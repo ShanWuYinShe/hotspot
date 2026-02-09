@@ -7,7 +7,7 @@
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Skeleton } from '$lib/components/ui/skeleton';
-	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
+	import { Avatar, AvatarFallback } from '$lib/components/ui/avatar';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import type { ReportItem, ReportStatus } from '$lib/types/api';
 	import { formatDateTime } from '$lib/utils/format';
@@ -17,7 +17,7 @@
 	import Check from 'lucide-svelte/icons/check';
 	import X from 'lucide-svelte/icons/x';
 
-	let reports = $state<ReportItem[]>([]);
+	let reports = $state.raw<ReportItem[]>([]);
 	let isLoading = $state(true);
 	let cursor = $state<string | undefined>(undefined);
 	let hasMore = $state(false);
@@ -26,10 +26,12 @@
 	async function loadReports(append = false) {
 		if (!append) isLoading = true;
 		try {
-			const response = await adminReportsService.getList({
+			const response = await adminReportsService.search({
 				status: statusFilter === 'all' ? undefined : statusFilter,
-				limit: 20,
-				cursor: append ? cursor : undefined
+				pagination: {
+					limit: 20,
+					cursor: append ? cursor : undefined
+				}
 			});
 
 			if (isSuccess(response) && response.data) {
@@ -53,7 +55,7 @@
 			const response = await adminReportsService.handle({
 				report_id: reportId,
 				action,
-				resolution: action === 'resolve' ? '举报属实，已处理' : '举报不属实'
+				note: action === 'resolve' ? '举报属实，已处理' : '举报不属实'
 			});
 
 			if (isSuccess(response)) {
@@ -197,12 +199,11 @@
 							<div class="flex items-start justify-between gap-4">
 								<div class="flex items-start gap-3">
 									<Avatar class="h-10 w-10">
-										<AvatarImage src={report.reporter?.avatar_url} alt={report.reporter?.nickname} />
-										<AvatarFallback>{report.reporter?.nickname?.slice(0, 2) || '?'}</AvatarFallback>
+										<AvatarFallback>?</AvatarFallback>
 									</Avatar>
 									<div>
 										<div class="flex items-center gap-2">
-											<span class="font-medium">{report.reporter?.nickname || '未知用户'}</span>
+											<span class="font-medium">用户举报</span>
 											<span class="text-muted-foreground">举报了</span>
 											<Badge variant="outline">{getTargetTypeText(report.target_type)}</Badge>
 										</div>
@@ -226,7 +227,7 @@
 										<DropdownMenu.Root>
 											<DropdownMenu.Trigger>
 												{#snippet child({ props })}
-													<Button variant="ghost" size="icon" {...props}>
+													<Button variant="ghost" size="icon" aria-label="更多操作" {...props}>
 														<MoreVertical class="h-4 w-4" />
 													</Button>
 												{/snippet}

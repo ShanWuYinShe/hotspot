@@ -3,9 +3,10 @@ use axum::{extract::State, Json};
 use crate::{
     dto::{
         request::{
-            AdminGetGlobalSettingsRequest, FetchGlobalSettingsRequest, UpdateContactRequest,
-            UpdateDefaultsRequest, UpdateFeaturesRequest, UpdateLimitsRequest,
-            UpdateRateLimitsRequest, UpdateUploadConfigRequest,
+            AdminGetGlobalSettingsRequest, AdminUpdateResponseDefaultsRequest,
+            FetchGlobalSettingsRequest, UpdateContactRequest, UpdateDefaultsRequest,
+            UpdateFeaturesRequest, UpdateLimitsRequest, UpdateRateLimitsRequest,
+            UpdateUploadConfigRequest,
         },
         response::{
             AdminGlobalSettingsData, ApiResponse, GlobalSettings, UpdateContactConfigData,
@@ -248,4 +249,29 @@ pub async fn admin_update_rate_limits_config(
         rate_limits: settings.rate_limits,
         updated_at: chrono::Utc::now().to_rfc3339(),
     })))
+}
+
+/// 更新响应默认值配置（管理员）
+/// TODO: 需要实现独立的 response_defaults 更新逻辑
+pub async fn admin_update_response_defaults_config(
+    State(_state): State<AppState>,
+    _user: AuthenticatedUser,
+    Json(_req): Json<AdminUpdateResponseDefaultsRequest>,
+) -> Result<Json<ApiResponse<()>>> {
+    // 暂未实现，返回空成功响应
+    Ok(Json(ApiResponse::success_empty()))
+}
+
+/// 获取客户端配置（管理员）
+/// 复用管理员全局配置获取逻辑
+pub async fn admin_get_client_config(
+    State(state): State<AppState>,
+    _user: AuthenticatedUser,
+    Json(_req): Json<AdminGetGlobalSettingsRequest>,
+) -> Result<Json<ApiResponse<AdminGlobalSettingsData>>> {
+    let settings = state
+        .system_config_service
+        .get_admin_global_settings()
+        .await?;
+    Ok(Json(ApiResponse::success(settings)))
 }

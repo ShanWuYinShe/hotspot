@@ -5,6 +5,7 @@
 	 * 用于显示群组信息的统一UI组件
 	 * 支持多种显示模式和自定义选项
 	 */
+	import { dev } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
@@ -29,11 +30,11 @@
 	import UserPlus from 'lucide-svelte/icons/user-plus';
 	import Share2 from 'lucide-svelte/icons/share-2';
 	import Flag from 'lucide-svelte/icons/flag';
-	import type { GroupInfo } from '$lib/types/api';
+	import type { GroupItem, GroupInfo } from '$lib/types/api';
 
 	interface Props {
 		/** 群组数据 */
-		group: GroupInfo;
+		group: GroupItem | GroupInfo;
 		/** 是否显示距离 */
 		showDistance?: boolean;
 		/** 是否显示成员数 */
@@ -61,8 +62,11 @@
 		variant = 'default'
 	}: Props = $props();
 
+	// Extract GroupInfo from either GroupItem or GroupInfo
+	const groupInfo = $derived('group' in group ? group.group : group);
+	
 	// 计算实际链接
-	const actualHref = $derived(href ?? `/groups/${group.group_id}`);
+	const actualHref = $derived(href ?? `/groups/${groupInfo.group_id}`);
 
 	// 获取距离信息（单位：米）
 	const distance = $derived.by(() => {
@@ -107,9 +111,9 @@
 		e.preventDefault();
 		e.stopPropagation();
 		const shareData = {
-			title: `${group.name} - HotSpot`,
-			text: `加入 ${group.name} 群组`,
-			url: `${window.location.origin}/groups/${group.group_id}`
+			title: `${groupInfo.name} - HotSpot`,
+			text: `加入 ${groupInfo.name} 群组`,
+			url: `${window.location.origin}/groups/${groupInfo.group_id}`
 		};
 
 		if (navigator.share) {
@@ -117,7 +121,7 @@
 				await navigator.share(shareData);
 			} catch (err) {
 				if ((err as Error).name !== 'AbortError') {
-					console.error('分享失败:', err);
+					if (dev) console.error('分享失败:', err);
 				}
 			}
 		} else {
@@ -151,7 +155,7 @@
 				<!-- 方块模式：Pinterest/小红书风格，高度自适应 -->
 				<!-- 使用group_id的哈希值生成稳定的随机高度 -->
 				{@const heightVariants = [125, 145, 165, 135, 155, 140, 150, 160]}
-				{@const idHash = group.group_id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)}
+				{@const idHash = groupInfo.group_id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)}
 				{@const minHeight = heightVariants[idHash % heightVariants.length]}
 				<div class="flex flex-col justify-between space-y-2.5" style="min-height: {minHeight}px;">
 					<!-- 头像和基本信息 -->
@@ -161,9 +165,9 @@
 								glow
 								class="size-12"
 							>
-								<AvatarImage src={group.avatar_url} alt={group.name} />
+								<AvatarImage src={groupInfo.avatar_url} alt={groupInfo.name} />
 								<AvatarFallback class="bg-linear-to-br from-secondary/20 to-primary/20 text-primary font-bold text-sm">
-									{group.name.slice(0, 2)}
+									{groupInfo.name.slice(0, 2)}
 								</AvatarFallback>
 							</Avatar>
 							{#if unreadCount > 0}
@@ -177,7 +181,7 @@
 						</div>
 						<div class="min-w-0 flex-1">
 							<div class="flex items-center gap-1">
-								<h3 class="truncate font-semibold text-sm">{group.name}</h3>
+								<h3 class="truncate font-semibold text-sm">{groupInfo.name}</h3>
 								{#if isPrivate}
 									<Lock class="size-3 text-muted-foreground shrink-0" />
 								{/if}
@@ -186,7 +190,7 @@
 								{#if showMembers}
 									<span class="flex items-center gap-0.5">
 										<Users class="size-3" />
-										{group.members_count}人
+										{groupInfo.members_count}人
 									</span>
 								{/if}
 								{#if distance}
@@ -219,7 +223,7 @@
 							{@const groupWithTags = group as { tags?: string[] }}
 							{#if groupWithTags.tags && groupWithTags.tags.length > 0}
 								<div class="flex flex-wrap gap-1.5">
-									{#each groupWithTags.tags.slice(0, 5) as tag}
+									{#each groupWithTags.tags.slice(0, 5) as tag (tag)}
 										<Badge variant="secondary" class="rounded-full text-[10px] px-2 py-0.5">#{tag}</Badge>
 									{/each}
 								</div>
@@ -236,9 +240,9 @@
 							glow
 							class="h-14 w-14"
 						>
-							<AvatarImage src={group.avatar_url} alt={group.name} />
+							<AvatarImage src={groupInfo.avatar_url} alt={groupInfo.name} />
 							<AvatarFallback class="bg-gradient-to-br from-secondary/20 to-primary/20 text-primary font-bold text-base">
-								{group.name.slice(0, 2)}
+								{groupInfo.name.slice(0, 2)}
 							</AvatarFallback>
 						</Avatar>
 					</div>
@@ -246,7 +250,7 @@
 					<!-- 群组信息 -->
 					<div class="flex-1 min-w-0">
 						<div class="flex items-center gap-2">
-							<h3 class="font-bold text-foreground truncate">{group.name}</h3>
+							<h3 class="font-bold text-foreground truncate">{groupInfo.name}</h3>
 							{#if isPrivate}
 								<Lock class="h-4 w-4 text-muted-foreground shrink-0" />
 							{/if}
@@ -256,7 +260,7 @@
 							{#if showMembers}
 								<span class="flex items-center gap-1 text-xs text-muted-foreground">
 									<Users class="h-3.5 w-3.5" />
-									{group.members_count}人
+									{groupInfo.members_count}人
 								</span>
 							{/if}
 							
@@ -303,6 +307,7 @@
 								e.preventDefault();
 								e.stopPropagation();
 							}}
+							aria-label="更多操作"
 						>
 							<MoreVertical class="h-4 w-4" />
 						</Button>

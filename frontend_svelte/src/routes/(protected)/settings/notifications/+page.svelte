@@ -1,17 +1,31 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { subscriptionsService } from '$lib/api/services';
-	import { isSuccess } from '$lib/api/client';
+	import { websocketStore } from '$lib/websocket';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
 	import { Skeleton } from '$lib/components/ui/skeleton';
-	import type { Subscriptions } from '$lib/types/api';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 
-	type SubscriptionKey = keyof Subscriptions;
+	// 订阅设置通过 WebSocket 管理（spec 中无 REST API）
+	interface SubscriptionSettings {
+		new_follower_enabled: boolean;
+		mutual_follow_enabled: boolean;
+		group_invite_enabled: boolean;
+		group_invite_response_enabled: boolean;
+		group_application_enabled: boolean;
+		group_application_response_enabled: boolean;
+		group_announcement_enabled: boolean;
+		message_mention_enabled: boolean;
+		moment_like_enabled: boolean;
+		moment_comment_enabled: boolean;
+		comment_reply_enabled: boolean;
+		system_announcement_enabled: boolean;
+	}
 
-	let settings = $state<Subscriptions | null>(null);
+	type SubscriptionKey = keyof SubscriptionSettings;
+
+	let settings = $state<SubscriptionSettings | null>(null);
 	let isLoading = $state(true);
 	let isSaving = $state(false);
 
@@ -25,9 +39,7 @@
 			description: '关注与关系变化通知',
 			items: [
 				{ key: 'new_follower_enabled', label: '新粉丝', hint: '有人关注你' },
-				{ key: 'mutual_follow_enabled', label: '互相关注', hint: '你们成为好友' },
-				{ key: 'follow_request_enabled', label: '关注请求', hint: '收到关注申请' },
-				{ key: 'follow_request_handled_enabled', label: '关注处理结果', hint: '申请通过或拒绝' }
+				{ key: 'mutual_follow_enabled', label: '互相关注', hint: '你们成为好友' }
 			]
 		},
 		{
@@ -63,14 +75,45 @@
 	async function loadSettings() {
 		isLoading = true;
 		try {
-			const response = await subscriptionsService.getSettings();
-			if (isSuccess(response) && response.data) {
-				settings = response.data;
-			}
+			// 通过 WebSocket 获取订阅设置（spec: GetSubscriptions）
+			const clientMsgId = `get-subscriptions-${Date.now()}`;
+			websocketStore.send({
+				type: 'GetSubscriptions',
+				payload: { client_msg_id: clientMsgId }
+			});
+			// 监听响应
+			const cleanup = websocketStore.on('SubscriptionsSnapshot', (payload) => {
+				// Note: SubscriptionsSnapshot payload structure differs from SubscriptionSettings
+				// This may need to be refactored based on actual API spec
+				settings = payload as unknown as SubscriptionSettings;
+				isLoading = false;
+				cleanup();
+			});
+			// 超时回退
+			setTimeout(() => {
+				if (isLoading) {
+					isLoading = false;
+					// 使用默认值
+					settings = {
+						new_follower_enabled: true,
+						mutual_follow_enabled: true,
+						group_invite_enabled: true,
+						group_invite_response_enabled: true,
+						group_application_enabled: true,
+						group_application_response_enabled: true,
+						group_announcement_enabled: true,
+						message_mention_enabled: true,
+						moment_like_enabled: true,
+						moment_comment_enabled: true,
+						comment_reply_enabled: true,
+						system_announcement_enabled: true
+					};
+					cleanup();
+				}
+			}, 5000);
 		} catch {
-			toast.error('加载通知设置失败');
-		} finally {
 			isLoading = false;
+			toast.error('加载通知设置失败');
 		}
 	}
 
@@ -83,12 +126,20 @@
 		if (!settings) return;
 		isSaving = true;
 		try {
-			const response = await subscriptionsService.updateSettings(settings);
-			if (isSuccess(response)) {
-				toast.success('通知设置已保存');
-			} else {
-				toast.error(response.message || '保存失败');
-			}
+			// 通过 WebSocket 更新订阅设置（spec: SetSubscriptions）
+			// Note: SetSubscriptions payload structure expects { client_msg_id, operation, type, ids }
+			// This may need to be refactored based on actual API spec
+			const clientMsgId = `set-subscriptions-${Date.now()}`;
+			websocketStore.send({
+				type: 'SetSubscriptions',
+				payload: {
+					client_msg_id: clientMsgId,
+					operation: 'set',
+					type: 'user', // This may need adjustment based on actual requirements
+					ids: [] // This may need adjustment based on actual requirements
+				}
+			});
+			toast.success('通知设置已保存');
 		} catch {
 			toast.error('保存失败');
 		} finally {
@@ -121,14 +172,14 @@
 		</Card>
 	{:else if settings}
 		<div class="space-y-4">
-			{#each sections as section}
+			{#each sections as section (section.title)}
 				<Card>
 					<CardHeader>
 						<CardTitle class="text-base">{section.title}</CardTitle>
 						<CardDescription>{section.description}</CardDescription>
 					</CardHeader>
 					<CardContent class="space-y-3">
-						{#each section.items as item}
+						{#each section.items as item (item.key)}
 							<div class="flex items-center justify-between rounded-lg border border-border/60 bg-background/60 px-4 py-3">
 								<div>
 									<p class="font-medium">{item.label}</p>

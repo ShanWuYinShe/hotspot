@@ -1,0 +1,429 @@
+# HotSpot API - 聊天模块端点
+# 对应原 api_spec_chat.mdc
+
+# ============================================================
+# 私聊管理 API
+# ============================================================
+
+private_chats_me_list:
+  post:
+    summary: 获取私聊列表
+    operationId: privateChatsMeList
+    tags: [private_chats]
+    x-idempotency: none
+    x-error-codes:
+      10000: 参数错误
+    description: 按最近活跃时间倒序（最新会话在前）
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/chat.yaml#/MyPrivateChatsRequest'
+    responses:
+      '200':
+        description: 私聊列表
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas/common.yaml#/ApiResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '../components/schemas/chat.yaml#/PaginatedPrivateChatItems'
+
+private_chats_open_the_door:
+  post:
+    summary: 获取私聊详情
+    operationId: privateChatsOpenTheDoor
+    tags: [private_chats]
+    x-idempotency: semantic
+    x-error-codes:
+      10000: 参数错误
+      10200: 权限不足
+      10300: 资源不存在
+    description: |
+      简化设计：
+      - 唯一寻址：使用 target_user_id 获取与指定用户的会话详情
+      - 自动创建：若会话不存在，自动创建空会话并返回（首次聊天更流畅）
+      - 可选消息预加载：支持一次请求获取会话详情和最近消息
+      
+      首次聊天流程：
+      1. 调用 open_the_door 检查或创建会话
+      2. 自动返回会话详情（无论是否是首次聊天）
+      3. 直接调用 send 发送消息
+      
+      响应始终包含最近消息列表，条数由 ServerConfig.response_defaults.chat_recent_messages_count 控制。
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/chat.yaml#/PrivateChatOpenTheDoorRequest'
+    responses:
+      '200':
+        description: 私聊详情
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas/common.yaml#/ApiResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '../components/schemas/chat.yaml#/PrivateChatOpenResult'
+
+private_chats_me_update_settings:
+  post:
+    summary: 更新私聊设置
+    operationId: privateChatsMeUpdateSettings
+    tags: [private_chats]
+    x-idempotency: semantic
+    x-error-codes:
+      10000: 参数错误
+      10300: 资源不存在
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/chat.yaml#/UpdatePrivateChatSettingsRequest'
+    responses:
+      '200':
+        description: 设置更新成功
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/ApiResponse'
+
+private_chats_me_delete:
+  post:
+    summary: 删除私聊会话（仅当前用户视角）
+    operationId: privateChatsMeDelete
+    tags: [private_chats]
+    x-idempotency: semantic
+    x-error-codes:
+      10000: 参数错误
+      10300: 资源不存在
+    description: |
+      删除语义：
+      - 隐藏/移除该私聊会话入口
+      - 清空当前用户视角下的该会话历史消息
+      - 不影响对方视角与对方历史数据
+      - 若再次发起私聊，将创建一个新的空白会话
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/chat.yaml#/DeletePrivateChatRequest'
+    responses:
+      '200':
+        description: 删除成功
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/ApiResponse'
+
+# ============================================================
+# 私聊消息 API
+# ============================================================
+
+private_messages_send:
+  post:
+    summary: 发送私聊消息
+    operationId: privateMessagesSend
+    tags: [private_messages]
+    x-idempotency: required
+    x-error-codes:
+      10000: 参数错误
+      10200: 权限不足
+      10300: 资源不存在
+      22000: 幂等键冲突
+      22002: 幂等操作进行中
+    description: |
+      简化设计：支持即发即创，客户端无需预先调用 create 接口。
+      
+      安全性与权限：
+      - 必须校验接收方的隐私设置（allow_private_chat）
+      - 必须校验黑名单关系
+      - 陌生人消息限制
+      
+      消息类型：
+      - text 需要 content
+      - image/video/audio/file 需要 file_id
+      - share 需要 share_code
+      
+      发送语义：API 调用仅提交发送意图和获取 message_id，消息最终态通过 WebSocket 推送获取。
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/chat.yaml#/SendPrivateMessageRequest'
+    responses:
+      '200':
+        description: 消息发送成功
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas/common.yaml#/ApiResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '../components/schemas/common.yaml#/MessageSent'
+
+private_messages_get_history:
+  post:
+    summary: 获取私聊消息历史
+    operationId: privateMessagesGetHistory
+    tags: [private_messages]
+    x-idempotency: none
+    x-error-codes:
+      10000: 参数错误
+      10300: 资源不存在
+    description: 按 sent_at 时间倒序（最新在前）
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/chat.yaml#/GetPrivateMessagesHistoryRequest'
+    responses:
+      '200':
+        description: 消息历史
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas/common.yaml#/ApiResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '../components/schemas/chat.yaml#/PaginatedPrivateMessageItems'
+
+private_messages_update:
+  post:
+    summary: 编辑私聊消息
+    operationId: privateMessagesUpdate
+    tags: [private_messages]
+    x-idempotency: semantic
+    x-error-codes:
+      10000: 参数错误
+      10200: 权限不足
+      10300: 资源不存在
+      10400: 业务冲突
+    description: 仅允许编辑当前用户发送的消息，最终展示以 WebSocket 推送的更新事件为准
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/chat.yaml#/UpdatePrivateMessageRequest'
+    responses:
+      '200':
+        description: 消息编辑成功
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/ApiResponse'
+
+private_messages_recall:
+  post:
+    summary: 撤回私聊消息
+    operationId: privateMessagesRecall
+    tags: [private_messages]
+    x-idempotency: semantic
+    x-error-codes:
+      10000: 参数错误
+      10200: 权限不足
+      10300: 资源不存在
+      10400: 业务冲突
+    description: 发送者只能撤回 2 分钟内的消息
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/chat.yaml#/RecallPrivateMessageRequest'
+    responses:
+      '200':
+        description: 消息撤回成功
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/ApiResponse'
+
+private_messages_me_mark_as_read:
+  post:
+    summary: 标记私聊消息已读
+    operationId: privateMessagesMeMarkAsRead
+    tags: [private_messages]
+    x-idempotency: semantic
+    x-error-codes:
+      10000: 参数错误
+      10300: 资源不存在
+    description: 当不传 up_to_message_id 时，标记全部私聊消息为已读
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/chat.yaml#/MarkPrivateMessagesReadRequest'
+    responses:
+      '200':
+        description: 标记已读成功
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/ApiResponse'
+
+# ============================================================
+# 群聊消息 API
+# ============================================================
+
+group_messages_send:
+  post:
+    summary: 发送群聊消息
+    operationId: groupMessagesSend
+    tags: [group_messages]
+    x-idempotency: required
+    x-error-codes:
+      10000: 参数错误
+      10300: 资源不存在
+      10400: 业务冲突
+      22000: 幂等键冲突
+      22002: 幂等操作进行中
+    description: |
+      消息类型：
+      - text 需要 content
+      - image/video/audio/file 需要 file_id
+      - share 需要 share_code
+      
+      发送语义：API 调用仅提交发送意图和获取 message_id，消息最终态通过 WebSocket 推送获取。
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/chat.yaml#/SendGroupMessageRequest'
+    responses:
+      '200':
+        description: 消息发送成功
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas/common.yaml#/ApiResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '../components/schemas/common.yaml#/MessageSent'
+
+group_messages_get_history:
+  post:
+    summary: 获取群聊消息历史
+    operationId: groupMessagesGetHistory
+    tags: [group_messages]
+    x-idempotency: none
+    x-error-codes:
+      10000: 参数错误
+      10300: 资源不存在
+      10400: 业务冲突
+    description: 按 sent_at 时间倒序（最新在前）
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/chat.yaml#/GetGroupMessagesHistoryRequest'
+    responses:
+      '200':
+        description: 消息历史
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas/common.yaml#/ApiResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '../components/schemas/chat.yaml#/PaginatedGroupMessageItems'
+
+group_messages_update:
+  post:
+    summary: 编辑群聊消息
+    operationId: groupMessagesUpdate
+    tags: [group_messages]
+    x-idempotency: semantic
+    x-error-codes:
+      10000: 参数错误
+      10200: 权限不足
+      10300: 资源不存在
+      10400: 业务冲突
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/chat.yaml#/UpdateGroupMessageRequest'
+    responses:
+      '200':
+        description: 消息编辑成功
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/ApiResponse'
+
+group_messages_recall:
+  post:
+    summary: 撤回群聊消息
+    operationId: groupMessagesRecall
+    tags: [group_messages]
+    x-idempotency: semantic
+    x-error-codes:
+      10000: 参数错误
+      10200: 权限不足
+      10300: 资源不存在
+      10400: 业务冲突
+    description: 发送者可撤回 2 分钟内消息，群组管理员/群主可撤回任何消息
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/chat.yaml#/RecallGroupMessageRequest'
+    responses:
+      '200':
+        description: 消息撤回成功
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/ApiResponse'
+
+group_messages_me_mark_as_read:
+  post:
+    summary: 标记群聊消息已读
+    operationId: groupMessagesMeMarkAsRead
+    tags: [group_messages]
+    x-idempotency: semantic
+    x-error-codes:
+      10000: 参数错误
+      10300: 资源不存在
+      10400: 业务冲突
+    description: 当不传 up_to_message_id 时，标记全部群聊消息为已读
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/chat.yaml#/MarkGroupMessagesReadRequest'
+    responses:
+      '200':
+        description: 标记已读成功
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/ApiResponse'

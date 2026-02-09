@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { DropdownMenu as DropdownMenuPrimitive } from 'bits-ui';
+	import { DropdownMenu as DropdownMenuPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
 	import { cn } from '$lib/utils';
 	import type { Snippet } from 'svelte';
 	import ChevronRight from 'lucide-svelte/icons/chevron-right';
 
-	interface Props {
+	interface Props extends WithoutChildrenOrChild<DropdownMenuPrimitive.SubTriggerProps> {
 		inset?: boolean;
 		children?: Snippet;
 		class?: string;

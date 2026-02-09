@@ -1,10 +1,8 @@
 <script lang="ts">
-	import { Avatar as AvatarPrimitive } from 'bits-ui';
+	import { Avatar as AvatarPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
 	import { cn } from '$lib/utils';
 
-	interface Props {
-		src?: string;
-		alt?: string;
+	interface Props extends WithoutChildrenOrChild<AvatarPrimitive.ImageProps> {
 		class?: string;
 	}
 

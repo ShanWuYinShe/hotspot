@@ -3,10 +3,10 @@
  * 显示在页面顶部的进度条
  -->
 <script lang="ts">
-	import { navigating } from '$app/stores';
+	import { navigating } from '$app/state';
 </script>
 
-{#if $navigating}
+{#if navigating}
 	<div
 		class="fixed left-0 right-0 top-0 z-[100] h-1 animate-glow-pulse bg-gradient-to-r from-primary via-accent to-primary"
 		style="box-shadow: 0 0 20px var(--color-glow-primary);"

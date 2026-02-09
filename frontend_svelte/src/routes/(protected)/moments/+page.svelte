@@ -8,19 +8,20 @@
 	import EmptyState from '$lib/components/common/empty-state.svelte';
 	import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
 	import CreateMomentModal from '$lib/components/common/create-moment-modal.svelte';
-	import type { UserMomentListItem } from '$lib/types/api';
+	import type { MomentItem } from '$lib/types/api';
 	import Plus from 'lucide-svelte/icons/plus';
 	import Image from 'lucide-svelte/icons/image';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
+	import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
 
-	const pagination = usePagination<UserMomentListItem>({
+	const pagination = usePagination<MomentItem>({
 		uniqueKey: 'moment_id'
 	});
 	let showCreateMoment = $state(false);
 
 	async function loadMoments(refresh = false) {
 		await pagination.load(
-			(cursor) => momentsService.getMyMoments({ limit: 20, cursor }),
+			(cursor) => momentsService.getMyMoments({ pagination: { limit: 20, cursor } }),
 			refresh
 		);
 	}
@@ -51,6 +52,14 @@
 
 	{#if pagination.loading}
 		<ListSkeleton type="moment" count={3} layout="grid" />
+	{:else if pagination.error}
+		<EmptyState 
+			icon={AlertTriangle} 
+			title="加载失败" 
+			description={pagination.error} 
+			actionText="重试"
+			onAction={() => loadMoments(true)}
+		/>
 	{:else if pagination.items.length === 0}
 		<EmptyState 
 			icon={Image} 
@@ -69,7 +78,7 @@
 								<p class="line-clamp-3 whitespace-pre-wrap">{moment.description}</p>
 								{#if moment.images && moment.images.length > 0}
 									<div class="mt-3 flex gap-2 overflow-x-auto">
-										{#each moment.images.slice(0, 4) as image, i}
+										{#each moment.images.slice(0, 4) as image, i (image.url)}
 											<img
 												src={image.url}
 												alt="图片 {i + 1}"
@@ -86,6 +95,7 @@
 								<div class="mt-3 flex items-center gap-4 text-sm text-muted-foreground">
 									<span>{moment.likes_count} 点赞</span>
 									<span>{moment.comments_count} 评论</span>
+									<span>{moment.shares_count} 分享</span>
 									<span>{new Date(moment.created_at).toLocaleDateString('zh-CN')}</span>
 								</div>
 							</a>

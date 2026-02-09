@@ -20,7 +20,7 @@
 	let searchable = $state(true);
 	let locationSearchable = $state(true);
 	let locationVisible = $state(true);
-	let onlineVisible = $state(true);
+	let presenceVisible = $state(true);
 
 	async function loadSettings() {
 		isLoading = true;
@@ -34,7 +34,7 @@
 				searchable = settings.searchable;
 				locationSearchable = settings.location_searchable;
 				locationVisible = settings.location_visible;
-				onlineVisible = settings.online_visible;
+				presenceVisible = settings.presence_visible;
 			}
 		} catch {
 			toast.error('加载隐私设置失败');
@@ -53,10 +53,9 @@
 				searchable,
 				location_searchable: locationSearchable,
 				location_visible: locationVisible,
-				online_visible: onlineVisible
+				presence_visible: presenceVisible
 			});
-			if (isSuccess(response) && response.data) {
-				settings = response.data;
+			if (isSuccess(response)) {
 				toast.success('隐私设置已保存');
 			} else {
 				toast.error(response.message || '保存失败');
@@ -122,7 +121,7 @@
 						<p class="font-medium">在线状态可见</p>
 						<p class="text-sm text-muted-foreground">允许显示在线/离线状态</p>
 					</div>
-					<input type="checkbox" class="h-4 w-4" bind:checked={onlineVisible} />
+					<input type="checkbox" class="h-4 w-4" bind:checked={presenceVisible} />
 				</div>
 			</CardContent>
 		</Card>

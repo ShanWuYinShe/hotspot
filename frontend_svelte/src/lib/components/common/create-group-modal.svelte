@@ -76,15 +76,22 @@
 			const locationName = mapAnchorStore.name || mapAnchorStore.displayName;
 			const payload: {
 				name: string;
+				location: { point: { latitude: number; longitude: number }; location_name: string };
 				description?: string;
 				tags?: string[];
 				password?: string;
 				join_method?: JoinMethod;
 				is_searchable?: boolean;
 				max_members?: number;
-				location?: { latitude: number; longitude: number; location_name: string };
 			} = {
 				name: name.trim(),
+				location: {
+					point: {
+						latitude: mapAnchorStore.latitude,
+						longitude: mapAnchorStore.longitude
+					},
+					location_name: locationName
+				},
 				join_method: joinMethod,
 				is_searchable: isSearchable
 			};
@@ -93,13 +100,6 @@
 			if (tags.length > 0) payload.tags = tags;
 			if (password.trim()) payload.password = password.trim();
 			if (maxMembers.trim()) payload.max_members = parseInt(maxMembers, 10);
-			if (includeLocation) {
-				payload.location = {
-					latitude: mapAnchorStore.latitude,
-					longitude: mapAnchorStore.longitude,
-					location_name: locationName
-				};
-			}
 
 			const response = await groupsService.create(payload);
 			if (isSuccess(response)) {
@@ -155,7 +155,7 @@
 				<Input id="group-tags" placeholder="兴趣、城市、活动" bind:value={tagsInput} />
 				{#if tags.length > 0}
 					<div class="flex flex-wrap gap-2">
-						{#each tags as tag}
+						{#each tags as tag (tag)}
 							<Badge variant="secondary" class="rounded-full text-xs">#{tag}</Badge>
 						{/each}
 					</div>

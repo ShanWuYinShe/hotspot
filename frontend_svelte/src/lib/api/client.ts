@@ -17,8 +17,8 @@ import { AUTH } from './endpoints';
 // Re-export types for external use
 export type { ApiResponse, PaginatedData };
 
-// Token 无效或过期的错误码
-const TOKEN_INVALID_CODES = [10101, 10102, 10103, 10104, 10106];
+// Token 无效或过期的错误码（spec 定义的宽泛分类码）
+const TOKEN_INVALID_CODE = 10100;
 
 // 是否正在刷新 Token
 let isRefreshing = false;
@@ -88,9 +88,10 @@ function getConfig(): ApiClientConfig {
 
 /**
  * 检查是否为 Token 无效错误
+ * spec 定义: code=10100 表示认证类错误（token 无效/过期/缺失等）
  */
 function isTokenInvalidError(code: number): boolean {
-	return TOKEN_INVALID_CODES.includes(code);
+	return code === TOKEN_INVALID_CODE;
 }
 
 /**
@@ -147,8 +148,9 @@ async function refreshToken(): Promise<boolean> {
 
 /**
  * 确保刷新 Token（防止并发刷新）
+ * 导出供 TokenRefreshManager 共享同一个刷新锁
  */
-async function ensureRefreshToken(): Promise<boolean> {
+export async function ensureRefreshToken(): Promise<boolean> {
 	if (isRefreshing) {
 		return refreshPromise ?? Promise.resolve(false);
 	}
@@ -336,7 +338,7 @@ export async function post<T>(
  */
 export async function paginate<T>(
 	url: string,
-	params: { limit?: number; cursor?: string } & Record<string, unknown> = {},
+	params?: Record<string, unknown>,
 	options?: RequestOptions
 ): Promise<ApiResponse<PaginatedData<T>>> {
 	return post<PaginatedData<T>>(url, params, options);
@@ -367,7 +369,7 @@ export class ApiError extends Error {
 		super(response.message || '操作失败');
 		this.name = 'ApiError';
 		this.code = response.code;
-		this.requestId = response.request_id;
+		this.requestId = response.request_id ?? '';
 	}
 }
 

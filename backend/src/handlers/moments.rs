@@ -3,15 +3,15 @@ use axum::{extract::State, Json};
 use crate::{
     dto::{
         request::{
-            CheckFavoritedRequest, CheckLikedRequest, CreateMomentRequest, DeleteMomentRequest,
-            EditMomentRequest, FavoriteMomentRequest, GetMomentInteractionStateRequest,
-            LikeMomentRequest, MomentLikesRequest, MomentOpenTheDoorRequest, MyFavoritesRequest,
-            MyMomentsRequest, SearchMomentsByKeywordRequest, SearchMomentsByLocationRequest,
-            SearchMomentsByTagRequest, UnfavoriteMomentRequest, UnlikeMomentRequest,
+            CreateMomentRequest, DeleteMomentRequest,
+            EditMomentRequest, FavoriteMomentRequest,
+            GeoPoint, LikeMomentRequest, MomentLikesRequest, MomentOpenTheDoorRequest,
+            MyFavoritesRequest, MyMomentsRequest, SearchMomentsByKeywordRequest,
+            SearchMomentsByLocationRequest, SearchMomentsByTagRequest, SearchMomentsRequest,
+            UnfavoriteMomentRequest, UnlikeMomentRequest,
         },
         response::{
-            ApiResponse, CheckFavoritedData, CheckLikedData, MomentInteractionStateData,
-            MomentLikeItem, MomentSearchItem, PaginatedData, UserMomentListItem,
+            ApiResponse, MomentLikeItem, MomentSearchItem, PaginatedData, UserMomentListItem,
         },
     },
     error::Result,
@@ -21,43 +21,59 @@ use crate::{
 
 // ==================== Token 可选 ====================
 
-/// 按关键字搜索生活瞬间（全局）
-pub async fn search_by_keyword(
+/// 统一搜索瞬间（支持关键字/标签/位置组合）
+pub async fn search(
     State(state): State<AppState>,
     user: OptionalAuthenticatedUser,
-    Json(req): Json<SearchMomentsByKeywordRequest>,
+    Json(req): Json<SearchMomentsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<MomentSearchItem>>>> {
-    let response = state
-        .moment_service
-        .search_by_keyword(user.user_id, &req)
-        .await?;
-    Ok(Json(ApiResponse::success(response)))
-}
+    let reference_point = req.search.reference_point.unwrap_or(GeoPoint {
+        latitude: 0.0,
+        longitude: 0.0,
+    });
 
-/// 按标签搜索生活瞬间（全局）
-pub async fn search_by_tag(
-    State(state): State<AppState>,
-    user: OptionalAuthenticatedUser,
-    Json(req): Json<SearchMomentsByTagRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MomentSearchItem>>>> {
-    let response = state
-        .moment_service
-        .search_by_tag(user.user_id, &req)
-        .await?;
-    Ok(Json(ApiResponse::success(response)))
-}
-
-/// 按位置搜索生活瞬间（范围过滤）
-pub async fn search_by_location(
-    State(state): State<AppState>,
-    user: OptionalAuthenticatedUser,
-    Json(req): Json<SearchMomentsByLocationRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MomentSearchItem>>>> {
-    let response = state
-        .moment_service
-        .search_by_location(user.user_id, &req)
-        .await?;
-    Ok(Json(ApiResponse::success(response)))
+    if let Some(radius) = req.radius {
+        let location_req = SearchMomentsByLocationRequest {
+            kw: req.keyword,
+            reference_point,
+            radius,
+            limit: req.search.limit,
+            cursor: req.search.cursor,
+        };
+        let response = state
+            .moment_service
+            .search_by_location(user.user_id, &location_req)
+            .await?;
+        Ok(Json(ApiResponse::success(response)))
+    } else if let Some(tag) = req.tag {
+        let tag_req = SearchMomentsByTagRequest {
+            tag,
+            reference_point,
+            limit: req.search.limit,
+            cursor: req.search.cursor,
+        };
+        let response = state
+            .moment_service
+            .search_by_tag(user.user_id, &tag_req)
+            .await?;
+        Ok(Json(ApiResponse::success(response)))
+    } else if let Some(keyword) = req.keyword {
+        let kw_req = SearchMomentsByKeywordRequest {
+            kw: keyword,
+            reference_point,
+            limit: req.search.limit,
+            cursor: req.search.cursor,
+        };
+        let response = state
+            .moment_service
+            .search_by_keyword(user.user_id, &kw_req)
+            .await?;
+        Ok(Json(ApiResponse::success(response)))
+    } else {
+        Err(crate::error::AppError::BadRequest(
+            "至少需要提供 keyword、tag、radius 中的一个搜索条件".to_string(),
+        ))
+    }
 }
 
 /// 获取当前用户生活瞬间历史（/me/ API）
@@ -156,15 +172,6 @@ pub async fn unlike(
     Ok(Json(ApiResponse::success_empty()))
 }
 
-pub async fn check_liked(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(req): Json<CheckLikedRequest>,
-) -> Result<Json<ApiResponse<CheckLikedData>>> {
-    let is_liked = state.moment_service.check_liked(user.user_id, &req).await?;
-    Ok(Json(ApiResponse::success(CheckLikedData { is_liked })))
-}
-
 // ==================== 收藏 ====================
 
 pub async fn favorite(
@@ -189,33 +196,6 @@ pub async fn unfavorite(
         .unfavorite_moment(user.user_id, &req)
         .await?;
     Ok(Json(ApiResponse::success_empty()))
-}
-
-pub async fn check_favorited(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(req): Json<CheckFavoritedRequest>,
-) -> Result<Json<ApiResponse<CheckFavoritedData>>> {
-    let is_favorited = state
-        .moment_service
-        .check_favorited(user.user_id, &req)
-        .await?;
-    Ok(Json(ApiResponse::success(CheckFavoritedData {
-        is_favorited,
-    })))
-}
-
-/// 获取瞬间互动状态（点赞+收藏）
-pub async fn get_interaction_state(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(req): Json<GetMomentInteractionStateRequest>,
-) -> Result<Json<ApiResponse<MomentInteractionStateData>>> {
-    let data = state
-        .moment_service
-        .get_interaction_state(user.user_id, &req)
-        .await?;
-    Ok(Json(ApiResponse::success(data)))
 }
 
 pub async fn get_my_favorites(

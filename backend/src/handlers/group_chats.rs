@@ -7,19 +7,21 @@ use crate::{
             AdminGroupSearchRequest, ApplyToGroupRequest, ApproveGroupApplicationRequest,
             BanMemberRequest, BannedMembersRequest, CancelApplicationRequest,
             CreateGroupAnnouncementRequest, CreateGroupChatRequest, DeleteGroupAnnouncementRequest,
-            GetMyGroupStateRequest, GroupAnnouncementsRequest, GroupApplicationsRequest,
-            GroupMembersRequest, GroupOpenTheDoorRequest, GroupSettingsRequest,
+            GeoPoint, GroupAnnouncementsRequest, GroupApplicationsRequest,
+            GroupMembersRequest, GroupOpenTheDoorRequest,
             InviteMemberRequest, JoinGroupRequest, LeaveGroupRequest, MuteMemberRequest,
             MyGroupChatsRequest, MyInvitesRequest, RejectGroupApplicationRequest,
-            RejectInviteRequest, RemoveMemberRequest, SearchGroupsByKeywordRequest,
-            SearchGroupsByLocationRequest, SearchGroupsByTagRequest, SetMemberRoleRequest,
+            RejectInviteRequest, RemoveMemberRequest, SearchGroupMembersRequest,
+            SearchGroupsByKeywordRequest,
+            SearchGroupsByLocationRequest, SearchGroupsByTagRequest, SearchGroupsRequest,
+            SetMemberRoleRequest,
             TransferOwnershipRequest, UnbanMemberRequest, UnmuteMemberRequest,
             UpdateGroupAnnouncementRequest, UpdateGroupChatRequest, UpdateGroupMySettingsRequest,
         },
         response::{
             AdminGroupDetail, AdminGroupSearchItem, ApiResponse, ApplyToGroupData,
             BannedMemberItem, GroupAnnouncementItem, GroupApplicationItem, GroupDetailData,
-            GroupInviteItem, GroupMemberItem, GroupMyStateData, GroupSearchItem, GroupSettingsData,
+            GroupInviteItem, GroupMemberItem, GroupSearchItem,
             InviteMemberData, MyGroupItem, PaginatedData,
         },
     },
@@ -31,31 +33,73 @@ use crate::{
 
 // ==================== Token 可选 ====================
 
-/// 按关键字搜索群组（全局）
-pub async fn search_by_keyword(
+/// 统一搜索群组（支持关键字/标签/位置组合）
+pub async fn search(
     State(state): State<AppState>,
-    Json(req): Json<SearchGroupsByKeywordRequest>,
+    Json(req): Json<SearchGroupsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<GroupSearchItem>>>> {
-    let response = state.group_service.search_by_keyword(req).await?;
-    Ok(Json(ApiResponse::success(response)))
+    let reference_point = req.search.reference_point.unwrap_or(GeoPoint {
+        latitude: 0.0,
+        longitude: 0.0,
+    });
+
+    if let Some(radius) = req.radius {
+        let location_req = SearchGroupsByLocationRequest {
+            kw: req.keyword,
+            reference_point,
+            radius,
+            limit: req.search.limit,
+            cursor: req.search.cursor,
+        };
+        let response = state.group_service.search_by_location(location_req).await?;
+        Ok(Json(ApiResponse::success(response)))
+    } else if let Some(tag) = req.tag {
+        let tag_req = SearchGroupsByTagRequest {
+            tag,
+            reference_point,
+            limit: req.search.limit,
+            cursor: req.search.cursor,
+        };
+        let response = state.group_service.search_by_tag(tag_req).await?;
+        Ok(Json(ApiResponse::success(response)))
+    } else if let Some(keyword) = req.keyword {
+        let kw_req = SearchGroupsByKeywordRequest {
+            kw: keyword,
+            reference_point,
+            limit: req.search.limit,
+            cursor: req.search.cursor,
+        };
+        let response = state.group_service.search_by_keyword(kw_req).await?;
+        Ok(Json(ApiResponse::success(response)))
+    } else {
+        Err(crate::error::AppError::BadRequest(
+            "至少需要提供 keyword、tag、radius 中的一个搜索条件".to_string(),
+        ))
+    }
 }
 
-/// 按标签搜索群组（全局）
-pub async fn search_by_tag(
-    State(state): State<AppState>,
-    Json(req): Json<SearchGroupsByTagRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<GroupSearchItem>>>> {
-    let response = state.group_service.search_by_tag(req).await?;
-    Ok(Json(ApiResponse::success(response)))
+/// 搜索群组成员
+/// TODO: 需要在 GroupService 中实现 search_members 方法
+pub async fn search_members(
+    State(_state): State<AppState>,
+    _user: AuthenticatedUser,
+    Json(_req): Json<SearchGroupMembersRequest>,
+) -> Result<Json<ApiResponse<PaginatedData<GroupMemberItem>>>> {
+    Err(crate::error::AppError::InternalError(
+        "群组成员搜索功能尚未实现".to_string(),
+    ))
 }
 
-/// 按位置搜索群组（范围过滤）
-pub async fn search_by_location(
-    State(state): State<AppState>,
-    Json(req): Json<SearchGroupsByLocationRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<GroupSearchItem>>>> {
-    let response = state.group_service.search_by_location(req).await?;
-    Ok(Json(ApiResponse::success(response)))
+/// 我的入群申请列表
+/// TODO: 需要在 GroupService 中实现 get_my_applications 方法
+pub async fn my_applications(
+    State(_state): State<AppState>,
+    _user: AuthenticatedUser,
+    Json(_req): Json<GroupApplicationsRequest>,
+) -> Result<Json<ApiResponse<PaginatedData<GroupApplicationItem>>>> {
+    Err(crate::error::AppError::InternalError(
+        "我的入群申请列表功能尚未实现".to_string(),
+    ))
 }
 
 /// 获取群组详情（通过 ID 获取指定群组的详情）
@@ -84,15 +128,6 @@ pub async fn open_the_door(
         response.my_state.is_some()
     );
 
-    Ok(Json(ApiResponse::success(response)))
-}
-
-/// 获取群组设置
-pub async fn settings(
-    State(state): State<AppState>,
-    Json(req): Json<GroupSettingsRequest>,
-) -> Result<Json<ApiResponse<GroupSettingsData>>> {
-    let response = state.group_service.get_settings(req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
@@ -442,16 +477,6 @@ pub async fn delete_announcement(
         .delete_announcement(user.user_id, &req)
         .await?;
     Ok(Json(ApiResponse::success_empty()))
-}
-
-/// 获取我在群内的状态
-pub async fn get_my_state(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(req): Json<GetMyGroupStateRequest>,
-) -> Result<Json<ApiResponse<GroupMyStateData>>> {
-    let data = state.group_service.get_my_state(user.user_id, &req).await?;
-    Ok(Json(ApiResponse::success(data)))
 }
 
 /// 更新我的群组偏好设置

@@ -24,7 +24,7 @@
 			: 'text-muted-foreground hover:bg-accent hover:text-foreground',
 		className
 	)}
-	use:rippleFeedback
+	{@attach rippleFeedback}
 	{...restProps}
 >
 	{#if children}

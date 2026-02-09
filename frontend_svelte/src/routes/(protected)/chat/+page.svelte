@@ -11,20 +11,20 @@
 	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
 	import ListSkeleton from '$lib/components/common/list-skeleton.svelte';
 	import EmptyState from '$lib/components/common/empty-state.svelte';
-	import type { PrivateChatListItem, MyGroupItem } from '$lib/types/api';
+	import type { PrivateChatItem, GroupItem } from '$lib/types/api';
 	import MessageCircle from 'lucide-svelte/icons/message-circle';
 	import Users from 'lucide-svelte/icons/users';
 
 	let currentTab = $state<'private' | 'group'>('private');
-	let privateChats = $state<PrivateChatListItem[]>([]);
-	let groupChats = $state<MyGroupItem[]>([]);
+	let privateChats = $state.raw<PrivateChatItem[]>([]);
+	let groupChats = $state.raw<GroupItem[]>([]);
 	let isLoadingPrivate = $state(true);
 	let isLoadingGroup = $state(false);
 	let groupsLoaded = $state(false);
 
 	async function loadPrivateChats() {
 		try {
-			const response = await privateChatsService.getChats({ limit: 50 });
+			const response = await privateChatsService.getChats({ pagination: { limit: 50 } });
 			if (isSuccess(response) && response.data) {
 				privateChats = response.data.items;
 			}
@@ -40,7 +40,7 @@
 		
 		isLoadingGroup = true;
 		try {
-			const response = await groupsService.getMyGroups({ limit: 50 });
+			const response = await groupsService.getMyGroups({ pagination: { limit: 50 } });
 			if (isSuccess(response) && response.data) {
 				groupChats = response.data.items;
 				groupsLoaded = true;
@@ -96,7 +96,7 @@
 			{:else}
 				<div class="space-y-6">
 					{#each privateChats as chat (chat.other_user.user_id)}
-						{@const isOnline = presenceStore.isOnline(chat.other_user.user_id) || chat.is_online}
+						{@const isOnline = presenceStore.isOnline(chat.other_user.user_id) || chat.presence_status === 'online'}
 						<a href="/chat/users/{chat.other_user.user_id}">
 							<Card variant="default" glow="soft" interactive class="cursor-pointer">
 								<CardContent class="flex items-center gap-4 p-5">
@@ -153,12 +153,12 @@
 				/>
 			{:else}
 				<div class="space-y-6">
-					{#each groupChats as group (group.group_id)}
-						<a href="/chat/groups/{group.group_id}">
+					{#each groupChats as group (group.group.group_id)}
+						<a href="/chat/groups/{group.group.group_id}">
 							<Card variant="default" glow="soft" interactive class="cursor-pointer">
 								<CardContent class="flex items-center gap-4 p-5">
 									<Avatar class="h-14 w-14" glow>
-										<AvatarImage src={group.avatar_url} alt={group.name} />
+										<AvatarImage src={group.group.avatar_url} alt={group.group.name} />
 										<AvatarFallback class="bg-linear-to-br from-primary/20 to-secondary/20 text-primary">
 											<Users class="h-7 w-7" />
 										</AvatarFallback>
@@ -166,7 +166,7 @@
 									<div class="min-w-0 flex-1">
 										<div class="flex items-center justify-between mb-1.5">
 											<div class="flex items-center gap-2 min-w-0 flex-1">
-											<p class="font-semibold text-base truncate">{group.name}</p>
+											<p class="font-semibold text-base truncate">{group.group.name}</p>
 											{#if group.my_state?.role === 'owner'}
 												<Badge variant="default" class="text-xs shrink-0">群主</Badge>
 											{:else if group.my_state?.role === 'admin'}
@@ -174,12 +174,12 @@
 											{/if}
 										</div>
 											<span class="text-xs text-muted-foreground shrink-0 ml-2">
-												{group.members_count} 人
+												{group.group.members_count} 人
 											</span>
 										</div>
 										<div class="flex items-center justify-between gap-2">
 											<p class="text-sm text-muted-foreground leading-relaxed">
-												{formatRelativeTime(group.my_state?.joined_at ?? group.created_at ?? '')}
+												{formatRelativeTime(group.my_state?.joined_at ?? '')}
 											</p>
 											{#if (group.my_state?.unread_count ?? 0) > 0}
 												<Badge variant="destructive" class="ml-2 shrink-0">

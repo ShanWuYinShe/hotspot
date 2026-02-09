@@ -24,11 +24,6 @@ alwaysApply: true
 | `POST /api/v1/auth/guest` | 创建访客用户 | 可选 | MUST |
 | `POST /api/v1/auth/refresh_token` | 刷新 Token | 可选 | 无 |
 | `POST /api/v1/auth/check_status` | 检查认证状态 | 可选 | 无 |
-| `POST /api/v1/auth/captcha/request` | 请求人机验证挑战 | 可选 | 无 |
-| `POST /api/v1/auth/captcha/verify` | 验证人机挑战答案 | 可选 | 无 |
-| `POST /api/v1/auth/send_verification_code` | 发送验证码 | 可选 | 无 |
-| `POST /api/v1/auth/verify_code` | 校验验证码 | 可选 | 无 |
-| `POST /api/v1/auth/reset_password` | 重置密码 | 可选 | MUST |
 | `POST /api/v1/auth/me/change_password` | 修改密码 | 必须 | MUST |
 | `POST /api/v1/auth/me/sessions/list` | 获取会话列表 | 必须 | 无 |
 | `POST /api/v1/auth/me/sessions/revoke` | 撤销会话 | 必须 | 无 |
@@ -40,32 +35,6 @@ alwaysApply: true
 - `ClientType`
 
 ```typescript
-// CAPTCHA 人机验证
-type CaptchaScene = 'register' | 'login' | 'reset_password';
-
-interface CaptchaRequest {
-  scene: CaptchaScene;
-}
-
-interface CaptchaChallenge {
-  captcha_id: string;
-  image_url: string;          // 验证码图片 URL
-  expires_at: string;         // 有效期（建议 2 分钟）
-}
-
-interface VerifyCaptchaRequest {
-  captcha_id: string;
-  answer: string;
-}
-
-interface CaptchaVerified {
-  captcha_token: string;      // 短期有效凭证（建议 5 分钟），一次性
-  expires_at: string;
-}
-
-// 验证码类型
-type VerificationCodeType = 'register' | 'reset_password' | 'login';
-
 // 认证响应负载：按 client_type 拆分
 // Web：仅通过 HttpOnly Cookie 传递 token，响应体不包含任何 token 字段
 // App：access_token/refresh_token 出现在 body，客户端负责安全存储
@@ -108,16 +77,13 @@ interface RegisterRequest {
   nickname: string;
   password: string;
   client_type: ClientType;
-  verify_token?: string;
 }
 
 interface LoginRequest {
   login_id: string;            // 手机号/邮箱/用户名
-  password?: string;           // 密码登录时必填
-  verify_token?: string;       // 验证码登录时必填（来自 verify_code 接口，type='login'）
+  password: string;            // 密码
   client_type: ClientType;
 }
-// password 和 verify_token 二选一，不可同时为空
 
 interface GuestRequest {
   nickname: string;
@@ -127,35 +93,6 @@ interface GuestRequest {
 interface RefreshTokenRequest {
   client_type: ClientType;
   refresh_token?: string;  // App 端必填，Web 端留空（使用 Cookie）
-}
-
-interface SendVerificationCodeRequest {
-  phone: string;
-  type: VerificationCodeType;
-  captcha_token: string;      // 必填（来自 captcha/verify）
-}
-
-interface VerificationCodeSent {
-  code_id: string;
-  expires_at: string;
-  retry_after?: number;
-}
-
-interface VerifyCodeRequest {
-  code_id: string;
-  code: string;
-}
-
-interface VerificationResult {
-  verified: boolean;
-  verify_token: string;
-  expires_at: string;
-}
-
-interface ResetPasswordRequest {
-  login_id: string;       // 手机号或邮箱（用于验证 verify_token 的绑定）
-  verify_token: string;   // 来自 verify_code 接口，短期有效
-  new_password: string;   // 新密码
 }
 
 interface ChangePasswordRequest {
@@ -178,52 +115,34 @@ interface RevokeAllResult {
 
 ### 客户端类型与 Token 投递策略
 
+> Cookie 名称与属性的完整定义见 `api_spec_base.mdc` 的 "Web 端 Cookie 契约" 章节。
+
 #### Web 端（`client_type='web'`）
 
-**Token 投递方式**：通过 `Set-Cookie` Header
-
-**Web 端禁止使用 `Authorization` Header**。
+Token 通过服务端 `Set-Cookie` 响应头投递，**禁止**使用 `Authorization` Header。
 
 ```http
-Set-Cookie: access_token=<token>; HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=<access_token_ttl>
-Set-Cookie: refresh_token=<token>; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth/refresh_token; Max-Age=<refresh_token_ttl>
+Set-Cookie: access_token=<token>; HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=<ttl>
+Set-Cookie: refresh_token=<token>; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth/refresh_token; Max-Age=<ttl>
 ```
 
-**关键配置**：
-- `access_token` Cookie:
-  - `Path=/api` - 所有 API 请求都自动携带
-  - `HttpOnly` - 防止 JavaScript 访问
-  - `Secure` - 仅 HTTPS 传输
-- `SameSite=Strict` - 提供更强的 CSRF 防护
-  
-- `refresh_token` Cookie:
-  - `Path=/api/v1/auth/refresh_token` - **仅**在调用 refresh_token API 时自动携带
-  - `HttpOnly` - 防止 JavaScript 访问
-  - `Secure` - 仅 HTTPS 传输
-- `SameSite=Strict` - 防止 CSRF 攻击
-
-**响应体契约**：
-- 返回 `ApiResponse<AuthTokenPairWeb>`
-- 响应体中不包含任何 token 值，`data` 为空对象
+**响应体**：返回 `ApiResponse<AuthTokenPairWeb>`，`data` 为空对象（Token 仅在 Cookie 中传递，响应体不包含任何 token 值）。
 
 #### App 端（`client_type='app'`）
 
-**Token 投递方式**：通过响应体
+Token 通过响应体投递：
+- 返回 `ApiResponse<AuthTokenPairApp>`，响应体中包含 `access_token`、`refresh_token` 及各自过期时间
+- 客户端负责安全存储（Keychain / Keystore）
 
-**响应体契约**：
-- 返回 `ApiResponse<AuthTokenPairApp>`
-- 响应体中必须出现 `access_token` 和 `refresh_token`
-- 客户端负责安全存储（Keychain/Keystore）
+#### Cookie 生命周期（Web 端）
 
-#### Token 自动携带规则（Web 端）
-
-| 场景 | access_token Cookie | refresh_token Cookie |
-|------|---------------------|----------------------|
-| 登录/注册/访客 | ✅ 设置 | ✅ 设置 |
-| 刷新 Token | ✅ 更新 | ✅ 更新 |
-| 登出 | ✅ 清除（Max-Age=0） | ✅ 清除（Max-Age=0） |
-| 普通 API 请求 | ✅ 自动携带 | ❌ 不携带（Path 限制） |
-| 调用 refresh_token API | ✅ 自动携带 | ✅ 自动携带（Path 匹配） |
+| 场景 | `access_token` Cookie | `refresh_token` Cookie |
+|---|---|---|
+| 登录 / 注册 / 访客 | `Set-Cookie` 设置 | `Set-Cookie` 设置 |
+| 刷新 Token | `Set-Cookie` 更新 | `Set-Cookie` 更新 |
+| 登出 | `Max-Age=0` 清除 | `Max-Age=0` 清除 |
+| 普通 API 请求 | 自动携带（`Path=/api`） | **不**携带（`Path` 不匹配） |
+| 调用 refresh_token API | 自动携带 | 自动携带（`Path` 匹配） |
 
 ## 端点详情
 
@@ -238,24 +157,14 @@ Set-Cookie: refresh_token=<token>; HttpOnly; Secure; SameSite=Strict; Path=/api/
 
 **Response**: `ApiResponse<AuthTokenPairWeb | AuthTokenPairApp>`
 
-**验证要求**：
-- 当 `ClientConfig.features.require_phone_verification` 为 true 时，`verify_token` 为必填
-- 当为 false 时（早期开发阶段），`verify_token` 可选
-- 同理，`send_verification_code` 中的 `captcha_token` 受 `require_captcha` 开关控制
-
 **错误码**: `10000` `10100` `10400` `22000` `22002`
 
 ### POST /api/v1/auth/login
 
-用户登录。支持密码登录和手机验证码登录两种方式。
+用户登录（密码方式）。
 
 - **认证**: 可选
 - **幂等**: 无
-
-**验证码登录流程**：
-1. 调用 `send_verification_code`（`type: 'login'`）获取验证码
-2. 调用 `verify_code` 验证成功后获得 `verify_token`
-3. 调用 `login`（`verify_token`）完成登录
 
 **Request**: `LoginRequest`
 
@@ -357,99 +266,6 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 **Response**: `ApiResponse<AuthStatus>`
 
 **错误码**: `10000`
-
----
-
-### POST /api/v1/auth/captcha/request
-
-请求人机验证挑战。
-
-- **认证**: 可选
-- **幂等**: 无
-
-**Request**: `CaptchaRequest`
-
-**Response**: `ApiResponse<CaptchaChallenge>`
-
-**错误码**: `10000`
-
----
-
-### POST /api/v1/auth/captcha/verify
-
-验证人机挑战答案。
-
-- **认证**: 可选
-- **幂等**: 无
-
-**Request**: `VerifyCaptchaRequest`
-
-**Response**: `ApiResponse<CaptchaVerified>`
-
-**说明**：
-- `captcha_token` 为一次性凭证，使用后立即失效
-- `captcha_token` 有效期建议 5 分钟
-- 受 `ClientConfig.features.require_captcha` 开关控制：关闭时服务端跳过验证（但端点仍可调用）
-
-**错误码**: `10000` `10100`
-
----
-
-### POST /api/v1/auth/send_verification_code
-
-发送验证码。
-
-- **认证**: 可选
-- **幂等**: 无
-
-**Request**: `SendVerificationCodeRequest`
-
-**说明**：
-- `captcha_token` 受 `ClientConfig.features.require_captcha` 开关控制
-- `type` 对应的手机验证受 `ClientConfig.features.require_phone_verification` 开关控制
-
-**Response**: `ApiResponse<VerificationCodeSent>`
-
-**错误码**: `10000`
-
----
-
-### POST /api/v1/auth/verify_code
-
-验证验证码。
-
-- **认证**: 可选
-- **幂等**: 无
-
-**Request**: `VerifyCodeRequest`
-
-**Response**: `ApiResponse<VerificationResult>`
-
-**错误码**: `10000` `10300` `10400`
-
----
-
-### POST /api/v1/auth/reset_password
-
-重置密码（忘记密码场景）。
-
-- **认证**: 可选
-- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
-
-**流程说明**：
-1. 用户输入手机号/邮箱，调用 `send_verification_code` 获取验证码
-2. 用户输入验证码，调用 `verify_code` 验证成功后获得 `verify_token`（短期有效，建议 5 分钟）
-3. 用户输入新密码，调用 `reset_password` 完成重置
-
-**Request**: `ResetPasswordRequest`
-
-**Response**: `ApiResponse`
-
-**安全说明**：
-- verify_token 使用后立即失效，不可重复使用
-- verify_token 与 login_id 绑定，防止跨账户攻击
-
-**错误码**: `10000` `10100` `10300` `22000` `22002`
 
 ---
 

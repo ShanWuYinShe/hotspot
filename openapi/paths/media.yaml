@@ -1,0 +1,91 @@
+# HotSpot API - 媒体模块端点
+# 对应原 api_spec_media.mdc
+
+presign_upload:
+  post:
+    summary: 申请上传预签名
+    operationId: mediaPresignUpload
+    tags: [media]
+    x-idempotency: none
+    x-error-codes:
+      10000: 参数错误
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/media.yaml#/PresignUploadRequest'
+    responses:
+      '200':
+        description: 上传预签名
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas/common.yaml#/ApiResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '../components/schemas/media.yaml#/PresignedUpload'
+
+batch_presign_upload:
+  post:
+    summary: 批量申请上传预签名
+    operationId: mediaBatchPresignUpload
+    tags: [media]
+    x-idempotency: none
+    x-error-codes:
+      10000: 参数错误
+    description: |
+      批量预签名是原子操作：任一文件校验失败则整批失败。
+      每个文件独立获得 upload_url，客户端可并发上传。
+      上传完成后逐个调用 complete_upload 确认。
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/media.yaml#/BatchPresignUploadRequest'
+    responses:
+      '200':
+        description: 批量上传预签名
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas/common.yaml#/ApiResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '../components/schemas/media.yaml#/BatchPresignedUpload'
+
+complete_upload:
+  post:
+    summary: 完成上传
+    operationId: mediaCompleteUpload
+    tags: [media]
+    x-idempotency: required
+    x-error-codes:
+      10000: 参数错误
+      10300: 资源不存在
+      10400: 业务冲突
+    description: |
+      同一 upload_id 的重复提交必须返回相同的 UploadedMedia。
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/media.yaml#/CompleteUploadRequest'
+    responses:
+      '200':
+        description: 上传完成
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas/common.yaml#/ApiResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '../components/schemas/media.yaml#/UploadedMedia'

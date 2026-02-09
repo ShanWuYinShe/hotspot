@@ -5,10 +5,16 @@
  * 通过 WebSocket 事件实时更新
  */
 
-import type { UserPresenceStatus } from '$lib/websocket/types';
+// 用户在线状态类型（前端抽象，WebSocket 事件仅推送 online/offline）
+export type UserPresenceStatus =
+	| 'online' // 正在活跃
+	| 'idle' // 空闲/离开
+	| 'dnd' // 请勿打扰
+	| 'invisible' // 隐身
+	| 'offline'; // 离线
 
 interface UserPresence {
-	user_id: number;
+	user_id: string;
 	status: UserPresenceStatus;
 	status_text?: string;
 	updated_at: string;
@@ -17,7 +23,7 @@ interface UserPresence {
 
 class PresenceStore {
 	// 用户状态映射：user_id -> UserPresence
-	#presences = $state<Map<number, UserPresence>>(new Map());
+	#presences = $state.raw<Map<string, UserPresence>>(new Map());
 
 	// ==================== Getters ====================
 
@@ -26,7 +32,7 @@ class PresenceStore {
 	 * @param user_id 用户ID
 	 * @returns 用户状态，如果不存在则返回 null
 	 */
-	getPresence(user_id: number): UserPresence | null {
+	getPresence(user_id: string): UserPresence | null {
 		return this.#presences.get(user_id) ?? null;
 	}
 
@@ -35,7 +41,7 @@ class PresenceStore {
 	 * @param user_id 用户ID
 	 * @returns 状态类型，如果不存在则返回 'offline'
 	 */
-	getStatus(user_id: number): UserPresenceStatus {
+	getStatus(user_id: string): UserPresenceStatus {
 		return this.#presences.get(user_id)?.status ?? 'offline';
 	}
 
@@ -44,7 +50,7 @@ class PresenceStore {
 	 * @param user_id 用户ID
 	 * @returns 状态文本，如果不存在则返回 undefined
 	 */
-	getStatusText(user_id: number): string | undefined {
+	getStatusText(user_id: string): string | undefined {
 		return this.#presences.get(user_id)?.status_text;
 	}
 
@@ -53,7 +59,7 @@ class PresenceStore {
 	 * @param user_id 用户ID
 	 * @returns 是否在线
 	 */
-	isOnline(user_id: number): boolean {
+	isOnline(user_id: string): boolean {
 		const status = this.getStatus(user_id);
 		return status === 'online' || status === 'idle';
 	}
@@ -63,7 +69,7 @@ class PresenceStore {
 	 * @param user_id 用户ID
 	 * @returns 是否离线
 	 */
-	isOffline(user_id: number): boolean {
+	isOffline(user_id: string): boolean {
 		const status = this.getStatus(user_id);
 		return status === 'offline';
 	}
@@ -73,7 +79,7 @@ class PresenceStore {
 	 * @param user_id 用户ID
 	 * @returns 最后在线时间字符串，如果不存在则返回 undefined
 	 */
-	getLastSeen(user_id: number): string | undefined {
+	getLastSeen(user_id: string): string | undefined {
 		return this.#presences.get(user_id)?.last_seen;
 	}
 
@@ -82,8 +88,8 @@ class PresenceStore {
 	 * @param user_ids 用户ID数组
 	 * @returns 用户ID到状态的映射
 	 */
-	getBatchStatuses(user_ids: number[]): Map<number, UserPresenceStatus> {
-		const result = new Map<number, UserPresenceStatus>();
+	getBatchStatuses(user_ids: string[]): Map<string, UserPresenceStatus> {
+		const result = new Map<string, UserPresenceStatus>();
 		for (const user_id of user_ids) {
 			result.set(user_id, this.getStatus(user_id));
 		}
@@ -94,35 +100,35 @@ class PresenceStore {
 	 * 获取所有已知状态的用户ID
 	 * @returns 用户ID数组
 	 */
-	getAllUserIds(): number[] {
+	getAllUserIds(): string[] {
 		return Array.from(this.#presences.keys());
 	}
 
 	// ==================== Actions ====================
 
 	/**
-	 * 更新用户状态（用于 UserPresenceUpdate 事件）
+	 * 更新用户状态
 	 * @param user_id 用户ID
 	 * @param status 新状态
 	 * @param status_text 自定义状态文本（可选）
 	 * @param updated_at 更新时间
 	 */
 	updatePresence(
-		user_id: number,
+		user_id: string,
 		status: UserPresenceStatus,
 		status_text: string | undefined,
 		updated_at: string
 	) {
 		const existing = this.#presences.get(user_id);
-		this.#presences.set(user_id, {
+		const newMap = new Map(this.#presences);
+		newMap.set(user_id, {
 			user_id,
 			status,
 			status_text,
 			updated_at,
 			last_seen: existing?.last_seen
 		});
-		// 触发响应式更新
-		this.#presences = this.#presences;
+		this.#presences = newMap;
 	}
 
 	/**
@@ -133,21 +139,21 @@ class PresenceStore {
 	 * @param online_at 上线时间
 	 */
 	setOnline(
-		user_id: number,
+		user_id: string,
 		status: UserPresenceStatus,
 		status_text: string | undefined,
 		online_at: string
 	) {
 		const existing = this.#presences.get(user_id);
-		this.#presences.set(user_id, {
+		const newMap = new Map(this.#presences);
+		newMap.set(user_id, {
 			user_id,
 			status,
 			status_text,
 			updated_at: online_at,
 			last_seen: existing?.last_seen
 		});
-		// 触发响应式更新
-		this.#presences = this.#presences;
+		this.#presences = newMap;
 	}
 
 	/**
@@ -156,47 +162,45 @@ class PresenceStore {
 	 * @param offline_at 离线时间
 	 * @param last_seen 最后在线时间（可选）
 	 */
-	setOffline(user_id: number, offline_at: string, last_seen?: string) {
+	setOffline(user_id: string, offline_at: string, last_seen?: string) {
 		const existing = this.#presences.get(user_id);
-		this.#presences.set(user_id, {
+		const newMap = new Map(this.#presences);
+		newMap.set(user_id, {
 			user_id,
 			status: 'offline',
 			updated_at: offline_at,
 			last_seen: last_seen ?? existing?.last_seen ?? offline_at
 		});
-		// 触发响应式更新
-		this.#presences = this.#presences;
+		this.#presences = newMap;
 	}
 
 	/**
 	 * 清除用户状态（用户登出或不再需要跟踪时）
 	 * @param user_id 用户ID
 	 */
-	clearPresence(user_id: number) {
-		this.#presences.delete(user_id);
-		// 触发响应式更新
-		this.#presences = this.#presences;
+	clearPresence(user_id: string) {
+		const newMap = new Map(this.#presences);
+		newMap.delete(user_id);
+		this.#presences = newMap;
 	}
 
 	/**
 	 * 批量清除用户状态
 	 * @param user_ids 用户ID数组
 	 */
-	clearBatchPresences(user_ids: number[]) {
+	clearBatchPresences(user_ids: string[]) {
+		const newMap = new Map(this.#presences);
 		for (const user_id of user_ids) {
-			this.#presences.delete(user_id);
+			newMap.delete(user_id);
 		}
-		// 触发响应式更新
-		this.#presences = this.#presences;
+		this.#presences = newMap;
 	}
 
 	/**
 	 * 清除所有状态
 	 */
 	clearAll() {
-		this.#presences.clear();
-		// 触发响应式更新
-		this.#presences = this.#presences;
+		this.#presences = new Map();
 	}
 }
 

@@ -53,7 +53,7 @@
 		size === 'icon' && 'h-11 w-11 min-h-[44px] min-w-[44px]',
 		className
 	)}
-	use:feedbackAction
+	{@attach feedbackAction}
 	{...restProps}
 >
 	{#if children}

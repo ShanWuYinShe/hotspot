@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { cn } from '$lib/utils';
@@ -35,7 +35,7 @@
 	];
 
 	function isActive(href: string): boolean {
-		const pathname = $page.url.pathname;
+		const pathname = page.url.pathname;
 		if (href === '/admin') {
 			return pathname === '/admin';
 		}
@@ -45,12 +45,12 @@
 	// 认证检查
 	$effect(() => {
 		if (browser && authStore.initialized && !authStore.isAuthenticated) {
-			uiStore.saveRedirectUrl(`${$page.url.pathname}${$page.url.search}`);
+			uiStore.saveRedirectUrl(`${page.url.pathname}${page.url.search}`);
 		}
 	});
 
 	function handleLoginClick() {
-		uiStore.saveRedirectUrl(`${$page.url.pathname}${$page.url.search}`);
+		uiStore.saveRedirectUrl(`${page.url.pathname}${page.url.search}`);
 		uiStore.openLoginModal();
 	}
 </script>
@@ -64,7 +64,7 @@
 			<aside class="hidden w-64 shrink-0 bg-sidebar text-sidebar-foreground md:block">
 				<nav class="space-y-1 p-4">
 					<h2 class="mb-4 px-3 text-lg font-semibold">管理后台</h2>
-					{#each adminNavItems as item}
+					{#each adminNavItems as item (item.href)}
 						<a
 							href={item.href}
 							class={cn(
@@ -96,7 +96,7 @@
 				>
 					<nav class="space-y-1 p-4" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
 						<h2 class="mb-4 px-3 text-lg font-semibold">管理后台</h2>
-						{#each adminNavItems as item}
+						{#each adminNavItems as item (item.href)}
 							<a
 								href={item.href}
 								class={cn(

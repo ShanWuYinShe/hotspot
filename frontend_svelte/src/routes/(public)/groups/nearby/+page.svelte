@@ -8,13 +8,14 @@
 	import MasonryLayoutItem from '$lib/components/common/masonry-layout-item.svelte';
 	import EmptyState from '$lib/components/common/empty-state.svelte';
 	import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
-	import type { GroupSearchItem } from '$lib/types/api';
+	import type { GroupItem } from '$lib/types/api';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import UsersRound from 'lucide-svelte/icons/users-round';
+	import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
 
 	// ✨ 使用新的 usePagination Hook
-	const pagination = usePagination<GroupSearchItem>({
-		uniqueKey: 'group_id'
+	const pagination = usePagination<GroupItem>({
+		uniqueKey: (item) => item.group.group_id
 	});
 
 	function getAnchor() {
@@ -26,11 +27,12 @@
 
 	async function loadGroups(refresh = false) {
 		await pagination.load(
-			(cursor) => groupsService.searchByLocation({
-				reference_point: getAnchor(),
-				radius: mapAnchorStore.radius * 1000,
-				limit: 20,
-				cursor
+			(cursor) => groupsService.search({
+				search: {
+					reference_point: getAnchor(),
+					pagination: { limit: 20, cursor }
+				},
+				radius: mapAnchorStore.radius * 1000
 			}),
 			refresh
 		);
@@ -67,7 +69,7 @@
 
 <div class="container mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
 	<div class="flex items-center gap-4">
-		<Button variant="ghost" size="icon" onclick={() => history.back()}>
+		<Button variant="ghost" size="icon" onclick={() => history.back()} aria-label="返回">
 			<ArrowLeft class="h-5 w-5" />
 		</Button>
 		<h1 class="text-2xl font-bold">附近群组</h1>
@@ -81,6 +83,14 @@
 				</MasonryLayoutItem>
 			{/each}
 		</MasonryLayout>
+	{:else if pagination.error}
+		<EmptyState 
+			icon={AlertTriangle} 
+			title="加载失败" 
+			description={pagination.error} 
+			actionText="重试"
+			onAction={() => loadGroups(true)}
+		/>
 	{:else if pagination.items.length === 0}
 		<EmptyState icon={UsersRound} title="附近暂无群组" description="等待附近建立新群组" />
 	{:else}
@@ -90,7 +100,7 @@
 			animated={true}
 			animationDelay={50}
 		>
-			{#each pagination.items as group (group.group_id)}
+			{#each pagination.items as group (group.group.group_id)}
 				<MasonryLayoutItem>
 					<GroupCard
 						{group}

@@ -1,0 +1,132 @@
+# HotSpot API - 系统模块类型定义
+# 对应原 api_spec_system.mdc 中的类型定义
+
+# ============================================================
+# 枚举
+# ============================================================
+
+ApiVersionStatus:
+  type: string
+  enum: [active, deprecated, sunset]
+  description: API 版本状态
+
+SystemHealthStatus:
+  type: string
+  enum: [healthy, degraded, unhealthy]
+  description: 系统健康状态
+
+# ============================================================
+# 响应类型
+# ============================================================
+
+ApiVersionMeta:
+  type: object
+  required: [version, status]
+  properties:
+    version:
+      type: string
+      description: 当前 API 版本号，如 "v1"
+    status:
+      $ref: '#/ApiVersionStatus'
+    deprecated_at:
+      type: string
+      format: date-time
+      description: 进入废弃状态时间（UTC ISO 8601）
+    sunset_at:
+      type: string
+      format: date-time
+      description: 计划下线时间（UTC ISO 8601）
+    message:
+      type: string
+      description: 面向客户端的提示信息
+    recommended_version:
+      type: string
+      description: 推荐升级的版本号（如 "v2"）
+
+HealthStatus:
+  type: object
+  required: [status, timestamp]
+  properties:
+    status:
+      $ref: '#/SystemHealthStatus'
+    timestamp:
+      type: string
+      format: date-time
+
+FeatureSwitches:
+  type: object
+  required: [enable_public_registration, enable_guest_login, enable_moments, enable_nearby_people, require_phone_verification, require_captcha]
+  properties:
+    enable_public_registration:
+      type: boolean
+    enable_guest_login:
+      type: boolean
+    enable_moments:
+      type: boolean
+    enable_nearby_people:
+      type: boolean
+    require_phone_verification:
+      type: boolean
+      description: 是否要求手机验证（早期开发可关闭）
+    require_captcha:
+      type: boolean
+      description: 是否要求人机验证（早期开发可关闭）
+
+AppLimits:
+  type: object
+  required: [max_group_members, max_moment_tags, max_moment_images, moment_description_max_length, comment_max_length, search_radius_max]
+  properties:
+    max_group_members:
+      type: integer
+    max_moment_tags:
+      type: integer
+    max_moment_images:
+      type: integer
+    moment_description_max_length:
+      type: integer
+    comment_max_length:
+      type: integer
+    search_radius_max:
+      type: integer
+
+ContactInfo:
+  type: object
+  required: [support_email, privacy_policy_url, terms_of_service_url, official_website]
+  properties:
+    support_email:
+      type: string
+      format: email
+    privacy_policy_url:
+      type: string
+      format: uri
+    terms_of_service_url:
+      type: string
+      format: uri
+    official_website:
+      type: string
+      format: uri
+
+ClientConfig:
+  type: object
+  required: [features, limits, contact]
+  properties:
+    features:
+      $ref: '#/FeatureSwitches'
+    limits:
+      $ref: '#/AppLimits'
+    contact:
+      $ref: '#/ContactInfo'
+
+# ============================================================
+# 请求类型
+# ============================================================
+
+AnnouncementListRequest:
+  type: object
+  properties:
+    limit:
+      type: integer
+      default: 10
+      minimum: 1
+      maximum: 50
+      description: 每页数量

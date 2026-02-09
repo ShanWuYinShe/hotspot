@@ -1,0 +1,63 @@
+# HotSpot API - 举报模块端点
+# 对应原 api_spec_report.mdc
+
+create:
+  post:
+    summary: 创建举报
+    operationId: reportsCreate
+    tags: [reports]
+    x-idempotency: required
+    x-error-codes:
+      10000: 参数错误
+      10300: 资源不存在
+      22000: 幂等键冲突
+      22002: 幂等操作进行中
+    description: |
+      客户端必须携带 Idempotency-Key。
+      reason：举报原因，1-200 字符。
+      target_id：统一为 string 类型；举报用户时将 user_id 转为字符串格式。
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/report.yaml#/CreateReportRequest'
+    responses:
+      '200':
+        description: 举报创建成功
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas/common.yaml#/ApiResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '../components/schemas/report.yaml#/ReportCreated'
+
+me_list:
+  post:
+    summary: 我的举报记录
+    operationId: reportsMeList
+    tags: [reports]
+    x-idempotency: none
+    x-error-codes:
+      10000: 参数错误
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/report.yaml#/MyReportsRequest'
+    responses:
+      '200':
+        description: 举报记录列表
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas/common.yaml#/ApiResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '../components/schemas/report.yaml#/PaginatedReportItems'

@@ -10,7 +10,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import type { GroupCard } from '$lib/types/api';
+	import type { AdminGroupSearchItem } from '$lib/types/api';
 	import { formatDate } from '$lib/utils/format';
 	import Search from 'lucide-svelte/icons/search';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
@@ -21,7 +21,7 @@
 	import Users from 'lucide-svelte/icons/users';
 	import Lock from 'lucide-svelte/icons/lock';
 
-	let groups = $state<GroupCard[]>([]);
+	let groups = $state.raw<AdminGroupSearchItem[]>([]);
 	let isLoading = $state(true);
 	let cursor = $state<string | undefined>(undefined);
 	let hasMore = $state(false);
@@ -32,8 +32,10 @@
 		try {
 			const response = await adminGroupsService.search({
 				name: name || undefined,
-				limit: 20,
-				cursor: append ? cursor : undefined
+				pagination: {
+					limit: 20,
+					cursor: append ? cursor : undefined
+				}
 			});
 
 			if (isSuccess(response) && response.data) {
@@ -58,7 +60,7 @@
 		try {
 			const response = await adminGroupsService.dismiss({ group_id: groupId, reason: '管理员操作' });
 			if (isSuccess(response)) {
-				groups = groups.filter(g => g.group_id !== groupId);
+				groups = groups.filter(g => g.group.group_id !== groupId);
 				toast.success('已解散群组');
 			} else {
 				toast.error(response.message || '操作失败');
@@ -128,15 +130,15 @@
 				<div class="py-8 text-center text-muted-foreground">暂无群组数据</div>
 			{:else}
 				<div class="divide-y">
-					{#each groups as group (group.group_id)}
+					{#each groups as group (group.group.group_id)}
 						<div class="flex items-center gap-4 py-4">
 							<Avatar class="h-10 w-10">
-								<AvatarImage src={group.avatar_url} alt={group.name} />
-								<AvatarFallback>{group.name.slice(0, 2)}</AvatarFallback>
+								<AvatarImage src={group.group.avatar_url} alt={group.group.name} />
+								<AvatarFallback>{group.group.name.slice(0, 2)}</AvatarFallback>
 							</Avatar>
 							<div class="min-w-0 flex-1">
 								<div class="flex items-center gap-2">
-									<p class="font-medium">{group.name}</p>
+									<p class="font-medium">{group.group.name}</p>
 									{#if group.has_password}
 										<Lock class="h-3 w-3 text-muted-foreground" />
 									{/if}
@@ -144,7 +146,7 @@
 								<div class="flex items-center gap-3 text-xs text-muted-foreground">
 									<span class="flex items-center gap-1">
 										<Users class="h-3 w-3" />
-										{group.members_count}
+										{group.group.members_count}
 									</span>
 									{#if group.created_at}
 										<span>创建: {formatDate(group.created_at)}</span>
@@ -155,7 +157,7 @@
 							<DropdownMenu.Root>
 								<DropdownMenu.Trigger>
 									{#snippet child({ props })}
-										<Button variant="ghost" size="icon" {...props}>
+										<Button variant="ghost" size="icon" aria-label="更多操作" {...props}>
 											<MoreVertical class="h-4 w-4" />
 										</Button>
 									{/snippet}
@@ -163,7 +165,7 @@
 								<DropdownMenu.Content align="end">
 									<DropdownMenu.Item>
 										{#snippet child({ props })}
-											<a href="/groups/{group.group_id}" {...props}>
+											<a href="/groups/{group.group.group_id}" {...props}>
 												<Eye class="mr-2 h-4 w-4" />
 												查看详情
 											</a>
@@ -172,7 +174,7 @@
 									<DropdownMenu.Separator />
 									<DropdownMenu.Item class="text-destructive">
 										{#snippet child({ props })}
-											<button {...props} onclick={() => handleDissolve(group.group_id)}>
+											<button {...props} onclick={() => handleDissolve(group.group.group_id)}>
 												<Trash2 class="mr-2 h-4 w-4" />
 												解散群组
 											</button>

@@ -1,0 +1,506 @@
+openapi: 3.1.0
+
+info:
+  title: HotSpot API
+  version: 1.0.0
+  description: |
+    HotSpot 社交应用 API 规范 —— 跨端契约（Contract）唯一权威来源。
+
+    ## 核心设计原则
+
+    - **全 POST 设计**：所有 HTTP API 仅使用 POST 方法
+    - **统一响应信封**：所有响应使用 `ApiResponse<T>` 包装（code=0 成功，非 0 业务错误）
+    - **HTTP 200 = 到达业务层**：HTTP 非 200 视为请求失败（网络/网关），不解析业务响应
+    - **游标分页**：所有列表接口使用 cursor 分页（cursor 为不透明字符串，客户端只透传）
+    - **ID 字段**：所有 ID 为 `string` 类型（不透明），命名必须使用 `xxx_id`
+    - **URL 字段**：所有 `*_url` 字段为完整绝对 URL
+    - **时间格式**：所有时间字段使用 UTC ISO 8601
+
+    ## 认证机制
+
+    按 `client_type` 区分投递方式：
+
+    **Web 端**（Cookie 认证）：
+    - 使用两个固定名称的 HttpOnly Cookie，**禁止** Authorization Header
+    - `access_token` Cookie（`Path=/api`）：所有 API 请求自动携带
+    - `refresh_token` Cookie（`Path=/api/v1/auth/refresh_token`）：仅刷新端点自动携带
+    - 属性：`HttpOnly; Secure; SameSite=Strict`，`Max-Age` 由服务端动态设置
+    - Cookie 由服务端 `Set-Cookie` 设置和清除，前端不可读取也不应手动操作
+
+    **App 端**（Header 认证）：
+    - `Authorization: Bearer <access_token>`
+    - Token 从响应体 `AuthTokenPairApp` 获取并存储在 Keychain / Keystore
+
+    ## 通用隐含错误码（各端点不再列出）
+
+    - `10100` 认证失败（Token 无效/过期）
+    - `10201` 账号被封禁（强制登出）
+    - `10500` 请求过于频繁（按 Retry-After 退避）
+    - `10600` 服务器内部错误
+
+    ## 通用请求/响应头
+
+    | Header | 方向 | 说明 |
+    |--------|------|------|
+    | `X-Request-Id` | 请求（可选）/ 响应（必须） | 请求链路追踪 ID。客户端可选传入；服务端必须在响应头返回（未携带时由服务端生成）。格式为 UUID v4 |
+    | `Idempotency-Key` | 请求 | 仅用于 `x-idempotency: required` 的端点。格式：`{client_id}-{timestamp_ms}-{random}`，32-64 字符，字符集 `[a-zA-Z0-9-_]`。重试必须复用同一 Key，新请求必须生成新 Key |
+    | `Retry-After` | 响应 | 仅在触发限流（错误码 `10500`）时返回，单位秒。客户端应按此值退避重试 |
+
+    ### 禁止返回的响应头
+
+    服务端禁止返回可能泄露技术栈或部署架构的响应头：`Server`、`X-Powered-By`、`X-AspNet-Version`、`X-Runtime` 等。在反向代理层和应用层均须移除或覆盖。
+
+    安全说明：不暴露 `X-RateLimit-Limit` / `X-RateLimit-Remaining` / `X-RateLimit-Reset` 等精确限流状态，避免攻击者优化请求频率以规避限流。
+
+    ## 分页约定
+
+    - 所有列表接口使用**游标分页**（cursor-based），`cursor` 为不透明字符串，客户端只透传
+    - 全局默认值：`limit` default=20, max=100
+    - 各模块可覆盖 `limit` 的 default/max，会在接口文档中显式标注
+    - 有界数据（搜索建议、热门标签等）由服务端决定返回数量，通过 `ServerConfig.response_defaults` 配置
+
+    ## 自定义扩展
+
+    - `x-idempotency`：`required`（必须 Idempotency-Key）| `semantic`（幂等语义）| `none`
+    - `x-error-codes`：端点特有的业务错误码列表
+    - `x-visibility`：字段可见性标注（`auth-only` | `owner-only` | `group-admin-only` | `member-only` | `participant-only`）
+
+    ## 详细设计文档
+
+    Token 语义、隐私控制、限流策略、WebSocket 事件等详细设计，参见 spec/ 下对应文档。
+
+servers:
+  - url: /api/v1
+    description: API v1
+
+security:
+  - bearerAuth: []
+  - accessTokenCookie: []
+
+tags:
+  - name: auth
+    description: 认证（登录、注册、Token 刷新、密码管理、会话管理）
+  - name: users
+    description: 用户（搜索、资料、关注关系、黑名单、设置）
+  - name: moments
+    description: 生活瞬间
+  - name: comments
+    description: 评论
+  - name: private_chats
+    description: 私聊管理
+  - name: private_messages
+    description: 私聊消息
+  - name: group_messages
+    description: 群聊消息
+  - name: groups
+    description: 群组管理（CRUD、成员、申请/邀请、公告）
+  - name: feed
+    description: 信息流（推荐、热门）
+  - name: search
+    description: 搜索建议
+  - name: tags
+    description: 标签
+  - name: map
+    description: 地图渲染
+  - name: share
+    description: 通用分享系统
+  - name: media
+    description: 文件与媒体上传
+  - name: reports
+    description: 用户举报
+  - name: system
+    description: 系统（健康检查、版本信息、配置、公告）
+  - name: admin-core
+    description: 管理后台核心（RBAC、审计日志、服务端/客户端配置）
+  - name: admin-moderation
+    description: 管理后台审核（用户/群组/举报/标签/公告管理）
+
+paths:
+  # ──── 认证 (15) ────
+  /auth/register:
+    $ref: 'paths/auth.yaml#/register'
+  /auth/login:
+    $ref: 'paths/auth.yaml#/login'
+  /auth/logout:
+    $ref: 'paths/auth.yaml#/logout'
+  /auth/guest:
+    $ref: 'paths/auth.yaml#/guest'
+  /auth/refresh_token:
+    $ref: 'paths/auth.yaml#/refresh_token'
+  /auth/check_status:
+    $ref: 'paths/auth.yaml#/check_status'
+  /auth/captcha/request:
+    $ref: 'paths/auth.yaml#/captcha_request'
+  /auth/captcha/verify:
+    $ref: 'paths/auth.yaml#/captcha_verify'
+  /auth/send_verification_code:
+    $ref: 'paths/auth.yaml#/send_verification_code'
+  /auth/verify_code:
+    $ref: 'paths/auth.yaml#/verify_code'
+  /auth/reset_password:
+    $ref: 'paths/auth.yaml#/reset_password'
+  /auth/me/change_password:
+    $ref: 'paths/auth.yaml#/me_change_password'
+  /auth/me/sessions/list:
+    $ref: 'paths/auth.yaml#/me_sessions_list'
+  /auth/me/sessions/revoke:
+    $ref: 'paths/auth.yaml#/me_sessions_revoke'
+  /auth/me/sessions/revoke_all:
+    $ref: 'paths/auth.yaml#/me_sessions_revoke_all'
+
+  # ──── 用户 (24) ────
+  /users/search:
+    $ref: 'paths/users.yaml#/search'
+  /users/open_the_door:
+    $ref: 'paths/users.yaml#/open_the_door'
+  /users/list_friends:
+    $ref: 'paths/users.yaml#/list_friends'
+  /users/list_following:
+    $ref: 'paths/users.yaml#/list_following'
+  /users/list_followers:
+    $ref: 'paths/users.yaml#/list_followers'
+  /users/list_groups:
+    $ref: 'paths/users.yaml#/list_groups'
+  /users/list_moments:
+    $ref: 'paths/users.yaml#/list_moments'
+  /users/list_liked_moments:
+    $ref: 'paths/users.yaml#/list_liked_moments'
+  /users/me/profile/get:
+    $ref: 'paths/users.yaml#/me_profile_get'
+  /users/me/profile/update:
+    $ref: 'paths/users.yaml#/me_profile_update'
+  /users/me/location/update:
+    $ref: 'paths/users.yaml#/me_location_update'
+  /users/me/upgrade:
+    $ref: 'paths/users.yaml#/me_upgrade'
+  /users/me/settings/get:
+    $ref: 'paths/users.yaml#/me_settings_get'
+  /users/me/settings/update:
+    $ref: 'paths/users.yaml#/me_settings_update'
+  /users/me/delete:
+    $ref: 'paths/users.yaml#/me_delete'
+  /users/me/follow:
+    $ref: 'paths/users.yaml#/me_follow'
+  /users/me/unfollow:
+    $ref: 'paths/users.yaml#/me_unfollow'
+  /users/me/block:
+    $ref: 'paths/users.yaml#/me_block'
+  /users/me/unblock:
+    $ref: 'paths/users.yaml#/me_unblock'
+  /users/me/list_friends:
+    $ref: 'paths/users.yaml#/me_list_friends'
+  /users/me/list_following:
+    $ref: 'paths/users.yaml#/me_list_following'
+  /users/me/list_followers:
+    $ref: 'paths/users.yaml#/me_list_followers'
+  /users/me/list_blocked:
+    $ref: 'paths/users.yaml#/me_list_blocked'
+  /users/me/set_remark:
+    $ref: 'paths/users.yaml#/me_set_remark'
+
+  # ──── 生活瞬间 + 评论 (19) ────
+  /moments/search:
+    $ref: 'paths/moments.yaml#/search'
+  /moments/open_the_door:
+    $ref: 'paths/moments.yaml#/open_the_door'
+  /moments/create:
+    $ref: 'paths/moments.yaml#/create'
+  /moments/update:
+    $ref: 'paths/moments.yaml#/update'
+  /moments/delete:
+    $ref: 'paths/moments.yaml#/delete'
+  /moments/me/list:
+    $ref: 'paths/moments.yaml#/me_list'
+  /moments/me/list_favorites:
+    $ref: 'paths/moments.yaml#/me_list_favorites'
+  /moments/me/like:
+    $ref: 'paths/moments.yaml#/me_like'
+  /moments/me/unlike:
+    $ref: 'paths/moments.yaml#/me_unlike'
+  /moments/me/favorite:
+    $ref: 'paths/moments.yaml#/me_favorite'
+  /moments/me/unfavorite:
+    $ref: 'paths/moments.yaml#/me_unfavorite'
+  /moments/list_likes:
+    $ref: 'paths/moments.yaml#/list_likes'
+  /comments/create:
+    $ref: 'paths/moments.yaml#/comments_create'
+  /comments/delete:
+    $ref: 'paths/moments.yaml#/comments_delete'
+  /comments/list:
+    $ref: 'paths/moments.yaml#/comments_list'
+  /comments/list_replies:
+    $ref: 'paths/moments.yaml#/comments_list_replies'
+  /comments/me/like:
+    $ref: 'paths/moments.yaml#/comments_me_like'
+  /comments/me/unlike:
+    $ref: 'paths/moments.yaml#/comments_me_unlike'
+  /comments/list_likes:
+    $ref: 'paths/moments.yaml#/comments_list_likes'
+
+  # ──── 私聊 + 群聊消息 (14) ────
+  /private_chats/me/list:
+    $ref: 'paths/chat.yaml#/private_chats_me_list'
+  /private_chats/open_the_door:
+    $ref: 'paths/chat.yaml#/private_chats_open_the_door'
+  /private_chats/me/update_settings:
+    $ref: 'paths/chat.yaml#/private_chats_me_update_settings'
+  /private_chats/me/delete:
+    $ref: 'paths/chat.yaml#/private_chats_me_delete'
+  /private_messages/send:
+    $ref: 'paths/chat.yaml#/private_messages_send'
+  /private_messages/get_history:
+    $ref: 'paths/chat.yaml#/private_messages_get_history'
+  /private_messages/update:
+    $ref: 'paths/chat.yaml#/private_messages_update'
+  /private_messages/recall:
+    $ref: 'paths/chat.yaml#/private_messages_recall'
+  /private_messages/me/mark_as_read:
+    $ref: 'paths/chat.yaml#/private_messages_me_mark_as_read'
+  /group_messages/send:
+    $ref: 'paths/chat.yaml#/group_messages_send'
+  /group_messages/get_history:
+    $ref: 'paths/chat.yaml#/group_messages_get_history'
+  /group_messages/update:
+    $ref: 'paths/chat.yaml#/group_messages_update'
+  /group_messages/recall:
+    $ref: 'paths/chat.yaml#/group_messages_recall'
+  /group_messages/me/mark_as_read:
+    $ref: 'paths/chat.yaml#/group_messages_me_mark_as_read'
+
+  # ──── 群组管理 (32) ────
+  /groups/search:
+    $ref: 'paths/groups.yaml#/search'
+  /groups/open_the_door:
+    $ref: 'paths/groups.yaml#/open_the_door'
+  /groups/create:
+    $ref: 'paths/groups.yaml#/create'
+  /groups/update:
+    $ref: 'paths/groups.yaml#/update'
+  /groups/dismiss:
+    $ref: 'paths/groups.yaml#/dismiss'
+  /groups/members/list:
+    $ref: 'paths/groups.yaml#/members_list'
+  /groups/members/search:
+    $ref: 'paths/groups.yaml#/members_search'
+  /groups/members/invite:
+    $ref: 'paths/groups.yaml#/members_invite'
+  /groups/members/set_role:
+    $ref: 'paths/groups.yaml#/members_set_role'
+  /groups/members/mute:
+    $ref: 'paths/groups.yaml#/members_mute'
+  /groups/members/unmute:
+    $ref: 'paths/groups.yaml#/members_unmute'
+  /groups/members/ban:
+    $ref: 'paths/groups.yaml#/members_ban'
+  /groups/members/unban:
+    $ref: 'paths/groups.yaml#/members_unban'
+  /groups/members/list_banned:
+    $ref: 'paths/groups.yaml#/members_list_banned'
+  /groups/members/remove_member:
+    $ref: 'paths/groups.yaml#/members_remove_member'
+  /groups/applications/list:
+    $ref: 'paths/groups.yaml#/applications_list'
+  /groups/applications/approve:
+    $ref: 'paths/groups.yaml#/applications_approve'
+  /groups/applications/reject:
+    $ref: 'paths/groups.yaml#/applications_reject'
+  /groups/announcements/create:
+    $ref: 'paths/groups.yaml#/announcements_create'
+  /groups/announcements/list:
+    $ref: 'paths/groups.yaml#/announcements_list'
+  /groups/announcements/update:
+    $ref: 'paths/groups.yaml#/announcements_update'
+  /groups/announcements/delete:
+    $ref: 'paths/groups.yaml#/announcements_delete'
+  /groups/me/update_settings:
+    $ref: 'paths/groups.yaml#/me_update_settings'
+  /groups/me/join:
+    $ref: 'paths/groups.yaml#/me_join'
+  /groups/me/transfer_ownership:
+    $ref: 'paths/groups.yaml#/me_transfer_ownership'
+  /groups/me/list:
+    $ref: 'paths/groups.yaml#/me_list'
+  /groups/me/applications/list:
+    $ref: 'paths/groups.yaml#/me_applications_list'
+  /groups/me/applications/cancel:
+    $ref: 'paths/groups.yaml#/me_applications_cancel'
+  /groups/me/invites/list:
+    $ref: 'paths/groups.yaml#/me_invites_list'
+  /groups/me/invites/accept:
+    $ref: 'paths/groups.yaml#/me_invites_accept'
+  /groups/me/invites/reject:
+    $ref: 'paths/groups.yaml#/me_invites_reject'
+  /groups/me/leave:
+    $ref: 'paths/groups.yaml#/me_leave'
+
+  # ──── 信息流 (5) ────
+  /feed/list_moments:
+    $ref: 'paths/feed.yaml#/list_moments'
+  /feed/list_groups:
+    $ref: 'paths/feed.yaml#/list_groups'
+  /feed/list_users:
+    $ref: 'paths/feed.yaml#/list_users'
+  /feed/list_trending:
+    $ref: 'paths/feed.yaml#/list_trending'
+  /feed/me/feedback:
+    $ref: 'paths/feed.yaml#/me_feedback'
+
+  # ──── 搜索与标签 (2) ────
+  /search/suggest:
+    $ref: 'paths/search.yaml#/search_suggest'
+  /tags/list_trending:
+    $ref: 'paths/search.yaml#/tags_list_trending'
+
+  # ──── 地图 (1) ────
+  /map/render:
+    $ref: 'paths/map.yaml#/render'
+
+  # ──── 分享 (5) ────
+  /share/create:
+    $ref: 'paths/share.yaml#/create'
+  /share/get:
+    $ref: 'paths/share.yaml#/get'
+  /share/apply:
+    $ref: 'paths/share.yaml#/apply'
+  /share/me/list:
+    $ref: 'paths/share.yaml#/me_list'
+  /share/revoke:
+    $ref: 'paths/share.yaml#/revoke'
+
+  # ──── 媒体上传 (3) ────
+  /media/presign_upload:
+    $ref: 'paths/media.yaml#/presign_upload'
+  /media/batch_presign_upload:
+    $ref: 'paths/media.yaml#/batch_presign_upload'
+  /media/complete_upload:
+    $ref: 'paths/media.yaml#/complete_upload'
+
+  # ──── 举报 (2) ────
+  /reports/create:
+    $ref: 'paths/reports.yaml#/create'
+  /reports/me/list:
+    $ref: 'paths/reports.yaml#/me_list'
+
+  # ──── 系统 (4) ────
+  /system/get_meta:
+    $ref: 'paths/system.yaml#/get_meta'
+  /system/health:
+    $ref: 'paths/system.yaml#/health'
+  /system/list_announcements:
+    $ref: 'paths/system.yaml#/list_announcements'
+  /system/get_client_config:
+    $ref: 'paths/system.yaml#/get_client_config'
+
+  # ──── 管理后台核心 (21) ────
+  /admin/rbac/get_me:
+    $ref: 'paths/admin-core.yaml#/admin_rbac_get_me'
+  /admin/rbac/list_permissions:
+    $ref: 'paths/admin-core.yaml#/admin_rbac_list_permissions'
+  /admin/rbac/roles/list:
+    $ref: 'paths/admin-core.yaml#/admin_rbac_roles_list'
+  /admin/rbac/roles/create:
+    $ref: 'paths/admin-core.yaml#/admin_rbac_roles_create'
+  /admin/rbac/roles/update:
+    $ref: 'paths/admin-core.yaml#/admin_rbac_roles_update'
+  /admin/rbac/roles/delete:
+    $ref: 'paths/admin-core.yaml#/admin_rbac_roles_delete'
+  /admin/rbac/roles/set_permissions:
+    $ref: 'paths/admin-core.yaml#/admin_rbac_roles_set_permissions'
+  /admin/rbac/admins/list:
+    $ref: 'paths/admin-core.yaml#/admin_rbac_admins_list'
+  /admin/rbac/admins/grant:
+    $ref: 'paths/admin-core.yaml#/admin_rbac_admins_grant'
+  /admin/rbac/admins/revoke:
+    $ref: 'paths/admin-core.yaml#/admin_rbac_admins_revoke'
+  /admin/audit/list:
+    $ref: 'paths/admin-core.yaml#/admin_audit_list'
+  /admin/audit/open_the_door:
+    $ref: 'paths/admin-core.yaml#/admin_audit_open_the_door'
+  /admin/server_config/get:
+    $ref: 'paths/admin-core.yaml#/admin_server_config_get'
+  /admin/server_config/update_upload:
+    $ref: 'paths/admin-core.yaml#/admin_server_config_update_upload'
+  /admin/server_config/update_defaults:
+    $ref: 'paths/admin-core.yaml#/admin_server_config_update_defaults'
+  /admin/server_config/update_rate_limits:
+    $ref: 'paths/admin-core.yaml#/admin_server_config_update_rate_limits'
+  /admin/server_config/update_response_defaults:
+    $ref: 'paths/admin-core.yaml#/admin_server_config_update_response_defaults'
+  /admin/client_config/get:
+    $ref: 'paths/admin-core.yaml#/admin_client_config_get'
+  /admin/client_config/update_features:
+    $ref: 'paths/admin-core.yaml#/admin_client_config_update_features'
+  /admin/client_config/update_limits:
+    $ref: 'paths/admin-core.yaml#/admin_client_config_update_limits'
+  /admin/client_config/update_contact:
+    $ref: 'paths/admin-core.yaml#/admin_client_config_update_contact'
+
+  # ──── 管理后台审核 (15) ────
+  /admin/users/search:
+    $ref: 'paths/admin-moderation.yaml#/admin_users_search'
+  /admin/users/open_the_door:
+    $ref: 'paths/admin-moderation.yaml#/admin_users_open_the_door'
+  /admin/users/ban:
+    $ref: 'paths/admin-moderation.yaml#/admin_users_ban'
+  /admin/users/unban:
+    $ref: 'paths/admin-moderation.yaml#/admin_users_unban'
+  /admin/groups/search:
+    $ref: 'paths/admin-moderation.yaml#/admin_groups_search'
+  /admin/groups/open_the_door:
+    $ref: 'paths/admin-moderation.yaml#/admin_groups_open_the_door'
+  /admin/groups/dismiss:
+    $ref: 'paths/admin-moderation.yaml#/admin_groups_dismiss'
+  /admin/reports/search:
+    $ref: 'paths/admin-moderation.yaml#/admin_reports_search'
+  /admin/reports/handle:
+    $ref: 'paths/admin-moderation.yaml#/admin_reports_handle'
+  /admin/tags/search:
+    $ref: 'paths/admin-moderation.yaml#/admin_tags_search'
+  /admin/tags/delete:
+    $ref: 'paths/admin-moderation.yaml#/admin_tags_delete'
+  /admin/announcements/search:
+    $ref: 'paths/admin-moderation.yaml#/admin_announcements_search'
+  /admin/announcements/create:
+    $ref: 'paths/admin-moderation.yaml#/admin_announcements_create'
+  /admin/announcements/update:
+    $ref: 'paths/admin-moderation.yaml#/admin_announcements_update'
+  /admin/announcements/delete:
+    $ref: 'paths/admin-moderation.yaml#/admin_announcements_delete'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        App 端认证。请求头 `Authorization: Bearer <access_token>`。
+        Token 从登录 / 注册 / 刷新接口的响应体 `AuthTokenPairApp` 获取。
+    accessTokenCookie:
+      type: apiKey
+      in: cookie
+      name: access_token
+      description: |
+        Web 端 API 访问令牌（固定 Cookie 名称：`access_token`）。
+        配置：`HttpOnly; Secure; SameSite=Strict; Path=/api`。
+        所有 `/api/*` 请求浏览器自动携带。
+        由服务端 Set-Cookie 设置和清除，前端不可读取。
+    refreshTokenCookie:
+      type: apiKey
+      in: cookie
+      name: refresh_token
+      description: |
+        Web 端 Token 刷新令牌（固定 Cookie 名称：`refresh_token`）。
+        配置：`HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth/refresh_token`。
+        仅在调用 `/api/v1/auth/refresh_token` 端点时浏览器自动携带。
+        由服务端 Set-Cookie 设置和清除，前端不可读取。
+    csrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+      description: |
+        Web 端 CSRF 防护令牌。前端从 Cookie `hs_csrf_token` 读取值，
+        添加到请求头 `X-CSRF-Token` 中。所有 Web 端 POST 请求必须携带。
+        Cookie 由服务端在设置 auth Cookie 时同时设置。
+        配置：`Secure; SameSite=Strict`（非 HttpOnly，前端需读取）。

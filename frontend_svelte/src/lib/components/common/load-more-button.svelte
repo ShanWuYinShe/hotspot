@@ -35,7 +35,7 @@
 
 		const observer = new IntersectionObserver(
 			(entries) => {
-				const isIntersecting = entries[0].isIntersecting;
+				const isIntersecting = entries[0]?.isIntersecting ?? false;
 
 				// 关键逻辑：只有当按钮从"不可见"变为"可见"时才触发加载
 				// 这样可以避免加载完成后如果按钮还在视口中导致的无限循环

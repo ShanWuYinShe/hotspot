@@ -1,0 +1,811 @@
+# HotSpot API - 管理后台核心模块类型定义
+# 对应原 api_spec_admin_core.mdc 中的类型定义
+
+# ============================================================
+# 枚举
+# ============================================================
+
+AuditAction:
+  type: string
+  enum: [user.ban, user.unban, group.dismiss, announcement.create, announcement.delete, role.create, role.update, role.delete, role.set_permissions, admin.grant, admin.revoke, report.handle, 
+      tag.delete, permission.grant, permission.revoke, config.update]
+  description: 审计动作类型
+
+AuditTargetType:
+  type: string
+  enum: [user, group, announcement, role, admin, report, tag, config]
+  description: 审计目标类型
+
+# ============================================================
+# RBAC 类型
+# ============================================================
+
+AdminPermissions:
+  type: object
+  required: [permissions, roles]
+  properties:
+    permissions:
+      type: array
+      items:
+        type: string
+      description: "'*' 表示拥有全部权限"
+    roles:
+      type: array
+      items:
+        $ref: '#/AdminRoleBasic'
+
+AdminRoleBasic:
+  type: object
+  required: [role_id, name]
+  properties:
+    role_id:
+      type: string
+      description: 角色 ID
+    name:
+      type: string
+      description: 角色名称
+AdminPermissionItem:
+  type: object
+  required: [key, description]
+  properties:
+    key:
+      type: string
+      description: 权限标识
+    description:
+      type: string
+      description: 权限描述
+AdminRoleItem:
+  type: object
+  required: [role_id, name, permissions]
+  properties:
+    role_id:
+      type: string
+      description: 角色 ID
+    name:
+      type: string
+      description: 角色名称
+    description:
+      type: string
+      description: 角色描述
+    permissions:
+      type: array
+      items:
+        type: string
+      description: 角色拥有的权限列表
+AdminOperatorItem:
+  type: object
+  required: [user, permissions, roles]
+  properties:
+    user:
+      $ref: './common.yaml#/UserInfo'
+    permissions:
+      type: array
+      items:
+        type: string
+      description: "'*' 表示拥有全部权限"
+    roles:
+      type: array
+      items:
+        $ref: '#/AdminRoleBasic'
+
+# ============================================================
+# 审计详情（区分联合类型，按 type 字段区分）
+# ============================================================
+
+AuditDetails:
+  oneOf:
+  - $ref: '#/AuditDetailsUserBan'
+  - $ref: '#/AuditDetailsUserUnban'
+  - $ref: '#/AuditDetailsGroupDismiss'
+  - $ref: '#/AuditDetailsAnnouncementCreate'
+  - $ref: '#/AuditDetailsAnnouncementDelete'
+  - $ref: '#/AuditDetailsRoleCreate'
+  - $ref: '#/AuditDetailsRoleUpdate'
+  - $ref: '#/AuditDetailsRoleDelete'
+  - $ref: '#/AuditDetailsRoleSetPermissions'
+  - $ref: '#/AuditDetailsAdminGrant'
+  - $ref: '#/AuditDetailsAdminRevoke'
+  - $ref: '#/AuditDetailsReportHandle'
+  - $ref: '#/AuditDetailsTagDelete'
+  - $ref: '#/AuditDetailsPermissionGrant'
+  - $ref: '#/AuditDetailsPermissionRevoke'
+  - $ref: '#/AuditDetailsConfigUpdate'
+  discriminator:
+    propertyName: type
+    mapping:
+      user.ban: '#/AuditDetailsUserBan'
+      user.unban: '#/AuditDetailsUserUnban'
+      group.dismiss: '#/AuditDetailsGroupDismiss'
+      announcement.create: '#/AuditDetailsAnnouncementCreate'
+      announcement.delete: '#/AuditDetailsAnnouncementDelete'
+      role.create: '#/AuditDetailsRoleCreate'
+      role.update: '#/AuditDetailsRoleUpdate'
+      role.delete: '#/AuditDetailsRoleDelete'
+      role.set_permissions: '#/AuditDetailsRoleSetPermissions'
+      admin.grant: '#/AuditDetailsAdminGrant'
+      admin.revoke: '#/AuditDetailsAdminRevoke'
+      report.handle: '#/AuditDetailsReportHandle'
+      tag.delete: '#/AuditDetailsTagDelete'
+      permission.grant: '#/AuditDetailsPermissionGrant'
+      permission.revoke: '#/AuditDetailsPermissionRevoke'
+      config.update: '#/AuditDetailsConfigUpdate'
+
+AuditDetailsUserBan:
+  type: object
+  required: [type]
+  properties:
+    type:
+      type: string
+      enum: [user.ban]
+    reason:
+      type: string
+      description: 操作原因
+    duration_days:
+      type: integer
+      minimum: 0
+      maximum: 3650
+      description: 封禁天数（0 = 永久）
+
+AuditDetailsUserUnban:
+  type: object
+  required: [type]
+  properties:
+    type:
+      type: string
+      enum: [user.unban]
+    reason:
+      type: string
+      description: 操作原因
+AuditDetailsGroupDismiss:
+  type: object
+  required: [type]
+  properties:
+    type:
+      type: string
+      enum: [group.dismiss]
+    reason:
+      type: string
+      description: 操作原因
+AuditDetailsAnnouncementCreate:
+  type: object
+  required: [type, title]
+  properties:
+    type:
+      type: string
+      enum: [announcement.create]
+    title:
+      type: string
+      description: 标题
+AuditDetailsAnnouncementDelete:
+  type: object
+  required: [type, title]
+  properties:
+    type:
+      type: string
+      enum: [announcement.delete]
+    title:
+      type: string
+      description: 标题
+AuditDetailsRoleCreate:
+  type: object
+  required: [type, role_name, permissions]
+  properties:
+    type:
+      type: string
+      enum: [role.create]
+    role_name:
+      type: string
+      description: 角色名称
+    permissions:
+      type: array
+      items:
+        type: string
+
+AuditDetailsRoleUpdate:
+  type: object
+  required: [type, role_name]
+  properties:
+    type:
+      type: string
+      enum: [role.update]
+    role_name:
+      type: string
+      description: 角色名称
+    added_permissions:
+      type: array
+      items:
+        type: string
+    removed_permissions:
+      type: array
+      items:
+        type: string
+
+AuditDetailsRoleDelete:
+  type: object
+  required: [type, role_name]
+  properties:
+    type:
+      type: string
+      enum: [role.delete]
+    role_name:
+      type: string
+      description: 角色名称
+AuditDetailsRoleSetPermissions:
+  type: object
+  required: [type, role_name, permissions]
+  properties:
+    type:
+      type: string
+      enum: [role.set_permissions]
+    role_name:
+      type: string
+      description: 角色名称
+    permissions:
+      type: array
+      items:
+        type: string
+
+AuditDetailsAdminGrant:
+  type: object
+  required: [type, target_user_id, role_ids]
+  properties:
+    type:
+      type: string
+      enum: [admin.grant]
+    target_user_id:
+      type: string
+      description: 目标用户 ID
+    role_ids:
+      type: array
+      items:
+        type: string
+      description: 角色 ID 列表
+    grant_all_permissions:
+      type: boolean
+      description: 是否授予全部权限
+AuditDetailsAdminRevoke:
+  type: object
+  required: [type, target_user_id]
+  properties:
+    type:
+      type: string
+      enum: [admin.revoke]
+    target_user_id:
+      type: string
+      description: 目标用户 ID
+AuditDetailsReportHandle:
+  type: object
+  required: [type, report_id, action]
+  properties:
+    type:
+      type: string
+      enum: [report.handle]
+    report_id:
+      type: string
+      description: 举报记录 ID
+    action:
+      type: string
+      description: 处理动作
+    note:
+      type: string
+      description: 备注说明
+AuditDetailsTagDelete:
+  type: object
+  required: [type, tag_name]
+  properties:
+    type:
+      type: string
+      enum: [tag.delete]
+    tag_name:
+      type: string
+      description: 标签名称
+AuditDetailsPermissionGrant:
+  type: object
+  required: [type, permission]
+  properties:
+    type:
+      type: string
+      enum: [permission.grant]
+    permission:
+      type: string
+
+AuditDetailsPermissionRevoke:
+  type: object
+  required: [type, permission]
+  properties:
+    type:
+      type: string
+      enum: [permission.revoke]
+    permission:
+      type: string
+
+AuditDetailsConfigUpdate:
+  type: object
+  required: [type, config_key]
+  properties:
+    type:
+      type: string
+      enum: [config.update]
+    config_key:
+      type: string
+
+# ============================================================
+# 审计日志类型
+# ============================================================
+
+      description: 配置键名
+AuditLogItem:
+  type: object
+  required: [log_id, action, operator, target_type, target_id, created_at]
+  properties:
+    log_id:
+      type: string
+      description: 审计日志 ID
+    action:
+      $ref: '#/AuditAction'
+      description: 处理动作
+    operator:
+      $ref: './common.yaml#/UserInfo'
+    target_type:
+      $ref: '#/AuditTargetType'
+    target_id:
+      type: string
+      description: 操作目标 ID
+    target_name:
+      type: string
+      description: 操作目标名称（可选，便于展示）
+    details:
+      $ref: '#/AuditDetails'
+    ip_location:
+      type: string
+      description: IP 地理位置，所有管理员可见
+    ip_address:
+      type: string
+      description: 需要 admin.audit.read_ip 权限
+    device_summary:
+      type: string
+      description: 设备摘要（脱敏后的 UA 信息）
+    created_at:
+      type: string
+      format: date-time
+
+# ============================================================
+# 服务端配置类型
+# ============================================================
+
+UploadConfig:
+  type: object
+  required: [image_max_size, video_max_size, audio_max_size, file_max_size, allowed_image_types, allowed_video_types]
+  properties:
+    image_max_size:
+      type: integer
+    video_max_size:
+      type: integer
+    audio_max_size:
+      type: integer
+    file_max_size:
+      type: integer
+    allowed_image_types:
+      type: array
+      items:
+        type: string
+    allowed_video_types:
+      type: array
+      items:
+        type: string
+
+ContentDefaults:
+  type: object
+  required: [default_location_name, default_group_avatar, default_user_avatar, default_group_settings]
+  properties:
+    default_location_name:
+      type: string
+    default_group_avatar:
+      type: string
+      format: uri
+    default_user_avatar:
+      type: string
+      format: uri
+    default_group_settings:
+      $ref: './common.yaml#/GroupSettings'
+
+RateLimitConfig:
+  type: object
+  required: [global_per_hour, user_per_hour, auth_send_code_per_minute, auth_verify_code_per_10minutes, auth_register_per_10minutes, auth_login_per_10minutes, auth_guest_per_10minutes, 
+      auth_refresh_per_10minutes, auth_reset_request_per_minute, auth_reset_verify_per_10minutes, auth_reset_per_10minutes, moments_create_per_minute, comments_create_per_minute, 
+      reports_create_per_hour]
+  properties:
+    global_per_hour:
+      type: integer
+    user_per_hour:
+      type: integer
+    auth_send_code_per_minute:
+      type: integer
+    auth_verify_code_per_10minutes:
+      type: integer
+    auth_register_per_10minutes:
+      type: integer
+    auth_login_per_10minutes:
+      type: integer
+    auth_guest_per_10minutes:
+      type: integer
+    auth_refresh_per_10minutes:
+      type: integer
+    auth_reset_request_per_minute:
+      type: integer
+    auth_reset_verify_per_10minutes:
+      type: integer
+    auth_reset_per_10minutes:
+      type: integer
+    moments_create_per_minute:
+      type: integer
+    comments_create_per_minute:
+      type: integer
+    reports_create_per_hour:
+      type: integer
+
+ResponseDefaults:
+  type: object
+  required: [search_suggest_count, trending_tags_count, hot_moments_count, chat_recent_messages_count, group_announcements_count]
+  properties:
+    search_suggest_count:
+      type: integer
+      description: 搜索建议返回条数，默认 5
+    trending_tags_count:
+      type: integer
+      description: 热门标签返回条数（tags/list_trending 及 feed/list_trending），默认 10
+    hot_moments_count:
+      type: integer
+      description: feed/list_trending 热门瞬间返回条数，默认 20
+    chat_recent_messages_count:
+      type: integer
+      description: open_the_door 返回的最近消息条数，默认 20
+    group_announcements_count:
+      type: integer
+      description: 群公告列表返回条数，默认 10
+
+ServerConfig:
+  type: object
+  required: [upload, defaults, rate_limits, response_defaults]
+  properties:
+    upload:
+      $ref: '#/UploadConfig'
+    defaults:
+      $ref: '#/ContentDefaults'
+    rate_limits:
+      $ref: '#/RateLimitConfig'
+    response_defaults:
+      $ref: '#/ResponseDefaults'
+    updated_at:
+      type: string
+      format: date-time
+    updated_by_user_id:
+      type: string
+
+# ============================================================
+# 客户端配置类型
+# ============================================================
+
+      description: 最后更新者用户 ID
+AdminClientConfig:
+  allOf:
+  - $ref: './system.yaml#/ClientConfig'
+  - type: object
+    required: [updated_at, updated_by_user_id]
+    properties:
+      updated_at:
+        type: string
+        format: date-time
+      updated_by_user_id:
+        type: string
+
+# ============================================================
+# 请求类型
+# ============================================================
+
+AdminRbacRolesListRequest:
+  type: object
+  description: 直接返回全部角色，无需分页
+
+AdminRbacRoleCreateRequest:
+  type: object
+  required: [name]
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 50
+      description: 角色名称
+    description:
+      type: string
+      maxLength: 200
+      description: 角色描述
+AdminRbacRoleUpdateRequest:
+  type: object
+  required: [role_id]
+  properties:
+    role_id:
+      type: string
+      description: 要更新的角色 ID
+    name:
+      type: string
+      minLength: 1
+      maxLength: 50
+      description: 角色名称
+    description:
+      type: string
+      maxLength: 200
+      description: 角色描述
+    clear_description:
+      type: boolean
+      description: 是否清空描述（设为 true 时忽略 description 字段）
+AdminRbacRoleDeleteRequest:
+  type: object
+  required: [role_id]
+  properties:
+    role_id:
+      type: string
+      description: 要删除的角色 ID
+AdminRbacRoleSetPermissionsRequest:
+  type: object
+  required: [role_id, permission_keys]
+  properties:
+    role_id:
+      type: string
+      description: 目标角色 ID
+    permission_keys:
+      type: array
+      items:
+        type: string
+      description: 要设置的权限标识列表（全量替换）
+AdminRbacAdminsListRequest:
+  type: object
+  properties:
+    pagination:
+      $ref: './common.yaml#/PaginationParams'
+
+AdminRbacGrantAdminRequest:
+  type: object
+  required: [user_id, role_ids]
+  properties:
+    user_id:
+      type: string
+      description: 要授权的用户 ID
+    grant_all_permissions:
+      type: boolean
+      description: 是否授予全部权限（超级管理员）
+    role_ids:
+      type: array
+      items:
+        type: string
+      description: 要分配的角色 ID 列表
+AdminRbacRevokeAdminRequest:
+  type: object
+  required: [user_id]
+  properties:
+    user_id:
+      type: string
+      description: 要撤销管理员权限的用户 ID
+AuditLogListRequest:
+  type: object
+  properties:
+    pagination:
+      $ref: './common.yaml#/PaginationParams'
+    action:
+      $ref: '#/AuditAction'
+      description: 处理动作
+    operator_id:
+      type: string
+      description: 按操作人 ID 筛选
+    target_type:
+      $ref: '#/AuditTargetType'
+    target_id:
+      type: string
+      description: 按目标资源 ID 筛选
+    start_time:
+      type: string
+      format: date-time
+      description: UTC ISO 8601
+    end_time:
+      type: string
+      format: date-time
+      description: UTC ISO 8601
+
+AuditLogOpenTheDoorRequest:
+  type: object
+  required: [log_id]
+  properties:
+    log_id:
+      type: string
+      description: 审计日志 ID
+UpdateUploadConfigRequest:
+  type: object
+  properties:
+    upload:
+      type: object
+      properties:
+        image_max_size:
+          type: integer
+        video_max_size:
+          type: integer
+        audio_max_size:
+          type: integer
+        file_max_size:
+          type: integer
+        allowed_image_types:
+          type: array
+          items:
+            type: string
+        allowed_video_types:
+          type: array
+          items:
+            type: string
+
+UpdateDefaultsRequest:
+  type: object
+  properties:
+    default_location_name:
+      type: string
+    default_group_avatar:
+      type: string
+      format: uri
+    default_user_avatar:
+      type: string
+      format: uri
+    default_group_settings:
+      type: object
+      properties:
+        join_method:
+          $ref: './common.yaml#/GroupJoinMethod'
+          description: 加入方式
+        is_searchable:
+          type: boolean
+          description: 是否可被搜索发现
+        max_members:
+          type: integer
+          description: 最大成员数
+        location:
+          $ref: './common.yaml#/Location'
+
+UpdateRateLimitsRequest:
+  type: object
+  properties:
+    rate_limits:
+      type: object
+      properties:
+        global_per_hour:
+          type: integer
+        user_per_hour:
+          type: integer
+        auth_send_code_per_minute:
+          type: integer
+        auth_verify_code_per_10minutes:
+          type: integer
+        auth_register_per_10minutes:
+          type: integer
+        auth_login_per_10minutes:
+          type: integer
+        auth_guest_per_10minutes:
+          type: integer
+        auth_refresh_per_10minutes:
+          type: integer
+        auth_reset_request_per_minute:
+          type: integer
+        auth_reset_verify_per_10minutes:
+          type: integer
+        auth_reset_per_10minutes:
+          type: integer
+        moments_create_per_minute:
+          type: integer
+        comments_create_per_minute:
+          type: integer
+        reports_create_per_hour:
+          type: integer
+
+UpdateResponseDefaultsRequest:
+  type: object
+  properties:
+    response_defaults:
+      type: object
+      properties:
+        search_suggest_count:
+          type: integer
+        trending_tags_count:
+          type: integer
+        hot_moments_count:
+          type: integer
+        chat_recent_messages_count:
+          type: integer
+        group_announcements_count:
+          type: integer
+
+UpdateFeaturesRequest:
+  type: object
+  properties:
+    enable_public_registration:
+      type: boolean
+    enable_guest_login:
+      type: boolean
+    enable_moments:
+      type: boolean
+    enable_nearby_people:
+      type: boolean
+
+UpdateLimitsRequest:
+  type: object
+  properties:
+    limits:
+      type: object
+      properties:
+        max_group_members:
+          type: integer
+        max_moment_tags:
+          type: integer
+        max_moment_images:
+          type: integer
+        moment_description_max_length:
+          type: integer
+        comment_max_length:
+          type: integer
+        search_radius_max:
+          type: integer
+
+UpdateContactRequest:
+  type: object
+  properties:
+    support_email:
+      type: string
+      format: email
+    privacy_policy_url:
+      type: string
+      format: uri
+    terms_of_service_url:
+      type: string
+      format: uri
+    official_website:
+      type: string
+      format: uri
+
+# ============================================================
+# 列表响应类型
+# ============================================================
+
+AdminPermissionItemList:
+  type: object
+  required: [items]
+  properties:
+    items:
+      type: array
+      items:
+        $ref: '#/AdminPermissionItem'
+
+AdminRoleItemList:
+  type: object
+  required: [items]
+  properties:
+    items:
+      type: array
+      items:
+        $ref: '#/AdminRoleItem'
+
+PaginatedAdminOperatorItems:
+  type: object
+  required: [items, pagination]
+  properties:
+    items:
+      type: array
+      items:
+        $ref: '#/AdminOperatorItem'
+    pagination:
+      $ref: './common.yaml#/Pagination'
+
+PaginatedAuditLogItems:
+  type: object
+  required: [items, pagination]
+  properties:
+    items:
+      type: array
+      items:
+        $ref: '#/AuditLogItem'
+    pagination:
+      $ref: './common.yaml#/Pagination'

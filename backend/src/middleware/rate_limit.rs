@@ -280,38 +280,6 @@ pub async fn rate_limit_middleware(
     let path = req.uri().path();
     let method = req.method().as_str();
     match (method, path) {
-        ("POST", "/api/v1/auth/send_verification_code") => {
-            let limit = get_limit(
-                "send_code_per_minute",
-                state.config.rate_limit_send_code_per_minute,
-            )
-            .await;
-            apply_limit(
-                &cache,
-                "auth:send_code:ip",
-                &client_ip,
-                limit,
-                60,
-                state.config.rate_limit_fail_open,
-            )
-            .await?;
-        }
-        ("POST", "/api/v1/auth/verify_code") => {
-            let limit = get_limit(
-                "verify_code_per_10minutes",
-                state.config.rate_limit_verify_code_per_10minutes,
-            )
-            .await;
-            apply_limit(
-                &cache,
-                "auth:verify_code:ip",
-                &client_ip,
-                limit,
-                600,
-                state.config.rate_limit_fail_open,
-            )
-            .await?;
-        }
         ("POST", "/api/v1/auth/register") => {
             let limit = get_limit(
                 "register_per_10minutes",
@@ -369,54 +337,6 @@ pub async fn rate_limit_middleware(
             apply_limit(
                 &cache,
                 "auth:refresh:ip",
-                &client_ip,
-                limit,
-                600,
-                state.config.rate_limit_fail_open,
-            )
-            .await?;
-        }
-        ("POST", "/api/v1/auth/request_password_reset") => {
-            let limit = get_limit(
-                "reset_request_per_minute",
-                state.config.rate_limit_reset_request_per_minute,
-            )
-            .await;
-            apply_limit(
-                &cache,
-                "auth:reset_request:ip",
-                &client_ip,
-                limit,
-                60,
-                state.config.rate_limit_fail_open,
-            )
-            .await?;
-        }
-        ("POST", "/api/v1/auth/verify_reset_code") => {
-            let limit = get_limit(
-                "reset_verify_per_10minutes",
-                state.config.rate_limit_reset_verify_per_10minutes,
-            )
-            .await;
-            apply_limit(
-                &cache,
-                "auth:reset_verify:ip",
-                &client_ip,
-                limit,
-                600,
-                state.config.rate_limit_fail_open,
-            )
-            .await?;
-        }
-        ("POST", "/api/v1/auth/reset_password") => {
-            let limit = get_limit(
-                "reset_per_10minutes",
-                state.config.rate_limit_reset_per_10minutes,
-            )
-            .await;
-            apply_limit(
-                &cache,
-                "auth:reset:ip",
                 &client_ip,
                 limit,
                 600,

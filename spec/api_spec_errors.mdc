@@ -75,4 +75,4 @@ WebSocket 握手成功必须为 HTTP 101；握手失败使用真实 HTTP 状态�
 |-------|------|-----------|
 | `22000` | 幂等键冲突 | 换新的 Idempotency-Key 重试 |
 | `22001` | 幂等缓存失效 | 换新的 Idempotency-Key 重试 |
-| `22002` | 幂等操作正在处理中 | 等待后使用相同 Idempotency-Key 重试 |
+| `22002` | 幂等操作进行中 | 等待后使用相同 Idempotency-Key 重试 |

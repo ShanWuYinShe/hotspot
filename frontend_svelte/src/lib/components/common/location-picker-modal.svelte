@@ -136,8 +136,10 @@ async function handleDoubleClick(event: MapClickEvent) {
 			map?.setZoomAndCenter(15, [longitude, latitude]);
 			const resolvedName = await reverseGeocode(latitude, longitude);
 			locationStore.setLocation({
-				latitude,
-				longitude,
+				point: {
+					latitude,
+					longitude
+				},
 				location_name: resolvedName
 			});
 		} else {
@@ -264,7 +266,7 @@ async function handleDoubleClick(event: MapClickEvent) {
 					<div class="text-sm font-normal text-muted-foreground">拖动地图选择浏览位置</div>
 				</div>
 				<!-- 桌面端关闭按钮 -->
-				<Button variant="ghost" size="icon" class="h-9 w-9 rounded-xl" onclick={handleClose}>
+				<Button variant="ghost" size="icon" class="h-9 w-9 rounded-xl" onclick={handleClose} aria-label="关闭">
 					<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
 					</svg>
@@ -325,6 +327,7 @@ async function handleDoubleClick(event: MapClickEvent) {
 					class="h-11 w-11 rounded-full shadow-lg" 
 					onclick={handleUseCurrentLocation} 
 					disabled={isLocating}
+					aria-label="使用当前位置"
 				>
 					{#if isLocating}
 						<Loader2 class="h-5 w-5 animate-spin" />

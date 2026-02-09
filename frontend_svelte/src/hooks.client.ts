@@ -9,18 +9,21 @@
 
 import { browser, dev } from '$app/environment';
 import { authStore } from '$lib/stores/auth.svelte';
-import { authService } from '$lib/api/services/auth';
-import { initApiClient, isSuccess } from '$lib/api/client';
+import { initApiClient, ensureRefreshToken } from '$lib/api/client';
 import { websocketStore } from '$lib/websocket';
 
 /**
  * Token 刷新管理器
+ * 
+ * 与 client.ts 的被动刷新（401 触发）互补：
+ * - 本管理器：主动定时检查，提前刷新即将过期的 Token
+ * - client.ts：被动刷新，API 请求收到 Token 错误码时触发
+ * - 两者共享同一个 ensureRefreshToken 锁，避免并发刷新
  */
 class TokenRefreshManager {
 	private checkInterval: ReturnType<typeof setInterval> | null = null;
 	private readonly CHECK_INTERVAL = 60 * 1000; // 每分钟检查一次
-	private readonly REFRESH_THRESHOLD = 3; // 提前 3 分钟刷新（30 分钟过期时间下更合理）
-	private isRefreshing = false;
+	private readonly REFRESH_THRESHOLD = 3; // 提前 3 分钟刷新
 
 	/**
 	 * 启动定时检查
@@ -42,7 +45,7 @@ class TokenRefreshManager {
 	/**
 	 * 停止定时检查
 	 */
-		stop() {
+	stop() {
 		if (this.checkInterval) {
 			clearInterval(this.checkInterval);
 			this.checkInterval = null;
@@ -54,49 +57,13 @@ class TokenRefreshManager {
 	 * 检查并刷新 Token
 	 */
 	private async checkAndRefresh() {
-		// 未登录或正在刷新，跳过
-		if (!authStore.isAuthenticated || this.isRefreshing) {
-			return;
-		}
+		if (!authStore.isAuthenticated) return;
 
-		// 检查 Token 是否即将过期
 		if (authStore.isTokenExpiringSoon(this.REFRESH_THRESHOLD)) {
 			if (dev) console.log(`[TokenRefresh] Token 将在 ${this.REFRESH_THRESHOLD} 分钟内过期，开始刷新...`);
-			await this.refreshToken();
-		}
-	}
-
-	/**
-	 * 刷新 Token
-	 */
-	private async refreshToken() {
-		if (this.isRefreshing) return;
-
-		this.isRefreshing = true;
-
-		try {
-			const response = await authService.refreshToken({
-				client_type: 'web'
-				// Web 端不传 refresh_token（从 HttpOnly Cookie 读取）
-			});
-
-			if (isSuccess(response) && response.data) {
-				// 更新 Token
-				authStore.updateToken(
-					response.data.access_token,
-					response.data.access_token_expires_at
-				);
-				if (dev) console.log('[TokenRefresh] Token 刷新成功');
-			} else {
-				if (dev) console.error('[TokenRefresh] Token 刷新失败:', response.message);
-				// 刷新失败，清除 Token 并登出
-				authStore.clearToken();
-			}
-		} catch (error) {
-			if (dev) console.error('[TokenRefresh] Token 刷新异常:', error);
-			authStore.clearToken();
-		} finally {
-			this.isRefreshing = false;
+			// 复用 client.ts 的 ensureRefreshToken，共享并发锁
+			const success = await ensureRefreshToken();
+			if (dev) console.log(`[TokenRefresh] 刷新${success ? '成功' : '失败'}`);
 		}
 	}
 }

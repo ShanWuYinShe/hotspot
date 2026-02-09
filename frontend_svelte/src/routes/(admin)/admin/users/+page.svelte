@@ -10,7 +10,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import type { UserCard } from '$lib/types/api';
+	import type { UserItem } from '$lib/types/api';
 	import Search from 'lucide-svelte/icons/search';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import MoreVertical from 'lucide-svelte/icons/more-vertical';
@@ -20,9 +20,9 @@
 	import Shield from 'lucide-svelte/icons/shield';
 	import Users from 'lucide-svelte/icons/users';
 
-	type AdminUserItem = UserCard & { status: 'normal' | 'banned' };
+	type AdminUserItem = UserItem & { status: 'normal' | 'banned' };
 
-	let users = $state<AdminUserItem[]>([]);
+	let users = $state.raw<AdminUserItem[]>([]);
 	let isLoading = $state(true);
 	let cursor = $state<string | undefined>(undefined);
 	let hasMore = $state(false);
@@ -33,8 +33,10 @@
 		try {
 			const response = await adminUsersService.search({
 				nickname: nickname || undefined,
-				limit: 20,
-				cursor: append ? cursor : undefined
+				pagination: {
+					limit: 20,
+					cursor: append ? cursor : undefined
+				}
 			});
 
 			if (isSuccess(response) && response.data) {
@@ -53,11 +55,11 @@
 		}
 	}
 
-	async function handleBan(userId: number) {
+	async function handleBan(userId: string) {
 		try {
 			const response = await adminUsersService.ban({ user_id: userId, reason: '违规操作' });
 			if (isSuccess(response)) {
-				users = users.map(u => u.user_id === userId ? { ...u, status: 'banned' } : u);
+				users = users.map(u => u.user.user_id === userId ? { ...u, status: 'banned' } : u);
 				toast.success('已封禁');
 			} else {
 				toast.error(response.message || '操作失败');
@@ -67,11 +69,11 @@
 		}
 	}
 
-	async function handleUnban(userId: number) {
+	async function handleUnban(userId: string) {
 		try {
 			const response = await adminUsersService.unban({ user_id: userId });
 			if (isSuccess(response)) {
-				users = users.map(u => u.user_id === userId ? { ...u, status: 'normal' } : u);
+				users = users.map(u => u.user.user_id === userId ? { ...u, status: 'normal' } : u);
 				toast.success('已解封');
 			} else {
 				toast.error(response.message || '操作失败');
@@ -152,21 +154,18 @@
 				<div class="py-8 text-center text-muted-foreground">暂无用户数据</div>
 			{:else}
 				<div class="divide-y">
-					{#each users as user (user.user_id)}
+					{#each users as user (user.user.user_id)}
 						<div class="flex items-center gap-4 py-4">
 							<Avatar class="h-10 w-10">
-								<AvatarImage src={user.avatar_url} alt={user.nickname} />
-								<AvatarFallback>{user.nickname.slice(0, 2)}</AvatarFallback>
+								<AvatarImage src={user.user.avatar_url} alt={user.user.nickname} />
+								<AvatarFallback>{user.user.nickname.slice(0, 2)}</AvatarFallback>
 							</Avatar>
 							<div class="min-w-0 flex-1">
 								<div class="flex items-center gap-2">
-									<p class="font-medium">{user.nickname}</p>
-									{#if user.user_type === 'temp'}
-										<Badge variant="outline" class="text-xs">访客</Badge>
-									{/if}
+									<p class="font-medium">{user.user.nickname}</p>
 								</div>
 								<div class="flex items-center gap-3 text-xs text-muted-foreground">
-									<span>ID: {user.user_id}</span>
+									<span>ID: {user.user.user_id}</span>
 								</div>
 							</div>
 							<Badge variant={getStatusBadge(user.status).variant}>
@@ -175,7 +174,7 @@
 							<DropdownMenu.Root>
 								<DropdownMenu.Trigger>
 									{#snippet child({ props })}
-										<Button variant="ghost" size="icon" {...props}>
+										<Button variant="ghost" size="icon" aria-label="更多操作" {...props}>
 											<MoreVertical class="h-4 w-4" />
 										</Button>
 									{/snippet}
@@ -183,7 +182,7 @@
 								<DropdownMenu.Content align="end">
 									<DropdownMenu.Item>
 										{#snippet child({ props })}
-											<a href="/users/{user.user_id}" {...props}>
+											<a href="/users/{user.user.user_id}" {...props}>
 												<Eye class="mr-2 h-4 w-4" />
 												查看详情
 											</a>
@@ -191,7 +190,7 @@
 									</DropdownMenu.Item>
 									<DropdownMenu.Item>
 										{#snippet child({ props })}
-											<a href="/admin/users/{user.user_id}/roles" {...props}>
+											<a href="/admin/users/{user.user.user_id}/roles" {...props}>
 												<Shield class="mr-2 h-4 w-4" />
 												管理角色
 											</a>
@@ -201,7 +200,7 @@
 									{#if user.status === 'banned'}
 										<DropdownMenu.Item>
 											{#snippet child({ props })}
-												<button {...props} onclick={() => handleUnban(user.user_id)}>
+												<button {...props} onclick={() => handleUnban(user.user.user_id)}>
 													<UserX class="mr-2 h-4 w-4" />
 													解除封禁
 												</button>
@@ -210,7 +209,7 @@
 									{:else}
 										<DropdownMenu.Item class="text-destructive">
 											{#snippet child({ props })}
-												<button {...props} onclick={() => handleBan(user.user_id)}>
+												<button {...props} onclick={() => handleBan(user.user.user_id)}>
 													<Ban class="mr-2 h-4 w-4" />
 													封禁用户
 												</button>

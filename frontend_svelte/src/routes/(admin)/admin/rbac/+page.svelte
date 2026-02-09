@@ -5,7 +5,6 @@
 	import { toast } from '$lib/stores/toast.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
@@ -19,10 +18,9 @@
 	import Edit from 'lucide-svelte/icons/edit';
 	import Trash2 from 'lucide-svelte/icons/trash-2';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
-	import Users from 'lucide-svelte/icons/users';
 
-	let roles = $state<AdminRole[]>([]);
-	let permissions = $state<AdminPermission[]>([]);
+	let roles = $state.raw<AdminRole[]>([]);
+	let permissions = $state.raw<AdminPermission[]>([]);
 	let isLoading = $state(true);
 
 	// Create/Edit role dialog
@@ -31,7 +29,7 @@
 	let editingRoleId = $state<string | null>(null);
 	let roleName = $state('');
 	let roleDescription = $state('');
-	let rolePermissions = $state<string[]>([]);
+	let rolePermissions = $state.raw<string[]>([]);
 
 	async function loadData() {
 		isLoading = true;
@@ -44,9 +42,9 @@
 			if (isSuccess(rolesRes) && rolesRes.data) {
 				roles = rolesRes.data.items;
 			}
-			if (isSuccess(permissionsRes) && permissionsRes.data) {
-				permissions = permissionsRes.data;
-			}
+		if (isSuccess(permissionsRes) && permissionsRes.data) {
+			permissions = permissionsRes.data.items;
+		}
 		} catch {
 			toast.error('加载失败');
 		} finally {
@@ -89,7 +87,7 @@
 					// 更新权限
 					await adminRbacService.setRolePermissions({
 						role_id: editingRoleId,
-						permissions: rolePermissions
+						permission_keys: rolePermissions
 					});
 					loadData();
 					toast.success('更新成功');
@@ -100,11 +98,15 @@
 			} else {
 				const response = await adminRbacService.createRole({
 					name: roleName.trim(),
-					description: roleDescription.trim() || undefined,
-					permissions: rolePermissions
+					description: roleDescription.trim() || undefined
 				});
 
-				if (isSuccess(response)) {
+				if (isSuccess(response) && response.data) {
+					// 设置权限
+					await adminRbacService.setRolePermissions({
+						role_id: response.data.role_id,
+						permission_keys: rolePermissions
+					});
 					loadData();
 					toast.success('创建成功');
 					showRoleDialog = false;
@@ -147,7 +149,11 @@
 	function groupPermissions(perms: AdminPermission[]): Map<string, AdminPermission[]> {
 		const groups = new Map<string, AdminPermission[]>();
 		for (const perm of perms) {
-			const category = perm.category || '其他';
+			// Derive category from key (e.g., "admin.users.create" -> "admin.users")
+			const keyParts = perm.key.split('.');
+			const category = keyParts.length > 1 
+				? keyParts.slice(0, -1).join('.') 
+				: '其他';
 			if (!groups.has(category)) {
 				groups.set(category, []);
 			}
@@ -223,7 +229,7 @@
 									</div>
 								</div>
 								<div class="flex gap-1">
-									<Button variant="ghost" size="icon" onclick={() => openEditRoleDialog(role)}>
+									<Button variant="ghost" size="icon" onclick={() => openEditRoleDialog(role)} aria-label="编辑角色">
 										<Edit class="h-4 w-4" />
 									</Button>
 									<Button
@@ -231,6 +237,7 @@
 										size="icon"
 										class="text-destructive"
 										onclick={() => handleDeleteRole(role.role_id)}
+										aria-label="删除角色"
 									>
 										<Trash2 class="h-4 w-4" />
 									</Button>
@@ -265,15 +272,15 @@
 					<div class="py-8 text-center text-muted-foreground">暂无权限数据</div>
 				{:else}
 					<div class="space-y-4">
-						{#each [...groupPermissions(permissions)] as [category, perms]}
+						{#each [...groupPermissions(permissions)] as [category, perms] (category)}
 							<div>
 								<h4 class="mb-2 text-sm font-medium text-muted-foreground">{category}</h4>
 								<div class="space-y-1">
-									{#each perms as perm (perm.permission_id)}
+									{#each perms as perm (perm.key)}
 										<div class="flex items-center gap-3 rounded px-2 py-1 hover:bg-muted/50">
 											<Key class="h-4 w-4 text-muted-foreground" />
 											<div class="flex-1">
-												<p class="text-sm font-medium">{perm.name}</p>
+												<p class="text-sm font-medium">{perm.key}</p>
 												{#if perm.description}
 													<p class="text-xs text-muted-foreground">{perm.description}</p>
 												{/if}
@@ -308,19 +315,19 @@
 			<div class="space-y-2">
 				<Label>分配权限</Label>
 				<div class="max-h-60 space-y-4 overflow-y-auto rounded-lg border p-3">
-					{#each [...groupPermissions(permissions)] as [category, perms]}
+					{#each [...groupPermissions(permissions)] as [category, perms] (category)}
 						<div>
 							<h5 class="mb-2 text-xs font-medium text-muted-foreground">{category}</h5>
 							<div class="space-y-1">
-								{#each perms as perm (perm.permission_id)}
+								{#each perms as perm (perm.key)}
 									<label class="flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-muted/50">
 										<input
 											type="checkbox"
-											checked={rolePermissions.includes(perm.permission_id)}
-											onchange={() => togglePermission(perm.permission_id)}
+											checked={rolePermissions.includes(perm.key)}
+											onchange={() => togglePermission(perm.key)}
 											class="h-4 w-4 rounded border-gray-300"
 										/>
-										<span class="text-sm">{perm.name}</span>
+										<span class="text-sm">{perm.description || perm.key}</span>
 									</label>
 								{/each}
 							</div>

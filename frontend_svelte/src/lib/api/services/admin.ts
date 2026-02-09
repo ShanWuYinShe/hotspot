@@ -1,5 +1,6 @@
 /**
  * 管理员服务
+ * 严格对齐 spec/api_spec_admin_core.mdc + spec/api_spec_admin_moderation.mdc
  */
 
 import { post, paginate } from '../client';
@@ -11,21 +12,37 @@ import {
 	ADMIN_AUDIT,
 	ADMIN_REPORTS,
 	ADMIN_TAGS,
-	ADMIN_GLOBAL_SETTINGS
+	ADMIN_SERVER_CONFIG,
+	ADMIN_CLIENT_CONFIG
 } from '../endpoints';
 import type {
-	AdminPermission,
-	AdminRole,
-	AdminUser,
-	UserCard,
-	AdminGroupSearchItem,
-	GroupSettings,
-	SystemAnnouncementItem,
-	AnnouncementCreated,
+	AdminPermissionItem,
+	AdminPermissions,
+	AdminRoleItem,
+	AdminOperatorItem,
+	AdminUserItem,
+	AdminGroupItem,
+	AdminReportItem,
+	AdminAnnouncementItem,
+	AdminTagItem,
+	AdminTagSortBy,
+	AdminClientConfig,
 	AuditLogItem,
-	ReportItem,
-	GlobalSettings,
-	AnnouncementSeverity
+	AuditAction,
+	AuditTargetType,
+	AnnouncementCreated,
+	AnnouncementSeverity,
+	ReportHandleAction,
+	ReportStatus,
+	ReportTargetType,
+	UserAccountStatus,
+	UserType,
+	ServerConfig,
+	UploadConfig,
+	RateLimitConfig,
+	ResponseDefaults,
+	GroupSettings,
+	PaginationParams
 } from '$lib/types/api';
 
 // ==================== RBAC ====================
@@ -33,41 +50,42 @@ import type {
 export const adminRbacService = {
 	/**
 	 * 获取我的管理员权限
+	 * spec: Response = AdminPermissions
 	 */
 	getMyPermissions() {
-		return post<{
-			is_admin: boolean;
-			permissions: string[];
-			roles: AdminRole[];
-		}>(ADMIN_RBAC.ME);
+		return post<AdminPermissions>(ADMIN_RBAC.GET_ME);
 	},
 
 	/**
 	 * 获取权限字典
+	 * spec: Response = { items: AdminPermissionItem[] }
 	 */
 	getPermissions() {
-		return post<AdminPermission[]>(ADMIN_RBAC.PERMISSIONS);
+		return post<{ items: AdminPermissionItem[] }>(ADMIN_RBAC.LIST_PERMISSIONS);
 	},
 
 	/**
-	 * 获取角色列表
+	 * 获取角色列表（非分页，直接返回全部）
+	 * spec: Response = { items: AdminRoleItem[] }
 	 */
-	getRoles(params?: { limit?: number; cursor?: string }) {
-		return paginate<AdminRole>(ADMIN_RBAC.ROLES.LIST, params);
+	getRoles() {
+		return post<{ items: AdminRoleItem[] }>(ADMIN_RBAC.ROLES.LIST);
 	},
 
 	/**
 	 * 创建角色
+	 * spec: Request = { name, description? }
 	 */
-	createRole(data: { name: string; description?: string; permissions?: string[] }) {
-		return post<AdminRole>(ADMIN_RBAC.ROLES.CREATE, data);
+	createRole(data: { name: string; description?: string }) {
+		return post<AdminRoleItem>(ADMIN_RBAC.ROLES.CREATE, data);
 	},
 
 	/**
 	 * 更新角色
+	 * spec: Response = ApiResponse (void)
 	 */
-	updateRole(data: { role_id: string; name?: string; description?: string }) {
-		return post<AdminRole>(ADMIN_RBAC.ROLES.UPDATE, data);
+	updateRole(data: { role_id: string; name?: string; description?: string; clear_description?: boolean }) {
+		return post<void>(ADMIN_RBAC.ROLES.UPDATE, data);
 	},
 
 	/**
@@ -79,29 +97,32 @@ export const adminRbacService = {
 
 	/**
 	 * 设置角色权限
+	 * spec: Request = { role_id, permission_keys }
 	 */
-	setRolePermissions(data: { role_id: string; permissions: string[] }) {
+	setRolePermissions(data: { role_id: string; permission_keys: string[] }) {
 		return post<void>(ADMIN_RBAC.ROLES.SET_PERMISSIONS, data);
 	},
 
 	/**
 	 * 获取管理员列表
+	 * spec: Response = PaginatedData<AdminOperatorItem>
 	 */
-	getAdmins(params?: { limit?: number; cursor?: string }) {
-		return paginate<AdminUser>(ADMIN_RBAC.ADMINS.LIST, params);
+	getAdmins(params?: { pagination?: PaginationParams }) {
+		return paginate<AdminOperatorItem>(ADMIN_RBAC.ADMINS.LIST, params);
 	},
 
 	/**
 	 * 授予管理员权限
+	 * spec: Request = { user_id, grant_all_permissions?, role_ids }
 	 */
-	grantAdmin(data: { user_id: number; role_ids: string[] }) {
+	grantAdmin(data: { user_id: string; grant_all_permissions?: boolean; role_ids: string[] }) {
 		return post<void>(ADMIN_RBAC.ADMINS.GRANT, data);
 	},
 
 	/**
 	 * 撤销管理员权限
 	 */
-	revokeAdmin(data: { user_id: number }) {
+	revokeAdmin(data: { user_id: string }) {
 		return post<void>(ADMIN_RBAC.ADMINS.REVOKE, data);
 	}
 };
@@ -111,46 +132,40 @@ export const adminRbacService = {
 export const adminUsersService = {
 	/**
 	 * 搜索用户
+	 * spec: Response = PaginatedData<AdminUserItem>
 	 */
 	search(params: {
-		user_id?: number;
+		user_id?: string;
 		nickname?: string;
 		login_id?: string;
-		status?: 'normal' | 'banned';
-		user_type?: 'temp' | 'normal' | 'admin';
-		limit?: number;
-		cursor?: string;
+		status?: UserAccountStatus;
+		user_type?: UserType;
+		pagination?: PaginationParams;
 	}) {
-		return paginate<UserCard & { status: 'normal' | 'banned' }>(ADMIN_USERS.SEARCH, params);
+		return paginate<AdminUserItem>(ADMIN_USERS.SEARCH, params);
 	},
 
 	/**
 	 * 获取用户详情
+	 * spec: Response = AdminUserItem
 	 */
-	getDetail(data: { user_id: number }) {
-		return post<
-			UserCard & {
-				status: 'normal' | 'banned';
-				email?: string;
-				phone?: string;
-				created_at: string;
-				banned_at?: string;
-				ban_reason?: string;
-			}
-		>(ADMIN_USERS.DETAIL, data);
+	getDetail(data: { user_id: string }) {
+		return post<AdminUserItem>(ADMIN_USERS.OPEN_THE_DOOR, data);
 	},
 
 	/**
 	 * 封禁用户
+	 * spec: Request = { user_id, reason?, duration_days? }
 	 */
-	ban(data: { user_id: number; reason: string; duration?: number }) {
+	ban(data: { user_id: string; reason?: string; duration_days?: number }) {
 		return post<void>(ADMIN_USERS.BAN, data);
 	},
 
 	/**
 	 * 解封用户
+	 * spec: Request = { user_id, reason? }
 	 */
-	unban(data: { user_id: number }) {
+	unban(data: { user_id: string; reason?: string }) {
 		return post<void>(ADMIN_USERS.UNBAN, data);
 	}
 };
@@ -160,22 +175,30 @@ export const adminUsersService = {
 export const adminGroupsService = {
 	/**
 	 * 搜索群组
+	 * spec: Response = PaginatedData<AdminGroupItem>
 	 */
-	search(params: { group_id?: string; name?: string; owner_id?: string; limit?: number; cursor?: string }) {
-		return paginate<AdminGroupSearchItem>(ADMIN_GROUPS.SEARCH, params);
+	search(params: {
+		group_id?: string;
+		name?: string;
+		owner_id?: string;
+		pagination?: PaginationParams;
+	}) {
+		return paginate<AdminGroupItem>(ADMIN_GROUPS.SEARCH, params);
 	},
 
 	/**
 	 * 获取群组详情
+	 * spec: Response = AdminGroupItem
 	 */
 	getDetail(data: { group_id: string }) {
-		return post<AdminGroupSearchItem>(ADMIN_GROUPS.DETAIL, data);
+		return post<AdminGroupItem>(ADMIN_GROUPS.OPEN_THE_DOOR, data);
 	},
 
 	/**
 	 * 解散群组
+	 * spec: Request = { group_id, reason? }
 	 */
-	dismiss(data: { group_id: string; reason: string }) {
+	dismiss(data: { group_id: string; reason?: string }) {
 		return post<void>(ADMIN_GROUPS.DISMISS, data);
 	}
 };
@@ -184,10 +207,12 @@ export const adminGroupsService = {
 
 export const adminAnnouncementsService = {
 	/**
-	 * 获取公告列表
+	 * 搜索公告列表
+	 * spec: Request = { pagination?, severity? }
+	 * spec: Response = PaginatedData<AdminAnnouncementItem>
 	 */
-	getList(params?: { limit?: number; cursor?: string }) {
-		return paginate<SystemAnnouncementItem>(ADMIN_ANNOUNCEMENTS.LIST, params);
+	search(params?: { pagination?: PaginationParams; severity?: AnnouncementSeverity }) {
+		return paginate<AdminAnnouncementItem>(ADMIN_ANNOUNCEMENTS.SEARCH, params);
 	},
 
 	/**
@@ -204,6 +229,20 @@ export const adminAnnouncementsService = {
 	},
 
 	/**
+	 * 更新公告
+	 * spec: Response = ApiResponse (void)
+	 */
+	update(data: {
+		announcement_id: string;
+		title?: string;
+		content?: string;
+		severity?: AnnouncementSeverity;
+		action_url?: string;
+	}) {
+		return post<void>(ADMIN_ANNOUNCEMENTS.UPDATE, data);
+	},
+
+	/**
 	 * 删除公告
 	 */
 	delete(data: { announcement_id: string }) {
@@ -216,47 +255,26 @@ export const adminAnnouncementsService = {
 export const adminAuditService = {
 	/**
 	 * 获取审计日志列表
+	 * spec: Request includes target_id
 	 */
 	getList(params?: {
-		action?: string;
-		operator_id?: number;
-		target_type?: string;
+		action?: AuditAction;
+		operator_id?: string;
+		target_type?: AuditTargetType;
+		target_id?: string;
 		start_time?: string;
 		end_time?: string;
-		limit?: number;
-		cursor?: string;
+		pagination?: PaginationParams;
 	}) {
 		return paginate<AuditLogItem>(ADMIN_AUDIT.LIST, params);
 	},
 
 	/**
 	 * 获取审计日志详情
+	 * spec: Request = { log_id }
 	 */
-	getDetail(data: { audit_id: string }) {
-		return post<AuditLogItem>(ADMIN_AUDIT.DETAIL, data);
-	},
-
-	/**
-	 * 导出审计日志
-	 */
-	export(data: {
-		start_time: string;
-		end_time: string;
-		action?: string;
-		format?: 'csv' | 'json';
-	}) {
-		return post<{ task_id: string }>(ADMIN_AUDIT.EXPORT, data);
-	},
-
-	/**
-	 * 获取导出状态
-	 */
-	getExportStatus(data: { task_id: string }) {
-		return post<{
-			status: 'pending' | 'processing' | 'completed' | 'failed';
-			download_url?: string;
-			error?: string;
-		}>(ADMIN_AUDIT.EXPORT_STATUS, data);
+	getDetail(data: { log_id: string }) {
+		return post<AuditLogItem>(ADMIN_AUDIT.OPEN_THE_DOOR, data);
 	}
 };
 
@@ -264,29 +282,26 @@ export const adminAuditService = {
 
 export const adminReportsService = {
 	/**
-	 * 获取举报列表
+	 * 搜索举报列表
+	 * spec: Request = { pagination?, status?, target_type? }
+	 * spec: Response = PaginatedData<AdminReportItem>
 	 */
-	getList(params?: {
-		status?: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
-		limit?: number;
-		cursor?: string;
+	search(params?: {
+		status?: ReportStatus;
+		target_type?: ReportTargetType;
+		pagination?: PaginationParams;
 	}) {
-		return paginate<ReportItem>(ADMIN_REPORTS.LIST, params);
+		return paginate<AdminReportItem>(ADMIN_REPORTS.SEARCH, params);
 	},
 
 	/**
 	 * 处理举报
+	 * spec: Request = { report_id, action, note? }
 	 */
 	handle(data: {
 		report_id: string;
-		action: 'resolve' | 'dismiss';
-		resolution?: string;
-		punish_target?: boolean;
-		punishment?: {
-			type: 'warning' | 'mute' | 'ban';
-			duration?: number;
-			reason: string;
-		};
+		action: ReportHandleAction;
+		note?: string;
 	}) {
 		return post<void>(ADMIN_REPORTS.HANDLE, data);
 	}
@@ -296,47 +311,84 @@ export const adminReportsService = {
 
 export const adminTagsService = {
 	/**
-	 * 删除标签
+	 * 搜索标签
+	 * spec: Request = { pagination?, keyword?, sort_by? }
+	 * spec: Response = PaginatedData<AdminTagItem>
 	 */
-	delete(data: { tag: string }) {
+	search(params?: {
+		keyword?: string;
+		sort_by?: AdminTagSortBy;
+		pagination?: PaginationParams;
+	}) {
+		return paginate<AdminTagItem>(ADMIN_TAGS.SEARCH, params);
+	},
+
+	/**
+	 * 删除标签
+	 * spec: Request = { tag_name }
+	 */
+	delete(data: { tag_name: string }) {
 		return post<void>(ADMIN_TAGS.DELETE, data);
 	}
 };
 
-// ==================== 全局配置 ====================
+// ==================== 服务端配置 ====================
 
-export const adminGlobalSettingsService = {
+export const adminServerConfigService = {
 	/**
-	 * 获取全局配置
+	 * 获取服务端配置
 	 */
-	fetch() {
-		return post<GlobalSettings>(ADMIN_GLOBAL_SETTINGS.FETCH);
+	get() {
+		return post<ServerConfig>(ADMIN_SERVER_CONFIG.GET);
 	},
 
 	/**
 	 * 更新上传配置
+	 * spec: Request = { upload: Partial<UploadConfig> }
 	 */
-	updateUpload(data: {
-		image_max_size?: number;
-		video_max_size?: number;
-		audio_max_size?: number;
-		file_max_size?: number;
-		allowed_image_types?: string[];
-		allowed_video_types?: string[];
-	}) {
-		return post<void>(ADMIN_GLOBAL_SETTINGS.UPDATE_UPLOAD, data);
+	updateUpload(data: { upload: Partial<UploadConfig> }) {
+		return post<void>(ADMIN_SERVER_CONFIG.UPDATE_UPLOAD, data);
 	},
 
 	/**
 	 * 更新默认配置
+	 * spec: Request = { default_location_name?, default_group_avatar?, default_user_avatar?, default_group_settings? }
 	 */
 	updateDefaults(data: {
 		default_location_name?: string;
 		default_group_avatar?: string;
 		default_user_avatar?: string;
-		default_group_settings?: GroupSettings;
+		default_group_settings?: Partial<GroupSettings>;
 	}) {
-		return post<void>(ADMIN_GLOBAL_SETTINGS.UPDATE_DEFAULTS, data);
+		return post<void>(ADMIN_SERVER_CONFIG.UPDATE_DEFAULTS, data);
+	},
+
+	/**
+	 * 更新频率限制
+	 * spec: Request = { rate_limits: Partial<RateLimitConfig> }
+	 */
+	updateRateLimits(data: { rate_limits: Partial<RateLimitConfig> }) {
+		return post<void>(ADMIN_SERVER_CONFIG.UPDATE_RATE_LIMITS, data);
+	},
+
+	/**
+	 * 更新响应默认值
+	 * spec: Request = { response_defaults: Partial<ResponseDefaults> }
+	 */
+	updateResponseDefaults(data: { response_defaults: Partial<ResponseDefaults> }) {
+		return post<void>(ADMIN_SERVER_CONFIG.UPDATE_RESPONSE_DEFAULTS, data);
+	}
+};
+
+// ==================== 客户端配置 ====================
+
+export const adminClientConfigService = {
+	/**
+	 * 获取客户端配置（管理员视角，包含元数据）
+	 * spec: Response = AdminClientConfig
+	 */
+	get() {
+		return post<AdminClientConfig>(ADMIN_CLIENT_CONFIG.GET);
 	},
 
 	/**
@@ -348,7 +400,24 @@ export const adminGlobalSettingsService = {
 		enable_moments?: boolean;
 		enable_nearby_people?: boolean;
 	}) {
-		return post<void>(ADMIN_GLOBAL_SETTINGS.UPDATE_FEATURES, data);
+		return post<void>(ADMIN_CLIENT_CONFIG.UPDATE_FEATURES, data);
+	},
+
+	/**
+	 * 更新限制配置
+	 * spec: Request = { limits: Partial<AppLimits> }
+	 */
+	updateLimits(data: {
+		limits: Partial<{
+			max_group_members: number;
+			max_moment_tags: number;
+			max_moment_images: number;
+			moment_description_max_length: number;
+			comment_max_length: number;
+			search_radius_max: number;
+		}>;
+	}) {
+		return post<void>(ADMIN_CLIENT_CONFIG.UPDATE_LIMITS, data);
 	},
 
 	/**
@@ -360,42 +429,6 @@ export const adminGlobalSettingsService = {
 		terms_of_service_url?: string;
 		official_website?: string;
 	}) {
-		return post<void>(ADMIN_GLOBAL_SETTINGS.UPDATE_CONTACT, data);
-	},
-
-	/**
-	 * 更新限制配置
-	 */
-	updateLimits(data: {
-		max_group_members?: number;
-		max_moment_tags?: number;
-		max_moment_images?: number;
-		moment_description_max_length?: number;
-		comment_max_length?: number;
-		search_radius_max?: number;
-	}) {
-		return post<void>(ADMIN_GLOBAL_SETTINGS.UPDATE_LIMITS, data);
-	},
-
-	/**
-	 * 更新频率限制
-	 */
-	updateRateLimits(data: {
-		global_per_hour?: number;
-		user_per_hour?: number;
-		auth_send_code_per_minute?: number;
-		auth_verify_code_per_10minutes?: number;
-		auth_register_per_10minutes?: number;
-		auth_login_per_10minutes?: number;
-		auth_guest_per_10minutes?: number;
-		auth_refresh_per_10minutes?: number;
-		auth_reset_request_per_minute?: number;
-		auth_reset_verify_per_10minutes?: number;
-		auth_reset_per_10minutes?: number;
-		moments_create_per_minute?: number;
-		comments_create_per_minute?: number;
-		reports_create_per_hour?: number;
-	}) {
-		return post<void>(ADMIN_GLOBAL_SETTINGS.UPDATE_RATE_LIMITS, data);
+		return post<void>(ADMIN_CLIENT_CONFIG.UPDATE_CONTACT, data);
 	}
 };

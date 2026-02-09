@@ -9,14 +9,16 @@ use crate::{handlers::private_messages, state::AppState};
 
 /// Token 必须的私聊消息路由
 pub fn token_required_routes() -> Router<AppState> {
-    Router::new()
+    // 主路由
+    let main_routes = Router::new()
         .route("/send", post(private_messages::send))
-        .route("/history", post(private_messages::history))
+        .route("/get_history", post(private_messages::history))
         .route("/update", post(private_messages::update))
-        .route("/recall", post(private_messages::recall))
-        .route("/delete", post(private_messages::delete))
-        .route("/mark_as_read", post(private_messages::mark_as_read))
-        .route("/add_reaction", post(private_messages::add_reaction))
-        .route("/remove_reaction", post(private_messages::remove_reaction))
-        .route("/reactions", post(private_messages::reactions))
+        .route("/recall", post(private_messages::recall));
+
+    // /me 子路由
+    let me_routes = Router::new()
+        .route("/mark_as_read", post(private_messages::mark_as_read));
+
+    main_routes.nest("/me", me_routes)
 }

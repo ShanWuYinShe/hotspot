@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -10,13 +10,13 @@
 	// 如果已登录，直接跳转
 	$effect(() => {
 		if (browser && authStore.isAuthenticated) {
-			const redirect = $page.url.searchParams.get('redirect') || '/';
+			const redirect = page.url.searchParams.get('redirect') || '/';
 			goto(redirect);
 		}
 	});
 
 	function handleLoginClick() {
-		const redirect = $page.url.searchParams.get('redirect') || '/';
+		const redirect = page.url.searchParams.get('redirect') || '/';
 		uiStore.openLoginModal(() => goto(redirect));
 	}
 </script>

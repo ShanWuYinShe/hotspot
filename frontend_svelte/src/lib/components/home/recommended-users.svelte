@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { dev } from '$app/environment';
 	import { usersService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
-	import type { UserSearchItem } from '$lib/types/api';
+	import type { UserItem } from '$lib/types/api';
 	import UserCard from '$lib/components/common/user-card.svelte';
 	import ListSkeleton from '$lib/components/common/list-skeleton.svelte';
 	import Users from 'lucide-svelte/icons/users';
@@ -13,25 +14,29 @@
 
 	let { refreshTrigger = 0 }: Props = $props();
 
-	let users = $state<UserSearchItem[]>([]);
+	let users = $state.raw<UserItem[]>([]);
 	let loading = $state(false);
 
 	async function loadUsers() {
 		loading = true;
 		try {
-			const response = await usersService.searchByLocation({
-				reference_point: {
-					latitude: mapAnchorStore.latitude,
-					longitude: mapAnchorStore.longitude
+			const response = await usersService.search({
+				search: {
+					reference_point: {
+						latitude: mapAnchorStore.latitude,
+						longitude: mapAnchorStore.longitude
+					},
+					pagination: {
+						limit: 6
+					}
 				},
-				radius: mapAnchorStore.radius * 1000,
-				limit: 6
+				radius: mapAnchorStore.radius * 1000
 			});
 			if (isSuccess(response) && response.data) {
 				users = response.data.items ?? [];
 			}
 		} catch (error) {
-			console.error('Failed to load recommended users:', error);
+			if (dev) console.error('Failed to load recommended users:', error);
 			// 不显示 toast，避免影响首页体验
 		} finally {
 			loading = false;
@@ -73,7 +78,7 @@
 			</a>
 		</div>
 		<div class="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
-			{#each users as user (user.user_id)}
+			{#each users as user (user.user.user_id)}
 				<div class="mb-3 break-inside-avoid">
 					<UserCard {user} showDistance showBio showTags variant="square" />
 				</div>

@@ -8,8 +8,16 @@ use axum::{routing::post, Router};
 
 /// 分享模块路由
 pub fn share_routes() -> Router<AppState> {
-    Router::new()
+    // 主路由
+    let main_routes = Router::new()
         .route("/create", post(share::create_share))
         .route("/get", post(share::get_share))
         .route("/apply", post(share::apply_share))
+        .route("/revoke", post(share::revoke_share));
+
+    // /me 子路由
+    let me_routes = Router::new()
+        .route("/list", post(share::my_shares));
+
+    main_routes.nest("/me", me_routes)
 }

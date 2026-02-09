@@ -11,16 +11,22 @@ use crate::{handlers::comments, state::AppState};
 /// Token 可选的评论路由
 pub fn token_optional_routes() -> Router<AppState> {
     Router::new()
-        .route("/", post(comments::get_comments))
-        .route("/replies", post(comments::get_replies))
-        .route("/likes", post(comments::get_likes))
+        .route("/list", post(comments::get_comments))
+        .route("/list_replies", post(comments::get_replies))
+        .route("/list_likes", post(comments::get_likes))
 }
 
 /// Token 必须的评论路由
 pub fn token_required_routes() -> Router<AppState> {
-    Router::new()
+    // 主路由
+    let main_routes = Router::new()
         .route("/create", post(comments::create))
-        .route("/delete", post(comments::delete))
+        .route("/delete", post(comments::delete));
+
+    // /me 子路由
+    let me_routes = Router::new()
         .route("/like", post(comments::like))
-        .route("/unlike", post(comments::unlike))
+        .route("/unlike", post(comments::unlike));
+
+    main_routes.nest("/me", me_routes)
 }

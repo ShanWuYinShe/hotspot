@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
-	import { goto } from '$app/navigation';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
@@ -19,7 +18,7 @@
 	import ListSkeleton from '$lib/components/common/list-skeleton.svelte';
 	import EmptyState from '$lib/components/common/empty-state.svelte';
 	import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
-	import type { FeedMomentItem, MomentSearchItem, TrendingTag } from '$lib/types/api';
+	import type { MomentItem, TagItem } from '$lib/types/api';
 	import MapPin from 'lucide-svelte/icons/map-pin';
 	import Users from 'lucide-svelte/icons/users';
 	import Image from 'lucide-svelte/icons/image';
@@ -65,10 +64,10 @@
 	let showExplore = $state(false);
 
 	// Data states for Explore mode
-	let trendingTags = $state([] as TrendingTag[]);
+	let trendingTags = $state.raw<TagItem[]>([]);
 	let loadingTags = $state(true);
 
-	const feed = usePagination<FeedMomentItem | MomentSearchItem>({
+	const feed = usePagination<MomentItem>({
 		uniqueKey: 'moment_id',
 		initialLoading: true
 	});
@@ -83,7 +82,7 @@
 	async function loadTrendingTags() {
 		loadingTags = true;
 		try {
-			const response = await tagsService.getTrending({ limit: 10 });
+			const response = await tagsService.getTrending();
 			if (isSuccess(response) && response.data) {
 				trendingTags = response.data.items;
 			}
@@ -101,18 +100,19 @@
 		await feed.load(async (cursor) => {
 			if (authStore.isAuthenticated) {
 				return await feedService.getMoments({
-					source: 'all',
 					reference_point: getAnchor(),
-					limit: 20,
-					cursor
+					source: 'all',
+					radius: mapAnchorStore.radius * 1000,
+					pagination: { limit: 20, cursor }
 				});
 			} else {
 				// 未登录：显示附近动态
-				return await momentsService.searchByLocation({
-					reference_point: getAnchor(),
-					radius: mapAnchorStore.radius * 1000,
-					limit: 20,
-					cursor
+				return await momentsService.search({
+					search: {
+						reference_point: getAnchor(),
+						pagination: { limit: 20, cursor }
+					},
+					radius: mapAnchorStore.radius * 1000
 				});
 			}
 		}, refresh);
@@ -214,7 +214,7 @@
 						<h2 class="text-2xl font-bold tracking-tight">探索发现</h2>
 						<p class="text-muted-foreground">发现附近的精彩人与事</p>
 					</div>
-					<Button variant="ghost" size="icon" class="rounded-full" onclick={refreshAll}>
+					<Button variant="ghost" size="icon" class="rounded-full" onclick={refreshAll} aria-label="刷新">
 						<RefreshCw class="h-4 w-4 {feed.loading ? 'animate-spin' : ''}" />
 					</Button>
 				</div>
@@ -227,7 +227,7 @@
 							<h3 class="text-lg font-semibold tracking-tight">热门话题</h3>
 						</div>
 						<div class="flex flex-wrap gap-2">
-							{#each trendingTags as tag}
+							{#each trendingTags as tag (tag.name)}
 								<a href="/search?tag={encodeURIComponent(tag.name)}" class="group">
 									<Badge variant="secondary" class="cursor-pointer rounded-full px-3 py-1.5 text-sm transition-all hover:bg-primary/10 hover:text-primary">
 										#{tag.name}
@@ -295,7 +295,7 @@
 				<p class="text-muted-foreground">探索 HotSpot 为你提供的精彩体验</p>
 			</div>
 			<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-				{#each features as feature}
+				{#each features as feature (feature.title)}
 					<Card class="group cursor-pointer border-0 bg-linear-to-br {feature.color} backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10">
 						<CardHeader>
 							<div class="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-background/80 shadow-sm transition-transform group-hover:scale-110">
@@ -341,7 +341,7 @@
 						</h1>
 						<p class="text-muted-foreground">发现附近的精彩内容</p>
 					</div>
-					<Button variant="ghost" size="icon" class="rounded-full" onclick={refreshAll} disabled={feed.loading}>
+					<Button variant="ghost" size="icon" class="rounded-full" onclick={refreshAll} disabled={feed.loading} aria-label="刷新">
 						<RefreshCw class="h-4 w-4 {feed.loading ? 'animate-spin' : ''}" />
 					</Button>
 				</div>

@@ -322,35 +322,6 @@ pub struct CheckStatusData {
     pub expires_at: Option<String>,
 }
 
-/// 发送验证码数据 - API 文档: SendVerificationCodeData
-#[derive(Debug, Serialize)]
-pub struct SendVerificationCodeData {
-    pub code_id: String,
-    pub expires_at: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub retry_after: Option<i32>,
-}
-
-/// 验证码验证数据 - API 文档: VerifyCodeData
-#[derive(Debug, Serialize)]
-pub struct VerifyCodeData {
-    pub verified: bool,
-    pub verify_token: String,
-    pub expires_at: String,
-}
-
-/// 密码重置请求数据 - API 文档: RequestPasswordResetData
-#[derive(Debug, Serialize)]
-pub struct RequestPasswordResetData {
-    pub reset_id: String,
-}
-
-/// 重置码验证数据 - API 文档: VerifyResetCodeData
-#[derive(Debug, Serialize)]
-pub struct VerifyResetCodeData {
-    pub reset_token: String,
-}
-
 /// 会话信息项 - API 文档: SessionItem
 ///
 /// 安全说明：

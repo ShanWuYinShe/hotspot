@@ -38,15 +38,14 @@
 		if (existingName && existingName !== '当前位置') return;
 
 		const geoPoint = existing
-			? { latitude: existing.latitude, longitude: existing.longitude }
+			? { latitude: existing.point.latitude, longitude: existing.point.longitude }
 			: await locationStore.requestLocation();
 		if (!geoPoint) return;
 
 		const resolved = await reverseGeocode(geoPoint.latitude, geoPoint.longitude);
 		const name = resolved || locationStore.current?.location_name || '当前位置';
 		locationStore.setLocation({
-			latitude: geoPoint.latitude,
-			longitude: geoPoint.longitude,
+			point: { latitude: geoPoint.latitude, longitude: geoPoint.longitude },
 			location_name: name
 		});
 

@@ -26,12 +26,11 @@
 	} from '$lib/components/ui/dropdown-menu';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import type {
-		GroupCard,
-		GroupSettings,
+		GroupOpenResult,
 		GroupAnnouncementItem,
 		GroupMemberItem,
 		SetableGroupRole,
-		GroupRole
+		GroupJoinMethod
 	} from '$lib/types/api';
 	import { formatDateTime } from '$lib/utils/format';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
@@ -52,10 +51,12 @@
 
 	let { data }: { data: PageData } = $props();
 
-	const groupId = data.groupId;
+	const groupId = $derived(data.groupId);
 
-	let group = $state<GroupCard | null>(data.group);
-	let settings = $state<GroupSettings | null>(null);
+	let groupData = $state<GroupOpenResult | null>(null);
+	$effect(() => { groupData = data.groupData; });
+	const group = $derived(groupData?.group ?? null);
+	let settings = $state<{ join_method?: 'open' | 'approval' | 'invite_only' } | null>(null);
 	let isJoining = $state(false);
 	let isLeaving = $state(false);
 	let showJoinDialog = $state(false);
@@ -108,7 +109,7 @@
 
 	let showLeaveDialog = $state(false);
 
-	function getJoinMethodLabel(method?: GroupSettings['join_method']) {
+	function getJoinMethodLabel(method?: GroupJoinMethod) {
 		switch (method) {
 			case 'open':
 				return '开放加入';
@@ -186,38 +187,45 @@
 
 		announcementSubmitting = true;
 		try {
-			const response = editingAnnouncement
-				? await groupsService.updateAnnouncement({
+			if (editingAnnouncement) {
+				const response = await groupsService.updateAnnouncement({
 					announcement_id: editingAnnouncement.announcement_id,
 					title,
 					content,
 					is_pinned: announcementPinned
-				})
-				: await groupsService.createAnnouncement({
+				});
+				if (isSuccess(response)) {
+					// updateAnnouncement returns void, manually update item
+					const updatedItem = {
+						...editingAnnouncement,
+						title,
+						content,
+						is_pinned: announcementPinned
+					};
+					announcementsPagination.updateItem((item) =>
+						item.announcement_id === updatedItem.announcement_id ? updatedItem : null
+					);
+					toast.success('公告已更新');
+					showAnnouncementDialog = false;
+					resetAnnouncementForm();
+					announcementsLoaded = true;
+				}
+			} else {
+				const response = await groupsService.createAnnouncement({
 					group_id: groupId,
 					title,
 					content,
 					is_pinned: announcementPinned
 				});
-
-			if (isSuccess(response) && response.data) {
-				const updated = response.data;
-				if (editingAnnouncement) {
-					// 更新已有公告
-					announcementsPagination.updateItem((item) =>
-						item.announcement_id === updated.announcement_id ? updated : null
-					);
-					toast.success('公告已更新');
-				} else {
-					// 添加新公告到列表开头
-					announcementsPagination.addItem(updated);
+				if (isSuccess(response) && response.data) {
+					announcementsPagination.addItem(response.data);
 					toast.success('公告已发布');
+					showAnnouncementDialog = false;
+					resetAnnouncementForm();
+					announcementsLoaded = true;
+				} else {
+					toast.error(response.message || '操作失败');
 				}
-				showAnnouncementDialog = false;
-				resetAnnouncementForm();
-				announcementsLoaded = true;
-			} else {
-				toast.error(response.message || '操作失败');
 			}
 		} catch {
 			toast.error('操作失败');
@@ -277,6 +285,7 @@
 			return;
 		}
 		if (!muteTarget) return;
+		const targetUserId = muteTarget.user.user_id;
 		const duration = Number(muteDurationMinutes);
 		if (!Number.isFinite(duration) || duration <= 0) {
 			toast.error('请输入有效的禁言时长');
@@ -287,14 +296,15 @@
 		try {
 			const response = await groupsService.mute({
 				group_id: groupId,
-				user_id: muteTarget.user.user_id,
+				user_id: targetUserId,
 				duration_minutes: duration
 			});
-			if (isSuccess(response) && response.data) {
-				const updated = response.data;
+			if (isSuccess(response)) {
+				// 计算禁言到期时间
+				const mutedUntil = new Date(Date.now() + duration * 60 * 1000).toISOString();
 				// 更新成员状态
 				membersPagination.updateItem((item) =>
-					item.user.user_id === updated.user.user_id ? updated : null
+					item.user.user_id === targetUserId ? { ...item, muted_until: mutedUntil } : null
 				);
 				toast.success('已设置禁言');
 				showMuteDialog = false;
@@ -322,11 +332,10 @@
 				group_id: groupId,
 				user_id: member.user.user_id
 			});
-			if (isSuccess(response) && response.data) {
-				const updated = response.data;
+			if (isSuccess(response)) {
 				// 更新成员状态
 				membersPagination.updateItem((item) =>
-					item.user.user_id === updated.user.user_id ? updated : null
+					item.user.user_id === member.user.user_id ? { ...item, muted_until: undefined } : null
 				);
 				toast.success('已解除禁言');
 			} else {
@@ -350,19 +359,19 @@
 			return;
 		}
 		if (!roleTarget) return;
+		const targetUserId = roleTarget.user.user_id;
 
 		roleSubmitting = true;
 		try {
 			const response = await groupsService.setRole({
 				group_id: groupId,
-				user_id: roleTarget.user.user_id,
+				user_id: targetUserId,
 				role
 			});
-			if (isSuccess(response) && response.data) {
-				const updated = response.data;
+			if (isSuccess(response)) {
 				// 更新成员角色
 				membersPagination.updateItem((item) =>
-					item.user.user_id === updated.user.user_id ? updated : null
+					item.user.user_id === targetUserId ? { ...item, role } : null
 				);
 				toast.success('成员角色已更新');
 				showRoleDialog = false;
@@ -400,8 +409,11 @@
 			if (isSuccess(response)) {
 				// 从成员列表中删除
 				membersPagination.removeItem((item) => item.user.user_id === removeTarget!.user.user_id);
-				if (group) {
-					group = { ...group, members_count: Math.max(0, group.members_count - 1) };
+				if (groupData && group) {
+					groupData = {
+						...groupData,
+						group: { ...group, group: { ...group.group, members_count: Math.max(0, group.group.members_count - 1) } }
+					};
 				}
 				toast.success('已移除成员');
 				showRemoveDialog = false;
@@ -421,8 +433,8 @@
 		try {
 			const response = await groupsService.getGroup({ group_id: groupId });
 			if (isSuccess(response) && response.data) {
-				group = response.data;
-				if (!response.data.my_state?.is_joined) {
+				groupData = response.data;
+				if (!response.data.group.my_state?.is_joined) {
 					// 未加入群组，重置分页状态
 					announcementsPagination.reset();
 					membersPagination.reset();
@@ -439,29 +451,41 @@
 
 	async function loadSettings() {
 		if (!authStore.isAuthenticated || settingsLoaded) return;
-		try {
-			const response = await groupsService.getSettings({ group_id: groupId });
-			if (isSuccess(response) && response.data) {
-				settings = response.data;
-			}
-		} catch {
-			// ignore
-		} finally {
-			settingsLoaded = true;
-		}
+		if (!group) return;
+		// Use join_method from group if available
+		settings = { join_method: group.join_method };
+		settingsLoaded = true;
 	}
 
-	// 使用 usePagination hook，简化分页逻辑
+	// 加载公告（非分页，返回所有公告）
 	async function loadAnnouncements(refresh = false) {
 		if (!canAccessGroupData) return;
 
+		// 使用 usePagination 的 load 方法，但包装非分页响应为分页格式
 		await announcementsPagination.load(
-			(cursor) =>
-				groupsService.getAnnouncements({
-					group_id: groupId,
-					limit: 10,
-					cursor
-				}),
+			async () => {
+				const response = await groupsService.getAnnouncements({ group_id: groupId });
+				if (isSuccess(response) && response.data) {
+					// 包装为非分页响应格式
+					return {
+						code: 0,
+						data: {
+							items: response.data.items,
+							pagination: { has_more: false }
+						},
+						request_id: response.request_id
+					};
+				}
+				return {
+					code: response.code,
+					message: response.message,
+					request_id: response.request_id,
+					data: {
+						items: [],
+						pagination: { has_more: false }
+					}
+				};
+			},
 			refresh
 		);
 
@@ -477,8 +501,7 @@
 			(cursor) =>
 				groupsService.getMembers({
 					group_id: groupId,
-					limit: 20,
-					cursor
+					pagination: { limit: 20, cursor }
 				}),
 			refresh
 		);
@@ -514,15 +537,11 @@
 
 		isJoining = true;
 		try {
-			const response = joinMethod === 'approval'
-				? await groupsService.apply({
-					group_id: groupId,
-					message: joinMessage.trim() || undefined
-				})
-				: await groupsService.join({
-					group_id: groupId,
-					password: joinPassword.trim() || undefined
-				});
+			const response = await groupsService.join({
+				group_id: groupId,
+				password: joinPassword.trim() || undefined,
+				message: joinMethod === 'approval' ? (joinMessage.trim() || undefined) : undefined
+			});
 
 			if (isSuccess(response)) {
 				toast.success(joinMethod === 'approval' ? '已提交申请' : '已加入群组');
@@ -592,15 +611,18 @@
 		// 监听群组成员离开事件
 		const handleMemberLeft = (e: CustomEvent<{
 			group_id: string;
-			user_id: number;
+			user_id: string;
 			member_count: number;
 		}>) => {
 			if (e.detail.group_id === groupId) {
 				// 从成员列表中移除
 				membersPagination.removeItem((item) => item.user.user_id === e.detail.user_id);
 				// 更新群组成员数量
-				if (group) {
-					group = { ...group, members_count: e.detail.member_count };
+				if (groupData && group) {
+					groupData = {
+						...groupData,
+						group: { ...group, group: { ...group.group, members_count: e.detail.member_count } }
+					};
 				}
 			}
 		};
@@ -608,7 +630,7 @@
 		// 监听群组成员被移除事件
 		const handleMemberRemoved = (e: CustomEvent<{
 			group_id: string;
-			user_id: number;
+			user_id: string;
 			member_count: number;
 			is_current_user: boolean;
 		}>) => {
@@ -616,8 +638,11 @@
 				// 从成员列表中移除
 				membersPagination.removeItem((item) => item.user.user_id === e.detail.user_id);
 				// 更新群组成员数量
-				if (group) {
-					group = { ...group, members_count: e.detail.member_count };
+				if (groupData && group) {
+					groupData = {
+						...groupData,
+						group: { ...group, group: { ...group.group, members_count: e.detail.member_count } }
+					};
 				}
 				// 如果被移除的是当前用户，重新加载群组信息
 				if (e.detail.is_current_user) {
@@ -626,32 +651,10 @@
 			}
 		};
 
-		// 监听群组成员角色变更事件
-		const handleMemberRoleChanged = (e: CustomEvent<{
-			group_id: string;
-			user_id: number;
-			old_role: string;
-			new_role: string;
-		}>) => {
-			if (e.detail.group_id === groupId) {
-				// 更新成员角色
-				membersPagination.updateItem((item) => {
-					if (item.user.user_id === e.detail.user_id) {
-						return { ...item, role: e.detail.new_role as GroupRole };
-					}
-					return null;
-				});
-				// 如果角色变更的是当前用户，重新加载群组信息以更新权限
-				if (e.detail.user_id === authStore.currentUserId) {
-					loadGroup();
-				}
-			}
-		};
-
 		// 监听群组成员被禁言事件
 		const handleMemberMuted = (e: CustomEvent<{
 			group_id: string;
-			user_id: number;
+			user_id: string;
 			muted_until?: string;
 		}>) => {
 			if (e.detail.group_id === groupId) {
@@ -672,7 +675,7 @@
 		// 监听群组成员解除禁言事件
 		const handleMemberUnmuted = (e: CustomEvent<{
 			group_id: string;
-			user_id: number;
+			user_id: string;
 		}>) => {
 			if (e.detail.group_id === groupId) {
 				// 更新成员禁言状态
@@ -689,23 +692,6 @@
 			}
 		};
 
-		// 监听群公告更新事件
-		const handleAnnouncementUpdated = (e: CustomEvent<{
-			group_id: string;
-			announcement_id: string;
-			content: string;
-		}>) => {
-			if (e.detail.group_id === groupId) {
-				// 更新公告内容
-				announcementsPagination.updateItem((item) => {
-					if (item.announcement_id === e.detail.announcement_id) {
-						return { ...item, content: e.detail.content };
-					}
-					return null;
-				});
-			}
-		};
-
 		// 监听群组信息更新事件
 		const handleGroupUpdated = (e: CustomEvent<{
 			group_id: string;
@@ -715,44 +701,60 @@
 				description?: string;
 			};
 		}>) => {
-			if (e.detail.group_id === groupId && group) {
+			if (e.detail.group_id === groupId && groupData && group) {
 				// 更新群组信息
-				group = {
-					...group,
-					...e.detail.updated_fields
+				groupData = {
+					...groupData,
+					group: {
+						...group,
+						group: {
+							...group.group,
+							...(e.detail.updated_fields.name && { name: e.detail.updated_fields.name }),
+							...(e.detail.updated_fields.avatar_url && { avatar_url: e.detail.updated_fields.avatar_url })
+						},
+						...(e.detail.updated_fields.description && { description: e.detail.updated_fields.description })
+					}
 				};
+			}
+		};
+
+		// 监听群组解散事件（spec: GroupDismissed）
+		const handleGroupDismissed = (e: CustomEvent<{
+			group_id: string;
+			reason?: string;
+		}>) => {
+			if (e.detail.group_id === groupId) {
+				goto('/groups');
 			}
 		};
 
 		// 注册事件监听器
 		window.addEventListener('group-member-left', handleMemberLeft as EventListener);
 		window.addEventListener('group-member-removed', handleMemberRemoved as EventListener);
-		window.addEventListener('group-member-role-changed', handleMemberRoleChanged as EventListener);
 		window.addEventListener('group-member-muted', handleMemberMuted as EventListener);
 		window.addEventListener('group-member-unmuted', handleMemberUnmuted as EventListener);
-		window.addEventListener('group-announcement-updated', handleAnnouncementUpdated as EventListener);
 		window.addEventListener('group-updated', handleGroupUpdated as EventListener);
+		window.addEventListener('group-dismissed', handleGroupDismissed as EventListener);
 
 		// 清理函数
 		return () => {
 			window.removeEventListener('group-member-left', handleMemberLeft as EventListener);
 			window.removeEventListener('group-member-removed', handleMemberRemoved as EventListener);
-			window.removeEventListener('group-member-role-changed', handleMemberRoleChanged as EventListener);
 			window.removeEventListener('group-member-muted', handleMemberMuted as EventListener);
 			window.removeEventListener('group-member-unmuted', handleMemberUnmuted as EventListener);
-			window.removeEventListener('group-announcement-updated', handleAnnouncementUpdated as EventListener);
 			window.removeEventListener('group-updated', handleGroupUpdated as EventListener);
+			window.removeEventListener('group-dismissed', handleGroupDismissed as EventListener);
 		};
 	});
 </script>
 
 <svelte:head>
-	<title>{group?.name ?? '群组详情'} - HotSpot</title>
+	<title>{group?.group.name ?? '群组详情'} - HotSpot</title>
 </svelte:head>
 
 <div class="mx-auto max-w-5xl space-y-6">
 	<div class="flex items-center gap-4">
-		<Button variant="ghost" size="icon" onclick={() => history.back()}>
+		<Button variant="ghost" size="icon" onclick={() => history.back()} aria-label="返回">
 			<ArrowLeft class="h-5 w-5" />
 		</Button>
 		<h1 class="text-2xl font-bold">群组详情</h1>
@@ -774,12 +776,12 @@
 				<div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
 					<div class="flex flex-col gap-4 sm:flex-row sm:items-center">
 						<Avatar class="h-24 w-24 ring-2 ring-primary/15">
-							<AvatarImage src={group.avatar_url} alt={group.name} />
-							<AvatarFallback class="text-2xl">{group.name.slice(0, 2)}</AvatarFallback>
+							<AvatarImage src={group.group.avatar_url} alt={group.group.name} />
+							<AvatarFallback class="text-2xl">{group.group.name.slice(0, 2)}</AvatarFallback>
 						</Avatar>
 						<div>
 							<div class="flex items-center gap-2">
-								<h2 class="text-2xl font-bold">{group.name}</h2>
+								<h2 class="text-2xl font-bold">{group.group.name}</h2>
 								{#if group.has_password}
 									<Lock class="h-4 w-4 text-muted-foreground" />
 								{/if}
@@ -789,7 +791,7 @@
 							{/if}
 							{#if group.tags && group.tags.length > 0}
 								<div class="mt-3 flex flex-wrap gap-2">
-									{#each group.tags as tag}
+									{#each group.tags as tag (tag)}
 										<Badge variant="secondary">#{tag}</Badge>
 									{/each}
 								</div>
@@ -828,7 +830,7 @@
 							<Users class="h-4 w-4" />
 							成员数量
 						</div>
-						<div class="mt-2 text-2xl font-bold">{group.members_count}</div>
+						<div class="mt-2 text-2xl font-bold">{group.group.members_count}</div>
 					</div>
 					<div class="rounded-2xl border border-border/60 bg-background/70 p-4 text-left">
 						<div class="flex items-center gap-2 text-sm text-muted-foreground">
@@ -869,7 +871,7 @@
 							</p>
 							{#if group.tags && group.tags.length > 0}
 								<div class="flex flex-wrap gap-2">
-									{#each group.tags as tag}
+									{#each group.tags as tag (tag)}
 										<Badge variant="secondary" class="rounded-full">#{tag}</Badge>
 									{/each}
 								</div>
@@ -988,7 +990,7 @@
 												</div>
 												<p class="whitespace-pre-wrap text-sm text-muted-foreground">{announcement.content}</p>
 												<div class="text-xs text-muted-foreground">
-													{announcement.created_by.nickname} · {formatDateTime(announcement.created_at)}
+													{formatDateTime(announcement.created_at)}
 												</div>
 											</div>
 											{#if canManageGroup}
@@ -1033,22 +1035,6 @@
 							</Button>
 						</div>
 					{/if}
-					{/if}
-					{#if announcementsPagination.hasMore}
-						<div class="flex justify-center pt-2">
-							<Button
-								variant="outline"
-								size="sm"
-								class="rounded-full"
-								onclick={() => loadAnnouncements(false)}
-								disabled={announcementsPagination.loadingMore}
-							>
-								{#if announcementsPagination.loadingMore}
-									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-								{/if}
-								加载更多
-							</Button>
-						</div>
 					{/if}
 				{/if}
 			</TabsContent>
@@ -1210,15 +1196,6 @@
 				{/if}
 			</TabsContent>
 		</Tabs>
-	{:else}
-		<Card>
-			<CardContent class="py-12 text-center">
-				<p class="text-muted-foreground">群组不存在或已被解散</p>
-				<Button variant="outline" class="mt-4" onclick={() => goto('/groups/nearby')}>
-					去探索群组
-				</Button>
-			</CardContent>
-		</Card>
 	{/if}
 </div>
 
@@ -1345,7 +1322,7 @@
 				成员：{muteTarget?.user.nickname ?? '-'}
 			</div>
 			<div class="grid grid-cols-2 gap-2">
-				{#each mutePresets as preset}
+				{#each mutePresets as preset (preset.value)}
 					<Button
 						variant={Number(muteDurationMinutes) === preset.value ? 'default' : 'outline'}
 						size="sm"
@@ -1441,10 +1418,10 @@
 			<Dialog.Title>退出群组</Dialog.Title>
 			<Dialog.Description>确认要退出该群组吗？退出后将无法查看群组内容。</Dialog.Description>
 		</Dialog.Header>
-		<div class="rounded-xl border border-border/60 bg-muted/30 px-4 py-3">
-			<div class="text-sm font-medium">{group?.name ?? '群组'}</div>
+			<div class="rounded-xl border border-border/60 bg-muted/30 px-4 py-3">
+			<div class="text-sm font-medium">{group?.group.name ?? '群组'}</div>
 			<div class="mt-1 text-xs text-muted-foreground">
-				{group?.members_count ?? 0} 位成员
+				{group?.group.members_count ?? 0} 位成员
 			</div>
 		</div>
 		<Dialog.Footer>

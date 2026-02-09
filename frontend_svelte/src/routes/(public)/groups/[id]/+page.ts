@@ -10,19 +10,19 @@ export const load: PageLoad = async ({ params }) => {
 		
 		if (isSuccess(response) && response.data) {
 			return {
-				group: response.data,
+				groupData: response.data,
 				groupId
 			};
 		}
 		
 		return {
-			group: null,
+			groupData: null,
 			groupId,
 			error: response.message || '群组不存在'
 		};
 	} catch (error) {
 		return {
-			group: null,
+			groupData: null,
 			groupId,
 			error: '加载失败'
 		};

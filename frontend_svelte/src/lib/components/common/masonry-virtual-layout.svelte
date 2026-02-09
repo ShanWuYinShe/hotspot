@@ -1,4 +1,4 @@
-<script lang="ts">
+<script lang="ts" generics="T">
 	/**
 	 * 虚拟滚动 Masonry 瀑布流布局组件
 	 * 
@@ -16,7 +16,7 @@
 	import type { Snippet } from 'svelte';
 	import { cn } from '$lib/utils';
 
-	interface Props<T> {
+	interface Props {
 		/**
 		 * 数据列表
 		 */
@@ -92,7 +92,7 @@
 		isLoading = false,
 		hasMore = true,
 		class: className
-	}: Props<any> = $props();
+	}: Props = $props();
 
 	// 列数配置（$derived 确保 columns 变化时更新）
 	const columnConfig = $derived({
@@ -119,10 +119,9 @@
 		key: string | number;
 	}
 
-	let itemRects = $state<ItemRect[]>([]);
-	let columnHeights = $state<number[]>([]);
+	let itemRects = $state.raw<ItemRect[]>([]);
 	let totalHeight = $state(0);
-	let visibleItems = $state<ItemRect[]>([]);
+	let visibleItems = $state.raw<ItemRect[]>([]);
 
 	// 已测量高度的项目缓存（纯缓存，不需要响应式）
 	const measuredHeights = new Map<string | number, number>();
@@ -143,13 +142,6 @@
 	function calculateColumnWidth(totalWidth: number, cols: number, gapSize: number): number {
 		const totalGap = (cols - 1) * gapSize;
 		return (totalWidth - totalGap) / cols;
-	}
-
-	/**
-	 * 找到当前高度最小的列
-	 */
-	function getShortestColumn(): number {
-		return columnHeights.indexOf(Math.min(...columnHeights));
 	}
 
 	/**
@@ -193,7 +185,6 @@
 		});
 
 		// 一次性更新所有响应式状态
-		columnHeights = tempColumnHeights;
 		itemRects = tempItemRects;
 		totalHeight = Math.max(...tempColumnHeights);
 	}
@@ -211,22 +202,22 @@
 	}
 
 	/**
-	 * 测量项目的实际高度
+	 * 测量项目的实际高度（Svelte 5 Attachment 工厂）
 	 */
-	function measureItem(element: HTMLElement, key: string | number) {
-		if (!element) return;
+	function measureItem(key: string | number) {
+		return (element: HTMLElement) => {
+			const height = element.offsetHeight;
+			const cachedHeight = measuredHeights.get(key);
 
-		const height = element.offsetHeight;
-		const cachedHeight = measuredHeights.get(key);
-
-		// 如果高度变化，更新缓存并重新计算布局
-		if (cachedHeight !== height) {
-			measuredHeights.set(key, height);
-			tick().then(() => {
-				calculateLayout();
-				calculateVisibleItems();
-			});
-		}
+			// 如果高度变化，更新缓存并重新计算布局
+			if (cachedHeight !== height) {
+				measuredHeights.set(key, height);
+				tick().then(() => {
+					calculateLayout();
+					calculateVisibleItems();
+				});
+			}
+		};
 	}
 
 	/**
@@ -346,9 +337,9 @@
 				style:left={`${rect.x}px`}
 				style:top={`${rect.y}px`}
 				style:width={`${rect.width}px`}
-				use:measureItem={rect.key}
+				{@attach measureItem(rect.key)}
 			>
-				{@render children(items[rect.index], rect.index)}
+				{@render children(items[rect.index]!, rect.index)}
 			</div>
 		{/each}
 	</div>

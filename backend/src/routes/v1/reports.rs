@@ -13,7 +13,7 @@ pub fn token_required_routes() -> Router<AppState> {
     let main_routes = Router::new().route("/create", post(reports::create));
 
     // /me 子路由 - 当前用户举报记录
-    let me_routes = Router::new().route("/", post(reports::me));
+    let me_routes = Router::new().route("/list", post(reports::me));
 
     main_routes.nest("/me", me_routes)
 }

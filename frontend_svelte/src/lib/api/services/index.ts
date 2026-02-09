@@ -26,20 +26,20 @@ export { privateChatsService, privateMessagesService } from './private-chats';
 // 群组
 export { groupsService, groupMessagesService } from './groups';
 
-// 通知
-export { notificationsService, subscriptionsService, deviceTokensService } from './notifications';
-
 // 媒体
 export { mediaService } from './media';
 
 // 地图
 export { mapService } from './map';
 
+// 分享
+export { shareService } from './share';
+
 // 举报
 export { reportsService } from './reports';
 
 // 系统
-export { systemService, globalSettingsService, announcementsService } from './system';
+export { systemService } from './system';
 
 // 管理员
 export {
@@ -50,5 +50,6 @@ export {
 	adminAuditService,
 	adminReportsService,
 	adminTagsService,
-	adminGlobalSettingsService
+	adminServerConfigService,
+	adminClientConfigService
 } from './admin';

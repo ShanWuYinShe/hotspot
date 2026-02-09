@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { dev } from '$app/environment';
 	import { groupsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
-	import type { GroupSearchItem } from '$lib/types/api';
+	import type { GroupItem } from '$lib/types/api';
 	import GroupCard from '$lib/components/common/group-card.svelte';
 	import ListSkeleton from '$lib/components/common/list-skeleton.svelte';
 	import Users from 'lucide-svelte/icons/users';
@@ -13,25 +14,29 @@
 
 	let { refreshTrigger = 0 }: Props = $props();
 
-	let groups = $state<GroupSearchItem[]>([]);
+	let groups = $state.raw<GroupItem[]>([]);
 	let loading = $state(false);
 
 	async function loadGroups() {
 		loading = true;
 		try {
-			const response = await groupsService.searchByLocation({
-				reference_point: {
-					latitude: mapAnchorStore.latitude,
-					longitude: mapAnchorStore.longitude
+			const response = await groupsService.search({
+				search: {
+					reference_point: {
+						latitude: mapAnchorStore.latitude,
+						longitude: mapAnchorStore.longitude
+					},
+					pagination: {
+						limit: 6
+					}
 				},
-				radius: mapAnchorStore.radius * 1000,
-				limit: 6
+				radius: mapAnchorStore.radius * 1000
 			});
 			if (isSuccess(response) && response.data) {
 				groups = response.data.items ?? [];
 			}
 		} catch (error) {
-			console.error('Failed to load recommended groups:', error);
+			if (dev) console.error('Failed to load recommended groups:', error);
 			// 不显示 toast，避免影响首页体验
 		} finally {
 			loading = false;
@@ -73,7 +78,7 @@
 			</a>
 		</div>
 		<div class="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
-			{#each groups as group (group.group_id)}
+			{#each groups as group (group.group.group_id)}
 				<div class="mb-3 break-inside-avoid">
 					<GroupCard {group} showDistance showMembers variant="square" />
 				</div>

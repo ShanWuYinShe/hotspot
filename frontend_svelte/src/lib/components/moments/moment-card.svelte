@@ -10,7 +10,7 @@
 	import { Card, CardContent, CardFooter, CardHeader } from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
-	import type { FeedMomentItem, MomentCard as MomentCardType, MomentSearchItem } from '$lib/types/api';
+	import type { MomentItem } from '$lib/types/api';
 	import Heart from 'lucide-svelte/icons/heart';
 	import MessageCircle from 'lucide-svelte/icons/message-circle';
 	import Bookmark from 'lucide-svelte/icons/bookmark';
@@ -22,34 +22,21 @@
 	import UserCheck from 'lucide-svelte/icons/user-check';
 
 	interface Props {
-		moment: FeedMomentItem | MomentCardType | MomentSearchItem;
+		moment: MomentItem;
 	}
 
 	let { moment }: Props = $props();
 
-	// 使用 $derived 自动计算初始状态（当 moment prop 变化时自动更新）
-	const initialLiked = $derived.by(() => {
-		if ('is_liked' in moment) return moment.is_liked;
-		if ('my_state' in moment) return moment.my_state?.is_liked ?? false;
-		return false;
-	});
-
-	const initialFavorited = $derived.by(() => {
-		if ('is_favorited' in moment) return moment.is_favorited;
-		if ('my_state' in moment) return moment.my_state?.is_favorited ?? false;
-		return false;
-	});
-
 	// 乐观更新 Hooks
 	const likeAction = useOptimisticToggle({
-		initialValue: () => initialLiked,
+		initialValue: () => moment.my_state?.is_liked ?? false,
 		initialCount: () => moment.likes_count,
 		onTrue: () => momentsService.like({ moment_id: moment.moment_id }),
 		onFalse: () => momentsService.unlike({ moment_id: moment.moment_id })
 	});
 
 	const favoriteAction = useOptimisticToggle({
-		initialValue: () => initialFavorited,
+		initialValue: () => moment.my_state?.is_favorited ?? false,
 		onTrue: () => momentsService.favorite({ moment_id: moment.moment_id }),
 		onFalse: () => momentsService.unfavorite({ moment_id: moment.moment_id })
 	});
@@ -120,10 +107,11 @@
 					<p class="font-semibold text-foreground transition-colors group-hover/user:text-primary">{moment.user.nickname}</p>
 					<div class="flex items-center gap-2 text-xs text-muted-foreground">
 						<span>{formatRelativeTime(moment.created_at)}</span>
-						{#if 'location' in moment && moment.location && 'distance' in moment.location}
+						{#if moment.location?.distance != null}
+							{@const distance = moment.location.distance}
 							<span class="flex items-center gap-0.5 rounded-full bg-muted/50 px-1.5 py-0.5">
 								<MapPin class="h-3 w-3" />
-								{formatDistance(moment.location.distance)}
+								{formatDistance(distance)}
 							</span>
 						{/if}
 					</div>
@@ -159,7 +147,7 @@
 
 			{#if moment.images && moment.images.length > 0}
 				<div class="grid gap-2 overflow-hidden rounded-2xl border-2 border-primary/10 {moment.images.length === 1 ? '' : moment.images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}">
-					{#each moment.images.slice(0, 9) as image, i}
+					{#each moment.images.slice(0, 9) as image, i (image.url)}
 						{#if moment.images.length === 1}
 							<div class="relative overflow-hidden bg-muted/30">
 								<img
@@ -190,7 +178,7 @@
 
 			{#if moment.tags && moment.tags.length > 0}
 				<div class="flex flex-wrap gap-2 pt-1">
-					{#each moment.tags as tag}
+					{#each moment.tags as tag (tag)}
 						<Badge variant="default" class="text-xs">#{tag}</Badge>
 					{/each}
 				</div>
@@ -227,6 +215,7 @@
 			class={favoriteAction.isOn ? 'bg-yellow-500/15 text-yellow-500' : ''}
 			onclick={handleFavorite}
 			disabled={favoriteAction.isLoading}
+			aria-label={favoriteAction.isOn ? '取消收藏' : '收藏'}
 		>
 				<Bookmark class="h-5 w-5 {favoriteAction.isOn && 'fill-current animate-bounce-in'}" />
 			</Button>
@@ -234,6 +223,7 @@
 				variant="ghost" 
 				size="icon"
 				onclick={handleShare}
+				aria-label="分享"
 			>
 				<Share2 class="h-5 w-5" />
 			</Button>

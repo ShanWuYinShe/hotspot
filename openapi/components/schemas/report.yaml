@@ -1,0 +1,82 @@
+# HotSpot API - 举报模块类型定义
+# 对应原 api_spec_report.mdc 中的类型定义
+
+# ============================================================
+# 响应类型
+# ============================================================
+
+ReportCreated:
+  type: object
+  required: [report_id]
+  properties:
+    report_id:
+      type: string
+      description: 举报记录 ID
+ReportItem:
+  type: object
+  required: [report_id, target_type, target_id, reason, status, created_at]
+  properties:
+    report_id:
+      type: string
+      description: 举报记录 ID
+    target_type:
+      $ref: './common.yaml#/ReportTargetType'
+    target_id:
+      type: string
+      description: 被举报目标 ID
+    reason:
+      type: string
+      description: 举报原因类型
+    description:
+      type: string
+      description: 举报详情描述
+    status:
+      $ref: './common.yaml#/ReportStatus'
+    created_at:
+      type: string
+      format: date-time
+    handled_at:
+      type: string
+      format: date-time
+
+# ============================================================
+# 请求类型
+# ============================================================
+
+CreateReportRequest:
+  type: object
+  required: [target_type, target_id, reason]
+  properties:
+    target_type:
+      $ref: './common.yaml#/ReportTargetType'
+    target_id:
+      type: string
+      description: 统一为 string（user_id 需转为字符串格式）
+    reason:
+      type: string
+      minLength: 1
+      maxLength: 200
+      description: 举报原因类型
+    description:
+      type: string
+      description: 举报详情描述
+MyReportsRequest:
+  type: object
+  properties:
+    pagination:
+      $ref: './common.yaml#/PaginationParams'
+
+# ============================================================
+# 列表响应类型
+# ============================================================
+
+PaginatedReportItems:
+  type: object
+  required: [items, pagination]
+  properties:
+    items:
+      type: array
+      items:
+        $ref: '#/ReportItem'
+    pagination:
+      $ref: './common.yaml#/Pagination'

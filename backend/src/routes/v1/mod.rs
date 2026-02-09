@@ -8,28 +8,22 @@
 
 // 统一的路由模块（按功能域组织）
 pub mod admin;
-pub mod announcements;
 pub mod auth;
 pub mod comments;
-pub mod device_tokens;
 pub mod feed;
-pub mod global_settings;
-pub mod group_chats;
 pub mod group_messages;
+pub mod groups;
 pub mod map;
 pub mod media;
-pub mod messages;
 pub mod moments;
-pub mod notifications;
 pub mod private_chats;
 pub mod private_messages;
 pub mod reports;
 pub mod search;
 pub mod share;
-pub mod subscriptions;
 pub mod system;
 pub mod tags;
-pub mod user;
+pub mod users;
 
 use axum::{middleware, Router};
 
@@ -87,17 +81,14 @@ pub fn v1_routes(state: AppState) -> Router<AppState> {
     // 可带 token；带 token 会注入 user_id（用于"登录态差异化返回"/限流维度）
     let token_optional_routes = Router::new()
         .nest("/auth", auth::token_optional_routes())
-        .nest("/user", user::token_optional_routes())
-        .nest("/group_chats", group_chats::token_optional_routes())
+        .nest("/users", users::token_optional_routes())
+        .nest("/groups", groups::token_optional_routes())
         .nest("/moments", moments::token_optional_routes())
         .nest("/comments", comments::token_optional_routes())
         .nest("/map", map::token_optional_routes())
         .nest("/system", system::token_optional_routes())
-        .nest("/global_settings", global_settings::token_optional_routes())
-        .nest("/feed", feed::token_optional_routes())
         .nest("/search", search::routes())
         .nest("/tags", tags::token_optional_routes())
-        .nest("/announcements", announcements::token_optional_routes())
         .with_state(state.clone())
         // 约定：最后添加的 layer 最先执行（outermost）
         // 期望执行顺序：optional_auth -> rate_limit -> resource_guard
@@ -109,8 +100,8 @@ pub fn v1_routes(state: AppState) -> Router<AppState> {
     // 需要认证，且有幂等性、速率限制中间件
     let auth_required_routes = Router::new()
         .nest("/auth", auth::token_required_routes())
-        .nest("/user", user::token_required_routes())
-        .nest("/group_chats", group_chats::token_required_routes())
+        .nest("/users", users::token_required_routes())
+        .nest("/groups", groups::token_required_routes())
         .nest("/private_chats", private_chats::token_required_routes())
         .nest(
             "/private_messages",
@@ -120,14 +111,9 @@ pub fn v1_routes(state: AppState) -> Router<AppState> {
         .nest("/moments", moments::token_required_routes())
         .nest("/comments", comments::token_required_routes())
         .nest("/reports", reports::token_required_routes())
-        .nest("/device_tokens", device_tokens::token_required_routes())
-        .nest("/subscriptions", subscriptions::token_required_routes())
-        .nest("/system", system::token_required_routes())
         .nest("/feed", feed::token_required_routes())
         .nest("/share", share::share_routes())
         .nest("/media", media::token_required_routes())
-        .nest("/messages", messages::token_required_routes())
-        .nest("/notifications", notifications::token_required_routes())
         .with_state(state.clone())
         // 期望执行顺序：auth -> rate_limit -> resource_guard -> idempotency
         .layer(idempotency_layer.clone())

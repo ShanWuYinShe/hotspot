@@ -3,7 +3,6 @@
 	import { goto } from '$app/navigation';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
-	import { notificationStore } from '$lib/stores/notification.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
@@ -83,6 +82,7 @@
 				class="shrink-0 md:hidden"
 				onclick={onMenuClick}
 				circular
+				aria-label="打开菜单"
 			>
 				<Menu class="h-5 w-5" />
 			</RippleButton>

@@ -1,5 +1,5 @@
-const AMAP_KEY = import.meta.env.VITE_AMAP_KEY;
-const AMAP_SERVICE_HOST = import.meta.env.VITE_AMAP_SERVICE_HOST || '/_AMapService';
+const AMAP_KEY = import.meta.env['VITE_AMAP_KEY'];
+const AMAP_SERVICE_HOST = import.meta.env['VITE_AMAP_SERVICE_HOST'] || '/_AMapService';
 
 let loadPromise: Promise<void> | null = null;
 let securityConfigured = false;

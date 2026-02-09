@@ -1,7 +1,8 @@
 <script lang="ts">
+	import { dev } from '$app/environment';
 	import { tagsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
-	import type { TrendingTag } from '$lib/types/api';
+	import type { TagItem } from '$lib/types/api';
 	import { Badge } from '$lib/components/ui/badge';
 	import Hash from 'lucide-svelte/icons/hash';
 
@@ -11,21 +12,17 @@
 
 	let { refreshTrigger = 0 }: Props = $props();
 
-	let tags = $state<TrendingTag[]>([]);
-	let loading = $state(false);
+	let tags = $state.raw<TagItem[]>([]);
 
 	async function loadTags() {
-		loading = true;
 		try {
-			const response = await tagsService.getTrending({ limit: 10 });
+			const response = await tagsService.getTrending();
 			if (isSuccess(response) && response.data) {
 				tags = response.data.items ?? [];
 			}
 		} catch (error) {
-			console.error('Failed to load trending tags:', error);
+			if (dev) console.error('Failed to load trending tags:', error);
 			// 不显示 toast，避免影响首页体验
-		} finally{
-			loading = false;
 		}
 	}
 
@@ -42,7 +39,7 @@
 			<h2 class="text-lg font-semibold tracking-tight">热门话题</h2>
 		</div>
 		<div class="flex flex-wrap gap-2">
-			{#each tags as tag}
+			{#each tags as tag (tag.name)}
 				<a href="/search?tag={encodeURIComponent(tag.name)}" class="group">
 					<Badge variant="secondary" class="cursor-pointer rounded-full px-3 py-1.5 text-sm transition-all hover:bg-primary/10 hover:text-primary">
 						#{tag.name}

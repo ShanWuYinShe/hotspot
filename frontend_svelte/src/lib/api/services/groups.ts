@@ -6,76 +6,48 @@ import { post, paginate } from '../client';
 import { GROUPS, GROUP_MESSAGES } from '../endpoints';
 import type {
 	ApplicationStatus,
-	GroupSearchItem,
-	GroupSuggestions,
-	GroupInfo,
-	GroupSettings,
+	GroupItem,
+	GroupOpenResult,
 	GroupMemberItem,
+	BannedMemberItem,
 	GroupAnnouncementItem,
 	GroupApplicationItem,
+	GroupInviteItem,
 	GroupMessageItem,
-	MessageLocation,
-	MessageReactionItem,
-	MessageReadItem,
-	GeoPoint,
+	MessageSent,
+	JoinGroupResult,
+	Invitation,
 	Location,
 	SendMessageType,
-	ReactionType,
 	SetableGroupRole,
-	UserInfo
+	PaginationParams,
+	SearchBaseParams,
+	GroupRole
 } from '$lib/types/api';
 
 export const groupsService = {
 	// ==================== 搜索 ====================
 
 	/**
-	 * 关键词搜索群组
+	 * 搜索群组（对齐 spec SearchGroupsRequest）
 	 */
-	searchByKeyword(params: { reference_point: GeoPoint; kw: string; limit?: number; cursor?: string }) {
-		return paginate<GroupSearchItem>(GROUPS.SEARCH_BY_KEYWORD, params);
-	},
-
-	/**
-	 * 群组搜索建议
-	 */
-	suggest(params: { prefix: string; limit?: number }) {
-		return post<GroupSuggestions>(GROUPS.SUGGEST, params);
-	},
-
-	/**
-	 * 标签搜索群组
-	 */
-	searchByTag(params: { reference_point: GeoPoint; tag: string; limit?: number; cursor?: string }) {
-		return paginate<GroupSearchItem>(GROUPS.SEARCH_BY_TAG, params);
-	},
-
-	/**
-	 * 位置搜索群组
-	 */
-	searchByLocation(params: {
-		reference_point: GeoPoint;
-		radius: number;
-		kw?: string;
-		limit?: number;
-		cursor?: string;
+	search(params: {
+		search: SearchBaseParams;
+		keyword?: string;
+		tag?: string;
+		radius?: number;
+		sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';
 	}) {
-		return paginate<GroupSearchItem>(GROUPS.SEARCH_BY_LOCATION, params);
+		return paginate<GroupItem>(GROUPS.SEARCH, params);
 	},
 
 	// ==================== 群组信息 ====================
 
 	/**
-	 * 获取群组详情
+	 * 获取群组详情（返回群组信息 + 最近消息）
 	 */
 	getGroup(data: { group_id: string }) {
-		return post<GroupSearchItem>(GROUPS.OPEN_THE_DOOR, data);
-	},
-
-	/**
-	 * 获取群组设置
-	 */
-	getSettings(data: { group_id: string }) {
-		return post<GroupSettings>(GROUPS.SETTINGS, data);
+		return post<GroupOpenResult>(GROUPS.OPEN_THE_DOOR, data);
 	},
 
 	// ==================== 群组操作 ====================
@@ -85,6 +57,7 @@ export const groupsService = {
 	 */
 	create(data: {
 		name: string;
+		location: Location;
 		description?: string;
 		avatar_file_id?: string;
 		tags?: string[];
@@ -92,9 +65,8 @@ export const groupsService = {
 		join_method?: 'open' | 'approval' | 'invite_only';
 		is_searchable?: boolean;
 		max_members?: number;
-		location?: Location;
 	}) {
-		return post<void>(GROUPS.CREATE, data);
+		return post<GroupItem>(GROUPS.CREATE, data);
 	},
 
 	/**
@@ -119,21 +91,21 @@ export const groupsService = {
 	 * 更新我的群组设置
 	 */
 	updateMySettings(data: { group_id: string; is_muted?: boolean; is_pinned?: boolean }) {
-		return post<void>(GROUPS.UPDATE_MY_SETTINGS, data);
+		return post<void>(GROUPS.ME.UPDATE_SETTINGS, data);
 	},
 
 	/**
 	 * 解散群组
 	 */
-	delete(data: { group_id: string }) {
-		return post<void>(GROUPS.DELETE, data);
+	dismiss(data: { group_id: string }) {
+		return post<void>(GROUPS.DISMISS, data);
 	},
 
 	/**
 	 * 转让群主
 	 */
-	transferOwnership(data: { group_id: string; new_owner_id: number }) {
-		return post<void>(GROUPS.TRANSFER_OWNERSHIP, data);
+	transferOwnership(data: { group_id: string; new_owner_id: string }) {
+		return post<void>(GROUPS.ME.TRANSFER_OWNERSHIP, data);
 	},
 
 	// ==================== 成员管理 ====================
@@ -141,80 +113,77 @@ export const groupsService = {
 	/**
 	 * 获取成员列表
 	 */
-	getMembers(params: { group_id: string; limit?: number; cursor?: string }) {
+	getMembers(params: { group_id: string; role?: GroupRole; pagination?: PaginationParams }) {
 		return paginate<GroupMemberItem>(GROUPS.MEMBERS.LIST, params);
 	},
 
 	/**
-	 * 邀请成员
+	 * 搜索成员
 	 */
-	invite(data: { group_id: string; user_ids: number[] }) {
-		return post<void>(GROUPS.MEMBERS.INVITE, data);
+	searchMembers(params: { group_id: string; keyword: string; role?: GroupRole; pagination?: PaginationParams }) {
+		return paginate<GroupMemberItem>(GROUPS.MEMBERS.SEARCH, params);
 	},
 
 	/**
-	 * 直接加入（开放群）
+	 * 邀请成员（单个用户）
 	 */
-	join(data: { group_id: string; password?: string }) {
-		return post<void>(GROUPS.MEMBERS.JOIN, data);
+	invite(data: { group_id: string; user_id: string; message?: string }) {
+		return post<Invitation>(GROUPS.MEMBERS.INVITE, data);
 	},
 
 	/**
-	 * 申请加入
+	 * 加入群组（自动根据 join_method 处理：open 直接加入，approval 发起申请）
 	 */
-	apply(data: { group_id: string; message?: string }) {
-		return post<void>(GROUPS.MEMBERS.APPLY, data);
+	join(data: { group_id: string; password?: string; message?: string }) {
+		return post<JoinGroupResult>(GROUPS.ME.JOIN, data);
 	},
 
 	/**
 	 * 设置成员角色
 	 */
-	setRole(data: { group_id: string; user_id: number; role: SetableGroupRole }) {
-		return post<GroupMemberItem>(GROUPS.MEMBERS.SET_ROLE, data);
+	setRole(data: { group_id: string; user_id: string; role: SetableGroupRole }) {
+		return post<void>(GROUPS.MEMBERS.SET_ROLE, data);
 	},
 
 	/**
 	 * 禁言成员
 	 */
-	mute(data: { group_id: string; user_id: number; duration_minutes: number }) {
-		return post<GroupMemberItem>(GROUPS.MEMBERS.MUTE, data);
+	mute(data: { group_id: string; user_id: string; duration_minutes: number }) {
+		return post<void>(GROUPS.MEMBERS.MUTE, data);
 	},
 
 	/**
 	 * 解除禁言
 	 */
-	unmute(data: { group_id: string; user_id: number }) {
-		return post<GroupMemberItem>(GROUPS.MEMBERS.UNMUTE, data);
+	unmute(data: { group_id: string; user_id: string }) {
+		return post<void>(GROUPS.MEMBERS.UNMUTE, data);
 	},
 
 	/**
 	 * 封禁成员
 	 */
-	ban(data: { group_id: string; user_id: number; reason?: string }) {
+	ban(data: { group_id: string; user_id: string; reason?: string }) {
 		return post<void>(GROUPS.MEMBERS.BAN, data);
 	},
 
 	/**
 	 * 解除封禁
 	 */
-	unban(data: { group_id: string; user_id: number }) {
+	unban(data: { group_id: string; user_id: string }) {
 		return post<void>(GROUPS.MEMBERS.UNBAN, data);
 	},
 
 	/**
 	 * 获取封禁列表
 	 */
-	getBanned(params: { group_id: string; limit?: number; cursor?: string }) {
-		return paginate<{ user: UserInfo; banned_at: string; reason?: string }>(
-			GROUPS.MEMBERS.BANNED,
-			params
-		);
+	getBanned(params: { group_id: string; pagination?: PaginationParams }) {
+		return paginate<BannedMemberItem>(GROUPS.MEMBERS.LIST_BANNED, params);
 	},
 
 	/**
 	 * 移除成员
 	 */
-	removeMember(data: { group_id: string; user_id: number }) {
+	removeMember(data: { group_id: string; user_id: string }) {
 		return post<void>(GROUPS.MEMBERS.REMOVE_MEMBER, data);
 	},
 
@@ -223,7 +192,7 @@ export const groupsService = {
 	/**
 	 * 获取入群申请列表
 	 */
-	getApplications(params: { group_id: string; limit?: number; cursor?: string }) {
+	getApplications(params: { group_id: string; status?: ApplicationStatus | 'all'; pagination?: PaginationParams }) {
 		return paginate<GroupApplicationItem>(GROUPS.APPLICATIONS.LIST, params);
 	},
 
@@ -231,23 +200,23 @@ export const groupsService = {
 	 * 批准入群申请
 	 */
 	approveApplication(data: { application_id: string }) {
-		return post<GroupApplicationItem>(GROUPS.APPLICATIONS.APPROVE, data);
+		return post<void>(GROUPS.APPLICATIONS.APPROVE, data);
 	},
 
 	/**
 	 * 拒绝入群申请
 	 */
 	rejectApplication(data: { application_id: string; reason?: string }) {
-		return post<GroupApplicationItem>(GROUPS.APPLICATIONS.REJECT, data);
+		return post<void>(GROUPS.APPLICATIONS.REJECT, data);
 	},
 
 	// ==================== 群公告 ====================
 
 	/**
-	 * 获取群公告列表
+	 * 获取群公告列表（非分页，返回所有公告）
 	 */
-	getAnnouncements(params: { group_id: string; limit?: number; cursor?: string }) {
-		return paginate<GroupAnnouncementItem>(GROUPS.ANNOUNCEMENTS.LIST, params);
+	getAnnouncements(params: { group_id: string }) {
+		return post<{ items: GroupAnnouncementItem[] }>(GROUPS.ANNOUNCEMENTS.LIST, params);
 	},
 
 	/**
@@ -261,7 +230,7 @@ export const groupsService = {
 	 * 更新群公告
 	 */
 	updateAnnouncement(data: { announcement_id: string; title?: string; content?: string; is_pinned?: boolean }) {
-		return post<GroupAnnouncementItem>(GROUPS.ANNOUNCEMENTS.UPDATE, data);
+		return post<void>(GROUPS.ANNOUNCEMENTS.UPDATE, data);
 	},
 
 	/**
@@ -276,30 +245,29 @@ export const groupsService = {
 	/**
 	 * 获取我加入的群组列表
 	 */
-	getMyGroups(params?: { limit?: number; cursor?: string }) {
-		return paginate<GroupSearchItem>(GROUPS.ME.LIST, params);
+	getMyGroups(params?: { pagination?: PaginationParams }) {
+		return paginate<GroupItem>(GROUPS.ME.LIST, params);
+	},
+
+	/**
+	 * 获取我的入群申请列表
+	 */
+	getMyApplications(params?: { status?: ApplicationStatus | 'all'; pagination?: PaginationParams }) {
+		return paginate<GroupApplicationItem>(GROUPS.ME.APPLICATIONS_LIST, params);
 	},
 
 	/**
 	 * 取消入群申请
 	 */
-	cancelApplication(data: { group_id: string }) {
+	cancelApplication(data: { application_id: string }) {
 		return post<void>(GROUPS.ME.CANCEL_APPLICATION, data);
 	},
 
 	/**
 	 * 获取收到的群组邀请
 	 */
-	getInvites(params?: { limit?: number; cursor?: string; status?: ApplicationStatus | 'all' }) {
-		return paginate<{
-			invite_id: string;
-			group: GroupInfo;
-			inviter: UserInfo;
-			message?: string;
-			status: ApplicationStatus;
-			created_at: string;
-			expires_at?: string;
-		}>(GROUPS.ME.INVITES, params);
+	getInvites(params?: { status?: ApplicationStatus | 'all'; pagination?: PaginationParams }) {
+		return paginate<GroupInviteItem>(GROUPS.ME.INVITES_LIST, params);
 	},
 
 	/**
@@ -333,13 +301,13 @@ export const groupMessagesService = {
 		type: SendMessageType;
 		content?: string;
 		file_id?: string;
-		location?: MessageLocation;
+		share_code?: string;
 		reply_to_message_id?: string;
-		mentions?: number[];
+		mentions?: string[];
 		idempotencyKey?: string;
 	}) {
 		const { idempotencyKey, ...payload } = data;
-		return post<void>(GROUP_MESSAGES.SEND, payload, { idempotencyKey });
+		return post<MessageSent>(GROUP_MESSAGES.SEND, payload, { idempotencyKey });
 	},
 
 	/**
@@ -347,11 +315,10 @@ export const groupMessagesService = {
 	 */
 	getHistory(params: {
 		group_id: string;
-		limit?: number;
-		cursor?: string;
 		include_system?: boolean;
+		pagination?: PaginationParams;
 	}) {
-		return paginate<GroupMessageItem>(GROUP_MESSAGES.HISTORY, params);
+		return paginate<GroupMessageItem>(GROUP_MESSAGES.GET_HISTORY, params);
 	},
 
 	/**
@@ -369,44 +336,9 @@ export const groupMessagesService = {
 	},
 
 	/**
-	 * 删除消息（仅自己可见）
-	 */
-	delete(data: { message_id: string }) {
-		return post<void>(GROUP_MESSAGES.DELETE, data);
-	},
-
-	/**
 	 * 标记已读
 	 */
-	markAsRead(data: { group_id: string; up_to_message_id?: string }) {
-		return post<void>(GROUP_MESSAGES.MARK_AS_READ, data);
-	},
-
-	/**
-	 * 获取消息已读状态
-	 */
-	getReadStatus(params: { message_id: string; limit?: number; cursor?: string }) {
-		return paginate<MessageReadItem>(GROUP_MESSAGES.READ_STATUS, params);
-	},
-
-	/**
-	 * 添加消息反应
-	 */
-	addReaction(data: { message_id: string; type: ReactionType }) {
-		return post<void>(GROUP_MESSAGES.ADD_REACTION, data);
-	},
-
-	/**
-	 * 移除消息反应
-	 */
-	removeReaction(data: { message_id: string; type: ReactionType }) {
-		return post<void>(GROUP_MESSAGES.REMOVE_REACTION, data);
-	},
-
-	/**
-	 * 获取消息反应列表
-	 */
-	getReactions(params: { message_id: string; limit?: number; cursor?: string }) {
-		return paginate<MessageReactionItem>(GROUP_MESSAGES.REACTIONS, params);
+	markAsRead(data: { group_id?: string; up_to_message_id?: string }) {
+		return post<void>(GROUP_MESSAGES.ME.MARK_AS_READ, data);
 	}
 };

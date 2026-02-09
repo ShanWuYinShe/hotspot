@@ -99,7 +99,7 @@
 		const uploadedIds: string[] = [];
 
 		for (let i = 0; i < selectedImages.length; i += 1) {
-			const image = selectedImages[i];
+			const image = selectedImages[i]!;
 			if (image.uploadedId) {
 				uploadedIds.push(image.uploadedId);
 				continue;
@@ -153,8 +153,10 @@
 			const response = await momentsService.create({
 				description: description.trim(),
 				location: {
-					latitude: mapAnchorStore.latitude,
-					longitude: mapAnchorStore.longitude,
+					point: {
+						latitude: mapAnchorStore.latitude,
+						longitude: mapAnchorStore.longitude
+					},
 					location_name: locationName
 				},
 				image_file_ids: imageIds.length > 0 ? imageIds : undefined,
@@ -223,7 +225,7 @@
 				/>
 				{#if tags.length > 0}
 					<div class="flex flex-wrap gap-2">
-						{#each tags as tag}
+						{#each tags as tag (tag)}
 							<Badge variant="secondary" class="rounded-full text-xs">#{tag}</Badge>
 						{/each}
 					</div>
@@ -250,7 +252,7 @@
 
 				{#if selectedImages.length > 0}
 					<div class="grid gap-3 sm:grid-cols-3">
-						{#each selectedImages as image, index}
+						{#each selectedImages as image, index (image.previewUrl)}
 							<div class="group relative overflow-hidden rounded-xl border bg-muted/30">
 								<img src={image.previewUrl} alt="预览图" class="h-28 w-full object-cover" />
 								{#if image.isUploading}

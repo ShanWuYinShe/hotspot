@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { DropdownMenu as DropdownMenuPrimitive } from 'bits-ui';
+	import { DropdownMenu as DropdownMenuPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
 	import { cn } from '$lib/utils';
 
-	interface Props {
+	interface Props extends WithoutChildrenOrChild<DropdownMenuPrimitive.SeparatorProps> {
 		class?: string;
 	}
 

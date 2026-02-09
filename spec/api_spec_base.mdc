@@ -106,17 +106,6 @@ interface ApiResponse<T = void> {
 
 **安全说明**：不暴露 `X-RateLimit-Limit` / `X-RateLimit-Remaining` / `X-RateLimit-Reset` 等精确限流状态。对于面向终端用户的社交应用，暴露精确额度会帮助爬虫/攻击者优化请求频率以规避限流
 
-### 缓存控制响应头
-
-对于低频更新的公开资源（如 `system/get_client_config`、`system/list_announcements`），服务端**应当**返回标准缓存头：
-
-| Header | 说明 |
-|--------|------|
-| `Cache-Control` | 缓存策略，如 `public, max-age=300`（5 分钟） |
-| `ETag` | 资源版本标识符（内容哈希或版本号） |
-
-客户端可在后续请求中携带 `If-None-Match: <ETag值>`，若资源未变更，服务端返回 HTTP 304 Not Modified（无 body），节省带宽。
-
 ---
 
 ## 路径设计与 Token 语义（契约级）
@@ -150,26 +139,56 @@ interface ApiResponse<T = void> {
 
 ### Token 处理规则
 
-#### Token 携带方式
+#### Web 端 Cookie 契约
 
-**Web 端**：
-1. **Cookie 方式**（自动携带）
-     - `access_token` Cookie：
-      - 作用范围：所有 `/api/*` 请求自动携带
-      - 配置：`HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=3600`
-      - Max-Age 由服务端根据 token 过期时间动态设置
-   
-    - `refresh_token` Cookie：
-      - 作用范围：仅 `/api/v1/auth/refresh_token` 请求自动携带
-      - 配置：`HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth/refresh_token; Max-Age=604800`
-     - SameSite=Strict 提供更强的 CSRF 防护
-     - Path 限制确保 refresh_token 只在刷新端点携带
+Web 端使用以下**固定名称**的 HttpOnly Cookie 携带认证信息（**禁止**使用 `Authorization` Header）：
 
-   **Web 端禁止使用 `Authorization` Header**。
-   
-**App 端**：
+| Cookie 名称 | 用途 | Path | 属性 | Max-Age |
+|---|---|---|---|---|
+| `access_token` | API 访问令牌 | `/api` | `HttpOnly; Secure; SameSite=Strict` | 服务端动态设置（与 token 过期时间一致） |
+| `refresh_token` | Token 刷新令牌 | `/api/v1/auth/refresh_token` | `HttpOnly; Secure; SameSite=Strict` | 服务端动态设置（与 token 过期时间一致） |
+
+**规则**：
+- `access_token` 和 `refresh_token` 是**固定的 Cookie 名称**，前端 / 后端必须一致使用，禁止使用其他名称（如 `token`、`jwt`、`session`）
+- `Path` 限制确保 `refresh_token` 仅在刷新端点（`/api/v1/auth/refresh_token`）自动携带，普通 API 请求不会发送
+- Cookie 由服务端通过 `Set-Cookie` 响应头设置和清除，前端 JavaScript 不可读取也不应手动操作
+- 登出时服务端通过 `Max-Age=0` 清除两个 Cookie
+
+#### CSRF 防护（Web 端）
+
+Web 端使用 CSRF Token 防止跨站请求伪造攻击：
+
+| 项目 | 值 |
+|------|-----|
+| Cookie 名称 | `hs_csrf_token` |
+| Header 名称 | `X-CSRF-Token` |
+| 适用范围 | 所有 Web 端 POST 请求 |
+| Cookie 属性 | `Secure; SameSite=Strict`（非 HttpOnly，前端需读取） |
+
+**防护模式**：Double Submit Cookie（OWASP 推荐方案之一），结合 auth Cookie 的 `SameSite=Strict` 属性形成纵深防御。
+
+**工作流程**：
+- 服务端在设置 auth Cookie（登录/刷新 Token）时，生成密码学安全的随机 Token（≥32 字节），设置到 `hs_csrf_token` Cookie
+- 每次刷新 Token 时重新生成 CSRF Token（per-session 级别，不要求 per-request）
+- 前端在每个 POST 请求中读取 `hs_csrf_token` Cookie 值，并添加到请求头 `X-CSRF-Token`
+- 服务端验证 `X-CSRF-Token` header 与 `hs_csrf_token` Cookie 是否一致，不一致则拒绝请求
+- 登出时服务端通过 `Max-Age=0` 清除 `hs_csrf_token` Cookie
+
+**安全原理**：
+- 攻击者可以诱导浏览器自动携带 Cookie，但**无法跨域读取 Cookie 值**（同源策略保护）
+- 攻击者**无法跨域设置自定义 Header**（`X-CSRF-Token`），因此校验必然失败
+- 即使在不支持 `SameSite` 的旧浏览器中，Double Submit Cookie 仍可独立防御 CSRF
+
+**说明**：
+- Token 必须使用密码学安全的随机数生成器（如 CSPRNG），长度不低于 32 字节
+- App 端不使用 Cookie，因此不受 CSRF 攻击影响，无需 CSRF Token
+- `hs_csrf_token` 是**固定的 Cookie 名称**，前后端必须一致使用
+
+#### App 端 Header 认证
+
+App 端通过 Header 携带认证信息：
 - `Authorization: Bearer <access_token>`
-- 客户端从响应体获取 token 并存储在 Keychain/Keystore
+- Token 从响应体获取并存储在 Keychain（iOS）/ Keystore（Android）
 
 #### Token 验证规则
 

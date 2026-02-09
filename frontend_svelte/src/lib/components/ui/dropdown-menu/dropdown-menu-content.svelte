@@ -1,14 +1,11 @@
 <script lang="ts">
-	import { DropdownMenu as DropdownMenuPrimitive } from 'bits-ui';
+	import { DropdownMenu as DropdownMenuPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
 	import { cn } from '$lib/utils';
 	import type { Snippet } from 'svelte';
 
-	interface Props {
-		sideOffset?: number;
+	interface Props extends WithoutChildrenOrChild<DropdownMenuPrimitive.ContentProps> {
 		children?: Snippet;
 		class?: string;
-		side?: 'top' | 'right' | 'bottom' | 'left';
-		align?: 'start' | 'center' | 'end';
 	}
 
 	let { class: className, sideOffset = 4, side, align, children, ...restProps }: Props = $props();

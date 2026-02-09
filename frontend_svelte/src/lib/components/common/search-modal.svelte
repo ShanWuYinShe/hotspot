@@ -27,8 +27,8 @@
 	let keyword = $state('');
 	let isLoadingTags = $state(false);
 	let isSuggesting = $state(false);
-	let trendingTags = $state<TrendingTag[]>([]);
-	let suggestions = $state<SearchSuggestItem[]>([]);
+	let trendingTags = $state.raw<TrendingTag[]>([]);
+	let suggestions = $state.raw<SearchSuggestItem[]>([]);
 	let recentSearches = $state<string[]>([]);
 	const trimmedKeyword = $derived(keyword.trim());
 	const recentMatches = $derived(
@@ -106,7 +106,7 @@
 	async function loadTrendingTags() {
 		isLoadingTags = true;
 		try {
-			const response = await tagsService.getTrending({ limit: 10 });
+			const response = await tagsService.getTrending();
 			if (isSuccess(response) && response.data) {
 				trendingTags = response.data.items;
 			}
@@ -126,8 +126,7 @@
 		try {
 			const response = await searchService.suggest({
 				prefix,
-				limit: 10,
-				location: {
+				reference_point: {
 					latitude: mapAnchorStore.latitude,
 					longitude: mapAnchorStore.longitude
 				}
@@ -349,7 +348,7 @@
 											</Button>
 										</div>
 										<div class="flex flex-wrap gap-2">
-											{#each recentMatches as term}
+											{#each recentMatches as term (term)}
 												<div class="group flex items-center gap-1 rounded-full bg-secondary/80 pl-3 pr-1 py-1 transition-all hover:bg-secondary hover:shadow-md hover:scale-105">
 													<button
 														type="button"
@@ -382,7 +381,7 @@
 											综合建议
 										</div>
 										<div class="space-y-1">
-											{#each suggestions as item}
+											{#each suggestions as item (`${item.type}_${'user_id' in item.payload ? item.payload.user_id : 'group_id' in item.payload ? item.payload.group_id : 'moment_id' in item.payload ? item.payload.moment_id : item.payload.name}`)}
 												<button
 													type="button"
 													class="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-accent/50"
@@ -457,7 +456,7 @@
 								<p class="text-sm text-muted-foreground">暂无搜索记录</p>
 							{:else}
 								<div class="flex flex-wrap gap-2">
-									{#each recentSearches as term}
+									{#each recentSearches as term (term)}
 										<div class="group flex items-center gap-1 rounded-full bg-secondary/80 pl-3 pr-1 py-1 transition-all hover:bg-secondary hover:shadow-md hover:scale-105">
 											<button
 												type="button"
@@ -500,7 +499,7 @@
 								<p class="text-sm text-muted-foreground">暂无热门标签</p>
 					{:else}
 						<div class="flex flex-wrap gap-2">
-							{#each trendingTags as tag}
+							{#each trendingTags as tag (tag.name)}
 								<Badge
 									variant="secondary"
 									class="cursor-pointer rounded-full px-3 py-1.5 hover:bg-primary/10 hover:text-primary"

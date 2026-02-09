@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { Dialog as DialogPrimitive } from 'bits-ui';
+	import { Dialog as DialogPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
 	import { cn } from '$lib/utils';
 	import type { Snippet } from 'svelte';
 
-	interface Props {
+	interface Props extends WithoutChildrenOrChild<DialogPrimitive.DescriptionProps> {
 		children?: Snippet;
 		class?: string;
 	}

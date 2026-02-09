@@ -283,15 +283,13 @@ impl AppState {
         );
 
         let auth_service = AuthService::new(
-            &db, // Still takes db? Yes, signature in grep output showed &db
+            &db,
             &redis,
             config.jwt_secret.clone(),
             config.jwt_access_token_expiration,
             config.jwt_refresh_token_expiration,
             user_repo.clone(),
             session_repo.clone(),
-            password_reset_repo.clone(),
-            verification_repo.clone(),
             user_settings_repo.clone(),
         );
 

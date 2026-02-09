@@ -3,14 +3,23 @@
  * 严格遵循 @spec/api_spec_websocket.mdc
  */
 
-import type { UserInfo, Location, MessageMedia, MessageLocation } from '$lib/types/api';
+import type {
+	UserInfo,
+	Location,
+	MessageMedia,
+	MessageType,
+	ClientType,
+	FollowSource,
+	GroupJoinMethod,
+	GroupRole
+} from '$lib/types/api';
 
 // ============ 基础类型 ============
 
-export type MessageType = 'text' | 'image' | 'video' | 'audio' | 'location' | 'file';
-export type ReactionType = 'like' | 'love' | 'laugh' | 'surprise' | 'sad' | 'angry';
-export type GroupRole = 'owner' | 'admin' | 'member';
 export type AnnouncementSeverity = 'info' | 'warning' | 'critical';
+export type SubscriptionOperation = 'subscribe' | 'unsubscribe' | 'set';
+export type SubscriptionFailureReason = 'invalid' | 'denied' | 'error';
+export type ErrorSeverity = 'fatal' | 'recoverable' | 'warning';
 
 // ============ WebSocket 事件类型枚举 ============
 
@@ -18,44 +27,33 @@ export type ServerEventType =
 	// 连接管理
 	| 'ConnectionEstablished'
 	| 'Pong'
-	| 'BatchEvents'
 	// 用户状态
 	| 'UserOnline'
 	| 'UserOffline'
-	| 'UserPresenceUpdate'
-	| 'UserLocationUpdate'
 	// 关注关系
 	| 'NewFollower'
 	| 'MutualFollow'
-	| 'FollowRequestReceived'
-	| 'FollowRequestHandled'
 	// 生活瞬间互动
 	| 'MomentLiked'
 	| 'MomentCommented'
+	| 'CommentLiked'
 	| 'CommentReply'
 	| 'MessageMentioned'
-	| 'SystemAnnouncement'
 	// 私聊消息
 	| 'PrivateMessageNew'
 	| 'PrivateMessageEdited'
 	| 'PrivateMessageRecalled'
-	| 'PrivateMessageDeleted'
-	| 'PrivateMessageReaction'
 	| 'PrivateMessageRead'
 	| 'PrivateUserTyping'
 	// 群聊消息
 	| 'GroupMessageNew'
 	| 'GroupMessageEdited'
 	| 'GroupMessageRecalled'
-	| 'GroupMessageDeleted'
-	| 'GroupMessageReaction'
-	| 'GroupMessageRead'
 	| 'GroupUserTyping'
 	// 群组管理
 	| 'GroupMemberJoined'
 	| 'GroupMemberLeft'
 	| 'GroupMemberRemoved'
-	| 'GroupMemberRoleChanged'
 	| 'GroupMemberMuted'
 	| 'GroupMemberUnmuted'
 	| 'GroupInviteReceived'
@@ -63,10 +61,15 @@ export type ServerEventType =
 	| 'GroupApplicationReceived'
 	| 'GroupApplicationResponse'
 	| 'GroupAnnouncementCreated'
-	| 'GroupAnnouncementUpdated'
 	| 'GroupUpdated'
-	| 'GroupDeleted'
+	| 'GroupDismissed'
+	| 'GroupUserEntered'
+	| 'GroupUserExited'
+	// 用户
+	| 'UserProfileUpdated'
 	// 系统
+	| 'SystemAnnouncement'
+	| 'AccountBanned'
 	| 'Error'
 	| 'SubscribeAck'
 	| 'SubscriptionsSnapshot';
@@ -74,12 +77,12 @@ export type ServerEventType =
 export type ClientEventType =
 	| 'Auth'
 	| 'Ping'
-	| 'Subscribe'
-	| 'Unsubscribe'
 	| 'SetSubscriptions'
 	| 'GetSubscriptions'
 	| 'PrivateTyping'
-	| 'GroupTyping';
+	| 'GroupTyping'
+	| 'GroupEnter'
+	| 'GroupLeave';
 
 // ============ 通用事件结构 ============
 
@@ -103,28 +106,24 @@ export interface MomentSummary {
 
 export interface MessageReplyTo {
 	message_id: string;
-	user_id: number;
+	user_id: string;
 	nickname: string;
 	content: string;
 }
 
-export type SubscriptionSourceId = string | number;
-
 export interface FailedSubscriptionId {
-	id: string | number;
-	reason: 'not_found' | 'permission_denied' | 'blocked';
+	subscription_id: string;
+	reason: SubscriptionFailureReason;
 }
-
-export type SubscriptionOperation = 'subscribe' | 'unsubscribe' | 'set';
 
 // ============ 服务端推送事件 ============
 
 // 连接管理
 export interface ConnectionEstablishedPayload {
 	connection_id: string;
-	user_id: number;
+	user_id: string;
 	server_time: string; // 服务端当前时间（UTC ISO 8601），客户端用于判断断开时长
-	
+
 	// 服务端配置（动态配置，客户端不得硬编码）
 	config: {
 		ping_interval: number; // 心跳间隔（秒）
@@ -134,60 +133,26 @@ export interface ConnectionEstablishedPayload {
 			group: number; // 群组订阅上限
 		};
 	};
-	
-	// 未读计数（快速显示角标）
-	unread_counts: {
-		messages: number; // 未读私聊消息数
-		group_messages: number; // 未读群聊消息数
-		notifications: number; // 未读通知数
+
+	// 未读摘要（冷启动/重连时获取 badge 数据）
+	unread_summary: {
+		private_chats: number; // 有未读消息的私聊会话数
+		groups: number; // 有未读消息的群聊数
+		total_messages: number; // 总未读消息数
 	};
 }
 
 export interface PongPayload {}
 
-// 批量事件推送（性能优化）
-export interface BatchEventsPayload {
-	events: ServerWebSocketEvent[]; // 多个事件（已包含 event_id）
-	batch_id: string; // 批次ID（UUID）
-}
-
-// 用户状态类型
-export type UserPresenceStatus =
-	| 'online' // 正在活跃（有 WebSocket 连接且 5 分钟内有活动）
-	| 'idle' // 空闲/离开（有连接但 5 分钟没活动）
-	| 'dnd' // 请勿打扰（用户主动设置）
-	| 'invisible' // 隐身（对他人显示为 offline）
-	| 'offline'; // 离线（无连接）
-
 // 在线状态
 export interface UserOnlinePayload {
-	user_id: number;
-	nickname: string;
-	avatar_url?: string;
-	status: UserPresenceStatus; // 状态类型
-	status_text?: string; // 自定义状态文本（如"开会中"、"勿扰"）
+	user_id: string;
 	online_at: string;
 }
 
 export interface UserOfflinePayload {
-	user_id: number;
-	status: UserPresenceStatus; // 固定为 'offline'
-	last_seen?: string; // 最后在线时间（可选）
-	offline_at: string;
-}
-
-// 用户状态变更（online/idle/dnd/invisible 之间切换）
-export interface UserPresenceUpdatePayload {
-	user_id: number;
-	status: UserPresenceStatus; // 新状态
-	status_text?: string; // 自定义状态文本
-	updated_at: string;
-}
-
-export interface UserLocationUpdatePayload {
-	user_id: number;
-	location: Location;
-	updated_at: string;
+	user_id: string;
+	offline_at: string; // 离线时间（即最后在线时间）
 }
 
 // 关注关系
@@ -195,25 +160,13 @@ export interface NewFollowerPayload {
 	user: UserInfo;
 	followed_at: string;
 	is_mutual: boolean;
+	source?: FollowSource;
+	source_moment_id?: string;
 }
 
 export interface MutualFollowPayload {
 	user: UserInfo;
 	mutual_at: string;
-}
-
-export interface FollowRequestReceivedPayload {
-	request_id: string;
-	requester: UserInfo;
-	message?: string;
-	requested_at: string;
-}
-
-export interface FollowRequestHandledPayload {
-	request_id: string;
-	target_user: UserInfo;
-	action: 'accept';
-	handled_at: string;
 }
 
 // 生活瞬间互动
@@ -231,6 +184,15 @@ export interface MomentCommentedPayload {
 	user: UserInfo;
 	content: string;
 	commented_at: string;
+}
+
+export interface CommentLikedPayload {
+	comment_id: string;
+	moment_id: string;
+	moment_summary?: MomentSummary;
+	comment_preview: string;
+	user: UserInfo;
+	liked_at: string;
 }
 
 export interface CommentReplyPayload {
@@ -262,59 +224,49 @@ export interface SystemAnnouncementPayload {
 	created_at: string;
 }
 
+// 用户资料变更
+export interface UserProfileUpdatedPayload {
+	user: UserInfo;
+	updated_at: string;
+}
+
 // 私聊消息
 export interface PrivateMessageNewPayload {
 	message_id: string;
-	target_user_id: number;
-	sender: UserInfo;
+	target_user_id: string;
+	sender_id: string; // 私聊双方已知，只需 ID
 	type: MessageType;
 	content?: string;
-	media?: MessageMedia;
-	location?: MessageLocation;
+	share_code?: string;
 	reply_to?: MessageReplyTo;
+	media?: MessageMedia;
 	sent_at: string;
 }
 
 export interface PrivateMessageEditedPayload {
 	message_id: string;
-	target_user_id: number;
+	target_user_id: string;
 	content: string;
 	edited_at: string;
 }
 
 export interface PrivateMessageRecalledPayload {
 	message_id: string;
-	target_user_id: number;
-	recalled_by: number;
+	target_user_id: string;
+	recalled_by: string;
 	recalled_at: string;
 }
 
-export interface PrivateMessageDeletedPayload {
-	message_id: string;
-	target_user_id: number;
-	deleted_by: number;
-	deleted_at: string;
-}
-
-export interface PrivateMessageReactionPayload {
-	message_id: string;
-	target_user_id: number;
-	user: UserInfo;
-	reaction_type: ReactionType;
-	has_reaction: boolean;
-	created_at: string;
-}
-
 export interface PrivateMessageReadPayload {
-	target_user_id: number;
+	target_user_id: string;
 	up_to: string;
-	reader_id: number;
+	reader_id: string;
 	read_at: string;
 }
 
 export interface PrivateUserTypingPayload {
-	target_user_id: number;
-	user_id: number;
+	target_user_id: string;
+	user_id: string;
 	is_typing: boolean;
 }
 
@@ -325,10 +277,10 @@ export interface GroupMessageNewPayload {
 	sender: UserInfo;
 	type: MessageType;
 	content?: string;
-	media?: MessageMedia;
-	location?: MessageLocation;
+	share_code?: string;
 	reply_to?: MessageReplyTo;
-	mentions?: number[];
+	mentions?: string[];
+	media?: MessageMedia;
 	sent_at: string;
 }
 
@@ -342,36 +294,13 @@ export interface GroupMessageEditedPayload {
 export interface GroupMessageRecalledPayload {
 	message_id: string;
 	group_id: string;
-	recalled_by: number;
+	recalled_by: string;
 	recalled_at: string;
-}
-
-export interface GroupMessageDeletedPayload {
-	message_id: string;
-	group_id: string;
-	deleted_by: number;
-	deleted_at: string;
-}
-
-export interface GroupMessageReactionPayload {
-	message_id: string;
-	group_id: string;
-	user: UserInfo;
-	reaction_type: ReactionType;
-	has_reaction: boolean;
-	created_at: string;
-}
-
-export interface GroupMessageReadPayload {
-	group_id: string;
-	up_to: string;
-	reader_id: number;
-	read_at: string;
 }
 
 export interface GroupUserTypingPayload {
 	group_id: string;
-	user_id: number;
+	user_id: string;
 	is_typing: boolean;
 }
 
@@ -382,6 +311,42 @@ export interface GroupMemberJoinedPayload {
 	role: GroupRole;
 	member_count: number;
 	joined_at: string;
+}
+
+// 成员离开（自愿离开）
+export interface GroupMemberLeftPayload {
+	group_id: string;
+	user: UserInfo;
+	left_at: string;
+	member_count: number; // 剩余成员总数
+}
+
+// 成员被移除（被踢出/被封禁）
+export interface GroupMemberRemovedPayload {
+	group_id: string;
+	user: UserInfo;
+	removed_by: string; // user_id（操作者）
+	reason?: 'kicked' | 'banned'; // 移除原因
+	removed_at: string;
+	member_count: number;
+}
+
+// 群组成员禁言
+export interface GroupMemberMutedPayload {
+	group_id: string;
+	user: UserInfo;
+	muted_by: string; // user_id（操作者）
+	muted_until: string; // 禁言截止时间
+	duration_minutes: number;
+	muted_at: string;
+}
+
+// 群组成员解除禁言
+export interface GroupMemberUnmutedPayload {
+	group_id: string;
+	user: UserInfo;
+	unmuted_by: string; // user_id（操作者）
+	unmuted_at: string;
 }
 
 export interface GroupInviteReceivedPayload {
@@ -428,92 +393,64 @@ export interface GroupAnnouncementCreatedPayload {
 	created_at: string;
 }
 
-// 成员离开（自愿离开）
-export interface GroupMemberLeftPayload {
-	group_id: string;
-	user: UserInfo;
-	left_at: string;
-	member_count: number; // 剩余成员总数
-}
-
-// 成员被移除（被踢出/被封禁）
-export interface GroupMemberRemovedPayload {
-	group_id: string;
-	user: UserInfo;
-	removed_by: number; // user_id（操作者）
-	reason?: 'kicked' | 'banned'; // 移除原因
-	removed_at: string;
-	member_count: number;
-}
-
-// 成员角色变更
-export interface GroupMemberRoleChangedPayload {
-	group_id: string;
-	user: UserInfo;
-	old_role: GroupRole; // 引用 @api_spec_common_types.mdc
-	new_role: GroupRole;
-	changed_by: number; // user_id（操作者）
-	changed_at: string;
-}
-
-// 成员被禁言
-export interface GroupMemberMutedPayload {
-	group_id: string;
-	user: UserInfo;
-	muted_by: number; // user_id（操作者）
-	muted_until?: string; // 禁言结束时间（null 表示永久禁言）
-	reason?: string;
-	muted_at: string;
-}
-
-// 成员解除禁言
-export interface GroupMemberUnmutedPayload {
-	group_id: string;
-	user: UserInfo;
-	unmuted_by: number; // user_id（操作者）
-	unmuted_at: string;
-}
-
-// 群公告更新
-export interface GroupAnnouncementUpdatedPayload {
-	group_id: string;
-	announcement_id: string;
-	content: string; // 更新后的内容
-	updated_by: number; // user_id（操作者）
-	updated_at: string;
-}
-
 // 群组信息更新
 export interface GroupUpdatedPayload {
 	group_id: string;
-	updated_fields: { // 只包含变更的字段
+	updated_fields: {
 		name?: string;
 		avatar_url?: string;
 		description?: string;
+		tags?: string[];
+		join_method?: GroupJoinMethod;
+		is_searchable?: boolean;
+		max_members?: number;
+		has_password?: boolean;
+		location?: Location;
 	};
-	updated_by: number; // user_id（操作者）
+	updated_by: string; // user_id（操作者）
 	updated_at: string;
 }
 
 // 群组解散
-export interface GroupDeletedPayload {
+export interface GroupDismissedPayload {
 	group_id: string;
-	deleted_by: number; // user_id（操作者）
-	deleted_at: string;
-	reason?: string;
+	dismissed_at: string;
+	reason?: 'owner_dismissed' | 'admin_dismissed';
+}
+
+// 用户进入群聊
+export interface GroupUserEnteredPayload {
+	group_id: string;
+	user: UserInfo;
+	entered_at: string;
+}
+
+// 用户离开群聊
+export interface GroupUserExitedPayload {
+	group_id: string;
+	user: UserInfo;
+	exited_at: string;
 }
 
 // 系统
 export interface ErrorPayload {
 	code: number;
 	message: string;
+	severity: ErrorSeverity;
+	retryable: boolean;
+	retry_after?: number;
+	context?: {
+		operation?: string;
+		resource_type?: string;
+		resource_id?: string;
+	};
 }
 
 export interface SubscribeAckPayload {
 	client_msg_id: string;
 	operation: SubscriptionOperation;
-	type: string;
-	ids: SubscriptionSourceId[];
+	type: 'user' | 'group';
+	ids: string[];
 	code: number;
 	message?: string;
 	failed_ids?: FailedSubscriptionId[];
@@ -521,45 +458,41 @@ export interface SubscribeAckPayload {
 
 // 订阅状态快照（响应 GetSubscriptions）
 export interface SubscriptionsSnapshotPayload {
-	client_msg_id: string; // 回传客户端消息ID
-	user_ids: number[]; // 当前订阅的用户ID列表
-	group_ids: string[]; // 当前订阅的群组ID列表
-	total_count: number; // 总订阅数（user_ids.length + group_ids.length）
+	client_msg_id: string;
+	user_ids: string[];
+	group_ids: string[];
+	total_count: number;
+}
+
+// 账号被封禁
+export interface AccountBannedPayload {
+	reason: string;
+	duration_days: number;
+	banned_at: string;
 }
 
 // ============ 客户端发送事件 ============
 
 export interface AuthPayload {
-	access_token: string;
-	device_fingerprint?: string;
+	client_type: ClientType;
+	access_token?: string; // App 端必填，Web 端不传
 }
 
 export interface PingPayload {}
 
-export interface SubscribePayload {
-	client_msg_id: string;
-	type: string;
-	ids: SubscriptionSourceId[];
-}
-
-export interface UnsubscribePayload {
-	client_msg_id: string;
-	type: string;
-	ids: SubscriptionSourceId[];
-}
-
 export interface SetSubscriptionsPayload {
 	client_msg_id: string;
-	type: string;
-	ids: SubscriptionSourceId[];
+	operation: SubscriptionOperation;
+	type: 'user' | 'group';
+	ids: string[];
 }
 
 export interface GetSubscriptionsPayload {
-	client_msg_id: string; // 客户端消息ID，用于与响应对齐
+	client_msg_id: string;
 }
 
 export interface PrivateTypingPayload {
-	target_user_id: number;
+	target_user_id: string;
 	is_typing: boolean;
 }
 
@@ -568,43 +501,42 @@ export interface GroupTypingPayload {
 	is_typing: boolean;
 }
 
+export interface GroupEnterPayload {
+	group_id: string;
+}
+
+export interface GroupLeavePayload {
+	group_id: string;
+}
+
 // ============ 类型联合 ============
 
 export type ServerEvent =
 	| WebSocketEvent<'ConnectionEstablished', ConnectionEstablishedPayload>
 	| WebSocketEvent<'Pong', PongPayload>
-	| WebSocketEvent<'BatchEvents', BatchEventsPayload>
 	| WebSocketEvent<'UserOnline', UserOnlinePayload>
 	| WebSocketEvent<'UserOffline', UserOfflinePayload>
-	| WebSocketEvent<'UserPresenceUpdate', UserPresenceUpdatePayload>
-	| WebSocketEvent<'UserLocationUpdate', UserLocationUpdatePayload>
 	| WebSocketEvent<'NewFollower', NewFollowerPayload>
 	| WebSocketEvent<'MutualFollow', MutualFollowPayload>
-	| WebSocketEvent<'FollowRequestReceived', FollowRequestReceivedPayload>
-	| WebSocketEvent<'FollowRequestHandled', FollowRequestHandledPayload>
 	| WebSocketEvent<'MomentLiked', MomentLikedPayload>
 	| WebSocketEvent<'MomentCommented', MomentCommentedPayload>
+	| WebSocketEvent<'CommentLiked', CommentLikedPayload>
 	| WebSocketEvent<'CommentReply', CommentReplyPayload>
 	| WebSocketEvent<'MessageMentioned', MessageMentionedPayload>
 	| WebSocketEvent<'SystemAnnouncement', SystemAnnouncementPayload>
+	| WebSocketEvent<'UserProfileUpdated', UserProfileUpdatedPayload>
 	| WebSocketEvent<'PrivateMessageNew', PrivateMessageNewPayload>
 	| WebSocketEvent<'PrivateMessageEdited', PrivateMessageEditedPayload>
 	| WebSocketEvent<'PrivateMessageRecalled', PrivateMessageRecalledPayload>
-	| WebSocketEvent<'PrivateMessageDeleted', PrivateMessageDeletedPayload>
-	| WebSocketEvent<'PrivateMessageReaction', PrivateMessageReactionPayload>
 	| WebSocketEvent<'PrivateMessageRead', PrivateMessageReadPayload>
 	| WebSocketEvent<'PrivateUserTyping', PrivateUserTypingPayload>
 	| WebSocketEvent<'GroupMessageNew', GroupMessageNewPayload>
 	| WebSocketEvent<'GroupMessageEdited', GroupMessageEditedPayload>
 	| WebSocketEvent<'GroupMessageRecalled', GroupMessageRecalledPayload>
-	| WebSocketEvent<'GroupMessageDeleted', GroupMessageDeletedPayload>
-	| WebSocketEvent<'GroupMessageReaction', GroupMessageReactionPayload>
-	| WebSocketEvent<'GroupMessageRead', GroupMessageReadPayload>
 	| WebSocketEvent<'GroupUserTyping', GroupUserTypingPayload>
 	| WebSocketEvent<'GroupMemberJoined', GroupMemberJoinedPayload>
 	| WebSocketEvent<'GroupMemberLeft', GroupMemberLeftPayload>
 	| WebSocketEvent<'GroupMemberRemoved', GroupMemberRemovedPayload>
-	| WebSocketEvent<'GroupMemberRoleChanged', GroupMemberRoleChangedPayload>
 	| WebSocketEvent<'GroupMemberMuted', GroupMemberMutedPayload>
 	| WebSocketEvent<'GroupMemberUnmuted', GroupMemberUnmutedPayload>
 	| WebSocketEvent<'GroupInviteReceived', GroupInviteReceivedPayload>
@@ -612,9 +544,11 @@ export type ServerEvent =
 	| WebSocketEvent<'GroupApplicationReceived', GroupApplicationReceivedPayload>
 	| WebSocketEvent<'GroupApplicationResponse', GroupApplicationResponsePayload>
 	| WebSocketEvent<'GroupAnnouncementCreated', GroupAnnouncementCreatedPayload>
-	| WebSocketEvent<'GroupAnnouncementUpdated', GroupAnnouncementUpdatedPayload>
 	| WebSocketEvent<'GroupUpdated', GroupUpdatedPayload>
-	| WebSocketEvent<'GroupDeleted', GroupDeletedPayload>
+	| WebSocketEvent<'GroupDismissed', GroupDismissedPayload>
+	| WebSocketEvent<'GroupUserEntered', GroupUserEnteredPayload>
+	| WebSocketEvent<'GroupUserExited', GroupUserExitedPayload>
+	| WebSocketEvent<'AccountBanned', AccountBannedPayload>
 	| WebSocketEvent<'Error', ErrorPayload>
 	| WebSocketEvent<'SubscribeAck', SubscribeAckPayload>
 	| WebSocketEvent<'SubscriptionsSnapshot', SubscriptionsSnapshotPayload>;
@@ -622,12 +556,12 @@ export type ServerEvent =
 export type ClientEvent =
 	| WebSocketEvent<'Auth', AuthPayload>
 	| WebSocketEvent<'Ping', PingPayload>
-	| WebSocketEvent<'Subscribe', SubscribePayload>
-	| WebSocketEvent<'Unsubscribe', UnsubscribePayload>
 	| WebSocketEvent<'SetSubscriptions', SetSubscriptionsPayload>
 	| WebSocketEvent<'GetSubscriptions', GetSubscriptionsPayload>
 	| WebSocketEvent<'PrivateTyping', PrivateTypingPayload>
-	| WebSocketEvent<'GroupTyping', GroupTypingPayload>;
+	| WebSocketEvent<'GroupTyping', GroupTypingPayload>
+	| WebSocketEvent<'GroupEnter', GroupEnterPayload>
+	| WebSocketEvent<'GroupLeave', GroupLeavePayload>;
 
 // ============ WebSocket 事件类型映射 ============
 
@@ -639,44 +573,35 @@ export type WebSocketEventMap = {
 	// 连接管理
 	ConnectionEstablished: ConnectionEstablishedPayload;
 	Pong: PongPayload;
-	BatchEvents: BatchEventsPayload;
 	// 在线状态
 	UserOnline: UserOnlinePayload;
 	UserOffline: UserOfflinePayload;
-	UserPresenceUpdate: UserPresenceUpdatePayload;
-	UserLocationUpdate: UserLocationUpdatePayload;
 	// 关注关系
 	NewFollower: NewFollowerPayload;
 	MutualFollow: MutualFollowPayload;
-	FollowRequestReceived: FollowRequestReceivedPayload;
-	FollowRequestHandled: FollowRequestHandledPayload;
 	// 生活瞬间互动
 	MomentLiked: MomentLikedPayload;
 	MomentCommented: MomentCommentedPayload;
+	CommentLiked: CommentLikedPayload;
 	CommentReply: CommentReplyPayload;
 	MessageMentioned: MessageMentionedPayload;
 	SystemAnnouncement: SystemAnnouncementPayload;
+	UserProfileUpdated: UserProfileUpdatedPayload;
 	// 私聊消息
 	PrivateMessageNew: PrivateMessageNewPayload;
 	PrivateMessageEdited: PrivateMessageEditedPayload;
 	PrivateMessageRecalled: PrivateMessageRecalledPayload;
-	PrivateMessageDeleted: PrivateMessageDeletedPayload;
-	PrivateMessageReaction: PrivateMessageReactionPayload;
 	PrivateMessageRead: PrivateMessageReadPayload;
 	PrivateUserTyping: PrivateUserTypingPayload;
 	// 群聊消息
 	GroupMessageNew: GroupMessageNewPayload;
 	GroupMessageEdited: GroupMessageEditedPayload;
 	GroupMessageRecalled: GroupMessageRecalledPayload;
-	GroupMessageDeleted: GroupMessageDeletedPayload;
-	GroupMessageReaction: GroupMessageReactionPayload;
-	GroupMessageRead: GroupMessageReadPayload;
 	GroupUserTyping: GroupUserTypingPayload;
 	// 群组管理
 	GroupMemberJoined: GroupMemberJoinedPayload;
 	GroupMemberLeft: GroupMemberLeftPayload;
 	GroupMemberRemoved: GroupMemberRemovedPayload;
-	GroupMemberRoleChanged: GroupMemberRoleChangedPayload;
 	GroupMemberMuted: GroupMemberMutedPayload;
 	GroupMemberUnmuted: GroupMemberUnmutedPayload;
 	GroupInviteReceived: GroupInviteReceivedPayload;
@@ -684,10 +609,12 @@ export type WebSocketEventMap = {
 	GroupApplicationReceived: GroupApplicationReceivedPayload;
 	GroupApplicationResponse: GroupApplicationResponsePayload;
 	GroupAnnouncementCreated: GroupAnnouncementCreatedPayload;
-	GroupAnnouncementUpdated: GroupAnnouncementUpdatedPayload;
 	GroupUpdated: GroupUpdatedPayload;
-	GroupDeleted: GroupDeletedPayload;
+	GroupDismissed: GroupDismissedPayload;
+	GroupUserEntered: GroupUserEnteredPayload;
+	GroupUserExited: GroupUserExitedPayload;
 	// 系统
+	AccountBanned: AccountBannedPayload;
 	Error: ErrorPayload;
 	SubscribeAck: SubscribeAckPayload;
 	SubscriptionsSnapshot: SubscriptionsSnapshotPayload;

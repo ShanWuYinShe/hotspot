@@ -110,7 +110,7 @@ interface PaginationState<T> {
  * 创建分页状态管理
  */
 export function usePagination<T>(options?: UsePaginationOptions<T>): PaginationState<T> {
-	let items = $state<T[]>([]);
+	let items = $state.raw<T[]>([]);
 	let loading = $state(options?.initialLoading ?? true);
 	let loadingMore = $state(false);
 	let cursor = $state<string | undefined>(undefined);
@@ -229,11 +229,11 @@ export function usePagination<T>(options?: UsePaginationOptions<T>): PaginationS
 	}
 
 	return {
-		items,
-		loading,
-		loadingMore,
-		hasMore,
-		error,
+		get items() { return items; },
+		get loading() { return loading; },
+		get loadingMore() { return loadingMore; },
+		get hasMore() { return hasMore; },
+		get error() { return error; },
 		load,
 		reset,
 		setError,

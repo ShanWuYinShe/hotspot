@@ -8,7 +8,7 @@ use crate::types::enums::{
     FeedFeedbackAction, FeedSource, GroupJoinMethod, GroupRole, MapDataType, MediaCategory,
     NotificationFilterType, PrivacyLevel, PrivateChatPermission, ReactionType, ReportHandleAction,
     ReportStatus, ReportTargetType, SendMessageType, SetableGroupRole, ShareType, TagTimeframe,
-    UserAccountStatus, UserType, VerificationCodeType,
+    UserAccountStatus, UserType,
 };
 use serde::{Deserialize, Serialize};
 
@@ -21,8 +21,6 @@ pub struct RegisterRequest {
     pub password: String,
     /// 客户端类型：web/app（用于 refresh_token 投递方式）
     pub client_type: ClientType,
-    /// 可选：如果通过手机验证码注册，提供此 token
-    pub verify_token: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -53,37 +51,6 @@ pub struct RefreshTokenRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct CheckStatusRequest {}
-
-#[derive(Debug, Deserialize)]
-pub struct SendVerificationCodeRequest {
-    pub phone: String,
-    pub r#type: VerificationCodeType,
-    pub captcha_token: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct VerifyCodeRequest {
-    pub code_id: String,
-    pub code: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct RequestPasswordResetRequest {
-    pub login_id: String,
-    pub verify_token: String, // 必填，来自 verify_code 接口
-}
-
-#[derive(Debug, Deserialize)]
-pub struct VerifyResetCodeRequest {
-    pub reset_id: String,
-    pub code: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ResetPasswordRequest {
-    pub reset_token: String,
-    pub password: String,
-}
 
 #[derive(Debug, Deserialize)]
 pub struct ChangePasswordRequest {
@@ -1404,4 +1371,105 @@ pub struct ApplyShareRequest {
 #[derive(Debug, Deserialize)]
 pub struct DeleteLocationShareRequest {
     pub share_id: String,
+}
+
+// ==================== 统一搜索请求（与 spec 对齐） ====================
+
+/// 搜索基础参数（统一入口）
+#[derive(Debug, Deserialize)]
+pub struct SearchBaseParams {
+    pub reference_point: Option<GeoPoint>,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+/// 统一用户搜索请求 - POST /api/v1/users/search
+#[derive(Debug, Deserialize)]
+pub struct SearchUsersRequest {
+    pub search: SearchBaseParams,
+    pub keyword: Option<String>,
+    pub tag: Option<String>,
+    pub radius: Option<f64>,
+    pub sort_by: Option<String>,
+}
+
+/// 统一群组搜索请求 - POST /api/v1/groups/search
+#[derive(Debug, Deserialize)]
+pub struct SearchGroupsRequest {
+    pub search: SearchBaseParams,
+    pub keyword: Option<String>,
+    pub tag: Option<String>,
+    pub radius: Option<f64>,
+    pub sort_by: Option<String>,
+}
+
+/// 统一瞬间搜索请求 - POST /api/v1/moments/search
+#[derive(Debug, Deserialize)]
+pub struct SearchMomentsRequest {
+    pub search: SearchBaseParams,
+    pub keyword: Option<String>,
+    pub tag: Option<String>,
+    pub radius: Option<f64>,
+    pub sort_by: Option<String>,
+}
+
+/// 群组成员搜索请求 - POST /api/v1/groups/members/search
+#[derive(Debug, Deserialize)]
+pub struct SearchGroupMembersRequest {
+    pub group_chat_id: String,
+    pub keyword: String,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+/// 撤销所有会话请求 - POST /api/v1/auth/me/sessions/revoke_all
+#[derive(Debug, Deserialize)]
+pub struct RevokeAllSessionsRequest {}
+
+/// 系统元信息请求 - POST /api/v1/system/get_meta
+#[derive(Debug, Deserialize)]
+pub struct SystemGetMetaRequest {}
+
+/// 分享撤销请求 - POST /api/v1/share/revoke
+#[derive(Debug, Deserialize)]
+pub struct RevokeShareRequest {
+    pub share_id: String,
+}
+
+/// 我的分享列表请求 - POST /api/v1/share/me/list
+#[derive(Debug, Deserialize)]
+pub struct MySharesRequest {
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+/// 批量预签名上传请求 - POST /api/v1/media/batch_presign_upload
+#[derive(Debug, Deserialize)]
+pub struct BatchPresignUploadRequest {
+    pub items: Vec<PresignUploadRequest>,
+}
+
+/// 管理员标签搜索请求 - POST /api/v1/admin/tags/search
+#[derive(Debug, Deserialize)]
+pub struct AdminTagSearchRequest {
+    pub keyword: Option<String>,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
+}
+
+/// 管理员更新公告请求 - POST /api/v1/admin/announcements/update
+#[derive(Debug, Deserialize)]
+pub struct AdminUpdateAnnouncementRequest {
+    pub announcement_id: String,
+    pub title: Option<String>,
+    pub content: Option<String>,
+    pub severity: Option<AnnouncementSeverity>,
+    pub is_active: Option<bool>,
+}
+
+/// 管理员更新响应默认值请求
+#[derive(Debug, Deserialize)]
+pub struct AdminUpdateResponseDefaultsRequest {
+    pub default_page_size: Option<i32>,
+    pub max_page_size: Option<i32>,
 }

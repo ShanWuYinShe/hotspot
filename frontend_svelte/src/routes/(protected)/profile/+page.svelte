@@ -10,10 +10,9 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Separator } from '$lib/components/ui/separator';
-	import type { MyCard } from '$lib/types/api';
+	import type { MyProfile } from '$lib/types/api';
 	import { formatDate } from '$lib/utils/format';
 	import Camera from 'lucide-svelte/icons/camera';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
@@ -30,20 +29,32 @@
 	import X from 'lucide-svelte/icons/x';
 	import Shield from 'lucide-svelte/icons/shield';
 	import Bell from 'lucide-svelte/icons/bell';
+	import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
+
+	import type { PageData } from './$types';
 
 	// 使用 SvelteKit 的 load 函数加载的数据
-	let { data } = $props();
+	let { data }: { data: PageData } = $props();
 	
 	// 从 load 函数初始化 profile
-	let profile = $state<MyCard | null>(data.profile);
-	let isLoading = $state(false);
+	let profile = $state<MyProfile | null>(null);
 	let isSaving = $state(false);
 	let isEditing = $state(false);
 
 	// 表单状态
-	let nickname = $state(profile?.nickname ?? '');
-	let bio = $state(profile?.bio ?? '');
-	let tags = $state(profile?.tags?.join(', ') ?? '');
+	let nickname = $state('');
+	let bio = $state('');
+	let tags = $state('');
+	
+	// 同步 data.profile 到本地状态
+	$effect(() => {
+		profile = data.profile;
+		if (data.profile) {
+			nickname = data.profile.nickname ?? '';
+			bio = data.profile.bio ?? '';
+			tags = data.profile.tags?.join(', ') ?? '';
+		}
+	});
 	
 	// 初始化时更新 authStore（一次性操作）
 	onMount(() => {
@@ -69,9 +80,13 @@
 					.filter((t) => t)
 			});
 
-			if (isSuccess(response) && response.data) {
-				profile = response.data;
-				authStore.setProfile(profile);
+			if (isSuccess(response)) {
+				// updateMyProfile returns void; refresh profile manually
+				const profileRes = await usersService.getMyProfile();
+				if (isSuccess(profileRes) && profileRes.data) {
+					profile = profileRes.data;
+					authStore.setProfile(profile);
+				}
 				toast.success('保存成功');
 				isEditing = false;
 			} else {
@@ -107,27 +122,7 @@
 		</div>
 	</div>
 
-	{#if isLoading}
-		<!-- 加载骨架屏 -->
-		<div class="space-y-6">
-			<Card class="overflow-hidden">
-				<div class="bg-linear-to-r from-primary/10 to-primary/5 p-8">
-					<div class="flex items-center gap-6">
-						<Skeleton class="h-24 w-24 shrink-0 rounded-full" />
-						<div class="flex-1 space-y-3">
-							<Skeleton class="h-6 w-48" />
-							<Skeleton class="h-4 w-64" />
-						</div>
-					</div>
-				</div>
-				<CardContent class="space-y-4 p-6">
-					<Skeleton class="h-10 w-full" />
-					<Skeleton class="h-24 w-full" />
-					<Skeleton class="h-10 w-full" />
-				</CardContent>
-			</Card>
-		</div>
-	{:else if profile}
+	{#if profile}
 		<div class="grid gap-6 lg:grid-cols-3">
 			<!-- 左侧：主要信息 -->
 			<div class="space-y-6 lg:col-span-2">
@@ -147,10 +142,11 @@
 									variant="secondary"
 									class="absolute -bottom-2 -right-2 h-10 w-10 rounded-full shadow-md"
 									title="更换头像"
+									aria-label="更换头像"
 								>
 									<Camera class="h-4 w-4" />
 								</Button>
-								{#if profile.is_online}
+								{#if profile.presence_status === 'online'}
 									<div class="absolute right-0 top-0 h-6 w-6 rounded-full border-4 border-background bg-green-500"></div>
 								{/if}
 							</div>
@@ -175,7 +171,7 @@
 
 								{#if profile.tags && profile.tags.length > 0 && !isEditing}
 									<div class="mt-3 flex flex-wrap gap-2">
-										{#each profile.tags as tag}
+										{#each profile.tags as tag (tag)}
 											<Badge variant="secondary" class="rounded-full">#{tag}</Badge>
 										{/each}
 									</div>
@@ -389,5 +385,15 @@
 				</Card>
 			</div>
 		</div>
+	{:else}
+		<!-- 错误或空状态 -->
+		<Card>
+			<CardContent class="flex flex-col items-center justify-center py-16 text-center">
+				<AlertTriangle class="mb-4 h-12 w-12 text-muted-foreground/50" />
+				<h3 class="mb-2 text-lg font-medium">加载个人资料失败</h3>
+				<p class="mb-4 text-sm text-muted-foreground">{data.error ?? '无法获取个人资料，请稍后重试'}</p>
+				<Button variant="outline" onclick={() => location.reload()}>重试</Button>
+			</CardContent>
+		</Card>
 	{/if}
 </div>

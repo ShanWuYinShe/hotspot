@@ -1,10 +1,9 @@
 <script lang="ts">
-	import { Label as LabelPrimitive } from 'bits-ui';
+	import { Label as LabelPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
 	import { cn } from '$lib/utils';
 	import type { Snippet } from 'svelte';
 
-	interface Props {
-		for?: string;
+	interface Props extends WithoutChildrenOrChild<LabelPrimitive.RootProps> {
 		children?: Snippet;
 		class?: string;
 	}

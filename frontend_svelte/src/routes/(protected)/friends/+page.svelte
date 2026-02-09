@@ -11,7 +11,7 @@
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import Users from 'lucide-svelte/icons/users';
 
-	let friends = $state<FriendItem[]>([]);
+	let friends = $state.raw<FriendItem[]>([]);
 	let isLoading = $state(true);
 	let isLoadingMore = $state(false);
 	let cursor = $state<string | undefined>(undefined);
@@ -28,8 +28,10 @@
 
 		try {
 			const response = await usersService.getMyFriends({
-				limit: 24,
-				cursor: refresh ? undefined : cursor
+				pagination: {
+					limit: 24,
+					cursor: refresh ? undefined : cursor
+				}
 			});
 			if (isSuccess(response) && response.data) {
 				friends = refresh ? response.data.items : [...friends, ...response.data.items];

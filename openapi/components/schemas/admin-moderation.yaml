@@ -1,0 +1,391 @@
+# HotSpot API - 管理后台审核模块类型定义
+# 对应原 api_spec_admin_moderation.mdc 中的类型定义
+
+# ============================================================
+# 枚举
+# ============================================================
+
+AdminTagSortBy:
+  type: string
+  enum: [usage_count_desc, usage_count_asc, created_at_desc, last_used_at_desc]
+  description: 标签排序方式
+
+# ============================================================
+# Admin 扩展类型（管理员视角的完整数据）
+# ============================================================
+
+AdminUserItem:
+  allOf:
+  - $ref: './common.yaml#/UserItem'
+  - type: object
+    required: [status, created_at, login_id]
+    properties:
+      status:
+        $ref: './common.yaml#/UserAccountStatus'
+      created_at:
+        type: string
+        format: date-time
+      last_active_at:
+        type: string
+        format: date-time
+      login_id:
+        type: string
+        description: 登录账号（用户名/手机号）
+      register_ip:
+        type: string
+      register_location:
+        type: string
+      last_login_ip:
+        type: string
+      last_login_location:
+        type: string
+      email:
+        type: string
+        description: 电子邮箱
+      phone:
+        type: string
+        description: 手机号
+AdminGroupItem:
+  allOf:
+  - $ref: './common.yaml#/GroupItem'
+  - type: object
+    required: [owner, admins, stats]
+    properties:
+      owner:
+        $ref: './common.yaml#/UserInfo'
+      admins:
+        type: array
+        items:
+          $ref: './common.yaml#/UserInfo'
+      stats:
+        type: object
+        required: [messages_count, active_members_today]
+        properties:
+          messages_count:
+            type: integer
+          active_members_today:
+            type: integer
+          reports_count:
+            type: integer
+          last_reported_at:
+            type: string
+            format: date-time
+
+AdminReportItem:
+  allOf:
+  - $ref: './report.yaml#/ReportItem'
+  - type: object
+    required: [reporter_user_id, reporter]
+    properties:
+      reporter_user_id:
+        type: string
+      reporter:
+        $ref: './common.yaml#/UserInfo'
+      handled_by:
+        $ref: './common.yaml#/UserInfo'
+      handled_action:
+        $ref: './common.yaml#/ReportHandleAction'
+      handled_note:
+        type: string
+      target_snapshot:
+        type: object
+        properties:
+          content:
+            type: string
+          media_urls:
+            type: array
+            items:
+              type: string
+              format: uri
+          owner_id:
+            type: string
+
+AdminAnnouncementItem:
+  allOf:
+  - $ref: './common.yaml#/SystemAnnouncementItem'
+  - type: object
+    required: [created_by, send_push, view_count]
+    properties:
+      created_by:
+        $ref: './common.yaml#/UserInfo'
+      send_push:
+        type: boolean
+        description: 是否发送推送通知
+      push_sent_at:
+        type: string
+        format: date-time
+      view_count:
+        type: integer
+
+# ============================================================
+# 响应类型
+# ============================================================
+
+AnnouncementCreated:
+  type: object
+  required: [announcement_id]
+  properties:
+    announcement_id:
+      type: string
+      description: 公告 ID
+AdminTagItem:
+  type: object
+  required: [tag_name, usage_count, created_at]
+  properties:
+    tag_name:
+      type: string
+      description: 标签名称
+    usage_count:
+      type: integer
+      description: 当前关联的内容数量
+    created_at:
+      type: string
+      format: date-time
+      description: 标签首次使用时间
+    last_used_at:
+      type: string
+      format: date-time
+      description: 最近一次使用时间
+
+# ============================================================
+# 请求类型
+# ============================================================
+
+AdminUserSearchRequest:
+  type: object
+  properties:
+    pagination:
+      $ref: './common.yaml#/PaginationParams'
+    user_id:
+      type: string
+      description: 按用户 ID 精确筛选
+    nickname:
+      type: string
+      description: 按昵称模糊搜索
+    login_id:
+      type: string
+      description: 按登录账号筛选
+    status:
+      $ref: './common.yaml#/UserAccountStatus'
+    user_type:
+      $ref: './common.yaml#/UserType'
+
+AdminUserOpenTheDoorRequest:
+  type: object
+  required: [user_id]
+  properties:
+    user_id:
+      type: string
+      description: 要查看的用户 ID
+AdminBanUserRequest:
+  type: object
+  required: [user_id]
+  properties:
+    user_id:
+      type: string
+      description: 要封禁的用户 ID
+    reason:
+      type: string
+      description: 封禁原因
+    duration_days:
+      type: integer
+      minimum: 0
+      maximum: 3650
+      description: 封禁天数（0 = 永久）
+
+AdminUnbanUserRequest:
+  type: object
+  required: [user_id]
+  properties:
+    user_id:
+      type: string
+      description: 要解封的用户 ID
+    reason:
+      type: string
+      description: 解封原因
+AdminGroupSearchRequest:
+  type: object
+  properties:
+    pagination:
+      $ref: './common.yaml#/PaginationParams'
+    group_id:
+      type: string
+      description: 按群组 ID 精确筛选
+    name:
+      type: string
+      description: 按群组名称模糊搜索
+    owner_id:
+      type: string
+      description: 按群主用户 ID 筛选
+AdminGroupOpenTheDoorRequest:
+  type: object
+  required: [group_id]
+  properties:
+    group_id:
+      type: string
+      description: 要查看的群组 ID
+AdminDismissGroupRequest:
+  type: object
+  required: [group_id]
+  properties:
+    group_id:
+      type: string
+      description: 要解散的群组 ID
+    reason:
+      type: string
+      description: 解散原因
+AdminReportsRequest:
+  type: object
+  properties:
+    pagination:
+      $ref: './common.yaml#/PaginationParams'
+    status:
+      $ref: './common.yaml#/ReportStatus'
+    target_type:
+      $ref: './common.yaml#/ReportTargetType'
+
+HandleReportRequest:
+  type: object
+  required: [report_id, action]
+  properties:
+    report_id:
+      type: string
+      description: 举报记录 ID
+    action:
+      $ref: './common.yaml#/ReportHandleAction'
+      description: 处理动作（approve / reject / ignore）
+    note:
+      type: string
+      description: 处理备注
+AdminTagSearchRequest:
+  type: object
+  properties:
+    pagination:
+      $ref: './common.yaml#/PaginationParams'
+    keyword:
+      type: string
+      description: 标签名模糊搜索
+    sort_by:
+      $ref: '#/AdminTagSortBy'
+      description: 排序方式，默认 usage_count_desc
+
+AdminDeleteTagRequest:
+  type: object
+  required: [tag_name]
+  properties:
+    tag_name:
+      type: string
+      description: 要删除的标签名称
+AdminAnnouncementSearchRequest:
+  type: object
+  properties:
+    pagination:
+      $ref: './common.yaml#/PaginationParams'
+    severity:
+      $ref: './common.yaml#/AnnouncementSeverity'
+
+CreateAnnouncementRequest:
+  type: object
+  required: [title, content, severity]
+  properties:
+    title:
+      type: string
+      description: 公告标题
+    content:
+      type: string
+      description: 公告内容
+    severity:
+      $ref: './common.yaml#/AnnouncementSeverity'
+    action_url:
+      type: string
+      format: uri
+      description: 点击跳转链接
+    send_push:
+      type: boolean
+      description: 是否发送推送通知
+UpdateAnnouncementRequest:
+  type: object
+  required: [announcement_id]
+  properties:
+    announcement_id:
+      type: string
+      description: 公告 ID
+    title:
+      type: string
+      description: 公告标题
+    content:
+      type: string
+      description: 公告内容
+    severity:
+      $ref: './common.yaml#/AnnouncementSeverity'
+    action_url:
+      type: string
+      format: uri
+
+      description: 点击跳转链接
+DeleteAnnouncementRequest:
+  type: object
+  required: [announcement_id]
+  properties:
+    announcement_id:
+      type: string
+
+# ============================================================
+# 列表响应类型
+# ============================================================
+
+      description: 要删除的公告 ID
+PaginatedAdminAnnouncementItems:
+  type: object
+  required: [items, pagination]
+  properties:
+    items:
+      type: array
+      items:
+        $ref: '#/AdminAnnouncementItem'
+    pagination:
+      $ref: './common.yaml#/Pagination'
+
+PaginatedAdminGroupItems:
+  type: object
+  required: [items, pagination]
+  properties:
+    items:
+      type: array
+      items:
+        $ref: '#/AdminGroupItem'
+    pagination:
+      $ref: './common.yaml#/Pagination'
+
+PaginatedAdminReportItems:
+  type: object
+  required: [items, pagination]
+  properties:
+    items:
+      type: array
+      items:
+        $ref: '#/AdminReportItem'
+    pagination:
+      $ref: './common.yaml#/Pagination'
+
+PaginatedAdminTagItems:
+  type: object
+  required: [items, pagination]
+  properties:
+    items:
+      type: array
+      items:
+        $ref: '#/AdminTagItem'
+    pagination:
+      $ref: './common.yaml#/Pagination'
+
+PaginatedAdminUserItems:
+  type: object
+  required: [items, pagination]
+  properties:
+    items:
+      type: array
+      items:
+        $ref: '#/AdminUserItem'
+    pagination:
+      $ref: './common.yaml#/Pagination'

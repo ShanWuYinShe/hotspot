@@ -10,6 +10,7 @@
 	import type { FollowerItem } from '$lib/types/api';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import UserPlus from 'lucide-svelte/icons/user-plus';
+	import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
 
 	const pagination = usePagination<FollowerItem>({
 		uniqueKey: (item) => item.user.user_id
@@ -17,7 +18,7 @@
 
 	async function loadFollowers(refresh = false) {
 		await pagination.load(
-			(cursor) => usersService.getMyFollowers({ limit: 24, cursor }),
+			(cursor) => usersService.getMyFollowers({ pagination: { limit: 24, cursor } }),
 			refresh
 		);
 	}
@@ -45,6 +46,14 @@
 
 	{#if pagination.loading}
 		<ListSkeleton type="user" count={6} />
+	{:else if pagination.error}
+		<EmptyState 
+			icon={AlertTriangle} 
+			title="加载失败" 
+			description={pagination.error} 
+			actionText="重试"
+			onAction={() => loadFollowers(true)}
+		/>
 	{:else if pagination.items.length === 0}
 		<EmptyState icon={UserPlus} title="暂无粉丝" />
 	{:else}

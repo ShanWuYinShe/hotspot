@@ -10,6 +10,5 @@ use crate::{handlers::tags, state::AppState};
 /// Token 可选的标签路由
 pub fn token_optional_routes() -> Router<AppState> {
     Router::new()
-        .route("/trending", post(tags::trending)) // 获取热门标签
-        .route("/suggest", post(tags::suggest)) // 标签搜索建议
+        .route("/list_trending", post(tags::trending))
 }

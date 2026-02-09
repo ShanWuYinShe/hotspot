@@ -72,8 +72,8 @@ class LocationStore {
 	/** 提取经纬度坐标 */
 	geoPoint = $derived(
 		this.#current ? {
-			latitude: this.#current.latitude,
-			longitude: this.#current.longitude
+			latitude: this.#current.point.latitude,
+			longitude: this.#current.point.longitude
 		} : null
 	);
 
@@ -129,7 +129,7 @@ class LocationStore {
 
 			// 注意：这里只返回坐标，location_name 使用默认占位
 			this.#current = {
-				...geoPoint,
+				point: geoPoint,
 				location_name: '当前位置'
 			};
 			this.#lastUpdated = new Date().toISOString();

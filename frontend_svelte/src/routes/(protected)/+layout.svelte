@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import Navbar from '$lib/components/common/navbar.svelte';
@@ -16,12 +16,12 @@
 
 	$effect(() => {
 		if (browser && authStore.initialized && !authStore.isAuthenticated) {
-			uiStore.saveRedirectUrl($page.url.pathname);
+			uiStore.saveRedirectUrl(page.url.pathname);
 		}
 	});
 
 	function handleLoginClick() {
-		uiStore.saveRedirectUrl($page.url.pathname);
+		uiStore.saveRedirectUrl(page.url.pathname);
 		uiStore.openLoginModal();
 	}
 </script>

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { dev } from '$app/environment';
+	import { page } from '$app/state';
 	import { onMount, tick } from 'svelte';
 	import { groupsService, groupMessagesService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
@@ -12,10 +13,9 @@
 	import { autofocus } from '$lib/attachments';
 	import { Button } from '$lib/components/ui/button';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import { Textarea } from '$lib/components/ui/textarea';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Badge } from '$lib/components/ui/badge';
-	import type { GroupCard, GroupMessageItem } from '$lib/types/api';
+	import type { GroupItem, GroupMessageItem } from '$lib/types/api';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import Send from 'lucide-svelte/icons/send';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
@@ -24,13 +24,12 @@
 	import MessageCircle from 'lucide-svelte/icons/message-circle';
 	import MapPin from 'lucide-svelte/icons/map-pin';
 	import ChevronDown from 'lucide-svelte/icons/chevron-down';
-	import Image from 'lucide-svelte/icons/image';
 	import X from 'lucide-svelte/icons/x';
 
-	const groupId = $page.params.id!;
+	const groupId = page.params.id!;
 
-	let group = $state<GroupCard | null>(null);
-	let messages = $state<GroupMessageItem[]>([]);
+	let group = $state<GroupItem | null>(null);
+	let messages = $state.raw<GroupMessageItem[]>([]);
 	let isLoading = $state(true);
 	let messageText = $state('');
 	let isSending = $state(false);
@@ -48,7 +47,7 @@
 
 	// ✨ 批量已读逻辑
 	const batchMarkRead = useBatchMarkRead({
-		markAsRead: async (messageIds) => {
+		markAsRead: async (_messageIds) => {
 			// 群聊消息的标记已读是按群组标记的，不需要传 messageIds
 			await groupMessagesService.markAsRead({ group_id: groupId });
 		},
@@ -60,7 +59,11 @@
 		try {
 			const response = await groupsService.getGroup({ group_id: groupId });
 			if (isSuccess(response) && response.data) {
-				group = response.data;
+				group = response.data.group;
+				// Initialize messages from recent_messages if available
+				if (response.data.recent_messages?.items) {
+					messages = response.data.recent_messages.items.reverse();
+				}
 			} else {
 				toast.error(response.message || '群组不存在');
 			}
@@ -78,8 +81,10 @@
 		try {
 			const response = await groupMessagesService.getHistory({
 				group_id: groupId,
-				limit: 50,
-				cursor: loadMore ? cursor : undefined,
+				pagination: {
+					limit: 50,
+					cursor: loadMore ? cursor : undefined
+				},
 				include_system: true
 			});
 
@@ -156,40 +161,19 @@
 		}
 	}
 
-	function extractMentions(text: string): number[] {
+	function extractMentions(text: string): string[] {
 		const mentionRegex = /@(\d+)/g;
-		const mentions: number[] = [];
+		const mentions: string[] = [];
 		let match;
 
 		while ((match = mentionRegex.exec(text)) !== null) {
-			const userId = parseInt(match[1]);
+			const userId = match[1]!;
 			if (!mentions.includes(userId)) {
 				mentions.push(userId);
 			}
 		}
 
 		return mentions;
-	}
-
-	function formatTime(dateStr: string): string {
-		const date = new Date(dateStr);
-		const now = new Date();
-
-		// 今天：显示时间
-		if (date.toDateString() === now.toDateString()) {
-			return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-		}
-
-		// 昨天
-		const yesterday = new Date(now);
-		yesterday.setDate(yesterday.getDate() - 1);
-		if (date.toDateString() === yesterday.toDateString()) {
-			return '昨天 ' + date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-		}
-
-		// 其他：显示日期+时间
-		return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }) + ' ' +
-			date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 	}
 
 	function formatDateDivider(dateStr: string): string {
@@ -218,33 +202,26 @@
 	}
 
 	/**
-	 * Svelte action：观察消息可见性
+	 * Svelte 5 Attachment：观察消息可见性
 	 */
-	function observeMessage(node: HTMLElement, params: { messageId: string; isSelf: boolean }) {
-		// 只观察其他人发送的消息（不观察自己发送的消息）
-		if (!params.isSelf) {
-			batchMarkRead.observe(node, params.messageId);
-		}
-
-		return {
-			update(newParams: { messageId: string; isSelf: boolean }) {
-				if (newParams.isSelf) {
-					batchMarkRead.unobserve(node);
-				} else {
-					batchMarkRead.observe(node, newParams.messageId);
-				}
-			},
-			destroy() {
-				batchMarkRead.unobserve(node);
+	function observeMessage(params: { messageId: string; isSelf: boolean }) {
+		return (node: HTMLElement) => {
+			// 只观察其他人发送的消息（不观察自己发送的消息）
+			if (!params.isSelf) {
+				batchMarkRead.observe(node, params.messageId);
 			}
+
+			return () => {
+				batchMarkRead.unobserve(node);
+			};
 		};
 	}
 
 	function shouldShowAvatar(index: number): boolean {
 		if (index === messages.length - 1) return true;
 		
-		const current = messages[index];
-		const next = messages[index + 1];
+		const current = messages[index]!;
+		const next = messages[index + 1]!;
 		
 		if (isSelf(current) !== isSelf(next)) return true;
 		if (current.sender?.user_id !== next.sender?.user_id) return true;
@@ -256,8 +233,8 @@
 	function shouldShowName(index: number): boolean {
 		if (index === 0) return true;
 		
-		const current = messages[index];
-		const prev = messages[index - 1];
+		const current = messages[index]!;
+		const prev = messages[index - 1]!;
 		
 		if (isSelf(current)) return false;
 		if (isSelf(prev) !== isSelf(current)) return true;
@@ -316,7 +293,6 @@
 					sender: payload.sender,
 					sent_at: payload.sent_at,
 					media: payload.media,
-					location: payload.location,
 					reply_to: payload.reply_to,
 					mentions: payload.mentions
 				};
@@ -358,7 +334,7 @@
 				toast.success(`${payload.user.nickname} 加入了群组`);
 				// 更新群组成员数量
 				if (group) {
-					group = { ...group, members_count: payload.member_count };
+					group = { ...group, group: { ...group.group, members_count: payload.member_count } };
 				}
 			}
 		});
@@ -366,13 +342,13 @@
 		// 监听群组成员离开事件
 		const handleMemberLeft = (e: CustomEvent<{
 			group_id: string;
-			user_id: number;
+			user_id: string;
 			member_count: number;
 		}>) => {
 			if (e.detail.group_id === groupId) {
 				// 更新群组成员数量
 				if (group) {
-					group = { ...group, members_count: e.detail.member_count };
+					group = { ...group, group: { ...group.group, members_count: e.detail.member_count } };
 				}
 			}
 		};
@@ -380,14 +356,14 @@
 		// 监听群组成员被移除事件
 		const handleMemberRemoved = (e: CustomEvent<{
 			group_id: string;
-			user_id: number;
+			user_id: string;
 			member_count: number;
 			is_current_user: boolean;
 		}>) => {
 			if (e.detail.group_id === groupId) {
 				// 更新群组成员数量
 				if (group) {
-					group = { ...group, members_count: e.detail.member_count };
+					group = { ...group, group: { ...group.group, members_count: e.detail.member_count } };
 				}
 				// 如果被移除的是当前用户，重新加载群组信息
 				if (e.detail.is_current_user) {
@@ -409,7 +385,10 @@
 				// 更新群组信息
 				group = {
 					...group,
-					...e.detail.updated_fields
+					group: {
+						...group.group,
+						...e.detail.updated_fields
+					}
 				};
 			}
 		};
@@ -452,7 +431,7 @@
 		if (!connected) {
 			// 连接断开，重置订阅状态
 			if (isSubscribed) {
-				console.log('[GroupChat] WebSocket 断开，重置订阅状态');
+				if (dev) console.log('[GroupChat] WebSocket 断开，重置订阅状态');
 				isSubscribed = false;
 			}
 			return;
@@ -462,16 +441,16 @@
 		if (!isSubscribed && !isAttemptingSubscribe) {
 			isAttemptingSubscribe = true;
 			
-			console.log('[GroupChat] WebSocket 已连接，订阅群组:', groupId);
+			if (dev) console.log('[GroupChat] WebSocket 已连接，订阅群组:', groupId);
 			
 			subscriptionManager.subscribe('group', [groupId]).then((success) => {
 				isSubscribed = success;
 				isAttemptingSubscribe = false;
 				
 				if (success) {
-					console.log('[GroupChat] ✅ 订阅成功');
+					if (dev) console.log('[GroupChat] ✅ 订阅成功');
 				} else {
-					console.warn('[GroupChat] ❌ 订阅失败，将在重连后重试');
+					if (dev) console.warn('[GroupChat] ❌ 订阅失败，将在重连后重试');
 					toast.warning('消息订阅失败，正在重试...');
 				}
 			});
@@ -481,14 +460,14 @@
 </script>
 
 <svelte:head>
-	<title>{group?.name ?? '群聊'} - HotSpot</title>
+	<title>{group?.group.name ?? '群聊'} - HotSpot</title>
 </svelte:head>
 
 <!-- 聊天容器 - 保留侧边栏布局 -->
 <div class="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-xl border border-border/50 bg-card shadow-lg">
 	<!-- Header -->
 	<header class="flex h-16 shrink-0 items-center gap-3 border-b border-border/50 bg-card/80 px-4 backdrop-blur-sm">
-		<Button variant="ghost" size="icon" class="h-9 w-9" onclick={() => history.back()}>
+		<Button variant="ghost" size="icon" class="h-9 w-9" onclick={() => history.back()} aria-label="返回">
 			<ArrowLeft class="h-5 w-5" />
 		</Button>
 		
@@ -501,21 +480,21 @@
 				class="flex flex-1 items-center gap-3 overflow-hidden transition-opacity hover:opacity-80"
 			>
 				<Avatar class="h-10 w-10 shrink-0">
-					<AvatarImage src={group.avatar_url} alt={group.name} />
+					<AvatarImage src={group.group.avatar_url} alt={group.group.name} />
 					<AvatarFallback>
 						<Users class="h-5 w-5" />
 					</AvatarFallback>
 				</Avatar>
 				<div class="flex-1 overflow-hidden">
-					<div class="truncate font-semibold">{group.name}</div>
+					<div class="truncate font-semibold">{group.group.name}</div>
 					<div class="truncate text-xs text-muted-foreground">
-						{group.members_count} 位成员
+						{group.group.members_count} 位成员
 					</div>
 				</div>
 			</a>
 		{/if}
 		
-		<Button variant="ghost" size="icon" class="h-9 w-9 shrink-0">
+		<Button variant="ghost" size="icon" class="h-9 w-9 shrink-0" aria-label="更多选项">
 			<MoreVertical class="h-5 w-5" />
 		</Button>
 	</header>
@@ -572,7 +551,7 @@
 				<div class="space-y-1 px-4 py-2">
 					{#each messages as message, index (message.message_id)}
 						{@const showDateDivider = index === 0 || 
-							new Date(message.sent_at).toDateString() !== new Date(messages[index - 1].sent_at).toDateString()}
+							new Date(message.sent_at).toDateString() !== new Date(messages[index - 1]!.sent_at).toDateString()}
 						{@const showAvatar = shouldShowAvatar(index)}
 						{@const showName = shouldShowName(index)}
 						{@const isMe = isSelf(message)}
@@ -594,7 +573,7 @@
 						{:else}
 							<div
 								class="group flex gap-3 py-1 {isMe ? 'flex-row-reverse' : ''}"
-								use:observeMessage={{ messageId: message.message_id, isSelf: isMe }}
+								{@attach observeMessage({ messageId: message.message_id, isSelf: isMe })}
 							>
 								{#if !isMe}
 									<div class="w-10 shrink-0">
@@ -645,13 +624,15 @@
 													class="max-h-[300px] max-w-[250px] object-cover"
 												/>
 											</button>
-										{:else if message.type === 'location' && message.location}
+										{:else if message.type === 'share' && message.share_code}
 											<div class="flex items-center gap-2 text-sm">
 												<MapPin class="h-4 w-4 shrink-0" />
 												<div>
-													<p class="font-medium">位置分享</p>
-													{#if message.location.location?.location_name ?? message.location.address}
-														<p class="text-xs opacity-80">{message.location.location?.location_name ?? message.location.address}</p>
+													<p class="font-medium">分享消息</p>
+													{#if message.share_code}
+														<a href="/share/{message.share_code}" class="text-xs opacity-80 hover:underline">
+															查看分享内容
+														</a>
 													{/if}
 												</div>
 											</div>
@@ -736,6 +717,7 @@
 					onclick={sendMessage}
 					onmousedown={(e) => e.preventDefault()}
 					disabled={!messageText.trim() || isSending}
+					aria-label="发送消息"
 				>
 					{#if isSending}
 						<Loader2 class="h-5 w-5 animate-spin" />

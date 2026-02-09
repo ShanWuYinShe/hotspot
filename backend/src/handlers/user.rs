@@ -3,21 +3,21 @@ use axum::{extract::State, Json};
 use crate::{
     dto::{
         request::{
-            BlockRequest, DeleteAccountRequest, FollowRequest, GetRelationshipRequest,
-            HandleFollowRequestRequest, MyBlockedRequest, MyFollowRequestsRequest,
+            BlockRequest, DeleteAccountRequest, FollowRequest, GeoPoint,
+            GetRelationshipRequest, MyBlockedRequest,
             MyFollowersRequest, MyFollowingRequest, MyFriendsRequest, MyProfileRequest,
-            MySettingsRequest, MyStatsRequest, SearchUsersByKeywordRequest,
-            SearchUsersByLocationRequest, SearchUsersByTagRequest, SetRemarkRequest,
-            UnblockRequest, UnfollowRequest, UpdateLocationRequest, UpdateProfileRequest,
-            UpdateSettingsRequest, UpgradeAccountRequest, UserFollowersRequest,
-            UserFollowingRequest, UserFriendsRequest, UserGroupsRequest, UserLikedMomentsRequest,
-            UserMomentsRequest, UserOpenTheDoorRequest, UserStatsRequest,
+            MySettingsRequest, SearchUsersByKeywordRequest,
+            SearchUsersByLocationRequest, SearchUsersByTagRequest, SearchUsersRequest,
+            SetRemarkRequest, UnblockRequest, UnfollowRequest, UpdateLocationRequest,
+            UpdateProfileRequest, UpdateSettingsRequest, UpgradeAccountRequest,
+            UserFollowersRequest, UserFollowingRequest, UserFriendsRequest, UserGroupsRequest,
+            UserLikedMomentsRequest, UserMomentsRequest, UserOpenTheDoorRequest,
         },
         response::{
-            AdminUserDetail, ApiResponse, AuthData, BlockedUserSearchItem, FollowRequestItem,
-            FollowerItem, FollowingItem, FriendItem, GroupSearchItem, MomentSearchItem, MyProfile,
-            PaginatedData, UserInfo, UserMomentListItem, UserRelation, UserSearchItem,
-            UserSettingsData, UserStatsData,
+            AdminUserDetail, ApiResponse, AuthData, BlockedUserSearchItem,
+            FollowerItem, FollowingItem, FriendItem, GroupSearchItem, MyProfile,
+            PaginatedData, UserMomentListItem, UserRelation, UserSearchItem,
+            UserSettingsData,
         },
     },
     error::Result,
@@ -28,31 +28,54 @@ use crate::{
 
 // ==================== Token 可选 ====================
 
-/// 按关键字搜索用户（全局）
-pub async fn search_by_keyword(
+/// 统一搜索用户（支持关键字/标签/位置组合）
+pub async fn search(
     State(state): State<AppState>,
-    Json(req): Json<SearchUsersByKeywordRequest>,
+    Json(req): Json<SearchUsersRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<UserSearchItem>>>> {
-    let response = state.user_service.search_by_keyword(&req).await?;
-    Ok(Json(ApiResponse::success(response)))
-}
+    let reference_point = req.search.reference_point.unwrap_or(GeoPoint {
+        latitude: 0.0,
+        longitude: 0.0,
+    });
 
-/// 按标签搜索用户（全局）
-pub async fn search_by_tag(
-    State(state): State<AppState>,
-    Json(req): Json<SearchUsersByTagRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<UserSearchItem>>>> {
-    let response = state.user_service.search_by_tag(&req).await?;
-    Ok(Json(ApiResponse::success(response)))
-}
-
-/// 按位置搜索用户（范围过滤）
-pub async fn search_by_location(
-    State(state): State<AppState>,
-    Json(req): Json<SearchUsersByLocationRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<UserSearchItem>>>> {
-    let response = state.user_service.search_by_location(&req).await?;
-    Ok(Json(ApiResponse::success(response)))
+    // 根据参数分发到不同的搜索逻辑
+    if let Some(radius) = req.radius {
+        // 位置搜索
+        let location_req = SearchUsersByLocationRequest {
+            kw: req.keyword,
+            reference_point,
+            radius,
+            limit: req.search.limit,
+            cursor: req.search.cursor,
+        };
+        let response = state.user_service.search_by_location(&location_req).await?;
+        Ok(Json(ApiResponse::success(response)))
+    } else if let Some(tag) = req.tag {
+        // 标签搜索
+        let tag_req = SearchUsersByTagRequest {
+            tag,
+            reference_point,
+            limit: req.search.limit,
+            cursor: req.search.cursor,
+        };
+        let response = state.user_service.search_by_tag(&tag_req).await?;
+        Ok(Json(ApiResponse::success(response)))
+    } else if let Some(keyword) = req.keyword {
+        // 关键字搜索
+        let kw_req = SearchUsersByKeywordRequest {
+            kw: keyword,
+            reference_point,
+            limit: req.search.limit,
+            cursor: req.search.cursor,
+        };
+        let response = state.user_service.search_by_keyword(&kw_req).await?;
+        Ok(Json(ApiResponse::success(response)))
+    } else {
+        // 至少需要一个搜索条件
+        Err(crate::error::AppError::BadRequest(
+            "至少需要提供 keyword、tag、radius 中的一个搜索条件".to_string(),
+        ))
+    }
 }
 
 /// 获取用户资料（通过 ID 获取指定用户的资料，包含在线状态）
@@ -119,37 +142,6 @@ pub async fn update_my_profile(
         .update_profile(user.user_id, &req)
         .await?;
     Ok(Json(ApiResponse::success(())))
-}
-
-pub async fn get_relationship(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(req): Json<GetRelationshipRequest>,
-) -> Result<Json<ApiResponse<UserRelation>>> {
-    let response = state
-        .user_service
-        .get_relationship(user.user_id, &req)
-        .await?;
-    Ok(Json(ApiResponse::success(response)))
-}
-
-/// 获取指定用户统计数据（公开 API）
-pub async fn get_stats(
-    State(state): State<AppState>,
-    Json(req): Json<UserStatsRequest>,
-) -> Result<Json<ApiResponse<UserStatsData>>> {
-    let response = state.user_service.get_stats(req.user_id).await?;
-    Ok(Json(ApiResponse::success(response)))
-}
-
-/// 获取当前用户统计数据（/me/ API）
-pub async fn get_my_stats(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(_req): Json<MyStatsRequest>,
-) -> Result<Json<ApiResponse<UserStatsData>>> {
-    let response = state.user_service.get_stats(user.user_id).await?;
-    Ok(Json(ApiResponse::success(response)))
 }
 
 /// 获取当前用户设置
@@ -351,30 +343,6 @@ pub async fn get_my_followers(
         .get_followers_list(user.user_id, &service_req)
         .await?;
     Ok(Json(ApiResponse::success(response)))
-}
-
-pub async fn get_follow_requests(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(req): Json<MyFollowRequestsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<FollowRequestItem>>>> {
-    let response = state
-        .user_service
-        .get_follow_requests(user.user_id, &req)
-        .await?;
-    Ok(Json(ApiResponse::success(response)))
-}
-
-pub async fn handle_follow_request(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(req): Json<HandleFollowRequestRequest>,
-) -> Result<Json<ApiResponse<()>>> {
-    state
-        .user_service
-        .handle_follow_request(user.user_id, &req)
-        .await?;
-    Ok(Json(ApiResponse::success_empty()))
 }
 
 // ==================== 拉黑管理 ====================

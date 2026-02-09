@@ -10,6 +10,7 @@
 	import type { FollowingItem } from '$lib/types/api';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import UserCheck from 'lucide-svelte/icons/user-check';
+	import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
 
 	const pagination = usePagination<FollowingItem>({
 		uniqueKey: (item) => item.user.user_id
@@ -17,7 +18,7 @@
 
 	async function loadFollowing(refresh = false) {
 		await pagination.load(
-			(cursor) => usersService.getMyFollowing({ limit: 24, cursor }),
+			(cursor) => usersService.getMyFollowing({ pagination: { limit: 24, cursor } }),
 			refresh
 		);
 	}
@@ -45,6 +46,14 @@
 
 	{#if pagination.loading}
 		<ListSkeleton type="user" count={6} />
+	{:else if pagination.error}
+		<EmptyState 
+			icon={AlertTriangle} 
+			title="加载失败" 
+			description={pagination.error} 
+			actionText="重试"
+			onAction={() => loadFollowing(true)}
+		/>
 	{:else if pagination.items.length === 0}
 		<EmptyState icon={UserCheck} title="暂无关注" />
 	{:else}

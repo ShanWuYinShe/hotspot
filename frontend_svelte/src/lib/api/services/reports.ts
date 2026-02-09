@@ -4,7 +4,7 @@
 
 import { post, paginate } from '../client';
 import { REPORTS } from '../endpoints';
-import type { ReportCreated, ReportItem, ReportTargetType, ReportReason } from '$lib/types/api';
+import type { ReportCreated, ReportItem, ReportTargetType, PaginationParams } from '$lib/types/api';
 
 export const reportsService = {
 	/**
@@ -13,7 +13,7 @@ export const reportsService = {
 	create(data: {
 		target_type: ReportTargetType;
 		target_id: string;
-		reason: ReportReason;
+		reason: string;
 		description?: string;
 	}) {
 		return post<ReportCreated>(REPORTS.CREATE, data);
@@ -22,7 +22,7 @@ export const reportsService = {
 	/**
 	 * 获取我的举报记录
 	 */
-	getMyReports(params?: { limit?: number; cursor?: string }) {
-		return paginate<ReportItem>(REPORTS.ME, params);
+	getMyReports(params?: { pagination?: PaginationParams }) {
+		return paginate<ReportItem>(REPORTS.ME_LIST, params);
 	}
 };

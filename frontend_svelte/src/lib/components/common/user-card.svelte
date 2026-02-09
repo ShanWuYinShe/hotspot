@@ -5,6 +5,7 @@
 	 * 用于显示用户信息的统一UI组件
 	 * 支持多种显示模式和自定义选项
 	 */
+	import { dev } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
@@ -27,14 +28,13 @@
 	import User from 'lucide-svelte/icons/user';
 	import MessageCircle from 'lucide-svelte/icons/message-circle';
 	import UserPlus from 'lucide-svelte/icons/user-plus';
-	import UserMinus from 'lucide-svelte/icons/user-minus';
 	import Share2 from 'lucide-svelte/icons/share-2';
 	import Flag from 'lucide-svelte/icons/flag';
-	import type { UserInfo, UserSearchItem } from '$lib/types/api';
+	import type { UserInfo, UserItem } from '$lib/types/api';
 
 	interface Props {
 		/** 用户数据 */
-		user: UserInfo | UserSearchItem;
+		user: UserInfo | UserItem;
 		/** 是否显示距离 */
 		showDistance?: boolean;
 		/** 是否显示简介 */
@@ -65,8 +65,11 @@
 		variant = 'default'
 	}: Props = $props();
 
+	// Extract UserInfo from either UserInfo or UserItem
+	const userInfo = $derived('user' in user ? user.user : user);
+
 	// 计算实际链接
-	const actualHref = $derived(href ?? `/users/${user.user_id}`);
+	const actualHref = $derived(href ?? `/users/${userInfo.user_id}`);
 
 	// 格式化距离
 
@@ -83,14 +86,14 @@
 		if (!showOnlineStatus) return false;
 		
 		// 优先使用 presence store 的实时状态
-		const presenceStatus = presenceStore.getStatus(user.user_id);
+		const presenceStatus = presenceStore.getStatus(userInfo.user_id);
 		if (presenceStatus !== 'offline') {
 			// 如果 presence store 有状态且不是 offline，使用它
-			return presenceStore.isOnline(user.user_id);
+			return presenceStore.isOnline(userInfo.user_id);
 		}
 		
 		// 降级：从 user 对象读取（API 返回的静态状态）
-		return 'is_online' in user ? user.is_online : false;
+		return 'presence_status' in user && user.presence_status === 'online';
 	});
 
 	// 获取标签列表（最多显示3个）
@@ -99,7 +102,7 @@
 	);
 
 	// 检查是否是自己
-	const isMe = $derived(authStore.currentUserId === user.user_id);
+	const isMe = $derived(authStore.currentUserId === userInfo.user_id);
 
 	// 菜单操作处理函数
 	function handleViewProfile(e: MouseEvent) {
@@ -115,7 +118,7 @@
 			uiStore.openLoginModal();
 			return;
 		}
-		goto(`/chat/users/${user.user_id}`);
+		goto(`/chat/users/${userInfo.user_id}`);
 	}
 
 	function handleFollow(e: MouseEvent) {
@@ -133,9 +136,9 @@
 		e.preventDefault();
 		e.stopPropagation();
 		const shareData = {
-			title: `${user.nickname} - HotSpot`,
-			text: `查看 ${user.nickname} 的个人主页`,
-			url: `${window.location.origin}/users/${user.user_id}`
+			title: `${userInfo.nickname} - HotSpot`,
+			text: `查看 ${userInfo.nickname} 的个人主页`,
+			url: `${window.location.origin}/users/${userInfo.user_id}`
 		};
 
 		if (navigator.share) {
@@ -143,7 +146,7 @@
 				await navigator.share(shareData);
 			} catch (err) {
 				if ((err as Error).name !== 'AbortError') {
-					console.error('分享失败:', err);
+					if (dev) console.error('分享失败:', err);
 				}
 			}
 		} else {
@@ -177,7 +180,8 @@
 				<!-- 方块模式：Pinterest/小红书风格，高度自适应 -->
 				<!-- 使用user_id生成稳定的随机高度变化 -->
 				{@const heightVariants = [120, 140, 160, 130, 150, 135, 145, 155]}
-				{@const minHeight = heightVariants[Math.abs(user.user_id) % heightVariants.length]}
+				{@const userIdHash = userInfo.user_id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)}
+				{@const minHeight = heightVariants[userIdHash % heightVariants.length]}
 				<div class="flex flex-col justify-between space-y-2.5" style="min-height: {minHeight}px;">
 					<!-- 头像和基本信息 -->
 					<div class="flex items-center gap-2.5">
@@ -186,8 +190,8 @@
 								glow
 								class="size-12"
 							>
-								<AvatarImage src={user.avatar_url} alt={user.nickname} />
-								<AvatarFallback class="bg-linear-to-br from-primary/20 to-secondary/20 text-primary font-bold text-sm">{(user.nickname || '用户').slice(0, 2)}</AvatarFallback>
+								<AvatarImage src={userInfo.avatar_url} alt={userInfo.nickname} />
+								<AvatarFallback class="bg-linear-to-br from-primary/20 to-secondary/20 text-primary font-bold text-sm">{(userInfo.nickname || '用户').slice(0, 2)}</AvatarFallback>
 							</Avatar>
 							{#if isOnline}
 								<span
@@ -196,7 +200,7 @@
 							{/if}
 						</div>
 						<div class="min-w-0 flex-1">
-							<h3 class="truncate font-semibold text-sm">{user.nickname}</h3>
+							<h3 class="truncate font-semibold text-sm">{userInfo.nickname}</h3>
 							{#if distance}
 								<div class="flex items-center gap-1 text-xs text-muted-foreground">
 									<MapPin class="size-3" />
@@ -220,7 +224,7 @@
 						<!-- 标签（如果有） -->
 						{#if displayTags.length > 0}
 							<div class="flex flex-wrap gap-1.5">
-								{#each displayTags as tag}
+								{#each displayTags as tag (tag)}
 									<Badge variant="secondary" class="rounded-full text-[10px] px-2 py-0.5">#{tag}</Badge>
 								{/each}
 							</div>
@@ -235,8 +239,8 @@
 							glow
 							class="h-12 w-12"
 						>
-							<AvatarImage src={user.avatar_url} alt={user.nickname} />
-							<AvatarFallback class="bg-linear-to-br from-primary/20 to-secondary/20 text-primary font-bold">{(user.nickname || '用户').slice(0, 2)}</AvatarFallback>
+							<AvatarImage src={userInfo.avatar_url} alt={userInfo.nickname} />
+							<AvatarFallback class="bg-linear-to-br from-primary/20 to-secondary/20 text-primary font-bold">{(userInfo.nickname || '用户').slice(0, 2)}</AvatarFallback>
 						</Avatar>
 					{#if isOnline}
 						<span
@@ -246,7 +250,7 @@
 					</div>
 					<div class="min-w-0 flex-1">
 						<div class="flex items-center justify-between gap-2">
-							<h3 class="truncate font-semibold">{user.nickname}</h3>
+							<h3 class="truncate font-semibold">{userInfo.nickname}</h3>
 							{#if distance}
 								<span
 									class="flex shrink-0 items-center gap-0.5 rounded-full bg-muted/50 px-1.5 py-0.5 text-[10px] text-muted-foreground"
@@ -270,8 +274,8 @@
 								glow
 								class="h-16 w-16"
 							>
-								<AvatarImage src={user.avatar_url} alt={user.nickname} />
-								<AvatarFallback class="text-lg bg-linear-to-br from-primary/20 to-secondary/20 text-primary font-bold">{(user.nickname || '用户').slice(0, 2)}</AvatarFallback>
+								<AvatarImage src={userInfo.avatar_url} alt={userInfo.nickname} />
+								<AvatarFallback class="text-lg bg-linear-to-br from-primary/20 to-secondary/20 text-primary font-bold">{(userInfo.nickname || '用户').slice(0, 2)}</AvatarFallback>
 							</Avatar>
 						{#if isOnline}
 							<span
@@ -280,7 +284,7 @@
 						{/if}
 						</div>
 						<div class="min-w-0 flex-1">
-							<h3 class="truncate text-lg font-semibold">{user.nickname}</h3>
+							<h3 class="truncate text-lg font-semibold">{userInfo.nickname}</h3>
 							{#if distance}
 								<p class="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
 									<MapPin class="h-3.5 w-3.5" />
@@ -294,7 +298,7 @@
 					{/if}
 					{#if displayTags.length > 0}
 						<div class="flex flex-wrap gap-2">
-							{#each displayTags as tag}
+							{#each displayTags as tag (tag)}
 								<Badge variant="secondary" class="rounded-full text-xs">#{tag}</Badge>
 							{/each}
 						</div>
@@ -308,8 +312,8 @@
 							glow
 							class="h-12 w-12"
 						>
-							<AvatarImage src={user.avatar_url} alt={user.nickname} />
-							<AvatarFallback class="bg-linear-to-br from-primary/20 to-secondary/20 text-primary font-bold">{(user.nickname || '用户').slice(0, 2)}</AvatarFallback>
+							<AvatarImage src={userInfo.avatar_url} alt={userInfo.nickname} />
+							<AvatarFallback class="bg-linear-to-br from-primary/20 to-secondary/20 text-primary font-bold">{(userInfo.nickname || '用户').slice(0, 2)}</AvatarFallback>
 						</Avatar>
 					{#if isOnline}
 						<span
@@ -318,7 +322,7 @@
 					{/if}
 					</div>
 					<div class="min-w-0 flex-1">
-						<h3 class="truncate font-semibold">{user.nickname}</h3>
+						<h3 class="truncate font-semibold">{userInfo.nickname}</h3>
 						{#if distance}
 							<p class="flex items-center gap-1 text-xs text-muted-foreground">
 								<MapPin class="h-3 w-3" />
@@ -332,7 +336,7 @@
 				{/if}
 				{#if displayTags.length > 0}
 					<div class="mt-3 flex flex-wrap gap-2">
-						{#each displayTags as tag}
+						{#each displayTags as tag (tag)}
 							<Badge variant="secondary" class="rounded-full text-xs">#{tag}</Badge>
 						{/each}
 					</div>
@@ -371,6 +375,7 @@
 										e.preventDefault();
 										e.stopPropagation();
 									}}
+									aria-label="更多操作"
 								>
 									<MoreVertical class="h-4 w-4" />
 								</Button>

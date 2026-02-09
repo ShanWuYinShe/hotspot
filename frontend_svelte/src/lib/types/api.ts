@@ -1,39 +1,38 @@
 // HotSpot API 类型定义
-// 基于 @api_spec_common_types.mdc
+// 严格对齐 openapi/components/schemas/ 下的 OpenAPI 3.1 规范
 
-// ============== 基础类型 ==============
+// ============================================================================
+// 枚举类型（common.yaml + 各模块）
+// ============================================================================
 
 export type UserType = 'temp' | 'normal' | 'admin' | 'system';
-export type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'location' | 'system';
+export type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'share' | 'system';
 export type SendMessageType = Exclude<MessageType, 'system'>;
-export type PrivacyLevel = 'public' | 'friends' | 'private';
-export type ReactionType = 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow';
+export type PrivacyLevel = 'public' | 'followers' | 'friends' | 'private';
 export type GroupRole = 'owner' | 'admin' | 'member';
 export type SetableGroupRole = 'admin' | 'member';
 export type Gender = 'male' | 'female' | 'apache_helicopter';
 export type ClientType = 'web' | 'app';
+export type UserPresenceStatus = 'online' | 'offline';
 export type UserAccountStatus = 'normal' | 'banned';
 export type ApplicationStatus = 'pending' | 'accepted' | 'rejected';
-export type ResponseStatus = 'accepted' | 'rejected';
 export type ReportStatus = 'pending' | 'reviewing' | 'resolved' | 'dismissed';
+export type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group';
+export type ReportHandleAction = 'resolve' | 'dismiss' | 'escalate';
 export type GroupJoinMethod = 'open' | 'approval' | 'invite_only';
 export type FeedSource = 'following' | 'nearby' | 'all';
 export type PrivateChatPermission = 'everyone' | 'friends' | 'nobody';
 export type AnnouncementSeverity = 'info' | 'warning' | 'error';
 export type TagTrend = 'rising' | 'stable' | 'falling';
 export type TagTimeframe = 'daily' | 'weekly' | 'monthly';
-export type NotificationFilterType = 'like' | 'comment' | 'follow' | 'system' | 'mention';
-export type VerificationCodeType = 'register' | 'reset_password' | 'change_phone';
-export type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group';
 export type FollowSource = 'moment' | 'search' | 'recommendation' | 'profile' | 'group';
+export type RecommendationType = 'friend_liked' | 'nearby' | 'trending' | 'following' | 'tag_match';
 export type NotificationType =
 	| 'moment_like'
 	| 'moment_comment'
 	| 'comment_reply'
 	| 'new_follower'
 	| 'mutual_follow'
-	| 'follow_request'
-	| 'follow_request_handled'
 	| 'group_invite'
 	| 'group_invite_response'
 	| 'group_application'
@@ -44,7 +43,6 @@ export type NotificationType =
 export type NotificationTargetType = 'moment' | 'comment' | 'user' | 'group' | 'web';
 export type FeedContentType = 'moment' | 'group' | 'user';
 export type FeedFeedbackAction = 'hide' | 'not_interested';
-export type DevicePlatform = 'ios' | 'android' | 'harmony' | 'web';
 export type MediaCategory =
 	| 'avatar'
 	| 'group_avatar'
@@ -55,21 +53,36 @@ export type MediaCategory =
 	| 'chat_file';
 export type MapDataType = 'user' | 'group' | 'moment' | 'all';
 export type MapItemType = 'cluster' | 'user' | 'group' | 'moment';
+export type ShareType = 'reference_point' | 'moment' | 'group' | 'user';
+export type CantMessageReason = 'blocked' | 'privacy' | 'stranger_limit' | 'account_suspended';
+export type SearchSuggestType = 'tag' | 'user' | 'group' | 'moment';
+export type SystemHealthStatus = 'healthy' | 'degraded' | 'unhealthy';
 
-// ============== 位置类型 ==============
+// ============================================================================
+// 位置类型（common.yaml）
+// ============================================================================
 
+/** 基础坐标点（经纬度） */
 export interface GeoPoint {
 	latitude: number;
 	longitude: number;
 }
 
-export interface Location extends GeoPoint {
+/** 位置信息（仅用于 Request 请求参数） */
+export interface Location {
+	point: GeoPoint;
 	location_name: string;
 }
 
-export interface RelativeLocation extends Location {
-	distance: number;
-	bearing_degrees: number;
+/**
+ * 相对位置（用于所有 Response 响应数据）
+ * distance/bearing_degrees 基于 reference_point 计算，搜索/列表/Feed 场景有值，详情场景为 undefined
+ */
+export interface RelativeLocation {
+	point: GeoPoint;
+	location_name: string;
+	distance?: number;
+	bearing_degrees?: number;
 }
 
 export interface Bounds {
@@ -84,16 +97,13 @@ export interface MapViewport {
 	zoom: number;
 }
 
-// ============== 分页类型 ==============
+// ============================================================================
+// 分页与搜索（common.yaml）
+// ============================================================================
 
 export interface PaginationParams {
 	limit?: number;
 	cursor?: string;
-}
-
-export interface TimeRangeParams {
-	start_time?: string;
-	end_time?: string;
 }
 
 export interface PaginationMeta {
@@ -106,10 +116,27 @@ export interface PaginatedData<T> {
 	pagination: PaginationMeta;
 }
 
-// ============== 媒体类型 ==============
+export interface TimeRangeParams {
+	start_time?: string;
+	end_time?: string;
+}
+
+/**
+ * 搜索基础参数（包含浏览锚点位置，组合分页参数）
+ * reference_point 是客户端必须传入的有效地理位置
+ */
+export interface SearchBaseParams {
+	pagination?: PaginationParams;
+	reference_point: GeoPoint;
+}
+
+// ============================================================================
+// 媒体资源（common.yaml + media.yaml）
+// ============================================================================
 
 export interface MomentImage {
 	url: string;
+	thumbnail_url?: string;
 	width?: number;
 	height?: number;
 	content_type?: string;
@@ -124,11 +151,6 @@ export interface MessageMedia {
 	width?: number;
 	height?: number;
 	mime_type?: string;
-}
-
-export interface MessageLocation {
-	location: Location;
-	address?: string;
 }
 
 export interface PresignedUpload {
@@ -148,111 +170,22 @@ export interface UploadedMedia {
 	height?: number;
 }
 
-// ============== 用户类型 ==============
+export interface RecommendationContext {
+	type: RecommendationType;
+}
 
+// ============================================================================
+// 用户类型（common.yaml + users.yaml）
+// ============================================================================
+
+/** 用户基础信息（用于嵌套在其他对象中），不包含 user_type */
 export interface UserInfo {
-	user_id: number;
+	user_id: string;
 	nickname: string;
 	avatar_url?: string;
-	user_type: UserType;
 }
 
-export interface UserSearchItem extends UserInfo {
-	bio?: string;
-	tags?: string[];
-	is_online?: boolean;
-	last_online?: string;
-	location?: RelativeLocation;
-}
-
-export interface FeedUserItem extends UserInfo {
-	bio?: string;
-	tags?: string[];
-	is_online?: boolean;
-	last_online?: string;
-	location?: RelativeLocation;
-	mutual_friends_count?: number;
-	common_tags?: string[];
-	relation?: Relationship;
-}
-
-// 用户建议项 - API 规范: @api_spec_search.mdc UserSuggestItem
-// 用途：显示用户基本信息，点击后跳转到用户主页
-export interface UserSuggestItem {
-	user_id: number;
-	nickname: string;
-	avatar_url?: string;
-	bio?: string; // 个性签名，用于副标题展示
-	distance?: number; // 距离（米），仅当请求包含 location 时返回
-}
-
-export interface UserSuggestions {
-	items: UserSuggestItem[];
-}
-
-export interface Relationship {
-	is_following: boolean;
-	is_followed_by: boolean;
-	is_blocked: boolean;
-	has_pending_follow_request: boolean;
-}
-
-export interface FriendItem {
-	user: UserInfo;
-	is_online?: boolean;
-	remark?: string;
-	followed_at: string;
-	followed_back_at: string;
-}
-
-export interface FollowingItem {
-	user: UserInfo;
-	followed_at: string;
-	is_mutual: boolean;
-	is_online?: boolean;
-}
-
-export interface FollowerItem {
-	user: UserInfo;
-	followed_at: string;
-	is_following_back: boolean;
-	is_online?: boolean;
-}
-
-export interface FollowRequestItem {
-	request_id: string;
-	requester: UserInfo;
-	message?: string;
-	requested_at: string;
-}
-
-export interface BlockedUserItem {
-	user: UserInfo;
-	blocked_at: string;
-	reason?: string;
-}
-
-export interface UserCard extends UserInfo {
-	bio?: string;
-	tags?: string[];
-	is_online?: boolean;
-	last_online?: string;
-	location?: Location;
-	stats: {
-		moments_count: number;
-		friends_count: number;
-		followers_count: number;
-		following_count: number;
-	};
-	relation?: Relationship;
-	social_context?: {
-		mutual_friends_count: number;
-		mutual_friends_preview?: UserInfo[];
-		common_groups_count?: number;
-		common_tags?: string[];
-	};
-}
-
+/** 用户统计信息 */
 export interface UserStats {
 	moments_count: number;
 	friends_count: number;
@@ -261,16 +194,48 @@ export interface UserStats {
 	groups_count: number;
 }
 
+/** 用户关系信息（@auth-only） */
+export interface Relationship {
+	is_following: boolean;
+	is_followed_by: boolean;
+	is_blocked: boolean;
+	is_blocked_by: boolean;
+}
+
+/** 社交上下文（@auth-only） */
+export interface SocialContext {
+	mutual_friends_count: number;
+	mutual_friends_preview?: UserInfo[];
+	common_groups_count?: number;
+	common_tags?: string[];
+}
+
+/**
+ * 用户统一数据类型（用于列表、搜索、详情、Feed 等所有场景）
+ * 替代原 UserSearchItem/UserCard/FeedUserItem
+ */
+export interface UserItem {
+	user: UserInfo;
+	bio?: string;
+	tags?: string[];
+	presence_status?: UserPresenceStatus;
+	last_online?: string;
+	location?: RelativeLocation;
+	stats?: UserStats;
+	// @auth-only
+	relation?: Relationship;
+	social_context?: SocialContext;
+}
+
+/** 用户设置 */
 export interface UserSettings {
 	privacy_level: PrivacyLevel;
 	location_visible: boolean;
-	online_visible: boolean;
-	last_online_visible: boolean;
+	presence_visible: boolean;
 	friends_visible: PrivacyLevel;
 	following_visible: PrivacyLevel;
 	followers_visible: PrivacyLevel;
 	groups_visible: PrivacyLevel;
-	moments_visible: PrivacyLevel;
 	liked_moments_visible: PrivacyLevel;
 	stats_visible: PrivacyLevel;
 	allow_follow: boolean;
@@ -281,23 +246,67 @@ export interface UserSettings {
 	location_searchable: boolean;
 }
 
-export interface MyCard {
+/**
+ * 我的资料（/users/me/profile/get 返回）
+ * user_type 仅在此处返回，UserInfo 不包含
+ */
+export interface MyProfile {
+	user_id: string;
 	nickname: string;
 	avatar_url?: string;
+	user_type: UserType;
 	bio?: string;
 	tags?: string[];
 	gender?: Gender;
 	email?: string;
 	phone?: string;
 	location: Location;
-	is_online: boolean;
+	presence_status: UserPresenceStatus;
 	last_online: string;
 	created_at: string;
 	stats: UserStats;
 }
 
-// ============== 群组类型 ==============
+/** 好友列表项 */
+export interface FriendItem {
+	user: UserInfo;
+	presence_status?: UserPresenceStatus;
+	last_online?: string;
+	remark?: string;
+	followed_at: string;
+	followed_back_at: string;
+}
 
+/** 关注列表项 */
+export interface FollowingItem {
+	user: UserInfo;
+	followed_at: string;
+	is_mutual: boolean;
+	presence_status?: UserPresenceStatus;
+	last_online?: string;
+}
+
+/** 粉丝列表项 */
+export interface FollowerItem {
+	user: UserInfo;
+	followed_at: string;
+	is_following_back: boolean;
+	presence_status?: UserPresenceStatus;
+	last_online?: string;
+}
+
+/** 拉黑列表项 */
+export interface BlockedUserItem {
+	user: UserInfo;
+	blocked_at: string;
+	reason?: string;
+}
+
+// ============================================================================
+// 群组类型（common.yaml + groups.yaml）
+// ============================================================================
+
+/** 群组基础信息（用于嵌套在其他对象中） */
 export interface GroupInfo {
 	group_id: string;
 	name: string;
@@ -305,31 +314,15 @@ export interface GroupInfo {
 	members_count: number;
 }
 
-export interface GroupSearchItem extends GroupInfo {
-	description?: string;
-	tags?: string[];
-	has_password: boolean;
-	location: RelativeLocation;
-	created_at?: string;
-	owner_id?: string;
-	my_state?: MyGroupState;
+/** 群组设置 */
+export interface GroupSettings {
+	join_method: GroupJoinMethod;
+	is_searchable: boolean;
+	max_members: number;
+	location: Location;
 }
 
-// 群组建议项 - API 规范: @api_spec_search.mdc GroupSuggestItem
-// 用途：显示群组基本信息，点击后跳转到群组页
-export interface GroupSuggestItem {
-	group_id: string;
-	name: string;
-	avatar_url?: string;
-	description?: string; // 群组简介，用于副标题展示（优先于成员数）
-	members_count: number; // 成员数量，当无 description 时显示"X 位成员"
-	distance?: number; // 距离（米），仅当请求包含 location 时返回
-}
-
-export interface GroupSuggestions {
-	items: GroupSuggestItem[];
-}
-
+/** 我在群内的状态（@auth-only） */
 export interface MyGroupState {
 	role: GroupRole;
 	is_joined: boolean;
@@ -339,33 +332,36 @@ export interface MyGroupState {
 	joined_at?: string;
 }
 
-export type MyGroupItem = GroupSearchItem;
-export type GroupCard = GroupSearchItem;
-
-export interface FeedGroupItem extends GroupInfo {
+/**
+ * 群组统一数据类型（用于列表、搜索、详情、Feed 等所有场景）
+ * 替代原 GroupSearchItem/GroupCard/FeedGroupItem/MyGroupItem
+ */
+export interface GroupItem {
+	group: GroupInfo;
 	description?: string;
 	tags?: string[];
 	has_password: boolean;
 	location: RelativeLocation;
-	friends_in_group?: number;
+	last_activity_at?: string;
+	created_at?: string;
+	owner_id?: string;
+	// @auth-only
 	my_state?: MyGroupState;
+	friends_in_group?: number;
+	// @group-admin-only
+	join_method?: GroupJoinMethod;
+	is_searchable?: boolean;
+	max_members?: number;
+	settings_location?: Location;
 }
 
-export interface GroupSettings {
-	join_method: GroupJoinMethod;
-	is_searchable: boolean;
-	max_members: number;
-	location: Location;
+/** 群组详情响应 */
+export interface GroupOpenResult {
+	group: GroupItem;
+	recent_messages: PaginatedData<GroupMessageItem>;
 }
 
-export interface GroupMemberItem {
-	user: UserInfo;
-	role: GroupRole;
-	joined_at: string;
-	muted_until?: string;
-	is_online?: boolean; // 成员是否在线
-}
-
+/** 群公告列表项 */
 export interface GroupAnnouncementItem {
 	announcement_id: string;
 	group_id: string;
@@ -376,6 +372,25 @@ export interface GroupAnnouncementItem {
 	is_pinned: boolean;
 }
 
+/** 群组成员列表项 */
+export interface GroupMemberItem {
+	user: UserInfo;
+	role: GroupRole;
+	joined_at: string;
+	muted_until?: string;
+	presence_status?: UserPresenceStatus;
+	last_online?: string;
+}
+
+/** 封禁成员列表项 */
+export interface BannedMemberItem {
+	user: UserInfo;
+	banned_at: string;
+	reason?: string;
+	banned_by?: UserInfo;
+}
+
+/** 群组申请列表项 */
 export interface GroupApplicationItem {
 	application_id: string;
 	applicant: UserInfo;
@@ -386,185 +401,173 @@ export interface GroupApplicationItem {
 	handled_by?: UserInfo;
 }
 
-// ============== 瞬间类型 ==============
-
-export interface MyMomentState {
-	is_liked: boolean;
-	is_favorited: boolean;
+/** 群组邀请列表项 */
+export interface GroupInviteItem {
+	invite_id: string;
+	group: GroupInfo;
+	inviter: UserInfo;
+	message?: string;
+	status: ApplicationStatus;
+	created_at: string;
+	expires_at?: string;
 }
 
-export interface MomentLikeItem {
-	user: UserInfo;
-	liked_at: string;
+/** 邀请响应 */
+export interface Invitation {
+	invite_id: string;
+	expires_at: string;
 }
 
-export interface LikedStatus {
-	is_liked: boolean;
+/** 申请响应 */
+export interface Application {
+	application_id: string;
 }
 
-export interface FavoritedStatus {
-	is_favorited: boolean;
+/** 加入群组响应 */
+export interface JoinGroupResult {
+	status: 'joined' | 'pending_approval';
+	application?: Application;
 }
 
-export interface MomentBase {
+// ============================================================================
+// 瞬间类型（common.yaml + moments.yaml）
+// ============================================================================
+
+/**
+ * 瞬间统一数据类型（用于列表、搜索、详情、Feed、用户瞬间历史等所有场景）
+ * 替代原 MomentBase/MomentSearchItem/MomentCard/FeedMomentItem/UserMomentListItem
+ */
+export interface MomentItem {
 	moment_id: string;
 	description: string;
 	images?: MomentImage[];
 	tags: string[];
-	mentions?: number[];
+	mentions?: string[];
 	created_at: string;
 	likes_count: number;
 	comments_count: number;
-}
-
-export interface MomentSearchItem extends MomentBase {
+	shares_count: number;
 	user: UserInfo;
 	location: RelativeLocation;
-}
-
-// 瞬间建议项 - API 规范: @api_spec_search.mdc MomentSuggestItem
-// 用途：显示瞬间预览信息，点击后跳转到瞬间详情页
-export interface MomentSuggestItem {
-	moment_id: string;
-	content: string; // 瞬间文字内容（后端限制长度为前100字符）
-	author_nickname: string; // 作者昵称，用于显示"来自 XXX"
-	author_avatar_url?: string; // 作者头像，用于显示作者头像而非瞬间图片
-	distance?: number; // 距离（米），仅当请求包含 location 时返回
-}
-
-export interface MomentSuggestions {
-	items: MomentSuggestItem[];
-}
-
-export interface MomentCard extends MomentBase {
-	user: UserInfo;
-	location: Location;
-	my_state?: MyMomentState;
-}
-
-export interface UserMomentListItem extends MomentBase {
-	location: Location;
-}
-
-export interface FeedMomentItem extends MomentBase {
-	user: UserInfo;
-	location: RelativeLocation;
-	is_liked: boolean;
-	is_favorited: boolean;
+	// @owner-only
+	privacy_level?: PrivacyLevel;
+	// @auth-only
+	my_state?: {
+		is_liked: boolean;
+		is_favorited: boolean;
+	};
+	// Feed 场景返回
 	recommendation?: RecommendationContext;
 }
 
-export type RecommendationType = 'friend_liked' | 'nearby' | 'trending' | 'following' | 'tag_match';
-
-export interface RecommendationContext {
-	type: RecommendationType;
-	friends_preview?: UserInfo[];
-}
-
-// ============== 评论类型 ==============
-
-export interface CommentListItem {
-	comment_id: string;
-	user: UserInfo;
-	content: string;
-	parent_id?: string;
-	mentions?: number[];
-	created_at: string;
-	likes_count: number;
-	replies_count: number;
-}
-
-export interface CommentLikeItem {
+/** 点赞列表项（瞬间/评论共用） */
+export interface LikeItem {
 	user: UserInfo;
 	liked_at: string;
 }
 
-// ============== 消息类型 ==============
+// ============================================================================
+// 评论类型（moments.yaml）
+// ============================================================================
 
+/** 评论项 */
+export interface CommentItem {
+	comment_id: string;
+	user: UserInfo;
+	content: string;
+	parent_id?: string;
+	mentions?: string[];
+	created_at: string;
+	likes_count: number;
+	replies_count: number;
+	// @auth-only
+	is_liked?: boolean;
+}
+
+// ============================================================================
+// 消息类型（chat.yaml）
+// ============================================================================
+
+/** 回复引用快照 */
 export interface MessageReplyTo {
 	message_id: string;
-	user_id: number;
+	user_id: string;
 	nickname: string;
 	content: string;
+	share_code?: string;
 }
 
-export interface MessageBase {
+/** 消息发送响应（私聊/群聊共用） */
+export interface MessageSent {
 	message_id: string;
-	type: MessageType;
-	content?: string;
-	media?: MessageMedia;
-	location?: MessageLocation;
-	sender: UserInfo;
-	reply_to?: MessageReplyTo;
 	sent_at: string;
-	edited_at?: string;
-	recalled_at?: string;
 }
 
-export interface MessageLimit {
-	remaining: number;
-	total: number;
-	is_unlocked: boolean;
-}
-
-export interface MessageReactionItem {
-	user: UserInfo;
-	type: ReactionType;
-	created_at: string;
-}
-
-export interface MessageReadItem {
-	user: UserInfo;
-	read_at: string;
-}
-
+/** 私聊消息项（使用 sender_id 而非完整 UserInfo） */
 export interface PrivateMessageItem {
 	message_id: string;
 	type: MessageType;
 	content?: string;
 	media?: MessageMedia;
-	location?: MessageLocation;
-	sender_id: number;
+	share_code?: string;
+	sender_id: string;
 	reply_to?: MessageReplyTo;
 	sent_at: string;
 	edited_at?: string;
 	recalled_at?: string;
+	is_read?: boolean;
 }
 
-export interface GroupMessageItem extends MessageBase {
-	mentions?: number[];
-	recalled_by?: number;
+/** 群聊消息项（使用 sender: UserInfo） */
+export interface GroupMessageItem {
+	message_id: string;
+	type: MessageType;
+	content?: string;
+	media?: MessageMedia;
+	share_code?: string;
+	sender: UserInfo;
+	reply_to?: MessageReplyTo;
+	mentions?: string[];
+	recalled_by?: string;
+	sent_at: string;
+	edited_at?: string;
+	recalled_at?: string;
 	read_count?: number;
 }
 
-export interface PrivateChatListItem {
+/**
+ * 私聊统一数据类型（用于列表、详情等所有场景）
+ * 替代原 PrivateChatListItem/Conversation
+ */
+export interface PrivateChatItem {
 	other_user: UserInfo;
 	unread_count: number;
+	is_muted: boolean;
+	is_pinned: boolean;
+	last_activity_at: string;
+	can_message: boolean;
+	cant_message_reason?: CantMessageReason;
 	last_message?: {
 		message_id: string;
 		content?: string;
 		type: MessageType;
-		sender_id: number;
+		share_code?: string;
+		sender_id: string;
 		sent_at: string;
 	};
-	last_activity_at: string;
-	is_muted: boolean;
-	is_pinned: boolean;
-	is_online: boolean;
+	presence_status?: UserPresenceStatus;
+	created_at?: string;
 }
 
-export interface Conversation {
-	other_user: UserInfo;
-	message_limit?: MessageLimit;
-	unread_count: number;
-	is_muted: boolean;
-	is_pinned: boolean;
-	last_activity_at: string;
-	created_at: string;
-	can_message: boolean;
+/** 私聊详情响应 */
+export interface PrivateChatOpenResult {
+	chat: PrivateChatItem;
+	recent_messages: PaginatedData<PrivateMessageItem>;
 }
 
-// ============== 通知类型 ==============
+// ============================================================================
+// 通知类型（WebSocket 推送用）
+// ============================================================================
 
 export interface NotificationItem {
 	notification_id: string;
@@ -581,21 +584,12 @@ export interface NotificationItem {
 	target_media_url?: string;
 }
 
-export interface UnreadCount {
-	total: number;
-	breakdown?: {
-		like: number;
-		comment: number;
-		follow: number;
-		system: number;
-		mention: number;
-	};
-}
-
-// ============== 地图类型 ==============
+// ============================================================================
+// 地图类型（map.yaml）
+// ============================================================================
 
 export interface MapRenderItem {
-	id: string;
+	render_id: string;
 	type: MapItemType;
 	location: GeoPoint;
 	cluster?: {
@@ -617,37 +611,58 @@ export interface MapCanvas {
 	toast_message?: string;
 }
 
-// ============== 标签类型 ==============
-
-export interface TrendingTag {
-	name: string;
-	usage_count: number;
-	trend?: TagTrend;
-}
+// ============================================================================
+// 标签与搜索类型（search.yaml + feed.yaml）
+// ============================================================================
 
 export interface TagSuggestItem {
 	name: string;
 	usage_count: number;
 }
 
-export interface TagSuggestions {
-	items: TagSuggestItem[];
+/** TagItem = TagSuggestItem + optional trend */
+export interface TagItem {
+	name: string;
+	usage_count: number;
+	trend?: TagTrend;
 }
 
+/** 热门标签项（trend 必填，扩展自 TagItem） */
 export interface TrendingTagItem {
 	name: string;
 	usage_count: number;
 	trend: TagTrend;
-	hot_moment_preview?: FeedMomentItem;
-}
-
-export interface TrendingTags {
-	items: TrendingTag[];
+	hot_moment_preview?: MomentItem;
 }
 
 export interface TrendingBundle {
 	trending_tags: TrendingTagItem[];
-	hot_moments: FeedMomentItem[];
+	hot_moments: MomentItem[];
+}
+
+export interface UserSuggestItem {
+	user_id: string;
+	nickname: string;
+	avatar_url?: string;
+	bio?: string;
+	location?: RelativeLocation;
+}
+
+export interface GroupSuggestItem {
+	group_id: string;
+	name: string;
+	avatar_url?: string;
+	description?: string;
+	members_count: number;
+	location?: RelativeLocation;
+}
+
+export interface MomentSuggestItem {
+	moment_id: string;
+	content: string;
+	author_nickname: string;
+	author_avatar_url?: string;
+	location?: RelativeLocation;
 }
 
 export type SearchSuggestItem =
@@ -660,29 +675,33 @@ export interface SearchSuggestions {
 	items: SearchSuggestItem[];
 }
 
-export interface SearchSuggestRequest {
-	prefix: string;
-	limit?: number;
-	location?: GeoPoint;
-}
-
-// ============== API 响应类型 ==============
+// ============================================================================
+// API 响应类型
+// ============================================================================
 
 export interface ApiResponse<T = void> {
 	code: number;
 	message?: string;
 	data?: T;
-	request_id: string;
+	request_id?: string;
 }
 
-// ============== 认证类型 ==============
+// ============================================================================
+// 认证类型（auth.yaml）
+// ============================================================================
 
+/**
+ * 前端 Auth Store 使用的数据（整合 Web/App 两端响应）
+ * Web 端: Cookie 携带 Token，响应体为空；user_type/expires 通过后续接口获取
+ * App 端: 响应体包含完整 Token 信息
+ */
 export interface AuthData {
-	user_id: number;
-	nickname: string;
-	access_token: string;
-	refresh_token?: string;
+	user_id: string;
+	user_type: UserType;
 	access_token_expires_at: string;
+	// App 端特有
+	access_token?: string;
+	refresh_token?: string;
 	refresh_token_expires_at?: string;
 }
 
@@ -697,7 +716,6 @@ export interface RegisterRequest {
 	password: string;
 	nickname: string;
 	client_type: ClientType;
-	verify_token?: string;
 }
 
 export interface GuestRequest {
@@ -707,90 +725,182 @@ export interface GuestRequest {
 
 export interface RefreshTokenRequest {
 	client_type: ClientType;
-	refresh_token?: string; // App 端必填，Web 端留空
+	refresh_token?: string;
 }
 
-// ============== 举报类型 ==============
+export interface AuthStatus {
+	is_valid: boolean;
+	expires_at?: string;
+}
 
-export type ReportReason = string;
+export interface RevokeAllResult {
+	revoked_count: number;
+}
+
+// ============================================================================
+// 举报类型（report.yaml）
+// ============================================================================
+
+export interface ReportCreated {
+	report_id: string;
+}
 
 export interface ReportItem {
 	report_id: string;
 	target_type: ReportTargetType;
 	target_id: string;
-	reason: ReportReason;
+	reason: string;
 	description?: string;
-	reporter: UserInfo;
 	status: ReportStatus;
 	created_at: string;
 	handled_at?: string;
-	handled_by?: UserInfo;
-	resolution?: string;
 }
 
-// ============== 管理员类型 ==============
+// ============================================================================
+// 管理员类型（admin-core.yaml + admin-moderation.yaml）
+// ============================================================================
 
-export interface AdminPermission {
-	permission_id: string;
-	name: string;
+// === RBAC 类型 ===
+
+export interface AdminPermissionItem {
+	key: string;
 	description: string;
-	category: string;
 }
 
-export interface AdminRole {
+export interface AdminRoleBasic {
 	role_id: string;
 	name: string;
-	description: string;
-	permissions: string[];
-	created_at: string;
 }
 
-export interface AdminUser {
-	user_id: number;
-	nickname: string;
-	avatar_url?: string;
-	roles: AdminRole[];
-	granted_at: string;
-	granted_by?: UserInfo;
-}
-
-export interface AdminDismissalRecord {
-	dismissed_at: string;
-	dismissed_by: UserInfo;
-	reason?: string;
-}
-
-export interface AdminGroupSearchItem extends GroupInfo {
-	owner: UserInfo;
-	created_at: string;
+export interface AdminRoleItem {
+	role_id: string;
+	name: string;
 	description?: string;
-	tags?: string[];
-	max_members: number;
-	location?: RelativeLocation;
-	settings: {
-		join_method: GroupJoinMethod;
-		is_searchable: boolean;
-		has_password: boolean;
-	};
-	admins?: UserInfo[];
+	permissions: string[];
+}
+
+export interface AdminPermissions {
+	permissions: string[]; // '*' 表示拥有全部权限
+	roles: AdminRoleBasic[];
+}
+
+export interface AdminOperatorItem {
+	user: UserInfo;
+	permissions: string[]; // '*' 表示拥有全部权限
+	roles: AdminRoleBasic[];
+}
+
+// === 审计日志类型 ===
+
+export type AuditAction =
+	| 'user.ban'
+	| 'user.unban'
+	| 'group.dismiss'
+	| 'announcement.create'
+	| 'announcement.delete'
+	| 'role.create'
+	| 'role.update'
+	| 'role.delete'
+	| 'role.set_permissions'
+	| 'admin.grant'
+	| 'admin.revoke'
+	| 'report.handle'
+	| 'tag.delete'
+	| 'permission.grant'
+	| 'permission.revoke'
+	| 'config.update';
+
+export type AuditTargetType =
+	| 'user'
+	| 'group'
+	| 'announcement'
+	| 'role'
+	| 'admin'
+	| 'report'
+	| 'tag'
+	| 'config';
+
+export interface AuditLogItem {
+	log_id: string;
+	action: AuditAction;
+	operator: UserInfo;
+	target_type: AuditTargetType;
+	target_id: string;
+	target_name?: string;
+	details?: Record<string, unknown>;
+	ip_location?: string;
+	ip_address?: string;
+	device_summary?: string;
+	created_at: string;
+}
+
+// === Admin 扩展类型（管理员视角的完整数据）===
+
+export interface AdminUserItem extends UserItem {
+	status: UserAccountStatus;
+	created_at: string;
+	last_active_at?: string;
+	login_id: string;
+	register_ip?: string;
+	register_location?: string;
+	last_login_ip?: string;
+	last_login_location?: string;
+	email?: string;
+	phone?: string;
+}
+
+export interface AdminGroupItem extends GroupItem {
+	owner: UserInfo;
+	admins: UserInfo[];
 	stats: {
 		messages_count: number;
 		active_members_today: number;
+		reports_count?: number;
+		last_reported_at?: string;
 	};
-	dismissal_history?: AdminDismissalRecord[];
 }
 
-export interface AuditLogItem {
-	audit_id: string;
-	action: string;
-	target_type: string;
-	target_id: string;
-	operator: UserInfo;
-	details?: Record<string, unknown>;
-	ip_address?: string;
-	user_agent?: string;
-	created_at: string;
+export interface AdminReportItem extends ReportItem {
+	reporter_user_id: string;
+	reporter: UserInfo;
+	handled_by?: UserInfo;
+	handled_action?: ReportHandleAction;
+	handled_note?: string;
+	target_snapshot?: {
+		content?: string;
+		media_urls?: string[];
+		owner_id?: string;
+	};
 }
+
+export interface AdminAnnouncementItem extends SystemAnnouncementItem {
+	created_by: UserInfo;
+	send_push: boolean;
+	push_sent_at?: string;
+	view_count: number;
+}
+
+export interface AdminTagItem {
+	tag_name: string;
+	usage_count: number;
+	created_at: string;
+	last_used_at?: string;
+}
+
+export type AdminTagSortBy =
+	| 'usage_count_desc'
+	| 'usage_count_asc'
+	| 'created_at_desc'
+	| 'last_used_at_desc';
+
+/** @deprecated Use AdminPermissionItem instead */
+export type AdminPermission = AdminPermissionItem;
+/** @deprecated Use AdminRoleItem instead */
+export type AdminRole = AdminRoleItem;
+/** @deprecated Use AdminOperatorItem instead */
+export type AdminUser = AdminOperatorItem;
+/** @deprecated Use AdminGroupItem instead */
+export type AdminGroupSearchItem = AdminGroupItem;
 
 export interface SystemAnnouncementItem {
 	announcement_id: string;
@@ -799,31 +909,17 @@ export interface SystemAnnouncementItem {
 	severity: AnnouncementSeverity;
 	action_url?: string;
 	created_at: string;
-	created_by: UserInfo;
 }
 
 export interface AnnouncementCreated {
 	announcement_id: string;
-	created_at: string;
 }
 
-// ============== 全局设置类型 ==============
+// ============================================================================
+// 系统配置类型（system.yaml）
+// ============================================================================
 
-export interface GlobalSettings {
-	upload: {
-		image_max_size: number;
-		video_max_size: number;
-		audio_max_size: number;
-		file_max_size: number;
-		allowed_image_types: string[];
-		allowed_video_types: string[];
-	};
-	defaults: {
-		default_location_name: string;
-		default_group_avatar: string;
-		default_user_avatar: string;
-		default_group_settings: GroupSettings;
-	};
+export interface ClientConfig {
 	features: {
 		enable_public_registration: boolean;
 		enable_guest_login: boolean;
@@ -846,62 +942,89 @@ export interface GlobalSettings {
 	};
 }
 
-export interface HealthStatus {
-	status: 'ok' | 'degraded';
+export interface UploadConfig {
+	image_max_size: number;
+	video_max_size: number;
+	audio_max_size: number;
+	file_max_size: number;
+	allowed_image_types: string[];
+	allowed_video_types: string[];
+}
+
+export interface ContentDefaults {
+	default_location_name: string;
+	default_group_avatar: string;
+	default_user_avatar: string;
+	default_group_settings: GroupSettings;
+}
+
+export interface RateLimitConfig {
+	global_per_hour: number;
+	user_per_hour: number;
+	auth_register_per_10minutes: number;
+	auth_login_per_10minutes: number;
+	auth_guest_per_10minutes: number;
+	auth_refresh_per_10minutes: number;
+	auth_reset_per_10minutes: number;
+	moments_create_per_minute: number;
+	comments_create_per_minute: number;
+	reports_create_per_hour: number;
+}
+
+export interface ResponseDefaults {
+	search_suggest_count: number;
+	trending_tags_count: number;
+	hot_moments_count: number;
+	chat_recent_messages_count: number;
+	group_announcements_count: number;
+}
+
+export interface ServerConfig {
+	upload: UploadConfig;
+	defaults: ContentDefaults;
+	rate_limits: RateLimitConfig;
+	response_defaults: ResponseDefaults;
+	updated_at?: string;
+	updated_by_user_id?: string;
+}
+
+export interface AdminClientConfig extends ClientConfig {
+	updated_at: string;
+	updated_by_user_id: string;
+}
+
+export interface SystemMeta {
 	version: string;
+	build_time?: string;
+	environment?: string;
+}
+
+export interface HealthStatus {
+	status: SystemHealthStatus;
 	timestamp: string;
 }
 
-export interface Subscriptions {
-	new_follower_enabled: boolean;
-	mutual_follow_enabled: boolean;
-	follow_request_enabled: boolean;
-	follow_request_handled_enabled: boolean;
-	group_invite_enabled: boolean;
-	group_invite_response_enabled: boolean;
-	group_application_enabled: boolean;
-	group_application_response_enabled: boolean;
-	group_announcement_enabled: boolean;
-	message_mention_enabled: boolean;
-	moment_like_enabled: boolean;
-	moment_comment_enabled: boolean;
-	comment_reply_enabled: boolean;
-	system_announcement_enabled: boolean;
-}
-
-export interface DeviceTokenItem {
-	device_token_id: string;
-	platform: DevicePlatform;
-	device_token: string;
-	created_at: string;
-}
-
-export interface ReportCreated {
-	report_id: string;
-}
-
-// ============== 会话管理类型 ==============
+// ============================================================================
+// 会话管理类型（auth.yaml）
+// ============================================================================
 
 export interface SessionItem {
-	display_id: string; // 用户可见的会话ID（如 "ses_abc123"）
-	revoke_token: string; // 一次性撤销令牌
-	device_name?: string;
+	session_id: string;
 	device_type?: string;
+	device_name?: string;
 	ip_address?: string;
-	ip_location?: string; // IP地理位置信息
-	last_active_at: string;
+	ip_location?: string;
 	created_at: string;
+	last_active_at: string;
 	is_current: boolean;
 }
 
-// ============== 分享系统 ==============
+// ============================================================================
+// 分享系统（share.yaml）
+// ============================================================================
 
-export type ShareType = 'location' | 'moment' | 'group' | 'user';
-
-export interface LocationSharePayload {
-	latitude: number;
-	longitude: number;
-	location_name: string;
+export interface ReferencePointSharePayload {
+	reference_point: Location;
 }
 
 export interface MomentSharePayload {
@@ -913,28 +1036,67 @@ export interface GroupSharePayload {
 }
 
 export interface UserSharePayload {
-	user_id: number;
+	user_id: string;
 }
 
 export type SharePayload =
-	| LocationSharePayload
+	| ReferencePointSharePayload
 	| MomentSharePayload
 	| GroupSharePayload
 	| UserSharePayload;
 
-export interface Share {
+export interface ShareBase {
 	share_id: string;
 	share_code: string;
 	share_type: ShareType;
 	creator: UserInfo;
-	payload: SharePayload;
 	created_at: string;
+	expires_at?: string;
 }
 
-// 分享请求
+export interface ShareCreated {
+	share_id: string;
+	share_code: string;
+	expires_at?: string;
+}
+
+export interface SharePreview {
+	title: string;
+	subtitle?: string;
+	cover_url?: string;
+}
+
+export interface ShareDetail {
+	share: ShareBase;
+	payload: SharePayload;
+	preview?: SharePreview;
+}
+
+export type ShareApplyAction =
+	| { type: 'navigate_user'; user_id: string }
+	| { type: 'navigate_group'; group_id: string }
+	| { type: 'navigate_moment'; moment_id: string }
+	| { type: 'update_reference_point'; reference_point: Location };
+
+export interface ShareApplyResult {
+	share_type: ShareType;
+	action: ShareApplyAction;
+}
+
+export interface ShareListItem {
+	share_id: string;
+	share_code: string;
+	share_type: ShareType;
+	created_at: string;
+	expires_at?: string;
+	is_revoked: boolean;
+	preview?: SharePreview;
+}
+
 export interface CreateShareRequest {
 	share_type: ShareType;
 	payload: SharePayload;
+	expires_in_seconds?: number;
 }
 
 export interface GetShareRequest {
@@ -943,4 +1105,57 @@ export interface GetShareRequest {
 
 export interface ApplyShareRequest {
 	share_code: string;
+}
+
+// ============================================================================
+// 向后兼容类型别名（过渡期使用，后续逐步移除）
+// ============================================================================
+
+/** @deprecated 使用 UserItem 代替 */
+export type UserSearchItem = UserItem;
+/** @deprecated 使用 UserItem 代替 */
+export type UserCard = UserItem;
+/** @deprecated 使用 UserItem 代替 */
+export type FeedUserItem = UserItem;
+/** @deprecated 使用 GroupItem 代替 */
+export type GroupSearchItem = GroupItem;
+/** @deprecated 使用 GroupItem 代替 */
+export type GroupCard = GroupItem;
+/** @deprecated 使用 GroupItem 代替 */
+export type FeedGroupItem = GroupItem;
+/** @deprecated 使用 GroupItem 代替 */
+export type MyGroupItem = GroupItem;
+/** @deprecated 使用 MomentItem 代替 */
+export type MomentSearchItem = MomentItem;
+/** @deprecated 使用 MomentItem 代替 */
+export type MomentCard = MomentItem;
+/** @deprecated 使用 MomentItem 代替 */
+export type FeedMomentItem = MomentItem;
+/** @deprecated 使用 MomentItem 代替 */
+export type UserMomentListItem = MomentItem;
+/** @deprecated 使用 LikeItem 代替 */
+export type MomentLikeItem = LikeItem;
+/** @deprecated 使用 LikeItem 代替 */
+export type CommentLikeItem = LikeItem;
+/** @deprecated 使用 CommentItem 代替 */
+export type CommentListItem = CommentItem;
+/** @deprecated 使用 MyProfile 代替 */
+export type MyCard = MyProfile;
+/** @deprecated 使用 PrivateChatItem 代替 */
+export type PrivateChatListItem = PrivateChatItem;
+/** @deprecated 使用 PrivateChatItem 代替 */
+export type Conversation = PrivateChatItem;
+/** @deprecated 使用 ShareDetail 代替 */
+export type Share = ShareDetail;
+/** @deprecated 使用 TagItem 代替 */
+export type TrendingTag = TagItem;
+/** @deprecated 使用 TagItem[] 代替 */
+export interface TrendingTags {
+	items: TagItem[];
+}
+/** @deprecated 搜索建议请求已重构 */
+export interface SearchSuggestRequest {
+	prefix: string;
+	reference_point: GeoPoint;
+	types?: SearchSuggestType[];
 }

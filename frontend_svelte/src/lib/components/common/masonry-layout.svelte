@@ -75,7 +75,7 @@
 	});
 
 	let container: HTMLDivElement;
-	let items = $state<HTMLElement[]>([]);
+	let items = $state.raw<HTMLElement[]>([]);
 	let containerWidth = $state(0);
 	let containerHeight = $state(0);
 	let currentColumns = $state(1);
@@ -146,7 +146,7 @@
 			}
 			
 			// 更新该列的高度（当前高度 + 项目高度 + 间距）
-			columnHeights[columnIndex] += item.offsetHeight + gapSize;
+			columnHeights[columnIndex] = (columnHeights[columnIndex] ?? 0) + item.offsetHeight + gapSize;
 		});
 
 		// 设置容器高度为最高列的高度

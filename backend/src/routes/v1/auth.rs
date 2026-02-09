@@ -17,17 +17,6 @@ pub fn token_optional_routes() -> Router<AppState> {
         .route("/guest", post(auth::create_guest))
         .route("/refresh_token", post(auth::refresh_token))
         .route("/check_status", post(auth::check_status))
-        .route(
-            "/send_verification_code",
-            post(auth::send_verification_code),
-        )
-        .route("/verify_code", post(auth::verify_code))
-        .route(
-            "/request_password_reset",
-            post(auth::request_password_reset),
-        )
-        .route("/verify_reset_code", post(auth::verify_reset_code))
-        .route("/reset_password", post(auth::reset_password))
 }
 
 /// Token 必须的认证路由
@@ -38,8 +27,9 @@ pub fn token_required_routes() -> Router<AppState> {
     // /me 子路由 - 当前用户认证相关操作
     let me_routes = Router::new()
         .route("/change_password", post(auth::change_password))
-        .route("/sessions", post(auth::list_sessions))
-        .route("/sessions/revoke", post(auth::revoke_session));
+        .route("/sessions/list", post(auth::list_sessions))
+        .route("/sessions/revoke", post(auth::revoke_session))
+        .route("/sessions/revoke_all", post(auth::revoke_all_sessions));
 
     main_routes.nest("/me", me_routes)
 }

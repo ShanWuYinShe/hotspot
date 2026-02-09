@@ -1,11 +1,10 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { usersService, momentsService, groupsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
-	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
@@ -14,7 +13,7 @@
 	import GroupCard from '$lib/components/common/group-card.svelte';
 	import MasonryLayout from '$lib/components/common/masonry-layout.svelte';
 	import MasonryLayoutItem from '$lib/components/common/masonry-layout-item.svelte';
-	import type { UserSearchItem, MomentSearchItem, GroupSearchItem } from '$lib/types/api';
+	import type { UserItem, MomentItem, GroupItem } from '$lib/types/api';
 	import Search from 'lucide-svelte/icons/search';
 	import Users from 'lucide-svelte/icons/users';
 	import Image from 'lucide-svelte/icons/image';
@@ -22,8 +21,7 @@
 	import X from 'lucide-svelte/icons/x';
 
 	// 从 URL 获取初始搜索词（$derived 使 URL 变化时更新）
-	const initialKeyword = $derived($page.url.searchParams.get('q') || '');
-	const initialTag = $derived($page.url.searchParams.get('tag') || '');
+	const initialKeyword = $derived(page.url.searchParams.get('q') || '');
 
 	let keyword = $state('');
 	let currentTab = $state<'users' | 'moments' | 'groups'>('users');
@@ -33,9 +31,9 @@
 	});
 	let isLoading = $state(false);
 
-	let users = $state<UserSearchItem[]>([]);
-	let moments = $state<MomentSearchItem[]>([]);
-	let groups = $state<GroupSearchItem[]>([]);
+	let users = $state.raw<UserItem[]>([]);
+	let moments = $state.raw<MomentItem[]>([]);
+	let groups = $state.raw<GroupItem[]>([]);
 	
 	// 用于防止重复触发搜索
 	let lastSearchedQuery = $state<string>('');
@@ -58,9 +56,9 @@
 
 		try {
 			const [usersRes, momentsRes, groupsRes] = await Promise.all([
-				usersService.searchByKeyword({ reference_point: getReferencePoint(), kw: searchTerm, limit: 20 }),
-				momentsService.searchByKeyword({ reference_point: getReferencePoint(), kw: searchTerm, limit: 20 }),
-				groupsService.searchByKeyword({ reference_point: getReferencePoint(), kw: searchTerm, limit: 20 })
+				usersService.search({ search: { reference_point: getReferencePoint() }, keyword: searchTerm }),
+				momentsService.search({ search: { reference_point: getReferencePoint() }, keyword: searchTerm }),
+				groupsService.search({ search: { reference_point: getReferencePoint() }, keyword: searchTerm })
 			]);
 
 			if (isSuccess(usersRes) && usersRes.data) {
@@ -90,9 +88,9 @@
 
 		try {
 			const [usersRes, momentsRes, groupsRes] = await Promise.all([
-				usersService.searchByTag({ reference_point: getReferencePoint(), tag, limit: 20 }),
-				momentsService.searchByTag({ reference_point: getReferencePoint(), tag, limit: 20 }),
-				groupsService.searchByTag({ reference_point: getReferencePoint(), tag, limit: 20 })
+				usersService.search({ search: { reference_point: getReferencePoint() }, tag }),
+				momentsService.search({ search: { reference_point: getReferencePoint() }, tag }),
+				groupsService.search({ search: { reference_point: getReferencePoint() }, tag })
 			]);
 
 			if (isSuccess(usersRes) && usersRes.data) {
@@ -136,8 +134,8 @@
 
 	// 监听 URL 参数变化，执行搜索（只在首次加载或外部跳转时触发）
 	$effect(() => {
-		const q = $page.url.searchParams.get('q');
-		const tag = $page.url.searchParams.get('tag');
+		const q = page.url.searchParams.get('q');
+		const tag = page.url.searchParams.get('tag');
 		
 		// 优先处理标签搜索
 		if (tag) {
@@ -226,7 +224,7 @@
 					</Card>
 				{:else}
 					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
-						{#each users as user (user.user_id)}
+						{#each users as user (user.user.user_id)}
 							<MasonryLayoutItem>
 								<UserCard {user} showBio showTags showDistance variant="square" />
 							</MasonryLayoutItem>
@@ -280,7 +278,7 @@
 					</Card>
 				{:else}
 					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
-						{#each groups as group (group.group_id)}
+						{#each groups as group (group.group.group_id)}
 							<MasonryLayoutItem>
 								<GroupCard {group} showMembers showDistance variant="square" />
 							</MasonryLayoutItem>

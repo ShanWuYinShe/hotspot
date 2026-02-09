@@ -8,7 +8,8 @@ import { browser } from '$app/environment';
 
 // ============ 通知类型 ============
 
-export interface NotificationItem {
+/** WebSocket 推送的实时通知项（区别于 API 返回的 NotificationItem） */
+export interface RealtimeNotification {
 	id: string;
 	type: string;
 	title: string;
@@ -21,7 +22,7 @@ export interface NotificationItem {
 
 class NotificationStore {
 	// 未读通知列表
-	unreadNotifications = $state<NotificationItem[]>([]);
+	unreadNotifications = $state.raw<RealtimeNotification[]>([]);
 
 	// 未读数量
 	unreadCount = $derived(this.unreadNotifications.length);
@@ -140,7 +141,7 @@ class NotificationStore {
 	/**
 	 * 添加通知
 	 */
-	private addNotification(notification: NotificationItem) {
+	private addNotification(notification: RealtimeNotification) {
 		// 检查是否已存在
 		const exists = this.unreadNotifications.some((n) => n.id === notification.id);
 		if (!exists) {

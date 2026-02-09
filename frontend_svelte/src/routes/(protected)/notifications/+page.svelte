@@ -1,15 +1,8 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { notificationsService } from '$lib/api/services';
-	import { isSuccess } from '$lib/api/client';
-	import { toast } from '$lib/stores/toast.svelte';
+	import { notificationStore, type RealtimeNotification } from '$lib/stores/notification.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent } from '$lib/components/ui/card';
-	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
-	import ListSkeleton from '$lib/components/common/list-skeleton.svelte';
 	import EmptyState from '$lib/components/common/empty-state.svelte';
-	import type { NotificationItem, NotificationFilterType } from '$lib/types/api';
 	import Bell from 'lucide-svelte/icons/bell';
 	import Heart from 'lucide-svelte/icons/heart';
 	import MessageCircle from 'lucide-svelte/icons/message-circle';
@@ -18,46 +11,17 @@
 	import Info from 'lucide-svelte/icons/info';
 	import CheckCheck from 'lucide-svelte/icons/check-check';
 
-	let notifications = $state<NotificationItem[]>([]);
-	let isLoading = $state(true);
-	let currentFilter = $state<NotificationFilterType | undefined>(undefined);
+	// 通知数据来自 WebSocket 推送（spec 中无通知 REST API）
+	let notifications = $derived(notificationStore.unreadNotifications);
 
-	async function loadNotifications(filter?: NotificationFilterType) {
-		isLoading = true;
-		currentFilter = filter;
-		try {
-			const response = await notificationsService.getNotifications({
-				type: filter,
-				limit: 50
-			});
-			if (isSuccess(response) && response.data) {
-				notifications = response.data.items;
-			}
-		} catch {
-			toast.error('加载失败');
-		} finally {
-			isLoading = false;
-		}
-	}
-
-	async function markAllRead() {
-		try {
-			const response = await notificationsService.markRead({
-				type: currentFilter
-			});
-			if (isSuccess(response)) {
-				notifications = notifications.map((n) => ({ ...n, is_read: true }));
-				toast.success('已全部标记为已读');
-			}
-		} catch {
-			toast.error('操作失败');
-		}
+	function markAllRead() {
+		notificationStore.markAllAsRead();
 	}
 
 	function getNotificationIcon(type: string) {
 		if (type.includes('like')) return Heart;
 		if (type.includes('comment') || type.includes('reply')) return MessageCircle;
-		if (type.includes('follow')) return UserPlus;
+		if (type.includes('follow') || type.includes('mutual')) return UserPlus;
 		if (type.includes('mention')) return AtSign;
 		return Info;
 	}
@@ -77,22 +41,19 @@
 		return date.toLocaleDateString('zh-CN');
 	}
 
-	function getNotificationLink(notification: NotificationItem): string {
-		if (notification.target_type === 'moment' && notification.target_id) {
-			return `/moments/${notification.target_id}`;
+	function getNotificationLink(notification: RealtimeNotification): string {
+		// 基于通知类型推断跳转链接
+		if (notification.type === 'like' || notification.type === 'comment' || notification.type === 'reply') {
+			return '#'; // 瞬间相关，需要通知中携带 target_id
 		}
-		if (notification.target_type === 'user' && notification.sender) {
-			return `/users/${notification.sender.user_id}`;
+		if (notification.type === 'follower' || notification.type === 'mutual') {
+			return '#'; // 用户相关
 		}
-		if (notification.target_type === 'group' && notification.target_id) {
-			return `/groups/${notification.target_id}`;
+		if (notification.type === 'group_invite' || notification.type === 'group_application') {
+			return '#'; // 群组相关
 		}
 		return '#';
 	}
-
-	onMount(() => {
-		loadNotifications();
-	});
 </script>
 
 <svelte:head>
@@ -108,66 +69,38 @@
 		</Button>
 	</div>
 
-	<Tabs value={currentFilter ?? 'all'} onValueChange={(v) => loadNotifications(v === 'all' ? undefined : v as NotificationFilterType)}>
-		<TabsList>
-			<TabsTrigger value="all">全部</TabsTrigger>
-			<TabsTrigger value="like">点赞</TabsTrigger>
-			<TabsTrigger value="comment">评论</TabsTrigger>
-			<TabsTrigger value="follow">关注</TabsTrigger>
-			<TabsTrigger value="system">系统</TabsTrigger>
-		</TabsList>
-
-		<TabsContent value={currentFilter ?? 'all'} class="mt-4">
-			{#if isLoading}
-				<ListSkeleton type="notification" count={5} layout="list" />
-			{:else if notifications.length === 0}
-				<EmptyState icon={Bell} title="暂无通知" />
-			{:else}
-				<div class="space-y-2">
-					{#each notifications as notification (notification.notification_id)}
-						{@const Icon = getNotificationIcon(notification.type)}
-						<a href={getNotificationLink(notification)}>
-							<Card class="cursor-pointer transition-colors hover:bg-accent/50 {notification.is_read ? 'opacity-70' : ''}">
-								<CardContent class="flex items-start gap-4 p-4">
-									{#if notification.sender}
-										<Avatar class="h-10 w-10">
-											<AvatarImage src={notification.sender.avatar_url} alt={notification.sender.nickname} />
-											<AvatarFallback>{notification.sender.nickname.slice(0, 2)}</AvatarFallback>
-										</Avatar>
-									{:else}
-										<div class="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-											<Icon class="h-5 w-5" />
-										</div>
-									{/if}
-									<div class="min-w-0 flex-1">
-										<div class="flex items-start justify-between gap-2">
-											<div>
-												{#if notification.sender}
-													<span class="font-medium">{notification.sender.nickname}</span>
-												{/if}
-												<span class="text-muted-foreground">
-													{notification.content || notification.title}
-												</span>
-											</div>
-											{#if !notification.is_read}
-												<div class="mt-1 h-2 w-2 rounded-full bg-primary"></div>
-											{/if}
-										</div>
-										{#if notification.target_text_preview}
-											<p class="mt-1 truncate text-sm text-muted-foreground">
-												{notification.target_text_preview}
-											</p>
-										{/if}
-										<p class="mt-1 text-xs text-muted-foreground">
-											{formatTime(notification.created_at)}
-										</p>
+	{#if notifications.length === 0}
+		<EmptyState icon={Bell} title="暂无通知" />
+	{:else}
+		<div class="space-y-2">
+			{#each notifications as notification (notification.id)}
+				{@const Icon = getNotificationIcon(notification.type)}
+				<a href={getNotificationLink(notification)}>
+					<Card class="cursor-pointer transition-colors hover:bg-accent/50">
+						<CardContent class="flex items-start gap-4 p-4">
+							<div class="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+								<Icon class="h-5 w-5" />
+							</div>
+							<div class="min-w-0 flex-1">
+								<div class="flex items-start justify-between gap-2">
+									<div>
+										<span class="font-medium">{notification.title}</span>
+										<span class="text-muted-foreground">
+											{notification.content}
+										</span>
 									</div>
-								</CardContent>
-							</Card>
-						</a>
-					{/each}
-				</div>
-			{/if}
-		</TabsContent>
-	</Tabs>
+									{#if !notification.read}
+										<div class="mt-1 h-2 w-2 rounded-full bg-primary"></div>
+									{/if}
+								</div>
+								<p class="mt-1 text-xs text-muted-foreground">
+									{formatTime(notification.timestamp)}
+								</p>
+							</div>
+						</CardContent>
+					</Card>
+				</a>
+			{/each}
+		</div>
+	{/if}
 </div>

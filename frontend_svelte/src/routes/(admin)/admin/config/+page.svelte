@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { adminGlobalSettingsService } from '$lib/api/services';
+	import { adminServerConfigService, adminClientConfigService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -8,24 +8,26 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Skeleton } from '$lib/components/ui/skeleton';
-	import type { GlobalSettings } from '$lib/types/api';
+	import type { ServerConfig, ClientConfig } from '$lib/types/api';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import Save from 'lucide-svelte/icons/save';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
-	import Globe from 'lucide-svelte/icons/globe';
 	import Lock from 'lucide-svelte/icons/lock';
 	import FileText from 'lucide-svelte/icons/file-text';
 	import Bell from 'lucide-svelte/icons/bell';
 
-	let config = $state<GlobalSettings | null>(null);
+	let serverConfig = $state<ServerConfig | null>(null);
+	let clientConfig = $state<ClientConfig | null>(null);
 	let isLoading = $state(true);
 	let isSaving = $state(false);
 
-	// Form fields
+	// Server config form fields
 	let imageMaxSize = $state('');
 	let videoMaxSize = $state('');
 	let audioMaxSize = $state('');
 	let fileMaxSize = $state('');
+
+	// Client config form fields
 	let enablePublicRegistration = $state(true);
 	let enableGuestLogin = $state(true);
 	let enableMoments = $state(true);
@@ -40,24 +42,32 @@
 	async function loadConfig() {
 		isLoading = true;
 		try {
-			const response = await adminGlobalSettingsService.fetch();
-			if (isSuccess(response) && response.data) {
-				config = response.data;
-				// Populate form fields
-				imageMaxSize = String(config.upload?.image_max_size || 5242880);
-				videoMaxSize = String(config.upload?.video_max_size || 52428800);
-				audioMaxSize = String(config.upload?.audio_max_size || 10485760);
-				fileMaxSize = String(config.upload?.file_max_size || 10485760);
-				enablePublicRegistration = config.features?.enable_public_registration ?? true;
-				enableGuestLogin = config.features?.enable_guest_login ?? true;
-				enableMoments = config.features?.enable_moments ?? true;
-				enableNearbyPeople = config.features?.enable_nearby_people ?? true;
-				maxMomentTags = String(config.limits?.max_moment_tags || 10);
-				maxMomentImages = String(config.limits?.max_moment_images || 9);
-				momentDescriptionMaxLength = String(config.limits?.moment_description_max_length || 300);
-				commentMaxLength = String(config.limits?.comment_max_length || 200);
-				maxGroupMembers = String(config.limits?.max_group_members || 500);
-				searchRadiusMax = String(config.limits?.search_radius_max || 50);
+			// 并行加载服务端配置和客户端配置
+			const [serverRes, clientRes] = await Promise.all([
+				adminServerConfigService.get(),
+				adminClientConfigService.get()
+			]);
+
+			if (isSuccess(serverRes) && serverRes.data) {
+				serverConfig = serverRes.data;
+				imageMaxSize = String(serverConfig.upload?.image_max_size || 5242880);
+				videoMaxSize = String(serverConfig.upload?.video_max_size || 52428800);
+				audioMaxSize = String(serverConfig.upload?.audio_max_size || 10485760);
+				fileMaxSize = String(serverConfig.upload?.file_max_size || 10485760);
+			}
+
+			if (isSuccess(clientRes) && clientRes.data) {
+				clientConfig = clientRes.data;
+				enablePublicRegistration = clientConfig.features?.enable_public_registration ?? true;
+				enableGuestLogin = clientConfig.features?.enable_guest_login ?? true;
+				enableMoments = clientConfig.features?.enable_moments ?? true;
+				enableNearbyPeople = clientConfig.features?.enable_nearby_people ?? true;
+				maxMomentTags = String(clientConfig.limits?.max_moment_tags || 10);
+				maxMomentImages = String(clientConfig.limits?.max_moment_images || 9);
+				momentDescriptionMaxLength = String(clientConfig.limits?.moment_description_max_length || 300);
+				commentMaxLength = String(clientConfig.limits?.comment_max_length || 200);
+				maxGroupMembers = String(clientConfig.limits?.max_group_members || 500);
+				searchRadiusMax = String(clientConfig.limits?.search_radius_max || 50);
 			}
 		} catch {
 			toast.error('加载配置失败');
@@ -69,11 +79,13 @@
 	async function handleSaveUpload() {
 		isSaving = true;
 		try {
-			const response = await adminGlobalSettingsService.updateUpload({
-				image_max_size: parseInt(imageMaxSize) || undefined,
-				video_max_size: parseInt(videoMaxSize) || undefined,
-				audio_max_size: parseInt(audioMaxSize) || undefined,
-				file_max_size: parseInt(fileMaxSize) || undefined
+			const response = await adminServerConfigService.updateUpload({
+				upload: {
+					image_max_size: parseInt(imageMaxSize) || undefined,
+					video_max_size: parseInt(videoMaxSize) || undefined,
+					audio_max_size: parseInt(audioMaxSize) || undefined,
+					file_max_size: parseInt(fileMaxSize) || undefined
+				}
 			});
 
 			if (isSuccess(response)) {
@@ -91,7 +103,7 @@
 	async function handleSaveFeatures() {
 		isSaving = true;
 		try {
-			const response = await adminGlobalSettingsService.updateFeatures({
+			const response = await adminClientConfigService.updateFeatures({
 				enable_public_registration: enablePublicRegistration,
 				enable_guest_login: enableGuestLogin,
 				enable_moments: enableMoments,
@@ -113,13 +125,15 @@
 	async function handleSaveLimits() {
 		isSaving = true;
 		try {
-			const response = await adminGlobalSettingsService.updateLimits({
-				max_moment_tags: parseInt(maxMomentTags) || undefined,
-				max_moment_images: parseInt(maxMomentImages) || undefined,
-				moment_description_max_length: parseInt(momentDescriptionMaxLength) || undefined,
-				comment_max_length: parseInt(commentMaxLength) || undefined,
-				max_group_members: parseInt(maxGroupMembers) || undefined,
-				search_radius_max: parseInt(searchRadiusMax) || undefined
+			const response = await adminClientConfigService.updateLimits({
+				limits: {
+					max_moment_tags: parseInt(maxMomentTags) || undefined,
+					max_moment_images: parseInt(maxMomentImages) || undefined,
+					moment_description_max_length: parseInt(momentDescriptionMaxLength) || undefined,
+					comment_max_length: parseInt(commentMaxLength) || undefined,
+					max_group_members: parseInt(maxGroupMembers) || undefined,
+					search_radius_max: parseInt(searchRadiusMax) || undefined
+				}
 			});
 
 			if (isSuccess(response)) {
@@ -173,14 +187,14 @@
 		</div>
 	{:else}
 		<div class="grid gap-6 lg:grid-cols-2">
-			<!-- 上传设置 -->
+			<!-- 上传设置（服务端配置） -->
 			<Card>
 				<CardHeader>
 					<CardTitle class="flex items-center gap-2">
 						<FileText class="h-5 w-5" />
 						上传设置
 					</CardTitle>
-					<CardDescription>配置文件上传相关限制</CardDescription>
+					<CardDescription>配置文件上传相关限制（服务端配置）</CardDescription>
 				</CardHeader>
 				<CardContent class="space-y-4">
 					<div class="space-y-2">
@@ -237,14 +251,14 @@
 				</CardContent>
 			</Card>
 
-			<!-- 功能开关 -->
+			<!-- 功能开关（客户端配置） -->
 			<Card>
 				<CardHeader>
 					<CardTitle class="flex items-center gap-2">
 						<Lock class="h-5 w-5" />
 						功能开关
 					</CardTitle>
-					<CardDescription>启用或禁用系统功能</CardDescription>
+					<CardDescription>启用或禁用系统功能（客户端配置）</CardDescription>
 				</CardHeader>
 				<CardContent class="space-y-4">
 					<div class="flex items-center justify-between">
@@ -298,14 +312,14 @@
 				</CardContent>
 			</Card>
 
-			<!-- 限制设置 -->
+			<!-- 限制设置（客户端配置） -->
 			<Card>
 				<CardHeader>
 					<CardTitle class="flex items-center gap-2">
 						<Bell class="h-5 w-5" />
 						限制设置
 					</CardTitle>
-					<CardDescription>配置各种数量限制</CardDescription>
+					<CardDescription>配置各种数量限制（客户端配置）</CardDescription>
 				</CardHeader>
 				<CardContent class="space-y-4">
 					<div class="space-y-2">

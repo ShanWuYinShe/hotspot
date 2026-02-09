@@ -64,9 +64,9 @@ export function useOptimisticToggle<T>(options: OptimisticOptions<T>) {
 	}
 
 	return {
-		isOn,
-		count,
-		isLoading,
+		get isOn() { return isOn; },
+		get count() { return count; },
+		get isLoading() { return isLoading; },
 		toggle
 	};
 }

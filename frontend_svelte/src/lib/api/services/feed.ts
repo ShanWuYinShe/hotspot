@@ -5,18 +5,17 @@
 import { post, paginate } from '../client';
 import { FEED, TAGS } from '../endpoints';
 import type {
-	FeedMomentItem,
-	FeedGroupItem,
-	FeedUserItem,
-	TrendingTag,
-	TrendingTags,
+	MomentItem,
+	GroupItem,
+	UserItem,
+	TagItem,
 	TrendingBundle,
-	TagSuggestions,
-	SearchSuggestions,
 	FeedSource,
 	GeoPoint,
 	FeedContentType,
-	FeedFeedbackAction
+	FeedFeedbackAction,
+	PaginationParams,
+	TagTimeframe
 } from '$lib/types/api';
 
 export const feedService = {
@@ -24,34 +23,33 @@ export const feedService = {
 	 * 获取瞬间信息流
 	 */
 	getMoments(params: {
-		source: FeedSource;
-		reference_point?: GeoPoint;
-		limit?: number;
-		cursor?: string;
+		reference_point: GeoPoint;
+		source?: FeedSource;
 		radius?: number;
+		pagination?: PaginationParams;
 	}) {
-		return paginate<FeedMomentItem>(FEED.MOMENTS, params);
+		return paginate<MomentItem>(FEED.LIST_MOMENTS, params);
 	},
 
 	/**
 	 * 获取群组推荐
 	 */
-	getGroups(params: { reference_point: GeoPoint; radius?: number; limit?: number; cursor?: string }) {
-		return paginate<FeedGroupItem>(FEED.GROUPS, params);
+	getGroups(params: { reference_point: GeoPoint; radius?: number; pagination?: PaginationParams }) {
+		return paginate<GroupItem>(FEED.LIST_GROUPS, params);
 	},
 
 	/**
 	 * 获取用户推荐
 	 */
-	getUsers(params: { reference_point: GeoPoint; radius?: number; limit?: number; cursor?: string }) {
-		return paginate<FeedUserItem>(FEED.USERS, params);
+	getUsers(params: { reference_point: GeoPoint; radius?: number; pagination?: PaginationParams }) {
+		return paginate<UserItem>(FEED.LIST_USERS, params);
 	},
 
 	/**
 	 * 获取热门内容
 	 */
-	getTrending(params?: { limit?: number }) {
-		return post<TrendingBundle>(FEED.TRENDING, params);
+	getTrending() {
+		return post<TrendingBundle>(FEED.LIST_TRENDING);
 	},
 
 	/**
@@ -63,7 +61,7 @@ export const feedService = {
 		action: FeedFeedbackAction;
 		reason?: string;
 	}) {
-		return post<void>(FEED.FEEDBACK, data);
+		return post<void>(FEED.ME.FEEDBACK, data);
 	}
 };
 
@@ -71,17 +69,7 @@ export const tagsService = {
 	/**
 	 * 获取热门标签
 	 */
-	getTrending(params?: {
-		timeframe?: 'daily' | 'weekly' | 'monthly';
-		limit?: number;
-	}) {
-		return post<TrendingTags>(TAGS.TRENDING, params);
-	},
-
-	/**
-	 * 标签搜索建议
-	 */
-	suggest(params: { prefix: string; limit?: number }) {
-		return post<TagSuggestions>(TAGS.SUGGEST, params);
+	getTrending(params?: { timeframe?: TagTimeframe }) {
+		return post<{ items: TagItem[] }>(TAGS.LIST_TRENDING, params);
 	}
 };

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { momentsService, commentsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
@@ -13,7 +13,7 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Badge } from '$lib/components/ui/badge';
-	import type { MomentCard, CommentListItem } from '$lib/types/api';
+	import type { MomentItem, CommentItem } from '$lib/types/api';
 	import Heart from 'lucide-svelte/icons/heart';
 	import MessageCircle from 'lucide-svelte/icons/message-circle';
 	import Bookmark from 'lucide-svelte/icons/bookmark';
@@ -23,12 +23,13 @@
 	import Send from 'lucide-svelte/icons/send';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 
-	const momentId = $page.params.id!;
+	const momentId = page.params.id!;
 
-	let moment = $state<MomentCard | null>(null);
-	let comments = $state<CommentListItem[]>([]);
+	let moment = $state<MomentItem | null>(null);
+	let comments = $state.raw<CommentItem[]>([]);
 	let isLoading = $state(true);
 	let isLoadingComments = $state(true);
+	let commentsError = $state(false);
 	let commentText = $state('');
 	let isSubmitting = $state(false);
 
@@ -58,13 +59,16 @@
 	}
 
 	async function loadComments() {
+		commentsError = false;
 		try {
-			const response = await commentsService.getComments({ moment_id: momentId, limit: 50 });
+			const response = await commentsService.getComments({ moment_id: momentId, pagination: { limit: 50 } });
 			if (isSuccess(response) && response.data) {
 				comments = response.data.items;
+			} else {
+				commentsError = true;
 			}
 		} catch {
-			// 忽略错误
+			commentsError = true;
 		} finally {
 			isLoadingComments = false;
 		}
@@ -167,7 +171,7 @@
 <div class="mx-auto max-w-2xl space-y-6">
 	<!-- Header -->
 	<div class="flex items-center gap-4">
-		<Button variant="ghost" size="icon" onclick={() => history.back()}>
+		<Button variant="ghost" size="icon" onclick={() => history.back()} aria-label="返回">
 			<ArrowLeft class="h-5 w-5" />
 		</Button>
 		<h1 class="text-xl font-bold">瞬间详情</h1>
@@ -215,7 +219,7 @@
 
 				{#if moment.images && moment.images.length > 0}
 					<div class="grid gap-2 {moment.images.length === 1 ? '' : 'grid-cols-2'}">
-						{#each moment.images as image, i}
+						{#each moment.images as image, i (image.url)}
 							<img
 								src={image.url}
 								alt="图片 {i + 1}"
@@ -228,7 +232,7 @@
 
 				{#if moment.tags && moment.tags.length > 0}
 					<div class="flex flex-wrap gap-2">
-						{#each moment.tags as tag}
+						{#each moment.tags as tag (tag)}
 							<Badge variant="secondary">#{tag}</Badge>
 						{/each}
 					</div>
@@ -323,6 +327,11 @@
 								</div>
 							</div>
 						{/each}
+					</div>
+				{:else if commentsError}
+					<div class="flex flex-col items-center gap-3 py-8 text-center">
+						<p class="text-sm text-muted-foreground">加载评论失败</p>
+						<Button variant="outline" size="sm" onclick={loadComments}>重试</Button>
 					</div>
 				{:else if comments.length === 0}
 					<p class="py-8 text-center text-muted-foreground">暂无评论</p>

@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { DropdownMenu as DropdownMenuPrimitive } from 'bits-ui';
+	import { DropdownMenu as DropdownMenuPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
 	import type { Snippet } from 'svelte';
 
-	interface Props {
-		open?: boolean;
+	interface Props extends WithoutChildrenOrChild<DropdownMenuPrimitive.SubProps> {
 		children?: Snippet;
 	}
 

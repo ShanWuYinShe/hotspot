@@ -1,7 +1,8 @@
 <script lang="ts">
+	import { dev } from '$app/environment';
 	import { usersService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
-	import type { UserStats } from '$lib/types/api';
+	import type { MyCard } from '$lib/types/api';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import Heart from 'lucide-svelte/icons/heart';
@@ -14,19 +15,19 @@
 
 	let { refreshTrigger = 0 }: Props = $props();
 
-	let stats = $state<UserStats | null>(null);
+	// 统计数据内嵌在 MyCard 中（spec 无独立 stats 端点）
+	let stats = $state<MyCard['stats'] | null>(null);
 	let loading = $state(false);
 
 	async function loadStats() {
 		loading = true;
 		try {
-			const response = await usersService.getMyStats();
+			const response = await usersService.getMyProfile();
 			if (isSuccess(response) && response.data) {
-				stats = response.data;
+				stats = response.data.stats;
 			}
 		} catch (error) {
-			console.error('Failed to load user stats:', error);
-			// 不显示 toast，避免影响首页体验
+			if (dev) console.error('Failed to load user stats:', error);
 		} finally {
 			loading = false;
 		}

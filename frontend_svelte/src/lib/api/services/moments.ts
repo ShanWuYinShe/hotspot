@@ -5,51 +5,28 @@
 import { post, paginate } from '../client';
 import { MOMENTS } from '../endpoints';
 import type {
-	MomentCard,
-	MomentSearchItem,
-	MomentSuggestions,
-	MomentLikeItem,
-	GeoPoint,
+	MomentItem,
+	LikeItem,
 	Location,
 	PrivacyLevel,
-	UserMomentListItem
+	PaginationParams,
+	SearchBaseParams
 } from '$lib/types/api';
 
 export const momentsService = {
 	// ==================== 搜索 ====================
 
 	/**
-	 * 关键词搜索瞬间
+	 * 搜索瞬间（对齐 spec SearchMomentsRequest）
 	 */
-	searchByKeyword(params: { reference_point: GeoPoint; kw: string; limit?: number; cursor?: string }) {
-		return paginate<MomentSearchItem>(MOMENTS.SEARCH_BY_KEYWORD, params);
-	},
-
-	/**
-	 * 瞬间搜索建议
-	 */
-	suggest(params: { prefix: string; limit?: number }) {
-		return post<MomentSuggestions>(MOMENTS.SUGGEST, params);
-	},
-
-	/**
-	 * 标签搜索瞬间
-	 */
-	searchByTag(params: { reference_point: GeoPoint; tag: string; limit?: number; cursor?: string }) {
-		return paginate<MomentSearchItem>(MOMENTS.SEARCH_BY_TAG, params);
-	},
-
-	/**
-	 * 位置搜索瞬间
-	 */
-	searchByLocation(params: {
-		reference_point: GeoPoint;
-		radius: number;
-		kw?: string;
-		limit?: number;
-		cursor?: string;
+	search(params: {
+		search: SearchBaseParams;
+		keyword?: string;
+		tag?: string;
+		radius?: number;
+		sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';
 	}) {
-		return paginate<MomentSearchItem>(MOMENTS.SEARCH_BY_LOCATION, params);
+		return paginate<MomentItem>(MOMENTS.SEARCH, params);
 	},
 
 	// ==================== 瞬间信息 ====================
@@ -58,14 +35,14 @@ export const momentsService = {
 	 * 获取瞬间详情
 	 */
 	getMoment(data: { moment_id: string }) {
-		return post<MomentCard>(MOMENTS.OPEN_THE_DOOR, data);
+		return post<MomentItem>(MOMENTS.OPEN_THE_DOOR, data);
 	},
 
 	/**
 	 * 获取点赞列表
 	 */
-	getLikes(params: { moment_id: string; limit?: number; cursor?: string }) {
-		return paginate<MomentLikeItem>(MOMENTS.LIKES, params);
+	getLikes(params: { moment_id: string; pagination?: PaginationParams }) {
+		return paginate<LikeItem>(MOMENTS.LIST_LIKES, params);
 	},
 
 	// ==================== 瞬间操作 ====================
@@ -79,9 +56,9 @@ export const momentsService = {
 		tags?: string[];
 		image_file_ids?: string[];
 		privacy_level?: PrivacyLevel;
-		mentions?: number[];
+		mentions?: string[];
 	}) {
-		return post<UserMomentListItem>(MOMENTS.CREATE, data);
+		return post<MomentItem>(MOMENTS.CREATE, data);
 	},
 
 	/**
@@ -94,7 +71,7 @@ export const momentsService = {
 		tags?: string[];
 		image_file_ids?: string[];
 		privacy_level?: PrivacyLevel;
-		mentions?: number[];
+		mentions?: string[];
 	}) {
 		return post<void>(MOMENTS.UPDATE, data);
 	},
@@ -110,28 +87,28 @@ export const momentsService = {
 	 * 点赞瞬间
 	 */
 	like(data: { moment_id: string }) {
-		return post<void>(MOMENTS.LIKE, data);
+		return post<void>(MOMENTS.ME.LIKE, data);
 	},
 
 	/**
 	 * 取消点赞
 	 */
 	unlike(data: { moment_id: string }) {
-		return post<void>(MOMENTS.UNLIKE, data);
+		return post<void>(MOMENTS.ME.UNLIKE, data);
 	},
 
 	/**
 	 * 收藏瞬间
 	 */
 	favorite(data: { moment_id: string }) {
-		return post<void>(MOMENTS.FAVORITE, data);
+		return post<void>(MOMENTS.ME.FAVORITE, data);
 	},
 
 	/**
 	 * 取消收藏
 	 */
 	unfavorite(data: { moment_id: string }) {
-		return post<void>(MOMENTS.UNFAVORITE, data);
+		return post<void>(MOMENTS.ME.UNFAVORITE, data);
 	},
 
 	// ==================== 当前用户 ====================
@@ -139,14 +116,14 @@ export const momentsService = {
 	/**
 	 * 获取我的瞬间列表
 	 */
-	getMyMoments(params?: { limit?: number; cursor?: string }) {
-		return paginate<UserMomentListItem>(MOMENTS.ME.LIST, params);
+	getMyMoments(params?: { pagination?: PaginationParams }) {
+		return paginate<MomentItem>(MOMENTS.ME.LIST, params);
 	},
 
 	/**
 	 * 获取我的收藏
 	 */
-	getMyFavorites(params?: { limit?: number; cursor?: string }) {
-		return paginate<MomentCard>(MOMENTS.ME.FAVORITES, params);
+	getMyFavorites(params?: { pagination?: PaginationParams }) {
+		return paginate<MomentItem>(MOMENTS.ME.LIST_FAVORITES, params);
 	}
 };

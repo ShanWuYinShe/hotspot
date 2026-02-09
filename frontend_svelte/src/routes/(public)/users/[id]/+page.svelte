@@ -7,13 +7,13 @@
 	import { toast } from '$lib/stores/toast.svelte';
 	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import { Card, CardContent } from '$lib/components/ui/card';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
 	import MomentCard from '$lib/components/moments/moment-card.svelte';
-	import type { UserCard, UserInfo, UserMomentListItem } from '$lib/types/api';
+	import type { UserItem, UserInfo, MomentItem } from '$lib/types/api';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import MapPin from 'lucide-svelte/icons/map-pin';
 	import Users from 'lucide-svelte/icons/users';
@@ -21,22 +21,24 @@
 	import MessageCircle from 'lucide-svelte/icons/message-circle';
 	import UserPlus from 'lucide-svelte/icons/user-plus';
 	import UserCheck from 'lucide-svelte/icons/user-check';
-	import UserMinus from 'lucide-svelte/icons/user-minus';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
-	const userId = data.userId;
+	const userId = $derived(data.userId);
 
-	let user = $state<UserCard | null>(data.user);
-	let isFollowing = $state(data.user?.relation?.is_following ?? false);
-	let isFollowPending = $state(data.user?.relation?.has_pending_follow_request ?? false);
+	let user = $state<UserItem | null>(null);
+	let isFollowing = $state(false);
+	$effect(() => {
+		user = data.user;
+		isFollowing = data.user?.relation?.is_following ?? false;
+	});
 	let isActionLoading = $state(false);
 	let currentTab = $state<'moments' | 'followers' | 'following'>('moments');
 
 	// 使用 usePagination hook 统一管理三个 tab 的分页状态
-	const momentsPagination = usePagination<UserMomentListItem>({
+	const momentsPagination = usePagination<MomentItem>({
 		initialLoading: false,
 		uniqueKey: 'moment_id'
 	});
@@ -61,39 +63,36 @@
 
 		isActionLoading = true;
 		try {
-		if (isFollowing || isFollowPending) {
+		if (isFollowing) {
 			const response = await usersService.unfollow({ user_id: userId });
-			if (isSuccess(response) && response.data) {
-				// 使用后端返回的 UserRelation 更新状态
-				isFollowing = response.data.is_following;
-				isFollowPending = response.data.has_pending_follow_request;
+			if (isSuccess(response)) {
+				isFollowing = false;
+				// 更新 user.relation
+				if (user) {
+					user = {
+						...user,
+						relation: user.relation ? { ...user.relation, is_following: false } : undefined
+					};
+				}
 				toast.success('已取消关注');
 			} else {
 				toast.error(response.message || '操作失败');
 			}
 		} else {
 			const response = await usersService.follow({ user_id: userId });
-			if (isSuccess(response) && response.data) {
-				// 使用后端返回的 UserRelation 判断关注状态
-				if (response.data.has_pending_follow_request) {
-					isFollowPending = true;
-					toast.success('已发送关注请求，等待对方审批');
-				} else if (response.data.is_following) {
-					isFollowing = true;
-					isFollowPending = false;
-					toast.success('关注成功');
+			if (isSuccess(response)) {
+				isFollowing = true;
+				// 更新 user.relation
+				if (user) {
+					user = {
+						...user,
+						relation: user.relation ? { ...user.relation, is_following: true } : { is_following: true, is_followed_by: false, is_blocked: false, is_blocked_by: false }
+					};
 				}
+				toast.success('关注成功');
 			} else {
-				// 处理具体的错误码
-				if (response.code === 10213) {
-					toast.error('对方不允许被关注');
-				} else if (response.code === 10211) {
-					toast.error('已被对方拉黑');
-				} else if (response.code === 10411) {
-					toast.error('不能关注自己');
-				} else {
-					toast.error(response.message || '操作失败');
-				}
+				// 统一使用 response.message 展示错误（spec 哲学：code 驱动行为，message 描述上下文）
+				toast.error(response.message || '操作失败');
 			}
 		}
 		} catch {
@@ -109,8 +108,7 @@
 			(cursor) =>
 				usersService.getMoments({
 					user_id: userId,
-					limit: 12,
-					cursor
+					pagination: { limit: 12, cursor }
 				}),
 			refresh
 		);
@@ -125,8 +123,7 @@
 			(cursor) =>
 				usersService.getFollowers({
 					user_id: userId,
-					limit: 20,
-					cursor
+					pagination: { limit: 20, cursor }
 				}),
 			refresh
 		);
@@ -141,8 +138,7 @@
 			(cursor) =>
 				usersService.getFollowing({
 					user_id: userId,
-					limit: 20,
-					cursor
+					pagination: { limit: 20, cursor }
 				}),
 			refresh
 		);
@@ -171,13 +167,13 @@
 </script>
 
 <svelte:head>
-	<title>{user?.nickname ?? '用户'} - HotSpot</title>
+	<title>{user?.user.nickname ?? '用户'} - HotSpot</title>
 </svelte:head>
 
 <div class="mx-auto max-w-5xl space-y-8">
 	<!-- Header -->
 	<div class="flex items-center gap-4">
-		<Button variant="ghost" size="icon" onclick={() => history.back()}>
+		<Button variant="ghost" size="icon" onclick={() => history.back()} aria-label="返回">
 			<ArrowLeft class="h-5 w-5" />
 		</Button>
 		<h1 class="text-2xl font-bold">用户主页</h1>
@@ -199,11 +195,11 @@
 				<div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
 					<div class="flex flex-col gap-4 sm:flex-row sm:items-center">
 						<Avatar class="h-24 w-24 ring-2 ring-primary/15">
-							<AvatarImage src={user.avatar_url} alt={user.nickname} />
-							<AvatarFallback class="text-2xl">{user.nickname.slice(0, 2)}</AvatarFallback>
+							<AvatarImage src={user.user.avatar_url} alt={user.user.nickname} />
+							<AvatarFallback class="text-2xl">{user.user.nickname.slice(0, 2)}</AvatarFallback>
 						</Avatar>
 						<div>
-							<h2 class="text-2xl font-bold">{user.nickname}</h2>
+							<h2 class="text-2xl font-bold">{user.user.nickname}</h2>
 							{#if user.bio}
 								<p class="mt-2 max-w-xl text-sm text-muted-foreground">{user.bio}</p>
 							{/if}
@@ -215,7 +211,7 @@
 							{/if}
 							{#if user.tags && user.tags.length > 0}
 								<div class="mt-3 flex flex-wrap gap-2">
-									{#each user.tags as tag}
+									{#each user.tags as tag (tag)}
 										<Badge variant="secondary">#{tag}</Badge>
 									{/each}
 								</div>
@@ -235,9 +231,6 @@
 								{:else if isFollowing}
 									<UserCheck class="mr-2 h-4 w-4" />
 									已关注
-								{:else if isFollowPending}
-									<UserMinus class="mr-2 h-4 w-4" />
-									等待确认
 								{:else}
 									<UserPlus class="mr-2 h-4 w-4" />
 									关注
@@ -263,7 +256,7 @@
 						class="rounded-2xl border border-border/60 bg-background/70 p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/10"
 						onclick={() => handleTabChange('moments')}
 					>
-						<div class="text-2xl font-bold">{user.stats.moments_count}</div>
+						<div class="text-2xl font-bold">{user.stats?.moments_count ?? 0}</div>
 						<div class="text-sm text-muted-foreground">瞬间</div>
 					</button>
 					<button
@@ -271,7 +264,7 @@
 						class="rounded-2xl border border-border/60 bg-background/70 p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/10"
 						onclick={() => handleTabChange('followers')}
 					>
-						<div class="text-2xl font-bold">{user.stats.followers_count}</div>
+						<div class="text-2xl font-bold">{user.stats?.followers_count ?? 0}</div>
 						<div class="text-sm text-muted-foreground">粉丝</div>
 					</button>
 					<button
@@ -279,7 +272,7 @@
 						class="rounded-2xl border border-border/60 bg-background/70 p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/10"
 						onclick={() => handleTabChange('following')}
 					>
-						<div class="text-2xl font-bold">{user.stats.following_count}</div>
+						<div class="text-2xl font-bold">{user.stats?.following_count ?? 0}</div>
 						<div class="text-sm text-muted-foreground">关注</div>
 					</button>
 				</div>
@@ -328,12 +321,7 @@
 					<div class="columns-1 gap-4 sm:columns-2 lg:columns-3">
 						{#each momentsPagination.items as moment (moment.moment_id)}
 							<div class="mb-4 break-inside-avoid">
-								<MomentCard moment={{
-									...moment,
-									user: user!,
-									is_liked: false,
-									is_favorited: false
-								}} />
+								<MomentCard {moment} />
 							</div>
 						{/each}
 					</div>
@@ -458,14 +446,5 @@
 				{/if}
 			</TabsContent>
 		</Tabs>
-	{:else}
-		<Card>
-			<CardContent class="py-12 text-center">
-				<p class="text-muted-foreground">用户不存在</p>
-				<Button variant="outline" class="mt-4" onclick={() => goto('/')}>
-					返回首页
-				</Button>
-			</CardContent>
-		</Card>
 	{/if}
 </div>

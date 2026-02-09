@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { dev } from '$app/environment';
+	import { page } from '$app/state';
 	import { onMount } from 'svelte';
-	import { privateChatsService, privateMessagesService, usersService } from '$lib/api/services';
+	import { privateMessagesService, usersService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { messageStore } from '$lib/stores/message.svelte';
@@ -20,10 +21,10 @@
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 	import MoreVertical from 'lucide-svelte/icons/more-vertical';
 
-	const userId = parseInt($page.params.id!);
+	const userId = page.params.id!;
 
 	let otherUser = $state<UserInfo | null>(null);
-	let messages = $state<PrivateMessageItem[]>([]);
+	let messages = $state.raw<PrivateMessageItem[]>([]);
 	let isLoading = $state(true);
 	let messageText = $state('');
 	let isSending = $state(false);
@@ -37,7 +38,7 @@
 
 	// ✨ 批量已读逻辑
 	const batchMarkRead = useBatchMarkRead({
-		markAsRead: async (messageIds) => {
+		markAsRead: async (_messageIds) => {
 			// 私聊消息的标记已读是按对话标记的，不需要传 messageIds
 			await privateMessagesService.markAsRead({ target_user_id: userId });
 		},
@@ -50,13 +51,13 @@
 			// 获取对方信息
 			const userResponse = await usersService.getUser({ user_id: userId });
 			if (isSuccess(userResponse) && userResponse.data) {
-				otherUser = userResponse.data;
+				otherUser = userResponse.data.user;
 			}
 
 			// 获取消息历史
 			const messagesResponse = await privateMessagesService.getHistory({
 				target_user_id: userId,
-				limit: 50
+				pagination: { limit: 50 }
 			});
 			if (isSuccess(messagesResponse) && messagesResponse.data) {
 				messages = messagesResponse.data.items.reverse();
@@ -141,25 +142,18 @@
 	}
 
 	/**
-	 * Svelte action：观察消息可见性
+	 * Svelte 5 Attachment：观察消息可见性
 	 */
-	function observeMessage(node: HTMLElement, params: { messageId: string; isSelf: boolean }) {
-		// 只观察对方发送的消息（不观察自己发送的消息）
-		if (!params.isSelf) {
-			batchMarkRead.observe(node, params.messageId);
-		}
-
-		return {
-			update(newParams: { messageId: string; isSelf: boolean }) {
-				if (newParams.isSelf) {
-					batchMarkRead.unobserve(node);
-				} else {
-					batchMarkRead.observe(node, newParams.messageId);
-				}
-			},
-			destroy() {
-				batchMarkRead.unobserve(node);
+	function observeMessage(params: { messageId: string; isSelf: boolean }) {
+		return (node: HTMLElement) => {
+			// 只观察对方发送的消息（不观察自己发送的消息）
+			if (!params.isSelf) {
+				batchMarkRead.observe(node, params.messageId);
 			}
+
+			return () => {
+				batchMarkRead.unobserve(node);
+			};
 		};
 	}
 
@@ -173,17 +167,16 @@
 			// 只处理与当前聊天相关的消息
 			if (
 				payload.target_user_id === userId ||
-				(payload.sender.user_id === userId && payload.target_user_id === authStore.currentUserId)
+				(payload.sender_id === userId && payload.target_user_id === authStore.currentUserId)
 			) {
 				// 将 WebSocket 消息转换为 PrivateMessageItem
 				const newMessage: PrivateMessageItem = {
 					message_id: payload.message_id,
 					type: payload.type,
 					content: payload.content,
-					sender_id: payload.sender.user_id,
+					sender_id: payload.sender_id,
 					sent_at: payload.sent_at,
 					media: payload.media,
-					location: payload.location,
 					reply_to: payload.reply_to
 				};
 
@@ -257,7 +250,7 @@
 		if (!connected) {
 			// 连接断开，重置订阅状态
 			if (isSubscribed) {
-				console.log('[Chat] WebSocket 断开，重置订阅状态');
+				if (dev) console.log('[Chat] WebSocket 断开，重置订阅状态');
 				isSubscribed = false;
 			}
 			return;
@@ -267,16 +260,16 @@
 		if (!isSubscribed && !isAttemptingSubscribe) {
 			isAttemptingSubscribe = true;
 			
-			console.log('[Chat] WebSocket 已连接，订阅用户:', userId);
+			if (dev) console.log('[Chat] WebSocket 已连接，订阅用户:', userId);
 			
 			subscriptionManager.subscribe('user', [userId]).then((success) => {
 				isSubscribed = success;
 				isAttemptingSubscribe = false;
 				
 				if (success) {
-					console.log('[Chat] ✅ 订阅成功');
+					if (dev) console.log('[Chat] ✅ 订阅成功');
 				} else {
-					console.warn('[Chat] ❌ 订阅失败，将在重连后重试');
+					if (dev) console.warn('[Chat] ❌ 订阅失败，将在重连后重试');
 					toast.warning('消息订阅失败，正在重试...');
 				}
 			});
@@ -291,7 +284,7 @@
 <div class="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-xl border border-border/50 bg-card shadow-lg">
 	<!-- Header -->
 	<div class="flex h-16 items-center gap-3 border-b border-border/50 bg-card/80 px-4 backdrop-blur-sm">
-		<Button variant="ghost" size="icon" onclick={() => history.back()}>
+		<Button variant="ghost" size="icon" onclick={() => history.back()} aria-label="返回">
 			<ArrowLeft class="h-5 w-5" />
 		</Button>
 		{#if isLoading}
@@ -307,7 +300,7 @@
 			</a>
 		{/if}
 		<div class="ml-auto">
-			<Button variant="ghost" size="icon">
+			<Button variant="ghost" size="icon" aria-label="更多选项">
 				<MoreVertical class="h-5 w-5" />
 			</Button>
 		</div>
@@ -337,7 +330,7 @@
 				{#each messages as message (message.message_id)}
 					<div
 						class="flex {isSelf(message) ? 'justify-end' : ''}"
-						use:observeMessage={{ messageId: message.message_id, isSelf: isSelf(message) }}
+						{@attach observeMessage({ messageId: message.message_id, isSelf: isSelf(message) })}
 					>
 						<div class="flex max-w-[70%] flex-col gap-1">
 							<div
@@ -415,6 +408,7 @@
 				onclick={sendMessage}
 				onmousedown={(e) => e.preventDefault()}
 				disabled={!messageText.trim() || isSending}
+				aria-label="发送消息"
 			>
 				{#if isSending}
 					<Loader2 class="h-5 w-5 animate-spin" />

@@ -1,15 +1,13 @@
 <script lang="ts">
-	import { DropdownMenu as DropdownMenuPrimitive } from 'bits-ui';
+	import { DropdownMenu as DropdownMenuPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
 	import { cn } from '$lib/utils';
 	import type { Snippet } from 'svelte';
 
-	interface Props {
+	interface Props extends WithoutChildrenOrChild<DropdownMenuPrimitive.ItemProps> {
 		inset?: boolean;
 		children?: Snippet;
 		child?: Snippet<[{ props: Record<string, unknown> }]>;
 		class?: string;
-		disabled?: boolean;
-		onclick?: (event: MouseEvent) => void;
 	}
 
 	let { class: className, inset, disabled, children, child, ...restProps }: Props = $props();

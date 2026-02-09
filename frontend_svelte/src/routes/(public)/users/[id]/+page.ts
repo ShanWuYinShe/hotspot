@@ -3,7 +3,7 @@ import { isSuccess } from '$lib/api/client';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ params }) => {
-	const userId = parseInt(params.id);
+	const userId = params.id;
 
 	try {
 		const response = await usersService.getUser({ user_id: userId });

@@ -2,9 +2,9 @@
  * 系统服务
  */
 
-import { post, paginate } from '../client';
-import { SYSTEM, GLOBAL_SETTINGS, ANNOUNCEMENTS } from '../endpoints';
-import type { GlobalSettings, HealthStatus, SystemAnnouncementItem } from '$lib/types/api';
+import { post } from '../client';
+import { SYSTEM } from '../endpoints';
+import type { ClientConfig, HealthStatus, SystemAnnouncementItem, SystemMeta } from '$lib/types/api';
 
 export const systemService = {
 	/**
@@ -14,23 +14,26 @@ export const systemService = {
 		return post<HealthStatus>(SYSTEM.HEALTH, undefined, {
 			skipAuth: true
 		});
-	}
-};
+	},
 
-export const globalSettingsService = {
 	/**
-	 * 获取全局配置
+	 * 获取系统元信息
 	 */
-	fetch() {
-		return post<GlobalSettings>(GLOBAL_SETTINGS.FETCH, undefined, { skipAuth: true });
-	}
-};
+	getMeta() {
+		return post<SystemMeta>(SYSTEM.GET_META, undefined, { skipAuth: true });
+	},
 
-export const announcementsService = {
 	/**
-	 * 获取系统公告列表
+	 * 获取客户端配置
 	 */
-	getList(params?: { limit?: number; cursor?: string }) {
-		return paginate<SystemAnnouncementItem>(ANNOUNCEMENTS.LIST, params);
+	getClientConfig() {
+		return post<ClientConfig>(SYSTEM.GET_CLIENT_CONFIG, undefined, { skipAuth: true });
+	},
+
+	/**
+	 * 获取系统公告列表（非分页，返回 { items }）
+	 */
+	getAnnouncements(params?: { limit?: number }) {
+		return post<{ items: SystemAnnouncementItem[] }>(SYSTEM.LIST_ANNOUNCEMENTS, params);
 	}
 };

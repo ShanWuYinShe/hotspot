@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { cn } from '$lib/utils';
 	import { authStore } from '$lib/stores/auth.svelte';
@@ -13,7 +13,6 @@
 	import { rippleFeedback, circularFeedback } from '$lib/attachments';
 	import LocationPickerModal from './location-picker-modal.svelte';
 	import Home from 'lucide-svelte/icons/home';
-	import Compass from 'lucide-svelte/icons/compass';
 	import Image from 'lucide-svelte/icons/image';
 	import UsersRound from 'lucide-svelte/icons/users-round';
 	import MessageCircle from 'lucide-svelte/icons/message-circle';
@@ -26,7 +25,6 @@
 	import Sun from 'lucide-svelte/icons/sun';
 	import Moon from 'lucide-svelte/icons/moon';
 	import ChevronRight from 'lucide-svelte/icons/chevron-right';
-	import Share2 from 'lucide-svelte/icons/share-2';
 
 	interface NavItem {
 		href: string;
@@ -54,15 +52,15 @@
 	];
 
 	// 优化：使用 $derived 缓存当前路径和参数，避免在模板中重复计算
-	const currentPathname = $derived($page.url.pathname);
-	const currentParams = $derived($page.url.searchParams);
+	const currentPathname = $derived(page.url.pathname);
+	const currentParams = $derived(page.url.searchParams);
 
 	// 预计算所有导航项的激活状态
 	const activeStates = $derived.by(() => {
 		const states = new Map<string, boolean>();
 		
 		const checkActive = (href: string): boolean => {
-			const url = new URL(href, $page.url.origin);
+			const url = new URL(href, page.url.origin);
 			
 			if (url.pathname !== currentPathname) return false;
 			if (url.searchParams.toString().length === 0) {
@@ -76,7 +74,7 @@
 		};
 		
 		// 预计算所有导航项
-		[...mainNavItems, ...personalNavItems, ...adminNavItems].forEach(item => {
+		[...mainNavItems, ...personalNavItems].forEach(item => {
 			states.set(item.href, checkActive(item.href));
 		});
 		
@@ -122,7 +120,7 @@
 	>
 		<!-- 主导航 -->
 		<div class="space-y-1">
-			{#each mainNavItems as item}
+			{#each mainNavItems as item (item.href)}
 				<RippleNavItem href={item.href} active={isActive(item.href)}>
 					<item.icon class="h-5 w-5 transition-transform group-hover:scale-110" />
 					<span>{item.label}</span>
@@ -136,7 +134,7 @@
 				个人中心
 			</h3>
 			<div class="space-y-1">
-				{#each personalNavItems as item}
+				{#each personalNavItems as item (item.href)}
 					<RippleNavItem 
 						href={item.href} 
 						active={isActive(item.href)}
@@ -183,7 +181,7 @@
 			type="button"
 			class="group relative flex w-full items-center gap-3 overflow-hidden rounded-xl bg-gradient-to-r from-primary/5 to-primary/10 p-3 text-left transition-all duration-200 hover:from-primary/10 hover:to-primary/20 min-h-[56px]"
 			onclick={() => (showLocationPicker = true)}
-			use:rippleFeedback
+			{@attach rippleFeedback}
 		>
 			<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-transform group-hover:scale-105">
 				<Navigation class="h-5 w-5" />
@@ -202,7 +200,7 @@
 				type="button"
 				class="group relative flex flex-1 items-center justify-center gap-2 overflow-hidden rounded-lg bg-muted/40 p-3 transition-all duration-200 hover:bg-muted/60 min-h-[44px]"
 				onclick={toggleMode}
-				use:circularFeedback
+				{@attach circularFeedback}
 				aria-label="切换主题"
 			>
 				<div class="flex h-5 w-5 items-center justify-center text-muted-foreground transition-transform group-hover:scale-110">
@@ -222,7 +220,7 @@
 				type="button"
 				class="group relative flex items-center justify-center overflow-hidden rounded-lg bg-muted/40 p-3 transition-all duration-200 hover:bg-muted/60 min-h-[44px] min-w-[44px]"
 				onclick={() => goto('/settings')}
-				use:circularFeedback
+				{@attach circularFeedback}
 				aria-label="设置"
 			>
 				<Settings class="h-5 w-5 text-muted-foreground transition-transform group-hover:scale-110" />

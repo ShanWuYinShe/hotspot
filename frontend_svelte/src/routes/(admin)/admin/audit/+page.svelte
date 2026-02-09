@@ -8,7 +8,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Skeleton } from '$lib/components/ui/skeleton';
-	import type { AuditLogItem } from '$lib/types/api';
+	import type { AuditLogItem, AuditAction } from '$lib/types/api';
 	import { formatDateTime } from '$lib/utils/format';
 	import Search from 'lucide-svelte/icons/search';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
@@ -16,7 +16,7 @@
 	import User from 'lucide-svelte/icons/user';
 	import Clock from 'lucide-svelte/icons/clock';
 
-	let logs = $state<AuditLogItem[]>([]);
+	let logs = $state.raw<AuditLogItem[]>([]);
 	let isLoading = $state(true);
 	let cursor = $state<string | undefined>(undefined);
 	let hasMore = $state(false);
@@ -26,9 +26,11 @@
 		if (!append) isLoading = true;
 		try {
 			const response = await adminAuditService.getList({
-				action: actionFilter || undefined,
-				limit: 30,
-				cursor: append ? cursor : undefined
+				action: (actionFilter || undefined) as AuditAction | undefined,
+				pagination: {
+					limit: 30,
+					cursor: append ? cursor : undefined
+				}
 			});
 
 			if (isSuccess(response) && response.data) {
@@ -120,7 +122,7 @@
 				<div class="py-8 text-center text-muted-foreground">暂无审计日志</div>
 			{:else}
 				<div class="space-y-3">
-					{#each logs as log (log.audit_id)}
+					{#each logs as log (log.log_id)}
 						<div class="flex items-start gap-4 rounded-lg border p-3">
 							<div class="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
 								<User class="h-5 w-5 text-muted-foreground" />

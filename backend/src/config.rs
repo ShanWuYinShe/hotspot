@@ -32,15 +32,10 @@ pub struct Config {
     /// - false: fail-closed（拒绝请求，优先保证安全性）
     pub rate_limit_fail_open: bool,
     // 端点级限速配置
-    pub rate_limit_send_code_per_minute: u32,
-    pub rate_limit_verify_code_per_10minutes: u32,
     pub rate_limit_register_per_10minutes: u32,
     pub rate_limit_login_per_10minutes: u32,
     pub rate_limit_guest_per_10minutes: u32,
     pub rate_limit_refresh_per_10minutes: u32,
-    pub rate_limit_reset_request_per_minute: u32,
-    pub rate_limit_reset_verify_per_10minutes: u32,
-    pub rate_limit_reset_per_10minutes: u32,
     pub rate_limit_moments_create_per_minute: u32,
     pub rate_limit_comments_create_per_minute: u32,
     pub rate_limit_reports_create_per_hour: u32,
@@ -134,14 +129,6 @@ impl Config {
                 .unwrap_or_else(|_| "true".to_string())
                 .parse()
                 .map_err(|_| "Invalid RATE_LIMIT_FAIL_OPEN".to_string())?,
-            rate_limit_send_code_per_minute: env::var("RATE_LIMIT_SEND_CODE_PER_MINUTE")
-                .unwrap_or_else(|_| "5".to_string())
-                .parse()
-                .map_err(|_| "Invalid RATE_LIMIT_SEND_CODE_PER_MINUTE".to_string())?,
-            rate_limit_verify_code_per_10minutes: env::var("RATE_LIMIT_VERIFY_CODE_PER_10MINUTES")
-                .unwrap_or_else(|_| "30".to_string())
-                .parse()
-                .map_err(|_| "Invalid RATE_LIMIT_VERIFY_CODE_PER_10MINUTES".to_string())?,
             rate_limit_register_per_10minutes: env::var("RATE_LIMIT_REGISTER_PER_10MINUTES")
                 .unwrap_or_else(|_| "10".to_string())
                 .parse()
@@ -158,20 +145,6 @@ impl Config {
                 .unwrap_or_else(|_| "120".to_string())
                 .parse()
                 .map_err(|_| "Invalid RATE_LIMIT_REFRESH_PER_10MINUTES".to_string())?,
-            rate_limit_reset_request_per_minute: env::var("RATE_LIMIT_RESET_REQUEST_PER_MINUTE")
-                .unwrap_or_else(|_| "5".to_string())
-                .parse()
-                .map_err(|_| "Invalid RATE_LIMIT_RESET_REQUEST_PER_MINUTE".to_string())?,
-            rate_limit_reset_verify_per_10minutes: env::var(
-                "RATE_LIMIT_RESET_VERIFY_PER_10MINUTES",
-            )
-            .unwrap_or_else(|_| "20".to_string())
-            .parse()
-            .map_err(|_| "Invalid RATE_LIMIT_RESET_VERIFY_PER_10MINUTES".to_string())?,
-            rate_limit_reset_per_10minutes: env::var("RATE_LIMIT_RESET_PER_10MINUTES")
-                .unwrap_or_else(|_| "10".to_string())
-                .parse()
-                .map_err(|_| "Invalid RATE_LIMIT_RESET_PER_10MINUTES".to_string())?,
             rate_limit_moments_create_per_minute: env::var("RATE_LIMIT_MOMENTS_CREATE_PER_MINUTE")
                 .unwrap_or_else(|_| "20".to_string())
                 .parse()

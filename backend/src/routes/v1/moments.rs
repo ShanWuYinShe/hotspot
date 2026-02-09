@@ -12,14 +12,12 @@ use crate::{handlers::moments, state::AppState};
 /// 带 Token 时返回 @auth-only 字段（如 my_state）
 pub fn token_optional_routes() -> Router<AppState> {
     Router::new()
-        // 搜索 API
-        .route("/search_by_keyword", post(moments::search_by_keyword))
-        .route("/search_by_tag", post(moments::search_by_tag))
-        .route("/search_by_location", post(moments::search_by_location))
+        // 搜索 API（统一入口）
+        .route("/search", post(moments::search))
         // 获取指定瞬间信息
         .route("/open_the_door", post(moments::open_the_door))
         // 列表 API
-        .route("/likes", post(moments::get_likes))
+        .route("/list_likes", post(moments::get_likes))
 }
 
 /// Token 必须的瞬间路由
@@ -28,22 +26,16 @@ pub fn token_required_routes() -> Router<AppState> {
     let main_routes = Router::new()
         .route("/create", post(moments::create))
         .route("/update", post(moments::update))
-        .route("/delete", post(moments::delete))
-        // 点赞
-        .route("/like", post(moments::like))
-        .route("/unlike", post(moments::unlike))
-        // 收藏
-        .route("/favorite", post(moments::favorite))
-        .route("/unfavorite", post(moments::unfavorite))
-        // 互动状态
-        .route("/interaction_state", post(moments::get_interaction_state));
+        .route("/delete", post(moments::delete));
 
     // /me 子路由 - 当前用户的瞬间相关操作
     let me_routes = Router::new()
-        .route("/", post(moments::get_my_moments))
-        .route("/favorites", post(moments::get_my_favorites))
-        .route("/liked", post(moments::check_liked))
-        .route("/favorited", post(moments::check_favorited));
+        .route("/list", post(moments::get_my_moments))
+        .route("/list_favorites", post(moments::get_my_favorites))
+        .route("/like", post(moments::like))
+        .route("/unlike", post(moments::unlike))
+        .route("/favorite", post(moments::favorite))
+        .route("/unfavorite", post(moments::unfavorite));
 
     main_routes.nest("/me", me_routes)
 }

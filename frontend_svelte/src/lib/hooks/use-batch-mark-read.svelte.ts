@@ -9,7 +9,7 @@
  */
 
 import { onMount } from 'svelte';
-import { authStore } from '$lib/stores/auth.svelte';
+import { dev } from '$app/environment';
 
 export interface UseBatchMarkReadOptions {
 	/**
@@ -69,11 +69,11 @@ export function useBatchMarkRead(options: UseBatchMarkReadOptions): BatchMarkRea
 		enabled = true
 	} = options;
 
-	// 已可见的消息 ID 数组（Svelte 5 $state 无法追踪 Set 内部变化，使用数组）
-	let visibleMessageIds = $state<string[]>([]);
+	// 已可见的消息 ID 数组（使用 $state.raw 因为只做整体替换，不需要深度响应式）
+	let visibleMessageIds = $state.raw<string[]>([]);
 	
 	// 等待标记的消息 ID 数组
-	let pendingMessageIds = $state<string[]>([]);
+	let pendingMessageIds = $state.raw<string[]>([]);
 	
 	// 消息元素与 ID 的映射
 	const elementToIdMap = new Map<HTMLElement, string>();
@@ -98,9 +98,9 @@ export function useBatchMarkRead(options: UseBatchMarkReadOptions): BatchMarkRea
 
 		try {
 			await markAsRead(idsToMark);
-			console.log(`[BatchMarkRead] 已标记 ${idsToMark.length} 条消息为已读`);
+			if (dev) console.log(`[BatchMarkRead] 已标记 ${idsToMark.length} 条消息为已读`);
 		} catch (error) {
-			console.error('[BatchMarkRead] 标记已读失败:', error);
+			if (dev) console.error('[BatchMarkRead] 标记已读失败:', error);
 			// 失败时重新加入队列
 			pendingMessageIds = [...pendingMessageIds, ...idsToMark];
 		}

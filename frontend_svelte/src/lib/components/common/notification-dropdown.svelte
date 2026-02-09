@@ -75,7 +75,7 @@
 <DropdownMenu.Root bind:open>
 	<DropdownMenu.Trigger>
 		{#snippet child({ props })}
-			<Button variant="ghost" size="icon" class="relative rounded-full" {...props}>
+			<Button variant="ghost" size="icon" class="relative rounded-full" aria-label="通知" {...props}>
 				{#if notificationStore.unreadCount > 0}
 					<BellDot class="h-5 w-5" />
 					<Badge 
@@ -110,6 +110,7 @@
 						class="h-8 w-8"
 						onclick={handleMarkAllRead}
 						title="全部已读"
+						aria-label="全部标为已读"
 					>
 						<CheckCheck class="h-4 w-4" />
 					</Button>
@@ -120,6 +121,7 @@
 					class="h-8 w-8"
 					onclick={handleViewAll}
 					title="通知设置"
+					aria-label="通知设置"
 				>
 					<Settings class="h-4 w-4" />
 				</Button>

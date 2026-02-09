@@ -19,7 +19,7 @@ import type { SystemAnnouncementItem, AnnouncementSeverity } from '$lib/types/ap
 	import Trash2 from 'lucide-svelte/icons/trash-2';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 
-let announcements = $state<SystemAnnouncementItem[]>([]);
+let announcements = $state.raw<SystemAnnouncementItem[]>([]);
 	let isLoading = $state(true);
 	let cursor = $state<string | undefined>(undefined);
 	let hasMore = $state(false);
@@ -34,9 +34,11 @@ let announcements = $state<SystemAnnouncementItem[]>([]);
 	async function loadAnnouncements(append = false) {
 		if (!append) isLoading = true;
 		try {
-			const response = await adminAnnouncementsService.getList({
-				limit: 20,
-				cursor: append ? cursor : undefined
+			const response = await adminAnnouncementsService.search({
+				pagination: {
+					limit: 20,
+					cursor: append ? cursor : undefined
+				}
 			});
 
 			if (isSuccess(response) && response.data) {
@@ -187,6 +189,7 @@ let announcements = $state<SystemAnnouncementItem[]>([]);
 									size="icon"
 									class="text-destructive"
 									onclick={() => handleDelete(announcement.announcement_id)}
+									aria-label="删除公告"
 								>
 									<Trash2 class="h-4 w-4" />
 								</Button>

@@ -23,8 +23,8 @@ export interface UnreadConversation {
 // ============ 消息未读计数 Store ============
 
 class MessageStore {
-	// 未读对话列表
-	unreadConversations = $state<Map<string, UnreadConversation>>(new Map());
+	// 未读对话列表（使用 $state.raw 避免 Map 自赋值反模式）
+	unreadConversations = $state.raw<Map<string, UnreadConversation>>(new Map());
 
 	// 总未读消息数
 	totalUnreadCount = $derived(
@@ -48,49 +48,49 @@ class MessageStore {
 	 * 注册消息事件处理器
 	 */
 	private registerMessageHandlers() {
-		// 监听私聊新消息（现在有类型提示了！）
+		// 监听私聊新消息
 		this.cleanupFunctions.push(
 			websocketStore.on('PrivateMessageNew', (payload) => {
-				// ✅ 只统计别人发给我的消息（过滤掉自己发送的消息）
-				if (payload.sender.user_id === authStore.currentUserId) {
+				// 只统计别人发给我的消息（过滤掉自己发送的消息）
+				if (payload.sender_id === authStore.currentUserId) {
 					return;
 				}
 
-				const conversationId = `private_${payload.sender.user_id}`;
+				const conversationId = `private_${payload.sender_id}`;
 				const existing = this.unreadConversations.get(conversationId);
 
+				const newMap = new Map(this.unreadConversations);
 				if (existing) {
-					this.unreadConversations.set(conversationId, {
+					newMap.set(conversationId, {
 						...existing,
 						count: existing.count + 1,
 						lastMessage: {
 							content: payload.content ?? '',
 							timestamp: payload.sent_at,
-							senderName: payload.sender.nickname
+							senderName: '' // 私聊使用 sender_id，昵称由 UI 从会话列表获取
 						}
 					});
 				} else {
-					this.unreadConversations.set(conversationId, {
+					newMap.set(conversationId, {
 						id: conversationId,
 						type: 'private',
 						count: 1,
 						lastMessage: {
 							content: payload.content ?? '',
 							timestamp: payload.sent_at,
-							senderName: payload.sender.nickname
+							senderName: '' // 私聊使用 sender_id，昵称由 UI 从会话列表获取
 						}
 					});
 				}
 
-				// 触发响应式更新
-				this.unreadConversations = this.unreadConversations;
+				this.unreadConversations = newMap;
 			})
 		);
 
-		// 监听群聊新消息（现在有类型提示了！）
+		// 监听群聊新消息
 		this.cleanupFunctions.push(
 			websocketStore.on('GroupMessageNew', (payload) => {
-				// ✅ 只统计别人发的消息（过滤掉自己发送的消息）
+				// 只统计别人发的消息（过滤掉自己发送的消息）
 				if (payload.sender.user_id === authStore.currentUserId) {
 					return;
 				}
@@ -98,8 +98,9 @@ class MessageStore {
 				const conversationId = `group_${payload.group_id}`;
 				const existing = this.unreadConversations.get(conversationId);
 
+				const newMap = new Map(this.unreadConversations);
 				if (existing) {
-					this.unreadConversations.set(conversationId, {
+					newMap.set(conversationId, {
 						...existing,
 						count: existing.count + 1,
 						lastMessage: {
@@ -109,7 +110,7 @@ class MessageStore {
 						}
 					});
 				} else {
-					this.unreadConversations.set(conversationId, {
+					newMap.set(conversationId, {
 						id: conversationId,
 						type: 'group',
 						count: 1,
@@ -121,8 +122,7 @@ class MessageStore {
 					});
 				}
 
-				// 触发响应式更新
-				this.unreadConversations = this.unreadConversations;
+				this.unreadConversations = newMap;
 			})
 		);
 	}
@@ -131,16 +131,16 @@ class MessageStore {
 	 * 标记对话为已读
 	 */
 	markConversationAsRead(conversationId: string) {
-		this.unreadConversations.delete(conversationId);
-		this.unreadConversations = this.unreadConversations;
+		const newMap = new Map(this.unreadConversations);
+		newMap.delete(conversationId);
+		this.unreadConversations = newMap;
 	}
 
 	/**
 	 * 标记所有消息为已读
 	 */
 	markAllAsRead() {
-		this.unreadConversations.clear();
-		this.unreadConversations = this.unreadConversations;
+		this.unreadConversations = new Map();
 	}
 
 	/**

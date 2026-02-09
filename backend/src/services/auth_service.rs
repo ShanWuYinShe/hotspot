@@ -1,11 +1,10 @@
 //! 认证服务层实现
 //!
-//! 核心业务逻辑：注册、登录、验证码验证、会话管理
+//! 核心业务逻辑：注册、登录、会话管理
 
 use chrono::{Duration, TimeZone, Utc};
 use redis::aio::ConnectionManager;
 use redis::AsyncCommands;
-use serde::{Deserialize, Serialize};
 use sqlx::types::ipnetwork::IpNetwork;
 use sqlx::PgPool;
 use std::net::IpAddr;
@@ -13,41 +12,30 @@ use uuid::Uuid;
 
 use crate::constants::REDIS_KEY_SESSION;
 use crate::dto::request::{
-    ChangePasswordRequest, GuestRequest, LoginRequest, RegisterRequest, RequestPasswordResetRequest,
-    ResetPasswordRequest, RevokeSessionRequest, SendVerificationCodeRequest, SessionsRequest,
-    VerifyCodeRequest, VerifyResetCodeRequest,
+    ChangePasswordRequest, GuestRequest, LoginRequest, RegisterRequest,
+    RevokeSessionRequest, SessionsRequest,
 };
 use crate::dto::response::{
-    AuthData, CheckStatusData, PaginatedData, PaginationMeta, RequestPasswordResetData,
-    SendVerificationCodeData, SessionItem, VerifyCodeData, VerifyResetCodeData,
+    AuthData, CheckStatusData, PaginatedData, PaginationMeta, SessionItem,
 };
 use crate::error::{AppError, Result};
 use crate::repositories::{
-    password_reset_repo::PasswordResetRepository, session_repo::SessionRepository,
+    session_repo::SessionRepository,
     user_repo::UserRepository, user_settings_repo::UserSettingsRepository,
-    verification_repo::VerificationRepository,
 };
-use crate::types::enums::{ClientType, UserStatus, VerificationCodeType};
+use crate::types::enums::{ClientType, UserStatus};
 use crate::utils::cache_invalidation::{CacheInvalidator, InvalidationEvent};
 use crate::utils::{
     jwt::JwtUtil, password::PasswordUtil, session_token::SessionTokenGenerator,
     token::TokenUtil, validation::Validator,
 };
 
-const VERIFY_TOKEN_TTL_SECS: usize = 300;
 const REVOKE_TOKEN_TTL_SECS: usize = 300;
-const RESET_CODE_TTL_SECS: i64 = 900;
 
 #[derive(Debug, Clone)]
 pub struct AuthIssue {
     pub data: AuthData,
     pub refresh_token_raw: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct VerifyTokenPayload {
-    target: String,
-    r#type: String,
 }
 
 #[derive(Clone)]
@@ -59,8 +47,6 @@ pub struct AuthService {
     refresh_token_expiration: i64,
     user_repo: UserRepository,
     session_repo: SessionRepository,
-    password_reset_repo: PasswordResetRepository,
-    verification_repo: VerificationRepository,
     settings_repo: UserSettingsRepository,
 }
 
@@ -73,8 +59,6 @@ impl AuthService {
         refresh_token_expiration: i64,
         user_repo: UserRepository,
         session_repo: SessionRepository,
-        password_reset_repo: PasswordResetRepository,
-        verification_repo: VerificationRepository,
         settings_repo: UserSettingsRepository,
     ) -> Self {
         Self {
@@ -85,8 +69,6 @@ impl AuthService {
             refresh_token_expiration,
             user_repo,
             session_repo,
-            password_reset_repo,
-            verification_repo,
             settings_repo,
         }
     }
@@ -100,11 +82,6 @@ impl AuthService {
         user_agent: Option<&str>,
         device_fingerprint: Option<&str>,
     ) -> Result<AuthIssue> {
-        if let Some(token) = req.verify_token.as_deref() {
-            self.consume_verify_token(token, &req.login_id, VerificationCodeType::Register)
-                .await?;
-        }
-
         if self
             .user_repo
             .find_by_identifier(&req.login_id)
@@ -310,79 +287,6 @@ impl AuthService {
         self.revoke_session_by_id(user_id, session_id).await
     }
 
-    /// 请求密码重置
-    pub async fn request_password_reset(
-        &self,
-        req: &RequestPasswordResetRequest,
-    ) -> Result<RequestPasswordResetData> {
-        self.consume_verify_token(&req.verify_token, &req.login_id, VerificationCodeType::ResetPassword)
-            .await?;
-
-        let user = self
-            .user_repo
-            .find_by_identifier(&req.login_id)
-            .await?
-            .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
-
-        let reset_code = TokenUtil::generate_numeric_code(6);
-        let expires_at = Utc::now() + Duration::seconds(RESET_CODE_TTL_SECS);
-        let reset_id = self
-            .password_reset_repo
-            .create(user.user_id, reset_code, expires_at)
-            .await?;
-
-        Ok(RequestPasswordResetData {
-            reset_id: reset_id.to_string(),
-        })
-    }
-
-    /// 校验重置码
-    pub async fn verify_reset_code(
-        &self,
-        req: &VerifyResetCodeRequest,
-    ) -> Result<VerifyResetCodeData> {
-        let reset_id = Uuid::parse_str(&req.reset_id)
-            .map_err(|_| AppError::InvalidFormat("reset_id 无效".to_string()))?;
-
-        let record = self
-            .password_reset_repo
-            .find_by_id(reset_id)
-            .await?
-            .ok_or_else(|| AppError::NotFound("重置请求不存在".to_string()))?;
-
-        if record.used.unwrap_or(false) || record.expires_at <= Utc::now() {
-            return Err(AppError::Conflict("重置请求已失效".to_string()));
-        }
-
-        if record.token != req.code {
-            return Err(AppError::NotFound("重置码错误".to_string()));
-        }
-
-        let reset_token = TokenUtil::generate_token();
-        self.password_reset_repo
-            .update_token(reset_id, reset_token.clone())
-            .await?;
-
-        Ok(VerifyResetCodeData { reset_token })
-    }
-
-    /// 重置密码
-    pub async fn reset_password(&self, req: &ResetPasswordRequest) -> Result<()> {
-        let record = self
-            .password_reset_repo
-            .find_valid(&req.reset_token)
-            .await?
-            .ok_or_else(|| AppError::VerifyTokenInvalid("reset_token 无效".to_string()))?;
-
-        let password_hash = PasswordUtil::hash_password(&req.password)?;
-        self.user_repo
-            .update_password(record.user_id, &password_hash)
-            .await?;
-        self.password_reset_repo.mark_used(record.reset_id).await?;
-        self.revoke_all_sessions(record.user_id).await?;
-        Ok(())
-    }
-
     /// 检查认证状态
     pub async fn check_status(
         &self,
@@ -526,65 +430,6 @@ impl AuthService {
         self.revoke_session_by_id(user_id, session_id).await
     }
 
-    /// 发送验证码
-    pub async fn send_verification_code(
-        &self,
-        req: &SendVerificationCodeRequest,
-    ) -> Result<SendVerificationCodeData> {
-        let code = TokenUtil::generate_numeric_code(6);
-        let expires_at = Utc::now() + Duration::minutes(10);
-
-        let record = self
-            .verification_repo
-            .create_code(&req.phone, &code, req.r#type.as_str(), expires_at)
-            .await
-            .map_err(|e| AppError::internal(e.to_string()))?;
-
-        Ok(SendVerificationCodeData {
-            code_id: record.code_id.to_string(),
-            expires_at: record.expires_at.to_rfc3339(),
-            retry_after: Some(60),
-        })
-    }
-
-    /// 校验验证码
-    pub async fn verify_code(&self, req: &VerifyCodeRequest) -> Result<VerifyCodeData> {
-        let code_id = Uuid::parse_str(&req.code_id)
-            .map_err(|_| AppError::InvalidFormat("code_id 无效".to_string()))?;
-        let record = self
-            .verification_repo
-            .find_by_id(code_id)
-            .await
-            .map_err(|e| AppError::internal(e.to_string()))?
-            .ok_or_else(|| AppError::NotFound("验证码不存在".to_string()))?;
-
-        if record.used.unwrap_or(false) || record.expires_at <= Utc::now() {
-            return Err(AppError::Conflict("验证码已失效".to_string()));
-        }
-
-        if record.code != req.code {
-            return Err(AppError::NotFound("验证码错误".to_string()));
-        }
-
-        self.verification_repo
-            .mark_used(record.code_id)
-            .await
-            .map_err(|e| AppError::internal(e.to_string()))?;
-        let verify_token = TokenUtil::generate_token();
-        let payload = VerifyTokenPayload {
-            target: record.target,
-            r#type: record.r#type,
-        };
-        self.store_verify_token(&verify_token, &payload).await?;
-
-        let expires_at = (Utc::now() + Duration::seconds(VERIFY_TOKEN_TTL_SECS as i64)).to_rfc3339();
-        Ok(VerifyCodeData {
-            verified: true,
-            verify_token,
-            expires_at,
-        })
-    }
-
     async fn issue_tokens(
         &self,
         user_id: i64,
@@ -644,7 +489,7 @@ impl AuthService {
         Ok(())
     }
 
-    async fn revoke_all_sessions(&self, user_id: i64) -> Result<()> {
+    pub async fn revoke_all_sessions(&self, user_id: i64) -> Result<()> {
         let session_ids = self.session_repo.revoke_all_by_user(user_id).await?;
         for session_id in session_ids {
             self.clear_session_whitelist(session_id).await?;
@@ -687,48 +532,6 @@ impl AuthService {
         Ok(())
     }
 
-    async fn store_verify_token(
-        &self,
-        token: &str,
-        payload: &VerifyTokenPayload,
-    ) -> Result<()> {
-        let key = verify_token_key(token);
-        let value = serde_json::to_string(payload).map_err(|e| AppError::internal(e.to_string()))?;
-        let mut conn = self.redis.clone();
-        conn.set_ex::<_, _, ()>(key, value, VERIFY_TOKEN_TTL_SECS as u64)
-            .await
-            .map_err(|e| AppError::internal(e.to_string()))?;
-        Ok(())
-    }
-
-    async fn consume_verify_token(
-        &self,
-        token: &str,
-        expected_target: &str,
-        expected_type: VerificationCodeType,
-    ) -> Result<()> {
-        let key = verify_token_key(token);
-        let mut conn = self.redis.clone();
-        let value: Option<String> = conn
-            .get(&key)
-            .await
-            .map_err(|e| AppError::internal(e.to_string()))?;
-        let value =
-            value.ok_or_else(|| AppError::VerifyTokenInvalid("验证 token 无效".to_string()))?;
-        let payload: VerifyTokenPayload = serde_json::from_str(&value)
-            .map_err(|_| AppError::VerifyTokenInvalid("验证 token 无效".to_string()))?;
-
-        if payload.target != expected_target || payload.r#type != expected_type.as_str() {
-            return Err(AppError::VerifyTokenInvalid("验证 token 无效".to_string()));
-        }
-
-        let _ = conn
-            .del::<_, ()>(&key)
-            .await
-            .map_err(|e| AppError::internal(e.to_string()))?;
-        Ok(())
-    }
-
     async fn store_revoke_token(
         &self,
         token: &str,
@@ -747,10 +550,6 @@ impl AuthService {
 
 fn session_key(session_id: Uuid) -> String {
     format!("{}:{}", REDIS_KEY_SESSION, session_id)
-}
-
-fn verify_token_key(token: &str) -> String {
-    format!("verify_token:{}", token)
 }
 
 fn revoke_token_key(token: &str) -> String {

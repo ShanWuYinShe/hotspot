@@ -4,7 +4,7 @@
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import { Card, CardContent } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import type { SessionItem } from '$lib/types/api';
@@ -12,11 +12,8 @@
 	import Shield from 'lucide-svelte/icons/shield';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 
-	let sessions = $state<SessionItem[]>([]);
+	let sessions = $state.raw<SessionItem[]>([]);
 	let isLoading = $state(true);
-	let isLoadingMore = $state(false);
-	let cursor = $state<string | undefined>(undefined);
-	let hasMore = $state(true);
 	let isRevoking = $state<string | null>(null);
 
 	function formatTime(dateStr: string): string {
@@ -24,39 +21,26 @@
 		return date.toLocaleString('zh-CN', { hour12: false });
 	}
 
-	async function loadSessions(refresh = false) {
-		if (refresh) {
-			isLoading = true;
-			cursor = undefined;
-			hasMore = true;
-		} else {
-			isLoadingMore = true;
-		}
-
+	async function loadSessions() {
+		isLoading = true;
 		try {
-			const response = await authService.getSessions({
-				limit: 20,
-				cursor: refresh ? undefined : cursor
-			});
+			const response = await authService.getSessions();
 			if (isSuccess(response) && response.data) {
-				sessions = refresh ? response.data.items : [...sessions, ...response.data.items];
-				hasMore = response.data.pagination.has_more;
-				cursor = response.data.pagination.next_cursor;
+				sessions = response.data.items;
 			}
 		} catch {
 			toast.error('加载会话失败');
 		} finally {
 			isLoading = false;
-			isLoadingMore = false;
 		}
 	}
 
-	async function revoke(revokeToken: string) {
-		isRevoking = revokeToken;
+	async function revoke(sessionId: string) {
+		isRevoking = sessionId;
 		try {
-			const response = await authService.revokeSession({ revoke_token: revokeToken });
+			const response = await authService.revokeSession({ session_id: sessionId });
 			if (isSuccess(response)) {
-				sessions = sessions.filter((item) => item.revoke_token !== revokeToken);
+				sessions = sessions.filter((item) => item.session_id !== sessionId);
 				toast.success('已撤销会话');
 			} else {
 				toast.error(response.message || '撤销失败');
@@ -69,7 +53,7 @@
 	}
 
 	onMount(() => {
-		loadSessions(true);
+		loadSessions();
 	});
 </script>
 
@@ -83,7 +67,7 @@
 			<h1 class="text-2xl font-bold">会话管理</h1>
 			<p class="text-sm text-muted-foreground">查看并管理已登录设备</p>
 		</div>
-		<Button variant="outline" size="sm" onclick={() => loadSessions(true)} disabled={isLoading}>
+		<Button variant="outline" size="sm" onclick={loadSessions} disabled={isLoading}>
 			<RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
 			刷新
 		</Button>
@@ -112,7 +96,7 @@
 		</Card>
 	{:else}
 		<div class="space-y-3">
-			{#each sessions as session (session.display_id)}
+			{#each sessions as session (session.session_id)}
 				<Card class="border-0 bg-card/70 shadow-sm shadow-black/5">
 					<CardContent class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
 						<div class="min-w-0">
@@ -130,10 +114,10 @@
 							<Button
 								variant="outline"
 								size="sm"
-								disabled={session.is_current || isRevoking === session.revoke_token}
-								onclick={() => revoke(session.revoke_token)}
+								disabled={session.is_current || isRevoking === session.session_id}
+								onclick={() => revoke(session.session_id)}
 							>
-								{#if isRevoking === session.revoke_token}
+								{#if isRevoking === session.session_id}
 									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 								{/if}
 								撤销
@@ -143,15 +127,5 @@
 				</Card>
 			{/each}
 		</div>
-		{#if hasMore}
-			<div class="flex justify-center pt-4">
-				<Button variant="outline" onclick={() => loadSessions(false)} disabled={isLoadingMore}>
-					{#if isLoadingMore}
-						<RefreshCw class="mr-2 h-4 w-4 animate-spin" />
-					{/if}
-					加载更多
-				</Button>
-			</div>
-		{/if}
 	{/if}
 </div>

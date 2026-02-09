@@ -70,8 +70,6 @@ interface FeatureSwitches {
   enable_guest_login: boolean;
   enable_moments: boolean;
   enable_nearby_people: boolean;
-  require_phone_verification: boolean;  // 是否要求手机验证（早期开发可关闭）
-  require_captcha: boolean;             // 是否要求人机验证（早期开发可关闭）
 }
 
 interface AppLimits {
@@ -115,10 +113,6 @@ interface ContactInfo {
 
 **Response**: `ApiResponse<ApiVersionMeta>`
 
-**缓存策略**：
-- 服务端返回 `Cache-Control: public, max-age=3600` 和 `ETag` 响应头
-- API 版本信息变更频率极低，客户端可长时间缓存
-
 **错误码**: `10000`
 
 ---
@@ -135,6 +129,8 @@ interface ContactInfo {
 **Request**: `{}`
 
 **Response**: `ApiResponse<HealthStatus>`
+
+**错误码**: `10600`
 
 ### POST /api/v1/system/list_announcements
 
@@ -160,10 +156,6 @@ interface AnnouncementListRequest {
 - 管理员查看/搜索全部公告（含历史）请使用 `admin/announcements/search`（定义于 `@api_spec_admin_moderation.mdc`）
 - 按 `created_at` 倒序排列
 
-**缓存策略**：
-- 服务端返回 `Cache-Control: public, max-age=60` 和 `ETag` 响应头
-- 公告更新频率高于配置，缓存时间较短
-
 **错误码**: `10000`
 
 ---
@@ -183,10 +175,5 @@ interface AnnouncementListRequest {
 **Request**: `{}`
 
 **Response**: `ApiResponse<ClientConfig>`
-
-**缓存策略**：
-- 服务端返回 `Cache-Control: public, max-age=300` 和 `ETag` 响应头
-- 客户端应缓存此响应，后续请求携带 `If-None-Match` 以利用 304 Not Modified
-- 详见 `@api_spec_base.mdc` 中"缓存控制响应头"
 
 **错误码**: `10000`

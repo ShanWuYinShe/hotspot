@@ -2,7 +2,7 @@
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Separator } from '$lib/components/ui/separator';
 	import ThemeToggle from '$lib/components/common/theme-toggle.svelte';
 	import User from 'lucide-svelte/icons/user';
@@ -50,13 +50,13 @@
 <div class="mx-auto max-w-2xl space-y-6">
 	<h1 class="text-2xl font-bold">设置</h1>
 
-	{#each settingsSections as section}
+	{#each settingsSections as section (section.title)}
 		<Card>
 			<CardHeader>
 				<CardTitle class="text-lg">{section.title}</CardTitle>
 			</CardHeader>
 			<CardContent class="space-y-1 p-0">
-				{#each section.items as item, i}
+				{#each section.items as item, i (item.href)}
 					{#if i > 0}
 						<Separator />
 					{/if}

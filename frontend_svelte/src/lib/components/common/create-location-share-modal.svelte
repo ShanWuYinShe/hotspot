@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createShare } from '$lib/api/services/share';
+	import { shareService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { MapPin, Share2, Copy, Check, Loader2, UsersRound } from 'lucide-svelte';
@@ -49,19 +49,23 @@
 	async function handleSubmit() {
 		isSubmitting = true;
 		try {
-			const response = await createShare({
-				share_type: 'location',
+			const response = await shareService.create({
+				share_type: 'reference_point',
 				payload: {
-					latitude,
-					longitude,
-					location_name: locationName
+					reference_point: {
+						point: {
+							latitude,
+							longitude
+						},
+						location_name: locationName
+					}
 				}
 			});
 
-			if (isSuccess(response)) {
-				const share = response.data;
-				shareCode = share.share_code;
-				shareUrl = `${window.location.origin}/share/${share.share_code}`;
+			if (isSuccess(response) && response.data) {
+				const shareCreated = response.data;
+				shareCode = shareCreated.share_code;
+				shareUrl = `${window.location.origin}/share/${shareCreated.share_code}`;
 				toast.success('位置分享创建成功！');
 			} else {
 				toast.error('创建失败', response.message);

@@ -1,0 +1,159 @@
+# HotSpot API - Feed 端点
+# 对应原 api_spec_feed.mdc
+
+list_moments:
+  post:
+    summary: 获取瞬间信息流
+    operationId: feedListMoments
+    tags: [feed]
+    x-idempotency: none
+    x-error-codes:
+      10000: 参数错误
+    description: |
+      支持多种来源筛选。
+      
+      排序：
+      - source='following'：按时间倒序（最新在前）
+      - source='nearby'：以地理位置相关信号为主
+      - source='all'：综合推荐流（允许排序波动）
+      
+      来源说明：
+      - following：仅关注的人发布的瞬间，按时间倒序（需要 reference_point，用于 MomentItem.location 的距离/方位计算）
+      - nearby：附近范围内的瞬间，按距离和热度排序（需要 reference_point）
+      - all：综合推荐（默认），混合关注动态、附近热门、个性化推荐（需要 reference_point）
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/feed.yaml#/GetFeedMomentsRequest'
+    responses:
+      '200':
+        description: 瞬间信息流
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas/common.yaml#/ApiResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '../components/schemas/common.yaml#/PaginatedMomentItems'
+
+list_groups:
+  post:
+    summary: 获取群组推荐
+    operationId: feedListGroups
+    tags: [feed]
+    x-idempotency: none
+    x-error-codes:
+      10000: 参数错误
+    description: |
+      获取附近可加入的群组推荐。
+      
+      排序：
+      - 主序：以地理位置相关信号为主（距离/热度/活跃度的组合）
+      - 次序：允许在距离接近时体现"社交信号"（共同好友/同标签）
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/feed.yaml#/GetFeedGroupsRequest'
+    responses:
+      '200':
+        description: 群组推荐
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas/common.yaml#/ApiResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '../components/schemas/common.yaml#/PaginatedGroupItems'
+
+list_users:
+  post:
+    summary: 获取用户推荐
+    operationId: feedListUsers
+    tags: [feed]
+    x-idempotency: none
+    x-error-codes:
+      10000: 参数错误
+    description: |
+      获取附近的用户推荐。
+      
+      排序：
+      - 主序：以地理位置相关信号为主（距离/活跃度的组合）
+      - 次序：允许综合"社交信号"（共同好友数、共同标签）提升前排质量
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/feed.yaml#/GetFeedUsersRequest'
+    responses:
+      '200':
+        description: 用户推荐
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas/common.yaml#/ApiResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '../components/schemas/common.yaml#/PaginatedUserItems'
+
+list_trending:
+  post:
+    summary: 获取热门内容
+    operationId: feedListTrending
+    tags: [feed]
+    security: []
+    x-idempotency: none
+    x-error-codes:
+      10000: 参数错误
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/feed.yaml#/GetFeedTrendingRequest'
+    responses:
+      '200':
+        description: 热门内容
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas/common.yaml#/ApiResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '../components/schemas/feed.yaml#/TrendingBundle'
+
+me_feedback:
+  post:
+    summary: 信息流反馈
+    operationId: feedFeedback
+    tags: [feed]
+    x-idempotency: none
+    x-error-codes:
+      10000: 参数错误
+      10300: 资源不存在
+    description: 反馈信息流内容（用于改进推荐算法）
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/feed.yaml#/FeedFeedbackRequest'
+    responses:
+      '200':
+        description: 反馈成功
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas/common.yaml#/ApiResponse'

@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { Avatar as AvatarPrimitive } from 'bits-ui';
+	import { Avatar as AvatarPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
 	import { cn } from '$lib/utils';
 	import type { Snippet } from 'svelte';
 
-	interface Props {
+	interface Props extends WithoutChildrenOrChild<AvatarPrimitive.RootProps> {
 		children?: Snippet;
 		class?: string;
 		glow?: boolean;

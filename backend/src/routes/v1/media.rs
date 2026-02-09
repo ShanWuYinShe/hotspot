@@ -11,5 +11,6 @@ use crate::{handlers::media, state::AppState};
 pub fn token_required_routes() -> Router<AppState> {
     Router::new()
         .route("/presign_upload", post(media::presign_upload))
+        .route("/batch_presign_upload", post(media::batch_presign_upload))
         .route("/complete_upload", post(media::complete_upload))
 }

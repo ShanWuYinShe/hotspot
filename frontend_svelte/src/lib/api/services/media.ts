@@ -21,6 +21,21 @@ export const mediaService = {
 	},
 
 	/**
+	 * 批量申请上传预签名 URL
+	 */
+	batchPresignUpload(data: {
+		files: Array<{
+			category: MediaCategory;
+			file_name: string;
+			mime_type: string;
+			file_size: number;
+			md5?: string;
+		}>;
+	}) {
+		return post<{ uploads: PresignedUpload[] }>(MEDIA.BATCH_PRESIGN_UPLOAD, data);
+	},
+
+	/**
 	 * 完成上传
 	 */
 	completeUpload(data: { upload_id: string }) {

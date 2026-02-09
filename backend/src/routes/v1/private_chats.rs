@@ -11,12 +11,13 @@ use crate::{handlers::private_chats, state::AppState};
 pub fn token_required_routes() -> Router<AppState> {
     // 主路由 - 私聊操作
     let main_routes = Router::new()
-        .route("/open_the_door", post(private_chats::open_the_door))
+        .route("/open_the_door", post(private_chats::open_the_door));
+
+    // /me 子路由 - 当前用户私聊相关操作
+    let me_routes = Router::new()
+        .route("/list", post(private_chats::me))
         .route("/update_settings", post(private_chats::update_settings))
         .route("/delete", post(private_chats::delete));
-
-    // /me 子路由 - 当前用户私聊列表
-    let me_routes = Router::new().route("/", post(private_chats::me));
 
     main_routes.nest("/me", me_routes)
 }

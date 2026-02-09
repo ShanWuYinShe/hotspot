@@ -1,10 +1,9 @@
 <script lang="ts">
-	import { Tabs as TabsPrimitive } from 'bits-ui';
+	import { Tabs as TabsPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
 	import { cn } from '$lib/utils';
 	import type { Snippet } from 'svelte';
 
-	interface Props {
-		value: string;
+	interface Props extends WithoutChildrenOrChild<TabsPrimitive.ContentProps> {
 		children?: Snippet;
 		class?: string;
 	}

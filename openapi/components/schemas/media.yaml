@@ -1,0 +1,98 @@
+# HotSpot API - 媒体模块类型定义
+# 对应原 api_spec_media.mdc 中的类型定义
+
+# ============================================================
+# 枚举
+# ============================================================
+
+MediaCategory:
+  type: string
+  enum: [avatar, group_avatar, moment_image, chat_image, chat_video, chat_audio, chat_file]
+  description: 媒体分类
+
+# ============================================================
+# 上传相关类型
+# ============================================================
+
+PresignedUpload:
+  type: object
+  required: [upload_id, upload_url, headers, expires_at]
+  properties:
+    upload_id:
+      type: string
+    upload_url:
+      type: string
+      format: uri
+    headers:
+      type: object
+      additionalProperties:
+        type: string
+    expires_at:
+      type: string
+      format: date-time
+
+UploadedMedia:
+  type: object
+  required: [file_id, file_size, mime_type]
+  properties:
+    file_id:
+      type: string
+      description: 上传文件 ID
+    thumbnail_url:
+      type: string
+      format: uri
+    file_size:
+      type: integer
+    mime_type:
+      type: string
+    duration:
+      type: number
+    width:
+      type: integer
+    height:
+      type: integer
+
+BatchPresignedUpload:
+  type: object
+  required: [uploads]
+  properties:
+    uploads:
+      type: array
+      items:
+        $ref: '#/PresignedUpload'
+
+# ============================================================
+# 请求类型
+# ============================================================
+
+PresignUploadRequest:
+  type: object
+  required: [file_name, file_size, mime_type, category]
+  properties:
+    file_name:
+      type: string
+    file_size:
+      type: integer
+    mime_type:
+      type: string
+    category:
+      $ref: '#/MediaCategory'
+    md5:
+      type: string
+
+BatchPresignUploadRequest:
+  type: object
+  required: [files]
+  properties:
+    files:
+      type: array
+      maxItems: 9
+      items:
+        $ref: '#/PresignUploadRequest'
+
+CompleteUploadRequest:
+  type: object
+  required: [upload_id]
+  properties:
+    upload_id:
+      type: string

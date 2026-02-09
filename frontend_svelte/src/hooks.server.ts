@@ -45,6 +45,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const refreshToken = event.cookies.get('refresh_token');
 	const hasAuth = !!refreshToken;
 
+	// 注入到 Locals 供 load 函数使用
+	event.locals.hasAuth = hasAuth;
+
 	// 检查管理员路由
 	if (requiresAdmin(pathname)) {
 		if (!hasAuth) {

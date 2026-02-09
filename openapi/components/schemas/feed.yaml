@@ -1,0 +1,123 @@
+# HotSpot API - Feed 类型定义
+# 对应原 api_spec_feed.mdc 中的类型定义
+
+# ============================================================
+# 枚举
+# ============================================================
+
+FeedSource:
+  type: string
+  enum: [following, nearby, all]
+  description: 信息流来源
+
+FeedContentType:
+  type: string
+  enum: [moment, group, user]
+  description: 信息流内容类型
+
+FeedFeedbackAction:
+  type: string
+  enum: [hide, not_interested]
+  description: 信息流反馈动作
+
+# ============================================================
+# 热门内容
+# ============================================================
+
+TrendingTagItem:
+  description: |
+    热门标签项（扩展自 TagItem，trend 字段为必填）。
+    TagItem 定义于 search.yaml。
+  allOf:
+  - $ref: './search.yaml#/TagItem'
+  - type: object
+    required: [trend]
+    properties:
+      trend:
+        $ref: './search.yaml#/TagTrend'
+        description: 必填（TagItem 中为可选，此处覆盖为必填）
+      hot_moment_preview:
+        $ref: './common.yaml#/MomentItem'
+        description: 热门瞬间预览
+
+TrendingBundle:
+  type: object
+  required: [trending_tags, hot_moments]
+  properties:
+    trending_tags:
+      type: array
+      items:
+        $ref: '#/TrendingTagItem'
+    hot_moments:
+      type: array
+      items:
+        $ref: './common.yaml#/MomentItem'
+
+# ============================================================
+# 请求类型
+# ============================================================
+
+GetFeedMomentsRequest:
+  type: object
+  required: [reference_point]
+  properties:
+    pagination:
+      $ref: './common.yaml#/PaginationParams'
+    source:
+      $ref: '#/FeedSource'
+      description: 来源
+    reference_point:
+      $ref: './common.yaml#/GeoPoint'
+    radius:
+      type: integer
+      minimum: 100
+      maximum: 50000
+      description: 位置范围（米），可由 AppLimits.search_radius_max 覆盖
+
+GetFeedGroupsRequest:
+  type: object
+  required: [reference_point]
+  properties:
+    pagination:
+      $ref: './common.yaml#/PaginationParams'
+    reference_point:
+      $ref: './common.yaml#/GeoPoint'
+    radius:
+      type: integer
+      minimum: 100
+      maximum: 50000
+      description: 位置范围（米），可由 AppLimits.search_radius_max 覆盖
+
+GetFeedUsersRequest:
+  type: object
+  required: [reference_point]
+  properties:
+    pagination:
+      $ref: './common.yaml#/PaginationParams'
+    reference_point:
+      $ref: './common.yaml#/GeoPoint'
+    radius:
+      type: integer
+      minimum: 100
+      maximum: 50000
+      description: 位置范围（米），可由 AppLimits.search_radius_max 覆盖
+
+GetFeedTrendingRequest:
+  type: object
+  description: 返回条数由 ServerConfig.response_defaults 控制（trending_tags_count、hot_moments_count）
+
+FeedFeedbackRequest:
+  type: object
+  required: [content_type, content_id, action]
+  properties:
+    content_type:
+      $ref: '#/FeedContentType'
+    content_id:
+      type: string
+      description: 反馈内容 ID
+    action:
+      $ref: '#/FeedFeedbackAction'
+      description: 处理动作
+    reason:
+      type: string
+      description: 反馈原因

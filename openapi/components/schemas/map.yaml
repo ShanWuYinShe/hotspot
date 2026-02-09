@@ -1,0 +1,144 @@
+# HotSpot API - Map 类型定义
+# 对应原 api_spec_map.mdc 中的类型定义
+
+# ============================================================
+# 枚举
+# ============================================================
+
+MapDataType:
+  type: string
+  enum: [user, group, moment, all]
+  description: 地图数据类型
+
+MapItemType:
+  type: string
+  enum: [cluster, user, group, moment]
+  description: 地图渲染项类型
+
+# ============================================================
+# 地图渲染
+# ============================================================
+
+Bounds:
+  type: object
+  required: [north, south, east, west]
+  description: 视口边界（用于地图查询）
+  properties:
+    north:
+      type: number
+    south:
+      type: number
+    east:
+      type: number
+    west:
+      type: number
+
+MapViewport:
+  type: object
+  required: [bounds, zoom]
+  properties:
+    bounds:
+      $ref: '#/Bounds'
+    zoom:
+      type: number
+      minimum: 1
+      maximum: 20
+      description: 地图缩放级别
+
+TimeRangeParams:
+  type: object
+  description: 时间范围参数
+  properties:
+    start_time:
+      type: string
+      format: date-time
+      description: UTC ISO 8601
+    end_time:
+      type: string
+      format: date-time
+      description: UTC ISO 8601
+
+MapCluster:
+  type: object
+  required: [count]
+  properties:
+    count:
+      type: integer
+    label:
+      type: string
+    preview_urls:
+      type: array
+      items:
+        type: string
+        format: uri
+
+MapRenderItem:
+  type: object
+  required: [render_id, type, location]
+  description: 地图渲染项（聚合或实体）
+  properties:
+    render_id:
+      type: string
+      description: 渲染项唯一 ID（聚合时由服务端生成，实体时为 payload_id）
+    type:
+      $ref: '#/MapItemType'
+    location:
+      $ref: './common.yaml#/GeoPoint'
+    cluster:
+      $ref: '#/MapCluster'
+      description: 聚合数据
+    entity:
+      type: object
+      description: 实体数据 (User/Group/Moment)
+      properties:
+        title:
+          type: string
+          description: 标记标题
+        subtitle:
+          type: string
+          description: 标记副标题
+        cover_url:
+          type: string
+          format: uri
+          description: 封面 URL
+        payload_id:
+          type: string
+          description: 原始业务 ID（user_id / group_id / moment_id）
+        category:
+          type: string
+          description: 业务分类
+
+MapCanvas:
+  type: object
+  required: [items]
+  description: 地图画布数据
+  properties:
+    items:
+      type: array
+      maxItems: 500
+      items:
+        $ref: '#/MapRenderItem'
+      description: 最大返回 500 个渲染项，超出时服务端自动聚合
+    toast_message:
+      type: string
+
+# ============================================================
+# 请求类型
+# ============================================================
+
+MapRenderRequest:
+  type: object
+  required: [viewport]
+  properties:
+    viewport:
+      $ref: '#/MapViewport'
+    filter:
+      type: object
+      properties:
+        data_type:
+          $ref: '#/MapDataType'
+        time_range:
+          $ref: '#/TimeRangeParams'
+        only_friends:
+          type: boolean
+          description: 仅登录态生效；仅显示好友

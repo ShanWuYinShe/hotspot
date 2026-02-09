@@ -13,7 +13,7 @@ import type { AuthData, MyCard } from '$lib/types/api';
 const STORAGE_KEY = 'hotspot_auth';
 
 interface AccountInfo {
-	user_id: number;
+	user_id: string;
 	nickname: string;
 	avatar_url?: string;
 	access_token: string;
@@ -25,7 +25,7 @@ interface AccountInfo {
 
 interface AuthState {
 	accounts: AccountInfo[];
-	currentUserId: number | null;
+	currentUserId: string | null;
 }
 
 function loadFromStorage(): AuthState {
@@ -58,8 +58,8 @@ function saveToStorage(state: AuthState) {
 // ==================== Auth Store Class ====================
 
 class AuthStore {
-	#accounts = $state<AccountInfo[]>([]);
-	#currentUserId = $state<number | null>(null);
+	#accounts = $state.raw<AccountInfo[]>([]);
+	#currentUserId = $state<string | null>(null);
 	#profile = $state<MyCard | null>(null);
 	#initialized = $state(false);
 
@@ -97,9 +97,9 @@ class AuthStore {
 		this.currentAccount?.access_token ?? null
 	);
 
-	/** 是否已认证 */
+	/** 是否已认证（Web 端 token 在 Cookie 中，通过 expires_at 判断） */
 	isAuthenticated = $derived(
-		!!this.currentAccount?.access_token
+		!!this.currentAccount?.access_token || !!this.currentAccount?.access_token_expires_at
 	);
 
 	/** 可用账户列表（未锁定） */
@@ -128,8 +128,8 @@ class AuthStore {
 
 		const accountInfo: AccountInfo = {
 			user_id: authData.user_id,
-			nickname: authData.nickname,
-			access_token: authData.access_token,
+			nickname: '', // Web 端 AuthData 不含 nickname，后续通过 setProfile 补充
+			access_token: authData.access_token ?? '', // Web 端 token 在 Cookie 中
 			access_token_expires_at: authData.access_token_expires_at,
 			refresh_token: authData.refresh_token,
 			refresh_token_expires_at: authData.refresh_token_expires_at,
@@ -171,7 +171,7 @@ class AuthStore {
 	}
 
 	/** 切换账户 */
-	switchAccount(userId: number) {
+	switchAccount(userId: string) {
 		const account = this.#accounts.find((a) => a.user_id === userId && !a.is_locked);
 		if (account) {
 			this.#currentUserId = userId;
@@ -181,7 +181,7 @@ class AuthStore {
 	}
 
 	/** 锁定账户（保留但不激活） */
-	lockAccount(userId: number) {
+	lockAccount(userId: string) {
 		const index = this.#accounts.findIndex((a) => a.user_id === userId);
 		if (index >= 0) {
 			const account = this.#accounts[index]!;
@@ -204,7 +204,7 @@ class AuthStore {
 	}
 
 	/** 解锁账户 */
-	unlockAccount(userId: number) {
+	unlockAccount(userId: string) {
 		const index = this.#accounts.findIndex((a) => a.user_id === userId);
 		if (index >= 0) {
 			const account = this.#accounts[index]!;
@@ -219,7 +219,7 @@ class AuthStore {
 	}
 
 	/** 移除账户 */
-	removeAccount(userId: number) {
+	removeAccount(userId: string) {
 		this.#accounts = this.#accounts.filter((a) => a.user_id !== userId);
 
 		if (this.#currentUserId === userId) {

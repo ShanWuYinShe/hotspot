@@ -1,0 +1,133 @@
+# HotSpot API - 系统模块端点
+# 对应原 api_spec_system.mdc
+
+get_meta:
+  post:
+    summary: API 版本元信息
+    operationId: systemGetMeta
+    tags: [system]
+    security: []
+    x-idempotency: none
+    x-error-codes:
+      10000: 参数错误
+    description: |
+      此接口为公开资源，无需认证。
+      每个 API 版本都应在其路径下提供此端点。
+      客户端应在启动时调用此接口，检查当前使用的 API 版本状态。
+      
+      客户端处理建议：
+      - active: 正常使用，无需处理
+      - deprecated: 提示用户升级；可展示 message 并引导更新
+      - sunset: 强制升级或提示服务不可用
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+    responses:
+      '200':
+        description: API 版本元信息
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas/common.yaml#/ApiResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '../components/schemas/system.yaml#/ApiVersionMeta'
+
+health:
+  post:
+    summary: 系统健康检查
+    operationId: systemHealth
+    tags: [system]
+    security: []
+    x-idempotency: none
+    x-error-codes:
+      10600: 服务器错误
+    description: 系统健康检查为公开资源，无需认证。
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+    responses:
+      '200':
+        description: 健康状态
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas/common.yaml#/ApiResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '../components/schemas/system.yaml#/HealthStatus'
+
+list_announcements:
+  post:
+    summary: 系统公告列表
+    operationId: systemListAnnouncements
+    tags: [system]
+    security: []
+    x-idempotency: none
+    x-error-codes:
+      10000: 参数错误
+    description: |
+      系统公告属于"默认公开资源"，无需认证。
+      普通用户只需获取最新的 N 条公告，无需分页翻阅历史。
+      管理员查看/搜索全部公告（含历史）请使用 admin/announcements/search。
+      按 created_at 倒序排列。
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/system.yaml#/AnnouncementListRequest'
+    responses:
+      '200':
+        description: 系统公告列表
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas/common.yaml#/ApiResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '../components/schemas/common.yaml#/SystemAnnouncementItemList'
+
+get_client_config:
+  post:
+    summary: 客户端公开配置
+    operationId: systemGetClientConfig
+    tags: [system]
+    security: []
+    x-idempotency: none
+    x-error-codes:
+      10000: 参数错误
+    description: |
+      此接口为公开资源，无需认证。
+      返回影响客户端 UI/行为的配置：功能开关、输入限制、联系方式。
+      客户端应在启动时调用并缓存，配置变更频率低。
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+    responses:
+      '200':
+        description: 客户端配置
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '../components/schemas/common.yaml#/ApiResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '../components/schemas/system.yaml#/ClientConfig'

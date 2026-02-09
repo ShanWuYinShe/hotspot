@@ -211,6 +211,7 @@
 								size="icon"
 								class="absolute right-0 top-0 h-full px-3"
 								onclick={() => (showPassword = !showPassword)}
+								aria-label={showPassword ? '隐藏密码' : '显示密码'}
 							>
 								{#if showPassword}
 									<EyeOff class="h-4 w-4" />

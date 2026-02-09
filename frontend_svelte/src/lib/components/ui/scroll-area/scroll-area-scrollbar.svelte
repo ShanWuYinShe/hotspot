@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { ScrollArea as ScrollAreaPrimitive } from 'bits-ui';
+	import { ScrollArea as ScrollAreaPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
 	import { cn } from '$lib/utils';
 
-	interface Props {
-		orientation?: 'vertical' | 'horizontal';
+	interface Props extends WithoutChildrenOrChild<ScrollAreaPrimitive.ScrollbarProps> {
 		class?: string;
 	}
 

@@ -1,0 +1,318 @@
+# HotSpot API - 生活瞬间与评论模块类型定义
+# 对应原 api_spec_moment.mdc 中的类型定义
+
+# ============================================================
+# 点赞项
+# ============================================================
+
+LikeItem:
+  type: object
+  required: [user, liked_at]
+  description: 点赞列表项
+  properties:
+    user:
+      $ref: './common.yaml#/UserInfo'
+      description: 点赞用户
+    liked_at:
+      type: string
+      format: date-time
+
+# ============================================================
+# 评论项
+# ============================================================
+
+      description: 点赞时间
+CommentItem:
+  type: object
+  required: [comment_id, user, content, created_at, likes_count, replies_count]
+  description: |
+    评论项。
+    @auth-only 字段仅登录态返回。
+  properties:
+    comment_id:
+      type: string
+      description: 评论 ID
+    user:
+      $ref: './common.yaml#/UserInfo'
+    content:
+      type: string
+      minLength: 1
+      maxLength: 2000
+      description: 评论内容
+    parent_id:
+      type: string
+      description: 父评论ID（回复时存在）
+    mentions:
+      type: array
+      maxItems: 20
+      items:
+        type: string
+      description: '@ 提及的用户 ID 列表'
+    created_at:
+      type: string
+      format: date-time
+    likes_count:
+      type: integer
+      description: 点赞数
+    replies_count:
+      type: integer
+      description: 子评论数量
+    is_liked:
+      type: boolean
+      description: 当前用户是否已点赞该评论（@auth-only）
+      x-visibility: auth-only
+
+# ============================================================
+# 请求类型
+# ============================================================
+
+SearchMomentsRequest:
+  type: object
+  required: [search]
+  description: |
+    至少提供 keyword、tag、radius 中的一个
+  properties:
+    search:
+      $ref: './common.yaml#/SearchBaseParams'
+    keyword:
+      type: string
+      description: 关键字搜索（匹配描述等）
+    tag:
+      type: string
+      description: 标签筛选
+    radius:
+      type: number
+      description: 位置范围（米），配合 search.reference_point 使用
+    sort_by:
+      type: string
+      enum: [relevance, distance, newest, popular]
+      default: relevance
+      description: "默认: relevance"
+
+MomentOpenTheDoorRequest:
+  type: object
+  required: [moment_id]
+  properties:
+    moment_id:
+      type: string
+      description: 要查看的瞬间 ID
+CreateMomentRequest:
+  type: object
+  required: [description, location]
+  properties:
+    description:
+      type: string
+      minLength: 1
+      maxLength: 5000
+      description: 瞬间描述文本（1-5000 字符）
+    location:
+      $ref: './common.yaml#/Location'
+    privacy_level:
+      $ref: './common.yaml#/PrivacyLevel'
+      default: public
+      description: "默认: public"
+    tags:
+      type: array
+      maxItems: 10
+      items:
+        type: string
+        maxLength: 30
+      description: 标签列表
+    image_file_ids:
+      type: array
+      maxItems: 9
+      items:
+        type: string
+      description: 图片文件 ID 列表（来自上传接口）
+    mentions:
+      type: array
+      maxItems: 20
+      items:
+        type: string
+      description: '@ 提及的用户 ID 列表'
+EditMomentRequest:
+  type: object
+  required: [moment_id]
+  properties:
+    moment_id:
+      type: string
+      description: 要编辑的瞬间 ID
+    description:
+      type: string
+      minLength: 1
+      maxLength: 5000
+      description: 修改后的描述文本（1-5000 字符）
+    location:
+      $ref: './common.yaml#/Location'
+    privacy_level:
+      $ref: './common.yaml#/PrivacyLevel'
+    tags:
+      type: array
+      maxItems: 10
+      items:
+        type: string
+        maxLength: 30
+      description: 标签列表
+    image_file_ids:
+      type: array
+      maxItems: 9
+      items:
+        type: string
+      description: 图片文件 ID 列表（来自上传接口）
+    mentions:
+      type: array
+      maxItems: 20
+      items:
+        type: string
+      description: '@ 提及的用户 ID 列表'
+DeleteMomentRequest:
+  type: object
+  required: [moment_id]
+  properties:
+    moment_id:
+      type: string
+      description: 要删除的瞬间 ID
+MyMomentsRequest:
+  type: object
+  properties:
+    pagination:
+      $ref: './common.yaml#/PaginationParams'
+
+MyFavoritesRequest:
+  type: object
+  properties:
+    pagination:
+      $ref: './common.yaml#/PaginationParams'
+
+LikeMomentRequest:
+  type: object
+  required: [moment_id]
+  properties:
+    moment_id:
+      type: string
+      description: 瞬间 ID
+UnlikeMomentRequest:
+  type: object
+  required: [moment_id]
+  properties:
+    moment_id:
+      type: string
+      description: 瞬间 ID
+FavoriteMomentRequest:
+  type: object
+  required: [moment_id]
+  properties:
+    moment_id:
+      type: string
+      description: 瞬间 ID
+UnfavoriteMomentRequest:
+  type: object
+  required: [moment_id]
+  properties:
+    moment_id:
+      type: string
+      description: 瞬间 ID
+MomentLikesRequest:
+  type: object
+  required: [moment_id]
+  properties:
+    pagination:
+      $ref: './common.yaml#/PaginationParams'
+    moment_id:
+      type: string
+      description: 瞬间 ID
+CreateCommentRequest:
+  type: object
+  required: [moment_id, content]
+  properties:
+    moment_id:
+      type: string
+      description: 目标瞬间 ID
+    content:
+      type: string
+      minLength: 1
+      maxLength: 2000
+      description: 评论内容（1-2000 字符）
+    parent_id:
+      type: string
+      description: 父评论ID（回复时存在）
+    mentions:
+      type: array
+      maxItems: 20
+      items:
+        type: string
+      description: '@ 提及的用户 ID 列表'
+DeleteCommentRequest:
+  type: object
+  required: [comment_id]
+  properties:
+    comment_id:
+      type: string
+      description: 要删除的评论 ID
+CommentsRequest:
+  type: object
+  required: [moment_id]
+  properties:
+    pagination:
+      $ref: './common.yaml#/PaginationParams'
+    moment_id:
+      type: string
+      description: 瞬间 ID
+CommentRepliesRequest:
+  type: object
+  required: [comment_id]
+  properties:
+    pagination:
+      $ref: './common.yaml#/PaginationParams'
+    comment_id:
+      type: string
+      description: 评论 ID
+LikeCommentRequest:
+  type: object
+  required: [comment_id]
+  properties:
+    comment_id:
+      type: string
+      description: 评论 ID
+UnlikeCommentRequest:
+  type: object
+  required: [comment_id]
+  properties:
+    comment_id:
+      type: string
+      description: 评论 ID
+CommentLikesRequest:
+  type: object
+  required: [comment_id]
+  properties:
+    pagination:
+      $ref: './common.yaml#/PaginationParams'
+    comment_id:
+      type: string
+
+# ============================================================
+# 列表响应类型
+# ============================================================
+
+      description: 评论 ID
+PaginatedCommentItems:
+  type: object
+  required: [items, pagination]
+  properties:
+    items:
+      type: array
+      items:
+        $ref: '#/CommentItem'
+    pagination:
+      $ref: './common.yaml#/Pagination'
+
+PaginatedLikeItems:
+  type: object
+  required: [items, pagination]
+  properties:
+    items:
+      type: array
+      items:
+        $ref: '#/LikeItem'
+    pagination:
+      $ref: './common.yaml#/Pagination'

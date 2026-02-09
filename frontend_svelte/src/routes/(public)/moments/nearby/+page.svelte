@@ -8,12 +8,13 @@
 	import MasonryLayoutItem from '$lib/components/common/masonry-layout-item.svelte';
 	import EmptyState from '$lib/components/common/empty-state.svelte';
 	import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
-	import type { MomentSearchItem } from '$lib/types/api';
+	import type { MomentItem } from '$lib/types/api';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import Image from 'lucide-svelte/icons/image';
+	import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
 
 	// ✨ 使用新的 usePagination Hook
-	const pagination = usePagination<MomentSearchItem>({
+	const pagination = usePagination<MomentItem>({
 		uniqueKey: 'moment_id'
 	});
 
@@ -26,11 +27,12 @@
 
 	async function loadMoments(refresh = false) {
 		await pagination.load(
-			(cursor) => momentsService.searchByLocation({
-				reference_point: getAnchor(),
-				radius: mapAnchorStore.radius * 1000,
-				limit: 20,
-				cursor
+			(cursor) => momentsService.search({
+				search: {
+					reference_point: getAnchor(),
+					pagination: { limit: 20, cursor }
+				},
+				radius: mapAnchorStore.radius * 1000
 			}),
 			refresh
 		);
@@ -67,7 +69,7 @@
 
 <div class="container mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
 	<div class="flex items-center gap-4">
-		<Button variant="ghost" size="icon" onclick={() => history.back()}>
+		<Button variant="ghost" size="icon" onclick={() => history.back()} aria-label="返回">
 			<ArrowLeft class="h-5 w-5" />
 		</Button>
 		<h1 class="text-2xl font-bold">附近动态</h1>
@@ -81,6 +83,14 @@
 				</MasonryLayoutItem>
 			{/each}
 		</MasonryLayout>
+	{:else if pagination.error}
+		<EmptyState 
+			icon={AlertTriangle} 
+			title="加载失败" 
+			description={pagination.error} 
+			actionText="重试"
+			onAction={() => loadMoments(true)}
+		/>
 	{:else if pagination.items.length === 0}
 		<EmptyState icon={Image} title="附近暂无动态" description="等待附近的人发布动态" />
 	{:else}

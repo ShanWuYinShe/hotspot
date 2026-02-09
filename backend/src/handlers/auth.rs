@@ -10,13 +10,11 @@ use crate::{
     dto::{
         request::{
             ChangePasswordRequest, CheckStatusRequest, GuestRequest, LoginRequest, LogoutRequest,
-            RefreshTokenRequest, RegisterRequest, RequestPasswordResetRequest,
-            ResetPasswordRequest, RevokeSessionRequest, SendVerificationCodeRequest,
-            SessionsRequest, VerifyCodeRequest, VerifyResetCodeRequest,
+            RefreshTokenRequest, RegisterRequest, RevokeAllSessionsRequest, RevokeSessionRequest,
+            SessionsRequest,
         },
         response::{
-            ApiResponse, CheckStatusData, PaginatedData, RequestPasswordResetData,
-            SendVerificationCodeData, SessionItem, VerifyCodeData, VerifyResetCodeData,
+            ApiResponse, CheckStatusData, PaginatedData, SessionItem,
         },
     },
     error::{AppError, Result},
@@ -328,30 +326,6 @@ pub async fn logout(
     Ok((resp_headers, Json(ApiResponse::success_empty())))
 }
 
-pub async fn request_password_reset(
-    State(state): State<AppState>,
-    Json(req): Json<RequestPasswordResetRequest>,
-) -> Result<Json<ApiResponse<RequestPasswordResetData>>> {
-    let response = state.auth_service.request_password_reset(&req).await?;
-    Ok(Json(ApiResponse::success(response)))
-}
-
-pub async fn verify_reset_code(
-    State(state): State<AppState>,
-    Json(req): Json<VerifyResetCodeRequest>,
-) -> Result<Json<ApiResponse<VerifyResetCodeData>>> {
-    let response = state.auth_service.verify_reset_code(&req).await?;
-    Ok(Json(ApiResponse::success(response)))
-}
-
-pub async fn reset_password(
-    State(state): State<AppState>,
-    Json(req): Json<ResetPasswordRequest>,
-) -> Result<Json<ApiResponse<()>>> {
-    state.auth_service.reset_password(&req).await?;
-    Ok(Json(ApiResponse::success_empty()))
-}
-
 pub async fn check_status(
     State(state): State<AppState>,
     user: OptionalAuthenticatedUser,
@@ -404,28 +378,16 @@ pub async fn revoke_session(
     Ok(Json(ApiResponse::success_empty()))
 }
 
-pub async fn send_verification_code(
+/// 撤销当前用户所有其他会话
+pub async fn revoke_all_sessions(
     State(state): State<AppState>,
-    Json(req): Json<SendVerificationCodeRequest>,
-) -> Result<Json<ApiResponse<SendVerificationCodeData>>> {
-    // 参数验证
-    Validator::validate_not_empty(&req.phone, "手机号")?;
-    // r#type 已是强类型枚举，反序列化时自动验证
+    user: AuthenticatedUser,
+    Json(_req): Json<RevokeAllSessionsRequest>,
+) -> Result<Json<ApiResponse<()>>> {
+    state
+        .auth_service
+        .revoke_all_sessions(user.user_id)
+        .await?;
 
-    // 调用 Service
-    let response = state.auth_service.send_verification_code(&req).await?;
-    Ok(Json(ApiResponse::success(response)))
-}
-
-pub async fn verify_code(
-    State(state): State<AppState>,
-    Json(req): Json<VerifyCodeRequest>,
-) -> Result<Json<ApiResponse<VerifyCodeData>>> {
-    // 参数验证
-    Validator::validate_not_empty(&req.code_id, "验证码会话ID")?;
-    Validator::validate_not_empty(&req.code, "验证码")?;
-
-    // 调用 Service
-    let response = state.auth_service.verify_code(&req).await?;
-    Ok(Json(ApiResponse::success(response)))
+    Ok(Json(ApiResponse::success_empty()))
 }

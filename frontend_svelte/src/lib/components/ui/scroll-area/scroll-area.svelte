@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { ScrollArea as ScrollAreaPrimitive } from 'bits-ui';
+	import { ScrollArea as ScrollAreaPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
 	import { cn } from '$lib/utils';
 	import type { Snippet } from 'svelte';
 	import Scrollbar from './scroll-area-scrollbar.svelte';
 
-	interface Props {
+	interface Props extends WithoutChildrenOrChild<ScrollAreaPrimitive.RootProps> {
 		orientation?: 'vertical' | 'horizontal' | 'both';
 		children?: Snippet;
 		class?: string;

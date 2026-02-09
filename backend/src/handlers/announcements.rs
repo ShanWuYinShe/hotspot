@@ -3,8 +3,8 @@ use axum::{extract::State, Json};
 use crate::{
     dto::{
         request::{
-            AdminAnnouncementListRequest, CreateAnnouncementRequest, DeleteAnnouncementRequest,
-            PublicAnnouncementListRequest,
+            AdminAnnouncementListRequest, AdminUpdateAnnouncementRequest,
+            CreateAnnouncementRequest, DeleteAnnouncementRequest, PublicAnnouncementListRequest,
         },
         response::{ApiResponse, CreateAnnouncementData, PaginatedData, SystemAnnouncementItem},
     },
@@ -58,6 +58,17 @@ pub async fn admin_list(
         .list_admin_announcements(req)
         .await?;
     Ok(Json(ApiResponse::success(response)))
+}
+
+/// TODO: 需要在 AnnouncementService 中实现 update_announcement 方法
+pub async fn admin_update(
+    State(_state): State<AppState>,
+    _user: AuthenticatedUser,
+    Json(_req): Json<AdminUpdateAnnouncementRequest>,
+) -> Result<Json<ApiResponse<()>>> {
+    Err(crate::error::AppError::InternalError(
+        "公告更新功能尚未实现".to_string(),
+    ))
 }
 
 pub async fn admin_delete(

@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Dialog as DialogPrimitive } from 'bits-ui';
+	import { Dialog as DialogPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
 	import { cn } from '$lib/utils';
 
-	interface Props {
+	interface Props extends WithoutChildrenOrChild<DialogPrimitive.OverlayProps> {
 		class?: string;
 	}
 

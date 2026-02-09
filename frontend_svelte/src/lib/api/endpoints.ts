@@ -1,15 +1,15 @@
 /**
  * API 路径常量
  *
- * 严格遵循 @spec/api_spec.mdc 规范
- * 所有端点统一使用 /api/v1/ 前缀
+ * 严格遵循 spec/openapi/ 下的 OpenAPI 3.1 规范
+ * 所有端点统一使用 POST /api/v1/ 前缀
  */
 
 export const API_VERSION = 'v1';
 export const API_BASE = `/api/${API_VERSION}`;
 
 // ============================================================================
-// 认证 API
+// 认证 API（spec/openapi/paths/auth.yaml）
 // ============================================================================
 export const AUTH = {
 	REGISTER: `${API_BASE}/auth/register`,
@@ -18,176 +18,161 @@ export const AUTH = {
 	GUEST: `${API_BASE}/auth/guest`,
 	REFRESH_TOKEN: `${API_BASE}/auth/refresh_token`,
 	CHECK_STATUS: `${API_BASE}/auth/check_status`,
-	SEND_VERIFICATION_CODE: `${API_BASE}/auth/send_verification_code`,
-	VERIFY_CODE: `${API_BASE}/auth/verify_code`,
-	REQUEST_PASSWORD_RESET: `${API_BASE}/auth/request_password_reset`,
-	VERIFY_RESET_CODE: `${API_BASE}/auth/verify_reset_code`,
-	RESET_PASSWORD: `${API_BASE}/auth/reset_password`,
 	ME: {
 		CHANGE_PASSWORD: `${API_BASE}/auth/me/change_password`,
-		SESSIONS: `${API_BASE}/auth/me/sessions`,
-		REVOKE_SESSION: `${API_BASE}/auth/me/sessions/revoke`
+		SESSIONS_LIST: `${API_BASE}/auth/me/sessions/list`,
+		REVOKE_SESSION: `${API_BASE}/auth/me/sessions/revoke`,
+		REVOKE_ALL_SESSIONS: `${API_BASE}/auth/me/sessions/revoke_all`
 	}
 } as const;
 
 // ============================================================================
-// 用户 API
+// 用户 API（spec/openapi/paths/users.yaml）
 // ============================================================================
-export const USER = {
-	// 搜索
-	SEARCH_BY_KEYWORD: `${API_BASE}/user/search_by_keyword`,
-	SEARCH_BY_TAG: `${API_BASE}/user/search_by_tag`,
-	SEARCH_BY_LOCATION: `${API_BASE}/user/search_by_location`,
-	SUGGEST: `${API_BASE}/user/suggest`,
+export const USERS = {
+	// 搜索（单一端点，通过请求体 keyword/tags/location 参数区分）
+	SEARCH: `${API_BASE}/users/search`,
 	// 获取指定用户信息
-	OPEN_THE_DOOR: `${API_BASE}/user/open_the_door`,
-	STATS: `${API_BASE}/user/stats`,
-	FRIENDS: `${API_BASE}/user/friends`,
-	FOLLOWING: `${API_BASE}/user/following`,
-	FOLLOWERS: `${API_BASE}/user/followers`,
-	GROUPS: `${API_BASE}/user/groups`,
-	LIKED_MOMENTS: `${API_BASE}/user/liked_moments`,
-	MOMENTS: `${API_BASE}/user/moments`,
+	OPEN_THE_DOOR: `${API_BASE}/users/open_the_door`,
+	LIST_FRIENDS: `${API_BASE}/users/list_friends`,
+	LIST_FOLLOWING: `${API_BASE}/users/list_following`,
+	LIST_FOLLOWERS: `${API_BASE}/users/list_followers`,
+	LIST_GROUPS: `${API_BASE}/users/list_groups`,
+	LIST_MOMENTS: `${API_BASE}/users/list_moments`,
+	LIST_LIKED_MOMENTS: `${API_BASE}/users/list_liked_moments`,
 	// 当前用户
 	ME: {
-		PROFILE: `${API_BASE}/user/me/profile`,
-		PROFILE_UPDATE: `${API_BASE}/user/me/profile/update`,
-		LOCATION: `${API_BASE}/user/me/location`,
-		UPGRADE: `${API_BASE}/user/me/upgrade`,
-		STATS: `${API_BASE}/user/me/stats`,
-		SETTINGS: `${API_BASE}/user/me/settings`,
-		SETTINGS_UPDATE: `${API_BASE}/user/me/settings/update`,
-		DELETE: `${API_BASE}/user/me/delete`,
-		FRIENDS: `${API_BASE}/user/me/friends`,
-		FOLLOWING: `${API_BASE}/user/me/following`,
-		FOLLOWERS: `${API_BASE}/user/me/followers`,
-		BLOCKED: `${API_BASE}/user/me/blocked`,
-		FOLLOW_REQUESTS: `${API_BASE}/user/me/follow_requests`,
-		FOLLOW_REQUESTS_HANDLE: `${API_BASE}/user/me/follow_requests/handle`,
+		PROFILE_GET: `${API_BASE}/users/me/profile/get`,
+		PROFILE_UPDATE: `${API_BASE}/users/me/profile/update`,
+		LOCATION_UPDATE: `${API_BASE}/users/me/location/update`,
+		UPGRADE: `${API_BASE}/users/me/upgrade`,
+		SETTINGS_GET: `${API_BASE}/users/me/settings/get`,
+		SETTINGS_UPDATE: `${API_BASE}/users/me/settings/update`,
+		DELETE: `${API_BASE}/users/me/delete`,
+		LIST_FRIENDS: `${API_BASE}/users/me/list_friends`,
+		LIST_FOLLOWING: `${API_BASE}/users/me/list_following`,
+		LIST_FOLLOWERS: `${API_BASE}/users/me/list_followers`,
+		LIST_BLOCKED: `${API_BASE}/users/me/list_blocked`,
 		// 关注关系操作
-		FOLLOW: `${API_BASE}/user/me/follow`,
-		UNFOLLOW: `${API_BASE}/user/me/unfollow`,
-		BLOCK: `${API_BASE}/user/me/block`,
-		UNBLOCK: `${API_BASE}/user/me/unblock`,
-		REMARK: `${API_BASE}/user/me/remark`
+		FOLLOW: `${API_BASE}/users/me/follow`,
+		UNFOLLOW: `${API_BASE}/users/me/unfollow`,
+		BLOCK: `${API_BASE}/users/me/block`,
+		UNBLOCK: `${API_BASE}/users/me/unblock`,
+		SET_REMARK: `${API_BASE}/users/me/set_remark`
 	}
 } as const;
 
 // ============================================================================
-// 生活瞬间 API
+// 生活瞬间 API（spec/openapi/paths/moments.yaml）
 // ============================================================================
 export const MOMENTS = {
-	// 搜索
-	SEARCH_BY_KEYWORD: `${API_BASE}/moments/search_by_keyword`,
-	SEARCH_BY_TAG: `${API_BASE}/moments/search_by_tag`,
-	SEARCH_BY_LOCATION: `${API_BASE}/moments/search_by_location`,
-	SUGGEST: `${API_BASE}/moments/suggest`,
+	// 搜索（单一端点，通过请求体参数区分）
+	SEARCH: `${API_BASE}/moments/search`,
 	// 获取指定瞬间信息
 	OPEN_THE_DOOR: `${API_BASE}/moments/open_the_door`,
-	LIKES: `${API_BASE}/moments/likes`,
+	LIST_LIKES: `${API_BASE}/moments/list_likes`,
 	// 操作
 	CREATE: `${API_BASE}/moments/create`,
 	UPDATE: `${API_BASE}/moments/update`,
 	DELETE: `${API_BASE}/moments/delete`,
-	LIKE: `${API_BASE}/moments/like`,
-	UNLIKE: `${API_BASE}/moments/unlike`,
-	FAVORITE: `${API_BASE}/moments/favorite`,
-	UNFAVORITE: `${API_BASE}/moments/unfavorite`,
-	// 当前用户
+	// 当前用户操作
 	ME: {
-		LIST: `${API_BASE}/moments/me`,
-		FAVORITES: `${API_BASE}/moments/me/favorites`
+		LIKE: `${API_BASE}/moments/me/like`,
+		UNLIKE: `${API_BASE}/moments/me/unlike`,
+		FAVORITE: `${API_BASE}/moments/me/favorite`,
+		UNFAVORITE: `${API_BASE}/moments/me/unfavorite`,
+		LIST: `${API_BASE}/moments/me/list`,
+		LIST_FAVORITES: `${API_BASE}/moments/me/list_favorites`
 	}
 } as const;
 
 // ============================================================================
-// 评论 API
+// 评论 API（spec/openapi/paths/moments.yaml - 评论部分）
 // ============================================================================
 export const COMMENTS = {
-	LIST: `${API_BASE}/comments`,
-	REPLIES: `${API_BASE}/comments/replies`,
-	LIKES: `${API_BASE}/comments/likes`,
+	LIST: `${API_BASE}/comments/list`,
+	LIST_REPLIES: `${API_BASE}/comments/list_replies`,
+	LIST_LIKES: `${API_BASE}/comments/list_likes`,
 	CREATE: `${API_BASE}/comments/create`,
 	DELETE: `${API_BASE}/comments/delete`,
-	LIKE: `${API_BASE}/comments/like`,
-	UNLIKE: `${API_BASE}/comments/unlike`
+	ME: {
+		LIKE: `${API_BASE}/comments/me/like`,
+		UNLIKE: `${API_BASE}/comments/me/unlike`
+	}
 } as const;
 
 // ============================================================================
-// 私聊 API
+// 私聊 API（spec/openapi/paths/chat.yaml）
 // ============================================================================
 export const PRIVATE_CHATS = {
-	ME: `${API_BASE}/private_chats/me`,
 	OPEN_THE_DOOR: `${API_BASE}/private_chats/open_the_door`,
-	UPDATE_SETTINGS: `${API_BASE}/private_chats/update_settings`,
-	DELETE: `${API_BASE}/private_chats/delete`
+	ME: {
+		LIST: `${API_BASE}/private_chats/me/list`,
+		UPDATE_SETTINGS: `${API_BASE}/private_chats/me/update_settings`,
+		DELETE: `${API_BASE}/private_chats/me/delete`
+	}
 } as const;
 
 // ============================================================================
-// 私聊消息 API
+// 私聊消息 API（spec/openapi/paths/chat.yaml）
 // ============================================================================
 export const PRIVATE_MESSAGES = {
 	SEND: `${API_BASE}/private_messages/send`,
-	HISTORY: `${API_BASE}/private_messages/history`,
+	GET_HISTORY: `${API_BASE}/private_messages/get_history`,
 	UPDATE: `${API_BASE}/private_messages/update`,
 	RECALL: `${API_BASE}/private_messages/recall`,
-	DELETE: `${API_BASE}/private_messages/delete`,
-	MARK_AS_READ: `${API_BASE}/private_messages/mark_as_read`,
-	ADD_REACTION: `${API_BASE}/private_messages/add_reaction`,
-	REMOVE_REACTION: `${API_BASE}/private_messages/remove_reaction`,
-	REACTIONS: `${API_BASE}/private_messages/reactions`
+	ME: {
+		MARK_AS_READ: `${API_BASE}/private_messages/me/mark_as_read`
+	}
 } as const;
 
 // ============================================================================
-// 群组 API
+// 群组 API（spec/openapi/paths/groups.yaml）
 // ============================================================================
 export const GROUPS = {
-	// 搜索
-	SEARCH_BY_KEYWORD: `${API_BASE}/groups/search_by_keyword`,
-	SEARCH_BY_TAG: `${API_BASE}/groups/search_by_tag`,
-	SEARCH_BY_LOCATION: `${API_BASE}/groups/search_by_location`,
-	SUGGEST: `${API_BASE}/groups/suggest`,
+	// 搜索（单一端点，通过请求体参数区分）
+	SEARCH: `${API_BASE}/groups/search`,
 	// 获取指定群组信息
 	OPEN_THE_DOOR: `${API_BASE}/groups/open_the_door`,
-	SETTINGS: `${API_BASE}/groups/settings`,
 	// 操作
 	CREATE: `${API_BASE}/groups/create`,
 	UPDATE: `${API_BASE}/groups/update`,
-	UPDATE_MY_SETTINGS: `${API_BASE}/groups/update_my_settings`,
-	DELETE: `${API_BASE}/groups/delete`,
-	TRANSFER_OWNERSHIP: `${API_BASE}/groups/transfer_ownership`,
+	DISMISS: `${API_BASE}/groups/dismiss`,
 	// 成员管理
 	MEMBERS: {
-		LIST: `${API_BASE}/groups/members`,
+		LIST: `${API_BASE}/groups/members/list`,
+		SEARCH: `${API_BASE}/groups/members/search`,
 		INVITE: `${API_BASE}/groups/members/invite`,
-		JOIN: `${API_BASE}/groups/members/join`,
-		APPLY: `${API_BASE}/groups/members/apply`,
 		SET_ROLE: `${API_BASE}/groups/members/set_role`,
 		MUTE: `${API_BASE}/groups/members/mute`,
 		UNMUTE: `${API_BASE}/groups/members/unmute`,
 		BAN: `${API_BASE}/groups/members/ban`,
 		UNBAN: `${API_BASE}/groups/members/unban`,
-		BANNED: `${API_BASE}/groups/members/banned`,
+		LIST_BANNED: `${API_BASE}/groups/members/list_banned`,
 		REMOVE_MEMBER: `${API_BASE}/groups/members/remove_member`
 	},
 	// 申请管理
 	APPLICATIONS: {
-		LIST: `${API_BASE}/groups/applications`,
+		LIST: `${API_BASE}/groups/applications/list`,
 		APPROVE: `${API_BASE}/groups/applications/approve`,
 		REJECT: `${API_BASE}/groups/applications/reject`
 	},
 	// 群公告
 	ANNOUNCEMENTS: {
-		LIST: `${API_BASE}/groups/announcements`,
+		LIST: `${API_BASE}/groups/announcements/list`,
 		CREATE: `${API_BASE}/groups/announcements/create`,
 		UPDATE: `${API_BASE}/groups/announcements/update`,
 		DELETE: `${API_BASE}/groups/announcements/delete`
 	},
 	// 当前用户
 	ME: {
-		LIST: `${API_BASE}/groups/me`,
+		UPDATE_SETTINGS: `${API_BASE}/groups/me/update_settings`,
+		JOIN: `${API_BASE}/groups/me/join`,
+		TRANSFER_OWNERSHIP: `${API_BASE}/groups/me/transfer_ownership`,
+		LIST: `${API_BASE}/groups/me/list`,
+		APPLICATIONS_LIST: `${API_BASE}/groups/me/applications/list`,
 		CANCEL_APPLICATION: `${API_BASE}/groups/me/applications/cancel`,
-		INVITES: `${API_BASE}/groups/me/invites`,
+		INVITES_LIST: `${API_BASE}/groups/me/invites/list`,
 		ACCEPT_INVITE: `${API_BASE}/groups/me/invites/accept`,
 		REJECT_INVITE: `${API_BASE}/groups/me/invites/reject`,
 		LEAVE: `${API_BASE}/groups/me/leave`
@@ -195,152 +180,98 @@ export const GROUPS = {
 } as const;
 
 // ============================================================================
-// 群聊消息 API
+// 群聊消息 API（spec/openapi/paths/chat.yaml）
 // ============================================================================
 export const GROUP_MESSAGES = {
 	SEND: `${API_BASE}/group_messages/send`,
-	HISTORY: `${API_BASE}/group_messages/history`,
+	GET_HISTORY: `${API_BASE}/group_messages/get_history`,
 	UPDATE: `${API_BASE}/group_messages/update`,
 	RECALL: `${API_BASE}/group_messages/recall`,
-	DELETE: `${API_BASE}/group_messages/delete`,
-	MARK_AS_READ: `${API_BASE}/group_messages/mark_as_read`,
-	READ_STATUS: `${API_BASE}/group_messages/read_status`,
-	ADD_REACTION: `${API_BASE}/group_messages/add_reaction`,
-	REMOVE_REACTION: `${API_BASE}/group_messages/remove_reaction`,
-	REACTIONS: `${API_BASE}/group_messages/reactions`
+	ME: {
+		MARK_AS_READ: `${API_BASE}/group_messages/me/mark_as_read`
+	}
 } as const;
 
 // ============================================================================
-// 消息通用 API
-// ============================================================================
-export const MESSAGES = {
-	MARK_ALL_AS_READ: `${API_BASE}/messages/mark_all_as_read`
-} as const;
-
-// ============================================================================
-// 信息流 API
+// 信息流 API（spec/openapi/paths/feed.yaml）
 // ============================================================================
 export const FEED = {
-	MOMENTS: `${API_BASE}/feed/moments`,
-	GROUPS: `${API_BASE}/feed/groups`,
-	USERS: `${API_BASE}/feed/users`,
-	TRENDING: `${API_BASE}/feed/trending`,
-	FEEDBACK: `${API_BASE}/feed/feedback`
+	LIST_MOMENTS: `${API_BASE}/feed/list_moments`,
+	LIST_GROUPS: `${API_BASE}/feed/list_groups`,
+	LIST_USERS: `${API_BASE}/feed/list_users`,
+	LIST_TRENDING: `${API_BASE}/feed/list_trending`,
+	ME: {
+		FEEDBACK: `${API_BASE}/feed/me/feedback`
+	}
 } as const;
 
 // ============================================================================
-// 搜索 API
+// 搜索 API（spec/openapi/paths/search.yaml）
 // ============================================================================
 export const SEARCH = {
 	SUGGEST: `${API_BASE}/search/suggest`
 } as const;
 
 // ============================================================================
-// 标签 API
+// 标签 API（spec/openapi/paths/search.yaml）
 // ============================================================================
 export const TAGS = {
-	TRENDING: `${API_BASE}/tags/trending`,
-	SUGGEST: `${API_BASE}/tags/suggest`
+	LIST_TRENDING: `${API_BASE}/tags/list_trending`
 } as const;
 
 // ============================================================================
-// 地图 API
+// 地图 API（spec/openapi/paths/map.yaml）
 // ============================================================================
 export const MAP = {
 	RENDER: `${API_BASE}/map/render`
 } as const;
 
 // ============================================================================
-// 位置分享 API
+// 分享 API（spec/openapi/paths/share.yaml）
 // ============================================================================
 export const SHARE = {
 	CREATE: `${API_BASE}/share/create`,
 	GET: `${API_BASE}/share/get`,
-	APPLY: `${API_BASE}/share/apply`
+	APPLY: `${API_BASE}/share/apply`,
+	ME_LIST: `${API_BASE}/share/me/list`,
+	REVOKE: `${API_BASE}/share/revoke`
 } as const;
 
 // ============================================================================
-// 媒体上传 API
+// 媒体上传 API（spec/openapi/paths/media.yaml）
 // ============================================================================
 export const MEDIA = {
 	PRESIGN_UPLOAD: `${API_BASE}/media/presign_upload`,
+	BATCH_PRESIGN_UPLOAD: `${API_BASE}/media/batch_presign_upload`,
 	COMPLETE_UPLOAD: `${API_BASE}/media/complete_upload`
 } as const;
 
 // ============================================================================
-// 通知中心 API
-// ============================================================================
-export const NOTIFICATIONS = {
-	LIST: `${API_BASE}/notifications`,
-	UNREAD_COUNT: `${API_BASE}/notifications/unread_count`,
-	MARK_READ: `${API_BASE}/notifications/mark_read`
-} as const;
-
-// ============================================================================
-// 订阅设置 API
-// ============================================================================
-export const SUBSCRIPTIONS = {
-	ME: `${API_BASE}/subscriptions/me`,
-	UPDATE: `${API_BASE}/subscriptions/me/update`
-} as const;
-
-// ============================================================================
-// 设备推送 API
-// ============================================================================
-export const DEVICE_TOKENS = {
-	ME: `${API_BASE}/device_tokens/me`,
-	REGISTER: `${API_BASE}/device_tokens/me/register`,
-	UNREGISTER: `${API_BASE}/device_tokens/me/unregister`
-} as const;
-
-// ============================================================================
-// 举报 API
+// 举报 API（spec/openapi/paths/report.yaml）
 // ============================================================================
 export const REPORTS = {
 	CREATE: `${API_BASE}/reports/create`,
-	ME: `${API_BASE}/reports/me`
+	ME_LIST: `${API_BASE}/reports/me/list`
 } as const;
 
 // ============================================================================
-// 系统 API
+// 系统 API（spec/openapi/paths/system.yaml）
 // ============================================================================
 export const SYSTEM = {
-	HEALTH: `${API_BASE}/system/health`
+	GET_META: `${API_BASE}/system/get_meta`,
+	HEALTH: `${API_BASE}/system/health`,
+	LIST_ANNOUNCEMENTS: `${API_BASE}/system/list_announcements`,
+	GET_CLIENT_CONFIG: `${API_BASE}/system/get_client_config`
 } as const;
 
 // ============================================================================
-// 全局配置 API
+// 管理员 API（spec/openapi/paths/admin-core.yaml + admin-moderation.yaml）
 // ============================================================================
-export const GLOBAL_SETTINGS = {
-	FETCH: `${API_BASE}/global_settings/fetch`
-} as const;
-
-// ============================================================================
-// 系统公告 API（公开）
-// ============================================================================
-export const ANNOUNCEMENTS = {
-	LIST: `${API_BASE}/announcements`
-} as const;
-
-// ============================================================================
-// 管理员 API
-// ============================================================================
-
-// 管理员 - 全局配置
-export const ADMIN_GLOBAL_SETTINGS = {
-	FETCH: `${API_BASE}/admin/global_settings`,
-	UPDATE_UPLOAD: `${API_BASE}/admin/global_settings/update_upload`,
-	UPDATE_DEFAULTS: `${API_BASE}/admin/global_settings/update_defaults`,
-	UPDATE_FEATURES: `${API_BASE}/admin/global_settings/update_features`,
-	UPDATE_CONTACT: `${API_BASE}/admin/global_settings/update_contact`,
-	UPDATE_LIMITS: `${API_BASE}/admin/global_settings/update_limits`,
-	UPDATE_RATE_LIMITS: `${API_BASE}/admin/global_settings/update_rate_limits`
-} as const;
 
 // 管理员 - RBAC
 export const ADMIN_RBAC = {
-	ME: `${API_BASE}/admin/rbac/me`,
-	PERMISSIONS: `${API_BASE}/admin/rbac/permissions`,
+	GET_ME: `${API_BASE}/admin/rbac/get_me`,
+	LIST_PERMISSIONS: `${API_BASE}/admin/rbac/list_permissions`,
 	ROLES: {
 		LIST: `${API_BASE}/admin/rbac/roles/list`,
 		CREATE: `${API_BASE}/admin/rbac/roles/create`,
@@ -355,10 +286,27 @@ export const ADMIN_RBAC = {
 	}
 } as const;
 
+// 管理员 - 服务端配置
+export const ADMIN_SERVER_CONFIG = {
+	GET: `${API_BASE}/admin/server_config/get`,
+	UPDATE_UPLOAD: `${API_BASE}/admin/server_config/update_upload`,
+	UPDATE_DEFAULTS: `${API_BASE}/admin/server_config/update_defaults`,
+	UPDATE_RATE_LIMITS: `${API_BASE}/admin/server_config/update_rate_limits`,
+	UPDATE_RESPONSE_DEFAULTS: `${API_BASE}/admin/server_config/update_response_defaults`
+} as const;
+
+// 管理员 - 客户端配置
+export const ADMIN_CLIENT_CONFIG = {
+	GET: `${API_BASE}/admin/client_config/get`,
+	UPDATE_FEATURES: `${API_BASE}/admin/client_config/update_features`,
+	UPDATE_LIMITS: `${API_BASE}/admin/client_config/update_limits`,
+	UPDATE_CONTACT: `${API_BASE}/admin/client_config/update_contact`
+} as const;
+
 // 管理员 - 用户管理
 export const ADMIN_USERS = {
 	SEARCH: `${API_BASE}/admin/users/search`,
-	DETAIL: `${API_BASE}/admin/users/detail`,
+	OPEN_THE_DOOR: `${API_BASE}/admin/users/open_the_door`,
 	BAN: `${API_BASE}/admin/users/ban`,
 	UNBAN: `${API_BASE}/admin/users/unban`
 } as const;
@@ -366,33 +314,33 @@ export const ADMIN_USERS = {
 // 管理员 - 群组管理
 export const ADMIN_GROUPS = {
 	SEARCH: `${API_BASE}/admin/groups/search`,
-	DETAIL: `${API_BASE}/admin/groups/detail`,
+	OPEN_THE_DOOR: `${API_BASE}/admin/groups/open_the_door`,
 	DISMISS: `${API_BASE}/admin/groups/dismiss`
 } as const;
 
 // 管理员 - 系统公告
 export const ADMIN_ANNOUNCEMENTS = {
-	LIST: `${API_BASE}/admin/announcements/list`,
+	SEARCH: `${API_BASE}/admin/announcements/search`,
 	CREATE: `${API_BASE}/admin/announcements/create`,
+	UPDATE: `${API_BASE}/admin/announcements/update`,
 	DELETE: `${API_BASE}/admin/announcements/delete`
 } as const;
 
 // 管理员 - 审计日志
 export const ADMIN_AUDIT = {
 	LIST: `${API_BASE}/admin/audit/list`,
-	DETAIL: `${API_BASE}/admin/audit/detail`,
-	EXPORT: `${API_BASE}/admin/audit/export`,
-	EXPORT_STATUS: `${API_BASE}/admin/audit/export/status`
+	OPEN_THE_DOOR: `${API_BASE}/admin/audit/open_the_door`
 } as const;
 
 // 管理员 - 举报审核
 export const ADMIN_REPORTS = {
-	LIST: `${API_BASE}/admin/reports`,
+	SEARCH: `${API_BASE}/admin/reports/search`,
 	HANDLE: `${API_BASE}/admin/reports/handle`
 } as const;
 
 // 管理员 - 标签管理
 export const ADMIN_TAGS = {
+	SEARCH: `${API_BASE}/admin/tags/search`,
 	DELETE: `${API_BASE}/admin/tags/delete`
 } as const;
 
@@ -401,29 +349,24 @@ export const ADMIN_TAGS = {
 // ============================================================================
 export const ENDPOINTS = {
 	AUTH,
-	USER,
+	USERS,
 	MOMENTS,
 	COMMENTS,
 	PRIVATE_CHATS,
 	PRIVATE_MESSAGES,
 	GROUPS,
 	GROUP_MESSAGES,
-	MESSAGES,
 	FEED,
 	SEARCH,
 	TAGS,
 	MAP,
 	SHARE,
 	MEDIA,
-	NOTIFICATIONS,
-	SUBSCRIPTIONS,
-	DEVICE_TOKENS,
 	REPORTS,
 	SYSTEM,
-	GLOBAL_SETTINGS,
-	ANNOUNCEMENTS,
-	ADMIN_GLOBAL_SETTINGS,
 	ADMIN_RBAC,
+	ADMIN_SERVER_CONFIG,
+	ADMIN_CLIENT_CONFIG,
 	ADMIN_USERS,
 	ADMIN_GROUPS,
 	ADMIN_ANNOUNCEMENTS,

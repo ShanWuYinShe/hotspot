@@ -7,7 +7,7 @@
 	const currentMode = $derived(mode.current);
 </script>
 
-<Button variant="ghost" size="icon" onclick={toggleMode}>
+<Button variant="ghost" size="icon" onclick={toggleMode} aria-label="切换主题">
 	{#if currentMode === 'dark'}
 		<Sun class="h-5 w-5" />
 	{:else}

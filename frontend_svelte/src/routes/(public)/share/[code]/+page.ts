@@ -1,4 +1,4 @@
-import { getShare } from '$lib/api/services/share';
+import { shareService } from '$lib/api/services';
 import { isSuccess } from '$lib/api/client';
 import type { PageLoad } from './$types';
 
@@ -6,7 +6,7 @@ export const load: PageLoad = async ({ params }) => {
 	const shareCode = params.code;
 
 	try {
-		const response = await getShare({ share_code: shareCode });
+		const response = await shareService.get({ share_code: shareCode });
 		
 		if (isSuccess(response) && response.data) {
 			return {
