@@ -6,7 +6,7 @@
 import { PageNames } from '../../../constants/AppConstants';
 import { common } from '@kit.AbilityKit';
 import { UIContext } from '@kit.ArkUI';
-import { GlobalStateManager, UnreadCount, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_CURRENT_LOCATION, KEY_UNREAD_COUNT } from '../../../core/state/GlobalStateManager';
+import { GlobalStateManager, UnreadCount, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_USER_TYPE, KEY_CURRENT_LOCATION, KEY_UNREAD_COUNT } from '../../../core/state/GlobalStateManager';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { PersistentStateManager } from '../../../core/state/PersistentStateManager';
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
@@ -45,6 +45,7 @@ const STORAGE_KEY_VISIBLE_NOTIFICATIONS = 'visibleNotifications';
 struct Index {
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfileData | null = null;
   @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
+  @StorageLink(KEY_USER_TYPE) userType: string = '';
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_UNREAD_COUNT) unreadCount: UnreadCount = { total_unread_count: 0 };
   @StorageLink(STORAGE_KEY_VISIBLE_NOTIFICATIONS) visibleNotifications: SmartNotification[] = [];
@@ -494,9 +495,6 @@ struct Index {
 
   private handleTabChange(index: number) {
     this.currentTabIndex = index;
-    if (!this.isLoggedIn && index !== 0 && index !== 3) { 
-       // Logic for unauthorized access
-    }
   }
 
   @Builder
@@ -553,10 +551,17 @@ struct Index {
           }
           .tabBar(this.TabBuilderIcon('群组', 0, AppIcon.GROUP))
 
-          // 2. 消息
+          // 2. 消息（已认证用户可用，含临时用户）
           TabContent() {
             if (this.isLoggedIn) {
-              MessagePage()
+              Column() {
+                if (this.userType === 'temp') {
+                  this.buildUpgradeBanner()
+                }
+                MessagePage()
+              }
+              .width('100%')
+              .height('100%')
             } else {
               this.buildWelcomeView()
             }
@@ -642,37 +647,93 @@ struct Index {
   }
 
   @Builder
+  private buildUpgradeBanner() {
+    Row({ space: 8 }) {
+      Text('当前为临时用户，注册账号可保留所有数据')
+        .fontSize(12)
+        .fontColor($r('sys.color.ohos_id_color_text_primary_contrary'))
+        .layoutWeight(1)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      Button('去注册')
+        .type(ButtonType.Capsule)
+        .fontSize(12)
+        .height(28)
+        .backgroundColor(Color.White)
+        .fontColor($r('sys.color.ohos_id_color_emphasize'))
+        .onClick(async () => {
+          try {
+            const routerInstance = this.getUIContext().getRouter();
+            await routerInstance.pushUrl({ url: `features/auth/pages/${PageNames.LOGIN}` });
+          } catch (error) {
+            hilog.error(DOMAIN_NUMBER, TAG, `跳转注册失败: ${error}`);
+          }
+        })
+    }
+    .width('100%')
+    .padding({ left: 16, right: 12, top: 8, bottom: 8 })
+    .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+  }
+
+  @Builder
   private buildWelcomeView() {
-    Column({ space: 24 }) {
+    Column({ space: 20 }) {
       Text() {
         SymbolSpan($r(AppIcon.MESSAGE))
           .fontSize(48)
           .fontColor([$r('sys.color.ohos_id_color_emphasize')])
       }
 
-      Text($r('app.string.module_desc'))
-        .fontSize(28)
+      Text('消息功能需要登录')
+        .fontSize(20)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('sys.color.ohos_id_color_text_primary'))
 
-      Text($r('app.string.app_description'))
-        .fontSize(16)
+      Text('登录后可与好友实时聊天、加入群组讨论')
+        .fontSize(14)
         .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .textAlign(TextAlign.Center)
 
-      Button($r('app.string.auth_start_experience'))
-        .type(ButtonType.Capsule)
-        .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-        .fontColor(Color.White)
-        .width(200)
-        .height(44)
-        .onClick(async () => {
-          try {
-            const routerInstance = this.getUIContext().getRouter();
-            await routerInstance.pushUrl({ url: `features/auth/pages/${PageNames.LOGIN}` });
-          } catch (error) {
-            hilog.error(DOMAIN_NUMBER, TAG, `跳转登录页面失败: ${error}`);
-          }
-        })
+      Column({ space: 12 }) {
+        // 快速体验（创建临时用户）
+        Button('快速体验（无需注册）')
+          .type(ButtonType.Capsule)
+          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+          .fontColor(Color.White)
+          .width('80%')
+          .height(44)
+          .onClick(async () => {
+            try {
+              const routerInstance = this.getUIContext().getRouter();
+              await routerInstance.pushUrl({ url: `features/auth/pages/${PageNames.LOGIN}` });
+            } catch (error) {
+              hilog.error(DOMAIN_NUMBER, TAG, `跳转登录页面失败: ${error}`);
+            }
+          })
+
+        // 登录/注册
+        Button('登录 / 注册')
+          .type(ButtonType.Capsule)
+          .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .width('80%')
+          .height(44)
+          .onClick(async () => {
+            try {
+              const routerInstance = this.getUIContext().getRouter();
+              await routerInstance.pushUrl({ url: `features/auth/pages/${PageNames.LOGIN}` });
+            } catch (error) {
+              hilog.error(DOMAIN_NUMBER, TAG, `跳转登录页面失败: ${error}`);
+            }
+          })
+      }
+      .margin({ top: 8 })
+
+      Text('群组、瞬间、地图无需登录即可浏览')
+        .fontSize(12)
+        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .margin({ top: 8 })
     }
     .width('100%')
     .height('100%')

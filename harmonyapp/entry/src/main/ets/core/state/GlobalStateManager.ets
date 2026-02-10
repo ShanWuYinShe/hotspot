@@ -1,9 +1,15 @@
 /**
  * 全局状态管理器 (基于 AppStorage 和 PersistentStorage)
  * 符合 HarmonyOS 最佳实践
+ *
+ * 用户三级体系：
+ * - 匿名（无 token）：可浏览公开内容（瞬间、群组、地图等）
+ * - 临时用户（temp，有 token）：通过 guest API 创建，可执行绝大部分写操作
+ * - 注册用户（normal，有 token）：完整功能，含密码修改等
  */
 
 import { MyProfileData } from '../types/api';
+import type { UserType } from '../types/api';
 import { LocationInfo } from '../location/LocationUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
@@ -25,6 +31,7 @@ export interface UnreadCount {
 export interface GlobalState {
   currentUser: MyProfileData | null;
   isLoggedIn: boolean;
+  userType: string;
   networkConnected: boolean;
   locationEnabled: boolean;
   currentLocation: LocationInfo | null;
@@ -34,6 +41,7 @@ export interface GlobalState {
 // 定义 AppStorage 的 key
 export const KEY_CURRENT_USER = 'currentUser';
 export const KEY_IS_LOGGED_IN = 'isLoggedIn';
+export const KEY_USER_TYPE = 'userType';
 export const KEY_CURRENT_LOCATION = 'currentLocation';
 export const KEY_LOCATION_PICK_RESULT = 'locationPickResult';
 export const KEY_BROWSE_ANCHOR = 'browseAnchor';
@@ -44,6 +52,7 @@ export const KEY_LAST_MESSAGE_SYNC_TIME = 'lastMessageSyncTime';
 // 初始化 PersistentStorage (必须在 AppStorage 使用之前)
 PersistentStorage.persistProp<MyProfileData | null>(KEY_CURRENT_USER, null);
 PersistentStorage.persistProp<boolean>(KEY_IS_LOGGED_IN, false);
+PersistentStorage.persistProp<string>(KEY_USER_TYPE, '');
 PersistentStorage.persistProp<LocationInfo | null>(KEY_BROWSE_ANCHOR, null);
 
 export class GlobalStateManager {
@@ -82,16 +91,19 @@ export class GlobalStateManager {
     if (!AppStorage.has(KEY_LAST_MESSAGE_SYNC_TIME)) {
       AppStorage.setOrCreate<number>(KEY_LAST_MESSAGE_SYNC_TIME, 0);
     }
-    
+
     hilog.info(DOMAIN_NUMBER, TAG, 'GlobalStateManager (AppStorage) 初始化成功');
   }
 
   /**
    * 更新用户信息
+   * isLoggedIn = (user !== null)，表示有 token（含临时用户和注册用户）
+   * userType 区分 'temp' | 'normal' | 'admin' | 'system'
    */
   updateUser(user: MyProfileData | null): void {
     AppStorage.setOrCreate(KEY_CURRENT_USER, user);
     AppStorage.setOrCreate(KEY_IS_LOGGED_IN, user !== null);
+    AppStorage.setOrCreate(KEY_USER_TYPE, user?.user_type || '');
   }
 
   /**
@@ -99,6 +111,35 @@ export class GlobalStateManager {
    */
   getCurrentUser(): MyProfileData | null | undefined {
     return AppStorage.get<MyProfileData | null>(KEY_CURRENT_USER);
+  }
+
+  /**
+   * 获取当前用户类型
+   */
+  getUserType(): string {
+    return AppStorage.get<string>(KEY_USER_TYPE) || '';
+  }
+
+  /**
+   * 是否已认证（有 token，含临时用户和注册用户）
+   */
+  isAuthenticated(): boolean {
+    return AppStorage.get<boolean>(KEY_IS_LOGGED_IN) === true;
+  }
+
+  /**
+   * 是否为临时用户
+   */
+  isTempUser(): boolean {
+    return this.getUserType() === 'temp';
+  }
+
+  /**
+   * 是否为注册用户
+   */
+  isRegisteredUser(): boolean {
+    const userType = this.getUserType();
+    return userType === 'normal' || userType === 'admin' || userType === 'system';
   }
 
   /**

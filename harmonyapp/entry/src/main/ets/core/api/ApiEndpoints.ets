@@ -2,27 +2,20 @@
  * API 端点常量定义
  * 所有 API 路径统一在此定义，方便维护和修改
  * 严格按照 api_spec.mdc 定义
+ *
+ * 后端统一使用 /api/v1/ 前缀，不区分 public/protected，
+ * Token 可选/必须由后端中间件层控制。
  */
 
 /**
  * API 版本前缀
  */
-const API_V1 = '/api/v1';
+const V1 = '/api/v1';
 
 /**
- * 公开接口路径（无需认证）
+ * 管理员接口路径
  */
-const PUBLIC = `${API_V1}/public`;
-
-/**
- * 受保护接口路径（需要认证）
- */
-const PROTECTED = `${API_V1}/protected`;
-
-/**
- * 管理员接口路径（需要管理员权限）
- */
-const ADMIN = `${API_V1}/admin`;
+const ADMIN = `${V1}/admin`;
 
 /**
  * API 端点常量
@@ -30,200 +23,174 @@ const ADMIN = `${API_V1}/admin`;
 export const API_ENDPOINTS = {
   // ==================== 认证相关 ====================
   AUTH: {
-    // 公开认证接口
-    REGISTER: `${PUBLIC}/auth/register`,
-    LOGIN: `${PUBLIC}/auth/login`,
-    GUEST: `${PUBLIC}/auth/guest`,
-    REFRESH_TOKEN: `${PUBLIC}/auth/refresh_token`,
-    REQUEST_PASSWORD_RESET: `${PUBLIC}/auth/request_password_reset`,
-    VERIFY_RESET_CODE: `${PUBLIC}/auth/verify_reset_code`,
-    RESET_PASSWORD: `${PUBLIC}/auth/reset_password`,
-    // 受保护认证接口
-    LOGOUT: `${PROTECTED}/auth/logout`,
-    CHECK_STATUS: `${PROTECTED}/auth/check_status`,
-    // 当前用户认证 (/me/ 路径)
+    REGISTER: `${V1}/auth/register`,
+    LOGIN: `${V1}/auth/login`,
+    GUEST: `${V1}/auth/guest`,
+    REFRESH_TOKEN: `${V1}/auth/refresh_token`,
+    CHECK_STATUS: `${V1}/auth/check_status`,
+    LOGOUT: `${V1}/auth/logout`,
     ME: {
-      CHANGE_PASSWORD: `${PROTECTED}/auth/me/change_password`,
-      SESSIONS: `${PROTECTED}/auth/me/sessions`,
-      REVOKE_SESSION: `${PROTECTED}/auth/me/sessions/revoke`,
+      CHANGE_PASSWORD: `${V1}/auth/me/change_password`,
+      SESSIONS: `${V1}/auth/me/sessions`,
+      REVOKE_SESSION: `${V1}/auth/me/sessions/revoke`,
+      REVOKE_ALL: `${V1}/auth/me/sessions/revoke_all`,
     },
   },
 
   // ==================== 用户管理 ====================
   USER: {
-    // 公开搜索接口
-    SEARCH_BY_KEYWORD: `${PUBLIC}/user/search_by_keyword`,
-    SEARCH_BY_TAG: `${PUBLIC}/user/search_by_tag`,
-    SEARCH_BY_LOCATION: `${PUBLIC}/user/search_by_location`,
-    // 公开用户信息接口（open_the_door 包含在线状态，受隐私设置控制）
-    OPEN_THE_DOOR: `${PUBLIC}/user/open_the_door`,
-    STATS: `${PUBLIC}/user/stats`,
-    // 公开用户列表接口（受隐私设置控制）
-    FRIENDS: `${PUBLIC}/user/friends`,
-    FOLLOWING: `${PUBLIC}/user/following`,
-    FOLLOWERS: `${PUBLIC}/user/followers`,
-    // 受保护用户接口
-    RELATIONSHIP: `${PROTECTED}/user/relationship`,
-    // 当前用户操作 (/me/ 路径)
+    SEARCH_BY_KEYWORD: `${V1}/users/search_by_keyword`,
+    SEARCH_BY_TAG: `${V1}/users/search_by_tag`,
+    SEARCH_BY_LOCATION: `${V1}/users/search_by_location`,
+    OPEN_THE_DOOR: `${V1}/users/open_the_door`,
+    STATS: `${V1}/users/stats`,
+    FRIENDS: `${V1}/users/friends`,
+    FOLLOWING: `${V1}/users/following`,
+    FOLLOWERS: `${V1}/users/followers`,
+    RELATIONSHIP: `${V1}/users/relationship`,
     ME: {
-      PROFILE: `${PROTECTED}/user/me/profile`,
-      PROFILE_UPDATE: `${PROTECTED}/user/me/profile/update`,
-      LOCATION: `${PROTECTED}/user/me/location`,
-      UPGRADE: `${PROTECTED}/user/me/upgrade`,
-      STATS: `${PROTECTED}/user/me/stats`,
-      SETTINGS: `${PROTECTED}/user/me/settings`,
-      SETTINGS_UPDATE: `${PROTECTED}/user/me/settings/update`,
-      DELETE: `${PROTECTED}/user/me/delete`,
-      // 关注关系
-      FOLLOW: `${PROTECTED}/user/me/follow`,
-      UNFOLLOW: `${PROTECTED}/user/me/unfollow`,
-      // 拉黑关系
-      BLOCK: `${PROTECTED}/user/me/block`,
-      UNBLOCK: `${PROTECTED}/user/me/unblock`,
-      // 列表
-      FRIENDS: `${PROTECTED}/user/me/friends`,
-      FOLLOWING: `${PROTECTED}/user/me/following`,
-      FOLLOWERS: `${PROTECTED}/user/me/followers`,
-      BLOCKED: `${PROTECTED}/user/me/blocked`,
-      // 好友备注
-      REMARK: `${PROTECTED}/user/me/remark`,
+      PROFILE: `${V1}/users/me/profile`,
+      PROFILE_UPDATE: `${V1}/users/me/profile/update`,
+      LOCATION: `${V1}/users/me/location`,
+      UPGRADE: `${V1}/users/me/upgrade`,
+      STATS: `${V1}/users/me/stats`,
+      SETTINGS: `${V1}/users/me/settings`,
+      SETTINGS_UPDATE: `${V1}/users/me/settings/update`,
+      DELETE: `${V1}/users/me/delete`,
+      FOLLOW: `${V1}/users/me/follow`,
+      UNFOLLOW: `${V1}/users/me/unfollow`,
+      BLOCK: `${V1}/users/me/block`,
+      UNBLOCK: `${V1}/users/me/unblock`,
+      FRIENDS: `${V1}/users/me/friends`,
+      FOLLOWING: `${V1}/users/me/following`,
+      FOLLOWERS: `${V1}/users/me/followers`,
+      BLOCKED: `${V1}/users/me/blocked`,
+      REMARK: `${V1}/users/me/remark`,
     },
   },
 
   // ==================== 生活瞬间 ====================
   MOMENTS: {
-    // 公开接口
-    SEARCH_BY_KEYWORD: `${PUBLIC}/moments/search_by_keyword`,
-    SEARCH_BY_TAG: `${PUBLIC}/moments/search_by_tag`,
-    SEARCH_BY_LOCATION: `${PUBLIC}/moments/search_by_location`,
-    OPEN_THE_DOOR: `${PUBLIC}/moments/open_the_door`,
-    COMMENTS: `${PUBLIC}/moments/comments`,
-    USER_MOMENTS: `${PUBLIC}/user/moments`,
-    LIKES: `${PUBLIC}/moments/likes`,
-    // 受保护接口
-    CREATE: `${PROTECTED}/moments/create`,
-    UPDATE: `${PROTECTED}/moments/update`,
-    DELETE: `${PROTECTED}/moments/delete`,
-    LIKE: `${PROTECTED}/moments/like`,
-    UNLIKE: `${PROTECTED}/moments/unlike`,
-    FAVORITE: `${PROTECTED}/moments/favorite`,
-    UNFAVORITE: `${PROTECTED}/moments/unfavorite`,
-    // 当前用户瞬间 (/me/ 路径)
+    SEARCH_BY_KEYWORD: `${V1}/moments/search_by_keyword`,
+    SEARCH_BY_TAG: `${V1}/moments/search_by_tag`,
+    SEARCH_BY_LOCATION: `${V1}/moments/search_by_location`,
+    OPEN_THE_DOOR: `${V1}/moments/open_the_door`,
+    COMMENTS: `${V1}/moments/comments`,
+    USER_MOMENTS: `${V1}/users/moments`,
+    LIKES: `${V1}/moments/likes`,
+    CREATE: `${V1}/moments/create`,
+    UPDATE: `${V1}/moments/update`,
+    DELETE: `${V1}/moments/delete`,
+    LIKE: `${V1}/moments/like`,
+    UNLIKE: `${V1}/moments/unlike`,
+    FAVORITE: `${V1}/moments/favorite`,
+    UNFAVORITE: `${V1}/moments/unfavorite`,
     ME: {
-      LIST: `${PROTECTED}/moments/me`,
-      FAVORITES: `${PROTECTED}/moments/me/favorites`,
-      LIKED: `${PROTECTED}/moments/me/liked`,
-      FAVORITED: `${PROTECTED}/moments/me/favorited`,
+      LIST: `${V1}/moments/me`,
+      FAVORITES: `${V1}/moments/me/favorites`,
+      LIKED: `${V1}/moments/me/liked`,
+      FAVORITED: `${V1}/moments/me/favorited`,
     },
   },
 
   // ==================== 评论 ====================
   COMMENTS: {
-    // 公开接口
-    LIST: `${PUBLIC}/comments`,
-    REPLIES: `${PUBLIC}/comments/replies`,
-    LIKES: `${PUBLIC}/comments/likes`,
-    // 受保护接口
-    CREATE: `${PROTECTED}/comments/create`,
-    DELETE: `${PROTECTED}/comments/delete`,
-    LIKE: `${PROTECTED}/comments/like`,
-    UNLIKE: `${PROTECTED}/comments/unlike`,
+    LIST: `${V1}/comments`,
+    REPLIES: `${V1}/comments/replies`,
+    LIKES: `${V1}/comments/likes`,
+    CREATE: `${V1}/comments/create`,
+    DELETE: `${V1}/comments/delete`,
+    LIKE: `${V1}/comments/like`,
+    UNLIKE: `${V1}/comments/unlike`,
   },
 
   // ==================== 私聊管理 ====================
   PRIVATE_CHATS: {
-    CREATE: `${PROTECTED}/private_chats/create`,
-    OPEN_THE_DOOR: `${PROTECTED}/private_chats/open_the_door`,
-    UPDATE_SETTINGS: `${PROTECTED}/private_chats/update_settings`,
-    DELETE: `${PROTECTED}/private_chats/delete`,
-    // 当前用户私聊 (/me/ 路径)
+    CREATE: `${V1}/private_chats/create`,
+    OPEN_THE_DOOR: `${V1}/private_chats/open_the_door`,
+    UPDATE_SETTINGS: `${V1}/private_chats/update_settings`,
+    DELETE: `${V1}/private_chats/delete`,
     ME: {
-      LIST: `${PROTECTED}/private_chats/me`,
+      LIST: `${V1}/private_chats/me`,
     },
   },
 
   // ==================== 私聊消息 ====================
   PRIVATE_MESSAGES: {
-    SEND: `${PROTECTED}/private_messages/send`,
-    HISTORY: `${PROTECTED}/private_messages/history`,
-    UPDATE: `${PROTECTED}/private_messages/update`,
-    RECALL: `${PROTECTED}/private_messages/recall`,
-    DELETE: `${PROTECTED}/private_messages/delete`,
-    MARK_AS_READ: `${PROTECTED}/private_messages/mark_as_read`,
-    ADD_REACTION: `${PROTECTED}/private_messages/add_reaction`,
-    REMOVE_REACTION: `${PROTECTED}/private_messages/remove_reaction`,
-    REACTIONS: `${PROTECTED}/private_messages/reactions`,
+    SEND: `${V1}/private_messages/send`,
+    HISTORY: `${V1}/private_messages/history`,
+    UPDATE: `${V1}/private_messages/update`,
+    RECALL: `${V1}/private_messages/recall`,
+    DELETE: `${V1}/private_messages/delete`,
+    MARK_AS_READ: `${V1}/private_messages/mark_as_read`,
+    ADD_REACTION: `${V1}/private_messages/add_reaction`,
+    REMOVE_REACTION: `${V1}/private_messages/remove_reaction`,
+    REACTIONS: `${V1}/private_messages/reactions`,
   },
 
   // ==================== 群组管理 ====================
   GROUP_CHATS: {
-    // 公开接口
-    SEARCH_BY_KEYWORD: `${PUBLIC}/groups/search_by_keyword`,
-    SEARCH_BY_TAG: `${PUBLIC}/groups/search_by_tag`,
-    SEARCH_BY_LOCATION: `${PUBLIC}/groups/search_by_location`,
-    OPEN_THE_DOOR: `${PUBLIC}/groups/open_the_door`,
-    SETTINGS: `${PUBLIC}/groups/settings`,
-    // 受保护接口
-    CREATE: `${PROTECTED}/groups/create`,
-    UPDATE: `${PROTECTED}/groups/update`,
-    DELETE: `${PROTECTED}/groups/delete`,
-    TRANSFER_OWNERSHIP: `${PROTECTED}/groups/transfer_ownership`,
-    // 成员管理
+    SEARCH_BY_KEYWORD: `${V1}/groups/search_by_keyword`,
+    SEARCH_BY_TAG: `${V1}/groups/search_by_tag`,
+    SEARCH_BY_LOCATION: `${V1}/groups/search_by_location`,
+    OPEN_THE_DOOR: `${V1}/groups/open_the_door`,
+    SETTINGS: `${V1}/groups/settings`,
+    CREATE: `${V1}/groups/create`,
+    UPDATE: `${V1}/groups/update`,
+    DELETE: `${V1}/groups/delete`,
+    TRANSFER_OWNERSHIP: `${V1}/groups/transfer_ownership`,
     MEMBERS: {
-      LIST: `${PUBLIC}/groups/members`,
-      INVITE: `${PROTECTED}/groups/members/invite`,
-      JOIN: `${PROTECTED}/groups/members/join`,
-      APPLY: `${PROTECTED}/groups/members/apply`,
-      SET_ROLE: `${PROTECTED}/groups/members/set_role`,
-      MUTE: `${PROTECTED}/groups/members/mute`,
-      UNMUTE: `${PROTECTED}/groups/members/unmute`,
-      BAN: `${PROTECTED}/groups/members/ban`,
-      UNBAN: `${PROTECTED}/groups/members/unban`,
-      BANNED: `${PROTECTED}/groups/members/banned`,
-      REMOVE_MEMBER: `${PROTECTED}/groups/members/remove_member`,
+      LIST: `${V1}/groups/members`,
+      INVITE: `${V1}/groups/members/invite`,
+      JOIN: `${V1}/groups/members/join`,
+      APPLY: `${V1}/groups/members/apply`,
+      SET_ROLE: `${V1}/groups/members/set_role`,
+      MUTE: `${V1}/groups/members/mute`,
+      UNMUTE: `${V1}/groups/members/unmute`,
+      BAN: `${V1}/groups/members/ban`,
+      UNBAN: `${V1}/groups/members/unban`,
+      BANNED: `${V1}/groups/members/banned`,
+      REMOVE_MEMBER: `${V1}/groups/members/remove_member`,
     },
-    // 申请管理
     APPLICATIONS: {
-      LIST: `${PROTECTED}/groups/applications`,
-      APPROVE: `${PROTECTED}/groups/applications/approve`,
-      REJECT: `${PROTECTED}/groups/applications/reject`,
+      LIST: `${V1}/groups/applications`,
+      APPROVE: `${V1}/groups/applications/approve`,
+      REJECT: `${V1}/groups/applications/reject`,
     },
-    // 当前用户群组操作 (/me/ 路径)
     ME: {
-      LIST: `${PROTECTED}/groups/me`,
-      CANCEL_APPLICATION: `${PROTECTED}/groups/me/applications/cancel`,
-      INVITES: `${PROTECTED}/groups/me/invites`,
-      ACCEPT_INVITE: `${PROTECTED}/groups/me/invites/accept`,
-      REJECT_INVITE: `${PROTECTED}/groups/me/invites/reject`,
-      LEAVE: `${PROTECTED}/groups/me/leave`,
+      LIST: `${V1}/groups/me`,
+      CANCEL_APPLICATION: `${V1}/groups/me/applications/cancel`,
+      INVITES: `${V1}/groups/me/invites`,
+      ACCEPT_INVITE: `${V1}/groups/me/invites/accept`,
+      REJECT_INVITE: `${V1}/groups/me/invites/reject`,
+      LEAVE: `${V1}/groups/me/leave`,
     },
   },
 
   // ==================== 群聊消息 ====================
   GROUP_MESSAGES: {
-    SEND: `${PROTECTED}/group_messages/send`,
-    HISTORY: `${PROTECTED}/group_messages/history`,
-    UPDATE: `${PROTECTED}/group_messages/update`,
-    RECALL: `${PROTECTED}/group_messages/recall`,
-    DELETE: `${PROTECTED}/group_messages/delete`,
-    MARK_AS_READ: `${PROTECTED}/group_messages/mark_as_read`,
-    READ_STATUS: `${PROTECTED}/group_messages/read_status`,
-    ADD_REACTION: `${PROTECTED}/group_messages/add_reaction`,
-    REMOVE_REACTION: `${PROTECTED}/group_messages/remove_reaction`,
-    REACTIONS: `${PROTECTED}/group_messages/reactions`,
+    SEND: `${V1}/group_messages/send`,
+    HISTORY: `${V1}/group_messages/history`,
+    UPDATE: `${V1}/group_messages/update`,
+    RECALL: `${V1}/group_messages/recall`,
+    DELETE: `${V1}/group_messages/delete`,
+    MARK_AS_READ: `${V1}/group_messages/mark_as_read`,
+    READ_STATUS: `${V1}/group_messages/read_status`,
+    ADD_REACTION: `${V1}/group_messages/add_reaction`,
+    REMOVE_REACTION: `${V1}/group_messages/remove_reaction`,
+    REACTIONS: `${V1}/group_messages/reactions`,
   },
 
   // ==================== 消息通用 ====================
   MESSAGES: {
-    MARK_ALL_AS_READ: `${PROTECTED}/messages/mark_all_as_read`,
+    MARK_ALL_AS_READ: `${V1}/messages/mark_all_as_read`,
   },
 
   // ==================== 举报 ====================
   REPORTS: {
-    CREATE: `${PROTECTED}/reports/create`,
-    // 当前用户举报 (/me/ 路径)
+    CREATE: `${V1}/reports/create`,
     ME: {
-      LIST: `${PROTECTED}/reports/me`,
+      LIST: `${V1}/reports/me`,
     },
   },
 
@@ -236,48 +203,49 @@ export const API_ENDPOINTS = {
   // ==================== 通知订阅设置 ====================
   SUBSCRIPTIONS: {
     ME: {
-      ME: `${PROTECTED}/subscriptions/me`,
-      UPDATE: `${PROTECTED}/subscriptions/me/update`,
+      ME: `${V1}/subscriptions/me`,
+      UPDATE: `${V1}/subscriptions/me/update`,
     },
   },
 
   // ==================== 推送设备管理 ====================
   DEVICE_TOKENS: {
     ME: {
-      REGISTER: `${PROTECTED}/device_tokens/me/register`,
-      UNREGISTER: `${PROTECTED}/device_tokens/me/unregister`,
-      ME: `${PROTECTED}/device_tokens/me`,
+      REGISTER: `${V1}/device_tokens/me/register`,
+      UNREGISTER: `${V1}/device_tokens/me/unregister`,
+      ME: `${V1}/device_tokens/me`,
     },
   },
 
   // ==================== 系统 ====================
   SYSTEM: {
-    HEALTH: `${PUBLIC}/system/health`,
+    HEALTH: `${V1}/system/health`,
+    CLIENT_CONFIG: `${V1}/system/client_config`,
   },
 
   // ==================== 媒体上传 ====================
   MEDIA: {
-    UPLOAD: `${PROTECTED}/media/upload`,
-    INITIATE_UPLOAD: `${PROTECTED}/media/initiate_upload`,
-    UPLOAD_CHUNK: `${PROTECTED}/media/upload_chunk`,
-    COMPLETE_UPLOAD: `${PROTECTED}/media/complete_upload`,
-    UPLOAD_STATUS: `${PROTECTED}/media/upload_status`,
-    ABORT_UPLOAD: `${PROTECTED}/media/abort_upload`,
+    UPLOAD: `${V1}/media/upload`,
+    INITIATE_UPLOAD: `${V1}/media/initiate_upload`,
+    UPLOAD_CHUNK: `${V1}/media/upload_chunk`,
+    COMPLETE_UPLOAD: `${V1}/media/complete_upload`,
+    UPLOAD_STATUS: `${V1}/media/upload_status`,
+    ABORT_UPLOAD: `${V1}/media/abort_upload`,
   },
 
   // ==================== 信息流 ====================
   FEED: {
-    MOMENTS: `${PROTECTED}/feed/moments`,
-    GROUPS: `${PROTECTED}/feed/groups`,
-    USERS: `${PROTECTED}/feed/users`,
-    TRENDING: `${PROTECTED}/feed/trending`,
-    FEEDBACK: `${PROTECTED}/feed/feedback`,
+    MOMENTS: `${V1}/feed/moments`,
+    GROUPS: `${V1}/feed/groups`,
+    USERS: `${V1}/feed/users`,
+    TRENDING: `${V1}/feed/trending`,
+    FEEDBACK: `${V1}/feed/feedback`,
   },
 
   // ==================== 标签 ====================
   TAGS: {
-    TRENDING: `${PUBLIC}/tags/trending`,
-    SUGGEST: `${PUBLIC}/tags/suggest`,
+    TRENDING: `${V1}/tags/trending`,
+    SUGGEST: `${V1}/tags/suggest`,
   },
 
   // ==================== 管理员配置 ====================
@@ -291,3 +259,8 @@ export const API_ENDPOINTS = {
     CHANGES: `${ADMIN}/config/changes`,
   },
 } as const;
+
+/**
+ * 快捷引用别名
+ */
+export const ApiEndpoints = API_ENDPOINTS;

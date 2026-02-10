@@ -3,7 +3,7 @@
  * 使用 HarmonyOS 原生 List 组件重构，提供更原生、流畅的体验
  */
 
-import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
+import { GlobalStateManager, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_USER_TYPE } from '../../../core/state/GlobalStateManager';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -19,6 +19,8 @@ import { MessageCacheService } from '../../../core/database/MessageCacheService'
 @Component
 struct SettingsPage {
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfileData | null = null;
+  @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
+  @StorageLink(KEY_USER_TYPE) userType: string = '';
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
 
@@ -146,21 +148,41 @@ struct SettingsPage {
         .divider({ strokeWidth: 1, color: DesignConstants.COLOR.TERTIARY_BG_LIGHT, startMargin: 16, endMargin: 16 })
         .margin({ left: 16, right: 16 })
 
-        // 退出登录
-        ListItem() {
-          Button('退出登录')
-            .width('100%')
-            .height(50)
-            .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
-            .fontColor(DesignConstants.COLOR.ERROR)
-            .fontSize(16)
-            .type(ButtonType.Normal)
-            .onClick(() => {
-              this.logout();
-            })
+        // 退出登录（仅已认证用户显示）
+        if (this.isLoggedIn) {
+          ListItem() {
+            Button('退出登录')
+              .width('100%')
+              .height(50)
+              .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+              .fontColor(DesignConstants.COLOR.ERROR)
+              .fontSize(16)
+              .type(ButtonType.Normal)
+              .onClick(() => {
+                this.logout();
+              })
+          }
+          .borderRadius(DesignConstants.RADIUS.LG)
+          .margin({ left: 16, right: 16, top: 12, bottom: 24 })
         }
-        .borderRadius(DesignConstants.RADIUS.LG)
-        .margin({ left: 16, right: 16, top: 12, bottom: 24 })
+
+        // 未登录时显示登录入口
+        if (!this.isLoggedIn) {
+          ListItem() {
+            Button('登录 / 注册')
+              .width('100%')
+              .height(50)
+              .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
+              .fontColor(Color.White)
+              .fontSize(16)
+              .type(ButtonType.Capsule)
+              .onClick(async () => {
+                const routerInstance = this.getUIContext().getRouter();
+                await routerInstance.pushUrl({ url: `features/auth/pages/${PageNames.LOGIN}` });
+              })
+          }
+          .margin({ left: 16, right: 16, top: 12, bottom: 24 })
+        }
       }
       .width('100%')
       .layoutWeight(1)

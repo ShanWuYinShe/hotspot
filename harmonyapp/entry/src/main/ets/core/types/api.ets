@@ -470,6 +470,8 @@ export interface UserLikedMomentsRequest extends SearchBaseParams {
 export interface MyProfileRequest {}
 
 export interface MyProfileData {
+  user_id?: number;
+  user_type?: UserType;
   nickname: string;
   avatar_url?: string;
   bio?: string;
@@ -477,6 +479,7 @@ export interface MyProfileData {
   gender?: 'male' | 'female' | 'other';
   email?: string;
   phone?: string;
+  login_id?: string;
   location: Location;
   is_online: boolean;
   last_online: string;
