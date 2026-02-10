@@ -163,7 +163,7 @@ export struct GroupPage {
       if (this.isLoading && this.groups.length === 0) {
         SystemLoadingView({ message: '正在加载附近群组...' })
       } else if (this.errorMessage && this.groups.length === 0) {
-        this.buildEmptyState(AppIcon.WARNING, this.errorMessage, '重试', () => this.loadNearbyGroups())
+        this.buildEmptyState(AppIcon.WARNING, this.errorMessage, '重试', () => { this.loadNearbyGroups(); })
       } else if (this.groups.length === 0) {
         Refresh({ refreshing: $$this.isLoading, builder: this.RefreshBuilder() }) {
           this.buildEmptyState(AppIcon.GROUP, '附近暂无群组\n快来创建第一个吧！', undefined, undefined)

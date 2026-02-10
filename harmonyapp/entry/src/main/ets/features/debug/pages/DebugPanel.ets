@@ -49,7 +49,7 @@ struct DebugPanel {
         Text('调试面板')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Medium)
-          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
 
@@ -66,14 +66,14 @@ struct DebugPanel {
       .width('100%')
       .height(56)
       .padding({ left: 8, right: 8 })
-      .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+      .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       Scroll() {
         Column({ space: 16 }) {
           // 状态卡片
           SystemCard({
             cardPadding: 16,
-            cardBackgroundColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT
+            cardBackgroundColor: $r('sys.color.ohos_id_color_background')
           }) {
             Column({ space: 8 }) {
               Text('系统状态')
@@ -133,7 +133,7 @@ struct DebugPanel {
           }
           .width('100%')
           .height(300)
-          .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
+          .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
           .padding(8)
           .borderRadius(8)
         }
@@ -144,7 +144,7 @@ struct DebugPanel {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
   }
 }
 

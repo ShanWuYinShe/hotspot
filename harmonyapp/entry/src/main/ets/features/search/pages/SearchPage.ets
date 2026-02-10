@@ -109,7 +109,7 @@ struct SearchPage {
         TextInput({ placeholder: '搜索用户、群组、瞬间...', text: this.keyword })
           .layoutWeight(1)
           .height(40)
-          .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
+          .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
           .borderRadius(20)
           .padding({ left: 16, right: 16 })
           .margin({ left: 8, right: 16 })
@@ -122,7 +122,7 @@ struct SearchPage {
       }
       .width('100%')
       .height(56)
-      .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+      .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       if (this.isLoading) {
         SystemLoadingView({ message: '搜索中...' }).layoutWeight(1)
@@ -150,25 +150,25 @@ struct SearchPage {
         })
         .width('100%')
         .layoutWeight(1)
-        .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+        .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
       }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
   }
 
   @Builder TabBuilder(index: number, name: string) {
     Column() {
       Text(name)
-        .fontColor(this.currentIndex === index ? DesignConstants.COLOR.BRAND_PRIMARY : DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+        .fontColor(this.currentIndex === index ? $r('sys.color.ohos_id_color_emphasize') : $r('sys.color.ohos_id_color_text_secondary'))
         .fontSize(16)
         .fontWeight(this.currentIndex === index ? FontWeight.Medium : FontWeight.Normal)
         .lineHeight(22)
         .margin({ top: 17, bottom: 7 })
       Divider()
         .strokeWidth(2)
-        .color(DesignConstants.COLOR.BRAND_PRIMARY)
+        .color($r('sys.color.ohos_id_color_emphasize'))
         .opacity(this.currentIndex === index ? 1 : 0)
         .width(20)
     }.width('100%')
@@ -179,7 +179,7 @@ struct SearchPage {
     if (this.hasSearched && data.length === 0) {
       Column({ space: 16 }) {
         Text('🔍').fontSize(48)
-        Text('未找到相关结果').fontSize(16).fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+        Text('未找到相关结果').fontSize(16).fontColor($r('sys.color.ohos_id_color_text_secondary'))
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Center)
     } else {
@@ -211,12 +211,12 @@ struct SearchPage {
         Text(item.nickname)
           .fontSize(16)
           .fontWeight(FontWeight.Medium)
-          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
         
         if (item.bio) {
           Text(item.bio)
             .fontSize(14)
-            .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
@@ -226,7 +226,7 @@ struct SearchPage {
     }
     .width('100%')
     .padding(16)
-    .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+    .backgroundColor($r('sys.color.ohos_id_color_background'))
     .borderRadius(DesignConstants.RADIUS.LG)
     .margin({ bottom: 12 })
   }
@@ -246,16 +246,16 @@ struct SearchPage {
         Text(item.name)
           .fontSize(16)
           .fontWeight(FontWeight.Medium)
-          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
         
         Text(`${item.members_count} 成员`)
           .fontSize(12)
-          .fontColor(DesignConstants.COLOR.TEXT_TERTIARY_LIGHT)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
 
         if (item.description) {
           Text(item.description)
             .fontSize(14)
-            .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
@@ -265,7 +265,7 @@ struct SearchPage {
     }
     .width('100%')
     .padding(16)
-    .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+    .backgroundColor($r('sys.color.ohos_id_color_background'))
     .borderRadius(DesignConstants.RADIUS.LG)
     .margin({ bottom: 12 })
     .onClick(async () => {
@@ -290,18 +290,18 @@ struct SearchPage {
 
         Text(item.user.nickname)
           .fontSize(14)
-          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
       }
 
       Text(item.description)
         .fontSize(16)
-        .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+        .fontColor($r('sys.color.ohos_id_color_text_primary'))
         .maxLines(3)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
     .padding(16)
-    .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+    .backgroundColor($r('sys.color.ohos_id_color_background'))
     .borderRadius(DesignConstants.RADIUS.LG)
     .margin({ bottom: 12 })
   }

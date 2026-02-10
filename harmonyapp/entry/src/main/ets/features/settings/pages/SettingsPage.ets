@@ -214,7 +214,7 @@ struct SettingsPage {
       .alignItems(HorizontalAlign.Start)
 
       Text() {
-        SymbolSpan($r(AppIcon.CHEVRON_RIGHT))
+        SymbolSpan($r(AppIcon.ARROW_RIGHT))
           .fontSize(16)
           .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
       }

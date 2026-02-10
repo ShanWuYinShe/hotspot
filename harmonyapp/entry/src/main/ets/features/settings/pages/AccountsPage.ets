@@ -133,7 +133,7 @@ struct AccountsPage {
         Text('账号管理')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Medium)
-          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
 
@@ -141,23 +141,23 @@ struct AccountsPage {
       }
       .width('100%')
       .height(56)
-      .padding({ left: 8, right: 8 })
-      .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+      .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
+      .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       if (this.isLoading) {
         Text('加载中...')
-          .fontSize(14)
-          .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
           .margin({ top: 24 })
       } else if (this.accounts.length === 0) {
         Column({ space: 12 }) {
           Text('暂无已保存账号')
-            .fontSize(14)
-            .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
 
           Button('去登录/创建访客')
             .type(ButtonType.Capsule)
-            .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
+            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
             .fontColor(Color.White)
             .height(44)
             .onClick(() => {
@@ -166,7 +166,7 @@ struct AccountsPage {
             })
         }
         .width('100%')
-        .padding(24)
+        .padding(DesignConstants.SPACING.XL)
       } else {
         List({ space: 12 }) {
           ForEach(this.accounts, (acc: AppAuthData) => {
@@ -175,20 +175,20 @@ struct AccountsPage {
                 Column({ space: 4 }) {
                   Row({ space: 8 }) {
                     Text(acc.nickname)
-                      .fontSize(16)
-                      .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+                      .fontSize(DesignConstants.FONT.SIZE.LG)
+                      .fontColor($r('sys.color.ohos_id_color_text_primary'))
                     if (this.currentUserId === acc.user_id) {
                       Text('当前')
-                        .fontSize(12)
+                        .fontSize(DesignConstants.FONT.SIZE.SM)
                         .fontColor(Color.White)
-                        .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
-                        .borderRadius(8)
+                        .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+                        .borderRadius(DesignConstants.RADIUS.MD)
                         .padding({ left: 8, right: 8, top: 2, bottom: 2 })
                     }
                   }
                   Text(`ID: ${acc.user_id}`)
-                    .fontSize(12)
-                    .fontColor(DesignConstants.COLOR.TEXT_TERTIARY_LIGHT)
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                 }
                 .layoutWeight(1)
                 .alignItems(HorizontalAlign.Start)
@@ -196,15 +196,15 @@ struct AccountsPage {
                 Row({ space: 8 }) {
                   Button('切换')
                     .type(ButtonType.Capsule)
-                    .fontSize(12)
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
                     .height(32)
-                    .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
-                    .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+                    .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+                    .fontColor($r('sys.color.ohos_id_color_text_primary'))
                     .onClick(() => this.switchTo(acc))
 
                   Button('删除')
                     .type(ButtonType.Capsule)
-                    .fontSize(12)
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
                     .height(32)
                     .backgroundColor(DesignConstants.COLOR.ERROR)
                     .fontColor(Color.White)
@@ -212,11 +212,11 @@ struct AccountsPage {
                 }
               }
               .width('100%')
-              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+              .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
             }
-            .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+            .backgroundColor($r('sys.color.ohos_id_color_background'))
             .borderRadius(DesignConstants.RADIUS.LG)
-            .margin({ left: 16, right: 16 })
+            .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
           }, (acc: AppAuthData) => acc.user_id.toString())
         }
         .width('100%')
@@ -226,7 +226,7 @@ struct AccountsPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
   }
 }
 

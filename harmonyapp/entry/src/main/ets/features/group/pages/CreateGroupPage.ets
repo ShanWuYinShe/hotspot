@@ -181,7 +181,7 @@ struct CreateGroupPage {
           Text('创建群组')
             .fontSize(DesignConstants.FONT.SIZE.XL)
             .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-            .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
             .layoutWeight(1)
             .textAlign(TextAlign.Center)
           
@@ -190,7 +190,7 @@ struct CreateGroupPage {
         .width('100%')
         .height(56)
         .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-        .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+        .backgroundColor($r('sys.color.ohos_id_color_background'))
 
         // 表单内容
         List({ space: 16 }) {
@@ -200,7 +200,7 @@ struct CreateGroupPage {
               Column() {
                 Text('群组名称')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                   .width('100%')
                   .margin({ bottom: 4 })
                 
@@ -221,7 +221,7 @@ struct CreateGroupPage {
               Column() {
                 Text('群组描述')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                   .width('100%')
                   .margin({ bottom: 4 })
                 
@@ -238,9 +238,9 @@ struct CreateGroupPage {
               .padding({ top: 8, bottom: 8 })
             }
           }
-          .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+          .backgroundColor($r('sys.color.ohos_id_color_background'))
           .borderRadius(DesignConstants.RADIUS.LG)
-          .divider({ strokeWidth: 1, color: DesignConstants.COLOR.TERTIARY_BG_LIGHT, startMargin: 16, endMargin: 16 })
+          .divider({ strokeWidth: 1, color: $r('sys.color.ohos_id_color_component_normal'), startMargin: 16, endMargin: 16 })
           .margin({ left: 16, right: 16 })
 
           // 位置信息组
@@ -251,15 +251,15 @@ struct CreateGroupPage {
                   if (this.localLocation) {
                     Text(this.localLocation.locationName)
                       .fontSize(DesignConstants.FONT.SIZE.MD)
-                      .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+                      .fontColor($r('sys.color.ohos_id_color_text_primary'))
                     Text(`${this.localLocation.latitude.toFixed(6)}, ${this.localLocation.longitude.toFixed(6)}`)
                       .fontSize(DesignConstants.FONT.SIZE.SM)
-                      .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+                      .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                       .margin({ top: 2 })
                   } else {
                     Text('正在获取位置...')
                       .fontSize(DesignConstants.FONT.SIZE.MD)
-                      .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+                      .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                   }
                 }
                 .layoutWeight(1)
@@ -268,17 +268,17 @@ struct CreateGroupPage {
                 Row({ space: 8 }) {
                   Button('选点')
                     .type(ButtonType.Capsule)
-                    .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
-                    .fontColor(DesignConstants.COLOR.BRAND_PRIMARY)
-                    .fontSize(12)
+                    .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+                    .fontColor($r('sys.color.ohos_id_color_emphasize'))
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
                     .height(28)
                     .onClick(() => this.openLocationPicker())
 
                   Button('刷新')
                     .type(ButtonType.Capsule)
-                    .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
-                    .fontColor(DesignConstants.COLOR.BRAND_PRIMARY)
-                    .fontSize(12)
+                    .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+                    .fontColor($r('sys.color.ohos_id_color_emphasize'))
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
                     .height(28)
                     .onClick(() => this.refreshLocation())
                 }
@@ -287,7 +287,7 @@ struct CreateGroupPage {
               .padding({ top: 12, bottom: 12 })
             }
           }
-          .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+          .backgroundColor($r('sys.color.ohos_id_color_background'))
           .borderRadius(DesignConstants.RADIUS.LG)
           .margin({ left: 16, right: 16 })
 
@@ -297,13 +297,13 @@ struct CreateGroupPage {
               Row() {
                 Text('最大成员数')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
                   .layoutWeight(1)
 
                 Counter() {
                   Text(this.maxMembers.toString())
                     .fontSize(DesignConstants.FONT.SIZE.MD)
-                    .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+                    .fontColor($r('sys.color.ohos_id_color_text_primary'))
                 }
                 .onInc(() => {
                   if (this.maxMembers < 500) this.maxMembers += 10;
@@ -320,11 +320,11 @@ struct CreateGroupPage {
               Row() {
                 Text('密码保护')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
                   .layoutWeight(1)
 
                 Toggle({ type: ToggleType.Switch, isOn: this.isPasswordRequired })
-                  .selectedColor(DesignConstants.COLOR.BRAND_PRIMARY)
+                  .selectedColor($r('sys.color.ohos_id_color_emphasize'))
                   .onChange((isOn: boolean) => {
                     this.isPasswordRequired = isOn;
                     if (!isOn) this.groupPassword = '';
@@ -339,7 +339,7 @@ struct CreateGroupPage {
                 Column() {
                   Text('群组密码')
                     .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                     .width('100%')
                     .margin({ bottom: 4 })
                   
@@ -358,16 +358,16 @@ struct CreateGroupPage {
               }
             }
           }
-          .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+          .backgroundColor($r('sys.color.ohos_id_color_background'))
           .borderRadius(DesignConstants.RADIUS.LG)
-          .divider({ strokeWidth: 1, color: DesignConstants.COLOR.TERTIARY_BG_LIGHT, startMargin: 16, endMargin: 16 })
+          .divider({ strokeWidth: 1, color: $r('sys.color.ohos_id_color_component_normal'), startMargin: 16, endMargin: 16 })
           .margin({ left: 16, right: 16 })
 
           // 提交按钮
           ListItem() {
             Button('立即创建')
               .type(ButtonType.Capsule)
-              .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
+              .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
               .fontColor(Color.White)
               .width('100%')
               .height(48)
@@ -379,11 +379,11 @@ struct CreateGroupPage {
           .margin({ top: 24, bottom: 48, left: 16, right: 16 })
         }
         .layoutWeight(1)
-        .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+        .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
       }
       .width('100%')
       .height('100%')
-      .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+      .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
 
       if (this.isCreating) {
         SystemLoadingView()
@@ -396,8 +396,8 @@ struct CreateGroupPage {
   @Builder
   ListHeader(title: string) {
     Text(title)
-      .fontSize(14)
-      .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+      .fontSize(DesignConstants.FONT.SIZE.MD)
+      .fontColor($r('sys.color.ohos_id_color_text_secondary'))
       .margin({ left: 12, bottom: 8, top: 16 })
       .width('100%')
   }

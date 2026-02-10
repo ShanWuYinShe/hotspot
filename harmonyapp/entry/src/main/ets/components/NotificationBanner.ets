@@ -4,7 +4,7 @@ import { SystemIcon, AppIcon } from './SystemIcon';
 
 @Component
 export struct NotificationBanner {
-  @ObjectLink notification: SmartNotification; // 使用ObjectLink以响应变化，或者Prop如果数据简单
+  @ObjectLink notification: SmartNotification;
   onClose?: () => void;
   onAction?: (action: NotificationAction) => void;
   onBannerClick?: () => void;
@@ -18,23 +18,23 @@ export struct NotificationBanner {
           iconSize: 24,
           iconColor: this.getPriorityColor(this.notification.priority)
         })
-        .margin({ right: 12 })
+        .margin({ right: DesignConstants.SPACING.MD })
 
         // 内容
         Column() {
           Text(this.notification.title)
-            .fontSize(16)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontWeight(FontWeight.Bold)
-            .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
           Text(this.notification.message)
-            .fontSize(14)
-            .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .margin({ top: 4 })
+            .margin({ top: DesignConstants.SPACING.XS })
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
@@ -51,21 +51,21 @@ export struct NotificationBanner {
             }
           }
         })
-        .margin({ left: 8 })
+        .margin({ left: DesignConstants.SPACING.SM })
       }
       .width('100%')
       .alignItems(VerticalAlign.Top)
 
       // 操作按钮
       if (this.notification.actions && this.notification.actions.length > 0) {
-        Row({ space: 12 }) {
+        Row({ space: DesignConstants.SPACING.MD }) {
           ForEach(this.notification.actions, (action: NotificationAction) => {
             Button(action.label)
               .type(ButtonType.Capsule)
               .height(28)
-              .fontSize(12)
-              .backgroundColor(action.type === 'primary' ? DesignConstants.COLOR.BRAND_PRIMARY : DesignConstants.COLOR.TERTIARY_BG_LIGHT)
-              .fontColor(action.type === 'primary' ? Color.White : DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .backgroundColor(action.type === 'primary' ? $r('sys.color.ohos_id_color_emphasize') : $r('sys.color.ohos_id_color_component_normal'))
+              .fontColor(action.type === 'primary' ? Color.White : $r('sys.color.ohos_id_color_text_primary'))
               .onClick(() => {
                 if (this.onAction) {
                   this.onAction(action);
@@ -74,12 +74,12 @@ export struct NotificationBanner {
           })
         }
         .width('100%')
-        .margin({ top: 12 })
+        .margin({ top: DesignConstants.SPACING.MD })
       }
     }
     .width('100%')
-    .padding(16)
-    .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+    .padding(DesignConstants.SPACING.LG)
+    .backgroundColor($r('sys.color.ohos_id_color_background'))
     .borderRadius(DesignConstants.RADIUS.LG)
     .shadow(DesignConstants.SHADOW.MEDIUM)
     .onClick(() => {
@@ -108,13 +108,3 @@ export struct NotificationBanner {
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

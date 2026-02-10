@@ -292,14 +292,14 @@ struct CreateMomentPage {
         Text('发布瞬间')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
 
         Button('发布')
           .type(ButtonType.Normal)
           .backgroundColor(Color.Transparent)
-          .fontColor(DesignConstants.COLOR.BRAND_PRIMARY)
+          .fontColor($r('sys.color.ohos_id_color_emphasize'))
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .enabled(!this.isPublishing)
           .opacity(this.isPublishing ? 0.5 : 1)
@@ -308,7 +308,7 @@ struct CreateMomentPage {
       .width('100%')
       .height(56)
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-      .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+      .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       List() {
         ListItem() {
@@ -320,7 +320,7 @@ struct CreateMomentPage {
                 })
                 .maxLength(500)
                 .height(120)
-                .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
+                .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
                 .borderRadius(DesignConstants.RADIUS.MD)
             }
           }
@@ -334,12 +334,12 @@ struct CreateMomentPage {
                 Text('添加图片')
                   .fontSize(DesignConstants.FONT.SIZE.LG)
                   .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                  .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
                   .layoutWeight(1)
 
                 Text(`${this.imageUrls.length}/9`)
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
               }
               .width('100%')
               .margin({ bottom: DesignConstants.SPACING.MD })
@@ -361,14 +361,14 @@ struct CreateMomentPage {
                         Image($r('sys.media.ohos_ic_public_add'))
                           .width(24)
                           .height(24)
-                          .fillColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+                          .fillColor($r('sys.color.ohos_id_color_text_secondary'))
                         Text('相册')
                           .fontSize(10)
-                          .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+                          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                       }
                     }
                     .type(ButtonType.Normal)
-                    .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
+                    .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
                     .width('100%')
                     .height('100%')
                     .borderRadius(DesignConstants.RADIUS.MD)
@@ -384,14 +384,14 @@ struct CreateMomentPage {
                         Image($r('sys.media.ohos_ic_public_camera'))
                           .width(24)
                           .height(24)
-                          .fillColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+                          .fillColor($r('sys.color.ohos_id_color_text_secondary'))
                         Text('拍照')
                           .fontSize(10)
-                          .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+                          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                       }
                     }
                     .type(ButtonType.Normal)
-                    .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
+                    .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
                     .width('100%')
                     .height('100%')
                     .borderRadius(DesignConstants.RADIUS.MD)
@@ -415,7 +415,7 @@ struct CreateMomentPage {
               Text('添加标签')
                 .fontSize(DesignConstants.FONT.SIZE.LG)
                 .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+                .fontColor($r('sys.color.ohos_id_color_text_primary'))
                 .width('100%')
                 .margin({ bottom: DesignConstants.SPACING.MD })
 
@@ -427,12 +427,12 @@ struct CreateMomentPage {
                   .layoutWeight(1)
                   .maxLength(20)
                   .height(DesignConstants.COMPONENT.INPUT_HEIGHT)
-                  .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
+                  .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
                   .borderRadius(DesignConstants.RADIUS.MD)
 
                 Button('添加')
                   .type(ButtonType.Capsule)
-                  .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
+                  .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
                   .fontColor(Color.White)
                   .fontSize(DesignConstants.FONT.SIZE.MD)
                   .onClick(() => this.addTag())
@@ -461,21 +461,21 @@ struct CreateMomentPage {
                 Text('位置信息')
                   .fontSize(DesignConstants.FONT.SIZE.LG)
                   .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                  .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
                   .layoutWeight(1)
 
                 Row({ space: DesignConstants.SPACING.SM }) {
                   Button('选点')
                     .type(ButtonType.Normal)
                     .backgroundColor(Color.Transparent)
-                    .fontColor(DesignConstants.COLOR.BRAND_PRIMARY)
+                    .fontColor($r('sys.color.ohos_id_color_emphasize'))
                     .fontSize(DesignConstants.FONT.SIZE.MD)
                     .onClick(() => this.openLocationPicker())
 
                   Button('刷新')
                     .type(ButtonType.Normal)
                     .backgroundColor(Color.Transparent)
-                    .fontColor(DesignConstants.COLOR.BRAND_PRIMARY)
+                    .fontColor($r('sys.color.ohos_id_color_emphasize'))
                     .fontSize(DesignConstants.FONT.SIZE.MD)
                     .onClick(() => this.refreshLocation())
                 }
@@ -488,17 +488,17 @@ struct CreateMomentPage {
                   Image($r('sys.media.ohos_ic_public_location'))
                     .width(20)
                     .height(20)
-                    .fillColor(DesignConstants.COLOR.BRAND_PRIMARY)
+                    .fillColor($r('sys.color.ohos_id_color_emphasize'))
 
                   Column() {
                     Text(this.localLocation.locationName)
                       .fontSize(DesignConstants.FONT.SIZE.MD)
-                      .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+                      .fontColor($r('sys.color.ohos_id_color_text_primary'))
                       .width('100%')
 
                     Text(`${this.localLocation.latitude.toFixed(6)}, ${this.localLocation.longitude.toFixed(6)}`)
                       .fontSize(DesignConstants.FONT.SIZE.SM)
-                      .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+                      .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                       .width('100%')
                       .margin({ top: 2 })
                   }
@@ -508,12 +508,12 @@ struct CreateMomentPage {
                 }
                 .width('100%')
                 .padding(DesignConstants.SPACING.MD)
-                .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
+                .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
                 .borderRadius(DesignConstants.RADIUS.MD)
               } else {
                 Text('正在获取位置信息...')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                   .width('100%')
                   .textAlign(TextAlign.Center)
                   .padding(DesignConstants.SPACING.LG)
@@ -528,7 +528,7 @@ struct CreateMomentPage {
     }
       .width('100%')
       .height('100%')
-      .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+      .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       if (this.isPublishing) {
         SystemLoadingView({ message: this.publishingMessage })
@@ -556,7 +556,7 @@ struct CreateMomentPage {
     Row() {
       Text(`#${tag}`)
         .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor(DesignConstants.COLOR.BRAND_PRIMARY)
+        .fontColor($r('sys.color.ohos_id_color_emphasize'))
 
       IconButton({
         icon: AppIcon.CLOSE,
@@ -573,7 +573,7 @@ struct CreateMomentPage {
       top: DesignConstants.SPACING.XS,
       bottom: DesignConstants.SPACING.XS
     })
-    .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
+    .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
     .borderRadius(DesignConstants.RADIUS.LG)
     .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
   }
@@ -586,7 +586,7 @@ struct CreateMomentPage {
         .height('100%')
         .borderRadius(DesignConstants.RADIUS.MD)
         .objectFit(ImageFit.Cover)
-        .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
+        .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
 
       Button() {
         Image($r('sys.media.ohos_ic_public_cancel'))

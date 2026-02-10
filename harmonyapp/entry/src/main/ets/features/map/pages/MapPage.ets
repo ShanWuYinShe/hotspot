@@ -313,7 +313,7 @@ export struct MapPage {
 
           // 我的位置
           Text() {
-            SymbolSpan($r(AppIcon.MAP_PIN))
+            SymbolSpan($r(AppIcon.MAP))
               .fontSize(22)
               .fontColor([$r('sys.color.ohos_id_color_text_primary')])
           }

@@ -169,7 +169,7 @@ struct LocationPickerPage {
         Text(this.titleText)
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
 
@@ -178,7 +178,7 @@ struct LocationPickerPage {
       .width('100%')
       .height(56)
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-      .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+      .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       // 地图 + 底部信息
       Stack() {
@@ -205,21 +205,21 @@ struct LocationPickerPage {
           Column() {
           Text(this.selected?.locationName || this.hintText)
               .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+              .fontColor($r('sys.color.ohos_id_color_text_primary'))
               .maxLines(2)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
 
             if (this.selected) {
               Text(`${this.selected.latitude.toFixed(6)}, ${this.selected.longitude.toFixed(6)}`)
                 .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                 .margin({ top: 4 })
             }
 
             if (this.isResolving) {
               Text('正在解析地址…')
                 .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                 .margin({ top: 4 })
             }
           }
@@ -243,7 +243,7 @@ struct LocationPickerPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
   }
 }
 

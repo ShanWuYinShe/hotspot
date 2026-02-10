@@ -226,9 +226,9 @@ struct GroupDetailPage {
   private getRoleColor(role: string): ResourceColor {
     switch (role) {
       case 'owner': return DesignConstants.COLOR.WARNING;
-      case 'admin': return DesignConstants.COLOR.BRAND_PRIMARY;
-      case 'member': return DesignConstants.COLOR.TEXT_SECONDARY_LIGHT;
-      default: return DesignConstants.COLOR.TEXT_SECONDARY_LIGHT;
+      case 'admin': return $r('sys.color.ohos_id_color_emphasize');
+      case 'member': return $r('sys.color.ohos_id_color_text_secondary');
+      default: return $r('sys.color.ohos_id_color_text_secondary');
     }
   }
 
@@ -276,7 +276,7 @@ struct GroupDetailPage {
         Text('群组详情')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
 
@@ -285,7 +285,7 @@ struct GroupDetailPage {
       .width('100%')
       .height(56)
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-      .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+      .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       if (this.isLoading) {
         SystemLoadingView({ message: '加载群组信息中...' }).layoutWeight(1)
@@ -294,12 +294,12 @@ struct GroupDetailPage {
           Text('😕').fontSize(48).margin({ bottom: DesignConstants.SPACING.MD })
           Text(this.errorMessage)
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .textAlign(TextAlign.Center)
             .margin({ bottom: DesignConstants.SPACING.XL })
           Button('重试')
             .type(ButtonType.Capsule)
-            .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
+            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
             .fontColor(Color.White)
             .onClick(() => this.loadGroupDetail())
         }
@@ -323,13 +323,13 @@ struct GroupDetailPage {
                 Text(this.groupInfo?.name || '')
                   .fontSize(DesignConstants.FONT.SIZE.XL)
                   .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-                  .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
                   .margin({ top: DesignConstants.SPACING.MD })
                 
                 if (this.groupInfo?.description) {
                   Text(this.groupInfo?.description)
                     .fontSize(DesignConstants.FONT.SIZE.MD)
-                    .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                     .textAlign(TextAlign.Center)
                     .maxLines(3)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -345,10 +345,10 @@ struct GroupDetailPage {
                   Text(this.groupInfo?.members_count.toString())
                     .fontSize(DesignConstants.FONT.SIZE.LG)
                     .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-                    .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+                    .fontColor($r('sys.color.ohos_id_color_text_primary'))
                   Text('成员')
                     .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                     .margin({ top: 4 })
                 }
                 .layoutWeight(1)
@@ -357,10 +357,10 @@ struct GroupDetailPage {
                   Text(this.groupInfo?.location?.distance ? `${Math.round(this.groupInfo.location.distance)}m` : '--')
                     .fontSize(DesignConstants.FONT.SIZE.LG)
                     .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-                    .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+                    .fontColor($r('sys.color.ohos_id_color_text_primary'))
                   Text('距离')
                     .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                     .margin({ top: 4 })
                 }
                 .layoutWeight(1)
@@ -370,7 +370,7 @@ struct GroupDetailPage {
               .justifyContent(FlexAlign.SpaceAround)
             }
           }
-          .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+          .backgroundColor($r('sys.color.ohos_id_color_background'))
           .borderRadius(DesignConstants.RADIUS.LG)
           .margin({ left: 16, right: 16 })
 
@@ -381,11 +381,11 @@ struct GroupDetailPage {
                   Image($r('sys.media.ohos_ic_public_location'))
                     .width(20)
                     .height(20)
-                    .fillColor(DesignConstants.COLOR.BRAND_PRIMARY)
+                    .fillColor($r('sys.color.ohos_id_color_emphasize'))
                   Text('位置信息')
                     .fontSize(DesignConstants.FONT.SIZE.LG)
                     .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                    .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+                    .fontColor($r('sys.color.ohos_id_color_text_primary'))
                     .margin({ left: DesignConstants.SPACING.SM })
                 }
                 .width('100%')
@@ -393,20 +393,20 @@ struct GroupDetailPage {
 
                 Text(this.groupInfo?.location?.location_name || '未知位置')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                   .width('100%')
 
                 if (this.groupInfo?.location) {
                   Text(`${this.groupInfo.location.latitude.toFixed(6)}, ${this.groupInfo.location.longitude.toFixed(6)}`)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                     .width('100%')
                     .margin({ top: 4 })
                 }
              }
              .padding(DesignConstants.SPACING.LG)
           }
-          .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+          .backgroundColor($r('sys.color.ohos_id_color_background'))
           .borderRadius(DesignConstants.RADIUS.LG)
           .margin({ left: 16, right: 16 })
 
@@ -417,10 +417,10 @@ struct GroupDetailPage {
                  Text('群组成员')
                   .fontSize(DesignConstants.FONT.SIZE.LG)
                   .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                  .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
                  Text(`${this.groupInfo?.members_count} 名成员`)
                   .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                   .margin({ top: 4 })
               }
               .layoutWeight(1)
@@ -428,13 +428,13 @@ struct GroupDetailPage {
 
               Text('查看全部 >')
                 .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontColor(DesignConstants.COLOR.BRAND_PRIMARY)
+                .fontColor($r('sys.color.ohos_id_color_emphasize'))
                 .onClick(() => this.loadGroupMembers())
             }
             .width('100%')
             .padding(DesignConstants.SPACING.LG)
           }
-          .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+          .backgroundColor($r('sys.color.ohos_id_color_background'))
           .borderRadius(DesignConstants.RADIUS.LG)
           .margin({ left: 16, right: 16 })
 
@@ -444,7 +444,7 @@ struct GroupDetailPage {
                 if (this.isMember) {
                   Button('进入聊天')
                     .type(ButtonType.Capsule)
-                    .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
+                    .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
                     .fontColor(Color.White)
                     .width('100%')
                     .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
@@ -469,14 +469,14 @@ struct GroupDetailPage {
                       })
                       .fontSize(16)
                       .padding(16)
-                      .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+                      .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
                       .borderRadius(DesignConstants.RADIUS.MD)
                       .margin({ bottom: DesignConstants.SPACING.MD })
                   }
 
                   Button(this.groupInfo?.has_password ? '加入群组（需要密码）' : '加入群组')
                     .type(ButtonType.Capsule)
-                    .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
+                    .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
                     .fontColor(Color.White)
                     .width('100%')
                     .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
@@ -486,7 +486,7 @@ struct GroupDetailPage {
              }
              .padding(DesignConstants.SPACING.LG)
           }
-          .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+          .backgroundColor($r('sys.color.ohos_id_color_background'))
           .borderRadius(DesignConstants.RADIUS.LG)
           .margin({ left: 16, right: 16, bottom: 24 })
 
@@ -498,13 +498,13 @@ struct GroupDetailPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
     .bindSheet($$this.showMemberList, this.buildMemberListSheet(), {
       height: '70%',
       // 允许拖拽/点击外部关闭时，不显示右上角关闭按钮（避免冗余）
       showClose: false,
       dragBar: true,
-      backgroundColor: DesignConstants.COLOR.SECONDARY_BG_LIGHT
+      backgroundColor: $r('sys.color.ohos_id_color_sub_background')
     })
   }
 
@@ -516,12 +516,12 @@ struct GroupDetailPage {
         Text('群组成员')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
 
         Text(`${this.members.length} 人`)
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
       }
       .width('100%')
       .padding(DesignConstants.SPACING.LG)
@@ -545,7 +545,7 @@ struct GroupDetailPage {
         Column() {
           Text('暂无成员信息')
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         }
         .width('100%')
         .layoutWeight(1)
@@ -554,7 +554,7 @@ struct GroupDetailPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
   }
 
   @Builder
@@ -571,7 +571,7 @@ struct GroupDetailPage {
         Text(member.user.nickname)
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
@@ -579,14 +579,14 @@ struct GroupDetailPage {
           Text(this.getRoleDisplayText(member.role))
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getRoleColor(member.role))
-            .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
+            .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
             .padding({ left: 6, right: 6, top: 2, bottom: 2 })
             .borderRadius(4)
 
           if (member.joined_at) {
             Text(`加入于 ${new Date(member.joined_at).toLocaleDateString()}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
               .margin({ left: 8 })
           }
         }
@@ -598,7 +598,7 @@ struct GroupDetailPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
-    .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
     .borderRadius(DesignConstants.RADIUS.MD)
     .margin({ bottom: DesignConstants.SPACING.SM })
   }

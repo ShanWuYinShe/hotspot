@@ -398,7 +398,7 @@ struct ChatPage {
         Text(this.title)
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Medium)
-          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
         
@@ -426,8 +426,8 @@ struct ChatPage {
       }
       .width('100%')
       .height(56)
-      .padding({ left: 8, right: 8 })
-      .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+      .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
+      .backgroundColor($r('sys.color.ohos_id_color_background'))
       .zIndex(1)
 
       // 消息列表
@@ -440,17 +440,17 @@ struct ChatPage {
       }
       .width('100%')
       .layoutWeight(1)
-      .padding({ left: 16, right: 16, top: 16, bottom: 16 })
-      .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+      .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
 
       // 输入框
       Row() {
         TextInput({ text: this.inputText, placeholder: '发送消息...' })
           .layoutWeight(1)
           .height(40)
-          .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
+          .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
           .borderRadius(20)
-          .padding({ left: 16, right: 16 })
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
           .onChange((value) => {
             this.inputText = value;
           })
@@ -460,20 +460,20 @@ struct ChatPage {
 
         Button('发送')
           .type(ButtonType.Capsule)
-          .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
+          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
           .fontColor(Color.White)
           .height(36)
-          .margin({ left: 12 })
+          .margin({ left: DesignConstants.SPACING.MD })
           .enabled(!this.isSending && this.inputText.trim().length > 0)
           .onClick(() => this.sendMessage())
       }
       .width('100%')
-      .padding({ left: 16, right: 16, top: 8, bottom: 8 })
-      .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+      .backgroundColor($r('sys.color.ohos_id_color_background'))
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
   }
 
   @Builder
@@ -482,8 +482,8 @@ struct ChatPage {
       Row() {
         Text(msg.content)
           .fontSize(12)
-          .fontColor(DesignConstants.COLOR.TEXT_TERTIARY_LIGHT)
-          .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
           .padding({ left: 12, right: 12, top: 4, bottom: 4 })
           .borderRadius(12)
       }
@@ -505,7 +505,7 @@ struct ChatPage {
           if (!msg.isSelf && this.chatType === 'group_chat') {
             Text(msg.senderName)
               .fontSize(12)
-              .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
               .margin({ bottom: 4, left: 4 })
           }
 
@@ -518,8 +518,8 @@ struct ChatPage {
             } else {
               Text(msg.content)
                 .fontSize(16)
-                .fontColor(msg.isSelf ? Color.White : DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
-                .backgroundColor(msg.isSelf ? DesignConstants.COLOR.BRAND_PRIMARY : DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+                .fontColor(msg.isSelf ? Color.White : $r('sys.color.ohos_id_color_text_primary'))
+                .backgroundColor(msg.isSelf ? $r('sys.color.ohos_id_color_emphasize') : $r('sys.color.ohos_id_color_background'))
                 .padding(12)
                 .borderRadius(16)
                 .constraintSize({ maxWidth: '70%' })

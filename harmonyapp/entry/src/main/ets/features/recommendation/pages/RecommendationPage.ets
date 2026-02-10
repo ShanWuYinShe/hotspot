@@ -59,13 +59,13 @@ struct RecommendationPage {
         Text('推荐')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Bold)
-          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
-          .padding({ left: 16 })
+          .padding({ left: DesignConstants.SPACING.LG })
       }
       .width('100%')
       .height(56)
-      .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+      .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       if (this.isLoading) {
         SystemLoadingView({ message: '加载推荐内容...' })
@@ -75,33 +75,33 @@ struct RecommendationPage {
           ListItem() {
             Column({ space: 12 }) {
               Text('热门话题')
-                .fontSize(16)
+                .fontSize(DesignConstants.FONT.SIZE.LG)
                 .fontWeight(FontWeight.Bold)
                 .width('100%')
-                .padding({ left: 8 })
+                .padding({ left: DesignConstants.SPACING.SM })
               
               Flex({ wrap: FlexWrap.Wrap }) {
                 if (this.trendingTags.length > 0) {
                   ForEach(this.trendingTags, (tag: TagItem) => {
                     Text(`#${tag.name}`)
-                      .padding(8)
-                      .backgroundColor(DesignConstants.COLOR.TERTIARY_BG_LIGHT)
-                      .borderRadius(16)
-                      .margin({ right: 8, bottom: 8 })
+                      .padding(DesignConstants.SPACING.SM)
+                      .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+                      .borderRadius(DesignConstants.RADIUS.XL)
+                      .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
                   }, (tag: TagItem) => tag.name)
                 } else {
                   Text('暂无热门话题')
-                    .fontSize(14)
-                    .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
-                    .padding(8)
+                    .fontSize(DesignConstants.FONT.SIZE.MD)
+                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                    .padding(DesignConstants.SPACING.SM)
                 }
               }
               .padding({ left: 8, right: 8 })
             }
           }
           .width('100%')
-          .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
-          .padding(16)
+          .backgroundColor($r('sys.color.ohos_id_color_background'))
+          .padding(DesignConstants.SPACING.LG)
           .borderRadius(DesignConstants.RADIUS.LG)
 
 
@@ -120,11 +120,11 @@ struct RecommendationPage {
                     
                     Column() {
                       Text(user.nickname)
-                        .fontSize(16)
+                        .fontSize(DesignConstants.FONT.SIZE.LG)
                         .fontWeight(FontWeight.Medium)
                       Text('可能会感兴趣')
-                        .fontSize(12)
-                        .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+                        .fontSize(DesignConstants.FONT.SIZE.SM)
+                        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                     }
                     .alignItems(HorizontalAlign.Start)
                     .layoutWeight(1)
@@ -132,8 +132,8 @@ struct RecommendationPage {
                     Button('关注')
                       .type(ButtonType.Capsule)
                       .height(28)
-                      .fontSize(12)
-                      .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
+                      .fontSize(DesignConstants.FONT.SIZE.SM)
+                      .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
                       .onClick(async () => {
                         try {
                           await ApiClient.followUser({ user_id: user.user_id });
@@ -144,34 +144,34 @@ struct RecommendationPage {
                       })
                   }
                   .width('100%')
-                  .padding(16)
-                  .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+                  .padding(DesignConstants.SPACING.LG)
+                  .backgroundColor($r('sys.color.ohos_id_color_background'))
                 }
               }, (user: FeedUserItem) => String(user.user_id))
             }
             .borderRadius(DesignConstants.RADIUS.LG)
-            .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
-            .divider({ strokeWidth: 1, color: DesignConstants.COLOR.TERTIARY_BG_LIGHT, startMargin: 68, endMargin: 16 })
+            .backgroundColor($r('sys.color.ohos_id_color_background'))
+            .divider({ strokeWidth: 1, color: $r('sys.color.ohos_id_color_component_normal'), startMargin: 68, endMargin: 16 })
           }
         }
         .width('100%')
         .layoutWeight(1)
-        .padding({ left: 16, right: 16, top: 16, bottom: 16 })
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
         .scrollBar(BarState.Auto)
       }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
   }
 
   @Builder
   ListHeader(title: string) {
     Text(title)
-      .fontSize(16)
+      .fontSize(DesignConstants.FONT.SIZE.LG)
       .fontWeight(FontWeight.Bold)
       .width('100%')
-      .padding({ left: 8, bottom: 8, top: 8 })
-      .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+      .padding({ left: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.SM })
+      .fontColor($r('sys.color.ohos_id_color_text_primary'))
   }
 }

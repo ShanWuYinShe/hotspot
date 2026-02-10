@@ -390,7 +390,7 @@ export struct MomentPage {
         }
 
         Row({ space: DesignConstants.SPACING.XS }) {
-          SystemIcon({ icon: AppIcon.MESSAGE, iconSize: 20, iconColor: $r('sys.color.ohos_id_color_text_secondary') as unknown as string })
+          SystemIcon({ icon: AppIcon.MESSAGE, iconSize: 20, iconColor: DesignConstants.COLOR.TEXT_SECONDARY_LIGHT })
           Text(moment.comments_count.toString())
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
@@ -399,7 +399,7 @@ export struct MomentPage {
         Blank()
 
         Row({ space: DesignConstants.SPACING.XS }) {
-          SystemIcon({ icon: AppIcon.SHARE, iconSize: 20, iconColor: $r('sys.color.ohos_id_color_text_secondary') as unknown as string })
+          SystemIcon({ icon: AppIcon.SHARE, iconSize: 20, iconColor: DesignConstants.COLOR.TEXT_SECONDARY_LIGHT })
           Text('分享')
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
@@ -434,7 +434,7 @@ struct LikeButton {
       SystemIcon({
         icon: this.isLiked ? AppIcon.HEART_FILL : AppIcon.HEART,
         iconSize: 20,
-        iconColor: this.isLiked ? DesignConstants.COLOR.ERROR : ($r('sys.color.ohos_id_color_text_secondary') as unknown as string),
+        iconColor: this.isLiked ? DesignConstants.COLOR.ERROR : DesignConstants.COLOR.TEXT_SECONDARY_LIGHT,
         clickable: true,
         onIconClick: () => {
           this.isLiked = !this.isLiked;

@@ -174,7 +174,7 @@ struct SubscriptionsPage {
         Text('通知订阅')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Medium)
-          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
 
@@ -182,19 +182,19 @@ struct SubscriptionsPage {
       }
       .width('100%')
       .height(56)
-      .padding({ left: 8, right: 8 })
-      .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+      .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
+      .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       if (this.loading) {
         Column() {
           Text('加载中...')
-            .fontSize(16)
-            .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         }
         .layoutWeight(1)
         .justifyContent(FlexAlign.Center)
         .width('100%')
-        .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+        .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
       } else {
         List({ space: 0 }) {
           ListItemGroup({ header: this.ListHeader('通知类型') }) {
@@ -203,50 +203,50 @@ struct SubscriptionsPage {
                 Row() {
                   Column({ space: 4 }) {
                     Text(item.title)
-                      .fontSize(16)
-                      .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+                      .fontSize(DesignConstants.FONT.SIZE.LG)
+                      .fontColor($r('sys.color.ohos_id_color_text_primary'))
                     Text(item.description)
-                      .fontSize(13)
-                      .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+                      .fontSize(DesignConstants.FONT.SIZE.MD)
+                      .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                   }
                   .layoutWeight(1)
                   .alignItems(HorizontalAlign.Start)
 
                   Toggle({ type: ToggleType.Switch, isOn: this.getValue(item.key) })
-                    .selectedColor(DesignConstants.COLOR.BRAND_PRIMARY)
+                    .selectedColor($r('sys.color.ohos_id_color_emphasize'))
                     .onChange((isOn: boolean) => {
                       this.update(item.key, isOn);
                     })
                     .enabled(!this.savingKey || this.savingKey === String(item.key))
                 }
                 .width('100%')
-                .padding(16)
+                .padding(DesignConstants.SPACING.LG)
               }
-              .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+              .backgroundColor($r('sys.color.ohos_id_color_background'))
             }, (i: SubscriptionItem) => i.key as string)
           }
           .borderRadius(DesignConstants.RADIUS.LG)
-          .divider({ strokeWidth: 1, color: DesignConstants.COLOR.TERTIARY_BG_LIGHT, startMargin: 16, endMargin: 16 })
-          .margin({ left: 16, right: 16, top: 16, bottom: 24 })
+          .divider({ strokeWidth: 1, color: $r('sys.color.ohos_id_color_component_normal'), startMargin: 16, endMargin: 16 })
+          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XL })
         }
         .layoutWeight(1)
         .scrollBar(BarState.Auto)
         .sticky(StickyStyle.Header)
         .width('100%')
-        .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+        .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
       }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
   }
 
   @Builder
   private ListHeader(title: string) {
     Text(title)
-      .fontSize(14)
-      .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
-      .margin({ left: 12, bottom: 8, top: 16 })
+      .fontSize(DesignConstants.FONT.SIZE.MD)
+      .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+      .margin({ left: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.LG })
       .width('100%')
   }
 }
