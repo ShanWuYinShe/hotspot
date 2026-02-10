@@ -152,30 +152,114 @@ export struct ProfilePage {
       if (this.isLoading) {
         SystemLoadingView({ message: '正在更新...' }).layoutWeight(1)
       } else if (!this.isLoggedIn) {
-        // 未登录状态
-        Column({ space: 16 }) {
-          Text('🔐')
-            .fontSize(48)
-          Text('请先登录\n查看个人信息')
-            .fontSize(16)
-            .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
-            .textAlign(TextAlign.Center)
-          Button('去登录')
-            .type(ButtonType.Capsule)
-            .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
-            .fontColor(Color.White)
+        // 未登录 - 游客引导界面
+        Scroll() {
+          Column({ space: 24 }) {
+            // 头像占位 + 欢迎语
+            Column({ space: 12 }) {
+              Stack() {
+                Circle()
+                  .width(80)
+                  .height(80)
+                  .fill($r('sys.color.ohos_id_color_component_normal'))
+                Text() {
+                  SymbolSpan($r(AppIcon.PERSON))
+                    .fontSize(36)
+                    .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+                }
+              }
+
+              Text('游客模式')
+                .fontSize(20)
+                .fontWeight(FontWeight.Medium)
+                .fontColor($r('sys.color.ohos_id_color_text_primary'))
+
+              Text('登录后可解锁更多功能')
+                .fontSize(14)
+                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            }
+            .width('100%')
+            .padding({ top: 32, bottom: 16 })
+
+            // 当前可用功能
+            Column({ space: 8 }) {
+              Text('当前可用')
+                .fontSize(14)
+                .fontWeight(FontWeight.Medium)
+                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                .alignSelf(ItemAlign.Start)
+
+              this.GuestFeatureItem('浏览附近群组', AppIcon.GROUP)
+              this.GuestFeatureItem('查看附近瞬间', AppIcon.CAMERA)
+              this.GuestFeatureItem('探索地图', AppIcon.MAP)
+            }
+            .width('100%')
+            .backgroundColor($r('sys.color.ohos_id_color_background'))
+            .borderRadius(DesignConstants.RADIUS.LG)
+            .padding(DesignConstants.SPACING.LG)
+
+            // 登录解锁功能
+            Column({ space: 8 }) {
+              Text('登录后解锁')
+                .fontSize(14)
+                .fontWeight(FontWeight.Medium)
+                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                .alignSelf(ItemAlign.Start)
+
+              this.GuestFeatureItem('发布瞬间、点赞互动', AppIcon.HEART)
+              this.GuestFeatureItem('创建和加入群组', AppIcon.ADD)
+              this.GuestFeatureItem('实时消息聊天', AppIcon.MESSAGE)
+            }
+            .width('100%')
+            .backgroundColor($r('sys.color.ohos_id_color_background'))
+            .borderRadius(DesignConstants.RADIUS.LG)
+            .padding(DesignConstants.SPACING.LG)
+
+            // 登录按钮
+            Button('登录 / 注册')
+              .type(ButtonType.Capsule)
+              .width('100%')
+              .height(48)
+              .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
+              .fontColor(Color.White)
+              .fontSize(16)
+              .onClick(async () => {
+                try {
+                  const routerInstance = this.getUIContext().getRouter();
+                  await routerInstance.pushUrl({ url: `features/auth/pages/${PageNames.LOGIN}` });
+                } catch (error) {
+                  SystemToast.showError('跳转失败', this.getUIContext());
+                }
+              })
+
+            // 设置入口
+            Row({ space: 8 }) {
+              Text() {
+                SymbolSpan($r(AppIcon.SETTINGS))
+                  .fontSize(16)
+                  .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+              }
+              Text('设置')
+                .fontSize(14)
+                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            }
+            .justifyContent(FlexAlign.Center)
+            .width('100%')
+            .padding({ top: 8, bottom: 16 })
             .onClick(async () => {
               try {
-                const routerInstance = this.getUIContext().getRouter();
-                await routerInstance.pushUrl({ url: `features/auth/pages/${PageNames.LOGIN}` });
+                await this.getUIContext().getRouter().pushUrl({
+                  url: `features/settings/pages/${PageNames.SETTINGS}`
+                });
               } catch (error) {
                 SystemToast.showError('跳转失败', this.getUIContext());
               }
             })
+          }
+          .width('100%')
+          .padding({ left: 16, right: 16 })
         }
-        .width('100%')
         .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
       } else {
         // 已登录，使用 List 布局
         List({ space: 12 }) {
@@ -378,6 +462,22 @@ export struct ProfilePage {
       .width('100%')
     }
     .width('100%')
+  }
+
+  @Builder
+  private GuestFeatureItem(label: string, icon: AppIcon): void {
+    Row({ space: 12 }) {
+      Text() {
+        SymbolSpan($r(icon))
+          .fontSize(16)
+          .fontColor([DesignConstants.COLOR.BRAND_PRIMARY])
+      }
+      Text(label)
+        .fontSize(14)
+        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+    }
+    .width('100%')
+    .padding({ top: 8, bottom: 8 })
   }
 
   @Builder

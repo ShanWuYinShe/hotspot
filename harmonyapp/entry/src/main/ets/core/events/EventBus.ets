@@ -109,6 +109,7 @@ export interface EventStats {
  * 事件总线实现
  */
 export class EventBus extends BaseSingleton {
+  private static instance: EventBus | null = null;
   private listeners: Map<string, ListenerInfo[]> = new Map();
   private eventHistory: Event[] = [];
   private stats: EventStats;
@@ -133,14 +134,19 @@ export class EventBus extends BaseSingleton {
    * 获取单例实例
    */
   static getInstance(): EventBus {
-    return super.getInstance() as EventBus;
+    if (!EventBus.instance) {
+      EventBus.instance = new EventBus();
+    }
+    return EventBus.instance;
   }
 
   /**
    * 异步获取单例实例
    */
   static async getInstanceAsync(): Promise<EventBus> {
-    return super.getInstanceAsync() as Promise<EventBus>;
+    const instance = EventBus.getInstance();
+    await instance.initialize();
+    return instance;
   }
 
   /**
@@ -173,6 +179,7 @@ export class EventBus extends BaseSingleton {
       
       // 清理事件历史
       this.eventHistory = [];
+      EventBus.instance = null;
       
       logger.info('事件总线清理完成');
     } catch (error) {

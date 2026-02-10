@@ -381,19 +381,32 @@ export class PermissionManager {
   }
 
   /**
-   * 检查位置权限并请求
+   * 请求位置权限
+   *
+   * HarmonyOS 要求：必须先获得 APPROXIMATELY_LOCATION 授权，
+   * 然后才能请求 LOCATION（精确位置）。顺序不可颠倒。
+   *
+   * @returns true 表示至少获得了大概位置权限
    */
   async requestLocationPermission(): Promise<boolean> {
     try {
-      // 先请求精确位置权限
+      // 第一步：请求大概位置权限（必须先获得）
+      const approximateResult = await this.requestPermission('ohos.permission.APPROXIMATELY_LOCATION');
+      if (!approximateResult.granted) {
+        hilog.warn(DOMAIN_NUMBER, TAG, '大概位置权限被拒绝，无法继续请求精确位置');
+        return false;
+      }
+
+      // 第二步：在大概位置已授权的前提下，请求精确位置权限
       const preciseResult = await this.requestPermission('ohos.permission.LOCATION');
       if (preciseResult.granted) {
+        hilog.info(DOMAIN_NUMBER, TAG, '精确位置权限已授权');
         return true;
       }
 
-      // 如果精确位置被拒绝，尝试请求大概位置权限
-      const approximateResult = await this.requestPermission('ohos.permission.APPROXIMATELY_LOCATION');
-      return approximateResult.granted;
+      // 精确位置被拒绝，但大概位置已授权，仍可使用
+      hilog.info(DOMAIN_NUMBER, TAG, '仅获得大概位置权限');
+      return true;
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `请求位置权限失败: ${JSON.stringify(error)}`);
       return false;

@@ -157,27 +157,28 @@ export struct GroupPage {
       // 标题栏
       Row() {
         Text('附近群组')
-          .fontSize(20)
+          .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Bold)
-          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
 
         Button('创建')
           .type(ButtonType.Capsule)
-          .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
+          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
           .fontColor(Color.White)
-          .fontSize(14)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
           .padding({
-            left: 16,
-            right: 16,
-            top: 8,
-            bottom: 8
+            left: DesignConstants.SPACING.LG,
+            right: DesignConstants.SPACING.LG,
+            top: DesignConstants.SPACING.SM,
+            bottom: DesignConstants.SPACING.SM
           })
           .onClick(() => this.createGroup())
       }
       .width('100%')
-      .padding(16)
-      .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+      .height(56)
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+      .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       // 内容区域
       if (this.isLoading) {

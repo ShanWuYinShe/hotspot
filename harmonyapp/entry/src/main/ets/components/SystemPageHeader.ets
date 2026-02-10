@@ -23,14 +23,16 @@ export struct SystemPageHeader {
       Text(this.title)
         .fontSize(DesignConstants.FONT.SIZE.XL)
         .fontWeight(FontWeight.Bold)
-        .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+        .fontColor($r('sys.color.ohos_id_color_text_primary'))
         .layoutWeight(1)
 
       if (this.action) {
         Button(this.action.label)
           .type(ButtonType.Normal)
           .backgroundColor(Color.Transparent)
-          .fontColor(this.action.disabled ? DesignConstants.COLOR.TEXT_TERTIARY_LIGHT : DesignConstants.COLOR.BRAND_PRIMARY)
+          .fontColor(this.action.disabled
+            ? $r('sys.color.ohos_id_color_text_secondary')
+            : $r('sys.color.ohos_id_color_emphasize'))
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .enabled(!this.action.disabled)
           .onClick(async () => {
@@ -43,8 +45,9 @@ export struct SystemPageHeader {
       }
     }
     .width('100%')
-    .padding(DesignConstants.SPACING.LG)
-    .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+    .height(56)
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+    .backgroundColor($r('sys.color.ohos_id_color_background'))
   }
 }
 

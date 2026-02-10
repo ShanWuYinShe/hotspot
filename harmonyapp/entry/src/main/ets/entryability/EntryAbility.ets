@@ -202,16 +202,16 @@ export default class EntryAbility extends UIAbility {
     try {
       const mainWindow = await windowStage.getMainWindow();
 
-      // 设置窗口全屏
-      await mainWindow.setWindowLayoutFullScreen(true);
+      // 非沉浸式布局：让系统自动管理状态栏和导航栏的安全区域
+      await mainWindow.setWindowLayoutFullScreen(false);
 
       // 设置状态栏和导航栏样式
       await mainWindow.setWindowSystemBarEnable(['status', 'navigation']);
       await mainWindow.setWindowSystemBarProperties({
-        statusBarColor: '#00000000',
-        navigationBarColor: '#00000000',
-        statusBarContentColor: '#FFFFFF',
-        navigationBarContentColor: '#FFFFFF'
+        statusBarColor: '#FFFFFF',
+        navigationBarColor: '#FFFFFF',
+        statusBarContentColor: '#000000',
+        navigationBarContentColor: '#000000'
       });
 
       // 设置窗口方向

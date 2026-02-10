@@ -66,6 +66,7 @@ export interface ContainerStats {
  * 依赖注入容器
  */
 export class Container extends BaseSingleton {
+  private static instance: Container | null = null;
   private services: Map<string, ServiceRegistration> = new Map();
   private stats: ContainerStats;
   private globalScope: Map<string, any> = new Map();
@@ -86,14 +87,19 @@ export class Container extends BaseSingleton {
    * 获取单例实例
    */
   static getInstance(): Container {
-    return super.getInstance();
+    if (!Container.instance) {
+      Container.instance = new Container();
+    }
+    return Container.instance;
   }
 
   /**
    * 异步获取单例实例
    */
   static async getInstanceAsync(): Promise<Container> {
-    return super.getInstanceAsync();
+    const instance = Container.getInstance();
+    await instance.initialize();
+    return instance;
   }
 
   /**
@@ -124,6 +130,7 @@ export class Container extends BaseSingleton {
       // 清理注册信息
       this.services.clear();
       this.globalScope.clear();
+      Container.instance = null;
       
       logger.info('依赖注入容器清理完成');
     } catch (error) {

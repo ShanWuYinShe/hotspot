@@ -16,7 +16,7 @@ import { MyProfileData, UpdateLocationRequest } from '../../../core/types/api';
 import type { ServerEvent } from '../../../core/types/WebSocketTypes';
 import { PermissionManager } from '../../../core/permission/PermissionManager';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { AppIcon, AppIconMap } from '../../../components/SystemIcon';
+import { AppIcon } from '../../../components/SystemIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { SmartNotificationService, NotificationEvent, CreateNotificationInput, NotificationMetadata, CreateNotificationOptions } from '../../../core/services/SmartNotificationService';
 import { CacheManager } from '../../../core/cache/CacheManager';
@@ -105,6 +105,10 @@ struct Index {
       await PreferencesUtil.init(this.abilityContext);
       hilog.info(DOMAIN_NUMBER, TAG, '✅ 存储初始化完成');
 
+      // 初始化权限管理器（必须在使用任何权限 API 之前）
+      await PermissionManager.getInstance().initialize(this.abilityContext);
+      hilog.info(DOMAIN_NUMBER, TAG, '✅ 权限管理器初始化完成');
+
       await this.persistentStateManager.initialize();
       await this.stateManager.initialize();
       await this.initializeSmartServices();
@@ -118,7 +122,8 @@ struct Index {
       }
 
       try {
-        const hasPermission: boolean = await PermissionManager.getInstance().checkLocationPermission();
+        // 主动请求位置权限（而非仅检查）
+        const hasPermission: boolean = await PermissionManager.getInstance().requestLocationPermission();
         if (hasPermission) {
           const location = await LocationUtil.getCurrentLocation();
           if (location) {
@@ -495,19 +500,22 @@ struct Index {
   }
 
   @Builder
-  TabBuilderIcon(title: string, targetIndex: number, icon: string) {
+  TabBuilderIcon(title: string, targetIndex: number, icon: AppIcon) {
     Column() {
-      // 使用 SymbolGlyph 替代 Text 渲染图标
-      SymbolGlyph($r(`sys.symbol.${icon}`))
+      SymbolGlyph($r(icon))
         .fontSize(24)
-        .fontColor([this.currentTabIndex === targetIndex ? DesignConstants.COLOR.BRAND_PRIMARY : DesignConstants.COLOR.TEXT_SECONDARY_LIGHT])
+        .fontColor([this.currentTabIndex === targetIndex
+          ? $r('sys.color.ohos_id_color_emphasize')
+          : $r('sys.color.ohos_id_color_text_secondary')])
         .renderingStrategy(SymbolRenderingStrategy.SINGLE)
-      
+
       Text(title)
-        .fontColor(this.currentTabIndex === targetIndex ? DesignConstants.COLOR.BRAND_PRIMARY : DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+        .fontColor(this.currentTabIndex === targetIndex
+          ? $r('sys.color.ohos_id_color_emphasize')
+          : $r('sys.color.ohos_id_color_text_secondary'))
         .fontSize(10)
         .margin({ top: 4 })
-        .fontWeight(this.currentTabIndex === targetIndex ? 500 : 400)
+        .fontWeight(this.currentTabIndex === targetIndex ? FontWeight.Medium : FontWeight.Normal)
     }
     .width('100%')
     .height(56)
@@ -535,7 +543,7 @@ struct Index {
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
-        .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+        .backgroundColor($r('sys.color.ohos_id_color_background'))
       } else {
         Tabs({ barPosition: BarPosition.End, controller: this.tabsController }) {
           // 1. 群组/发现
@@ -543,7 +551,7 @@ struct Index {
             // 游客允许浏览附近群组；加入/创建等操作在页面内做登录引导
             GroupPage()
           }
-          .tabBar(this.TabBuilderIcon('群组', 0, AppIconMap[AppIcon.GROUP]))
+          .tabBar(this.TabBuilderIcon('群组', 0, AppIcon.GROUP))
 
           // 2. 消息
           TabContent() {
@@ -553,30 +561,30 @@ struct Index {
               this.buildWelcomeView()
             }
           }
-          .tabBar(this.TabBuilderIcon('消息', 1, AppIconMap[AppIcon.MESSAGE]))
+          .tabBar(this.TabBuilderIcon('消息', 1, AppIcon.MESSAGE))
 
           // 3. 瞬间
           TabContent() {
             // 游客允许浏览附近瞬间；发布/点赞等操作在页面内做登录引导
             MomentPage()
           }
-          .tabBar(this.TabBuilderIcon('瞬间', 2, AppIconMap[AppIcon.CAMERA]))
+          .tabBar(this.TabBuilderIcon('瞬间', 2, AppIcon.CAMERA))
 
           // 4. 地图
           TabContent() {
             MapPage()
           }
-          .tabBar(this.TabBuilderIcon('地图', 3, AppIconMap[AppIcon.MAP]))
+          .tabBar(this.TabBuilderIcon('地图', 3, AppIcon.MAP))
 
           // 5. 我的
           TabContent() {
             ProfilePage()
           }
-          .tabBar(this.TabBuilderIcon('我的', 4, AppIconMap[AppIcon.PERSON]))
+          .tabBar(this.TabBuilderIcon('我的', 4, AppIcon.PERSON))
         }
         .scrollable(false)
         .onChange((index: number) => this.handleTabChange(index))
-        .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+        .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
       }
 
       if (this.visibleNotifications.length > 0) {
@@ -598,7 +606,7 @@ struct Index {
           }, (item: SmartNotification) => item.id)
         }
         .width('100%')
-        .padding({ top: 12 + 36, left: 16, right: 16 })
+        .padding({ top: 12, left: 16, right: 16 })
         .hitTestBehavior(HitTestMode.Transparent)
       }
 
@@ -608,7 +616,7 @@ struct Index {
         }
         .width('100%')
         .height('100%')
-        .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+        .backgroundColor($r('sys.color.ohos_id_color_background'))
         .onClick(() => {
           this.showNotificationCenter = false;
         })
@@ -623,7 +631,7 @@ struct Index {
         }
         .width('100%')
         .height('100%')
-        .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+        .backgroundColor($r('sys.color.ohos_id_color_background'))
         .onClick(() => {
           this.showPerformanceDetails = false;
         })
@@ -636,18 +644,24 @@ struct Index {
   @Builder
   private buildWelcomeView() {
     Column({ space: 24 }) {
+      Text() {
+        SymbolSpan($r(AppIcon.MESSAGE))
+          .fontSize(48)
+          .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+      }
+
       Text($r('app.string.module_desc'))
         .fontSize(28)
         .fontWeight(FontWeight.Bold)
-        .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+        .fontColor($r('sys.color.ohos_id_color_text_primary'))
 
       Text($r('app.string.app_description'))
         .fontSize(16)
-        .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
 
       Button($r('app.string.auth_start_experience'))
         .type(ButtonType.Capsule)
-        .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
+        .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
         .fontColor(Color.White)
         .width(200)
         .height(44)
@@ -664,6 +678,6 @@ struct Index {
     .height('100%')
     .justifyContent(FlexAlign.Center)
     .padding(24)
-    .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
   }
 }
