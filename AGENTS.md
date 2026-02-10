@@ -6,6 +6,7 @@
 - `spec/` is the single source of truth for API contracts.
 - `spec/api_spec_*.mdc` defines endpoints, fields, error codes, and WebSocket events.
 - `spec/api_spec_base.mdc` defines global rules (pagination, idempotency, etc.).
+- OpenAPI is not used for now; prefer the `.mdc` specs for AI work.
 - backend/frontend_svelte/harmonyapp 必须严格遵循 spec，冲突以 spec 为准。
 - Do not copy/paste spec contents into docs; reference by file/section title only.
 - Never hardcode API paths; use endpoint constants.
@@ -19,10 +20,7 @@
 - `spec/frontend_rule.mdc` frontend rules
 
 ## Project Layout
-- `spec/` API specs + backend/frontend rules
-- `backend/` Rust (Axum 0.8 + PostgreSQL + Redis)
-- `frontend_svelte/` Svelte 5 + SvelteKit client
-- `harmonyapp/` HarmonyOS (ETS) client
+- `spec/` API specs + rules; `backend/` Rust; `frontend_svelte/` SvelteKit; `harmonyapp/` HarmonyOS.
 
 ## Build / Lint / Test Commands
 ### Backend (Rust)
@@ -54,12 +52,16 @@ pnpm check:watch
 - No unit-test runner configured in `frontend_svelte/package.json`.
 
 ### HarmonyOS (ETS / Hvigor)
+When modifying `harmonyapp/` or collecting build output, ask the user for DevEco Studio install dir or Command Line Tools dir. Derive `DEVECO_SDK_HOME` from that location.
 ```bash
-cd harmonyapp
-hvigor type-check
-hvigor --tasks   # list available build/test tasks
+# DevEco Studio (macOS)
+DEVECO_SDK_HOME="$DEVECO_STUDIO_DIR/Contents/sdk" node "$DEVECO_STUDIO_DIR/Contents/tools/hvigor/bin/hvigorw.js" --tasks   # or type-check
+# DevEco Studio (non-macOS)
+DEVECO_SDK_HOME="$DEVECO_STUDIO_DIR/sdk" node "$DEVECO_STUDIO_DIR/tools/hvigor/bin/hvigorw.js" --tasks   # or type-check
+# Command Line Tools (all platforms)
+DEVECO_SDK_HOME="$COMMANDLINE_TOOL_DIR/sdk" node "$COMMANDLINE_TOOL_DIR/hvigor/bin/hvigorw.js" --tasks   # or type-check
 ```
-- Hvigor tasks are provided by `appTasks`/`hapTasks`; confirm with `hvigor --tasks`.
+- Hvigor tasks are provided by `appTasks`/`hapTasks`; confirm with `--tasks`.
 - Linter configuration: `harmonyapp/code-linter.json5`.
 - Use DevEco Studio when Hvigor tasks are unclear.
 
@@ -141,13 +143,7 @@ import UserCard from '$lib/components/user-card.svelte';
 - Backend config uses env vars; keep defaults in `.env.example` only.
 - Frontend config should avoid embedding secrets; use public envs only.
 
-## Comments & Docs
-- Keep comments brief and factual; avoid duplicating spec text.
-- For Harmony API types, reference spec sections by title only (no chapter numbers).
-
 ## Common Pitfalls
-- Hardcoded API paths or ad-hoc endpoints.
-- Mixing HTTP status with business success.
-- Parsing/decoding cursor values.
+- Hardcoded API paths or ad-hoc endpoints; mixing HTTP status with business success.
 - SQL or business logic inside handlers.
 - Rust `unwrap()` or manual geo distance math.

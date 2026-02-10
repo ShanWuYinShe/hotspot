@@ -3,12 +3,19 @@
  * 只保留核心必要的常量定义
  */
 
-// API 配置（统一同源入口：Nginx 反代 Web + API + WebSocket）
-export const SERVER_BASE_URL = 'http://127.0.0.1:8888';
+import { DEBUG } from 'BuildProfile';
+
+// API 配置：根据构建模式自动切换
+// debug  → 开发服务器（局域网 IP）
+// release → 正式域名
+const DEV_SERVER = 'http://192.168.0.109:8888';
+const PROD_SERVER = 'https://api.chaoset.com';
+
+export const SERVER_BASE_URL: string = DEBUG ? DEV_SERVER : PROD_SERVER;
 
 // 由同一个 BaseUrl 推导出 API / WebSocket 地址（避免多处硬编码）
-export const API_BASE_URL = SERVER_BASE_URL;
-export const WS_BASE_URL = SERVER_BASE_URL.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') + '/ws';
+export const API_BASE_URL: string = SERVER_BASE_URL;
+export const WS_BASE_URL: string = SERVER_BASE_URL.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') + '/ws';
 
 // 业务状态码
 export interface BusinessCodeType {
