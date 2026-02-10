@@ -1,13 +1,11 @@
 /**
- * 极简群组页面
- * 使用HarmonyOS原生能力，去除复杂抽象
- * 优化：添加左滑退出群组功能
+ * 群组页面
+ * 使用 HarmonyOS 原生能力 + 系统颜色资源（支持深色模式）
  */
 
 import { GlobalStateManager, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { LocationUtil } from '../../../core/location/LocationUtil';
 import { PageNames } from '../../../constants/AppConstants';
 import { GroupSearchItem, SearchGroupsByLocationRequest } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -15,12 +13,12 @@ import { IntelligentLocationCard } from '../../../components/IntelligentLocation
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
-import { SystemCard } from '../../../components/SystemCard';
+import { AppIcon } from '../../../components/SystemIcon';
 
 @Component
 export struct GroupPage {
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
-  
+
   private stateManager = GlobalStateManager.getInstance();
   @State groups: GroupSearchItem[] = [];
   @State isLoading: boolean = false;
@@ -30,13 +28,8 @@ export struct GroupPage {
     await this.loadNearbyGroups();
   }
 
-  aboutToDisappear() {
-    // 
-  }
+  aboutToDisappear() {}
 
-  /**
-   * 加载附近群组
-   */
   private async loadNearbyGroups() {
     if (!this.currentLocation) {
       this.errorMessage = '请先获取位置信息';
@@ -52,8 +45,8 @@ export struct GroupPage {
           latitude: this.currentLocation.latitude,
           longitude: this.currentLocation.longitude
         },
-        radius: 5000, // 5km 范围
-        limit: 50     // 最多50个群组
+        radius: 5000,
+        limit: 50
       };
       const response = await ApiClient.searchGroupsByLocation(request);
 
@@ -70,9 +63,6 @@ export struct GroupPage {
     }
   }
 
-  /**
-   * 加入群组
-   */
   private async joinGroup(group: GroupSearchItem) {
     const currentUser = this.stateManager.getCurrentUser();
     if (!currentUser) {
@@ -91,7 +81,6 @@ export struct GroupPage {
 
     if (group.has_password) {
       SystemToast.show('此群组需要密码，请进入详情页加入', this.getUIContext());
-      // 跳转到详情页
       try {
         const routerInstance = this.getUIContext().getRouter();
         await routerInstance.pushUrl({
@@ -107,22 +96,17 @@ export struct GroupPage {
     try {
       await ApiClient.joinGroup({ group_id: group.group_id });
       SystemToast.show('加入群组成功', this.getUIContext());
-      // 自动刷新列表以更新状态（如果需要）或者跳转到群组聊天页面
-      await this.loadNearbyGroups(); 
+      await this.loadNearbyGroups();
     } catch (error) {
-      // 错误处理优化
       const errMsg = error instanceof Error ? error.message : '加入群组失败';
-      if (errMsg.includes('1305')) { // 假设 1305 是 "已在群组中"
-          SystemToast.show('您已是该群成员', this.getUIContext());
+      if (errMsg.includes('1305')) {
+        SystemToast.show('您已是该群成员', this.getUIContext());
       } else {
-          SystemToast.showError(errMsg, this.getUIContext());
+        SystemToast.showError(errMsg, this.getUIContext());
       }
     }
   }
 
-  /**
-   * 创建群组
-   */
   private async createGroup() {
     const currentUser = this.stateManager.getCurrentUser();
     if (!currentUser) {
@@ -167,12 +151,7 @@ export struct GroupPage {
           .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
           .fontColor(Color.White)
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .padding({
-            left: DesignConstants.SPACING.LG,
-            right: DesignConstants.SPACING.LG,
-            top: DesignConstants.SPACING.SM,
-            bottom: DesignConstants.SPACING.SM
-          })
+          .height(32)
           .onClick(() => this.createGroup())
       }
       .width('100%')
@@ -181,76 +160,74 @@ export struct GroupPage {
       .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       // 内容区域
-      if (this.isLoading) {
+      if (this.isLoading && this.groups.length === 0) {
         SystemLoadingView({ message: '正在加载附近群组...' })
-      } else if (this.errorMessage) {
-        // 内联错误视图
-        Column({ space: 16 }) {
-          Text('⚠️')
-            .fontSize(48)
-
-          Text(this.errorMessage)
-            .fontSize(16)
-            .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
-            .textAlign(TextAlign.Center)
-
-          Button('重试')
-            .type(ButtonType.Capsule)
-            .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
-            .fontColor(Color.White)
-            .onClick(() => this.loadNearbyGroups())
-        }
-        .width('100%')
-        .height('100%')
-        .justifyContent(FlexAlign.Center)
-        .padding(24)
+      } else if (this.errorMessage && this.groups.length === 0) {
+        this.buildEmptyState(AppIcon.WARNING, this.errorMessage, '重试', () => this.loadNearbyGroups())
       } else if (this.groups.length === 0) {
-        // 内联空状态视图
         Refresh({ refreshing: $$this.isLoading, builder: this.RefreshBuilder() }) {
-          Column({ space: 16 }) {
-            Text('👥')
-              .fontSize(48)
-
-            Text('附近暂无群组\n快来创建第一个吧！')
-              .fontSize(16)
-              .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
-              .textAlign(TextAlign.Center)
-          }
-          .width('100%')
-          .height('100%')
-          .justifyContent(FlexAlign.Center)
+          this.buildEmptyState(AppIcon.GROUP, '附近暂无群组\n快来创建第一个吧！', undefined, undefined)
         }
-        .onRefreshing(() => {
-          this.loadNearbyGroups();
-        })
+        .onRefreshing(() => { this.loadNearbyGroups(); })
       } else {
         Refresh({ refreshing: $$this.isLoading, builder: this.RefreshBuilder() }) {
           this.buildGroupList()
         }
-        .onRefreshing(() => {
-          this.loadNearbyGroups();
-        })
+        .onRefreshing(() => { this.loadNearbyGroups(); })
       }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+  }
+
+  @Builder
+  private buildEmptyState(icon: AppIcon, message: string, actionLabel: string | undefined, action: (() => void) | undefined) {
+    Column({ space: DesignConstants.SPACING.LG }) {
+      Text() {
+        SymbolSpan($r(icon))
+          .fontSize(48)
+          .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+      }
+
+      Text(message)
+        .fontSize(DesignConstants.FONT.SIZE.LG)
+        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .textAlign(TextAlign.Center)
+        .lineHeight(24)
+
+      if (actionLabel && action) {
+        Button(actionLabel)
+          .type(ButtonType.Capsule)
+          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+          .fontColor(Color.White)
+          .height(40)
+          .onClick(() => { action(); })
+      }
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .padding(DesignConstants.SPACING.XXL)
   }
 
   @Builder
   RefreshBuilder() {
     Row() {
       LoadingProgress().width(24).height(24)
-      Text('正在刷新...').fontSize(14).margin({left: 8}).fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+      Text('正在刷新...')
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .margin({ left: DesignConstants.SPACING.SM })
+        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
     }
     .width('100%')
     .justifyContent(FlexAlign.Center)
-    .padding(10)
+    .padding(DesignConstants.SPACING.SM)
   }
 
   @Builder
   private buildGroupList() {
-    List({ space: 12 }) {
+    List({ space: DesignConstants.SPACING.MD }) {
       ForEach(this.groups, (group: GroupSearchItem) => {
         ListItem() {
           this.buildGroupCard(group)
@@ -259,63 +236,45 @@ export struct GroupPage {
     }
     .width('100%')
     .layoutWeight(1)
-    .padding({
-      left: 16,
-      right: 16,
-      top: 8,
-      bottom: 16
-    })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
     .scrollBar(BarState.Auto)
   }
 
   @Builder
   private buildGroupCard(group: GroupSearchItem) {
-    SystemCard({
-      content: () => {
-        this.GroupCardContent(group);
-      },
-      cardBackgroundColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT
-    })
-    .onClick(async () => {
-      try {
-        const routerInstance = this.getUIContext().getRouter();
-        await routerInstance.pushUrl({
-          url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
-          params: { groupId: group.group_id }
-        });
-      } catch (error) {
-        SystemToast.showError('跳转失败', this.getUIContext());
-      }
-    })
-  }
-
-  @Builder
-  private GroupCardContent(group: GroupSearchItem) {
-    Column({ space: 12 }) {
+    Column({ space: DesignConstants.SPACING.MD }) {
       // 群组基本信息
-      Row({ space: 12 }) {
+      Row({ space: DesignConstants.SPACING.MD }) {
         SystemAvatar({
           avatarUrl: group.avatar_url || '',
           name: group.name,
-          avatarSize: 48
+          avatarSize: 48,
+          shape: 'squircle'
         })
 
         Column({ space: 4 }) {
           Text(group.name)
             .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontWeight(FontWeight.Medium)
-            .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-          Text(`${group.members_count}人`)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+          Row({ space: DesignConstants.SPACING.XS }) {
+            Text() {
+              SymbolSpan($r(AppIcon.PERSON))
+                .fontSize(12)
+                .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+            }
+            Text(`${group.members_count}人`)
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          }
 
           if (group.description) {
             Text(group.description)
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
               .maxLines(2)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
@@ -323,18 +282,12 @@ export struct GroupPage {
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
 
-        // 加入按钮
         Button('加入')
           .type(ButtonType.Capsule)
-          .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
+          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
           .fontColor(Color.White)
-          .fontSize(12)
-          .padding({
-            left: 12,
-            right: 12,
-            top: 6,
-            bottom: 6
-          })
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .height(32)
           .onClick(() => this.joinGroup(group))
       }
       .width('100%')
@@ -347,10 +300,24 @@ export struct GroupPage {
           longitude: group.location.longitude,
           locationName: group.location.location_name,
           distance: group.location.distance,
-          altitude: 0 // 列表数据暂时不包含海拔信息
+          altitude: 0
         })
       }
     }
     .width('100%')
+    .padding(DesignConstants.SPACING.LG)
+    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .borderRadius(DesignConstants.RADIUS.LG)
+    .onClick(async () => {
+      try {
+        const routerInstance = this.getUIContext().getRouter();
+        await routerInstance.pushUrl({
+          url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
+          params: { groupId: group.group_id }
+        });
+      } catch (error) {
+        SystemToast.showError('跳转失败', this.getUIContext());
+      }
+    })
   }
 }

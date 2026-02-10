@@ -441,7 +441,7 @@ export struct ProfilePage {
         .backgroundColor($r('sys.color.ohos_id_color_background'))
       }
       .borderRadius(DesignConstants.RADIUS.LG)
-      .divider({ strokeWidth: 1, color: DesignConstants.COLOR.TERTIARY_BG_LIGHT, startMargin: 56, endMargin: 16 })
+      .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 56, endMargin: 16 })
       .margin({ left: 16, right: 16, bottom: 24 })
     }
     .width('100%')
@@ -512,7 +512,7 @@ export struct ProfilePage {
         .backgroundColor($r('sys.color.ohos_id_color_background'))
       }
       .borderRadius(DesignConstants.RADIUS.LG)
-      .divider({ strokeWidth: 1, color: DesignConstants.COLOR.TERTIARY_BG_LIGHT, startMargin: 56, endMargin: 16 })
+      .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 56, endMargin: 16 })
       .margin({ left: 16, right: 16, bottom: 24 })
     }
     .width('100%')

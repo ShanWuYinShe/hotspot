@@ -1,14 +1,13 @@
 /**
  * 设置页面
- * 使用 HarmonyOS 原生 List 组件重构，提供更原生、流畅的体验
+ * 使用 HarmonyOS 原生 List 组件 + 系统颜色资源
  */
 
 import { GlobalStateManager, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_USER_TYPE } from '../../../core/state/GlobalStateManager';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
-import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
-import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
+import { AppIcon } from '../../../components/SystemIcon';
 import { HttpUtil } from '../../../core/network/HttpUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { MyProfileData } from '../../../core/types/api';
@@ -24,17 +23,12 @@ struct SettingsPage {
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
 
-  /**
-   * 退出登录
-   */
   private async logout() {
     try {
       this.webSocketService.disconnect();
-      // 多账号：默认仅“锁定当前账号”，保留本地已保存的其他账号
-      // 同时清空本地消息缓存，避免切换账号后看到上一个账号的消息
       await MessageCacheService.getInstance().clearAll();
       await AuthAccountManager.lockCurrent();
-      await HttpUtil.clearToken(); // 兼容：清除 Authorization 使用的 token
+      await HttpUtil.clearToken();
       this.stateManager.updateUser(null);
 
       const routerInstance = this.getUIContext().getRouter();
@@ -50,21 +44,23 @@ struct SettingsPage {
     Column() {
       // 标题栏
       Row() {
-        IconButton({
-          icon: AppIcon.BACK,
-          iconSize: IconSize.LARGE,
-          iconColor: DesignConstants.COLOR.TEXT_PRIMARY_LIGHT,
-          bgColor: Color.Transparent,
-          onButtonClick: () => {
-            const routerInstance = this.getUIContext().getRouter();
-            routerInstance.back();
-          }
+        Text() {
+          SymbolSpan($r(AppIcon.BACK))
+            .fontSize(24)
+            .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+        }
+        .onClick(() => {
+          const routerInstance = this.getUIContext().getRouter();
+          routerInstance.back();
         })
+        .width(48)
+        .height(48)
+        .textAlign(TextAlign.Center)
 
         Text('设置')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Medium)
-          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
 
@@ -72,12 +68,11 @@ struct SettingsPage {
       }
       .width('100%')
       .height(56)
-      .padding({ left: 8, right: 8 })
-      .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
-      .zIndex(1)
+      .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
+      .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       // 设置列表
-      List({ space: 12 }) {
+      List({ space: DesignConstants.SPACING.MD }) {
         // 账号设置组
         ListItemGroup({ header: this.ListHeader('账号') }) {
           ListItem() {
@@ -86,7 +81,7 @@ struct SettingsPage {
               routerInstance.pushUrl({ url: `features/settings/pages/${PageNames.ACCOUNTS}` });
             })
           }
-          .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+          .backgroundColor($r('sys.color.ohos_id_color_background'))
 
           ListItem() {
             this.SettingItem('个人资料', '修改头像、昵称', async () => {
@@ -107,11 +102,11 @@ struct SettingsPage {
               }
             })
           }
-          .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+          .backgroundColor($r('sys.color.ohos_id_color_background'))
         }
         .borderRadius(DesignConstants.RADIUS.LG)
-        .divider({ strokeWidth: 1, color: DesignConstants.COLOR.TERTIARY_BG_LIGHT, startMargin: 16, endMargin: 16 })
-        .margin({ left: 16, right: 16 })
+        .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 16, endMargin: 16 })
+        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
         // 通用设置组
         ListItemGroup({ header: this.ListHeader('通用') }) {
@@ -121,7 +116,7 @@ struct SettingsPage {
               routerInstance.pushUrl({ url: `features/subscriptions/pages/${PageNames.SUBSCRIPTIONS}` });
             })
           }
-          .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+          .backgroundColor($r('sys.color.ohos_id_color_background'))
 
           ListItem() {
             this.SettingItem('高级设置', '开发者选项、网络诊断', async () => {
@@ -129,41 +124,39 @@ struct SettingsPage {
               await routerInstance.pushUrl({ url: `features/settings/pages/${PageNames.ADVANCED_SETTINGS}` });
             })
           }
-          .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+          .backgroundColor($r('sys.color.ohos_id_color_background'))
         }
         .borderRadius(DesignConstants.RADIUS.LG)
-        .divider({ strokeWidth: 1, color: DesignConstants.COLOR.TERTIARY_BG_LIGHT, startMargin: 16, endMargin: 16 })
-        .margin({ left: 16, right: 16 })
+        .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 16, endMargin: 16 })
+        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
         // 关于组
         ListItemGroup({ header: this.ListHeader('关于') }) {
           ListItem() {
-            this.SettingItem('关于HotSpot', 'v1.0.0', () => {
+            this.SettingItem('关于 HotSpot', 'v1.0.0', () => {
               SystemToast.show('HotSpot v1.0.0', this.getUIContext());
             })
           }
-          .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+          .backgroundColor($r('sys.color.ohos_id_color_background'))
         }
         .borderRadius(DesignConstants.RADIUS.LG)
-        .divider({ strokeWidth: 1, color: DesignConstants.COLOR.TERTIARY_BG_LIGHT, startMargin: 16, endMargin: 16 })
-        .margin({ left: 16, right: 16 })
+        .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 16, endMargin: 16 })
+        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
-        // 退出登录（仅已认证用户显示）
+        // 退出登录
         if (this.isLoggedIn) {
           ListItem() {
             Button('退出登录')
               .width('100%')
               .height(50)
-              .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
-              .fontColor(DesignConstants.COLOR.ERROR)
-              .fontSize(16)
+              .backgroundColor($r('sys.color.ohos_id_color_background'))
+              .fontColor('#FF3B30')
+              .fontSize(DesignConstants.FONT.SIZE.LG)
               .type(ButtonType.Normal)
-              .onClick(() => {
-                this.logout();
-              })
+              .borderRadius(DesignConstants.RADIUS.LG)
+              .onClick(() => { this.logout(); })
           }
-          .borderRadius(DesignConstants.RADIUS.LG)
-          .margin({ left: 16, right: 16, top: 12, bottom: 24 })
+          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.XXL })
         }
 
         // 未登录时显示登录入口
@@ -172,16 +165,16 @@ struct SettingsPage {
             Button('登录 / 注册')
               .width('100%')
               .height(50)
-              .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
+              .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
               .fontColor(Color.White)
-              .fontSize(16)
+              .fontSize(DesignConstants.FONT.SIZE.LG)
               .type(ButtonType.Capsule)
               .onClick(async () => {
                 const routerInstance = this.getUIContext().getRouter();
                 await routerInstance.pushUrl({ url: `features/auth/pages/${PageNames.LOGIN}` });
               })
           }
-          .margin({ left: 16, right: 16, top: 12, bottom: 24 })
+          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.XXL })
         }
       }
       .width('100%')
@@ -191,15 +184,15 @@ struct SettingsPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
   }
 
   @Builder
   ListHeader(title: string) {
     Text(title)
-      .fontSize(14)
-      .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
-      .margin({ left: 12, bottom: 8, top: 16 })
+      .fontSize(DesignConstants.FONT.SIZE.MD)
+      .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+      .margin({ left: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.LG })
       .width('100%')
   }
 
@@ -208,24 +201,26 @@ struct SettingsPage {
     Row() {
       Column({ space: 4 }) {
         Text(title)
-          .fontSize(16)
-          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
-        
+          .fontSize(DesignConstants.FONT.SIZE.LG)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+
         if (subtitle) {
           Text(subtitle)
-            .fontSize(12)
-            .fontColor(DesignConstants.COLOR.TEXT_TERTIARY_LIGHT)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         }
       }
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
-      
-      Text('>')
-        .fontSize(16)
-        .fontColor(DesignConstants.COLOR.TEXT_TERTIARY_LIGHT)
+
+      Text() {
+        SymbolSpan($r(AppIcon.CHEVRON_RIGHT))
+          .fontSize(16)
+          .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+      }
     }
     .width('100%')
-    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
     .onClick(onClick)
   }
 }

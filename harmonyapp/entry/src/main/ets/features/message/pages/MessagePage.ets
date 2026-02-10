@@ -1,9 +1,7 @@
 /**
  * 消息列表页面
- * 重构：使用 LazyForEach 和 BasicDataSource 提升性能
- * 新增：滑动操作（删除）
- * 优化：使用 RDB 缓存实现离线浏览
- * 优化：使用原生菜单和震动反馈
+ * 使用 HarmonyOS 原生能力 + 系统颜色资源（支持深色模式）
+ * LazyForEach + RDB 缓存 + swipeAction
  */
 
 import { GlobalStateManager, KEY_CURRENT_USER, KEY_LAST_MESSAGE_SYNC_TIME } from '../../../core/state/GlobalStateManager';
@@ -41,11 +39,10 @@ interface ChatItem {
 export struct MessagePage {
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfileData | null = null;
   @StorageLink(KEY_LAST_MESSAGE_SYNC_TIME) @Watch('onMessageSync') lastMessageSyncTime: number = 0;
-  
-  // 使用自定义 DataSource
+
   private chatListDataSource: BasicDataSource<ChatItem> = new BasicDataSource([]);
   private messageCacheService = MessageCacheService.getInstance();
-  
+
   @State isLoading: boolean = false;
   @State isRefreshing: boolean = false;
   @State errorMessage: string = '';
@@ -63,19 +60,16 @@ export struct MessagePage {
   }
 
   private async loadData(forceRefresh: boolean = false) {
-    // 1. 先尝试加载缓存
     if (!forceRefresh) {
-        await this.loadFromCache();
+      await this.loadFromCache();
     }
 
-    // 2. 发起网络请求
     if (this.chatListDataSource.totalCount() === 0) {
-        this.isLoading = true;
+      this.isLoading = true;
     }
     this.errorMessage = '';
 
     try {
-      // 并行加载私聊和群聊
       const privateChatsPromise = this.loadPrivateChats();
       const groupChatsPromise = this.loadGroupChats();
       const results = await Promise.allSettled([privateChatsPromise, groupChatsPromise]);
@@ -87,12 +81,10 @@ export struct MessagePage {
       if (privateChatsResult.status === 'fulfilled' && privateChatsResult.value) {
         allChats.push(...privateChatsResult.value);
       }
-      
       if (groupChatsResult.status === 'fulfilled' && groupChatsResult.value) {
         allChats.push(...groupChatsResult.value);
       }
 
-      // 排序
       allChats.sort((a, b) => {
         const timeA = new Date(a.lastTime).getTime();
         const timeB = new Date(b.lastTime).getTime();
@@ -106,9 +98,7 @@ export struct MessagePage {
         VibrationUtil.startSuccess();
       }
 
-      // 3. 异步更新缓存
       this.updateCache(allChats);
-
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `加载消息失败: ${JSON.stringify(error)}`);
       if (this.chatListDataSource.totalCount() === 0) {
@@ -125,30 +115,10 @@ export struct MessagePage {
   }
 
   private async loadFromCache() {
-      const cachedItems = await this.messageCacheService.getCachedChatList();
-      if (cachedItems.length > 0) {
-          const chats = cachedItems.map(item => {
-              const chatItem: ChatItem = {
-                  id: item.id,
-                  type: item.type,
-                  name: item.name,
-                  avatarUrl: item.avatarUrl,
-                  lastMessage: item.lastMessage,
-                  lastTime: item.lastTime,
-                  unreadCount: item.unreadCount,
-                  data: JSON.parse(item.data)
-              };
-              return chatItem;
-          });
-          this.chatListDataSource.setData(chats);
-          this.hasData = true;
-          hilog.info(DOMAIN_NUMBER, TAG, `Loaded ${chats.length} chats from cache`);
-      }
-  }
-
-  private async updateCache(chats: ChatItem[]): Promise<void> {
-      const cacheItems: ChatCacheItem[] = chats.map(item => {
-        const cacheItem: ChatCacheItem = {
+    const cachedItems = await this.messageCacheService.getCachedChatList();
+    if (cachedItems.length > 0) {
+      const chats = cachedItems.map(item => {
+        const chatItem: ChatItem = {
           id: item.id,
           type: item.type,
           name: item.name,
@@ -156,11 +126,31 @@ export struct MessagePage {
           lastMessage: item.lastMessage,
           lastTime: item.lastTime,
           unreadCount: item.unreadCount,
-          data: JSON.stringify(item.data)
+          data: JSON.parse(item.data)
         };
-        return cacheItem;
+        return chatItem;
       });
-      await this.messageCacheService.cacheChatList(cacheItems);
+      this.chatListDataSource.setData(chats);
+      this.hasData = true;
+      hilog.info(DOMAIN_NUMBER, TAG, `Loaded ${chats.length} chats from cache`);
+    }
+  }
+
+  private async updateCache(chats: ChatItem[]): Promise<void> {
+    const cacheItems: ChatCacheItem[] = chats.map(item => {
+      const cacheItem: ChatCacheItem = {
+        id: item.id,
+        type: item.type,
+        name: item.name,
+        avatarUrl: item.avatarUrl,
+        lastMessage: item.lastMessage,
+        lastTime: item.lastTime,
+        unreadCount: item.unreadCount,
+        data: JSON.stringify(item.data)
+      };
+      return cacheItem;
+    });
+    await this.messageCacheService.cacheChatList(cacheItems);
   }
 
   private async loadPrivateChats(): Promise<ChatItem[]> {
@@ -232,17 +222,14 @@ export struct MessagePage {
   private formatTime(timeStr: string): string {
     const time = new Date(timeStr);
     const now = new Date();
-    // 今天
     if (time.toDateString() === now.toDateString()) {
       return `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
     }
-    // 昨天
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
     if (time.toDateString() === yesterday.toDateString()) {
       return '昨天';
     }
-    // 今年
     if (time.getFullYear() === now.getFullYear()) {
       return `${(time.getMonth() + 1).toString().padStart(2, '0')}-${time.getDate().toString().padStart(2, '0')}`;
     }
@@ -255,7 +242,7 @@ export struct MessagePage {
       await routerInstance.pushUrl({
         url: `features/chat/pages/${PageNames.CHAT}`,
         params: {
-          chatId: item.type === 'private' ? (item.data as PrivateChatListItem).other_user.user_id.toString() : item.id, 
+          chatId: item.type === 'private' ? (item.data as PrivateChatListItem).other_user.user_id.toString() : item.id,
           chatType: item.type === 'private' ? 'private_chat' : 'group_chat',
           title: item.name,
           targetId: item.type === 'private' ? (item.data as PrivateChatListItem).other_user.user_id : undefined
@@ -278,28 +265,24 @@ export struct MessagePage {
         const request: LeaveGroupRequest = { group_id: groupData.group_id };
         await ApiClient.leaveGroup(request);
       }
-      
-      // 更新列表
+
       const index = this.chatListDataSource.getDataIndex(item);
       if (index >= 0) {
         this.chatListDataSource.deleteData(index);
       }
-      // 更新缓存
-      const currentData = this.chatListDataSource.getData(0) ? [] : []; 
       this.updateCache(this.getAllDataFromSource());
-
       SystemToast.show('操作成功', this.getUIContext());
     } catch (error) {
       SystemToast.showError('操作失败', this.getUIContext());
     }
   }
-  
+
   private getAllDataFromSource(): ChatItem[] {
-      const items: ChatItem[] = [];
-      for(let i = 0; i < this.chatListDataSource.totalCount(); i++) {
-          items.push(this.chatListDataSource.getData(i));
-      }
-      return items;
+    const items: ChatItem[] = [];
+    for (let i = 0; i < this.chatListDataSource.totalCount(); i++) {
+      items.push(this.chatListDataSource.getData(i));
+    }
+    return items;
   }
 
   build() {
@@ -309,33 +292,28 @@ export struct MessagePage {
         Text('消息')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Bold)
-          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
-          .padding({ left: 16 })
+          .padding({ left: DesignConstants.SPACING.LG })
 
-        Row() {
-          SystemIcon({ 
-            icon: AppIcon.SEARCH, 
-            iconSize: 24, 
-            iconColor: DesignConstants.COLOR.TEXT_PRIMARY_LIGHT,
-            clickable: true,
-            onIconClick: () => {
-              const routerInstance = this.getUIContext().getRouter();
-              routerInstance.pushUrl({ url: `features/search/pages/${PageNames.SEARCH}` });
-            }
+        Row({ space: DesignConstants.SPACING.LG }) {
+          // 搜索
+          Text() {
+            SymbolSpan($r(AppIcon.SEARCH))
+              .fontSize(24)
+              .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+          }
+          .onClick(() => {
+            const routerInstance = this.getUIContext().getRouter();
+            routerInstance.pushUrl({ url: `features/search/pages/${PageNames.SEARCH}` });
           })
-          
-          Blank().width(16)
 
-          SystemIcon({ 
-            icon: AppIcon.ADD, 
-            iconSize: 24, 
-            iconColor: DesignConstants.COLOR.TEXT_PRIMARY_LIGHT,
-            clickable: true,
-            onIconClick: () => {
-              // 占位，实际由 bindMenu 接管
-            }
-          })
+          // 更多操作
+          Text() {
+            SymbolSpan($r(AppIcon.ADD))
+              .fontSize(24)
+              .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+          }
           .bindMenu([
             {
               value: '发起群聊',
@@ -354,9 +332,7 @@ export struct MessagePage {
             {
               value: '扫一扫',
               action: async () => {
-                // 集成 Scan Kit
                 try {
-                  // 检查是否支持扫码能力
                   if (canIUse('SystemCapability.Multimedia.Scan.ScanBarcode')) {
                     const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
                     const scanTypes: scanCore.ScanType[] = [scanCore.ScanType.ALL];
@@ -365,16 +341,13 @@ export struct MessagePage {
                       enableMultiMode: true,
                       enableAlbum: true
                     };
-                    
+
                     const result = await scanBarcode.startScanForResult(context, options);
-                    
                     if (result.originalValue) {
                       const scanContent: string = result.originalValue;
-                      // 简单处理：复制到剪贴板并提示
                       const systemPasteboard = pasteboard.getSystemPasteboard();
                       const pasteData = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, scanContent);
                       await systemPasteboard.setData(pasteData);
-                      
                       SystemToast.show(`扫码内容已复制: ${scanContent}`, this.getUIContext());
                     }
                   } else {
@@ -382,60 +355,35 @@ export struct MessagePage {
                   }
                 } catch (error) {
                   hilog.error(DOMAIN_NUMBER, TAG, `扫描启动失败: ${JSON.stringify(error)}`);
-                  // 错误码处理
                   const errorObj = error as Record<string, Object>;
                   const errorCode = errorObj.code as number | undefined;
-                  if (errorCode === 1001) {
-                     // 用户取消
-                  } else {
-                     SystemToast.showError('扫描启动失败', this.getUIContext());
+                  if (errorCode !== 1001) {
+                    SystemToast.showError('扫描启动失败', this.getUIContext());
                   }
                 }
               }
             }
           ])
         }
-        .padding({ right: 16 })
+        .padding({ right: DesignConstants.SPACING.LG })
       }
       .width('100%')
       .height(56)
-      .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+      .backgroundColor($r('sys.color.ohos_id_color_background'))
 
+      // 内容区域
       if (this.isLoading && !this.hasData) {
         SystemLoadingView({ message: '收取信件中...' })
       } else if (!this.hasData && this.errorMessage) {
         Refresh({ refreshing: $$this.isRefreshing, builder: this.RefreshBuilder() }) {
-          Column({ space: 16 }) {
-            Text('⚠️')
-               .fontSize(48)
-            Text(this.errorMessage)
-              .fontSize(16)
-              .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
-            Button('重试').onClick(() => this.loadData(true))
-          }
-          .width('100%')
-          .height('100%')
-          .justifyContent(FlexAlign.Center)
+          this.buildEmptyState(AppIcon.WARNING, this.errorMessage, '重试', () => { this.loadData(true); })
         }
-        .onRefreshing(() => {
-            this.loadData(true);
-        })
+        .onRefreshing(() => { this.loadData(true); })
       } else if (!this.hasData) {
         Refresh({ refreshing: $$this.isRefreshing, builder: this.RefreshBuilder() }) {
-          Column({ space: 16 }) {
-            Text('📭')
-              .fontSize(48)
-            Text('暂无消息')
-              .fontSize(16)
-              .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
-          }
-          .width('100%')
-          .height('100%')
-          .justifyContent(FlexAlign.Center)
+          this.buildEmptyState(AppIcon.MESSAGE, '暂无消息', undefined, undefined)
         }
-        .onRefreshing(() => {
-          this.loadData(true);
-        })
+        .onRefreshing(() => { this.loadData(true); })
       } else {
         Refresh({ refreshing: $$this.isRefreshing, builder: this.RefreshBuilder() }) {
           List() {
@@ -443,36 +391,64 @@ export struct MessagePage {
               ListItem() {
                 this.buildChatItem(item)
               }
-              .swipeAction({
-                end: this.SwipeActionEnd(item)
-              })
+              .swipeAction({ end: this.SwipeActionEnd(item) })
             }, (item: ChatItem) => item.id + item.type)
           }
           .width('100%')
           .layoutWeight(1)
-          .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT) 
-          .divider({ strokeWidth: 1, color: DesignConstants.COLOR.TERTIARY_BG_LIGHT, startMargin: 78, endMargin: 0 })
+          .backgroundColor($r('sys.color.ohos_id_color_background'))
+          .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 78, endMargin: 0 })
           .cachedCount(10)
         }
-        .onRefreshing(() => {
-          this.loadData(true);
-        })
+        .onRefreshing(() => { this.loadData(true); })
       }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+  }
+
+  @Builder
+  private buildEmptyState(icon: AppIcon, message: string, actionLabel: string | undefined, action: (() => void) | undefined) {
+    Column({ space: DesignConstants.SPACING.LG }) {
+      Text() {
+        SymbolSpan($r(icon))
+          .fontSize(48)
+          .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+      }
+
+      Text(message)
+        .fontSize(DesignConstants.FONT.SIZE.LG)
+        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .textAlign(TextAlign.Center)
+
+      if (actionLabel && action) {
+        Button(actionLabel)
+          .type(ButtonType.Capsule)
+          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+          .fontColor(Color.White)
+          .height(40)
+          .onClick(() => { action(); })
+      }
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .padding(DesignConstants.SPACING.XXL)
   }
 
   @Builder
   RefreshBuilder() {
     Row() {
       LoadingProgress().width(24).height(24)
-      Text('正在刷新...').fontSize(14).margin({left: 8}).fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+      Text('正在刷新...')
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .margin({ left: DesignConstants.SPACING.SM })
+        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
     }
     .width('100%')
     .justifyContent(FlexAlign.Center)
-    .padding(10)
+    .padding(DesignConstants.SPACING.SM)
   }
 
   @Builder
@@ -482,13 +458,13 @@ export struct MessagePage {
         Column() {
           Text('删除')
             .fontColor(Color.White)
-            .fontSize(16)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
         }
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
       }
-      .backgroundColor(DesignConstants.COLOR.ERROR)
+      .backgroundColor('#FF3B30')
       .width(80)
       .height('100%')
       .onClick(() => this.deleteChat(item))
@@ -500,20 +476,20 @@ export struct MessagePage {
   @Builder
   buildChatItem(item: ChatItem) {
     Row() {
-      // 头像
+      // 头像 + 未读角标
       Stack({ alignContent: Alignment.TopEnd }) {
         SystemAvatar({
           avatarUrl: item.avatarUrl,
           name: item.name,
           avatarSize: 50,
-          shape: item.type === 'group' ? 'square' : 'circle'
+          shape: item.type === 'group' ? 'squircle' : 'circle'
         })
 
         if (item.unreadCount > 0) {
           Text(item.unreadCount > 99 ? '99+' : item.unreadCount.toString())
             .fontSize(10)
             .fontColor(Color.White)
-            .backgroundColor(DesignConstants.COLOR.ERROR)
+            .backgroundColor('#FF3B30')
             .borderRadius(10)
             .padding({ left: 4, right: 4 })
             .height(16)
@@ -522,28 +498,28 @@ export struct MessagePage {
             .offset({ x: 4, y: -4 })
         }
       }
-      .margin({ right: 12 })
+      .margin({ right: DesignConstants.SPACING.MD })
 
       // 内容
       Column({ space: 4 }) {
         Row() {
           Text(item.name)
-            .fontSize(16)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontWeight(FontWeight.Medium)
-            .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
             .layoutWeight(1)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
           Text(this.formatTime(item.lastTime))
-            .fontSize(12)
-            .fontColor(DesignConstants.COLOR.TEXT_TERTIARY_LIGHT)
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         }
         .width('100%')
 
         Text(item.lastMessage)
-          .fontSize(14)
-          .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .width('100%')
@@ -551,9 +527,9 @@ export struct MessagePage {
       .layoutWeight(1)
     }
     .width('100%')
-    .height(72) // 固定高度
-    .padding({ left: 16, right: 16 })
-    .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+    .height(72)
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+    .backgroundColor($r('sys.color.ohos_id_color_background'))
     .onClick(() => this.enterChat(item))
   }
 }

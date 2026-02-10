@@ -6,7 +6,6 @@
 
 import { GlobalStateManager } from '../../../core/state/GlobalStateManager';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { HttpUtil } from '../../../core/network/HttpUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { PageNames } from '../../../constants/AppConstants';
@@ -17,6 +16,7 @@ import { AuthData, GuestRequest, MyProfileData, LoginRequest, RegisterRequest } 
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
+import { AppIcon } from '../../../components/SystemIcon';
 
 const DOMAIN_NUMBER: number = 0xFF02;
 const TAG: string = 'LoginPage';
@@ -42,10 +42,6 @@ struct LoginPage {
 
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
-
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
 
   aboutToAppear() {
     try {
@@ -76,60 +72,65 @@ struct LoginPage {
           externalProgress: this.loadingProgress
         })
       } else {
-        // 返回按钮（游客可直接返回浏览）
+        // 顶部导航栏
         Row() {
-          Text('← 返回浏览')
-            .fontSize(14)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-            .onClick(async () => {
+          Text() {
+            SymbolSpan($r(AppIcon.BACK))
+              .fontSize(24)
+              .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+          }
+          .onClick(async () => {
+            try {
+              const routerInstance = this.getUIContext().getRouter();
+              await routerInstance.back();
+            } catch (error) {
               try {
                 const routerInstance = this.getUIContext().getRouter();
-                await routerInstance.back();
-              } catch (error) {
-                // fallback: 跳转主页
-                try {
-                  const routerInstance = this.getUIContext().getRouter();
-                  await routerInstance.replaceUrl({ url: `features/main/pages/${PageNames.INDEX}` });
-                } catch (e) {
-                  hilog.error(DOMAIN_NUMBER, TAG, `跳转失败: ${e}`);
-                }
+                await routerInstance.replaceUrl({ url: `features/main/pages/${PageNames.INDEX}` });
+              } catch (e) {
+                hilog.error(DOMAIN_NUMBER, TAG, `跳转失败: ${e}`);
               }
-            })
+            }
+          })
+          .width(48)
+          .height(48)
+          .textAlign(TextAlign.Center)
+
+          Blank()
         }
         .width('100%')
-        .padding({ top: 16, left: 16, right: 16 })
+        .height(56)
+        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
 
-        List() {
-          // 标题区域
-          ListItem() {
-            Column({ space: 8 }) {
+        // 内容区域
+        Scroll() {
+          Column({ space: DesignConstants.SPACING.XXL }) {
+            // 标题区域
+            Column({ space: DesignConstants.SPACING.SM }) {
               Text($r('app.string.app_name'))
                 .fontSize(28)
                 .fontWeight(FontWeight.Bold)
                 .fontColor($r('sys.color.ohos_id_color_text_primary'))
 
               Text($r('app.string.app_description'))
-                .fontSize(16)
+                .fontSize(DesignConstants.FONT.SIZE.LG)
                 .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             }
             .width('100%')
             .alignItems(HorizontalAlign.Start)
-            .padding({ top: 24, bottom: 32 })
-          }
 
-          // 模式切换
-          ListItem() {
-            Row({ space: 4 }) {
+            // 模式切换
+            Row({ space: DesignConstants.SPACING.XS }) {
               this.ModeTab('快速体验', 'temp')
               this.ModeTab('登录', 'login')
               this.ModeTab('注册', 'register')
             }
             .width('100%')
-            .margin({ bottom: 24 })
-          }
+            .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+            .borderRadius(DesignConstants.RADIUS.LG)
+            .padding(DesignConstants.SPACING.XS)
 
-          // 表单区域
-          ListItem() {
+            // 表单区域
             if (this.loginMode === 'temp') {
               this.buildTempUserForm()
             } else if (this.loginMode === 'login') {
@@ -138,10 +139,11 @@ struct LoginPage {
               this.buildRegisterForm()
             }
           }
+          .width('100%')
+          .padding({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL })
         }
-        .width('100%')
         .layoutWeight(1)
-        .padding({ left: 32, right: 32 })
+        .scrollBar(BarState.Off)
       }
     }
     .width('100%')
@@ -151,15 +153,15 @@ struct LoginPage {
 
   @Builder
   private ModeTab(label: string, mode: string) {
-    Button(label)
-      .type(this.loginMode === mode ? ButtonType.Capsule : ButtonType.Normal)
-      .backgroundColor(this.loginMode === mode
-        ? $r('sys.color.ohos_id_color_emphasize')
-        : $r('sys.color.ohos_id_color_component_normal'))
+    Text(label)
+      .fontSize(DesignConstants.FONT.SIZE.MD)
+      .fontWeight(this.loginMode === mode ? FontWeight.Medium : FontWeight.Normal)
       .fontColor(this.loginMode === mode ? Color.White : $r('sys.color.ohos_id_color_text_primary'))
-      .fontSize(14)
+      .backgroundColor(this.loginMode === mode ? $r('sys.color.ohos_id_color_emphasize') : Color.Transparent)
+      .borderRadius(DesignConstants.RADIUS.MD)
       .height(36)
       .layoutWeight(1)
+      .textAlign(TextAlign.Center)
       .onClick(() => {
         if (mode === 'temp') {
           this.loginMode = 'temp';
@@ -173,31 +175,29 @@ struct LoginPage {
 
   @Builder
   private buildTempUserForm() {
-    Column({ space: 16 }) {
+    Column({ space: DesignConstants.SPACING.LG }) {
       Text('无需注册，输入昵称即可快速体验')
-        .fontSize(14)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
         .fontColor($r('sys.color.ohos_id_color_text_secondary'))
 
       TextInput({ placeholder: '请输入你的昵称' })
-        .fontSize(16)
-        .padding(16)
+        .fontSize(DesignConstants.FONT.SIZE.LG)
+        .padding(DesignConstants.SPACING.LG)
         .backgroundColor($r('sys.color.ohos_id_color_background'))
-        .borderRadius(12)
-        .onChange((value: string) => {
-          this.nickname = value;
-        })
+        .borderRadius(DesignConstants.RADIUS.LG)
+        .onChange((value: string) => { this.nickname = value; })
 
       Button('开始体验')
         .type(ButtonType.Capsule)
         .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
         .fontColor(Color.White)
-        .fontSize(16)
+        .fontSize(DesignConstants.FONT.SIZE.LG)
         .width('100%')
         .height(48)
         .onClick(() => this.createTempUser())
 
       Text('临时用户可使用大部分功能，随时可升级为完整账号')
-        .fontSize(12)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         .textAlign(TextAlign.Center)
     }
@@ -206,38 +206,34 @@ struct LoginPage {
 
   @Builder
   private buildLoginForm() {
-    Column({ space: 16 }) {
+    Column({ space: DesignConstants.SPACING.LG }) {
       TextInput({ placeholder: '邮箱 / 用户名' })
-        .fontSize(16)
-        .padding(16)
+        .fontSize(DesignConstants.FONT.SIZE.LG)
+        .padding(DesignConstants.SPACING.LG)
         .backgroundColor($r('sys.color.ohos_id_color_background'))
-        .borderRadius(12)
+        .borderRadius(DesignConstants.RADIUS.LG)
         .type(InputType.Email)
-        .onChange((value: string) => {
-          this.loginId = value;
-        })
+        .onChange((value: string) => { this.loginId = value; })
 
       TextInput({ placeholder: '密码' })
-        .fontSize(16)
-        .padding(16)
+        .fontSize(DesignConstants.FONT.SIZE.LG)
+        .padding(DesignConstants.SPACING.LG)
         .backgroundColor($r('sys.color.ohos_id_color_background'))
-        .borderRadius(12)
+        .borderRadius(DesignConstants.RADIUS.LG)
         .type(InputType.Password)
-        .onChange((value: string) => {
-          this.password = value;
-        })
+        .onChange((value: string) => { this.password = value; })
 
       Button('登录')
         .type(ButtonType.Capsule)
         .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
         .fontColor(Color.White)
-        .fontSize(16)
+        .fontSize(DesignConstants.FONT.SIZE.LG)
         .width('100%')
         .height(48)
         .onClick(() => this.userLogin())
 
-      Text('没有账号？切换到"注册"或"快速体验"')
-        .fontSize(12)
+      Text('没有账号？切换到「注册」或「快速体验」')
+        .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         .textAlign(TextAlign.Center)
     }
@@ -246,57 +242,49 @@ struct LoginPage {
 
   @Builder
   private buildRegisterForm() {
-    Column({ space: 16 }) {
+    Column({ space: DesignConstants.SPACING.LG }) {
       TextInput({ placeholder: '昵称（必填）' })
-        .fontSize(16)
-        .padding(16)
+        .fontSize(DesignConstants.FONT.SIZE.LG)
+        .padding(DesignConstants.SPACING.LG)
         .backgroundColor($r('sys.color.ohos_id_color_background'))
-        .borderRadius(12)
-        .onChange((value: string) => {
-          this.registerNickname = value;
-        })
+        .borderRadius(DesignConstants.RADIUS.LG)
+        .onChange((value: string) => { this.registerNickname = value; })
 
       TextInput({ placeholder: '邮箱 / 用户名（登录凭证）' })
-        .fontSize(16)
-        .padding(16)
+        .fontSize(DesignConstants.FONT.SIZE.LG)
+        .padding(DesignConstants.SPACING.LG)
         .backgroundColor($r('sys.color.ohos_id_color_background'))
-        .borderRadius(12)
+        .borderRadius(DesignConstants.RADIUS.LG)
         .type(InputType.Email)
-        .onChange((value: string) => {
-          this.registerLoginId = value;
-        })
+        .onChange((value: string) => { this.registerLoginId = value; })
 
       TextInput({ placeholder: '密码（至少8位）' })
-        .fontSize(16)
-        .padding(16)
+        .fontSize(DesignConstants.FONT.SIZE.LG)
+        .padding(DesignConstants.SPACING.LG)
         .backgroundColor($r('sys.color.ohos_id_color_background'))
-        .borderRadius(12)
+        .borderRadius(DesignConstants.RADIUS.LG)
         .type(InputType.Password)
-        .onChange((value: string) => {
-          this.registerPassword = value;
-        })
+        .onChange((value: string) => { this.registerPassword = value; })
 
       TextInput({ placeholder: '确认密码' })
-        .fontSize(16)
-        .padding(16)
+        .fontSize(DesignConstants.FONT.SIZE.LG)
+        .padding(DesignConstants.SPACING.LG)
         .backgroundColor($r('sys.color.ohos_id_color_background'))
-        .borderRadius(12)
+        .borderRadius(DesignConstants.RADIUS.LG)
         .type(InputType.Password)
-        .onChange((value: string) => {
-          this.registerPasswordConfirm = value;
-        })
+        .onChange((value: string) => { this.registerPasswordConfirm = value; })
 
       Button('注册')
         .type(ButtonType.Capsule)
         .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
         .fontColor(Color.White)
-        .fontSize(16)
+        .fontSize(DesignConstants.FONT.SIZE.LG)
         .width('100%')
         .height(48)
         .onClick(() => this.userRegister())
 
-      Text('已有账号？切换到"登录"标签')
-        .fontSize(12)
+      Text('已有账号？切换到「登录」标签')
+        .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         .textAlign(TextAlign.Center)
     }
@@ -366,7 +354,6 @@ struct LoginPage {
         this.loadingProgress = 70;
 
         PasswordSecurityUtil.clearSensitiveString(this.password);
-
         await this.handleAuthSuccess(response.data);
         this.loadingProgress = 100;
       } else {
@@ -420,7 +407,6 @@ struct LoginPage {
 
         PasswordSecurityUtil.clearSensitiveString(this.registerPassword);
         PasswordSecurityUtil.clearSensitiveString(this.registerPasswordConfirm);
-
         await this.handleAuthSuccess(response.data);
         this.loadingProgress = 100;
       } else {
@@ -435,19 +421,10 @@ struct LoginPage {
     }
   }
 
-  /**
-   * 认证成功后的统一处理
-   * 1. 保存 token 到多账户管理器
-   * 2. 获取完整 profile（含 user_type）
-   * 3. 连接 WebSocket
-   * 4. 跳转
-   */
   private async handleAuthSuccess(authData: AuthData) {
-    // 保存多账户
     await AuthAccountManager.upsertAndActivate(authData);
     await HttpUtil.setToken(authData.access_token);
 
-    // 先用 authData 设置基础用户信息，保证 isLoggedIn 立刻为 true
     const basicUserInfo: MyProfileData = {
       user_id: authData.user_id,
       nickname: authData.nickname,
@@ -456,11 +433,7 @@ struct LoginPage {
       tags: [],
       email: '',
       phone: '',
-      location: {
-        latitude: 0,
-        longitude: 0,
-        location_name: ''
-      },
+      location: { latitude: 0, longitude: 0, location_name: '' },
       is_online: true,
       last_online: '',
       created_at: new Date().toISOString(),
@@ -474,7 +447,6 @@ struct LoginPage {
     };
     this.stateManager.updateUser(basicUserInfo);
 
-    // 拉取完整 profile（含 user_type 等完整信息）
     try {
       const profileResp = await ApiClient.getMyProfile();
       if (profileResp.code === 0 && profileResp.data) {
@@ -485,14 +457,12 @@ struct LoginPage {
       hilog.warn(DOMAIN_NUMBER, TAG, `获取用户资料失败，使用基础信息: ${JSON.stringify(error)}`);
     }
 
-    // 连接 WebSocket
     try {
       await this.webSocketService.connect(authData.access_token);
     } catch (error) {
       hilog.warn(DOMAIN_NUMBER, TAG, `WebSocket连接失败: ${JSON.stringify(error)}`);
     }
 
-    // 跳转
     try {
       const routerInstance = this.getUIContext().getRouter();
       const targetUrl = this.redirectUrl || `features/main/pages/${PageNames.INDEX}`;

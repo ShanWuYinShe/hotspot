@@ -1,34 +1,31 @@
 /**
  * 地图页面 - 显示附近的用户、群组和瞬间
- * 使用HarmonyOS原生地图能力
+ * 使用 HarmonyOS 原生地图能力 + 系统颜色资源
  */
 
 import { GlobalStateManager, KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { LocationUtil, LocationInfo } from '../../../core/location/LocationUtil';
 import { PageNames } from '../../../constants/AppConstants';
-import { 
-  UserSearchItem, 
+import {
+  UserSearchItem,
   RelativeLocation,
-  GroupSearchItem, 
+  GroupSearchItem,
   MomentSearchItem,
   SearchUsersByLocationRequest,
   SearchGroupsByLocationRequest,
   SearchMomentsByLocationRequest
 } from '../../../core/types/api';
-import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
-import { SystemAvatar } from '../../../components/SystemAvatar';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
-import { AppIcon, SystemIcon } from '../../../components/SystemIcon';
+import { AppIcon } from '../../../components/SystemIcon';
 import { NativeMapComponent, MapMarker, MapRegion } from '../../../components/NativeMapComponent';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 
 const DOMAIN_NUMBER: number = 0xFF12;
 const TAG: string = 'MapPage';
 
-// 扩展 MapMarker 接口以适配 NativeMapComponent
 interface ExtendedMapMarker extends MapMarker {
   type: 'user' | 'group' | 'moment';
   data: UserSearchItem | GroupSearchItem | MomentSearchItem;
@@ -50,7 +47,7 @@ export struct MapPage {
   @State showMarkerDetail: boolean = false;
   @State mapCenter: MapCenter | null = null;
   @State currentFilter: 'all' | 'users' | 'groups' | 'moments' = 'all';
-  
+
   @State mapRegion: MapRegion = {
     latitude: 39.9042,
     longitude: 116.4074,
@@ -60,8 +57,6 @@ export struct MapPage {
 
   async aboutToAppear() {
     hilog.info(DOMAIN_NUMBER, TAG, '地图页面初始化');
-    
-    // 设置地图中心
     const center = this.browseAnchor || this.currentLocation;
     if (center) {
       this.updateMapCenter(center.latitude, center.longitude);
@@ -111,13 +106,13 @@ export struct MapPage {
 
   private async loadMapData() {
     if (!this.mapCenter) return;
-    
+
     this.isLoading = true;
-    this.markers = []; // Clear existing
-    
+    this.markers = [];
+
     try {
       const promises: Promise<void>[] = [];
-      
+
       if (this.currentFilter === 'all' || this.currentFilter === 'users') {
         promises.push(this.loadNearbyUsers());
       }
@@ -127,7 +122,7 @@ export struct MapPage {
       if (this.currentFilter === 'all' || this.currentFilter === 'moments') {
         promises.push(this.loadNearbyMoments());
       }
-      
+
       await Promise.all(promises);
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `加载地图数据失败: ${error}`);
@@ -143,12 +138,8 @@ export struct MapPage {
     this.loadMapData();
   }
 
-  /**
-   * 加载附近用户
-   */
   private async loadNearbyUsers(): Promise<void> {
     if (!this.mapCenter) return;
-
     try {
       const myId = await AuthAccountManager.getCurrentUserId();
       const request: SearchUsersByLocationRequest = {
@@ -164,7 +155,6 @@ export struct MapPage {
       if (response.code === 0 && response.data) {
         const users = response.data.items
           .filter((u: UserSearchItem) => (typeof myId === 'number' ? u.user_id !== myId : true))
-          // 位置信息可能因隐私返回 null/undefined，此处直接过滤避免运行时崩溃
           .filter((u: UserSearchItem) => !!u.location);
 
         const userMarkers: ExtendedMapMarker[] = users.map((user: UserSearchItem): ExtendedMapMarker => ({
@@ -183,12 +173,8 @@ export struct MapPage {
     }
   }
 
-  /**
-   * 加载附近群组
-   */
   private async loadNearbyGroups(): Promise<void> {
     if (!this.mapCenter) return;
-
     try {
       const request: SearchGroupsByLocationRequest = {
         reference_point: {
@@ -217,12 +203,8 @@ export struct MapPage {
     }
   }
 
-  /**
-   * 加载附近瞬间
-   */
   private async loadNearbyMoments(): Promise<void> {
     if (!this.mapCenter) return;
-
     try {
       const request: SearchMomentsByLocationRequest = {
         reference_point: {
@@ -241,7 +223,7 @@ export struct MapPage {
           latitude: moment.location!.latitude,
           longitude: moment.location!.longitude,
           title: moment.user.nickname,
-          snippet: moment.description.length > 20 ? 
+          snippet: moment.description.length > 20 ?
             moment.description.substring(0, 20) + '...' : moment.description,
           data: moment
         }));
@@ -252,18 +234,11 @@ export struct MapPage {
     }
   }
 
-  /**
-   * 处理标记点击
-   */
   private handleMarkerClick(marker: MapMarker) {
-    // 强制类型转换，因为我们在load时确保了类型是ExtendedMapMarker
     this.selectedMarker = marker as ExtendedMapMarker;
     this.showMarkerDetail = true;
   }
-  
-  /**
-   * 获取当前位置
-   */
+
   private async getCurrentLocation() {
     try {
       this.isLoading = true;
@@ -290,11 +265,9 @@ export struct MapPage {
 
     switch (marker.type) {
       case 'user':
-        // 导航到用户资料页面或开始聊天
         SystemToast.show(`查看用户: ${marker.title}`, this.getUIContext());
         break;
       case 'group':
-        // 导航到群组详情页面
         try {
           this.getUIContext().getRouter().pushUrl({
             url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
@@ -305,21 +278,17 @@ export struct MapPage {
         }
         break;
       case 'moment':
-        // 显示瞬间详情
         SystemToast.show(`查看瞬间: ${marker.title}`, this.getUIContext());
         break;
     }
   }
 
-  /**
-   * 获取标记图标
-   */
-  private getMarkerIcon(type: 'user' | 'group' | 'moment'): string {
+  private getMarkerIcon(type: 'user' | 'group' | 'moment'): AppIcon {
     switch (type) {
-      case 'user': return '👤';
-      case 'group': return '👥';
-      case 'moment': return '📸';
-      default: return '📍';
+      case 'user': return AppIcon.PERSON;
+      case 'group': return AppIcon.GROUP;
+      case 'moment': return AppIcon.CAMERA;
+      default: return AppIcon.LOCATION;
     }
   }
 
@@ -331,59 +300,70 @@ export struct MapPage {
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Bold)
           .layoutWeight(1)
-          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
 
-        Button('锚点')
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .backgroundColor(Color.Transparent)
-          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+        Row({ space: DesignConstants.SPACING.SM }) {
+          // 锚点
+          Text() {
+            SymbolSpan($r(AppIcon.LOCATION))
+              .fontSize(22)
+              .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+          }
           .onClick(() => this.openBrowseAnchorPicker())
 
-        Button('我的位置')
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .backgroundColor(Color.Transparent)
-          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+          // 我的位置
+          Text() {
+            SymbolSpan($r(AppIcon.MAP_PIN))
+              .fontSize(22)
+              .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+          }
           .onClick(() => this.jumpToMyLocation())
 
-        Button('刷新')
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .backgroundColor(Color.Transparent)
-          .fontColor(DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+          // 刷新
+          Text() {
+            SymbolSpan($r(AppIcon.REFRESH))
+              .fontSize(22)
+              .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+          }
           .onClick(() => this.loadMapData())
+        }
       }
       .width('100%')
       .height(56)
-      .padding({ left: 16, right: 16 })
-      .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_LIGHT)
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+      .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       // 筛选器
-      Row() {
-        this.FilterButton('全部', 'all')
-        this.FilterButton('用户', 'users')
-        this.FilterButton('群组', 'groups')
-        this.FilterButton('瞬间', 'moments')
+      Row({ space: DesignConstants.SPACING.SM }) {
+        this.FilterChip('全部', 'all')
+        this.FilterChip('用户', 'users')
+        this.FilterChip('群组', 'groups')
+        this.FilterChip('瞬间', 'moments')
       }
       .width('100%')
-      .padding({ left: 16, right: 16, top: 8, bottom: 8 })
-      .justifyContent(FlexAlign.SpaceAround)
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+      .justifyContent(FlexAlign.Start)
+      .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       // 地图区域
       Stack() {
         if (this.errorMessage) {
-           Column() {
-            Text('😕')
-              .fontSize(48)
-              .margin({ bottom: 16 })
-            
+          Column({ space: DesignConstants.SPACING.LG }) {
+            Text() {
+              SymbolSpan($r(AppIcon.WARNING))
+                .fontSize(48)
+                .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+            }
+
             Text(this.errorMessage)
               .fontSize(DesignConstants.FONT.SIZE.LG)
-              .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
-              .margin({ bottom: 24 })
-            
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+
             Button('重试')
               .type(ButtonType.Capsule)
-              .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
+              .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
               .fontColor(Color.White)
+              .height(40)
               .onClick(() => this.getCurrentLocation())
           }
           .justifyContent(FlexAlign.Center)
@@ -391,33 +371,27 @@ export struct MapPage {
           .width('100%')
           .height('100%')
         } else {
-          // 使用原生地图组件
           NativeMapComponent({
             mapRegion: this.mapRegion,
             markers: this.markers,
             showUserLocation: true,
             showZoomControls: false,
-            onMapClick: (coord) => {
-              // 处理地图点击
-            },
-            onMarkerClick: (marker) => {
-              this.handleMarkerClick(marker);
-            }
+            onMapClick: (coord) => {},
+            onMarkerClick: (marker) => { this.handleMarkerClick(marker); }
           })
-          
-          // 加载遮罩
+
           if (this.isLoading) {
-             Column() {
-               LoadingProgress()
-                 .width(48)
-                 .height(48)
-                 .color($r('sys.color.ohos_id_color_emphasize'))
-             }
-             .width('100%')
-             .height('100%')
-             .justifyContent(FlexAlign.Center)
-             .backgroundColor('rgba(255,255,255,0.5)')
-             .hitTestBehavior(HitTestMode.Transparent)
+            Column() {
+              LoadingProgress()
+                .width(48)
+                .height(48)
+                .color($r('sys.color.ohos_id_color_emphasize'))
+            }
+            .width('100%')
+            .height('100%')
+            .justifyContent(FlexAlign.Center)
+            .backgroundColor('rgba(255,255,255,0.5)')
+            .hitTestBehavior(HitTestMode.Transparent)
           }
         }
       }
@@ -425,25 +399,24 @@ export struct MapPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(DesignConstants.COLOR.SECONDARY_BG_LIGHT)
+    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
     .bindSheet($$this.showMarkerDetail, this.buildMarkerDetailSheet(), {
       height: SheetSize.MEDIUM,
-      // 允许拖拽/点击外部关闭时，不显示右上角关闭按钮（避免冗余）
       showClose: false,
       dragBar: true,
-      backgroundColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT
+      backgroundColor: $r('sys.color.ohos_id_color_background')
     })
   }
 
   @Builder
-  FilterButton(text: string, filter: 'all' | 'users' | 'groups' | 'moments') {
-    Button(text)
-      .fontSize(12)
-      .height(28)
-      .backgroundColor(this.currentFilter === filter ? 
-        DesignConstants.COLOR.BRAND_PRIMARY : Color.Transparent)
-      .fontColor(this.currentFilter === filter ? 
-        Color.White : DesignConstants.COLOR.TEXT_PRIMARY_LIGHT)
+  FilterChip(text: string, filter: 'all' | 'users' | 'groups' | 'moments') {
+    Text(text)
+      .fontSize(DesignConstants.FONT.SIZE.SM)
+      .fontColor(this.currentFilter === filter ? Color.White : $r('sys.color.ohos_id_color_text_primary'))
+      .backgroundColor(this.currentFilter === filter ?
+        $r('sys.color.ohos_id_color_emphasize') : $r('sys.color.ohos_id_color_component_normal'))
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+      .borderRadius(DesignConstants.RADIUS.FULL)
       .onClick(() => this.switchFilter(filter))
   }
 
@@ -451,29 +424,25 @@ export struct MapPage {
   buildMarkerTypeContent() {
     if (this.selectedMarker) {
       if (this.selectedMarker.type === 'group') {
-        Column() {
+        Column({ space: DesignConstants.SPACING.SM }) {
           Text(`成员数: ${(this.selectedMarker.data as GroupSearchItem).members_count}`)
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .margin({ bottom: 8 })
-          
+
           if ((this.selectedMarker.data as GroupSearchItem).description) {
             Text((this.selectedMarker.data as GroupSearchItem).description!)
               .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
-              .margin({ bottom: 12 })
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
           }
         }
         .alignItems(HorizontalAlign.Start)
       } else if (this.selectedMarker.type === 'moment') {
-        Column() {
+        Column({ space: DesignConstants.SPACING.SM }) {
           Text(`点赞: ${(this.selectedMarker.data as MomentSearchItem).likes_count} | 评论: ${(this.selectedMarker.data as MomentSearchItem).comments_count}`)
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .margin({ bottom: 8 })
-          
+
           Text((this.selectedMarker.data as MomentSearchItem).location!.location_name)
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
-            .margin({ bottom: 12 })
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         }
         .alignItems(HorizontalAlign.Start)
       }
@@ -485,52 +454,56 @@ export struct MapPage {
     if (this.selectedMarker) {
       Column() {
         // 标题栏
-        Row() {
-          Text(this.getMarkerIcon(this.selectedMarker.type))
-            .fontSize(24)
-            .margin({ right: 12 })
-          
+        Row({ space: DesignConstants.SPACING.MD }) {
+          Text() {
+            SymbolSpan($r(this.getMarkerIcon(this.selectedMarker.type)))
+              .fontSize(24)
+              .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+          }
+
           Text(this.selectedMarker.title)
             .fontSize(DesignConstants.FONT.SIZE.XL)
             .fontWeight(FontWeight.Bold)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
             .layoutWeight(1)
         }
         .width('100%')
-        .padding(16)
+        .padding(DesignConstants.SPACING.LG)
 
         // 详情内容
-        Column() {
+        Column({ space: DesignConstants.SPACING.SM }) {
           if (this.selectedMarker.snippet) {
             Text(this.selectedMarker.snippet)
               .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
-              .margin({ bottom: 12 })
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
           }
 
-          // 根据类型显示不同内容
           this.buildMarkerTypeContent()
         }
         .alignItems(HorizontalAlign.Start)
         .width('100%')
-        .padding({ left: 16, right: 16 })
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
         // 操作按钮
-        Row() {
+        Row({ space: DesignConstants.SPACING.MD }) {
           Button('查看详情')
             .type(ButtonType.Capsule)
-            .backgroundColor(DesignConstants.COLOR.BRAND_PRIMARY)
+            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
             .fontColor(Color.White)
             .layoutWeight(1)
+            .height(44)
             .onClick(() => this.navigateToDetail())
-          
+
           Button('取消')
             .type(ButtonType.Capsule)
-            .backgroundColor(Color.Transparent)
-            .fontColor(DesignConstants.COLOR.TEXT_SECONDARY_LIGHT)
+            .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .layoutWeight(1)
+            .height(44)
             .onClick(() => this.showMarkerDetail = false)
         }
         .width('100%')
-        .padding(16)
+        .padding(DesignConstants.SPACING.LG)
         .justifyContent(FlexAlign.SpaceAround)
       }
       .width('100%')
