@@ -24,6 +24,8 @@ alwaysApply: true
 | `POST /api/v1/auth/guest` | 创建访客用户 | 可选 | MUST |
 | `POST /api/v1/auth/refresh_token` | 刷新 Token | 可选 | 无 |
 | `POST /api/v1/auth/check_status` | 检查认证状态 | 可选 | 无 |
+| `POST /api/v1/auth/request_password_reset` | 请求密码重置 | 无 | MUST |
+| `POST /api/v1/auth/reset_password` | 重置密码 | 无 | MUST |
 | `POST /api/v1/auth/me/change_password` | 修改密码 | 必须 | MUST |
 | `POST /api/v1/auth/me/sessions/list` | 获取会话列表 | 必须 | 无 |
 | `POST /api/v1/auth/me/sessions/revoke` | 撤销会话 | 必须 | 无 |
@@ -93,6 +95,18 @@ interface GuestRequest {
 interface RefreshTokenRequest {
   client_type: ClientType;
   refresh_token?: string;  // App 端必填，Web 端留空（使用 Cookie）
+}
+
+interface RequestPasswordResetRequest {
+  login_id: string;       // 注册时使用的邮箱或手机号
+  client_type: ClientType;
+}
+
+interface ResetPasswordRequest {
+  login_id: string;
+  verification_code: string;
+  new_password: string;
+  client_type: ClientType;
 }
 
 interface ChangePasswordRequest {
@@ -266,6 +280,45 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 **Response**: `ApiResponse<AuthStatus>`
 
 **错误码**: `10000`
+
+---
+
+### POST /api/v1/auth/request_password_reset
+
+请求密码重置（发送验证码）。
+
+- **认证**: 无
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+
+**安全说明**：
+- 无论 `login_id` 是否存在，均返回成功响应，不暴露账号是否注册
+- 验证码有效期和发送频率由 `AppConfig.rate_limits.auth_reset_per_10minutes` 控制
+
+**Request**: `RequestPasswordResetRequest`
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10500` `22000` `22002`
+
+---
+
+### POST /api/v1/auth/reset_password
+
+验证验证码并重置密码。重置成功后自动登录并返回 Token。
+
+- **认证**: 无
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+
+**安全说明**：
+- 重置密码成功后，服务端自动吊销该账号所有现有会话（与 `change_password` 一致）
+- 所有被吊销会话的 token 写入黑名单
+- 被吊销设备的 WebSocket 连接会被服务端主动断开
+
+**Request**: `ResetPasswordRequest`
+
+**Response**: `ApiResponse<AuthTokenPairWeb | AuthTokenPairApp>`
+
+**错误码**: `10000` `10100` `10300` `22000` `22002`
 
 ---
 

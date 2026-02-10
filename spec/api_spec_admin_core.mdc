@@ -11,13 +11,11 @@ alwaysApply: true
 - **命名空间**: 
   - `admin.rbac`
   - `admin.audit`
-  - `admin.server_config`
-  - `admin.client_config`
+  - `admin.app_config`
 - **基础路径**: 
   - `/api/v1/admin/rbac/`
   - `/api/v1/admin/audit/`
-  - `/api/v1/admin/server_config/`
-  - `/api/v1/admin/client_config/`
+  - `/api/v1/admin/app_config/`
 - **引用**: 
   - 基础规范：`@api_spec_base.mdc`
   - 通用类型：`@api_spec_types.mdc`
@@ -44,10 +42,8 @@ alwaysApply: true
 | `admin.rbac.manage` | 管理员权限管理（授权/角色/权限） |
 | `admin.reports.read` | 查看举报列表 |
 | `admin.reports.write` | 处理举报 |
-| `admin.server_config.read` | 查看服务端配置 |
-| `admin.server_config.write` | 修改服务端配置 |
-| `admin.client_config.read` | 查看客户端配置 |
-| `admin.client_config.write` | 修改客户端配置 |
+| `admin.app_config.read` | 查看应用配置（AppConfig） |
+| `admin.app_config.write` | 修改应用配置（AppConfig） |
 | `admin.tags.read` | 查看标签列表 |
 | `admin.tags.write` | 删除/屏蔽标签 |
 | `admin.announcements.read` | 查看公告列表 |
@@ -57,6 +53,7 @@ alwaysApply: true
 | `admin.groups.read` | 查看群组列表/详情 |
 | `admin.groups.write` | 解散/封禁群组 |
 | `admin.audit.read` | 查看审计日志 |
+| `admin.audit.read_ip` | 查看审计日志 IP 地址（敏感 PII，独立权限控制） |
 
 ## 端点总览
 
@@ -74,15 +71,14 @@ alwaysApply: true
 | `POST /api/v1/admin/rbac/admins/revoke` | 撤销管理员 | 必须 + `admin.rbac.manage` | 幂等语义 |
 | `POST /api/v1/admin/audit/list` | 审计日志列表 | 必须 + `admin.audit.read` | 无 |
 | `POST /api/v1/admin/audit/open_the_door` | 审计日志详情 | 必须 + `admin.audit.read` | 无 |
-| `POST /api/v1/admin/server_config/get` | 获取服务端配置 | 必须 + `admin.server_config.read` | 无 |
-| `POST /api/v1/admin/server_config/update_upload` | 更新上传策略 | 必须 + `admin.server_config.write` | 幂等语义 |
-| `POST /api/v1/admin/server_config/update_defaults` | 更新内容默认值 | 必须 + `admin.server_config.write` | 幂等语义 |
-| `POST /api/v1/admin/server_config/update_rate_limits` | 更新频率限制 | 必须 + `admin.server_config.write` | 幂等语义 |
-| `POST /api/v1/admin/server_config/update_response_defaults` | 更新响应默认值 | 必须 + `admin.server_config.write` | 幂等语义 |
-| `POST /api/v1/admin/client_config/get` | 获取客户端配置 | 必须 + `admin.client_config.read` | 无 |
-| `POST /api/v1/admin/client_config/update_features` | 更新功能开关 | 必须 + `admin.client_config.write` | 幂等语义 |
-| `POST /api/v1/admin/client_config/update_limits` | 更新应用限制 | 必须 + `admin.client_config.write` | 幂等语义 |
-| `POST /api/v1/admin/client_config/update_contact` | 更新联系信息 | 必须 + `admin.client_config.write` | 幂等语义 |
+| `POST /api/v1/admin/app_config/get` | 获取完整应用配置 | 必须 + `admin.app_config.read` | 无 |
+| `POST /api/v1/admin/app_config/update_upload` | 更新上传策略 | 必须 + `admin.app_config.write` | 幂等语义 |
+| `POST /api/v1/admin/app_config/update_defaults` | 更新内容默认值 | 必须 + `admin.app_config.write` | 幂等语义 |
+| `POST /api/v1/admin/app_config/update_rate_limits` | 更新频率限制 | 必须 + `admin.app_config.write` | 幂等语义 |
+| `POST /api/v1/admin/app_config/update_response_defaults` | 更新响应默认值 | 必须 + `admin.app_config.write` | 幂等语义 |
+| `POST /api/v1/admin/app_config/update_features` | 更新功能开关 | 必须 + `admin.app_config.write` | 幂等语义 |
+| `POST /api/v1/admin/app_config/update_limits` | 更新应用限制 | 必须 + `admin.app_config.write` | 幂等语义 |
+| `POST /api/v1/admin/app_config/update_contact` | 更新联系信息 | 必须 + `admin.app_config.write` | 幂等语义 |
 
 ## 类型定义
 
@@ -217,19 +213,25 @@ interface ResponseDefaults {
   group_announcements_count: number;  // 群公告列表返回条数，默认 10
 }
 
-interface ServerConfig {
+// AppConfig: 完整的应用配置，由管理员统一管理
+// ClientConfig（见 @api_spec_system.mdc）是 AppConfig 中客户端可见部分的投影
+interface AppConfig {
+  // === 客户端可见配置（构成 ClientConfig） ===
+  features: FeatureSwitches;       // 定义于 @api_spec_system.mdc
+  limits: AppLimits;               // 定义于 @api_spec_system.mdc
+  contact: ContactInfo;            // 定义于 @api_spec_system.mdc
+  // === 仅服务端使用 ===
   upload: UploadConfig;
   defaults: ContentDefaults;
   rate_limits: RateLimitConfig;
   response_defaults: ResponseDefaults;
+  // === 元数据 ===
   updated_at?: string;
   updated_by_user_id?: string;
 }
 
-interface AdminClientConfig extends ClientConfig {
-  updated_at: string;
-  updated_by_user_id: string;
-}
+// AdminClientConfig 已不再需要：AppConfig 包含 ClientConfig 的所有字段及元数据
+// 管理员通过 admin/app_config/get 获取完整 AppConfig
 ```
 
 ## 端点详情
@@ -462,13 +464,13 @@ interface AdminRbacRevokeAdminRequest {
 **Request**: `AuditLogListRequest`
 ```typescript
 interface AuditLogListRequest {
-  pagination?: PaginationParams;
   action?: AuditAction;
   operator_id?: string;
   target_type?: AuditTargetType;
   target_id?: string;
   start_time?: string;  // UTC ISO 8601
   end_time?: string;    // UTC ISO 8601
+  pagination?: PaginationParams;
 }
 ```
 
@@ -498,30 +500,30 @@ interface AuditLogOpenTheDoorRequest {
 
 ---
 
-## 服务端配置 API（ServerConfig）
+## 应用配置 API（AppConfig）
 
-**设计说明**：服务端配置包含仅后端使用的运行参数（上传策略、默认值、频率限制），不直接暴露给客户端。客户端配置由 `admin/client_config/*` 管理，见下方。
+**设计说明**：`AppConfig` 是完整的应用配置，由管理员统一管理。其中 `features`/`limits`/`contact` 部分构成 `ClientConfig`（投影给客户端），其余为仅服务端使用的运行参数。
 
-### POST /api/v1/admin/server_config/get
+### POST /api/v1/admin/app_config/get
 
-获取服务端配置。
+获取完整应用配置（AppConfig）。
 
-- **认证**: 必须 + `admin.server_config.read`
+- **认证**: 必须 + `admin.app_config.read`
 - **幂等**: 无
 
 **Request**: `{}`
 
-**Response**: `ApiResponse<ServerConfig>`
+**Response**: `ApiResponse<AppConfig>`
 
 **错误码**: `10200`
 
 ---
 
-### POST /api/v1/admin/server_config/update_upload
+### POST /api/v1/admin/app_config/update_upload
 
 更新上传策略。
 
-- **认证**: 必须 + `admin.server_config.write`
+- **认证**: 必须 + `admin.app_config.write`
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `UpdateUploadConfigRequest`
@@ -537,11 +539,11 @@ interface UpdateUploadConfigRequest {
 
 ---
 
-### POST /api/v1/admin/server_config/update_defaults
+### POST /api/v1/admin/app_config/update_defaults
 
 更新内容默认值。
 
-- **认证**: 必须 + `admin.server_config.write`
+- **认证**: 必须 + `admin.app_config.write`
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `UpdateDefaultsRequest`
@@ -560,11 +562,11 @@ interface UpdateDefaultsRequest {
 
 ---
 
-### POST /api/v1/admin/server_config/update_rate_limits
+### POST /api/v1/admin/app_config/update_rate_limits
 
 更新频率限制配置。
 
-- **认证**: 必须 + `admin.server_config.write`
+- **认证**: 必须 + `admin.app_config.write`
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
 **说明**：动态调整 Rate Limit 策略，无需重启服务即可生效。
@@ -593,13 +595,13 @@ interface UpdateRateLimitsRequest {
 
 ---
 
-### POST /api/v1/admin/server_config/update_response_defaults
+### POST /api/v1/admin/app_config/update_response_defaults
 
 更新响应默认值配置。
 
 控制非分页接口的服务端返回数量（如搜索建议条数、热门标签条数、聊天开门时的最近消息条数）。
 
-- **认证**: 必须 + `admin.server_config.write`
+- **认证**: 必须 + `admin.app_config.write`
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `UpdateResponseDefaultsRequest`
@@ -623,33 +625,18 @@ interface UpdateResponseDefaultsRequest {
 
 ---
 
-## 客户端配置 API（ClientConfig）
+## 客户端可见配置管理
 
-**设计说明**：客户端配置包含影响客户端 UI/行为的参数（功能开关、应用限制、联系方式）。与服务端配置分离管理，便于独立权限控制和缓存策略。
+**设计说明**：以下端点管理 `AppConfig` 中客户端可见的部分（`features`/`limits`/`contact`），这些字段构成 `ClientConfig`，通过公开端点 `system/get_client_config`（见 `@api_spec_system.mdc`）暴露给客户端。
 
-> 权限要求：读取 `admin.client_config.read`，更新 `admin.client_config.write`
-> 客户端可通过公开端点 `system/get_client_config`（见 `@api_spec_system.mdc`）获取配置，无需认证。
+> 统一使用 `admin.app_config.read` / `admin.app_config.write` 权限。
+> 客户端可通过公开端点 `system/get_client_config`（见 `@api_spec_system.mdc`）获取 ClientConfig 投影，无需认证。
 
-### POST /api/v1/admin/client_config/get
-
-获取客户端配置（管理员视角，包含元数据）。
-
-- **认证**: 必须 + `admin.client_config.read`
-- **幂等**: 无
-
-**Request**: `{}`
-
-**Response**: `ApiResponse<AdminClientConfig>`
-
-**错误码**: `10200`
-
----
-
-### POST /api/v1/admin/client_config/update_features
+### POST /api/v1/admin/app_config/update_features
 
 更新功能开关。
 
-- **认证**: 必须 + `admin.client_config.write`
+- **认证**: 必须 + `admin.app_config.write`
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `UpdateFeaturesRequest`
@@ -668,11 +655,11 @@ interface UpdateFeaturesRequest {
 
 ---
 
-### POST /api/v1/admin/client_config/update_limits
+### POST /api/v1/admin/app_config/update_limits
 
 更新应用限制。
 
-- **认证**: 必须 + `admin.client_config.write`
+- **认证**: 必须 + `admin.app_config.write`
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `UpdateLimitsRequest`
@@ -688,11 +675,11 @@ interface UpdateLimitsRequest {
 
 ---
 
-### POST /api/v1/admin/client_config/update_contact
+### POST /api/v1/admin/app_config/update_contact
 
 更新联系信息。
 
-- **认证**: 必须 + `admin.client_config.write`
+- **认证**: 必须 + `admin.app_config.write`
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `UpdateContactRequest`

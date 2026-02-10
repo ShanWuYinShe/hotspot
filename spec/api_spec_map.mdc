@@ -51,7 +51,7 @@ interface Bounds {
 
 interface MapViewport {
   bounds: Bounds;
-  zoom: number;
+  zoom: number;  // 取值范围 1-20，约束定义见 @api_spec_base.mdc 通用字段约束
 }
 
 // 时间范围参数

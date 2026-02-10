@@ -122,6 +122,8 @@ interface SearchSuggestRequest {
   prefix: string;
   reference_point: GeoPoint; // 必填，用于 LBS 优先排序（用户拒绝定位时使用 fallback）
   types?: SearchSuggestType[];  // 可选：限定返回的类型（如 ['user', 'group']）。为空则返回所有类型。
+  radius?: number;  // 搜索半径（米），约束见 @api_spec_base.mdc 通用字段约束
+  limit?: number;   // 返回条数上限，默认值由 AppConfig.response_defaults.search_suggest_count 决定，客户端可传更小值
 }
 ```
 
@@ -144,6 +146,7 @@ interface SearchSuggestRequest {
 ```typescript
 interface TrendingTagsRequest {
   timeframe?: TagTimeframe;
+  limit?: number;   // 返回条数上限，默认值由 AppConfig.response_defaults.trending_tags_count 决定
 }
 ```
 

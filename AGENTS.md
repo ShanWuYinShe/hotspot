@@ -1,33 +1,23 @@
 # HotSpot - Agent Guide
 
-> For agentic coding tools. Keep changes contract-safe and minimal.
-
+> For agentic coding tools. Keep changes contract-safe, minimal, and reversible.
 ## Contract Priority / 契约优先
 - `spec/` is the single source of truth for API contracts.
 - `spec/api_spec_*.mdc` defines endpoints, fields, error codes, and WebSocket events.
 - `spec/api_spec_base.mdc` defines global rules (pagination, idempotency, etc.).
-- OpenAPI is not used for now; prefer the `.mdc` specs for AI work.
-- backend/frontend_svelte/harmonyapp 必须严格遵循 spec，冲突以 spec 为准。
+- OpenAPI is not used; prefer the `.mdc` specs for AI work.
+- backend/frontend_svelte/frontend_legaccy/harmonyapp must follow spec; conflicts resolve to spec.
 - Do not copy/paste spec contents into docs; reference by file/section title only.
 - Never hardcode API paths; use endpoint constants.
-
 ## Key Spec Files (quick lookup)
-- `spec/api_spec_index.mdc` index
-- `spec/api_spec_types.mdc` shared types
-- `spec/api_spec_errors.mdc` error codes
-- `spec/api_spec_websocket.mdc` WS events
-- `spec/backend_rule.mdc` backend rules
-- `spec/frontend_rule.mdc` frontend rules
-
+- `spec/api_spec_index.mdc` index; `spec/api_spec_types.mdc` shared types; `spec/api_spec_errors.mdc` error codes.
+- `spec/api_spec_websocket.mdc` WS events; `spec/backend_rule.mdc` backend rules; `spec/frontend_rule.mdc` frontend rules.
 ## Project Layout
-- `spec/` API specs + rules; `backend/` Rust; `frontend_svelte/` SvelteKit; `harmonyapp/` HarmonyOS.
-
+- `spec/` specs; `backend/` Rust; `frontend_svelte/` SvelteKit; `frontend_legaccy/` legacy Nuxt; `harmonyapp/` HarmonyOS; `scripts/` guards; `openapi/` legacy artifacts.
 ## Build / Lint / Test Commands
 ### Backend (Rust)
 ```bash
 cd backend
-cargo run
-RUST_LOG=debug cargo run
 cargo build --release
 cargo check
 cargo fmt
@@ -37,44 +27,39 @@ cargo test --test user_tests
 cargo test test_create_user
 cargo test -- --nocapture
 ```
-
 ### Frontend (SvelteKit)
 ```bash
 cd frontend_svelte
 pnpm install
 pnpm dev
-pnpm dev -- --open
 pnpm build
-pnpm preview
 pnpm check
 pnpm check:watch
 ```
 - No unit-test runner configured in `frontend_svelte/package.json`.
-
+### Frontend Legacy (Nuxt)
+```bash
+cd frontend_legaccy
+pnpm install
+pnpm dev
+pnpm build
+pnpm run guard:api-paths
+```
+- No test runner configured in `frontend_legaccy/package.json`.
 ### HarmonyOS (ETS / Hvigor)
-When modifying `harmonyapp/` or collecting build output, ask the user for DevEco Studio install dir or Command Line Tools dir. Derive `DEVECO_SDK_HOME` and `HVIGORW` from that location.
+Ask for DevEco Studio/CLI tools dir to derive `DEVECO_SDK_HOME` and `HVIGORW`.
 ```bash
 # DevEco Studio (macOS)
-DEVECO_SDK_HOME="$DEVECO_STUDIO_DIR/Contents/sdk"
-HVIGORW="$DEVECO_STUDIO_DIR/Contents/tools/hvigor/bin/hvigorw.js"
+DEVECO_SDK_HOME="$DEVECO_STUDIO_DIR/Contents/sdk"; HVIGORW="$DEVECO_STUDIO_DIR/Contents/tools/hvigor/bin/hvigorw.js"
 # DevEco Studio (non-macOS)
-DEVECO_SDK_HOME="$DEVECO_STUDIO_DIR/sdk"
-HVIGORW="$DEVECO_STUDIO_DIR/tools/hvigor/bin/hvigorw.js"
+DEVECO_SDK_HOME="$DEVECO_STUDIO_DIR/sdk"; HVIGORW="$DEVECO_STUDIO_DIR/tools/hvigor/bin/hvigorw.js"
 # Command Line Tools (all platforms)
-DEVECO_SDK_HOME="$COMMANDLINE_TOOL_DIR/sdk"
-HVIGORW="$COMMANDLINE_TOOL_DIR/hvigor/bin/hvigorw.js"
-
-# Build HAP (in harmonyapp/ directory)
+DEVECO_SDK_HOME="$COMMANDLINE_TOOL_DIR/sdk"; HVIGORW="$COMMANDLINE_TOOL_DIR/hvigor/bin/hvigorw.js"
 cd harmonyapp
 DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$HVIGORW" clean --mode module -p product=default assembleHap --info --analyze=ultrafine --parallel --incremental --enable-build-script-type-check --no-daemon
-
-# List available tasks
 DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$HVIGORW" --tasks
 ```
-- Hvigor tasks are provided by `appTasks`/`hapTasks`; confirm with `--tasks`.
-- Linter configuration: `harmonyapp/code-linter.json5`.
-- Use DevEco Studio when Hvigor tasks are unclear.
-
+- Hvigor tasks provided by `appTasks`/`hapTasks`; linter config `harmonyapp/code-linter.json5`.
 ## Backend (Rust) Style
 - Architecture: Handler -> Service -> Repository. Keep SQL in repositories only.
 - Handlers: param extraction + response wrapping only.
@@ -101,7 +86,6 @@ use crate::dto::UserResponse;
 - Logging: use `tracing`, avoid `println!`.
 - Geo: do not compute distance/angles in Rust; use PostGIS (`ST_Distance`, `ST_DWithin`) + GIST index.
 - Response envelope: `ApiResponse<T>`; business success is `code === 0`.
-
 ## Frontend (Svelte/TS) Style
 - Naming: `kebab-case.svelte`, `+page.svelte`, `+layout.svelte`, `kebab-case.ts`.
 - Indentation: follow existing tabs in TS/Svelte files.
@@ -125,40 +109,36 @@ import UserCard from '$lib/components/user-card.svelte';
 - Only `code === 0` indicates business success.
 - Use optional chaining (`?.`) and nullish coalescing (`??`) for optional fields.
 - Cursor values are opaque; do not decode or parse.
-
+- Legacy Nuxt app: follow existing patterns in `frontend_legaccy/`; keep changes minimal.
 ## HarmonyOS (ETS) Style
 - Files: `.ets` in PascalCase for components/pages; constants in `*Constants.ets`.
 - Indentation: follow existing 2-space ETS style.
 - Imports order: system/ohos -> core utilities -> features/components.
 - Types: explicit parameter/return types and `Promise<T>`; avoid `any`.
 - API types live in `harmonyapp/entry/src/main/ets/core/types/api.ets`.
-- Endpoints/client: use `ApiEndpoints` + `ApiClient`
-  (`harmonyapp/entry/src/main/ets/core/config/ApiEndpoints.ets`).
+- Endpoints/client: use `ApiEndpoints` + `ApiClient` (`harmonyapp/entry/src/main/ets/core/config/ApiEndpoints.ets`).
 - Network: go through `HttpUtil`; WebSocket through `WebSocketService`.
 - Error handling: same HTTP vs business split; `code === 0` only success.
 - Lint/security: follow `code-linter.json5` (no unsafe crypto).
-
-## Error Handling Rules (All Clients)
+- Guard script: `scripts/guard-api-paths.sh` prevents hardcoded versioned API paths.
+## Error Handling, Pagination, Cursor
 - HTTP layer error: request failed (non-200, network, timeout) -> treat as network failure.
 - Business layer error: HTTP 200 but `code !== 0` -> show domain error.
 - Always log or surface `request_id` when available.
-
-## Pagination & Cursor
-- Cursor is opaque; pass through only.
+- Cursor is opaque; pass through only; never decode or assume format.
 - Use `PaginationMeta` / `PaginatedData` types.
-- Never store decoded cursor or assume format.
-
 ## Secrets & Config
 - Do not commit secrets or `.env` files.
 - Backend config uses env vars; keep defaults in `.env.example` only.
 - Frontend config should avoid embedding secrets; use public envs only.
-
-## Destructive Operations
-- NEVER use `git checkout` to revert files in bulk without explicit user approval.
-- NEVER use `rm` to delete multiple files without explicit user approval.
-- Prefer editing files over deleting them; file deletion requires user confirmation.
-- When in doubt, ask the user before performing any destructive or irreversible operation.
-
+## Git Safety (Strict)
+- Default: do not run any `git` command unless the user asks.
+- Read-only allowed only when needed: `git status`, `git diff`, `git log`, `git show`.
+- Require explicit approval for any write/history operation or file deletion.
+- Forbidden without approval: `git add`, `git commit`, `git push`, `git pull`, `git fetch`, `git merge`, `git rebase`, `git cherry-pick`, `git revert`, `git reset`, `git checkout`, `git restore`, `git clean`, `git branch -D`, `git tag -d`.
+- Never use `--force`, `--hard`, or `--no-verify` unless user explicitly requests.
+## Cursor/Copilot Rules
+- None found in `.cursor/rules/`, `.cursorrules`, or `.github/copilot-instructions.md`.
 ## Common Pitfalls
 - Hardcoded API paths or ad-hoc endpoints; mixing HTTP status with business success.
 - SQL or business logic inside handlers.

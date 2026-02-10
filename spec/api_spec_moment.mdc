@@ -50,7 +50,7 @@ alwaysApply: true
 - `PrivacyLevel`
 - `Location`
 - `RelativeLocation`
-- `SearchBaseParams`
+- `GeoPoint`
 - `PaginationParams`
 - `UserInfo`
 
@@ -96,11 +96,12 @@ interface CommentItem {
 **Request**: `SearchMomentsRequest`
 ```typescript
 interface SearchMomentsRequest {
-  search: SearchBaseParams;
   keyword?: string;    // 关键字搜索（匹配描述等）
   tag?: string;        // 标签筛选
-  radius?: number;     // 位置范围（米），配合 search.reference_point 使用
+  radius?: number;     // 位置范围（米），配合 reference_point 使用
   sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';  // 默认: relevance
+  reference_point: GeoPoint; // 浏览锚点位置（客户端必须传入有效坐标，拒绝定位时使用 fallback）
+  pagination?: PaginationParams;
 }
 // 至少提供 keyword、tag、radius 中的一个
 ```
@@ -172,7 +173,7 @@ interface EditMomentRequest {
 }
 ```
 
-**Response**: `ApiResponse`
+**Response**: `ApiResponse<MomentItem>`
 
 **错误码**: `10000` `10200` `10300`
 
@@ -317,8 +318,8 @@ interface MyFavoritesRequest {
 **Request**: `MomentLikesRequest`
 ```typescript
 interface MomentLikesRequest {
-  pagination?: PaginationParams;
   moment_id: string;
+  pagination?: PaginationParams;
 }
 ```
 
@@ -375,13 +376,13 @@ interface DeleteCommentRequest {
 
 - **认证**: 可选
 - **幂等**: 无
-- **排序**: 评论列表默认按 `created_at` **时间倒序**（最新在前）
+- **排序**: 评论列表默认按 `created_at` **时间倒序**（最新在前），tie-breaker 为 `comment_id`
 
 **Request**: `CommentsRequest`
 ```typescript
 interface CommentsRequest {
-  pagination?: PaginationParams;
   moment_id: string;
+  pagination?: PaginationParams;
 }
 ```
 
@@ -395,13 +396,13 @@ interface CommentsRequest {
 
 - **认证**: 可选
 - **幂等**: 无
-- **排序**: 回复列表默认按 `created_at` **时间正序**（最早在前，便于对话阅读）
+- **排序**: 回复列表默认按 `created_at` **时间正序**（最早在前，便于对话阅读），tie-breaker 为 `comment_id`
 
 **Request**: `CommentRepliesRequest`
 ```typescript
 interface CommentRepliesRequest {
-  pagination?: PaginationParams;
   comment_id: string;
+  pagination?: PaginationParams;
 }
 ```
 
@@ -456,8 +457,8 @@ interface UnlikeCommentRequest {
 **Request**: `CommentLikesRequest`
 ```typescript
 interface CommentLikesRequest {
-  pagination?: PaginationParams;
   comment_id: string;
+  pagination?: PaginationParams;
 }
 ```
 

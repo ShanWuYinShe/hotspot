@@ -138,12 +138,12 @@ type AdminTagSortBy =
 **Request**: `AdminUserSearchRequest`
 ```typescript
 interface AdminUserSearchRequest {
-  pagination?: PaginationParams;
   user_id?: string;
   nickname?: string;
   login_id?: string;
   status?: UserAccountStatus;
   user_type?: UserType;
+  pagination?: PaginationParams;
 }
 ```
 
@@ -232,10 +232,10 @@ interface AdminUnbanUserRequest {
 **Request**: `AdminGroupSearchRequest`
 ```typescript
 interface AdminGroupSearchRequest {
-  pagination?: PaginationParams;
   group_id?: string;
   name?: string;
   owner_id?: string;
+  pagination?: PaginationParams;
 }
 ```
 
@@ -293,12 +293,12 @@ interface AdminDismissGroupRequest {
 - **认证**: 必须 + `admin.reports.read`
 - **幂等**: 无
 
-**Request**: `AdminReportsRequest`
+**Request**: `AdminReportSearchRequest`
 ```typescript
-interface AdminReportsRequest {
-  pagination?: PaginationParams;
+interface AdminReportSearchRequest {
   status?: ReportStatus;
   target_type?: ReportTargetType;
+  pagination?: PaginationParams;
 }
 ```
 
@@ -341,9 +341,9 @@ interface HandleReportRequest {
 **Request**: `AdminTagSearchRequest`
 ```typescript
 interface AdminTagSearchRequest {
-  pagination?: PaginationParams;
   keyword?: string;                   // 标签名模糊搜索
   sort_by?: AdminTagSortBy;          // 排序方式，默认 usage_count_desc
+  pagination?: PaginationParams;
 }
 ```
 
@@ -387,8 +387,8 @@ interface AdminDeleteTagRequest {
 **Request**: `AdminAnnouncementSearchRequest`
 ```typescript
 interface AdminAnnouncementSearchRequest {
-  pagination?: PaginationParams;
   severity?: AnnouncementSeverity;
+  pagination?: PaginationParams;
 }
 ```
 

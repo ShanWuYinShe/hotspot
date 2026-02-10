@@ -135,16 +135,6 @@ interface PaginatedData<T> {
     next_cursor?: string;
   };
 }
-
-// 搜索基础参数（包含浏览锚点位置，组合分页参数）
-// 说明：reference_point 是客户端必须传入的有效地理位置
-// - 服务端可能用于距离计算、地理位置排序、推荐优化等
-// - 即使是纯关键字搜索，服务端也可能利用 reference_point 优化排序（附近的结果更靠前）
-// - 客户端拒绝定位时使用 fallback 坐标
-interface SearchBaseParams {
-  pagination?: PaginationParams;
-  reference_point: GeoPoint; // 浏览锚点位置（客户端必须传入有效坐标，拒绝定位时使用 fallback）
-}
 ```
 
 ### 媒体资源
@@ -198,10 +188,10 @@ interface UserStats {
   following_count: number;
   groups_count: number;
 }
-```
 
 // 账号状态（系统管理员视角）
 type UserAccountStatus = 'normal' | 'banned';
+```
 
 **UserItem**: 用户统一数据类型（用于列表、搜索、详情、Feed 等所有场景）
 ```typescript

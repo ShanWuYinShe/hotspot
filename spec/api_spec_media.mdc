@@ -158,4 +158,8 @@ interface CompleteUploadRequest {
 
 **Response**: `ApiResponse<UploadedMedia>`
 
-**错误码**: `10000` `10300` `10400`
+**错误码**: `10000` `10300` `10400` `22000` `22002`
+
+**错误码说明**：
+- `10300`：upload_id 不存在（如恶意请求发送了不存在的 upload_id）
+- `10400`：业务冲突（如对同一上传重复发送 complete_upload 请求）

@@ -66,7 +66,7 @@ alwaysApply: true
 - `GroupJoinMethod`
 - `Location`
 - `PaginationParams`
-- `SearchBaseParams`
+- `GeoPoint`
 - `PaginatedData`
 - `ApiResponse`
 - `UserInfo`
@@ -85,7 +85,7 @@ type SetableGroupRole = 'admin' | 'member';
 // 群组详情响应
 interface GroupOpenResult {
   group: GroupItem;
-  recent_messages: PaginatedData<GroupMessageItem>;  // GroupMessageItem 定义于 @api_spec_chat.mdc；始终返回，条数由 ServerConfig.response_defaults.chat_recent_messages_count 控制
+  recent_messages: PaginatedData<GroupMessageItem>;  // GroupMessageItem 定义于 @api_spec_chat.mdc；始终返回，条数由 AppConfig.response_defaults.chat_recent_messages_count 控制
 }
 
 // 群组成员列表项
@@ -172,11 +172,12 @@ interface JoinGroupResult {
 **Request**: `SearchGroupsRequest`
 ```typescript
 interface SearchGroupsRequest {
-  search: SearchBaseParams;
   keyword?: string;    // 关键字搜索（匹配名称、描述等）
   tag?: string;        // 标签筛选
-  radius?: number;     // 位置范围（米），配合 search.reference_point 使用
+  radius?: number;     // 位置范围（米），配合 reference_point 使用
   sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';  // 默认: relevance
+  reference_point: GeoPoint; // 浏览锚点位置（客户端必须传入有效坐标，拒绝定位时使用 fallback）
+  pagination?: PaginationParams;
 }
 // 至少提供 keyword、tag、radius 中的一个
 ```
@@ -192,7 +193,7 @@ interface SearchGroupsRequest {
 获取群组详情。
 
 Token 可选；登录态返回 `GroupItem.my_state`。
-始终返回最近消息（`recent_messages`），条数由 `ServerConfig.response_defaults.chat_recent_messages_count` 控制。
+始终返回最近消息（`recent_messages`），条数由 `AppConfig.response_defaults.chat_recent_messages_count` 控制。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -298,9 +299,9 @@ interface DismissGroupRequest {
 **Request**: `GroupMembersRequest`
 ```typescript
 interface GroupMembersRequest {
-  pagination?: PaginationParams;
   group_id: string;
   role?: GroupRole;
+  pagination?: PaginationParams;
 }
 ```
 
@@ -321,10 +322,10 @@ interface GroupMembersRequest {
 **Request**: `SearchGroupMembersRequest`
 ```typescript
 interface SearchGroupMembersRequest {
-  pagination?: PaginationParams;
   group_id: string;
   keyword: string;    // 按昵称搜索
   role?: GroupRole;   // 可选：按角色过滤
+  pagination?: PaginationParams;
 }
 ```
 
@@ -487,8 +488,8 @@ interface UnbanMemberRequest {
 **Request**: `BannedMembersRequest`
 ```typescript
 interface BannedMembersRequest {
-  pagination?: PaginationParams;
   group_id: string;
+  pagination?: PaginationParams;
 }
 ```
 
@@ -532,9 +533,9 @@ interface RemoveMemberRequest {
 **Request**: `GroupApplicationsRequest`
 ```typescript
 interface GroupApplicationsRequest {
-  pagination?: PaginationParams;
   group_id: string;
   status?: ApplicationStatus | 'all';
+  pagination?: PaginationParams;
 }
 ```
 
@@ -621,7 +622,7 @@ interface CreateGroupAnnouncementRequest {
 interface GroupAnnouncementsRequest {
   group_id: string;
 }
-// 返回条数由 ServerConfig.response_defaults.group_announcements_count 控制
+// 返回条数由 AppConfig.response_defaults.group_announcements_count 控制
 ```
 
 **Response**: `ApiResponse<{ items: GroupAnnouncementItem[] }>`
@@ -644,6 +645,7 @@ interface GroupAnnouncementsRequest {
 **Request**: `UpdateGroupAnnouncementRequest`
 ```typescript
 interface UpdateGroupAnnouncementRequest {
+  group_id: string;
   announcement_id: string;
   title?: string;
   content?: string;
@@ -667,6 +669,7 @@ interface UpdateGroupAnnouncementRequest {
 **Request**: `DeleteGroupAnnouncementRequest`
 ```typescript
 interface DeleteGroupAnnouncementRequest {
+  group_id: string;
   announcement_id: string;
 }
 ```
@@ -784,8 +787,8 @@ interface MyGroupsRequest {
 **Request**: `MyApplicationsRequest`
 ```typescript
 interface MyApplicationsRequest {
-  pagination?: PaginationParams;
   status?: ApplicationStatus | 'all';  // 默认: 'all'
+  pagination?: PaginationParams;
 }
 ```
 
@@ -828,8 +831,8 @@ interface CancelApplicationRequest {
 **Request**: `MyInvitesRequest`
 ```typescript
 interface MyInvitesRequest {
-  pagination?: PaginationParams;
   status?: ApplicationStatus | 'all';
+  pagination?: PaginationParams;
 }
 ```
 

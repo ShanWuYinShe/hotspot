@@ -38,7 +38,7 @@ alwaysApply: true
 - `PaginationParams`
 
 ```typescript
-type ShareType = 'user' | 'group' | 'moment' | 'reference_point';
+type ShareType = 'user' | 'group' | 'moment' | 'location';
 
 interface ShareBase {
   share_id: string;
@@ -56,26 +56,26 @@ interface ShareCreated {
 }
 
 interface UserSharePayload {
-  user_id: string;
+  shared_user_id: string;
 }
 
 interface GroupSharePayload {
-  group_id: string;
+  shared_group_id: string;
 }
 
 interface MomentSharePayload {
-  moment_id: string;
+  shared_moment_id: string;
 }
 
-interface ReferencePointSharePayload {
-  reference_point: Location;
+interface LocationSharePayload {
+  shared_location: Location;
 }
 
 type SharePayload =
   | UserSharePayload
   | GroupSharePayload
   | MomentSharePayload
-  | ReferencePointSharePayload;
+  | LocationSharePayload;
 
 interface SharePreview {
   title: string;
@@ -90,10 +90,10 @@ interface ShareDetail {
 }
 
 type ShareApplyAction =
-  | { type: 'navigate_user'; user_id: string }
-  | { type: 'navigate_group'; group_id: string }
-  | { type: 'navigate_moment'; moment_id: string }
-  | { type: 'update_reference_point'; reference_point: Location };
+  | { type: 'navigate_user'; shared_user_id: string }
+  | { type: 'navigate_group'; shared_group_id: string }
+  | { type: 'navigate_moment'; shared_moment_id: string }
+  | { type: 'update_location'; shared_location: Location };
 
 interface ShareApplyResult {
   share_type: ShareType;
@@ -126,8 +126,8 @@ interface ApplyShareRequest {
 }
 
 interface ShareListRequest {
-  pagination?: PaginationParams;
   share_type?: ShareType;           // 按类型筛选
+  pagination?: PaginationParams;
 }
 
 interface RevokeShareRequest {
@@ -178,7 +178,7 @@ interface CreateShareRequest {
 **业务规则**：
 - 校验 payload 与 share_type 匹配
 - 校验目标资源存在且可访问
-- `reference_point`：校验经纬度范围与 `location_name` 长度（1-100 字符）
+- `location`：校验经纬度范围与 `location_name` 长度（1-100 字符）
 - `expires_in_seconds` 若提供，必须为正整数且不超过系统允许上限
 
 **错误码**: `10000` `10300` `22000` `22002`
@@ -214,7 +214,7 @@ interface GetShareRequest {
 
 **行为说明**：
 - `navigate_user` / `navigate_group` / `navigate_moment`：客户端跳转到对应详情页
-- `update_reference_point`：服务端更新用户浏览锚点位置，并返回最新锚点
+- `update_location`：服务端更新用户浏览锚点位置，并返回最新锚点
 
 **Request**: `ApplyShareRequest`
 ```typescript
@@ -240,8 +240,8 @@ interface ApplyShareRequest {
 **Request**: `ShareListRequest`
 ```typescript
 interface ShareListRequest {
-  pagination?: PaginationParams;
   share_type?: ShareType;           // 按类型筛选
+  pagination?: PaginationParams;
 }
 ```
 

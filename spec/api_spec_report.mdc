@@ -37,6 +37,16 @@ alwaysApply: true
 
 管理员审核流程（处理动作、内容快照机制等）详见 `@api_spec_admin_moderation.mdc`。
 
+**不同 `ReportTargetType` 的处理逻辑**：
+
+| 目标类型 | 可执行措施 |
+|---------|-----------|
+| `user` | 封禁用户 |
+| `moment` | 删除瞬间 + 警告/封禁发布者 |
+| `comment` | 删除评论 + 警告发布者 |
+| `message` | 删除消息 + 警告/封禁发送者 |
+| `group` | 解散群组 + 封禁群主 |
+
 ## 类型定义
 
 以下类型定义于 `@api_spec_types.mdc`：
@@ -58,6 +68,8 @@ interface CreateReportRequest {
 }
 
 interface MyReportsRequest {
+  status?: ReportStatus;
+  target_type?: ReportTargetType;
   pagination?: PaginationParams;
 }
 
@@ -113,6 +125,8 @@ interface CreateReportRequest {
 **Request**: `MyReportsRequest`
 ```typescript
 interface MyReportsRequest {
+  status?: ReportStatus;
+  target_type?: ReportTargetType;
   pagination?: PaginationParams;
 }
 ```

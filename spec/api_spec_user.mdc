@@ -55,7 +55,7 @@ alwaysApply: true
 - `UserPresenceStatus`
 - `Location`
 - `PaginationParams`
-- `SearchBaseParams`
+- `GeoPoint`
 - `GroupItem`
 - `MomentItem`
 - `FollowSource`
@@ -76,8 +76,8 @@ interface MyProfile {
   bio?: string;
   tags?: string[];
   gender?: Gender;
-  email?: string;
-  phone?: string;
+  email?: string;               // 只读，来源于 login_id；如需变更请通过 auth/me/change_login_id 处理
+  phone?: string;               // 只读，来源于 login_id；如需变更请通过 auth/me/change_login_id 处理
   location: Location;  // 直接映射自请求，不经过距离/角度计算
   presence_status: UserPresenceStatus;
   last_online: string;
@@ -135,11 +135,12 @@ interface BlockedUserItem {
 }
 
 interface SearchUsersRequest {
-  search: SearchBaseParams;
   keyword?: string;    // 关键字搜索（匹配昵称、bio 等）
   tag?: string;        // 标签筛选
-  radius?: number;     // 位置范围（米），配合 search.reference_point 使用
+  radius?: number;     // 位置范围（米），配合 reference_point 使用
   sort_by?: 'relevance' | 'distance' | 'newest';  // 默认: relevance
+  reference_point: GeoPoint; // 浏览锚点位置（客户端必须传入有效坐标，拒绝定位时使用 fallback）
+  pagination?: PaginationParams;
 }
 // 至少提供 keyword、tag、radius 中的一个
 
@@ -148,33 +149,33 @@ interface UserOpenTheDoorRequest {
 }
 
 interface UserFriendsRequest {
-  pagination?: PaginationParams;
   user_id: string;
+  pagination?: PaginationParams;
 }
 
 interface UserFollowingRequest {
-  pagination?: PaginationParams;
   user_id: string;
+  pagination?: PaginationParams;
 }
 
 interface UserFollowersRequest {
-  pagination?: PaginationParams;
   user_id: string;
+  pagination?: PaginationParams;
 }
 
 interface UserGroupsRequest {
-  pagination?: PaginationParams;
   user_id: string;
+  pagination?: PaginationParams;
 }
 
 interface UserMomentsRequest {
-  pagination?: PaginationParams;
   user_id: string;
+  pagination?: PaginationParams;
 }
 
 interface UserLikedMomentsRequest {
-  pagination?: PaginationParams;
   user_id: string;
+  pagination?: PaginationParams;
 }
 
 interface UpdateProfileRequest {
@@ -239,7 +240,7 @@ interface MyBlockedRequest {
 
 interface SetRemarkRequest {
   user_id: string;
-  remark?: string;  // 为空则清除备注
+  remark?: string;  // 传空字符串 "" 表示清除备注；不传此字段则不修改
 }
 ```
 
@@ -266,11 +267,12 @@ interface SetRemarkRequest {
 **Request**: `SearchUsersRequest`
 ```typescript
 interface SearchUsersRequest {
-  search: SearchBaseParams;
   keyword?: string;    // 关键字搜索（匹配昵称、bio 等）
   tag?: string;        // 标签筛选
-  radius?: number;     // 位置范围（米），配合 search.reference_point 使用
+  radius?: number;     // 位置范围（米），配合 reference_point 使用
   sort_by?: 'relevance' | 'distance' | 'newest';  // 默认: relevance
+  reference_point: GeoPoint; // 浏览锚点位置（客户端必须传入有效坐标，拒绝定位时使用 fallback）
+  pagination?: PaginationParams;
 }
 // 至少提供 keyword、tag、radius 中的一个
 ```
@@ -316,12 +318,14 @@ interface UserOpenTheDoorRequest {
 **Request**: `UserFriendsRequest`
 ```typescript
 interface UserFriendsRequest {
-  pagination?: PaginationParams;
   user_id: string;
+  pagination?: PaginationParams;
 }
 ```
 
-**Response**: `ApiResponse<PaginatedData<UserInfo>>`
+**Response**: `ApiResponse<PaginatedData<FriendItem>>`
+
+**可见性说明**：`remark` 为 `@owner-only`（仅 `me/list_friends` 返回），`presence_status`/`last_online` 受对方隐私设置控制。
 
 **错误码**: `10000` `10300`
 
@@ -340,12 +344,14 @@ interface UserFriendsRequest {
 **Request**: `UserFollowingRequest`
 ```typescript
 interface UserFollowingRequest {
-  pagination?: PaginationParams;
   user_id: string;
+  pagination?: PaginationParams;
 }
 ```
 
-**Response**: `ApiResponse<PaginatedData<UserInfo>>`
+**Response**: `ApiResponse<PaginatedData<FollowingItem>>`
+
+**可见性说明**：`presence_status`/`last_online` 受对方隐私设置控制。
 
 **错误码**: `10000` `10300`
 
@@ -364,12 +370,14 @@ interface UserFollowingRequest {
 **Request**: `UserFollowersRequest`
 ```typescript
 interface UserFollowersRequest {
-  pagination?: PaginationParams;
   user_id: string;
+  pagination?: PaginationParams;
 }
 ```
 
-**Response**: `ApiResponse<PaginatedData<UserInfo>>`
+**Response**: `ApiResponse<PaginatedData<FollowerItem>>`
+
+**可见性说明**：`presence_status`/`last_online` 受对方隐私设置控制。
 
 **错误码**: `10000` `10300`
 
@@ -388,8 +396,8 @@ interface UserFollowersRequest {
 **Request**: `UserGroupsRequest`
 ```typescript
 interface UserGroupsRequest {
-  pagination?: PaginationParams;
   user_id: string;
+  pagination?: PaginationParams;
 }
 ```
 
@@ -412,8 +420,8 @@ interface UserGroupsRequest {
 **Request**: `UserMomentsRequest`
 ```typescript
 interface UserMomentsRequest {
-  pagination?: PaginationParams;
   user_id: string;
+  pagination?: PaginationParams;
 }
 ```
 
@@ -436,8 +444,8 @@ interface UserMomentsRequest {
 **Request**: `UserLikedMomentsRequest`
 ```typescript
 interface UserLikedMomentsRequest {
-  pagination?: PaginationParams;
   user_id: string;
+  pagination?: PaginationParams;
 }
 ```
 
@@ -770,7 +778,7 @@ interface MyBlockedRequest {
 ```typescript
 interface SetRemarkRequest {
   user_id: string;
-  remark?: string;  // 为空则清除备注
+  remark?: string;  // 传空字符串 "" 表示清除备注；不传此字段则不修改
 }
 ```
 

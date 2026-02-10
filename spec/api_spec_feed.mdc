@@ -22,7 +22,6 @@ alwaysApply: true
 | `POST /api/v1/feed/list_groups` | 获取群组推荐 | 必须 | 无 |
 | `POST /api/v1/feed/list_users` | 获取用户推荐 | 必须 | 无 |
 | `POST /api/v1/feed/list_trending` | 获取热门内容 | 可选 | 无 |
-| `POST /api/v1/feed/me/feedback` | 信息流反馈 | 必须 | 无 |
 
 ## 类型定义
 
@@ -37,12 +36,6 @@ alwaysApply: true
 ```typescript
 // 信息流来源
 type FeedSource = 'following' | 'nearby' | 'all';
-
-// 信息流内容类型
-type FeedContentType = 'moment' | 'group' | 'user';
-
-// 信息流反馈动作
-type FeedFeedbackAction = 'hide' | 'not_interested';
 
 interface TrendingBundle {
   trending_tags: TrendingTagItem[];
@@ -73,10 +66,10 @@ interface TrendingTagItem extends Omit<TagItem, 'trend'> {
 **Request**: `GetFeedMomentsRequest`
 ```typescript
 interface GetFeedMomentsRequest {
+  source: FeedSource;
+  radius?: number;  // 位置范围（米），100-50000，可由 AppConfig.limits.search_radius_max 覆盖
+  reference_point: GeoPoint; // 浏览锚点位置
   pagination?: PaginationParams;
-  source?: FeedSource;
-  reference_point: GeoPoint;
-  radius?: number;  // 位置范围（米），100-50000，可由 AppLimits.search_radius_max 覆盖
 }
 ```
 
@@ -104,9 +97,9 @@ interface GetFeedMomentsRequest {
 **Request**: `GetFeedGroupsRequest`
 ```typescript
 interface GetFeedGroupsRequest {
+  radius?: number;  // 位置范围（米），100-50000，可由 AppConfig.limits.search_radius_max 覆盖
+  reference_point: GeoPoint; // 浏览锚点位置
   pagination?: PaginationParams;
-  reference_point: GeoPoint;
-  radius?: number;  // 位置范围（米），100-50000，可由 AppLimits.search_radius_max 覆盖
 }
 ```
 
@@ -129,9 +122,9 @@ interface GetFeedGroupsRequest {
 **Request**: `GetFeedUsersRequest`
 ```typescript
 interface GetFeedUsersRequest {
+  radius?: number;  // 位置范围（米），100-50000，可由 AppConfig.limits.search_radius_max 覆盖
+  reference_point: GeoPoint; // 浏览锚点位置
   pagination?: PaginationParams;
-  reference_point: GeoPoint;
-  radius?: number;  // 位置范围（米），100-50000，可由 AppLimits.search_radius_max 覆盖
 }
 ```
 
@@ -151,36 +144,11 @@ interface GetFeedUsersRequest {
 **Request**: `GetFeedTrendingRequest`
 ```typescript
 interface GetFeedTrendingRequest {}
-// 返回条数由 ServerConfig.response_defaults 控制（trending_tags_count、hot_moments_count）
+// 返回条数由 AppConfig.response_defaults 控制（trending_tags_count、hot_moments_count）
 ```
 
 **Response**: `ApiResponse<TrendingBundle>`
 
 **错误码**: `10000`
-
----
-
-### POST /api/v1/feed/me/feedback
-
-反馈信息流内容（用于改进推荐算法）。
-
-- **认证**: 必须
-- **幂等**: 无
-
-**Request**: `FeedFeedbackRequest`
-```typescript
-interface FeedFeedbackRequest {
-  content_type: FeedContentType;
-  content_id: string;
-  action: FeedFeedbackAction;
-  reason?: string;
-}
-```
-
-**Response**: `ApiResponse`
-
-**错误码**: `10000` `10300`
-
----
 
 > **注**：标签相关 API（`tags/list_trending`）定义于 `@api_spec_search.mdc` 搜索与发现模块。

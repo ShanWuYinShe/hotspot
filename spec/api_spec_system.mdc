@@ -58,6 +58,7 @@ interface AnnouncementListRequest {
 }
 
 // 客户端公开配置
+// ClientConfig 是 AppConfig（见 @api_spec_admin_core.mdc）中客户端可见部分的投影
 // 客户端启动时通过 system/get_client_config 获取并缓存
 interface ClientConfig {
   features: FeatureSwitches;
@@ -124,7 +125,11 @@ interface ContactInfo {
 - **认证**: 可选
 - **幂等**: 无
 
-**说明**：系统健康检查为公开资源，无需认证。
+**说明**：
+- 系统健康检查为公开资源，无需认证
+- HTTP 200 + `code=0` 表示系统健康
+- HTTP 200 + `code=10600` 表示系统不健康（`data` 仍包含 `HealthStatus`）
+- HTTP 非 200 表示请求未到达业务层
 
 **Request**: `{}`
 
@@ -169,7 +174,7 @@ interface AnnouncementListRequest {
 
 **说明**：
 - 此接口为公开资源，**无需认证**
-- 返回影响客户端 UI/行为的配置：功能开关、输入限制、联系方式
+- 返回的 `ClientConfig` 由 `AppConfig`（见 `@api_spec_admin_core.mdc`）投影得来，包含功能开关、输入限制、联系方式
 - 客户端应在启动时调用并缓存，配置变更频率低
 
 **Request**: `{}`

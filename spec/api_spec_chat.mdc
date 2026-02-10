@@ -105,7 +105,7 @@ type CantMessageReason =
 
 interface PrivateChatOpenResult {
   chat: PrivateChatItem;
-  recent_messages: PaginatedData<PrivateMessageItem>;  // 始终返回，条数由 ServerConfig.response_defaults.chat_recent_messages_count 控制
+  recent_messages: PaginatedData<PrivateMessageItem>;  // 始终返回，条数由 AppConfig.response_defaults.chat_recent_messages_count 控制
 }
 
 interface PrivateMessageItem {
@@ -196,10 +196,10 @@ interface MyPrivateChatsRequest {
 2. 自动返回会话详情（无论是否是首次聊天）
 3. 直接调用 `send` 发送消息
 
-响应始终包含最近消息列表（`PaginatedData<PrivateMessageItem>`），条数由 `ServerConfig.response_defaults.chat_recent_messages_count` 控制。
+响应始终包含最近消息列表（`PaginatedData<PrivateMessageItem>`），条数由 `AppConfig.response_defaults.chat_recent_messages_count` 控制。
 
 - **认证**: 必须
-- **幂等**: 幂等语义（同一 `target_user_id` 的重复调用应返回同一会话）
+- **幂等**: 幂等语义（同一 `target_user_id` 的重复调用返回同一会话数据，不会重复创建会话）
 
 **Request**: `PrivateChatOpenTheDoorRequest`
 ```typescript
@@ -308,8 +308,8 @@ interface SendPrivateMessageRequest {
 **Request**: `GetPrivateMessagesHistoryRequest`
 ```typescript
 interface GetPrivateMessagesHistoryRequest {
-  pagination?: PaginationParams;
   target_user_id: string;
+  pagination?: PaginationParams;
 }
 ```
 
@@ -423,9 +423,9 @@ interface SendGroupMessageRequest {
 **Request**: `GetGroupMessagesHistoryRequest`
 ```typescript
 interface GetGroupMessagesHistoryRequest {
-  pagination?: PaginationParams;
   group_id: string;
   include_system?: boolean;
+  pagination?: PaginationParams;
 }
 ```
 

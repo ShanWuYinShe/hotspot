@@ -68,12 +68,14 @@ interface ApiResponse<T = void> {
 
 以下错误码为**所有端点隐含支持**，各模块端点文档中**无需重复列出**，仅列出该端点特有的业务错误码：
 
-| 错误码 | 适用范围 | 说明 |
-|-------|---------|------|
-| `10100` | 所有"认证: 必须"的端点 | 认证失败（Token 无效/过期），客户端尝试刷新 Token 或跳登录页 |
-| `10201` | 所有"认证: 必须"的端点 | 账号被封禁，客户端强制登出并展示封禁页 |
-| `10500` | 所有端点 | 请求过于频繁，客户端按 `Retry-After` 退避重试 |
-| `10600` | 所有端点 | 服务器内部错误，客户端显示通用错误提示 |
+| 错误码 | 适用范围 |
+|-------|---------|
+| `10100` | 所有"认证: 必须"的端点 |
+| `10201` | 所有"认证: 必须"的端点 |
+| `10500` | 所有端点 |
+| `10600` | 所有端点 |
+
+各错误码的类型、客户端行为及 message 示例详见 `@api_spec_errors.mdc`。
 
 因此，端点文档中的"**错误码**"字段仅需列出该端点**特有的业务错误码**（如 `10000`、`10200`、`10300`、`10400`、`22000` 等）。
 
@@ -345,10 +347,10 @@ App 端通过 Header 携带认证信息：
 | `login_id` | 3-64 字符 | 登录标识（手机号/邮箱/用户名） |
 | `bio` | 0-500 字符 | 个人简介 |
 | `tags` | 每个标签 1-30 字符，最多 10 个 | 用户/群组/瞬间标签 |
-| `description`（moment） | 1-2000 字符 | 瞬间描述，可由 `AppLimits.moment_description_max_length` 覆盖 |
-| `content`（comment） | 1-500 字符 | 评论内容，可由 `AppLimits.comment_max_length` 覆盖 |
+| `description`（moment） | 1-2000 字符 | 瞬间描述，可由 `AppConfig.limits.moment_description_max_length` 覆盖 |
+| `content`（comment） | 1-500 字符 | 评论内容，可由 `AppConfig.limits.comment_max_length` 覆盖 |
 | `content`（message） | 1-5000 字符 | 聊天消息内容 |
-| `image_file_ids` | 最多 9 个 | 瞬间图片，可由 `AppLimits.max_moment_images` 覆盖 |
+| `image_file_ids` | 最多 9 个 | 瞬间图片，可由 `AppConfig.limits.max_moment_images` 覆盖 |
 | `mentions` | 最多 20 个 | @ 提及的用户 ID 列表 |
 | `reason`（report） | 1-200 字符 | 举报原因 |
 | `reason`（admin） | 0-500 字符 | 管理员操作原因 |
@@ -362,7 +364,7 @@ App 端通过 Header 携带认证信息：
 | `name` | 1-50 字符 | 群组名称 |
 | `description` | 0-500 字符 | 群组描述 |
 | `password` | 4-32 字符 | 群组密码（设置时） |
-| `max_members` | 2-2000 | 群组最大成员数，可由 `AppLimits.max_group_members` 覆盖 |
+| `max_members` | 2-2000 | 群组最大成员数，可由 `AppConfig.limits.max_group_members` 覆盖 |
 | `duration_minutes`（mute） | 1-43200（最多 30 天） | 禁言时长 |
 | `message`（invite/apply） | 0-200 字符 | 邀请/申请附言 |
 
@@ -379,7 +381,7 @@ App 端通过 Header 携带认证信息：
 |-----|------|------|
 | `keyword` | 1-100 字符 | 搜索关键字 |
 | `prefix` | 1-50 字符 | 搜索建议前缀 |
-| `radius` | 100-50000 米 | 搜索半径，可由 `AppLimits.search_radius_max` 覆盖 |
+| `radius` | 100-50000 米 | 搜索半径，上限由 `AppConfig.limits.search_radius_max`（见 `@api_spec_admin_core.mdc`）控制 |
 | `zoom`（map） | 1-20 | 地图缩放级别 |
 
 ### 管理员字段约束
@@ -406,7 +408,7 @@ App 端通过 Header 携带认证信息：
 - 所有列表接口使用游标分页，禁止 offset 分页
 - `cursor` 为**完全不透明字符串**（客户端禁止解析/构造/修改，格式可能随版本变化）。服务端必须对 cursor 进行签名或加密处理，防止客户端篡改或解码以推测内部排序逻辑和 ID 范围
 - 无界列表接口统一使用 `PaginationParams` 与 `PaginatedData<T>` 进行游标分页（类型定义见 `@api_spec_types.mdc`"分页与元数据"小节）
-- 有界/确定数量的数据（如搜索建议、热门标签、聊天最近消息）由服务端决定返回数量，具体值通过 `ServerConfig.response_defaults` 配置（见 `@api_spec_admin_core.mdc`），客户端不传分页或 limit 参数
+- 有界/确定数量的数据（如搜索建议、热门标签、聊天最近消息）由服务端决定返回数量，具体值通过 `AppConfig.response_defaults` 配置（见 `@api_spec_admin_core.mdc`），客户端不传分页或 limit 参数
 - 任意使用 `PaginationParams` 的接口必须返回 `PaginatedData<T>`；不返回分页结构的接口不得使用 `PaginationParams`
 
 #### 分页默认值与模块级覆盖
@@ -515,10 +517,11 @@ App 端通过 Header 携带认证信息：
 - **新请求**：必须生成**新**的 `Idempotency-Key`
 - **收到"幂等处理中"错误**：等待 1-2 秒后使用相同 key 重试
 - **收到"幂等键冲突"响应**：视为成功，使用返回的响应数据
+- 具体幂等错误码（`22000`/`22001`/`22002`）的定义与客户端行为详见 `@api_spec_errors.mdc`
 
 #### 必须使用幂等键的接口（MUST）
 
-- 认证与账号：`auth/register`、`auth/guest`、`auth/reset_password`、`auth/me/change_password`
+- 认证与账号：`auth/register`、`auth/guest`、`auth/request_password_reset`、`auth/reset_password`、`auth/me/change_password`
 - 内容创建：`moments/create`、`comments/create`
 - 消息发送：`private_messages/send`、`group_messages/send`
 - 媒体上传：`media/complete_upload`
