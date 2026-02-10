@@ -38,7 +38,7 @@ pub async fn search(
     State(state): State<AppState>,
     Json(req): Json<SearchGroupsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<GroupSearchItem>>>> {
-    let reference_point = req.search.reference_point.unwrap_or(GeoPoint {
+    let reference_point = req.reference_point.unwrap_or(GeoPoint {
         latitude: 0.0,
         longitude: 0.0,
     });
@@ -48,8 +48,8 @@ pub async fn search(
             kw: req.keyword,
             reference_point,
             radius,
-            limit: req.search.limit,
-            cursor: req.search.cursor,
+            limit: req.limit,
+            cursor: req.cursor,
         };
         let response = state.group_service.search_by_location(location_req).await?;
         Ok(Json(ApiResponse::success(response)))
@@ -57,8 +57,8 @@ pub async fn search(
         let tag_req = SearchGroupsByTagRequest {
             tag,
             reference_point,
-            limit: req.search.limit,
-            cursor: req.search.cursor,
+            limit: req.limit,
+            cursor: req.cursor,
         };
         let response = state.group_service.search_by_tag(tag_req).await?;
         Ok(Json(ApiResponse::success(response)))
@@ -66,8 +66,8 @@ pub async fn search(
         let kw_req = SearchGroupsByKeywordRequest {
             kw: keyword,
             reference_point,
-            limit: req.search.limit,
-            cursor: req.search.cursor,
+            limit: req.limit,
+            cursor: req.cursor,
         };
         let response = state.group_service.search_by_keyword(kw_req).await?;
         Ok(Json(ApiResponse::success(response)))

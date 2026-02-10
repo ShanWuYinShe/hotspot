@@ -16,7 +16,7 @@ import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { SystemCard } from '../../../components/SystemCard';
-import { CreateMomentRequest } from '../../../core/types/api';
+import { ApiResponse, CreateMomentRequest, MomentItem, GeoPoint } from '../../../core/types/api';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { PageNames } from '../../../constants/AppConstants';
 
@@ -219,18 +219,21 @@ struct CreateMomentPage {
       
       this.publishingMessage = '正在发布...';
       
+      const geoPoint: GeoPoint = {
+        latitude: this.localLocation.latitude,
+        longitude: this.localLocation.longitude
+      };
       const request: CreateMomentRequest = {
         description: this.description.trim(),
         location: {
-          latitude: this.localLocation.latitude,
-          longitude: this.localLocation.longitude,
+          point: geoPoint,
           location_name: this.localLocation.locationName || "南天门"
         },
         tags: this.tags.length > 0 ? this.tags : undefined,
         image_file_ids: imageFileIds.length > 0 ? imageFileIds : undefined
       };
 
-      const response = await ApiClient.createMoment(request);
+      const response: ApiResponse<MomentItem> = await ApiClient.createMoment(request);
 
       if (response.code === 0) {
         SystemToast.showSuccess('瞬间发布成功', this.getUIContext());

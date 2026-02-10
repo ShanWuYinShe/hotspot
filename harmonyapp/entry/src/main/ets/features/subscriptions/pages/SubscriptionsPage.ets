@@ -1,13 +1,34 @@
+/**
+ * 通知订阅页面
+ * TODO: Notification subscriptions and device token APIs are not in the backend spec yet.
+ * This page uses local AppStorage/PreferencesUtil for client-side preferences only.
+ * When backend spec defines subscription APIs, migrate to API calls.
+ */
 import { PageNames, StorageKeys } from '../../../constants/AppConstants';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { SystemToast } from '../../../components/SystemToast';
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
-import { ApiClient } from '../../../core/api/ApiClient';
-import type { SubscriptionsData, UpdateSubscriptionsRequest } from '../../../core/types/api';
+
+const SUBSCRIPTIONS_STORAGE_KEY = 'notification_subscriptions';
+
+// Local subscription preferences (client-side only; no backend API)
+interface LocalSubscriptionPrefs {
+  new_follower_enabled?: boolean;
+  mutual_follow_enabled?: boolean;
+  group_invite_enabled?: boolean;
+  group_invite_response_enabled?: boolean;
+  group_application_enabled?: boolean;
+  group_application_response_enabled?: boolean;
+  message_mention_enabled?: boolean;
+  moment_like_enabled?: boolean;
+  moment_comment_enabled?: boolean;
+  comment_reply_enabled?: boolean;
+  system_announcement_enabled?: boolean;
+}
 
 interface SubscriptionItem {
-  key: keyof SubscriptionsData;
+  key: keyof LocalSubscriptionPrefs;
   title: string;
   description: string;
 }
@@ -17,7 +38,7 @@ interface SubscriptionItem {
 struct SubscriptionsPage {
   @State private loading: boolean = true;
   @State private savingKey: string = '';
-  @State private data: SubscriptionsData | null = null;
+  @State private data: LocalSubscriptionPrefs | null = null;
 
   private items: SubscriptionItem[] = [
     { key: 'new_follower_enabled', title: '新关注者', description: '有人关注你时通知' },
@@ -60,33 +81,45 @@ struct SubscriptionsPage {
   private async load(): Promise<void> {
     this.loading = true;
     try {
-      const response = await ApiClient.getSubscriptions();
-      if (response.code === 0 && response.data) {
-        this.data = response.data;
-      } else {
-        SystemToast.showError(response.message || '加载失败', this.getUIContext());
-      }
+      const stored = await PreferencesUtil.getObject<LocalSubscriptionPrefs>(SUBSCRIPTIONS_STORAGE_KEY);
+      this.data = stored ?? this.getDefaultPrefs();
     } catch (e) {
-      SystemToast.showError('加载失败', this.getUIContext());
+      this.data = this.getDefaultPrefs();
     } finally {
       this.loading = false;
     }
   }
 
-  private getValue(key: keyof SubscriptionsData): boolean {
-    if (!this.data) return false;
-    const dataRecord = (this.data as Object) as Record<string, boolean>;
-    return dataRecord[key as string] || false;
+  private getDefaultPrefs(): LocalSubscriptionPrefs {
+    return {
+      new_follower_enabled: true,
+      mutual_follow_enabled: true,
+      group_invite_enabled: true,
+      group_invite_response_enabled: true,
+      group_application_enabled: true,
+      group_application_response_enabled: true,
+      message_mention_enabled: true,
+      moment_like_enabled: true,
+      moment_comment_enabled: true,
+      comment_reply_enabled: true,
+      system_announcement_enabled: true
+    };
   }
 
-  private setValue(key: keyof SubscriptionsData, value: boolean): void {
+  private getValue(key: keyof LocalSubscriptionPrefs): boolean {
+    if (!this.data) return false;
+    const dataRecord = (this.data as Object) as Record<string, boolean>;
+    return dataRecord[key as string] ?? false;
+  }
+
+  private setValue(key: keyof LocalSubscriptionPrefs, value: boolean): void {
     if (!this.data) return;
     const dataRecord = (this.data as Object) as Record<string, boolean>;
     dataRecord[key as string] = value;
-    this.data = (dataRecord as Object) as SubscriptionsData;
+    this.data = (dataRecord as Object) as LocalSubscriptionPrefs;
   }
 
-  private async update(key: keyof SubscriptionsData, value: boolean): Promise<void> {
+  private async update(key: keyof LocalSubscriptionPrefs, value: boolean): Promise<void> {
     if (!this.data) return;
     if (this.savingKey) return;
 
@@ -95,59 +128,8 @@ struct SubscriptionsPage {
     this.setValue(key, value);
 
     try {
-      const payload: UpdateSubscriptionsRequest = {
-        new_follower_enabled: undefined,
-        mutual_follow_enabled: undefined,
-        group_invite_enabled: undefined,
-        group_invite_response_enabled: undefined,
-        group_application_enabled: undefined,
-        group_application_response_enabled: undefined,
-        message_mention_enabled: undefined,
-        moment_like_enabled: undefined,
-        moment_comment_enabled: undefined,
-        comment_reply_enabled: undefined,
-        system_announcement_enabled: undefined
-      };
-      switch (key) {
-        case 'new_follower_enabled':
-          payload.new_follower_enabled = value;
-          break;
-        case 'mutual_follow_enabled':
-          payload.mutual_follow_enabled = value;
-          break;
-        case 'group_invite_enabled':
-          payload.group_invite_enabled = value;
-          break;
-        case 'group_invite_response_enabled':
-          payload.group_invite_response_enabled = value;
-          break;
-        case 'group_application_enabled':
-          payload.group_application_enabled = value;
-          break;
-        case 'group_application_response_enabled':
-          payload.group_application_response_enabled = value;
-          break;
-        case 'message_mention_enabled':
-          payload.message_mention_enabled = value;
-          break;
-        case 'moment_like_enabled':
-          payload.moment_like_enabled = value;
-          break;
-        case 'moment_comment_enabled':
-          payload.moment_comment_enabled = value;
-          break;
-        case 'comment_reply_enabled':
-          payload.comment_reply_enabled = value;
-          break;
-        case 'system_announcement_enabled':
-          payload.system_announcement_enabled = value;
-          break;
-      }
-      const response = await ApiClient.updateSubscriptions(payload);
-      if (response.code !== 0) {
-        this.setValue(key, prev);
-        SystemToast.showError(response.message || '保存失败', this.getUIContext());
-      }
+      await PreferencesUtil.setObject(SUBSCRIPTIONS_STORAGE_KEY, this.data);
+      SystemToast.showSuccess('已保存', this.getUIContext());
     } catch (e) {
       this.setValue(key, prev);
       SystemToast.showError('保存失败', this.getUIContext());
@@ -250,4 +232,3 @@ struct SubscriptionsPage {
       .width('100%')
   }
 }
-

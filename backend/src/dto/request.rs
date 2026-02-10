@@ -1375,42 +1375,40 @@ pub struct DeleteLocationShareRequest {
 
 // ==================== 统一搜索请求（与 spec 对齐） ====================
 
-/// 搜索基础参数（统一入口）
+/// 统一用户搜索请求 - POST /api/v1/users/search
 #[derive(Debug, Deserialize)]
-pub struct SearchBaseParams {
+pub struct SearchUsersRequest {
+    pub keyword: Option<String>,
+    pub tag: Option<String>,
+    pub radius: Option<f64>,
+    pub sort_by: Option<String>,
     pub reference_point: Option<GeoPoint>,
     pub limit: Option<i32>,
     pub cursor: Option<String>,
 }
 
-/// 统一用户搜索请求 - POST /api/v1/users/search
-#[derive(Debug, Deserialize)]
-pub struct SearchUsersRequest {
-    pub search: SearchBaseParams,
-    pub keyword: Option<String>,
-    pub tag: Option<String>,
-    pub radius: Option<f64>,
-    pub sort_by: Option<String>,
-}
-
 /// 统一群组搜索请求 - POST /api/v1/groups/search
 #[derive(Debug, Deserialize)]
 pub struct SearchGroupsRequest {
-    pub search: SearchBaseParams,
     pub keyword: Option<String>,
     pub tag: Option<String>,
     pub radius: Option<f64>,
     pub sort_by: Option<String>,
+    pub reference_point: Option<GeoPoint>,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
 }
 
 /// 统一瞬间搜索请求 - POST /api/v1/moments/search
 #[derive(Debug, Deserialize)]
 pub struct SearchMomentsRequest {
-    pub search: SearchBaseParams,
     pub keyword: Option<String>,
     pub tag: Option<String>,
     pub radius: Option<f64>,
     pub sort_by: Option<String>,
+    pub reference_point: Option<GeoPoint>,
+    pub limit: Option<i32>,
+    pub cursor: Option<String>,
 }
 
 /// 群组成员搜索请求 - POST /api/v1/groups/members/search

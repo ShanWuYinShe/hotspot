@@ -121,15 +121,6 @@ export interface TimeRangeParams {
 	end_time?: string;
 }
 
-/**
- * 搜索基础参数（包含浏览锚点位置，组合分页参数）
- * reference_point 是客户端必须传入的有效地理位置
- */
-export interface SearchBaseParams {
-	pagination?: PaginationParams;
-	reference_point: GeoPoint;
-}
-
 // ============================================================================
 // 媒体资源（common.yaml + media.yaml）
 // ============================================================================

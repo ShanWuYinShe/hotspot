@@ -108,11 +108,9 @@
 			} else {
 				// 未登录：显示附近动态
 				return await momentsService.search({
-					search: {
-						reference_point: getAnchor(),
-						pagination: { limit: 20, cursor }
-					},
-					radius: mapAnchorStore.radius * 1000
+					radius: mapAnchorStore.radius * 1000,
+					reference_point: getAnchor(),
+					pagination: { limit: 20, cursor }
 				});
 			}
 		}, refresh);

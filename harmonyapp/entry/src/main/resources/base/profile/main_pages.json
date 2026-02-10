@@ -12,6 +12,9 @@
     "features/settings/pages/AdvancedSettingsPage",
     "features/subscriptions/pages/SubscriptionsPage",
     "features/debug/pages/DebugPanel",
-    "features/recommendation/pages/RecommendationPage"
+    "features/recommendation/pages/RecommendationPage",
+    "features/map/pages/MapPage",
+    "features/map/pages/LocationPickerPage",
+    "features/settings/pages/AccountsPage"
   ]
 }

@@ -21,7 +21,7 @@ import type {
 	SendMessageType,
 	SetableGroupRole,
 	PaginationParams,
-	SearchBaseParams,
+	GeoPoint,
 	GroupRole
 } from '$lib/types/api';
 
@@ -32,11 +32,12 @@ export const groupsService = {
 	 * 搜索群组（对齐 spec SearchGroupsRequest）
 	 */
 	search(params: {
-		search: SearchBaseParams;
 		keyword?: string;
 		tag?: string;
 		radius?: number;
 		sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';
+		reference_point: GeoPoint;
+		pagination?: PaginationParams;
 	}) {
 		return paginate<GroupItem>(GROUPS.SEARCH, params);
 	},

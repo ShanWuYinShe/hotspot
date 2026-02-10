@@ -12,7 +12,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { PasswordSecurityUtil } from '../../../core/security/PasswordSecurityUtil';
-import { AuthData, GuestRequest, MyProfileData, LoginRequest, RegisterRequest } from '../../../core/types/api';
+import { AuthData, GuestRequest, MyProfile, LoginRequest, RegisterRequest } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -425,16 +425,17 @@ struct LoginPage {
     await AuthAccountManager.upsertAndActivate(authData);
     await HttpUtil.setToken(authData.access_token);
 
-    const basicUserInfo: MyProfileData = {
+    const basicUserInfo: MyProfile = {
       user_id: authData.user_id,
-      nickname: authData.nickname,
+      nickname: '',
       avatar_url: '',
+      user_type: 'temp',
       bio: '',
       tags: [],
       email: '',
       phone: '',
-      location: { latitude: 0, longitude: 0, location_name: '' },
-      is_online: true,
+      location: { point: { latitude: 0, longitude: 0 }, location_name: '' },
+      presence_status: 'online',
       last_online: '',
       created_at: new Date().toISOString(),
       stats: {

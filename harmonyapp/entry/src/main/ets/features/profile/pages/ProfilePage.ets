@@ -16,7 +16,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
-import { MyProfileData, UpdateLocationRequest, UpgradeAccountRequest } from '../../../core/types/api';
+import { MyProfile, UpdateLocationRequest, UpgradeAccountRequest } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, SystemIcon } from '../../../components/SystemIcon';
@@ -27,7 +27,7 @@ const TAG: string = 'ProfilePage';
 
 @Component
 export struct ProfilePage {
-  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfileData | null = null;
+  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
   @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
   @StorageLink(KEY_USER_TYPE) userType: string = '';
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
@@ -116,8 +116,10 @@ export struct ProfilePage {
     try {
       const request: UpdateLocationRequest = {
         location: {
-          latitude: this.currentLocation.latitude,
-          longitude: this.currentLocation.longitude,
+          point: {
+            latitude: this.currentLocation.latitude,
+            longitude: this.currentLocation.longitude
+          },
           location_name: this.currentLocation.locationName || '未知位置'
         }
       };
@@ -602,7 +604,7 @@ export struct ProfilePage {
         avatarUrl: this.currentUser?.avatar_url || '',
         name: this.currentUser?.nickname || '',
         avatarSize: 80,
-        isOnline: this.currentUser?.is_online || false
+        isOnline: this.currentUser?.presence_status === 'online'
       })
 
       Text(this.currentUser?.nickname || '')
@@ -756,12 +758,15 @@ export struct ProfilePage {
         .fontColor($r('sys.color.ohos_id_color_text_primary'))
         .layoutWeight(1)
 
-      Text('>')
-        .fontSize(16)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+      Text() {
+        SymbolSpan($r(AppIcon.FORWARD))
+          .fontSize(16)
+          .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+      }
     }
     .width('100%')
-    .padding({ top: 16, bottom: 16 })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
     .onClick(onTap)
   }
 }

@@ -7,11 +7,11 @@
         "material": {
           "certpath": "/Users/liyou/.ohos/config/default_harmonyapp_B9Uv_-vddcTKAoWc3LuP-S_-NldVKoukY5K_Xa_ccCI=.cer",
           "keyAlias": "debugKey",
-          "keyPassword": "0000001B111F0A3399B50E5BB52F418D05871A33FF630754ADFA5E47DD2826CFAE138F27DD0C8530DB2BB8",
+          "keyPassword": "0000001BAB59D35F58F5799E7569823C5309A9D13BC214102860479BC6F7BEE253592107EEA0B27AB0BFA3",
           "profile": "/Users/liyou/.ohos/config/default_harmonyapp_B9Uv_-vddcTKAoWc3LuP-S_-NldVKoukY5K_Xa_ccCI=.p7b",
           "signAlg": "SHA256withECDSA",
           "storeFile": "/Users/liyou/.ohos/config/default_harmonyapp_B9Uv_-vddcTKAoWc3LuP-S_-NldVKoukY5K_Xa_ccCI=.p12",
-          "storePassword": "0000001B7648A96DFB7BED3D5812D013068C2C37424DC03B247E71AB1AFA0237BBEDEE1B7EAEF2D00D2C2F"
+          "storePassword": "0000001BC978E950A4692DAB05160E67ACDC5F61758E28700F0567CC72A39B789771764D46C9DCA5A7B0A0"
         }
       }
     ],
@@ -36,6 +36,17 @@
       },
       {
         "name": "release"
+      }
+    ],
+    "capabilities": [
+      {
+        "bundleName": "com.lsyb.social",
+        "config": [
+          {
+            "name": "Map Kit",
+            "capability": "com.huawei.service.mapkit"
+          }
+        ]
       }
     ]
   },

@@ -5,7 +5,7 @@
 
 import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { LocationInfo } from '../../../core/location/LocationUtil';
-import { MyProfileData } from '../../../core/types/api';
+import { MyProfile, GeoPoint } from '../../../core/types/api';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -13,8 +13,8 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
 import { DesignConstants } from '../../../constants/DesignConstants';
-import { 
-  GroupSearchItem, 
+import {
+  GroupItem,
   GroupMemberItem
 } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -40,14 +40,14 @@ interface GroupDetailParams {
 @Entry
 @Component
 struct GroupDetailPage {
-  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfileData | null = null;
+  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   
   private stateManager = GlobalStateManager.getInstance();
   private distributedSyncService = DistributedSyncService.getInstance();
   private smartNotificationService = SmartNotificationService.getInstance();
   private accessibilityManager = AccessibilityManager.getInstance();
-  @State groupInfo: GroupSearchItem | null = null;
+  @State groupInfo: GroupItem | null = null;
   @State members: GroupMemberItem[] = [];
   @State isLoading: boolean = true;
   @State isLoadingMembers: boolean = false;
@@ -96,14 +96,20 @@ struct GroupDetailPage {
     this.errorMessage = '';
 
     try {
+      let referencePoint: GeoPoint = { latitude: 0, longitude: 0 };
+      if (this.currentLocation) {
+        referencePoint = { latitude: this.currentLocation.latitude, longitude: this.currentLocation.longitude };
+      }
       const response = await ApiClient.getGroupDetail({
-        group_id: this.groupId
+        group_id: this.groupId,
+        reference_point: referencePoint
       });
 
       if (response.code === 0 && response.data) {
-        this.groupInfo = response.data;
+        this.groupInfo = response.data.group;
+        this.isMember = this.groupInfo.my_state?.is_joined ?? false;
         await this.syncGroupData();
-        await this.accessibilityManager.announceText(`已加载群组：${this.groupInfo.name}`);
+        await this.accessibilityManager.announceText(`已加载群组：${this.groupInfo.group.name}`);
       } else {
         this.errorMessage = response.message || '加载群组详情失败';
       }
@@ -121,7 +127,7 @@ struct GroupDetailPage {
     try {
       const response = await ApiClient.getGroupMembers({
         group_id: this.groupId,
-        limit: 100
+        pagination: { limit: 100 }
       });
 
       if (response.code === 0 && response.data) {
@@ -153,10 +159,14 @@ struct GroupDetailPage {
         password: this.groupInfo.has_password ? this.joinPassword.trim() : undefined
       });
 
-      if (response.code === 0) {
-        SystemToast.showSuccess('加入群组成功', this.getUIContext());
-        this.isMember = true;
-        await this.loadGroupDetail();
+      if (response.code === 0 && response.data) {
+        if (response.data.status === 'joined') {
+          SystemToast.showSuccess('加入群组成功', this.getUIContext());
+          this.isMember = true;
+          await this.loadGroupDetail();
+        } else if (response.data.status === 'pending_approval') {
+          SystemToast.showSuccess('已提交申请，等待管理员审批', this.getUIContext());
+        }
       } else if (response.code === 1305) {
         SystemToast.show('您已是该群组成员', this.getUIContext());
         this.isMember = true;
@@ -206,7 +216,7 @@ struct GroupDetailPage {
         params: {
           chatId: this.groupId,
           chatType: 'group_chat',
-          title: this.groupInfo.name
+          title: this.groupInfo.group.name
         }
       });
     } catch (error) {
@@ -316,11 +326,11 @@ struct GroupDetailPage {
               // 头像和名称
               Column() {
                 SystemAvatar({
-                  src: this.groupInfo?.avatar_url,
-                  name: this.groupInfo?.name,
+                  src: this.groupInfo?.group.avatar_url,
+                  name: this.groupInfo?.group.name,
                   avatarSize: 80
                 })
-                Text(this.groupInfo?.name || '')
+                Text(this.groupInfo?.group.name || '')
                   .fontSize(DesignConstants.FONT.SIZE.XL)
                   .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
                   .fontColor($r('sys.color.ohos_id_color_text_primary'))
@@ -342,7 +352,7 @@ struct GroupDetailPage {
               // 统计信息
               Row() {
                 Column() {
-                  Text(this.groupInfo?.members_count.toString())
+                  Text(this.groupInfo?.group.members_count.toString())
                     .fontSize(DesignConstants.FONT.SIZE.LG)
                     .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
                     .fontColor($r('sys.color.ohos_id_color_text_primary'))
@@ -396,8 +406,8 @@ struct GroupDetailPage {
                   .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                   .width('100%')
 
-                if (this.groupInfo?.location) {
-                  Text(`${this.groupInfo.location.latitude.toFixed(6)}, ${this.groupInfo.location.longitude.toFixed(6)}`)
+                if (this.groupInfo?.location?.point) {
+                  Text(`${this.groupInfo.location.point.latitude.toFixed(6)}, ${this.groupInfo.location.point.longitude.toFixed(6)}`)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                     .width('100%')
@@ -418,7 +428,7 @@ struct GroupDetailPage {
                   .fontSize(DesignConstants.FONT.SIZE.LG)
                   .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                   .fontColor($r('sys.color.ohos_id_color_text_primary'))
-                 Text(`${this.groupInfo?.members_count} 名成员`)
+                 Text(`${this.groupInfo?.group.members_count} 名成员`)
                   .fontSize(DesignConstants.FONT.SIZE.MD)
                   .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                   .margin({ top: 4 })

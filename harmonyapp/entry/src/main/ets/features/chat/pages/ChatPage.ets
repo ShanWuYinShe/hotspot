@@ -7,7 +7,7 @@
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { WebSocketService } from '../../../core/network/WebSocketService';
-import { MyProfileData, MessageType, PrivateMessageItem, GroupMessageItem, SendMessageType, UserInfo, SendPrivateMessageRequest, SendGroupMessageRequest, PrivateMessagesHistoryRequest, GroupMessagesHistoryRequest, MarkPrivateMessagesReadRequest, MarkGroupMessagesReadRequest } from '../../../core/types/api';
+import { MyProfile, MessageType, PrivateMessageItem, GroupMessageItem, SendMessageType, UserInfo, SendPrivateMessageRequest, SendGroupMessageRequest, GetPrivateMessagesHistoryRequest, GetGroupMessagesHistoryRequest, MarkPrivateMessagesReadRequest, MarkGroupMessagesReadRequest } from '../../../core/types/api';
 import type { ServerEvent, PrivateMessageNewEvent, GroupMessageNewEvent } from '../../../core/types/WebSocketTypes';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -26,27 +26,27 @@ const TAG: string = 'ChatPage';
 interface ChatMessage {
   id: string;
   content: string;
-  senderId: number;
+  senderId: string;
   senderName: string;
   senderAvatar?: string;
   type: MessageType;
   sentAt: string;
   isSelf: boolean;
   isSystem: boolean;
-  rawData?: Object; // 原始数据，用于缓存
+  rawData?: Object;
 }
 
 interface ChatParams {
   chatId: string;
   chatType: 'private_chat' | 'group_chat';
   title: string;
-  targetId?: number; // 私聊对方的用户ID
+  targetId?: string;
 }
 
 @Entry
 @Component
 struct ChatPage {
-  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfileData | null = null;
+  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
   
   @State messages: ChatMessage[] = [];
   @State inputText: string = '';
@@ -56,7 +56,7 @@ struct ChatPage {
   
   private chatId: string = '';
   private chatType: 'private_chat' | 'group_chat' = 'private_chat';
-  private targetId?: number;
+  private targetId?: string;
   private webSocketService = WebSocketService.getInstance();
   private messageCacheService = MessageCacheService.getInstance();
   private scroller: Scroller = new Scroller();
@@ -71,22 +71,22 @@ struct ChatPage {
 
     if (!currentUserId || !targetId) return;
 
-    // Check relevance
+    // PrivateMessageNewPayload uses sender_id (string), not sender object
     const isRelevant = 
-      (payload.sender.user_id === currentUserId && payload.target_user_id === targetId) ||
-      (payload.sender.user_id === targetId && payload.target_user_id === currentUserId);
+      (payload.sender_id === currentUserId && payload.target_user_id === targetId) ||
+      (payload.sender_id === targetId && payload.target_user_id === currentUserId);
     
     if (!isRelevant) return;
 
     const newMessage: ChatMessage = {
       id: payload.message_id,
       content: payload.media?.url || payload.content || (payload.type === 'image' ? '[图片]' : '[非文本消息]'),
-      senderId: payload.sender.user_id,
-      senderName: payload.sender.nickname,
-      senderAvatar: payload.sender.avatar_url,
+      senderId: payload.sender_id,
+      senderName: `User ${payload.sender_id}`,
+      senderAvatar: undefined,
       type: payload.type as MessageType,
       sentAt: payload.sent_at,
-      isSelf: payload.sender.user_id === currentUserId,
+      isSelf: payload.sender_id === currentUserId,
       isSystem: payload.type === 'system',
       rawData: payload
     };
@@ -120,12 +120,10 @@ struct ChatPage {
     this.messages.push(newMessage);
     this.scrollToBottom();
 
-    // 如果当前就在这个会话里，收到新消息后立即标记已读（避免会话列表一直显示未读）
     if (!newMessage.isSelf) {
       this.markAsRead(newMessage.id);
     }
 
-    // 追加缓存
     this.messageCacheService.addMessage({
       id: newMessage.id,
       chatId: this.chatId,
@@ -150,7 +148,6 @@ struct ChatPage {
         await this.loadHistory();
         this.subscribeToEvents();
 
-        // 进入会话后尝试标记已读（使用当前页面最后一条消息作为 up_to）
         const last = this.messages.length > 0 ? this.messages[this.messages.length - 1] : undefined;
         if (last) {
           this.markAsRead(last.id);
@@ -168,7 +165,6 @@ struct ChatPage {
   private async loadHistory() {
     this.isLoading = true;
     
-    // 1. 先尝试加载缓存
     await this.loadFromCache();
 
     try {
@@ -179,13 +175,13 @@ struct ChatPage {
         if (!targetUserId) {
           throw new Error('target_user_id is required for private chat');
         }
-        const request: PrivateMessagesHistoryRequest = { target_user_id: targetUserId, limit: 20 };
+        const request: GetPrivateMessagesHistoryRequest = { target_user_id: targetUserId, pagination: { limit: 20 } };
         const response = await ApiClient.getPrivateMessages(request);
         if (response.code === 0 && response.data) {
           items = response.data.items;
         }
       } else {
-        const request: GroupMessagesHistoryRequest = { group_id: this.chatId, limit: 20 };
+        const request: GetGroupMessagesHistoryRequest = { group_id: this.chatId, pagination: { limit: 20 } };
         const response = await ApiClient.getGroupMessages(request);
         if (response.code === 0 && response.data) {
           items = response.data.items;
@@ -195,10 +191,7 @@ struct ChatPage {
       const newMessages = await Promise.all(items.reverse().map(item => this.convertMessage(item)));
       this.messages = newMessages;
       
-      // 3. 更新缓存
       this.updateCache(newMessages);
-      
-      // 滚动到底部
       this.scrollToBottom();
 
     } catch (error) {
@@ -214,7 +207,6 @@ struct ChatPage {
   private async loadFromCache() {
     const cachedMessages = await this.messageCacheService.getCachedMessages(this.chatId);
     if (cachedMessages.length > 0) {
-      // 缓存是倒序取出的（最新的在前），需要反转回正序（旧的在前）
       const messages = await Promise.all(cachedMessages.reverse().map(async item => {
         const rawData = JSON.parse(item.data) as Object;
         return await this.convertMessage(rawData as PrivateMessageItem | GroupMessageItem);
@@ -226,7 +218,6 @@ struct ChatPage {
   }
 
   private async updateCache(messages: ChatMessage[]): Promise<void> {
-    // 转换UI模型回缓存模型
     const cacheItems: MessageCacheItem[] = messages.map(msg => {
       const cacheItem: MessageCacheItem = {
         id: msg.id,
@@ -245,8 +236,7 @@ struct ChatPage {
   private async convertMessage(item: PrivateMessageItem | GroupMessageItem): Promise<ChatMessage> {
     const currentUserId = await AuthAccountManager.getCurrentUserId();
     
-    // PrivateMessageItem 使用 sender_id，GroupMessageItem 使用 sender
-    let senderId: number;
+    let senderId: string;
     let senderName: string;
     let senderAvatar: string | undefined;
     let isSelf: boolean;
@@ -254,16 +244,14 @@ struct ChatPage {
     const itemObj = item as Object;
     const itemRecord = itemObj as Record<string, Object>;
     if (itemRecord.sender_id !== undefined) {
-      // PrivateMessageItem
+      // PrivateMessageItem: has sender_id (string)
       const privateItem = item as PrivateMessageItem;
       senderId = privateItem.sender_id;
       isSelf = senderId === currentUserId;
-      // 对于私聊消息，sender_id 需要从其他地方获取用户信息
-      // 这里暂时使用占位符，实际应该从缓存或API获取
       senderName = `User ${senderId}`;
       senderAvatar = undefined;
     } else {
-      // GroupMessageItem
+      // GroupMessageItem: has sender (UserInfo)
       const groupItem = item as GroupMessageItem;
       senderId = groupItem.sender.user_id;
       senderName = groupItem.sender.nickname;
@@ -282,7 +270,7 @@ struct ChatPage {
       sentAt: item.sent_at,
       isSelf: isSelf,
       isSystem: item.type === 'system',
-      rawData: item // 保存原始数据以便缓存
+      rawData: item
     };
   }
 
@@ -344,10 +332,6 @@ struct ChatPage {
       }
       
       this.inputText = '';
-      // 遵循 @harmony_app_rule.mdc 消息发送规范：
-      // 1. API 仅负责发送消息，不处理本地数据更新
-      // 2. 消息上屏完全依赖 WebSocket 推送的 ChatMessageNew 事件
-      // 3. 确保显示的数据（如媒体URL、时间戳）与服务端完全一致
     } catch (error) {
       SystemToast.showError('发送失败', this.getUIContext());
     } finally {
@@ -355,13 +339,9 @@ struct ChatPage {
     }
   }
 
-  /**
-   * 标记当前会话已读（API + WS），并通知消息列表刷新
-   */
   private markAsRead(upToMessageId: string): void {
     if (!upToMessageId) return;
 
-    // HTTP 标记已读（权威，影响 unread_count）
     (async () => {
       try {
         if (this.chatType === 'private_chat') {
@@ -375,14 +355,13 @@ struct ChatPage {
         }
         GlobalStateManager.getInstance().notifyMessageSync();
       } catch (e) {
-        // ignore：不阻塞 UI
+        // ignore
       }
     })();
   }
 
   build() {
     Column() {
-      // 标题栏
       Row() {
         IconButton({
           icon: AppIcon.BACK,
@@ -430,7 +409,6 @@ struct ChatPage {
       .backgroundColor($r('sys.color.ohos_id_color_background'))
       .zIndex(1)
 
-      // 消息列表
       List({ scroller: this.scroller, initialIndex: this.messages.length - 1 }) {
         ForEach(this.messages, (msg: ChatMessage) => {
           ListItem() {
@@ -443,7 +421,6 @@ struct ChatPage {
       .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
       .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
 
-      // 输入框
       Row() {
         TextInput({ text: this.inputText, placeholder: '发送消息...' })
           .layoutWeight(1)

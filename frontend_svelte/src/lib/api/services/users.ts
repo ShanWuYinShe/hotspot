@@ -18,7 +18,7 @@ import type {
 	MomentItem,
 	FollowSource,
 	PaginationParams,
-	SearchBaseParams
+	GeoPoint
 } from '$lib/types/api';
 
 export const usersService = {
@@ -28,11 +28,12 @@ export const usersService = {
 	 * 搜索用户（对齐 spec SearchUsersRequest）
 	 */
 	search(params: {
-		search: SearchBaseParams;
 		keyword?: string;
 		tag?: string;
 		radius?: number;
 		sort_by?: 'relevance' | 'distance' | 'newest';
+		reference_point: GeoPoint;
+		pagination?: PaginationParams;
 	}) {
 		return paginate<UserItem>(USERS.SEARCH, params);
 	},

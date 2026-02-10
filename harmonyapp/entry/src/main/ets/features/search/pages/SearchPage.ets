@@ -7,7 +7,7 @@ import { GlobalStateManager, KEY_CURRENT_LOCATION } from '../../../core/state/Gl
 import { ApiClient } from '../../../core/api/ApiClient';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { PageNames } from '../../../constants/AppConstants';
-import { UserSearchItem, GroupSearchItem, MomentSearchItem } from '../../../core/types/api';
+import { UserItem, GroupItem, MomentItem, GeoPoint } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
@@ -28,9 +28,9 @@ struct SearchPage {
   @State currentIndex: number = 0;
   @State keyword: string = '';
   @State isLoading: boolean = false;
-  @State userResults: UserSearchItem[] = [];
-  @State groupResults: GroupSearchItem[] = [];
-  @State momentResults: MomentSearchItem[] = [];
+  @State userResults: UserItem[] = [];
+  @State groupResults: GroupItem[] = [];
+  @State momentResults: MomentItem[] = [];
   @State hasSearched: boolean = false;
   private controller: TabsController = new TabsController();
 
@@ -50,22 +50,19 @@ struct SearchPage {
     try {
       const lat = this.currentLocation.latitude;
       const lng = this.currentLocation.longitude;
+      const referencePoint: GeoPoint = { latitude: lat, longitude: lng };
 
-      // 并行搜索所有类型，或者根据当前tab搜索
-      // 为了简单体验，这里一次性搜索所有类型，或者也可以只搜索当前tab
-      // 考虑到Tabs可以滑动，预加载比较好。
-      
-      const p1 = ApiClient.searchUsersByKeyword({ 
-        kw: this.keyword, 
-        reference_point: { latitude: lat, longitude: lng }
+      const p1 = ApiClient.searchUsers({
+        keyword: this.keyword,
+        reference_point: referencePoint
       });
-      const p2 = ApiClient.searchGroupsByKeyword({ 
-        kw: this.keyword, 
-        reference_point: { latitude: lat, longitude: lng }
+      const p2 = ApiClient.searchGroups({
+        keyword: this.keyword,
+        reference_point: referencePoint
       });
-      const p3 = ApiClient.searchMomentsByKeyword({ 
-        kw: this.keyword, 
-        reference_point: { latitude: lat, longitude: lng }
+      const p3 = ApiClient.searchMoments({
+        keyword: this.keyword,
+        reference_point: referencePoint
       });
 
       const results = await Promise.all([p1, p2, p3]);
@@ -73,11 +70,10 @@ struct SearchPage {
       const res2 = results[1];
       const res3 = results[2];
 
-      // 过滤掉“自己”（避免搜索结果里出现当前用户）
       const myId = await AuthAccountManager.getCurrentUserId();
       if (res1.code === 0 && res1.data) {
-        this.userResults = (myId !== null && typeof myId === 'number')
-          ? res1.data.items.filter((u: UserSearchItem) => u.user_id !== myId)
+        this.userResults = (myId !== null && typeof myId === 'string')
+          ? res1.data.items.filter((u: UserItem) => u.user.user_id !== myId)
           : res1.data.items;
       }
       if (res2.code === 0 && res2.data) this.groupResults = res2.data.items;
@@ -93,7 +89,6 @@ struct SearchPage {
 
   build() {
     Column() {
-      // 搜索栏
       Row() {
         IconButton({
           icon: AppIcon.BACK,
@@ -175,7 +170,7 @@ struct SearchPage {
   }
 
   @Builder
-  ResultList(data: UserSearchItem[] | GroupSearchItem[] | MomentSearchItem[], type: 'user' | 'group' | 'moment') {
+  ResultList(data: UserItem[] | GroupItem[] | MomentItem[], type: 'user' | 'group' | 'moment') {
     if (this.hasSearched && data.length === 0) {
       Column({ space: 16 }) {
         Text('🔍').fontSize(48)
@@ -184,11 +179,11 @@ struct SearchPage {
       .width('100%').height('100%').justifyContent(FlexAlign.Center)
     } else {
       List() {
-        ForEach(data, (item: UserSearchItem | GroupSearchItem | MomentSearchItem) => {
+        ForEach(data, (item: UserItem | GroupItem | MomentItem) => {
           ListItem() {
-            if (type === 'user') this.buildUserItem(item as UserSearchItem);
-            else if (type === 'group') this.buildGroupItem(item as GroupSearchItem);
-            else this.buildMomentItem(item as MomentSearchItem);
+            if (type === 'user') this.buildUserItem(item as UserItem);
+            else if (type === 'group') this.buildGroupItem(item as GroupItem);
+            else this.buildMomentItem(item as MomentItem);
           }
         })
       }
@@ -198,17 +193,17 @@ struct SearchPage {
   }
 
   @Builder
-  buildUserItem(item: UserSearchItem) {
+  buildUserItem(item: UserItem) {
     Row() {
       SystemAvatar({
-        avatarUrl: item.avatar_url,
-        name: item.nickname,
+        avatarUrl: item.user.avatar_url,
+        name: item.user.nickname,
         avatarSize: 50
       })
       .margin({ right: 12 })
 
       Column({ space: 4 }) {
-        Text(item.nickname)
+        Text(item.user.nickname)
           .fontSize(16)
           .fontWeight(FontWeight.Medium)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
@@ -232,23 +227,23 @@ struct SearchPage {
   }
 
   @Builder
-  buildGroupItem(item: GroupSearchItem) {
+  buildGroupItem(item: GroupItem) {
     Row() {
       SystemAvatar({
-        avatarUrl: item.avatar_url,
-        name: item.name,
+        avatarUrl: item.group.avatar_url,
+        name: item.group.name,
         avatarSize: 50,
         shape: 'square'
       })
       .margin({ right: 12 })
 
       Column({ space: 4 }) {
-        Text(item.name)
+        Text(item.group.name)
           .fontSize(16)
           .fontWeight(FontWeight.Medium)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
         
-        Text(`${item.members_count} 成员`)
+        Text(`${item.group.members_count} 成员`)
           .fontSize(12)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
 
@@ -272,13 +267,13 @@ struct SearchPage {
       const routerInstance = this.getUIContext().getRouter();
       await routerInstance.pushUrl({
         url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
-        params: { groupId: item.group_id }
+        params: { groupId: item.group.group_id }
       });
     })
   }
 
   @Builder
-  buildMomentItem(item: MomentSearchItem) {
+  buildMomentItem(item: MomentItem) {
     Column({ space: 8 }) {
       Row() {
         SystemAvatar({

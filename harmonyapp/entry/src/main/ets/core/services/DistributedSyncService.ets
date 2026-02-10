@@ -9,11 +9,11 @@ import { common } from '@kit.AbilityKit';
 import { ApiClient } from '../api/ApiClient';
 import { GlobalStateManager } from '../state/GlobalStateManager';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
-import { MyProfileData, UserMomentsRequest, MyGroupsRequest, GeoPoint } from '../types/api';
+import { MyProfile, UserMomentsRequest, MyGroupsRequest, GeoPoint } from '../types/api';
 import { AuthAccountManager } from '../state/AuthAccountManager';
 
 export interface SyncData {
-  userId: number;
+  userId: string;
   dataType: 'user_profile' | 'messages' | 'moments' | 'groups';
   data: Object;
   timestamp: number;
@@ -270,7 +270,7 @@ export class DistributedSyncService {
    */
   private async updateLocalUserProfile(syncData: SyncData): Promise<void> {
     try {
-      const remoteUser = syncData.data as MyProfileData;
+      const remoteUser = syncData.data as MyProfile;
       const currentUser = GlobalStateManager.getInstance().getCurrentUser();
       const currentUserId = await AuthAccountManager.getCurrentUserId();
       
@@ -351,7 +351,7 @@ export class DistributedSyncService {
         longitude: 0
       };
       const params: UserMomentsRequest = {
-        user_id: Number(userId),
+        user_id: userId,
         reference_point: referencePoint
       };
       const response = await ApiClient.getUserMoments(params);
@@ -373,7 +373,7 @@ export class DistributedSyncService {
     try {
       // 调用 API 获取用户群组
       const params: MyGroupsRequest = {
-        limit: 50
+        pagination: { limit: 50 }
       };
       const response = await ApiClient.getJoinedGroups(params);
       if (response.code === 0 && response.data) {

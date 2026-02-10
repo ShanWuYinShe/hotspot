@@ -12,8 +12,9 @@ import { PersistentStateManager } from '../../../core/state/PersistentStateManag
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { LocationUtil } from '../../../core/location/LocationUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
-import { MyProfileData, UpdateLocationRequest } from '../../../core/types/api';
+import { MyProfile, UpdateLocationRequest, GeoPoint } from '../../../core/types/api';
 import type { ServerEvent } from '../../../core/types/WebSocketTypes';
+import type { ConnectionEstablishedEvent } from '../../../core/types/WebSocketTypes';
 import { PermissionManager } from '../../../core/permission/PermissionManager';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppIcon } from '../../../components/SystemIcon';
@@ -24,11 +25,11 @@ import { NotificationCenter } from '../../../components/NotificationCenter';
 import { PerformanceIndicator } from '../../../components/PerformanceIndicator';
 import { I18nManager } from '../../../core/i18n/I18nManager';
 import { DesignConstants } from '../../../constants/DesignConstants';
-import { GroupPage } from '../../../features/group/pages/GroupPage';
+import { NearbyPage } from '../../../features/nearby/pages/NearbyPage';
+import { DiscoverPage } from '../../../features/discover/pages/DiscoverPage';
 import { MessagePage } from '../../../features/message/pages/MessagePage';
-import { MomentPage } from '../../../features/moment/pages/MomentPage';
-import { MapPage } from '../../../features/map/pages/MapPage';
 import { ProfilePage } from '../../../features/profile/pages/ProfilePage';
+import { LoginPromptView } from '../../../components/LoginPromptView';
 import { NotificationRenderer } from '../../../core/services/notification/NotificationRenderer';
 import { SmartNotification, NotificationAction } from '../../../core/services/notification/NotificationDataManager';
 import { NotificationBanner } from '../../../components/NotificationBanner';
@@ -43,7 +44,7 @@ const STORAGE_KEY_VISIBLE_NOTIFICATIONS = 'visibleNotifications';
 @Entry
 @Component
 struct Index {
-  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfileData | null = null;
+  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
   @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
   @StorageLink(KEY_USER_TYPE) userType: string = '';
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
@@ -51,10 +52,12 @@ struct Index {
   @StorageLink(STORAGE_KEY_VISIBLE_NOTIFICATIONS) visibleNotifications: SmartNotification[] = [];
 
   @State currentTabIndex: number = 0;
+  @State previousTabIndex: number = 0;
   @State isInitialized: boolean = false;
   @State lastError: string = '';
   @State showNotificationCenter: boolean = false;
   @State showPerformanceDetails: boolean = false;
+  @State showCreateSheet: boolean = false;
   
   private stateManager = GlobalStateManager.getInstance();
   private persistentStateManager = PersistentStateManager.getInstance();
@@ -106,6 +109,15 @@ struct Index {
       await PreferencesUtil.init(this.abilityContext);
       hilog.info(DOMAIN_NUMBER, TAG, '✅ 存储初始化完成');
 
+      try {
+        const configResp = await ApiClient.getClientConfig();
+        if (configResp.code === 0 && configResp.data) {
+          hilog.info(DOMAIN_NUMBER, TAG, `✅ 客户端配置加载: features.moments=${configResp.data.features?.enable_moments}`);
+        }
+      } catch (e) {
+        hilog.warn(DOMAIN_NUMBER, TAG, `客户端配置加载失败: ${JSON.stringify(e)}`);
+      }
+
       // 初始化权限管理器（必须在使用任何权限 API 之前）
       await PermissionManager.getInstance().initialize(this.abilityContext);
       hilog.info(DOMAIN_NUMBER, TAG, '✅ 权限管理器初始化完成');
@@ -144,10 +156,13 @@ struct Index {
             // 登录态：同步到服务端（与 Web 端保持一致，不依赖“手动点更新位置”）
             if (this.isLoggedIn) {
               try {
+                const geoPoint: GeoPoint = {
+                  latitude: locationInfo.latitude,
+                  longitude: locationInfo.longitude
+                };
                 const locationReq: UpdateLocationRequest = {
                   location: {
-                    latitude: locationInfo.latitude,
-                    longitude: locationInfo.longitude,
+                    point: geoPoint,
                     location_name: locationInfo.locationName || '位置不可用'
                   }
                 };
@@ -188,10 +203,13 @@ struct Index {
             };
             this.stateManager.updateLocation(locationInfo);
 
+            const geoPoint2: GeoPoint = {
+              latitude: locationInfo.latitude,
+              longitude: locationInfo.longitude
+            };
             const locationReq: UpdateLocationRequest = {
               location: {
-                latitude: locationInfo.latitude,
-                longitude: locationInfo.longitude,
+                point: geoPoint2,
                 location_name: locationInfo.locationName || '位置不可用'
               }
             };
@@ -259,6 +277,16 @@ struct Index {
     const handle = async (event: ServerEvent) => {
       try {
         switch (event.type) {
+          case 'ConnectionEstablished': {
+            const connEvent = event as ConnectionEstablishedEvent;
+            const summary = connEvent.payload.unread_summary;
+            this.stateManager.updateUnreadCount({
+              total_unread_count: summary.total_messages,
+              private_chat_count: summary.private_chats,
+              group_chat_count: summary.groups
+            });
+            break;
+          }
           case 'NewFollower': {
             const p: Object = event.payload as Object;
             const payloadRecord = p as Record<string, Object>;
@@ -459,6 +487,7 @@ struct Index {
 
     // 逐事件绑定（避免 '*' 里做大量无关 switch）
     [
+      'ConnectionEstablished',
       'NewFollower',
       'MutualFollow',
       'MomentLiked',
@@ -494,18 +523,47 @@ struct Index {
   }
 
   private handleTabChange(index: number) {
+    // "+" 按钮 (index 2) 不是真实标签，拦截并弹出创建菜单
+    if (index === 2) {
+      this.tabsController.changeIndex(this.previousTabIndex);
+      this.currentTabIndex = this.previousTabIndex;
+      this.showCreateActionSheet();
+      return;
+    }
+    this.previousTabIndex = this.currentTabIndex;
     this.currentTabIndex = index;
   }
 
+  private showCreateActionSheet(): void {
+    if (!this.isLoggedIn) {
+      try {
+        const routerInstance = this.getUIContext().getRouter();
+        routerInstance.pushUrl({
+          url: `features/auth/pages/${PageNames.LOGIN}`,
+          params: { reason: 'action_required', action: '创建内容' }
+        });
+      } catch (_e) {
+        // ignore
+      }
+      return;
+    }
+    this.showCreateSheet = true;
+  }
+
+  /**
+   * 通用带图标标签 Builder（SymbolSpan）
+   * 用于发现、消息、我的等确认可用的系统符号
+   */
   @Builder
   TabBuilderIcon(title: string, targetIndex: number, icon: AppIcon) {
     Column() {
-      SymbolGlyph($r(icon))
-        .fontSize(24)
-        .fontColor([this.currentTabIndex === targetIndex
-          ? $r('sys.color.ohos_id_color_emphasize')
-          : $r('sys.color.ohos_id_color_text_secondary')])
-        .renderingStrategy(SymbolRenderingStrategy.SINGLE)
+      Text() {
+        SymbolSpan($r(icon))
+          .fontSize(24)
+          .fontColor([this.currentTabIndex === targetIndex
+            ? $r('sys.color.ohos_id_color_emphasize')
+            : $r('sys.color.ohos_id_color_text_secondary')])
+      }
 
       Text(title)
         .fontColor(this.currentTabIndex === targetIndex
@@ -519,8 +577,71 @@ struct Index {
     .height(56)
     .justifyContent(FlexAlign.Center)
     .onClick(() => {
-      this.currentTabIndex = targetIndex;
-      this.tabsController.changeIndex(targetIndex);
+      this.handleTabChange(targetIndex);
+      if (targetIndex !== 2) {
+        this.tabsController.changeIndex(targetIndex);
+      }
+    })
+  }
+
+  /**
+   * 附近标签 Builder — 使用 Image + 系统媒体图标
+   * sys.symbol.location 在部分设备不可用，改用 sys.media 图标
+   */
+  @Builder
+  NearbyTabBuilder() {
+    Column() {
+      Image($r('sys.media.ohos_ic_public_location'))
+        .width(24)
+        .height(24)
+        .fillColor(this.currentTabIndex === 0
+          ? $r('sys.color.ohos_id_color_emphasize')
+          : $r('sys.color.ohos_id_color_text_secondary'))
+
+      Text('附近')
+        .fontColor(this.currentTabIndex === 0
+          ? $r('sys.color.ohos_id_color_emphasize')
+          : $r('sys.color.ohos_id_color_text_secondary'))
+        .fontSize(10)
+        .margin({ top: 4 })
+        .fontWeight(this.currentTabIndex === 0 ? FontWeight.Medium : FontWeight.Normal)
+    }
+    .width('100%')
+    .height(56)
+    .justifyContent(FlexAlign.Center)
+    .onClick(() => {
+      this.handleTabChange(0);
+      this.tabsController.changeIndex(0);
+    })
+  }
+
+  /** 中间「+」发布按钮 Builder */
+  @Builder
+  CreateTabBuilder() {
+    Column() {
+      Column() {
+        Text() {
+          SymbolSpan($r(AppIcon.ADD))
+            .fontSize(24)
+            .fontColor([Color.White])
+        }
+      }
+      .width(44)
+      .height(28)
+      .justifyContent(FlexAlign.Center)
+      .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+      .borderRadius(DesignConstants.RADIUS.MD)
+
+      Text('发布')
+        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .fontSize(10)
+        .margin({ top: 4 })
+    }
+    .width('100%')
+    .height(56)
+    .justifyContent(FlexAlign.Center)
+    .onClick(() => {
+      this.handleTabChange(2);
     })
   }
 
@@ -544,14 +665,26 @@ struct Index {
         .backgroundColor($r('sys.color.ohos_id_color_background'))
       } else {
         Tabs({ barPosition: BarPosition.End, controller: this.tabsController }) {
-          // 1. 群组/发现
+          // 1. 附近（含动态/用户/群组子标签）
           TabContent() {
-            // 游客允许浏览附近群组；加入/创建等操作在页面内做登录引导
-            GroupPage()
+            NearbyPage()
           }
-          .tabBar(this.TabBuilderIcon('群组', 0, AppIcon.GROUP))
+          .tabBar(this.NearbyTabBuilder())
 
-          // 2. 消息（已认证用户可用，含临时用户）
+          // 2. 发现（热门话题/推荐用户/热门瞬间）
+          TabContent() {
+            DiscoverPage()
+          }
+          .tabBar(this.TabBuilderIcon('发现', 1, AppIcon.RECOMMEND))
+
+          // 3. 发布（+按钮，拦截后弹出 ActionSheet）
+          TabContent() {
+            // 占位：不会真正显示，点击时拦截弹出菜单
+            Column() {}
+          }
+          .tabBar(this.CreateTabBuilder())
+
+          // 4. 消息
           TabContent() {
             if (this.isLoggedIn) {
               Column() {
@@ -563,23 +696,14 @@ struct Index {
               .width('100%')
               .height('100%')
             } else {
-              this.buildWelcomeView()
+              LoginPromptView({
+                title: '消息功能需要登录',
+                subtitle: '登录后可与好友实时聊天、加入群组讨论',
+                icon: AppIcon.MESSAGE
+              })
             }
           }
-          .tabBar(this.TabBuilderIcon('消息', 1, AppIcon.MESSAGE))
-
-          // 3. 瞬间
-          TabContent() {
-            // 游客允许浏览附近瞬间；发布/点赞等操作在页面内做登录引导
-            MomentPage()
-          }
-          .tabBar(this.TabBuilderIcon('瞬间', 2, AppIcon.CAMERA))
-
-          // 4. 地图
-          TabContent() {
-            MapPage()
-          }
-          .tabBar(this.TabBuilderIcon('地图', 3, AppIcon.MAP))
+          .tabBar(this.TabBuilderIcon('消息', 3, AppIcon.MESSAGE))
 
           // 5. 我的
           TabContent() {
@@ -590,6 +714,11 @@ struct Index {
         .scrollable(false)
         .onChange((index: number) => this.handleTabChange(index))
         .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+        .bindSheet($$this.showCreateSheet, this.CreateSheetContent(), {
+          height: SheetSize.FIT_CONTENT,
+          dragBar: true,
+          showClose: true
+        })
       }
 
       if (this.visibleNotifications.length > 0) {
@@ -677,68 +806,110 @@ struct Index {
   }
 
   @Builder
-  private buildWelcomeView() {
-    Column({ space: 20 }) {
-      Text() {
-        SymbolSpan($r(AppIcon.MESSAGE))
-          .fontSize(48)
-          .fontColor([$r('sys.color.ohos_id_color_emphasize')])
-      }
-
-      Text('消息功能需要登录')
-        .fontSize(20)
+  CreateSheetContent() {
+    Column({ space: 0 }) {
+      Text('创建内容')
+        .fontSize(DesignConstants.FONT.SIZE.XL)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .margin({ top: 8, bottom: 20 })
 
-      Text('登录后可与好友实时聊天、加入群组讨论')
-        .fontSize(14)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        .textAlign(TextAlign.Center)
+      // 发布瞬间
+      Row({ space: DesignConstants.SPACING.LG }) {
+        Column() {
+          Text() {
+            SymbolSpan($r(AppIcon.CAMERA))
+              .fontSize(28)
+              .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+          }
+        }
+        .width(56)
+        .height(56)
+        .justifyContent(FlexAlign.Center)
+        .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+        .borderRadius(DesignConstants.RADIUS.LG)
 
-      Column({ space: 12 }) {
-        // 快速体验（创建临时用户）
-        Button('快速体验（无需注册）')
-          .type(ButtonType.Capsule)
-          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-          .fontColor(Color.White)
-          .width('80%')
-          .height(44)
-          .onClick(async () => {
-            try {
-              const routerInstance = this.getUIContext().getRouter();
-              await routerInstance.pushUrl({ url: `features/auth/pages/${PageNames.LOGIN}` });
-            } catch (error) {
-              hilog.error(DOMAIN_NUMBER, TAG, `跳转登录页面失败: ${error}`);
-            }
-          })
+        Column({ space: 4 }) {
+          Text('发布瞬间')
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          Text('分享你身边的精彩时刻')
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
 
-        // 登录/注册
-        Button('登录 / 注册')
-          .type(ButtonType.Capsule)
-          .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .width('80%')
-          .height(44)
-          .onClick(async () => {
-            try {
-              const routerInstance = this.getUIContext().getRouter();
-              await routerInstance.pushUrl({ url: `features/auth/pages/${PageNames.LOGIN}` });
-            } catch (error) {
-              hilog.error(DOMAIN_NUMBER, TAG, `跳转登录页面失败: ${error}`);
-            }
-          })
+        Text() {
+          SymbolSpan($r(AppIcon.FORWARD))
+            .fontSize(18)
+            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+        }
       }
-      .margin({ top: 8 })
+      .width('100%')
+      .padding(DesignConstants.SPACING.LG)
+      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .borderRadius(DesignConstants.RADIUS.LG)
+      .onClick(() => {
+        this.showCreateSheet = false;
+        this.navigateToPage(`features/moment/pages/${PageNames.CREATE_MOMENT}`);
+      })
 
-      Text('群组、瞬间、地图无需登录即可浏览')
-        .fontSize(12)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        .margin({ top: 8 })
+      // 创建群组
+      Row({ space: DesignConstants.SPACING.LG }) {
+        Column() {
+          Text() {
+            SymbolSpan($r(AppIcon.GROUP))
+              .fontSize(28)
+              .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+          }
+        }
+        .width(56)
+        .height(56)
+        .justifyContent(FlexAlign.Center)
+        .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+        .borderRadius(DesignConstants.RADIUS.LG)
+
+        Column({ space: 4 }) {
+          Text('创建群组')
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          Text('创建一个附近的群组讨论')
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+
+        Text() {
+          SymbolSpan($r(AppIcon.FORWARD))
+            .fontSize(18)
+            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+        }
+      }
+      .width('100%')
+      .padding(DesignConstants.SPACING.LG)
+      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .borderRadius(DesignConstants.RADIUS.LG)
+      .margin({ top: DesignConstants.SPACING.SM })
+      .onClick(() => {
+        this.showCreateSheet = false;
+        this.navigateToPage(`features/group/pages/${PageNames.CREATE_GROUP}`);
+      })
     }
     .width('100%')
-    .height('100%')
-    .justifyContent(FlexAlign.Center)
-    .padding(24)
-    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.LG, bottom: 40 })
+  }
+
+  private navigateToPage(url: string): void {
+    try {
+      const routerInstance = this.getUIContext().getRouter();
+      routerInstance.pushUrl({ url: url });
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `页面跳转失败: ${error}`);
+    }
   }
 }

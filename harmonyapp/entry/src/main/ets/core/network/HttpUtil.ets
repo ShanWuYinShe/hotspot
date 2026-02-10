@@ -9,7 +9,7 @@ import request from '@ohos.request';
 import common from '@ohos.app.ability.common';
 import { API_BASE_URL, StorageKeys } from '../../constants/AppConstants';
 import { ApiEndpoints } from '../config/ApiEndpoints';
-import { ApiResponse, AuthData, HealthCheckData, UploadCategory, UploadMediaData } from '../types/api';
+import { ApiResponse, AuthData, HealthStatus, UploadCategory, UploadedMedia } from '../types/api';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import {
@@ -108,6 +108,16 @@ export class HttpUtil {
     } catch {
       // ignore
     }
+    // 同步重置全局 UI 状态，让 @StorageLink 绑定的组件立即切换到未登录视图
+    // 直接操作 AppStorage，无需引入 GlobalStateManager（避免循环依赖）
+    try {
+      AppStorage.setOrCreate('currentUser', null);
+      AppStorage.setOrCreate('isLoggedIn', false);
+      AppStorage.setOrCreate('userType', '');
+    } catch {
+      // ignore
+    }
+    hilog.info(DOMAIN_NUMBER, TAG, '认证数据已清除，UI 状态已重置为未登录');
   }
 
   /**
@@ -264,6 +274,10 @@ export class HttpUtil {
         if (refreshed) {
           return await HttpUtil.request<TResponse, TRequest>(url, method, data, true);
         }
+        // refresh 失败：原请求已确认为认证错误，无法恢复，清除认证状态
+        // 这会触发 @StorageLink 绑定的 UI 组件切换到未登录视图
+        await HttpUtil.clearAuthData();
+        hilog.warn(DOMAIN_NUMBER, TAG, '令牌刷新失败，已强制登出');
       }
 
       // 检查业务状态码（业务成功与否以 code 判定）
@@ -357,9 +371,9 @@ export class HttpUtil {
   /**
    * 测试服务器连接 - 使用系统健康检查API
    */
-  static async testConnection(): Promise<ApiResponse<HealthCheckData>> {
+  static async testConnection(): Promise<ApiResponse<HealthStatus>> {
     const emptyRequest: Record<string, Object> = {};
-    return HttpUtil.request<ApiResponse<HealthCheckData>, Record<string, Object>>(
+    return HttpUtil.request<ApiResponse<HealthStatus>, Record<string, Object>>(
       ApiEndpoints.SYSTEM.HEALTH,
       http.RequestMethod.POST,
       emptyRequest

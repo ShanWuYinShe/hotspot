@@ -1,7 +1,7 @@
 /**
  * WebSocket服务管理器
  * 统一管理WebSocket连接和消息处理
- * 严格遵循 api_spec.mdc WebSocket 设计规范
+ * 严格遵循 api_spec_websocket.mdc 设计规范
  */
 
 import { WebSocketUtil } from './WebSocketUtil';
@@ -11,19 +11,20 @@ import { PreferencesUtil } from '../storage/PreferencesUtil';
 import {
   ClientEvent,
   ServerEvent,
-  BatchEventsEvent,
   ConnectionEstablishedPayload,
+  ErrorPayload,
   SubscriptionItem,
+  SubscriptionOperation,
   WebSocketState,
   ReconnectConfig,
   createAuthEvent,
   createPingEvent,
-  createSubscribeEvent,
-  createUnsubscribeEvent,
   createSetSubscriptionsEvent,
   createGetSubscriptionsEvent,
   createPrivateTypingEvent,
   createGroupTypingEvent,
+  createGroupEnterEvent,
+  createGroupLeaveEvent,
   parseServerEvent,
   serializeClientEvent
 } from '../types/WebSocketTypes';
@@ -31,15 +32,13 @@ import {
 const DOMAIN_NUMBER: number = 0xFF06;
 const TAG: string = 'WebSocketService';
 
-// 默认重连配置（遵循 API 文档的指数退避算法）
 const DEFAULT_RECONNECT_CONFIG: ReconnectConfig = {
-  baseDelay: 1000,      // 1秒
-  maxDelay: 30000,      // 30秒
+  baseDelay: 1000,
+  maxDelay: 30000,
   maxAttempts: 10,
-  jitterFactor: 0.2     // ±20% 抖动
+  jitterFactor: 0.2
 };
 
-// 心跳间隔（秒） - 遵循 API 文档定义的 45秒
 const HEARTBEAT_INTERVAL = 45;
 
 export class WebSocketService {
@@ -65,9 +64,6 @@ export class WebSocketService {
     return WebSocketService.instance;
   }
 
-  /**
-   * 连接WebSocket服务器
-   */
   async connect(token: string): Promise<void> {
     if (this.state === WebSocketState.CONNECTED || this.state === WebSocketState.CONNECTING) {
       hilog.warn(DOMAIN_NUMBER, TAG, 'WebSocket已连接或正在连接中');
@@ -81,8 +77,7 @@ export class WebSocketService {
       const wsUrl = await this.getWsUrl();
       hilog.info(DOMAIN_NUMBER, TAG, `正在连接WebSocket服务器: ${wsUrl}`);
       await this.webSocketUtil.connect(wsUrl);
-      // 握手成功后立即发送首帧 Auth（鉴权通过后服务端才会发 ConnectionEstablished）
-      this.webSocketUtil.sendRaw(serializeClientEvent(createAuthEvent(token)));
+      this.webSocketUtil.sendRaw(serializeClientEvent(createAuthEvent('app', token)));
       hilog.info(DOMAIN_NUMBER, TAG, 'WebSocket握手成功，已发送Auth，等待ConnectionEstablished');
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `WebSocket连接失败: ${JSON.stringify(error)}`);
@@ -104,9 +99,6 @@ export class WebSocketService {
     }
   }
 
-  /**
-   * 断开WebSocket连接
-   */
   disconnect(): void {
     try {
       this.stopHeartbeat();
@@ -121,58 +113,43 @@ export class WebSocketService {
     }
   }
 
-  /**
-   * 获取连接状态
-   */
   getState(): WebSocketState {
     return this.state;
   }
 
-  /**
-   * 是否已连接
-   */
   isConnected(): boolean {
     return this.state === WebSocketState.CONNECTED;
   }
 
   // ============================================================================
-  // 订阅管理
+  // 订阅管理（统一使用 SetSubscriptions + operation）
   // ============================================================================
 
-  /**
-   * 增量订阅
-   */
   subscribe(item: SubscriptionItem): void {
     if (!this.isConnected()) {
       hilog.warn(DOMAIN_NUMBER, TAG, 'WebSocket未连接，无法订阅');
       return;
     }
-    this.send(createSubscribeEvent(item) as ClientEvent);
+    this.send(createSetSubscriptionsEvent('subscribe', item));
   }
 
-  /**
-   * 取消订阅
-   */
   unsubscribe(item: SubscriptionItem): void {
     if (!this.isConnected()) {
       hilog.warn(DOMAIN_NUMBER, TAG, 'WebSocket未连接，无法取消订阅');
       return;
     }
-    this.send(createUnsubscribeEvent(item) as ClientEvent);
+    this.send(createSetSubscriptionsEvent('unsubscribe', item));
   }
 
-  /**
-   * 替换式订阅（覆盖现有订阅）
-   */
-  setSubscriptions(item: SubscriptionItem): void {
+  setSubscriptions(item: SubscriptionItem, operation: SubscriptionOperation = 'set'): void {
     if (!this.isConnected()) {
       hilog.warn(DOMAIN_NUMBER, TAG, 'WebSocket未连接，无法设置订阅');
       return;
     }
-    this.send(createSetSubscriptionsEvent(item));
+    this.send(createSetSubscriptionsEvent(operation, item));
   }
 
-  getSubscriptions(): void {
+  getSubscriptionsState(): void {
     if (!this.isConnected()) {
       hilog.warn(DOMAIN_NUMBER, TAG, 'WebSocket未连接，无法获取订阅状态');
       return;
@@ -195,64 +172,47 @@ export class WebSocketService {
     }
   }
 
-  /**
-   * 订阅群聊消息
-   */
   subscribeGroupChats(groupChatIds: string[]): void {
-    this.subscribe({
-      type: 'group',
-      ids: groupChatIds
-    });
+    this.subscribe({ type: 'group', ids: groupChatIds });
   }
 
-  /**
-   * 取消订阅群聊消息
-   */
   unsubscribeGroupChats(groupChatIds: string[]): void {
-    this.unsubscribe({
-      type: 'group',
-      ids: groupChatIds
-    });
+    this.unsubscribe({ type: 'group', ids: groupChatIds });
   }
 
-  /**
-   * 订阅用户状态
-   */
-  subscribeUsers(userIds: number[]): void {
-    this.subscribe({
-      type: 'user',
-      ids: userIds.map(id => id.toString())
-    });
+  subscribeUsers(userIds: string[]): void {
+    this.subscribe({ type: 'user', ids: userIds });
   }
 
-  /**
-   * 取消订阅用户状态
-   */
-  unsubscribeUsers(userIds: number[]): void {
-    this.unsubscribe({
-      type: 'user',
-      ids: userIds.map(id => id.toString())
-    });
+  unsubscribeUsers(userIds: string[]): void {
+    this.unsubscribe({ type: 'user', ids: userIds });
+  }
+
+  // ============================================================================
+  // 群聊进入/离开（触发 GroupUserEntered/GroupUserExited 广播）
+  // ============================================================================
+
+  enterGroup(groupId: string): void {
+    if (!this.isConnected()) return;
+    this.send(createGroupEnterEvent(groupId));
+  }
+
+  leaveGroupChat(groupId: string): void {
+    if (!this.isConnected()) return;
+    this.send(createGroupLeaveEvent(groupId));
   }
 
   // ============================================================================
   // 实时状态同步
   // ============================================================================
 
-  /**
-   * 发送正在输入状态
-   */
-  sendPrivateTyping(targetUserId: number, isTyping: boolean): void {
-    if (!this.isConnected()) {
-      return;
-    }
+  sendPrivateTyping(targetUserId: string, isTyping: boolean): void {
+    if (!this.isConnected()) return;
     this.send(createPrivateTypingEvent(targetUserId, isTyping));
   }
 
   sendGroupTyping(groupChatId: string, isTyping: boolean): void {
-    if (!this.isConnected()) {
-      return;
-    }
+    if (!this.isConnected()) return;
     this.send(createGroupTypingEvent(groupChatId, isTyping));
   }
 
@@ -260,18 +220,12 @@ export class WebSocketService {
   // 事件监听
   // ============================================================================
 
-  /**
-   * 监听服务端事件
-   */
   on(eventType: string, handler: (event: ServerEvent) => void): void {
     const handlers = this.eventHandlers.get(eventType) || [];
     handlers.push(handler);
     this.eventHandlers.set(eventType, handlers);
   }
 
-  /**
-   * 移除事件监听
-   */
   off(eventType: string, handler: (event: ServerEvent) => void): void {
     const handlers = this.eventHandlers.get(eventType) || [];
     const index = handlers.indexOf(handler);
@@ -285,9 +239,6 @@ export class WebSocketService {
   // 内部方法
   // ============================================================================
 
-  /**
-   * 发送客户端事件
-   */
   private send(event: ClientEvent): void {
     if (!this.isConnected()) {
       hilog.warn(DOMAIN_NUMBER, TAG, 'WebSocket未连接，无法发送消息');
@@ -303,19 +254,14 @@ export class WebSocketService {
     }
   }
 
-  /**
-   * 设置内部消息处理器
-   */
   private setupInternalHandlers(): void {
-    // 监听原始消息
     this.webSocketUtil.onRawMessage((data: string) => {
       const event = parseServerEvent(data);
       if (event) {
-        this.handleServerEvent(event as ServerEvent | BatchEventsEvent);
+        this.handleServerEvent(event as ServerEvent);
       }
     });
 
-    // 监听连接关闭
     this.webSocketUtil.onClose(() => {
       hilog.info(DOMAIN_NUMBER, TAG, 'WebSocket连接关闭');
       this.state = WebSocketState.DISCONNECTED;
@@ -323,57 +269,35 @@ export class WebSocketService {
       this.scheduleReconnect();
     });
 
-    // 监听连接错误
     this.webSocketUtil.onError((error: Error) => {
       hilog.error(DOMAIN_NUMBER, TAG, `WebSocket错误: ${error.message}`);
       this.state = WebSocketState.ERROR;
     });
   }
 
-  /**
-   * 处理服务端事件
-   */
-  private handleServerEvent(event: ServerEvent | BatchEventsEvent): void {
-    // 处理批量事件
-    if (event.type === 'BatchEvents') {
-      const batchEvent = event as BatchEventsEvent;
-      hilog.debug(DOMAIN_NUMBER, TAG, `收到批量事件，批次ID: ${batchEvent.payload.batch_id}，事件数: ${batchEvent.payload.events.length}`);
-      
-      // 按序处理每个事件
-      batchEvent.payload.events.forEach((subEvent) => {
-        // 每个事件仍需检查 event_id 去重（在 parseServerEvent 中已处理）
-        // 直接将 subEvent 转为 ServerEvent（忽略多余的 event_id 字段）
-        this.handleServerEvent((subEvent as Object) as ServerEvent);
-      });
-      return;
-    }
-
+  private handleServerEvent(event: ServerEvent): void {
     hilog.debug(DOMAIN_NUMBER, TAG, `收到服务端事件: ${event.type}`);
 
-    // 处理特殊事件
     switch (event.type) {
       case 'ConnectionEstablished':
         const connPayload = event.payload as ConnectionEstablishedPayload;
         hilog.info(DOMAIN_NUMBER, TAG, `连接已建立: connection_id=${connPayload.connection_id}, user_id=${connPayload.user_id}`);
         hilog.debug(DOMAIN_NUMBER, TAG, `服务端时间: ${connPayload.server_time}`);
         hilog.debug(DOMAIN_NUMBER, TAG, `配置: ping_interval=${connPayload.config.ping_interval}s, ping_timeout=${connPayload.config.ping_timeout}s`);
-        hilog.debug(DOMAIN_NUMBER, TAG, `未读数: messages=${connPayload.unread_counts.messages}, group_messages=${connPayload.unread_counts.group_messages}, notifications=${connPayload.unread_counts.notifications}`);
-        
+        hilog.debug(DOMAIN_NUMBER, TAG, `未读摘要: private_chats=${connPayload.unread_summary.private_chats}, groups=${connPayload.unread_summary.groups}, total=${connPayload.unread_summary.total_messages}`);
+
         this.state = WebSocketState.CONNECTED;
         this.reconnectAttempts = 0;
-        
-        // 使用服务端配置的心跳间隔（如果可用）
+
         const pingInterval = connPayload.config?.ping_interval || HEARTBEAT_INTERVAL;
         this.startHeartbeat(pingInterval);
-        
-        // 重新订阅之前的频道
+
         if (this.subscriptions.length > 0) {
           this.subscriptions.forEach((item) => this.setSubscriptions(item));
         }
         break;
 
       case 'Pong':
-        // 服务端心跳响应 (Pong)，连接正常
         hilog.debug(DOMAIN_NUMBER, TAG, '收到服务端Pong');
         break;
 
@@ -401,7 +325,17 @@ export class WebSocketService {
         break;
 
       case 'Error':
-        hilog.error(DOMAIN_NUMBER, TAG, `服务端错误: [${event.payload.code}] ${event.payload.message}`);
+        const errPayload = event.payload as ErrorPayload;
+        hilog.error(DOMAIN_NUMBER, TAG, `服务端错误: [${errPayload.code}] ${errPayload.message} severity=${errPayload.severity}`);
+        if (errPayload.severity === 'fatal') {
+          hilog.error(DOMAIN_NUMBER, TAG, '收到致命错误，断开连接');
+          this.disconnect();
+        }
+        break;
+
+      case 'AccountBanned':
+        hilog.error(DOMAIN_NUMBER, TAG, `账号被封禁: ${JSON.stringify(event.payload)}`);
+        this.disconnect();
         break;
     }
 
@@ -426,10 +360,6 @@ export class WebSocketService {
     });
   }
 
-  /**
-   * 启动心跳
-   * @param interval 心跳间隔（秒），默认使用常量值
-   */
   private startHeartbeat(interval?: number): void {
     this.stopHeartbeat();
     const pingInterval = interval || HEARTBEAT_INTERVAL;
@@ -440,9 +370,6 @@ export class WebSocketService {
     }, pingInterval * 1000);
   }
 
-  /**
-   * 停止心跳
-   */
   private stopHeartbeat(): void {
     if (this.heartbeatTimer !== null) {
       clearInterval(this.heartbeatTimer);
@@ -450,9 +377,6 @@ export class WebSocketService {
     }
   }
 
-  /**
-   * 计划重连（指数退避算法）
-   */
   private scheduleReconnect(): void {
     if (this.reconnectAttempts >= this.reconnectConfig.maxAttempts) {
       hilog.error(DOMAIN_NUMBER, TAG, '达到最大重连次数，停止重连');
@@ -466,7 +390,6 @@ export class WebSocketService {
 
     this.reconnectAttempts++;
 
-    // 计算延迟：min(baseDelay * 2^attempt, maxDelay) * (1 ± jitterFactor)
     const baseDelay = this.reconnectConfig.baseDelay;
     const maxDelay = this.reconnectConfig.maxDelay;
     const jitterFactor = this.reconnectConfig.jitterFactor;

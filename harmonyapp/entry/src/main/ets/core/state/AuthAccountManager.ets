@@ -16,7 +16,7 @@ import type { AuthData } from '../types/api';
 
 interface AuthAccountsState {
   version: 1;
-  current_user_id?: number;
+  current_user_id?: string;
   accounts: Record<string, AuthData>;
 }
 
@@ -47,14 +47,14 @@ export class AuthAccountManager {
     return Object.values(state.accounts);
   }
 
-  static async getCurrentUserId(): Promise<number | null> {
+  static async getCurrentUserId(): Promise<string | null> {
     const state = await AuthAccountManager.getState();
-    return typeof state.current_user_id === 'number' ? state.current_user_id : null;
+    return typeof state.current_user_id === 'string' ? state.current_user_id : null;
   }
 
   static async getCurrentAuth(): Promise<AuthData | null> {
     const state = await AuthAccountManager.getState();
-    const currentId = typeof state.current_user_id === 'number' ? state.current_user_id : undefined;
+    const currentId = typeof state.current_user_id === 'string' ? state.current_user_id : undefined;
     if (currentId == null) return null;
     return state.accounts[String(currentId)] ?? null;
   }
@@ -87,7 +87,7 @@ export class AuthAccountManager {
    * 切换到已保存账号（会更新 access_token/user_info）
    * 返回切换后的 auth（不存在则返回 null）
    */
-  static async switchTo(userId: number): Promise<AuthData | null> {
+  static async switchTo(userId: string): Promise<AuthData | null> {
     const state = await AuthAccountManager.getState();
     const next = state.accounts[String(userId)];
     if (!next) return null;
@@ -122,7 +122,7 @@ export class AuthAccountManager {
   /**
    * 删除一个账号（如果删除的是当前账号，会自动 lock）
    */
-  static async removeAccount(userId: number): Promise<void> {
+  static async removeAccount(userId: string): Promise<void> {
     const state = await AuthAccountManager.getState();
     const newAccounts: Record<string, AuthData> = {};
     const accountKeys = Object.keys(state.accounts);

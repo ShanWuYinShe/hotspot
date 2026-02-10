@@ -8,7 +8,7 @@ import { GlobalStateManager, KEY_CURRENT_LOCATION } from '../../../core/state/Gl
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames } from '../../../constants/AppConstants';
-import { LikeMomentRequest, MomentSearchItem, SearchMomentsByLocationRequest, MomentImage } from '../../../core/types/api';
+import { LikeMomentRequest, MomentItem, SearchMomentsRequest, MomentImage } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { IntelligentLocationCard } from '../../../components/IntelligentLocationCard';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -27,7 +27,7 @@ export struct MomentPage {
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
 
   private stateManager = GlobalStateManager.getInstance();
-  private momentsDataSource: BasicDataSource<MomentSearchItem> = new BasicDataSource([]);
+  private momentsDataSource: BasicDataSource<MomentItem> = new BasicDataSource([]);
   private momentCacheService = MomentCacheService.getInstance();
 
   @State isLoading: boolean = false;
@@ -62,15 +62,16 @@ export struct MomentPage {
     this.errorMessage = '';
 
     try {
-      const request: SearchMomentsByLocationRequest = {
+      const request: SearchMomentsRequest = {
         reference_point: {
           latitude: this.currentLocation.latitude,
           longitude: this.currentLocation.longitude
         },
         radius: 2000,
-        limit: 50
+        sort_by: 'distance',
+        pagination: { limit: 50 }
       };
-      const response = await ApiClient.searchMomentsByLocation(request);
+      const response = await ApiClient.searchMoments(request);
 
       if (response.code === 0 && response.data) {
         this.momentsDataSource.setData(response.data.items);
@@ -101,7 +102,7 @@ export struct MomentPage {
     }
   }
 
-  private async updateCache(moments: MomentSearchItem[]) {
+  private async updateCache(moments: MomentItem[]) {
     await this.momentCacheService.cacheMoments(moments);
   }
 
@@ -130,7 +131,7 @@ export struct MomentPage {
     return rows * itemHeight + (rows - 1) * gap;
   }
 
-  private async likeMoment(moment: MomentSearchItem, index: number) {
+  private async likeMoment(moment: MomentItem, index: number) {
     const currentUser = this.stateManager.getCurrentUser();
     if (!currentUser) {
       SystemToast.showWarning('请先登录后再点赞', this.getUIContext());
@@ -280,11 +281,11 @@ export struct MomentPage {
   @Builder
   private buildMomentList() {
     List({ space: DesignConstants.SPACING.MD }) {
-      LazyForEach(this.momentsDataSource, (moment: MomentSearchItem, index: number) => {
+      LazyForEach(this.momentsDataSource, (moment: MomentItem, index: number) => {
         ListItem() {
           this.buildMomentCard(moment, index)
         }
-      }, (moment: MomentSearchItem) => moment.moment_id)
+      }, (moment: MomentItem) => moment.moment_id)
     }
     .width('100%')
     .layoutWeight(1)
@@ -294,7 +295,7 @@ export struct MomentPage {
   }
 
   @Builder
-  private buildMomentCard(moment: MomentSearchItem, index: number) {
+  private buildMomentCard(moment: MomentItem, index: number) {
     Column({ space: DesignConstants.SPACING.MD }) {
       // 用户信息
       Row({ space: DesignConstants.SPACING.MD }) {
@@ -371,10 +372,10 @@ export struct MomentPage {
       // 位置信息
       if (moment.location) {
         IntelligentLocationCard({
-          latitude: moment.location.latitude,
-          longitude: moment.location.longitude,
+          latitude: moment.location.point.latitude,
+          longitude: moment.location.point.longitude,
           locationName: moment.location.location_name,
-          distance: moment.location.distance,
+          distance: moment.location.distance ?? 0,
           altitude: 0
         })
       }
@@ -385,6 +386,7 @@ export struct MomentPage {
           LikeButton({
             momentId: moment.moment_id,
             initialLikesCount: moment.likes_count,
+            initialIsLiked: moment.my_state?.is_liked ?? false,
             onLike: (): void => { this.likeMoment(moment, index); }
           })
         }
@@ -400,7 +402,7 @@ export struct MomentPage {
 
         Row({ space: DesignConstants.SPACING.XS }) {
           SystemIcon({ icon: AppIcon.SHARE, iconSize: 20, iconColor: DesignConstants.COLOR.TEXT_SECONDARY_LIGHT })
-          Text('分享')
+          Text(moment.shares_count.toString())
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         }
@@ -423,10 +425,12 @@ struct LikeButton {
   @State isLiked: boolean = false;
   @State likesCount: number = 0;
   @Prop initialLikesCount: number = 0;
+  @Prop initialIsLiked: boolean = false;
   onLike?: () => void;
 
   async aboutToAppear() {
     this.likesCount = this.initialLikesCount;
+    this.isLiked = this.initialIsLiked;
   }
 
   build() {

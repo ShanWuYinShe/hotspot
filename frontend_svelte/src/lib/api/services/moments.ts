@@ -10,7 +10,7 @@ import type {
 	Location,
 	PrivacyLevel,
 	PaginationParams,
-	SearchBaseParams
+	GeoPoint
 } from '$lib/types/api';
 
 export const momentsService = {
@@ -20,11 +20,12 @@ export const momentsService = {
 	 * 搜索瞬间（对齐 spec SearchMomentsRequest）
 	 */
 	search(params: {
-		search: SearchBaseParams;
 		keyword?: string;
 		tag?: string;
 		radius?: number;
 		sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';
+		reference_point: GeoPoint;
+		pagination?: PaginationParams;
 	}) {
 		return paginate<MomentItem>(MOMENTS.SEARCH, params);
 	},

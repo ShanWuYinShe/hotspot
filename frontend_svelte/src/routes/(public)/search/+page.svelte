@@ -56,9 +56,9 @@
 
 		try {
 			const [usersRes, momentsRes, groupsRes] = await Promise.all([
-				usersService.search({ search: { reference_point: getReferencePoint() }, keyword: searchTerm }),
-				momentsService.search({ search: { reference_point: getReferencePoint() }, keyword: searchTerm }),
-				groupsService.search({ search: { reference_point: getReferencePoint() }, keyword: searchTerm })
+				usersService.search({ keyword: searchTerm, reference_point: getReferencePoint() }),
+				momentsService.search({ keyword: searchTerm, reference_point: getReferencePoint() }),
+				groupsService.search({ keyword: searchTerm, reference_point: getReferencePoint() })
 			]);
 
 			if (isSuccess(usersRes) && usersRes.data) {
@@ -88,9 +88,9 @@
 
 		try {
 			const [usersRes, momentsRes, groupsRes] = await Promise.all([
-				usersService.search({ search: { reference_point: getReferencePoint() }, tag }),
-				momentsService.search({ search: { reference_point: getReferencePoint() }, tag }),
-				groupsService.search({ search: { reference_point: getReferencePoint() }, tag })
+				usersService.search({ tag, reference_point: getReferencePoint() }),
+				momentsService.search({ tag, reference_point: getReferencePoint() }),
+				groupsService.search({ tag, reference_point: getReferencePoint() })
 			]);
 
 			if (isSuccess(usersRes) && usersRes.data) {

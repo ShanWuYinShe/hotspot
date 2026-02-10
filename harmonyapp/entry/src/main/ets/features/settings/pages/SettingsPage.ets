@@ -10,14 +10,14 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { HttpUtil } from '../../../core/network/HttpUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
-import { MyProfileData } from '../../../core/types/api';
+import { MyProfile } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
 
 @Entry
 @Component
 struct SettingsPage {
-  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfileData | null = null;
+  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
   @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
   @StorageLink(KEY_USER_TYPE) userType: string = '';
   private stateManager = GlobalStateManager.getInstance();

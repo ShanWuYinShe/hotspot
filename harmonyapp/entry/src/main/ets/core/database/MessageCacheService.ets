@@ -24,7 +24,7 @@ export interface MessageCacheItem {
   id: string;
   chatId: string;
   type: string;
-  senderId: number;
+  senderId: string;
   content: string;
   sentAt: string;
   data: string; // JSON string of original data
@@ -200,7 +200,7 @@ export class MessageCacheService {
           id: resultSet.getString(resultSet.getColumnIndex('id')),
           chatId: resultSet.getString(resultSet.getColumnIndex('chat_id')),
           type: resultSet.getString(resultSet.getColumnIndex('type')),
-          senderId: resultSet.getDouble(resultSet.getColumnIndex('sender_id')),
+          senderId: resultSet.getString(resultSet.getColumnIndex('sender_id')),
           content: resultSet.getString(resultSet.getColumnIndex('content')),
           sentAt: resultSet.getString(resultSet.getColumnIndex('sent_at')),
           data: resultSet.getString(resultSet.getColumnIndex('json_data'))

@@ -53,14 +53,21 @@ export struct NativeMapComponent {
   onMapReady?: () => void;
   onMarkerClick?: (marker: MapMarker) => void;
   onMapClick?: (coordinate: MapCoordinate) => void;
+  /** 双击地图回调 */
+  onMapDoubleClick?: (coordinate: MapCoordinate) => void;
+  /** 相机停止移动回调（用户停止拖拽/缩放后触发） */
+  onCameraIdle?: (center: MapCoordinate) => void;
   
   // 地图控制器
   private mapController: map.MapComponentController | null = null;
   private mapCallback?: AsyncCallback<map.MapComponentController>;
   private createdMarkers: Map<string, map.Marker> = new Map();
+  // 双击检测
+  private lastClickTime: number = 0;
 
   // 内部状态
   @State isMapReady: boolean = false;
+  @State mapError: string = '';
 
   aboutToAppear() {
     // 初始化地图回调
@@ -68,6 +75,7 @@ export struct NativeMapComponent {
       if (!err && mapController) {
         this.mapController = mapController;
         this.isMapReady = true;
+        this.mapError = '';
         hilog.info(DOMAIN_NUMBER, TAG, 'MapComponentController 初始化成功');
         
         // 初始化地图设置
@@ -78,7 +86,9 @@ export struct NativeMapComponent {
           this.onMapReady();
         }
       } else {
-        hilog.error(DOMAIN_NUMBER, TAG, `MapComponentController 初始化失败: ${JSON.stringify(err)}`);
+        const errMsg = JSON.stringify(err);
+        hilog.error(DOMAIN_NUMBER, TAG, `MapComponentController 初始化失败: ${errMsg}`);
+        this.mapError = '地图加载失败，请检查 AppGallery Connect 配置';
       }
     };
   }
@@ -114,12 +124,45 @@ export struct NativeMapComponent {
     // 设置缩放按钮
     this.mapController.setZoomControlsEnabled(this.showZoomControls);
 
-    // 监听地图点击
+    // 监听地图点击（含双击检测）
     this.mapController.on("mapClick", (position: mapCommon.LatLng) => {
-      if (this.onMapClick) {
-        this.onMapClick({ latitude: position.latitude, longitude: position.longitude });
+      const now = Date.now();
+      const coord: MapCoordinate = { latitude: position.latitude, longitude: position.longitude };
+
+      if (now - this.lastClickTime < 400) {
+        // 双击：两次点击间隔 < 400ms
+        this.lastClickTime = 0;
+        if (this.onMapDoubleClick) {
+          this.onMapDoubleClick(coord);
+        }
+      } else {
+        this.lastClickTime = now;
+        if (this.onMapClick) {
+          this.onMapClick(coord);
+        }
       }
     });
+
+    // 监听相机空闲（用户停止拖拽/缩放后触发）
+    try {
+      this.mapController.on("cameraIdle", () => {
+        if (this.onCameraIdle && this.mapController) {
+          try {
+            const cameraPosition = this.mapController.getCameraPosition();
+            if (cameraPosition && cameraPosition.target) {
+              this.onCameraIdle({
+                latitude: cameraPosition.target.latitude,
+                longitude: cameraPosition.target.longitude
+              });
+            }
+          } catch (e) {
+            hilog.warn(DOMAIN_NUMBER, TAG, `cameraIdle 获取相机位置失败: ${JSON.stringify(e)}`);
+          }
+        }
+      });
+    } catch (e) {
+      hilog.warn(DOMAIN_NUMBER, TAG, `注册 cameraIdle 事件失败: ${JSON.stringify(e)}`);
+    }
 
     // 监听标记点击
     this.mapController.on("markerClick", (marker: map.Marker) => {
@@ -194,7 +237,37 @@ export struct NativeMapComponent {
 
   build() {
     Stack() {
-      if (this.mapCallback) {
+      if (this.mapError.length > 0) {
+        // 地图加载失败提示
+        Column({ space: 12 }) {
+          Text() {
+            SymbolSpan($r('sys.symbol.map'))
+              .fontSize(48)
+              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+          }
+
+          Text('地图服务不可用')
+            .fontSize(16)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+
+          Text(this.mapError)
+            .fontSize(13)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .textAlign(TextAlign.Center)
+
+          Text('请在 module.json5 中配置 client_id\n并在 AppGallery Connect 中启用 Map Kit 服务')
+            .fontSize(12)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .textAlign(TextAlign.Center)
+            .lineHeight(18)
+        }
+        .width('100%')
+        .height('100%')
+        .justifyContent(FlexAlign.Center)
+        .padding(32)
+        .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+      } else if (this.mapCallback) {
         MapComponent({ 
           mapOptions: {
             position: {
@@ -210,7 +283,18 @@ export struct NativeMapComponent {
         .width('100%')
         .height('100%')
       } else {
-        LoadingProgress()
+        Column() {
+          LoadingProgress()
+            .width(40)
+            .height(40)
+          Text('加载地图中...')
+            .fontSize(14)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .margin({ top: 12 })
+        }
+        .width('100%')
+        .height('100%')
+        .justifyContent(FlexAlign.Center)
       }
     }
     .width('100%')

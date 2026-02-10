@@ -4,7 +4,7 @@
  */
 
 import { ApiClient } from '../../../core/api/ApiClient';
-import { FeedUserItem, TrendingTagsData, TagItem } from '../../../core/types/api';
+import { UserItem, TagItem } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -20,7 +20,7 @@ const TAG: string = 'RecommendationPage';
 struct RecommendationPage {
   @State isLoading: boolean = true;
   @State trendingTags: TagItem[] = [];
-  @State recommendedUsers: FeedUserItem[] = [];
+  @State recommendedUsers: UserItem[] = [];
 
   async aboutToAppear() {
     await this.loadData();
@@ -32,13 +32,13 @@ struct RecommendationPage {
       // 并行加载推荐数据
       const results = await Promise.all([
         ApiClient.getTrendingTags({ limit: 10, timeframe: 'weekly' }),
-        ApiClient.getFeedUsers({ limit: 5 })
+        ApiClient.getFeedUsers({ reference_point: { latitude: 0, longitude: 0 }, pagination: { limit: 5 } })
       ]);
       const tagsResponse = results[0];
       const usersResponse = results[1];
 
       if (tagsResponse.code === 0 && tagsResponse.data) {
-        this.trendingTags = tagsResponse.data.items;
+        this.trendingTags = tagsResponse.data;
       }
 
       if (usersResponse.code === 0 && usersResponse.data) {
@@ -108,18 +108,18 @@ struct RecommendationPage {
           // 推荐用户
           if (this.recommendedUsers.length > 0) {
             ListItemGroup({ header: this.ListHeader('推荐用户') }) {
-              ForEach(this.recommendedUsers, (user: FeedUserItem) => {
+              ForEach(this.recommendedUsers, (user: UserItem) => {
                 ListItem() {
                   Row() {
                     SystemAvatar({
-                      avatarUrl: user.avatar_url,
-                      name: user.nickname,
+                      avatarUrl: user.user?.avatar_url,
+                      name: user.user?.nickname ?? '',
                       avatarSize: 40
                     })
                     .margin({ right: 12 })
                     
                     Column() {
-                      Text(user.nickname)
+                      Text(user.user?.nickname ?? '')
                         .fontSize(DesignConstants.FONT.SIZE.LG)
                         .fontWeight(FontWeight.Medium)
                       Text('可能会感兴趣')
@@ -136,7 +136,7 @@ struct RecommendationPage {
                       .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
                       .onClick(async () => {
                         try {
-                          await ApiClient.followUser({ user_id: user.user_id });
+                          await ApiClient.followUser({ user_id: user.user?.user_id ?? '' });
                           SystemToast.showSuccess('已关注', this.getUIContext());
                         } catch (error) {
                           SystemToast.showError('关注失败', this.getUIContext());
@@ -147,7 +147,7 @@ struct RecommendationPage {
                   .padding(DesignConstants.SPACING.LG)
                   .backgroundColor($r('sys.color.ohos_id_color_background'))
                 }
-              }, (user: FeedUserItem) => String(user.user_id))
+              }, (user: UserItem) => user.user?.user_id ?? '')
             }
             .borderRadius(DesignConstants.RADIUS.LG)
             .backgroundColor($r('sys.color.ohos_id_color_background'))

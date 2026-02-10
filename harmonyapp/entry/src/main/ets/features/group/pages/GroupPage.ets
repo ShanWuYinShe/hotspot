@@ -7,7 +7,7 @@ import { GlobalStateManager, KEY_CURRENT_LOCATION } from '../../../core/state/Gl
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames } from '../../../constants/AppConstants';
-import { GroupSearchItem, SearchGroupsByLocationRequest } from '../../../core/types/api';
+import { GroupItem, SearchGroupsRequest } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { IntelligentLocationCard } from '../../../components/IntelligentLocationCard';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -20,7 +20,7 @@ export struct GroupPage {
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
 
   private stateManager = GlobalStateManager.getInstance();
-  @State groups: GroupSearchItem[] = [];
+  @State groups: GroupItem[] = [];
   @State isLoading: boolean = false;
   @State errorMessage: string = '';
 
@@ -40,15 +40,16 @@ export struct GroupPage {
     this.errorMessage = '';
 
     try {
-      const request: SearchGroupsByLocationRequest = {
+      const request: SearchGroupsRequest = {
         reference_point: {
           latitude: this.currentLocation.latitude,
           longitude: this.currentLocation.longitude
         },
         radius: 5000,
-        limit: 50
+        sort_by: 'distance',
+        pagination: { limit: 50 }
       };
-      const response = await ApiClient.searchGroupsByLocation(request);
+      const response = await ApiClient.searchGroups(request);
 
       if (response.code === 0 && response.data) {
         this.groups = response.data.items;
@@ -63,7 +64,7 @@ export struct GroupPage {
     }
   }
 
-  private async joinGroup(group: GroupSearchItem) {
+  private async joinGroup(group: GroupItem) {
     const currentUser = this.stateManager.getCurrentUser();
     if (!currentUser) {
       SystemToast.showWarning('请先登录后再加入群组', this.getUIContext());
@@ -85,7 +86,7 @@ export struct GroupPage {
         const routerInstance = this.getUIContext().getRouter();
         await routerInstance.pushUrl({
           url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
-          params: { groupId: group.group_id }
+          params: { groupId: group.group.group_id }
         });
       } catch (error) {
         SystemToast.showError('跳转失败', this.getUIContext());
@@ -94,9 +95,21 @@ export struct GroupPage {
     }
 
     try {
-      await ApiClient.joinGroup({ group_id: group.group_id });
-      SystemToast.show('加入群组成功', this.getUIContext());
-      await this.loadNearbyGroups();
+      const response = await ApiClient.joinGroup({ group_id: group.group.group_id });
+      if (response.code === 0 && response.data) {
+        if (response.data.status === 'joined') {
+          SystemToast.show('加入群组成功', this.getUIContext());
+          await this.loadNearbyGroups();
+        } else if (response.data.status === 'pending_approval') {
+          SystemToast.show('已提交申请，等待管理员审批', this.getUIContext());
+          await this.loadNearbyGroups();
+        }
+      } else if (response.code === 1305) {
+        SystemToast.show('您已是该群成员', this.getUIContext());
+        await this.loadNearbyGroups();
+      } else {
+        SystemToast.showError(response.message || '加入群组失败', this.getUIContext());
+      }
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : '加入群组失败';
       if (errMsg.includes('1305')) {
@@ -228,11 +241,11 @@ export struct GroupPage {
   @Builder
   private buildGroupList() {
     List({ space: DesignConstants.SPACING.MD }) {
-      ForEach(this.groups, (group: GroupSearchItem) => {
+      ForEach(this.groups, (group: GroupItem) => {
         ListItem() {
           this.buildGroupCard(group)
         }
-      }, (group: GroupSearchItem) => group.group_id)
+      }, (group: GroupItem) => group.group.group_id)
     }
     .width('100%')
     .layoutWeight(1)
@@ -241,19 +254,19 @@ export struct GroupPage {
   }
 
   @Builder
-  private buildGroupCard(group: GroupSearchItem) {
+  private buildGroupCard(group: GroupItem) {
     Column({ space: DesignConstants.SPACING.MD }) {
       // 群组基本信息
       Row({ space: DesignConstants.SPACING.MD }) {
         SystemAvatar({
-          avatarUrl: group.avatar_url || '',
-          name: group.name,
+          avatarUrl: group.group.avatar_url || '',
+          name: group.group.name,
           avatarSize: 48,
           shape: 'squircle'
         })
 
         Column({ space: 4 }) {
-          Text(group.name)
+          Text(group.group.name)
             .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontWeight(FontWeight.Medium)
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
@@ -266,7 +279,7 @@ export struct GroupPage {
                 .fontSize(12)
                 .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
             }
-            Text(`${group.members_count}人`)
+            Text(`${group.group.members_count}人`)
               .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor($r('sys.color.ohos_id_color_text_secondary'))
           }
@@ -294,10 +307,10 @@ export struct GroupPage {
       .alignItems(VerticalAlign.Top)
 
       // 位置信息
-      if (group.location) {
+      if (group.location?.point) {
         IntelligentLocationCard({
-          latitude: group.location.latitude,
-          longitude: group.location.longitude,
+          latitude: group.location.point.latitude,
+          longitude: group.location.point.longitude,
           locationName: group.location.location_name,
           distance: group.location.distance,
           altitude: 0
@@ -313,7 +326,7 @@ export struct GroupPage {
         const routerInstance = this.getUIContext().getRouter();
         await routerInstance.pushUrl({
           url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
-          params: { groupId: group.group_id }
+          params: { groupId: group.group.group_id }
         });
       } catch (error) {
         SystemToast.showError('跳转失败', this.getUIContext());

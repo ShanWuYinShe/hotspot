@@ -10,7 +10,7 @@ import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
-import { MyProfileData, AppAuthData } from '../../../core/types/api';
+import { MyProfile, AuthData } from '../../../core/types/api';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -19,10 +19,10 @@ import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 @Entry
 @Component
 struct AccountsPage {
-  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfileData | null = null;
+  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
 
-  @State accounts: AppAuthData[] = [];
-  @State currentUserId: number | null = null;
+  @State accounts: AuthData[] = [];
+  @State currentUserId: string | null = null;
   @State isLoading: boolean = false;
 
   private stateManager = GlobalStateManager.getInstance();
@@ -37,26 +37,34 @@ struct AccountsPage {
     this.isLoading = true;
     try {
       this.accounts = await AuthAccountManager.listAccounts();
-      this.currentUserId = await AuthAccountManager.getCurrentUserId();
+      const uid = await AuthAccountManager.getCurrentUserId();
+      this.currentUserId = uid !== null ? String(uid) : null;
     } finally {
       this.isLoading = false;
     }
   }
 
-  private toProfile(auth: AppAuthData): MyProfileData {
+  private getAccountDisplayName(auth: AuthData): string {
+    // AuthData 只有 user_id/token 等字段，用 user_id 作为显示名
+    return auth.user_id;
+  }
+
+  private toProfile(auth: AuthData): MyProfile {
+    const nickname = auth.user_id;
     return {
-      nickname: auth.nickname,
+      user_id: auth.user_id,
+      nickname: nickname,
       avatar_url: '',
+      user_type: 'temp',
       bio: '',
       tags: [],
       email: '',
       phone: '',
       location: {
-        latitude: 0,
-        longitude: 0,
+        point: { latitude: 0, longitude: 0 },
         location_name: ''
       },
-      is_online: true,
+      presence_status: 'online',
       last_online: '',
       created_at: new Date().toISOString(),
       stats: {
@@ -69,7 +77,7 @@ struct AccountsPage {
     };
   }
 
-  private async switchTo(auth: AppAuthData) {
+  private async switchTo(auth: AuthData) {
     try {
       // 1) 清空缓存（避免串数据）
       await this.cache.clearAll();
@@ -92,17 +100,17 @@ struct AccountsPage {
         // ignore
       }
 
-      SystemToast.showSuccess(`已切换到：${next.nickname}`, this.getUIContext());
+      SystemToast.showSuccess(`已切换到：${next.user_id}`, this.getUIContext());
       await this.load();
     } catch {
       SystemToast.showError('切换失败', this.getUIContext());
     }
   }
 
-  private async remove(auth: AppAuthData) {
+  private async remove(auth: AuthData) {
     try {
       await AuthAccountManager.removeAccount(auth.user_id);
-      if (this.currentUserId === auth.user_id) {
+      if (this.currentUserId !== null && this.currentUserId === auth.user_id) {
         // 删除当前账号 => 锁定
         await this.cache.clearAll();
         this.ws.disconnect();
@@ -169,12 +177,12 @@ struct AccountsPage {
         .padding(DesignConstants.SPACING.XL)
       } else {
         List({ space: 12 }) {
-          ForEach(this.accounts, (acc: AppAuthData) => {
+          ForEach(this.accounts, (acc: AuthData) => {
             ListItem() {
               Row() {
                 Column({ space: 4 }) {
                   Row({ space: 8 }) {
-                    Text(acc.nickname)
+                    Text(this.getAccountDisplayName(acc))
                       .fontSize(DesignConstants.FONT.SIZE.LG)
                       .fontColor($r('sys.color.ohos_id_color_text_primary'))
                     if (this.currentUserId === acc.user_id) {
@@ -217,7 +225,7 @@ struct AccountsPage {
             .backgroundColor($r('sys.color.ohos_id_color_background'))
             .borderRadius(DesignConstants.RADIUS.LG)
             .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-          }, (acc: AppAuthData) => acc.user_id.toString())
+          }, (acc: AuthData) => acc.user_id)
         }
         .width('100%')
         .layoutWeight(1)

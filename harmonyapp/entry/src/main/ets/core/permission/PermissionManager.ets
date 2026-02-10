@@ -383,30 +383,57 @@ export class PermissionManager {
   /**
    * 请求位置权限
    *
-   * HarmonyOS 要求：必须先获得 APPROXIMATELY_LOCATION 授权，
-   * 然后才能请求 LOCATION（精确位置）。顺序不可颠倒。
+   * 将 APPROXIMATELY_LOCATION 和 LOCATION 一次性传入 requestPermissionsFromUser，
+   * 系统会合并为一个弹窗，用户可一次性选择授权精确或大概位置。
    *
    * @returns true 表示至少获得了大概位置权限
    */
   async requestLocationPermission(): Promise<boolean> {
-    try {
-      // 第一步：请求大概位置权限（必须先获得）
-      const approximateResult = await this.requestPermission('ohos.permission.APPROXIMATELY_LOCATION');
-      if (!approximateResult.granted) {
-        hilog.warn(DOMAIN_NUMBER, TAG, '大概位置权限被拒绝，无法继续请求精确位置');
-        return false;
-      }
+    if (!this.context || !this.atManager) {
+      hilog.error(DOMAIN_NUMBER, TAG, '权限管理器未初始化');
+      return false;
+    }
 
-      // 第二步：在大概位置已授权的前提下，请求精确位置权限
-      const preciseResult = await this.requestPermission('ohos.permission.LOCATION');
-      if (preciseResult.granted) {
-        hilog.info(DOMAIN_NUMBER, TAG, '精确位置权限已授权');
+    try {
+      // 先检查是否已经授权
+      const alreadyGranted = await this.checkLocationPermission();
+      if (alreadyGranted) {
         return true;
       }
 
-      // 精确位置被拒绝，但大概位置已授权，仍可使用
-      hilog.info(DOMAIN_NUMBER, TAG, '仅获得大概位置权限');
-      return true;
+      // 同时请求两个权限，系统将合并为一个弹窗
+      const locationPermissions: Permissions[] = [
+        'ohos.permission.APPROXIMATELY_LOCATION',
+        'ohos.permission.LOCATION'
+      ];
+      const result = await this.atManager.requestPermissionsFromUser(this.context, locationPermissions);
+
+      const approxGranted = result.authResults[0] === abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED;
+      const preciseGranted = result.authResults[1] === abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED;
+
+      // 更新缓存
+      const approxInfo = this.permissionCache.get('ohos.permission.APPROXIMATELY_LOCATION');
+      if (approxInfo) {
+        approxInfo.status = approxGranted ? PermissionStatus.GRANTED : PermissionStatus.DENIED;
+        approxInfo.requestCount++;
+        approxInfo.lastRequestTime = Date.now();
+      }
+      const preciseInfo = this.permissionCache.get('ohos.permission.LOCATION');
+      if (preciseInfo) {
+        preciseInfo.status = preciseGranted ? PermissionStatus.GRANTED : PermissionStatus.DENIED;
+        preciseInfo.requestCount++;
+        preciseInfo.lastRequestTime = Date.now();
+      }
+
+      if (preciseGranted) {
+        hilog.info(DOMAIN_NUMBER, TAG, '精确位置权限已授权');
+      } else if (approxGranted) {
+        hilog.info(DOMAIN_NUMBER, TAG, '仅获得大概位置权限');
+      } else {
+        hilog.warn(DOMAIN_NUMBER, TAG, '位置权限全部被拒绝');
+      }
+
+      return approxGranted || preciseGranted;
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `请求位置权限失败: ${JSON.stringify(error)}`);
       return false;

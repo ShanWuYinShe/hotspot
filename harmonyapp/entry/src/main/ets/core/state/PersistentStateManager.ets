@@ -4,7 +4,7 @@
  */
 
 import { PreferencesUtil } from '../storage/PreferencesUtil';
-import { MyProfileData } from '../types/api';
+import { MyProfile } from '../types/api';
 import { LocationInfo } from '../location/LocationUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
@@ -21,7 +21,7 @@ export interface UnreadCount {
 }
 
 export interface GlobalState {
-  currentUser: MyProfileData | null;
+  currentUser: MyProfile | null;
   isLoggedIn: boolean;
   networkConnected: boolean;
   locationEnabled: boolean;
@@ -64,7 +64,7 @@ export class PersistentStateManager {
       hilog.info(DOMAIN_NUMBER, TAG, '🔄 开始初始化持久化状态管理器');
 
       // 恢复用户信息
-      const userInfo = await PreferencesUtil.getObject<MyProfileData>('user_info');
+      const userInfo = await PreferencesUtil.getObject<MyProfile>('user_info');
       const token = await PreferencesUtil.get<string>('access_token', '');
 
       if (userInfo && token) {
@@ -119,7 +119,7 @@ export class PersistentStateManager {
   /**
    * 更新用户信息并持久化
    */
-  async updateUser(user: MyProfileData | null): Promise<void> {
+  async updateUser(user: MyProfile | null): Promise<void> {
     try {
       this.state.currentUser = user;
       this.state.isLoggedIn = !!user;

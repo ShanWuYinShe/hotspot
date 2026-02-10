@@ -7,7 +7,7 @@
 import { GlobalStateManager, KEY_CURRENT_USER, KEY_LAST_MESSAGE_SYNC_TIME } from '../../../core/state/GlobalStateManager';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames } from '../../../constants/AppConstants';
-import { PrivateChatListItem, JoinedGroupItem, MyProfileData, MyGroupsRequest, DeletePrivateChatRequest, LeaveGroupRequest } from '../../../core/types/api';
+import { PrivateChatItem, GroupItem, MyProfile, MyGroupsRequest, DeletePrivateChatRequest, LeaveGroupRequest } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
@@ -32,12 +32,12 @@ interface ChatItem {
   lastMessage?: string;
   lastTime: string;
   unreadCount: number;
-  data: PrivateChatListItem | JoinedGroupItem;
+  data: PrivateChatItem | GroupItem;
 }
 
 @Component
 export struct MessagePage {
-  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfileData | null = null;
+  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
   @StorageLink(KEY_LAST_MESSAGE_SYNC_TIME) @Watch('onMessageSync') lastMessageSyncTime: number = 0;
 
   private chatListDataSource: BasicDataSource<ChatItem> = new BasicDataSource([]);
@@ -155,11 +155,11 @@ export struct MessagePage {
 
   private async loadPrivateChats(): Promise<ChatItem[]> {
     try {
-      const response = await ApiClient.getPrivateChats({ limit: 50 });
+      const response = await ApiClient.getPrivateChats({ pagination: { limit: 50 } });
       if (response.code === 0 && response.data) {
-        return response.data.items.map((item: PrivateChatListItem): ChatItem => {
+        return response.data.items.map((item: PrivateChatItem): ChatItem => {
           const chatItem: ChatItem = {
-            id: item.other_user.user_id.toString(),
+            id: item.other_user.user_id,
             type: 'private',
             name: item.other_user.nickname,
             avatarUrl: item.other_user.avatar_url,
@@ -180,17 +180,17 @@ export struct MessagePage {
 
   private async loadGroupChats(): Promise<ChatItem[]> {
     try {
-      const request: MyGroupsRequest = { limit: 50 };
+      const request: MyGroupsRequest = { pagination: { limit: 50 } };
       const response = await ApiClient.getJoinedGroups(request);
       if (response.code === 0 && response.data) {
-        return response.data.items.map((item: JoinedGroupItem): ChatItem => {
+        return response.data.items.map((item: GroupItem): ChatItem => {
           const chatItem: ChatItem = {
-            id: item.group_id,
+            id: item.group.group_id,
             type: 'group',
-            name: item.name,
-            avatarUrl: item.avatar_url,
+            name: item.group.name,
+            avatarUrl: item.group.avatar_url,
             lastMessage: '点击进入群聊',
-            lastTime: item.created_at || '',
+            lastTime: item.last_activity_at || item.created_at || '',
             unreadCount: item.my_state?.unread_count || 0,
             data: item
           };
@@ -242,10 +242,10 @@ export struct MessagePage {
       await routerInstance.pushUrl({
         url: `features/chat/pages/${PageNames.CHAT}`,
         params: {
-          chatId: item.type === 'private' ? (item.data as PrivateChatListItem).other_user.user_id.toString() : item.id,
+          chatId: item.type === 'private' ? (item.data as PrivateChatItem).other_user.user_id : item.id,
           chatType: item.type === 'private' ? 'private_chat' : 'group_chat',
           title: item.name,
-          targetId: item.type === 'private' ? (item.data as PrivateChatListItem).other_user.user_id : undefined
+          targetId: item.type === 'private' ? (item.data as PrivateChatItem).other_user.user_id : undefined
         }
       });
     } catch (error) {
@@ -257,12 +257,12 @@ export struct MessagePage {
     try {
       VibrationUtil.startShort();
       if (item.type === 'private') {
-        const privateData = item.data as PrivateChatListItem;
+        const privateData = item.data as PrivateChatItem;
         const request: DeletePrivateChatRequest = { target_user_id: privateData.other_user.user_id };
         await ApiClient.deletePrivateChat(request);
       } else {
-        const groupData = item.data as JoinedGroupItem;
-        const request: LeaveGroupRequest = { group_id: groupData.group_id };
+        const groupData = item.data as GroupItem;
+        const request: LeaveGroupRequest = { group_id: groupData.group.group_id };
         await ApiClient.leaveGroup(request);
       }
 

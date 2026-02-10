@@ -27,7 +27,7 @@ pub async fn search(
     user: OptionalAuthenticatedUser,
     Json(req): Json<SearchMomentsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<MomentSearchItem>>>> {
-    let reference_point = req.search.reference_point.unwrap_or(GeoPoint {
+    let reference_point = req.reference_point.unwrap_or(GeoPoint {
         latitude: 0.0,
         longitude: 0.0,
     });
@@ -37,8 +37,8 @@ pub async fn search(
             kw: req.keyword,
             reference_point,
             radius,
-            limit: req.search.limit,
-            cursor: req.search.cursor,
+            limit: req.limit,
+            cursor: req.cursor,
         };
         let response = state
             .moment_service
@@ -49,8 +49,8 @@ pub async fn search(
         let tag_req = SearchMomentsByTagRequest {
             tag,
             reference_point,
-            limit: req.search.limit,
-            cursor: req.search.cursor,
+            limit: req.limit,
+            cursor: req.cursor,
         };
         let response = state
             .moment_service
@@ -61,8 +61,8 @@ pub async fn search(
         let kw_req = SearchMomentsByKeywordRequest {
             kw: keyword,
             reference_point,
-            limit: req.search.limit,
-            cursor: req.search.cursor,
+            limit: req.limit,
+            cursor: req.cursor,
         };
         let response = state
             .moment_service

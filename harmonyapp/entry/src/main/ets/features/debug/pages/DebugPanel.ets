@@ -8,19 +8,20 @@ import { SystemCard } from '../../../components/SystemCard';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { SystemToast } from '../../../components/SystemToast';
-import { MyProfileData } from '../../../core/types/api';
+import { MyProfile } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 
 @Entry
 @Component
 struct DebugPanel {
   @State logs: string[] = [];
-  @State currentUserId: number | null = null;
-  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfileData | null = null;
+  @State currentUserId: string | null = null;
+  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
   private webSocketService = WebSocketService.getInstance();
 
   async aboutToAppear() {
-    this.currentUserId = await AuthAccountManager.getCurrentUserId();
+    const uid = await AuthAccountManager.getCurrentUserId();
+    this.currentUserId = uid !== null ? String(uid) : null;
     this.addLog('DebugPanel initialized');
     this.addLog(`User: ${this.currentUser?.nickname || 'Not logged in'}`);
     this.addLog(`WS Status: ${this.webSocketService.isConnected() ? 'Connected' : 'Disconnected'}`);

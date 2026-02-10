@@ -5,7 +5,7 @@
 import { RdbManager } from './RdbManager';
 import { relationalStore, ValuesBucket } from '@kit.ArkData';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { MomentSearchItem } from '../types/api';
+import { MomentItem } from '../types/api';
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG = 'MomentCacheService';
@@ -26,7 +26,7 @@ export class MomentCacheService {
   /**
    * 缓存瞬间列表
    */
-  public async cacheMoments(moments: MomentSearchItem[]): Promise<void> {
+  public async cacheMoments(moments: MomentItem[]): Promise<void> {
     const store = this.rdbManager.getStore();
     if (!store) return;
 
@@ -46,8 +46,8 @@ export class MomentCacheService {
           description: moment.description,
           images: JSON.stringify(moment.images || []),
           tags: JSON.stringify(moment.tags || []),
-          latitude: moment.location?.latitude ?? 0,
-          longitude: moment.location?.longitude ?? 0,
+          latitude: moment.location?.point?.latitude ?? 0,
+          longitude: moment.location?.point?.longitude ?? 0,
           location_name: moment.location?.location_name ?? '',
           distance: moment.location?.distance ?? 0,
           likes_count: moment.likes_count,
@@ -73,7 +73,7 @@ export class MomentCacheService {
   /**
    * 获取缓存的瞬间列表
    */
-  public async getCachedMoments(): Promise<MomentSearchItem[]> {
+  public async getCachedMoments(): Promise<MomentItem[]> {
     const store = this.rdbManager.getStore();
     if (!store) return [];
 
@@ -82,13 +82,13 @@ export class MomentCacheService {
       predicates.orderByDesc('created_at'); 
       
       const resultSet = await store.query(predicates);
-      const items: MomentSearchItem[] = [];
+      const items: MomentItem[] = [];
 
       while (resultSet.goToNextRow()) {
         const jsonData = resultSet.getString(resultSet.getColumnIndex('json_data'));
         if (jsonData) {
           try {
-            items.push(JSON.parse(jsonData) as MomentSearchItem);
+            items.push(JSON.parse(jsonData) as MomentItem);
           } catch (e) {
              // ignore parse error
           }

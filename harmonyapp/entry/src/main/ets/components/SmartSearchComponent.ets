@@ -5,9 +5,9 @@
 
 import { ApiClient } from '../core/api/ApiClient';
 import { 
-  UserSearchItem, 
-  GroupSearchItem, 
-  MomentSearchItem
+  UserItem, 
+  GroupItem, 
+  MomentItem
 } from '../core/types/api';
 import { KEY_CURRENT_LOCATION } from '../core/state/GlobalStateManager';
 import { GlobalStateManager } from '../core/state/GlobalStateManager';
@@ -25,7 +25,7 @@ interface SearchResult {
   type: 'user' | 'group' | 'moment';
   title: string;
   subtitle: string;
-  data: UserSearchItem | GroupSearchItem | MomentSearchItem;
+  data: UserItem | GroupItem | MomentItem;
 }
 
 @Component
@@ -42,29 +42,19 @@ export struct SmartSearchComponent {
   private searchTimer: number = -1;
 
   aboutToAppear() {
-    // 加载搜索历史
     this.loadSearchHistory();
   }
 
   aboutToDisappear() {
-    // 清理定时器
     if (this.searchTimer !== -1) {
       clearTimeout(this.searchTimer);
     }
   }
 
-  /**
-   * 加载搜索历史
-   */
   private loadSearchHistory() {
-    // 从本地存储加载搜索历史
-    // 这里可以集成 PreferencesUtil
     this.searchHistory = ['附近咖啡厅', '技术交流群', '摄影爱好者'];
   }
 
-  /**
-   * 执行搜索
-   */
   private async performSearch(query: string) {
     if (!query.trim()) {
       this.searchResults = [];
@@ -78,7 +68,6 @@ export struct SmartSearchComponent {
     try {
       hilog.info(DOMAIN_NUMBER, TAG, `执行搜索: ${query}, 筛选: ${this.currentFilter}`);
 
-      // 并行搜索不同类型的内容
       const searchPromises: Promise<void>[] = [];
 
       if (this.currentFilter === 'all' || this.currentFilter === 'users') {
@@ -94,8 +83,6 @@ export struct SmartSearchComponent {
       }
 
       await Promise.all(searchPromises);
-
-      // 保存搜索历史
       this.saveSearchHistory(query);
 
     } catch (error) {
@@ -106,10 +93,6 @@ export struct SmartSearchComponent {
     }
   }
 
-  /**
-   * 搜索用户
-   * 使用 searchUsersByKeyword API
-   */
   private async searchUsers(query: string) {
     if (!this.currentLocation) {
       return;
@@ -118,22 +101,24 @@ export struct SmartSearchComponent {
     try {
       const me = GlobalStateManager.getInstance().getCurrentUser();
       const myId = me?.user_id;
-      const response = await ApiClient.searchUsersByKeyword({
-        kw: query,
-        latitude: this.currentLocation.latitude,
-        longitude: this.currentLocation.longitude,
-        limit: 10
+      const response = await ApiClient.searchUsers({
+        keyword: query,
+        reference_point: {
+          latitude: this.currentLocation.latitude,
+          longitude: this.currentLocation.longitude
+        },
+        pagination: { limit: 10 }
       });
 
       if (response.code === 0 && response.data) {
-        const users = typeof myId === 'number'
-          ? response.data.items.filter((u: UserSearchItem) => u.user_id !== myId)
+        const users = typeof myId === 'string'
+          ? response.data.items.filter((u: UserItem) => u.user.user_id !== myId)
           : response.data.items;
 
-        const userResults: SearchResult[] = users.map((user: UserSearchItem): SearchResult => ({
-          id: `user_${user.user_id}`,
+        const userResults: SearchResult[] = users.map((user: UserItem): SearchResult => ({
+          id: `user_${user.user.user_id}`,
           type: 'user',
-          title: user.nickname,
+          title: user.user.nickname,
           subtitle: user.bio || '用户',
           data: user
         }));
@@ -145,29 +130,27 @@ export struct SmartSearchComponent {
     }
   }
 
-  /**
-   * 搜索群组
-   * 使用 searchGroupsByKeyword API
-   */
   private async searchGroups(query: string) {
     if (!this.currentLocation) {
       return;
     }
 
     try {
-      const response = await ApiClient.searchGroupsByKeyword({
-        kw: query,
-        latitude: this.currentLocation.latitude,
-        longitude: this.currentLocation.longitude,
-        limit: 10
+      const response = await ApiClient.searchGroups({
+        keyword: query,
+        reference_point: {
+          latitude: this.currentLocation.latitude,
+          longitude: this.currentLocation.longitude
+        },
+        pagination: { limit: 10 }
       });
 
       if (response.code === 0 && response.data) {
-        const groupResults: SearchResult[] = response.data.items.map((group: GroupSearchItem): SearchResult => ({
-          id: `group_${group.group_id}`,
+        const groupResults: SearchResult[] = response.data.items.map((group: GroupItem): SearchResult => ({
+          id: `group_${group.group.group_id}`,
           type: 'group',
-          title: group.name,
-          subtitle: `${group.members_count} 成员`,
+          title: group.group.name,
+          subtitle: `${group.group.members_count} 成员`,
           data: group
         }));
 
@@ -178,26 +161,23 @@ export struct SmartSearchComponent {
     }
   }
 
-  /**
-   * 搜索瞬间
-   * 使用 searchMomentsByKeyword API
-   */
   private async searchMoments(query: string) {
     if (!this.currentLocation) {
       return;
     }
 
     try {
-      // 使用关键字搜索
-      const response = await ApiClient.searchMomentsByKeyword({
-        kw: query,
-        latitude: this.currentLocation.latitude,
-        longitude: this.currentLocation.longitude,
-        limit: 10
+      const response = await ApiClient.searchMoments({
+        keyword: query,
+        reference_point: {
+          latitude: this.currentLocation.latitude,
+          longitude: this.currentLocation.longitude
+        },
+        pagination: { limit: 10 }
       });
 
       if (response.code === 0 && response.data) {
-        const momentResults: SearchResult[] = response.data.items.map((moment: MomentSearchItem): SearchResult => ({
+        const momentResults: SearchResult[] = response.data.items.map((moment: MomentItem): SearchResult => ({
           id: `moment_${moment.moment_id}`,
           type: 'moment',
           title: moment.user.nickname,
@@ -213,70 +193,52 @@ export struct SmartSearchComponent {
     }
   }
 
-  /**
-   * 保存搜索历史
-   */
   private saveSearchHistory(query: string) {
     if (!this.searchHistory.includes(query)) {
       this.searchHistory.unshift(query);
       if (this.searchHistory.length > 10) {
         this.searchHistory = this.searchHistory.slice(0, 10);
       }
-      // 这里可以保存到本地存储
     }
   }
 
-  /**
-   * 处理搜索输入变化
-   */
   private onSearchTextChange(value: string) {
     this.searchText = value;
 
-    // 清除之前的定时器
     if (this.searchTimer !== -1) {
       clearTimeout(this.searchTimer);
     }
 
-    // 防抖搜索
     this.searchTimer = setTimeout(() => {
-      this.searchResults = []; // 清空之前的结果
+      this.searchResults = [];
       this.performSearch(value);
     }, 300);
   }
 
-  /**
-   * 处理搜索结果点击
-   */
   private handleResultClick(result: SearchResult) {
     this.showResults = false;
 
     switch (result.type) {
       case 'user':
-        // 导航到用户资料或开始聊天
         SystemToast.show(`查看用户: ${result.title}`, this.getUIContext());
         break;
       case 'group':
-        // 导航到群组详情
-        const group = result.data as GroupSearchItem;
+        const group = result.data as GroupItem;
         try {
           this.getUIContext().getRouter().pushUrl({
             url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
-            params: { groupId: group.group_id }
+            params: { groupId: group.group.group_id }
           });
         } catch (error) {
           hilog.error(DOMAIN_NUMBER, TAG, `跳转群组详情失败: ${error}`);
         }
         break;
       case 'moment':
-        // 显示瞬间详情
         SystemToast.show(`查看瞬间: ${result.title}`, this.getUIContext());
         break;
     }
   }
 
-  /**
-   * 切换筛选器
-   */
   private switchFilter(filter: 'all' | 'users' | 'groups' | 'moments') {
     if (this.currentFilter === filter) {
       return;
@@ -291,7 +253,6 @@ export struct SmartSearchComponent {
 
   build() {
     Column() {
-      // 搜索框
       Row() {
         TextInput({
           placeholder: '搜索用户、群组、瞬间...',
@@ -323,7 +284,6 @@ export struct SmartSearchComponent {
       .width('100%')
       .padding(12)
 
-      // 筛选器
       if (this.showResults) {
         Row() {
           Button('全部')
@@ -363,11 +323,9 @@ export struct SmartSearchComponent {
         .justifyContent(FlexAlign.SpaceAround)
       }
 
-      // 搜索结果或历史
       if (this.showResults) {
         List() {
           if (this.searchText.trim() === '' && this.searchHistory.length > 0) {
-            // 显示搜索历史
             ListItem() {
               Text('搜索历史')
                 .fontSize(14)
@@ -408,7 +366,6 @@ export struct SmartSearchComponent {
               }
             })
           } else if (this.searchResults.length > 0) {
-            // 显示搜索结果
             ForEach(this.searchResults, (result: SearchResult) => {
               ListItem() {
                 Row() {
@@ -440,7 +397,6 @@ export struct SmartSearchComponent {
               }
             })
           } else if (this.searchText.trim() !== '' && !this.isSearching) {
-            // 无搜索结果
             ListItem() {
               Column() {
                 Text('😕')
@@ -473,16 +429,12 @@ export struct SmartSearchComponent {
     .width('100%')
     .height('100%')
     .onClick(() => {
-      // 点击空白区域隐藏搜索结果
       if (this.showResults) {
         this.showResults = false;
       }
     })
   }
 
-  /**
-   * 获取结果图标
-   */
   private getResultIcon(type: 'user' | 'group' | 'moment'): string {
     switch (type) {
       case 'user':

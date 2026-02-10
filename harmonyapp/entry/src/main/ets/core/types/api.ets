@@ -3,7 +3,6 @@
 export interface ApiResponse<T = void> {
   code: number;
   message?: string;
-  // 服务端回显 `X-Request-Id`；每次请求必返，用于链路追踪
   request_id: string;
   data?: T;
 }
@@ -23,27 +22,56 @@ export interface PaginationParams {
   cursor?: string;
 }
 
-export interface SearchBaseParams {
-  reference_point: GeoPoint;
-  limit?: number;
-  cursor?: string;
-}
-
-export interface TimeRangeParams {
-  start_time?: string;
-  end_time?: string;
-}
-
 // ==================== 通用类型定义 (Domain Primitives) ====================
 
+// 消息类型枚举
+export type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'share' | 'system';
+export type SendMessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'share';
+
+// 用户类型枚举
 export type UserType = 'temp' | 'normal' | 'admin' | 'system';
-export type SendMessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'location';
-export type MessageType = SendMessageType | 'system';
-export type ReactionType = 'like' | 'love' | 'laugh' | 'angry' | 'sad' | 'wow';
-export type PrivacyLevel = 'public' | 'friends' | 'private';
+
+// 隐私级别
+export type PrivacyLevel = 'public' | 'followers' | 'friends' | 'private';
+
+// 角色
 export type GroupRole = 'owner' | 'admin' | 'member';
-export type UserAccountStatus = 'active' | 'banned' | 'suspended';
+
+// 客户端类型
+export type ClientType = 'web' | 'app';
+
+// 用户在线状态
+export type UserPresenceStatus = 'online' | 'offline';
+
+// 举报状态
+export type ReportStatus = 'pending' | 'reviewing' | 'resolved' | 'dismissed';
+
+// 举报目标类型
+export type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group';
+
+// 举报处理操作
+export type ReportHandleAction = 'resolve' | 'dismiss' | 'escalate';
+
+// 群组加入方式
 export type GroupJoinMethod = 'open' | 'approval' | 'invite_only';
+
+// 公告严重程度
+export type AnnouncementSeverity = 'info' | 'warning' | 'error';
+
+// 关注来源
+export type FollowSource = 'moment' | 'search' | 'recommendation' | 'profile' | 'group';
+
+// 推荐理由类型
+export type RecommendationType = 'friend_liked' | 'nearby' | 'trending' | 'following' | 'tag_match';
+
+export interface RecommendationContext {
+  type: RecommendationType;
+}
+
+// 账号状态（系统管理员视角）
+export type UserAccountStatus = 'normal' | 'banned';
+
+// ==================== 位置与地理信息 ====================
 
 // 基础坐标点
 export interface GeoPoint {
@@ -51,15 +79,18 @@ export interface GeoPoint {
   longitude: number;
 }
 
-// 命名位置
-export interface Location extends GeoPoint {
+// 命名位置 (用于 Request)
+export interface Location {
+  point: GeoPoint;
   location_name: string;
 }
 
-// 相对位置 (用于搜索结果/附近推荐)
-export interface RelativeLocation extends Location {
-  distance: number;
-  bearing_degrees: number;
+// 相对位置 (用于 Response)
+export interface RelativeLocation {
+  point: GeoPoint;
+  location_name: string;
+  distance?: number;
+  bearing_degrees?: number;
 }
 
 // 视口边界
@@ -75,17 +106,11 @@ export interface MapViewport {
   zoom: number;
 }
 
-// 字段可见性元数据
-export type FieldVisibility = 'visible' | 'hidden';
-export type HiddenReason = 'privacy' | 'blocked' | 'not_available';
-
-export interface FieldVisibilityMeta {
-  visibility: FieldVisibility;
-  reason?: HiddenReason;
-}
+// ==================== 媒体资源 ====================
 
 export interface MomentImage {
   url: string;
+  thumbnail_url?: string;
   width?: number;
   height?: number;
   content_type?: string;
@@ -107,34 +132,9 @@ export interface MessageMedia {
 // 1. 用户 (User)
 
 export interface UserInfo {
-  user_id: number;
+  user_id: string;
   nickname: string;
   avatar_url?: string;
-  user_type: UserType;
-}
-
-export interface UserRelation {
-  is_following: boolean;
-  is_followed_by: boolean;
-  is_blocked: boolean;
-  is_blocking: boolean;
-  has_pending_follow_request: boolean;
-}
-
-export interface UserItem extends UserInfo {
-  bio?: string;
-  tags?: string[];
-  
-  is_online: boolean | null;
-  is_online_meta: FieldVisibilityMeta;
-  
-  last_online: string | null;
-  last_online_meta: FieldVisibilityMeta;
-  
-  location?: RelativeLocation | null;
-  location_meta: FieldVisibilityMeta;
-
-  relation?: UserRelation;
 }
 
 export interface UserStats {
@@ -142,28 +142,39 @@ export interface UserStats {
   friends_count: number;
   followers_count: number;
   following_count: number;
+  groups_count: number;
 }
 
-export interface UserDetailData extends UserItem {
-  created_at?: string;
-  stats?: UserStatsData;
+export interface Relationship {
+  is_following: boolean;
+  is_followed_by: boolean;
+  is_blocked: boolean;
+  is_blocked_by: boolean;
 }
 
-// My Profile Type (from spec)
-export interface MyCard {
-  user_id: number;
-  nickname: string;
-  avatar_url?: string;
+export interface SocialContext {
+  mutual_friends_count: number;
+  mutual_friends_preview?: UserInfo[];
+  common_groups_count?: number;
+  common_tags?: string[];
+}
+
+export interface UserItem {
+  user: UserInfo;
   bio?: string;
   tags?: string[];
-  gender?: 'male' | 'female' | 'other';
-  email?: string;
-  phone?: string;
-  location: Location;
-  is_online: boolean;
-  last_online: string;
-  created_at: string;
-  stats: UserStatsData;
+
+  presence_status?: UserPresenceStatus;
+  last_online?: string;
+
+  location?: RelativeLocation;
+
+  stats?: UserStats;
+
+  // @auth-only
+  relation?: Relationship;
+
+  social_context?: SocialContext;
 }
 
 // 2. 群组 (Group)
@@ -175,7 +186,7 @@ export interface GroupInfo {
   members_count: number;
 }
 
-export interface GroupMyState {
+export interface MyGroupState {
   role: GroupRole;
   is_joined: boolean;
   unread_count: number;
@@ -184,55 +195,96 @@ export interface GroupMyState {
   joined_at?: string;
 }
 
-export interface GroupItem extends GroupInfo {
+export interface GroupItem {
+  group: GroupInfo;
   description?: string;
   tags?: string[];
   has_password: boolean;
   location: RelativeLocation;
+  last_activity_at?: string;
   created_at?: string;
   owner_id?: string;
-  my_state?: GroupMyState;
-}
 
-export interface JoinedGroupItem extends GroupItem {}
+  // @auth-only
+  my_state?: MyGroupState;
+  friends_in_group?: number;
+
+  // @group-admin-only
+  join_method?: GroupJoinMethod;
+  is_searchable?: boolean;
+  max_members?: number;
+  settings_location?: Location;
+}
 
 export interface GroupSettings {
   join_method: GroupJoinMethod;
   is_searchable: boolean;
   max_members: number;
-  location: RelativeLocation;
+  location: Location;
 }
 
-export interface GroupDetailData extends GroupItem {}
+export interface GroupAnnouncementItem {
+  announcement_id: string;
+  group_id: string;
+  title: string;
+  content: string;
+  created_by: UserInfo;
+  created_at: string;
+  is_pinned: boolean;
+}
+
+export interface SystemAnnouncementItem {
+  announcement_id: string;
+  title: string;
+  content: string;
+  severity: AnnouncementSeverity;
+  action_url?: string;
+  created_at: string;
+}
 
 // 3. 生活瞬间 (Moment)
 
+export interface MomentMyState {
+  is_liked: boolean;
+  is_favorited: boolean;
+}
+
 export interface MomentItem {
   moment_id: string;
-  user: UserInfo;
-  
   description: string;
   images?: MomentImage[];
   tags: string[];
-  
-  location?: RelativeLocation;
-  
+  mentions?: string[];
   created_at: string;
-  
   likes_count: number;
   comments_count: number;
-  
-  is_liked: boolean;
-  is_favorited: boolean;
+  shares_count: number;
+  user: UserInfo;
+  location: RelativeLocation;
+
+  // @owner-only
+  privacy_level?: PrivacyLevel;
+
+  // @auth-only
+  my_state?: MomentMyState;
+
+  // Feed 场景返回
+  recommendation?: RecommendationContext;
 }
 
 // 4. 消息 (Message)
 
 export interface MessageReplyTo {
   message_id: string;
-  user_id: number;
+  user_id: string;
   nickname: string;
   content: string;
+  share_code?: string;
+}
+
+export interface MessageSent {
+  message_id: string;
+  sent_at: string;
 }
 
 export interface PrivateMessageItem {
@@ -240,12 +292,13 @@ export interface PrivateMessageItem {
   type: MessageType;
   content?: string;
   media?: MessageMedia;
-  sender_id: number;
-  reply_to_message_id?: string;
+  share_code?: string;
+  sender_id: string;
   reply_to?: MessageReplyTo;
   sent_at: string;
   edited_at?: string;
   recalled_at?: string;
+  is_read?: boolean;
 }
 
 export interface GroupMessageItem {
@@ -253,110 +306,111 @@ export interface GroupMessageItem {
   type: MessageType;
   content?: string;
   media?: MessageMedia;
+  share_code?: string;
   sender: UserInfo;
-  reply_to_message_id?: string;
   reply_to?: MessageReplyTo;
-  mentions?: number[];
+  mentions?: string[];
+  recalled_by?: string;
   sent_at: string;
   edited_at?: string;
-  recalled_by?: number;
   recalled_at?: string;
   read_count?: number;
 }
+
+// 5. 评论 (Comment)
+
+export interface CommentItem {
+  comment_id: string;
+  user: UserInfo;
+  content: string;
+  parent_id?: string;
+  created_at: string;
+  likes_count: number;
+  replies_count: number;
+  is_liked?: boolean;
+}
+
+export interface LikeItem {
+  user: UserInfo;
+  liked_at: string;
+}
+
+// 6. 私聊 (Private Chat)
 
 export interface PrivateChatLastMessage {
   message_id: string;
   content?: string;
   type: MessageType;
-  sender_id: number;
+  share_code?: string;
+  sender_id: string;
   sent_at: string;
 }
 
-export interface PrivateChatListItem {
+export interface PrivateChatItem {
   other_user: UserInfo;
   unread_count: number;
-  last_message?: PrivateChatLastMessage;
-  last_activity_at: string;
   is_muted: boolean;
   is_pinned: boolean;
-  is_online: boolean;
+  last_activity_at: string;
+  last_message?: PrivateChatLastMessage;
+  presence_status?: UserPresenceStatus;
+}
+
+export interface PrivateChatOpenResult {
+  chat: PrivateChatItem;
+  recent_messages: PaginatedData<PrivateMessageItem>;
+}
+
+// 7. 群组详情 (Group Open)
+
+export interface GroupOpenResult {
+  group: GroupItem;
+  recent_messages: PaginatedData<GroupMessageItem>;
 }
 
 // ==================== 认证API类型 ====================
 
-export interface AuthTokenPairWeb {
-  user_id: number;
-  nickname: string;
-  access_token: string;
-  access_token_expires_at: string;
-  refresh_token_expires_at: string;
-}
-
 export interface AuthTokenPairApp {
-  user_id: number;
-  nickname: string;
+  user_id: string;
   access_token: string;
   refresh_token: string;
   access_token_expires_at: string;
   refresh_token_expires_at: string;
 }
 
-export interface AuthData extends AuthTokenPairApp {} // HarmonyOS use App type
+// HarmonyOS 使用 App 类型
+export interface AuthData extends AuthTokenPairApp {}
 
 export interface RegisterRequest {
   login_id: string;
   nickname: string;
   password: string;
-  client_type: 'web' | 'app';
+  client_type: ClientType;
 }
 
 export interface LoginRequest {
   login_id: string;
   password: string;
-  client_type: 'web' | 'app';
+  client_type: ClientType;
 }
 
 export interface GuestRequest {
   nickname: string;
-  client_type: 'web' | 'app';
+  client_type: ClientType;
 }
 
 export interface RefreshTokenRequest {
-  client_type: 'web' | 'app';
+  client_type: ClientType;
   refresh_token?: string;
 }
 
-export interface CheckStatusData {
+export interface AuthStatus {
   is_valid: boolean;
-  expires_at: string;
+  expires_at?: string;
 }
 
-// Verification Code Types
-export interface VerificationCodeSent {
-  code_id: string;
-  expires_at: string;
-  retry_after?: number;
-}
-
-export interface VerificationResult {
-  verified: boolean;
-  verify_token: string;
-  expires_at: string;
-}
-
-// Password Reset Types
-export interface ResetRequested {
-  reset_id: string;
-}
-
-export interface ResetVerified {
-  reset_token: string;
-}
-
-// Session Management Types
 export interface SessionItem {
-  display_id: string;         // 展示用短标识
-  revoke_token: string;         // 撤销用一次性令牌
+  session_id: string;
   device_type?: string;
   device_name?: string;
   ip_address?: string;
@@ -366,26 +420,26 @@ export interface SessionItem {
   is_current: boolean;
 }
 
+export interface SessionsRequest {}
+
+export interface RevokeSessionRequest {
+  session_id: string;
+}
+
+export interface RevokeAllResult {
+  revoked_count: number;
+}
+
 export interface RequestPasswordResetRequest {
   login_id: string;
-}
-
-export interface RequestPasswordResetData {
-  reset_id: string;
-}
-
-export interface VerifyResetCodeRequest {
-  reset_id: string;
-  code: string;
-}
-
-export interface VerifyResetCodeData {
-  reset_token: string;
+  client_type: ClientType;
 }
 
 export interface ResetPasswordRequest {
-  reset_token: string;
-  password: string;
+  login_id: string;
+  verification_code: string;
+  new_password: string;
+  client_type: ClientType;
 }
 
 export interface ChangePasswordRequest {
@@ -393,98 +447,74 @@ export interface ChangePasswordRequest {
   new_password: string;
 }
 
-export interface SessionsRequest {
-  limit?: number;
-  cursor?: string;
-}
-
-export interface RevokeSessionRequest {
-  session_id: string;
-}
-
 // ==================== 用户API类型 ====================
 
-export interface SearchUsersByKeywordRequest extends SearchBaseParams {
-  kw: string;
-}
+export type Gender = 'male' | 'female' | 'apache_helicopter';
+export type PrivateChatPermission = 'everyone' | 'friends' | 'nobody';
 
-export interface SearchUsersByTagRequest extends SearchBaseParams {
-  tag: string;
-}
-
-export interface SearchUsersByLocationRequest extends SearchBaseParams {
-  kw?: string;
-  radius: number;
+export interface SearchUsersRequest {
+  keyword?: string;
+  tag?: string;
+  radius?: number;
+  sort_by?: 'relevance' | 'distance' | 'newest';
+  reference_point: GeoPoint;
+  pagination?: PaginationParams;
 }
 
 export interface UserOpenTheDoorRequest {
-  user_id: number;
+  user_id: string;
   reference_point: GeoPoint;
 }
 
-export interface GetRelationshipRequest {
-  user_id: number;
-}
-
-export interface UserStatsRequest {
-  user_id: number;
-}
-
-export interface UserStatsData {
-  moments_count: number;
-  friends_count: number;
-  followers_count: number;
-  following_count: number;
-  groups_count: number;
-}
-
 export interface UserFriendsRequest {
-  user_id: number;
-  limit?: number;
-  cursor?: string;
+  user_id: string;
+  pagination?: PaginationParams;
 }
 
 export interface UserFollowingRequest {
-  user_id: number;
-  limit?: number;
-  cursor?: string;
+  user_id: string;
+  pagination?: PaginationParams;
 }
 
 export interface UserFollowersRequest {
-  user_id: number;
-  limit?: number;
-  cursor?: string;
+  user_id: string;
+  pagination?: PaginationParams;
 }
 
 export interface UserGroupsRequest {
-  user_id: number;
-  limit?: number;
-  cursor?: string;
+  user_id: string;
+  pagination?: PaginationParams;
 }
 
-export interface UserLikedMomentsRequest extends SearchBaseParams {
-  user_id: number;
+export interface UserMomentsRequest {
+  user_id: string;
+  reference_point: GeoPoint;
+  pagination?: PaginationParams;
 }
 
-// 当前用户 API
-export interface MyProfileRequest {}
+export interface UserLikedMomentsRequest {
+  user_id: string;
+  reference_point: GeoPoint;
+  pagination?: PaginationParams;
+}
 
-export interface MyProfileData {
-  user_id?: number;
-  user_type?: UserType;
+// My Profile
+
+export interface MyProfile {
+  user_id: string;
   nickname: string;
   avatar_url?: string;
+  user_type: UserType;
   bio?: string;
   tags?: string[];
-  gender?: 'male' | 'female' | 'other';
+  gender?: Gender;
   email?: string;
   phone?: string;
-  login_id?: string;
   location: Location;
-  is_online: boolean;
+  presence_status: UserPresenceStatus;
   last_online: string;
   created_at: string;
-  stats: UserStatsData;
+  stats: UserStats;
 }
 
 export interface UpdateProfileRequest {
@@ -492,6 +522,7 @@ export interface UpdateProfileRequest {
   avatar_file_id?: string;
   bio?: string;
   tags?: string[];
+  gender?: Gender;
 }
 
 export interface UpdateLocationRequest {
@@ -503,15 +534,10 @@ export interface UpgradeAccountRequest {
   password: string;
 }
 
-export interface MyStatsRequest {}
-
-export interface MySettingsRequest {}
-
-export interface UserSettingsData {
+export interface UserSettings {
   privacy_level: PrivacyLevel;
   location_visible: boolean;
-  online_visible: boolean;
-  last_online_visible: boolean;
+  presence_visible: boolean;
   friends_visible: PrivacyLevel;
   following_visible: PrivacyLevel;
   followers_visible: PrivacyLevel;
@@ -519,61 +545,25 @@ export interface UserSettingsData {
   liked_moments_visible: PrivacyLevel;
   stats_visible: PrivacyLevel;
   allow_follow: boolean;
-  allow_private_chat: 'everyone' | 'friends' | 'nobody';
+  allow_private_chat: PrivateChatPermission;
   searchable: boolean;
   phone_searchable: boolean;
   nickname_searchable: boolean;
   location_searchable: boolean;
 }
 
-// User Relationship and Friend Types
-export interface FriendItem {
-  user: UserInfo;
-  is_online?: boolean;
-  remark?: string;
-  followed_at: string;
-  followed_back_at: string;
-}
-
-export interface FollowingItem {
-  user: UserInfo;
-  followed_at: string;
-  is_mutual: boolean;
-  is_online?: boolean;
-}
-
-export interface FollowerItem {
-  user: UserInfo;
-  followed_at: string;
-  is_following_back: boolean;
-  is_online?: boolean;
-}
-
-export interface FollowRequestItem {
-  request_id: string;
-  requester: UserInfo;
-  message?: string;
-  requested_at: string;
-}
-
-export interface BlockedUserItem {
-  user: UserInfo;
-  blocked_at: string;
-  reason?: string;
-}
-
 export interface UpdateSettingsRequest {
   privacy_level?: PrivacyLevel;
   location_visible?: boolean;
-  online_visible?: boolean;
-  last_online_visible?: boolean;
+  presence_visible?: boolean;
   friends_visible?: PrivacyLevel;
   following_visible?: PrivacyLevel;
   followers_visible?: PrivacyLevel;
-  moments_visible?: PrivacyLevel;
+  groups_visible?: PrivacyLevel;
+  liked_moments_visible?: PrivacyLevel;
   stats_visible?: PrivacyLevel;
   allow_follow?: boolean;
-  allow_private_chat?: 'everyone' | 'friends' | 'nobody';
+  allow_private_chat?: PrivateChatPermission;
   searchable?: boolean;
   phone_searchable?: boolean;
   nickname_searchable?: boolean;
@@ -585,68 +575,85 @@ export interface DeleteAccountRequest {
 }
 
 export interface FollowRequest {
-  user_id: number;
+  user_id: string;
+  source?: FollowSource;
+  source_moment_id?: string;
 }
 
 export interface UnfollowRequest {
-  user_id: number;
+  user_id: string;
 }
 
 export interface BlockRequest {
-  user_id: number;
+  user_id: string;
   reason?: string;
 }
 
 export interface UnblockRequest {
-  user_id: number;
+  user_id: string;
 }
 
 export interface MyFriendsRequest {
-  limit?: number;
-  cursor?: string;
+  pagination?: PaginationParams;
 }
 
-export interface FriendListItem {
+export interface MyFollowingRequest {
+  pagination?: PaginationParams;
+}
+
+export interface MyFollowersRequest {
+  pagination?: PaginationParams;
+}
+
+export interface MyBlockedRequest {
+  pagination?: PaginationParams;
+}
+
+export interface SetRemarkRequest {
+  user_id: string;
+  remark: string;
+}
+
+export interface FriendItem {
   user: UserInfo;
-  is_online: boolean;
+  presence_status?: UserPresenceStatus;
+  last_online?: string;
   remark?: string;
   followed_at: string;
   followed_back_at: string;
 }
 
-export interface MyFollowingRequest {
-  limit?: number;
-  cursor?: string;
+export interface FollowingItem {
+  user: UserInfo;
+  followed_at: string;
+  is_mutual: boolean;
+  presence_status?: UserPresenceStatus;
+  last_online?: string;
 }
 
-export interface MyFollowersRequest {
-  limit?: number;
-  cursor?: string;
+export interface FollowerItem {
+  user: UserInfo;
+  followed_at: string;
+  is_following_back: boolean;
+  presence_status?: UserPresenceStatus;
+  last_online?: string;
 }
 
-export interface MyBlockedRequest {
-  limit?: number;
-  cursor?: string;
-}
-
-export interface SetRemarkRequest {
-  user_id: number;
-  remark?: string;
+export interface BlockedUserItem {
+  user: UserInfo;
+  blocked_at: string;
+  reason?: string;
 }
 
 // ==================== 生活瞬间API类型 ====================
 
-export interface SearchMomentsByKeywordRequest extends SearchBaseParams {
-  kw: string;
-}
-
-export interface SearchMomentsByTagRequest extends SearchBaseParams {
-  tag: string;
-}
-
-export interface SearchMomentsByLocationRequest extends SearchBaseParams {
-  kw?: string;
-  radius: number;
+export interface SearchMomentsRequest {
+  keyword?: string;
+  tag?: string;
+  radius?: number;
+  sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';
+  reference_point: GeoPoint;
+  pagination?: PaginationParams;
 }
 
 export interface MomentOpenTheDoorRequest {
@@ -654,23 +661,19 @@ export interface MomentOpenTheDoorRequest {
   reference_point: GeoPoint;
 }
 
-export interface UserMomentsRequest extends SearchBaseParams {
-  user_id: number;
-}
-
 export interface CreateMomentRequest {
   description: string;
   location: Location;
   tags?: string[];
   image_file_ids?: string[];
+  privacy_level?: PrivacyLevel;
 }
 
-export interface UpdateMomentRequest {
+export interface EditMomentRequest {
   moment_id: string;
   description?: string;
   image_file_ids?: string[];
   tags?: string[];
-  location?: Location;
 }
 
 export interface DeleteMomentRequest {
@@ -693,35 +696,19 @@ export interface UnfavoriteMomentRequest {
   moment_id: string;
 }
 
-export interface MyMomentsRequest extends SearchBaseParams {}
-
-export interface MyFavoritesRequest extends SearchBaseParams {}
-
-export interface CheckLikedRequest {
-  moment_id: string;
+export interface MyMomentsRequest {
+  reference_point: GeoPoint;
+  pagination?: PaginationParams;
 }
 
-export interface CheckLikedData {
-  is_liked: boolean;
-}
-
-export interface CheckFavoritedRequest {
-  moment_id: string;
-}
-
-export interface CheckFavoritedData {
-  is_favorited: boolean;
+export interface MyFavoritesRequest {
+  reference_point: GeoPoint;
+  pagination?: PaginationParams;
 }
 
 export interface MomentLikesRequest {
   moment_id: string;
-  limit?: number;
-  cursor?: string;
-}
-
-export interface MomentLikeItem {
-  user: UserInfo;
-  liked_at: string;
+  pagination?: PaginationParams;
 }
 
 // ==================== 评论API类型 ====================
@@ -738,24 +725,12 @@ export interface DeleteCommentRequest {
 
 export interface CommentsRequest {
   moment_id: string;
-  limit?: number;
-  cursor?: string;
-}
-
-export interface CommentListItem {
-  comment_id: string;
-  user: UserInfo;
-  content: string;
-  parent_id?: string;
-  created_at: string;
-  likes_count: number;
-  replies_count: number;
+  pagination?: PaginationParams;
 }
 
 export interface CommentRepliesRequest {
   comment_id: string;
-  limit?: number;
-  cursor?: string;
+  pagination?: PaginationParams;
 }
 
 export interface LikeCommentRequest {
@@ -768,103 +743,73 @@ export interface UnlikeCommentRequest {
 
 export interface CommentLikesRequest {
   comment_id: string;
-  limit?: number;
-  cursor?: string;
-}
-
-export interface CommentLikeItem {
-  user: UserInfo;
-  liked_at: string;
-}
-
-// Moment Status Types
-export interface LikedStatus {
-  is_liked: boolean;
-}
-
-export interface FavoritedStatus {
-  is_favorited: boolean;
-}
-
-export interface EditMomentRequest {
-  moment_id: string;
-  description?: string;
-  image_file_ids?: string[];
-  tags?: string[];
-  location?: Location;
-}
-
-export interface GetMomentInteractionStateRequest {
-  moment_id: string;
+  pagination?: PaginationParams;
 }
 
 // ==================== 私聊管理API类型 ====================
 
 export interface MyPrivateChatsRequest {
-  limit?: number;
-  cursor?: string;
+  pagination?: PaginationParams;
 }
 
 export interface PrivateChatOpenTheDoorRequest {
-  target_user_id: number;
-}
-
-export interface MessageLimit {
-  remaining: number;
-  total: number;
-  is_unlocked: boolean;
-}
-
-export interface PrivateChatDetailData {
-  other_user: UserInfo;
-  message_limit?: MessageLimit;
-  unread_count: number;
-  is_muted: boolean;
-  is_pinned: boolean;
-  last_message?: PrivateChatLastMessage;
-  last_activity_at: string;
-  created_at: string;
-  can_message: boolean;
+  target_user_id: string;
 }
 
 export interface UpdatePrivateChatSettingsRequest {
-  target_user_id: number;
+  target_user_id: string;
   is_muted?: boolean;
   is_pinned?: boolean;
 }
 
 export interface DeletePrivateChatRequest {
-  target_user_id: number;
+  target_user_id: string;
+}
+
+// ==================== 私聊消息API类型 ====================
+
+export interface SendPrivateMessageRequest {
+  target_user_id: string;
+  type: SendMessageType;
+  content?: string;
+  file_id?: string;
+  share_code?: string;
+  reply_to_message_id?: string;
+}
+
+export interface GetPrivateMessagesHistoryRequest {
+  target_user_id: string;
+  pagination?: PaginationParams;
+}
+
+export interface UpdatePrivateMessageRequest {
+  message_id: string;
+  content: string;
+}
+
+export interface RecallPrivateMessageRequest {
+  message_id: string;
+}
+
+export interface MarkPrivateMessagesReadRequest {
+  target_user_id?: string;
+  up_to_message_id?: string;
 }
 
 // ==================== 群组管理API类型 ====================
 
-export interface SearchGroupsByKeywordRequest extends SearchBaseParams {
-  kw: string;
-}
-
-export interface SearchGroupsByTagRequest extends SearchBaseParams {
-  tag: string;
-}
-
-export interface SearchGroupsByLocationRequest extends SearchBaseParams {
-  kw?: string;
-  radius: number;
+export interface SearchGroupsRequest {
+  keyword?: string;
+  tag?: string;
+  radius?: number;
+  sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';
+  reference_point: GeoPoint;
+  pagination?: PaginationParams;
 }
 
 export interface GroupOpenTheDoorRequest {
   group_id: string;
-}
-
-export interface GroupSettingsRequest {
-  group_id: string;
-}
-
-export interface GroupSettingsData {
-  group_id: string;
-  settings: GroupSettings;
-  has_password: boolean;
-  created_at: string;
+  reference_point: GeoPoint;
 }
 
 export interface CreateGroupRequest {
@@ -892,40 +837,46 @@ export interface UpdateGroupRequest {
   location?: Location;
 }
 
+export interface DismissGroupRequest {
+  group_id: string;
+}
+
 export interface UpdateGroupMySettingsRequest {
   group_id: string;
   is_muted?: boolean;
   is_pinned?: boolean;
 }
 
-export interface DeleteGroupRequest {
-  group_id: string;
-}
-
 // ==================== 群组成员管理API类型 ====================
 
 export interface GroupMembersRequest {
   group_id: string;
-  role?: 'owner' | 'admin' | 'member';
-  limit?: number;
-  cursor?: string;
+  role?: GroupRole;
+  pagination?: PaginationParams;
+}
+
+export interface SearchGroupMembersRequest {
+  group_id: string;
+  keyword: string;
+  pagination?: PaginationParams;
 }
 
 export interface GroupMemberItem {
   user: UserInfo;
-  role: 'owner' | 'admin' | 'member';
+  role: GroupRole;
   joined_at: string;
   muted_until?: string;
-  is_online: boolean;
+  presence_status?: UserPresenceStatus;
+  last_online?: string;
 }
 
 export interface InviteMemberRequest {
   group_id: string;
-  user_id: number;
+  user_id: string;
   message?: string;
 }
 
-export interface InviteMemberData {
+export interface Invitation {
   invite_id: string;
   expires_at: string;
 }
@@ -933,49 +884,49 @@ export interface InviteMemberData {
 export interface JoinGroupRequest {
   group_id: string;
   password?: string;
-}
-
-export interface ApplyToGroupRequest {
-  group_id: string;
   message?: string;
 }
 
-export interface ApplyToGroupData {
+export interface JoinGroupResult {
+  status: 'joined' | 'pending_approval';
+  application?: Application;
+}
+
+export interface Application {
   application_id: string;
 }
 
 export interface SetMemberRoleRequest {
   group_id: string;
-  user_id: number;
+  user_id: string;
   role: 'admin' | 'member';
 }
 
 export interface MuteMemberRequest {
   group_id: string;
-  user_id: number;
+  user_id: string;
   duration_minutes: number;
 }
 
 export interface UnmuteMemberRequest {
   group_id: string;
-  user_id: number;
+  user_id: string;
 }
 
 export interface BanMemberRequest {
   group_id: string;
-  user_id: number;
+  user_id: string;
   reason?: string;
 }
 
 export interface UnbanMemberRequest {
   group_id: string;
-  user_id: number;
+  user_id: string;
 }
 
 export interface BannedMembersRequest {
   group_id: string;
-  limit?: number;
-  cursor?: string;
+  pagination?: PaginationParams;
 }
 
 export interface BannedMemberItem {
@@ -987,14 +938,13 @@ export interface BannedMemberItem {
 
 export interface RemoveMemberRequest {
   group_id: string;
-  user_id: number;
+  user_id: string;
 }
 
 export interface GroupApplicationsRequest {
   group_id: string;
   status?: 'pending' | 'accepted' | 'rejected' | 'all';
-  limit?: number;
-  cursor?: string;
+  pagination?: PaginationParams;
 }
 
 export interface GroupApplicationItem {
@@ -1018,12 +968,11 @@ export interface RejectGroupApplicationRequest {
 
 export interface TransferOwnershipRequest {
   group_id: string;
-  new_owner_id: number;
+  new_owner_id: string;
 }
 
 export interface MyGroupsRequest {
-  limit?: number;
-  cursor?: string;
+  pagination?: PaginationParams;
 }
 
 export interface CancelApplicationRequest {
@@ -1032,8 +981,7 @@ export interface CancelApplicationRequest {
 
 export interface MyInvitesRequest {
   status?: 'pending' | 'accepted' | 'rejected' | 'all';
-  limit?: number;
-  cursor?: string;
+  pagination?: PaginationParams;
 }
 
 export interface GroupInviteItem {
@@ -1058,73 +1006,30 @@ export interface LeaveGroupRequest {
   group_id: string;
 }
 
-// ==================== 私聊消息API类型 ====================
+// ==================== 群公告API类型 ====================
 
-export interface SendPrivateMessageRequest {
-  target_user_id: number;
-  type: SendMessageType;
-  content?: string;
-  file_id?: string;
-  reply_to_message_id?: string;
-}
-
-export interface PrivateMessagesHistoryRequest {
-  target_user_id: number;
-  limit?: number;
-  cursor?: string;
-}
-
-export interface UpdatePrivateMessageRequest {
-  message_id: string;
+export interface CreateGroupAnnouncementRequest {
+  group_id: string;
+  title: string;
   content: string;
+  is_pinned?: boolean;
 }
 
-export interface RecallPrivateMessageRequest {
-  message_id: string;
+export interface GroupAnnouncementsRequest {
+  group_id: string;
 }
 
-export interface DeletePrivateMessageRequest {
-  message_id: string;
+export interface UpdateGroupAnnouncementRequest {
+  group_id: string;
+  announcement_id: string;
+  title?: string;
+  content?: string;
+  is_pinned?: boolean;
 }
 
-export interface MarkPrivateMessagesReadRequest {
-  target_user_id: number;
-  up_to_message_id?: string;
-}
-
-export interface AddPrivateMessageReactionRequest {
-  message_id: string;
-  type: ReactionType;
-}
-
-export interface RemovePrivateMessageReactionRequest {
-  message_id: string;
-  type: ReactionType;
-}
-
-export interface PrivateMessageReactionsRequest {
-  message_id: string;
-  type?: ReactionType;
-  limit?: number;
-  cursor?: string;
-}
-
-// Private Chat Management Types
-export interface Conversation {
-  other_user: UserInfo;
-  message_limit?: MessageLimit;
-  unread_count: number;
-  is_muted: boolean;
-  is_pinned: boolean;
-  last_activity_at: string;
-  created_at: string;
-  can_message: boolean;
-}
-
-export interface MessageReactionItem {
-  user: UserInfo;
-  type: ReactionType;
-  created_at: string;
+export interface DeleteGroupAnnouncementRequest {
+  group_id: string;
+  announcement_id: string;
 }
 
 // ==================== 群聊消息API类型 ====================
@@ -1134,15 +1039,14 @@ export interface SendGroupMessageRequest {
   type: SendMessageType;
   content?: string;
   file_id?: string;
+  share_code?: string;
   reply_to_message_id?: string;
-  mentions?: number[];
+  mentions?: string[];
 }
 
-export interface GroupMessagesHistoryRequest {
+export interface GetGroupMessagesHistoryRequest {
   group_id: string;
-  limit?: number;
-  cursor?: string;
-  include_system?: boolean;
+  pagination?: PaginationParams;
 }
 
 export interface UpdateGroupMessageRequest {
@@ -1154,47 +1058,10 @@ export interface RecallGroupMessageRequest {
   message_id: string;
 }
 
-export interface DeleteGroupMessageRequest {
-  message_id: string;
-  for_everyone?: boolean;
-}
-
 export interface MarkGroupMessagesReadRequest {
   group_id: string;
   up_to_message_id?: string;
 }
-
-export interface MessageReadStatusRequest {
-  message_id: string;
-  limit?: number;
-  cursor?: string;
-}
-
-export interface MessageReadItem {
-  user: UserInfo;
-  read_at: string;
-}
-
-export interface AddGroupMessageReactionRequest {
-  message_id: string;
-  type: ReactionType;
-}
-
-export interface RemoveGroupMessageReactionRequest {
-  message_id: string;
-  type: ReactionType;
-}
-
-export interface GroupMessageReactionsRequest {
-  message_id: string;
-  type?: ReactionType;
-  limit?: number;
-  cursor?: string;
-}
-
-// ==================== 消息通用 API ====================
-
-export interface MarkAllMessagesReadRequest {}
 
 // ==================== 地图渲染 API ====================
 
@@ -1241,132 +1108,191 @@ export interface MapRenderData {
   toast_message?: string;
 }
 
-// ==================== 举报审核API类型 ====================
+// ==================== 举报API类型 ====================
 
 export interface CreateReportRequest {
-  target_type: 'user' | 'moment' | 'comment' | 'message' | 'group';
+  target_type: ReportTargetType;
   target_id: string;
   reason: string;
   description?: string;
-}
-
-export interface CreateReportData {
-  report_id: string;
 }
 
 export interface ReportCreated {
   report_id: string;
 }
 
-export interface MyReportsRequest extends PaginationParams {}
+export interface MyReportsRequest {
+  status?: ReportStatus;
+  target_type?: ReportTargetType;
+  pagination?: PaginationParams;
+}
 
 export interface ReportItem {
   report_id: string;
-  target_type: 'user' | 'moment' | 'comment' | 'message' | 'group';
+  target_type: ReportTargetType;
   target_id: string;
   reason: string;
   description?: string;
-  status: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
+  status: ReportStatus;
   created_at: string;
   handled_at?: string;
 }
 
-// ==================== 通知中心 API类型 ====================
+// ==================== 信息流API类型 ====================
 
-export interface GetNotificationsRequest {
+export type FeedSource = 'following' | 'nearby' | 'all';
+
+export interface GetFeedMomentsRequest {
+  source: FeedSource;
+  radius?: number;
+  reference_point: GeoPoint;
+  pagination?: PaginationParams;
+}
+
+export interface GetFeedGroupsRequest {
+  radius?: number;
+  reference_point: GeoPoint;
+  pagination?: PaginationParams;
+}
+
+export interface GetFeedUsersRequest {
+  radius?: number;
+  reference_point: GeoPoint;
+  pagination?: PaginationParams;
+}
+
+export interface GetFeedTrendingRequest {
   limit?: number;
-  cursor?: string;
-  type?: 'like' | 'comment' | 'follow' | 'system' | 'mention';
 }
 
-export interface NotificationItem {
-  notification_id: string;
-  type: 'like' | 'comment' | 'follow' | 'system' | 'mention';
-  title: string;
-  message: string;
-  created_at: string;
-  read: boolean;
+export interface TrendingBundle {
+  trending_tags: TagItem[];
+  hot_moments: MomentItem[];
 }
 
-export interface GetUnreadNotificationCountRequest {}
+// ==================== 标签管理API类型 ====================
 
-export interface UnreadNotificationBreakdown {
-  like: number;
-  comment: number;
-  follow: number;
-  system: number;
-  mention: number;
+export interface TagItem {
+  name: string;
+  usage_count: number;
+  trend?: 'rising' | 'stable' | 'falling';
 }
 
-export interface UnreadNotificationCountData {
-  total: number;
-  breakdown?: UnreadNotificationBreakdown;
-}
+export type TagTimeframe = 'daily' | 'weekly' | 'monthly';
 
-// ==================== 通知订阅设置API类型 ====================
-
-export interface SubscriptionsData {
-  new_follower_enabled: boolean;
-  mutual_follow_enabled: boolean;
-  group_invite_enabled: boolean;
-  group_invite_response_enabled: boolean;
-  group_application_enabled: boolean;
-  group_application_response_enabled: boolean;
-  message_mention_enabled: boolean;
-  moment_like_enabled: boolean;
-  moment_comment_enabled: boolean;
-  comment_reply_enabled: boolean;
-  system_announcement_enabled: boolean;
-}
-
-export interface MySubscriptionsRequest {}
-
-export interface UpdateSubscriptionsRequest {
-  new_follower_enabled?: boolean;
-  mutual_follow_enabled?: boolean;
-  group_invite_enabled?: boolean;
-  group_invite_response_enabled?: boolean;
-  group_application_enabled?: boolean;
-  group_application_response_enabled?: boolean;
-  message_mention_enabled?: boolean;
-  moment_like_enabled?: boolean;
-  moment_comment_enabled?: boolean;
-  comment_reply_enabled?: boolean;
-  system_announcement_enabled?: boolean;
-}
-
-// ==================== 推送设备管理API类型 ====================
-
-export interface RegisterDeviceTokenRequest {
-  platform: 'ios' | 'android' | 'harmony' | 'web';
-  device_token: string;
-}
-
-export interface UnregisterDeviceTokenRequest {
-  platform: 'ios' | 'android' | 'harmony' | 'web';
-  device_token: string;
-}
-
-export interface MyDeviceTokensRequest {
+export interface TrendingTagsRequest {
+  timeframe?: TagTimeframe;
   limit?: number;
-  cursor?: string;
 }
 
-export interface DeviceTokenItem {
-  device_token_id: string;
-  platform: 'ios' | 'android' | 'harmony' | 'web';
-  device_token: string;
-  created_at: string;
+// ==================== 搜索API类型 ====================
+
+export type SearchSuggestType = 'tag' | 'user' | 'group' | 'moment';
+
+export interface SearchSuggestRequest {
+  prefix: string;
+  reference_point: GeoPoint;
+  types?: SearchSuggestType[];
+  radius?: number;
+  limit?: number;
 }
 
-// ==================== 系统健康检查API类型 ====================
+export interface UserSuggestItem extends UserInfo {
+  bio?: string;
+  tags?: string[];
+  distance?: number;
+}
 
-export interface SystemHealthRequest {}
+export interface GroupSuggestItem extends GroupInfo {
+  description?: string;
+  tags?: string[];
+  has_password?: boolean;
+  distance?: number;
+}
 
-export interface HealthCheckData {
-  status: 'healthy' | 'degraded' | 'unhealthy';
+export interface MomentSuggestItem {
+  moment_id: string;
+  description: string;
+  images?: MomentImage[];
+  tags?: string[];
+  user: UserInfo;
+  distance?: number;
+}
+
+export interface TagSuggestItem {
+  name: string;
+  usage_count: number;
+}
+
+export interface SearchSuggestItemTag {
+  type: 'tag';
+  payload: TagSuggestItem;
+}
+
+export interface SearchSuggestItemUser {
+  type: 'user';
+  payload: UserSuggestItem;
+}
+
+export interface SearchSuggestItemGroup {
+  type: 'group';
+  payload: GroupSuggestItem;
+}
+
+export interface SearchSuggestItemMoment {
+  type: 'moment';
+  payload: MomentSuggestItem;
+}
+
+export type SearchSuggestItem =
+  | SearchSuggestItemTag
+  | SearchSuggestItemUser
+  | SearchSuggestItemGroup
+  | SearchSuggestItemMoment;
+
+export interface SearchSuggestResponse {
+  items: SearchSuggestItem[];
+}
+
+// ==================== 系统配置API类型 ====================
+
+export interface FeatureSwitches {
+  enable_public_registration: boolean;
+  enable_guest_login: boolean;
+  enable_moments: boolean;
+  enable_nearby_people: boolean;
+}
+
+export interface AppLimits {
+  max_group_members: number;
+  max_moment_tags: number;
+  max_moment_images: number;
+  moment_description_max_length: number;
+  comment_max_length: number;
+  search_radius_max: number;
+}
+
+export interface ContactInfo {
+  support_email: string;
+  privacy_policy_url: string;
+  terms_of_service_url: string;
+  official_website: string;
+}
+
+export interface ClientConfig {
+  features: FeatureSwitches;
+  limits: AppLimits;
+  contact: ContactInfo;
+}
+
+export interface HealthStatus {
+  status: 'healthy' | 'degraded';
   version: string;
   timestamp: string;
+}
+
+export interface AnnouncementListRequest {
+  pagination?: PaginationParams;
 }
 
 // ==================== 文件与媒体上传API类型 ====================
@@ -1381,19 +1307,28 @@ export interface PresignUploadRequest {
   md5?: string;
 }
 
-export interface PresignUploadData {
+export interface PresignedUpload {
   upload_id: string;
   upload_url: string;
   headers: Record<string, string>;
   expires_at: string;
 }
 
+export interface BatchPresignUploadRequest {
+  files: PresignUploadRequest[];
+}
+
+export interface BatchPresignedUpload {
+  uploads: PresignedUpload[];
+}
+
 export interface CompleteUploadRequest {
   upload_id: string;
 }
 
-export interface UploadMediaData {
+export interface UploadedMedia {
   file_id: string;
+  url: string;
   thumbnail_url?: string;
   file_size: number;
   mime_type: string;
@@ -1402,205 +1337,124 @@ export interface UploadMediaData {
   height?: number;
 }
 
-// ==================== 信息流API类型 ====================
+// ==================== 分享API类型 ====================
 
-export type RecommendationType = 'friend_liked' | 'nearby' | 'trending' | 'following' | 'tag_match';
+export type ShareType = 'user' | 'group' | 'moment' | 'location';
 
-export interface RecommendationContext {
-  type: RecommendationType;
-  friends_preview?: UserInfo[];
+export interface UserSharePayload {
+  shared_user_id: string;
 }
 
-export interface GetFeedMomentsRequest {
-  source?: 'following' | 'nearby' | 'all';
-  radius?: number;
-  limit?: number;
-  cursor?: string;
+export interface GroupSharePayload {
+  shared_group_id: string;
 }
 
-export interface GetFeedGroupsRequest {
-  radius?: number;
-  limit?: number;
-  cursor?: string;
+export interface MomentSharePayload {
+  shared_moment_id: string;
 }
 
-export interface GetFeedUsersRequest {
-  radius?: number;
-  limit?: number;
-  cursor?: string;
+export interface LocationSharePayload {
+  shared_location: Location;
 }
 
-export interface GetFeedTrendingRequest {
-  limit?: number;
+export type SharePayload =
+  | UserSharePayload
+  | GroupSharePayload
+  | MomentSharePayload
+  | LocationSharePayload;
+
+export interface NavigateUserAction {
+  type: 'navigate_user';
+  shared_user_id: string;
 }
 
-export interface FeedGroupItem extends GroupItem {
-  friends_in_group?: number;
-  my_role?: GroupRole;
-  is_joined?: boolean;
+export interface NavigateGroupAction {
+  type: 'navigate_group';
+  shared_group_id: string;
 }
 
-export interface FeedUserItem extends UserItem {
-  mutual_friends_count?: number;
-  common_tags?: string[];
+export interface NavigateMomentAction {
+  type: 'navigate_moment';
+  shared_moment_id: string;
 }
 
-export interface TrendingBundle {
-  trending_tags: TrendingTagItem[];
-  hot_moments: MomentItem[];
+export interface UpdateLocationAction {
+  type: 'update_location';
+  shared_location: Location;
 }
 
-export interface TrendingTagItem {
-  name: string;
-  usage_count: number;
-  trend: 'rising' | 'stable' | 'falling';
-  hot_moment_preview?: MomentItem;
+export type ShareApplyAction =
+  NavigateUserAction | NavigateGroupAction | NavigateMomentAction | UpdateLocationAction;
+
+export interface ShareBase {
+  share_id: string;
+  share_code: string;
+  share_type: ShareType;
+  creator: UserInfo;
+  created_at: string;
+  expires_at?: string;
 }
 
-export interface FeedFeedbackRequest {
-  content_type: 'moment' | 'group' | 'user';
-  content_id: string;
-  action: 'hide' | 'not_interested';
-  reason?: string;
+export interface ShareCreated {
+  share_id: string;
+  share_code: string;
+  expires_at?: string;
 }
 
-// ==================== 标签管理API类型 ====================
-
-export interface TagItem {
-  name: string;
-  usage_count: number;
-  trend?: 'rising' | 'stable' | 'falling';
-}
-
-export interface TrendingTagsRequest {
-  limit?: number;
-  timeframe?: 'daily' | 'weekly' | 'monthly';
-}
-
-export interface TrendingTagsData {
-  items: TagItem[];
-}
-
-export interface SuggestTagsRequest {
-  prefix: string;
-  limit?: number;
-}
-
-export interface TagSuggestItem {
-  name: string;
-  usage_count: number;
-}
-
-export interface TagSuggestions {
-  items: TagSuggestItem[];
-}
-
-
-// ==================== 系统配置API类型 ====================
-
-export interface UploadConfig {
-  image_max_size: number;
-  video_max_size: number;
-  audio_max_size: number;
-  file_max_size: number;
-  allowed_image_types: string[];
-  allowed_video_types: string[];
-}
-
-export interface ContentDefaults {
-  default_location_name: string;
-  default_group_avatar: string;
-  default_user_avatar: string;
-  default_group_settings: GroupSettings;
-}
-
-export interface FeatureSwitches {
-  enable_public_registration: boolean;
-  enable_guest_login: boolean;
-  enable_moments: boolean;
-  enable_nearby_people: boolean;
-}
-
-export interface ContactInfo {
-  support_email: string;
-  privacy_policy_url: string;
-  terms_of_service_url: string;
-  official_website: string;
-}
-
-export interface AppLimits {
-  max_group_members: number;
-  max_moment_tags: number;
-  max_moment_images: number;
-  moment_description_max_length: number;
-  comment_max_length: number;
-  search_radius_max: number;
-}
-
-export interface GlobalSettings {
-  upload: UploadConfig;
-  defaults: ContentDefaults;
-  features: FeatureSwitches;
-  contact: ContactInfo;
-  limits: AppLimits;
-  version: string;
-}
-
-export interface FetchGlobalSettingsContext {
-  os: 'ios' | 'android' | 'web' | 'harmony';
-  app_version: string;
-  device_id?: string;
-  language?: string;
-}
-
-export interface FetchGlobalSettingsRequest {
-  context: FetchGlobalSettingsContext;
-  current_version?: string;
-}
-
-export interface FetchSettingsData {
-  action: 'update' | 'no_change' | 'force_update';
-  config?: GlobalSettings;
-  latest_version: string;
-}
-
-// ==================== 管理员系统公告 API ====================
-
-export interface SystemAnnouncementItem {
-  announcement_id: string;
+export interface SharePreview {
   title: string;
-  content: string;
-  severity: 'info' | 'warning' | 'error';
-  action_url?: string;
+  subtitle?: string;
+  cover_url?: string;
+}
+
+export interface ShareDetail {
+  share: ShareBase;
+  payload: SharePayload;
+  preview?: SharePreview;
+}
+
+export interface ShareApplyResult {
+  share_type: ShareType;
+  action: ShareApplyAction;
+}
+
+export interface ShareListItem {
+  share_id: string;
+  share_code: string;
+  share_type: ShareType;
   created_at: string;
-  created_by: UserInfo;
+  expires_at?: string;
+  is_revoked: boolean;
+  preview?: SharePreview;
 }
 
-// Group Chat Additional Types
-export interface GroupSettingsResponse {
-  group_id: string;
-  settings: GroupSettings;
-  has_password: boolean;
-  created_at: string;
+export interface CreateShareRequest {
+  share_type: ShareType;
+  payload: SharePayload;
+  expires_in_seconds?: number;
 }
 
-export interface Invitation {
-  invite_id: string;
-  expires_at: string;
+export interface GetShareRequest {
+  share_code: string;
 }
 
-export interface Application {
-  application_id: string;
+export interface ApplyShareRequest {
+  share_code: string;
 }
 
-export interface PublicAnnouncementListRequest {
-  limit?: number;
-  cursor?: string;
+export interface ShareListRequest {
+  share_type?: ShareType;
+  pagination?: PaginationParams;
+}
+
+export interface RevokeShareRequest {
+  share_id: string;
 }
 
 // ==================== Admin Types ====================
 
-export interface AdminUserItem extends UserInfo {
+export interface AdminUserItem {
+  user: UserInfo;
   status: UserAccountStatus;
   created_at: string;
   last_active_at?: string;
@@ -1608,7 +1462,8 @@ export interface AdminUserItem extends UserInfo {
   is_online: boolean;
 }
 
-export interface AdminUserDetail extends UserInfo {
+export interface AdminUserDetail {
+  user: UserInfo;
   status: UserAccountStatus;
   created_at: string;
   last_active_at?: string;
@@ -1619,7 +1474,7 @@ export interface AdminUserDetail extends UserInfo {
   tags?: string[];
   location?: Location;
   is_online: boolean;
-  stats: UserStatsData;
+  stats: UserStats;
   ban_history?: AdminBanRecord[];
 }
 
@@ -1632,7 +1487,8 @@ export interface AdminBanRecord {
   unbanned_by?: UserInfo;
 }
 
-export interface AdminGroupItem extends GroupInfo {
+export interface AdminGroupItem {
+  group: GroupInfo;
   owner: UserInfo;
   created_at: string;
 }
@@ -1648,7 +1504,8 @@ export interface AdminGroupDetailStats {
   active_members_today: number;
 }
 
-export interface AdminGroupDetail extends GroupInfo {
+export interface AdminGroupDetail {
+  group: GroupInfo;
   description?: string;
   tags?: string[];
   max_members: number;
@@ -1714,13 +1571,13 @@ export interface AdminRbacRoleSetPermissionsRequest {
 }
 
 export interface AdminRbacGrantAdminRequest {
-  user_id: number;
+  user_id: string;
   grant_all_permissions?: boolean;
   role_ids: string[];
 }
 
 export interface AdminRbacRevokeAdminRequest {
-  user_id: number;
+  user_id: string;
 }
 
 // Admin Audit Types
@@ -1738,6 +1595,20 @@ export type AuditAction =
   | 'config.update';
 
 export type AuditTargetType = 'user' | 'group' | 'announcement' | 'role' | 'config';
+
+export interface AuditLogItem {
+  log_id: string;
+  action: AuditAction;
+  operator: UserInfo;
+  target_type: AuditTargetType;
+  target_id: string;
+  target_name?: string;
+  details?: AuditDetails;
+  ip_location?: string;
+  ip_address?: string;
+  device_summary?: string;
+  created_at: string;
+}
 
 export interface AuditDetailsUserBan {
   type: 'user.ban';
@@ -1811,20 +1682,6 @@ export type AuditDetails =
   | AuditDetailsPermissionRevoke
   | AuditDetailsConfigUpdate;
 
-export interface AuditLogItem {
-  log_id: string;
-  action: AuditAction;
-  operator: UserInfo;
-  target_type: AuditTargetType;
-  target_id: string;
-  target_name?: string;
-  details?: AuditDetails;
-  ip_location?: string;
-  ip_address?: string;
-  device_summary?: string;
-  created_at: string;
-}
-
 export interface AuditLogDetail extends AuditLogItem {
   before_state?: StateSnapshot;
   after_state?: StateSnapshot;
@@ -1860,13 +1717,14 @@ export type StateSnapshot =
   | StateSnapshotRole
   | StateSnapshotConfig;
 
-export interface AuditLogListRequest extends PaginationParams {
+export interface AuditLogListRequest {
   action?: AuditAction;
-  operator_id?: number;
+  operator_id?: string;
   target_type?: AuditTargetType;
   target_id?: string;
   start_time?: string;
   end_time?: string;
+  pagination?: PaginationParams;
 }
 
 export interface AuditLogDetailRequest {
@@ -1875,7 +1733,7 @@ export interface AuditLogDetailRequest {
 
 export interface AuditLogExportRequest {
   action?: AuditAction;
-  operator_id?: number;
+  operator_id?: string;
   target_type?: AuditTargetType;
   start_time?: string;
   end_time?: string;
@@ -1893,10 +1751,11 @@ export interface AuditLogExportStatusRequest {
   export_id: string;
 }
 
+// Admin Announcement Types
 export interface CreateAnnouncementRequest {
   title: string;
   content: string;
-  severity: 'info' | 'warning' | 'error';
+  severity: AnnouncementSeverity;
   action_url?: string;
   send_push?: boolean;
 }
@@ -1906,48 +1765,49 @@ export interface AnnouncementCreated {
   created_at: string;
 }
 
-export interface AnnouncementListRequest extends PaginationParams {}
-
 // Admin Report Types
-export interface ReportsRequest extends PaginationParams {
-  status?: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
-  target_type?: 'user' | 'moment' | 'comment' | 'message' | 'group';
+export interface AdminReportSearchRequest {
+  status?: ReportStatus;
+  target_type?: ReportTargetType;
+  pagination?: PaginationParams;
 }
 
 export interface HandleReportRequest {
   report_id: string;
-  action: 'resolve' | 'dismiss' | 'escalate';
+  action: ReportHandleAction;
   note?: string;
 }
 
 // Admin User Types
-export interface AdminUserSearchRequest extends PaginationParams {
-  user_id?: number;
+export interface AdminUserSearchRequest {
+  user_id?: string;
   nickname?: string;
   login_id?: string;
   status?: UserAccountStatus;
   user_type?: UserType;
+  pagination?: PaginationParams;
 }
 
 export interface AdminUserDetailRequest {
-  user_id: number;
+  user_id: string;
 }
 
 export interface AdminBanUserRequest {
-  user_id: number;
+  user_id: string;
   reason?: string;
   duration_days?: number;
 }
 
 export interface AdminUnbanUserRequest {
-  user_id: number;
+  user_id: string;
   reason?: string;
 }
 
-export interface AdminGroupSearchRequest extends PaginationParams {
+export interface AdminGroupSearchRequest {
   group_id?: string;
   name?: string;
-  owner_id?: number;
+  owner_id?: string;
+  pagination?: PaginationParams;
 }
 
 export interface AdminGroupDetailRequest {
@@ -1959,70 +1819,16 @@ export interface AdminDismissGroupRequest {
   reason?: string;
 }
 
-// ==================== 搜索API类型 ====================
+// ==================== Response 包装类型 (ArkTS 要求命名类型) ====================
 
-export interface SearchSuggestItemTag {
-  type: 'tag';
-  payload: TagSuggestItem;
+export interface SystemAnnouncementListData {
+  items: SystemAnnouncementItem[];
 }
 
-export interface SearchSuggestItemUser {
-  type: 'user';
-  payload: UserSuggestItem;
+export interface SessionListData {
+  items: SessionItem[];
 }
 
-export interface SearchSuggestItemGroup {
-  type: 'group';
-  payload: GroupSuggestItem;
+export interface GroupAnnouncementListData {
+  items: GroupAnnouncementItem[];
 }
-
-export interface SearchSuggestItemMoment {
-  type: 'moment';
-  payload: MomentSuggestItem;
-}
-
-export type SearchSuggestItem =
-  | SearchSuggestItemTag
-  | SearchSuggestItemUser
-  | SearchSuggestItemGroup
-  | SearchSuggestItemMoment;
-
-export interface UserSuggestItem extends UserInfo {
-  bio?: string;
-  tags?: string[];
-  distance?: number;
-}
-
-export interface GroupSuggestItem extends GroupInfo {
-  description?: string;
-  tags?: string[];
-  has_password?: boolean;
-  distance?: number;
-}
-
-export interface MomentSuggestItem {
-  moment_id: string;
-  description: string;
-  images?: MomentImage[];
-  tags?: string[];
-  user: UserInfo;
-  distance?: number;
-}
-
-export interface SearchSuggestions {
-  items: SearchSuggestItem[];
-}
-
-export interface SearchSuggestRequest {
-  prefix: string;
-  limit?: number;
-  location?: GeoPoint;
-}
-
-// ==================== 客户端扩展类型别名 ====================
-// 这些类型别名用于客户端代码，实际 API 返回的是 MomentItem、GroupItem、UserItem
-// 为了保持代码一致性，使用这些别名
-
-export interface MomentSearchItem extends MomentItem {}
-export interface GroupSearchItem extends GroupItem {}
-export interface UserSearchItem extends UserItem {}

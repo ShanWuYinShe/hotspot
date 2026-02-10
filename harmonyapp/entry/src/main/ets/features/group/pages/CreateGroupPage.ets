@@ -13,7 +13,7 @@ import { SystemToast } from '../../../components/SystemToast';
 import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { PasswordSecurityUtil } from '../../../core/security/PasswordSecurityUtil';
-import { CreateGroupRequest } from '../../../core/types/api';
+import { CreateGroupRequest, GeoPoint } from '../../../core/types/api';
 
 @Entry
 @Component
@@ -99,12 +99,15 @@ struct CreateGroupPage {
 
     this.isCreating = true;
     try {
+      const geoPoint: GeoPoint = {
+        latitude: this.localLocation.latitude,
+        longitude: this.localLocation.longitude
+      };
       const request: CreateGroupRequest = {
         name: this.groupName.trim(),
         description: this.groupDescription.trim() || undefined,
         location: {
-          latitude: this.localLocation.latitude,
-          longitude: this.localLocation.longitude,
+          point: geoPoint,
           location_name: this.localLocation.locationName || "南天门"
         },
         password: this.isPasswordRequired ? this.groupPassword.trim() : undefined,
@@ -112,7 +115,7 @@ struct CreateGroupPage {
         join_method: 'open'
       };
 
-      const response = await ApiClient.createGroupChat(request);
+      const response = await ApiClient.createGroup(request);
 
       if (response.code === 0 && response.data) {
         SystemToast.showSuccess('群组创建成功', this.getUIContext());
@@ -120,7 +123,7 @@ struct CreateGroupPage {
           const routerInstance = this.getUIContext().getRouter();
           await routerInstance.replaceUrl({
             url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
-            params: { groupId: response.data.group_id }
+            params: { groupId: response.data.group.group_id }
           });
         } catch (error) {
           SystemToast.showError('跳转失败', this.getUIContext());

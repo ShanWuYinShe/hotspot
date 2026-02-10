@@ -21,6 +21,8 @@ class AuthEndpoints {
   readonly GUEST: string = '/api/v1/auth/guest';
   readonly REFRESH_TOKEN: string = '/api/v1/auth/refresh_token';
   readonly CHECK_STATUS: string = '/api/v1/auth/check_status';
+  readonly REQUEST_PASSWORD_RESET: string = '/api/v1/auth/request_password_reset';
+  readonly RESET_PASSWORD: string = '/api/v1/auth/reset_password';
   readonly ME: AuthMeEndpoints = new AuthMeEndpoints();
 }
 
@@ -196,16 +198,11 @@ class SearchEndpoints {
 }
 
 // Feed
-class FeedMeEndpoints {
-  readonly FEEDBACK: string = '/api/v1/feed/me/feedback';
-}
-
 class FeedEndpoints {
   readonly LIST_MOMENTS: string = '/api/v1/feed/list_moments';
   readonly LIST_GROUPS: string = '/api/v1/feed/list_groups';
   readonly LIST_USERS: string = '/api/v1/feed/list_users';
   readonly LIST_TRENDING: string = '/api/v1/feed/list_trending';
-  readonly ME: FeedMeEndpoints = new FeedMeEndpoints();
 }
 
 // Upload

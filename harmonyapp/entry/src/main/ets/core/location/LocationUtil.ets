@@ -248,7 +248,7 @@ export class LocationUtil {
       };
 
       const geoAddresses = await geoLocationManager.getAddressesFromLocation(reverseRequest);
-      
+
       if (!geoAddresses || geoAddresses.length === 0) {
         hilog.warn(DOMAIN_NUMBER, TAG, '未找到地址信息');
         return null;

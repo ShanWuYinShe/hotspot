@@ -42,7 +42,7 @@ export class RdbManager {
       id TEXT PRIMARY KEY,
       chat_id TEXT,
       type TEXT, 
-      sender_id INTEGER,
+      sender_id TEXT,
       content TEXT,
       sent_at TEXT,
       json_data TEXT

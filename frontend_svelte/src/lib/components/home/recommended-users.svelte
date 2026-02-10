@@ -21,16 +21,12 @@
 		loading = true;
 		try {
 			const response = await usersService.search({
-				search: {
-					reference_point: {
-						latitude: mapAnchorStore.latitude,
-						longitude: mapAnchorStore.longitude
-					},
-					pagination: {
-						limit: 6
-					}
+				radius: mapAnchorStore.radius * 1000,
+				reference_point: {
+					latitude: mapAnchorStore.latitude,
+					longitude: mapAnchorStore.longitude
 				},
-				radius: mapAnchorStore.radius * 1000
+				pagination: { limit: 6 }
 			});
 			if (isSuccess(response) && response.data) {
 				users = response.data.items ?? [];

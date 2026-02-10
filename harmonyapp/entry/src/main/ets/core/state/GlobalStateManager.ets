@@ -8,7 +8,7 @@
  * - 注册用户（normal，有 token）：完整功能，含密码修改等
  */
 
-import { MyProfileData } from '../types/api';
+import { MyProfile } from '../types/api';
 import type { UserType } from '../types/api';
 import { LocationInfo } from '../location/LocationUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -29,7 +29,7 @@ export interface UnreadCount {
  * 全局状态接口定义 (主要用于类型引用兼容)
  */
 export interface GlobalState {
-  currentUser: MyProfileData | null;
+  currentUser: MyProfile | null;
   isLoggedIn: boolean;
   userType: string;
   networkConnected: boolean;
@@ -50,7 +50,7 @@ export const KEY_NETWORK_CONNECTED = 'networkConnected';
 export const KEY_LAST_MESSAGE_SYNC_TIME = 'lastMessageSyncTime';
 
 // 初始化 PersistentStorage (必须在 AppStorage 使用之前)
-PersistentStorage.persistProp<MyProfileData | null>(KEY_CURRENT_USER, null);
+PersistentStorage.persistProp<MyProfile | null>(KEY_CURRENT_USER, null);
 PersistentStorage.persistProp<boolean>(KEY_IS_LOGGED_IN, false);
 PersistentStorage.persistProp<string>(KEY_USER_TYPE, '');
 PersistentStorage.persistProp<LocationInfo | null>(KEY_BROWSE_ANCHOR, null);
@@ -100,7 +100,7 @@ export class GlobalStateManager {
    * isLoggedIn = (user !== null)，表示有 token（含临时用户和注册用户）
    * userType 区分 'temp' | 'normal' | 'admin' | 'system'
    */
-  updateUser(user: MyProfileData | null): void {
+  updateUser(user: MyProfile | null): void {
     AppStorage.setOrCreate(KEY_CURRENT_USER, user);
     AppStorage.setOrCreate(KEY_IS_LOGGED_IN, user !== null);
     AppStorage.setOrCreate(KEY_USER_TYPE, user?.user_type || '');
@@ -109,8 +109,8 @@ export class GlobalStateManager {
   /**
    * 获取当前用户 (供非UI组件使用)
    */
-  getCurrentUser(): MyProfileData | null | undefined {
-    return AppStorage.get<MyProfileData | null>(KEY_CURRENT_USER);
+  getCurrentUser(): MyProfile | null | undefined {
+    return AppStorage.get<MyProfile | null>(KEY_CURRENT_USER);
   }
 
   /**

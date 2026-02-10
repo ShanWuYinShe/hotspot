@@ -16,6 +16,7 @@ export struct SystemAvatar {
   @Prop showBorder: boolean = false;
   @Prop shape: 'circle' | 'squircle' | 'square' = 'circle';
   @Prop userInfo: UserInfo | undefined;
+  @Prop userType: string = '';
 
   private getBorderOptions(): BorderOptions | undefined {
     if (!this.showBorder) {
@@ -68,7 +69,7 @@ export struct SystemAvatar {
             .borderRadius(DesignConstants.RADIUS.FULL)
             .border(this.getBorderOptions())
             .margin({ bottom: -1, right: -1 })
-        } else if (this.userInfo && UserTypeUtil.isTempUser(this.userInfo.user_type)) {
+        } else if (this.userType && UserTypeUtil.isTempUser(this.userType)) {
           Text('临时')
             .fontSize(this.avatarSize * 0.25)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
@@ -76,7 +77,7 @@ export struct SystemAvatar {
             .borderRadius(4)
             .padding({ left: 2, right: 2 })
             .margin({ bottom: -2, right: -2 })
-        } else if (this.userInfo && UserTypeUtil.isSystemUser(this.userInfo.user_type)) {
+        } else if (this.userType && UserTypeUtil.isSystemUser(this.userType)) {
           Text('官方')
             .fontSize(this.avatarSize * 0.25)
             .fontColor(Color.White)
