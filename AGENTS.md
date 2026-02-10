@@ -52,14 +52,24 @@ pnpm check:watch
 - No unit-test runner configured in `frontend_svelte/package.json`.
 
 ### HarmonyOS (ETS / Hvigor)
-When modifying `harmonyapp/` or collecting build output, ask the user for DevEco Studio install dir or Command Line Tools dir. Derive `DEVECO_SDK_HOME` from that location.
+When modifying `harmonyapp/` or collecting build output, ask the user for DevEco Studio install dir or Command Line Tools dir. Derive `DEVECO_SDK_HOME` and `HVIGORW` from that location.
 ```bash
 # DevEco Studio (macOS)
-DEVECO_SDK_HOME="$DEVECO_STUDIO_DIR/Contents/sdk" node "$DEVECO_STUDIO_DIR/Contents/tools/hvigor/bin/hvigorw.js" --tasks   # or type-check
+DEVECO_SDK_HOME="$DEVECO_STUDIO_DIR/Contents/sdk"
+HVIGORW="$DEVECO_STUDIO_DIR/Contents/tools/hvigor/bin/hvigorw.js"
 # DevEco Studio (non-macOS)
-DEVECO_SDK_HOME="$DEVECO_STUDIO_DIR/sdk" node "$DEVECO_STUDIO_DIR/tools/hvigor/bin/hvigorw.js" --tasks   # or type-check
+DEVECO_SDK_HOME="$DEVECO_STUDIO_DIR/sdk"
+HVIGORW="$DEVECO_STUDIO_DIR/tools/hvigor/bin/hvigorw.js"
 # Command Line Tools (all platforms)
-DEVECO_SDK_HOME="$COMMANDLINE_TOOL_DIR/sdk" node "$COMMANDLINE_TOOL_DIR/hvigor/bin/hvigorw.js" --tasks   # or type-check
+DEVECO_SDK_HOME="$COMMANDLINE_TOOL_DIR/sdk"
+HVIGORW="$COMMANDLINE_TOOL_DIR/hvigor/bin/hvigorw.js"
+
+# Build HAP (in harmonyapp/ directory)
+cd harmonyapp
+DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$HVIGORW" clean --mode module -p product=default assembleHap --info --analyze=ultrafine --parallel --incremental --enable-build-script-type-check --no-daemon
+
+# List available tasks
+DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$HVIGORW" --tasks
 ```
 - Hvigor tasks are provided by `appTasks`/`hapTasks`; confirm with `--tasks`.
 - Linter configuration: `harmonyapp/code-linter.json5`.
@@ -142,6 +152,12 @@ import UserCard from '$lib/components/user-card.svelte';
 - Do not commit secrets or `.env` files.
 - Backend config uses env vars; keep defaults in `.env.example` only.
 - Frontend config should avoid embedding secrets; use public envs only.
+
+## Destructive Operations
+- NEVER use `git checkout` to revert files in bulk without explicit user approval.
+- NEVER use `rm` to delete multiple files without explicit user approval.
+- Prefer editing files over deleting them; file deletion requires user confirmation.
+- When in doubt, ask the user before performing any destructive or irreversible operation.
 
 ## Common Pitfalls
 - Hardcoded API paths or ad-hoc endpoints; mixing HTTP status with business success.
