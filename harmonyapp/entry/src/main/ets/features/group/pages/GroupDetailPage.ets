@@ -11,7 +11,9 @@ import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
-import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
+import { IconButton, AppIcon, IconSize, SystemIcon } from '../../../components/SystemIcon';
+import { SystemShareService } from '../../../core/services/SystemShareService';
+import { common } from '@kit.AbilityKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import {
   GroupItem,
@@ -22,6 +24,10 @@ import { DistributedSyncService, SyncData } from '../../../core/services/Distrib
 import { SmartNotificationService } from '../../../core/services/SmartNotificationService';
 import { AccessibilityManager } from '../../../core/accessibility/AccessibilityManager';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
+import { LoadingUtil } from '../../../core/utils/LoadingUtil';
+import { BasicDataSource } from '../../../core/utils/BasicDataSource';
+import { NfcShareService } from '../../../core/services/NfcShareService';
+import { AppRouter, LoginRouteParam, ChatRouteParam } from '../../../core/router/AppRouter';
 
 interface GroupSyncData {
   groupId: string;
@@ -37,9 +43,9 @@ interface GroupDetailParams {
   groupId: string;
 }
 
-@Entry
 @Component
-struct GroupDetailPage {
+export struct GroupDetailPage {
+  pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   
@@ -49,6 +55,7 @@ struct GroupDetailPage {
   private accessibilityManager = AccessibilityManager.getInstance();
   @State groupInfo: GroupItem | null = null;
   @State members: GroupMemberItem[] = [];
+  private membersDataSource: BasicDataSource<GroupMemberItem> = new BasicDataSource<GroupMemberItem>([]);
   @State isLoading: boolean = true;
   @State isLoadingMembers: boolean = false;
   @State errorMessage: string = '';
@@ -67,31 +74,11 @@ struct GroupDetailPage {
     if (this.currentUser) return true;
 
     SystemToast.showWarning(`请先登录后再${actionName}`, this.getUIContext());
-    try {
-      const routerInstance = this.getUIContext().getRouter();
-      routerInstance.pushUrl({
-        url: `features/auth/pages/${PageNames.LOGIN}`,
-        params: { reason: 'action_required', action: actionName }
-      });
-    } catch (error) {
-      // ignore
-    }
+    const loginParams = new LoginRouteParam();
+    loginParams.reason = 'action_required';
+    loginParams.action = actionName;
+    AppRouter.push(PageNames.LOGIN, loginParams);
     return false;
-  }
-
-  async aboutToAppear() {
-    try {
-      const routerInstance = this.getUIContext().getRouter();
-      const params = routerInstance.getParams() as GroupDetailParams;
-      if (params && params.groupId) {
-        this.groupId = params.groupId;
-        await this.loadGroupDetail();
-      } else {
-        this.errorMessage = '缺少群组ID参数';
-      }
-    } catch (error) {
-      this.errorMessage = '初始化失败';
-    }
   }
 
   private async loadGroupDetail(): Promise<void> {
@@ -99,24 +86,26 @@ struct GroupDetailPage {
     this.errorMessage = '';
 
     try {
-      let referencePoint: GeoPoint = { latitude: 0, longitude: 0 };
-      if (this.currentLocation) {
-        referencePoint = { latitude: this.currentLocation.latitude, longitude: this.currentLocation.longitude };
-      }
-      const response = await ApiClient.getGroupDetail({
-        group_id: this.groupId,
-        reference_point: referencePoint
-      });
+      await LoadingUtil.withMinimumTime(async () => {
+        let referencePoint: GeoPoint = { latitude: 0, longitude: 0 };
+        if (this.currentLocation) {
+          referencePoint = { latitude: this.currentLocation.latitude, longitude: this.currentLocation.longitude };
+        }
+        const response = await ApiClient.getGroupDetail({
+          group_id: this.groupId,
+          reference_point: referencePoint
+        });
 
-      if (response.code === 0 && response.data) {
-        this.groupInfo = response.data.group;
-        this.isMember = this.groupInfo.my_state?.is_joined ?? false;
-        await this.syncGroupData();
-        await this.accessibilityManager.announceText(`已加载群组：${this.groupInfo.group?.name ?? ''}`);
-      } else {
-        this.errorMessage = response.message || '加载群组详情失败';
-      }
-    } catch (error) {
+        if (response.code === 0 && response.data) {
+          this.groupInfo = response.data.group;
+          this.isMember = this.groupInfo.my_state?.is_joined ?? false;
+          await this.syncGroupData();
+          await this.accessibilityManager.announceText(`已加载群组：${this.groupInfo.group?.name ?? ''}`);
+        } else {
+          this.errorMessage = response.message || '加载群组详情失败';
+        }
+      });
+    } catch {
       this.errorMessage = '加载群组详情失败';
     } finally {
       this.isLoading = false;
@@ -128,20 +117,23 @@ struct GroupDetailPage {
 
     this.isLoadingMembers = true;
     try {
-      const response = await ApiClient.getGroupMembers({
-        group_id: this.groupId,
-        pagination: { limit: 100 }
-      });
+      await LoadingUtil.withMinimumTime(async () => {
+        const response = await ApiClient.getGroupMembers({
+          group_id: this.groupId,
+          pagination: { limit: 100 }
+        });
 
-      if (response.code === 0 && response.data) {
-        this.members = response.data.items;
-        this.membersHasMore = response.data.pagination?.has_more ?? false;
-        this.membersNextCursor = response.data.pagination?.next_cursor ?? '';
-        this.showMemberList = true;
-      } else {
-        SystemToast.showError(response.message || '加载成员列表失败', this.getUIContext());
-      }
-    } catch (error) {
+        if (response.code === 0 && response.data) {
+          this.members = response.data.items;
+          this.membersDataSource.setData(this.members);
+          this.membersHasMore = response.data.pagination?.has_more ?? false;
+          this.membersNextCursor = response.data.pagination?.next_cursor ?? '';
+          this.showMemberList = true;
+        } else {
+          SystemToast.showError(response.message || '加载成员列表失败', this.getUIContext());
+        }
+      });
+    } catch {
       SystemToast.showError('加载成员列表失败', this.getUIContext());
     } finally {
       this.isLoadingMembers = false;
@@ -158,10 +150,11 @@ struct GroupDetailPage {
       });
       if (response.code === 0 && response.data) {
         this.members = this.members.concat(response.data.items);
+        this.membersDataSource.appendData(response.data.items);
         this.membersHasMore = response.data.pagination?.has_more ?? false;
         this.membersNextCursor = response.data.pagination?.next_cursor ?? '';
       }
-    } catch (error) {
+    } catch {
       // 静默失败
     } finally {
       this.membersLoadingMore = false;
@@ -177,29 +170,32 @@ struct GroupDetailPage {
       return;
     }
 
+    const groupInfoRef = this.groupInfo;
     this.isJoining = true;
     try {
-      const response = await ApiClient.joinGroup({
-        group_id: this.groupId,
-        password: this.groupInfo.has_password ? this.joinPassword.trim() : undefined
-      });
+      await LoadingUtil.withMinimumTime(async () => {
+        const response = await ApiClient.joinGroup({
+          group_id: this.groupId,
+          password: groupInfoRef.has_password ? this.joinPassword.trim() : undefined
+        });
 
-      if (response.code === 0 && response.data) {
-        if (response.data.status === 'joined') {
-          SystemToast.showSuccess('加入群组成功', this.getUIContext());
+        if (response.code === 0 && response.data) {
+          if (response.data.status === 'joined') {
+            SystemToast.showSuccess('加入群组成功', this.getUIContext());
+            this.isMember = true;
+            await this.loadGroupDetail();
+          } else if (response.data.status === 'pending_approval') {
+            SystemToast.showSuccess('已提交申请，等待管理员审批', this.getUIContext());
+          }
+        } else if (response.code === 1305) {
+          SystemToast.show('您已是该群组成员', this.getUIContext());
           this.isMember = true;
-          await this.loadGroupDetail();
-        } else if (response.data.status === 'pending_approval') {
-          SystemToast.showSuccess('已提交申请，等待管理员审批', this.getUIContext());
+          await this.enterChat();
+        } else {
+          SystemToast.showError(response.message || '加入群组失败', this.getUIContext());
         }
-      } else if (response.code === 1305) {
-        SystemToast.show('您已是该群组成员', this.getUIContext());
-        this.isMember = true;
-        await this.enterChat();
-      } else {
-        SystemToast.showError(response.message || '加入群组失败', this.getUIContext());
-      }
-    } catch (error) {
+      }, LoadingUtil.DEFAULT_ACTION_MS);
+    } catch {
       SystemToast.showError('加入群组失败', this.getUIContext());
     } finally {
       this.isJoining = false;
@@ -212,41 +208,49 @@ struct GroupDetailPage {
 
     this.isLeaving = true;
     try {
-      const response = await ApiClient.leaveGroup({
-        group_id: this.groupId
-      });
+      await LoadingUtil.withMinimumTime(async () => {
+        const response = await ApiClient.leaveGroup({
+          group_id: this.groupId
+        });
 
-      if (response.code === 0) {
-        SystemToast.showSuccess('已离开群组', this.getUIContext());
-        this.isMember = false;
-        const routerInstance = this.getUIContext().getRouter();
-        routerInstance.back();
-      } else {
-        SystemToast.showError(response.message || '离开群组失败', this.getUIContext());
-      }
-    } catch (error) {
+        if (response.code === 0) {
+          SystemToast.showSuccess('已离开群组', this.getUIContext());
+          this.isMember = false;
+          AppRouter.pop();
+        } else {
+          SystemToast.showError(response.message || '离开群组失败', this.getUIContext());
+        }
+      }, LoadingUtil.DEFAULT_ACTION_MS);
+    } catch {
       SystemToast.showError('离开群组失败', this.getUIContext());
     } finally {
       this.isLeaving = false;
     }
   }
 
+  private async shareGroup(): Promise<void> {
+    if (!this.groupInfo) return;
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      const content = SystemShareService.buildGroupShareContent(
+        this.groupInfo.group?.name ?? '',
+        this.groupInfo.description,
+        this.groupInfo.group?.group_id ?? this.groupId
+      );
+      await SystemShareService.getInstance().shareText(context, content);
+    } catch {
+      // User cancelled or share failed - non-fatal
+    }
+  }
+
   private async enterChat(): Promise<void> {
     if (!this.groupInfo) return;
     if (!this.ensureLoggedIn('进入群聊')) return;
-    try {
-      const routerInstance = this.getUIContext().getRouter();
-      await routerInstance.pushUrl({
-        url: `features/chat/pages/${PageNames.CHAT}`,
-        params: {
-          chatId: this.groupId,
-          chatType: 'group_chat',
-          title: this.groupInfo.group?.name ?? ''
-        }
-      });
-    } catch (error) {
-      SystemToast.showError('跳转聊天页面失败', this.getUIContext());
-    }
+    const chatParams = new ChatRouteParam();
+    chatParams.chatId = this.groupId;
+    chatParams.chatType = 'group_chat';
+    chatParams.title = this.groupInfo.group?.name ?? '';
+    AppRouter.push(PageNames.CHAT, chatParams);
   }
 
   private getRoleDisplayText(role: string): string {
@@ -288,23 +292,23 @@ struct GroupDetailPage {
       };
       
       await this.distributedSyncService.syncUserData(syncData);
-    } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `同步群组数据失败: ${JSON.stringify(error)}`);
+    } catch {
+      hilog.error(DOMAIN_NUMBER, TAG, '同步群组数据失败');
     }
   }
 
   build() {
+    NavDestination() {
     Column() {
       // 标题栏
       Row() {
         IconButton({
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
-          iconColor: DesignConstants.COLOR.TEXT_PRIMARY_LIGHT,
+          iconColor: $r('sys.color.ohos_id_color_text_primary'),
           bgColor: Color.Transparent,
           onButtonClick: () => {
-            const routerInstance = this.getUIContext().getRouter();
-            routerInstance.back();
+            AppRouter.pop();
           }
         })
 
@@ -315,7 +319,13 @@ struct GroupDetailPage {
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
 
-        Blank().width(48)
+        SystemIcon({
+          icon: AppIcon.SHARE,
+          iconSize: IconSize.LARGE,
+          iconColor: $r('sys.color.ohos_id_color_text_primary'),
+          clickable: true,
+          onIconClick: () => this.shareGroup()
+        })
       }
       .width('100%')
       .height(56)
@@ -360,7 +370,7 @@ struct GroupDetailPage {
                   .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
                   .fontColor($r('sys.color.ohos_id_color_text_primary'))
                   .margin({ top: DesignConstants.SPACING.MD })
-                
+
                 if (this.groupInfo?.description) {
                   Text(this.groupInfo?.description)
                     .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -404,10 +414,11 @@ struct GroupDetailPage {
               .padding({ bottom: DesignConstants.SPACING.XL })
               .justifyContent(FlexAlign.SpaceAround)
             }
+            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
           }
           .backgroundColor($r('sys.color.ohos_id_color_background'))
           .borderRadius(DesignConstants.RADIUS.LG)
-          .margin({ left: 16, right: 16 })
+          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
           // 2. 位置信息
           ListItem() {
@@ -443,7 +454,7 @@ struct GroupDetailPage {
           }
           .backgroundColor($r('sys.color.ohos_id_color_background'))
           .borderRadius(DesignConstants.RADIUS.LG)
-          .margin({ left: 16, right: 16 })
+          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
           // 3. 成员列表入口
           ListItem() {
@@ -471,7 +482,7 @@ struct GroupDetailPage {
           }
           .backgroundColor($r('sys.color.ohos_id_color_background'))
           .borderRadius(DesignConstants.RADIUS.LG)
-          .margin({ left: 16, right: 16 })
+          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
           // 4. 操作按钮
           ListItem() {
@@ -523,7 +534,7 @@ struct GroupDetailPage {
           }
           .backgroundColor($r('sys.color.ohos_id_color_background'))
           .borderRadius(DesignConstants.RADIUS.LG)
-          .margin({ left: 16, right: 16, bottom: 24 })
+          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 24 })
 
         }
         .width('100%')
@@ -534,6 +545,20 @@ struct GroupDetailPage {
     .width('100%')
     .height('100%')
     .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    }
+    .hideTitleBar(true)
+    .onReady((context: NavDestinationContext) => {
+      this.pathStack = context.pathStack;
+      const param = context.pathInfo.param as Record<string, Object> | undefined;
+      if (param && param.groupId) {
+        this.groupId = param.groupId as string;
+        (async () => {
+          await this.loadGroupDetail();
+        })();
+      } else {
+        this.errorMessage = '缺少群组ID参数';
+      }
+    })
     .bindSheet($$this.showMemberList, this.buildMemberListSheet(), {
       height: '70%',
       // 允许拖拽/点击外部关闭时，不显示右上角关闭按钮（避免冗余）
@@ -566,11 +591,11 @@ struct GroupDetailPage {
         SystemLoadingView({ message: '加载成员列表中...' }).layoutWeight(1)
       } else if (this.members.length > 0) {
         List() {
-          ForEach(this.members, (member: GroupMemberItem) => {
+          LazyForEach(this.membersDataSource, (member: GroupMemberItem) => {
             ListItem() {
               this.buildMemberItem(member)
             }
-          })
+          }, (member: GroupMemberItem) => member.user?.user_id ?? member.joined_at ?? '')
           if (this.membersLoadingMore) {
             ListItem() {
               Row({ space: DesignConstants.SPACING.SM }) {
@@ -629,8 +654,8 @@ struct GroupDetailPage {
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getRoleColor(member.role))
             .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
-            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-            .borderRadius(4)
+            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 2, bottom: 2 })
+            .borderRadius(DesignConstants.SPACING.XS)
 
           if (member.joined_at) {
             Text(`加入于 ${new Date(member.joined_at).toLocaleDateString()}`)
@@ -651,4 +676,9 @@ struct GroupDetailPage {
     .borderRadius(DesignConstants.RADIUS.MD)
     .margin({ bottom: DesignConstants.SPACING.SM })
   }
+}
+
+@Builder
+export function GroupDetailPageBuilder() {
+  GroupDetailPage()
 }

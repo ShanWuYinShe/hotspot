@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { adminAppConfigService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
@@ -43,10 +44,12 @@
 		isLoading = true;
 		try {
 			// 并行加载服务端配置和客户端配置
-			const [serverRes, clientRes] = await Promise.all([
-				adminAppConfigService.get(),
-				adminAppConfigService.getClient()
-			]);
+			const [serverRes, clientRes] = await withMinimumLoadingTime(() =>
+				Promise.all([
+					adminAppConfigService.get(),
+					adminAppConfigService.getClient()
+				])
+			);
 
 			if (isSuccess(serverRes) && serverRes.data) {
 				serverConfig = serverRes.data;

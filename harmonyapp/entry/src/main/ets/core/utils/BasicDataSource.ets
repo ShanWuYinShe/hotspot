@@ -82,8 +82,28 @@ export class BasicDataSource<T> implements IDataSource {
 
   public addData(data: T[]) {
     if (!data || data.length === 0) return;
-    const startIndex = this.originDataArray.length;
-    this.originDataArray.push(...data);
+    for (const item of data) {
+      this.originDataArray.push(item);
+    }
+    this.notifyDataReload();
+  }
+
+  /** 追加数据到末尾（别名） */
+  public appendData(data: T[]) {
+    this.addData(data);
+  }
+
+  /** 在头部插入数据 */
+  public prependData(data: T[]) {
+    if (!data || data.length === 0) return;
+    const newArr: T[] = [];
+    for (const item of data) {
+      newArr.push(item);
+    }
+    for (const item of this.originDataArray) {
+      newArr.push(item);
+    }
+    this.originDataArray = newArr;
     this.notifyDataReload();
   }
   

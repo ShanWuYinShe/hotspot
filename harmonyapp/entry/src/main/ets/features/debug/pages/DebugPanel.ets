@@ -10,10 +10,11 @@ import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/Global
 import { SystemToast } from '../../../components/SystemToast';
 import { MyProfile } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
+import { AppRouter } from '../../../core/router/AppRouter';
 
-@Entry
 @Component
-struct DebugPanel {
+export struct DebugPanel {
+  pathStack: NavPathStack = new NavPathStack();
   @State logs: string[] = [];
   @State currentUserId: string | null = null;
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
@@ -33,17 +34,17 @@ struct DebugPanel {
   }
 
   build() {
+    NavDestination() {
     Column() {
       // 标题栏
       Row() {
         IconButton({
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
-          iconColor: DesignConstants.COLOR.TEXT_PRIMARY_LIGHT,
+          iconColor: $r('sys.color.ohos_id_color_text_primary'),
           bgColor: Color.Transparent,
           onButtonClick: () => {
-            const routerInstance = this.getUIContext().getRouter();
-            routerInstance.back();
+            AppRouter.pop();
           }
         })
 
@@ -57,7 +58,7 @@ struct DebugPanel {
         IconButton({
           icon: AppIcon.CLOSE, // Used as Clear
           iconSize: IconSize.LARGE,
-          iconColor: DesignConstants.COLOR.TEXT_PRIMARY_LIGHT,
+          iconColor: $r('sys.color.ohos_id_color_text_primary'),
           bgColor: Color.Transparent,
           onButtonClick: () => {
             this.logs = [];
@@ -66,7 +67,7 @@ struct DebugPanel {
       }
       .width('100%')
       .height(56)
-      .padding({ left: 8, right: 8 })
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
       .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       Scroll() {
@@ -146,6 +147,16 @@ struct DebugPanel {
     .width('100%')
     .height('100%')
     .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    }
+    .hideTitleBar(true)
+    .onReady((context: NavDestinationContext) => {
+      this.pathStack = context.pathStack;
+    })
   }
+}
+
+@Builder
+export function DebugPanelBuilder() {
+  DebugPanel()
 }
 

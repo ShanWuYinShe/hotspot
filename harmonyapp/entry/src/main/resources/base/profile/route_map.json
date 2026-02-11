@@ -1,0 +1,79 @@
+{
+  "routerMap": [
+    {
+      "name": "LoginPage",
+      "pageSourceFile": "src/main/ets/features/auth/pages/LoginPage.ets",
+      "buildFunction": "LoginPageBuilder"
+    },
+    {
+      "name": "ChatPage",
+      "pageSourceFile": "src/main/ets/features/chat/pages/ChatPage.ets",
+      "buildFunction": "ChatPageBuilder"
+    },
+    {
+      "name": "GroupDetailPage",
+      "pageSourceFile": "src/main/ets/features/group/pages/GroupDetailPage.ets",
+      "buildFunction": "GroupDetailPageBuilder"
+    },
+    {
+      "name": "CreateGroupPage",
+      "pageSourceFile": "src/main/ets/features/group/pages/CreateGroupPage.ets",
+      "buildFunction": "CreateGroupPageBuilder"
+    },
+    {
+      "name": "CreateMomentPage",
+      "pageSourceFile": "src/main/ets/features/moment/pages/CreateMomentPage.ets",
+      "buildFunction": "CreateMomentPageBuilder"
+    },
+    {
+      "name": "PhotoPreviewPage",
+      "pageSourceFile": "src/main/ets/features/moment/pages/PhotoPreviewPage.ets",
+      "buildFunction": "PhotoPreviewPageBuilder"
+    },
+    {
+      "name": "MapPage",
+      "pageSourceFile": "src/main/ets/features/map/pages/MapPage.ets",
+      "buildFunction": "MapPageBuilder"
+    },
+    {
+      "name": "LocationPickerPage",
+      "pageSourceFile": "src/main/ets/features/map/pages/LocationPickerPage.ets",
+      "buildFunction": "LocationPickerPageBuilder"
+    },
+    {
+      "name": "SearchPage",
+      "pageSourceFile": "src/main/ets/features/search/pages/SearchPage.ets",
+      "buildFunction": "SearchPageBuilder"
+    },
+    {
+      "name": "SettingsPage",
+      "pageSourceFile": "src/main/ets/features/settings/pages/SettingsPage.ets",
+      "buildFunction": "SettingsPageBuilder"
+    },
+    {
+      "name": "AdvancedSettingsPage",
+      "pageSourceFile": "src/main/ets/features/settings/pages/AdvancedSettingsPage.ets",
+      "buildFunction": "AdvancedSettingsPageBuilder"
+    },
+    {
+      "name": "AccountsPage",
+      "pageSourceFile": "src/main/ets/features/settings/pages/AccountsPage.ets",
+      "buildFunction": "AccountsPageBuilder"
+    },
+    {
+      "name": "SubscriptionsPage",
+      "pageSourceFile": "src/main/ets/features/subscriptions/pages/SubscriptionsPage.ets",
+      "buildFunction": "SubscriptionsPageBuilder"
+    },
+    {
+      "name": "RecommendationPage",
+      "pageSourceFile": "src/main/ets/features/recommendation/pages/RecommendationPage.ets",
+      "buildFunction": "RecommendationPageBuilder"
+    },
+    {
+      "name": "DebugPanel",
+      "pageSourceFile": "src/main/ets/features/debug/pages/DebugPanel.ets",
+      "buildFunction": "DebugPanelBuilder"
+    }
+  ]
+}

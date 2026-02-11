@@ -11,6 +11,7 @@
     "deliveryWithInstall": true,
     "installationFree": false,
     "pages": "$profile:main_pages",
+    "routerMap": "$profile:route_map",
     "requestPermissions": [
       {
         "name": "ohos.permission.LOCATION",
@@ -79,6 +80,14 @@
       {
         "name": "ohos.permission.MICROPHONE",
         "reason": "$string:microphone_reason",
+        "usedScene": {
+          "abilities": ["EntryAbility"],
+          "when": "inuse"
+        }
+      },
+      {
+        "name": "ohos.permission.DISTRIBUTED_DATASYNC",
+        "reason": "$string:distributed_sync_reason",
         "usedScene": {
           "abilities": ["EntryAbility"],
           "when": "inuse"

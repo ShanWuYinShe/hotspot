@@ -73,6 +73,7 @@ export interface PageNamesType {
   DEBUG_PANEL: string;
   SUBSCRIPTIONS: string;
   ACCOUNTS: string;
+  RECOMMENDATION: string;
 }
 
 export const PageNames: PageNamesType = {
@@ -94,7 +95,8 @@ export const PageNames: PageNamesType = {
   PHOTO_PREVIEW: 'PhotoPreviewPage',
   DEBUG_PANEL: 'DebugPanel',
   SUBSCRIPTIONS: 'SubscriptionsPage',
-  ACCOUNTS: 'AccountsPage'
+  ACCOUNTS: 'AccountsPage',
+  RECOMMENDATION: 'RecommendationPage'
 };
 
 // 默认配置

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { adminRbacService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
@@ -34,10 +35,12 @@
 	async function loadData() {
 		isLoading = true;
 		try {
-			const [rolesRes, permissionsRes] = await Promise.all([
-				adminRbacService.getRoles(),
-				adminRbacService.getPermissions()
-			]);
+			const [rolesRes, permissionsRes] = await withMinimumLoadingTime(() =>
+				Promise.all([
+					adminRbacService.getRoles(),
+					adminRbacService.getPermissions()
+				])
+			);
 
 			if (isSuccess(rolesRes) && rolesRes.data) {
 				roles = rolesRes.data.items;

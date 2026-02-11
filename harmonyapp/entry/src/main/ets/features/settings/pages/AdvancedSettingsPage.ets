@@ -3,26 +3,27 @@
  * 重构：使用原生 List 组件
  */
 
-import { PageNames } from '../../../constants/AppConstants';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { SystemToast } from '../../../components/SystemToast';
+import { AppRouter } from '../../../core/router/AppRouter';
 
-@Entry
 @Component
-struct AdvancedSettingsPage {
+export struct AdvancedSettingsPage {
+  pathStack: NavPathStack = new NavPathStack();
+
   build() {
+    NavDestination() {
     Column() {
       // 标题栏
       Row() {
         IconButton({
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
-          iconColor: DesignConstants.COLOR.TEXT_PRIMARY_LIGHT,
+          iconColor: $r('sys.color.ohos_id_color_text_primary'),
           bgColor: Color.Transparent,
           onButtonClick: () => {
-            const routerInstance = this.getUIContext().getRouter();
-            routerInstance.back();
+            AppRouter.pop();
           }
         })
 
@@ -37,7 +38,7 @@ struct AdvancedSettingsPage {
       }
       .width('100%')
       .height(56)
-      .padding({ left: 8, right: 8 })
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
       .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       List({ space: 16 }) {
@@ -50,9 +51,8 @@ struct AdvancedSettingsPage {
           .backgroundColor($r('sys.color.ohos_id_color_background'))
 
           ListItem() {
-            this.SettingItem('调试面板', async () => {
-               const routerInstance = this.getUIContext().getRouter();
-               await routerInstance.pushUrl({ url: `features/debug/pages/${PageNames.DEBUG_PANEL}` });
+            this.SettingItem('调试面板', () => {
+              AppRouter.push('DebugPanel');
             })
           }
           .backgroundColor($r('sys.color.ohos_id_color_background'))
@@ -68,6 +68,11 @@ struct AdvancedSettingsPage {
     .width('100%')
     .height('100%')
     .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    }
+    .hideTitleBar(true)
+    .onReady((context: NavDestinationContext) => {
+      this.pathStack = context.pathStack;
+    })
   }
 
   @Builder
@@ -86,4 +91,9 @@ struct AdvancedSettingsPage {
     .padding(16)
     .onClick(onClick)
   }
+}
+
+@Builder
+export function AdvancedSettingsPageBuilder() {
+  AdvancedSettingsPage()
 }

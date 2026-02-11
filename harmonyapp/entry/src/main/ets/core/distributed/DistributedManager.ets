@@ -7,7 +7,10 @@ import distributedKVStore from '@ohos.data.distributedKVStore';
 import deviceManager from '@ohos.distributedDeviceManager';
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { GetHistoryResponse } from '../types/api';
+import { PrivateMessageItem, GroupMessageItem } from '../types/api';
+
+/** 可同步的消息类型（私聊或群聊消息，含 message_id） */
+export type SyncableMessage = PrivateMessageItem | GroupMessageItem;
 
 const DOMAIN_NUMBER: number = 0xFF10;
 const TAG: string = 'DistributedManager';
@@ -31,6 +34,42 @@ export interface SyncProgress {
   status: 'syncing' | 'completed' | 'failed';
   progress: number;
   error?: string;
+}
+
+/** 设备状态变化回调数据（deviceStateChange 事件，含 action + device） */
+interface DeviceStateChangeData {
+  action: deviceManager.DeviceStateChange;
+  device: deviceManager.DeviceBasicInfo;
+}
+
+/** 发现的设备信息（用于 discoverSuccess 回调） */
+interface DiscoveredDeviceInfo {
+  deviceName: string;
+}
+
+/** 设备发现成功回调数据（discoverSuccess 事件） */
+interface DiscoverySuccessData {
+  device?: DiscoveredDeviceInfo;
+}
+
+/** 设备发现参数（用于 startDiscovering，需满足 Record<string, Object>） */
+function createDiscoverParam(): Record<string, Object> {
+  const subscribeId: Object = Date.now();
+  const mode: Object = 0xAA;
+  const medium: Object = 0;
+  const freq: Object = 2;
+  const isSameAccount: Object = false;
+  const isWakeRemote: Object = true;
+  const capability: Object = 0;
+  return {
+    'subscribeId': subscribeId,
+    'mode': mode,
+    'medium': medium,
+    'freq': freq,
+    'isSameAccount': isSameAccount,
+    'isWakeRemote': isWakeRemote,
+    'capability': capability
+  };
 }
 
 export class DistributedManager {
@@ -71,7 +110,7 @@ export class DistributedManager {
       hilog.info(DOMAIN_NUMBER, TAG, '✅ 分布式管理器初始化成功');
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `❌ 分布式管理器初始化失败: ${JSON.stringify(error)}`);
-      throw error;
+      throw (error instanceof Error ? error : new Error(String(error)));
     }
   }
 
@@ -117,7 +156,7 @@ export class DistributedManager {
       hilog.info(DOMAIN_NUMBER, TAG, '✅ 分布式KV存储初始化成功');
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `❌ 分布式KV存储初始化失败: ${JSON.stringify(error)}`);
-      throw error;
+      throw (error instanceof Error ? error : new Error(String(error)));
     }
   }
 
@@ -145,7 +184,7 @@ export class DistributedManager {
       hilog.info(DOMAIN_NUMBER, TAG, '✅ 设备管理器初始化成功');
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `❌ 设备管理器初始化失败: ${JSON.stringify(error)}`);
-      throw error;
+      throw (error instanceof Error ? error : new Error(String(error)));
     }
   }
 
@@ -162,7 +201,7 @@ export class DistributedManager {
       hilog.info(DOMAIN_NUMBER, TAG, `✅ 数据存储成功: ${key}`);
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `❌ 数据存储失败: ${JSON.stringify(error)}`);
-      throw error;
+      throw (error instanceof Error ? error : new Error(String(error)));
     }
   }
 
@@ -197,14 +236,14 @@ export class DistributedManager {
       hilog.info(DOMAIN_NUMBER, TAG, `✅ 数据删除成功: ${key}`);
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `❌ 数据删除失败: ${JSON.stringify(error)}`);
-      throw error;
+      throw (error instanceof Error ? error : new Error(String(error)));
     }
   }
 
   /**
    * 同步消息到其他设备
    */
-  async syncMessages(messages: GetHistoryResponse[], targetDeviceIds?: string[]): Promise<void> {
+  async syncMessages(messages: SyncableMessage[], targetDeviceIds?: string[]): Promise<void> {
     try {
       if (!this.kvStore) {
         throw new Error('分布式存储未初始化');
@@ -225,7 +264,7 @@ export class DistributedManager {
       }
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `❌ 消息同步失败: ${JSON.stringify(error)}`);
-      throw error;
+      throw (error instanceof Error ? error : new Error(String(error)));
     }
   }
 
@@ -246,13 +285,19 @@ export class DistributedManager {
       }
 
       const devices = this.deviceManager.getAvailableDeviceListSync();
-      this.trustedDevices = devices.map(device => ({
-        deviceId: device.deviceId,
-        deviceName: device.deviceName,
-        deviceType: device.deviceType,
-        networkId: device.networkId || '',
-        isOnline: true
-      }));
+      this.trustedDevices = [];
+      for (let i = 0; i < devices.length; i++) {
+        const device = devices[i];
+        const deviceTypeVal = device.deviceType;
+        const info: DeviceInfo = {
+          deviceId: device.deviceId,
+          deviceName: device.deviceName,
+          deviceType: (typeof deviceTypeVal === 'number' ? deviceTypeVal : 0),
+          networkId: (device.networkId !== undefined && device.networkId !== null ? device.networkId : ''),
+          isOnline: true
+        };
+        this.trustedDevices.push(info);
+      }
 
       hilog.info(DOMAIN_NUMBER, TAG, `✅ 可信设备列表已更新: ${this.trustedDevices.length}个设备`);
     } catch (error) {
@@ -269,21 +314,12 @@ export class DistributedManager {
         throw new Error('设备管理器未初始化');
       }
 
-      const discoverParam = {
-        subscribeId: Date.now(),
-        mode: 0xAA, // 主动发现模式
-        medium: 0, // 自动选择发现媒介
-        freq: 2, // 高频发现
-        isSameAccount: false,
-        isWakeRemote: true,
-        capability: 0
-      };
-
+      const discoverParam = createDiscoverParam();
       this.deviceManager.startDiscovering(discoverParam);
       hilog.info(DOMAIN_NUMBER, TAG, '✅ 设备发现已开始');
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `❌ 开始设备发现失败: ${JSON.stringify(error)}`);
-      throw error;
+      throw (error instanceof Error ? error : new Error(String(error)));
     }
   }
 
@@ -331,11 +367,14 @@ export class DistributedManager {
    * 处理同步完成事件
    */
   private handleSyncComplete(data: Array<[string, number]>): void {
-    for (const [deviceId, result] of data) {
+    for (let i = 0; i < data.length; i++) {
+      const pair = data[i];
+      const deviceId = pair[0];
+      const result = pair[1];
       const callback = this.syncCallbacks.get(deviceId);
       if (callback) {
         const progress: SyncProgress = {
-          deviceId,
+          deviceId: deviceId,
           status: result === 0 ? 'completed' : 'failed',
           progress: 100,
           error: result !== 0 ? `同步失败，错误码: ${result}` : undefined
@@ -350,8 +389,8 @@ export class DistributedManager {
   /**
    * 处理设备状态变化
    */
-  private handleDeviceStateChange(data: deviceManager.DeviceStateChange): void {
-    hilog.info(DOMAIN_NUMBER, TAG, `设备状态变化: ${data.deviceId} - ${data.action}`);
+  private handleDeviceStateChange(data: DeviceStateChangeData): void {
+    hilog.info(DOMAIN_NUMBER, TAG, `设备状态变化: ${data.device.deviceId} - ${data.action}`);
     
     // 更新可信设备列表
     this.refreshTrustedDevices();
@@ -360,7 +399,7 @@ export class DistributedManager {
   /**
    * 处理设备发现事件
    */
-  private handleDeviceDiscovered(data: deviceManager.DiscoverySuccess): void {
+  private handleDeviceDiscovered(data: DiscoverySuccessData): void {
     hilog.info(DOMAIN_NUMBER, TAG, `发现新设备: ${data.device?.deviceName}`);
     
     // 可以在这里处理新发现的设备

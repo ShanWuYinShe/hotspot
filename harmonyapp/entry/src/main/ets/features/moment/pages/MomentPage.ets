@@ -14,10 +14,14 @@ import { IntelligentLocationCard } from '../../../components/IntelligentLocation
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
-import { AppIcon, SystemIcon } from '../../../components/SystemIcon';
+import { AppIcon, SystemIcon, IconSize } from '../../../components/SystemIcon';
+import { SystemShareService } from '../../../core/services/SystemShareService';
+import { common } from '@kit.AbilityKit';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { SystemToast } from '../../../components/SystemToast';
 import { MomentCacheService } from '../../../core/database/MomentCacheService';
+import { LoadingUtil } from '../../../core/utils/LoadingUtil';
+import { AppRouter, LoginRouteParam, PhotoPreviewRouteParam } from '../../../core/router/AppRouter';
 
 const DOMAIN_NUMBER: number = 0xFF05;
 const TAG: string = 'MomentPage';
@@ -74,7 +78,7 @@ export struct MomentPage {
         sort_by: 'distance',
         pagination: { limit: 50 }
       };
-      const response = await ApiClient.searchMoments(request);
+      const response = await LoadingUtil.withMinimumTime(() => ApiClient.searchMoments(request));
 
       if (response.code === 0 && response.data) {
         const validItems = response.data.items.filter((m: MomentItem) => m.moment_id && m.user);
@@ -169,15 +173,10 @@ export struct MomentPage {
     const currentUser = this.stateManager.getCurrentUser();
     if (!currentUser) {
       SystemToast.showWarning('请先登录后再点赞', this.getUIContext());
-      try {
-        const routerInstance = this.getUIContext().getRouter();
-        await routerInstance.pushUrl({
-          url: `features/auth/pages/${PageNames.LOGIN}`,
-          params: { reason: 'action_required', action: '点赞瞬间' }
-        });
-      } catch (error) {
-        // ignore
-      }
+      const loginParams = new LoginRouteParam();
+      loginParams.reason = 'action_required';
+      loginParams.action = '点赞瞬间';
+      AppRouter.push(PageNames.LOGIN, loginParams);
       return;
     }
 
@@ -194,16 +193,26 @@ export struct MomentPage {
     }
   }
 
-  private previewImage(momentId: string, images: string[], index: number) {
+  private async shareMoment(moment: MomentItem): Promise<void> {
     try {
-      const routerInstance = this.getUIContext().getRouter();
-      routerInstance.pushUrl({
-        url: `features/moment/pages/${PageNames.PHOTO_PREVIEW}`,
-        params: { momentId: momentId, images: images, index: index }
-      });
+      const context = getContext(this) as common.UIAbilityContext;
+      const content = SystemShareService.buildMomentShareContent(
+        moment.description,
+        moment.user?.nickname ?? '匿名用户',
+        moment.moment_id
+      );
+      await SystemShareService.getInstance().shareText(context, content);
     } catch (error) {
-      SystemToast.showError('打开图片失败', this.getUIContext());
+      // User cancelled or share failed - non-fatal
     }
+  }
+
+  private previewImage(momentId: string, images: string[], index: number) {
+    const previewParams = new PhotoPreviewRouteParam();
+    previewParams.momentId = momentId;
+    previewParams.images = images;
+    previewParams.index = index;
+    AppRouter.push(PageNames.PHOTO_PREVIEW, previewParams);
   }
 
   build() {
@@ -223,22 +232,16 @@ export struct MomentPage {
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .height(32)
           .onClick(async () => {
-            try {
-              const currentUser = this.stateManager.getCurrentUser();
-              if (!currentUser) {
-                SystemToast.showWarning('请先登录后再发布', this.getUIContext());
-                const routerInstance = this.getUIContext().getRouter();
-                await routerInstance.pushUrl({
-                  url: `features/auth/pages/${PageNames.LOGIN}`,
-                  params: { reason: 'action_required', action: '发布瞬间' }
-                });
-                return;
-              }
-              const routerInstance = this.getUIContext().getRouter();
-              await routerInstance.pushUrl({ url: `features/moment/pages/${PageNames.CREATE_MOMENT}` });
-            } catch (error) {
-              hilog.error(DOMAIN_NUMBER, TAG, `跳转失败: ${JSON.stringify(error)}`);
+            const currentUser = this.stateManager.getCurrentUser();
+            if (!currentUser) {
+              SystemToast.showWarning('请先登录后再发布', this.getUIContext());
+              const lp = new LoginRouteParam();
+              lp.reason = 'action_required';
+              lp.action = '发布瞬间';
+              AppRouter.push(PageNames.LOGIN, lp);
+              return;
             }
+            AppRouter.push(PageNames.CREATE_MOMENT);
           })
       }
       .width('100%')
@@ -441,7 +444,7 @@ export struct MomentPage {
         }
 
         Row({ space: DesignConstants.SPACING.XS }) {
-          SystemIcon({ icon: AppIcon.MESSAGE, iconSize: 20, iconColor: DesignConstants.COLOR.TEXT_SECONDARY_LIGHT })
+          SystemIcon({ icon: AppIcon.MESSAGE, iconSize: 20, iconColor: $r('sys.color.ohos_id_color_text_secondary') })
           Text(moment.comments_count.toString())
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
@@ -450,7 +453,13 @@ export struct MomentPage {
         Blank()
 
         Row({ space: DesignConstants.SPACING.XS }) {
-          SystemIcon({ icon: AppIcon.SHARE, iconSize: 20, iconColor: DesignConstants.COLOR.TEXT_SECONDARY_LIGHT })
+          SystemIcon({
+            icon: AppIcon.SHARE,
+            iconSize: IconSize.SMALL,
+            iconColor: $r('sys.color.ohos_id_color_text_secondary'),
+            clickable: true,
+            onIconClick: () => this.shareMoment(moment)
+          })
           Text(moment.shares_count.toString())
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
@@ -487,7 +496,7 @@ struct LikeButton {
       SystemIcon({
         icon: this.isLiked ? AppIcon.HEART_FILL : AppIcon.HEART,
         iconSize: 20,
-        iconColor: this.isLiked ? DesignConstants.COLOR.ERROR : DesignConstants.COLOR.TEXT_SECONDARY_LIGHT,
+        iconColor: this.isLiked ? DesignConstants.COLOR.ERROR : $r('sys.color.ohos_id_color_text_secondary'),
         clickable: true,
         onIconClick: () => {
           this.isLiked = !this.isLiked;

@@ -10,14 +10,15 @@ import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { DesignConstants } from '../../../constants/DesignConstants';
-
+import { LoadingUtil } from '../../../core/utils/LoadingUtil';
+import { AppRouter } from '../../../core/router/AppRouter';
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'RecommendationPage';
 
-@Entry
 @Component
-struct RecommendationPage {
+export struct RecommendationPage {
+  pathStack: NavPathStack = new NavPathStack();
   @State isLoading: boolean = true;
   @State trendingTags: TagItem[] = [];
   @State recommendedUsers: UserItem[] = [];
@@ -29,21 +30,23 @@ struct RecommendationPage {
   private async loadData() {
     this.isLoading = true;
     try {
-      // 并行加载推荐数据
-      const results = await Promise.all([
-        ApiClient.getTrendingTags({ limit: 10, timeframe: 'weekly' }),
-        ApiClient.getFeedUsers({ reference_point: { latitude: 0, longitude: 0 }, pagination: { limit: 5 } })
-      ]);
-      const tagsResponse = results[0];
-      const usersResponse = results[1];
+      await LoadingUtil.withMinimumTime(async () => {
+        // 并行加载推荐数据
+        const results = await Promise.all([
+          ApiClient.getTrendingTags({ limit: 10, timeframe: 'weekly' }),
+          ApiClient.getFeedUsers({ reference_point: { latitude: 0, longitude: 0 }, pagination: { limit: 5 } })
+        ]);
+        const tagsResponse = results[0];
+        const usersResponse = results[1];
 
-      if (tagsResponse.code === 0 && tagsResponse.data) {
-        this.trendingTags = tagsResponse.data;
-      }
+        if (tagsResponse.code === 0 && tagsResponse.data) {
+          this.trendingTags = tagsResponse.data;
+        }
 
-      if (usersResponse.code === 0 && usersResponse.data) {
-        this.recommendedUsers = usersResponse.data.items;
-      }
+        if (usersResponse.code === 0 && usersResponse.data) {
+          this.recommendedUsers = usersResponse.data.items;
+        }
+      });
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `加载推荐数据失败: ${JSON.stringify(error)}`);
       SystemToast.showError('加载失败，请重试', this.getUIContext());
@@ -53,6 +56,7 @@ struct RecommendationPage {
   }
 
   build() {
+    NavDestination() {
     Column() {
       // 标题栏
       Row() {
@@ -61,10 +65,11 @@ struct RecommendationPage {
           .fontWeight(FontWeight.Bold)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
-          .padding({ left: DesignConstants.SPACING.LG })
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
       }
       .width('100%')
       .height(56)
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
       .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       if (this.isLoading) {
@@ -78,7 +83,7 @@ struct RecommendationPage {
                 .fontSize(DesignConstants.FONT.SIZE.LG)
                 .fontWeight(FontWeight.Bold)
                 .width('100%')
-                .padding({ left: DesignConstants.SPACING.SM })
+                .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
               
               Flex({ wrap: FlexWrap.Wrap }) {
                 if (this.trendingTags.length > 0) {
@@ -96,7 +101,7 @@ struct RecommendationPage {
                     .padding(DesignConstants.SPACING.SM)
                 }
               }
-              .padding({ left: 8, right: 8 })
+              .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
             }
           }
           .width('100%')
@@ -163,6 +168,11 @@ struct RecommendationPage {
     .width('100%')
     .height('100%')
     .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    }
+    .hideTitleBar(true)
+    .onReady((context: NavDestinationContext) => {
+      this.pathStack = context.pathStack;
+    })
   }
 
   @Builder
@@ -171,7 +181,12 @@ struct RecommendationPage {
       .fontSize(DesignConstants.FONT.SIZE.LG)
       .fontWeight(FontWeight.Bold)
       .width('100%')
-      .padding({ left: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.SM })
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.SM })
       .fontColor($r('sys.color.ohos_id_color_text_primary'))
   }
+}
+
+@Builder
+export function RecommendationPageBuilder() {
+  RecommendationPage()
 }

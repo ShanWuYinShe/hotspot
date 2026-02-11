@@ -2,6 +2,7 @@
 	import { dev } from '$app/environment';
 	import { page } from '$app/state';
 	import { onMount, tick } from 'svelte';
+	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { groupsService, groupMessagesService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { authStore } from '$lib/stores/auth.svelte';
@@ -275,8 +276,10 @@
 	}
 
 	async function init() {
-		await loadGroup();
-		await loadMessages();
+		await withMinimumLoadingTime(async () => {
+			await loadGroup();
+			await loadMessages();
+		});
 	}
 
 	onMount(() => {

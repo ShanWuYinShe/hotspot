@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { groupsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
@@ -22,7 +23,9 @@
 	async function loadGroups() {
 		isLoading = true;
 		try {
-			const response = await groupsService.getMyGroups({ pagination: { limit: 50 } });
+			const response = await withMinimumLoadingTime(() =>
+				groupsService.getMyGroups({ pagination: { limit: 50 } })
+			);
 			if (isSuccess(response) && response.data) {
 				groups = response.data.items;
 			}

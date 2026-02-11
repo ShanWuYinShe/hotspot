@@ -12,6 +12,7 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { HttpUtil } from '../../../core/network/HttpUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
+import { AppRouter } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemToast } from '../../../components/SystemToast';
@@ -19,8 +20,10 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { MyProfile, UpdateLocationRequest, UpgradeAccountRequest } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
-import { AppIcon, SystemIcon } from '../../../components/SystemIcon';
+import { AppIcon } from '../../../components/SystemIcon';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { LoadingUtil } from '../../../core/utils/LoadingUtil';
+import { NfcShareService } from '../../../core/services/NfcShareService';
 
 const DOMAIN_NUMBER: number = 0xFF03;
 const TAG: string = 'ProfilePage';
@@ -52,8 +55,28 @@ export struct ProfilePage {
     if (this.currentUser) {
       this.editNickname = this.currentUser.nickname;
       this.editBio = this.currentUser.bio || '';
+      try {
+        NfcShareService.getInstance().setShareData(
+          NfcShareService.buildUserProfileShare(
+            this.currentUser.user_id,
+            this.currentUser.nickname,
+            this.currentUser.bio,
+            this.currentUser.avatar_url
+          )
+        );
+      } catch (_) {
+        // NFC 不可用或失败时静默忽略
+      }
     }
     await this.loadUserStats();
+  }
+
+  aboutToDisappear(): void {
+    try {
+      NfcShareService.getInstance().clearShareData();
+    } catch (_) {
+      // 静默忽略
+    }
   }
 
   private async loadUserStats(): Promise<void> {
@@ -86,20 +109,22 @@ export struct ProfilePage {
 
     this.isLoading = true;
     try {
-      if (this.currentUser) {
-        await ApiClient.updateProfile({
-          nickname: this.editNickname,
-          bio: this.editBio
-        });
+      await LoadingUtil.withMinimumTime(async () => {
+        if (this.currentUser) {
+          await ApiClient.updateProfile({
+            nickname: this.editNickname,
+            bio: this.editBio
+          });
 
-        const response = await ApiClient.getMyProfile();
-        if (response.code === 0 && response.data) {
-          this.stateManager.updateUser(response.data);
+          const response = await ApiClient.getMyProfile();
+          if (response.code === 0 && response.data) {
+            this.stateManager.updateUser(response.data);
+          }
         }
-      }
 
-      this.isEditing = false;
-      SystemToast.showSuccess('资料更新成功', this.getUIContext());
+        this.isEditing = false;
+        SystemToast.showSuccess('资料更新成功', this.getUIContext());
+      }, LoadingUtil.DEFAULT_ACTION_MS);
     } catch (error) {
       SystemToast.showError('更新失败', this.getUIContext());
     } finally {
@@ -132,23 +157,36 @@ export struct ProfilePage {
 
   private async logout(): Promise<void> {
     try {
-      // 先尝试通知服务端
+      // 1. 先尝试通知服务端（失败不阻塞本地清理）
       try {
         await ApiClient.logout();
       } catch (e) {
         hilog.warn(DOMAIN_NUMBER, TAG, `服务端登出失败: ${JSON.stringify(e)}`);
       }
+
+      // 2. 断开 WebSocket
       this.webSocketService.disconnect();
+
+      // 3. 清理本地持久化数据（Preferences + token）
       await PreferencesUtil.clear();
       await HttpUtil.clearToken();
+
+      // 4. 重置 AppStorage（PersistentStorage 会自动同步到磁盘）
       this.stateManager.clear();
 
-      const routerInstance = this.getUIContext().getRouter();
-      routerInstance.clear();
-      await routerInstance.pushUrl({ url: `features/main/pages/${PageNames.INDEX}` });
+      // 5. 跳转到首页
+      AppRouter.clear();
       SystemToast.show('已退出登录', this.getUIContext());
     } catch (error) {
-      SystemToast.show('退出失败', this.getUIContext());
+      hilog.error(DOMAIN_NUMBER, TAG, `退出登录异常: ${JSON.stringify(error)}`);
+      // 即使出现异常，也强制清理状态，避免用户卡在"已登录但无法操作"的死胡同
+      try {
+        this.stateManager.clear();
+        await HttpUtil.clearToken();
+      } catch (_) {
+        // ignore
+      }
+      SystemToast.show('退出登录遇到问题，请重启应用', this.getUIContext());
     }
   }
 
@@ -300,13 +338,8 @@ export struct ProfilePage {
             .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
             .fontColor(Color.White)
             .fontSize(16)
-            .onClick(async () => {
-              try {
-                const routerInstance = this.getUIContext().getRouter();
-                await routerInstance.pushUrl({ url: `features/auth/pages/${PageNames.LOGIN}` });
-              } catch (error) {
-                SystemToast.showError('跳转失败', this.getUIContext());
-              }
+            .onClick(() => {
+              AppRouter.push(PageNames.LOGIN);
             })
 
           // 登录/注册按钮
@@ -317,13 +350,8 @@ export struct ProfilePage {
             .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
             .fontSize(16)
-            .onClick(async () => {
-              try {
-                const routerInstance = this.getUIContext().getRouter();
-                await routerInstance.pushUrl({ url: `features/auth/pages/${PageNames.LOGIN}` });
-              } catch (error) {
-                SystemToast.showError('跳转失败', this.getUIContext());
-              }
+            .onClick(() => {
+              AppRouter.push(PageNames.LOGIN);
             })
         }
 
@@ -341,14 +369,8 @@ export struct ProfilePage {
         .justifyContent(FlexAlign.Center)
         .width('100%')
         .padding({ top: 8, bottom: 16 })
-        .onClick(async () => {
-          try {
-            await this.getUIContext().getRouter().pushUrl({
-              url: `features/settings/pages/${PageNames.SETTINGS}`
-            });
-          } catch (error) {
-            SystemToast.showError('跳转失败', this.getUIContext());
-          }
+        .onClick(() => {
+          AppRouter.push(PageNames.SETTINGS);
         })
       }
       .width('100%')
@@ -429,10 +451,8 @@ export struct ProfilePage {
         .backgroundColor($r('sys.color.ohos_id_color_background'))
 
         ListItem() {
-          this.MenuItemContent('设置', AppIcon.SETTINGS, async () => {
-            await this.getUIContext().getRouter().pushUrl({
-              url: `features/settings/pages/${PageNames.SETTINGS}`
-            });
+          this.MenuItemContent('设置', AppIcon.SETTINGS, () => {
+            AppRouter.push(PageNames.SETTINGS);
           })
         }
         .backgroundColor($r('sys.color.ohos_id_color_background'))
@@ -443,8 +463,8 @@ export struct ProfilePage {
         .backgroundColor($r('sys.color.ohos_id_color_background'))
       }
       .borderRadius(DesignConstants.RADIUS.LG)
-      .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 56, endMargin: 16 })
-      .margin({ left: 16, right: 16, bottom: 24 })
+      .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 52, endMargin: DesignConstants.SPACING.LG })
+      .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 24 })
     }
     .width('100%')
     .layoutWeight(1)
@@ -495,10 +515,8 @@ export struct ProfilePage {
         .backgroundColor($r('sys.color.ohos_id_color_background'))
 
         ListItem() {
-          this.MenuItemContent('设置', AppIcon.SETTINGS, async () => {
-            await this.getUIContext().getRouter().pushUrl({
-              url: `features/settings/pages/${PageNames.SETTINGS}`
-            });
+          this.MenuItemContent('设置', AppIcon.SETTINGS, () => {
+            AppRouter.push(PageNames.SETTINGS);
           })
         }
         .backgroundColor($r('sys.color.ohos_id_color_background'))
@@ -514,8 +532,8 @@ export struct ProfilePage {
         .backgroundColor($r('sys.color.ohos_id_color_background'))
       }
       .borderRadius(DesignConstants.RADIUS.LG)
-      .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 56, endMargin: 16 })
-      .margin({ left: 16, right: 16, bottom: 24 })
+      .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 52, endMargin: DesignConstants.SPACING.LG })
+      .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 24 })
     }
     .width('100%')
     .layoutWeight(1)
@@ -750,11 +768,17 @@ export struct ProfilePage {
 
   @Builder
   private MenuItemContent(title: string, icon: string, onTap: () => void): void {
-    Row({ space: 12 }) {
-      SystemIcon({ icon: icon as AppIcon, iconSize: 20, iconColor: DesignConstants.COLOR.BRAND_PRIMARY })
+    Row({ space: DesignConstants.SPACING.MD }) {
+      Text() {
+        SymbolSpan($r(icon))
+          .fontSize(20)
+          .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+      }
+      .width(24)
+      .textAlign(TextAlign.Center)
 
       Text(title)
-        .fontSize(16)
+        .fontSize(DesignConstants.FONT.SIZE.LG)
         .fontColor($r('sys.color.ohos_id_color_text_primary'))
         .layoutWeight(1)
 
@@ -765,8 +789,10 @@ export struct ProfilePage {
       }
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
-      top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+    .padding({
+      left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+      top: 14, bottom: 14
+    })
     .onClick(onTap)
   }
 }

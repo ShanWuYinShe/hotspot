@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { usersService, momentsService, groupsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
@@ -55,11 +56,13 @@
 		lastSearchedQuery = searchTerm;
 
 		try {
-			const [usersRes, momentsRes, groupsRes] = await Promise.all([
-				usersService.search({ keyword: searchTerm, reference_point: getReferencePoint() }),
-				momentsService.search({ keyword: searchTerm, reference_point: getReferencePoint() }),
-				groupsService.search({ keyword: searchTerm, reference_point: getReferencePoint() })
-			]);
+			const [usersRes, momentsRes, groupsRes] = await withMinimumLoadingTime(() =>
+				Promise.all([
+					usersService.search({ keyword: searchTerm, reference_point: getReferencePoint() }),
+					momentsService.search({ keyword: searchTerm, reference_point: getReferencePoint() }),
+					groupsService.search({ keyword: searchTerm, reference_point: getReferencePoint() })
+				])
+			);
 
 			if (isSuccess(usersRes) && usersRes.data) {
 				users = usersRes.data.items;
@@ -87,11 +90,13 @@
 		lastSearchedQuery = tag;
 
 		try {
-			const [usersRes, momentsRes, groupsRes] = await Promise.all([
-				usersService.search({ tag, reference_point: getReferencePoint() }),
-				momentsService.search({ tag, reference_point: getReferencePoint() }),
-				groupsService.search({ tag, reference_point: getReferencePoint() })
-			]);
+			const [usersRes, momentsRes, groupsRes] = await withMinimumLoadingTime(() =>
+				Promise.all([
+					usersService.search({ tag, reference_point: getReferencePoint() }),
+					momentsService.search({ tag, reference_point: getReferencePoint() }),
+					groupsService.search({ tag, reference_point: getReferencePoint() })
+				])
+			);
 
 			if (isSuccess(usersRes) && usersRes.data) {
 				users = usersRes.data.items;

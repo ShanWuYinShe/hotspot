@@ -11,14 +11,15 @@ import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/Global
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
 import { MyProfile, AuthData } from '../../../core/types/api';
-import { PageNames } from '../../../constants/AppConstants';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
+import { LoadingUtil } from '../../../core/utils/LoadingUtil';
+import { AppRouter } from '../../../core/router/AppRouter';
 
-@Entry
 @Component
-struct AccountsPage {
+export struct AccountsPage {
+  pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
 
   @State accounts: AuthData[] = [];
@@ -36,9 +37,11 @@ struct AccountsPage {
   private async load() {
     this.isLoading = true;
     try {
-      this.accounts = await AuthAccountManager.listAccounts();
-      const uid = await AuthAccountManager.getCurrentUserId();
-      this.currentUserId = uid !== null ? String(uid) : null;
+      await LoadingUtil.withMinimumTime(async () => {
+        this.accounts = await AuthAccountManager.listAccounts();
+        const uid = await AuthAccountManager.getCurrentUserId();
+        this.currentUserId = uid !== null ? String(uid) : null;
+      });
     } finally {
       this.isLoading = false;
     }
@@ -124,17 +127,17 @@ struct AccountsPage {
   }
 
   build() {
+    NavDestination() {
     Column() {
       // 标题栏
       Row() {
         IconButton({
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
-          iconColor: DesignConstants.COLOR.TEXT_PRIMARY_LIGHT,
+          iconColor: $r('sys.color.ohos_id_color_text_primary'),
           bgColor: Color.Transparent,
           onButtonClick: () => {
-            const routerInstance = this.getUIContext().getRouter();
-            routerInstance.back();
+            AppRouter.pop();
           }
         })
 
@@ -149,7 +152,7 @@ struct AccountsPage {
       }
       .width('100%')
       .height(56)
-      .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
       .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       if (this.isLoading) {
@@ -169,8 +172,7 @@ struct AccountsPage {
             .fontColor(Color.White)
             .height(44)
             .onClick(() => {
-              const routerInstance = this.getUIContext().getRouter();
-              routerInstance.pushUrl({ url: `features/auth/pages/${PageNames.LOGIN}` });
+              AppRouter.push('LoginPage');
             })
         }
         .width('100%')
@@ -191,7 +193,7 @@ struct AccountsPage {
                         .fontColor(Color.White)
                         .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
                         .borderRadius(DesignConstants.RADIUS.MD)
-                        .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+                        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 2, bottom: 2 })
                     }
                   }
                   Text(`ID: ${acc.user_id}`)
@@ -235,6 +237,16 @@ struct AccountsPage {
     .width('100%')
     .height('100%')
     .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    }
+    .hideTitleBar(true)
+    .onReady((context: NavDestinationContext) => {
+      this.pathStack = context.pathStack;
+    })
   }
+}
+
+@Builder
+export function AccountsPageBuilder() {
+  AccountsPage()
 }
 

@@ -4,7 +4,6 @@
  */
 
 import { GlobalStateManager, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_USER_TYPE } from '../../../core/state/GlobalStateManager';
-import { PageNames } from '../../../constants/AppConstants';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
@@ -13,10 +12,11 @@ import { WebSocketService } from '../../../core/network/WebSocketService';
 import { MyProfile } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
+import { AppRouter, ProfileRouteParam, LoginRouteParam } from '../../../core/router/AppRouter';
 
-@Entry
 @Component
-struct SettingsPage {
+export struct SettingsPage {
+  pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
   @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
   @StorageLink(KEY_USER_TYPE) userType: string = '';
@@ -31,9 +31,7 @@ struct SettingsPage {
       await HttpUtil.clearToken();
       this.stateManager.updateUser(null);
 
-      const routerInstance = this.getUIContext().getRouter();
-      routerInstance.clear();
-      await routerInstance.pushUrl({ url: `features/main/pages/${PageNames.INDEX}` });
+      AppRouter.clear();
       SystemToast.show('已退出登录', this.getUIContext());
     } catch (error) {
       SystemToast.show('退出失败', this.getUIContext());
@@ -41,6 +39,7 @@ struct SettingsPage {
   }
 
   build() {
+    NavDestination() {
     Column() {
       // 标题栏
       Row() {
@@ -50,8 +49,7 @@ struct SettingsPage {
             .fontColor([$r('sys.color.ohos_id_color_text_primary')])
         }
         .onClick(() => {
-          const routerInstance = this.getUIContext().getRouter();
-          routerInstance.back();
+          AppRouter.pop();
         })
         .width(48)
         .height(48)
@@ -68,7 +66,7 @@ struct SettingsPage {
       }
       .width('100%')
       .height(56)
-      .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
       .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       // 设置列表
@@ -77,8 +75,7 @@ struct SettingsPage {
         ListItemGroup({ header: this.ListHeader('账号') }) {
           ListItem() {
             this.SettingItem('账号管理', '切换/删除本地已保存账号', () => {
-              const routerInstance = this.getUIContext().getRouter();
-              routerInstance.pushUrl({ url: `features/settings/pages/${PageNames.ACCOUNTS}` });
+              AppRouter.push('AccountsPage');
             })
           }
           .backgroundColor($r('sys.color.ohos_id_color_background'))
@@ -87,18 +84,16 @@ struct SettingsPage {
             this.SettingItem('个人资料', '修改头像、昵称', async () => {
               if (this.currentUser) {
                 const userId = await AuthAccountManager.getCurrentUserId();
-                const routerInstance = this.getUIContext().getRouter();
-                routerInstance.pushUrl({
-                  url: `features/profile/pages/${PageNames.PROFILE}`,
-                  params: { userId: userId }
-                });
+                const profileParams = new ProfileRouteParam();
+                profileParams.userId = userId ?? '';
+                AppRouter.push('ProfilePage', profileParams);
               } else {
                 SystemToast.showWarning('请先登录', this.getUIContext());
-                const routerInstance = this.getUIContext().getRouter();
-                routerInstance.pushUrl({
-                  url: `features/auth/pages/${PageNames.LOGIN}`,
-                  params: { reason: 'action_required', action: '查看个人资料', redirectUrl: `features/profile/pages/${PageNames.PROFILE}` }
-                });
+                const loginParams = new LoginRouteParam();
+                loginParams.reason = 'action_required';
+                loginParams.action = '查看个人资料';
+                loginParams.redirectUrl = 'ProfilePage';
+                AppRouter.push('LoginPage', loginParams);
               }
             })
           }
@@ -112,16 +107,14 @@ struct SettingsPage {
         ListItemGroup({ header: this.ListHeader('通用') }) {
           ListItem() {
             this.SettingItem('消息通知', '', () => {
-              const routerInstance = this.getUIContext().getRouter();
-              routerInstance.pushUrl({ url: `features/subscriptions/pages/${PageNames.SUBSCRIPTIONS}` });
+              AppRouter.push('SubscriptionsPage');
             })
           }
           .backgroundColor($r('sys.color.ohos_id_color_background'))
 
           ListItem() {
-            this.SettingItem('高级设置', '开发者选项、网络诊断', async () => {
-              const routerInstance = this.getUIContext().getRouter();
-              await routerInstance.pushUrl({ url: `features/settings/pages/${PageNames.ADVANCED_SETTINGS}` });
+            this.SettingItem('高级设置', '开发者选项、网络诊断', () => {
+              AppRouter.push('AdvancedSettingsPage');
             })
           }
           .backgroundColor($r('sys.color.ohos_id_color_background'))
@@ -150,7 +143,7 @@ struct SettingsPage {
               .width('100%')
               .height(50)
               .backgroundColor($r('sys.color.ohos_id_color_background'))
-              .fontColor('#FF3B30')
+              .fontColor($r('app.color.color_danger'))
               .fontSize(DesignConstants.FONT.SIZE.LG)
               .type(ButtonType.Normal)
               .borderRadius(DesignConstants.RADIUS.LG)
@@ -169,9 +162,8 @@ struct SettingsPage {
               .fontColor(Color.White)
               .fontSize(DesignConstants.FONT.SIZE.LG)
               .type(ButtonType.Capsule)
-              .onClick(async () => {
-                const routerInstance = this.getUIContext().getRouter();
-                await routerInstance.pushUrl({ url: `features/auth/pages/${PageNames.LOGIN}` });
+              .onClick(() => {
+                AppRouter.push('LoginPage');
               })
           }
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.XXL })
@@ -185,6 +177,11 @@ struct SettingsPage {
     .width('100%')
     .height('100%')
     .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    }
+    .hideTitleBar(true)
+    .onReady((context: NavDestinationContext) => {
+      this.pathStack = context.pathStack;
+    })
   }
 
   @Builder
@@ -223,4 +220,9 @@ struct SettingsPage {
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
     .onClick(onClick)
   }
+}
+
+@Builder
+export function SettingsPageBuilder() {
+  SettingsPage()
 }

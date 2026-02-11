@@ -7,6 +7,7 @@
 import { KEY_IS_LOGGED_IN, KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
+import { AppRouter } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import {
   MomentItem, UserItem, GroupItem, GeoPoint,
@@ -19,7 +20,11 @@ import { SystemToast } from '../../../components/SystemToast';
 import { LocationBar } from '../../../components/LocationBar';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
+import { LoadingUtil } from '../../../core/utils/LoadingUtil';
+import { BasicDataSource } from '../../../core/utils/BasicDataSource';
+import { DistributedManager } from '../../../core/distributed/DistributedManager';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { WidgetDataService } from '../../../core/services/WidgetDataService';
 
 const DOMAIN_NUMBER: number = 0xFF10;
 const TAG: string = 'NearbyPage';
@@ -28,17 +33,26 @@ class GroupDetailParams {
   groupId: string = '';
 }
 
+class LoginRedirectParams {
+  reason: string = '';
+  action: string = '';
+}
+
 @Component
 export struct NearbyPage {
   @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
-  @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
-  @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
+  @StorageLink(KEY_CURRENT_LOCATION) @Watch('onCurrentLocationChange') currentLocation: LocationInfo | null = null;
+  @StorageLink(KEY_BROWSE_ANCHOR) @Watch('onBrowseAnchorChange') browseAnchor: LocationInfo | null = null;
+  @StorageLink('nearbyDeviceCount') nearbyDeviceCount: number = 0;
 
   @State currentSubTab: number = 0;
   private subTabController: TabsController = new TabsController();
+  /** 标记 aboutToAppear 是否已完成首次数据加载，避免 @Watch 重复触发 */
+  private initialLoadDone: boolean = false;
 
   // 动态数据
   @State moments: MomentItem[] = [];
+  private momentsDataSource: BasicDataSource<MomentItem> = new BasicDataSource<MomentItem>([]);
   @State momentsLoading: boolean = false;
   @State momentsError: string = '';
   @State momentsHasMore: boolean = false;
@@ -47,6 +61,7 @@ export struct NearbyPage {
 
   // 用户数据
   @State users: UserItem[] = [];
+  private usersDataSource: BasicDataSource<UserItem> = new BasicDataSource<UserItem>([]);
   @State usersLoading: boolean = false;
   @State usersError: string = '';
   @State usersHasMore: boolean = false;
@@ -55,6 +70,7 @@ export struct NearbyPage {
 
   // 群组数据
   @State groups: GroupItem[] = [];
+  private groupsDataSource: BasicDataSource<GroupItem> = new BasicDataSource<GroupItem>([]);
   @State groupsLoading: boolean = false;
   @State groupsError: string = '';
   @State groupsHasMore: boolean = false;
@@ -63,6 +79,59 @@ export struct NearbyPage {
 
   async aboutToAppear() {
     await this.loadCurrentTabData();
+    this.initialLoadDone = true;
+
+    // Start device discovery (non-blocking)
+    try {
+      const dm = DistributedManager.getInstance();
+      dm.startDeviceDiscovery();
+    } catch {
+      hilog.warn(DOMAIN_NUMBER, TAG, '设备发现启动失败');
+    }
+  }
+
+  aboutToDisappear() {
+    try {
+      DistributedManager.getInstance().stopDeviceDiscovery();
+    } catch {
+      // ignore
+    }
+  }
+
+  /**
+   * currentLocation 变化时：仅当没有设置浏览锚点且当前数据为空/出错时自动刷新
+   * 典型场景：页面加载时 GPS 尚未定位，定位完成后自动加载附近数据
+   */
+  private onCurrentLocationChange(): void {
+    if (!this.initialLoadDone) return;
+    // 已设置浏览锚点时，currentLocation 变化不影响搜索中心
+    if (this.browseAnchor) return;
+    // 新位置为 null 则无需处理
+    if (!this.currentLocation) return;
+    // 仅当当前 tab 无数据或有错误时才自动刷新（避免频繁 GPS 更新导致反复请求）
+    if (this.isCurrentTabEmpty()) {
+      hilog.info(DOMAIN_NUMBER, TAG, '位置可用，自动加载附近数据');
+      this.loadCurrentTabData();
+    }
+  }
+
+  /**
+   * browseAnchor 变化时：用户主动切换了搜索中心，始终刷新当前 tab 数据
+   */
+  private onBrowseAnchorChange(): void {
+    if (!this.initialLoadDone) return;
+    hilog.info(DOMAIN_NUMBER, TAG, `浏览锚点变化 -> ${this.browseAnchor ? this.browseAnchor.locationName : '已清除'}`);
+    this.loadCurrentTabData();
+  }
+
+  /** 判断当前 tab 是否无数据（用于决定 location 变化时是否需要自动加载） */
+  private isCurrentTabEmpty(): boolean {
+    switch (this.currentSubTab) {
+      case 0: return this.moments.length === 0;
+      case 1: return this.users.length === 0;
+      case 2: return this.groups.length === 0;
+      default: return true;
+    }
   }
 
   private getReferencePoint(): GeoPoint | null {
@@ -112,16 +181,23 @@ export struct NearbyPage {
         const validItems = response.data.items.filter((m: MomentItem) => m.moment_id && m.user);
         if (loadMore) {
           this.moments = this.moments.concat(validItems);
+          this.momentsDataSource.appendData(validItems);
         } else {
           this.moments = validItems;
+          this.momentsDataSource.setData(validItems);
         }
         this.momentsHasMore = response.data.pagination?.has_more ?? false;
         this.momentsNextCursor = response.data.pagination?.next_cursor ?? '';
+        try {
+          WidgetDataService.getInstance().updateStats('nearbyMomentCount', this.moments.length);
+        } catch {
+          // 小组件数据更新失败不影响主流程
+        }
       } else if (!loadMore) {
         this.momentsError = response.message || '加载失败';
       }
-    } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `加载附近动态失败: ${JSON.stringify(error)}`);
+    } catch {
+      hilog.error(DOMAIN_NUMBER, TAG, '加载附近动态失败');
       if (!loadMore) {
         this.momentsError = '加载附近动态失败';
       }
@@ -160,16 +236,23 @@ export struct NearbyPage {
         const validItems = response.data.items.filter((u: UserItem) => u.user?.user_id);
         if (loadMore) {
           this.users = this.users.concat(validItems);
+          this.usersDataSource.appendData(validItems);
         } else {
           this.users = validItems;
+          this.usersDataSource.setData(validItems);
         }
         this.usersHasMore = response.data.pagination?.has_more ?? false;
         this.usersNextCursor = response.data.pagination?.next_cursor ?? '';
+        try {
+          WidgetDataService.getInstance().updateStats('nearbyUserCount', this.users.length);
+        } catch {
+          // 小组件数据更新失败不影响主流程
+        }
       } else if (!loadMore) {
         this.usersError = response.message || '加载失败';
       }
-    } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `加载附近用户失败: ${JSON.stringify(error)}`);
+    } catch {
+      hilog.error(DOMAIN_NUMBER, TAG, '加载附近用户失败');
       if (!loadMore) {
         this.usersError = '加载附近用户失败';
       }
@@ -203,21 +286,30 @@ export struct NearbyPage {
         sort_by: 'distance',
         pagination: { limit: 30, cursor: loadMore ? this.groupsNextCursor : undefined }
       };
-      const response = await ApiClient.searchGroups(request);
+      const response = loadMore
+        ? await ApiClient.searchGroups(request)
+        : await LoadingUtil.withMinimumTime(() => ApiClient.searchGroups(request));
       if (response.code === 0 && response.data) {
         const validItems = response.data.items.filter((g: GroupItem) => g.group?.group_id);
         if (loadMore) {
           this.groups = this.groups.concat(validItems);
+          this.groupsDataSource.appendData(validItems);
         } else {
           this.groups = validItems;
+          this.groupsDataSource.setData(validItems);
         }
         this.groupsHasMore = response.data.pagination?.has_more ?? false;
         this.groupsNextCursor = response.data.pagination?.next_cursor ?? '';
+        try {
+          WidgetDataService.getInstance().updateStats('nearbyGroupCount', this.groups.length);
+        } catch {
+          // 小组件数据更新失败不影响主流程
+        }
       } else if (!loadMore) {
         this.groupsError = response.message || '加载失败';
       }
-    } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `加载附近群组失败: ${JSON.stringify(error)}`);
+    } catch {
+      hilog.error(DOMAIN_NUMBER, TAG, '加载附近群组失败');
       if (!loadMore) {
         this.groupsError = '加载附近群组失败';
       }
@@ -234,6 +326,24 @@ export struct NearbyPage {
     Column() {
       // 顶部位置栏
       LocationBar({ showMapButton: true, showSearchButton: true })
+
+      // 附近设备发现指示器
+      if (this.nearbyDeviceCount > 0) {
+        Row({ space: DesignConstants.SPACING.SM }) {
+          Text() {
+            SymbolSpan($r('sys.symbol.wifi'))
+              .fontSize(14)
+              .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+          }
+          Text(`发现 ${this.nearbyDeviceCount} 台附近设备正在使用 GeoTalk`)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        }
+        .width('100%')
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+        .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+      }
 
       // 子标签栏 + 内容
       Tabs({ barPosition: BarPosition.Start, controller: this.subTabController }) {
@@ -259,7 +369,7 @@ export struct NearbyPage {
       .barHeight(44)
       .animationDuration(300)
       .onChange((index: number) => {
-        this.getUIContext().animateTo({ duration: 200, curve: Curve.EaseInOut }, () => {
+        this.getUIContext().animateTo({ duration: 250, curve: Curve.FastOutSlowIn }, () => {
           this.currentSubTab = index;
         });
         this.loadCurrentTabData();
@@ -310,7 +420,7 @@ export struct NearbyPage {
     } else {
       Refresh({ refreshing: $$this.momentsLoading }) {
         List({ space: DesignConstants.SPACING.SM }) {
-          ForEach(this.moments, (moment: MomentItem) => {
+          LazyForEach(this.momentsDataSource, (moment: MomentItem) => {
             ListItem() {
               this.buildMomentCard(moment)
             }
@@ -435,7 +545,7 @@ export struct NearbyPage {
     } else {
       Refresh({ refreshing: $$this.usersLoading }) {
         List({ space: DesignConstants.SPACING.SM }) {
-          ForEach(this.users, (user: UserItem) => {
+          LazyForEach(this.usersDataSource, (user: UserItem) => {
             ListItem() {
               this.buildUserCard(user)
             }
@@ -529,7 +639,7 @@ export struct NearbyPage {
     } else {
       Refresh({ refreshing: $$this.groupsLoading }) {
         List({ space: DesignConstants.SPACING.SM }) {
-          ForEach(this.groups, (group: GroupItem) => {
+          LazyForEach(this.groupsDataSource, (group: GroupItem) => {
             ListItem() {
               this.buildGroupCard(group)
             }
@@ -656,6 +766,14 @@ export struct NearbyPage {
   // ==================== 操作方法 ====================
   private async followUser(user: UserItem): Promise<void> {
     if (!user.user?.user_id) return;
+    if (!this.isLoggedIn) {
+      SystemToast.showWarning('请先登录后再关注', this.getUIContext());
+      const loginParams = new LoginRedirectParams();
+      loginParams.reason = 'action_required';
+      loginParams.action = '关注用户';
+      AppRouter.push(PageNames.LOGIN, loginParams);
+      return;
+    }
     try {
       const followReq: FollowRequest = { user_id: user.user.user_id };
       const response = await ApiClient.followUser(followReq);
@@ -664,7 +782,7 @@ export struct NearbyPage {
       } else {
         SystemToast.showError(response.message || '关注失败', this.getUIContext());
       }
-    } catch (_e) {
+    } catch {
       SystemToast.showError('关注失败', this.getUIContext());
     }
   }
@@ -672,7 +790,10 @@ export struct NearbyPage {
   private async joinGroup(group: GroupItem): Promise<void> {
     if (!this.isLoggedIn) {
       SystemToast.showWarning('请先登录后再加入群组', this.getUIContext());
-      this.navigateTo(`features/auth/pages/${PageNames.LOGIN}`);
+      const loginParams = new LoginRedirectParams();
+      loginParams.reason = 'action_required';
+      loginParams.action = '加入群组';
+      AppRouter.push(PageNames.LOGIN, loginParams);
       return;
     }
     try {
@@ -690,7 +811,7 @@ export struct NearbyPage {
       } else {
         SystemToast.showError(response.message || '加入失败', this.getUIContext());
       }
-    } catch (_e) {
+    } catch {
       SystemToast.showError('加入群组失败', this.getUIContext());
     }
   }
@@ -699,20 +820,7 @@ export struct NearbyPage {
     if (!group.group?.group_id) return;
     const params = new GroupDetailParams();
     params.groupId = group.group.group_id;
-    this.navigateTo(`features/group/pages/${PageNames.GROUP_DETAIL}`, params);
-  }
-
-  private navigateTo(url: string, params?: object): void {
-    try {
-      const routerInstance = this.getUIContext().getRouter();
-      if (params) {
-        routerInstance.pushUrl({ url: url, params: params });
-      } else {
-        routerInstance.pushUrl({ url: url });
-      }
-    } catch (_e) {
-      // ignore
-    }
+    AppRouter.push(PageNames.GROUP_DETAIL, params);
   }
 
   private formatDistance(meters: number): string {

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { withMinimumLoadingTime, MIN_LOADING_ACTION } from '$lib/utils/loading';
 	import { authService, usersService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { authStore } from '$lib/stores/auth.svelte';
@@ -45,11 +46,15 @@
 
 		isLoading = true;
 		try {
-			const response = await authService.login({
-				login_id: loginId,
-				password,
-				client_type: 'web'
-			});
+			const response = await withMinimumLoadingTime(
+				() =>
+					authService.login({
+						login_id: loginId,
+						password,
+						client_type: 'web'
+					}),
+				MIN_LOADING_ACTION
+			);
 
 			if (isSuccess(response)) {
 				authStore.login(response.data);
@@ -87,12 +92,16 @@
 
 		isLoading = true;
 		try {
-			const response = await authService.register({
-				login_id: loginId,
-				password,
-				nickname,
-				client_type: 'web'
-			});
+			const response = await withMinimumLoadingTime(
+				() =>
+					authService.register({
+						login_id: loginId,
+						password,
+						nickname,
+						client_type: 'web'
+					}),
+				MIN_LOADING_ACTION
+			);
 
 			if (isSuccess(response)) {
 				authStore.login(response.data);
@@ -118,10 +127,14 @@
 
 		isLoading = true;
 		try {
-			const response = await authService.guest({
-				nickname: trimmedNickname,
-				client_type: 'web'
-			});
+			const response = await withMinimumLoadingTime(
+				() =>
+					authService.guest({
+						nickname: trimmedNickname,
+						client_type: 'web'
+					}),
+				MIN_LOADING_ACTION
+			);
 
 			if (isSuccess(response)) {
 				authStore.login(response.data);

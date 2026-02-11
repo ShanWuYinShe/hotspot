@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { adminAnnouncementsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
@@ -34,12 +35,15 @@ let announcements = $state.raw<SystemAnnouncementItem[]>([]);
 	async function loadAnnouncements(append = false) {
 		if (!append) isLoading = true;
 		try {
-			const response = await adminAnnouncementsService.search({
-				pagination: {
-					limit: 20,
-					cursor: append ? cursor : undefined
-				}
-			});
+			const response = append
+				? await adminAnnouncementsService.search({
+						pagination: { limit: 20, cursor }
+					})
+				: await withMinimumLoadingTime(() =>
+						adminAnnouncementsService.search({
+							pagination: { limit: 20, cursor: undefined }
+						})
+					);
 
 			if (isSuccess(response) && response.data) {
 				if (append) {

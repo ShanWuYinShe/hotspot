@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { authService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
@@ -24,7 +25,7 @@
 	async function loadSessions() {
 		isLoading = true;
 		try {
-			const response = await authService.getSessions();
+			const response = await withMinimumLoadingTime(() => authService.getSessions());
 			if (isSuccess(response) && response.data) {
 				sessions = response.data.items;
 			}

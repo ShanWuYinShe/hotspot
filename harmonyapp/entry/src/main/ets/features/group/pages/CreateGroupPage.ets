@@ -14,10 +14,12 @@ import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { PasswordSecurityUtil } from '../../../core/security/PasswordSecurityUtil';
 import { CreateGroupRequest, GeoPoint } from '../../../core/types/api';
+import { LoadingUtil } from '../../../core/utils/LoadingUtil';
+import { AppRouter, LoginRouteParam, GroupDetailRouteParam } from '../../../core/router/AppRouter';
 
-@Entry
 @Component
-struct CreateGroupPage {
+export struct CreateGroupPage {
+  pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_LOCATION_PICK_RESULT) pickResult: LocationInfo | null = null;
   
@@ -72,15 +74,10 @@ struct CreateGroupPage {
     const currentUser = this.stateManager.getCurrentUser();
     if (!currentUser) {
       SystemToast.showWarning('请先登录后再创建群组', this.getUIContext());
-      try {
-        const routerInstance = this.getUIContext().getRouter();
-        await routerInstance.pushUrl({
-          url: `features/auth/pages/${PageNames.LOGIN}`,
-          params: { reason: 'action_required', action: '创建群组' }
-        });
-      } catch (error) {
-        // ignore
-      }
+      const loginParams = new LoginRouteParam();
+      loginParams.reason = 'action_required';
+      loginParams.action = '创建群组';
+      AppRouter.push(PageNames.LOGIN, loginParams);
       return;
     }
 
@@ -97,40 +94,37 @@ struct CreateGroupPage {
       return;
     }
 
+    const localLoc = this.localLocation;
     this.isCreating = true;
     try {
-      const geoPoint: GeoPoint = {
-        latitude: this.localLocation.latitude,
-        longitude: this.localLocation.longitude
-      };
-      const request: CreateGroupRequest = {
-        name: this.groupName.trim(),
-        description: this.groupDescription.trim() || undefined,
-        location: {
-          point: geoPoint,
-          location_name: this.localLocation.locationName || "南天门"
-        },
-        password: this.isPasswordRequired ? this.groupPassword.trim() : undefined,
-        max_members: this.maxMembers,
-        join_method: 'open'
-      };
+      await LoadingUtil.withMinimumTime(async () => {
+        const geoPoint: GeoPoint = {
+          latitude: localLoc.latitude,
+          longitude: localLoc.longitude
+        };
+        const request: CreateGroupRequest = {
+          name: this.groupName.trim(),
+          description: this.groupDescription.trim() || undefined,
+          location: {
+            point: geoPoint,
+            location_name: localLoc.locationName || "南天门"
+          },
+          password: this.isPasswordRequired ? this.groupPassword.trim() : undefined,
+          max_members: this.maxMembers,
+          join_method: 'open'
+        };
 
-      const response = await ApiClient.createGroup(request);
+        const response = await ApiClient.createGroup(request);
 
-      if (response.code === 0 && response.data) {
-        SystemToast.showSuccess('群组创建成功', this.getUIContext());
-        try {
-          const routerInstance = this.getUIContext().getRouter();
-          await routerInstance.replaceUrl({
-            url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
-            params: { groupId: response.data.group.group_id }
-          });
-        } catch (error) {
-          SystemToast.showError('跳转失败', this.getUIContext());
+        if (response.code === 0 && response.data) {
+          SystemToast.showSuccess('群组创建成功', this.getUIContext());
+          const detailParams = new GroupDetailRouteParam();
+          detailParams.groupId = response.data.group.group_id;
+          AppRouter.replacePath(PageNames.GROUP_DETAIL, detailParams);
+        } else {
+          SystemToast.showError(response.message || '创建群组失败', this.getUIContext());
         }
-      } else {
-        SystemToast.showError(response.message || '创建群组失败', this.getUIContext());
-      }
+      }, LoadingUtil.DEFAULT_ACTION_MS);
     } catch (error) {
       SystemToast.showError('创建群组失败', this.getUIContext());
     } finally {
@@ -156,16 +150,14 @@ struct CreateGroupPage {
 
   private async openLocationPicker(): Promise<void> {
     try {
-      const routerInstance = this.getUIContext().getRouter();
-      await routerInstance.pushUrl({
-        url: `features/map/pages/${PageNames.LOCATION_PICKER}`
-      });
+      AppRouter.push(PageNames.LOCATION_PICKER);
     } catch (error) {
       SystemToast.showError('跳转失败', this.getUIContext());
     }
   }
 
   build() {
+    NavDestination() {
     Stack() {
       Column() {
         // 标题栏
@@ -173,11 +165,10 @@ struct CreateGroupPage {
           IconButton({
             icon: AppIcon.BACK,
             iconSize: IconSize.LARGE,
-            iconColor: DesignConstants.COLOR.TEXT_PRIMARY_LIGHT,
+            iconColor: $r('sys.color.ohos_id_color_text_primary'),
             bgColor: Color.Transparent,
             onButtonClick: () => {
-              const routerInstance = this.getUIContext().getRouter();
-              routerInstance.back();
+              AppRouter.pop();
             }
           })
 
@@ -192,7 +183,7 @@ struct CreateGroupPage {
         }
         .width('100%')
         .height(56)
-        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
         .backgroundColor($r('sys.color.ohos_id_color_background'))
 
         // 表单内容
@@ -206,7 +197,7 @@ struct CreateGroupPage {
                   .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                   .width('100%')
                   .margin({ bottom: 4 })
-                
+
                 TextInput({ placeholder: '请输入群组名称', text: this.groupName })
                   .onChange((value: string) => {
                     this.groupName = value;
@@ -217,9 +208,12 @@ struct CreateGroupPage {
                   .padding({ left: 0 })
               }
               .alignItems(HorizontalAlign.Start)
-              .padding({ top: 8, bottom: 8 })
+              .padding({
+                left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+                top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM
+              })
             }
-            
+
             ListItem() {
               Column() {
                 Text('群组描述')
@@ -227,7 +221,7 @@ struct CreateGroupPage {
                   .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                   .width('100%')
                   .margin({ bottom: 4 })
-                
+
                 TextArea({ placeholder: '请输入群组描述（可选）', text: this.groupDescription })
                   .onChange((value: string) => {
                     this.groupDescription = value;
@@ -238,13 +232,19 @@ struct CreateGroupPage {
                   .padding({ left: 0 })
               }
               .alignItems(HorizontalAlign.Start)
-              .padding({ top: 8, bottom: 8 })
+              .padding({
+                left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+                top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM
+              })
             }
           }
           .backgroundColor($r('sys.color.ohos_id_color_background'))
           .borderRadius(DesignConstants.RADIUS.LG)
-          .divider({ strokeWidth: 1, color: $r('sys.color.ohos_id_color_component_normal'), startMargin: 16, endMargin: 16 })
-          .margin({ left: 16, right: 16 })
+          .divider({
+            strokeWidth: 1, color: $r('sys.color.ohos_id_color_component_normal'),
+            startMargin: DesignConstants.SPACING.LG, endMargin: DesignConstants.SPACING.LG
+          })
+          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
           // 位置信息组
           ListItemGroup({ header: this.ListHeader('位置信息') }) {
@@ -287,12 +287,15 @@ struct CreateGroupPage {
                 }
               }
               .width('100%')
-              .padding({ top: 12, bottom: 12 })
+              .padding({
+                left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+                top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD
+              })
             }
           }
           .backgroundColor($r('sys.color.ohos_id_color_background'))
           .borderRadius(DesignConstants.RADIUS.LG)
-          .margin({ left: 16, right: 16 })
+          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
           // 隐私设置组
           ListItemGroup({ header: this.ListHeader('隐私与限制') }) {
@@ -316,7 +319,10 @@ struct CreateGroupPage {
                 })
               }
               .width('100%')
-              .padding({ top: 8, bottom: 8 })
+              .padding({
+                left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+                top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM
+              })
             }
 
             ListItem() {
@@ -334,7 +340,10 @@ struct CreateGroupPage {
                   })
               }
               .width('100%')
-              .padding({ top: 8, bottom: 8 })
+              .padding({
+                left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+                top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM
+              })
             }
 
             if (this.isPasswordRequired) {
@@ -345,7 +354,7 @@ struct CreateGroupPage {
                     .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                     .width('100%')
                     .margin({ bottom: 4 })
-                  
+
                   TextInput({ placeholder: '请输入群组密码', text: this.groupPassword })
                     .type(InputType.Password)
                     .onChange((value: string) => {
@@ -357,14 +366,20 @@ struct CreateGroupPage {
                     .padding({ left: 0 })
                 }
                 .alignItems(HorizontalAlign.Start)
-                .padding({ top: 8, bottom: 8 })
+                .padding({
+                  left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+                  top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM
+                })
               }
             }
           }
           .backgroundColor($r('sys.color.ohos_id_color_background'))
           .borderRadius(DesignConstants.RADIUS.LG)
-          .divider({ strokeWidth: 1, color: $r('sys.color.ohos_id_color_component_normal'), startMargin: 16, endMargin: 16 })
-          .margin({ left: 16, right: 16 })
+          .divider({
+            strokeWidth: 1, color: $r('sys.color.ohos_id_color_component_normal'),
+            startMargin: DesignConstants.SPACING.LG, endMargin: DesignConstants.SPACING.LG
+          })
+          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
           // 提交按钮
           ListItem() {
@@ -377,9 +392,10 @@ struct CreateGroupPage {
               .fontSize(16)
               .enabled(!this.isCreating)
               .opacity(this.isCreating ? 0.7 : 1)
+              .animation({ duration: 200, curve: Curve.EaseInOut })
               .onClick(() => this.createGroup())
           }
-          .margin({ top: 24, bottom: 48, left: 16, right: 16 })
+          .margin({ top: 24, bottom: 48, left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
         }
         .layoutWeight(1)
         .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
@@ -394,6 +410,12 @@ struct CreateGroupPage {
     }
     .width('100%')
     .height('100%')
+    }
+    .hideTitleBar(true)
+    .onReady((context: NavDestinationContext) => {
+      this.pathStack = context.pathStack;
+      // CreateGroupPage 无路由参数，参数逻辑在 aboutToAppear 中处理（pickResult / getCurrentLocation）
+    })
   }
 
   @Builder
@@ -401,7 +423,12 @@ struct CreateGroupPage {
     Text(title)
       .fontSize(DesignConstants.FONT.SIZE.MD)
       .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-      .margin({ left: 12, bottom: 8, top: 16 })
+      .margin({ left: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.LG })
       .width('100%')
   }
+}
+
+@Builder
+export function CreateGroupPageBuilder() {
+  CreateGroupPage()
 }

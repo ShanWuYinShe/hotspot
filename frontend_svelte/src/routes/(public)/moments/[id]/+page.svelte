@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
+	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { momentsService, commentsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { authStore } from '$lib/stores/auth.svelte';
@@ -41,7 +42,9 @@
 
 	async function loadMoment() {
 		try {
-			const response = await momentsService.getMoment({ moment_id: momentId });
+			const response = await withMinimumLoadingTime(() =>
+				momentsService.getMoment({ moment_id: momentId })
+			);
 			if (isSuccess(response) && response.data) {
 				moment = response.data;
 				isLiked = moment.my_state?.is_liked ?? false;

@@ -6,6 +6,7 @@ import { SmartNotification, SmartNotificationService, NotificationFilter, Notifi
 import { SystemIcon, AppIcon } from './SystemIcon';
 import { SystemToast } from './SystemToast';
 import { AccessibilityManager } from '../core/accessibility/AccessibilityManager';
+import { DesignConstants } from '../constants/DesignConstants';
 
 interface FilterOption {
   key: string;
@@ -21,10 +22,20 @@ export struct NotificationCenter {
 
   private notificationService = SmartNotificationService.getInstance();
   private accessibilityManager = AccessibilityManager.getInstance();
+  /** 通知创建事件监听器引用，用于 aboutToDisappear 清理 */
+  private notificationCreatedListener: ((event: NotificationEvent, notification: SmartNotification, extra?: Object) => void) | null = null;
 
   aboutToAppear() {
     this.loadNotifications();
     this.setupNotificationListener();
+  }
+
+  aboutToDisappear() {
+    // 移除通知事件监听器，避免组件销毁后监听器堆积
+    if (this.notificationCreatedListener) {
+      this.notificationService.removeEventListener(NotificationEvent.CREATED, this.notificationCreatedListener);
+      this.notificationCreatedListener = null;
+    }
   }
 
   /**
@@ -55,15 +66,16 @@ export struct NotificationCenter {
    * 设置通知监听器
    */
   private setupNotificationListener(): void {
-    this.notificationService.addEventListener(NotificationEvent.CREATED, (event, notification: SmartNotification) => {
+    this.notificationCreatedListener = (_event: NotificationEvent, notification: SmartNotification): void => {
       this.loadNotifications();
-      
+
       // 无障碍播报新通知
       this.accessibilityManager.announceText(
         `收到新通知：${notification.title}`,
         notification.priority === 'critical' ? 'high' : 'medium'
       );
-    });
+    };
+    this.notificationService.addEventListener(NotificationEvent.CREATED, this.notificationCreatedListener);
   }
 
   /**
@@ -397,9 +409,9 @@ export struct NotificationCenter {
           Text(this.getTypeText(notification.type))
             .fontSize(12)
             .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
-            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 2, bottom: 2 })
             .backgroundColor($r('sys.color.ohos_id_color_background'))
-            .borderRadius(4)
+            .borderRadius(DesignConstants.SPACING.XS)
         }
         .width('100%')
 

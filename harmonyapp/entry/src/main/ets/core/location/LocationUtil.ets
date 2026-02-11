@@ -106,17 +106,17 @@ export class LocationUtil {
 
   /**
    * 获取当前位置
+   * 使用 SingleLocationRequest（API 12+）替代废弃的 CurrentLocationRequest，
+   * 优先精度模式，与地图蓝点使用相同的高精度定位策略。
    */
   static async getCurrentLocation(): Promise<LocationInfo | null> {
     try {
       hilog.info(DOMAIN_NUMBER, TAG, '开始获取当前位置');
 
-      // 配置位置请求参数
-      const requestInfo: geoLocationManager.CurrentLocationRequest = {
-        priority: geoLocationManager.LocationRequestPriority.FIRST_FIX,
-        scenario: geoLocationManager.LocationRequestScenario.UNSET,
-        maxAccuracy: 100,
-        timeoutMs: 10000
+      // SingleLocationRequest（API 12+）：优先精度，与 Map Kit 蓝点定位一致
+      const requestInfo: geoLocationManager.SingleLocationRequest = {
+        locatingTimeoutMs: 10000,
+        locatingPriority: geoLocationManager.LocatingPriority.PRIORITY_ACCURACY
       };
 
       // 获取位置
@@ -164,12 +164,10 @@ export class LocationUtil {
 
       hilog.info(DOMAIN_NUMBER, TAG, '开始位置监听');
 
-      const requestInfo: geoLocationManager.LocationRequest = {
-        priority: geoLocationManager.LocationRequestPriority.ACCURACY,
-        scenario: geoLocationManager.LocationRequestScenario.UNSET,
-        timeInterval: 5000, // 5秒更新一次
-        distanceInterval: 10, // 移动10米更新一次
-        maxAccuracy: 100
+      // ContinuousLocationRequest（API 12+）：替代废弃的 LocationRequest
+      const requestInfo: geoLocationManager.ContinuousLocationRequest = {
+        interval: 5, // 5 秒更新一次（单位：秒）
+        locationScenario: geoLocationManager.UserActivityScenario.DAILY_LIFE_SERVICE
       };
 
       LocationUtil.locationCallback = callback;
@@ -304,6 +302,46 @@ export class LocationUtil {
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `正向地理编码失败: ${JSON.stringify(error)}`);
       return null;
+    }
+  }
+
+  /**
+   * 正向地理编码（地址转坐标）- 多结果版本
+   * 返回多个匹配位置，供用户选择
+   */
+  static async geocodeMultiple(address: string, maxItems: number = 10): Promise<LocationInfo[]> {
+    try {
+      hilog.debug(DOMAIN_NUMBER, TAG, `正向地理编码（多结果）: ${address}`);
+
+      const geocodeRequest: geoLocationManager.GeoCodeRequest = {
+        description: address,
+        maxItems: maxItems
+      };
+
+      const geoAddresses = await geoLocationManager.getAddressesFromLocationName(geocodeRequest);
+
+      if (!geoAddresses || geoAddresses.length === 0) {
+        hilog.warn(DOMAIN_NUMBER, TAG, '未找到匹配位置');
+        return [];
+      }
+
+      const results: LocationInfo[] = [];
+      for (const addr of geoAddresses) {
+        if (addr.latitude !== undefined && addr.longitude !== undefined &&
+          LocationUtil.isValidCoordinate(addr.latitude, addr.longitude)) {
+          results.push({
+            latitude: addr.latitude,
+            longitude: addr.longitude,
+            locationName: addr.placeName || `${addr.locality || ''}${addr.subLocality || ''}${addr.roadName || ''}`
+          });
+        }
+      }
+
+      hilog.debug(DOMAIN_NUMBER, TAG, `地理编码找到 ${results.length} 个结果`);
+      return results;
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `正向地理编码（多结果）失败: ${JSON.stringify(error)}`);
+      return [];
     }
   }
 

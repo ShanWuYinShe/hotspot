@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { formatRelativeTime } from '$lib/utils/format';
 	import { privateChatsService, groupsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
@@ -24,7 +25,9 @@
 
 	async function loadPrivateChats() {
 		try {
-			const response = await privateChatsService.getChats({ pagination: { limit: 50 } });
+			const response = await withMinimumLoadingTime(() =>
+				privateChatsService.getChats({ pagination: { limit: 50 } })
+			);
 			if (isSuccess(response) && response.data) {
 				privateChats = response.data.items;
 			}
@@ -40,7 +43,9 @@
 		
 		isLoadingGroup = true;
 		try {
-			const response = await groupsService.getMyGroups({ pagination: { limit: 50 } });
+			const response = await withMinimumLoadingTime(() =>
+				groupsService.getMyGroups({ pagination: { limit: 50 } })
+			);
 			if (isSuccess(response) && response.data) {
 				groupChats = response.data.items;
 				groupsLoaded = true;

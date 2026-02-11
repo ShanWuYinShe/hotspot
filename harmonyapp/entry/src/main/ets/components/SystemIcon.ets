@@ -108,6 +108,9 @@ export enum AppIcon {
   CODE = 'sys.symbol.curlybraces',
   BUG = 'sys.symbol.ant',
 
+  // 时间图标
+  TIME = 'sys.symbol.clock',
+
   // 通用图标
   ALL = 'sys.symbol.square_grid_2x2'
 }

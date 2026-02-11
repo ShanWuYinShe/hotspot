@@ -4,11 +4,12 @@
  * This page uses local AppStorage/PreferencesUtil for client-side preferences only.
  * When backend spec defines subscription APIs, migrate to API calls.
  */
-import { PageNames, StorageKeys } from '../../../constants/AppConstants';
+import { StorageKeys } from '../../../constants/AppConstants';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { SystemToast } from '../../../components/SystemToast';
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
+import { AppRouter, LoginRouteParam } from '../../../core/router/AppRouter';
 
 const SUBSCRIPTIONS_STORAGE_KEY = 'notification_subscriptions';
 
@@ -33,9 +34,9 @@ interface SubscriptionItem {
   description: string;
 }
 
-@Entry
 @Component
-struct SubscriptionsPage {
+export struct SubscriptionsPage {
+  pathStack: NavPathStack = new NavPathStack();
   @State private loading: boolean = true;
   @State private savingKey: string = '';
   @State private data: LocalSubscriptionPrefs | null = null;
@@ -63,11 +64,11 @@ struct SubscriptionsPage {
       const token = await PreferencesUtil.get<string>(StorageKeys.ACCESS_TOKEN, '');
       if (!token) {
         SystemToast.showWarning('请先登录', this.getUIContext());
-        const routerInstance = this.getUIContext().getRouter();
-        await routerInstance.pushUrl({
-          url: `features/auth/pages/${PageNames.LOGIN}`,
-          params: { reason: 'action_required', action: '管理通知订阅', redirectUrl: `features/subscriptions/pages/${PageNames.SUBSCRIPTIONS}` }
-        });
+        const loginParams = new LoginRouteParam();
+        loginParams.reason = 'action_required';
+        loginParams.action = '管理通知订阅';
+        loginParams.redirectUrl = 'SubscriptionsPage';
+        AppRouter.push('LoginPage', loginParams);
         this.loading = false;
         return;
       }
@@ -139,17 +140,17 @@ struct SubscriptionsPage {
   }
 
   build() {
+    NavDestination() {
     Column() {
       // 标题栏
       Row() {
         IconButton({
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
-          iconColor: DesignConstants.COLOR.TEXT_PRIMARY_LIGHT,
+          iconColor: $r('sys.color.ohos_id_color_text_primary'),
           bgColor: Color.Transparent,
           onButtonClick: () => {
-            const routerInstance = this.getUIContext().getRouter();
-            routerInstance.back();
+            AppRouter.pop();
           }
         })
 
@@ -164,7 +165,7 @@ struct SubscriptionsPage {
       }
       .width('100%')
       .height(56)
-      .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
       .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       if (this.loading) {
@@ -221,6 +222,11 @@ struct SubscriptionsPage {
     .width('100%')
     .height('100%')
     .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    }
+    .hideTitleBar(true)
+    .onReady((context: NavDestinationContext) => {
+      this.pathStack = context.pathStack;
+    })
   }
 
   @Builder
@@ -231,4 +237,9 @@ struct SubscriptionsPage {
       .margin({ left: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.LG })
       .width('100%')
   }
+}
+
+@Builder
+export function SubscriptionsPageBuilder() {
+  SubscriptionsPage()
 }

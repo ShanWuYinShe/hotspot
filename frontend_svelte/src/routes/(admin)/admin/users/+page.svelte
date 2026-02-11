@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { adminUsersService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
@@ -31,13 +32,17 @@
 	async function loadUsers(append = false) {
 		if (!append) isLoading = true;
 		try {
-			const response = await adminUsersService.search({
-				nickname: nickname || undefined,
-				pagination: {
-					limit: 20,
-					cursor: append ? cursor : undefined
-				}
-			});
+			const response = append
+				? await adminUsersService.search({
+						nickname: nickname || undefined,
+						pagination: { limit: 20, cursor }
+					})
+				: await withMinimumLoadingTime(() =>
+						adminUsersService.search({
+							nickname: nickname || undefined,
+							pagination: { limit: 20, cursor: undefined }
+						})
+					);
 
 			if (isSuccess(response) && response.data) {
 				if (append) {

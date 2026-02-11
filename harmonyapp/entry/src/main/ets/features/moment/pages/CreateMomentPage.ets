@@ -18,14 +18,16 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { SystemCard } from '../../../components/SystemCard';
 import { ApiResponse, CreateMomentRequest, MomentItem, GeoPoint } from '../../../core/types/api';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { PageNames } from '../../../constants/AppConstants';
+import { AppRouter } from '../../../core/router/AppRouter';
 
 const DOMAIN_NUMBER: number = 0xFF06;
 const TAG: string = 'CreateMomentPage';
 
-@Entry
 @Component
-struct CreateMomentPage {
+export struct CreateMomentPage {
+  pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_LOCATION_PICK_RESULT) pickResult: LocationInfo | null = null;
   
@@ -169,79 +171,81 @@ struct CreateMomentPage {
       return;
     }
 
+    const localLoc = this.localLocation;
     this.isPublishing = true;
     this.publishingMessage = '正在处理图片...';
     
     try {
-      const imageFileIds: string[] = []; 
-      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      await LoadingUtil.withMinimumTime(async () => {
+        const imageFileIds: string[] = []; 
+        const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
 
-      // 串行压缩并上传图片
-      for (let i = 0; i < this.imageUrls.length; i++) {
-        const imageUrl = this.imageUrls[i];
-        this.publishingMessage = `正在上传第 ${i + 1}/${this.imageUrls.length} 张图片...`;
-        
-        try {
-          // 1. 压缩图片
-          // 压缩到最大 1920x1080，质量 80%
-          const compressedPath = await MediaServiceManager.compressImage(context, imageUrl, 80, 1024 * 1024 * 2); // 限制 2MB
+        // 串行压缩并上传图片
+        for (let i = 0; i < this.imageUrls.length; i++) {
+          const imageUrl = this.imageUrls[i];
+          this.publishingMessage = `正在上传第 ${i + 1}/${this.imageUrls.length} 张图片...`;
           
-          hilog.info(DOMAIN_NUMBER, TAG, `图片压缩成功: ${compressedPath}`);
-          
-          // 准备上传文件 (复制到 cache 并获取 internal URI)
-          const uploadUri = await MediaServiceManager.prepareFileForUpload(context, compressedPath);
-
-          // 2. 上传压缩后的图片
-          const uploadResult = await ApiClient.uploadFile(context, uploadUri, 'moment_image');
-          if (uploadResult && uploadResult.file_id) {
-            imageFileIds.push(uploadResult.file_id);
-          }
-          
-        } catch (processError) {
-          hilog.error(DOMAIN_NUMBER, TAG, `图片处理/上传失败: ${JSON.stringify(processError)}`);
-          // 尝试直接上传原图（作为降级策略）
           try {
-             hilog.warn(DOMAIN_NUMBER, TAG, `压缩失败，尝试上传原图: ${imageUrl}`);
-             // 准备原图
-             const uploadUri = await MediaServiceManager.prepareFileForUpload(context, imageUrl);
-             const uploadResult = await ApiClient.uploadFile(context, uploadUri, 'moment_image');
-             if (uploadResult && uploadResult.file_id) {
-               imageFileIds.push(uploadResult.file_id);
-             }
-          } catch (uploadError) {
-             hilog.error(DOMAIN_NUMBER, TAG, `原图上传也失败: ${JSON.stringify(uploadError)}`);
-             SystemToast.showError(`第 ${i + 1} 张图片上传失败`, this.getUIContext());
-             this.isPublishing = false;
-             return;
+            // 1. 压缩图片
+            // 压缩到最大 1920x1080，质量 80%
+            const compressedPath = await MediaServiceManager.compressImage(context, imageUrl, 80, 1024 * 1024 * 2); // 限制 2MB
+            
+            hilog.info(DOMAIN_NUMBER, TAG, `图片压缩成功: ${compressedPath}`);
+            
+            // 准备上传文件 (复制到 cache 并获取 internal URI)
+            const uploadUri = await MediaServiceManager.prepareFileForUpload(context, compressedPath);
+
+            // 2. 上传压缩后的图片
+            const uploadResult = await ApiClient.uploadFile(context, uploadUri, 'moment_image');
+            if (uploadResult && uploadResult.file_id) {
+              imageFileIds.push(uploadResult.file_id);
+            }
+            
+          } catch (processError) {
+            hilog.error(DOMAIN_NUMBER, TAG, `图片处理/上传失败: ${JSON.stringify(processError)}`);
+            // 尝试直接上传原图（作为降级策略）
+            try {
+               hilog.warn(DOMAIN_NUMBER, TAG, `压缩失败，尝试上传原图: ${imageUrl}`);
+               // 准备原图
+               const uploadUri = await MediaServiceManager.prepareFileForUpload(context, imageUrl);
+               const uploadResult = await ApiClient.uploadFile(context, uploadUri, 'moment_image');
+               if (uploadResult && uploadResult.file_id) {
+                 imageFileIds.push(uploadResult.file_id);
+               }
+            } catch (uploadError) {
+               hilog.error(DOMAIN_NUMBER, TAG, `原图上传也失败: ${JSON.stringify(uploadError)}`);
+               SystemToast.showError(`第 ${i + 1} 张图片上传失败`, this.getUIContext());
+               this.isPublishing = false;
+               return;
+            }
           }
         }
-      }
-      
-      this.publishingMessage = '正在发布...';
-      
-      const geoPoint: GeoPoint = {
-        latitude: this.localLocation.latitude,
-        longitude: this.localLocation.longitude
-      };
-      const request: CreateMomentRequest = {
-        description: this.description.trim(),
-        location: {
-          point: geoPoint,
-          location_name: this.localLocation.locationName || "南天门"
-        },
-        tags: this.tags.length > 0 ? this.tags : undefined,
-        image_file_ids: imageFileIds.length > 0 ? imageFileIds : undefined
-      };
+        
+        this.publishingMessage = '正在发布...';
+        
+        const geoPoint: GeoPoint = {
+          latitude: localLoc.latitude,
+          longitude: localLoc.longitude
+        };
+        const request: CreateMomentRequest = {
+          description: this.description.trim(),
+          location: {
+            point: geoPoint,
+            location_name: localLoc.locationName || "南天门"
+          },
+          tags: this.tags.length > 0 ? this.tags : undefined,
+          image_file_ids: imageFileIds.length > 0 ? imageFileIds : undefined
+        };
 
-      const response: ApiResponse<MomentItem> = await ApiClient.createMoment(request);
+        const response: ApiResponse<MomentItem> = await ApiClient.createMoment(request);
 
-      if (response.code === 0) {
-        SystemToast.showSuccess('瞬间发布成功', this.getUIContext());
-        const routerInstance = this.getUIContext().getRouter();
-        routerInstance.back();
-      } else {
-        SystemToast.showError(response.message || '发布瞬间失败', this.getUIContext());
-      }
+        if (response.code === 0) {
+          SystemToast.showSuccess('瞬间发布成功', this.getUIContext());
+          AppRouter.pop();
+        } else {
+          SystemToast.showError(response.message || '发布瞬间失败', this.getUIContext());
+        }
+      }, LoadingUtil.DEFAULT_ACTION_MS);
     } catch (error) {
       SystemToast.showError('发布瞬间失败', this.getUIContext());
     } finally {
@@ -267,16 +271,14 @@ struct CreateMomentPage {
 
   private async openLocationPicker(): Promise<void> {
     try {
-      const routerInstance = this.getUIContext().getRouter();
-      await routerInstance.pushUrl({
-        url: `features/map/pages/${PageNames.LOCATION_PICKER}`
-      });
+      AppRouter.push(PageNames.LOCATION_PICKER);
     } catch (error) {
       SystemToast.showError('跳转失败', this.getUIContext());
     }
   }
 
   build() {
+    NavDestination() {
     Stack() {
       Column() {
       // 标题栏
@@ -284,11 +286,10 @@ struct CreateMomentPage {
         IconButton({
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
-          iconColor: DesignConstants.COLOR.TEXT_PRIMARY_LIGHT,
+          iconColor: $r('sys.color.ohos_id_color_text_primary'),
           bgColor: Color.Transparent,
           onButtonClick: () => {
-            const routerInstance = this.getUIContext().getRouter();
-            routerInstance.back();
+            AppRouter.pop();
           }
         })
 
@@ -306,6 +307,7 @@ struct CreateMomentPage {
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .enabled(!this.isPublishing)
           .opacity(this.isPublishing ? 0.5 : 1)
+          .animation({ duration: 200, curve: Curve.EaseInOut })
           .onClick(() => this.publishMoment())
       }
       .width('100%')
@@ -539,6 +541,11 @@ struct CreateMomentPage {
     }
     .width('100%')
     .height('100%')
+    }
+    .hideTitleBar(true)
+    .onReady((context: NavDestinationContext) => {
+      this.pathStack = context.pathStack;
+    })
   }
 
   // 简单计算Grid高度
@@ -598,7 +605,7 @@ struct CreateMomentPage {
           .fillColor(Color.White)
       }
       .type(ButtonType.Circle)
-      .backgroundColor('rgba(0,0,0,0.6)')
+      .backgroundColor($r('app.color.color_overlay_heavy'))
       .width(20)
       .height(20)
       .margin({top: 4, right: 4})
@@ -607,4 +614,9 @@ struct CreateMomentPage {
     .width('100%')
     .height('100%')
   }
+}
+
+@Builder
+export function CreateMomentPageBuilder() {
+  CreateMomentPage()
 }

@@ -35,6 +35,12 @@ export interface MapCoordinate {
   longitude: number;
 }
 
+/** 地图控制器操作接口，供父组件调用缩放等控制 */
+export interface NativeMapActions {
+  zoomIn: () => void;
+  zoomOut: () => void;
+}
+
 @Component
 export struct NativeMapComponent {
   @Watch('onRegionChangeProp') @Prop mapRegion: MapRegion = {
@@ -48,6 +54,8 @@ export struct NativeMapComponent {
   @Prop showCompass: boolean = true;
   @Prop showScale: boolean = true;
   @Prop showZoomControls: boolean = false;
+  /** 是否显示 Map Kit 内置的「我的位置」按钮 */
+  @Prop showMyLocationControls: boolean = true;
   
   // 回调函数
   onMapReady?: () => void;
@@ -57,6 +65,8 @@ export struct NativeMapComponent {
   onMapDoubleClick?: (coordinate: MapCoordinate) => void;
   /** 相机停止移动回调（用户停止拖拽/缩放后触发） */
   onCameraIdle?: (center: MapCoordinate) => void;
+  /** 地图控制器就绪回调，用于父组件获取缩放等操作能力 */
+  onActionsReady?: (actions: NativeMapActions) => void;
   
   // 地图控制器
   private mapController: map.MapComponentController | null = null;
@@ -107,7 +117,45 @@ export struct NativeMapComponent {
    */
   onRegionChangeProp() {
     if (this.isMapReady && this.mapController) {
-       // 可以在这里平滑移动到新区域，但为了避免冲突，通常由外部控制是否移动
+      this.moveCamera(this.mapRegion.latitude, this.mapRegion.longitude);
+    }
+  }
+
+  // 注意：Map Kit 在 MapComponent 从组件树移除时自动清理内部事件监听器，无需手动 off
+
+  /** 放大地图（zoom + 1） */
+  private doZoomIn(): void {
+    if (!this.mapController) return;
+    try {
+      const pos = this.mapController.getCameraPosition();
+      const newZoom = Math.min(20, pos.zoom + 1);
+      const cameraUpdate = map.newCameraPosition({
+        target: pos.target,
+        zoom: newZoom,
+        tilt: pos.tilt,
+        bearing: pos.bearing
+      });
+      this.mapController.animateCamera(cameraUpdate, 300);
+    } catch (e) {
+      hilog.warn(DOMAIN_NUMBER, TAG, `放大地图失败: ${JSON.stringify(e)}`);
+    }
+  }
+
+  /** 缩小地图（zoom - 1） */
+  private doZoomOut(): void {
+    if (!this.mapController) return;
+    try {
+      const pos = this.mapController.getCameraPosition();
+      const newZoom = Math.max(3, pos.zoom - 1);
+      const cameraUpdate = map.newCameraPosition({
+        target: pos.target,
+        zoom: newZoom,
+        tilt: pos.tilt,
+        bearing: pos.bearing
+      });
+      this.mapController.animateCamera(cameraUpdate, 300);
+    } catch (e) {
+      hilog.warn(DOMAIN_NUMBER, TAG, `缩小地图失败: ${JSON.stringify(e)}`);
     }
   }
 
@@ -116,13 +164,22 @@ export struct NativeMapComponent {
     
     // 设置定位启用
     this.mapController.setMyLocationEnabled(this.showUserLocation);
-    this.mapController.setMyLocationControlsEnabled(true);
+    this.mapController.setMyLocationControlsEnabled(this.showMyLocationControls);
     
     // 设置比例尺
     this.mapController.setScaleControlsEnabled(this.showScale);
     
     // 设置缩放按钮
     this.mapController.setZoomControlsEnabled(this.showZoomControls);
+
+    // 通知父组件地图控制能力已就绪
+    if (this.onActionsReady) {
+      const actions: NativeMapActions = {
+        zoomIn: (): void => this.doZoomIn(),
+        zoomOut: (): void => this.doZoomOut()
+      };
+      this.onActionsReady(actions);
+    }
 
     // 监听地图点击（含双击检测）
     this.mapController.on("mapClick", (position: mapCommon.LatLng) => {

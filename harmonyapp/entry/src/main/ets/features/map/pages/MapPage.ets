@@ -21,8 +21,10 @@ import { SystemToast } from '../../../components/SystemToast';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
-import { NativeMapComponent, MapMarker, MapRegion } from '../../../components/NativeMapComponent';
+import { NativeMapComponent, NativeMapActions, MapMarker, MapRegion } from '../../../components/NativeMapComponent';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
+import { LoadingUtil } from '../../../core/utils/LoadingUtil';
+import { AppRouter, LocationPickerRouteParam, GroupDetailRouteParam } from '../../../core/router/AppRouter';
 
 const DOMAIN_NUMBER: number = 0xFF12;
 const TAG: string = 'MapPage';
@@ -37,9 +39,9 @@ interface MapCenter {
   longitude: number;
 }
 
-@Entry
 @Component
-struct MapPage {
+export struct MapPage {
+  pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @State markers: ExtendedMapMarker[] = [];
@@ -56,6 +58,7 @@ struct MapPage {
     latitudeDelta: 0.01,
     longitudeDelta: 0.01
   };
+  private mapActions: NativeMapActions | null = null;
 
   async aboutToAppear() {
     hilog.info(DOMAIN_NUMBER, TAG, '地图页面初始化');
@@ -69,22 +72,13 @@ struct MapPage {
   }
 
   private openBrowseAnchorPicker(): void {
-    try {
-      const routerInstance = this.getUIContext().getRouter();
-      routerInstance.pushUrl({
-        url: `features/map/pages/${PageNames.LOCATION_PICKER}`,
-        params: {
-          mode: 'browse_anchor',
-          title: '设置浏览锚点',
-          confirmText: '设为浏览锚点',
-          hintText: '点击地图设置浏览锚点',
-          resultKey: KEY_BROWSE_ANCHOR
-        }
-      });
-    } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `打开浏览锚点选择失败: ${error}`);
-      SystemToast.showError('打开锚点选择失败', this.getUIContext());
-    }
+    const pickerParams = new LocationPickerRouteParam();
+    pickerParams.mode = 'browse_anchor';
+    pickerParams.title = '设置浏览锚点';
+    pickerParams.confirmText = '设为浏览锚点';
+    pickerParams.hintText = '点击地图设置浏览锚点';
+    pickerParams.resultKey = KEY_BROWSE_ANCHOR;
+    AppRouter.push(PageNames.LOCATION_PICKER, pickerParams);
   }
 
   private jumpToMyLocation(): void {
@@ -125,7 +119,7 @@ struct MapPage {
         promises.push(this.loadNearbyMoments());
       }
 
-      await Promise.all(promises);
+      await LoadingUtil.withMinimumTime(() => Promise.all(promises));
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `加载地图数据失败: ${error}`);
       SystemToast.showError('加载地图数据失败', this.getUIContext());
@@ -277,14 +271,9 @@ struct MapPage {
         SystemToast.show(`查看用户: ${marker.title}`, this.getUIContext());
         break;
       case 'group':
-        try {
-          this.getUIContext().getRouter().pushUrl({
-            url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
-            params: { groupId: (marker.data as GroupItem).group?.group_id ?? '' }
-          });
-        } catch (error) {
-          hilog.error(DOMAIN_NUMBER, TAG, `跳转群组详情失败: ${error}`);
-        }
+        const detailParams = new GroupDetailRouteParam();
+        detailParams.groupId = (marker.data as GroupItem).group?.group_id ?? '';
+        AppRouter.push(PageNames.GROUP_DETAIL, detailParams);
         break;
       case 'moment':
         SystemToast.show(`查看瞬间: ${marker.title}`, this.getUIContext());
@@ -302,7 +291,8 @@ struct MapPage {
   }
 
   build() {
-    Column() {
+    NavDestination() {
+      Column() {
       // 顶部工具栏
       Row() {
         // 返回按钮
@@ -315,11 +305,7 @@ struct MapPage {
         .height(40)
         .textAlign(TextAlign.Center)
         .onClick(() => {
-          try {
-            this.getUIContext().getRouter().back();
-          } catch (_e) {
-            // ignore
-          }
+          AppRouter.pop();
         })
 
         Text('地图')
@@ -403,8 +389,59 @@ struct MapPage {
             showUserLocation: true,
             showZoomControls: false,
             onMapClick: (coord) => {},
-            onMarkerClick: (marker) => { this.handleMarkerClick(marker); }
+            onMarkerClick: (marker) => { this.handleMarkerClick(marker); },
+            onActionsReady: (actions: NativeMapActions) => { this.mapActions = actions; }
           })
+
+          // 右下角浮动控制按钮组：缩放 + 定位
+          Column({ space: 12 }) {
+            // 放大按钮
+            Column() {
+              Text('+')
+                .fontSize(22)
+                .fontWeight(FontWeight.Medium)
+                .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            }
+            .width(44)
+            .height(44)
+            .justifyContent(FlexAlign.Center)
+            .backgroundColor($r('sys.color.ohos_id_color_background'))
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+            .onClick(() => { this.mapActions?.zoomIn(); })
+
+            // 缩小按钮
+            Column() {
+              Text('−')
+                .fontSize(22)
+                .fontWeight(FontWeight.Medium)
+                .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            }
+            .width(44)
+            .height(44)
+            .justifyContent(FlexAlign.Center)
+            .backgroundColor($r('sys.color.ohos_id_color_background'))
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+            .onClick(() => { this.mapActions?.zoomOut(); })
+
+            // 回到当前位置按钮
+            Column() {
+              Text() {
+                SymbolSpan($r(AppIcon.LOCATION))
+                  .fontSize(22)
+                  .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+              }
+            }
+            .width(44)
+            .height(44)
+            .justifyContent(FlexAlign.Center)
+            .backgroundColor($r('sys.color.ohos_id_color_background'))
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+            .onClick(() => { this.jumpToMyLocation(); })
+          }
+          .position({ right: 16, bottom: 24 })
 
           if (this.isLoading) {
             Column() {
@@ -416,7 +453,7 @@ struct MapPage {
             .width('100%')
             .height('100%')
             .justifyContent(FlexAlign.Center)
-            .backgroundColor('rgba(255,255,255,0.5)')
+            .backgroundColor($r('app.color.color_overlay_medium'))
             .hitTestBehavior(HitTestMode.Transparent)
           }
         }
@@ -431,6 +468,11 @@ struct MapPage {
       showClose: false,
       dragBar: true,
       backgroundColor: $r('sys.color.ohos_id_color_background')
+    })
+    }
+    .hideTitleBar(true)
+    .onReady((context: NavDestinationContext) => {
+      this.pathStack = context.pathStack;
     })
   }
 
@@ -537,4 +579,9 @@ struct MapPage {
       .width('100%')
     }
   }
+}
+
+@Builder
+export function MapPageBuilder() {
+  MapPage()
 }

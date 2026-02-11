@@ -45,6 +45,56 @@ declare global {
 				location: [number, number],
 				callback: (status: string, result: GeocodeResult) => void
 			): void;
+			getLocation(
+				address: string,
+				callback: (status: string, result: ForwardGeocodeResult) => void
+			): void;
+		}
+
+		class PlaceSearch {
+			constructor(options?: PlaceSearchOptions);
+			search(
+				keyword: string,
+				callback: (status: string, result: PlaceSearchResult) => void
+			): void;
+			searchNearBy(
+				keyword: string,
+				center: [number, number],
+				radius: number,
+				callback: (status: string, result: PlaceSearchResult) => void
+			): void;
+		}
+
+		interface PlaceSearchOptions {
+			city?: string;
+			citylimit?: boolean;
+			type?: string;
+			pageSize?: number;
+			pageIndex?: number;
+			extensions?: 'base' | 'all';
+		}
+
+		interface PlaceSearchResult {
+			info: string;
+			poiList?: {
+				pois: Array<PlaceSearchPoi>;
+				count: number;
+				pageIndex: number;
+				pageSize: number;
+			};
+		}
+
+		interface PlaceSearchPoi {
+			id: string;
+			name: string;
+			type: string;
+			address: string;
+			location: LngLat;
+			tel?: string;
+			distance?: number;
+			pname?: string;
+			cityname?: string;
+			adname?: string;
 		}
 
 		class Geolocation {
@@ -75,6 +125,15 @@ declare global {
 					area: string;
 				}>;
 			};
+		}
+
+		interface ForwardGeocodeResult {
+			info: string;
+			geocodes: Array<{
+				location: LngLat;
+				formattedAddress: string;
+				level: string;
+			}>;
 		}
 
 		interface GeolocationResult {

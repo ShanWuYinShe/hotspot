@@ -217,7 +217,7 @@ const SHADOW: ShadowSystem = {
 
 // ==================== 动画系统 ====================
 const ANIMATION: AnimationSystem = {
-  DURATION_SHORT: 150,
+  DURATION_SHORT: 200,
   DURATION_MEDIUM: 300,
   DURATION_LONG: 500,
   CURVE_EASE_IN_OUT: Curve.EaseInOut,

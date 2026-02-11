@@ -18,6 +18,9 @@ import { AppIcon, SystemIcon, IconSize, IconButton } from '../../../components/S
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { MessageCacheService, MessageCacheItem } from '../../../core/database/MessageCacheService';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
+import { LoadingUtil } from '../../../core/utils/LoadingUtil';
+import { BasicDataSource } from '../../../core/utils/BasicDataSource';
+import { AppRouter, LoginRouteParam, GroupDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'ChatPage';
@@ -43,12 +46,13 @@ interface ChatParams {
   targetId?: string;
 }
 
-@Entry
 @Component
-struct ChatPage {
+export struct ChatPage {
+  pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
   
   @State messages: ChatMessage[] = [];
+  private messagesDataSource: BasicDataSource<ChatMessage> = new BasicDataSource<ChatMessage>([]);
   @State inputText: string = '';
   @State isLoading: boolean = true;
   @State isSending: boolean = false;
@@ -122,6 +126,7 @@ struct ChatPage {
 
   private handleNewMessage(newMessage: ChatMessage) {
     this.messages.push(newMessage);
+    this.messagesDataSource.appendData([newMessage]);
     this.scrollToBottom();
 
     if (!newMessage.isSelf) {
@@ -139,27 +144,8 @@ struct ChatPage {
     });
   }
 
-  async aboutToAppear() {
-    try {
-      const routerInstance = this.getUIContext().getRouter();
-      const params = routerInstance.getParams() as ChatParams;
-      if (params) {
-        this.chatId = params.chatId;
-        this.chatType = params.chatType;
-        this.title = params.title;
-        this.targetId = params.targetId;
-        
-        await this.loadHistory();
-        this.subscribeToEvents();
-
-        const last = this.messages.length > 0 ? this.messages[this.messages.length - 1] : undefined;
-        if (last) {
-          this.markAsRead(last.id);
-        }
-      }
-    } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `获取参数失败: ${JSON.stringify(error)}`);
-    }
+  aboutToAppear() {
+    // 参数在 onReady 中从 context.pathInfo.param 读取
   }
 
   aboutToDisappear() {
@@ -172,37 +158,39 @@ struct ChatPage {
     await this.loadFromCache();
 
     try {
-      let items: (PrivateMessageItem | GroupMessageItem)[] = [];
-      let paginationMeta: PaginationMeta | undefined;
-      
-      if (this.chatType === 'private_chat') {
-        const targetUserId = this.targetId;
-        if (!targetUserId) {
-          throw new Error('target_user_id is required for private chat');
+      await LoadingUtil.withMinimumTime(async () => {
+        let items: (PrivateMessageItem | GroupMessageItem)[] = [];
+        let paginationMeta: PaginationMeta | undefined;
+        
+        if (this.chatType === 'private_chat') {
+          const targetUserId = this.targetId;
+          if (!targetUserId) {
+            throw new Error('target_user_id is required for private chat');
+          }
+          const request: GetPrivateMessagesHistoryRequest = { target_user_id: targetUserId, pagination: { limit: 20 } };
+          const response = await ApiClient.getPrivateMessages(request);
+          if (response.code === 0 && response.data) {
+            items = response.data.items;
+            paginationMeta = response.data.pagination;
+          }
+        } else {
+          const request: GetGroupMessagesHistoryRequest = { group_id: this.chatId, pagination: { limit: 20 } };
+          const response = await ApiClient.getGroupMessages(request);
+          if (response.code === 0 && response.data) {
+            items = response.data.items;
+            paginationMeta = response.data.pagination;
+          }
         }
-        const request: GetPrivateMessagesHistoryRequest = { target_user_id: targetUserId, pagination: { limit: 20 } };
-        const response = await ApiClient.getPrivateMessages(request);
-        if (response.code === 0 && response.data) {
-          items = response.data.items;
-          paginationMeta = response.data.pagination;
-        }
-      } else {
-        const request: GetGroupMessagesHistoryRequest = { group_id: this.chatId, pagination: { limit: 20 } };
-        const response = await ApiClient.getGroupMessages(request);
-        if (response.code === 0 && response.data) {
-          items = response.data.items;
-          paginationMeta = response.data.pagination;
-        }
-      }
 
-      const newMessages = await Promise.all(items.reverse().map(item => this.convertMessage(item)));
-      this.messages = newMessages;
-      this.hasMoreHistory = paginationMeta?.has_more ?? false;
-      this.historyNextCursor = paginationMeta?.next_cursor ?? '';
-      
-      this.updateCache(newMessages);
-      this.scrollToBottom();
-
+        const newMessages = await Promise.all(items.reverse().map(item => this.convertMessage(item)));
+        this.messages = newMessages;
+        this.messagesDataSource.setData(newMessages);
+        this.hasMoreHistory = paginationMeta?.has_more ?? false;
+        this.historyNextCursor = paginationMeta?.next_cursor ?? '';
+        
+        this.updateCache(newMessages);
+        this.scrollToBottom();
+      });
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `加载历史消息失败: ${error}`);
       if (this.messages.length === 0) {
@@ -247,6 +235,7 @@ struct ChatPage {
       const olderMessages = await Promise.all(items.reverse().map(item => this.convertMessage(item)));
       // 将更早的消息插入到列表开头
       this.messages = olderMessages.concat(this.messages);
+      this.messagesDataSource.prependData(olderMessages);
       this.hasMoreHistory = paginationMeta?.has_more ?? false;
       this.historyNextCursor = paginationMeta?.next_cursor ?? '';
     } catch (error) {
@@ -264,6 +253,7 @@ struct ChatPage {
         return await this.convertMessage(rawData as PrivateMessageItem | GroupMessageItem);
       }));
       this.messages = messages;
+      this.messagesDataSource.setData(messages);
       this.scrollToBottom();
       hilog.info(DOMAIN_NUMBER, TAG, `Loaded ${messages.length} messages from cache`);
     }
@@ -345,15 +335,10 @@ struct ChatPage {
   private async sendMessage() {
     if (!this.currentUser) {
       SystemToast.showWarning('请先登录后再发送消息', this.getUIContext());
-      try {
-        const routerInstance = this.getUIContext().getRouter();
-        await routerInstance.pushUrl({
-          url: `features/auth/pages/${PageNames.LOGIN}`,
-          params: { reason: 'action_required', action: '发送消息' }
-        });
-      } catch (error) {
-        // ignore
-      }
+      const loginParams = new LoginRouteParam();
+      loginParams.reason = 'action_required';
+      loginParams.action = '发送消息';
+      AppRouter.push(PageNames.LOGIN, loginParams);
       return;
     }
 
@@ -373,16 +358,16 @@ struct ChatPage {
           type: 'text',
           content: content
         };
-        await ApiClient.sendPrivateMessage(request);
+        await LoadingUtil.withMinimumTime(async () => ApiClient.sendPrivateMessage(request), LoadingUtil.DEFAULT_ACTION_MS);
       } else {
         const request: SendGroupMessageRequest = {
           group_id: this.chatId,
           type: 'text',
           content: content
         };
-        await ApiClient.sendGroupMessage(request);
+        await LoadingUtil.withMinimumTime(async () => ApiClient.sendGroupMessage(request), LoadingUtil.DEFAULT_ACTION_MS);
       }
-      
+
       this.inputText = '';
     } catch (error) {
       SystemToast.showError('发送失败', this.getUIContext());
@@ -412,17 +397,27 @@ struct ChatPage {
     })();
   }
 
+  /** 从 onReady 参数初始化后，异步加载聊天数据 */
+  private async initChatData(): Promise<void> {
+    await this.loadHistory();
+    this.subscribeToEvents();
+    const last = this.messages.length > 0 ? this.messages[this.messages.length - 1] : undefined;
+    if (last) {
+      this.markAsRead(last.id);
+    }
+  }
+
   build() {
+    NavDestination() {
     Column() {
       Row() {
         IconButton({
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
-          iconColor: DesignConstants.COLOR.TEXT_PRIMARY_LIGHT,
+          iconColor: $r('sys.color.ohos_id_color_text_primary'),
           bgColor: Color.Transparent,
           onButtonClick: () => {
-            const routerInstance = this.getUIContext().getRouter();
-            routerInstance.back();
+            AppRouter.pop();
           }
         })
 
@@ -436,28 +431,24 @@ struct ChatPage {
         IconButton({
           icon: AppIcon.MORE,
           iconSize: IconSize.LARGE,
-          iconColor: DesignConstants.COLOR.TEXT_PRIMARY_LIGHT,
+          iconColor: $r('sys.color.ohos_id_color_text_primary'),
           bgColor: Color.Transparent,
           onButtonClick: () => {
             if (this.chatType === 'group_chat') {
-              const routerInstance = this.getUIContext().getRouter();
-              routerInstance.pushUrl({
-                url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
-                params: { groupId: this.chatId }
-              });
+              const p = new GroupDetailRouteParam();
+              p.groupId = this.chatId;
+              AppRouter.push(PageNames.GROUP_DETAIL, p);
             } else if (this.targetId) {
-              const routerInstance = this.getUIContext().getRouter();
-              routerInstance.pushUrl({
-                url: `features/profile/pages/${PageNames.PROFILE}`,
-                params: { userId: this.targetId }
-              });
+              const p = new ProfileRouteParam();
+              p.userId = this.targetId;
+              AppRouter.push(PageNames.PROFILE, p);
             }
           }
         })
       }
       .width('100%')
       .height(56)
-      .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
       .backgroundColor($r('sys.color.ohos_id_color_background'))
       .zIndex(1)
 
@@ -476,7 +467,7 @@ struct ChatPage {
             .padding(DesignConstants.SPACING.MD)
           }
         }
-        ForEach(this.messages, (msg: ChatMessage) => {
+        LazyForEach(this.messagesDataSource, (msg: ChatMessage) => {
           ListItem() {
             this.buildMessageItem(msg)
           }
@@ -523,6 +514,21 @@ struct ChatPage {
     .width('100%')
     .height('100%')
     .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    }
+    .hideTitleBar(true)
+    .onReady((context: NavDestinationContext) => {
+      this.pathStack = context.pathStack;
+      const param = context.pathInfo.param as Record<string, Object> | undefined;
+      if (param) {
+        this.chatId = String(param.chatId ?? '');
+        this.chatType = String(param.chatType ?? 'private_chat') as 'private_chat' | 'group_chat';
+        this.title = String(param.title ?? '聊天');
+        this.targetId = param.targetId ? String(param.targetId) : undefined;
+        this.initChatData();
+      } else {
+        hilog.error(DOMAIN_NUMBER, TAG, 'ChatPage 缺少路由参数');
+      }
+    })
   }
 
   @Builder
@@ -594,4 +600,9 @@ struct ChatPage {
       .margin({ bottom: 16 })
     }
   }
+}
+
+@Builder
+export function ChatPageBuilder() {
+  ChatPage()
 }

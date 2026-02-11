@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { usersService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
@@ -25,7 +26,7 @@
 	async function loadSettings() {
 		isLoading = true;
 		try {
-			const response = await usersService.getMySettings();
+			const response = await withMinimumLoadingTime(() => usersService.getMySettings());
 			if (isSuccess(response) && response.data) {
 				settings = response.data;
 				privacyLevel = settings.privacy_level;

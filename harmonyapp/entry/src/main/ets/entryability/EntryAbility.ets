@@ -19,6 +19,7 @@ import { deviceInfo, BusinessError } from '@kit.BasicServicesKit';
 import { geoLocationManager } from '@kit.LocationKit';
 import { ServiceRegistry } from '../core/services/ServiceRegistry';
 import { RdbManager } from '../core/database/RdbManager';
+import { AnchorHistoryUtil } from '../core/utils/AnchorHistoryUtil';
 
 const DOMAIN_NUMBER: number = 0xFF00;
 const TAG: string = 'GeoTalk';
@@ -46,6 +47,9 @@ export default class EntryAbility extends UIAbility {
     
     // 初始化数据库
     this.rdbManager.init(this.context);
+
+    // 初始化锚点历史工具
+    AnchorHistoryUtil.init(this.context);
 
     // 初始化智能服务
     this.initializeSmartServices();
@@ -207,12 +211,10 @@ export default class EntryAbility extends UIAbility {
 
       // 设置状态栏和导航栏样式
       await mainWindow.setWindowSystemBarEnable(['status', 'navigation']);
-      await mainWindow.setWindowSystemBarProperties({
-        statusBarColor: '#FFFFFF',
-        navigationBarColor: '#FFFFFF',
-        statusBarContentColor: '#000000',
-        navigationBarContentColor: '#000000'
-      });
+
+      // 根据当前系统颜色模式设置状态栏样式
+      const isDark = this.context.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
+      await this.applySystemBarStyle(mainWindow, isDark);
 
       // 设置窗口方向
       await mainWindow.setPreferredOrientation(window.Orientation.AUTO_ROTATION);
@@ -220,6 +222,23 @@ export default class EntryAbility extends UIAbility {
       hilog.info(DOMAIN_NUMBER, TAG, '窗口配置完成');
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, '窗口配置失败: %{public}s', JSON.stringify(error));
+    }
+  }
+
+  /** 根据深色/浅色模式设置系统状态栏和导航栏样式 */
+  private async applySystemBarStyle(mainWindow: window.Window, isDark: boolean): Promise<void> {
+    try {
+      const barColor = isDark ? '#000000' : '#FFFFFF';
+      const contentColor = isDark ? '#FFFFFF' : '#000000';
+      await mainWindow.setWindowSystemBarProperties({
+        statusBarColor: barColor,
+        navigationBarColor: barColor,
+        statusBarContentColor: contentColor,
+        navigationBarContentColor: contentColor
+      });
+      hilog.info(DOMAIN_NUMBER, TAG, `系统栏样式已更新: isDark=${isDark}`);
+    } catch {
+      hilog.warn(DOMAIN_NUMBER, TAG, '更新系统栏样式失败');
     }
   }
 
@@ -251,9 +270,15 @@ export default class EntryAbility extends UIAbility {
    * 处理系统配置变化
    */
   private handleConfigurationChange(config: Configuration): void {
-    // 处理语言、主题、屏幕方向等变化
-    if (config.colorMode !== undefined) {
+    // 处理深色/浅色主题切换 → 实时更新系统状态栏样式
+    if (config.colorMode !== undefined && this.windowStage) {
       hilog.info(DOMAIN_NUMBER, TAG, '主题模式变化: %{public}d', config.colorMode);
+      const isDark = config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
+      this.windowStage.getMainWindow()
+        .then((mainWindow: window.Window) => this.applySystemBarStyle(mainWindow, isDark))
+        .catch(() => {
+          hilog.warn(DOMAIN_NUMBER, TAG, '更新系统栏样式失败');
+        });
     }
     if (config.language !== undefined) {
       hilog.info(DOMAIN_NUMBER, TAG, '语言变化: %{public}s', config.language);

@@ -4,6 +4,12 @@
 	import { locationStore } from '$lib/stores/location.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { loadAMap, loadAMapPlugin } from '$lib/utils/amap';
+	import {
+		getAnchorHistory,
+		addToAnchorHistory,
+		clearAnchorHistory,
+		type AnchorHistoryItem
+	} from '$lib/utils/anchor-history';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent } from '$lib/components/ui/card';
@@ -15,6 +21,10 @@
 	import ChevronDown from 'lucide-svelte/icons/chevron-down';
 	import SlidersHorizontal from 'lucide-svelte/icons/sliders-horizontal';
 	import Share2 from 'lucide-svelte/icons/share-2';
+	import Search from 'lucide-svelte/icons/search';
+	import X from 'lucide-svelte/icons/x';
+	import Clock from 'lucide-svelte/icons/clock';
+	import Trash2 from 'lucide-svelte/icons/trash-2';
 	import CreateLocationShareModal from './create-location-share-modal.svelte';
 
 	interface Props {
@@ -40,6 +50,18 @@
 	let isBottomSheetExpanded = $state(false);
 	let showShareModal = $state(false);
 
+	// 搜索相关状态
+	let showSearch = $state(false);
+	let searchText = $state('');
+	let isSearching = $state(false);
+	let searchInput = $state<HTMLInputElement | null>(null);
+	let searchResults = $state<Array<{ name: string; address: string; latitude: number; longitude: number }>>([]);
+	let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+	let placeSearch: AMap.PlaceSearch | null = null;
+
+	// 锚点历史
+	let anchorHistory = $state<AnchorHistoryItem[]>([]);
+
 	type MapClickEvent = {
 		lnglat?: AMap.LngLat;
 	};
@@ -48,6 +70,95 @@
 		if (geocoder) return;
 		await loadAMapPlugin(['AMap.Geocoder']);
 		geocoder = new AMap.Geocoder();
+	}
+
+	// ========== 搜索功能 ==========
+
+	async function toggleSearch() {
+		showSearch = !showSearch;
+		if (showSearch) {
+			searchText = '';
+			searchResults = [];
+			await tick();
+			searchInput?.focus();
+		}
+	}
+
+	async function ensurePlaceSearch() {
+		if (placeSearch) return;
+		await loadAMapPlugin(['AMap.PlaceSearch']);
+		placeSearch = new AMap.PlaceSearch({
+			pageSize: 10,
+			extensions: 'base'
+		});
+	}
+
+	async function doSearch() {
+		const keyword = searchText.trim();
+		if (keyword.length === 0) return;
+
+		isSearching = true;
+		searchResults = [];
+		try {
+			await ensurePlaceSearch();
+			if (!placeSearch) return;
+
+			const results = await new Promise<
+				Array<{ name: string; address: string; latitude: number; longitude: number }>
+			>((resolve) => {
+				placeSearch!.searchNearBy(
+					keyword,
+					[longitude, latitude],
+					50000, // 50km 搜索半径
+					(status: string, result: AMap.PlaceSearchResult) => {
+						if (status === 'complete' && result.poiList?.pois?.length) {
+							resolve(
+								result.poiList.pois.map((poi) => ({
+									name: poi.name,
+									address: [poi.adname, poi.address].filter(Boolean).join(' '),
+									latitude: poi.location.getLat(),
+									longitude: poi.location.getLng()
+								}))
+							);
+						} else {
+							resolve([]);
+						}
+					}
+				);
+			});
+
+			if (results.length > 0) {
+				searchResults = results;
+			} else {
+				toast.error('未找到该地点，请换个关键词试试');
+			}
+		} catch {
+			toast.error('搜索失败，请稍后重试');
+		} finally {
+			isSearching = false;
+		}
+	}
+
+	function selectSearchResult(result: { name: string; address: string; latitude: number; longitude: number }) {
+		latitude = result.latitude;
+		longitude = result.longitude;
+		locationName = result.name;
+		map?.setCenter([result.longitude, result.latitude]);
+		showSearch = false;
+		searchText = '';
+		searchResults = [];
+	}
+
+	function selectHistoryItem(item: AnchorHistoryItem) {
+		latitude = item.latitude;
+		longitude = item.longitude;
+		locationName = item.locationName;
+		map?.setCenter([item.longitude, item.latitude]);
+	}
+
+	function handleClearHistory() {
+		clearAnchorHistory();
+		anchorHistory = [];
 	}
 
 	async function reverseGeocode(lat: number, lng: number): Promise<string> {
@@ -150,6 +261,7 @@ async function handleDoubleClick(event: MapClickEvent) {
 
 	function handleConfirm() {
 		mapAnchorStore.setAnchor(latitude, longitude, locationName || undefined, searchRadius);
+		addToAnchorHistory(latitude, longitude, locationName || '自定义位置');
 		toast.success(`浏览锚点已更新`);
 		handleClose();
 	}
@@ -166,6 +278,10 @@ async function handleDoubleClick(event: MapClickEvent) {
 				longitude = mapAnchorStore.longitude;
 				locationName = mapAnchorStore.name;
 				searchRadius = mapAnchorStore.radius;
+				anchorHistory = getAnchorHistory();
+				showSearch = false;
+				searchText = '';
+				searchResults = [];
 
 				if (!hasInit) {
 					initMap();
@@ -187,6 +303,10 @@ async function handleDoubleClick(event: MapClickEvent) {
 			if (debounceTimer) {
 				clearTimeout(debounceTimer);
 				debounceTimer = null;
+			}
+			if (searchDebounceTimer) {
+				clearTimeout(searchDebounceTimer);
+				searchDebounceTimer = null;
 			}
 		};
 	});
@@ -265,6 +385,10 @@ async function handleDoubleClick(event: MapClickEvent) {
 					<div>地图选择锚点</div>
 					<div class="text-sm font-normal text-muted-foreground">拖动地图选择浏览位置</div>
 				</div>
+				<!-- 桌面端搜索按钮 -->
+				<Button variant="ghost" size="icon" class="h-9 w-9 rounded-xl" onclick={toggleSearch} aria-label="搜索">
+					<Search class="h-4 w-4" />
+				</Button>
 				<!-- 桌面端关闭按钮 -->
 				<Button variant="ghost" size="icon" class="h-9 w-9 rounded-xl" onclick={handleClose} aria-label="关闭">
 					<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -281,17 +405,113 @@ async function handleDoubleClick(event: MapClickEvent) {
 				<MapPin class="h-5 w-5 text-primary" />
 				<span class="font-semibold">选择位置</span>
 			</div>
-			<Button variant="ghost" size="sm" class="h-8 w-8 p-0" onclick={handleClose}>
-				<span class="sr-only">关闭</span>
-				<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-				</svg>
-			</Button>
+			<div class="flex items-center gap-1">
+				<Button variant="ghost" size="sm" class="h-8 w-8 p-0" onclick={toggleSearch}>
+					<Search class="h-4 w-4" />
+					<span class="sr-only">搜索</span>
+				</Button>
+				<Button variant="ghost" size="sm" class="h-8 w-8 p-0" onclick={handleClose}>
+					<span class="sr-only">关闭</span>
+					<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+					</svg>
+				</Button>
+			</div>
 		</div>
 
 		<!-- 地图容器 -->
 		<div class="relative flex-1 overflow-hidden sm:rounded-2xl sm:border">
 			<div class="h-full w-full touch-none" bind:this={mapContainer}></div>
+
+			<!-- 搜索覆盖层 -->
+			{#if showSearch}
+				<div class="absolute inset-x-0 top-0 z-30 flex flex-col bg-background/95 backdrop-blur-sm shadow-lg">
+					<!-- 搜索输入框 -->
+					<div class="flex items-center gap-2 border-b px-3 py-2">
+						<Search class="h-4 w-4 shrink-0 text-muted-foreground" />
+					<input
+						type="text"
+						bind:this={searchInput}
+						bind:value={searchText}
+						placeholder="搜索地点名称"
+						class="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+						oninput={() => {
+							if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+							if (searchText.trim().length > 0) {
+								searchDebounceTimer = setTimeout(() => { doSearch(); }, 500);
+							} else {
+								searchResults = [];
+							}
+						}}
+						onkeydown={(e) => {
+							if (e.key === 'Enter') {
+								if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+								doSearch();
+							}
+						}}
+					/>
+						{#if isSearching}
+							<Loader2 class="h-4 w-4 shrink-0 animate-spin text-primary" />
+						{:else if searchText.length > 0}
+							<button class="shrink-0 text-muted-foreground hover:text-foreground" onclick={() => { if (searchDebounceTimer) clearTimeout(searchDebounceTimer); searchText = ''; searchResults = []; searchInput?.focus(); }}>
+								<X class="h-4 w-4" />
+							</button>
+						{/if}
+						<Button variant="ghost" size="sm" class="shrink-0 text-xs" onclick={toggleSearch}>
+							取消
+						</Button>
+					</div>
+
+				<!-- 搜索结果列表 -->
+				{#if searchResults.length > 0}
+					<div class="max-h-64 overflow-y-auto">
+						{#each searchResults as result, i}
+							<button
+								class="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50"
+								onclick={() => selectSearchResult(result)}
+							>
+								<MapPin class="h-4 w-4 shrink-0 text-primary" />
+								<div class="min-w-0 flex-1">
+									<div class="truncate text-sm font-medium">{result.name}</div>
+									<div class="text-xs text-muted-foreground">
+										{result.address || `${result.latitude.toFixed(6)}, ${result.longitude.toFixed(6)}`}
+									</div>
+								</div>
+							</button>
+							{#if i < searchResults.length - 1}
+								<div class="mx-4 border-b"></div>
+							{/if}
+						{/each}
+					</div>
+				{:else if searchText.trim().length === 0 && anchorHistory.length > 0}
+					<!-- 无输入时展示历史记录 -->
+					<div class="max-h-64 overflow-y-auto">
+						<div class="flex items-center justify-between px-4 py-2">
+							<div class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+								<Clock class="h-3.5 w-3.5" />
+								<span>最近使用</span>
+							</div>
+							<button class="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground" onclick={handleClearHistory}>
+								<Trash2 class="h-3 w-3" />
+								<span>清空</span>
+							</button>
+						</div>
+						{#each anchorHistory as item, i}
+							<button
+								class="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted/50"
+								onclick={() => { selectHistoryItem(item); showSearch = false; }}
+							>
+								<Clock class="h-4 w-4 shrink-0 text-muted-foreground" />
+								<div class="min-w-0 flex-1 truncate text-sm">{item.locationName}</div>
+							</button>
+							{#if i < anchorHistory.length - 1}
+								<div class="mx-4 border-b"></div>
+							{/if}
+						{/each}
+					</div>
+				{/if}
+				</div>
+			{/if}
 
 			{#if !isMapAvailable}
 				<div class="absolute inset-0 z-20 flex items-center justify-center bg-background/80 backdrop-blur-sm">
@@ -378,7 +598,7 @@ async function handleDoubleClick(event: MapClickEvent) {
 									💡 双击地图可快速选中位置，确认后才会更新锚点
 								</div>
 
-								<!-- 搜索范围 -->
+							<!-- 搜索范围 -->
 								<Card class="border-muted">
 									<CardContent class="flex flex-col gap-3 p-4">
 										<div class="flex items-center justify-between">

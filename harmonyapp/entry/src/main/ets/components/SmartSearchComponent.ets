@@ -4,6 +4,7 @@
  */
 
 import { ApiClient } from '../core/api/ApiClient';
+import { LoadingUtil } from '../core/utils/LoadingUtil';
 import { 
   UserItem, 
   GroupItem, 
@@ -13,8 +14,10 @@ import { KEY_CURRENT_LOCATION } from '../core/state/GlobalStateManager';
 import { GlobalStateManager } from '../core/state/GlobalStateManager';
 import { LocationInfo } from '../core/location/LocationUtil';
 import { SystemAvatar } from './SystemAvatar';
+import { DesignConstants } from '../constants/DesignConstants';
 import { SystemToast } from './SystemToast';
 import { PageNames } from '../constants/AppConstants';
+import { AppRouter, GroupDetailRouteParam } from '../core/router/AppRouter';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
 const DOMAIN_NUMBER: number = 0xFF13;
@@ -66,24 +69,26 @@ export struct SmartSearchComponent {
     this.showResults = true;
 
     try {
-      hilog.info(DOMAIN_NUMBER, TAG, `执行搜索: ${query}, 筛选: ${this.currentFilter}`);
+      await LoadingUtil.withMinimumTime(async () => {
+        hilog.info(DOMAIN_NUMBER, TAG, `执行搜索: ${query}, 筛选: ${this.currentFilter}`);
 
-      const searchPromises: Promise<void>[] = [];
+        const searchPromises: Promise<void>[] = [];
 
-      if (this.currentFilter === 'all' || this.currentFilter === 'users') {
-        searchPromises.push(this.searchUsers(query));
-      }
+        if (this.currentFilter === 'all' || this.currentFilter === 'users') {
+          searchPromises.push(this.searchUsers(query));
+        }
 
-      if (this.currentFilter === 'all' || this.currentFilter === 'groups') {
-        searchPromises.push(this.searchGroups(query));
-      }
+        if (this.currentFilter === 'all' || this.currentFilter === 'groups') {
+          searchPromises.push(this.searchGroups(query));
+        }
 
-      if (this.currentFilter === 'all' || this.currentFilter === 'moments') {
-        searchPromises.push(this.searchMoments(query));
-      }
+        if (this.currentFilter === 'all' || this.currentFilter === 'moments') {
+          searchPromises.push(this.searchMoments(query));
+        }
 
-      await Promise.all(searchPromises);
-      this.saveSearchHistory(query);
+        await Promise.all(searchPromises);
+        this.saveSearchHistory(query);
+      }, LoadingUtil.DEFAULT_ACTION_MS);
 
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `搜索失败: ${error}`);
@@ -228,14 +233,9 @@ export struct SmartSearchComponent {
       case 'group':
         const group = result.data as GroupItem;
         if (!group.group?.group_id) break;
-        try {
-          this.getUIContext().getRouter().pushUrl({
-            url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
-            params: { groupId: group.group.group_id }
-          });
-        } catch (error) {
-          hilog.error(DOMAIN_NUMBER, TAG, `跳转群组详情失败: ${error}`);
-        }
+        const p = new GroupDetailRouteParam();
+        p.groupId = group.group.group_id;
+        AppRouter.push(PageNames.GROUP_DETAIL, p);
         break;
       case 'moment':
         SystemToast.show(`查看瞬间: ${result.title}`, this.getUIContext());
@@ -323,8 +323,9 @@ export struct SmartSearchComponent {
             .onClick(() => this.switchFilter('moments'))
         }
         .width('100%')
-        .padding({ left: 12, right: 12, bottom: 8 })
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
         .justifyContent(FlexAlign.SpaceAround)
+        .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
       }
 
       if (this.showResults) {
@@ -334,7 +335,10 @@ export struct SmartSearchComponent {
               Text('搜索历史')
                 .fontSize(14)
                 .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-                .padding(12)
+                .padding({
+                  left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+                  top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM
+                })
             }
 
             ForEach(this.searchHistory, (historyItem: string) => {
@@ -362,7 +366,7 @@ export struct SmartSearchComponent {
                     })
                 }
                 .width('100%')
-                .padding(12)
+                .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
                 .onClick(() => {
                   this.searchText = historyItem;
                   this.performSearch(historyItem);
@@ -396,7 +400,7 @@ export struct SmartSearchComponent {
                   .layoutWeight(1)
                 }
                 .width('100%')
-                .padding(12)
+                .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
                 .onClick(() => this.handleResultClick(result))
               }
             })
@@ -424,10 +428,11 @@ export struct SmartSearchComponent {
         .borderRadius({ topLeft: 12, topRight: 12 })
         .shadow({
           radius: 8,
-          color: Color.Black,
+          color: $r('app.color.color_shadow'),
           offsetX: 0,
           offsetY: -2
         })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
       }
     }
     .width('100%')

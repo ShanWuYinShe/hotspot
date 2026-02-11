@@ -2,13 +2,14 @@
  * 图片预览页面
  * 支持手势缩放、滑动切换
  */
-// import { router } from '@kit.ArkUI'; // Deprecated global router, use this.getUIContext().getRouter()
+
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, IconButton, IconSize } from '../../../components/SystemIcon';
+import { AppRouter } from '../../../core/router/AppRouter';
 
-@Entry
 @Component
-struct PhotoPreviewPage {
+export struct PhotoPreviewPage {
+  pathStack: NavPathStack = new NavPathStack();
   @State images: string[] = [];
   @State currentIndex: number = 0;
   @State momentId: string = '';
@@ -23,21 +24,8 @@ struct PhotoPreviewPage {
   @State compWidth: number = 0;
   @State compHeight: number = 0;
 
-  aboutToAppear() {
-    try {
-      const router = this.getUIContext().getRouter();
-      const params = router.getParams() as Record<string, Object>;
-      if (params) {
-        this.images = params['images'] as string[] || [];
-        this.currentIndex = params['index'] as number || 0;
-        this.momentId = params['momentId'] as string || '';
-      }
-    } catch (e) {
-      // ignore
-    }
-  }
-
   build() {
+    NavDestination() {
     Stack() {
       // 黑色背景
       Column()
@@ -165,7 +153,7 @@ struct PhotoPreviewPage {
           iconColor: Color.White,
           bgColor: 'rgba(0,0,0,0.3)',
           onButtonClick: () => {
-            this.getUIContext().getRouter().back();
+            AppRouter.pop();
           }
         })
         .margin({ left: 16, top: 16 })
@@ -191,6 +179,22 @@ struct PhotoPreviewPage {
     }
     .width('100%')
     .height('100%')
+    }
+    .hideTitleBar(true)
+    .onReady((context: NavDestinationContext) => {
+      this.pathStack = context.pathStack;
+      const params = context.pathInfo?.param as Record<string, Object> | undefined;
+      if (params) {
+        this.images = (params['images'] as string[]) || [];
+        this.currentIndex = (params['index'] as number) ?? 0;
+        this.momentId = (params['momentId'] as string) || '';
+      }
+    })
   }
+}
+
+@Builder
+export function PhotoPreviewPageBuilder() {
+  PhotoPreviewPage()
 }
 

@@ -25,6 +25,7 @@
 
 import { isSuccess } from '$lib/api/client';
 import type { ApiResponse, PaginatedData } from '$lib/types/api';
+import { withMinimumLoadingTime } from '$lib/utils/loading';
 
 interface UsePaginationOptions<T> {
 	/**
@@ -156,7 +157,11 @@ export function usePagination<T>(options?: UsePaginationOptions<T>): PaginationS
 		}
 
 		try {
-			const response = await fetcher(refresh ? undefined : cursor);
+			// 初始/刷新加载使用最短展示时间，避免加载动画一闪而过
+			// 加载更多无需最短时间（内联加载器，应尽快响应）
+			const response = refresh
+				? await withMinimumLoadingTime(() => fetcher(undefined))
+				: await fetcher(cursor);
 
 			if (isSuccess(response) && response.data) {
 				// 更新数据

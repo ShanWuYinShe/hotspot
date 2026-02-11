@@ -2,6 +2,7 @@
 	import { dev } from '$app/environment';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
+	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { privateMessagesService, usersService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { authStore } from '$lib/stores/auth.svelte';
@@ -48,22 +49,24 @@
 
 	async function loadChat() {
 		try {
-			// 获取对方信息
-			const userResponse = await usersService.getUser({ user_id: userId });
-			if (isSuccess(userResponse) && userResponse.data) {
-				otherUser = userResponse.data.user;
-			}
+			await withMinimumLoadingTime(async () => {
+				// 获取对方信息
+				const userResponse = await usersService.getUser({ user_id: userId });
+				if (isSuccess(userResponse) && userResponse.data) {
+					otherUser = userResponse.data.user;
+				}
 
-			// 获取消息历史
-			const messagesResponse = await privateMessagesService.getHistory({
-				target_user_id: userId,
-				pagination: { limit: 50 }
+				// 获取消息历史
+				const messagesResponse = await privateMessagesService.getHistory({
+					target_user_id: userId,
+					pagination: { limit: 50 }
+				});
+				if (isSuccess(messagesResponse) && messagesResponse.data) {
+					messages = messagesResponse.data.items.reverse();
+				}
+
+				// ✅ 不再立即标记已读，等待消息可见时自动标记
 			});
-			if (isSuccess(messagesResponse) && messagesResponse.data) {
-				messages = messagesResponse.data.items.reverse();
-			}
-
-			// ✅ 不再立即标记已读，等待消息可见时自动标记
 		} catch {
 			toast.error('加载失败');
 		} finally {

@@ -5,6 +5,7 @@
 
 import { DesignConstants } from '../constants/DesignConstants';
 import { PageNames } from '../constants/AppConstants';
+import { AppRouter } from '../core/router/AppRouter';
 import { AppIcon } from './SystemIcon';
 
 @Component
@@ -85,11 +86,6 @@ export struct LoginPromptView {
   }
 
   private navigateToLogin(): void {
-    try {
-      const routerInstance = this.getUIContext().getRouter();
-      routerInstance.pushUrl({ url: `features/auth/pages/${PageNames.LOGIN}` });
-    } catch (_e) {
-      // ignore navigation error
-    }
+    AppRouter.push(PageNames.LOGIN);
   }
 }

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { adminAuditService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
@@ -25,13 +26,17 @@
 	async function loadLogs(append = false) {
 		if (!append) isLoading = true;
 		try {
-			const response = await adminAuditService.getList({
-				action: (actionFilter || undefined) as AuditAction | undefined,
-				pagination: {
-					limit: 30,
-					cursor: append ? cursor : undefined
-				}
-			});
+			const response = append
+				? await adminAuditService.getList({
+						action: (actionFilter || undefined) as AuditAction | undefined,
+						pagination: { limit: 30, cursor }
+					})
+				: await withMinimumLoadingTime(() =>
+						adminAuditService.getList({
+							action: (actionFilter || undefined) as AuditAction | undefined,
+							pagination: { limit: 30, cursor: undefined }
+						})
+					);
 
 			if (isSuccess(response) && response.data) {
 				if (append) {

@@ -14,6 +14,9 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
+import { LoadingUtil } from '../../../core/utils/LoadingUtil';
+import { BasicDataSource } from '../../../core/utils/BasicDataSource';
+import { AppRouter, LoginRouteParam, GroupDetailRouteParam } from '../../../core/router/AppRouter';
 
 @Component
 export struct GroupPage {
@@ -21,6 +24,7 @@ export struct GroupPage {
 
   private stateManager = GlobalStateManager.getInstance();
   @State groups: GroupItem[] = [];
+  private groupsDataSource: BasicDataSource<GroupItem> = new BasicDataSource<GroupItem>([]);
   @State isLoading: boolean = false;
   @State errorMessage: string = '';
   @State hasMore: boolean = false;
@@ -52,15 +56,17 @@ export struct GroupPage {
         sort_by: 'distance',
         pagination: { limit: 50 }
       };
-      const response = await ApiClient.searchGroups(request);
+      const response = await LoadingUtil.withMinimumTime(() => ApiClient.searchGroups(request));
 
       if (response.code === 0 && response.data) {
         this.groups = response.data.items;
+        this.groupsDataSource.setData(this.groups);
         this.hasMore = response.data.pagination?.has_more ?? false;
         this.nextCursor = response.data.pagination?.next_cursor ?? '';
       } else {
         this.errorMessage = response.message || '加载群组失败';
         this.groups = [];
+        this.groupsDataSource.clear();
       }
     } catch (error) {
       this.errorMessage = error instanceof Error ? error.message : '加载群组失败';
@@ -85,6 +91,7 @@ export struct GroupPage {
       const response = await ApiClient.searchGroups(request);
       if (response.code === 0 && response.data) {
         this.groups = this.groups.concat(response.data.items);
+        this.groupsDataSource.appendData(response.data.items);
         this.hasMore = response.data.pagination?.has_more ?? false;
         this.nextCursor = response.data.pagination?.next_cursor ?? '';
       }
@@ -99,29 +106,18 @@ export struct GroupPage {
     const currentUser = this.stateManager.getCurrentUser();
     if (!currentUser) {
       SystemToast.showWarning('请先登录后再加入群组', this.getUIContext());
-      try {
-        const routerInstance = this.getUIContext().getRouter();
-        await routerInstance.pushUrl({
-          url: `features/auth/pages/${PageNames.LOGIN}`,
-          params: { reason: 'action_required', action: '加入群组' }
-        });
-      } catch (error) {
-        // ignore
-      }
+      const loginParams = new LoginRouteParam();
+      loginParams.reason = 'action_required';
+      loginParams.action = '加入群组';
+      AppRouter.push(PageNames.LOGIN, loginParams);
       return;
     }
 
     if (group.has_password) {
       SystemToast.show('此群组需要密码，请进入详情页加入', this.getUIContext());
-      try {
-        const routerInstance = this.getUIContext().getRouter();
-        await routerInstance.pushUrl({
-          url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
-          params: { groupId: group.group.group_id }
-        });
-      } catch (error) {
-        SystemToast.showError('跳转失败', this.getUIContext());
-      }
+      const detailParams = new GroupDetailRouteParam();
+      detailParams.groupId = group.group.group_id;
+      AppRouter.push(PageNames.GROUP_DETAIL, detailParams);
       return;
     }
 
@@ -155,15 +151,10 @@ export struct GroupPage {
     const currentUser = this.stateManager.getCurrentUser();
     if (!currentUser) {
       SystemToast.showWarning('请先登录后再创建群组', this.getUIContext());
-      try {
-        const routerInstance = this.getUIContext().getRouter();
-        await routerInstance.pushUrl({
-          url: `features/auth/pages/${PageNames.LOGIN}`,
-          params: { reason: 'action_required', action: '创建群组' }
-        });
-      } catch (error) {
-        // ignore
-      }
+      const loginParams = new LoginRouteParam();
+      loginParams.reason = 'action_required';
+      loginParams.action = '创建群组';
+      AppRouter.push(PageNames.LOGIN, loginParams);
       return;
     }
 
@@ -172,12 +163,7 @@ export struct GroupPage {
       return;
     }
 
-    try {
-      const routerInstance = this.getUIContext().getRouter();
-      await routerInstance.pushUrl({ url: `features/group/pages/${PageNames.CREATE_GROUP}` });
-    } catch (error) {
-      SystemToast.showError('跳转失败', this.getUIContext());
-    }
+    AppRouter.push(PageNames.CREATE_GROUP);
   }
 
   build() {
@@ -272,11 +258,11 @@ export struct GroupPage {
   @Builder
   private buildGroupList() {
     List({ space: DesignConstants.SPACING.MD }) {
-      ForEach(this.groups, (group: GroupItem) => {
+      LazyForEach(this.groupsDataSource, (group: GroupItem) => {
         ListItem() {
           this.buildGroupCard(group)
         }
-      }, (group: GroupItem) => group.group.group_id)
+      }, (group: GroupItem) => group.group?.group_id ?? '')
       if (this.isLoadingMore) {
         ListItem() {
           Row({ space: DesignConstants.SPACING.SM }) {
@@ -366,16 +352,10 @@ export struct GroupPage {
     .padding(DesignConstants.SPACING.LG)
     .backgroundColor($r('sys.color.ohos_id_color_background'))
     .borderRadius(DesignConstants.RADIUS.LG)
-    .onClick(async () => {
-      try {
-        const routerInstance = this.getUIContext().getRouter();
-        await routerInstance.pushUrl({
-          url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
-          params: { groupId: group.group.group_id }
-        });
-      } catch (error) {
-        SystemToast.showError('跳转失败', this.getUIContext());
-      }
+    .onClick(() => {
+      const detailParams = new GroupDetailRouteParam();
+      detailParams.groupId = group.group.group_id;
+      AppRouter.push(PageNames.GROUP_DETAIL, detailParams);
     })
   }
 }

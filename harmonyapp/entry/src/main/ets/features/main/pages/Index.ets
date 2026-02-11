@@ -4,6 +4,7 @@
  */
 
 import { PageNames } from '../../../constants/AppConstants';
+import { AppRouter, LoginRouteParam } from '../../../core/router/AppRouter';
 import { common } from '@kit.AbilityKit';
 import { UIContext } from '@kit.ArkUI';
 import { GlobalStateManager, UnreadCount, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_USER_TYPE, KEY_CURRENT_LOCATION, KEY_UNREAD_COUNT } from '../../../core/state/GlobalStateManager';
@@ -44,6 +45,9 @@ const STORAGE_KEY_VISIBLE_NOTIFICATIONS = 'visibleNotifications';
 @Entry
 @Component
 struct Index {
+  /** Navigation 路由栈 */
+  @Provide('NavPathStack') navPathStack: NavPathStack = new NavPathStack();
+
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
   @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
   @StorageLink(KEY_USER_TYPE) userType: string = '';
@@ -70,8 +74,15 @@ struct Index {
   private tabsController: TabsController = new TabsController();
   private wsNotificationsBound: boolean = false;
   private locationSyncTimerId: number = 0;
+  /** 缓存监控定时器 ID */
+  private cacheMonitorTimerId: number = 0;
+  /** 智能通知监听器引用（用于清理） */
+  private smartNotificationListener: ((event: NotificationEvent, notification: SmartNotification, extra?: Object) => void) | null = null;
 
   async aboutToAppear() {
+    // 初始化全局路由
+    AppRouter.init(this.navPathStack);
+
     try {
       this.uiContext = this.getUIContext();
       this.abilityContext = this.uiContext.getHostContext() as common.UIAbilityContext;
@@ -92,6 +103,18 @@ struct Index {
     if (this.locationSyncTimerId) {
       TimerManager.clearInterval(this.locationSyncTimerId);
       this.locationSyncTimerId = 0;
+    }
+    // 停止持续位置监听
+    LocationUtil.stopLocationListening();
+    // 清理缓存监控定时器
+    if (this.cacheMonitorTimerId) {
+      TimerManager.clearInterval(this.cacheMonitorTimerId);
+      this.cacheMonitorTimerId = 0;
+    }
+    // 清理智能通知监听器
+    if (this.smartNotificationListener) {
+      this.smartNotificationService.removeEventListener(NotificationEvent.CREATED, this.smartNotificationListener);
+      this.smartNotificationListener = null;
     }
   }
 
@@ -133,92 +156,53 @@ struct Index {
       if (persistentState.currentLocation) {
         this.stateManager.updateLocation(persistentState.currentLocation as LocationInfo);
       }
-
+      // ===== 持续位置追踪（与 MapKit 蓝点共享 Location Kit 数据源） =====
       try {
-        // 主动请求位置权限（而非仅检查）
         const hasPermission: boolean = await PermissionManager.getInstance().requestLocationPermission();
         if (hasPermission) {
-          const location = await LocationUtil.getCurrentLocation();
-          if (location) {
-            const locationName: string | null = await LocationUtil.getLocationName(location.latitude, location.longitude);
-            const locationInfo: LocationInfo = {
-              latitude: location.latitude,
-              longitude: location.longitude,
-              locationName: locationName || '位置不可用',
-              accuracy: location.accuracy || 0,
-              altitude: location.altitude || 0,
-              speed: location.speed || 0,
-              bearing: location.bearing || 0,
-              timestamp: location.timestamp || Date.now()
-            };
-            this.stateManager.updateLocation(locationInfo);
-
-            // 登录态：同步到服务端（与 Web 端保持一致，不依赖“手动点更新位置”）
-            if (this.isLoggedIn) {
-              try {
-                const geoPoint: GeoPoint = {
-                  latitude: locationInfo.latitude,
-                  longitude: locationInfo.longitude
-                };
-                const locationReq: UpdateLocationRequest = {
-                  location: {
-                    point: geoPoint,
-                    location_name: locationInfo.locationName || '位置不可用'
-                  }
-                };
-                await ApiClient.updateLocation(locationReq);
-              } catch (e) {
-                hilog.warn(DOMAIN_NUMBER, TAG, `位置上传失败: ${JSON.stringify(e)}`);
-              }
+          // 启动持续位置监听（5s 间隔），实时更新 currentLocation
+          // 确保 currentLocation 始终与地图蓝点位置一致
+          const started = await LocationUtil.startLocationListening((locInfo: LocationInfo) => {
+            this.stateManager.updateLocation(locInfo);
+          });
+          if (started) {
+            hilog.info(DOMAIN_NUMBER, TAG, '✅ 持续位置监听已启动');
+          } else {
+            // 监听启动失败，回退到单次定位
+            hilog.warn(DOMAIN_NUMBER, TAG, '持续监听启动失败，回退到单次定位');
+            const location = await LocationUtil.getCurrentLocation();
+            if (location) {
+              this.stateManager.updateLocation(location);
             }
           }
         } else {
           hilog.warn(DOMAIN_NUMBER, TAG, '位置权限未授予');
         }
-      } catch (error) {
-        hilog.warn(DOMAIN_NUMBER, TAG, `获取位置失败: ${JSON.stringify(error)}`);
+      } catch {
+        hilog.warn(DOMAIN_NUMBER, TAG, '位置初始化失败');
       }
 
-      // 定时同步位置（5分钟一次）：仅登录态启用，节省电量与网络
+      // 定时同步位置到服务端（5分钟一次）：位置由持续监听实时更新，服务端上报节省网络
       if (this.isLoggedIn && this.locationSyncTimerId === 0) {
         this.locationSyncTimerId = TimerManager.setInterval(async () => {
           try {
-            if (!this.isLoggedIn) return;
-            const hasPermission: boolean = await PermissionManager.getInstance().checkLocationPermission();
-            if (!hasPermission) return;
-
-            const location = await LocationUtil.getCurrentLocation();
-            if (!location) return;
-
-            const locationName: string | null = await LocationUtil.getLocationName(location.latitude, location.longitude);
-            const locationInfo: LocationInfo = {
-              latitude: location.latitude,
-              longitude: location.longitude,
-              locationName: locationName || '位置不可用',
-              accuracy: location.accuracy || 0,
-              altitude: location.altitude || 0,
-              speed: location.speed || 0,
-              bearing: location.bearing || 0,
-              timestamp: location.timestamp || Date.now()
-            };
-            this.stateManager.updateLocation(locationInfo);
-
-            const geoPoint2: GeoPoint = {
-              latitude: locationInfo.latitude,
-              longitude: locationInfo.longitude
+            if (!this.isLoggedIn || !this.currentLocation) return;
+            const geoPoint: GeoPoint = {
+              latitude: this.currentLocation.latitude,
+              longitude: this.currentLocation.longitude
             };
             const locationReq: UpdateLocationRequest = {
               location: {
-                point: geoPoint2,
-                location_name: locationInfo.locationName || '位置不可用'
+                point: geoPoint,
+                location_name: this.currentLocation.locationName || '位置不可用'
               }
             };
             const resp = await ApiClient.updateLocation(locationReq);
             if (resp.code !== 0) {
               hilog.warn(DOMAIN_NUMBER, TAG, `定时位置上传失败: ${resp.message || resp.code}`);
             }
-          } catch (e) {
-            hilog.warn(DOMAIN_NUMBER, TAG, `定时位置同步异常: ${JSON.stringify(e)}`);
+          } catch {
+            hilog.warn(DOMAIN_NUMBER, TAG, '定时位置同步异常');
           }
         }, 5 * 60 * 1000, '定时同步用户位置');
       }
@@ -505,17 +489,20 @@ struct Index {
 
   private async initializeSmartServices(): Promise<void> {
     try {
-      setInterval(() => {
+      // 缓存命中率监控（使用 TimerManager 以便统一清理）
+      this.cacheMonitorTimerId = TimerManager.setInterval(() => {
         const stats = this.cacheManager.getStats();
         if (stats.hitRate < 50 && stats.totalRequests > 100) {
           hilog.warn(DOMAIN_NUMBER, TAG, `缓存命中率较低: ${stats.hitRate}%`);
         }
-      }, 30000); 
+      }, 30000);
 
-      this.smartNotificationService.addEventListener(NotificationEvent.CREATED, (event, notification) => {
+      // 存储监听器引用以便 aboutToDisappear 清理
+      this.smartNotificationListener = (_event: NotificationEvent, notification: SmartNotification): void => {
         hilog.info(DOMAIN_NUMBER, TAG, `收到通知: ${notification.title}`);
         NotificationRenderer.getInstance().showNotification(notification);
-      });
+      };
+      this.smartNotificationService.addEventListener(NotificationEvent.CREATED, this.smartNotificationListener);
 
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `智能服务初始化失败: ${JSON.stringify(error)}`);
@@ -536,15 +523,10 @@ struct Index {
 
   private showCreateActionSheet(): void {
     if (!this.isLoggedIn) {
-      try {
-        const routerInstance = this.getUIContext().getRouter();
-        routerInstance.pushUrl({
-          url: `features/auth/pages/${PageNames.LOGIN}`,
-          params: { reason: 'action_required', action: '创建内容' }
-        });
-      } catch (_e) {
-        // ignore
-      }
+      const loginParams = new LoginRouteParam();
+      loginParams.reason = 'action_required';
+      loginParams.action = '创建内容';
+      AppRouter.push(PageNames.LOGIN, loginParams);
       return;
     }
     this.showCreateSheet = true;
@@ -664,6 +646,7 @@ struct Index {
         .justifyContent(FlexAlign.Center)
         .backgroundColor($r('sys.color.ohos_id_color_background'))
       } else {
+        Navigation(this.navPathStack) {
         Tabs({ barPosition: BarPosition.End, controller: this.tabsController }) {
           // 1. 附近（含动态/用户/群组子标签）
           TabContent() {
@@ -719,6 +702,10 @@ struct Index {
           dragBar: true,
           showClose: true
         })
+        }
+        .mode(NavigationMode.Stack)
+        .hideTitleBar(true)
+        .hideBackButton(true)
       }
 
       if (this.visibleNotifications.length > 0) {
@@ -736,7 +723,10 @@ struct Index {
                 NotificationRenderer.getInstance().handleAction(action, notification);
               }
             })
-            .transition(TransitionEffect.OPACITY.animation({ duration: 300 }).combine(TransitionEffect.move(TransitionEdge.TOP)))
+            .transition(
+              TransitionEffect.OPACITY.animation({ duration: 350, curve: Curve.FastOutSlowIn })
+                .combine(TransitionEffect.move(TransitionEdge.TOP).animation({ duration: 350, curve: Curve.FastOutSlowIn }))
+            )
           }, (item: SmartNotification) => item.id)
         }
         .width('100%')
@@ -751,6 +741,7 @@ struct Index {
         .width('100%')
         .height('100%')
         .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.EaseInOut }))
         .onClick(() => {
           this.showNotificationCenter = false;
         })
@@ -766,6 +757,7 @@ struct Index {
         .width('100%')
         .height('100%')
         .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.EaseInOut }))
         .onClick(() => {
           this.showPerformanceDetails = false;
         })
@@ -789,19 +781,14 @@ struct Index {
         .type(ButtonType.Capsule)
         .fontSize(12)
         .height(28)
-        .backgroundColor(Color.White)
+        .backgroundColor($r('sys.color.ohos_id_color_background'))
         .fontColor($r('sys.color.ohos_id_color_emphasize'))
-        .onClick(async () => {
-          try {
-            const routerInstance = this.getUIContext().getRouter();
-            await routerInstance.pushUrl({ url: `features/auth/pages/${PageNames.LOGIN}` });
-          } catch (error) {
-            hilog.error(DOMAIN_NUMBER, TAG, `跳转注册失败: ${error}`);
-          }
+        .onClick(() => {
+          AppRouter.push(PageNames.LOGIN);
         })
     }
     .width('100%')
-    .padding({ left: 16, right: 12, top: 8, bottom: 8 })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: 8, bottom: 8 })
     .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
   }
 
@@ -853,7 +840,7 @@ struct Index {
       .borderRadius(DesignConstants.RADIUS.LG)
       .onClick(() => {
         this.showCreateSheet = false;
-        this.navigateToPage(`features/moment/pages/${PageNames.CREATE_MOMENT}`);
+        AppRouter.push(PageNames.CREATE_MOMENT);
       })
 
       // 创建群组
@@ -896,7 +883,7 @@ struct Index {
       .margin({ top: DesignConstants.SPACING.SM })
       .onClick(() => {
         this.showCreateSheet = false;
-        this.navigateToPage(`features/group/pages/${PageNames.CREATE_GROUP}`);
+        AppRouter.push(PageNames.CREATE_GROUP);
       })
     }
     .width('100%')
@@ -904,12 +891,8 @@ struct Index {
       top: DesignConstants.SPACING.LG, bottom: 40 })
   }
 
-  private navigateToPage(url: string): void {
-    try {
-      const routerInstance = this.getUIContext().getRouter();
-      routerInstance.pushUrl({ url: url });
-    } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `页面跳转失败: ${error}`);
-    }
+  /** 通过路由名跳转页面（兼容旧调用） */
+  private navigateToPage(name: string): void {
+    AppRouter.push(name);
   }
 }

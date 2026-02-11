@@ -155,6 +155,10 @@
     {
       "name": "error_network_error",
       "value": "网络错误"
+    },
+    {
+      "name": "distributed_sync_reason",
+      "value": "需要分布式数据同步权限以支持多设备协同"
     }
   ]
 }

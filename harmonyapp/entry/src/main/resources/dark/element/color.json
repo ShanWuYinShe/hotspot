@@ -3,6 +3,34 @@
     {
       "name": "start_window_background",
       "value": "#000000"
+    },
+    {
+      "name": "color_shadow",
+      "value": "#33FFFFFF"
+    },
+    {
+      "name": "color_danger",
+      "value": "#FFEF5350"
+    },
+    {
+      "name": "color_overlay_light",
+      "value": "#0DFFFFFF"
+    },
+    {
+      "name": "color_overlay_medium",
+      "value": "#33FFFFFF"
+    },
+    {
+      "name": "color_overlay_heavy",
+      "value": "#66FFFFFF"
+    },
+    {
+      "name": "color_pin_halo",
+      "value": "#33FF7043"
+    },
+    {
+      "name": "color_emphasize_bg",
+      "value": "#33FF8F00"
     }
   ]
 }

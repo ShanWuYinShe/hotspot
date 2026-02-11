@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { adminReportsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
@@ -26,13 +27,17 @@
 	async function loadReports(append = false) {
 		if (!append) isLoading = true;
 		try {
-			const response = await adminReportsService.search({
-				status: statusFilter === 'all' ? undefined : statusFilter,
-				pagination: {
-					limit: 20,
-					cursor: append ? cursor : undefined
-				}
-			});
+			const response = append
+				? await adminReportsService.search({
+						status: statusFilter === 'all' ? undefined : statusFilter,
+						pagination: { limit: 20, cursor }
+					})
+				: await withMinimumLoadingTime(() =>
+						adminReportsService.search({
+							status: statusFilter === 'all' ? undefined : statusFilter,
+							pagination: { limit: 20, cursor: undefined }
+						})
+					);
 
 			if (isSuccess(response) && response.data) {
 				if (append) {

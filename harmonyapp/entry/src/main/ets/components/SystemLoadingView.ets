@@ -43,13 +43,13 @@ export struct SystemLoadingView {
 
   build() {
     Column({ space: 24 }) {
-      // 系统级加载动画
+      // 龙形 logo 旋转动画 —— 游龙戏珠效果
       Stack() {
-        // 外圈旋转动画
-        Circle({ width: 80, height: 80 })
-          .stroke($r('sys.color.ohos_id_color_emphasize'))
-          .strokeWidth(3)
-          .strokeDashArray([15, 8])
+        // logo 旋转
+        Image($r('app.media.logo'))
+          .width(80)
+          .height(80)
+          .objectFit(ImageFit.Contain)
           .rotate({ angle: this.rotationAngle })
           .animation({
             duration: 2000,
@@ -57,42 +57,21 @@ export struct SystemLoadingView {
             curve: Curve.Linear
           })
 
-        // 内圈进度
-        if (this.showProgress) {
-          if (this.progressType === 'indeterminate') {
-            // 不确定进度 - 使用呼吸效果
-            Circle({ width: 60, height: 60 })
-              .stroke($r('sys.color.ohos_id_color_emphasize'))
-              .strokeWidth(4)
-              .opacity(0.3 + 0.7 * (this.loadingProgress / 100))
-              .animation({
-                duration: 2000,
-                iterations: -1,
-                curve: Curve.EaseInOut
-              })
-          } else {
-            // 确定进度 - 显示实际进度
-            Progress({
-              value: this.externalProgress !== undefined ? this.externalProgress : this.loadingProgress,
-              total: this.maxProgress,
-              type: ProgressType.Ring
-            })
-            .width(60)
-            .height(60)
+        // 确定进度模式：在 logo 下方显示进度环
+        if (this.showProgress && this.progressType === 'determinate') {
+          Progress({
+            value: this.externalProgress !== undefined ? this.externalProgress : this.loadingProgress,
+            total: this.maxProgress,
+            type: ProgressType.Ring
+          })
+            .width(96)
+            .height(96)
             .color($r('sys.color.ohos_id_color_emphasize'))
             .style({
-              strokeWidth: 4,
+              strokeWidth: 3,
               scaleCount: 0,
               enableScanEffect: false
             })
-          }
-        }
-
-        // 中心图标
-        Text() {
-          SymbolSpan($r('sys.symbol.arrow_clockwise'))
-            .fontSize(24)
-            .fontColor([$r('sys.color.ohos_id_color_emphasize')])
         }
       }
 

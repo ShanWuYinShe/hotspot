@@ -1,20 +1,5 @@
 {
   "src": [
-    "features/main/pages/Index",
-    "features/auth/pages/LoginPage",
-    "features/group/pages/GroupDetailPage",
-    "features/group/pages/CreateGroupPage",
-    "features/chat/pages/ChatPage",
-    "features/moment/pages/CreateMomentPage",
-    "features/moment/pages/PhotoPreviewPage",
-    "features/search/pages/SearchPage",
-    "features/settings/pages/SettingsPage",
-    "features/settings/pages/AdvancedSettingsPage",
-    "features/subscriptions/pages/SubscriptionsPage",
-    "features/debug/pages/DebugPanel",
-    "features/recommendation/pages/RecommendationPage",
-    "features/map/pages/MapPage",
-    "features/map/pages/LocationPickerPage",
-    "features/settings/pages/AccountsPage"
+    "features/main/pages/Index"
   ]
 }

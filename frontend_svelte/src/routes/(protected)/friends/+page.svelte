@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { usersService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
@@ -27,12 +28,15 @@
 		}
 
 		try {
-			const response = await usersService.getMyFriends({
-				pagination: {
-					limit: 24,
-					cursor: refresh ? undefined : cursor
-				}
-			});
+			const response = refresh
+				? await withMinimumLoadingTime(() =>
+						usersService.getMyFriends({
+							pagination: { limit: 24, cursor: undefined }
+						})
+					)
+				: await usersService.getMyFriends({
+						pagination: { limit: 24, cursor }
+					});
 			if (isSuccess(response) && response.data) {
 				friends = refresh ? response.data.items : [...friends, ...response.data.items];
 				hasMore = response.data.pagination.has_more;

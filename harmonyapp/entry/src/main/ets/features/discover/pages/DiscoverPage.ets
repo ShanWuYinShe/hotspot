@@ -6,6 +6,7 @@
 import { KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
+import { AppRouter } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import {
   UserItem, TagItem, MomentItem, TrendingBundle, MomentImage, FollowRequest, SearchUsersRequest
@@ -15,6 +16,8 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
+import { LoadingUtil } from '../../../core/utils/LoadingUtil';
+import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
 const DOMAIN_NUMBER: number = 0xFF11;
@@ -31,7 +34,9 @@ export struct DiscoverPage {
   @State isLoading: boolean = false;
   @State trendingTags: TagItem[] = [];
   @State recommendedUsers: UserItem[] = [];
+  private recommendedUsersDataSource: BasicDataSource<UserItem> = new BasicDataSource<UserItem>([]);
   @State hotMoments: MomentItem[] = [];
+  private hotMomentsDataSource: BasicDataSource<MomentItem> = new BasicDataSource<MomentItem>([]);
   @State isRefreshing: boolean = false;
 
   async aboutToAppear() {
@@ -42,16 +47,15 @@ export struct DiscoverPage {
     this.isLoading = true;
     try {
       // 并行加载：热门内容 + 推荐用户
-      const trendingPromise = ApiClient.getFeedTrending({});
       const usersRequest: SearchUsersRequest = {
         reference_point: this.currentLocation
           ? { latitude: this.currentLocation.latitude, longitude: this.currentLocation.longitude }
           : { latitude: 0, longitude: 0 },
         pagination: { limit: 10 }
       };
-      const usersPromise = ApiClient.searchUsers(usersRequest);
-
-      const results = await Promise.all([trendingPromise, usersPromise]);
+      const results = await LoadingUtil.withMinimumTime(() =>
+        Promise.all([ApiClient.getFeedTrending({}), ApiClient.searchUsers(usersRequest)])
+      );
       const trendingResponse = results[0];
       const usersResponse = results[1];
 
@@ -59,13 +63,15 @@ export struct DiscoverPage {
         const bundle: TrendingBundle = trendingResponse.data;
         this.trendingTags = bundle.trending_tags || [];
         this.hotMoments = bundle.hot_moments || [];
+        this.hotMomentsDataSource.setData(this.hotMoments);
       }
 
       if (usersResponse.code === 0 && usersResponse.data) {
         this.recommendedUsers = usersResponse.data.items.filter((u: UserItem) => u.user?.user_id);
+        this.recommendedUsersDataSource.setData(this.recommendedUsers);
       }
-    } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `加载发现数据失败: ${JSON.stringify(error)}`);
+    } catch {
+      hilog.error(DOMAIN_NUMBER, TAG, '加载发现数据失败');
     } finally {
       this.isLoading = false;
       this.isRefreshing = false;
@@ -95,12 +101,12 @@ export struct DiscoverPage {
         .justifyContent(FlexAlign.Center)
         .borderRadius(DesignConstants.RADIUS.FULL)
         .onClick(() => {
-          this.navigateTo(`features/search/pages/${PageNames.SEARCH}`);
+          AppRouter.push(PageNames.SEARCH);
         })
       }
       .width('100%')
       .height(56)
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.MD })
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
       .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       // 内容区
@@ -116,18 +122,40 @@ export struct DiscoverPage {
               }
             }
 
-            // 推荐用户
+            // 推荐用户（标题 + LazyForEach）
             if (this.recommendedUsers.length > 0) {
               ListItem() {
-                this.buildRecommendedUsersSection()
+                Column({ space: DesignConstants.SPACING.MD }) {
+                  this.buildSectionHeader('推荐用户', AppIcon.PERSON)
+                }
+                .width('100%')
+                .padding(DesignConstants.SPACING.LG)
+                .backgroundColor($r('sys.color.ohos_id_color_background'))
+                .borderRadius(DesignConstants.RADIUS.LG)
               }
+              LazyForEach(this.recommendedUsersDataSource, (user: UserItem) => {
+                ListItem() {
+                  this.buildRecommendedUserRow(user)
+                }
+              }, (user: UserItem) => user.user?.user_id ?? '')
             }
 
-            // 热门瞬间
+            // 热门瞬间（标题 + LazyForEach）
             if (this.hotMoments.length > 0) {
               ListItem() {
-                this.buildHotMomentsSection()
+                Column({ space: DesignConstants.SPACING.MD }) {
+                  this.buildSectionHeader('热门动态', AppIcon.HEART_FILL)
+                }
+                .width('100%')
+                .padding(DesignConstants.SPACING.LG)
+                .backgroundColor($r('sys.color.ohos_id_color_background'))
+                .borderRadius(DesignConstants.RADIUS.LG)
               }
+              LazyForEach(this.hotMomentsDataSource, (moment: MomentItem) => {
+                ListItem() {
+                  this.buildHotMomentRow(moment)
+                }
+              }, (moment: MomentItem) => moment.moment_id)
             }
 
             // 没有任何内容
@@ -191,7 +219,7 @@ export struct DiscoverPage {
           .onClick(() => {
             const searchParams = new SearchParams();
             searchParams.keyword = `#${tag.name}`;
-            this.navigateTo(`features/search/pages/${PageNames.SEARCH}`, searchParams);
+            AppRouter.push(PageNames.SEARCH, searchParams);
           })
         }, (tag: TagItem) => tag.name)
       }
@@ -202,114 +230,97 @@ export struct DiscoverPage {
     .borderRadius(DesignConstants.RADIUS.LG)
   }
 
-  // ==================== 推荐用户 ====================
+  // ==================== 推荐用户（单行，供 LazyForEach 使用）====================
   @Builder
-  buildRecommendedUsersSection() {
-    Column({ space: DesignConstants.SPACING.MD }) {
-      this.buildSectionHeader('推荐用户', AppIcon.PERSON)
+  buildRecommendedUserRow(user: UserItem) {
+    Row({ space: DesignConstants.SPACING.MD }) {
+      SystemAvatar({
+        avatarUrl: user.user?.avatar_url ?? '',
+        name: user.user?.nickname ?? '',
+        avatarSize: 44
+      })
 
-      ForEach(this.recommendedUsers, (user: UserItem) => {
-        Row({ space: DesignConstants.SPACING.MD }) {
-          SystemAvatar({
-            avatarUrl: user.user?.avatar_url ?? '',
-            name: user.user?.nickname ?? '',
-            avatarSize: 44
-          })
+      Column({ space: 2 }) {
+        Text(user.user?.nickname ?? '')
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
 
-          Column({ space: 2 }) {
-            Text(user.user?.nickname ?? '')
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontWeight(FontWeight.Medium)
-              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        Text(user.bio || '可能会感兴趣')
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
 
-            Text(user.bio || '可能会感兴趣')
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-          }
-          .alignItems(HorizontalAlign.Start)
-          .layoutWeight(1)
-
-          Button('关注')
-            .type(ButtonType.Capsule)
-            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-            .fontColor(Color.White)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .height(30)
-            .onClick(() => { this.followUser(user); })
-        }
-        .width('100%')
-        .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-      }, (user: UserItem) => user.user?.user_id ?? '')
+      Button('关注')
+        .type(ButtonType.Capsule)
+        .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+        .fontColor(Color.White)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .height(30)
+        .onClick(() => { this.followUser(user); })
     }
     .width('100%')
-    .padding(DesignConstants.SPACING.LG)
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
     .backgroundColor($r('sys.color.ohos_id_color_background'))
-    .borderRadius(DesignConstants.RADIUS.LG)
   }
 
-  // ==================== 热门瞬间 ====================
+  // ==================== 热门瞬间（单条，供 LazyForEach 使用）====================
   @Builder
-  buildHotMomentsSection() {
-    Column({ space: DesignConstants.SPACING.MD }) {
-      this.buildSectionHeader('热门动态', AppIcon.HEART_FILL)
+  buildHotMomentRow(moment: MomentItem) {
+    Column({ space: DesignConstants.SPACING.SM }) {
+      // 用户行
+      Row({ space: DesignConstants.SPACING.SM }) {
+        SystemAvatar({
+          avatarUrl: moment.user?.avatar_url ?? '',
+          name: moment.user?.nickname ?? '',
+          avatarSize: 32
+        })
+        Text(moment.user?.nickname ?? '')
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .layoutWeight(1)
+      }
+      .width('100%')
 
-      ForEach(this.hotMoments, (moment: MomentItem) => {
-        Column({ space: DesignConstants.SPACING.SM }) {
-          // 用户行
-          Row({ space: DesignConstants.SPACING.SM }) {
-            SystemAvatar({
-              avatarUrl: moment.user?.avatar_url ?? '',
-              name: moment.user?.nickname ?? '',
-              avatarSize: 32
-            })
-            Text(moment.user?.nickname ?? '')
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontWeight(FontWeight.Medium)
-              .fontColor($r('sys.color.ohos_id_color_text_primary'))
-              .layoutWeight(1)
-          }
-          .width('100%')
-
-          // 文本
-          Text(moment.description)
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
-            .maxLines(3)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .lineHeight(22)
-            .width('100%')
-
-          // 图片（只显示第一张）
-          if (moment.images && moment.images.length > 0) {
-            Image(moment.images[0].url)
-              .width('100%')
-              .constraintSize({ maxHeight: 180 })
-              .objectFit(ImageFit.Cover)
-              .borderRadius(DesignConstants.RADIUS.MD)
-          }
-
-          // 互动数据
-          Row({ space: 24 }) {
-            this.buildStatChip(AppIcon.HEART, `${moment.likes_count}`)
-            this.buildStatChip(AppIcon.MESSAGE, `${moment.comments_count}`)
-          }
-          .width('100%')
-        }
+      // 文本
+      Text(moment.description)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .maxLines(3)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .lineHeight(22)
         .width('100%')
-        .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
 
-        // 分隔线
-        Divider()
-          .strokeWidth(0.5)
-          .color($r('sys.color.ohos_id_color_component_normal'))
-      }, (moment: MomentItem) => moment.moment_id)
+      // 图片（只显示第一张）
+      if (moment.images && moment.images.length > 0) {
+        Image(moment.images[0].url)
+          .width('100%')
+          .constraintSize({ maxHeight: 180 })
+          .objectFit(ImageFit.Cover)
+          .borderRadius(DesignConstants.RADIUS.MD)
+      }
+
+      // 互动数据
+      Row({ space: 24 }) {
+        this.buildStatChip(AppIcon.HEART, `${moment.likes_count}`)
+        this.buildStatChip(AppIcon.MESSAGE, `${moment.comments_count}`)
+      }
+      .width('100%')
     }
     .width('100%')
-    .padding(DesignConstants.SPACING.LG)
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
     .backgroundColor($r('sys.color.ohos_id_color_background'))
-    .borderRadius(DesignConstants.RADIUS.LG)
+
+    Divider()
+      .strokeWidth(0.5)
+      .color($r('sys.color.ohos_id_color_component_normal'))
   }
 
   // ==================== 通用构建器 ====================
@@ -354,21 +365,9 @@ export struct DiscoverPage {
       } else {
         SystemToast.showError(response.message || '关注失败', this.getUIContext());
       }
-    } catch (_e) {
+    } catch {
       SystemToast.showError('关注失败', this.getUIContext());
     }
   }
 
-  private navigateTo(url: string, params?: object): void {
-    try {
-      const routerInstance = this.getUIContext().getRouter();
-      if (params) {
-        routerInstance.pushUrl({ url: url, params: params });
-      } else {
-        routerInstance.pushUrl({ url: url });
-      }
-    } catch (_e) {
-      // ignore
-    }
-  }
 }

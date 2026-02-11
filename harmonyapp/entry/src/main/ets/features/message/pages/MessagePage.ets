@@ -6,6 +6,7 @@
 
 import { GlobalStateManager, KEY_CURRENT_USER, KEY_LAST_MESSAGE_SYNC_TIME } from '../../../core/state/GlobalStateManager';
 import { ApiClient } from '../../../core/api/ApiClient';
+import { AppRouter, ChatRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { PrivateChatItem, GroupItem, MyProfile, MyGroupsRequest, DeletePrivateChatRequest, LeaveGroupRequest } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -20,6 +21,7 @@ import { VibrationUtil } from '../../../core/utils/VibrationUtil';
 import { scanBarcode, scanCore } from '@kit.ScanKit';
 import { common } from '@kit.AbilityKit';
 import pasteboard from '@ohos.pasteboard';
+import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 
 const DOMAIN_NUMBER: number = 0xFF08;
 const TAG: string = 'MessagePage';
@@ -77,19 +79,19 @@ export struct MessagePage {
     this.errorMessage = '';
 
     try {
-      const privateChatsPromise = this.loadPrivateChats();
-      const groupChatsPromise = this.loadGroupChats();
-      const results = await Promise.allSettled([privateChatsPromise, groupChatsPromise]);
+      const results = await LoadingUtil.withMinimumTime(() =>
+        Promise.allSettled([this.loadPrivateChats(), this.loadGroupChats()])
+      );
       const privateChatsResult = results[0];
       const groupChatsResult = results[1];
 
       let allChats: ChatItem[] = [];
 
       if (privateChatsResult.status === 'fulfilled' && privateChatsResult.value) {
-        allChats.push(...privateChatsResult.value);
+        allChats = allChats.concat(privateChatsResult.value);
       }
       if (groupChatsResult.status === 'fulfilled' && groupChatsResult.value) {
-        allChats.push(...groupChatsResult.value);
+        allChats = allChats.concat(groupChatsResult.value);
       }
 
       allChats.sort((a, b) => {
@@ -106,8 +108,8 @@ export struct MessagePage {
       }
 
       this.updateCache(allChats);
-    } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `加载消息失败: ${JSON.stringify(error)}`);
+    } catch {
+      hilog.error(DOMAIN_NUMBER, TAG, '加载消息失败');
       if (this.chatListDataSource.totalCount() === 0) {
         this.errorMessage = '加载消息失败，请检查网络';
         this.hasData = false;
@@ -183,8 +185,8 @@ export struct MessagePage {
           });
       }
       return [];
-    } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `加载私聊失败: ${error}`);
+    } catch {
+      hilog.error(DOMAIN_NUMBER, TAG, '加载私聊失败');
       return [];
     }
   }
@@ -213,8 +215,8 @@ export struct MessagePage {
           });
       }
       return [];
-    } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `加载群聊失败: ${error}`);
+    } catch {
+      hilog.error(DOMAIN_NUMBER, TAG, '加载群聊失败');
       return [];
     }
   }
@@ -235,7 +237,7 @@ export struct MessagePage {
       let newChats: ChatItem[] = [];
       for (const result of results) {
         if (result.status === 'fulfilled' && result.value) {
-          newChats.push(...result.value);
+          newChats = newChats.concat(result.value);
         }
       }
       if (newChats.length > 0) {
@@ -245,8 +247,8 @@ export struct MessagePage {
         this.chatListDataSource.setData(mergedItems);
         this.updateCache(mergedItems);
       }
-    } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `加载更多消息失败: ${error}`);
+    } catch {
+      hilog.error(DOMAIN_NUMBER, TAG, '加载更多消息失败');
     } finally {
       this.isLoadingMore = false;
     }
@@ -284,22 +286,16 @@ export struct MessagePage {
     return time.toLocaleDateString();
   }
 
-  private async enterChat(item: ChatItem) {
-    try {
-      const routerInstance = this.getUIContext().getRouter();
-      const targetUserId = item.type === 'private' ? (item.data as PrivateChatItem).other_user?.user_id ?? item.id : item.id;
-      await routerInstance.pushUrl({
-        url: `features/chat/pages/${PageNames.CHAT}`,
-        params: {
-          chatId: targetUserId,
-          chatType: item.type === 'private' ? 'private_chat' : 'group_chat',
-          title: item.name,
-          targetId: item.type === 'private' ? targetUserId : undefined
-        }
-      });
-    } catch (error) {
-      SystemToast.showError('跳转失败', this.getUIContext());
+  private enterChat(item: ChatItem) {
+    const targetUserId = item.type === 'private' ? (item.data as PrivateChatItem).other_user?.user_id ?? item.id : item.id;
+    const chatParams = new ChatRouteParam();
+    chatParams.chatId = targetUserId;
+    chatParams.chatType = item.type === 'private' ? 'private_chat' : 'group_chat';
+    chatParams.title = item.name;
+    if (item.type === 'private') {
+      chatParams.targetId = targetUserId;
     }
+    AppRouter.push(PageNames.CHAT, chatParams);
   }
 
   private async deleteChat(item: ChatItem): Promise<void> {
@@ -323,7 +319,7 @@ export struct MessagePage {
       }
       this.updateCache(this.getAllDataFromSource());
       SystemToast.show('操作成功', this.getUIContext());
-    } catch (error) {
+    } catch {
       SystemToast.showError('操作失败', this.getUIContext());
     }
   }
@@ -355,8 +351,7 @@ export struct MessagePage {
               .fontColor([$r('sys.color.ohos_id_color_text_primary')])
           }
           .onClick(() => {
-            const routerInstance = this.getUIContext().getRouter();
-            routerInstance.pushUrl({ url: `features/search/pages/${PageNames.SEARCH}` });
+            AppRouter.push(PageNames.SEARCH);
           })
 
           // 更多操作
@@ -369,15 +364,13 @@ export struct MessagePage {
             {
               value: '发起群聊',
               action: () => {
-                const routerInstance = this.getUIContext().getRouter();
-                routerInstance.pushUrl({ url: `features/group/pages/${PageNames.CREATE_GROUP}` });
+                AppRouter.push(PageNames.CREATE_GROUP);
               }
             },
             {
               value: '添加朋友',
               action: () => {
-                const routerInstance = this.getUIContext().getRouter();
-                routerInstance.pushUrl({ url: `features/search/pages/${PageNames.SEARCH}` });
+                AppRouter.push(PageNames.SEARCH);
               }
             },
             {
@@ -404,13 +397,9 @@ export struct MessagePage {
                   } else {
                     SystemToast.show('当前设备不支持扫码', this.getUIContext());
                   }
-                } catch (error) {
-                  hilog.error(DOMAIN_NUMBER, TAG, `扫描启动失败: ${JSON.stringify(error)}`);
-                  const errorObj = error as Record<string, Object>;
-                  const errorCode = errorObj.code as number | undefined;
-                  if (errorCode !== 1001) {
-                    SystemToast.showError('扫描启动失败', this.getUIContext());
-                  }
+                } catch {
+                  hilog.error(DOMAIN_NUMBER, TAG, '扫描启动失败');
+                  SystemToast.showError('扫描启动失败', this.getUIContext());
                 }
               }
             }
@@ -529,7 +518,7 @@ export struct MessagePage {
         .height('100%')
         .justifyContent(FlexAlign.Center)
       }
-      .backgroundColor('#FF3B30')
+      .backgroundColor($r('app.color.color_danger'))
       .width(80)
       .height('100%')
       .onClick(() => this.deleteChat(item))
@@ -554,7 +543,7 @@ export struct MessagePage {
           Text(item.unreadCount > 99 ? '99+' : item.unreadCount.toString())
             .fontSize(10)
             .fontColor(Color.White)
-            .backgroundColor('#FF3B30')
+            .backgroundColor($r('app.color.color_danger'))
             .borderRadius(10)
             .padding({ left: 4, right: 4 })
             .height(16)

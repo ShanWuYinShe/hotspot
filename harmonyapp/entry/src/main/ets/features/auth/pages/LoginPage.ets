@@ -8,7 +8,7 @@ import { GlobalStateManager } from '../../../core/state/GlobalStateManager';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { HttpUtil } from '../../../core/network/HttpUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
-import { PageNames } from '../../../constants/AppConstants';
+import { AppRouter } from '../../../core/router/AppRouter';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { PasswordSecurityUtil } from '../../../core/security/PasswordSecurityUtil';
@@ -16,14 +16,15 @@ import { AuthData, GuestRequest, MyProfile, LoginRequest, RegisterRequest } from
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
+import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AppIcon } from '../../../components/SystemIcon';
 
 const DOMAIN_NUMBER: number = 0xFF02;
 const TAG: string = 'LoginPage';
 
-@Entry
 @Component
-struct LoginPage {
+export struct LoginPage {
+  pathStack: NavPathStack = new NavPathStack();
   @StorageLink('isLoggedIn') isLoggedIn: boolean = false;
 
   @State nickname: string = '';
@@ -43,27 +44,9 @@ struct LoginPage {
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
 
-  aboutToAppear() {
-    try {
-      const routerInstance = this.getUIContext().getRouter();
-      const params = routerInstance.getParams() as Record<string, Object>;
-      if (params) {
-        const redirect = params.redirectUrl as string;
-        if (redirect) {
-          this.redirectUrl = redirect;
-        }
-        const action = params.action as string;
-        if (action) {
-          this.redirectAction = action;
-        }
-      }
-    } catch (error) {
-      // ignore
-    }
-  }
-
   build() {
-    Column() {
+    NavDestination() {
+      Column() {
       if (this.isLoading) {
         SystemLoadingView({
           message: this.loadingStage || '加载中...',
@@ -79,18 +62,8 @@ struct LoginPage {
               .fontSize(24)
               .fontColor([$r('sys.color.ohos_id_color_text_primary')])
           }
-          .onClick(async () => {
-            try {
-              const routerInstance = this.getUIContext().getRouter();
-              await routerInstance.back();
-            } catch (error) {
-              try {
-                const routerInstance = this.getUIContext().getRouter();
-                await routerInstance.replaceUrl({ url: `features/main/pages/${PageNames.INDEX}` });
-              } catch (e) {
-                hilog.error(DOMAIN_NUMBER, TAG, `跳转失败: ${e}`);
-              }
-            }
+          .onClick(() => {
+            AppRouter.pop();
           })
           .width(48)
           .height(48)
@@ -100,7 +73,7 @@ struct LoginPage {
         }
         .width('100%')
         .height(56)
-        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
         // 内容区域
         Scroll() {
@@ -149,6 +122,22 @@ struct LoginPage {
     .width('100%')
     .height('100%')
     .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    }
+    .hideTitleBar(true)
+    .onReady((context: NavDestinationContext) => {
+      this.pathStack = context.pathStack;
+      const params = context.pathInfo?.param as Record<string, Object> | undefined;
+      if (params) {
+        const redirect = params.redirectUrl as string;
+        if (redirect) {
+          this.redirectUrl = redirect;
+        }
+        const action = params.action as string;
+        if (action) {
+          this.redirectAction = action;
+        }
+      }
+    })
   }
 
   @Builder
@@ -303,23 +292,25 @@ struct LoginPage {
     this.loadingProgress = 0;
 
     try {
-      this.loadingStage = '正在创建临时用户...';
-      this.loadingProgress = 30;
+      await LoadingUtil.withMinimumTime(async () => {
+        this.loadingStage = '正在创建临时用户...';
+        this.loadingProgress = 30;
 
-      const request: GuestRequest = {
-        nickname: this.nickname.trim(),
-        client_type: 'app'
-      };
-      const response = await ApiClient.createTempUser(request);
+        const request: GuestRequest = {
+          nickname: this.nickname.trim(),
+          client_type: 'app'
+        };
+        const response = await ApiClient.createTempUser(request);
 
-      if (response.code === 0 && response.data) {
-        this.loadingStage = '初始化中...';
-        this.loadingProgress = 70;
-        await this.handleAuthSuccess(response.data);
-        this.loadingProgress = 100;
-      } else {
-        SystemToast.showError(response.message || '创建失败', this.getUIContext());
-      }
+        if (response.code === 0 && response.data) {
+          this.loadingStage = '初始化中...';
+          this.loadingProgress = 70;
+          await this.handleAuthSuccess(response.data);
+          this.loadingProgress = 100;
+        } else {
+          SystemToast.showError(response.message || '创建失败', this.getUIContext());
+        }
+      }, LoadingUtil.DEFAULT_ACTION_MS);
     } catch (error) {
       SystemToast.showError(error instanceof Error ? error.message : '创建失败', this.getUIContext());
     } finally {
@@ -339,26 +330,28 @@ struct LoginPage {
     this.loadingProgress = 0;
 
     try {
-      this.loadingStage = '正在验证登录信息...';
-      this.loadingProgress = 40;
+      await LoadingUtil.withMinimumTime(async () => {
+        this.loadingStage = '正在验证登录信息...';
+        this.loadingProgress = 40;
 
-      const loginRequest: LoginRequest = {
-        login_id: this.loginId,
-        password: this.password,
-        client_type: 'app'
-      };
+        const loginRequest: LoginRequest = {
+          login_id: this.loginId,
+          password: this.password,
+          client_type: 'app'
+        };
 
-      const response = await ApiClient.login(loginRequest);
-      if (response.code === 0 && response.data) {
-        this.loadingStage = '登录成功，正在初始化...';
-        this.loadingProgress = 70;
+        const response = await ApiClient.login(loginRequest);
+        if (response.code === 0 && response.data) {
+          this.loadingStage = '登录成功，正在初始化...';
+          this.loadingProgress = 70;
 
-        PasswordSecurityUtil.clearSensitiveString(this.password);
-        await this.handleAuthSuccess(response.data);
-        this.loadingProgress = 100;
-      } else {
-        SystemToast.showError(response.message || '登录失败', this.getUIContext());
-      }
+          PasswordSecurityUtil.clearSensitiveString(this.password);
+          await this.handleAuthSuccess(response.data);
+          this.loadingProgress = 100;
+        } else {
+          SystemToast.showError(response.message || '登录失败', this.getUIContext());
+        }
+      }, LoadingUtil.DEFAULT_ACTION_MS);
     } catch (error) {
       SystemToast.showError(error instanceof Error ? error.message : '登录失败', this.getUIContext());
     } finally {
@@ -390,28 +383,30 @@ struct LoginPage {
     this.loadingProgress = 0;
 
     try {
-      this.loadingStage = '正在注册...';
-      this.loadingProgress = 40;
+      await LoadingUtil.withMinimumTime(async () => {
+        this.loadingStage = '正在注册...';
+        this.loadingProgress = 40;
 
-      const registerRequest: RegisterRequest = {
-        nickname: this.registerNickname.trim(),
-        login_id: this.registerLoginId.trim(),
-        password: this.registerPassword,
-        client_type: 'app'
-      };
+        const registerRequest: RegisterRequest = {
+          nickname: this.registerNickname.trim(),
+          login_id: this.registerLoginId.trim(),
+          password: this.registerPassword,
+          client_type: 'app'
+        };
 
-      const response = await ApiClient.register(registerRequest);
-      if (response.code === 0 && response.data) {
-        this.loadingStage = '注册成功，正在初始化...';
-        this.loadingProgress = 70;
+        const response = await ApiClient.register(registerRequest);
+        if (response.code === 0 && response.data) {
+          this.loadingStage = '注册成功，正在初始化...';
+          this.loadingProgress = 70;
 
-        PasswordSecurityUtil.clearSensitiveString(this.registerPassword);
-        PasswordSecurityUtil.clearSensitiveString(this.registerPasswordConfirm);
-        await this.handleAuthSuccess(response.data);
-        this.loadingProgress = 100;
-      } else {
-        SystemToast.showError(response.message || '注册失败', this.getUIContext());
-      }
+          PasswordSecurityUtil.clearSensitiveString(this.registerPassword);
+          PasswordSecurityUtil.clearSensitiveString(this.registerPasswordConfirm);
+          await this.handleAuthSuccess(response.data);
+          this.loadingProgress = 100;
+        } else {
+          SystemToast.showError(response.message || '注册失败', this.getUIContext());
+        }
+      }, LoadingUtil.DEFAULT_ACTION_MS);
     } catch (error) {
       SystemToast.showError(error instanceof Error ? error.message : '注册失败', this.getUIContext());
     } finally {
@@ -464,13 +459,12 @@ struct LoginPage {
       hilog.warn(DOMAIN_NUMBER, TAG, `WebSocket连接失败: ${JSON.stringify(error)}`);
     }
 
-    try {
-      const routerInstance = this.getUIContext().getRouter();
-      const targetUrl = this.redirectUrl || `features/main/pages/${PageNames.INDEX}`;
-      await routerInstance.replaceUrl({ url: targetUrl });
-      SystemToast.showSuccess('欢迎！', this.getUIContext());
-    } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `跳转主页失败: ${error}`);
-    }
+    AppRouter.clear();
+    SystemToast.showSuccess('欢迎！', this.getUIContext());
   }
+}
+
+@Builder
+export function LoginPageBuilder() {
+  LoginPage()
 }

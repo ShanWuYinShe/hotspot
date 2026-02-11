@@ -1,12 +1,18 @@
 /**
  * LocationBar - 位置/浏览锚点选择栏
  * 显示当前位置或自定义锚点，提供搜索和地图入口
+ *
+ * 设计语言：
+ * - 悬浮圆角卡片风格，通过阴影和层叠营造深度感
+ * - 当前位置模式：脉冲呼吸动画传达「实时定位」
+ * - 浏览锚点模式：蓝色调卡片 + 浏览标识，明确区分状态
  */
 
 import { LocationInfo } from '../core/location/LocationUtil';
 import { KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../core/state/GlobalStateManager';
 import { PageNames } from '../constants/AppConstants';
 import { DesignConstants } from '../constants/DesignConstants';
+import { AppRouter, LocationPickerRouteParam } from '../core/router/AppRouter';
 import { AppIcon } from './SystemIcon';
 
 @Component
@@ -18,6 +24,11 @@ export struct LocationBar {
   @Prop showMapButton: boolean = true;
   /** 是否显示搜索按钮 */
   @Prop showSearchButton: boolean = true;
+
+  /** 脉冲呼吸动画状态 */
+  @State private pulseScale: number = 1.0;
+  @State private pulseOpacity: number = 0.7;
+  private pulseTimerId: number = 0;
 
   private getDisplayLocation(): string {
     if (this.browseAnchor && this.browseAnchor.locationName) {
@@ -33,74 +44,189 @@ export struct LocationBar {
     return this.browseAnchor !== null && this.browseAnchor !== undefined;
   }
 
+  /** 清除浏览锚点，恢复使用当前位置 */
+  private clearBrowseAnchor(): void {
+    AppStorage.setOrCreate<LocationInfo | null>(KEY_BROWSE_ANCHOR, null);
+  }
+
+  /** 启动脉冲呼吸动画 */
+  private startPulseAnimation(): void {
+    this.stopPulseAnimation();
+    this.doPulse();
+    this.pulseTimerId = setInterval(() => {
+      this.pulseScale = 1.0;
+      this.pulseOpacity = 0.7;
+      setTimeout(() => {
+        this.doPulse();
+      }, 50);
+    }, 2400);
+  }
+
+  private doPulse(): void {
+    try {
+      this.getUIContext().animateTo({
+        duration: 1500,
+        curve: Curve.EaseOut
+      }, () => {
+        this.pulseScale = 2.2;
+        this.pulseOpacity = 0;
+      });
+    } catch (_e) {
+      // 组件未挂载时忽略
+    }
+  }
+
+  /** 停止脉冲动画 */
+  private stopPulseAnimation(): void {
+    if (this.pulseTimerId > 0) {
+      clearInterval(this.pulseTimerId);
+      this.pulseTimerId = 0;
+    }
+  }
+
+  aboutToDisappear(): void {
+    this.stopPulseAnimation();
+  }
+
   build() {
-    Row() {
-      // 位置选择区域
-      Row({ space: 6 }) {
-        Text() {
-          SymbolSpan($r(AppIcon.LOCATION))
-            .fontSize(18)
-            .fontColor([$r('sys.color.ohos_id_color_emphasize')])
-        }
+    Row({ space: DesignConstants.SPACING.SM }) {
 
-        Text(this.getDisplayLocation())
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .constraintSize({ maxWidth: '50%' })
-
-        // 下拉箭头
-        Text() {
-          SymbolSpan($r(AppIcon.DOWN))
-            .fontSize(12)
-            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
-        }
-
-        // 锚点清除按钮（带出入场过渡动画）
+      // ===== 位置卡片（悬浮圆角，主交互区域）=====
+      Row({ space: DesignConstants.SPACING.MD }) {
+        // 左侧定位指示器
         if (this.isUsingAnchor()) {
-          Text() {
-            SymbolSpan($r(AppIcon.CLOSE))
-              .fontSize(14)
-              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+          // 浏览锚点模式：蓝色背景圆形图标
+          Column() {
+            Text() {
+              SymbolSpan($r(AppIcon.LOCATION))
+                .fontSize(16)
+                .fontColor([Color.White])
+            }
           }
+          .width(32)
+          .height(32)
+          .justifyContent(FlexAlign.Center)
+          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
+        } else {
+          // 当前位置模式：脉冲动画指示器
+          Stack({ alignContent: Alignment.Center }) {
+            // 脉冲扩散环
+            Column()
+              .width(12)
+              .height(12)
+              .borderRadius(6)
+              .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+              .scale({ x: this.pulseScale, y: this.pulseScale })
+              .opacity(this.pulseOpacity)
+
+            // 核心圆点（白色描边 + 阴影，营造立体感）
+            Column()
+              .width(12)
+              .height(12)
+              .borderRadius(6)
+              .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+              .border({ width: 2.5, color: $r('sys.color.ohos_id_color_background') })
+              .shadow({ radius: 4, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 1 })
+          }
+          .width(32)
+          .height(32)
+          .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
+          .onAppear(() => {
+            this.startPulseAnimation();
+          })
+        }
+
+        // 位置文本
+        Column({ space: 2 }) {
+          Text(this.isUsingAnchor() ? '浏览位置' : '当前位置')
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.isUsingAnchor()
+              ? $r('sys.color.ohos_id_color_emphasize')
+              : $r('sys.color.ohos_id_color_text_tertiary'))
+
+          Text(this.getDisplayLocation())
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+
+        // 右侧操作指示
+        if (this.isUsingAnchor()) {
+          // 关闭按钮（重置锚点）
+          Column() {
+            Text() {
+              SymbolSpan($r(AppIcon.CLOSE))
+                .fontSize(12)
+                .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
+            }
+          }
+          .width(24)
+          .height(24)
+          .justifyContent(FlexAlign.Center)
           .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
           .borderRadius(DesignConstants.RADIUS.FULL)
-          .width(22)
-          .height(22)
-          .textAlign(TextAlign.Center)
-          .transition(TransitionEffect.OPACITY.combine(TransitionEffect.scale({ x: 0.6, y: 0.6 })))
+          .hitTestBehavior(HitTestMode.Block)
           .onClick(() => {
-            this.getUIContext().animateTo({ duration: 200, curve: Curve.EaseInOut }, () => {
-              this.browseAnchor = null;
-            });
+            this.clearBrowseAnchor();
           })
+        } else {
+          Text() {
+            SymbolSpan($r(AppIcon.FORWARD))
+              .fontSize(14)
+              .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
+          }
         }
       }
       .layoutWeight(1)
-      .height('100%')
+      .height(48)
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+      .backgroundColor(this.isUsingAnchor()
+        ? $r('app.color.color_emphasize_bg')
+        : $r('sys.color.ohos_id_color_background'))
+      .borderRadius(DesignConstants.RADIUS.XL)
+      .border({
+        width: 0.5,
+        color: this.isUsingAnchor()
+          ? $r('sys.color.ohos_id_color_emphasize')
+          : $r('sys.color.ohos_id_color_list_separator')
+      })
+      .shadow({
+        radius: 12,
+        color: $r('app.color.color_shadow'),
+        offsetX: 0,
+        offsetY: 4
+      })
       .onClick(() => {
         this.openLocationPicker();
       })
 
-      // 右侧按钮区
-      Row({ space: 4 }) {
-        if (this.showSearchButton) {
-          this.buildIconButton(AppIcon.SEARCH, () => {
-            this.navigateToSearch();
-          })
-        }
+      // ===== 右侧功能按钮（悬浮圆形）=====
+      if (this.showSearchButton) {
+        this.buildIconButton(AppIcon.SEARCH, () => {
+          this.navigateToSearch();
+        })
+      }
 
-        if (this.showMapButton) {
-          this.buildIconButton(AppIcon.MAP, () => {
-            this.navigateToMap();
-          })
-        }
+      if (this.showMapButton) {
+        this.buildIconButton(AppIcon.MAP, () => {
+          this.navigateToMap();
+        })
       }
     }
     .width('100%')
-    .height(48)
-    .padding({ left: 16, right: 12 })
+    .height(64)
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.SM,
+      bottom: DesignConstants.SPACING.SM
+    })
     .backgroundColor($r('sys.color.ohos_id_color_background'))
   }
 
@@ -109,44 +235,39 @@ export struct LocationBar {
     Column() {
       Text() {
         SymbolSpan($r(icon))
-          .fontSize(22)
+          .fontSize(20)
           .fontColor([$r('sys.color.ohos_id_color_text_primary')])
       }
     }
     .width(40)
     .height(40)
     .justifyContent(FlexAlign.Center)
+    .backgroundColor($r('sys.color.ohos_id_color_background'))
     .borderRadius(DesignConstants.RADIUS.FULL)
+    .border({ width: 0.5, color: $r('sys.color.ohos_id_color_list_separator') })
+    .shadow({
+      radius: 8,
+      color: $r('app.color.color_shadow'),
+      offsetX: 0,
+      offsetY: 2
+    })
     .onClick(action)
   }
 
   private openLocationPicker(): void {
-    try {
-      const routerInstance = this.getUIContext().getRouter();
-      routerInstance.pushUrl({
-        url: `features/map/pages/${PageNames.LOCATION_PICKER}`,
-        params: { resultKey: KEY_BROWSE_ANCHOR }
-      });
-    } catch (_e) {
-      // ignore
-    }
+    const params = new LocationPickerRouteParam();
+    params.resultKey = KEY_BROWSE_ANCHOR;
+    params.mode = 'browse_anchor';
+    params.title = '选择浏览位置';
+    params.confirmText = '设为浏览位置';
+    AppRouter.push(PageNames.LOCATION_PICKER, params);
   }
 
   private navigateToSearch(): void {
-    try {
-      const routerInstance = this.getUIContext().getRouter();
-      routerInstance.pushUrl({ url: `features/search/pages/${PageNames.SEARCH}` });
-    } catch (_e) {
-      // ignore
-    }
+    AppRouter.push(PageNames.SEARCH);
   }
 
   private navigateToMap(): void {
-    try {
-      const routerInstance = this.getUIContext().getRouter();
-      routerInstance.pushUrl({ url: `features/map/pages/${PageNames.MAP}` });
-    } catch (_e) {
-      // ignore
-    }
+    AppRouter.push(PageNames.MAP);
   }
 }

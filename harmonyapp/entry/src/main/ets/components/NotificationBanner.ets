@@ -4,7 +4,7 @@ import { SystemIcon, AppIcon } from './SystemIcon';
 
 @Component
 export struct NotificationBanner {
-  @ObjectLink notification: SmartNotification;
+  @Prop notification: SmartNotification;
   onClose?: () => void;
   onAction?: (action: NotificationAction) => void;
   onBannerClick?: () => void;
@@ -43,7 +43,7 @@ export struct NotificationBanner {
         SystemIcon({
           icon: AppIcon.CLOSE,
           iconSize: 16,
-          iconColor: DesignConstants.COLOR.TEXT_TERTIARY_LIGHT,
+          iconColor: $r('sys.color.ohos_id_color_text_tertiary'),
           clickable: true,
           onIconClick: () => {
             if (this.onClose) {
@@ -99,12 +99,12 @@ export struct NotificationBanner {
     }
   }
 
-  private getPriorityColor(priority: string): string {
+  private getPriorityColor(priority: string): string | Resource {
     switch (priority) {
       case 'critical': return DesignConstants.COLOR.ERROR;
       case 'high': return DesignConstants.COLOR.WARNING;
       case 'medium': return DesignConstants.COLOR.BRAND_PRIMARY;
-      default: return DesignConstants.COLOR.TEXT_SECONDARY_LIGHT;
+      default: return $r('sys.color.ohos_id_color_text_secondary');
     }
   }
 }
