@@ -191,11 +191,11 @@
 				<TabsTrigger value="guest">访客</TabsTrigger>
 			</TabsList>
 
-			<!-- 固定最小高度以防止跳动 -->
-			<div class="min-h-[320px]">
+			<!-- 固定最小高度以防止跳动（需容纳注册表单 4 个输入框 + 按钮） -->
+			<div class="min-h-[400px]">
 				<!-- 登录 -->
 				<TabsContent value="login">
-				<form onsubmit={(e) => { e.preventDefault(); handleLogin(); }} class="space-y-4 pt-4">
+				<form onsubmit={(e) => { e.preventDefault(); handleLogin(); }} class="space-y-4 pt-4 animate-in fade-in-0 duration-200">
 					<div class="space-y-2">
 						<Label for="modal-login-id">账号</Label>
 						<Input
@@ -245,7 +245,7 @@
 
 			<!-- 注册 -->
 			<TabsContent value="register">
-				<form onsubmit={(e) => { e.preventDefault(); handleRegister(); }} class="space-y-4 pt-4">
+				<form onsubmit={(e) => { e.preventDefault(); handleRegister(); }} class="space-y-4 pt-4 animate-in fade-in-0 duration-200">
 					<div class="space-y-2">
 						<Label for="modal-register-nickname">昵称</Label>
 						<Input
@@ -301,7 +301,7 @@
 
 			<!-- 访客 -->
 			<TabsContent value="guest">
-				<form onsubmit={(e) => { e.preventDefault(); handleGuestLogin(); }} class="space-y-4 pt-4">
+				<form onsubmit={(e) => { e.preventDefault(); handleGuestLogin(); }} class="space-y-4 pt-4 animate-in fade-in-0 duration-200">
 					<div class="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
 						访客模式可快速体验，部分功能受限。
 					</div>

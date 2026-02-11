@@ -9,7 +9,7 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import {
-  UserItem, TagItem, MomentItem, TrendingBundle, MomentImage, FollowRequest, SearchUsersRequest
+  UserItem, TagItem, MomentItem, TrendingBundle, FollowRequest, SearchUsersRequest
 } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -112,6 +112,7 @@ export struct DiscoverPage {
       // 内容区
       if (this.isLoading && this.trendingTags.length === 0) {
         SystemLoadingView({ message: '正在加载发现内容...' })
+          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
         Refresh({ refreshing: $$this.isRefreshing }) {
           List({ space: DesignConstants.SPACING.MD }) {
@@ -184,6 +185,7 @@ export struct DiscoverPage {
           .scrollBar(BarState.Auto)
         }
         .onRefreshing(() => { this.loadData(); })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
     }
     .width('100%')

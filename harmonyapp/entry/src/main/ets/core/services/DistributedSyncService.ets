@@ -276,8 +276,8 @@ export class DistributedSyncService {
       
       // 如果是自己的数据（跨设备同步），更新本地状态
       if (currentUser && currentUserId && syncData.userId === currentUserId) {
-        // 比较时间戳，使用最新的数据
-        const localTime = new Date(currentUser.created_at).getTime(); // 注意：这里简化处理，实际应有 updatedAt
+        // 比较时间戳，使用最新的数据（用 Date.parse 避免创建 Date 对象）
+        const localTime = Date.parse(currentUser.created_at);
         if (syncData.timestamp > localTime) {
            GlobalStateManager.getInstance().updateUser(remoteUser);
            await PreferencesUtil.setObject('user_info', remoteUser);

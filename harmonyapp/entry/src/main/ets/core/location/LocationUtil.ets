@@ -4,7 +4,7 @@
  */
 
 import { geoLocationManager } from '@kit.LocationKit';
-import { abilityAccessCtrl, Permissions } from '@kit.AbilityKit';
+import { abilityAccessCtrl } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { common } from '@kit.AbilityKit';
 
@@ -165,14 +165,16 @@ export class LocationUtil {
       hilog.info(DOMAIN_NUMBER, TAG, '开始位置监听');
 
       // ContinuousLocationRequest（API 12+）：替代废弃的 LocationRequest
+      // 使用 NAVIGATION 场景以获得最高定位精度（GNSS + WiFi + 基站多源融合），
+      // 确保持续定位精度与 MapKit 蓝点一致。
       const requestInfo: geoLocationManager.ContinuousLocationRequest = {
         interval: 5, // 5 秒更新一次（单位：秒）
-        locationScenario: geoLocationManager.UserActivityScenario.DAILY_LIFE_SERVICE
+        locationScenario: geoLocationManager.UserActivityScenario.NAVIGATION
       };
 
       LocationUtil.locationCallback = callback;
 
-      await geoLocationManager.on('locationChange', requestInfo, (location: geoLocationManager.Location) => {
+      geoLocationManager.on('locationChange', requestInfo, (location: geoLocationManager.Location) => {
         const locationInfo: LocationInfo = {
           latitude: location.latitude,
           longitude: location.longitude,
@@ -220,7 +222,7 @@ export class LocationUtil {
         return false;
       }
 
-      await geoLocationManager.off('locationChange');
+      geoLocationManager.off('locationChange');
       LocationUtil.isListening = false;
       LocationUtil.locationCallback = null;
       

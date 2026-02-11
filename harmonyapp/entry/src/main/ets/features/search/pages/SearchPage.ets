@@ -140,7 +140,9 @@ export struct SearchPage {
       .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       if (this.isLoading) {
-        SystemLoadingView({ message: '搜索中...' }).layoutWeight(1)
+        SystemLoadingView({ message: '搜索中...' })
+          .layoutWeight(1)
+          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
         Tabs({ barPosition: BarPosition.Start, controller: this.controller, index: this.currentIndex }) {
           TabContent() {
@@ -166,6 +168,7 @@ export struct SearchPage {
         .width('100%')
         .layoutWeight(1)
         .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
     }
     .width('100%')

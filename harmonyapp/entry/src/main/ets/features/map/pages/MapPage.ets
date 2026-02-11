@@ -14,17 +14,16 @@ import {
   SearchUsersRequest,
   SearchGroupsRequest,
   SearchMomentsRequest,
-  GeoPoint,
-  RelativeLocation
+  GeoPoint
 } from '../../../core/types/api';
 import { SystemToast } from '../../../components/SystemToast';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
-import { NativeMapComponent, NativeMapActions, MapMarker, MapRegion } from '../../../components/NativeMapComponent';
+import { NativeMapComponent, MapMarker, MapRegion } from '../../../components/NativeMapComponent';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
-import { AppRouter, LocationPickerRouteParam, GroupDetailRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, GroupDetailRouteParam } from '../../../core/router/AppRouter';
 
 const DOMAIN_NUMBER: number = 0xFF12;
 const TAG: string = 'MapPage';
@@ -58,8 +57,6 @@ export struct MapPage {
     latitudeDelta: 0.01,
     longitudeDelta: 0.01
   };
-  private mapActions: NativeMapActions | null = null;
-
   async aboutToAppear() {
     hilog.info(DOMAIN_NUMBER, TAG, '地图页面初始化');
     const center = this.browseAnchor || this.currentLocation;
@@ -69,25 +66,6 @@ export struct MapPage {
     } else {
       await this.getCurrentLocation();
     }
-  }
-
-  private openBrowseAnchorPicker(): void {
-    const pickerParams = new LocationPickerRouteParam();
-    pickerParams.mode = 'browse_anchor';
-    pickerParams.title = '设置浏览锚点';
-    pickerParams.confirmText = '设为浏览锚点';
-    pickerParams.hintText = '点击地图设置浏览锚点';
-    pickerParams.resultKey = KEY_BROWSE_ANCHOR;
-    AppRouter.push(PageNames.LOCATION_PICKER, pickerParams);
-  }
-
-  private jumpToMyLocation(): void {
-    if (!this.currentLocation) {
-      this.getCurrentLocation();
-      return;
-    }
-    this.updateMapCenter(this.currentLocation.latitude, this.currentLocation.longitude);
-    this.loadMapData();
   }
 
   private updateMapCenter(lat: number, lng: number) {
@@ -314,31 +292,16 @@ export struct MapPage {
           .layoutWeight(1)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
 
-        Row({ space: DesignConstants.SPACING.SM }) {
-          // 锚点
-          Text() {
-            SymbolSpan($r(AppIcon.LOCATION))
-              .fontSize(22)
-              .fontColor([$r('sys.color.ohos_id_color_text_primary')])
-          }
-          .onClick(() => this.openBrowseAnchorPicker())
-
-          // 我的位置
-          Text() {
-            SymbolSpan($r(AppIcon.MAP))
-              .fontSize(22)
-              .fontColor([$r('sys.color.ohos_id_color_text_primary')])
-          }
-          .onClick(() => this.jumpToMyLocation())
-
-          // 刷新
-          Text() {
-            SymbolSpan($r(AppIcon.REFRESH))
-              .fontSize(22)
-              .fontColor([$r('sys.color.ohos_id_color_text_primary')])
-          }
-          .onClick(() => this.loadMapData())
+        // 刷新按钮
+        Text() {
+          SymbolSpan($r(AppIcon.REFRESH))
+            .fontSize(22)
+            .fontColor([$r('sys.color.ohos_id_color_text_primary')])
         }
+        .width(40)
+        .height(40)
+        .textAlign(TextAlign.Center)
+        .onClick(() => this.loadMapData())
       }
       .width('100%')
       .height(56)
@@ -387,61 +350,10 @@ export struct MapPage {
             mapRegion: this.mapRegion,
             markers: this.markers,
             showUserLocation: true,
-            showZoomControls: false,
-            onMapClick: (coord) => {},
-            onMarkerClick: (marker) => { this.handleMarkerClick(marker); },
-            onActionsReady: (actions: NativeMapActions) => { this.mapActions = actions; }
+            showZoomControls: true,
+            showMyLocationControls: true,
+            onMarkerClick: (marker) => { this.handleMarkerClick(marker); }
           })
-
-          // 右下角浮动控制按钮组：缩放 + 定位
-          Column({ space: 12 }) {
-            // 放大按钮
-            Column() {
-              Text('+')
-                .fontSize(22)
-                .fontWeight(FontWeight.Medium)
-                .fontColor($r('sys.color.ohos_id_color_text_primary'))
-            }
-            .width(44)
-            .height(44)
-            .justifyContent(FlexAlign.Center)
-            .backgroundColor($r('sys.color.ohos_id_color_background'))
-            .borderRadius(DesignConstants.RADIUS.FULL)
-            .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
-            .onClick(() => { this.mapActions?.zoomIn(); })
-
-            // 缩小按钮
-            Column() {
-              Text('−')
-                .fontSize(22)
-                .fontWeight(FontWeight.Medium)
-                .fontColor($r('sys.color.ohos_id_color_text_primary'))
-            }
-            .width(44)
-            .height(44)
-            .justifyContent(FlexAlign.Center)
-            .backgroundColor($r('sys.color.ohos_id_color_background'))
-            .borderRadius(DesignConstants.RADIUS.FULL)
-            .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
-            .onClick(() => { this.mapActions?.zoomOut(); })
-
-            // 回到当前位置按钮
-            Column() {
-              Text() {
-                SymbolSpan($r(AppIcon.LOCATION))
-                  .fontSize(22)
-                  .fontColor([$r('sys.color.ohos_id_color_emphasize')])
-              }
-            }
-            .width(44)
-            .height(44)
-            .justifyContent(FlexAlign.Center)
-            .backgroundColor($r('sys.color.ohos_id_color_background'))
-            .borderRadius(DesignConstants.RADIUS.FULL)
-            .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
-            .onClick(() => { this.jumpToMyLocation(); })
-          }
-          .position({ right: 16, bottom: 24 })
 
           if (this.isLoading) {
             Column() {
@@ -455,6 +367,7 @@ export struct MapPage {
             .justifyContent(FlexAlign.Center)
             .backgroundColor($r('app.color.color_overlay_medium'))
             .hitTestBehavior(HitTestMode.Transparent)
+            .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
           }
         }
       }

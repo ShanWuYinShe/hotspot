@@ -252,18 +252,22 @@ export struct MomentPage {
       // 内容区域
       if (this.isLoading && !this.hasData) {
         SystemLoadingView({ message: '正在加载附近瞬间...' })
+          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (!this.hasData && this.errorMessage) {
         this.buildEmptyState(AppIcon.WARNING, this.errorMessage, '重试', () => { this.loadNearbyMoments(true); })
+          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (!this.hasData) {
         Refresh({ refreshing: $$this.isLoading, builder: this.RefreshBuilder() }) {
           this.buildEmptyState(AppIcon.CAMERA, '附近暂无瞬间\n快来分享第一个吧！', undefined, undefined)
         }
         .onRefreshing(() => { this.loadNearbyMoments(true); })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
         Refresh({ refreshing: $$this.isLoading, builder: this.RefreshBuilder() }) {
           this.buildMomentList()
         }
         .onRefreshing(() => { this.loadNearbyMoments(true); })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
     }
     .width('100%')

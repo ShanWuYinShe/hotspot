@@ -1,6 +1,6 @@
 /**
  * 登录/注册页面
- * 三种模式：临时用户、登录、注册
+ * 两种模式：登录、注册
  * 认证成功后获取完整 profile（含 user_type）
  */
 
@@ -12,7 +12,7 @@ import { AppRouter } from '../../../core/router/AppRouter';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { PasswordSecurityUtil } from '../../../core/security/PasswordSecurityUtil';
-import { AuthData, GuestRequest, MyProfile, LoginRequest, RegisterRequest } from '../../../core/types/api';
+import { AuthData, MyProfile, LoginRequest, RegisterRequest } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -27,7 +27,6 @@ export struct LoginPage {
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink('isLoggedIn') isLoggedIn: boolean = false;
 
-  @State nickname: string = '';
   @State loginId: string = '';
   @State password: string = '';
   @State registerNickname: string = '';
@@ -37,7 +36,7 @@ export struct LoginPage {
   @State isLoading: boolean = false;
   @State loadingStage: string = '';
   @State loadingProgress: number = 0;
-  @State loginMode: 'temp' | 'login' | 'register' = 'temp';
+  @State loginMode: 'login' | 'register' = 'login';
   @State redirectUrl: string = '';
   @State redirectAction: string = '';
 
@@ -54,74 +53,86 @@ export struct LoginPage {
           showProgress: true,
           externalProgress: this.loadingProgress
         })
+          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
-        // 顶部导航栏
-        Row() {
-          Text() {
-            SymbolSpan($r(AppIcon.BACK))
-              .fontSize(24)
-              .fontColor([$r('sys.color.ohos_id_color_text_primary')])
-          }
-          .onClick(() => {
-            AppRouter.pop();
-          })
-          .width(48)
-          .height(48)
-          .textAlign(TextAlign.Center)
-
-          Blank()
-        }
-        .width('100%')
-        .height(56)
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-
-        // 内容区域
-        Scroll() {
-          Column({ space: DesignConstants.SPACING.XXL }) {
-            // 标题区域
-            Column({ space: DesignConstants.SPACING.SM }) {
-              Text($r('app.string.app_name'))
-                .fontSize(28)
-                .fontWeight(FontWeight.Bold)
-                .fontColor($r('sys.color.ohos_id_color_text_primary'))
-
-              Text($r('app.string.app_description'))
-                .fontSize(DesignConstants.FONT.SIZE.LG)
-                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        Column() {
+          // 顶部导航栏（固定）
+          Row() {
+            Text() {
+              SymbolSpan($r(AppIcon.BACK))
+                .fontSize(24)
+                .fontColor([$r('sys.color.ohos_id_color_text_primary')])
             }
-            .width('100%')
-            .alignItems(HorizontalAlign.Start)
+            .onClick(() => {
+              AppRouter.pop();
+            })
+            .width(48)
+            .height(48)
+            .textAlign(TextAlign.Center)
 
-            // 模式切换
-            Row({ space: DesignConstants.SPACING.XS }) {
-              this.ModeTab('快速体验', 'temp')
-              this.ModeTab('登录', 'login')
-              this.ModeTab('注册', 'register')
-            }
-            .width('100%')
-            .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
-            .borderRadius(DesignConstants.RADIUS.LG)
-            .padding(DesignConstants.SPACING.XS)
-
-            // 表单区域
-            if (this.loginMode === 'temp') {
-              this.buildTempUserForm()
-            } else if (this.loginMode === 'login') {
-              this.buildLoginForm()
-            } else {
-              this.buildRegisterForm()
-            }
+            Blank()
           }
           .width('100%')
-          .padding({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL })
+          .height(56)
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+
+          // 标题区域（固定）
+          Column({ space: DesignConstants.SPACING.SM }) {
+            Image($r('app.media.logo'))
+              .width(72)
+              .height(72)
+              .objectFit(ImageFit.Contain)
+
+            Text($r('app.string.app_name'))
+              .fontSize(28)
+              .fontWeight(FontWeight.Bold)
+              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+
+            Text($r('app.string.app_description'))
+              .fontSize(DesignConstants.FONT.SIZE.LG)
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          }
+          .width('100%')
+          .alignItems(HorizontalAlign.Center)
+          .padding({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL,
+            bottom: DesignConstants.SPACING.LG })
+
+          // 模式切换标签（固定）
+          Row({ space: DesignConstants.SPACING.XS }) {
+            this.ModeTab('登录', 'login')
+            this.ModeTab('注册', 'register')
+          }
+          .width('100%')
+          .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+          .borderRadius(DesignConstants.RADIUS.LG)
+          .padding(DesignConstants.SPACING.XS)
+          .margin({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL })
+
+          // 表单区域（可滚动，填充剩余空间，内容靠近标签栏顶部对齐）
+          Scroll() {
+            Column() {
+              if (this.loginMode === 'login') {
+                this.buildLoginForm()
+              } else {
+                this.buildRegisterForm()
+              }
+            }
+            .width('100%')
+            .padding({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL,
+              top: DesignConstants.SPACING.XL, bottom: DesignConstants.SPACING.XXL })
+          }
+          .align(Alignment.Top)
+          .layoutWeight(1)
+          .scrollBar(BarState.Off)
         }
-        .layoutWeight(1)
-        .scrollBar(BarState.Off)
+        .width('100%')
+        .height('100%')
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    .backgroundColor($r('sys.color.ohos_id_color_background'))
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {
@@ -151,46 +162,14 @@ export struct LoginPage {
       .height(36)
       .layoutWeight(1)
       .textAlign(TextAlign.Center)
+      .animation({ duration: 250, curve: Curve.FastOutSlowIn })
       .onClick(() => {
-        if (mode === 'temp') {
-          this.loginMode = 'temp';
-        } else if (mode === 'login') {
+        if (mode === 'login') {
           this.loginMode = 'login';
         } else {
           this.loginMode = 'register';
         }
       })
-  }
-
-  @Builder
-  private buildTempUserForm() {
-    Column({ space: DesignConstants.SPACING.LG }) {
-      Text('无需注册，输入昵称即可快速体验')
-        .fontSize(DesignConstants.FONT.SIZE.MD)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-
-      TextInput({ placeholder: '请输入你的昵称' })
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
-        .borderRadius(DesignConstants.RADIUS.LG)
-        .onChange((value: string) => { this.nickname = value; })
-
-      Button('开始体验')
-        .type(ButtonType.Capsule)
-        .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-        .fontColor(Color.White)
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .width('100%')
-        .height(48)
-        .onClick(() => this.createTempUser())
-
-      Text('临时用户可使用大部分功能，随时可升级为完整账号')
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        .textAlign(TextAlign.Center)
-    }
-    .width('100%')
   }
 
   @Builder
@@ -221,12 +200,13 @@ export struct LoginPage {
         .height(48)
         .onClick(() => this.userLogin())
 
-      Text('没有账号？切换到「注册」或「快速体验」')
+      Text('没有账号？切换到「注册」标签')
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         .textAlign(TextAlign.Center)
     }
     .width('100%')
+    .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
   }
 
   @Builder
@@ -278,47 +258,10 @@ export struct LoginPage {
         .textAlign(TextAlign.Center)
     }
     .width('100%')
+    .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
   }
 
   // ==================== 认证逻辑 ====================
-
-  private async createTempUser() {
-    if (!this.nickname.trim()) {
-      SystemToast.showWarning('请输入昵称', this.getUIContext());
-      return;
-    }
-
-    this.isLoading = true;
-    this.loadingProgress = 0;
-
-    try {
-      await LoadingUtil.withMinimumTime(async () => {
-        this.loadingStage = '正在创建临时用户...';
-        this.loadingProgress = 30;
-
-        const request: GuestRequest = {
-          nickname: this.nickname.trim(),
-          client_type: 'app'
-        };
-        const response = await ApiClient.createTempUser(request);
-
-        if (response.code === 0 && response.data) {
-          this.loadingStage = '初始化中...';
-          this.loadingProgress = 70;
-          await this.handleAuthSuccess(response.data);
-          this.loadingProgress = 100;
-        } else {
-          SystemToast.showError(response.message || '创建失败', this.getUIContext());
-        }
-      }, LoadingUtil.DEFAULT_ACTION_MS);
-    } catch (error) {
-      SystemToast.showError(error instanceof Error ? error.message : '创建失败', this.getUIContext());
-    } finally {
-      this.isLoading = false;
-      this.loadingStage = '';
-      this.loadingProgress = 0;
-    }
-  }
 
   private async userLogin() {
     if (!this.loginId.trim() || !this.password.trim()) {

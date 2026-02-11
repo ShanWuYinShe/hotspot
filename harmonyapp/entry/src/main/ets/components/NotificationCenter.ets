@@ -267,10 +267,10 @@ export struct NotificationCenter {
       Scroll(new Scroller()) {
         Row({ space: 8 }) {
           ForEach([
-            { key: 'all', label: '全部' },
-            { key: 'unread', label: '未读' },
-            { key: 'performance', label: '性能' },
-            { key: 'social', label: '社交' },
+            { key: 'all', label: '全部' } as FilterOption,
+            { key: 'unread', label: '未读' } as FilterOption,
+            { key: 'performance', label: '性能' } as FilterOption,
+            { key: 'social', label: '社交' } as FilterOption,
           ], (filter: FilterOption) => {
             Button(filter.label)
               .type(this.selectedFilter === filter.key ? ButtonType.Capsule : ButtonType.Normal)
@@ -286,7 +286,7 @@ export struct NotificationCenter {
                 this.selectedFilter = filter.key as ('all' | 'unread' | 'performance' | 'social');
                 this.loadNotifications();
               })
-          })
+          }, (filter: FilterOption) => filter.key)
         }
         .padding({ left: 16, right: 16 })
       }
@@ -309,6 +309,7 @@ export struct NotificationCenter {
         .width('100%')
         .height(200)
         .justifyContent(FlexAlign.Center)
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (this.notifications.length === 0) {
         Refresh({ refreshing: $$this.isLoading, builder: this.RefreshBuilder() }) {
           Column() {
@@ -330,6 +331,7 @@ export struct NotificationCenter {
         .onRefreshing(() => {
           this.loadNotifications();
         })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
         Refresh({ refreshing: $$this.isLoading, builder: this.RefreshBuilder() }) {
           List({ space: 8 }) {
@@ -346,6 +348,7 @@ export struct NotificationCenter {
         .onRefreshing(() => {
           this.loadNotifications();
         })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
     }
     .width('100%')
@@ -445,7 +448,7 @@ export struct NotificationCenter {
                   .fontSize(12)
                   .padding({ left: 12, right: 12, top: 4, bottom: 4 })
                   .onClick(() => this.executeNotificationAction(notification, action.id))
-              })
+              }, (action: NotificationAction) => action.id)
             }
           }
 

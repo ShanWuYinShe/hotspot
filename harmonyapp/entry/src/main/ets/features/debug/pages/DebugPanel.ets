@@ -131,7 +131,7 @@ export struct DebugPanel {
                   .fontFamily('Monospace')
                   .width('100%')
               }
-            })
+            }, (_item: string, index: number) => index.toString())
           }
           .width('100%')
           .height(300)

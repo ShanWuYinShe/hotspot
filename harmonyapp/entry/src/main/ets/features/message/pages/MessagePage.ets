@@ -414,16 +414,19 @@ export struct MessagePage {
       // 内容区域
       if (this.isLoading && !this.hasData) {
         SystemLoadingView({ message: '收取信件中...' })
+          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (!this.hasData && this.errorMessage) {
         Refresh({ refreshing: $$this.isRefreshing, builder: this.RefreshBuilder() }) {
           this.buildEmptyState(AppIcon.WARNING, this.errorMessage, '重试', () => { this.loadData(true); })
         }
         .onRefreshing(() => { this.loadData(true); })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (!this.hasData) {
         Refresh({ refreshing: $$this.isRefreshing, builder: this.RefreshBuilder() }) {
           this.buildEmptyState(AppIcon.MESSAGE, '暂无消息', undefined, undefined)
         }
         .onRefreshing(() => { this.loadData(true); })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
         Refresh({ refreshing: $$this.isRefreshing, builder: this.RefreshBuilder() }) {
           List() {
@@ -455,6 +458,7 @@ export struct MessagePage {
           .onReachEnd(() => { this.loadMore(); })
         }
         .onRefreshing(() => { this.loadData(true); })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
     }
     .width('100%')

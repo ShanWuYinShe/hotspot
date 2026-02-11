@@ -169,18 +169,27 @@ const manager = GlobalStateManager.getInstance();
 - [ ] cursor 是否做了解析而非透传？
 - [ ] 新增页面是否放在了正确的 `features/` 子目录下？
 
-## 编译命令
+## 编译与检查命令
+
+编译和代码检查是两个独立的工具，**必须分别运行**：
+- **编译（hvigorw）**：检查编译错误，生成 HAP 包。
+- **代码检查（codelinter）**：检查 DevEco Studio IDE 中显示的 linter 警告（性能建议、代码规范等）。
 
 ```bash
 # macOS 默认路径
 DEVECO_SDK_HOME="/Applications/DevEco-Studio.app/Contents/sdk"
 HVIGORW="/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw.js"
+CODELINTER="/Applications/DevEco-Studio.app/Contents/plugins/codelinter/run/index.js"
 
-# 编译
+# 编译（检查编译错误）
 DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$HVIGORW" \
   clean --mode module -p product=default assembleHap \
   --info --analyze=ultrafine --parallel --incremental \
   --enable-build-script-type-check --no-daemon
+
+# 代码检查（检查 IDE 中的 linter 警告，基于 code-linter.json5 规则配置）
+DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$CODELINTER" \
+  -c code-linter.json5 entry/src/main/ets/
 
 # 禁止模式扫描
 rg '"/api/v1/' entry/src/main/ets/

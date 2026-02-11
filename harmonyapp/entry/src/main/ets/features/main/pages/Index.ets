@@ -645,6 +645,7 @@ struct Index {
         .height('100%')
         .justifyContent(FlexAlign.Center)
         .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
         Navigation(this.navPathStack) {
         Tabs({ barPosition: BarPosition.End, controller: this.tabsController }) {
@@ -706,6 +707,7 @@ struct Index {
         .mode(NavigationMode.Stack)
         .hideTitleBar(true)
         .hideBackButton(true)
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
 
       if (this.visibleNotifications.length > 0) {

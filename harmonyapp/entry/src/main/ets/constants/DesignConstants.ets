@@ -96,6 +96,8 @@ export interface AnimationSystem {
   DURATION_SHORT: number;
   DURATION_MEDIUM: number;
   DURATION_LONG: number;
+  /** loading → content 交叉淡入淡出时长 */
+  DURATION_CONTENT_SWITCH: number;
   CURVE_EASE_IN_OUT: Curve;
 }
 
@@ -220,6 +222,7 @@ const ANIMATION: AnimationSystem = {
   DURATION_SHORT: 200,
   DURATION_MEDIUM: 300,
   DURATION_LONG: 500,
+  DURATION_CONTENT_SWITCH: 400,
   CURVE_EASE_IN_OUT: Curve.EaseInOut,
 };
 

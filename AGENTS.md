@@ -84,19 +84,27 @@ DevEco Studio 默认安装路径（macOS）：`/Applications/DevEco-Studio.app/`
 # macOS 默认路径（直接使用，无需询问）
 DEVECO_SDK_HOME="/Applications/DevEco-Studio.app/Contents/sdk"
 HVIGORW="/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw.js"
+CODELINTER="/Applications/DevEco-Studio.app/Contents/plugins/codelinter/run/index.js"
 
 # 非 macOS / 自定义路径
 DEVECO_SDK_HOME="$DEVECO_STUDIO_DIR/Contents/sdk"  # macOS
 DEVECO_SDK_HOME="$DEVECO_STUDIO_DIR/sdk"           # 其他平台
 HVIGORW="$DEVECO_STUDIO_DIR/Contents/tools/hvigor/bin/hvigorw.js"  # macOS
 HVIGORW="$DEVECO_STUDIO_DIR/tools/hvigor/bin/hvigorw.js"          # 其他平台
+CODELINTER="$DEVECO_STUDIO_DIR/Contents/plugins/codelinter/run/index.js"  # macOS
+CODELINTER="$DEVECO_STUDIO_DIR/plugins/codelinter/run/index.js"          # 其他平台
 
-# 编译
+# 编译（检查编译错误）
 cd harmonyapp
 DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$HVIGORW" \
   clean --mode module -p product=default assembleHap \
   --info --analyze=ultrafine --parallel --incremental \
   --enable-build-script-type-check --no-daemon
+
+# 代码检查（检查 DevEco Studio IDE 中显示的 linter 警告）
+# 注意：编译命令和代码检查是两个独立的工具，编译不会输出 linter 警告
+DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$CODELINTER" \
+  -c code-linter.json5 entry/src/main/ets/
 ```
 
 ## 跨项目关键规则
@@ -145,15 +153,24 @@ DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$HVIGORW" \
 ```bash
 cd backend && cargo check
 cd frontend_svelte && pnpm check
+
+# HarmonyOS 编译
 cd harmonyapp && DEVECO_SDK_HOME="/Applications/DevEco-Studio.app/Contents/sdk" \
   node "/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw.js" \
   clean --mode module -p product=default assembleHap \
   --info --analyze=ultrafine --parallel --incremental \
   --enable-build-script-type-check --no-daemon
+
+# HarmonyOS 代码检查（与编译独立，检查 IDE 中的 linter 警告）
+cd harmonyapp && DEVECO_SDK_HOME="/Applications/DevEco-Studio.app/Contents/sdk" \
+  node "/Applications/DevEco-Studio.app/Contents/plugins/codelinter/run/index.js" \
+  -c code-linter.json5 entry/src/main/ets/
 ```
 
 - 编译警告应尽量消除，但不得用 `#[allow(...)]` 等属性压制。
+- HarmonyOS 的编译命令（hvigorw）和代码检查命令（codelinter）是两个独立工具，**必须分别运行**。
 - 如果编译失败，修复后重新运行直到通过。
+- 代码检查（codelinter）发现的警告也应尽量修复。
 
 ### 步骤二：禁止模式扫描
 

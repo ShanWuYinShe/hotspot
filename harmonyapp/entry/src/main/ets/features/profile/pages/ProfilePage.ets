@@ -17,7 +17,8 @@ import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
-import { MyProfile, UpdateLocationRequest, UpgradeAccountRequest } from '../../../core/types/api';
+import { MyProfile, UpdateLocationRequest, UpgradeAccountRequest, GuestRequest } from '../../../core/types/api';
+import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
@@ -42,6 +43,10 @@ export struct ProfilePage {
   @State isLoading: boolean = false;
   @State myMomentsCount: number = 0;
   @State myGroupsCount: number = 0;
+  // 快速体验弹窗
+  @State showQuickStart: boolean = false;
+  @State quickNickname: string = '';
+  @State isQuickStarting: boolean = false;
   // 升级表单
   @State showUpgradeForm: boolean = false;
   @State upgradeLoginId: string = '';
@@ -242,19 +247,37 @@ export struct ProfilePage {
       })
 
       if (this.isLoading) {
-        SystemLoadingView({ message: '正在更新...' }).layoutWeight(1)
+        SystemLoadingView({ message: '正在更新...' })
+          .layoutWeight(1)
+          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (!this.isLoggedIn) {
         // 匿名用户 - 游客模式
-        this.buildGuestView()
+        Column() {
+          this.buildGuestView()
+        }
+        .layoutWeight(1)
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (this.showUpgradeForm) {
         // 升级表单
-        this.buildUpgradeFormView()
+        Column() {
+          this.buildUpgradeFormView()
+        }
+        .layoutWeight(1)
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (this.userType === 'temp') {
         // 临时用户
-        this.buildTempUserView()
+        Column() {
+          this.buildTempUserView()
+        }
+        .layoutWeight(1)
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
         // 注册用户
-        this.buildRegisteredUserView()
+        Column() {
+          this.buildRegisteredUserView()
+        }
+        .layoutWeight(1)
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
     }
     .width('100%')
@@ -330,7 +353,7 @@ export struct ProfilePage {
         .padding(DesignConstants.SPACING.LG)
 
         Column({ space: 12 }) {
-          // 快速体验按钮
+          // 快速体验按钮（弹窗模式）
           Button('快速体验（无需注册）')
             .type(ButtonType.Capsule)
             .width('100%')
@@ -339,7 +362,7 @@ export struct ProfilePage {
             .fontColor(Color.White)
             .fontSize(16)
             .onClick(() => {
-              AppRouter.push(PageNames.LOGIN);
+              this.showQuickStart = true;
             })
 
           // 登录/注册按钮
@@ -377,6 +400,12 @@ export struct ProfilePage {
       .padding({ left: 16, right: 16 })
     }
     .layoutWeight(1)
+    .bindSheet($$this.showQuickStart, this.buildQuickStartSheet(), {
+      height: SheetSize.FIT_CONTENT,
+      showClose: true,
+      dragBar: true,
+      backgroundColor: $r('sys.color.ohos_id_color_background')
+    })
   }
 
   // ==================== 临时用户界面 ====================
@@ -794,5 +823,105 @@ export struct ProfilePage {
       top: 14, bottom: 14
     })
     .onClick(onTap)
+  }
+
+  // ==================== 快速体验弹窗 ====================
+
+  @Builder
+  private buildQuickStartSheet() {
+    Column({ space: DesignConstants.SPACING.LG }) {
+      Text('快速体验')
+        .fontSize(DesignConstants.FONT.SIZE.XL)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+
+      Text('无需注册，输入昵称即可快速体验')
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+
+      TextInput({ placeholder: '请输入你的昵称' })
+        .fontSize(DesignConstants.FONT.SIZE.LG)
+        .padding(DesignConstants.SPACING.LG)
+        .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+        .borderRadius(DesignConstants.RADIUS.LG)
+        .enabled(!this.isQuickStarting)
+        .onChange((value: string) => { this.quickNickname = value; })
+
+      Button(this.isQuickStarting ? '正在创建...' : '开始体验')
+        .type(ButtonType.Capsule)
+        .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+        .fontColor(Color.White)
+        .fontSize(DesignConstants.FONT.SIZE.LG)
+        .width('100%')
+        .height(48)
+        .enabled(!this.isQuickStarting)
+        .opacity(this.isQuickStarting ? 0.6 : 1.0)
+        .onClick(() => this.startQuickExperience())
+
+      Text('临时用户可使用大部分功能，随时可升级为完整账号')
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .textAlign(TextAlign.Center)
+    }
+    .width('100%')
+    .padding({
+      left: DesignConstants.SPACING.XXL,
+      right: DesignConstants.SPACING.XXL,
+      top: DesignConstants.SPACING.LG,
+      bottom: DesignConstants.SPACING.XXL
+    })
+  }
+
+  private async startQuickExperience(): Promise<void> {
+    const nickname = this.quickNickname.trim();
+    if (!nickname) {
+      SystemToast.showWarning('请输入昵称', this.getUIContext());
+      return;
+    }
+
+    this.isQuickStarting = true;
+    try {
+      const request: GuestRequest = { nickname, client_type: 'app' };
+      const response = await ApiClient.createTempUser(request);
+
+      if (response.code === 0 && response.data) {
+        const authData = response.data;
+        await AuthAccountManager.upsertAndActivate(authData);
+        await HttpUtil.setToken(authData.access_token);
+
+        const basicUserInfo: MyProfile = {
+          user_id: authData.user_id, nickname: '', avatar_url: '', user_type: 'temp',
+          bio: '', tags: [], email: '', phone: '',
+          location: { point: { latitude: 0, longitude: 0 }, location_name: '' },
+          presence_status: 'online', last_online: '', created_at: new Date().toISOString(),
+          stats: { moments_count: 0, friends_count: 0, followers_count: 0, following_count: 0, groups_count: 0 }
+        };
+        this.stateManager.updateUser(basicUserInfo);
+
+        try {
+          const profileResp = await ApiClient.getMyProfile();
+          if (profileResp.code === 0 && profileResp.data) {
+            this.stateManager.updateUser(profileResp.data);
+          }
+        } catch (error) {
+          hilog.warn(DOMAIN_NUMBER, TAG, `获取用户资料失败: ${JSON.stringify(error)}`);
+        }
+
+        try {
+          await this.webSocketService.connect(authData.access_token);
+        } catch (error) {
+          hilog.warn(DOMAIN_NUMBER, TAG, `WebSocket连接失败: ${JSON.stringify(error)}`);
+        }
+
+        this.showQuickStart = false;
+        SystemToast.showSuccess('欢迎！', this.getUIContext());
+      } else {
+        SystemToast.showError(response.message || '创建失败', this.getUIContext());
+      }
+    } catch (error) {
+      SystemToast.showError(error instanceof Error ? error.message : '创建失败', this.getUIContext());
+    } finally {
+      this.isQuickStarting = false;
+    }
   }
 }

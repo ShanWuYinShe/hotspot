@@ -44,11 +44,6 @@ export struct LocationBar {
     return this.browseAnchor !== null && this.browseAnchor !== undefined;
   }
 
-  /** 清除浏览锚点，恢复使用当前位置 */
-  private clearBrowseAnchor(): void {
-    AppStorage.setOrCreate<LocationInfo | null>(KEY_BROWSE_ANCHOR, null);
-  }
-
   /** 启动脉冲呼吸动画 */
   private startPulseAnimation(): void {
     this.stopPulseAnimation();
@@ -156,31 +151,11 @@ export struct LocationBar {
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
 
-        // 右侧操作指示
-        if (this.isUsingAnchor()) {
-          // 关闭按钮（重置锚点）
-          Column() {
-            Text() {
-              SymbolSpan($r(AppIcon.CLOSE))
-                .fontSize(12)
-                .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
-            }
-          }
-          .width(24)
-          .height(24)
-          .justifyContent(FlexAlign.Center)
-          .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .hitTestBehavior(HitTestMode.Block)
-          .onClick(() => {
-            this.clearBrowseAnchor();
-          })
-        } else {
-          Text() {
-            SymbolSpan($r(AppIcon.FORWARD))
-              .fontSize(14)
-              .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
-          }
+        // 右侧前进箭头（点击进入位置选择）
+        Text() {
+          SymbolSpan($r(AppIcon.FORWARD))
+            .fontSize(14)
+            .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
         }
       }
       .layoutWeight(1)

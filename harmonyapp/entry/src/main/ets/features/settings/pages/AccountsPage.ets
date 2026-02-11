@@ -160,6 +160,7 @@ export struct AccountsPage {
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
           .margin({ top: 24 })
+          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (this.accounts.length === 0) {
         Column({ space: 12 }) {
           Text('暂无已保存账号')
@@ -177,6 +178,7 @@ export struct AccountsPage {
         }
         .width('100%')
         .padding(DesignConstants.SPACING.XL)
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
         List({ space: 12 }) {
           ForEach(this.accounts, (acc: AuthData) => {
@@ -232,6 +234,7 @@ export struct AccountsPage {
         .width('100%')
         .layoutWeight(1)
         .scrollBar(BarState.Auto)
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
     }
     .width('100%')

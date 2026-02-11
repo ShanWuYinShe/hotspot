@@ -78,7 +78,10 @@ export struct NearbyPage {
   @State groupsLoadingMore: boolean = false;
 
   async aboutToAppear() {
-    await this.loadCurrentTabData();
+    // 预加载所有 tab 数据（并行），切换 tab 时数据已就绪，无需再显示 loading
+    this.loadNearbyMoments();
+    this.loadNearbyUsers();
+    this.loadNearbyGroups();
     this.initialLoadDone = true;
 
     // Start device discovery (non-blocking)
@@ -176,7 +179,9 @@ export struct NearbyPage {
         sort_by: 'distance',
         pagination: { limit: 30, cursor: loadMore ? this.momentsNextCursor : undefined }
       };
-      const response = await ApiClient.searchMoments(request);
+      const response = loadMore
+        ? await ApiClient.searchMoments(request)
+        : await LoadingUtil.withMinimumTime(() => ApiClient.searchMoments(request));
       if (response.code === 0 && response.data) {
         const validItems = response.data.items.filter((m: MomentItem) => m.moment_id && m.user);
         if (loadMore) {
@@ -231,7 +236,9 @@ export struct NearbyPage {
         sort_by: 'distance',
         pagination: { limit: 30, cursor: loadMore ? this.usersNextCursor : undefined }
       };
-      const response = await ApiClient.searchUsers(request);
+      const response = loadMore
+        ? await ApiClient.searchUsers(request)
+        : await LoadingUtil.withMinimumTime(() => ApiClient.searchUsers(request));
       if (response.code === 0 && response.data) {
         const validItems = response.data.items.filter((u: UserItem) => u.user?.user_id);
         if (loadMore) {
@@ -367,9 +374,9 @@ export struct NearbyPage {
       }
       .barMode(BarMode.Fixed)
       .barHeight(44)
-      .animationDuration(300)
+      .animationDuration(500)
       .onChange((index: number) => {
-        this.getUIContext().animateTo({ duration: 250, curve: Curve.FastOutSlowIn }, () => {
+        this.getUIContext().animateTo({ duration: 400, curve: Curve.FastOutSlowIn }, () => {
           this.currentSubTab = index;
         });
         this.loadCurrentTabData();
@@ -401,7 +408,7 @@ export struct NearbyPage {
           : Color.Transparent)
         .margin({ top: 6 })
         .lineCap(LineCapStyle.Round)
-        .animation({ duration: 250, curve: Curve.FastOutSlowIn })
+        .animation({ duration: 400, curve: Curve.FastOutSlowIn })
     }
     .width('100%')
     .height('100%')
@@ -440,6 +447,7 @@ export struct NearbyPage {
         .onReachEnd(() => { this.loadNearbyMoments(true); })
       }
       .onRefreshing(() => { this.loadNearbyMoments(); })
+      .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
     }
   }
 
@@ -538,10 +546,21 @@ export struct NearbyPage {
   buildUsersContent() {
     if (this.usersLoading && this.users.length === 0) {
       SystemLoadingView({ message: '正在加载附近用户...' })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
     } else if (this.usersError.length > 0 && this.users.length === 0) {
-      this.buildEmptyState(AppIcon.WARNING, this.usersError, '重试', () => { this.loadNearbyUsers(); })
+      Stack() {
+        this.buildEmptyState(AppIcon.WARNING, this.usersError, '重试', () => { this.loadNearbyUsers(); })
+      }
+      .width('100%')
+      .height('100%')
+      .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
     } else if (this.users.length === 0) {
-      this.buildEmptyState(AppIcon.PERSON, '附近暂无其他用户', undefined, undefined)
+      Stack() {
+        this.buildEmptyState(AppIcon.PERSON, '附近暂无其他用户', undefined, undefined)
+      }
+      .width('100%')
+      .height('100%')
+      .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
     } else {
       Refresh({ refreshing: $$this.usersLoading }) {
         List({ space: DesignConstants.SPACING.SM }) {
@@ -564,6 +583,7 @@ export struct NearbyPage {
         .onReachEnd(() => { this.loadNearbyUsers(true); })
       }
       .onRefreshing(() => { this.loadNearbyUsers(); })
+      .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
     }
   }
 
@@ -632,10 +652,21 @@ export struct NearbyPage {
   buildGroupsContent() {
     if (this.groupsLoading && this.groups.length === 0) {
       SystemLoadingView({ message: '正在加载附近群组...' })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
     } else if (this.groupsError.length > 0 && this.groups.length === 0) {
-      this.buildEmptyState(AppIcon.WARNING, this.groupsError, '重试', () => { this.loadNearbyGroups(); })
+      Stack() {
+        this.buildEmptyState(AppIcon.WARNING, this.groupsError, '重试', () => { this.loadNearbyGroups(); })
+      }
+      .width('100%')
+      .height('100%')
+      .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
     } else if (this.groups.length === 0) {
-      this.buildEmptyState(AppIcon.GROUP, '附近暂无群组', undefined, undefined)
+      Stack() {
+        this.buildEmptyState(AppIcon.GROUP, '附近暂无群组', undefined, undefined)
+      }
+      .width('100%')
+      .height('100%')
+      .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
     } else {
       Refresh({ refreshing: $$this.groupsLoading }) {
         List({ space: DesignConstants.SPACING.SM }) {
@@ -658,6 +689,7 @@ export struct NearbyPage {
         .onReachEnd(() => { this.loadNearbyGroups(true); })
       }
       .onRefreshing(() => { this.loadNearbyGroups(); })
+      .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
     }
   }
 

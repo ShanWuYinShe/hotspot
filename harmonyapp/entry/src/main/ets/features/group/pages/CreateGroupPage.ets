@@ -406,6 +406,7 @@ export struct CreateGroupPage {
 
       if (this.isCreating) {
         SystemLoadingView()
+          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
     }
     .width('100%')

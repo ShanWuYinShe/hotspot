@@ -3,63 +3,6 @@
     {
       "name": "app_name",
       "value": "HotSpot"
-    },
-    {
-      "name": "app_description",
-      "value": "Discover nearby users, groups and moments"
-    },
-    {
-      "name": "common_loading",
-      "value": "Loading..."
-    },
-    {
-      "name": "auth_login",
-      "value": "Login"
-    },
-    {
-      "name": "auth_temp_user",
-      "value": "Quick Start"
-    },
-    {
-      "name": "auth_login_btn",
-      "value": "Login"
-    },
-    {
-      "name": "auth_start_experience",
-      "value": "Start"
-    },
-    {
-      "name": "auth_temp_user_desc",
-      "value": "No registration required. Create a temporary identity and explore now. You can upgrade later."
-    },
-    {
-      "name": "auth_nickname_placeholder",
-      "value": "Enter nickname"
-    },
-    {
-      "name": "auth_login_id_placeholder",
-      "value": "Email or phone"
-    },
-    {
-      "name": "auth_password_placeholder",
-      "value": "Password"
-    },
-    {
-      "name": "auth_register_not_supported",
-      "value": "Registration is not available yet. Please register on the web first."
-    },
-    {
-      "name": "auth_login_success",
-      "value": "Login successful"
-    },
-    {
-      "name": "auth_login_failed",
-      "value": "Login failed"
-    },
-    {
-      "name": "module_desc",
-      "value": "Explore nearby, chat instantly, share moments"
     }
   ]
 }
-

@@ -74,6 +74,7 @@ export struct RecommendationPage {
 
       if (this.isLoading) {
         SystemLoadingView({ message: '加载推荐内容...' })
+          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
         List({ space: 16 }) {
           // 热门话题

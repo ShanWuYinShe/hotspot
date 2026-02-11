@@ -259,7 +259,7 @@ export class DistributedManager {
       // 触发同步到指定设备
       const deviceIds = targetDeviceIds || this.trustedDevices.map(d => d.deviceId);
       if (deviceIds.length > 0) {
-        await this.kvStore.sync(deviceIds, distributedKVStore.SyncMode.PUSH_PULL);
+        this.kvStore.sync(deviceIds, distributedKVStore.SyncMode.PUSH_PULL);
         hilog.info(DOMAIN_NUMBER, TAG, `✅ 消息同步已触发，目标设备: ${deviceIds.length}个`);
       }
     } catch (error) {

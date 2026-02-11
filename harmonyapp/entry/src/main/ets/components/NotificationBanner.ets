@@ -71,7 +71,7 @@ export struct NotificationBanner {
                   this.onAction(action);
                 }
               })
-          })
+          }, (action: NotificationAction) => action.label)
         }
         .width('100%')
         .margin({ top: DesignConstants.SPACING.MD })

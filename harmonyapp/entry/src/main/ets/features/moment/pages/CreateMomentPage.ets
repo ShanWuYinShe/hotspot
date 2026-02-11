@@ -356,7 +356,7 @@ export struct CreateMomentPage {
                   GridItem() {
                     this.buildImageItem(imageUrl, index)
                   }
-                })
+                }, (imageUrl: string, index: number) => `${index}_${imageUrl}`)
 
                 // 添加按钮
                 if (this.imageUrls.length < 9) {

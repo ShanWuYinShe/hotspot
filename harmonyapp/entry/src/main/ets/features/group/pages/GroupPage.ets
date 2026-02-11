@@ -192,18 +192,25 @@ export struct GroupPage {
       // 内容区域
       if (this.isLoading && this.groups.length === 0) {
         SystemLoadingView({ message: '正在加载附近群组...' })
+          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (this.errorMessage && this.groups.length === 0) {
-        this.buildEmptyState(AppIcon.WARNING, this.errorMessage, '重试', () => { this.loadNearbyGroups(); })
+        Column() {
+          this.buildEmptyState(AppIcon.WARNING, this.errorMessage, '重试', () => { this.loadNearbyGroups(); })
+        }
+        .layoutWeight(1)
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (this.groups.length === 0) {
         Refresh({ refreshing: $$this.isLoading, builder: this.RefreshBuilder() }) {
           this.buildEmptyState(AppIcon.GROUP, '附近暂无群组\n快来创建第一个吧！', undefined, undefined)
         }
         .onRefreshing(() => { this.loadNearbyGroups(); })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
         Refresh({ refreshing: $$this.isLoading, builder: this.RefreshBuilder() }) {
           this.buildGroupList()
         }
         .onRefreshing(() => { this.loadNearbyGroups(); })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
     }
     .width('100%')

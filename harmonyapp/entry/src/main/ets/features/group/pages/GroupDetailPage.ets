@@ -333,7 +333,9 @@ export struct GroupDetailPage {
       .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       if (this.isLoading) {
-        SystemLoadingView({ message: '加载群组信息中...' }).layoutWeight(1)
+        SystemLoadingView({ message: '加载群组信息中...' })
+          .layoutWeight(1)
+          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (this.errorMessage) {
         Column() {
           Text('😕').fontSize(48).margin({ bottom: DesignConstants.SPACING.MD })
@@ -352,6 +354,7 @@ export struct GroupDetailPage {
         .layoutWeight(1)
         .justifyContent(FlexAlign.Center)
         .padding(DesignConstants.SPACING.XL)
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (this.groupInfo) {
         // 使用 List 布局
         List({ space: 12 }) {
@@ -540,6 +543,7 @@ export struct GroupDetailPage {
         .width('100%')
         .layoutWeight(1)
         .scrollBar(BarState.Auto)
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
     }
     .width('100%')

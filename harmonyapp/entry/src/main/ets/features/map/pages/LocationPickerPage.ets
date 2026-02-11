@@ -10,7 +10,7 @@ import { KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION, KEY_LOCATION_PICK_RESULT } fro
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AnchorHistoryItem, AnchorHistoryUtil } from '../../../core/utils/AnchorHistoryUtil';
-import { NativeMapComponent, NativeMapActions, MapRegion, MapCoordinate } from '../../../components/NativeMapComponent';
+import { NativeMapComponent, MapRegion, MapCoordinate } from '../../../components/NativeMapComponent';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
@@ -60,8 +60,6 @@ export struct LocationPickerPage {
   private skipNextResolve: boolean = false;
   /** 搜索防抖计时器 */
   private searchDebounceTimerId: number = 0;
-  /** 地图控制操作（缩放等） */
-  private mapActions: NativeMapActions | null = null;
 
   async aboutToAppear() {
     // 参数读取与初始化已移至 onReady
@@ -78,7 +76,10 @@ export struct LocationPickerPage {
     this.titleText = this.getStringParam(param, 'title') || (this.mode === 'browse_anchor' ? '设置浏览锚点' : '地图选点');
     this.confirmText = this.getStringParam(param, 'confirmText') || (this.mode === 'browse_anchor' ? '设为浏览锚点' : '确认选择');
 
-    AppStorage.setOrCreate<LocationInfo | null>(this.resultKey, null);
+    // 仅清空临时结果键，不清空浏览锚点（用户未确认时应保留旧值）
+    if (this.resultKey !== KEY_BROWSE_ANCHOR) {
+      AppStorage.setOrCreate<LocationInfo | null>(this.resultKey, null);
+    }
 
     if (this.mode === 'browse_anchor') {
       this.anchorHistory = AnchorHistoryUtil.getHistory();
@@ -261,18 +262,6 @@ export struct LocationPickerPage {
 
   // ========== 其他操作 ==========
 
-  /**
-   * 移动浏览锚点到当前位置
-   * 使用 @StorageLink 缓存的位置（与地图蓝点使用相同的 Location Kit 数据源）
-   */
-  private relocateToCurrentPosition(): void {
-    if (this.currentLocation) {
-      this.setCenter(this.currentLocation.latitude, this.currentLocation.longitude);
-    } else {
-      SystemToast.show('无法获取当前位置', this.getUIContext());
-    }
-  }
-
   /** 选择历史记录条目 → 移动地图到该位置 */
   private selectHistory(item: AnchorHistoryItem): void {
     this.skipNextResolve = true;
@@ -418,11 +407,10 @@ export struct LocationPickerPage {
           markers: [],
           showCompass: true,
           showScale: true,
-          showZoomControls: false,
-          showMyLocationControls: false,
+          showZoomControls: true,
+          showMyLocationControls: true,
           onCameraIdle: (center: MapCoordinate) => { this.onCameraIdle(center); },
-          onMapDoubleClick: (coord: MapCoordinate) => { this.onMapDoubleClick(coord); },
-          onActionsReady: (actions: NativeMapActions) => { this.mapActions = actions; }
+          onMapDoubleClick: (coord: MapCoordinate) => { this.onMapDoubleClick(coord); }
         })
 
         // 中心选择器 — 地图钉
@@ -459,55 +447,6 @@ export struct LocationPickerPage {
         .offset({ y: this.isPinAnimating ? -30 : -18 })
         .scale({ x: this.isPinAnimating ? 1.15 : 1.0, y: this.isPinAnimating ? 1.15 : 1.0 })
         .animation({ duration: 500, curve: curves.springMotion(0.6, 0.8) })
-
-        // 右下角浮动控制按钮组：缩放 + 定位
-        Column({ space: 12 }) {
-          // 放大按钮
-          Column() {
-            Text('+')
-              .fontSize(22)
-              .fontWeight(FontWeight.Medium)
-              .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          }
-          .width(44)
-          .height(44)
-          .justifyContent(FlexAlign.Center)
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
-          .onClick(() => { this.mapActions?.zoomIn(); })
-
-          // 缩小按钮
-          Column() {
-            Text('−')
-              .fontSize(22)
-              .fontWeight(FontWeight.Medium)
-              .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          }
-          .width(44)
-          .height(44)
-          .justifyContent(FlexAlign.Center)
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
-          .onClick(() => { this.mapActions?.zoomOut(); })
-
-          // 移动浏览锚点到当前位置按钮
-          Column() {
-            Image($r('sys.media.ohos_ic_public_location'))
-              .width(22)
-              .height(22)
-              .fillColor($r('sys.color.ohos_id_color_emphasize'))
-          }
-          .width(44)
-          .height(44)
-          .justifyContent(FlexAlign.Center)
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
-          .onClick(() => { this.relocateToCurrentPosition(); })
-        }
-        .position({ right: 16, bottom: 24 })
 
         // 搜索覆盖层：历史记录（无输入时） / 搜索结果（有结果时）
         if (this.showSearchBar && this.searchText.trim().length === 0 && this.searchResults.length === 0

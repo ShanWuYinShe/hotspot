@@ -7,7 +7,7 @@
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { WebSocketService } from '../../../core/network/WebSocketService';
-import { MyProfile, MessageType, PrivateMessageItem, GroupMessageItem, SendMessageType, UserInfo, SendPrivateMessageRequest, SendGroupMessageRequest, GetPrivateMessagesHistoryRequest, GetGroupMessagesHistoryRequest, MarkPrivateMessagesReadRequest, MarkGroupMessagesReadRequest, PaginationMeta } from '../../../core/types/api';
+import { MyProfile, MessageType, PrivateMessageItem, GroupMessageItem, SendPrivateMessageRequest, SendGroupMessageRequest, GetPrivateMessagesHistoryRequest, GetGroupMessagesHistoryRequest, MarkPrivateMessagesReadRequest, MarkGroupMessagesReadRequest, PaginationMeta } from '../../../core/types/api';
 import type { ServerEvent, PrivateMessageNewEvent, GroupMessageNewEvent } from '../../../core/types/WebSocketTypes';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -452,6 +452,11 @@ export struct ChatPage {
       .backgroundColor($r('sys.color.ohos_id_color_background'))
       .zIndex(1)
 
+      if (this.isLoading && this.messages.length === 0) {
+        SystemLoadingView({ message: '加载消息...' })
+          .layoutWeight(1)
+          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+      } else {
       List({ scroller: this.scroller, initialIndex: this.messages.length - 1 }) {
         // 顶部加载更多历史指示器
         if (this.isLoadingMoreHistory) {
@@ -483,6 +488,8 @@ export struct ChatPage {
           this.loadMoreHistory();
         }
       })
+      .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+      }
 
       Row() {
         TextInput({ text: this.inputText, placeholder: '发送消息...' })

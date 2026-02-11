@@ -416,7 +416,7 @@ export struct PerformanceIndicator {
             .padding(12)
             .backgroundColor($r('sys.color.ohos_id_color_background'))
             .borderRadius(8)
-          })
+          }, (alert: PerformanceAlert) => `${alert.timestamp}_${alert.message}`)
         }
         .width('100%')
       }

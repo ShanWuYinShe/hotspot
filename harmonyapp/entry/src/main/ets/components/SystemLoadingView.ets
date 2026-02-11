@@ -3,9 +3,7 @@
  * 集成系统时间、进度显示、系统动画等HarmonyOS能力
  */
 
-import { curves } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { systemDateTime } from '@kit.BasicServicesKit';
 
 const DOMAIN_NUMBER: number = 0xFF12;
 const TAG: string = 'SystemLoadingView';
@@ -24,6 +22,7 @@ export struct SystemLoadingView {
   @State private progressDirection: number = 1; // 1 for forward, -1 for backward
   private animationId: number = -1;
   private timeUpdateId: number = -1;
+  private cachedDate: Date = new Date();
 
   aboutToAppear() {
     this.startAnimation();
@@ -154,12 +153,10 @@ export struct SystemLoadingView {
     }, 1000);
   }
 
-  private async updateSystemTime(): Promise<void> {
+  private updateSystemTime(): void {
     try {
-      // 使用推荐的Date.now()或new Date()替代util.Time.getCurrentTime()
-      const now = Date.now();
-      const date = new Date(now);
-      this.systemTime = date.toLocaleTimeString('zh-CN');
+      this.cachedDate.setTime(Date.now());
+      this.systemTime = this.cachedDate.toLocaleTimeString('zh-CN');
     } catch (error) {
       hilog.warn(DOMAIN_NUMBER, TAG, '获取系统时间失败');
     }

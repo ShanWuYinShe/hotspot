@@ -372,7 +372,7 @@ export struct SmartSearchComponent {
                   this.performSearch(historyItem);
                 })
               }
-            })
+            }, (item: string) => item)
           } else if (this.searchResults.length > 0) {
             ForEach(this.searchResults, (result: SearchResult) => {
               ListItem() {
@@ -403,7 +403,7 @@ export struct SmartSearchComponent {
                 .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
                 .onClick(() => this.handleResultClick(result))
               }
-            })
+            }, (result: SearchResult) => result.id)
           } else if (this.searchText.trim() !== '' && !this.isSearching) {
             ListItem() {
               Column() {

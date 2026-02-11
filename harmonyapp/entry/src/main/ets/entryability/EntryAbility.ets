@@ -16,7 +16,6 @@ import { window } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { notificationManager } from '@kit.NotificationKit';
 import { deviceInfo, BusinessError } from '@kit.BasicServicesKit';
-import { geoLocationManager } from '@kit.LocationKit';
 import { ServiceRegistry } from '../core/services/ServiceRegistry';
 import { RdbManager } from '../core/database/RdbManager';
 import { AnchorHistoryUtil } from '../core/utils/AnchorHistoryUtil';
