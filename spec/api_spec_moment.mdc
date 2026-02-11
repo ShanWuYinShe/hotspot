@@ -54,27 +54,6 @@ alwaysApply: true
 - `PaginationParams`
 - `UserInfo`
 
-```typescript
-interface LikeItem {
-  user: UserInfo;
-  liked_at: string;
-}
-
-interface CommentItem {
-  comment_id: string;
-  user: UserInfo;
-  content: string;
-  parent_id?: string;       // 父评论ID（回复时存在）
-  mentions?: string[];      // @ 提及的用户 ID 列表
-  created_at: string;
-  likes_count: number;
-  replies_count: number;    // 子评论数量
-  
-  // === @auth-only 以下字段仅登录态返回 ===
-  is_liked?: boolean;       // 当前用户是否已点赞该评论
-}
-```
-
 ## 生活瞬间 API
 
 ### 搜索与发现
@@ -325,6 +304,13 @@ interface MomentLikesRequest {
 
 **Response**: `ApiResponse<PaginatedData<LikeItem>>`
 
+```typescript
+interface LikeItem {
+  user: UserInfo;
+  liked_at: string;
+}
+```
+
 **错误码**: `10300`
 
 ---
@@ -349,6 +335,22 @@ interface CreateCommentRequest {
 ```
 
 **Response**: `ApiResponse<CommentItem>`
+
+```typescript
+interface CommentItem {
+  comment_id: string;
+  user: UserInfo;
+  content: string;
+  parent_id?: string;       // 父评论ID（回复时存在）
+  mentions?: string[];      // @ 提及的用户 ID 列表
+  created_at: string;
+  likes_count: number;
+  replies_count: number;    // 子评论数量
+  
+  // === @auth-only 以下字段仅登录态返回 ===
+  is_liked?: boolean;       // 当前用户是否已点赞该评论
+}
+```
 
 **错误码**: `10000` `10200` `10300` `22000` `22002`
 

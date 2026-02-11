@@ -10,7 +10,7 @@ alwaysApply: true
 
 - **命名空间**: `admin.users`、`admin.groups`、`admin.reports`、`admin.tags`、`admin.announcements`
 - **基础路径**: `/api/v1/admin/users/`、`/api/v1/admin/groups/`、`/api/v1/admin/reports/`、`/api/v1/admin/tags/`、`/api/v1/admin/announcements/`
-- **引用**: 
+- **引用**:
   - 基础规范：`@api_spec_base.mdc`
   - 通用类型：`@api_spec_types.mdc`（`UserItem`、`GroupItem`、`SystemAnnouncementItem`、`UserInfo` 等）
   - 举报类型：`@api_spec_report.mdc`（`ReportItem`）
@@ -59,73 +59,6 @@ alwaysApply: true
 
 说明：以下 Admin 扩展类型通过 `extends` 继承普通类型，包含管理员视角的完整字段。
 
-```typescript
-// === Admin 扩展类型（管理员视角的完整数据）===
-
-interface AdminUserItem extends UserItem {
-  status: UserAccountStatus;
-  created_at: string;
-  last_active_at?: string;
-  login_id: string;
-  register_ip?: string;
-  register_location?: string;
-  last_login_ip?: string;
-  last_login_location?: string;
-  email?: string;
-  phone?: string;
-}
-
-interface AdminGroupItem extends GroupItem {
-  owner: UserInfo;
-  admins: UserInfo[];
-  stats: {
-    messages_count: number;
-    active_members_today: number;
-    reports_count?: number;
-    last_reported_at?: string;
-  };
-}
-
-interface AdminReportItem extends ReportItem {
-  reporter_user_id: string;
-  reporter: UserInfo;
-  handled_by?: UserInfo;
-  handled_action?: ReportHandleAction;
-  handled_note?: string;
-  target_snapshot?: {
-    content?: string;
-    media_urls?: string[];
-    owner_id?: string;
-  };
-}
-
-interface AdminAnnouncementItem extends SystemAnnouncementItem {
-  created_by: UserInfo;
-  send_push: boolean;
-  push_sent_at?: string;
-  view_count: number;
-}
-
-// === 本模块响应类型 ===
-
-interface AnnouncementCreated {
-  announcement_id: string;
-}
-
-interface AdminTagItem {
-  tag_name: string;
-  usage_count: number;               // 当前关联的内容数量
-  created_at: string;                // 标签首次使用时间
-  last_used_at?: string;             // 最近一次使用时间
-}
-
-type AdminTagSortBy =
-  | 'usage_count_desc'               // 使用量降序（默认）
-  | 'usage_count_asc'                // 使用量升序
-  | 'created_at_desc'               // 创建时间降序
-  | 'last_used_at_desc';            // 最近使用时间降序
-```
-
 ## 端点详情
 
 ### POST /api/v1/admin/users/search
@@ -148,6 +81,20 @@ interface AdminUserSearchRequest {
 ```
 
 **Response**: `ApiResponse<PaginatedData<AdminUserItem>>`
+```typescript
+interface AdminUserItem extends UserItem {
+  status: UserAccountStatus;
+  created_at: string;
+  last_active_at?: string;
+  login_id: string;
+  register_ip?: string;
+  register_location?: string;
+  last_login_ip?: string;
+  last_login_location?: string;
+  email?: string;
+  phone?: string;
+}
+```
 
 **错误码**: `10000` `10200`
 
@@ -240,6 +187,18 @@ interface AdminGroupSearchRequest {
 ```
 
 **Response**: `ApiResponse<PaginatedData<AdminGroupItem>>`
+```typescript
+interface AdminGroupItem extends GroupItem {
+  owner: UserInfo;
+  admins: UserInfo[];
+  stats: {
+    messages_count: number;
+    active_members_today: number;
+    reports_count?: number;
+    last_reported_at?: string;
+  };
+}
+```
 
 **错误码**: `10000` `10200`
 
@@ -303,6 +262,20 @@ interface AdminReportSearchRequest {
 ```
 
 **Response**: `ApiResponse<PaginatedData<AdminReportItem>>`
+```typescript
+interface AdminReportItem extends ReportItem {
+  reporter_user_id: string;
+  reporter: UserInfo;
+  handled_by?: UserInfo;
+  handled_action?: ReportHandleAction;
+  handled_note?: string;
+  target_snapshot?: {
+    content?: string;
+    media_urls?: string[];
+    owner_id?: string;
+  };
+}
+```
 
 **错误码**: `10000` `10200`
 
@@ -340,6 +313,12 @@ interface HandleReportRequest {
 
 **Request**: `AdminTagSearchRequest`
 ```typescript
+type AdminTagSortBy =
+  | 'usage_count_desc'               // 使用量降序（默认）
+  | 'usage_count_asc'                // 使用量升序
+  | 'created_at_desc'               // 创建时间降序
+  | 'last_used_at_desc';            // 最近使用时间降序
+
 interface AdminTagSearchRequest {
   keyword?: string;                   // 标签名模糊搜索
   sort_by?: AdminTagSortBy;          // 排序方式，默认 usage_count_desc
@@ -348,6 +327,14 @@ interface AdminTagSearchRequest {
 ```
 
 **Response**: `ApiResponse<PaginatedData<AdminTagItem>>`
+```typescript
+interface AdminTagItem {
+  tag_name: string;
+  usage_count: number;               // 当前关联的内容数量
+  created_at: string;                // 标签首次使用时间
+  last_used_at?: string;             // 最近一次使用时间
+}
+```
 
 **错误码**: `10000` `10200`
 
@@ -393,6 +380,14 @@ interface AdminAnnouncementSearchRequest {
 ```
 
 **Response**: `ApiResponse<PaginatedData<AdminAnnouncementItem>>`
+```typescript
+interface AdminAnnouncementItem extends SystemAnnouncementItem {
+  created_by: UserInfo;
+  send_push: boolean;
+  push_sent_at?: string;
+  view_count: number;
+}
+```
 
 **错误码**: `10000` `10200`
 
@@ -417,6 +412,11 @@ interface CreateAnnouncementRequest {
 ```
 
 **Response**: `ApiResponse<AnnouncementCreated>`
+```typescript
+interface AnnouncementCreated {
+  announcement_id: string;
+}
+```
 
 **错误码**: `10000` `10200` `22000` `22002`
 

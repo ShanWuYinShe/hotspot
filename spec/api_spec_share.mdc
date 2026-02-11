@@ -37,104 +37,6 @@ alwaysApply: true
 - `Location`
 - `PaginationParams`
 
-```typescript
-type ShareType = 'user' | 'group' | 'moment' | 'location';
-
-interface ShareBase {
-  share_id: string;
-  share_code: string;
-  share_type: ShareType;
-  creator: UserInfo;
-  created_at: string;
-  expires_at?: string;
-}
-
-interface ShareCreated {
-  share_id: string;
-  share_code: string;
-  expires_at?: string;
-}
-
-interface UserSharePayload {
-  shared_user_id: string;
-}
-
-interface GroupSharePayload {
-  shared_group_id: string;
-}
-
-interface MomentSharePayload {
-  shared_moment_id: string;
-}
-
-interface LocationSharePayload {
-  shared_location: Location;
-}
-
-type SharePayload =
-  | UserSharePayload
-  | GroupSharePayload
-  | MomentSharePayload
-  | LocationSharePayload;
-
-interface SharePreview {
-  title: string;
-  subtitle?: string;
-  cover_url?: string;
-}
-
-interface ShareDetail {
-  share: ShareBase;
-  payload: SharePayload;
-  preview?: SharePreview;
-}
-
-type ShareApplyAction =
-  | { type: 'navigate_user'; shared_user_id: string }
-  | { type: 'navigate_group'; shared_group_id: string }
-  | { type: 'navigate_moment'; shared_moment_id: string }
-  | { type: 'update_location'; shared_location: Location };
-
-interface ShareApplyResult {
-  share_type: ShareType;
-  action: ShareApplyAction;
-}
-
-// 分享列表项（我的分享管理）
-interface ShareListItem {
-  share_id: string;
-  share_code: string;
-  share_type: ShareType;
-  created_at: string;
-  expires_at?: string;
-  is_revoked: boolean;
-  preview?: SharePreview;           // 分享目标的摘要预览
-}
-
-interface CreateShareRequest {
-  share_type: ShareType;
-  payload: SharePayload;
-  expires_in_seconds?: number; // 可选，默认由系统配置
-}
-
-interface GetShareRequest {
-  share_code: string;         // 不区分大小写，服务端统一转换为大写
-}
-
-interface ApplyShareRequest {
-  share_code: string;         // 不区分大小写，服务端统一转换为大写
-}
-
-interface ShareListRequest {
-  share_type?: ShareType;           // 按类型筛选
-  pagination?: PaginationParams;
-}
-
-interface RevokeShareRequest {
-  share_id: string;
-}
-```
-
 **说明**：`preview` 为展示用摘要，服务端可根据权限与可见性策略选择是否返回。
 
 ## 分享码规则
@@ -166,6 +68,30 @@ interface RevokeShareRequest {
 
 **Request**: `CreateShareRequest`
 ```typescript
+type ShareType = 'user' | 'group' | 'moment' | 'location';
+
+interface UserSharePayload {
+  shared_user_id: string;
+}
+
+interface GroupSharePayload {
+  shared_group_id: string;
+}
+
+interface MomentSharePayload {
+  shared_moment_id: string;
+}
+
+interface LocationSharePayload {
+  shared_location: Location;
+}
+
+type SharePayload =
+  | UserSharePayload
+  | GroupSharePayload
+  | MomentSharePayload
+  | LocationSharePayload;
+
 interface CreateShareRequest {
   share_type: ShareType;
   payload: SharePayload;
@@ -174,6 +100,13 @@ interface CreateShareRequest {
 ```
 
 **Response**: `ApiResponse<ShareCreated>`
+```typescript
+interface ShareCreated {
+  share_id: string;
+  share_code: string;
+  expires_at?: string;
+}
+```
 
 **业务规则**：
 - 校验 payload 与 share_type 匹配
@@ -200,6 +133,28 @@ interface GetShareRequest {
 ```
 
 **Response**: `ApiResponse<ShareDetail>`
+```typescript
+interface ShareBase {
+  share_id: string;
+  share_code: string;
+  share_type: ShareType;
+  creator: UserInfo;
+  created_at: string;
+  expires_at?: string;
+}
+
+interface SharePreview {
+  title: string;
+  subtitle?: string;
+  cover_url?: string;
+}
+
+interface ShareDetail {
+  share: ShareBase;
+  payload: SharePayload;
+  preview?: SharePreview;
+}
+```
 
 **错误码**: `10000` `10300`
 
@@ -224,6 +179,18 @@ interface ApplyShareRequest {
 ```
 
 **Response**: `ApiResponse<ShareApplyResult>`
+```typescript
+type ShareApplyAction =
+  | { type: 'navigate_user'; shared_user_id: string }
+  | { type: 'navigate_group'; shared_group_id: string }
+  | { type: 'navigate_moment'; shared_moment_id: string }
+  | { type: 'update_location'; shared_location: Location };
+
+interface ShareApplyResult {
+  share_type: ShareType;
+  action: ShareApplyAction;
+}
+```
 
 **错误码**: `10000` `10300`
 
@@ -246,6 +213,17 @@ interface ShareListRequest {
 ```
 
 **Response**: `ApiResponse<PaginatedData<ShareListItem>>`
+```typescript
+interface ShareListItem {
+  share_id: string;
+  share_code: string;
+  share_type: ShareType;
+  created_at: string;
+  expires_at?: string;
+  is_revoked: boolean;
+  preview?: SharePreview;           // 分享目标的摘要预览
+}
+```
 
 **错误码**: `10000`
 

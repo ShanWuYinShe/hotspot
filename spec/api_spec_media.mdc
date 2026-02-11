@@ -60,30 +60,6 @@ alwaysApply: true
 | `chat_audio` | audio/mpeg, audio/aac, audio/ogg | 20MB | 聊天语音 |
 | `chat_file` | 任意类型 | 100MB | 聊天文件 |
 
-## 类型定义
-
-```typescript
-type MediaCategory = 'avatar' | 'group_avatar' | 'moment_image' | 'chat_image' | 'chat_video' | 'chat_audio' | 'chat_file';
-
-interface PresignedUpload {
-  upload_id: string;
-  upload_url: string;
-  headers: Record<string, string>;
-  expires_at: string;
-}
-
-interface UploadedMedia {
-  file_id: string;
-  thumbnail_url?: string;
-  file_size: number;
-  mime_type: string;
-  duration?: number;
-  width?: number;
-  height?: number;
-}
-
-```
-
 ## 端点详情
 
 ### POST /api/v1/media/presign_upload
@@ -95,6 +71,8 @@ interface UploadedMedia {
 
 **Request**: `PresignUploadRequest`
 ```typescript
+type MediaCategory = 'avatar' | 'group_avatar' | 'moment_image' | 'chat_image' | 'chat_video' | 'chat_audio' | 'chat_file';
+
 interface PresignUploadRequest {
   file_name: string;
   file_size: number;
@@ -105,6 +83,14 @@ interface PresignUploadRequest {
 ```
 
 **Response**: `ApiResponse<PresignedUpload>`
+```typescript
+interface PresignedUpload {
+  upload_id: string;
+  upload_url: string;
+  headers: Record<string, string>;
+  expires_at: string;
+}
+```
 
 **错误码**: `10000`
 
@@ -157,6 +143,17 @@ interface CompleteUploadRequest {
 ```
 
 **Response**: `ApiResponse<UploadedMedia>`
+```typescript
+interface UploadedMedia {
+  file_id: string;
+  thumbnail_url?: string;
+  file_size: number;
+  mime_type: string;
+  duration?: number;
+  width?: number;
+  height?: number;
+}
+```
 
 **错误码**: `10000` `10300` `10400` `22000` `22002`
 

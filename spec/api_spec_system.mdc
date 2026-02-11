@@ -28,69 +28,6 @@ alwaysApply: true
 以下类型定义于 `@api_spec_types.mdc`：
 - `SystemAnnouncementItem`
 
-```typescript
-// API 版本元信息
-interface ApiVersionMeta {
-  version: string;                    // 当前 API 版本号，如 "v1"
-  status: ApiVersionStatus;           // 版本状态
-  deprecated_at?: string;             // 进入废弃状态时间（UTC ISO 8601）
-  sunset_at?: string;                 // 计划下线时间（UTC ISO 8601）
-  message?: string;                   // 面向客户端的提示信息
-  recommended_version?: string;       // 推荐升级的版本号（如 "v2"）
-}
-
-// API 版本状态
-type ApiVersionStatus = 
-  | 'active'      // 正常使用中
-  | 'deprecated'  // 已废弃，但仍可用
-  | 'sunset';     // 即将下线或已停止
-
-// 系统健康状态
-type SystemHealthStatus = 'healthy' | 'degraded' | 'unhealthy';
-
-interface HealthStatus {
-  status: SystemHealthStatus;
-  timestamp: string;
-}
-
-interface AnnouncementListRequest {
-  limit?: number;  // default: 10, max: 50
-}
-
-// 客户端公开配置
-// ClientConfig 是 AppConfig（见 @api_spec_admin_core.mdc）中客户端可见部分的投影
-// 客户端启动时通过 system/get_client_config 获取并缓存
-interface ClientConfig {
-  features: FeatureSwitches;
-  limits: AppLimits;
-  contact: ContactInfo;
-}
-
-interface FeatureSwitches {
-  enable_public_registration: boolean;
-  enable_guest_login: boolean;
-  enable_moments: boolean;
-  enable_nearby_people: boolean;
-}
-
-interface AppLimits {
-  max_group_members: number;
-  max_moment_tags: number;
-  max_moment_images: number;
-  moment_description_max_length: number;
-  comment_max_length: number;
-  search_radius_max: number;
-}
-
-interface ContactInfo {
-  support_email: string;
-  privacy_policy_url: string;
-  terms_of_service_url: string;
-  official_website: string;
-}
-
-```
-
 ## 端点详情
 
 ### POST /api/v1/system/get_meta
@@ -114,6 +51,24 @@ interface ContactInfo {
 
 **Response**: `ApiResponse<ApiVersionMeta>`
 
+```typescript
+// API 版本元信息
+interface ApiVersionMeta {
+  version: string;                    // 当前 API 版本号，如 "v1"
+  status: ApiVersionStatus;           // 版本状态
+  deprecated_at?: string;             // 进入废弃状态时间（UTC ISO 8601）
+  sunset_at?: string;                 // 计划下线时间（UTC ISO 8601）
+  message?: string;                   // 面向客户端的提示信息
+  recommended_version?: string;       // 推荐升级的版本号（如 "v2"）
+}
+
+// API 版本状态
+type ApiVersionStatus = 
+  | 'active'      // 正常使用中
+  | 'deprecated'  // 已废弃，但仍可用
+  | 'sunset';     // 即将下线或已停止
+```
+
 **错误码**: `10000`
 
 ---
@@ -134,6 +89,16 @@ interface ContactInfo {
 **Request**: `{}`
 
 **Response**: `ApiResponse<HealthStatus>`
+
+```typescript
+// 系统健康状态
+type SystemHealthStatus = 'healthy' | 'degraded' | 'unhealthy';
+
+interface HealthStatus {
+  status: SystemHealthStatus;
+  timestamp: string;
+}
+```
 
 **错误码**: `10600`
 
@@ -180,5 +145,39 @@ interface AnnouncementListRequest {
 **Request**: `{}`
 
 **Response**: `ApiResponse<ClientConfig>`
+
+```typescript
+// 客户端公开配置
+// ClientConfig 是 AppConfig（见 @api_spec_admin_core.mdc）中客户端可见部分的投影
+// 客户端启动时通过 system/get_client_config 获取并缓存
+interface ClientConfig {
+  features: FeatureSwitches;
+  limits: AppLimits;
+  contact: ContactInfo;
+}
+
+interface FeatureSwitches {
+  enable_public_registration: boolean;
+  enable_guest_login: boolean;
+  enable_moments: boolean;
+  enable_nearby_people: boolean;
+}
+
+interface AppLimits {
+  max_group_members: number;
+  max_moment_tags: number;
+  max_moment_images: number;
+  moment_description_max_length: number;
+  comment_max_length: number;
+  search_radius_max: number;
+}
+
+interface ContactInfo {
+  support_email: string;
+  privacy_policy_url: string;
+  terms_of_service_url: string;
+  official_website: string;
+}
+```
 
 **错误码**: `10000`

@@ -66,9 +66,30 @@ alwaysApply: true
 - `PaginationParams`
 - `PaginatedData`
 
-```typescript
-// === 私聊类型 ===
+---
 
+## 私聊管理 API
+
+私聊权限和陌生人消息限制规则详见 `@api_spec_base.mdc` 中的"隐私与访问控制"章节。
+
+### POST /api/v1/private_chats/me/list
+
+获取私聊列表。
+
+- **认证**: 必须
+- **幂等**: 无
+- **排序**: 按最近活跃时间倒序（最新会话在前）
+
+**Request**: `MyPrivateChatsRequest`
+```typescript
+interface MyPrivateChatsRequest {
+  pagination?: PaginationParams;
+}
+```
+
+**Response**: `ApiResponse<PaginatedData<PrivateChatItem>>`
+
+```typescript
 // PrivateChatItem: 私聊统一数据类型（用于列表、详情等所有场景）
 interface PrivateChatItem {
   other_user: UserInfo;
@@ -102,81 +123,7 @@ type CantMessageReason =
   | 'privacy'           // 对方隐私设置不允许
   | 'stranger_limit'    // 陌生人消息限额已用完
   | 'account_suspended';// 账号被限制
-
-interface PrivateChatOpenResult {
-  chat: PrivateChatItem;
-  recent_messages: PaginatedData<PrivateMessageItem>;  // 始终返回，条数由 AppConfig.response_defaults.chat_recent_messages_count 控制
-}
-
-interface PrivateMessageItem {
-  message_id: string;
-  type: MessageType;
-  
-  content?: string;
-  media?: MessageMedia;
-  share_code?: string;
-  
-  sender_id: string;  // 私聊场景：会话双方已知，只需 ID
-  
-  reply_to?: MessageReplyTo;
-  
-  sent_at: string;
-  edited_at?: string;
-  recalled_at?: string;  // 存在即表示已撤回
-  is_read?: boolean;     // 消息是否已被对方读取
-}
-
-// === 群聊类型 ===
-
-// 设计说明：群聊消息使用 `sender: UserInfo` 而非 `sender_id: string`，
-// 因为群聊场景下客户端需要显示发送者头像/昵称等信息，且群成员数量多变、
-// 不一定在本地缓存中。私聊消息使用 `sender_id` 是因为双方信息已通过
-// PrivateChatItem.other_user 获取，无需重复传输。
-
-interface GroupMessageItem {
-  message_id: string;
-  type: MessageType;
-  
-  content?: string;
-  media?: MessageMedia;
-  share_code?: string;
-  
-  sender: UserInfo;  // 群聊场景：需要完整用户信息
-  
-  reply_to?: MessageReplyTo;
-  mentions?: string[];  // @UserIDs
-  recalled_by?: string;
-  
-  sent_at: string;
-  edited_at?: string;
-  recalled_at?: string;  // 存在即表示已撤回
-  
-  read_count?: number;
-}
 ```
-
----
-
-## 私聊管理 API
-
-私聊权限和陌生人消息限制规则详见 `@api_spec_base.mdc` 中的"隐私与访问控制"章节。
-
-### POST /api/v1/private_chats/me/list
-
-获取私聊列表。
-
-- **认证**: 必须
-- **幂等**: 无
-- **排序**: 按最近活跃时间倒序（最新会话在前）
-
-**Request**: `MyPrivateChatsRequest`
-```typescript
-interface MyPrivateChatsRequest {
-  pagination?: PaginationParams;
-}
-```
-
-**Response**: `ApiResponse<PaginatedData<PrivateChatItem>>`
 
 **错误码**: `10000`
 
@@ -209,6 +156,13 @@ interface PrivateChatOpenTheDoorRequest {
 ```
 
 **Response**: `ApiResponse<PrivateChatOpenResult>`
+
+```typescript
+interface PrivateChatOpenResult {
+  chat: PrivateChatItem;
+  recent_messages: PaginatedData<PrivateMessageItem>;  // 始终返回，条数由 AppConfig.response_defaults.chat_recent_messages_count 控制
+}
+```
 
 **错误码**: `10000` `10200` `10300`
 
@@ -294,6 +248,26 @@ interface SendPrivateMessageRequest {
 ```
 
 **Response**: `ApiResponse<MessageSent>`
+
+```typescript
+interface PrivateMessageItem {
+  message_id: string;
+  type: MessageType;
+  
+  content?: string;
+  media?: MessageMedia;
+  share_code?: string;
+  
+  sender_id: string;  // 私聊场景：会话双方已知，只需 ID
+  
+  reply_to?: MessageReplyTo;
+  
+  sent_at: string;
+  edited_at?: string;
+  recalled_at?: string;  // 存在即表示已撤回
+  is_read?: boolean;     // 消息是否已被对方读取
+}
+```
 
 **错误码**: `10000` `10200` `10300` `22000` `22002`
 
@@ -409,6 +383,34 @@ interface SendGroupMessageRequest {
 ```
 
 **Response**: `ApiResponse<MessageSent>`
+
+```typescript
+// 设计说明：群聊消息使用 `sender: UserInfo` 而非 `sender_id: string`，
+// 因为群聊场景下客户端需要显示发送者头像/昵称等信息，且群成员数量多变、
+// 不一定在本地缓存中。私聊消息使用 `sender_id` 是因为双方信息已通过
+// PrivateChatItem.other_user 获取，无需重复传输。
+
+interface GroupMessageItem {
+  message_id: string;
+  type: MessageType;
+  
+  content?: string;
+  media?: MessageMedia;
+  share_code?: string;
+  
+  sender: UserInfo;  // 群聊场景：需要完整用户信息
+  
+  reply_to?: MessageReplyTo;
+  mentions?: string[];  // @UserIDs
+  recalled_by?: string;
+  
+  sent_at: string;
+  edited_at?: string;
+  recalled_at?: string;  // 存在即表示已撤回
+  
+  read_count?: number;
+}
+```
 
 **错误码**: `10000` `10300` `10400` `22000` `22002`
 

@@ -89,151 +89,6 @@ alwaysApply: true
 - `PaginatedData<T>`
 - `ApiResponse<T>`
 
-```typescript
-// === RBAC 类型 ===
-
-interface AdminPermissions {
-  permissions: string[];  // '*' 表示拥有全部权限
-  roles: AdminRoleBasic[];
-}
-
-interface AdminRoleBasic {
-  role_id: string;
-  name: string;
-}
-
-interface AdminPermissionItem {
-  key: string;
-  description: string;
-}
-
-interface AdminRoleItem {
-  role_id: string;
-  name: string;
-  description?: string;
-  permissions: string[];
-}
-
-interface AdminOperatorItem {
-  user: UserInfo;
-  permissions: string[];  // '*' 表示拥有全部权限
-  roles: AdminRoleBasic[];
-}
-
-// === 审计日志类型 ===
-
-type AuditAction = 
-  | 'user.ban'           // 封禁用户
-  | 'user.unban'         // 解封用户
-  | 'group.dismiss'      // 解散群组
-  | 'announcement.create'// 创建公告
-  | 'announcement.delete'// 删除公告
-  | 'role.create'        // 创建角色
-  | 'role.update'        // 更新角色
-  | 'role.delete'        // 删除角色
-  | 'role.set_permissions' // 设置角色权限
-  | 'admin.grant'        // 授权管理员
-  | 'admin.revoke'       // 撤销管理员
-  | 'report.handle'      // 处理举报
-  | 'tag.delete'         // 删除/屏蔽标签
-  | 'permission.grant'   // 授予权限
-  | 'permission.revoke'  // 撤销权限
-  | 'config.update';     // 更新系统配置
-
-type AuditTargetType = 'user' | 'group' | 'announcement' | 'role' | 'admin' | 'report' | 'tag' | 'config';
-
-type AuditDetails = 
-  | { type: 'user.ban'; reason?: string; duration_days?: number }
-  | { type: 'user.unban'; reason?: string }
-  | { type: 'group.dismiss'; reason?: string }
-  | { type: 'announcement.create'; title: string }
-  | { type: 'announcement.delete'; title: string }
-  | { type: 'role.create'; role_name: string; permissions: string[] }
-  | { type: 'role.update'; role_name: string; added_permissions?: string[]; removed_permissions?: string[] }
-  | { type: 'role.delete'; role_name: string }
-  | { type: 'role.set_permissions'; role_name: string; permissions: string[] }
-  | { type: 'admin.grant'; target_user_id: string; role_ids: string[]; grant_all_permissions?: boolean }
-  | { type: 'admin.revoke'; target_user_id: string }
-  | { type: 'report.handle'; report_id: string; action: string; note?: string }
-  | { type: 'tag.delete'; tag_name: string }
-  | { type: 'permission.grant'; permission: string }
-  | { type: 'permission.revoke'; permission: string }
-  | { type: 'config.update'; config_key: string };
-
-interface AuditLogItem {
-  log_id: string;
-  action: AuditAction;
-  operator: UserInfo;
-  target_type: AuditTargetType;
-  target_id: string;
-  target_name?: string;
-  details?: AuditDetails;
-  ip_location?: string;           // IP 地理位置，所有管理员可见
-  ip_address?: string;            // 需要 admin.audit.read_ip 权限
-  device_summary?: string;        // 设备摘要（脱敏后的 UA 信息）
-  created_at: string;
-}
-
-// === 全局配置类型 ===
-
-interface UploadConfig {
-  image_max_size: number;
-  video_max_size: number;
-  audio_max_size: number;
-  file_max_size: number;
-  allowed_image_types: string[];
-  allowed_video_types: string[];
-}
-
-interface ContentDefaults {
-  default_location_name: string;
-  default_group_avatar: string;
-  default_user_avatar: string;
-  default_group_settings: GroupSettings;  // GroupSettings 定义于 @api_spec_types.mdc
-}
-
-interface RateLimitConfig {
-  global_per_hour: number;
-  user_per_hour: number;
-  auth_register_per_10minutes: number;
-  auth_login_per_10minutes: number;
-  auth_guest_per_10minutes: number;
-  auth_refresh_per_10minutes: number;
-  auth_reset_per_10minutes: number;
-  moments_create_per_minute: number;
-  comments_create_per_minute: number;
-  reports_create_per_hour: number;
-}
-
-interface ResponseDefaults {
-  search_suggest_count: number;       // 搜索建议返回条数，默认 5
-  trending_tags_count: number;        // 热门标签返回条数（tags/list_trending 及 feed/list_trending），默认 10
-  hot_moments_count: number;          // feed/list_trending 热门瞬间返回条数，默认 20
-  chat_recent_messages_count: number; // open_the_door 返回的最近消息条数，默认 20
-  group_announcements_count: number;  // 群公告列表返回条数，默认 10
-}
-
-// AppConfig: 完整的应用配置，由管理员统一管理
-// ClientConfig（见 @api_spec_system.mdc）是 AppConfig 中客户端可见部分的投影
-interface AppConfig {
-  // === 客户端可见配置（构成 ClientConfig） ===
-  features: FeatureSwitches;       // 定义于 @api_spec_system.mdc
-  limits: AppLimits;               // 定义于 @api_spec_system.mdc
-  contact: ContactInfo;            // 定义于 @api_spec_system.mdc
-  // === 仅服务端使用 ===
-  upload: UploadConfig;
-  defaults: ContentDefaults;
-  rate_limits: RateLimitConfig;
-  response_defaults: ResponseDefaults;
-  // === 元数据 ===
-  updated_at?: string;
-  updated_by_user_id?: string;
-}
-
-// AdminClientConfig 已不再需要：AppConfig 包含 ClientConfig 的所有字段及元数据
-// 管理员通过 admin/app_config/get 获取完整 AppConfig
-```
-
 ## 端点详情
 
 ### RBAC 管理 API
@@ -253,6 +108,18 @@ interface AppConfig {
 
 **Response**: `ApiResponse<AdminPermissions>`
 
+```typescript
+interface AdminRoleBasic {
+  role_id: string;
+  name: string;
+}
+
+interface AdminPermissions {
+  permissions: string[];  // '*' 表示拥有全部权限
+  roles: AdminRoleBasic[];
+}
+```
+
 **错误码**: `10200`
 
 ---
@@ -267,6 +134,13 @@ interface AppConfig {
 **Request**: `{}`
 
 **Response**: `ApiResponse<{ items: AdminPermissionItem[] }>`
+
+```typescript
+interface AdminPermissionItem {
+  key: string;
+  description: string;
+}
+```
 
 **错误码**: `10200`
 
@@ -285,6 +159,15 @@ interface AdminRbacRolesListRequest {} // 直接返回全部角色，无需分�
 ```
 
 **Response**: `ApiResponse<{ items: AdminRoleItem[] }>`
+
+```typescript
+interface AdminRoleItem {
+  role_id: string;
+  name: string;
+  description?: string;
+  permissions: string[];
+}
+```
 
 **说明**：
 - RBAC 角色为系统配置数据，数量有限，无需分页
@@ -397,6 +280,14 @@ interface AdminRbacAdminsListRequest {
 
 **Response**: `ApiResponse<PaginatedData<AdminOperatorItem>>`
 
+```typescript
+interface AdminOperatorItem {
+  user: UserInfo;
+  permissions: string[];  // '*' 表示拥有全部权限
+  roles: AdminRoleBasic[];
+}
+```
+
 **错误码**: `10000` `10200`
 
 ---
@@ -476,6 +367,60 @@ interface AuditLogListRequest {
 
 **Response**: `ApiResponse<PaginatedData<AuditLogItem>>`
 
+```typescript
+type AuditAction = 
+  | 'user.ban'           // 封禁用户
+  | 'user.unban'         // 解封用户
+  | 'group.dismiss'      // 解散群组
+  | 'announcement.create'// 创建公告
+  | 'announcement.delete'// 删除公告
+  | 'role.create'        // 创建角色
+  | 'role.update'        // 更新角色
+  | 'role.delete'        // 删除角色
+  | 'role.set_permissions' // 设置角色权限
+  | 'admin.grant'        // 授权管理员
+  | 'admin.revoke'       // 撤销管理员
+  | 'report.handle'      // 处理举报
+  | 'tag.delete'         // 删除/屏蔽标签
+  | 'permission.grant'   // 授予权限
+  | 'permission.revoke'  // 撤销权限
+  | 'config.update';     // 更新系统配置
+
+type AuditTargetType = 'user' | 'group' | 'announcement' | 'role' | 'admin' | 'report' | 'tag' | 'config';
+
+type AuditDetails = 
+  | { type: 'user.ban'; reason?: string; duration_days?: number }
+  | { type: 'user.unban'; reason?: string }
+  | { type: 'group.dismiss'; reason?: string }
+  | { type: 'announcement.create'; title: string }
+  | { type: 'announcement.delete'; title: string }
+  | { type: 'role.create'; role_name: string; permissions: string[] }
+  | { type: 'role.update'; role_name: string; added_permissions?: string[]; removed_permissions?: string[] }
+  | { type: 'role.delete'; role_name: string }
+  | { type: 'role.set_permissions'; role_name: string; permissions: string[] }
+  | { type: 'admin.grant'; target_user_id: string; role_ids: string[]; grant_all_permissions?: boolean }
+  | { type: 'admin.revoke'; target_user_id: string }
+  | { type: 'report.handle'; report_id: string; action: string; note?: string }
+  | { type: 'tag.delete'; tag_name: string }
+  | { type: 'permission.grant'; permission: string }
+  | { type: 'permission.revoke'; permission: string }
+  | { type: 'config.update'; config_key: string };
+
+interface AuditLogItem {
+  log_id: string;
+  action: AuditAction;
+  operator: UserInfo;
+  target_type: AuditTargetType;
+  target_id: string;
+  target_name?: string;
+  details?: AuditDetails;
+  ip_location?: string;           // IP 地理位置，所有管理员可见
+  ip_address?: string;            // 需要 admin.audit.read_ip 权限
+  device_summary?: string;        // 设备摘要（脱敏后的 UA 信息）
+  created_at: string;
+}
+```
+
 **错误码**: `10000` `10200`
 
 ---
@@ -515,6 +460,28 @@ interface AuditLogOpenTheDoorRequest {
 
 **Response**: `ApiResponse<AppConfig>`
 
+```typescript
+// AppConfig: 完整的应用配置，由管理员统一管理
+// ClientConfig（见 @api_spec_system.mdc）是 AppConfig 中客户端可见部分的投影
+interface AppConfig {
+  // === 客户端可见配置（构成 ClientConfig） ===
+  features: FeatureSwitches;       // 定义于 @api_spec_system.mdc
+  limits: AppLimits;               // 定义于 @api_spec_system.mdc
+  contact: ContactInfo;            // 定义于 @api_spec_system.mdc
+  // === 仅服务端使用 ===
+  upload: UploadConfig;
+  defaults: ContentDefaults;
+  rate_limits: RateLimitConfig;
+  response_defaults: ResponseDefaults;
+  // === 元数据 ===
+  updated_at?: string;
+  updated_by_user_id?: string;
+}
+
+// AdminClientConfig 已不再需要：AppConfig 包含 ClientConfig 的所有字段及元数据
+// 管理员通过 admin/app_config/get 获取完整 AppConfig
+```
+
 **错误码**: `10200`
 
 ---
@@ -528,6 +495,15 @@ interface AuditLogOpenTheDoorRequest {
 
 **Request**: `UpdateUploadConfigRequest`
 ```typescript
+interface UploadConfig {
+  image_max_size: number;
+  video_max_size: number;
+  audio_max_size: number;
+  file_max_size: number;
+  allowed_image_types: string[];
+  allowed_video_types: string[];
+}
+
 interface UpdateUploadConfigRequest {
   upload: Partial<UploadConfig>;
 }
@@ -548,6 +524,13 @@ interface UpdateUploadConfigRequest {
 
 **Request**: `UpdateDefaultsRequest`
 ```typescript
+interface ContentDefaults {
+  default_location_name: string;
+  default_group_avatar: string;
+  default_user_avatar: string;
+  default_group_settings: GroupSettings;  // GroupSettings 定义于 @api_spec_types.mdc
+}
+
 interface UpdateDefaultsRequest {
   default_location_name?: string;
   default_group_avatar?: string;
@@ -573,6 +556,19 @@ interface UpdateDefaultsRequest {
 
 **Request**: `UpdateRateLimitsRequest`
 ```typescript
+interface RateLimitConfig {
+  global_per_hour: number;
+  user_per_hour: number;
+  auth_register_per_10minutes: number;
+  auth_login_per_10minutes: number;
+  auth_guest_per_10minutes: number;
+  auth_refresh_per_10minutes: number;
+  auth_reset_per_10minutes: number;
+  moments_create_per_minute: number;
+  comments_create_per_minute: number;
+  reports_create_per_hour: number;
+}
+
 interface UpdateRateLimitsRequest {
   rate_limits: Partial<RateLimitConfig>;
 }
@@ -606,6 +602,14 @@ interface UpdateRateLimitsRequest {
 
 **Request**: `UpdateResponseDefaultsRequest`
 ```typescript
+interface ResponseDefaults {
+  search_suggest_count: number;       // 搜索建议返回条数，默认 5
+  trending_tags_count: number;        // 热门标签返回条数（tags/list_trending 及 feed/list_trending），默认 10
+  hot_moments_count: number;          // feed/list_trending 热门瞬间返回条数，默认 20
+  chat_recent_messages_count: number; // open_the_door 返回的最近消息条数，默认 20
+  group_announcements_count: number;  // 群公告列表返回条数，默认 10
+}
+
 interface UpdateResponseDefaultsRequest {
   response_defaults: Partial<ResponseDefaults>;
 }

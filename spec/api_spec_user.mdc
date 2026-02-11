@@ -60,190 +60,6 @@ alwaysApply: true
 - `MomentItem`
 - `FollowSource`
 
-```typescript
-// 性别枚举
-type Gender = 'male' | 'female' | 'apache_helicopter';
-
-// 私聊权限
-// 注：'friends' 表示"仅好友"，好友 = 双方互相关注的用户
-type PrivateChatPermission = 'everyone' | 'friends' | 'nobody';
-
-interface MyProfile {
-  user_id: string;
-  nickname: string;
-  avatar_url?: string;
-  user_type: UserType;          // 仅在"我的资料"中返回，UserInfo 不包含此字段
-  bio?: string;
-  tags?: string[];
-  gender?: Gender;
-  email?: string;               // 只读，来源于 login_id；如需变更请通过 auth/me/change_login_id 处理
-  phone?: string;               // 只读，来源于 login_id；如需变更请通过 auth/me/change_login_id 处理
-  location: Location;  // 直接映射自请求，不经过距离/角度计算
-  presence_status: UserPresenceStatus;
-  last_online: string;
-  created_at: string;
-  stats: UserStats;
-}
-
-interface UserSettings {
-  privacy_level: PrivacyLevel;
-  location_visible: boolean;
-  presence_visible: boolean;  // 在线状态和最后在线时间的可见性（统一控制）
-  friends_visible: PrivacyLevel;  // 好友列表可见性（好友 = 互相关注）
-  following_visible: PrivacyLevel;
-  followers_visible: PrivacyLevel;
-  groups_visible: PrivacyLevel;
-  liked_moments_visible: PrivacyLevel;
-  stats_visible: PrivacyLevel;
-  allow_follow: boolean;
-  allow_private_chat: PrivateChatPermission;
-  searchable: boolean;
-  phone_searchable: boolean;
-  nickname_searchable: boolean;
-  location_searchable: boolean;
-}
-
-interface FriendItem {
-  user: UserInfo;
-  presence_status?: UserPresenceStatus;  // 隐私受控：对方隐私设置时不返回
-  last_online?: string;
-  remark?: string;
-  followed_at: string;        // 我关注对方的时间
-  followed_back_at: string;   // 对方回关我的时间（成为好友的时间）
-}
-
-interface FollowingItem {
-  user: UserInfo;
-  followed_at: string;
-  is_mutual: boolean;
-  presence_status?: UserPresenceStatus;  // 隐私受控：对方隐私设置时不返回
-  last_online?: string;
-}
-
-interface FollowerItem {
-  user: UserInfo;
-  followed_at: string;
-  is_following_back: boolean;
-  presence_status?: UserPresenceStatus;  // 隐私受控：对方隐私设置时不返回
-  last_online?: string;
-}
-
-interface BlockedUserItem {
-  user: UserInfo;
-  blocked_at: string;
-  reason?: string;
-}
-
-interface SearchUsersRequest {
-  keyword?: string;    // 关键字搜索（匹配昵称、bio 等）
-  tag?: string;        // 标签筛选
-  radius?: number;     // 位置范围（米），配合 reference_point 使用
-  sort_by?: 'relevance' | 'distance' | 'newest';  // 默认: relevance
-  reference_point: GeoPoint; // 浏览锚点位置（客户端必须传入有效坐标，拒绝定位时使用 fallback）
-  pagination?: PaginationParams;
-}
-// 至少提供 keyword、tag、radius 中的一个
-
-interface UserOpenTheDoorRequest {
-  user_id: string;
-}
-
-interface UserFriendsRequest {
-  user_id: string;
-  pagination?: PaginationParams;
-}
-
-interface UserFollowingRequest {
-  user_id: string;
-  pagination?: PaginationParams;
-}
-
-interface UserFollowersRequest {
-  user_id: string;
-  pagination?: PaginationParams;
-}
-
-interface UserGroupsRequest {
-  user_id: string;
-  pagination?: PaginationParams;
-}
-
-interface UserMomentsRequest {
-  user_id: string;
-  pagination?: PaginationParams;
-}
-
-interface UserLikedMomentsRequest {
-  user_id: string;
-  pagination?: PaginationParams;
-}
-
-interface UpdateProfileRequest {
-  nickname?: string;
-  avatar_file_id?: string;
-  bio?: string;
-  tags?: string[];
-  gender?: Gender;
-}
-
-interface UpdateLocationRequest {
-  location: Location;
-}
-
-interface UpgradeAccountRequest {
-  login_id: string;
-  password: string;
-}
-
-interface UpdateSettingsRequest {
-  settings: Partial<UserSettings>;
-}
-
-interface DeleteAccountRequest {
-  confirmation: string;  // 必须为 "DELETE_MY_ACCOUNT"
-}
-
-interface FollowRequest {
-  user_id: string;
-  source?: FollowSource;        // 可选：关注来源（用于心理学优化，让被关注者知道来源）
-  source_moment_id?: string;    // 可选：如果是通过瞬间关注，提供瞬间 ID
-}
-
-interface UnfollowRequest {
-  user_id: string;
-}
-
-interface BlockRequest {
-  user_id: string;
-  reason?: string;
-}
-
-interface UnblockRequest {
-  user_id: string;
-}
-
-interface MyFriendsRequest {
-  pagination?: PaginationParams;
-}
-
-interface MyFollowingRequest {
-  pagination?: PaginationParams;
-}
-
-interface MyFollowersRequest {
-  pagination?: PaginationParams;
-}
-
-interface MyBlockedRequest {
-  pagination?: PaginationParams;
-}
-
-interface SetRemarkRequest {
-  user_id: string;
-  remark?: string;  // 传空字符串 "" 表示清除备注；不传此字段则不修改
-}
-```
-
 ## 端点详情
 
 ### POST /api/v1/users/search
@@ -324,6 +140,16 @@ interface UserFriendsRequest {
 ```
 
 **Response**: `ApiResponse<PaginatedData<FriendItem>>`
+```typescript
+interface FriendItem {
+  user: UserInfo;
+  presence_status?: UserPresenceStatus;  // 隐私受控：对方隐私设置时不返回
+  last_online?: string;
+  remark?: string;
+  followed_at: string;        // 我关注对方的时间
+  followed_back_at: string;   // 对方回关我的时间（成为好友的时间）
+}
+```
 
 **可见性说明**：`remark` 为 `@owner-only`（仅 `me/list_friends` 返回），`presence_status`/`last_online` 受对方隐私设置控制。
 
@@ -350,6 +176,15 @@ interface UserFollowingRequest {
 ```
 
 **Response**: `ApiResponse<PaginatedData<FollowingItem>>`
+```typescript
+interface FollowingItem {
+  user: UserInfo;
+  followed_at: string;
+  is_mutual: boolean;
+  presence_status?: UserPresenceStatus;  // 隐私受控：对方隐私设置时不返回
+  last_online?: string;
+}
+```
 
 **可见性说明**：`presence_status`/`last_online` 受对方隐私设置控制。
 
@@ -376,6 +211,15 @@ interface UserFollowersRequest {
 ```
 
 **Response**: `ApiResponse<PaginatedData<FollowerItem>>`
+```typescript
+interface FollowerItem {
+  user: UserInfo;
+  followed_at: string;
+  is_following_back: boolean;
+  presence_status?: UserPresenceStatus;  // 隐私受控：对方隐私设置时不返回
+  last_online?: string;
+}
+```
 
 **可见性说明**：`presence_status`/`last_online` 受对方隐私设置控制。
 
@@ -467,6 +311,27 @@ interface UserLikedMomentsRequest {
 **Request**: `{}`
 
 **Response**: `ApiResponse<MyProfile>`
+```typescript
+// 性别枚举
+type Gender = 'male' | 'female' | 'apache_helicopter';
+
+interface MyProfile {
+  user_id: string;
+  nickname: string;
+  avatar_url?: string;
+  user_type: UserType;          // 仅在"我的资料"中返回，UserInfo 不包含此字段
+  bio?: string;
+  tags?: string[];
+  gender?: Gender;
+  email?: string;               // 只读，来源于 login_id；如需变更请通过 auth/me/change_login_id 处理
+  phone?: string;               // 只读，来源于 login_id；如需变更请通过 auth/me/change_login_id 处理
+  location: Location;  // 直接映射自请求，不经过距离/角度计算
+  presence_status: UserPresenceStatus;
+  last_online: string;
+  created_at: string;
+  stats: UserStats;
+}
+```
 
 **错误码**: `10000`
 
@@ -547,6 +412,29 @@ interface UpgradeAccountRequest {
 **Request**: `{}`
 
 **Response**: `ApiResponse<UserSettings>`
+```typescript
+// 私聊权限
+// 注：'friends' 表示"仅好友"，好友 = 双方互相关注的用户
+type PrivateChatPermission = 'everyone' | 'friends' | 'nobody';
+
+interface UserSettings {
+  privacy_level: PrivacyLevel;
+  location_visible: boolean;
+  presence_visible: boolean;  // 在线状态和最后在线时间的可见性（统一控制）
+  friends_visible: PrivacyLevel;  // 好友列表可见性（好友 = 互相关注）
+  following_visible: PrivacyLevel;
+  followers_visible: PrivacyLevel;
+  groups_visible: PrivacyLevel;
+  liked_moments_visible: PrivacyLevel;
+  stats_visible: PrivacyLevel;
+  allow_follow: boolean;
+  allow_private_chat: PrivateChatPermission;
+  searchable: boolean;
+  phone_searchable: boolean;
+  nickname_searchable: boolean;
+  location_searchable: boolean;
+}
+```
 
 **错误码**: `10000`
 
@@ -760,6 +648,13 @@ interface MyBlockedRequest {
 ```
 
 **Response**: `ApiResponse<PaginatedData<BlockedUserItem>>`
+```typescript
+interface BlockedUserItem {
+  user: UserInfo;
+  blocked_at: string;
+  reason?: string;
+}
+```
 
 **错误码**: `10000`
 

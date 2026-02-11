@@ -75,82 +75,6 @@ alwaysApply: true
 以下类型定义于 `@api_spec_chat.mdc`：
 - `GroupMessageItem`
 
-```typescript
-// 申请状态
-type ApplicationStatus = 'pending' | 'accepted' | 'rejected';
-
-// 可设置的角色（不含 owner）
-type SetableGroupRole = 'admin' | 'member';
-
-// 群组详情响应
-interface GroupOpenResult {
-  group: GroupItem;
-  recent_messages: PaginatedData<GroupMessageItem>;  // GroupMessageItem 定义于 @api_spec_chat.mdc；始终返回，条数由 AppConfig.response_defaults.chat_recent_messages_count 控制
-}
-
-// 群组成员列表项
-interface GroupMemberItem {
-  user: UserInfo;
-  role: GroupRole;
-  joined_at: string;
-  muted_until?: string;           // @group-admin-only（或被禁言者自身可见）
-  presence_status?: UserPresenceStatus;  // 隐私受控：成员隐私设置时不返回
-  last_online?: string;
-}
-
-// 邀请响应
-interface Invitation {
-  invite_id: string;
-  expires_at: string;
-}
-
-// 申请响应
-interface Application {
-  application_id: string;
-}
-
-// 群组创建响应：直接返回完整 GroupItem（与 moments/create 返回 MomentItem 保持一致）
-// 不再使用独立的 GroupCreated 类型，客户端无需额外请求即可获得完整群组数据
-
-// 封禁成员列表项
-interface BannedMemberItem {
-  user: UserInfo;
-  banned_at: string;
-  // === @group-admin-only ===
-  reason?: string;
-  banned_by?: UserInfo;
-}
-
-// 群组申请列表项
-interface GroupApplicationItem {
-  application_id: string;
-  applicant: UserInfo;
-  message?: string;
-  status: ApplicationStatus;
-  created_at: string;
-  handled_at?: string;
-  // === @group-admin-only ===
-  handled_by?: UserInfo;
-}
-
-// 群组邀请列表项
-interface GroupInviteItem {
-  invite_id: string;
-  group: GroupInfo;
-  inviter: UserInfo;
-  message?: string;
-  status: ApplicationStatus;
-  created_at: string;
-  expires_at?: string;
-}
-
-// 加入群组响应
-interface JoinGroupResult {
-  status: 'joined' | 'pending_approval';
-  application?: Application;  // 仅 pending_approval 时返回
-}
-```
-
 ## 端点详情
 
 ### POST /api/v1/groups/search
@@ -206,6 +130,13 @@ interface GroupOpenTheDoorRequest {
 ```
 
 **Response**: `ApiResponse<GroupOpenResult>`
+```typescript
+// 群组详情响应
+interface GroupOpenResult {
+  group: GroupItem;
+  recent_messages: PaginatedData<GroupMessageItem>;  // GroupMessageItem 定义于 @api_spec_chat.mdc；始终返回，条数由 AppConfig.response_defaults.chat_recent_messages_count 控制
+}
+```
 
 **错误码**: `10000` `10300`
 
@@ -234,6 +165,10 @@ interface CreateGroupRequest {
 ```
 
 **Response**: `ApiResponse<GroupItem>`
+```typescript
+// 群组创建响应：直接返回完整 GroupItem（与 moments/create 返回 MomentItem 保持一致）
+// 不再使用独立的 GroupCreated 类型，客户端无需额外请求即可获得完整群组数据
+```
 
 **错误码**: `10000` `10300` `22000` `22002`
 
@@ -306,6 +241,17 @@ interface GroupMembersRequest {
 ```
 
 **Response**: `ApiResponse<PaginatedData<GroupMemberItem>>`
+```typescript
+// 群组成员列表项
+interface GroupMemberItem {
+  user: UserInfo;
+  role: GroupRole;
+  joined_at: string;
+  muted_until?: string;           // @group-admin-only（或被禁言者自身可见）
+  presence_status?: UserPresenceStatus;  // 隐私受控：成员隐私设置时不返回
+  last_online?: string;
+}
+```
 
 **错误码**: `10000` `10300`
 
@@ -352,6 +298,13 @@ interface InviteMemberRequest {
 ```
 
 **Response**: `ApiResponse<Invitation>`
+```typescript
+// 邀请响应
+interface Invitation {
+  invite_id: string;
+  expires_at: string;
+}
+```
 
 **错误码**: `10000` `10200` `10300` `10400`
 
@@ -494,6 +447,16 @@ interface BannedMembersRequest {
 ```
 
 **Response**: `ApiResponse<PaginatedData<BannedMemberItem>>`
+```typescript
+// 封禁成员列表项
+interface BannedMemberItem {
+  user: UserInfo;
+  banned_at: string;
+  // === @group-admin-only ===
+  reason?: string;
+  banned_by?: UserInfo;
+}
+```
 
 **错误码**: `10000` `10200` `10300`
 
@@ -540,6 +503,25 @@ interface GroupApplicationsRequest {
 ```
 
 **Response**: `ApiResponse<PaginatedData<GroupApplicationItem>>`
+```typescript
+// 申请状态
+type ApplicationStatus = 'pending' | 'accepted' | 'rejected';
+
+// 可设置的角色（不含 owner）
+type SetableGroupRole = 'admin' | 'member';
+
+// 群组申请列表项
+interface GroupApplicationItem {
+  application_id: string;
+  applicant: UserInfo;
+  message?: string;
+  status: ApplicationStatus;
+  created_at: string;
+  handled_at?: string;
+  // === @group-admin-only ===
+  handled_by?: UserInfo;
+}
+```
 
 **错误码**: `10000` `10200` `10300`
 
@@ -725,6 +707,18 @@ interface JoinGroupRequest {
 ```
 
 **Response**: `ApiResponse<JoinGroupResult>`
+```typescript
+// 申请响应
+interface Application {
+  application_id: string;
+}
+
+// 加入群组响应
+interface JoinGroupResult {
+  status: 'joined' | 'pending_approval';
+  application?: Application;  // 仅 pending_approval 时返回
+}
+```
 
 **错误码**: `10000` `10200` `10300` `10400` `22000` `22002`
 
@@ -837,6 +831,18 @@ interface MyInvitesRequest {
 ```
 
 **Response**: `ApiResponse<PaginatedData<GroupInviteItem>>`
+```typescript
+// 群组邀请列表项
+interface GroupInviteItem {
+  invite_id: string;
+  group: GroupInfo;
+  inviter: UserInfo;
+  message?: string;
+  status: ApplicationStatus;
+  created_at: string;
+  expires_at?: string;
+}
+```
 
 **错误码**: `10000`
 

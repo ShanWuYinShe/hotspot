@@ -33,23 +33,6 @@ alwaysApply: true
 - `GeoPoint`
 - `TagItem`、`TagTrend`（定义于 `@api_spec_search.mdc`）
 
-```typescript
-// 信息流来源
-type FeedSource = 'following' | 'nearby' | 'all';
-
-interface TrendingBundle {
-  trending_tags: TrendingTagItem[];
-  hot_moments: MomentItem[];
-}
-
-// TrendingTagItem 复用 TagItem 并扩展热门瞬间预览
-// TagItem 定义于 @api_spec_search.mdc（含 name、usage_count、trend?）
-interface TrendingTagItem extends Omit<TagItem, 'trend'> {
-  trend: TagTrend;  // 必填（TagItem 中为可选，此处覆盖为必填）
-  hot_moment_preview?: MomentItem;
-}
-```
-
 ## 端点详情
 
 ### POST /api/v1/feed/list_moments
@@ -65,6 +48,9 @@ interface TrendingTagItem extends Omit<TagItem, 'trend'> {
 
 **Request**: `GetFeedMomentsRequest`
 ```typescript
+// 信息流来源
+type FeedSource = 'following' | 'nearby' | 'all';
+
 interface GetFeedMomentsRequest {
   source: FeedSource;
   radius?: number;  // 位置范围（米），100-50000，可由 AppConfig.limits.search_radius_max 覆盖
@@ -148,6 +134,19 @@ interface GetFeedTrendingRequest {}
 ```
 
 **Response**: `ApiResponse<TrendingBundle>`
+```typescript
+interface TrendingBundle {
+  trending_tags: TrendingTagItem[];
+  hot_moments: MomentItem[];
+}
+
+// TrendingTagItem 复用 TagItem 并扩展热门瞬间预览
+// TagItem 定义于 @api_spec_search.mdc（含 name、usage_count、trend?）
+interface TrendingTagItem extends Omit<TagItem, 'trend'> {
+  trend: TagTrend;  // 必填（TagItem 中为可选，此处覆盖为必填）
+  hot_moment_preview?: MomentItem;
+}
+```
 
 **错误码**: `10000`
 

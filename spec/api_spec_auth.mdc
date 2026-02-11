@@ -36,6 +36,10 @@ alwaysApply: true
 以下类型定义于 `@api_spec_types.mdc`：
 - `ClientType`
 
+### 客户端类型与 Token 投递策略
+
+> Cookie 名称与属性的完整定义见 `api_spec_base.mdc` 的 "Web 端 Cookie 契约" 章节。
+
 ```typescript
 // 认证响应负载：按 client_type 拆分
 // Web：仅通过 HttpOnly Cookie 传递 token，响应体不包含任何 token 字段
@@ -55,81 +59,7 @@ interface AuthTokenPairApp {
   access_token_expires_at: string;
   refresh_token_expires_at: string;
 }
-
-interface SessionItem {
-  session_id: string;           // 会话标识，用于展示和撤销操作
-  device_type?: string;
-  device_name?: string;
-  ip_address?: string;          // 脱敏显示（如 "192.168.xxx.xxx"），防止被用于跟踪
-  ip_location?: string;         // IP 地理位置（如 "北京市"）
-  created_at: string;
-  last_active_at: string;
-  is_current: boolean;
-}
-
-interface AuthStatus {
-  is_valid: boolean;
-  expires_at?: string;  // 仅当 is_valid === true 时返回
-  
-  // 注：如需完整用户信息（nickname、头像等），应调用 /api/v1/users/me/profile/get
-}
-
-interface RegisterRequest {
-  login_id: string;
-  nickname: string;
-  password: string;
-  client_type: ClientType;
-}
-
-interface LoginRequest {
-  login_id: string;            // 手机号/邮箱/用户名
-  password: string;            // 密码
-  client_type: ClientType;
-}
-
-interface GuestRequest {
-  nickname: string;
-  client_type: ClientType;
-}
-
-interface RefreshTokenRequest {
-  client_type: ClientType;
-  refresh_token?: string;  // App 端必填，Web 端留空（使用 Cookie）
-}
-
-interface RequestPasswordResetRequest {
-  login_id: string;       // 注册时使用的邮箱或手机号
-  client_type: ClientType;
-}
-
-interface ResetPasswordRequest {
-  login_id: string;
-  verification_code: string;
-  new_password: string;
-  client_type: ClientType;
-}
-
-interface ChangePasswordRequest {
-  old_password: string;
-  new_password: string;
-}
-
-interface SessionsRequest {} // 直接返回全部活跃会话，无需分页
-
-interface RevokeSessionRequest {
-  session_id: string;  // 来自 SessionItem.session_id
-}
-
-interface RevokeAllResult {
-  revoked_count: number;  // 被撤销的会话数量
-}
-
-// ClientType 定义于 @api_spec_types.mdc
 ```
-
-### 客户端类型与 Token 投递策略
-
-> Cookie 名称与属性的完整定义见 `api_spec_base.mdc` 的 "Web 端 Cookie 契约" 章节。
 
 #### Web 端（`client_type='web'`）
 
@@ -168,6 +98,14 @@ Token 通过响应体投递：
 - **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
 
 **Request**: `RegisterRequest`
+```typescript
+interface RegisterRequest {
+  login_id: string;
+  nickname: string;
+  password: string;
+  client_type: ClientType;
+}
+```
 
 **Response**: `ApiResponse<AuthTokenPairWeb | AuthTokenPairApp>`
 
@@ -181,6 +119,13 @@ Token 通过响应体投递：
 - **幂等**: 无
 
 **Request**: `LoginRequest`
+```typescript
+interface LoginRequest {
+  login_id: string;            // 手机号/邮箱/用户名
+  password: string;            // 密码
+  client_type: ClientType;
+}
+```
 
 **Response**: `ApiResponse<AuthTokenPairWeb | AuthTokenPairApp>`
 
@@ -229,6 +174,12 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 - **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
 
 **Request**: `GuestRequest`
+```typescript
+interface GuestRequest {
+  nickname: string;
+  client_type: ClientType;
+}
+```
 
 **Response**: `ApiResponse<AuthTokenPairWeb | AuthTokenPairApp>`
 
@@ -259,6 +210,12 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 - `client_type='app'`：请求体必须携带 `refresh_token`
 
 **Request**: `RefreshTokenRequest`
+```typescript
+interface RefreshTokenRequest {
+  client_type: ClientType;
+  refresh_token?: string;  // App 端必填，Web 端留空（使用 Cookie）
+}
+```
 
 **Response**: `ApiResponse<AuthTokenPairWeb | AuthTokenPairApp>`
 
@@ -278,6 +235,14 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 **Request**: `{}`
 
 **Response**: `ApiResponse<AuthStatus>`
+```typescript
+interface AuthStatus {
+  is_valid: boolean;
+  expires_at?: string;  // 仅当 is_valid === true 时返回
+  
+  // 注：如需完整用户信息（nickname、头像等），应调用 /api/v1/users/me/profile/get
+}
+```
 
 **错误码**: `10000`
 
@@ -295,6 +260,12 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 - 验证码有效期和发送频率由 `AppConfig.rate_limits.auth_reset_per_10minutes` 控制
 
 **Request**: `RequestPasswordResetRequest`
+```typescript
+interface RequestPasswordResetRequest {
+  login_id: string;       // 注册时使用的邮箱或手机号
+  client_type: ClientType;
+}
+```
 
 **Response**: `ApiResponse`
 
@@ -315,6 +286,14 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 - 被吊销设备的 WebSocket 连接会被服务端主动断开
 
 **Request**: `ResetPasswordRequest`
+```typescript
+interface ResetPasswordRequest {
+  login_id: string;
+  verification_code: string;
+  new_password: string;
+  client_type: ClientType;
+}
+```
 
 **Response**: `ApiResponse<AuthTokenPairWeb | AuthTokenPairApp>`
 
@@ -330,6 +309,12 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 - **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
 
 **Request**: `ChangePasswordRequest`
+```typescript
+interface ChangePasswordRequest {
+  old_password: string;
+  new_password: string;
+}
+```
 
 **Response**: `ApiResponse`
 
@@ -352,8 +337,23 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 **黑名单语义**：登出/撤销会话会将对应 token 写入黑名单，直至 token 过期。
 
 **Request**: `SessionsRequest`
+```typescript
+interface SessionsRequest {} // 直接返回全部活跃会话，无需分页
+```
 
 **Response**: `ApiResponse<{ items: SessionItem[] }>`
+```typescript
+interface SessionItem {
+  session_id: string;           // 会话标识，用于展示和撤销操作
+  device_type?: string;
+  device_name?: string;
+  ip_address?: string;          // 脱敏显示（如 "192.168.xxx.xxx"），防止被用于跟踪
+  ip_location?: string;         // IP 地理位置（如 "北京市"）
+  created_at: string;
+  last_active_at: string;
+  is_current: boolean;
+}
+```
 
 **说明**：
 - 活跃会话数天然有限（受并发设备数约束，过期会话自动清理），无需分页
@@ -375,6 +375,11 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 - 不允许撤销当前会话（使用 logout 代替）
 
 **Request**: `RevokeSessionRequest`
+```typescript
+interface RevokeSessionRequest {
+  session_id: string;  // 来自 SessionItem.session_id
+}
+```
 
 **Response**: `ApiResponse`
 
@@ -397,3 +402,8 @@ Set-Cookie: refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
 **Request**: `{}`
 
 **Response**: `ApiResponse<RevokeAllResult>`
+```typescript
+interface RevokeAllResult {
+  revoked_count: number;  // 被撤销的会话数量
+}
+```

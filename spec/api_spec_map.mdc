@@ -36,68 +36,6 @@ alwaysApply: true
 以下类型定义于 `@api_spec_types.mdc`：
 - `GeoPoint`
 
-```typescript
-type MapDataType = 'user' | 'group' | 'moment' | 'all';
-
-type MapItemType = 'cluster' | 'user' | 'group' | 'moment';
-
-// 视口边界 (用于地图查询)
-interface Bounds {
-  north: number;
-  south: number;
-  east: number;
-  west: number;
-}
-
-interface MapViewport {
-  bounds: Bounds;
-  zoom: number;  // 取值范围 1-20，约束定义见 @api_spec_base.mdc 通用字段约束
-}
-
-// 时间范围参数
-interface TimeRangeParams {
-  start_time?: string;  // UTC ISO 8601
-  end_time?: string;    // UTC ISO 8601
-}
-
-// 地图渲染项 (聚合或实体)
-interface MapRenderItem {
-  render_id: string;  // 渲染项唯一 ID（聚合时由服务端生成，实体时为 payload_id）
-  type: MapItemType;
-  location: GeoPoint;
-  
-  // 聚合数据
-  cluster?: {
-    count: number;
-    label?: string;
-    preview_urls?: string[];
-  };
-
-  // 实体数据 (User/Group/Moment)
-  entity?: {
-    title: string;
-    subtitle?: string;
-    cover_url?: string;
-    payload_id: string;  // 原始业务 ID（user_id / group_id / moment_id）
-    category?: string;   // 业务分类
-  };
-}
-
-interface MapCanvas {
-  items: MapRenderItem[];  // 最大返回 500 个渲染项，超出时服务端自动聚合
-  toast_message?: string;
-}
-
-interface MapRenderRequest {
-  viewport: MapViewport;
-  filter?: {
-    data_type?: MapDataType;
-    time_range?: TimeRangeParams;
-    only_friends?: boolean;  // 仅登录态生效；仅显示好友
-  };
-}
-```
-
 ## 端点详情
 
 ### POST /api/v1/map/render
@@ -125,5 +63,52 @@ interface MapRenderRequest {
 ```
 
 **Response**: `ApiResponse<MapCanvas>`
+```typescript
+type MapDataType = 'user' | 'group' | 'moment' | 'all';
+
+type MapItemType = 'cluster' | 'user' | 'group' | 'moment';
+
+interface Bounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
+interface MapViewport {
+  bounds: Bounds;
+  zoom: number;  // 取值范围 1-20，约束定义见 @api_spec_base.mdc 通用字段约束
+}
+
+interface TimeRangeParams {
+  start_time?: string;  // UTC ISO 8601
+  end_time?: string;    // UTC ISO 8601
+}
+
+interface MapRenderItem {
+  render_id: string;  // 渲染项唯一 ID（聚合时由服务端生成，实体时为 payload_id）
+  type: MapItemType;
+  location: GeoPoint;
+  
+  cluster?: {
+    count: number;
+    label?: string;
+    preview_urls?: string[];
+  };
+
+  entity?: {
+    title: string;
+    subtitle?: string;
+    cover_url?: string;
+    payload_id: string;  // 原始业务 ID（user_id / group_id / moment_id）
+    category?: string;   // 业务分类
+  };
+}
+
+interface MapCanvas {
+  items: MapRenderItem[];  // 最大返回 500 个渲染项，超出时服务端自动聚合
+  toast_message?: string;
+}
+```
 
 **错误码**: `10000`

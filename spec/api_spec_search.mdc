@@ -29,74 +29,6 @@ alwaysApply: true
 - `GeoPoint`
 - `RelativeLocation`
 
-```typescript
-// === 标签类型 ===
-
-// 标签建议项
-interface TagSuggestItem {
-  name: string;
-  usage_count: number;
-}
-
-// 标签趋势
-type TagTrend = 'rising' | 'stable' | 'falling';
-
-// 标签时间范围
-type TagTimeframe = 'daily' | 'weekly' | 'monthly';
-
-interface TagItem {
-  name: string;
-  usage_count: number;
-  trend?: TagTrend;
-}
-
-// === 搜索建议类型 ===
-
-// 用户建议项
-interface UserSuggestItem {
-  user_id: string;
-  nickname: string;
-  avatar_url?: string;
-  bio?: string;
-  location?: RelativeLocation;
-}
-
-// 群组建议项
-interface GroupSuggestItem {
-  group_id: string;
-  name: string;
-  avatar_url?: string;
-  description?: string;
-  members_count: number;
-  location?: RelativeLocation;
-}
-
-// 瞬间建议项
-interface MomentSuggestItem {
-  moment_id: string;
-  content: string;
-  author_nickname: string;
-  author_avatar_url?: string;
-  location?: RelativeLocation;
-}
-
-// === 搜索建议聚合类型 ===
-
-// 搜索建议类型（支持按类型过滤）
-type SearchSuggestType = 'tag' | 'user' | 'group' | 'moment';
-
-type SearchSuggestItem =
-  | { type: 'tag'; payload: TagSuggestItem }
-  | { type: 'user'; payload: UserSuggestItem }
-  | { type: 'group'; payload: GroupSuggestItem }
-  | { type: 'moment'; payload: MomentSuggestItem };
-
-interface SearchSuggestResponse {
-  items: SearchSuggestItem[];
-}
-
-```
-
 ## 端点详情
 
 ### POST /api/v1/search/suggest
@@ -129,6 +61,55 @@ interface SearchSuggestRequest {
 
 **Response**: `ApiResponse<SearchSuggestResponse>`
 
+```typescript
+// 标签建议项
+interface TagSuggestItem {
+  name: string;
+  usage_count: number;
+}
+
+// 用户建议项
+interface UserSuggestItem {
+  user_id: string;
+  nickname: string;
+  avatar_url?: string;
+  bio?: string;
+  location?: RelativeLocation;
+}
+
+// 群组建议项
+interface GroupSuggestItem {
+  group_id: string;
+  name: string;
+  avatar_url?: string;
+  description?: string;
+  members_count: number;
+  location?: RelativeLocation;
+}
+
+// 瞬间建议项
+interface MomentSuggestItem {
+  moment_id: string;
+  content: string;
+  author_nickname: string;
+  author_avatar_url?: string;
+  location?: RelativeLocation;
+}
+
+// 搜索建议类型（支持按类型过滤）
+type SearchSuggestType = 'tag' | 'user' | 'group' | 'moment';
+
+type SearchSuggestItem =
+  | { type: 'tag'; payload: TagSuggestItem }
+  | { type: 'user'; payload: UserSuggestItem }
+  | { type: 'group'; payload: GroupSuggestItem }
+  | { type: 'moment'; payload: MomentSuggestItem };
+
+interface SearchSuggestResponse {
+  items: SearchSuggestItem[];
+}
+```
+
 **错误码**: `10000`
 
 ---
@@ -151,5 +132,19 @@ interface TrendingTagsRequest {
 ```
 
 **Response**: `ApiResponse<TagItem[]>`
+
+```typescript
+// 标签趋势
+type TagTrend = 'rising' | 'stable' | 'falling';
+
+// 标签时间范围
+type TagTimeframe = 'daily' | 'weekly' | 'monthly';
+
+interface TagItem {
+  name: string;
+  usage_count: number;
+  trend?: TagTrend;
+}
+```
 
 **错误码**: `10000`

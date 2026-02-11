@@ -318,6 +318,35 @@ type ConnectionEstablishedEvent = { type: "ConnectionEstablished"; payload: Conn
 
 // PongPayload 定义见上文「心跳机制」
 type PongEvent = { type: "Pong"; payload: PongPayload; };
+
+// 订阅操作类型（SetSubscriptions 与 SubscribeAck 共用）
+// - subscribe: 增量添加（进入场景时订阅新的 ID）
+// - unsubscribe: 增量移除（退出场景时取消订阅）
+// - set: 全量覆盖（重连时同步完整订阅列表，ids 为空则清空该类型订阅）
+type SubscriptionOperation = 'subscribe' | 'unsubscribe' | 'set';
+
+// 订阅确认事件（服务端回复 SetSubscriptions）
+// 订阅失败原因（简化为 3 类）
+type SubscriptionFailureReason =
+  | 'invalid'   // 订阅项无效（格式错误、目标不存在、超出限制等）
+  | 'denied'    // 无权限（无权限订阅、已被拉黑等）
+  | 'error';    // 服务端错误（可重试）
+
+interface FailedSubscriptionId {
+  subscription_id: string;  // 失败的订阅目标 ID（user 类型为 user_id，group 类型为 group_id）
+  reason: SubscriptionFailureReason;
+}
+
+interface SubscribeAckPayload {
+  client_msg_id: string;                             // 回传客户端消息ID
+  operation: SubscriptionOperation;                  // 回传操作类型
+  type: 'user' | 'group';                           // 回传订阅类型
+  ids: string[];                                     // 回传订阅 ID 列表
+  code: number;                                      // 0表示成功，非0表示失败
+  message?: string;                                  // 错误消息（失败时）
+  failed_ids?: FailedSubscriptionId[];               // 失败的订阅 id
+}
+type SubscribeAckEvent = { type: "SubscribeAck"; payload: SubscribeAckPayload; };
 ```
 
 **在线状态事件**：
@@ -456,17 +485,6 @@ interface MessageMentionedPayload {
   mentioned_at: string;
 }
 type MessageMentionedEvent = { type: "MessageMentioned"; payload: MessageMentionedPayload; };
-
-type SystemAnnouncementPayload = Omit<SystemAnnouncementItem, "created_by">;
-type SystemAnnouncementEvent = { type: "SystemAnnouncement"; payload: SystemAnnouncementPayload; };
-
-// 用户资料变更（推送给：正在与其私聊的用户 + 其当前所在群聊的其他订阅者）
-// 属于自动推送（无需订阅），推送范围天然受限于活跃会话，维护成本低
-interface UserProfileUpdatedPayload {
-  user: UserInfo;               // 更新后的用户基础信息
-  updated_at: string;
-}
-type UserProfileUpdatedEvent = { type: "UserProfileUpdated"; payload: UserProfileUpdatedPayload; };
 ```
 
 **私聊消息事件**:
@@ -703,8 +721,22 @@ interface GroupUserExitedPayload {
 type GroupUserExitedEvent = { type: "GroupUserExited"; payload: GroupUserExitedPayload; };
 ```
 
+**用户事件**：
+```typescript
+// 用户资料变更（推送给：正在与其私聊的用户 + 其当前所在群聊的其他订阅者）
+// 属于自动推送（无需订阅），推送范围天然受限于活跃会话，维护成本低
+interface UserProfileUpdatedPayload {
+  user: UserInfo;               // 更新后的用户基础信息
+  updated_at: string;
+}
+type UserProfileUpdatedEvent = { type: "UserProfileUpdated"; payload: UserProfileUpdatedPayload; };
+```
+
 **系统事件**：
 ```typescript
+type SystemAnnouncementPayload = Omit<SystemAnnouncementItem, "created_by">;
+type SystemAnnouncementEvent = { type: "SystemAnnouncement"; payload: SystemAnnouncementPayload; };
+
 // 错误严重程度
 type ErrorSeverity = 
   | 'fatal'        // 致命错误：必须断开连接（token 过期、账号被封）
@@ -820,11 +852,7 @@ type GetSubscriptionsEvent = { type: "GetSubscriptions"; payload: GetSubscriptio
 WebSocket订阅机制提供用户状态订阅和群组订阅两种类型：
 
 ```typescript
-// 订阅操作类型
-// - subscribe: 增量添加（进入场景时订阅新的 ID）
-// - unsubscribe: 增量移除（退出场景时取消订阅）
-// - set: 全量覆盖（重连时同步完整订阅列表，ids 为空则清空该类型订阅）
-type SubscriptionOperation = 'subscribe' | 'unsubscribe' | 'set';
+// SubscriptionOperation 定义见上文「连接管理事件」
 
 // SetSubscriptions - 订阅管理（扁平结构）
 // 单次请求仅允许一个 type，不同 type 需分开请求
@@ -835,30 +863,6 @@ interface SetSubscriptionsPayload {
   ids: string[];               // 订阅目标 ID 列表（user_id 或 group_id）
 }
 type SetSubscriptionsEvent = { type: "SetSubscriptions"; payload: SetSubscriptionsPayload; };
-
-// 订阅确认事件（服务端回复）
-
-// 订阅失败原因（简化为 3 类）
-type SubscriptionFailureReason =
-  | 'invalid'   // 订阅项无效（格式错误、目标不存在、超出限制等）
-  | 'denied'    // 无权限（无权限订阅、已被拉黑等）
-  | 'error';    // 服务端错误（可重试）
-
-interface FailedSubscriptionId {
-  subscription_id: string;  // 失败的订阅目标 ID（user 类型为 user_id，group 类型为 group_id）
-  reason: SubscriptionFailureReason;
-}
-
-interface SubscribeAckPayload {
-  client_msg_id: string;                             // 回传客户端消息ID
-  operation: SubscriptionOperation;                  // 回传操作类型
-  type: 'user' | 'group';                           // 回传订阅类型
-  ids: string[];                                     // 回传订阅 ID 列表
-  code: number;                                      // 0表示成功，非0表示失败
-  message?: string;                                  // 错误消息（失败时）
-  failed_ids?: FailedSubscriptionId[];               // 失败的订阅 id
-}
-type SubscribeAckEvent = { type: "SubscribeAck"; payload: SubscribeAckPayload; };
 ```
 
 ---
