@@ -57,7 +57,7 @@ export struct LocationBar {
             .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
         }
 
-        // 锚点清除按钮
+        // 锚点清除按钮（带出入场过渡动画）
         if (this.isUsingAnchor()) {
           Text() {
             SymbolSpan($r(AppIcon.CLOSE))
@@ -69,8 +69,11 @@ export struct LocationBar {
           .width(22)
           .height(22)
           .textAlign(TextAlign.Center)
+          .transition(TransitionEffect.OPACITY.combine(TransitionEffect.scale({ x: 0.6, y: 0.6 })))
           .onClick(() => {
-            this.browseAnchor = null;
+            this.getUIContext().animateTo({ duration: 200, curve: Curve.EaseInOut }, () => {
+              this.browseAnchor = null;
+            });
           })
         }
       }

@@ -72,12 +72,17 @@ struct SearchPage {
 
       const myId = await AuthAccountManager.getCurrentUserId();
       if (res1.code === 0 && res1.data) {
+        const validUsers = res1.data.items.filter((u: UserItem) => u.user?.user_id);
         this.userResults = (myId !== null && typeof myId === 'string')
-          ? res1.data.items.filter((u: UserItem) => u.user.user_id !== myId)
-          : res1.data.items;
+          ? validUsers.filter((u: UserItem) => u.user.user_id !== myId)
+          : validUsers;
       }
-      if (res2.code === 0 && res2.data) this.groupResults = res2.data.items;
-      if (res3.code === 0 && res3.data) this.momentResults = res3.data.items;
+      if (res2.code === 0 && res2.data) {
+        this.groupResults = res2.data.items.filter((g: GroupItem) => g.group?.group_id);
+      }
+      if (res3.code === 0 && res3.data) {
+        this.momentResults = res3.data.items.filter((m: MomentItem) => m.moment_id && m.user);
+      }
 
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `搜索失败: ${error}`);
@@ -196,14 +201,14 @@ struct SearchPage {
   buildUserItem(item: UserItem) {
     Row() {
       SystemAvatar({
-        avatarUrl: item.user.avatar_url,
-        name: item.user.nickname,
+        avatarUrl: item.user?.avatar_url ?? '',
+        name: item.user?.nickname ?? '',
         avatarSize: 50
       })
       .margin({ right: 12 })
 
       Column({ space: 4 }) {
-        Text(item.user.nickname)
+        Text(item.user?.nickname ?? '')
           .fontSize(16)
           .fontWeight(FontWeight.Medium)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
@@ -230,20 +235,20 @@ struct SearchPage {
   buildGroupItem(item: GroupItem) {
     Row() {
       SystemAvatar({
-        avatarUrl: item.group.avatar_url,
-        name: item.group.name,
+        avatarUrl: item.group?.avatar_url ?? '',
+        name: item.group?.name ?? '',
         avatarSize: 50,
         shape: 'square'
       })
       .margin({ right: 12 })
 
       Column({ space: 4 }) {
-        Text(item.group.name)
+        Text(item.group?.name ?? '')
           .fontSize(16)
           .fontWeight(FontWeight.Medium)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
         
-        Text(`${item.group.members_count} 成员`)
+        Text(`${item.group?.members_count ?? 0} 成员`)
           .fontSize(12)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
 
@@ -267,7 +272,7 @@ struct SearchPage {
       const routerInstance = this.getUIContext().getRouter();
       await routerInstance.pushUrl({
         url: `features/group/pages/${PageNames.GROUP_DETAIL}`,
-        params: { groupId: item.group.group_id }
+        params: { groupId: item.group?.group_id ?? '' }
       });
     })
   }
@@ -277,13 +282,13 @@ struct SearchPage {
     Column({ space: 8 }) {
       Row() {
         SystemAvatar({
-          avatarUrl: item.user.avatar_url,
-          name: item.user.nickname,
+          avatarUrl: item.user?.avatar_url ?? '',
+          name: item.user?.nickname ?? '',
           avatarSize: 32
         })
         .margin({ right: 8 })
 
-        Text(item.user.nickname)
+        Text(item.user?.nickname ?? '')
           .fontSize(14)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
       }

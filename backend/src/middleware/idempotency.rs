@@ -48,18 +48,21 @@ pub async fn idempotency_middleware(
     let endpoint = req.uri().path().to_string();
 
     // 4. 提取 user_id（由 auth_middleware 注入 extensions）
-    let user_id = req
-        .extensions()
-        .get::<i64>()
-        .copied()
-        .ok_or_else(|| AppError::Unauthorized("未认证".to_string()))?;
+    //    对于 Token 可选的幂等端点（如 auth/register、auth/guest），user_id 可能不存在
+    let user_id = req.extensions().get::<i64>().copied();
+    if user_id.is_none() && !is_unauthenticated_idempotent_path(&endpoint) {
+        return Err(AppError::Unauthorized("未认证".to_string()));
+    }
 
     // 5. 生成服务端缓存用幂等 hash key
     let hashed_key = hash_idempotency_key(user_id, &endpoint, &client_key);
 
     // 6. 检查缓存
     let cache_key = format!("idempotency:{}", hashed_key);
-    let meta_key = format!("idempotency:meta:{}:{}", user_id, client_key);
+    let user_key_part = user_id
+        .map(|id| id.to_string())
+        .unwrap_or_else(|| "anon".to_string());
+    let meta_key = format!("idempotency:meta:{}:{}", user_key_part, client_key);
     let mut redis_conn = state.redis.clone();
 
     if let Ok(Some(cached_response)) = redis_conn.get::<&str, Option<String>>(&cache_key).await {
@@ -142,42 +145,111 @@ pub async fn idempotency_middleware(
     Ok(response)
 }
 
+/// Token 可选但仍需幂等处理的端点（注册、访客等未登录场景）
+fn is_unauthenticated_idempotent_path(path: &str) -> bool {
+    matches!(
+        path,
+        "/api/v1/auth/register"
+            | "/api/v1/auth/guest"
+            | "/api/v1/auth/request_password_reset"
+            | "/api/v1/auth/reset_password"
+    )
+}
+
+/// 管理后台写操作（可选幂等：提供 key 即去重）
+fn is_admin_write_path(path: &str) -> bool {
+    if !path.starts_with("/api/v1/admin/") {
+        return false;
+    }
+    path.ends_with("/create")
+        || path.ends_with("/update")
+        || path.ends_with("/delete")
+        || path.ends_with("/ban")
+        || path.ends_with("/unban")
+        || path.ends_with("/dismiss")
+        || path.ends_with("/handle")
+        || path.ends_with("/grant")
+        || path.ends_with("/revoke")
+        || path.ends_with("/set_permissions")
+        || path.contains("/update_") // update_upload, update_defaults 等
+}
+
 /// 判断是否需要幂等处理
 fn should_check_idempotency(path: &str) -> bool {
     matches!(
         path,
-        // 发送消息：客户端必须提供 key（但同内容不同 key 允许重复意图）
-        "/api/v1/private_messages/send" | "/api/v1/group_messages/send"
+        // 认证类（Token 可选，但必须携带 Idempotency-Key）
+        "/api/v1/auth/register"
+            | "/api/v1/auth/guest"
+            | "/api/v1/auth/request_password_reset"
+            | "/api/v1/auth/reset_password"
+            | "/api/v1/auth/me/change_password"
+            // 发送消息：客户端必须提供 key（但同内容不同 key 允许重复意图）
+            | "/api/v1/private_messages/send"
+            | "/api/v1/group_messages/send"
             // 创建类
             | "/api/v1/moments/create"
+            | "/api/v1/comments/create"
             | "/api/v1/reports/create"
-            | "/api/v1/group_chats/create"
-            // 群组成员操作
-            | "/api/v1/group_chats/members/join"
-            | "/api/v1/group_chats/members/apply"
-            | "/api/v1/group_chats/applications/approve"
-            | "/api/v1/group_chats/applications/reject"
-            | "/api/v1/group_chats/me/invites/accept"
-            | "/api/v1/group_chats/me/invites/reject"
+            | "/api/v1/share/create"
+            // 群组
+            | "/api/v1/groups/create"
+            | "/api/v1/groups/me/join"
+            | "/api/v1/groups/members/ban"
+            | "/api/v1/groups/announcements/create"
+            | "/api/v1/groups/applications/approve"
+            | "/api/v1/groups/applications/reject"
+            | "/api/v1/groups/me/invites/accept"
+            | "/api/v1/groups/me/invites/reject"
             // 上传：仅在客户端提供 key 时去重
             | "/api/v1/media/complete_upload"
             // 关注：虽然天然幂等，但可通过 key 去重重试，减少写放大
-            | "/api/v1/user/me/follow"
-    )
+            | "/api/v1/users/me/follow"
+    ) || is_admin_write_path(path)
 }
 
+/// 必须携带 Idempotency-Key 的端点（缺少则拒绝请求）
 fn requires_idempotency_key(path: &str) -> bool {
     matches!(
         path,
-        "/api/v1/private_messages/send"
+        // 认证类
+        "/api/v1/auth/register"
+            | "/api/v1/auth/guest"
+            | "/api/v1/auth/request_password_reset"
+            | "/api/v1/auth/reset_password"
+            | "/api/v1/auth/me/change_password"
+            // 消息发送
+            | "/api/v1/private_messages/send"
             | "/api/v1/group_messages/send"
+            // 创建类
             | "/api/v1/moments/create"
+            | "/api/v1/comments/create"
             | "/api/v1/reports/create"
-            | "/api/v1/group_chats/members/join"
-            | "/api/v1/group_chats/applications/approve"
-            | "/api/v1/group_chats/applications/reject"
-            | "/api/v1/group_chats/me/invites/accept"
-            | "/api/v1/group_chats/me/invites/reject"
+            | "/api/v1/share/create"
+            // 群组操作
+            | "/api/v1/groups/create"
+            | "/api/v1/groups/me/join"
+            | "/api/v1/groups/members/ban"
+            | "/api/v1/groups/announcements/create"
+            | "/api/v1/groups/applications/approve"
+            | "/api/v1/groups/applications/reject"
+            | "/api/v1/groups/me/invites/accept"
+            | "/api/v1/groups/me/invites/reject"
+            // 上传
+            | "/api/v1/media/complete_upload"
+    ) || is_admin_must_idempotent(path)
+}
+
+/// 管理后台 MUST 幂等端点
+fn is_admin_must_idempotent(path: &str) -> bool {
+    matches!(
+        path,
+        "/api/v1/admin/rbac/roles/create"
+            | "/api/v1/admin/rbac/admins/grant"
+            | "/api/v1/admin/users/ban"
+            | "/api/v1/admin/groups/dismiss"
+            | "/api/v1/admin/reports/handle"
+            | "/api/v1/admin/announcements/create"
     )
 }
 
@@ -193,9 +265,12 @@ fn extract_client_idempotency_key(headers: &HeaderMap) -> Option<String> {
     }
 }
 
-fn hash_idempotency_key(user_id: i64, endpoint: &str, client_key: &str) -> String {
+fn hash_idempotency_key(user_id: Option<i64>, endpoint: &str, client_key: &str) -> String {
     let mut hasher = Sha256::new();
-    hasher.update(user_id.to_string());
+    match user_id {
+        Some(id) => hasher.update(id.to_string()),
+        None => hasher.update("anon"),
+    }
     hasher.update(":");
     hasher.update(endpoint);
     hasher.update(":");

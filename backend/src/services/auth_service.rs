@@ -13,7 +13,7 @@ use uuid::Uuid;
 use crate::constants::REDIS_KEY_SESSION;
 use crate::dto::request::{
     ChangePasswordRequest, GuestRequest, LoginRequest, RegisterRequest,
-    RevokeSessionRequest, SessionsRequest,
+    RequestPasswordResetRequest, ResetPasswordRequest, RevokeSessionRequest, SessionsRequest,
 };
 use crate::dto::response::{
     AuthData, CheckStatusData, PaginatedData, PaginationMeta, SessionItem,
@@ -22,8 +22,9 @@ use crate::error::{AppError, Result};
 use crate::repositories::{
     session_repo::SessionRepository,
     user_repo::UserRepository, user_settings_repo::UserSettingsRepository,
+    verification_repo::VerificationRepository,
 };
-use crate::types::enums::{ClientType, UserStatus};
+use crate::types::enums::{ClientType, UserStatus, VerificationCodeType};
 use crate::utils::cache_invalidation::{CacheInvalidator, InvalidationEvent};
 use crate::utils::{
     jwt::JwtUtil, password::PasswordUtil, session_token::SessionTokenGenerator,
@@ -48,6 +49,7 @@ pub struct AuthService {
     user_repo: UserRepository,
     session_repo: SessionRepository,
     settings_repo: UserSettingsRepository,
+    verification_repo: VerificationRepository,
 }
 
 impl AuthService {
@@ -60,6 +62,7 @@ impl AuthService {
         user_repo: UserRepository,
         session_repo: SessionRepository,
         settings_repo: UserSettingsRepository,
+        verification_repo: VerificationRepository,
     ) -> Self {
         Self {
             db: db.clone(),
@@ -70,6 +73,7 @@ impl AuthService {
             user_repo,
             session_repo,
             settings_repo,
+            verification_repo,
         }
     }
 
@@ -319,6 +323,99 @@ impl AuthService {
             nickname: None,
             expires_at: None,
         })
+    }
+
+    /// 请求密码重置（发送验证码）
+    /// 安全说明：无论 login_id 是否存在，均返回成功响应，不暴露账号是否注册
+    pub async fn request_password_reset(&self, req: &RequestPasswordResetRequest) -> Result<()> {
+        // 无论用户是否存在，都生成验证码流程但仅对已存在用户实际存储
+        let user = self.user_repo.find_by_identifier(&req.login_id).await?;
+        if user.is_none() {
+            // 不暴露用户是否存在，静默返回成功
+            tracing::info!(login_id = %req.login_id, "Password reset requested for non-existent user, returning success silently");
+            return Ok(());
+        }
+
+        // 生成 6 位数字验证码
+        let code = TokenUtil::generate_numeric_code(6);
+        let expires_at = Utc::now() + Duration::minutes(10);
+
+        self.verification_repo
+            .create_code(
+                &req.login_id,
+                &code,
+                VerificationCodeType::ResetPassword.as_str(),
+                expires_at,
+            )
+            .await
+            .map_err(|e| AppError::internal(e.to_string()))?;
+
+        // TODO: 实际发送验证码（邮件/短信），当前仅日志输出
+        tracing::info!(login_id = %req.login_id, code = %code, "Password reset verification code generated (NOT sent - need email/SMS integration)");
+
+        Ok(())
+    }
+
+    /// 验证验证码并重置密码
+    /// 重置成功后自动登录并返回 Token，同时吊销该账号所有现有会话
+    pub async fn reset_password(
+        &self,
+        req: &ResetPasswordRequest,
+        _client_type: ClientType,
+        ip_address: Option<String>,
+        user_agent: Option<&str>,
+        device_fingerprint: Option<&str>,
+    ) -> Result<AuthIssue> {
+        // 1. 验证码校验
+        let verification = self
+            .verification_repo
+            .find_valid(
+                &req.login_id,
+                &req.verification_code,
+                VerificationCodeType::ResetPassword.as_str(),
+            )
+            .await
+            .map_err(|e| AppError::internal(e.to_string()))?
+            .ok_or_else(|| {
+                AppError::VerifyTokenInvalid("验证码无效或已过期".to_string())
+            })?;
+
+        // 2. 标记验证码已使用
+        self.verification_repo
+            .mark_used(verification.code_id)
+            .await
+            .map_err(|e| AppError::internal(e.to_string()))?;
+
+        // 3. 查找用户
+        let user = self
+            .user_repo
+            .find_by_identifier(&req.login_id)
+            .await?
+            .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
+
+        // 4. 更新密码
+        let password_hash = PasswordUtil::hash_password(&req.new_password)?;
+        self.user_repo
+            .update_password(user.user_id, &password_hash)
+            .await?;
+
+        // 5. 吊销该用户所有现有会话（与 change_password 行为一致）
+        let session_ids = self.session_repo.revoke_all_by_user(user.user_id).await?;
+        for session_id in session_ids {
+            self.clear_session_whitelist(session_id).await?;
+            self.publish_session_revoked(user.user_id, session_id)
+                .await?;
+        }
+
+        // 6. 自动登录：颁发新 token
+        self.issue_tokens(
+            user.user_id,
+            user.nickname,
+            ip_address,
+            user_agent,
+            device_fingerprint,
+        )
+        .await
     }
 
     /// 修改密码

@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::utils::pagination::{decode_cursor, encode_cursor};
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct TagRow {

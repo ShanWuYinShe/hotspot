@@ -35,42 +35,41 @@ pub fn admin_routes() -> Router<AppState> {
         // 举报审核（管理员）
         .route("/reports/search", post(reports::get_list))
         .route("/reports/handle", post(reports::handle))
-        // Server Config
+        // App Config（spec 统一路径 admin/app_config/*）
         .route(
-            "/server_config/get",
+            "/app_config/get",
             post(system_config::admin_get_global_settings),
         )
         .route(
-            "/server_config/update_upload",
+            "/app_config/update_upload",
             post(system_config::admin_update_upload_config),
         )
         .route(
-            "/server_config/update_defaults",
+            "/app_config/update_defaults",
             post(system_config::admin_update_defaults_config),
         )
         .route(
-            "/server_config/update_rate_limits",
+            "/app_config/update_rate_limits",
             post(system_config::admin_update_rate_limits_config),
         )
         .route(
-            "/server_config/update_response_defaults",
+            "/app_config/update_response_defaults",
             post(system_config::admin_update_response_defaults_config),
         )
-        // Client Config
         .route(
-            "/client_config/get",
+            "/app_config/get_client",
             post(system_config::admin_get_client_config),
         )
         .route(
-            "/client_config/update_features",
+            "/app_config/update_features",
             post(system_config::admin_update_features_config),
         )
         .route(
-            "/client_config/update_limits",
+            "/app_config/update_limits",
             post(system_config::admin_update_limits_config),
         )
         .route(
-            "/client_config/update_contact",
+            "/app_config/update_contact",
             post(system_config::admin_update_contact_config),
         )
         // 用户管理

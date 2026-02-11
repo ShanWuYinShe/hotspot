@@ -12,8 +12,7 @@ import {
 	ADMIN_AUDIT,
 	ADMIN_REPORTS,
 	ADMIN_TAGS,
-	ADMIN_SERVER_CONFIG,
-	ADMIN_CLIENT_CONFIG
+	ADMIN_APP_CONFIG
 } from '../endpoints';
 import type {
 	AdminPermissionItem,
@@ -77,7 +76,7 @@ export const adminRbacService = {
 	 * spec: Request = { name, description? }
 	 */
 	createRole(data: { name: string; description?: string }) {
-		return post<AdminRoleItem>(ADMIN_RBAC.ROLES.CREATE, data);
+		return post<AdminRoleItem>(ADMIN_RBAC.ROLES.CREATE, data, { idempotencyKey: crypto.randomUUID() });
 	},
 
 	/**
@@ -116,7 +115,7 @@ export const adminRbacService = {
 	 * spec: Request = { user_id, grant_all_permissions?, role_ids }
 	 */
 	grantAdmin(data: { user_id: string; grant_all_permissions?: boolean; role_ids: string[] }) {
-		return post<void>(ADMIN_RBAC.ADMINS.GRANT, data);
+		return post<void>(ADMIN_RBAC.ADMINS.GRANT, data, { idempotencyKey: crypto.randomUUID() });
 	},
 
 	/**
@@ -158,7 +157,7 @@ export const adminUsersService = {
 	 * spec: Request = { user_id, reason?, duration_days? }
 	 */
 	ban(data: { user_id: string; reason?: string; duration_days?: number }) {
-		return post<void>(ADMIN_USERS.BAN, data);
+		return post<void>(ADMIN_USERS.BAN, data, { idempotencyKey: crypto.randomUUID() });
 	},
 
 	/**
@@ -199,7 +198,7 @@ export const adminGroupsService = {
 	 * spec: Request = { group_id, reason? }
 	 */
 	dismiss(data: { group_id: string; reason?: string }) {
-		return post<void>(ADMIN_GROUPS.DISMISS, data);
+		return post<void>(ADMIN_GROUPS.DISMISS, data, { idempotencyKey: crypto.randomUUID() });
 	}
 };
 
@@ -225,7 +224,7 @@ export const adminAnnouncementsService = {
 		action_url?: string;
 		send_push?: boolean;
 	}) {
-		return post<AnnouncementCreated>(ADMIN_ANNOUNCEMENTS.CREATE, data);
+		return post<AnnouncementCreated>(ADMIN_ANNOUNCEMENTS.CREATE, data, { idempotencyKey: crypto.randomUUID() });
 	},
 
 	/**
@@ -303,7 +302,7 @@ export const adminReportsService = {
 		action: ReportHandleAction;
 		note?: string;
 	}) {
-		return post<void>(ADMIN_REPORTS.HANDLE, data);
+		return post<void>(ADMIN_REPORTS.HANDLE, data, { idempotencyKey: crypto.randomUUID() });
 	}
 };
 
@@ -332,14 +331,14 @@ export const adminTagsService = {
 	}
 };
 
-// ==================== 服务端配置 ====================
+// ==================== 应用配置（统一 app_config） ====================
 
-export const adminServerConfigService = {
+export const adminAppConfigService = {
 	/**
 	 * 获取服务端配置
 	 */
 	get() {
-		return post<ServerConfig>(ADMIN_SERVER_CONFIG.GET);
+		return post<ServerConfig>(ADMIN_APP_CONFIG.GET);
 	},
 
 	/**
@@ -347,7 +346,7 @@ export const adminServerConfigService = {
 	 * spec: Request = { upload: Partial<UploadConfig> }
 	 */
 	updateUpload(data: { upload: Partial<UploadConfig> }) {
-		return post<void>(ADMIN_SERVER_CONFIG.UPDATE_UPLOAD, data);
+		return post<void>(ADMIN_APP_CONFIG.UPDATE_UPLOAD, data);
 	},
 
 	/**
@@ -360,7 +359,7 @@ export const adminServerConfigService = {
 		default_user_avatar?: string;
 		default_group_settings?: Partial<GroupSettings>;
 	}) {
-		return post<void>(ADMIN_SERVER_CONFIG.UPDATE_DEFAULTS, data);
+		return post<void>(ADMIN_APP_CONFIG.UPDATE_DEFAULTS, data);
 	},
 
 	/**
@@ -368,7 +367,7 @@ export const adminServerConfigService = {
 	 * spec: Request = { rate_limits: Partial<RateLimitConfig> }
 	 */
 	updateRateLimits(data: { rate_limits: Partial<RateLimitConfig> }) {
-		return post<void>(ADMIN_SERVER_CONFIG.UPDATE_RATE_LIMITS, data);
+		return post<void>(ADMIN_APP_CONFIG.UPDATE_RATE_LIMITS, data);
 	},
 
 	/**
@@ -376,19 +375,15 @@ export const adminServerConfigService = {
 	 * spec: Request = { response_defaults: Partial<ResponseDefaults> }
 	 */
 	updateResponseDefaults(data: { response_defaults: Partial<ResponseDefaults> }) {
-		return post<void>(ADMIN_SERVER_CONFIG.UPDATE_RESPONSE_DEFAULTS, data);
-	}
-};
+		return post<void>(ADMIN_APP_CONFIG.UPDATE_RESPONSE_DEFAULTS, data);
+	},
 
-// ==================== 客户端配置 ====================
-
-export const adminClientConfigService = {
 	/**
 	 * 获取客户端配置（管理员视角，包含元数据）
 	 * spec: Response = AdminClientConfig
 	 */
-	get() {
-		return post<AdminClientConfig>(ADMIN_CLIENT_CONFIG.GET);
+	getClient() {
+		return post<AdminClientConfig>(ADMIN_APP_CONFIG.GET_CLIENT);
 	},
 
 	/**
@@ -400,7 +395,7 @@ export const adminClientConfigService = {
 		enable_moments?: boolean;
 		enable_nearby_people?: boolean;
 	}) {
-		return post<void>(ADMIN_CLIENT_CONFIG.UPDATE_FEATURES, data);
+		return post<void>(ADMIN_APP_CONFIG.UPDATE_FEATURES, data);
 	},
 
 	/**
@@ -417,7 +412,7 @@ export const adminClientConfigService = {
 			search_radius_max: number;
 		}>;
 	}) {
-		return post<void>(ADMIN_CLIENT_CONFIG.UPDATE_LIMITS, data);
+		return post<void>(ADMIN_APP_CONFIG.UPDATE_LIMITS, data);
 	},
 
 	/**
@@ -429,6 +424,6 @@ export const adminClientConfigService = {
 		terms_of_service_url?: string;
 		official_website?: string;
 	}) {
-		return post<void>(ADMIN_CLIENT_CONFIG.UPDATE_CONTACT, data);
+		return post<void>(ADMIN_APP_CONFIG.UPDATE_CONTACT, data);
 	}
 };

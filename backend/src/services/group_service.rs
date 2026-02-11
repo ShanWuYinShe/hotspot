@@ -4,7 +4,6 @@
 
 use chrono::{Duration, Utc};
 use redis::aio::ConnectionManager as RedisConnectionManager;
-use std::str::FromStr;
 use std::sync::Arc;
 use uuid::Uuid;
 

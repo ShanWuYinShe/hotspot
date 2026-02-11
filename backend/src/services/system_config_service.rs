@@ -289,7 +289,7 @@ impl SystemConfigService {
 
         for (key, value) in updates {
             // 获取旧值用于日志
-            let old_val = self
+            let _old_val = self
                 .repo
                 .find_by_key(key)
                 .await?

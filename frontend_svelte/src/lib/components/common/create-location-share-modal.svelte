@@ -50,9 +50,9 @@
 		isSubmitting = true;
 		try {
 			const response = await shareService.create({
-				share_type: 'reference_point',
+				share_type: 'location',
 				payload: {
-					reference_point: {
+					shared_location: {
 						point: {
 							latitude,
 							longitude

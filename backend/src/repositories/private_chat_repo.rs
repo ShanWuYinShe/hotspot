@@ -4,7 +4,7 @@ use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::utils::pagination::{decode_cursor, encode_cursor, IdCursor};
+use crate::utils::pagination::{decode_cursor, encode_cursor};
 
 /// 私聊Row
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]

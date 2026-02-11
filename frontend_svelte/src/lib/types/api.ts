@@ -53,7 +53,7 @@ export type MediaCategory =
 	| 'chat_file';
 export type MapDataType = 'user' | 'group' | 'moment' | 'all';
 export type MapItemType = 'cluster' | 'user' | 'group' | 'moment';
-export type ShareType = 'reference_point' | 'moment' | 'group' | 'user';
+export type ShareType = 'location' | 'moment' | 'group' | 'user';
 export type CantMessageReason = 'blocked' | 'privacy' | 'stranger_limit' | 'account_suspended';
 export type SearchSuggestType = 'tag' | 'user' | 'group' | 'moment';
 export type SystemHealthStatus = 'healthy' | 'degraded' | 'unhealthy';
@@ -1014,24 +1014,24 @@ export interface SessionItem {
 // 分享系统（share.yaml）
 // ============================================================================
 
-export interface ReferencePointSharePayload {
-	reference_point: Location;
+export interface LocationSharePayload {
+	shared_location: Location;
 }
 
 export interface MomentSharePayload {
-	moment_id: string;
+	shared_moment_id: string;
 }
 
 export interface GroupSharePayload {
-	group_id: string;
+	shared_group_id: string;
 }
 
 export interface UserSharePayload {
-	user_id: string;
+	shared_user_id: string;
 }
 
 export type SharePayload =
-	| ReferencePointSharePayload
+	| LocationSharePayload
 	| MomentSharePayload
 	| GroupSharePayload
 	| UserSharePayload;
@@ -1064,10 +1064,10 @@ export interface ShareDetail {
 }
 
 export type ShareApplyAction =
-	| { type: 'navigate_user'; user_id: string }
-	| { type: 'navigate_group'; group_id: string }
-	| { type: 'navigate_moment'; moment_id: string }
-	| { type: 'update_reference_point'; reference_point: Location };
+	| { type: 'navigate_user'; shared_user_id: string }
+	| { type: 'navigate_group'; shared_group_id: string }
+	| { type: 'navigate_moment'; shared_moment_id: string }
+	| { type: 'update_location'; shared_location: Location };
 
 export interface ShareApplyResult {
 	share_type: ShareType;

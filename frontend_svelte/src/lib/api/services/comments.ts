@@ -37,7 +37,7 @@ export const commentsService = {
 		parent_id?: string;
 		mentions?: string[];
 	}) {
-		return post<CommentItem>(COMMENTS.CREATE, data);
+		return post<CommentItem>(COMMENTS.CREATE, data, { idempotencyKey: crypto.randomUUID() });
 	},
 
 	/**

@@ -50,6 +50,5 @@ export {
 	adminAuditService,
 	adminReportsService,
 	adminTagsService,
-	adminServerConfigService,
-	adminClientConfigService
+	adminAppConfigService
 } from './admin';

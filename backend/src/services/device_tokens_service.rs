@@ -63,8 +63,8 @@ impl DeviceTokensService {
         user_id: i64,
         req: MyDeviceTokensRequest,
     ) -> Result<PaginatedData<DeviceTokenItem>, AppError> {
-        let limit = Validator::validate_limit(req.limit, 100)? as i32;
-        let cursor = req.cursor;
+        let _limit = Validator::validate_limit(req.limit, 100)? as i32;
+        let _cursor = req.cursor;
 
         let (tokens, next_cursor) = (self.device_token_repo.list_by_user(user_id).await?, None);
 

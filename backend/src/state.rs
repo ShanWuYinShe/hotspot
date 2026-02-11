@@ -239,7 +239,7 @@ impl AppState {
         let map_repo = MapRepository::new(db.clone());
         let moment_repo = MomentRepository::new(db.clone());
         let notification_repo = NotificationRepository::new(db.clone());
-        let password_reset_repo = PasswordResetRepository::new(db.clone());
+        let _password_reset_repo = PasswordResetRepository::new(db.clone());
         let private_chat_repo = PrivateChatRepository::new(db.clone());
         let private_message_repo = PrivateMessageRepository::new(db.clone());
         let report_repo = ReportRepository::new(db.clone());
@@ -291,6 +291,7 @@ impl AppState {
             user_repo.clone(),
             session_repo.clone(),
             user_settings_repo.clone(),
+            verification_repo.clone(),
         );
 
         let user_service = UserService::new(

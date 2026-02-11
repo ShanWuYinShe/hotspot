@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
-use crate::error::{AppError, Result};
+use crate::error::Result;
 use crate::utils::pagination::{decode_cursor, encode_cursor, TimeCursor};
 use crate::types::enums::ReactionType;
 

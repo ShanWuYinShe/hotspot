@@ -23,6 +23,9 @@ export struct GroupPage {
   @State groups: GroupItem[] = [];
   @State isLoading: boolean = false;
   @State errorMessage: string = '';
+  @State hasMore: boolean = false;
+  @State nextCursor: string = '';
+  @State isLoadingMore: boolean = false;
 
   async aboutToAppear() {
     await this.loadNearbyGroups();
@@ -53,6 +56,8 @@ export struct GroupPage {
 
       if (response.code === 0 && response.data) {
         this.groups = response.data.items;
+        this.hasMore = response.data.pagination?.has_more ?? false;
+        this.nextCursor = response.data.pagination?.next_cursor ?? '';
       } else {
         this.errorMessage = response.message || '加载群组失败';
         this.groups = [];
@@ -61,6 +66,32 @@ export struct GroupPage {
       this.errorMessage = error instanceof Error ? error.message : '加载群组失败';
     } finally {
       this.isLoading = false;
+    }
+  }
+
+  private async loadMoreGroups(): Promise<void> {
+    if (this.isLoadingMore || !this.hasMore || !this.currentLocation) return;
+    this.isLoadingMore = true;
+    try {
+      const request: SearchGroupsRequest = {
+        reference_point: {
+          latitude: this.currentLocation.latitude,
+          longitude: this.currentLocation.longitude
+        },
+        radius: 5000,
+        sort_by: 'distance',
+        pagination: { limit: 50, cursor: this.nextCursor }
+      };
+      const response = await ApiClient.searchGroups(request);
+      if (response.code === 0 && response.data) {
+        this.groups = this.groups.concat(response.data.items);
+        this.hasMore = response.data.pagination?.has_more ?? false;
+        this.nextCursor = response.data.pagination?.next_cursor ?? '';
+      }
+    } catch (error) {
+      // 静默失败，用户可再次触底重试
+    } finally {
+      this.isLoadingMore = false;
     }
   }
 
@@ -246,11 +277,25 @@ export struct GroupPage {
           this.buildGroupCard(group)
         }
       }, (group: GroupItem) => group.group.group_id)
+      if (this.isLoadingMore) {
+        ListItem() {
+          Row({ space: DesignConstants.SPACING.SM }) {
+            LoadingProgress().width(20).height(20)
+            Text('加载更多...')
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          }
+          .width('100%')
+          .justifyContent(FlexAlign.Center)
+          .padding(DesignConstants.SPACING.MD)
+        }
+      }
     }
     .width('100%')
     .layoutWeight(1)
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
     .scrollBar(BarState.Auto)
+    .onReachEnd(() => { this.loadMoreGroups(); })
   }
 
   @Builder

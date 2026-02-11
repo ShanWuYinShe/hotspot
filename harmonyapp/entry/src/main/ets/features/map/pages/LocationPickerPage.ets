@@ -122,8 +122,14 @@ struct LocationPickerPage {
   }
 
   private onMapDoubleClick(coord: MapCoordinate): void {
-    this.isPinAnimating = true;
-    setTimeout(() => { this.isPinAnimating = false; }, 300);
+    this.getUIContext().animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+      this.isPinAnimating = true;
+    });
+    setTimeout(() => {
+      this.getUIContext().animateTo({ duration: 400, curve: Curve.EaseOut }, () => {
+        this.isPinAnimating = false;
+      });
+    }, 300);
     this.setCenter(coord.latitude, coord.longitude);
   }
 
@@ -213,7 +219,7 @@ struct LocationPickerPage {
         .onClick(() => { this.getUIContext().getRouter().back(); })
 
         if (this.showSearchBar) {
-          // 搜索输入框
+          // 搜索输入框（带入场动画）
           TextInput({ placeholder: '搜索地点名称', text: this.searchText })
             .layoutWeight(1)
             .height(36)
@@ -222,6 +228,9 @@ struct LocationPickerPage {
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .onChange((value: string) => { this.searchText = value; })
             .onSubmit(() => { this.doSearch(); })
+            .transition(TransitionEffect.OPACITY.combine(
+              TransitionEffect.translate({ x: 40 })
+            ).animation({ duration: 250, curve: Curve.FastOutSlowIn }))
 
           // 搜索 / 取消按钮
           if (this.isSearching) {
@@ -235,19 +244,23 @@ struct LocationPickerPage {
               .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontColor($r('sys.color.ohos_id_color_emphasize'))
               .margin({ left: DesignConstants.SPACING.SM })
+              .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
               .onClick(() => {
-                this.showSearchBar = false;
-                this.searchText = '';
+                this.getUIContext().animateTo({ duration: 250, curve: Curve.FastOutSlowIn }, () => {
+                  this.showSearchBar = false;
+                  this.searchText = '';
+                });
               })
           }
         } else {
-          // 标题
+          // 标题（带入场动画）
           Text(this.titleText)
             .fontSize(DesignConstants.FONT.SIZE.XL)
             .fontWeight(FontWeight.Bold)
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
             .layoutWeight(1)
             .textAlign(TextAlign.Center)
+            .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
 
           // 搜索按钮
           Column() {
@@ -260,7 +273,11 @@ struct LocationPickerPage {
           .width(44)
           .height(44)
           .justifyContent(FlexAlign.Center)
-          .onClick(() => { this.showSearchBar = true; })
+          .onClick(() => {
+            this.getUIContext().animateTo({ duration: 250, curve: Curve.FastOutSlowIn }, () => {
+              this.showSearchBar = true;
+            });
+          })
         }
       }
       .width('100%')
@@ -311,8 +328,9 @@ struct LocationPickerPage {
             .backgroundColor('rgba(0,0,0,0.12)')
             .margin({ top: 6 })
         }
-        .offset({ y: this.isPinAnimating ? -28 : -18 })
-        .animation({ duration: 200, curve: Curve.EaseOut })
+        .offset({ y: this.isPinAnimating ? -30 : -18 })
+        .scale({ x: this.isPinAnimating ? 1.15 : 1.0, y: this.isPinAnimating ? 1.15 : 1.0 })
+        .animation({ duration: 350, curve: Curve.FastOutSlowIn })
 
         // 回到当前位置
         Column() {

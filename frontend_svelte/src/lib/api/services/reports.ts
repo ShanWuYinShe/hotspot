@@ -16,7 +16,7 @@ export const reportsService = {
 		reason: string;
 		description?: string;
 	}) {
-		return post<ReportCreated>(REPORTS.CREATE, data);
+		return post<ReportCreated>(REPORTS.CREATE, data, { idempotencyKey: crypto.randomUUID() });
 	},
 
 	/**

@@ -7,9 +7,9 @@ use axum::{routing::post, Router};
 
 use crate::{handlers::feed, state::AppState};
 
-/// Token 可选的信息流路由
+/// Token 可选的信息流路由（公开可访问）
 pub fn token_optional_routes() -> Router<AppState> {
-    Router::new()
+    Router::new().route("/list_trending", post(feed::get_trending))
 }
 
 /// Token 必须的信息流路由
@@ -18,8 +18,7 @@ pub fn token_required_routes() -> Router<AppState> {
     let main_routes = Router::new()
         .route("/list_moments", post(feed::get_moments))
         .route("/list_groups", post(feed::get_groups))
-        .route("/list_users", post(feed::get_users))
-        .route("/list_trending", post(feed::get_trending));
+        .route("/list_users", post(feed::get_users));
 
     // /me 子路由
     let me_routes = Router::new()

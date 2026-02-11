@@ -3,7 +3,7 @@ use axum::{extract::State, Json};
 use crate::{
     dto::{
         request::{AdminTagSearchRequest, SuggestTagsRequest, TrendingTagsRequest},
-        response::{ApiResponse, PaginatedData, TagSuggestData, TrendingTagsData},
+        response::{ApiResponse, TagSuggestData, TrendingTagsData},
     },
     error::Result,
     state::AppState,

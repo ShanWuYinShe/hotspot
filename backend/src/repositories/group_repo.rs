@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 
 use crate::error::Result;
+use crate::types::enums::GroupJoinMethod;
 use crate::utils::pagination::{decode_cursor, encode_cursor, DistanceCursor};
 
 /// 群组基础行数据
@@ -20,7 +21,7 @@ pub struct GroupRow {
     pub group_type: String,
     pub max_members: i32,
     pub is_muted: bool,
-    pub join_type: String,
+    pub join_type: GroupJoinMethod,
     pub metadata: serde_json::Value,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -99,7 +100,7 @@ impl GroupRepository {
         group_type: String,
         join_type: String,
     ) -> Result<GroupRow> {
-        let row = sqlx::query_as_unchecked!(
+        let row = sqlx::query_as!(
             GroupRow,
             r#"
             INSERT INTO groups (name, owner_id, location, group_type, join_type)
@@ -108,9 +109,10 @@ impl GroupRepository {
                          THEN ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography 
                          ELSE NULL END,
                     $5, $6)
-            RETURNING group_id, name, description, avatar_url, owner_id, group_type, 
-                      max_members, is_muted, join_type, metadata, 
-                      created_at, updated_at, dismissed_at
+            RETURNING group_id as "group_id!", name as "name!", description, avatar_url, owner_id as "owner_id!",
+                      group_type as "group_type!", max_members as "max_members!", is_muted as "is_muted!",
+                      join_type as "join_type!: GroupJoinMethod", metadata as "metadata!",
+                      created_at as "created_at!", updated_at as "updated_at!", dismissed_at
             "#,
             name,
             owner_id,
@@ -132,7 +134,7 @@ impl GroupRepository {
             r#"
             SELECT group_id, name as "name!", description, avatar_url, owner_id,
                    group_type as "group_type!", max_members as "max_members!",
-                   is_muted as "is_muted!", join_type as "join_type!", metadata as "metadata!",
+                   is_muted as "is_muted!", join_type as "join_type!: GroupJoinMethod", metadata as "metadata!",
                    created_at as "created_at!", updated_at as "updated_at!", dismissed_at
             FROM groups
             WHERE group_id = $1 AND dismissed_at IS NULL
@@ -221,14 +223,14 @@ impl GroupRepository {
             (0.0, 0)
         };
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             GroupSearchRow,
             r#"
             SELECT 
-                g.group_id, g.name, g.description, g.avatar_url, g.owner_id,
-                COALESCE(gs.member_count, 0) as member_count,
+                g.group_id as "group_id!", g.name as "name!", g.description, g.avatar_url, g.owner_id as "owner_id!",
+                COALESCE(gs.member_count, 0)::int as "member_count!",
                 ST_Distance(g.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) as distance,
-                g.created_at
+                g.created_at as "created_at!"
             FROM groups g
             LEFT JOIN group_stats gs ON g.group_id = gs.group_id
             WHERE g.dismissed_at IS NULL
@@ -281,16 +283,16 @@ impl GroupRepository {
 
         let pattern = kw.map(|v| format!("%{}%", v));
 
-        let rows: Vec<FeedGroupRow> = sqlx::query_as_unchecked!(
+        let rows: Vec<FeedGroupRow> = sqlx::query_as!(
             FeedGroupRow,
             r#"
             SELECT 
-                g.group_id,
+                g.group_id as "group_id!",
                 g.name as "name!",
                 COALESCE(g.description, '') as "description!",
                 g.avatar_url as "avatar_url?",
                 COALESCE(gs.member_count, 0)::int as "member_count!",
-                ST_Distance(g.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) as distance,
+                ST_Distance(g.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) as "distance!",
                 ST_Y(g.location::geometry) as "latitude!",
                 ST_X(g.location::geometry) as "longitude!",
                 COALESCE(g.location_name, '') as "location_name!",
@@ -315,7 +317,7 @@ impl GroupRepository {
               )
             GROUP BY g.group_id, g.name, g.description, g.avatar_url, gs.member_count,
                      g.location, g.location_name, gs_setting.password_hash
-            ORDER BY distance ASC, g.group_id ASC
+            ORDER BY ST_Distance(g.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) ASC, g.group_id ASC
             LIMIT $7
             "#,
             lon,
@@ -324,7 +326,7 @@ impl GroupRepository {
             pattern,
             last_dist,
             last_id,
-            limit as i64 + 1
+            (limit as i64) + 1
         )
         .fetch_all(&self.pool)
         .await?;
@@ -359,14 +361,14 @@ impl GroupRepository {
         };
 
         let pattern = format!("%{}%", kw);
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             GroupSearchRow,
             r#"
             SELECT 
-                g.group_id, g.name, g.description, g.avatar_url, g.owner_id,
-                COALESCE(gs.member_count, 0) as member_count,
+                g.group_id as "group_id!", g.name as "name!", g.description, g.avatar_url, g.owner_id as "owner_id!",
+                COALESCE(gs.member_count, 0)::int as "member_count!",
                 ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) as distance,
-                g.created_at
+                g.created_at as "created_at!"
             FROM groups g
             LEFT JOIN group_stats gs ON g.group_id = gs.group_id
             WHERE g.dismissed_at IS NULL
@@ -414,11 +416,11 @@ impl GroupRepository {
             .map(|(lat, lon)| (Some(lat), Some(lon)))
             .unwrap_or((None, None));
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             GroupSuggestRow,
             r#"
             SELECT
-                g.group_id,
+                g.group_id as "group_id!",
                 g.name as "name!",
                 g.avatar_url as "avatar_url?",
                 COALESCE(g.description, '') as "description!",
@@ -460,14 +462,14 @@ impl GroupRepository {
             (0.0, 0)
         };
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             GroupSearchRow,
             r#"
             SELECT 
-                g.group_id, g.name, g.description, g.avatar_url, g.owner_id,
-                COALESCE(gs.member_count, 0) as member_count,
+                g.group_id as "group_id!", g.name as "name!", g.description, g.avatar_url, g.owner_id as "owner_id!",
+                COALESCE(gs.member_count, 0)::int as "member_count!",
                 ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) as distance,
-                g.created_at
+                g.created_at as "created_at!"
             FROM groups g
             INNER JOIN group_tags gt ON g.group_id = gt.group_id
             INNER JOIN tags t ON t.tag_id = gt.tag_id
@@ -512,7 +514,7 @@ impl GroupRepository {
             r#"
             SELECT g.group_id, g.name as "name!", g.description, g.avatar_url, g.owner_id,
                    g.group_type as "group_type!", g.max_members as "max_members!",
-                   g.is_muted as "is_muted!", g.join_type as "join_type!", g.metadata as "metadata!",
+                   g.is_muted as "is_muted!", g.join_type as "join_type!: GroupJoinMethod", g.metadata as "metadata!",
                    g.created_at as "created_at!", g.updated_at as "updated_at!", g.dismissed_at
             FROM groups g
             JOIN group_members gm ON g.group_id = gm.group_id
@@ -558,7 +560,7 @@ impl GroupRepository {
             r#"
             SELECT group_id, name as "name!", description, avatar_url, owner_id,
                    group_type as "group_type!", max_members as "max_members!",
-                   is_muted as "is_muted!", join_type as "join_type!", metadata as "metadata!",
+                   is_muted as "is_muted!", join_type as "join_type!: GroupJoinMethod", metadata as "metadata!",
                    created_at as "created_at!", updated_at as "updated_at!", dismissed_at
             FROM groups
             WHERE group_id = ANY($1)

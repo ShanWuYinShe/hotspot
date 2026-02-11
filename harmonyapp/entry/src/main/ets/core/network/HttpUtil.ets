@@ -7,6 +7,7 @@
 import http from '@ohos.net.http';
 import request from '@ohos.request';
 import common from '@ohos.app.ability.common';
+import util from '@ohos.util';
 import { API_BASE_URL, StorageKeys } from '../../constants/AppConstants';
 import { ApiEndpoints } from '../config/ApiEndpoints';
 import { ApiResponse, AuthData, HealthStatus, UploadCategory, UploadedMedia } from '../types/api';
@@ -18,6 +19,38 @@ import {
   shouldForceLogoutOnAuthError,
   isAuthErrorCode
 } from './ApiErrorUtil';
+
+/**
+ * Spec MUST 幂等端点列表
+ * 这些端点的每次请求必须携带 Idempotency-Key，缺少则会被后端拒绝
+ */
+const MUST_IDEMPOTENT_ENDPOINTS: string[] = [
+  // 认证
+  ApiEndpoints.AUTH.REGISTER,
+  ApiEndpoints.AUTH.GUEST,
+  ApiEndpoints.AUTH.REQUEST_PASSWORD_RESET,
+  ApiEndpoints.AUTH.RESET_PASSWORD,
+  ApiEndpoints.AUTH.ME.CHANGE_PASSWORD,
+  // 消息
+  ApiEndpoints.CHAT.PRIVATE_MESSAGES.SEND,
+  ApiEndpoints.CHAT.GROUP_MESSAGES.SEND,
+  // 创建类
+  ApiEndpoints.MOMENT.CREATE,
+  ApiEndpoints.COMMENT.CREATE,
+  ApiEndpoints.REPORT.CREATE,
+  ApiEndpoints.SHARE.CREATE,
+  // 群组
+  ApiEndpoints.GROUP.CREATE,
+  ApiEndpoints.GROUP.ME.JOIN,
+  ApiEndpoints.GROUP.MEMBERS.BAN,
+  ApiEndpoints.GROUP.ANNOUNCEMENTS.CREATE,
+  ApiEndpoints.GROUP.APPLICATIONS.APPROVE,
+  ApiEndpoints.GROUP.APPLICATIONS.REJECT,
+  ApiEndpoints.GROUP.ME.INVITES.ACCEPT,
+  ApiEndpoints.GROUP.ME.INVITES.REJECT,
+  // 上传
+  ApiEndpoints.UPLOAD.COMPLETE_UPLOAD,
+];
 
 const DOMAIN_NUMBER: number = 0xFF08;
 const TAG: string = 'HttpUtil';
@@ -181,7 +214,7 @@ export class HttpUtil {
     return HttpUtil.refreshPromise;
   }
 
-  private static async buildHeaders(): Promise<Record<string, string>> {
+  private static async buildHeaders(url?: string): Promise<Record<string, string>> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json'
     };
@@ -193,6 +226,12 @@ export class HttpUtil {
       }
     } catch (error) {
       hilog.warn(DOMAIN_NUMBER, TAG, `获取令牌失败，使用无认证请求: ${error}`);
+    }
+
+    // 自动为 MUST 幂等端点注入 Idempotency-Key
+    if (url && MUST_IDEMPOTENT_ENDPOINTS.includes(url)) {
+      headers['Idempotency-Key'] = util.generateRandomUUID(false);
+      hilog.debug(DOMAIN_NUMBER, TAG, `🔑 幂等键已注入: ${url}`);
     }
 
     return headers;
@@ -222,7 +261,7 @@ export class HttpUtil {
       const tokenForRetryCheck = await HttpUtil.getToken();
       const hasAuthHeader = !!tokenForRetryCheck;
 
-      const headers = await HttpUtil.buildHeaders();
+      const headers = await HttpUtil.buildHeaders(url);
       const requestOptions: http.HttpRequestOptions = {
         method,
         header: headers,

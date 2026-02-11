@@ -52,16 +52,18 @@ impl GroupMessageRepository {
         reply_to_id: Option<Uuid>,
         at_users: Option<Vec<i64>>,
     ) -> Result<GroupMessageRow> {
-        let row = sqlx::query_as_unchecked!(
+        let row = sqlx::query_as!(
             GroupMessageRow,
             r#"
             INSERT INTO group_messages_partitioned (
                 group_id, sender_id, message_type, content, metadata, reply_to_id, at_users
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING message_id, group_id, sender_id, message_type as "type: MessageType", content, metadata, 
-                      reply_to_id, is_recalled, reaction_counts, at_users as "mentions!", read_count, 
-                      sent_at, edited_at, recalled_at, recalled_by
+            RETURNING message_id as "message_id!", group_id as "group_id!", sender_id as "sender_id!",
+                      message_type as "type!: MessageType", content, metadata as "metadata!",
+                      reply_to_id, is_recalled as "is_recalled!", reaction_counts as "reaction_counts!",
+                      at_users as "mentions!", read_count as "read_count!",
+                      sent_at as "sent_at!", edited_at, recalled_at, recalled_by
             "#,
             group_id,
             sender_id,
@@ -79,12 +81,14 @@ impl GroupMessageRepository {
 
     /// 根据 ID 查找
     pub async fn find_by_id(&self, message_id: Uuid) -> Result<Option<GroupMessageRow>> {
-        let row = sqlx::query_as_unchecked!(
+        let row = sqlx::query_as!(
             GroupMessageRow,
             r#"
-            SELECT message_id, group_id, sender_id, message_type as "type: MessageType", content, metadata,
-                   reply_to_id, is_recalled, reaction_counts, at_users as "mentions!", read_count,
-                   sent_at, edited_at, recalled_at, recalled_by
+            SELECT message_id as "message_id!", group_id as "group_id!", sender_id as "sender_id!",
+                   message_type as "type!: MessageType", content, metadata as "metadata!",
+                   reply_to_id, is_recalled as "is_recalled!", reaction_counts as "reaction_counts!",
+                   at_users as "mentions!", read_count as "read_count!",
+                   sent_at as "sent_at!", edited_at, recalled_at, recalled_by
             FROM group_messages
             WHERE message_id = $1
             "#,
@@ -137,12 +141,14 @@ impl GroupMessageRepository {
             (DateTime::<Utc>::MAX_UTC, Uuid::max())
         };
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             GroupMessageRow,
             r#"
-            SELECT message_id, group_id, sender_id, message_type as "type: MessageType", content, metadata,
-                   reply_to_id, is_recalled, reaction_counts, at_users as "mentions!", read_count,
-                   sent_at, edited_at, recalled_at, recalled_by
+            SELECT message_id as "message_id!", group_id as "group_id!", sender_id as "sender_id!",
+                   message_type as "type!: MessageType", content, metadata as "metadata!",
+                   reply_to_id, is_recalled as "is_recalled!", reaction_counts as "reaction_counts!",
+                   at_users as "mentions!", read_count as "read_count!",
+                   sent_at as "sent_at!", edited_at, recalled_at, recalled_by
             FROM group_messages
             WHERE group_id = $1
               AND (sent_at, message_id) < ($3, $4)
@@ -182,12 +188,14 @@ impl GroupMessageRepository {
             return Ok(vec![]);
         }
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             GroupMessageRow,
             r#"
-            SELECT message_id, group_id, sender_id, message_type as "type: MessageType", content, metadata,
-                   reply_to_id, is_recalled, reaction_counts, at_users as "mentions!", read_count,
-                   sent_at, edited_at, recalled_at, recalled_by
+            SELECT message_id as "message_id!", group_id as "group_id!", sender_id as "sender_id!",
+                   message_type as "type!: MessageType", content, metadata as "metadata!",
+                   reply_to_id, is_recalled as "is_recalled!", reaction_counts as "reaction_counts!",
+                   at_users as "mentions!", read_count as "read_count!",
+                   sent_at as "sent_at!", edited_at, recalled_at, recalled_by
             FROM group_messages
             WHERE message_id = ANY($1)
             "#,

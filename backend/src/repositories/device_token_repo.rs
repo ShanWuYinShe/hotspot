@@ -56,7 +56,7 @@ impl DeviceTokenRepository {
             r#"
             SELECT 
                 token_id, user_id, 
-                platform as "platform: DevicePlatform", 
+                platform as "platform!: crate::types::enums::DevicePlatform", 
                 device_token, 
                 last_active_at,
                 created_at

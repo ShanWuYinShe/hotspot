@@ -18,6 +18,8 @@ export const AUTH = {
 	GUEST: `${API_BASE}/auth/guest`,
 	REFRESH_TOKEN: `${API_BASE}/auth/refresh_token`,
 	CHECK_STATUS: `${API_BASE}/auth/check_status`,
+	REQUEST_PASSWORD_RESET: `${API_BASE}/auth/request_password_reset`,
+	RESET_PASSWORD: `${API_BASE}/auth/reset_password`,
 	ME: {
 		CHANGE_PASSWORD: `${API_BASE}/auth/me/change_password`,
 		SESSIONS_LIST: `${API_BASE}/auth/me/sessions/list`,
@@ -286,21 +288,17 @@ export const ADMIN_RBAC = {
 	}
 } as const;
 
-// 管理员 - 服务端配置
-export const ADMIN_SERVER_CONFIG = {
-	GET: `${API_BASE}/admin/server_config/get`,
-	UPDATE_UPLOAD: `${API_BASE}/admin/server_config/update_upload`,
-	UPDATE_DEFAULTS: `${API_BASE}/admin/server_config/update_defaults`,
-	UPDATE_RATE_LIMITS: `${API_BASE}/admin/server_config/update_rate_limits`,
-	UPDATE_RESPONSE_DEFAULTS: `${API_BASE}/admin/server_config/update_response_defaults`
-} as const;
-
-// 管理员 - 客户端配置
-export const ADMIN_CLIENT_CONFIG = {
-	GET: `${API_BASE}/admin/client_config/get`,
-	UPDATE_FEATURES: `${API_BASE}/admin/client_config/update_features`,
-	UPDATE_LIMITS: `${API_BASE}/admin/client_config/update_limits`,
-	UPDATE_CONTACT: `${API_BASE}/admin/client_config/update_contact`
+// 管理员 - 应用配置（spec 统一路径 admin/app_config/*）
+export const ADMIN_APP_CONFIG = {
+	GET: `${API_BASE}/admin/app_config/get`,
+	UPDATE_UPLOAD: `${API_BASE}/admin/app_config/update_upload`,
+	UPDATE_DEFAULTS: `${API_BASE}/admin/app_config/update_defaults`,
+	UPDATE_RATE_LIMITS: `${API_BASE}/admin/app_config/update_rate_limits`,
+	UPDATE_RESPONSE_DEFAULTS: `${API_BASE}/admin/app_config/update_response_defaults`,
+	GET_CLIENT: `${API_BASE}/admin/app_config/get_client`,
+	UPDATE_FEATURES: `${API_BASE}/admin/app_config/update_features`,
+	UPDATE_LIMITS: `${API_BASE}/admin/app_config/update_limits`,
+	UPDATE_CONTACT: `${API_BASE}/admin/app_config/update_contact`
 } as const;
 
 // 管理员 - 用户管理
@@ -365,8 +363,7 @@ export const ENDPOINTS = {
 	REPORTS,
 	SYSTEM,
 	ADMIN_RBAC,
-	ADMIN_SERVER_CONFIG,
-	ADMIN_CLIENT_CONFIG,
+	ADMIN_APP_CONFIG,
 	ADMIN_USERS,
 	ADMIN_GROUPS,
 	ADMIN_ANNOUNCEMENTS,

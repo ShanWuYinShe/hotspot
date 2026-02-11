@@ -2,10 +2,8 @@
 //!
 //! 核心业务逻辑：发布动态、搜索、互动状态管理
 
-use std::collections::HashMap;
 use std::sync::Arc;
 
-use chrono::Utc;
 use redis::aio::ConnectionManager;
 use uuid::Uuid;
 
@@ -20,7 +18,7 @@ use crate::{
             UserMomentsRequest,
         },
         response::{
-            CheckFavoritedData, CheckLikedData, MomentImage, MomentInteractionStateData,
+            MomentImage, MomentInteractionStateData,
             MomentLikeItem, MomentSearchItem, MyMomentState, PaginatedData, PaginationMeta,
             RelativeLocation, UserInfo, UserMomentListItem,
         },

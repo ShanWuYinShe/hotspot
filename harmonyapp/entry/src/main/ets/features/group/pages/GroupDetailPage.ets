@@ -53,6 +53,9 @@ struct GroupDetailPage {
   @State isLoadingMembers: boolean = false;
   @State errorMessage: string = '';
   @State showMemberList: boolean = false;
+  @State membersHasMore: boolean = false;
+  @State membersNextCursor: string = '';
+  @State membersLoadingMore: boolean = false;
   @State isJoining: boolean = false;
   @State isLeaving: boolean = false;
   @State joinPassword: string = '';
@@ -109,7 +112,7 @@ struct GroupDetailPage {
         this.groupInfo = response.data.group;
         this.isMember = this.groupInfo.my_state?.is_joined ?? false;
         await this.syncGroupData();
-        await this.accessibilityManager.announceText(`已加载群组：${this.groupInfo.group.name}`);
+        await this.accessibilityManager.announceText(`已加载群组：${this.groupInfo.group?.name ?? ''}`);
       } else {
         this.errorMessage = response.message || '加载群组详情失败';
       }
@@ -132,6 +135,8 @@ struct GroupDetailPage {
 
       if (response.code === 0 && response.data) {
         this.members = response.data.items;
+        this.membersHasMore = response.data.pagination?.has_more ?? false;
+        this.membersNextCursor = response.data.pagination?.next_cursor ?? '';
         this.showMemberList = true;
       } else {
         SystemToast.showError(response.message || '加载成员列表失败', this.getUIContext());
@@ -140,6 +145,26 @@ struct GroupDetailPage {
       SystemToast.showError('加载成员列表失败', this.getUIContext());
     } finally {
       this.isLoadingMembers = false;
+    }
+  }
+
+  private async loadMoreMembers(): Promise<void> {
+    if (this.membersLoadingMore || !this.membersHasMore) return;
+    this.membersLoadingMore = true;
+    try {
+      const response = await ApiClient.getGroupMembers({
+        group_id: this.groupId,
+        pagination: { limit: 100, cursor: this.membersNextCursor }
+      });
+      if (response.code === 0 && response.data) {
+        this.members = this.members.concat(response.data.items);
+        this.membersHasMore = response.data.pagination?.has_more ?? false;
+        this.membersNextCursor = response.data.pagination?.next_cursor ?? '';
+      }
+    } catch (error) {
+      // 静默失败
+    } finally {
+      this.membersLoadingMore = false;
     }
   }
 
@@ -216,7 +241,7 @@ struct GroupDetailPage {
         params: {
           chatId: this.groupId,
           chatType: 'group_chat',
-          title: this.groupInfo.group.name
+          title: this.groupInfo.group?.name ?? ''
         }
       });
     } catch (error) {
@@ -326,11 +351,11 @@ struct GroupDetailPage {
               // 头像和名称
               Column() {
                 SystemAvatar({
-                  src: this.groupInfo?.group.avatar_url,
-                  name: this.groupInfo?.group.name,
+                  src: this.groupInfo?.group?.avatar_url ?? '',
+                  name: this.groupInfo?.group?.name ?? '',
                   avatarSize: 80
                 })
-                Text(this.groupInfo?.group.name || '')
+                Text(this.groupInfo?.group?.name ?? '')
                   .fontSize(DesignConstants.FONT.SIZE.XL)
                   .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
                   .fontColor($r('sys.color.ohos_id_color_text_primary'))
@@ -352,7 +377,7 @@ struct GroupDetailPage {
               // 统计信息
               Row() {
                 Column() {
-                  Text(this.groupInfo?.group.members_count.toString())
+                  Text((this.groupInfo?.group?.members_count ?? 0).toString())
                     .fontSize(DesignConstants.FONT.SIZE.LG)
                     .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
                     .fontColor($r('sys.color.ohos_id_color_text_primary'))
@@ -428,7 +453,7 @@ struct GroupDetailPage {
                   .fontSize(DesignConstants.FONT.SIZE.LG)
                   .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                   .fontColor($r('sys.color.ohos_id_color_text_primary'))
-                 Text(`${this.groupInfo?.group.members_count} 名成员`)
+                 Text(`${this.groupInfo?.group?.members_count ?? 0} 名成员`)
                   .fontSize(DesignConstants.FONT.SIZE.MD)
                   .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                   .margin({ top: 4 })
@@ -546,11 +571,25 @@ struct GroupDetailPage {
               this.buildMemberItem(member)
             }
           })
+          if (this.membersLoadingMore) {
+            ListItem() {
+              Row({ space: DesignConstants.SPACING.SM }) {
+                LoadingProgress().width(20).height(20)
+                Text('加载更多...')
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              }
+              .width('100%')
+              .justifyContent(FlexAlign.Center)
+              .padding(DesignConstants.SPACING.MD)
+            }
+          }
         }
         .width('100%')
         .layoutWeight(1)
         .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
         .scrollBar(BarState.Auto)
+        .onReachEnd(() => { this.loadMoreMembers(); })
       } else {
         Column() {
           Text('暂无成员信息')
@@ -571,14 +610,14 @@ struct GroupDetailPage {
   buildMemberItem(member: GroupMemberItem) {
     Row() {
       SystemAvatar({
-        src: member.user.avatar_url,
-        name: member.user.nickname,
+        src: member.user?.avatar_url ?? '',
+        name: member.user?.nickname ?? '',
         avatarSize: 40,
         userInfo: member.user
       })
 
       Column() {
-        Text(member.user.nickname)
+        Text(member.user?.nickname ?? '')
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))

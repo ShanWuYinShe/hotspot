@@ -1,7 +1,6 @@
 //! 标签服务 - 热门标签和搜索建议
 
 use crate::{
-    constants::{TRENDING_DAILY_DAYS, TRENDING_MONTHLY_DAYS, TRENDING_WEEKLY_DAYS},
     dto::{
         request::{SuggestTagsRequest, TrendingTagsRequest},
         response::{TagItem, TagSuggestData, TagSuggestItem, TrendingTagsData},

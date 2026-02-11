@@ -27,14 +27,14 @@ export const authService = {
 	 * 用户注册
 	 */
 	register(data: RegisterRequest) {
-		return post<AuthData>(AUTH.REGISTER, data);
+		return post<AuthData>(AUTH.REGISTER, data, { idempotencyKey: crypto.randomUUID() });
 	},
 
 	/**
 	 * 创建访客用户
 	 */
 	guest(data: GuestRequest) {
-		return post<AuthData>(AUTH.GUEST, data);
+		return post<AuthData>(AUTH.GUEST, data, { idempotencyKey: crypto.randomUUID() });
 	},
 
 	/**
@@ -67,7 +67,7 @@ export const authService = {
 	 * 修改密码（已登录用户）
 	 */
 	changePassword(data: { old_password: string; new_password: string }) {
-		return post<void>(AUTH.ME.CHANGE_PASSWORD, data);
+		return post<void>(AUTH.ME.CHANGE_PASSWORD, data, { idempotencyKey: crypto.randomUUID() });
 	},
 
 	/**
@@ -89,5 +89,19 @@ export const authService = {
 	 */
 	revokeAllSessions() {
 		return post<RevokeAllResult>(AUTH.ME.REVOKE_ALL_SESSIONS);
+	},
+
+	/**
+	 * 请求密码重置（发送验证码）
+	 */
+	requestPasswordReset(data: { login_id: string }) {
+		return post<void>(AUTH.REQUEST_PASSWORD_RESET, data, { idempotencyKey: crypto.randomUUID() });
+	},
+
+	/**
+	 * 重置密码（使用验证码）
+	 */
+	resetPassword(data: { login_id: string; verification_code: string; new_password: string }) {
+		return post<void>(AUTH.RESET_PASSWORD, data, { idempotencyKey: crypto.randomUUID() });
 	}
 };

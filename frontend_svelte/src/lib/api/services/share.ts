@@ -22,7 +22,7 @@ export const shareService = {
 	 * 创建分享
 	 */
 	create(request: CreateShareRequest): Promise<ApiResponse<ShareCreated>> {
-		return post<ShareCreated>(SHARE.CREATE, request);
+		return post<ShareCreated>(SHARE.CREATE, request, { idempotencyKey: crypto.randomUUID() });
 	},
 
 	/**

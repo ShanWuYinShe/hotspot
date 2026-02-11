@@ -232,7 +232,7 @@ impl PresenceService {
         if !miss_ids.is_empty() {
             if let Ok(rows) = self.online_status_repo.get_batch_status(&miss_ids).await {
                 for r in rows {
-                    db_last_seen_map.insert(r.user_id, r.last_active_at.map(|t| t.to_rfc3339()));
+                    db_last_seen_map.insert(r.user_id, Some(r.last_active_at.to_rfc3339()));
                 }
             }
         }
@@ -318,7 +318,7 @@ impl PresenceService {
         match self.online_status_repo.get_status(user_id).await {
             Ok(Some(status)) => {
                 let last_online = if !status.is_online {
-                    status.last_active_at.map(|t| t.to_rfc3339())
+                    Some(status.last_active_at.to_rfc3339())
                 } else {
                     None
                 };

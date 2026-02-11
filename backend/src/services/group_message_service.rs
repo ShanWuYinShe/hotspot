@@ -2,7 +2,7 @@
 // 群聊消息Service
 
 use sqlx::PgPool;
-use std::str::FromStr; // Add FromStr
+ // Add FromStr
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -30,7 +30,7 @@ use crate::{
         user_repo::UserRepository,
     },
     services::media_service::MediaService,
-    types::enums::{GroupRole, MessageType, ReactionType, UserType},
+    types::enums::{GroupRole, MessageType, UserType},
     utils::{bloom_filter::ResourceExistenceChecker, validation::Validator},
     EventBus,
 };

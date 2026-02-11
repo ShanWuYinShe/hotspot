@@ -57,16 +57,16 @@ impl PrivateMessageRepository {
         metadata: Option<serde_json::Value>,
         reply_to_id: Option<Uuid>,
     ) -> Result<PrivateMessageRow> {
-        let row = sqlx::query_as_unchecked!(
+        let row = sqlx::query_as!(
             PrivateMessageRow,
             r#"
             INSERT INTO private_messages_partitioned (
                 chat_id, sender_id, receiver_id, message_type, content, metadata, reply_to_id
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING message_id, chat_id, sender_id, receiver_id, 
-                      message_type as "type: MessageType", content, metadata, reply_to_id as "reply_to_message_id", 
-                      is_recalled, reaction_counts,
+            RETURNING message_id as "message_id!", chat_id as "chat_id!", sender_id as "sender_id!", receiver_id as "receiver_id!", 
+                      message_type as "type!: MessageType", content, metadata as "metadata!", reply_to_id as "reply_to_message_id", 
+                      is_recalled as "is_recalled!", reaction_counts as "reaction_counts!",
                       metadata->>'thumbnail_url' as "thumbnail_url?",
                       metadata->>'file_name' as "file_name?",
                       (metadata->>'size')::bigint as "file_size?",
@@ -74,7 +74,7 @@ impl PrivateMessageRepository {
                       (metadata->>'width')::int as "width?",
                       (metadata->>'height')::int as "height?",
                       metadata->>'mime_type' as "mime_type?",
-                      sent_at, edited_at, recalled_at
+                      sent_at as "sent_at!", edited_at, recalled_at
             "#,
             chat_id,
             sender_id,
@@ -104,11 +104,12 @@ impl PrivateMessageRepository {
             (DateTime::<Utc>::MAX_UTC, Uuid::max())
         };
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             PrivateMessageRow,
             r#"
-            SELECT message_id, chat_id, sender_id, receiver_id, message_type as "type: MessageType",
-                   content, metadata, reply_to_id as "reply_to_message_id", is_recalled, reaction_counts,
+            SELECT message_id as "message_id!", chat_id as "chat_id!", sender_id as "sender_id!", receiver_id as "receiver_id!",
+                   message_type as "type!: MessageType", content, metadata as "metadata!", reply_to_id as "reply_to_message_id",
+                   is_recalled as "is_recalled!", reaction_counts as "reaction_counts!",
                    metadata->>'thumbnail_url' as "thumbnail_url?",
                    metadata->>'file_name' as "file_name?",
                    (metadata->>'size')::bigint as "file_size?",
@@ -116,7 +117,7 @@ impl PrivateMessageRepository {
                    (metadata->>'width')::int as "width?",
                    (metadata->>'height')::int as "height?",
                    metadata->>'mime_type' as "mime_type?",
-                   sent_at, edited_at, recalled_at
+                   sent_at as "sent_at!", edited_at, recalled_at
             FROM private_messages
             WHERE chat_id = $1
               AND (sent_at, message_id) < ($3, $4)
@@ -180,11 +181,12 @@ impl PrivateMessageRepository {
             return Ok(vec![]);
         }
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             PrivateMessageRow,
             r#"
-            SELECT message_id, chat_id, sender_id, receiver_id, message_type as "type: MessageType",
-                   content, metadata, reply_to_id as "reply_to_message_id", is_recalled, reaction_counts,
+            SELECT message_id as "message_id!", chat_id as "chat_id!", sender_id as "sender_id!", receiver_id as "receiver_id!",
+                   message_type as "type!: MessageType", content, metadata as "metadata!", reply_to_id as "reply_to_message_id",
+                   is_recalled as "is_recalled!", reaction_counts as "reaction_counts!",
                    metadata->>'thumbnail_url' as "thumbnail_url?",
                    metadata->>'file_name' as "file_name?",
                    (metadata->>'size')::bigint as "file_size?",
@@ -192,7 +194,7 @@ impl PrivateMessageRepository {
                    (metadata->>'width')::int as "width?",
                    (metadata->>'height')::int as "height?",
                    metadata->>'mime_type' as "mime_type?",
-                   sent_at, edited_at, recalled_at
+                   sent_at as "sent_at!", edited_at, recalled_at
             FROM private_messages
             WHERE message_id = ANY($1)
             "#,
@@ -242,12 +244,14 @@ impl PrivateMessageRepository {
             return Ok(std::collections::HashMap::new());
         }
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             PrivateMessageRow,
             r#"
             SELECT DISTINCT ON (chat_id)
-                   message_id, chat_id, sender_id, receiver_id, message_type as "type: MessageType",
-                   content, metadata, reply_to_id as "reply_to_message_id", is_recalled, reaction_counts,
+                   message_id as "message_id!", chat_id as "chat_id!", sender_id as "sender_id!", receiver_id as "receiver_id!",
+                   message_type as "type!: MessageType",
+                   content, metadata as "metadata!", reply_to_id as "reply_to_message_id",
+                   is_recalled as "is_recalled!", reaction_counts as "reaction_counts!",
                    metadata->>'thumbnail_url' as "thumbnail_url?",
                    metadata->>'file_name' as "file_name?",
                    (metadata->>'size')::bigint as "file_size?",
@@ -255,7 +259,7 @@ impl PrivateMessageRepository {
                    (metadata->>'width')::int as "width?",
                    (metadata->>'height')::int as "height?",
                    metadata->>'mime_type' as "mime_type?",
-                   sent_at, edited_at, recalled_at
+                   sent_at as "sent_at!", edited_at, recalled_at
             FROM private_messages
             WHERE chat_id = ANY($1)
             ORDER BY chat_id, sent_at DESC, message_id DESC
@@ -269,11 +273,12 @@ impl PrivateMessageRepository {
     }
 
     pub async fn get_meta(&self, message_id: Uuid) -> Result<Option<PrivateMessageRow>> {
-        let row = sqlx::query_as_unchecked!(
+        let row = sqlx::query_as!(
             PrivateMessageRow,
             r#"
-            SELECT message_id, chat_id, sender_id, receiver_id, message_type as "type: MessageType",
-                   content, metadata, reply_to_id as "reply_to_message_id", is_recalled, reaction_counts,
+            SELECT message_id as "message_id!", chat_id as "chat_id!", sender_id as "sender_id!", receiver_id as "receiver_id!",
+                   message_type as "type!: MessageType", content, metadata as "metadata!", reply_to_id as "reply_to_message_id",
+                   is_recalled as "is_recalled!", reaction_counts as "reaction_counts!",
                    metadata->>'thumbnail_url' as "thumbnail_url?",
                    metadata->>'file_name' as "file_name?",
                    (metadata->>'size')::bigint as "file_size?",
@@ -281,7 +286,7 @@ impl PrivateMessageRepository {
                    (metadata->>'width')::int as "width?",
                    (metadata->>'height')::int as "height?",
                    metadata->>'mime_type' as "mime_type?",
-                   sent_at, edited_at, recalled_at
+                   sent_at as "sent_at!", edited_at, recalled_at
             FROM private_messages
             WHERE message_id = $1
             "#,

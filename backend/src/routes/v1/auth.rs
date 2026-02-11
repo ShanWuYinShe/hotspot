@@ -17,6 +17,11 @@ pub fn token_optional_routes() -> Router<AppState> {
         .route("/guest", post(auth::create_guest))
         .route("/refresh_token", post(auth::refresh_token))
         .route("/check_status", post(auth::check_status))
+        .route(
+            "/request_password_reset",
+            post(auth::request_password_reset),
+        )
+        .route("/reset_password", post(auth::reset_password))
 }
 
 /// Token 必须的认证路由

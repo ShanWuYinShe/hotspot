@@ -42,31 +42,32 @@ impl ReportRepository {
         reason: &str,
         description: Option<String>,
     ) -> Result<ReportRow> {
-        let row = sqlx::query_as::<_, ReportRow>(
+        let row = sqlx::query_as!(
+            ReportRow,
             r#"
             INSERT INTO reports (reporter_id, target_type, target_id, reason, description)
             VALUES ($1, $2, $3, $4, $5)
             RETURNING report_id,
                       reporter_id,
-                      target_type,
+                      target_type as "target_type: ReportTargetType",
                       target_id,
                       reason,
                       description,
-                      status,
+                      status as "status!: ReportStatus",
                       handled_at,
                       handled_by,
-                      handled_action,
+                      handled_action as "handled_action: ReportHandleAction",
                       handled_note,
                       target_snapshot,
                       created_at,
                       updated_at
             "#,
+            reporter_id,
+            target_type as ReportTargetType,
+            target_id,
+            reason,
+            description
         )
-        .bind(reporter_id)
-        .bind(target_type)
-        .bind(target_id)
-        .bind(reason)
-        .bind(description)
         .fetch_one(&self.pool)
         .await?;
 
@@ -81,7 +82,7 @@ impl ReportRepository {
         note: Option<String>,
         handler_id: i64,
     ) -> Result<()> {
-        sqlx::query(
+        sqlx::query!(
             r#"
             UPDATE reports
             SET status = $2,
@@ -92,12 +93,12 @@ impl ReportRepository {
                 updated_at = NOW()
             WHERE report_id = $1
             "#,
+            report_id,
+            status as ReportStatus,
+            action as ReportHandleAction,
+            note,
+            handler_id
         )
-        .bind(report_id)
-        .bind(status)
-        .bind(action)
-        .bind(note)
-        .bind(handler_id)
         .execute(&self.pool)
         .await?;
         Ok(())
@@ -110,18 +111,19 @@ impl ReportRepository {
         offset: i64,
     ) -> Result<Vec<ReportRow>> {
         let status_str = status.map(|s| s.as_str().to_string());
-        let rows = sqlx::query_as::<_, ReportRow>(
+        let rows = sqlx::query_as!(
+            ReportRow,
             r#"
             SELECT report_id,
                    reporter_id,
-                   target_type,
+                   target_type as "target_type: ReportTargetType",
                    target_id,
                    reason,
                    description,
-                   status,
+                   status as "status!: ReportStatus",
                    handled_at,
                    handled_by,
-                   handled_action,
+                   handled_action as "handled_action: ReportHandleAction",
                    handled_note,
                    target_snapshot,
                    created_at,
@@ -131,10 +133,10 @@ impl ReportRepository {
             ORDER BY created_at DESC
             LIMIT $2 OFFSET $3
             "#,
+            status_str,
+            limit,
+            offset
         )
-        .bind(status_str)
-        .bind(limit)
-        .bind(offset)
         .fetch_all(&self.pool)
         .await?;
         Ok(rows)
@@ -166,18 +168,20 @@ impl ReportRepository {
             (chrono::DateTime::<chrono::Utc>::MAX_UTC, Uuid::max())
         };
 
-        let rows = sqlx::query_as::<_, ReportRow>(
+        let fetch_limit = limit as i64 + 1;
+        let rows = sqlx::query_as!(
+            ReportRow,
             r#"
             SELECT report_id,
                    reporter_id,
-                   target_type,
+                   target_type as "target_type: ReportTargetType",
                    target_id,
                    reason,
                    description,
-                   status,
+                   status as "status!: ReportStatus",
                    handled_at,
                    handled_by,
-                   handled_action,
+                   handled_action as "handled_action: ReportHandleAction",
                    handled_note,
                    target_snapshot,
                    created_at,
@@ -188,11 +192,11 @@ impl ReportRepository {
             ORDER BY created_at DESC, report_id DESC
             LIMIT $4
             "#,
+            reporter_id,
+            last_ts,
+            last_id,
+            fetch_limit
         )
-        .bind(reporter_id)
-        .bind(last_ts)
-        .bind(last_id)
-        .bind(limit as i64 + 1)
         .fetch_all(&self.pool)
         .await?;
 
@@ -227,18 +231,20 @@ impl ReportRepository {
             (chrono::DateTime::<chrono::Utc>::MAX_UTC, Uuid::max())
         };
 
-        let rows = sqlx::query_as::<_, ReportRow>(
+        let fetch_limit = limit as i64 + 1;
+        let rows = sqlx::query_as!(
+            ReportRow,
             r#"
             SELECT report_id,
                    reporter_id,
-                   target_type,
+                   target_type as "target_type: ReportTargetType",
                    target_id,
                    reason,
                    description,
-                   status,
+                   status as "status!: ReportStatus",
                    handled_at,
                    handled_by,
-                   handled_action,
+                   handled_action as "handled_action: ReportHandleAction",
                    handled_note,
                    target_snapshot,
                    created_at,
@@ -250,12 +256,12 @@ impl ReportRepository {
             ORDER BY created_at DESC, report_id DESC
             LIMIT $5
             "#,
+            status_str,
+            target_type_str,
+            last_ts,
+            last_id,
+            fetch_limit
         )
-        .bind(status_str)
-        .bind(target_type_str)
-        .bind(last_ts)
-        .bind(last_id)
-        .bind(limit as i64 + 1)
         .fetch_all(&self.pool)
         .await?;
 

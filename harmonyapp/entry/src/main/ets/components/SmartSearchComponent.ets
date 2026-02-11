@@ -111,14 +111,15 @@ export struct SmartSearchComponent {
       });
 
       if (response.code === 0 && response.data) {
+        const validUsers = response.data.items.filter((u: UserItem) => u.user?.user_id);
         const users = typeof myId === 'string'
-          ? response.data.items.filter((u: UserItem) => u.user.user_id !== myId)
-          : response.data.items;
+          ? validUsers.filter((u: UserItem) => u.user.user_id !== myId)
+          : validUsers;
 
         const userResults: SearchResult[] = users.map((user: UserItem): SearchResult => ({
           id: `user_${user.user.user_id}`,
           type: 'user',
-          title: user.user.nickname,
+          title: user.user.nickname ?? '',
           subtitle: user.bio || '用户',
           data: user
         }));
@@ -146,11 +147,12 @@ export struct SmartSearchComponent {
       });
 
       if (response.code === 0 && response.data) {
-        const groupResults: SearchResult[] = response.data.items.map((group: GroupItem): SearchResult => ({
+        const validGroups = response.data.items.filter((g: GroupItem) => g.group?.group_id);
+        const groupResults: SearchResult[] = validGroups.map((group: GroupItem): SearchResult => ({
           id: `group_${group.group.group_id}`,
           type: 'group',
-          title: group.group.name,
-          subtitle: `${group.group.members_count} 成员`,
+          title: group.group.name ?? '',
+          subtitle: `${group.group.members_count ?? 0} 成员`,
           data: group
         }));
 
@@ -177,12 +179,13 @@ export struct SmartSearchComponent {
       });
 
       if (response.code === 0 && response.data) {
-        const momentResults: SearchResult[] = response.data.items.map((moment: MomentItem): SearchResult => ({
+        const validMoments = response.data.items.filter((m: MomentItem) => m.moment_id && m.user);
+        const momentResults: SearchResult[] = validMoments.map((moment: MomentItem): SearchResult => ({
           id: `moment_${moment.moment_id}`,
           type: 'moment',
-          title: moment.user.nickname,
-          subtitle: moment.description.length > 30 ?
-            moment.description.substring(0, 30) + '...' : moment.description,
+          title: moment.user?.nickname ?? '',
+          subtitle: (moment.description?.length ?? 0) > 30 ?
+            moment.description.substring(0, 30) + '...' : (moment.description ?? ''),
           data: moment
         }));
 
@@ -224,6 +227,7 @@ export struct SmartSearchComponent {
         break;
       case 'group':
         const group = result.data as GroupItem;
+        if (!group.group?.group_id) break;
         try {
           this.getUIContext().getRouter().pushUrl({
             url: `features/group/pages/${PageNames.GROUP_DETAIL}`,

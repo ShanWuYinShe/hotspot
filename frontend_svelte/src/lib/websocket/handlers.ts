@@ -28,7 +28,8 @@ import type {
 	GroupMemberUnmutedPayload,
 	GroupUpdatedPayload,
 	GroupDismissedPayload,
-	AccountBannedPayload
+	AccountBannedPayload,
+	GroupMemberJoinedPayload
 } from './types';
 
 // ============ 事件处理器类型 ============
@@ -394,6 +395,71 @@ class WebSocketEventHandlers {
 			this.notificationHandlers.forEach((handler) => handler(payload));
 		});
 
+		// 群组邀请响应（spec: GroupInviteResponse）
+		websocketStore.on('GroupInviteResponse', (payload) => {
+			log('[WS] 群组邀请响应:', payload);
+			if (payload.status === 'accepted') {
+				toast.success(`${payload.user.nickname} 接受了群组邀请`);
+			}
+			this.notificationHandlers.forEach((handler) => handler(payload));
+		});
+
+		// 群组申请响应（spec: GroupApplicationResponse）
+		websocketStore.on('GroupApplicationResponse', (payload) => {
+			log('[WS] 群组申请响应:', payload);
+			if (payload.status === 'accepted') {
+				toast.success(`你的入群申请已通过 - ${payload.group_name}`);
+			}
+			this.notificationHandlers.forEach((handler) => handler(payload));
+		});
+
+		// 群组成员加入（spec: GroupMemberJoined）
+		websocketStore.on('GroupMemberJoined', (payload: GroupMemberJoinedPayload) => {
+			log('[WS] 群组成员加入:', payload);
+			toast.info(`${payload.user.nickname} 加入了群组`);
+
+			if (browser) {
+				window.dispatchEvent(
+					new CustomEvent('group-member-joined', {
+						detail: {
+							group_id: payload.group_id,
+							user: payload.user,
+							member_count: payload.member_count
+						}
+					})
+				);
+			}
+		});
+
+		// 群公告创建（spec: GroupAnnouncementCreated）
+		websocketStore.on('GroupAnnouncementCreated', (payload) => {
+			log('[WS] 新群公告:', payload);
+			toast.info(`群组发布了新公告: ${payload.title}`);
+			this.notificationHandlers.forEach((handler) => handler(payload));
+		});
+
+		// 被提及（spec: MessageMentioned）
+		websocketStore.on('MessageMentioned', (payload) => {
+			log('[WS] 被提及:', payload);
+			toast.info(`${payload.user.nickname} 在${payload.target_type === 'moment' ? '动态' : '评论'}中提到了你`);
+			this.notificationHandlers.forEach((handler) => handler(payload));
+		});
+
+		// 私聊已读回执（spec: PrivateMessageRead）
+		websocketStore.on('PrivateMessageRead', (payload) => {
+			log('[WS] 私聊消息已读:', payload);
+			if (browser) {
+				window.dispatchEvent(
+					new CustomEvent('private-message-read', { detail: payload })
+				);
+			}
+		});
+
+		// 订阅状态快照（spec: SubscriptionsSnapshot）
+		websocketStore.on('SubscriptionsSnapshot', (payload) => {
+			log('[WS] 订阅状态快照:', payload);
+		});
+
 		// 群组成员离开（GroupMemberLeft）
 		websocketStore.on('GroupMemberLeft', (payload: GroupMemberLeftPayload) => {
 			log('[WS] 群组成员离开:', payload);
@@ -637,13 +703,43 @@ class WebSocketEventHandlers {
 			// 可用于更新缓存的用户信息
 		});
 
+		// 私聊正在输入（spec: PrivateUserTyping）
+		websocketStore.on('PrivateUserTyping', (payload) => {
+			log('[WS] 私聊正在输入:', payload);
+			if (browser) {
+				window.dispatchEvent(
+					new CustomEvent('private-user-typing', { detail: payload })
+				);
+			}
+		});
+
+		// 群聊正在输入（spec: GroupUserTyping）
+		websocketStore.on('GroupUserTyping', (payload) => {
+			log('[WS] 群聊正在输入:', payload);
+			if (browser) {
+				window.dispatchEvent(
+					new CustomEvent('group-user-typing', { detail: payload })
+				);
+			}
+		});
+
 		// 群用户进入/离开群聊（spec 新增事件）
 		websocketStore.on('GroupUserEntered', (payload) => {
 			log('[WS] 用户进入群聊:', payload);
+			if (browser) {
+				window.dispatchEvent(
+					new CustomEvent('group-user-entered', { detail: payload })
+				);
+			}
 		});
 
 		websocketStore.on('GroupUserExited', (payload) => {
 			log('[WS] 用户离开群聊:', payload);
+			if (browser) {
+				window.dispatchEvent(
+					new CustomEvent('group-user-exited', { detail: payload })
+				);
+			}
 		});
 	}
 
@@ -684,6 +780,48 @@ class WebSocketEventHandlers {
 	onUserOffline(handler: EventHandler) {
 		this.userOfflineHandlers.add(handler);
 		return () => this.userOfflineHandlers.delete(handler);
+	}
+
+	// ============ 客户端事件发送 ============
+
+	/**
+	 * 发送私聊正在输入状态
+	 */
+	sendPrivateTyping(targetUserId: string, isTyping: boolean) {
+		websocketStore.send({
+			type: 'PrivateTyping',
+			payload: { target_user_id: targetUserId, is_typing: isTyping }
+		});
+	}
+
+	/**
+	 * 发送群聊正在输入状态
+	 */
+	sendGroupTyping(groupId: string, isTyping: boolean) {
+		websocketStore.send({
+			type: 'GroupTyping',
+			payload: { group_id: groupId, is_typing: isTyping }
+		});
+	}
+
+	/**
+	 * 通知进入群聊页面
+	 */
+	sendGroupEnter(groupId: string) {
+		websocketStore.send({
+			type: 'GroupEnter',
+			payload: { group_id: groupId }
+		});
+	}
+
+	/**
+	 * 通知离开群聊页面
+	 */
+	sendGroupLeave(groupId: string) {
+		websocketStore.send({
+			type: 'GroupLeave',
+			payload: { group_id: groupId }
+		});
 	}
 }
 

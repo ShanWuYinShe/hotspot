@@ -41,9 +41,16 @@ impl ChatConversationStateRepository {
         chat_type: &str,
         chat_id: &str,
     ) -> Result<Option<ChatConversationStateRow>> {
-        let row = sqlx::query_as_unchecked!(
+        let row = sqlx::query_as!(
             ChatConversationStateRow,
-            "SELECT * FROM chat_conversations_state WHERE user_id = $1 AND chat_type = $2 AND chat_id = $3",
+            r#"
+            SELECT user_id as "user_id!", chat_type as "chat_type!", chat_id as "chat_id!",
+                   unread_count as "unread_count!", last_read_message_id,
+                   is_pinned as "is_pinned!", is_muted as "is_muted!", is_hidden as "is_hidden!",
+                   updated_at as "updated_at!"
+            FROM chat_conversations_state
+            WHERE user_id = $1 AND chat_type = $2 AND chat_id = $3
+            "#,
             user_id,
             chat_type,
             chat_id
@@ -56,9 +63,17 @@ impl ChatConversationStateRepository {
 
     /// 列出用户的所有活跃会话 (用于 Inbox 列表)
     pub async fn list_by_user(&self, user_id: i64) -> Result<Vec<ChatConversationStateRow>> {
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             ChatConversationStateRow,
-            "SELECT * FROM chat_conversations_state WHERE user_id = $1 AND is_hidden = FALSE ORDER BY is_pinned DESC, updated_at DESC",
+            r#"
+            SELECT user_id as "user_id!", chat_type as "chat_type!", chat_id as "chat_id!",
+                   unread_count as "unread_count!", last_read_message_id,
+                   is_pinned as "is_pinned!", is_muted as "is_muted!", is_hidden as "is_hidden!",
+                   updated_at as "updated_at!"
+            FROM chat_conversations_state
+            WHERE user_id = $1 AND is_hidden = FALSE
+            ORDER BY is_pinned DESC, updated_at DESC
+            "#,
             user_id
         )
         .fetch_all(&self.pool)

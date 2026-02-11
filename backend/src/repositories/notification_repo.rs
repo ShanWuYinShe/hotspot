@@ -74,7 +74,7 @@ impl NotificationRepository {
             "target_preview": target_preview
         });
 
-        let row = sqlx::query_as_unchecked!(
+        let row = sqlx::query_as!(
             NotificationRow,
             r#"
             WITH inserted AS (
@@ -83,9 +83,9 @@ impl NotificationRepository {
                 RETURNING notification_id, user_id, notification_type, payload, created_at
             )
             SELECT
-                notification_id,
-                user_id,
-                notification_type as "type: NotificationType",
+                notification_id as "notification_id!",
+                user_id as "user_id!",
+                notification_type as "type!: NotificationType",
                 payload->>'title' as "title?",
                 payload->>'content' as "content?",
                 (payload->>'sender_id')::bigint as "sender_id?",
@@ -96,7 +96,7 @@ impl NotificationRepository {
                 payload->>'reference_id' as "reference_id?",
                 payload->>'target_preview' as "target_preview?",
                 notification_is_read($1, notification_id, notification_type, created_at) as "is_read!",
-                created_at
+                created_at as "created_at!"
             FROM inserted
             "#,
             user_id,
@@ -123,13 +123,13 @@ impl NotificationRepository {
             (DateTime::<Utc>::MAX_UTC, Uuid::max())
         };
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             NotificationRow,
             r#"
             SELECT
-                notification_id,
-                user_id,
-                notification_type as "type: NotificationType",
+                notification_id as "notification_id!",
+                user_id as "user_id!",
+                notification_type as "type!: NotificationType",
                 payload->>'title' as "title?",
                 payload->>'content' as "content?",
                 (payload->>'sender_id')::bigint as "sender_id?",
@@ -140,7 +140,7 @@ impl NotificationRepository {
                 payload->>'reference_id' as "reference_id?",
                 payload->>'target_preview' as "target_preview?",
                 notification_is_read($1, notification_id, notification_type, created_at) as "is_read!",
-                created_at
+                created_at as "created_at!"
             FROM notifications_partitioned
             WHERE user_id = $1
               AND (created_at, notification_id) < ($2, $3)
@@ -151,7 +151,7 @@ impl NotificationRepository {
             user_id,
             last_ts,
             last_id,
-            type_filters,
+            type_filters.as_deref(),
             limit + 1
         )
         .fetch_all(&self.pool)
@@ -175,7 +175,7 @@ impl NotificationRepository {
     pub async fn count_unread(&self, user_id: i64) -> Result<i64> {
         let row = sqlx::query_as!(
             UnreadBreakdownRow,
-            "SELECT total::bigint as \"total!\", breakdown FROM get_unread_notifications_breakdown($1)",
+            "SELECT total::bigint as \"total!\", breakdown as \"breakdown!\" FROM get_unread_notifications_breakdown($1)",
             user_id
         )
         .fetch_one(&self.pool)
@@ -190,7 +190,7 @@ impl NotificationRepository {
     ) -> Result<Vec<(NotificationType, i64)>> {
         let row = sqlx::query_as!(
             UnreadBreakdownRow,
-            "SELECT total::bigint as \"total!\", breakdown FROM get_unread_notifications_breakdown($1)",
+            "SELECT total::bigint as \"total!\", breakdown as \"breakdown!\" FROM get_unread_notifications_breakdown($1)",
             user_id
         )
         .fetch_one(&self.pool)

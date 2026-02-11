@@ -59,7 +59,7 @@ export const momentsService = {
 		privacy_level?: PrivacyLevel;
 		mentions?: string[];
 	}) {
-		return post<MomentItem>(MOMENTS.CREATE, data);
+		return post<MomentItem>(MOMENTS.CREATE, data, { idempotencyKey: crypto.randomUUID() });
 	},
 
 	/**

@@ -39,7 +39,7 @@ export const mediaService = {
 	 * 完成上传
 	 */
 	completeUpload(data: { upload_id: string }) {
-		return post<UploadedMedia>(MEDIA.COMPLETE_UPLOAD, data);
+		return post<UploadedMedia>(MEDIA.COMPLETE_UPLOAD, data, { idempotencyKey: crypto.randomUUID() });
 	},
 
 	/**

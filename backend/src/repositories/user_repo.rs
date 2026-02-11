@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 
-use crate::error::{AppError, Result};
+use crate::error::Result;
 use crate::types::enums::{UserGender, UserStatus, UserType};
 use crate::utils::pagination::{decode_cursor, encode_cursor, DistanceCursor};
 
@@ -116,13 +116,13 @@ impl UserRepository {
         email: Option<String>,
         phone: Option<String>,
     ) -> Result<UserRow> {
-        let row = sqlx::query_as_unchecked!(
+        let row = sqlx::query_as!(
             UserRow,
             r#"
             INSERT INTO users (username, password_hash, nickname, email, phone)
             VALUES ($1, $2, $3, $4, $5)
             RETURNING user_id, username, email, phone, nickname, avatar_url, bio, 
-                      gender, birthday, user_type, status, 
+                      gender as "gender!: UserGender", birthday, user_type as "user_type!: UserType", status as "status!: UserStatus", 
                       created_at, updated_at, last_login_at, password_hash
             "#,
             username,
@@ -139,11 +139,11 @@ impl UserRepository {
 
     /// 根据用户 ID 查找
     pub async fn find_by_id(&self, user_id: i64) -> Result<Option<UserRow>> {
-        let row = sqlx::query_as_unchecked!(
+        let row = sqlx::query_as!(
             UserRow,
             r#"
             SELECT user_id, username, email, phone, nickname, avatar_url, bio, 
-                   gender, birthday, user_type, status, 
+                   gender as "gender!: UserGender", birthday, user_type as "user_type!: UserType", status as "status!: UserStatus", 
                    created_at, updated_at, last_login_at, password_hash
             FROM users
             WHERE user_id = $1 AND status != 'deleted'
@@ -185,11 +185,11 @@ impl UserRepository {
 
     /// 批量获取用户信息
     pub async fn find_profiles(&self, user_ids: &[i64]) -> Result<Vec<UserRow>> {
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             UserRow,
             r#"
             SELECT user_id, username, email, phone, nickname, avatar_url, bio, 
-                   gender, birthday, user_type, status, 
+                   gender as "gender!: UserGender", birthday, user_type as "user_type!: UserType", status as "status!: UserStatus", 
                    created_at, updated_at, last_login_at, password_hash
             FROM users
             WHERE user_id = ANY($1) AND status != 'deleted'
@@ -270,11 +270,11 @@ impl UserRepository {
 
     /// 根据标识符查找
     pub async fn find_by_identifier(&self, identifier: &str) -> Result<Option<UserRow>> {
-        let row = sqlx::query_as_unchecked!(
+        let row = sqlx::query_as!(
             UserRow,
             r#"
             SELECT user_id, username, email, phone, nickname, avatar_url, bio, 
-                   gender, birthday, user_type, status, 
+                   gender as "gender!: UserGender", birthday, user_type as "user_type!: UserType", status as "status!: UserStatus", 
                    created_at, updated_at, last_login_at, password_hash
             FROM users
             WHERE (username = $1 OR email = $1 OR phone = $1) AND status != 'deleted'
@@ -362,14 +362,14 @@ impl UserRepository {
             decode_cursor::<DistanceCursor>(&c)?
         } else { (0.0, 0) };
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             UserSearchRow,
             r#"
             SELECT 
-                u.user_id, u.nickname, u.avatar_url, u.bio, u.gender,
-                ST_Distance(u.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) as distance,
-                degrees(ST_Azimuth(ST_SetSRID(ST_MakePoint($1, $2), 4326), u.location::geometry)) as bearing_degrees,
-                COALESCE(os.is_online, false) as is_online,
+                u.user_id as "user_id!", u.nickname, u.avatar_url, u.bio, u.gender as "gender!: UserGender",
+                ST_Distance(u.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) as "distance!",
+                degrees(ST_Azimuth(ST_SetSRID(ST_MakePoint($1, $2), 4326), u.location::geometry)) as "bearing_degrees!",
+                COALESCE(os.is_online, false) as "is_online!",
                 os.last_active_at
             FROM users u
             LEFT JOIN user_online_status os ON u.user_id = os.user_id
@@ -379,7 +379,7 @@ impl UserRepository {
                   ST_Distance(u.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) > $4
                   OR (ST_Distance(u.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) = $4 AND u.user_id > $5)
               )
-            ORDER BY distance ASC, u.user_id ASC LIMIT $6
+            ORDER BY ST_Distance(u.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) ASC, u.user_id ASC LIMIT $6
             "#,
             lon, lat, radius, last_dist, last_id, limit + 1
         ).fetch_all(&self.pool).await?;
@@ -409,15 +409,15 @@ impl UserRepository {
             (0.0, 0)
         };
 
-        let rows: Vec<FeedUserRow> = sqlx::query_as_unchecked!(
+        let rows: Vec<FeedUserRow> = sqlx::query_as!(
             FeedUserRow,
             r#"
             SELECT 
-                u.user_id,
+                u.user_id as "user_id!",
                 COALESCE(u.nickname, '') as "nickname!",
                 u.avatar_url as "avatar_url?",
                 COALESCE(u.bio, '') as "bio!",
-                u.user_type as "user_type: UserType",
+                u.user_type as "user_type!: UserType",
                 COALESCE(
                     ARRAY_REMOVE(ARRAY_AGG(t.name ORDER BY t.name), NULL),
                     ARRAY[]::text[]
@@ -425,7 +425,7 @@ impl UserRepository {
                 ST_Y(u.location::geometry) as "latitude!",
                 ST_X(u.location::geometry) as "longitude!",
                 COALESCE(u.location_name, '') as "location_name!",
-                ST_Distance(u.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) as distance,
+                ST_Distance(u.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) as "distance!",
                 degrees(ST_Azimuth(ST_SetSRID(ST_MakePoint($1, $2), 4326), u.location::geometry)) as "bearing_degrees!"
             FROM users u
             LEFT JOIN user_tags ut ON u.user_id = ut.user_id
@@ -440,7 +440,7 @@ impl UserRepository {
               )
             GROUP BY u.user_id, u.nickname, u.avatar_url, u.bio, u.user_type,
                      u.location, u.location_name
-            ORDER BY distance ASC, u.user_id ASC
+            ORDER BY ST_Distance(u.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) ASC, u.user_id ASC
             LIMIT $7
             "#,
             lon,
@@ -480,11 +480,11 @@ impl UserRepository {
             .map(|(lat, lon)| (Some(lat), Some(lon)))
             .unwrap_or((None, None));
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             UserSuggestRow,
             r#"
             SELECT
-                u.user_id,
+                u.user_id as "user_id!",
                 COALESCE(u.nickname, u.username) as "nickname!",
                 u.avatar_url as "avatar_url?",
                 COALESCE(u.bio, '') as "bio!",
@@ -496,7 +496,10 @@ impl UserRepository {
             FROM users u
             WHERE u.status = 'active'
               AND (u.nickname ILIKE $1 OR u.username ILIKE $1)
-            ORDER BY distance ASC NULLS LAST, u.user_id ASC
+            ORDER BY (CASE
+                WHEN $2::float8 IS NULL OR $3::float8 IS NULL OR u.location IS NULL THEN NULL
+                ELSE ST_Distance(u.location, ST_SetSRID(ST_MakePoint($3, $2), 4326)::geography)
+            END) ASC NULLS LAST, u.user_id ASC
             LIMIT $4
             "#,
             pattern,
@@ -526,14 +529,14 @@ impl UserRepository {
         };
 
         let pattern = format!("%{}%", kw);
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             UserSearchRow,
             r#"
             SELECT 
-                u.user_id, u.nickname, u.avatar_url, u.bio, u.gender,
-                ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) as distance,
-                degrees(ST_Azimuth(ST_SetSRID(ST_MakePoint($2, $3), 4326), u.location::geometry)) as bearing_degrees,
-                COALESCE(os.is_online, false) as is_online,
+                u.user_id as "user_id!", u.nickname, u.avatar_url, u.bio, u.gender as "gender!: UserGender",
+                ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) as "distance!",
+                degrees(ST_Azimuth(ST_SetSRID(ST_MakePoint($2, $3), 4326), u.location::geometry)) as "bearing_degrees!",
+                COALESCE(os.is_online, false) as "is_online!",
                 os.last_active_at
             FROM users u
             LEFT JOIN user_online_status os ON u.user_id = os.user_id
@@ -544,7 +547,7 @@ impl UserRepository {
                   ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) > $4
                   OR (ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) = $4 AND u.user_id > $5)
               )
-            ORDER BY distance ASC, u.user_id ASC
+            ORDER BY ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) ASC, u.user_id ASC
             LIMIT $6
             "#,
             pattern,
@@ -586,14 +589,14 @@ impl UserRepository {
             (0.0, 0)
         };
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             UserSearchRow,
             r#"
             SELECT 
-                u.user_id, u.nickname, u.avatar_url, u.bio, u.gender,
-                ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) as distance,
-                degrees(ST_Azimuth(ST_SetSRID(ST_MakePoint($2, $3), 4326), u.location::geometry)) as bearing_degrees,
-                COALESCE(os.is_online, false) as is_online,
+                u.user_id as "user_id!", u.nickname, u.avatar_url, u.bio, u.gender as "gender!: UserGender",
+                ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) as "distance!",
+                degrees(ST_Azimuth(ST_SetSRID(ST_MakePoint($2, $3), 4326), u.location::geometry)) as "bearing_degrees!",
+                COALESCE(os.is_online, false) as "is_online!",
                 os.last_active_at
             FROM users u
             JOIN user_tags ut ON u.user_id = ut.user_id
@@ -606,7 +609,7 @@ impl UserRepository {
                   ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) > $4
                   OR (ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) = $4 AND u.user_id > $5)
               )
-            ORDER BY distance ASC, u.user_id ASC
+            ORDER BY ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) ASC, u.user_id ASC
             LIMIT $6
             "#,
             tag,
@@ -652,15 +655,15 @@ impl UserRepository {
 
         let nickname_pattern = nickname.map(|v| format!("%{}%", v));
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             AdminUserSearchRow,
             r#"
-            SELECT u.user_id, u.nickname, u.avatar_url,
-                   u.user_type as "user_type: UserType",
-                   u.status as "status: UserStatus",
-                   u.created_at,
+            SELECT u.user_id as "user_id!", u.nickname, u.avatar_url,
+                   u.user_type as "user_type!: UserType",
+                   u.status as "status!: UserStatus",
+                   u.created_at as "created_at!",
                    os.last_active_at,
-                   u.username as login_id,
+                   u.username as "login_id!",
                    COALESCE(os.is_online, false) as "is_online!"
             FROM users u
             LEFT JOIN user_online_status os ON u.user_id = os.user_id

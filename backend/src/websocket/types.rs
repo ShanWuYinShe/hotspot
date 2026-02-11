@@ -21,6 +21,8 @@ pub enum WsMessage {
         connection_id: String,
         user_id: i64,
         server_time: String, // ISO 8601 UTC
+        config: ConnectionConfig,
+        unread_summary: UnreadSummary,
     },
 
     // ===== 在线状态事件 =====
@@ -190,7 +192,7 @@ pub enum WsMessage {
     /// 新群聊消息
     GroupMessageNew {
         message_id: String,
-        group_chat_id: String,
+        group_id: String,
         sender: UserInfo,
         #[serde(rename = "type")]
         message_type: MessageType,
@@ -208,7 +210,7 @@ pub enum WsMessage {
     /// 群聊消息被编辑
     GroupMessageEdited {
         message_id: String,
-        group_chat_id: String,
+        group_id: String,
         content: String,
         edited_at: String, // ISO 8601 UTC
     },
@@ -216,7 +218,7 @@ pub enum WsMessage {
     /// 群聊消息被撤回
     GroupMessageRecalled {
         message_id: String,
-        group_chat_id: String,
+        group_id: String,
         recalled_by: i64,
         recalled_at: String, // ISO 8601 UTC
     },
@@ -224,7 +226,7 @@ pub enum WsMessage {
     /// 群聊消息被删除
     GroupMessageDeleted {
         message_id: String,
-        group_chat_id: String,
+        group_id: String,
         deleted_by: i64,
         deleted_at: String, // ISO 8601 UTC
     },
@@ -232,7 +234,7 @@ pub enum WsMessage {
     /// 群聊消息反应
     GroupMessageReaction {
         message_id: String,
-        group_chat_id: String,
+        group_id: String,
         user: UserInfo,
         reaction_type: ReactionType, // 使用 Enum
         has_reaction: bool,
@@ -241,7 +243,7 @@ pub enum WsMessage {
 
     /// 群聊消息已读回执
     GroupMessageRead {
-        group_chat_id: String,
+        group_id: String,
         up_to: String,
         reader_id: i64,
         read_at: String,
@@ -249,7 +251,7 @@ pub enum WsMessage {
 
     /// 群聊成员正在输入
     GroupUserTyping {
-        group_chat_id: String,
+        group_id: String,
         user_id: i64,
         is_typing: bool,
     },
@@ -257,7 +259,7 @@ pub enum WsMessage {
     // ===== 群组事件 =====
     /// 成员加入群组
     GroupMemberJoined {
-        group_chat_id: String,
+        group_id: String,
         user: UserInfo,
         role: GroupRole,   // 使用 Enum
         member_count: i32, // 当前成员总数
@@ -267,7 +269,7 @@ pub enum WsMessage {
     /// 收到群组邀请
     GroupInviteReceived {
         invite_id: String,
-        group_chat_id: String,
+        group_id: String,
         group_name: String,
         #[serde(skip_serializing_if = "Option::is_none")]
         group_avatar_url: Option<String>,
@@ -280,7 +282,7 @@ pub enum WsMessage {
     /// 群组邀请响应
     GroupInviteResponse {
         invite_id: String,
-        group_chat_id: String,
+        group_id: String,
         user: UserInfo,
         status: String,       // 固定为 "accepted"
         responded_at: String, // ISO 8601 UTC
@@ -289,7 +291,7 @@ pub enum WsMessage {
     /// 收到群组申请
     GroupApplicationReceived {
         application_id: String,
-        group_chat_id: String,
+        group_id: String,
         applicant: UserInfo,
         #[serde(skip_serializing_if = "Option::is_none")]
         message: Option<String>,
@@ -299,7 +301,7 @@ pub enum WsMessage {
     /// 群组申请响应
     GroupApplicationResponse {
         application_id: String,
-        group_chat_id: String,
+        group_id: String,
         group_name: String,
         status: String,       // 固定为 "accepted"
         responded_at: String, // ISO 8601 UTC
@@ -309,7 +311,7 @@ pub enum WsMessage {
     /// 群公告创建
     GroupAnnouncementCreated {
         announcement_id: String,
-        group_chat_id: String,
+        group_id: String,
         title: String,
         content: String,
         created_by: UserInfo,
@@ -392,6 +394,30 @@ pub enum WsMessage {
         failed_ids: Option<Vec<FailedSubscriptionId>>,
     },
 
+    /// 订阅状态快照（响应 GetSubscriptions）
+    SubscriptionsSnapshot {
+        client_msg_id: String,
+        user_ids: Vec<String>,
+        group_ids: Vec<String>,
+        total_count: i32,
+    },
+
+    /// 用户进入群聊页面
+    GroupUserEntered {
+        group_id: String,
+        user: UserInfo,
+        entered_at: String, // ISO 8601 UTC
+    },
+
+    /// 用户离开群聊页面
+    GroupUserExited {
+        group_id: String,
+        user: UserInfo,
+        exited_at: String, // ISO 8601 UTC
+    },
+
+    // ========== 客户端发送事件 (续) ==========
+
     /// 私聊正在输入
     PrivateTyping {
         target_user_id: i64,
@@ -400,8 +426,23 @@ pub enum WsMessage {
 
     /// 群聊正在输入
     GroupTyping {
-        group_chat_id: String,
+        group_id: String,
         is_typing: bool,
+    },
+
+    /// 查询当前订阅状态
+    GetSubscriptions {
+        client_msg_id: String,
+    },
+
+    /// 进入群聊页面（与订阅独立，表示用户当前正在查看该群聊）
+    GroupEnter {
+        group_id: String,
+    },
+
+    /// 离开群聊页面
+    GroupLeave {
+        group_id: String,
     },
 }
 
@@ -443,4 +484,27 @@ pub enum FailedSubscriptionId {
         id: String,
         reason: SubscriptionFailureReason, // 使用 Enum
     },
+}
+
+/// ConnectionEstablished 中的服务端配置（spec: config）
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ConnectionConfig {
+    pub ping_interval: u32,  // 心跳间隔（秒）
+    pub ping_timeout: u32,   // Pong 超时（秒）
+    pub max_subscriptions: MaxSubscriptions,
+}
+
+/// 最大订阅数限制
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MaxSubscriptions {
+    pub user: u32,  // 用户订阅上限
+    pub group: u32, // 群组订阅上限
+}
+
+/// ConnectionEstablished 中的未读摘要（spec: unread_summary）
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct UnreadSummary {
+    pub private_chats: i64,    // 有未读消息的私聊会话数
+    pub groups: i64,           // 有未读消息的群聊数
+    pub total_messages: i64,   // 总未读消息数
 }

@@ -61,17 +61,18 @@ impl CommentRepository {
         reply_to_user_id: Option<i64>,
         mentions: Option<Vec<i64>>,
     ) -> Result<CommentRow> {
-        let row = sqlx::query_as_unchecked!(
+        let row = sqlx::query_as!(
             CommentRow,
             r#"
             INSERT INTO comments_partitioned (
                 moment_id, user_id, content, parent_id, reply_to_comment_id, reply_to_user_id, mentions
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING comment_id, moment_id, user_id, content, parent_id, 
-                      reply_to_comment_id, reply_to_user_id, mentions, like_count, reply_count, 
-                      created_at, updated_at, deleted_at,
-                      NULL::text as user_nickname, NULL::text as user_avatar_url
+            RETURNING comment_id as "comment_id!", moment_id as "moment_id!", user_id as "user_id!", content as "content!",
+                      parent_id, reply_to_comment_id, reply_to_user_id, mentions,
+                      0::int as "like_count!", 0::int as "reply_count!",
+                      created_at as "created_at!", updated_at as "updated_at!", deleted_at,
+                      NULL::text as "user_nickname?", NULL::text as "user_avatar_url?"
             "#,
             moment_id,
             user_id,
@@ -79,7 +80,7 @@ impl CommentRepository {
             parent_id,
             reply_to_comment_id,
             reply_to_user_id,
-            mentions
+            mentions.as_deref()
         )
         .fetch_one(&self.pool)
         .await?;
@@ -90,11 +91,16 @@ impl CommentRepository {
 
     /// 根据 ID 查找
     pub async fn find_by_id(&self, comment_id: Uuid) -> Result<Option<CommentRow>> {
-        let row = sqlx::query_as_unchecked!(
+        let row = sqlx::query_as!(
             CommentRow,
             r#"
-            SELECT c.*, u.nickname as user_nickname, u.avatar_url as user_avatar_url
-            FROM comments c
+            SELECT c.comment_id as "comment_id!", c.moment_id as "moment_id!", c.user_id as "user_id!", c.content as "content!",
+                   c.parent_id, c.reply_to_comment_id, c.reply_to_user_id, c.mentions,
+                   COALESCE(cs.likes_count, 0)::int as "like_count!", COALESCE(cs.replies_count, 0)::int as "reply_count!",
+                   c.created_at as "created_at!", c.updated_at as "updated_at!", c.deleted_at,
+                   u.nickname as "user_nickname?", u.avatar_url as "user_avatar_url?"
+            FROM comments_partitioned c
+            LEFT JOIN comment_stats cs ON c.comment_id = cs.comment_id
             JOIN users u ON c.user_id = u.user_id
             WHERE c.comment_id = $1 AND c.deleted_at IS NULL
             "#,
@@ -108,7 +114,7 @@ impl CommentRepository {
 
     pub async fn exists(&self, comment_id: Uuid) -> Result<bool> {
         let row = sqlx::query_scalar!(
-            "SELECT EXISTS(SELECT 1 FROM comments WHERE comment_id = $1 AND deleted_at IS NULL) as \"exists!\"",
+            "SELECT EXISTS(SELECT 1 FROM comments_partitioned WHERE comment_id = $1 AND deleted_at IS NULL) as \"exists!\"",
             comment_id
         )
         .fetch_one(&self.pool)
@@ -128,11 +134,16 @@ impl CommentRepository {
             .and_then(|c| decode_cursor::<DateTime<Utc>>(&c).ok())
             .unwrap_or(DateTime::<Utc>::MAX_UTC);
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             CommentRow,
             r#"
-            SELECT c.*, u.nickname as user_nickname, u.avatar_url as user_avatar_url
-            FROM comments c
+            SELECT c.comment_id as "comment_id!", c.moment_id as "moment_id!", c.user_id as "user_id!", c.content as "content!",
+                   c.parent_id, c.reply_to_comment_id, c.reply_to_user_id, c.mentions,
+                   COALESCE(cs.likes_count, 0)::int as "like_count!", COALESCE(cs.replies_count, 0)::int as "reply_count!",
+                   c.created_at as "created_at!", c.updated_at as "updated_at!", c.deleted_at,
+                   u.nickname as "user_nickname?", u.avatar_url as "user_avatar_url?"
+            FROM comments_partitioned c
+            LEFT JOIN comment_stats cs ON c.comment_id = cs.comment_id
             JOIN users u ON c.user_id = u.user_id
             WHERE c.moment_id = $1 
               AND c.parent_id IS NULL 
@@ -171,11 +182,16 @@ impl CommentRepository {
             .and_then(|c| decode_cursor::<DateTime<Utc>>(&c).ok())
             .unwrap_or(DateTime::<Utc>::MIN_UTC);
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             CommentRow,
             r#"
-            SELECT c.*, u.nickname as user_nickname, u.avatar_url as user_avatar_url
-            FROM comments c
+            SELECT c.comment_id as "comment_id!", c.moment_id as "moment_id!", c.user_id as "user_id!", c.content as "content!",
+                   c.parent_id, c.reply_to_comment_id, c.reply_to_user_id, c.mentions,
+                   COALESCE(cs.likes_count, 0)::int as "like_count!", COALESCE(cs.replies_count, 0)::int as "reply_count!",
+                   c.created_at as "created_at!", c.updated_at as "updated_at!", c.deleted_at,
+                   u.nickname as "user_nickname?", u.avatar_url as "user_avatar_url?"
+            FROM comments_partitioned c
+            LEFT JOIN comment_stats cs ON c.comment_id = cs.comment_id
             JOIN users u ON c.user_id = u.user_id
             WHERE c.parent_id = $1
               AND c.deleted_at IS NULL

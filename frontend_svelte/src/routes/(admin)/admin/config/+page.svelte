@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { adminServerConfigService, adminClientConfigService } from '$lib/api/services';
+	import { adminAppConfigService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -44,8 +44,8 @@
 		try {
 			// 并行加载服务端配置和客户端配置
 			const [serverRes, clientRes] = await Promise.all([
-				adminServerConfigService.get(),
-				adminClientConfigService.get()
+				adminAppConfigService.get(),
+				adminAppConfigService.getClient()
 			]);
 
 			if (isSuccess(serverRes) && serverRes.data) {
@@ -79,7 +79,7 @@
 	async function handleSaveUpload() {
 		isSaving = true;
 		try {
-			const response = await adminServerConfigService.updateUpload({
+			const response = await adminAppConfigService.updateUpload({
 				upload: {
 					image_max_size: parseInt(imageMaxSize) || undefined,
 					video_max_size: parseInt(videoMaxSize) || undefined,
@@ -103,7 +103,7 @@
 	async function handleSaveFeatures() {
 		isSaving = true;
 		try {
-			const response = await adminClientConfigService.updateFeatures({
+			const response = await adminAppConfigService.updateFeatures({
 				enable_public_registration: enablePublicRegistration,
 				enable_guest_login: enableGuestLogin,
 				enable_moments: enableMoments,
@@ -125,7 +125,7 @@
 	async function handleSaveLimits() {
 		isSaving = true;
 		try {
-			const response = await adminClientConfigService.updateLimits({
+			const response = await adminAppConfigService.updateLimits({
 				limits: {
 					max_moment_tags: parseInt(maxMomentTags) || undefined,
 					max_moment_images: parseInt(maxMomentImages) || undefined,

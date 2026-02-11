@@ -33,6 +33,9 @@ export struct MomentPage {
   @State isLoading: boolean = false;
   @State errorMessage: string = '';
   @State hasData: boolean = false;
+  @State hasMore: boolean = false;
+  @State nextCursor: string = '';
+  @State isLoadingMore: boolean = false;
 
   async aboutToAppear() {
     await this.loadNearbyMoments();
@@ -74,8 +77,11 @@ export struct MomentPage {
       const response = await ApiClient.searchMoments(request);
 
       if (response.code === 0 && response.data) {
-        this.momentsDataSource.setData(response.data.items);
-        this.hasData = response.data.items.length > 0;
+        const validItems = response.data.items.filter((m: MomentItem) => m.moment_id && m.user);
+        this.momentsDataSource.setData(validItems);
+        this.hasData = validItems.length > 0;
+        this.hasMore = response.data.pagination?.has_more ?? false;
+        this.nextCursor = response.data.pagination?.next_cursor ?? '';
         this.updateCache(response.data.items);
       } else {
         if (this.momentsDataSource.totalCount() === 0) {
@@ -90,6 +96,34 @@ export struct MomentPage {
       }
     } finally {
       this.isLoading = false;
+    }
+  }
+
+  private async loadMoreMoments(): Promise<void> {
+    if (this.isLoadingMore || !this.hasMore || !this.currentLocation) return;
+    this.isLoadingMore = true;
+    try {
+      const request: SearchMomentsRequest = {
+        reference_point: {
+          latitude: this.currentLocation.latitude,
+          longitude: this.currentLocation.longitude
+        },
+        radius: 2000,
+        sort_by: 'distance',
+        pagination: { limit: 50, cursor: this.nextCursor }
+      };
+      const response = await ApiClient.searchMoments(request);
+      if (response.code === 0 && response.data) {
+        const validItems = response.data.items.filter((m: MomentItem) => m.moment_id && m.user);
+        this.momentsDataSource.addData(validItems);
+        this.hasData = this.momentsDataSource.totalCount() > 0;
+        this.hasMore = response.data.pagination?.has_more ?? false;
+        this.nextCursor = response.data.pagination?.next_cursor ?? '';
+      }
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `加载更多瞬间失败: ${JSON.stringify(error)}`);
+    } finally {
+      this.isLoadingMore = false;
     }
   }
 
@@ -286,12 +320,27 @@ export struct MomentPage {
           this.buildMomentCard(moment, index)
         }
       }, (moment: MomentItem) => moment.moment_id)
+      // 底部加载更多指示器
+      if (this.isLoadingMore) {
+        ListItem() {
+          Row({ space: DesignConstants.SPACING.SM }) {
+            LoadingProgress().width(20).height(20)
+            Text('加载更多...')
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          }
+          .width('100%')
+          .justifyContent(FlexAlign.Center)
+          .padding(DesignConstants.SPACING.MD)
+        }
+      }
     }
     .width('100%')
     .layoutWeight(1)
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
     .scrollBar(BarState.Auto)
     .cachedCount(5)
+    .onReachEnd(() => { this.loadMoreMoments(); })
   }
 
   @Builder
@@ -300,13 +349,13 @@ export struct MomentPage {
       // 用户信息
       Row({ space: DesignConstants.SPACING.MD }) {
         SystemAvatar({
-          avatarUrl: moment.user.avatar_url || '',
-          name: moment.user.nickname,
+          avatarUrl: moment.user?.avatar_url ?? '',
+          name: moment.user?.nickname ?? '',
           avatarSize: 40
         })
 
         Column({ space: 2 }) {
-          Text(moment.user.nickname)
+          Text(moment.user?.nickname ?? '')
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontWeight(FontWeight.Medium)
             .fontColor($r('sys.color.ohos_id_color_text_primary'))

@@ -25,12 +25,12 @@ fn required_permission(path: &str) -> Option<&'static str> {
         return Some("admin.reports.read");
     }
 
-    // 全局配置管理（注意：API 文档中使用 global_settings 而非 config）
-    if path.starts_with("/api/v1/admin/global_settings") {
+    // 配置管理（统一路径 admin/app_config/*）
+    if path.starts_with("/api/v1/admin/app_config") {
         if path.contains("/update_") {
-            return Some("admin.config.write");
+            return Some("admin.app_config.write");
         }
-        return Some("admin.config.read");
+        return Some("admin.app_config.read");
     }
 
     // 用户管理

@@ -635,7 +635,7 @@ impl EventHandler {
             } => {
                 let user = self.get_user_info(*user_id).await;
                 let message = WsMessage::GroupMemberJoined {
-                    group_chat_id: group_id.to_string(),
+                    group_id: group_id.to_string(),
                     user,
                     role: role.clone(),
                     member_count: *member_count as i32,
@@ -671,7 +671,7 @@ impl EventHandler {
                 let inviter = self.get_user_info(*from_user_id).await;
                 let ws_message = WsMessage::GroupInviteReceived {
                     invite_id: invite_id.to_string(),
-                    group_chat_id: group_id.to_string(),
+                    group_id: group_id.to_string(),
                     group_name: group_name.clone(),
                     group_avatar_url: group_avatar_url.clone(),
                     inviter,
@@ -699,7 +699,7 @@ impl EventHandler {
                 let user = self.get_user_info(*invitee_id).await;
                 let message = WsMessage::GroupInviteResponse {
                     invite_id: invite_id.to_string(),
-                    group_chat_id: group_id.to_string(),
+                    group_id: group_id.to_string(),
                     user,
                     status: "accepted".to_string(),
                     responded_at: chrono::Utc::now().to_rfc3339(),
@@ -716,7 +716,7 @@ impl EventHandler {
                 let applicant = self.get_user_info(*applicant_id).await;
                 let ws_message = WsMessage::GroupApplicationReceived {
                     application_id: application_id.to_string(),
-                    group_chat_id: group_id.to_string(),
+                    group_id: group_id.to_string(),
                     applicant,
                     message: message.clone(),
                     created_at: chrono::Utc::now().to_rfc3339(),
@@ -751,7 +751,7 @@ impl EventHandler {
                 }
                 let message = WsMessage::GroupApplicationResponse {
                     application_id: application_id.to_string(),
-                    group_chat_id: group_id.to_string(),
+                    group_id: group_id.to_string(),
                     group_name: group_name.clone(),
                     status: "accepted".to_string(),
                     responded_at: chrono::Utc::now().to_rfc3339(),
@@ -777,7 +777,7 @@ impl EventHandler {
                 let sender = self.get_user_info(*sender_id).await;
                 let message = WsMessage::GroupMessageNew {
                     message_id: message_id.to_string(),
-                    group_chat_id: group_chat_id.to_string(),
+                    group_id: group_chat_id.to_string(),
                     sender,
                     message_type: message_type.clone(),
                     content: content.clone(),
@@ -808,7 +808,7 @@ impl EventHandler {
             } => {
                 let message = WsMessage::GroupMessageEdited {
                     message_id: message_id.to_string(),
-                    group_chat_id: group_chat_id.to_string(),
+                    group_id: group_chat_id.to_string(),
                     content: content.clone(),
                     edited_at: edited_at.clone(),
                 };
@@ -827,7 +827,7 @@ impl EventHandler {
             } => {
                 let message = WsMessage::GroupMessageRecalled {
                     message_id: message_id.to_string(),
-                    group_chat_id: group_chat_id.to_string(),
+                    group_id: group_chat_id.to_string(),
                     recalled_by: *recalled_by,
                     recalled_at: recalled_at.clone(),
                 };
@@ -848,7 +848,7 @@ impl EventHandler {
                 if *for_everyone {
                     let message = WsMessage::GroupMessageDeleted {
                         message_id: message_id.to_string(),
-                        group_chat_id: group_chat_id.to_string(),
+                        group_id: group_chat_id.to_string(),
                         deleted_by: *deleted_by,
                         deleted_at: chrono::Utc::now().to_rfc3339(),
                     };
@@ -867,7 +867,7 @@ impl EventHandler {
                 read_at,
             } => {
                 let message = WsMessage::GroupMessageRead {
-                    group_chat_id: group_chat_id.to_string(),
+                    group_id: group_chat_id.to_string(),
                     up_to: up_to.to_string(),
                     reader_id: *reader_id,
                     read_at: read_at.clone(),
@@ -889,7 +889,7 @@ impl EventHandler {
                 let user = self.get_user_info(*user_id).await;
                 let message = WsMessage::GroupMessageReaction {
                     message_id: message_id.to_string(),
-                    group_chat_id: group_chat_id.to_string(),
+                    group_id: group_chat_id.to_string(),
                     user,
                     reaction_type: reaction_type.clone(),
                     has_reaction: action == "add",
@@ -908,7 +908,7 @@ impl EventHandler {
                 is_typing,
             } => {
                 let message = WsMessage::GroupUserTyping {
-                    group_chat_id: group_chat_id.to_string(),
+                    group_id: group_chat_id.to_string(),
                     user_id: *user_id,
                     is_typing: *is_typing,
                 };
@@ -1237,7 +1237,7 @@ impl EventHandler {
                 let created_by = self.get_user_info(*created_by_user_id).await;
                 let message = WsMessage::GroupAnnouncementCreated {
                     announcement_id: announcement_id.to_string(),
-                    group_chat_id: group_id.to_string(),
+                    group_id: group_id.to_string(),
                     title: title.clone(),
                     content: content.clone(),
                     created_by,

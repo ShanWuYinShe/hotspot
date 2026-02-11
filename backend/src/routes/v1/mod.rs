@@ -79,6 +79,7 @@ pub fn v1_routes(state: AppState) -> Router<AppState> {
 
     // ==================== Token 可选路由 ====================
     // 可带 token；带 token 会注入 user_id（用于"登录态差异化返回"/限流维度）
+    // 幂等层覆盖 Token 可选路由（如 auth/register、auth/guest 等需要幂等检查）
     let token_optional_routes = Router::new()
         .nest("/auth", auth::token_optional_routes())
         .nest("/users", users::token_optional_routes())
@@ -89,9 +90,12 @@ pub fn v1_routes(state: AppState) -> Router<AppState> {
         .nest("/system", system::token_optional_routes())
         .nest("/search", search::routes())
         .nest("/tags", tags::token_optional_routes())
+        .nest("/feed", feed::token_optional_routes())
+        .nest("/share", share::token_optional_routes())
         .with_state(state.clone())
         // 约定：最后添加的 layer 最先执行（outermost）
-        // 期望执行顺序：optional_auth -> rate_limit -> resource_guard
+        // 期望执行顺序：optional_auth -> rate_limit -> resource_guard -> idempotency
+        .layer(idempotency_layer.clone())
         .layer(resource_guard_layer.clone())
         .layer(rate_limit_layer.clone())
         .layer(optional_auth_layer.clone());
@@ -112,7 +116,7 @@ pub fn v1_routes(state: AppState) -> Router<AppState> {
         .nest("/comments", comments::token_required_routes())
         .nest("/reports", reports::token_required_routes())
         .nest("/feed", feed::token_required_routes())
-        .nest("/share", share::share_routes())
+        .nest("/share", share::token_required_routes())
         .nest("/media", media::token_required_routes())
         .with_state(state.clone())
         // 期望执行顺序：auth -> rate_limit -> resource_guard -> idempotency

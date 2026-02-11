@@ -44,7 +44,7 @@ impl MapRepository {
         west: f64, south: f64, east: f64, north: f64,
         grid_meters: f64,
     ) -> Result<Vec<MapClusterRow>> {
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             MapClusterRow,
             r#"
             WITH env AS (SELECT ST_MakeEnvelope($1, $2, $3, $4, 4326) AS bbox),
@@ -55,10 +55,10 @@ impl MapRepository {
               WHERE u.status = 'active' AND ST_Intersects(u.location, env.bbox::geography)
             )
             SELECT 
-              CONCAT(FLOOR(ST_X(p)/$5), ':', FLOOR(ST_Y(p)/$5)) as key,
-              ST_Y(ST_Transform(p, 4326)) as latitude,
-              ST_X(ST_Transform(p, 4326)) as longitude,
-              COUNT(*) as count,
+              CONCAT(FLOOR(ST_X(p)/$5), ':', FLOOR(ST_Y(p)/$5)) as "key!",
+              ST_Y(ST_Transform(p, 4326)) as "latitude!",
+              ST_X(ST_Transform(p, 4326)) as "longitude!",
+              COUNT(*) as "count!",
               COALESCE(ARRAY_REMOVE(ARRAY_AGG(avatar_url), NULL), ARRAY[]::text[]) as "preview_urls!"
             FROM snapped GROUP BY p
             "#,
@@ -85,12 +85,16 @@ impl MapRepository {
         west: f64, south: f64, east: f64, north: f64,
         limit: i32,
     ) -> Result<Vec<MapEntityRow>> {
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             MapEntityRow,
             r#"
             SELECT 
-                u.user_id::text as id, u.nickname as title, u.bio as subtitle, u.avatar_url as cover_url,
-                ST_Y(u.location::geometry) as latitude, ST_X(u.location::geometry) as longitude
+                u.user_id::text as "id!",
+                u.nickname as "title!",
+                u.bio as subtitle,
+                u.avatar_url as cover_url,
+                ST_Y(u.location::geometry) as "latitude!",
+                ST_X(u.location::geometry) as "longitude!"
             FROM users u
             WHERE u.status = 'active' AND u.location && ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography
             LIMIT $5
@@ -120,7 +124,7 @@ impl MapRepository {
         north: f64,
         grid_meters: f64,
     ) -> Result<Vec<MapClusterRow>> {
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             MapClusterRow,
             r#"
             WITH env AS (SELECT ST_MakeEnvelope($1, $2, $3, $4, 4326) AS bbox),
@@ -132,10 +136,10 @@ impl MapRepository {
                 AND ST_Intersects(g.location, env.bbox::geography)
             )
             SELECT 
-              CONCAT(FLOOR(ST_X(p)/$5), ':', FLOOR(ST_Y(p)/$5)) as key,
-              ST_Y(ST_Transform(p, 4326)) as latitude,
-              ST_X(ST_Transform(p, 4326)) as longitude,
-              COUNT(*) as count,
+              CONCAT(FLOOR(ST_X(p)/$5), ':', FLOOR(ST_Y(p)/$5)) as "key!",
+              ST_Y(ST_Transform(p, 4326)) as "latitude!",
+              ST_X(ST_Transform(p, 4326)) as "longitude!",
+              COUNT(*) as "count!",
               COALESCE(ARRAY_REMOVE(ARRAY_AGG(avatar_url), NULL), ARRAY[]::text[]) as "preview_urls!"
             FROM snapped GROUP BY p
             "#,
@@ -159,16 +163,16 @@ impl MapRepository {
         north: f64,
         limit: i32,
     ) -> Result<Vec<MapEntityRow>> {
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             MapEntityRow,
             r#"
             SELECT 
-                g.group_id::text as id,
-                g.name as title,
+                g.group_id::text as "id!",
+                g.name as "title!",
                 g.description as subtitle,
                 g.avatar_url as cover_url,
-                ST_Y(g.location::geometry) as latitude,
-                ST_X(g.location::geometry) as longitude
+                ST_Y(g.location::geometry) as "latitude!",
+                ST_X(g.location::geometry) as "longitude!"
             FROM groups g
             WHERE g.dismissed_at IS NULL
               AND g.location IS NOT NULL
@@ -197,7 +201,7 @@ impl MapRepository {
         start_time: Option<String>,
         end_time: Option<String>,
     ) -> Result<Vec<MapClusterRow>> {
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             MapClusterRow,
             r#"
             WITH env AS (SELECT ST_MakeEnvelope($1, $2, $3, $4, 4326) AS bbox),
@@ -216,14 +220,14 @@ impl MapRepository {
               WHERE m.deleted_at IS NULL
                 AND m.location IS NOT NULL
                 AND ST_Intersects(m.location, (SELECT bbox FROM env)::geography)
-                AND ($6::timestamptz IS NULL OR m.created_at >= $6::timestamptz)
-                AND ($7::timestamptz IS NULL OR m.created_at <= $7::timestamptz)
+                AND ($6::text IS NULL OR m.created_at >= ($6::text)::timestamptz)
+                AND ($7::text IS NULL OR m.created_at <= ($7::text)::timestamptz)
             )
             SELECT 
-              CONCAT(FLOOR(ST_X(p)/$5), ':', FLOOR(ST_Y(p)/$5)) as key,
-              ST_Y(ST_Transform(p, 4326)) as latitude,
-              ST_X(ST_Transform(p, 4326)) as longitude,
-              COUNT(DISTINCT moment_id) as count,
+              CONCAT(FLOOR(ST_X(p)/$5), ':', FLOOR(ST_Y(p)/$5)) as "key!",
+              ST_Y(ST_Transform(p, 4326)) as "latitude!",
+              ST_X(ST_Transform(p, 4326)) as "longitude!",
+              COUNT(DISTINCT moment_id) as "count!",
               COALESCE(ARRAY_REMOVE(ARRAY_AGG(preview_url), NULL), ARRAY[]::text[]) as "preview_urls!"
             FROM snapped GROUP BY p
             "#,
@@ -251,16 +255,16 @@ impl MapRepository {
         start_time: Option<String>,
         end_time: Option<String>,
     ) -> Result<Vec<MapEntityRow>> {
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             MapEntityRow,
             r#"
             SELECT 
-                m.moment_id::text as id,
-                COALESCE(m.description, '') as title,
+                m.moment_id::text as "id!",
+                COALESCE(m.description, '') as "title!",
                 m.location_name as subtitle,
                 mi.url as cover_url,
-                ST_Y(m.location::geometry) as latitude,
-                ST_X(m.location::geometry) as longitude
+                ST_Y(m.location::geometry) as "latitude!",
+                ST_X(m.location::geometry) as "longitude!"
             FROM moments m
             LEFT JOIN LATERAL (
                 SELECT url
@@ -272,8 +276,8 @@ impl MapRepository {
             WHERE m.deleted_at IS NULL
               AND m.location IS NOT NULL
               AND m.location && ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography
-              AND ($6::timestamptz IS NULL OR m.created_at >= $6::timestamptz)
-              AND ($7::timestamptz IS NULL OR m.created_at <= $7::timestamptz)
+              AND ($6::text IS NULL OR m.created_at >= ($6::text)::timestamptz)
+              AND ($7::text IS NULL OR m.created_at <= ($7::text)::timestamptz)
             LIMIT $5
             "#,
             west,
@@ -299,7 +303,7 @@ impl MapRepository {
         north: f64,
         grid_meters: f64,
     ) -> Result<Vec<MapClusterRow>> {
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             MapClusterRow,
             r#"
             WITH env AS (SELECT ST_MakeEnvelope($2, $3, $4, $5, 4326) AS bbox),
@@ -319,10 +323,10 @@ impl MapRepository {
                 )
             )
             SELECT 
-              CONCAT(FLOOR(ST_X(p)/$6), ':', FLOOR(ST_Y(p)/$6)) as key,
-              ST_Y(ST_Transform(p, 4326)) as latitude,
-              ST_X(ST_Transform(p, 4326)) as longitude,
-              COUNT(*) as count,
+              CONCAT(FLOOR(ST_X(p)/$6), ':', FLOOR(ST_Y(p)/$6)) as "key!",
+              ST_Y(ST_Transform(p, 4326)) as "latitude!",
+              ST_X(ST_Transform(p, 4326)) as "longitude!",
+              COUNT(*) as "count!",
               COALESCE(ARRAY_REMOVE(ARRAY_AGG(avatar_url), NULL), ARRAY[]::text[]) as "preview_urls!"
             FROM snapped GROUP BY p
             "#,
@@ -348,16 +352,16 @@ impl MapRepository {
         north: f64,
         limit: i32,
     ) -> Result<Vec<MapEntityRow>> {
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             MapEntityRow,
             r#"
             SELECT 
-                u.user_id::text as id,
-                COALESCE(u.nickname, '') as title,
+                u.user_id::text as "id!",
+                COALESCE(u.nickname, '') as "title!",
                 u.bio as subtitle,
                 u.avatar_url as cover_url,
-                ST_Y(u.location::geometry) as latitude,
-                ST_X(u.location::geometry) as longitude
+                ST_Y(u.location::geometry) as "latitude!",
+                ST_X(u.location::geometry) as "longitude!"
             FROM users u
             WHERE u.status = 'active'
               AND u.location IS NOT NULL
@@ -395,7 +399,7 @@ impl MapRepository {
         start_time: Option<String>,
         end_time: Option<String>,
     ) -> Result<Vec<MapClusterRow>> {
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             MapClusterRow,
             r#"
             WITH env AS (SELECT ST_MakeEnvelope($2, $3, $4, $5, 4326) AS bbox),
@@ -421,14 +425,14 @@ impl MapRepository {
                         AND EXISTS (SELECT 1 FROM follows f2 WHERE f2.follower_id = m.user_id AND f2.following_id = $1)
                     )
                 )
-                AND ($7::timestamptz IS NULL OR m.created_at >= $7::timestamptz)
-                AND ($8::timestamptz IS NULL OR m.created_at <= $8::timestamptz)
+                AND ($7::text IS NULL OR m.created_at >= ($7::text)::timestamptz)
+                AND ($8::text IS NULL OR m.created_at <= ($8::text)::timestamptz)
             )
             SELECT 
-              CONCAT(FLOOR(ST_X(p)/$6), ':', FLOOR(ST_Y(p)/$6)) as key,
-              ST_Y(ST_Transform(p, 4326)) as latitude,
-              ST_X(ST_Transform(p, 4326)) as longitude,
-              COUNT(DISTINCT moment_id) as count,
+              CONCAT(FLOOR(ST_X(p)/$6), ':', FLOOR(ST_Y(p)/$6)) as "key!",
+              ST_Y(ST_Transform(p, 4326)) as "latitude!",
+              ST_X(ST_Transform(p, 4326)) as "longitude!",
+              COUNT(DISTINCT moment_id) as "count!",
               COALESCE(ARRAY_REMOVE(ARRAY_AGG(preview_url), NULL), ARRAY[]::text[]) as "preview_urls!"
             FROM snapped GROUP BY p
             "#,
@@ -458,16 +462,16 @@ impl MapRepository {
         start_time: Option<String>,
         end_time: Option<String>,
     ) -> Result<Vec<MapEntityRow>> {
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             MapEntityRow,
             r#"
             SELECT 
-                m.moment_id::text as id,
-                COALESCE(m.description, '') as title,
+                m.moment_id::text as "id!",
+                COALESCE(m.description, '') as "title!",
                 m.location_name as subtitle,
                 mi.url as cover_url,
-                ST_Y(m.location::geometry) as latitude,
-                ST_X(m.location::geometry) as longitude
+                ST_Y(m.location::geometry) as "latitude!",
+                ST_X(m.location::geometry) as "longitude!"
             FROM moments m
             LEFT JOIN LATERAL (
                 SELECT url
@@ -486,8 +490,8 @@ impl MapRepository {
                       AND EXISTS (SELECT 1 FROM follows f2 WHERE f2.follower_id = m.user_id AND f2.following_id = $1)
                   )
               )
-              AND ($7::timestamptz IS NULL OR m.created_at >= $7::timestamptz)
-              AND ($8::timestamptz IS NULL OR m.created_at <= $8::timestamptz)
+              AND ($7::text IS NULL OR m.created_at >= ($7::text)::timestamptz)
+              AND ($8::text IS NULL OR m.created_at <= ($8::text)::timestamptz)
             LIMIT $6
             "#,
             user_id,

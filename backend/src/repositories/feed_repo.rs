@@ -4,7 +4,6 @@ use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::utils::pagination::{decode_cursor, encode_cursor};
 
 /// Feed反馈Row - 严格按照数据库 schema
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]

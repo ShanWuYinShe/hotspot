@@ -10,13 +10,12 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames } from '../../../constants/AppConstants';
 import {
   MomentItem, UserItem, GroupItem, GeoPoint,
-  GetFeedMomentsRequest, GetFeedUsersRequest, SearchGroupsRequest,
+  SearchMomentsRequest, SearchUsersRequest, SearchGroupsRequest,
   MomentImage, FollowRequest, JoinGroupRequest
 } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
-import { LoginPromptView } from '../../../components/LoginPromptView';
 import { LocationBar } from '../../../components/LocationBar';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
@@ -42,16 +41,25 @@ export struct NearbyPage {
   @State moments: MomentItem[] = [];
   @State momentsLoading: boolean = false;
   @State momentsError: string = '';
+  @State momentsHasMore: boolean = false;
+  @State momentsNextCursor: string = '';
+  @State momentsLoadingMore: boolean = false;
 
   // 用户数据
   @State users: UserItem[] = [];
   @State usersLoading: boolean = false;
   @State usersError: string = '';
+  @State usersHasMore: boolean = false;
+  @State usersNextCursor: string = '';
+  @State usersLoadingMore: boolean = false;
 
   // 群组数据
   @State groups: GroupItem[] = [];
   @State groupsLoading: boolean = false;
   @State groupsError: string = '';
+  @State groupsHasMore: boolean = false;
+  @State groupsNextCursor: string = '';
+  @State groupsLoadingMore: boolean = false;
 
   async aboutToAppear() {
     await this.loadCurrentTabData();
@@ -79,93 +87,146 @@ export struct NearbyPage {
   }
 
   // ==================== 加载附近动态 ====================
-  private async loadNearbyMoments(): Promise<void> {
-    if (!this.isLoggedIn) return;
+  private async loadNearbyMoments(loadMore: boolean = false): Promise<void> {
     const ref = this.getReferencePoint();
     if (!ref) {
       this.momentsError = '请先获取位置信息';
       return;
     }
-    this.momentsLoading = true;
-    this.momentsError = '';
+    if (loadMore) {
+      if (this.momentsLoadingMore || !this.momentsHasMore) return;
+      this.momentsLoadingMore = true;
+    } else {
+      this.momentsLoading = true;
+      this.momentsError = '';
+    }
     try {
-      const request: GetFeedMomentsRequest = {
-        source: 'nearby',
+      const request: SearchMomentsRequest = {
         reference_point: ref,
         radius: 5000,
-        pagination: { limit: 30 }
+        sort_by: 'distance',
+        pagination: { limit: 30, cursor: loadMore ? this.momentsNextCursor : undefined }
       };
-      const response = await ApiClient.getFeedMoments(request);
+      const response = await ApiClient.searchMoments(request);
       if (response.code === 0 && response.data) {
-        this.moments = response.data.items;
-      } else {
+        const validItems = response.data.items.filter((m: MomentItem) => m.moment_id && m.user);
+        if (loadMore) {
+          this.moments = this.moments.concat(validItems);
+        } else {
+          this.moments = validItems;
+        }
+        this.momentsHasMore = response.data.pagination?.has_more ?? false;
+        this.momentsNextCursor = response.data.pagination?.next_cursor ?? '';
+      } else if (!loadMore) {
         this.momentsError = response.message || '加载失败';
       }
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `加载附近动态失败: ${JSON.stringify(error)}`);
-      this.momentsError = '加载附近动态失败';
+      if (!loadMore) {
+        this.momentsError = '加载附近动态失败';
+      }
     } finally {
-      this.momentsLoading = false;
+      if (loadMore) {
+        this.momentsLoadingMore = false;
+      } else {
+        this.momentsLoading = false;
+      }
     }
   }
 
   // ==================== 加载附近用户 ====================
-  private async loadNearbyUsers(): Promise<void> {
-    if (!this.isLoggedIn) return;
+  private async loadNearbyUsers(loadMore: boolean = false): Promise<void> {
     const ref = this.getReferencePoint();
     if (!ref) {
       this.usersError = '请先获取位置信息';
       return;
     }
-    this.usersLoading = true;
-    this.usersError = '';
+    if (loadMore) {
+      if (this.usersLoadingMore || !this.usersHasMore) return;
+      this.usersLoadingMore = true;
+    } else {
+      this.usersLoading = true;
+      this.usersError = '';
+    }
     try {
-      const request: GetFeedUsersRequest = {
+      const request: SearchUsersRequest = {
         reference_point: ref,
         radius: 5000,
-        pagination: { limit: 30 }
+        sort_by: 'distance',
+        pagination: { limit: 30, cursor: loadMore ? this.usersNextCursor : undefined }
       };
-      const response = await ApiClient.getFeedUsers(request);
+      const response = await ApiClient.searchUsers(request);
       if (response.code === 0 && response.data) {
-        this.users = response.data.items;
-      } else {
+        const validItems = response.data.items.filter((u: UserItem) => u.user?.user_id);
+        if (loadMore) {
+          this.users = this.users.concat(validItems);
+        } else {
+          this.users = validItems;
+        }
+        this.usersHasMore = response.data.pagination?.has_more ?? false;
+        this.usersNextCursor = response.data.pagination?.next_cursor ?? '';
+      } else if (!loadMore) {
         this.usersError = response.message || '加载失败';
       }
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `加载附近用户失败: ${JSON.stringify(error)}`);
-      this.usersError = '加载附近用户失败';
+      if (!loadMore) {
+        this.usersError = '加载附近用户失败';
+      }
     } finally {
-      this.usersLoading = false;
+      if (loadMore) {
+        this.usersLoadingMore = false;
+      } else {
+        this.usersLoading = false;
+      }
     }
   }
 
   // ==================== 加载附近群组 ====================
-  private async loadNearbyGroups(): Promise<void> {
+  private async loadNearbyGroups(loadMore: boolean = false): Promise<void> {
     const ref = this.getReferencePoint();
     if (!ref) {
       this.groupsError = '请先获取位置信息';
       return;
     }
-    this.groupsLoading = true;
-    this.groupsError = '';
+    if (loadMore) {
+      if (this.groupsLoadingMore || !this.groupsHasMore) return;
+      this.groupsLoadingMore = true;
+    } else {
+      this.groupsLoading = true;
+      this.groupsError = '';
+    }
     try {
       const request: SearchGroupsRequest = {
         reference_point: ref,
         radius: 5000,
         sort_by: 'distance',
-        pagination: { limit: 30 }
+        pagination: { limit: 30, cursor: loadMore ? this.groupsNextCursor : undefined }
       };
       const response = await ApiClient.searchGroups(request);
       if (response.code === 0 && response.data) {
-        this.groups = response.data.items;
-      } else {
+        const validItems = response.data.items.filter((g: GroupItem) => g.group?.group_id);
+        if (loadMore) {
+          this.groups = this.groups.concat(validItems);
+        } else {
+          this.groups = validItems;
+        }
+        this.groupsHasMore = response.data.pagination?.has_more ?? false;
+        this.groupsNextCursor = response.data.pagination?.next_cursor ?? '';
+      } else if (!loadMore) {
         this.groupsError = response.message || '加载失败';
       }
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `加载附近群组失败: ${JSON.stringify(error)}`);
-      this.groupsError = '加载附近群组失败';
+      if (!loadMore) {
+        this.groupsError = '加载附近群组失败';
+      }
     } finally {
-      this.groupsLoading = false;
+      if (loadMore) {
+        this.groupsLoadingMore = false;
+      } else {
+        this.groupsLoading = false;
+      }
     }
   }
 
@@ -178,31 +239,13 @@ export struct NearbyPage {
       Tabs({ barPosition: BarPosition.Start, controller: this.subTabController }) {
         // 子标签 0: 动态
         TabContent() {
-          if (this.isLoggedIn) {
-            this.buildMomentsContent()
-          } else {
-            LoginPromptView({
-              title: '查看附近动态需要登录',
-              subtitle: '登录后可发现身边有趣的人和事',
-              hint: '附近群组无需登录即可浏览',
-              icon: AppIcon.CAMERA
-            })
-          }
+          this.buildMomentsContent()
         }
         .tabBar(this.SubTabBuilder('动态', 0))
 
         // 子标签 1: 用户
         TabContent() {
-          if (this.isLoggedIn) {
-            this.buildUsersContent()
-          } else {
-            LoginPromptView({
-              title: '查看附近用户需要登录',
-              subtitle: '登录后可发现附近的人并建立联系',
-              hint: '附近群组无需登录即可浏览',
-              icon: AppIcon.PERSON
-            })
-          }
+          this.buildUsersContent()
         }
         .tabBar(this.SubTabBuilder('用户', 1))
 
@@ -214,8 +257,11 @@ export struct NearbyPage {
       }
       .barMode(BarMode.Fixed)
       .barHeight(44)
+      .animationDuration(300)
       .onChange((index: number) => {
-        this.currentSubTab = index;
+        this.getUIContext().animateTo({ duration: 200, curve: Curve.EaseInOut }, () => {
+          this.currentSubTab = index;
+        });
         this.loadCurrentTabData();
       })
       .layoutWeight(1)
@@ -236,15 +282,16 @@ export struct NearbyPage {
           ? $r('sys.color.ohos_id_color_text_primary')
           : $r('sys.color.ohos_id_color_text_secondary'))
 
-      // 下划线指示器
+      // 下划线指示器（带缩放+颜色过渡动画）
       Divider()
-        .width(24)
+        .width(this.currentSubTab === index ? 24 : 0)
         .strokeWidth(3)
         .color(this.currentSubTab === index
           ? $r('sys.color.ohos_id_color_emphasize')
           : Color.Transparent)
         .margin({ top: 6 })
         .lineCap(LineCapStyle.Round)
+        .animation({ duration: 250, curve: Curve.FastOutSlowIn })
     }
     .width('100%')
     .height('100%')
@@ -268,12 +315,19 @@ export struct NearbyPage {
               this.buildMomentCard(moment)
             }
           }, (moment: MomentItem) => moment.moment_id)
+          // 底部加载更多指示器
+          if (this.momentsLoadingMore) {
+            ListItem() {
+              this.buildLoadingMoreIndicator()
+            }
+          }
         }
         .width('100%')
         .layoutWeight(1)
         .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
           top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
         .scrollBar(BarState.Auto)
+        .onReachEnd(() => { this.loadNearbyMoments(true); })
       }
       .onRefreshing(() => { this.loadNearbyMoments(); })
     }
@@ -285,12 +339,12 @@ export struct NearbyPage {
       // 用户信息
       Row({ space: DesignConstants.SPACING.SM }) {
         SystemAvatar({
-          avatarUrl: moment.user.avatar_url,
-          name: moment.user.nickname,
+          avatarUrl: moment.user?.avatar_url ?? '',
+          name: moment.user?.nickname ?? '',
           avatarSize: 40
         })
         Column({ space: 2 }) {
-          Text(moment.user.nickname)
+          Text(moment.user?.nickname ?? '')
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontWeight(FontWeight.Medium)
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
@@ -385,13 +439,19 @@ export struct NearbyPage {
             ListItem() {
               this.buildUserCard(user)
             }
-          }, (user: UserItem) => user.user.user_id)
+          }, (user: UserItem) => user.user?.user_id ?? '')
+          if (this.usersLoadingMore) {
+            ListItem() {
+              this.buildLoadingMoreIndicator()
+            }
+          }
         }
         .width('100%')
         .layoutWeight(1)
         .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
           top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
         .scrollBar(BarState.Auto)
+        .onReachEnd(() => { this.loadNearbyUsers(true); })
       }
       .onRefreshing(() => { this.loadNearbyUsers(); })
     }
@@ -401,13 +461,13 @@ export struct NearbyPage {
   buildUserCard(user: UserItem) {
     Row({ space: DesignConstants.SPACING.MD }) {
       SystemAvatar({
-        avatarUrl: user.user.avatar_url,
-        name: user.user.nickname,
+        avatarUrl: user.user?.avatar_url ?? '',
+        name: user.user?.nickname ?? '',
         avatarSize: 52
       })
 
       Column({ space: 4 }) {
-        Text(user.user.nickname)
+        Text(user.user?.nickname ?? '')
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .fontWeight(FontWeight.Medium)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
@@ -473,13 +533,19 @@ export struct NearbyPage {
             ListItem() {
               this.buildGroupCard(group)
             }
-          }, (group: GroupItem) => group.group.group_id)
+          }, (group: GroupItem) => group.group?.group_id ?? '')
+          if (this.groupsLoadingMore) {
+            ListItem() {
+              this.buildLoadingMoreIndicator()
+            }
+          }
         }
         .width('100%')
         .layoutWeight(1)
         .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
           top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
         .scrollBar(BarState.Auto)
+        .onReachEnd(() => { this.loadNearbyGroups(true); })
       }
       .onRefreshing(() => { this.loadNearbyGroups(); })
     }
@@ -489,14 +555,14 @@ export struct NearbyPage {
   buildGroupCard(group: GroupItem) {
     Row({ space: DesignConstants.SPACING.MD }) {
       SystemAvatar({
-        avatarUrl: group.group.avatar_url || '',
-        name: group.group.name,
+        avatarUrl: group.group?.avatar_url ?? '',
+        name: group.group?.name ?? '',
         avatarSize: 52,
         shape: 'squircle'
       })
 
       Column({ space: 4 }) {
-        Text(group.group.name)
+        Text(group.group?.name ?? '')
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .fontWeight(FontWeight.Medium)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
@@ -504,7 +570,7 @@ export struct NearbyPage {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
         Row({ space: DesignConstants.SPACING.SM }) {
-          Text(`${group.group.members_count}人`)
+          Text(`${group.group?.members_count ?? 0}人`)
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
 
@@ -544,6 +610,20 @@ export struct NearbyPage {
     .onClick(() => { this.openGroupDetail(group); })
   }
 
+  // ==================== 底部加载更多指示器 ====================
+  @Builder
+  buildLoadingMoreIndicator() {
+    Row({ space: DesignConstants.SPACING.SM }) {
+      LoadingProgress().width(20).height(20)
+      Text('加载更多...')
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+    }
+    .width('100%')
+    .justifyContent(FlexAlign.Center)
+    .padding(DesignConstants.SPACING.MD)
+  }
+
   // ==================== 通用空状态 ====================
   @Builder
   buildEmptyState(icon: AppIcon, message: string, actionLabel: string | undefined, action: (() => void) | undefined) {
@@ -575,6 +655,7 @@ export struct NearbyPage {
 
   // ==================== 操作方法 ====================
   private async followUser(user: UserItem): Promise<void> {
+    if (!user.user?.user_id) return;
     try {
       const followReq: FollowRequest = { user_id: user.user.user_id };
       const response = await ApiClient.followUser(followReq);
@@ -595,7 +676,7 @@ export struct NearbyPage {
       return;
     }
     try {
-      const joinReq: JoinGroupRequest = { group_id: group.group.group_id };
+      const joinReq: JoinGroupRequest = { group_id: group.group?.group_id ?? '' };
       const response = await ApiClient.joinGroup(joinReq);
       if (response.code === 0 && response.data) {
         if (response.data.status === 'joined') {
@@ -615,6 +696,7 @@ export struct NearbyPage {
   }
 
   private openGroupDetail(group: GroupItem): void {
+    if (!group.group?.group_id) return;
     const params = new GroupDetailParams();
     params.groupId = group.group.group_id;
     this.navigateTo(`features/group/pages/${PageNames.GROUP_DETAIL}`, params);

@@ -30,12 +30,12 @@ impl FollowRequestRepository {
 
     /// 创建关注请求
     pub async fn create(&self, requester_id: i64, target_id: i64) -> Result<FollowRequestRow> {
-        let row = sqlx::query_as_unchecked!(
+        let row = sqlx::query_as!(
             FollowRequestRow,
             r#"
             INSERT INTO follow_requests (requester_id, target_id)
             VALUES ($1, $2)
-            RETURNING request_id, requester_id, target_id, status as "status: RequestStatus", created_at, updated_at
+            RETURNING request_id, requester_id, target_id, status as "status!: RequestStatus", created_at, updated_at
             "#,
             requester_id,
             target_id
@@ -48,10 +48,10 @@ impl FollowRequestRepository {
 
     /// 按ID查找请求
     pub async fn find_by_id(&self, request_id: Uuid) -> Result<Option<FollowRequestRow>> {
-        let row = sqlx::query_as_unchecked!(
+        let row = sqlx::query_as!(
             FollowRequestRow,
             r#"
-            SELECT request_id, requester_id, target_id, status as "status: RequestStatus", created_at, updated_at
+            SELECT request_id, requester_id, target_id, status as "status!: RequestStatus", created_at, updated_at
             FROM follow_requests
             WHERE request_id = $1
             "#,
@@ -119,10 +119,10 @@ impl FollowRequestRepository {
             (DateTime::<Utc>::MAX_UTC, i64::MAX)
         };
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             FollowRequestRow,
             r#"
-            SELECT request_id, requester_id, target_id, status as "status: RequestStatus", created_at, updated_at
+            SELECT request_id, requester_id, target_id, status as "status!: RequestStatus", created_at, updated_at
             FROM follow_requests
             WHERE target_id = $1 
               AND ($2::text IS NULL OR status = $2::text::request_status)

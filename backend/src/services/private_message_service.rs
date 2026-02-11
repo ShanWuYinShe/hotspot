@@ -33,7 +33,7 @@ use crate::{
         user_repo::UserRepository,
         user_settings_repo::UserSettingsRepository,
     },
-    types::enums::{MessageType, ReactionType, UserType},
+    types::enums::{MessageType, UserType},
     utils::validation::Validator,
     EventBus,
 };

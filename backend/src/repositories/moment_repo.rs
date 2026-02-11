@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::types::enums::UserType;
+use crate::types::enums::{PrivacyLevel, UserType};
 use crate::utils::pagination::{decode_cursor, encode_cursor, TimeIdCursor};
 
 /// 瞬间基础行数据
@@ -20,7 +20,7 @@ pub struct MomentRow {
     pub description: Option<String>,
     pub mentions: Option<Vec<i64>>,
     pub location_name: Option<String>,
-    pub privacy_level: String,
+    pub privacy_level: PrivacyLevel,
     pub view_count: i32,
     pub like_count: i32,
     pub comments_count: i32,
@@ -38,7 +38,7 @@ pub struct MomentDetailRow {
     pub description: Option<String>,
     pub mentions: Option<Vec<i64>>,
     pub location_name: Option<String>,
-    pub privacy_level: String,
+    pub privacy_level: PrivacyLevel,
     pub view_count: i32,
     pub like_count: i32,
     pub comments_count: i32,
@@ -141,8 +141,8 @@ impl MomentRepository {
         location_name: Option<String>,
         privacy_level: String,
     ) -> Result<MomentRow> {
-        // 使用 query_as_unchecked! 绕过编译期 geography 类型检查
-        let row = sqlx::query_as_unchecked!(
+        // 使用 query_as! 进行编译期类型检查
+        let row = sqlx::query_as!(
             MomentRow,
             r#"
             INSERT INTO moments_partitioned (user_id, description, mentions, location, location_name, privacy_level)
@@ -151,9 +151,11 @@ impl MomentRepository {
                          THEN ST_SetSRID(ST_MakePoint($4, $5), 4326)::geography 
                          ELSE NULL END, 
                     $6, $7)
-            RETURNING moment_id, user_id, description, mentions, location_name, privacy_level,
-                      view_count, like_count, comments_count, share_count,
-                      created_at, updated_at, deleted_at
+            RETURNING moment_id as "moment_id!", user_id as "user_id!",
+                      description, mentions, location_name,
+                      privacy_level as "privacy_level!: crate::types::enums::PrivacyLevel",
+                      0::int as "view_count!", 0::int as "like_count!", 0::int as "comments_count!", 0::int as "share_count!",
+                      created_at as "created_at!", updated_at as "updated_at!", deleted_at
             "#,
             user_id,
             description,
@@ -171,12 +173,15 @@ impl MomentRepository {
 
     /// 根据 ID 查找
     pub async fn find_by_id(&self, moment_id: Uuid) -> Result<Option<MomentRow>> {
-        let row = sqlx::query_as_unchecked!(
+        let row = sqlx::query_as!(
             MomentRow,
             r#"
-            SELECT moment_id, user_id, description, mentions, location_name, privacy_level,
-                   view_count, like_count, comments_count, share_count,
-                   created_at, updated_at, deleted_at
+            SELECT moment_id as "moment_id!", user_id as "user_id!",
+                   description, mentions, location_name,
+                   privacy_level as "privacy_level!: crate::types::enums::PrivacyLevel",
+                   view_count::int as "view_count!", like_count::int as "like_count!",
+                   comments_count::int as "comments_count!", share_count::int as "share_count!",
+                   created_at as "created_at!", updated_at as "updated_at!", deleted_at
             FROM moments
             WHERE moment_id = $1 AND deleted_at IS NULL
             "#,
@@ -190,12 +195,15 @@ impl MomentRepository {
 
     /// 获取动态详情（带用户信息和坐标）
     pub async fn get_detail(&self, moment_id: Uuid, viewer_lon: Option<f64>, viewer_lat: Option<f64>) -> Result<Option<MomentDetailRow>> {
-        let row = sqlx::query_as_unchecked!(
+        let row = sqlx::query_as!(
             MomentDetailRow,
             r#"
-            SELECT m.moment_id, m.user_id, m.description, m.mentions, m.location_name, m.privacy_level,
-                   m.view_count, m.like_count, m.comments_count, m.share_count,
-                   m.created_at, m.updated_at,
+            SELECT m.moment_id as "moment_id!", m.user_id as "user_id!",
+                   m.description, m.mentions, m.location_name,
+                   m.privacy_level as "privacy_level!: crate::types::enums::PrivacyLevel",
+                   m.view_count::int as "view_count!", m.like_count::int as "like_count!",
+                   m.comments_count::int as "comments_count!", m.share_count::int as "share_count!",
+                   m.created_at as "created_at!", m.updated_at as "updated_at!",
                    u.nickname as user_nickname, u.avatar_url as user_avatar_url,
                    ST_X(m.location::geometry) as longitude,
                    ST_Y(m.location::geometry) as latitude,
@@ -229,12 +237,14 @@ impl MomentRepository {
             (DateTime::<Utc>::MAX_UTC, Uuid::max())
         };
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             MomentDetailRow,
             r#"
-            SELECT m.moment_id, m.user_id, m.description, m.mentions, m.location_name, m.privacy_level,
-                   m.view_count, m.like_count, m.comments_count, m.share_count,
-                   m.created_at, m.updated_at,
+            SELECT m.moment_id as "moment_id!", m.user_id as "user_id!", m.description, m.mentions, m.location_name,
+                   m.privacy_level as "privacy_level!: crate::types::enums::PrivacyLevel",
+                   m.view_count::int as "view_count!", m.like_count::int as "like_count!",
+                   m.comments_count::int as "comments_count!", m.share_count::int as "share_count!",
+                   m.created_at as "created_at!", m.updated_at as "updated_at!",
                    u.nickname as user_nickname, u.avatar_url as user_avatar_url,
                    ST_X(m.location::geometry) as longitude,
                    ST_Y(m.location::geometry) as latitude,
@@ -283,14 +293,14 @@ impl MomentRepository {
             (DateTime::<Utc>::MAX_UTC, Uuid::max())
         };
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             FeedMomentRow,
             r#"
-            SELECT m.moment_id,
-                   m.user_id,
+            SELECT m.moment_id as "moment_id!",
+                   m.user_id as "user_id!",
                    COALESCE(u.nickname, '') as "nickname!",
                    u.avatar_url as "avatar_url?",
-                   u.user_type as "user_type: UserType",
+                   u.user_type as "user_type!: UserType",
                    COALESCE(m.description, '') as "description!",
                    COALESCE(
                        ARRAY_REMOVE(ARRAY_AGG(mi.url ORDER BY mi.sort_order ASC, mi.created_at ASC), NULL),
@@ -298,8 +308,8 @@ impl MomentRepository {
                    ) as "images!",
                    m.mentions,
                    m.created_at as "created_at!",
-                   m.like_count as "likes_count!",
-                   m.comments_count as "comments_count!",
+                   m.like_count::int as "likes_count!",
+                   m.comments_count::int as "comments_count!",
                    m.location_name,
                    ST_X(m.location::geometry) as longitude,
                    ST_Y(m.location::geometry) as latitude,
@@ -376,14 +386,14 @@ impl MomentRepository {
             (0.0, Uuid::nil())
         };
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             FeedMomentRow,
             r#"
-            SELECT m.moment_id,
-                   m.user_id,
+            SELECT m.moment_id as "moment_id!",
+                   m.user_id as "user_id!",
                    COALESCE(u.nickname, '') as "nickname!",
                    u.avatar_url as "avatar_url?",
-                   u.user_type as "user_type: UserType",
+                   u.user_type as "user_type!: UserType",
                    COALESCE(m.description, '') as "description!",
                    COALESCE(
                        ARRAY_REMOVE(ARRAY_AGG(mi.url ORDER BY mi.sort_order ASC, mi.created_at ASC), NULL),
@@ -391,8 +401,8 @@ impl MomentRepository {
                    ) as "images!",
                    m.mentions,
                    m.created_at as "created_at!",
-                   m.like_count as "likes_count!",
-                   m.comments_count as "comments_count!",
+                   m.like_count::int as "likes_count!",
+                   m.comments_count::int as "comments_count!",
                    m.location_name,
                    ST_X(m.location::geometry) as longitude,
                    ST_Y(m.location::geometry) as latitude,
@@ -454,14 +464,14 @@ impl MomentRepository {
             (DateTime::<Utc>::MAX_UTC, Uuid::max())
         };
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             FeedMomentRow,
             r#"
-            SELECT m.moment_id,
-                   m.user_id,
+            SELECT m.moment_id as "moment_id!",
+                   m.user_id as "user_id!",
                    COALESCE(u.nickname, '') as "nickname!",
                    u.avatar_url as "avatar_url?",
-                   u.user_type as "user_type: UserType",
+                   u.user_type as "user_type!: UserType",
                    COALESCE(m.description, '') as "description!",
                    COALESCE(
                        ARRAY_REMOVE(ARRAY_AGG(mi.url ORDER BY mi.sort_order ASC, mi.created_at ASC), NULL),
@@ -469,8 +479,8 @@ impl MomentRepository {
                    ) as "images!",
                    m.mentions,
                    m.created_at as "created_at!",
-                   m.like_count as "likes_count!",
-                   m.comments_count as "comments_count!",
+                   m.like_count::int as "likes_count!",
+                   m.comments_count::int as "comments_count!",
                    m.location_name,
                    ST_X(m.location::geometry) as longitude,
                    ST_Y(m.location::geometry) as latitude,
@@ -533,14 +543,14 @@ impl MomentRepository {
             (i32::MAX, DateTime::<Utc>::MAX_UTC, Uuid::max())
         };
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             FeedMomentRow,
             r#"
-            SELECT m.moment_id,
-                   m.user_id,
+            SELECT m.moment_id as "moment_id!",
+                   m.user_id as "user_id!",
                    COALESCE(u.nickname, '') as "nickname!",
                    u.avatar_url as "avatar_url?",
-                   u.user_type as "user_type: UserType",
+                   u.user_type as "user_type!: UserType",
                    COALESCE(m.description, '') as "description!",
                    COALESCE(
                        ARRAY_REMOVE(ARRAY_AGG(mi.url ORDER BY mi.sort_order ASC, mi.created_at ASC), NULL),
@@ -548,8 +558,8 @@ impl MomentRepository {
                    ) as "images!",
                    m.mentions,
                    m.created_at as "created_at!",
-                   m.like_count as "likes_count!",
-                   m.comments_count as "comments_count!",
+                   m.like_count::int as "likes_count!",
+                   m.comments_count::int as "comments_count!",
                    m.location_name,
                    ST_X(m.location::geometry) as longitude,
                    ST_Y(m.location::geometry) as latitude,
@@ -573,7 +583,7 @@ impl MomentRepository {
             LIMIT $5
             "#,
             since,
-            last_like,
+            last_like as i64,
             last_ts,
             last_id,
             limit + 1
@@ -609,11 +619,11 @@ impl MomentRepository {
             .map(|(lat, lon)| (Some(lat), Some(lon)))
             .unwrap_or((None, None));
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             MomentSuggestRow,
             r#"
             SELECT
-                m.moment_id,
+                m.moment_id as "moment_id!",
                 COALESCE(m.description, '') as "description!",
                 COALESCE(u.nickname, '') as "nickname!",
                 u.avatar_url as "avatar_url?",
@@ -668,13 +678,14 @@ impl MomentRepository {
             (DateTime::<Utc>::MAX_UTC, Uuid::max())
         };
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             MomentListRow,
             r#"
-            SELECT m.moment_id, m.description, m.mentions, m.location_name,
+            SELECT m.moment_id as "moment_id!", m.description, m.mentions, m.location_name,
                    ST_X(m.location::geometry) as longitude,
                    ST_Y(m.location::geometry) as latitude,
-                   m.like_count, m.comments_count, m.created_at
+                   m.like_count::int as "like_count!", m.comments_count::int as "comments_count!",
+                   m.created_at as "created_at!"
             FROM moments m
             WHERE m.user_id = $1 AND m.deleted_at IS NULL
               AND (m.created_at, m.moment_id) < ($2, $3)
@@ -721,12 +732,15 @@ impl MomentRepository {
         };
 
         let pattern = format!("%{}%", kw);
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             MomentDetailRow,
             r#"
-            SELECT m.moment_id, m.user_id, m.description, m.mentions, m.location_name, m.privacy_level,
-                   m.view_count, m.like_count, m.comments_count, m.share_count,
-                   m.created_at, m.updated_at,
+            SELECT m.moment_id as "moment_id!", m.user_id as "user_id!",
+                   m.description, m.mentions, m.location_name,
+                   m.privacy_level as "privacy_level!: crate::types::enums::PrivacyLevel",
+                   m.view_count::int as "view_count!", m.like_count::int as "like_count!",
+                   m.comments_count::int as "comments_count!", m.share_count::int as "share_count!",
+                   m.created_at as "created_at!", m.updated_at as "updated_at!",
                    u.nickname as user_nickname, u.avatar_url as user_avatar_url,
                    ST_X(m.location::geometry) as longitude,
                    ST_Y(m.location::geometry) as latitude,
@@ -781,12 +795,15 @@ impl MomentRepository {
             (DateTime::<Utc>::MAX_UTC, Uuid::max())
         };
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             MomentDetailRow,
             r#"
-            SELECT m.moment_id, m.user_id, m.description, m.mentions, m.location_name, m.privacy_level,
-                   m.view_count, m.like_count, m.comments_count, m.share_count,
-                   m.created_at, m.updated_at,
+            SELECT m.moment_id as "moment_id!", m.user_id as "user_id!",
+                   m.description, m.mentions, m.location_name,
+                   m.privacy_level as "privacy_level!: crate::types::enums::PrivacyLevel",
+                   m.view_count::int as "view_count!", m.like_count::int as "like_count!",
+                   m.comments_count::int as "comments_count!", m.share_count::int as "share_count!",
+                   m.created_at as "created_at!", m.updated_at as "updated_at!",
                    u.nickname as user_nickname, u.avatar_url as user_avatar_url,
                    ST_X(m.location::geometry) as longitude,
                    ST_Y(m.location::geometry) as latitude,
@@ -850,12 +867,15 @@ impl MomentRepository {
 
         let pattern = kw.map(|v| format!("%{}%", v));
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             MomentDetailRow,
             r#"
-            SELECT m.moment_id, m.user_id, m.description, m.mentions, m.location_name, m.privacy_level,
-                   m.view_count, m.like_count, m.comments_count, m.share_count,
-                   m.created_at, m.updated_at,
+            SELECT m.moment_id as "moment_id!", m.user_id as "user_id!",
+                   m.description, m.mentions, m.location_name,
+                   m.privacy_level as "privacy_level!: crate::types::enums::PrivacyLevel",
+                   m.view_count::int as "view_count!", m.like_count::int as "like_count!",
+                   m.comments_count::int as "comments_count!", m.share_count::int as "share_count!",
+                   m.created_at as "created_at!", m.updated_at as "updated_at!",
                    u.nickname as user_nickname, u.avatar_url as user_avatar_url,
                    ST_X(m.location::geometry) as longitude,
                    ST_Y(m.location::geometry) as latitude,
@@ -1206,12 +1226,15 @@ impl MomentRepository {
             (DateTime::<Utc>::MAX_UTC, Uuid::max())
         };
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             MomentDetailRow,
             r#"
-            SELECT m.moment_id, m.user_id, m.description, m.mentions, m.location_name, m.privacy_level,
-                   m.view_count, m.like_count, m.comments_count, m.share_count,
-                   m.created_at, m.updated_at,
+            SELECT m.moment_id as "moment_id!", m.user_id as "user_id!",
+                   m.description, m.mentions, m.location_name,
+                   m.privacy_level as "privacy_level!: crate::types::enums::PrivacyLevel",
+                   m.view_count::int as "view_count!", m.like_count::int as "like_count!",
+                   m.comments_count::int as "comments_count!", m.share_count::int as "share_count!",
+                   m.created_at as "created_at!", m.updated_at as "updated_at!",
                    u.nickname as user_nickname, u.avatar_url as user_avatar_url,
                    ST_X(m.location::geometry) as longitude,
                    ST_Y(m.location::geometry) as latitude,
@@ -1260,12 +1283,15 @@ impl MomentRepository {
             (DateTime::<Utc>::MAX_UTC, Uuid::max())
         };
 
-        let rows = sqlx::query_as_unchecked!(
+        let rows = sqlx::query_as!(
             MomentDetailRow,
             r#"
-            SELECT m.moment_id, m.user_id, m.description, m.mentions, m.location_name, m.privacy_level,
-                   m.view_count, m.like_count, m.comments_count, m.share_count,
-                   m.created_at, m.updated_at,
+            SELECT m.moment_id as "moment_id!", m.user_id as "user_id!",
+                   m.description, m.mentions, m.location_name,
+                   m.privacy_level as "privacy_level!: crate::types::enums::PrivacyLevel",
+                   m.view_count::int as "view_count!", m.like_count::int as "like_count!",
+                   m.comments_count::int as "comments_count!", m.share_count::int as "share_count!",
+                   m.created_at as "created_at!", m.updated_at as "updated_at!",
                    u.nickname as user_nickname, u.avatar_url as user_avatar_url,
                    ST_X(m.location::geometry) as longitude,
                    ST_Y(m.location::geometry) as latitude,

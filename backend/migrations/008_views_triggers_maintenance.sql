@@ -69,6 +69,18 @@ SELECT
 FROM moment_stats_buckets
 GROUP BY moment_id;
 
+-- 瞬间视图（分区表 + 统计，供 FROM moments 查询）
+CREATE OR REPLACE VIEW moments AS
+SELECT
+    m.moment_id, m.user_id, m.description, m.mentions, m.location, m.location_name,
+    m.privacy_level, m.created_at, m.updated_at, m.deleted_at,
+    0::INTEGER AS view_count,
+    COALESCE(ms.likes_count, 0)::INTEGER AS like_count,
+    COALESCE(ms.comments_count, 0)::INTEGER AS comments_count,
+    COALESCE(ms.shares_count, 0)::INTEGER AS share_count
+FROM moments_partitioned m
+LEFT JOIN moment_stats ms ON ms.moment_id = m.moment_id;
+
 -- 评论统计（从 bucket 聚合）
 CREATE OR REPLACE VIEW comment_stats AS
 SELECT

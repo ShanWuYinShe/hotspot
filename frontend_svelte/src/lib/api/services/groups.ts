@@ -67,7 +67,7 @@ export const groupsService = {
 		is_searchable?: boolean;
 		max_members?: number;
 	}) {
-		return post<GroupItem>(GROUPS.CREATE, data);
+		return post<GroupItem>(GROUPS.CREATE, data, { idempotencyKey: crypto.randomUUID() });
 	},
 
 	/**
@@ -136,7 +136,7 @@ export const groupsService = {
 	 * 加入群组（自动根据 join_method 处理：open 直接加入，approval 发起申请）
 	 */
 	join(data: { group_id: string; password?: string; message?: string }) {
-		return post<JoinGroupResult>(GROUPS.ME.JOIN, data);
+		return post<JoinGroupResult>(GROUPS.ME.JOIN, data, { idempotencyKey: crypto.randomUUID() });
 	},
 
 	/**
@@ -164,7 +164,7 @@ export const groupsService = {
 	 * 封禁成员
 	 */
 	ban(data: { group_id: string; user_id: string; reason?: string }) {
-		return post<void>(GROUPS.MEMBERS.BAN, data);
+		return post<void>(GROUPS.MEMBERS.BAN, data, { idempotencyKey: crypto.randomUUID() });
 	},
 
 	/**
@@ -201,14 +201,14 @@ export const groupsService = {
 	 * 批准入群申请
 	 */
 	approveApplication(data: { application_id: string }) {
-		return post<void>(GROUPS.APPLICATIONS.APPROVE, data);
+		return post<void>(GROUPS.APPLICATIONS.APPROVE, data, { idempotencyKey: crypto.randomUUID() });
 	},
 
 	/**
 	 * 拒绝入群申请
 	 */
 	rejectApplication(data: { application_id: string; reason?: string }) {
-		return post<void>(GROUPS.APPLICATIONS.REJECT, data);
+		return post<void>(GROUPS.APPLICATIONS.REJECT, data, { idempotencyKey: crypto.randomUUID() });
 	},
 
 	// ==================== 群公告 ====================
@@ -224,7 +224,7 @@ export const groupsService = {
 	 * 发布群公告
 	 */
 	createAnnouncement(data: { group_id: string; title: string; content: string; is_pinned?: boolean }) {
-		return post<GroupAnnouncementItem>(GROUPS.ANNOUNCEMENTS.CREATE, data);
+		return post<GroupAnnouncementItem>(GROUPS.ANNOUNCEMENTS.CREATE, data, { idempotencyKey: crypto.randomUUID() });
 	},
 
 	/**
@@ -275,14 +275,14 @@ export const groupsService = {
 	 * 接受群组邀请
 	 */
 	acceptInvite(data: { invite_id: string }) {
-		return post<void>(GROUPS.ME.ACCEPT_INVITE, data);
+		return post<void>(GROUPS.ME.ACCEPT_INVITE, data, { idempotencyKey: crypto.randomUUID() });
 	},
 
 	/**
 	 * 拒绝群组邀请
 	 */
 	rejectInvite(data: { invite_id: string }) {
-		return post<void>(GROUPS.ME.REJECT_INVITE, data);
+		return post<void>(GROUPS.ME.REJECT_INVITE, data, { idempotencyKey: crypto.randomUUID() });
 	},
 
 	/**

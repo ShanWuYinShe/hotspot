@@ -59,6 +59,21 @@ pub struct ChangePasswordRequest {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct RequestPasswordResetRequest {
+    /// 注册时使用的邮箱或手机号
+    pub login_id: String,
+    pub client_type: ClientType,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResetPasswordRequest {
+    pub login_id: String,
+    pub verification_code: String,
+    pub new_password: String,
+    pub client_type: ClientType,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct SessionsRequest {
     pub limit: Option<i32>,
     pub cursor: Option<String>,

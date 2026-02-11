@@ -7,7 +7,7 @@
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { WebSocketService } from '../../../core/network/WebSocketService';
-import { MyProfile, MessageType, PrivateMessageItem, GroupMessageItem, SendMessageType, UserInfo, SendPrivateMessageRequest, SendGroupMessageRequest, GetPrivateMessagesHistoryRequest, GetGroupMessagesHistoryRequest, MarkPrivateMessagesReadRequest, MarkGroupMessagesReadRequest } from '../../../core/types/api';
+import { MyProfile, MessageType, PrivateMessageItem, GroupMessageItem, SendMessageType, UserInfo, SendPrivateMessageRequest, SendGroupMessageRequest, GetPrivateMessagesHistoryRequest, GetGroupMessagesHistoryRequest, MarkPrivateMessagesReadRequest, MarkGroupMessagesReadRequest, PaginationMeta } from '../../../core/types/api';
 import type { ServerEvent, PrivateMessageNewEvent, GroupMessageNewEvent } from '../../../core/types/WebSocketTypes';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -53,6 +53,9 @@ struct ChatPage {
   @State isLoading: boolean = true;
   @State isSending: boolean = false;
   @State title: string = '聊天';
+  @State hasMoreHistory: boolean = false;
+  @State historyNextCursor: string = '';
+  @State isLoadingMoreHistory: boolean = false;
   
   private chatId: string = '';
   private chatType: 'private_chat' | 'group_chat' = 'private_chat';
@@ -99,13 +102,14 @@ struct ChatPage {
 
     const payload = (event as GroupMessageNewEvent).payload;
     if (payload.group_id !== this.chatId) return;
+    if (!payload.sender) return;
 
     const currentUserId = await AuthAccountManager.getCurrentUserId();
     const newMessage: ChatMessage = {
       id: payload.message_id,
       content: payload.media?.url || payload.content || (payload.type === 'image' ? '[图片]' : '[非文本消息]'),
-      senderId: payload.sender.user_id,
-      senderName: payload.sender.nickname,
+      senderId: payload.sender.user_id ?? '',
+      senderName: payload.sender.nickname ?? '',
       senderAvatar: payload.sender.avatar_url,
       type: payload.type as MessageType,
       sentAt: payload.sent_at,
@@ -169,6 +173,7 @@ struct ChatPage {
 
     try {
       let items: (PrivateMessageItem | GroupMessageItem)[] = [];
+      let paginationMeta: PaginationMeta | undefined;
       
       if (this.chatType === 'private_chat') {
         const targetUserId = this.targetId;
@@ -179,17 +184,21 @@ struct ChatPage {
         const response = await ApiClient.getPrivateMessages(request);
         if (response.code === 0 && response.data) {
           items = response.data.items;
+          paginationMeta = response.data.pagination;
         }
       } else {
         const request: GetGroupMessagesHistoryRequest = { group_id: this.chatId, pagination: { limit: 20 } };
         const response = await ApiClient.getGroupMessages(request);
         if (response.code === 0 && response.data) {
           items = response.data.items;
+          paginationMeta = response.data.pagination;
         }
       }
 
       const newMessages = await Promise.all(items.reverse().map(item => this.convertMessage(item)));
       this.messages = newMessages;
+      this.hasMoreHistory = paginationMeta?.has_more ?? false;
+      this.historyNextCursor = paginationMeta?.next_cursor ?? '';
       
       this.updateCache(newMessages);
       this.scrollToBottom();
@@ -201,6 +210,49 @@ struct ChatPage {
       }
     } finally {
       this.isLoading = false;
+    }
+  }
+
+  private async loadMoreHistory(): Promise<void> {
+    if (this.isLoadingMoreHistory || !this.hasMoreHistory) return;
+    this.isLoadingMoreHistory = true;
+    try {
+      let items: (PrivateMessageItem | GroupMessageItem)[] = [];
+      let paginationMeta: PaginationMeta | undefined;
+
+      if (this.chatType === 'private_chat') {
+        const targetUserId = this.targetId;
+        if (!targetUserId) return;
+        const request: GetPrivateMessagesHistoryRequest = {
+          target_user_id: targetUserId,
+          pagination: { limit: 20, cursor: this.historyNextCursor }
+        };
+        const response = await ApiClient.getPrivateMessages(request);
+        if (response.code === 0 && response.data) {
+          items = response.data.items;
+          paginationMeta = response.data.pagination;
+        }
+      } else {
+        const request: GetGroupMessagesHistoryRequest = {
+          group_id: this.chatId,
+          pagination: { limit: 20, cursor: this.historyNextCursor }
+        };
+        const response = await ApiClient.getGroupMessages(request);
+        if (response.code === 0 && response.data) {
+          items = response.data.items;
+          paginationMeta = response.data.pagination;
+        }
+      }
+
+      const olderMessages = await Promise.all(items.reverse().map(item => this.convertMessage(item)));
+      // 将更早的消息插入到列表开头
+      this.messages = olderMessages.concat(this.messages);
+      this.hasMoreHistory = paginationMeta?.has_more ?? false;
+      this.historyNextCursor = paginationMeta?.next_cursor ?? '';
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `加载更早消息失败: ${error}`);
+    } finally {
+      this.isLoadingMoreHistory = false;
     }
   }
 
@@ -246,16 +298,16 @@ struct ChatPage {
     if (itemRecord.sender_id !== undefined) {
       // PrivateMessageItem: has sender_id (string)
       const privateItem = item as PrivateMessageItem;
-      senderId = privateItem.sender_id;
+      senderId = privateItem.sender_id ?? '';
       isSelf = senderId === currentUserId;
       senderName = `User ${senderId}`;
       senderAvatar = undefined;
     } else {
       // GroupMessageItem: has sender (UserInfo)
       const groupItem = item as GroupMessageItem;
-      senderId = groupItem.sender.user_id;
-      senderName = groupItem.sender.nickname;
-      senderAvatar = groupItem.sender.avatar_url;
+      senderId = groupItem.sender?.user_id ?? '';
+      senderName = groupItem.sender?.nickname ?? '';
+      senderAvatar = groupItem.sender?.avatar_url;
       isSelf = senderId === currentUserId;
     }
     
@@ -410,6 +462,20 @@ struct ChatPage {
       .zIndex(1)
 
       List({ scroller: this.scroller, initialIndex: this.messages.length - 1 }) {
+        // 顶部加载更多历史指示器
+        if (this.isLoadingMoreHistory) {
+          ListItem() {
+            Row({ space: DesignConstants.SPACING.SM }) {
+              LoadingProgress().width(20).height(20)
+              Text('加载更早消息...')
+                .fontSize(DesignConstants.FONT.SIZE.SM)
+                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            }
+            .width('100%')
+            .justifyContent(FlexAlign.Center)
+            .padding(DesignConstants.SPACING.MD)
+          }
+        }
         ForEach(this.messages, (msg: ChatMessage) => {
           ListItem() {
             this.buildMessageItem(msg)
@@ -420,6 +486,12 @@ struct ChatPage {
       .layoutWeight(1)
       .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
       .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+      .onScrollIndex((start: number) => {
+        // 当滚动到列表顶部附近时加载更早的消息
+        if (start <= 1 && this.hasMoreHistory && !this.isLoadingMoreHistory) {
+          this.loadMoreHistory();
+        }
+      })
 
       Row() {
         TextInput({ text: this.inputText, placeholder: '发送消息...' })

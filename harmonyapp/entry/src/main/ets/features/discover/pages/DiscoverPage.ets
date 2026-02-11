@@ -3,17 +3,16 @@
  * 展示热门话题、推荐用户、热门瞬间
  */
 
-import { KEY_IS_LOGGED_IN, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
+import { KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames } from '../../../constants/AppConstants';
 import {
-  UserItem, TagItem, MomentItem, TrendingBundle, MomentImage, FollowRequest
+  UserItem, TagItem, MomentItem, TrendingBundle, MomentImage, FollowRequest, SearchUsersRequest
 } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
-import { LoginPromptView } from '../../../components/LoginPromptView';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -27,7 +26,6 @@ class SearchParams {
 
 @Component
 export struct DiscoverPage {
-  @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
 
   @State isLoading: boolean = false;
@@ -37,9 +35,7 @@ export struct DiscoverPage {
   @State isRefreshing: boolean = false;
 
   async aboutToAppear() {
-    if (this.isLoggedIn) {
-      await this.loadData();
-    }
+    await this.loadData();
   }
 
   private async loadData(): Promise<void> {
@@ -47,12 +43,13 @@ export struct DiscoverPage {
     try {
       // 并行加载：热门内容 + 推荐用户
       const trendingPromise = ApiClient.getFeedTrending({});
-      const usersPromise = ApiClient.getFeedUsers({
+      const usersRequest: SearchUsersRequest = {
         reference_point: this.currentLocation
           ? { latitude: this.currentLocation.latitude, longitude: this.currentLocation.longitude }
           : { latitude: 0, longitude: 0 },
         pagination: { limit: 10 }
-      });
+      };
+      const usersPromise = ApiClient.searchUsers(usersRequest);
 
       const results = await Promise.all([trendingPromise, usersPromise]);
       const trendingResponse = results[0];
@@ -65,7 +62,7 @@ export struct DiscoverPage {
       }
 
       if (usersResponse.code === 0 && usersResponse.data) {
-        this.recommendedUsers = usersResponse.data.items;
+        this.recommendedUsers = usersResponse.data.items.filter((u: UserItem) => u.user?.user_id);
       }
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `加载发现数据失败: ${JSON.stringify(error)}`);
@@ -107,13 +104,7 @@ export struct DiscoverPage {
       .backgroundColor($r('sys.color.ohos_id_color_background'))
 
       // 内容区
-      if (!this.isLoggedIn) {
-        LoginPromptView({
-          title: '发现更多精彩内容',
-          subtitle: '登录后查看热门话题、推荐用户和热门动态',
-          icon: AppIcon.RECOMMEND
-        })
-      } else if (this.isLoading && this.trendingTags.length === 0) {
+      if (this.isLoading && this.trendingTags.length === 0) {
         SystemLoadingView({ message: '正在加载发现内容...' })
       } else {
         Refresh({ refreshing: $$this.isRefreshing }) {
@@ -220,13 +211,13 @@ export struct DiscoverPage {
       ForEach(this.recommendedUsers, (user: UserItem) => {
         Row({ space: DesignConstants.SPACING.MD }) {
           SystemAvatar({
-            avatarUrl: user.user.avatar_url,
-            name: user.user.nickname,
+            avatarUrl: user.user?.avatar_url ?? '',
+            name: user.user?.nickname ?? '',
             avatarSize: 44
           })
 
           Column({ space: 2 }) {
-            Text(user.user.nickname)
+            Text(user.user?.nickname ?? '')
               .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('sys.color.ohos_id_color_text_primary'))
@@ -250,7 +241,7 @@ export struct DiscoverPage {
         }
         .width('100%')
         .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-      }, (user: UserItem) => user.user.user_id)
+      }, (user: UserItem) => user.user?.user_id ?? '')
     }
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
@@ -269,11 +260,11 @@ export struct DiscoverPage {
           // 用户行
           Row({ space: DesignConstants.SPACING.SM }) {
             SystemAvatar({
-              avatarUrl: moment.user.avatar_url,
-              name: moment.user.nickname,
+              avatarUrl: moment.user?.avatar_url ?? '',
+              name: moment.user?.nickname ?? '',
               avatarSize: 32
             })
-            Text(moment.user.nickname)
+            Text(moment.user?.nickname ?? '')
               .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('sys.color.ohos_id_color_text_primary'))
@@ -354,6 +345,7 @@ export struct DiscoverPage {
 
   // ==================== 操作 ====================
   private async followUser(user: UserItem): Promise<void> {
+    if (!user.user?.user_id) return;
     try {
       const followReq: FollowRequest = { user_id: user.user.user_id };
       const response = await ApiClient.followUser(followReq);

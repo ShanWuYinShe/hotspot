@@ -10,8 +10,8 @@ use crate::{
     dto::{
         request::{
             ChangePasswordRequest, CheckStatusRequest, GuestRequest, LoginRequest, LogoutRequest,
-            RefreshTokenRequest, RegisterRequest, RevokeAllSessionsRequest, RevokeSessionRequest,
-            SessionsRequest,
+            RefreshTokenRequest, RegisterRequest, RequestPasswordResetRequest,
+            ResetPasswordRequest, RevokeAllSessionsRequest, RevokeSessionRequest, SessionsRequest,
         },
         response::{
             ApiResponse, CheckStatusData, PaginatedData, SessionItem,
@@ -324,6 +324,58 @@ pub async fn logout(
     append_set_cookie(&mut resp_headers, clear_csrf_cookie)?;
 
     Ok((resp_headers, Json(ApiResponse::success_empty())))
+}
+
+pub async fn request_password_reset(
+    State(state): State<AppState>,
+    Json(req): Json<RequestPasswordResetRequest>,
+) -> Result<Json<ApiResponse<()>>> {
+    // 参数验证
+    Validator::validate_not_empty(&req.login_id, "登录ID")?;
+
+    state.auth_service.request_password_reset(&req).await?;
+    Ok(Json(ApiResponse::success_empty()))
+}
+
+pub async fn reset_password(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Json(req): Json<ResetPasswordRequest>,
+) -> Result<impl IntoResponse> {
+    // 参数验证
+    Validator::validate_not_empty(&req.login_id, "登录ID")?;
+    Validator::validate_not_empty(&req.verification_code, "验证码")?;
+    Validator::validate_not_empty(&req.new_password, "新密码")?;
+    Validator::validate_length(&req.new_password, "新密码", 8, 128)?;
+
+    let user_agent = headers
+        .get(axum::http::header::USER_AGENT)
+        .and_then(|v| v.to_str().ok());
+    let device_fingerprint = headers
+        .get("X-Device-Fingerprint")
+        .and_then(|v| v.to_str().ok());
+    let ip_address = None;
+    let client_type = req.client_type;
+
+    let auth_issue = state
+        .auth_service
+        .reset_password(&req, client_type, ip_address, user_agent, device_fingerprint)
+        .await?;
+
+    let mut resp_headers = HeaderMap::new();
+    if client_type == ClientType::Web {
+        let secure = false;
+        append_auth_cookies(
+            &mut resp_headers,
+            &auth_issue.data.access_token,
+            state.config.jwt_access_token_expiration,
+            &auth_issue.refresh_token_raw,
+            state.config.jwt_refresh_token_expiration,
+            secure,
+        )?;
+    }
+
+    Ok((resp_headers, Json(ApiResponse::success(auth_issue.data))))
 }
 
 pub async fn check_status(

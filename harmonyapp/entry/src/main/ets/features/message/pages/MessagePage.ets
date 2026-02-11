@@ -47,6 +47,13 @@ export struct MessagePage {
   @State isRefreshing: boolean = false;
   @State errorMessage: string = '';
   @State hasData: boolean = false;
+  // 分页状态：私聊
+  private privateHasMore: boolean = false;
+  private privateNextCursor: string = '';
+  // 分页状态：群聊
+  private groupHasMore: boolean = false;
+  private groupNextCursor: string = '';
+  @State isLoadingMore: boolean = false;
 
   async aboutToAppear() {
     await this.loadData();
@@ -153,23 +160,27 @@ export struct MessagePage {
     await this.messageCacheService.cacheChatList(cacheItems);
   }
 
-  private async loadPrivateChats(): Promise<ChatItem[]> {
+  private async loadPrivateChats(cursor?: string): Promise<ChatItem[]> {
     try {
-      const response = await ApiClient.getPrivateChats({ pagination: { limit: 50 } });
+      const response = await ApiClient.getPrivateChats({ pagination: { limit: 50, cursor: cursor } });
       if (response.code === 0 && response.data) {
-        return response.data.items.map((item: PrivateChatItem): ChatItem => {
-          const chatItem: ChatItem = {
-            id: item.other_user.user_id,
-            type: 'private',
-            name: item.other_user.nickname,
-            avatarUrl: item.other_user.avatar_url,
-            lastMessage: this.formatLastMessage(item.last_message),
-            lastTime: item.last_activity_at,
-            unreadCount: item.unread_count,
-            data: item
-          };
-          return chatItem;
-        });
+        this.privateHasMore = response.data.pagination?.has_more ?? false;
+        this.privateNextCursor = response.data.pagination?.next_cursor ?? '';
+        return response.data.items
+          .filter((item: PrivateChatItem) => item.other_user?.user_id)
+          .map((item: PrivateChatItem): ChatItem => {
+            const chatItem: ChatItem = {
+              id: item.other_user.user_id,
+              type: 'private',
+              name: item.other_user.nickname ?? '',
+              avatarUrl: item.other_user.avatar_url,
+              lastMessage: this.formatLastMessage(item.last_message),
+              lastTime: item.last_activity_at,
+              unreadCount: item.unread_count,
+              data: item
+            };
+            return chatItem;
+          });
       }
       return [];
     } catch (error) {
@@ -178,29 +189,66 @@ export struct MessagePage {
     }
   }
 
-  private async loadGroupChats(): Promise<ChatItem[]> {
+  private async loadGroupChats(cursor?: string): Promise<ChatItem[]> {
     try {
-      const request: MyGroupsRequest = { pagination: { limit: 50 } };
+      const request: MyGroupsRequest = { pagination: { limit: 50, cursor: cursor } };
       const response = await ApiClient.getJoinedGroups(request);
       if (response.code === 0 && response.data) {
-        return response.data.items.map((item: GroupItem): ChatItem => {
-          const chatItem: ChatItem = {
-            id: item.group.group_id,
-            type: 'group',
-            name: item.group.name,
-            avatarUrl: item.group.avatar_url,
-            lastMessage: '点击进入群聊',
-            lastTime: item.last_activity_at || item.created_at || '',
-            unreadCount: item.my_state?.unread_count || 0,
-            data: item
-          };
-          return chatItem;
-        });
+        this.groupHasMore = response.data.pagination?.has_more ?? false;
+        this.groupNextCursor = response.data.pagination?.next_cursor ?? '';
+        return response.data.items
+          .filter((item: GroupItem) => item.group?.group_id)
+          .map((item: GroupItem): ChatItem => {
+            const chatItem: ChatItem = {
+              id: item.group.group_id,
+              type: 'group',
+              name: item.group.name ?? '',
+              avatarUrl: item.group.avatar_url,
+              lastMessage: '点击进入群聊',
+              lastTime: item.last_activity_at || item.created_at || '',
+              unreadCount: item.my_state?.unread_count || 0,
+              data: item
+            };
+            return chatItem;
+          });
       }
       return [];
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `加载群聊失败: ${error}`);
       return [];
+    }
+  }
+
+  private async loadMore(): Promise<void> {
+    if (this.isLoadingMore) return;
+    if (!this.privateHasMore && !this.groupHasMore) return;
+    this.isLoadingMore = true;
+    try {
+      const promises: Promise<ChatItem[]>[] = [];
+      if (this.privateHasMore) {
+        promises.push(this.loadPrivateChats(this.privateNextCursor));
+      }
+      if (this.groupHasMore) {
+        promises.push(this.loadGroupChats(this.groupNextCursor));
+      }
+      const results = await Promise.allSettled(promises);
+      let newChats: ChatItem[] = [];
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value) {
+          newChats.push(...result.value);
+        }
+      }
+      if (newChats.length > 0) {
+        newChats.sort((a, b) => new Date(b.lastTime).getTime() - new Date(a.lastTime).getTime());
+        const existingItems = this.getAllDataFromSource();
+        const mergedItems = existingItems.concat(newChats);
+        this.chatListDataSource.setData(mergedItems);
+        this.updateCache(mergedItems);
+      }
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `加载更多消息失败: ${error}`);
+    } finally {
+      this.isLoadingMore = false;
     }
   }
 
@@ -239,13 +287,14 @@ export struct MessagePage {
   private async enterChat(item: ChatItem) {
     try {
       const routerInstance = this.getUIContext().getRouter();
+      const targetUserId = item.type === 'private' ? (item.data as PrivateChatItem).other_user?.user_id ?? item.id : item.id;
       await routerInstance.pushUrl({
         url: `features/chat/pages/${PageNames.CHAT}`,
         params: {
-          chatId: item.type === 'private' ? (item.data as PrivateChatItem).other_user.user_id : item.id,
+          chatId: targetUserId,
           chatType: item.type === 'private' ? 'private_chat' : 'group_chat',
           title: item.name,
-          targetId: item.type === 'private' ? (item.data as PrivateChatItem).other_user.user_id : undefined
+          targetId: item.type === 'private' ? targetUserId : undefined
         }
       });
     } catch (error) {
@@ -258,11 +307,13 @@ export struct MessagePage {
       VibrationUtil.startShort();
       if (item.type === 'private') {
         const privateData = item.data as PrivateChatItem;
-        const request: DeletePrivateChatRequest = { target_user_id: privateData.other_user.user_id };
+        const userId = privateData.other_user?.user_id ?? item.id;
+        const request: DeletePrivateChatRequest = { target_user_id: userId };
         await ApiClient.deletePrivateChat(request);
       } else {
         const groupData = item.data as GroupItem;
-        const request: LeaveGroupRequest = { group_id: groupData.group.group_id };
+        const groupId = groupData.group?.group_id ?? item.id;
+        const request: LeaveGroupRequest = { group_id: groupId };
         await ApiClient.leaveGroup(request);
       }
 
@@ -393,12 +444,26 @@ export struct MessagePage {
               }
               .swipeAction({ end: this.SwipeActionEnd(item) })
             }, (item: ChatItem) => item.id + item.type)
+            if (this.isLoadingMore) {
+              ListItem() {
+                Row({ space: DesignConstants.SPACING.SM }) {
+                  LoadingProgress().width(20).height(20)
+                  Text('加载更多...')
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                }
+                .width('100%')
+                .justifyContent(FlexAlign.Center)
+                .padding(DesignConstants.SPACING.MD)
+              }
+            }
           }
           .width('100%')
           .layoutWeight(1)
           .backgroundColor($r('sys.color.ohos_id_color_background'))
           .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 78, endMargin: 0 })
           .cachedCount(10)
+          .onReachEnd(() => { this.loadMore(); })
         }
         .onRefreshing(() => { this.loadData(true); })
       }
