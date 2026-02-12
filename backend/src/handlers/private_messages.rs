@@ -4,16 +4,10 @@
 use crate::{
     dto::{
         request::{
-            AddPrivateMessageReactionRequest, DeletePrivateMessageRequest,
-            MarkPrivateMessagesReadRequest, PrivateMessageReactionsRequest,
-            PrivateMessagesHistoryRequest, RecallPrivateMessageRequest,
-            RemovePrivateMessageReactionRequest, SendPrivateMessageRequest,
-            UpdatePrivateMessageRequest,
+            MarkPrivateMessagesReadRequest, PrivateMessagesHistoryRequest,
+            RecallPrivateMessageRequest, SendPrivateMessageRequest, UpdatePrivateMessageRequest,
         },
-        response::{
-            ApiResponse, MessageReactionItem, PaginatedData, PrivateMessageItem,
-            SendPrivateMessageData,
-        },
+        response::{ApiResponse, PaginatedData, PrivateMessageItem, SendPrivateMessageData},
     },
     error::Result,
     middleware::auth::AuthenticatedUser,
@@ -73,19 +67,6 @@ pub async fn recall(
     Ok(Json(ApiResponse::success_empty()))
 }
 
-pub async fn delete(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(req): Json<DeletePrivateMessageRequest>,
-) -> Result<Json<ApiResponse<()>>> {
-    state
-        .private_message_service
-        .delete(&req, user.user_id)
-        .await?;
-
-    Ok(Json(ApiResponse::success_empty()))
-}
-
 pub async fn mark_as_read(
     State(state): State<AppState>,
     user: AuthenticatedUser,
@@ -97,43 +78,4 @@ pub async fn mark_as_read(
         .await?;
 
     Ok(Json(ApiResponse::success_empty()))
-}
-
-pub async fn add_reaction(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(req): Json<AddPrivateMessageReactionRequest>,
-) -> Result<Json<ApiResponse<()>>> {
-    state
-        .private_message_service
-        .add_reaction(&req, user.user_id)
-        .await?;
-
-    Ok(Json(ApiResponse::success_empty()))
-}
-
-pub async fn remove_reaction(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(req): Json<RemovePrivateMessageReactionRequest>,
-) -> Result<Json<ApiResponse<()>>> {
-    state
-        .private_message_service
-        .remove_reaction(&req, user.user_id)
-        .await?;
-
-    Ok(Json(ApiResponse::success_empty()))
-}
-
-pub async fn reactions(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(req): Json<PrivateMessageReactionsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MessageReactionItem>>>> {
-    let response = state
-        .private_message_service
-        .get_reactions_list(&req, user.user_id)
-        .await?;
-
-    Ok(Json(ApiResponse::success(response)))
 }

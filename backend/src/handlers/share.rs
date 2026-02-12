@@ -54,27 +54,23 @@ pub async fn apply_share(
 /// 撤销分享
 ///
 /// POST /api/v1/share/revoke
-/// TODO: 需要在 ShareService 中实现 revoke_share 方法
 pub async fn revoke_share(
-    State(_state): State<AppState>,
-    AuthenticatedUser { .. }: AuthenticatedUser,
-    Json(_req): Json<RevokeShareRequest>,
+    State(state): State<AppState>,
+    AuthenticatedUser { user_id, .. }: AuthenticatedUser,
+    Json(req): Json<RevokeShareRequest>,
 ) -> Result<Json<ApiResponse<()>>, AppError> {
-    Err(AppError::InternalError(
-        "分享撤销功能尚未实现".to_string(),
-    ))
+    ShareService::revoke_share(&state.db, user_id, req).await?;
+    Ok(Json(ApiResponse::success_empty()))
 }
 
 /// 我的分享列表
 ///
 /// POST /api/v1/share/me/list
-/// TODO: 需要在 ShareService 中实现 my_shares 方法
 pub async fn my_shares(
-    State(_state): State<AppState>,
-    AuthenticatedUser { .. }: AuthenticatedUser,
-    Json(_req): Json<MySharesRequest>,
+    State(state): State<AppState>,
+    AuthenticatedUser { user_id, .. }: AuthenticatedUser,
+    Json(req): Json<MySharesRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<Share>>>, AppError> {
-    Err(AppError::InternalError(
-        "我的分享列表功能尚未实现".to_string(),
-    ))
+    let response = ShareService::my_shares(&state.db, user_id, req).await?;
+    Ok(Json(ApiResponse::success(response)))
 }

@@ -1,5 +1,5 @@
 //! 评论仓库层实现
-//! 
+//!
 //! 适配新 Schema: comment_id (UUID), user_id (BIGINT), 分区表 comments_partitioned
 
 use chrono::{DateTime, Utc};
@@ -26,7 +26,7 @@ pub struct CommentRow {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
-    
+
     // Joined fields
     pub user_nickname: Option<String>,
     pub user_avatar_url: Option<String>,
@@ -87,7 +87,6 @@ impl CommentRepository {
 
         Ok(row)
     }
-
 
     /// 根据 ID 查找
     pub async fn find_by_id(&self, comment_id: Uuid) -> Result<Option<CommentRow>> {
@@ -161,9 +160,12 @@ impl CommentRepository {
 
         let has_more = rows.len() > limit as usize;
         let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
-        
+
         let next_cursor = if has_more {
-            items.last().map(|r| encode_cursor(&r.created_at)).transpose()?
+            items
+                .last()
+                .map(|r| encode_cursor(&r.created_at))
+                .transpose()?
         } else {
             None
         };
@@ -210,7 +212,10 @@ impl CommentRepository {
         let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
 
         let next_cursor = if has_more {
-            items.last().map(|r| encode_cursor(&r.created_at)).transpose()?
+            items
+                .last()
+                .map(|r| encode_cursor(&r.created_at))
+                .transpose()?
         } else {
             None
         };
@@ -255,7 +260,10 @@ impl CommentRepository {
         let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
 
         let next_cursor = if has_more {
-            items.last().map(|r| encode_cursor(&r.created_at)).transpose()?
+            items
+                .last()
+                .map(|r| encode_cursor(&r.created_at))
+                .transpose()?
         } else {
             None
         };

@@ -271,23 +271,11 @@ impl ResourceExistenceChecker {
             .await
     }
 
-    /// 记录用户存在
-    pub async fn record_user(&self, user_id: i64) -> Result<(), redis::RedisError> {
-        self.bloom
-            .add(filter_names::USER_IDS, &user_id.to_string())
-            .await
-    }
-
     /// 检查群组是否可能存在
     pub async fn group_might_exist(&self, group_id: &str) -> Result<bool, redis::RedisError> {
         self.bloom
             .might_contain(filter_names::GROUP_IDS, group_id)
             .await
-    }
-
-    /// 记录群组存在
-    pub async fn record_group(&self, group_id: &str) -> Result<(), redis::RedisError> {
-        self.bloom.add(filter_names::GROUP_IDS, group_id).await
     }
 
     /// 检查瞬间是否可能存在
@@ -297,21 +285,11 @@ impl ResourceExistenceChecker {
             .await
     }
 
-    /// 记录瞬间存在
-    pub async fn record_moment(&self, moment_id: &str) -> Result<(), redis::RedisError> {
-        self.bloom.add(filter_names::MOMENT_IDS, moment_id).await
-    }
-
     /// 检查评论是否可能存在
     pub async fn comment_might_exist(&self, comment_id: &str) -> Result<bool, redis::RedisError> {
         self.bloom
             .might_contain(filter_names::COMMENT_IDS, comment_id)
             .await
-    }
-
-    /// 记录评论存在
-    pub async fn record_comment(&self, comment_id: &str) -> Result<(), redis::RedisError> {
-        self.bloom.add(filter_names::COMMENT_IDS, comment_id).await
     }
 
     /// 检查消息是否可能存在

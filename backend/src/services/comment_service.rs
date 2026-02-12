@@ -1,5 +1,5 @@
 //! 评论服务层实现
-//! 
+//!
 //! 核心业务逻辑：发布评论、回复评论、点赞评论、分页检索
 
 use std::sync::Arc;
@@ -7,8 +7,11 @@ use uuid::Uuid;
 
 use crate::{
     dto::{
-        request::{CommentLikesRequest, CommentRepliesRequest, CreateCommentRequest, DeleteCommentRequest, LikeCommentRequest, MomentCommentsRequest, UnlikeCommentRequest},
-        response::{PaginatedData, PaginationMeta, CommentLikeItem, CommentListItem, UserInfo},
+        request::{
+            CommentLikesRequest, CommentRepliesRequest, CreateCommentRequest, DeleteCommentRequest,
+            LikeCommentRequest, MomentCommentsRequest, UnlikeCommentRequest,
+        },
+        response::{CommentLikeItem, CommentListItem, PaginatedData, PaginationMeta, UserInfo},
     },
     error::{AppError, Result},
     events::event_types::AppEvent,
@@ -56,7 +59,10 @@ impl CommentService {
             return Ok(UserInfo {
                 user_id,
                 nickname,
-                avatar_url: self.media_service.sign_url_if_path(avatar_url.as_deref()).await,
+                avatar_url: self
+                    .media_service
+                    .sign_url_if_path(avatar_url.as_deref())
+                    .await,
                 user_type: crate::types::enums::UserType::Normal,
             });
         }
@@ -77,9 +83,14 @@ impl CommentService {
     }
 
     /// 发布评论/回复
-    pub async fn add_comment(&self, user_id: i64, req: &CreateCommentRequest) -> Result<CommentListItem> {
-        let mid = Uuid::parse_str(&req.moment_id).map_err(|_| AppError::BadRequest("无效动态ID".to_string()))?;
-        
+    pub async fn add_comment(
+        &self,
+        user_id: i64,
+        req: &CreateCommentRequest,
+    ) -> Result<CommentListItem> {
+        let mid = Uuid::parse_str(&req.moment_id)
+            .map_err(|_| AppError::BadRequest("无效动态ID".to_string()))?;
+
         // 1. 验证动态存在
         if !self.moment_repo.exists(mid).await? {
             return Err(AppError::MomentNotFound("动态不存在".to_string()));
@@ -137,7 +148,11 @@ impl CommentService {
         });
 
         let user_info = self
-            .resolve_user_info(row.user_id, row.user_nickname.clone(), row.user_avatar_url.clone())
+            .resolve_user_info(
+                row.user_id,
+                row.user_nickname.clone(),
+                row.user_avatar_url.clone(),
+            )
             .await?;
 
         Ok(CommentListItem {
@@ -153,23 +168,30 @@ impl CommentService {
     }
 
     /// 获取评论列表
-    pub async fn list_comments(&self, req: &MomentCommentsRequest) -> Result<PaginatedData<CommentListItem>> {
-        let mid = Uuid::parse_str(&req.moment_id).map_err(|_| AppError::BadRequest("无效动态ID".to_string()))?;
+    pub async fn list_comments(
+        &self,
+        req: &MomentCommentsRequest,
+    ) -> Result<PaginatedData<CommentListItem>> {
+        let mid = Uuid::parse_str(&req.moment_id)
+            .map_err(|_| AppError::BadRequest("无效动态ID".to_string()))?;
 
         if !self.moment_repo.exists(mid).await? {
             return Err(AppError::MomentNotFound("动态不存在".to_string()));
         }
-        
-        let (rows, next_cursor) = self.comment_repo.list_by_moment(
-            mid,
-            req.limit.unwrap_or(20) as i64,
-            req.cursor.clone(),
-        ).await?;
+
+        let (rows, next_cursor) = self
+            .comment_repo
+            .list_by_moment(mid, req.limit.unwrap_or(20) as i64, req.cursor.clone())
+            .await?;
 
         let mut items = Vec::with_capacity(rows.len());
         for r in rows {
             let user_info = self
-                .resolve_user_info(r.user_id, r.user_nickname.clone(), r.user_avatar_url.clone())
+                .resolve_user_info(
+                    r.user_id,
+                    r.user_nickname.clone(),
+                    r.user_avatar_url.clone(),
+                )
                 .await?;
             items.push(CommentListItem {
                 comment_id: r.comment_id.to_string(),
@@ -185,28 +207,41 @@ impl CommentService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta { has_more: next_cursor.is_some(), next_cursor },
+            pagination: PaginationMeta {
+                has_more: next_cursor.is_some(),
+                next_cursor,
+            },
         })
     }
 
-    pub async fn list_replies(&self, req: &CommentRepliesRequest) -> Result<PaginatedData<CommentListItem>> {
-        let comment_id =
-            Uuid::parse_str(&req.comment_id).map_err(|_| AppError::BadRequest("无效评论ID".to_string()))?;
+    pub async fn list_replies(
+        &self,
+        req: &CommentRepliesRequest,
+    ) -> Result<PaginatedData<CommentListItem>> {
+        let comment_id = Uuid::parse_str(&req.comment_id)
+            .map_err(|_| AppError::BadRequest("无效评论ID".to_string()))?;
 
         if !self.comment_repo.exists(comment_id).await? {
             return Err(AppError::CommentNotFound("评论不存在".to_string()));
         }
 
-        let (rows, next_cursor) = self.comment_repo.list_replies(
-            comment_id,
-            req.limit.unwrap_or(20) as i64,
-            req.cursor.clone(),
-        ).await?;
+        let (rows, next_cursor) = self
+            .comment_repo
+            .list_replies(
+                comment_id,
+                req.limit.unwrap_or(20) as i64,
+                req.cursor.clone(),
+            )
+            .await?;
 
         let mut items = Vec::with_capacity(rows.len());
         for r in rows {
             let user_info = self
-                .resolve_user_info(r.user_id, r.user_nickname.clone(), r.user_avatar_url.clone())
+                .resolve_user_info(
+                    r.user_id,
+                    r.user_nickname.clone(),
+                    r.user_avatar_url.clone(),
+                )
                 .await?;
             items.push(CommentListItem {
                 comment_id: r.comment_id.to_string(),
@@ -222,29 +257,41 @@ impl CommentService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta { has_more: next_cursor.is_some(), next_cursor },
+            pagination: PaginationMeta {
+                has_more: next_cursor.is_some(),
+                next_cursor,
+            },
         })
     }
 
-    pub async fn get_likes_list(&self, req: &CommentLikesRequest) -> Result<PaginatedData<CommentLikeItem>> {
-        let comment_id =
-            Uuid::parse_str(&req.comment_id).map_err(|_| AppError::BadRequest("无效评论ID".to_string()))?;
+    pub async fn get_likes_list(
+        &self,
+        req: &CommentLikesRequest,
+    ) -> Result<PaginatedData<CommentLikeItem>> {
+        let comment_id = Uuid::parse_str(&req.comment_id)
+            .map_err(|_| AppError::BadRequest("无效评论ID".to_string()))?;
 
         if !self.comment_repo.exists(comment_id).await? {
             return Err(AppError::CommentNotFound("评论不存在".to_string()));
         }
 
-        let (rows, next_cursor) = self.comment_repo.list_likes(
-            comment_id,
-            req.limit.unwrap_or(20) as i64,
-            req.cursor.clone(),
-        ).await?;
+        let (rows, next_cursor) = self
+            .comment_repo
+            .list_likes(
+                comment_id,
+                req.limit.unwrap_or(20) as i64,
+                req.cursor.clone(),
+            )
+            .await?;
 
         let items = self.build_like_items(rows).await?;
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta { has_more: next_cursor.is_some(), next_cursor },
+            pagination: PaginationMeta {
+                has_more: next_cursor.is_some(),
+                next_cursor,
+            },
         })
     }
 
@@ -252,7 +299,11 @@ impl CommentService {
         let mut items = Vec::with_capacity(rows.len());
         for r in rows {
             let user_info = self
-                .resolve_user_info(r.user_id, r.user_nickname.clone(), r.user_avatar_url.clone())
+                .resolve_user_info(
+                    r.user_id,
+                    r.user_nickname.clone(),
+                    r.user_avatar_url.clone(),
+                )
                 .await?;
             items.push(CommentLikeItem {
                 user: user_info,
@@ -263,8 +314,8 @@ impl CommentService {
     }
 
     pub async fn delete_comment(&self, user_id: i64, req: &DeleteCommentRequest) -> Result<()> {
-        let comment_id =
-            Uuid::parse_str(&req.comment_id).map_err(|_| AppError::BadRequest("无效评论ID".to_string()))?;
+        let comment_id = Uuid::parse_str(&req.comment_id)
+            .map_err(|_| AppError::BadRequest("无效评论ID".to_string()))?;
 
         let comment = self
             .comment_repo
@@ -281,8 +332,8 @@ impl CommentService {
     }
 
     pub async fn like_comment(&self, user_id: i64, req: &LikeCommentRequest) -> Result<()> {
-        let comment_id =
-            Uuid::parse_str(&req.comment_id).map_err(|_| AppError::BadRequest("无效评论ID".to_string()))?;
+        let comment_id = Uuid::parse_str(&req.comment_id)
+            .map_err(|_| AppError::BadRequest("无效评论ID".to_string()))?;
 
         let comment = self
             .comment_repo
@@ -305,8 +356,8 @@ impl CommentService {
     }
 
     pub async fn unlike_comment(&self, user_id: i64, req: &UnlikeCommentRequest) -> Result<()> {
-        let comment_id =
-            Uuid::parse_str(&req.comment_id).map_err(|_| AppError::BadRequest("无效评论ID".to_string()))?;
+        let comment_id = Uuid::parse_str(&req.comment_id)
+            .map_err(|_| AppError::BadRequest("无效评论ID".to_string()))?;
 
         if !self.comment_repo.exists(comment_id).await? {
             return Err(AppError::CommentNotFound("评论不存在".to_string()));

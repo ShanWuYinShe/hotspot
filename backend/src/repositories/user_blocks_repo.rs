@@ -1,7 +1,7 @@
+use crate::error::Result;
+use crate::utils::pagination::{decode_cursor, encode_cursor, TimeCursor};
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
-use crate::utils::pagination::{decode_cursor, encode_cursor, TimeCursor};
-use crate::error::Result;
 
 #[derive(Debug, Clone)]
 pub struct UserBlocksRepository {
@@ -22,24 +22,33 @@ impl UserBlocksRepository {
     pub async fn block(&self, blocker_id: i64, blocked_id: i64) -> Result<()> {
         sqlx::query!(
             "INSERT INTO blocks (blocker_id, blocked_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-            blocker_id, blocked_id
-        ).execute(&self.pool).await?;
+            blocker_id,
+            blocked_id
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
     pub async fn unblock(&self, blocker_id: i64, blocked_id: i64) -> Result<()> {
         sqlx::query!(
             "DELETE FROM blocks WHERE blocker_id = $1 AND blocked_id = $2",
-            blocker_id, blocked_id
-        ).execute(&self.pool).await?;
+            blocker_id,
+            blocked_id
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
     pub async fn is_blocked(&self, blocker_id: i64, blocked_id: i64) -> Result<bool> {
         let row = sqlx::query_scalar!(
             "SELECT EXISTS(SELECT 1 FROM blocks WHERE blocker_id = $1 AND blocked_id = $2)",
-            blocker_id, blocked_id
-        ).fetch_one(&self.pool).await?;
+            blocker_id,
+            blocked_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
         Ok(row.unwrap_or(false))
     }
 

@@ -6,12 +6,6 @@ use uuid::Uuid;
 #[derive(Debug, Clone)]
 pub struct VerificationCode {
     pub code_id: Uuid,
-    pub target: String,
-    pub code: String,
-    pub r#type: String,
-    pub expires_at: DateTime<Utc>,
-    pub used: Option<bool>,
-    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Clone)]
@@ -37,7 +31,7 @@ impl VerificationRepository {
             r#"
             INSERT INTO verification_codes (target, code, type, expires_at)
             VALUES ($1, $2, $3, $4)
-            RETURNING code_id, target, code, type, expires_at, used, created_at
+            RETURNING code_id
             "#,
             target,
             code,
@@ -51,11 +45,16 @@ impl VerificationRepository {
     }
 
     /// 查找验证码
-    pub async fn find_valid(&self, target: &str, code: &str, code_type: &str) -> Result<Option<VerificationCode>> {
+    pub async fn find_valid(
+        &self,
+        target: &str,
+        code: &str,
+        code_type: &str,
+    ) -> Result<Option<VerificationCode>> {
         let row = sqlx::query_as!(
             VerificationCode,
             r#"
-            SELECT code_id, target, code, type, expires_at, used, created_at
+            SELECT code_id
             FROM verification_codes
             WHERE target = $1 AND code = $2 AND type = $3 AND used = FALSE AND expires_at > NOW()
             ORDER BY created_at DESC
@@ -64,23 +63,6 @@ impl VerificationRepository {
             target,
             code,
             code_type
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(row)
-    }
-
-    /// 按 code_id 查找验证码
-    pub async fn find_by_id(&self, code_id: Uuid) -> Result<Option<VerificationCode>> {
-        let row = sqlx::query_as!(
-            VerificationCode,
-            r#"
-            SELECT code_id, target, code, type, expires_at, used, created_at
-            FROM verification_codes
-            WHERE code_id = $1
-            "#,
-            code_id
         )
         .fetch_optional(&self.pool)
         .await?;

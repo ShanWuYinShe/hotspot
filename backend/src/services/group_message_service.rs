@@ -1,31 +1,27 @@
 // src/services/group_message_service.rs
 // 群聊消息Service
 
-use sqlx::PgPool;
- // Add FromStr
 use std::sync::Arc;
 use uuid::Uuid;
 
 use redis::aio::ConnectionManager as RedisConnectionManager;
 
+use crate::constants::MESSAGE_RECALL_MINUTES;
 use crate::{
     dto::{
         request::{
-            AddGroupMessageReactionRequest, DeleteGroupMessageRequest,
-            GroupMessageReactionsRequest, GroupMessagesHistoryRequest,
-            MarkGroupMessagesReadRequest, MessageReadStatusRequest, RecallGroupMessageRequest,
-            RemoveGroupMessageReactionRequest, SendGroupMessageRequest, UpdateGroupMessageRequest,
+            GroupMessagesHistoryRequest, MarkGroupMessagesReadRequest, RecallGroupMessageRequest,
+            SendGroupMessageRequest, UpdateGroupMessageRequest,
         },
         response::{
-            GroupMessageItem, MessageMedia, MessageReactionItem, MessageReplyTo, MessageReadItem,
-            PaginatedData, PaginationMeta, SendGroupMessageData, UserInfo,
+            GroupMessageItem, MessageMedia, MessageReplyTo, PaginatedData, PaginationMeta,
+            SendGroupMessageData, UserInfo,
         },
     },
     error::{AppError, Result},
     events::event_types::AppEvent,
     repositories::{
         chat_unread_repo::ChatUnreadRepository, group_member_repo::GroupMemberRepository,
-        group_message_reactions_repo::GroupMessageReactionsRepository,
         group_message_repo::GroupMessageRepository, group_repo::GroupRepository,
         user_repo::UserRepository,
     },
@@ -37,7 +33,6 @@ use crate::{
 
 #[derive(Clone)]
 pub struct GroupMessageService {
-    db: PgPool,
     redis: RedisConnectionManager,
     event_bus: Arc<EventBus>,
     message_repo: GroupMessageRepository,
@@ -45,13 +40,11 @@ pub struct GroupMessageService {
     group_repo: GroupRepository,
     user_repo: UserRepository,
     unread_repo: ChatUnreadRepository,
-    reactions_repo: GroupMessageReactionsRepository,
     media_service: MediaService,
 }
 
 impl GroupMessageService {
     pub fn new(
-        db: PgPool,
         redis: RedisConnectionManager,
         event_bus: Arc<EventBus>,
         message_repo: GroupMessageRepository,
@@ -59,11 +52,9 @@ impl GroupMessageService {
         group_repo: GroupRepository,
         user_repo: UserRepository,
         unread_repo: ChatUnreadRepository,
-        reactions_repo: GroupMessageReactionsRepository,
         media_service: MediaService,
     ) -> Self {
         Self {
-            db,
             redis,
             event_bus,
             message_repo,
@@ -71,7 +62,6 @@ impl GroupMessageService {
             group_repo,
             user_repo,
             unread_repo,
-            reactions_repo,
             media_service,
         }
     }
@@ -229,15 +219,17 @@ impl GroupMessageService {
         };
 
         // 4. 保存到数据库
-        let media_meta = media.as_ref().map(|m| serde_json::json!({
-            "file_name": m.file_name,
-            "file_size": m.file_size,
-            "thumbnail_url": m.thumbnail_url,
-            "duration": m.duration,
-            "width": m.width,
-            "height": m.height,
-            "mime_type": m.mime_type
-        }));
+        let media_meta = media.as_ref().map(|m| {
+            serde_json::json!({
+                "file_name": m.file_name,
+                "file_size": m.file_size,
+                "thumbnail_url": m.thumbnail_url,
+                "duration": m.duration,
+                "width": m.width,
+                "height": m.height,
+                "mime_type": m.mime_type
+            })
+        });
 
         let created = self
             .message_repo
@@ -265,7 +257,10 @@ impl GroupMessageService {
 
         // 6. 发布消息事件（用于实时推送）
         // 注意：媒体消息的 content 字段存储的是 media_url
-        let event_content = if matches!(message_type, MessageType::Text | MessageType::System | MessageType::Location) {
+        let event_content = if matches!(
+            message_type,
+            MessageType::Text | MessageType::System | MessageType::Location
+        ) {
             req.content.clone()
         } else {
             None
@@ -284,20 +279,6 @@ impl GroupMessageService {
 
         Ok(SendGroupMessageData {
             message_id: created.message_id.to_string(),
-        })
-    }
-
-    pub async fn get_read_status(
-        &self,
-        _req: &MessageReadStatusRequest,
-        _user_id: i64,
-    ) -> Result<PaginatedData<MessageReadItem>> {
-        Ok(PaginatedData {
-            items: Vec::new(),
-            pagination: PaginationMeta {
-                has_more: false,
-                next_cursor: None,
-            },
         })
     }
 
@@ -329,10 +310,7 @@ impl GroupMessageService {
             .list_by_group(group_id, user_id, limit, cursor, include_system)
             .await?;
 
-        let reply_ids: Vec<Uuid> = messages
-            .iter()
-            .filter_map(|m| m.reply_to_id)
-            .collect();
+        let reply_ids: Vec<Uuid> = messages.iter().filter_map(|m| m.reply_to_id).collect();
         let reply_rows = self.message_repo.find_by_ids(&reply_ids).await?;
         let reply_sender_ids: Vec<i64> = reply_rows.iter().map(|m| m.sender_id).collect();
         let reply_senders = self.user_repo.find_profiles(&reply_sender_ids).await?;
@@ -356,7 +334,10 @@ impl GroupMessageService {
             let user = user_map.get(&m.sender_id);
 
             // Construct MessageMedia if it's a media message
-            let media = if matches!(m.r#type, MessageType::Image | MessageType::Video | MessageType::Audio | MessageType::File) {
+            let media = if matches!(
+                m.r#type,
+                MessageType::Image | MessageType::Video | MessageType::Audio | MessageType::File
+            ) {
                 let content_str = m.content.clone().unwrap_or_default();
                 let signed_url = match self.media_service.sign_url(&content_str).await {
                     Ok(u) => u,
@@ -375,10 +356,20 @@ impl GroupMessageService {
                     .and_then(|obj| obj.get("file_name"))
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string());
-                let file_size = meta.and_then(|obj| obj.get("file_size")).and_then(|v| v.as_i64());
-                let duration = meta.and_then(|obj| obj.get("duration")).and_then(|v| v.as_f64());
-                let width = meta.and_then(|obj| obj.get("width")).and_then(|v| v.as_i64()).map(|v| v as i32);
-                let height = meta.and_then(|obj| obj.get("height")).and_then(|v| v.as_i64()).map(|v| v as i32);
+                let file_size = meta
+                    .and_then(|obj| obj.get("file_size"))
+                    .and_then(|v| v.as_i64());
+                let duration = meta
+                    .and_then(|obj| obj.get("duration"))
+                    .and_then(|v| v.as_f64());
+                let width = meta
+                    .and_then(|obj| obj.get("width"))
+                    .and_then(|v| v.as_i64())
+                    .map(|v| v as i32);
+                let height = meta
+                    .and_then(|obj| obj.get("height"))
+                    .and_then(|v| v.as_i64())
+                    .map(|v| v as i32);
                 let mime_type = meta
                     .and_then(|obj| obj.get("mime_type"))
                     .and_then(|v| v.as_str())
@@ -401,17 +392,16 @@ impl GroupMessageService {
             let mentions = m
                 .mentions
                 .as_array()
-                .map(|arr| {
-                    arr.iter()
-                        .filter_map(|v| v.as_i64())
-                        .collect::<Vec<i64>>()
-                })
+                .map(|arr| arr.iter().filter_map(|v| v.as_i64()).collect::<Vec<i64>>())
                 .filter(|arr| !arr.is_empty());
 
             items.push(GroupMessageItem {
                 message_id: m.message_id.to_string(),
                 message_type: m.r#type,
-                content: if matches!(m.r#type, MessageType::Text | MessageType::System | MessageType::Location) {
+                content: if matches!(
+                    m.r#type,
+                    MessageType::Text | MessageType::System | MessageType::Location
+                ) {
                     m.content.clone()
                 } else {
                     None
@@ -522,7 +512,7 @@ impl GroupMessageService {
             // 发送者可以撤回自己的消息（2分钟内）
             let now = chrono::Utc::now();
             let elapsed = now.signed_duration_since(message.sent_at);
-            if elapsed.num_minutes() >= 2 {
+            if elapsed.num_minutes() >= MESSAGE_RECALL_MINUTES {
                 return Err(AppError::OperationWindowExpired);
             }
         } else {
@@ -550,62 +540,6 @@ impl GroupMessageService {
             group_chat_id: message.group_id,
             recalled_by: user_id,
             recalled_at: chrono::Utc::now().to_rfc3339(),
-        });
-
-        Ok(())
-    }
-
-    /// 删除群聊消息
-    pub async fn delete(&self, req: &DeleteGroupMessageRequest, user_id: i64) -> Result<()> {
-        let message_id = Uuid::parse_str(&req.message_id)
-            .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
-
-        // 1. 查询消息元数据
-        let message = self
-            .message_repo
-            .get_meta(message_id)
-            .await?
-            .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
-
-        // 2. 验证权限
-        let for_everyone = req.for_everyone.unwrap_or(false);
-
-        if for_everyone {
-            // 为所有人删除（仅管理员/群主）
-            let role = self
-                .member_repo
-                .get_member_role(message.group_id, user_id)
-                .await?;
-            let is_admin = role == Some(GroupRole::Owner) || role == Some(GroupRole::Admin);
-            if !is_admin {
-                return Err(AppError::Forbidden("无权为所有人删除消息".to_string()));
-            }
-        } else {
-            // 仅为自己删除（需要是群成员）
-            if !self
-                .member_repo
-                .is_member(message.group_id, user_id)
-                .await?
-            {
-                return Err(AppError::Forbidden("您不是此群组的成员".to_string()));
-            }
-        }
-
-        // 3. 删除消息
-        if for_everyone {
-            self.message_repo
-                .delete_for_everyone(message_id, user_id)
-                .await?;
-        } else {
-            self.message_repo.delete_for_user(message_id, user_id).await?;
-        }
-
-        // 4. 发布删除事件
-        self.event_bus.publish(AppEvent::GroupMessageDeleted {
-            message_id,
-            group_chat_id: message.group_id,
-            deleted_by: user_id,
-            for_everyone,
         });
 
         Ok(())
@@ -641,149 +575,5 @@ impl GroupMessageService {
             .await?;
 
         Ok(())
-    }
-
-    /// 添加消息反应
-    pub async fn add_reaction(
-        &self,
-        req: &AddGroupMessageReactionRequest,
-        user_id: i64,
-    ) -> Result<()> {
-        let message_id = Uuid::parse_str(&req.message_id)
-            .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
-
-        // 获取消息元数据
-        let message = self
-            .message_repo
-            .get_meta(message_id)
-            .await?
-            .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
-
-        // 验证用户是否是群成员
-        if !self
-            .member_repo
-            .is_member(message.group_id, user_id)
-            .await?
-        {
-            return Err(AppError::Forbidden("您不是此群组的成员".to_string()));
-        }
-
-        // 添加反应 - r#type 已是强类型枚举
-        self.reactions_repo.add(message_id, user_id, req.r#type).await?;
-
-        self.event_bus.publish(AppEvent::GroupMessageReaction {
-            message_id,
-            group_chat_id: message.group_id,
-            user_id,
-            reaction_type: req.r#type,
-            action: "add".to_string(),
-        });
-
-        Ok(())
-    }
-
-    /// 移除消息反应
-    pub async fn remove_reaction(
-        &self,
-        req: &RemoveGroupMessageReactionRequest,
-        user_id: i64,
-    ) -> Result<()> {
-        let message_id = Uuid::parse_str(&req.message_id)
-            .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
-
-        // 获取消息元数据
-        let message = self
-            .message_repo
-            .get_meta(message_id)
-            .await?
-            .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
-
-        // 验证用户是否是群成员
-        if !self
-            .member_repo
-            .is_member(message.group_id, user_id)
-            .await?
-        {
-            return Err(AppError::Forbidden("您不是此群组的成员".to_string()));
-        }
-
-        // 移除反应 - r#type 已是强类型枚举
-        self.reactions_repo.remove(message_id, user_id).await?;
-
-        self.event_bus.publish(AppEvent::GroupMessageReaction {
-            message_id,
-            group_chat_id: message.group_id,
-            user_id,
-            reaction_type: req.r#type,
-            action: "remove".to_string(),
-        });
-
-        Ok(())
-    }
-
-    /// 获取消息反应列表
-    pub async fn get_reactions_list(
-        &self,
-        req: &GroupMessageReactionsRequest,
-        user_id: i64,
-    ) -> Result<PaginatedData<MessageReactionItem>> {
-        let message_id = Uuid::parse_str(&req.message_id)
-            .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
-
-        // 获取消息元数据
-        let message = self
-            .message_repo
-            .get_meta(message_id)
-            .await?
-            .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
-
-        // 验证用户是否是群成员
-        if !self
-            .member_repo
-            .is_member(message.group_id, user_id)
-            .await?
-        {
-            return Err(AppError::Forbidden("您不是此群组的成员".to_string()));
-        }
-
-        let limit = Validator::validate_limit(req.limit, 100)? as i64;
-        let cursor = Validator::parse_cursor(req.cursor.as_deref())?;
-        let reaction_type = req.r#type;
-
-        let (reactions, next_cursor) = self
-            .reactions_repo
-            .list_by_message(message_id, reaction_type, limit, cursor)
-            .await?;
-
-        // 批量获取用户信息
-        let user_ids: Vec<i64> = reactions.iter().map(|r| r.user_id).collect();
-        let users = self.user_repo.find_profiles(&user_ids).await?;
-        let user_map: std::collections::HashMap<i64, _> =
-            users.into_iter().map(|u| (u.user_id, u)).collect();
-
-        let items: Vec<MessageReactionItem> = reactions
-            .into_iter()
-            .filter_map(|r| {
-                let user = user_map.get(&r.user_id)?;
-                Some(MessageReactionItem {
-                    user: UserInfo {
-                        user_id: user.user_id,
-                        nickname: user.nickname.clone().unwrap_or_else(|| "未知用户".to_string()),
-                        avatar_url: user.avatar_url.clone(),
-                        user_type: user.user_type,
-                    },
-                    reaction_type: r.reaction_type,
-                    created_at: r.created_at.to_rfc3339(),
-                })
-            })
-            .collect();
-
-        Ok(PaginatedData {
-            items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
-        })
     }
 }

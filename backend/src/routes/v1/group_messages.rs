@@ -17,8 +17,7 @@ pub fn token_required_routes() -> Router<AppState> {
         .route("/recall", post(group_messages::recall));
 
     // /me 子路由
-    let me_routes = Router::new()
-        .route("/mark_as_read", post(group_messages::mark_as_read));
+    let me_routes = Router::new().route("/mark_as_read", post(group_messages::mark_as_read));
 
     main_routes.nest("/me", me_routes)
 }

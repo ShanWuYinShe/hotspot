@@ -1,15 +1,6 @@
-use chrono::{DateTime, Utc};
-use sqlx::{FromRow, PgPool};
-use uuid::Uuid;
+use sqlx::PgPool;
 
 use crate::error::Result;
-
-#[derive(Debug, Clone, FromRow)]
-pub struct UserLocationHistoryRow {
-    pub history_id: Uuid,
-    pub user_id: i64,
-    pub created_at: DateTime<Utc>,
-}
 
 #[derive(Debug, Clone)]
 pub struct UserLocationHistoryRepository {
@@ -27,14 +18,5 @@ impl UserLocationHistoryRepository {
             user_id, lon, lat
         ).execute(&self.pool).await?;
         Ok(())
-    }
-
-    pub async fn get_history(&self, user_id: i64, limit: i64) -> Result<Vec<UserLocationHistoryRow>> {
-        let rows = sqlx::query_as!(
-            UserLocationHistoryRow,
-            "SELECT history_id, user_id, created_at FROM user_location_history WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2",
-            user_id, limit
-        ).fetch_all(&self.pool).await?;
-        Ok(rows)
     }
 }

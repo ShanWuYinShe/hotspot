@@ -53,7 +53,9 @@ impl UserSettingsRepository {
         sqlx::query!(
             "INSERT INTO user_settings (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING",
             user_id
-        ).execute(&self.pool).await?;
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
@@ -72,7 +74,9 @@ impl UserSettingsRepository {
             WHERE user_id = $1
             "#,
             user_id
-        ).fetch_optional(&self.pool).await?;
+        )
+        .fetch_optional(&self.pool)
+        .await?;
         Ok(row)
     }
 
@@ -91,7 +95,9 @@ impl UserSettingsRepository {
             WHERE user_id = ANY($1)
             "#,
             user_ids
-        ).fetch_all(&self.pool).await?;
+        )
+        .fetch_all(&self.pool)
+        .await?;
         Ok(rows)
     }
 
@@ -134,7 +140,10 @@ impl UserSettingsRepository {
             map.insert("moments_visible".to_string(), serde_json::json!(value));
         }
         if let Some(value) = params.liked_moments_visible {
-            map.insert("liked_moments_visible".to_string(), serde_json::json!(value));
+            map.insert(
+                "liked_moments_visible".to_string(),
+                serde_json::json!(value),
+            );
         }
         if let Some(value) = params.stats_visible {
             map.insert("stats_visible".to_string(), serde_json::json!(value));

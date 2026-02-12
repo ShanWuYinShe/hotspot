@@ -17,18 +17,18 @@ use crate::{
         request::{
             AdminBanUserRequest, AdminUnbanUserRequest, AdminUserDetailRequest,
             AdminUserSearchRequest, BlockRequest, DeleteAccountRequest, FollowRequest,
-            GetRelationshipRequest, HandleFollowRequestRequest, MyBlockedRequest,
-            MyFollowRequestsRequest, SearchUsersByKeywordRequest, SearchUsersByLocationRequest,
-            SearchUsersByTagRequest, SetRemarkRequest, UnblockRequest, UnfollowRequest,
-            UpdateLocationRequest, UpdateProfileRequest, UpdateSettingsRequest,
-            UpgradeAccountRequest, UserFollowersRequest, UserFollowingRequest, UserFriendsRequest,
-            UserGroupsRequest, UserLikedMomentsRequest, UserOpenTheDoorRequest,
+            GetRelationshipRequest, MyBlockedRequest, SearchUsersByKeywordRequest,
+            SearchUsersByLocationRequest, SearchUsersByTagRequest, SetRemarkRequest,
+            UnblockRequest, UnfollowRequest, UpdateLocationRequest, UpdateProfileRequest,
+            UpdateSettingsRequest, UpgradeAccountRequest, UserFollowersRequest,
+            UserFollowingRequest, UserFriendsRequest, UserGroupsRequest, UserLikedMomentsRequest,
+            UserOpenTheDoorRequest,
         },
         response::{
-            AdminUserDetail, AdminUserSearchItem, AuthData, BlockedUserSearchItem, FollowRequestItem,
-            FollowerItem, FollowingItem, FriendItem, GroupSearchItem, MyProfile, PaginatedData,
-            PaginationMeta, RelativeLocation, UserCardStats, UserInfo, UserMomentListItem,
-            UserRelation, UserSearchItem, UserSettingsData, UserStatsData,
+            AdminUserDetail, AdminUserSearchItem, AuthData, BlockedUserSearchItem, FollowerItem,
+            FollowingItem, FriendItem, GroupSearchItem, MyProfile, PaginatedData, PaginationMeta,
+            RelativeLocation, UserCardStats, UserInfo, UserMomentListItem, UserRelation,
+            UserSearchItem, UserSettingsData, UserStatsData,
         },
     },
     error::{AppError, Result},
@@ -48,12 +48,8 @@ use crate::{
     },
     types::enums::{PrivacyLevel, PrivateChatPermission, UserStatus, UserType},
     utils::{
-        bloom_filter::ResourceExistenceChecker,
-        cache::CacheManager,
-        jwt::JwtUtil,
-        password::PasswordUtil,
-        token::TokenUtil,
-        validation::Validator,
+        bloom_filter::ResourceExistenceChecker, cache::CacheManager, jwt::JwtUtil,
+        password::PasswordUtil, token::TokenUtil, validation::Validator,
     },
     EventBus,
 };
@@ -71,7 +67,6 @@ pub struct UserService {
     follow_request_repo: FollowRequestRepository,
     blocks_repo: UserBlocksRepository,
     user_friend_remarks_repo: UserFriendRemarksRepository,
-    device_token_repo: crate::repositories::device_token_repo::DeviceTokenRepository,
     session_repo: SessionRepository,
     tag_repo: TagRepository,
     group_member_repo: GroupMemberRepository,
@@ -96,7 +91,6 @@ impl UserService {
         follow_request_repo: FollowRequestRepository,
         blocks_repo: UserBlocksRepository,
         user_friend_remarks_repo: UserFriendRemarksRepository,
-        device_token_repo: crate::repositories::device_token_repo::DeviceTokenRepository,
         session_repo: SessionRepository,
         tag_repo: TagRepository,
         group_member_repo: GroupMemberRepository,
@@ -118,7 +112,6 @@ impl UserService {
             follow_request_repo,
             blocks_repo,
             user_friend_remarks_repo,
-            device_token_repo,
             session_repo,
             tag_repo,
             group_member_repo,
@@ -135,7 +128,10 @@ impl UserService {
         req: &SearchUsersByKeywordRequest,
     ) -> Result<PaginatedData<UserSearchItem>> {
         Validator::validate_not_empty(&req.kw, "kw")?;
-        Validator::validate_coordinates(req.reference_point.latitude, req.reference_point.longitude)?;
+        Validator::validate_coordinates(
+            req.reference_point.latitude,
+            req.reference_point.longitude,
+        )?;
         let limit = Validator::validate_limit(req.limit, 50)? as i64;
 
         let (rows, next_cursor) = self
@@ -152,9 +148,15 @@ impl UserService {
         self.build_user_search_list(rows, next_cursor).await
     }
 
-    pub async fn search_by_tag(&self, req: &SearchUsersByTagRequest) -> Result<PaginatedData<UserSearchItem>> {
+    pub async fn search_by_tag(
+        &self,
+        req: &SearchUsersByTagRequest,
+    ) -> Result<PaginatedData<UserSearchItem>> {
         Validator::validate_not_empty(&req.tag, "tag")?;
-        Validator::validate_coordinates(req.reference_point.latitude, req.reference_point.longitude)?;
+        Validator::validate_coordinates(
+            req.reference_point.latitude,
+            req.reference_point.longitude,
+        )?;
         let limit = Validator::validate_limit(req.limit, 50)? as i64;
 
         let (rows, next_cursor) = self
@@ -175,7 +177,10 @@ impl UserService {
         &self,
         req: &SearchUsersByLocationRequest,
     ) -> Result<PaginatedData<UserSearchItem>> {
-        Validator::validate_coordinates(req.reference_point.latitude, req.reference_point.longitude)?;
+        Validator::validate_coordinates(
+            req.reference_point.latitude,
+            req.reference_point.longitude,
+        )?;
         let radius = Validator::validate_radius_required(req.radius, 50000.0)?;
         let limit = Validator::validate_limit(req.limit, 50)? as i64;
 
@@ -187,6 +192,7 @@ impl UserService {
                 radius,
                 limit,
                 req.cursor.clone(),
+                req.kw.as_deref(),
             )
             .await?;
 
@@ -210,7 +216,11 @@ impl UserService {
             }
         }
 
-        let tags = self.tag_repo.get_user_tags(user.user_id).await.unwrap_or_default();
+        let tags = self
+            .tag_repo
+            .get_user_tags(user.user_id)
+            .await
+            .unwrap_or_default();
         let (is_online, last_online) = self
             .presence_service
             .get_online_status_with_privacy(user.user_id)
@@ -230,7 +240,15 @@ impl UserService {
         };
 
         let relation = if let Some(viewer_id) = viewer_id {
-            Some(self.get_relationship(viewer_id, &GetRelationshipRequest { user_id: user.user_id }).await?)
+            Some(
+                self.get_relationship(
+                    viewer_id,
+                    &GetRelationshipRequest {
+                        user_id: user.user_id,
+                    },
+                )
+                .await?,
+            )
         } else {
             None
         };
@@ -238,7 +256,10 @@ impl UserService {
         Ok(UserSearchItem {
             user_id: user.user_id,
             nickname: user.nickname.unwrap_or_default(),
-            avatar_url: self.media_service.sign_url_if_path(user.avatar_url.as_deref()).await,
+            avatar_url: self
+                .media_service
+                .sign_url_if_path(user.avatar_url.as_deref())
+                .await,
             user_type: user.user_type,
             bio: user.bio,
             tags: Some(tags),
@@ -258,7 +279,11 @@ impl UserService {
             .await?
             .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
 
-        let tags = self.tag_repo.get_user_tags(user_id).await.unwrap_or_default();
+        let tags = self
+            .tag_repo
+            .get_user_tags(user_id)
+            .await
+            .unwrap_or_default();
         let stats = self.get_stats(user_id).await?;
 
         let (is_online, last_online) = self.presence_service.get_online_status(user_id).await;
@@ -270,7 +295,10 @@ impl UserService {
             .build_location_for_user(user_id)
             .await
             .unwrap_or(RelativeLocation {
-                point: crate::dto::response::GeoPoint { latitude: 0.0, longitude: 0.0 },
+                point: crate::dto::response::GeoPoint {
+                    latitude: 0.0,
+                    longitude: 0.0,
+                },
                 location_name: "".to_string(),
                 distance: None,
                 bearing_degrees: None,
@@ -279,7 +307,10 @@ impl UserService {
         Ok(MyProfile {
             user_id: user.user_id,
             nickname: user.nickname.unwrap_or_default(),
-            avatar_url: self.media_service.sign_url_if_path(user.avatar_url.as_deref()).await,
+            avatar_url: self
+                .media_service
+                .sign_url_if_path(user.avatar_url.as_deref())
+                .await,
             bio: user.bio,
             tags: Some(tags),
             gender: Some(user.gender),
@@ -327,15 +358,19 @@ impl UserService {
 
         let _ = self
             .cache_manager
-            .delete(crate::utils::cache::cache_keys::USER_INFO, &user_id.to_string())
+            .delete(
+                crate::utils::cache::cache_keys::USER_INFO,
+                &user_id.to_string(),
+            )
             .await;
 
-        self.event_bus.publish(crate::events::event_types::AppEvent::UserProfileUpdated {
-            user_id,
-            nickname: req.nickname.clone(),
-            avatar_url: avatar_url.map(|s| s.to_string()),
-            bio: req.bio.clone(),
-        });
+        self.event_bus
+            .publish(crate::events::event_types::AppEvent::UserProfileUpdated {
+                user_id,
+                nickname: req.nickname.clone(),
+                avatar_url: avatar_url.map(|s| s.to_string()),
+                bio: req.bio.clone(),
+            });
 
         Ok(())
     }
@@ -348,8 +383,10 @@ impl UserService {
         let is_following = self.follows_repo.is_following(user_id, req.user_id).await?;
         let is_followed_by = self.follows_repo.is_following(req.user_id, user_id).await?;
         let is_blocked = self.blocks_repo.is_blocked(user_id, req.user_id).await?;
-        let has_pending_follow_request =
-            self.follow_request_repo.exists(user_id, req.user_id).await?;
+        let has_pending_follow_request = self
+            .follow_request_repo
+            .exists(user_id, req.user_id)
+            .await?;
 
         Ok(UserRelation {
             is_mutual_follow: is_following && is_followed_by,
@@ -413,7 +450,8 @@ impl UserService {
 
         let friend_ids: Vec<i64> = rows.iter().map(|r| r.user_id).collect();
         let profiles = self.user_repo.find_profiles(&friend_ids).await?;
-        let profile_map: HashMap<i64, UserRow> = profiles.into_iter().map(|p| (p.user_id, p)).collect();
+        let profile_map: HashMap<i64, UserRow> =
+            profiles.into_iter().map(|p| (p.user_id, p)).collect();
         let remark_map = self
             .user_friend_remarks_repo
             .get_batch(user_id, &friend_ids)
@@ -427,7 +465,10 @@ impl UserService {
         let mut items = Vec::with_capacity(rows.len());
         for row in rows {
             if let Some(profile) = profile_map.get(&row.user_id) {
-                let (is_online, _last_online) = online_map.get(&row.user_id).cloned().unwrap_or((None, None));
+                let (is_online, _last_online) = online_map
+                    .get(&row.user_id)
+                    .cloned()
+                    .unwrap_or((None, None));
                 items.push(FriendItem {
                     user: self.build_user_info(profile).await,
                     is_online,
@@ -460,7 +501,8 @@ impl UserService {
 
         let ids: Vec<i64> = rows.iter().map(|r| r.user_id).collect();
         let profiles = self.user_repo.find_profiles(&ids).await?;
-        let profile_map: HashMap<i64, UserRow> = profiles.into_iter().map(|p| (p.user_id, p)).collect();
+        let profile_map: HashMap<i64, UserRow> =
+            profiles.into_iter().map(|p| (p.user_id, p)).collect();
         let online_map = self
             .presence_service
             .batch_get_online_status_with_privacy(&ids)
@@ -469,8 +511,15 @@ impl UserService {
         let mut items = Vec::with_capacity(rows.len());
         for row in rows {
             if let Some(profile) = profile_map.get(&row.user_id) {
-                let is_mutual = self.follows_repo.is_following(row.user_id, user_id).await.unwrap_or(false);
-                let (is_online, _last_online) = online_map.get(&row.user_id).cloned().unwrap_or((None, None));
+                let is_mutual = self
+                    .follows_repo
+                    .is_following(row.user_id, user_id)
+                    .await
+                    .unwrap_or(false);
+                let (is_online, _last_online) = online_map
+                    .get(&row.user_id)
+                    .cloned()
+                    .unwrap_or((None, None));
                 items.push(FollowingItem {
                     user: self.build_user_info(profile).await,
                     followed_at: row.created_at.to_rfc3339(),
@@ -502,7 +551,8 @@ impl UserService {
 
         let ids: Vec<i64> = rows.iter().map(|r| r.user_id).collect();
         let profiles = self.user_repo.find_profiles(&ids).await?;
-        let profile_map: HashMap<i64, UserRow> = profiles.into_iter().map(|p| (p.user_id, p)).collect();
+        let profile_map: HashMap<i64, UserRow> =
+            profiles.into_iter().map(|p| (p.user_id, p)).collect();
         let online_map = self
             .presence_service
             .batch_get_online_status_with_privacy(&ids)
@@ -511,8 +561,15 @@ impl UserService {
         let mut items = Vec::with_capacity(rows.len());
         for row in rows {
             if let Some(profile) = profile_map.get(&row.user_id) {
-                let is_following_back = self.follows_repo.is_following(user_id, row.user_id).await.unwrap_or(false);
-                let (is_online, _last_online) = online_map.get(&row.user_id).cloned().unwrap_or((None, None));
+                let is_following_back = self
+                    .follows_repo
+                    .is_following(user_id, row.user_id)
+                    .await
+                    .unwrap_or(false);
+                let (is_online, _last_online) = online_map
+                    .get(&row.user_id)
+                    .cloned()
+                    .unwrap_or((None, None));
                 items.push(FollowerItem {
                     user: self.build_user_info(profile).await,
                     followed_at: row.created_at.to_rfc3339(),
@@ -547,12 +604,18 @@ impl UserService {
                 group_chat_id: row.group_id.to_string(),
                 name: row.name,
                 description: row.description,
-                avatar_url: self.media_service.sign_url_if_path(row.avatar_url.as_deref()).await,
+                avatar_url: self
+                    .media_service
+                    .sign_url_if_path(row.avatar_url.as_deref())
+                    .await,
                 tags: None,
                 members_count: row.members_count as i32,
                 has_password: row.has_password,
                 location: RelativeLocation {
-                    point: crate::dto::response::GeoPoint { latitude: 0.0, longitude: 0.0 },
+                    point: crate::dto::response::GeoPoint {
+                        latitude: 0.0,
+                        longitude: 0.0,
+                    },
                     location_name: "".to_string(),
                     distance: None,
                     bearing_degrees: None,
@@ -585,15 +648,27 @@ impl UserService {
     pub async fn update_location(&self, user_id: i64, req: &UpdateLocationRequest) -> Result<()> {
         Validator::validate_coordinates(req.location.point.latitude, req.location.point.longitude)?;
         self.user_repo
-            .update_location(user_id, req.location.point.longitude, req.location.point.latitude)
+            .update_location(
+                user_id,
+                req.location.point.longitude,
+                req.location.point.latitude,
+            )
             .await?;
         let _ = self
             .user_location_history_repo
-            .record(user_id, req.location.point.longitude, req.location.point.latitude)
+            .record(
+                user_id,
+                req.location.point.longitude,
+                req.location.point.latitude,
+            )
             .await;
         let _ = self
             .presence_service
-            .update_location_cache(user_id, req.location.point.latitude, req.location.point.longitude)
+            .update_location_cache(
+                user_id,
+                req.location.point.latitude,
+                req.location.point.longitude,
+            )
             .await;
         Ok(())
     }
@@ -614,9 +689,15 @@ impl UserService {
         }
 
         let password_hash = PasswordUtil::hash_password(&req.password)?;
-        self.user_repo.update_password(user_id, &password_hash).await?;
-        self.user_repo.update_login_id(user_id, &req.login_id).await?;
-        self.user_repo.update_user_type(user_id, UserType::Normal).await?;
+        self.user_repo
+            .update_password(user_id, &password_hash)
+            .await?;
+        self.user_repo
+            .update_login_id(user_id, &req.login_id)
+            .await?;
+        self.user_repo
+            .update_user_type(user_id, UserType::Normal)
+            .await?;
 
         let session_id = Uuid::now_v7();
         let access_token = JwtUtil::generate_token(
@@ -648,7 +729,11 @@ impl UserService {
         let key = format!("{}:{}", REDIS_KEY_SESSION, session_id);
         let mut conn = self.redis.clone();
         let _: () = conn
-            .set_ex(key, user_id.to_string(), self.refresh_token_expiration as u64)
+            .set_ex(
+                key,
+                user_id.to_string(),
+                self.refresh_token_expiration as u64,
+            )
             .await
             .map_err(|e| AppError::internal(e.to_string()))?;
 
@@ -657,8 +742,8 @@ impl UserService {
             nickname: req.login_id.clone(),
             access_token,
             refresh_token: Some(refresh_token_raw.clone()),
-            access_token_expires_at:
-                (Utc::now() + Duration::seconds(self.access_token_expiration)).to_rfc3339(),
+            access_token_expires_at: (Utc::now() + Duration::seconds(self.access_token_expiration))
+                .to_rfc3339(),
             refresh_token_expires_at: Some(refresh_expires_at.to_rfc3339()),
         })
     }
@@ -667,7 +752,9 @@ impl UserService {
         if req.confirmation != "DELETE_MY_ACCOUNT" {
             return Err(AppError::Conflict("确认字符串不正确".to_string()));
         }
-        self.user_repo.update_status(user_id, UserStatus::Deleted).await?;
+        self.user_repo
+            .update_status(user_id, UserStatus::Deleted)
+            .await?;
         let _ = self.session_repo.revoke_all_by_user(user_id).await;
         Ok(())
     }
@@ -685,9 +772,19 @@ impl UserService {
             return Err(AppError::BlockedByUser("已被对方拉黑".to_string()));
         }
 
-        let allow_follow = self.bool_from_settings(req.user_id, "allow_follow", true).await;
+        let allow_follow = self
+            .bool_from_settings(req.user_id, "allow_follow", true)
+            .await;
         if !allow_follow {
             return Err(AppError::FollowNotAllowed("对方不允许被关注".to_string()));
+        }
+
+        if let Some(ref source) = req.source {
+            tracing::debug!(
+                follow_source = ?source,
+                source_moment_id = ?req.source_moment_id,
+                "Follow source recorded"
+            );
         }
 
         self.follows_repo.follow(user_id, req.user_id).await?;
@@ -711,78 +808,15 @@ impl UserService {
         Ok(())
     }
 
-    pub async fn get_follow_requests(
-        &self,
-        user_id: i64,
-        req: &MyFollowRequestsRequest,
-    ) -> Result<PaginatedData<FollowRequestItem>> {
-        let limit = Validator::validate_limit(req.limit, 50)? as usize;
-        let (rows, next_cursor) = self
-            .follow_request_repo
-            .list_received(user_id, None, limit, req.cursor.clone())
-            .await?;
-
-        let requester_ids: Vec<i64> = rows.iter().map(|r| r.requester_id).collect();
-        let profiles = self.user_repo.find_profiles(&requester_ids).await?;
-        let profile_map: HashMap<i64, UserRow> = profiles.into_iter().map(|p| (p.user_id, p)).collect();
-
-        let mut items = Vec::with_capacity(rows.len());
-        for row in rows {
-            if let Some(profile) = profile_map.get(&row.requester_id) {
-                items.push(FollowRequestItem {
-                    request_id: row.request_id.to_string(),
-                    requester: self.build_user_info(profile).await,
-                    message: None,
-                    requested_at: row.created_at.to_rfc3339(),
-                });
-            }
-        }
-
-        Ok(PaginatedData {
-            items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
-        })
-    }
-
-    pub async fn handle_follow_request(
-        &self,
-        user_id: i64,
-        req: &HandleFollowRequestRequest,
-    ) -> Result<()> {
-        let request_id = Uuid::parse_str(&req.request_id)
-            .map_err(|_| AppError::InvalidFormat("无效的 request_id".to_string()))?;
-        let record = self
-            .follow_request_repo
-            .find_by_id(request_id)
-            .await?
-            .ok_or_else(|| AppError::NotFound("关注请求不存在".to_string()))?;
-
-        if record.target_id != user_id {
-            return Err(AppError::Forbidden("无权处理该请求".to_string()));
-        }
-
-        match req.action {
-            crate::types::enums::FollowRequestAction::Accept => {
-                self.follow_request_repo.accept(request_id).await?;
-                self.follows_repo.follow(record.requester_id, record.target_id).await?;
-            }
-            crate::types::enums::FollowRequestAction::Reject => {
-                self.follow_request_repo.reject(request_id).await?;
-            }
-        }
-
-        Ok(())
-    }
-
     pub async fn block_user(&self, user_id: i64, req: &BlockRequest) -> Result<()> {
         if user_id == req.user_id {
             return Err(AppError::CannotOperateOnSelf);
         }
         if !self.user_repo.exists(req.user_id).await? {
             return Err(AppError::UserNotFound("用户不存在".to_string()));
+        }
+        if let Some(ref reason) = req.reason {
+            tracing::debug!(block_reason = %reason, "Block reason recorded");
         }
         self.blocks_repo.block(user_id, req.user_id).await?;
         Ok(())
@@ -809,7 +843,8 @@ impl UserService {
 
         let ids: Vec<i64> = rows.iter().map(|r| r.user_id).collect();
         let profiles = self.user_repo.find_profiles(&ids).await?;
-        let profile_map: HashMap<i64, UserRow> = profiles.into_iter().map(|p| (p.user_id, p)).collect();
+        let profile_map: HashMap<i64, UserRow> =
+            profiles.into_iter().map(|p| (p.user_id, p)).collect();
 
         let mut items = Vec::with_capacity(rows.len());
         for row in rows {
@@ -842,14 +877,18 @@ impl UserService {
 
         if let Some(remark) = &req.remark {
             if remark.trim().is_empty() {
-                self.user_friend_remarks_repo.delete(user_id, req.user_id).await?;
+                self.user_friend_remarks_repo
+                    .delete(user_id, req.user_id)
+                    .await?;
             } else {
                 self.user_friend_remarks_repo
                     .upsert(user_id, req.user_id, remark.trim().to_string())
                     .await?;
             }
         } else {
-            self.user_friend_remarks_repo.delete(user_id, req.user_id).await?;
+            self.user_friend_remarks_repo
+                .delete(user_id, req.user_id)
+                .await?;
         }
 
         Ok(())
@@ -878,7 +917,10 @@ impl UserService {
             items.push(AdminUserSearchItem {
                 user_id: row.user_id,
                 nickname: row.nickname.unwrap_or_default(),
-                avatar_url: self.media_service.sign_url_if_path(row.avatar_url.as_deref()).await,
+                avatar_url: self
+                    .media_service
+                    .sign_url_if_path(row.avatar_url.as_deref())
+                    .await,
                 user_type: row.user_type,
                 status: row.status,
                 created_at: row.created_at.to_rfc3339(),
@@ -898,19 +940,24 @@ impl UserService {
     }
 
     pub async fn admin_ban_user(&self, req: &AdminBanUserRequest) -> Result<()> {
-        self.user_repo.update_status(req.user_id, UserStatus::Banned).await?;
+        self.user_repo
+            .update_status(req.user_id, UserStatus::Banned)
+            .await?;
 
-        self.event_bus.publish(crate::events::event_types::AppEvent::AccountBanned {
-            user_id: req.user_id,
-            reason: req.reason.clone().unwrap_or_else(|| "违规行为".to_string()),
-            duration_days: req.duration_days.unwrap_or(0),
-        });
+        self.event_bus
+            .publish(crate::events::event_types::AppEvent::AccountBanned {
+                user_id: req.user_id,
+                reason: req.reason.clone().unwrap_or_else(|| "违规行为".to_string()),
+                duration_days: req.duration_days.unwrap_or(0),
+            });
 
         Ok(())
     }
 
     pub async fn admin_unban_user(&self, req: &AdminUnbanUserRequest) -> Result<()> {
-        self.user_repo.update_status(req.user_id, UserStatus::Active).await
+        self.user_repo
+            .update_status(req.user_id, UserStatus::Active)
+            .await
     }
 
     pub async fn admin_user_detail(&self, req: &AdminUserDetailRequest) -> Result<AdminUserDetail> {
@@ -920,7 +967,11 @@ impl UserService {
             .await?
             .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
 
-        let tags = self.tag_repo.get_user_tags(req.user_id).await.unwrap_or_default();
+        let tags = self
+            .tag_repo
+            .get_user_tags(req.user_id)
+            .await
+            .unwrap_or_default();
         let stats = self.user_repo.get_stats(req.user_id).await?;
         let (is_online, last_online) = self.presence_service.get_online_status(req.user_id).await;
         let location = self.build_location_for_user(req.user_id).await;
@@ -928,7 +979,10 @@ impl UserService {
         Ok(AdminUserDetail {
             user_id: user.user_id,
             nickname: user.nickname.unwrap_or_default(),
-            avatar_url: self.media_service.sign_url_if_path(user.avatar_url.as_deref()).await,
+            avatar_url: self
+                .media_service
+                .sign_url_if_path(user.avatar_url.as_deref())
+                .await,
             user_type: user.user_type,
             status: user.status,
             created_at: user.created_at.to_rfc3339(),
@@ -964,10 +1018,20 @@ impl UserService {
 
         let mut items = Vec::with_capacity(rows.len());
         for row in rows {
-            let (is_online, last_online) = online_map.get(&row.user_id).cloned().unwrap_or((None, None));
-            let location = if location_visible_map.get(&row.user_id).copied().unwrap_or(true) {
+            let (is_online, last_online) = online_map
+                .get(&row.user_id)
+                .cloned()
+                .unwrap_or((None, None));
+            let location = if location_visible_map
+                .get(&row.user_id)
+                .copied()
+                .unwrap_or(true)
+            {
                 Some(RelativeLocation {
-                    point: crate::dto::response::GeoPoint { latitude: 0.0, longitude: 0.0 },
+                    point: crate::dto::response::GeoPoint {
+                        latitude: 0.0,
+                        longitude: 0.0,
+                    },
                     location_name: "".to_string(),
                     distance: Some(row.distance),
                     bearing_degrees: Some(row.bearing_degrees),
@@ -979,7 +1043,10 @@ impl UserService {
             items.push(UserSearchItem {
                 user_id: row.user_id,
                 nickname: row.nickname.unwrap_or_default(),
-                avatar_url: self.media_service.sign_url_if_path(row.avatar_url.as_deref()).await,
+                avatar_url: self
+                    .media_service
+                    .sign_url_if_path(row.avatar_url.as_deref())
+                    .await,
                 user_type: UserType::Normal,
                 bio: row.bio,
                 tags: None,
@@ -1005,7 +1072,10 @@ impl UserService {
         UserInfo {
             user_id: user.user_id,
             nickname: user.nickname.clone().unwrap_or_default(),
-            avatar_url: self.media_service.sign_url_if_path(user.avatar_url.as_deref()).await,
+            avatar_url: self
+                .media_service
+                .sign_url_if_path(user.avatar_url.as_deref())
+                .await,
             user_type: user.user_type,
         }
     }
@@ -1023,7 +1093,10 @@ impl UserService {
     async fn build_location_for_user(&self, user_id: i64) -> Option<RelativeLocation> {
         if let Ok(Some((lat, lng))) = self.user_repo.get_current_location(user_id).await {
             Some(RelativeLocation {
-                point: crate::dto::response::GeoPoint { latitude: lat, longitude: lng },
+                point: crate::dto::response::GeoPoint {
+                    latitude: lat,
+                    longitude: lng,
+                },
                 location_name: "".to_string(),
                 distance: None,
                 bearing_degrees: None,
@@ -1040,14 +1113,30 @@ impl UserService {
             online_visible: self.privacy_bool(settings, "online_visible", true),
             last_online_visible: self.privacy_bool(settings, "last_online_visible", true),
             friends_visible: self.privacy_level(settings, "friends_visible", PrivacyLevel::Public),
-            following_visible: self.privacy_level(settings, "following_visible", PrivacyLevel::Public),
-            followers_visible: self.privacy_level(settings, "followers_visible", PrivacyLevel::Public),
+            following_visible: self.privacy_level(
+                settings,
+                "following_visible",
+                PrivacyLevel::Public,
+            ),
+            followers_visible: self.privacy_level(
+                settings,
+                "followers_visible",
+                PrivacyLevel::Public,
+            ),
             groups_visible: self.privacy_level(settings, "groups_visible", PrivacyLevel::Public),
             moments_visible: self.privacy_level(settings, "moments_visible", PrivacyLevel::Public),
-            liked_moments_visible: self.privacy_level(settings, "liked_moments_visible", PrivacyLevel::Public),
+            liked_moments_visible: self.privacy_level(
+                settings,
+                "liked_moments_visible",
+                PrivacyLevel::Public,
+            ),
             stats_visible: self.privacy_level(settings, "stats_visible", PrivacyLevel::Public),
             allow_follow: self.privacy_bool(settings, "allow_follow", true),
-            allow_private_chat: self.privacy_chat_permission(settings, "allow_private_chat", PrivateChatPermission::Everyone),
+            allow_private_chat: self.privacy_chat_permission(
+                settings,
+                "allow_private_chat",
+                PrivateChatPermission::Everyone,
+            ),
             searchable: self.privacy_bool(settings, "searchable", true),
             phone_searchable: self.privacy_bool(settings, "phone_searchable", true),
             nickname_searchable: self.privacy_bool(settings, "nickname_searchable", true),
@@ -1089,18 +1178,22 @@ impl UserService {
     }
 
     async fn bool_from_settings(&self, user_id: i64, key: &str, default: bool) -> bool {
-        let settings = self.user_settings_repo.find_by_user_id(user_id).await.ok().flatten();
+        let settings = self
+            .user_settings_repo
+            .find_by_user_id(user_id)
+            .await
+            .ok()
+            .flatten();
         self.privacy_bool(settings.as_ref(), key, default)
     }
 
-    async fn is_visibility_allowed(&self, user_id: i64, key: &str) -> Result<bool> {
-        let settings = self.user_settings_repo.find_by_user_id(user_id).await?;
-        let level = self.privacy_level(settings.as_ref(), key, PrivacyLevel::Public);
-        Ok(matches!(level, PrivacyLevel::Public))
-    }
-
     async fn location_visible_for_user(&self, user_id: i64) -> bool {
-        let settings = self.user_settings_repo.find_by_user_id(user_id).await.ok().flatten();
+        let settings = self
+            .user_settings_repo
+            .find_by_user_id(user_id)
+            .await
+            .ok()
+            .flatten();
         self.privacy_bool(settings.as_ref(), "location_visible", true)
     }
 
@@ -1152,7 +1245,10 @@ impl UserService {
         })
     }
 
-    async fn sign_images(&self, rows: &[MomentImageRow]) -> Option<Vec<crate::dto::response::MomentImage>> {
+    async fn sign_images(
+        &self,
+        rows: &[MomentImageRow],
+    ) -> Option<Vec<crate::dto::response::MomentImage>> {
         if rows.is_empty() {
             return None;
         }

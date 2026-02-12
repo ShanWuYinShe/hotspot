@@ -57,8 +57,6 @@ enum AuthFailureReason {
     InvalidSessionId,
     /// Session 不在 Redis 白名单中（已撤销或过期）
     SessionRevoked,
-    /// Redis 查询失败
-    RedisError,
 }
 
 impl AuthFailureReason {
@@ -72,13 +70,12 @@ impl AuthFailureReason {
             Self::InvalidUserId => "无效的用户ID",
             Self::InvalidSessionId => "无效的会话",
             Self::SessionRevoked => "会话已失效或过期",
-            Self::RedisError => "认证服务暂时不可用",
         }
     }
 
     /// 是否应该记录为错误日志
     fn should_log_error(&self) -> bool {
-        matches!(self, Self::RedisError)
+        false
     }
 }
 
@@ -475,6 +472,5 @@ mod tests {
     fn test_auth_failure_reason_log_level() {
         assert!(!AuthFailureReason::TokenMissing.should_log_error());
         assert!(!AuthFailureReason::Expired.should_log_error());
-        assert!(AuthFailureReason::RedisError.should_log_error());
     }
 }

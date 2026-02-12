@@ -1,7 +1,6 @@
 use crate::dto::response::{MessageMedia, UserInfo};
 use crate::types::enums::{
-    AnnouncementSeverity, GroupRole, MessageType, SubscriptionFailureReason,
-    SubscriptionOperation,
+    AnnouncementSeverity, GroupRole, MessageType, SubscriptionFailureReason, SubscriptionOperation,
 };
 use serde::{Deserialize, Serialize};
 
@@ -280,18 +279,18 @@ pub enum WsMessage {
     GroupMemberLeft {
         group_id: String,
         user: UserInfo,
-        left_at: String,     // ISO 8601 UTC
-        member_count: i32,   // 剩余成员总数
+        left_at: String,   // ISO 8601 UTC
+        member_count: i32, // 剩余成员总数
     },
 
     /// 成员被移除（踢出/封禁）
     GroupMemberRemoved {
         group_id: String,
         user: UserInfo,
-        removed_by: String,        // user_id（操作者）
+        removed_by: String, // user_id（操作者）
         #[serde(skip_serializing_if = "Option::is_none")]
-        reason: Option<String>,    // "kicked" | "banned"
-        removed_at: String,        // ISO 8601 UTC
+        reason: Option<String>, // "kicked" | "banned"
+        removed_at: String, // ISO 8601 UTC
         member_count: i32,
     },
 
@@ -299,18 +298,18 @@ pub enum WsMessage {
     GroupMemberMuted {
         group_id: String,
         user: UserInfo,
-        muted_by: String,          // user_id（操作者）
-        muted_until: String,       // 禁言截止时间
+        muted_by: String,    // user_id（操作者）
+        muted_until: String, // 禁言截止时间
         duration_minutes: i32,
-        muted_at: String,          // ISO 8601 UTC
+        muted_at: String, // ISO 8601 UTC
     },
 
     /// 成员被解除禁言
     GroupMemberUnmuted {
         group_id: String,
         user: UserInfo,
-        unmuted_by: String,        // user_id（操作者）
-        unmuted_at: String,        // ISO 8601 UTC
+        unmuted_by: String, // user_id（操作者）
+        unmuted_at: String, // ISO 8601 UTC
     },
 
     /// 群组信息更新
@@ -324,9 +323,9 @@ pub enum WsMessage {
     /// 群组解散
     GroupDismissed {
         group_id: String,
-        dismissed_at: String,           // ISO 8601 UTC
+        dismissed_at: String, // ISO 8601 UTC
         #[serde(skip_serializing_if = "Option::is_none")]
-        reason: Option<String>,         // "owner_dismissed" | "admin_dismissed"
+        reason: Option<String>, // "owner_dismissed" | "admin_dismissed"
     },
 
     // ===== 用户事件 =====
@@ -340,8 +339,8 @@ pub enum WsMessage {
     /// 账号被封禁
     AccountBanned {
         reason: String,
-        duration_days: i32,     // 0=永久
-        banned_at: String,      // ISO 8601 UTC
+        duration_days: i32, // 0=永久
+        banned_at: String,  // ISO 8601 UTC
     },
 
     /// 错误消息
@@ -367,7 +366,7 @@ pub enum WsMessage {
 
     /// 订阅管理（统一入口，通过 operation 区分操作类型）
     SetSubscriptions {
-        client_msg_id: String, // 客户端生成，用于与 SubscribeAck 对齐
+        client_msg_id: String,            // 客户端生成，用于与 SubscribeAck 对齐
         operation: SubscriptionOperation, // subscribe / unsubscribe / set
         #[serde(rename = "type")]
         r#type: String,
@@ -411,7 +410,6 @@ pub enum WsMessage {
     },
 
     // ========== 客户端发送事件 (续) ==========
-
     /// 私聊正在输入
     PrivateTyping {
         target_user_id: i64,
@@ -419,25 +417,16 @@ pub enum WsMessage {
     },
 
     /// 群聊正在输入
-    GroupTyping {
-        group_id: String,
-        is_typing: bool,
-    },
+    GroupTyping { group_id: String, is_typing: bool },
 
     /// 查询当前订阅状态
-    GetSubscriptions {
-        client_msg_id: String,
-    },
+    GetSubscriptions { client_msg_id: String },
 
     /// 进入群聊页面（与订阅独立，表示用户当前正在查看该群聊）
-    GroupEnter {
-        group_id: String,
-    },
+    GroupEnter { group_id: String },
 
     /// 离开群聊页面
-    GroupLeave {
-        group_id: String,
-    },
+    GroupLeave { group_id: String },
 }
 
 /// 消息回复引用快照
@@ -483,8 +472,8 @@ pub enum FailedSubscriptionId {
 /// ConnectionEstablished 中的服务端配置（spec: config）
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ConnectionConfig {
-    pub ping_interval: u32,  // 心跳间隔（秒）
-    pub ping_timeout: u32,   // Pong 超时（秒）
+    pub ping_interval: u32, // 心跳间隔（秒）
+    pub ping_timeout: u32,  // Pong 超时（秒）
     pub max_subscriptions: MaxSubscriptions,
 }
 
@@ -498,7 +487,7 @@ pub struct MaxSubscriptions {
 /// ConnectionEstablished 中的未读摘要（spec: unread_summary）
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UnreadSummary {
-    pub private_chats: i64,    // 有未读消息的私聊会话数
-    pub groups: i64,           // 有未读消息的群聊数
-    pub total_messages: i64,   // 总未读消息数
+    pub private_chats: i64,  // 有未读消息的私聊会话数
+    pub groups: i64,         // 有未读消息的群聊数
+    pub total_messages: i64, // 总未读消息数
 }

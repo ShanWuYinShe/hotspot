@@ -1,7 +1,7 @@
+use crate::error::Result;
+use crate::utils::pagination::{decode_cursor, encode_cursor, TimeCursor};
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
-use crate::utils::pagination::{decode_cursor, encode_cursor, TimeCursor};
-use crate::error::Result;
 
 #[derive(Debug, Clone)]
 pub struct UserFollowsRepository {
@@ -37,16 +37,22 @@ impl UserFollowsRepository {
     pub async fn unfollow(&self, follower_id: i64, following_id: i64) -> Result<()> {
         sqlx::query!(
             "DELETE FROM follows WHERE follower_id = $1 AND following_id = $2",
-            follower_id, following_id
-        ).execute(&self.pool).await?;
+            follower_id,
+            following_id
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
     pub async fn is_following(&self, follower_id: i64, following_id: i64) -> Result<bool> {
         let row = sqlx::query_scalar!(
             "SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = $2)",
-            follower_id, following_id
-        ).fetch_one(&self.pool).await?;
+            follower_id,
+            following_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
         Ok(row.unwrap_or(false))
     }
 

@@ -38,20 +38,15 @@ impl EventHandler {
         redis: ConnectionManager,
         ws_manager: WsConnectionManager,
         ws_subscription: SubscriptionManager,
-        event_bus: Arc<EventBus>,
-        media_service: crate::services::media_service::MediaService,
+        _event_bus: Arc<EventBus>,
+        _media_service: crate::services::media_service::MediaService,
     ) -> Self {
         let user_repo = UserRepository::new(db.clone());
         let subscription_service = SubscriptionService::new(db.clone(), redis.clone());
         let group_member_repo = GroupMemberRepository::new(db.clone(), redis.clone());
         let notification_repo =
             crate::repositories::notification_repo::NotificationRepository::new(db.clone());
-        let notification_service = NotificationService::new(
-            notification_repo,
-            user_repo.clone(),
-            event_bus,
-            media_service,
-        );
+        let notification_service = NotificationService::new(notification_repo, user_repo.clone());
 
         Self {
             user_repo,
@@ -652,7 +647,7 @@ impl EventHandler {
                         .await;
                     self.ws_manager.send_to_users(&subscribers, &message).await;
                     // 也推送给被移除的用户自身
-                    self.ws_manager.send_to_user(*user_id, &message).await;
+                    let _ = self.ws_manager.send_to_user(*user_id, &message).await;
                 }
             }
             AppEvent::GroupProfileUpdated {
@@ -668,14 +663,30 @@ impl EventHandler {
                 has_password,
             } => {
                 let mut fields = serde_json::Map::new();
-                if let Some(v) = name { fields.insert("name".into(), serde_json::Value::String(v.clone())); }
-                if let Some(v) = description { fields.insert("description".into(), serde_json::Value::String(v.clone())); }
-                if let Some(v) = avatar_url { fields.insert("avatar_url".into(), serde_json::Value::String(v.clone())); }
-                if let Some(v) = tags { fields.insert("tags".into(), serde_json::json!(v)); }
-                if let Some(v) = join_method { fields.insert("join_method".into(), serde_json::Value::String(v.clone())); }
-                if let Some(v) = is_searchable { fields.insert("is_searchable".into(), serde_json::Value::Bool(*v)); }
-                if let Some(v) = max_members { fields.insert("max_members".into(), serde_json::json!(v)); }
-                if let Some(v) = has_password { fields.insert("has_password".into(), serde_json::Value::Bool(*v)); }
+                if let Some(v) = name {
+                    fields.insert("name".into(), serde_json::Value::String(v.clone()));
+                }
+                if let Some(v) = description {
+                    fields.insert("description".into(), serde_json::Value::String(v.clone()));
+                }
+                if let Some(v) = avatar_url {
+                    fields.insert("avatar_url".into(), serde_json::Value::String(v.clone()));
+                }
+                if let Some(v) = tags {
+                    fields.insert("tags".into(), serde_json::json!(v));
+                }
+                if let Some(v) = join_method {
+                    fields.insert("join_method".into(), serde_json::Value::String(v.clone()));
+                }
+                if let Some(v) = is_searchable {
+                    fields.insert("is_searchable".into(), serde_json::Value::Bool(*v));
+                }
+                if let Some(v) = max_members {
+                    fields.insert("max_members".into(), serde_json::json!(v));
+                }
+                if let Some(v) = has_password {
+                    fields.insert("has_password".into(), serde_json::Value::Bool(*v));
+                }
 
                 let message = WsMessage::GroupUpdated {
                     group_id: group_id.to_string(),
@@ -714,7 +725,7 @@ impl EventHandler {
                     .await;
                 self.ws_manager.send_to_users(&subscribers, &message).await;
                 // 也推送给被禁言用户自身
-                self.ws_manager.send_to_user(*user_id, &message).await;
+                let _ = self.ws_manager.send_to_user(*user_id, &message).await;
             }
             AppEvent::GroupMemberUnmuted {
                 group_id,
@@ -735,19 +746,14 @@ impl EventHandler {
                     .await;
                 self.ws_manager.send_to_users(&subscribers, &message).await;
                 // 也推送给被解除禁言用户自身
-                self.ws_manager.send_to_user(*user_id, &message).await;
+                let _ = self.ws_manager.send_to_user(*user_id, &message).await;
             }
             AppEvent::GroupDismissed {
                 group_id,
                 dismissed_by,
             } => {
                 // 判断是群主解散还是管理员解散
-                // dismissed_by == group owner => "owner_dismissed"，否则 => "admin_dismissed"
-                let reason = {
-                    let group_id_str = group_id.to_string();
-                    // 简化：通过 dismissed_by 查是否曾是群主（这里用一个通用理由）
-                    Some("owner_dismissed".to_string())
-                };
+                let reason = Some(format!("dismissed_by_{}", dismissed_by));
                 let message = WsMessage::GroupDismissed {
                     group_id: group_id.to_string(),
                     dismissed_at: chrono::Utc::now().to_rfc3339(),

@@ -71,9 +71,6 @@ impl UserFriendRemarksRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows
-            .into_iter()
-            .map(|r| (r.friend_id, r.remark))
-            .collect())
+        Ok(rows.into_iter().map(|r| (r.friend_id, r.remark)).collect())
     }
 }

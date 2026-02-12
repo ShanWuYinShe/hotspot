@@ -20,15 +20,6 @@ pub async fn trending(
     Ok(Json(ApiResponse::success(response)))
 }
 
-/// 标签搜索建议
-pub async fn suggest(
-    State(state): State<AppState>,
-    Json(req_body): Json<SuggestTagsRequest>,
-) -> Result<Json<ApiResponse<TagSuggestData>>> {
-    let response = state.tag_service.suggest(&req_body).await?;
-    Ok(Json(ApiResponse::success(response)))
-}
-
 // ==================== Admin APIs ====================
 
 /// 搜索标签（管理员）
@@ -36,6 +27,9 @@ pub async fn admin_search(
     State(state): State<AppState>,
     Json(req): Json<AdminTagSearchRequest>,
 ) -> Result<Json<ApiResponse<TagSuggestData>>> {
+    if let Some(ref cursor) = req.cursor {
+        tracing::debug!(cursor = %cursor, "Admin tag search cursor (suggest does not support pagination yet)");
+    }
     // 复用标签建议搜索逻辑
     let suggest_req = SuggestTagsRequest {
         prefix: req.keyword.unwrap_or_default(),

@@ -13,11 +13,9 @@ use crate::{
     },
     utils::validation::Validator,
 };
-use redis::aio::ConnectionManager;
 
 #[derive(Clone)]
 pub struct SearchService {
-    redis: ConnectionManager,
     user_repo: UserRepository,
     group_repo: GroupRepository,
     tag_repo: TagRepository,
@@ -27,7 +25,6 @@ pub struct SearchService {
 
 impl SearchService {
     pub fn new(
-        redis: ConnectionManager,
         user_repo: UserRepository,
         group_repo: GroupRepository,
         tag_repo: TagRepository,
@@ -35,7 +32,6 @@ impl SearchService {
         media_service: crate::services::media_service::MediaService,
     ) -> Self {
         Self {
-            redis,
             user_repo,
             group_repo,
             tag_repo,
@@ -167,32 +163,6 @@ impl SearchService {
         }
 
         Ok(SearchSuggestions { items })
-    }
-
-    async fn sign_moment_images(
-        &self,
-        images: &[String],
-    ) -> Option<Vec<crate::dto::response::MomentImage>> {
-        if images.is_empty() {
-            return None;
-        }
-        let mut signed_images = Vec::with_capacity(images.len());
-        for path in images {
-            let url = match self.media_service.sign_url(path).await {
-                Ok(u) => u,
-                Err(e) => {
-                    tracing::warn!("Failed to sign url for path {}: {}", path, e);
-                    path.clone()
-                }
-            };
-            signed_images.push(crate::dto::response::MomentImage {
-                url,
-                width: None,
-                height: None,
-                content_type: None,
-            });
-        }
-        Some(signed_images)
     }
 }
 

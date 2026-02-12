@@ -3,8 +3,7 @@ use axum::{extract::State, Json};
 use crate::{
     dto::{
         request::{
-            CreateMomentRequest, DeleteMomentRequest,
-            EditMomentRequest, FavoriteMomentRequest,
+            CreateMomentRequest, DeleteMomentRequest, EditMomentRequest, FavoriteMomentRequest,
             GeoPoint, LikeMomentRequest, MomentLikesRequest, MomentOpenTheDoorRequest,
             MyFavoritesRequest, MyMomentsRequest, SearchMomentsByKeywordRequest,
             SearchMomentsByLocationRequest, SearchMomentsByTagRequest, SearchMomentsRequest,
@@ -27,6 +26,9 @@ pub async fn search(
     user: OptionalAuthenticatedUser,
     Json(req): Json<SearchMomentsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<MomentSearchItem>>>> {
+    let sort_by = req.sort_by.as_deref().unwrap_or("relevance");
+    tracing::debug!(sort_by = %sort_by, "Search sort parameter");
+
     let reference_point = req.reference_point.unwrap_or(GeoPoint {
         latitude: 0.0,
         longitude: 0.0,

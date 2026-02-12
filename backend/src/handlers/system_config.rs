@@ -252,12 +252,14 @@ pub async fn admin_update_rate_limits_config(
 }
 
 /// 更新响应默认值配置（管理员）
-/// TODO: 需要实现独立的 response_defaults 更新逻辑
 pub async fn admin_update_response_defaults_config(
-    State(_state): State<AppState>,
-    _user: AuthenticatedUser,
-    Json(_req): Json<AdminUpdateResponseDefaultsRequest>,
-) -> Result<Json<ApiResponse<()>>> {
-    // 暂未实现，返回空成功响应
-    Ok(Json(ApiResponse::success_empty()))
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    Json(req): Json<AdminUpdateResponseDefaultsRequest>,
+) -> Result<Json<ApiResponse<GlobalSettings>>> {
+    let settings = state
+        .system_config_service
+        .update_response_defaults_config(req, user.user_id)
+        .await?;
+    Ok(Json(ApiResponse::success(settings)))
 }

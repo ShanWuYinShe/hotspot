@@ -4,9 +4,8 @@
 //! 枚举类型字段使用 crate::types::enums 中定义的类型，确保类型安全
 
 use crate::types::enums::{
-    AnnouncementSeverity, ApplicationStatusFilter, ClientType, DevicePlatform,
-    FeedSource, GroupJoinMethod, GroupRole, MapDataType, MediaCategory,
-    NotificationFilterType, PrivacyLevel, PrivateChatPermission, ReactionType, ReportHandleAction,
+    AnnouncementSeverity, ApplicationStatusFilter, ClientType, FeedSource, GroupJoinMethod,
+    GroupRole, MapDataType, MediaCategory, PrivacyLevel, PrivateChatPermission, ReportHandleAction,
     ReportStatus, ReportTargetType, SendMessageType, SetableGroupRole, ShareType, TagTimeframe,
     UserAccountStatus, UserType,
 };
@@ -89,14 +88,6 @@ pub struct RevokeSessionRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct MyProfileRequest {}
-
-#[derive(Debug, Deserialize)]
-pub struct UserStatsRequest {
-    pub user_id: i64,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct MyStatsRequest {}
 
 #[derive(Debug, Deserialize)]
 pub struct GetRelationshipRequest {
@@ -220,20 +211,6 @@ pub struct SetRemarkRequest {
     pub remark: Option<String>,
 }
 
-// ==================== 关注请求 API ====================
-
-#[derive(Debug, Deserialize)]
-pub struct MyFollowRequestsRequest {
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct HandleFollowRequestRequest {
-    pub request_id: String,
-    pub action: crate::types::enums::FollowRequestAction,
-}
-
 // ==================== 生活瞬间 API ====================
 
 #[derive(Debug, Deserialize)]
@@ -334,11 +311,6 @@ pub struct MomentLikesRequest {
     pub moment_id: String,
     pub limit: Option<i32>,
     pub cursor: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct GetMomentInteractionStateRequest {
-    pub moment_id: String,
 }
 
 // ==================== 评论与点赞 API ====================
@@ -494,11 +466,6 @@ pub struct UpdateGroupMySettingsRequest {
     pub is_pinned: Option<bool>,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct GetMyGroupStateRequest {
-    pub group_chat_id: String,
-}
-
 // ==================== 群组成员管理 API ====================
 
 #[derive(Debug, Deserialize)]
@@ -507,11 +474,6 @@ pub struct GroupMembersRequest {
     pub role: Option<GroupRole>,
     pub limit: Option<i32>,
     pub cursor: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct GroupSettingsRequest {
-    pub group_chat_id: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -525,12 +487,6 @@ pub struct InviteMemberRequest {
 pub struct JoinGroupRequest {
     pub group_chat_id: String,
     pub password: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ApplyToGroupRequest {
-    pub group_chat_id: String,
-    pub message: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -691,11 +647,6 @@ pub struct RecallPrivateMessageRequest {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct DeletePrivateMessageRequest {
-    pub message_id: String,
-}
-
-#[derive(Debug, Deserialize)]
 pub struct MarkPrivateMessagesReadRequest {
     pub target_user_id: i64,
     pub up_to_message_id: Option<String>,
@@ -733,68 +684,10 @@ pub struct RecallGroupMessageRequest {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct DeleteGroupMessageRequest {
-    pub message_id: String,
-    pub for_everyone: Option<bool>,
-}
-
-#[derive(Debug, Deserialize)]
 pub struct MarkGroupMessagesReadRequest {
     pub group_chat_id: String,
     pub up_to_message_id: Option<String>,
 }
-
-#[derive(Debug, Deserialize)]
-pub struct MessageReadStatusRequest {
-    pub message_id: String,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct AddGroupMessageReactionRequest {
-    pub message_id: String,
-    pub r#type: ReactionType,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct RemoveGroupMessageReactionRequest {
-    pub message_id: String,
-    pub r#type: ReactionType,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct AddPrivateMessageReactionRequest {
-    pub message_id: String,
-    pub r#type: ReactionType,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct RemovePrivateMessageReactionRequest {
-    pub message_id: String,
-    pub r#type: ReactionType,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct GroupMessageReactionsRequest {
-    pub message_id: String,
-    pub r#type: Option<ReactionType>,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct PrivateMessageReactionsRequest {
-    pub message_id: String,
-    pub r#type: Option<ReactionType>,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
-}
-
-// ==================== 消息通用 API ====================
-
-#[derive(Debug, Deserialize)]
-pub struct MarkAllMessagesReadRequest {}
 
 // ==================== 举报审核 API ====================
 
@@ -825,59 +718,6 @@ pub struct HandleReportRequest {
     pub report_id: String,
     pub action: ReportHandleAction,
     pub note: Option<String>,
-}
-
-// ==================== 通知订阅设置 API ====================
-
-#[derive(Debug, Deserialize)]
-pub struct MySubscriptionsRequest {}
-
-#[derive(Debug, Deserialize)]
-pub struct UpdateSubscriptionsRequest {
-    pub new_follower_enabled: Option<bool>,
-    pub mutual_follow_enabled: Option<bool>,
-    pub follow_request_enabled: Option<bool>, // 收到关注请求（需审批时）
-    pub follow_request_handled_enabled: Option<bool>, // 关注请求被处理
-    pub group_invite_enabled: Option<bool>,
-    pub group_invite_response_enabled: Option<bool>,
-    pub group_application_enabled: Option<bool>,
-    pub group_application_response_enabled: Option<bool>,
-    pub group_announcement_enabled: Option<bool>,
-    pub message_mention_enabled: Option<bool>,
-    pub moment_like_enabled: Option<bool>,
-    pub moment_comment_enabled: Option<bool>,
-    pub comment_reply_enabled: Option<bool>,
-    pub system_announcement_enabled: Option<bool>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct RegisterDeviceTokenRequest {
-    pub platform: DevicePlatform,
-    pub device_token: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct UnregisterDeviceTokenRequest {
-    pub platform: DevicePlatform,
-    pub device_token: String,
-}
-
-// ==================== 通知 API ====================
-
-#[derive(Debug, Deserialize)]
-pub struct GetNotificationsRequest {
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
-    pub r#type: Option<NotificationFilterType>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct GetUnreadNotificationCountRequest {}
-
-#[derive(Debug, Deserialize)]
-pub struct MarkNotificationsReadRequest {
-    pub notification_ids: Option<Vec<String>>,
-    pub r#type: Option<NotificationFilterType>,
 }
 
 // ==================== 系统健康检查 API ====================
@@ -1202,21 +1042,6 @@ pub struct AuditLogDetailRequest {
     pub log_id: String,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct AuditLogExportRequest {
-    pub action: Option<String>,
-    pub operator_id: Option<i64>,
-    pub target_type: Option<String>,
-    pub start_time: Option<String>,
-    pub end_time: Option<String>,
-    pub format: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct AuditLogExportStatusRequest {
-    pub export_id: String,
-}
-
 // ==================== 管理员系统公告管理 ====================
 
 #[derive(Debug, Deserialize)]
@@ -1256,25 +1081,6 @@ pub struct SearchMomentsByKeywordRequest {
     pub limit: Option<i32>,
     pub cursor: Option<String>,
 }
-
-#[derive(Debug, Deserialize)]
-pub struct CheckLikedRequest {
-    pub moment_id: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct CheckFavoritedRequest {
-    pub moment_id: String,
-}
-
-// Device Tokens
-#[derive(Debug, Deserialize)]
-pub struct MyDeviceTokensRequest {
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
-}
-
-// Media Upload
 
 // Private Chat
 #[derive(Debug, Deserialize)]
@@ -1338,25 +1144,6 @@ pub struct MyBlockedRequest {
 
 // ==================== 分享模块请求 ====================
 
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(tag = "share_type", rename_all = "lowercase")]
-pub enum SharePayload {
-    Location {
-        latitude: f64,
-        longitude: f64,
-        location_name: String,
-    },
-    Moment {
-        moment_id: String,
-    },
-    Group {
-        group_id: String,
-    },
-    User {
-        user_id: i64,
-    },
-}
-
 #[derive(Debug, Deserialize)]
 pub struct CreateShareRequest {
     pub share_type: ShareType,
@@ -1372,11 +1159,6 @@ pub struct GetShareRequest {
 #[derive(Debug, Deserialize)]
 pub struct ApplyShareRequest {
     pub share_code: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct DeleteLocationShareRequest {
-    pub share_id: String,
 }
 
 // ==================== 统一搜索请求（与 spec 对齐） ====================

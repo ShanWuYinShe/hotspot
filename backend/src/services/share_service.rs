@@ -2,13 +2,16 @@
 //!
 //! 负责分享的业务逻辑
 
-use crate::dto::request::{ApplyShareRequest, CreateShareRequest, GetShareRequest};
-use crate::dto::response::{Share, UserInfo};
+use crate::dto::request::{
+    ApplyShareRequest, CreateShareRequest, GetShareRequest, MySharesRequest, RevokeShareRequest,
+};
+use crate::dto::response::{PaginatedData, PaginationMeta, Share, UserInfo};
 use crate::error::AppError;
 use crate::repositories::share_repo::ShareRepository;
 use crate::types::enums::{ShareType, UserType};
-use crate::utils::id_gen;
+use crate::utils::{id_gen, validation::Validator};
 use sqlx::PgPool;
+use uuid::Uuid;
 
 pub struct ShareService;
 
@@ -203,6 +206,91 @@ impl ShareService {
         })?;
 
         Ok(())
+    }
+
+    /// 撤销分享（按 share_id）
+    pub async fn revoke_share(
+        pool: &PgPool,
+        user_id: i64,
+        req: RevokeShareRequest,
+    ) -> Result<(), AppError> {
+        let share_id = Uuid::parse_str(&req.share_id)
+            .map_err(|_| AppError::BadRequest("无效的 share_id".to_string()))?;
+
+        let share = ShareRepository::get_by_id(pool, share_id)
+            .await?
+            .ok_or(AppError::NotFound("分享不存在或已删除".to_string()))?;
+
+        if share.creator_id != user_id {
+            return Err(AppError::Forbidden("无权撤销他人的分享".to_string()));
+        }
+
+        ShareRepository::revoke_by_id(pool, share_id)
+            .await
+            .map_err(|e| AppError::internal(e.to_string()))?;
+
+        Ok(())
+    }
+
+    /// 我的分享列表（分页）
+    pub async fn my_shares(
+        pool: &PgPool,
+        user_id: i64,
+        req: MySharesRequest,
+    ) -> Result<PaginatedData<Share>, AppError> {
+        let limit = Validator::validate_limit(req.limit, 50)? as i64;
+
+        let (rows, next_cursor) =
+            ShareRepository::list_by_creator(pool, user_id, limit, req.cursor.as_deref())
+                .await
+                .map_err(|e| AppError::internal(e.to_string()))?;
+
+        let mut items = Vec::with_capacity(rows.len());
+        for row in rows {
+            let creator_row = sqlx::query!(
+                r#"
+                SELECT user_id, nickname, avatar_url, user_type as "user_type: UserType"
+                FROM users
+                WHERE user_id = $1 AND status = 'active'::user_status
+                "#,
+                row.creator_id
+            )
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| AppError::internal(e.to_string()))?
+            .ok_or(AppError::NotFound("用户不存在".to_string()))?;
+
+            let creator = UserInfo {
+                user_id: creator_row.user_id,
+                nickname: creator_row
+                    .nickname
+                    .unwrap_or_else(|| "未知用户".to_string()),
+                avatar_url: creator_row.avatar_url,
+                user_type: creator_row.user_type.unwrap_or(UserType::Normal),
+            };
+
+            let share_type = row
+                .share_type
+                .parse::<ShareType>()
+                .map_err(|_| AppError::NotFound("无效的分享类型".to_string()))?;
+
+            items.push(Share {
+                share_id: row.share_id.to_string(),
+                share_code: row.share_code,
+                share_type,
+                creator,
+                payload: row.payload,
+                created_at: row.created_at.to_rfc3339(),
+            });
+        }
+
+        Ok(PaginatedData {
+            items,
+            pagination: PaginationMeta {
+                has_more: next_cursor.is_some(),
+                next_cursor,
+            },
+        })
     }
 
     /// 验证 payload 的有效性

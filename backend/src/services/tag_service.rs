@@ -35,35 +35,34 @@ impl TagService {
         let timeframe = req.timeframe.unwrap_or(TagTimeframe::Week);
         let cache_key = format!("{}:{}", timeframe.as_str(), limit);
 
-        let cached = self
-            .cache_manager
-            .get_or_set_with_lock_with_ttl(
-                cache_keys::TRENDING_TAGS,
-                &cache_key,
-                300,
-                60,
-                || async {
-                    // 从 tags 表获取热门标签
-                    let tag_rows = self
-                        .tag_repo
-                        .get_trending(limit)
-                        .await
-                        .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+        let cached =
+            self.cache_manager
+                .get_or_set_with_lock_with_ttl(
+                    cache_keys::TRENDING_TAGS,
+                    &cache_key,
+                    300,
+                    60,
+                    || async {
+                        // 从 tags 表获取热门标签
+                        let tag_rows =
+                            self.tag_repo.get_trending(limit).await.map_err(|e| {
+                                Box::new(e) as Box<dyn std::error::Error + Send + Sync>
+                            })?;
 
-                    let items = tag_rows
-                        .into_iter()
-                        .map(|r| TagItem {
-                            name: r.name,
-                            usage_count: r.usage_count.unwrap_or(0),
-                            trend: None,
-                        })
-                        .collect();
+                        let items = tag_rows
+                            .into_iter()
+                            .map(|r| TagItem {
+                                name: r.name,
+                                usage_count: r.usage_count.unwrap_or(0),
+                                trend: None,
+                            })
+                            .collect();
 
-                    Ok(Some(TrendingTagsData { items }))
-                },
-            )
-            .await
-            .map_err(|e| AppError::InternalError(e.to_string()))?;
+                        Ok(Some(TrendingTagsData { items }))
+                    },
+                )
+                .await
+                .map_err(|e| AppError::InternalError(e.to_string()))?;
 
         if let Some(data) = cached {
             return Ok(data);

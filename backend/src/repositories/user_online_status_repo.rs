@@ -13,7 +13,6 @@ pub struct UserOnlineStatusRow {
     pub user_id: i64,
     pub is_online: bool,
     pub last_active_at: DateTime<Utc>,
-    pub connection_count: i32,
 }
 
 #[derive(Debug, Clone)]
@@ -31,8 +30,7 @@ impl UserOnlineStatusRepository {
         let row = sqlx::query_as!(
             UserOnlineStatusRow,
             r#"
-            SELECT user_id as "user_id!", is_online as "is_online!", last_active_at as "last_active_at!",
-                   connection_count as "connection_count!"
+            SELECT user_id as "user_id!", is_online as "is_online!", last_active_at as "last_active_at!"
             FROM user_online_status
             WHERE user_id = $1
             "#,
@@ -45,10 +43,7 @@ impl UserOnlineStatusRepository {
     }
 
     /// 批量获取用户在线状态
-    pub async fn get_batch_status(
-        &self,
-        user_ids: &[i64],
-    ) -> Result<Vec<UserOnlineStatusRow>> {
+    pub async fn get_batch_status(&self, user_ids: &[i64]) -> Result<Vec<UserOnlineStatusRow>> {
         if user_ids.is_empty() {
             return Ok(vec![]);
         }
@@ -56,8 +51,7 @@ impl UserOnlineStatusRepository {
         let rows = sqlx::query_as!(
             UserOnlineStatusRow,
             r#"
-            SELECT user_id as "user_id!", is_online as "is_online!", last_active_at as "last_active_at!",
-                   connection_count as "connection_count!"
+            SELECT user_id as "user_id!", is_online as "is_online!", last_active_at as "last_active_at!"
             FROM user_online_status
             WHERE user_id = ANY($1)
             "#,
@@ -67,32 +61,6 @@ impl UserOnlineStatusRepository {
         .await?;
 
         Ok(rows)
-    }
-
-    /// 更新或插入在线状态
-    pub async fn upsert_status(
-        &self,
-        user_id: i64,
-        is_online: bool,
-        connection_count: i32,
-    ) -> Result<()> {
-        sqlx::query!(
-            r#"
-            INSERT INTO user_online_status (user_id, is_online, last_active_at, connection_count)
-            VALUES ($1, $2, NOW(), $3)
-            ON CONFLICT (user_id) DO UPDATE SET
-                is_online = $2,
-                last_active_at = NOW(),
-                connection_count = $3
-            "#,
-            user_id,
-            is_online,
-            connection_count
-        )
-        .execute(&self.pool)
-        .await?;
-
-        Ok(())
     }
 
     /// 标记用户上线

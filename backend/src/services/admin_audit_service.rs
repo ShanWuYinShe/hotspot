@@ -5,27 +5,21 @@ use uuid::Uuid;
 
 use crate::{
     dto::{
-        request::{
-            AuditLogDetailRequest, AuditLogExportRequest, AuditLogExportStatusRequest,
-            AuditLogListRequest,
-        },
+        request::{AuditLogDetailRequest, AuditLogListRequest},
         response::{
-            AdminBanRecord, AdminDismissalRecord, AuditLogDetail, AuditLogExportResult,
-            AuditLogItem, PaginatedData, PaginationMeta, UserInfo,
+            AdminBanRecord, AdminDismissalRecord, AuditLogDetail, AuditLogItem, PaginatedData,
+            PaginationMeta, UserInfo,
         },
     },
     error::{AppError, Result},
     repositories::{
-        admin_audit_repo::{
-            AdminAuditRepository, AuditExportParams, AuditLogFilter, AuditLogRow, NewAuditLog,
-        },
+        admin_audit_repo::{AdminAuditRepository, AuditLogFilter, AuditLogRow, NewAuditLog},
         user_repo::UserRepository,
     },
     services::media_service::MediaService,
     utils::validation::Validator,
 };
 
-const EXPORT_LIMIT: i64 = 5000;
 const ALLOWED_AUDIT_ACTIONS: [&str; 11] = [
     "user.ban",
     "user.unban",
@@ -141,136 +135,6 @@ impl AdminAuditService {
             created_at: row.created_at.to_rfc3339(),
             before_state: redact_optional(row.before_state),
             after_state: redact_optional(row.after_state),
-        })
-    }
-
-    pub async fn export_logs(
-        &self,
-        _operator_id: i64,
-        req: AuditLogExportRequest,
-    ) -> Result<AuditLogExportResult> {
-        validate_action(&req.action)?;
-        validate_target_type(&req.target_type)?;
-        let format = req.format.as_deref().unwrap_or("csv").to_lowercase();
-        if format != "csv" && format != "json" {
-            return Err(AppError::InvalidFormat(
-                "format 仅支持 csv/json".to_string(),
-            ));
-        }
-
-        let filter = AuditLogFilter {
-            action: req.action.clone(),
-            operator_id: req.operator_id,
-            target_type: req.target_type.clone(),
-            target_id: None,
-            start_time: parse_time(req.start_time.as_deref(), "start_time")?,
-            end_time: parse_time(req.end_time.as_deref(), "end_time")?,
-        };
-
-        let export_row = self
-            .repo
-            .create_export(AuditExportParams {
-                status: "processing".to_string(),
-                format: format.clone(),
-                action: req.action,
-                operator_id: req.operator_id,
-                target_type: req.target_type,
-                target_id: None,
-                start_time: filter.start_time,
-                end_time: filter.end_time,
-            })
-            .await?;
-
-        let export_id = export_row.export_id;
-        let rows = self.repo.list_logs_for_export(filter, EXPORT_LIMIT).await?;
-        let items = self.map_rows_to_items(rows).await?;
-
-        let content = if format == "json" {
-            serde_json::to_string(&items).map_err(|e| AppError::InternalError(e.to_string()))?
-        } else {
-            build_csv(&items)
-        };
-
-        let key = format!("exports/admin_audit/{}.{}", export_id, format);
-        let content_type = if format == "json" {
-            "application/json"
-        } else {
-            "text/csv"
-        };
-
-        let upload_result = self
-            .media_service
-            .upload_bytes(&key, content_type, content.into_bytes())
-            .await;
-
-        if let Err(e) = upload_result {
-            let _ = self
-                .repo
-                .update_export(export_id, "failed", None, None, Some(e.to_string()))
-                .await;
-            return Err(AppError::InternalError("导出失败".to_string()));
-        }
-
-        let expires_at = Utc::now() + chrono::Duration::hours(1);
-        let export_row = self
-            .repo
-            .update_export(
-                export_id,
-                "completed",
-                Some(key.clone()),
-                Some(expires_at),
-                None,
-            )
-            .await?;
-
-        let download_url = self
-            .media_service
-            .sign_url_with_expiry(&key, std::time::Duration::from_secs(3600))
-            .await?;
-        Ok(AuditLogExportResult {
-            export_id: export_row.export_id.to_string(),
-            status: export_row.status,
-            download_url: Some(download_url),
-            expires_at: Some(expires_at.to_rfc3339()),
-        })
-    }
-
-    pub async fn export_status(
-        &self,
-        req: AuditLogExportStatusRequest,
-    ) -> Result<AuditLogExportResult> {
-        let export_id = Uuid::parse_str(&req.export_id)
-            .map_err(|_| AppError::InvalidFormat("export_id 格式错误".to_string()))?;
-        let row = self
-            .repo
-            .get_export(export_id)
-            .await?
-            .ok_or_else(|| AppError::NotFound("导出任务不存在".to_string()))?;
-
-        let mut download_url = None;
-        if row.status == "completed" {
-            if let Some(key) = row.download_key.as_deref() {
-                if let Some(expires_at) = row.expires_at {
-                    let ttl = expires_at.signed_duration_since(Utc::now());
-                    if ttl.num_seconds() > 0 {
-                        download_url = Some(
-                            self.media_service
-                                .sign_url_with_expiry(
-                                    key,
-                                    std::time::Duration::from_secs(ttl.num_seconds() as u64),
-                                )
-                                .await?,
-                        );
-                    }
-                }
-            }
-        }
-
-        Ok(AuditLogExportResult {
-            export_id: row.export_id.to_string(),
-            status: row.status,
-            download_url,
-            expires_at: row.expires_at.map(|t| t.to_rfc3339()),
         })
     }
 
@@ -457,47 +321,6 @@ fn is_sensitive_key(key: &str) -> bool {
     ) || lower.ends_with("_secret")
         || lower.ends_with("_key")
         || lower.ends_with("_token")
-}
-
-fn build_csv(items: &[AuditLogItem]) -> String {
-    let mut out = String::new();
-    out.push_str("log_id,action,operator_id,operator_nickname,target_type,target_id,target_name,details,ip_address,user_agent,created_at\n");
-    for item in items {
-        let details = item
-            .details
-            .as_ref()
-            .and_then(|v| serde_json::to_string(v).ok())
-            .unwrap_or_default();
-        let row = [
-            item.log_id.as_str(),
-            item.action.as_str(),
-            item.operator.user_id.to_string().as_str(),
-            item.operator.nickname.as_str(),
-            item.target_type.as_str(),
-            item.target_id.as_str(),
-            item.target_name.as_deref().unwrap_or(""),
-            details.as_str(),
-            item.ip_address.as_deref().unwrap_or(""),
-            item.user_agent.as_deref().unwrap_or(""),
-            item.created_at.as_str(),
-        ]
-        .iter()
-        .map(|v| csv_escape(v))
-        .collect::<Vec<_>>()
-        .join(",");
-        out.push_str(&row);
-        out.push('\n');
-    }
-    out
-}
-
-fn csv_escape(input: &str) -> String {
-    let need_quote = input.contains(',') || input.contains('"') || input.contains('\n');
-    if !need_quote {
-        return input.to_string();
-    }
-    let escaped = input.replace('"', "\"\"");
-    format!("\"{}\"", escaped)
 }
 
 fn validate_action(action: &Option<String>) -> Result<()> {

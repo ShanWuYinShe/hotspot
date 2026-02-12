@@ -4,15 +4,10 @@
 use crate::{
     dto::{
         request::{
-            AddGroupMessageReactionRequest, DeleteGroupMessageRequest,
-            GroupMessageReactionsRequest, GroupMessagesHistoryRequest,
-            MarkGroupMessagesReadRequest, MessageReadStatusRequest, RecallGroupMessageRequest,
-            RemoveGroupMessageReactionRequest, SendGroupMessageRequest, UpdateGroupMessageRequest,
+            GroupMessagesHistoryRequest, MarkGroupMessagesReadRequest, RecallGroupMessageRequest,
+            SendGroupMessageRequest, UpdateGroupMessageRequest,
         },
-        response::{
-            ApiResponse, GroupMessageItem, MessageReactionItem, MessageReadItem, PaginatedData,
-            SendGroupMessageData,
-        },
+        response::{ApiResponse, GroupMessageItem, PaginatedData, SendGroupMessageData},
     },
     error::Result,
     middleware::auth::AuthenticatedUser,
@@ -73,20 +68,6 @@ pub async fn recall(
     Ok(Json(ApiResponse::success_empty()))
 }
 
-/// 删除群聊消息
-pub async fn delete(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(req): Json<DeleteGroupMessageRequest>,
-) -> Result<Json<ApiResponse<()>>> {
-    state
-        .group_message_service
-        .delete(&req, user.user_id)
-        .await?;
-
-    Ok(Json(ApiResponse::success_empty()))
-}
-
 /// 标记群聊消息已读
 pub async fn mark_as_read(
     State(state): State<AppState>,
@@ -99,60 +80,4 @@ pub async fn mark_as_read(
         .await?;
 
     Ok(Json(ApiResponse::success_empty()))
-}
-
-/// 获取消息已读状态
-pub async fn read_status(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(req): Json<MessageReadStatusRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MessageReadItem>>>> {
-    let response = state
-        .group_message_service
-        .get_read_status(&req, user.user_id)
-        .await?;
-
-    Ok(Json(ApiResponse::success(response)))
-}
-
-/// 添加消息反应
-pub async fn add_reaction(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(req): Json<AddGroupMessageReactionRequest>,
-) -> Result<Json<ApiResponse<()>>> {
-    state
-        .group_message_service
-        .add_reaction(&req, user.user_id)
-        .await?;
-
-    Ok(Json(ApiResponse::success_empty()))
-}
-
-/// 移除消息反应
-pub async fn remove_reaction(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(req): Json<RemoveGroupMessageReactionRequest>,
-) -> Result<Json<ApiResponse<()>>> {
-    state
-        .group_message_service
-        .remove_reaction(&req, user.user_id)
-        .await?;
-
-    Ok(Json(ApiResponse::success_empty()))
-}
-
-/// 获取消息反应列表
-pub async fn reactions(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(req): Json<GroupMessageReactionsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MessageReactionItem>>>> {
-    let response = state
-        .group_message_service
-        .get_reactions_list(&req, user.user_id)
-        .await?;
-
-    Ok(Json(ApiResponse::success(response)))
 }

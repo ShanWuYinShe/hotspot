@@ -9,6 +9,5 @@ use crate::{handlers::tags, state::AppState};
 
 /// Token 可选的标签路由
 pub fn token_optional_routes() -> Router<AppState> {
-    Router::new()
-        .route("/list_trending", post(tags::trending))
+    Router::new().route("/list_trending", post(tags::trending))
 }

@@ -1,5 +1,5 @@
 //! 动态瞬间仓库层实现
-//! 
+//!
 //! 适配新 Schema: moment_id (UUID), user_id (BIGINT), 分区表 moments_partitioned
 
 use chrono::{DateTime, Utc};
@@ -45,11 +45,11 @@ pub struct MomentDetailRow {
     pub share_count: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    
+
     // Joined fields
     pub user_nickname: Option<String>,
     pub user_avatar_url: Option<String>,
-    
+
     // LBS fields (Result of ST_X/Y or ST_Distance)
     pub longitude: Option<f64>,
     pub latitude: Option<f64>,
@@ -108,7 +108,6 @@ pub struct MomentImageRow {
     pub url: String,
     pub width: Option<i32>,
     pub height: Option<i32>,
-    pub sort_order: Option<i32>,
 }
 
 /// 瞬间点赞用户行
@@ -194,7 +193,12 @@ impl MomentRepository {
     }
 
     /// 获取动态详情（带用户信息和坐标）
-    pub async fn get_detail(&self, moment_id: Uuid, viewer_lon: Option<f64>, viewer_lat: Option<f64>) -> Result<Option<MomentDetailRow>> {
+    pub async fn get_detail(
+        &self,
+        moment_id: Uuid,
+        viewer_lon: Option<f64>,
+        viewer_lat: Option<f64>,
+    ) -> Result<Option<MomentDetailRow>> {
         let row = sqlx::query_as!(
             MomentDetailRow,
             r#"
@@ -222,60 +226,6 @@ impl MomentRepository {
         .await?;
 
         Ok(row)
-    }
-
-    /// 列出用户的动态 Feed
-    pub async fn list_feed(
-        &self,
-        user_id: i64,
-        limit: i64,
-        cursor: Option<String>,
-    ) -> Result<(Vec<MomentDetailRow>, Option<String>)> {
-        let (last_ts, last_id) = if let Some(c) = cursor {
-            decode_cursor::<TimeIdCursor>(&c)?
-        } else {
-            (DateTime::<Utc>::MAX_UTC, Uuid::max())
-        };
-
-        let rows = sqlx::query_as!(
-            MomentDetailRow,
-            r#"
-            SELECT m.moment_id as "moment_id!", m.user_id as "user_id!", m.description, m.mentions, m.location_name,
-                   m.privacy_level as "privacy_level!: crate::types::enums::PrivacyLevel",
-                   m.view_count::int as "view_count!", m.like_count::int as "like_count!",
-                   m.comments_count::int as "comments_count!", m.share_count::int as "share_count!",
-                   m.created_at as "created_at!", m.updated_at as "updated_at!",
-                   u.nickname as user_nickname, u.avatar_url as user_avatar_url,
-                   ST_X(m.location::geometry) as longitude,
-                   ST_Y(m.location::geometry) as latitude,
-                   NULL::float8 as distance
-            FROM moments m
-            JOIN users u ON m.user_id = u.user_id
-            WHERE (m.user_id = $1 OR m.privacy_level = 'public' OR 
-                  (m.privacy_level = 'friends' AND EXISTS(SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = m.user_id)))
-              AND m.deleted_at IS NULL
-              AND (m.created_at, m.moment_id) < ($2, $3)
-            ORDER BY m.created_at DESC, m.moment_id DESC
-            LIMIT $4
-            "#,
-            user_id,
-            last_ts,
-            last_id,
-            limit + 1
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        let has_more = rows.len() > limit as usize;
-        let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
-        
-        let next_cursor = if has_more {
-            items.last().map(|r| encode_cursor(&(r.created_at, r.moment_id))).transpose()?
-        } else {
-            None
-        };
-
-        Ok((items, next_cursor))
     }
 
     /// 关注流（仅关注 + 自己）
@@ -441,7 +391,12 @@ impl MomentRepository {
         let next_cursor = if has_more {
             items
                 .last()
-                .map(|r| encode_cursor(&DistanceMomentCursor(r.distance.unwrap_or(0.0), r.moment_id)))
+                .map(|r| {
+                    encode_cursor(&DistanceMomentCursor(
+                        r.distance.unwrap_or(0.0),
+                        r.moment_id,
+                    ))
+                })
                 .transpose()?
         } else {
             None
@@ -715,7 +670,6 @@ impl MomentRepository {
         Ok((items, next_cursor))
     }
 
-
     /// 按关键字搜索瞬间
     pub async fn search_by_keyword(
         &self,
@@ -910,7 +864,12 @@ impl MomentRepository {
         let next_cursor = if has_more {
             items
                 .last()
-                .map(|r| encode_cursor(&DistanceMomentCursor(r.distance.unwrap_or(0.0), r.moment_id)))
+                .map(|r| {
+                    encode_cursor(&DistanceMomentCursor(
+                        r.distance.unwrap_or(0.0),
+                        r.moment_id,
+                    ))
+                })
                 .transpose()?
         } else {
             None
@@ -957,24 +916,6 @@ impl MomentRepository {
         Ok(())
     }
 
-    /// 获取瞬间图片
-    pub async fn list_images(&self, moment_id: Uuid) -> Result<Vec<MomentImageRow>> {
-        let rows = sqlx::query_as!(
-            MomentImageRow,
-            r#"
-            SELECT moment_id as "moment_id!", url as "url!", width, height, sort_order
-            FROM moment_images
-            WHERE moment_id = $1
-            ORDER BY sort_order ASC, created_at ASC
-            "#,
-            moment_id
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(rows)
-    }
-
     /// 批量获取瞬间图片
     pub async fn list_images_batch(
         &self,
@@ -987,7 +928,7 @@ impl MomentRepository {
         let rows = sqlx::query_as!(
             MomentImageRow,
             r#"
-            SELECT moment_id as "moment_id!", url as "url!", width, height, sort_order
+            SELECT moment_id as "moment_id!", url as "url!", width, height
             FROM moment_images
             WHERE moment_id = ANY($1)
             ORDER BY moment_id ASC, sort_order ASC, created_at ASC
@@ -1018,7 +959,11 @@ impl MomentRepository {
             .await?;
 
         for (idx, (file_id, url, width, height, sort_order)) in images.iter().enumerate() {
-            let order = if *sort_order >= 0 { *sort_order } else { idx as i32 };
+            let order = if *sort_order >= 0 {
+                *sort_order
+            } else {
+                idx as i32
+            };
             sqlx::query!(
                 r#"
                 INSERT INTO moment_images (moment_id, file_id, url, width, height, sort_order)
@@ -1076,7 +1021,10 @@ impl MomentRepository {
         let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
 
         let next_cursor = if has_more {
-            items.last().map(|r| encode_cursor(&r.created_at)).transpose()?
+            items
+                .last()
+                .map(|r| encode_cursor(&r.created_at))
+                .transpose()?
         } else {
             None
         };

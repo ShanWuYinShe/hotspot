@@ -8,9 +8,8 @@ use serde_json::Value;
 
 // 导入所有需要的枚举类型
 use crate::types::enums::{
-    AnnouncementSeverity, ApplicationStatus, DevicePlatform, Gender, GroupJoinMethod, GroupRole,
-    MapItemType, MessageType, NotificationTargetType, NotificationType, PrivacyLevel,
-    PrivateChatPermission, ReactionType, ReportStatus, ReportTargetType, ShareType,
+    AnnouncementSeverity, ApplicationStatus, Gender, GroupJoinMethod, GroupRole, MapItemType,
+    MessageType, PrivacyLevel, PrivateChatPermission, ReportStatus, ReportTargetType, ShareType,
     SystemHealthStatus, TagTrend, UserAccountStatus, UserType,
 };
 
@@ -132,16 +131,6 @@ pub struct UserRelation {
     pub is_followed_by: bool, // 对方是否关注了我
     pub is_blocked: bool,     // 我是否拉黑了对方
     pub has_pending_follow_request: bool,
-}
-
-/// 关注请求项 - API 文档: FollowRequestItem
-#[derive(Debug, Serialize, Clone)]
-pub struct FollowRequestItem {
-    pub request_id: String,
-    pub requester: UserInfo,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub message: Option<String>,
-    pub requested_at: String,
 }
 
 /// 社交上下文（展示与当前用户的共同点）- API 文档: UserSearchItem.social_context
@@ -426,25 +415,6 @@ pub struct MomentLikeItem {
     pub liked_at: String,
 }
 
-/// 点赞状态检查数据
-#[derive(Debug, Serialize)]
-pub struct CheckLikedData {
-    pub is_liked: bool,
-}
-
-/// 收藏状态检查数据
-#[derive(Debug, Serialize)]
-pub struct CheckFavoritedData {
-    pub is_favorited: bool,
-}
-
-/// 瞬间互动状态数据 - API 文档: MomentInteractionStateData
-#[derive(Debug, Serialize)]
-pub struct MomentInteractionStateData {
-    pub is_liked: bool,
-    pub is_favorited: bool,
-}
-
 // ============================================================
 // 评论相关类型
 // ============================================================
@@ -542,15 +512,6 @@ pub struct GroupSettings {
     pub location: RelativeLocation,
 }
 
-/// 群组设置数据（含 ID）
-#[derive(Debug, Serialize)]
-pub struct GroupSettingsData {
-    pub group_chat_id: String,
-    pub settings: GroupSettings,
-    pub has_password: bool,
-    pub created_at: String,
-}
-
 /// 已加入的群组项 - API 文档: MyGroupItem
 #[derive(Debug, Serialize)]
 pub struct MyGroupItem {
@@ -609,12 +570,6 @@ pub struct BannedMemberItem {
 pub struct InviteMemberData {
     pub invite_id: String,
     pub expires_at: String,
-}
-
-/// 申请加入返回数据
-#[derive(Debug, Serialize)]
-pub struct ApplyToGroupData {
-    pub application_id: String,
 }
 
 /// 群组申请项 - API 文档: GroupApplicationItem
@@ -792,22 +747,6 @@ pub struct GroupMessageItem {
     pub read_count: Option<i32>,
 }
 
-/// 消息已读项 - API 文档: MessageReadItem
-#[derive(Debug, Serialize)]
-pub struct MessageReadItem {
-    pub user: UserInfo,
-    pub read_at: String,
-}
-
-/// 消息反应项 - API 文档: MessageReactionItem
-#[derive(Debug, Serialize)]
-pub struct MessageReactionItem {
-    pub user: UserInfo,
-    #[serde(rename = "type")]
-    pub reaction_type: ReactionType,
-    pub created_at: String,
-}
-
 // ============================================================
 // 举报相关类型
 // ============================================================
@@ -867,63 +806,6 @@ pub struct SubscriptionsData {
     pub moment_comment_enabled: bool,
     pub comment_reply_enabled: bool,
     pub system_announcement_enabled: bool,
-}
-
-/// 通知项 - API 文档: NotificationItem
-#[derive(Debug, Serialize)]
-pub struct NotificationItem {
-    pub notification_id: String,
-    #[serde(rename = "type")]
-    pub notification_type: NotificationType,
-    pub is_read: bool,
-    pub created_at: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub sender: Option<UserInfo>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub title: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub content: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub target_type: Option<NotificationTargetType>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub target_id: Option<String>, // 统一为 string（user_id 也转为字符串格式）
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub reference_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub target_text_preview: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub target_media_url: Option<String>,
-}
-
-/// 未读通知计数数据 - API 文档: UnreadNotificationCountData
-#[derive(Debug, Serialize)]
-pub struct UnreadNotificationCountData {
-    pub total: i64,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub breakdown: Option<UnreadNotificationBreakdown>,
-}
-
-/// 未读通知分类计数
-#[derive(Debug, Serialize)]
-pub struct UnreadNotificationBreakdown {
-    pub like: i64,
-    pub comment: i64,
-    pub follow: i64,
-    pub system: i64,
-    pub mention: i64,
-}
-
-// ============================================================
-// 设备令牌相关类型
-// ============================================================
-
-/// 设备令牌项 - API 文档: DeviceTokenItem
-#[derive(Debug, Serialize)]
-pub struct DeviceTokenItem {
-    pub device_token_id: String,
-    pub platform: DevicePlatform,
-    pub device_token: String,
-    pub created_at: String,
 }
 
 // ============================================================
@@ -1522,17 +1404,6 @@ pub struct AuditLogDetail {
     pub before_state: Option<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub after_state: Option<Value>,
-}
-
-/// 导出结果 - API 文档: AuditLogExportResult
-#[derive(Debug, Serialize)]
-pub struct AuditLogExportResult {
-    pub export_id: String,
-    pub status: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub download_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub expires_at: Option<String>,
 }
 
 // ============================================================

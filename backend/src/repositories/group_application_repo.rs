@@ -30,31 +30,6 @@ impl GroupApplicationRepository {
         Self { pool }
     }
 
-    /// 创建申请
-    pub async fn create(
-        &self,
-        group_id: i64,
-        applicant_id: i64,
-        message: Option<String>,
-    ) -> Result<GroupApplicationRow> {
-        let row = sqlx::query_as!(
-            GroupApplicationRow,
-            r#"
-            INSERT INTO group_requests (group_id, user_id, operator_id, type, message)
-            VALUES ($1, $2, $2, 'apply', $3)
-            RETURNING request_id as "application_id!", group_id, user_id as "applicant_id!", message,
-                      COALESCE(status, 'pending'::request_status) as "status!: ApplicationStatus", created_at, handled_by, handled_at
-            "#,
-            group_id,
-            applicant_id,
-            message
-        )
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(row)
-    }
-
     /// 按 application_id 查找申请（对外契约使用 UUID 字符串）
     pub async fn find_by_application_id(
         &self,

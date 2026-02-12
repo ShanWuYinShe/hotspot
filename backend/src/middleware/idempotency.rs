@@ -280,7 +280,10 @@ fn validate_idempotency_key_format(key: &str) -> bool {
         return false;
     }
     // 校验字符集
-    if !key.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+    if !key
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
         return false;
     }
     // 校验至少包含 2 个 '-'（{client_id}-{timestamp_ms}-{random} 至少有 2 个分隔符）

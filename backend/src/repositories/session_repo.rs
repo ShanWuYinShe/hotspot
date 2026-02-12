@@ -82,26 +82,6 @@ impl SessionRepository {
         Ok(row)
     }
 
-    /// 按ID查找会话
-    pub async fn find_by_id(&self, session_id: Uuid) -> Result<Option<SessionRow>> {
-        let row = sqlx::query_as!(
-            SessionRow,
-            r#"
-            SELECT id, session_id, user_id, device_type, device_name, device_fingerprint,
-                   ip_address, user_agent,
-                   access_token_hash, refresh_token_hash, previous_refresh_token_hash,
-                   created_at, last_active_at, expires_at, is_revoked, revoked_at
-            FROM sessions
-            WHERE session_id = $1 AND is_revoked = FALSE AND expires_at > NOW()
-            "#,
-            session_id
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(row)
-    }
-
     /// 撤销会话
     pub async fn revoke(&self, session_id: Uuid) -> Result<()> {
         sqlx::query!(
@@ -155,11 +135,6 @@ impl SessionRepository {
         crate::utils::pagination::paginate_with_limit_plus_one(rows, limit, |item| {
             encode_cursor(&item.id)
         })
-    }
-
-    /// 删除会话（撤销）
-    pub async fn delete(&self, session_id: Uuid) -> Result<()> {
-        self.revoke(session_id).await
     }
 
     /// 按 refresh_token 查找会话

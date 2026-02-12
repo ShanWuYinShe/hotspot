@@ -11,7 +11,8 @@ use std::collections::HashMap;
 use crate::constants::{REDIS_KEY_PRESENCE_LOCATION, REDIS_KEY_PRESENCE_ONLINE};
 use crate::error::{AppError, Result};
 use crate::repositories::{
-    user_online_status_repo::UserOnlineStatusRepository, user_repo::UserRepository,
+    user_online_status_repo::UserOnlineStatusRepository,
+    user_repo::UserRepository,
     user_settings_repo::{UserSettingsRepository, UserSettingsRow},
 };
 
@@ -173,8 +174,10 @@ impl PresenceService {
         }
 
         // 1) 批量拿隐私设置（避免 N+1）
-        let mut settings_map: HashMap<i64, crate::repositories::user_settings_repo::UserSettingsRow> =
-            HashMap::new();
+        let mut settings_map: HashMap<
+            i64,
+            crate::repositories::user_settings_repo::UserSettingsRow,
+        > = HashMap::new();
         if let Ok(settings) = self.user_settings_repo.get_batch(user_ids).await {
             settings_map = settings.into_iter().map(|s| (s.user_id, s)).collect();
         }
@@ -282,12 +285,6 @@ impl PresenceService {
         }
 
         result
-    }
-
-    /// 批量获取用户在线状态（仅 bool，用于 FriendsList 等，不处理 privacy）
-    /// 这里的命名应该区分一下，或者直接 expose public
-    pub async fn batch_get_online_status_raw(&self, user_ids: &[i64]) -> HashMap<i64, bool> {
-        self.batch_get_online_status(user_ids).await
     }
 
     /// 获取用户在线状态（内部方法，不检查隐私设置）

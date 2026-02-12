@@ -106,20 +106,4 @@ impl ChatUnreadRepository {
 
         Ok(rows.into_iter().map(|r| (r.chat_id, r.count)).collect())
     }
-
-    /// 标记用户所有会话已读
-    pub async fn mark_all_as_read_for_user(&self, user_id: i64) -> Result<(), AppError> {
-        sqlx::query!(
-            r#"
-            UPDATE chat_conversations_state
-            SET unread_count = 0,
-                updated_at = NOW()
-            WHERE user_id = $1
-            "#,
-            user_id
-        )
-        .execute(&self.pool)
-        .await?;
-        Ok(())
-    }
 }

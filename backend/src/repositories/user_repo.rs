@@ -1,5 +1,5 @@
 //! 用户仓库层实现
-//! 
+//!
 //! 适配新 Schema: user_id 使用 BIGINT，集成 PostGIS 地理空间功能
 
 use chrono::{DateTime, Utc};
@@ -34,13 +34,10 @@ pub struct UserRow {
 /// 用户统计行
 #[derive(Debug, Clone, FromRow)]
 pub struct UserStatsRow {
-    pub user_id: i64,
     pub moments_count: i32,
     pub following_count: i32,
     pub followers_count: i32,
-    pub likes_received: i32,
     pub groups_count: i32,
-    pub reactions_given: i32,
 }
 
 /// 附近的人搜索结果
@@ -204,26 +201,22 @@ impl UserRepository {
         let row = sqlx::query_as!(
             UserStatsRow,
             r#"
-            SELECT user_id as "user_id!",
-                   COALESCE(moments_count, 0)::int as "moments_count!",
+            SELECT COALESCE(moments_count, 0)::int as "moments_count!",
                    COALESCE(following_count, 0)::int as "following_count!",
                    COALESCE(followers_count, 0)::int as "followers_count!",
-                   COALESCE(likes_received, 0)::int as "likes_received!",
-                   COALESCE(groups_count, 0)::int as "groups_count!",
-                   COALESCE(reactions_given, 0)::int as "reactions_given!"
+                   COALESCE(groups_count, 0)::int as "groups_count!"
             FROM user_stats WHERE user_id = $1
             "#,
             user_id
-        ).fetch_optional(&self.pool).await?;
+        )
+        .fetch_optional(&self.pool)
+        .await?;
 
         Ok(row.unwrap_or(UserStatsRow {
-            user_id,
             moments_count: 0,
             following_count: 0,
             followers_count: 0,
-            likes_received: 0,
             groups_count: 0,
-            reactions_given: 0,
         }))
     }
 
@@ -254,7 +247,9 @@ impl UserRepository {
             bio,
             gender as Option<UserGender>,
             birthday.and_then(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").ok())
-        ).execute(&self.pool).await?;
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
@@ -264,7 +259,9 @@ impl UserRepository {
             "UPDATE users SET password_hash = $2, updated_at = NOW() WHERE user_id = $1",
             user_id,
             password_hash
-        ).execute(&self.pool).await?;
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
@@ -357,10 +354,13 @@ impl UserRepository {
         radius: f64,
         limit: i64,
         cursor: Option<String>,
+        kw: Option<&str>,
     ) -> Result<(Vec<UserSearchRow>, Option<String>)> {
         let (last_dist, last_id) = if let Some(c) = cursor {
             decode_cursor::<DistanceCursor>(&c)?
-        } else { (0.0, 0) };
+        } else {
+            (0.0, 0)
+        };
 
         let rows = sqlx::query_as!(
             UserSearchRow,
@@ -379,16 +379,22 @@ impl UserRepository {
                   ST_Distance(u.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) > $4
                   OR (ST_Distance(u.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) = $4 AND u.user_id > $5)
               )
-            ORDER BY ST_Distance(u.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) ASC, u.user_id ASC LIMIT $6
+              AND ($6::text IS NULL OR u.nickname ILIKE '%' || $6 || '%')
+            ORDER BY ST_Distance(u.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) ASC, u.user_id ASC LIMIT $7
             "#,
-            lon, lat, radius, last_dist, last_id, limit + 1
+            lon, lat, radius, last_dist, last_id, kw, limit + 1
         ).fetch_all(&self.pool).await?;
 
         let has_more = rows.len() > limit as usize;
         let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
         let next_cursor = if has_more {
-            items.last().map(|r| encode_cursor(&(r.distance, r.user_id))).transpose()?
-        } else { None };
+            items
+                .last()
+                .map(|r| encode_cursor(&(r.distance, r.user_id)))
+                .transpose()?
+        } else {
+            None
+        };
 
         Ok((items, next_cursor))
     }
@@ -690,7 +696,10 @@ impl UserRepository {
         let has_more = rows.len() > limit as usize;
         let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
         let next_cursor = if has_more {
-            items.last().map(|r| encode_cursor(&r.user_id)).transpose()?
+            items
+                .last()
+                .map(|r| encode_cursor(&r.user_id))
+                .transpose()?
         } else {
             None
         };

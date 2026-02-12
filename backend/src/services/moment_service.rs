@@ -10,25 +10,24 @@ use uuid::Uuid;
 use crate::{
     dto::{
         request::{
-            CheckFavoritedRequest, CheckLikedRequest, CreateMomentRequest, DeleteMomentRequest,
-            EditMomentRequest, FavoriteMomentRequest, GetMomentInteractionStateRequest,
+            CreateMomentRequest, DeleteMomentRequest, EditMomentRequest, FavoriteMomentRequest,
             LikeMomentRequest, MomentLikesRequest, MomentOpenTheDoorRequest, MyFavoritesRequest,
             MyMomentsRequest, SearchMomentsByKeywordRequest, SearchMomentsByLocationRequest,
             SearchMomentsByTagRequest, UnfavoriteMomentRequest, UnlikeMomentRequest,
             UserMomentsRequest,
         },
         response::{
-            MomentImage, MomentInteractionStateData,
-            MomentLikeItem, MomentSearchItem, MyMomentState, PaginatedData, PaginationMeta,
-            RelativeLocation, UserInfo, UserMomentListItem,
+            MomentImage, MomentLikeItem, MomentSearchItem, MyMomentState, PaginatedData,
+            PaginationMeta, RelativeLocation, UserInfo, UserMomentListItem,
         },
     },
     error::{AppError, Result},
     events::event_types::AppEvent,
     repositories::{
-        moment_repo::{MomentDetailRow, MomentImageRow, MomentLikeRow, MomentListRow, MomentRepository},
+        moment_repo::{
+            MomentDetailRow, MomentImageRow, MomentLikeRow, MomentListRow, MomentRepository,
+        },
         tag_repo::TagRepository,
-        user_repo::UserRepository,
         user_settings_repo::UserSettingsRepository,
     },
     types::enums::PrivacyLevel,
@@ -42,7 +41,6 @@ pub struct MomentService {
     event_bus: Arc<EventBus>,
     moment_repo: MomentRepository,
     tag_repo: TagRepository,
-    user_repo: UserRepository,
     _user_settings_repo: UserSettingsRepository,
     media_service: crate::services::media_service::MediaService,
     _cache_manager: CacheManager,
@@ -54,7 +52,6 @@ impl MomentService {
         event_bus: Arc<EventBus>,
         moment_repo: MomentRepository,
         tag_repo: TagRepository,
-        user_repo: UserRepository,
         user_settings_repo: UserSettingsRepository,
         media_service: crate::services::media_service::MediaService,
         cache_manager: CacheManager,
@@ -64,7 +61,6 @@ impl MomentService {
             event_bus,
             moment_repo,
             tag_repo,
-            user_repo,
             _user_settings_repo: user_settings_repo,
             media_service,
             _cache_manager: cache_manager,
@@ -78,7 +74,10 @@ impl MomentService {
         req: &SearchMomentsByKeywordRequest,
     ) -> Result<PaginatedData<MomentSearchItem>> {
         Validator::validate_not_empty(&req.kw, "kw")?;
-        Validator::validate_coordinates(req.reference_point.latitude, req.reference_point.longitude)?;
+        Validator::validate_coordinates(
+            req.reference_point.latitude,
+            req.reference_point.longitude,
+        )?;
         let limit = Validator::validate_limit(req.limit, 50)? as i64;
 
         let (rows, next_cursor) = self
@@ -102,7 +101,10 @@ impl MomentService {
         req: &SearchMomentsByTagRequest,
     ) -> Result<PaginatedData<MomentSearchItem>> {
         Validator::validate_not_empty(&req.tag, "tag")?;
-        Validator::validate_coordinates(req.reference_point.latitude, req.reference_point.longitude)?;
+        Validator::validate_coordinates(
+            req.reference_point.latitude,
+            req.reference_point.longitude,
+        )?;
         let limit = Validator::validate_limit(req.limit, 50)? as i64;
 
         let (rows, next_cursor) = self
@@ -125,7 +127,10 @@ impl MomentService {
         viewer_id: Option<i64>,
         req: &SearchMomentsByLocationRequest,
     ) -> Result<PaginatedData<MomentSearchItem>> {
-        Validator::validate_coordinates(req.reference_point.latitude, req.reference_point.longitude)?;
+        Validator::validate_coordinates(
+            req.reference_point.latitude,
+            req.reference_point.longitude,
+        )?;
         let radius = Validator::validate_radius_required(req.radius, 50000.0)?;
         let limit = Validator::validate_limit(req.limit, 50)? as i64;
 
@@ -371,7 +376,11 @@ impl MomentService {
 
         let (lon, lat, location_name) = if let Some(loc) = &req.location {
             Validator::validate_coordinates(loc.point.latitude, loc.point.longitude)?;
-            (Some(loc.point.longitude), Some(loc.point.latitude), Some(loc.location_name.clone()))
+            (
+                Some(loc.point.longitude),
+                Some(loc.point.latitude),
+                Some(loc.location_name.clone()),
+            )
         } else {
             (None, None, None)
         };
@@ -453,15 +462,6 @@ impl MomentService {
         Ok(())
     }
 
-    pub async fn check_liked(&self, user_id: i64, req: &CheckLikedRequest) -> Result<bool> {
-        let moment_id = Uuid::parse_str(&req.moment_id)
-            .map_err(|_| AppError::InvalidFormat("无效的 moment_id".to_string()))?;
-        if !self.moment_repo.exists(moment_id).await? {
-            return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
-        }
-        self.moment_repo.is_liked(moment_id, user_id).await
-    }
-
     /// 收藏
     pub async fn favorite_moment(&self, user_id: i64, req: &FavoriteMomentRequest) -> Result<()> {
         let moment_id = Uuid::parse_str(&req.moment_id)
@@ -488,39 +488,6 @@ impl MomentService {
         Ok(())
     }
 
-    pub async fn check_favorited(
-        &self,
-        user_id: i64,
-        req: &CheckFavoritedRequest,
-    ) -> Result<bool> {
-        let moment_id = Uuid::parse_str(&req.moment_id)
-            .map_err(|_| AppError::InvalidFormat("无效的 moment_id".to_string()))?;
-        if !self.moment_repo.exists(moment_id).await? {
-            return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
-        }
-        self.moment_repo.is_favorited(moment_id, user_id).await
-    }
-
-    /// 获取瞬间互动状态（点赞+收藏）
-    pub async fn get_interaction_state(
-        &self,
-        user_id: i64,
-        req: &GetMomentInteractionStateRequest,
-    ) -> Result<MomentInteractionStateData> {
-        let moment_id = Uuid::parse_str(&req.moment_id)
-            .map_err(|_| AppError::InvalidFormat("无效的 moment_id".to_string()))?;
-        if !self.moment_repo.exists(moment_id).await? {
-            return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
-        }
-
-        let is_liked = self.moment_repo.is_liked(moment_id, user_id).await?;
-        let is_favorited = self.moment_repo.is_favorited(moment_id, user_id).await?;
-        Ok(MomentInteractionStateData {
-            is_liked,
-            is_favorited,
-        })
-    }
-
     pub async fn get_favorites_list(
         &self,
         user_id: i64,
@@ -532,7 +499,8 @@ impl MomentService {
             .list_favorited_moments(user_id, limit, req.cursor.clone())
             .await?;
 
-        self.build_search_list(rows, Some(user_id), next_cursor).await
+        self.build_search_list(rows, Some(user_id), next_cursor)
+            .await
     }
 
     fn build_location(
@@ -579,7 +547,10 @@ impl MomentService {
 
         let (liked_set, favorited_set) = if let Some(uid) = viewer_id {
             let liked = self.moment_repo.batch_check_liked(&moment_ids, uid).await?;
-            let favorited = self.moment_repo.batch_check_favorited(&moment_ids, uid).await?;
+            let favorited = self
+                .moment_repo
+                .batch_check_favorited(&moment_ids, uid)
+                .await?;
             (Some(liked), Some(favorited))
         } else {
             (None, None)

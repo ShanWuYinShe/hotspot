@@ -17,7 +17,7 @@ pub struct UserJoinedGroupInfoRow {
     pub avatar_url: Option<String>,
     pub members_count: i32,
     pub has_password: bool,
-    pub joined_at: DateTime<Utc>,  // From group_members
+    pub joined_at: DateTime<Utc>, // From group_members
 }
 
 /// 基础群组成员Row (对应数据库表)
@@ -25,7 +25,7 @@ pub struct UserJoinedGroupInfoRow {
 pub struct GroupMemberRow {
     pub group_id: i64,
     pub user_id: i64,
-    pub nickname: Option<String>,  // Custom nickname in group
+    pub nickname: Option<String>, // Custom nickname in group
     pub role: GroupRole,
     pub is_muted: Option<bool>,
     pub muted_until: Option<DateTime<Utc>>,
@@ -38,7 +38,7 @@ pub struct GroupMemberRow {
 pub struct GroupMemberDetailRow {
     pub group_id: i64,
     pub user_id: i64,
-    pub group_nickname: Option<String>,  // From group_members.nickname
+    pub group_nickname: Option<String>, // From group_members.nickname
     pub role: GroupRole,
     pub is_muted: Option<bool>,
     pub muted_until: Option<DateTime<Utc>>,
@@ -46,7 +46,7 @@ pub struct GroupMemberDetailRow {
     pub inviter_id: Option<i64>,
 
     // Joined fields from users table
-    pub user_nickname: Option<String>,  // From users.nickname
+    pub user_nickname: Option<String>, // From users.nickname
     pub avatar_url: Option<String>,
     pub user_type: Option<crate::types::enums::UserType>,
 }
@@ -108,11 +108,7 @@ impl GroupMemberRepository {
     }
 
     /// 按用户ID和群组ID查找成员
-    pub async fn find_member(
-        &self,
-        group_id: i64,
-        user_id: i64,
-    ) -> Result<Option<GroupMemberRow>> {
+    pub async fn find_member(&self, group_id: i64, user_id: i64) -> Result<Option<GroupMemberRow>> {
         let row = sqlx::query_as!(
             GroupMemberRow,
             r#"
@@ -131,12 +127,7 @@ impl GroupMemberRepository {
     }
 
     /// 更新成员角色
-    pub async fn update_role(
-        &self,
-        group_id: i64,
-        user_id: i64,
-        role: GroupRole,
-    ) -> Result<()> {
+    pub async fn update_role(&self, group_id: i64, user_id: i64, role: GroupRole) -> Result<()> {
         let role_str = role.to_string();
         sqlx::query!(
             r#"
@@ -320,7 +311,90 @@ impl GroupMemberRepository {
         };
 
         let next_cursor = if has_more {
-            items.last().map(|r| encode_cursor(&r.joined_at)).transpose()?
+            items
+                .last()
+                .map(|r| encode_cursor(&r.joined_at))
+                .transpose()?
+        } else {
+            None
+        };
+
+        Ok((items, next_cursor))
+    }
+
+    /// 搜索群组成员（按昵称关键字）
+    pub async fn search_members(
+        &self,
+        group_id: i64,
+        keyword: &str,
+        limit: usize,
+        cursor: Option<&str>,
+    ) -> Result<(Vec<GroupMemberDetailRow>, Option<String>)> {
+        let keyword_pattern = format!("%{}%", keyword);
+        let cursor_time = cursor.and_then(|c| decode_cursor::<DateTime<Utc>>(c).ok());
+
+        let rows = if let Some(time) = cursor_time {
+            sqlx::query_as!(
+                GroupMemberDetailRow,
+                r#"
+                SELECT 
+                    gm.group_id, gm.user_id, gm.nickname as group_nickname, 
+                    gm.role as "role!: GroupRole", gm.is_muted, gm.muted_until, 
+                    gm.joined_at, gm.inviter_id,
+                    u.nickname as user_nickname, u.avatar_url,
+                    u.user_type as "user_type: crate::types::enums::UserType"
+                FROM group_members gm
+                LEFT JOIN users u ON gm.user_id = u.user_id
+                WHERE gm.group_id = $1
+                  AND (COALESCE(u.nickname, '') ILIKE $2 OR COALESCE(gm.nickname, '') ILIKE $2)
+                  AND gm.joined_at > $3
+                ORDER BY gm.joined_at ASC
+                LIMIT $4
+                "#,
+                group_id,
+                &keyword_pattern,
+                time,
+                (limit + 1) as i64
+            )
+            .fetch_all(&self.pool)
+            .await?
+        } else {
+            sqlx::query_as!(
+                GroupMemberDetailRow,
+                r#"
+                SELECT 
+                    gm.group_id, gm.user_id, gm.nickname as group_nickname, 
+                    gm.role as "role!: GroupRole", gm.is_muted, gm.muted_until, 
+                    gm.joined_at, gm.inviter_id,
+                    u.nickname as user_nickname, u.avatar_url,
+                    u.user_type as "user_type: crate::types::enums::UserType"
+                FROM group_members gm
+                LEFT JOIN users u ON gm.user_id = u.user_id
+                WHERE gm.group_id = $1
+                  AND (COALESCE(u.nickname, '') ILIKE $2 OR COALESCE(gm.nickname, '') ILIKE $2)
+                ORDER BY gm.joined_at ASC
+                LIMIT $3
+                "#,
+                group_id,
+                &keyword_pattern,
+                (limit + 1) as i64
+            )
+            .fetch_all(&self.pool)
+            .await?
+        };
+
+        let has_more = rows.len() > limit;
+        let items = if has_more {
+            rows[..limit].to_vec()
+        } else {
+            rows
+        };
+
+        let next_cursor = if has_more {
+            items
+                .last()
+                .map(|r| encode_cursor(&r.joined_at))
+                .transpose()?
         } else {
             None
         };
@@ -389,7 +463,10 @@ impl GroupMemberRepository {
         };
 
         let next_cursor = if has_more {
-            items.last().map(|r| encode_cursor(&r.joined_at)).transpose()?
+            items
+                .last()
+                .map(|r| encode_cursor(&r.joined_at))
+                .transpose()?
         } else {
             None
         };
@@ -415,30 +492,6 @@ impl GroupMemberRepository {
             user_id,
             is_muted,
             muted_until
-        )
-        .execute(&self.pool)
-        .await?;
-
-        self.invalidate_member_cache(group_id, user_id).await;
-        Ok(())
-    }
-
-    /// 更新群昵称
-    pub async fn update_nickname(
-        &self,
-        group_id: i64,
-        user_id: i64,
-        nickname: Option<String>,
-    ) -> Result<()> {
-        sqlx::query!(
-            r#"
-            UPDATE group_members
-            SET nickname = $3
-            WHERE group_id = $1 AND user_id = $2
-            "#,
-            group_id,
-            user_id,
-            nickname
         )
         .execute(&self.pool)
         .await?;
@@ -477,33 +530,5 @@ impl GroupMemberRepository {
         .await?;
 
         Ok(rows.into_iter().map(|r| r.user_id).collect())
-    }
-
-    /// 批量检查用户是否为群成员
-    pub async fn batch_check_membership(
-        &self,
-        group_id: i64,
-        user_ids: &[i64],
-    ) -> Result<std::collections::HashMap<i64, bool>> {
-        let rows = sqlx::query!(
-            r#"
-            SELECT user_id
-            FROM group_members
-            WHERE group_id = $1 AND user_id = ANY($2)
-            "#,
-            group_id,
-            user_ids
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        let member_set: std::collections::HashSet<i64> = rows.into_iter().map(|r| r.user_id).collect();
-        
-        let mut result = std::collections::HashMap::new();
-        for &user_id in user_ids {
-            result.insert(user_id, member_set.contains(&user_id));
-        }
-
-        Ok(result)
     }
 }

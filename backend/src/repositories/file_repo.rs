@@ -5,9 +5,9 @@
 //! - 元数据存储在 meta JSONB 字段中
 //! - 移除 category, is_deleted 字段
 
+use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
-use serde_json::json;
 
 use crate::error::{AppError, Result};
 
@@ -85,7 +85,7 @@ impl FileRepository {
 
         // 解析 meta
         let meta_json = row.meta.unwrap_or(json!({}));
-        
+
         Ok(UploadedFileData {
             file_id: row.file_id,
             storage_path: row.storage_path,
@@ -95,7 +95,10 @@ impl FileRepository {
             filename: meta_json["original_name"].as_str().map(|s| s.to_string()),
             width: meta_json["width"].as_i64().map(|v| v as i32),
             height: meta_json["height"].as_i64().map(|v| v as i32),
-            mime_type: meta_json["mime_type"].as_str().unwrap_or("application/octet-stream").to_string(),
+            mime_type: meta_json["mime_type"]
+                .as_str()
+                .unwrap_or("application/octet-stream")
+                .to_string(),
         })
     }
 
@@ -107,7 +110,7 @@ impl FileRepository {
         &self,
         file_id: Uuid,
         uploader_id: i64,
-        _expected_category: &str, 
+        _expected_category: &str,
     ) -> Result<UploadedFileData> {
         let row = sqlx::query!(
             r#"

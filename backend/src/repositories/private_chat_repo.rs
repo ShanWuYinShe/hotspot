@@ -110,7 +110,10 @@ impl PrivateChatRepository {
         let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
 
         let next_cursor = if has_more {
-            items.last().map(|r| encode_cursor(&r.updated_at)).transpose()?
+            items
+                .last()
+                .map(|r| encode_cursor(&r.updated_at))
+                .transpose()?
         } else {
             None
         };

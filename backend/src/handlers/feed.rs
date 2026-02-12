@@ -2,10 +2,7 @@ use axum::{extract::State, Json};
 
 use crate::{
     dto::{
-        request::{
-            FeedGroupsRequest, FeedMomentsRequest, FeedTrendingRequest,
-            FeedUsersRequest,
-        },
+        request::{FeedGroupsRequest, FeedMomentsRequest, FeedTrendingRequest, FeedUsersRequest},
         response::{
             ApiResponse, FeedGroupItem, FeedMomentItem, FeedTrendingData, FeedUserItem,
             PaginatedData,

@@ -58,13 +58,13 @@ impl TagRepository {
     /// 设置用户标签
     pub async fn set_user_tags(&self, user_id: i64, tag_names: &[String]) -> Result<()> {
         let tag_ids = self.find_or_create_many(tag_names).await?;
-        
+
         let mut tx = self.pool.begin().await?;
-        
+
         sqlx::query!("DELETE FROM user_tags WHERE user_id = $1", user_id)
             .execute(&mut *tx)
             .await?;
-            
+
         for tag_id in tag_ids {
             sqlx::query!(
                 "INSERT INTO user_tags (user_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
@@ -74,7 +74,7 @@ impl TagRepository {
             .execute(&mut *tx)
             .await?;
         }
-        
+
         tx.commit().await?;
         Ok(())
     }
@@ -119,22 +119,6 @@ impl TagRepository {
         Ok(rows)
     }
 
-    /// 获取瞬间标签名列表
-    pub async fn get_moment_tags(&self, moment_id: Uuid) -> Result<Vec<String>> {
-        let rows = sqlx::query_scalar!(
-            r#"
-            SELECT t.name
-            FROM tags t
-            JOIN moment_tags mt ON t.tag_id = mt.tag_id
-            WHERE mt.moment_id = $1
-            "#,
-            moment_id
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(rows)
-    }
-
     /// 批量获取瞬间标签
     pub async fn get_moment_tags_batch(
         &self,
@@ -159,9 +143,7 @@ impl TagRepository {
 
         let mut map: HashMap<Uuid, Vec<String>> = HashMap::new();
         for row in rows {
-            map.entry(row.moment_id)
-                .or_default()
-                .push(row.name);
+            map.entry(row.moment_id).or_default().push(row.name);
         }
 
         Ok(map)
@@ -207,12 +189,9 @@ impl TagRepository {
 
     /// 删除标签（管理员）
     pub async fn delete(&self, name: &str) -> Result<bool> {
-        let result = sqlx::query!(
-            "DELETE FROM tags WHERE name = $1",
-            name
-        )
-        .execute(&self.pool)
-        .await?;
+        let result = sqlx::query!("DELETE FROM tags WHERE name = $1", name)
+            .execute(&self.pool)
+            .await?;
 
         Ok(result.rows_affected() > 0)
     }

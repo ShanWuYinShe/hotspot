@@ -12,9 +12,9 @@ use crate::{
     constants::{REDIS_CHANNEL_CONFIG_UPDATES, REDIS_KEY_CONFIG},
     dto::{
         request::{
-            FetchGlobalSettingsRequest, UpdateContactRequest, UpdateDefaultsRequest,
-            UpdateFeaturesRequest, UpdateLimitsRequest, UpdateRateLimitsRequest,
-            UpdateUploadConfigRequest,
+            AdminUpdateResponseDefaultsRequest, FetchGlobalSettingsRequest, UpdateContactRequest,
+            UpdateDefaultsRequest, UpdateFeaturesRequest, UpdateLimitsRequest,
+            UpdateRateLimitsRequest, UpdateUploadConfigRequest,
         },
         response::{
             AdminGlobalSettingsData, AppLimits, ContactInfo, ContentDefaults, FeatureSwitches,
@@ -275,6 +275,27 @@ impl SystemConfigService {
         self.get_full_global_settings().await
     }
 
+    /// 更新响应默认值配置（分页默认值等）
+    pub async fn update_response_defaults_config(
+        &self,
+        req: AdminUpdateResponseDefaultsRequest,
+        admin_id: i64,
+    ) -> Result<GlobalSettings> {
+        let mut updates = HashMap::new();
+        if let Some(v) = req.default_page_size {
+            updates.insert("response_defaults.default_page_size", v.to_string());
+        }
+        if let Some(v) = req.max_page_size {
+            updates.insert("response_defaults.max_page_size", v.to_string());
+        }
+
+        if !updates.is_empty() {
+            self.batch_update_configs(updates, admin_id).await?;
+        }
+
+        self.get_full_global_settings().await
+    }
+
     // ==================== 内部辅助方法 ====================
 
     /// 批量更新配置（不做版本控制/变更历史）
@@ -408,7 +429,10 @@ impl SystemConfigService {
                     is_searchable: true,
                     max_members: 500,
                     location: RelativeLocation {
-                        point: crate::dto::response::GeoPoint { latitude: 0.0, longitude: 0.0 },
+                        point: crate::dto::response::GeoPoint {
+                            latitude: 0.0,
+                            longitude: 0.0,
+                        },
                         location_name: "Unknown".to_string(),
                         distance: None,
                         bearing_degrees: None,
@@ -518,12 +542,6 @@ impl SystemConfigService {
             .delete(cache_keys::SYSTEM_CONFIG, "full_settings")
             .await;
         Ok(())
-    }
-
-    /// 清除配置缓存（兼容旧接口）
-    async fn clear_config_cache(&self, config_key: &str) -> Result<()> {
-        self.clear_single_config_cache(config_key).await?;
-        self.clear_full_settings_cache().await
     }
 
     /// 发布配置更新事件（通过 Redis Pub/Sub）

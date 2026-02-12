@@ -3,10 +3,9 @@ use axum::{extract::State, Json};
 use crate::{
     dto::{
         request::{
-            BlockRequest, DeleteAccountRequest, FollowRequest, GeoPoint,
-            GetRelationshipRequest, MyBlockedRequest,
-            MyFollowersRequest, MyFollowingRequest, MyFriendsRequest, MyProfileRequest,
-            MySettingsRequest, SearchUsersByKeywordRequest,
+            BlockRequest, DeleteAccountRequest, FollowRequest, GeoPoint, GetRelationshipRequest,
+            MyBlockedRequest, MyFollowersRequest, MyFollowingRequest, MyFriendsRequest,
+            MyProfileRequest, MySettingsRequest, SearchUsersByKeywordRequest,
             SearchUsersByLocationRequest, SearchUsersByTagRequest, SearchUsersRequest,
             SetRemarkRequest, UnblockRequest, UnfollowRequest, UpdateLocationRequest,
             UpdateProfileRequest, UpdateSettingsRequest, UpgradeAccountRequest,
@@ -14,10 +13,9 @@ use crate::{
             UserLikedMomentsRequest, UserMomentsRequest, UserOpenTheDoorRequest,
         },
         response::{
-            AdminUserDetail, ApiResponse, AuthData, BlockedUserSearchItem,
-            FollowerItem, FollowingItem, FriendItem, GroupSearchItem, MyProfile,
-            PaginatedData, UserMomentListItem, UserRelation, UserSearchItem,
-            UserSettingsData,
+            AdminUserDetail, ApiResponse, AuthData, BlockedUserSearchItem, FollowerItem,
+            FollowingItem, FriendItem, GroupSearchItem, MyProfile, PaginatedData,
+            UserMomentListItem, UserRelation, UserSearchItem, UserSettingsData,
         },
     },
     error::Result,
@@ -33,6 +31,9 @@ pub async fn search(
     State(state): State<AppState>,
     Json(req): Json<SearchUsersRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<UserSearchItem>>>> {
+    let sort_by = req.sort_by.as_deref().unwrap_or("relevance");
+    tracing::debug!(sort_by = %sort_by, "Search sort parameter");
+
     let reference_point = req.reference_point.unwrap_or(GeoPoint {
         latitude: 0.0,
         longitude: 0.0,
@@ -175,7 +176,10 @@ pub async fn get_friends(
     State(state): State<AppState>,
     Json(req): Json<UserFriendsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<FriendItem>>>> {
-    let response = state.user_service.get_friends_list(req.user_id, &req).await?;
+    let response = state
+        .user_service
+        .get_friends_list(req.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
@@ -184,7 +188,10 @@ pub async fn get_following(
     State(state): State<AppState>,
     Json(req): Json<UserFollowingRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<FollowingItem>>>> {
-    let response = state.user_service.get_following_list(req.user_id, &req).await?;
+    let response = state
+        .user_service
+        .get_following_list(req.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
@@ -193,7 +200,10 @@ pub async fn get_followers(
     State(state): State<AppState>,
     Json(req): Json<UserFollowersRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<FollowerItem>>>> {
-    let response = state.user_service.get_followers_list(req.user_id, &req).await?;
+    let response = state
+        .user_service
+        .get_followers_list(req.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success(response)))
 }
 

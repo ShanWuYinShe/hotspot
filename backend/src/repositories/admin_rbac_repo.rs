@@ -1,20 +1,11 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
-use uuid::Uuid;
 use std::collections::HashMap;
+use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::enums::UserType;
-
-/// 管理员用户Row - 严格按照数据库 schema
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
-pub struct AdminUserRow {
-    pub user_id: i64,
-    pub role_id: Option<Uuid>,
-    pub is_super_admin: bool,
-    pub created_at: DateTime<Utc>,
-}
 
 /// 管理员角色Row
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
@@ -27,25 +18,10 @@ pub struct AdminRoleRow {
     pub updated_at: DateTime<Utc>,
 }
 
-/// 管理员权限Row
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
-pub struct AdminPermissionRow {
-    pub permission_key: String,  // 如: user:create
-    pub name: String,
-    pub description: Option<String>,
-}
-
 #[derive(Debug, Clone, FromRow)]
 pub struct AdminPermissionListRow {
     pub key: String,
     pub description: String,
-}
-
-/// 用户权限Row
-#[derive(Debug, Clone, FromRow)]
-pub struct UserPermissionRow {
-    pub permission_key: String,
-    pub name: String,
 }
 
 #[derive(Debug, Clone, FromRow)]
@@ -88,22 +64,6 @@ impl AdminRbacRepository {
         Self { pool }
     }
 
-    pub fn pool(&self) -> &PgPool {
-        &self.pool
-    }
-
-    /// 检查用户是否为管理员
-    pub async fn is_admin(&self, user_id: i64) -> Result<bool> {
-        let result = sqlx::query!(
-            "SELECT EXISTS(SELECT 1 FROM admin_users WHERE user_id = $1) as \"exists!\"",
-            user_id
-        )
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(result.exists)
-    }
-
     /// 检查用户是否为超级管理员
     pub async fn is_super_admin(&self, user_id: i64) -> Result<bool> {
         let result = sqlx::query!(
@@ -125,19 +85,6 @@ impl AdminRbacRepository {
         .await?;
 
         Ok(result.exists)
-    }
-
-    /// 获取管理员信息
-    pub async fn get_admin_info(&self, user_id: i64) -> Result<Option<AdminUserRow>> {
-        let row = sqlx::query_as!(
-            AdminUserRow,
-            "SELECT user_id, role_id, COALESCE(is_super_admin, FALSE) as \"is_super_admin!\", created_at FROM admin_users WHERE user_id = $1",
-            user_id
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(row)
     }
 
     /// 获取管理员详情（含角色）
@@ -231,9 +178,12 @@ impl AdminRbacRepository {
 
     /// 确保用户类型为 admin
     pub async fn ensure_user_type_admin(&self, user_id: i64) -> Result<()> {
-        sqlx::query!("UPDATE users SET user_type = 'admin' WHERE user_id = $1", user_id)
-            .execute(&self.pool)
-            .await?;
+        sqlx::query!(
+            "UPDATE users SET user_type = 'admin' WHERE user_id = $1",
+            user_id
+        )
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }

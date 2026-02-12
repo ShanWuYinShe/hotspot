@@ -158,21 +158,6 @@ impl MediaCategory {
     }
 }
 
-/// 上传状态
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type, Display, EnumString,
-)]
-#[sqlx(type_name = "upload_status", rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
-#[strum(serialize_all = "lowercase")]
-pub enum UploadStatus {
-    Pending,
-    Processing,
-    Completed,
-    Failed,
-    Cancelled,
-}
-
 // ============================================================
 // 群组与申请枚举
 // ============================================================
@@ -375,16 +360,6 @@ pub enum ReportHandleAction {
     Escalate,
 }
 
-impl ReportHandleAction {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            ReportHandleAction::Resolve => "resolve",
-            ReportHandleAction::Dismiss => "dismiss",
-            ReportHandleAction::Escalate => "escalate",
-        }
-    }
-}
-
 // ============================================================
 // 公告相关
 // ============================================================
@@ -415,32 +390,6 @@ impl AnnouncementSeverity {
 // ============================================================
 // 平台与设备
 // ============================================================
-
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type, Display, EnumString,
-)]
-#[sqlx(type_name = "varchar", rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
-#[strum(serialize_all = "lowercase")]
-pub enum Platform {
-    Ios,
-    Android,
-    Harmony,
-    Web,
-}
-
-impl Platform {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Platform::Ios => "ios",
-            Platform::Android => "android",
-            Platform::Harmony => "harmony",
-            Platform::Web => "web",
-        }
-    }
-}
-
-pub type DevicePlatform = Platform;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]
 #[serde(rename_all = "lowercase")]
@@ -524,45 +473,6 @@ pub enum FeedSource {
     Hot,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]
-#[serde(rename_all = "lowercase")]
-#[strum(serialize_all = "lowercase")]
-pub enum FeedContentType {
-    Moment,
-    Ad,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]
-#[serde(rename_all = "lowercase")]
-#[strum(serialize_all = "lowercase")]
-pub enum FeedFeedbackAction {
-    NotInterested,
-    Dislike,
-    Report,
-    Hide,
-}
-
-impl FeedFeedbackAction {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            FeedFeedbackAction::NotInterested => "not_interested",
-            FeedFeedbackAction::Dislike => "dislike",
-            FeedFeedbackAction::Report => "report",
-            FeedFeedbackAction::Hide => "hide",
-        }
-    }
-
-    pub fn should_remove_from_feed(&self) -> bool {
-        matches!(
-            self,
-            FeedFeedbackAction::NotInterested
-                | FeedFeedbackAction::Dislike
-                | FeedFeedbackAction::Report
-                | FeedFeedbackAction::Hide
-        )
-    }
-}
-
 // ============================================================
 // 通知相关
 // ============================================================
@@ -588,28 +498,6 @@ pub enum NotificationType {
     GroupAnnouncement,
     SystemAnnouncement,
     MessageMention,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]
-#[serde(rename_all = "lowercase")]
-#[strum(serialize_all = "lowercase")]
-pub enum NotificationTargetType {
-    User,
-    Group,
-    Moment,
-    Comment,
-    Web,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]
-#[serde(rename_all = "lowercase")]
-#[strum(serialize_all = "lowercase")]
-pub enum NotificationFilterType {
-    Like,
-    Comment,
-    Follow,
-    System,
-    Mention,
 }
 
 // ============================================================
@@ -737,27 +625,9 @@ pub enum RecommendationType {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
-pub enum ConfigValueType {
-    String,
-    Number,
-    Boolean,
-    Json,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]
-#[serde(rename_all = "lowercase")]
-#[strum(serialize_all = "lowercase")]
 pub enum FollowSource {
     Search,
     Nearby,
     Recommend,
     Share,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]
-#[serde(rename_all = "lowercase")]
-#[strum(serialize_all = "lowercase")]
-pub enum FollowRequestAction {
-    Accept,
-    Reject,
 }

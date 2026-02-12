@@ -12,8 +12,7 @@ use crate::{
     repositories::{
         admin_audit_repo::AdminAuditRepository, admin_rbac_repo::AdminRbacRepository,
         announcement_repo::AnnouncementRepository, chat_unread_repo::ChatUnreadRepository,
-        comment_repo::CommentRepository, device_token_repo::DeviceTokenRepository,
-        feed_repo::FeedRepository, follow_request_repo::FollowRequestRepository,
+        comment_repo::CommentRepository, follow_request_repo::FollowRequestRepository,
         group_announcement_repo::GroupAnnouncementRepository,
         group_application_repo::GroupApplicationRepository, group_bans_repo::GroupBansRepository,
         group_invite_repo::GroupInviteRepository,
@@ -21,7 +20,6 @@ use crate::{
         group_member_repo::GroupMemberRepository, group_message_repo::GroupMessageRepository,
         group_repo::GroupRepository, group_settings_repo::GroupSettingsRepository,
         map_repo::MapRepository, moment_repo::MomentRepository,
-        notification_repo::NotificationRepository, password_reset_repo::PasswordResetRepository,
         private_chat_repo::PrivateChatRepository, private_message_repo::PrivateMessageRepository,
         report_repo::ReportRepository, session_repo::SessionRepository,
         system_config_repo::SystemConfigRepository, tag_repo::TagRepository,
@@ -34,15 +32,13 @@ use crate::{
     services::{
         admin_audit_service::AdminAuditService, admin_rbac_service::AdminRbacService,
         announcement_service::AnnouncementService, auth_service::AuthService,
-        comment_service::CommentService, device_tokens_service::DeviceTokensService,
-        feed_service::FeedService, group_message_service::GroupMessageService,
-        group_service::GroupService, map_service::MapService, media_service::MediaService,
-        message_common_service::MessageCommonService, moment_service::MomentService,
+        comment_service::CommentService, feed_service::FeedService,
+        group_message_service::GroupMessageService, group_service::GroupService,
+        map_service::MapService, media_service::MediaService, moment_service::MomentService,
         presence_service::PresenceService, private_chat_service::PrivateChatService,
         private_message_service::PrivateMessageService, report_service::ReportService,
-        search_service::SearchService, subscription_service::SubscriptionService,
-        system_config_service::SystemConfigService, tag_service::TagService,
-        user_service::UserService,
+        search_service::SearchService, system_config_service::SystemConfigService,
+        tag_service::TagService, user_service::UserService,
     },
     utils::cache_invalidation::{start_invalidation_listener, InvalidationEvent},
     websocket::{
@@ -79,18 +75,14 @@ pub struct AppState {
     pub map_service: MapService,
     pub private_chat_service: PrivateChatService,
     pub private_message_service: PrivateMessageService,
-    pub message_common_service: MessageCommonService,
     pub media_service: MediaService,
     pub tag_service: TagService,
     pub feed_service: FeedService,
-    pub device_tokens_service: DeviceTokensService,
-    pub subscription_service: SubscriptionService,
     pub report_service: ReportService,
     pub system_config_service: SystemConfigService,
     pub presence_service: PresenceService,
     pub admin_rbac_service: AdminRbacService,
     pub admin_audit_service: AdminAuditService,
-    pub notification_service: crate::services::notification_service::NotificationService,
     pub announcement_service: AnnouncementService,
     pub search_service: SearchService,
 }
@@ -224,8 +216,6 @@ impl AppState {
         let announcement_repo = AnnouncementRepository::new(db.clone());
         let chat_unread_repo = ChatUnreadRepository::new(db.clone());
         let comment_repo = CommentRepository::new(db.clone());
-        let device_token_repo = DeviceTokenRepository::new(db.clone());
-        let feed_repo = FeedRepository::new(db.clone());
         let file_repo = crate::repositories::file_repo::FileRepository::new(db.clone());
         let group_announcement_repo = GroupAnnouncementRepository::new(db.clone());
         let group_application_repo = GroupApplicationRepository::new(db.clone());
@@ -238,8 +228,6 @@ impl AppState {
         let group_settings_repo = GroupSettingsRepository::new(db.clone());
         let map_repo = MapRepository::new(db.clone());
         let moment_repo = MomentRepository::new(db.clone());
-        let notification_repo = NotificationRepository::new(db.clone());
-        let _password_reset_repo = PasswordResetRepository::new(db.clone());
         let private_chat_repo = PrivateChatRepository::new(db.clone());
         let private_message_repo = PrivateMessageRepository::new(db.clone());
         let report_repo = ReportRepository::new(db.clone());
@@ -256,14 +244,6 @@ impl AppState {
         let user_repo = UserRepository::new(db.clone());
         let user_settings_repo = UserSettingsRepository::new(db.clone());
         let verification_repo = VerificationRepository::new(db.clone());
-        let private_message_reactions_repo =
-            crate::repositories::private_message_reactions_repo::PrivateMessageReactionsRepository::new(
-                db.clone(),
-            );
-        let group_message_reactions_repo =
-            crate::repositories::group_message_reactions_repo::GroupMessageReactionsRepository::new(
-                db.clone(),
-            );
 
         // --- Services Initialization ---
 
@@ -283,7 +263,6 @@ impl AppState {
         );
 
         let auth_service = AuthService::new(
-            &db,
             &redis,
             config.jwt_secret.clone(),
             config.jwt_access_token_expiration,
@@ -306,7 +285,6 @@ impl AppState {
             follow_request_repo.clone(),
             user_blocks_repo.clone(),
             user_friend_remarks_repo.clone(),
-            device_token_repo.clone(),
             session_repo.clone(),
             tag_repo.clone(),
             group_member_repo.clone(),
@@ -322,7 +300,6 @@ impl AppState {
             event_bus.clone(),
             moment_repo.clone(),
             tag_repo.clone(),
-            user_repo.clone(),
             user_settings_repo.clone(),
             media_service.clone(),
             cache_manager.clone(),
@@ -339,7 +316,6 @@ impl AppState {
         let group_service = GroupService::new(
             event_bus.clone(),
             group_repo.clone(),
-            group_message_repo.clone(),
             group_member_repo.clone(),
             group_member_history_repo.clone(),
             group_application_repo.clone(),
@@ -350,14 +326,11 @@ impl AppState {
             tag_repo.clone(),
             user_repo.clone(),
             chat_unread_repo.clone(),
-            redis.clone(),
-            presence_service.clone(),
             media_service.clone(),
             cache_manager.clone(),
         );
 
         let group_message_service = GroupMessageService::new(
-            db.clone(),
             redis.clone(),
             event_bus.clone(),
             group_message_repo.clone(),
@@ -365,7 +338,6 @@ impl AppState {
             group_repo.clone(),
             user_repo.clone(),
             chat_unread_repo.clone(),
-            group_message_reactions_repo.clone(),
             media_service.clone(),
         );
 
@@ -383,25 +355,17 @@ impl AppState {
 
         let private_message_service = PrivateMessageService::new(
             event_bus.clone(),
-            redis.clone(),
             private_message_repo.clone(),
             private_chat_repo.clone(),
             user_repo.clone(),
             chat_unread_repo.clone(),
-            user_follows_repo.clone(),
             user_blocks_repo.clone(),
-            user_settings_repo.clone(),
-            private_message_reactions_repo.clone(),
             media_service.clone(),
         );
-
-        let message_common_service = MessageCommonService::new(chat_unread_repo.clone());
 
         let tag_service = TagService::new(tag_repo.clone(), cache_manager.clone());
 
         let feed_service = FeedService::new(
-            redis.clone(),
-            feed_repo.clone(),
             moment_repo.clone(),
             user_repo.clone(),
             group_repo.clone(),
@@ -409,10 +373,6 @@ impl AppState {
             presence_service.clone(),
             media_service.clone(),
         );
-
-        let device_tokens_service = DeviceTokensService::new(device_token_repo.clone());
-
-        let subscription_service = SubscriptionService::new(db.clone(), redis.clone());
 
         let report_service = ReportService::new(
             report_repo.clone(),
@@ -441,13 +401,6 @@ impl AppState {
 
         let map_service = MapService::new(map_repo.clone());
 
-        let notification_service = crate::services::notification_service::NotificationService::new(
-            notification_repo.clone(),
-            user_repo.clone(),
-            event_bus.clone(),
-            media_service.clone(),
-        );
-
         let announcement_service = AnnouncementService::new(
             announcement_repo.clone(),
             event_bus.clone(),
@@ -455,7 +408,6 @@ impl AppState {
         );
 
         let search_service = SearchService::new(
-            redis.clone(),
             user_repo.clone(),
             group_repo.clone(),
             tag_repo.clone(),
@@ -503,18 +455,14 @@ impl AppState {
             map_service,
             private_chat_service,
             private_message_service,
-            message_common_service,
             media_service,
             tag_service,
             feed_service,
-            device_tokens_service,
-            subscription_service,
             report_service,
             system_config_service,
             presence_service,
             admin_rbac_service,
             admin_audit_service,
-            notification_service,
             announcement_service,
             search_service,
             token_cache,

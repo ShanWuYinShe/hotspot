@@ -13,14 +13,12 @@ use crate::{
             RefreshTokenRequest, RegisterRequest, RequestPasswordResetRequest,
             ResetPasswordRequest, RevokeAllSessionsRequest, RevokeSessionRequest, SessionsRequest,
         },
-        response::{
-            ApiResponse, CheckStatusData, PaginatedData, SessionItem,
-        },
+        response::{ApiResponse, CheckStatusData, PaginatedData, SessionItem},
     },
     error::{AppError, Result},
     middleware::auth::{AuthenticatedUser, BearerToken, OptionalAuthenticatedUser},
-    types::enums::ClientType,
     state::AppState,
+    types::enums::ClientType,
     utils::validation::Validator,
     utils::web_cookie::{
         build_access_token_clear_cookie, build_access_token_set_cookie,
@@ -359,7 +357,13 @@ pub async fn reset_password(
 
     let auth_issue = state
         .auth_service
-        .reset_password(&req, client_type, ip_address, user_agent, device_fingerprint)
+        .reset_password(
+            &req,
+            client_type,
+            ip_address,
+            user_agent,
+            device_fingerprint,
+        )
         .await?;
 
     let mut resp_headers = HeaderMap::new();
@@ -436,10 +440,7 @@ pub async fn revoke_all_sessions(
     user: AuthenticatedUser,
     Json(_req): Json<RevokeAllSessionsRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    state
-        .auth_service
-        .revoke_all_sessions(user.user_id)
-        .await?;
+    state.auth_service.revoke_all_sessions(user.user_id).await?;
 
     Ok(Json(ApiResponse::success_empty()))
 }

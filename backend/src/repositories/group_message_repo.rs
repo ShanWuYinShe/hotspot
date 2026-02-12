@@ -1,5 +1,5 @@
 //! 群聊消息仓库层实现
-//! 
+//!
 //! 适配新 Schema: message_id (UUID), group_id (BIGINT), 分区表 group_messages_partitioned
 
 use chrono::{DateTime, Utc};
@@ -173,9 +173,12 @@ impl GroupMessageRepository {
 
         let has_more = rows.len() > limit as usize;
         let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
-        
+
         let next_cursor = if has_more {
-            items.last().map(|r| encode_cursor(&(r.sent_at, r.message_id))).transpose()?
+            items
+                .last()
+                .map(|r| encode_cursor(&(r.sent_at, r.message_id)))
+                .transpose()?
         } else {
             None
         };
@@ -207,7 +210,10 @@ impl GroupMessageRepository {
         Ok(rows)
     }
 
-    pub async fn get_read_counts(&self, message_ids: &[Uuid]) -> Result<std::collections::HashMap<Uuid, i64>> {
+    pub async fn get_read_counts(
+        &self,
+        message_ids: &[Uuid],
+    ) -> Result<std::collections::HashMap<Uuid, i64>> {
         if message_ids.is_empty() {
             return Ok(std::collections::HashMap::new());
         }
@@ -246,32 +252,6 @@ impl GroupMessageRepository {
 
     /// 撤回群消息
     pub async fn recall(&self, message_id: Uuid, user_id: i64) -> Result<()> {
-        sqlx::query!(
-            "UPDATE group_messages_partitioned SET is_recalled = TRUE, recalled_at = NOW(), recalled_by = $2, content = NULL, metadata = '{}'::jsonb WHERE message_id = $1",
-            message_id,
-            user_id
-        )
-        .execute(&self.pool)
-        .await?;
-        Ok(())
-    }
-
-    pub async fn delete_for_user(&self, message_id: Uuid, user_id: i64) -> Result<()> {
-        sqlx::query!(
-            r#"
-            INSERT INTO group_message_deletions (message_id, user_id)
-            VALUES ($1, $2)
-            ON CONFLICT (message_id, user_id) DO NOTHING
-            "#,
-            message_id,
-            user_id
-        )
-        .execute(&self.pool)
-        .await?;
-        Ok(())
-    }
-
-    pub async fn delete_for_everyone(&self, message_id: Uuid, user_id: i64) -> Result<()> {
         sqlx::query!(
             "UPDATE group_messages_partitioned SET is_recalled = TRUE, recalled_at = NOW(), recalled_by = $2, content = NULL, metadata = '{}'::jsonb WHERE message_id = $1",
             message_id,

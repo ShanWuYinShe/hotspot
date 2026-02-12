@@ -56,10 +56,6 @@ pub enum AppError {
     #[error("认证失败: {0}")]
     Unauthorized(String),
 
-    /// 10101 - Access Token 无效或过期
-    #[error("Access Token 无效或过期: {0}")]
-    AccessTokenInvalid(String),
-
     /// 10102 - Access Token 缺失
     #[error("Access Token 缺失")]
     AccessTokenMissing,
@@ -106,10 +102,6 @@ pub enum AppError {
     /// 10206 - 无法操作管理员账户
     #[error("无法操作管理员账户: {0}")]
     CannotOperateAdmin(String),
-
-    /// 10210 - 对方不允许接收私聊
-    #[error("对方不允许接收私聊: {0}")]
-    PrivateChatNotAllowed(String),
 
     /// 10211 - 已被对方拉黑
     #[error("已被对方拉黑: {0}")]
@@ -161,10 +153,6 @@ pub enum AppError {
     #[error("资源已存在: {0}")]
     AlreadyExists(String),
 
-    /// 10401 - 资源已被删除
-    #[error("资源已被删除: {0}")]
-    AlreadyDeleted(String),
-
     /// 10402 - 资源状态冲突
     #[error("资源状态冲突: {0}")]
     Conflict(String),
@@ -180,14 +168,6 @@ pub enum AppError {
     /// 10411 - 不能对自己执行此操作
     #[error("不能对自己执行此操作")]
     CannotOperateOnSelf,
-
-    /// 10412 - 已是好友关系（双方已互相关注）
-    #[error("已是好友关系")]
-    AlreadyFriends,
-
-    /// 10413 - 关注请求已存在
-    #[error("关注请求已存在: {0}")]
-    FollowRequestAlreadyExists(String),
 
     /// 10414 - 群组已满员
     #[error("群组已满员")]
@@ -240,10 +220,6 @@ pub enum AppError {
     #[error("并发请求数过多")]
     TooManyConcurrentRequests,
 
-    /// 10510 - 消息数量已达上限（陌生人消息限制）
-    #[error("消息数量已达上限: {0}")]
-    MessageLimitReached(String),
-
     // ============================================================
     // 10600-10699：服务端错误（可重试/稍后再试）
     // 安全说明：统一返回 10600，禁止向客户端暴露具体的技术栈细节
@@ -293,17 +269,9 @@ pub enum AppError {
     #[error("订阅失败: {0}")]
     SubscriptionFailed(String),
 
-    /// 20101 - 订阅频道不存在
-    #[error("订阅频道不存在: {0}")]
-    SubscriptionChannelNotFound(String),
-
     /// 20102 - 订阅权限不足
     #[error("订阅权限不足: {0}")]
     SubscriptionPermissionDenied(String),
-
-    /// 20103 - 订阅数量超出限制
-    #[error("订阅数量超出限制")]
-    SubscriptionLimitExceeded,
 
     /// 20104 - 无效的订阅项格式
     #[error("无效的订阅项格式: {0}")]
@@ -368,7 +336,7 @@ impl AppError {
 
             // 10100-10199：认证
             Self::Unauthorized(_) => 10100,
-            Self::AccessTokenInvalid(_) | Self::Jwt(_) => 10101,
+            Self::Jwt(_) => 10101,
             Self::AccessTokenMissing => 10102,
             Self::RefreshTokenInvalid(_) => 10103,
             Self::RefreshTokenMissing => 10104,
@@ -382,7 +350,6 @@ impl AppError {
             Self::NotAdmin => 10204,
             Self::AdminPermissionDenied(_) => 10205,
             Self::CannotOperateAdmin(_) => 10206,
-            Self::PrivateChatNotAllowed(_) => 10210,
             Self::BlockedByUser(_) => 10211,
             Self::GroupPasswordError(_) => 10212,
             Self::FollowNotAllowed(_) => 10213,
@@ -398,13 +365,10 @@ impl AppError {
 
             // 10400-10499：业务冲突
             Self::AlreadyExists(_) => 10400,
-            Self::AlreadyDeleted(_) => 10401,
             Self::Conflict(_) => 10402,
             Self::VersionConflict(_) => 10403,
             Self::BusinessRuleViolation(_) => 10410,
             Self::CannotOperateOnSelf => 10411,
-            Self::AlreadyFriends => 10412,
-            Self::FollowRequestAlreadyExists(_) => 10413,
             Self::GroupFull => 10414,
             Self::AlreadyInGroup => 10415,
             Self::NotGroupMember(_) => 10416,
@@ -419,7 +383,6 @@ impl AppError {
             Self::HourlyRateLimitExceeded => 10502,
             Self::DailyRateLimitExceeded => 10503,
             Self::TooManyConcurrentRequests => 10504,
-            Self::MessageLimitReached(_) => 10510,
 
             // 10600-10699：服务端错误
             // 安全说明：所有内部错误统一返回 10600，不暴露具体技术栈
@@ -438,9 +401,7 @@ impl AppError {
             Self::WebSocketMessageFormatError(_) => 20003,
             Self::WebSocketProtocolIncompatible(_) => 20004,
             Self::SubscriptionFailed(_) => 20100,
-            Self::SubscriptionChannelNotFound(_) => 20101,
             Self::SubscriptionPermissionDenied(_) => 20102,
-            Self::SubscriptionLimitExceeded => 20103,
             Self::InvalidSubscriptionFormat(_) => 20104,
             Self::BatchLimitExceeded => 20105,
 

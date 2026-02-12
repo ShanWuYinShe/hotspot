@@ -6,32 +6,26 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use chrono::Utc;
-use redis::aio::ConnectionManager as RedisConnectionManager;
 use uuid::Uuid;
 
+use crate::constants::MESSAGE_RECALL_MINUTES;
 use crate::{
     dto::{
         request::{
-            AddPrivateMessageReactionRequest, DeletePrivateMessageRequest, MarkPrivateMessagesReadRequest,
-            PrivateMessageReactionsRequest, PrivateMessagesHistoryRequest, RecallPrivateMessageRequest,
-            RemovePrivateMessageReactionRequest, SendPrivateMessageRequest, UpdatePrivateMessageRequest,
+            MarkPrivateMessagesReadRequest, PrivateMessagesHistoryRequest,
+            RecallPrivateMessageRequest, SendPrivateMessageRequest, UpdatePrivateMessageRequest,
         },
         response::{
-            MessageMedia, MessageReactionItem, MessageReplyTo, PaginatedData, PaginationMeta,
-            PrivateMessageItem, SendPrivateMessageData, UserInfo,
+            MessageMedia, MessageReplyTo, PaginatedData, PaginationMeta, PrivateMessageItem,
+            SendPrivateMessageData, UserInfo,
         },
     },
     error::{AppError, Result},
     events::event_types::{AppEvent, ReplyToSnapshot},
     repositories::{
-        chat_unread_repo::ChatUnreadRepository,
-        private_chat_repo::PrivateChatRepository,
-        private_message_reactions_repo::PrivateMessageReactionsRepository,
-        private_message_repo::PrivateMessageRepository,
-        user_blocks_repo::UserBlocksRepository,
-        user_follows_repo::UserFollowsRepository,
+        chat_unread_repo::ChatUnreadRepository, private_chat_repo::PrivateChatRepository,
+        private_message_repo::PrivateMessageRepository, user_blocks_repo::UserBlocksRepository,
         user_repo::UserRepository,
-        user_settings_repo::UserSettingsRepository,
     },
     types::enums::{MessageType, UserType},
     utils::validation::Validator,
@@ -41,49 +35,41 @@ use crate::{
 #[derive(Clone)]
 pub struct PrivateMessageService {
     event_bus: Arc<EventBus>,
-    redis: RedisConnectionManager,
-    message_repo: PrivateMessageRepository,
     chat_repo: PrivateChatRepository,
-    user_repo: UserRepository,
-    unread_repo: ChatUnreadRepository,
-    follows_repo: UserFollowsRepository,
+    message_repo: PrivateMessageRepository,
     blocks_repo: UserBlocksRepository,
-    settings_repo: UserSettingsRepository,
-    reactions_repo: PrivateMessageReactionsRepository,
+    unread_repo: ChatUnreadRepository,
+    user_repo: UserRepository,
     media_service: crate::services::media_service::MediaService,
 }
 
 impl PrivateMessageService {
     pub fn new(
         event_bus: Arc<EventBus>,
-        redis: RedisConnectionManager,
         message_repo: PrivateMessageRepository,
         chat_repo: PrivateChatRepository,
         user_repo: UserRepository,
         unread_repo: ChatUnreadRepository,
-        follows_repo: UserFollowsRepository,
         blocks_repo: UserBlocksRepository,
-        settings_repo: UserSettingsRepository,
-        reactions_repo: PrivateMessageReactionsRepository,
         media_service: crate::services::media_service::MediaService,
     ) -> Self {
         Self {
             event_bus,
-            redis,
-            message_repo,
             chat_repo,
-            user_repo,
-            unread_repo,
-            follows_repo,
+            message_repo,
             blocks_repo,
-            settings_repo,
-            reactions_repo,
+            unread_repo,
+            user_repo,
             media_service,
         }
     }
 
     /// 发送私聊消息
-    pub async fn send(&self, req: &SendPrivateMessageRequest, user_id: i64) -> Result<SendPrivateMessageData> {
+    pub async fn send(
+        &self,
+        req: &SendPrivateMessageRequest,
+        user_id: i64,
+    ) -> Result<SendPrivateMessageData> {
         if user_id == req.target_user_id {
             return Err(AppError::CannotOperateOnSelf);
         }
@@ -109,7 +95,10 @@ impl PrivateMessageService {
         }
 
         // 创建/获取会话
-        let chat = self.chat_repo.get_or_create(user_id, req.target_user_id).await?;
+        let chat = self
+            .chat_repo
+            .get_or_create(user_id, req.target_user_id)
+            .await?;
 
         let reply_to_message_id = req
             .reply_to_message_id
@@ -256,13 +245,17 @@ impl PrivateMessageService {
             .list_by_chat(chat.chat_id, user_id, limit, req.cursor.clone())
             .await?;
 
-        let reply_ids: Vec<Uuid> = messages.iter().filter_map(|m| m.reply_to_message_id).collect();
+        let reply_ids: Vec<Uuid> = messages
+            .iter()
+            .filter_map(|m| m.reply_to_message_id)
+            .collect();
         let reply_rows = self.message_repo.find_by_ids(&reply_ids).await?;
         let reply_sender_ids: Vec<i64> = reply_rows.iter().map(|m| m.sender_id).collect();
         let reply_senders = self.user_repo.find_profiles(&reply_sender_ids).await?;
         let reply_sender_map: HashMap<i64, _> =
             reply_senders.into_iter().map(|u| (u.user_id, u)).collect();
-        let reply_map: HashMap<Uuid, _> = reply_rows.into_iter().map(|m| (m.message_id, m)).collect();
+        let reply_map: HashMap<Uuid, _> =
+            reply_rows.into_iter().map(|m| (m.message_id, m)).collect();
 
         let sender_ids: Vec<i64> = messages.iter().map(|m| m.sender_id).collect();
         let senders = self.user_repo.find_profiles(&sender_ids).await?;
@@ -272,13 +265,12 @@ impl PrivateMessageService {
         for m in messages {
             let sender = sender_map.get(&m.sender_id);
 
-            let media = if matches!(m.r#type, MessageType::Image | MessageType::Video | MessageType::Audio | MessageType::File) {
+            let media = if matches!(
+                m.r#type,
+                MessageType::Image | MessageType::Video | MessageType::Audio | MessageType::File
+            ) {
                 let path = m.content.clone().unwrap_or_default();
-                let signed_url = self
-                    .media_service
-                    .sign_url(&path)
-                    .await
-                    .unwrap_or(path);
+                let signed_url = self.media_service.sign_url(&path).await.unwrap_or(path);
                 Some(MessageMedia {
                     url: signed_url,
                     thumbnail_url: m.thumbnail_url.clone(),
@@ -315,7 +307,11 @@ impl PrivateMessageService {
             items.push(PrivateMessageItem {
                 message_id: m.message_id.to_string(),
                 message_type: m.r#type,
-                content: if media.is_some() { None } else { m.content.clone() },
+                content: if media.is_some() {
+                    None
+                } else {
+                    m.content.clone()
+                },
                 sender: UserInfo {
                     user_id: m.sender_id,
                     nickname: sender
@@ -408,7 +404,7 @@ impl PrivateMessageService {
         }
 
         let elapsed = Utc::now().signed_duration_since(message.sent_at);
-        if elapsed.num_minutes() >= 2 {
+        if elapsed.num_minutes() >= MESSAGE_RECALL_MINUTES {
             return Err(AppError::OperationWindowExpired);
         }
 
@@ -425,33 +421,11 @@ impl PrivateMessageService {
         Ok(())
     }
 
-    pub async fn delete(&self, req: &DeletePrivateMessageRequest, user_id: i64) -> Result<()> {
-        let message_id = Uuid::parse_str(&req.message_id)
-            .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
-        let message = self
-            .message_repo
-            .get_meta(message_id)
-            .await?
-            .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
-
-        self.message_repo.delete_for_user(message_id, user_id).await?;
-
-        let target_user_id = if message.sender_id == user_id {
-            message.receiver_id
-        } else {
-            message.sender_id
-        };
-
-        self.event_bus.publish(AppEvent::PrivateMessageDeleted {
-            message_id,
-            target_user_id,
-            deleted_by: user_id,
-        });
-
-        Ok(())
-    }
-
-    pub async fn mark_as_read(&self, req: &MarkPrivateMessagesReadRequest, user_id: i64) -> Result<()> {
+    pub async fn mark_as_read(
+        &self,
+        req: &MarkPrivateMessagesReadRequest,
+        user_id: i64,
+    ) -> Result<()> {
         let chat = self
             .chat_repo
             .find_by_users(user_id, req.target_user_id)
@@ -467,7 +441,12 @@ impl PrivateMessageService {
 
         if let Some(up_to_id) = up_to {
             self.unread_repo
-                .mark_as_read("private", &chat.chat_id.to_string(), user_id, Some(up_to_id))
+                .mark_as_read(
+                    "private",
+                    &chat.chat_id.to_string(),
+                    user_id,
+                    Some(up_to_id),
+                )
                 .await?;
 
             self.event_bus.publish(AppEvent::PrivateMessageRead {
@@ -479,105 +458,5 @@ impl PrivateMessageService {
         }
 
         Ok(())
-    }
-
-    pub async fn add_reaction(&self, req: &AddPrivateMessageReactionRequest, user_id: i64) -> Result<()> {
-        let message_id = Uuid::parse_str(&req.message_id)
-            .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
-        let message = self
-            .message_repo
-            .get_meta(message_id)
-            .await?
-            .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
-
-        self.reactions_repo.add(message_id, user_id, req.r#type).await?;
-
-        let target_user_id = if message.sender_id == user_id {
-            message.receiver_id
-        } else {
-            message.sender_id
-        };
-
-        self.event_bus.publish(AppEvent::PrivateMessageReaction {
-            message_id,
-            target_user_id,
-            user_id,
-            reaction_type: req.r#type,
-            action: "add".to_string(),
-        });
-
-        Ok(())
-    }
-
-    pub async fn remove_reaction(&self, req: &RemovePrivateMessageReactionRequest, user_id: i64) -> Result<()> {
-        let message_id = Uuid::parse_str(&req.message_id)
-            .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
-        let message = self
-            .message_repo
-            .get_meta(message_id)
-            .await?
-            .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
-
-        self.reactions_repo.remove(message_id, user_id).await?;
-
-        let target_user_id = if message.sender_id == user_id {
-            message.receiver_id
-        } else {
-            message.sender_id
-        };
-
-        self.event_bus.publish(AppEvent::PrivateMessageReaction {
-            message_id,
-            target_user_id,
-            user_id,
-            reaction_type: req.r#type,
-            action: "remove".to_string(),
-        });
-
-        Ok(())
-    }
-
-    pub async fn get_reactions_list(
-        &self,
-        req: &PrivateMessageReactionsRequest,
-        _user_id: i64,
-    ) -> Result<PaginatedData<MessageReactionItem>> {
-        let message_id = Uuid::parse_str(&req.message_id)
-            .map_err(|_| AppError::BadRequest("无效的消息ID".to_string()))?;
-
-        let limit = Validator::validate_limit(req.limit, 100)? as i64;
-        let (reactions, next_cursor) = self
-            .reactions_repo
-            .list_by_message(message_id, req.r#type, limit, req.cursor.clone())
-            .await?;
-
-        let user_ids: Vec<i64> = reactions.iter().map(|r| r.user_id).collect();
-        let users = self.user_repo.find_profiles(&user_ids).await?;
-        let user_map: HashMap<i64, _> = users.into_iter().map(|u| (u.user_id, u)).collect();
-
-        let items = reactions
-            .into_iter()
-            .filter_map(|r| {
-                let user = user_map.get(&r.user_id)?;
-                Some(MessageReactionItem {
-                        user: UserInfo {
-                            user_id: user.user_id,
-                            nickname: user.nickname.clone().unwrap_or_else(|| "未知用户".to_string()),
-                            avatar_url: user.avatar_url.clone(),
-                            user_type: user.user_type,
-                        },
-                    reaction_type: r.reaction_type,
-                    created_at: r.created_at.to_rfc3339(),
-                })
-            })
-            .collect();
-
-        Ok(PaginatedData {
-            items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
-        })
     }
 }

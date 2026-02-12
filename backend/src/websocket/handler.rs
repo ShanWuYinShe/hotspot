@@ -381,7 +381,8 @@ async fn handle_message(
                     match operation {
                         SubscriptionOperation::Subscribe => {
                             let failed_ids = process_subscribe(user_id, &r#type, &ids, state).await;
-                            let current_ids = build_current_subscription_ids(user_id, state, &r#type).await;
+                            let current_ids =
+                                build_current_subscription_ids(user_id, state, &r#type).await;
                             let code = subscription_ack_code(&failed_ids);
                             let ack_msg = WsMessage::SubscribeAck {
                                 client_msg_id,
@@ -389,14 +390,23 @@ async fn handle_message(
                                 r#type,
                                 ids: current_ids,
                                 code,
-                                message: if failed_ids.is_empty() { None } else { Some("订阅部分失败".to_string()) },
-                                failed_ids: if failed_ids.is_empty() { None } else { Some(failed_ids) },
+                                message: if failed_ids.is_empty() {
+                                    None
+                                } else {
+                                    Some("订阅部分失败".to_string())
+                                },
+                                failed_ids: if failed_ids.is_empty() {
+                                    None
+                                } else {
+                                    Some(failed_ids)
+                                },
                             };
                             state.ws_manager.send_to_user(user_id, &ack_msg).await?;
                         }
                         SubscriptionOperation::Unsubscribe => {
                             process_unsubscribe(user_id, &r#type, &ids, state).await;
-                            let current_ids = build_current_subscription_ids(user_id, state, &r#type).await;
+                            let current_ids =
+                                build_current_subscription_ids(user_id, state, &r#type).await;
                             let ack_msg = WsMessage::SubscribeAck {
                                 client_msg_id,
                                 operation: SubscriptionOperation::Unsubscribe,
@@ -411,7 +421,8 @@ async fn handle_message(
                         SubscriptionOperation::Set => {
                             clear_subscriptions_by_type(user_id, &r#type, state).await;
                             let failed_ids = process_subscribe(user_id, &r#type, &ids, state).await;
-                            let current_ids = build_current_subscription_ids(user_id, state, &r#type).await;
+                            let current_ids =
+                                build_current_subscription_ids(user_id, state, &r#type).await;
                             let code = subscription_ack_code(&failed_ids);
                             let ack_msg = WsMessage::SubscribeAck {
                                 client_msg_id,
@@ -419,8 +430,16 @@ async fn handle_message(
                                 r#type,
                                 ids: current_ids,
                                 code,
-                                message: if failed_ids.is_empty() { None } else { Some("订阅部分失败".to_string()) },
-                                failed_ids: if failed_ids.is_empty() { None } else { Some(failed_ids) },
+                                message: if failed_ids.is_empty() {
+                                    None
+                                } else {
+                                    Some("订阅部分失败".to_string())
+                                },
+                                failed_ids: if failed_ids.is_empty() {
+                                    None
+                                } else {
+                                    Some(failed_ids)
+                                },
                             };
                             state.ws_manager.send_to_user(user_id, &ack_msg).await?;
                         }
@@ -471,8 +490,7 @@ async fn handle_message(
 
                 WsMessage::GetSubscriptions { client_msg_id } => {
                     // 查询当前订阅状态
-                    let subscriptions =
-                        state.ws_subscription.get_subscriptions(user_id).await;
+                    let subscriptions = state.ws_subscription.get_subscriptions(user_id).await;
                     let mut user_ids = Vec::new();
                     let mut group_ids = Vec::new();
                     for sub in subscriptions {
@@ -500,17 +518,14 @@ async fn handle_message(
 
                 WsMessage::GroupEnter { group_id } => {
                     // 进入群聊页面：向该群聊的其他订阅者推送 GroupUserEntered
-                    let user_repo =
-                        UserRepository::new(state.db.clone());
+                    let user_repo = UserRepository::new(state.db.clone());
                     let user_info = match user_repo.find_by_id(user_id).await {
-                        Ok(Some(u)) => {
-                            crate::dto::response::UserInfo {
-                                user_id: u.user_id,
-                                nickname: u.nickname.unwrap_or_default(),
-                                avatar_url: u.avatar_url,
-                                user_type: u.user_type,
-                            }
-                        }
+                        Ok(Some(u)) => crate::dto::response::UserInfo {
+                            user_id: u.user_id,
+                            nickname: u.nickname.unwrap_or_default(),
+                            avatar_url: u.avatar_url,
+                            user_type: u.user_type,
+                        },
                         _ => return Ok(()),
                     };
 
@@ -537,17 +552,14 @@ async fn handle_message(
 
                 WsMessage::GroupLeave { group_id } => {
                     // 离开群聊页面：向该群聊的其他订阅者推送 GroupUserExited
-                    let user_repo =
-                        UserRepository::new(state.db.clone());
+                    let user_repo = UserRepository::new(state.db.clone());
                     let user_info = match user_repo.find_by_id(user_id).await {
-                        Ok(Some(u)) => {
-                            crate::dto::response::UserInfo {
-                                user_id: u.user_id,
-                                nickname: u.nickname.unwrap_or_default(),
-                                avatar_url: u.avatar_url,
-                                user_type: u.user_type,
-                            }
-                        }
+                        Ok(Some(u)) => crate::dto::response::UserInfo {
+                            user_id: u.user_id,
+                            nickname: u.nickname.unwrap_or_default(),
+                            avatar_url: u.avatar_url,
+                            user_type: u.user_type,
+                        },
                         _ => return Ok(()),
                     };
 
@@ -949,20 +961,16 @@ fn subscription_ack_code(failed_ids: &[FailedSubscriptionId]) -> i32 {
     if failed_ids.is_empty() {
         return 0;
     }
-    if failed_ids.iter().any(|i| {
-        matches!(
-            failure_reason(i),
-            SubscriptionFailureReason::InternalError
-        )
-    }) {
+    if failed_ids
+        .iter()
+        .any(|i| matches!(failure_reason(i), SubscriptionFailureReason::InternalError))
+    {
         return AppError::SubscriptionFailed("订阅失败".to_string()).error_code();
     }
-    if failed_ids.iter().any(|i| {
-        matches!(
-            failure_reason(i),
-            SubscriptionFailureReason::Forbidden
-        )
-    }) {
+    if failed_ids
+        .iter()
+        .any(|i| matches!(failure_reason(i), SubscriptionFailureReason::Forbidden))
+    {
         return AppError::SubscriptionPermissionDenied("权限不足".to_string()).error_code();
     }
     if failed_ids

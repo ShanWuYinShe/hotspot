@@ -1,10 +1,7 @@
 use crate::{
     constants::{DEFAULT_LATITUDE, DEFAULT_LONGITUDE},
     dto::{
-        request::{
-            FeedGroupsRequest, FeedMomentsRequest, FeedTrendingRequest,
-            FeedUsersRequest,
-        },
+        request::{FeedGroupsRequest, FeedMomentsRequest, FeedTrendingRequest, FeedUsersRequest},
         response::{
             FeedGroupItem, FeedMomentItem, FeedTrendingData, FeedUserItem, PaginatedData,
             PaginationMeta, TrendingTagItem, UserSearchItem,
@@ -12,19 +9,15 @@ use crate::{
     },
     error::AppError,
     repositories::{
-        feed_repo::FeedRepository, group_repo::GroupRepository, moment_repo::MomentRepository,
-        tag_repo::TagRepository, user_repo::UserRepository,
+        group_repo::GroupRepository, moment_repo::MomentRepository, tag_repo::TagRepository,
+        user_repo::UserRepository,
     },
     types::enums::{FeedSource, TagTrend},
     utils::validation::Validator,
 };
-use redis::aio::ConnectionManager;
-use redis::AsyncCommands;
 
 #[derive(Clone)]
 pub struct FeedService {
-    redis: ConnectionManager,
-    feed_repo: FeedRepository,
     moment_repo: MomentRepository,
     user_repo: UserRepository,
     group_repo: GroupRepository,
@@ -35,8 +28,6 @@ pub struct FeedService {
 
 impl FeedService {
     pub fn new(
-        redis: ConnectionManager,
-        feed_repo: FeedRepository,
         moment_repo: MomentRepository,
         user_repo: UserRepository,
         group_repo: GroupRepository,
@@ -45,8 +36,6 @@ impl FeedService {
         media_service: crate::services::media_service::MediaService,
     ) -> Self {
         Self {
-            redis,
-            feed_repo,
             moment_repo,
             user_repo,
             group_repo,
@@ -454,5 +443,4 @@ impl FeedService {
         }
         Some(signed_images)
     }
-
 }

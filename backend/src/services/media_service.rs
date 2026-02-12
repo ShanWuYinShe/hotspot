@@ -5,7 +5,6 @@
 
 use aws_sdk_s3::operation::head_object::HeadObjectError;
 use aws_sdk_s3::presigning::PresigningConfig;
-use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::Client as S3Client;
 use std::time::Duration;
 use uuid::Uuid;
@@ -409,27 +408,6 @@ impl MediaService {
             }
             None => None,
         }
-    }
-
-    /// 上传服务端生成内容到对象存储（用于导出等场景）
-    pub async fn upload_bytes(
-        &self,
-        key: &str,
-        content_type: &str,
-        data: Vec<u8>,
-    ) -> Result<String> {
-        let cleaned_key = key.trim_start_matches('/');
-        self.s3_client
-            .put_object()
-            .bucket(&self.bucket)
-            .key(cleaned_key)
-            .content_type(content_type)
-            .body(ByteStream::from(data))
-            .send()
-            .await
-            .map_err(|e| AppError::InternalError(format!("上传失败: {}", e)))?;
-
-        Ok(cleaned_key.to_string())
     }
 
     /// 标记文件已使用

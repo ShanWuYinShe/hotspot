@@ -1,5 +1,5 @@
 //! 群组仓库层实现
-//! 
+//!
 //! 适配新 Schema: group_id (BIGINT), owner_id (BIGINT), LBS 支持
 
 use chrono::{DateTime, Utc};
@@ -197,6 +197,32 @@ impl GroupRepository {
         Ok(())
     }
 
+    pub async fn update_location(
+        &self,
+        group_id: i64,
+        lon: f64,
+        lat: f64,
+        location_name: Option<&str>,
+    ) -> Result<()> {
+        let loc_name = location_name.unwrap_or("Unknown");
+        sqlx::query!(
+            r#"
+            UPDATE groups SET
+                location = ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography,
+                location_name = $4,
+                updated_at = NOW()
+            WHERE group_id = $1
+            "#,
+            group_id,
+            lon,
+            lat,
+            loc_name
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
     pub async fn update_owner(&self, group_id: i64, owner_id: i64) -> Result<()> {
         sqlx::query!(
             "UPDATE groups SET owner_id = $2, updated_at = NOW() WHERE group_id = $1",
@@ -216,6 +242,7 @@ impl GroupRepository {
         radius_meters: f64,
         limit: i64,
         cursor: Option<String>,
+        kw: Option<&str>,
     ) -> Result<(Vec<GroupSearchRow>, Option<String>)> {
         let (last_dist, last_id) = if let Some(c) = cursor {
             decode_cursor::<DistanceCursor>(&c)?
@@ -240,14 +267,16 @@ impl GroupRepository {
                   ST_Distance(g.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) > $4
                   OR (ST_Distance(g.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) = $4 AND g.group_id > $5)
               )
+              AND ($6::text IS NULL OR g.name ILIKE '%' || $6 || '%')
             ORDER BY distance ASC, g.group_id ASC
-            LIMIT $6
+            LIMIT $7
             "#,
             lon,
             lat,
             radius_meters,
             last_dist,
             last_id,
+            kw,
             limit + 1
         )
         .fetch_all(&self.pool)
@@ -255,9 +284,12 @@ impl GroupRepository {
 
         let has_more = rows.len() > limit as usize;
         let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
-        
+
         let next_cursor = if has_more {
-            items.last().map(|r| encode_cursor(&(r.distance.unwrap_or(0.0), r.group_id))).transpose()?
+            items
+                .last()
+                .map(|r| encode_cursor(&(r.distance.unwrap_or(0.0), r.group_id)))
+                .transpose()?
         } else {
             None
         };
@@ -507,28 +539,6 @@ impl GroupRepository {
         Ok((items, next_cursor))
     }
 
-    /// 列出用户加入的群组
-    pub async fn list_by_user(&self, user_id: i64) -> Result<Vec<GroupRow>> {
-        let rows = sqlx::query_as!(
-            GroupRow,
-            r#"
-            SELECT g.group_id, g.name as "name!", g.description, g.avatar_url, g.owner_id,
-                   g.group_type as "group_type!", g.max_members as "max_members!",
-                   g.is_muted as "is_muted!", g.join_type as "join_type!: GroupJoinMethod", g.metadata as "metadata!",
-                   g.created_at as "created_at!", g.updated_at as "updated_at!", g.dismissed_at
-            FROM groups g
-            JOIN group_members gm ON g.group_id = gm.group_id
-            WHERE gm.user_id = $1 AND g.dismissed_at IS NULL
-            ORDER BY gm.joined_at DESC
-            "#,
-            user_id
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(rows)
-    }
-
     pub async fn list_group_ids_after(
         &self,
         last_group_id: i64,
@@ -614,7 +624,10 @@ impl GroupRepository {
         let has_more = rows.len() > limit as usize;
         let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
         let next_cursor = if has_more {
-            items.last().map(|r| encode_cursor(&r.group_id)).transpose()?
+            items
+                .last()
+                .map(|r| encode_cursor(&r.group_id))
+                .transpose()?
         } else {
             None
         };

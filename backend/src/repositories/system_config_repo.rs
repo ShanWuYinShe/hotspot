@@ -73,22 +73,6 @@ impl SystemConfigRepository {
         Ok(())
     }
 
-    pub async fn list_public(&self) -> Result<Vec<SystemConfigRow>> {
-        let rows = sqlx::query_as!(
-            SystemConfigRow,
-            r#"
-            SELECT config_key, config_value, description,
-                   COALESCE(is_public, false) as "is_public!",
-                   updated_at, updated_by
-            FROM system_configs
-            WHERE is_public = TRUE
-            "#
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(rows)
-    }
-
     pub async fn list_all(&self) -> Result<Vec<SystemConfigRow>> {
         let rows = sqlx::query_as!(
             SystemConfigRow,

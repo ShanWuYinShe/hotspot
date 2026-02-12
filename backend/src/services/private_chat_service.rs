@@ -10,7 +10,6 @@ use crate::{
         private_message_repo::PrivateMessageRepository,
         user_blocks_repo::UserBlocksRepository,
         user_repo::UserRepository,
-        user_settings_repo::UserSettingsRepository,
     },
     types::enums::{MessageType, UserType},
 };
@@ -19,7 +18,6 @@ use crate::{
 #[derive(Clone)]
 pub struct PrivateChatService {
     repo: PrivateChatRepository,
-    settings_repo: UserSettingsRepository,
     blocks_repo: UserBlocksRepository,
     user_repo: UserRepository,
     message_repo: PrivateMessageRepository,
@@ -30,7 +28,7 @@ pub struct PrivateChatService {
 impl PrivateChatService {
     pub fn new(
         repo: PrivateChatRepository,
-        settings_repo: UserSettingsRepository,
+        _settings_repo: crate::repositories::user_settings_repo::UserSettingsRepository,
         blocks_repo: UserBlocksRepository,
         _follows_repo: crate::repositories::user_follows_repo::UserFollowsRepository,
         user_repo: UserRepository,
@@ -41,7 +39,6 @@ impl PrivateChatService {
     ) -> Self {
         Self {
             repo,
-            settings_repo,
             blocks_repo,
             user_repo,
             message_repo,
@@ -92,9 +89,9 @@ impl PrivateChatService {
         cursor: Option<String>,
         include_archived: bool,
     ) -> Result<(Vec<PrivateChatListItem>, bool, Option<String>)> {
-        let (chats, next_cursor) =
-            self.list_by_user(current_user_id, limit, cursor, include_archived)
-                .await?;
+        let (chats, next_cursor) = self
+            .list_by_user(current_user_id, limit, cursor, include_archived)
+            .await?;
 
         let has_more = next_cursor.is_some();
         if chats.is_empty() {
@@ -313,7 +310,13 @@ impl PrivateChatService {
                             }
                         })
                     }),
-                    media: if matches!(m.r#type, MessageType::Image | MessageType::Video | MessageType::Audio | MessageType::File) {
+                    media: if matches!(
+                        m.r#type,
+                        MessageType::Image
+                            | MessageType::Video
+                            | MessageType::Audio
+                            | MessageType::File
+                    ) {
                         Some(MessageMedia {
                             url: m.content.clone().unwrap_or_default(),
                             file_name: m.file_name.clone(),

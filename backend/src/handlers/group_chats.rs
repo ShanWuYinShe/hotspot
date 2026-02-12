@@ -4,25 +4,22 @@ use crate::{
     dto::{
         request::{
             AcceptInviteRequest, AdminDismissGroupRequest, AdminGroupDetailRequest,
-            AdminGroupSearchRequest, ApplyToGroupRequest, ApproveGroupApplicationRequest,
-            BanMemberRequest, BannedMembersRequest, CancelApplicationRequest,
-            CreateGroupAnnouncementRequest, CreateGroupChatRequest, DeleteGroupAnnouncementRequest,
-            GeoPoint, GroupAnnouncementsRequest, GroupApplicationsRequest,
-            GroupMembersRequest, GroupOpenTheDoorRequest,
-            InviteMemberRequest, JoinGroupRequest, LeaveGroupRequest, MuteMemberRequest,
-            MyGroupChatsRequest, MyInvitesRequest, RejectGroupApplicationRequest,
-            RejectInviteRequest, RemoveMemberRequest, SearchGroupMembersRequest,
-            SearchGroupsByKeywordRequest,
-            SearchGroupsByLocationRequest, SearchGroupsByTagRequest, SearchGroupsRequest,
-            SetMemberRoleRequest,
+            AdminGroupSearchRequest, ApproveGroupApplicationRequest, BanMemberRequest,
+            BannedMembersRequest, CancelApplicationRequest, CreateGroupAnnouncementRequest,
+            CreateGroupChatRequest, DeleteGroupAnnouncementRequest, GeoPoint,
+            GroupAnnouncementsRequest, GroupApplicationsRequest, GroupMembersRequest,
+            GroupOpenTheDoorRequest, InviteMemberRequest, JoinGroupRequest, LeaveGroupRequest,
+            MuteMemberRequest, MyGroupChatsRequest, MyInvitesRequest,
+            RejectGroupApplicationRequest, RejectInviteRequest, RemoveMemberRequest,
+            SearchGroupMembersRequest, SearchGroupsByKeywordRequest, SearchGroupsByLocationRequest,
+            SearchGroupsByTagRequest, SearchGroupsRequest, SetMemberRoleRequest,
             TransferOwnershipRequest, UnbanMemberRequest, UnmuteMemberRequest,
             UpdateGroupAnnouncementRequest, UpdateGroupChatRequest, UpdateGroupMySettingsRequest,
         },
         response::{
-            AdminGroupDetail, AdminGroupSearchItem, ApiResponse, ApplyToGroupData,
-            BannedMemberItem, GroupAnnouncementItem, GroupApplicationItem, GroupDetailData,
-            GroupInviteItem, GroupMemberItem, GroupSearchItem,
-            InviteMemberData, MyGroupItem, PaginatedData,
+            AdminGroupDetail, AdminGroupSearchItem, ApiResponse, BannedMemberItem,
+            GroupAnnouncementItem, GroupApplicationItem, GroupDetailData, GroupInviteItem,
+            GroupMemberItem, GroupSearchItem, InviteMemberData, MyGroupItem, PaginatedData,
         },
     },
     error::Result,
@@ -38,6 +35,9 @@ pub async fn search(
     State(state): State<AppState>,
     Json(req): Json<SearchGroupsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<GroupSearchItem>>>> {
+    let sort_by = req.sort_by.as_deref().unwrap_or("relevance");
+    tracing::debug!(sort_by = %sort_by, "Search sort parameter");
+
     let reference_point = req.reference_point.unwrap_or(GeoPoint {
         latitude: 0.0,
         longitude: 0.0,
@@ -79,15 +79,16 @@ pub async fn search(
 }
 
 /// 搜索群组成员
-/// TODO: 需要在 GroupService 中实现 search_members 方法
 pub async fn search_members(
-    State(_state): State<AppState>,
-    _user: AuthenticatedUser,
-    Json(_req): Json<SearchGroupMembersRequest>,
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    Json(req): Json<SearchGroupMembersRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<GroupMemberItem>>>> {
-    Err(crate::error::AppError::InternalError(
-        "群组成员搜索功能尚未实现".to_string(),
-    ))
+    let response = state
+        .group_service
+        .search_members(user.user_id, req)
+        .await?;
+    Ok(Json(ApiResponse::success(response)))
 }
 
 /// 我的入群申请列表
@@ -208,18 +209,6 @@ pub async fn join(
 ) -> Result<Json<ApiResponse<()>>> {
     state.group_service.join_group(user.user_id, req).await?;
     Ok(Json(ApiResponse::success_empty()))
-}
-
-pub async fn apply(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(req): Json<ApplyToGroupRequest>,
-) -> Result<Json<ApiResponse<ApplyToGroupData>>> {
-    let response = state
-        .group_service
-        .apply_to_group(user.user_id, req)
-        .await?;
-    Ok(Json(ApiResponse::success(response)))
 }
 
 pub async fn set_role(

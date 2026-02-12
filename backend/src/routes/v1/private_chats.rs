@@ -10,8 +10,7 @@ use crate::{handlers::private_chats, state::AppState};
 /// Token 必须的私聊路由
 pub fn token_required_routes() -> Router<AppState> {
     // 主路由 - 私聊操作
-    let main_routes = Router::new()
-        .route("/open_the_door", post(private_chats::open_the_door));
+    let main_routes = Router::new().route("/open_the_door", post(private_chats::open_the_door));
 
     // /me 子路由 - 当前用户私聊相关操作
     let me_routes = Router::new()

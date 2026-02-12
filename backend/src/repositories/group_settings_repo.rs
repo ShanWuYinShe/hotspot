@@ -43,10 +43,7 @@ impl GroupSettingsRepository {
     }
 
     /// 根据群聊ID查找群组设置（静态方法）
-    pub async fn find_by_group_id(
-        pool: &PgPool,
-        group_id: i64,
-    ) -> Result<Option<GroupSettings>> {
+    pub async fn find_by_group_id(pool: &PgPool, group_id: i64) -> Result<Option<GroupSettings>> {
         let settings = sqlx::query_as!(
             GroupSettings,
             r#"

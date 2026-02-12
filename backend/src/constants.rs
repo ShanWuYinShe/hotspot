@@ -7,10 +7,6 @@
 // ============================================================
 pub const DEFAULT_LATITUDE: f64 = 35.154922;
 pub const DEFAULT_LONGITUDE: f64 = 112.682524;
-pub const DEFAULT_LOCATION_NAME: &str = "南天门";
-
-// 位置变化阈值（米）
-pub const LOCATION_CHANGE_THRESHOLD: f64 = 500.0;
 
 // ============================================================
 // Redis 键前缀
@@ -36,9 +32,7 @@ pub const DEFAULT_PAGE_LIMIT: i64 = 20;
 // ============================================================
 // 时间窗口（天/小时/分钟）
 // ============================================================
-pub const TRENDING_DAILY_DAYS: i64 = 1;
 pub const TRENDING_WEEKLY_DAYS: i64 = 7;
-pub const TRENDING_MONTHLY_DAYS: i64 = 30;
 
 pub const MESSAGE_RECALL_MINUTES: i64 = 2; // 消息撤回时间窗口
 pub const INVITE_EXPIRE_DAYS: i64 = 7; // 邀请过期时间

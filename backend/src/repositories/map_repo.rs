@@ -1,9 +1,9 @@
 //! 地图仓库层实现
-//! 
+//!
 //! 基于 PostGIS 提供高性能的 LBS 聚类和实体检索
 
-use sqlx::{FromRow, PgPool};
 use crate::error::Result;
+use sqlx::{FromRow, PgPool};
 
 #[derive(Debug, Clone)]
 pub struct MapRepository {
@@ -41,7 +41,10 @@ impl MapRepository {
     /// 聚类查询附近的用户
     pub async fn cluster_users(
         &self,
-        west: f64, south: f64, east: f64, north: f64,
+        west: f64,
+        south: f64,
+        east: f64,
+        north: f64,
         grid_meters: f64,
     ) -> Result<Vec<MapClusterRow>> {
         let rows = sqlx::query_as!(
@@ -76,13 +79,17 @@ impl MapRepository {
         north: f64,
         grid_meters: f64,
     ) -> Result<Vec<MapClusterRow>> {
-        self.cluster_users(west, south, east, north, grid_meters).await
+        self.cluster_users(west, south, east, north, grid_meters)
+            .await
     }
 
     /// 搜索矩形区域内的用户
     pub async fn search_users(
         &self,
-        west: f64, south: f64, east: f64, north: f64,
+        west: f64,
+        south: f64,
+        east: f64,
+        north: f64,
         limit: i32,
     ) -> Result<Vec<MapEntityRow>> {
         let rows = sqlx::query_as!(

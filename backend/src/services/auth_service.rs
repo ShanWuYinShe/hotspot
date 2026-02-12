@@ -6,7 +6,6 @@ use chrono::{Duration, TimeZone, Utc};
 use redis::aio::ConnectionManager;
 use redis::AsyncCommands;
 use sqlx::types::ipnetwork::IpNetwork;
-use sqlx::PgPool;
 use std::net::IpAddr;
 use uuid::Uuid;
 
@@ -15,20 +14,17 @@ use crate::dto::request::{
     ChangePasswordRequest, GuestRequest, LoginRequest, RegisterRequest,
     RequestPasswordResetRequest, ResetPasswordRequest, RevokeSessionRequest, SessionsRequest,
 };
-use crate::dto::response::{
-    AuthData, CheckStatusData, PaginatedData, PaginationMeta, SessionItem,
-};
+use crate::dto::response::{AuthData, CheckStatusData, PaginatedData, PaginationMeta, SessionItem};
 use crate::error::{AppError, Result};
 use crate::repositories::{
-    session_repo::SessionRepository,
-    user_repo::UserRepository, user_settings_repo::UserSettingsRepository,
-    verification_repo::VerificationRepository,
+    session_repo::SessionRepository, user_repo::UserRepository,
+    user_settings_repo::UserSettingsRepository, verification_repo::VerificationRepository,
 };
 use crate::types::enums::{ClientType, UserStatus, VerificationCodeType};
 use crate::utils::cache_invalidation::{CacheInvalidator, InvalidationEvent};
 use crate::utils::{
-    jwt::JwtUtil, password::PasswordUtil, session_token::SessionTokenGenerator,
-    token::TokenUtil, validation::Validator,
+    jwt::JwtUtil, password::PasswordUtil, session_token::SessionTokenGenerator, token::TokenUtil,
+    validation::Validator,
 };
 
 const REVOKE_TOKEN_TTL_SECS: usize = 300;
@@ -41,7 +37,6 @@ pub struct AuthIssue {
 
 #[derive(Clone)]
 pub struct AuthService {
-    db: PgPool,
     redis: ConnectionManager,
     jwt_secret: String,
     access_token_expiration: i64,
@@ -54,7 +49,6 @@ pub struct AuthService {
 
 impl AuthService {
     pub fn new(
-        db: &PgPool,
         redis: &ConnectionManager,
         jwt_secret: String,
         access_token_expiration: i64,
@@ -65,7 +59,6 @@ impl AuthService {
         verification_repo: VerificationRepository,
     ) -> Self {
         Self {
-            db: db.clone(),
             redis: redis.clone(),
             jwt_secret,
             access_token_expiration,
@@ -220,8 +213,7 @@ impl AuthService {
             let access_token_hash = TokenUtil::hash_token(&access_token, &self.jwt_secret);
             let new_refresh_token_hash =
                 TokenUtil::hash_token(&new_refresh_token_raw, &self.jwt_secret);
-            let refresh_expires_at =
-                Utc::now() + Duration::seconds(self.refresh_token_expiration);
+            let refresh_expires_at = Utc::now() + Duration::seconds(self.refresh_token_expiration);
 
             let rotated = self
                 .session_repo
@@ -328,11 +320,16 @@ impl AuthService {
     /// 请求密码重置（发送验证码）
     /// 安全说明：无论 login_id 是否存在，均返回成功响应，不暴露账号是否注册
     pub async fn request_password_reset(&self, req: &RequestPasswordResetRequest) -> Result<()> {
+        tracing::info!(
+            client_type = ?req.client_type,
+            login_id = %req.login_id,
+            "Password reset requested (SMS not configured)"
+        );
+
         // 无论用户是否存在，都生成验证码流程但仅对已存在用户实际存储
         let user = self.user_repo.find_by_identifier(&req.login_id).await?;
         if user.is_none() {
             // 不暴露用户是否存在，静默返回成功
-            tracing::info!(login_id = %req.login_id, "Password reset requested for non-existent user, returning success silently");
             return Ok(());
         }
 
@@ -376,9 +373,7 @@ impl AuthService {
             )
             .await
             .map_err(|e| AppError::internal(e.to_string()))?
-            .ok_or_else(|| {
-                AppError::VerifyTokenInvalid("验证码无效或已过期".to_string())
-            })?;
+            .ok_or_else(|| AppError::VerifyTokenInvalid("验证码无效或已过期".to_string()))?;
 
         // 2. 标记验证码已使用
         self.verification_repo
@@ -419,11 +414,7 @@ impl AuthService {
     }
 
     /// 修改密码
-    pub async fn change_password(
-        &self,
-        user_id: i64,
-        req: &ChangePasswordRequest,
-    ) -> Result<()> {
+    pub async fn change_password(&self, user_id: i64, req: &ChangePasswordRequest) -> Result<()> {
         let user = self
             .user_repo
             .find_by_id(user_id)
@@ -435,7 +426,9 @@ impl AuthService {
         }
 
         let password_hash = PasswordUtil::hash_password(&req.new_password)?;
-        self.user_repo.update_password(user_id, &password_hash).await?;
+        self.user_repo
+            .update_password(user_id, &password_hash)
+            .await?;
         Ok(())
     }
 
@@ -449,8 +442,10 @@ impl AuthService {
         let limit = Validator::validate_limit(req.limit, 100)?;
         let cursor = Validator::parse_cursor(req.cursor.as_deref())?;
 
-        let (rows, next_cursor) =
-            self.session_repo.list_by_user(user_id, limit, cursor).await?;
+        let (rows, next_cursor) = self
+            .session_repo
+            .list_by_user(user_id, limit, cursor)
+            .await?;
 
         let token_generator = SessionTokenGenerator::new(&self.jwt_secret);
         let mut items = Vec::with_capacity(rows.len());
@@ -487,11 +482,7 @@ impl AuthService {
     }
 
     /// 撤销会话
-    pub async fn revoke_session(
-        &self,
-        user_id: i64,
-        req: &RevokeSessionRequest,
-    ) -> Result<()> {
+    pub async fn revoke_session(&self, user_id: i64, req: &RevokeSessionRequest) -> Result<()> {
         let token_generator = SessionTokenGenerator::new(&self.jwt_secret);
         if !token_generator.verify_revoke_token_format(&req.revoke_token) {
             return Err(AppError::NotFound("撤销令牌无效".to_string()));
@@ -571,8 +562,9 @@ impl AuthService {
                 nickname: nickname.unwrap_or_default(),
                 access_token,
                 refresh_token: Some(refresh_token_raw.clone()),
-                access_token_expires_at:
-                    (Utc::now() + Duration::seconds(self.access_token_expiration)).to_rfc3339(),
+                access_token_expires_at: (Utc::now()
+                    + Duration::seconds(self.access_token_expiration))
+                .to_rfc3339(),
                 refresh_token_expires_at: Some(refresh_expires_at.to_rfc3339()),
             },
             refresh_token_raw,
@@ -603,8 +595,8 @@ impl AuthService {
             user_id.to_string(),
             self.refresh_token_expiration as u64,
         )
-            .await
-            .map_err(|e| AppError::internal(e.to_string()))?;
+        .await
+        .map_err(|e| AppError::internal(e.to_string()))?;
         Ok(())
     }
 
@@ -629,12 +621,7 @@ impl AuthService {
         Ok(())
     }
 
-    async fn store_revoke_token(
-        &self,
-        token: &str,
-        user_id: i64,
-        session_id: Uuid,
-    ) -> Result<()> {
+    async fn store_revoke_token(&self, token: &str, user_id: i64, session_id: Uuid) -> Result<()> {
         let key = revoke_token_key(token);
         let value = format!("{}:{}", user_id, session_id);
         let mut conn = self.redis.clone();

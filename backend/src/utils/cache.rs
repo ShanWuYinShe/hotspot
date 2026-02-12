@@ -46,12 +46,6 @@ impl CacheMetrics {
             hits as f64 / total as f64
         }
     }
-
-    pub fn reset(&self) {
-        self.hits.store(0, Ordering::Relaxed);
-        self.misses.store(0, Ordering::Relaxed);
-        self.errors.store(0, Ordering::Relaxed);
-    }
 }
 
 /// 缓存配置
@@ -61,8 +55,6 @@ pub struct CacheConfig {
     pub base_ttl_secs: u64,
     /// 过期时间随机波动范围（秒），用于防止缓存雪崩
     pub ttl_jitter_secs: u64,
-    /// 空值缓存时间（秒），用于防止缓存穿透
-    pub null_ttl_secs: u64,
     /// 锁超时时间（秒），用于防止缓存击穿
     pub lock_timeout_secs: u64,
 }
@@ -72,7 +64,6 @@ impl Default for CacheConfig {
         Self {
             base_ttl_secs: 3600,  // 1 小时
             ttl_jitter_secs: 600, // 10 分钟随机波动
-            null_ttl_secs: 60,    // 空值缓存 1 分钟
             lock_timeout_secs: 5, // 锁超时 5 秒
         }
     }
@@ -82,22 +73,8 @@ impl Default for CacheConfig {
 pub mod cache_keys {
     /// 用户信息缓存
     pub const USER_INFO: &str = "cache:user:info";
-    /// 用户设置缓存
-    pub const USER_SETTINGS: &str = "cache:user:settings";
-    /// 用户统计缓存
-    pub const USER_STATS: &str = "cache:user:stats";
     /// 群组信息缓存
     pub const GROUP_INFO: &str = "cache:group:info";
-    /// 群组设置缓存
-    pub const GROUP_SETTINGS: &str = "cache:group:settings";
-    /// 群组成员缓存
-    pub const GROUP_MEMBERS: &str = "cache:group:members";
-    /// 瞬间详情缓存
-    pub const MOMENT_DETAIL: &str = "cache:moment:detail";
-    /// 瞬间作者缓存
-    pub const MOMENT_OWNER: &str = "cache:moment:owner";
-    /// 私聊设置缓存
-    pub const PRIVATE_CHAT_SETTINGS: &str = "cache:private_chat:settings";
     /// 热门标签缓存
     pub const TRENDING_TAGS: &str = "cache:trending:tags";
     /// 系统配置缓存
@@ -226,15 +203,6 @@ impl CacheManager {
         Ok(())
     }
 
-    /// 设置空值缓存（防止缓存穿透）
-    pub async fn set_null(&self, prefix: &str, id: &str) -> Result<(), redis::RedisError> {
-        let key = self.make_key(prefix, id);
-        let mut conn = self.redis.clone();
-        conn.set_ex::<_, _, ()>(&key, NULL_MARKER, self.config.null_ttl_secs)
-            .await?;
-        Ok(())
-    }
-
     /// 设置空值缓存（自定义 TTL）
     pub async fn set_null_with_ttl(
         &self,
@@ -257,22 +225,6 @@ impl CacheManager {
         Ok(())
     }
 
-    /// 批量删除缓存
-    pub async fn delete_batch(
-        &self,
-        prefix: &str,
-        ids: &[String],
-    ) -> Result<(), redis::RedisError> {
-        if ids.is_empty() {
-            return Ok(());
-        }
-
-        let keys: Vec<String> = ids.iter().map(|id| self.make_key(prefix, id)).collect();
-        let mut conn = self.redis.clone();
-        conn.del::<_, ()>(&keys[..]).await?;
-        Ok(())
-    }
-
     /// 尝试获取锁（用于防止缓存击穿）
     pub async fn try_lock(&self, lock_name: &str) -> Result<bool, redis::RedisError> {
         let key = format!("lock:{}", lock_name);
@@ -292,132 +244,11 @@ impl CacheManager {
     }
 
     /// 释放锁
-    ///
-    /// ⚠️ 警告：此方法不验证锁的所有者，可能误删其他进程的锁
-    /// 建议使用 `unlock_with_owner` 替代
     pub async fn unlock(&self, lock_name: &str) -> Result<(), redis::RedisError> {
         let key = format!("lock:{}", lock_name);
         let mut conn = self.redis.clone();
         conn.del::<_, ()>(&key).await?;
         Ok(())
-    }
-
-    /// 尝试获取锁（带所有者标识）
-    ///
-    /// 使用 owner_id 作为锁的值，确保只有持有者可以释放锁
-    pub async fn try_lock_with_owner(
-        &self,
-        lock_name: &str,
-        owner_id: &str,
-    ) -> Result<bool, redis::RedisError> {
-        let key = format!("lock:{}", lock_name);
-        let mut conn = self.redis.clone();
-
-        // SET key owner_id NX EX seconds
-        let result: Option<String> = redis::cmd("SET")
-            .arg(&key)
-            .arg(owner_id)
-            .arg("NX")
-            .arg("EX")
-            .arg(self.config.lock_timeout_secs)
-            .query_async(&mut conn)
-            .await?;
-
-        Ok(result.is_some())
-    }
-
-    /// 释放锁（验证所有者）
-    ///
-    /// 使用 Lua 脚本保证原子性：仅当锁的值为 owner_id 时才删除
-    /// 返回 true 表示成功释放，false 表示锁不存在或不属于当前所有者
-    pub async fn unlock_with_owner(
-        &self,
-        lock_name: &str,
-        owner_id: &str,
-    ) -> Result<bool, redis::RedisError> {
-        let key = format!("lock:{}", lock_name);
-        let mut conn = self.redis.clone();
-
-        // Lua 脚本保证原子性：仅当锁的值为 owner_id 时才删除
-        let script = r#"
-            if redis.call("GET", KEYS[1]) == ARGV[1] then
-                return redis.call("DEL", KEYS[1])
-            else
-                return 0
-            end
-        "#;
-
-        let result: i32 = redis::Script::new(script)
-            .key(&key)
-            .arg(owner_id)
-            .invoke_async(&mut conn)
-            .await?;
-
-        Ok(result == 1)
-    }
-
-    /// 带锁的缓存获取/设置
-    ///
-    /// 如果缓存未命中，获取锁后执行回调函数获取数据并缓存
-    pub async fn get_or_set_with_lock<T, F, Fut>(
-        &self,
-        prefix: &str,
-        id: &str,
-        loader: F,
-    ) -> Result<Option<T>, Box<dyn std::error::Error + Send + Sync>>
-    where
-        T: Serialize + DeserializeOwned + Clone,
-        F: FnOnce() -> Fut,
-        Fut: std::future::Future<
-            Output = Result<Option<T>, Box<dyn std::error::Error + Send + Sync>>,
-        >,
-    {
-        // 先尝试从缓存获取
-        if let Some(cached) = self.get::<T>(prefix, id).await? {
-            return Ok(cached);
-        }
-
-        // 缓存未命中，尝试获取锁
-        let lock_name = format!("{}:{}", prefix, id);
-        let got_lock = self.try_lock(&lock_name).await?;
-
-        if got_lock {
-            // 获取到锁，再次检查缓存（双重检查）
-            if let Some(cached) = self.get::<T>(prefix, id).await? {
-                let _ = self.unlock(&lock_name).await;
-                return Ok(cached);
-            }
-
-            // 执行加载函数
-            let result = loader().await;
-
-            match &result {
-                Ok(Some(value)) => {
-                    let _ = self.set(prefix, id, value).await;
-                }
-                Ok(None) => {
-                    // 设置空值缓存
-                    let _ = self.set_null(prefix, id).await;
-                }
-                Err(_) => {
-                    // 加载失败，不缓存
-                }
-            }
-
-            let _ = self.unlock(&lock_name).await;
-            result
-        } else {
-            // 未获取到锁，等待一段时间后重试
-            tokio::time::sleep(Duration::from_millis(100)).await;
-
-            // 重试从缓存获取
-            if let Some(cached) = self.get::<T>(prefix, id).await? {
-                return Ok(cached);
-            }
-
-            // 仍然没有，执行加载函数（不缓存，避免竞争）
-            loader().await
-        }
     }
 
     /// 带锁的缓存获取/设置（自定义 TTL）
@@ -468,58 +299,6 @@ impl CacheManager {
             }
             loader().await
         }
-    }
-
-    /// 批量获取缓存
-    pub async fn mget<T: DeserializeOwned>(
-        &self,
-        prefix: &str,
-        ids: &[String],
-    ) -> Result<Vec<(String, Option<T>)>, redis::RedisError> {
-        if ids.is_empty() {
-            return Ok(vec![]);
-        }
-
-        let keys: Vec<String> = ids.iter().map(|id| self.make_key(prefix, id)).collect();
-        let mut conn = self.redis.clone();
-
-        let values: Vec<Option<String>> = conn.mget(&keys[..]).await?;
-
-        let mut results = Vec::with_capacity(ids.len());
-        for (id, value) in ids.iter().zip(values.into_iter()) {
-            let parsed = match value {
-                Some(v) if v == NULL_MARKER => None,
-                Some(v) => serde_json::from_str(&v).ok(),
-                None => None,
-            };
-            results.push((id.clone(), parsed));
-        }
-
-        Ok(results)
-    }
-
-    /// 批量设置缓存
-    pub async fn mset<T: Serialize>(
-        &self,
-        prefix: &str,
-        items: &[(String, T)],
-    ) -> Result<(), redis::RedisError> {
-        if items.is_empty() {
-            return Ok(());
-        }
-
-        let mut conn = self.redis.clone();
-        let mut pipe = redis::pipe();
-
-        for (id, value) in items {
-            let key = self.make_key(prefix, id);
-            let ttl = self.get_ttl_with_jitter();
-            let serialized = serde_json::to_string(value).unwrap_or_default();
-            pipe.cmd("SET").arg(&key).arg(serialized).arg("EX").arg(ttl);
-        }
-
-        pipe.query_async::<()>(&mut conn).await?;
-        Ok(())
     }
 
     /// 增加计数器（用于统计）

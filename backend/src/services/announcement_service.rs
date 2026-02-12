@@ -6,8 +6,8 @@ use uuid::Uuid;
 use crate::{
     dto::{
         request::{
-            AdminAnnouncementListRequest, CreateAnnouncementRequest, DeleteAnnouncementRequest,
-            PublicAnnouncementListRequest,
+            AdminAnnouncementListRequest, AdminUpdateAnnouncementRequest,
+            CreateAnnouncementRequest, DeleteAnnouncementRequest, PublicAnnouncementListRequest,
         },
         response::{
             CreateAnnouncementData, PaginatedData, PaginationMeta, SystemAnnouncementItem, UserInfo,
@@ -79,6 +79,27 @@ impl AnnouncementService {
         })
     }
 
+    pub async fn update_announcement(&self, req: AdminUpdateAnnouncementRequest) -> Result<()> {
+        let announcement_id = Uuid::parse_str(&req.announcement_id)
+            .map_err(|_| AppError::BadRequest("无效的公告ID".to_string()))?;
+
+        if self.repo.find_by_id(announcement_id).await?.is_none() {
+            return Err(AppError::NotFound("公告不存在".to_string()));
+        }
+
+        self.repo
+            .update(
+                announcement_id,
+                req.title.as_deref(),
+                req.content.as_deref(),
+                req.severity.map(|s| s.as_str()),
+                req.is_active,
+            )
+            .await?;
+
+        Ok(())
+    }
+
     pub async fn delete_announcement(&self, req: DeleteAnnouncementRequest) -> Result<()> {
         let announcement_id = Uuid::parse_str(&req.announcement_id)
             .map_err(|_| AppError::BadRequest("无效的公告ID".to_string()))?;
@@ -117,9 +138,10 @@ impl AnnouncementService {
         let items: Vec<SystemAnnouncementItem> =
             future::join_all(rows.into_iter().map(|row| async move {
                 let publisher_id = row.publisher_id.unwrap_or_default();
-                let created_by = if let (Some(nickname), Some(avatar_url)) =
-                    (row.publisher_nickname.clone(), row.publisher_avatar_url.clone())
-                {
+                let created_by = if let (Some(nickname), Some(avatar_url)) = (
+                    row.publisher_nickname.clone(),
+                    row.publisher_avatar_url.clone(),
+                ) {
                     let signed_avatar_url =
                         self.media_service.sign_url_if_path(Some(&avatar_url)).await;
                     UserInfo {

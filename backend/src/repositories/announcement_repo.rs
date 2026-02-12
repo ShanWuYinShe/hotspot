@@ -12,8 +12,8 @@ pub struct AnnouncementRow {
     pub announcement_id: Uuid,
     pub title: String,
     pub content: String,
-    pub r#type: String,  // database uses 'type' field
-    pub target_user_type: Option<String>,  // all, user, admin
+    pub r#type: String,                   // database uses 'type' field
+    pub target_user_type: Option<String>, // all, user, admin
     pub severity: String,
     pub action_url: Option<String>,
     pub send_push: bool,
@@ -33,19 +33,10 @@ pub struct AnnouncementDetailRow {
     pub announcement_id: Uuid,
     pub title: String,
     pub content: String,
-    pub r#type: String,
-    pub target_user_type: Option<String>,
     pub severity: String,
     pub action_url: Option<String>,
-    pub send_push: bool,
-    pub start_at: DateTime<Utc>,
-    pub end_at: Option<DateTime<Utc>>,
-    pub is_published: bool,
     pub publisher_id: Option<i64>,
-    pub push_sent_at: Option<DateTime<Utc>>,
-    pub view_count: i32,
     pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
     pub publisher_nickname: Option<String>,
     pub publisher_avatar_url: Option<String>,
 }
@@ -137,6 +128,54 @@ impl AnnouncementRepository {
         Ok(row)
     }
 
+    /// 更新公告（仅更新非 None 的字段）
+    pub async fn update(
+        &self,
+        announcement_id: Uuid,
+        title: Option<&str>,
+        content: Option<&str>,
+        severity: Option<&str>,
+        is_active: Option<bool>,
+    ) -> Result<()> {
+        if let Some(t) = title {
+            sqlx::query!(
+                "UPDATE announcements SET title = $2, updated_at = NOW() WHERE announcement_id = $1",
+                announcement_id,
+                t
+            )
+            .execute(&self.pool)
+            .await?;
+        }
+        if let Some(c) = content {
+            sqlx::query!(
+                "UPDATE announcements SET content = $2, updated_at = NOW() WHERE announcement_id = $1",
+                announcement_id,
+                c
+            )
+            .execute(&self.pool)
+            .await?;
+        }
+        if let Some(s) = severity {
+            sqlx::query!(
+                r#"UPDATE announcements SET severity = $2::text::announcement_severity, updated_at = NOW() WHERE announcement_id = $1"#,
+                announcement_id,
+                s
+            )
+            .execute(&self.pool)
+            .await?;
+        }
+        if let Some(a) = is_active {
+            sqlx::query!(
+                "UPDATE announcements SET is_published = $2, updated_at = NOW() WHERE announcement_id = $1",
+                announcement_id,
+                a
+            )
+            .execute(&self.pool)
+            .await?;
+        }
+        Ok(())
+    }
+
     /// 删除公告
     pub async fn delete(&self, announcement_id: Uuid) -> Result<()> {
         sqlx::query!(
@@ -167,19 +206,10 @@ impl AnnouncementRepository {
                 a.announcement_id as "announcement_id!",
                 a.title as "title!",
                 a.content as "content!",
-                COALESCE(a.type, 'system') as "type!",
-                a.target_user_type as "target_user_type?",
                 COALESCE(a.severity, 'info')::text as "severity!",
                 a.action_url as "action_url?",
-                COALESCE(a.send_push, FALSE) as "send_push!",
-                a.start_at as "start_at!",
-                a.end_at as "end_at?",
-                COALESCE(a.is_published, FALSE) as "is_published!",
                 a.publisher_id as "publisher_id?",
-                a.push_sent_at as "push_sent_at?",
-                COALESCE(a.view_count, 0) as "view_count!",
                 a.created_at as "created_at!",
-                a.updated_at as "updated_at!",
                 u.nickname as "publisher_nickname?",
                 u.avatar_url as "publisher_avatar_url?"
             FROM announcements a
@@ -202,57 +232,14 @@ impl AnnouncementRepository {
         };
 
         let next_cursor = if has_more {
-            items.last().map(|r| encode_cursor(&r.created_at)).transpose()?
+            items
+                .last()
+                .map(|r| encode_cursor(&r.created_at))
+                .transpose()?
         } else {
             None
         };
 
         Ok((items, next_cursor))
-    }
-
-    /// 列出系统公告（对用户可见）
-    pub async fn list_public(
-        &self,
-        target_user_type: Option<&str>,
-        limit: i64,
-    ) -> Result<Vec<AnnouncementDetailRow>> {
-        let rows = sqlx::query_as!(
-            AnnouncementDetailRow,
-            r#"
-            SELECT 
-                a.announcement_id as "announcement_id!",
-                a.title as "title!",
-                a.content as "content!",
-                COALESCE(a.type, 'system') as "type!",
-                a.target_user_type as "target_user_type?",
-                COALESCE(a.severity, 'info')::text as "severity!",
-                a.action_url as "action_url?",
-                COALESCE(a.send_push, FALSE) as "send_push!",
-                a.start_at as "start_at!",
-                a.end_at as "end_at?",
-                COALESCE(a.is_published, FALSE) as "is_published!",
-                a.publisher_id as "publisher_id?",
-                a.push_sent_at as "push_sent_at?",
-                COALESCE(a.view_count, 0) as "view_count!",
-                a.created_at as "created_at!",
-                a.updated_at as "updated_at!",
-                u.nickname as "publisher_nickname?",
-                u.avatar_url as "publisher_avatar_url?"
-            FROM announcements a
-            LEFT JOIN users u ON a.publisher_id = u.user_id
-            WHERE a.is_published = TRUE 
-              AND a.start_at <= NOW()
-              AND (a.end_at IS NULL OR a.end_at > NOW())
-              AND (a.target_user_type = $1 OR $1 IS NULL)
-            ORDER BY a.start_at DESC
-            LIMIT $2
-            "#,
-            target_user_type,
-            limit
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(rows)
     }
 }

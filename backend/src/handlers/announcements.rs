@@ -60,15 +60,13 @@ pub async fn admin_list(
     Ok(Json(ApiResponse::success(response)))
 }
 
-/// TODO: 需要在 AnnouncementService 中实现 update_announcement 方法
 pub async fn admin_update(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     _user: AuthenticatedUser,
-    Json(_req): Json<AdminUpdateAnnouncementRequest>,
+    Json(req): Json<AdminUpdateAnnouncementRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    Err(crate::error::AppError::InternalError(
-        "公告更新功能尚未实现".to_string(),
-    ))
+    state.announcement_service.update_announcement(req).await?;
+    Ok(Json(ApiResponse::success_empty()))
 }
 
 pub async fn admin_delete(
