@@ -36,6 +36,11 @@
       "buildFunction": "AnchorPickPageBuilder"
     },
     {
+      "name": "LocationPickerPage",
+      "pageSourceFile": "src/main/ets/features/map/pages/LocationPickerPage.ets",
+      "buildFunction": "LocationPickerPageBuilder"
+    },
+    {
       "name": "SearchPage",
       "pageSourceFile": "src/main/ets/features/search/pages/SearchPage.ets",
       "buildFunction": "SearchPageBuilder"

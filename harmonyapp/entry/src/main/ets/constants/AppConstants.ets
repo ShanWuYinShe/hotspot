@@ -88,7 +88,7 @@ export const PageNames: PageNamesType = {
   CREATE_MOMENT: 'CreateMomentPage',
   CHAT: 'ChatPage',
   ANCHOR_PICK: 'AnchorPickPage',
-  LOCATION_PICKER: 'AnchorPickPage',
+  LOCATION_PICKER: 'LocationPickerPage',
   SEARCH: 'SearchPage',
   SETTINGS: 'SettingsPage',
   ADVANCED_SETTINGS: 'AdvancedSettingsPage',

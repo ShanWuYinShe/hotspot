@@ -26,15 +26,6 @@ export class GroupDetailRouteParam {
   groupId: string = '';
 }
 
-/** 位置选择器参数 */
-export class LocationPickerRouteParam {
-  mode: string = '';
-  resultKey: string = '';
-  title: string = '';
-  confirmText: string = '';
-  hintText: string = '';
-}
-
 /** 用户资料页参数 */
 export class ProfileRouteParam {
   userId: string = '';

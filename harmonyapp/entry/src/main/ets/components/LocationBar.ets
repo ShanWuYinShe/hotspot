@@ -222,19 +222,10 @@ export struct LocationBar {
   }
 
   private openLocationPicker(): void {
-    const params = new LocationPickerRouteParam();
-    params.resultKey = KEY_BROWSE_ANCHOR;
-    params.mode = 'browse_anchor';
-    params.title = '选择浏览位置';
-    params.confirmText = '设为浏览位置';
-    AppRouter.push(PageNames.LOCATION_PICKER, params);
+    AppRouter.push(PageNames.ANCHOR_PICK);
   }
 
   private navigateToSearch(): void {
     AppRouter.push(PageNames.SEARCH);
-  }
-
-  private navigateToMap(): void {
-    AppRouter.push(PageNames.ANCHOR_PICK);
   }
 }
