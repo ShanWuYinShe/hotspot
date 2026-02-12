@@ -10,7 +10,7 @@ import {
   GroupItem, 
   MomentItem
 } from '../core/types/api';
-import { KEY_CURRENT_LOCATION } from '../core/state/GlobalStateManager';
+import { KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR } from '../core/state/GlobalStateManager';
 import { GlobalStateManager } from '../core/state/GlobalStateManager';
 import { LocationInfo } from '../core/location/LocationUtil';
 import { SystemAvatar } from './SystemAvatar';
@@ -33,6 +33,7 @@ interface SearchResult {
 
 @Component
 export struct SmartSearchComponent {
+  @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   
   @State searchText: string = '';
@@ -99,7 +100,8 @@ export struct SmartSearchComponent {
   }
 
   private async searchUsers(query: string) {
-    if (!this.currentLocation) {
+    const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
+    if (!refLoc) {
       return;
     }
 
@@ -109,8 +111,8 @@ export struct SmartSearchComponent {
       const response = await ApiClient.searchUsers({
         keyword: query,
         reference_point: {
-          latitude: this.currentLocation.latitude,
-          longitude: this.currentLocation.longitude
+          latitude: refLoc.latitude,
+          longitude: refLoc.longitude
         },
         pagination: { limit: 10 }
       });
@@ -137,7 +139,8 @@ export struct SmartSearchComponent {
   }
 
   private async searchGroups(query: string) {
-    if (!this.currentLocation) {
+    const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
+    if (!refLoc) {
       return;
     }
 
@@ -145,8 +148,8 @@ export struct SmartSearchComponent {
       const response = await ApiClient.searchGroups({
         keyword: query,
         reference_point: {
-          latitude: this.currentLocation.latitude,
-          longitude: this.currentLocation.longitude
+          latitude: refLoc.latitude,
+          longitude: refLoc.longitude
         },
         pagination: { limit: 10 }
       });
@@ -169,7 +172,8 @@ export struct SmartSearchComponent {
   }
 
   private async searchMoments(query: string) {
-    if (!this.currentLocation) {
+    const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
+    if (!refLoc) {
       return;
     }
 
@@ -177,8 +181,8 @@ export struct SmartSearchComponent {
       const response = await ApiClient.searchMoments({
         keyword: query,
         reference_point: {
-          latitude: this.currentLocation.latitude,
-          longitude: this.currentLocation.longitude
+          latitude: refLoc.latitude,
+          longitude: refLoc.longitude
         },
         pagination: { limit: 10 }
       });

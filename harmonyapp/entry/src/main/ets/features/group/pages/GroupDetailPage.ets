@@ -3,7 +3,7 @@
  * 重构：使用 HarmonyOS 原生 List 组件
  */
 
-import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
+import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { MyProfile, GeoPoint } from '../../../core/types/api';
 import { ApiClient } from '../../../core/api/ApiClient';
@@ -47,6 +47,7 @@ interface GroupDetailParams {
 export struct GroupDetailPage {
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
+  @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   
   private stateManager = GlobalStateManager.getInstance();
@@ -87,9 +88,10 @@ export struct GroupDetailPage {
 
     try {
       await LoadingUtil.withMinimumTime(async () => {
+        const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
         let referencePoint: GeoPoint = { latitude: 0, longitude: 0 };
-        if (this.currentLocation) {
-          referencePoint = { latitude: this.currentLocation.latitude, longitude: this.currentLocation.longitude };
+        if (refLoc) {
+          referencePoint = { latitude: refLoc.latitude, longitude: refLoc.longitude };
         }
         const response = await ApiClient.getGroupDetail({
           group_id: this.groupId,

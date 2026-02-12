@@ -16,6 +16,7 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AppRouter } from '../../../core/router/AppRouter';
+import { PageNames } from '../../../constants/AppConstants';
 
 @Component
 export struct AccountsPage {
@@ -173,7 +174,7 @@ export struct AccountsPage {
             .fontColor(Color.White)
             .height(44)
             .onClick(() => {
-              AppRouter.push('LoginPage');
+              AppRouter.push(PageNames.LOGIN);
             })
         }
         .width('100%')

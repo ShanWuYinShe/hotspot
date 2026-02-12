@@ -4,11 +4,11 @@
  * 类似抖音风格的子标签切换
  */
 
-import { KEY_IS_LOGGED_IN, KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
+import { GlobalStateManager, KEY_IS_LOGGED_IN, KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter } from '../../../core/router/AppRouter';
-import { PageNames } from '../../../constants/AppConstants';
+import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import {
   MomentItem, UserItem, GroupItem, GeoPoint,
   SearchMomentsRequest, SearchUsersRequest, SearchGroupsRequest,
@@ -162,7 +162,6 @@ export struct NearbyPage {
   private async loadNearbyMoments(loadMore: boolean = false): Promise<void> {
     const ref = this.getReferencePoint();
     if (!ref) {
-      this.momentsError = '请先获取位置信息';
       return;
     }
     if (loadMore) {
@@ -175,9 +174,9 @@ export struct NearbyPage {
     try {
       const request: SearchMomentsRequest = {
         reference_point: ref,
-        radius: 5000,
+        radius: DefaultConfig.NEARBY_RADIUS,
         sort_by: 'distance',
-        pagination: { limit: 30, cursor: loadMore ? this.momentsNextCursor : undefined }
+        pagination: { limit: DefaultConfig.PAGE_SIZE, cursor: loadMore ? this.momentsNextCursor : undefined }
       };
       const response = loadMore
         ? await ApiClient.searchMoments(request)
@@ -219,7 +218,6 @@ export struct NearbyPage {
   private async loadNearbyUsers(loadMore: boolean = false): Promise<void> {
     const ref = this.getReferencePoint();
     if (!ref) {
-      this.usersError = '请先获取位置信息';
       return;
     }
     if (loadMore) {
@@ -232,9 +230,9 @@ export struct NearbyPage {
     try {
       const request: SearchUsersRequest = {
         reference_point: ref,
-        radius: 5000,
+        radius: DefaultConfig.NEARBY_RADIUS,
         sort_by: 'distance',
-        pagination: { limit: 30, cursor: loadMore ? this.usersNextCursor : undefined }
+        pagination: { limit: DefaultConfig.PAGE_SIZE, cursor: loadMore ? this.usersNextCursor : undefined }
       };
       const response = loadMore
         ? await ApiClient.searchUsers(request)
@@ -276,7 +274,6 @@ export struct NearbyPage {
   private async loadNearbyGroups(loadMore: boolean = false): Promise<void> {
     const ref = this.getReferencePoint();
     if (!ref) {
-      this.groupsError = '请先获取位置信息';
       return;
     }
     if (loadMore) {
@@ -289,9 +286,9 @@ export struct NearbyPage {
     try {
       const request: SearchGroupsRequest = {
         reference_point: ref,
-        radius: 5000,
+        radius: DefaultConfig.NEARBY_RADIUS,
         sort_by: 'distance',
-        pagination: { limit: 30, cursor: loadMore ? this.groupsNextCursor : undefined }
+        pagination: { limit: DefaultConfig.PAGE_SIZE, cursor: loadMore ? this.groupsNextCursor : undefined }
       };
       const response = loadMore
         ? await ApiClient.searchGroups(request)

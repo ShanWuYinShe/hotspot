@@ -3,10 +3,10 @@
  * 使用 HarmonyOS 原生能力 + 系统颜色资源（支持深色模式）
  */
 
-import { GlobalStateManager, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
+import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR } from '../../../core/state/GlobalStateManager';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { PageNames } from '../../../constants/AppConstants';
+import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { GroupItem, SearchGroupsRequest } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { IntelligentLocationCard } from '../../../components/IntelligentLocationCard';
@@ -20,6 +20,7 @@ import { AppRouter, LoginRouteParam, GroupDetailRouteParam } from '../../../core
 
 @Component
 export struct GroupPage {
+  @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
 
   private stateManager = GlobalStateManager.getInstance();
@@ -37,9 +38,14 @@ export struct GroupPage {
 
   aboutToDisappear() {}
 
+  /** 获取搜索参考点：优先浏览锚点，回退到当前定位 */
+  private getRefLocation(): LocationInfo | null {
+    return this.browseAnchor ?? this.currentLocation;
+  }
+
   private async loadNearbyGroups() {
-    if (!this.currentLocation) {
-      this.errorMessage = '请先获取位置信息';
+    const refLoc = this.getRefLocation();
+    if (!refLoc) {
       return;
     }
 
@@ -49,12 +55,12 @@ export struct GroupPage {
     try {
       const request: SearchGroupsRequest = {
         reference_point: {
-          latitude: this.currentLocation.latitude,
-          longitude: this.currentLocation.longitude
+          latitude: refLoc.latitude,
+          longitude: refLoc.longitude
         },
-        radius: 5000,
+        radius: DefaultConfig.NEARBY_RADIUS,
         sort_by: 'distance',
-        pagination: { limit: 50 }
+        pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE }
       };
       const response = await LoadingUtil.withMinimumTime(() => ApiClient.searchGroups(request));
 
@@ -76,17 +82,18 @@ export struct GroupPage {
   }
 
   private async loadMoreGroups(): Promise<void> {
-    if (this.isLoadingMore || !this.hasMore || !this.currentLocation) return;
+    const refLoc = this.getRefLocation();
+    if (this.isLoadingMore || !this.hasMore || !refLoc) return;
     this.isLoadingMore = true;
     try {
       const request: SearchGroupsRequest = {
         reference_point: {
-          latitude: this.currentLocation.latitude,
-          longitude: this.currentLocation.longitude
+          latitude: refLoc.latitude,
+          longitude: refLoc.longitude
         },
-        radius: 5000,
+        radius: DefaultConfig.NEARBY_RADIUS,
         sort_by: 'distance',
-        pagination: { limit: 50, cursor: this.nextCursor }
+        pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE, cursor: this.nextCursor }
       };
       const response = await ApiClient.searchGroups(request);
       if (response.code === 0 && response.data) {
@@ -155,11 +162,6 @@ export struct GroupPage {
       loginParams.reason = 'action_required';
       loginParams.action = '创建群组';
       AppRouter.push(PageNames.LOGIN, loginParams);
-      return;
-    }
-
-    if (!this.currentLocation) {
-      SystemToast.show('请先获取位置信息', this.getUIContext());
       return;
     }
 

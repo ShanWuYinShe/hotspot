@@ -99,17 +99,25 @@ export const PageNames: PageNamesType = {
   RECOMMENDATION: 'RecommendationPage'
 };
 
-// 默认配置
+// 默认配置（服务端 ClientConfig 加载前的回退值）
 export interface DefaultConfigType {
-  SEARCH_RADIUS: number;
+  NEARBY_RADIUS: number;
+  MOMENT_RADIUS: number;
   PAGE_SIZE: number;
+  PAGE_SIZE_LARGE: number;
   REQUEST_TIMEOUT: number;
   LOCATION_CACHE_TIME: number;
+  MAX_MOMENT_IMAGES: number;
+  MAX_MOMENT_TAGS: number;
 }
 
 export const DefaultConfig: DefaultConfigType = {
-  SEARCH_RADIUS: 2000,        // 默认搜索半径2km
-  PAGE_SIZE: 20,              // 默认分页大小
-  REQUEST_TIMEOUT: 30000,     // 请求超时30秒
-  LOCATION_CACHE_TIME: 300000 // 位置缓存5分钟
+  NEARBY_RADIUS: 5000,         // 附近搜索默认半径 5km
+  MOMENT_RADIUS: 2000,         // 瞬间搜索默认半径 2km
+  PAGE_SIZE: 30,               // 默认分页大小
+  PAGE_SIZE_LARGE: 50,         // 大分页大小（加载更多）
+  REQUEST_TIMEOUT: 30000,      // 请求超时 30 秒
+  LOCATION_CACHE_TIME: 300000, // 位置缓存 5 分钟
+  MAX_MOMENT_IMAGES: 9,        // 瞬间最大图片数
+  MAX_MOMENT_TAGS: 10          // 瞬间最大标签数
 };

@@ -139,7 +139,7 @@ export struct ProfilePage {
 
   private async updateLocation(): Promise<void> {
     if (!this.currentLocation) {
-      SystemToast.show('请先获取位置信息', this.getUIContext());
+      SystemToast.show('当前位置不可用', this.getUIContext());
       return;
     }
 
@@ -534,24 +534,9 @@ export struct ProfilePage {
         .backgroundColor($r('sys.color.ohos_id_color_background'))
 
         ListItem() {
-          this.MenuItemContent('我的瞬间', AppIcon.CAMERA, () => {})
-        }
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
-
-        ListItem() {
-          this.MenuItemContent('我的群组', AppIcon.GROUP, () => {})
-        }
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
-
-        ListItem() {
           this.MenuItemContent('设置', AppIcon.SETTINGS, () => {
             AppRouter.push(PageNames.SETTINGS);
           })
-        }
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
-
-        ListItem() {
-          this.MenuItemContent('关于', AppIcon.INFO, () => {})
         }
         .backgroundColor($r('sys.color.ohos_id_color_background'))
 

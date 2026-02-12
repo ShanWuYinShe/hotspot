@@ -4,7 +4,7 @@
  * This page uses local AppStorage/PreferencesUtil for client-side preferences only.
  * When backend spec defines subscription APIs, migrate to API calls.
  */
-import { StorageKeys } from '../../../constants/AppConstants';
+import { StorageKeys, PageNames } from '../../../constants/AppConstants';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { SystemToast } from '../../../components/SystemToast';
@@ -67,8 +67,8 @@ export struct SubscriptionsPage {
         const loginParams = new LoginRouteParam();
         loginParams.reason = 'action_required';
         loginParams.action = '管理通知订阅';
-        loginParams.redirectUrl = 'SubscriptionsPage';
-        AppRouter.push('LoginPage', loginParams);
+        loginParams.redirectUrl = PageNames.SUBSCRIPTIONS;
+        AppRouter.push(PageNames.LOGIN, loginParams);
         this.loading = false;
         return;
       }

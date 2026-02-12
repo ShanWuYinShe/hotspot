@@ -3,7 +3,7 @@
  * 展示热门话题、推荐用户、热门瞬间
  */
 
-import { KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
+import { KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR } from '../../../core/state/GlobalStateManager';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter } from '../../../core/router/AppRouter';
@@ -29,6 +29,7 @@ class SearchParams {
 
 @Component
 export struct DiscoverPage {
+  @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
 
   @State isLoading: boolean = false;
@@ -46,29 +47,38 @@ export struct DiscoverPage {
   private async loadData(): Promise<void> {
     this.isLoading = true;
     try {
-      // 并行加载：热门内容 + 推荐用户
-      const usersRequest: SearchUsersRequest = {
-        reference_point: this.currentLocation
-          ? { latitude: this.currentLocation.latitude, longitude: this.currentLocation.longitude }
-          : { latitude: 0, longitude: 0 },
-        pagination: { limit: 10 }
-      };
-      const results = await LoadingUtil.withMinimumTime(() =>
-        Promise.all([ApiClient.getFeedTrending({}), ApiClient.searchUsers(usersRequest)])
-      );
-      const trendingResponse = results[0];
-      const usersResponse = results[1];
+      // 热门内容不依赖位置，推荐用户需要位置
+      const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
+      const trendingPromise = ApiClient.getFeedTrending({});
 
-      if (trendingResponse.code === 0 && trendingResponse.data) {
-        const bundle: TrendingBundle = trendingResponse.data;
-        this.trendingTags = bundle.trending_tags || [];
-        this.hotMoments = bundle.hot_moments || [];
-        this.hotMomentsDataSource.setData(this.hotMoments);
-      }
-
-      if (usersResponse.code === 0 && usersResponse.data) {
-        this.recommendedUsers = usersResponse.data.items.filter((u: UserItem) => u.user?.user_id);
-        this.recommendedUsersDataSource.setData(this.recommendedUsers);
+      if (refLoc) {
+        const usersRequest: SearchUsersRequest = {
+          reference_point: { latitude: refLoc.latitude, longitude: refLoc.longitude },
+          pagination: { limit: 10 }
+        };
+        const results = await LoadingUtil.withMinimumTime(() =>
+          Promise.all([trendingPromise, ApiClient.searchUsers(usersRequest)])
+        );
+        const usersResponse = results[1];
+        if (usersResponse.code === 0 && usersResponse.data) {
+          this.recommendedUsers = usersResponse.data.items.filter((u: UserItem) => u.user?.user_id);
+          this.recommendedUsersDataSource.setData(this.recommendedUsers);
+        }
+        const trendingResponse = results[0];
+        if (trendingResponse.code === 0 && trendingResponse.data) {
+          const bundle: TrendingBundle = trendingResponse.data;
+          this.trendingTags = bundle.trending_tags || [];
+          this.hotMoments = bundle.hot_moments || [];
+          this.hotMomentsDataSource.setData(this.hotMoments);
+        }
+      } else {
+        const trendingResponse = await LoadingUtil.withMinimumTime(() => trendingPromise);
+        if (trendingResponse.code === 0 && trendingResponse.data) {
+          const bundle: TrendingBundle = trendingResponse.data;
+          this.trendingTags = bundle.trending_tags || [];
+          this.hotMoments = bundle.hot_moments || [];
+          this.hotMomentsDataSource.setData(this.hotMoments);
+        }
       }
     } catch {
       hilog.error(DOMAIN_NUMBER, TAG, '加载发现数据失败');

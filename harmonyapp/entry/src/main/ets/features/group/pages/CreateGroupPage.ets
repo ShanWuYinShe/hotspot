@@ -3,7 +3,7 @@
  * 重构：使用 HarmonyOS 原生 List 组件构建表单
  */
 
-import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_LOCATION_PICK_RESULT } from '../../../core/state/GlobalStateManager';
+import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_LOCATION_PICK_RESULT } from '../../../core/state/GlobalStateManager';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { LocationUtil } from '../../../core/location/LocationUtil';
@@ -20,6 +20,7 @@ import { AppRouter, LoginRouteParam, GroupDetailRouteParam } from '../../../core
 @Component
 export struct CreateGroupPage {
   pathStack: NavPathStack = new NavPathStack();
+  @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_LOCATION_PICK_RESULT) pickResult: LocationInfo | null = null;
   
@@ -38,35 +39,27 @@ export struct CreateGroupPage {
       this.localLocation = {
         latitude: this.pickResult.latitude,
         longitude: this.pickResult.longitude,
-        locationName: this.pickResult.locationName || '南天门'
+        locationName: this.pickResult.locationName || '未知位置'
       };
       AppStorage.setOrCreate<LocationInfo | null>(KEY_LOCATION_PICK_RESULT, null);
       return;
     }
 
-    await this.getCurrentLocation();
+    this.initDefaultLocation();
   }
 
-  private async getCurrentLocation(): Promise<void> {
-    try {
-      if (this.currentLocation) {
-        this.localLocation = {
-          latitude: this.currentLocation.latitude,
-          longitude: this.currentLocation.longitude,
-          locationName: this.currentLocation.locationName || '南天门'
-        };
-      } else {
-        const location = await LocationUtil.getCurrentLocation();
-        if (location) {
-          this.localLocation = {
-            latitude: location.latitude,
-            longitude: location.longitude,
-            locationName: location.locationName || '南天门'
-          };
-        }
-      }
-    } catch (error) {
-      SystemToast.showError('获取位置信息失败', this.getUIContext());
+  /**
+   * 初始化默认位置：优先浏览锚点 → 当前定位。
+   * 浏览锚点是用户正在浏览的区域中心，更符合用户创建群组的意图。
+   */
+  private initDefaultLocation(): void {
+    const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
+    if (refLoc) {
+      this.localLocation = {
+        latitude: refLoc.latitude,
+        longitude: refLoc.longitude,
+        locationName: refLoc.locationName || '未知位置'
+      };
     }
   }
 
@@ -86,7 +79,7 @@ export struct CreateGroupPage {
       return;
     }
     if (!this.localLocation) {
-      SystemToast.show('请先获取位置信息', this.getUIContext());
+      SystemToast.show('位置信息不可用，请选择位置', this.getUIContext());
       return;
     }
     if (this.isPasswordRequired && !this.groupPassword.trim()) {
@@ -107,7 +100,7 @@ export struct CreateGroupPage {
           description: this.groupDescription.trim() || undefined,
           location: {
             point: geoPoint,
-            location_name: localLoc.locationName || "南天门"
+            location_name: localLoc.locationName || "未知位置"
           },
           password: this.isPasswordRequired ? this.groupPassword.trim() : undefined,
           max_members: this.maxMembers,
@@ -139,7 +132,7 @@ export struct CreateGroupPage {
         this.localLocation = {
           latitude: location.latitude,
           longitude: location.longitude,
-          locationName: location.locationName || '南天门'
+          locationName: location.locationName || '未知位置'
         };
         SystemToast.show('位置已更新', this.getUIContext());
       }

@@ -148,7 +148,7 @@ export class PersistentStateManager {
       this.state.locationEnabled = true;
 
       await PreferencesUtil.setObject('current_location', location);
-      hilog.info(DOMAIN_NUMBER, TAG, `💾 位置信息已保存: ${location.locationName || '南天门'}`);
+      hilog.info(DOMAIN_NUMBER, TAG, `💾 位置信息已保存: ${location.locationName || '未知位置'}`);
 
       this.notifyListeners();
     } catch (error) {

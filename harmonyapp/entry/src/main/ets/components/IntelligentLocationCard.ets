@@ -13,7 +13,7 @@ const TAG: string = 'IntelligentLocationCard';
 export struct IntelligentLocationCard {
   @Prop latitude: number = 0;
   @Prop longitude: number = 0;
-  @Prop locationName: string = '南天门';
+  @Prop locationName: string = '未知位置';
   @Prop distance: number = -1;
   @Prop altitude: number = 0; // 新增海拔属性
   @Prop showElevation: boolean = true;
@@ -39,7 +39,7 @@ export struct IntelligentLocationCard {
 
       Column({ space: 6 }) {
         // 地址信息
-        Text(this.locationName || '南天门')
+        Text(this.locationName || '未知位置')
           .fontSize(16)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .fontWeight(FontWeight.Medium)

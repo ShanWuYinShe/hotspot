@@ -8,7 +8,7 @@
  * - 注册用户（normal，有 token）：完整功能，含密码修改等
  */
 
-import { MyProfile } from '../types/api';
+import { MyProfile, ClientConfig, AppLimits } from '../types/api';
 import type { UserType } from '../types/api';
 import { LocationInfo } from '../location/LocationUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -48,6 +48,7 @@ export const KEY_BROWSE_ANCHOR = 'browseAnchor';
 export const KEY_UNREAD_COUNT = 'unreadCount';
 export const KEY_NETWORK_CONNECTED = 'networkConnected';
 export const KEY_LAST_MESSAGE_SYNC_TIME = 'lastMessageSyncTime';
+export const KEY_CLIENT_CONFIG = 'clientConfig';
 
 // 初始化 PersistentStorage (必须在 AppStorage 使用之前)
 PersistentStorage.persistProp<MyProfile | null>(KEY_CURRENT_USER, null);
@@ -90,6 +91,9 @@ export class GlobalStateManager {
     }
     if (!AppStorage.has(KEY_LAST_MESSAGE_SYNC_TIME)) {
       AppStorage.setOrCreate<number>(KEY_LAST_MESSAGE_SYNC_TIME, 0);
+    }
+    if (!AppStorage.has(KEY_CLIENT_CONFIG)) {
+      AppStorage.setOrCreate<ClientConfig | null>(KEY_CLIENT_CONFIG, null);
     }
 
     hilog.info(DOMAIN_NUMBER, TAG, 'GlobalStateManager (AppStorage) 初始化成功');
@@ -168,6 +172,22 @@ export class GlobalStateManager {
    */
   notifyMessageSync(): void {
     AppStorage.setOrCreate(KEY_LAST_MESSAGE_SYNC_TIME, Date.now());
+  }
+
+  /**
+   * 更新客户端配置
+   */
+  updateClientConfig(config: ClientConfig): void {
+    AppStorage.setOrCreate<ClientConfig | null>(KEY_CLIENT_CONFIG, config);
+    hilog.info(DOMAIN_NUMBER, TAG, `客户端配置已更新: search_radius_max=${config.limits?.search_radius_max}`);
+  }
+
+  /**
+   * 获取 AppLimits（服务端配置的限制参数）
+   */
+  getLimits(): AppLimits | null {
+    const config = AppStorage.get<ClientConfig | null>(KEY_CLIENT_CONFIG);
+    return config?.limits ?? null;
   }
 
   /**

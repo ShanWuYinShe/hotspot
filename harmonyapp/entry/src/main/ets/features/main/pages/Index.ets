@@ -7,7 +7,8 @@ import { PageNames } from '../../../constants/AppConstants';
 import { AppRouter, LoginRouteParam } from '../../../core/router/AppRouter';
 import { common } from '@kit.AbilityKit';
 import { UIContext } from '@kit.ArkUI';
-import { GlobalStateManager, UnreadCount, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_USER_TYPE, KEY_CURRENT_LOCATION, KEY_UNREAD_COUNT } from '../../../core/state/GlobalStateManager';
+import { GlobalStateManager, UnreadCount, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_USER_TYPE, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_UNREAD_COUNT } from '../../../core/state/GlobalStateManager';
+import { CoordinateConverter } from '../../../core/geo/CoordinateConverter';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { PersistentStateManager } from '../../../core/state/PersistentStateManager';
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
@@ -74,6 +75,7 @@ struct Index {
   private tabsController: TabsController = new TabsController();
   private wsNotificationsBound: boolean = false;
   private locationSyncTimerId: number = 0;
+  private hasInitialLocationSynced: boolean = false;
   /** 缓存监控定时器 ID */
   private cacheMonitorTimerId: number = 0;
   /** 智能通知监听器引用（用于清理） */
@@ -135,7 +137,8 @@ struct Index {
       try {
         const configResp = await ApiClient.getClientConfig();
         if (configResp.code === 0 && configResp.data) {
-          hilog.info(DOMAIN_NUMBER, TAG, `✅ 客户端配置加载: features.moments=${configResp.data.features?.enable_moments}`);
+          this.stateManager.updateClientConfig(configResp.data);
+          hilog.info(DOMAIN_NUMBER, TAG, `✅ 客户端配置已缓存: features.moments=${configResp.data.features?.enable_moments}`);
         }
       } catch (e) {
         hilog.warn(DOMAIN_NUMBER, TAG, `客户端配置加载失败: ${JSON.stringify(e)}`);
@@ -154,16 +157,24 @@ struct Index {
         this.stateManager.updateUser(persistentState.currentUser);
       }
       if (persistentState.currentLocation) {
-        this.stateManager.updateLocation(persistentState.currentLocation as LocationInfo);
+        const restoredLoc = persistentState.currentLocation as LocationInfo;
+        this.stateManager.updateLocation(restoredLoc);
+        // 若浏览锚点尚未设置，用恢复的位置初始化
+        this.initBrowseAnchorIfNeeded(restoredLoc);
       }
       // ===== 持续位置追踪（与 MapKit 蓝点共享 Location Kit 数据源） =====
       try {
         const hasPermission: boolean = await PermissionManager.getInstance().requestLocationPermission();
         if (hasPermission) {
           // 启动持续位置监听（5s 间隔），实时更新 currentLocation
-          // 确保 currentLocation 始终与地图蓝点位置一致
           const started = await LocationUtil.startLocationListening((locInfo: LocationInfo) => {
             this.stateManager.updateLocation(locInfo);
+            this.initBrowseAnchorIfNeeded(locInfo);
+            // 首次获取到真实位置后，立即同步到服务器
+            if (!this.hasInitialLocationSynced) {
+              this.hasInitialLocationSynced = true;
+              this.syncLocationToServer(locInfo);
+            }
           });
           if (started) {
             hilog.info(DOMAIN_NUMBER, TAG, '✅ 持续位置监听已启动');
@@ -173,6 +184,12 @@ struct Index {
             const location = await LocationUtil.getCurrentLocation();
             if (location) {
               this.stateManager.updateLocation(location);
+              this.initBrowseAnchorIfNeeded(location);
+              // 立即同步到服务器
+              if (!this.hasInitialLocationSynced) {
+                this.hasInitialLocationSynced = true;
+                this.syncLocationToServer(location);
+              }
             }
           }
         } else {
@@ -182,28 +199,11 @@ struct Index {
         hilog.warn(DOMAIN_NUMBER, TAG, '位置初始化失败');
       }
 
-      // 定时同步位置到服务端（5分钟一次）：位置由持续监听实时更新，服务端上报节省网络
-      if (this.isLoggedIn && this.locationSyncTimerId === 0) {
+      // 定时同步位置到服务端（5分钟一次），所有用户（包括临时用户）均需上报
+      if (this.locationSyncTimerId === 0) {
         this.locationSyncTimerId = TimerManager.setInterval(async () => {
-          try {
-            if (!this.isLoggedIn || !this.currentLocation) return;
-            const geoPoint: GeoPoint = {
-              latitude: this.currentLocation.latitude,
-              longitude: this.currentLocation.longitude
-            };
-            const locationReq: UpdateLocationRequest = {
-              location: {
-                point: geoPoint,
-                location_name: this.currentLocation.locationName || '位置不可用'
-              }
-            };
-            const resp = await ApiClient.updateLocation(locationReq);
-            if (resp.code !== 0) {
-              hilog.warn(DOMAIN_NUMBER, TAG, `定时位置上传失败: ${resp.message || resp.code}`);
-            }
-          } catch {
-            hilog.warn(DOMAIN_NUMBER, TAG, '定时位置同步异常');
-          }
+          if (!this.currentLocation) return;
+          this.syncLocationToServer(this.currentLocation);
         }, 5 * 60 * 1000, '定时同步用户位置');
       }
 
@@ -217,6 +217,49 @@ struct Index {
       this.lastError = errorMsg;
       this.isInitialized = true; 
     }
+  }
+
+  /**
+   * 同步真实位置到服务端。所有用户（登录 / 临时）均需上报。
+   */
+  private syncLocationToServer(location: LocationInfo): void {
+    const geoPoint: GeoPoint = {
+      latitude: location.latitude,
+      longitude: location.longitude
+    };
+    const locationReq: UpdateLocationRequest = {
+      location: {
+        point: geoPoint,
+        location_name: location.locationName || '未知位置'
+      }
+    };
+    ApiClient.updateLocation(locationReq).then((resp) => {
+      if (resp.code !== 0) {
+        hilog.warn(DOMAIN_NUMBER, TAG, `位置上传失败: ${resp.message || resp.code}`);
+      }
+    }).catch(() => {
+      hilog.warn(DOMAIN_NUMBER, TAG, '位置同步异常');
+    });
+  }
+
+  /**
+   * 首次定位后，若浏览锚点尚未设置，则将当前位置（WGS84 → GCJ02）设为初始浏览锚点。
+   * 已有锚点（用户手动选择或持久化恢复）时不覆盖。
+   */
+  private initBrowseAnchorIfNeeded(wgs84Location: LocationInfo): void {
+    const currentAnchor = AppStorage.get<LocationInfo | null>(KEY_BROWSE_ANCHOR);
+    if (currentAnchor) return;
+
+    const converted = CoordinateConverter.convertWgs84ToGcj02(
+      wgs84Location.latitude, wgs84Location.longitude
+    );
+    const anchor: LocationInfo = {
+      latitude: converted.latitude,
+      longitude: converted.longitude,
+      locationName: wgs84Location.locationName
+    };
+    AppStorage.setOrCreate<LocationInfo | null>(KEY_BROWSE_ANCHOR, anchor);
+    hilog.info(DOMAIN_NUMBER, TAG, `✅ 初始浏览锚点已设置: ${anchor.locationName ?? '未知'}`);
   }
 
   private async getAccessToken(): Promise<string | null> {

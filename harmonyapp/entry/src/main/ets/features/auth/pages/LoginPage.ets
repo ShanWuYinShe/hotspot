@@ -166,8 +166,14 @@ export struct LoginPage {
       .onClick(() => {
         if (mode === 'login') {
           this.loginMode = 'login';
+          this.registerNickname = '';
+          this.registerLoginId = '';
+          this.registerPassword = '';
+          this.registerPasswordConfirm = '';
         } else {
           this.loginMode = 'register';
+          this.loginId = '';
+          this.password = '';
         }
       })
   }
@@ -175,21 +181,19 @@ export struct LoginPage {
   @Builder
   private buildLoginForm() {
     Column({ space: DesignConstants.SPACING.LG }) {
-      TextInput({ placeholder: '邮箱 / 用户名' })
+      TextInput({ placeholder: '邮箱 / 用户名', text: $$this.loginId })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
         .backgroundColor($r('sys.color.ohos_id_color_background'))
         .borderRadius(DesignConstants.RADIUS.LG)
         .type(InputType.Email)
-        .onChange((value: string) => { this.loginId = value; })
 
-      TextInput({ placeholder: '密码' })
+      TextInput({ placeholder: '密码', text: $$this.password })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
         .backgroundColor($r('sys.color.ohos_id_color_background'))
         .borderRadius(DesignConstants.RADIUS.LG)
         .type(InputType.Password)
-        .onChange((value: string) => { this.password = value; })
 
       Button('登录')
         .type(ButtonType.Capsule)
@@ -212,36 +216,32 @@ export struct LoginPage {
   @Builder
   private buildRegisterForm() {
     Column({ space: DesignConstants.SPACING.LG }) {
-      TextInput({ placeholder: '昵称（必填）' })
+      TextInput({ placeholder: '昵称（必填）', text: $$this.registerNickname })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
         .backgroundColor($r('sys.color.ohos_id_color_background'))
         .borderRadius(DesignConstants.RADIUS.LG)
-        .onChange((value: string) => { this.registerNickname = value; })
 
-      TextInput({ placeholder: '邮箱 / 用户名（登录凭证）' })
+      TextInput({ placeholder: '邮箱 / 用户名（登录凭证）', text: $$this.registerLoginId })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
         .backgroundColor($r('sys.color.ohos_id_color_background'))
         .borderRadius(DesignConstants.RADIUS.LG)
         .type(InputType.Email)
-        .onChange((value: string) => { this.registerLoginId = value; })
 
-      TextInput({ placeholder: '密码（至少8位）' })
+      TextInput({ placeholder: '密码（至少8位）', text: $$this.registerPassword })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
         .backgroundColor($r('sys.color.ohos_id_color_background'))
         .borderRadius(DesignConstants.RADIUS.LG)
         .type(InputType.Password)
-        .onChange((value: string) => { this.registerPassword = value; })
 
-      TextInput({ placeholder: '确认密码' })
+      TextInput({ placeholder: '确认密码', text: $$this.registerPasswordConfirm })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
         .backgroundColor($r('sys.color.ohos_id_color_background'))
         .borderRadius(DesignConstants.RADIUS.LG)
         .type(InputType.Password)
-        .onChange((value: string) => { this.registerPasswordConfirm = value; })
 
       Button('注册')
         .type(ButtonType.Capsule)

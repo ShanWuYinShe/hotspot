@@ -4,7 +4,7 @@
  * 新增：上传前图片压缩功能
  */
 
-import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_LOCATION_PICK_RESULT } from '../../../core/state/GlobalStateManager';
+import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_LOCATION_PICK_RESULT } from '../../../core/state/GlobalStateManager';
 import { PermissionManager } from '../../../core/permission/PermissionManager';
 import { Permissions } from '@kit.AbilityKit';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
@@ -19,7 +19,7 @@ import { SystemCard } from '../../../components/SystemCard';
 import { ApiResponse, CreateMomentRequest, MomentItem, GeoPoint } from '../../../core/types/api';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
-import { PageNames } from '../../../constants/AppConstants';
+import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { AppRouter } from '../../../core/router/AppRouter';
 
 const DOMAIN_NUMBER: number = 0xFF06;
@@ -28,6 +28,7 @@ const TAG: string = 'CreateMomentPage';
 @Component
 export struct CreateMomentPage {
   pathStack: NavPathStack = new NavPathStack();
+  @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_LOCATION_PICK_RESULT) pickResult: LocationInfo | null = null;
   
@@ -47,13 +48,13 @@ export struct CreateMomentPage {
       this.localLocation = {
         latitude: this.pickResult.latitude,
         longitude: this.pickResult.longitude,
-        locationName: this.pickResult.locationName || '南天门'
+        locationName: this.pickResult.locationName || '未知位置'
       };
       AppStorage.setOrCreate<LocationInfo | null>(KEY_LOCATION_PICK_RESULT, null);
       return;
     }
 
-    await this.getCurrentLocation();
+    this.initDefaultLocation();
   }
 
   private async requestPermissions(): Promise<void> {
@@ -76,34 +77,26 @@ export struct CreateMomentPage {
     }
   }
 
-  private async getCurrentLocation(): Promise<void> {
-    try {
-      if (this.currentLocation) {
-        this.localLocation = {
-          latitude: this.currentLocation.latitude,
-          longitude: this.currentLocation.longitude,
-          locationName: this.currentLocation.locationName || '南天门'
-        };
-      } else {
-        const location = await LocationUtil.getCurrentLocation();
-        if (location) {
-          this.localLocation = {
-            latitude: location.latitude,
-            longitude: location.longitude,
-            locationName: location.locationName || '南天门'
-          };
-        }
-      }
-    } catch (error) {
-      SystemToast.showError('获取位置信息失败', this.getUIContext());
+  /**
+   * 初始化默认位置：优先浏览锚点 → 当前定位。
+   * 浏览锚点是用户正在浏览的区域中心，更符合用户发布瞬间的意图。
+   */
+  private initDefaultLocation(): void {
+    const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
+    if (refLoc) {
+      this.localLocation = {
+        latitude: refLoc.latitude,
+        longitude: refLoc.longitude,
+        locationName: refLoc.locationName || '未知位置'
+      };
     }
   }
 
   private addTag(): void {
     const tag = this.currentTag.trim();
     if (!tag) return;
-    if (this.tags.length >= 10) {
-      SystemToast.show('最多只能添加10个标签', this.getUIContext());
+    if (this.tags.length >= DefaultConfig.MAX_MOMENT_TAGS) {
+      SystemToast.show(`最多只能添加${DefaultConfig.MAX_MOMENT_TAGS}个标签`, this.getUIContext());
       return;
     }
     if (this.tags.includes(tag)) {
@@ -141,7 +134,7 @@ export struct CreateMomentPage {
 
   private async capturePhoto(): Promise<void> {
     try {
-      if (this.imageUrls.length >= 9) {
+      if (this.imageUrls.length >= DefaultConfig.MAX_MOMENT_IMAGES) {
         SystemToast.show('最多只能选择9张图片', this.getUIContext());
         return;
       }
@@ -167,7 +160,7 @@ export struct CreateMomentPage {
       return;
     }
     if (!this.localLocation) {
-      SystemToast.show('请先获取位置信息', this.getUIContext());
+      SystemToast.show('位置信息不可用，请选择位置', this.getUIContext());
       return;
     }
 
@@ -231,7 +224,7 @@ export struct CreateMomentPage {
           description: this.description.trim(),
           location: {
             point: geoPoint,
-            location_name: localLoc.locationName || "南天门"
+            location_name: localLoc.locationName || "未知位置"
           },
           tags: this.tags.length > 0 ? this.tags : undefined,
           image_file_ids: imageFileIds.length > 0 ? imageFileIds : undefined
@@ -260,7 +253,7 @@ export struct CreateMomentPage {
         this.localLocation = {
           latitude: location.latitude,
           longitude: location.longitude,
-          locationName: location.locationName || '南天门'
+          locationName: location.locationName || '未知位置'
         };
         SystemToast.show('位置已更新', this.getUIContext());
       }

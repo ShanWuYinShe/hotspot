@@ -3,7 +3,7 @@
  * 重构：使用 HarmonyOS 原生 Tabs 组件
  */
 
-import { GlobalStateManager, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
+import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR } from '../../../core/state/GlobalStateManager';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { PageNames } from '../../../constants/AppConstants';
@@ -26,6 +26,7 @@ const TAG: string = 'SearchPage';
 @Component
 export struct SearchPage {
   pathStack: NavPathStack = new NavPathStack();
+  @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   
   @State currentIndex: number = 0;
@@ -42,8 +43,8 @@ export struct SearchPage {
 
   private async doSearch() {
     if (!this.keyword.trim()) return;
-    if (!this.currentLocation) {
-      SystemToast.show('请先获取位置信息', this.getUIContext());
+    const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
+    if (!refLoc) {
       return;
     }
 
@@ -57,8 +58,8 @@ export struct SearchPage {
     this.momentResultsDataSource.clear();
 
     const referencePoint: GeoPoint = {
-      latitude: this.currentLocation.latitude,
-      longitude: this.currentLocation.longitude
+      latitude: refLoc.latitude,
+      longitude: refLoc.longitude
     };
 
     try {

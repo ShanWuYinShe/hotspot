@@ -4,10 +4,10 @@
  * LazyForEach + RDB 缓存
  */
 
-import { GlobalStateManager, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
+import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR } from '../../../core/state/GlobalStateManager';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { PageNames } from '../../../constants/AppConstants';
+import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { LikeMomentRequest, MomentItem, SearchMomentsRequest, MomentImage } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { IntelligentLocationCard } from '../../../components/IntelligentLocationCard';
@@ -28,6 +28,7 @@ const TAG: string = 'MomentPage';
 
 @Component
 export struct MomentPage {
+  @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
 
   private stateManager = GlobalStateManager.getInstance();
@@ -47,15 +48,19 @@ export struct MomentPage {
 
   aboutToDisappear() {}
 
+  /** 获取搜索参考点：优先浏览锚点，回退到当前定位 */
+  private getRefLocation(): LocationInfo | null {
+    return this.browseAnchor ?? this.currentLocation;
+  }
+
   private async loadNearbyMoments(forceRefresh: boolean = false) {
-    if (!this.currentLocation && !forceRefresh) {
+    const refLoc = this.getRefLocation();
+
+    if (!refLoc && !forceRefresh) {
       await this.loadFromCache();
     }
 
-    if (!this.currentLocation) {
-      if (this.momentsDataSource.totalCount() === 0) {
-        this.errorMessage = '请先获取位置信息';
-      }
+    if (!refLoc) {
       return;
     }
 
@@ -71,12 +76,12 @@ export struct MomentPage {
     try {
       const request: SearchMomentsRequest = {
         reference_point: {
-          latitude: this.currentLocation.latitude,
-          longitude: this.currentLocation.longitude
+          latitude: refLoc.latitude,
+          longitude: refLoc.longitude
         },
-        radius: 2000,
+        radius: DefaultConfig.MOMENT_RADIUS,
         sort_by: 'distance',
-        pagination: { limit: 50 }
+        pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE }
       };
       const response = await LoadingUtil.withMinimumTime(() => ApiClient.searchMoments(request));
 
@@ -104,17 +109,18 @@ export struct MomentPage {
   }
 
   private async loadMoreMoments(): Promise<void> {
-    if (this.isLoadingMore || !this.hasMore || !this.currentLocation) return;
+    const refLoc = this.getRefLocation();
+    if (this.isLoadingMore || !this.hasMore || !refLoc) return;
     this.isLoadingMore = true;
     try {
       const request: SearchMomentsRequest = {
         reference_point: {
-          latitude: this.currentLocation.latitude,
-          longitude: this.currentLocation.longitude
+          latitude: refLoc.latitude,
+          longitude: refLoc.longitude
         },
-        radius: 2000,
+        radius: DefaultConfig.MOMENT_RADIUS,
         sort_by: 'distance',
-        pagination: { limit: 50, cursor: this.nextCursor }
+        pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE, cursor: this.nextCursor }
       };
       const response = await ApiClient.searchMoments(request);
       if (response.code === 0 && response.data) {

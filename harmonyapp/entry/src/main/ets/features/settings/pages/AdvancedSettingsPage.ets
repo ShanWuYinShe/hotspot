@@ -7,6 +7,7 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { SystemToast } from '../../../components/SystemToast';
 import { AppRouter } from '../../../core/router/AppRouter';
+import { PageNames } from '../../../constants/AppConstants';
 
 @Component
 export struct AdvancedSettingsPage {
@@ -52,7 +53,7 @@ export struct AdvancedSettingsPage {
 
           ListItem() {
             this.SettingItem('调试面板', () => {
-              AppRouter.push('DebugPanel');
+              AppRouter.push(PageNames.DEBUG_PANEL);
             })
           }
           .backgroundColor($r('sys.color.ohos_id_color_background'))

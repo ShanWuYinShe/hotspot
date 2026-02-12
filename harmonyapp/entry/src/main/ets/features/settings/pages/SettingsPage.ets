@@ -13,6 +13,7 @@ import { MyProfile } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
 import { AppRouter, ProfileRouteParam, LoginRouteParam } from '../../../core/router/AppRouter';
+import { PageNames } from '../../../constants/AppConstants';
 
 @Component
 export struct SettingsPage {
@@ -75,7 +76,7 @@ export struct SettingsPage {
         ListItemGroup({ header: this.ListHeader('账号') }) {
           ListItem() {
             this.SettingItem('账号管理', '切换/删除本地已保存账号', () => {
-              AppRouter.push('AccountsPage');
+              AppRouter.push(PageNames.ACCOUNTS);
             })
           }
           .backgroundColor($r('sys.color.ohos_id_color_background'))
@@ -86,14 +87,14 @@ export struct SettingsPage {
                 const userId = await AuthAccountManager.getCurrentUserId();
                 const profileParams = new ProfileRouteParam();
                 profileParams.userId = userId ?? '';
-                AppRouter.push('ProfilePage', profileParams);
+                AppRouter.push(PageNames.PROFILE, profileParams);
               } else {
                 SystemToast.showWarning('请先登录', this.getUIContext());
                 const loginParams = new LoginRouteParam();
                 loginParams.reason = 'action_required';
                 loginParams.action = '查看个人资料';
-                loginParams.redirectUrl = 'ProfilePage';
-                AppRouter.push('LoginPage', loginParams);
+                loginParams.redirectUrl = PageNames.PROFILE;
+                AppRouter.push(PageNames.LOGIN, loginParams);
               }
             })
           }
@@ -107,14 +108,14 @@ export struct SettingsPage {
         ListItemGroup({ header: this.ListHeader('通用') }) {
           ListItem() {
             this.SettingItem('消息通知', '', () => {
-              AppRouter.push('SubscriptionsPage');
+              AppRouter.push(PageNames.SUBSCRIPTIONS);
             })
           }
           .backgroundColor($r('sys.color.ohos_id_color_background'))
 
           ListItem() {
             this.SettingItem('高级设置', '开发者选项、网络诊断', () => {
-              AppRouter.push('AdvancedSettingsPage');
+              AppRouter.push(PageNames.ADVANCED_SETTINGS);
             })
           }
           .backgroundColor($r('sys.color.ohos_id_color_background'))
@@ -163,7 +164,7 @@ export struct SettingsPage {
               .fontSize(DesignConstants.FONT.SIZE.LG)
               .type(ButtonType.Capsule)
               .onClick(() => {
-                AppRouter.push('LoginPage');
+                AppRouter.push(PageNames.LOGIN);
               })
           }
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.XXL })
