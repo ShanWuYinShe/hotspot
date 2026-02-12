@@ -332,7 +332,7 @@ export struct NearbyPage {
   build() {
     Column() {
       // 顶部位置栏
-      LocationBar({ showMapButton: true, showSearchButton: true })
+      LocationBar({ showMapButton: false, showSearchButton: true })
 
       // 附近设备发现指示器
       if (this.nearbyDeviceCount > 0) {

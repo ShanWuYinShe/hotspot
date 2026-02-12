@@ -33,7 +33,7 @@ export struct CreateGroupPage {
   @State localLocation: LocationInfo | null = null;
 
   async aboutToAppear() {
-    // 优先消费“地图选点”结果（从 LocationPickerPage 返回时会写入）
+    // 优先消费“地图选点”结果（从 AnchorPickPage 返回时会写入）
     if (this.pickResult) {
       this.localLocation = {
         latitude: this.pickResult.latitude,

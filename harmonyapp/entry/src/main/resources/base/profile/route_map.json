@@ -31,14 +31,9 @@
       "buildFunction": "PhotoPreviewPageBuilder"
     },
     {
-      "name": "MapPage",
-      "pageSourceFile": "src/main/ets/features/map/pages/MapPage.ets",
-      "buildFunction": "MapPageBuilder"
-    },
-    {
-      "name": "LocationPickerPage",
-      "pageSourceFile": "src/main/ets/features/map/pages/LocationPickerPage.ets",
-      "buildFunction": "LocationPickerPageBuilder"
+      "name": "AnchorPickPage",
+      "pageSourceFile": "src/main/ets/features/map/pages/AnchorPickPage.ets",
+      "buildFunction": "AnchorPickPageBuilder"
     },
     {
       "name": "SearchPage",

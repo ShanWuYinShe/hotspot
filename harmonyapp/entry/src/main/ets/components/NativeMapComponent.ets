@@ -20,7 +20,7 @@ export interface MapMarker {
   title?: string;
   snippet?: string;
   icon?: string; // 暂不支持自定义图标路径，仅作为预留
-  type?: 'user' | 'group' | 'moment';
+  type?: 'user' | 'group' | 'moment' | 'cluster';
 }
 
 export interface MapRegion {
@@ -33,6 +33,11 @@ export interface MapRegion {
 export interface MapCoordinate {
   latitude: number;
   longitude: number;
+}
+
+/** 摄像头信息（含可选 zoom） */
+export interface MapCameraPosition extends MapCoordinate {
+  zoom?: number;
 }
 
 /** 地图控制器操作接口，供父组件调用缩放等控制 */
@@ -64,7 +69,7 @@ export struct NativeMapComponent {
   /** 双击地图回调 */
   onMapDoubleClick?: (coordinate: MapCoordinate) => void;
   /** 相机停止移动回调（用户停止拖拽/缩放后触发） */
-  onCameraIdle?: (center: MapCoordinate) => void;
+  onCameraIdle?: (camera: MapCameraPosition) => void;
   /** 地图控制器就绪回调，用于父组件获取缩放等操作能力 */
   onActionsReady?: (actions: NativeMapActions) => void;
   
@@ -209,7 +214,8 @@ export struct NativeMapComponent {
             if (cameraPosition && cameraPosition.target) {
               this.onCameraIdle({
                 latitude: cameraPosition.target.latitude,
-                longitude: cameraPosition.target.longitude
+                longitude: cameraPosition.target.longitude,
+                zoom: cameraPosition.zoom
               });
             }
           } catch (e) {

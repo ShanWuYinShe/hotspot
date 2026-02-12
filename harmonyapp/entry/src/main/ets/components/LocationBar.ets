@@ -10,9 +10,9 @@
 
 import { LocationInfo } from '../core/location/LocationUtil';
 import { KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../core/state/GlobalStateManager';
-import { PageNames } from '../constants/AppConstants';
 import { DesignConstants } from '../constants/DesignConstants';
-import { AppRouter, LocationPickerRouteParam } from '../core/router/AppRouter';
+import { PageNames } from '../constants/AppConstants';
+import { AppRouter } from '../core/router/AppRouter';
 import { AppIcon } from './SystemIcon';
 
 @Component
@@ -20,8 +20,6 @@ export struct LocationBar {
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
 
-  /** 是否显示地图入口按钮 */
-  @Prop showMapButton: boolean = true;
   /** 是否显示搜索按钮 */
   @Prop showSearchButton: boolean = true;
 
@@ -187,12 +185,6 @@ export struct LocationBar {
           this.navigateToSearch();
         })
       }
-
-      if (this.showMapButton) {
-        this.buildIconButton(AppIcon.MAP, () => {
-          this.navigateToMap();
-        })
-      }
     }
     .width('100%')
     .height(64)
@@ -243,6 +235,6 @@ export struct LocationBar {
   }
 
   private navigateToMap(): void {
-    AppRouter.push(PageNames.MAP);
+    AppRouter.push(PageNames.ANCHOR_PICK);
   }
 }
