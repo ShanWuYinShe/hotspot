@@ -174,8 +174,7 @@ impl GroupService {
 
     async fn build_location(&self, distance: Option<f64>) -> RelativeLocation {
         RelativeLocation {
-            latitude: 0.0,
-            longitude: 0.0,
+            point: crate::dto::response::GeoPoint { latitude: 0.0, longitude: 0.0 },
             location_name: "未知".to_string(),
             distance,
             bearing_degrees: None,
@@ -424,7 +423,7 @@ impl GroupService {
         let (lon, lat) = req
             .location
             .as_ref()
-            .map(|l| (Some(l.longitude), Some(l.latitude)))
+            .map(|l| (Some(l.point.longitude), Some(l.point.latitude)))
             .unwrap_or((None, None));
 
         let join_method = req.join_method.unwrap_or(GroupJoinMethod::Open);
@@ -587,6 +586,7 @@ impl GroupService {
             )
             .await?;
 
+        let event_tags = req.tags.clone();
         if let Some(tags) = req.tags {
             self.tag_repo.set_group_tags(group_id, &tags).await?;
         }
@@ -638,9 +638,15 @@ impl GroupService {
 
         self.event_bus.publish(AppEvent::GroupProfileUpdated {
             group_id,
+            updated_by: user_id,
             name: req.name,
             description: req.description,
             avatar_url,
+            tags: event_tags,
+            join_method: req.join_method.map(|jm| Self::join_method_to_string(jm)),
+            is_searchable: req.is_searchable,
+            max_members: req.max_members,
+            has_password: req.password.as_ref().map(|p| !p.is_empty()),
         });
 
         let _ = self
@@ -892,7 +898,9 @@ impl GroupService {
         self.event_bus.publish(AppEvent::GroupMemberMuted {
             group_id,
             user_id: req.user_id,
+            muted_by: user_id,
             muted_until: muted_until.to_rfc3339(),
+            duration_minutes: req.duration_minutes,
         });
 
         let user_info = self.build_user_info(req.user_id).await?;
@@ -927,6 +935,7 @@ impl GroupService {
         self.event_bus.publish(AppEvent::GroupMemberUnmuted {
             group_id,
             user_id: req.user_id,
+            unmuted_by: user_id,
         });
 
         let user_info = self.build_user_info(req.user_id).await?;

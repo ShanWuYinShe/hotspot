@@ -4,8 +4,8 @@
 //! 枚举类型字段使用 crate::types::enums 中定义的类型，确保类型安全
 
 use crate::types::enums::{
-    AnnouncementSeverity, ApplicationStatusFilter, ClientType, DevicePlatform, FeedContentType,
-    FeedFeedbackAction, FeedSource, GroupJoinMethod, GroupRole, MapDataType, MediaCategory,
+    AnnouncementSeverity, ApplicationStatusFilter, ClientType, DevicePlatform,
+    FeedSource, GroupJoinMethod, GroupRole, MapDataType, MediaCategory,
     NotificationFilterType, PrivacyLevel, PrivateChatPermission, ReactionType, ReportHandleAction,
     ReportStatus, ReportTargetType, SendMessageType, SetableGroupRole, ShareType, TagTimeframe,
     UserAccountStatus, UserType,
@@ -248,8 +248,7 @@ pub struct CreateMomentRequest {
 
 #[derive(Debug, Clone, Deserialize, serde::Serialize)]
 pub struct Location {
-    pub latitude: f64,
-    pub longitude: f64,
+    pub point: GeoPoint,
     pub location_name: String,
 }
 
@@ -904,7 +903,7 @@ pub struct CompleteUploadRequest {
 
 // ==================== Map 聚合 / 视口查询（public） ====================
 
-#[derive(Debug, Deserialize, Clone, Copy)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 pub struct GeoPoint {
     pub latitude: f64,
     pub longitude: f64,
@@ -1049,14 +1048,6 @@ pub struct FeedUsersRequest {
 #[derive(Debug, Deserialize)]
 pub struct FeedTrendingRequest {
     pub limit: Option<i32>, // 默认 20，最大 50
-}
-
-#[derive(Debug, Deserialize)]
-pub struct FeedFeedbackRequest {
-    pub content_type: FeedContentType,
-    pub content_id: String,
-    pub action: FeedFeedbackAction,
-    pub reason: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

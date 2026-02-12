@@ -270,7 +270,7 @@ pub async fn refresh_token(
                     "web 场景不得在 body 中传递 refresh_token".to_string(),
                 ));
             }
-            get_cookie_value(&headers, "hs_refresh_token")
+            get_cookie_value(&headers, "refresh_token")
                 .ok_or_else(|| AppError::RefreshTokenMissing)?
         }
     };

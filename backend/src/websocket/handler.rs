@@ -338,136 +338,19 @@ async fn handle_message(
                     state.ws_manager.send_to_user(user_id, &pong_msg).await?;
                 }
 
-                WsMessage::Subscribe {
-                    client_msg_id,
-                    r#type,
-                    ids,
-                } => {
-                    if let Err(err) = validate_subscription_request(&r#type, &ids, false) {
-                        let current_ids =
-                            build_current_subscription_ids(user_id, state, &r#type).await;
-                        let ack_msg = WsMessage::SubscribeAck {
-                            client_msg_id,
-                            operation: SubscriptionOperation::Subscribe,
-                            r#type,
-                            ids: current_ids,
-                            code: err.error_code(),
-                            message: Some(err.to_string()),
-                            failed_ids: None,
-                        };
-                        state.ws_manager.send_to_user(user_id, &ack_msg).await?;
-                        return Ok(());
-                    }
-                    if is_rate_limited(user_id, state).await {
-                        let failed_ids =
-                            build_failed_ids(&ids, SubscriptionFailureReason::InternalError);
-                        let current_ids =
-                            build_current_subscription_ids(user_id, state, &r#type).await;
-                        let ack_msg = WsMessage::SubscribeAck {
-                            client_msg_id,
-                            operation: SubscriptionOperation::Subscribe,
-                            r#type,
-                            ids: current_ids,
-                            code: 20103,
-                            message: Some("订阅过于频繁，请稍后重试".to_string()),
-                            failed_ids: Some(failed_ids),
-                        };
-                        state.ws_manager.send_to_user(user_id, &ack_msg).await?;
-                        return Ok(());
-                    }
-
-                    // 处理增量订阅
-                    let failed_ids = process_subscribe(user_id, &r#type, &ids, state).await;
-                    let current_ids = build_current_subscription_ids(user_id, state, &r#type).await;
-                    let code = subscription_ack_code(&failed_ids);
-
-                    // 发送订阅确认
-                    let ack_msg = WsMessage::SubscribeAck {
-                        client_msg_id,
-                        operation: SubscriptionOperation::Subscribe,
-                        r#type,
-                        ids: current_ids,
-                        code,
-                        message: if failed_ids.is_empty() {
-                            None
-                        } else {
-                            Some("订阅部分失败".to_string())
-                        },
-                        failed_ids: if failed_ids.is_empty() {
-                            None
-                        } else {
-                            Some(failed_ids)
-                        },
-                    };
-                    state.ws_manager.send_to_user(user_id, &ack_msg).await?;
-                }
-
-                WsMessage::Unsubscribe {
-                    client_msg_id,
-                    r#type,
-                    ids,
-                } => {
-                    if let Err(err) = validate_subscription_request(&r#type, &ids, false) {
-                        let current_ids =
-                            build_current_subscription_ids(user_id, state, &r#type).await;
-                        let ack_msg = WsMessage::SubscribeAck {
-                            client_msg_id,
-                            operation: SubscriptionOperation::Unsubscribe,
-                            r#type,
-                            ids: current_ids,
-                            code: err.error_code(),
-                            message: Some(err.to_string()),
-                            failed_ids: None,
-                        };
-                        state.ws_manager.send_to_user(user_id, &ack_msg).await?;
-                        return Ok(());
-                    }
-                    if is_rate_limited(user_id, state).await {
-                        let failed_ids =
-                            build_failed_ids(&ids, SubscriptionFailureReason::InternalError);
-                        let current_ids =
-                            build_current_subscription_ids(user_id, state, &r#type).await;
-                        let ack_msg = WsMessage::SubscribeAck {
-                            client_msg_id,
-                            operation: SubscriptionOperation::Unsubscribe,
-                            r#type,
-                            ids: current_ids,
-                            code: 20103,
-                            message: Some("订阅过于频繁，请稍后重试".to_string()),
-                            failed_ids: Some(failed_ids),
-                        };
-                        state.ws_manager.send_to_user(user_id, &ack_msg).await?;
-                        return Ok(());
-                    }
-
-                    // 处理取消订阅
-                    process_unsubscribe(user_id, &r#type, &ids, state).await;
-                    let current_ids = build_current_subscription_ids(user_id, state, &r#type).await;
-
-                    // 发送取消订阅确认
-                    let ack_msg = WsMessage::SubscribeAck {
-                        client_msg_id,
-                        operation: SubscriptionOperation::Unsubscribe,
-                        r#type,
-                        ids: current_ids,
-                        code: 0,
-                        message: None,
-                        failed_ids: None,
-                    };
-                    state.ws_manager.send_to_user(user_id, &ack_msg).await?;
-                }
-
                 WsMessage::SetSubscriptions {
                     client_msg_id,
+                    operation,
                     r#type,
                     ids,
                 } => {
-                    if let Err(err) = validate_subscription_request(&r#type, &ids, true) {
+                    let is_set_op = operation == SubscriptionOperation::Set;
+                    if let Err(err) = validate_subscription_request(&r#type, &ids, is_set_op) {
                         let current_ids =
                             build_current_subscription_ids(user_id, state, &r#type).await;
                         let ack_msg = WsMessage::SubscribeAck {
                             client_msg_id,
-                            operation: SubscriptionOperation::Subscribe,
+                            operation,
                             r#type,
                             ids: current_ids,
                             code: err.error_code(),
@@ -484,7 +367,7 @@ async fn handle_message(
                             build_current_subscription_ids(user_id, state, &r#type).await;
                         let ack_msg = WsMessage::SubscribeAck {
                             client_msg_id,
-                            operation: SubscriptionOperation::Subscribe,
+                            operation,
                             r#type,
                             ids: current_ids,
                             code: 20103,
@@ -495,33 +378,53 @@ async fn handle_message(
                         return Ok(());
                     }
 
-                    // 先清空该类型订阅
-                    clear_subscriptions_by_type(user_id, &r#type, state).await;
-
-                    // 然后添加新订阅
-                    let failed_ids = process_subscribe(user_id, &r#type, &ids, state).await;
-                    let current_ids = build_current_subscription_ids(user_id, state, &r#type).await;
-                    let code = subscription_ack_code(&failed_ids);
-
-                    // 发送确认
-                    let ack_msg = WsMessage::SubscribeAck {
-                        client_msg_id,
-                        operation: SubscriptionOperation::Subscribe,
-                        r#type,
-                        ids: current_ids,
-                        code,
-                        message: if failed_ids.is_empty() {
-                            None
-                        } else {
-                            Some("订阅部分失败".to_string())
-                        },
-                        failed_ids: if failed_ids.is_empty() {
-                            None
-                        } else {
-                            Some(failed_ids)
-                        },
-                    };
-                    state.ws_manager.send_to_user(user_id, &ack_msg).await?;
+                    match operation {
+                        SubscriptionOperation::Subscribe => {
+                            let failed_ids = process_subscribe(user_id, &r#type, &ids, state).await;
+                            let current_ids = build_current_subscription_ids(user_id, state, &r#type).await;
+                            let code = subscription_ack_code(&failed_ids);
+                            let ack_msg = WsMessage::SubscribeAck {
+                                client_msg_id,
+                                operation: SubscriptionOperation::Subscribe,
+                                r#type,
+                                ids: current_ids,
+                                code,
+                                message: if failed_ids.is_empty() { None } else { Some("订阅部分失败".to_string()) },
+                                failed_ids: if failed_ids.is_empty() { None } else { Some(failed_ids) },
+                            };
+                            state.ws_manager.send_to_user(user_id, &ack_msg).await?;
+                        }
+                        SubscriptionOperation::Unsubscribe => {
+                            process_unsubscribe(user_id, &r#type, &ids, state).await;
+                            let current_ids = build_current_subscription_ids(user_id, state, &r#type).await;
+                            let ack_msg = WsMessage::SubscribeAck {
+                                client_msg_id,
+                                operation: SubscriptionOperation::Unsubscribe,
+                                r#type,
+                                ids: current_ids,
+                                code: 0,
+                                message: None,
+                                failed_ids: None,
+                            };
+                            state.ws_manager.send_to_user(user_id, &ack_msg).await?;
+                        }
+                        SubscriptionOperation::Set => {
+                            clear_subscriptions_by_type(user_id, &r#type, state).await;
+                            let failed_ids = process_subscribe(user_id, &r#type, &ids, state).await;
+                            let current_ids = build_current_subscription_ids(user_id, state, &r#type).await;
+                            let code = subscription_ack_code(&failed_ids);
+                            let ack_msg = WsMessage::SubscribeAck {
+                                client_msg_id,
+                                operation: SubscriptionOperation::Set,
+                                r#type,
+                                ids: current_ids,
+                                code,
+                                message: if failed_ids.is_empty() { None } else { Some("订阅部分失败".to_string()) },
+                                failed_ids: if failed_ids.is_empty() { None } else { Some(failed_ids) },
+                            };
+                            state.ws_manager.send_to_user(user_id, &ack_msg).await?;
+                        }
+                    }
                 }
 
                 WsMessage::PrivateTyping {

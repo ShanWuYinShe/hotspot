@@ -2,7 +2,7 @@ use crate::{
     constants::{DEFAULT_LATITUDE, DEFAULT_LONGITUDE},
     dto::{
         request::{
-            FeedFeedbackRequest, FeedGroupsRequest, FeedMomentsRequest, FeedTrendingRequest,
+            FeedGroupsRequest, FeedMomentsRequest, FeedTrendingRequest,
             FeedUsersRequest,
         },
         response::{
@@ -15,7 +15,7 @@ use crate::{
         feed_repo::FeedRepository, group_repo::GroupRepository, moment_repo::MomentRepository,
         tag_repo::TagRepository, user_repo::UserRepository,
     },
-    types::enums::{FeedContentType, FeedFeedbackAction, FeedSource, TagTrend},
+    types::enums::{FeedSource, TagTrend},
     utils::validation::Validator,
 };
 use redis::aio::ConnectionManager;
@@ -141,8 +141,10 @@ impl FeedService {
                 likes_count: m.likes_count as i32,
                 comments_count: m.comments_count as i32,
                 location: crate::dto::response::RelativeLocation {
-                    latitude: m.latitude.unwrap_or(0.0),
-                    longitude: m.longitude.unwrap_or(0.0),
+                    point: crate::dto::response::GeoPoint {
+                        latitude: m.latitude.unwrap_or(0.0),
+                        longitude: m.longitude.unwrap_or(0.0),
+                    },
                     location_name: m.location_name.unwrap_or_default(),
                     distance: m.distance,
                     bearing_degrees: m.bearing_degrees,
@@ -210,8 +212,10 @@ impl FeedService {
                 },
                 has_password: g.has_password,
                 location: crate::dto::response::RelativeLocation {
-                    latitude: g.latitude,
-                    longitude: g.longitude,
+                    point: crate::dto::response::GeoPoint {
+                        latitude: g.latitude,
+                        longitude: g.longitude,
+                    },
                     location_name: g.location_name,
                     distance: Some(g.distance),
                     bearing_degrees: Some(g.bearing_degrees),
@@ -291,8 +295,10 @@ impl FeedService {
 
             let location = if location_visible {
                 Some(crate::dto::response::RelativeLocation {
-                    latitude: u.latitude,
-                    longitude: u.longitude,
+                    point: crate::dto::response::GeoPoint {
+                        latitude: u.latitude,
+                        longitude: u.longitude,
+                    },
                     location_name: u.location_name,
                     distance: Some(u.distance),
                     bearing_degrees: Some(u.bearing_degrees),
@@ -403,8 +409,10 @@ impl FeedService {
                 likes_count: m.likes_count as i32,
                 comments_count: m.comments_count as i32,
                 location: crate::dto::response::RelativeLocation {
-                    latitude: m.latitude.unwrap_or(0.0),
-                    longitude: m.longitude.unwrap_or(0.0),
+                    point: crate::dto::response::GeoPoint {
+                        latitude: m.latitude.unwrap_or(0.0),
+                        longitude: m.longitude.unwrap_or(0.0),
+                    },
                     location_name: m.location_name.unwrap_or_default(),
                     distance: m.distance,
                     bearing_degrees: m.bearing_degrees,
@@ -419,58 +427,6 @@ impl FeedService {
             trending_tags,
             hot_moments,
         })
-    }
-
-    /// 提交反馈
-    pub async fn submit_feedback(
-        &self,
-        user_id: i64,
-        req: FeedFeedbackRequest,
-    ) -> Result<(), AppError> {
-        // 验证 content_id 格式（moment 必须是 UUID）
-        if matches!(req.content_type, FeedContentType::Moment) {
-            uuid::Uuid::parse_str(&req.content_id)
-                .map_err(|_| AppError::InvalidFormat("无效的 content_id 格式".to_string()))?;
-        }
-
-        // action 已是强类型枚举，直接使用
-        let action = req.action;
-
-        // 可选原因：用于输入约束（并可作为后续审计字段扩展）
-        let reason = req
-            .reason
-            .as_deref()
-            .map(str::trim)
-            .filter(|s| !s.is_empty());
-        if let Some(r) = reason {
-            if r.len() > 200 {
-                return Err(AppError::InvalidFormat("反馈原因过长".to_string()));
-            }
-        }
-        let reason = reason.map(str::to_string);
-
-        // 记录反馈到数据库
-        self.feed_repo
-            .record_feedback(
-                user_id,
-                req.content_type.to_string(),
-                req.content_id.clone(),
-                action.as_str().to_string(),
-                reason,
-            )
-            .await?;
-
-        // 更新Redis中的推荐权重
-        self.update_recommendation_weights(user_id, &req, action)
-            .await?;
-
-        // 如果是负面反馈，从缓存中移除该内容
-        if action.should_remove_from_feed() {
-            self.remove_from_cached_feed(user_id, &req.content_id)
-                .await?;
-        }
-
-        Ok(())
     }
 
     async fn sign_moment_images(
@@ -499,50 +455,4 @@ impl FeedService {
         Some(signed_images)
     }
 
-    /// 更新推荐权重
-    async fn update_recommendation_weights(
-        &self,
-        user_id: i64,
-        req: &FeedFeedbackRequest,
-        action: FeedFeedbackAction,
-    ) -> Result<(), AppError> {
-        let mut conn = self.redis.clone();
-        let redis_key = format!("feed:weights:user:{}", user_id);
-
-        // 根据反馈类型调整权重
-        let weight_change = match action {
-            FeedFeedbackAction::Hide => -1.0,
-            FeedFeedbackAction::NotInterested => -2.0,
-            FeedFeedbackAction::Dislike => -3.0,
-            FeedFeedbackAction::Report => -5.0,
-        };
-
-        let content_key = format!("{}:{}", req.content_type, req.content_id);
-        let _: () = redis::cmd("HINCRBYFLOAT")
-            .arg(&redis_key)
-            .arg(content_key)
-            .arg(weight_change)
-            .query_async(&mut conn)
-            .await
-            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
-
-        Ok(())
-    }
-
-    /// 从缓存中移除内容
-    async fn remove_from_cached_feed(
-        &self,
-        user_id: i64,
-        content_id: &str,
-    ) -> Result<(), AppError> {
-        let mut conn = self.redis.clone();
-        let redis_key = format!("feed:user:{}", user_id);
-
-        let _: () = conn
-            .lrem(&redis_key, 0, content_id)
-            .await
-            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
-
-        Ok(())
-    }
 }

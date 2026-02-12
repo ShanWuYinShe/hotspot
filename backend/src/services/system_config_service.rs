@@ -408,8 +408,7 @@ impl SystemConfigService {
                     is_searchable: true,
                     max_members: 500,
                     location: RelativeLocation {
-                        latitude: 0.0,
-                        longitude: 0.0,
+                        point: crate::dto::response::GeoPoint { latitude: 0.0, longitude: 0.0 },
                         location_name: "Unknown".to_string(),
                         distance: None,
                         bearing_degrees: None,

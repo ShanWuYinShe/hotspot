@@ -684,6 +684,7 @@ impl TagTimeframe {
 pub enum SubscriptionOperation {
     Subscribe,
     Unsubscribe,
+    Set,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]

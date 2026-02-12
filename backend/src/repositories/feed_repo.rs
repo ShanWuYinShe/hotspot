@@ -5,18 +5,6 @@ use uuid::Uuid;
 
 use crate::error::Result;
 
-/// Feed反馈Row - 严格按照数据库 schema
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
-pub struct FeedFeedbackRow {
-    pub feedback_id: Uuid,
-    pub user_id: i64,
-    pub content_type: String,  // moment, user, group
-    pub content_id: String,
-    pub action: String,  // like, dislike, click, view
-    pub reason: Option<String>,
-    pub created_at: DateTime<Utc>,
-}
-
 /// Feed项Row - 用于feed流展示
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct FeedItemRow {
@@ -37,36 +25,6 @@ pub struct FeedRepository {
 impl FeedRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
-    }
-
-    /// 记录反馈
-    pub async fn record_feedback(
-        &self,
-        user_id: i64,
-        content_type: String,
-        content_id: String,
-        action: String,
-        reason: Option<String>,
-    ) -> Result<FeedFeedbackRow> {
-        let row = sqlx::query_as!(
-            FeedFeedbackRow,
-            r#"
-            INSERT INTO feed_feedback (user_id, content_type, content_id, action, reason)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING feedback_id as "feedback_id!", user_id as "user_id!",
-                      content_type as "content_type!", content_id as "content_id!",
-                      action as "action!", reason, created_at as "created_at!"
-            "#,
-            user_id,
-            content_type,
-            content_id,
-            action,
-            reason
-        )
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(row)
     }
 
     /// 检查用户是否对内容执行过操作

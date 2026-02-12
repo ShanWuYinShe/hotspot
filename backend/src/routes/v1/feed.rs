@@ -20,9 +20,5 @@ pub fn token_required_routes() -> Router<AppState> {
         .route("/list_groups", post(feed::get_groups))
         .route("/list_users", post(feed::get_users));
 
-    // /me 子路由
-    let me_routes = Router::new()
-        .route("/feedback", post(feed::feedback));
-
-    main_routes.nest("/me", me_routes)
+    main_routes
 }

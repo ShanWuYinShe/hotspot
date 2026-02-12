@@ -74,9 +74,15 @@ pub enum AppEvent {
     /// 群组资料更新
     GroupProfileUpdated {
         group_id: i64,
+        updated_by: i64,
         name: Option<String>,
         description: Option<String>,
         avatar_url: Option<String>,
+        tags: Option<Vec<String>>,
+        join_method: Option<String>,
+        is_searchable: Option<bool>,
+        max_members: Option<i32>,
+        has_password: Option<bool>,
     },
     /// 成员角色变更
     GroupMemberRoleChanged {
@@ -89,12 +95,15 @@ pub enum AppEvent {
     GroupMemberMuted {
         group_id: i64,
         user_id: i64,
+        muted_by: i64,
         muted_until: String,
+        duration_minutes: i32,
     },
     /// 成员取消禁言
     GroupMemberUnmuted {
         group_id: i64,
         user_id: i64,
+        unmuted_by: i64,
     },
     /// 群组解散
     GroupDismissed {
@@ -289,8 +298,10 @@ pub enum AppEvent {
     },
     CommentLiked {
         comment_id: Uuid,
+        moment_id: Uuid,
         user_id: i64,
         liker_id: i64,
+        comment_preview: String,
     },
     /// 评论被回复
     CommentReplied {
@@ -347,6 +358,12 @@ pub enum AppEvent {
     NotificationReadStateUpdated {
         user_id: i64,
         total_unread_count: i32,
+    },
+    /// 账号被封禁
+    AccountBanned {
+        user_id: i64,
+        reason: String,
+        duration_days: i32,
     },
 }
 
@@ -429,6 +446,7 @@ impl AppEvent {
             // 系统事件
             AppEvent::SystemNotification { .. } => "system_notification",
             AppEvent::SystemAnnouncement { .. } => "SystemAnnouncement",
+            AppEvent::AccountBanned { .. } => "account_banned",
         }
     }
 }

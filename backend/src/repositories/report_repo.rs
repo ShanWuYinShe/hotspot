@@ -104,44 +104,6 @@ impl ReportRepository {
         Ok(())
     }
 
-    pub async fn list_by_status(
-        &self,
-        status: Option<ReportStatus>,
-        limit: i64,
-        offset: i64,
-    ) -> Result<Vec<ReportRow>> {
-        let status_str = status.map(|s| s.as_str().to_string());
-        let rows = sqlx::query_as!(
-            ReportRow,
-            r#"
-            SELECT report_id,
-                   reporter_id,
-                   target_type as "target_type: ReportTargetType",
-                   target_id,
-                   reason,
-                   description,
-                   status as "status!: ReportStatus",
-                   handled_at,
-                   handled_by,
-                   handled_action as "handled_action: ReportHandleAction",
-                   handled_note,
-                   target_snapshot,
-                   created_at,
-                   updated_at
-            FROM reports
-            WHERE ($1::text IS NULL OR status::text = $1)
-            ORDER BY created_at DESC
-            LIMIT $2 OFFSET $3
-            "#,
-            status_str,
-            limit,
-            offset
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(rows)
-    }
-
     pub async fn exists(&self, report_id: Uuid) -> Result<bool> {
         let exists = sqlx::query_scalar!(
             r#"

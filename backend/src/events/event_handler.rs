@@ -5,7 +5,6 @@ use tokio::sync::mpsc;
 use tracing::{error, info};
 
 use crate::{
-    dto::request::Location,
     events::{event_bus::EventBus, event_types::AppEvent},
     repositories::{
         group_member_repo::GroupMemberRepository, notification_repo::NotificationType,
@@ -494,20 +493,10 @@ impl EventHandler {
             AppEvent::UserRegistered { .. } => {
                 // 注册事件不需要 WebSocket 推送
             }
-            AppEvent::UserProfileUpdated { .. } => {}
-            AppEvent::UserLocationUpdated {
-                user_id,
-                latitude,
-                longitude,
-                location_name,
-            } => {
-                let message = WsMessage::UserLocationUpdate {
-                    user_id: *user_id,
-                    location: Location {
-                        latitude: *latitude,
-                        longitude: *longitude,
-                        location_name: location_name.clone(),
-                    },
+            AppEvent::UserProfileUpdated { user_id, .. } => {
+                let user = self.get_user_info(*user_id).await;
+                let message = WsMessage::UserProfileUpdated {
+                    user: user,
                     updated_at: chrono::Utc::now().to_rfc3339(),
                 };
                 // 推送给订阅了该用户状态的用户
@@ -516,6 +505,9 @@ impl EventHandler {
                     .get_user_status_subscribers(*user_id)
                     .await;
                 self.ws_manager.send_to_users(&subscribers, &message).await;
+            }
+            AppEvent::UserLocationUpdated { .. } => {
+                // spec 未定义 UserLocationUpdate WebSocket 事件，不推送
             }
 
             // ========== 关注关系事件 ==========
@@ -574,45 +566,13 @@ impl EventHandler {
                         .await;
                 }
             }
-            AppEvent::FollowRequestReceived {
-                request_id,
-                requester_id,
-                target_id,
-            } => {
-                let cfg = self.subscription_service.get_config(*target_id).await?;
-                if !cfg.follow_request_enabled {
-                    return Ok(());
-                }
-                let requester = self.get_user_info(*requester_id).await;
-                let message = WsMessage::FollowRequestReceived {
-                    request_id: request_id.clone(),
-                    requester,
-                    message: None,
-                    requested_at: chrono::Utc::now().to_rfc3339(),
-                };
-                let _ = self.ws_manager.send_to_user(*target_id, &message).await;
+            AppEvent::FollowRequestReceived { .. } => {
+                // spec 未定义 FollowRequestReceived WebSocket 事件，不推送
+                // 通知已在 persist_notification 中处理
             }
-            AppEvent::FollowRequestHandled {
-                request_id,
-                requester_id,
-                target_id,
-                accepted,
-            } => {
-                if !accepted {
-                    return Ok(());
-                }
-                let cfg = self.subscription_service.get_config(*requester_id).await?;
-                if !cfg.follow_request_handled_enabled {
-                    return Ok(());
-                }
-                let target_user = self.get_user_info(*target_id).await;
-                let message = WsMessage::FollowRequestHandled {
-                    request_id: request_id.clone(),
-                    target_user,
-                    action: "accept".to_string(),
-                    handled_at: chrono::Utc::now().to_rfc3339(),
-                };
-                let _ = self.ws_manager.send_to_user(*requester_id, &message).await;
+            AppEvent::FollowRequestHandled { .. } => {
+                // spec 未定义 FollowRequestHandled WebSocket 事件，不推送
+                // 通知已在 persist_notification 中处理
             }
 
             // ========== 群组管理事件 ==========
@@ -648,12 +608,159 @@ impl EventHandler {
                     .await;
                 self.ws_manager.send_to_users(&subscribers, &message).await;
             }
-            AppEvent::GroupMemberRemoved { .. } => {}
-            AppEvent::GroupProfileUpdated { .. } => {}
+            AppEvent::GroupMemberRemoved {
+                group_id,
+                user_id,
+                removed_by,
+                member_count,
+                reason,
+            } => {
+                let user = self.get_user_info(*user_id).await;
+                let group_id_str = group_id.to_string();
+
+                if *reason == crate::types::enums::MemberLeaveReason::Quit {
+                    // 成员主动离开
+                    let message = WsMessage::GroupMemberLeft {
+                        group_id: group_id_str.clone(),
+                        user,
+                        left_at: chrono::Utc::now().to_rfc3339(),
+                        member_count: *member_count as i32,
+                    };
+                    let subscribers = self
+                        .ws_subscription
+                        .get_group_chat_subscribers(&group_id_str)
+                        .await;
+                    self.ws_manager.send_to_users(&subscribers, &message).await;
+                } else {
+                    // 被踢出或封禁
+                    let reason_str = match reason {
+                        crate::types::enums::MemberLeaveReason::Kick => Some("kicked".to_string()),
+                        crate::types::enums::MemberLeaveReason::Dismiss => None,
+                        _ => Some("banned".to_string()),
+                    };
+                    let message = WsMessage::GroupMemberRemoved {
+                        group_id: group_id_str.clone(),
+                        user,
+                        removed_by: removed_by.to_string(),
+                        reason: reason_str,
+                        removed_at: chrono::Utc::now().to_rfc3339(),
+                        member_count: *member_count as i32,
+                    };
+                    let subscribers = self
+                        .ws_subscription
+                        .get_group_chat_subscribers(&group_id_str)
+                        .await;
+                    self.ws_manager.send_to_users(&subscribers, &message).await;
+                    // 也推送给被移除的用户自身
+                    self.ws_manager.send_to_user(*user_id, &message).await;
+                }
+            }
+            AppEvent::GroupProfileUpdated {
+                group_id,
+                updated_by,
+                name,
+                description,
+                avatar_url,
+                tags,
+                join_method,
+                is_searchable,
+                max_members,
+                has_password,
+            } => {
+                let mut fields = serde_json::Map::new();
+                if let Some(v) = name { fields.insert("name".into(), serde_json::Value::String(v.clone())); }
+                if let Some(v) = description { fields.insert("description".into(), serde_json::Value::String(v.clone())); }
+                if let Some(v) = avatar_url { fields.insert("avatar_url".into(), serde_json::Value::String(v.clone())); }
+                if let Some(v) = tags { fields.insert("tags".into(), serde_json::json!(v)); }
+                if let Some(v) = join_method { fields.insert("join_method".into(), serde_json::Value::String(v.clone())); }
+                if let Some(v) = is_searchable { fields.insert("is_searchable".into(), serde_json::Value::Bool(*v)); }
+                if let Some(v) = max_members { fields.insert("max_members".into(), serde_json::json!(v)); }
+                if let Some(v) = has_password { fields.insert("has_password".into(), serde_json::Value::Bool(*v)); }
+
+                let message = WsMessage::GroupUpdated {
+                    group_id: group_id.to_string(),
+                    updated_fields: serde_json::Value::Object(fields),
+                    updated_by: updated_by.to_string(),
+                    updated_at: chrono::Utc::now().to_rfc3339(),
+                };
+                let group_id_str = group_id.to_string();
+                let subscribers = self
+                    .ws_subscription
+                    .get_group_chat_subscribers(&group_id_str)
+                    .await;
+                self.ws_manager.send_to_users(&subscribers, &message).await;
+            }
             AppEvent::GroupMemberRoleChanged { .. } => {}
-            AppEvent::GroupMemberMuted { .. } => {}
-            AppEvent::GroupMemberUnmuted { .. } => {}
-            AppEvent::GroupDismissed { .. } => {}
+            AppEvent::GroupMemberMuted {
+                group_id,
+                user_id,
+                muted_by,
+                muted_until,
+                duration_minutes,
+            } => {
+                let user = self.get_user_info(*user_id).await;
+                let message = WsMessage::GroupMemberMuted {
+                    group_id: group_id.to_string(),
+                    user,
+                    muted_by: muted_by.to_string(),
+                    muted_until: muted_until.clone(),
+                    duration_minutes: *duration_minutes,
+                    muted_at: chrono::Utc::now().to_rfc3339(),
+                };
+                let group_id_str = group_id.to_string();
+                let subscribers = self
+                    .ws_subscription
+                    .get_group_chat_subscribers(&group_id_str)
+                    .await;
+                self.ws_manager.send_to_users(&subscribers, &message).await;
+                // 也推送给被禁言用户自身
+                self.ws_manager.send_to_user(*user_id, &message).await;
+            }
+            AppEvent::GroupMemberUnmuted {
+                group_id,
+                user_id,
+                unmuted_by,
+            } => {
+                let user = self.get_user_info(*user_id).await;
+                let message = WsMessage::GroupMemberUnmuted {
+                    group_id: group_id.to_string(),
+                    user,
+                    unmuted_by: unmuted_by.to_string(),
+                    unmuted_at: chrono::Utc::now().to_rfc3339(),
+                };
+                let group_id_str = group_id.to_string();
+                let subscribers = self
+                    .ws_subscription
+                    .get_group_chat_subscribers(&group_id_str)
+                    .await;
+                self.ws_manager.send_to_users(&subscribers, &message).await;
+                // 也推送给被解除禁言用户自身
+                self.ws_manager.send_to_user(*user_id, &message).await;
+            }
+            AppEvent::GroupDismissed {
+                group_id,
+                dismissed_by,
+            } => {
+                // 判断是群主解散还是管理员解散
+                // dismissed_by == group owner => "owner_dismissed"，否则 => "admin_dismissed"
+                let reason = {
+                    let group_id_str = group_id.to_string();
+                    // 简化：通过 dismissed_by 查是否曾是群主（这里用一个通用理由）
+                    Some("owner_dismissed".to_string())
+                };
+                let message = WsMessage::GroupDismissed {
+                    group_id: group_id.to_string(),
+                    dismissed_at: chrono::Utc::now().to_rfc3339(),
+                    reason,
+                };
+                // 推送给所有群订阅者
+                let group_id_str = group_id.to_string();
+                let subscribers = self
+                    .ws_subscription
+                    .get_group_chat_subscribers(&group_id_str)
+                    .await;
+                self.ws_manager.send_to_users(&subscribers, &message).await;
+            }
             AppEvent::GroupInviteSent {
                 invite_id,
                 group_id,
@@ -838,69 +945,14 @@ impl EventHandler {
                     .await;
                 self.ws_manager.send_to_users(&subscribers, &message).await;
             }
-            AppEvent::GroupMessageDeleted {
-                message_id,
-                group_chat_id,
-                deleted_by,
-                for_everyone,
-            } => {
-                // 仅当 for_everyone=true 时推送删除事件（否则仅影响自己，且后端不推送个人删除）
-                if *for_everyone {
-                    let message = WsMessage::GroupMessageDeleted {
-                        message_id: message_id.to_string(),
-                        group_id: group_chat_id.to_string(),
-                        deleted_by: *deleted_by,
-                        deleted_at: chrono::Utc::now().to_rfc3339(),
-                    };
-                    let group_id_str = group_chat_id.to_string();
-                    let subscribers = self
-                        .ws_subscription
-                        .get_group_chat_subscribers(&group_id_str)
-                        .await;
-                    self.ws_manager.send_to_users(&subscribers, &message).await;
-                }
+            AppEvent::GroupMessageDeleted { .. } => {
+                // spec 未定义 GroupMessageDeleted WebSocket 事件，不推送
             }
-            AppEvent::GroupMessageRead {
-                group_chat_id,
-                reader_id,
-                up_to,
-                read_at,
-            } => {
-                let message = WsMessage::GroupMessageRead {
-                    group_id: group_chat_id.to_string(),
-                    up_to: up_to.to_string(),
-                    reader_id: *reader_id,
-                    read_at: read_at.clone(),
-                };
-                let group_id_str = group_chat_id.to_string();
-                let subscribers = self
-                    .ws_subscription
-                    .get_group_chat_subscribers(&group_id_str)
-                    .await;
-                self.ws_manager.send_to_users(&subscribers, &message).await;
+            AppEvent::GroupMessageRead { .. } => {
+                // spec 未定义 GroupMessageRead WebSocket 事件，不推送
             }
-            AppEvent::GroupMessageReaction {
-                message_id,
-                group_chat_id,
-                user_id,
-                reaction_type,
-                action,
-            } => {
-                let user = self.get_user_info(*user_id).await;
-                let message = WsMessage::GroupMessageReaction {
-                    message_id: message_id.to_string(),
-                    group_id: group_chat_id.to_string(),
-                    user,
-                    reaction_type: reaction_type.clone(),
-                    has_reaction: action == "add",
-                    created_at: chrono::Utc::now().to_rfc3339(),
-                };
-                let group_id_str = group_chat_id.to_string();
-                let subscribers = self
-                    .ws_subscription
-                    .get_group_chat_subscribers(&group_id_str)
-                    .await;
-                self.ws_manager.send_to_users(&subscribers, &message).await;
+            AppEvent::GroupMessageReaction { .. } => {
+                // spec 未定义 GroupMessageReaction WebSocket 事件，不推送
             }
             AppEvent::GroupUserTyping {
                 group_chat_id,
@@ -1002,20 +1054,8 @@ impl EventHandler {
                 // 发送给发送者（多端同步）
                 let _ = self.ws_manager.send_to_user(*sender_id, &message).await;
             }
-            AppEvent::PrivateMessageDeleted {
-                message_id,
-                target_user_id,
-                deleted_by,
-            } => {
-                let message = WsMessage::PrivateMessageDeleted {
-                    message_id: message_id.to_string(),
-                    target_user_id: *target_user_id,
-                    deleted_by: *deleted_by,
-                    deleted_at: chrono::Utc::now().to_rfc3339(),
-                };
-                // 私聊删除只影响自己，不需要推送给对方
-                // 但需要推送给自己的其他设备（多端同步）
-                let _ = self.ws_manager.send_to_user(*deleted_by, &message).await;
+            AppEvent::PrivateMessageDeleted { .. } => {
+                // spec 未定义 PrivateMessageDeleted WebSocket 事件，不推送
             }
             AppEvent::PrivateMessageRead {
                 target_user_id,
@@ -1037,29 +1077,8 @@ impl EventHandler {
                 // 推送给读者自己（多端同步未读状态）
                 let _ = self.ws_manager.send_to_user(*reader_id, &message).await;
             }
-            AppEvent::PrivateMessageReaction {
-                message_id,
-                target_user_id,
-                user_id,
-                reaction_type,
-                action,
-                ..
-            } => {
-                let user = self.get_user_info(*user_id).await;
-                let message = WsMessage::PrivateMessageReaction {
-                    message_id: message_id.to_string(),
-                    target_user_id: *target_user_id,
-                    user,
-                    reaction_type: reaction_type.clone(),
-                    has_reaction: action == "add",
-                    created_at: chrono::Utc::now().to_rfc3339(),
-                };
-                let _ = self
-                    .ws_manager
-                    .send_to_user(*target_user_id, &message)
-                    .await;
-                // 也推送给自己（多端同步）
-                let _ = self.ws_manager.send_to_user(*user_id, &message).await;
+            AppEvent::PrivateMessageReaction { .. } => {
+                // spec 未定义 PrivateMessageReaction WebSocket 事件，不推送
             }
             AppEvent::PrivateUserTyping {
                 target_user_id,
@@ -1160,15 +1179,26 @@ impl EventHandler {
             }
             AppEvent::CommentLiked {
                 comment_id,
+                moment_id,
                 user_id,
                 liker_id,
+                comment_preview,
             } => {
-                tracing::debug!(
-                    "评论被点赞: comment_id={}, user_id={}, liker_id={}",
-                    comment_id,
-                    user_id,
-                    liker_id
-                );
+                // 不推送给自己
+                if user_id == liker_id {
+                    return Ok(());
+                }
+
+                let liker = self.get_user_info(*liker_id).await;
+                let message = WsMessage::CommentLiked {
+                    comment_id: comment_id.to_string(),
+                    moment_id: moment_id.to_string(),
+                    moment_summary: None, // 简化：不重复查瞬间摘要
+                    comment_preview: comment_preview.clone(),
+                    user: liker,
+                    liked_at: chrono::Utc::now().to_rfc3339(),
+                };
+                let _ = self.ws_manager.send_to_user(*user_id, &message).await;
             }
             AppEvent::CommentReplied {
                 moment_id,
@@ -1223,6 +1253,20 @@ impl EventHandler {
                         let _ = self.ws_manager.send_to_user(uid, &message).await;
                     }
                 }
+            }
+
+            AppEvent::AccountBanned {
+                user_id,
+                reason,
+                duration_days,
+            } => {
+                let message = WsMessage::AccountBanned {
+                    reason: reason.clone(),
+                    duration_days: *duration_days,
+                    banned_at: chrono::Utc::now().to_rfc3339(),
+                };
+                let _ = self.ws_manager.send_to_user(*user_id, &message).await;
+                // TODO: 推送后断开该用户的 WebSocket 连接
             }
 
             // ========== 群公告事件 ==========

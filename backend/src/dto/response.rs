@@ -64,6 +64,13 @@ impl ApiResponse<()> {
 // 通用基础类型 (API 文档定义)
 // ============================================================
 
+/// 基础坐标点 (经纬度) - API 文档: GeoPoint
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+pub struct GeoPoint {
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
 /// 相对位置 - API 文档: RelativeLocation
 /// 用途：所有 response 响应数据中的位置字段统一使用此类型
 /// - 搜索/列表/Feed 场景：distance 和 bearing_degrees 有值（计算相对距离）
@@ -71,8 +78,7 @@ impl ApiResponse<()> {
 /// 注意：如果 moment 没有位置信息，整个 location 字段应为 Option<RelativeLocation>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RelativeLocation {
-    pub latitude: f64,
-    pub longitude: f64,
+    pub point: GeoPoint,
     pub location_name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub distance: Option<f64>,

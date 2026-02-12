@@ -35,7 +35,14 @@ pub async fn idempotency_middleware(
 
     // 2. 读取客户端幂等键：没有则根据端点规则决定是否强制
     let client_key = match extract_client_idempotency_key(req.headers()) {
-        Some(v) => v,
+        Some(v) => {
+            if !validate_idempotency_key_format(&v) {
+                return Err(AppError::BadRequest(
+                    "Idempotency-Key 格式无效：要求 32-64 字符，字符集 [a-zA-Z0-9-_]，格式 {client_id}-{timestamp_ms}-{random}".to_string(),
+                ));
+            }
+            v
+        }
         None => {
             if requires_idempotency_key(req.uri().path()) {
                 return Err(AppError::MissingParameter("Idempotency-Key".to_string()));
@@ -263,6 +270,24 @@ fn extract_client_idempotency_key(headers: &HeaderMap) -> Option<String> {
     } else {
         Some(s)
     }
+}
+
+/// 校验 Idempotency-Key 格式
+/// spec 要求：32-64 字符，字符集 [a-zA-Z0-9-_]，格式 {client_id}-{timestamp_ms}-{random}
+fn validate_idempotency_key_format(key: &str) -> bool {
+    let len = key.len();
+    if !(32..=64).contains(&len) {
+        return false;
+    }
+    // 校验字符集
+    if !key.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+        return false;
+    }
+    // 校验至少包含 2 个 '-'（{client_id}-{timestamp_ms}-{random} 至少有 2 个分隔符）
+    if key.matches('-').count() < 2 {
+        return false;
+    }
+    true
 }
 
 fn hash_idempotency_key(user_id: Option<i64>, endpoint: &str, client_key: &str) -> String {

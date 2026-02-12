@@ -261,17 +261,3 @@ pub async fn admin_update_response_defaults_config(
     // 暂未实现，返回空成功响应
     Ok(Json(ApiResponse::success_empty()))
 }
-
-/// 获取客户端配置（管理员）
-/// 复用管理员全局配置获取逻辑
-pub async fn admin_get_client_config(
-    State(state): State<AppState>,
-    _user: AuthenticatedUser,
-    Json(_req): Json<AdminGetGlobalSettingsRequest>,
-) -> Result<Json<ApiResponse<AdminGlobalSettingsData>>> {
-    let settings = state
-        .system_config_service
-        .get_admin_global_settings()
-        .await?;
-    Ok(Json(ApiResponse::success(settings)))
-}

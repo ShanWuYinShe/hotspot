@@ -57,10 +57,6 @@ pub fn admin_routes() -> Router<AppState> {
             post(system_config::admin_update_response_defaults_config),
         )
         .route(
-            "/app_config/get_client",
-            post(system_config::admin_get_client_config),
-        )
-        .route(
             "/app_config/update_features",
             post(system_config::admin_update_features_config),
         )

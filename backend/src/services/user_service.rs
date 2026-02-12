@@ -270,8 +270,7 @@ impl UserService {
             .build_location_for_user(user_id)
             .await
             .unwrap_or(RelativeLocation {
-                latitude: 0.0,
-                longitude: 0.0,
+                point: crate::dto::response::GeoPoint { latitude: 0.0, longitude: 0.0 },
                 location_name: "".to_string(),
                 distance: None,
                 bearing_degrees: None,
@@ -330,6 +329,14 @@ impl UserService {
             .cache_manager
             .delete(crate::utils::cache::cache_keys::USER_INFO, &user_id.to_string())
             .await;
+
+        self.event_bus.publish(crate::events::event_types::AppEvent::UserProfileUpdated {
+            user_id,
+            nickname: req.nickname.clone(),
+            avatar_url: avatar_url.map(|s| s.to_string()),
+            bio: req.bio.clone(),
+        });
+
         Ok(())
     }
 
@@ -545,8 +552,7 @@ impl UserService {
                 members_count: row.members_count as i32,
                 has_password: row.has_password,
                 location: RelativeLocation {
-                    latitude: 0.0,
-                    longitude: 0.0,
+                    point: crate::dto::response::GeoPoint { latitude: 0.0, longitude: 0.0 },
                     location_name: "".to_string(),
                     distance: None,
                     bearing_degrees: None,
@@ -577,17 +583,17 @@ impl UserService {
     }
 
     pub async fn update_location(&self, user_id: i64, req: &UpdateLocationRequest) -> Result<()> {
-        Validator::validate_coordinates(req.location.latitude, req.location.longitude)?;
+        Validator::validate_coordinates(req.location.point.latitude, req.location.point.longitude)?;
         self.user_repo
-            .update_location(user_id, req.location.longitude, req.location.latitude)
+            .update_location(user_id, req.location.point.longitude, req.location.point.latitude)
             .await?;
         let _ = self
             .user_location_history_repo
-            .record(user_id, req.location.longitude, req.location.latitude)
+            .record(user_id, req.location.point.longitude, req.location.point.latitude)
             .await;
         let _ = self
             .presence_service
-            .update_location_cache(user_id, req.location.latitude, req.location.longitude)
+            .update_location_cache(user_id, req.location.point.latitude, req.location.point.longitude)
             .await;
         Ok(())
     }
@@ -892,7 +898,15 @@ impl UserService {
     }
 
     pub async fn admin_ban_user(&self, req: &AdminBanUserRequest) -> Result<()> {
-        self.user_repo.update_status(req.user_id, UserStatus::Banned).await
+        self.user_repo.update_status(req.user_id, UserStatus::Banned).await?;
+
+        self.event_bus.publish(crate::events::event_types::AppEvent::AccountBanned {
+            user_id: req.user_id,
+            reason: req.reason.clone().unwrap_or_else(|| "违规行为".to_string()),
+            duration_days: req.duration_days.unwrap_or(0),
+        });
+
+        Ok(())
     }
 
     pub async fn admin_unban_user(&self, req: &AdminUnbanUserRequest) -> Result<()> {
@@ -953,8 +967,7 @@ impl UserService {
             let (is_online, last_online) = online_map.get(&row.user_id).cloned().unwrap_or((None, None));
             let location = if location_visible_map.get(&row.user_id).copied().unwrap_or(true) {
                 Some(RelativeLocation {
-                    latitude: 0.0,
-                    longitude: 0.0,
+                    point: crate::dto::response::GeoPoint { latitude: 0.0, longitude: 0.0 },
                     location_name: "".to_string(),
                     distance: Some(row.distance),
                     bearing_degrees: Some(row.bearing_degrees),
@@ -1010,8 +1023,7 @@ impl UserService {
     async fn build_location_for_user(&self, user_id: i64) -> Option<RelativeLocation> {
         if let Ok(Some((lat, lng))) = self.user_repo.get_current_location(user_id).await {
             Some(RelativeLocation {
-                latitude: lat,
-                longitude: lng,
+                point: crate::dto::response::GeoPoint { latitude: lat, longitude: lng },
                 location_name: "".to_string(),
                 distance: None,
                 bearing_degrees: None,
@@ -1120,8 +1132,10 @@ impl UserService {
                 likes_count: row.like_count,
                 comments_count: row.comments_count,
                 location: RelativeLocation {
-                    latitude: row.latitude.unwrap_or(0.0),
-                    longitude: row.longitude.unwrap_or(0.0),
+                    point: crate::dto::response::GeoPoint {
+                        latitude: row.latitude.unwrap_or(0.0),
+                        longitude: row.longitude.unwrap_or(0.0),
+                    },
                     location_name: row.location_name.unwrap_or_default(),
                     distance: None,
                     bearing_degrees: None,

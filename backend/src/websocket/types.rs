@@ -1,9 +1,6 @@
-use crate::dto::{
-    request::Location,
-    response::{MessageMedia, UserInfo},
-};
+use crate::dto::response::{MessageMedia, UserInfo};
 use crate::types::enums::{
-    AnnouncementSeverity, GroupRole, MessageType, ReactionType, SubscriptionFailureReason,
+    AnnouncementSeverity, GroupRole, MessageType, SubscriptionFailureReason,
     SubscriptionOperation,
 };
 use serde::{Deserialize, Serialize};
@@ -41,13 +38,6 @@ pub enum WsMessage {
         offline_at: String, // ISO 8601 UTC
     },
 
-    /// 用户位置更新
-    UserLocationUpdate {
-        user_id: i64,
-        location: Location, // WebSocket 位置更新事件使用 request::Location
-        updated_at: String, // ISO 8601 UTC
-    },
-
     // ===== 关注关系事件 =====
     /// 新增关注者（有人关注了我）
     /// 心理学优化：通过 source 让被关注者了解"为什么被关注"
@@ -61,23 +51,6 @@ pub enum WsMessage {
     MutualFollow {
         user: UserInfo,
         mutual_at: String, // ISO 8601 UTC
-    },
-
-    /// 收到关注请求（当 allow_follow 设置为需要审批时）
-    FollowRequestReceived {
-        request_id: String,
-        requester: UserInfo,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        message: Option<String>,
-        requested_at: String, // ISO 8601 UTC
-    },
-
-    /// 关注请求被处理（发送给请求方）
-    FollowRequestHandled {
-        request_id: String,
-        target_user: UserInfo, // 被请求关注的用户
-        action: String,        // 固定为 "accept"
-        handled_at: String,    // ISO 8601 UTC
     },
 
     // ===== 生活瞬间互动事件 =====
@@ -155,24 +128,6 @@ pub enum WsMessage {
         recalled_at: String, // ISO 8601 UTC
     },
 
-    /// 私聊消息被删除
-    PrivateMessageDeleted {
-        message_id: String,
-        target_user_id: i64,
-        deleted_by: i64,
-        deleted_at: String, // ISO 8601 UTC
-    },
-
-    /// 私聊消息反应
-    PrivateMessageReaction {
-        message_id: String,
-        target_user_id: i64,
-        user: UserInfo,
-        reaction_type: ReactionType, // 使用 Enum
-        has_reaction: bool,          // 操作后状态：true=添加了反应，false=移除了反应
-        created_at: String,          // ISO 8601 UTC
-    },
-
     /// 私聊消息已读回执
     PrivateMessageRead {
         target_user_id: i64,
@@ -221,32 +176,6 @@ pub enum WsMessage {
         group_id: String,
         recalled_by: i64,
         recalled_at: String, // ISO 8601 UTC
-    },
-
-    /// 群聊消息被删除
-    GroupMessageDeleted {
-        message_id: String,
-        group_id: String,
-        deleted_by: i64,
-        deleted_at: String, // ISO 8601 UTC
-    },
-
-    /// 群聊消息反应
-    GroupMessageReaction {
-        message_id: String,
-        group_id: String,
-        user: UserInfo,
-        reaction_type: ReactionType, // 使用 Enum
-        has_reaction: bool,
-        created_at: String,
-    },
-
-    /// 群聊消息已读回执
-    GroupMessageRead {
-        group_id: String,
-        up_to: String,
-        reader_id: i64,
-        read_at: String,
     },
 
     /// 群聊成员正在输入
@@ -334,7 +263,87 @@ pub enum WsMessage {
         mentioned_at: String, // ISO 8601 UTC
     },
 
+    // ===== 瞬间互动事件（续） =====
+    /// 评论被点赞
+    CommentLiked {
+        comment_id: String,
+        moment_id: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        moment_summary: Option<MomentSummary>,
+        comment_preview: String,
+        user: UserInfo,
+        liked_at: String, // ISO 8601 UTC
+    },
+
+    // ===== 群组事件（续） =====
+    /// 成员主动离开群组
+    GroupMemberLeft {
+        group_id: String,
+        user: UserInfo,
+        left_at: String,     // ISO 8601 UTC
+        member_count: i32,   // 剩余成员总数
+    },
+
+    /// 成员被移除（踢出/封禁）
+    GroupMemberRemoved {
+        group_id: String,
+        user: UserInfo,
+        removed_by: String,        // user_id（操作者）
+        #[serde(skip_serializing_if = "Option::is_none")]
+        reason: Option<String>,    // "kicked" | "banned"
+        removed_at: String,        // ISO 8601 UTC
+        member_count: i32,
+    },
+
+    /// 成员被禁言
+    GroupMemberMuted {
+        group_id: String,
+        user: UserInfo,
+        muted_by: String,          // user_id（操作者）
+        muted_until: String,       // 禁言截止时间
+        duration_minutes: i32,
+        muted_at: String,          // ISO 8601 UTC
+    },
+
+    /// 成员被解除禁言
+    GroupMemberUnmuted {
+        group_id: String,
+        user: UserInfo,
+        unmuted_by: String,        // user_id（操作者）
+        unmuted_at: String,        // ISO 8601 UTC
+    },
+
+    /// 群组信息更新
+    GroupUpdated {
+        group_id: String,
+        updated_fields: serde_json::Value, // 只包含变更的字段
+        updated_by: String,                // user_id（操作者）
+        updated_at: String,                // ISO 8601 UTC
+    },
+
+    /// 群组解散
+    GroupDismissed {
+        group_id: String,
+        dismissed_at: String,           // ISO 8601 UTC
+        #[serde(skip_serializing_if = "Option::is_none")]
+        reason: Option<String>,         // "owner_dismissed" | "admin_dismissed"
+    },
+
+    // ===== 用户事件 =====
+    /// 用户资料变更
+    UserProfileUpdated {
+        user: UserInfo,
+        updated_at: String, // ISO 8601 UTC
+    },
+
     // ===== 系统事件 =====
+    /// 账号被封禁
+    AccountBanned {
+        reason: String,
+        duration_days: i32,     // 0=永久
+        banned_at: String,      // ISO 8601 UTC
+    },
+
     /// 错误消息
     Error { code: i32, message: String },
 
@@ -356,25 +365,10 @@ pub enum WsMessage {
         timestamp: String, // ISO 8601 UTC
     },
 
-    /// 订阅（增量订阅）
-    Subscribe {
-        client_msg_id: String, // 客户端生成，用于与 SubscribeAck 对齐
-        #[serde(rename = "type")]
-        r#type: String,
-        ids: Vec<SubscriptionSourceId>,
-    },
-
-    /// 取消订阅
-    Unsubscribe {
-        client_msg_id: String, // 客户端生成，用于与 SubscribeAck 对齐
-        #[serde(rename = "type")]
-        r#type: String,
-        ids: Vec<SubscriptionSourceId>,
-    },
-
-    /// 替换式订阅（覆盖现有订阅）
+    /// 订阅管理（统一入口，通过 operation 区分操作类型）
     SetSubscriptions {
         client_msg_id: String, // 客户端生成，用于与 SubscribeAck 对齐
+        operation: SubscriptionOperation, // subscribe / unsubscribe / set
         #[serde(rename = "type")]
         r#type: String,
         ids: Vec<SubscriptionSourceId>,

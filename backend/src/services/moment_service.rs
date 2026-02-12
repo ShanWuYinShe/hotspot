@@ -260,7 +260,7 @@ impl MomentService {
         req: &CreateMomentRequest,
     ) -> Result<UserMomentListItem> {
         Validator::validate_not_empty(&req.description, "description")?;
-        Validator::validate_coordinates(req.location.latitude, req.location.longitude)?;
+        Validator::validate_coordinates(req.location.point.latitude, req.location.point.longitude)?;
 
         let privacy_level = req
             .privacy_level
@@ -273,8 +273,8 @@ impl MomentService {
                 user_id,
                 Some(req.description.clone()),
                 req.mentions.clone(),
-                Some(req.location.longitude),
-                Some(req.location.latitude),
+                Some(req.location.point.longitude),
+                Some(req.location.point.latitude),
                 Some(req.location.location_name.clone()),
                 privacy_level,
             )
@@ -337,8 +337,10 @@ impl MomentService {
             likes_count: moment.like_count,
             comments_count: moment.comments_count,
             location: RelativeLocation {
-                latitude: req.location.latitude,
-                longitude: req.location.longitude,
+                point: crate::dto::response::GeoPoint {
+                    latitude: req.location.point.latitude,
+                    longitude: req.location.point.longitude,
+                },
                 location_name: req.location.location_name.clone(),
                 distance: None,
                 bearing_degrees: None,
@@ -368,8 +370,8 @@ impl MomentService {
         }
 
         let (lon, lat, location_name) = if let Some(loc) = &req.location {
-            Validator::validate_coordinates(loc.latitude, loc.longitude)?;
-            (Some(loc.longitude), Some(loc.latitude), Some(loc.location_name.clone()))
+            Validator::validate_coordinates(loc.point.latitude, loc.point.longitude)?;
+            (Some(loc.point.longitude), Some(loc.point.latitude), Some(loc.location_name.clone()))
         } else {
             (None, None, None)
         };
@@ -540,8 +542,10 @@ impl MomentService {
         distance: Option<f64>,
     ) -> RelativeLocation {
         RelativeLocation {
-            latitude: latitude.unwrap_or(0.0),
-            longitude: longitude.unwrap_or(0.0),
+            point: crate::dto::response::GeoPoint {
+                latitude: latitude.unwrap_or(0.0),
+                longitude: longitude.unwrap_or(0.0),
+            },
             location_name: location_name.unwrap_or_default(),
             distance,
             bearing_degrees: None,

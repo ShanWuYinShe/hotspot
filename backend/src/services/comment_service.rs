@@ -294,8 +294,10 @@ impl CommentService {
         if inserted {
             self.event_bus.publish(AppEvent::CommentLiked {
                 comment_id,
+                moment_id: comment.moment_id,
                 user_id: comment.user_id,
                 liker_id: user_id,
+                comment_preview: comment.content.chars().take(100).collect(),
             });
         }
 

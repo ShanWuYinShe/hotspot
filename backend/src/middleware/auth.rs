@@ -86,7 +86,7 @@ impl AuthFailureReason {
 ///
 /// 优先级：
 /// 1. Authorization Header (Bearer token)
-/// 2. Cookie (hs_access_token)
+/// 2. Cookie (access_token)
 ///
 /// 这是一个同步函数，避免跨 await 持有 Request 引用导致 Future 非 Send
 fn extract_bearer_token(req: &Request) -> Result<Option<String>, AuthFailureReason> {
@@ -103,7 +103,7 @@ fn extract_bearer_token(req: &Request) -> Result<Option<String>, AuthFailureReas
     }
 
     // 备选：从 Cookie 提取
-    if let Some(cookie_token) = get_cookie_value(req.headers(), "hs_access_token") {
+    if let Some(cookie_token) = get_cookie_value(req.headers(), "access_token") {
         return Ok(Some(cookie_token));
     }
 

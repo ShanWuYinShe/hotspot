@@ -119,7 +119,7 @@ async function refreshToken(): Promise<boolean> {
 		const response = await fetch(`${cfg.baseUrl}${AUTH.REFRESH_TOKEN}`, {
 			method: 'POST',
 			headers,
-			credentials: 'include', // 携带 HttpOnly Cookie（包含 hs_refresh_token 和 hs_csrf_token）
+			credentials: 'include', // 携带 HttpOnly Cookie（包含 refresh_token 和 hs_csrf_token）
 			body: JSON.stringify({
 				client_type: 'web'
 				// ✅ 不添加 refresh_token 字段（Web 端从 Cookie 读取）

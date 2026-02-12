@@ -9,7 +9,7 @@ use axum::http::HeaderMap;
 pub fn get_cookie_value(headers: &HeaderMap, cookie_name: &str) -> Option<String> {
     let cookie_header = headers.get(axum::http::header::COOKIE)?.to_str().ok()?;
 
-    // Cookie: a=1; b=2; hs_refresh_token=xxx
+    // Cookie: a=1; b=2; refresh_token=xxx
     for part in cookie_header.split(';') {
         let trimmed = part.trim();
         let (k, v) = trimmed.split_once('=')?;
@@ -36,7 +36,7 @@ pub fn build_access_token_set_cookie(
     let same_site = if secure { "None" } else { "Lax" };
 
     let mut cookie = format!(
-        "hs_access_token={}; Max-Age={}; Path=/api; HttpOnly; SameSite={}",
+        "access_token={}; Max-Age={}; Path=/api; HttpOnly; SameSite={}",
         access_token, max_age_seconds, same_site
     );
 
@@ -63,7 +63,7 @@ pub fn build_refresh_token_set_cookie(
 
     // 注意：Path 限制为 /api/v1/auth/refresh_token，仅刷新 API 可用
     let mut cookie = format!(
-        "hs_refresh_token={}; Max-Age={}; Path=/api/v1/auth/refresh_token; HttpOnly; SameSite={}",
+        "refresh_token={}; Max-Age={}; Path=/api/v1/auth/refresh_token; HttpOnly; SameSite={}",
         refresh_token, max_age_seconds, same_site
     );
 
@@ -99,7 +99,7 @@ pub fn build_access_token_clear_cookie(secure: bool) -> String {
     let same_site = if secure { "None" } else { "Lax" };
 
     let mut cookie = format!(
-        "hs_access_token=; Max-Age=0; Path=/api; HttpOnly; SameSite={}",
+        "access_token=; Max-Age=0; Path=/api; HttpOnly; SameSite={}",
         same_site
     );
 
@@ -115,7 +115,7 @@ pub fn build_refresh_token_clear_cookie(secure: bool) -> String {
     let same_site = if secure { "None" } else { "Lax" };
 
     let mut cookie = format!(
-        "hs_refresh_token=; Max-Age=0; Path=/api/v1/auth/refresh_token; HttpOnly; SameSite={}",
+        "refresh_token=; Max-Age=0; Path=/api/v1/auth/refresh_token; HttpOnly; SameSite={}",
         same_site
     );
 

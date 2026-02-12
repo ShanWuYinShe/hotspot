@@ -3,7 +3,7 @@ use axum::{extract::State, Json};
 use crate::{
     dto::{
         request::{
-            FeedFeedbackRequest, FeedGroupsRequest, FeedMomentsRequest, FeedTrendingRequest,
+            FeedGroupsRequest, FeedMomentsRequest, FeedTrendingRequest,
             FeedUsersRequest,
         },
         response::{
@@ -64,18 +64,4 @@ pub async fn get_trending(
 ) -> Result<Json<ApiResponse<FeedTrendingData>>> {
     let result = state.feed_service.get_trending(user.user_id, req).await?;
     Ok(Json(ApiResponse::success(result)))
-}
-
-/// 提交反馈
-/// POST /api/v1/feed/feedback
-pub async fn feedback(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(req): Json<FeedFeedbackRequest>,
-) -> Result<Json<ApiResponse<()>>> {
-    state
-        .feed_service
-        .submit_feedback(user.user_id, req)
-        .await?;
-    Ok(Json(ApiResponse::success_empty()))
 }
