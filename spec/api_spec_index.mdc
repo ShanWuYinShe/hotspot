@@ -33,7 +33,7 @@ alwaysApply: true
 | 文件 | 说明 |
 |-----|------|
 | [api_spec_feed.mdc](api_spec_feed.mdc) | 信息流 API |
-| [api_spec_search.mdc](api_spec_search.mdc) | 搜索与发现 API（综合建议、热门标签） |
+| [api_spec_search.mdc](api_spec_search.mdc) | 搜索与发现 API（综合建议） |
 | [api_spec_map.mdc](api_spec_map.mdc) | 地图渲染 API |
 | [api_spec_share.mdc](api_spec_share.mdc) | 通用分享系统 API（位置、动态、群组等） |
 
@@ -43,6 +43,7 @@ alwaysApply: true
 |-----|------|
 | [api_spec_media.mdc](api_spec_media.mdc) | 文件与媒体上传 API（Presigned 模式） |
 | [api_spec_report.mdc](api_spec_report.mdc) | 用户举报 API |
+| [api_spec_notification.mdc](api_spec_notification.mdc) | 通知中心 API（通知历史、未读计数、已读标记） |
 | [api_spec_system.mdc](api_spec_system.mdc) | 系统健康检查、版本信息、客户端配置、公告、冷启动 API |
 
 ### 管理员 API
@@ -59,17 +60,17 @@ alwaysApply: true
 - 禁止使用数字章节号（如"第X章/第X节"）来引用本规范内容；引用时仅使用小节标题或锚点标题
 
 **内部优先级**（本规范内部冲突时）：
-1. `@api_spec_base.mdc`
-2. `@api_spec_types.mdc`
-3. `@api_spec_errors.mdc`
-4. 各模块 `@api_spec_*.mdc`
+1. `@spec/api_spec_base.mdc`
+2. `@spec/api_spec_types.mdc`
+3. `@spec/api_spec_errors.mdc`
+4. 各模块 `@spec/api_spec_*.mdc`
 
 ## 文档说明
 
 - 本规范为 **Contract Only**：只定义对外可观测的端点/字段/类型/错误码/事件
 - 所有实现细节、自检、工程化约束不属于本规范范围
 
-通用约定（如时间格式、分页/幂等、Token 可选/必须语义、`@auth-only` 字段）统一放在 `@api_spec_base.mdc`，通用类型定义放在 `@api_spec_types.mdc`，避免在索引文件重复。
+通用约定（如时间格式、分页/幂等、Token 可选/必须语义、`@auth-only` 字段）统一放在 `@spec/api_spec_base.mdc`，通用类型定义放在 `@spec/api_spec_types.mdc`，避免在索引文件重复。
 
 ## 快速索引（按路径前缀）
 
@@ -82,11 +83,12 @@ alwaysApply: true
 | `/api/v1/private_chats/`, `/api/v1/private_messages/`, `/api/v1/group_messages/` | `api_spec_chat.mdc` |
 | `/api/v1/groups/` | `api_spec_group.mdc` |
 | `/api/v1/feed/` | `api_spec_feed.mdc` |
-| `/api/v1/search/`, `/api/v1/tags/` | `api_spec_search.mdc` |
+| `/api/v1/search/` | `api_spec_search.mdc` |
 | `/api/v1/map/` | `api_spec_map.mdc` |
 | `/api/v1/share/` | `api_spec_share.mdc` |
 | `/api/v1/media/` | `api_spec_media.mdc` |
 | `/api/v1/reports/` | `api_spec_report.mdc` |
+| `/api/v1/notifications/` | `api_spec_notification.mdc` |
 | `/api/v1/system/` | `api_spec_system.mdc` |
 | `/api/v1/admin/rbac/`, `/api/v1/admin/audit/`, `/api/v1/admin/app_config/` | `api_spec_admin_core.mdc` |
 | `/api/v1/admin/users/`, `/api/v1/admin/groups/`, `/api/v1/admin/reports/`, `/api/v1/admin/tags/`, `/api/v1/admin/announcements/` | `api_spec_admin_moderation.mdc` |

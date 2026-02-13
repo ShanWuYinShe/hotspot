@@ -10,9 +10,9 @@ alwaysApply: true
 - **命名空间**: `map`
 - **基础路径**: `/api/v1/map/`
 - **引用**: 
-  - 基础规范：`@api_spec_base.mdc`
-  - 通用类型：`@api_spec_types.mdc`
-  - 错误码：`@api_spec_errors.mdc`
+  - 基础规范：`@spec/api_spec_base.mdc`
+  - 通用类型：`@spec/api_spec_types.mdc`
+  - 错误码：`@spec/api_spec_errors.mdc`
 
 ## 设计理念
 
@@ -33,7 +33,7 @@ alwaysApply: true
 
 ## 类型定义
 
-以下类型定义于 `@api_spec_types.mdc`：
+以下类型定义于 `@spec/api_spec_types.mdc`：
 - `GeoPoint`
 
 ## 端点详情
@@ -77,7 +77,7 @@ interface Bounds {
 
 interface MapViewport {
   bounds: Bounds;
-  zoom: number;  // 取值范围 1-20，约束定义见 @api_spec_base.mdc 通用字段约束
+  zoom: number;  // 取值范围 1-20，约束定义见 @spec/api_spec_base.mdc 通用字段约束
 }
 
 interface TimeRangeParams {

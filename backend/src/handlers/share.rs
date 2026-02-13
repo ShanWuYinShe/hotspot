@@ -3,7 +3,7 @@
 //! 处理分享相关的 HTTP 请求
 
 use crate::dto::request::{
-    ApplyShareRequest, CreateShareRequest, GetShareRequest, MySharesRequest, RevokeShareRequest,
+    CreateShareRequest, GetShareRequest, MySharesRequest, RevokeShareRequest,
 };
 use crate::dto::response::{ApiResponse, PaginatedData, Share};
 use crate::error::AppError;
@@ -36,19 +36,6 @@ pub async fn get_share(
     let share = ShareService::get_share(&state.db, req).await?;
 
     Ok(Json(ApiResponse::success(share)))
-}
-
-/// 应用分享
-///
-/// POST /api/v1/share/apply
-pub async fn apply_share(
-    State(state): State<AppState>,
-    AuthenticatedUser { user_id, .. }: AuthenticatedUser,
-    Json(req): Json<ApplyShareRequest>,
-) -> Result<Json<ApiResponse<()>>, AppError> {
-    ShareService::apply_share(&state.db, user_id, req).await?;
-
-    Ok(Json(ApiResponse::success_empty()))
 }
 
 /// 撤销分享

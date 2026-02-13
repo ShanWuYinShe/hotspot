@@ -16,8 +16,8 @@ use crate::{
             RecallPrivateMessageRequest, SendPrivateMessageRequest, UpdatePrivateMessageRequest,
         },
         response::{
-            MessageMedia, MessageReplyTo, PaginatedData, PaginationMeta, PrivateMessageItem,
-            SendPrivateMessageData, UserInfo,
+            MessageMedia, MessageReplyTo, PaginatedData, PrivateMessageItem, SendPrivateMessageData,
+            UserInfo,
         },
     },
     error::{AppError, Result},
@@ -27,7 +27,7 @@ use crate::{
         private_message_repo::PrivateMessageRepository, user_blocks_repo::UserBlocksRepository,
         user_repo::UserRepository,
     },
-    types::enums::{MessageType, UserType},
+    types::enums::MessageType,
     utils::validation::Validator,
     EventBus,
 };
@@ -321,7 +321,6 @@ impl PrivateMessageService {
                         .media_service
                         .sign_url_if_path(sender.and_then(|u| u.avatar_url.as_deref()))
                         .await,
-                    user_type: sender.map(|u| u.user_type).unwrap_or(UserType::Normal),
                 },
                 reply_to,
                 media,
@@ -334,10 +333,7 @@ impl PrivateMessageService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -457,6 +453,14 @@ impl PrivateMessageService {
             });
         }
 
+        Ok(())
+    }
+
+    /// 标记当前用户所有私聊会话为已读
+    pub async fn mark_all_read(&self, user_id: i64) -> Result<()> {
+        self.unread_repo
+            .mark_all_as_read("private", user_id)
+            .await?;
         Ok(())
     }
 }

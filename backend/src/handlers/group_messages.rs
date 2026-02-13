@@ -81,3 +81,16 @@ pub async fn mark_as_read(
 
     Ok(Json(ApiResponse::success_empty()))
 }
+
+/// 标记所有群聊消息已读
+pub async fn mark_all_read(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+) -> Result<Json<ApiResponse<()>>> {
+    state
+        .group_message_service
+        .mark_all_read(user.user_id)
+        .await?;
+
+    Ok(Json(ApiResponse::success_empty()))
+}

@@ -6,7 +6,6 @@ import { post, paginate } from '../client';
 import { USERS } from '../endpoints';
 import type {
 	UserItem,
-	UserInfo,
 	UserSettings,
 	MyProfile,
 	FriendItem,
@@ -51,21 +50,21 @@ export const usersService = {
 	 * 获取用户好友列表
 	 */
 	getFriends(params: { user_id: string; pagination?: PaginationParams }) {
-		return paginate<UserInfo>(USERS.LIST_FRIENDS, params);
+		return paginate<FriendItem>(USERS.LIST_FRIENDS, params);
 	},
 
 	/**
 	 * 获取用户关注列表
 	 */
 	getFollowing(params: { user_id: string; pagination?: PaginationParams }) {
-		return paginate<UserInfo>(USERS.LIST_FOLLOWING, params);
+		return paginate<FollowingItem>(USERS.LIST_FOLLOWING, params);
 	},
 
 	/**
 	 * 获取用户粉丝列表
 	 */
 	getFollowers(params: { user_id: string; pagination?: PaginationParams }) {
-		return paginate<UserInfo>(USERS.LIST_FOLLOWERS, params);
+		return paginate<FollowerItem>(USERS.LIST_FOLLOWERS, params);
 	},
 
 	/**

@@ -4,7 +4,13 @@
 
 import { post, paginate } from '../client';
 import { REPORTS } from '../endpoints';
-import type { ReportCreated, ReportItem, ReportTargetType, PaginationParams } from '$lib/types/api';
+import type {
+	ReportCreated,
+	ReportItem,
+	ReportReason,
+	ReportTargetType,
+	PaginationParams
+} from '$lib/types/api';
 
 export const reportsService = {
 	/**
@@ -13,7 +19,7 @@ export const reportsService = {
 	create(data: {
 		target_type: ReportTargetType;
 		target_id: string;
-		reason: string;
+		reason: ReportReason;
 		description?: string;
 	}) {
 		return post<ReportCreated>(REPORTS.CREATE, data, { idempotencyKey: crypto.randomUUID() });

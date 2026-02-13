@@ -10,6 +10,17 @@ use uuid::Uuid;
 use crate::error::Result;
 pub use crate::types::enums::NotificationType;
 
+/// 通知行数据（列表查询用）
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct NotificationListRow {
+    pub notification_id: Uuid,
+    pub user_id: i64,
+    pub notification_type: String,
+    pub payload: serde_json::Value,
+    pub is_read: bool,
+    pub created_at: DateTime<Utc>,
+}
+
 /// 通知行数据
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct NotificationRow {
@@ -99,5 +110,198 @@ impl NotificationRepository {
         .await?;
 
         Ok(row)
+    }
+
+    /// 分页列表
+    pub async fn list_by_user(
+        &self,
+        user_id: i64,
+        notification_type: Option<NotificationType>,
+        cursor: Option<&str>,
+        limit: i64,
+    ) -> Result<Vec<NotificationListRow>> {
+        let limit = limit.clamp(1, 100);
+        let type_filter = notification_type.map(|t| t.to_string());
+
+        #[derive(serde::Deserialize)]
+        struct CursorPayload {
+            created_at: chrono::DateTime<chrono::Utc>,
+            notification_id: Uuid,
+        }
+
+        let rows = if let Some(c) = cursor {
+            let decoded: CursorPayload =
+                crate::utils::pagination::decode_cursor(c).map_err(|e| {
+                    crate::error::AppError::CursorFormatError(e.to_string())
+                })?;
+
+            if let Some(ref t) = type_filter {
+                sqlx::query_as!(
+                    NotificationListRow,
+                    r#"
+                    SELECT
+                        notification_id as "notification_id!",
+                        user_id as "user_id!",
+                        notification_type as "notification_type!",
+                        payload as "payload!",
+                        notification_is_read($1, notification_id, notification_type, created_at) as "is_read!",
+                        created_at as "created_at!"
+                    FROM notifications_partitioned
+                    WHERE user_id = $1
+                      AND notification_type = $2
+                      AND (created_at, notification_id) < ($3, $4)
+                    ORDER BY created_at DESC, notification_id DESC
+                    LIMIT $5
+                    "#,
+                    user_id,
+                    t,
+                    decoded.created_at,
+                    decoded.notification_id,
+                    limit + 1
+                )
+                .fetch_all(&self.pool)
+                .await?
+            } else {
+                sqlx::query_as!(
+                    NotificationListRow,
+                    r#"
+                    SELECT
+                        notification_id as "notification_id!",
+                        user_id as "user_id!",
+                        notification_type as "notification_type!",
+                        payload as "payload!",
+                        notification_is_read($1, notification_id, notification_type, created_at) as "is_read!",
+                        created_at as "created_at!"
+                    FROM notifications_partitioned
+                    WHERE user_id = $1
+                      AND (created_at, notification_id) < ($2, $3)
+                    ORDER BY created_at DESC, notification_id DESC
+                    LIMIT $4
+                    "#,
+                    user_id,
+                    decoded.created_at,
+                    decoded.notification_id,
+                    limit + 1
+                )
+                .fetch_all(&self.pool)
+                .await?
+            }
+        } else if let Some(ref t) = type_filter {
+            sqlx::query_as!(
+                NotificationListRow,
+                r#"
+                SELECT
+                    notification_id as "notification_id!",
+                    user_id as "user_id!",
+                    notification_type as "notification_type!",
+                    payload as "payload!",
+                    notification_is_read($1, notification_id, notification_type, created_at) as "is_read!",
+                    created_at as "created_at!"
+                FROM notifications_partitioned
+                WHERE user_id = $1 AND notification_type = $2
+                ORDER BY created_at DESC, notification_id DESC
+                LIMIT $3
+                "#,
+                user_id,
+                t,
+                limit + 1
+            )
+            .fetch_all(&self.pool)
+            .await?
+        } else {
+            sqlx::query_as!(
+                NotificationListRow,
+                r#"
+                SELECT
+                    notification_id as "notification_id!",
+                    user_id as "user_id!",
+                    notification_type as "notification_type!",
+                    payload as "payload!",
+                    notification_is_read($1, notification_id, notification_type, created_at) as "is_read!",
+                    created_at as "created_at!"
+                FROM notifications_partitioned
+                WHERE user_id = $1
+                ORDER BY created_at DESC, notification_id DESC
+                LIMIT $2
+                "#,
+                user_id,
+                limit + 1
+            )
+            .fetch_all(&self.pool)
+            .await?
+        };
+
+        Ok(rows)
+    }
+
+    /// 未读数量
+    pub async fn unread_count(&self, user_id: i64) -> Result<(i64, i64, i64, i64, i64)> {
+        struct UnreadCountRow {
+            total: i64,
+            social: i64,
+            interaction: i64,
+            group: i64,
+            system: i64,
+        }
+
+        let row = sqlx::query_as!(
+            UnreadCountRow,
+            r#"
+            WITH unread AS (
+                SELECT notification_type
+                FROM notifications_partitioned n
+                WHERE n.user_id = $1
+                  AND NOT notification_is_read($1, n.notification_id, n.notification_type, n.created_at)
+            )
+            SELECT
+                COUNT(*)::bigint as "total!",
+                COUNT(*) FILTER (WHERE notification_type IN ('new_follower', 'mutual_follow'))::bigint as "social!",
+                COUNT(*) FILTER (WHERE notification_type IN ('moment_liked', 'moment_commented', 'comment_liked', 'comment_reply', 'mentioned'))::bigint as "interaction!",
+                COUNT(*) FILTER (WHERE notification_type IN ('group_invite_received', 'group_application_accepted'))::bigint as "group!",
+                COUNT(*) FILTER (WHERE notification_type = 'system_announcement')::bigint as "system!"
+            FROM unread
+            "#,
+            user_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok((row.total, row.social, row.interaction, row.group, row.system))
+    }
+
+    /// 标记指定通知已读
+    pub async fn mark_as_read(&self, user_id: i64, notification_ids: &[Uuid]) -> Result<()> {
+        if notification_ids.is_empty() {
+            return Ok(());
+        }
+        for nid in notification_ids {
+            sqlx::query!(
+                r#"
+                INSERT INTO notification_read_items (user_id, notification_id)
+                VALUES ($1, $2)
+                ON CONFLICT (user_id, notification_id) DO NOTHING
+                "#,
+                user_id,
+                nid
+            )
+            .execute(&self.pool)
+            .await?;
+        }
+        Ok(())
+    }
+
+    /// 标记全部已读
+    pub async fn mark_all_read(&self, user_id: i64) -> Result<()> {
+        sqlx::query!(
+            r#"
+            INSERT INTO notification_read_state (user_id, last_read_at, updated_at)
+            VALUES ($1, NOW(), NOW())
+            ON CONFLICT (user_id) DO UPDATE SET last_read_at = NOW(), updated_at = NOW()
+            "#,
+            user_id
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
     }
 }

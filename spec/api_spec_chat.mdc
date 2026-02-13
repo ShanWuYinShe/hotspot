@@ -16,11 +16,11 @@ alwaysApply: true
   - `/api/v1/private_messages/`
   - `/api/v1/group_messages/`
 - **引用**:
-  - 基础规范：`@api_spec_base.mdc`
-  - 通用类型：`@api_spec_types.mdc`
-  - 错误码：`@api_spec_errors.mdc`
-  - WebSocket：`@api_spec_websocket.mdc`
-  - 群组管理：`@api_spec_group.mdc`（GroupOpenResult 引用本模块 GroupMessageItem）
+  - 基础规范：`@spec/api_spec_base.mdc`
+  - 通用类型：`@spec/api_spec_types.mdc`
+  - 错误码：`@spec/api_spec_errors.mdc`
+  - WebSocket：`@spec/api_spec_websocket.mdc`
+  - 群组管理：`@spec/api_spec_group.mdc`
 
 ## 端点总览
 
@@ -34,12 +34,14 @@ alwaysApply: true
 | `POST /api/v1/private_messages/get_history` | 私聊消息历史 | 必须 | 无 |
 | `POST /api/v1/private_messages/update` | 编辑私聊消息 | 必须 | 幂等语义 |
 | `POST /api/v1/private_messages/recall` | 撤回私聊消息 | 必须 | 幂等语义 |
-| `POST /api/v1/private_messages/me/mark_as_read` | 标记已读（不传 up_to_message_id 时标记全部） | 必须 | 幂等语义 |
+| `POST /api/v1/private_messages/me/mark_as_read` | 标记指定私聊会话已读 | 必须 | 幂等语义 |
+| `POST /api/v1/private_messages/me/mark_all_read` | 标记所有私聊消息已读 | 必须 | 幂等语义 |
 | `POST /api/v1/group_messages/send` | 发送群聊消息 | 必须 | MUST |
 | `POST /api/v1/group_messages/get_history` | 群聊消息历史 | 必须 | 无 |
 | `POST /api/v1/group_messages/update` | 编辑群聊消息 | 必须 | 幂等语义 |
 | `POST /api/v1/group_messages/recall` | 撤回群聊消息 | 必须 | 幂等语义 |
-| `POST /api/v1/group_messages/me/mark_as_read` | 标记已读（不传 up_to_message_id 时标记全部） | 必须 | 幂等语义 |
+| `POST /api/v1/group_messages/me/mark_as_read` | 标记指定群聊已读 | 必须 | 幂等语义 |
+| `POST /api/v1/group_messages/me/mark_all_read` | 标记所有群聊消息已读 | 必须 | 幂等语义 |
 
 ## 已读状态设计
 
@@ -55,7 +57,7 @@ alwaysApply: true
 
 ## 类型定义
 
-以下类型定义于 `@api_spec_types.mdc`：
+以下类型定义于 `@spec/api_spec_types.mdc`：
 - `UserInfo`
 - `MessageType`
 - `SendMessageType`
@@ -70,7 +72,7 @@ alwaysApply: true
 
 ## 私聊管理 API
 
-私聊权限和陌生人消息限制规则详见 `@api_spec_base.mdc` 中的"隐私与访问控制"章节。
+私聊权限和陌生人消息限制规则详见 `@spec/api_spec_base.mdc` 中的"隐私与访问控制"章节。
 
 ### POST /api/v1/private_chats/me/list
 
@@ -104,7 +106,7 @@ interface PrivateChatItem {
     content?: string;
     type: MessageType;
     share_code?: string;
-    sender_id: string;
+    sender: UserInfo;
     sent_at: string;
   };
   
@@ -118,9 +120,10 @@ interface PrivateChatItem {
 }
 
 // 不可发消息原因
+// 设计说明：被拉黑场景统一返回 'privacy'，不暴露拉黑状态（隐私保护）
+// 被拉黑的用户看到的效果与"对方设置了严格隐私"一致
 type CantMessageReason = 
-  | 'blocked'           // 已被对方拉黑
-  | 'privacy'           // 对方隐私设置不允许
+  | 'privacy'           // 对方隐私设置不允许（含被拉黑场景）
   | 'stranger_limit'    // 陌生人消息限额已用完
   | 'account_suspended';// 账号被限制
 ```
@@ -258,14 +261,14 @@ interface PrivateMessageItem {
   media?: MessageMedia;
   share_code?: string;
   
-  sender_id: string;  // 私聊场景：会话双方已知，只需 ID
+  sender: UserInfo;  // 统一使用 UserInfo
   
   reply_to?: MessageReplyTo;
   
   sent_at: string;
   edited_at?: string;
   recalled_at?: string;  // 存在即表示已撤回
-  is_read?: boolean;     // 消息是否已被对方读取
+  is_read: boolean;      // 消息是否已被对方读取（默认 false）
 }
 ```
 
@@ -332,9 +335,9 @@ interface RecallPrivateMessageRequest {
 
 ### POST /api/v1/private_messages/me/mark_as_read
 
-标记私聊消息已读。
+标记指定私聊会话的消息为已读。
 
-**语义**：当不传 `up_to_message_id` 时，标记全部私聊消息为已读。
+**语义**：标记与指定用户的私聊消息为已读。当不传 `up_to_message_id` 时，标记该会话全部消息为已读。
 
 - **认证**: 必须
 - **幂等**: 幂等语义
@@ -342,7 +345,7 @@ interface RecallPrivateMessageRequest {
 **Request**: `MarkPrivateMessagesReadRequest`
 ```typescript
 interface MarkPrivateMessagesReadRequest {
-  target_user_id?: string;       // 指定会话；不传时标记全部私聊
+  target_user_id: string;        // 指定会话（必选）
   up_to_message_id?: string;     // 标记截至此消息；不传时标记该会话全部
 }
 ```
@@ -350,6 +353,19 @@ interface MarkPrivateMessagesReadRequest {
 **Response**: `ApiResponse`
 
 **错误码**: `10000` `10300`
+
+### POST /api/v1/private_messages/me/mark_all_read
+
+标记所有私聊消息为已读。
+
+- **认证**: 必须
+- **幂等**: 幂等语义
+
+**Request**: `{}`
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000`
 
 ---
 
@@ -385,10 +401,8 @@ interface SendGroupMessageRequest {
 **Response**: `ApiResponse<MessageSent>`
 
 ```typescript
-// 设计说明：群聊消息使用 `sender: UserInfo` 而非 `sender_id: string`，
-// 因为群聊场景下客户端需要显示发送者头像/昵称等信息，且群成员数量多变、
-// 不一定在本地缓存中。私聊消息使用 `sender_id` 是因为双方信息已通过
-// PrivateChatItem.other_user 获取，无需重复传输。
+// 设计说明：私聊和群聊消息统一使用 `sender: UserInfo`，
+// 保持类型一致性，简化客户端消息渲染逻辑。
 
 interface GroupMessageItem {
   message_id: string;
@@ -402,7 +416,7 @@ interface GroupMessageItem {
   
   reply_to?: MessageReplyTo;
   mentions?: string[];  // @UserIDs
-  recalled_by?: string;
+  recalled_by?: UserInfo;  // 撤回操作者（群管理员/群主/发送者）
   
   sent_at: string;
   edited_at?: string;
@@ -474,9 +488,9 @@ interface RecallGroupMessageRequest {
 
 ### POST /api/v1/group_messages/me/mark_as_read
 
-标记群聊消息已读。
+标记指定群聊的消息为已读。
 
-**语义**：当不传 `up_to_message_id` 时，标记全部群聊消息为已读。
+**语义**：标记指定群组的群聊消息为已读。当不传 `up_to_message_id` 时，标记该群全部消息为已读。
 
 - **认证**: 必须
 - **幂等**: 幂等语义
@@ -484,7 +498,7 @@ interface RecallGroupMessageRequest {
 **Request**: `MarkGroupMessagesReadRequest`
 ```typescript
 interface MarkGroupMessagesReadRequest {
-  group_id?: string;             // 指定群组；不传时标记全部群聊
+  group_id: string;              // 指定群组（必选）
   up_to_message_id?: string;     // 标记截至此消息；不传时标记该群全部
 }
 ```
@@ -492,3 +506,16 @@ interface MarkGroupMessagesReadRequest {
 **Response**: `ApiResponse`
 
 **错误码**: `10000` `10300` `10400`
+
+### POST /api/v1/group_messages/me/mark_all_read
+
+标记所有群聊消息为已读。
+
+- **认证**: 必须
+- **幂等**: 幂等语义
+
+**Request**: `{}`
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000`

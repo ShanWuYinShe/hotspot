@@ -3,7 +3,7 @@
  * 严格遵循 api_spec_websocket.mdc 定义
  */
 
-import { UserInfo, ClientType, MessageType, MessageMedia, MessageReplyTo, GroupAnnouncementItem, SystemAnnouncementItem, Location } from './api';
+import { UserInfo, ClientType, MessageType, MessageMedia, MessageReplyTo, GroupAnnouncementItem, MomentSummary } from './api';
 
 // ============================================================================
 // 订阅管理类型
@@ -34,9 +34,7 @@ export enum ClientEventType {
   SET_SUBSCRIPTIONS = 'SetSubscriptions',
   GET_SUBSCRIPTIONS = 'GetSubscriptions',
   PRIVATE_TYPING = 'PrivateTyping',
-  GROUP_TYPING = 'GroupTyping',
-  GROUP_ENTER = 'GroupEnter',
-  GROUP_LEAVE = 'GroupLeave'
+  GROUP_TYPING = 'GroupTyping'
 }
 
 /**
@@ -88,8 +86,6 @@ export enum ServerEventType {
   GROUP_ANNOUNCEMENT_CREATED = 'GroupAnnouncementCreated',
   GROUP_UPDATED = 'GroupUpdated',
   GROUP_DISMISSED = 'GroupDismissed',
-  GROUP_USER_ENTERED = 'GroupUserEntered',
-  GROUP_USER_EXITED = 'GroupUserExited',
 
   // 用户
   USER_PROFILE_UPDATED = 'UserProfileUpdated',
@@ -165,24 +161,6 @@ export interface GroupTypingEvent {
   payload: GroupTypingPayload
 }
 
-export interface GroupEnterPayload {
-  group_id: string
-}
-
-export interface GroupEnterEvent {
-  type: 'GroupEnter'
-  payload: GroupEnterPayload
-}
-
-export interface GroupLeavePayload {
-  group_id: string
-}
-
-export interface GroupLeaveEvent {
-  type: 'GroupLeave'
-  payload: GroupLeavePayload
-}
-
 // ============================================================================
 // 服务端推送事件定义
 // ============================================================================
@@ -206,18 +184,11 @@ export interface ConnectionConfig {
   max_subscriptions: MaxSubscriptions
 }
 
-export interface UnreadSummary {
-  private_chats: number
-  groups: number
-  total_messages: number
-}
-
 export interface ConnectionEstablishedPayload {
   connection_id: string
   user_id: string
   server_time: string
   config: ConnectionConfig
-  unread_summary: UnreadSummary
 }
 
 export interface ConnectionEstablishedEvent {
@@ -260,7 +231,6 @@ export interface UserOfflineEvent {
 export interface NewFollowerPayload {
   user: UserInfo
   followed_at: string
-  is_mutual: boolean
   source?: string
   source_moment_id?: string
 }
@@ -281,12 +251,6 @@ export interface MutualFollowEvent {
 }
 
 // ----- 生活瞬间互动事件 -----
-
-export interface MomentSummary {
-  moment_id: string
-  cover_url?: string
-  text_preview: string
-}
 
 export interface MomentLikedPayload {
   moment_id: string
@@ -402,7 +366,7 @@ export interface AccountBannedEvent {
 export interface PrivateMessageNewPayload {
   message_id: string
   target_user_id: string
-  sender_id: string
+  sender: UserInfo
   type: MessageType
   content?: string
   share_code?: string
@@ -431,7 +395,7 @@ export interface PrivateMessageEditedEvent {
 export interface PrivateMessageRecalledPayload {
   message_id: string
   target_user_id: string
-  recalled_by: string
+  recalled_by: UserInfo
   recalled_at: string
 }
 
@@ -498,7 +462,7 @@ export interface GroupMessageEditedEvent {
 export interface GroupMessageRecalledPayload {
   message_id: string
   group_id: string
-  recalled_by: string
+  recalled_by: UserInfo
   recalled_at: string
 }
 
@@ -669,28 +633,6 @@ export interface GroupApplicationResponseEvent {
   payload: GroupApplicationResponsePayload
 }
 
-export interface GroupUserEnteredPayload {
-  group_id: string
-  user: UserInfo
-  entered_at: string
-}
-
-export interface GroupUserEnteredEvent {
-  type: 'GroupUserEntered'
-  payload: GroupUserEnteredPayload
-}
-
-export interface GroupUserExitedPayload {
-  group_id: string
-  user: UserInfo
-  exited_at: string
-}
-
-export interface GroupUserExitedEvent {
-  type: 'GroupUserExited'
-  payload: GroupUserExitedPayload
-}
-
 // ----- 系统/订阅事件 -----
 
 export interface SubscribeAckPayload {
@@ -712,7 +654,6 @@ export interface SubscriptionsSnapshotPayload {
   client_msg_id: string
   user_ids: string[]
   group_ids: string[]
-  total_count: number
 }
 
 export interface SubscriptionsSnapshotEvent {
@@ -745,8 +686,6 @@ export type ClientEvent =
   | GetSubscriptionsEvent
   | PrivateTypingEvent
   | GroupTypingEvent
-  | GroupEnterEvent
-  | GroupLeaveEvent
 
 export type ServerEvent =
   | ConnectionEstablishedEvent
@@ -784,8 +723,6 @@ export type ServerEvent =
   | GroupAnnouncementCreatedEvent
   | GroupUpdatedEvent
   | GroupDismissedEvent
-  | GroupUserEnteredEvent
-  | GroupUserExitedEvent
   | SubscribeAckEvent
   | SubscriptionsSnapshotEvent
   | ErrorEvent
@@ -875,20 +812,6 @@ export function createGroupTypingEvent(
   return {
     type: 'GroupTyping',
     payload: { group_id, is_typing }
-  }
-}
-
-export function createGroupEnterEvent(group_id: string): GroupEnterEvent {
-  return {
-    type: 'GroupEnter',
-    payload: { group_id }
-  }
-}
-
-export function createGroupLeaveEvent(group_id: string): GroupLeaveEvent {
-  return {
-    type: 'GroupLeave',
-    payload: { group_id }
   }
 }
 

@@ -11,7 +11,7 @@ use crate::{
             CommentLikesRequest, CommentRepliesRequest, CreateCommentRequest, DeleteCommentRequest,
             LikeCommentRequest, MomentCommentsRequest, UnlikeCommentRequest,
         },
-        response::{CommentLikeItem, CommentListItem, PaginatedData, PaginationMeta, UserInfo},
+        response::{CommentLikeItem, CommentListItem, PaginatedData, UserInfo},
     },
     error::{AppError, Result},
     events::event_types::AppEvent,
@@ -63,7 +63,6 @@ impl CommentService {
                     .media_service
                     .sign_url_if_path(avatar_url.as_deref())
                     .await,
-                user_type: crate::types::enums::UserType::Normal,
             });
         }
 
@@ -78,7 +77,6 @@ impl CommentService {
                 .media_service
                 .sign_url_if_path(user.and_then(|u| u.avatar_url).as_deref())
                 .await,
-            user_type: crate::types::enums::UserType::Normal,
         })
     }
 
@@ -207,10 +205,7 @@ impl CommentService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -257,10 +252,7 @@ impl CommentService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -288,10 +280,7 @@ impl CommentService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 

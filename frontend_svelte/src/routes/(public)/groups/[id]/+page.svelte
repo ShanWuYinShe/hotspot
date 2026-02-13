@@ -26,7 +26,7 @@
 	} from '$lib/components/ui/dropdown-menu';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import type {
-		GroupOpenResult,
+		GroupItem,
 		GroupAnnouncementItem,
 		GroupMemberItem,
 		SetableGroupRole,
@@ -53,9 +53,9 @@
 
 	const groupId = $derived(data.groupId);
 
-	let groupData = $state<GroupOpenResult | null>(null);
+	let groupData = $state<GroupItem | null>(null);
 	$effect(() => { groupData = data.groupData; });
-	const group = $derived(groupData?.group ?? null);
+	const group = $derived(groupData ?? null);
 	let settings = $state<{ join_method?: 'open' | 'approval' | 'invite_only' } | null>(null);
 	let isJoining = $state(false);
 	let isLeaving = $state(false);
@@ -409,10 +409,10 @@
 			if (isSuccess(response)) {
 				// 从成员列表中删除
 				membersPagination.removeItem((item) => item.user.user_id === removeTarget!.user.user_id);
-				if (groupData && group) {
+				if (groupData) {
 					groupData = {
 						...groupData,
-						group: { ...group, group: { ...group.group, members_count: Math.max(0, group.group.members_count - 1) } }
+						group: { ...groupData.group, members_count: Math.max(0, groupData.group.members_count - 1) }
 					};
 				}
 				toast.success('已移除成员');
@@ -434,7 +434,7 @@
 			const response = await groupsService.getGroup({ group_id: groupId });
 			if (isSuccess(response) && response.data) {
 				groupData = response.data;
-				if (!response.data.group.my_state?.is_joined) {
+				if (!response.data.my_state?.is_joined) {
 					// 未加入群组，重置分页状态
 					announcementsPagination.reset();
 					membersPagination.reset();
@@ -471,7 +471,7 @@
 						code: 0,
 						data: {
 							items: response.data.items,
-							pagination: { has_more: false }
+							next_cursor: undefined
 						},
 						request_id: response.request_id
 					};
@@ -482,7 +482,7 @@
 					request_id: response.request_id,
 					data: {
 						items: [],
-						pagination: { has_more: false }
+						next_cursor: undefined
 					}
 				};
 			},
@@ -618,10 +618,10 @@
 				// 从成员列表中移除
 				membersPagination.removeItem((item) => item.user.user_id === e.detail.user_id);
 				// 更新群组成员数量
-				if (groupData && group) {
+				if (groupData) {
 					groupData = {
 						...groupData,
-						group: { ...group, group: { ...group.group, members_count: e.detail.member_count } }
+						group: { ...groupData.group, members_count: e.detail.member_count }
 					};
 				}
 			}
@@ -641,7 +641,7 @@
 				if (groupData && group) {
 					groupData = {
 						...groupData,
-						group: { ...group, group: { ...group.group, members_count: e.detail.member_count } }
+						group: { ...groupData.group, members_count: e.detail.member_count }
 					};
 				}
 				// 如果被移除的是当前用户，重新加载群组信息
@@ -701,19 +701,16 @@
 				description?: string;
 			};
 		}>) => {
-			if (e.detail.group_id === groupId && groupData && group) {
+			if (e.detail.group_id === groupId && groupData) {
 				// 更新群组信息
 				groupData = {
 					...groupData,
 					group: {
-						...group,
-						group: {
-							...group.group,
-							...(e.detail.updated_fields.name && { name: e.detail.updated_fields.name }),
-							...(e.detail.updated_fields.avatar_url && { avatar_url: e.detail.updated_fields.avatar_url })
-						},
-						...(e.detail.updated_fields.description && { description: e.detail.updated_fields.description })
-					}
+						...groupData.group,
+						...(e.detail.updated_fields.name && { name: e.detail.updated_fields.name }),
+						...(e.detail.updated_fields.avatar_url && { avatar_url: e.detail.updated_fields.avatar_url })
+					},
+					...(e.detail.updated_fields.description && { description: e.detail.updated_fields.description })
 				};
 			}
 		};

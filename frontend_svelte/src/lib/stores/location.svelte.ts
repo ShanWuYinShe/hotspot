@@ -4,6 +4,7 @@
 
 import { browser } from '$app/environment';
 import type { GeoPoint, Location } from '$lib/types/api';
+import { configStore } from './config.svelte';
 
 const STORAGE_KEY = 'hotspot_location';
 
@@ -104,6 +105,22 @@ class LocationStore {
 	}
 
 	/**
+	 * 定位失败时使用 ClientConfig 默认位置作为回退
+	 */
+	#applyDefaultLocation() {
+		if (this.#current) return; // 已有位置，不覆盖
+		const loc = configStore.defaultLocation;
+		if (loc) {
+			this.#current = {
+				point: { latitude: loc.point.latitude, longitude: loc.point.longitude },
+				location_name: loc.location_name
+			};
+			this.#lastUpdated = new Date().toISOString();
+			this.#persist();
+		}
+	}
+
+	/**
 	 * 请求当前位置
 	 */
 	async requestLocation(): Promise<GeoPoint | null> {
@@ -142,6 +159,8 @@ class LocationStore {
 				this.#permissionDenied = true;
 				this.#persist();
 			}
+			// 定位失败时，尝试使用 ClientConfig 默认位置
+			this.#applyDefaultLocation();
 			return null;
 		} finally {
 			this.#isLoading = false;

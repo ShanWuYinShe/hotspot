@@ -64,6 +64,18 @@ impl AdminRbacRepository {
         Self { pool }
     }
 
+    /// 检查用户是否为管理员（轻量级，仅判断存在性）
+    pub async fn is_admin(&self, user_id: i64) -> Result<bool> {
+        let result = sqlx::query!(
+            "SELECT EXISTS(SELECT 1 FROM admin_users WHERE user_id = $1) as \"exists!\"",
+            user_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(result.exists)
+    }
+
     /// 检查用户是否为超级管理员
     pub async fn is_super_admin(&self, user_id: i64) -> Result<bool> {
         let result = sqlx::query!(

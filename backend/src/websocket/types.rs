@@ -18,7 +18,6 @@ pub enum WsMessage {
         user_id: i64,
         server_time: String, // ISO 8601 UTC
         config: ConnectionConfig,
-        unread_summary: UnreadSummary,
     },
 
     // ===== 在线状态事件 =====
@@ -43,7 +42,6 @@ pub enum WsMessage {
     NewFollower {
         user: UserInfo,
         followed_at: String, // ISO 8601 UTC
-        is_mutual: bool,     // 是否互相关注（成为好友）
     },
 
     /// 互相关注（成为好友）
@@ -74,6 +72,8 @@ pub enum WsMessage {
     /// 评论被回复
     CommentReply {
         moment_id: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        moment_summary: Option<MomentSummary>, // 所属瞬间的摘要（与 MomentCommented、CommentLiked 保持一致）
         comment_id: String,       // 原评论ID（被回复的评论）
         reply_to_content: String, // 原评论内容摘要
         reply_id: String,         // 回复评论ID
@@ -123,7 +123,7 @@ pub enum WsMessage {
     PrivateMessageRecalled {
         message_id: String,
         target_user_id: i64,
-        recalled_by: i64,
+        recalled_by: UserInfo,
         recalled_at: String, // ISO 8601 UTC
     },
 
@@ -173,7 +173,7 @@ pub enum WsMessage {
     GroupMessageRecalled {
         message_id: String,
         group_id: String,
-        recalled_by: i64,
+        recalled_by: UserInfo,
         recalled_at: String, // ISO 8601 UTC
     },
 
@@ -320,12 +320,13 @@ pub enum WsMessage {
         updated_at: String,                // ISO 8601 UTC
     },
 
-    /// 群组解散
+    /// 群组解散（群主主动解散或因违规被解散）
+    /// 设计说明：不暴露系统管理员的存在，详细操作记录保留在审计日志中
     GroupDismissed {
         group_id: String,
         dismissed_at: String, // ISO 8601 UTC
         #[serde(skip_serializing_if = "Option::is_none")]
-        reason: Option<String>, // "owner_dismissed" | "admin_dismissed"
+        reason: Option<String>, // "owner_dismissed" | "policy_violation"
     },
 
     // ===== 用户事件 =====
@@ -392,21 +393,6 @@ pub enum WsMessage {
         client_msg_id: String,
         user_ids: Vec<String>,
         group_ids: Vec<String>,
-        total_count: i32,
-    },
-
-    /// 用户进入群聊页面
-    GroupUserEntered {
-        group_id: String,
-        user: UserInfo,
-        entered_at: String, // ISO 8601 UTC
-    },
-
-    /// 用户离开群聊页面
-    GroupUserExited {
-        group_id: String,
-        user: UserInfo,
-        exited_at: String, // ISO 8601 UTC
     },
 
     // ========== 客户端发送事件 (续) ==========
@@ -421,12 +407,6 @@ pub enum WsMessage {
 
     /// 查询当前订阅状态
     GetSubscriptions { client_msg_id: String },
-
-    /// 进入群聊页面（与订阅独立，表示用户当前正在查看该群聊）
-    GroupEnter { group_id: String },
-
-    /// 离开群聊页面
-    GroupLeave { group_id: String },
 }
 
 /// 消息回复引用快照
@@ -439,6 +419,7 @@ pub struct MessageReplyTo {
 }
 
 /// 瞬间摘要快照
+/// 亦在 api_spec_types.mdc 中定义，保持与 spec 一致
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MomentSummary {
     pub moment_id: String,
@@ -482,12 +463,4 @@ pub struct ConnectionConfig {
 pub struct MaxSubscriptions {
     pub user: u32,  // 用户订阅上限
     pub group: u32, // 群组订阅上限
-}
-
-/// ConnectionEstablished 中的未读摘要（spec: unread_summary）
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct UnreadSummary {
-    pub private_chats: i64,  // 有未读消息的私聊会话数
-    pub groups: i64,         // 有未读消息的群聊数
-    pub total_messages: i64, // 总未读消息数
 }

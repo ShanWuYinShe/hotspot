@@ -52,11 +52,11 @@ class MessageStore {
 		this.cleanupFunctions.push(
 			websocketStore.on('PrivateMessageNew', (payload) => {
 				// 只统计别人发给我的消息（过滤掉自己发送的消息）
-				if (payload.sender_id === authStore.currentUserId) {
+				if (payload.sender.user_id === authStore.currentUserId) {
 					return;
 				}
 
-				const conversationId = `private_${payload.sender_id}`;
+				const conversationId = `private_${payload.sender.user_id}`;
 				const existing = this.unreadConversations.get(conversationId);
 
 				const newMap = new Map(this.unreadConversations);
@@ -67,7 +67,7 @@ class MessageStore {
 						lastMessage: {
 							content: payload.content ?? '',
 							timestamp: payload.sent_at,
-							senderName: '' // 私聊使用 sender_id，昵称由 UI 从会话列表获取
+							senderName: payload.sender.nickname
 						}
 					});
 				} else {
@@ -78,7 +78,7 @@ class MessageStore {
 						lastMessage: {
 							content: payload.content ?? '',
 							timestamp: payload.sent_at,
-							senderName: '' // 私聊使用 sender_id，昵称由 UI 从会话列表获取
+							senderName: payload.sender.nickname
 						}
 					});
 				}

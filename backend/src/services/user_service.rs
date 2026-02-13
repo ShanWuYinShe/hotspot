@@ -26,9 +26,9 @@ use crate::{
         },
         response::{
             AdminUserDetail, AdminUserSearchItem, AuthData, BlockedUserSearchItem, FollowerItem,
-            FollowingItem, FriendItem, GroupSearchItem, MyProfile, PaginatedData, PaginationMeta,
-            RelativeLocation, UserCardStats, UserInfo, UserMomentListItem, UserRelation,
-            UserSearchItem, UserSettingsData, UserStatsData,
+            FollowingItem, FriendItem, GroupInfo, GroupSearchItem, MyProfile, PaginatedData,
+            RelativeLocation, Relationship, UserInfo, UserMomentListItem, UserSearchItem, UserSettingsData,
+            UserStats,
         },
     },
     error::{AppError, Result},
@@ -46,7 +46,7 @@ use crate::{
         user_repo::{UserRepository, UserRow},
         user_settings_repo::{UpdateSettingsParams, UserSettingsRepository, UserSettingsRow},
     },
-    types::enums::{PrivacyLevel, PrivateChatPermission, UserStatus, UserType},
+    types::enums::{PrivacyLevel, PrivateChatPermission, UserPresenceStatus, UserStatus, UserType},
     utils::{
         bloom_filter::ResourceExistenceChecker, cache::CacheManager, jwt::JwtUtil,
         password::PasswordUtil, token::TokenUtil, validation::Validator,
@@ -254,16 +254,18 @@ impl UserService {
         };
 
         Ok(UserSearchItem {
-            user_id: user.user_id,
-            nickname: user.nickname.unwrap_or_default(),
-            avatar_url: self
-                .media_service
-                .sign_url_if_path(user.avatar_url.as_deref())
-                .await,
-            user_type: user.user_type,
+            user: UserInfo {
+                user_id: user.user_id,
+                nickname: user.nickname.unwrap_or_default(),
+                avatar_url: self
+                    .media_service
+                    .sign_url_if_path(user.avatar_url.as_deref())
+                    .await,
+            },
             bio: user.bio,
             tags: Some(tags),
-            is_online,
+            presence_status: is_online
+                .map(|online| if online { UserPresenceStatus::Online } else { UserPresenceStatus::Offline }),
             last_online,
             location,
             stats,
@@ -379,27 +381,21 @@ impl UserService {
         &self,
         user_id: i64,
         req: &GetRelationshipRequest,
-    ) -> Result<UserRelation> {
+    ) -> Result<Relationship> {
         let is_following = self.follows_repo.is_following(user_id, req.user_id).await?;
         let is_followed_by = self.follows_repo.is_following(req.user_id, user_id).await?;
         let is_blocked = self.blocks_repo.is_blocked(user_id, req.user_id).await?;
-        let has_pending_follow_request = self
-            .follow_request_repo
-            .exists(user_id, req.user_id)
-            .await?;
 
-        Ok(UserRelation {
-            is_mutual_follow: is_following && is_followed_by,
+        Ok(Relationship {
             is_following,
             is_followed_by,
             is_blocked,
-            has_pending_follow_request,
         })
     }
 
-    pub async fn get_stats(&self, user_id: i64) -> Result<UserStatsData> {
+    pub async fn get_stats(&self, user_id: i64) -> Result<UserStats> {
         let stats = self.user_repo.get_stats(user_id).await?;
-        Ok(UserStatsData {
+        Ok(UserStats {
             moments_count: stats.moments_count,
             friends_count: stats.following_count,
             followers_count: stats.followers_count,
@@ -481,10 +477,7 @@ impl UserService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -531,10 +524,7 @@ impl UserService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -581,10 +571,7 @@ impl UserService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -601,15 +588,17 @@ impl UserService {
         let mut items = Vec::with_capacity(rows.len());
         for row in rows {
             items.push(GroupSearchItem {
-                group_chat_id: row.group_id.to_string(),
-                name: row.name,
+                group: GroupInfo {
+                    group_id: row.group_id.to_string(),
+                    name: row.name.clone(),
+                    avatar_url: self
+                        .media_service
+                        .sign_url_if_path(row.avatar_url.as_deref())
+                        .await,
+                    members_count: row.members_count,
+                },
                 description: row.description,
-                avatar_url: self
-                    .media_service
-                    .sign_url_if_path(row.avatar_url.as_deref())
-                    .await,
                 tags: None,
-                members_count: row.members_count as i32,
                 has_password: row.has_password,
                 location: RelativeLocation {
                     point: crate::dto::response::GeoPoint {
@@ -620,15 +609,20 @@ impl UserService {
                     distance: None,
                     bearing_degrees: None,
                 },
+                last_activity_at: None,
+                created_at: None,
+                owner_id: None,
+                my_state: None,
+                friends_in_group: None,
+                join_method: None,
+                is_searchable: None,
+                max_members: None,
             });
         }
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -859,10 +853,7 @@ impl UserService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -932,10 +923,7 @@ impl UserService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -994,11 +982,12 @@ impl UserService {
             tags: Some(tags),
             location,
             is_online,
-            stats: UserCardStats {
+            stats: UserStats {
                 moments_count: stats.moments_count,
                 friends_count: stats.following_count,
                 followers_count: stats.followers_count,
                 following_count: stats.following_count,
+                groups_count: stats.groups_count,
             },
             ban_history: None,
         })
@@ -1041,16 +1030,18 @@ impl UserService {
             };
 
             items.push(UserSearchItem {
-                user_id: row.user_id,
-                nickname: row.nickname.unwrap_or_default(),
-                avatar_url: self
-                    .media_service
-                    .sign_url_if_path(row.avatar_url.as_deref())
-                    .await,
-                user_type: UserType::Normal,
+                user: UserInfo {
+                    user_id: row.user_id,
+                    nickname: row.nickname.unwrap_or_default(),
+                    avatar_url: self
+                        .media_service
+                        .sign_url_if_path(row.avatar_url.as_deref())
+                        .await,
+                },
                 bio: row.bio,
                 tags: None,
-                is_online,
+                presence_status: is_online
+                    .map(|online| if online { UserPresenceStatus::Online } else { UserPresenceStatus::Offline }),
                 last_online,
                 location,
                 stats: None,
@@ -1061,10 +1052,7 @@ impl UserService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -1076,17 +1064,17 @@ impl UserService {
                 .media_service
                 .sign_url_if_path(user.avatar_url.as_deref())
                 .await,
-            user_type: user.user_type,
         }
     }
 
-    async fn build_user_card_stats(&self, user_id: i64) -> Result<UserCardStats> {
+    async fn build_user_card_stats(&self, user_id: i64) -> Result<UserStats> {
         let stats = self.user_repo.get_stats(user_id).await?;
-        Ok(UserCardStats {
+        Ok(UserStats {
             moments_count: stats.moments_count,
             friends_count: stats.following_count,
             followers_count: stats.followers_count,
             following_count: stats.following_count,
+            groups_count: stats.groups_count,
         })
     }
 
@@ -1112,25 +1100,13 @@ impl UserService {
             location_visible: self.privacy_bool(settings, "location_visible", true),
             online_visible: self.privacy_bool(settings, "online_visible", true),
             last_online_visible: self.privacy_bool(settings, "last_online_visible", true),
-            friends_visible: self.privacy_level(settings, "friends_visible", PrivacyLevel::Public),
-            following_visible: self.privacy_level(
-                settings,
-                "following_visible",
-                PrivacyLevel::Public,
-            ),
-            followers_visible: self.privacy_level(
-                settings,
-                "followers_visible",
-                PrivacyLevel::Public,
-            ),
-            groups_visible: self.privacy_level(settings, "groups_visible", PrivacyLevel::Public),
-            moments_visible: self.privacy_level(settings, "moments_visible", PrivacyLevel::Public),
-            liked_moments_visible: self.privacy_level(
-                settings,
-                "liked_moments_visible",
-                PrivacyLevel::Public,
-            ),
-            stats_visible: self.privacy_level(settings, "stats_visible", PrivacyLevel::Public),
+            friends_visible: self.privacy_visible(settings, "friends_visible", true),
+            following_visible: self.privacy_visible(settings, "following_visible", true),
+            followers_visible: self.privacy_visible(settings, "followers_visible", true),
+            groups_visible: self.privacy_visible(settings, "groups_visible", true),
+            moments_visible: self.privacy_visible(settings, "moments_visible", true),
+            liked_moments_visible: self.privacy_visible(settings, "liked_moments_visible", true),
+            stats_visible: self.privacy_visible(settings, "stats_visible", true),
             allow_follow: self.privacy_bool(settings, "allow_follow", true),
             allow_private_chat: self.privacy_chat_permission(
                 settings,
@@ -1148,6 +1124,18 @@ impl UserService {
         settings
             .and_then(|s| s.privacy_settings.get(key))
             .and_then(|v| v.as_bool())
+            .unwrap_or(default)
+    }
+
+    /// 解析可见性字段：支持 bool 或 "public"/"private" 字符串（向后兼容）
+    fn privacy_visible(&self, settings: Option<&UserSettingsRow>, key: &str, default: bool) -> bool {
+        settings
+            .and_then(|s| s.privacy_settings.get(key))
+            .and_then(|v| {
+                v.as_bool().or_else(|| {
+                    v.as_str().map(|s| matches!(s.to_lowercase().as_str(), "public" | "true" | "1"))
+                })
+            })
             .unwrap_or(default)
     }
 
@@ -1215,15 +1203,25 @@ impl UserService {
                 None => None,
             };
 
+            let user_info = UserInfo {
+                user_id: row.user_id,
+                nickname: row.user_nickname.clone().unwrap_or_default(),
+                avatar_url: self
+                    .media_service
+                    .sign_url_if_path(row.user_avatar_url.as_deref())
+                    .await,
+            };
             items.push(UserMomentListItem {
                 moment_id: row.moment_id.to_string(),
                 description: row.description.unwrap_or_default(),
                 images: image_list,
                 tags,
-                mentions: row.mentions,
+                mentions: row.mentions.clone(),
                 created_at: row.created_at.to_rfc3339(),
                 likes_count: row.like_count,
                 comments_count: row.comments_count,
+                shares_count: 0,
+                user: user_info,
                 location: RelativeLocation {
                     point: crate::dto::response::GeoPoint {
                         latitude: row.latitude.unwrap_or(0.0),
@@ -1233,15 +1231,15 @@ impl UserService {
                     distance: None,
                     bearing_degrees: None,
                 },
+                privacy_level: None,
+                my_state: None,
+                recommendation: None,
             });
         }
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -1258,6 +1256,7 @@ impl UserService {
             let signed = self.media_service.sign_url_if_path(Some(&row.url)).await;
             images.push(crate::dto::response::MomentImage {
                 url: signed.unwrap_or_else(|| row.url.clone()),
+                thumbnail_url: None,
                 width: row.width,
                 height: row.height,
                 content_type: None,

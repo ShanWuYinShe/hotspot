@@ -10,22 +10,22 @@ alwaysApply: true
 - **命名空间**: `system`
 - **基础路径**: `/api/v1/system/`
 - **引用**: 
-  - 基础规范：`@api_spec_base.mdc`
-  - 通用类型：`@api_spec_types.mdc`
-  - 错误码：`@api_spec_errors.mdc`
+  - 基础规范：`@spec/api_spec_base.mdc`
+  - 通用类型：`@spec/api_spec_types.mdc`
+  - 错误码：`@spec/api_spec_errors.mdc`
 
 ## 端点总览
 
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
-| `POST /api/v1/system/get_meta` | API 版本元信息 | 可选 | 无 |
-| `POST /api/v1/system/health` | 健康检查 | 可选 | 无 |
-| `POST /api/v1/system/list_announcements` | 系统公告列表 | 可选 | 无 |
-| `POST /api/v1/system/get_client_config` | 客户端公开配置 | 可选 | 无 |
+| `POST /api/v1/system/get_meta` | API 版本元信息 | 无 | 无 |
+| `POST /api/v1/system/health` | 健康检查 | 无 | 无 |
+| `POST /api/v1/system/list_announcements` | 系统公告列表 | 无 | 无 |
+| `POST /api/v1/system/get_client_config` | 客户端公开配置 | 无 | 无 |
 
 ## 类型定义
 
-以下类型定义于 `@api_spec_types.mdc`：
+以下类型定义于 `@spec/api_spec_types.mdc`：
 - `SystemAnnouncementItem`
 
 ## 端点详情
@@ -34,7 +34,7 @@ alwaysApply: true
 
 获取当前 API 版本的元信息，包括废弃状态和下线计划。
 
-- **认证**: 可选
+- **认证**: 无
 - **幂等**: 无
 
 **说明**：
@@ -77,7 +77,7 @@ type ApiVersionStatus =
 
 系统健康检查。
 
-- **认证**: 可选
+- **认证**: 无
 - **幂等**: 无
 
 **说明**：
@@ -106,24 +106,20 @@ interface HealthStatus {
 
 获取系统公告列表。
 
-- **认证**: 可选
+- **认证**: 无
 - **幂等**: 无
 
 **说明**：
 - 系统公告属于"默认公开资源"，无需认证
 
-**Request**: `AnnouncementListRequest`
-```typescript
-interface AnnouncementListRequest {
-  limit?: number;  // default: 10, max: 50
-}
-```
+**Request**: `{}`
 
 **Response**: `ApiResponse<{ items: SystemAnnouncementItem[] }>`
 
 **说明**：
+- 返回当前有效的最新公告，返回条数由服务端 `AppConfig.response_defaults` 控制，客户端不传数量参数
 - 普通用户只需获取最新的 N 条公告，无需分页翻阅历史
-- 管理员查看/搜索全部公告（含历史）请使用 `admin/announcements/search`（定义于 `@api_spec_admin_moderation.mdc`）
+- 管理员查看/搜索全部公告（含历史）请使用 `admin/announcements/search`（定义于 `@spec/api_spec_admin_moderation.mdc`）
 - 按 `created_at` 倒序排列
 
 **错误码**: `10000`
@@ -134,12 +130,12 @@ interface AnnouncementListRequest {
 
 获取客户端公开配置。
 
-- **认证**: 可选
+- **认证**: 无
 - **幂等**: 无
 
 **说明**：
 - 此接口为公开资源，**无需认证**
-- 返回的 `ClientConfig` 由 `AppConfig`（见 `@api_spec_admin_core.mdc`）投影得来，包含功能开关、输入限制、联系方式
+- 返回的 `ClientConfig` 由 `AppConfig`（见 `@spec/api_spec_admin_core.mdc`）投影得来，包含功能开关、输入限制、联系方式
 - 客户端应在启动时调用并缓存，配置变更频率低
 
 **Request**: `{}`
@@ -148,12 +144,13 @@ interface AnnouncementListRequest {
 
 ```typescript
 // 客户端公开配置
-// ClientConfig 是 AppConfig（见 @api_spec_admin_core.mdc）中客户端可见部分的投影
+// ClientConfig 是 AppConfig（见 @spec/api_spec_admin_core.mdc）中客户端可见部分的投影
 // 客户端启动时通过 system/get_client_config 获取并缓存
 interface ClientConfig {
   features: FeatureSwitches;
   limits: AppLimits;
   contact: ContactInfo;
+  defaults: ClientDefaults;
 }
 
 interface FeatureSwitches {
@@ -177,6 +174,14 @@ interface ContactInfo {
   privacy_policy_url: string;
   terms_of_service_url: string;
   official_website: string;
+}
+
+// 客户端可见的默认值
+// 由管理员在后台配置（见 @spec/api_spec_admin_core.mdc 中 ContentDefaults）
+interface ClientDefaults {
+  default_location: Location;    // 默认位置，Location 定义于 @spec/api_spec_types.mdc
+  default_user_avatar: string;   // 默认用户头像 URL
+  default_group_avatar: string;  // 默认群组头像 URL
 }
 ```
 

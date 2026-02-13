@@ -3,8 +3,9 @@ use crate::{
     dto::{
         request::{FeedGroupsRequest, FeedMomentsRequest, FeedTrendingRequest, FeedUsersRequest},
         response::{
-            FeedGroupItem, FeedMomentItem, FeedTrendingData, FeedUserItem, PaginatedData,
-            PaginationMeta, TrendingTagItem, UserSearchItem,
+            FeedGroupItem, FeedMomentItem, FeedTrendingData, FeedUserItem, GroupInfo, MyMomentState,
+            PaginatedData, RelativeLocation, SocialContext, TrendingTagItem,
+            UserInfo,
         },
     },
     error::AppError,
@@ -12,7 +13,7 @@ use crate::{
         group_repo::GroupRepository, moment_repo::MomentRepository, tag_repo::TagRepository,
         user_repo::UserRepository,
     },
-    types::enums::{FeedSource, TagTrend},
+    types::enums::{FeedSource, TagTrend, UserPresenceStatus},
     utils::validation::Validator,
 };
 
@@ -116,11 +117,10 @@ impl FeedService {
 
             items.push(FeedMomentItem {
                 moment_id: m.moment_id.to_string(),
-                user: crate::dto::response::UserInfo {
+                user: UserInfo {
                     user_id: m.user_id,
                     nickname: m.nickname,
                     avatar_url,
-                    user_type: m.user_type,
                 },
                 description: m.description,
                 images,
@@ -129,7 +129,8 @@ impl FeedService {
                 created_at: m.created_at.to_rfc3339(),
                 likes_count: m.likes_count as i32,
                 comments_count: m.comments_count as i32,
-                location: crate::dto::response::RelativeLocation {
+                shares_count: 0,
+                location: RelativeLocation {
                     point: crate::dto::response::GeoPoint {
                         latitude: m.latitude.unwrap_or(0.0),
                         longitude: m.longitude.unwrap_or(0.0),
@@ -138,18 +139,18 @@ impl FeedService {
                     distance: m.distance,
                     bearing_degrees: m.bearing_degrees,
                 },
-                is_liked: liked_set.contains(&m.moment_id),
-                is_favorited: favorited_set.contains(&m.moment_id),
+                privacy_level: None,
+                my_state: Some(MyMomentState {
+                    is_liked: liked_set.contains(&m.moment_id),
+                    is_favorited: favorited_set.contains(&m.moment_id),
+                }),
                 recommendation: None, // TODO: 实现推荐理由计算逻辑
             });
         }
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -185,10 +186,12 @@ impl FeedService {
                 .await;
 
             items.push(FeedGroupItem {
-                group_chat_id: g.group_id.to_string(),
-                name: g.name,
-                avatar_url,
-                members_count: g.member_count,
+                group: GroupInfo {
+                    group_id: g.group_id.to_string(),
+                    name: g.name,
+                    avatar_url,
+                    members_count: g.member_count,
+                },
                 description: if g.description.is_empty() {
                     None
                 } else {
@@ -209,17 +212,20 @@ impl FeedService {
                     distance: Some(g.distance),
                     bearing_degrees: Some(g.bearing_degrees),
                 },
+                last_activity_at: None,
+                created_at: None,
+                owner_id: None,
+                my_state: None,        // TODO: Implement social graph logic to populate this
                 friends_in_group: None, // TODO: Implement social graph logic to populate this
-                my_state: None,         // TODO: Implement social graph logic to populate this
+                join_method: None,
+                is_searchable: None,
+                max_members: None,
             });
         }
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -303,32 +309,36 @@ impl FeedService {
                 .await;
 
             items.push(FeedUserItem {
-                user: UserSearchItem {
+                user: UserInfo {
                     user_id: u.user_id,
                     nickname: u.nickname,
                     avatar_url,
-                    bio: if u.bio.is_empty() { None } else { Some(u.bio) },
-                    tags: Some(u.tags),
-                    is_online,
-                    last_online,
-                    user_type: u.user_type,
-                    location,
-                    stats: None,
-                    relation: None,
-                    social_context: None,
                 },
-                mutual_friends_count: None, // TODO: Implement social graph logic to populate this
-                common_tags: None,          // TODO: Implement tag matching logic to populate this
-                relation: None, // TODO: Implement relationship status check to populate this
+                bio: if u.bio.is_empty() { None } else { Some(u.bio) },
+                tags: Some(u.tags),
+                presence_status: is_online.map(|online| {
+                    if online {
+                        UserPresenceStatus::Online
+                    } else {
+                        UserPresenceStatus::Offline
+                    }
+                }),
+                last_online,
+                location,
+                stats: None,
+                relation: None,
+                social_context: Some(SocialContext {
+                    mutual_friends_count: 0, // TODO: Implement social graph logic
+                    mutual_friends_preview: None,
+                    common_groups_count: None,
+                    common_tags: None,
+                }),
             });
         }
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -384,11 +394,10 @@ impl FeedService {
 
             hot_moments.push(FeedMomentItem {
                 moment_id: m.moment_id.to_string(),
-                user: crate::dto::response::UserInfo {
+                user: UserInfo {
                     user_id: m.user_id,
                     nickname: m.nickname,
                     avatar_url,
-                    user_type: m.user_type,
                 },
                 description: m.description,
                 images,
@@ -397,7 +406,8 @@ impl FeedService {
                 created_at: m.created_at.to_rfc3339(),
                 likes_count: m.likes_count as i32,
                 comments_count: m.comments_count as i32,
-                location: crate::dto::response::RelativeLocation {
+                shares_count: 0,
+                location: RelativeLocation {
                     point: crate::dto::response::GeoPoint {
                         latitude: m.latitude.unwrap_or(0.0),
                         longitude: m.longitude.unwrap_or(0.0),
@@ -406,8 +416,11 @@ impl FeedService {
                     distance: m.distance,
                     bearing_degrees: m.bearing_degrees,
                 },
-                is_liked: liked_set.contains(&m.moment_id),
-                is_favorited: favorited_set.contains(&m.moment_id),
+                privacy_level: None,
+                my_state: Some(MyMomentState {
+                    is_liked: liked_set.contains(&m.moment_id),
+                    is_favorited: favorited_set.contains(&m.moment_id),
+                }),
                 recommendation: None, // TODO: 实现推荐理由计算逻辑
             });
         }
@@ -436,6 +449,7 @@ impl FeedService {
             };
             signed_images.push(crate::dto::response::MomentImage {
                 url,
+                thumbnail_url: None,
                 width: None,
                 height: None,
                 content_type: None,

@@ -229,7 +229,6 @@ pub async fn list_admins(
                     user_id: row.user.user_id,
                     nickname: row.user.nickname,
                     avatar_url: row.user.avatar_url,
-                    user_type: row.user.user_type,
                 },
                 permissions,
                 roles: row

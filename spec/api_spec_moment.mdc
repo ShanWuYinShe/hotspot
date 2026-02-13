@@ -14,10 +14,10 @@ alwaysApply: true
   - `/api/v1/moments/`
   - `/api/v1/comments/`
 - **引用**:
-  - 基础规范：`@api_spec_base.mdc`
-  - 通用类型：`@api_spec_types.mdc`
-  - 错误码：`@api_spec_errors.mdc`
-  - 搜索建议：`@api_spec_search.mdc`（per-module suggest 已移除，使用全局 `search/suggest`）
+  - 基础规范：`@spec/api_spec_base.mdc`
+  - 通用类型：`@spec/api_spec_types.mdc`
+  - 错误码：`@spec/api_spec_errors.mdc`
+  - 搜索建议：`@spec/api_spec_search.mdc`（per-module suggest 已移除，使用全局 `search/suggest`）
 
 ## 端点总览
 
@@ -45,7 +45,7 @@ alwaysApply: true
 
 ## 类型定义
 
-以下类型定义于 `@api_spec_types.mdc`：
+以下类型定义于 `@spec/api_spec_types.mdc`：
 - `MomentItem`
 - `PrivacyLevel`
 - `Location`
@@ -59,9 +59,9 @@ alwaysApply: true
 ### 搜索与发现
 
 说明（Token 可选的搜索语义）：
-- 生活瞬间支持 `privacy_level` 控制可见性：`public`（公开）、`followers`（关注我的人可见）、`friends`（互关好友可见）、`private`（仅自己）
+- 生活瞬间支持 `privacy_level` 控制可见性：`public`（公开）、`private`（仅自己可见）
 - 未登录用户仅能访问 `public` 的瞬间
-- 登录态下可访问自己的所有瞬间 + 好友的 `friends` 瞬间 + 关注者的 `followers` 瞬间 + 所有 `public` 瞬间
+- 登录态下可访问自己的所有瞬间（含 `private`）+ 所有 `public` 瞬间
 - 登录态会返回 `@auth-only` 字段（如 `my_state`）
 
 ### POST /api/v1/moments/search
@@ -374,7 +374,9 @@ interface DeleteCommentRequest {
 
 ### POST /api/v1/comments/list
 
-获取评论列表（顶层评论）。
+获取指定瞬间的顶层评论列表。
+
+Token 可选；登录态返回包含 `@auth-only` 字段的完整 `CommentItem`（如 `is_liked`）；未登录态不返回 `@auth-only` 字段。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -394,7 +396,9 @@ interface CommentsRequest {
 
 ### POST /api/v1/comments/list_replies
 
-获取子评论列表。
+获取指定评论的子评论列表。
+
+Token 可选；登录态返回包含 `@auth-only` 字段的完整 `CommentItem`（如 `is_liked`）；未登录态不返回 `@auth-only` 字段。
 
 - **认证**: 可选
 - **幂等**: 无

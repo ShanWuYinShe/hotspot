@@ -164,6 +164,7 @@ class PrivateChatsEndpoints {
 
 class PrivateMessagesMeEndpoints {
   readonly MARK_AS_READ: string = '/api/v1/private_messages/me/mark_as_read';
+  readonly MARK_ALL_READ: string = '/api/v1/private_messages/me/mark_all_read';
 }
 
 class PrivateMessagesEndpoints {
@@ -176,6 +177,7 @@ class PrivateMessagesEndpoints {
 
 class GroupMessagesMeEndpoints {
   readonly MARK_AS_READ: string = '/api/v1/group_messages/me/mark_as_read';
+  readonly MARK_ALL_READ: string = '/api/v1/group_messages/me/mark_all_read';
 }
 
 class GroupMessagesEndpoints {
@@ -240,6 +242,14 @@ class MapEndpoints {
   readonly RENDER: string = '/api/v1/map/render';
 }
 
+// Notification
+class NotificationsEndpoints {
+  readonly LIST: string = '/api/v1/notifications/list';
+  readonly UNREAD_COUNT: string = '/api/v1/notifications/unread_count';
+  readonly MARK_AS_READ: string = '/api/v1/notifications/mark_as_read';
+  readonly MARK_ALL_READ: string = '/api/v1/notifications/mark_all_read';
+}
+
 // Tag
 class TagEndpoints {
   readonly LIST_TRENDING: string = '/api/v1/tags/list_trending';
@@ -263,7 +273,6 @@ class ShareMeEndpoints {
 class ShareEndpoints {
   readonly CREATE: string = '/api/v1/share/create';
   readonly GET: string = '/api/v1/share/get';
-  readonly APPLY: string = '/api/v1/share/apply';
   readonly REVOKE: string = '/api/v1/share/revoke';
   readonly ME: ShareMeEndpoints = new ShareMeEndpoints();
 }
@@ -281,6 +290,7 @@ export class ApiEndpoints {
   static readonly SYSTEM: SystemEndpoints = new SystemEndpoints();
   static readonly COMMENT: CommentEndpoints = new CommentEndpoints();
   static readonly MAP: MapEndpoints = new MapEndpoints();
+  static readonly NOTIFICATIONS: NotificationsEndpoints = new NotificationsEndpoints();
   static readonly TAG: TagEndpoints = new TagEndpoints();
   static readonly REPORT: ReportEndpoints = new ReportEndpoints();
   static readonly SHARE: ShareEndpoints = new ShareEndpoints();

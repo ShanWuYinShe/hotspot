@@ -2,23 +2,12 @@ use axum::{extract::State, Json};
 
 use crate::{
     dto::{
-        request::{AdminTagSearchRequest, SuggestTagsRequest, TrendingTagsRequest},
-        response::{ApiResponse, TagSuggestData, TrendingTagsData},
+        request::{AdminTagSearchRequest, SuggestTagsRequest},
+        response::{ApiResponse, TagSuggestData},
     },
     error::Result,
     state::AppState,
 };
-
-// ==================== Token 可选 ====================
-
-/// 获取热门标签
-pub async fn trending(
-    State(state): State<AppState>,
-    Json(req_body): Json<TrendingTagsRequest>,
-) -> Result<Json<ApiResponse<TrendingTagsData>>> {
-    let response = state.tag_service.get_trending(&req_body).await?;
-    Ok(Json(ApiResponse::success(response)))
-}
 
 // ==================== Admin APIs ====================
 

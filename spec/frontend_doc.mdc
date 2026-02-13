@@ -11,10 +11,10 @@ alwaysApply: false
 
 权威引用：
 - **API 契约**：`@spec/api_spec_index.mdc`
-- **基础规范**：`@api_spec_base.mdc`
-- **通用类型**：`@api_spec_types.mdc`
+- **基础规范**：`@spec/api_spec_base.mdc`
+- **通用类型**：`@spec/api_spec_types.mdc`
 - **错误码**：`@spec/api_spec_errors.mdc`
-- **前端实现规范**：`@frontend_rule.mdc`
+- **前端实现规范**：`@spec/frontend_rule.mdc`
 
 ---
 

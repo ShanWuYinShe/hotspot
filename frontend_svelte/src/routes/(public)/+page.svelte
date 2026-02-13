@@ -3,7 +3,7 @@
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
-	import { feedService, tagsService, momentsService } from '$lib/api/services';
+	import { feedService, momentsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -82,9 +82,9 @@
 	async function loadTrendingTags() {
 		loadingTags = true;
 		try {
-			const response = await tagsService.getTrending();
+			const response = await feedService.getTrending();
 			if (isSuccess(response) && response.data) {
-				trendingTags = response.data.items;
+				trendingTags = response.data.trending_tags ?? [];
 			}
 		} catch {
 			// ignore

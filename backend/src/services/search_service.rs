@@ -112,7 +112,7 @@ impl SearchService {
             };
 
             items.push(SearchSuggestItem::Group(GroupSuggestItem {
-                group_chat_id: group.group_id.to_string(),
+                group_id: group.group_id.to_string(),
                 name: group.name,
                 avatar_url,
                 description,

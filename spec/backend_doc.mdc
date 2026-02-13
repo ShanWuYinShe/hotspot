@@ -18,10 +18,10 @@ alwaysApply: false
 
 权威引用：
 - **API 契约**：`@spec/api_spec_index.mdc`
-- **基础规范**：`@api_spec_base.mdc`
-- **通用类型**：`@api_spec_types.mdc`
+- **基础规范**：`@spec/api_spec_base.mdc`
+- **通用类型**：`@spec/api_spec_types.mdc`
 - **错误码**：`@spec/api_spec_errors.mdc`
-- **实现规范**：`@backend_rule.mdc`
+- **实现规范**：`@spec/backend_rule.mdc`
 
 ---
 
@@ -85,7 +85,7 @@ alwaysApply: false
 ## 实时能力（WebSocket）
 
 - 连接、鉴权、订阅与事件推送
-- 事件与订阅模型以 `@api_spec_websocket.mdc` 为准
+- 事件与订阅模型以 `@spec/api_spec_websocket.mdc` 为准
 
 ---
 

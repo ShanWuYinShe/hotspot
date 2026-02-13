@@ -18,16 +18,17 @@ use crate::{
         },
         response::{
             MomentImage, MomentLikeItem, MomentSearchItem, MyMomentState, PaginatedData,
-            PaginationMeta, RelativeLocation, UserInfo, UserMomentListItem,
+            RelativeLocation, UserInfo, UserMomentListItem,
         },
     },
     error::{AppError, Result},
     events::event_types::AppEvent,
     repositories::{
         moment_repo::{
-            MomentDetailRow, MomentImageRow, MomentLikeRow, MomentListRow, MomentRepository,
+            MomentDetailRow, MomentImageRow, MomentLikeRow, MomentRepository,
         },
         tag_repo::TagRepository,
+        user_repo::UserRepository,
         user_settings_repo::UserSettingsRepository,
     },
     types::enums::PrivacyLevel,
@@ -41,6 +42,7 @@ pub struct MomentService {
     event_bus: Arc<EventBus>,
     moment_repo: MomentRepository,
     tag_repo: TagRepository,
+    user_repo: UserRepository,
     _user_settings_repo: UserSettingsRepository,
     media_service: crate::services::media_service::MediaService,
     _cache_manager: CacheManager,
@@ -52,6 +54,7 @@ impl MomentService {
         event_bus: Arc<EventBus>,
         moment_repo: MomentRepository,
         tag_repo: TagRepository,
+        user_repo: UserRepository,
         user_settings_repo: UserSettingsRepository,
         media_service: crate::services::media_service::MediaService,
         cache_manager: CacheManager,
@@ -61,6 +64,7 @@ impl MomentService {
             event_bus,
             moment_repo,
             tag_repo,
+            user_repo,
             _user_settings_repo: user_settings_repo,
             media_service,
             _cache_manager: cache_manager,
@@ -251,10 +255,7 @@ impl MomentService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -324,12 +325,28 @@ impl MomentService {
                 let signed = self.media_service.sign_url_if_path(Some(url)).await;
                 list.push(MomentImage {
                     url: signed.unwrap_or_else(|| url.clone()),
+                    thumbnail_url: None,
                     width: *width,
                     height: *height,
                     content_type: None,
                 });
             }
             Some(list)
+        };
+
+        let user_row = self
+            .user_repo
+            .find_by_id(user_id)
+            .await?
+            .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
+
+        let user = UserInfo {
+            user_id,
+            nickname: user_row.nickname.unwrap_or_default(),
+            avatar_url: self
+                .media_service
+                .sign_url_if_path(user_row.avatar_url.as_deref())
+                .await,
         };
 
         Ok(UserMomentListItem {
@@ -341,6 +358,8 @@ impl MomentService {
             created_at: moment.created_at.to_rfc3339(),
             likes_count: moment.like_count,
             comments_count: moment.comments_count,
+            shares_count: 0,
+            user,
             location: RelativeLocation {
                 point: crate::dto::response::GeoPoint {
                     latitude: req.location.point.latitude,
@@ -350,6 +369,9 @@ impl MomentService {
                 distance: None,
                 bearing_degrees: None,
             },
+            privacy_level: None,
+            my_state: None,
+            recommendation: None,
         })
     }
 
@@ -529,7 +551,6 @@ impl MomentService {
                     .media_service
                     .sign_url_if_path(row.user_avatar_url.as_deref())
                     .await,
-                user_type: crate::types::enums::UserType::Normal,
             },
             liked_at: row.created_at.to_rfc3339(),
         }
@@ -576,10 +597,7 @@ impl MomentService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -597,15 +615,6 @@ impl MomentService {
 
         MomentSearchItem {
             moment_id: detail.moment_id.to_string(),
-            user: UserInfo {
-                user_id: detail.user_id,
-                nickname: detail.user_nickname.unwrap_or_default(),
-                avatar_url: self
-                    .media_service
-                    .sign_url_if_path(detail.user_avatar_url.as_deref())
-                    .await,
-                user_type: crate::types::enums::UserType::Normal,
-            },
             description: detail.description.unwrap_or_default(),
             images: image_list,
             tags,
@@ -613,19 +622,30 @@ impl MomentService {
             created_at: detail.created_at.to_rfc3339(),
             likes_count: detail.like_count,
             comments_count: detail.comments_count,
+            shares_count: 0,
+            user: UserInfo {
+                user_id: detail.user_id,
+                nickname: detail.user_nickname.unwrap_or_default(),
+                avatar_url: self
+                    .media_service
+                    .sign_url_if_path(detail.user_avatar_url.as_deref())
+                    .await,
+            },
             location: Self::build_location(
                 detail.latitude,
                 detail.longitude,
                 detail.location_name,
                 detail.distance,
             ),
+            privacy_level: None,
             my_state,
+            recommendation: None,
         }
     }
 
     async fn build_user_moment_list(
         &self,
-        rows: Vec<MomentListRow>,
+        rows: Vec<MomentDetailRow>,
         next_cursor: Option<String>,
     ) -> Result<PaginatedData<UserMomentListItem>> {
         let moment_ids: Vec<Uuid> = rows.iter().map(|r| r.moment_id).collect();
@@ -637,8 +657,17 @@ impl MomentService {
             let tags = tags_map.get(&row.moment_id).cloned().unwrap_or_default();
             let images = images_map.get(&row.moment_id);
             let image_list = match images {
-                Some(rows) => self.sign_images(rows).await,
+                Some(img_rows) => self.sign_images(img_rows).await,
                 None => None,
+            };
+
+            let user = UserInfo {
+                user_id: row.user_id,
+                nickname: row.user_nickname.unwrap_or_default(),
+                avatar_url: self
+                    .media_service
+                    .sign_url_if_path(row.user_avatar_url.as_deref())
+                    .await,
             };
 
             items.push(UserMomentListItem {
@@ -650,21 +679,23 @@ impl MomentService {
                 created_at: row.created_at.to_rfc3339(),
                 likes_count: row.like_count,
                 comments_count: row.comments_count,
+                shares_count: 0,
+                user,
                 location: Self::build_location(
                     row.latitude,
                     row.longitude,
                     row.location_name,
-                    None,
+                    row.distance,
                 ),
+                privacy_level: None,
+                my_state: None,
+                recommendation: None,
             });
         }
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -678,6 +709,7 @@ impl MomentService {
             let signed = self.media_service.sign_url_if_path(Some(&row.url)).await;
             images.push(MomentImage {
                 url: signed.unwrap_or_else(|| row.url.clone()),
+                thumbnail_url: None,
                 width: row.width,
                 height: row.height,
                 content_type: None,

@@ -108,18 +108,17 @@ export enum RoomType {
   CONVERSATION = 'conversation'
 }
 
-// 通知类型枚举
+// 通知类型枚举（对齐 spec/api_spec_notification.mdc）
 export enum NotificationType {
   NEW_FOLLOWER = 'new_follower',
   MUTUAL_FOLLOW = 'mutual_follow',
-  GROUP_INVITATION = 'group_invitation',
-  GROUP_INVITE_RESPONSE = 'group_invite_response',
-  GROUP_APPLICATION = 'group_application',
-  GROUP_APPLICATION_RESPONSE = 'group_application_response',
-  MESSAGE_MENTION = 'message_mention',
-  MOMENT_LIKE = 'moment_like',
-  MOMENT_COMMENT = 'moment_comment',
+  MOMENT_LIKED = 'moment_liked',
+  MOMENT_COMMENTED = 'moment_commented',
+  COMMENT_LIKED = 'comment_liked',
   COMMENT_REPLY = 'comment_reply',
+  MENTIONED = 'mentioned',
+  GROUP_INVITE_RECEIVED = 'group_invite_received',
+  GROUP_APPLICATION_ACCEPTED = 'group_application_accepted',
   SYSTEM_ANNOUNCEMENT = 'system_announcement'
 }
 

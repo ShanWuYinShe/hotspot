@@ -31,9 +31,9 @@ export const systemService = {
 	},
 
 	/**
-	 * 获取系统公告列表（非分页，返回 { items }）
+	 * 获取系统公告列表（非分页，返回条数由服务端 ResponseDefaults 控制）
 	 */
-	getAnnouncements(params?: { limit?: number }) {
-		return post<{ items: SystemAnnouncementItem[] }>(SYSTEM.LIST_ANNOUNCEMENTS, params);
+	getAnnouncements() {
+		return post<{ items: SystemAnnouncementItem[] }>(SYSTEM.LIST_ANNOUNCEMENTS, {});
 	}
 };

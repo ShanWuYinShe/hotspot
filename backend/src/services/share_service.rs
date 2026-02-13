@@ -3,9 +3,9 @@
 //! 负责分享的业务逻辑
 
 use crate::dto::request::{
-    ApplyShareRequest, CreateShareRequest, GetShareRequest, MySharesRequest, RevokeShareRequest,
+    CreateShareRequest, GetShareRequest, MySharesRequest, RevokeShareRequest,
 };
-use crate::dto::response::{PaginatedData, PaginationMeta, Share, UserInfo};
+use crate::dto::response::{PaginatedData, Share, UserInfo};
 use crate::error::AppError;
 use crate::repositories::share_repo::ShareRepository;
 use crate::types::enums::{ShareType, UserType};
@@ -55,7 +55,6 @@ impl ShareService {
             user_id: row.user_id,
             nickname: row.nickname.unwrap_or_else(|| "未知用户".to_string()),
             avatar_url: row.avatar_url,
-            user_type: row.user_type.unwrap_or(UserType::Normal),
         })?;
 
         Ok(Share {
@@ -92,7 +91,6 @@ impl ShareService {
             user_id: row.user_id,
             nickname: row.nickname.unwrap_or_else(|| "未知用户".to_string()),
             avatar_url: row.avatar_url,
-            user_type: row.user_type.unwrap_or(UserType::Normal),
         })?;
 
         // 解析 share_type
@@ -109,103 +107,6 @@ impl ShareService {
             payload: db_share.payload,
             created_at: db_share.created_at.to_rfc3339(),
         })
-    }
-
-    /// 应用分享
-    pub async fn apply_share(
-        pool: &PgPool,
-        user_id: i64,
-        req: ApplyShareRequest,
-    ) -> Result<(), AppError> {
-        // 获取分享
-        let db_share = ShareRepository::get_by_code(pool, &req.share_code)
-            .await?
-            .ok_or(AppError::NotFound("分享不存在或已删除".to_string()))?;
-
-        // 解析 share_type
-        let share_type = db_share
-            .share_type
-            .parse::<ShareType>()
-            .map_err(|_| AppError::NotFound("无效的分享类型".to_string()))?;
-
-        // 根据类型执行不同操作
-        match share_type {
-            ShareType::ReferencePoint => {
-                Self::apply_location_share(pool, user_id, &db_share.payload).await?;
-            }
-            ShareType::Moment => {
-                // TODO: 实现动态分享的应用逻辑
-                return Err(AppError::NotFound("动态分享暂未实现".to_string()));
-            }
-            ShareType::Group => {
-                // TODO: 实现群组分享的应用逻辑
-                return Err(AppError::NotFound("群组分享暂未实现".to_string()));
-            }
-            ShareType::User => {
-                // TODO: 实现用户分享的应用逻辑
-                return Err(AppError::NotFound("用户分享暂未实现".to_string()));
-            }
-        }
-
-        Ok(())
-    }
-
-    /// 应用位置分享（更新用户的浏览锚点）
-    async fn apply_location_share(
-        pool: &PgPool,
-        user_id: i64,
-        payload: &serde_json::Value,
-    ) -> Result<(), AppError> {
-        let latitude = payload
-            .get("latitude")
-            .and_then(|v| v.as_f64())
-            .ok_or(AppError::OutOfRange("无效的纬度".to_string()))?;
-
-        let longitude = payload
-            .get("longitude")
-            .and_then(|v| v.as_f64())
-            .ok_or(AppError::OutOfRange("无效的经度".to_string()))?;
-
-        let location_name = payload
-            .get("location_name")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-
-        // 验证经纬度范围
-        if !(-90.0..=90.0).contains(&latitude) {
-            return Err(AppError::OutOfRange(
-                "纬度必须在 -90 到 90 之间".to_string(),
-            ));
-        }
-        if !(-180.0..=180.0).contains(&longitude) {
-            return Err(AppError::OutOfRange(
-                "经度必须在 -180 到 180 之间".to_string(),
-            ));
-        }
-
-        // 更新用户的浏览锚点（保持原有的浏览半径偏好）
-        sqlx::query!(
-            r#"
-            UPDATE users
-            SET location = ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
-                location_name = $3,
-                location_updated_at = NOW(),
-                updated_at = CURRENT_TIMESTAMP
-            WHERE user_id = $4
-            "#,
-            latitude,
-            longitude,
-            location_name,
-            user_id
-        )
-        .execute(pool)
-        .await
-        .map_err(|e| {
-            tracing::error!("更新用户浏览锚点失败: {}", e);
-            AppError::internal(e.to_string())
-        })?;
-
-        Ok(())
     }
 
     /// 撤销分享（按 share_id）
@@ -266,7 +167,6 @@ impl ShareService {
                     .nickname
                     .unwrap_or_else(|| "未知用户".to_string()),
                 avatar_url: creator_row.avatar_url,
-                user_type: creator_row.user_type.unwrap_or(UserType::Normal),
             };
 
             let share_type = row
@@ -286,10 +186,7 @@ impl ShareService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 

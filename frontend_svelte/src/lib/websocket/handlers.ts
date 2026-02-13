@@ -722,25 +722,6 @@ class WebSocketEventHandlers {
 				);
 			}
 		});
-
-		// 群用户进入/离开群聊（spec 新增事件）
-		websocketStore.on('GroupUserEntered', (payload) => {
-			log('[WS] 用户进入群聊:', payload);
-			if (browser) {
-				window.dispatchEvent(
-					new CustomEvent('group-user-entered', { detail: payload })
-				);
-			}
-		});
-
-		websocketStore.on('GroupUserExited', (payload) => {
-			log('[WS] 用户离开群聊:', payload);
-			if (browser) {
-				window.dispatchEvent(
-					new CustomEvent('group-user-exited', { detail: payload })
-				);
-			}
-		});
 	}
 
 	// ============ 添加自定义处理器 ============
@@ -801,26 +782,6 @@ class WebSocketEventHandlers {
 		websocketStore.send({
 			type: 'GroupTyping',
 			payload: { group_id: groupId, is_typing: isTyping }
-		});
-	}
-
-	/**
-	 * 通知进入群聊页面
-	 */
-	sendGroupEnter(groupId: string) {
-		websocketStore.send({
-			type: 'GroupEnter',
-			payload: { group_id: groupId }
-		});
-	}
-
-	/**
-	 * 通知离开群聊页面
-	 */
-	sendGroupLeave(groupId: string) {
-		websocketStore.send({
-			type: 'GroupLeave',
-			payload: { group_id: groupId }
 		});
 	}
 }

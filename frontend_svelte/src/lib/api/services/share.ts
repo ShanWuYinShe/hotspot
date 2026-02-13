@@ -6,11 +6,9 @@ import { post, paginate } from '../client';
 import { SHARE } from '../endpoints';
 import type {
 	ApiResponse,
-	ApplyShareRequest,
 	CreateShareRequest,
 	GetShareRequest,
 	ShareDetail,
-	ShareApplyResult,
 	ShareCreated,
 	ShareListItem,
 	ShareType,
@@ -30,13 +28,6 @@ export const shareService = {
 	 */
 	get(request: GetShareRequest): Promise<ApiResponse<ShareDetail>> {
 		return post<ShareDetail>(SHARE.GET, request);
-	},
-
-	/**
-	 * 应用分享
-	 */
-	apply(request: ApplyShareRequest): Promise<ApiResponse<ShareApplyResult>> {
-		return post<ShareApplyResult>(SHARE.APPLY, request);
 	},
 
 	/**

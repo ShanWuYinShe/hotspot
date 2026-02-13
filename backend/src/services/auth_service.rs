@@ -14,7 +14,7 @@ use crate::dto::request::{
     ChangePasswordRequest, GuestRequest, LoginRequest, RegisterRequest,
     RequestPasswordResetRequest, ResetPasswordRequest, RevokeSessionRequest, SessionsRequest,
 };
-use crate::dto::response::{AuthData, CheckStatusData, PaginatedData, PaginationMeta, SessionItem};
+use crate::dto::response::{AuthData, CheckStatusData, PaginatedData, SessionItem};
 use crate::error::{AppError, Result};
 use crate::repositories::{
     session_repo::SessionRepository, user_repo::UserRepository,
@@ -474,10 +474,7 @@ impl AuthService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 

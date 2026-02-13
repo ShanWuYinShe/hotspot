@@ -17,8 +17,8 @@ use crate::{
             UpdateRateLimitsRequest, UpdateUploadConfigRequest,
         },
         response::{
-            AdminGlobalSettingsData, AppLimits, ContactInfo, ContentDefaults, FeatureSwitches,
-            GlobalSettings, RateLimitConfig, RelativeLocation, UploadConfig,
+            AdminGlobalSettingsData, AppLimits, ContactInfo, ContentDefaults, DefaultLocation,
+            FeatureSwitches, GlobalSettings, RateLimitConfig, UploadConfig,
         },
     },
     error::Result,
@@ -119,8 +119,16 @@ impl SystemConfigService {
         admin_id: i64,
     ) -> Result<GlobalSettings> {
         let mut updates = HashMap::new();
-        if let Some(v) = req.default_location_name {
-            updates.insert("defaults.default_location_name", v);
+        if let Some(loc) = req.default_location {
+            if let Some(lat) = loc.latitude {
+                updates.insert("defaults.default_location_latitude", lat.to_string());
+            }
+            if let Some(lon) = loc.longitude {
+                updates.insert("defaults.default_location_longitude", lon.to_string());
+            }
+            if let Some(name) = loc.location_name {
+                updates.insert("defaults.default_location_name", name);
+            }
         }
         if let Some(v) = req.default_group_avatar {
             updates.insert("defaults.default_group_avatar", v);
@@ -288,6 +296,12 @@ impl SystemConfigService {
         if let Some(v) = req.max_page_size {
             updates.insert("response_defaults.max_page_size", v.to_string());
         }
+        if let Some(v) = req.system_announcements_count {
+            updates.insert(
+                "response_defaults.system_announcements_count",
+                v.to_string(),
+            );
+        }
 
         if !updates.is_empty() {
             self.batch_update_configs(updates, admin_id).await?;
@@ -416,6 +430,8 @@ impl SystemConfigService {
             |k: &str, default: i32| map.get(k).and_then(|v| v.parse().ok()).unwrap_or(default);
         let get_bool =
             |k: &str, default: bool| map.get(k).and_then(|v| v.parse().ok()).unwrap_or(default);
+        let get_f64 =
+            |k: &str, default: f64| map.get(k).and_then(|v| v.parse().ok()).unwrap_or(default);
         let get_json_vec = |k: &str| -> Vec<String> {
             map.get(k)
                 .and_then(|v| serde_json::from_str(v).ok())
@@ -428,14 +444,12 @@ impl SystemConfigService {
                     join_method: GroupJoinMethod::Open,
                     is_searchable: true,
                     max_members: 500,
-                    location: RelativeLocation {
-                        point: crate::dto::response::GeoPoint {
+                    location: crate::dto::request::Location {
+                        point: crate::dto::request::GeoPoint {
                             latitude: 0.0,
                             longitude: 0.0,
                         },
                         location_name: "Unknown".to_string(),
-                        distance: None,
-                        bearing_degrees: None,
                     },
                 })
         };
@@ -450,7 +464,13 @@ impl SystemConfigService {
         };
 
         let defaults = ContentDefaults {
-            default_location_name: get_str("defaults.default_location_name", "Unknown Location"),
+            default_location: DefaultLocation {
+                point: crate::dto::response::GeoPoint {
+                    latitude: get_f64("defaults.default_location_latitude", 35.154922),
+                    longitude: get_f64("defaults.default_location_longitude", 112.682524),
+                },
+                location_name: get_str("defaults.default_location_name", "南天门"),
+            },
             default_group_avatar: get_str("defaults.default_group_avatar", ""),
             default_user_avatar: get_str("defaults.default_user_avatar", ""),
             default_group_settings: get_json_settings("defaults.default_group_settings"),

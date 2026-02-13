@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
-	import { searchService, tagsService } from '$lib/api/services';
+	import { searchService, feedService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
@@ -106,9 +106,9 @@
 	async function loadTrendingTags() {
 		isLoadingTags = true;
 		try {
-			const response = await tagsService.getTrending();
+			const response = await feedService.getTrending();
 			if (isSuccess(response) && response.data) {
-				trendingTags = response.data.items;
+				trendingTags = response.data.trending_tags;
 			}
 		} catch {
 			// ignore

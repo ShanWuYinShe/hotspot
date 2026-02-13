@@ -4,18 +4,17 @@ alwaysApply: true
 # HotSpot API - 群组管理
 
 > 本文档定义 HotSpot 群组管理 (`groups`) 相关的 RPC 接口，包括群组 CRUD、成员管理、申请/邀请管理和群公告。
-> 群聊消息 (`group_messages`) 接口定义在 `@api_spec_chat.mdc`。
+> 群聊消息 (`group_messages`) 接口定义在 `@spec/api_spec_chat.mdc`。
 
 ## 模块信息
 
 - **命名空间**: `groups`
 - **基础路径**: `/api/v1/groups/`
 - **引用**: 
-  - 基础规范：`@api_spec_base.mdc`
-  - 通用类型：`@api_spec_types.mdc`
-  - 错误码：`@api_spec_errors.mdc`
-  - WebSocket：`@api_spec_websocket.mdc`
-  - 聊天模块：`@api_spec_chat.mdc`（GroupMessageItem 类型定义）
+  - 基础规范：`@spec/api_spec_base.mdc`
+  - 通用类型：`@spec/api_spec_types.mdc`
+  - 错误码：`@spec/api_spec_errors.mdc`
+  - WebSocket：`@spec/api_spec_websocket.mdc`
 
 ## 端点总览
 
@@ -26,7 +25,7 @@ alwaysApply: true
 | `POST /api/v1/groups/create` | 创建群组 | 必须 | MUST |
 | `POST /api/v1/groups/update` | 更新群组 | 必须 | 幂等语义 |
 | `POST /api/v1/groups/dismiss` | 解散群组 | 必须 | SHOULD |
-| `POST /api/v1/groups/members/list` | 成员列表 | 必须 | 无 |
+| `POST /api/v1/groups/members/list` | 成员列表 | 可选 | 无 |
 | `POST /api/v1/groups/members/search` | 搜索成员 | 必须 | 无 |
 | `POST /api/v1/groups/members/invite` | 邀请成员 | 必须 | 无 |
 | `POST /api/v1/groups/members/set_role` | 设置角色 | 必须 | 幂等语义 |
@@ -43,7 +42,7 @@ alwaysApply: true
 | `POST /api/v1/groups/me/join` | 加入群组（根据 join_method 自动处理） | 必须 | MUST |
 | `POST /api/v1/groups/me/transfer_ownership` | 转让群主 | 必须 | SHOULD |
 | `POST /api/v1/groups/announcements/create` | 发布公告 | 必须 | MUST |
-| `POST /api/v1/groups/announcements/list` | 公告列表 | 必须 | 无 |
+| `POST /api/v1/groups/announcements/list` | 公告列表 | 可选 | 无 |
 | `POST /api/v1/groups/announcements/update` | 更新公告 | 必须 | 幂等语义 |
 | `POST /api/v1/groups/announcements/delete` | 删除公告 | 必须 | 幂等语义 |
 | `POST /api/v1/groups/me/list` | 我的群组列表 | 必须 | 无 |
@@ -56,7 +55,7 @@ alwaysApply: true
 
 ## 类型定义
 
-以下类型定义于 `@api_spec_types.mdc`：
+以下类型定义于 `@spec/api_spec_types.mdc`：
 - `GroupInfo`
 - `GroupItem`
 - `GroupSettings`
@@ -71,9 +70,6 @@ alwaysApply: true
 - `ApiResponse`
 - `UserInfo`
 - `UserPresenceStatus`
-
-以下类型定义于 `@api_spec_chat.mdc`：
-- `GroupMessageItem`
 
 ## 端点详情
 
@@ -117,7 +113,6 @@ interface SearchGroupsRequest {
 获取群组详情。
 
 Token 可选；登录态返回 `GroupItem.my_state`。
-始终返回最近消息（`recent_messages`），条数由 `AppConfig.response_defaults.chat_recent_messages_count` 控制。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -129,14 +124,7 @@ interface GroupOpenTheDoorRequest {
 }
 ```
 
-**Response**: `ApiResponse<GroupOpenResult>`
-```typescript
-// 群组详情响应
-interface GroupOpenResult {
-  group: GroupItem;
-  recent_messages: PaginatedData<GroupMessageItem>;  // GroupMessageItem 定义于 @api_spec_chat.mdc；始终返回，条数由 AppConfig.response_defaults.chat_recent_messages_count 控制
-}
-```
+**Response**: `ApiResponse<GroupItem>`
 
 **错误码**: `10000` `10300`
 
@@ -227,7 +215,7 @@ interface DismissGroupRequest {
 
 获取成员列表。
 
-- **认证**: 必须
+- **认证**: 可选
 - **幂等**: 无
 - **排序**: 按 `joined_at` 时间正序（最早加入在前）
 
@@ -595,7 +583,7 @@ interface CreateGroupAnnouncementRequest {
 
 获取群公告列表。
 
-- **认证**: 必须
+- **认证**: 可选
 - **幂等**: 无
 - **排序**: 按 `is_pinned DESC, created_at DESC` 排序
 

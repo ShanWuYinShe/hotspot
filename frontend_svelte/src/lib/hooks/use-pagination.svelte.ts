@@ -186,8 +186,8 @@ export function usePagination<T>(options?: UsePaginationOptions<T>): PaginationS
 				}
 				
 				// 更新分页状态
-				hasMore = response.data.pagination?.has_more ?? false;
-				cursor = response.data.pagination?.next_cursor;
+				hasMore = !!response.data.next_cursor;
+				cursor = response.data.next_cursor;
 				
 				// 清除错误
 				error = null;

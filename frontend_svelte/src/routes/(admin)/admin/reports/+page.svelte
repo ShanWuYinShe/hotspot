@@ -45,8 +45,8 @@
 				} else {
 					reports = response.data.items;
 				}
-				cursor = response.data.pagination.next_cursor;
-				hasMore = response.data.pagination.has_more;
+				cursor = response.data.next_cursor;
+				hasMore = !!response.data.next_cursor;
 			}
 		} catch {
 			toast.error('加载失败');
@@ -80,9 +80,12 @@
 		const reasonMap: Record<string, string> = {
 			spam: '垃圾内容',
 			harassment: '骚扰',
-			inappropriate: '不当内容',
 			violence: '暴力',
-			illegal: '违法内容',
+			hate_speech: '仇恨言论',
+			sexual_content: '色情内容',
+			misinformation: '虚假信息',
+			impersonation: '冒充',
+			self_harm: '自残',
 			other: '其他'
 		};
 		return reasonMap[reason] || reason;

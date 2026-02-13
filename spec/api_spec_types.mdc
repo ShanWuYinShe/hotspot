@@ -7,8 +7,8 @@ alwaysApply: true
 
 ## 契约引用
 
-- 基础规范与约束：`@api_spec_base.mdc`
-- 错误码：`@api_spec_errors.mdc`
+- 基础规范与约束：`@spec/api_spec_base.mdc`
+- 错误码：`@spec/api_spec_errors.mdc`
 
 ---
 
@@ -23,16 +23,17 @@ alwaysApply: true
 type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'share' | 'system';
 type SendMessageType = Exclude<MessageType, 'system'>;
 
-// 用户类型枚举
-type UserType = 'temp' | 'normal' | 'admin' | 'system';
+// 用户类型枚举（仅表达账号生命周期，不含权限角色）
+// - 'temp': 临时用户（访客，未注册）
+// - 'normal': 正式用户（已注册）
+// 管理员身份由 RBAC 系统管理（见 @spec/api_spec_admin_core.mdc），不体现在 UserType 中
+// 系统通知通过 MessageType = 'system' 和公告 API 处理，不需要"系统用户"类型
+type UserType = 'temp' | 'normal';
 
 // 隐私级别枚举（跨模块复用：用户设置、瞬间等）
-// 层级关系：public > followers > friends > private
 // - 'public': 所有人可见（包括未登录用户）
-// - 'followers': 关注我的人可见（单向关系）
-// - 'friends': 互关好友可见（双向关系，好友 = 双方互相关注的用户）
 // - 'private': 仅自己可见
-type PrivacyLevel = 'public' | 'followers' | 'friends' | 'private';
+type PrivacyLevel = 'public' | 'private';
 
 // 角色枚举
 type GroupRole = 'owner' | 'admin' | 'member';
@@ -48,6 +49,19 @@ type ReportStatus = 'pending' | 'reviewing' | 'resolved' | 'dismissed';
 // === 业务操作类型 ===
 type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group';
 type ReportHandleAction = 'resolve' | 'dismiss' | 'escalate';
+
+// 举报原因枚举（用户从中选取）
+type ReportReason =
+  | 'spam'              // 垃圾信息/广告
+  | 'harassment'        // 骚扰/欺凌
+  | 'violence'          // 暴力/威胁
+  | 'hate_speech'       // 仇恨言论
+  | 'sexual_content'    // 色情/裸露内容
+  | 'misinformation'    // 虚假信息
+  | 'impersonation'     // 冒充他人
+  | 'self_harm'         // 自伤/自杀相关
+  | 'other';            // 其他（需填写 description）
+
 type GroupJoinMethod = 'open' | 'approval' | 'invite_only';
 
 // === 公告 ===
@@ -130,10 +144,7 @@ interface PaginationParams {
 // 通用分页容器
 interface PaginatedData<T> {
   items: T[];
-  pagination: {
-    has_more: boolean;
-    next_cursor?: string;
-  };
+  next_cursor?: string;  // 下一页游标；为 undefined 时表示没有更多数据
 }
 ```
 
@@ -165,8 +176,8 @@ interface MessageMedia {
 
 **系统管理员可见性规则**：
 - 系统管理员使用普通 API 时与普通用户**无区别**：使用相同端点、获得相同响应形态
-- 其他用户可正常搜索到管理员用户、查看其资料；`UserInfo` 不包含 `user_type` 字段，普通用户无法通过任何普通 API 判断对方是否为管理员
-- 系统管理员仅通过 `users/me/profile/get` 返回的 `MyProfile.user_type` 知晓自己的身份类型
+- 其他用户可正常搜索到管理员用户、查看其资料；`UserInfo` 不包含管理员标识，普通用户无法通过任何普通 API 判断对方是否为管理员
+- 管理员身份**不通过 `UserType` 体现**（`UserType` 仅表达账号生命周期）；管理员通过 `admin/rbac/get_me`（见 `@spec/api_spec_admin_core.mdc`）获知自己的管理员身份和权限
 - 管理员专用字段（如 `status`、`login_id`、`register_ip` 等）不在本类型中定义，**仅在 `/admin/*` 路径下通过独立的 Admin 类型返回**
 - 设计专用接口用于用户联系系统管理员（如举报反馈、申诉等），此类接口中管理员身份匿名化，用户仅知道"对方是官方客服/管理员"
 
@@ -204,9 +215,7 @@ interface UserItem {
   presence_status?: UserPresenceStatus;  // 用户状态（online/offline）
   last_online?: string;                  // 最后在线时间（offline 时有值），精度截断到分钟（隐私保护，防止行为模式分析）
   
-  // 位置信息：使用 RelativeLocation
-  // - 搜索/列表场景：distance 和 bearing_degrees 有值
-  // - 详情场景：distance 和 bearing_degrees 为 undefined
+  // 位置信息（可见性规则见 RelativeLocation 类型定义）
   location?: RelativeLocation;
   
   // 统计信息（详情页返回，搜索/列表可选返回）
@@ -232,9 +241,13 @@ interface Relationship {
   is_following: boolean;       // 我是否关注了对方
   is_followed_by: boolean;     // 对方是否关注了我
   is_blocked: boolean;         // 我是否拉黑了对方
-  is_blocked_by: boolean;      // 对方是否拉黑了我
   
   // 互相关注可由客户端计算：is_following && is_followed_by
+  
+  // 设计说明：不暴露 is_blocked_by（对方是否拉黑了我）
+  // 被拉黑的用户不应感知到自己被拉黑（业界隐私最佳实践）
+  // 被拉黑后的体验由服务端隐式处理：搜索不到对方、看不到动态、无法发消息等
+  // 客户端看到的效果与"对方设置了严格隐私"一致
 }
 ```
 
@@ -258,9 +271,7 @@ interface GroupItem {
   tags?: string[];
   has_password: boolean;
   
-  // 位置信息：使用 RelativeLocation
-  // - 搜索/列表场景：distance 和 bearing_degrees 有值
-  // - 详情场景：distance 和 bearing_degrees 为 undefined
+  // 位置信息（可见性规则见 RelativeLocation 类型定义）
   location: RelativeLocation;
   
   // 列表/详情页返回
@@ -280,7 +291,6 @@ interface GroupItem {
   join_method?: GroupJoinMethod;
   is_searchable?: boolean;
   max_members?: number;
-  settings_location?: Location;  // 群组配置位置（原始 Location，非 RelativeLocation）
 }
 ```
 
@@ -353,9 +363,7 @@ interface MomentItem {
   shares_count: number;
   user: UserInfo;
   
-  // 位置信息：使用 RelativeLocation
-  // - 搜索/列表/Feed 场景：distance 和 bearing_degrees 有值
-  // - 详情/用户瞬间历史场景：distance 和 bearing_degrees 为 undefined
+  // 位置信息（可见性规则见 RelativeLocation 类型定义）
   location: RelativeLocation;
   
   // === @owner-only 以下字段仅资源拥有者返回 ===
@@ -391,7 +399,14 @@ interface MessageSent {
   message_id: string;
   sent_at: string;    // 服务端确定的发送时间
 }
+
+// 瞬间摘要快照（用于通知、WebSocket 事件等场景的轻量级预览）
+interface MomentSummary {
+  moment_id: string;
+  cover_url?: string;     // 封面图 (第一张图片)
+  text_preview: string;   // 文本内容摘要 (前50字)
+}
 ```
 
-私聊/群聊消息项类型定义在模块文档中：`@api_spec_chat.mdc`。
+私聊/群聊消息项类型定义在模块文档中：`@spec/api_spec_chat.mdc`。
 

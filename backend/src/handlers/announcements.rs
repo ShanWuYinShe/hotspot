@@ -6,7 +6,10 @@ use crate::{
             AdminAnnouncementListRequest, AdminUpdateAnnouncementRequest,
             CreateAnnouncementRequest, DeleteAnnouncementRequest, PublicAnnouncementListRequest,
         },
-        response::{ApiResponse, CreateAnnouncementData, PaginatedData, SystemAnnouncementItem},
+        response::{
+            ApiResponse, CreateAnnouncementData, PaginatedData, SystemAnnouncementItem,
+            SystemAnnouncementListData,
+        },
     },
     error::Result,
     middleware::auth::AuthenticatedUser,
@@ -98,11 +101,21 @@ pub async fn admin_delete(
 
 pub async fn public_list(
     State(state): State<AppState>,
-    Json(req): Json<PublicAnnouncementListRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<SystemAnnouncementItem>>>> {
-    let response = state
+    Json(_req): Json<PublicAnnouncementListRequest>,
+) -> Result<Json<ApiResponse<SystemAnnouncementListData>>> {
+    // 从 ResponseDefaults 配置获取返回条数，默认 10
+    let count = state
+        .system_config_service
+        .get_config_value("response_defaults.system_announcements_count")
+        .await?
+        .and_then(|s| s.parse::<i64>().ok())
+        .unwrap_or(10);
+
+    let items = state
         .announcement_service
-        .list_public_announcements(req)
+        .list_public_announcements(count)
         .await?;
-    Ok(Json(ApiResponse::success(response)))
+    Ok(Json(ApiResponse::success(SystemAnnouncementListData {
+        items,
+    })))
 }

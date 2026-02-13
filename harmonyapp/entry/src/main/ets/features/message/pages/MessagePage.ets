@@ -166,8 +166,8 @@ export struct MessagePage {
     try {
       const response = await ApiClient.getPrivateChats({ pagination: { limit: 50, cursor: cursor } });
       if (response.code === 0 && response.data) {
-        this.privateHasMore = response.data.pagination?.has_more ?? false;
-        this.privateNextCursor = response.data.pagination?.next_cursor ?? '';
+        this.privateHasMore = !!(response.data.next_cursor);
+        this.privateNextCursor = response.data.next_cursor ?? '';
         return response.data.items
           .filter((item: PrivateChatItem) => item.other_user?.user_id)
           .map((item: PrivateChatItem): ChatItem => {
@@ -196,8 +196,8 @@ export struct MessagePage {
       const request: MyGroupsRequest = { pagination: { limit: 50, cursor: cursor } };
       const response = await ApiClient.getJoinedGroups(request);
       if (response.code === 0 && response.data) {
-        this.groupHasMore = response.data.pagination?.has_more ?? false;
-        this.groupNextCursor = response.data.pagination?.next_cursor ?? '';
+        this.groupHasMore = !!(response.data.next_cursor);
+        this.groupNextCursor = response.data.next_cursor ?? '';
         return response.data.items
           .filter((item: GroupItem) => item.group?.group_id)
           .map((item: GroupItem): ChatItem => {

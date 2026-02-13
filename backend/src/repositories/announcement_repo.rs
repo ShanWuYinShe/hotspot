@@ -97,6 +97,18 @@ impl AnnouncementRepository {
     }
 
     /// 按ID查找公告
+    /// 轻量级检查公告是否存在
+    pub async fn exists(&self, announcement_id: Uuid) -> Result<bool> {
+        let row = sqlx::query_scalar!(
+            "SELECT EXISTS(SELECT 1 FROM announcements WHERE announcement_id = $1)",
+            announcement_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(row.unwrap_or(false))
+    }
+
     pub async fn find_by_id(&self, announcement_id: Uuid) -> Result<Option<AnnouncementRow>> {
         let row = sqlx::query_as!(
             AnnouncementRow,

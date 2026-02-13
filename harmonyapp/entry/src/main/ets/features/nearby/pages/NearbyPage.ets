@@ -190,8 +190,8 @@ export struct NearbyPage {
           this.moments = validItems;
           this.momentsDataSource.setData(validItems);
         }
-        this.momentsHasMore = response.data.pagination?.has_more ?? false;
-        this.momentsNextCursor = response.data.pagination?.next_cursor ?? '';
+        this.momentsHasMore = !!(response.data.next_cursor);
+        this.momentsNextCursor = response.data.next_cursor ?? '';
         try {
           WidgetDataService.getInstance().updateStats('nearbyMomentCount', this.moments.length);
         } catch {
@@ -246,8 +246,8 @@ export struct NearbyPage {
           this.users = validItems;
           this.usersDataSource.setData(validItems);
         }
-        this.usersHasMore = response.data.pagination?.has_more ?? false;
-        this.usersNextCursor = response.data.pagination?.next_cursor ?? '';
+        this.usersHasMore = !!(response.data.next_cursor);
+        this.usersNextCursor = response.data.next_cursor ?? '';
         try {
           WidgetDataService.getInstance().updateStats('nearbyUserCount', this.users.length);
         } catch {
@@ -302,8 +302,8 @@ export struct NearbyPage {
           this.groups = validItems;
           this.groupsDataSource.setData(validItems);
         }
-        this.groupsHasMore = response.data.pagination?.has_more ?? false;
-        this.groupsNextCursor = response.data.pagination?.next_cursor ?? '';
+        this.groupsHasMore = !!(response.data.next_cursor);
+        this.groupsNextCursor = response.data.next_cursor ?? '';
         try {
           WidgetDataService.getInstance().updateStats('nearbyGroupCount', this.groups.length);
         } catch {

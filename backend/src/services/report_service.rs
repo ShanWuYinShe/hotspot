@@ -1,9 +1,10 @@
+use std::str::FromStr;
 use uuid::Uuid;
 
 use crate::{
     dto::{
         request::{CreateReportRequest, HandleReportRequest, MyReportsRequest, ReportsRequest},
-        response::{CreateReportData, PaginatedData, PaginationMeta, ReportItem},
+        response::{CreateReportData, PaginatedData, ReportItem},
     },
     error::AppError,
     repositories::{
@@ -15,7 +16,7 @@ use crate::{
         report_repo::{ReportRepository, ReportRow},
         user_repo::UserRepository,
     },
-    types::enums::{ReportStatus, ReportTargetType},
+    types::enums::{ReportReason, ReportStatus, ReportTargetType},
     utils::validation::Validator,
 };
 
@@ -57,16 +58,9 @@ impl ReportService {
         reporter_id: i64,
         req: CreateReportRequest,
     ) -> Result<CreateReportData, AppError> {
-        // target_type 已是强类型枚举
+        // target_type 和 reason 已是强类型枚举
 
-        // 验证 reason
-        let reason = req.reason.trim().to_string();
-        if reason.is_empty() {
-            return Err(AppError::InvalidFormat("举报原因不能为空".to_string()));
-        }
-        if reason.chars().count() > 200 {
-            return Err(AppError::OutOfRange("举报原因长度超出范围".to_string()));
-        }
+        let reason_str = req.reason.to_string();
 
         let target_type = req.target_type;
         let target_id = normalize_report_target_id(target_type, req.target_id)?;
@@ -78,7 +72,7 @@ impl ReportService {
                 reporter_id,
                 target_type,
                 &target_id,
-                &reason,
+                &reason_str,
                 req.description,
             )
             .await?;
@@ -109,10 +103,7 @@ impl ReportService {
 
         Ok(PaginatedData {
             items: response_items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -138,10 +129,7 @@ impl ReportService {
 
         Ok(PaginatedData {
             items: response_items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -208,11 +196,13 @@ impl ReportService {
             }
         });
 
+        let reason = ReportReason::from_str(&report.reason).unwrap_or(ReportReason::Other);
+
         Ok(ReportItem {
             report_id: report.report_id.to_string(),
             target_type: report.target_type,
-            target_id: report.target_id, // 已统一为 String
-            reason: report.reason,
+            target_id: report.target_id.clone(),
+            reason,
             description: report.description,
             status: report.status,
             created_at: report.created_at.to_rfc3339(),

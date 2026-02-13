@@ -79,3 +79,15 @@ pub async fn mark_as_read(
 
     Ok(Json(ApiResponse::success_empty()))
 }
+
+pub async fn mark_all_read(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+) -> Result<Json<ApiResponse<()>>> {
+    state
+        .private_message_service
+        .mark_all_read(user.user_id)
+        .await?;
+
+    Ok(Json(ApiResponse::success_empty()))
+}

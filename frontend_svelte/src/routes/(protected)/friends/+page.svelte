@@ -39,8 +39,8 @@
 					});
 			if (isSuccess(response) && response.data) {
 				friends = refresh ? response.data.items : [...friends, ...response.data.items];
-				hasMore = response.data.pagination.has_more;
-				cursor = response.data.pagination.next_cursor;
+				hasMore = !!response.data.next_cursor;
+				cursor = response.data.next_cursor;
 			}
 		} catch {
 			toast.error('加载好友失败');

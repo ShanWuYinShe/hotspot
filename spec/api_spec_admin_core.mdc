@@ -4,7 +4,7 @@ alwaysApply: true
 # HotSpot API - 管理后台核心
 
 > 本文档定义 HotSpot 管理后台核心功能的 RPC 接口，包括权限管理（RBAC）、审计日志和全局配置。
-> 内容审核相关接口（用户/群组/举报/标签/公告管理）定义在 `@api_spec_admin_moderation.mdc`。
+> 内容审核相关接口（用户/群组/举报/标签/公告管理）定义在 `@spec/api_spec_admin_moderation.mdc`。
 
 ## 模块信息
 
@@ -17,10 +17,10 @@ alwaysApply: true
   - `/api/v1/admin/audit/`
   - `/api/v1/admin/app_config/`
 - **引用**: 
-  - 基础规范：`@api_spec_base.mdc`
-  - 通用类型：`@api_spec_types.mdc`
-  - 错误码：`@api_spec_errors.mdc`
-  - 客户端配置类型：`@api_spec_system.mdc`（`ClientConfig`、`FeatureSwitches`、`AppLimits`、`ContactInfo`）
+  - 基础规范：`@spec/api_spec_base.mdc`
+  - 通用类型：`@spec/api_spec_types.mdc`
+  - 错误码：`@spec/api_spec_errors.mdc`
+  - 客户端配置类型：`@spec/api_spec_system.mdc`（`ClientConfig`、`FeatureSwitches`、`AppLimits`、`ContactInfo`）
 
 ## 统一访问控制
 
@@ -82,7 +82,7 @@ alwaysApply: true
 
 ## 类型定义
 
-以下类型定义于 `@api_spec_types.mdc`：
+以下类型定义于 `@spec/api_spec_types.mdc`：
 - `UserInfo`
 - `GroupSettings`
 - `PaginationParams`
@@ -372,6 +372,9 @@ type AuditAction =
   | 'user.ban'           // 封禁用户
   | 'user.unban'         // 解封用户
   | 'group.dismiss'      // 解散群组
+  | 'group.member_mute'  // 禁言群成员（系统管理员操作）
+  | 'group.member_ban'   // 封禁群成员（系统管理员操作）
+  | 'group.member_remove'// 移除群成员（系统管理员操作）
   | 'announcement.create'// 创建公告
   | 'announcement.delete'// 删除公告
   | 'role.create'        // 创建角色
@@ -388,10 +391,14 @@ type AuditAction =
 
 type AuditTargetType = 'user' | 'group' | 'announcement' | 'role' | 'admin' | 'report' | 'tag' | 'config';
 
+// 注意：AuditDetails.type 必须与 AuditLogItem.action 一致（即每个 action 对应唯一的 details 变体）
 type AuditDetails = 
   | { type: 'user.ban'; reason?: string; duration_days?: number }
   | { type: 'user.unban'; reason?: string }
   | { type: 'group.dismiss'; reason?: string }
+  | { type: 'group.member_mute'; reason?: string; duration_hours?: number }
+  | { type: 'group.member_ban'; reason?: string }
+  | { type: 'group.member_remove'; reason?: string }
   | { type: 'announcement.create'; title: string }
   | { type: 'announcement.delete'; title: string }
   | { type: 'role.create'; role_name: string; permissions: string[] }
@@ -404,7 +411,7 @@ type AuditDetails =
   | { type: 'tag.delete'; tag_name: string }
   | { type: 'permission.grant'; permission: string }
   | { type: 'permission.revoke'; permission: string }
-  | { type: 'config.update'; config_key: string };
+  | { type: 'config.update'; config_key: string; old_value: unknown; new_value: unknown };
 
 interface AuditLogItem {
   log_id: string;
@@ -462,12 +469,12 @@ interface AuditLogOpenTheDoorRequest {
 
 ```typescript
 // AppConfig: 完整的应用配置，由管理员统一管理
-// ClientConfig（见 @api_spec_system.mdc）是 AppConfig 中客户端可见部分的投影
+// ClientConfig（见 @spec/api_spec_system.mdc）是 AppConfig 中客户端可见部分的投影
 interface AppConfig {
   // === 客户端可见配置（构成 ClientConfig） ===
-  features: FeatureSwitches;       // 定义于 @api_spec_system.mdc
-  limits: AppLimits;               // 定义于 @api_spec_system.mdc
-  contact: ContactInfo;            // 定义于 @api_spec_system.mdc
+  features: FeatureSwitches;       // 定义于 @spec/api_spec_system.mdc
+  limits: AppLimits;               // 定义于 @spec/api_spec_system.mdc
+  contact: ContactInfo;            // 定义于 @spec/api_spec_system.mdc
   // === 仅服务端使用 ===
   upload: UploadConfig;
   defaults: ContentDefaults;
@@ -525,14 +532,14 @@ interface UpdateUploadConfigRequest {
 **Request**: `UpdateDefaultsRequest`
 ```typescript
 interface ContentDefaults {
-  default_location_name: string;
+  default_location: Location;              // 默认位置（含坐标和名称），Location 定义于 @spec/api_spec_types.mdc
   default_group_avatar: string;
   default_user_avatar: string;
-  default_group_settings: GroupSettings;  // GroupSettings 定义于 @api_spec_types.mdc
+  default_group_settings: GroupSettings;    // GroupSettings 定义于 @spec/api_spec_types.mdc
 }
 
 interface UpdateDefaultsRequest {
-  default_location_name?: string;
+  default_location?: Partial<Location>;    // 可单独更新 point 或 location_name
   default_group_avatar?: string;
   default_user_avatar?: string;
   default_group_settings?: Partial<GroupSettings>;
@@ -608,6 +615,7 @@ interface ResponseDefaults {
   hot_moments_count: number;          // feed/list_trending 热门瞬间返回条数，默认 20
   chat_recent_messages_count: number; // open_the_door 返回的最近消息条数，默认 20
   group_announcements_count: number;  // 群公告列表返回条数，默认 10
+  system_announcements_count: number; // 系统公告列表返回条数（system/list_announcements），默认 10
 }
 
 interface UpdateResponseDefaultsRequest {
@@ -624,6 +632,7 @@ interface UpdateResponseDefaultsRequest {
 - `hot_moments_count`：建议范围 `5-100`
 - `chat_recent_messages_count`：建议范围 `10-50`
 - `group_announcements_count`：建议范围 `5-50`
+- `system_announcements_count`：建议范围 `5-50`
 
 **错误码**: `10000` `10200`
 
@@ -631,10 +640,10 @@ interface UpdateResponseDefaultsRequest {
 
 ## 客户端可见配置管理
 
-**设计说明**：以下端点管理 `AppConfig` 中客户端可见的部分（`features`/`limits`/`contact`），这些字段构成 `ClientConfig`，通过公开端点 `system/get_client_config`（见 `@api_spec_system.mdc`）暴露给客户端。
+**设计说明**：以下端点管理 `AppConfig` 中客户端可见的部分（`features`/`limits`/`contact`），这些字段构成 `ClientConfig`，通过公开端点 `system/get_client_config`（见 `@spec/api_spec_system.mdc`）暴露给客户端。
 
 > 统一使用 `admin.app_config.read` / `admin.app_config.write` 权限。
-> 客户端可通过公开端点 `system/get_client_config`（见 `@api_spec_system.mdc`）获取 ClientConfig 投影，无需认证。
+> 客户端可通过公开端点 `system/get_client_config`（见 `@spec/api_spec_system.mdc`）获取 ClientConfig 投影，无需认证。
 
 ### POST /api/v1/admin/app_config/update_features
 

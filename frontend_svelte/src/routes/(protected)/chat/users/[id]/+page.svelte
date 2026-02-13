@@ -141,7 +141,7 @@
 	}
 
 	function isSelf(message: PrivateMessageItem): boolean {
-		return message.sender_id === authStore.currentUserId;
+		return message.sender.user_id === authStore.currentUserId;
 	}
 
 	/**
@@ -170,17 +170,18 @@
 			// 只处理与当前聊天相关的消息
 			if (
 				payload.target_user_id === userId ||
-				(payload.sender_id === userId && payload.target_user_id === authStore.currentUserId)
+				(payload.sender.user_id === userId && payload.target_user_id === authStore.currentUserId)
 			) {
 				// 将 WebSocket 消息转换为 PrivateMessageItem
 				const newMessage: PrivateMessageItem = {
 					message_id: payload.message_id,
 					type: payload.type,
 					content: payload.content,
-					sender_id: payload.sender_id,
+					sender: payload.sender,
 					sent_at: payload.sent_at,
 					media: payload.media,
-					reply_to: payload.reply_to
+					reply_to: payload.reply_to,
+					is_read: true
 				};
 
 				// 添加到消息列表
@@ -202,7 +203,7 @@
 		const unsubscribeRecalled = websocketStore.on('PrivateMessageRecalled', (payload) => {
 			if (
 				payload.target_user_id === userId ||
-				(payload.recalled_by === userId && payload.target_user_id === authStore.currentUserId)
+				(payload.recalled_by.user_id === userId && payload.target_user_id === authStore.currentUserId)
 			) {
 				messages = messages.map((msg) =>
 					msg.message_id === payload.message_id ? { ...msg, recalled_at: payload.recalled_at } : msg

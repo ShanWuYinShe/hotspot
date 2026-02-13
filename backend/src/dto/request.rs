@@ -5,9 +5,9 @@
 
 use crate::types::enums::{
     AnnouncementSeverity, ApplicationStatusFilter, ClientType, FeedSource, GroupJoinMethod,
-    GroupRole, MapDataType, MediaCategory, PrivacyLevel, PrivateChatPermission, ReportHandleAction,
-    ReportStatus, ReportTargetType, SendMessageType, SetableGroupRole, ShareType, TagTimeframe,
-    UserAccountStatus, UserType,
+    GroupRole, MapDataType, MediaCategory, NotificationType, PrivacyLevel, PrivateChatPermission,
+    ReportHandleAction, ReportReason, ReportStatus, ReportTargetType, SendMessageType,
+    SetableGroupRole, ShareType, UserAccountStatus, UserType,
 };
 use serde::{Deserialize, Serialize};
 
@@ -162,13 +162,13 @@ pub struct UpdateSettingsRequest {
     pub location_visible: Option<bool>,
     pub online_visible: Option<bool>,
     pub last_online_visible: Option<bool>,
-    pub friends_visible: Option<PrivacyLevel>,
-    pub following_visible: Option<PrivacyLevel>,
-    pub followers_visible: Option<PrivacyLevel>,
-    pub groups_visible: Option<PrivacyLevel>,
-    pub moments_visible: Option<PrivacyLevel>,
-    pub liked_moments_visible: Option<PrivacyLevel>,
-    pub stats_visible: Option<PrivacyLevel>,
+    pub friends_visible: Option<bool>,
+    pub following_visible: Option<bool>,
+    pub followers_visible: Option<bool>,
+    pub groups_visible: Option<bool>,
+    pub moments_visible: Option<bool>,
+    pub liked_moments_visible: Option<bool>,
+    pub stats_visible: Option<bool>,
     pub allow_follow: Option<bool>,
     pub allow_private_chat: Option<PrivateChatPermission>,
     pub searchable: Option<bool>,
@@ -695,7 +695,7 @@ pub struct MarkGroupMessagesReadRequest {
 pub struct CreateReportRequest {
     pub target_type: ReportTargetType,
     pub target_id: String, // 统一为 string（user_id 也转为字符串格式）
-    pub reason: String,
+    pub reason: ReportReason,
     pub description: Option<String>,
 }
 
@@ -803,8 +803,15 @@ pub struct UpdateUploadConfigRequest {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct UpdateDefaultLocationRequest {
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+    pub location_name: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct UpdateDefaultsRequest {
-    pub default_location_name: Option<String>,
+    pub default_location: Option<UpdateDefaultLocationRequest>,
     pub default_group_avatar: Option<String>,
     pub default_user_avatar: Option<String>,
     pub default_group_settings: Option<GroupSettingsUpdate>,
@@ -898,12 +905,6 @@ pub struct SearchSuggestRequest {
 }
 
 // ==================== 标签管理 API ====================
-
-#[derive(Debug, Deserialize)]
-pub struct TrendingTagsRequest {
-    pub limit: Option<i32>,
-    pub timeframe: Option<TagTimeframe>,
-}
 
 #[derive(Debug, Deserialize)]
 pub struct SuggestTagsRequest {
@@ -1066,11 +1067,9 @@ pub struct DeleteAnnouncementRequest {
 
 // ==================== 公开系统公告查询 ====================
 
+/// 公开系统公告列表请求（空结构体，返回条数由服务端 ResponseDefaults 控制）
 #[derive(Debug, Deserialize)]
-pub struct PublicAnnouncementListRequest {
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
-}
+pub struct PublicAnnouncementListRequest {}
 
 // ==================== 补充类型（如确有需要再添加，避免重复定义） ====================
 
@@ -1153,11 +1152,6 @@ pub struct CreateShareRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct GetShareRequest {
-    pub share_code: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ApplyShareRequest {
     pub share_code: String,
 }
 
@@ -1258,4 +1252,22 @@ pub struct AdminUpdateAnnouncementRequest {
 pub struct AdminUpdateResponseDefaultsRequest {
     pub default_page_size: Option<i32>,
     pub max_page_size: Option<i32>,
+    pub system_announcements_count: Option<i32>,
+}
+
+// ==================== 通知模块请求 ====================
+
+/// 通知列表请求
+#[derive(Debug, Deserialize)]
+pub struct NotificationListRequest {
+    #[serde(rename = "type")]
+    pub notification_type: Option<NotificationType>,
+    pub cursor: Option<String>,
+    pub limit: Option<i64>,
+}
+
+/// 标记通知已读请求
+#[derive(Debug, Deserialize)]
+pub struct MarkNotificationsReadRequest {
+    pub notification_ids: Vec<String>,
 }

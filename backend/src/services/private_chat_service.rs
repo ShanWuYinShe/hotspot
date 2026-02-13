@@ -11,7 +11,7 @@ use crate::{
         user_blocks_repo::UserBlocksRepository,
         user_repo::UserRepository,
     },
-    types::enums::{MessageType, UserType},
+    types::enums::MessageType,
 };
 
 /// 私聊服务
@@ -112,8 +112,12 @@ impl PrivateChatService {
 
         let chat_ids_str: Vec<String> = chat_ids.iter().map(|id| id.to_string()).collect();
 
+        // Include current_user_id for last message sender (when current user sent the last msg)
+        let mut user_ids_to_fetch: Vec<i64> = other_user_ids.iter().copied().collect();
+        user_ids_to_fetch.push(current_user_id);
+
         let (users, unread_counts, last_messages) = tokio::try_join!(
-            self.user_repo.find_profiles(&other_user_ids),
+            self.user_repo.find_profiles(&user_ids_to_fetch),
             self.unread_repo
                 .get_unread_count_batch("private", &chat_ids_str, current_user_id),
             self.message_repo.get_last_message_batch(&chat_ids)
@@ -141,13 +145,11 @@ impl PrivateChatService {
                     user_id: u.user_id,
                     nickname: u.nickname.clone().unwrap_or_else(|| "未知用户".to_string()),
                     avatar_url: u.avatar_url.clone(),
-                    user_type: u.user_type,
                 })
                 .unwrap_or_else(|| UserInfo {
                     user_id: other_user_id,
                     nickname: "未知用户".to_string(),
                     avatar_url: None,
-                    user_type: UserType::Normal,
                 });
 
             let unread_count = unread_counts
@@ -156,12 +158,18 @@ impl PrivateChatService {
                 .unwrap_or(0);
 
             let last_message_row = last_messages.get(&chat.chat_id);
-            let last_message = last_message_row.map(|m| PrivateChatLastMessage {
-                message_id: m.message_id.to_string(),
-                content: m.content.clone(),
-                message_type: m.r#type,
-                sender_id: m.sender_id,
-                sent_at: m.sent_at.to_rfc3339(),
+            let last_message = last_message_row.and_then(|m| {
+                user_map.get(&m.sender_id).map(|u| PrivateChatLastMessage {
+                    message_id: m.message_id.to_string(),
+                    content: m.content.clone(),
+                    message_type: m.r#type,
+                    sender: UserInfo {
+                        user_id: u.user_id,
+                        nickname: u.nickname.clone().unwrap_or_else(|| "未知用户".to_string()),
+                        avatar_url: u.avatar_url.clone(),
+                    },
+                    sent_at: m.sent_at.to_rfc3339(),
+                })
             });
 
             let last_activity_at = last_message
@@ -206,13 +214,11 @@ impl PrivateChatService {
                 user_id: u.user_id,
                 nickname: u.nickname.unwrap_or_else(|| "未知用户".to_string()),
                 avatar_url: u.avatar_url,
-                user_type: u.user_type,
             })
             .unwrap_or_else(|| UserInfo {
                 user_id: target_user_id,
                 nickname: "未知用户".to_string(),
                 avatar_url: None,
-                user_type: UserType::Normal,
             });
 
         let unread_count = self
@@ -220,23 +226,6 @@ impl PrivateChatService {
             .get_unread_count("private", &chat.chat_id.to_string(), current_user_id)
             .await
             .unwrap_or(0);
-
-        let (last_messages, _) = self
-            .message_repo
-            .list_by_chat(chat.chat_id, current_user_id, 1, None)
-            .await?;
-        let last_message = last_messages.first().map(|m| PrivateChatLastMessage {
-            message_id: m.message_id.to_string(),
-            content: m.content.clone(),
-            message_type: m.r#type,
-            sender_id: m.sender_id,
-            sent_at: m.sent_at.to_rfc3339(),
-        });
-
-        let last_activity_at = last_message
-            .as_ref()
-            .map(|m| m.sent_at.clone())
-            .unwrap_or_else(|| chat.updated_at.to_rfc3339());
 
         let is_blocked = self
             .blocks_repo
@@ -252,7 +241,6 @@ impl PrivateChatService {
             .message_repo
             .list_by_chat(chat.chat_id, current_user_id, limit, None)
             .await?;
-        let has_more = next_cursor.is_some();
 
         let reply_ids: Vec<_> = messages
             .iter()
@@ -271,6 +259,29 @@ impl PrivateChatService {
         let sender_map: std::collections::HashMap<i64, _> =
             senders.into_iter().map(|s| (s.user_id, s)).collect();
 
+        let last_message = messages.first().map(|m| {
+            let sender_info = sender_map.get(&m.sender_id).map(|s| UserInfo {
+                user_id: s.user_id,
+                nickname: s.nickname.clone().unwrap_or_else(|| "未知用户".to_string()),
+                avatar_url: s.avatar_url.clone(),
+            }).unwrap_or_else(|| UserInfo {
+                user_id: m.sender_id,
+                nickname: "未知用户".to_string(),
+                avatar_url: None,
+            });
+            PrivateChatLastMessage {
+                message_id: m.message_id.to_string(),
+                content: m.content.clone(),
+                message_type: m.r#type,
+                sender: sender_info,
+                sent_at: m.sent_at.to_rfc3339(),
+            }
+        });
+        let last_activity_at = last_message
+            .as_ref()
+            .map(|m| m.sent_at.clone())
+            .unwrap_or_else(|| chat.updated_at.to_rfc3339());
+
         let message_items: Vec<PrivateMessageItem> = messages
             .into_iter()
             .map(|m| {
@@ -284,13 +295,11 @@ impl PrivateChatService {
                             user_id: s.user_id,
                             nickname: s.nickname.clone().unwrap_or_else(|| "未知用户".to_string()),
                             avatar_url: s.avatar_url.clone(),
-                            user_type: s.user_type,
                         })
                         .unwrap_or_else(|| UserInfo {
                             user_id: m.sender_id,
                             nickname: "未知用户".to_string(),
                             avatar_url: None,
-                            user_type: UserType::Normal,
                         }),
                     reply_to: m.reply_to_message_id.and_then(|reply_id| {
                         reply_map.get(&reply_id).map(|reply_msg| {
@@ -349,7 +358,6 @@ impl PrivateChatService {
             can_message,
             recent_messages: RecentMessages {
                 items: message_items,
-                has_more,
                 next_cursor,
             },
         })

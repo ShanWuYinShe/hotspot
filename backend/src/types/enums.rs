@@ -11,7 +11,10 @@ use strum_macros::{Display, EnumString};
 // 用户相关枚举
 // ============================================================
 
-/// 用户类型
+/// 用户类型（仅表达账号生命周期，不含权限角色）
+/// - Temp: 临时用户（访客，未注册）
+/// - Normal: 正式用户（已注册）
+/// 管理员身份由 RBAC 系统管理，不体现在 UserType 中
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type, Display, EnumString,
 )]
@@ -21,9 +24,6 @@ use strum_macros::{Display, EnumString};
 pub enum UserType {
     Temp,
     Normal,
-    Official,
-    Admin,
-    System,
 }
 
 impl Default for UserType {
@@ -47,6 +47,14 @@ pub enum UserStatus {
 }
 
 pub type UserAccountStatus = UserStatus;
+
+/// 用户在线状态 - API 文档: UserPresenceStatus
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum UserPresenceStatus {
+    Online,
+    Offline,
+}
 
 /// 性别
 #[derive(
@@ -274,7 +282,6 @@ pub type SendMessageType = MessageType;
 #[strum(serialize_all = "lowercase")]
 pub enum PrivacyLevel {
     Public,
-    Friends,
     Private,
 }
 
@@ -358,6 +365,25 @@ pub enum ReportHandleAction {
     Resolve,
     Dismiss,
     Escalate,
+}
+
+/// 举报原因枚举 - API 文档: ReportReason
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type, Display, EnumString,
+)]
+#[sqlx(type_name = "varchar", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum ReportReason {
+    Spam,
+    Harassment,
+    Violence,
+    HateSpeech,
+    SexualContent,
+    Misinformation,
+    Impersonation,
+    SelfHarm,
+    Other,
 }
 
 // ============================================================
@@ -484,20 +510,16 @@ pub enum FeedSource {
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum NotificationType {
-    MomentLike,
-    MomentComment,
-    CommentReply,
     NewFollower,
     MutualFollow,
-    FollowRequest,
-    FollowRequestHandled,
-    GroupInvite,
-    GroupInviteResponse,
-    GroupApplication,
-    GroupApplicationResponse,
-    GroupAnnouncement,
+    MomentLiked,
+    MomentCommented,
+    CommentLiked,
+    CommentReply,
+    Mentioned,
+    GroupInviteReceived,
+    GroupApplicationAccepted,
     SystemAnnouncement,
-    MessageMention,
 }
 
 // ============================================================
@@ -543,25 +565,6 @@ pub enum TagTrend {
     Stable,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]
-#[serde(rename_all = "lowercase")]
-#[strum(serialize_all = "lowercase")]
-pub enum TagTimeframe {
-    Day,
-    Week,
-    Month,
-}
-
-impl TagTimeframe {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            TagTimeframe::Day => "day",
-            TagTimeframe::Week => "week",
-            TagTimeframe::Month => "month",
-        }
-    }
-}
-
 // ============================================================
 // WebSocket 订阅
 // ============================================================
@@ -581,6 +584,7 @@ pub enum SubscriptionOperation {
 pub enum SubscriptionFailureReason {
     InvalidTopic,
     Forbidden,
+    LimitExceeded,
     InternalError,
 }
 

@@ -10,9 +10,9 @@ alwaysApply: true
 - **命名空间**: `media`
 - **基础路径**: `/api/v1/media/`
 - **引用**: 
-  - 基础规范：`@api_spec_base.mdc`
-  - 通用类型：`@api_spec_types.mdc`
-  - 错误码：`@api_spec_errors.mdc`
+  - 基础规范：`@spec/api_spec_base.mdc`
+  - 通用类型：`@spec/api_spec_types.mdc`
+  - 错误码：`@spec/api_spec_errors.mdc`
 
 ## 端点总览
 

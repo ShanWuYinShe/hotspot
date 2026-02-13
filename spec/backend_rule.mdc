@@ -13,10 +13,10 @@ alwaysApply: false
 
 权威引用：
 - **API 契约**：`@spec/api_spec_index.mdc`
-- **基础规范**：`@api_spec_base.mdc`
-- **通用类型**：`@api_spec_types.mdc`
+- **基础规范**：`@spec/api_spec_base.mdc`
+- **通用类型**：`@spec/api_spec_types.mdc`
 - **错误码**：`@spec/api_spec_errors.mdc`
-- **功能边界**：`@backend_doc.mdc`
+- **功能边界**：`@spec/backend_doc.mdc`
 
 ---
 
@@ -104,7 +104,7 @@ Handler -> Service -> Repository
 
 ## WebSocket
 
-- 事件与订阅格式严格遵循 `@api_spec_websocket.mdc`
+- 事件与订阅格式严格遵循 `@spec/api_spec_websocket.mdc`
 - 连接鉴权失败必须终止连接
 - 心跳参数由服务端统一下发
 

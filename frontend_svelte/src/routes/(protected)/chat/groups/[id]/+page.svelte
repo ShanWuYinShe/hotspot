@@ -60,11 +60,7 @@
 		try {
 			const response = await groupsService.getGroup({ group_id: groupId });
 			if (isSuccess(response) && response.data) {
-				group = response.data.group;
-				// Initialize messages from recent_messages if available
-				if (response.data.recent_messages?.items) {
-					messages = response.data.recent_messages.items.reverse();
-				}
+				group = response.data;
 			} else {
 				toast.error(response.message || '群组不存在');
 			}
@@ -111,8 +107,8 @@
 					scrollToBottom(false);
 				}
 
-				cursor = response.data.pagination?.next_cursor;
-				hasMore = response.data.pagination?.has_more ?? false;
+				cursor = response.data.next_cursor;
+				hasMore = !!response.data.next_cursor;
 
 				// ✅ 不再立即标记已读，等待消息可见时自动标记
 			}
@@ -319,7 +315,9 @@
 		const unsubscribeRecalled = websocketStore.on('GroupMessageRecalled', (payload) => {
 			if (payload.group_id === groupId) {
 				messages = messages.map((msg) =>
-					msg.message_id === payload.message_id ? { ...msg, recalled_at: payload.recalled_at } : msg
+					msg.message_id === payload.message_id
+						? { ...msg, recalled_at: payload.recalled_at, recalled_by: payload.recalled_by }
+						: msg
 				);
 			}
 		});

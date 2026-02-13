@@ -52,6 +52,27 @@ impl ChatUnreadRepository {
         Ok(())
     }
 
+    /// 标记指定类型下当前用户所有会话为已读
+    pub async fn mark_all_as_read(
+        &self,
+        chat_type: &str,
+        user_id: i64,
+    ) -> Result<(), AppError> {
+        sqlx::query!(
+            r#"
+            UPDATE chat_conversations_state
+            SET unread_count = 0, updated_at = NOW()
+            WHERE user_id = $1 AND chat_type = $2
+            "#,
+            user_id,
+            chat_type
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
     /// 获取未读计数
     pub async fn get_unread_count(
         &self,

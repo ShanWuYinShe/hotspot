@@ -10,10 +10,10 @@ alwaysApply: true
 - **命名空间**: `users`
 - **基础路径**: `/api/v1/users/`
 - **引用**: 
-  - 基础规范：`@api_spec_base.mdc`
-  - 通用类型：`@api_spec_types.mdc`
-  - 错误码：`@api_spec_errors.mdc`
-  - 搜索建议：`@api_spec_search.mdc`（per-module suggest 已移除，使用全局 `search/suggest`）
+  - 基础规范：`@spec/api_spec_base.mdc`
+  - 通用类型：`@spec/api_spec_types.mdc`
+  - 错误码：`@spec/api_spec_errors.mdc`
+  - 搜索建议：`@spec/api_spec_search.mdc`（per-module suggest 已移除，使用全局 `search/suggest`）
 
 ## 端点总览
 
@@ -43,10 +43,14 @@ alwaysApply: true
 | `POST /api/v1/users/me/list_followers` | 我的粉丝列表 | 必须 | 无 |
 | `POST /api/v1/users/me/list_blocked` | 我的拉黑列表 | 必须 | 无 |
 | `POST /api/v1/users/me/set_remark` | 设置备注 | 必须 | 幂等语义 |
+| `POST /api/v1/users/me/email/request_change` | 请求变更邮箱 | 必须 | MUST |
+| `POST /api/v1/users/me/email/confirm_change` | 确认变更邮箱 | 必须 | MUST |
+| `POST /api/v1/users/me/phone/request_change` | 请求变更手机 | 必须 | MUST |
+| `POST /api/v1/users/me/phone/confirm_change` | 确认变更手机 | 必须 | MUST |
 
 ## 类型定义
 
-以下类型定义于 `@api_spec_types.mdc`：
+以下类型定义于 `@spec/api_spec_types.mdc`：
 - `PrivacyLevel`
 - `UserStats`
 - `UserItem`
@@ -233,6 +237,8 @@ interface FollowerItem {
 
 **隐私控制**：受 `groups_visible` 设置控制。仅返回 `is_searchable=true` 的公开群组。
 
+Token 可选；登录态返回包含 `@auth-only` 字段的完整 `GroupItem`（如 `my_state`）；未登录态不返回 `@auth-only` 字段。
+
 - **认证**: 可选
 - **幂等**: 无
 - **排序**: 默认按 `joined_at` **时间倒序**（最近加入在前）
@@ -255,7 +261,9 @@ interface UserGroupsRequest {
 
 获取指定用户生活瞬间历史。
 
-**说明**：生活瞬间支持 `privacy_level` 控制可见性。未登录用户仅能访问 `public` 的瞬间；登录用户可额外看到自己的所有瞬间和所关注用户的 `followers_only` 瞬间。
+**说明**：生活瞬间支持 `privacy_level` 控制可见性（`public` / `private`）。未登录用户仅能访问 `public` 的瞬间；登录用户可额外看到自己的所有瞬间（包括 `private`）。
+
+Token 可选；登录态返回包含 `@auth-only` 字段的完整 `MomentItem`（如 `my_state`）；未登录态不返回 `@auth-only` 字段。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -280,6 +288,8 @@ interface UserMomentsRequest {
 获取指定用户点赞的瞬间。
 
 **隐私控制**：受 `liked_moments_visible` 设置控制。
+
+Token 可选；登录态返回包含 `@auth-only` 字段的完整 `MomentItem`（如 `my_state`）；未登录态不返回 `@auth-only` 字段。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -319,12 +329,12 @@ interface MyProfile {
   user_id: string;
   nickname: string;
   avatar_url?: string;
-  user_type: UserType;          // 仅在"我的资料"中返回，UserInfo 不包含此字段
+  user_type: UserType;          // 账号类型（temp/normal），仅表达账号生命周期；管理员身份通过 admin/rbac/get_me 获取
   bio?: string;
   tags?: string[];
   gender?: Gender;
-  email?: string;               // 只读，来源于 login_id；如需变更请通过 auth/me/change_login_id 处理
-  phone?: string;               // 只读，来源于 login_id；如需变更请通过 auth/me/change_login_id 处理
+  email?: string;               // 通过 users/me/email/request_change + confirm_change 变更
+  phone?: string;               // 通过 users/me/phone/request_change + confirm_change 变更
   location: Location;  // 直接映射自请求，不经过距离/角度计算
   presence_status: UserPresenceStatus;
   last_online: string;
@@ -420,13 +430,13 @@ type PrivateChatPermission = 'everyone' | 'friends' | 'nobody';
 interface UserSettings {
   privacy_level: PrivacyLevel;
   location_visible: boolean;
-  presence_visible: boolean;  // 在线状态和最后在线时间的可见性（统一控制）
-  friends_visible: PrivacyLevel;  // 好友列表可见性（好友 = 互相关注）
-  following_visible: PrivacyLevel;
-  followers_visible: PrivacyLevel;
-  groups_visible: PrivacyLevel;
-  liked_moments_visible: PrivacyLevel;
-  stats_visible: PrivacyLevel;
+  presence_visible: boolean;       // 在线状态和最后在线时间的可见性（统一控制）
+  friends_visible: boolean;        // 好友列表是否公开（好友 = 互相关注）
+  following_visible: boolean;      // 关注列表是否公开
+  followers_visible: boolean;      // 粉丝列表是否公开
+  groups_visible: boolean;         // 群组列表是否公开
+  liked_moments_visible: boolean;  // 点赞瞬间列表是否公开
+  stats_visible: boolean;          // 统计信息是否公开
   allow_follow: boolean;
   allow_private_chat: PrivateChatPermission;
   searchable: boolean;
@@ -680,3 +690,96 @@ interface SetRemarkRequest {
 **Response**: `ApiResponse`
 
 **错误码**: `10000` `10300` `10400`
+
+---
+
+### POST /api/v1/users/me/email/request_change
+
+请求变更邮箱。发送验证码到新邮箱地址。
+
+**安全设计**：需要当前密码验证身份，防止账号被盗后变更邮箱。
+
+- **认证**: 必须
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+
+**Request**: `RequestEmailChangeRequest`
+```typescript
+interface RequestEmailChangeRequest {
+  new_email: string;       // 新邮箱地址
+  password: string;        // 当前密码（身份验证）
+}
+```
+
+**Response**: `ApiResponse<VerificationSent>`
+```typescript
+interface VerificationSent {
+  expires_at: string;      // 验证码过期时间（UTC ISO 8601）
+}
+```
+
+**错误码**: `10000` `10200` `10400` `22000` `22002`
+
+---
+
+### POST /api/v1/users/me/email/confirm_change
+
+确认变更邮箱。提交发送到新邮箱的验证码完成变更。
+
+- **认证**: 必须
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+
+**Request**: `ConfirmEmailChangeRequest`
+```typescript
+interface ConfirmEmailChangeRequest {
+  new_email: string;             // 与 request_change 一致的新邮箱
+  verification_code: string;     // 验证码
+}
+```
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10200` `10400` `22000` `22002`
+
+---
+
+### POST /api/v1/users/me/phone/request_change
+
+请求变更手机号。发送验证码到新手机号。
+
+**安全设计**：需要当前密码验证身份，防止账号被盗后变更手机号。
+
+- **认证**: 必须
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+
+**Request**: `RequestPhoneChangeRequest`
+```typescript
+interface RequestPhoneChangeRequest {
+  new_phone: string;       // 新手机号
+  password: string;        // 当前密码（身份验证）
+}
+```
+
+**Response**: `ApiResponse<VerificationSent>`
+
+**错误码**: `10000` `10200` `10400` `22000` `22002`
+
+---
+
+### POST /api/v1/users/me/phone/confirm_change
+
+确认变更手机号。提交发送到新手机号的验证码完成变更。
+
+- **认证**: 必须
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+
+**Request**: `ConfirmPhoneChangeRequest`
+```typescript
+interface ConfirmPhoneChangeRequest {
+  new_phone: string;             // 与 request_change 一致的新手机号
+  verification_code: string;     // 验证码
+}
+```
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10200` `10400` `22000` `22002`

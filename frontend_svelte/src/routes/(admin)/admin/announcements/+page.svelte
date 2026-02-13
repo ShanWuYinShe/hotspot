@@ -51,8 +51,8 @@ let announcements = $state.raw<SystemAnnouncementItem[]>([]);
 				} else {
 					announcements = response.data.items;
 				}
-				cursor = response.data.pagination.next_cursor;
-				hasMore = response.data.pagination.has_more;
+				cursor = response.data.next_cursor;
+				hasMore = !!response.data.next_cursor;
 			}
 		} catch {
 			toast.error('加载失败');

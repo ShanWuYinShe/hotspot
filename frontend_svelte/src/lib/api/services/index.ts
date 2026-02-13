@@ -18,7 +18,7 @@ export { commentsService } from './comments';
 export { searchService } from './search';
 
 // 信息流
-export { feedService, tagsService } from './feed';
+export { feedService } from './feed';
 
 // 私聊
 export { privateChatsService, privateMessagesService } from './private-chats';
@@ -34,6 +34,9 @@ export { mapService } from './map';
 
 // 分享
 export { shareService } from './share';
+
+// 通知
+export { notificationsService } from './notifications';
 
 // 举报
 export { reportsService } from './reports';

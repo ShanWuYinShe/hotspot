@@ -5,29 +5,29 @@ alwaysApply: true
 
 > 本文档定义 HotSpot 全局搜索 (`search`) 和标签 (`tags`) 相关的 RPC 接口。
 > 旨在提供基于地理位置和语义的综合搜索与发现能力。
-> 管理员标签管理接口定义于 `@api_spec_admin_moderation.mdc`。
+> 管理员标签管理接口定义于 `@spec/api_spec_admin_moderation.mdc`。
 
 ## 模块信息
 
-- **命名空间**: `search`、`tags`
-- **基础路径**: `/api/v1/search/`、`/api/v1/tags/`
+- **命名空间**: `search`
+- **基础路径**: `/api/v1/search/`
 - **引用**: 
-  - 基础规范：`@api_spec_base.mdc`
-  - 通用类型：`@api_spec_types.mdc`
-  - 错误码：`@api_spec_errors.mdc`
+  - 基础规范：`@spec/api_spec_base.mdc`
+  - 通用类型：`@spec/api_spec_types.mdc`
+  - 错误码：`@spec/api_spec_errors.mdc`
 
 ## 端点总览
 
 | 端点 | 说明 | 认证 | 幂等 |
 |-----|------|------|------|
 | `POST /api/v1/search/suggest` | 综合搜索建议 | 可选 | 无 |
-| `POST /api/v1/tags/list_trending` | 热门标签 | 可选 | 无 |
 
 ## 类型定义
 
-以下类型定义于 `@api_spec_types.mdc`：
+以下类型定义于 `@spec/api_spec_types.mdc`：
 - `GeoPoint`
 - `RelativeLocation`
+- `UserInfo`
 
 ## 端点详情
 
@@ -52,9 +52,9 @@ alwaysApply: true
 ```typescript
 interface SearchSuggestRequest {
   prefix: string;
-  reference_point: GeoPoint; // 必填，用于 LBS 优先排序（用户拒绝定位时使用 fallback）
+  reference_point: GeoPoint; // 必填，用于 LBS 优先排序（用户拒绝定位时使用 ClientConfig.defaults.default_location 作为 fallback）
   types?: SearchSuggestType[];  // 可选：限定返回的类型（如 ['user', 'group']）。为空则返回所有类型。
-  radius?: number;  // 搜索半径（米），约束见 @api_spec_base.mdc 通用字段约束
+  radius?: number;  // 搜索半径（米），约束见 @spec/api_spec_base.mdc 通用字段约束
   limit?: number;   // 返回条数上限，默认值由 AppConfig.response_defaults.search_suggest_count 决定，客户端可传更小值
 }
 ```
@@ -90,9 +90,8 @@ interface GroupSuggestItem {
 // 瞬间建议项
 interface MomentSuggestItem {
   moment_id: string;
-  content: string;
-  author_nickname: string;
-  author_avatar_url?: string;
+  description_preview: string;
+  author: UserInfo;
   location?: RelativeLocation;
 }
 
@@ -114,31 +113,13 @@ interface SearchSuggestResponse {
 
 ---
 
-### POST /api/v1/tags/list_trending
+## 标签相关类型
 
-获取热门标签。
-
-标签属于"默认公开资源"，不涉及用户隐私等级/访问控制分支。标签是跨模块使用的概念（用户标签、群组标签、瞬间标签）。
-
-- **认证**: 可选
-- **幂等**: 无
-
-**Request**: `TrendingTagsRequest`
-```typescript
-interface TrendingTagsRequest {
-  timeframe?: TagTimeframe;
-  limit?: number;   // 返回条数上限，默认值由 AppConfig.response_defaults.trending_tags_count 决定
-}
-```
-
-**Response**: `ApiResponse<TagItem[]>`
+以下类型供其他模块（如 Feed）复用：
 
 ```typescript
 // 标签趋势
 type TagTrend = 'rising' | 'stable' | 'falling';
-
-// 标签时间范围
-type TagTimeframe = 'daily' | 'weekly' | 'monthly';
 
 interface TagItem {
   name: string;
@@ -146,5 +127,3 @@ interface TagItem {
   trend?: TagTrend;
 }
 ```
-
-**错误码**: `10000`

@@ -11,10 +11,10 @@ alwaysApply: false
 
 权威引用：
 - **API 契约**：`@spec/api_spec_index.mdc`
-- **基础规范**：`@api_spec_base.mdc`
-- **通用类型**：`@api_spec_types.mdc`
+- **基础规范**：`@spec/api_spec_base.mdc`
+- **通用类型**：`@spec/api_spec_types.mdc`
 - **错误码**：`@spec/api_spec_errors.mdc`
-- **功能边界**：`@frontend_doc.mdc`
+- **功能边界**：`@spec/frontend_doc.mdc`
 
 ---
 
@@ -62,7 +62,7 @@ alwaysApply: false
 
 ## WebSocket 规范
 
-- 事件名与 payload 结构以 `@api_spec_websocket.mdc` 为准
+- 事件名与 payload 结构以 `@spec/api_spec_websocket.mdc` 为准
 - 可在前端定义**镜像类型**（仅映射契约，不得扩展）
 - 消息最终态以 WebSocket 推送为准
 

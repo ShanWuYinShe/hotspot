@@ -99,7 +99,7 @@ export struct GroupDetailPage {
         });
 
         if (response.code === 0 && response.data) {
-          this.groupInfo = response.data.group;
+          this.groupInfo = response.data;
           this.isMember = this.groupInfo.my_state?.is_joined ?? false;
           await this.syncGroupData();
           await this.accessibilityManager.announceText(`已加载群组：${this.groupInfo.group?.name ?? ''}`);
@@ -128,8 +128,8 @@ export struct GroupDetailPage {
         if (response.code === 0 && response.data) {
           this.members = response.data.items;
           this.membersDataSource.setData(this.members);
-          this.membersHasMore = response.data.pagination?.has_more ?? false;
-          this.membersNextCursor = response.data.pagination?.next_cursor ?? '';
+          this.membersHasMore = !!(response.data.next_cursor);
+          this.membersNextCursor = response.data.next_cursor ?? '';
           this.showMemberList = true;
         } else {
           SystemToast.showError(response.message || '加载成员列表失败', this.getUIContext());
@@ -153,8 +153,8 @@ export struct GroupDetailPage {
       if (response.code === 0 && response.data) {
         this.members = this.members.concat(response.data.items);
         this.membersDataSource.appendData(response.data.items);
-        this.membersHasMore = response.data.pagination?.has_more ?? false;
-        this.membersNextCursor = response.data.pagination?.next_cursor ?? '';
+        this.membersHasMore = !!(response.data.next_cursor);
+        this.membersNextCursor = response.data.next_cursor ?? '';
       }
     } catch {
       // 静默失败

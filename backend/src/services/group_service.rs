@@ -26,7 +26,7 @@ use crate::{
             AdminGroupDetail, AdminGroupSearchItem, AdminGroupSettingsSummary, AdminGroupStats,
             BannedMemberItem, GroupAnnouncementItem, GroupApplicationItem, GroupDetailData,
             GroupInfo, GroupInviteItem, GroupMemberItem, GroupMyStateData, GroupSearchItem,
-            InviteMemberData, MyGroupItem, PaginatedData, PaginationMeta, RelativeLocation,
+            InviteMemberData, MyGroupItem, PaginatedData, RelativeLocation,
             UserInfo,
         },
     },
@@ -47,7 +47,7 @@ use crate::{
     },
     types::enums::{
         ApplicationStatus, ApplicationStatusFilter, GroupJoinMethod, GroupRole, MemberLeaveReason,
-        ResponseStatus, SetableGroupRole, UserType,
+        ResponseStatus, SetableGroupRole,
     },
     utils::{
         cache::{cache_keys, CacheManager},
@@ -127,14 +127,12 @@ impl GroupService {
                 user_id: u.user_id,
                 nickname: u.nickname.unwrap_or_else(|| "未知用户".to_string()),
                 avatar_url,
-                user_type: u.user_type,
             })
         } else {
             Ok(UserInfo {
                 user_id,
                 nickname: "未知用户".to_string(),
                 avatar_url: None,
-                user_type: UserType::Normal,
             })
         }
     }
@@ -196,10 +194,7 @@ impl GroupService {
         let items = self.map_search_rows(groups).await?;
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -222,10 +217,7 @@ impl GroupService {
         let items = self.map_search_rows(groups).await?;
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -249,10 +241,7 @@ impl GroupService {
         let items = self.map_search_rows(groups).await?;
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -267,17 +256,27 @@ impl GroupService {
                 .is_some();
             let location = self.build_location(g.distance).await;
             items.push(GroupSearchItem {
-                group_chat_id: g.group_id.to_string(),
-                name: g.name,
+                group: GroupInfo {
+                    group_id: g.group_id.to_string(),
+                    name: g.name,
+                    avatar_url: self
+                        .media_service
+                        .sign_url_if_path(g.avatar_url.as_deref())
+                        .await,
+                    members_count: g.member_count,
+                },
                 description: g.description,
-                avatar_url: self
-                    .media_service
-                    .sign_url_if_path(g.avatar_url.as_deref())
-                    .await,
                 tags,
-                members_count: g.member_count,
                 has_password,
                 location,
+                last_activity_at: None,
+                created_at: None,
+                owner_id: None,
+                my_state: None,
+                friends_in_group: None,
+                join_method: None,
+                is_searchable: None,
+                max_members: None,
             });
         }
         Ok(items)
@@ -333,20 +332,27 @@ impl GroupService {
         };
 
         Ok(GroupDetailData {
-            group_chat_id: group.group_id.to_string(),
-            name: group.name,
+            group: GroupInfo {
+                group_id: group.group_id.to_string(),
+                name: group.name,
+                avatar_url: self
+                    .media_service
+                    .sign_url_if_path(group.avatar_url.as_deref())
+                    .await,
+                members_count,
+            },
             description: group.description,
-            avatar_url: self
-                .media_service
-                .sign_url_if_path(group.avatar_url.as_deref())
-                .await,
             tags,
-            members_count,
             has_password,
             location: self.build_location(None).await,
-            created_at: group.created_at.to_rfc3339(),
-            owner_id: group.owner_id,
+            last_activity_at: None,
+            created_at: Some(group.created_at.to_rfc3339()),
+            owner_id: Some(group.owner_id.to_string()),
             my_state,
+            friends_in_group: None,
+            join_method: None,
+            is_searchable: None,
+            max_members: None,
         })
     }
 
@@ -374,10 +380,7 @@ impl GroupService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -404,10 +407,7 @@ impl GroupService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -418,7 +418,6 @@ impl GroupService {
                 user_id: m.user_id,
                 nickname,
                 avatar_url: m.avatar_url,
-                user_type: m.user_type.unwrap_or(UserType::Normal),
             },
             role: m.role,
             joined_at: m.joined_at.to_rfc3339(),
@@ -543,9 +542,14 @@ impl GroupService {
                 .copied()
                 .unwrap_or(0) as i32;
             let tags = self.tag_repo.get_group_tags(row.group_id).await.ok();
+            let role = self
+                .member_repo
+                .get_member_role(row.group_id, user_id)
+                .await?
+                .unwrap_or(GroupRole::Member);
             items.push(MyGroupItem {
-                group_info: GroupInfo {
-                    group_chat_id: row.group_id.to_string(),
+                group: GroupInfo {
+                    group_id: row.group_id.to_string(),
                     name: row.name,
                     avatar_url: self
                         .media_service
@@ -557,18 +561,27 @@ impl GroupService {
                 tags,
                 has_password: row.has_password,
                 location: self.build_location(None).await,
-                last_activity_at: row.joined_at.to_rfc3339(),
-                role: GroupRole::Member,
-                unread_count,
+                last_activity_at: Some(row.joined_at.to_rfc3339()),
+                created_at: None,
+                owner_id: None,
+                my_state: Some(GroupMyStateData {
+                    role,
+                    unread_count,
+                    is_joined: true,
+                    is_muted: false,
+                    is_pinned: false,
+                    joined_at: Some(row.joined_at.to_rfc3339()),
+                }),
+                friends_in_group: None,
+                join_method: None,
+                is_searchable: None,
+                max_members: None,
             });
         }
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -1013,7 +1026,6 @@ impl GroupService {
                     user_id: r.user_id,
                     nickname: r.nickname.unwrap_or_else(|| "未知用户".to_string()),
                     avatar_url: r.avatar_url,
-                    user_type: r.user_type.unwrap_or(UserType::Normal),
                 },
                 reason: r.reason,
                 banned_at: r.banned_at.to_rfc3339(),
@@ -1022,10 +1034,7 @@ impl GroupService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -1123,7 +1132,6 @@ impl GroupService {
                             user_id: u.user_id,
                             nickname: u.nickname.clone().unwrap_or_else(|| "未知用户".to_string()),
                             avatar_url: u.avatar_url.clone(),
-                            user_type: u.user_type,
                         });
                 GroupApplicationItem {
                     application_id: r.application_id.to_string(),
@@ -1133,7 +1141,6 @@ impl GroupService {
                             .and_then(|u| u.nickname.clone())
                             .unwrap_or_else(|| "未知用户".to_string()),
                         avatar_url: applicant.and_then(|u| u.avatar_url.clone()),
-                        user_type: applicant.map(|u| u.user_type).unwrap_or(UserType::Normal),
                     },
                     message: r.message,
                     status: r.status,
@@ -1146,10 +1153,7 @@ impl GroupService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -1311,7 +1315,7 @@ impl GroupService {
                 GroupInviteItem {
                     invite_id: r.invite_id.to_string(),
                     group: GroupInfo {
-                        group_chat_id: r.group_id.to_string(),
+                        group_id: r.group_id.to_string(),
                         name: group
                             .map(|g| g.name.clone())
                             .unwrap_or_else(|| "群组".to_string()),
@@ -1324,7 +1328,6 @@ impl GroupService {
                             .and_then(|u| u.nickname.clone())
                             .unwrap_or_else(|| "未知用户".to_string()),
                         avatar_url: inviter.and_then(|u| u.avatar_url.clone()),
-                        user_type: inviter.map(|u| u.user_type).unwrap_or(UserType::Normal),
                     },
                     message: r.message,
                     status: r.status,
@@ -1336,10 +1339,7 @@ impl GroupService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -1439,7 +1439,7 @@ impl GroupService {
 
         Ok(GroupAnnouncementItem {
             announcement_id: announcement.announcement_id.to_string(),
-            group_chat_id: group_id.to_string(),
+            group_id: group_id.to_string(),
             title: announcement.title,
             content: announcement.content,
             created_by: self.build_user_info(user_id).await?,
@@ -1470,7 +1470,7 @@ impl GroupService {
                 let user = user_map.get(&a.publisher_id);
                 GroupAnnouncementItem {
                     announcement_id: a.announcement_id.to_string(),
-                    group_chat_id: group_id.to_string(),
+                    group_id: group_id.to_string(),
                     title: a.title,
                     content: a.content,
                     created_by: UserInfo {
@@ -1479,7 +1479,6 @@ impl GroupService {
                             .and_then(|u| u.nickname.clone())
                             .unwrap_or_else(|| "未知用户".to_string()),
                         avatar_url: user.and_then(|u| u.avatar_url.clone()),
-                        user_type: user.map(|u| u.user_type).unwrap_or(UserType::Normal),
                     },
                     created_at: a.created_at.to_rfc3339(),
                     is_pinned: a.is_pinned,
@@ -1489,10 +1488,7 @@ impl GroupService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: false,
-                next_cursor: None,
-            },
+            next_cursor: None,
         })
     }
 
@@ -1536,7 +1532,7 @@ impl GroupService {
 
         Ok(GroupAnnouncementItem {
             announcement_id: announcement_id.to_string(),
-            group_chat_id: announcement.group_id.to_string(),
+            group_id: announcement.group_id.to_string(),
             title: req.title.clone().unwrap_or(announcement.title),
             content: req.content.clone().unwrap_or(announcement.content),
             created_by: self.build_user_info(announcement.publisher_id).await?,
@@ -1618,7 +1614,7 @@ impl GroupService {
             .map(|r| {
                 let owner = owner_map.get(&r.owner_id);
                 AdminGroupSearchItem {
-                    group_chat_id: r.group_id.to_string(),
+                    group_id: r.group_id.to_string(),
                     name: r.name,
                     avatar_url: r.avatar_url,
                     members_count: r.member_count,
@@ -1629,7 +1625,6 @@ impl GroupService {
                             .and_then(|u| u.nickname.clone())
                             .unwrap_or_else(|| "未知用户".to_string()),
                         avatar_url: owner.and_then(|u| u.avatar_url.clone()),
-                        user_type: owner.map(|u| u.user_type).unwrap_or(UserType::Normal),
                     },
                     created_at: r.created_at.to_rfc3339(),
                 }
@@ -1638,10 +1633,7 @@ impl GroupService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -1661,7 +1653,7 @@ impl GroupService {
         let tags = self.tag_repo.get_group_tags(group_id).await.ok();
 
         Ok(AdminGroupDetail {
-            group_chat_id: group_id.to_string(),
+            group_id: group_id.to_string(),
             name: group.name,
             avatar_url: self
                 .media_service

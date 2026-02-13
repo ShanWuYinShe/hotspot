@@ -75,7 +75,7 @@ interface ApiResponse<T = void> {
 | `10500` | 所有端点 |
 | `10600` | 所有端点 |
 
-各错误码的类型、客户端行为及 message 示例详见 `@api_spec_errors.mdc`。
+各错误码的类型、客户端行为及 message 示例详见 `@spec/api_spec_errors.mdc`。
 
 因此，端点文档中的"**错误码**"字段仅需列出该端点**特有的业务错误码**（如 `10000`、`10200`、`10300`、`10400`、`22000` 等）。
 
@@ -131,8 +131,8 @@ interface ApiResponse<T = void> {
 ├── feed/              # 信息流（推荐/热门）
 ├── map/               # 地图渲染
 ├── search/            # 搜索与发现（综合建议）
-├── tags/              # 标签（热门标签/标签建议）
 ├── reports/           # 举报
+├── notifications/     # 通知中心
 ├── media/             # 媒体上传
 ├── share/             # 分享系统
 ├── system/            # 系统（健康/版本/配置/公告）
@@ -207,6 +207,12 @@ App 端通过 Header 携带认证信息：
 - Web 端通过 Cookie 自动携带，无需前端代码手动处理
 - App 端需要在每个请求的 Header 中手动添加 `Authorization` 字段
 
+**Token 可选端点的 Token 验证规则**：
+- **任何时候**，只要请求携带了 Token，服务端都**必须验证** Token 的有效性
+- Token 无效（过期、被撤销、格式错误等）时，返回 `10100` 认证错误，**不会静默降级为未登录状态**
+- 服务端不区分"客户端是否有意携带 Token"——收到 Token 就验证，验证失败就报错
+- 客户端如果想以匿名身份访问 Token 可选端点，应**不携带 Token**（Web 端不发送 auth Cookie，App 端不添加 Authorization Header）
+
 **黑名单规则（契约级）**：
 - access_token/refresh_token 的失效通过黑名单机制实现（登出/撤销即写入黑名单）
 - 服务端验证 Token 时必须检查黑名单；黑名单条目有效期不得短于 Token 过期时间
@@ -252,9 +258,10 @@ App 端通过 Header 携带认证信息：
 
 ### 隐私与访问控制
 
-**隐私等级判定**（层级：`public > followers > friends > private`）：
+**隐私等级判定**（`public` / `private`）：
+- `public`：所有人可见（包括未登录用户）
+- `private`：仅自己可见
 - 未登录时：仅能访问 `privacy_level='public'` 的资源
-- 已登录时：根据与资源拥有者的关系，判定 `followers`（对方关注了我）/ `friends`（互关好友）/ `private`（仅自己）等可见性
 
 **隐私字段可见性**：
 - `privacy_level` 不对非资源拥有者暴露
@@ -297,7 +304,7 @@ App 端通过 Header 携带认证信息：
 ### 类型归属与复用规则（契约级）
 
 - **嵌套引用也算引用**：若类型 A 被共享类型 B 作为字段使用，则所有引用 B 的模块都视为引用 A
-- **多模块复用**：任一类型在 2 个及以上模块出现（直接或嵌套）必须定义在 `@api_spec_types.mdc`
+- **多模块复用**：任一类型在 2 个及以上模块出现（直接或嵌套）必须定义在 `@spec/api_spec_types.mdc`
 - **单模块归属**：只在单模块使用的类型必须定义在该模块文档
 - **禁止同义重复**：已在 types 定义的类型，模块不得使用同义的字面量/结构硬编码
 - **新增通用类型**：先改 types，再在模块引用，避免分叉
@@ -325,7 +332,7 @@ App 端通过 Header 携带认证信息：
 
 **额外能力**：
 - 详情页返回完整的 `@auth-only` 字段
-- 可访问非 `public` 的资源（基于关系判定）
+- 可访问 `private` 资源（仅自己的资源）
 - 个性化信息流（`/feed/*`）
 - 私聊/群聊/通知等个人数据
 - 所有写操作和互动操作
@@ -336,7 +343,7 @@ App 端通过 Header 携带认证信息：
 
 本节定义跨模块复用的字段校验规则。各模块接口文档必须显式标注模块级校验约束。
 
-说明：以下约束值为系统默认值，管理员可通过 `ClientConfig.limits`（见 `@api_spec_system.mdc`）动态调整部分限制。
+说明：以下约束值为系统默认值，管理员可通过 `ClientConfig.limits`（见 `@spec/api_spec_system.mdc`）动态调整部分限制。
 
 ### 通用字段约束
 
@@ -381,7 +388,7 @@ App 端通过 Header 携带认证信息：
 |-----|------|------|
 | `keyword` | 1-100 字符 | 搜索关键字 |
 | `prefix` | 1-50 字符 | 搜索建议前缀 |
-| `radius` | 100-50000 米 | 搜索半径，上限由 `AppConfig.limits.search_radius_max`（见 `@api_spec_admin_core.mdc`）控制 |
+| `radius` | 100-50000 米 | 搜索半径，上限由 `AppConfig.limits.search_radius_max`（见 `@spec/api_spec_admin_core.mdc`）控制 |
 | `zoom`（map） | 1-20 | 地图缩放级别 |
 
 ### 管理员字段约束
@@ -407,8 +414,8 @@ App 端通过 Header 携带认证信息：
 
 - 所有列表接口使用游标分页，禁止 offset 分页
 - `cursor` 为**完全不透明字符串**（客户端禁止解析/构造/修改，格式可能随版本变化）。服务端必须对 cursor 进行签名或加密处理，防止客户端篡改或解码以推测内部排序逻辑和 ID 范围
-- 无界列表接口统一使用 `PaginationParams` 与 `PaginatedData<T>` 进行游标分页（类型定义见 `@api_spec_types.mdc`"分页与元数据"小节）
-- 有界/确定数量的数据（如搜索建议、热门标签、聊天最近消息）由服务端决定返回数量，具体值通过 `AppConfig.response_defaults` 配置（见 `@api_spec_admin_core.mdc`），客户端不传分页或 limit 参数
+- 无界列表接口统一使用 `PaginationParams` 与 `PaginatedData<T>` 进行游标分页（类型定义见 `@spec/api_spec_types.mdc`"分页与元数据"小节）
+- 有界/确定数量的数据（如搜索建议、热门标签、聊天最近消息）由服务端决定返回数量，具体值通过 `AppConfig.response_defaults` 配置（见 `@spec/api_spec_admin_core.mdc`），客户端不传分页或 limit 参数
 - 任意使用 `PaginationParams` 的接口必须返回 `PaginatedData<T>`；不返回分页结构的接口不得使用 `PaginationParams`
 
 #### 分页默认值与模块级覆盖
@@ -517,11 +524,12 @@ App 端通过 Header 携带认证信息：
 - **新请求**：必须生成**新**的 `Idempotency-Key`
 - **收到"幂等处理中"错误**：等待 1-2 秒后使用相同 key 重试
 - **收到"幂等键冲突"响应**：视为成功，使用返回的响应数据
-- 具体幂等错误码（`22000`/`22001`/`22002`）的定义与客户端行为详见 `@api_spec_errors.mdc`
+- 具体幂等错误码（`22000`/`22001`/`22002`）的定义与客户端行为详见 `@spec/api_spec_errors.mdc`
 
 #### 必须使用幂等键的接口（MUST）
 
 - 认证与账号：`auth/register`、`auth/guest`、`auth/request_password_reset`、`auth/reset_password`、`auth/me/change_password`
+- 联系方式变更：`users/me/email/request_change`、`users/me/email/confirm_change`、`users/me/phone/request_change`、`users/me/phone/confirm_change`
 - 内容创建：`moments/create`、`comments/create`
 - 消息发送：`private_messages/send`、`group_messages/send`
 - 媒体上传：`media/complete_upload`

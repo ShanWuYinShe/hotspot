@@ -75,8 +75,6 @@ pub mod cache_keys {
     pub const USER_INFO: &str = "cache:user:info";
     /// 群组信息缓存
     pub const GROUP_INFO: &str = "cache:group:info";
-    /// 热门标签缓存
-    pub const TRENDING_TAGS: &str = "cache:trending:tags";
     /// 系统配置缓存
     pub const SYSTEM_CONFIG: &str = "cache:system:config";
 }

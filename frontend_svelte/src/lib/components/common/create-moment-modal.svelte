@@ -281,7 +281,6 @@
 					bind:value={privacy}
 				>
 					<option value="public">公开</option>
-					<option value="friends">仅好友</option>
 					<option value="private">仅自己</option>
 				</select>
 			</div>

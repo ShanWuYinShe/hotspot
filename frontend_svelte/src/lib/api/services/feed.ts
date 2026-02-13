@@ -3,19 +3,17 @@
  */
 
 import { post, paginate } from '../client';
-import { FEED, TAGS } from '../endpoints';
+import { FEED } from '../endpoints';
 import type {
 	MomentItem,
 	GroupItem,
 	UserItem,
-	TagItem,
 	TrendingBundle,
 	FeedSource,
 	GeoPoint,
 	FeedContentType,
 	FeedFeedbackAction,
-	PaginationParams,
-	TagTimeframe
+	PaginationParams
 } from '$lib/types/api';
 
 export const feedService = {
@@ -62,14 +60,5 @@ export const feedService = {
 		reason?: string;
 	}) {
 		return post<void>(FEED.ME.FEEDBACK, data);
-	}
-};
-
-export const tagsService = {
-	/**
-	 * 获取热门标签
-	 */
-	getTrending(params?: { timeframe?: TagTimeframe }) {
-		return post<{ items: TagItem[] }>(TAGS.LIST_TRENDING, params);
 	}
 };

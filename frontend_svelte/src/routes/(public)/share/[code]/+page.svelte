@@ -2,20 +2,23 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from '$lib/stores/toast.svelte';
-	import { shareService } from '$lib/api/services';
-	import { isSuccess } from '$lib/api/client';
+	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
 	import { MapPin, Share2, UsersRound } from 'lucide-svelte';
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import type { ShareDetail, LocationSharePayload } from '$lib/types/api';
+	import type {
+		ShareDetail,
+		LocationSharePayload,
+		MomentSharePayload,
+		GroupSharePayload,
+		UserSharePayload
+	} from '$lib/types/api';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
-	const shareCode = $derived(data.shareCode);
 	const share = $derived<ShareDetail | null>(data.share);
-	let isApplying = $state(false);
 
 	// 复制分享链接
 	async function copyShareLink() {
@@ -28,35 +31,28 @@
 		}
 	}
 
-	// 应用分享
-	async function handleApply() {
+	// 处理分享（客户端本地导航，不使用 apply 接口）
+	function handleApply() {
 		if (!share) return;
 
-		isApplying = true;
-		try {
-			const response = await shareService.apply({ share_code: shareCode });
-			if (isSuccess(response) && response.data) {
-				const result = response.data;
-				if (result.action.type === 'update_location') {
-					toast.success('浏览锚点已更新！');
-					// 跳转到主页，让用户看到新锚点的效果
-					setTimeout(() => {
-						goto('/');
-					}, 1500);
-				} else if (result.action.type === 'navigate_user') {
-					goto(`/users/${result.action.shared_user_id}`);
-				} else if (result.action.type === 'navigate_group') {
-					goto(`/groups/${result.action.shared_group_id}`);
-				} else if (result.action.type === 'navigate_moment') {
-					goto(`/moments/${result.action.shared_moment_id}`);
-				}
-			} else {
-				toast.error('应用失败', response.message ?? '未知错误');
-			}
-		} catch (error) {
-			toast.error('网络错误', '请检查网络连接');
-		} finally {
-			isApplying = false;
+		const { share_type } = share.share;
+		const payload = share.payload;
+
+		if (share_type === 'location') {
+			const loc = (payload as LocationSharePayload).shared_location;
+			mapAnchorStore.setAnchor(
+				loc.point.latitude,
+				loc.point.longitude,
+				loc.location_name
+			);
+			toast.success('浏览锚点已更新！');
+			setTimeout(() => goto('/'), 500);
+		} else if (share_type === 'user') {
+			goto(`/users/${(payload as UserSharePayload).shared_user_id}`);
+		} else if (share_type === 'group') {
+			goto(`/groups/${(payload as GroupSharePayload).shared_group_id}`);
+		} else if (share_type === 'moment') {
+			goto(`/moments/${(payload as MomentSharePayload).shared_moment_id}`);
 		}
 	}
 
@@ -109,17 +105,12 @@
 
 			<CardContent class="space-y-6 p-6">
 				<!-- 主要操作按钮 -->
-				<Button 
-					class="w-full h-14 text-base font-semibold" 
-					onclick={handleApply} 
-					disabled={isApplying}
+				<Button
+					class="w-full h-14 text-base font-semibold"
+					onclick={handleApply}
 				>
-					{#if isApplying}
-						应用中...
-					{:else}
-						<MapPin class="mr-2 h-5 w-5" />
-						设为浏览锚点
-					{/if}
+					<MapPin class="mr-2 h-5 w-5" />
+					设为浏览锚点
 				</Button>
 
 				<!-- 说明卡片 -->
@@ -165,13 +156,18 @@
 			</CardContent>
 		</Card>
 	{:else}
-		<!-- 其他类型的分享（暂未实现） -->
+		<!-- 其他类型的分享（用户/群组/瞬间） -->
 		<Card>
 			<CardHeader>
-				<CardTitle>暂不支持此类型的分享</CardTitle>
-				<CardDescription>分享类型：{share.share.share_type}</CardDescription>
+				<CardTitle>分享内容</CardTitle>
+				<CardDescription>
+					分享类型：{share.share.share_type === 'user' ? '用户' : share.share.share_type === 'group' ? '群组' : '瞬间'}
+				</CardDescription>
 			</CardHeader>
-			<CardContent>
+			<CardContent class="space-y-4">
+				<Button class="w-full" onclick={handleApply}>
+					前去查看
+				</Button>
 				<Button variant="outline" onclick={() => goto('/')}>返回首页</Button>
 			</CardContent>
 		</Card>

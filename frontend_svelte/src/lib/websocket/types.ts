@@ -8,6 +8,7 @@ import type {
 	Location,
 	MessageMedia,
 	MessageType,
+	MomentSummary,
 	ClientType,
 	FollowSource,
 	GroupJoinMethod,
@@ -18,7 +19,7 @@ import type {
 
 export type AnnouncementSeverity = 'info' | 'warning' | 'critical';
 export type SubscriptionOperation = 'subscribe' | 'unsubscribe' | 'set';
-export type SubscriptionFailureReason = 'invalid' | 'denied' | 'error';
+export type SubscriptionFailureReason = 'invalid' | 'denied' | 'limit_exceeded' | 'error';
 export type ErrorSeverity = 'fatal' | 'recoverable' | 'warning';
 
 // ============ WebSocket 事件类型枚举 ============
@@ -63,8 +64,6 @@ export type ServerEventType =
 	| 'GroupAnnouncementCreated'
 	| 'GroupUpdated'
 	| 'GroupDismissed'
-	| 'GroupUserEntered'
-	| 'GroupUserExited'
 	// 用户
 	| 'UserProfileUpdated'
 	// 系统
@@ -80,9 +79,7 @@ export type ClientEventType =
 	| 'SetSubscriptions'
 	| 'GetSubscriptions'
 	| 'PrivateTyping'
-	| 'GroupTyping'
-	| 'GroupEnter'
-	| 'GroupLeave';
+	| 'GroupTyping';
 
 // ============ 通用事件结构 ============
 
@@ -98,11 +95,7 @@ export interface ServerWebSocketEvent extends WebSocketEvent<ServerEventType, un
 
 // ============ 辅助类型 ============
 
-export interface MomentSummary {
-	moment_id: string;
-	cover_url?: string;
-	text_preview: string;
-}
+// MomentSummary 定义于 api.ts (对应 api_spec_types.mdc)
 
 export interface MessageReplyTo {
 	message_id: string;
@@ -133,13 +126,6 @@ export interface ConnectionEstablishedPayload {
 			group: number; // 群组订阅上限
 		};
 	};
-
-	// 未读摘要（冷启动/重连时获取 badge 数据）
-	unread_summary: {
-		private_chats: number; // 有未读消息的私聊会话数
-		groups: number; // 有未读消息的群聊数
-		total_messages: number; // 总未读消息数
-	};
 }
 
 export interface PongPayload {}
@@ -159,7 +145,6 @@ export interface UserOfflinePayload {
 export interface NewFollowerPayload {
 	user: UserInfo;
 	followed_at: string;
-	is_mutual: boolean;
 	source?: FollowSource;
 	source_moment_id?: string;
 }
@@ -197,6 +182,7 @@ export interface CommentLikedPayload {
 
 export interface CommentReplyPayload {
 	moment_id: string;
+	moment_summary?: MomentSummary;
 	comment_id: string;
 	reply_to_content: string;
 	reply_id: string;
@@ -234,7 +220,7 @@ export interface UserProfileUpdatedPayload {
 export interface PrivateMessageNewPayload {
 	message_id: string;
 	target_user_id: string;
-	sender_id: string; // 私聊双方已知，只需 ID
+	sender: UserInfo;
 	type: MessageType;
 	content?: string;
 	share_code?: string;
@@ -253,7 +239,7 @@ export interface PrivateMessageEditedPayload {
 export interface PrivateMessageRecalledPayload {
 	message_id: string;
 	target_user_id: string;
-	recalled_by: string;
+	recalled_by: UserInfo;
 	recalled_at: string;
 }
 
@@ -294,7 +280,7 @@ export interface GroupMessageEditedPayload {
 export interface GroupMessageRecalledPayload {
 	message_id: string;
 	group_id: string;
-	recalled_by: string;
+	recalled_by: UserInfo;
 	recalled_at: string;
 }
 
@@ -411,25 +397,11 @@ export interface GroupUpdatedPayload {
 	updated_at: string;
 }
 
-// 群组解散
+// 群组解散（群主主动解散或因违规被解散）
 export interface GroupDismissedPayload {
 	group_id: string;
 	dismissed_at: string;
-	reason?: 'owner_dismissed' | 'admin_dismissed';
-}
-
-// 用户进入群聊
-export interface GroupUserEnteredPayload {
-	group_id: string;
-	user: UserInfo;
-	entered_at: string;
-}
-
-// 用户离开群聊
-export interface GroupUserExitedPayload {
-	group_id: string;
-	user: UserInfo;
-	exited_at: string;
+	reason?: 'owner_dismissed' | 'policy_violation';
 }
 
 // 系统
@@ -461,7 +433,6 @@ export interface SubscriptionsSnapshotPayload {
 	client_msg_id: string;
 	user_ids: string[];
 	group_ids: string[];
-	total_count: number;
 }
 
 // 账号被封禁
@@ -501,14 +472,6 @@ export interface GroupTypingPayload {
 	is_typing: boolean;
 }
 
-export interface GroupEnterPayload {
-	group_id: string;
-}
-
-export interface GroupLeavePayload {
-	group_id: string;
-}
-
 // ============ 类型联合 ============
 
 export type ServerEvent =
@@ -546,8 +509,6 @@ export type ServerEvent =
 	| WebSocketEvent<'GroupAnnouncementCreated', GroupAnnouncementCreatedPayload>
 	| WebSocketEvent<'GroupUpdated', GroupUpdatedPayload>
 	| WebSocketEvent<'GroupDismissed', GroupDismissedPayload>
-	| WebSocketEvent<'GroupUserEntered', GroupUserEnteredPayload>
-	| WebSocketEvent<'GroupUserExited', GroupUserExitedPayload>
 	| WebSocketEvent<'AccountBanned', AccountBannedPayload>
 	| WebSocketEvent<'Error', ErrorPayload>
 	| WebSocketEvent<'SubscribeAck', SubscribeAckPayload>
@@ -559,9 +520,7 @@ export type ClientEvent =
 	| WebSocketEvent<'SetSubscriptions', SetSubscriptionsPayload>
 	| WebSocketEvent<'GetSubscriptions', GetSubscriptionsPayload>
 	| WebSocketEvent<'PrivateTyping', PrivateTypingPayload>
-	| WebSocketEvent<'GroupTyping', GroupTypingPayload>
-	| WebSocketEvent<'GroupEnter', GroupEnterPayload>
-	| WebSocketEvent<'GroupLeave', GroupLeavePayload>;
+	| WebSocketEvent<'GroupTyping', GroupTypingPayload>;
 
 // ============ WebSocket 事件类型映射 ============
 
@@ -611,8 +570,6 @@ export type WebSocketEventMap = {
 	GroupAnnouncementCreated: GroupAnnouncementCreatedPayload;
 	GroupUpdated: GroupUpdatedPayload;
 	GroupDismissed: GroupDismissedPayload;
-	GroupUserEntered: GroupUserEnteredPayload;
-	GroupUserExited: GroupUserExitedPayload;
 	// 系统
 	AccountBanned: AccountBannedPayload;
 	Error: ErrorPayload;

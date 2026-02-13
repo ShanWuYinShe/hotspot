@@ -620,13 +620,13 @@ impl MomentRepository {
         Ok(rows)
     }
 
-    /// 列出指定用户的瞬间
+    /// 列出指定用户的瞬间（带用户信息）
     pub async fn list_by_user(
         &self,
         user_id: i64,
         limit: i64,
         cursor: Option<String>,
-    ) -> Result<(Vec<MomentListRow>, Option<String>)> {
+    ) -> Result<(Vec<MomentDetailRow>, Option<String>)> {
         let (last_ts, last_id) = if let Some(c) = cursor {
             decode_cursor::<TimeIdCursor>(&c)?
         } else {
@@ -634,14 +634,20 @@ impl MomentRepository {
         };
 
         let rows = sqlx::query_as!(
-            MomentListRow,
+            MomentDetailRow,
             r#"
-            SELECT m.moment_id as "moment_id!", m.description, m.mentions, m.location_name,
+            SELECT m.moment_id as "moment_id!", m.user_id as "user_id!",
+                   m.description, m.mentions, m.location_name,
+                   m.privacy_level as "privacy_level!: crate::types::enums::PrivacyLevel",
+                   m.view_count::int as "view_count!", m.like_count::int as "like_count!",
+                   m.comments_count::int as "comments_count!", m.share_count::int as "share_count!",
+                   m.created_at as "created_at!", m.updated_at as "updated_at!",
+                   u.nickname as user_nickname, u.avatar_url as user_avatar_url,
                    ST_X(m.location::geometry) as longitude,
                    ST_Y(m.location::geometry) as latitude,
-                   m.like_count::int as "like_count!", m.comments_count::int as "comments_count!",
-                   m.created_at as "created_at!"
+                   NULL::float8 as distance
             FROM moments m
+            JOIN users u ON m.user_id = u.user_id
             WHERE m.user_id = $1 AND m.deleted_at IS NULL
               AND (m.created_at, m.moment_id) < ($2, $3)
             ORDER BY m.created_at DESC, m.moment_id DESC

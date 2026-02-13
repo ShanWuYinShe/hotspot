@@ -65,13 +65,11 @@ impl EventHandler {
                 user_id: user.user_id,
                 nickname: user.nickname.unwrap_or_default(),
                 avatar_url: user.avatar_url,
-                user_type: user.user_type,
             },
             _ => crate::dto::response::UserInfo {
                 user_id,
                 nickname: "未知用户".to_string(),
                 avatar_url: None,
-                user_type: crate::types::enums::UserType::Normal,
             },
         }
     }
@@ -174,7 +172,7 @@ impl EventHandler {
                 self.notification_service
                     .create_notification(
                         *user_id,
-                        NotificationType::MomentLike,
+                        NotificationType::MomentLiked,
                         "瞬间获赞".to_string(),
                         "点赞了你的瞬间".to_string(),
                         Some(*liker_id),
@@ -201,7 +199,7 @@ impl EventHandler {
                 self.notification_service
                     .create_notification(
                         *user_id,
-                        NotificationType::MomentComment,
+                        NotificationType::MomentCommented,
                         "瞬间评论".to_string(),
                         content.clone(),
                         Some(*commenter_id),
@@ -251,7 +249,7 @@ impl EventHandler {
                 self.notification_service
                     .create_notification(
                         *to_user_id,
-                        NotificationType::GroupInvite,
+                        NotificationType::GroupInviteReceived,
                         "群组邀请".to_string(),
                         format!("邀请你加入群组: {}", group_name),
                         Some(*from_user_id),
@@ -262,58 +260,11 @@ impl EventHandler {
                     )
                     .await?;
             }
-            AppEvent::GroupInviteResponse {
-                invite_id,
-                group_id,
-                inviter_id,
-                invitee_id,
-                status,
-            } => {
-                if status.as_str() != "accepted" {
-                    return Ok(());
-                }
-                self.notification_service
-                    .create_notification(
-                        *inviter_id,
-                        NotificationType::GroupInviteResponse,
-                        "群组邀请已接受".to_string(),
-                        "对方已接受你的群组邀请".to_string(),
-                        Some(*invitee_id),
-                        Some("group".to_string()),
-                        Some(group_id.to_string()),
-                        Some(invite_id.to_string()),
-                        None,
-                    )
-                    .await?;
+            AppEvent::GroupInviteResponse { .. } => {
+                // spec 已移除 group_invite_response 通知类型，不再持久化
             }
-            AppEvent::GroupApplicationReceived {
-                application_id,
-                group_id,
-                applicant_id,
-                message,
-            } => {
-                // 需要通知所有管理员
-                let admin_ids = self
-                    .group_member_repo
-                    .list_admin_user_ids(*group_id)
-                    .await?;
-                for admin_id in admin_ids {
-                    self.notification_service
-                        .create_notification(
-                            admin_id,
-                            NotificationType::GroupApplication,
-                            "入群申请".to_string(),
-                            message
-                                .clone()
-                                .unwrap_or_else(|| "申请加入群组".to_string()),
-                            Some(*applicant_id),
-                            Some("group".to_string()),
-                            Some(group_id.to_string()),
-                            Some(application_id.to_string()),
-                            None,
-                        )
-                        .await?;
-                }
+            AppEvent::GroupApplicationReceived { .. } => {
+                // spec 已移除 group_application 通知类型，不再持久化
             }
             AppEvent::GroupApplicationResponse {
                 application_id,
@@ -328,7 +279,7 @@ impl EventHandler {
                 self.notification_service
                     .create_notification(
                         *applicant_id,
-                        NotificationType::GroupApplicationResponse,
+                        NotificationType::GroupApplicationAccepted,
                         "入群申请已通过".to_string(),
                         format!("已通过加入群组: {}", group_name),
                         None,
@@ -339,36 +290,8 @@ impl EventHandler {
                     )
                     .await?;
             }
-            AppEvent::GroupAnnouncementCreated {
-                announcement_id,
-                group_id,
-                title,
-                content,
-                created_by_user_id,
-                ..
-            } => {
-                let member_ids = self
-                    .group_member_repo
-                    .list_member_user_ids(*group_id)
-                    .await?;
-                for member_id in member_ids {
-                    if member_id == *created_by_user_id {
-                        continue;
-                    }
-                    self.notification_service
-                        .create_notification(
-                            member_id,
-                            NotificationType::GroupAnnouncement,
-                            title.clone(),
-                            content.clone(),
-                            Some(*created_by_user_id),
-                            Some("group".to_string()),
-                            Some(group_id.to_string()),
-                            Some(announcement_id.to_string()),
-                            None,
-                        )
-                        .await?;
-                }
+            AppEvent::GroupAnnouncementCreated { .. } => {
+                // spec 已移除 group_announcement 通知类型，不再持久化
             }
             AppEvent::SystemAnnouncement {
                 announcement_id,
@@ -427,49 +350,77 @@ impl EventHandler {
                     )
                     .await?;
             }
-            AppEvent::FollowRequestReceived {
-                request_id,
-                requester_id,
-                target_id,
+            AppEvent::FollowRequestReceived { .. } => {
+                // spec 已移除 follow_request 通知类型，不再持久化
+            }
+            AppEvent::FollowRequestHandled { .. } => {
+                // spec 已移除 follow_request_handled 通知类型，不再持久化
+            }
+            AppEvent::CommentLiked {
+                comment_id,
+                moment_id,
+                user_id,
+                liker_id,
+                comment_preview,
             } => {
-                // 创建关注请求通知
+                if *user_id != *liker_id {
+                    self.notification_service
+                        .create_notification(
+                            *user_id,
+                            NotificationType::CommentLiked,
+                            "评论获赞".to_string(),
+                            "点赞了你的评论".to_string(),
+                            Some(*liker_id),
+                            Some("comment".to_string()),
+                            Some(moment_id.to_string()),
+                            Some(comment_id.to_string()),
+                            Some(comment_preview.clone()),
+                        )
+                        .await?;
+                }
+            }
+            AppEvent::MomentMentioned {
+                moment_id,
+                mentioned_user_id,
+                mentioning_user_id,
+                moment_text_preview,
+                moment_cover_url,
+            } => {
+                let preview = moment_cover_url
+                    .clone()
+                    .unwrap_or_else(|| moment_text_preview.clone());
                 self.notification_service
                     .create_notification(
-                        *target_id,
-                        NotificationType::FollowRequest,
-                        "新的关注请求".to_string(),
-                        "请求关注你".to_string(),
-                        Some(*requester_id),
+                        *mentioned_user_id,
+                        NotificationType::Mentioned,
+                        "被提及".to_string(),
+                        "在瞬间中提到了你".to_string(),
+                        Some(*mentioning_user_id),
+                        Some("moment".to_string()),
+                        Some(moment_id.to_string()),
                         None,
-                        Some(request_id.clone()),
-                        None,
-                        None,
+                        Some(preview),
                     )
                     .await?;
             }
-            AppEvent::FollowRequestHandled {
-                request_id,
-                requester_id,
-                target_id,
-                accepted,
+            AppEvent::CommentMentioned {
+                moment_id,
+                comment_id,
+                mentioned_user_id,
+                mentioning_user_id,
+                content_preview,
             } => {
-                if !accepted {
-                    return Ok(());
-                }
-                // 创建关注请求处理通知
-                let title = "关注请求已通过";
-                let content = "已同意你的关注请求";
                 self.notification_service
                     .create_notification(
-                        *requester_id,
-                        NotificationType::FollowRequestHandled,
-                        title.to_string(),
-                        content.to_string(),
-                        Some(*target_id),
-                        None,
-                        Some(request_id.clone()),
-                        None,
-                        None,
+                        *mentioned_user_id,
+                        NotificationType::Mentioned,
+                        "被提及".to_string(),
+                        "在评论中提到了你".to_string(),
+                        Some(*mentioning_user_id),
+                        Some("comment".to_string()),
+                        Some(moment_id.to_string()),
+                        Some(comment_id.to_string()),
+                        Some(content_preview.clone()),
                     )
                     .await?;
             }
@@ -509,7 +460,7 @@ impl EventHandler {
             AppEvent::NewFollower {
                 user_id,
                 follower_id,
-                is_mutual,
+                is_mutual: _,
             } => {
                 // 通知推送 = 持久化偏好
                 let cfg = self.subscription_service.get_config(*user_id).await?;
@@ -521,7 +472,6 @@ impl EventHandler {
                 let message = WsMessage::NewFollower {
                     user: follower_info,
                     followed_at: chrono::Utc::now().to_rfc3339(),
-                    is_mutual: *is_mutual,
                 };
                 let _ = self.ws_manager.send_to_user(*user_id, &message).await;
             }
@@ -938,10 +888,11 @@ impl EventHandler {
                 recalled_by,
                 recalled_at,
             } => {
+                let recalled_by_user = self.get_user_info(*recalled_by).await;
                 let message = WsMessage::GroupMessageRecalled {
                     message_id: message_id.to_string(),
                     group_id: group_chat_id.to_string(),
-                    recalled_by: *recalled_by,
+                    recalled_by: recalled_by_user,
                     recalled_at: recalled_at.clone(),
                 };
                 let group_id_str = group_chat_id.to_string();
@@ -1046,10 +997,11 @@ impl EventHandler {
                 recalled_by,
                 recalled_at,
             } => {
+                let recalled_by_info = self.get_user_info(*recalled_by).await;
                 let message = WsMessage::PrivateMessageRecalled {
                     message_id: message_id.to_string(),
                     target_user_id: *target_user_id,
-                    recalled_by: *recalled_by,
+                    recalled_by: recalled_by_info,
                     recalled_at: recalled_at.clone(),
                 };
                 // 发送给接收者
@@ -1223,6 +1175,7 @@ impl EventHandler {
                 let replier = self.get_user_info(*replier_id).await;
                 let message = WsMessage::CommentReply {
                     moment_id: moment_id.to_string(),
+                    moment_summary: None, // 简化：不重复查瞬间摘要，与 CommentLiked 保持一致
                     comment_id: comment_id.to_string(),
                     reply_to_content: reply_to_content.clone(),
                     reply_id: reply_id.to_string(),

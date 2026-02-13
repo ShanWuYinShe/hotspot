@@ -5,10 +5,10 @@
 // 枚举类型（common.yaml + 各模块）
 // ============================================================================
 
-export type UserType = 'temp' | 'normal' | 'admin' | 'system';
+export type UserType = 'temp' | 'normal';
 export type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'share' | 'system';
 export type SendMessageType = Exclude<MessageType, 'system'>;
-export type PrivacyLevel = 'public' | 'followers' | 'friends' | 'private';
+export type PrivacyLevel = 'public' | 'private';
 export type GroupRole = 'owner' | 'admin' | 'member';
 export type SetableGroupRole = 'admin' | 'member';
 export type Gender = 'male' | 'female' | 'apache_helicopter';
@@ -19,27 +19,34 @@ export type ApplicationStatus = 'pending' | 'accepted' | 'rejected';
 export type ReportStatus = 'pending' | 'reviewing' | 'resolved' | 'dismissed';
 export type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group';
 export type ReportHandleAction = 'resolve' | 'dismiss' | 'escalate';
+export type ReportReason =
+	| 'spam'
+	| 'harassment'
+	| 'violence'
+	| 'hate_speech'
+	| 'sexual_content'
+	| 'misinformation'
+	| 'impersonation'
+	| 'self_harm'
+	| 'other';
 export type GroupJoinMethod = 'open' | 'approval' | 'invite_only';
 export type FeedSource = 'following' | 'nearby' | 'all';
 export type PrivateChatPermission = 'everyone' | 'friends' | 'nobody';
 export type AnnouncementSeverity = 'info' | 'warning' | 'error';
 export type TagTrend = 'rising' | 'stable' | 'falling';
-export type TagTimeframe = 'daily' | 'weekly' | 'monthly';
 export type FollowSource = 'moment' | 'search' | 'recommendation' | 'profile' | 'group';
 export type RecommendationType = 'friend_liked' | 'nearby' | 'trending' | 'following' | 'tag_match';
 export type NotificationType =
-	| 'moment_like'
-	| 'moment_comment'
-	| 'comment_reply'
 	| 'new_follower'
 	| 'mutual_follow'
-	| 'group_invite'
-	| 'group_invite_response'
-	| 'group_application'
-	| 'group_application_response'
-	| 'group_announcement'
-	| 'system_announcement'
-	| 'message_mention';
+	| 'moment_liked'
+	| 'moment_commented'
+	| 'comment_liked'
+	| 'comment_reply'
+	| 'mentioned'
+	| 'group_invite_received'
+	| 'group_application_accepted'
+	| 'system_announcement';
 export type NotificationTargetType = 'moment' | 'comment' | 'user' | 'group' | 'web';
 export type FeedContentType = 'moment' | 'group' | 'user';
 export type FeedFeedbackAction = 'hide' | 'not_interested';
@@ -54,7 +61,8 @@ export type MediaCategory =
 export type MapDataType = 'user' | 'group' | 'moment' | 'all';
 export type MapItemType = 'cluster' | 'user' | 'group' | 'moment';
 export type ShareType = 'location' | 'moment' | 'group' | 'user';
-export type CantMessageReason = 'blocked' | 'privacy' | 'stranger_limit' | 'account_suspended';
+// 设计说明：被拉黑场景统一返回 'privacy'，不暴露拉黑状态
+export type CantMessageReason = 'privacy' | 'stranger_limit' | 'account_suspended';
 export type SearchSuggestType = 'tag' | 'user' | 'group' | 'moment';
 export type SystemHealthStatus = 'healthy' | 'degraded' | 'unhealthy';
 
@@ -106,14 +114,9 @@ export interface PaginationParams {
 	cursor?: string;
 }
 
-export interface PaginationMeta {
-	has_more: boolean;
-	next_cursor?: string;
-}
-
 export interface PaginatedData<T> {
 	items: T[];
-	pagination: PaginationMeta;
+	next_cursor?: string;
 }
 
 export interface TimeRangeParams {
@@ -186,11 +189,11 @@ export interface UserStats {
 }
 
 /** 用户关系信息（@auth-only） */
+// 设计说明：不暴露 is_blocked_by，被拉黑的用户不应感知到自己被拉黑
 export interface Relationship {
 	is_following: boolean;
 	is_followed_by: boolean;
 	is_blocked: boolean;
-	is_blocked_by: boolean;
 }
 
 /** 社交上下文（@auth-only） */
@@ -223,12 +226,12 @@ export interface UserSettings {
 	privacy_level: PrivacyLevel;
 	location_visible: boolean;
 	presence_visible: boolean;
-	friends_visible: PrivacyLevel;
-	following_visible: PrivacyLevel;
-	followers_visible: PrivacyLevel;
-	groups_visible: PrivacyLevel;
-	liked_moments_visible: PrivacyLevel;
-	stats_visible: PrivacyLevel;
+	friends_visible: boolean;
+	following_visible: boolean;
+	followers_visible: boolean;
+	groups_visible: boolean;
+	liked_moments_visible: boolean;
+	stats_visible: boolean;
 	allow_follow: boolean;
 	allow_private_chat: PrivateChatPermission;
 	searchable: boolean;
@@ -343,7 +346,6 @@ export interface GroupItem {
 	join_method?: GroupJoinMethod;
 	is_searchable?: boolean;
 	max_members?: number;
-	settings_location?: Location;
 }
 
 /** 群组详情响应 */
@@ -424,6 +426,13 @@ export interface JoinGroupResult {
 // 瞬间类型（common.yaml + moments.yaml）
 // ============================================================================
 
+/** 瞬间摘要快照（用于通知、WebSocket 事件等场景的轻量级预览） */
+export interface MomentSummary {
+	moment_id: string;
+	cover_url?: string;
+	text_preview: string;
+}
+
 /**
  * 瞬间统一数据类型（用于列表、搜索、详情、Feed、用户瞬间历史等所有场景）
  * 替代原 MomentBase/MomentSearchItem/MomentCard/FeedMomentItem/UserMomentListItem
@@ -494,19 +503,19 @@ export interface MessageSent {
 	sent_at: string;
 }
 
-/** 私聊消息项（使用 sender_id 而非完整 UserInfo） */
+/** 私聊消息项 */
 export interface PrivateMessageItem {
 	message_id: string;
 	type: MessageType;
 	content?: string;
 	media?: MessageMedia;
 	share_code?: string;
-	sender_id: string;
+	sender: UserInfo;
 	reply_to?: MessageReplyTo;
 	sent_at: string;
 	edited_at?: string;
 	recalled_at?: string;
-	is_read?: boolean;
+	is_read: boolean;
 }
 
 /** 群聊消息项（使用 sender: UserInfo） */
@@ -519,7 +528,7 @@ export interface GroupMessageItem {
 	sender: UserInfo;
 	reply_to?: MessageReplyTo;
 	mentions?: string[];
-	recalled_by?: string;
+	recalled_by?: UserInfo;
 	sent_at: string;
 	edited_at?: string;
 	recalled_at?: string;
@@ -543,7 +552,7 @@ export interface PrivateChatItem {
 		content?: string;
 		type: MessageType;
 		share_code?: string;
-		sender_id: string;
+		sender: UserInfo;
 		sent_at: string;
 	};
 	presence_status?: UserPresenceStatus;
@@ -557,22 +566,88 @@ export interface PrivateChatOpenResult {
 }
 
 // ============================================================================
-// 通知类型（WebSocket 推送用）
+// 通知类型
 // ============================================================================
+
+export type NotificationPayload =
+	| { type: 'new_follower'; actor: UserInfo; source?: FollowSource; source_moment_id?: string }
+	| { type: 'mutual_follow'; actor: UserInfo }
+	| { type: 'moment_liked'; actor: UserInfo; moment_id: string; moment_summary: MomentSummary }
+	| {
+			type: 'moment_commented';
+			actor: UserInfo;
+			moment_id: string;
+			moment_summary: MomentSummary;
+			comment_id: string;
+			comment_preview: string;
+	  }
+	| {
+			type: 'comment_liked';
+			actor: UserInfo;
+			comment_id: string;
+			comment_preview: string;
+			moment_id: string;
+			moment_summary?: MomentSummary;
+	  }
+	| {
+			type: 'comment_reply';
+			actor: UserInfo;
+			comment_id: string;
+			comment_preview: string;
+			moment_id: string;
+			moment_summary?: MomentSummary;
+	  }
+	| {
+			type: 'mentioned';
+			actor: UserInfo;
+			target_type: 'moment' | 'comment';
+			moment_id: string;
+			moment_summary?: MomentSummary;
+			comment_id?: string;
+			comment_preview?: string;
+	  }
+	| {
+			type: 'group_invite_received';
+			actor: UserInfo;
+			group_id: string;
+			group_name: string;
+			invite_id: string;
+	  }
+	| {
+			type: 'group_application_accepted';
+			group_id: string;
+			group_name: string;
+			application_id: string;
+	  }
+	| { type: 'system_announcement'; announcement_id: string; severity: AnnouncementSeverity };
 
 export interface NotificationItem {
 	notification_id: string;
 	type: NotificationType;
 	is_read: boolean;
 	created_at: string;
-	sender?: UserInfo;
-	title?: string;
-	content?: string;
-	target_type?: NotificationTargetType;
-	target_id?: string;
-	reference_id?: string;
-	target_text_preview?: string;
-	target_media_url?: string;
+	payload: NotificationPayload;
+}
+
+export interface UnreadCountByType {
+	social: number;
+	interaction: number;
+	group: number;
+	system: number;
+}
+
+export interface UnreadCountResult {
+	total: number;
+	by_type: UnreadCountByType;
+}
+
+export interface NotificationListRequest {
+	type?: NotificationType;
+	pagination?: PaginationParams;
+}
+
+export interface MarkNotificationsReadRequest {
+	notification_ids: string[];
 }
 
 // ============================================================================
@@ -740,7 +815,7 @@ export interface ReportItem {
 	report_id: string;
 	target_type: ReportTargetType;
 	target_id: string;
-	reason: string;
+	reason: ReportReason;
 	description?: string;
 	status: ReportStatus;
 	created_at: string;
@@ -787,6 +862,9 @@ export type AuditAction =
 	| 'user.ban'
 	| 'user.unban'
 	| 'group.dismiss'
+	| 'group.member_mute'
+	| 'group.member_ban'
+	| 'group.member_remove'
 	| 'announcement.create'
 	| 'announcement.delete'
 	| 'role.create'
@@ -931,6 +1009,14 @@ export interface ClientConfig {
 		comment_max_length: number;
 		search_radius_max: number;
 	};
+	defaults: {
+		default_location: {
+			point: { latitude: number; longitude: number };
+			location_name: string;
+		};
+		default_user_avatar: string;
+		default_group_avatar: string;
+	};
 }
 
 export interface UploadConfig {
@@ -943,7 +1029,10 @@ export interface UploadConfig {
 }
 
 export interface ContentDefaults {
-	default_location_name: string;
+	default_location: {
+		point: { latitude: number; longitude: number };
+		location_name: string;
+	};
 	default_group_avatar: string;
 	default_user_avatar: string;
 	default_group_settings: GroupSettings;
@@ -968,6 +1057,7 @@ export interface ResponseDefaults {
 	hot_moments_count: number;
 	chat_recent_messages_count: number;
 	group_announcements_count: number;
+	system_announcements_count: number;
 }
 
 export interface ServerConfig {
@@ -1063,17 +1153,6 @@ export interface ShareDetail {
 	preview?: SharePreview;
 }
 
-export type ShareApplyAction =
-	| { type: 'navigate_user'; shared_user_id: string }
-	| { type: 'navigate_group'; shared_group_id: string }
-	| { type: 'navigate_moment'; shared_moment_id: string }
-	| { type: 'update_location'; shared_location: Location };
-
-export interface ShareApplyResult {
-	share_type: ShareType;
-	action: ShareApplyAction;
-}
-
 export interface ShareListItem {
 	share_id: string;
 	share_code: string;
@@ -1091,10 +1170,6 @@ export interface CreateShareRequest {
 }
 
 export interface GetShareRequest {
-	share_code: string;
-}
-
-export interface ApplyShareRequest {
 	share_code: string;
 }
 

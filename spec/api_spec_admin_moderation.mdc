@@ -4,19 +4,19 @@ alwaysApply: true
 # HotSpot API - 管理后台审核
 
 > 本文档定义 HotSpot 管理后台内容审核相关的 RPC 接口，包括用户管理、群组管理、举报审核、标签管理和系统公告管理。
-> 核心管理功能（RBAC、审计、配置）定义在 `@api_spec_admin_core.mdc`。
+> 核心管理功能（RBAC、审计、配置）定义在 `@spec/api_spec_admin_core.mdc`。
 
 ## 模块信息
 
 - **命名空间**: `admin.users`、`admin.groups`、`admin.reports`、`admin.tags`、`admin.announcements`
 - **基础路径**: `/api/v1/admin/users/`、`/api/v1/admin/groups/`、`/api/v1/admin/reports/`、`/api/v1/admin/tags/`、`/api/v1/admin/announcements/`
 - **引用**:
-  - 基础规范：`@api_spec_base.mdc`
-  - 通用类型：`@api_spec_types.mdc`（`UserItem`、`GroupItem`、`SystemAnnouncementItem`、`UserInfo` 等）
-  - 举报类型：`@api_spec_report.mdc`（`ReportItem`）
-  - 错误码：`@api_spec_errors.mdc`
-  - 统一访问控制与权限 key 约定：`@api_spec_admin_core.mdc`
-  - 公开公告 API：`@api_spec_system.mdc`
+  - 基础规范：`@spec/api_spec_base.mdc`
+  - 通用类型：`@spec/api_spec_types.mdc`（`UserItem`、`GroupItem`、`SystemAnnouncementItem`、`UserInfo` 等）
+  - 举报类型：`@spec/api_spec_report.mdc`（`ReportItem`）
+  - 错误码：`@spec/api_spec_errors.mdc`
+  - 统一访问控制与权限 key 约定：`@spec/api_spec_admin_core.mdc`
+  - 公开公告 API：`@spec/api_spec_system.mdc`
 
 ## 端点总览
 
@@ -40,7 +40,7 @@ alwaysApply: true
 
 ## 类型定义
 
-以下类型定义于 `@api_spec_types.mdc`：
+以下类型定义于 `@spec/api_spec_types.mdc`：
 - `UserItem`
 - `GroupItem`
 - `SystemAnnouncementItem`
@@ -54,7 +54,7 @@ alwaysApply: true
 - `AnnouncementSeverity`
 - `UserInfo`
 
-以下类型定义于 `@api_spec_report.mdc`：
+以下类型定义于 `@spec/api_spec_report.mdc`：
 - `ReportItem`
 
 说明：以下 Admin 扩展类型通过 `extends` 继承普通类型，包含管理员视角的完整字段。
@@ -368,7 +368,7 @@ interface AdminDeleteTagRequest {
 - **幂等**: 无
 
 **说明**：
-- 普通用户通过 `POST /api/v1/system/list_announcements`（定义于 `@api_spec_system.mdc`）获取公开公告
+- 普通用户通过 `POST /api/v1/system/list_announcements`（定义于 `@spec/api_spec_system.mdc`）获取公开公告
 - 此端点返回 `AdminAnnouncementItem`（含 `created_by`、`view_count` 等管理员字段）
 
 **Request**: `AdminAnnouncementSearchRequest`

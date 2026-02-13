@@ -13,7 +13,7 @@
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
 	import MomentCard from '$lib/components/moments/moment-card.svelte';
-	import type { UserItem, UserInfo, MomentItem } from '$lib/types/api';
+	import type { UserItem, MomentItem, FollowerItem, FollowingItem } from '$lib/types/api';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import MapPin from 'lucide-svelte/icons/map-pin';
 	import Users from 'lucide-svelte/icons/users';
@@ -43,14 +43,14 @@
 		uniqueKey: 'moment_id'
 	});
 
-	const followersPagination = usePagination<UserInfo>({
+	const followersPagination = usePagination<FollowerItem>({
 		initialLoading: false,
-		uniqueKey: 'user_id'
+		uniqueKey: (item) => item.user.user_id
 	});
 
-	const followingPagination = usePagination<UserInfo>({
+	const followingPagination = usePagination<FollowingItem>({
 		initialLoading: false,
-		uniqueKey: 'user_id'
+		uniqueKey: (item) => item.user.user_id
 	});
 
 
@@ -86,7 +86,7 @@
 				if (user) {
 					user = {
 						...user,
-						relation: user.relation ? { ...user.relation, is_following: true } : { is_following: true, is_followed_by: false, is_blocked: false, is_blocked_by: false }
+						relation: user.relation ? { ...user.relation, is_following: true } : { is_following: true, is_followed_by: false, is_blocked: false }
 					};
 				}
 				toast.success('关注成功');
@@ -362,16 +362,16 @@
 					</Card>
 				{:else}
 					<div class="grid gap-3 sm:grid-cols-2">
-						{#each followersPagination.items as follower (follower.user_id)}
-							<a href="/users/{follower.user_id}">
+						{#each followersPagination.items as follower (follower.user.user_id)}
+							<a href="/users/{follower.user.user_id}">
 								<Card class="cursor-pointer border-0 bg-card/70 shadow-sm shadow-black/5 transition-shadow hover:shadow-lg hover:shadow-black/10">
 									<CardContent class="flex items-center gap-3 p-4">
 										<Avatar class="h-12 w-12">
-											<AvatarImage src={follower.avatar_url} alt={follower.nickname} />
-											<AvatarFallback>{follower.nickname.slice(0, 2)}</AvatarFallback>
+											<AvatarImage src={follower.user.avatar_url} alt={follower.user.nickname} />
+											<AvatarFallback>{follower.user.nickname.slice(0, 2)}</AvatarFallback>
 										</Avatar>
 										<div class="min-w-0">
-											<p class="truncate font-medium">{follower.nickname}</p>
+											<p class="truncate font-medium">{follower.user.nickname}</p>
 											<p class="text-xs text-muted-foreground">查看主页</p>
 										</div>
 									</CardContent>
@@ -416,16 +416,16 @@
 					</Card>
 				{:else}
 					<div class="grid gap-3 sm:grid-cols-2">
-						{#each followingPagination.items as follow (follow.user_id)}
-							<a href="/users/{follow.user_id}">
+						{#each followingPagination.items as follow (follow.user.user_id)}
+							<a href="/users/{follow.user.user_id}">
 								<Card class="cursor-pointer border-0 bg-card/70 shadow-sm shadow-black/5 transition-shadow hover:shadow-lg hover:shadow-black/10">
 									<CardContent class="flex items-center gap-3 p-4">
 										<Avatar class="h-12 w-12">
-											<AvatarImage src={follow.avatar_url} alt={follow.nickname} />
-											<AvatarFallback>{follow.nickname.slice(0, 2)}</AvatarFallback>
+											<AvatarImage src={follow.user.avatar_url} alt={follow.user.nickname} />
+											<AvatarFallback>{follow.user.nickname.slice(0, 2)}</AvatarFallback>
 										</Avatar>
 										<div class="min-w-0">
-											<p class="truncate font-medium">{follow.nickname}</p>
+											<p class="truncate font-medium">{follow.user.nickname}</p>
 											<p class="text-xs text-muted-foreground">查看主页</p>
 										</div>
 									</CardContent>

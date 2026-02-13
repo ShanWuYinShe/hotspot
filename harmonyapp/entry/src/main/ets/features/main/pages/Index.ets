@@ -16,7 +16,6 @@ import { LocationUtil } from '../../../core/location/LocationUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { MyProfile, UpdateLocationRequest, GeoPoint } from '../../../core/types/api';
 import type { ServerEvent } from '../../../core/types/WebSocketTypes';
-import type { ConnectionEstablishedEvent } from '../../../core/types/WebSocketTypes';
 import { PermissionManager } from '../../../core/permission/PermissionManager';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppIcon } from '../../../components/SystemIcon';
@@ -305,13 +304,7 @@ struct Index {
       try {
         switch (event.type) {
           case 'ConnectionEstablished': {
-            const connEvent = event as ConnectionEstablishedEvent;
-            const summary = connEvent.payload.unread_summary;
-            this.stateManager.updateUnreadCount({
-              total_unread_count: summary.total_messages,
-              private_chat_count: summary.private_chats,
-              group_chat_count: summary.groups
-            });
+            // Unread counts are now fetched via notifications/unread_count HTTP API
             break;
           }
           case 'NewFollower': {
@@ -323,8 +316,8 @@ struct Index {
             const notifInput: CreateNotificationInput = {
               type: 'social',
               priority: 'medium',
-              title: payloadRecord.is_mutual ? '新好友' : '新关注者',
-              message: payloadRecord.is_mutual ? `${(payloadRecord.user as Record<string, Object>).nickname} 与你互相关注了` : `${(payloadRecord.user as Record<string, Object>).nickname} 关注了你`,
+              title: '新关注者',
+              message: `${(payloadRecord.user as Record<string, Object>).nickname} 关注了你`,
               read: false,
               actionable: true,
               metadata: metadata

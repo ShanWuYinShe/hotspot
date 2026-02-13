@@ -33,7 +33,7 @@ export struct RecommendationPage {
       await LoadingUtil.withMinimumTime(async () => {
         // 并行加载推荐数据
         const results = await Promise.all([
-          ApiClient.getTrendingTags({ limit: 10, timeframe: 'weekly' }),
+          ApiClient.getTrendingTags({ limit: 10 }),
           ApiClient.getFeedUsers({ reference_point: { latitude: 0, longitude: 0 }, pagination: { limit: 5 } })
         ]);
         const tagsResponse = results[0];

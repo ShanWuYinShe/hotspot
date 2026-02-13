@@ -7,7 +7,7 @@
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { WebSocketService } from '../../../core/network/WebSocketService';
-import { MyProfile, MessageType, PrivateMessageItem, GroupMessageItem, SendPrivateMessageRequest, SendGroupMessageRequest, GetPrivateMessagesHistoryRequest, GetGroupMessagesHistoryRequest, MarkPrivateMessagesReadRequest, MarkGroupMessagesReadRequest, PaginationMeta } from '../../../core/types/api';
+import { MyProfile, MessageType, PrivateMessageItem, GroupMessageItem, SendPrivateMessageRequest, SendGroupMessageRequest, GetPrivateMessagesHistoryRequest, GetGroupMessagesHistoryRequest, MarkPrivateMessagesReadRequest, MarkGroupMessagesReadRequest } from '../../../core/types/api';
 import type { ServerEvent, PrivateMessageNewEvent, GroupMessageNewEvent } from '../../../core/types/WebSocketTypes';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -78,22 +78,23 @@ export struct ChatPage {
 
     if (!currentUserId || !targetId) return;
 
-    // PrivateMessageNewPayload uses sender_id (string), not sender object
+    // PrivateMessageNewPayload uses sender (UserInfo)
+    if (!payload.sender) return;
     const isRelevant = 
-      (payload.sender_id === currentUserId && payload.target_user_id === targetId) ||
-      (payload.sender_id === targetId && payload.target_user_id === currentUserId);
+      (payload.sender.user_id === currentUserId && payload.target_user_id === targetId) ||
+      (payload.sender.user_id === targetId && payload.target_user_id === currentUserId);
     
     if (!isRelevant) return;
 
     const newMessage: ChatMessage = {
       id: payload.message_id,
       content: payload.media?.url || payload.content || (payload.type === 'image' ? '[图片]' : '[非文本消息]'),
-      senderId: payload.sender_id,
-      senderName: `User ${payload.sender_id}`,
-      senderAvatar: undefined,
+      senderId: payload.sender.user_id,
+      senderName: payload.sender.nickname ?? '',
+      senderAvatar: payload.sender.avatar_url,
       type: payload.type as MessageType,
       sentAt: payload.sent_at,
-      isSelf: payload.sender_id === currentUserId,
+      isSelf: payload.sender.user_id === currentUserId,
       isSystem: payload.type === 'system',
       rawData: payload
     };
@@ -160,7 +161,7 @@ export struct ChatPage {
     try {
       await LoadingUtil.withMinimumTime(async () => {
         let items: (PrivateMessageItem | GroupMessageItem)[] = [];
-        let paginationMeta: PaginationMeta | undefined;
+        let nextCursor: string | undefined;
         
         if (this.chatType === 'private_chat') {
           const targetUserId = this.targetId;
@@ -171,22 +172,22 @@ export struct ChatPage {
           const response = await ApiClient.getPrivateMessages(request);
           if (response.code === 0 && response.data) {
             items = response.data.items;
-            paginationMeta = response.data.pagination;
+            nextCursor = response.data.next_cursor;
           }
         } else {
           const request: GetGroupMessagesHistoryRequest = { group_id: this.chatId, pagination: { limit: 20 } };
           const response = await ApiClient.getGroupMessages(request);
           if (response.code === 0 && response.data) {
             items = response.data.items;
-            paginationMeta = response.data.pagination;
+            nextCursor = response.data.next_cursor;
           }
         }
 
         const newMessages = await Promise.all(items.reverse().map(item => this.convertMessage(item)));
         this.messages = newMessages;
         this.messagesDataSource.setData(newMessages);
-        this.hasMoreHistory = paginationMeta?.has_more ?? false;
-        this.historyNextCursor = paginationMeta?.next_cursor ?? '';
+        this.hasMoreHistory = !!(nextCursor);
+        this.historyNextCursor = nextCursor ?? '';
         
         this.updateCache(newMessages);
         this.scrollToBottom();
@@ -206,7 +207,7 @@ export struct ChatPage {
     this.isLoadingMoreHistory = true;
     try {
       let items: (PrivateMessageItem | GroupMessageItem)[] = [];
-      let paginationMeta: PaginationMeta | undefined;
+      let nextCursor: string | undefined;
 
       if (this.chatType === 'private_chat') {
         const targetUserId = this.targetId;
@@ -218,7 +219,7 @@ export struct ChatPage {
         const response = await ApiClient.getPrivateMessages(request);
         if (response.code === 0 && response.data) {
           items = response.data.items;
-          paginationMeta = response.data.pagination;
+          nextCursor = response.data.next_cursor;
         }
       } else {
         const request: GetGroupMessagesHistoryRequest = {
@@ -228,7 +229,7 @@ export struct ChatPage {
         const response = await ApiClient.getGroupMessages(request);
         if (response.code === 0 && response.data) {
           items = response.data.items;
-          paginationMeta = response.data.pagination;
+          nextCursor = response.data.next_cursor;
         }
       }
 
@@ -236,8 +237,8 @@ export struct ChatPage {
       // 将更早的消息插入到列表开头
       this.messages = olderMessages.concat(this.messages);
       this.messagesDataSource.prependData(olderMessages);
-      this.hasMoreHistory = paginationMeta?.has_more ?? false;
-      this.historyNextCursor = paginationMeta?.next_cursor ?? '';
+      this.hasMoreHistory = nextCursor !== undefined && nextCursor !== '';
+      this.historyNextCursor = nextCursor ?? '';
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `加载更早消息失败: ${error}`);
     } finally {
@@ -283,22 +284,18 @@ export struct ChatPage {
     let senderAvatar: string | undefined;
     let isSelf: boolean;
     
-    const itemObj = item as Object;
-    const itemRecord = itemObj as Record<string, Object>;
-    if (itemRecord.sender_id !== undefined) {
-      // PrivateMessageItem: has sender_id (string)
-      const privateItem = item as PrivateMessageItem;
-      senderId = privateItem.sender_id ?? '';
+    // Both PrivateMessageItem and GroupMessageItem use sender: UserInfo
+    const msgItem = item as PrivateMessageItem | GroupMessageItem;
+    if (msgItem.sender) {
+      senderId = msgItem.sender.user_id ?? '';
+      senderName = msgItem.sender.nickname ?? '';
+      senderAvatar = msgItem.sender.avatar_url;
       isSelf = senderId === currentUserId;
-      senderName = `User ${senderId}`;
-      senderAvatar = undefined;
     } else {
-      // GroupMessageItem: has sender (UserInfo)
-      const groupItem = item as GroupMessageItem;
-      senderId = groupItem.sender?.user_id ?? '';
-      senderName = groupItem.sender?.nickname ?? '';
-      senderAvatar = groupItem.sender?.avatar_url;
-      isSelf = senderId === currentUserId;
+      senderId = '';
+      senderName = '';
+      senderAvatar = undefined;
+      isSelf = false;
     }
     
     const messageType: MessageType = item.type as MessageType;

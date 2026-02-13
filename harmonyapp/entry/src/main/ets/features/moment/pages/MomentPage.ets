@@ -89,8 +89,8 @@ export struct MomentPage {
         const validItems = response.data.items.filter((m: MomentItem) => m.moment_id && m.user);
         this.momentsDataSource.setData(validItems);
         this.hasData = validItems.length > 0;
-        this.hasMore = response.data.pagination?.has_more ?? false;
-        this.nextCursor = response.data.pagination?.next_cursor ?? '';
+        this.hasMore = !!(response.data.next_cursor);
+        this.nextCursor = response.data.next_cursor ?? '';
         this.updateCache(response.data.items);
       } else {
         if (this.momentsDataSource.totalCount() === 0) {
@@ -127,8 +127,8 @@ export struct MomentPage {
         const validItems = response.data.items.filter((m: MomentItem) => m.moment_id && m.user);
         this.momentsDataSource.addData(validItems);
         this.hasData = this.momentsDataSource.totalCount() > 0;
-        this.hasMore = response.data.pagination?.has_more ?? false;
-        this.nextCursor = response.data.pagination?.next_cursor ?? '';
+        this.hasMore = !!(response.data.next_cursor);
+        this.nextCursor = response.data.next_cursor ?? '';
       }
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `加载更多瞬间失败: ${JSON.stringify(error)}`);

@@ -13,6 +13,7 @@ pub mod comments;
 pub mod feed;
 pub mod group_messages;
 pub mod groups;
+pub mod notifications;
 pub mod map;
 pub mod media;
 pub mod moments;
@@ -116,6 +117,7 @@ pub fn v1_routes(state: AppState) -> Router<AppState> {
         .nest("/comments", comments::token_required_routes())
         .nest("/reports", reports::token_required_routes())
         .nest("/feed", feed::token_required_routes())
+        .nest("/notifications", notifications::token_required_routes())
         .nest("/share", share::token_required_routes())
         .nest("/media", media::token_required_routes())
         .with_state(state.clone())

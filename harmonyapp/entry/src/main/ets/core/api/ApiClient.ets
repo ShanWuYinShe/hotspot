@@ -112,7 +112,6 @@ import {
   // 群组管理
   SearchGroupsRequest,
   GroupOpenTheDoorRequest,
-  GroupOpenResult,
   CreateGroupRequest,
   UpdateGroupRequest,
   DismissGroupRequest,
@@ -195,8 +194,6 @@ import {
   ShareCreated,
   GetShareRequest,
   ShareDetail,
-  ApplyShareRequest,
-  ShareApplyResult,
   RevokeShareRequest,
   ShareListRequest,
   ShareListItem,
@@ -205,6 +202,12 @@ import {
   SystemAnnouncementListData,
   SessionListData,
   GroupAnnouncementListData,
+
+  // 通知中心
+  NotificationItem,
+  NotificationListRequest,
+  UnreadCountResult,
+  MarkNotificationsReadRequest,
 } from '../types/api';
 
 // 空请求体类
@@ -583,14 +586,18 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<void>, MarkPrivateMessagesReadRequest>(ApiEndpoints.CHAT.PRIVATE_MESSAGES.ME.MARK_AS_READ, params);
   }
 
+  static async markAllPrivateMessagesRead(): Promise<ApiResponse<void>> {
+    return HttpUtil.post<ApiResponse<void>, EmptyRequest>(ApiEndpoints.CHAT.PRIVATE_MESSAGES.ME.MARK_ALL_READ, new EmptyRequest());
+  }
+
   // ==================== 群组管理 API ====================
 
   static async searchGroups(params: SearchGroupsRequest): Promise<ApiResponse<PaginatedData<GroupItem>>> {
     return HttpUtil.post<ApiResponse<PaginatedData<GroupItem>>, SearchGroupsRequest>(ApiEndpoints.GROUP.SEARCH, params);
   }
 
-  static async getGroupDetail(params: GroupOpenTheDoorRequest): Promise<ApiResponse<GroupOpenResult>> {
-    return HttpUtil.post<ApiResponse<GroupOpenResult>, GroupOpenTheDoorRequest>(ApiEndpoints.GROUP.OPEN_THE_DOOR, params);
+  static async getGroupDetail(params: GroupOpenTheDoorRequest): Promise<ApiResponse<GroupItem>> {
+    return HttpUtil.post<ApiResponse<GroupItem>, GroupOpenTheDoorRequest>(ApiEndpoints.GROUP.OPEN_THE_DOOR, params);
   }
 
   static async createGroup(params: CreateGroupRequest): Promise<ApiResponse<GroupItem>> {
@@ -731,6 +738,10 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<void>, MarkGroupMessagesReadRequest>(ApiEndpoints.CHAT.GROUP_MESSAGES.ME.MARK_AS_READ, params);
   }
 
+  static async markAllGroupMessagesRead(): Promise<ApiResponse<void>> {
+    return HttpUtil.post<ApiResponse<void>, EmptyRequest>(ApiEndpoints.CHAT.GROUP_MESSAGES.ME.MARK_ALL_READ, new EmptyRequest());
+  }
+
   // ==================== 举报 API ====================
 
   static async createReport(params: CreateReportRequest): Promise<ApiResponse<ReportCreated>> {
@@ -785,10 +796,6 @@ export class ApiClient {
 
   static async getShare(params: GetShareRequest): Promise<ApiResponse<ShareDetail>> {
     return HttpUtil.post<ApiResponse<ShareDetail>, GetShareRequest>(ApiEndpoints.SHARE.GET, params);
-  }
-
-  static async applyShare(params: ApplyShareRequest): Promise<ApiResponse<ShareApplyResult>> {
-    return HttpUtil.post<ApiResponse<ShareApplyResult>, ApplyShareRequest>(ApiEndpoints.SHARE.APPLY, params);
   }
 
   static async revokeShare(params: RevokeShareRequest): Promise<ApiResponse<void>> {

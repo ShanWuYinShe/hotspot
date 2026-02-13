@@ -112,16 +112,11 @@ impl AdminRbacService {
     }
 
     pub async fn is_admin(&self, user_id: i64) -> Result<bool> {
-        Ok(self.repo.get_admin_user(user_id).await?.is_some())
+        self.repo.is_admin(user_id).await
     }
 
     pub async fn is_super_admin(&self, user_id: i64) -> Result<bool> {
-        Ok(self
-            .repo
-            .get_admin_user(user_id)
-            .await?
-            .map(|u| u.is_super)
-            .unwrap_or(false))
+        self.repo.is_super_admin(user_id).await
     }
 
     pub async fn require_permission(&self, user_id: i64, permission_key: &str) -> Result<()> {
@@ -192,15 +187,16 @@ impl AdminRbacService {
     }
 
     pub async fn get_me(&self, user_id: i64) -> Result<(bool, Vec<String>, Vec<AdminRoleRow>)> {
-        // 必须是管理员
-        if !self.is_admin(user_id).await? {
-            return Err(AppError::Forbidden("需要管理员权限".to_string()));
-        }
+        // 一次查询获取管理员信息（同时完成存在性校验和 is_super 判断）
+        let admin = self
+            .repo
+            .get_admin_user(user_id)
+            .await?
+            .ok_or_else(|| AppError::Forbidden("需要管理员权限".to_string()))?;
 
-        let is_super = self.is_super_admin(user_id).await?;
         let permissions = self.repo.list_user_permissions(user_id).await?;
         let roles = self.repo.list_user_roles(user_id).await?;
-        Ok((is_super, permissions, roles))
+        Ok((admin.is_super, permissions, roles))
     }
 
     pub async fn grant_admin(

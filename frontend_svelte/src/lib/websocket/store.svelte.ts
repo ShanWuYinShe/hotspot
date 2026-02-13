@@ -491,18 +491,11 @@ class WebSocketStore {
 			}
 		}
 
-		// 更新未读计数到 UI store
-		// 注意：这里需要更新 notification store 或其他 UI store
-		// 由于 notification store 可能没有直接暴露未读计数更新方法，
-		// 这里先记录，后续可以通过事件或直接调用更新
-		log('[WebSocket] 未读摘要:', payload.unread_summary);
-
 		log('[WebSocket] 连接已建立:', {
 			connection_id: payload.connection_id,
 			user_id: payload.user_id,
 			server_time: payload.server_time,
-			config: payload.config,
-			unread_summary: payload.unread_summary
+			config: payload.config
 		});
 
 		// 启动心跳（使用服务端配置的间隔）

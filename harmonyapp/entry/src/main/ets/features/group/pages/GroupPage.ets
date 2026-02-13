@@ -67,8 +67,8 @@ export struct GroupPage {
       if (response.code === 0 && response.data) {
         this.groups = response.data.items;
         this.groupsDataSource.setData(this.groups);
-        this.hasMore = response.data.pagination?.has_more ?? false;
-        this.nextCursor = response.data.pagination?.next_cursor ?? '';
+        this.hasMore = !!(response.data.next_cursor);
+        this.nextCursor = response.data.next_cursor ?? '';
       } else {
         this.errorMessage = response.message || '加载群组失败';
         this.groups = [];
@@ -99,8 +99,8 @@ export struct GroupPage {
       if (response.code === 0 && response.data) {
         this.groups = this.groups.concat(response.data.items);
         this.groupsDataSource.appendData(response.data.items);
-        this.hasMore = response.data.pagination?.has_more ?? false;
-        this.nextCursor = response.data.pagination?.next_cursor ?? '';
+        this.hasMore = !!(response.data.next_cursor);
+        this.nextCursor = response.data.next_cursor ?? '';
       }
     } catch (error) {
       // 静默失败，用户可再次触底重试

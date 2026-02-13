@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { dev } from '$app/environment';
-	import { tagsService } from '$lib/api/services';
+	import { feedService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import type { TagItem } from '$lib/types/api';
 	import { Badge } from '$lib/components/ui/badge';
@@ -16,9 +16,9 @@
 
 	async function loadTags() {
 		try {
-			const response = await tagsService.getTrending();
+			const response = await feedService.getTrending();
 			if (isSuccess(response) && response.data) {
-				tags = response.data.items ?? [];
+				tags = response.data.trending_tags ?? [];
 			}
 		} catch (error) {
 			if (dev) console.error('Failed to load trending tags:', error);

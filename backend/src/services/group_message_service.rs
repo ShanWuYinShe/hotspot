@@ -14,8 +14,8 @@ use crate::{
             SendGroupMessageRequest, UpdateGroupMessageRequest,
         },
         response::{
-            GroupMessageItem, MessageMedia, MessageReplyTo, PaginatedData, PaginationMeta,
-            SendGroupMessageData, UserInfo,
+            GroupMessageItem, MessageMedia, MessageReplyTo, PaginatedData, SendGroupMessageData,
+            UserInfo,
         },
     },
     error::{AppError, Result},
@@ -26,7 +26,7 @@ use crate::{
         user_repo::UserRepository,
     },
     services::media_service::MediaService,
-    types::enums::{GroupRole, MessageType, UserType},
+    types::enums::{GroupRole, MessageType},
     utils::{bloom_filter::ResourceExistenceChecker, validation::Validator},
     EventBus,
 };
@@ -83,7 +83,7 @@ impl GroupMessageService {
             .map_err(|_| AppError::BadRequest("无效的群组ID".to_string()))?;
 
         // 验证群组是否存在
-        if self.group_repo.find_by_id(group_id).await?.is_none() {
+        if !self.group_repo.exists(group_id).await? {
             return Err(AppError::GroupNotFound("群组不存在".to_string()));
         }
 
@@ -322,9 +322,14 @@ impl GroupMessageService {
         let message_ids: Vec<Uuid> = messages.iter().map(|m| m.message_id).collect();
         let read_counts = self.message_repo.get_read_counts(&message_ids).await?;
 
-        // 5. 批量获取发送者信息
-        let sender_ids: Vec<i64> = messages.iter().map(|m| m.sender_id).collect();
-        let users = self.user_repo.find_profiles(&sender_ids).await?;
+        // 5. 批量获取发送者和撤回者信息
+        let mut user_ids: Vec<i64> = messages.iter().map(|m| m.sender_id).collect();
+        for recalled_id in messages.iter().filter_map(|m| m.recalled_by) {
+            if !user_ids.contains(&recalled_id) {
+                user_ids.push(recalled_id);
+            }
+        }
+        let users = self.user_repo.find_profiles(&user_ids).await?;
         let user_map: std::collections::HashMap<i64, _> =
             users.into_iter().map(|u| (u.user_id, u)).collect();
 
@@ -395,6 +400,23 @@ impl GroupMessageService {
                 .map(|arr| arr.iter().filter_map(|v| v.as_i64()).collect::<Vec<i64>>())
                 .filter(|arr| !arr.is_empty());
 
+            let recalled_by = if let Some(id) = m.recalled_by {
+                if let Some(u) = user_map.get(&id) {
+                    Some(UserInfo {
+                        user_id: u.user_id,
+                        nickname: u.nickname.clone().unwrap_or_else(|| "未知用户".to_string()),
+                        avatar_url: self
+                            .media_service
+                            .sign_url_if_path(u.avatar_url.as_deref())
+                            .await,
+                    })
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
             items.push(GroupMessageItem {
                 message_id: m.message_id.to_string(),
                 message_type: m.r#type,
@@ -415,7 +437,6 @@ impl GroupMessageService {
                         .media_service
                         .sign_url_if_path(user.and_then(|u| u.avatar_url.as_deref()))
                         .await,
-                    user_type: user.map(|u| u.user_type).unwrap_or(UserType::Normal),
                 },
                 reply_to: m.reply_to_id.and_then(|reply_id| {
                     reply_map.get(&reply_id).map(|reply_msg| {
@@ -440,7 +461,7 @@ impl GroupMessageService {
                 sent_at: m.sent_at.to_rfc3339(),
                 edited_at: m.edited_at.map(|t| t.to_rfc3339()),
                 is_recalled: m.is_recalled,
-                recalled_by: m.recalled_by,
+                recalled_by,
                 recalled_at: m.recalled_at.map(|t| t.to_rfc3339()),
                 read_count: read_counts.get(&m.message_id).map(|c| *c as i32),
             });
@@ -448,10 +469,7 @@ impl GroupMessageService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -574,6 +592,14 @@ impl GroupMessageService {
             .mark_as_read("group", &group_id.to_string(), user_id, up_to)
             .await?;
 
+        Ok(())
+    }
+
+    /// 标记当前用户所有群聊会话为已读
+    pub async fn mark_all_read(&self, user_id: i64) -> Result<()> {
+        self.unread_repo
+            .mark_all_as_read("group", user_id)
+            .await?;
         Ok(())
     }
 }

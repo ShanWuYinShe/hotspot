@@ -143,7 +143,6 @@ export class NotificationMetadata {
   moment_id?: string;
   group_id?: string;
   comment_id?: string;
-  is_mutual?: boolean;
   alert?: Object;
   config?: Object;
   fromUser?: string;

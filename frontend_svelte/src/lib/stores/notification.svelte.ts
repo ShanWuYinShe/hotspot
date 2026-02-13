@@ -1,14 +1,18 @@
 /**
  * 通知 Store
- * 处理 WebSocket 推送的通知事件
+ * HTTP API 负责冷启动数据，WebSocket 负责实时增量
  */
 
-import { websocketStore } from '$lib/websocket';
 import { browser } from '$app/environment';
+import { authStore } from '$lib/stores/auth.svelte';
+import { notificationsService } from '$lib/api/services';
+import { isSuccess } from '$lib/api/client';
+import type { ApiResponse, PaginatedData, NotificationItem, NotificationListRequest } from '$lib/types/api';
+import { websocketStore } from '$lib/websocket';
 
 // ============ 通知类型 ============
 
-/** WebSocket 推送的实时通知项（区别于 API 返回的 NotificationItem） */
+/** WebSocket 推送的实时通知项（用于类型兼容，列表数据来自 API） */
 export interface RealtimeNotification {
 	id: string;
 	type: string;
@@ -21,163 +25,92 @@ export interface RealtimeNotification {
 // ============ 通知 Store ============
 
 class NotificationStore {
-	// 未读通知列表
-	unreadNotifications = $state.raw<RealtimeNotification[]>([]);
+	// 未读数量（来自 HTTP API + WebSocket 增量）
+	unreadCount = $state.raw(0);
 
-	// 未读数量
-	unreadCount = $derived(this.unreadNotifications.length);
-
-	// 清理函数数组（用于取消 WebSocket 监听）
 	private cleanupFunctions: (() => void)[] = [];
 
 	constructor() {
 		if (!browser) return;
 
-		// 监听各种通知事件
 		this.registerNotificationHandlers();
+
+		// 认证后拉取未读数量
+		$effect.root(() => {
+			$effect(() => {
+				if (authStore.isAuthenticated) {
+					this.fetchUnreadCount();
+				}
+			});
+		});
 	}
 
 	/**
-	 * 注册通知事件处理器（现在所有 payload 都有类型提示了！）
+	 * 拉取未读数量（冷启动 / 重连时调用）
 	 */
-	private registerNotificationHandlers() {
-		// 新增关注者
-		this.cleanupFunctions.push(websocketStore.on('NewFollower', (payload) => {
-			this.addNotification({
-				id: `follower_${Date.now()}`,
-				type: 'follower',
-				title: '新增关注者',
-				content: `${payload.user.nickname} 关注了你`,
-				timestamp: payload.followed_at,
-				read: false
-			});
-		}));
-
-		// 互相关注
-		this.cleanupFunctions.push(websocketStore.on('MutualFollow', (payload) => {
-			this.addNotification({
-				id: `mutual_${Date.now()}`,
-				type: 'mutual',
-				title: '新好友',
-				content: `你和 ${payload.user.nickname} 成为了好友`,
-				timestamp: payload.mutual_at,
-				read: false
-			});
-		}));
-
-		// 动态被点赞
-		this.cleanupFunctions.push(websocketStore.on('MomentLiked', (payload) => {
-			this.addNotification({
-				id: `like_${payload.moment_id}_${Date.now()}`,
-				type: 'like',
-				title: '动态被点赞',
-				content: `${payload.user.nickname} 赞了你的动态`,
-				timestamp: payload.liked_at,
-				read: false
-			});
-		}));
-
-		// 动态被评论
-		this.cleanupFunctions.push(websocketStore.on('MomentCommented', (payload) => {
-			this.addNotification({
-				id: `comment_${payload.comment_id}`,
-				type: 'comment',
-				title: '动态被评论',
-				content: `${payload.user.nickname}: ${payload.content}`,
-				timestamp: payload.commented_at,
-				read: false
-			});
-		}));
-
-		// 评论被回复
-		this.cleanupFunctions.push(websocketStore.on('CommentReply', (payload) => {
-			this.addNotification({
-				id: `reply_${payload.reply_id}`,
-				type: 'reply',
-				title: '评论被回复',
-				content: `${payload.user.nickname} 回复了你`,
-				timestamp: payload.replied_at,
-				read: false
-			});
-		}));
-
-		// 群组邀请
-		this.cleanupFunctions.push(websocketStore.on('GroupInviteReceived', (payload) => {
-			this.addNotification({
-				id: `invite_${payload.invite_id}`,
-				type: 'group_invite',
-				title: '群组邀请',
-				content: `${payload.inviter.nickname} 邀请你加入 ${payload.group_name}`,
-				timestamp: payload.created_at,
-				read: false
-			});
-		}));
-
-		// 入群申请
-		this.cleanupFunctions.push(websocketStore.on('GroupApplicationReceived', (payload) => {
-			this.addNotification({
-				id: `application_${payload.application_id}`,
-				type: 'group_application',
-				title: '入群申请',
-				content: `${payload.applicant.nickname} 申请加入群组`,
-				timestamp: payload.created_at,
-				read: false
-			});
-		}));
-
-		// 系统公告
-		this.cleanupFunctions.push(websocketStore.on('SystemAnnouncement', (payload) => {
-			this.addNotification({
-				id: `announcement_${payload.announcement_id}`,
-				type: 'system',
-				title: payload.title,
-				content: payload.content,
-				timestamp: payload.created_at,
-				read: false
-			});
-		}));
-	}
-
-	/**
-	 * 添加通知
-	 */
-	private addNotification(notification: RealtimeNotification) {
-		// 检查是否已存在
-		const exists = this.unreadNotifications.some((n) => n.id === notification.id);
-		if (!exists) {
-			this.unreadNotifications = [notification, ...this.unreadNotifications];
-
-			// 最多保留 100 条未读通知
-			if (this.unreadNotifications.length > 100) {
-				this.unreadNotifications = this.unreadNotifications.slice(0, 100);
-			}
+	async fetchUnreadCount(): Promise<void> {
+		const res = await notificationsService.unreadCount();
+		if (isSuccess(res) && res.data) {
+			this.unreadCount = res.data.total;
 		}
 	}
 
 	/**
-	 * 标记所有通知为已读
+	 * 分页获取通知列表
 	 */
-	markAllAsRead() {
-		this.unreadNotifications = [];
+	async fetchHistory(params?: NotificationListRequest): Promise<ApiResponse<PaginatedData<NotificationItem>>> {
+		return notificationsService.list(params ?? {});
 	}
 
 	/**
-	 * 标记单个通知为已读
+	 * 标记指定通知为已读
 	 */
-	markAsRead(id: string) {
-		this.unreadNotifications = this.unreadNotifications.filter((n) => n.id !== id);
+	async markAsRead(notificationIds: string[]): Promise<boolean> {
+		if (notificationIds.length === 0) return true;
+		const res = await notificationsService.markAsRead(notificationIds);
+		if (isSuccess(res)) {
+			this.unreadCount = Math.max(0, this.unreadCount - notificationIds.length);
+			return true;
+		}
+		return false;
 	}
 
 	/**
-	 * 清理所有 WebSocket 监听器
-	 * 注：虽然这是单例通常不需要清理，但为了一致性和可测试性提供此方法
+	 * 标记全部通知为已读
 	 */
+	async markAllAsRead(): Promise<boolean> {
+		const res = await notificationsService.markAllRead();
+		if (isSuccess(res)) {
+			this.unreadCount = 0;
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * WebSocket 推送时增加未读计数
+	 */
+	private registerNotificationHandlers() {
+		const increment = () => {
+			this.unreadCount += 1;
+		};
+
+		this.cleanupFunctions.push(websocketStore.on('NewFollower', increment));
+		this.cleanupFunctions.push(websocketStore.on('MutualFollow', increment));
+		this.cleanupFunctions.push(websocketStore.on('MomentLiked', increment));
+		this.cleanupFunctions.push(websocketStore.on('MomentCommented', increment));
+		this.cleanupFunctions.push(websocketStore.on('CommentLiked', increment));
+		this.cleanupFunctions.push(websocketStore.on('CommentReply', increment));
+		this.cleanupFunctions.push(websocketStore.on('MessageMentioned', increment));
+		this.cleanupFunctions.push(websocketStore.on('GroupInviteReceived', increment));
+		this.cleanupFunctions.push(websocketStore.on('GroupApplicationReceived', increment));
+		this.cleanupFunctions.push(websocketStore.on('SystemAnnouncement', increment));
+	}
+
 	destroy() {
 		this.cleanupFunctions.forEach((cleanup) => cleanup());
 		this.cleanupFunctions = [];
 	}
 }
-
-// ============ 导出单例 ============
 
 export const notificationStore = new NotificationStore();

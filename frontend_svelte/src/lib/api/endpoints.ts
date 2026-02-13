@@ -124,7 +124,8 @@ export const PRIVATE_MESSAGES = {
 	UPDATE: `${API_BASE}/private_messages/update`,
 	RECALL: `${API_BASE}/private_messages/recall`,
 	ME: {
-		MARK_AS_READ: `${API_BASE}/private_messages/me/mark_as_read`
+		MARK_AS_READ: `${API_BASE}/private_messages/me/mark_as_read`,
+		MARK_ALL_READ: `${API_BASE}/private_messages/me/mark_all_read`
 	}
 } as const;
 
@@ -190,7 +191,8 @@ export const GROUP_MESSAGES = {
 	UPDATE: `${API_BASE}/group_messages/update`,
 	RECALL: `${API_BASE}/group_messages/recall`,
 	ME: {
-		MARK_AS_READ: `${API_BASE}/group_messages/me/mark_as_read`
+		MARK_AS_READ: `${API_BASE}/group_messages/me/mark_as_read`,
+		MARK_ALL_READ: `${API_BASE}/group_messages/me/mark_all_read`
 	}
 } as const;
 
@@ -215,13 +217,6 @@ export const SEARCH = {
 } as const;
 
 // ============================================================================
-// 标签 API（spec/openapi/paths/search.yaml）
-// ============================================================================
-export const TAGS = {
-	LIST_TRENDING: `${API_BASE}/tags/list_trending`
-} as const;
-
-// ============================================================================
 // 地图 API（spec/openapi/paths/map.yaml）
 // ============================================================================
 export const MAP = {
@@ -234,7 +229,6 @@ export const MAP = {
 export const SHARE = {
 	CREATE: `${API_BASE}/share/create`,
 	GET: `${API_BASE}/share/get`,
-	APPLY: `${API_BASE}/share/apply`,
 	ME_LIST: `${API_BASE}/share/me/list`,
 	REVOKE: `${API_BASE}/share/revoke`
 } as const;
@@ -246,6 +240,16 @@ export const MEDIA = {
 	PRESIGN_UPLOAD: `${API_BASE}/media/presign_upload`,
 	BATCH_PRESIGN_UPLOAD: `${API_BASE}/media/batch_presign_upload`,
 	COMPLETE_UPLOAD: `${API_BASE}/media/complete_upload`
+} as const;
+
+// ============================================================================
+// 通知 API（spec/api_spec_notification.mdc）
+// ============================================================================
+export const NOTIFICATIONS = {
+	LIST: `${API_BASE}/notifications/list`,
+	UNREAD_COUNT: `${API_BASE}/notifications/unread_count`,
+	MARK_AS_READ: `${API_BASE}/notifications/mark_as_read`,
+	MARK_ALL_READ: `${API_BASE}/notifications/mark_all_read`
 } as const;
 
 // ============================================================================
@@ -356,10 +360,10 @@ export const ENDPOINTS = {
 	GROUP_MESSAGES,
 	FEED,
 	SEARCH,
-	TAGS,
 	MAP,
 	SHARE,
 	MEDIA,
+	NOTIFICATIONS,
 	REPORTS,
 	SYSTEM,
 	ADMIN_RBAC,

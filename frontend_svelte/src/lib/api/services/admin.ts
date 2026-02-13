@@ -351,10 +351,10 @@ export const adminAppConfigService = {
 
 	/**
 	 * 更新默认配置
-	 * spec: Request = { default_location_name?, default_group_avatar?, default_user_avatar?, default_group_settings? }
+	 * spec: Request = { default_location?, default_group_avatar?, default_user_avatar?, default_group_settings? }
 	 */
 	updateDefaults(data: {
-		default_location_name?: string;
+		default_location?: { latitude?: number; longitude?: number; location_name?: string };
 		default_group_avatar?: string;
 		default_user_avatar?: string;
 		default_group_settings?: Partial<GroupSettings>;

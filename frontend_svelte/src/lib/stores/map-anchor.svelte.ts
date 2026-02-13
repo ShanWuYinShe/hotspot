@@ -1,22 +1,40 @@
 /**
  * 地图锚点状态管理
  * 用于存储用户选择的浏览位置锚点
+ *
+ * 默认值优先从 ClientConfig.defaults.default_location 取得，
+ * 若配置未加载则回退到硬编码值（与后端默认值一致）。
  */
 
 import { browser } from '$app/environment';
+import { configStore } from './config.svelte';
 
 const STORAGE_KEY = 'hotspot_map_anchor';
 
 /** 默认锚点名称（未自定义时的占位），与后端一致 */
 export const DEFAULT_ANCHOR_NAME = '南天门';
 
-// 默认位置（与后端默认值一致）
-const DEFAULTS = {
-	latitude: 35.154921,
-	longitude: 112.68253,
+// 硬编码回退值（与后端 system_config_service 中的默认值一致）
+const FALLBACK_DEFAULTS = {
+	latitude: 35.154922,
+	longitude: 112.682524,
 	name: DEFAULT_ANCHOR_NAME,
 	radius: 5 // Default 5km
 };
+
+/** 运行时默认值：优先取 ClientConfig，回退到硬编码 */
+function getDefaults() {
+	const loc = configStore.defaultLocation;
+	if (loc) {
+		return {
+			latitude: loc.point.latitude,
+			longitude: loc.point.longitude,
+			name: loc.location_name || DEFAULT_ANCHOR_NAME,
+			radius: FALLBACK_DEFAULTS.radius
+		};
+	}
+	return FALLBACK_DEFAULTS;
+}
 
 export interface MapAnchor {
 	latitude: number;
@@ -28,7 +46,7 @@ export interface MapAnchor {
 
 function loadFromStorage(): MapAnchor {
 	if (!browser) {
-		return { ...DEFAULTS, updatedAt: Date.now() };
+		return { ...getDefaults(), updatedAt: Date.now() };
 	}
 
 	try {
@@ -40,7 +58,7 @@ function loadFromStorage(): MapAnchor {
 		// 忽略解析错误
 	}
 
-	return { ...DEFAULTS, updatedAt: Date.now() };
+	return { ...getDefaults(), updatedAt: Date.now() };
 }
 
 function saveToStorage(anchor: MapAnchor) {
@@ -54,7 +72,7 @@ function saveToStorage(anchor: MapAnchor) {
 }
 
 class MapAnchorStore {
-	#anchor = $state<MapAnchor>({ ...DEFAULTS, updatedAt: Date.now() });
+	#anchor = $state<MapAnchor>({ ...FALLBACK_DEFAULTS, updatedAt: Date.now() });
 	#initialized = $state(false);
 
 	constructor() {
@@ -122,9 +140,9 @@ class MapAnchorStore {
 		saveToStorage(this.#anchor);
 	}
 
-	/** 重置为默认位置 */
+	/** 重置为默认位置（优先使用 ClientConfig） */
 	reset() {
-		this.#anchor = { ...DEFAULTS, updatedAt: Date.now() };
+		this.#anchor = { ...getDefaults(), updatedAt: Date.now() };
 		saveToStorage(this.#anchor);
 	}
 

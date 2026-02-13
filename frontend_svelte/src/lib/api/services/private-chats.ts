@@ -84,7 +84,14 @@ export const privateMessagesService = {
 	/**
 	 * 标记已读
 	 */
-	markAsRead(data: { target_user_id?: string; up_to_message_id?: string }) {
+	markAsRead(data: { target_user_id: string; up_to_message_id?: string }) {
 		return post<void>(PRIVATE_MESSAGES.ME.MARK_AS_READ, data);
+	},
+
+	/**
+	 * 标记全部私聊已读
+	 */
+	markAllRead() {
+		return post<void>(PRIVATE_MESSAGES.ME.MARK_ALL_READ, {});
 	}
 };

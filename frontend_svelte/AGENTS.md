@@ -94,7 +94,7 @@ const res = await post<PaginatedData<MomentItem>>(MOMENTS.LIST, {
   limit: 20,
   cursor: nextCursor, // 不透明，直接透传
 });
-// 下一页：使用 res.data.pagination.next_cursor
+// 下一页：使用 res.data.next_cursor
 ```
 
 ## 状态管理

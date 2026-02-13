@@ -2,13 +2,13 @@
 
 use crate::{
     dto::{
-        request::{SuggestTagsRequest, TrendingTagsRequest},
-        response::{TagItem, TagSuggestData, TagSuggestItem, TrendingTagsData},
+        request::SuggestTagsRequest,
+        response::{TagSuggestData, TagSuggestItem},
     },
     error::{AppError, Result},
     repositories::tag_repo::TagRepository,
     utils::{
-        cache::{cache_keys, CacheManager},
+        cache::CacheManager,
         validation::Validator,
     },
 };
@@ -25,50 +25,6 @@ impl TagService {
             tag_repo,
             cache_manager,
         }
-    }
-
-    /// 获取热门标签
-    pub async fn get_trending(&self, req: &TrendingTagsRequest) -> Result<TrendingTagsData> {
-        use crate::types::enums::TagTimeframe;
-
-        let limit = Validator::validate_limit(req.limit, 100)? as i64;
-        let timeframe = req.timeframe.unwrap_or(TagTimeframe::Week);
-        let cache_key = format!("{}:{}", timeframe.as_str(), limit);
-
-        let cached =
-            self.cache_manager
-                .get_or_set_with_lock_with_ttl(
-                    cache_keys::TRENDING_TAGS,
-                    &cache_key,
-                    300,
-                    60,
-                    || async {
-                        // 从 tags 表获取热门标签
-                        let tag_rows =
-                            self.tag_repo.get_trending(limit).await.map_err(|e| {
-                                Box::new(e) as Box<dyn std::error::Error + Send + Sync>
-                            })?;
-
-                        let items = tag_rows
-                            .into_iter()
-                            .map(|r| TagItem {
-                                name: r.name,
-                                usage_count: r.usage_count.unwrap_or(0),
-                                trend: None,
-                            })
-                            .collect();
-
-                        Ok(Some(TrendingTagsData { items }))
-                    },
-                )
-                .await
-                .map_err(|e| AppError::InternalError(e.to_string()))?;
-
-        if let Some(data) = cached {
-            return Ok(data);
-        }
-
-        Ok(TrendingTagsData { items: vec![] })
     }
 
     /// 标签搜索建议

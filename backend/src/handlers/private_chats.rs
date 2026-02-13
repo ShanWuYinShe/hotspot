@@ -7,7 +7,7 @@ use crate::{
             UpdatePrivateChatSettingsRequest,
         },
         response::{
-            ApiResponse, PaginatedData, PaginationMeta, PrivateChatDetailData, PrivateChatListItem,
+            ApiResponse, PaginatedData, PrivateChatDetailData, PrivateChatListItem,
         },
     },
     error::Result,
@@ -24,17 +24,14 @@ pub async fn me(
 ) -> Result<Json<ApiResponse<PaginatedData<PrivateChatListItem>>>> {
     let limit = Validator::validate_limit(req.limit, 100)? as i64;
     let include_archived = req.include_archived.unwrap_or(false);
-    let (items, has_more, next_cursor) = state
+    let (items, _, next_cursor) = state
         .private_chat_service
         .get_list_with_details(user.user_id, limit, req.cursor, include_archived)
         .await?;
 
     Ok(Json(ApiResponse::success(PaginatedData {
         items,
-        pagination: PaginationMeta {
-            has_more,
-            next_cursor,
-        },
+        next_cursor,
     })))
 }
 

@@ -7,7 +7,6 @@ import { GROUPS, GROUP_MESSAGES } from '../endpoints';
 import type {
 	ApplicationStatus,
 	GroupItem,
-	GroupOpenResult,
 	GroupMemberItem,
 	BannedMemberItem,
 	GroupAnnouncementItem,
@@ -45,10 +44,10 @@ export const groupsService = {
 	// ==================== 群组信息 ====================
 
 	/**
-	 * 获取群组详情（返回群组信息 + 最近消息）
+	 * 获取群组详情
 	 */
 	getGroup(data: { group_id: string }) {
-		return post<GroupOpenResult>(GROUPS.OPEN_THE_DOOR, data);
+		return post<GroupItem>(GROUPS.OPEN_THE_DOOR, data);
 	},
 
 	// ==================== 群组操作 ====================
@@ -339,7 +338,14 @@ export const groupMessagesService = {
 	/**
 	 * 标记已读
 	 */
-	markAsRead(data: { group_id?: string; up_to_message_id?: string }) {
+	markAsRead(data: { group_id: string; up_to_message_id?: string }) {
 		return post<void>(GROUP_MESSAGES.ME.MARK_AS_READ, data);
+	},
+
+	/**
+	 * 标记全部群聊已读
+	 */
+	markAllRead() {
+		return post<void>(GROUP_MESSAGES.ME.MARK_ALL_READ, {});
 	}
 };

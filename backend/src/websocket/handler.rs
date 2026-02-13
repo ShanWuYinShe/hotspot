@@ -169,7 +169,7 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
         _ => ("Unknown".to_string(), None),
     };
 
-    // 鉴权通过后发送 ConnectionEstablished（包含 config 和 unread_summary）
+    // 鉴权通过后发送 ConnectionEstablished（包含 config）
     let welcome_msg = WsMessage::ConnectionEstablished {
         connection_id: connection_id.clone(),
         user_id,
@@ -181,11 +181,6 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
                 user: 500,
                 group: 100,
             },
-        },
-        unread_summary: crate::websocket::types::UnreadSummary {
-            private_chats: 0,
-            groups: 0,
-            total_messages: 0,
         },
     };
     if let Ok(json) = serde_json::to_string(&welcome_msg) {
@@ -503,84 +498,15 @@ async fn handle_message(
                             }
                         }
                     }
-                    let total_count = (user_ids.len() + group_ids.len()) as i32;
                     let snapshot_msg = WsMessage::SubscriptionsSnapshot {
                         client_msg_id,
                         user_ids,
                         group_ids,
-                        total_count,
                     };
                     state
                         .ws_manager
                         .send_to_user(user_id, &snapshot_msg)
                         .await?;
-                }
-
-                WsMessage::GroupEnter { group_id } => {
-                    // 进入群聊页面：向该群聊的其他订阅者推送 GroupUserEntered
-                    let user_repo = UserRepository::new(state.db.clone());
-                    let user_info = match user_repo.find_by_id(user_id).await {
-                        Ok(Some(u)) => crate::dto::response::UserInfo {
-                            user_id: u.user_id,
-                            nickname: u.nickname.unwrap_or_default(),
-                            avatar_url: u.avatar_url,
-                            user_type: u.user_type,
-                        },
-                        _ => return Ok(()),
-                    };
-
-                    let entered_msg = WsMessage::GroupUserEntered {
-                        group_id: group_id.clone(),
-                        user: user_info,
-                        entered_at: chrono::Utc::now().to_rfc3339(),
-                    };
-
-                    // 推送给订阅了该群聊的所有用户（排除自己）
-                    let subscribers = state
-                        .ws_subscription
-                        .get_group_chat_subscribers(&group_id)
-                        .await;
-                    for subscriber_id in subscribers {
-                        if subscriber_id != user_id {
-                            let _ = state
-                                .ws_manager
-                                .send_to_user(subscriber_id, &entered_msg)
-                                .await;
-                        }
-                    }
-                }
-
-                WsMessage::GroupLeave { group_id } => {
-                    // 离开群聊页面：向该群聊的其他订阅者推送 GroupUserExited
-                    let user_repo = UserRepository::new(state.db.clone());
-                    let user_info = match user_repo.find_by_id(user_id).await {
-                        Ok(Some(u)) => crate::dto::response::UserInfo {
-                            user_id: u.user_id,
-                            nickname: u.nickname.unwrap_or_default(),
-                            avatar_url: u.avatar_url,
-                            user_type: u.user_type,
-                        },
-                        _ => return Ok(()),
-                    };
-
-                    let exited_msg = WsMessage::GroupUserExited {
-                        group_id: group_id.clone(),
-                        user: user_info,
-                        exited_at: chrono::Utc::now().to_rfc3339(),
-                    };
-
-                    let subscribers = state
-                        .ws_subscription
-                        .get_group_chat_subscribers(&group_id)
-                        .await;
-                    for subscriber_id in subscribers {
-                        if subscriber_id != user_id {
-                            let _ = state
-                                .ws_manager
-                                .send_to_user(subscriber_id, &exited_msg)
-                                .await;
-                        }
-                    }
                 }
 
                 _ => {

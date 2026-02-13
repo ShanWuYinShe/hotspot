@@ -9,6 +9,7 @@
 
 import { browser, dev } from '$app/environment';
 import { authStore } from '$lib/stores/auth.svelte';
+import { configStore } from '$lib/stores/config.svelte';
 import { initApiClient, ensureRefreshToken } from '$lib/api/client';
 import { websocketStore } from '$lib/websocket';
 
@@ -84,6 +85,11 @@ if (browser) {
 		getToken: () => authStore.token,
 		setToken: (token, expiresAt) => authStore.updateToken(token, expiresAt),
 		clearToken: () => authStore.clearToken()
+	});
+
+	// 拉取服务端 ClientConfig（无需认证，尽早执行）
+	configStore.fetch().then(() => {
+		if (dev) console.log('[App] ClientConfig 已加载');
 	});
 
 	// 启动 Token 刷新管理器

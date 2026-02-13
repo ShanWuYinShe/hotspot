@@ -20,6 +20,7 @@ use crate::{
         group_member_repo::GroupMemberRepository, group_message_repo::GroupMessageRepository,
         group_repo::GroupRepository, group_settings_repo::GroupSettingsRepository,
         map_repo::MapRepository, moment_repo::MomentRepository,
+        notification_repo::NotificationRepository,
         private_chat_repo::PrivateChatRepository, private_message_repo::PrivateMessageRepository,
         report_repo::ReportRepository, session_repo::SessionRepository,
         system_config_repo::SystemConfigRepository, tag_repo::TagRepository,
@@ -35,7 +36,8 @@ use crate::{
         comment_service::CommentService, feed_service::FeedService,
         group_message_service::GroupMessageService, group_service::GroupService,
         map_service::MapService, media_service::MediaService, moment_service::MomentService,
-        presence_service::PresenceService, private_chat_service::PrivateChatService,
+        notification_service::NotificationService, presence_service::PresenceService,
+        private_chat_service::PrivateChatService,
         private_message_service::PrivateMessageService, report_service::ReportService,
         search_service::SearchService, system_config_service::SystemConfigService,
         tag_service::TagService, user_service::UserService,
@@ -73,6 +75,7 @@ pub struct AppState {
     pub group_service: GroupService,
     pub group_message_service: GroupMessageService,
     pub map_service: MapService,
+    pub notification_service: NotificationService,
     pub private_chat_service: PrivateChatService,
     pub private_message_service: PrivateMessageService,
     pub media_service: MediaService,
@@ -228,6 +231,7 @@ impl AppState {
         let group_settings_repo = GroupSettingsRepository::new(db.clone());
         let map_repo = MapRepository::new(db.clone());
         let moment_repo = MomentRepository::new(db.clone());
+        let notification_repo = NotificationRepository::new(db.clone());
         let private_chat_repo = PrivateChatRepository::new(db.clone());
         let private_message_repo = PrivateMessageRepository::new(db.clone());
         let report_repo = ReportRepository::new(db.clone());
@@ -300,6 +304,7 @@ impl AppState {
             event_bus.clone(),
             moment_repo.clone(),
             tag_repo.clone(),
+            user_repo.clone(),
             user_settings_repo.clone(),
             media_service.clone(),
             cache_manager.clone(),
@@ -401,6 +406,9 @@ impl AppState {
 
         let map_service = MapService::new(map_repo.clone());
 
+        let notification_service =
+            NotificationService::new(notification_repo.clone(), user_repo.clone());
+
         let announcement_service = AnnouncementService::new(
             announcement_repo.clone(),
             event_bus.clone(),
@@ -453,6 +461,7 @@ impl AppState {
             group_service,
             group_message_service,
             map_service,
+            notification_service,
             private_chat_service,
             private_message_service,
             media_service,

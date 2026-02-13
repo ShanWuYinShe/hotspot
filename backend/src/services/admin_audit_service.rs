@@ -8,7 +8,7 @@ use crate::{
         request::{AuditLogDetailRequest, AuditLogListRequest},
         response::{
             AdminBanRecord, AdminDismissalRecord, AuditLogDetail, AuditLogItem, PaginatedData,
-            PaginationMeta, UserInfo,
+            UserInfo,
         },
     },
     error::{AppError, Result},
@@ -20,10 +20,13 @@ use crate::{
     utils::validation::Validator,
 };
 
-const ALLOWED_AUDIT_ACTIONS: [&str; 11] = [
+const ALLOWED_AUDIT_ACTIONS: [&str; 14] = [
     "user.ban",
     "user.unban",
     "group.dismiss",
+    "group.member_mute",
+    "group.member_ban",
+    "group.member_remove",
     "announcement.create",
     "announcement.delete",
     "role.create",
@@ -105,10 +108,7 @@ impl AdminAuditService {
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 
@@ -252,7 +252,6 @@ impl AdminAuditService {
                     user_id: profile.user_id,
                     nickname: profile.nickname.unwrap_or_default(),
                     avatar_url,
-                    user_type: profile.user_type,
                 },
             );
         }
@@ -280,7 +279,6 @@ fn fallback_user(user_id: i64) -> UserInfo {
         user_id,
         nickname: "未知用户".to_string(),
         avatar_url: None,
-        user_type: crate::types::enums::UserType::Normal,
     }
 }
 

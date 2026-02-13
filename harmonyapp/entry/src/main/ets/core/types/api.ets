@@ -7,14 +7,9 @@ export interface ApiResponse<T = void> {
   data?: T;
 }
 
-export interface PaginationMeta {
-  has_more: boolean;
-  next_cursor?: string;
-}
-
 export interface PaginatedData<T> {
   items: T[];
-  pagination: PaginationMeta;
+  next_cursor?: string;
 }
 
 export interface PaginationParams {
@@ -32,7 +27,7 @@ export type SendMessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 's
 export type UserType = 'temp' | 'normal' | 'admin' | 'system';
 
 // 隐私级别
-export type PrivacyLevel = 'public' | 'followers' | 'friends' | 'private';
+export type PrivacyLevel = 'public' | 'private';
 
 // 角色
 export type GroupRole = 'owner' | 'admin' | 'member';
@@ -51,6 +46,17 @@ export type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'grou
 
 // 举报处理操作
 export type ReportHandleAction = 'resolve' | 'dismiss' | 'escalate';
+
+export type ReportReason =
+  | 'spam'
+  | 'harassment'
+  | 'violence'
+  | 'hate_speech'
+  | 'sexual_content'
+  | 'misinformation'
+  | 'impersonation'
+  | 'self_harm'
+  | 'other';
 
 // 群组加入方式
 export type GroupJoinMethod = 'open' | 'approval' | 'invite_only';
@@ -213,7 +219,6 @@ export interface GroupItem {
   join_method?: GroupJoinMethod;
   is_searchable?: boolean;
   max_members?: number;
-  settings_location?: Location;
 }
 
 export interface GroupSettings {
@@ -243,6 +248,12 @@ export interface SystemAnnouncementItem {
 }
 
 // 3. 生活瞬间 (Moment)
+
+export interface MomentSummary {
+  moment_id: string;
+  cover_url?: string;
+  text_preview: string;
+}
 
 export interface MomentMyState {
   is_liked: boolean;
@@ -293,12 +304,12 @@ export interface PrivateMessageItem {
   content?: string;
   media?: MessageMedia;
   share_code?: string;
-  sender_id: string;
+  sender: UserInfo;
   reply_to?: MessageReplyTo;
   sent_at: string;
   edited_at?: string;
   recalled_at?: string;
-  is_read?: boolean;
+  is_read: boolean;
 }
 
 export interface GroupMessageItem {
@@ -310,7 +321,7 @@ export interface GroupMessageItem {
   sender: UserInfo;
   reply_to?: MessageReplyTo;
   mentions?: string[];
-  recalled_by?: string;
+  recalled_by?: UserInfo;
   sent_at: string;
   edited_at?: string;
   recalled_at?: string;
@@ -342,7 +353,7 @@ export interface PrivateChatLastMessage {
   content?: string;
   type: MessageType;
   share_code?: string;
-  sender_id: string;
+  sender: UserInfo;
   sent_at: string;
 }
 
@@ -359,13 +370,6 @@ export interface PrivateChatItem {
 export interface PrivateChatOpenResult {
   chat: PrivateChatItem;
   recent_messages: PaginatedData<PrivateMessageItem>;
-}
-
-// 7. 群组详情 (Group Open)
-
-export interface GroupOpenResult {
-  group: GroupItem;
-  recent_messages: PaginatedData<GroupMessageItem>;
 }
 
 // ==================== 认证API类型 ====================
@@ -538,12 +542,12 @@ export interface UserSettings {
   privacy_level: PrivacyLevel;
   location_visible: boolean;
   presence_visible: boolean;
-  friends_visible: PrivacyLevel;
-  following_visible: PrivacyLevel;
-  followers_visible: PrivacyLevel;
-  groups_visible: PrivacyLevel;
-  liked_moments_visible: PrivacyLevel;
-  stats_visible: PrivacyLevel;
+  friends_visible: boolean;
+  following_visible: boolean;
+  followers_visible: boolean;
+  groups_visible: boolean;
+  liked_moments_visible: boolean;
+  stats_visible: boolean;
   allow_follow: boolean;
   allow_private_chat: PrivateChatPermission;
   searchable: boolean;
@@ -556,12 +560,12 @@ export interface UpdateSettingsRequest {
   privacy_level?: PrivacyLevel;
   location_visible?: boolean;
   presence_visible?: boolean;
-  friends_visible?: PrivacyLevel;
-  following_visible?: PrivacyLevel;
-  followers_visible?: PrivacyLevel;
-  groups_visible?: PrivacyLevel;
-  liked_moments_visible?: PrivacyLevel;
-  stats_visible?: PrivacyLevel;
+  friends_visible?: boolean;
+  following_visible?: boolean;
+  followers_visible?: boolean;
+  groups_visible?: boolean;
+  liked_moments_visible?: boolean;
+  stats_visible?: boolean;
   allow_follow?: boolean;
   allow_private_chat?: PrivateChatPermission;
   searchable?: boolean;
@@ -1113,7 +1117,7 @@ export interface MapRenderData {
 export interface CreateReportRequest {
   target_type: ReportTargetType;
   target_id: string;
-  reason: string;
+  reason: ReportReason;
   description?: string;
 }
 
@@ -1131,7 +1135,7 @@ export interface ReportItem {
   report_id: string;
   target_type: ReportTargetType;
   target_id: string;
-  reason: string;
+  reason: ReportReason;
   description?: string;
   status: ReportStatus;
   created_at: string;
@@ -1178,10 +1182,7 @@ export interface TagItem {
   trend?: 'rising' | 'stable' | 'falling';
 }
 
-export type TagTimeframe = 'daily' | 'weekly' | 'monthly';
-
 export interface TrendingTagsRequest {
-  timeframe?: TagTimeframe;
   limit?: number;
 }
 
@@ -1363,29 +1364,6 @@ export type SharePayload =
   | MomentSharePayload
   | LocationSharePayload;
 
-export interface NavigateUserAction {
-  type: 'navigate_user';
-  shared_user_id: string;
-}
-
-export interface NavigateGroupAction {
-  type: 'navigate_group';
-  shared_group_id: string;
-}
-
-export interface NavigateMomentAction {
-  type: 'navigate_moment';
-  shared_moment_id: string;
-}
-
-export interface UpdateLocationAction {
-  type: 'update_location';
-  shared_location: Location;
-}
-
-export type ShareApplyAction =
-  NavigateUserAction | NavigateGroupAction | NavigateMomentAction | UpdateLocationAction;
-
 export interface ShareBase {
   share_id: string;
   share_code: string;
@@ -1413,11 +1391,6 @@ export interface ShareDetail {
   preview?: SharePreview;
 }
 
-export interface ShareApplyResult {
-  share_type: ShareType;
-  action: ShareApplyAction;
-}
-
 export interface ShareListItem {
   share_id: string;
   share_code: string;
@@ -1435,10 +1408,6 @@ export interface CreateShareRequest {
 }
 
 export interface GetShareRequest {
-  share_code: string;
-}
-
-export interface ApplyShareRequest {
   share_code: string;
 }
 
@@ -1831,4 +1800,54 @@ export interface SessionListData {
 
 export interface GroupAnnouncementListData {
   items: GroupAnnouncementItem[];
+}
+
+// ==================== 通知中心 API 类型 ====================
+
+export interface NotificationPayload {
+  type: string;
+  actor?: UserInfo;
+  source?: string;
+  source_moment_id?: string;
+  moment_id?: string;
+  moment_summary?: MomentSummary;
+  comment_id?: string;
+  comment_preview?: string;
+  target_type?: string;
+  group_id?: string;
+  group_name?: string;
+  invite_id?: string;
+  application_id?: string;
+  announcement_id?: string;
+  severity?: string;
+}
+
+export interface NotificationItem {
+  notification_id: string;
+  type: string;
+  is_read: boolean;
+  created_at: string;
+  payload: NotificationPayload;
+}
+
+export interface UnreadCountByType {
+  social: number;
+  interaction: number;
+  group: number;
+  system: number;
+}
+
+export interface UnreadCountResult {
+  total: number;
+  by_type: UnreadCountByType;
+}
+
+export interface NotificationListRequest {
+  type?: string;
+  cursor?: string;
+  limit?: number;
+}
+
+export interface MarkNotificationsReadRequest {
+  notification_ids: string[];
 }

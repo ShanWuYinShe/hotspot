@@ -1,4 +1,3 @@
-use futures_util::future;
 use std::str::FromStr;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -7,11 +6,9 @@ use crate::{
     dto::{
         request::{
             AdminAnnouncementListRequest, AdminUpdateAnnouncementRequest,
-            CreateAnnouncementRequest, DeleteAnnouncementRequest, PublicAnnouncementListRequest,
+            CreateAnnouncementRequest, DeleteAnnouncementRequest,
         },
-        response::{
-            CreateAnnouncementData, PaginatedData, PaginationMeta, SystemAnnouncementItem, UserInfo,
-        },
+        response::{CreateAnnouncementData, PaginatedData, SystemAnnouncementItem},
     },
     error::{AppError, Result},
     events::event_types::AppEvent,
@@ -83,7 +80,7 @@ impl AnnouncementService {
         let announcement_id = Uuid::parse_str(&req.announcement_id)
             .map_err(|_| AppError::BadRequest("无效的公告ID".to_string()))?;
 
-        if self.repo.find_by_id(announcement_id).await?.is_none() {
+        if !self.repo.exists(announcement_id).await? {
             return Err(AppError::NotFound("公告不存在".to_string()));
         }
 
@@ -104,7 +101,7 @@ impl AnnouncementService {
         let announcement_id = Uuid::parse_str(&req.announcement_id)
             .map_err(|_| AppError::BadRequest("无效的公告ID".to_string()))?;
 
-        if self.repo.find_by_id(announcement_id).await?.is_none() {
+        if !self.repo.exists(announcement_id).await? {
             return Err(AppError::NotFound("公告不存在".to_string()));
         }
 
@@ -119,11 +116,27 @@ impl AnnouncementService {
         self.list_announcements(req.limit, req.cursor).await
     }
 
+    /// 公开公告列表（非分页，返回条数由调用方传入，通常来自 ResponseDefaults 配置）
     pub async fn list_public_announcements(
         &self,
-        req: PublicAnnouncementListRequest,
-    ) -> Result<PaginatedData<SystemAnnouncementItem>> {
-        self.list_announcements(req.limit, req.cursor).await
+        count: i64,
+    ) -> Result<Vec<SystemAnnouncementItem>> {
+        let (rows, _next_cursor) = self.repo.list(count, None).await?;
+
+        let items: Vec<SystemAnnouncementItem> = rows
+            .into_iter()
+            .map(|row| SystemAnnouncementItem {
+                announcement_id: row.announcement_id.to_string(),
+                title: row.title,
+                content: row.content,
+                severity: AnnouncementSeverity::from_str(&row.severity)
+                    .unwrap_or(AnnouncementSeverity::Info),
+                action_url: row.action_url,
+                created_at: row.created_at.to_rfc3339(),
+            })
+            .collect();
+
+        Ok(items)
     }
 
     async fn list_announcements(
@@ -134,50 +147,22 @@ impl AnnouncementService {
         let limit = Validator::validate_limit(limit_opt, 50)? as i64;
         let (rows, next_cursor) = self.repo.list(limit, cursor.as_deref()).await?;
 
-        // 使用 futures_util::future::join_all 来并发签名所有 avatar_url
-        let items: Vec<SystemAnnouncementItem> =
-            future::join_all(rows.into_iter().map(|row| async move {
-                let publisher_id = row.publisher_id.unwrap_or_default();
-                let created_by = if let (Some(nickname), Some(avatar_url)) = (
-                    row.publisher_nickname.clone(),
-                    row.publisher_avatar_url.clone(),
-                ) {
-                    let signed_avatar_url =
-                        self.media_service.sign_url_if_path(Some(&avatar_url)).await;
-                    UserInfo {
-                        user_id: publisher_id,
-                        nickname,
-                        avatar_url: signed_avatar_url,
-                        user_type: crate::types::enums::UserType::System,
-                    }
-                } else {
-                    UserInfo {
-                        user_id: publisher_id,
-                        nickname: "Admin".to_string(),
-                        avatar_url: None,
-                        user_type: crate::types::enums::UserType::System,
-                    }
-                };
-
-                SystemAnnouncementItem {
-                    announcement_id: row.announcement_id.to_string(),
-                    title: row.title,
-                    content: row.content,
-                    severity: AnnouncementSeverity::from_str(&row.severity)
-                        .unwrap_or(AnnouncementSeverity::Info),
-                    action_url: row.action_url,
-                    created_at: row.created_at.to_rfc3339(),
-                    created_by,
-                }
-            }))
-            .await;
+        let items: Vec<SystemAnnouncementItem> = rows
+            .into_iter()
+            .map(|row| SystemAnnouncementItem {
+                announcement_id: row.announcement_id.to_string(),
+                title: row.title,
+                content: row.content,
+                severity: AnnouncementSeverity::from_str(&row.severity)
+                    .unwrap_or(AnnouncementSeverity::Info),
+                action_url: row.action_url,
+                created_at: row.created_at.to_rfc3339(),
+            })
+            .collect();
 
         Ok(PaginatedData {
             items,
-            pagination: PaginationMeta {
-                has_more: next_cursor.is_some(),
-                next_cursor,
-            },
+            next_cursor,
         })
     }
 }

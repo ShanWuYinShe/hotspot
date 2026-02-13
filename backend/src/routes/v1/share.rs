@@ -19,7 +19,6 @@ pub fn token_optional_routes() -> Router<AppState> {
 pub fn token_required_routes() -> Router<AppState> {
     let main_routes = Router::new()
         .route("/create", post(share::create_share))
-        .route("/apply", post(share::apply_share))
         .route("/revoke", post(share::revoke_share));
 
     // /me 子路由

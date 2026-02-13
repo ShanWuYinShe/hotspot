@@ -23,8 +23,6 @@ import {
   createGetSubscriptionsEvent,
   createPrivateTypingEvent,
   createGroupTypingEvent,
-  createGroupEnterEvent,
-  createGroupLeaveEvent,
   parseServerEvent,
   serializeClientEvent
 } from '../types/WebSocketTypes';
@@ -189,20 +187,6 @@ export class WebSocketService {
   }
 
   // ============================================================================
-  // 群聊进入/离开（触发 GroupUserEntered/GroupUserExited 广播）
-  // ============================================================================
-
-  enterGroup(groupId: string): void {
-    if (!this.isConnected()) return;
-    this.send(createGroupEnterEvent(groupId));
-  }
-
-  leaveGroupChat(groupId: string): void {
-    if (!this.isConnected()) return;
-    this.send(createGroupLeaveEvent(groupId));
-  }
-
-  // ============================================================================
   // 实时状态同步
   // ============================================================================
 
@@ -284,7 +268,6 @@ export class WebSocketService {
         hilog.info(DOMAIN_NUMBER, TAG, `连接已建立: connection_id=${connPayload.connection_id}, user_id=${connPayload.user_id}`);
         hilog.debug(DOMAIN_NUMBER, TAG, `服务端时间: ${connPayload.server_time}`);
         hilog.debug(DOMAIN_NUMBER, TAG, `配置: ping_interval=${connPayload.config.ping_interval}s, ping_timeout=${connPayload.config.ping_timeout}s`);
-        hilog.debug(DOMAIN_NUMBER, TAG, `未读摘要: private_chats=${connPayload.unread_summary.private_chats}, groups=${connPayload.unread_summary.groups}, total=${connPayload.unread_summary.total_messages}`);
 
         this.state = WebSocketState.CONNECTED;
         this.reconnectAttempts = 0;
