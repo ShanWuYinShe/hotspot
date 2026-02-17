@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { untrack } from 'svelte';
 	import { notificationStore } from '$lib/stores/notification.svelte';
 	import type { NotificationItem } from '$lib/types/api';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
@@ -18,24 +19,35 @@
 	import { isSuccess } from '$lib/api/client';
 
 	let open = $state(false);
-	let recentNotifications = $state<NotificationItem[]>([]);
+	let recentNotifications = $state.raw<NotificationItem[]>([]);
 	let loading = $state(false);
+	let loadVersion = 0;
 
 	$effect(() => {
 		if (open) {
-			loadRecent();
+			const version = ++loadVersion;
+			untrack(() => loadRecent(version));
 		}
 	});
 
-	async function loadRecent() {
+	async function loadRecent(version: number) {
 		loading = true;
-		const res = await notificationStore.fetchHistory({ pagination: { limit: 5 } });
-		if (isSuccess(res) && res.data) {
-			recentNotifications = res.data.items;
-		} else {
+		try {
+			const res = await notificationStore.fetchHistory({ pagination: { limit: 5 } });
+			if (version !== loadVersion) return; // 丢弃过期响应
+			if (isSuccess(res) && res.data) {
+				recentNotifications = res.data.items;
+			} else {
+				recentNotifications = [];
+			}
+		} catch {
+			if (version !== loadVersion) return;
 			recentNotifications = [];
+		} finally {
+			if (version === loadVersion) {
+				loading = false;
+			}
 		}
-		loading = false;
 	}
 
 	const hasMore = $derived(notificationStore.unreadCount > 5);

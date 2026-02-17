@@ -5,6 +5,7 @@
 use std::sync::Arc;
 
 use redis::aio::ConnectionManager;
+use tokio::try_join;
 use uuid::Uuid;
 
 use crate::{
@@ -12,21 +13,18 @@ use crate::{
         request::{
             CreateMomentRequest, DeleteMomentRequest, EditMomentRequest, FavoriteMomentRequest,
             LikeMomentRequest, MomentLikesRequest, MomentOpenTheDoorRequest, MyFavoritesRequest,
-            MyMomentsRequest, SearchMomentsByKeywordRequest, SearchMomentsByLocationRequest,
-            SearchMomentsByTagRequest, UnfavoriteMomentRequest, UnlikeMomentRequest,
+            MyMomentsRequest, SearchMomentsRequest, UnfavoriteMomentRequest, UnlikeMomentRequest,
             UserMomentsRequest,
         },
         response::{
-            MomentImage, MomentLikeItem, MomentSearchItem, MyMomentState, PaginatedData,
-            RelativeLocation, UserInfo, UserMomentListItem,
+            MomentImage, MomentItem, MomentLikeItem, MyMomentState, PaginatedData,
+            RelativeLocation, UserInfo,
         },
     },
     error::{AppError, Result},
     events::event_types::AppEvent,
     repositories::{
-        moment_repo::{
-            MomentDetailRow, MomentImageRow, MomentLikeRow, MomentRepository,
-        },
+        moment_repo::{MomentDetailRow, MomentImageRow, MomentLikeRow, MomentRepository},
         tag_repo::TagRepository,
         user_repo::UserRepository,
         user_settings_repo::UserSettingsRepository,
@@ -71,84 +69,58 @@ impl MomentService {
         }
     }
 
-    /// 按关键字搜索生活瞬间（全局）
-    pub async fn search_by_keyword(
+    /// 统一搜索生活瞬间（支持关键字/标签/位置）
+    pub async fn search(
         &self,
         viewer_id: Option<i64>,
-        req: &SearchMomentsByKeywordRequest,
-    ) -> Result<PaginatedData<MomentSearchItem>> {
-        Validator::validate_not_empty(&req.kw, "kw")?;
+        req: &SearchMomentsRequest,
+    ) -> Result<PaginatedData<MomentItem>> {
         Validator::validate_coordinates(
             req.reference_point.latitude,
             req.reference_point.longitude,
         )?;
         let limit = Validator::validate_limit(req.limit, 50)? as i64;
 
-        let (rows, next_cursor) = self
-            .moment_repo
-            .search_by_keyword(
-                &req.kw,
-                req.reference_point.longitude,
-                req.reference_point.latitude,
-                limit,
-                req.cursor.clone(),
-            )
-            .await?;
-
-        self.build_search_list(rows, viewer_id, next_cursor).await
-    }
-
-    /// 按标签搜索生活瞬间（全局）
-    pub async fn search_by_tag(
-        &self,
-        viewer_id: Option<i64>,
-        req: &SearchMomentsByTagRequest,
-    ) -> Result<PaginatedData<MomentSearchItem>> {
-        Validator::validate_not_empty(&req.tag, "tag")?;
-        Validator::validate_coordinates(
-            req.reference_point.latitude,
-            req.reference_point.longitude,
-        )?;
-        let limit = Validator::validate_limit(req.limit, 50)? as i64;
-
-        let (rows, next_cursor) = self
-            .moment_repo
-            .search_by_tag(
-                &req.tag,
-                req.reference_point.longitude,
-                req.reference_point.latitude,
-                limit,
-                req.cursor.clone(),
-            )
-            .await?;
-
-        self.build_search_list(rows, viewer_id, next_cursor).await
-    }
-
-    /// 按位置搜索生活瞬间（范围过滤）
-    pub async fn search_by_location(
-        &self,
-        viewer_id: Option<i64>,
-        req: &SearchMomentsByLocationRequest,
-    ) -> Result<PaginatedData<MomentSearchItem>> {
-        Validator::validate_coordinates(
-            req.reference_point.latitude,
-            req.reference_point.longitude,
-        )?;
-        let radius = Validator::validate_radius_required(req.radius, 50000.0)?;
-        let limit = Validator::validate_limit(req.limit, 50)? as i64;
-
-        let (rows, next_cursor) = self
-            .moment_repo
-            .search_by_location(
-                req.kw.as_deref(),
-                req.reference_point.longitude,
-                req.reference_point.latitude,
-                radius,
-                limit,
-                req.cursor.clone(),
-            )
-            .await?;
+        let (rows, next_cursor) = if let Some(radius) = req.radius {
+            let radius =
+                Validator::validate_radius_required(radius, crate::constants::MAX_SEARCH_RADIUS)?;
+            self.moment_repo
+                .search_by_location(
+                    req.keyword.as_deref(),
+                    req.reference_point.longitude,
+                    req.reference_point.latitude,
+                    radius,
+                    limit,
+                    req.cursor.clone(),
+                )
+                .await?
+        } else if let Some(ref tag) = req.tag {
+            Validator::validate_not_empty(tag, "tag")?;
+            self.moment_repo
+                .search_by_tag(
+                    tag,
+                    req.reference_point.longitude,
+                    req.reference_point.latitude,
+                    limit,
+                    req.cursor.clone(),
+                )
+                .await?
+        } else if let Some(ref keyword) = req.keyword {
+            Validator::validate_not_empty(keyword, "keyword")?;
+            self.moment_repo
+                .search_by_keyword(
+                    keyword,
+                    req.reference_point.longitude,
+                    req.reference_point.latitude,
+                    limit,
+                    req.cursor.clone(),
+                )
+                .await?
+        } else {
+            return Err(AppError::BadRequest(
+                "至少需要提供 keyword、tag、radius 中的一个搜索条件".to_string(),
+            ));
+        };
 
         self.build_search_list(rows, viewer_id, next_cursor).await
     }
@@ -158,7 +130,7 @@ impl MomentService {
         &self,
         user_id: i64,
         req: &MyMomentsRequest,
-    ) -> Result<PaginatedData<UserMomentListItem>> {
+    ) -> Result<PaginatedData<MomentItem>> {
         let limit = Validator::validate_limit(req.limit, 50)? as i64;
         let (rows, next_cursor) = self
             .moment_repo
@@ -172,11 +144,12 @@ impl MomentService {
     pub async fn get_user_moments_list(
         &self,
         req: &UserMomentsRequest,
-    ) -> Result<PaginatedData<UserMomentListItem>> {
+    ) -> Result<PaginatedData<MomentItem>> {
+        let user_id = crate::utils::validation::Validator::parse_user_id(&req.user_id)?;
         let limit = Validator::validate_limit(req.limit, 50)? as i64;
         let (rows, next_cursor) = self
             .moment_repo
-            .list_by_user(req.user_id, limit, req.cursor.clone())
+            .list_by_user(user_id, limit, req.cursor.clone())
             .await?;
 
         self.build_user_moment_list(rows, next_cursor).await
@@ -187,9 +160,8 @@ impl MomentService {
         &self,
         viewer_id: Option<i64>,
         req: &MomentOpenTheDoorRequest,
-    ) -> Result<MomentSearchItem> {
-        let moment_id = Uuid::parse_str(&req.moment_id)
-            .map_err(|_| AppError::InvalidFormat("无效的 moment_id".to_string()))?;
+    ) -> Result<MomentItem> {
+        let moment_id = Validator::parse_uuid(&req.moment_id, "moment_id")?;
 
         let detail = self
             .moment_repo
@@ -197,24 +169,19 @@ impl MomentService {
             .await?
             .ok_or_else(|| AppError::MomentNotFound("瞬间不存在".to_string()))?;
 
-        let tags_map = self
-            .tag_repo
-            .get_moment_tags_batch(&[detail.moment_id])
-            .await?;
-        let images_map = self
-            .moment_repo
-            .list_images_batch(&[detail.moment_id])
-            .await?;
+        let ids = [detail.moment_id];
+        let (tags_map, images_map) = try_join!(
+            self.tag_repo.get_moment_tags_batch(&ids),
+            self.moment_repo.list_images_batch(&ids)
+        )?;
 
-        let liked = if let Some(uid) = viewer_id {
-            self.moment_repo.is_liked(moment_id, uid).await?
+        let (liked, favorited) = if let Some(uid) = viewer_id {
+            try_join!(
+                self.moment_repo.is_liked(moment_id, uid),
+                self.moment_repo.is_favorited(moment_id, uid)
+            )?
         } else {
-            false
-        };
-        let favorited = if let Some(uid) = viewer_id {
-            self.moment_repo.is_favorited(moment_id, uid).await?
-        } else {
-            false
+            (false, false)
         };
 
         Ok(self
@@ -235,8 +202,7 @@ impl MomentService {
         &self,
         req: &MomentLikesRequest,
     ) -> Result<PaginatedData<MomentLikeItem>> {
-        let moment_id = Uuid::parse_str(&req.moment_id)
-            .map_err(|_| AppError::InvalidFormat("无效的 moment_id".to_string()))?;
+        let moment_id = Validator::parse_uuid(&req.moment_id, "moment_id")?;
         let limit = Validator::validate_limit(req.limit, 50)? as i64;
 
         if !self.moment_repo.exists(moment_id).await? {
@@ -253,10 +219,7 @@ impl MomentService {
             items.push(self.build_like_item(row).await);
         }
 
-        Ok(PaginatedData {
-            items,
-            next_cursor,
-        })
+        Ok(PaginatedData { items, next_cursor })
     }
 
     /// 创建瞬间
@@ -264,21 +227,20 @@ impl MomentService {
         &self,
         user_id: i64,
         req: &CreateMomentRequest,
-    ) -> Result<UserMomentListItem> {
+    ) -> Result<MomentItem> {
         Validator::validate_not_empty(&req.description, "description")?;
         Validator::validate_coordinates(req.location.point.latitude, req.location.point.longitude)?;
 
-        let privacy_level = req
-            .privacy_level
-            .unwrap_or(PrivacyLevel::Public)
-            .to_string();
+        let privacy_level = req.privacy_level.unwrap_or(PrivacyLevel::Public);
+
+        let mentions = Validator::parse_mentions(req.mentions.as_deref())?;
 
         let moment = self
             .moment_repo
             .create(
                 user_id,
                 Some(req.description.clone()),
-                req.mentions.clone(),
+                mentions,
                 Some(req.location.point.longitude),
                 Some(req.location.point.latitude),
                 Some(req.location.location_name.clone()),
@@ -289,8 +251,7 @@ impl MomentService {
         let mut image_rows: Vec<(Uuid, String, Option<i32>, Option<i32>, i32)> = Vec::new();
         if let Some(image_ids) = &req.image_file_ids {
             for (idx, fid) in image_ids.iter().enumerate() {
-                let file_id = Uuid::parse_str(fid)
-                    .map_err(|_| AppError::InvalidFormat("无效的 image_file_id".to_string()))?;
+                let file_id = Validator::parse_uuid(fid, "image_file_id")?;
                 let file = self
                     .media_service
                     .validate_file(file_id, user_id, "moment_image")
@@ -340,45 +301,39 @@ impl MomentService {
             .await?
             .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
 
-        let user = UserInfo {
+        let user = UserInfo::new(
             user_id,
-            nickname: user_row.nickname.unwrap_or_default(),
-            avatar_url: self
-                .media_service
+            user_row.nickname.unwrap_or_default(),
+            self.media_service
                 .sign_url_if_path(user_row.avatar_url.as_deref())
                 .await,
-        };
+        );
 
-        Ok(UserMomentListItem {
+        Ok(MomentItem {
             moment_id: moment.moment_id.to_string(),
             description: req.description.clone(),
             images,
             tags,
-            mentions: req.mentions.clone(),
+            mentions: moment.mentions.clone(),
             created_at: moment.created_at.to_rfc3339(),
             likes_count: moment.like_count,
             comments_count: moment.comments_count,
             shares_count: 0,
             user,
-            location: RelativeLocation {
-                point: crate::dto::response::GeoPoint {
-                    latitude: req.location.point.latitude,
-                    longitude: req.location.point.longitude,
-                },
-                location_name: req.location.location_name.clone(),
-                distance: None,
-                bearing_degrees: None,
-            },
+            location: RelativeLocation::without_distance(
+                req.location.point.latitude,
+                req.location.point.longitude,
+                req.location.location_name.clone(),
+            ),
             privacy_level: None,
             my_state: None,
             recommendation: None,
         })
     }
 
-    /// 编辑瞬间
-    pub async fn update_moment(&self, user_id: i64, req: &EditMomentRequest) -> Result<()> {
-        let moment_id = Uuid::parse_str(&req.moment_id)
-            .map_err(|_| AppError::InvalidFormat("无效的 moment_id".to_string()))?;
+    /// 编辑瞬间，返回更新后的完整 MomentItem
+    pub async fn update_moment(&self, user_id: i64, req: &EditMomentRequest) -> Result<MomentItem> {
+        let moment_id = Validator::parse_uuid(&req.moment_id, "moment_id")?;
 
         let moment = self
             .moment_repo
@@ -407,13 +362,14 @@ impl MomentService {
             (None, None, None)
         };
 
-        let privacy_level = req.privacy_level.map(|p| p.to_string());
+        let privacy_level = req.privacy_level;
+        let mentions = Validator::parse_mentions(req.mentions.as_deref())?;
 
         self.moment_repo
             .update(
                 moment_id,
                 req.description.clone(),
-                req.mentions.clone(),
+                mentions,
                 lon,
                 lat,
                 location_name,
@@ -428,8 +384,7 @@ impl MomentService {
         if let Some(image_ids) = &req.image_file_ids {
             let mut image_rows: Vec<(Uuid, String, Option<i32>, Option<i32>, i32)> = Vec::new();
             for (idx, fid) in image_ids.iter().enumerate() {
-                let file_id = Uuid::parse_str(fid)
-                    .map_err(|_| AppError::InvalidFormat("无效的 image_file_id".to_string()))?;
+                let file_id = Validator::parse_uuid(fid, "image_file_id")?;
                 let file = self
                     .media_service
                     .validate_file(file_id, user_id, "moment_image")
@@ -441,13 +396,39 @@ impl MomentService {
                 .await?;
         }
 
-        Ok(())
+        let detail = self
+            .moment_repo
+            .get_detail(moment_id, None, None)
+            .await?
+            .ok_or_else(|| AppError::MomentNotFound("瞬间不存在".to_string()))?;
+
+        let ids = [detail.moment_id];
+        let (tags_map, images_map) = try_join!(
+            self.tag_repo.get_moment_tags_batch(&ids),
+            self.moment_repo.list_images_batch(&ids)
+        )?;
+
+        let (liked, favorited) = try_join!(
+            self.moment_repo.is_liked(moment_id, user_id),
+            self.moment_repo.is_favorited(moment_id, user_id)
+        )?;
+
+        Ok(self
+            .build_search_item(
+                detail,
+                tags_map.get(&moment_id).cloned().unwrap_or_default(),
+                images_map.get(&moment_id),
+                Some(MyMomentState {
+                    is_liked: liked,
+                    is_favorited: favorited,
+                }),
+            )
+            .await)
     }
 
     /// 删除瞬间
     pub async fn delete_moment(&self, user_id: i64, req: &DeleteMomentRequest) -> Result<()> {
-        let moment_id = Uuid::parse_str(&req.moment_id)
-            .map_err(|_| AppError::InvalidFormat("无效的 moment_id".to_string()))?;
+        let moment_id = Validator::parse_uuid(&req.moment_id, "moment_id")?;
         let moment = self
             .moment_repo
             .find_by_id(moment_id)
@@ -464,8 +445,7 @@ impl MomentService {
 
     /// 点赞
     pub async fn like_moment(&self, user_id: i64, req: &LikeMomentRequest) -> Result<()> {
-        let moment_id = Uuid::parse_str(&req.moment_id)
-            .map_err(|_| AppError::InvalidFormat("无效的 moment_id".to_string()))?;
+        let moment_id = Validator::parse_uuid(&req.moment_id, "moment_id")?;
         if !self.moment_repo.exists(moment_id).await? {
             return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
         }
@@ -475,8 +455,7 @@ impl MomentService {
 
     /// 取消点赞
     pub async fn unlike_moment(&self, user_id: i64, req: &UnlikeMomentRequest) -> Result<()> {
-        let moment_id = Uuid::parse_str(&req.moment_id)
-            .map_err(|_| AppError::InvalidFormat("无效的 moment_id".to_string()))?;
+        let moment_id = Validator::parse_uuid(&req.moment_id, "moment_id")?;
         if !self.moment_repo.exists(moment_id).await? {
             return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
         }
@@ -486,8 +465,7 @@ impl MomentService {
 
     /// 收藏
     pub async fn favorite_moment(&self, user_id: i64, req: &FavoriteMomentRequest) -> Result<()> {
-        let moment_id = Uuid::parse_str(&req.moment_id)
-            .map_err(|_| AppError::InvalidFormat("无效的 moment_id".to_string()))?;
+        let moment_id = Validator::parse_uuid(&req.moment_id, "moment_id")?;
         if !self.moment_repo.exists(moment_id).await? {
             return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
         }
@@ -501,8 +479,7 @@ impl MomentService {
         user_id: i64,
         req: &UnfavoriteMomentRequest,
     ) -> Result<()> {
-        let moment_id = Uuid::parse_str(&req.moment_id)
-            .map_err(|_| AppError::InvalidFormat("无效的 moment_id".to_string()))?;
+        let moment_id = Validator::parse_uuid(&req.moment_id, "moment_id")?;
         if !self.moment_repo.exists(moment_id).await? {
             return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
         }
@@ -514,7 +491,7 @@ impl MomentService {
         &self,
         user_id: i64,
         req: &MyFavoritesRequest,
-    ) -> Result<PaginatedData<MomentSearchItem>> {
+    ) -> Result<PaginatedData<MomentItem>> {
         let limit = Validator::validate_limit(req.limit, 50)? as i64;
         let (rows, next_cursor) = self
             .moment_repo
@@ -544,14 +521,13 @@ impl MomentService {
 
     async fn build_like_item(&self, row: MomentLikeRow) -> MomentLikeItem {
         MomentLikeItem {
-            user: UserInfo {
-                user_id: row.user_id,
-                nickname: row.user_nickname.unwrap_or_default(),
-                avatar_url: self
-                    .media_service
+            user: UserInfo::new(
+                row.user_id,
+                row.user_nickname.unwrap_or_default(),
+                self.media_service
                     .sign_url_if_path(row.user_avatar_url.as_deref())
                     .await,
-            },
+            ),
             liked_at: row.created_at.to_rfc3339(),
         }
     }
@@ -561,17 +537,18 @@ impl MomentService {
         rows: Vec<MomentDetailRow>,
         viewer_id: Option<i64>,
         next_cursor: Option<String>,
-    ) -> Result<PaginatedData<MomentSearchItem>> {
+    ) -> Result<PaginatedData<MomentItem>> {
         let moment_ids: Vec<Uuid> = rows.iter().map(|r| r.moment_id).collect();
-        let tags_map = self.tag_repo.get_moment_tags_batch(&moment_ids).await?;
-        let images_map = self.moment_repo.list_images_batch(&moment_ids).await?;
+        let (tags_map, images_map) = try_join!(
+            self.tag_repo.get_moment_tags_batch(&moment_ids),
+            self.moment_repo.list_images_batch(&moment_ids)
+        )?;
 
         let (liked_set, favorited_set) = if let Some(uid) = viewer_id {
-            let liked = self.moment_repo.batch_check_liked(&moment_ids, uid).await?;
-            let favorited = self
-                .moment_repo
-                .batch_check_favorited(&moment_ids, uid)
-                .await?;
+            let (liked, favorited) = try_join!(
+                self.moment_repo.batch_check_liked(&moment_ids, uid),
+                self.moment_repo.batch_check_favorited(&moment_ids, uid)
+            )?;
             (Some(liked), Some(favorited))
         } else {
             (None, None)
@@ -595,10 +572,7 @@ impl MomentService {
             items.push(self.build_search_item(row, tags, images, my_state).await);
         }
 
-        Ok(PaginatedData {
-            items,
-            next_cursor,
-        })
+        Ok(PaginatedData { items, next_cursor })
     }
 
     async fn build_search_item(
@@ -607,13 +581,13 @@ impl MomentService {
         tags: Vec<String>,
         images: Option<&Vec<MomentImageRow>>,
         my_state: Option<MyMomentState>,
-    ) -> MomentSearchItem {
+    ) -> MomentItem {
         let image_list = match images {
             Some(rows) => self.sign_images(rows).await,
             None => None,
         };
 
-        MomentSearchItem {
+        MomentItem {
             moment_id: detail.moment_id.to_string(),
             description: detail.description.unwrap_or_default(),
             images: image_list,
@@ -623,14 +597,13 @@ impl MomentService {
             likes_count: detail.like_count,
             comments_count: detail.comments_count,
             shares_count: 0,
-            user: UserInfo {
-                user_id: detail.user_id,
-                nickname: detail.user_nickname.unwrap_or_default(),
-                avatar_url: self
-                    .media_service
+            user: UserInfo::new(
+                detail.user_id,
+                detail.user_nickname.unwrap_or_default(),
+                self.media_service
                     .sign_url_if_path(detail.user_avatar_url.as_deref())
                     .await,
-            },
+            ),
             location: Self::build_location(
                 detail.latitude,
                 detail.longitude,
@@ -647,10 +620,12 @@ impl MomentService {
         &self,
         rows: Vec<MomentDetailRow>,
         next_cursor: Option<String>,
-    ) -> Result<PaginatedData<UserMomentListItem>> {
+    ) -> Result<PaginatedData<MomentItem>> {
         let moment_ids: Vec<Uuid> = rows.iter().map(|r| r.moment_id).collect();
-        let tags_map = self.tag_repo.get_moment_tags_batch(&moment_ids).await?;
-        let images_map = self.moment_repo.list_images_batch(&moment_ids).await?;
+        let (tags_map, images_map) = try_join!(
+            self.tag_repo.get_moment_tags_batch(&moment_ids),
+            self.moment_repo.list_images_batch(&moment_ids)
+        )?;
 
         let mut items = Vec::with_capacity(rows.len());
         for row in rows {
@@ -661,16 +636,15 @@ impl MomentService {
                 None => None,
             };
 
-            let user = UserInfo {
-                user_id: row.user_id,
-                nickname: row.user_nickname.unwrap_or_default(),
-                avatar_url: self
-                    .media_service
+            let user = UserInfo::new(
+                row.user_id,
+                row.user_nickname.unwrap_or_default(),
+                self.media_service
                     .sign_url_if_path(row.user_avatar_url.as_deref())
                     .await,
-            };
+            );
 
-            items.push(UserMomentListItem {
+            items.push(MomentItem {
                 moment_id: row.moment_id.to_string(),
                 description: row.description.unwrap_or_default(),
                 images: image_list,
@@ -693,10 +667,7 @@ impl MomentService {
             });
         }
 
-        Ok(PaginatedData {
-            items,
-            next_cursor,
-        })
+        Ok(PaginatedData { items, next_cursor })
     }
 
     async fn sign_images(&self, rows: &[MomentImageRow]) -> Option<Vec<MomentImage>> {

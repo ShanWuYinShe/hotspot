@@ -18,7 +18,7 @@
 
 	async function loadFollowers(refresh = false) {
 		await pagination.load(
-			(cursor) => usersService.getMyFollowers({ pagination: { limit: 24, cursor } }),
+			(cursor) => usersService.getFollowers({ pagination: { limit: 24, cursor } }),
 			refresh
 		);
 	}

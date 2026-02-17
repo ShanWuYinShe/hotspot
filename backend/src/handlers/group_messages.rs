@@ -1,5 +1,4 @@
-// src/handlers/group_messages.rs
-// 群聊消息Handler
+//! 群聊消息 Handler
 
 use crate::{
     dto::{

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { onMount } from 'svelte';
+	import { untrack } from 'svelte';
 	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { momentsService, commentsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
@@ -24,7 +24,7 @@
 	import Send from 'lucide-svelte/icons/send';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 
-	const momentId = page.params.id!;
+	const momentId = $derived(page.params.id!);
 
 	let moment = $state<MomentItem | null>(null);
 	let comments = $state.raw<CommentItem[]>([]);
@@ -39,12 +39,14 @@
 	let isFavorited = $state(false);
 	let likesCount = $state(0);
 	let commentsCount = $state(0);
+	let loadVersion = 0;
 
-	async function loadMoment() {
+	async function loadMoment(id: string, version: number) {
 		try {
 			const response = await withMinimumLoadingTime(() =>
-				momentsService.getMoment({ moment_id: momentId })
+				momentsService.getMoment({ moment_id: id })
 			);
+			if (version !== loadVersion) return; // 丢弃过期响应
 			if (isSuccess(response) && response.data) {
 				moment = response.data;
 				isLiked = moment.my_state?.is_liked ?? false;
@@ -55,25 +57,28 @@
 				toast.error(response.message || '加载失败');
 			}
 		} catch {
+			if (version !== loadVersion) return;
 			toast.error('加载失败');
 		} finally {
-			isLoading = false;
+			if (version === loadVersion) isLoading = false;
 		}
 	}
 
-	async function loadComments() {
+	async function loadComments(id: string, version: number) {
 		commentsError = false;
 		try {
-			const response = await commentsService.getComments({ moment_id: momentId, pagination: { limit: 50 } });
+			const response = await commentsService.getComments({ moment_id: id, pagination: { limit: 50 } });
+			if (version !== loadVersion) return; // 丢弃过期响应
 			if (isSuccess(response) && response.data) {
 				comments = response.data.items;
 			} else {
 				commentsError = true;
 			}
 		} catch {
+			if (version !== loadVersion) return;
 			commentsError = true;
 		} finally {
-			isLoadingComments = false;
+			if (version === loadVersion) isLoadingComments = false;
 		}
 	}
 
@@ -161,9 +166,24 @@
 		return date.toLocaleString('zh-CN');
 	}
 
-	onMount(() => {
-		loadMoment();
-		loadComments();
+	// momentId 变化时重置状态并重新加载（含首次加载）
+	$effect(() => {
+		const id = momentId;
+		untrack(() => {
+			const version = ++loadVersion;
+			moment = null;
+			comments = [];
+			isLoading = true;
+			isLoadingComments = true;
+			commentsError = false;
+			commentText = '';
+			isLiked = false;
+			isFavorited = false;
+			likesCount = 0;
+			commentsCount = 0;
+			loadMoment(id, version);
+			loadComments(id, version);
+		});
 	});
 </script>
 
@@ -321,7 +341,7 @@
 			<CardContent>
 				{#if isLoadingComments}
 					<div class="space-y-4">
-						{#each Array(3) as _}
+						{#each Array(3) as _, i (i)}
 							<div class="flex gap-3">
 								<Skeleton class="h-10 w-10 rounded-full" />
 								<div class="flex-1 space-y-2">
@@ -334,7 +354,12 @@
 				{:else if commentsError}
 					<div class="flex flex-col items-center gap-3 py-8 text-center">
 						<p class="text-sm text-muted-foreground">加载评论失败</p>
-						<Button variant="outline" size="sm" onclick={loadComments}>重试</Button>
+						<Button variant="outline" size="sm" onclick={() => {
+							const v = ++loadVersion;
+							isLoadingComments = true;
+							commentsError = false;
+							loadComments(momentId, v);
+						}}>重试</Button>
 					</div>
 				{:else if comments.length === 0}
 					<p class="py-8 text-center text-muted-foreground">暂无评论</p>

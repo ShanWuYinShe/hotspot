@@ -59,7 +59,6 @@ impl AdminRbacService {
         // 如果 login_id 已存在用户，直接将其升级为超级管理员
         if let Some(user) = self.user_repo.find_by_identifier(&login_id).await? {
             self.repo.upsert_admin_user(user.user_id, true).await?;
-            self.repo.ensure_user_type_admin(user.user_id).await?;
             tracing::warn!(
                 "SUPER ADMIN bootstrap: promoted existing user_id={} login_id={}",
                 user.user_id,
@@ -100,7 +99,6 @@ impl AdminRbacService {
 
         // 标记为超级管理员
         self.repo.upsert_admin_user(user.user_id, true).await?;
-        self.repo.ensure_user_type_admin(user.user_id).await?;
 
         tracing::warn!(
             "SUPER ADMIN bootstrap: created user_id={} login_id={}",
@@ -182,8 +180,13 @@ impl AdminRbacService {
             .await
     }
 
-    pub async fn list_admins(&self) -> Result<Vec<AdminWithRolesRow>> {
-        self.repo.list_admins().await
+    pub async fn list_admins(
+        &self,
+        limit: Option<i32>,
+        cursor: Option<String>,
+    ) -> Result<(Vec<AdminWithRolesRow>, Option<String>)> {
+        let limit = crate::utils::validation::Validator::validate_limit(limit, 50)? as usize;
+        self.repo.list_admins(limit, cursor.as_deref()).await
     }
 
     pub async fn get_me(&self, user_id: i64) -> Result<(bool, Vec<String>, Vec<AdminRoleRow>)> {
@@ -216,7 +219,6 @@ impl AdminRbacService {
         self.repo
             .upsert_admin_user(target_user_id, is_super)
             .await?;
-        self.repo.ensure_user_type_admin(target_user_id).await?;
         self.repo
             .replace_admin_roles(target_user_id, role_ids)
             .await?;
@@ -232,7 +234,6 @@ impl AdminRbacService {
         }
 
         self.repo.remove_admin_user(target_user_id).await?;
-        self.repo.revoke_user_type_admin(target_user_id).await?;
         Ok(())
     }
 }

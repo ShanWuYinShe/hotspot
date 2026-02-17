@@ -51,16 +51,18 @@ export const USERS = {
 		SETTINGS_GET: `${API_BASE}/users/me/settings/get`,
 		SETTINGS_UPDATE: `${API_BASE}/users/me/settings/update`,
 		DELETE: `${API_BASE}/users/me/delete`,
-		LIST_FRIENDS: `${API_BASE}/users/me/list_friends`,
-		LIST_FOLLOWING: `${API_BASE}/users/me/list_following`,
-		LIST_FOLLOWERS: `${API_BASE}/users/me/list_followers`,
 		LIST_BLOCKED: `${API_BASE}/users/me/list_blocked`,
 		// 关注关系操作
 		FOLLOW: `${API_BASE}/users/me/follow`,
 		UNFOLLOW: `${API_BASE}/users/me/unfollow`,
 		BLOCK: `${API_BASE}/users/me/block`,
 		UNBLOCK: `${API_BASE}/users/me/unblock`,
-		SET_REMARK: `${API_BASE}/users/me/set_remark`
+		SET_REMARK: `${API_BASE}/users/me/set_remark`,
+		// ⏳ 延期：邮箱/手机号变更（依赖验证码发送服务）
+		EMAIL_REQUEST_CHANGE: `${API_BASE}/users/me/email/request_change`,
+		EMAIL_CONFIRM_CHANGE: `${API_BASE}/users/me/email/confirm_change`,
+		PHONE_REQUEST_CHANGE: `${API_BASE}/users/me/phone/request_change`,
+		PHONE_CONFIRM_CHANGE: `${API_BASE}/users/me/phone/confirm_change`
 	}
 } as const;
 
@@ -111,6 +113,7 @@ export const PRIVATE_CHATS = {
 	ME: {
 		LIST: `${API_BASE}/private_chats/me/list`,
 		UPDATE_SETTINGS: `${API_BASE}/private_chats/me/update_settings`,
+		// ⏳ 延期：删除私聊会话
 		DELETE: `${API_BASE}/private_chats/me/delete`
 	}
 } as const;
@@ -205,7 +208,7 @@ export const FEED = {
 	LIST_USERS: `${API_BASE}/feed/list_users`,
 	LIST_TRENDING: `${API_BASE}/feed/list_trending`,
 	ME: {
-		FEEDBACK: `${API_BASE}/feed/me/feedback`
+		DISMISS: `${API_BASE}/feed/me/dismiss`
 	}
 } as const;
 
@@ -229,7 +232,7 @@ export const MAP = {
 export const SHARE = {
 	CREATE: `${API_BASE}/share/create`,
 	GET: `${API_BASE}/share/get`,
-	ME_LIST: `${API_BASE}/share/me/list`,
+	// ME_LIST deferred: share/me/list
 	REVOKE: `${API_BASE}/share/revoke`
 } as const;
 
@@ -299,7 +302,6 @@ export const ADMIN_APP_CONFIG = {
 	UPDATE_DEFAULTS: `${API_BASE}/admin/app_config/update_defaults`,
 	UPDATE_RATE_LIMITS: `${API_BASE}/admin/app_config/update_rate_limits`,
 	UPDATE_RESPONSE_DEFAULTS: `${API_BASE}/admin/app_config/update_response_defaults`,
-	GET_CLIENT: `${API_BASE}/admin/app_config/get_client`,
 	UPDATE_FEATURES: `${API_BASE}/admin/app_config/update_features`,
 	UPDATE_LIMITS: `${API_BASE}/admin/app_config/update_limits`,
 	UPDATE_CONTACT: `${API_BASE}/admin/app_config/update_contact`

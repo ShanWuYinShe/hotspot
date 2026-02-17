@@ -1,5 +1,4 @@
-// src/handlers/private_messages.rs
-// 私聊消息Handler
+//! 私聊消息 Handler
 
 use crate::{
     dto::{

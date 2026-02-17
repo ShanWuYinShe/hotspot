@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { untrack } from 'svelte';
 	import { usersService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { authStore } from '$lib/stores/auth.svelte';
@@ -36,6 +37,22 @@
 	});
 	let isActionLoading = $state(false);
 	let currentTab = $state<'moments' | 'followers' | 'following'>('moments');
+
+	// userId 变化时重置子 tab 分页状态并触发首次加载
+	// 注意：上方 data→user 同步 effect 先于此 effect 执行，因此此处 user 已是最新值
+	$effect(() => {
+		userId; // 依赖声明
+		untrack(() => {
+			currentTab = 'moments';
+			momentsPagination.reset();
+			followersPagination.reset();
+			followingPagination.reset();
+			// 首次加载 moments（仅当 user 数据可用时）
+			if (user) {
+				loadMoments(true);
+			}
+		});
+	});
 
 	// 使用 usePagination hook 统一管理三个 tab 的分页状态
 	const momentsPagination = usePagination<MomentItem>({
@@ -156,12 +173,10 @@
 		if (target === 'following' && followingPagination.items.length === 0) loadFollowing(true);
 	}
 
-	// 在用户数据加载后，显示错误或加载瞬间列表
+	// 数据错误提示（独立 effect，避免 user 变化导致重复触发）
 	$effect(() => {
 		if (data.error) {
 			toast.error(data.error);
-		} else if (user) {
-			loadMoments(true);
 		}
 	});
 </script>
@@ -298,7 +313,7 @@
 			<TabsContent value="moments" class="mt-6">
 				{#if momentsPagination.loading}
 					<div class="space-y-4">
-						{#each Array(3) as _}
+						{#each Array(3) as _, i (i)}
 							<Card>
 								<CardContent class="p-4">
 									<div class="space-y-3">
@@ -341,7 +356,7 @@
 			<TabsContent value="followers" class="mt-6">
 				{#if followersPagination.loading}
 					<div class="space-y-2">
-						{#each Array(5) as _}
+						{#each Array(5) as _, i (i)}
 							<Card>
 								<CardContent class="flex items-center gap-4 p-4">
 									<Skeleton class="h-12 w-12 rounded-full" />
@@ -395,7 +410,7 @@
 			<TabsContent value="following" class="mt-6">
 				{#if followingPagination.loading}
 					<div class="space-y-2">
-						{#each Array(5) as _}
+						{#each Array(5) as _, i (i)}
 							<Card>
 								<CardContent class="flex items-center gap-4 p-4">
 									<Skeleton class="h-12 w-12 rounded-full" />

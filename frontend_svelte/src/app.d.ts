@@ -12,13 +12,7 @@ declare global {
 			message: string;
 		}
 
-		/**
-		 * 服务端 Locals，通过 hooks.server.ts 注入
-		 */
-		interface Locals {
-			/** 用户是否有有效的 refresh_token cookie */
-			hasAuth: boolean;
-		}
+		// interface Locals {}
 
 		// interface PageData {}
 		// interface PageState {}

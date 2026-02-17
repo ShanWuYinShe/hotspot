@@ -7,11 +7,8 @@ alwaysApply: true
 
 ## 权威边界与冲突处理
 
-- 本文件定义 HotSpot API 设计的基础原则与全局约束
 - 若本文件与任何工程实现或其它 doc/rule 文件产生冲突，以本文件为准
 - 禁止使用数字章节号（如"第X章/第X节"）来引用本文件内容；引用时仅使用小节标题或锚点标题
-
-本文件定义 **全局契约**：路径设计与 Token 语义、分页/游标、幂等性与隐私控制等。
 
 ## 术语约定（契约级）
 
@@ -19,8 +16,6 @@ alwaysApply: true
 - **自身**：指"对自己执行操作"的语义，用于错误码与规则描述
 - **群成员**：指已加入群组的用户
 - **会话参与者**：指私聊会话的双方用户
-
-本文件为通用契约定义，不依赖其它规范文件。
 
 重要契约约定（必须）：
 - 所有时间字段使用 UTC，格式为 ISO 8601（如 `1949-10-01T10:01:00Z`）
@@ -164,7 +159,7 @@ Web 端使用 CSRF Token 防止跨站请求伪造攻击：
 |------|-----|
 | Cookie 名称 | `hs_csrf_token` |
 | Header 名称 | `X-CSRF-Token` |
-| 适用范围 | 所有 Web 端 POST 请求 |
+| 适用范围 | Web 端敏感操作 POST 请求（账号变更、密码修改、支付等） |
 | Cookie 属性 | `Secure; SameSite=Strict`（非 HttpOnly，前端需读取） |
 
 **防护模式**：Double Submit Cookie（OWASP 推荐方案之一），结合 auth Cookie 的 `SameSite=Strict` 属性形成纵深防御。
@@ -200,7 +195,7 @@ App 端通过 Header 携带认证信息：
 | 写操作（create/update/delete） | **必须** | 缺少 token 返回认证错误 |
 | 互动操作（like/follow/block 等） | **必须** | 缺少 token 返回认证错误 |
 | `*/me/*` 路径（如 `/api/v1/users/me/*`） | **必须** | 当前用户专属数据 |
-| `/feed/*` 路径 | **必须** | 个性化推荐依赖身份 |
+| `/feed/*` 路径 | **必须**（`list_trending` 可选） | 个性化推荐依赖身份；`list_trending` 为全局热门数据，不依赖身份 |
 | `/admin/*` 路径 | **必须**+权限 | 管理员功能 |
 
 **说明**：
@@ -255,6 +250,13 @@ App 端通过 Header 携带认证信息：
 #### @participant-only
 
 标记仅会话参与者视角返回的字段（等同于可选字段，非该视角下不返回）。
+
+### Token 可选端点的统一语义
+
+认证为"可选"的端点遵循统一语义，各模块不再逐端点重复说明：
+
+- **未登录（不带 token）**：仅返回公开可见内容；不返回 `@auth-only` 字段
+- **已登录（带 token）**：在满足隐私与关系规则前提下，返回完整数据（包括 `@auth-only` 字段如 `relation`、`my_state`、`social_context` 等）
 
 ### 隐私与访问控制
 
@@ -359,7 +361,7 @@ App 端通过 Header 携带认证信息：
 | `content`（message） | 1-5000 字符 | 聊天消息内容 |
 | `image_file_ids` | 最多 9 个 | 瞬间图片，可由 `AppConfig.limits.max_moment_images` 覆盖 |
 | `mentions` | 最多 20 个 | @ 提及的用户 ID 列表 |
-| `reason`（report） | 1-200 字符 | 举报原因 |
+| `description`（report） | 0-1000 字符 | 举报详细说明，`reason` 为 `'other'` 时建议填写 |
 | `reason`（admin） | 0-500 字符 | 管理员操作原因 |
 | `remark` | 0-100 字符 | 用户备注 |
 | `location_name` | 0-100 字符 | 位置名称 |

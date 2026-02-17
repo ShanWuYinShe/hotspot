@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { dev } from '$app/environment';
 	import { page } from '$app/state';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { privateMessagesService, usersService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
@@ -22,7 +22,7 @@
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 	import MoreVertical from 'lucide-svelte/icons/more-vertical';
 
-	const userId = page.params.id!;
+	const userId = $derived(page.params.id!);
 
 	let otherUser = $state<UserInfo | null>(null);
 	let messages = $state.raw<PrivateMessageItem[]>([]);
@@ -34,6 +34,7 @@
 	let shouldFocusInput = $state(0); // 用于触发重新聚焦
 	let isSubscribed = $state(false); // 订阅状态
 	let isAttemptingSubscribe = $state(false); // 是否正在尝试订阅
+	let isMounted = false; // 组件是否挂载（防止异步操作在卸载后更新状态）
 
 	const canSendMessage = $derived(isSubscribed);
 
@@ -52,6 +53,7 @@
 			await withMinimumLoadingTime(async () => {
 				// 获取对方信息
 				const userResponse = await usersService.getUser({ user_id: userId });
+				if (!isMounted) return;
 				if (isSuccess(userResponse) && userResponse.data) {
 					otherUser = userResponse.data.user;
 				}
@@ -61,6 +63,7 @@
 					target_user_id: userId,
 					pagination: { limit: 50 }
 				});
+				if (!isMounted) return;
 				if (isSuccess(messagesResponse) && messagesResponse.data) {
 					messages = messagesResponse.data.items.reverse();
 				}
@@ -68,9 +71,9 @@
 				// ✅ 不再立即标记已读，等待消息可见时自动标记
 			});
 		} catch {
-			toast.error('加载失败');
+			if (isMounted) toast.error('加载失败');
 		} finally {
-			isLoading = false;
+			if (isMounted) isLoading = false;
 		}
 	}
 
@@ -85,8 +88,7 @@
 			const response = await privateMessagesService.send({
 				target_user_id: userId,
 				type: 'text',
-				content: text,
-				idempotencyKey: crypto.randomUUID()
+				content: text
 			});
 
 			if (!isSuccess(response)) {
@@ -161,18 +163,14 @@
 	}
 
 	onMount(() => {
-		// ✅ 立即清除这个对话的未读计数
-		messageStore.markConversationAsRead(`private_${userId}`);
+		isMounted = true;
 
-		// 先注册消息监听器（确保不会错过任何消息）
-		// 监听私聊消息
+		// 注册 WebSocket 监听器（使用 reactive userId 自动过滤正确的消息）
 		const unsubscribeMessage = eventHandlers.onPrivateMessage((payload: PrivateMessageNewPayload) => {
-			// 只处理与当前聊天相关的消息
 			if (
 				payload.target_user_id === userId ||
 				(payload.sender.user_id === userId && payload.target_user_id === authStore.currentUserId)
 			) {
-				// 将 WebSocket 消息转换为 PrivateMessageItem
 				const newMessage: PrivateMessageItem = {
 					message_id: payload.message_id,
 					type: payload.type,
@@ -183,23 +181,17 @@
 					reply_to: payload.reply_to,
 					is_read: true
 				};
-
-				// 添加到消息列表
 				messages = [...messages, newMessage];
-
-				// ✅ 清除未读计数（因为用户正在查看这个对话）
 				messageStore.markConversationAsRead(`private_${userId}`);
 			}
 		});
 
-		// 监听对方正在输入（类型自动推断！）
 		const unsubscribeTyping = websocketStore.on('PrivateUserTyping', (payload) => {
 			if (payload.user_id === userId) {
 				isOtherUserTyping = payload.is_typing;
 			}
 		});
 
-		// 监听消息撤回（类型自动推断！）
 		const unsubscribeRecalled = websocketStore.on('PrivateMessageRecalled', (payload) => {
 			if (
 				payload.target_user_id === userId ||
@@ -211,7 +203,6 @@
 			}
 		});
 
-		// 监听消息编辑（类型自动推断！）
 		const unsubscribeEdited = websocketStore.on('PrivateMessageEdited', (payload) => {
 			if (
 				payload.target_user_id === userId ||
@@ -223,24 +214,34 @@
 			}
 		});
 
-		// 加载聊天数据（异步，不阻塞）
-		loadChat();
-
-		// ✅ 返回清理函数（Svelte 5 的新方式）
 		return () => {
+			isMounted = false;
 			unsubscribeMessage();
 			unsubscribeTyping();
 			unsubscribeRecalled();
 			unsubscribeEdited();
-
-			// 取消订阅
 			if (isSubscribed) {
 				subscriptionManager.unsubscribe('user', [userId]);
 			}
-
-			// 清除正在输入定时器
 			if (typingTimer) clearTimeout(typingTimer);
 		};
+	});
+
+	// userId 变化时重置状态并重新加载（含首次加载）
+	$effect(() => {
+		const id = userId;
+		untrack(() => {
+			otherUser = null;
+			messages = [];
+			isLoading = true;
+			isOtherUserTyping = false;
+			messageText = '';
+			isSubscribed = false;
+			isAttemptingSubscribe = false;
+			messageStore.markConversationAsRead(`private_${id}`);
+			if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
+			loadChat();
+		});
 	});
 
 	/**
@@ -248,6 +249,8 @@
 	 * 使用 $effect 监听连接状态，自动订阅/恢复订阅
 	 */
 	$effect(() => {
+		let cancelled = false;
+
 		// 使用 derived 状态检查连接
 		const connected = websocketStore.isConnected;
 		
@@ -257,7 +260,7 @@
 				if (dev) console.log('[Chat] WebSocket 断开，重置订阅状态');
 				isSubscribed = false;
 			}
-			return;
+			return () => { cancelled = true; };
 		}
 
 		// WebSocket 已连接，尝试订阅
@@ -267,6 +270,7 @@
 			if (dev) console.log('[Chat] WebSocket 已连接，订阅用户:', userId);
 			
 			subscriptionManager.subscribe('user', [userId]).then((success) => {
+				if (cancelled) return;
 				isSubscribed = success;
 				isAttemptingSubscribe = false;
 				
@@ -278,6 +282,8 @@
 				}
 			});
 		}
+
+		return () => { cancelled = true; };
 	});
 </script>
 
@@ -302,6 +308,8 @@
 				</Avatar>
 				<span class="font-medium">{otherUser.nickname}</span>
 			</a>
+		{:else}
+			<span class="text-sm text-muted-foreground">用户不存在或加载失败</span>
 		{/if}
 		<div class="ml-auto">
 			<Button variant="ghost" size="icon" aria-label="更多选项">
@@ -314,7 +322,7 @@
 	<ScrollArea class="flex-1 bg-muted/20 py-4">
 		{#if isLoading}
 			<div class="space-y-4 px-4">
-				{#each Array(5) as _, i}
+				{#each Array(5) as _, i (i)}
 					<div class="flex {i % 2 === 0 ? '' : 'justify-end'}">
 						<div class="flex max-w-[70%] gap-2">
 							{#if i % 2 === 0}

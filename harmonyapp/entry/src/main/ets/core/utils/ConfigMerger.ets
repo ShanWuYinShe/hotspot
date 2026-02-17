@@ -35,6 +35,48 @@ interface RangeConfig {
   max?: number;
 }
 
+declare const structuredClone: (<T>(value: T) => T) | undefined;
+
+function deepClone(value: Record<string, Object>): Record<string, Object>;
+function deepClone(value: Object[]): Object[];
+function deepClone(value: Record<string, Object> | Object[]): Record<string, Object> | Object[] {
+  try {
+    if (typeof structuredClone === 'function') {
+      return structuredClone(value);
+    }
+  } catch (_) {}
+  if (Array.isArray(value)) {
+    const result: Object[] = [];
+    const sourceArray = value as Object[];
+    for (let i = 0; i < sourceArray.length; i++) {
+      const current = sourceArray[i];
+      if (Array.isArray(current)) {
+        result[i] = deepClone(current as Object[]);
+      } else if (current !== null && typeof current === 'object') {
+        result[i] = deepClone(current as Record<string, Object>);
+      } else {
+        result[i] = current;
+      }
+    }
+    return result;
+  }
+  const sourceObject = value as Record<string, Object>;
+  const clonedObject: Record<string, Object> = {};
+  const keys = Object.keys(sourceObject);
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const currentValue = sourceObject[key];
+    if (Array.isArray(currentValue)) {
+      clonedObject[key] = deepClone(currentValue as Object[]);
+    } else if (currentValue !== null && typeof currentValue === 'object') {
+      clonedObject[key] = deepClone(currentValue as Record<string, Object>);
+    } else {
+      clonedObject[key] = currentValue;
+    }
+  }
+  return clonedObject;
+}
+
 /**
  * 配置合并器
  */
@@ -47,10 +89,8 @@ export class ConfigMerger {
    * @returns 合并后的新配置对象
    */
   static merge(base: Object, override: Object): Object {
-    const baseStr = JSON.stringify(base);
-    const overrideStr = JSON.stringify(override);
-    const baseObj: Record<string, Object> = JSON.parse(baseStr) as Record<string, Object>;
-    const overrideObj: Record<string, Object> = JSON.parse(overrideStr) as Record<string, Object>;
+    const baseObj: Record<string, Object> = deepClone(base as Record<string, Object>);
+    const overrideObj: Record<string, Object> = deepClone(override as Record<string, Object>);
     const keys = Object.keys(overrideObj);
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i];
@@ -106,10 +146,8 @@ export class ConfigMerger {
     target: Object,
     source: Object
   ): Object {
-    const baseStr = JSON.stringify(target);
-    const overrideStr = JSON.stringify(source);
-    const baseObj: Record<string, Object> = JSON.parse(baseStr) as Record<string, Object>;
-    const overrideObj: Record<string, Object> = JSON.parse(overrideStr) as Record<string, Object>;
+    const baseObj: Record<string, Object> = deepClone(target as Record<string, Object>);
+    const overrideObj: Record<string, Object> = deepClone(source as Record<string, Object>);
     const targetKeys = Object.keys(baseObj);
     const sourceKeys = Object.keys(overrideObj);
     
@@ -135,15 +173,7 @@ export class ConfigMerger {
    * @returns 配置对象的副本
    */
   static clone(config: Record<string, Object>): Record<string, Object> {
-    const result: Record<string, Object> = {};
-    
-    const keys = Object.keys(config);
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i];
-      result[key] = config[key];
-    }
-    
-    return result;
+    return deepClone(config);
   }
 }
 

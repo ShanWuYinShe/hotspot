@@ -25,6 +25,7 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { NfcShareService } from '../../../core/services/NfcShareService';
+import { SystemUiController } from '../../../core/utils/SystemUiController';
 
 const DOMAIN_NUMBER: number = 0xFF03;
 const TAG: string = 'ProfilePage';
@@ -57,6 +58,9 @@ export struct ProfilePage {
   private webSocketService = WebSocketService.getInstance();
 
   async aboutToAppear() {
+    SystemUiController.useSurface({
+      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
+    });
     if (this.currentUser) {
       this.editNickname = this.currentUser.nickname;
       this.editBio = this.currentUser.bio || '';
@@ -282,7 +286,7 @@ export struct ProfilePage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    .backgroundColor($r('app.color.bg_primary'))
   }
 
   // ==================== 匿名用户 - 游客界面 ====================
@@ -827,7 +831,7 @@ export struct ProfilePage {
       TextInput({ placeholder: '请输入你的昵称' })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+        .backgroundColor($r('app.color.bg_primary'))
         .borderRadius(DesignConstants.RADIUS.LG)
         .enabled(!this.isQuickStarting)
         .onChange((value: string) => { this.quickNickname = value; })

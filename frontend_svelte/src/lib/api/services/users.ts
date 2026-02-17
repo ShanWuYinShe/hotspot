@@ -2,7 +2,7 @@
  * 用户服务
  */
 
-import { post, paginate } from '../client';
+import { post, paginate, generateIdempotencyKey, type RequestOptions } from '../client';
 import { USERS } from '../endpoints';
 import type {
 	UserItem,
@@ -13,11 +13,13 @@ import type {
 	FollowerItem,
 	BlockedUserItem,
 	Location,
+	Gender,
 	GroupItem,
 	MomentItem,
 	FollowSource,
 	PaginationParams,
-	GeoPoint
+	GeoPoint,
+	VerificationSent
 } from '$lib/types/api';
 
 export const usersService = {
@@ -33,8 +35,8 @@ export const usersService = {
 		sort_by?: 'relevance' | 'distance' | 'newest';
 		reference_point: GeoPoint;
 		pagination?: PaginationParams;
-	}) {
-		return paginate<UserItem>(USERS.SEARCH, params);
+	}, options?: RequestOptions) {
+		return paginate<UserItem>(USERS.SEARCH, params, options);
 	},
 
 	// ==================== 用户信息 ====================
@@ -47,23 +49,23 @@ export const usersService = {
 	},
 
 	/**
-	 * 获取用户好友列表
+	 * 获取用户好友列表（user_id 不传时返回当前用户的）
 	 */
-	getFriends(params: { user_id: string; pagination?: PaginationParams }) {
+	getFriends(params: { user_id?: string; pagination?: PaginationParams }) {
 		return paginate<FriendItem>(USERS.LIST_FRIENDS, params);
 	},
 
 	/**
-	 * 获取用户关注列表
+	 * 获取用户关注列表（user_id 不传时返回当前用户的）
 	 */
-	getFollowing(params: { user_id: string; pagination?: PaginationParams }) {
+	getFollowing(params: { user_id?: string; pagination?: PaginationParams }) {
 		return paginate<FollowingItem>(USERS.LIST_FOLLOWING, params);
 	},
 
 	/**
-	 * 获取用户粉丝列表
+	 * 获取用户粉丝列表（user_id 不传时返回当前用户的）
 	 */
-	getFollowers(params: { user_id: string; pagination?: PaginationParams }) {
+	getFollowers(params: { user_id?: string; pagination?: PaginationParams }) {
 		return paginate<FollowerItem>(USERS.LIST_FOLLOWERS, params);
 	},
 
@@ -105,7 +107,7 @@ export const usersService = {
 		avatar_file_id?: string;
 		bio?: string;
 		tags?: string[];
-		gender?: 'male' | 'female' | 'apache_helicopter';
+		gender?: Gender;
 	}) {
 		return post<void>(USERS.ME.PROFILE_UPDATE, data);
 	},
@@ -139,31 +141,10 @@ export const usersService = {
 	},
 
 	/**
-	 * 删除账户（spec: confirmation 必须为 "DELETE_MY_ACCOUNT"）
+	 * 删除账户（SHOULD 幂等，spec: confirmation 必须为 "DELETE_MY_ACCOUNT"）
 	 */
 	deleteAccount(data: { confirmation: string }) {
-		return post<void>(USERS.ME.DELETE, data);
-	},
-
-	/**
-	 * 获取我的好友列表
-	 */
-	getMyFriends(params?: { pagination?: PaginationParams }) {
-		return paginate<FriendItem>(USERS.ME.LIST_FRIENDS, params);
-	},
-
-	/**
-	 * 获取我的关注列表
-	 */
-	getMyFollowing(params?: { pagination?: PaginationParams }) {
-		return paginate<FollowingItem>(USERS.ME.LIST_FOLLOWING, params);
-	},
-
-	/**
-	 * 获取我的粉丝列表
-	 */
-	getMyFollowers(params?: { pagination?: PaginationParams }) {
-		return paginate<FollowerItem>(USERS.ME.LIST_FOLLOWERS, params);
+		return post<void>(USERS.ME.DELETE, data, { idempotencyKey: generateIdempotencyKey() });
 	},
 
 	/**
@@ -208,5 +189,39 @@ export const usersService = {
 	 */
 	setRemark(data: { user_id: string; remark?: string }) {
 		return post<void>(USERS.ME.SET_REMARK, data);
+	},
+
+	// ==================== 邮箱/手机号变更（⏳ 延期：依赖验证码发送服务） ====================
+
+	/**
+	 * 请求变更邮箱（发送验证码到新邮箱）
+	 * spec: MUST 幂等，需密码验证身份
+	 */
+	requestEmailChange(data: { new_email: string; password: string }) {
+		return post<VerificationSent>(USERS.ME.EMAIL_REQUEST_CHANGE, data, { idempotencyKey: generateIdempotencyKey() });
+	},
+
+	/**
+	 * 确认变更邮箱（提交验证码完成变更）
+	 * spec: MUST 幂等
+	 */
+	confirmEmailChange(data: { new_email: string; verification_code: string }) {
+		return post<void>(USERS.ME.EMAIL_CONFIRM_CHANGE, data, { idempotencyKey: generateIdempotencyKey() });
+	},
+
+	/**
+	 * 请求变更手机号（发送验证码到新手机号）
+	 * spec: MUST 幂等，需密码验证身份
+	 */
+	requestPhoneChange(data: { new_phone: string; password: string }) {
+		return post<VerificationSent>(USERS.ME.PHONE_REQUEST_CHANGE, data, { idempotencyKey: generateIdempotencyKey() });
+	},
+
+	/**
+	 * 确认变更手机号（提交验证码完成变更）
+	 * spec: MUST 幂等
+	 */
+	confirmPhoneChange(data: { new_phone: string; verification_code: string }) {
+		return post<void>(USERS.ME.PHONE_CONFIRM_CHANGE, data, { idempotencyKey: generateIdempotencyKey() });
 	}
 };

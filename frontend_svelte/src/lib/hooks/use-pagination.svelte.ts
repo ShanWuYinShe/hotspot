@@ -9,13 +9,14 @@
  * 
  * 使用示例：
  * ```typescript
- * const pagination = usePagination<UserSearchItem>();
+ * const pagination = usePagination<UserItem>();
  * 
  * async function loadUsers(refresh = false) {
  *   await pagination.load(
- *     () => usersService.searchByLocation({
+ *     (cursor) => usersService.search({
  *       reference_point: getAnchor(),
- *       radius: 5000
+ *       radius: 5000,
+ *       pagination: { limit: 20, cursor }
  *     }),
  *     refresh
  *   );
@@ -117,65 +118,55 @@ export function usePagination<T>(options?: UsePaginationOptions<T>): PaginationS
 	let cursor = $state<string | undefined>(undefined);
 	let hasMore = $state(true);
 	let error = $state<string | null>(null);
-	let isLoadingRequest = false; // 防止并发调用
-	let lastLoadTime = 0; // 记录上次加载时间
-	const MIN_LOAD_INTERVAL = 100; // 最小加载间隔（毫秒）
+
+	// 竞态保护：仅最新请求的结果会被写入状态
+	let loadVersion = 0;
+	let isLoadingMore = false; // 仅限制"加载更多"并发
 	
 	async function load(
 		fetcher: (cursor?: string) => Promise<ApiResponse<PaginatedData<T>>>,
 		refresh = false
 	) {
-		// 🔒 防止并发调用：如果正在加载，直接返回
-		if (isLoadingRequest) {
-			return;
+		if (!refresh) {
+			// 加载更多：防止并发（连续点击"加载更多"按钮）
+			if (isLoadingMore) return;
+			isLoadingMore = true;
 		}
+
+		// 刷新：递增版本号，后续用于丢弃过期响应
+		const version = ++loadVersion;
 		
-		// 🕐 防抖：如果距离上次加载时间太短，直接返回
-		const now = Date.now();
-		if (!refresh && now - lastLoadTime < MIN_LOAD_INTERVAL) {
-			return;
-		}
-		
-		isLoadingRequest = true;
-		lastLoadTime = now;
-		
-		// 刷新模式：重置状态
 		if (refresh) {
-			// Don't clear items immediately to avoid flash, unless you want skeleton
-			// But current logic clears it. Let's keep it for now or maybe optimize later.
-			// The user didn't complain about flash, but about duplicates.
-			// Actually, clearing items causes layout shift. 
-			// But let's stick to fixing duplicates first.
 			items = [];
 			cursor = undefined;
 			hasMore = true;
 			loading = true;
 			error = null;
 		} else {
-			// 加载更多模式
 			loadingMore = true;
 		}
 
 		try {
-			// 初始/刷新加载使用最短展示时间，避免加载动画一闪而过
-			// 加载更多无需最短时间（内联加载器，应尽快响应）
 			const response = refresh
 				? await withMinimumLoadingTime(() => fetcher(undefined))
 				: await fetcher(cursor);
 
+			// 竞态检查：丢弃非最新请求的结果
+			if (version !== loadVersion) return;
+
 			if (isSuccess(response) && response.data) {
-				// 更新数据
-				const newItems = response.data.items;
+				const newItems = response.data.items ?? [];
 				
 				if (refresh) {
 					items = newItems;
 				} else {
 					// 去重逻辑
 					if (options?.uniqueKey) {
-						const getKey = (item: T) => 
-							typeof options.uniqueKey === 'function' 
-								? (options.uniqueKey as Function)(item) 
-								: item[options.uniqueKey as keyof T];
+						const uniqueKeyOpt = options.uniqueKey;
+						const getKey = (item: T): unknown => 
+							typeof uniqueKeyOpt === 'function' 
+								? uniqueKeyOpt(item) 
+								: item[uniqueKeyOpt as keyof T];
 								
 						const existingKeys = new Set(items.map(getKey));
 						const uniqueNewItems = newItems.filter(item => !existingKeys.has(getKey(item)));
@@ -185,23 +176,23 @@ export function usePagination<T>(options?: UsePaginationOptions<T>): PaginationS
 					}
 				}
 				
-				// 更新分页状态
 				hasMore = !!response.data.next_cursor;
 				cursor = response.data.next_cursor;
-				
-				// 清除错误
 				error = null;
 			} else {
-				// 设置错误信息
 				error = response.message || '加载失败';
 			}
 		} catch (e) {
-			// 异常处理
+			// 竞态检查
+			if (version !== loadVersion) return;
 			error = e instanceof Error ? e.message : '加载失败';
 		} finally {
-			loading = false;
-			loadingMore = false;
-			isLoadingRequest = false; // 🔓 释放锁
+			// 仅最新请求负责重置 loading 状态
+			if (version === loadVersion) {
+				loading = false;
+				loadingMore = false;
+			}
+			if (!refresh) isLoadingMore = false;
 		}
 	}
 

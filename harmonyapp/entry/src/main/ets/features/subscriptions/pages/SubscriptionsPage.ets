@@ -10,6 +10,8 @@ import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { SystemToast } from '../../../components/SystemToast';
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { AppRouter, LoginRouteParam } from '../../../core/router/AppRouter';
+import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 
 const SUBSCRIPTIONS_STORAGE_KEY = 'notification_subscriptions';
 
@@ -40,6 +42,7 @@ export struct SubscriptionsPage {
   @State private loading: boolean = true;
   @State private savingKey: string = '';
   @State private data: LocalSubscriptionPrefs | null = null;
+  @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
 
   private items: SubscriptionItem[] = [
     { key: 'new_follower_enabled', title: '新关注者', description: '有人关注你时通知' },
@@ -56,6 +59,9 @@ export struct SubscriptionsPage {
   ];
 
   aboutToAppear() {
+    SystemUiController.useSurface({
+      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
+    });
     this.ensureAuthAndLoad();
   }
 
@@ -166,7 +172,8 @@ export struct SubscriptionsPage {
       .width('100%')
       .height(56)
       .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .backgroundColor($r('app.color.bg_secondary'))
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.loading) {
         Column() {
@@ -177,7 +184,7 @@ export struct SubscriptionsPage {
         .layoutWeight(1)
         .justifyContent(FlexAlign.Center)
         .width('100%')
-        .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+        .backgroundColor($r('app.color.bg_primary'))
       } else {
         List({ space: 0 }) {
           ListItemGroup({ header: this.ListHeader('通知类型') }) {
@@ -205,7 +212,7 @@ export struct SubscriptionsPage {
                 .width('100%')
                 .padding(DesignConstants.SPACING.LG)
               }
-              .backgroundColor($r('sys.color.ohos_id_color_background'))
+              .backgroundColor($r('app.color.bg_secondary'))
             }, (i: SubscriptionItem) => i.key as string)
           }
           .borderRadius(DesignConstants.RADIUS.LG)
@@ -216,12 +223,13 @@ export struct SubscriptionsPage {
         .scrollBar(BarState.Auto)
         .sticky(StickyStyle.Header)
         .width('100%')
-        .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+        .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
+        .backgroundColor($r('app.color.bg_primary'))
       }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    .backgroundColor($r('app.color.bg_primary'))
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

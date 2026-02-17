@@ -2,16 +2,21 @@
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import { untrack } from 'svelte';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import Shield from 'lucide-svelte/icons/shield';
 
-	// 如果已登录，直接跳转
+	// 如果已登录，直接跳转（仅追踪 isAuthenticated，不追踪 page.url）
 	$effect(() => {
 		if (browser && authStore.isAuthenticated) {
-			const redirect = page.url.searchParams.get('redirect') || '/';
-			goto(redirect);
+			untrack(() => {
+				const redirect = page.url.searchParams.get('redirect') || '/';
+				// 防止自引用循环（redirect 指向 /auth 自身）
+				const target = redirect.startsWith('/auth') ? '/' : redirect;
+				goto(target, { replaceState: true });
+			});
 		}
 	});
 

@@ -16,8 +16,10 @@
 
 	let groups = $state.raw<GroupItem[]>([]);
 	let loading = $state(false);
+	let loadVersion = 0;
 
 	async function loadGroups() {
+		const version = ++loadVersion;
 		loading = true;
 		try {
 			const response = await groupsService.search({
@@ -28,14 +30,15 @@
 				},
 				pagination: { limit: 6 }
 			});
+			if (version !== loadVersion) return; // 丢弃过期响应
 			if (isSuccess(response) && response.data) {
 				groups = response.data.items ?? [];
 			}
 		} catch (error) {
+			if (version !== loadVersion) return;
 			if (dev) console.error('Failed to load recommended groups:', error);
-			// 不显示 toast，避免影响首页体验
 		} finally {
-			loading = false;
+			if (version === loadVersion) loading = false;
 		}
 	}
 
@@ -55,7 +58,7 @@
 			</div>
 		</div>
 		<div class="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
-			{#each Array(6) as _}
+			{#each Array(6) as _, i (i)}
 				<div class="mb-3 break-inside-avoid">
 					<ListSkeleton type="group" count={1} layout="list" />
 				</div>

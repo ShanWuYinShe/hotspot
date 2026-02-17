@@ -58,11 +58,7 @@ alwaysApply: true
 
 ### 搜索与发现
 
-说明（Token 可选的搜索语义）：
-- 生活瞬间支持 `privacy_level` 控制可见性：`public`（公开）、`private`（仅自己可见）
-- 未登录用户仅能访问 `public` 的瞬间
-- 登录态下可访问自己的所有瞬间（含 `private`）+ 所有 `public` 瞬间
-- 登录态会返回 `@auth-only` 字段（如 `my_state`）
+说明：生活瞬间支持 `privacy_level` 控制可见性（`public` / `private`）。未登录用户仅能访问 `public` 的瞬间；登录态可访问自己的所有瞬间（含 `private`）+ 所有 `public` 瞬间。认证可选，字段可见性规则见 `@spec/api_spec_base.mdc`。
 
 ### POST /api/v1/moments/search
 
@@ -91,7 +87,7 @@ interface SearchMomentsRequest {
 
 ### POST /api/v1/moments/open_the_door
 
-获取瞬间详情。Token 可选；登录态返回 `MomentItem.my_state`（包含 `is_liked` 和 `is_favorited`）。
+获取瞬间详情。认证可选，字段可见性规则见 `@spec/api_spec_base.mdc`。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -374,9 +370,7 @@ interface DeleteCommentRequest {
 
 ### POST /api/v1/comments/list
 
-获取指定瞬间的顶层评论列表。
-
-Token 可选；登录态返回包含 `@auth-only` 字段的完整 `CommentItem`（如 `is_liked`）；未登录态不返回 `@auth-only` 字段。
+获取指定瞬间的顶层评论列表。认证可选，字段可见性规则见 `@spec/api_spec_base.mdc`。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -396,9 +390,7 @@ interface CommentsRequest {
 
 ### POST /api/v1/comments/list_replies
 
-获取指定评论的子评论列表。
-
-Token 可选；登录态返回包含 `@auth-only` 字段的完整 `CommentItem`（如 `is_liked`）；未登录态不返回 `@auth-only` 字段。
+获取指定评论的子评论列表。认证可选，字段可见性规则见 `@spec/api_spec_base.mdc`。
 
 - **认证**: 可选
 - **幂等**: 无

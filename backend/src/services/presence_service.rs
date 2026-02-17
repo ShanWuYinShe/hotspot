@@ -12,7 +12,6 @@ use crate::constants::{REDIS_KEY_PRESENCE_LOCATION, REDIS_KEY_PRESENCE_ONLINE};
 use crate::error::{AppError, Result};
 use crate::repositories::{
     user_online_status_repo::UserOnlineStatusRepository,
-    user_repo::UserRepository,
     user_settings_repo::{UserSettingsRepository, UserSettingsRow},
 };
 
@@ -21,7 +20,6 @@ pub struct PresenceService {
     redis: RedisConnectionManager,
     online_status_repo: UserOnlineStatusRepository,
     user_settings_repo: UserSettingsRepository,
-    user_repo: UserRepository,
 }
 
 impl PresenceService {
@@ -29,13 +27,11 @@ impl PresenceService {
         redis: RedisConnectionManager,
         online_status_repo: UserOnlineStatusRepository,
         user_settings_repo: UserSettingsRepository,
-        user_repo: UserRepository,
     ) -> Self {
         Self {
             redis,
             online_status_repo,
             user_settings_repo,
-            user_repo,
         }
     }
 
@@ -86,45 +82,11 @@ impl PresenceService {
 
         // 设置位置缓存，过期时间 1 小时 (或者更短，取决于实时性要求)
         let _: () = conn
-            .set_ex(&key, value, 3600)
+            .set_ex(&key, value, crate::constants::SECS_PER_HOUR)
             .await
             .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
 
         Ok(())
-    }
-
-    /// 获取用户当前位置 (Redis -> DB fallback)
-    /// 返回 (latitude, longitude)
-    pub async fn get_user_location(&self, user_id: i64) -> Result<Option<(f64, f64)>> {
-        // 1. 尝试从 Redis 获取
-        let mut conn = self.redis.clone();
-        let key = format!("{}{}", REDIS_KEY_PRESENCE_LOCATION, user_id);
-        let cached: Option<String> = conn.get(&key).await.ok();
-
-        if let Some(s) = cached {
-            let parts: Vec<&str> = s.split(',').collect();
-            if parts.len() == 2 {
-                if let (Ok(lat), Ok(lng)) = (parts[0].parse::<f64>(), parts[1].parse::<f64>()) {
-                    return Ok(Some((lat, lng)));
-                }
-            }
-        }
-
-        // 2. Redis 未命中，从 DB 获取 (UserRepo 需要在这里被调用，或者我们直接查表？)
-        // PresenceService 并没有直接持有 UserRepository，但是持有 UserSettingsRepository 和 UserOnlineStatusRepository
-        // 这里为了避免循环依赖 (UserRepo 依赖 PresenceService?), 我们可能需要直接查库
-        // 或者让调用方处理 Fallback。
-        // 为了方便 FeedService 调用，我们在 PresenceService 内部直接查库比较好。
-        // 但是 PresenceService 没有 UserRepo。
-        // 我们可以直接用 sqlx 查询，或者添加 UserRepo 字段。
-        // 从数据库查询位置
-        if let Some((lat, lng)) = self.user_repo.get_current_location(user_id).await? {
-            // 回填 Redis
-            let _ = self.update_location_cache(user_id, lat, lng).await;
-            return Ok(Some((lat, lng)));
-        }
-
-        Ok(None)
     }
 
     /// 获取用户在线状态（受隐私设置控制，返回 Option 值）
@@ -140,28 +102,14 @@ impl PresenceService {
             .ok()
             .flatten();
 
-        // 默认值：true（如果没有设置记录）
-        let online_visible = Self::privacy_bool(settings.as_ref(), "online_visible", true);
-        let last_online_visible =
-            Self::privacy_bool(settings.as_ref(), "last_online_visible", true);
-
-        // 如果用户不允许显示在线状态，返回 None
-        if !online_visible {
+        // presence_visible: 统一控制在线状态和最后在线时间
+        let visible = Self::presence_visible(settings.as_ref());
+        if !visible {
             return (None, None);
         }
 
-        // 获取在线状态
         let (is_online, last_online) = self.get_online_status(user_id).await;
-
-        (
-            Some(is_online),
-            // 如果用户不允许显示最后在线时间，不返回该字段
-            if last_online_visible {
-                last_online
-            } else {
-                None
-            },
-        )
+        (Some(is_online), last_online)
     }
 
     /// 批量获取用户在线状态（受隐私设置控制）
@@ -185,17 +133,16 @@ impl PresenceService {
         // 2) 批量拿在线状态（Redis pipeline + DB ANY）
         let online_status_map = self.batch_get_online_status(user_ids).await;
 
-        // 3) 预生成需要 last_online 的用户列表（离线 + 允许显示）
+        // 3) 预生成需要 last_online 的用户列表（离线 + presence_visible）
         let mut need_last_online_ids: Vec<i64> = Vec::new();
         for &user_id in user_ids {
             let settings = settings_map.get(&user_id);
-            let online_visible = Self::privacy_bool(settings, "online_visible", true);
-            let last_online_visible = Self::privacy_bool(settings, "last_online_visible", true);
-            if !online_visible {
+            let visible = Self::presence_visible(settings);
+            if !visible {
                 continue;
             }
             let is_online = online_status_map.get(&user_id).copied().unwrap_or(false);
-            if !is_online && last_online_visible {
+            if !is_online {
                 need_last_online_ids.push(user_id);
             }
         }
@@ -244,16 +191,15 @@ impl PresenceService {
         let mut result: HashMap<i64, (Option<bool>, Option<String>)> = HashMap::new();
         for &user_id in user_ids {
             let settings = settings_map.get(&user_id);
-            let online_visible = Self::privacy_bool(settings, "online_visible", true);
-            let last_online_visible = Self::privacy_bool(settings, "last_online_visible", true);
+            let visible = Self::presence_visible(settings);
 
-            if !online_visible {
+            if !visible {
                 result.insert(user_id, (None, None));
                 continue;
             }
 
             let is_online = online_status_map.get(&user_id).copied().unwrap_or(false);
-            let last_online = if !is_online && last_online_visible {
+            let last_online = if !is_online {
                 last_online_map
                     .get(&user_id)
                     .and_then(|v| v.clone())
@@ -380,5 +326,10 @@ impl PresenceService {
             .and_then(|s| s.privacy_settings.get(key))
             .and_then(|v| v.as_bool())
             .unwrap_or(default)
+    }
+
+    /// 在线状态和最后在线时间的统一可见性控制
+    fn presence_visible(settings: Option<&UserSettingsRow>) -> bool {
+        Self::privacy_bool(settings, "presence_visible", true)
     }
 }

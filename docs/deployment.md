@@ -444,9 +444,109 @@ redis-cli -a your_redis_password BGSAVE
 cp /var/lib/redis/dump.rdb /var/backups/hotspot/redis_$(date +%Y%m%d_%H%M%S).rdb
 ```
 
-## 4. 后端服务部署
+## 4. 前端服务部署（SvelteKit）
 
-### 4.1 编译后端服务
+### 4.1 构建方式
+
+前端使用 SvelteKit + adapter-node，构建后生成 Node.js 服务端应用。
+
+**本地构建**：
+
+```bash
+cd /path/to/hotspot/frontend_svelte
+
+# 安装依赖
+pnpm install --frozen-lockfile
+
+# 构建（输出到 ./build 目录）
+pnpm build
+```
+
+**Docker 构建**：
+
+```bash
+cd /path/to/hotspot
+docker compose build frontend
+```
+
+### 4.2 配置环境变量
+
+创建 `.env` 文件（参考 `.env.example`）：
+
+```bash
+# 高德地图（可选）
+VITE_AMAP_KEY=your_amap_key
+VITE_AMAP_SERVICE_HOST=/_AMapService
+
+# SvelteKit 运行时配置
+PORT=3000
+HOST=0.0.0.0
+
+# CSRF origin（必须与用户实际访问的域名一致）
+ORIGIN=https://your-domain.com
+```
+
+**注意**：`ORIGIN` 必须设置为用户实际访问的完整 URL（含协议），否则 SvelteKit 会拒绝 POST 请求（CSRF 保护）。
+
+### 4.3 运行方式
+
+**直接运行**：
+
+```bash
+cd /path/to/hotspot/frontend_svelte
+PORT=3000 HOST=0.0.0.0 ORIGIN=https://your-domain.com node build
+```
+
+**Systemd 服务**（`/etc/systemd/system/hotspot-frontend.service`）：
+
+```ini
+[Unit]
+Description=HotSpot Frontend Service (SvelteKit)
+After=network.target
+
+[Service]
+Type=simple
+User=hotspot
+Group=hotspot
+WorkingDirectory=/opt/hotspot/frontend_svelte
+Environment="NODE_ENV=production"
+Environment="PORT=3000"
+Environment="HOST=0.0.0.0"
+Environment="ORIGIN=https://your-domain.com"
+ExecStart=/usr/bin/node build
+Restart=always
+RestartSec=5
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**启动服务**：
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl start hotspot-frontend
+sudo systemctl enable hotspot-frontend
+```
+
+### 4.4 Nginx 反向代理
+
+前端需要通过 Nginx 反向代理对外提供服务，与后端 API、WebSocket、S3 统一在同一域名下。参考 `docs/hotspot.test.nginx.conf` 中的配置模板。
+
+关键路由规则：
+- `/` → SvelteKit SSR（端口 3000）
+- `/api/v1/` → 后端 API（端口 8080）
+- `/ws` → 后端 WebSocket（端口 8080）
+- `/s3/` → MinIO 存储（端口 9000）
+
+## 5. 后端服务部署
+
+### 5.1 编译后端服务
 
 ```bash
 cd /path/to/hotspot/backend
@@ -458,7 +558,7 @@ cargo build --release
 # target/release/hotspot-backend
 ```
 
-### 4.2 配置环境变量
+### 5.2 配置环境变量
 
 创建 `.env` 文件：
 
@@ -489,7 +589,7 @@ UPLOAD_DIR=/var/hotspot/uploads
 MAX_UPLOAD_SIZE=10485760  # 10MB
 ```
 
-### 4.3 Systemd 服务配置
+### 5.3 Systemd 服务配置
 
 创建 systemd 服务文件（`/etc/systemd/system/hotspot-backend.service`）：
 
@@ -539,9 +639,9 @@ sudo systemctl status hotspot-backend
 sudo journalctl -u hotspot-backend -f
 ```
 
-## 5. 监控与日志
+## 6. 监控与日志
 
-### 5.1 日志配置
+### 6.1 日志配置
 
 **应用日志**：
 
@@ -581,7 +681,7 @@ sudo journalctl -u hotspot-backend --since "2025-10-30 00:00:00" --until "2025-1
 }
 ```
 
-### 5.2 性能监控
+### 6.2 性能监控
 
 **系统监控工具**：
 
@@ -616,7 +716,7 @@ redis-cli -a your_redis_password info
 redis-cli -a your_redis_password info memory
 ```
 
-### 5.3 告警配置
+### 6.3 告警配置
 
 **磁盘空间告警**：
 
@@ -660,9 +760,9 @@ if ! curl -f http://localhost:8080/api/v1/public/system/health > /dev/null 2>&1;
 fi
 ```
 
-## 6. 安全加固
+## 7. 安全加固
 
-### 6.1 系统安全
+### 7.1 系统安全
 
 **更新系统**：
 ```bash
@@ -695,7 +795,7 @@ sudo systemctl disable bluetooth
 sudo systemctl disable cups
 ```
 
-### 6.2 应用安全
+### 7.2 应用安全
 
 **环境变量保护**：
 ```bash
@@ -716,7 +816,7 @@ cargo audit
 - 验证文件类型和大小
 - 使用独立的存储服务（如 S3）
 
-### 6.3 数据库安全
+### 7.3 数据库安全
 
 **定期更新密码**：
 ```sql
@@ -739,9 +839,9 @@ ssl_cert_file = '/etc/postgresql/15/main/server.crt'
 ssl_key_file = '/etc/postgresql/15/main/server.key'
 ```
 
-## 7. 故障排查
+## 8. 故障排查
 
-### 7.1 常见问题
+### 8.1 常见问题
 
 **问题 1：后端服务无法启动**
 
@@ -805,7 +905,7 @@ openssl s_client -connect admin-api.example.com:8080 -showcerts
 sudo journalctl -u hotspot-backend -f
 ```
 
-### 7.2 性能优化
+### 8.2 性能优化
 
 **数据库优化**：
 
@@ -838,9 +938,9 @@ redis-cli -a your_redis_password slowlog get 10
 - 优化数据库查询（使用 EXPLAIN ANALYZE）
 - 增加 Redis 缓存命中率
 
-## 8. 扩展与高可用
+## 9. 扩展与高可用
 
-### 8.1 水平扩展
+### 9.1 水平扩展
 
 **后端服务扩展**：
 
@@ -859,7 +959,7 @@ upstream backend {
 }
 ```
 
-### 8.2 数据库高可用
+### 9.2 数据库高可用
 
 **PostgreSQL 主从复制**：
 
@@ -876,7 +976,7 @@ upstream backend {
 redis-sentinel /etc/redis/sentinel.conf
 ```
 
-### 8.3 容器化部署
+### 9.3 容器化部署
 
 **Docker Compose 示例**：
 
@@ -915,9 +1015,9 @@ volumes:
   redis_data:
 ```
 
-## 9. 附录
+## 10. 附录
 
-### 9.1 环境变量参考
+### 10.1 环境变量参考
 
 | 变量名 | 说明 | 示例值 |
 |---|---|---|
@@ -933,7 +1033,7 @@ volumes:
 | `UPLOAD_DIR` | 文件上传目录 | `/var/hotspot/uploads` |
 | `MAX_UPLOAD_SIZE` | 最大上传大小（字节） | `10485760` (10MB) |
 
-### 9.2 端口参考
+### 10.2 端口参考
 
 | 端口 | 服务 | 说明 |
 |---|---|---|
@@ -944,11 +1044,11 @@ volumes:
 | 5432 | PostgreSQL | 数据库（内网） |
 | 6379 | Redis | 缓存（内网） |
 
-### 9.3 相关文档
+### 10.3 相关文档
 
-- [HotSpot API 规范](../.cursor/rules/api_spec.mdc)
-- [后端开发规范](../.cursor/rules/backend_dev_rule.mdc)
-- [后端开发需求](../.cursor/rules/backend_requirements.mdc)
+- [API 规范索引](../spec/api_spec_index.mdc)
+- [后端编码规范](../spec/backend_rule.mdc)
+- [前端编码规范](../spec/frontend_rule.mdc)
 - [PostgreSQL 官方文档](https://www.postgresql.org/docs/)
 - [Redis 官方文档](https://redis.io/documentation)
 - [Nginx 官方文档](https://nginx.org/en/docs/)

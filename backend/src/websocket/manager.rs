@@ -85,33 +85,80 @@ impl ConnectionManager {
         }
     }
 
-    /// 发送消息给指定用户的所有连接
-    pub async fn send_to_user(&self, user_id: i64, message: &WsMessage) -> Result<(), String> {
+    /// 发送已序列化的 JSON 到指定用户的所有连接（内部方法，&str 版本，用于 send_to_users）
+    async fn send_to_user_prepared(&self, user_id: i64, json_str: &str) -> Result<(), String> {
         let connections = self.connections.read().await;
 
         if let Some(user_connections) = connections.get(&user_id) {
-            let json_str =
-                serde_json::to_string(message).map_err(|e| format!("序列化消息失败: {}", e))?;
-
-            let ws_message = Message::Text(json_str.into());
-
-            for connection in user_connections {
-                if let Err(e) = connection.sender.send(ws_message.clone()) {
+            for conn in user_connections {
+                if let Err(e) = conn.sender.send(Message::Text(json_str.to_string().into())) {
                     tracing::error!("发送消息失败: user_id={}, error={}", user_id, e);
                 }
             }
-
             Ok(())
         } else {
             Err(format!("用户不在线: user_id={}", user_id))
         }
     }
 
-    /// 发送消息给多个用户
+    /// 发送已序列化的 JSON 到指定用户（String 版本，最后一个连接移动所有权，避免一次 clone）
+    async fn send_to_user_prepared_owned(
+        &self,
+        user_id: i64,
+        json_str: String,
+    ) -> Result<(), String> {
+        let connections = self.connections.read().await;
+
+        if let Some(user_connections) = connections.get(&user_id) {
+            if let Some((last, rest)) = user_connections.split_last() {
+                for conn in rest {
+                    if let Err(e) = conn.sender.send(Message::Text(json_str.clone().into())) {
+                        tracing::error!("发送消息失败: user_id={}, error={}", user_id, e);
+                    }
+                }
+                if let Err(e) = last.sender.send(Message::Text(json_str.into())) {
+                    tracing::error!("发送消息失败: user_id={}, error={}", user_id, e);
+                }
+            }
+            Ok(())
+        } else {
+            Err(format!("用户不在线: user_id={}", user_id))
+        }
+    }
+
+    /// 发送消息给指定用户的所有连接
+    pub async fn send_to_user(&self, user_id: i64, message: &WsMessage) -> Result<(), String> {
+        let json_str =
+            serde_json::to_string(message).map_err(|e| format!("序列化消息失败: {}", e))?;
+        self.send_to_user_prepared_owned(user_id, json_str).await
+    }
+
+    /// 发送消息给多个用户（序列化一次，分发给所有用户）
     pub async fn send_to_users(&self, user_ids: &[i64], message: &WsMessage) {
+        let json_str = match serde_json::to_string(message) {
+            Ok(s) => s,
+            Err(e) => {
+                tracing::error!("序列化 WebSocket 消息失败: {}", e);
+                return;
+            }
+        };
         for user_id in user_ids {
-            // 发送失败（常见原因：对方离线）不记录日志，避免噪音；真正的发送异常会在 send_to_user 内部记录 error
-            let _ = self.send_to_user(*user_id, message).await;
+            // 发送失败（常见原因：对方离线）不记录日志，避免噪音；真正的发送异常会在 send_to_user_prepared 内部记录 error
+            let _ = self.send_to_user_prepared(*user_id, &json_str).await;
+        }
+    }
+
+    /// 断开指定用户的所有 WebSocket 连接
+    pub async fn disconnect_user(&self, user_id: i64) {
+        let connection_ids: Vec<String> = {
+            let connections = self.connections.read().await;
+            connections
+                .get(&user_id)
+                .map(|conns| conns.iter().map(|c| c.connection_id.clone()).collect())
+                .unwrap_or_default()
+        };
+        for conn_id in connection_ids {
+            self.remove_connection(&conn_id).await;
         }
     }
 
@@ -143,6 +190,26 @@ impl ConnectionManager {
             }
         }
         Err(format!("连接不存在: connection_id={}", connection_id))
+    }
+
+    /// 发送消息给指定连接（用于心跳超时等场景下向单个连接发送 Error 后断开）
+    pub async fn send_to_connection(&self, connection_id: &str, message: &WsMessage) {
+        let json_str = match serde_json::to_string(message) {
+            Ok(s) => s,
+            Err(e) => {
+                tracing::error!("序列化 WebSocket 消息失败: {}", e);
+                return;
+            }
+        };
+        let connections = self.connections.read().await;
+        for user_connections in connections.values() {
+            for conn in user_connections {
+                if conn.connection_id == connection_id {
+                    let _ = conn.sender.send(Message::Text(json_str.into()));
+                    return;
+                }
+            }
+        }
     }
 
     /// 检查连接是否超时（超过 WS_CONNECTION_TIMEOUT_SECS 秒未收到心跳）

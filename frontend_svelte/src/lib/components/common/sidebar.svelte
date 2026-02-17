@@ -62,11 +62,17 @@
 		const checkActive = (href: string): boolean => {
 			const url = new URL(href, page.url.origin);
 			
-			if (url.pathname !== currentPathname) return false;
+			// 对含子路由的路径（如 /chat → /chat/users/123）使用前缀匹配
+			const isPrefix = currentPathname === url.pathname || currentPathname.startsWith(url.pathname + '/');
+			if (!isPrefix) return false;
+			
+			// 无查询参数时，前缀匹配即可
 			if (url.searchParams.toString().length === 0) {
 				return true;
 			}
 			
+			// 有查询参数时需精确匹配
+			if (currentPathname !== url.pathname) return false;
 			for (const [key, value] of url.searchParams) {
 				if (currentParams.get(key) !== value) return false;
 			}

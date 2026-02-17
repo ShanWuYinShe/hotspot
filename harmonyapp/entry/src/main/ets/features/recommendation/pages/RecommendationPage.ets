@@ -12,6 +12,8 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AppRouter } from '../../../core/router/AppRouter';
+import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { SystemUiController } from '../../../core/utils/SystemUiController';
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'RecommendationPage';
@@ -22,8 +24,12 @@ export struct RecommendationPage {
   @State isLoading: boolean = true;
   @State trendingTags: TagItem[] = [];
   @State recommendedUsers: UserItem[] = [];
+  @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
 
   async aboutToAppear() {
+    SystemUiController.useSurface({
+      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
+    });
     await this.loadData();
   }
 
@@ -70,7 +76,8 @@ export struct RecommendationPage {
       .width('100%')
       .height(56)
       .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .backgroundColor($r('app.color.bg_secondary'))
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.isLoading) {
         SystemLoadingView({ message: '加载推荐内容...' })
@@ -162,13 +169,14 @@ export struct RecommendationPage {
         }
         .width('100%')
         .layoutWeight(1)
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG,
+          bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
         .scrollBar(BarState.Auto)
       }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    .backgroundColor($r('app.color.bg_primary'))
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

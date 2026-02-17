@@ -1,34 +1,42 @@
 /**
- * 通知 API 服务
+ * 通知服务
  */
 
-import { post } from '$lib/api/client';
-import { NOTIFICATIONS } from '$lib/api/endpoints';
+import { post, paginate } from '../client';
+import { NOTIFICATIONS } from '../endpoints';
 import type {
-	PaginatedData,
 	NotificationItem,
 	UnreadCountResult,
-	NotificationListRequest
+	PaginationParams,
+	NotificationType
 } from '$lib/types/api';
 
-class NotificationsService {
-	async list(params: NotificationListRequest = {}) {
-		return post<PaginatedData<NotificationItem>>(NOTIFICATIONS.LIST, params);
-	}
+export const notificationsService = {
+	/**
+	 * 获取通知列表（游标分页）
+	 */
+	list(params?: { type?: NotificationType; pagination?: PaginationParams }) {
+		return paginate<NotificationItem>(NOTIFICATIONS.LIST, params);
+	},
 
-	async unreadCount() {
+	/**
+	 * 获取未读通知数
+	 */
+	unreadCount() {
 		return post<UnreadCountResult>(NOTIFICATIONS.UNREAD_COUNT, {});
-	}
+	},
 
-	async markAsRead(notificationIds: string[]) {
-		return post<null>(NOTIFICATIONS.MARK_AS_READ, {
-			notification_ids: notificationIds
-		});
-	}
+	/**
+	 * 批量标记已读（spec: 1-100 个 ID）
+	 */
+	markAsRead(data: { notification_ids: string[] }) {
+		return post<void>(NOTIFICATIONS.MARK_AS_READ, data);
+	},
 
-	async markAllRead() {
-		return post<null>(NOTIFICATIONS.MARK_ALL_READ, {});
+	/**
+	 * 标记全部已读
+	 */
+	markAllRead() {
+		return post<void>(NOTIFICATIONS.MARK_ALL_READ, {});
 	}
-}
-
-export const notificationsService = new NotificationsService();
+};

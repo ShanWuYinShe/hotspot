@@ -169,6 +169,31 @@ const manager = GlobalStateManager.getInstance();
 - [ ] cursor 是否做了解析而非透传？
 - [ ] 新增页面是否放在了正确的 `features/` 子目录下？
 
+## 文件删除与批量变更规则
+
+- Agent **不得自行删除**任何源代码文件。如需删除，须列出清单并说明原因，经用户确认后执行。
+- **批量修改**：当一次操作可能涉及**大量文件的修改、重命名或重构**时，Agent 必须先向用户展示完整的影响范围（受影响文件清单、变更摘要），经用户确认后才可执行。**禁止静默批量操作，必须给用户一个询问提示。**
+- **禁止的危险 Shell 命令**（可能导致源代码丢失）：`rm`、`rm -rf`、`mv`（批量）、`find ... -delete`、`xargs rm`。除非用户明确授权，否则一律禁止。
+
+## 禁止使用子任务
+
+- **修改 harmonyapp 项目代码时，严禁使用 Task 子任务（subagent）。** 所有文件的读取、搜索、修改必须由主 Agent 直接执行，不得委托给子任务。
+- 此规则的原因：子任务的执行过程不透明，曾导致源代码文件被意外删除且无法追溯根因。
+- 唯一例外：只读的代码探索（`subagent_type="explore"`，且设置 `readonly=true`）可以使用。
+
+## Git 安全（极严格）
+
+> **所有 Git 写操作默认禁止，防止覆盖用户未提交的更改。**
+
+- **允许的只读查询**：`git status`、`git diff`、`git log`、`git show`、`git ls-files`。
+- **严格禁止的命令**（包括但不限于）：
+  `git checkout`, `git restore`, `git reset`, `git clean`, `git stash`,
+  `git add`, `git commit`, `git push`, `git pull`, `git merge`,
+  `git rebase`, `git cherry-pick`, `git revert`
+- **无例外**：上述命令除非用户在当前对话中**逐条明确指示**执行，否则一律禁止。
+- **危险参数禁令**：禁止使用 `--force`、`--hard`、`--no-verify` 等可能绕过检查的参数。
+- **子 Agent 同样受约束**：在调用子 Agent 时，必须在 prompt 中明确禁止其执行任何 Git 写操作。
+
 ## 编译与检查命令
 
 编译和代码检查是两个独立的工具，**必须分别运行**：

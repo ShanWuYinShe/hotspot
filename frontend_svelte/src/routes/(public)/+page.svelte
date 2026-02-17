@@ -248,7 +248,7 @@
 
 					{#if feed.loading}
 						<div class="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
-							{#each Array(6) as _}
+							{#each Array(6) as _, i (i)}
 								<div class="mb-3 break-inside-avoid">
 									<ListSkeleton type="moment" count={1} layout="list" />
 								</div>
@@ -367,7 +367,7 @@
 
 				{#if feed.loading}
 					<div class="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
-						{#each Array(6) as _}
+						{#each Array(6) as _, i (i)}
 							<div class="mb-3 break-inside-avoid">
 								<Card class="border-0 bg-card/50">
 									<CardContent class="space-y-3 p-4">

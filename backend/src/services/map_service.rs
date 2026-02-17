@@ -3,7 +3,7 @@ use std::f64::consts::PI;
 use crate::{
     dto::{
         request::{Bounds, MapRenderRequest},
-        response::{MapClusterData, MapEntityData, MapPoint, MapRenderData, MapRenderItem},
+        response::{MapCanvas, MapClusterData, MapEntityData, MapPoint, MapRenderItem},
     },
     error::{AppError, Result},
     repositories::map_repo::{MapClusterRow, MapEntityRow, MapRepository},
@@ -52,7 +52,13 @@ impl MapService {
         (grid_px * meters_per_px).max(10.0)
     }
 
-    pub async fn render_map(&self, req: MapRenderRequest) -> Result<MapRenderData> {
+    /// Map render. When `social_filter_user_id` is `Some(user_id)`, filters results to
+    /// friends of that user (bidirectional follows) for User and Moment types.
+    pub async fn render_map(
+        &self,
+        req: MapRenderRequest,
+        social_filter_user_id: Option<i64>,
+    ) -> Result<MapCanvas> {
         Self::validate_bounds(req.viewport.bounds)?;
 
         let zoom = req.viewport.zoom;
@@ -64,7 +70,6 @@ impl MapService {
             .unwrap_or(MapDataType::All);
 
         let (start_time, end_time) = if let Some(f) = &req.filter {
-            let _ = f.only_friends; // public 渲染忽略 only_friends
             if let Some(tr) = &f.time_range {
                 (tr.start_time.clone(), tr.end_time.clone())
             } else {
@@ -77,180 +82,16 @@ impl MapService {
         let mut items = Vec::new();
 
         // 阈值：Zoom <= 12 显示聚合点，Zoom > 12 显示具体实体
-        // 参考高德/谷歌地图逻辑
         let cluster_zoom_threshold = 12;
 
         if zoom <= cluster_zoom_threshold {
-            // ==================== 聚合模式 ====================
-            let grid_meters = Self::grid_meters(bounds, zoom, None);
-
-            // Parallel execution could optimize this
-            if filter_type == MapDataType::All || filter_type == MapDataType::User {
-                let users = self
-                    .map_repo
-                    .cluster_users_by_bounds(
-                        bounds.west,
-                        bounds.south,
-                        bounds.east,
-                        bounds.north,
-                        grid_meters,
-                    )
-                    .await?;
-                items.extend(
-                    users
-                        .into_iter()
-                        .map(|c| self.cluster_to_item(c, MapDataType::User.as_str())),
-                );
-            }
-
-            if filter_type == MapDataType::All || filter_type == MapDataType::Group {
-                let groups = self
-                    .map_repo
-                    .cluster_groups_by_bounds(
-                        bounds.west,
-                        bounds.south,
-                        bounds.east,
-                        bounds.north,
-                        grid_meters,
-                    )
-                    .await?;
-                items.extend(
-                    groups
-                        .into_iter()
-                        .map(|c| self.cluster_to_item(c, MapDataType::Group.as_str())),
-                );
-            }
-
-            if filter_type == MapDataType::All || filter_type == MapDataType::Moment {
-                let moments = self
-                    .map_repo
-                    .cluster_moments_by_bounds(
-                        bounds.west,
-                        bounds.south,
-                        bounds.east,
-                        bounds.north,
-                        grid_meters,
-                        start_time.clone(),
-                        end_time.clone(),
-                    )
-                    .await?;
-                items.extend(
-                    moments
-                        .into_iter()
-                        .map(|c| self.cluster_to_item(c, MapDataType::Moment.as_str())),
-                );
-            }
-        } else {
-            // ==================== 实体模式 ====================
-            let limit = 200; // 每个类型的最大返回数
-
-            if filter_type == MapDataType::All || filter_type == MapDataType::User {
-                let users = self
-                    .map_repo
-                    .search_users_by_bounds(
-                        bounds.west,
-                        bounds.south,
-                        bounds.east,
-                        bounds.north,
-                        limit,
-                    )
-                    .await?;
-                items.extend(
-                    users
-                        .into_iter()
-                        .map(|u| self.entity_to_item(u, MapDataType::User.as_str())),
-                );
-            }
-
-            if filter_type == MapDataType::All || filter_type == MapDataType::Group {
-                let groups = self
-                    .map_repo
-                    .search_groups_by_bounds(
-                        bounds.west,
-                        bounds.south,
-                        bounds.east,
-                        bounds.north,
-                        limit,
-                    )
-                    .await?;
-                items.extend(
-                    groups
-                        .into_iter()
-                        .map(|g| self.entity_to_item(g, MapDataType::Group.as_str())),
-                );
-            }
-
-            if filter_type == MapDataType::All || filter_type == MapDataType::Moment {
-                let moments = self
-                    .map_repo
-                    .search_moments_by_bounds(
-                        bounds.west,
-                        bounds.south,
-                        bounds.east,
-                        bounds.north,
-                        limit,
-                        start_time.clone(),
-                        end_time.clone(),
-                    )
-                    .await?;
-                items.extend(
-                    moments
-                        .into_iter()
-                        .map(|m| self.entity_to_item(m, MapDataType::Moment.as_str())),
-                );
-            }
-        }
-
-        Ok(MapRenderData {
-            items,
-            toast_message: None, // 如果 zoom 太小或者是 limit 截断，可以给提示
-        })
-    }
-
-    /// Map render with social filtering (only_friends)
-    pub async fn render_map_with_social_filter(
-        &self,
-        user_id: i64,
-        req: MapRenderRequest,
-    ) -> Result<MapRenderData> {
-        Self::validate_bounds(req.viewport.bounds)?;
-
-        let zoom = req.viewport.zoom;
-        let bounds = req.viewport.bounds;
-        let filter_type = req
-            .filter
-            .as_ref()
-            .and_then(|f| f.data_type)
-            .unwrap_or(MapDataType::All);
-
-        let only_friends = req
-            .filter
-            .as_ref()
-            .and_then(|f| f.only_friends)
-            .unwrap_or(false);
-
-        let (start_time, end_time) = if let Some(f) = &req.filter {
-            if let Some(tr) = &f.time_range {
-                (tr.start_time.clone(), tr.end_time.clone())
-            } else {
-                (None, None)
-            }
-        } else {
-            (None, None)
-        };
-
-        let mut items = Vec::new();
-        let cluster_zoom_threshold = 12;
-
-        if zoom <= cluster_zoom_threshold {
-            // Cluster mode
             let grid_meters = Self::grid_meters(bounds, zoom, None);
 
             if filter_type == MapDataType::All || filter_type == MapDataType::User {
-                let users = if only_friends {
+                let users = if let Some(uid) = social_filter_user_id {
                     self.map_repo
                         .cluster_friend_users_by_bounds(
-                            user_id,
+                            uid,
                             bounds.west,
                             bounds.south,
                             bounds.east,
@@ -295,10 +136,10 @@ impl MapService {
             }
 
             if filter_type == MapDataType::All || filter_type == MapDataType::Moment {
-                let moments = if only_friends {
+                let moments = if let Some(uid) = social_filter_user_id {
                     self.map_repo
                         .cluster_friend_moments_by_bounds(
-                            user_id,
+                            uid,
                             bounds.west,
                             bounds.south,
                             bounds.east,
@@ -328,14 +169,13 @@ impl MapService {
                 );
             }
         } else {
-            // Entity mode
             let limit = 200;
 
             if filter_type == MapDataType::All || filter_type == MapDataType::User {
-                let users = if only_friends {
+                let users = if let Some(uid) = social_filter_user_id {
                     self.map_repo
                         .search_friend_users_by_bounds(
-                            user_id,
+                            uid,
                             bounds.west,
                             bounds.south,
                             bounds.east,
@@ -380,10 +220,10 @@ impl MapService {
             }
 
             if filter_type == MapDataType::All || filter_type == MapDataType::Moment {
-                let moments = if only_friends {
+                let moments = if let Some(uid) = social_filter_user_id {
                     self.map_repo
                         .search_friend_moments_by_bounds(
-                            user_id,
+                            uid,
                             bounds.west,
                             bounds.south,
                             bounds.east,
@@ -414,7 +254,7 @@ impl MapService {
             }
         }
 
-        Ok(MapRenderData {
+        Ok(MapCanvas {
             items,
             toast_message: None,
         })
@@ -429,7 +269,7 @@ impl MapService {
         };
 
         MapRenderItem {
-            id: format!("cluster:{}:{}", type_name, row.key),
+            render_id: format!("cluster:{}:{}", type_name, row.key),
             item_type: MapItemType::Cluster,
             location: MapPoint {
                 latitude: row.latitude,
@@ -439,7 +279,6 @@ impl MapService {
                 count: row.count,
                 label: Some(format!("{} {}", row.count, type_name)),
                 preview_urls,
-                boundary: None,
             }),
             entity: None,
         }
@@ -453,7 +292,7 @@ impl MapService {
             _ => MapItemType::User, // Default fallback
         };
         MapRenderItem {
-            id: format!("{}:{}", type_name, row.id),
+            render_id: format!("{}:{}", type_name, row.id),
             item_type,
             location: MapPoint {
                 latitude: row.latitude,
@@ -465,7 +304,7 @@ impl MapService {
                 subtitle: row.subtitle,
                 cover_url: row.cover_url,
                 payload_id: row.id,
-                is_highlighted: None,
+                category: None, // 从 DB 获取需扩展 repo，先用 None
             }),
         }
     }

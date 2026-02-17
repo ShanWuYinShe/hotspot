@@ -16,16 +16,16 @@ pub fn token_optional_routes() -> Router<AppState> {
         .route("/search", post(group_chats::search))
         // 获取指定群组信息
         .route("/open_the_door", post(group_chats::open_the_door))
+        // 成员列表（spec: 认证可选，带 Token 返回 @auth-only 字段）
+        .route("/members/list", post(group_chats::members))
+        // 群公告列表（spec: 认证可选）
+        .route("/announcements/list", post(group_chats::list_announcements))
 }
 
 /// Token 必须的群组路由
 pub fn token_required_routes() -> Router<AppState> {
     // 主路由 - 群组操作
     let main_routes = Router::new()
-        // 成员列表（spec: 认证必须）
-        .route("/members/list", post(group_chats::members))
-        // 群公告列表（spec: 认证必须）
-        .route("/announcements/list", post(group_chats::list_announcements))
         // 基础操作
         .route("/create", post(group_chats::create))
         .route("/update", post(group_chats::update))

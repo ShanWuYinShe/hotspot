@@ -5,6 +5,7 @@
 
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, IconButton, IconSize } from '../../../components/SystemIcon';
+import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { AppRouter } from '../../../core/router/AppRouter';
 
 @Component
@@ -24,6 +25,14 @@ export struct PhotoPreviewPage {
   @State compWidth: number = 0;
   @State compHeight: number = 0;
 
+  aboutToAppear(): void {
+    SystemUiController.useSurface({
+      baseColor: '#000000',
+      overlayOpacity: 1,
+      preferDarkContent: false
+    });
+  }
+
   build() {
     NavDestination() {
     Stack() {
@@ -32,6 +41,7 @@ export struct PhotoPreviewPage {
         .width('100%')
         .height('100%')
         .backgroundColor(Color.Black)
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
 
       // 图片轮播
       Swiper(this.swiperController) {
@@ -197,4 +207,3 @@ export struct PhotoPreviewPage {
 export function PhotoPreviewPageBuilder() {
   PhotoPreviewPage()
 }
-

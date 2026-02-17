@@ -87,7 +87,8 @@ alwaysApply: true
 - `GroupSettings`
 - `PaginationParams`
 - `PaginatedData<T>`
-- `ApiResponse<T>`
+
+`ApiResponse<T>` 定义于 `@spec/api_spec_base.mdc`。
 
 ## 端点详情
 
@@ -396,7 +397,7 @@ type AuditDetails =
   | { type: 'user.ban'; reason?: string; duration_days?: number }
   | { type: 'user.unban'; reason?: string }
   | { type: 'group.dismiss'; reason?: string }
-  | { type: 'group.member_mute'; reason?: string; duration_hours?: number }
+  | { type: 'group.member_mute'; reason?: string; duration_minutes?: number }
   | { type: 'group.member_ban'; reason?: string }
   | { type: 'group.member_remove'; reason?: string }
   | { type: 'announcement.create'; title: string }
@@ -408,7 +409,7 @@ type AuditDetails =
   | { type: 'admin.grant'; target_user_id: string; role_ids: string[]; grant_all_permissions?: boolean }
   | { type: 'admin.revoke'; target_user_id: string }
   | { type: 'report.handle'; report_id: string; action: string; note?: string }
-  | { type: 'tag.delete'; tag_name: string }
+  | { type: 'tag.delete'; name: string }
   | { type: 'permission.grant'; permission: string }
   | { type: 'permission.revoke'; permission: string }
   | { type: 'config.update'; config_key: string; old_value: unknown; new_value: unknown };

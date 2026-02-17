@@ -67,7 +67,6 @@ alwaysApply: true
 - `PaginationParams`
 - `GeoPoint`
 - `PaginatedData`
-- `ApiResponse`
 - `UserInfo`
 - `UserPresenceStatus`
 
@@ -76,10 +75,6 @@ alwaysApply: true
 ### POST /api/v1/groups/search
 
 统一搜索群组。支持关键字、标签、位置范围三种条件的自由组合。
-
-说明（Token 可选的搜索语义）：
-- 未登录（不带 token）：仅返回 `is_searchable=true` 的群组；不返回 `@auth-only` 字段
-- 已登录（带 token）：在满足关系与可见性规则前提下，允许返回更多可见群组；返回完整的 `GroupItem`（包括 `@auth-only` 字段）
 
 - **认证**: 可选
 - **幂等**: 无
@@ -110,9 +105,7 @@ interface SearchGroupsRequest {
 
 ### POST /api/v1/groups/open_the_door
 
-获取群组详情。
-
-Token 可选；登录态返回 `GroupItem.my_state`。
+获取群组详情。认证可选，字段可见性规则见 `@spec/api_spec_base.mdc`。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -273,6 +266,8 @@ interface SearchGroupMembersRequest {
 
 邀请成员。
 
+**重复邀请处理**：若对同一用户存在 pending 状态的邀请，返回已有邀请信息（不重复创建），避免重复通知骚扰。
+
 - **认证**: 必须
 - **幂等**: 无
 
@@ -298,11 +293,13 @@ interface Invitation {
 
 ---
 
+### 成员管理
+
+以下成员管理操作统一权限要求：群主或群组管理员可操作，系统管理员按 RBAC 权限可操作。
+
 ### POST /api/v1/groups/members/set_role
 
 设置成员角色。
-
-**权限说明**：成员管理操作需要群组管理员权限，系统管理员按 RBAC 权限可操作。
 
 - **认证**: 必须
 - **幂等**: 幂等语义（重复请求返回一致结果）
@@ -326,8 +323,6 @@ interface SetMemberRoleRequest {
 
 禁言成员。
 
-**权限说明**：成员管理操作需要群组管理员权限，系统管理员按 RBAC 权限可操作。
-
 - **认证**: 必须
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
@@ -350,8 +345,6 @@ interface MuteMemberRequest {
 
 取消禁言成员。
 
-**权限说明**：成员管理操作需要群组管理员权限，系统管理员按 RBAC 权限可操作。
-
 - **认证**: 必须
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
@@ -372,8 +365,6 @@ interface UnmuteMemberRequest {
 ### POST /api/v1/groups/members/ban
 
 封禁成员。封禁后成员将被移出群组且无法再次加入。
-
-**权限说明**：成员管理操作需要群组管理员权限，系统管理员按 RBAC 权限可操作。
 
 - **认证**: 必须
 - **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
@@ -397,8 +388,6 @@ interface BanMemberRequest {
 
 解除封禁成员。
 
-**权限说明**：成员管理操作需要群组管理员权限，系统管理员按 RBAC 权限可操作。
-
 - **认证**: 必须
 - **幂等**: 幂等语义（重复请求返回一致结果）
 
@@ -419,8 +408,6 @@ interface UnbanMemberRequest {
 ### POST /api/v1/groups/members/list_banned
 
 获取封禁列表。
-
-**权限说明**：成员管理操作需要群组管理员权限，系统管理员按 RBAC 权限可操作。
 
 - **认证**: 必须
 - **幂等**: 无
@@ -453,8 +440,6 @@ interface BannedMemberItem {
 ### POST /api/v1/groups/members/remove_member
 
 移除成员。
-
-**权限说明**：成员管理操作需要群组管理员权限，系统管理员按 RBAC 权限可操作。
 
 - **认证**: 必须
 - **幂等**: 幂等语义（重复请求返回一致结果）
@@ -492,8 +477,7 @@ interface GroupApplicationsRequest {
 
 **Response**: `ApiResponse<PaginatedData<GroupApplicationItem>>`
 ```typescript
-// 申请状态
-type ApplicationStatus = 'pending' | 'accepted' | 'rejected';
+// ApplicationStatus 定义于 @spec/api_spec_types.mdc
 
 // 可设置的角色（不含 owner）
 type SetableGroupRole = 'admin' | 'member';
@@ -882,6 +866,7 @@ interface RejectInviteRequest {
 
 退出群组。
 
+**限制**：群主不能直接退出群组，必须先通过 `groups/me/transfer_ownership` 转让群主身份，否则返回 `10400`（message: "群主需先转让群主身份"）。
 
 - **认证**: 必须
 - **幂等**: SHOULD（建议客户端携带 `Idempotency-Key`）

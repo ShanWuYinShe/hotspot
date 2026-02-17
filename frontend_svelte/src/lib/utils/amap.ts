@@ -26,8 +26,14 @@ export function loadAMap(): Promise<void> {
 	loadPromise = new Promise((resolve, reject) => {
 		const existing = document.getElementById('amap-sdk-script') as HTMLScriptElement | null;
 		if (existing) {
-			existing.addEventListener('load', () => resolve());
-			existing.addEventListener('error', () => reject(new Error('AMap SDK load failed')));
+			// script 已加载完毕（readyState complete 或 AMap 已可用）→ 直接 resolve
+			if (window.AMap) {
+				resolve();
+				return;
+			}
+			// script 仍在加载中 → 监听 load/error
+			existing.addEventListener('load', () => resolve(), { once: true });
+			existing.addEventListener('error', () => reject(new Error('AMap SDK load failed')), { once: true });
 			return;
 		}
 

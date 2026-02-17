@@ -22,6 +22,8 @@ import { SystemToast } from '../../../components/SystemToast';
 import { MomentCacheService } from '../../../core/database/MomentCacheService';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AppRouter, LoginRouteParam, PhotoPreviewRouteParam } from '../../../core/router/AppRouter';
+import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { SystemUiController } from '../../../core/utils/SystemUiController';
 
 const DOMAIN_NUMBER: number = 0xFF05;
 const TAG: string = 'MomentPage';
@@ -30,12 +32,13 @@ const TAG: string = 'MomentPage';
 export struct MomentPage {
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
+  @StorageLink('safeAreaTop') safeAreaTop: number = 0;
 
   private stateManager = GlobalStateManager.getInstance();
   private momentsDataSource: BasicDataSource<MomentItem> = new BasicDataSource([]);
   private momentCacheService = MomentCacheService.getInstance();
 
-  @State isLoading: boolean = false;
+  @State isLoading: boolean = true;
   @State errorMessage: string = '';
   @State hasData: boolean = false;
   @State hasMore: boolean = false;
@@ -43,6 +46,9 @@ export struct MomentPage {
   @State isLoadingMore: boolean = false;
 
   async aboutToAppear() {
+    SystemUiController.useSurface({
+      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
+    });
     await this.loadNearbyMoments();
   }
 
@@ -251,9 +257,14 @@ export struct MomentPage {
           })
       }
       .width('100%')
-      .height(56)
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
+        bottom: DesignConstants.SPACING.SM
+      })
       .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 内容区域
       if (this.isLoading && !this.hasData) {
@@ -506,7 +517,7 @@ struct LikeButton {
       SystemIcon({
         icon: this.isLiked ? AppIcon.HEART_FILL : AppIcon.HEART,
         iconSize: 20,
-        iconColor: this.isLiked ? DesignConstants.COLOR.ERROR : $r('sys.color.ohos_id_color_text_secondary'),
+        iconColor: this.isLiked ? $r('app.color.color_danger') : $r('sys.color.ohos_id_color_text_secondary'),
         clickable: true,
         onIconClick: () => {
           this.isLiked = !this.isLiked;
@@ -519,7 +530,7 @@ struct LikeButton {
 
       Text(this.likesCount.toString())
         .fontSize(DesignConstants.FONT.SIZE.MD)
-        .fontColor(this.isLiked ? DesignConstants.COLOR.ERROR : $r('sys.color.ohos_id_color_text_secondary'))
+        .fontColor(this.isLiked ? $r('app.color.color_danger') : $r('sys.color.ohos_id_color_text_secondary'))
     }
   }
 }

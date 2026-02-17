@@ -2,7 +2,7 @@
  * 群组服务
  */
 
-import { post, paginate } from '../client';
+import { post, paginate, generateIdempotencyKey, type RequestOptions } from '../client';
 import { GROUPS, GROUP_MESSAGES } from '../endpoints';
 import type {
 	ApplicationStatus,
@@ -37,8 +37,8 @@ export const groupsService = {
 		sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';
 		reference_point: GeoPoint;
 		pagination?: PaginationParams;
-	}) {
-		return paginate<GroupItem>(GROUPS.SEARCH, params);
+	}, options?: RequestOptions) {
+		return paginate<GroupItem>(GROUPS.SEARCH, params, options);
 	},
 
 	// ==================== 群组信息 ====================
@@ -66,7 +66,7 @@ export const groupsService = {
 		is_searchable?: boolean;
 		max_members?: number;
 	}) {
-		return post<GroupItem>(GROUPS.CREATE, data, { idempotencyKey: crypto.randomUUID() });
+		return post<GroupItem>(GROUPS.CREATE, data, { idempotencyKey: generateIdempotencyKey() });
 	},
 
 	/**
@@ -95,17 +95,17 @@ export const groupsService = {
 	},
 
 	/**
-	 * 解散群组
+	 * 解散群组（SHOULD 幂等）
 	 */
 	dismiss(data: { group_id: string }) {
-		return post<void>(GROUPS.DISMISS, data);
+		return post<void>(GROUPS.DISMISS, data, { idempotencyKey: generateIdempotencyKey() });
 	},
 
 	/**
-	 * 转让群主
+	 * 转让群主（SHOULD 幂等）
 	 */
 	transferOwnership(data: { group_id: string; new_owner_id: string }) {
-		return post<void>(GROUPS.ME.TRANSFER_OWNERSHIP, data);
+		return post<void>(GROUPS.ME.TRANSFER_OWNERSHIP, data, { idempotencyKey: generateIdempotencyKey() });
 	},
 
 	// ==================== 成员管理 ====================
@@ -135,7 +135,7 @@ export const groupsService = {
 	 * 加入群组（自动根据 join_method 处理：open 直接加入，approval 发起申请）
 	 */
 	join(data: { group_id: string; password?: string; message?: string }) {
-		return post<JoinGroupResult>(GROUPS.ME.JOIN, data, { idempotencyKey: crypto.randomUUID() });
+		return post<JoinGroupResult>(GROUPS.ME.JOIN, data, { idempotencyKey: generateIdempotencyKey() });
 	},
 
 	/**
@@ -163,7 +163,7 @@ export const groupsService = {
 	 * 封禁成员
 	 */
 	ban(data: { group_id: string; user_id: string; reason?: string }) {
-		return post<void>(GROUPS.MEMBERS.BAN, data, { idempotencyKey: crypto.randomUUID() });
+		return post<void>(GROUPS.MEMBERS.BAN, data, { idempotencyKey: generateIdempotencyKey() });
 	},
 
 	/**
@@ -200,14 +200,14 @@ export const groupsService = {
 	 * 批准入群申请
 	 */
 	approveApplication(data: { application_id: string }) {
-		return post<void>(GROUPS.APPLICATIONS.APPROVE, data, { idempotencyKey: crypto.randomUUID() });
+		return post<void>(GROUPS.APPLICATIONS.APPROVE, data, { idempotencyKey: generateIdempotencyKey() });
 	},
 
 	/**
 	 * 拒绝入群申请
 	 */
 	rejectApplication(data: { application_id: string; reason?: string }) {
-		return post<void>(GROUPS.APPLICATIONS.REJECT, data, { idempotencyKey: crypto.randomUUID() });
+		return post<void>(GROUPS.APPLICATIONS.REJECT, data, { idempotencyKey: generateIdempotencyKey() });
 	},
 
 	// ==================== 群公告 ====================
@@ -223,20 +223,22 @@ export const groupsService = {
 	 * 发布群公告
 	 */
 	createAnnouncement(data: { group_id: string; title: string; content: string; is_pinned?: boolean }) {
-		return post<GroupAnnouncementItem>(GROUPS.ANNOUNCEMENTS.CREATE, data, { idempotencyKey: crypto.randomUUID() });
+		return post<GroupAnnouncementItem>(GROUPS.ANNOUNCEMENTS.CREATE, data, { idempotencyKey: generateIdempotencyKey() });
 	},
 
 	/**
 	 * 更新群公告
+	 * spec: 需要 group_id + announcement_id 确定目标
 	 */
-	updateAnnouncement(data: { announcement_id: string; title?: string; content?: string; is_pinned?: boolean }) {
+	updateAnnouncement(data: { group_id: string; announcement_id: string; title?: string; content?: string; is_pinned?: boolean }) {
 		return post<void>(GROUPS.ANNOUNCEMENTS.UPDATE, data);
 	},
 
 	/**
 	 * 删除群公告
+	 * spec: 需要 group_id + announcement_id 确定目标
 	 */
-	deleteAnnouncement(data: { announcement_id: string }) {
+	deleteAnnouncement(data: { group_id: string; announcement_id: string }) {
 		return post<void>(GROUPS.ANNOUNCEMENTS.DELETE, data);
 	},
 
@@ -274,27 +276,28 @@ export const groupsService = {
 	 * 接受群组邀请
 	 */
 	acceptInvite(data: { invite_id: string }) {
-		return post<void>(GROUPS.ME.ACCEPT_INVITE, data, { idempotencyKey: crypto.randomUUID() });
+		return post<void>(GROUPS.ME.ACCEPT_INVITE, data, { idempotencyKey: generateIdempotencyKey() });
 	},
 
 	/**
 	 * 拒绝群组邀请
 	 */
 	rejectInvite(data: { invite_id: string }) {
-		return post<void>(GROUPS.ME.REJECT_INVITE, data, { idempotencyKey: crypto.randomUUID() });
+		return post<void>(GROUPS.ME.REJECT_INVITE, data, { idempotencyKey: generateIdempotencyKey() });
 	},
 
 	/**
-	 * 退出群组
+	 * 退出群组（SHOULD 幂等）
 	 */
 	leave(data: { group_id: string }) {
-		return post<void>(GROUPS.ME.LEAVE, data);
+		return post<void>(GROUPS.ME.LEAVE, data, { idempotencyKey: generateIdempotencyKey() });
 	}
 };
 
 export const groupMessagesService = {
 	/**
 	 * 发送群消息
+	 * spec: MUST 幂等，自动生成 Idempotency-Key
 	 */
 	send(data: {
 		group_id: string;
@@ -304,10 +307,8 @@ export const groupMessagesService = {
 		share_code?: string;
 		reply_to_message_id?: string;
 		mentions?: string[];
-		idempotencyKey?: string;
 	}) {
-		const { idempotencyKey, ...payload } = data;
-		return post<MessageSent>(GROUP_MESSAGES.SEND, payload, { idempotencyKey });
+		return post<MessageSent>(GROUP_MESSAGES.SEND, data, { idempotencyKey: generateIdempotencyKey() });
 	},
 
 	/**

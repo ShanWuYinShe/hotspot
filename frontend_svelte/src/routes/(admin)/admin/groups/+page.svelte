@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { adminGroupsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
+	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
@@ -11,7 +11,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import type { AdminGroupSearchItem } from '$lib/types/api';
+	import type { AdminGroupItem } from '$lib/types/api';
 	import { formatDate } from '$lib/utils/format';
 	import Search from 'lucide-svelte/icons/search';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
@@ -22,50 +22,41 @@
 	import Users from 'lucide-svelte/icons/users';
 	import Lock from 'lucide-svelte/icons/lock';
 
-	let groups = $state.raw<AdminGroupSearchItem[]>([]);
-	let isLoading = $state(true);
-	let cursor = $state<string | undefined>(undefined);
-	let hasMore = $state(false);
+	// ============ 分页 ============
+
+	const pagination = usePagination<AdminGroupItem>({
+		uniqueKey: (item) => item.group.group_id
+	});
+
 	let name = $state('');
 
-	async function loadGroups(append = false) {
-		if (!append) isLoading = true;
-		try {
-			const response = append
-				? await adminGroupsService.search({
-						name: name || undefined,
-						pagination: { limit: 20, cursor }
-					})
-				: await withMinimumLoadingTime(() =>
-						adminGroupsService.search({
-							name: name || undefined,
-							pagination: { limit: 20, cursor: undefined }
-						})
-					);
-
-			if (isSuccess(response) && response.data) {
-				if (append) {
-					groups = [...groups, ...response.data.items];
-				} else {
-					groups = response.data.items;
-				}
-				cursor = response.data.next_cursor;
-				hasMore = !!response.data.next_cursor;
-			}
-		} catch {
-			toast.error('加载失败');
-		} finally {
-			isLoading = false;
-		}
+	function loadGroups(refresh = true) {
+		pagination.load(
+			(cursor) =>
+				adminGroupsService.search({
+					name: name || undefined,
+					pagination: { limit: 20, cursor }
+				}),
+			refresh
+		);
 	}
+
+	$effect(() => {
+		if (pagination.error) toast.error(pagination.error);
+	});
+
+	// ============ 操作 ============
 
 	async function handleDissolve(groupId: string) {
 		if (!confirm('确定要解散该群组吗？此操作不可逆。')) return;
 
 		try {
-			const response = await adminGroupsService.dismiss({ group_id: groupId, reason: '管理员操作' });
+			const response = await adminGroupsService.dismiss({
+				group_id: groupId,
+				reason: '管理员操作'
+			});
 			if (isSuccess(response)) {
-				groups = groups.filter(g => g.group.group_id !== groupId);
+				pagination.removeItem((g) => g.group.group_id === groupId);
 				toast.success('已解散群组');
 			} else {
 				toast.error(response.message || '操作失败');
@@ -87,8 +78,8 @@
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
 		<h1 class="text-2xl font-bold">群组管理</h1>
-		<Button variant="outline" size="sm" onclick={() => loadGroups()} disabled={isLoading}>
-			<RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
+		<Button variant="outline" size="sm" onclick={() => loadGroups()} disabled={pagination.loading}>
+			<RefreshCw class="mr-2 h-4 w-4 {pagination.loading ? 'animate-spin' : ''}" />
 			刷新
 		</Button>
 	</div>
@@ -118,9 +109,9 @@
 			</CardTitle>
 		</CardHeader>
 		<CardContent>
-			{#if isLoading && groups.length === 0}
+			{#if pagination.loading && pagination.items.length === 0}
 				<div class="space-y-4">
-					{#each Array(5) as _}
+					{#each Array(5) as _, i (i)}
 						<div class="flex items-center gap-4">
 							<Skeleton class="h-10 w-10 rounded-full" />
 							<div class="flex-1 space-y-2">
@@ -131,11 +122,11 @@
 						</div>
 					{/each}
 				</div>
-			{:else if groups.length === 0}
+			{:else if pagination.items.length === 0}
 				<div class="py-8 text-center text-muted-foreground">暂无群组数据</div>
 			{:else}
 				<div class="divide-y">
-					{#each groups as group (group.group.group_id)}
+					{#each pagination.items as group (group.group.group_id)}
 						<div class="flex items-center gap-4 py-4">
 							<Avatar class="h-10 w-10">
 								<AvatarImage src={group.group.avatar_url} alt={group.group.name} />
@@ -191,11 +182,11 @@
 					{/each}
 				</div>
 
-				{#if hasMore}
-					<Button variant="outline" class="mt-4 w-full" onclick={() => loadGroups(true)}>
-						加载更多
-					</Button>
-				{/if}
+			{#if pagination.hasMore}
+				<Button variant="outline" class="mt-4 w-full" onclick={() => loadGroups(false)}>
+					加载更多
+				</Button>
+			{/if}
 			{/if}
 		</CardContent>
 	</Card>

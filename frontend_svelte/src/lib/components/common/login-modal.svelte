@@ -38,6 +38,33 @@
 		currentTab = 'login';
 	}
 
+	/**
+	 * 完成认证后的通用流程
+	 * spec: Web 端 auth 响应体为空，需通过 check_status + getMyProfile 获取用户信息
+	 */
+	async function completeAuthFlow(): Promise<boolean> {
+		const [statusRes, profileRes] = await Promise.all([
+			authService.checkStatus(),
+			usersService.getMyProfile()
+		]);
+
+		if (!isSuccess(statusRes) || !statusRes.data.is_valid || !statusRes.data.expires_at) {
+			return false;
+		}
+		if (!isSuccess(profileRes)) {
+			return false;
+		}
+
+		authStore.login({
+			user_id: profileRes.data.user_id,
+			user_type: profileRes.data.user_type,
+			access_token_expires_at: statusRes.data.expires_at
+		});
+		authStore.setProfile(profileRes.data);
+		await syncLocationAfterAuth();
+		return true;
+	}
+
 	async function handleLogin() {
 		if (!loginId || !password) {
 			toast.error('请填写登录信息');
@@ -56,14 +83,16 @@
 				MIN_LOADING_ACTION
 			);
 
-			if (isSuccess(response)) {
-				authStore.login(response.data);
-				await syncLocationAfterAuth();
-				toast.success('登录成功');
-				uiStore.onLoginSuccess();
-				// 清空表单
-				loginId = '';
-				password = '';
+			if (response.code === 0) {
+				// spec: Web 端 body 为空，token 通过 Cookie 设置
+				if (await completeAuthFlow()) {
+					toast.success('登录成功');
+					uiStore.onLoginSuccess();
+					loginId = '';
+					password = '';
+				} else {
+					toast.error('获取用户信息失败');
+				}
 			} else {
 				toast.error(response.message || '登录失败');
 			}
@@ -96,18 +125,20 @@
 				() =>
 					authService.register({
 						login_id: loginId,
-						password,
 						nickname,
+						password,
 						client_type: 'web'
 					}),
 				MIN_LOADING_ACTION
 			);
 
-			if (isSuccess(response)) {
-				authStore.login(response.data);
-				await syncLocationAfterAuth();
-				toast.success('注册成功');
-				uiStore.onLoginSuccess();
+			if (response.code === 0) {
+				if (await completeAuthFlow()) {
+					toast.success('注册成功');
+					uiStore.onLoginSuccess();
+				} else {
+					toast.error('获取用户信息失败');
+				}
 			} else {
 				toast.error(response.message || '注册失败');
 			}
@@ -136,11 +167,13 @@
 				MIN_LOADING_ACTION
 			);
 
-			if (isSuccess(response)) {
-				authStore.login(response.data);
-				await syncLocationAfterAuth();
-				toast.success('访客登录成功');
-				uiStore.onLoginSuccess();
+			if (response.code === 0) {
+				if (await completeAuthFlow()) {
+					toast.success('访客登录成功');
+					uiStore.onLoginSuccess();
+				} else {
+					toast.error('获取用户信息失败');
+				}
 			} else {
 				toast.error(response.message || '访客登录失败');
 			}

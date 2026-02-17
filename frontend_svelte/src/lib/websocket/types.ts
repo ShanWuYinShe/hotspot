@@ -5,19 +5,23 @@
 
 import type {
 	UserInfo,
+	GroupInfo,
+	GroupAnnouncementItem,
+	SystemAnnouncementItem,
 	Location,
 	MessageMedia,
+	MessageReplyTo,
 	MessageType,
 	MomentSummary,
 	ClientType,
 	FollowSource,
 	GroupJoinMethod,
-	GroupRole
+	GroupRole,
+	UserSettings
 } from '$lib/types/api';
 
 // ============ 基础类型 ============
-
-export type AnnouncementSeverity = 'info' | 'warning' | 'critical';
+// AnnouncementSeverity：定义于 api.ts（spec/api_spec_types.mdc），通过 SystemAnnouncementItem 间接引用
 export type SubscriptionOperation = 'subscribe' | 'unsubscribe' | 'set';
 export type SubscriptionFailureReason = 'invalid' | 'denied' | 'limit_exceeded' | 'error';
 export type ErrorSeverity = 'fatal' | 'recoverable' | 'warning';
@@ -71,7 +75,12 @@ export type ServerEventType =
 	| 'AccountBanned'
 	| 'Error'
 	| 'SubscribeAck'
-	| 'SubscriptionsSnapshot';
+	| 'SubscriptionsSnapshot'
+	// 多端同步（⏳ 延期实现）
+	| 'SelfReadSync'
+	| 'SelfChatSettingsSync'
+	| 'SelfSettingsUpdated'
+	| 'SelfRelationSync';
 
 export type ClientEventType =
 	| 'Auth'
@@ -88,21 +97,15 @@ export interface WebSocketEvent<TType extends string, TPayload = unknown> {
 	payload: TPayload;
 }
 
-// 服务端推送事件：包含 event_id 用于去重（幂等性保障）
-export interface ServerWebSocketEvent extends WebSocketEvent<ServerEventType, unknown> {
-	event_id: string; // 事件唯一ID（UUID），用于客户端去重
-}
+// 服务端推送事件
+export type ServerWebSocketEvent = WebSocketEvent<ServerEventType, unknown>;
 
 // ============ 辅助类型 ============
 
 // MomentSummary 定义于 api.ts (对应 api_spec_types.mdc)
 
-export interface MessageReplyTo {
-	message_id: string;
-	user_id: string;
-	nickname: string;
-	content: string;
-}
+// MessageReplyTo 从 $lib/types/api 导入（含 share_code?: string，与 spec 一致）
+export type { MessageReplyTo } from '$lib/types/api';
 
 export interface FailedSubscriptionId {
 	subscription_id: string;
@@ -201,14 +204,8 @@ export interface MessageMentionedPayload {
 	mentioned_at: string;
 }
 
-export interface SystemAnnouncementPayload {
-	announcement_id: string;
-	title: string;
-	content: string;
-	severity: AnnouncementSeverity;
-	action_url?: string;
-	created_at: string;
-}
+/** spec: type SystemAnnouncementPayload = SystemAnnouncementItem */
+export type SystemAnnouncementPayload = SystemAnnouncementItem;
 
 // 用户资料变更
 export interface UserProfileUpdatedPayload {
@@ -337,9 +334,7 @@ export interface GroupMemberUnmutedPayload {
 
 export interface GroupInviteReceivedPayload {
 	invite_id: string;
-	group_id: string;
-	group_name: string;
-	group_avatar_url?: string;
+	group: GroupInfo;
 	inviter: UserInfo;
 	message?: string;
 	created_at: string;
@@ -363,20 +358,9 @@ export interface GroupApplicationReceivedPayload {
 
 export interface GroupApplicationResponsePayload {
 	application_id: string;
-	group_id: string;
-	group_name: string;
+	group: GroupInfo;
 	status: 'accepted';
 	responded_at: string;
-}
-
-export interface GroupAnnouncementCreatedPayload {
-	announcement_id: string;
-	group_id: string;
-	title: string;
-	content: string;
-	created_by: UserInfo;
-	is_pinned: boolean;
-	created_at: string;
 }
 
 // 群组信息更新
@@ -440,6 +424,34 @@ export interface AccountBannedPayload {
 	reason: string;
 	duration_days: number;
 	banned_at: string;
+}
+
+// === 多端同步事件（⏳ 延期实现）===
+
+/** 已读状态同步：当某设备标记消息已读时，推送给该用户的其他设备 */
+export interface SelfReadSyncPayload {
+	chat_type: 'private' | 'group';
+	target_id: string;
+	up_to_message_id?: string;
+}
+
+/** 会话设置同步：静音/置顶变更 */
+export interface SelfChatSettingsSyncPayload {
+	chat_type: 'private' | 'group';
+	target_id: string;
+	is_muted?: boolean;
+	is_pinned?: boolean;
+}
+
+/** 用户设置同步：隐私等全局设置变更 */
+export interface SelfSettingsUpdatedPayload {
+	settings: UserSettings;
+}
+
+/** 关系变更同步 */
+export interface SelfRelationSyncPayload {
+	action: 'follow' | 'unfollow' | 'block' | 'unblock';
+	target_user_id: string;
 }
 
 // ============ 客户端发送事件 ============
@@ -506,13 +518,18 @@ export type ServerEvent =
 	| WebSocketEvent<'GroupInviteResponse', GroupInviteResponsePayload>
 	| WebSocketEvent<'GroupApplicationReceived', GroupApplicationReceivedPayload>
 	| WebSocketEvent<'GroupApplicationResponse', GroupApplicationResponsePayload>
-	| WebSocketEvent<'GroupAnnouncementCreated', GroupAnnouncementCreatedPayload>
+	| WebSocketEvent<'GroupAnnouncementCreated', GroupAnnouncementItem>
 	| WebSocketEvent<'GroupUpdated', GroupUpdatedPayload>
 	| WebSocketEvent<'GroupDismissed', GroupDismissedPayload>
 	| WebSocketEvent<'AccountBanned', AccountBannedPayload>
 	| WebSocketEvent<'Error', ErrorPayload>
 	| WebSocketEvent<'SubscribeAck', SubscribeAckPayload>
-	| WebSocketEvent<'SubscriptionsSnapshot', SubscriptionsSnapshotPayload>;
+	| WebSocketEvent<'SubscriptionsSnapshot', SubscriptionsSnapshotPayload>
+	// 多端同步（⏳ 延期实现）
+	| WebSocketEvent<'SelfReadSync', SelfReadSyncPayload>
+	| WebSocketEvent<'SelfChatSettingsSync', SelfChatSettingsSyncPayload>
+	| WebSocketEvent<'SelfSettingsUpdated', SelfSettingsUpdatedPayload>
+	| WebSocketEvent<'SelfRelationSync', SelfRelationSyncPayload>;
 
 export type ClientEvent =
 	| WebSocketEvent<'Auth', AuthPayload>
@@ -567,7 +584,7 @@ export type WebSocketEventMap = {
 	GroupInviteResponse: GroupInviteResponsePayload;
 	GroupApplicationReceived: GroupApplicationReceivedPayload;
 	GroupApplicationResponse: GroupApplicationResponsePayload;
-	GroupAnnouncementCreated: GroupAnnouncementCreatedPayload;
+	GroupAnnouncementCreated: GroupAnnouncementItem;
 	GroupUpdated: GroupUpdatedPayload;
 	GroupDismissed: GroupDismissedPayload;
 	// 系统
@@ -575,4 +592,9 @@ export type WebSocketEventMap = {
 	Error: ErrorPayload;
 	SubscribeAck: SubscribeAckPayload;
 	SubscriptionsSnapshot: SubscriptionsSnapshotPayload;
+	// 多端同步（⏳ 延期实现）
+	SelfReadSync: SelfReadSyncPayload;
+	SelfChatSettingsSync: SelfChatSettingsSyncPayload;
+	SelfSettingsUpdated: SelfSettingsUpdatedPayload;
+	SelfRelationSync: SelfRelationSyncPayload;
 };

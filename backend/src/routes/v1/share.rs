@@ -21,8 +21,7 @@ pub fn token_required_routes() -> Router<AppState> {
         .route("/create", post(share::create_share))
         .route("/revoke", post(share::revoke_share));
 
-    // /me 子路由
-    let me_routes = Router::new().route("/list", post(share::my_shares));
+    let me_routes = Router::new().route("/list", post(share::list_my_shares));
 
     main_routes.nest("/me", me_routes)
 }

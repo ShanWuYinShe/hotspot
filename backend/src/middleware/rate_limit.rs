@@ -2,7 +2,12 @@ use axum::{extract::Request, extract::State, middleware::Next, response::Respons
 use std::net::IpAddr;
 use std::str::FromStr;
 
-use crate::{error::AppError, state::AppState, utils::cache::CacheManager};
+use crate::{
+    constants::{SECS_10_MINUTES, SECS_5_MINUTES, SECS_PER_DAY, SECS_PER_HOUR, SECS_PER_MINUTE},
+    error::AppError,
+    state::AppState,
+    utils::cache::CacheManager,
+};
 
 async fn apply_limit(
     cache: &CacheManager,
@@ -58,9 +63,9 @@ async fn apply_limit(
         );
 
         return Err(match window_secs {
-            60 => AppError::MinuteRateLimitExceeded,
-            3600 => AppError::HourlyRateLimitExceeded,
-            86400 => AppError::DailyRateLimitExceeded,
+            crate::constants::SECS_PER_MINUTE => AppError::MinuteRateLimitExceeded,
+            crate::constants::SECS_PER_HOUR => AppError::HourlyRateLimitExceeded,
+            SECS_PER_DAY => AppError::DailyRateLimitExceeded,
             _ => AppError::RateLimited("请求过于频繁，请稍后再试".to_string()),
         });
     }
@@ -73,12 +78,33 @@ fn parse_ip(s: &str) -> Option<IpAddr> {
     IpAddr::from_str(ip).ok()
 }
 
+fn is_private_ip(ip: &IpAddr) -> bool {
+    match ip {
+        IpAddr::V4(v4) => {
+            let octets = v4.octets();
+            octets[0] == 10 // 10.0.0.0/8
+                || (octets[0] == 172 && (16..=31).contains(&octets[1])) // 172.16.0.0/12
+                || (octets[0] == 192 && octets[1] == 168) // 192.168.0.0/16
+        }
+        IpAddr::V6(v6) => v6.is_loopback() || v6.is_unicast_link_local(),
+    }
+}
+
 fn parse_x_forwarded_for(v: &str) -> Option<IpAddr> {
-    // X-Forwarded-For: client, proxy1, proxy2
-    let first = v.split(',').next()?.trim();
-    // 兼容 "ip:port"
-    let ip_part = first.split(':').next().unwrap_or(first);
-    parse_ip(ip_part)
+    // X-Forwarded-For: client, proxy1, proxy2 — spec: take first non-private IP
+    for part in v.split(',') {
+        let part = part.trim();
+        let ip_part = part.split(':').next().unwrap_or(part);
+        if let Some(ip) = parse_ip(ip_part) {
+            if !is_private_ip(&ip) {
+                return Some(ip);
+            }
+        }
+    }
+    v.split(',').next().and_then(|first| {
+        let ip_part = first.trim().split(':').next().unwrap_or(first.trim());
+        parse_ip(ip_part)
+    })
 }
 
 fn parse_forwarded(v: &str) -> Option<IpAddr> {
@@ -102,8 +128,18 @@ fn parse_forwarded(v: &str) -> Option<IpAddr> {
 }
 
 fn get_client_ip(req: &Request) -> String {
-    // 优先使用 Nginx 反代注入的真实 IP（你当前部署模型下更准确）
+    // Spec (api_spec_base): CF-Connecting-IP > X-Real-IP > X-Forwarded-For > TCP (dev only)
     // 注意：如果未来服务直接暴露公网，应只在“可信反代”场景下信任这些 header
+    if let Some(v) = req
+        .headers()
+        .get("CF-Connecting-IP")
+        .and_then(|v| v.to_str().ok())
+    {
+        if let Some(ip) = parse_ip(v) {
+            return ip.to_string();
+        }
+    }
+
     if let Some(v) = req.headers().get("x-real-ip").and_then(|v| v.to_str().ok()) {
         if let Some(ip) = parse_ip(v) {
             return ip.to_string();
@@ -190,7 +226,7 @@ pub async fn rate_limit_middleware(
 
     if ip_count == 1 {
         // 设置过期时间（1小时）
-        let _ = cache.expire(&ip_key, 3600).await;
+        let _ = cache.expire(&ip_key, SECS_PER_HOUR).await;
     }
 
     let ip_limit = get_limit("ip_per_hour", state.config.rate_limit_ip_per_hour).await;
@@ -220,7 +256,7 @@ pub async fn rate_limit_middleware(
         }) as u32;
 
         if user_count_5min == 1 {
-            let _ = cache.expire(&user_key_5min, 300).await; // 5 分钟 = 300 秒
+            let _ = cache.expire(&user_key_5min, SECS_5_MINUTES).await;
         }
 
         let user_limit_5min = get_limit(
@@ -235,7 +271,7 @@ pub async fn rate_limit_middleware(
                 client_ip = %client_ip,
                 current_count = user_count_5min,
                 limit = user_limit_5min,
-                window_seconds = 300,
+                window_seconds = SECS_5_MINUTES,
                 path = req.uri().path(),
                 "User rate limit exceeded (5 minutes window)"
             );
@@ -256,7 +292,7 @@ pub async fn rate_limit_middleware(
         }) as u32;
 
         if user_count_hour == 1 {
-            let _ = cache.expire(&user_key_hour, 3600).await; // 1 小时 = 3600 秒
+            let _ = cache.expire(&user_key_hour, SECS_PER_HOUR).await;
         }
 
         let user_limit_hour =
@@ -268,7 +304,7 @@ pub async fn rate_limit_middleware(
                 client_ip = %client_ip,
                 current_count = user_count_hour,
                 limit = user_limit_hour,
-                window_seconds = 3600,
+                window_seconds = SECS_PER_HOUR,
                 path = req.uri().path(),
                 "User rate limit exceeded (hourly window)"
             );
@@ -282,7 +318,7 @@ pub async fn rate_limit_middleware(
     match (method, path) {
         ("POST", "/api/v1/auth/register") => {
             let limit = get_limit(
-                "register_per_10minutes",
+                "auth_register_per_10minutes",
                 state.config.rate_limit_register_per_10minutes,
             )
             .await;
@@ -291,14 +327,14 @@ pub async fn rate_limit_middleware(
                 "auth:register:ip",
                 &client_ip,
                 limit,
-                600,
+                SECS_10_MINUTES,
                 state.config.rate_limit_fail_open,
             )
             .await?;
         }
         ("POST", "/api/v1/auth/login") => {
             let limit = get_limit(
-                "login_per_10minutes",
+                "auth_login_per_10minutes",
                 state.config.rate_limit_login_per_10minutes,
             )
             .await;
@@ -307,7 +343,7 @@ pub async fn rate_limit_middleware(
                 "auth:login:ip",
                 &client_ip,
                 limit,
-                600,
+                SECS_10_MINUTES,
                 state.config.rate_limit_fail_open,
             )
             .await?;
@@ -323,7 +359,7 @@ pub async fn rate_limit_middleware(
                 "auth:guest:ip",
                 &client_ip,
                 limit,
-                600,
+                SECS_10_MINUTES,
                 state.config.rate_limit_fail_open,
             )
             .await?;
@@ -339,7 +375,7 @@ pub async fn rate_limit_middleware(
                 "auth:refresh:ip",
                 &client_ip,
                 limit,
-                600,
+                SECS_10_MINUTES,
                 state.config.rate_limit_fail_open,
             )
             .await?;
@@ -356,7 +392,7 @@ pub async fn rate_limit_middleware(
                     "moments:create:user",
                     &uid.to_string(),
                     limit,
-                    60,
+                    SECS_PER_MINUTE,
                     state.config.rate_limit_fail_open,
                 )
                 .await?;
@@ -374,7 +410,7 @@ pub async fn rate_limit_middleware(
                     "comments:create:user",
                     &uid.to_string(),
                     limit,
-                    60,
+                    SECS_PER_MINUTE,
                     state.config.rate_limit_fail_open,
                 )
                 .await?;
@@ -394,7 +430,7 @@ pub async fn rate_limit_middleware(
                 "reports:create",
                 &identity,
                 limit,
-                3600,
+                SECS_PER_HOUR,
                 state.config.rate_limit_fail_open,
             )
             .await?;

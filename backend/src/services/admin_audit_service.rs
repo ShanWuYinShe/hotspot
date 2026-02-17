@@ -1,15 +1,11 @@
 use chrono::{DateTime, Utc};
 use serde_json::{Map, Value};
 use std::collections::HashMap;
-use uuid::Uuid;
 
 use crate::{
     dto::{
         request::{AuditLogDetailRequest, AuditLogListRequest},
-        response::{
-            AdminBanRecord, AdminDismissalRecord, AuditLogDetail, AuditLogItem, PaginatedData,
-            UserInfo,
-        },
+        response::{AdminBanRecord, AuditLogDetail, AuditLogItem, PaginatedData, UserInfo},
     },
     error::{AppError, Result},
     repositories::{
@@ -20,7 +16,7 @@ use crate::{
     utils::validation::Validator,
 };
 
-const ALLOWED_AUDIT_ACTIONS: [&str; 14] = [
+const ALLOWED_AUDIT_ACTIONS: [&str; 15] = [
     "user.ban",
     "user.unban",
     "group.dismiss",
@@ -35,8 +31,10 @@ const ALLOWED_AUDIT_ACTIONS: [&str; 14] = [
     "permission.grant",
     "permission.revoke",
     "config.update",
+    "tag.delete",
 ];
-const ALLOWED_AUDIT_TARGET_TYPES: [&str; 5] = ["user", "group", "announcement", "role", "config"];
+const ALLOWED_AUDIT_TARGET_TYPES: [&str; 6] =
+    ["user", "group", "announcement", "role", "config", "tag"];
 
 #[derive(Debug, Clone)]
 pub struct AuditLogInput {
@@ -50,6 +48,50 @@ pub struct AuditLogInput {
     pub after_state: Option<Value>,
     pub ip_address: Option<String>,
     pub user_agent: Option<String>,
+}
+
+impl AuditLogInput {
+    /// 构建针对用户操作的审计日志输入
+    pub fn user_action(
+        operator_id: i64,
+        action: &str,
+        target_user_id: i64,
+        details: Option<Value>,
+    ) -> Self {
+        Self {
+            action: action.to_string(),
+            operator_id,
+            target_type: "user".to_string(),
+            target_id: target_user_id.to_string(),
+            target_name: None,
+            details,
+            before_state: None,
+            after_state: None,
+            ip_address: None,
+            user_agent: None,
+        }
+    }
+
+    /// 构建针对群组操作的审计日志输入
+    pub fn group_action(
+        operator_id: i64,
+        action: &str,
+        group_id: impl std::fmt::Display,
+        details: Option<Value>,
+    ) -> Self {
+        Self {
+            action: action.to_string(),
+            operator_id,
+            target_type: "group".to_string(),
+            target_id: group_id.to_string(),
+            target_name: None,
+            details,
+            before_state: None,
+            after_state: None,
+            ip_address: None,
+            user_agent: None,
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -92,11 +134,16 @@ impl AdminAuditService {
     pub async fn list_logs(&self, req: AuditLogListRequest) -> Result<PaginatedData<AuditLogItem>> {
         validate_action(&req.action)?;
         validate_target_type(&req.target_type)?;
-        let limit = Validator::validate_limit(req.limit, 100)? as i64;
-        let cursor = Validator::parse_cursor(req.cursor.as_deref())?;
+        let limit = Validator::validate_limit(req.limit, crate::constants::MAX_PAGE_LIMIT)? as i64;
+        let cursor = req.cursor.clone();
+        let operator_id_filter = req
+            .operator_id
+            .as_ref()
+            .map(|id| Validator::parse_user_id(id))
+            .transpose()?;
         let filter = AuditLogFilter {
             action: req.action,
-            operator_id: req.operator_id,
+            operator_id: operator_id_filter,
             target_type: req.target_type,
             target_id: req.target_id,
             start_time: parse_time(req.start_time.as_deref(), "start_time")?,
@@ -106,15 +153,11 @@ impl AdminAuditService {
         let (rows, next_cursor) = self.repo.list_logs(filter, limit, cursor).await?;
         let items = self.map_rows_to_items(rows).await?;
 
-        Ok(PaginatedData {
-            items,
-            next_cursor,
-        })
+        Ok(PaginatedData { items, next_cursor })
     }
 
     pub async fn get_detail(&self, req: AuditLogDetailRequest) -> Result<AuditLogDetail> {
-        let log_id = Uuid::parse_str(&req.log_id)
-            .map_err(|_| AppError::InvalidFormat("log_id 格式错误".to_string()))?;
+        let log_id = Validator::parse_uuid(&req.log_id, "log_id")?;
         let row = self
             .repo
             .get_detail(log_id)
@@ -182,34 +225,6 @@ impl AdminAuditService {
         Ok(Some(records))
     }
 
-    pub async fn get_group_dismissal_history(
-        &self,
-        group_id: &str,
-    ) -> Result<Option<Vec<AdminDismissalRecord>>> {
-        let rows = self.repo.list_group_dismiss_logs(group_id).await?;
-        if rows.is_empty() {
-            return Ok(None);
-        }
-
-        let operator_ids: Vec<i64> = rows.iter().map(|r| r.operator_id).collect();
-        let operator_map = self.get_operator_map(&operator_ids).await;
-
-        let mut records = Vec::new();
-        for row in rows {
-            let operator = operator_map
-                .get(&row.operator_id)
-                .cloned()
-                .unwrap_or_else(|| fallback_user(row.operator_id));
-            records.push(AdminDismissalRecord {
-                dismissed_at: row.created_at.to_rfc3339(),
-                dismissed_by: operator,
-                reason: extract_reason(&row.details),
-            });
-        }
-
-        Ok(Some(records))
-    }
-
     async fn map_rows_to_items(&self, rows: Vec<AuditLogRow>) -> Result<Vec<AuditLogItem>> {
         let operator_ids: Vec<i64> = rows.iter().map(|r| r.operator_id).collect();
         let operator_map = self.get_operator_map(&operator_ids).await;
@@ -248,11 +263,11 @@ impl AdminAuditService {
                 .await;
             map.insert(
                 profile.user_id,
-                UserInfo {
-                    user_id: profile.user_id,
-                    nickname: profile.nickname.unwrap_or_default(),
+                UserInfo::new(
+                    profile.user_id,
+                    profile.nickname.unwrap_or_default(),
                     avatar_url,
-                },
+                ),
             );
         }
         map
@@ -275,11 +290,7 @@ fn parse_time(input: Option<&str>, field: &str) -> Result<Option<DateTime<Utc>>>
 }
 
 fn fallback_user(user_id: i64) -> UserInfo {
-    UserInfo {
-        user_id,
-        nickname: "未知用户".to_string(),
-        avatar_url: None,
-    }
+    UserInfo::new(user_id, crate::constants::UNKNOWN_USER_NICKNAME, None)
 }
 
 fn redact_optional(value: Option<Value>) -> Option<Value> {

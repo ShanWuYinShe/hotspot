@@ -13,11 +13,12 @@ CREATE EXTENSION IF NOT EXISTS "btree_gist";
 -- ─── 枚举类型 ──────────────────────────────────────────────
 
 -- 用户
-CREATE TYPE user_type AS ENUM ('temp', 'normal', 'admin', 'system');
+CREATE TYPE user_type AS ENUM ('temp', 'normal');
 CREATE TYPE user_status AS ENUM ('normal', 'banned');
+CREATE TYPE user_gender AS ENUM ('male', 'female', 'apache_helicopter');
 
 -- 隐私
-CREATE TYPE privacy_level AS ENUM ('public', 'friends', 'private');
+CREATE TYPE privacy_level AS ENUM ('public', 'private');
 
 -- 互动
 CREATE TYPE reaction_type AS ENUM ('like', 'love', 'laugh', 'angry', 'sad', 'wow');
@@ -41,7 +42,7 @@ CREATE TYPE report_handle_action AS ENUM ('resolve', 'dismiss', 'escalate');
 CREATE TYPE announcement_severity AS ENUM ('info', 'warning', 'error');
 
 -- 分享
-CREATE TYPE share_type AS ENUM ('user', 'group', 'moment', 'reference_point');
+CREATE TYPE share_type AS ENUM ('user', 'group', 'moment', 'location');
 
 -- 媒体
 CREATE TYPE upload_status AS ENUM ('pending', 'processing', 'completed', 'failed');
@@ -59,8 +60,8 @@ CREATE TYPE member_action AS ENUM ('join', 'leave', 'removed', 'banned', 'role_c
 -- 验证码类型
 CREATE TYPE verification_code_type AS ENUM ('register', 'reset_password', 'change_phone', 'login');
 
--- 不可发消息原因（应用层使用，非列类型）
-CREATE TYPE cant_message_reason AS ENUM ('blocked', 'privacy', 'stranger_limit', 'account_suspended');
+-- 不可发消息原因（应用层使用，非列类型；被拉黑场景统一用 'privacy'，不暴露拉黑状态）
+CREATE TYPE cant_message_reason AS ENUM ('privacy', 'stranger_limit', 'account_suspended');
 
 -- ─── 工具函数 ──────────────────────────────────────────────
 

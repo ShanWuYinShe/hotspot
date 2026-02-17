@@ -30,7 +30,7 @@
 </script>
 
 <div class="{containerClass} {className}">
-	{#each Array(count) as _}
+	{#each Array(count) as _, i (i)}
 		<Card class="border-0 bg-card/50">
 			<CardContent class="p-6">
 				{#if type === 'user'}

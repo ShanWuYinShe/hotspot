@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { adminUsersService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
+	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
@@ -21,50 +21,40 @@
 	import Shield from 'lucide-svelte/icons/shield';
 	import Users from 'lucide-svelte/icons/users';
 
+	// ============ 分页 ============
+
 	type AdminUserItem = UserItem & { status: 'normal' | 'banned' };
 
-	let users = $state.raw<AdminUserItem[]>([]);
-	let isLoading = $state(true);
-	let cursor = $state<string | undefined>(undefined);
-	let hasMore = $state(false);
+	const pagination = usePagination<AdminUserItem>({
+		uniqueKey: (item) => item.user.user_id
+	});
+
 	let nickname = $state('');
 
-	async function loadUsers(append = false) {
-		if (!append) isLoading = true;
-		try {
-			const response = append
-				? await adminUsersService.search({
-						nickname: nickname || undefined,
-						pagination: { limit: 20, cursor }
-					})
-				: await withMinimumLoadingTime(() =>
-						adminUsersService.search({
-							nickname: nickname || undefined,
-							pagination: { limit: 20, cursor: undefined }
-						})
-					);
-
-			if (isSuccess(response) && response.data) {
-				if (append) {
-					users = [...users, ...response.data.items];
-				} else {
-					users = response.data.items;
-				}
-				cursor = response.data.next_cursor;
-				hasMore = !!response.data.next_cursor;
-			}
-		} catch {
-			toast.error('加载失败');
-		} finally {
-			isLoading = false;
-		}
+	function loadUsers(refresh = true) {
+		pagination.load(
+			(cursor) =>
+				adminUsersService.search({
+					nickname: nickname || undefined,
+					pagination: { limit: 20, cursor }
+				}),
+			refresh
+		);
 	}
+
+	$effect(() => {
+		if (pagination.error) toast.error(pagination.error);
+	});
+
+	// ============ 操作 ============
 
 	async function handleBan(userId: string) {
 		try {
 			const response = await adminUsersService.ban({ user_id: userId, reason: '违规操作' });
 			if (isSuccess(response)) {
-				users = users.map(u => u.user.user_id === userId ? { ...u, status: 'banned' } : u);
+				pagination.updateItem((u) =>
+					u.user.user_id === userId ? { ...u, status: 'banned' as const } : null
+				);
 				toast.success('已封禁');
 			} else {
 				toast.error(response.message || '操作失败');
@@ -78,7 +68,9 @@
 		try {
 			const response = await adminUsersService.unban({ user_id: userId });
 			if (isSuccess(response)) {
-				users = users.map(u => u.user.user_id === userId ? { ...u, status: 'normal' } : u);
+				pagination.updateItem((u) =>
+					u.user.user_id === userId ? { ...u, status: 'normal' as const } : null
+				);
 				toast.success('已解封');
 			} else {
 				toast.error(response.message || '操作失败');
@@ -88,16 +80,14 @@
 		}
 	}
 
-	function getStatusBadge(status: string) {
-		switch (status) {
-			case 'normal':
-				return { variant: 'default' as const, text: '正常' };
-			case 'banned':
-				return { variant: 'destructive' as const, text: '已封禁' };
-			default:
-				return { variant: 'outline' as const, text: status };
-		}
-	}
+	// ============ 常量 ============
+
+	type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
+
+	const USER_STATUS_BADGE: Record<string, { variant: BadgeVariant; text: string }> = {
+		normal: { variant: 'default', text: '正常' },
+		banned: { variant: 'destructive', text: '已封禁' }
+	};
 
 	onMount(() => {
 		loadUsers();
@@ -111,8 +101,8 @@
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
 		<h1 class="text-2xl font-bold">用户管理</h1>
-		<Button variant="outline" size="sm" onclick={() => loadUsers()} disabled={isLoading}>
-			<RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
+		<Button variant="outline" size="sm" onclick={() => loadUsers()} disabled={pagination.loading}>
+			<RefreshCw class="mr-2 h-4 w-4 {pagination.loading ? 'animate-spin' : ''}" />
 			刷新
 		</Button>
 	</div>
@@ -142,9 +132,9 @@
 			</CardTitle>
 		</CardHeader>
 		<CardContent>
-			{#if isLoading && users.length === 0}
+			{#if pagination.loading && pagination.items.length === 0}
 				<div class="space-y-4">
-					{#each Array(5) as _}
+					{#each Array(5) as _, i (i)}
 						<div class="flex items-center gap-4">
 							<Skeleton class="h-10 w-10 rounded-full" />
 							<div class="flex-1 space-y-2">
@@ -155,11 +145,12 @@
 						</div>
 					{/each}
 				</div>
-			{:else if users.length === 0}
+			{:else if pagination.items.length === 0}
 				<div class="py-8 text-center text-muted-foreground">暂无用户数据</div>
 			{:else}
 				<div class="divide-y">
-					{#each users as user (user.user.user_id)}
+					{#each pagination.items as user (user.user.user_id)}
+						{@const badge = USER_STATUS_BADGE[user.status] ?? { variant: 'outline' as const, text: user.status }}
 						<div class="flex items-center gap-4 py-4">
 							<Avatar class="h-10 w-10">
 								<AvatarImage src={user.user.avatar_url} alt={user.user.nickname} />
@@ -173,8 +164,8 @@
 									<span>ID: {user.user.user_id}</span>
 								</div>
 							</div>
-							<Badge variant={getStatusBadge(user.status).variant}>
-								{getStatusBadge(user.status).text}
+							<Badge variant={badge.variant}>
+								{badge.text}
 							</Badge>
 							<DropdownMenu.Root>
 								<DropdownMenu.Trigger>
@@ -227,11 +218,11 @@
 					{/each}
 				</div>
 
-				{#if hasMore}
-					<Button variant="outline" class="mt-4 w-full" onclick={() => loadUsers(true)}>
-						加载更多
-					</Button>
-				{/if}
+			{#if pagination.hasMore}
+				<Button variant="outline" class="mt-4 w-full" onclick={() => loadUsers(false)}>
+					加载更多
+				</Button>
+			{/if}
 			{/if}
 		</CardContent>
 	</Card>

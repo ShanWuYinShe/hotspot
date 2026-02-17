@@ -3,7 +3,7 @@ use axum::{extract::State, Json};
 use crate::{
     dto::{
         request::MapRenderRequest,
-        response::{ApiResponse, MapRenderData},
+        response::{ApiResponse, MapCanvas},
     },
     error::Result,
     middleware::auth::OptionalAuthenticatedUser,
@@ -15,28 +15,21 @@ pub async fn render(
     State(state): State<AppState>,
     user: OptionalAuthenticatedUser,
     Json(req): Json<MapRenderRequest>,
-) -> Result<Json<ApiResponse<MapRenderData>>> {
-    let only_friends = req
+) -> Result<Json<ApiResponse<MapCanvas>>> {
+    // spec: only_friends "仅登录态生效"
+    // - 未登录：忽略 only_friends（按匿名可见范围渲染）
+    // - 已登录：only_friends=true 时启用社交筛选
+    let social_filter_user_id = req
         .filter
         .as_ref()
         .and_then(|f| f.only_friends)
-        .unwrap_or(false);
+        .filter(|&b| b)
+        .and_then(|_| user.user_id);
 
-    // spec: only_friends “仅登录态生效”
-    // - 未登录：忽略 only_friends（按匿名可见范围渲染）
-    // - 已登录：only_friends=true 时启用社交筛选
-    let data = if only_friends {
-        if let Some(user_id) = user.user_id {
-            state
-                .map_service
-                .render_map_with_social_filter(user_id, req)
-                .await?
-        } else {
-            state.map_service.render_map(req).await?
-        }
-    } else {
-        state.map_service.render_map(req).await?
-    };
+    let data = state
+        .map_service
+        .render_map(req, social_filter_user_id)
+        .await?;
     Ok(Json(ApiResponse::success(data)))
 }
 

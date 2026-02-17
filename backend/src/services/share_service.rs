@@ -3,95 +3,127 @@
 //! 负责分享的业务逻辑
 
 use crate::dto::request::{
-    CreateShareRequest, GetShareRequest, MySharesRequest, RevokeShareRequest,
+    CreateShareRequest, GetShareRequest, RevokeShareRequest, ShareListRequest,
 };
-use crate::dto::response::{PaginatedData, Share, UserInfo};
+use crate::dto::response::{
+    PaginatedData, ShareCreated, ShareDetail, ShareListItem, SharePreview, UserInfo,
+};
 use crate::error::AppError;
-use crate::repositories::share_repo::ShareRepository;
-use crate::types::enums::{ShareType, UserType};
-use crate::utils::{id_gen, validation::Validator};
+use crate::repositories::{
+    group_repo::GroupRepository,
+    moment_repo::{MomentPreview, MomentRepository},
+    share_repo::{ShareListRow, ShareRepository},
+    user_repo::UserRepository,
+};
+use crate::services::media_service::MediaService;
+use crate::types::enums::ShareType;
+use crate::utils::{
+    id_gen,
+    pagination::{decode_cursor, encode_cursor, paginate_with_limit_plus_one},
+    validation::Validator,
+};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
+use std::{collections::HashMap, sync::Arc};
 use uuid::Uuid;
 
-pub struct ShareService;
+#[derive(Clone)]
+pub struct ShareService {
+    db: PgPool,
+    media_service: Arc<MediaService>,
+}
 
 impl ShareService {
+    pub fn new(db: PgPool, media_service: Arc<MediaService>) -> Self {
+        Self { db, media_service }
+    }
+
     /// 创建分享
     pub async fn create_share(
-        pool: &PgPool,
+        &self,
         user_id: i64,
         req: CreateShareRequest,
-    ) -> Result<Share, AppError> {
-        // 验证 payload
+    ) -> Result<ShareCreated, AppError> {
+        // 验证 payload 格式
         Self::validate_payload(&req.share_type, &req.payload)?;
 
+        // 验证目标资源是否存在
+        Self::verify_share_target(&self.db, &req.share_type, &req.payload).await?;
+
+        // 计算过期时间（expires_in_seconds 须为正整数且不超过系统允许上限）
+        const MAX_EXPIRES_SECONDS: u32 = 86400 * 365; // 1 年
+        let expires_at = if let Some(secs) = req.expires_in_seconds {
+            if secs == 0 {
+                return Err(AppError::OutOfRange(
+                    "expires_in_seconds 须为正整数".to_string(),
+                ));
+            }
+            if secs > MAX_EXPIRES_SECONDS {
+                return Err(AppError::OutOfRange(
+                    "expires_in_seconds 超过系统允许上限".to_string(),
+                ));
+            }
+            Some(chrono::Utc::now() + chrono::Duration::seconds(secs as i64))
+        } else {
+            None
+        };
+
         // 生成唯一的分享码
-        let share_code = Self::generate_unique_share_code(pool).await?;
+        let share_code = Self::generate_unique_share_code(&self.db).await?;
 
         // 创建分享
         let share_id = ShareRepository::create(
-            pool,
+            &self.db,
             &share_code,
             req.share_type.as_str(),
             user_id,
             &req.payload,
+            expires_at,
         )
         .await?;
 
-        // 获取创建者信息
-        let creator = sqlx::query!(
-            r#"
-            SELECT user_id, nickname, avatar_url, user_type as "user_type: UserType"
-            FROM users
-            WHERE user_id = $1 AND status = 'active'::user_status
-            "#,
-            user_id
-        )
-        .fetch_optional(pool)
-        .await
-        .map_err(|e| AppError::internal(e.to_string()))?
-        .ok_or(AppError::NotFound("用户不存在".to_string()))
-        .map(|row| UserInfo {
-            user_id: row.user_id,
-            nickname: row.nickname.unwrap_or_else(|| "未知用户".to_string()),
-            avatar_url: row.avatar_url,
-        })?;
-
-        Ok(Share {
+        Ok(ShareCreated {
             share_id: share_id.to_string(),
             share_code,
-            share_type: req.share_type,
-            creator,
-            payload: req.payload,
-            created_at: chrono::Utc::now().to_rfc3339(),
+            expires_at: expires_at.map(|t| t.to_rfc3339()),
         })
     }
 
     /// 获取分享详情
-    pub async fn get_share(pool: &PgPool, req: GetShareRequest) -> Result<Share, AppError> {
+    pub async fn get_share(&self, req: GetShareRequest) -> Result<ShareDetail, AppError> {
         // 获取分享
-        let db_share = ShareRepository::get_by_code(pool, &req.share_code)
+        let db_share = ShareRepository::get_by_code(&self.db, &req.share_code)
             .await?
             .ok_or(AppError::NotFound("分享不存在或已删除".to_string()))?;
 
         // 获取创建者信息
-        let creator = sqlx::query!(
+        let creator_row = sqlx::query!(
             r#"
-            SELECT user_id, nickname, avatar_url, user_type as "user_type: UserType"
+            SELECT user_id, nickname, avatar_url
             FROM users
-            WHERE user_id = $1 AND status = 'active'::user_status
+            WHERE user_id = $1 AND status != 'banned' AND deleted_at IS NULL
             "#,
             db_share.creator_id
         )
-        .fetch_optional(pool)
+        .fetch_optional(&self.db)
         .await
         .map_err(|e| AppError::internal(e.to_string()))?
-        .ok_or(AppError::NotFound("用户不存在".to_string()))
-        .map(|row| UserInfo {
-            user_id: row.user_id,
-            nickname: row.nickname.unwrap_or_else(|| "未知用户".to_string()),
-            avatar_url: row.avatar_url,
-        })?;
+        .ok_or(AppError::NotFound("用户不存在".to_string()))?;
+
+        let creator = {
+            let avatar_url = self
+                .media_service
+                .sign_url_if_path(creator_row.avatar_url.as_deref())
+                .await;
+            UserInfo::new(
+                creator_row.user_id,
+                creator_row
+                    .nickname
+                    .unwrap_or_else(|| crate::constants::UNKNOWN_USER_NICKNAME.to_string()),
+                avatar_url,
+            )
+        };
 
         // 解析 share_type
         let share_type = db_share
@@ -99,26 +131,31 @@ impl ShareService {
             .parse::<ShareType>()
             .map_err(|_| AppError::NotFound("无效的分享类型".to_string()))?;
 
-        Ok(Share {
+        let share_base = crate::dto::response::ShareBase {
             share_id: db_share.share_id.to_string(),
             share_code: db_share.share_code,
             share_type,
             creator,
-            payload: db_share.payload,
             created_at: db_share.created_at.to_rfc3339(),
+            expires_at: db_share.expires_at.map(|t| t.to_rfc3339()),
+        };
+
+        Ok(crate::dto::response::ShareDetail {
+            share: share_base,
+            payload: db_share.payload,
+            preview: None, // 已撤销、已过期或目标不可访问时不返回 preview
         })
     }
 
     /// 撤销分享（按 share_id）
     pub async fn revoke_share(
-        pool: &PgPool,
+        &self,
         user_id: i64,
         req: RevokeShareRequest,
     ) -> Result<(), AppError> {
-        let share_id = Uuid::parse_str(&req.share_id)
-            .map_err(|_| AppError::BadRequest("无效的 share_id".to_string()))?;
+        let share_id = Validator::parse_uuid(&req.share_id, "share_id")?;
 
-        let share = ShareRepository::get_by_id(pool, share_id)
+        let share = ShareRepository::get_by_id(&self.db, share_id)
             .await?
             .ok_or(AppError::NotFound("分享不存在或已删除".to_string()))?;
 
@@ -126,68 +163,230 @@ impl ShareService {
             return Err(AppError::Forbidden("无权撤销他人的分享".to_string()));
         }
 
-        ShareRepository::revoke_by_id(pool, share_id)
+        if share.is_revoked {
+            return Ok(());
+        }
+
+        ShareRepository::revoke_by_id(&self.db, share_id)
             .await
             .map_err(|e| AppError::internal(e.to_string()))?;
 
         Ok(())
     }
 
-    /// 我的分享列表（分页）
-    pub async fn my_shares(
-        pool: &PgPool,
+    /// 获取当前用户的分享列表
+    pub async fn list_my_shares(
+        &self,
         user_id: i64,
-        req: MySharesRequest,
-    ) -> Result<PaginatedData<Share>, AppError> {
-        let limit = Validator::validate_limit(req.limit, 50)? as i64;
+        req: ShareListRequest,
+    ) -> Result<PaginatedData<ShareListItem>, AppError> {
+        let limit =
+            Validator::validate_limit(req.pagination.as_ref().and_then(|p| p.limit), 100)? as i32;
+        let cursor_val = req
+            .pagination
+            .as_ref()
+            .and_then(|p| p.cursor.as_deref())
+            .map(decode_cursor::<ShareListCursor>)
+            .transpose()?;
 
-        let (rows, next_cursor) =
-            ShareRepository::list_by_creator(pool, user_id, limit, req.cursor.as_deref())
-                .await
-                .map_err(|e| AppError::internal(e.to_string()))?;
+        let share_type_filter = req.share_type.map(|ty| ty.to_string());
+        let rows = ShareRepository::list_by_creator(
+            &self.db,
+            user_id,
+            share_type_filter.as_deref(),
+            cursor_val.map(|c| (c.created_at, c.share_id)),
+            (limit + 1) as i64,
+        )
+        .await?;
 
-        let mut items = Vec::with_capacity(rows.len());
+        let encode_cursor_fn = |row: &ShareListRow| -> Result<String, AppError> {
+            encode_cursor(&ShareListCursor {
+                created_at: row.created_at,
+                share_id: row.share_id,
+            })
+        };
+
+        let (rows, next_cursor) = paginate_with_limit_plus_one(rows, limit, encode_cursor_fn)?;
+
+        let mut share_records = Vec::with_capacity(rows.len());
+        let mut moment_targets: HashMap<Uuid, Uuid> = HashMap::new();
+        let mut moment_ids = Vec::new();
+        let mut user_targets: HashMap<Uuid, i64> = HashMap::new();
+        let mut user_ids = Vec::new();
+        let mut group_targets: HashMap<Uuid, i64> = HashMap::new();
+        let mut group_ids = Vec::new();
+        let mut location_previews: HashMap<Uuid, SharePreview> = HashMap::new();
+
         for row in rows {
-            let creator_row = sqlx::query!(
-                r#"
-                SELECT user_id, nickname, avatar_url, user_type as "user_type: UserType"
-                FROM users
-                WHERE user_id = $1 AND status = 'active'::user_status
-                "#,
-                row.creator_id
-            )
-            .fetch_optional(pool)
-            .await
-            .map_err(|e| AppError::internal(e.to_string()))?
-            .ok_or(AppError::NotFound("用户不存在".to_string()))?;
-
-            let creator = UserInfo {
-                user_id: creator_row.user_id,
-                nickname: creator_row
-                    .nickname
-                    .unwrap_or_else(|| "未知用户".to_string()),
-                avatar_url: creator_row.avatar_url,
-            };
-
             let share_type = row
                 .share_type
                 .parse::<ShareType>()
-                .map_err(|_| AppError::NotFound("无效的分享类型".to_string()))?;
+                .map_err(|_| AppError::InvalidFormat("share_type 数据损坏".to_string()))?;
 
-            items.push(Share {
+            match share_type {
+                ShareType::Moment => {
+                    if let Some(moment_id) = row
+                        .payload
+                        .get("shared_moment_id")
+                        .and_then(|v| v.as_str())
+                        .and_then(|s| Uuid::parse_str(s).ok())
+                    {
+                        if moment_targets.insert(row.share_id, moment_id).is_none() {
+                            moment_ids.push(moment_id);
+                        }
+                    }
+                }
+                ShareType::User => {
+                    if let Some(user_id_str) = row
+                        .payload
+                        .get("shared_user_id")
+                        .and_then(|v| v.as_str())
+                        .and_then(|s| s.parse::<i64>().ok())
+                    {
+                        if user_targets.insert(row.share_id, user_id_str).is_none() {
+                            user_ids.push(user_id_str);
+                        }
+                    }
+                }
+                ShareType::Group => {
+                    if let Some(group_id) = row
+                        .payload
+                        .get("shared_group_id")
+                        .and_then(|v| v.as_str())
+                        .and_then(|s| s.parse::<i64>().ok())
+                    {
+                        if group_targets.insert(row.share_id, group_id).is_none() {
+                            group_ids.push(group_id);
+                        }
+                    }
+                }
+                ShareType::Location => {
+                    if let Some(preview) = Self::build_location_preview(&row.payload) {
+                        location_previews.insert(row.share_id, preview);
+                    }
+                }
+            }
+
+            share_records.push((row, share_type));
+        }
+
+        let mut moment_preview_map = HashMap::new();
+        if !moment_ids.is_empty() {
+            let moment_repo = MomentRepository::new(self.db.clone());
+            let previews = moment_repo.get_previews(&moment_ids).await?;
+            for (share_id, moment_id) in &moment_targets {
+                if let Some(data) = previews.get(moment_id) {
+                    moment_preview_map.insert(*share_id, Self::build_moment_preview(data));
+                }
+            }
+        }
+
+        let mut user_preview_map = HashMap::new();
+        if !user_ids.is_empty() {
+            let user_repo = UserRepository::new(self.db.clone());
+            let profiles = user_repo.find_profiles(&user_ids).await?;
+            for profile in profiles {
+                let title = profile.nickname.clone().unwrap_or_else(|| {
+                    if profile.username.is_empty() {
+                        "用户".to_string()
+                    } else {
+                        profile.username.clone()
+                    }
+                });
+                user_preview_map.insert(
+                    profile.user_id,
+                    SharePreview {
+                        title,
+                        subtitle: profile.bio.clone(),
+                        cover_url: None,
+                    },
+                );
+            }
+        }
+
+        let mut group_preview_map = HashMap::new();
+        if !group_ids.is_empty() {
+            let group_repo = GroupRepository::new(self.db.clone());
+            let groups = group_repo.list_by_ids(&group_ids).await?;
+            for group in groups {
+                group_preview_map.insert(
+                    group.group_id,
+                    SharePreview {
+                        title: group.name.clone(),
+                        subtitle: group.description.clone(),
+                        cover_url: group.avatar_url.clone(),
+                    },
+                );
+            }
+        }
+
+        let mut items = Vec::with_capacity(share_records.len());
+        for (row, share_type) in share_records {
+            let preview = match share_type {
+                ShareType::Moment => moment_preview_map.get(&row.share_id).cloned(),
+                ShareType::User => user_targets
+                    .get(&row.share_id)
+                    .and_then(|id| user_preview_map.get(id))
+                    .cloned(),
+                ShareType::Group => group_targets
+                    .get(&row.share_id)
+                    .and_then(|id| group_preview_map.get(id))
+                    .cloned(),
+                ShareType::Location => location_previews.get(&row.share_id).cloned(),
+            };
+
+            items.push(ShareListItem {
                 share_id: row.share_id.to_string(),
                 share_code: row.share_code,
                 share_type,
-                creator,
-                payload: row.payload,
                 created_at: row.created_at.to_rfc3339(),
+                expires_at: row.expires_at.map(|t| t.to_rfc3339()),
+                is_revoked: row.is_revoked,
+                preview,
             });
         }
 
-        Ok(PaginatedData {
-            items,
-            next_cursor,
+        Ok(PaginatedData { items, next_cursor })
+    }
+    fn build_moment_preview(data: &MomentPreview) -> SharePreview {
+        let title = data
+            .description
+            .as_deref()
+            .map(Self::trim_preview_text)
+            .unwrap_or_else(|| "动态分享".to_string());
+        SharePreview {
+            title,
+            subtitle: data.location_name.clone(),
+            cover_url: None,
+        }
+    }
+
+    fn build_location_preview(payload: &serde_json::Value) -> Option<SharePreview> {
+        let title = payload.get("location_name")?.as_str()?.to_string();
+        let latitude = payload.get("latitude")?.as_f64()?;
+        let longitude = payload.get("longitude")?.as_f64()?;
+        Some(SharePreview {
+            title,
+            subtitle: Some(format!("{latitude:.4}, {longitude:.4}")),
+            cover_url: None,
         })
+    }
+
+    fn trim_preview_text(text: &str) -> String {
+        const MAX_LEN: usize = 40;
+        let trimmed = text.trim();
+        if trimmed.chars().count() <= MAX_LEN {
+            return trimmed.to_string();
+        }
+        let mut shortened = String::with_capacity(MAX_LEN + 3);
+        for (idx, ch) in trimmed.chars().enumerate() {
+            if idx >= MAX_LEN {
+                break;
+            }
+            shortened.push(ch);
+        }
+        shortened.push('…');
+        shortened
     }
 
     /// 验证 payload 的有效性
@@ -196,7 +395,7 @@ impl ShareService {
         payload: &serde_json::Value,
     ) -> Result<(), AppError> {
         match share_type {
-            ShareType::ReferencePoint => {
+            ShareType::Location => {
                 // 验证位置分享的 payload
                 let latitude = payload
                     .get("latitude")
@@ -232,16 +431,93 @@ impl ShareService {
                 Ok(())
             }
             ShareType::Moment => {
-                // TODO: 验证动态分享的 payload
-                Err(AppError::NotFound("动态分享暂未实现".to_string()))
+                // 验证动态分享的 payload: 需要 shared_moment_id
+                let moment_id_str = payload
+                    .get("shared_moment_id")
+                    .and_then(|v| v.as_str())
+                    .ok_or(AppError::MissingParameter("shared_moment_id".to_string()))?;
+
+                // 验证是合法的 UUID
+                Validator::parse_uuid(moment_id_str, "shared_moment_id")?;
+
+                Ok(())
             }
             ShareType::Group => {
-                // TODO: 验证群组分享的 payload
-                Err(AppError::NotFound("群组分享暂未实现".to_string()))
+                // 验证群组分享的 payload: 需要 shared_group_id
+                let group_id_str = payload
+                    .get("shared_group_id")
+                    .and_then(|v| v.as_str())
+                    .ok_or(AppError::MissingParameter("shared_group_id".to_string()))?;
+
+                // 验证是合法的数字 ID
+                Validator::parse_id(group_id_str, "shared_group_id")?;
+
+                Ok(())
             }
             ShareType::User => {
-                // TODO: 验证用户分享的 payload
-                Err(AppError::NotFound("用户分享暂未实现".to_string()))
+                // 验证用户分享的 payload: 需要 shared_user_id
+                let user_id_str = payload
+                    .get("shared_user_id")
+                    .and_then(|v| v.as_str())
+                    .ok_or(AppError::MissingParameter("shared_user_id".to_string()))?;
+
+                // 验证是合法的数字 ID
+                Validator::parse_id(user_id_str, "shared_user_id")?;
+
+                Ok(())
+            }
+        }
+    }
+
+    /// 验证分享目标资源是否存在（格式验证已由 validate_payload 完成）
+    async fn verify_share_target(
+        pool: &PgPool,
+        share_type: &ShareType,
+        payload: &serde_json::Value,
+    ) -> Result<(), AppError> {
+        match share_type {
+            ShareType::Location => {
+                // 位置分享无需验证远程资源
+                Ok(())
+            }
+            ShareType::Moment => {
+                let moment_id_str = payload
+                    .get("shared_moment_id")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| AppError::BadRequest("缺少 shared_moment_id".to_string()))?;
+                let moment_id = Validator::parse_uuid(moment_id_str, "shared_moment_id")?;
+                let moment_repo = MomentRepository::new(pool.clone());
+                moment_repo
+                    .find_by_id(moment_id)
+                    .await?
+                    .ok_or(AppError::NotFound("分享的动态不存在".to_string()))?;
+                Ok(())
+            }
+            ShareType::Group => {
+                let group_id_str = payload
+                    .get("shared_group_id")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| AppError::BadRequest("缺少 shared_group_id".to_string()))?;
+                let group_id = Validator::parse_id(group_id_str, "shared_group_id")?;
+                let group_repo = GroupRepository::new(pool.clone());
+                group_repo
+                    .find_by_id(group_id)
+                    .await?
+                    .ok_or(AppError::NotFound("分享的群组不存在".to_string()))?;
+                Ok(())
+            }
+            ShareType::User => {
+                let user_id_str = payload
+                    .get("shared_user_id")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| AppError::BadRequest("缺少 shared_user_id".to_string()))?;
+                let user_id = Validator::parse_id(user_id_str, "shared_user_id")?;
+                let user_repo = UserRepository::new(pool.clone());
+                user_repo
+                    .find_by_id(user_id)
+                    .await?
+                    .ok_or(AppError::NotFound("分享的用户不存在".to_string()))?;
+                Ok(())
             }
         }
     }
@@ -263,4 +539,10 @@ impl ShareService {
             "无法生成唯一的分享码，请稍后重试".to_string(),
         ))
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ShareListCursor {
+    created_at: DateTime<Utc>,
+    share_id: uuid::Uuid,
 }

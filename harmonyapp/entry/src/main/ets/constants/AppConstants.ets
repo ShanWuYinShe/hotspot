@@ -8,7 +8,7 @@ import { DEBUG } from 'BuildProfile';
 // API 配置：根据构建模式自动切换
 // debug  → 开发服务器（局域网 IP）
 // release → 正式域名
-const DEV_SERVER = 'http://192.168.0.109:8888';
+const DEV_SERVER = 'http://192.168.0.102:8888';
 const PROD_SERVER = 'https://api.chaoset.com';
 
 export const SERVER_BASE_URL: string = DEBUG ? DEV_SERVER : PROD_SERVER;

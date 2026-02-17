@@ -207,6 +207,7 @@
 		const images = container.querySelectorAll('img');
 		let loadedCount = 0;
 		const totalImages = images.length;
+		const imgLoadHandlers: Array<{ img: HTMLImageElement; handler: () => void }> = [];
 
 		if (totalImages > 0) {
 			images.forEach((img) => {
@@ -216,12 +217,14 @@
 						tick().then(layoutMasonry);
 					}
 				} else {
-					img.addEventListener('load', () => {
+					const handler = () => {
 						loadedCount++;
 						if (loadedCount === totalImages) {
 							tick().then(layoutMasonry);
 						}
-					});
+					};
+					img.addEventListener('load', handler);
+					imgLoadHandlers.push({ img, handler });
 				}
 			});
 		}
@@ -230,6 +233,10 @@
 			window.removeEventListener('resize', updateLayout);
 			resizeObserver?.disconnect();
 			mutationObserver?.disconnect();
+			// 清理图片 load 事件监听器
+			imgLoadHandlers.forEach(({ img, handler }) => {
+				img.removeEventListener('load', handler);
+			});
 		};
 	});
 

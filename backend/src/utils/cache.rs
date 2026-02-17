@@ -11,7 +11,6 @@ use redis::AsyncCommands;
 use serde::{de::DeserializeOwned, Serialize};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use std::time::Duration;
 
 /// 空值标记
 const NULL_MARKER: &str = "__NULL__";
@@ -55,8 +54,6 @@ pub struct CacheConfig {
     pub base_ttl_secs: u64,
     /// 过期时间随机波动范围（秒），用于防止缓存雪崩
     pub ttl_jitter_secs: u64,
-    /// 锁超时时间（秒），用于防止缓存击穿
-    pub lock_timeout_secs: u64,
 }
 
 impl Default for CacheConfig {
@@ -64,7 +61,6 @@ impl Default for CacheConfig {
         Self {
             base_ttl_secs: 3600,  // 1 小时
             ttl_jitter_secs: 600, // 10 分钟随机波动
-            lock_timeout_secs: 5, // 锁超时 5 秒
         }
     }
 }
@@ -109,16 +105,6 @@ impl CacheManager {
     fn get_ttl_with_jitter(&self) -> u64 {
         let jitter = rand::random::<u64>() % (self.config.ttl_jitter_secs + 1);
         self.config.base_ttl_secs + jitter
-    }
-
-    /// 生成指定 TTL 的随机波动过期时间
-    fn get_ttl_with_jitter_for(&self, base_ttl_secs: u64) -> u64 {
-        if base_ttl_secs == 0 {
-            return 0;
-        }
-        let jitter_cap = self.config.ttl_jitter_secs.min(base_ttl_secs);
-        let jitter = rand::random::<u64>() % (jitter_cap + 1);
-        base_ttl_secs + jitter
     }
 
     /// 生成完整的缓存键
@@ -185,118 +171,12 @@ impl CacheManager {
         Ok(())
     }
 
-    /// 设置缓存值（自定义 TTL）
-    pub async fn set_with_ttl<T: Serialize>(
-        &self,
-        prefix: &str,
-        id: &str,
-        value: &T,
-        base_ttl_secs: u64,
-    ) -> Result<(), redis::RedisError> {
-        let key = self.make_key(prefix, id);
-        let ttl = self.get_ttl_with_jitter_for(base_ttl_secs);
-        let serialized = serde_json::to_string(value).unwrap_or_default();
-        let mut conn = self.redis.clone();
-        conn.set_ex::<_, _, ()>(&key, serialized, ttl).await?;
-        Ok(())
-    }
-
-    /// 设置空值缓存（自定义 TTL）
-    pub async fn set_null_with_ttl(
-        &self,
-        prefix: &str,
-        id: &str,
-        null_ttl_secs: u64,
-    ) -> Result<(), redis::RedisError> {
-        let key = self.make_key(prefix, id);
-        let mut conn = self.redis.clone();
-        conn.set_ex::<_, _, ()>(&key, NULL_MARKER, null_ttl_secs)
-            .await?;
-        Ok(())
-    }
-
     /// 删除缓存
     pub async fn delete(&self, prefix: &str, id: &str) -> Result<(), redis::RedisError> {
         let key = self.make_key(prefix, id);
         let mut conn = self.redis.clone();
         conn.del::<_, ()>(&key).await?;
         Ok(())
-    }
-
-    /// 尝试获取锁（用于防止缓存击穿）
-    pub async fn try_lock(&self, lock_name: &str) -> Result<bool, redis::RedisError> {
-        let key = format!("lock:{}", lock_name);
-        let mut conn = self.redis.clone();
-
-        // SET key value NX EX seconds
-        let result: Option<String> = redis::cmd("SET")
-            .arg(&key)
-            .arg("1")
-            .arg("NX")
-            .arg("EX")
-            .arg(self.config.lock_timeout_secs)
-            .query_async(&mut conn)
-            .await?;
-
-        Ok(result.is_some())
-    }
-
-    /// 释放锁
-    pub async fn unlock(&self, lock_name: &str) -> Result<(), redis::RedisError> {
-        let key = format!("lock:{}", lock_name);
-        let mut conn = self.redis.clone();
-        conn.del::<_, ()>(&key).await?;
-        Ok(())
-    }
-
-    /// 带锁的缓存获取/设置（自定义 TTL）
-    pub async fn get_or_set_with_lock_with_ttl<T, F, Fut>(
-        &self,
-        prefix: &str,
-        id: &str,
-        base_ttl_secs: u64,
-        null_ttl_secs: u64,
-        loader: F,
-    ) -> Result<Option<T>, Box<dyn std::error::Error + Send + Sync>>
-    where
-        T: Serialize + DeserializeOwned + Clone,
-        F: FnOnce() -> Fut,
-        Fut: std::future::Future<
-            Output = Result<Option<T>, Box<dyn std::error::Error + Send + Sync>>,
-        >,
-    {
-        if let Some(cached) = self.get::<T>(prefix, id).await? {
-            return Ok(cached);
-        }
-
-        let lock_name = format!("{}:{}", prefix, id);
-        let got_lock = self.try_lock(&lock_name).await?;
-
-        if got_lock {
-            if let Some(cached) = self.get::<T>(prefix, id).await? {
-                let _ = self.unlock(&lock_name).await;
-                return Ok(cached);
-            }
-
-            let result = loader().await;
-            match &result {
-                Ok(Some(value)) => {
-                    let _ = self.set_with_ttl(prefix, id, value, base_ttl_secs).await;
-                }
-                Ok(None) => {
-                    let _ = self.set_null_with_ttl(prefix, id, null_ttl_secs).await;
-                }
-                Err(_) => {}
-            }
-            let _ = self.unlock(&lock_name).await;
-            result
-        } else {
-            tokio::time::sleep(Duration::from_millis(100)).await;
-            if let Some(cached) = self.get::<T>(prefix, id).await? {
-                return Ok(cached);
-            }
-            loader().await
-        }
     }
 
     /// 增加计数器（用于统计）

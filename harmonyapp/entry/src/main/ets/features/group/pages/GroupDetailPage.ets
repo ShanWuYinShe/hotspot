@@ -28,6 +28,8 @@ import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { NfcShareService } from '../../../core/services/NfcShareService';
 import { AppRouter, LoginRouteParam, ChatRouteParam } from '../../../core/router/AppRouter';
+import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 
 interface GroupSyncData {
   groupId: string;
@@ -49,6 +51,7 @@ export struct GroupDetailPage {
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
+  @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   
   private stateManager = GlobalStateManager.getInstance();
   private distributedSyncService = DistributedSyncService.getInstance();
@@ -70,6 +73,12 @@ export struct GroupDetailPage {
   private groupId: string = '';
 
   @State isMember: boolean = false;
+
+  aboutToAppear(): void {
+    SystemUiController.useSurface({
+      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
+    });
+  }
 
   private ensureLoggedIn(actionName: string): boolean {
     if (this.currentUser) return true;
@@ -266,7 +275,7 @@ export struct GroupDetailPage {
 
   private getRoleColor(role: string): ResourceColor {
     switch (role) {
-      case 'owner': return DesignConstants.COLOR.WARNING;
+      case 'owner': return $r('app.color.color_warning');
       case 'admin': return $r('sys.color.ohos_id_color_emphasize');
       case 'member': return $r('sys.color.ohos_id_color_text_secondary');
       default: return $r('sys.color.ohos_id_color_text_secondary');
@@ -333,6 +342,7 @@ export struct GroupDetailPage {
       .height(56)
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
       .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.isLoading) {
         SystemLoadingView({ message: '加载群组信息中...' })
@@ -505,8 +515,8 @@ export struct GroupDetailPage {
                   Button('离开群组')
                     .type(ButtonType.Capsule)
                     .backgroundColor(Color.Transparent)
-                    .fontColor(DesignConstants.COLOR.ERROR)
-                    .border({ width: 1, color: DesignConstants.COLOR.ERROR })
+                    .fontColor($r('app.color.color_danger'))
+                    .border({ width: 1, color: $r('app.color.color_danger') })
                     .width('100%')
                     .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
                     .enabled(!this.isLeaving)
@@ -520,7 +530,7 @@ export struct GroupDetailPage {
                       })
                       .fontSize(16)
                       .padding(16)
-                      .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+                       .backgroundColor($r('app.color.bg_primary'))
                       .borderRadius(DesignConstants.RADIUS.MD)
                       .margin({ bottom: DesignConstants.SPACING.MD })
                   }
@@ -537,7 +547,7 @@ export struct GroupDetailPage {
              }
              .padding(DesignConstants.SPACING.LG)
           }
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
+          .backgroundColor($r('app.color.bg_secondary'))
           .borderRadius(DesignConstants.RADIUS.LG)
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 24 })
 
@@ -545,12 +555,13 @@ export struct GroupDetailPage {
         .width('100%')
         .layoutWeight(1)
         .scrollBar(BarState.Auto)
+        .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    .backgroundColor($r('app.color.bg_primary'))
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {
@@ -570,7 +581,7 @@ export struct GroupDetailPage {
       // 允许拖拽/点击外部关闭时，不显示右上角关闭按钮（避免冗余）
       showClose: false,
       dragBar: true,
-      backgroundColor: $r('sys.color.ohos_id_color_sub_background')
+      backgroundColor: $r('app.color.bg_primary')
     })
   }
 
@@ -632,6 +643,7 @@ export struct GroupDetailPage {
         .justifyContent(FlexAlign.Center)
       }
     }
+    .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
     .width('100%')
     .height('100%')
     .backgroundColor($r('sys.color.ohos_id_color_sub_background'))

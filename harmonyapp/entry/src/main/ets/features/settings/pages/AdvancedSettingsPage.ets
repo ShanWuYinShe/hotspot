@@ -8,10 +8,17 @@ import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { SystemToast } from '../../../components/SystemToast';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
+import { SystemUiController } from '../../../core/utils/SystemUiController';
 
 @Component
 export struct AdvancedSettingsPage {
   pathStack: NavPathStack = new NavPathStack();
+
+  aboutToAppear(): void {
+    SystemUiController.useSurface({
+      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
+    });
+  }
 
   build() {
     NavDestination() {
@@ -40,7 +47,8 @@ export struct AdvancedSettingsPage {
       .width('100%')
       .height(56)
       .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .backgroundColor($r('app.color.bg_secondary'))
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       List({ space: 16 }) {
         ListItemGroup() {
@@ -64,11 +72,11 @@ export struct AdvancedSettingsPage {
       }
       .width('100%')
       .layoutWeight(1)
-      .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+      .backgroundColor($r('app.color.bg_primary'))
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    .backgroundColor($r('app.color.bg_primary'))
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

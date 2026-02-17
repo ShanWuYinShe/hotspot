@@ -18,6 +18,8 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AppIcon } from '../../../components/SystemIcon';
+import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 
 const DOMAIN_NUMBER: number = 0xFF02;
 const TAG: string = 'LoginPage';
@@ -26,6 +28,8 @@ const TAG: string = 'LoginPage';
 export struct LoginPage {
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink('isLoggedIn') isLoggedIn: boolean = false;
+  @StorageLink('safeAreaTop') safeAreaTop: number = 0;
+  @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
 
   @State loginId: string = '';
   @State password: string = '';
@@ -43,6 +47,16 @@ export struct LoginPage {
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
 
+  private getHeaderTopPadding(): number {
+    return (this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.LG) + DesignConstants.SPACING.SM;
+  }
+
+  aboutToAppear(): void {
+    SystemUiController.useSurface({
+      baseColor: DesignConstants.COLOR.SECONDARY_BG_LIGHT,      preferDarkContent: true
+    });
+  }
+
   build() {
     NavDestination() {
       Column() {
@@ -56,7 +70,7 @@ export struct LoginPage {
           .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
         Column() {
-          // 顶部导航栏（固定）
+          // 顶部导航栏（固定）- 使用 SafeArea 避免与状态栏重叠
           Row() {
             Text() {
               SymbolSpan($r(AppIcon.BACK))
@@ -73,8 +87,15 @@ export struct LoginPage {
             Blank()
           }
           .width('100%')
-          .height(56)
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+          .alignItems(VerticalAlign.Center)
+          .padding({
+            left: DesignConstants.SPACING.LG,
+            right: DesignConstants.SPACING.LG,
+            top: this.getHeaderTopPadding(),
+            bottom: DesignConstants.SPACING.SM
+          })
+          .backgroundColor($r('app.color.bg_secondary'))
+          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
           // 标题区域（固定）
           Column({ space: DesignConstants.SPACING.SM }) {
@@ -119,7 +140,8 @@ export struct LoginPage {
             }
             .width('100%')
             .padding({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL,
-              top: DesignConstants.SPACING.XL, bottom: DesignConstants.SPACING.XXL })
+              top: DesignConstants.SPACING.XL,
+              bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.XXL, 0) })
           }
           .align(Alignment.Top)
           .layoutWeight(1)
@@ -132,7 +154,7 @@ export struct LoginPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .backgroundColor($r('app.color.bg_secondary'))
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

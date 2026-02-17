@@ -10,7 +10,7 @@ import type { ClientConfig } from '$lib/types/api';
 import { systemService } from '$lib/api/services/system';
 
 class ConfigStore {
-	#config = $state<ClientConfig | null>(null);
+	#config = $state.raw<ClientConfig | null>(null);
 	#loaded = $state(false);
 	#error = $state<string | null>(null);
 
@@ -63,40 +63,20 @@ class ConfigStore {
 		}
 	}
 
-	/**
-	 * 获取搜索半径上限（米），回退到 50000
-	 */
-	get searchRadiusMax(): number {
-		return this.#config?.limits?.search_radius_max ?? 50000;
-	}
+	/** 搜索半径上限（米） */
+	searchRadiusMax = $derived(this.#config?.limits?.search_radius_max ?? 50000);
 
-	/**
-	 * 获取瞬间最大图片数
-	 */
-	get maxMomentImages(): number {
-		return this.#config?.limits?.max_moment_images ?? 9;
-	}
+	/** 瞬间最大图片数 */
+	maxMomentImages = $derived(this.#config?.limits?.max_moment_images ?? 9);
 
-	/**
-	 * 获取瞬间最大标签数
-	 */
-	get maxMomentTags(): number {
-		return this.#config?.limits?.max_moment_tags ?? 10;
-	}
+	/** 瞬间最大标签数 */
+	maxMomentTags = $derived(this.#config?.limits?.max_moment_tags ?? 10);
 
-	/**
-	 * 获取瞬间描述最大长度
-	 */
-	get momentDescriptionMaxLength(): number {
-		return this.#config?.limits?.moment_description_max_length ?? 2000;
-	}
+	/** 瞬间描述最大长度 */
+	momentDescriptionMaxLength = $derived(this.#config?.limits?.moment_description_max_length ?? 2000);
 
-	/**
-	 * 获取评论最大长度
-	 */
-	get commentMaxLength(): number {
-		return this.#config?.limits?.comment_max_length ?? 500;
-	}
+	/** 评论最大长度 */
+	commentMaxLength = $derived(this.#config?.limits?.comment_max_length ?? 500);
 }
 
 export const configStore = new ConfigStore();

@@ -14,13 +14,15 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
-import { AppIcon, SystemIcon, IconSize, IconButton } from '../../../components/SystemIcon';
+import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { MessageCacheService, MessageCacheItem } from '../../../core/database/MessageCacheService';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { AppRouter, LoginRouteParam, GroupDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
+import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { SystemUiController } from '../../../core/utils/SystemUiController';
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'ChatPage';
@@ -50,6 +52,8 @@ interface ChatParams {
 export struct ChatPage {
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
+  @StorageLink('safeAreaTop') safeAreaTop: number = 0;
+  @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   
   @State messages: ChatMessage[] = [];
   private messagesDataSource: BasicDataSource<ChatMessage> = new BasicDataSource<ChatMessage>([]);
@@ -67,6 +71,12 @@ export struct ChatPage {
   private webSocketService = WebSocketService.getInstance();
   private messageCacheService = MessageCacheService.getInstance();
   private scroller: Scroller = new Scroller();
+
+  aboutToAppear(): void {
+    SystemUiController.useSurface({
+      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
+    });
+  }
 
   private onPrivateMessageNew = async (event: ServerEvent): Promise<void> => {
     if (event.type !== 'PrivateMessageNew') return;
@@ -143,10 +153,6 @@ export struct ChatPage {
       sentAt: newMessage.sentAt,
       data: JSON.stringify(newMessage.rawData ?? null)
     });
-  }
-
-  aboutToAppear() {
-    // 参数在 onReady 中从 context.pathInfo.param 读取
   }
 
   aboutToDisappear() {
@@ -444,9 +450,14 @@ export struct ChatPage {
         })
       }
       .width('100%')
-      .height(56)
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
+        bottom: DesignConstants.SPACING.SM
+      })
       .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
       .zIndex(1)
 
       if (this.isLoading && this.messages.length === 0) {
@@ -512,7 +523,12 @@ export struct ChatPage {
           .onClick(() => this.sendMessage())
       }
       .width('100%')
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        top: DesignConstants.SPACING.SM,
+        bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, 0, DesignConstants.SPACING.SM)
+      })
       .backgroundColor($r('sys.color.ohos_id_color_background'))
     }
     .width('100%')

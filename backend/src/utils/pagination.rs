@@ -11,6 +11,9 @@ use std::env;
 
 use crate::error::{AppError, Result};
 
+/// 分页返回类型：(数据列表, 下一页游标)
+pub type Paginated<T> = crate::error::Result<(Vec<T>, Option<String>)>;
+
 // 使用 JWT_SECRET 派生加密密钥
 // 注意：这里使用 Lazy 确保只初始化一次
 // 如果初始化失败，所有使用 CIPHER 的地方都会返回错误
@@ -125,7 +128,7 @@ pub fn paginate_with_limit_plus_one<T, F>(
     rows: Vec<T>,
     limit: i32,
     get_cursor_value: F,
-) -> Result<(Vec<T>, Option<String>)>
+) -> Paginated<T>
 where
     F: FnOnce(&T) -> Result<String>,
 {

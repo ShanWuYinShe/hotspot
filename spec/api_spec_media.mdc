@@ -133,7 +133,7 @@ interface BatchPresignedUpload {
 完成上传。
 
 - **认证**: 必须
-- **幂等**: MUST（同一 `upload_id` 的重复提交必须返回相同的 `UploadedMedia`）
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
 
 **Request**: `CompleteUploadRequest`
 ```typescript
@@ -159,4 +159,4 @@ interface UploadedMedia {
 
 **错误码说明**：
 - `10300`：upload_id 不存在（如恶意请求发送了不存在的 upload_id）
-- `10400`：业务冲突（如对同一上传重复发送 complete_upload 请求）
+- `10400`：业务冲突（使用不同 Idempotency-Key 对已完成的 upload_id 再次提交；相同 Key 重试则返回缓存的成功响应）

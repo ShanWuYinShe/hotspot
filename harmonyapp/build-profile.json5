@@ -7,11 +7,11 @@
         "material": {
           "certpath": "/Users/liyou/.ohos/config/default_harmonyapp_B9Uv_-vddcTKAoWc3LuP-S_-NldVKoukY5K_Xa_ccCI=.cer",
           "keyAlias": "debugKey",
-          "keyPassword": "0000001BAB59D35F58F5799E7569823C5309A9D13BC214102860479BC6F7BEE253592107EEA0B27AB0BFA3",
+          "keyPassword": "0000001B49F1A40BBAC438D904BF9896E6DBA426B2B933ADBD90C277ACFE920EAA87F71A2FF2C0CA150A5E",
           "profile": "/Users/liyou/.ohos/config/default_harmonyapp_B9Uv_-vddcTKAoWc3LuP-S_-NldVKoukY5K_Xa_ccCI=.p7b",
           "signAlg": "SHA256withECDSA",
           "storeFile": "/Users/liyou/.ohos/config/default_harmonyapp_B9Uv_-vddcTKAoWc3LuP-S_-NldVKoukY5K_Xa_ccCI=.p12",
-          "storePassword": "0000001BC978E950A4692DAB05160E67ACDC5F61758E28700F0567CC72A39B789771764D46C9DCA5A7B0A0"
+          "storePassword": "0000001BB68D432DACAD203565A407B9EC7E8E21BB2861507E48A614D064DDDEEBEDA496627E67D4F39668"
         }
       }
     ],
@@ -19,8 +19,8 @@
       {
         "name": "default",
         "signingConfig": "default",
-        "targetSdkVersion": "5.1.1(19)",
-        "compatibleSdkVersion": "5.0.5(17)",
+        "targetSdkVersion": "6.0.0(20)",
+        "compatibleSdkVersion": "6.0.0(20)",
         "runtimeOS": "HarmonyOS",
         "buildOption": {
           "strictMode": {
@@ -43,8 +43,8 @@
         "bundleName": "com.lsyb.social",
         "config": [
           {
-            "name": "Map Kit",
-            "capability": "com.huawei.service.mapkit"
+            "capability": "com.huawei.service.mapkit",
+            "name": "Map Kit"
           }
         ]
       }

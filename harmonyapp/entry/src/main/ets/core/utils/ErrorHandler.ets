@@ -5,7 +5,6 @@
 
 import { BusinessError } from '@kit.BasicServicesKit';
 import { createLogger, LogLevel } from './LogManager';
-import { ConfigMerger } from './ConfigMerger';
 
 const logger = createLogger('ErrorHandler');
 

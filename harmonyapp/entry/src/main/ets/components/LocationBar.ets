@@ -85,19 +85,19 @@ export struct LocationBar {
     Row({ space: DesignConstants.SPACING.SM }) {
 
       // ===== 位置卡片（悬浮圆角，主交互区域）=====
-      Row({ space: DesignConstants.SPACING.MD }) {
+      Row({ space: DesignConstants.SPACING.SM }) {
         // 左侧定位指示器
         if (this.isUsingAnchor()) {
           // 浏览锚点模式：蓝色背景圆形图标
           Column() {
             Text() {
               SymbolSpan($r(AppIcon.LOCATION))
-                .fontSize(16)
+                .fontSize(14)
                 .fontColor([Color.White])
             }
           }
-          .width(32)
-          .height(32)
+          .width(28)
+          .height(28)
           .justifyContent(FlexAlign.Center)
           .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
           .borderRadius(DesignConstants.RADIUS.FULL)
@@ -107,24 +107,24 @@ export struct LocationBar {
           Stack({ alignContent: Alignment.Center }) {
             // 脉冲扩散环
             Column()
-              .width(12)
-              .height(12)
-              .borderRadius(6)
+              .width(10)
+              .height(10)
+              .borderRadius(5)
               .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
               .scale({ x: this.pulseScale, y: this.pulseScale })
               .opacity(this.pulseOpacity)
 
             // 核心圆点（白色描边 + 阴影，营造立体感）
             Column()
-              .width(12)
-              .height(12)
-              .borderRadius(6)
+              .width(10)
+              .height(10)
+              .borderRadius(5)
               .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-              .border({ width: 2.5, color: $r('sys.color.ohos_id_color_background') })
+              .border({ width: 2, color: $r('sys.color.ohos_id_color_background') })
               .shadow({ radius: 4, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 1 })
           }
-          .width(32)
-          .height(32)
+          .width(28)
+          .height(28)
           .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
           .onAppear(() => {
             this.startPulseAnimation();
@@ -132,7 +132,7 @@ export struct LocationBar {
         }
 
         // 位置文本
-        Column({ space: 2 }) {
+        Column({ space: 1 }) {
           Text(this.isUsingAnchor() ? '浏览位置' : '当前位置')
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.isUsingAnchor()
@@ -157,24 +157,12 @@ export struct LocationBar {
         }
       }
       .layoutWeight(1)
-      .height(48)
-      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+      .height(44)
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.SM })
       .backgroundColor(this.isUsingAnchor()
         ? $r('app.color.color_emphasize_bg')
-        : $r('sys.color.ohos_id_color_background'))
+        : $r('sys.color.ohos_id_color_sub_background'))
       .borderRadius(DesignConstants.RADIUS.XL)
-      .border({
-        width: 0.5,
-        color: this.isUsingAnchor()
-          ? $r('sys.color.ohos_id_color_emphasize')
-          : $r('sys.color.ohos_id_color_list_separator')
-      })
-      .shadow({
-        radius: 12,
-        color: $r('app.color.color_shadow'),
-        offsetX: 0,
-        offsetY: 4
-      })
       .onClick(() => {
         this.openLocationPicker();
       })
@@ -187,14 +175,11 @@ export struct LocationBar {
       }
     }
     .width('100%')
-    .height(64)
+    .height(52)
     .padding({
-      left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
-      top: DesignConstants.SPACING.SM,
-      bottom: DesignConstants.SPACING.SM
+      left: DesignConstants.SPACING.XS,
+      right: DesignConstants.SPACING.XS
     })
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
   }
 
   @Builder
@@ -209,15 +194,8 @@ export struct LocationBar {
     .width(40)
     .height(40)
     .justifyContent(FlexAlign.Center)
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
     .borderRadius(DesignConstants.RADIUS.FULL)
-    .border({ width: 0.5, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow({
-      radius: 8,
-      color: $r('app.color.color_shadow'),
-      offsetX: 0,
-      offsetY: 2
-    })
     .onClick(action)
   }
 

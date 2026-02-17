@@ -11,7 +11,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Label } from '$lib/components/ui/label';
-	import type { AdminRole, AdminPermission } from '$lib/types/api';
+	import type { AdminRoleItem, AdminPermissionItem } from '$lib/types/api';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import Plus from 'lucide-svelte/icons/plus';
 	import Shield from 'lucide-svelte/icons/shield';
@@ -20,8 +20,8 @@
 	import Trash2 from 'lucide-svelte/icons/trash-2';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 
-	let roles = $state.raw<AdminRole[]>([]);
-	let permissions = $state.raw<AdminPermission[]>([]);
+	let roles = $state.raw<AdminRoleItem[]>([]);
+	let permissions = $state.raw<AdminPermissionItem[]>([]);
 	let isLoading = $state(true);
 
 	// Create/Edit role dialog
@@ -63,7 +63,7 @@
 		showRoleDialog = true;
 	}
 
-	function openEditRoleDialog(role: AdminRole) {
+	function openEditRoleDialog(role: AdminRoleItem) {
 		editingRoleId = role.role_id;
 		roleName = role.name;
 		roleDescription = role.description || '';
@@ -149,8 +149,8 @@
 	}
 
 	// Group permissions by category
-	function groupPermissions(perms: AdminPermission[]): Map<string, AdminPermission[]> {
-		const groups = new Map<string, AdminPermission[]>();
+	function groupPermissions(perms: AdminPermissionItem[]): Map<string, AdminPermissionItem[]> {
+		const groups = new Map<string, AdminPermissionItem[]>();
 		for (const perm of perms) {
 			// Derive category from key (e.g., "admin.users.create" -> "admin.users")
 			const keyParts = perm.key.split('.');
@@ -202,7 +202,7 @@
 			<CardContent>
 				{#if isLoading}
 					<div class="space-y-3">
-						{#each Array(4) as _}
+						{#each Array(4) as _, i (i)}
 							<div class="flex items-center gap-4 rounded-lg border p-3">
 								<Skeleton class="h-10 w-10 rounded" />
 								<div class="flex-1 space-y-2">
@@ -264,7 +264,7 @@
 			<CardContent>
 				{#if isLoading}
 					<div class="space-y-3">
-						{#each Array(6) as _}
+						{#each Array(6) as _, i (i)}
 							<div class="flex items-center gap-4">
 								<Skeleton class="h-4 w-4" />
 								<Skeleton class="h-4 w-32" />

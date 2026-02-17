@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS group_messages_partitioned (
     metadata        JSONB,
     share_code      VARCHAR(16),
     reply_to_id     UUID,
-    mentions        JSONB,                          -- [ user_id, ... ]
+    at_users        JSONB       NOT NULL DEFAULT '[]'::jsonb,  -- [ user_id, ... ]
     is_recalled     BOOLEAN     NOT NULL DEFAULT FALSE,
     recalled_at     TIMESTAMPTZ,
     recalled_by     BIGINT,

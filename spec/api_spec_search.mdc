@@ -115,15 +115,4 @@ interface SearchSuggestResponse {
 
 ## 标签相关类型
 
-以下类型供其他模块（如 Feed）复用：
-
-```typescript
-// 标签趋势
-type TagTrend = 'rising' | 'stable' | 'falling';
-
-interface TagItem {
-  name: string;
-  usage_count: number;
-  trend?: TagTrend;
-}
-```
+`TagItem`、`TagTrend` 已收归至 `@spec/api_spec_types.mdc`，本模块和其他模块统一引用。

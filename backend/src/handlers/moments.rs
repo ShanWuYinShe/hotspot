@@ -4,14 +4,10 @@ use crate::{
     dto::{
         request::{
             CreateMomentRequest, DeleteMomentRequest, EditMomentRequest, FavoriteMomentRequest,
-            GeoPoint, LikeMomentRequest, MomentLikesRequest, MomentOpenTheDoorRequest,
-            MyFavoritesRequest, MyMomentsRequest, SearchMomentsByKeywordRequest,
-            SearchMomentsByLocationRequest, SearchMomentsByTagRequest, SearchMomentsRequest,
-            UnfavoriteMomentRequest, UnlikeMomentRequest,
+            LikeMomentRequest, MomentLikesRequest, MomentOpenTheDoorRequest, MyFavoritesRequest,
+            MyMomentsRequest, SearchMomentsRequest, UnfavoriteMomentRequest, UnlikeMomentRequest,
         },
-        response::{
-            ApiResponse, MomentLikeItem, MomentSearchItem, PaginatedData, UserMomentListItem,
-        },
+        response::{ApiResponse, MomentItem, MomentLikeItem, PaginatedData},
     },
     error::Result,
     middleware::auth::{AuthenticatedUser, OptionalAuthenticatedUser},
@@ -25,57 +21,12 @@ pub async fn search(
     State(state): State<AppState>,
     user: OptionalAuthenticatedUser,
     Json(req): Json<SearchMomentsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MomentSearchItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
     let sort_by = req.sort_by.as_deref().unwrap_or("relevance");
     tracing::debug!(sort_by = %sort_by, "Search sort parameter");
 
-    let reference_point = req.reference_point.unwrap_or(GeoPoint {
-        latitude: 0.0,
-        longitude: 0.0,
-    });
-
-    if let Some(radius) = req.radius {
-        let location_req = SearchMomentsByLocationRequest {
-            kw: req.keyword,
-            reference_point,
-            radius,
-            limit: req.limit,
-            cursor: req.cursor,
-        };
-        let response = state
-            .moment_service
-            .search_by_location(user.user_id, &location_req)
-            .await?;
-        Ok(Json(ApiResponse::success(response)))
-    } else if let Some(tag) = req.tag {
-        let tag_req = SearchMomentsByTagRequest {
-            tag,
-            reference_point,
-            limit: req.limit,
-            cursor: req.cursor,
-        };
-        let response = state
-            .moment_service
-            .search_by_tag(user.user_id, &tag_req)
-            .await?;
-        Ok(Json(ApiResponse::success(response)))
-    } else if let Some(keyword) = req.keyword {
-        let kw_req = SearchMomentsByKeywordRequest {
-            kw: keyword,
-            reference_point,
-            limit: req.limit,
-            cursor: req.cursor,
-        };
-        let response = state
-            .moment_service
-            .search_by_keyword(user.user_id, &kw_req)
-            .await?;
-        Ok(Json(ApiResponse::success(response)))
-    } else {
-        Err(crate::error::AppError::BadRequest(
-            "至少需要提供 keyword、tag、radius 中的一个搜索条件".to_string(),
-        ))
-    }
+    let response = state.moment_service.search(user.user_id, &req).await?;
+    Ok(Json(ApiResponse::success(response)))
 }
 
 /// 获取当前用户生活瞬间历史（/me/ API）
@@ -83,7 +34,7 @@ pub async fn get_my_moments(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<MyMomentsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<UserMomentListItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
     let response = state
         .moment_service
         .get_my_moments_list(user.user_id, &req)
@@ -96,7 +47,7 @@ pub async fn open_the_door(
     State(state): State<AppState>,
     user: OptionalAuthenticatedUser,
     Json(req): Json<MomentOpenTheDoorRequest>,
-) -> Result<Json<ApiResponse<MomentSearchItem>>> {
+) -> Result<Json<ApiResponse<MomentItem>>> {
     let response = state
         .moment_service
         .open_the_door(user.user_id, &req)
@@ -119,7 +70,7 @@ pub async fn create(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<CreateMomentRequest>,
-) -> Result<Json<ApiResponse<UserMomentListItem>>> {
+) -> Result<Json<ApiResponse<MomentItem>>> {
     let moment = state
         .moment_service
         .create_moment(user.user_id, &req)
@@ -131,12 +82,12 @@ pub async fn update(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<EditMomentRequest>,
-) -> Result<Json<ApiResponse<()>>> {
-    state
+) -> Result<Json<ApiResponse<MomentItem>>> {
+    let moment = state
         .moment_service
         .update_moment(user.user_id, &req)
         .await?;
-    Ok(Json(ApiResponse::success_empty()))
+    Ok(Json(ApiResponse::success(moment)))
 }
 
 pub async fn delete(
@@ -204,7 +155,7 @@ pub async fn get_my_favorites(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<MyFavoritesRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MomentSearchItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
     let response = state
         .moment_service
         .get_favorites_list(user.user_id, &req)

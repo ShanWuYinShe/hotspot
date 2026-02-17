@@ -1,14 +1,15 @@
 /**
  * HarmonyOS原生地图组件
  * 集成HarmonyOS Map Kit，支持地图显示、标记、交互
- * 注意：使用Map Kit需要在AppGallery Connect中配置指纹，并在module.json5中配置client_id
+ * 前置条件（DevEco Studio）：
+ * - build-profile.json5 的 capabilities 中声明 Map Kit
+ * - DevEco Studio 中配置项目签名，并在 AppGallery Connect 注册证书指纹、启用 Map Kit 服务
  */
 
 import { map, mapCommon, MapComponent } from '@kit.MapKit';
 import { AsyncCallback } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { LocationInfo } from '../core/location/LocationUtil';
-import { DesignConstants } from '../constants/DesignConstants';
+
 
 const DOMAIN_NUMBER: number = 0xFF11;
 const TAG: string = 'NativeMapComponent';
@@ -40,14 +41,21 @@ export interface MapCameraPosition extends MapCoordinate {
   zoom?: number;
 }
 
-/** 地图控制器操作接口，供父组件调用缩放等控制 */
+/** 地图控制器操作接口，供父组件调用缩放、生命周期等控制 */
 export interface NativeMapActions {
   zoomIn: () => void;
   zoomOut: () => void;
+  /** 移动相机到指定坐标（保持当前缩放级别） */
+  moveCamera: (latitude: number, longitude: number) => void;
+  /** 页面重新可见时调用（配合 NavDestination.onShown） */
+  show: () => void;
+  /** 页面不可见时调用（配合 NavDestination.onHidden） */
+  hide: () => void;
 }
 
 @Component
 export struct NativeMapComponent {
+  @Watch('onDarkModeChange') @StorageProp('isDarkMode') isDarkMode: boolean = false;
   @Watch('onRegionChangeProp') @Prop mapRegion: MapRegion = {
     latitude: 39.9042,
     longitude: 116.4074,
@@ -61,6 +69,9 @@ export struct NativeMapComponent {
   @Prop showZoomControls: boolean = false;
   /** 是否显示 Map Kit 内置的「我的位置」按钮 */
   @Prop showMyLocationControls: boolean = true;
+  /** 地图边界内边距（像素），用于把控件推离被遮挡的区域 */
+  @Watch('onContentPaddingChange') @Prop contentPaddingBottom: number = 0;
+  @Watch('onContentPaddingChange') @Prop contentPaddingTop: number = 0;
   
   // 回调函数
   onMapReady?: () => void;
@@ -108,6 +119,41 @@ export struct NativeMapComponent {
     };
   }
   
+  /**
+   * 监听 contentPadding 变化，更新地图内边距
+   */
+  onContentPaddingChange() {
+    this.applyContentPadding();
+  }
+
+  private applyContentPadding() {
+    if (this.isMapReady && this.mapController) {
+      try {
+        this.mapController.setPadding({
+          top: this.contentPaddingTop,
+          bottom: this.contentPaddingBottom
+        });
+      } catch (e) {
+        hilog.warn(DOMAIN_NUMBER, TAG, `设置地图内边距失败: ${JSON.stringify(e)}`);
+      }
+    }
+  }
+
+  /**
+   * 监听深色模式变化，切换地图夜间样式
+   */
+  onDarkModeChange() {
+    if (this.isMapReady && this.mapController) {
+      try {
+        this.mapController.setDayNightMode(
+          this.isDarkMode ? mapCommon.DayNightMode.NIGHT : mapCommon.DayNightMode.DAY
+        );
+      } catch (e) {
+        hilog.warn(DOMAIN_NUMBER, TAG, `切换地图夜间模式失败: ${JSON.stringify(e)}`);
+      }
+    }
+  }
+
   /**
    * 监听标记变化并更新
    */
@@ -167,6 +213,15 @@ export struct NativeMapComponent {
   private setupMap() {
     if (!this.mapController) return;
     
+    // 根据当前深浅模式设置地图夜间样式
+    try {
+      this.mapController.setDayNightMode(
+        this.isDarkMode ? mapCommon.DayNightMode.NIGHT : mapCommon.DayNightMode.DAY
+      );
+    } catch (e) {
+      hilog.warn(DOMAIN_NUMBER, TAG, `初始化地图夜间模式失败: ${JSON.stringify(e)}`);
+    }
+
     // 设置定位启用
     this.mapController.setMyLocationEnabled(this.showUserLocation);
     this.mapController.setMyLocationControlsEnabled(this.showMyLocationControls);
@@ -177,11 +232,44 @@ export struct NativeMapComponent {
     // 设置缩放按钮
     this.mapController.setZoomControlsEnabled(this.showZoomControls);
 
+    // 设置指南针
+    this.mapController.setCompassControlsEnabled(this.showCompass);
+
+    // 社交地图场景：禁用旋转和倾斜手势，避免用户误操作导致地图方向混乱
+    this.mapController.setRotateGesturesEnabled(false);
+    this.mapController.setTiltGesturesEnabled(false);
+
+    // 限制最小缩放级别（级别 3 ≈ 大洲级别，社交场景无需更小）
+    this.mapController.setMinZoom(3);
+
+    // 设置地图内边距，让控件避开覆盖层
+    this.applyContentPadding();
+
     // 通知父组件地图控制能力已就绪
     if (this.onActionsReady) {
+      const ctrl = this.mapController;
+      const self = this;
       const actions: NativeMapActions = {
         zoomIn: (): void => this.doZoomIn(),
-        zoomOut: (): void => this.doZoomOut()
+        zoomOut: (): void => this.doZoomOut(),
+        moveCamera: (lat: number, lng: number): void => {
+          if (ctrl) {
+            try {
+              const pos = ctrl.getCameraPosition();
+              const cameraUpdate = map.newCameraPosition({
+                target: { latitude: lat, longitude: lng },
+                zoom: pos?.zoom ?? 15,
+                tilt: 0,
+                bearing: 0
+              });
+              ctrl.animateCamera(cameraUpdate, 500);
+            } catch (e) {
+              self.moveCamera(lat, lng);
+            }
+          }
+        },
+        show: (): void => { if (ctrl) { ctrl.show(); } },
+        hide: (): void => { if (ctrl) { ctrl.hide(); } }
       };
       this.onActionsReady(actions);
     }
@@ -268,8 +356,7 @@ export struct NativeMapComponent {
           title: markerData.title,
           snippet: markerData.snippet,
           clickable: true,
-          // 可以根据 markerData.type 设置不同的颜色或图标
-          // icon: ... 
+          icon: this.getMarkerIcon(markerData.type)
         };
         
         const marker = await this.mapController.addMarker(markerOptions);
@@ -277,6 +364,16 @@ export struct NativeMapComponent {
       } catch (error) {
         hilog.error(DOMAIN_NUMBER, TAG, `添加标记失败 ${markerData.id}: ${JSON.stringify(error)}`);
       }
+    }
+  }
+
+  private getMarkerIcon(type?: string): Resource {
+    switch (type) {
+      case 'user': return $rawfile('marker_user.svg');
+      case 'group': return $rawfile('marker_group.svg');
+      case 'moment': return $rawfile('marker_moment.svg');
+      case 'cluster': return $rawfile('marker_cluster.svg');
+      default: return $rawfile('marker_user.svg');
     }
   }
 
@@ -319,7 +416,7 @@ export struct NativeMapComponent {
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .textAlign(TextAlign.Center)
 
-          Text('请在 module.json5 中配置 client_id\n并在 AppGallery Connect 中启用 Map Kit 服务')
+          Text('请在 DevEco Studio 中配置项目签名\n并在 AppGallery Connect 中注册指纹、启用 Map Kit')
             .fontSize(12)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .textAlign(TextAlign.Center)
@@ -331,7 +428,7 @@ export struct NativeMapComponent {
         .padding(32)
         .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
       } else if (this.mapCallback) {
-        MapComponent({ 
+        MapComponent({
           mapOptions: {
             position: {
               target: {
@@ -339,9 +436,11 @@ export struct NativeMapComponent {
                 longitude: this.mapRegion.longitude
               },
               zoom: 15
-            }
-          }, 
-          mapCallback: this.mapCallback 
+            },
+            minZoom: 3,
+            dayNightMode: this.isDarkMode ? mapCommon.DayNightMode.NIGHT : mapCommon.DayNightMode.DAY
+          },
+          mapCallback: this.mapCallback
         })
         .width('100%')
         .height('100%')

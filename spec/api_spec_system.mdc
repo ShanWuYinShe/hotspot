@@ -38,7 +38,6 @@ alwaysApply: true
 - **幂等**: 无
 
 **说明**：
-- 此接口为公开资源，无需认证
 - 每个 API 版本都应在其路径下提供此端点
 - 客户端应在启动时调用此接口，检查当前使用的 API 版本状态
 
@@ -81,7 +80,6 @@ type ApiVersionStatus =
 - **幂等**: 无
 
 **说明**：
-- 系统健康检查为公开资源，无需认证
 - HTTP 200 + `code=0` 表示系统健康
 - HTTP 200 + `code=10600` 表示系统不健康（`data` 仍包含 `HealthStatus`）
 - HTTP 非 200 表示请求未到达业务层
@@ -102,15 +100,14 @@ interface HealthStatus {
 
 **错误码**: `10600`
 
+---
+
 ### POST /api/v1/system/list_announcements
 
 获取系统公告列表。
 
 - **认证**: 无
 - **幂等**: 无
-
-**说明**：
-- 系统公告属于"默认公开资源"，无需认证
 
 **Request**: `{}`
 
@@ -134,7 +131,6 @@ interface HealthStatus {
 - **幂等**: 无
 
 **说明**：
-- 此接口为公开资源，**无需认证**
 - 返回的 `ClientConfig` 由 `AppConfig`（见 `@spec/api_spec_admin_core.mdc`）投影得来，包含功能开关、输入限制、联系方式
 - 客户端应在启动时调用并缓存，配置变更频率低
 

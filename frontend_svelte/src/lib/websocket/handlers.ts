@@ -74,115 +74,44 @@ class SubscriptionManager {
 		});
 	}
 
-	/**
-	 * 订阅（增量添加）
-	 */
-	async subscribe(type: SubscriptionType, ids: string[]): Promise<boolean> {
-		if (ids.length === 0) return true;
-
-		const clientMsgId = this.generateClientMsgId();
-
-		websocketStore.send({
-			type: 'SetSubscriptions',
-			payload: {
-				client_msg_id: clientMsgId,
-				operation: 'subscribe',
-				type,
-				ids
-			}
-		});
-
-		// 等待 SubscribeAck
-		return new Promise((resolve) => {
-			// 创建超时定时器
-			const timer = setTimeout(() => {
-				if (this.pendingAcks.has(clientMsgId)) {
-					warn('[WebSocket] 订阅超时:', type, ids);
-					this.pendingAcks.delete(clientMsgId);
-					resolve(false);
-				}
-			}, 10000); // 10秒超时
-
-			this.pendingAcks.set(clientMsgId, {
-				operation: 'subscribe',
-				type,
-				ids,
-				resolve,
-				timer
-			});
-		});
+	/** 增量添加订阅 */
+	subscribe(type: SubscriptionType, ids: string[]): Promise<boolean> {
+		return ids.length === 0 ? Promise.resolve(true) : this.sendRequest('subscribe', type, ids);
 	}
 
-	/**
-	 * 取消订阅（增量移除）
-	 */
-	async unsubscribe(type: SubscriptionType, ids: string[]): Promise<boolean> {
-		if (ids.length === 0) return true;
+	/** 增量移除订阅 */
+	unsubscribe(type: SubscriptionType, ids: string[]): Promise<boolean> {
+		return ids.length === 0 ? Promise.resolve(true) : this.sendRequest('unsubscribe', type, ids);
+	}
 
+	/** 全量覆盖订阅（重连时使用） */
+	setSubscriptions(type: SubscriptionType, ids: string[]): Promise<boolean> {
+		return this.sendRequest('set', type, ids);
+	}
+
+	/** 统一的订阅请求发送 + 超时等待 */
+	private sendRequest(
+		operation: SubscriptionOperation,
+		type: SubscriptionType,
+		ids: string[]
+	): Promise<boolean> {
 		const clientMsgId = this.generateClientMsgId();
 
 		websocketStore.send({
 			type: 'SetSubscriptions',
-			payload: {
-				client_msg_id: clientMsgId,
-				operation: 'unsubscribe',
-				type,
-				ids
-			}
+			payload: { client_msg_id: clientMsgId, operation, type, ids }
 		});
 
 		return new Promise((resolve) => {
-			// 创建超时定时器
 			const timer = setTimeout(() => {
 				if (this.pendingAcks.has(clientMsgId)) {
-					warn('[WebSocket] 取消订阅超时:', type, ids);
+					warn(`[WebSocket] ${operation}超时:`, type, ids);
 					this.pendingAcks.delete(clientMsgId);
 					resolve(false);
 				}
 			}, 10000);
 
-			this.pendingAcks.set(clientMsgId, {
-				operation: 'unsubscribe',
-				type,
-				ids,
-				resolve,
-				timer
-			});
-		});
-	}
-
-	/**
-	 * 设置订阅（全量覆盖，重连时使用）
-	 */
-	async setSubscriptions(type: SubscriptionType, ids: string[]): Promise<boolean> {
-		const clientMsgId = this.generateClientMsgId();
-
-		websocketStore.send({
-			type: 'SetSubscriptions',
-			payload: {
-				client_msg_id: clientMsgId,
-				operation: 'set',
-				type,
-				ids
-			}
-		});
-
-		return new Promise((resolve) => {
-			const timer = setTimeout(() => {
-				if (this.pendingAcks.has(clientMsgId)) {
-					warn('[WebSocket] 设置订阅超时:', type, ids);
-					this.pendingAcks.delete(clientMsgId);
-					resolve(false);
-				}
-			}, 10000);
-
-			this.pendingAcks.set(clientMsgId, {
-				operation: 'set',
-				type,
-				ids,
-				resolve,
-				timer
-			});
+			this.pendingAcks.set(clientMsgId, { operation, type, ids, resolve, timer });
 		});
 	}
 
@@ -217,32 +146,39 @@ class SubscriptionManager {
 		clearTimeout(pending.timer);
 		this.pendingAcks.delete(client_msg_id);
 
-		const success = code === 0;
+		// 计算成功的 ID（排除 failed_ids 中的项）
+		const failedIdSet = new Set(failed_ids?.map((f) => f.subscription_id) ?? []);
+		const succeededIds = ids.filter((id) => !failedIdSet.has(id));
 
-		if (success) {
-			// 更新本地订阅状态
-			const subscriptionSet = this.subscriptions.get(type as SubscriptionType);
-			if (subscriptionSet) {
-				switch (operation) {
-					case 'subscribe':
-						ids.forEach((id: string) => subscriptionSet.add(id));
-						break;
-					case 'unsubscribe':
-						ids.forEach((id: string) => subscriptionSet.delete(id));
-						break;
-					case 'set':
-						subscriptionSet.clear();
-						ids.forEach((id: string) => subscriptionSet.add(id));
-						break;
-				}
+		// 无论 code 是否为 0，都更新成功项的本地订阅状态
+		// spec: failed_ids 仅包含失败项，其余为成功
+		const subscriptionSet = this.subscriptions.get(type as SubscriptionType);
+		if (subscriptionSet && succeededIds.length > 0) {
+			switch (operation) {
+				case 'subscribe':
+					succeededIds.forEach((id) => subscriptionSet.add(id));
+					break;
+				case 'unsubscribe':
+					succeededIds.forEach((id) => subscriptionSet.delete(id));
+					break;
+				case 'set':
+					subscriptionSet.clear();
+					succeededIds.forEach((id) => subscriptionSet.add(id));
+					break;
 			}
-
-			log(`[WebSocket] 订阅${operation}成功:`, type, ids.length, '个');
-		} else {
-			logError('[WebSocket] 订阅操作失败:', payload.message, failed_ids);
 		}
 
-		pending.resolve(success);
+		if (code === 0) {
+			log(`[WebSocket] 订阅${operation}成功:`, type, ids.length, '个');
+		} else {
+			logError('[WebSocket] 订阅操作部分失败:', payload.message, failed_ids);
+			if (succeededIds.length > 0) {
+				log(`[WebSocket] 部分成功: ${succeededIds.length}/${ids.length} 个`);
+			}
+		}
+
+		// 全部成功时 resolve(true)，部分失败时 resolve(false)
+		pending.resolve(code === 0);
 	}
 
 	/**
@@ -276,10 +212,10 @@ class SubscriptionManager {
 	}
 
 	/**
-	 * 生成客户端消息 ID
+	 * 生成客户端消息 ID（spec 建议使用 UUID）
 	 */
 	private generateClientMsgId(): string {
-		return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+		return crypto.randomUUID();
 	}
 }
 
@@ -307,152 +243,92 @@ class WebSocketEventHandlers {
 		this.registerDefaultHandlers();
 	}
 
+	// ============ 辅助方法 ============
+
+	/** 注册通知类事件：log + toast + 转发到 notificationHandlers */
+	private onNotify<K extends keyof import('./types').WebSocketEventMap>(
+		event: K,
+		getMessage: (payload: import('./types').WebSocketEventMap[K]) => string,
+		toastType: 'info' | 'success' | 'warning' | 'error' = 'info'
+	) {
+		websocketStore.on(event, (payload) => {
+			log(`[WS] ${event}:`, payload);
+			toast[toastType](getMessage(payload));
+			this.notificationHandlers.forEach((handler) => handler(payload));
+		});
+	}
+
+	/** 注册消息类事件：log + 转发到自定义 handlers */
+	private onMessage<K extends keyof import('./types').WebSocketEventMap>(
+		event: K,
+		handlers: Set<EventHandler<import('./types').WebSocketEventMap[K]>>
+	) {
+		websocketStore.on(event, (payload) => {
+			log(`[WS] ${event}:`, payload);
+			handlers.forEach((handler) => handler(payload));
+		});
+	}
+
 	/**
 	 * 注册默认处理器
 	 */
 	private registerDefaultHandlers() {
 		// 私聊消息
-		websocketStore.on('PrivateMessageNew', (payload) => {
-			log('[WS] 收到私聊消息:', payload);
-			this.privateMessageHandlers.forEach((handler) => handler(payload));
-		});
-
-		websocketStore.on('PrivateMessageEdited', (payload) => {
-			log('[WS] 私聊消息已编辑:', payload);
-			this.privateMessageEditedHandlers.forEach((handler) => handler(payload));
-		});
-
-		websocketStore.on('PrivateMessageRecalled', (payload) => {
-			log('[WS] 私聊消息已撤回:', payload);
-			this.privateMessageRecalledHandlers.forEach((handler) => handler(payload));
-		});
+		this.onMessage('PrivateMessageNew', this.privateMessageHandlers);
+		this.onMessage('PrivateMessageEdited', this.privateMessageEditedHandlers);
+		this.onMessage('PrivateMessageRecalled', this.privateMessageRecalledHandlers);
 
 		// 群聊消息
-		websocketStore.on('GroupMessageNew', (payload) => {
-			log('[WS] 收到群聊消息:', payload);
-			this.groupMessageHandlers.forEach((handler) => handler(payload));
-		});
-
-		websocketStore.on('GroupMessageEdited', (payload) => {
-			log('[WS] 群聊消息已编辑:', payload);
-			this.groupMessageEditedHandlers.forEach((handler) => handler(payload));
-		});
-
-		websocketStore.on('GroupMessageRecalled', (payload) => {
-			log('[WS] 群聊消息已撤回:', payload);
-			this.groupMessageRecalledHandlers.forEach((handler) => handler(payload));
-		});
+		this.onMessage('GroupMessageNew', this.groupMessageHandlers);
+		this.onMessage('GroupMessageEdited', this.groupMessageEditedHandlers);
+		this.onMessage('GroupMessageRecalled', this.groupMessageRecalledHandlers);
 
 		// 关注关系
-		websocketStore.on('NewFollower', (payload) => {
-			log('[WS] 新增关注者:', payload);
-			toast.info(`${payload.user.nickname} 关注了你`);
-			this.notificationHandlers.forEach((handler) => handler(payload));
-		});
-
-		websocketStore.on('MutualFollow', (payload) => {
-			log('[WS] 互相关注:', payload);
-			toast.success(`你和 ${payload.user.nickname} 成为了好友`);
-			this.notificationHandlers.forEach((handler) => handler(payload));
-		});
+		this.onNotify('NewFollower', (p) => `${p.user.nickname} 关注了你`);
+		this.onNotify('MutualFollow', (p) => `你和 ${p.user.nickname} 成为了好友`, 'success');
 
 		// 生活瞬间互动
-		websocketStore.on('MomentLiked', (payload) => {
-			log('[WS] 动态被点赞:', payload);
-			toast.info(`${payload.user.nickname} 赞了你的动态`);
-			this.notificationHandlers.forEach((handler) => handler(payload));
-		});
+		this.onNotify('MomentLiked', (p) => `${p.user.nickname} 赞了你的动态`);
+		this.onNotify('MomentCommented', (p) => `${p.user.nickname} 评论了你的动态`);
+		this.onNotify('CommentLiked', (p) => `${p.user.nickname} 赞了你的评论`);
+		this.onNotify('CommentReply', (p) => `${p.user.nickname} 回复了你的评论`);
 
-		websocketStore.on('MomentCommented', (payload) => {
-			log('[WS] 动态被评论:', payload);
-			toast.info(`${payload.user.nickname} 评论了你的动态`);
-			this.notificationHandlers.forEach((handler) => handler(payload));
-		});
+		// 群组邀请/申请
+		this.onNotify('GroupInviteReceived', (p) => `${p.inviter.nickname} 邀请你加入群组`);
+		this.onNotify('GroupApplicationReceived', (p) => `${p.applicant.nickname} 申请加入群组`);
+		this.onNotify('GroupAnnouncementCreated', (p) => `群组发布了新公告: ${p.title}`);
+		this.onNotify(
+			'MessageMentioned',
+			(p) => `${p.user.nickname} 在${p.target_type === 'moment' ? '动态' : '评论'}中提到了你`
+		);
 
-		// 评论被点赞（spec 新增事件）
-		websocketStore.on('CommentLiked', (payload) => {
-			log('[WS] 评论被点赞:', payload);
-			toast.info(`${payload.user.nickname} 赞了你的评论`);
-			this.notificationHandlers.forEach((handler) => handler(payload));
-		});
-
-		websocketStore.on('CommentReply', (payload) => {
-			log('[WS] 评论被回复:', payload);
-			toast.info(`${payload.user.nickname} 回复了你的评论`);
-			this.notificationHandlers.forEach((handler) => handler(payload));
-		});
-
-		// 群组管理
-		websocketStore.on('GroupInviteReceived', (payload) => {
-			log('[WS] 收到群组邀请:', payload);
-			toast.info(`${payload.inviter.nickname} 邀请你加入群组`);
-			this.notificationHandlers.forEach((handler) => handler(payload));
-		});
-
-		websocketStore.on('GroupApplicationReceived', (payload) => {
-			log('[WS] 收到入群申请:', payload);
-			toast.info(`${payload.applicant.nickname} 申请加入群组`);
-			this.notificationHandlers.forEach((handler) => handler(payload));
-		});
-
-		// 群组邀请响应（spec: GroupInviteResponse）
+		// 群组邀请响应（条件 toast）
 		websocketStore.on('GroupInviteResponse', (payload) => {
-			log('[WS] 群组邀请响应:', payload);
+			log('[WS] GroupInviteResponse:', payload);
 			if (payload.status === 'accepted') {
 				toast.success(`${payload.user.nickname} 接受了群组邀请`);
 			}
 			this.notificationHandlers.forEach((handler) => handler(payload));
 		});
 
-		// 群组申请响应（spec: GroupApplicationResponse）
+		// 群组申请响应（条件 toast）
 		websocketStore.on('GroupApplicationResponse', (payload) => {
-			log('[WS] 群组申请响应:', payload);
+			log('[WS] GroupApplicationResponse:', payload);
 			if (payload.status === 'accepted') {
-				toast.success(`你的入群申请已通过 - ${payload.group_name}`);
+				toast.success(`你的入群申请已通过 - ${payload.group.name}`);
 			}
 			this.notificationHandlers.forEach((handler) => handler(payload));
 		});
 
-		// 群组成员加入（spec: GroupMemberJoined）
+		// 群组成员加入（仅 toast，不转发 notification）
 		websocketStore.on('GroupMemberJoined', (payload: GroupMemberJoinedPayload) => {
-			log('[WS] 群组成员加入:', payload);
+			log('[WS] GroupMemberJoined:', payload);
 			toast.info(`${payload.user.nickname} 加入了群组`);
-
-			if (browser) {
-				window.dispatchEvent(
-					new CustomEvent('group-member-joined', {
-						detail: {
-							group_id: payload.group_id,
-							user: payload.user,
-							member_count: payload.member_count
-						}
-					})
-				);
-			}
-		});
-
-		// 群公告创建（spec: GroupAnnouncementCreated）
-		websocketStore.on('GroupAnnouncementCreated', (payload) => {
-			log('[WS] 新群公告:', payload);
-			toast.info(`群组发布了新公告: ${payload.title}`);
-			this.notificationHandlers.forEach((handler) => handler(payload));
-		});
-
-		// 被提及（spec: MessageMentioned）
-		websocketStore.on('MessageMentioned', (payload) => {
-			log('[WS] 被提及:', payload);
-			toast.info(`${payload.user.nickname} 在${payload.target_type === 'moment' ? '动态' : '评论'}中提到了你`);
-			this.notificationHandlers.forEach((handler) => handler(payload));
 		});
 
 		// 私聊已读回执（spec: PrivateMessageRead）
 		websocketStore.on('PrivateMessageRead', (payload) => {
 			log('[WS] 私聊消息已读:', payload);
-			if (browser) {
-				window.dispatchEvent(
-					new CustomEvent('private-message-read', { detail: payload })
-				);
-			}
 		});
 
 		// 订阅状态快照（spec: SubscriptionsSnapshot）
@@ -463,22 +339,7 @@ class WebSocketEventHandlers {
 		// 群组成员离开（GroupMemberLeft）
 		websocketStore.on('GroupMemberLeft', (payload: GroupMemberLeftPayload) => {
 			log('[WS] 群组成员离开:', payload);
-
-			// 显示提示
 			toast.info(`${payload.user.nickname} 离开了群组`);
-
-			// 分发自定义事件，让页面组件更新成员列表
-			if (browser) {
-				window.dispatchEvent(
-					new CustomEvent('group-member-left', {
-						detail: {
-							group_id: payload.group_id,
-							user_id: payload.user.user_id,
-							member_count: payload.member_count
-						}
-					})
-				);
-			}
 		});
 
 		// 群组成员被移除（GroupMemberRemoved）
@@ -487,33 +348,11 @@ class WebSocketEventHandlers {
 
 			const isCurrentUser = payload.user.user_id === authStore.currentUserId;
 
-			// 显示提示
 			if (isCurrentUser) {
 				toast.warning('你已被移出群组');
-			} else {
-				const reasonText = payload.reason === 'banned' ? '被封禁' : '被移除';
-				toast.info(`${payload.user.nickname} ${reasonText}`);
-			}
-
-			// 分发自定义事件
-			if (browser) {
-				window.dispatchEvent(
-					new CustomEvent('group-member-removed', {
-						detail: {
-							group_id: payload.group_id,
-							user_id: payload.user.user_id,
-							removed_by: payload.removed_by,
-							reason: payload.reason,
-							member_count: payload.member_count,
-							is_current_user: isCurrentUser
-						}
-					})
-				);
-
-				// 如果被移除的是当前用户，检查是否需要跳转
-				if (isCurrentUser) {
+				// 如果在群组相关页面，跳转到群组列表
+				if (browser) {
 					const currentPath = window.location.pathname;
-					// 如果在群组相关页面，跳转到群组列表
 					if (
 						currentPath.includes(`/groups/${payload.group_id}`) ||
 						currentPath.includes(`/chat/groups/${payload.group_id}`)
@@ -521,6 +360,9 @@ class WebSocketEventHandlers {
 						goto('/groups');
 					}
 				}
+			} else {
+				const reasonText = payload.reason === 'banned' ? '被封禁' : '被移除';
+				toast.info(`${payload.user.nickname} ${reasonText}`);
 			}
 		});
 
@@ -531,26 +373,10 @@ class WebSocketEventHandlers {
 			const isCurrentUser = payload.user.user_id === authStore.currentUserId;
 			const mutedUntil = new Date(payload.muted_until).toLocaleString('zh-CN');
 
-			// 显示提示
 			if (isCurrentUser) {
 				toast.warning(`你已被禁言，直到 ${mutedUntil}`);
 			} else {
 				toast.info(`${payload.user.nickname} 已被禁言，直到 ${mutedUntil}`);
-			}
-
-			// 分发自定义事件
-			if (browser) {
-				window.dispatchEvent(
-					new CustomEvent('group-member-muted', {
-						detail: {
-							group_id: payload.group_id,
-							user_id: payload.user.user_id,
-							muted_by: payload.muted_by,
-							muted_until: payload.muted_until,
-							is_current_user: isCurrentUser
-						}
-					})
-				);
 			}
 		});
 
@@ -560,25 +386,10 @@ class WebSocketEventHandlers {
 
 			const isCurrentUser = payload.user.user_id === authStore.currentUserId;
 
-			// 显示提示
 			if (isCurrentUser) {
 				toast.success('你的禁言已解除');
 			} else {
 				toast.info(`${payload.user.nickname} 的禁言已解除`);
-			}
-
-			// 分发自定义事件
-			if (browser) {
-				window.dispatchEvent(
-					new CustomEvent('group-member-unmuted', {
-						detail: {
-							group_id: payload.group_id,
-							user_id: payload.user.user_id,
-							unmuted_by: payload.unmuted_by,
-							is_current_user: isCurrentUser
-						}
-					})
-				);
 			}
 		});
 
@@ -586,7 +397,6 @@ class WebSocketEventHandlers {
 		websocketStore.on('GroupUpdated', (payload: GroupUpdatedPayload) => {
 			log('[WS] 群组信息更新:', payload);
 
-			// 显示提示
 			const updatedFields = Object.keys(payload.updated_fields);
 			if (updatedFields.length > 0) {
 				const fieldLabels: Record<string, string> = {
@@ -603,40 +413,15 @@ class WebSocketEventHandlers {
 				const fieldsText = updatedFields.map((f) => fieldLabels[f] || f).join('、');
 				toast.success(`群组${fieldsText}已更新`);
 			}
-
-			// 分发自定义事件
-			if (browser) {
-				window.dispatchEvent(
-					new CustomEvent('group-updated', {
-						detail: {
-							group_id: payload.group_id,
-							updated_fields: payload.updated_fields,
-							updated_by: payload.updated_by
-						}
-					})
-				);
-			}
 		});
 
 		// 群组解散（GroupDismissed，spec 命名）
 		websocketStore.on('GroupDismissed', (payload: GroupDismissedPayload) => {
 			log('[WS] 群组解散:', payload);
-
-			// 显示提示
 			toast.warning('群组已解散');
 
-			// 分发自定义事件
+			// 如果在群组相关页面，跳转到群组列表
 			if (browser) {
-				window.dispatchEvent(
-					new CustomEvent('group-dismissed', {
-						detail: {
-							group_id: payload.group_id,
-							reason: payload.reason
-						}
-					})
-				);
-
-				// 检查当前路由，如果在群组相关页面，跳转到群组列表
 				const currentPath = window.location.pathname;
 				if (
 					currentPath.includes(`/groups/${payload.group_id}`) ||
@@ -651,7 +436,7 @@ class WebSocketEventHandlers {
 		websocketStore.on('SystemAnnouncement', (payload) => {
 			log('[WS] 系统公告:', payload);
 			switch (payload.severity) {
-				case 'critical':
+				case 'error':
 					toast.error(payload.title, payload.content);
 					break;
 				case 'warning':
@@ -671,7 +456,8 @@ class WebSocketEventHandlers {
 				payload.duration_days === 0 ? '永久' : `${payload.duration_days} 天`;
 			toast.error(`账号已被封禁（${durationText}）`, payload.reason);
 
-			// 强制登出
+			// 先断开 WebSocket（设置 shouldReconnect=false，阻止自动重连），再登出
+			websocketStore.disconnect();
 			authStore.logout();
 			goto('/auth');
 		});
@@ -706,21 +492,25 @@ class WebSocketEventHandlers {
 		// 私聊正在输入（spec: PrivateUserTyping）
 		websocketStore.on('PrivateUserTyping', (payload) => {
 			log('[WS] 私聊正在输入:', payload);
-			if (browser) {
-				window.dispatchEvent(
-					new CustomEvent('private-user-typing', { detail: payload })
-				);
-			}
 		});
 
 		// 群聊正在输入（spec: GroupUserTyping）
 		websocketStore.on('GroupUserTyping', (payload) => {
 			log('[WS] 群聊正在输入:', payload);
-			if (browser) {
-				window.dispatchEvent(
-					new CustomEvent('group-user-typing', { detail: payload })
-				);
-			}
+		});
+
+		// 多端同步事件（⏳ 延期实现）
+		websocketStore.on('SelfReadSync', (_payload) => {
+			// ⏳ 延期实现
+		});
+		websocketStore.on('SelfChatSettingsSync', (_payload) => {
+			// ⏳ 延期实现
+		});
+		websocketStore.on('SelfSettingsUpdated', (_payload) => {
+			// ⏳ 延期实现
+		});
+		websocketStore.on('SelfRelationSync', (_payload) => {
+			// ⏳ 延期实现
 		});
 	}
 
@@ -765,24 +555,127 @@ class WebSocketEventHandlers {
 
 	// ============ 客户端事件发送 ============
 
-	/**
-	 * 发送私聊正在输入状态
-	 */
+	// Typing 节流状态（spec: 最多每 3 秒一次，停止 3 秒后自动发 false）
+	private static readonly TYPING_THROTTLE_MS = 3000;
+	private typingThrottleTimers = new Map<string, ReturnType<typeof setTimeout>>();
+	private typingLastSent = new Map<string, number>();
+	private typingDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+	// 记录当前正在输入的目标，用于切换会话时取消
+	private activeTypingTargets = new Set<string>();
+
+	/** 发送私聊正在输入状态（带节流 + 自动取消） */
 	sendPrivateTyping(targetUserId: string, isTyping: boolean) {
-		websocketStore.send({
+		this.dispatchTyping(`private:${targetUserId}`, isTyping, (typing) => ({
 			type: 'PrivateTyping',
-			payload: { target_user_id: targetUserId, is_typing: isTyping }
-		});
+			payload: { target_user_id: targetUserId, is_typing: typing }
+		}));
+	}
+
+	/** 发送群聊正在输入状态（带节流 + 自动取消） */
+	sendGroupTyping(groupId: string, isTyping: boolean) {
+		this.dispatchTyping(`group:${groupId}`, isTyping, (typing) => ({
+			type: 'GroupTyping',
+			payload: { group_id: groupId, is_typing: typing }
+		}));
+	}
+
+	/** 统一的 typing 分发（节流 + 防抖逻辑复用） */
+	private dispatchTyping(
+		key: string,
+		isTyping: boolean,
+		createEvent: (is_typing: boolean) => import('./types').ClientEvent
+	) {
+		if (isTyping) {
+			this.sendTypingThrottled(
+				key,
+				() => websocketStore.send(createEvent(true)),
+				() => websocketStore.send(createEvent(false))
+			);
+		} else {
+			this.cancelTyping(key, () => websocketStore.send(createEvent(false)));
+		}
 	}
 
 	/**
-	 * 发送群聊正在输入状态
+	 * 切换会话时取消所有活跃的输入状态
+	 * spec: 切换会话时对上一个对象立即发 is_typing: false
 	 */
-	sendGroupTyping(groupId: string, isTyping: boolean) {
-		websocketStore.send({
-			type: 'GroupTyping',
-			payload: { group_id: groupId, is_typing: isTyping }
-		});
+	cancelAllTyping() {
+		for (const key of this.activeTypingTargets) {
+			const colonIndex = key.indexOf(':');
+			if (colonIndex === -1) continue;
+			const type = key.substring(0, colonIndex);
+			const id = key.substring(colonIndex + 1);
+			if (type === 'private') {
+				websocketStore.send({
+					type: 'PrivateTyping',
+					payload: { target_user_id: id, is_typing: false }
+				});
+			} else if (type === 'group') {
+				websocketStore.send({
+					type: 'GroupTyping',
+					payload: { group_id: id, is_typing: false }
+				});
+			}
+		}
+		// 清理所有定时器和状态
+		for (const timer of this.typingThrottleTimers.values()) clearTimeout(timer);
+		for (const timer of this.typingDebounceTimers.values()) clearTimeout(timer);
+		this.typingThrottleTimers.clear();
+		this.typingDebounceTimers.clear();
+		this.typingLastSent.clear();
+		this.activeTypingTargets.clear();
+	}
+
+	/**
+	 * 节流发送 typing（内部方法）
+	 */
+	private sendTypingThrottled(key: string, sendFn: () => void, cancelFn: () => void) {
+		const now = Date.now();
+		const lastSent = this.typingLastSent.get(key) ?? 0;
+		const elapsed = now - lastSent;
+
+		// 节流：距上次发送不足 3 秒则跳过
+		if (elapsed >= WebSocketEventHandlers.TYPING_THROTTLE_MS) {
+			sendFn();
+			this.typingLastSent.set(key, now);
+			this.activeTypingTargets.add(key);
+		}
+
+		// 重置防抖定时器：停止输入 3 秒后自动发 false
+		const existingDebounce = this.typingDebounceTimers.get(key);
+		if (existingDebounce) clearTimeout(existingDebounce);
+
+		this.typingDebounceTimers.set(key, setTimeout(() => {
+			cancelFn();
+			this.typingDebounceTimers.delete(key);
+			this.typingLastSent.delete(key);
+			this.activeTypingTargets.delete(key);
+		}, WebSocketEventHandlers.TYPING_THROTTLE_MS));
+	}
+
+	/**
+	 * 取消 typing（内部方法）
+	 */
+	private cancelTyping(key: string, sendFn: () => void) {
+		// 清理节流和防抖定时器
+		const throttleTimer = this.typingThrottleTimers.get(key);
+		if (throttleTimer) {
+			clearTimeout(throttleTimer);
+			this.typingThrottleTimers.delete(key);
+		}
+		const debounceTimer = this.typingDebounceTimers.get(key);
+		if (debounceTimer) {
+			clearTimeout(debounceTimer);
+			this.typingDebounceTimers.delete(key);
+		}
+
+		// 只有当我们之前确实发送过 typing:true 才发 false
+		if (this.activeTypingTargets.has(key)) {
+			sendFn();
+			this.activeTypingTargets.delete(key);
+		}
+		this.typingLastSent.delete(key);
 	}
 }
 

@@ -16,6 +16,9 @@ import { curves } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { CoordinateConverter } from '../../../core/geo/CoordinateConverter';
+import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { AnchorHistoryItem, AnchorHistoryUtil } from '../../../core/utils/AnchorHistoryUtil';
+import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 
 const DOMAIN_NUMBER: number = 0xFF14;
 const TAG: string = 'LocationPickerPage';
@@ -24,6 +27,8 @@ const TAG: string = 'LocationPickerPage';
 export struct LocationPickerPage {
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
+  @StorageLink('safeAreaTop') safeAreaTop: number = 0;
+  @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
 
   @State mapRegion: MapRegion = {
     latitude: 35.154921,
@@ -41,6 +46,7 @@ export struct LocationPickerPage {
   @State isSearching: boolean = false;
   @State showSearchBar: boolean = false;
   @State searchResults: LocationInfo[] = [];
+  @State anchorHistory: AnchorHistoryItem[] = [];
 
   private resolveTimerId: number = 0;
   private isFirstCameraIdle: boolean = true;
@@ -49,7 +55,12 @@ export struct LocationPickerPage {
   private initialised: boolean = false;
 
   async aboutToAppear() {
+    SystemUiController.useSurface({
+      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,
+      preferDarkContent: true
+    });
     this.initialised = false;
+    this.anchorHistory = AnchorHistoryUtil.getHistory();
   }
 
   private initFromParams(_param: Record<string, Object> | undefined): void {
@@ -105,17 +116,6 @@ export struct LocationPickerPage {
       clearTimeout(this.searchDebounceTimerId);
       this.searchDebounceTimerId = 0;
     }
-  }
-
-  private async recenterToCurrentLocation(): Promise<void> {
-    const location = await CoordinateConverter.getConvertedLocation();
-    if (!location) {
-      SystemToast.show('无法获取当前位置', this.getUIContext());
-      return;
-    }
-    this.skipNextResolve = true;
-    this.setCenter(location.latitude, location.longitude);
-    await this.resolveLocation(location.latitude, location.longitude);
   }
 
   private setCenter(lat: number, lng: number) {
@@ -227,6 +227,13 @@ export struct LocationPickerPage {
     });
   }
 
+  private selectHistoryItem(item: AnchorHistoryItem): void {
+    this.skipNextResolve = true;
+    this.setCenter(item.latitude, item.longitude);
+    this.locationName = item.locationName || '历史位置';
+    this.resolveLocation(item.latitude, item.longitude);
+  }
+
   /**
    * 确认选点：将结果写入 KEY_LOCATION_PICK_RESULT，不修改浏览锚点。
    */
@@ -246,195 +253,111 @@ export struct LocationPickerPage {
 
   build() {
     NavDestination() {
-      Column() {
-        // ===== 顶部导航栏 =====
-        Row() {
-          Column() {
-            Text() {
-              SymbolSpan($r(AppIcon.BACK))
-                .fontSize(22)
-                .fontColor([$r('sys.color.ohos_id_color_text_primary')])
-            }
-          }
-          .width(44)
-          .height(44)
-          .justifyContent(FlexAlign.Center)
-          .onClick(() => { AppRouter.pop(); })
+      Stack() {
+        // 1. 地图（全铺）
+        NativeMapComponent({
+          mapRegion: this.mapRegion,
+          markers: [],
+          showCompass: true,
+          showScale: true,
+          showZoomControls: true,
+          showMyLocationControls: true,
+          contentPaddingTop: (this.safeAreaTop > 0 ? this.safeAreaTop : 20) + 80,
+          contentPaddingBottom: 200 + this.safeAreaBottom,
+          onCameraIdle: (camera: MapCameraPosition) => { this.onCameraIdle(camera); },
+          onMapDoubleClick: (coord: MapCoordinate) => { this.onMapDoubleClick(coord); }
+        })
+        .width('100%')
+        .height('100%')
 
-          if (this.showSearchBar) {
-            TextInput({ placeholder: '搜索地点名称', text: this.searchText })
-              .id('locationPickerSearchInput')
-              .layoutWeight(1)
-              .height(36)
-              .borderRadius(DesignConstants.RADIUS.LG)
-              .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .onChange((value: string) => {
-                this.searchText = value;
-                if (this.searchDebounceTimerId > 0) {
-                  clearTimeout(this.searchDebounceTimerId);
-                  this.searchDebounceTimerId = 0;
-                }
-                if (value.trim().length > 0) {
-                  this.searchDebounceTimerId = setTimeout(() => {
-                    this.doSearch();
-                  }, 500);
-                } else {
-                  this.searchResults = [];
-                }
-              })
-              .onSubmit(() => {
-                if (this.searchDebounceTimerId > 0) {
-                  clearTimeout(this.searchDebounceTimerId);
-                  this.searchDebounceTimerId = 0;
-                }
-                this.doSearch();
-              })
-              .transition(TransitionEffect.OPACITY.combine(
-                TransitionEffect.translate({ x: 40 })
-              ).animation({ duration: 250, curve: Curve.FastOutSlowIn }))
+        // 2. 中心指示器
+        Column() {
+          Column()
+            .width(40)
+            .height(40)
+            .borderRadius(20)
+            .backgroundColor($r('app.color.color_pin_halo'))
+          Column()
+            .width(24)
+            .height(24)
+            .borderRadius(12)
+            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+            .border({ width: 3, color: $r('sys.color.ohos_id_color_background') })
+            .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+          Column()
+            .width(3)
+            .height(14)
+            .borderRadius(1.5)
+            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+            .margin({ top: 6 })
+        }
+        .offset({ y: this.isPinAnimating ? -30 : -18 })
+        .scale({ x: this.isPinAnimating ? 1.12 : 1, y: this.isPinAnimating ? 1.12 : 1 })
+        .animation({ duration: 500, curve: curves.springMotion(0.6, 0.8) })
+        .hitTestBehavior(HitTestMode.Transparent)
 
-            if (this.isSearching) {
-              LoadingProgress()
-                .width(24)
-                .height(24)
-                .color($r('sys.color.ohos_id_color_emphasize'))
-                .margin({ left: DesignConstants.SPACING.SM })
-                .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
-            } else {
-              Text('取消')
+        // 3. 全屏覆盖层：顶部浮层 + Blank + 底部面板
+        Column() {
+          // 顶部导航 + 搜索
+          Column({ space: 12 }) {
+            Row({ space: 12 }) {
+              Column() {
+                Text() {
+                  SymbolSpan($r(AppIcon.BACK))
+                    .fontSize(22)
+                    .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+                }
+              }
+              .width(44)
+              .height(44)
+              .justifyContent(FlexAlign.Center)
+              .backgroundColor($r('app.color.bg_secondary'))
+              .borderRadius(22)
+              .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+              .onClick(() => { AppRouter.pop(); })
+
+              TextInput({ placeholder: '搜索地点名称', text: this.searchText })
+                .id('locationPickerSearchInput')
+                .layoutWeight(1)
+                .height(44)
+                .borderRadius(22)
+                .backgroundColor($r('app.color.bg_secondary'))
+                .padding({ left: 16, right: 16 })
+                .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
                 .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontColor($r('sys.color.ohos_id_color_emphasize'))
-                .margin({ left: DesignConstants.SPACING.SM })
-                .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
-                .onClick(() => {
-                  this.getUIContext().animateTo({ duration: 250, curve: Curve.FastOutSlowIn }, () => {
-                    this.showSearchBar = false;
-                    this.searchText = '';
+                .onChange((value: string) => {
+                  this.searchText = value;
+                  if (this.searchDebounceTimerId > 0) clearTimeout(this.searchDebounceTimerId);
+                  if (value.trim().length > 0) {
+                    this.searchDebounceTimerId = setTimeout(() => this.doSearch(), 500);
+                  } else {
                     this.searchResults = [];
-                  });
+                  }
                 })
-            }
-          } else {
-            Text('选择位置')
-              .fontSize(DesignConstants.FONT.SIZE.XL)
-              .fontWeight(FontWeight.Bold)
-              .fontColor($r('sys.color.ohos_id_color_text_primary'))
-              .layoutWeight(1)
-              .textAlign(TextAlign.Center)
-              .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
+                .onSubmit(() => {
+                  if (this.searchDebounceTimerId > 0) {
+                    clearTimeout(this.searchDebounceTimerId);
+                    this.searchDebounceTimerId = 0;
+                  }
+                  this.doSearch();
+                })
 
-            Column() {
-              Text() {
-                SymbolSpan($r(AppIcon.SEARCH))
-                  .fontSize(22)
-                  .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+              if (this.isSearching) {
+                LoadingProgress()
+                  .width(24)
+                  .height(24)
+                  .color($r('sys.color.ohos_id_color_emphasize'))
+                  .alignSelf(ItemAlign.Center)
               }
             }
-            .width(44)
-            .height(44)
-            .justifyContent(FlexAlign.Center)
-            .onClick(() => {
-              this.getUIContext().animateTo({ duration: 250, curve: Curve.FastOutSlowIn }, () => {
-                this.showSearchBar = true;
-              });
-              setTimeout(() => {
-                this.getUIContext().getFocusController().requestFocus('locationPickerSearchInput');
-              }, 300);
-            })
-          }
-        }
-        .width('100%')
-        .height(56)
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+            .width('100%')
 
-        // ===== 地图区域 =====
-        Stack({ alignContent: Alignment.Center }) {
-          NativeMapComponent({
-            mapRegion: this.mapRegion,
-            markers: [],
-            showCompass: true,
-            showScale: true,
-            showZoomControls: true,
-            showMyLocationControls: false,
-            onCameraIdle: (camera: MapCameraPosition) => { this.onCameraIdle(camera); },
-            onMapDoubleClick: (coord: MapCoordinate) => { this.onMapDoubleClick(coord); }
-          })
-
-          // 中心选择器 — 地图钉
-          Column() {
-            Stack({ alignContent: Alignment.Center }) {
-              Column()
-                .width(40)
-                .height(40)
-                .borderRadius(20)
-                .backgroundColor($r('app.color.color_pin_halo'))
-              Column()
-                .width(24)
-                .height(24)
-                .borderRadius(12)
-                .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-                .border({ width: 3, color: $r('sys.color.ohos_id_color_background') })
-                .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
-            }
-
-            Column()
-              .width(3)
-              .height(14)
-              .borderRadius(1.5)
-              .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-              .margin({ top: -2 })
-
-            Column()
-              .width(10)
-              .height(4)
-              .borderRadius(5)
-              .backgroundColor($r('app.color.color_overlay_light'))
-              .margin({ top: 6 })
-          }
-          .offset({ y: this.isPinAnimating ? -30 : -18 })
-          .scale({ x: this.isPinAnimating ? 1.15 : 1.0, y: this.isPinAnimating ? 1.15 : 1.0 })
-          .animation({ duration: 500, curve: curves.springMotion(0.6, 0.8) })
-
-          // 回到我的位置按钮
-          Column() {
-            Text() {
-              SymbolSpan($r(AppIcon.LOCATION))
-                .fontSize(22)
-                .fontColor([$r('sys.color.ohos_id_color_emphasize')])
-            }
-          }
-          .width(44)
-          .height(44)
-          .justifyContent(FlexAlign.Center)
-          .borderRadius(22)
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
-          .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
-          .onClick(() => { this.recenterToCurrentLocation(); })
-          .position({ right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
-
-          // 搜索结果覆盖层
-          if (this.searchResults.length > 0) {
-            Column() {
-              List({ space: 0 }) {
-                ForEach(this.searchResults, (item: LocationInfo, index: number) => {
-                  ListItem() {
-                    Row({ space: DesignConstants.SPACING.MD }) {
-                      Column() {
-                        Text() {
-                          SymbolSpan($r(AppIcon.LOCATION))
-                            .fontSize(20)
-                            .fontColor([$r('sys.color.ohos_id_color_emphasize')])
-                        }
-                      }
-                      .width(36)
-                      .height(36)
-                      .justifyContent(FlexAlign.Center)
-                      .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
-                      .borderRadius(DesignConstants.RADIUS.MD)
-
-                      Column({ space: 2 }) {
+            if (this.searchResults.length > 0) {
+              Column() {
+                List({ space: 0 }) {
+                  ForEach(this.searchResults, (item: LocationInfo, index: number) => {
+                    ListItem() {
+                      Column({ space: 4 }) {
                         Text(item.locationName || '未知地点')
                           .fontSize(DesignConstants.FONT.SIZE.MD)
                           .fontColor($r('sys.color.ohos_id_color_text_primary'))
@@ -444,104 +367,105 @@ export struct LocationPickerPage {
                           .fontSize(DesignConstants.FONT.SIZE.SM)
                           .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
                       }
-                      .layoutWeight(1)
-                      .alignItems(HorizontalAlign.Start)
+                      .width('100%')
+                      .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+                      .onClick(() => this.selectSearchResult(item))
                     }
-                    .width('100%')
-                    .padding({
-                      left: DesignConstants.SPACING.LG,
-                      right: DesignConstants.SPACING.LG,
-                      top: DesignConstants.SPACING.MD,
-                      bottom: DesignConstants.SPACING.MD
-                    })
-                    .onClick(() => {
-                      this.selectSearchResult(item);
-                    })
-                  }
-                }, (item: LocationInfo, index: number) => `search_${index}_${item.latitude}_${item.longitude}`)
+                  }, (item: LocationInfo, index: number) => `search_${index}_${item.latitude}_${item.longitude}`)
+                }
+                .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator') })
               }
-              .width('100%')
-              .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator') })
+              .backgroundColor($r('app.color.bg_secondary'))
+              .borderRadius(24)
+              .shadow({ radius: 12, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 4 })
+              .constraintSize({ maxHeight: 300 })
             }
-            .width('100%')
-            .constraintSize({ maxHeight: '70%' })
-            .backgroundColor($r('sys.color.ohos_id_color_background'))
-            .borderRadius({ bottomLeft: DesignConstants.RADIUS.LG, bottomRight: DesignConstants.RADIUS.LG })
-            .shadow({ radius: 12, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 4 })
-            .transition(
-              TransitionEffect.OPACITY.combine(
-                TransitionEffect.translate({ y: -20 })
-              ).animation({ duration: 250, curve: Curve.FastOutSlowIn })
-            )
-            .position({ top: 0, left: 0 })
-          }
-        }
-        .width('100%')
-        .layoutWeight(1)
-
-        // ===== 底部面板 =====
-        Column() {
-          Column()
-            .width(36)
-            .height(4)
-            .borderRadius(2)
-            .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
-            .margin({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.MD })
-
-          Row({ space: DesignConstants.SPACING.SM }) {
-            LoadingProgress()
-              .width(18)
-              .height(18)
-              .color($r('sys.color.ohos_id_color_emphasize'))
-              .opacity(this.isLoading ? 1 : 0)
-              .animation({ duration: 200, curve: Curve.EaseInOut })
-
-            Text(this.isLoading ? '正在识别位置...' : (this.locationName || '移动地图选择位置'))
-              .fontSize(DesignConstants.FONT.SIZE.LG)
-              .fontWeight(this.locationName.length > 0 && !this.isLoading ? FontWeight.Medium : FontWeight.Normal)
-              .fontColor(this.locationName.length > 0 && !this.isLoading
-                ? $r('sys.color.ohos_id_color_text_primary')
-                : $r('sys.color.ohos_id_color_text_secondary'))
-              .layoutWeight(1)
-              .maxLines(2)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .animation({ duration: 200, curve: Curve.EaseInOut })
           }
           .width('100%')
-          .constraintSize({ minHeight: 44 })
-          .alignItems(VerticalAlign.Center)
+          .padding({ left: 16, right: 16 })
+          .margin({ top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop, DesignConstants.SPACING.XL) })
 
-          Button('确认位置')
-            .type(ButtonType.Capsule)
-            .width('100%')
-            .height(48)
-            .margin({ top: DesignConstants.SPACING.MD })
-            .backgroundColor(this.locationName.length > 0 && !this.isLoading
-              ? $r('sys.color.ohos_id_color_emphasize')
-              : $r('sys.color.ohos_id_color_component_normal'))
-            .fontColor(this.locationName.length > 0 && !this.isLoading
-              ? Color.White
-              : $r('sys.color.ohos_id_color_text_secondary'))
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontWeight(FontWeight.Medium)
-            .enabled(this.locationName.length > 0 && !this.isLoading)
-            .opacity(this.locationName.length > 0 && !this.isLoading ? 1.0 : 0.6)
-            .animation({ duration: 250, curve: Curve.EaseInOut })
-            .onClick(() => this.confirm())
+          Blank()
+
+          // 底部信息面板（圆角露出地图，Map Kit 内置控件通过 contentPadding 推到可见区域）
+          Column({ space: 16 }) {
+            Column({ space: 4 }) {
+              Row({ space: 8 }) {
+                LoadingProgress()
+                  .width(16)
+                  .height(16)
+                  .color($r('sys.color.ohos_id_color_emphasize'))
+                  .opacity(this.isLoading ? 1 : 0)
+                Text(this.isLoading ? '正在识别位置...' : (this.locationName || '移动地图选择位置'))
+                  .fontSize(DesignConstants.FONT.SIZE.LG)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                  .maxLines(2)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .layoutWeight(1)
+              }
+              if (this.locationName.length > 0 && !this.isLoading) {
+                Text(`${this.centerLat.toFixed(6)}, ${this.centerLng.toFixed(6)}`)
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+              }
+            }
+
+            if (this.anchorHistory.length > 0) {
+              Column({ space: 8 }) {
+                Text('历史锚点')
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                Scroll() {
+                  Row({ space: 12 }) {
+                    ForEach(this.anchorHistory, (item: AnchorHistoryItem, index: number) => {
+                      Column({ space: 4 }) {
+                        Text(item.locationName || '未命名位置')
+                          .fontSize(DesignConstants.FONT.SIZE.SM)
+                          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                          .maxLines(1)
+                          .textOverflow({ overflow: TextOverflow.Ellipsis })
+                        Text(`${item.latitude.toFixed(4)}, ${item.longitude.toFixed(4)}`)
+                          .fontSize(DesignConstants.FONT.SIZE.XS)
+                          .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+                      }
+                      .padding({ left: 12, right: 12, top: 8, bottom: 8 })
+                      .backgroundColor($r('app.color.bg_primary'))
+                      .borderRadius(DesignConstants.RADIUS.LG)
+                      .shadow({ radius: 4, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 1 })
+                      .onClick(() => this.selectHistoryItem(item))
+                    }, (item: AnchorHistoryItem, index: number) => `picker_history_${index}`)
+                  }
+                }
+                .scrollable(ScrollDirection.Horizontal)
+                .scrollBar(BarState.Off)
+              }
+            }
+
+            Button('确认位置')
+              .type(ButtonType.Capsule)
+              .width('100%')
+              .height(48)
+              .backgroundColor(this.locationName.length > 0 && !this.isLoading
+                ? $r('sys.color.ohos_id_color_emphasize')
+                : $r('sys.color.ohos_id_color_component_normal'))
+              .fontColor(this.locationName.length > 0 && !this.isLoading ? Color.White : $r('sys.color.ohos_id_color_text_secondary'))
+              .fontSize(DesignConstants.FONT.SIZE.LG)
+              .fontWeight(FontWeight.Medium)
+              .enabled(this.locationName.length > 0 && !this.isLoading)
+              .opacity(this.locationName.length > 0 && !this.isLoading ? 1 : 0.6)
+              .onClick(() => this.confirm())
+          }
+          .width('100%')
+          .padding({ left: 24, right: 24, bottom: 16 + this.safeAreaBottom, top: 16 })
+          .backgroundColor($r('sys.color.ohos_id_color_background'))
+          .borderRadius({ topLeft: 24, topRight: 24 })
+          .shadow({ radius: 16, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: -4 })
         }
         .width('100%')
-        .padding({
-          left: DesignConstants.SPACING.XL,
-          right: DesignConstants.SPACING.XL,
-          bottom: DesignConstants.SPACING.XL
-        })
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
-        .borderRadius({ topLeft: DesignConstants.RADIUS.XL, topRight: DesignConstants.RADIUS.XL })
-        .shadow({ radius: 16, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: -4 })
+        .height('100%')
+        .hitTestBehavior(HitTestMode.Transparent)
       }
-      .width('100%')
-      .height('100%')
-      .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

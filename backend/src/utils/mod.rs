@@ -5,7 +5,6 @@ pub mod id_gen;
 pub mod jwt;
 pub mod pagination;
 pub mod password;
-pub mod session_token;
 pub mod token;
 pub mod validation;
 pub mod web_cookie;

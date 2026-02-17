@@ -1,10 +1,11 @@
 use std::str::FromStr;
-use uuid::Uuid;
 
 use crate::{
     dto::{
-        request::{CreateReportRequest, HandleReportRequest, MyReportsRequest, ReportsRequest},
-        response::{CreateReportData, PaginatedData, ReportItem},
+        request::{
+            AdminReportSearchRequest, CreateReportRequest, HandleReportRequest, MyReportsRequest,
+        },
+        response::{AdminReportItem, CreateReportData, PaginatedData, ReportItem, UserInfo},
     },
     error::AppError,
     repositories::{
@@ -20,7 +21,7 @@ use crate::{
     utils::validation::Validator,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ReportService {
     report_repo: ReportRepository,
     user_repo: UserRepository,
@@ -29,6 +30,7 @@ pub struct ReportService {
     group_repo: GroupRepository,
     private_message_repo: PrivateMessageRepository,
     group_message_repo: GroupMessageRepository,
+    media_service: crate::services::media_service::MediaService,
 }
 
 impl ReportService {
@@ -40,6 +42,7 @@ impl ReportService {
         group_repo: GroupRepository,
         private_message_repo: PrivateMessageRepository,
         group_message_repo: GroupMessageRepository,
+        media_service: crate::services::media_service::MediaService,
     ) -> Self {
         Self {
             report_repo,
@@ -49,6 +52,7 @@ impl ReportService {
             group_repo,
             private_message_repo,
             group_message_repo,
+            media_service,
         }
     }
 
@@ -88,12 +92,18 @@ impl ReportService {
         reporter_id: i64,
         req: MyReportsRequest,
     ) -> Result<PaginatedData<ReportItem>, AppError> {
-        let limit = Validator::validate_limit(req.limit, 100)?;
-        let cursor = Validator::parse_cursor(req.cursor.as_deref())?;
+        let limit = Validator::validate_limit(req.limit, crate::constants::MAX_PAGE_LIMIT)?;
+        let cursor = req.cursor.clone();
 
         let (reports, next_cursor) = self
             .report_repo
-            .find_reports_by_reporter(reporter_id, limit as i32, cursor)
+            .find_reports_by_reporter(
+                reporter_id,
+                req.status,
+                req.target_type,
+                limit as i32,
+                cursor,
+            )
             .await?;
 
         let response_items: Vec<ReportItem> = reports
@@ -111,21 +121,115 @@ impl ReportService {
     pub async fn get_list(
         &self,
         _admin_id: i64, // 验证在Handler层
-        req: ReportsRequest,
-    ) -> Result<PaginatedData<ReportItem>, AppError> {
-        let limit = Validator::validate_limit(req.limit, 100)?;
-        let cursor = Validator::parse_cursor(req.cursor.as_deref())?;
+        req: &AdminReportSearchRequest,
+    ) -> Result<PaginatedData<AdminReportItem>, AppError> {
+        use crate::dto::response::ReportTargetSnapshot;
 
-        // status 和 target_type 已是强类型枚举，直接使用
+        let pagination = req.pagination.as_ref();
+        let limit_value = pagination.and_then(|p| p.limit).unwrap_or(20);
+        let limit = Validator::validate_limit(Some(limit_value), crate::constants::MAX_PAGE_LIMIT)?;
+        let cursor = pagination.and_then(|p| p.cursor.clone());
+
         let (reports, next_cursor) = self
             .report_repo
             .find_all_reports(req.status, req.target_type, limit as i32, cursor)
             .await?;
 
-        let response_items: Vec<ReportItem> = reports
-            .into_iter()
-            .map(Self::to_report_item)
-            .collect::<Result<Vec<_>, _>>()?;
+        let mut all_user_ids: Vec<i64> = reports.iter().map(|r| r.reporter_id).collect();
+        for r in &reports {
+            if let Some(uid) = r.handled_by {
+                all_user_ids.push(uid);
+            }
+        }
+        all_user_ids.sort_unstable();
+        all_user_ids.dedup();
+
+        let users = self
+            .user_repo
+            .find_profiles(&all_user_ids)
+            .await
+            .unwrap_or_default();
+        let user_map: std::collections::HashMap<i64, _> =
+            users.into_iter().map(|u| (u.user_id, u)).collect();
+
+        let mut response_items = Vec::with_capacity(reports.len());
+        for report in reports {
+            let report_item = Self::to_report_item(report.clone())?;
+            let target_snapshot = report.target_snapshot.and_then(|value| {
+                let content = value
+                    .get("content")
+                    .and_then(|v| v.as_str())
+                    .map(|v| v.to_string());
+                let media_urls = value.get("media_urls").and_then(|v| {
+                    v.as_array().map(|arr| {
+                        arr.iter()
+                            .filter_map(|item| item.as_str().map(|s| s.to_string()))
+                            .collect::<Vec<_>>()
+                    })
+                });
+                let owner_id = value.get("owner_id").and_then(|v| {
+                    v.as_str()
+                        .map(|s| s.to_string())
+                        .or_else(|| v.as_i64().map(|id| id.to_string()))
+                });
+                if content.is_none() && media_urls.is_none() && owner_id.is_none() {
+                    None
+                } else {
+                    Some(ReportTargetSnapshot {
+                        content,
+                        media_urls,
+                        owner_id,
+                    })
+                }
+            });
+            let reporter = if let Some(u) = user_map.get(&report.reporter_id) {
+                let avatar_url = self
+                    .media_service
+                    .sign_url_if_path(u.avatar_url.as_deref())
+                    .await;
+                UserInfo::new(
+                    u.user_id,
+                    u.nickname
+                        .clone()
+                        .unwrap_or_else(|| crate::constants::UNKNOWN_USER_NICKNAME.to_string()),
+                    avatar_url,
+                )
+            } else {
+                UserInfo::new(
+                    report.reporter_id,
+                    crate::constants::UNKNOWN_USER_NICKNAME,
+                    None,
+                )
+            };
+            let handled_by = if let Some(uid) = report.handled_by {
+                if let Some(u) = user_map.get(&uid) {
+                    let avatar_url = self
+                        .media_service
+                        .sign_url_if_path(u.avatar_url.as_deref())
+                        .await;
+                    Some(UserInfo::new(
+                        u.user_id,
+                        u.nickname
+                            .clone()
+                            .unwrap_or_else(|| crate::constants::UNKNOWN_USER_NICKNAME.to_string()),
+                        avatar_url,
+                    ))
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+            response_items.push(AdminReportItem {
+                report: report_item,
+                reporter_user_id: report.reporter_id,
+                reporter,
+                handled_by,
+                handled_action: report.handled_action,
+                handled_note: report.handled_note,
+                target_snapshot,
+            });
+        }
 
         Ok(PaginatedData {
             items: response_items,
@@ -140,8 +244,7 @@ impl ReportService {
         // action 已是强类型枚举
 
         // 解析report_id
-        let report_id = Uuid::parse_str(&req.report_id)
-            .map_err(|_| AppError::BadRequest("无效的举报ID".to_string()))?;
+        let report_id = Validator::parse_uuid(&req.report_id, "举报ID")?;
 
         // 仅做存在性校验（避免拉整行）
         if !self.report_repo.exists(report_id).await? {
@@ -165,37 +268,6 @@ impl ReportService {
 
     /// 辅助方法：将ReportRow转换为ReportItem
     fn to_report_item(report: ReportRow) -> Result<ReportItem, AppError> {
-        use crate::dto::response::ReportTargetSnapshot;
-
-        let target_snapshot = report.target_snapshot.and_then(|value| {
-            let content = value
-                .get("content")
-                .and_then(|v| v.as_str())
-                .map(|v| v.to_string());
-            let media_urls = value.get("media_urls").and_then(|v| {
-                v.as_array().map(|arr| {
-                    arr.iter()
-                        .filter_map(|item| item.as_str().map(|s| s.to_string()))
-                        .collect::<Vec<_>>()
-                })
-            });
-            let owner_id = value.get("owner_id").and_then(|v| {
-                v.as_str()
-                    .map(|s| s.to_string())
-                    .or_else(|| v.as_i64().map(|id| id.to_string()))
-            });
-
-            if content.is_none() && media_urls.is_none() && owner_id.is_none() {
-                None
-            } else {
-                Some(ReportTargetSnapshot {
-                    content,
-                    media_urls,
-                    owner_id,
-                })
-            }
-        });
-
         let reason = ReportReason::from_str(&report.reason).unwrap_or(ReportReason::Other);
 
         Ok(ReportItem {
@@ -207,7 +279,6 @@ impl ReportService {
             status: report.status,
             created_at: report.created_at.to_rfc3339(),
             handled_at: report.handled_at.map(|t| t.to_rfc3339()),
-            target_snapshot,
         })
     }
 }
@@ -220,38 +291,31 @@ impl ReportService {
     ) -> Result<(), AppError> {
         match target_type {
             ReportTargetType::User => {
-                let user_id = target_id
-                    .parse::<i64>()
-                    .map_err(|_| AppError::InvalidFormat("target_id 无效".to_string()))?;
+                let user_id = crate::utils::validation::Validator::parse_user_id(target_id)?;
                 if !self.user_repo.exists(user_id).await? {
                     return Err(AppError::NotFound("举报目标不存在".to_string()));
                 }
             }
             ReportTargetType::Moment => {
-                let moment_id = uuid::Uuid::parse_str(target_id)
-                    .map_err(|_| AppError::InvalidFormat("target_id 无效".to_string()))?;
+                let moment_id = Validator::parse_uuid(target_id, "target_id")?;
                 if !self.moment_repo.exists(moment_id).await? {
                     return Err(AppError::NotFound("举报目标不存在".to_string()));
                 }
             }
             ReportTargetType::Comment => {
-                let comment_id = uuid::Uuid::parse_str(target_id)
-                    .map_err(|_| AppError::InvalidFormat("target_id 无效".to_string()))?;
+                let comment_id = Validator::parse_uuid(target_id, "target_id")?;
                 if !self.comment_repo.exists(comment_id).await? {
                     return Err(AppError::NotFound("举报目标不存在".to_string()));
                 }
             }
             ReportTargetType::Group => {
-                let group_id = target_id
-                    .parse::<i64>()
-                    .map_err(|_| AppError::InvalidFormat("target_id 无效".to_string()))?;
+                let group_id = crate::utils::validation::Validator::parse_group_id(target_id)?;
                 if !self.group_repo.exists(group_id).await? {
                     return Err(AppError::NotFound("举报目标不存在".to_string()));
                 }
             }
             ReportTargetType::Message => {
-                let message_id = uuid::Uuid::parse_str(target_id)
-                    .map_err(|_| AppError::InvalidFormat("target_id 无效".to_string()))?;
+                let message_id = Validator::parse_uuid(target_id, "target_id")?;
                 let private_exists = self
                     .private_message_repo
                     .find_by_id(message_id)

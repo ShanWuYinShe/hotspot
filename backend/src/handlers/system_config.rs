@@ -9,9 +9,9 @@ use crate::{
             UpdateUploadConfigRequest,
         },
         response::{
-            AdminGlobalSettingsData, ApiResponse, GlobalSettings, UpdateContactConfigData,
-            UpdateDefaultsConfigData, UpdateFeaturesConfigData, UpdateLimitsConfigData,
-            UpdateRateLimitsConfigData, UpdateUploadConfigData,
+            AdminGlobalSettingsData, ApiResponse, ClientConfig, GlobalSettings,
+            UpdateContactConfigData, UpdateDefaultsConfigData, UpdateFeaturesConfigData,
+            UpdateLimitsConfigData, UpdateRateLimitsConfigData, UpdateUploadConfigData,
         },
     },
     error::Result,
@@ -22,14 +22,11 @@ use crate::{
 
 // ==================== 客户端拉取配置 ====================
 
-pub async fn fetch_global_settings(
+pub async fn get_client_config(
     State(state): State<AppState>,
     Json(req): Json<FetchGlobalSettingsRequest>,
-) -> Result<Json<ApiResponse<GlobalSettings>>> {
-    let data = state
-        .system_config_service
-        .fetch_global_settings(req)
-        .await?;
+) -> Result<Json<ApiResponse<ClientConfig>>> {
+    let data = state.system_config_service.get_client_config(req).await?;
     Ok(Json(ApiResponse::success(data)))
 }
 

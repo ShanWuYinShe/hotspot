@@ -34,12 +34,18 @@ impl SubscriptionService {
             r#"
             SELECT
                 new_follower_enabled,
+                mutual_follow_enabled,
+                follow_request_enabled,
+                follow_request_handled_enabled,
                 moment_like_enabled,
                 moment_comment_enabled,
                 comment_reply_enabled,
                 group_invite_enabled,
+                group_invite_response_enabled,
                 group_apply_enabled,
                 group_apply_result_enabled,
+                group_announcement_enabled,
+                message_mention_enabled,
                 system_announcement_enabled
             FROM notification_subscriptions
             WHERE user_id = $1
@@ -52,20 +58,19 @@ impl SubscriptionService {
         let data = if let Some(r) = row {
             SubscriptionsData {
                 new_follower_enabled: r.new_follower_enabled,
+                mutual_follow_enabled: r.mutual_follow_enabled,
+                follow_request_enabled: r.follow_request_enabled,
+                follow_request_handled_enabled: r.follow_request_handled_enabled,
+                group_invite_enabled: r.group_invite_enabled,
+                group_invite_response_enabled: r.group_invite_response_enabled,
+                group_application_enabled: r.group_apply_enabled,
+                group_application_response_enabled: r.group_apply_result_enabled,
+                group_announcement_enabled: r.group_announcement_enabled,
+                message_mention_enabled: r.message_mention_enabled,
                 moment_like_enabled: r.moment_like_enabled,
                 moment_comment_enabled: r.moment_comment_enabled,
                 comment_reply_enabled: r.comment_reply_enabled,
-                group_invite_enabled: r.group_invite_enabled,
                 system_announcement_enabled: r.system_announcement_enabled,
-                // 以下字段在 Schema 中缺失，使用默认值或待补充
-                mutual_follow_enabled: true,
-                follow_request_enabled: true,
-                follow_request_handled_enabled: true,
-                group_invite_response_enabled: true,
-                group_application_enabled: r.group_apply_enabled,
-                group_application_response_enabled: r.group_apply_result_enabled,
-                group_announcement_enabled: true,
-                message_mention_enabled: true,
             }
         } else {
             // 如果没有记录，返回默认值

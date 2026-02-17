@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { groupsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { authStore } from '$lib/stores/auth.svelte';
+	import { websocketStore, subscriptionManager } from '$lib/websocket';
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { usePagination } from '$lib/hooks/use-pagination.svelte';
@@ -64,6 +65,20 @@
 	let joinMessage = $state('');
 	let settingsLoaded = $state(false);
 	let currentTab = $state<'overview' | 'announcements' | 'members'>('overview');
+
+	// groupId 变化时重置子数据加载标志，确保切换群组后重新加载公告和成员
+	$effect(() => {
+		groupId; // 依赖声明
+		untrack(() => {
+			announcementsLoaded = false;
+			membersLoaded = false;
+			settingsLoaded = false;
+			settings = null;
+			currentTab = 'overview';
+			announcementsPagination.reset();
+			membersPagination.reset();
+		});
+	});
 
 	// 使用 usePagination hook 统一管理公告和成员的分页状态
 	const announcementsPagination = usePagination<GroupAnnouncementItem>({
@@ -189,6 +204,7 @@
 		try {
 			if (editingAnnouncement) {
 				const response = await groupsService.updateAnnouncement({
+					group_id: groupId,
 					announcement_id: editingAnnouncement.announcement_id,
 					title,
 					content,
@@ -246,7 +262,7 @@
 		showAnnouncementDeleteDialog = false;
 		announcementToDelete = null;
 		try {
-			const response = await groupsService.deleteAnnouncement({ announcement_id: targetId });
+			const response = await groupsService.deleteAnnouncement({ group_id: groupId, announcement_id: targetId });
 			if (isSuccess(response)) {
 				// 从列表中删除公告
 				announcementsPagination.removeItem((item) => item.announcement_id === targetId);
@@ -601,147 +617,111 @@
 	});
 
 	onMount(() => {
-		// 显示加载错误
 		if (data.error) {
 			toast.error(data.error);
 		}
-		
 		loadSettings();
+	});
 
-		// 监听群组成员离开事件
-		const handleMemberLeft = (e: CustomEvent<{
-			group_id: string;
-			user_id: string;
-			member_count: number;
-		}>) => {
-			if (e.detail.group_id === groupId) {
-				// 从成员列表中移除
-				membersPagination.removeItem((item) => item.user.user_id === e.detail.user_id);
-				// 更新群组成员数量
-				if (groupData) {
-					groupData = {
-						...groupData,
-						group: { ...groupData.group, members_count: e.detail.member_count }
-					};
-				}
+	// WebSocket 群组订阅管理（进入页面时订阅，离开时取消）
+	let isGroupSubscribed = $state(false);
+
+	$effect(() => {
+		let cancelled = false;
+		const connected = websocketStore.isConnected;
+		const id = groupId;
+
+		if (connected && id && !isGroupSubscribed) {
+			subscriptionManager.subscribe('group', [id]).then((success) => {
+				// 防止组件卸载或 groupId 变化后仍修改状态
+				if (!cancelled) isGroupSubscribed = success;
+			});
+		} else if (!connected && isGroupSubscribed) {
+			isGroupSubscribed = false;
+		}
+
+		return () => {
+			cancelled = true;
+			if (isGroupSubscribed) {
+				subscriptionManager.unsubscribe('group', [id]);
+				isGroupSubscribed = false;
 			}
 		};
+	});
 
-		// 监听群组成员被移除事件
-		const handleMemberRemoved = (e: CustomEvent<{
-			group_id: string;
-			user_id: string;
-			member_count: number;
-			is_current_user: boolean;
-		}>) => {
-			if (e.detail.group_id === groupId) {
-				// 从成员列表中移除
-				membersPagination.removeItem((item) => item.user.user_id === e.detail.user_id);
-				// 更新群组成员数量
-				if (groupData && group) {
-					groupData = {
-						...groupData,
-						group: { ...groupData.group, members_count: e.detail.member_count }
-					};
-				}
-				// 如果被移除的是当前用户，重新加载群组信息
-				if (e.detail.is_current_user) {
-					loadGroup();
-				}
-			}
-		};
-
-		// 监听群组成员被禁言事件
-		const handleMemberMuted = (e: CustomEvent<{
-			group_id: string;
-			user_id: string;
-			muted_until?: string;
-		}>) => {
-			if (e.detail.group_id === groupId) {
-				// 更新成员禁言状态
-				membersPagination.updateItem((item) => {
-					if (item.user.user_id === e.detail.user_id) {
-						return { ...item, muted_until: e.detail.muted_until };
-					}
-					return null;
-				});
-				// 如果被禁言的是当前用户，重新加载群组信息
-				if (e.detail.user_id === authStore.currentUserId) {
-					loadGroup();
-				}
-			}
-		};
-
-		// 监听群组成员解除禁言事件
-		const handleMemberUnmuted = (e: CustomEvent<{
-			group_id: string;
-			user_id: string;
-		}>) => {
-			if (e.detail.group_id === groupId) {
-				// 更新成员禁言状态
-				membersPagination.updateItem((item) => {
-					if (item.user.user_id === e.detail.user_id) {
-						return { ...item, muted_until: undefined };
-					}
-					return null;
-				});
-				// 如果解除禁言的是当前用户，重新加载群组信息
-				if (e.detail.user_id === authStore.currentUserId) {
-					loadGroup();
-				}
-			}
-		};
-
-		// 监听群组信息更新事件
-		const handleGroupUpdated = (e: CustomEvent<{
-			group_id: string;
-			updated_fields: {
-				name?: string;
-				avatar_url?: string;
-				description?: string;
-			};
-		}>) => {
-			if (e.detail.group_id === groupId && groupData) {
-				// 更新群组信息
+	// WebSocket 事件处理（Svelte 5 $effect，自动清理）
+	$effect(() => {
+		return websocketStore.on('GroupMemberLeft', (payload) => {
+			if (payload.group_id !== groupId) return;
+			membersPagination.removeItem((item) => item.user.user_id === payload.user.user_id);
+			if (groupData) {
 				groupData = {
 					...groupData,
-					group: {
-						...groupData.group,
-						...(e.detail.updated_fields.name && { name: e.detail.updated_fields.name }),
-						...(e.detail.updated_fields.avatar_url && { avatar_url: e.detail.updated_fields.avatar_url })
-					},
-					...(e.detail.updated_fields.description && { description: e.detail.updated_fields.description })
+					group: { ...groupData.group, members_count: payload.member_count }
 				};
 			}
-		};
+		});
+	});
 
-		// 监听群组解散事件（spec: GroupDismissed）
-		const handleGroupDismissed = (e: CustomEvent<{
-			group_id: string;
-			reason?: string;
-		}>) => {
-			if (e.detail.group_id === groupId) {
-				goto('/groups');
+	$effect(() => {
+		return websocketStore.on('GroupMemberRemoved', (payload) => {
+			if (payload.group_id !== groupId) return;
+			membersPagination.removeItem((item) => item.user.user_id === payload.user.user_id);
+			if (groupData) {
+				groupData = {
+					...groupData,
+					group: { ...groupData.group, members_count: payload.member_count }
+				};
 			}
-		};
+			if (payload.user.user_id === authStore.currentUserId) {
+				loadGroup();
+			}
+		});
+	});
 
-		// 注册事件监听器
-		window.addEventListener('group-member-left', handleMemberLeft as EventListener);
-		window.addEventListener('group-member-removed', handleMemberRemoved as EventListener);
-		window.addEventListener('group-member-muted', handleMemberMuted as EventListener);
-		window.addEventListener('group-member-unmuted', handleMemberUnmuted as EventListener);
-		window.addEventListener('group-updated', handleGroupUpdated as EventListener);
-		window.addEventListener('group-dismissed', handleGroupDismissed as EventListener);
+	$effect(() => {
+		return websocketStore.on('GroupMemberMuted', (payload) => {
+			if (payload.group_id !== groupId) return;
+			membersPagination.updateItem((item) => {
+				if (item.user.user_id === payload.user.user_id) {
+					return { ...item, muted_until: payload.muted_until };
+				}
+				return null;
+			});
+			if (payload.user.user_id === authStore.currentUserId) {
+				loadGroup();
+			}
+		});
+	});
 
-		// 清理函数
-		return () => {
-			window.removeEventListener('group-member-left', handleMemberLeft as EventListener);
-			window.removeEventListener('group-member-removed', handleMemberRemoved as EventListener);
-			window.removeEventListener('group-member-muted', handleMemberMuted as EventListener);
-			window.removeEventListener('group-member-unmuted', handleMemberUnmuted as EventListener);
-			window.removeEventListener('group-updated', handleGroupUpdated as EventListener);
-			window.removeEventListener('group-dismissed', handleGroupDismissed as EventListener);
-		};
+	$effect(() => {
+		return websocketStore.on('GroupMemberUnmuted', (payload) => {
+			if (payload.group_id !== groupId) return;
+			membersPagination.updateItem((item) => {
+				if (item.user.user_id === payload.user.user_id) {
+					return { ...item, muted_until: undefined };
+				}
+				return null;
+			});
+			if (payload.user.user_id === authStore.currentUserId) {
+				loadGroup();
+			}
+		});
+	});
+
+	$effect(() => {
+		return websocketStore.on('GroupUpdated', (payload) => {
+			if (payload.group_id !== groupId || !groupData) return;
+			groupData = {
+				...groupData,
+				group: {
+					...groupData.group,
+					...(payload.updated_fields.name && { name: payload.updated_fields.name }),
+					...(payload.updated_fields.avatar_url && { avatar_url: payload.updated_fields.avatar_url })
+				},
+				...(payload.updated_fields.description && { description: payload.updated_fields.description })
+			};
+		});
 	});
 </script>
 
@@ -956,7 +936,7 @@
 				</div>
 				{#if announcementsPagination.loading && announcementsPagination.items.length === 0}
 					<div class="space-y-3">
-						{#each Array(3) as _}
+						{#each Array(3) as _, i (i)}
 							<Card class="border-0 bg-card/60 shadow-sm shadow-black/5">
 								<CardContent class="space-y-2 p-4">
 									<Skeleton class="h-4 w-40" />
@@ -1079,7 +1059,7 @@
 				</div>
 				{#if membersPagination.loading && membersPagination.items.length === 0}
 					<div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
-						{#each Array(6) as _}
+						{#each Array(6) as _, i (i)}
 							<div class="mb-3 break-inside-avoid">
 								<Card class="border-0 bg-card/60 shadow-sm shadow-black/5">
 									<CardContent class="flex items-center gap-3 p-4">

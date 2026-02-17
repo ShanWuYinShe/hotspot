@@ -2,8 +2,10 @@ use axum::{extract::State, Json};
 
 use crate::{
     dto::{
-        request::{CreateReportRequest, HandleReportRequest, MyReportsRequest, ReportsRequest},
-        response::{ApiResponse, CreateReportData, PaginatedData, ReportItem},
+        request::{
+            AdminReportSearchRequest, CreateReportRequest, HandleReportRequest, MyReportsRequest,
+        },
+        response::{AdminReportItem, ApiResponse, CreateReportData, PaginatedData, ReportItem},
     },
     error::Result,
     middleware::auth::AuthenticatedUser,
@@ -37,9 +39,9 @@ pub async fn me(
 pub async fn get_list(
     State(state): State<AppState>,
     user: AuthenticatedUser,
-    Json(req): Json<ReportsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<ReportItem>>>> {
-    let result = state.report_service.get_list(user.user_id, req).await?;
+    Json(req): Json<AdminReportSearchRequest>,
+) -> Result<Json<ApiResponse<PaginatedData<AdminReportItem>>>> {
+    let result = state.report_service.get_list(user.user_id, &req).await?;
     Ok(Json(ApiResponse::success(result)))
 }
 

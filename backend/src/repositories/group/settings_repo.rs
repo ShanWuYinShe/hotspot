@@ -1,0 +1,221 @@
+//! 群组设置仓库
+//!
+//! 管理群组的加入方式、密码、成员上限等设置
+
+use std::collections::HashMap;
+
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use sqlx::{FromRow, PgPool};
+
+use crate::error::Result;
+
+/// 群组设置Row（如果group_repo.rs中已定义，可以从那里导入）
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct GroupSettings {
+    pub group_id: i64,
+    pub join_method: String,
+    pub is_searchable: bool,
+    pub max_members: Option<i32>,
+    pub password_hash: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+/// 用户群组偏好设置Row
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct GroupUserPreferences {
+    pub id: i64,
+    pub group_id: i64,
+    pub user_id: i64,
+    pub is_muted: bool,
+    pub is_pinned: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Clone)]
+pub struct GroupSettingsRepository {
+    pool: PgPool,
+}
+
+impl GroupSettingsRepository {
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
+
+    /// 根据群聊ID查找群组设置（静态方法）
+    pub async fn find_by_group_id(pool: &PgPool, group_id: i64) -> Result<Option<GroupSettings>> {
+        let settings = sqlx::query_as!(
+            GroupSettings,
+            r#"
+            SELECT group_id, join_method::TEXT as "join_method!", 
+                   is_searchable, max_members, password_hash,
+                   created_at, updated_at
+            FROM group_settings
+            WHERE group_id = $1
+            "#,
+            group_id
+        )
+        .fetch_optional(pool)
+        .await?;
+
+        Ok(settings)
+    }
+
+    /// 根据群聊ID查找群组设置（实例方法）
+    pub async fn find_by_group(&self, group_id: i64) -> Result<Option<GroupSettings>> {
+        Self::find_by_group_id(&self.pool, group_id).await
+    }
+
+    /// 批量根据群组ID查找群组设置
+    /// 返回 HashMap<group_id, GroupSettings>，仅包含存在设置的群组
+    pub async fn find_by_groups(&self, group_ids: &[i64]) -> Result<HashMap<i64, GroupSettings>> {
+        if group_ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        let rows = sqlx::query_as!(
+            GroupSettings,
+            r#"
+            SELECT group_id, join_method::TEXT as "join_method!",
+                   is_searchable, max_members, password_hash,
+                   created_at, updated_at
+            FROM group_settings
+            WHERE group_id = ANY($1)
+            "#,
+            group_ids
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|s| (s.group_id, s)).collect())
+    }
+
+    /// 更新群组设置
+    pub async fn update(
+        &self,
+        group_id: i64,
+        join_method: Option<&str>,
+        is_searchable: Option<bool>,
+        max_members: Option<i32>,
+        password_hash: Option<&str>,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+            UPDATE group_settings
+            SET join_method = COALESCE($2, join_method::TEXT)::group_join_method,
+                is_searchable = COALESCE($3, is_searchable),
+                max_members = COALESCE($4, max_members),
+                password_hash = COALESCE($5, password_hash),
+                updated_at = NOW()
+            WHERE group_id = $1
+            "#,
+            group_id,
+            join_method,
+            is_searchable,
+            max_members,
+            password_hash
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// 清除群组密码
+    pub async fn clear_password(&self, group_id: i64) -> Result<()> {
+        sqlx::query!(
+            r#"
+            UPDATE group_settings
+            SET password_hash = NULL,
+                updated_at = NOW()
+            WHERE group_id = $1
+            "#,
+            group_id
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// 创建群组设置（通常由触发器自动创建，此方法用于特殊情况）
+    pub async fn create(
+        &self,
+        group_id: i64,
+        join_method: &str,
+        is_searchable: bool,
+        max_members: Option<i32>,
+        password_hash: Option<&str>,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+            INSERT INTO group_settings (group_id, join_method, is_searchable, max_members, password_hash)
+            VALUES ($1, $2::TEXT::group_join_method, $3, $4, $5)
+            ON CONFLICT (group_id) DO NOTHING
+            "#,
+            group_id,
+            join_method,
+            is_searchable,
+            max_members,
+            password_hash
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    // ==================== 用户群组偏好设置 ====================
+
+    /// 获取用户群组偏好设置
+    pub async fn find_user_preferences(
+        &self,
+        group_id: i64,
+        user_id: i64,
+    ) -> Result<Option<GroupUserPreferences>> {
+        let prefs = sqlx::query_as!(
+            GroupUserPreferences,
+            r#"
+            SELECT id, group_id, user_id, is_muted, is_pinned, created_at, updated_at
+            FROM group_user_preferences
+            WHERE group_id = $1 AND user_id = $2
+            "#,
+            group_id,
+            user_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(prefs)
+    }
+
+    /// 创建或更新用户群组偏好设置
+    pub async fn upsert_user_preferences(
+        &self,
+        group_id: i64,
+        user_id: i64,
+        is_muted: Option<bool>,
+        is_pinned: Option<bool>,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+            INSERT INTO group_user_preferences (group_id, user_id, is_muted, is_pinned)
+            VALUES ($1, $2, COALESCE($3, FALSE), COALESCE($4, FALSE))
+            ON CONFLICT (group_id, user_id) DO UPDATE
+            SET is_muted = COALESCE($3, group_user_preferences.is_muted),
+                is_pinned = COALESCE($4, group_user_preferences.is_pinned),
+                updated_at = NOW()
+            "#,
+            group_id,
+            user_id,
+            is_muted,
+            is_pinned
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+}

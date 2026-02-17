@@ -2,6 +2,7 @@
 	import { groupsService } from '$lib/api/services';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
 	import { usePagination } from '$lib/hooks/use-pagination.svelte';
+	import { useLocationAwareLoad } from '$lib/hooks/use-location-aware-load.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import GroupCard from '$lib/components/common/group-card.svelte';
 	import MasonryLayout from '$lib/components/common/masonry-layout.svelte';
@@ -37,28 +38,7 @@
 	}
 
 	// 监听位置变化：首次立即加载，后续变化 500ms 防抖
-	let prevUpdatedAt: number | undefined = $state(undefined);
-	let locationDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-
-	$effect(() => {
-		const now = mapAnchorStore.anchor.updatedAt;
-		if (prevUpdatedAt === undefined) {
-			prevUpdatedAt = now;
-			void loadGroups();
-			return () => {};
-		}
-		prevUpdatedAt = now;
-		if (locationDebounceTimer) clearTimeout(locationDebounceTimer);
-		locationDebounceTimer = setTimeout(() => {
-			void loadGroups(true);
-		}, 500);
-		return () => {
-			if (locationDebounceTimer) {
-				clearTimeout(locationDebounceTimer);
-				locationDebounceTimer = null;
-			}
-		};
-	});
+	useLocationAwareLoad((refresh) => loadGroups(refresh));
 </script>
 
 <svelte:head>
@@ -75,7 +55,7 @@
 
 	{#if pagination.loading}
 		<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
-			{#each Array(6) as _}
+			{#each Array(6) as _, i (i)}
 				<MasonryLayoutItem>
 					<div class="h-52 animate-pulse rounded-2xl bg-muted"></div>
 				</MasonryLayoutItem>

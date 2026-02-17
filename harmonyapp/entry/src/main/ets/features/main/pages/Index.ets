@@ -35,6 +35,7 @@ import { NotificationRenderer } from '../../../core/services/notification/Notifi
 import { SmartNotification, NotificationAction } from '../../../core/services/notification/NotificationDataManager';
 import { NotificationBanner } from '../../../components/NotificationBanner';
 import { TimerManager } from '../../../core/utils/TimerManager';
+import { SystemUiController } from '../../../core/utils/SystemUiController';
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'IndexPage';
@@ -53,6 +54,8 @@ struct Index {
   @StorageLink(KEY_USER_TYPE) userType: string = '';
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_UNREAD_COUNT) unreadCount: UnreadCount = { total_unread_count: 0 };
+  @StorageLink('safeAreaTop') safeAreaTop: number = 0;
+  @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(STORAGE_KEY_VISIBLE_NOTIFICATIONS) visibleNotifications: SmartNotification[] = [];
 
   @State currentTabIndex: number = 0;
@@ -62,7 +65,7 @@ struct Index {
   @State showNotificationCenter: boolean = false;
   @State showPerformanceDetails: boolean = false;
   @State showCreateSheet: boolean = false;
-  
+
   private stateManager = GlobalStateManager.getInstance();
   private persistentStateManager = PersistentStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
@@ -81,6 +84,9 @@ struct Index {
   private smartNotificationListener: ((event: NotificationEvent, notification: SmartNotification, extra?: Object) => void) | null = null;
 
   async aboutToAppear() {
+    SystemUiController.useSurface({
+      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
+    });
     // 初始化全局路由
     AppRouter.init(this.navPathStack);
 
@@ -406,14 +412,15 @@ struct Index {
           case 'GroupInviteReceived': {
             const p: Object = event.payload as Object;
             const payloadRecord = p as Record<string, Object>;
+            const groupRecord = payloadRecord.group as Record<string, Object>;
             const metadata = new NotificationMetadata();
             metadata.type = 'group_invite';
-            metadata.targetId = String(payloadRecord.group_id);
+            metadata.targetId = String(groupRecord.group_id);
             const notifInput: CreateNotificationInput = {
               type: 'social',
               priority: 'high',
               title: '群组邀请',
-              message: `${(payloadRecord.inviter as Record<string, Object>).nickname} 邀请你加入「${String(payloadRecord.group_name)}」`,
+              message: `${(payloadRecord.inviter as Record<string, Object>).nickname} 邀请你加入「${String(groupRecord.name)}」`,
               read: false,
               actionable: true,
               metadata: metadata
@@ -463,14 +470,15 @@ struct Index {
           case 'GroupApplicationResponse': {
             const p: Object = event.payload as Object;
             const payloadRecord = p as Record<string, Object>;
+            const groupRecord = payloadRecord.group as Record<string, Object>;
             const metadata = new NotificationMetadata();
             metadata.type = 'group_application_response';
-            metadata.targetId = String(payloadRecord.group_id);
+            metadata.targetId = String(groupRecord.group_id);
             const notifInput: CreateNotificationInput = {
               type: 'social',
               priority: payloadRecord.status === 'accepted' ? 'medium' : 'low',
               title: payloadRecord.status === 'accepted' ? '申请已通过' : '申请被拒绝',
-              message: payloadRecord.status === 'accepted' ? `你已加入「${String(payloadRecord.group_name)}」` : `你的入群申请被拒绝`,
+              message: payloadRecord.status === 'accepted' ? `你已加入「${String(groupRecord.name)}」` : `你的入群申请被拒绝`,
               read: false,
               actionable: true,
               metadata: metadata
@@ -592,7 +600,8 @@ struct Index {
         .fontWeight(this.currentTabIndex === targetIndex ? FontWeight.Medium : FontWeight.Normal)
     }
     .width('100%')
-    .height(56)
+    .height(56 + this.safeAreaBottom)
+    .padding({ bottom: this.safeAreaBottom })
     .justifyContent(FlexAlign.Center)
     .onClick(() => {
       this.handleTabChange(targetIndex);
@@ -625,7 +634,8 @@ struct Index {
         .fontWeight(this.currentTabIndex === 0 ? FontWeight.Medium : FontWeight.Normal)
     }
     .width('100%')
-    .height(56)
+    .height(56 + this.safeAreaBottom)
+    .padding({ bottom: this.safeAreaBottom })
     .justifyContent(FlexAlign.Center)
     .onClick(() => {
       this.handleTabChange(0);
@@ -656,7 +666,8 @@ struct Index {
         .margin({ top: 4 })
     }
     .width('100%')
-    .height(56)
+    .height(56 + this.safeAreaBottom)
+    .padding({ bottom: this.safeAreaBottom })
     .justifyContent(FlexAlign.Center)
     .onClick(() => {
       this.handleTabChange(2);
@@ -681,8 +692,10 @@ struct Index {
         .height('100%')
         .justifyContent(FlexAlign.Center)
         .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
+        Column() {
         Navigation(this.navPathStack) {
         Tabs({ barPosition: BarPosition.End, controller: this.tabsController }) {
           // 1. 附近（含动态/用户/群组子标签）
@@ -731,9 +744,13 @@ struct Index {
           }
           .tabBar(this.TabBuilderIcon('我的', 4, AppIcon.PERSON))
         }
+        .barHeight(56 + this.safeAreaBottom)
         .scrollable(false)
+        .barMode(BarMode.Fixed)
+        .divider({ strokeWidth: 0 })  // 隐藏分隔线，更现代
         .onChange((index: number) => this.handleTabChange(index))
-        .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+        .backgroundColor($r('app.color.bg_primary'))
+        .shadow({ radius: 8, color: '#0A000000', offsetX: 0, offsetY: -2 })
         .bindSheet($$this.showCreateSheet, this.CreateSheetContent(), {
           height: SheetSize.FIT_CONTENT,
           dragBar: true,
@@ -744,6 +761,9 @@ struct Index {
         .hideTitleBar(true)
         .hideBackButton(true)
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        }
+        .width('100%')
+        .height('100%')
       }
 
       if (this.visibleNotifications.length > 0) {
@@ -769,6 +789,7 @@ struct Index {
         }
         .width('100%')
         .padding({ top: 12, left: 16, right: 16 })
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
         .hitTestBehavior(HitTestMode.Transparent)
       }
 
@@ -779,6 +800,7 @@ struct Index {
         .width('100%')
         .height('100%')
         .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.EaseInOut }))
         .onClick(() => {
           this.showNotificationCenter = false;
@@ -795,6 +817,7 @@ struct Index {
         .width('100%')
         .height('100%')
         .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.EaseInOut }))
         .onClick(() => {
           this.showPerformanceDetails = false;
@@ -803,6 +826,12 @@ struct Index {
     }
     .width('100%')
     .height('100%')
+    .backgroundColor($r('app.color.bg_primary'))
+  }
+
+  /** 获取安全区域顶部内边距（状态栏高度 + 间距） */
+  private getSafeAreaTopPadding(): number {
+    return (this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.LG) + DesignConstants.SPACING.SM;
   }
 
   @Builder
@@ -826,8 +855,14 @@ struct Index {
         })
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: 8, bottom: 8 })
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: this.getSafeAreaTopPadding(),
+      bottom: 8
+    })
     .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
   }
 
   @Builder

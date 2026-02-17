@@ -20,5 +20,7 @@ pub fn token_required_routes() -> Router<AppState> {
         .route("/list_groups", post(feed::get_groups))
         .route("/list_users", post(feed::get_users));
 
-    main_routes
+    let me_routes = Router::new().route("/dismiss", post(feed::dismiss_item));
+
+    main_routes.nest("/me", me_routes)
 }

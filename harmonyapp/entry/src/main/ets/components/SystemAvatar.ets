@@ -6,6 +6,7 @@ import { UserTypeUtil } from '../core/utils/UserTypeUtil';
  * SystemAvatar - 头像组件
  * 支持图片、首字母、在线状态、用户类型标识
  */
+@Reusable
 @Component
 export struct SystemAvatar {
   @Prop src: string | Resource | undefined;
@@ -65,7 +66,7 @@ export struct SystemAvatar {
           Row()
             .width(this.avatarSize * 0.28)
             .height(this.avatarSize * 0.28)
-            .backgroundColor(DesignConstants.COLOR.ONLINE_STATUS)
+            .backgroundColor($r('app.color.status_online'))
             .borderRadius(DesignConstants.RADIUS.FULL)
             .border(this.getBorderOptions())
             .margin({ bottom: -1, right: -1 })
@@ -103,16 +104,15 @@ export struct SystemAvatar {
     return name.substring(0, 2).toUpperCase();
   }
 
-  // 根据名称生成头像颜色（保持 string 类型用于 backgroundColor）
-  private generateAvatarColor(name: string): string {
-    if (!name) return DesignConstants.COLOR.TEXT_TERTIARY_LIGHT;
+  private generateAvatarColor(name: string): ResourceColor {
+    if (!name) return $r('sys.color.ohos_id_color_text_secondary');
 
-    const colors: string[] = [
-      DesignConstants.COLOR.BRAND_PRIMARY,
-      DesignConstants.COLOR.INFO,
-      DesignConstants.COLOR.SUCCESS,
-      DesignConstants.COLOR.WARNING,
-      DesignConstants.COLOR.ERROR
+    const colors: ResourceColor[] = [
+      $r('app.color.brand_primary'),
+      $r('app.color.brand_primary'),
+      $r('app.color.color_success'),
+      $r('app.color.color_warning'),
+      $r('app.color.color_danger')
     ];
 
     let hash = 0;

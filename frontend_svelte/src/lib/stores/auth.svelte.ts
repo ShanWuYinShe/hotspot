@@ -8,18 +8,21 @@
  */
 
 import { browser } from '$app/environment';
-import type { AuthData, MyCard } from '$lib/types/api';
+import type { AuthData, MyProfile } from '$lib/types/api';
 
 const STORAGE_KEY = 'hotspot_auth';
 
+/**
+ * 账户信息（持久化到 localStorage）
+ *
+ * spec: Web 端 token 通过 HttpOnly Cookie 传递，前端不存储
+ * 仅保留用户身份信息和 token 过期时间（用于主动刷新计时）
+ */
 interface AccountInfo {
 	user_id: string;
 	nickname: string;
 	avatar_url?: string;
-	access_token: string;
 	access_token_expires_at: string;
-	refresh_token?: string;
-	refresh_token_expires_at?: string;
 	is_locked?: boolean;
 }
 
@@ -60,7 +63,7 @@ function saveToStorage(state: AuthState) {
 class AuthStore {
 	#accounts = $state.raw<AccountInfo[]>([]);
 	#currentUserId = $state<string | null>(null);
-	#profile = $state<MyCard | null>(null);
+	#profile = $state.raw<MyProfile | null>(null);
 	#initialized = $state(false);
 
 	constructor() {
@@ -92,14 +95,13 @@ class AuthStore {
 		this.#accounts.find((a) => a.user_id === this.#currentUserId && !a.is_locked)
 	);
 
-	/** 当前 Token */
-	token = $derived(
-		this.currentAccount?.access_token ?? null
-	);
-
-	/** 是否已认证（Web 端 token 在 Cookie 中，通过 expires_at 判断） */
+	/**
+	 * 是否已认证
+	 * Web 端 token 在 HttpOnly Cookie 中，前端不可读
+	 * 通过 localStorage 中是否存在有效账户来判断认证状态
+	 */
 	isAuthenticated = $derived(
-		!!this.currentAccount?.access_token || !!this.currentAccount?.access_token_expires_at
+		!!this.currentAccount
 	);
 
 	/** 可用账户列表（未锁定） */
@@ -122,17 +124,18 @@ class AuthStore {
 		});
 	}
 
-	/** 登录/添加账户 */
+	/**
+	 * 登录/添加账户
+	 * spec: Web 端 auth 响应体为空，token 在 Cookie 中
+	 * 调用方需先通过 check_status + getMyProfile 获取用户信息后再调用
+	 */
 	login(authData: AuthData) {
 		const existingIndex = this.#accounts.findIndex((a) => a.user_id === authData.user_id);
 
 		const accountInfo: AccountInfo = {
 			user_id: authData.user_id,
-			nickname: '', // Web 端 AuthData 不含 nickname，后续通过 setProfile 补充
-			access_token: authData.access_token ?? '', // Web 端 token 在 Cookie 中
+			nickname: '', // 后续通过 setProfile 补充
 			access_token_expires_at: authData.access_token_expires_at,
-			refresh_token: authData.refresh_token,
-			refresh_token_expires_at: authData.refresh_token_expires_at,
 			is_locked: false
 		};
 
@@ -230,42 +233,19 @@ class AuthStore {
 		this.#persist();
 	}
 
-	/** 更新 Token */
-	updateToken(accessToken: string, expiresAt: string) {
+	/**
+	 * 更新 Token 过期时间（刷新成功后由 check_status 获取新的 expires_at）
+	 * spec: Web 端 token 在 Cookie 中，前端只追踪过期时间用于主动刷新计时
+	 */
+	updateExpiresAt(expiresAt: string) {
 		if (this.#currentUserId === null) return;
 
 		const index = this.#accounts.findIndex((a) => a.user_id === this.#currentUserId);
 		if (index >= 0) {
 			const account = this.#accounts[index]!;
-			// 不可变更新
 			this.#accounts = [
 				...this.#accounts.slice(0, index),
-				{
-					...account,
-					access_token: accessToken,
-					access_token_expires_at: expiresAt
-				} as AccountInfo,
-				...this.#accounts.slice(index + 1)
-			];
-			this.#persist();
-		}
-	}
-
-	/** 清除 Token（刷新失败时调用） */
-	clearToken() {
-		if (this.#currentUserId === null) return;
-
-		const index = this.#accounts.findIndex((a) => a.user_id === this.#currentUserId);
-		if (index >= 0) {
-			const account = this.#accounts[index]!;
-			// 不可变更新
-			this.#accounts = [
-				...this.#accounts.slice(0, index),
-				{
-					...account,
-					access_token: '',
-					access_token_expires_at: ''
-				} as AccountInfo,
+				{ ...account, access_token_expires_at: expiresAt } as AccountInfo,
 				...this.#accounts.slice(index + 1)
 			];
 			this.#persist();
@@ -273,7 +253,7 @@ class AuthStore {
 	}
 
 	/** 设置用户资料 */
-	setProfile(profile: MyCard | null) {
+	setProfile(profile: MyProfile | null) {
 		this.#profile = profile;
 
 		// 同步头像到账户信息

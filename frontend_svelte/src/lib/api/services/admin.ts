@@ -3,7 +3,7 @@
  * 严格对齐 spec/api_spec_admin_core.mdc + spec/api_spec_admin_moderation.mdc
  */
 
-import { post, paginate } from '../client';
+import { post, paginate, generateIdempotencyKey } from '../client';
 import {
 	ADMIN_RBAC,
 	ADMIN_USERS,
@@ -25,7 +25,6 @@ import type {
 	AdminAnnouncementItem,
 	AdminTagItem,
 	AdminTagSortBy,
-	AdminClientConfig,
 	AuditLogItem,
 	AuditAction,
 	AuditTargetType,
@@ -36,12 +35,13 @@ import type {
 	ReportTargetType,
 	UserAccountStatus,
 	UserType,
-	ServerConfig,
+	AppConfig,
 	UploadConfig,
 	RateLimitConfig,
 	ResponseDefaults,
 	GroupSettings,
-	PaginationParams
+	PaginationParams,
+	Location
 } from '$lib/types/api';
 
 // ==================== RBAC ====================
@@ -76,7 +76,7 @@ export const adminRbacService = {
 	 * spec: Request = { name, description? }
 	 */
 	createRole(data: { name: string; description?: string }) {
-		return post<AdminRoleItem>(ADMIN_RBAC.ROLES.CREATE, data, { idempotencyKey: crypto.randomUUID() });
+		return post<AdminRoleItem>(ADMIN_RBAC.ROLES.CREATE, data, { idempotencyKey: generateIdempotencyKey() });
 	},
 
 	/**
@@ -115,7 +115,7 @@ export const adminRbacService = {
 	 * spec: Request = { user_id, grant_all_permissions?, role_ids }
 	 */
 	grantAdmin(data: { user_id: string; grant_all_permissions?: boolean; role_ids: string[] }) {
-		return post<void>(ADMIN_RBAC.ADMINS.GRANT, data, { idempotencyKey: crypto.randomUUID() });
+		return post<void>(ADMIN_RBAC.ADMINS.GRANT, data, { idempotencyKey: generateIdempotencyKey() });
 	},
 
 	/**
@@ -157,7 +157,7 @@ export const adminUsersService = {
 	 * spec: Request = { user_id, reason?, duration_days? }
 	 */
 	ban(data: { user_id: string; reason?: string; duration_days?: number }) {
-		return post<void>(ADMIN_USERS.BAN, data, { idempotencyKey: crypto.randomUUID() });
+		return post<void>(ADMIN_USERS.BAN, data, { idempotencyKey: generateIdempotencyKey() });
 	},
 
 	/**
@@ -198,7 +198,7 @@ export const adminGroupsService = {
 	 * spec: Request = { group_id, reason? }
 	 */
 	dismiss(data: { group_id: string; reason?: string }) {
-		return post<void>(ADMIN_GROUPS.DISMISS, data, { idempotencyKey: crypto.randomUUID() });
+		return post<void>(ADMIN_GROUPS.DISMISS, data, { idempotencyKey: generateIdempotencyKey() });
 	}
 };
 
@@ -224,7 +224,7 @@ export const adminAnnouncementsService = {
 		action_url?: string;
 		send_push?: boolean;
 	}) {
-		return post<AnnouncementCreated>(ADMIN_ANNOUNCEMENTS.CREATE, data, { idempotencyKey: crypto.randomUUID() });
+		return post<AnnouncementCreated>(ADMIN_ANNOUNCEMENTS.CREATE, data, { idempotencyKey: generateIdempotencyKey() });
 	},
 
 	/**
@@ -302,7 +302,7 @@ export const adminReportsService = {
 		action: ReportHandleAction;
 		note?: string;
 	}) {
-		return post<void>(ADMIN_REPORTS.HANDLE, data, { idempotencyKey: crypto.randomUUID() });
+		return post<void>(ADMIN_REPORTS.HANDLE, data, { idempotencyKey: generateIdempotencyKey() });
 	}
 };
 
@@ -324,9 +324,9 @@ export const adminTagsService = {
 
 	/**
 	 * 删除标签
-	 * spec: Request = { tag_name }
+	 * spec: Request = { name }
 	 */
-	delete(data: { tag_name: string }) {
+	delete(data: { name: string }) {
 		return post<void>(ADMIN_TAGS.DELETE, data);
 	}
 };
@@ -335,10 +335,11 @@ export const adminTagsService = {
 
 export const adminAppConfigService = {
 	/**
-	 * 获取服务端配置
+	 * 获取完整应用配置（AppConfig）
+	 * spec: AppConfig 包含 ClientConfig 的所有字段 + 仅服务端字段 + 元数据
 	 */
 	get() {
-		return post<ServerConfig>(ADMIN_APP_CONFIG.GET);
+		return post<AppConfig>(ADMIN_APP_CONFIG.GET);
 	},
 
 	/**
@@ -351,10 +352,11 @@ export const adminAppConfigService = {
 
 	/**
 	 * 更新默认配置
-	 * spec: Request = { default_location?, default_group_avatar?, default_user_avatar?, default_group_settings? }
+	 * spec: Request = UpdateDefaultsRequest
+	 * default_location 为 Partial<Location>，即 { point?: GeoPoint; location_name?: string }
 	 */
 	updateDefaults(data: {
-		default_location?: { latitude?: number; longitude?: number; location_name?: string };
+		default_location?: Partial<Location>;
 		default_group_avatar?: string;
 		default_user_avatar?: string;
 		default_group_settings?: Partial<GroupSettings>;
@@ -376,14 +378,6 @@ export const adminAppConfigService = {
 	 */
 	updateResponseDefaults(data: { response_defaults: Partial<ResponseDefaults> }) {
 		return post<void>(ADMIN_APP_CONFIG.UPDATE_RESPONSE_DEFAULTS, data);
-	},
-
-	/**
-	 * 获取客户端配置（管理员视角，包含元数据）
-	 * spec: Response = AdminClientConfig
-	 */
-	getClient() {
-		return post<AdminClientConfig>(ADMIN_APP_CONFIG.GET_CLIENT);
 	},
 
 	/**

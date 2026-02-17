@@ -21,6 +21,8 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { AppRouter } from '../../../core/router/AppRouter';
+import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { SystemUiController } from '../../../core/utils/SystemUiController';
 
 const DOMAIN_NUMBER: number = 0xFF06;
 const TAG: string = 'CreateMomentPage';
@@ -31,6 +33,7 @@ export struct CreateMomentPage {
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_LOCATION_PICK_RESULT) pickResult: LocationInfo | null = null;
+  @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   
   private stateManager = GlobalStateManager.getInstance();
   @State description: string = '';
@@ -42,6 +45,9 @@ export struct CreateMomentPage {
   @State publishingMessage: string = ''; // 显示发布进度提示
 
   async aboutToAppear() {
+    SystemUiController.useSurface({
+      baseColor: DesignConstants.COLOR.SECONDARY_BG_LIGHT,      preferDarkContent: true
+    });
     await this.requestPermissions();
     // 优先消费“地图选点”结果
     if (this.pickResult) {
@@ -306,7 +312,8 @@ export struct CreateMomentPage {
       .width('100%')
       .height(56)
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .backgroundColor($r('app.color.bg_secondary'))
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       List() {
         ListItem() {
@@ -519,14 +526,15 @@ export struct CreateMomentPage {
             }
           }
         }
-        .padding({ top: DesignConstants.SPACING.MD, left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, bottom: 80 })
+        .padding({ top: DesignConstants.SPACING.MD, left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD,
+          bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.XL, 0) })
       }
       .width('100%')
       .layoutWeight(1)
     }
       .width('100%')
       .height('100%')
-      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .backgroundColor($r('app.color.bg_secondary'))
 
       if (this.isPublishing) {
         SystemLoadingView({ message: this.publishingMessage })

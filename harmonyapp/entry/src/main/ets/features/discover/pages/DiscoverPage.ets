@@ -18,6 +18,8 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
+import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
 const DOMAIN_NUMBER: number = 0xFF11;
@@ -31,8 +33,10 @@ class SearchParams {
 export struct DiscoverPage {
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
+  @StorageLink('safeAreaTop') safeAreaTop: number = 0;
+  @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
 
-  @State isLoading: boolean = false;
+  @State isLoading: boolean = true;
   @State trendingTags: TagItem[] = [];
   @State recommendedUsers: UserItem[] = [];
   private recommendedUsersDataSource: BasicDataSource<UserItem> = new BasicDataSource<UserItem>([]);
@@ -40,7 +44,44 @@ export struct DiscoverPage {
   private hotMomentsDataSource: BasicDataSource<MomentItem> = new BasicDataSource<MomentItem>([]);
   @State isRefreshing: boolean = false;
 
+  private getHeaderTopPadding(): number {
+    return (this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.LG) + DesignConstants.SPACING.SM;
+  }
+
+  private calculateImageHeight(moment: MomentItem): number {
+    if (moment.images && moment.images.length > 0) {
+      const img = moment.images[0];
+      if (img.width && img.height && img.width > 0) {
+        const columnWidth = 160;
+        const ratio = img.height / img.width;
+        const clampedRatio = Math.max(0.6, Math.min(1.8, ratio));
+        return columnWidth * clampedRatio;
+      }
+    }
+    return 160;
+  }
+
+  private getWaterFlowHeight(): number {
+    if (this.hotMoments.length === 0) return 0;
+    let leftH = 0;
+    let rightH = 0;
+    const gap = 8;
+    const infoHeight = 64;
+    for (let i = 0; i < this.hotMoments.length; i++) {
+      const cardH = this.calculateImageHeight(this.hotMoments[i]) + infoHeight;
+      if (leftH <= rightH) {
+        leftH += cardH + gap;
+      } else {
+        rightH += cardH + gap;
+      }
+    }
+    return Math.max(leftH, rightH);
+  }
+
   async aboutToAppear() {
+    SystemUiController.useSurface({
+      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
+    });
     await this.loadData();
   }
 
@@ -90,7 +131,7 @@ export struct DiscoverPage {
 
   build() {
     Column() {
-      // 标题栏
+      // 标题栏 - 使用 SafeArea 避免与状态栏重叠
       Row() {
         Text('发现')
           .fontSize(DesignConstants.FONT.SIZE.XL)
@@ -115,9 +156,15 @@ export struct DiscoverPage {
         })
       }
       .width('100%')
-      .height(56)
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .alignItems(VerticalAlign.Center)
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        top: this.getHeaderTopPadding(),
+        bottom: DesignConstants.SPACING.SM
+      })
+      .backgroundColor($r('app.color.bg_primary'))
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 内容区
       if (this.isLoading && this.trendingTags.length === 0) {
@@ -151,22 +198,30 @@ export struct DiscoverPage {
               }, (user: UserItem) => user.user?.user_id ?? '')
             }
 
-            // 热门瞬间（标题 + LazyForEach）
+            // 热门瞬间（瀑布流布局）
             if (this.hotMoments.length > 0) {
               ListItem() {
                 Column({ space: DesignConstants.SPACING.MD }) {
                   this.buildSectionHeader('热门动态', AppIcon.HEART_FILL)
+                  WaterFlow() {
+                    LazyForEach(this.hotMomentsDataSource, (moment: MomentItem) => {
+                      FlowItem() {
+                        this.buildHotMomentCard(moment)
+                      }
+                    }, (moment: MomentItem) => moment.moment_id)
+                  }
+                  .height(this.getWaterFlowHeight())
+                  .columnsTemplate('1fr 1fr')
+                  .columnsGap(8)
+                  .rowsGap(8)
+                  .cachedCount(10, true)
+                  .scrollBar(BarState.Off)
                 }
                 .width('100%')
                 .padding(DesignConstants.SPACING.LG)
                 .backgroundColor($r('sys.color.ohos_id_color_background'))
                 .borderRadius(DesignConstants.RADIUS.LG)
               }
-              LazyForEach(this.hotMomentsDataSource, (moment: MomentItem) => {
-                ListItem() {
-                  this.buildHotMomentRow(moment)
-                }
-              }, (moment: MomentItem) => moment.moment_id)
             }
 
             // 没有任何内容
@@ -191,7 +246,8 @@ export struct DiscoverPage {
           .width('100%')
           .layoutWeight(1)
           .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
-            top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
+            top: DesignConstants.SPACING.SM,
+            bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
           .scrollBar(BarState.Auto)
         }
         .onRefreshing(() => { this.loadData(); })
@@ -200,7 +256,7 @@ export struct DiscoverPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    .backgroundColor($r('app.color.bg_primary'))
   }
 
   // ==================== 热门话题 ====================
@@ -220,7 +276,7 @@ export struct DiscoverPage {
               Text() {
                 SymbolSpan($r(AppIcon.ARROW_UP))
                   .fontSize(12)
-                  .fontColor([DesignConstants.COLOR.ERROR])
+                  .fontColor([$r('app.color.color_danger')])
               }
             }
           }
@@ -281,7 +337,85 @@ export struct DiscoverPage {
     .backgroundColor($r('sys.color.ohos_id_color_background'))
   }
 
-  // ==================== 热门瞬间（单条，供 LazyForEach 使用）====================
+  // ==================== 热门瞬间卡片（masonry 小红书风格）====================
+  @Builder
+  buildHotMomentCard(moment: MomentItem) {
+    Column({ space: 0 }) {
+      // 封面图
+      if (moment.images && moment.images.length > 0) {
+        Image(moment.images[0].url)
+          .width('100%')
+          .height(this.calculateImageHeight(moment))
+          .objectFit(ImageFit.Cover)
+          .borderRadius({ topLeft: 12, topRight: 12 })
+          .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+      } else {
+        // 无图纯文本卡片
+        Column() {
+          Text(moment.description ?? '')
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .maxLines(6)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .lineHeight(22)
+        }
+        .width('100%')
+        .height(120)
+        .padding(12)
+        .justifyContent(FlexAlign.Center)
+        .borderRadius({ topLeft: 12, topRight: 12 })
+        .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+      }
+
+      // 信息区（白底下半部分）
+      Column({ space: 4 }) {
+        if (moment.description && moment.images && moment.images.length > 0) {
+          Text(moment.description)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .lineHeight(18)
+            .width('100%')
+        }
+
+        Row({ space: 4 }) {
+          SystemAvatar({
+            avatarUrl: moment.user?.avatar_url ?? '',
+            name: moment.user?.nickname ?? '',
+            avatarSize: 16
+          })
+
+          Text(moment.user?.nickname ?? '')
+            .fontSize(11)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .maxLines(1)
+            .layoutWeight(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+          Row({ space: 2 }) {
+            Text() {
+              SymbolSpan($r(AppIcon.HEART))
+                .fontSize(11)
+                .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+            }
+            Text(`${moment.likes_count}`)
+              .fontSize(11)
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          }
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+      }
+      .padding(8)
+    }
+    .width('100%')
+    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .borderRadius(12)
+    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+  }
+
+  // ==================== 热门瞬间列表项（供 LazyForEach 使用）====================
   @Builder
   buildHotMomentRow(moment: MomentItem) {
     Column({ space: DesignConstants.SPACING.SM }) {

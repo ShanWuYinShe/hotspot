@@ -54,6 +54,29 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
 CREATE TRIGGER tr_notif_prefs_updated_at
     BEFORE UPDATE ON notification_preferences FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 
+-- ─── 通知订阅总开关 ──────────────────────────────────────
+CREATE TABLE IF NOT EXISTS notification_subscriptions (
+    user_id                     BIGINT      PRIMARY KEY,
+    new_follower_enabled        BOOLEAN     NOT NULL DEFAULT TRUE,
+    mutual_follow_enabled       BOOLEAN     NOT NULL DEFAULT TRUE,
+    follow_request_enabled      BOOLEAN     NOT NULL DEFAULT TRUE,
+    follow_request_handled_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    moment_like_enabled         BOOLEAN     NOT NULL DEFAULT TRUE,
+    moment_comment_enabled      BOOLEAN     NOT NULL DEFAULT TRUE,
+    comment_reply_enabled       BOOLEAN     NOT NULL DEFAULT TRUE,
+    group_invite_enabled        BOOLEAN     NOT NULL DEFAULT TRUE,
+    group_invite_response_enabled BOOLEAN   NOT NULL DEFAULT TRUE,
+    group_apply_enabled         BOOLEAN     NOT NULL DEFAULT TRUE,
+    group_apply_result_enabled  BOOLEAN     NOT NULL DEFAULT TRUE,
+    group_announcement_enabled  BOOLEAN     NOT NULL DEFAULT TRUE,
+    message_mention_enabled     BOOLEAN     NOT NULL DEFAULT TRUE,
+    system_announcement_enabled BOOLEAN     NOT NULL DEFAULT TRUE,
+    created_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TRIGGER tr_notification_subscriptions_updated_at
+    BEFORE UPDATE ON notification_subscriptions FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
 -- ─── 通知已读状态（全局水位线）────────────────────────────
 CREATE TABLE IF NOT EXISTS notification_read_state (
     user_id         BIGINT      PRIMARY KEY,
@@ -134,6 +157,7 @@ CREATE TABLE IF NOT EXISTS media_files (
     url             TEXT        NOT NULL,
     thumbnail_url   TEXT,
     storage_path    TEXT        NOT NULL,
+    meta            JSONB       NOT NULL DEFAULT '{}'::jsonb,
     -- 文件元数据
     file_name       VARCHAR(255),
     file_size       BIGINT,

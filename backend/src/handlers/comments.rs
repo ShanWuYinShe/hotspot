@@ -9,7 +9,7 @@ use crate::{
         response::{ApiResponse, CommentLikeItem, CommentListItem, PaginatedData},
     },
     error::Result,
-    middleware::auth::AuthenticatedUser,
+    middleware::auth::{AuthenticatedUser, OptionalAuthenticatedUser},
     state::AppState,
 };
 
@@ -17,17 +17,25 @@ use crate::{
 
 pub async fn get_comments(
     State(state): State<AppState>,
+    user: OptionalAuthenticatedUser,
     Json(req): Json<MomentCommentsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<CommentListItem>>>> {
-    let response = state.comment_service.list_comments(&req).await?;
+    let response = state
+        .comment_service
+        .list_comments(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
 pub async fn get_replies(
     State(state): State<AppState>,
+    user: OptionalAuthenticatedUser,
     Json(req): Json<CommentRepliesRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<CommentListItem>>>> {
-    let response = state.comment_service.list_replies(&req).await?;
+    let response = state
+        .comment_service
+        .list_replies(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success(response)))
 }
 

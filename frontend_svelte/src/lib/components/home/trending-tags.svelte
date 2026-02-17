@@ -13,16 +13,19 @@
 	let { refreshTrigger = 0 }: Props = $props();
 
 	let tags = $state.raw<TagItem[]>([]);
+	let loadVersion = 0;
 
 	async function loadTags() {
+		const version = ++loadVersion;
 		try {
 			const response = await feedService.getTrending();
+			if (version !== loadVersion) return; // 丢弃过期响应
 			if (isSuccess(response) && response.data) {
 				tags = response.data.trending_tags ?? [];
 			}
 		} catch (error) {
+			if (version !== loadVersion) return;
 			if (dev) console.error('Failed to load trending tags:', error);
-			// 不显示 toast，避免影响首页体验
 		}
 	}
 

@@ -20,6 +20,9 @@
 
 	const share = $derived<ShareDetail | null>(data.share);
 
+	// 用于清理导航延迟定时器
+	let navigationTimer: ReturnType<typeof setTimeout> | null = null;
+
 	// 复制分享链接
 	async function copyShareLink() {
 		const url = window.location.href;
@@ -46,7 +49,7 @@
 				loc.location_name
 			);
 			toast.success('浏览锚点已更新！');
-			setTimeout(() => goto('/'), 500);
+			navigationTimer = setTimeout(() => goto('/'), 500);
 		} else if (share_type === 'user') {
 			goto(`/users/${(payload as UserSharePayload).shared_user_id}`);
 		} else if (share_type === 'group') {
@@ -61,6 +64,10 @@
 		if (data.error) {
 			toast.error(data.error);
 		}
+
+		return () => {
+			if (navigationTimer) clearTimeout(navigationTimer);
+		};
 	});
 </script>
 

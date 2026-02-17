@@ -11,6 +11,7 @@ use crate::{
         NotificationListRow, NotificationRepository, NotificationType as RepoNotificationType,
     },
     repositories::user_repo::UserRepository,
+    utils::validation::Validator,
 };
 use uuid::Uuid;
 
@@ -31,25 +32,20 @@ impl NotificationService {
         user_id: i64,
         req: NotificationListRequest,
     ) -> Result<PaginatedData<NotificationItem>> {
-        let limit = req.limit.unwrap_or(20).clamp(1, 100);
+        let limit = Validator::validate_limit(
+            req.limit.and_then(|x: i64| i32::try_from(x).ok()),
+            crate::constants::MAX_PAGE_LIMIT,
+        )? as i64;
         let rows = self
             .repo
-            .list_by_user(
-                user_id,
-                req.notification_type,
-                req.cursor.as_deref(),
-                limit,
-            )
+            .list_by_user(user_id, req.notification_type, req.cursor.as_deref(), limit)
             .await?;
 
         let (items, next_cursor) = crate::utils::pagination::paginate_with_limit_plus_one(
             rows,
             limit as i32,
             |row: &NotificationListRow| {
-                crate::utils::pagination::encode_cursor(&(
-                    row.created_at,
-                    row.notification_id,
-                ))
+                crate::utils::pagination::encode_cursor(&(row.created_at, row.notification_id))
             },
         )?;
 
@@ -58,16 +54,12 @@ impl NotificationService {
             .filter_map(|row| self.row_to_item(row).ok())
             .collect();
 
-        Ok(PaginatedData {
-            items,
-            next_cursor,
-        })
+        Ok(PaginatedData { items, next_cursor })
     }
 
     /// 未读数量
     pub async fn unread_count(&self, user_id: i64) -> Result<UnreadCountResult> {
-        let (total, social, interaction, group, system) =
-            self.repo.unread_count(user_id).await?;
+        let (total, social, interaction, group, system) = self.repo.unread_count(user_id).await?;
         Ok(UnreadCountResult {
             total,
             by_type: UnreadCountByType {
@@ -81,10 +73,11 @@ impl NotificationService {
 
     /// 标记已读
     pub async fn mark_as_read(&self, user_id: i64, notification_ids: &[String]) -> Result<()> {
-        if notification_ids.len() > 100 {
-            return Err(AppError::OutOfRange(
-                "notification_ids 最多 100 个".to_string(),
-            ));
+        if notification_ids.len() > crate::constants::MAX_PAGE_LIMIT as usize {
+            return Err(AppError::OutOfRange(format!(
+                "notification_ids 最多 {} 个",
+                crate::constants::MAX_PAGE_LIMIT
+            )));
         }
         let uuids: Vec<Uuid> = notification_ids
             .iter()
@@ -120,27 +113,38 @@ impl NotificationService {
         payload: &serde_json::Value,
     ) -> Result<NotificationPayload> {
         let actor = |payload: &serde_json::Value| -> UserInfo {
-            UserInfo {
-                user_id: payload
+            UserInfo::new(
+                payload
                     .get("sender_id")
                     .and_then(|v| v.as_i64())
                     .unwrap_or(0),
-                nickname: payload
+                payload
                     .get("sender_nickname")
                     .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string(),
-                avatar_url: payload
+                    .unwrap_or(""),
+                payload
                     .get("sender_avatar_url")
                     .and_then(|v| v.as_str())
                     .map(String::from),
-            }
+            )
         };
 
-        let target_id = payload.get("target_id").and_then(|v| v.as_str()).unwrap_or("");
-        let reference_id = payload.get("reference_id").and_then(|v| v.as_str()).unwrap_or("");
-        let target_preview = payload.get("target_preview").and_then(|v| v.as_str()).unwrap_or("");
-        let content = payload.get("content").and_then(|v| v.as_str()).unwrap_or("");
+        let target_id = payload
+            .get("target_id")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let reference_id = payload
+            .get("reference_id")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let target_preview = payload
+            .get("target_preview")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let content = payload
+            .get("content")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
 
         let moment_summary_from_preview = |moment_id: &str, preview: &str| MomentSummary {
             moment_id: moment_id.to_string(),
@@ -152,8 +156,14 @@ impl NotificationService {
         let payload = match ntype {
             NT::NewFollower => NotificationPayload::NewFollower {
                 actor: actor(payload),
-                source: payload.get("target_type").and_then(|v| v.as_str()).map(String::from),
-                source_moment_id: payload.get("target_id").and_then(|v| v.as_str()).map(String::from),
+                source: payload
+                    .get("target_type")
+                    .and_then(|v| v.as_str())
+                    .and_then(|s| s.parse::<crate::types::enums::FollowSource>().ok()),
+                source_moment_id: payload
+                    .get("target_id")
+                    .and_then(|v| v.as_str())
+                    .map(String::from),
             },
             NT::MutualFollow => NotificationPayload::MutualFollow {
                 actor: actor(payload),
@@ -226,7 +236,11 @@ impl NotificationService {
             },
             NT::SystemAnnouncement => NotificationPayload::SystemAnnouncement {
                 announcement_id: reference_id.to_string(),
-                severity: "info".to_string(),
+                severity: payload
+                    .get("severity")
+                    .and_then(|v| v.as_str())
+                    .and_then(|s| s.parse::<crate::types::enums::AnnouncementSeverity>().ok())
+                    .unwrap_or(crate::types::enums::AnnouncementSeverity::Info),
             },
         };
 
@@ -246,6 +260,7 @@ impl NotificationService {
         target_id: Option<String>,
         reference_id: Option<String>,
         target_preview: Option<String>,
+        extra_payload: Option<serde_json::Value>,
     ) -> Result<()> {
         // 获取发送者快照
         let (nickname, avatar_url) = if let Some(sid) = sender_id {
@@ -271,6 +286,7 @@ impl NotificationService {
                 target_id,
                 reference_id,
                 target_preview,
+                extra_payload,
             )
             .await?;
 

@@ -1,9 +1,12 @@
+use std::collections::HashSet;
+
 use crate::{
+    constants::MAX_SEARCH_RADIUS_I32,
     dto::{
-        request::SearchSuggestRequest,
+        request::{SearchSuggestRequest, SearchSuggestType},
         response::{
-            GroupSuggestItem, MomentSuggestItem, SearchSuggestItem, SearchSuggestions,
-            TagSuggestItem, UserSuggestItem,
+            GroupSuggestItem, MomentSuggestItem, RelativeLocation, SearchSuggestItem,
+            SearchSuggestions, TagSuggestItem, UserInfo, UserSuggestItem,
         },
     },
     error::AppError,
@@ -49,24 +52,53 @@ impl SearchService {
         Validator::validate_not_empty(&req.prefix, "prefix")?;
         let limit = Validator::validate_limit(req.limit, 20)? as i64;
 
-        // 解析位置参数
-        let location = if let Some(point) = req.location {
-            Validator::validate_coordinates(point.latitude, point.longitude)?;
-            Some((point.latitude, point.longitude))
+        // 解析位置参数（reference_point 必填）
+        Validator::validate_coordinates(
+            req.reference_point.latitude,
+            req.reference_point.longitude,
+        )?;
+        let location = Some((req.reference_point.latitude, req.reference_point.longitude));
+        let radius_opt = if let Some(r) = req.radius {
+            Some(Validator::validate_radius(Some(r), MAX_SEARCH_RADIUS_I32)? as f64)
         } else {
             None
         };
 
-        // 并发执行查询
-        let (tag_rows, user_rows, group_rows, moment_rows) = tokio::try_join!(
-            self.tag_repo.suggest(&req.prefix, limit),
+        let type_set: Option<HashSet<SearchSuggestType>> = req
+            .types
+            .as_ref()
+            .map(|list| list.iter().copied().collect());
+        let include_tag = should_include_type(&type_set, SearchSuggestType::Tag);
+        let include_user = should_include_type(&type_set, SearchSuggestType::User);
+        let include_group = should_include_type(&type_set, SearchSuggestType::Group);
+        let include_moment = should_include_type(&type_set, SearchSuggestType::Moment);
+
+        let tag_rows = if include_tag {
+            self.tag_repo.suggest(&req.prefix, limit).await?
+        } else {
+            Vec::new()
+        };
+        let user_rows = if include_user {
             self.user_repo
-                .suggest_by_nickname(&req.prefix, limit, location),
+                .suggest_by_nickname(&req.prefix, limit, location, radius_opt)
+                .await?
+        } else {
+            Vec::new()
+        };
+        let group_rows = if include_group {
             self.group_repo
-                .suggest_by_name(&req.prefix, limit, location),
+                .suggest_by_name(&req.prefix, limit, location, radius_opt)
+                .await?
+        } else {
+            Vec::new()
+        };
+        let moment_rows = if include_moment {
             self.moment_repo
-                .suggest_by_keyword(&req.prefix, viewer_id, limit as i32, location)
-        )?;
+                .suggest_by_keyword(&req.prefix, viewer_id, limit as i32, location, radius_opt)
+                .await?
+        } else {
+            Vec::new()
+        };
 
         let mut items: Vec<SearchSuggestItem> = Vec::new();
 
@@ -90,12 +122,21 @@ impl SearchService {
                 Some(user.bio)
             };
 
+            let location = build_relative_location(
+                user.distance,
+                user.latitude,
+                user.longitude,
+                user.location_name.as_deref(),
+                user.bearing_degrees,
+                req.reference_point.latitude,
+                req.reference_point.longitude,
+            );
             items.push(SearchSuggestItem::User(UserSuggestItem {
                 user_id: user.user_id,
                 nickname: user.nickname,
                 avatar_url,
                 bio,
-                distance: user.distance,
+                location,
             }));
         }
 
@@ -110,6 +151,15 @@ impl SearchService {
             } else {
                 Some(group.description)
             };
+            let location = build_relative_location(
+                group.distance,
+                group.latitude,
+                group.longitude,
+                group.location_name.as_deref(),
+                group.bearing_degrees,
+                req.reference_point.latitude,
+                req.reference_point.longitude,
+            );
 
             items.push(SearchSuggestItem::Group(GroupSuggestItem {
                 group_id: group.group_id.to_string(),
@@ -117,7 +167,7 @@ impl SearchService {
                 avatar_url,
                 description,
                 members_count: group.member_count,
-                distance: group.distance,
+                location,
             }));
         }
 
@@ -129,29 +179,33 @@ impl SearchService {
                 .await;
 
             // 限制内容长度为前100个字符
-            let content = if moment.description.chars().count() > 100 {
+            let description_preview = if moment.description.chars().count() > 100 {
                 moment.description.chars().take(100).collect::<String>() + "..."
             } else {
                 moment.description
             };
 
+            let author = UserInfo::new(moment.user_id, moment.nickname, author_avatar_url);
+
+            let location = build_relative_location(
+                moment.distance,
+                moment.latitude,
+                moment.longitude,
+                moment.location_name.as_deref(),
+                moment.bearing_degrees,
+                req.reference_point.latitude,
+                req.reference_point.longitude,
+            );
+
             items.push(SearchSuggestItem::Moment(MomentSuggestItem {
                 moment_id: moment.moment_id.to_string(),
-                content,
-                author_nickname: moment.nickname,
-                author_avatar_url,
-                distance: moment.distance,
+                description_preview,
+                author,
+                location,
             }));
         }
 
-        // 排序逻辑：
-        // 1. 如果有 location，按 distance 排序 (混合排序)
-        // 2. 如果没有 location，保持各类别的默认顺序 (或者可以按热度/匹配度混合)
-        //
-        // 注意：这是跨类型（用户/群组/瞬间/标签）混合搜索的特殊场景
-        // 距离计算已在各个 repository 的数据库层完成（使用 PostGIS）
-        // 这里只是对来自不同表的结果进行最终的混合排序
-        // 如果要在数据库层完成，需要使用 UNION ALL 重构整个查询架构
+        // 排序逻辑：按 distance 排序
         if location.is_some() {
             items.sort_by(|a, b| {
                 let dist_a = get_distance(a).unwrap_or(f64::MAX);
@@ -168,9 +222,31 @@ impl SearchService {
 
 fn get_distance(item: &SearchSuggestItem) -> Option<f64> {
     match item {
-        SearchSuggestItem::User(u) => u.distance,
-        SearchSuggestItem::Group(g) => g.distance,
-        SearchSuggestItem::Moment(m) => m.distance,
-        SearchSuggestItem::Tag(_) => None, // Tags don't have distance
+        SearchSuggestItem::User(u) => u.location.as_ref().and_then(|l| l.distance),
+        SearchSuggestItem::Group(g) => g.location.as_ref().and_then(|l| l.distance),
+        SearchSuggestItem::Moment(m) => m.location.as_ref().and_then(|l| l.distance),
+        SearchSuggestItem::Tag(_) => None,
     }
+}
+
+fn build_relative_location(
+    distance: Option<f64>,
+    latitude: Option<f64>,
+    longitude: Option<f64>,
+    location_name: Option<&str>,
+    bearing_degrees: Option<f64>,
+    ref_lat: f64,
+    ref_lon: f64,
+) -> Option<RelativeLocation> {
+    distance.map(|d| {
+        let lat = latitude.unwrap_or(ref_lat);
+        let lon = longitude.unwrap_or(ref_lon);
+        let name = location_name.unwrap_or("附近");
+        RelativeLocation::with_distance(lat, lon, name, d, bearing_degrees.unwrap_or(0.0))
+    })
+}
+
+fn should_include_type(set: &Option<HashSet<SearchSuggestType>>, ty: SearchSuggestType) -> bool {
+    set.as_ref()
+        .map_or(true, |s| s.is_empty() || s.contains(&ty))
 }

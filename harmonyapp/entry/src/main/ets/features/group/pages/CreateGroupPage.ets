@@ -16,6 +16,8 @@ import { PasswordSecurityUtil } from '../../../core/security/PasswordSecurityUti
 import { CreateGroupRequest, GeoPoint } from '../../../core/types/api';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AppRouter, LoginRouteParam, GroupDetailRouteParam } from '../../../core/router/AppRouter';
+import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 
 @Component
 export struct CreateGroupPage {
@@ -23,6 +25,7 @@ export struct CreateGroupPage {
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_LOCATION_PICK_RESULT) pickResult: LocationInfo | null = null;
+  @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   
   private stateManager = GlobalStateManager.getInstance();
   @State groupName: string = '';
@@ -34,6 +37,9 @@ export struct CreateGroupPage {
   @State localLocation: LocationInfo | null = null;
 
   async aboutToAppear() {
+    SystemUiController.useSurface({
+      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
+    });
     // 优先消费“地图选点”结果（从 AnchorPickPage 返回时会写入）
     if (this.pickResult) {
       this.localLocation = {
@@ -177,7 +183,8 @@ export struct CreateGroupPage {
         .width('100%')
         .height(56)
         .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .backgroundColor($r('app.color.bg_secondary'))
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
         // 表单内容
         List({ space: 16 }) {
@@ -231,7 +238,7 @@ export struct CreateGroupPage {
               })
             }
           }
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
+          .backgroundColor($r('app.color.bg_secondary'))
           .borderRadius(DesignConstants.RADIUS.LG)
           .divider({
             strokeWidth: 1, color: $r('sys.color.ohos_id_color_component_normal'),
@@ -286,7 +293,7 @@ export struct CreateGroupPage {
               })
             }
           }
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
+          .backgroundColor($r('app.color.bg_secondary'))
           .borderRadius(DesignConstants.RADIUS.LG)
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
@@ -366,7 +373,7 @@ export struct CreateGroupPage {
               }
             }
           }
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
+          .backgroundColor($r('app.color.bg_secondary'))
           .borderRadius(DesignConstants.RADIUS.LG)
           .divider({
             strokeWidth: 1, color: $r('sys.color.ohos_id_color_component_normal'),
@@ -390,12 +397,13 @@ export struct CreateGroupPage {
           }
           .margin({ top: 24, bottom: 48, left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
         }
+        .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
         .layoutWeight(1)
-        .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+        .backgroundColor($r('app.color.bg_primary'))
       }
       .width('100%')
       .height('100%')
-      .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+      .backgroundColor($r('app.color.bg_primary'))
 
       if (this.isCreating) {
         SystemLoadingView()

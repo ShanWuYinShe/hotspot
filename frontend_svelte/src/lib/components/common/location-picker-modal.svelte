@@ -55,12 +55,12 @@
 	let searchText = $state('');
 	let isSearching = $state(false);
 	let searchInput = $state<HTMLInputElement | null>(null);
-	let searchResults = $state<Array<{ name: string; address: string; latitude: number; longitude: number }>>([]);
+	let searchResults = $state.raw<Array<{ name: string; address: string; latitude: number; longitude: number }>>([]);
 	let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 	let placeSearch: AMap.PlaceSearch | null = null;
 
 	// 锚点历史
-	let anchorHistory = $state<AnchorHistoryItem[]>([]);
+	let anchorHistory = $state.raw<AnchorHistoryItem[]>([]);
 
 	type MapClickEvent = {
 		lnglat?: AMap.LngLat;
@@ -231,12 +231,17 @@ async function handleDoubleClick(event: MapClickEvent) {
 		map.on('dblclick', handleDoubleClick);
 			await reverseGeocode(latitude, longitude);
 			hasInit = true;
-		} catch {
-			isMapAvailable = false;
-		} finally {
-			isLoadingMap = false;
+	} catch {
+		// 地图实例可能已创建但后续操作（如逆地理编码）失败，需释放资源
+		if (map) {
+			map.destroy();
+			map = null;
 		}
+		isMapAvailable = false;
+	} finally {
+		isLoadingMap = false;
 	}
+}
 
 	async function handleUseCurrentLocation() {
 		isLocating = true;
@@ -465,7 +470,7 @@ async function handleDoubleClick(event: MapClickEvent) {
 				<!-- 搜索结果列表 -->
 				{#if searchResults.length > 0}
 					<div class="max-h-64 overflow-y-auto">
-						{#each searchResults as result, i}
+						{#each searchResults as result, i (`${result.latitude}_${result.longitude}`)}
 							<button
 								class="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50"
 								onclick={() => selectSearchResult(result)}
@@ -496,7 +501,7 @@ async function handleDoubleClick(event: MapClickEvent) {
 								<span>清空</span>
 							</button>
 						</div>
-						{#each anchorHistory as item, i}
+						{#each anchorHistory as item, i (item.timestamp)}
 							<button
 								class="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted/50"
 								onclick={() => { selectHistoryItem(item); showSearch = false; }}

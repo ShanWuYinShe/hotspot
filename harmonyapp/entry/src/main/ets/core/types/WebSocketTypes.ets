@@ -3,7 +3,7 @@
  * 严格遵循 api_spec_websocket.mdc 定义
  */
 
-import { UserInfo, ClientType, MessageType, MessageMedia, MessageReplyTo, GroupAnnouncementItem, MomentSummary } from './api';
+import { UserInfo, GroupInfo, ClientType, MessageType, MessageMedia, MessageReplyTo, GroupAnnouncementItem, MomentSummary, UserSettings } from './api';
 
 // ============================================================================
 // 订阅管理类型
@@ -95,7 +95,13 @@ export enum ServerEventType {
   ACCOUNT_BANNED = 'AccountBanned',
   ERROR = 'Error',
   SUBSCRIBE_ACK = 'SubscribeAck',
-  SUBSCRIPTIONS_SNAPSHOT = 'SubscriptionsSnapshot'
+  SUBSCRIPTIONS_SNAPSHOT = 'SubscriptionsSnapshot',
+
+  // 多端同步（⏳ 延期实现）
+  SELF_READ_SYNC = 'SelfReadSync',
+  SELF_CHAT_SETTINGS_SYNC = 'SelfChatSettingsSync',
+  SELF_SETTINGS_UPDATED = 'SelfSettingsUpdated',
+  SELF_RELATION_SYNC = 'SelfRelationSync'
 }
 
 // ============================================================================
@@ -581,9 +587,7 @@ export interface GroupDismissedEvent {
 
 export interface GroupInviteReceivedPayload {
   invite_id: string
-  group_id: string
-  group_name: string
-  group_avatar_url?: string
+  group: GroupInfo
   inviter: UserInfo
   message?: string
   created_at: string
@@ -622,8 +626,7 @@ export interface GroupApplicationReceivedEvent {
 
 export interface GroupApplicationResponsePayload {
   application_id: string
-  group_id: string
-  group_name: string
+  group: GroupInfo
   status: 'accepted'
   responded_at: string
 }
@@ -631,6 +634,50 @@ export interface GroupApplicationResponsePayload {
 export interface GroupApplicationResponseEvent {
   type: 'GroupApplicationResponse'
   payload: GroupApplicationResponsePayload
+}
+
+// ----- 多端同步事件（⏳ 延期实现）-----
+
+export interface SelfReadSyncPayload {
+  chat_type: 'private' | 'group'
+  target_id: string
+  up_to_message_id?: string
+}
+
+export interface SelfReadSyncEvent {
+  type: 'SelfReadSync'
+  payload: SelfReadSyncPayload
+}
+
+export interface SelfChatSettingsSyncPayload {
+  chat_type: 'private' | 'group'
+  target_id: string
+  is_muted?: boolean
+  is_pinned?: boolean
+}
+
+export interface SelfChatSettingsSyncEvent {
+  type: 'SelfChatSettingsSync'
+  payload: SelfChatSettingsSyncPayload
+}
+
+export interface SelfSettingsUpdatedPayload {
+  settings: UserSettings
+}
+
+export interface SelfSettingsUpdatedEvent {
+  type: 'SelfSettingsUpdated'
+  payload: SelfSettingsUpdatedPayload
+}
+
+export interface SelfRelationSyncPayload {
+  action: 'follow' | 'unfollow' | 'block' | 'unblock'
+  target_user_id: string
+}
+
+export interface SelfRelationSyncEvent {
+  type: 'SelfRelationSync'
+  payload: SelfRelationSyncPayload
 }
 
 // ----- 系统/订阅事件 -----
@@ -726,6 +773,10 @@ export type ServerEvent =
   | SubscribeAckEvent
   | SubscriptionsSnapshotEvent
   | ErrorEvent
+  | SelfReadSyncEvent
+  | SelfChatSettingsSyncEvent
+  | SelfSettingsUpdatedEvent
+  | SelfRelationSyncEvent
 
 // ============================================================================
 // 辅助类型

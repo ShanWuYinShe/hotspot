@@ -22,6 +22,7 @@
 	let locationSearchable = $state(true);
 	let locationVisible = $state(true);
 	let presenceVisible = $state(true);
+	let socialListsVisible = $state(true);
 
 	async function loadSettings() {
 		isLoading = true;
@@ -36,6 +37,7 @@
 				locationSearchable = settings.location_searchable;
 				locationVisible = settings.location_visible;
 				presenceVisible = settings.presence_visible;
+				socialListsVisible = settings.social_lists_visible;
 			}
 		} catch {
 			toast.error('加载隐私设置失败');
@@ -54,7 +56,8 @@
 				searchable,
 				location_searchable: locationSearchable,
 				location_visible: locationVisible,
-				presence_visible: presenceVisible
+				presence_visible: presenceVisible,
+				social_lists_visible: socialListsVisible
 			});
 			if (isSuccess(response)) {
 				toast.success('隐私设置已保存');
@@ -86,7 +89,7 @@
 	{#if isLoading}
 		<Card>
 			<CardContent class="space-y-4 p-6">
-				{#each Array(5) as _}
+				{#each Array(5) as _, i (i)}
 					<Skeleton class="h-10 w-full" />
 				{/each}
 			</CardContent>
@@ -122,6 +125,13 @@
 						<p class="text-sm text-muted-foreground">允许显示在线/离线状态</p>
 					</div>
 					<input type="checkbox" class="h-4 w-4" bind:checked={presenceVisible} />
+				</div>
+				<div class="flex items-center justify-between">
+					<div>
+						<p class="font-medium">好友/关注/粉丝列表可见</p>
+						<p class="text-sm text-muted-foreground">控制你的社交列表是否对他人可见</p>
+					</div>
+					<input type="checkbox" class="h-4 w-4" bind:checked={socialListsVisible} />
 				</div>
 			</CardContent>
 		</Card>

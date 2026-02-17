@@ -21,15 +21,8 @@
 	import UsersRound from 'lucide-svelte/icons/users-round';
 	import X from 'lucide-svelte/icons/x';
 
-	// 从 URL 获取初始搜索词（$derived 使 URL 变化时更新）
-	const initialKeyword = $derived(page.url.searchParams.get('q') || '');
-
 	let keyword = $state('');
 	let currentTab = $state<'users' | 'moments' | 'groups'>('users');
-
-	$effect(() => {
-		keyword = initialKeyword;
-	});
 	let isLoading = $state(false);
 
 	let users = $state.raw<UserItem[]>([]);
@@ -38,6 +31,8 @@
 	
 	// 用于防止重复触发搜索
 	let lastSearchedQuery = $state<string>('');
+	// 用于取消进行中的搜索请求，防止竞态条件
+	let searchAbortController: AbortController | null = null;
 
 	function getReferencePoint() {
 		return {
@@ -52,17 +47,26 @@
 	async function performKeywordSearch(searchTerm: string) {
 		if (!searchTerm || searchTerm === lastSearchedQuery) return;
 		
+		// 取消上一次进行中的请求
+		searchAbortController?.abort();
+		const controller = new AbortController();
+		searchAbortController = controller;
+
 		isLoading = true;
 		lastSearchedQuery = searchTerm;
 
 		try {
+			const signal = controller.signal;
 			const [usersRes, momentsRes, groupsRes] = await withMinimumLoadingTime(() =>
 				Promise.all([
-					usersService.search({ keyword: searchTerm, reference_point: getReferencePoint() }),
-					momentsService.search({ keyword: searchTerm, reference_point: getReferencePoint() }),
-					groupsService.search({ keyword: searchTerm, reference_point: getReferencePoint() })
+					usersService.search({ keyword: searchTerm, reference_point: getReferencePoint() }, { signal }),
+					momentsService.search({ keyword: searchTerm, reference_point: getReferencePoint() }, { signal }),
+					groupsService.search({ keyword: searchTerm, reference_point: getReferencePoint() }, { signal })
 				])
 			);
+
+			// 请求已被取消（新搜索已发起），不更新 UI
+			if (controller.signal.aborted) return;
 
 			if (isSuccess(usersRes) && usersRes.data) {
 				users = usersRes.data.items;
@@ -74,9 +78,13 @@
 				groups = groupsRes.data.items;
 			}
 		} catch {
-			toast.error('搜索失败');
+			if (!controller.signal.aborted) {
+				toast.error('搜索失败');
+			}
 		} finally {
-			isLoading = false;
+			if (!controller.signal.aborted) {
+				isLoading = false;
+			}
 		}
 	}
 
@@ -86,17 +94,25 @@
 	async function performTagSearch(tag: string) {
 		if (!tag || tag === lastSearchedQuery) return;
 
+		// 取消上一次进行中的请求
+		searchAbortController?.abort();
+		const controller = new AbortController();
+		searchAbortController = controller;
+
 		isLoading = true;
 		lastSearchedQuery = tag;
 
 		try {
+			const signal = controller.signal;
 			const [usersRes, momentsRes, groupsRes] = await withMinimumLoadingTime(() =>
 				Promise.all([
-					usersService.search({ tag, reference_point: getReferencePoint() }),
-					momentsService.search({ tag, reference_point: getReferencePoint() }),
-					groupsService.search({ tag, reference_point: getReferencePoint() })
+					usersService.search({ tag, reference_point: getReferencePoint() }, { signal }),
+					momentsService.search({ tag, reference_point: getReferencePoint() }, { signal }),
+					groupsService.search({ tag, reference_point: getReferencePoint() }, { signal })
 				])
 			);
+
+			if (controller.signal.aborted) return;
 
 			if (isSuccess(usersRes) && usersRes.data) {
 				users = usersRes.data.items;
@@ -108,9 +124,13 @@
 				groups = groupsRes.data.items;
 			}
 		} catch {
-			toast.error('搜索失败');
+			if (!controller.signal.aborted) {
+				toast.error('搜索失败');
+			}
 		} finally {
-			isLoading = false;
+			if (!controller.signal.aborted) {
+				isLoading = false;
+			}
 		}
 	}
 
@@ -154,6 +174,11 @@
 			keyword = q;
 			performKeywordSearch(q);
 		}
+
+		// 组件卸载时取消进行中的请求
+		return () => {
+			searchAbortController?.abort();
+		};
 	});
 </script>
 
@@ -215,7 +240,7 @@
 			<TabsContent value="users" class="mt-6">
 				{#if isLoading}
 					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
-						{#each Array(6) as _}
+						{#each Array(6) as _, i (i)}
 							<MasonryLayoutItem>
 								<div class="h-48 animate-pulse rounded-2xl bg-muted"></div>
 							</MasonryLayoutItem>
@@ -242,7 +267,7 @@
 			<TabsContent value="moments" class="mt-6">
 				{#if isLoading}
 					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={20}>
-						{#each Array(6) as _}
+						{#each Array(6) as _, i (i)}
 							<MasonryLayoutItem>
 								<div class="h-64 animate-pulse rounded-2xl bg-muted"></div>
 							</MasonryLayoutItem>
@@ -269,7 +294,7 @@
 			<TabsContent value="groups" class="mt-6">
 				{#if isLoading}
 					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
-						{#each Array(6) as _}
+						{#each Array(6) as _, i (i)}
 							<MasonryLayoutItem>
 								<div class="h-52 animate-pulse rounded-2xl bg-muted"></div>
 							</MasonryLayoutItem>

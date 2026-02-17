@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { adminAuditService } from '$lib/api/services';
-	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
+	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
@@ -17,54 +16,36 @@
 	import User from 'lucide-svelte/icons/user';
 	import Clock from 'lucide-svelte/icons/clock';
 
-	let logs = $state.raw<AuditLogItem[]>([]);
-	let isLoading = $state(true);
-	let cursor = $state<string | undefined>(undefined);
-	let hasMore = $state(false);
+	// ============ 分页 ============
+
+	const pagination = usePagination<AuditLogItem>({ uniqueKey: 'log_id' });
 	let actionFilter = $state('');
 
-	async function loadLogs(append = false) {
-		if (!append) isLoading = true;
-		try {
-			const response = append
-				? await adminAuditService.getList({
-						action: (actionFilter || undefined) as AuditAction | undefined,
-						pagination: { limit: 30, cursor }
-					})
-				: await withMinimumLoadingTime(() =>
-						adminAuditService.getList({
-							action: (actionFilter || undefined) as AuditAction | undefined,
-							pagination: { limit: 30, cursor: undefined }
-						})
-					);
-
-			if (isSuccess(response) && response.data) {
-				if (append) {
-					logs = [...logs, ...response.data.items];
-				} else {
-					logs = response.data.items;
-				}
-				cursor = response.data.next_cursor;
-				hasMore = !!response.data.next_cursor;
-			}
-		} catch {
-			toast.error('加载失败');
-		} finally {
-			isLoading = false;
-		}
+	function loadLogs(refresh = true) {
+		pagination.load(
+			(cursor) =>
+				adminAuditService.getList({
+					action: (actionFilter || undefined) as AuditAction | undefined,
+					pagination: { limit: 30, cursor }
+				}),
+			refresh
+		);
 	}
 
-	function getActionBadge(action: string) {
-		if (action.includes('create') || action.includes('add')) {
-			return { variant: 'default' as const, color: 'text-green-500' };
-		}
-		if (action.includes('delete') || action.includes('remove') || action.includes('ban')) {
-			return { variant: 'destructive' as const, color: 'text-red-500' };
-		}
-		if (action.includes('update') || action.includes('edit')) {
-			return { variant: 'secondary' as const, color: 'text-blue-500' };
-		}
-		return { variant: 'outline' as const, color: '' };
+	$effect(() => {
+		if (pagination.error) toast.error(pagination.error);
+	});
+
+	// ============ 常量 ============
+
+	type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
+
+	function getActionBadgeVariant(action: string): BadgeVariant {
+		if (action.includes('create') || action.includes('add')) return 'default';
+		if (action.includes('delete') || action.includes('remove') || action.includes('ban'))
+			return 'destructive';
+		if (action.includes('update') || action.includes('edit')) return 'secondary';
+		return 'outline';
 	}
 
 	onMount(() => {
@@ -79,8 +60,8 @@
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
 		<h1 class="text-2xl font-bold">审计日志</h1>
-		<Button variant="outline" size="sm" onclick={() => loadLogs()} disabled={isLoading}>
-			<RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
+		<Button variant="outline" size="sm" onclick={() => loadLogs()} disabled={pagination.loading}>
+			<RefreshCw class="mr-2 h-4 w-4 {pagination.loading ? 'animate-spin' : ''}" />
 			刷新
 		</Button>
 	</div>
@@ -110,9 +91,9 @@
 			</CardTitle>
 		</CardHeader>
 		<CardContent>
-			{#if isLoading && logs.length === 0}
+			{#if pagination.loading && pagination.items.length === 0}
 				<div class="space-y-4">
-					{#each Array(10) as _}
+					{#each Array(10) as _, i (i)}
 						<div class="flex items-center gap-4">
 							<Skeleton class="h-10 w-10 rounded-full" />
 							<div class="flex-1 space-y-2">
@@ -123,11 +104,11 @@
 						</div>
 					{/each}
 				</div>
-			{:else if logs.length === 0}
+			{:else if pagination.items.length === 0}
 				<div class="py-8 text-center text-muted-foreground">暂无审计日志</div>
 			{:else}
 				<div class="space-y-3">
-					{#each logs as log (log.log_id)}
+					{#each pagination.items as log (log.log_id)}
 						<div class="flex items-start gap-4 rounded-lg border p-3">
 							<div class="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
 								<User class="h-5 w-5 text-muted-foreground" />
@@ -135,7 +116,7 @@
 							<div class="min-w-0 flex-1">
 								<div class="flex items-center gap-2">
 									<span class="font-medium">{log.operator?.nickname || '系统'}</span>
-									<Badge variant={getActionBadge(log.action).variant}>
+									<Badge variant={getActionBadgeVariant(log.action)}>
 										{log.action}
 									</Badge>
 								</div>
@@ -159,11 +140,11 @@
 					{/each}
 				</div>
 
-				{#if hasMore}
-					<Button variant="outline" class="mt-4 w-full" onclick={() => loadLogs(true)}>
-						加载更多
-					</Button>
-				{/if}
+			{#if pagination.hasMore}
+				<Button variant="outline" class="mt-4 w-full" onclick={() => loadLogs(false)}>
+					加载更多
+				</Button>
+			{/if}
 			{/if}
 		</CardContent>
 	</Card>

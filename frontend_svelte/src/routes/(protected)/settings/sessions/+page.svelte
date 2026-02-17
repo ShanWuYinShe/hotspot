@@ -76,7 +76,7 @@
 
 	{#if isLoading}
 		<div class="space-y-3">
-			{#each Array(4) as _}
+			{#each Array(4) as _, i (i)}
 				<Card>
 					<CardContent class="flex items-center gap-4 p-4">
 						<Skeleton class="h-12 w-12 rounded-xl" />

@@ -1,8 +1,12 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
+	import { browser, dev } from '$app/environment';
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import { untrack } from 'svelte';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
+	import { adminRbacService } from '$lib/api/services';
+	import { isSuccess } from '$lib/api/client';
 	import { cn } from '$lib/utils';
 	import Navbar from '$lib/components/common/navbar.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -14,10 +18,13 @@
 	import Shield from 'lucide-svelte/icons/shield';
 	import Settings from 'lucide-svelte/icons/settings';
 	import LayoutDashboard from 'lucide-svelte/icons/layout-dashboard';
+	import type { AdminPermissions } from '$lib/types/api';
 
 	let { children } = $props();
 
 	let sidebarOpen = $state(false);
+	// 管理员权限状态：null=正在检查, false=非管理员, AdminPermissions=已验证
+	let adminState = $state<AdminPermissions | false | null>(null);
 
 	function closeSidebar() {
 		sidebarOpen = false;
@@ -42,12 +49,50 @@
 		return pathname.startsWith(href);
 	}
 
-	// 认证检查
+	// 竞态保护：仅最新一次权限检查的结果会被应用
+	let checkVersion = 0;
+
+	// 认证 + 管理员权限检查
 	$effect(() => {
-		if (browser && authStore.initialized && !authStore.isAuthenticated) {
+		const isAuthenticated = authStore.isAuthenticated;
+
+		if (browser && authStore.initialized && !isAuthenticated) {
 			uiStore.saveRedirectUrl(`${page.url.pathname}${page.url.search}`);
 		}
+
+		// 登录后校验管理员权限
+		if (isAuthenticated) {
+			const version = ++checkVersion;
+			untrack(() => {
+				checkAdminPermission(version);
+			});
+		} else {
+			untrack(() => {
+				checkVersion++; // 使之前进行中的请求失效
+				adminState = null;
+			});
+		}
 	});
+
+	async function checkAdminPermission(version: number) {
+		adminState = null; // 重置为"检查中"
+		try {
+			const res = await adminRbacService.getMyPermissions();
+			// 仅应用最新一次请求的结果
+			if (version !== checkVersion) return;
+			if (isSuccess(res) && res.data) {
+				adminState = res.data;
+				if (dev) console.log('[Admin] 权限验证通过:', res.data.permissions);
+			} else {
+				// 10200 权限不足 → 非管理员
+				adminState = false;
+				if (dev) console.warn('[Admin] 非管理员用户');
+			}
+		} catch {
+			if (version !== checkVersion) return;
+			adminState = false;
+		}
+	}
 
 	function handleLoginClick() {
 		uiStore.saveRedirectUrl(`${page.url.pathname}${page.url.search}`);
@@ -55,7 +100,7 @@
 	}
 </script>
 
-{#if authStore.isAuthenticated}
+{#if authStore.isAuthenticated && adminState}
 	<div class="min-h-screen bg-background">
 		<Navbar onMenuClick={() => (sidebarOpen = !sidebarOpen)} />
 
@@ -123,10 +168,42 @@
 			</main>
 		</div>
 	</div>
+{:else if authStore.isAuthenticated && adminState === null}
+	<!-- 管理员权限验证中 -->
+	<div class="min-h-screen bg-background">
+		<Navbar onMenuClick={() => {}} />
+		<div class="flex min-h-[calc(100dvh-4rem)] items-center justify-center bg-muted/30">
+			<div class="flex flex-col items-center gap-3 text-muted-foreground">
+				<div class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
+				<p class="text-sm">验证管理员权限...</p>
+			</div>
+		</div>
+	</div>
+{:else if authStore.isAuthenticated && adminState === false}
+	<!-- 已登录但非管理员 -->
+	<div class="min-h-screen bg-background">
+		<Navbar onMenuClick={() => {}} />
+		<div class="flex min-h-[calc(100dvh-4rem)] bg-muted/30">
+			<main class="flex-1 rounded-2xl bg-card/70 p-4 shadow-sm shadow-black/5 mx-3 md:mx-4 md:p-6" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
+				<div class="mx-auto w-full max-w-6xl">
+					<div class="flex flex-col items-center justify-center py-20 text-center">
+						<div class="mb-4 rounded-full bg-destructive/10 p-6">
+							<Shield class="h-10 w-10 text-destructive" />
+						</div>
+						<h2 class="mb-2 text-xl font-semibold">无访问权限</h2>
+						<p class="mb-6 text-muted-foreground">你的账号不是系统管理员，无法访问管理后台</p>
+						<Button class="rounded-full px-8" onclick={() => goto('/')}>
+							返回首页
+						</Button>
+					</div>
+				</div>
+			</main>
+		</div>
+	</div>
 {:else}
+	<!-- 未登录 -->
 	<div class="min-h-screen bg-background">
 		<Navbar onMenuClick={() => (sidebarOpen = !sidebarOpen)} />
-
 		<div class="flex min-h-[calc(100dvh-4rem)] bg-muted/30">
 			<main class="flex-1 rounded-2xl bg-card/70 p-4 shadow-sm shadow-black/5 mx-3 md:mx-4 md:p-6" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
 				<div class="mx-auto w-full max-w-6xl">

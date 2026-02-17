@@ -424,7 +424,6 @@ where
 #[derive(Debug, Clone, Copy)]
 pub struct OptionalAuthenticatedUser {
     pub user_id: Option<i64>,
-    pub session_id: Option<uuid::Uuid>,
 }
 
 impl<S> FromRequestParts<S> for OptionalAuthenticatedUser
@@ -435,16 +434,8 @@ where
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         let user_id = parts.extensions.get::<i64>().copied();
-        let session_id = parts
-            .extensions
-            .get::<Option<uuid::Uuid>>()
-            .copied()
-            .flatten();
 
-        Ok(OptionalAuthenticatedUser {
-            user_id,
-            session_id,
-        })
+        Ok(OptionalAuthenticatedUser { user_id })
     }
 }
 

@@ -66,7 +66,11 @@
 
 	function handleShare() {
 		if (navigator.share) {
-			navigator.share(shareData).catch(() => {});
+			navigator.share(shareData).catch((error) => {
+				// 用户取消分享（AbortError）不需要提示
+				if (error instanceof DOMException && error.name === 'AbortError') return;
+				toast.error('分享失败');
+			});
 		} else {
 			// 复制链接
 			navigator.clipboard.writeText(shareData.url);

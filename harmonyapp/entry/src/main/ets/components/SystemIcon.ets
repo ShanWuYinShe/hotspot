@@ -1,5 +1,3 @@
-import { DesignConstants } from '../constants/DesignConstants';
-
 /**
  * 系统图标组件
  * 提供统一的图标显示和交互功能
@@ -239,11 +237,12 @@ export interface IconButtonParams {
 /**
  * 系统图标组件
  */
+@Reusable
 @Component
 export struct SystemIcon {
   @Prop icon: AppIcon;
   @Prop iconSize: IconSize = IconSize.MEDIUM;
-  @Prop iconColor: string | ResourceColor = IconColor.PRIMARY;
+  @Prop iconColor: string | ResourceColor = $r('app.color.brand_primary');
   @Prop clickable: boolean = false;
   onIconClick?: () => void;
 
@@ -264,12 +263,13 @@ export struct SystemIcon {
 /**
  * 带背景的图标按钮组件
  */
+@Reusable
 @Component
 export struct IconButton {
   @Prop icon: AppIcon;
   @Prop iconSize: IconSize = IconSize.MEDIUM;
-  @Prop iconColor: string | ResourceColor = IconColor.PRIMARY;
-  @Prop bgColor: ResourceColor = DesignConstants.COLOR.TERTIARY_BG_LIGHT; // Default background
+  @Prop iconColor: string | ResourceColor = $r('app.color.brand_primary');
+  @Prop bgColor: ResourceColor = $r('app.color.bg_tertiary'); // Default background
   @Prop radius: number = 8;
   @Prop paddingSize: number = 8;
   onButtonClick?: () => void;
@@ -291,65 +291,5 @@ export struct IconButton {
         this.onButtonClick();
       }
     })
-  }
-}
-
-/**
- * 导航图标组件
- */
-@Component
-export struct NavIcon {
-  @Prop icon: AppIcon;
-  @Prop iconSize: IconSize = IconSize.LARGE;
-  @Prop iconColor: string | ResourceColor = IconColor.PRIMARY;
-  onNavClick?: () => void;
-
-  build() {
-    Button() {
-      Text() {
-        SymbolSpan($r(this.icon))
-          .fontSize(this.iconSize)
-          .fontColor([this.iconColor as ResourceColor])
-      }
-    }
-    .type(ButtonType.Normal)
-    .backgroundColor('#00000000')
-    .padding(8)
-    .onClick(() => {
-      if (this.onNavClick) {
-        this.onNavClick();
-      }
-    })
-  }
-}
-
-/**
- * 状态图标组件
- */
-@Component
-export struct StatusIcon {
-  @Prop icon: AppIcon;
-  @Prop iconSize: IconSize = IconSize.MEDIUM;
-  @Prop status: 'normal' | 'success' | 'warning' | 'error' = 'normal';
-
-  build() {
-    Text() {
-      SymbolSpan($r(this.icon))
-        .fontSize(this.iconSize)
-        .fontColor([this.getStatusColor() as ResourceColor])
-    }
-  }
-
-  private getStatusColor(): string {
-    switch (this.status) {
-      case 'success':
-        return IconColor.SUCCESS;
-      case 'warning':
-        return IconColor.WARNING;
-      case 'error':
-        return IconColor.ERROR;
-      default:
-        return IconColor.PRIMARY;
-    }
   }
 }

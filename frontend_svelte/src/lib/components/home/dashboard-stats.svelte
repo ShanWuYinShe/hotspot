@@ -2,7 +2,7 @@
 	import { dev } from '$app/environment';
 	import { usersService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
-	import type { MyCard } from '$lib/types/api';
+	import type { MyProfile } from '$lib/types/api';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import Heart from 'lucide-svelte/icons/heart';
@@ -15,21 +15,25 @@
 
 	let { refreshTrigger = 0 }: Props = $props();
 
-	// 统计数据内嵌在 MyCard 中（spec 无独立 stats 端点）
-	let stats = $state<MyCard['stats'] | null>(null);
+	// 统计数据内嵌在 MyProfile 中（spec 无独立 stats 端点）
+	let stats = $state<MyProfile['stats'] | null>(null);
 	let loading = $state(false);
+	let loadVersion = 0;
 
 	async function loadStats() {
+		const version = ++loadVersion;
 		loading = true;
 		try {
 			const response = await usersService.getMyProfile();
+			if (version !== loadVersion) return; // 丢弃过期响应
 			if (isSuccess(response) && response.data) {
 				stats = response.data.stats;
 			}
 		} catch (error) {
+			if (version !== loadVersion) return;
 			if (dev) console.error('Failed to load user stats:', error);
 		} finally {
-			loading = false;
+			if (version === loadVersion) loading = false;
 		}
 	}
 

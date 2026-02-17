@@ -329,7 +329,7 @@ interface AdminTagSearchRequest {
 **Response**: `ApiResponse<PaginatedData<AdminTagItem>>`
 ```typescript
 interface AdminTagItem {
-  tag_name: string;
+  name: string;                      // 与 TagItem.name 一致
   usage_count: number;               // 当前关联的内容数量
   created_at: string;                // 标签首次使用时间
   last_used_at?: string;             // 最近一次使用时间
@@ -350,7 +350,7 @@ interface AdminTagItem {
 **Request**: `AdminDeleteTagRequest`
 ```typescript
 interface AdminDeleteTagRequest {
-  tag_name: string;
+  name: string;
 }
 ```
 

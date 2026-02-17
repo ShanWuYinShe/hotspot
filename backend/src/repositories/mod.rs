@@ -1,43 +1,28 @@
-// src/repositories/mod.rs - 数据库访问层模块
-// 统一导出所有 Repository 模块
+//! Domain-organized repositories
 
-pub mod admin_audit_repo;
-pub mod admin_rbac_repo;
-pub mod announcement_repo;
-pub mod chat_conversations_state_repo;
-pub mod chat_unread_repo;
-pub mod comment_repo;
-pub mod device_token_repo;
-pub mod feed_repo;
-pub mod file_repo;
-pub mod follow_request_repo;
-pub mod group_announcement_repo;
-pub mod group_application_repo;
-pub mod group_bans_repo;
-pub mod group_invite_repo;
-pub mod group_member_history_repo;
-pub mod group_member_repo;
-pub mod group_message_reactions_repo;
-pub mod group_message_repo;
-pub mod group_repo;
-pub mod group_settings_repo;
-pub mod map_repo;
-pub mod moment_repo;
-pub mod notification_repo;
-pub mod password_reset_repo;
-pub mod private_chat_repo;
-pub mod private_message_reactions_repo;
-pub mod private_message_repo;
-pub mod report_repo;
-pub mod session_repo;
-pub mod share_repo;
-pub mod system_config_repo;
-pub mod tag_repo;
-pub mod user_blocks_repo;
-pub mod user_follows_repo;
-pub mod user_friend_remarks_repo;
-pub mod user_location_history_repo;
-pub mod user_online_status_repo;
-pub mod user_repo;
-pub mod user_settings_repo;
-pub mod verification_repo;
+pub mod admin;
+pub mod chat;
+pub mod content;
+pub mod feed;
+pub mod group;
+pub mod system;
+pub mod user;
+
+// Re-export all modules for backward compatibility (explicit to ensure glob works)
+pub use admin::{admin_audit_repo, admin_rbac_repo};
+pub use chat::{chat_unread_repo, private_chat_repo, private_message_repo};
+pub use content::{comment_repo, moment_repo, tag_repo};
+pub use feed::dismiss_repo;
+pub use group::{
+    group_announcement_repo, group_application_repo, group_bans_repo, group_invite_repo,
+    group_member_history_repo, group_member_repo, group_message_repo, group_repo,
+    group_settings_repo,
+};
+pub use system::{
+    announcement_repo, file_repo, map_repo, notification_repo, report_repo, session_repo,
+    share_repo, system_config_repo,
+};
+pub use user::{
+    user_blocks_repo, user_follows_repo, user_friend_remarks_repo, user_location_history_repo,
+    user_online_status_repo, user_repo, user_settings_repo, verification_repo,
+};

@@ -5,7 +5,6 @@ mod error;
 mod events;
 mod handlers;
 mod middleware;
-mod models;
 mod repositories;
 mod routes;
 mod services;
@@ -16,12 +15,20 @@ mod websocket;
 
 use axum::body::Body;
 use axum::Router;
+use chrono::SecondsFormat;
+use chrono::Utc;
+use std::fmt as StdFmt;
 use std::sync::Arc;
 use std::time::Duration;
 use tower_http::trace::TraceLayer;
 
 use crate::error::AppError;
+use tracing::field::{Field, Visit};
 use tracing::Span;
+use tracing::{Event, Level, Subscriber};
+use tracing_subscriber::fmt::{format, FmtContext, FormatEvent, FormatFields};
+use tracing_subscriber::layer::{Context, Layer};
+use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::{
@@ -30,26 +37,136 @@ use crate::{
     state::AppState,
 };
 
+#[derive(Clone)]
+struct RequestIdFormatter {
+    enable_ansi: bool,
+}
+
+impl RequestIdFormatter {
+    fn new() -> Self {
+        let enable_ansi = std::env::var("NO_COLOR").map_or(true, |v| v.is_empty());
+        Self { enable_ansi }
+    }
+}
+
+impl<S, N> FormatEvent<S, N> for RequestIdFormatter
+where
+    S: Subscriber + for<'span> LookupSpan<'span>,
+    N: for<'writer> FormatFields<'writer> + 'static,
+{
+    fn format_event(
+        &self,
+        ctx: &FmtContext<'_, S, N>,
+        mut writer: format::Writer<'_>,
+        event: &Event<'_>,
+    ) -> StdFmt::Result {
+        let timestamp = Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true);
+        writer.write_fmt(format_args!("{} ", timestamp))?;
+
+        let metadata = event.metadata();
+        self.write_level(&mut writer, metadata.level())?;
+
+        if self.enable_ansi {
+            writer.write_fmt(format_args!("\x1b[2m{}:\x1b[0m ", metadata.target()))?;
+        } else {
+            writer.write_fmt(format_args!("{}: ", metadata.target()))?;
+        }
+
+        if let Some(span) = ctx.lookup_current() {
+            if let Some(request_id) = span.extensions().get::<RequestId>() {
+                writer.write_fmt(format_args!("[request_id={}] ", request_id.0))?;
+            }
+        }
+
+        ctx.format_fields(writer.by_ref(), event)?;
+        writer.write_char('\n')
+    }
+}
+
+impl RequestIdFormatter {
+    fn write_level(&self, writer: &mut format::Writer<'_>, level: &Level) -> StdFmt::Result {
+        if self.enable_ansi {
+            let (color, reset) = match *level {
+                Level::ERROR => ("\x1b[31m", "\x1b[0m"),
+                Level::WARN => ("\x1b[33m", "\x1b[0m"),
+                Level::INFO => ("\x1b[32m", "\x1b[0m"),
+                Level::DEBUG => ("\x1b[34m", "\x1b[0m"),
+                Level::TRACE => ("\x1b[90m", "\x1b[0m"),
+            };
+            writer.write_fmt(format_args!("{}{:>5}{} ", color, level, reset))
+        } else {
+            writer.write_fmt(format_args!("{:>5} ", level))
+        }
+    }
+}
+
+struct RequestIdLayer;
+
+impl<S> Layer<S> for RequestIdLayer
+where
+    S: Subscriber + for<'span> LookupSpan<'span>,
+{
+    fn on_new_span(
+        &self,
+        attrs: &tracing::span::Attributes<'_>,
+        id: &tracing::span::Id,
+        ctx: Context<'_, S>,
+    ) {
+        struct Visitor {
+            request_id: Option<String>,
+        }
+
+        impl Visit for Visitor {
+            fn record_str(&mut self, field: &Field, value: &str) {
+                if field.name() == "request_id" {
+                    self.request_id = Some(value.to_string());
+                }
+            }
+
+            fn record_debug(&mut self, field: &Field, value: &dyn StdFmt::Debug) {
+                if field.name() == "request_id" {
+                    self.request_id = Some(format!("{:?}", value));
+                }
+            }
+        }
+
+        let mut visitor = Visitor { request_id: None };
+        attrs.record(&mut visitor);
+
+        if let Some(request_id) = visitor.request_id {
+            if let Some(span) = ctx.span(id) {
+                span.extensions_mut().insert(RequestId(request_id));
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct RequestId(String);
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 初始化日志
     // 目标：日志“人类可读”，且每条请求链路日志都能看到 request_id，但不输出 span_list / 海量 DEBUG/TRACE 噪声
+    let env_filter = tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+        // 默认：业务日志为主；屏蔽 tower_http/axum/tungstenite 的噪音
+        // 仍允许用户用 RUST_LOG 覆盖
+        "info,sqlx=warn,hotspot_backend=info,tower_http=warn,axum=warn,tokio_tungstenite=warn"
+            .into()
+    });
+
+    let event_format = RequestIdFormatter::new();
+
+    let fmt_layer = tracing_subscriber::fmt::layer()
+        .with_target(true)
+        .with_thread_ids(false)
+        .with_thread_names(false)
+        .event_format(event_format);
+
     tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                // 默认：业务日志为主；屏蔽 tower_http/axum/tungstenite 的噪音
-                // 仍允许用户用 RUST_LOG 覆盖
-                "info,sqlx=warn,hotspot_backend=info,tower_http=warn,axum=warn,tokio_tungstenite=warn".into()
-            }),
-        )
-        .with(
-            tracing_subscriber::fmt::layer()
-                .compact()
-                // 输出 target：便于按 target 精细设置 RUST_LOG（例如：hotspot_backend::services::auth_service=debug）
-                .with_target(true)
-                .with_thread_ids(false)
-                .with_thread_names(false), // 事件在 span 内时会带上 span（http_request{request_id=...}: ...）
-        )
+        .with(env_filter)
+        .with(RequestIdLayer)
+        .with(fmt_layer)
         .init();
 
     tracing::info!("Starting HotSpot Backend...");
@@ -97,6 +214,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     "WebSocket连接超时，移除连接: {}",
                     connection_id
                 );
+                // spec: 心跳超时先发送 Error(code=20000) 再断开
+                let error_msg = crate::websocket::types::ws_error_from_app_error(&err);
+                ws_manager_clone
+                    .send_to_connection(&connection_id, &error_msg)
+                    .await;
                 ws_manager_clone.remove_connection(&connection_id).await;
             }
         }

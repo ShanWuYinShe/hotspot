@@ -72,7 +72,7 @@ function saveToStorage(anchor: MapAnchor) {
 }
 
 class MapAnchorStore {
-	#anchor = $state<MapAnchor>({ ...FALLBACK_DEFAULTS, updatedAt: Date.now() });
+	#anchor = $state.raw<MapAnchor>({ ...FALLBACK_DEFAULTS, updatedAt: Date.now() });
 	#initialized = $state(false);
 
 	constructor() {

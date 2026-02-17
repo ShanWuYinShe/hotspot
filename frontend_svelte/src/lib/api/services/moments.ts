@@ -2,7 +2,7 @@
  * 瞬间服务
  */
 
-import { post, paginate } from '../client';
+import { post, paginate, generateIdempotencyKey, type RequestOptions } from '../client';
 import { MOMENTS } from '../endpoints';
 import type {
 	MomentItem,
@@ -26,8 +26,8 @@ export const momentsService = {
 		sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';
 		reference_point: GeoPoint;
 		pagination?: PaginationParams;
-	}) {
-		return paginate<MomentItem>(MOMENTS.SEARCH, params);
+	}, options?: RequestOptions) {
+		return paginate<MomentItem>(MOMENTS.SEARCH, params, options);
 	},
 
 	// ==================== 瞬间信息 ====================
@@ -59,7 +59,7 @@ export const momentsService = {
 		privacy_level?: PrivacyLevel;
 		mentions?: string[];
 	}) {
-		return post<MomentItem>(MOMENTS.CREATE, data, { idempotencyKey: crypto.randomUUID() });
+		return post<MomentItem>(MOMENTS.CREATE, data, { idempotencyKey: generateIdempotencyKey() });
 	},
 
 	/**
@@ -74,7 +74,7 @@ export const momentsService = {
 		privacy_level?: PrivacyLevel;
 		mentions?: string[];
 	}) {
-		return post<void>(MOMENTS.UPDATE, data);
+		return post<MomentItem>(MOMENTS.UPDATE, data);
 	},
 
 	/**

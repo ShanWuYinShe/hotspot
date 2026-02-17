@@ -17,22 +17,33 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { AppRouter, LoginRouteParam, GroupDetailRouteParam } from '../../../core/router/AppRouter';
+import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 
 @Component
 export struct GroupPage {
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
+  @StorageLink('safeAreaTop') safeAreaTop: number = 0;
+  @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
 
   private stateManager = GlobalStateManager.getInstance();
   @State groups: GroupItem[] = [];
   private groupsDataSource: BasicDataSource<GroupItem> = new BasicDataSource<GroupItem>([]);
-  @State isLoading: boolean = false;
+  @State isLoading: boolean = true;
   @State errorMessage: string = '';
   @State hasMore: boolean = false;
   @State nextCursor: string = '';
   @State isLoadingMore: boolean = false;
 
+  private getHeaderTopPadding(): number {
+    return (this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.LG) + DesignConstants.SPACING.SM;
+  }
+
   async aboutToAppear() {
+    SystemUiController.useSurface({
+      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
+    });
     await this.loadNearbyGroups();
   }
 
@@ -170,7 +181,7 @@ export struct GroupPage {
 
   build() {
     Column() {
-      // 标题栏
+      // 标题栏 - 使用 SafeArea 避免与状态栏重叠
       Row() {
         Text('附近群组')
           .fontSize(DesignConstants.FONT.SIZE.XL)
@@ -187,9 +198,15 @@ export struct GroupPage {
           .onClick(() => this.createGroup())
       }
       .width('100%')
-      .height(56)
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .alignItems(VerticalAlign.Center)
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        top: this.getHeaderTopPadding(),
+        bottom: DesignConstants.SPACING.SM
+      })
+      .backgroundColor($r('app.color.bg_secondary'))
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 内容区域
       if (this.isLoading && this.groups.length === 0) {
@@ -217,7 +234,7 @@ export struct GroupPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    .backgroundColor($r('app.color.bg_primary'))
   }
 
   @Builder
@@ -288,7 +305,8 @@ export struct GroupPage {
     }
     .width('100%')
     .layoutWeight(1)
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM,
+      bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
     .scrollBar(BarState.Auto)
     .onReachEnd(() => { this.loadMoreGroups(); })
   }
@@ -359,7 +377,7 @@ export struct GroupPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.LG)
     .onClick(() => {
       const detailParams = new GroupDetailRouteParam();

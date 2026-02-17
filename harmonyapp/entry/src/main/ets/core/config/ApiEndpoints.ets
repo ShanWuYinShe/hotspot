@@ -51,9 +51,6 @@ class UserMeEndpoints {
   readonly UNFOLLOW: string = '/api/v1/users/me/unfollow';
   readonly BLOCK: string = '/api/v1/users/me/block';
   readonly UNBLOCK: string = '/api/v1/users/me/unblock';
-  readonly LIST_FRIENDS: string = '/api/v1/users/me/list_friends';
-  readonly LIST_FOLLOWING: string = '/api/v1/users/me/list_following';
-  readonly LIST_FOLLOWERS: string = '/api/v1/users/me/list_followers';
   readonly LIST_BLOCKED: string = '/api/v1/users/me/list_blocked';
   readonly SET_REMARK: string = '/api/v1/users/me/set_remark';
 }
@@ -154,7 +151,7 @@ class MomentEndpoints {
 class PrivateChatsMeEndpoints {
   readonly LIST: string = '/api/v1/private_chats/me/list';
   readonly UPDATE_SETTINGS: string = '/api/v1/private_chats/me/update_settings';
-  readonly DELETE: string = '/api/v1/private_chats/me/delete';
+  // ⏳ 延期实现: readonly DELETE: string = '/api/v1/private_chats/me/delete';
 }
 
 class PrivateChatsEndpoints {
@@ -205,6 +202,7 @@ class FeedEndpoints {
   readonly LIST_GROUPS: string = '/api/v1/feed/list_groups';
   readonly LIST_USERS: string = '/api/v1/feed/list_users';
   readonly LIST_TRENDING: string = '/api/v1/feed/list_trending';
+  readonly ME_DISMISS: string = '/api/v1/feed/me/dismiss';
 }
 
 // Upload
@@ -266,15 +264,11 @@ class ReportEndpoints {
 }
 
 // Share
-class ShareMeEndpoints {
-  readonly LIST: string = '/api/v1/share/me/list';
-}
-
 class ShareEndpoints {
   readonly CREATE: string = '/api/v1/share/create';
   readonly GET: string = '/api/v1/share/get';
   readonly REVOKE: string = '/api/v1/share/revoke';
-  readonly ME: ShareMeEndpoints = new ShareMeEndpoints();
+  // ⏳ 延期实现: share/me/list
 }
 
 // Main entry

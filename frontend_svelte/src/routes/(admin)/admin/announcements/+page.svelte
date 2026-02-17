@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { adminAnnouncementsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
+	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
@@ -12,7 +12,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Label } from '$lib/components/ui/label';
-import type { SystemAnnouncementItem, AnnouncementSeverity } from '$lib/types/api';
+	import type { SystemAnnouncementItem, AnnouncementSeverity } from '$lib/types/api';
 	import { formatDateTime } from '$lib/utils/format';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import Plus from 'lucide-svelte/icons/plus';
@@ -20,46 +20,32 @@ import type { SystemAnnouncementItem, AnnouncementSeverity } from '$lib/types/ap
 	import Trash2 from 'lucide-svelte/icons/trash-2';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 
-let announcements = $state.raw<SystemAnnouncementItem[]>([]);
-	let isLoading = $state(true);
-	let cursor = $state<string | undefined>(undefined);
-	let hasMore = $state(false);
+	// ============ 分页 ============
 
-	// Create dialog
+	const pagination = usePagination<SystemAnnouncementItem>({
+		uniqueKey: 'announcement_id'
+	});
+
+	function loadAnnouncements(refresh = true) {
+		pagination.load(
+			(cursor) =>
+				adminAnnouncementsService.search({ pagination: { limit: 20, cursor } }),
+			refresh
+		);
+	}
+
+	// 错误提示
+	$effect(() => {
+		if (pagination.error) toast.error(pagination.error);
+	});
+
+	// ============ 创建公告 ============
+
 	let showDialog = $state(false);
 	let isSubmitting = $state(false);
 	let title = $state('');
 	let content = $state('');
 	let severity = $state<AnnouncementSeverity>('info');
-
-	async function loadAnnouncements(append = false) {
-		if (!append) isLoading = true;
-		try {
-			const response = append
-				? await adminAnnouncementsService.search({
-						pagination: { limit: 20, cursor }
-					})
-				: await withMinimumLoadingTime(() =>
-						adminAnnouncementsService.search({
-							pagination: { limit: 20, cursor: undefined }
-						})
-					);
-
-			if (isSuccess(response) && response.data) {
-				if (append) {
-					announcements = [...announcements, ...response.data.items];
-				} else {
-					announcements = response.data.items;
-				}
-				cursor = response.data.next_cursor;
-				hasMore = !!response.data.next_cursor;
-			}
-		} catch {
-			toast.error('加载失败');
-		} finally {
-			isLoading = false;
-		}
-	}
 
 	function openCreateDialog() {
 		title = '';
@@ -82,11 +68,11 @@ let announcements = $state.raw<SystemAnnouncementItem[]>([]);
 				severity
 			});
 
-		if (isSuccess(response)) {
-			toast.success('创建成功');
-			showDialog = false;
-			loadAnnouncements();
-		} else {
+			if (isSuccess(response)) {
+				toast.success('创建成功');
+				showDialog = false;
+				loadAnnouncements();
+			} else {
 				toast.error(response.message || '创建失败');
 			}
 		} catch {
@@ -100,9 +86,11 @@ let announcements = $state.raw<SystemAnnouncementItem[]>([]);
 		if (!confirm('确定要删除该公告吗？')) return;
 
 		try {
-			const response = await adminAnnouncementsService.delete({ announcement_id: announcementId });
+			const response = await adminAnnouncementsService.delete({
+				announcement_id: announcementId
+			});
 			if (isSuccess(response)) {
-				announcements = announcements.filter(a => a.announcement_id !== announcementId);
+				pagination.removeItem((a) => a.announcement_id === announcementId);
 				toast.success('已删除');
 			} else {
 				toast.error(response.message || '删除失败');
@@ -112,17 +100,15 @@ let announcements = $state.raw<SystemAnnouncementItem[]>([]);
 		}
 	}
 
-	function getSeverityBadge(s: AnnouncementSeverity) {
-		switch (s) {
-			case 'error':
-				return { variant: 'destructive' as const, text: '紧急' };
-			case 'warning':
-				return { variant: 'default' as const, text: '警告' };
-			case 'info':
-			default:
-				return { variant: 'secondary' as const, text: '通知' };
-		}
-	}
+	// ============ 常量 ============
+
+	type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
+
+	const SEVERITY_BADGE: Record<AnnouncementSeverity, { variant: BadgeVariant; text: string }> = {
+		error: { variant: 'destructive', text: '紧急' },
+		warning: { variant: 'default', text: '警告' },
+		info: { variant: 'secondary', text: '通知' }
+	};
 
 	onMount(() => {
 		loadAnnouncements();
@@ -137,8 +123,8 @@ let announcements = $state.raw<SystemAnnouncementItem[]>([]);
 	<div class="flex items-center justify-between">
 		<h1 class="text-2xl font-bold">公告管理</h1>
 		<div class="flex gap-2">
-			<Button variant="outline" size="sm" onclick={() => loadAnnouncements()} disabled={isLoading}>
-				<RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
+			<Button variant="outline" size="sm" onclick={() => loadAnnouncements()} disabled={pagination.loading}>
+				<RefreshCw class="mr-2 h-4 w-4 {pagination.loading ? 'animate-spin' : ''}" />
 				刷新
 			</Button>
 			<Button size="sm" onclick={openCreateDialog}>
@@ -157,9 +143,9 @@ let announcements = $state.raw<SystemAnnouncementItem[]>([]);
 			</CardTitle>
 		</CardHeader>
 		<CardContent>
-			{#if isLoading && announcements.length === 0}
+			{#if pagination.loading && pagination.items.length === 0}
 				<div class="space-y-4">
-					{#each Array(3) as _}
+					{#each Array(3) as _, i (i)}
 						<div class="space-y-2 rounded-lg border p-4">
 							<Skeleton class="h-5 w-48" />
 							<Skeleton class="h-4 w-full" />
@@ -167,18 +153,19 @@ let announcements = $state.raw<SystemAnnouncementItem[]>([]);
 						</div>
 					{/each}
 				</div>
-			{:else if announcements.length === 0}
+			{:else if pagination.items.length === 0}
 				<div class="py-8 text-center text-muted-foreground">暂无公告</div>
 			{:else}
 				<div class="space-y-4">
-					{#each announcements as announcement (announcement.announcement_id)}
+					{#each pagination.items as announcement (announcement.announcement_id)}
+						{@const badge = SEVERITY_BADGE[announcement.severity]}
 						<div class="rounded-lg border p-4">
 							<div class="flex items-start justify-between gap-4">
 								<div class="flex-1">
 									<div class="flex items-center gap-2">
 										<h3 class="font-semibold">{announcement.title}</h3>
-										<Badge variant={getSeverityBadge(announcement.severity).variant}>
-											{getSeverityBadge(announcement.severity).text}
+										<Badge variant={badge.variant}>
+											{badge.text}
 										</Badge>
 									</div>
 									<p class="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
@@ -202,11 +189,11 @@ let announcements = $state.raw<SystemAnnouncementItem[]>([]);
 					{/each}
 				</div>
 
-				{#if hasMore}
-					<Button variant="outline" class="mt-4 w-full" onclick={() => loadAnnouncements(true)}>
-						加载更多
-					</Button>
-				{/if}
+			{#if pagination.hasMore}
+				<Button variant="outline" class="mt-4 w-full" onclick={() => loadAnnouncements(false)}>
+					加载更多
+				</Button>
+			{/if}
 			{/if}
 		</CardContent>
 	</Card>

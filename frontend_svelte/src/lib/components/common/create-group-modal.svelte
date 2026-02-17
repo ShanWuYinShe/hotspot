@@ -8,6 +8,7 @@
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import { groupsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
+	import { parseTags } from '$lib/utils/format';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
@@ -38,13 +39,7 @@
 	let isSubmitting = $state(false);
 	let showLocationPicker = $state(false);
 
-	const tags = $derived(
-		tagsInput
-			.split(/[,，\s]+/)
-			.map((tag) => tag.replace(/^#/, '').trim())
-			.filter(Boolean)
-			.slice(0, 10)
-	);
+	const tags = $derived(parseTags(tagsInput));
 
 	function resetForm() {
 		name = '';

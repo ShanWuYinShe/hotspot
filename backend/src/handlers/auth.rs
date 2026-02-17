@@ -1,11 +1,4 @@
-use axum::{
-    extract::State,
-    http::{header, HeaderMap, HeaderValue},
-    response::IntoResponse,
-    Json,
-};
-use uuid::Uuid;
-
+use crate::services::auth_service::AuthIssue;
 use crate::{
     dto::{
         request::{
@@ -13,7 +6,7 @@ use crate::{
             RefreshTokenRequest, RegisterRequest, RequestPasswordResetRequest,
             ResetPasswordRequest, RevokeAllSessionsRequest, RevokeSessionRequest, SessionsRequest,
         },
-        response::{ApiResponse, CheckStatusData, PaginatedData, SessionItem},
+        response::{ApiResponse, CheckStatusData, RevokeAllResult, SessionsListData},
     },
     error::{AppError, Result},
     middleware::auth::{AuthenticatedUser, BearerToken, OptionalAuthenticatedUser},
@@ -23,8 +16,15 @@ use crate::{
     utils::web_cookie::{
         build_access_token_clear_cookie, build_access_token_set_cookie,
         build_csrf_token_clear_cookie, build_csrf_token_set_cookie,
-        build_refresh_token_clear_cookie, build_refresh_token_set_cookie, get_cookie_value,
+        build_refresh_token_clear_cookie, build_refresh_token_set_cookie, generate_csrf_token,
+        get_cookie_value,
     },
+};
+use axum::{
+    extract::State,
+    http::{header, HeaderMap, HeaderValue},
+    response::IntoResponse,
+    Json,
 };
 
 fn append_set_cookie(headers: &mut HeaderMap, cookie: String) -> Result<()> {
@@ -44,7 +44,7 @@ fn append_auth_cookies(
     refresh_token_expiration: i64,
     secure: bool,
 ) -> Result<()> {
-    let csrf_token = Uuid::new_v4().to_string();
+    let csrf_token = generate_csrf_token();
 
     // access_token Cookie: Path=/api (所有 API 请求自动携带)
     let access_cookie =
@@ -60,6 +60,45 @@ fn append_auth_cookies(
     append_set_cookie(headers, access_cookie)?;
     append_set_cookie(headers, refresh_cookie)?;
     append_set_cookie(headers, csrf_cookie)?;
+    Ok(())
+}
+
+/// 统一构建认证响应（设置 Cookie、按 client_type 处理 data）
+///
+/// spec: Web 端 data 为 `{}`（tokens 仅通过 Set-Cookie 传递）
+///       App 端 data 包含完整 AuthTokenPairApp
+fn build_auth_response(
+    auth_issue: AuthIssue,
+    client_type: ClientType,
+    config: &crate::config::Config,
+) -> Result<(HeaderMap, Json<ApiResponse<serde_json::Value>>)> {
+    let mut headers = HeaderMap::new();
+    if client_type == ClientType::Web {
+        append_auth_cookies(
+            &mut headers,
+            &auth_issue.data.access_token,
+            config.jwt_access_token_expiration,
+            &auth_issue.refresh_token_raw,
+            config.jwt_refresh_token_expiration,
+            config.cookie_secure,
+        )?;
+    }
+    let data = if client_type == ClientType::Web {
+        // spec: Web 端 data = {} (空对象)
+        serde_json::json!({})
+    } else {
+        serde_json::to_value(&auth_issue.data)
+            .map_err(|_| AppError::internal("序列化认证数据失败"))?
+    };
+    Ok((headers, Json(ApiResponse::success(data))))
+}
+
+/// Web 端敏感操作的 CSRF 校验（仅当请求携带 hs_csrf_token Cookie 时触发）。
+/// App 端不使用 Cookie，不携带 hs_csrf_token，因此自动跳过。
+fn validate_csrf_if_web(headers: &HeaderMap) -> Result<()> {
+    if get_cookie_value(headers, "hs_csrf_token").is_some() {
+        validate_csrf_token(headers)?;
+    }
     Ok(())
 }
 
@@ -119,20 +158,7 @@ pub async fn register(
         )
         .await?;
 
-    let mut resp_headers = HeaderMap::new();
-    if client_type == ClientType::Web {
-        let secure = false; // 生产建议改为配置项
-        append_auth_cookies(
-            &mut resp_headers,
-            &auth_issue.data.access_token,
-            state.config.jwt_access_token_expiration,
-            &auth_issue.refresh_token_raw,
-            state.config.jwt_refresh_token_expiration,
-            secure,
-        )?;
-    }
-
-    Ok((resp_headers, Json(ApiResponse::success(auth_issue.data))))
+    build_auth_response(auth_issue, client_type, &state.config)
 }
 
 pub async fn login(
@@ -167,20 +193,7 @@ pub async fn login(
         )
         .await?;
 
-    let mut resp_headers = HeaderMap::new();
-    if client_type == ClientType::Web {
-        let secure = false; // 生产建议改为配置项
-        append_auth_cookies(
-            &mut resp_headers,
-            &auth_issue.data.access_token,
-            state.config.jwt_access_token_expiration,
-            &auth_issue.refresh_token_raw,
-            state.config.jwt_refresh_token_expiration,
-            secure,
-        )?;
-    }
-
-    Ok((resp_headers, Json(ApiResponse::success(auth_issue.data))))
+    build_auth_response(auth_issue, client_type, &state.config)
 }
 
 pub async fn create_guest(
@@ -215,20 +228,7 @@ pub async fn create_guest(
         )
         .await?;
 
-    let mut resp_headers = HeaderMap::new();
-    if client_type == ClientType::Web {
-        let secure = false; // 生产建议改为配置项
-        append_auth_cookies(
-            &mut resp_headers,
-            &auth_issue.data.access_token,
-            state.config.jwt_access_token_expiration,
-            &auth_issue.refresh_token_raw,
-            state.config.jwt_refresh_token_expiration,
-            secure,
-        )?;
-    }
-
-    Ok((resp_headers, Json(ApiResponse::success(auth_issue.data))))
+    build_auth_response(auth_issue, client_type, &state.config)
 }
 
 pub async fn refresh_token(
@@ -285,36 +285,26 @@ pub async fn refresh_token(
         )
         .await?;
 
-    let mut resp_headers = HeaderMap::new();
-    if client_type == ClientType::Web {
-        let secure = false; // 生产建议改为配置项
-        append_auth_cookies(
-            &mut resp_headers,
-            &auth_issue.data.access_token,
-            state.config.jwt_access_token_expiration,
-            &auth_issue.refresh_token_raw,
-            state.config.jwt_refresh_token_expiration,
-            secure,
-        )?;
-    }
-
-    Ok((resp_headers, Json(ApiResponse::success(auth_issue.data))))
+    build_auth_response(auth_issue, client_type, &state.config)
 }
 
 pub async fn logout(
     State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
     user: AuthenticatedUser,
     BearerToken(token): BearerToken,
     Json(_req): Json<LogoutRequest>,
 ) -> Result<impl IntoResponse> {
+    // CSRF 校验（Web 端敏感操作）
+    validate_csrf_if_web(&headers)?;
+
     // 调用 Service
     state.auth_service.logout(user.user_id, &token).await?;
 
     // 清除所有认证相关 Cookie（web）
-    let secure = false; // 生产建议改为配置项
-    let clear_access_cookie = build_access_token_clear_cookie(secure);
-    let clear_refresh_cookie = build_refresh_token_clear_cookie(secure);
-    let clear_csrf_cookie = build_csrf_token_clear_cookie(secure);
+    let clear_access_cookie = build_access_token_clear_cookie(state.config.cookie_secure);
+    let clear_refresh_cookie = build_refresh_token_clear_cookie(state.config.cookie_secure);
+    let clear_csrf_cookie = build_csrf_token_clear_cookie(state.config.cookie_secure);
 
     let mut resp_headers = HeaderMap::new();
     append_set_cookie(&mut resp_headers, clear_access_cookie)?;
@@ -366,20 +356,7 @@ pub async fn reset_password(
         )
         .await?;
 
-    let mut resp_headers = HeaderMap::new();
-    if client_type == ClientType::Web {
-        let secure = false;
-        append_auth_cookies(
-            &mut resp_headers,
-            &auth_issue.data.access_token,
-            state.config.jwt_access_token_expiration,
-            &auth_issue.refresh_token_raw,
-            state.config.jwt_refresh_token_expiration,
-            secure,
-        )?;
-    }
-
-    Ok((resp_headers, Json(ApiResponse::success(auth_issue.data))))
+    build_auth_response(auth_issue, client_type, &state.config)
 }
 
 pub async fn check_status(
@@ -398,12 +375,19 @@ pub async fn check_status(
 
 pub async fn change_password(
     State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
     user: AuthenticatedUser,
     Json(req): Json<ChangePasswordRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
+    // CSRF 校验（Web 端敏感操作）
+    validate_csrf_if_web(&headers)?;
+
+    let session_id = user
+        .session_id
+        .ok_or_else(|| AppError::Unauthorized("当前会话不可用".to_string()))?;
     state
         .auth_service
-        .change_password(user.user_id, &req)
+        .change_password(user.user_id, session_id, &req)
         .await?;
     Ok(Json(ApiResponse::success_empty()))
 }
@@ -412,7 +396,7 @@ pub async fn list_sessions(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(list_req): Json<SessionsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<SessionItem>>>> {
+) -> Result<Json<ApiResponse<SessionsListData>>> {
     let response = state
         .auth_service
         .list_sessions(user.user_id, &list_req, user.session_id)
@@ -422,25 +406,43 @@ pub async fn list_sessions(
 
 pub async fn revoke_session(
     State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
     user: AuthenticatedUser,
     Json(revoke_req): Json<RevokeSessionRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    // 撤销会话
+    // CSRF 校验（Web 端敏感操作）
+    validate_csrf_if_web(&headers)?;
+
+    let session_id = user
+        .session_id
+        .ok_or_else(|| AppError::Unauthorized("当前会话不可用".to_string()))?;
     state
         .auth_service
-        .revoke_session(user.user_id, &revoke_req)
+        .revoke_session(user.user_id, session_id, &revoke_req)
         .await?;
 
     Ok(Json(ApiResponse::success_empty()))
 }
 
-/// 撤销当前用户所有其他会话
+/// 撤销当前用户所有其他会话（不含当前会话）
 pub async fn revoke_all_sessions(
     State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
     user: AuthenticatedUser,
     Json(_req): Json<RevokeAllSessionsRequest>,
-) -> Result<Json<ApiResponse<()>>> {
-    state.auth_service.revoke_all_sessions(user.user_id).await?;
+) -> Result<Json<ApiResponse<RevokeAllResult>>> {
+    // CSRF 校验（Web 端敏感操作）
+    validate_csrf_if_web(&headers)?;
 
-    Ok(Json(ApiResponse::success_empty()))
+    let session_id = user
+        .session_id
+        .ok_or_else(|| AppError::Unauthorized("当前会话不可用".to_string()))?;
+    let revoked_count = state
+        .auth_service
+        .revoke_all_sessions(user.user_id, session_id)
+        .await?;
+
+    Ok(Json(ApiResponse::success(RevokeAllResult {
+        revoked_count,
+    })))
 }

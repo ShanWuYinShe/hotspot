@@ -9,7 +9,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Skeleton } from '$lib/components/ui/skeleton';
-	import type { ServerConfig, ClientConfig } from '$lib/types/api';
+	import type { AppConfig } from '$lib/types/api';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import Save from 'lucide-svelte/icons/save';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
@@ -17,22 +17,23 @@
 	import FileText from 'lucide-svelte/icons/file-text';
 	import Bell from 'lucide-svelte/icons/bell';
 
-	let serverConfig = $state<ServerConfig | null>(null);
-	let clientConfig = $state<ClientConfig | null>(null);
+	let appConfig = $state<AppConfig | null>(null);
 	let isLoading = $state(true);
 	let isSaving = $state(false);
 
-	// Server config form fields
+	// 上传配置表单
 	let imageMaxSize = $state('');
 	let videoMaxSize = $state('');
 	let audioMaxSize = $state('');
 	let fileMaxSize = $state('');
 
-	// Client config form fields
+	// 功能开关表单
 	let enablePublicRegistration = $state(true);
 	let enableGuestLogin = $state(true);
 	let enableMoments = $state(true);
 	let enableNearbyPeople = $state(true);
+
+	// 限制配置表单
 	let maxMomentTags = $state('');
 	let maxMomentImages = $state('');
 	let momentDescriptionMaxLength = $state('');
@@ -43,34 +44,30 @@
 	async function loadConfig() {
 		isLoading = true;
 		try {
-			// 并行加载服务端配置和客户端配置
-			const [serverRes, clientRes] = await withMinimumLoadingTime(() =>
-				Promise.all([
-					adminAppConfigService.get(),
-					adminAppConfigService.getClient()
-				])
-			);
+			const response = await withMinimumLoadingTime(() => adminAppConfigService.get());
 
-			if (isSuccess(serverRes) && serverRes.data) {
-				serverConfig = serverRes.data;
-				imageMaxSize = String(serverConfig.upload?.image_max_size || 5242880);
-				videoMaxSize = String(serverConfig.upload?.video_max_size || 52428800);
-				audioMaxSize = String(serverConfig.upload?.audio_max_size || 10485760);
-				fileMaxSize = String(serverConfig.upload?.file_max_size || 10485760);
-			}
+			if (isSuccess(response) && response.data) {
+				appConfig = response.data;
 
-			if (isSuccess(clientRes) && clientRes.data) {
-				clientConfig = clientRes.data;
-				enablePublicRegistration = clientConfig.features?.enable_public_registration ?? true;
-				enableGuestLogin = clientConfig.features?.enable_guest_login ?? true;
-				enableMoments = clientConfig.features?.enable_moments ?? true;
-				enableNearbyPeople = clientConfig.features?.enable_nearby_people ?? true;
-				maxMomentTags = String(clientConfig.limits?.max_moment_tags || 10);
-				maxMomentImages = String(clientConfig.limits?.max_moment_images || 9);
-				momentDescriptionMaxLength = String(clientConfig.limits?.moment_description_max_length || 300);
-				commentMaxLength = String(clientConfig.limits?.comment_max_length || 200);
-				maxGroupMembers = String(clientConfig.limits?.max_group_members || 500);
-				searchRadiusMax = String(clientConfig.limits?.search_radius_max || 50);
+				// 上传配置
+				imageMaxSize = String(appConfig.upload?.image_max_size || 5242880);
+				videoMaxSize = String(appConfig.upload?.video_max_size || 52428800);
+				audioMaxSize = String(appConfig.upload?.audio_max_size || 10485760);
+				fileMaxSize = String(appConfig.upload?.file_max_size || 10485760);
+
+				// 功能开关
+				enablePublicRegistration = appConfig.features?.enable_public_registration ?? true;
+				enableGuestLogin = appConfig.features?.enable_guest_login ?? true;
+				enableMoments = appConfig.features?.enable_moments ?? true;
+				enableNearbyPeople = appConfig.features?.enable_nearby_people ?? true;
+
+				// 限制配置
+				maxMomentTags = String(appConfig.limits?.max_moment_tags || 10);
+				maxMomentImages = String(appConfig.limits?.max_moment_images || 9);
+				momentDescriptionMaxLength = String(appConfig.limits?.moment_description_max_length || 300);
+				commentMaxLength = String(appConfig.limits?.comment_max_length || 200);
+				maxGroupMembers = String(appConfig.limits?.max_group_members || 500);
+				searchRadiusMax = String(appConfig.limits?.search_radius_max || 50);
 			}
 		} catch {
 			toast.error('加载配置失败');
@@ -171,14 +168,14 @@
 
 	{#if isLoading}
 		<div class="grid gap-6 lg:grid-cols-2">
-			{#each Array(3) as _}
+			{#each Array(3) as _, i (i)}
 				<Card>
 					<CardHeader>
 						<Skeleton class="h-5 w-32" />
 						<Skeleton class="h-4 w-48" />
 					</CardHeader>
 					<CardContent class="space-y-4">
-						{#each Array(3) as _}
+						{#each Array(3) as _, i (i)}
 							<div class="space-y-2">
 								<Skeleton class="h-4 w-20" />
 								<Skeleton class="h-9 w-full" />

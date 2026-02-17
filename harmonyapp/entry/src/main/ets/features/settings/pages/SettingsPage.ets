@@ -14,6 +14,7 @@ import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
 import { AppRouter, ProfileRouteParam, LoginRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
+import { SystemUiController } from '../../../core/utils/SystemUiController';
 
 @Component
 export struct SettingsPage {
@@ -21,8 +22,19 @@ export struct SettingsPage {
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
   @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
   @StorageLink(KEY_USER_TYPE) userType: string = '';
+  @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
+
+  private getHeaderTopPadding(): number {
+    return (this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.LG) + DesignConstants.SPACING.SM;
+  }
+
+  aboutToAppear(): void {
+    SystemUiController.useSurface({
+      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
+    });
+  }
 
   private async logout() {
     try {
@@ -42,7 +54,7 @@ export struct SettingsPage {
   build() {
     NavDestination() {
     Column() {
-      // 标题栏
+      // 标题栏 - 使用 SafeArea 避免与状态栏重叠
       Row() {
         Text() {
           SymbolSpan($r(AppIcon.BACK))
@@ -66,9 +78,15 @@ export struct SettingsPage {
         Blank().width(48)
       }
       .width('100%')
-      .height(56)
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .alignItems(VerticalAlign.Center)
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        top: this.getHeaderTopPadding(),
+        bottom: DesignConstants.SPACING.SM
+      })
+      .backgroundColor($r('app.color.bg_secondary'))
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 设置列表
       List({ space: DesignConstants.SPACING.MD }) {
@@ -177,7 +195,7 @@ export struct SettingsPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    .backgroundColor($r('app.color.bg_primary'))
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

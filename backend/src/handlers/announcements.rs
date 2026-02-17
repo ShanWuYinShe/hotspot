@@ -7,7 +7,7 @@ use crate::{
             CreateAnnouncementRequest, DeleteAnnouncementRequest, PublicAnnouncementListRequest,
         },
         response::{
-            ApiResponse, CreateAnnouncementData, PaginatedData, SystemAnnouncementItem,
+            AdminAnnouncementItem, ApiResponse, CreateAnnouncementData, PaginatedData,
             SystemAnnouncementListData,
         },
     },
@@ -55,7 +55,7 @@ pub async fn admin_create(
 pub async fn admin_list(
     State(state): State<AppState>,
     Json(req): Json<AdminAnnouncementListRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<SystemAnnouncementItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<AdminAnnouncementItem>>>> {
     let response = state
         .announcement_service
         .list_admin_announcements(req)

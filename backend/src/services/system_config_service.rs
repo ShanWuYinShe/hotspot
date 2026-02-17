@@ -17,8 +17,9 @@ use crate::{
             UpdateRateLimitsRequest, UpdateUploadConfigRequest,
         },
         response::{
-            AdminGlobalSettingsData, AppLimits, ContactInfo, ContentDefaults, DefaultLocation,
-            FeatureSwitches, GlobalSettings, RateLimitConfig, UploadConfig,
+            AdminGlobalSettingsData, AppLimits, ClientConfig, ClientDefaults, ContactInfo,
+            ContentDefaults, DefaultLocation, FeatureSwitches, GlobalSettings, RateLimitConfig,
+            UploadConfig,
         },
     },
     error::Result,
@@ -49,13 +50,23 @@ impl SystemConfigService {
 
     // ==================== 客户端拉取配置 (Client Fetch) ====================
 
-    /// 拉取全局配置 (Client Side)
-    pub async fn fetch_global_settings(
+    /// 拉取客户端公开配置 (system/get_client_config)
+    /// 返回 ClientConfig，仅包含 spec 规定的 features/limits/contact/defaults
+    pub async fn get_client_config(
         &self,
         _req: FetchGlobalSettingsRequest,
-    ) -> Result<GlobalSettings> {
-        // spec：不做 Remote Config 版本控制/变更历史；客户端每次直接拉取完整配置即可。
-        self.get_full_global_settings().await
+    ) -> Result<ClientConfig> {
+        let settings = self.get_full_global_settings().await?;
+        Ok(ClientConfig {
+            features: settings.features,
+            limits: settings.limits,
+            contact: settings.contact,
+            defaults: ClientDefaults {
+                default_location: settings.defaults.default_location,
+                default_user_avatar: settings.defaults.default_user_avatar,
+                default_group_avatar: settings.defaults.default_group_avatar,
+            },
+        })
     }
 
     // ==================== 管理员配置管理 (Admin Management) ====================
@@ -88,23 +99,24 @@ impl SystemConfigService {
         req: UpdateUploadConfigRequest,
         admin_id: i64,
     ) -> Result<GlobalSettings> {
+        let u = &req.upload;
         let mut updates = HashMap::new();
-        if let Some(v) = req.image_max_size {
+        if let Some(v) = u.image_max_size {
             updates.insert("upload.image_max_size", v.to_string());
         }
-        if let Some(v) = req.video_max_size {
+        if let Some(v) = u.video_max_size {
             updates.insert("upload.video_max_size", v.to_string());
         }
-        if let Some(v) = req.audio_max_size {
+        if let Some(v) = u.audio_max_size {
             updates.insert("upload.audio_max_size", v.to_string());
         }
-        if let Some(v) = req.file_max_size {
+        if let Some(v) = u.file_max_size {
             updates.insert("upload.file_max_size", v.to_string());
         }
-        if let Some(v) = req.allowed_image_types {
+        if let Some(v) = u.allowed_image_types.clone() {
             updates.insert("upload.allowed_image_types", serde_json::to_string(&v)?);
         }
-        if let Some(v) = req.allowed_video_types {
+        if let Some(v) = u.allowed_video_types.clone() {
             updates.insert("upload.allowed_video_types", serde_json::to_string(&v)?);
         }
 
@@ -202,22 +214,23 @@ impl SystemConfigService {
         admin_id: i64,
     ) -> Result<GlobalSettings> {
         let mut updates = HashMap::new();
-        if let Some(v) = req.max_group_members {
+        let limits = &req.limits;
+        if let Some(v) = limits.max_group_members {
             updates.insert("limits.max_group_members", v.to_string());
         }
-        if let Some(v) = req.max_moment_tags {
+        if let Some(v) = limits.max_moment_tags {
             updates.insert("limits.max_moment_tags", v.to_string());
         }
-        if let Some(v) = req.max_moment_images {
+        if let Some(v) = limits.max_moment_images {
             updates.insert("limits.max_moment_images", v.to_string());
         }
-        if let Some(v) = req.moment_description_max_length {
+        if let Some(v) = limits.moment_description_max_length {
             updates.insert("limits.moment_description_max_length", v.to_string());
         }
-        if let Some(v) = req.comment_max_length {
+        if let Some(v) = limits.comment_max_length {
             updates.insert("limits.comment_max_length", v.to_string());
         }
-        if let Some(v) = req.search_radius_max {
+        if let Some(v) = limits.search_radius_max {
             updates.insert("limits.search_radius_max", v.to_string());
         }
 
@@ -289,14 +302,15 @@ impl SystemConfigService {
         req: AdminUpdateResponseDefaultsRequest,
         admin_id: i64,
     ) -> Result<GlobalSettings> {
+        let rd = &req.response_defaults;
         let mut updates = HashMap::new();
-        if let Some(v) = req.default_page_size {
+        if let Some(v) = rd.default_page_size {
             updates.insert("response_defaults.default_page_size", v.to_string());
         }
-        if let Some(v) = req.max_page_size {
+        if let Some(v) = rd.max_page_size {
             updates.insert("response_defaults.max_page_size", v.to_string());
         }
-        if let Some(v) = req.system_announcements_count {
+        if let Some(v) = rd.system_announcements_count {
             updates.insert(
                 "response_defaults.system_announcements_count",
                 v.to_string(),
@@ -496,7 +510,10 @@ impl SystemConfigService {
             max_moment_images: get_i32("limits.max_moment_images", 9),
             moment_description_max_length: get_i32("limits.moment_description_max_length", 2000),
             comment_max_length: get_i32("limits.comment_max_length", 500),
-            search_radius_max: get_i32("limits.search_radius_max", 50000),
+            search_radius_max: get_i32(
+                "limits.search_radius_max",
+                crate::constants::MAX_SEARCH_RADIUS_I32,
+            ),
         };
 
         let get_u32 =

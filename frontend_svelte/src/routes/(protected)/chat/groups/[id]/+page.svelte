@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { dev } from '$app/environment';
 	import { page } from '$app/state';
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { groupsService, groupMessagesService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
@@ -27,7 +27,7 @@
 	import ChevronDown from 'lucide-svelte/icons/chevron-down';
 	import X from 'lucide-svelte/icons/x';
 
-	const groupId = page.params.id!;
+	const groupId = $derived(page.params.id!);
 
 	let group = $state<GroupItem | null>(null);
 	let messages = $state.raw<GroupMessageItem[]>([]);
@@ -43,6 +43,7 @@
 	let shouldFocusInput = $state(0); // 用于触发重新聚焦
 	let isSubscribed = $state(false); // 订阅状态
 	let isAttemptingSubscribe = $state(false); // 是否正在尝试订阅
+	let isMounted = false; // 组件是否挂载（防止异步操作在卸载后更新状态）
 
 	const canSendMessage = $derived(group?.my_state?.is_joined && !group?.my_state?.is_muted && isSubscribed);
 
@@ -59,13 +60,14 @@
 	async function loadGroup() {
 		try {
 			const response = await groupsService.getGroup({ group_id: groupId });
+			if (!isMounted) return;
 			if (isSuccess(response) && response.data) {
 				group = response.data;
 			} else {
 				toast.error(response.message || '群组不存在');
 			}
 		} catch {
-			toast.error('加载群组失败');
+			if (isMounted) toast.error('加载群组失败');
 		}
 	}
 
@@ -85,6 +87,7 @@
 				include_system: true
 			});
 
+			if (!isMounted) return;
 			if (isSuccess(response) && response.data) {
 				const newMessages = response.data.items.reverse();
 				
@@ -113,7 +116,7 @@
 				// ✅ 不再立即标记已读，等待消息可见时自动标记
 			}
 		} catch {
-			toast.error('加载消息失败');
+			if (isMounted) toast.error('加载消息失败');
 		} finally {
 			if (loadMore) {
 				isLoadingMore = false;
@@ -137,8 +140,7 @@
 				group_id: groupId,
 				type: 'text',
 				content: text,
-				mentions: mentions.length > 0 ? mentions : undefined,
-				idempotencyKey: crypto.randomUUID()
+				mentions: mentions.length > 0 ? mentions : undefined
 			});
 
 			if (!isSuccess(response)) {
@@ -279,10 +281,9 @@
 	}
 
 	onMount(() => {
-		// ✅ 立即清除这个群组的未读计数
-		messageStore.markConversationAsRead(`group_${groupId}`);
+		isMounted = true;
 
-		// 先注册消息监听器（确保不会错过任何消息）
+		// 注册 WebSocket 监听器（使用 reactive groupId 自动过滤）
 		const unsubscribeMessage = eventHandlers.onGroupMessage((payload: GroupMessageNewPayload) => {
 			if (payload.group_id === groupId) {
 				const newMessage: GroupMessageItem = {
@@ -297,11 +298,8 @@
 				};
 
 				messages = [...messages, newMessage];
-
-				// ✅ 清除未读计数（因为用户正在查看这个群组）
 				messageStore.markConversationAsRead(`group_${groupId}`);
 
-				// 如果在底部附近，自动滚动到新消息
 				if (scrollContainer) {
 					const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
 					const isNearBottom = scrollHeight - scrollTop - clientHeight < 200;
@@ -333,92 +331,77 @@
 		const unsubscribeMemberJoined = websocketStore.on('GroupMemberJoined', (payload) => {
 			if (payload.group_id === groupId) {
 				toast.success(`${payload.user.nickname} 加入了群组`);
-				// 更新群组成员数量
 				if (group) {
 					group = { ...group, group: { ...group.group, members_count: payload.member_count } };
 				}
 			}
 		});
 
-		// 监听群组成员离开事件
-		const handleMemberLeft = (e: CustomEvent<{
-			group_id: string;
-			user_id: string;
-			member_count: number;
-		}>) => {
-			if (e.detail.group_id === groupId) {
-				// 更新群组成员数量
-				if (group) {
-					group = { ...group, group: { ...group.group, members_count: e.detail.member_count } };
-				}
-			}
-		};
-
-		// 监听群组成员被移除事件
-		const handleMemberRemoved = (e: CustomEvent<{
-			group_id: string;
-			user_id: string;
-			member_count: number;
-			is_current_user: boolean;
-		}>) => {
-			if (e.detail.group_id === groupId) {
-				// 更新群组成员数量
-				if (group) {
-					group = { ...group, group: { ...group.group, members_count: e.detail.member_count } };
-				}
-				// 如果被移除的是当前用户，重新加载群组信息
-				if (e.detail.is_current_user) {
-					loadGroup();
-				}
-			}
-		};
-
-		// 监听群组信息更新事件
-		const handleGroupUpdated = (e: CustomEvent<{
-			group_id: string;
-			updated_fields: {
-				name?: string;
-				avatar_url?: string;
-				description?: string;
-			};
-		}>) => {
-			if (e.detail.group_id === groupId && group) {
-				// 更新群组信息
-				group = {
-					...group,
-					group: {
-						...group.group,
-						...e.detail.updated_fields
-					}
-				};
-			}
-		};
-
-		// 注册浏览器事件监听器
-		window.addEventListener('group-member-left', handleMemberLeft as EventListener);
-		window.addEventListener('group-member-removed', handleMemberRemoved as EventListener);
-		window.addEventListener('group-updated', handleGroupUpdated as EventListener);
-
-		// 加载数据（异步，不阻塞）
-		init();
-
-		// ✅ 返回清理函数（Svelte 5 的新方式）
 		return () => {
+			isMounted = false;
 			unsubscribeMessage();
 			unsubscribeRecalled();
 			unsubscribeEdited();
 			unsubscribeMemberJoined();
-			
-			// 移除浏览器事件监听器
-			window.removeEventListener('group-member-left', handleMemberLeft as EventListener);
-			window.removeEventListener('group-member-removed', handleMemberRemoved as EventListener);
-			window.removeEventListener('group-updated', handleGroupUpdated as EventListener);
-			
-			// 取消订阅
 			if (isSubscribed) {
 				subscriptionManager.unsubscribe('group', [groupId]);
 			}
 		};
+	});
+
+	// groupId 变化时重置状态并重新加载（含首次加载）
+	$effect(() => {
+		const id = groupId;
+		untrack(() => {
+			group = null;
+			messages = [];
+			isLoading = true;
+			messageText = '';
+			cursor = undefined;
+			hasMore = true;
+			showScrollButton = false;
+			selectedImage = null;
+			isSubscribed = false;
+			isAttemptingSubscribe = false;
+			messageStore.markConversationAsRead(`group_${id}`);
+			init();
+		});
+	});
+
+	// WebSocket 事件处理（Svelte 5 $effect，自动清理）
+	$effect(() => {
+		return websocketStore.on('GroupMemberLeft', (payload) => {
+			if (payload.group_id !== groupId) return;
+			if (group) {
+				group = { ...group, group: { ...group.group, members_count: payload.member_count } };
+			}
+		});
+	});
+
+	$effect(() => {
+		return websocketStore.on('GroupMemberRemoved', (payload) => {
+			if (payload.group_id !== groupId) return;
+			if (group) {
+				group = { ...group, group: { ...group.group, members_count: payload.member_count } };
+			}
+			if (payload.user.user_id === authStore.currentUserId) {
+				loadGroup();
+			}
+		});
+	});
+
+	$effect(() => {
+		return websocketStore.on('GroupUpdated', (payload) => {
+			if (payload.group_id !== groupId || !group) return;
+			group = {
+				...group,
+				group: {
+					...group.group,
+					...(payload.updated_fields.name && { name: payload.updated_fields.name }),
+					...(payload.updated_fields.avatar_url && { avatar_url: payload.updated_fields.avatar_url })
+				}
+			};
+		});
 	});
 
 	/**
@@ -426,6 +409,8 @@
 	 * 使用 $effect 监听连接状态，自动订阅/恢复订阅
 	 */
 	$effect(() => {
+		let cancelled = false;
+
 		// 使用 derived 状态检查连接
 		const connected = websocketStore.isConnected;
 		
@@ -435,7 +420,7 @@
 				if (dev) console.log('[GroupChat] WebSocket 断开，重置订阅状态');
 				isSubscribed = false;
 			}
-			return;
+			return () => { cancelled = true; };
 		}
 
 		// WebSocket 已连接，尝试订阅
@@ -445,6 +430,7 @@
 			if (dev) console.log('[GroupChat] WebSocket 已连接，订阅群组:', groupId);
 			
 			subscriptionManager.subscribe('group', [groupId]).then((success) => {
+				if (cancelled) return;
 				isSubscribed = success;
 				isAttemptingSubscribe = false;
 				
@@ -456,6 +442,8 @@
 				}
 			});
 		}
+
+		return () => { cancelled = true; };
 	});
 
 </script>
@@ -508,7 +496,7 @@
 	>
 		{#if isLoading}
 			<div class="space-y-4 p-4">
-				{#each Array(8) as _}
+				{#each Array(8) as _, i (i)}
 					<div class="flex gap-3">
 						<Skeleton class="h-10 w-10 shrink-0 rounded-full" />
 						<div class="flex-1 space-y-2">

@@ -54,12 +54,9 @@ import {
   FollowerItem,
   BlockedUserItem,
   SetRemarkRequest,
-  UserFriendsRequest,
-  UserFollowingRequest,
-  UserFollowersRequest,
-  MyFriendsRequest,
-  MyFollowingRequest,
-  MyFollowersRequest,
+  ListFriendsRequest,
+  ListFollowingRequest,
+  ListFollowersRequest,
   MyBlockedRequest,
   UserGroupsRequest,
   UserMomentsRequest,
@@ -98,7 +95,6 @@ import {
   PrivateChatOpenTheDoorRequest,
   PrivateChatOpenResult,
   UpdatePrivateChatSettingsRequest,
-  DeletePrivateChatRequest,
 
   // 私聊消息
   SendPrivateMessageRequest,
@@ -181,7 +177,7 @@ import {
 
   // 地图
   MapRenderRequest,
-  MapRenderData,
+  MapCanvas,
 
   // 系统
   HealthStatus,
@@ -195,8 +191,6 @@ import {
   GetShareRequest,
   ShareDetail,
   RevokeShareRequest,
-  ShareListRequest,
-  ShareListItem,
 
   // Response 包装类型
   SystemAnnouncementListData,
@@ -376,16 +370,16 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<UserItem>, UserOpenTheDoorRequest>(ApiEndpoints.USER.OPEN_THE_DOOR, params);
   }
 
-  static async getUserFriendsList(params: UserFriendsRequest): Promise<ApiResponse<PaginatedData<FriendItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<FriendItem>>, UserFriendsRequest>(ApiEndpoints.USER.LIST_FRIENDS, params);
+  static async getUserFriendsList(params: ListFriendsRequest): Promise<ApiResponse<PaginatedData<FriendItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<FriendItem>>, ListFriendsRequest>(ApiEndpoints.USER.LIST_FRIENDS, params);
   }
 
-  static async getUserFollowingList(params: UserFollowingRequest): Promise<ApiResponse<PaginatedData<FollowingItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<FollowingItem>>, UserFollowingRequest>(ApiEndpoints.USER.LIST_FOLLOWING, params);
+  static async getUserFollowingList(params: ListFollowingRequest): Promise<ApiResponse<PaginatedData<FollowingItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<FollowingItem>>, ListFollowingRequest>(ApiEndpoints.USER.LIST_FOLLOWING, params);
   }
 
-  static async getUserFollowersList(params: UserFollowersRequest): Promise<ApiResponse<PaginatedData<FollowerItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<FollowerItem>>, UserFollowersRequest>(ApiEndpoints.USER.LIST_FOLLOWERS, params);
+  static async getUserFollowersList(params: ListFollowersRequest): Promise<ApiResponse<PaginatedData<FollowerItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<FollowerItem>>, ListFollowersRequest>(ApiEndpoints.USER.LIST_FOLLOWERS, params);
   }
 
   static async getUserGroups(params: UserGroupsRequest): Promise<ApiResponse<PaginatedData<GroupItem>>> {
@@ -446,16 +440,16 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<void>, UnblockRequest>(ApiEndpoints.USER.ME.UNBLOCK, params);
   }
 
-  static async getFriendsList(params: MyFriendsRequest): Promise<ApiResponse<PaginatedData<FriendItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<FriendItem>>, MyFriendsRequest>(ApiEndpoints.USER.ME.LIST_FRIENDS, params);
+  static async getFriendsList(params: ListFriendsRequest): Promise<ApiResponse<PaginatedData<FriendItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<FriendItem>>, ListFriendsRequest>(ApiEndpoints.USER.LIST_FRIENDS, params);
   }
 
-  static async getFollowingList(params: MyFollowingRequest): Promise<ApiResponse<PaginatedData<FollowingItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<FollowingItem>>, MyFollowingRequest>(ApiEndpoints.USER.ME.LIST_FOLLOWING, params);
+  static async getFollowingList(params: ListFollowingRequest): Promise<ApiResponse<PaginatedData<FollowingItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<FollowingItem>>, ListFollowingRequest>(ApiEndpoints.USER.LIST_FOLLOWING, params);
   }
 
-  static async getFollowersList(params: MyFollowersRequest): Promise<ApiResponse<PaginatedData<FollowerItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<FollowerItem>>, MyFollowersRequest>(ApiEndpoints.USER.ME.LIST_FOLLOWERS, params);
+  static async getFollowersList(params: ListFollowersRequest): Promise<ApiResponse<PaginatedData<FollowerItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<FollowerItem>>, ListFollowersRequest>(ApiEndpoints.USER.LIST_FOLLOWERS, params);
   }
 
   static async getBlockedList(params: MyBlockedRequest): Promise<ApiResponse<PaginatedData<BlockedUserItem>>> {
@@ -560,9 +554,7 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<void>, UpdatePrivateChatSettingsRequest>(ApiEndpoints.CHAT.PRIVATE_CHATS.ME.UPDATE_SETTINGS, params);
   }
 
-  static async deletePrivateChat(params: DeletePrivateChatRequest): Promise<ApiResponse<void>> {
-    return HttpUtil.post<ApiResponse<void>, DeletePrivateChatRequest>(ApiEndpoints.CHAT.PRIVATE_CHATS.ME.DELETE, params);
-  }
+  // ⏳ 延期实现: deletePrivateChat (private_chats/me/delete)
 
   // ==================== 私聊消息 API ====================
 
@@ -784,8 +776,8 @@ export class ApiClient {
 
   // ==================== 地图 API ====================
 
-  static async renderMap(params: MapRenderRequest): Promise<ApiResponse<MapRenderData>> {
-    return HttpUtil.post<ApiResponse<MapRenderData>, MapRenderRequest>(ApiEndpoints.MAP.RENDER, params);
+  static async renderMap(params: MapRenderRequest): Promise<ApiResponse<MapCanvas>> {
+    return HttpUtil.post<ApiResponse<MapCanvas>, MapRenderRequest>(ApiEndpoints.MAP.RENDER, params);
   }
 
   // ==================== 分享 API ====================
@@ -802,7 +794,5 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<void>, RevokeShareRequest>(ApiEndpoints.SHARE.REVOKE, params);
   }
 
-  static async listMyShares(params: ShareListRequest): Promise<ApiResponse<PaginatedData<ShareListItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<ShareListItem>>, ShareListRequest>(ApiEndpoints.SHARE.ME.LIST, params);
-  }
+  // ⏳ 延期实现: listMyShares (share/me/list)
 }

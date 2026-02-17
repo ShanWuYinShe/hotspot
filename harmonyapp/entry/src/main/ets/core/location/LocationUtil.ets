@@ -1,6 +1,6 @@
 /**
  * 位置工具类
- * 提供位置获取、地址解析、距离计算等功能
+ * 提供位置获取、地址解析（正/反向地理编码）、距离显示格式化等功能
  */
 
 import { geoLocationManager } from '@kit.LocationKit';

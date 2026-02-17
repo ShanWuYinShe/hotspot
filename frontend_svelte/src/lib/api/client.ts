@@ -57,14 +57,45 @@ export interface RequestOptions {
 export interface ApiClientConfig {
 	/** API 基础 URL */
 	baseUrl: string;
-	/** 获取 Token 的函数 */
-	getToken: () => string | null;
-	/** 设置 Token 的函数 */
-	setToken: (token: string, expiresAt: string) => void;
-	/** 清除 Token 的函数 */
-	clearToken: () => void;
-	/** 获取 Refresh Token 的函数 (App 端使用) */
-	getRefreshToken?: () => string | null;
+	/**
+	 * Token 刷新成功回调
+	 * Web 端 token 通过 Set-Cookie 更新，此回调用于通知应用更新过期时间等元数据
+	 */
+	onRefreshSuccess: () => void;
+	/**
+	 * Token 刷新失败回调
+	 * 应清除认证状态并引导用户重新登录
+	 */
+	onRefreshFail: () => void;
+	/**
+	 * 账号封禁回调（code 10201）
+	 * spec 要求：强制登出 + 显示封禁页
+	 */
+	onAccountBanned?: (message: string) => void;
+}
+
+// ============ 幂等键生成（spec: {client_id}-{timestamp_ms}-{random}，32-64 字符） ============
+
+// 会话级客户端 ID（8 字符随机字符串）
+let _clientId: string | null = null;
+function getClientId(): string {
+	if (!_clientId) {
+		_clientId = crypto.randomUUID().replace(/-/g, '').substring(0, 8);
+	}
+	return _clientId;
+}
+
+/**
+ * 生成 spec 要求的幂等键
+ * 格式: {client_id}-{timestamp_ms}-{random}
+ * 长度: 8 + 1 + 13 + 1 + 12 = ~35 字符（在 32-64 范围内）
+ * 字符集: [a-zA-Z0-9-_]
+ */
+export function generateIdempotencyKey(): string {
+	const clientId = getClientId();
+	const timestamp = Date.now();
+	const random = crypto.randomUUID().replace(/-/g, '').substring(0, 12);
+	return `${clientId}-${timestamp}-${random}`;
 }
 
 let config: ApiClientConfig | null = null;
@@ -95,53 +126,56 @@ function isTokenInvalidError(code: number): boolean {
 }
 
 /**
- * 刷新 Token
+ * 刷新 Token (Web 端)
+ *
+ * spec: client_type='web' 时请求体不含 refresh_token（通过 HttpOnly Cookie 传递）
+ * spec: 响应体为 AuthTokenPairWeb = Record<string, never>（空对象），新 token 通过 Set-Cookie 更新
  */
 async function refreshToken(): Promise<boolean> {
 	const cfg = getConfig();
 
 	try {
-		// 读取 CSRF Token (Web 端需要)
 		const csrfToken = getCookie('hs_csrf_token');
-		
-		// Web 端：不在 body 中传递 refresh_token（从 HttpOnly Cookie 中读取）
-		// 严格遵循 @spec/api_spec_auth.mdc 规范：
-		// - client_type='web'：请求体不得携带 refresh_token
+
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json'
 		};
-		
-		// 添加 CSRF Token header (Web 端必需)
+
 		if (csrfToken) {
 			headers['X-CSRF-Token'] = csrfToken;
 		}
-		
+
+		// 超时控制：防止刷新请求挂起导致所有 401 重试路径无限等待
+		const refreshController = new AbortController();
+		const refreshTimeoutId = setTimeout(() => refreshController.abort(), 10000);
+
 		const response = await fetch(`${cfg.baseUrl}${AUTH.REFRESH_TOKEN}`, {
 			method: 'POST',
 			headers,
-			credentials: 'include', // 携带 HttpOnly Cookie（包含 refresh_token 和 hs_csrf_token）
+			credentials: 'include', // 携带 HttpOnly Cookie（包含 refresh_token）
 			body: JSON.stringify({
 				client_type: 'web'
-				// ✅ 不添加 refresh_token 字段（Web 端从 Cookie 读取）
-			})
+				// spec: Web 端不传 refresh_token（从 Cookie 读取）
+			}),
+			signal: refreshController.signal
 		});
 
-		const data = (await response.json()) as ApiResponse<{
-			access_token: string;
-			access_token_expires_at: string;
-		}>;
+		clearTimeout(refreshTimeoutId);
 
-		if (data.code === 0 && data.data) {
-			cfg.setToken(data.data.access_token, data.data.access_token_expires_at);
+		const data = (await response.json()) as ApiResponse<Record<string, never>>;
+
+		if (data.code === 0) {
+			// Web 端: token 已通过 Set-Cookie 更新，body 为空对象
+			cfg.onRefreshSuccess();
 			return true;
 		}
 
-		// 刷新失败，清除 Token
-		cfg.clearToken();
+		// 刷新失败，清除认证状态
+		cfg.onRefreshFail();
 		return false;
 	} catch (error) {
 		if (dev) console.error('[TokenRefresh] Token 刷新异常:', error);
-		cfg.clearToken();
+		cfg.onRefreshFail();
 		return false;
 	}
 }
@@ -152,16 +186,24 @@ async function refreshToken(): Promise<boolean> {
  */
 export async function ensureRefreshToken(): Promise<boolean> {
 	if (isRefreshing) {
-		return refreshPromise ?? Promise.resolve(false);
+		// 等待正在进行的刷新
+		try {
+			return (await refreshPromise) ?? false;
+		} catch {
+			return false;
+		}
 	}
 
 	isRefreshing = true;
-	refreshPromise = refreshToken().finally(() => {
+	try {
+		refreshPromise = refreshToken();
+		return await refreshPromise;
+	} catch {
+		return false;
+	} finally {
 		isRefreshing = false;
 		refreshPromise = null;
-	});
-
-	return refreshPromise;
+	}
 }
 
 /**
@@ -179,16 +221,10 @@ async function request<T>(
 		...options.headers
 	};
 
-	// 注入 Token
-	if (!options.skipAuth) {
-		const token = cfg.getToken();
-		if (token) {
-			headers['Authorization'] = `Bearer ${token}`;
-		}
-	}
+	// spec: Web 端禁止使用 Authorization Header
+	// Token 通过 HttpOnly Cookie 自动传递（credentials: 'include'）
 
 	// 注入 CSRF Token (Web 端需要)
-	// 对于需要 CSRF 保护的端点（如 refresh_token），自动添加
 	const csrfToken = getCookie('hs_csrf_token');
 	if (csrfToken) {
 		headers['X-CSRF-Token'] = csrfToken;
@@ -205,16 +241,17 @@ async function request<T>(
 	const timeoutId = setTimeout(() => controller.abort(), timeout);
 
 	// 合并 signal（支持外部取消 + 内部超时）
-	const signal = options.signal
+	const combined = options.signal
 		? combineSignals([options.signal, controller.signal])
-		: controller.signal;
+		: null;
+	const signal = combined?.signal ?? controller.signal;
 
 	try {
 		const response = await fetch(`${cfg.baseUrl}${url}`, {
 			method: 'POST',
 			headers,
 			credentials: 'include',
-			body: body ? JSON.stringify(body) : undefined,
+			body: JSON.stringify(body ?? {}),
 			signal
 		});
 
@@ -223,6 +260,14 @@ async function request<T>(
 
 		// 处理 HTTP 错误
 		if (!response.ok) {
+			// HTTP 401: Cookie 中的 token 可能已过期，尝试刷新后重试
+			if (response.status === 401 && !isRetry && !options.skipAuth) {
+				const refreshed = await ensureRefreshToken();
+				if (refreshed) {
+					return request<T>(url, body, options, true);
+				}
+			}
+
 			let errorMessage = `HTTP Error: ${response.status}`;
 			let requestId = response.headers.get('X-Request-ID') || '';
 			
@@ -254,11 +299,17 @@ async function request<T>(
 			};
 		}
 
-		// Token 过期处理（仅在非重试且有 Token 时）
-		if (!isRetry && !options.skipAuth && cfg.getToken() && isTokenInvalidError(data.code)) {
+		// 账号封禁拦截（spec 10201：强制登出 + 封禁页）
+		if (data.code === 10201) {
+			cfg.onAccountBanned?.(data.message || '账号被封禁');
+			return data;
+		}
+
+		// Token 过期处理（仅在非重试时尝试刷新）
+		if (!isRetry && !options.skipAuth && isTokenInvalidError(data.code)) {
 			const refreshed = await ensureRefreshToken();
 			if (refreshed) {
-				// 使用新 Token 重试
+				// Cookie 中的 token 已更新，重试
 				return request<T>(url, body, options, true);
 			}
 		}
@@ -302,24 +353,34 @@ async function request<T>(
 			message: '网络请求失败',
 			request_id: ''
 		};
+	} finally {
+		// 释放 combineSignals 在外部 signal 上注册的监听器，防止累积泄漏
+		combined?.cleanup();
 	}
 }
 
 /**
- * 合并多个 AbortSignal
+ * 合并多个 AbortSignal，返回合并后的 signal 和清理函数。
+ * 请求完成后必须调用 cleanup() 释放外部 signal 上的监听器。
  */
-function combineSignals(signals: AbortSignal[]): AbortSignal {
+function combineSignals(signals: AbortSignal[]): { signal: AbortSignal; cleanup: () => void } {
 	const controller = new AbortController();
+	const cleanups: (() => void)[] = [];
 
 	for (const signal of signals) {
 		if (signal.aborted) {
 			controller.abort();
 			break;
 		}
-		signal.addEventListener('abort', () => controller.abort(), { once: true });
+		const handler = () => controller.abort();
+		signal.addEventListener('abort', handler, { once: true });
+		cleanups.push(() => signal.removeEventListener('abort', handler));
 	}
 
-	return controller.signal;
+	return {
+		signal: controller.signal,
+		cleanup: () => cleanups.forEach((fn) => fn())
+	};
 }
 
 /**

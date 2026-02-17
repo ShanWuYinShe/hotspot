@@ -8,7 +8,7 @@ use crate::{error::AppError, state::AppState};
 
 fn required_permission(path: &str) -> Option<&'static str> {
     // RBAC 自检：只要是管理员即可访问（用于前端判断可见性/权限）
-    if path == "/api/v1/admin/rbac/me" {
+    if path == "/api/v1/admin/rbac/get_me" {
         return None;
     }
 
@@ -51,12 +51,15 @@ fn required_permission(path: &str) -> Option<&'static str> {
 
     // 标签管理
     if path.starts_with("/api/v1/admin/tags") {
+        if path.ends_with("/search") {
+            return Some("admin.tags.read");
+        }
         return Some("admin.tags.write");
     }
 
     // 公告管理
     if path.starts_with("/api/v1/admin/announcements") {
-        if path.ends_with("/create") || path.ends_with("/delete") {
+        if path.ends_with("/create") || path.ends_with("/delete") || path.ends_with("/update") {
             return Some("admin.announcements.write");
         }
         return Some("admin.announcements.read");

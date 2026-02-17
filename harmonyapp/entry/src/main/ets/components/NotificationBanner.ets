@@ -2,6 +2,7 @@ import { SmartNotification, NotificationAction } from '../core/services/notifica
 import { DesignConstants } from '../constants/DesignConstants';
 import { SystemIcon, AppIcon } from './SystemIcon';
 
+@Reusable
 @Component
 export struct NotificationBanner {
   @Prop notification: SmartNotification;
@@ -101,9 +102,9 @@ export struct NotificationBanner {
 
   private getPriorityColor(priority: string): string | Resource {
     switch (priority) {
-      case 'critical': return DesignConstants.COLOR.ERROR;
-      case 'high': return DesignConstants.COLOR.WARNING;
-      case 'medium': return DesignConstants.COLOR.BRAND_PRIMARY;
+      case 'critical': return $r('app.color.color_danger');
+      case 'high': return $r('app.color.color_warning');
+      case 'medium': return $r('app.color.brand_primary');
       default: return $r('sys.color.ohos_id_color_text_secondary');
     }
   }

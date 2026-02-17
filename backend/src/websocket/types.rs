@@ -1,8 +1,87 @@
-use crate::dto::response::{MessageMedia, UserInfo};
+use crate::dto::response::{GroupInfo, MessageMedia, UserInfo};
 use crate::types::enums::{
-    AnnouncementSeverity, GroupRole, MessageType, SubscriptionFailureReason, SubscriptionOperation,
+    AnnouncementSeverity, ClientType, GroupRole, MessageType, SubscriptionFailureReason,
+    SubscriptionOperation,
 };
 use serde::{Deserialize, Serialize};
+
+/// Serialize i64 as string, deserialize from string or number (spec: 所有 ID 在 API 层为 string)
+mod ws_id_as_string {
+    use serde::{self, Deserialize, Deserializer, Serializer};
+
+    pub fn serialize<S>(id: &i64, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&id.to_string())
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<i64, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum StringOrNumber {
+            Str(String),
+            Num(i64),
+        }
+        match StringOrNumber::deserialize(deserializer)? {
+            StringOrNumber::Str(s) => s.parse::<i64>().map_err(serde::de::Error::custom),
+            StringOrNumber::Num(n) => Ok(n),
+        }
+    }
+}
+
+/// Serialize Option<Vec<i64>> as string[] or null, deserialize from string[] or number[]
+mod ws_option_vec_id_as_string {
+    use serde::{self, Deserialize, Deserializer, Serializer};
+
+    pub fn serialize<S>(ids: &Option<Vec<i64>>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match ids {
+            Some(ids) => {
+                use serde::ser::SerializeSeq;
+                let mut seq = serializer.serialize_seq(Some(ids.len()))?;
+                for id in ids {
+                    seq.serialize_element(&id.to_string())?;
+                }
+                seq.end()
+            }
+            None => serializer.serialize_none(),
+        }
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<Vec<i64>>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let opt: Option<Vec<serde_json::Value>> = Option::deserialize(deserializer)?;
+        match opt {
+            None => Ok(None),
+            Some(vals) => {
+                let mut ids = Vec::with_capacity(vals.len());
+                for val in vals {
+                    match val {
+                        serde_json::Value::String(s) => {
+                            ids.push(s.parse::<i64>().map_err(serde::de::Error::custom)?);
+                        }
+                        serde_json::Value::Number(n) => {
+                            ids.push(
+                                n.as_i64()
+                                    .ok_or_else(|| serde::de::Error::custom("invalid id"))?,
+                            );
+                        }
+                        _ => return Err(serde::de::Error::custom("invalid id type")),
+                    }
+                }
+                Ok(Some(ids))
+            }
+        }
+    }
+}
 
 /// WebSocket 消息类型定义
 /// 严格遵循 api_spec.mdc WebSocket 实时事件定义
@@ -15,23 +94,23 @@ pub enum WsMessage {
     /// 连接建立确认
     ConnectionEstablished {
         connection_id: String,
+        #[serde(with = "ws_id_as_string")]
         user_id: i64,
         server_time: String, // ISO 8601 UTC
         config: ConnectionConfig,
     },
 
     // ===== 在线状态事件 =====
-    /// 用户上线
+    /// 用户上线（spec: user_id, online_at）
     UserOnline {
+        #[serde(with = "ws_id_as_string")]
         user_id: i64,
-        nickname: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        avatar_url: Option<String>,
         online_at: String, // ISO 8601 UTC
     },
 
     /// 用户离线
     UserOffline {
+        #[serde(with = "ws_id_as_string")]
         user_id: i64,
         offline_at: String, // ISO 8601 UTC
     },
@@ -42,6 +121,10 @@ pub enum WsMessage {
     NewFollower {
         user: UserInfo,
         followed_at: String, // ISO 8601 UTC
+        #[serde(skip_serializing_if = "Option::is_none")]
+        source: Option<crate::types::enums::FollowSource>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        source_moment_id: Option<String>,
     },
 
     /// 互相关注（成为好友）
@@ -98,12 +181,15 @@ pub enum WsMessage {
     /// 新私聊消息
     PrivateMessageNew {
         message_id: String,
+        #[serde(with = "ws_id_as_string")]
         target_user_id: i64, // 接收者ID (对于发送者多端同步=接收方ID)
         sender: UserInfo,
         #[serde(rename = "type")]
         message_type: MessageType,
         #[serde(skip_serializing_if = "Option::is_none")]
         content: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        share_code: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         media: Option<MessageMedia>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -114,6 +200,7 @@ pub enum WsMessage {
     /// 私聊消息被编辑
     PrivateMessageEdited {
         message_id: String,
+        #[serde(with = "ws_id_as_string")]
         target_user_id: i64,
         content: String,
         edited_at: String, // ISO 8601 UTC
@@ -122,6 +209,7 @@ pub enum WsMessage {
     /// 私聊消息被撤回
     PrivateMessageRecalled {
         message_id: String,
+        #[serde(with = "ws_id_as_string")]
         target_user_id: i64,
         recalled_by: UserInfo,
         recalled_at: String, // ISO 8601 UTC
@@ -129,15 +217,19 @@ pub enum WsMessage {
 
     /// 私聊消息已读回执
     PrivateMessageRead {
+        #[serde(with = "ws_id_as_string")]
         target_user_id: i64,
         up_to: String, // 读到哪条消息ID
+        #[serde(with = "ws_id_as_string")]
         reader_id: i64,
         read_at: String, // ISO 8601 UTC
     },
 
     /// 私聊对方正在输入
     PrivateUserTyping {
+        #[serde(with = "ws_id_as_string")]
         target_user_id: i64,
+        #[serde(with = "ws_id_as_string")]
         user_id: i64,
         is_typing: bool,
     },
@@ -153,10 +245,13 @@ pub enum WsMessage {
         #[serde(skip_serializing_if = "Option::is_none")]
         content: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
+        share_code: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         media: Option<MessageMedia>,
         #[serde(skip_serializing_if = "Option::is_none")]
         reply_to: Option<MessageReplyTo>,
         #[serde(skip_serializing_if = "Option::is_none")]
+        #[serde(default, with = "ws_option_vec_id_as_string")]
         mentions: Option<Vec<i64>>,
         sent_at: String, // ISO 8601 UTC
     },
@@ -180,6 +275,7 @@ pub enum WsMessage {
     /// 群聊成员正在输入
     GroupUserTyping {
         group_id: String,
+        #[serde(with = "ws_id_as_string")]
         user_id: i64,
         is_typing: bool,
     },
@@ -197,10 +293,7 @@ pub enum WsMessage {
     /// 收到群组邀请
     GroupInviteReceived {
         invite_id: String,
-        group_id: String,
-        group_name: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        group_avatar_url: Option<String>,
+        group: GroupInfo,
         inviter: UserInfo,
         #[serde(skip_serializing_if = "Option::is_none")]
         message: Option<String>,
@@ -229,8 +322,7 @@ pub enum WsMessage {
     /// 群组申请响应
     GroupApplicationResponse {
         application_id: String,
-        group_id: String,
-        group_name: String,
+        group: GroupInfo,
         status: String,       // 固定为 "accepted"
         responded_at: String, // ISO 8601 UTC
     },
@@ -344,26 +436,38 @@ pub enum WsMessage {
         banned_at: String,  // ISO 8601 UTC
     },
 
+    // ⏳ 延期实现：多端同步事件（spec: api_spec_websocket.mdc）
+    // 实现时添加以下变体：
+    // SelfReadSync { chat_type, target_id, up_to_message_id? }
+    // SelfChatSettingsSync { chat_type, target_id, is_muted?, is_pinned? }
+    // SelfSettingsUpdated { settings: UserSettings }
+    // SelfRelationSync { action, target_user_id }
     /// 错误消息
-    Error { code: i32, message: String },
+    Error {
+        code: i32,
+        message: String,
+        severity: String, // "fatal" | "recoverable" | "warning"
+        retryable: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        retry_after: Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        context: Option<serde_json::Value>,
+    },
 
     // ========== 客户端发送事件 (Client → Server) ==========
-    /// 鉴权（握手后首帧）
+    /// 鉴权（握手后首帧，spec: client_type, access_token?）
     Auth {
-        access_token: String,
+        #[serde(default)]
+        client_type: Option<ClientType>, // 可选，默认 "app"
         #[serde(skip_serializing_if = "Option::is_none")]
-        device_fingerprint: Option<String>,
+        access_token: Option<String>, // App 端必填，Web 端不传（通过 Cookie 鉴权）
     },
 
-    /// 心跳保活
-    Ping {
-        timestamp: String, // ISO 8601 UTC
-    },
+    /// 心跳保活（spec: 空 payload）
+    Ping {},
 
-    /// 心跳响应
-    Pong {
-        timestamp: String, // ISO 8601 UTC
-    },
+    /// 心跳响应（payload 为空对象）
+    Pong {},
 
     /// 订阅管理（统一入口，通过 operation 区分操作类型）
     SetSubscriptions {
@@ -371,7 +475,7 @@ pub enum WsMessage {
         operation: SubscriptionOperation, // subscribe / unsubscribe / set
         #[serde(rename = "type")]
         r#type: String,
-        ids: Vec<SubscriptionSourceId>,
+        ids: Vec<String>, // spec: ids: string[]
     },
 
     /// 订阅确认（服务端响应）
@@ -380,7 +484,7 @@ pub enum WsMessage {
         operation: SubscriptionOperation,
         #[serde(rename = "type")]
         r#type: String,
-        ids: Vec<SubscriptionSourceId>,
+        ids: Vec<String>, // spec: ids: string[]
         code: i32,
         #[serde(skip_serializing_if = "Option::is_none")]
         message: Option<String>,
@@ -398,6 +502,7 @@ pub enum WsMessage {
     // ========== 客户端发送事件 (续) ==========
     /// 私聊正在输入
     PrivateTyping {
+        #[serde(with = "ws_id_as_string")]
         target_user_id: i64,
         is_typing: bool,
     },
@@ -413,9 +518,12 @@ pub enum WsMessage {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MessageReplyTo {
     pub message_id: String,
+    #[serde(with = "ws_id_as_string")]
     pub user_id: i64,
     pub nickname: String,
     pub content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub share_code: Option<String>,
 }
 
 /// 瞬间摘要快照
@@ -428,26 +536,11 @@ pub struct MomentSummary {
     pub text_preview: String,
 }
 
-/// 订阅源ID：user 为 number，其他为 string
+/// 失败的订阅ID — spec: { subscription_id: string, reason: SubscriptionFailureReason }
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(untagged)]
-pub enum SubscriptionSourceId {
-    String(String),
-    Number(i64),
-}
-
-/// 失败的订阅ID
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(untagged)]
-pub enum FailedSubscriptionId {
-    Number {
-        id: i64,
-        reason: SubscriptionFailureReason, // 使用 Enum
-    },
-    String {
-        id: String,
-        reason: SubscriptionFailureReason, // 使用 Enum
-    },
+pub struct FailedSubscriptionId {
+    pub subscription_id: String,
+    pub reason: SubscriptionFailureReason,
 }
 
 /// ConnectionEstablished 中的服务端配置（spec: config）
@@ -463,4 +556,16 @@ pub struct ConnectionConfig {
 pub struct MaxSubscriptions {
     pub user: u32,  // 用户订阅上限
     pub group: u32, // 群组订阅上限
+}
+
+/// 从 AppError 构建 WebSocket Error 消息（连接/协议错误均为 fatal，不可重试）
+pub fn ws_error_from_app_error(err: &crate::error::AppError) -> WsMessage {
+    WsMessage::Error {
+        code: err.error_code(),
+        message: err.to_string(),
+        severity: "fatal".to_string(),
+        retryable: false,
+        retry_after: None,
+        context: None,
+    }
 }

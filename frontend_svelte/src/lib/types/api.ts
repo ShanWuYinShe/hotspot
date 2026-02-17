@@ -31,6 +31,7 @@ export type ReportReason =
 	| 'other';
 export type GroupJoinMethod = 'open' | 'approval' | 'invite_only';
 export type FeedSource = 'following' | 'nearby' | 'all';
+export type DismissTargetType = 'moment' | 'user' | 'group';
 export type PrivateChatPermission = 'everyone' | 'friends' | 'nobody';
 export type AnnouncementSeverity = 'info' | 'warning' | 'error';
 export type TagTrend = 'rising' | 'stable' | 'falling';
@@ -47,9 +48,7 @@ export type NotificationType =
 	| 'group_invite_received'
 	| 'group_application_accepted'
 	| 'system_announcement';
-export type NotificationTargetType = 'moment' | 'comment' | 'user' | 'group' | 'web';
-export type FeedContentType = 'moment' | 'group' | 'user';
-export type FeedFeedbackAction = 'hide' | 'not_interested';
+// NotificationTargetType 已删除：spec 中不存在该类型，mentioned payload 的 target_type 为内联 'moment' | 'comment'
 export type MediaCategory =
 	| 'avatar'
 	| 'group_avatar'
@@ -60,7 +59,7 @@ export type MediaCategory =
 	| 'chat_file';
 export type MapDataType = 'user' | 'group' | 'moment' | 'all';
 export type MapItemType = 'cluster' | 'user' | 'group' | 'moment';
-export type ShareType = 'location' | 'moment' | 'group' | 'user';
+export type ShareType = 'user' | 'group' | 'moment' | 'location';
 // 设计说明：被拉黑场景统一返回 'privacy'，不暴露拉黑状态
 export type CantMessageReason = 'privacy' | 'stranger_limit' | 'account_suspended';
 export type SearchSuggestType = 'tag' | 'user' | 'group' | 'moment';
@@ -226,9 +225,7 @@ export interface UserSettings {
 	privacy_level: PrivacyLevel;
 	location_visible: boolean;
 	presence_visible: boolean;
-	friends_visible: boolean;
-	following_visible: boolean;
-	followers_visible: boolean;
+	social_lists_visible: boolean;
 	groups_visible: boolean;
 	liked_moments_visible: boolean;
 	stats_visible: boolean;
@@ -348,12 +345,6 @@ export interface GroupItem {
 	max_members?: number;
 }
 
-/** 群组详情响应 */
-export interface GroupOpenResult {
-	group: GroupItem;
-	recent_messages: PaginatedData<GroupMessageItem>;
-}
-
 /** 群公告列表项 */
 export interface GroupAnnouncementItem {
 	announcement_id: string;
@@ -393,6 +384,8 @@ export interface GroupApplicationItem {
 	handled_at?: string;
 	handled_by?: UserInfo;
 }
+
+// MyApplicationItem 已删除：spec 声明 groups/me/applications/list 返回 GroupApplicationItem，以 spec 为准
 
 /** 群组邀请列表项 */
 export interface GroupInviteItem {
@@ -646,7 +639,7 @@ export interface NotificationListRequest {
 	pagination?: PaginationParams;
 }
 
-export interface MarkNotificationsReadRequest {
+export interface MarkAsReadRequest {
 	notification_ids: string[];
 }
 
@@ -725,9 +718,8 @@ export interface GroupSuggestItem {
 
 export interface MomentSuggestItem {
 	moment_id: string;
-	content: string;
-	author_nickname: string;
-	author_avatar_url?: string;
+	description_preview: string;
+	author: UserInfo;
 	location?: RelativeLocation;
 }
 
@@ -737,7 +729,7 @@ export type SearchSuggestItem =
 	| { type: 'group'; payload: GroupSuggestItem }
 	| { type: 'moment'; payload: MomentSuggestItem };
 
-export interface SearchSuggestions {
+export interface SearchSuggestResponse {
 	items: SearchSuggestItem[];
 }
 
@@ -757,18 +749,16 @@ export interface ApiResponse<T = void> {
 // ============================================================================
 
 /**
- * 前端 Auth Store 使用的数据（整合 Web/App 两端响应）
- * Web 端: Cookie 携带 Token，响应体为空；user_type/expires 通过后续接口获取
- * App 端: 响应体包含完整 Token 信息
+ * 前端 Auth Store 使用的认证状态（仅 Web 端）
+ *
+ * spec: Web 端 auth 响应体为 AuthTokenPairWeb = Record<string, never>（空对象）
+ * Token 通过 HttpOnly Cookie 传递，前端不可见
+ * user_id/user_type/expires_at 通过 check_status + users/me/profile/get 获取
  */
 export interface AuthData {
 	user_id: string;
 	user_type: UserType;
 	access_token_expires_at: string;
-	// App 端特有
-	access_token?: string;
-	refresh_token?: string;
-	refresh_token_expires_at?: string;
 }
 
 export interface LoginRequest {
@@ -779,8 +769,8 @@ export interface LoginRequest {
 
 export interface RegisterRequest {
 	login_id: string;
-	password: string;
 	nickname: string;
+	password: string;
 	client_type: ClientType;
 }
 
@@ -801,6 +791,11 @@ export interface AuthStatus {
 
 export interface RevokeAllResult {
 	revoked_count: number;
+}
+
+/** 验证码发送成功响应（用于 email/phone 变更请求） */
+export interface VerificationSent {
+	expires_at: string; // 验证码过期时间（UTC ISO 8601）
 }
 
 // ============================================================================
@@ -889,6 +884,28 @@ export type AuditTargetType =
 	| 'tag'
 	| 'config';
 
+/** 审计详情可辨识联合（type 与 AuditAction 一一对应） */
+export type AuditDetails =
+	| { type: 'user.ban'; reason?: string; duration_days?: number }
+	| { type: 'user.unban'; reason?: string }
+	| { type: 'group.dismiss'; reason?: string }
+	| { type: 'group.member_mute'; reason?: string; duration_minutes?: number }
+	| { type: 'group.member_ban'; reason?: string }
+	| { type: 'group.member_remove'; reason?: string }
+	| { type: 'announcement.create'; title: string }
+	| { type: 'announcement.delete'; title: string }
+	| { type: 'role.create'; role_name: string; permissions: string[] }
+	| { type: 'role.update'; role_name: string; added_permissions?: string[]; removed_permissions?: string[] }
+	| { type: 'role.delete'; role_name: string }
+	| { type: 'role.set_permissions'; role_name: string; permissions: string[] }
+	| { type: 'admin.grant'; target_user_id: string; role_ids: string[]; grant_all_permissions?: boolean }
+	| { type: 'admin.revoke'; target_user_id: string }
+	| { type: 'report.handle'; report_id: string; action: string; note?: string }
+	| { type: 'tag.delete'; name: string }
+	| { type: 'permission.grant'; permission: string }
+	| { type: 'permission.revoke'; permission: string }
+	| { type: 'config.update'; config_key: string; old_value: unknown; new_value: unknown };
+
 export interface AuditLogItem {
 	log_id: string;
 	action: AuditAction;
@@ -896,7 +913,7 @@ export interface AuditLogItem {
 	target_type: AuditTargetType;
 	target_id: string;
 	target_name?: string;
-	details?: Record<string, unknown>;
+	details?: AuditDetails;
 	ip_location?: string;
 	ip_address?: string;
 	device_summary?: string;
@@ -950,7 +967,7 @@ export interface AdminAnnouncementItem extends SystemAnnouncementItem {
 }
 
 export interface AdminTagItem {
-	tag_name: string;
+	name: string;
 	usage_count: number;
 	created_at: string;
 	last_used_at?: string;
@@ -961,15 +978,6 @@ export type AdminTagSortBy =
 	| 'usage_count_asc'
 	| 'created_at_desc'
 	| 'last_used_at_desc';
-
-/** @deprecated Use AdminPermissionItem instead */
-export type AdminPermission = AdminPermissionItem;
-/** @deprecated Use AdminRoleItem instead */
-export type AdminRole = AdminRoleItem;
-/** @deprecated Use AdminOperatorItem instead */
-export type AdminUser = AdminOperatorItem;
-/** @deprecated Use AdminGroupItem instead */
-export type AdminGroupSearchItem = AdminGroupItem;
 
 export interface SystemAnnouncementItem {
 	announcement_id: string;
@@ -995,12 +1003,6 @@ export interface ClientConfig {
 		enable_moments: boolean;
 		enable_nearby_people: boolean;
 	};
-	contact: {
-		support_email: string;
-		privacy_policy_url: string;
-		terms_of_service_url: string;
-		official_website: string;
-	};
 	limits: {
 		max_group_members: number;
 		max_moment_tags: number;
@@ -1008,6 +1010,12 @@ export interface ClientConfig {
 		moment_description_max_length: number;
 		comment_max_length: number;
 		search_radius_max: number;
+	};
+	contact: {
+		support_email: string;
+		privacy_policy_url: string;
+		terms_of_service_url: string;
+		official_website: string;
 	};
 	defaults: {
 		default_location: {
@@ -1069,15 +1077,34 @@ export interface ServerConfig {
 	updated_by_user_id?: string;
 }
 
-export interface AdminClientConfig extends ClientConfig {
-	updated_at: string;
-	updated_by_user_id: string;
+/**
+ * 完整应用配置（admin/app_config/get 返回）
+ * spec: AppConfig 包含 ClientConfig 的所有客户端可见字段 + 仅服务端使用字段 + 元数据
+ */
+export interface AppConfig {
+	// 客户端可见配置（构成 ClientConfig）
+	features: ClientConfig['features'];
+	limits: ClientConfig['limits'];
+	contact: ClientConfig['contact'];
+	// 仅服务端使用
+	upload: UploadConfig;
+	defaults: ContentDefaults;
+	rate_limits: RateLimitConfig;
+	response_defaults: ResponseDefaults;
+	// 元数据
+	updated_at?: string;
+	updated_by_user_id?: string;
 }
 
-export interface SystemMeta {
+export type ApiVersionStatus = 'active' | 'deprecated' | 'sunset';
+
+export interface ApiVersionMeta {
 	version: string;
-	build_time?: string;
-	environment?: string;
+	status: ApiVersionStatus;
+	deprecated_at?: string;
+	sunset_at?: string;
+	message?: string;
+	recommended_version?: string;
 }
 
 export interface HealthStatus {
@@ -1173,55 +1200,3 @@ export interface GetShareRequest {
 	share_code: string;
 }
 
-// ============================================================================
-// 向后兼容类型别名（过渡期使用，后续逐步移除）
-// ============================================================================
-
-/** @deprecated 使用 UserItem 代替 */
-export type UserSearchItem = UserItem;
-/** @deprecated 使用 UserItem 代替 */
-export type UserCard = UserItem;
-/** @deprecated 使用 UserItem 代替 */
-export type FeedUserItem = UserItem;
-/** @deprecated 使用 GroupItem 代替 */
-export type GroupSearchItem = GroupItem;
-/** @deprecated 使用 GroupItem 代替 */
-export type GroupCard = GroupItem;
-/** @deprecated 使用 GroupItem 代替 */
-export type FeedGroupItem = GroupItem;
-/** @deprecated 使用 GroupItem 代替 */
-export type MyGroupItem = GroupItem;
-/** @deprecated 使用 MomentItem 代替 */
-export type MomentSearchItem = MomentItem;
-/** @deprecated 使用 MomentItem 代替 */
-export type MomentCard = MomentItem;
-/** @deprecated 使用 MomentItem 代替 */
-export type FeedMomentItem = MomentItem;
-/** @deprecated 使用 MomentItem 代替 */
-export type UserMomentListItem = MomentItem;
-/** @deprecated 使用 LikeItem 代替 */
-export type MomentLikeItem = LikeItem;
-/** @deprecated 使用 LikeItem 代替 */
-export type CommentLikeItem = LikeItem;
-/** @deprecated 使用 CommentItem 代替 */
-export type CommentListItem = CommentItem;
-/** @deprecated 使用 MyProfile 代替 */
-export type MyCard = MyProfile;
-/** @deprecated 使用 PrivateChatItem 代替 */
-export type PrivateChatListItem = PrivateChatItem;
-/** @deprecated 使用 PrivateChatItem 代替 */
-export type Conversation = PrivateChatItem;
-/** @deprecated 使用 ShareDetail 代替 */
-export type Share = ShareDetail;
-/** @deprecated 使用 TagItem 代替 */
-export type TrendingTag = TagItem;
-/** @deprecated 使用 TagItem[] 代替 */
-export interface TrendingTags {
-	items: TagItem[];
-}
-/** @deprecated 搜索建议请求已重构 */
-export interface SearchSuggestRequest {
-	prefix: string;
-	reference_point: GeoPoint;
-	types?: SearchSuggestType[];
-}

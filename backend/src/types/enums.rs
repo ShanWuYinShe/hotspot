@@ -18,7 +18,7 @@ use strum_macros::{Display, EnumString};
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type, Display, EnumString,
 )]
-#[sqlx(type_name = "varchar", rename_all = "lowercase")]
+#[sqlx(type_name = "user_type", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum UserType {
@@ -32,7 +32,7 @@ impl Default for UserType {
     }
 }
 
-/// 用户账号状态
+/// 用户账号状态（与 spec 对齐：normal | banned）
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type, Display, EnumString,
 )]
@@ -40,13 +40,28 @@ impl Default for UserType {
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum UserStatus {
-    Active,
-    Inactive,
+    Normal,
     Banned,
-    Deleted,
 }
 
-pub type UserAccountStatus = UserStatus;
+/// API 层用户账号状态（spec: 'normal' | 'banned'）
+/// 仅在 admin API 响应中使用
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]
+#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
+pub enum UserAccountStatus {
+    Normal,
+    Banned,
+}
+
+impl From<UserStatus> for UserAccountStatus {
+    fn from(status: UserStatus) -> Self {
+        match status {
+            UserStatus::Banned => UserAccountStatus::Banned,
+            _ => UserAccountStatus::Normal,
+        }
+    }
+}
 
 /// 用户在线状态 - API 文档: UserPresenceStatus
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -56,47 +71,39 @@ pub enum UserPresenceStatus {
     Offline,
 }
 
-/// 性别
+/// 性别（spec: male | female | apache_helicopter）
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type, Display, EnumString,
 )]
-#[sqlx(type_name = "user_gender", rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
-#[strum(serialize_all = "lowercase")]
+#[sqlx(type_name = "user_gender", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
 pub enum UserGender {
     Male,
     Female,
-    Other,
-    Unknown,
+    ApacheHelicopter,
 }
 
 pub type Gender = UserGender;
 
-// ============================================================
-// 互动相关枚举
-// ============================================================
-
-/// 反应类型
+/// 不可发消息原因（spec: privacy | stranger_limit | account_suspended）
+/// 设计说明：被拉黑场景统一返回 Privacy，不暴露拉黑状态（隐私保护）
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type, Display, EnumString,
 )]
-#[sqlx(type_name = "reaction_type", rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
-#[strum(serialize_all = "lowercase")]
-pub enum ReactionType {
-    Like,
-    Love,
-    Haha,
-    Wow,
-    Sad,
-    Angry,
+#[sqlx(type_name = "cant_message_reason", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
+pub enum CantMessageReason {
+    Privacy,
+    StrangerLimit,
+    AccountSuspended,
 }
 
 // ============================================================
 // 媒体相关枚举
 // ============================================================
 
-/// 媒体分类
+/// 媒体分类（spec: avatar | group_avatar | moment_image | chat_image | chat_video | chat_audio | chat_file）
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type, Display, EnumString,
 )]
@@ -104,11 +111,6 @@ pub enum ReactionType {
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum MediaCategory {
-    Image,
-    Video,
-    Audio,
-    Document,
-    Other,
     Avatar,
     GroupAvatar,
     MomentImage,
@@ -130,11 +132,6 @@ impl MediaCategory {
             MediaCategory::ChatVideo => &["video/mp4", "video/quicktime"],
             MediaCategory::ChatAudio => &["audio/mpeg", "audio/aac", "audio/ogg"],
             MediaCategory::ChatFile => &[],
-            MediaCategory::Image => &["image/jpeg", "image/png", "image/webp", "image/gif"],
-            MediaCategory::Video => &["video/mp4", "video/quicktime"],
-            MediaCategory::Audio => &["audio/mpeg", "audio/aac", "audio/ogg"],
-            MediaCategory::Document => &[],
-            MediaCategory::Other => &[],
         }
     }
 
@@ -145,11 +142,6 @@ impl MediaCategory {
             MediaCategory::ChatVideo => 100 * 1024 * 1024,
             MediaCategory::ChatAudio => 20 * 1024 * 1024,
             MediaCategory::ChatFile => 100 * 1024 * 1024,
-            MediaCategory::Image => 10 * 1024 * 1024,
-            MediaCategory::Video => 100 * 1024 * 1024,
-            MediaCategory::Audio => 20 * 1024 * 1024,
-            MediaCategory::Document => 100 * 1024 * 1024,
-            MediaCategory::Other => 100 * 1024 * 1024,
         }
     }
 
@@ -174,7 +166,7 @@ impl MediaCategory {
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type, Display, EnumString,
 )]
-#[sqlx(type_name = "request_status", rename_all = "lowercase")]
+#[sqlx(type_name = "application_status", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum RequestStatus {
@@ -223,7 +215,7 @@ impl GroupJoinMethod {
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type, Display, EnumString,
 )]
-#[sqlx(type_name = "varchar", rename_all = "lowercase")]
+#[sqlx(type_name = "group_role", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum GroupRole {
@@ -254,7 +246,7 @@ pub enum MemberLeaveReason {
 // 隐私与消息枚举
 // ============================================================
 
-/// 消息类型
+/// 消息类型（spec: text | image | video | audio | file | share | system）
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type, Display, EnumString,
 )]
@@ -267,17 +259,56 @@ pub enum MessageType {
     Video,
     Audio,
     File,
-    Location,
+    Share,
     System,
 }
 
-pub type SendMessageType = MessageType;
+impl MessageType {
+    /// 返回消息类型的预览占位文本，如 "[图片]", "[视频]" 等
+    pub fn preview_text(&self) -> &'static str {
+        match self {
+            MessageType::Text => "[文本]",
+            MessageType::Image => "[图片]",
+            MessageType::Video => "[视频]",
+            MessageType::Audio => "[语音]",
+            MessageType::File => "[文件]",
+            MessageType::Share => "[分享]",
+            MessageType::System => "[系统消息]",
+        }
+    }
+}
+
+/// 可发送的消息类型（spec: Exclude<MessageType, 'system'>）
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]
+#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
+pub enum SendMessageType {
+    Text,
+    Image,
+    Video,
+    Audio,
+    File,
+    Share,
+}
+
+impl From<SendMessageType> for MessageType {
+    fn from(smt: SendMessageType) -> Self {
+        match smt {
+            SendMessageType::Text => MessageType::Text,
+            SendMessageType::Image => MessageType::Image,
+            SendMessageType::Video => MessageType::Video,
+            SendMessageType::Audio => MessageType::Audio,
+            SendMessageType::File => MessageType::File,
+            SendMessageType::Share => MessageType::Share,
+        }
+    }
+}
 
 /// 隐私级别
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type, Display, EnumString,
 )]
-#[sqlx(type_name = "varchar", rename_all = "lowercase")]
+#[sqlx(type_name = "privacy_level", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum PrivacyLevel {
@@ -432,14 +463,13 @@ pub enum ClientType {
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type, Display, EnumString,
 )]
-#[sqlx(type_name = "varchar", rename_all = "snake_case")]
+#[sqlx(type_name = "verification_code_type", rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum VerificationCodeType {
     Register,
     Login,
     ResetPassword,
-    ChangeEmail,
     ChangePhone,
 }
 
@@ -449,7 +479,6 @@ impl VerificationCodeType {
             VerificationCodeType::Register => "register",
             VerificationCodeType::Login => "login",
             VerificationCodeType::ResetPassword => "reset_password",
-            VerificationCodeType::ChangeEmail => "change_email",
             VerificationCodeType::ChangePhone => "change_phone",
         }
     }
@@ -459,6 +488,8 @@ impl VerificationCodeType {
 // Feed & Map
 // ============================================================
 
+/// 地图渲染项类型（spec: 'cluster' | 'user' | 'group' | 'moment'）
+/// 用于 response 中的 MapRenderItem.type
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type, Display, EnumString,
 )]
@@ -466,37 +497,42 @@ impl VerificationCodeType {
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum MapItemType {
-    All,
+    Cluster,
     User,
     Group,
     Moment,
-    Cluster,
 }
 
-impl MapItemType {
+/// 地图数据过滤类型（spec: 'user' | 'group' | 'moment' | 'all'）
+/// 用于 request 中的 MapFilter.data_type
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]
+#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
+pub enum MapDataType {
+    User,
+    Group,
+    Moment,
+    All,
+}
+
+impl MapDataType {
     pub fn as_str(&self) -> &'static str {
         match self {
-            MapItemType::All => "all",
-            MapItemType::User => "user",
-            MapItemType::Group => "group",
-            MapItemType::Moment => "moment",
-            MapItemType::Cluster => "cluster",
+            MapDataType::User => "user",
+            MapDataType::Group => "group",
+            MapDataType::Moment => "moment",
+            MapDataType::All => "all",
         }
     }
 }
-
-pub type MapDataType = MapItemType;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum FeedSource {
-    All,
     Following,
-    Follow,
     Nearby,
-    Recommend,
-    Hot,
+    All,
 }
 
 // ============================================================
@@ -582,9 +618,13 @@ pub enum SubscriptionOperation {
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum SubscriptionFailureReason {
+    #[serde(rename = "invalid")]
     InvalidTopic,
+    #[serde(rename = "denied")]
     Forbidden,
+    #[serde(rename = "limit_exceeded")]
     LimitExceeded,
+    #[serde(rename = "error")]
     InternalError,
 }
 
@@ -592,14 +632,29 @@ pub enum SubscriptionFailureReason {
 // 分享与推荐
 // ============================================================
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type, Display, EnumString,
+)]
+#[sqlx(type_name = "share_type", rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum ShareType {
     Moment,
     User,
     Group,
-    ReferencePoint,
+    Location,
+}
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type, Display, EnumString,
+)]
+#[sqlx(type_name = "dismiss_target_type", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum DismissTargetType {
+    Moment,
+    User,
+    Group,
 }
 
 impl ShareType {
@@ -608,30 +663,34 @@ impl ShareType {
             ShareType::Moment => "moment",
             ShareType::User => "user",
             ShareType::Group => "group",
-            ShareType::ReferencePoint => "reference_point",
+            ShareType::Location => "location",
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]
-#[serde(rename_all = "lowercase")]
-#[strum(serialize_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
 pub enum RecommendationType {
-    User,
-    Group,
-    Moment,
+    FriendLiked,
+    Nearby,
+    Trending,
+    Following,
+    TagMatch,
 }
 
 // ============================================================
 // 其他
 // ============================================================
 
+/// 关注来源（spec: moment | search | recommendation | profile | group）
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]
-#[serde(rename_all = "lowercase")]
-#[strum(serialize_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
 pub enum FollowSource {
+    Moment,
     Search,
-    Nearby,
-    Recommend,
-    Share,
+    Recommendation,
+    Profile,
+    Group,
 }

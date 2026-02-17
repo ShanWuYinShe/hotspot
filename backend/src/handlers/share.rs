@@ -3,12 +3,11 @@
 //! 处理分享相关的 HTTP 请求
 
 use crate::dto::request::{
-    CreateShareRequest, GetShareRequest, MySharesRequest, RevokeShareRequest,
+    CreateShareRequest, GetShareRequest, RevokeShareRequest, ShareListRequest,
 };
-use crate::dto::response::{ApiResponse, PaginatedData, Share};
+use crate::dto::response::{ApiResponse, PaginatedData, ShareCreated, ShareDetail, ShareListItem};
 use crate::error::AppError;
 use crate::middleware::auth::{AuthenticatedUser, OptionalAuthenticatedUser};
-use crate::services::share_service::ShareService;
 use crate::state::AppState;
 use axum::{extract::State, Json};
 
@@ -19,10 +18,10 @@ pub async fn create_share(
     State(state): State<AppState>,
     AuthenticatedUser { user_id, .. }: AuthenticatedUser,
     Json(req): Json<CreateShareRequest>,
-) -> Result<Json<ApiResponse<Share>>, AppError> {
-    let share = ShareService::create_share(&state.db, user_id, req).await?;
+) -> Result<Json<ApiResponse<ShareCreated>>, AppError> {
+    let data = state.share_service.create_share(user_id, req).await?;
 
-    Ok(Json(ApiResponse::success(share)))
+    Ok(Json(ApiResponse::success(data)))
 }
 
 /// 获取分享详情
@@ -32,10 +31,10 @@ pub async fn get_share(
     State(state): State<AppState>,
     OptionalAuthenticatedUser { .. }: OptionalAuthenticatedUser,
     Json(req): Json<GetShareRequest>,
-) -> Result<Json<ApiResponse<Share>>, AppError> {
-    let share = ShareService::get_share(&state.db, req).await?;
+) -> Result<Json<ApiResponse<ShareDetail>>, AppError> {
+    let data = state.share_service.get_share(req).await?;
 
-    Ok(Json(ApiResponse::success(share)))
+    Ok(Json(ApiResponse::success(data)))
 }
 
 /// 撤销分享
@@ -46,18 +45,16 @@ pub async fn revoke_share(
     AuthenticatedUser { user_id, .. }: AuthenticatedUser,
     Json(req): Json<RevokeShareRequest>,
 ) -> Result<Json<ApiResponse<()>>, AppError> {
-    ShareService::revoke_share(&state.db, user_id, req).await?;
+    state.share_service.revoke_share(user_id, req).await?;
     Ok(Json(ApiResponse::success_empty()))
 }
 
-/// 我的分享列表
-///
-/// POST /api/v1/share/me/list
-pub async fn my_shares(
+/// 获取当前用户创建的分享列表
+pub async fn list_my_shares(
     State(state): State<AppState>,
     AuthenticatedUser { user_id, .. }: AuthenticatedUser,
-    Json(req): Json<MySharesRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<Share>>>, AppError> {
-    let response = ShareService::my_shares(&state.db, user_id, req).await?;
-    Ok(Json(ApiResponse::success(response)))
+    Json(req): Json<ShareListRequest>,
+) -> Result<Json<ApiResponse<PaginatedData<ShareListItem>>>, AppError> {
+    let data = state.share_service.list_my_shares(user_id, req).await?;
+    Ok(Json(ApiResponse::success(data)))
 }

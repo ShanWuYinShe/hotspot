@@ -10,36 +10,33 @@ import { isSuccess } from '$lib/api/client';
 import type { ApiResponse, PaginatedData, NotificationItem, NotificationListRequest } from '$lib/types/api';
 import { websocketStore } from '$lib/websocket';
 
-// ============ 通知类型 ============
-
-/** WebSocket 推送的实时通知项（用于类型兼容，列表数据来自 API） */
-export interface RealtimeNotification {
-	id: string;
-	type: string;
-	title: string;
-	content: string;
-	timestamp: string;
-	read: boolean;
-}
-
 // ============ 通知 Store ============
 
 class NotificationStore {
 	// 未读数量（来自 HTTP API + WebSocket 增量）
-	unreadCount = $state.raw(0);
+	unreadCount = $state(0);
 
 	private cleanupFunctions: (() => void)[] = [];
+	// $effect.root() 清理函数
+	private destroyEffectRoot: (() => void) | null = null;
+	// 竞态保护：当前请求版本号
+	private fetchVersion = 0;
 
 	constructor() {
 		if (!browser) return;
 
 		this.registerNotificationHandlers();
 
-		// 认证后拉取未读数量
-		$effect.root(() => {
+		// 响应式监听认证状态：登录时拉取未读数量，登出时清空
+		this.destroyEffectRoot = $effect.root(() => {
 			$effect(() => {
 				if (authStore.isAuthenticated) {
 					this.fetchUnreadCount();
+				} else {
+					// 登出时清空未读计数，防止跨用户数据泄漏
+					this.unreadCount = 0;
+					// 使之前的请求结果无效
+					this.fetchVersion++;
 				}
 			});
 		});
@@ -49,7 +46,10 @@ class NotificationStore {
 	 * 拉取未读数量（冷启动 / 重连时调用）
 	 */
 	async fetchUnreadCount(): Promise<void> {
+		const version = ++this.fetchVersion;
 		const res = await notificationsService.unreadCount();
+		// 竞态保护：仅接受最新请求的结果（防止登出后过期响应写入）
+		if (version !== this.fetchVersion) return;
 		if (isSuccess(res) && res.data) {
 			this.unreadCount = res.data.total;
 		}
@@ -67,7 +67,7 @@ class NotificationStore {
 	 */
 	async markAsRead(notificationIds: string[]): Promise<boolean> {
 		if (notificationIds.length === 0) return true;
-		const res = await notificationsService.markAsRead(notificationIds);
+		const res = await notificationsService.markAsRead({ notification_ids: notificationIds });
 		if (isSuccess(res)) {
 			this.unreadCount = Math.max(0, this.unreadCount - notificationIds.length);
 			return true;
@@ -108,6 +108,11 @@ class NotificationStore {
 	}
 
 	destroy() {
+		// 清理 $effect.root()
+		if (this.destroyEffectRoot) {
+			this.destroyEffectRoot();
+			this.destroyEffectRoot = null;
+		}
 		this.cleanupFunctions.forEach((cleanup) => cleanup());
 		this.cleanupFunctions = [];
 	}

@@ -7,13 +7,15 @@
 import { GlobalStateManager, KEY_CURRENT_USER, KEY_LAST_MESSAGE_SYNC_TIME } from '../../../core/state/GlobalStateManager';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter, ChatRouteParam } from '../../../core/router/AppRouter';
+import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { PageNames } from '../../../constants/AppConstants';
-import { PrivateChatItem, GroupItem, MyProfile, MyGroupsRequest, DeletePrivateChatRequest, LeaveGroupRequest } from '../../../core/types/api';
+import { PrivateChatItem, GroupItem, MyProfile, MyGroupsRequest, LeaveGroupRequest } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
-import { AppIcon, SystemIcon } from '../../../components/SystemIcon';
+import { AppIcon } from '../../../components/SystemIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { MessageCacheService, ChatCacheItem } from '../../../core/database/MessageCacheService';
@@ -41,11 +43,17 @@ interface ChatItem {
 export struct MessagePage {
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
   @StorageLink(KEY_LAST_MESSAGE_SYNC_TIME) @Watch('onMessageSync') lastMessageSyncTime: number = 0;
+  @StorageLink('safeAreaTop') safeAreaTop: number = 0;
+  @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
 
   private chatListDataSource: BasicDataSource<ChatItem> = new BasicDataSource([]);
   private messageCacheService = MessageCacheService.getInstance();
 
-  @State isLoading: boolean = false;
+  private getHeaderTopPadding(): number {
+    return (this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.LG) + DesignConstants.SPACING.SM;
+  }
+
+  @State isLoading: boolean = true;
   @State isRefreshing: boolean = false;
   @State errorMessage: string = '';
   @State hasData: boolean = false;
@@ -58,6 +66,9 @@ export struct MessagePage {
   @State isLoadingMore: boolean = false;
 
   async aboutToAppear() {
+    SystemUiController.useSurface({
+      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
+    });
     await this.loadData();
   }
 
@@ -302,10 +313,8 @@ export struct MessagePage {
     try {
       VibrationUtil.startShort();
       if (item.type === 'private') {
-        const privateData = item.data as PrivateChatItem;
-        const userId = privateData.other_user?.user_id ?? item.id;
-        const request: DeletePrivateChatRequest = { target_user_id: userId };
-        await ApiClient.deletePrivateChat(request);
+        // ⏳ 延期实现: private_chats/me/delete 接口尚未上线
+        // 当前仅从本地列表移除，不调用后端
       } else {
         const groupData = item.data as GroupItem;
         const groupId = groupData.group?.group_id ?? item.id;
@@ -334,7 +343,7 @@ export struct MessagePage {
 
   build() {
     Column() {
-      // 标题栏
+      // 标题栏 - 使用 SafeArea 避免与状态栏重叠
       Row() {
         Text('消息')
           .fontSize(DesignConstants.FONT.SIZE.XL)
@@ -408,8 +417,13 @@ export struct MessagePage {
         .padding({ right: DesignConstants.SPACING.LG })
       }
       .width('100%')
-      .height(56)
-      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .alignItems(VerticalAlign.Center)
+      .padding({
+        top: this.getHeaderTopPadding(),
+        bottom: DesignConstants.SPACING.SM
+      })
+      .backgroundColor($r('app.color.bg_secondary'))
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 内容区域
       if (this.isLoading && !this.hasData) {
@@ -452,6 +466,7 @@ export struct MessagePage {
           }
           .width('100%')
           .layoutWeight(1)
+          .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
           .backgroundColor($r('sys.color.ohos_id_color_background'))
           .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 78, endMargin: 0 })
           .cachedCount(10)
@@ -463,7 +478,7 @@ export struct MessagePage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    .backgroundColor($r('app.color.bg_primary'))
   }
 
   @Builder
@@ -587,7 +602,7 @@ export struct MessagePage {
     .width('100%')
     .height(72)
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .backgroundColor($r('app.color.bg_secondary'))
     .onClick(() => this.enterChat(item))
   }
 }

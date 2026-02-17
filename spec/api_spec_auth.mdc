@@ -109,7 +109,7 @@ interface RegisterRequest {
 
 **Response**: `ApiResponse<AuthTokenPairWeb | AuthTokenPairApp>`
 
-**错误码**: `10000` `10100` `10400` `22000` `22002`
+**错误码**: `10000` `10400` `22000` `22002`
 
 ### POST /api/v1/auth/login
 
@@ -129,7 +129,9 @@ interface LoginRequest {
 
 **Response**: `ApiResponse<AuthTokenPairWeb | AuthTokenPairApp>`
 
-**错误码**: `10000` `10100` `10201` `10300`
+**安全说明**：用户不存在和密码错误统一返回 `10100`（认证失败），不区分具体原因，防止账号枚举攻击。
+
+**错误码**: `10000` `10100` `10201`
 
 ---
 
@@ -296,6 +298,8 @@ interface ResetPasswordRequest {
 ```
 
 **Response**: `ApiResponse<AuthTokenPairWeb | AuthTokenPairApp>`
+
+**错误码说明**：`10300` 仅用于"重置请求不存在或已过期"，禁止返回"用户不存在"等暴露账号存在性的 message（与 `request_password_reset` 的安全策略一致）。
 
 **错误码**: `10000` `10100` `10300` `22000` `22002`
 

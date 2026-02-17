@@ -22,6 +22,7 @@ alwaysApply: true
 | `POST /api/v1/feed/list_groups` | 获取群组推荐 | 必须 | 无 |
 | `POST /api/v1/feed/list_users` | 获取用户推荐 | 必须 | 无 |
 | `POST /api/v1/feed/list_trending` | 获取热门内容 | 可选 | 无 |
+| `POST /api/v1/feed/me/dismiss` | 标记不感兴趣 (⏳ 延期) | 必须 | 幂等语义 |
 
 ## 类型定义
 
@@ -31,7 +32,7 @@ alwaysApply: true
 - `UserItem`（Feed 场景下 `relation` 和 `social_context` 字段会被填充）
 - `PaginationParams`
 - `GeoPoint`
-- `TagItem`、`TagTrend`（定义于 `@spec/api_spec_search.mdc`）
+- `TagItem`、`TagTrend`（定义于 `@spec/api_spec_types.mdc`）
 
 ## 端点详情
 
@@ -122,9 +123,7 @@ interface GetFeedUsersRequest {
 
 ### POST /api/v1/feed/list_trending
 
-获取热门内容。
-
-Token 可选；登录态返回的 `MomentItem` 包含 `@auth-only` 字段（如 `my_state`）；未登录态不返回 `@auth-only` 字段。
+获取热门内容。认证可选，字段可见性规则见 `@spec/api_spec_base.mdc`。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -143,7 +142,7 @@ interface TrendingBundle {
 }
 
 // TrendingTagItem 复用 TagItem 并扩展热门瞬间预览
-// TagItem 定义于 @spec/api_spec_search.mdc（含 name、usage_count、trend?）
+// TagItem 定义于 @spec/api_spec_types.mdc（含 name、usage_count、trend?）
 interface TrendingTagItem extends Omit<TagItem, 'trend'> {
   trend: TagTrend;  // 必填（TagItem 中为可选，此处覆盖为必填）
   hot_moment_preview?: MomentItem;
@@ -152,4 +151,30 @@ interface TrendingTagItem extends Omit<TagItem, 'trend'> {
 
 **错误码**: `10000`
 
-> **注**：标签相关类型（`TagItem`、`TagTrend`）定义于 `@spec/api_spec_search.mdc`。
+> **注**：标签相关类型（`TagItem`、`TagTrend`）定义于 `@spec/api_spec_types.mdc`。
+
+---
+
+### POST /api/v1/feed/me/dismiss
+
+> ⏳ **延期实现**：推荐算法优化为后续迭代重点，当前阶段优先完成核心 Feed 流。
+
+标记内容为"不感兴趣"，用于改善推荐质量。支持对瞬间、用户、群组的负反馈。
+
+- **认证**: 必须
+- **幂等**: 幂等语义（重复标记同一内容返回成功）
+
+**Request**: `DismissFeedItemRequest`
+```typescript
+// 可标记不感兴趣的内容类型
+type DismissTargetType = 'moment' | 'user' | 'group';
+
+interface DismissFeedItemRequest {
+  target_type: DismissTargetType;
+  target_id: string;               // moment_id / user_id / group_id
+}
+```
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10300`

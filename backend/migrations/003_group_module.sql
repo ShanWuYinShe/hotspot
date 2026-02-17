@@ -10,11 +10,15 @@ CREATE TABLE IF NOT EXISTS groups (
     description     TEXT,
     avatar_url      TEXT,
     owner_id        BIGINT          NOT NULL,
+    group_type      VARCHAR(50)    NOT NULL DEFAULT 'public',
+    join_type       VARCHAR(20)     NOT NULL DEFAULT 'free',
+    is_muted        BOOLEAN         NOT NULL DEFAULT FALSE,
     -- 群组设置（原 group_settings 字段合入）
     join_method     group_join_method NOT NULL DEFAULT 'open',
     is_searchable   BOOLEAN         NOT NULL DEFAULT TRUE,
     max_members     INTEGER         NOT NULL DEFAULT 200,
     password_hash   TEXT,                           -- open + 密码场景
+    metadata        JSONB          NOT NULL DEFAULT '{}'::jsonb,
     -- PostGIS 位置
     location        GEOGRAPHY(POINT, 4326) NOT NULL,
     location_name   VARCHAR(255)    NOT NULL,
@@ -32,6 +36,20 @@ CREATE INDEX idx_groups_location   ON groups USING GIST(location) WHERE dismisse
 CREATE INDEX idx_groups_active     ON groups(last_activity_at DESC) WHERE dismissed_at IS NULL;
 CREATE INDEX idx_groups_searchable ON groups(created_at DESC) WHERE dismissed_at IS NULL AND is_searchable = TRUE;
 
+-- ─── 群组设置（保留独立配置表）────────────────────────
+CREATE TABLE IF NOT EXISTS group_settings (
+    group_id        BIGINT          PRIMARY KEY REFERENCES groups(group_id) ON DELETE CASCADE,
+    join_method     group_join_method NOT NULL DEFAULT 'open',
+    is_searchable   BOOLEAN         NOT NULL DEFAULT TRUE,
+    max_members     INTEGER         NOT NULL DEFAULT 200,
+    password_hash   TEXT,
+    created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_group_settings_searchable ON group_settings(is_searchable);
+CREATE TRIGGER tr_group_settings_updated_at
+    BEFORE UPDATE ON group_settings FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
 CREATE TRIGGER tr_groups_updated_at
     BEFORE UPDATE ON groups FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 
@@ -39,6 +57,7 @@ CREATE TRIGGER tr_groups_updated_at
 CREATE TABLE IF NOT EXISTS group_members (
     group_id    BIGINT      NOT NULL,
     user_id     BIGINT      NOT NULL,
+    nickname    VARCHAR(100),
     role        group_role  NOT NULL DEFAULT 'member',
     is_muted    BOOLEAN     NOT NULL DEFAULT FALSE,
     muted_until TIMESTAMPTZ,
@@ -53,13 +72,14 @@ CREATE INDEX idx_group_members_user   ON group_members(user_id, joined_at DESC);
 
 -- ─── 用户群组偏好（免打扰/置顶）──────────────────────────
 CREATE TABLE IF NOT EXISTS group_user_preferences (
+    id          BIGSERIAL   PRIMARY KEY,
     group_id    BIGINT      NOT NULL,
     user_id     BIGINT      NOT NULL,
     is_muted    BOOLEAN     NOT NULL DEFAULT FALSE,
     is_pinned   BOOLEAN     NOT NULL DEFAULT FALSE,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (group_id, user_id)
+    UNIQUE (group_id, user_id)
 );
 CREATE INDEX idx_group_user_prefs_user ON group_user_preferences(user_id, updated_at DESC);
 
@@ -76,6 +96,29 @@ CREATE TABLE IF NOT EXISTS group_stats_buckets (
     PRIMARY KEY (group_id, bucket_id)
 );
 CREATE INDEX idx_group_stats_group ON group_stats_buckets(group_id);
+
+-- ─── 群组请求统一表（apply/invite）────────────────────────
+CREATE TABLE IF NOT EXISTS group_requests (
+    request_id   UUID                PRIMARY KEY DEFAULT uuidv7(),
+    group_id     BIGINT              NOT NULL,
+    user_id      BIGINT              NOT NULL,
+    operator_id  BIGINT              NOT NULL,
+    type         VARCHAR(20)         NOT NULL CHECK (type IN ('apply', 'invite')),
+    message      TEXT,
+    status       application_status  NOT NULL DEFAULT 'pending',
+    expires_at   TIMESTAMPTZ,
+    handled_by   BIGINT,
+    handled_at   TIMESTAMPTZ,
+    created_at   TIMESTAMPTZ         NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_group_requests_group ON group_requests(group_id, type, created_at DESC);
+CREATE INDEX idx_group_requests_user  ON group_requests(user_id, type, created_at DESC);
+CREATE UNIQUE INDEX idx_group_requests_apply_pending
+    ON group_requests(group_id, user_id)
+    WHERE type = 'apply' AND status = 'pending';
+CREATE UNIQUE INDEX idx_group_requests_invite_pending
+    ON group_requests(group_id, user_id)
+    WHERE type = 'invite' AND status = 'pending';
 
 -- ─── 群组加入申请（用户 → 群组）──────────────────────────
 CREATE TABLE IF NOT EXISTS group_applications (
@@ -117,7 +160,8 @@ CREATE UNIQUE INDEX idx_group_invites_pending_unique
 
 -- ─── 群组封禁 ───────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS group_bans (
-    ban_id      UUID        PRIMARY KEY DEFAULT uuidv7(),
+    id          BIGSERIAL   PRIMARY KEY,
+    ban_id      UUID        NOT NULL DEFAULT uuidv7(),
     group_id    BIGINT      NOT NULL,
     user_id     BIGINT      NOT NULL,
     banned_by   BIGINT      NOT NULL,
@@ -127,6 +171,7 @@ CREATE TABLE IF NOT EXISTS group_bans (
     unbanned_by BIGINT,
     UNIQUE (group_id, user_id)
 );
+CREATE UNIQUE INDEX idx_group_bans_ban_id ON group_bans(ban_id);
 CREATE INDEX idx_group_bans_group ON group_bans(group_id, banned_at DESC);
 CREATE INDEX idx_group_bans_user  ON group_bans(user_id);
 

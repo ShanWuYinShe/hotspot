@@ -29,7 +29,7 @@ alwaysApply: true
 | `POST /api/v1/private_chats/me/list` | 私聊列表 | 必须 | 无 |
 | `POST /api/v1/private_chats/open_the_door` | 私聊详情 | 必须 | 幂等语义 |
 | `POST /api/v1/private_chats/me/update_settings` | 更新会话设置 | 必须 | 幂等语义 |
-| `POST /api/v1/private_chats/me/delete` | 删除私聊会话（仅当前用户视角） | 必须 | 幂等语义 |
+| `POST /api/v1/private_chats/me/delete` | 删除私聊会话 (⏳ 延期) | 必须 | 幂等语义 |
 | `POST /api/v1/private_messages/send` | 发送私聊消息 | 必须 | MUST |
 | `POST /api/v1/private_messages/get_history` | 私聊消息历史 | 必须 | 无 |
 | `POST /api/v1/private_messages/update` | 编辑私聊消息 | 必须 | 幂等语义 |
@@ -67,12 +67,22 @@ alwaysApply: true
 - `UserPresenceStatus`
 - `PaginationParams`
 - `PaginatedData`
+- `CantMessageReason`
+
+### 消息发送统一规则
+
+**消息类型与字段要求**：
+- `text` 需要 `content`
+- `image`/`video`/`audio`/`file` 需要 `file_id`
+- `share` 需要 `share_code`
+
+**发送语义**：API 调用仅提交发送意图和获取 `message_id`，消息最终态通过 WebSocket 推送获取。
 
 ---
 
 ## 私聊管理 API
 
-私聊权限和陌生人消息限制规则详见 `@spec/api_spec_base.mdc` 中的"隐私与访问控制"章节。
+私聊权限由用户设置 `allow_private_chat`（`PrivateChatPermission`，定义于 `@spec/api_spec_types.mdc`）控制；不可发消息原因见 `CantMessageReason`（同上）。
 
 ### POST /api/v1/private_chats/me/list
 
@@ -119,13 +129,7 @@ interface PrivateChatItem {
   cant_message_reason?: CantMessageReason; // 仅 can_message=false 时返回
 }
 
-// 不可发消息原因
-// 设计说明：被拉黑场景统一返回 'privacy'，不暴露拉黑状态（隐私保护）
-// 被拉黑的用户看到的效果与"对方设置了严格隐私"一致
-type CantMessageReason = 
-  | 'privacy'           // 对方隐私设置不允许（含被拉黑场景）
-  | 'stranger_limit'    // 陌生人消息限额已用完
-  | 'account_suspended';// 账号被限制
+// CantMessageReason 定义于 @spec/api_spec_types.mdc
 ```
 
 **错误码**: `10000`
@@ -191,6 +195,8 @@ interface UpdatePrivateChatSettingsRequest {
 
 ### POST /api/v1/private_chats/me/delete
 
+> ⏳ **延期实现**：单边删除需要 per-user 消息可见性状态，实现复杂度高，早期阶段性价比低。
+
 删除私聊。
 
 **删除语义**：
@@ -217,12 +223,7 @@ interface DeletePrivateChatRequest {
 
 ## 私聊消息 API
 
-消息类型：
-- `text` 需要 `content`
-- `image`/`video`/`audio`/`file` 需要 `file_id`
-- `share` 需要 `share_code`
-
-**发送语义**：API 调用仅提交发送意图和获取 `message_id`，消息最终态通过 WebSocket 推送获取。
+消息类型与字段要求见上方「消息发送统一规则」。
 
 ### POST /api/v1/private_messages/send
 
@@ -371,12 +372,7 @@ interface MarkPrivateMessagesReadRequest {
 
 ## 群聊消息 API
 
-**发送语义**：API 调用仅提交发送意图和获取 `message_id`，消息最终态通过 WebSocket 推送获取。
-
-消息类型：
-- `text` 需要 `content`
-- `image`/`video`/`audio`/`file` 需要 `file_id`
-- `share` 需要 `share_code`
+消息类型与字段要求见上方「消息发送统一规则」。
 
 ### POST /api/v1/group_messages/send
 

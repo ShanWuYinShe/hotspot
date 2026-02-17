@@ -1,3 +1,5 @@
+use uuid::Uuid;
+
 use crate::constants::DEFAULT_PAGE_LIMIT;
 use crate::error::{AppError, Result};
 
@@ -79,10 +81,43 @@ impl Validator {
         Ok(())
     }
 
-    /// 解析游标 (透传字符串)
-    /// - None -> Ok(None)
-    /// - Some(str) -> Ok(Some(String))
-    pub fn parse_cursor(cursor: Option<&str>) -> Result<Option<String>> {
-        Ok(cursor.map(|c| c.to_string()))
+    /// 解析用户 ID (String -> i64)
+    pub fn parse_user_id(id: &str) -> Result<i64> {
+        id.parse::<i64>()
+            .map_err(|_| AppError::InvalidFormat("无效的用户 ID".to_string()))
+    }
+
+    /// 解析群组 ID (String -> i64)
+    pub fn parse_group_id(id: &str) -> Result<i64> {
+        id.parse::<i64>()
+            .map_err(|_| AppError::InvalidFormat("无效的群组 ID".to_string()))
+    }
+
+    /// 解析角色 ID (String -> Uuid)
+    pub fn parse_role_id(id: &str) -> Result<Uuid> {
+        Uuid::parse_str(id).map_err(|_| AppError::InvalidFormat("无效的角色 ID".to_string()))
+    }
+
+    /// 解析 UUID 字符串（通用方法，field_name 用于错误消息）
+    pub fn parse_uuid(id: &str, field_name: &str) -> Result<Uuid> {
+        Uuid::parse_str(id).map_err(|_| AppError::InvalidFormat(format!("无效的{field_name}")))
+    }
+
+    /// 解析 i64 ID 字符串（通用方法，field_name 用于错误消息）
+    pub fn parse_id(id: &str, field_name: &str) -> Result<i64> {
+        id.parse::<i64>()
+            .map_err(|_| AppError::InvalidFormat(format!("无效的{field_name}")))
+    }
+
+    /// 解析 @ 提及的用户 ID 列表（String -> i64）
+    pub fn parse_mentions(mentions: Option<&[String]>) -> Result<Option<Vec<i64>>> {
+        let Some(ids) = mentions else {
+            return Ok(None);
+        };
+        let mut parsed = Vec::with_capacity(ids.len());
+        for id in ids {
+            parsed.push(Self::parse_user_id(id)?);
+        }
+        Ok(Some(parsed))
     }
 }

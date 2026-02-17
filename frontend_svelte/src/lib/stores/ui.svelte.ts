@@ -59,22 +59,26 @@ class UIStore {
 		const targetUrl = url ?? window.location.pathname + window.location.search;
 		// 不保存认证相关页面
 		if (!targetUrl.startsWith('/auth')) {
-			sessionStorage.setItem(REDIRECT_KEY, targetUrl);
+			try { sessionStorage.setItem(REDIRECT_KEY, targetUrl); } catch { /* 隐私模式或配额满 */ }
 		}
 	}
 	
 	/** 获取并清除保存的重定向 URL */
 	getAndClearRedirectUrl(): string {
 		if (!browser) return '/';
-		const url = sessionStorage.getItem(REDIRECT_KEY);
-		sessionStorage.removeItem(REDIRECT_KEY);
-		return url || '/';
+		try {
+			const url = sessionStorage.getItem(REDIRECT_KEY);
+			sessionStorage.removeItem(REDIRECT_KEY);
+			return url || '/';
+		} catch {
+			return '/';
+		}
 	}
 	
 	/** 检查是否有保存的重定向 URL */
 	hasRedirectUrl(): boolean {
 		if (!browser) return false;
-		return !!sessionStorage.getItem(REDIRECT_KEY);
+		try { return !!sessionStorage.getItem(REDIRECT_KEY); } catch { return false; }
 	}
 }
 

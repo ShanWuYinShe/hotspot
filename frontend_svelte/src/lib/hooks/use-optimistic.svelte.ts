@@ -15,22 +15,40 @@ interface OptimisticOptions<T> {
 }
 
 export function useOptimisticToggle<T>(options: OptimisticOptions<T>) {
-	// Initialize state directly (no need for $effect)
-	const getInitialValue = () => 
-		typeof options.initialValue === 'function' 
-			? options.initialValue() 
+	const getExternalValue = () =>
+		typeof options.initialValue === 'function'
+			? options.initialValue()
 			: options.initialValue;
-	
-	const getInitialCount = () => 
+
+	const getExternalCount = () =>
 		options.initialCount !== undefined
 			? (typeof options.initialCount === 'function'
 				? options.initialCount()
 				: options.initialCount)
 			: 0;
-	
-	let isOn = $state(getInitialValue());
-	let count = $state(getInitialCount());
+
+	let isOn = $state(getExternalValue());
+	let count = $state(getExternalCount());
 	let isLoading = $state(false);
+
+	// 跟踪上一次外部值，仅在外部数据真正变化时同步
+	// （避免乐观更新后被旧的外部值覆盖）
+	let prevExternalValue = getExternalValue();
+	let prevExternalCount = getExternalCount();
+
+	$effect.pre(() => {
+		const extVal = getExternalValue();
+		const extCount = getExternalCount();
+
+		if (extVal !== prevExternalValue) {
+			prevExternalValue = extVal;
+			isOn = extVal;
+		}
+		if (extCount !== prevExternalCount) {
+			prevExternalCount = extCount;
+			count = extCount;
+		}
+	});
 
 	async function toggle() {
 		if (isLoading) return;

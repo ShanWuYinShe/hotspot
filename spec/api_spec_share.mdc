@@ -26,7 +26,7 @@ alwaysApply: true
 |-----|------|------|------|
 | `POST /api/v1/share/create` | 创建分享 | 必须 | MUST |
 | `POST /api/v1/share/get` | 获取分享详情 | 可选 | 无 |
-| `POST /api/v1/share/me/list` | 我的分享列表 | 必须 | 无 |
+| `POST /api/v1/share/me/list` | 我的分享列表 (⏳ 延期) | 必须 | 无 |
 | `POST /api/v1/share/revoke` | 撤销分享 | 必须 | 幂等语义 |
 
 ## 类型定义
@@ -36,7 +36,7 @@ alwaysApply: true
 - `Location`
 - `PaginationParams`
 
-**说明**：`preview` 为展示用摘要，服务端可根据权限与可见性策略选择是否返回。
+**说明**：`preview` 为展示用摘要。已撤销、已过期或目标不可访问时不返回 preview。
 
 ## 分享码规则
 
@@ -67,7 +67,7 @@ alwaysApply: true
 
 **Request**: `CreateShareRequest`
 ```typescript
-type ShareType = 'user' | 'group' | 'moment' | 'location';
+// ShareType 定义于 @spec/api_spec_types.mdc
 
 interface UserSharePayload {
   shared_user_id: string;
@@ -160,6 +160,8 @@ interface ShareDetail {
 ---
 
 ### POST /api/v1/share/me/list
+
+> ⏳ **延期实现**：分享管理页面为低优先级功能，核心分享流程（create/get/revoke）已覆盖。
 
 获取当前用户创建的分享列表。
 

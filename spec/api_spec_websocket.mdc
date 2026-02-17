@@ -71,6 +71,17 @@ alwaysApply: true
 | | `GroupUpdated` | 群组信息更新（名称/头像/描述等所有可修改字段） |
 | | `GroupDismissed` | 群组解散 |
 
+#### 多端同步事件（Self-Sync）
+
+> ⏳ **延期实现**：以下事件用于同一用户多设备间的状态同步。当前阶段多端登录场景较少，客户端通过冷启动 HTTP API 补拉实现同步。
+
+| 事件 | 说明 | 推送目标 |
+|------|------|---------|
+| `SelfReadSync` | 当前用户在某设备标记已读后，同步到其他设备 | 当前用户其他设备 |
+| `SelfChatSettingsSync` | 会话静音/置顶变更同步 | 当前用户其他设备 |
+| `SelfSettingsUpdated` | 用户设置变更同步 | 当前用户其他设备 |
+| `SelfRelationSync` | 关注/拉黑等关系变更同步 | 当前用户其他设备 |
+
 ### 客户端能发送什么？
 
 | 事件 | 说明 |
@@ -105,11 +116,29 @@ alwaysApply: true
 - 鉴权失败或超时：服务端发送 `Error` 并断开连接（`code=20000`）。
 - Token 过期：服务端断开；客户端刷新 token 后重连并重新鉴权。
 
-### 重连成功后的处理（契约级要求）
+### 重连恢复策略（契约级要求）
 
-- 必须重新发送 `Auth`。
-- 必须恢复订阅（使用 `SetSubscriptions` 做全量恢复，客户端本地维护订阅状态）。
-- 根据断开时长决定是否需要通过 HTTP API 补拉离线数据（建议：断开超过 10 秒则补拉）。
+#### 1. 重连流程
+
+- 重连成功后必须重新发送 `Auth`。
+- 鉴权通过后必须恢复订阅：使用 `SetSubscriptions` 做全量恢复，客户端本地维护订阅状态。
+
+#### 2. 数据补拉
+
+服务端完全无状态，不保存任何连接状态。客户端判断是否需要补拉：
+
+- **记录断开时间**：连接断开时记录 `disconnected_at`。
+- **判断断开时长**：重连成功后，比对 `ConnectionEstablished` 中的 `server_time` 与 `disconnected_at`。
+- **补拉决策**：
+  - 断开时长 > 10 秒（建议阈值）：通过 HTTP API（如消息历史接口 `get_history`）按游标分页逐页补拉，客户端比对本地最新消息时间与返回消息的 `sent_at`，直到追上断开期间的增量。
+  - 断开时长 ≤ 10 秒：无需补拉，WebSocket 会自动推送新事件。
+
+#### 3. 去重规则
+
+HTTP API 返回的数据可能与 WebSocket 推送的事件重复。去重方式按资源主键执行（参见 `@spec/api_spec_base.mdc`）：
+
+- **持久化事件**：按业务 ID 去重（`message_id`/`moment_id`/`like_id` 等）。
+- **状态快照事件**：直接覆盖（保留最新状态），无需去重。
 
 ---
 
@@ -226,22 +255,7 @@ type ClientWebSocketEvent = WebSocketEvent<ClientEventType, unknown>;
 - 持久化事件通过业务 ID 去重，状态事件保留最新值
 - 简化协议：无需维护连接级序列号（seq）
 
-**重连后的数据补拉策略**：
-
-服务端完全无状态，不保存任何连接状态。客户端判断是否需要补拉：
-
-1. **记录断开时间**：客户端在连接断开时记录 `disconnected_at`
-2. **重连成功后**：
-   - 比对 `server_time`（来自 `ConnectionEstablished`）与 `disconnected_at`，计算断开时长
-3. **补拉决策**：
-   - 断开时长 > 10 秒（建议阈值）：通过 HTTP API 的消息历史接口（`get_history`）使用游标分页逐页补拉，客户端比对本地最新消息时间与返回消息的 `sent_at`，直到追上断开期间的增量
-   - 断开时长 ≤ 10 秒：无需补拉（WebSocket 会自动推送新事件）
-4. **恢复订阅**：使用 `SetSubscriptions` 全量恢复（客户端本地维护订阅状态）
-
-**补拉期间的去重**：
-- HTTP API 返回的数据可能与 WebSocket 推送的事件重复
-- **持久化事件**：通过业务 ID 去重（`message_id`/`moment_id`/`like_id` 等）
-- **状态快照事件**：直接覆盖（保留最新状态），无需去重
+> 重连后的数据补拉与去重策略详见「连接与鉴权」中的「重连恢复策略」。
 
 **WebSocket 通用类型定义**：
 ```typescript
@@ -273,6 +287,8 @@ type ServerEventType =
   | "UserProfileUpdated"
   // 系统
   | "SystemAnnouncement" | "AccountBanned"
+  // 多端同步（⏳ 延期实现）
+  | "SelfReadSync" | "SelfChatSettingsSync" | "SelfSettingsUpdated" | "SelfRelationSync"
   | "Error" | "SubscribeAck" | "SubscriptionsSnapshot";
 
 // 客户端发送事件类型枚举（强制：WebSocketEvent.type 必须来自该枚举）
@@ -390,7 +406,7 @@ type UserOfflineEvent = { type: "UserOffline"; payload: UserOfflinePayload; };
 
 - **PrivateMessageRead**
   - 触发：已读状态发生变化时触发
-  - 推送：推送给私聊对端
+  - 推送目标：私聊对端 + 发送方的其他设备（多端同步时）
   - 该事件用于即时交互反馈，不作为离线补偿依据
 
 **关注关系事件**：
@@ -575,9 +591,7 @@ type GroupMemberJoinedEvent = { type: "GroupMemberJoined"; payload: GroupMemberJ
 
 interface GroupInviteReceivedPayload {
   invite_id: string;
-  group_id: string;
-  group_name: string;
-  group_avatar_url?: string;
+  group: GroupInfo;  // 引用 @spec/api_spec_types.mdc
   inviter: UserInfo;
   message?: string;
   created_at: string;
@@ -604,8 +618,7 @@ type GroupApplicationReceivedEvent = { type: "GroupApplicationReceived"; payload
 
 interface GroupApplicationResponsePayload {
   application_id: string;
-  group_id: string;
-  group_name: string;
+  group: GroupInfo;  // 引用 @spec/api_spec_types.mdc
   status: 'accepted';  // 仅接受时推送，拒绝不通过 WebSocket 推送
   responded_at: string;
 }
@@ -743,6 +756,37 @@ interface AccountBannedPayload {
   banned_at: string;
 }
 type AccountBannedEvent = { type: "AccountBanned"; payload: AccountBannedPayload; };
+```
+
+**多端同步事件（⏳ 延期实现）**：
+```typescript
+// 已读状态同步：当某设备标记消息已读时，推送给该用户的其他设备
+interface SelfReadSyncPayload {
+  chat_type: 'private' | 'group';
+  target_id: string;         // private: target_user_id; group: group_id
+  up_to_message_id?: string; // 标记到哪条消息；不传表示全部
+}
+
+// 会话设置同步：静音/置顶变更
+interface SelfChatSettingsSyncPayload {
+  chat_type: 'private' | 'group';
+  target_id: string;
+  is_muted?: boolean;
+  is_pinned?: boolean;
+}
+
+// 用户设置同步：隐私等全局设置变更
+// UserSettings 定义于 @spec/api_spec_user.mdc
+interface SelfSettingsUpdatedPayload {
+  // 变更后的完整设置快照
+  settings: UserSettings;
+}
+
+// 关系变更同步：关注/取消关注/拉黑/解除拉黑
+interface SelfRelationSyncPayload {
+  action: 'follow' | 'unfollow' | 'block' | 'unblock';
+  target_user_id: string;
+}
 ```
 
 **错误码定义**：

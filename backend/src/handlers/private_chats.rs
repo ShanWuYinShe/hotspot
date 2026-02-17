@@ -3,12 +3,9 @@ use axum::{extract::State, Json};
 use crate::{
     dto::{
         request::{
-            DeletePrivateChatRequest, MyPrivateChatsRequest, PrivateChatOpenTheDoorRequest,
-            UpdatePrivateChatSettingsRequest,
+            MyPrivateChatsRequest, PrivateChatOpenTheDoorRequest, UpdatePrivateChatSettingsRequest,
         },
-        response::{
-            ApiResponse, PaginatedData, PrivateChatDetailData, PrivateChatListItem,
-        },
+        response::{ApiResponse, PaginatedData, PrivateChatListItem, PrivateChatOpenResult},
     },
     error::Result,
     middleware::auth::AuthenticatedUser,
@@ -22,11 +19,10 @@ pub async fn me(
     user: AuthenticatedUser,
     Json(req): Json<MyPrivateChatsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<PrivateChatListItem>>>> {
-    let limit = Validator::validate_limit(req.limit, 100)? as i64;
-    let include_archived = req.include_archived.unwrap_or(false);
+    let limit = Validator::validate_limit(req.limit, crate::constants::MAX_PAGE_LIMIT)? as i64;
     let (items, _, next_cursor) = state
         .private_chat_service
-        .get_list_with_details(user.user_id, limit, req.cursor, include_archived)
+        .get_list_with_details(user.user_id, limit, req.cursor)
         .await?;
 
     Ok(Json(ApiResponse::success(PaginatedData {
@@ -40,10 +36,11 @@ pub async fn open_the_door(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<PrivateChatOpenTheDoorRequest>,
-) -> Result<Json<ApiResponse<PrivateChatDetailData>>> {
+) -> Result<Json<ApiResponse<PrivateChatOpenResult>>> {
+    let target_user_id = crate::utils::validation::Validator::parse_user_id(&req.target_user_id)?;
     let detail = state
         .private_chat_service
-        .get_details(req.target_user_id, user.user_id, req.recent_messages_limit)
+        .get_details(target_user_id, user.user_id)
         .await?;
 
     Ok(Json(ApiResponse::success(detail)))
@@ -54,35 +51,11 @@ pub async fn update_settings(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<UpdatePrivateChatSettingsRequest>,
-) -> Result<Json<ApiResponse<PrivateChatDetailData>>> {
-    state
-        .private_chat_service
-        .update_settings(
-            req.target_user_id,
-            user.user_id,
-            req.is_muted,
-            req.is_pinned,
-            req.is_archived,
-        )
-        .await?;
-
-    let detail = state
-        .private_chat_service
-        .get_details(req.target_user_id, user.user_id, None)
-        .await?;
-
-    Ok(Json(ApiResponse::success(detail)))
-}
-
-/// 3.5.5 删除私聊
-pub async fn delete(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(req): Json<DeletePrivateChatRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
+    let target_user_id = crate::utils::validation::Validator::parse_user_id(&req.target_user_id)?;
     state
         .private_chat_service
-        .delete(req.target_user_id, user.user_id)
+        .update_settings(target_user_id, user.user_id, req.is_muted, req.is_pinned)
         .await?;
 
     Ok(Json(ApiResponse::success_empty()))

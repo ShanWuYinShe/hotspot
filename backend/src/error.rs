@@ -118,7 +118,7 @@ pub enum AppError {
     // ============================================================
     // 10300-10399：资源不存在 / 不可访问
     // ============================================================
-    /// 10300 - 资源不存在（泛化，向后兼容）
+    /// 10300 - 资源不存在（通用）
     #[error("资源不存在: {0}")]
     NotFound(String),
 
@@ -322,90 +322,99 @@ pub enum AppError {
 
 impl AppError {
     /// 获取错误码
+    ///
+    /// 错误码严格遵循 spec/api_spec_errors.mdc 定义：
+    /// - 多个 enum variant 映射到同一个 spec 错误码
+    /// - 具体业务场景通过 message 字段区分，客户端禁止解析 message
+    /// - "编号间隙为预留空间，禁止随意填补"
     pub fn error_code(&self) -> i32 {
         match self {
-            // 10000-10099：请求与参数
-            Self::BadRequest(_) => 10000,
-            Self::MissingParameter(_) => 10001,
-            Self::InvalidFormat(_) => 10002,
-            Self::OutOfRange(_) => 10003,
-            Self::JsonParseError(_) => 10004,
-            Self::PayloadTooLarge(_) => 10005,
-            Self::CursorFormatError(_) => 10006,
-            Self::CursorInvalidOrExpired(_) => 10007,
+            // 10000：参数错误（所有参数校验类 variant 统一映射）
+            Self::BadRequest(_)
+            | Self::MissingParameter(_)
+            | Self::InvalidFormat(_)
+            | Self::OutOfRange(_)
+            | Self::JsonParseError(_)
+            | Self::PayloadTooLarge(_)
+            | Self::CursorFormatError(_)
+            | Self::CursorInvalidOrExpired(_) => 10000,
 
-            // 10100-10199：认证
-            Self::Unauthorized(_) => 10100,
-            Self::Jwt(_) => 10101,
-            Self::AccessTokenMissing => 10102,
-            Self::RefreshTokenInvalid(_) => 10103,
-            Self::RefreshTokenMissing => 10104,
-            Self::PasswordError(_) | Self::Bcrypt(_) => 10105,
-            Self::ReLoginRequired(_) => 10106,
-            Self::VerifyTokenInvalid(_) => 10107,
+            // 10100：认证失败（所有认证类 variant 统一映射）
+            Self::Unauthorized(_)
+            | Self::Jwt(_)
+            | Self::AccessTokenMissing
+            | Self::RefreshTokenInvalid(_)
+            | Self::RefreshTokenMissing
+            | Self::PasswordError(_)
+            | Self::Bcrypt(_)
+            | Self::ReLoginRequired(_)
+            | Self::VerifyTokenInvalid(_) => 10100,
 
-            // 10200-10299：权限与访问控制
-            Self::Forbidden(_) => 10200,
+            // 10200：权限不足/访问受限
+            Self::Forbidden(_)
+            | Self::NotAdmin
+            | Self::AdminPermissionDenied(_)
+            | Self::CannotOperateAdmin(_)
+            | Self::BlockedByUser(_)
+            | Self::GroupPasswordError(_)
+            | Self::FollowNotAllowed(_) => 10200,
+
+            // 10201：账号被封禁（独立保留：客户端需强制登出+封禁页）
             Self::AccountBanned(_) => 10201,
-            Self::NotAdmin => 10204,
-            Self::AdminPermissionDenied(_) => 10205,
-            Self::CannotOperateAdmin(_) => 10206,
-            Self::BlockedByUser(_) => 10211,
-            Self::GroupPasswordError(_) => 10212,
-            Self::FollowNotAllowed(_) => 10213,
 
-            // 10300-10399：资源不存在
-            Self::NotFound(_) => 10300,
-            Self::UserNotFound(_) => 10310,
-            Self::GroupNotFound(_) => 10320,
-            Self::MomentNotFound(_) => 10330,
-            Self::CommentNotFound(_) => 10340,
-            Self::ChatNotFound(_) => 10350,
-            Self::FileNotFound(_) => 10360,
+            // 10300：资源不存在（所有 NotFound 类 variant 统一映射）
+            Self::NotFound(_)
+            | Self::UserNotFound(_)
+            | Self::GroupNotFound(_)
+            | Self::MomentNotFound(_)
+            | Self::CommentNotFound(_)
+            | Self::ChatNotFound(_)
+            | Self::FileNotFound(_) => 10300,
 
-            // 10400-10499：业务冲突
-            Self::AlreadyExists(_) => 10400,
-            Self::Conflict(_) => 10402,
-            Self::VersionConflict(_) => 10403,
-            Self::BusinessRuleViolation(_) => 10410,
-            Self::CannotOperateOnSelf => 10411,
-            Self::GroupFull => 10414,
-            Self::AlreadyInGroup => 10415,
-            Self::NotGroupMember(_) => 10416,
-            Self::MessageAlreadyRecalled => 10417,
-            Self::OperationWindowExpired => 10418,
-            Self::UserMuted => 10419,
-            Self::NotFriends => 10420,
+            // 10400：业务冲突（所有业务冲突类 variant 统一映射）
+            Self::AlreadyExists(_)
+            | Self::Conflict(_)
+            | Self::VersionConflict(_)
+            | Self::BusinessRuleViolation(_)
+            | Self::CannotOperateOnSelf
+            | Self::GroupFull
+            | Self::AlreadyInGroup
+            | Self::NotGroupMember(_)
+            | Self::MessageAlreadyRecalled
+            | Self::OperationWindowExpired
+            | Self::UserMuted
+            | Self::NotFriends => 10400,
 
-            // 10500-10599：速率限制与配额
-            Self::RateLimited(_) => 10500,
-            Self::MinuteRateLimitExceeded => 10501,
-            Self::HourlyRateLimitExceeded => 10502,
-            Self::DailyRateLimitExceeded => 10503,
-            Self::TooManyConcurrentRequests => 10504,
+            // 10500：请求过于频繁（所有限流类 variant 统一映射）
+            Self::RateLimited(_)
+            | Self::MinuteRateLimitExceeded
+            | Self::HourlyRateLimitExceeded
+            | Self::DailyRateLimitExceeded
+            | Self::TooManyConcurrentRequests => 10500,
 
-            // 10600-10699：服务端错误
-            // 安全说明：所有内部错误统一返回 10600，不暴露具体技术栈
-            Self::InternalError(_) => 10600,
-            Self::Sqlx(_) => 10600,      // 数据库错误 -> 统一为 10600
-            Self::Redis(_) => 10600,     // 缓存错误 -> 统一为 10600
-            Self::SerdeJson(_) => 10600, // 序列化错误 -> 统一为 10600
-            Self::ServiceUnavailable => 10610,
-            Self::SystemMaintenance => 10611,
-            Self::ServiceOverloaded => 10612,
+            // 10600：服务器错误（所有内部错误统一映射，不暴露技术细节）
+            Self::InternalError(_)
+            | Self::Sqlx(_)
+            | Self::Redis(_)
+            | Self::SerdeJson(_)
+            | Self::ServiceUnavailable
+            | Self::SystemMaintenance
+            | Self::ServiceOverloaded => 10600,
 
-            // 20000-20999：WebSocket 业务期错误
-            Self::WebSocketError(_) => 20000,
-            Self::WebSocketAuthFailed(_) => 20001,
-            Self::WebSocketHeartbeatTimeout => 20002,
-            Self::WebSocketMessageFormatError(_) => 20003,
-            Self::WebSocketProtocolIncompatible(_) => 20004,
-            Self::SubscriptionFailed(_) => 20100,
-            Self::SubscriptionPermissionDenied(_) => 20102,
-            Self::InvalidSubscriptionFormat(_) => 20104,
-            Self::BatchLimitExceeded => 20105,
+            // 20000：WebSocket 连接/协议错误
+            Self::WebSocketError(_)
+            | Self::WebSocketAuthFailed(_)
+            | Self::WebSocketHeartbeatTimeout
+            | Self::WebSocketMessageFormatError(_)
+            | Self::WebSocketProtocolIncompatible(_) => 20000,
 
-            // 22000-22099：幂等性相关错误
+            // 20100：WebSocket 订阅错误
+            Self::SubscriptionFailed(_)
+            | Self::SubscriptionPermissionDenied(_)
+            | Self::InvalidSubscriptionFormat(_)
+            | Self::BatchLimitExceeded => 20100,
+
+            // 22000-22002：幂等性相关错误（各自驱动不同重试策略，不合并）
             Self::IdempotencyKeyConflict(_) => 22000,
             Self::IdempotencyCacheExpired => 22001,
             Self::IdempotencyOperationInProgress => 22002,
@@ -430,25 +439,41 @@ impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let code = self.error_code();
         let status = self.http_status();
-        let message = self.to_string();
 
-        // 根据错误类型决定日志级别
-        if self.is_server_error() {
-            tracing::error!(code = code, message = %message, "request failed");
+        // 预先提取速率限制 Retry-After（需在 self 引用结束前完成）
+        let retry_after: Option<u32> = if (10500..10600).contains(&code) {
+            Some(match &self {
+                Self::MinuteRateLimitExceeded => 60,
+                Self::HourlyRateLimitExceeded => 300,
+                Self::DailyRateLimitExceeded => 3600,
+                Self::RateLimited(_) | Self::TooManyConcurrentRequests => 60,
+                _ => 60,
+            })
         } else {
+            None
+        };
+
+        // 10600 服务端错误：安全脱敏
+        // - 完整错误信息（含数据库/Redis/序列化等技术细节）仅记录在服务端日志
+        // - 客户端只收到通用 "服务器内部错误"，不暴露技术栈细节
+        let client_message = if self.is_server_error() {
+            tracing::error!(code = code, error = ?self, "服务端错误（客户端收到通用错误信息）");
+            "服务器内部错误".to_string()
+        } else {
+            let message = self.to_string();
             tracing::warn!(code = code, message = %message, "request failed");
-        }
+            message
+        };
 
-        let body = Json(ApiResponse::<()>::error(code, message));
-
+        let body = Json(ApiResponse::<()>::error(code, client_message));
         let mut resp = (status, body).into_response();
 
-        // 速率限制错误：添加 Retry-After 响应头
-        if (10500..10600).contains(&code) {
-            resp.headers_mut().insert(
-                axum::http::header::RETRY_AFTER,
-                axum::http::HeaderValue::from_static("60"),
-            );
+        // 速率限制错误：根据限流类型设置动态 Retry-After
+        if let Some(seconds) = retry_after {
+            if let Ok(val) = axum::http::HeaderValue::try_from(seconds.to_string()) {
+                resp.headers_mut()
+                    .insert(axum::http::header::RETRY_AFTER, val);
+            }
         }
 
         resp

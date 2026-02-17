@@ -39,7 +39,9 @@ pub async fn mark_as_read(
     Json(req): Json<MarkNotificationsReadRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     if req.notification_ids.is_empty() {
-        return Err(AppError::BadRequest("notification_ids 不能为空".to_string()));
+        return Err(AppError::BadRequest(
+            "notification_ids 不能为空".to_string(),
+        ));
     }
     state
         .notification_service

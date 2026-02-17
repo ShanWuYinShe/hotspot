@@ -1,0 +1,297 @@
+//! 资源存在性检查中间件
+//!
+//! 使用布隆过滤器快速过滤掉不存在的资源请求，
+//! 防止恶意请求穿透缓存直接查询数据库
+
+use axum::{
+    body::{to_bytes, Body},
+    extract::State,
+    http::{header::CONTENT_LENGTH, header::CONTENT_TYPE, Request, StatusCode},
+    middleware::Next,
+    response::{IntoResponse, Response},
+    Json,
+};
+use serde_json::Value;
+use std::collections::HashSet;
+use std::future::Future;
+
+use crate::{dto::response::ApiResponse, error::AppError, state::AppState};
+
+const MAX_GUARD_BODY_BYTES: usize = 512 * 1024;
+
+/// 布隆过滤器存在性检查：false 表示一定不存在。
+/// 返回 `Some(Response)` 时应立即返回该响应；返回 `None` 表示通过检查。
+async fn check_bloom_existence<T, F, G, Fut1, Fut2, E>(
+    ids: &[T],
+    single_check: F,
+    batch_check: G,
+    error_code: i32,
+    error_msg: &str,
+) -> Option<Response>
+where
+    T: std::fmt::Display,
+    F: FnOnce(&T) -> Fut1,
+    Fut1: Future<Output = Result<bool, E>>,
+    G: FnOnce(&[T]) -> Fut2,
+    Fut2: Future<Output = Result<Vec<bool>, E>>,
+    E: std::fmt::Display,
+{
+    if ids.is_empty() {
+        return None;
+    }
+    let results = if ids.len() == 1 {
+        match single_check(&ids[0]).await {
+            Ok(v) => vec![v],
+            Err(e) => {
+                tracing::warn!("Bloom filter check failed: {}", e);
+                vec![true]
+            }
+        }
+    } else {
+        let ids_vec = ids.to_vec();
+        match batch_check(&ids_vec).await {
+            Ok(v) => v,
+            Err(e) => {
+                tracing::warn!("Bloom filter batch check failed: {}", e);
+                vec![true; ids.len()]
+            }
+        }
+    };
+    if let Some((idx, _)) = results.iter().enumerate().find(|(_, v)| !**v) {
+        tracing::debug!("Bloom filter rejected: {}", &ids[idx]);
+        return Some(
+            (
+                StatusCode::OK,
+                Json(ApiResponse::<()>::error(error_code, error_msg.to_string())),
+            )
+                .into_response(),
+        );
+    }
+    None
+}
+
+/// 资源存在性保护中间件
+///
+/// - 使用布隆过滤器快速过滤不存在的 user/group/moment 请求
+/// - 仅在布隆过滤器准备完成后启用（避免误判）
+pub async fn resource_guard_middleware(
+    State(state): State<AppState>,
+    request: Request<Body>,
+    next: Next,
+) -> Response {
+    let ready = state.resource_checker.is_ready().await.unwrap_or(false);
+    if !ready {
+        return next.run(request).await;
+    }
+
+    let (parts, body) = request.into_parts();
+    let content_type = parts
+        .headers
+        .get(CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+
+    let mut extracted = ExtractedIds::default();
+    if let Some(query) = parts.uri.query() {
+        collect_ids_from_query(query, &mut extracted);
+    }
+
+    let body = if content_type.starts_with("application/json") {
+        if let Some(len) = parts
+            .headers
+            .get(CONTENT_LENGTH)
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.parse::<usize>().ok())
+        {
+            if len > MAX_GUARD_BODY_BYTES {
+                return (
+                    StatusCode::OK,
+                    Json(ApiResponse::<()>::error(10005, "请求体过大".to_string())),
+                )
+                    .into_response();
+            }
+        }
+
+        let bytes = match to_bytes(body, MAX_GUARD_BODY_BYTES).await {
+            Ok(b) => b,
+            Err(_) => {
+                return (
+                    StatusCode::OK,
+                    Json(ApiResponse::<()>::error(10005, "请求体过大".to_string())),
+                )
+                    .into_response();
+            }
+        };
+        let value: Value = match serde_json::from_slice(&bytes) {
+            Ok(v) => v,
+            Err(e) => {
+                let err = AppError::JsonParseError(e.to_string());
+                return (
+                    StatusCode::OK,
+                    Json(ApiResponse::<()>::error(err.error_code(), err.to_string())),
+                )
+                    .into_response();
+            }
+        };
+        collect_ids_from_value(&value, &mut extracted);
+        Body::from(bytes)
+    } else {
+        body
+    };
+
+    // Bloom 过滤（false => 一定不存在）
+    let user_ids: Vec<i64> = extracted.user_ids.iter().copied().collect();
+    if let Some(resp) = check_bloom_existence(
+        &user_ids,
+        |id| state.resource_checker.user_might_exist(*id),
+        |ids| state.resource_checker.user_might_exist_batch(ids),
+        10310_i32,
+        "用户不存在",
+    )
+    .await
+    {
+        return resp;
+    }
+
+    let group_ids: Vec<String> = extracted.group_ids.iter().cloned().collect();
+    if let Some(resp) = check_bloom_existence(
+        &group_ids,
+        |id| state.resource_checker.group_might_exist(id.as_str()),
+        |ids| state.resource_checker.group_might_exist_batch(ids),
+        10320,
+        "群组不存在",
+    )
+    .await
+    {
+        return resp;
+    }
+
+    let moment_ids: Vec<String> = extracted.moment_ids.iter().cloned().collect();
+    if let Some(resp) = check_bloom_existence(
+        &moment_ids,
+        |id| state.resource_checker.moment_might_exist(id.as_str()),
+        |ids| state.resource_checker.moment_might_exist_batch(ids),
+        10330,
+        "瞬间不存在",
+    )
+    .await
+    {
+        return resp;
+    }
+
+    let comment_ids: Vec<String> = extracted.comment_ids.iter().cloned().collect();
+    if let Some(resp) = check_bloom_existence(
+        &comment_ids,
+        |id| state.resource_checker.comment_might_exist(id.as_str()),
+        |ids| state.resource_checker.comment_might_exist_batch(ids),
+        10340,
+        "评论不存在",
+    )
+    .await
+    {
+        return resp;
+    }
+
+    let message_ids: Vec<String> = extracted.message_ids.iter().cloned().collect();
+    if let Some(resp) = check_bloom_existence(
+        &message_ids,
+        |id| state.resource_checker.message_might_exist(id.as_str()),
+        |ids| state.resource_checker.message_might_exist_batch(ids),
+        10350,
+        "消息不存在",
+    )
+    .await
+    {
+        return resp;
+    }
+
+    let request = Request::from_parts(parts, body);
+    next.run(request).await
+}
+
+#[derive(Default)]
+struct ExtractedIds {
+    user_ids: HashSet<i64>,
+    group_ids: HashSet<String>,
+    moment_ids: HashSet<String>,
+    comment_ids: HashSet<String>,
+    message_ids: HashSet<String>,
+}
+
+fn collect_ids_from_query(query: &str, out: &mut ExtractedIds) {
+    for pair in query.split('&') {
+        if let Some((key, value)) = pair.split_once('=') {
+            match key {
+                "user_id" => {
+                    if let Ok(id) = value.parse::<i64>() {
+                        out.user_ids.insert(id);
+                    }
+                }
+                "group_id" => {
+                    out.group_ids.insert(value.to_string());
+                }
+                "moment_id" => {
+                    out.moment_ids.insert(value.to_string());
+                }
+                "comment_id" => {
+                    out.comment_ids.insert(value.to_string());
+                }
+                "message_id" => {
+                    out.message_ids.insert(value.to_string());
+                }
+                _ => {}
+            }
+        }
+    }
+}
+
+fn collect_ids_from_value(value: &Value, out: &mut ExtractedIds) {
+    match value {
+        Value::Object(map) => {
+            for (k, v) in map {
+                match k.as_str() {
+                    "user_id" => {
+                        let parsed = if let Some(id) = v.as_i64() {
+                            Some(id)
+                        } else if let Some(raw) = v.as_str() {
+                            raw.parse::<i64>().ok()
+                        } else {
+                            None
+                        };
+                        if let Some(id) = parsed {
+                            out.user_ids.insert(id);
+                        }
+                    }
+                    "group_id" => {
+                        if let Some(id) = v.as_str() {
+                            out.group_ids.insert(id.to_string());
+                        }
+                    }
+                    "moment_id" => {
+                        if let Some(id) = v.as_str() {
+                            out.moment_ids.insert(id.to_string());
+                        }
+                    }
+                    "comment_id" => {
+                        if let Some(id) = v.as_str() {
+                            out.comment_ids.insert(id.to_string());
+                        }
+                    }
+                    "message_id" => {
+                        if let Some(id) = v.as_str() {
+                            out.message_ids.insert(id.to_string());
+                        }
+                    }
+                    _ => {}
+                }
+                collect_ids_from_value(v, out);
+            }
+        }
+        Value::Array(items) => {
+            for item in items {
+                collect_ids_from_value(item, out);
+            }
+        }
+        _ => {}
+    }
+}

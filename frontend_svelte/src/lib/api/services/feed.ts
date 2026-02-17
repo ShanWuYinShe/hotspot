@@ -10,9 +10,8 @@ import type {
 	UserItem,
 	TrendingBundle,
 	FeedSource,
+	DismissTargetType,
 	GeoPoint,
-	FeedContentType,
-	FeedFeedbackAction,
 	PaginationParams
 } from '$lib/types/api';
 
@@ -22,7 +21,7 @@ export const feedService = {
 	 */
 	getMoments(params: {
 		reference_point: GeoPoint;
-		source?: FeedSource;
+		source: FeedSource;
 		radius?: number;
 		pagination?: PaginationParams;
 	}) {
@@ -47,18 +46,13 @@ export const feedService = {
 	 * 获取热门内容
 	 */
 	getTrending() {
-		return post<TrendingBundle>(FEED.LIST_TRENDING);
+		return post<TrendingBundle>(FEED.LIST_TRENDING, {});
 	},
 
 	/**
-	 * 提交信息流反馈
+	 * 标记不感兴趣（⏳ 延期：后端尚未实现）
 	 */
-	submitFeedback(data: {
-		content_type: FeedContentType;
-		content_id: string;
-		action: FeedFeedbackAction;
-		reason?: string;
-	}) {
-		return post<void>(FEED.ME.FEEDBACK, data);
+	dismiss(data: { target_type: DismissTargetType; target_id: string }) {
+		return post<void>(FEED.ME.DISMISS, data);
 	}
 };

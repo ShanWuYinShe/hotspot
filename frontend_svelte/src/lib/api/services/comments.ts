@@ -2,7 +2,7 @@
  * 评论服务
  */
 
-import { post, paginate } from '../client';
+import { post, paginate, generateIdempotencyKey } from '../client';
 import { COMMENTS } from '../endpoints';
 import type { CommentItem, LikeItem, PaginationParams } from '$lib/types/api';
 
@@ -37,7 +37,7 @@ export const commentsService = {
 		parent_id?: string;
 		mentions?: string[];
 	}) {
-		return post<CommentItem>(COMMENTS.CREATE, data, { idempotencyKey: crypto.randomUUID() });
+		return post<CommentItem>(COMMENTS.CREATE, data, { idempotencyKey: generateIdempotencyKey() });
 	},
 
 	/**

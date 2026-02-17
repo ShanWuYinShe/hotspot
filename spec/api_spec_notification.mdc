@@ -36,19 +36,7 @@ alwaysApply: true
 
 ### 通知类型枚举
 
-```typescript
-type NotificationType =
-  | 'new_follower'                // 新关注者
-  | 'mutual_follow'              // 互相关注（成为好友）
-  | 'moment_liked'               // 瞬间被点赞
-  | 'moment_commented'           // 瞬间被评论
-  | 'comment_liked'              // 评论被点赞
-  | 'comment_reply'              // 评论被回复
-  | 'mentioned'                  // 在内容中被提及
-  | 'group_invite_received'      // 收到群组邀请
-  | 'group_application_accepted' // 入群申请通过
-  | 'system_announcement';       // 系统公告
-```
+`NotificationType` 定义于 `@spec/api_spec_types.mdc`。
 
 ### 通知负载（按 type 区分的联合类型）
 
@@ -146,7 +134,7 @@ interface MarkAsReadRequest {
 }
 ```
 
-**Response**: `ApiResponse<null>`
+**Response**: `ApiResponse`
 
 **错误码**: `10000`
 
@@ -161,6 +149,6 @@ interface MarkAsReadRequest {
 
 **Request**: 空对象 `{}`
 
-**Response**: `ApiResponse<null>`
+**Response**: `ApiResponse`
 
 **错误码**: `10000`

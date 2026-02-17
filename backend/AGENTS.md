@@ -173,6 +173,43 @@ let user = sqlx::query("SELECT * FROM users WHERE id = $1")
 - [ ] 是否遗漏了 MUST 幂等接口的幂等键支持？
 - [ ] 是否用 `#[allow(...)]` 压制了编译警告？
 
+## 文件删除与批量变更规则
+
+- Agent **不得自行删除**任何源代码文件。如需删除，须列出清单并说明原因，经用户确认后执行。
+- **批量修改**：当一次操作可能涉及**大量文件的修改、重命名或重构**时，Agent 必须先向用户展示完整的影响范围（受影响文件清单、变更摘要），经用户确认后才可执行。**禁止静默批量操作，必须给用户一个询问提示。**
+- **禁止的危险 Shell 命令**（可能导致源代码丢失）：`rm`、`rm -rf`、`mv`（批量）、`find ... -delete`、`xargs rm`。除非用户明确授权，否则一律禁止。
+- **禁止自行执行 `scripts/` 目录下的脚本**：须告知用户脚本内容和影响，经确认后才可运行。
+
+## 数据库操作安全
+
+> **Agent 禁止自行执行任何数据库重置或迁移命令。**
+
+以下操作 Agent **不得自行执行**，必须将命令和说明告知用户，由用户手动执行后将结果反馈给 Agent：
+
+- **数据库迁移**：`sqlx migrate run`、`sqlx migrate revert` 等。
+- **数据库重置**：`sqlx database reset`、`sqlx database drop`、`sqlx database create` 等。
+- **直连数据库执行 SQL**：`psql` 等数据库客户端命令。
+- **任何可能导致数据丢失或结构变更的数据库操作**。
+
+**正确流程**：
+- Agent 告诉用户需要执行什么命令、为什么需要执行。
+- 用户自行执行命令。
+- 用户将执行结果（成功或错误信息）反馈给 Agent。
+- Agent 根据结果继续后续工作。
+
+## Git 安全（极严格）
+
+> **所有 Git 写操作默认禁止，防止覆盖用户未提交的更改。**
+
+- **允许的只读查询**：`git status`、`git diff`、`git log`、`git show`、`git ls-files`。
+- **严格禁止的命令**（包括但不限于）：
+  `git checkout`, `git restore`, `git reset`, `git clean`, `git stash`,
+  `git add`, `git commit`, `git push`, `git pull`, `git merge`,
+  `git rebase`, `git cherry-pick`, `git revert`
+- **无例外**：上述命令除非用户在当前对话中**逐条明确指示**执行，否则一律禁止。
+- **危险参数禁令**：禁止使用 `--force`、`--hard`、`--no-verify` 等可能绕过检查的参数。
+- **子 Agent 同样受约束**：在调用子 Agent 时，必须在 prompt 中明确禁止其执行任何 Git 写操作。
+
 ## 验证命令
 
 ```bash

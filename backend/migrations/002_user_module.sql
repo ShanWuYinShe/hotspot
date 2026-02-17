@@ -6,13 +6,15 @@
 -- ─── 用户表 ─────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS users (
     user_id             BIGINT          PRIMARY KEY,  -- 应用层生成（Snowflake）
-    username            VARCHAR(50)     UNIQUE,       -- 登录 ID
+    username            VARCHAR(50)     NOT NULL UNIQUE,       -- 登录 ID
     email               VARCHAR(255)    UNIQUE,
     phone               VARCHAR(20)     UNIQUE,
     password_hash       VARCHAR(255),
-    nickname            VARCHAR(50)     NOT NULL,
+    nickname            VARCHAR(50),
     avatar_url          TEXT,
     bio                 TEXT,
+    gender              user_gender     NOT NULL DEFAULT 'male',
+    birthday            DATE,
     user_type           user_type       NOT NULL DEFAULT 'normal',
     status              user_status     NOT NULL DEFAULT 'normal',
     -- PostGIS 位置
@@ -45,7 +47,12 @@ CREATE TRIGGER tr_users_updated_at
 -- ─── 用户设置 ───────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS user_settings (
     user_id             BIGINT      PRIMARY KEY,
-    -- 隐私控制
+    language            VARCHAR(10) NOT NULL DEFAULT 'zh-CN',
+    theme               VARCHAR(20) NOT NULL DEFAULT 'system',
+    notifications_enabled BOOLEAN   NOT NULL DEFAULT TRUE,
+    privacy_settings    JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    preferences         JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    -- 隐私控制（legacy 字段，兼容旧版本）
     privacy_level       privacy_level NOT NULL DEFAULT 'public',
     location_visible    BOOLEAN     NOT NULL DEFAULT TRUE,
     presence_visible    BOOLEAN     NOT NULL DEFAULT TRUE,
@@ -146,6 +153,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     user_id                 BIGINT      NOT NULL,
     device_type             VARCHAR(50),
     device_name             VARCHAR(100),
+    device_fingerprint      TEXT,
     ip_address              INET,
     ip_location             VARCHAR(255),
     user_agent              TEXT,

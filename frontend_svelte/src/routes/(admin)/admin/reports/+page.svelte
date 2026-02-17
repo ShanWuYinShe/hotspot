@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { adminReportsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
+	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
@@ -18,42 +17,34 @@
 	import Check from 'lucide-svelte/icons/check';
 	import X from 'lucide-svelte/icons/x';
 
-	let reports = $state.raw<ReportItem[]>([]);
-	let isLoading = $state(true);
-	let cursor = $state<string | undefined>(undefined);
-	let hasMore = $state(false);
+	// ============ 分页 ============
+
+	const pagination = usePagination<ReportItem>({ uniqueKey: 'report_id' });
 	let statusFilter = $state<ReportStatus | 'all'>('pending');
 
-	async function loadReports(append = false) {
-		if (!append) isLoading = true;
-		try {
-			const response = append
-				? await adminReportsService.search({
-						status: statusFilter === 'all' ? undefined : statusFilter,
-						pagination: { limit: 20, cursor }
-					})
-				: await withMinimumLoadingTime(() =>
-						adminReportsService.search({
-							status: statusFilter === 'all' ? undefined : statusFilter,
-							pagination: { limit: 20, cursor: undefined }
-						})
-					);
-
-			if (isSuccess(response) && response.data) {
-				if (append) {
-					reports = [...reports, ...response.data.items];
-				} else {
-					reports = response.data.items;
-				}
-				cursor = response.data.next_cursor;
-				hasMore = !!response.data.next_cursor;
-			}
-		} catch {
-			toast.error('加载失败');
-		} finally {
-			isLoading = false;
-		}
+	function loadReports(refresh = true) {
+		pagination.load(
+			(cursor) =>
+				adminReportsService.search({
+					status: statusFilter === 'all' ? undefined : statusFilter,
+					pagination: { limit: 20, cursor }
+				}),
+			refresh
+		);
 	}
+
+	// 错误提示
+	$effect(() => {
+		if (pagination.error) toast.error(pagination.error);
+	});
+
+	// 筛选条件变化 → 自动刷新
+	$effect(() => {
+		statusFilter; // 依赖声明
+		loadReports();
+	});
+
+	// ============ 操作 ============
 
 	async function handleProcess(reportId: string, action: 'resolve' | 'dismiss') {
 		try {
@@ -64,8 +55,9 @@
 			});
 
 			if (isSuccess(response)) {
-				reports = reports.map(r =>
-					r.report_id === reportId ? { ...r, status: action === 'resolve' ? 'resolved' : 'dismissed' } : r
+				const newStatus: ReportStatus = action === 'resolve' ? 'resolved' : 'dismissed';
+				pagination.updateItem((r) =>
+					r.report_id === reportId ? { ...r, status: newStatus } : null
 				);
 				toast.success(action === 'resolve' ? '已处理' : '已驳回');
 			} else {
@@ -76,55 +68,36 @@
 		}
 	}
 
-	function getReasonText(reason: string): string {
-		const reasonMap: Record<string, string> = {
-			spam: '垃圾内容',
-			harassment: '骚扰',
-			violence: '暴力',
-			hate_speech: '仇恨言论',
-			sexual_content: '色情内容',
-			misinformation: '虚假信息',
-			impersonation: '冒充',
-			self_harm: '自残',
-			other: '其他'
-		};
-		return reasonMap[reason] || reason;
-	}
+	// ============ 常量 ============
 
-	function getTargetTypeText(type: string): string {
-		const typeMap: Record<string, string> = {
-			user: '用户',
-			moment: '瞬间',
-			comment: '评论',
-			group: '群组',
-			message: '消息'
-		};
-		return typeMap[type] || type;
-	}
+	type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
 
-	function getStatusBadge(status: ReportStatus) {
-		switch (status) {
-			case 'pending':
-				return { variant: 'secondary' as const, text: '待处理' };
-			case 'reviewing':
-				return { variant: 'default' as const, text: '审核中' };
-			case 'resolved':
-				return { variant: 'default' as const, text: '已处理' };
-			case 'dismissed':
-				return { variant: 'outline' as const, text: '已驳回' };
-			default:
-				return { variant: 'outline' as const, text: status };
-		}
-	}
+	const REASON_LABEL: Record<string, string> = {
+		spam: '垃圾内容',
+		harassment: '骚扰',
+		violence: '暴力',
+		hate_speech: '仇恨言论',
+		sexual_content: '色情内容',
+		misinformation: '虚假信息',
+		impersonation: '冒充',
+		self_harm: '自残',
+		other: '其他'
+	};
 
-	// Watch for filter changes
-	$effect(() => {
-		loadReports();
-	});
+	const TARGET_TYPE_LABEL: Record<string, string> = {
+		user: '用户',
+		moment: '瞬间',
+		comment: '评论',
+		group: '群组',
+		message: '消息'
+	};
 
-	onMount(() => {
-		// Initial load handled by $effect
-	});
+	const STATUS_BADGE: Record<ReportStatus, { variant: BadgeVariant; text: string }> = {
+		pending: { variant: 'secondary', text: '待处理' },
+		reviewing: { variant: 'default', text: '审核中' },
+		resolved: { variant: 'default', text: '已处理' },
+		dismissed: { variant: 'outline', text: '已驳回' }
+	};
 </script>
 
 <svelte:head>
@@ -134,8 +107,8 @@
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
 		<h1 class="text-2xl font-bold">举报审核</h1>
-		<Button variant="outline" size="sm" onclick={() => loadReports()} disabled={isLoading}>
-			<RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
+		<Button variant="outline" size="sm" onclick={() => loadReports()} disabled={pagination.loading}>
+			<RefreshCw class="mr-2 h-4 w-4 {pagination.loading ? 'animate-spin' : ''}" />
 			刷新
 		</Button>
 	</div>
@@ -181,9 +154,9 @@
 			</CardTitle>
 		</CardHeader>
 		<CardContent>
-			{#if isLoading && reports.length === 0}
+			{#if pagination.loading && pagination.items.length === 0}
 				<div class="space-y-4">
-					{#each Array(5) as _}
+					{#each Array(5) as _, i (i)}
 						<div class="rounded-lg border p-4">
 							<div class="flex items-center gap-4">
 								<Skeleton class="h-10 w-10 rounded-full" />
@@ -196,13 +169,14 @@
 						</div>
 					{/each}
 				</div>
-			{:else if reports.length === 0}
+			{:else if pagination.items.length === 0}
 				<div class="py-8 text-center text-muted-foreground">
 					{statusFilter === 'pending' ? '暂无待处理举报' : '暂无举报记录'}
 				</div>
 			{:else}
 				<div class="space-y-4">
-					{#each reports as report (report.report_id)}
+					{#each pagination.items as report (report.report_id)}
+						{@const badge = STATUS_BADGE[report.status]}
 						<div class="rounded-lg border p-4">
 							<div class="flex items-start justify-between gap-4">
 								<div class="flex items-start gap-3">
@@ -213,10 +187,10 @@
 										<div class="flex items-center gap-2">
 											<span class="font-medium">用户举报</span>
 											<span class="text-muted-foreground">举报了</span>
-											<Badge variant="outline">{getTargetTypeText(report.target_type)}</Badge>
+											<Badge variant="outline">{TARGET_TYPE_LABEL[report.target_type] ?? report.target_type}</Badge>
 										</div>
 										<div class="mt-1 flex items-center gap-2">
-											<Badge variant="secondary">{getReasonText(report.reason)}</Badge>
+											<Badge variant="secondary">{REASON_LABEL[report.reason] ?? report.reason}</Badge>
 											{#if report.description}
 												<span class="text-sm text-muted-foreground">{report.description}</span>
 											{/if}
@@ -227,8 +201,8 @@
 									</div>
 								</div>
 								<div class="flex items-center gap-2">
-									<Badge variant={getStatusBadge(report.status).variant}>
-										{getStatusBadge(report.status).text}
+									<Badge variant={badge.variant}>
+										{badge.text}
 									</Badge>
 
 									{#if report.status === 'pending'}
@@ -266,11 +240,11 @@
 					{/each}
 				</div>
 
-				{#if hasMore}
-					<Button variant="outline" class="mt-4 w-full" onclick={() => loadReports(true)}>
-						加载更多
-					</Button>
-				{/if}
+			{#if pagination.hasMore}
+				<Button variant="outline" class="mt-4 w-full" onclick={() => loadReports(false)}>
+					加载更多
+				</Button>
+			{/if}
 			{/if}
 		</CardContent>
 	</Card>

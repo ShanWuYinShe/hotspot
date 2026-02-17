@@ -5,6 +5,7 @@
 
 import { browser, dev } from '$app/environment';
 import { authStore } from '$lib/stores/auth.svelte';
+import { toast } from '$lib/stores/toast.svelte';
 import { untrack } from 'svelte';
 import type { 
 	ServerWebSocketEvent,
@@ -32,7 +33,7 @@ const JITTER_PERCENT = 0.2; // 抖动 ±20%
 
 // 最大重连次数（约 25 分钟后放弃）
 const MAX_RECONNECT_ATTEMPTS = 30;
-// 连续失败通知阈值
+// 连续失败多少次后提示用户（spec 要求）
 const CONSECUTIVE_FAILURE_THRESHOLD = 10;
 
 // ============ 连接状态 ============
@@ -78,10 +79,9 @@ class WebSocketStore {
 	
 	// 重连控制
 	private reconnectAttempts = 0;
-	private consecutiveFailures = 0; // 连续失败次数（用于用户通知）
 	private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 	private shouldReconnect = true;
-	private userNotified = false; // 是否已通知用户
+	private userNotifiedUnstable = false; // 是否已提示"连接不稳定"
 
 	// 心跳控制
 	private pingTimer: ReturnType<typeof setInterval> | null = null;
@@ -96,13 +96,12 @@ class WebSocketStore {
 	
 	// 全局事件监听器引用（用于清理）
 	private visibilityChangeHandler: (() => void) | null = null;
-
-	// 事件去重：维护最近 1000 个已处理的 event_id
-	private processedEventIds = new Set<string>();
-	private readonly MAX_PROCESSED_EVENT_IDS = 1000;
+	private onlineHandler: (() => void) | null = null;
+	// $effect.root() 清理函数
+	private destroyEffectRoot: (() => void) | null = null;
 
 	// 服务端配置（从 ConnectionEstablished 获取）
-	private serverConfig = $state<{
+	private serverConfig = $state.raw<{
 		ping_interval: number;
 		ping_timeout: number;
 		max_subscriptions: {
@@ -111,8 +110,10 @@ class WebSocketStore {
 		};
 	} | null>(null);
 
-	// serverTime 保留于注释中，未来用于断线恢复逻辑
-	private disconnectTime = 0; // 断开时间戳
+	// 上次断开时的服务端时间（UTC ISO 8601），用于重连后计算断开时长
+	private lastServerTime: string | null = null;
+	// 断开时间戳（客户端本地），仅在 lastServerTime 不可用时回退使用
+	private disconnectTime = 0;
 
 	// 防止并发连接的锁
 	private connectingLock = false;
@@ -130,10 +131,11 @@ class WebSocketStore {
 		log('[WebSocket] 初始化自动生命周期管理');
 
 		// 使用 $effect.root() 在模块顶层创建 effect（独立于组件生命周期）
-		$effect.root(() => {
+		this.destroyEffectRoot = $effect.root(() => {
 			// 监听认证状态变化，自动管理连接
 			$effect(() => {
-				const isAuthenticated = authStore.isAuthenticated && !!authStore.currentAccount?.access_token;
+				// Web 端使用 Cookie 鉴权，access_token 可能不在 store 中
+				const isAuthenticated = authStore.isAuthenticated;
 
 				log('[WebSocket] 认证状态变化:', isAuthenticated);
 
@@ -169,11 +171,14 @@ class WebSocketStore {
 				log('[WebSocket] 页面显示');
 				// 页面重新显示时，检查连接是否需要恢复
 				untrack(() => {
-					const isAuthenticated = authStore.isAuthenticated && !!authStore.currentAccount?.access_token;
+					const isAuthenticated = authStore.isAuthenticated;
 					const state = this.connectionState;
 
-					if (isAuthenticated && state === 'failed') {
+					if (isAuthenticated && (state === 'failed' || state === 'disconnected')) {
 						log('[WebSocket] 页面显示，尝试恢复连接');
+						// spec: 页面重新可见 → 重置退避计数，从 1s 重新开始
+						this.reconnectAttempts = 0;
+						this.userNotifiedUnstable = false;
 						this.connect();
 					}
 				});
@@ -182,10 +187,30 @@ class WebSocketStore {
 
 		document.addEventListener('visibilitychange', this.visibilityChangeHandler);
 
+		// 监听网络恢复事件（spec 要求：网络状态变化触发重连）
+		this.onlineHandler = () => {
+			log('[WebSocket] 网络恢复');
+			untrack(() => {
+				const isAuthenticated = authStore.isAuthenticated;
+				const state = this.connectionState;
+
+				if (isAuthenticated && (state === 'failed' || state === 'disconnected')) {
+					log('[WebSocket] 网络恢复，尝试重连');
+					// spec: 手动重连/页面重新可见 → 重置退避计数，从 1s 重新开始
+					this.reconnectAttempts = 0;
+					this.userNotifiedUnstable = false;
+					this.connect();
+				}
+			});
+		};
+
+		window.addEventListener('online', this.onlineHandler);
+
 		// 暴露调试方法到浏览器控制台（仅开发环境）
 		if (dev && typeof window !== 'undefined') {
-			(window as any).__debugWebSocket = () => this.debug();
-			(window as any).__wsStore = this;
+			const debugWindow = window as Window & { __debugWebSocket?: () => void; __wsStore?: WebSocketStore };
+			debugWindow.__debugWebSocket = () => this.debug();
+			debugWindow.__wsStore = this;
 		}
 	}
 
@@ -217,8 +242,8 @@ class WebSocketStore {
 			return;
 		}
 
-		// 防护 4: 认证检查
-		if (!authStore.isAuthenticated || !authStore.currentAccount?.access_token) {
+		// 防护 4: 认证检查（Web 端使用 Cookie 鉴权，不依赖 access_token 是否在 store 中）
+		if (!authStore.isAuthenticated) {
 			warn('[WebSocket] 未登录，无法建立连接');
 			return;
 		}
@@ -238,8 +263,6 @@ class WebSocketStore {
 		// 手动触发连接（非重连循环）时重置重连计数器
 		if (this.connectionState === 'failed' || this.connectionState === 'disconnected') {
 			this.reconnectAttempts = 0;
-			this.consecutiveFailures = 0;
-			this.userNotified = false;
 		}
 
 		// 确定 WebSocket URL
@@ -272,6 +295,7 @@ class WebSocketStore {
 		this.shouldReconnect = false;
 		this.reconnectAttempts = 0; // 重置重连次数
 		this.connectingLock = false; // 释放连接锁
+		this.pendingMessages = []; // 清空待发送队列，防止旧会话消息在重连后被错误发送
 		this.cleanup();
 		this.connectionState = 'disconnected';
 	}
@@ -299,17 +323,17 @@ class WebSocketStore {
 
 	/**
 	 * 监听 WebSocket 事件（类型安全版本）
-	 * 返回取消监听的函数（符合 Svelte 清理模式）
+	 * 返回取消监听的函数（符合 Svelte 5 $effect 清理模式）
 	 * 
 	 * @example
 	 * ```ts
-	 * // 现在 payload 会自动推断类型！
-	 * const unsubscribe = websocketStore.on('PrivateMessageNew', (payload) => {
-	 *   log('收到新消息:', payload.message_id);
+	 * // 在 $effect 中使用，payload 会自动推断类型
+	 * $effect(() => {
+	 *   const unsubscribe = websocketStore.on('PrivateMessageNew', (payload) => {
+	 *     console.log('收到新消息:', payload.message_id);
+	 *   });
+	 *   return unsubscribe; // $effect 清理时自动取消监听
 	 * });
-	 * 
-	 * // 在组件卸载时取消监听
-	 * onDestroy(unsubscribe);
 	 * ```
 	 */
 	on<K extends keyof WebSocketEventMap>(
@@ -358,8 +382,7 @@ class WebSocketStore {
 			log('[WebSocket] 连接已建立，开始鉴权...');
 			this.connectionState = 'authenticating';
 			this.reconnectAttempts = 0; // 重置重连次数
-			this.consecutiveFailures = 0; // 重置连续失败次数
-			this.userNotified = false; // 重置通知状态
+			this.userNotifiedUnstable = false; // 重置通知标记
 			this.authenticate();
 		};
 
@@ -398,17 +421,16 @@ class WebSocketStore {
 
 	/**
 	 * 鉴权
+	 * spec: Web 端使用 HttpOnly Cookie 中的 access_token 完成鉴权，Auth 事件不携带 token
 	 */
 	private authenticate() {
-		// Web 端 access_token 在 Cookie 中，可选传递
-		const accessToken = authStore.currentAccount?.access_token;
-
-		// 发送鉴权消息（spec: client_type 必填，access_token Web 端不传）
+		// Web 端：access_token 通过 HttpOnly Cookie 自动携带（WebSocket 握手时）
+		// spec 明确要求 Web 端 Auth 事件不传 access_token
 		const authEvent: ClientEvent = {
 			type: 'Auth',
 			payload: {
-				client_type: 'web',
-				access_token: accessToken || undefined
+				client_type: 'web'
+				// Web 端不传 access_token，由 Cookie 完成鉴权
 			}
 		};
 
@@ -423,31 +445,11 @@ class WebSocketStore {
 	}
 
 	/**
-	 * 处理服务端事件（带 event_id 去重）
+	 * 处理服务端事件
+	 * 去重职责下移到业务层，由消费方根据业务主键判断（如 message_id）
 	 */
 	private handleServerEvent(event: ServerWebSocketEvent) {
-		// 检查 event_id 去重
-		if (this.processedEventIds.has(event.event_id)) {
-			warn(`[WebSocket] 重复事件已忽略: ${event.event_id} (${event.type})`);
-			return;
-		}
-
-		// 记录已处理的事件 ID
-		this.processedEventIds.add(event.event_id);
-		
-		// 维护最近 1000 个 event_id
-		if (this.processedEventIds.size > this.MAX_PROCESSED_EVENT_IDS) {
-			// 删除最旧的（FIFO，但 Set 没有顺序，这里简化处理：清空重建）
-			// 实际场景中，可以使用 LRU Cache 或循环队列
-			const ids = Array.from(this.processedEventIds);
-			this.processedEventIds.clear();
-			// 保留最后 1000 个
-			ids.slice(-this.MAX_PROCESSED_EVENT_IDS).forEach(id => {
-				this.processedEventIds.add(id);
-			});
-		}
-
-		log('[WebSocket] 收到事件:', event.type, 'event_id:', event.event_id);
+		log('[WebSocket] 收到事件:', event.type);
 
 		switch (event.type) {
 			case 'ConnectionEstablished':
@@ -480,16 +482,24 @@ class WebSocketStore {
 		// 保存服务端配置
 		this.serverConfig = payload.config;
 
-		// 计算断开时长（如果之前有断开时间）
-		if (this.disconnectTime > 0) {
-			const disconnectDuration = Date.now() - this.disconnectTime;
-			log(`[WebSocket] 断开时长: ${(disconnectDuration / 1000).toFixed(1)}秒`);
-			
+		// 计算断开时长（spec: 使用 server_time 与上次记录的 lastServerTime 比较）
+		if (this.lastServerTime) {
+			const lastServerMs = new Date(this.lastServerTime).getTime();
+			const currentServerMs = new Date(payload.server_time).getTime();
+			const disconnectDuration = currentServerMs - lastServerMs;
+			log(`[WebSocket] 断开时长: ${(disconnectDuration / 1000).toFixed(1)}秒（基于 server_time）`);
+
 			// 断开超过 10 秒，建议通过 HTTP API 补拉离线数据
 			if (disconnectDuration > 10000) {
 				log('[WebSocket] 断开超过 10 秒，建议补拉离线数据');
 			}
+		} else if (this.disconnectTime > 0) {
+			// 首次连接或 lastServerTime 不可用时回退到客户端时间
+			const disconnectDuration = Date.now() - this.disconnectTime;
+			log(`[WebSocket] 断开时长: ${(disconnectDuration / 1000).toFixed(1)}秒（基于客户端时间）`);
 		}
+		// 记录本次服务端时间，用于下次断线恢复
+		this.lastServerTime = payload.server_time;
 
 		log('[WebSocket] 连接已建立:', {
 			connection_id: payload.connection_id,
@@ -523,17 +533,40 @@ class WebSocketStore {
 	}
 
 	/**
-	 * 处理服务端错误（类型安全！）
+	 * 处理服务端错误（按 severity 分级处理）
+	 * spec 要求：
+	 * - fatal: 断开连接，清除会话，不重连
+	 * - recoverable: 按 retry_after 重试，保持连接
+	 * - warning: 仅提示，保持连接
 	 */
 	private handleServerError(payload: ErrorPayload) {
 		logError('[WebSocket] 服务端错误:', payload);
 		this.lastError = payload.message ?? '未知错误';
 		this.emitEvent('Error', payload);
 
-		// 鉴权失败或严重错误，断开连接
-		if (payload.code === 20001) {
-			this.shouldReconnect = false;
-			this.cleanup();
+		switch (payload.severity) {
+			case 'fatal':
+				// spec: Fatal → 断开连接，清除会话，提示用户重新登录，不重连
+				warn('[WebSocket] 致命错误，断开连接不重连:', payload.message);
+				this.shouldReconnect = false;
+				this.cleanup();
+				this.connectionState = 'failed';
+				// 清除会话并提示用户
+				toast.error(payload.message || '会话已失效，请重新登录');
+				authStore.logout();
+				break;
+
+			case 'recoverable':
+				// 可恢复错误（临时错误、限流等）：提示重试
+				if (payload.retryable && payload.retry_after) {
+					log(`[WebSocket] 可恢复错误，${payload.retry_after}秒后重试`);
+				}
+				break;
+
+			case 'warning':
+				// 警告（订阅失败、权限不足等）：仅提示
+				warn('[WebSocket] 警告:', payload.message);
+				break;
 		}
 	}
 
@@ -661,10 +694,8 @@ class WebSocketStore {
 			this.shouldReconnect = false;
 			this.connectionState = 'failed';
 			this.connectingLock = false;
-			this.emitEvent('ConnectionFailed', {
-				message: '连接失败，请检查网络后重试',
-				attempts: this.reconnectAttempts
-			});
+			// spec: 达到最大重连次数后通知用户"连接失败，请检查网络"
+			toast.error('连接失败，请检查网络后重试');
 			return;
 		}
 
@@ -673,17 +704,15 @@ class WebSocketStore {
 		// 计算延迟（带抖动）
 		const delay = this.getReconnectDelay(this.reconnectAttempts);
 		this.reconnectAttempts++;
-		this.consecutiveFailures++;
 
-		// 连续失败 10 次后提示用户
-		if (this.consecutiveFailures >= CONSECUTIVE_FAILURE_THRESHOLD && !this.userNotified) {
-			this.userNotified = true;
-			this.notifyUserConnectionIssue();
-			warn('[WebSocket] 连续失败次数达到阈值，已通知用户');
+		// spec: 连续失败 10 次后提示用户"连接不稳定，正在重试"
+		if (this.reconnectAttempts >= CONSECUTIVE_FAILURE_THRESHOLD && !this.userNotifiedUnstable) {
+			this.userNotifiedUnstable = true;
+			toast.warning('连接不稳定，正在重试…');
 		}
 
 		log(
-			`[WebSocket] ${delay.toFixed(1)}秒后重连（第 ${this.reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} 次，连续失败 ${this.consecutiveFailures} 次）`
+			`[WebSocket] ${delay.toFixed(1)}秒后重连（第 ${this.reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} 次）`
 		);
 
 		this.reconnectTimer = setTimeout(() => {
@@ -701,17 +730,6 @@ class WebSocketStore {
 		const jitter = baseDelay * JITTER_PERCENT * (Math.random() * 2 - 1); // ±20%
 		const finalDelay = Math.min(baseDelay + jitter, MAX_DELAY);
 		return Math.max(finalDelay, 0.1); // 最小 0.1 秒
-	}
-
-	/**
-	 * 通知用户连接问题
-	 */
-	private notifyUserConnectionIssue() {
-		// 触发自定义事件，让 UI 层显示通知
-		this.emitEvent('ConnectionIssue', {
-			message: '网络连接不稳定，正在尝试重连...',
-			consecutiveFailures: this.consecutiveFailures
-		});
 	}
 
 	/**
@@ -742,12 +760,23 @@ class WebSocketStore {
 		
 		// 清理 WebSocket 连接和定时器
 		this.shouldReconnect = false;
+		this.pendingMessages = []; // 清空待发送队列
 		this.cleanup();
 		
 		// 移除全局事件监听器
 		if (this.visibilityChangeHandler) {
 			document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
 			this.visibilityChangeHandler = null;
+		}
+		if (this.onlineHandler) {
+			window.removeEventListener('online', this.onlineHandler);
+			this.onlineHandler = null;
+		}
+		
+		// 清理 $effect.root()
+		if (this.destroyEffectRoot) {
+			this.destroyEffectRoot();
+			this.destroyEffectRoot = null;
 		}
 		
 		// 清空所有事件监听器

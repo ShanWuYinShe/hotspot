@@ -6,20 +6,19 @@ use crate::{
             AcceptInviteRequest, AdminDismissGroupRequest, AdminGroupDetailRequest,
             AdminGroupSearchRequest, ApproveGroupApplicationRequest, BanMemberRequest,
             BannedMembersRequest, CancelApplicationRequest, CreateGroupAnnouncementRequest,
-            CreateGroupChatRequest, DeleteGroupAnnouncementRequest, GeoPoint,
-            GroupAnnouncementsRequest, GroupApplicationsRequest, GroupMembersRequest,
-            GroupOpenTheDoorRequest, InviteMemberRequest, JoinGroupRequest, LeaveGroupRequest,
-            MuteMemberRequest, MyGroupChatsRequest, MyInvitesRequest,
+            CreateGroupChatRequest, DeleteGroupAnnouncementRequest, GroupAnnouncementsRequest,
+            GroupApplicationsRequest, GroupMembersRequest, GroupOpenTheDoorRequest,
+            InviteMemberRequest, JoinGroupRequest, LeaveGroupRequest, MuteMemberRequest,
+            MyApplicationsRequest, MyGroupChatsRequest, MyInvitesRequest,
             RejectGroupApplicationRequest, RejectInviteRequest, RemoveMemberRequest,
-            SearchGroupMembersRequest, SearchGroupsByKeywordRequest, SearchGroupsByLocationRequest,
-            SearchGroupsByTagRequest, SearchGroupsRequest, SetMemberRoleRequest,
+            SearchGroupMembersRequest, SearchGroupsRequest, SetMemberRoleRequest,
             TransferOwnershipRequest, UnbanMemberRequest, UnmuteMemberRequest,
             UpdateGroupAnnouncementRequest, UpdateGroupChatRequest, UpdateGroupMySettingsRequest,
         },
         response::{
-            AdminGroupDetail, AdminGroupSearchItem, ApiResponse, BannedMemberItem,
-            GroupAnnouncementItem, GroupApplicationItem, GroupDetailData, GroupInviteItem,
-            GroupMemberItem, GroupSearchItem, InviteMemberData, MyGroupItem, PaginatedData,
+            AdminGroupItem, ApiResponse, BannedMemberItem, GroupAnnouncementItem,
+            GroupApplicationItem, GroupInviteItem, GroupItem, GroupMemberItem, InviteMemberData,
+            JoinGroupResult, MyApplicationItem, PaginatedData,
         },
     },
     error::Result,
@@ -34,48 +33,12 @@ use crate::{
 pub async fn search(
     State(state): State<AppState>,
     Json(req): Json<SearchGroupsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<GroupSearchItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<GroupItem>>>> {
     let sort_by = req.sort_by.as_deref().unwrap_or("relevance");
     tracing::debug!(sort_by = %sort_by, "Search sort parameter");
 
-    let reference_point = req.reference_point.unwrap_or(GeoPoint {
-        latitude: 0.0,
-        longitude: 0.0,
-    });
-
-    if let Some(radius) = req.radius {
-        let location_req = SearchGroupsByLocationRequest {
-            kw: req.keyword,
-            reference_point,
-            radius,
-            limit: req.limit,
-            cursor: req.cursor,
-        };
-        let response = state.group_service.search_by_location(location_req).await?;
-        Ok(Json(ApiResponse::success(response)))
-    } else if let Some(tag) = req.tag {
-        let tag_req = SearchGroupsByTagRequest {
-            tag,
-            reference_point,
-            limit: req.limit,
-            cursor: req.cursor,
-        };
-        let response = state.group_service.search_by_tag(tag_req).await?;
-        Ok(Json(ApiResponse::success(response)))
-    } else if let Some(keyword) = req.keyword {
-        let kw_req = SearchGroupsByKeywordRequest {
-            kw: keyword,
-            reference_point,
-            limit: req.limit,
-            cursor: req.cursor,
-        };
-        let response = state.group_service.search_by_keyword(kw_req).await?;
-        Ok(Json(ApiResponse::success(response)))
-    } else {
-        Err(crate::error::AppError::BadRequest(
-            "至少需要提供 keyword、tag、radius 中的一个搜索条件".to_string(),
-        ))
-    }
+    let response = state.group_service.search(&req).await?;
+    Ok(Json(ApiResponse::success(response)))
 }
 
 /// 搜索群组成员
@@ -92,15 +55,16 @@ pub async fn search_members(
 }
 
 /// 我的入群申请列表
-/// TODO: 需要在 GroupService 中实现 get_my_applications 方法
 pub async fn my_applications(
-    State(_state): State<AppState>,
-    _user: AuthenticatedUser,
-    Json(_req): Json<GroupApplicationsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<GroupApplicationItem>>>> {
-    Err(crate::error::AppError::InternalError(
-        "我的入群申请列表功能尚未实现".to_string(),
-    ))
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    Json(req): Json<MyApplicationsRequest>,
+) -> Result<Json<ApiResponse<PaginatedData<MyApplicationItem>>>> {
+    let response = state
+        .group_service
+        .get_my_applications(user.user_id, req)
+        .await?;
+    Ok(Json(ApiResponse::success(response)))
 }
 
 /// 获取群组详情（通过 ID 获取指定群组的详情）
@@ -112,10 +76,10 @@ pub async fn open_the_door(
     State(state): State<AppState>,
     user: OptionalAuthenticatedUser,
     Json(req): Json<GroupOpenTheDoorRequest>,
-) -> Result<Json<ApiResponse<GroupDetailData>>> {
+) -> Result<Json<ApiResponse<GroupItem>>> {
     tracing::info!(
         "open_the_door: group_id={}, user_id={:?}",
-        req.group_chat_id,
+        req.group_id,
         user.user_id
     );
 
@@ -156,7 +120,7 @@ pub async fn me(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<MyGroupChatsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MyGroupItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<GroupItem>>>> {
     let response = state.group_service.get_joined(user.user_id, req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -206,9 +170,9 @@ pub async fn join(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<JoinGroupRequest>,
-) -> Result<Json<ApiResponse<()>>> {
-    state.group_service.join_group(user.user_id, req).await?;
-    Ok(Json(ApiResponse::success_empty()))
+) -> Result<Json<ApiResponse<JoinGroupResult>>> {
+    let result = state.group_service.join_group(user.user_id, req).await?;
+    Ok(Json(ApiResponse::success(result)))
 }
 
 pub async fn set_role(
@@ -370,7 +334,7 @@ pub async fn reject_invite(
 pub async fn admin_search(
     State(state): State<AppState>,
     Json(req): Json<AdminGroupSearchRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<AdminGroupSearchItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<AdminGroupItem>>>> {
     let response = state.group_service.admin_search_groups(&req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -379,12 +343,8 @@ pub async fn admin_detail(
     State(state): State<AppState>,
     _admin: AuthenticatedUser,
     Json(req): Json<AdminGroupDetailRequest>,
-) -> Result<Json<ApiResponse<AdminGroupDetail>>> {
-    let mut detail = state.group_service.admin_group_detail(&req).await?;
-    detail.dismissal_history = state
-        .admin_audit_service
-        .get_group_dismissal_history(&req.group_chat_id)
-        .await?;
+) -> Result<Json<ApiResponse<AdminGroupItem>>> {
+    let detail = state.group_service.admin_group_detail(&req).await?;
     Ok(Json(ApiResponse::success(detail)))
 }
 
@@ -402,18 +362,12 @@ pub async fn admin_dismiss(
     });
     state
         .admin_audit_service
-        .record(AuditLogInput {
-            action: "group.dismiss".to_string(),
-            operator_id: admin.user_id,
-            target_type: "group".to_string(),
-            target_id: req.group_chat_id.clone(),
-            target_name: None,
-            details: Some(details),
-            before_state: None,
-            after_state: None,
-            ip_address: None,
-            user_agent: None,
-        })
+        .record(AuditLogInput::group_action(
+            admin.user_id,
+            "group.dismiss",
+            &req.group_id,
+            Some(details),
+        ))
         .await?;
     Ok(Json(ApiResponse::success_empty()))
 }

@@ -8,6 +8,7 @@
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import { momentsService, mediaService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
+	import { parseTags } from '$lib/utils/format';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
@@ -35,7 +36,7 @@
 	let isSubmitting = $state(false);
 	let isUploadingImages = $state(false);
 	let showLocationPicker = $state(false);
-	let selectedImages = $state<
+	let selectedImages = $state.raw<
 		{
 			file: File;
 			previewUrl: string;
@@ -47,13 +48,7 @@
 
 	const MAX_IMAGES = 9;
 
-	const tags = $derived(
-		tagsInput
-			.split(/[,，\s]+/)
-			.map((tag) => tag.replace(/^#/, '').trim())
-			.filter(Boolean)
-			.slice(0, 10)
-	);
+	const tags = $derived(parseTags(tagsInput));
 
 	function resetForm() {
 		description = '';

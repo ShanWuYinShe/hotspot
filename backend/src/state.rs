@@ -12,7 +12,7 @@ use crate::{
     repositories::{
         admin_audit_repo::AdminAuditRepository, admin_rbac_repo::AdminRbacRepository,
         announcement_repo::AnnouncementRepository, chat_unread_repo::ChatUnreadRepository,
-        comment_repo::CommentRepository, follow_request_repo::FollowRequestRepository,
+        comment_repo::CommentRepository, dismiss_repo::FeedDismissRepository,
         group_announcement_repo::GroupAnnouncementRepository,
         group_application_repo::GroupApplicationRepository, group_bans_repo::GroupBansRepository,
         group_invite_repo::GroupInviteRepository,
@@ -20,11 +20,11 @@ use crate::{
         group_member_repo::GroupMemberRepository, group_message_repo::GroupMessageRepository,
         group_repo::GroupRepository, group_settings_repo::GroupSettingsRepository,
         map_repo::MapRepository, moment_repo::MomentRepository,
-        notification_repo::NotificationRepository,
-        private_chat_repo::PrivateChatRepository, private_message_repo::PrivateMessageRepository,
-        report_repo::ReportRepository, session_repo::SessionRepository,
-        system_config_repo::SystemConfigRepository, tag_repo::TagRepository,
-        user_blocks_repo::UserBlocksRepository, user_follows_repo::UserFollowsRepository,
+        notification_repo::NotificationRepository, private_chat_repo::PrivateChatRepository,
+        private_message_repo::PrivateMessageRepository, report_repo::ReportRepository,
+        session_repo::SessionRepository, system_config_repo::SystemConfigRepository,
+        tag_repo::TagRepository, user_blocks_repo::UserBlocksRepository,
+        user_follows_repo::UserFollowsRepository,
         user_friend_remarks_repo::UserFriendRemarksRepository,
         user_location_history_repo::UserLocationHistoryRepository,
         user_online_status_repo::UserOnlineStatusRepository, user_repo::UserRepository,
@@ -37,10 +37,11 @@ use crate::{
         group_message_service::GroupMessageService, group_service::GroupService,
         map_service::MapService, media_service::MediaService, moment_service::MomentService,
         notification_service::NotificationService, presence_service::PresenceService,
-        private_chat_service::PrivateChatService,
-        private_message_service::PrivateMessageService, report_service::ReportService,
-        search_service::SearchService, system_config_service::SystemConfigService,
-        tag_service::TagService, user_service::UserService,
+        private_chat_service::PrivateChatService, private_message_service::PrivateMessageService,
+        report_service::ReportService, search_service::SearchService, share_service::ShareService,
+        stranger_message_limiter::StrangerMessageLimiter,
+        system_config_service::SystemConfigService, tag_service::TagService,
+        user_service::UserService,
     },
     utils::cache_invalidation::{start_invalidation_listener, InvalidationEvent},
     websocket::{
@@ -82,6 +83,7 @@ pub struct AppState {
     pub tag_service: TagService,
     pub feed_service: FeedService,
     pub report_service: ReportService,
+    pub share_service: ShareService,
     pub system_config_service: SystemConfigService,
     pub presence_service: PresenceService,
     pub admin_rbac_service: AdminRbacService,
@@ -235,13 +237,13 @@ impl AppState {
         let private_chat_repo = PrivateChatRepository::new(db.clone());
         let private_message_repo = PrivateMessageRepository::new(db.clone());
         let report_repo = ReportRepository::new(db.clone());
+        let feed_dismiss_repo = FeedDismissRepository::new(db.clone());
         let session_repo = SessionRepository::new(db.clone());
         // subscription_repo not yet implemented
         let system_config_repo = SystemConfigRepository::new(db.clone());
         let tag_repo = TagRepository::new(db.clone());
         let user_blocks_repo = UserBlocksRepository::new(db.clone());
         let user_follows_repo = UserFollowsRepository::new(db.clone());
-        let follow_request_repo = FollowRequestRepository::new(db.clone());
         let user_friend_remarks_repo = UserFriendRemarksRepository::new(db.clone());
         let user_location_history_repo = UserLocationHistoryRepository::new(db.clone());
         let user_online_status_repo = UserOnlineStatusRepository::new(db.clone());
@@ -263,7 +265,6 @@ impl AppState {
             redis.clone(),
             user_online_status_repo.clone(),
             user_settings_repo.clone(),
-            user_repo.clone(),
         );
 
         let auth_service = AuthService::new(
@@ -286,7 +287,6 @@ impl AppState {
             user_settings_repo.clone(),
             user_location_history_repo.clone(),
             user_follows_repo.clone(),
-            follow_request_repo.clone(),
             user_blocks_repo.clone(),
             user_friend_remarks_repo.clone(),
             session_repo.clone(),
@@ -329,6 +329,7 @@ impl AppState {
             group_settings_repo.clone(),
             group_announcement_repo.clone(),
             tag_repo.clone(),
+            report_repo.clone(),
             user_repo.clone(),
             chat_unread_repo.clone(),
             media_service.clone(),
@@ -346,6 +347,11 @@ impl AppState {
             media_service.clone(),
         );
 
+        let stranger_limiter = StrangerMessageLimiter::new(
+            redis.clone(),
+            crate::constants::STRANGER_MESSAGE_LIMIT_PER_DAY,
+        );
+
         let private_chat_service = PrivateChatService::new(
             private_chat_repo.clone(),
             user_settings_repo.clone(),
@@ -355,6 +361,8 @@ impl AppState {
             private_message_repo.clone(),
             chat_unread_repo.clone(),
             presence_service.clone(),
+            media_service.clone(),
+            stranger_limiter.clone(),
             cache_manager.clone(),
         );
 
@@ -365,18 +373,24 @@ impl AppState {
             user_repo.clone(),
             chat_unread_repo.clone(),
             user_blocks_repo.clone(),
+            user_settings_repo.clone(),
+            user_follows_repo.clone(),
             media_service.clone(),
+            stranger_limiter.clone(),
         );
 
-        let tag_service = TagService::new(tag_repo.clone(), cache_manager.clone());
+        let tag_service = TagService::new(tag_repo.clone());
 
         let feed_service = FeedService::new(
             moment_repo.clone(),
             user_repo.clone(),
             group_repo.clone(),
             tag_repo.clone(),
+            user_follows_repo.clone(),
+            group_member_repo.clone(),
             presence_service.clone(),
             media_service.clone(),
+            feed_dismiss_repo.clone(),
         );
 
         let report_service = ReportService::new(
@@ -387,6 +401,7 @@ impl AppState {
             group_repo.clone(),
             private_message_repo.clone(),
             group_message_repo.clone(),
+            media_service.clone(),
         );
 
         let system_config_service = SystemConfigService::new(
@@ -411,8 +426,9 @@ impl AppState {
 
         let announcement_service = AnnouncementService::new(
             announcement_repo.clone(),
-            event_bus.clone(),
+            user_repo.clone(),
             media_service.clone(),
+            event_bus.clone(),
         );
 
         let search_service = SearchService::new(
@@ -422,6 +438,9 @@ impl AppState {
             moment_repo.clone(),
             media_service.clone(),
         );
+
+        let share_service =
+            ShareService::new(db.clone(), std::sync::Arc::new(media_service.clone()));
 
         tracing::debug!("All services initialized");
 
@@ -468,6 +487,7 @@ impl AppState {
             tag_service,
             feed_service,
             report_service,
+            share_service,
             system_config_service,
             presence_service,
             admin_rbac_service,
@@ -478,6 +498,23 @@ impl AppState {
             revoked_sessions,
         })
     }
+}
+
+macro_rules! warmup_ids_loop {
+    ($last_var:ident, $repo:expr, $list_fn:ident, $checker:expr, $sync_fn:ident, $batch:expr) => {
+        let mut $last_var = 0i64;
+        loop {
+            let rows = $repo.$list_fn($last_var, $batch).await?;
+            if rows.is_empty() {
+                break;
+            }
+            let ids: Vec<String> = rows.iter().map(|(_, x)| x.to_string()).collect();
+            $checker.$sync_fn(&ids).await?;
+            if let Some((last_id, _)) = rows.last() {
+                $last_var = *last_id;
+            }
+        }
+    };
 }
 
 async fn warmup_bloom_filters(
@@ -496,8 +533,11 @@ async fn warmup_bloom_filters(
     let user_repo = UserRepository::new(db.clone());
     let group_repo = GroupRepository::new(db.clone());
     let moment_repo = MomentRepository::new(db.clone());
+    let comment_repo = CommentRepository::new(db.clone());
+    let group_message_repo = GroupMessageRepository::new(db.clone());
+    let private_message_repo = PrivateMessageRepository::new(db.clone());
 
-    // 用户
+    // 用户（sync_users 接受 &[i64]，与其他实体不同）
     let mut last_user_id = 0;
     loop {
         let ids = user_repo
@@ -512,88 +552,47 @@ async fn warmup_bloom_filters(
         }
     }
 
-    // 群组
-    let mut last_group_row_id = 0;
-    loop {
-        let rows = group_repo
-            .list_group_ids_after(last_group_row_id, BATCH_SIZE)
-            .await?;
-        if rows.is_empty() {
-            break;
-        }
-        let group_ids: Vec<String> = rows.iter().map(|(_, gid)| gid.to_string()).collect();
-        checker.sync_groups(&group_ids).await?;
-        if let Some((last_id, _)) = rows.last() {
-            last_group_row_id = *last_id;
-        }
-    }
-
-    // 瞬间
-    let mut last_moment_row_id = 0;
-    loop {
-        let rows = moment_repo
-            .list_moment_ids_after(last_moment_row_id, BATCH_SIZE)
-            .await?;
-        if rows.is_empty() {
-            break;
-        }
-        let moment_ids: Vec<String> = rows.iter().map(|(_, mid)| mid.to_string()).collect();
-        checker.sync_moments(&moment_ids).await?;
-        if let Some((last_id, _)) = rows.last() {
-            last_moment_row_id = *last_id;
-        }
-    }
-
-    // 评论
-    let comment_repo = CommentRepository::new(db.clone());
-    let mut last_comment_row_id = 0;
-    loop {
-        let rows = comment_repo
-            .list_comment_ids_after(last_comment_row_id, BATCH_SIZE)
-            .await?;
-        if rows.is_empty() {
-            break;
-        }
-        let comment_ids: Vec<String> = rows.iter().map(|(_, cid)| cid.to_string()).collect();
-        checker.sync_comments(&comment_ids).await?;
-        if let Some((last_id, _)) = rows.last() {
-            last_comment_row_id = *last_id;
-        }
-    }
-
-    // 消息（群聊消息 + 私聊消息）
-    let group_message_repo = GroupMessageRepository::new(db.clone());
-    let private_message_repo = PrivateMessageRepository::new(db.clone());
-
-    let mut last_group_msg_id = 0;
-    loop {
-        let rows = group_message_repo
-            .list_message_ids_after(last_group_msg_id, BATCH_SIZE)
-            .await?;
-        if rows.is_empty() {
-            break;
-        }
-        let message_ids: Vec<String> = rows.iter().map(|(_, mid)| mid.to_string()).collect();
-        checker.sync_messages(&message_ids).await?;
-        if let Some((last_id, _)) = rows.last() {
-            last_group_msg_id = *last_id;
-        }
-    }
-
-    let mut last_private_msg_id = 0;
-    loop {
-        let rows = private_message_repo
-            .list_message_ids_after(last_private_msg_id, BATCH_SIZE)
-            .await?;
-        if rows.is_empty() {
-            break;
-        }
-        let message_ids: Vec<String> = rows.iter().map(|(_, mid)| mid.to_string()).collect();
-        checker.sync_messages(&message_ids).await?;
-        if let Some((last_id, _)) = rows.last() {
-            last_private_msg_id = *last_id;
-        }
-    }
+    // 群组 / 瞬间 / 评论 / 消息（复用同一循环模式）
+    warmup_ids_loop!(
+        last_group_row_id,
+        group_repo,
+        list_group_ids_after,
+        checker,
+        sync_groups,
+        BATCH_SIZE
+    );
+    warmup_ids_loop!(
+        last_moment_row_id,
+        moment_repo,
+        list_moment_ids_after,
+        checker,
+        sync_moments,
+        BATCH_SIZE
+    );
+    warmup_ids_loop!(
+        last_comment_row_id,
+        comment_repo,
+        list_comment_ids_after,
+        checker,
+        sync_comments,
+        BATCH_SIZE
+    );
+    warmup_ids_loop!(
+        last_group_msg_id,
+        group_message_repo,
+        list_message_ids_after,
+        checker,
+        sync_messages,
+        BATCH_SIZE
+    );
+    warmup_ids_loop!(
+        last_private_msg_id,
+        private_message_repo,
+        list_message_ids_after,
+        checker,
+        sync_messages,
+        BATCH_SIZE
+    );
 
     checker.set_ready().await?;
     checker.log_filter_sizes().await;

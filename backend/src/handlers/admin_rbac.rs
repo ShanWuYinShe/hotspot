@@ -10,15 +10,15 @@ use crate::{
             AdminRbacRoleUpdateRequest, AdminRbacRolesListRequest,
         },
         response::{
-            AdminAdminItem, AdminAdminsData, AdminMeData, AdminPermissionItem,
-            AdminPermissionsData, AdminRoleBasic, AdminRoleItem, AdminRolesData, ApiResponse,
-            UserInfo,
+            AdminAdminItem, AdminMeData, AdminPermissionItem, AdminPermissionsData, AdminRoleBasic,
+            AdminRoleItem, AdminRolesData, ApiResponse, PaginatedData, UserInfo,
         },
     },
-    error::{AppError, Result},
+    error::Result,
     middleware::auth::AuthenticatedUser,
     services::admin_audit_service::AuditLogInput,
     state::AppState,
+    utils::validation::Validator,
 };
 
 pub async fn me(
@@ -118,8 +118,7 @@ pub async fn update_role(
     user: AuthenticatedUser,
     Json(req): Json<AdminRbacRoleUpdateRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let role_id = Uuid::parse_str(&req.role_id)
-        .map_err(|_| AppError::BadRequest("无效的角色ID".to_string()))?;
+    let role_id = Validator::parse_uuid(&req.role_id, "角色ID")?;
     let desc = if req.clear_description.unwrap_or(false) {
         Some(None)
     } else {
@@ -156,8 +155,7 @@ pub async fn delete_role(
     user: AuthenticatedUser,
     Json(req): Json<AdminRbacRoleDeleteRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let role_id = Uuid::parse_str(&req.role_id)
-        .map_err(|_| AppError::BadRequest("无效的角色ID".to_string()))?;
+    let role_id = Validator::parse_uuid(&req.role_id, "角色ID")?;
     state.admin_rbac_service.delete_role(role_id).await?;
     state
         .admin_audit_service
@@ -182,8 +180,7 @@ pub async fn set_role_permissions(
     user: AuthenticatedUser,
     Json(req): Json<AdminRbacRoleSetPermissionsRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    let role_id = Uuid::parse_str(&req.role_id)
-        .map_err(|_| AppError::BadRequest("无效的角色ID".to_string()))?;
+    let role_id = Validator::parse_uuid(&req.role_id, "角色ID")?;
     state
         .admin_rbac_service
         .set_role_permissions(role_id, &req.permission_keys)
@@ -212,9 +209,12 @@ pub async fn set_role_permissions(
 pub async fn list_admins(
     State(state): State<AppState>,
     _user: AuthenticatedUser,
-    Json(_req): Json<AdminRbacAdminsListRequest>,
-) -> Result<Json<ApiResponse<AdminAdminsData>>> {
-    let rows = state.admin_rbac_service.list_admins().await?;
+    Json(req): Json<AdminRbacAdminsListRequest>,
+) -> Result<Json<ApiResponse<PaginatedData<AdminAdminItem>>>> {
+    let (rows, next_cursor) = state
+        .admin_rbac_service
+        .list_admins(req.limit, req.cursor)
+        .await?;
     let items = rows
         .into_iter()
         .map(|row| {
@@ -225,11 +225,7 @@ pub async fn list_admins(
             };
 
             AdminAdminItem {
-                user: UserInfo {
-                    user_id: row.user.user_id,
-                    nickname: row.user.nickname,
-                    avatar_url: row.user.avatar_url,
-                },
+                user: UserInfo::new(row.user.user_id, row.user.nickname, row.user.avatar_url),
                 permissions,
                 roles: row
                     .roles
@@ -243,7 +239,10 @@ pub async fn list_admins(
         })
         .collect();
 
-    Ok(Json(ApiResponse::success(AdminAdminsData { items })))
+    Ok(Json(ApiResponse::success(PaginatedData {
+        items,
+        next_cursor,
+    })))
 }
 
 pub async fn grant_admin(
@@ -251,17 +250,18 @@ pub async fn grant_admin(
     operator: AuthenticatedUser,
     Json(req): Json<AdminRbacGrantAdminRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
+    let target_user_id = Validator::parse_user_id(&req.user_id)?;
     let role_ids: Vec<Uuid> = req
         .role_ids
         .iter()
-        .map(|id| Uuid::parse_str(id).map_err(|_| AppError::BadRequest("无效的角色ID".to_string())))
+        .map(|id| Validator::parse_role_id(id))
         .collect::<Result<Vec<_>>>()?;
 
     state
         .admin_rbac_service
         .grant_admin(
             operator.user_id,
-            req.user_id,
+            target_user_id,
             req.grant_all_permissions.unwrap_or(false),
             &role_ids,
         )
@@ -272,18 +272,12 @@ pub async fn grant_admin(
     });
     state
         .admin_audit_service
-        .record(AuditLogInput {
-            action: "permission.grant".to_string(),
-            operator_id: operator.user_id,
-            target_type: "user".to_string(),
-            target_id: req.user_id.to_string(),
-            target_name: None,
-            details: Some(details),
-            before_state: None,
-            after_state: None,
-            ip_address: None,
-            user_agent: None,
-        })
+        .record(AuditLogInput::user_action(
+            operator.user_id,
+            "permission.grant",
+            target_user_id,
+            Some(details),
+        ))
         .await?;
 
     Ok(Json(ApiResponse::success_empty()))
@@ -294,24 +288,19 @@ pub async fn revoke_admin(
     operator: AuthenticatedUser,
     Json(req): Json<AdminRbacRevokeAdminRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
+    let target_user_id = Validator::parse_user_id(&req.user_id)?;
     state
         .admin_rbac_service
-        .revoke_admin(operator.user_id, req.user_id)
+        .revoke_admin(operator.user_id, target_user_id)
         .await?;
     state
         .admin_audit_service
-        .record(AuditLogInput {
-            action: "permission.revoke".to_string(),
-            operator_id: operator.user_id,
-            target_type: "user".to_string(),
-            target_id: req.user_id.to_string(),
-            target_name: None,
-            details: None,
-            before_state: None,
-            after_state: None,
-            ip_address: None,
-            user_agent: None,
-        })
+        .record(AuditLogInput::user_action(
+            operator.user_id,
+            "permission.revoke",
+            target_user_id,
+            None,
+        ))
         .await?;
     Ok(Json(ApiResponse::success_empty()))
 }

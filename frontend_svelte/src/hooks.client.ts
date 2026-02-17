@@ -10,7 +10,8 @@
 import { browser, dev } from '$app/environment';
 import { authStore } from '$lib/stores/auth.svelte';
 import { configStore } from '$lib/stores/config.svelte';
-import { initApiClient, ensureRefreshToken } from '$lib/api/client';
+import { initApiClient, ensureRefreshToken, isSuccess } from '$lib/api/client';
+import { authService } from '$lib/api/services/auth';
 import { websocketStore } from '$lib/websocket';
 
 /**
@@ -80,16 +81,46 @@ const tokenRefreshManager = new TokenRefreshManager();
  */
 if (browser) {
 	// 初始化 API 客户端
+	// spec: Web 端禁止使用 Authorization Header，token 通过 HttpOnly Cookie 传递
 	initApiClient({
 		baseUrl: '', // 使用相对路径（与前端同域）
-		getToken: () => authStore.token,
-		setToken: (token, expiresAt) => authStore.updateToken(token, expiresAt),
-		clearToken: () => authStore.clearToken()
+		onAccountBanned: (message) => {
+			// spec 10201: 强制登出 + 显示封禁页
+			authStore.logoutAll();
+			// 使用 setTimeout 避免在请求处理中同步导航
+			setTimeout(() => {
+				window.location.href = `/banned?reason=${encodeURIComponent(message)}`;
+			}, 0);
+		},
+		onRefreshSuccess: () => {
+			// Token 已通过 Set-Cookie 更新，获取新的过期时间
+			authService.checkStatus().then((res) => {
+				if (isSuccess(res) && res.data.expires_at) {
+					authStore.updateExpiresAt(res.data.expires_at);
+				} else {
+					// checkStatus 返回非成功码，降级：用当前时间 + 15 分钟作为预估过期时间
+					if (dev) console.warn('[App] checkStatus 返回失败，使用预估过期时间');
+					const fallbackExpiry = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+					authStore.updateExpiresAt(fallbackExpiry);
+				}
+			}).catch((error) => {
+				// 网络错误等，降级：用当前时间 + 15 分钟作为预估过期时间
+				if (dev) console.warn('[App] checkStatus 请求失败，使用预估过期时间:', error);
+				const fallbackExpiry = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+				authStore.updateExpiresAt(fallbackExpiry);
+			});
+		},
+		onRefreshFail: () => {
+			// 刷新失败，清除认证状态
+			authStore.logoutAll();
+		}
 	});
 
 	// 拉取服务端 ClientConfig（无需认证，尽早执行）
 	configStore.fetch().then(() => {
 		if (dev) console.log('[App] ClientConfig 已加载');
+	}).catch((error) => {
+		if (dev) console.error('[App] ClientConfig 加载失败:', error);
 	});
 
 	// 启动 Token 刷新管理器
@@ -98,10 +129,11 @@ if (browser) {
 	// 初始化 WebSocket Store（构造函数中自动管理生命周期）
 	if (dev) console.log('[App] WebSocket Store 已初始化（自动管理连接）');
 
-	// 页面卸载时清理
+	// 页面卸载时彻底清理所有资源
+	// destroy() 会移除全局事件监听、销毁 $effect.root、清空所有 WebSocket 事件监听器
 	window.addEventListener('beforeunload', () => {
 		tokenRefreshManager.stop();
-		websocketStore.disconnect();
+		websocketStore.destroy();
 	});
 }
 

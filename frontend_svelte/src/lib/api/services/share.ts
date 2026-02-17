@@ -2,17 +2,14 @@
  * 分享服务
  */
 
-import { post, paginate } from '../client';
+import { post, generateIdempotencyKey } from '../client';
 import { SHARE } from '../endpoints';
 import type {
 	ApiResponse,
 	CreateShareRequest,
 	GetShareRequest,
 	ShareDetail,
-	ShareCreated,
-	ShareListItem,
-	ShareType,
-	PaginationParams
+	ShareCreated
 } from '$lib/types/api';
 
 export const shareService = {
@@ -20,7 +17,7 @@ export const shareService = {
 	 * 创建分享
 	 */
 	create(request: CreateShareRequest): Promise<ApiResponse<ShareCreated>> {
-		return post<ShareCreated>(SHARE.CREATE, request, { idempotencyKey: crypto.randomUUID() });
+		return post<ShareCreated>(SHARE.CREATE, request, { idempotencyKey: generateIdempotencyKey() });
 	},
 
 	/**
@@ -30,12 +27,7 @@ export const shareService = {
 		return post<ShareDetail>(SHARE.GET, request);
 	},
 
-	/**
-	 * 获取我的分享列表
-	 */
-	getMyShares(params?: { share_type?: ShareType; pagination?: PaginationParams }) {
-		return paginate<ShareListItem>(SHARE.ME_LIST, params);
-	},
+	// getMyShares deferred: share/me/list
 
 	/**
 	 * 撤销分享

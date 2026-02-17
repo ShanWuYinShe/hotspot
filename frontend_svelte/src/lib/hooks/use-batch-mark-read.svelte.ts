@@ -86,6 +86,9 @@ export function useBatchMarkRead(options: UseBatchMarkReadOptions): BatchMarkRea
 	
 	// 防抖定时器
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+	
+	// 可见性延迟检查定时器（消息 ID -> timer ID）
+	const visibilityTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 	/**
 	 * 批量标记已读
@@ -147,40 +150,66 @@ export function useBatchMarkRead(options: UseBatchMarkReadOptions): BatchMarkRea
 					}
 				} else {
 					// 尚未停留足够时间，稍后再检查
-					setTimeout(() => {
+					// 清除该消息之前的延迟检查定时器（如有）
+					const existingTimer = visibilityTimers.get(messageId);
+					if (existingTimer) clearTimeout(existingTimer);
+
+					const timer = setTimeout(() => {
+						visibilityTimers.delete(messageId);
 						if (elementToIdMap.has(entry.target as HTMLElement)) {
 							handleIntersection([entry]);
 						}
 					}, visibilityThreshold - visibleDuration);
+					visibilityTimers.set(messageId, timer);
 				}
 			} else {
 				// 元素离开视口
 				visibilityTimestamps.delete(messageId);
+				// 清除该消息的延迟检查定时器
+				const existingTimer = visibilityTimers.get(messageId);
+				if (existingTimer) {
+					clearTimeout(existingTimer);
+					visibilityTimers.delete(messageId);
+				}
 			}
 		});
 	}
 
 	/**
-	 * 初始化 IntersectionObserver
+	 * 确保 IntersectionObserver 已创建（懒初始化）
 	 */
-	function initObserver() {
-		if (observer || !enabled) return;
+	function ensureObserver(): boolean {
+		if (observer) return true;
+		if (!enabled) return false;
 
 		observer = new IntersectionObserver(handleIntersection, {
 			root: null, // 视口
 			rootMargin: '0px',
 			threshold: 0.5 // 50% 可见时触发
 		});
+
+		// 观察之前挂起的元素
+		for (const [element] of elementToIdMap) {
+			observer.observe(element);
+		}
+
+		return true;
 	}
 
 	/**
 	 * 注册消息元素用于可见性检测
+	 * 如果 observer 尚未创建，会先懒初始化；如果初始化失败则暂存映射
 	 */
 	function observe(element: HTMLElement, messageId: string) {
-		if (!enabled || !observer) return;
+		if (!enabled) return;
 
 		elementToIdMap.set(element, messageId);
-		observer.observe(element);
+
+		// 尝试懒初始化并观察
+		if (ensureObserver()) {
+			observer!.observe(element);
+		}
+		// 如果 observer 尚未准备好（不应发生），元素已在 map 中，ensureObserver 时会补观察
 	}
 
 	/**
@@ -216,6 +245,11 @@ export function useBatchMarkRead(options: UseBatchMarkReadOptions): BatchMarkRea
 			clearTimeout(debounceTimer);
 			debounceTimer = null;
 		}
+		// 清除所有可见性延迟检查定时器
+		for (const timer of visibilityTimers.values()) {
+			clearTimeout(timer);
+		}
+		visibilityTimers.clear();
 		elementToIdMap.clear();
 		visibilityTimestamps.clear();
 		// 数组使用重新赋值清空，不是 .clear()
@@ -225,12 +259,11 @@ export function useBatchMarkRead(options: UseBatchMarkReadOptions): BatchMarkRea
 
 	// 初始化
 	onMount(() => {
-		initObserver();
+		ensureObserver();
 
-		// 页面卸载时批量标记
+		// 页面卸载时：先完成标记，再清理资源
 		return () => {
-			markAllVisibleAsRead();
-			cleanup();
+			markAllVisibleAsRead().finally(() => cleanup());
 		};
 	});
 

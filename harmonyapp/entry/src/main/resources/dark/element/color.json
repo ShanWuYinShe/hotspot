@@ -31,6 +31,42 @@
     {
       "name": "color_emphasize_bg",
       "value": "#33FF8F00"
+    },
+    {
+      "name": "bg_primary",
+      "value": "#000000"
+    },
+    {
+      "name": "bg_secondary",
+      "value": "#1C1C1E"
+    },
+    {
+      "name": "bg_tertiary",
+      "value": "#2C2C2E"
+    },
+    {
+      "name": "brand_primary",
+      "value": "#0A84FF"
+    },
+    {
+      "name": "divider",
+      "value": "#3A3A3C"
+    },
+    {
+      "name": "status_online",
+      "value": "#34C759"
+    },
+    {
+      "name": "status_offline",
+      "value": "#636366"
+    },
+    {
+      "name": "color_warning",
+      "value": "#FFD60A"
+    },
+    {
+      "name": "color_success",
+      "value": "#30D158"
     }
   ]
 }

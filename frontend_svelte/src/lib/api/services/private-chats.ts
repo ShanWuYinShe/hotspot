@@ -2,7 +2,7 @@
  * 私聊服务
  */
 
-import { post, paginate } from '../client';
+import { post, paginate, generateIdempotencyKey } from '../client';
 import { PRIVATE_CHATS, PRIVATE_MESSAGES } from '../endpoints';
 import type {
 	PrivateChatItem,
@@ -35,17 +35,13 @@ export const privateChatsService = {
 		return post<void>(PRIVATE_CHATS.ME.UPDATE_SETTINGS, data);
 	},
 
-	/**
-	 * 删除私聊
-	 */
-	deleteChat(data: { target_user_id: string }) {
-		return post<void>(PRIVATE_CHATS.ME.DELETE, data);
-	}
+	// deleteChat deferred: private_chats/me/delete
 };
 
 export const privateMessagesService = {
 	/**
 	 * 发送私聊消息
+	 * spec: MUST 幂等，自动生成 Idempotency-Key
 	 */
 	send(data: {
 		target_user_id: string;
@@ -54,10 +50,8 @@ export const privateMessagesService = {
 		file_id?: string;
 		share_code?: string;
 		reply_to_message_id?: string;
-		idempotencyKey?: string;
 	}) {
-		const { idempotencyKey, ...payload } = data;
-		return post<MessageSent>(PRIVATE_MESSAGES.SEND, payload, { idempotencyKey });
+		return post<MessageSent>(PRIVATE_MESSAGES.SEND, data, { idempotencyKey: generateIdempotencyKey() });
 	},
 
 	/**

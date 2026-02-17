@@ -1,10 +1,14 @@
 <script lang="ts">
 	import '../app.css';
+	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { ModeWatcher } from 'mode-watcher';
 	import { Toaster } from '$lib/components/ui/sonner';
 	import LoginModal from '$lib/components/common/login-modal.svelte';
 	import PageLoading from '$lib/components/common/page-loading.svelte';
+	import { goto } from '$app/navigation';
+	import { authStore } from '$lib/stores/auth.svelte';
+	import { uiStore } from '$lib/stores/ui.svelte';
 	import { locationStore } from '$lib/stores/location.svelte';
 	import { mapAnchorStore, DEFAULT_ANCHOR_NAME } from '$lib/stores/map-anchor.svelte';
 	import { loadAMapPlugin } from '$lib/utils/amap';
@@ -55,6 +59,18 @@
 	}
 
 	onMount(() => {
+		// 处理 URL 中的 redirect 参数（例如外部链接 /?redirect=/profile）
+		const redirectParam = page.url.searchParams.get('redirect');
+		if (redirectParam) {
+			if (authStore.isAuthenticated) {
+				// 已登录：直接跳转到目标页面
+				goto(redirectParam, { replaceState: true });
+			} else {
+				// 未登录：保存目标 URL，登录后自动跳转
+				uiStore.saveRedirectUrl(redirectParam);
+			}
+		}
+
 		initLocation();
 		// 注：WebSocket 在 hooks.client.ts 中初始化，无需在组件中管理
 	});

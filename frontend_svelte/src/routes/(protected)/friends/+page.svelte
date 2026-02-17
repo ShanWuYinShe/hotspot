@@ -30,11 +30,11 @@
 		try {
 			const response = refresh
 				? await withMinimumLoadingTime(() =>
-						usersService.getMyFriends({
+						usersService.getFriends({
 							pagination: { limit: 24, cursor: undefined }
 						})
 					)
-				: await usersService.getMyFriends({
+				: await usersService.getFriends({
 						pagination: { limit: 24, cursor }
 					});
 			if (isSuccess(response) && response.data) {
@@ -73,7 +73,7 @@
 
 	{#if isLoading}
 		<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-			{#each Array(6) as _}
+			{#each Array(6) as _, i (i)}
 				<Card>
 					<CardContent class="flex items-center gap-3 p-4">
 						<Skeleton class="h-12 w-12 rounded-full" />

@@ -25,6 +25,8 @@ import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { DistributedManager } from '../../../core/distributed/DistributedManager';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { WidgetDataService } from '../../../core/services/WidgetDataService';
+import { SystemUiController } from '../../../core/utils/SystemUiController';
+
 
 const DOMAIN_NUMBER: number = 0xFF10;
 const TAG: string = 'NearbyPage';
@@ -44,6 +46,8 @@ export struct NearbyPage {
   @StorageLink(KEY_CURRENT_LOCATION) @Watch('onCurrentLocationChange') currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_BROWSE_ANCHOR) @Watch('onBrowseAnchorChange') browseAnchor: LocationInfo | null = null;
   @StorageLink('nearbyDeviceCount') nearbyDeviceCount: number = 0;
+  @StorageLink('safeAreaTop') safeAreaTop: number = 0;
+  @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
 
   @State currentSubTab: number = 0;
   private subTabController: TabsController = new TabsController();
@@ -53,7 +57,7 @@ export struct NearbyPage {
   // 动态数据
   @State moments: MomentItem[] = [];
   private momentsDataSource: BasicDataSource<MomentItem> = new BasicDataSource<MomentItem>([]);
-  @State momentsLoading: boolean = false;
+  @State momentsLoading: boolean = true;
   @State momentsError: string = '';
   @State momentsHasMore: boolean = false;
   @State momentsNextCursor: string = '';
@@ -62,7 +66,7 @@ export struct NearbyPage {
   // 用户数据
   @State users: UserItem[] = [];
   private usersDataSource: BasicDataSource<UserItem> = new BasicDataSource<UserItem>([]);
-  @State usersLoading: boolean = false;
+  @State usersLoading: boolean = true;
   @State usersError: string = '';
   @State usersHasMore: boolean = false;
   @State usersNextCursor: string = '';
@@ -71,13 +75,16 @@ export struct NearbyPage {
   // 群组数据
   @State groups: GroupItem[] = [];
   private groupsDataSource: BasicDataSource<GroupItem> = new BasicDataSource<GroupItem>([]);
-  @State groupsLoading: boolean = false;
+  @State groupsLoading: boolean = true;
   @State groupsError: string = '';
   @State groupsHasMore: boolean = false;
   @State groupsNextCursor: string = '';
   @State groupsLoadingMore: boolean = false;
 
   async aboutToAppear() {
+    SystemUiController.useSurface({
+      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
+    });
     // 预加载所有 tab 数据（并行），切换 tab 时数据已就绪，无需再显示 loading
     this.loadNearbyMoments();
     this.loadNearbyUsers();
@@ -156,6 +163,27 @@ export struct NearbyPage {
         await this.loadNearbyGroups();
         break;
     }
+  }
+
+  private getHeaderTopPadding(): number {
+    const safeTop = this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.XXL;
+    return safeTop + DesignConstants.SPACING.SM;
+  }
+
+  private getListBottomPadding(): number {
+    // 底部安全区域已由 Tab Bar 处理，列表只需少量视觉边距
+    return DesignConstants.SPACING.MD;
+  }
+
+  private switchSubTab(index: number): void {
+    if (this.currentSubTab === index) {
+      return;
+    }
+    this.subTabController.changeIndex(index);
+  }
+
+  private openAnchorPicker(): void {
+    AppRouter.push(PageNames.ANCHOR_PICK);
   }
 
   // ==================== 加载附近动态 ====================
@@ -328,10 +356,52 @@ export struct NearbyPage {
 
   build() {
     Column() {
-      // 顶部位置栏
+      this.buildHeaderSurface()
+
+      Tabs({ controller: this.subTabController }) {
+        TabContent() {
+          this.buildMomentsContent()
+        }
+        .tabBar(this.HiddenTabBar())
+
+        TabContent() {
+          this.buildUsersContent()
+        }
+        .tabBar(this.HiddenTabBar())
+
+        TabContent() {
+          this.buildGroupsContent()
+        }
+        .tabBar(this.HiddenTabBar())
+      }
+      .barMode(BarMode.Fixed)
+      .barHeight(0)
+      .animationDuration(400)
+      .onChange((index: number) => {
+        this.getUIContext().animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+          this.currentSubTab = index;
+        });
+        this.loadCurrentTabData();
+      })
+      .layoutWeight(1)
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('app.color.bg_primary'))
+  }
+
+  @Builder
+  private HiddenTabBar() {
+    Blank()
+      .width(0)
+      .height(0)
+  }
+
+  @Builder
+  private buildHeaderSurface() {
+    Column({ space: DesignConstants.SPACING.SM }) {
       LocationBar({ showSearchButton: true })
 
-      // 附近设备发现指示器
       if (this.nearbyDeviceCount > 0) {
         Row({ space: DesignConstants.SPACING.SM }) {
           Text() {
@@ -344,73 +414,80 @@ export struct NearbyPage {
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         }
         .width('100%')
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-        .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD,
+          top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+        .backgroundColor($r('app.color.bg_primary'))
+        .borderRadius(DesignConstants.RADIUS.LG)
+        .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
       }
 
-      // 子标签栏 + 内容
-      Tabs({ barPosition: BarPosition.Start, controller: this.subTabController }) {
-        // 子标签 0: 动态
-        TabContent() {
-          this.buildMomentsContent()
+      Row({ space: DesignConstants.SPACING.SM }) {
+        Row({ space: DesignConstants.SPACING.SM }) {
+          this.SubTabSegment('动态', 0, AppIcon.CAMERA)
+          this.SubTabSegment('用户', 1, AppIcon.PERSON)
+          this.SubTabSegment('群组', 2, AppIcon.GROUP)
         }
-        .tabBar(this.SubTabBuilder('动态', 0))
-
-        // 子标签 1: 用户
-        TabContent() {
-          this.buildUsersContent()
-        }
-        .tabBar(this.SubTabBuilder('用户', 1))
-
-        // 子标签 2: 群组
-        TabContent() {
-          this.buildGroupsContent()
-        }
-        .tabBar(this.SubTabBuilder('群组', 2))
+        .layoutWeight(1)
       }
-      .barMode(BarMode.Fixed)
-      .barHeight(44)
-      .animationDuration(500)
-      .onChange((index: number) => {
-        this.getUIContext().animateTo({ duration: 400, curve: Curve.FastOutSlowIn }, () => {
-          this.currentSubTab = index;
-        });
-        this.loadCurrentTabData();
-      })
-      .layoutWeight(1)
+      .alignItems(VerticalAlign.Center)
     }
     .width('100%')
-    .height('100%')
-    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    .padding({
+      top: this.getHeaderTopPadding(),
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      bottom: DesignConstants.SPACING.SM
+    })
+    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .borderRadius({ bottomLeft: DesignConstants.RADIUS.XL, bottomRight: DesignConstants.RADIUS.XL })
+    .shadow({ radius: 16, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 4 })
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
   }
 
-  // ==================== 子标签构建器 ====================
   @Builder
-  SubTabBuilder(title: string, index: number) {
-    Column() {
-      Text(title)
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontWeight(this.currentSubTab === index ? FontWeight.Bold : FontWeight.Normal)
-        .fontColor(this.currentSubTab === index
-          ? $r('sys.color.ohos_id_color_text_primary')
-          : $r('sys.color.ohos_id_color_text_secondary'))
-
-      // 下划线指示器（带缩放+颜色过渡动画）
-      Divider()
-        .width(this.currentSubTab === index ? 24 : 0)
-        .strokeWidth(3)
-        .color(this.currentSubTab === index
-          ? $r('sys.color.ohos_id_color_emphasize')
-          : Color.Transparent)
-        .margin({ top: 6 })
-        .lineCap(LineCapStyle.Round)
-        .animation({ duration: 400, curve: Curve.FastOutSlowIn })
+  private SubTabSegment(label: string, index: number, icon: AppIcon) {
+    Row({ space: DesignConstants.SPACING.XS }) {
+      Text() {
+        SymbolSpan($r(icon))
+          .fontSize(16)
+          .fontColor([this.currentSubTab === index ? Color.White : $r('sys.color.ohos_id_color_text_secondary')])
+      }
+      Text(label)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .fontWeight(this.currentSubTab === index ? FontWeight.Medium : FontWeight.Normal)
+        .fontColor(this.currentSubTab === index ? Color.White : $r('sys.color.ohos_id_color_text_primary'))
     }
-    .width('100%')
-    .height('100%')
-    .justifyContent(FlexAlign.Center)
+    .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD,
+      top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+    .backgroundColor(this.currentSubTab === index
+      ? $r('sys.color.ohos_id_color_emphasize')
+      : $r('sys.color.ohos_id_color_component_normal'))
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+    .onClick(() => {
+      this.switchSubTab(index);
+    })
   }
+
+  // @Builder
+  // private buildMapEntryButton() {
+  //   Column() {
+  //     Text() {
+  //       SymbolSpan($r(AppIcon.MAP))
+  //         .fontSize(20)
+  //         .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+  //     }
+  //   }
+  //   .width(44)
+  //   .height(44)
+  //   .justifyContent(FlexAlign.Center)
+  //   .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+  //   .borderRadius(DesignConstants.RADIUS.FULL)
+  //   .shadow({ radius: 10, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
+  //   .onClick(() => {
+  //     this.openAnchorPicker();
+  //   })
+  // }
 
   // ==================== 动态内容 ====================
   @Builder
@@ -423,24 +500,21 @@ export struct NearbyPage {
       this.buildEmptyState(AppIcon.CAMERA, '附近暂无动态\n去发布第一条吧！', undefined, undefined)
     } else {
       Refresh({ refreshing: $$this.momentsLoading }) {
-        List({ space: DesignConstants.SPACING.SM }) {
-          LazyForEach(this.momentsDataSource, (moment: MomentItem) => {
-            ListItem() {
-              this.buildMomentCard(moment)
+        WaterFlow({ footer: this.buildLoadingMoreIndicator() }) {
+          LazyForEach(this.momentsDataSource, (moment: MomentItem, index: number) => {
+            FlowItem() {
+              this.buildMomentCard(moment, index)
             }
           }, (moment: MomentItem) => moment.moment_id)
-          // 底部加载更多指示器
-          if (this.momentsLoadingMore) {
-            ListItem() {
-              this.buildLoadingMoreIndicator()
-            }
-          }
         }
+        // 小红书风格：auto-fill 自动计算列数，每列最小 160vp
+        .columnsTemplate('repeat(auto-fill, 160vp)')
+        .columnsGap(8)
+        .rowsGap(8)
         .width('100%')
         .layoutWeight(1)
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
-          top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
-        .scrollBar(BarState.Auto)
+        .padding({ left: 8, right: 8, top: 8, bottom: this.getListBottomPadding() })
+        .cachedCount(8)  // 预加载8个，提升滚动流畅度
         .onReachEnd(() => { this.loadNearbyMoments(true); })
       }
       .onRefreshing(() => { this.loadNearbyMoments(); })
@@ -448,56 +522,122 @@ export struct NearbyPage {
     }
   }
 
+  // 计算卡片图片高度，根据图片比例动态调整（小红书风格）
+  private calculateImageHeight(moment: MomentItem): number {
+    if (!moment.images || moment.images.length === 0) {
+      return 160;  // 无图默认高度
+    }
+
+    const image = moment.images[0];
+    if (image.width && image.height && image.width > 0) {
+      // 列宽约为 160vp，根据原始比例计算高度
+      const aspectRatio = image.height / image.width;
+      const calculatedHeight = 160 * aspectRatio;
+      // 限制高度范围：最小 120，最大 280
+      return Math.max(120, Math.min(calculatedHeight, 280));
+    }
+
+    return 180;  // 默认高度
+  }
+
+  @State pressedIndex: number = -1  // 记录被按下的卡片索引
+
   @Builder
-  buildMomentCard(moment: MomentItem) {
-    Column({ space: DesignConstants.SPACING.MD }) {
-      // 用户信息
-      Row({ space: DesignConstants.SPACING.SM }) {
-        SystemAvatar({
-          avatarUrl: moment.user?.avatar_url ?? '',
-          name: moment.user?.nickname ?? '',
-          avatarSize: 40
-        })
-        Column({ space: 2 }) {
-          Text(moment.user?.nickname ?? '')
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontWeight(FontWeight.Medium)
+  buildMomentCard(moment: MomentItem, index: number) {
+    Column({ space: 0 }) {
+      // 图片 (封面) - 根据原始比例动态调整高度
+      if (moment.images && moment.images.length > 0) {
+        Image(moment.images[0].url)
+          .width('100%')
+          .height(this.calculateImageHeight(moment))
+          .objectFit(ImageFit.Cover)
+          .borderRadius({ topLeft: 12, topRight: 12 })
+          .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+      } else {
+        // 无图占位 - 纯文字卡片
+        Column() {
+          Text(moment.description)
+            .fontSize(12)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .maxLines(5)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .width('100%')
+        .height(160)
+        .padding(12)
+        .justifyContent(FlexAlign.Center)
+        .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+        .borderRadius({ topLeft: 12, topRight: 12 })
+      }
+
+      // 内容区域 - 小红书风格
+      Column({ space: 4 }) {
+        // 文本描述
+        if (moment.description && moment.images && moment.images.length > 0) {
+          Text(moment.description)
+            .fontSize(13)
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          if (moment.location?.location_name) {
-            Text(moment.location.location_name)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .lineHeight(18)
+        }
+
+        // 用户信息 - 更紧凑的布局
+        Row({ space: 4 }) {
+          SystemAvatar({
+            avatarUrl: moment.user?.avatar_url ?? '',
+            name: moment.user?.nickname ?? '',
+            avatarSize: 16
+          })
+          Text(moment.user?.nickname ?? '未知用户')
+            .fontSize(11)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .layoutWeight(1)
+
+          // 点赞数 - 放在右侧
+          Row({ space: 2 }) {
+            Text() {
+              SymbolSpan($r(AppIcon.HEART))
+                .fontSize(11)
+                .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
+            }
+            Text(`${moment.likes_count}`)
+              .fontSize(11)
+              .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
           }
         }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
-      }
-      .width('100%')
-
-      // 文本内容
-      Text(moment.description)
-        .fontSize(DesignConstants.FONT.SIZE.MD)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
-        .lineHeight(22)
         .width('100%')
-
-      // 图片网格
-      if (moment.images && moment.images.length > 0) {
-        this.buildImageGrid(moment.images)
+        .alignItems(VerticalAlign.Center)
       }
-
-      // 互动栏
-      Row() {
-        this.buildStatItem(AppIcon.HEART, `${moment.likes_count}`)
-        this.buildStatItem(AppIcon.MESSAGE, `${moment.comments_count}`)
-      }
-      .width('100%')
-      .justifyContent(FlexAlign.Start)
+      .padding(8)
     }
     .width('100%')
-    .padding(DesignConstants.SPACING.LG)
     .backgroundColor($r('sys.color.ohos_id_color_background'))
-    .borderRadius(DesignConstants.RADIUS.LG)
+    .borderRadius(12)
+    // 小红书风格的微阴影
+    .shadow({ radius: 8, color: '#0D000000', offsetX: 0, offsetY: 2 })
+    // 点击反馈动画
+    .scale(this.pressedIndex === index ? { x: 0.97, y: 0.97 } : { x: 1, y: 1 })
+    .animation({ duration: 100, curve: Curve.EaseOut })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.pressedIndex = index;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.pressedIndex = -1;
+      }
+    })
+    .onClick(() => {
+      // 打开动态详情
+      this.openMomentDetail(moment);
+    })
+  }
+
+  private openMomentDetail(moment: MomentItem): void {
+    // 跳转到动态详情页面
+    hilog.info(DOMAIN_NUMBER, TAG, `打开动态详情: ${moment.moment_id}`);
+    // TODO: 实现动态详情页跳转
   }
 
   @Builder
@@ -575,7 +715,7 @@ export struct NearbyPage {
         .width('100%')
         .layoutWeight(1)
         .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
-          top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
+          top: DesignConstants.SPACING.SM, bottom: this.getListBottomPadding() })
         .scrollBar(BarState.Auto)
         .onReachEnd(() => { this.loadNearbyUsers(true); })
       }
@@ -681,7 +821,7 @@ export struct NearbyPage {
         .width('100%')
         .layoutWeight(1)
         .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
-          top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
+          top: DesignConstants.SPACING.SM, bottom: this.getListBottomPadding() })
         .scrollBar(BarState.Auto)
         .onReachEnd(() => { this.loadNearbyGroups(true); })
       }

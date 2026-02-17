@@ -18,10 +18,7 @@ pub fn token_optional_routes() -> Router<AppState> {
         // 系统元信息
         .route("/get_meta", post(system::get_meta))
         // 客户端配置
-        .route(
-            "/get_client_config",
-            post(system_config::fetch_global_settings),
-        )
+        .route("/get_client_config", post(system_config::get_client_config))
         // 系统公告列表
         .route("/list_announcements", post(announcements::public_list))
 }

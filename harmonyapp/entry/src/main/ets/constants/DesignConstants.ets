@@ -238,6 +238,67 @@ const COMPONENT: ComponentConstants = {
   INPUT_HEIGHT: 44,
 };
 
+// ==================== 小红书风格布局常量 ====================
+export class MasonryLayout {
+  // 列宽配置
+  static readonly COLUMN_WIDTH_SM: number = 140;  // 小屏设备
+  static readonly COLUMN_WIDTH_MD: number = 160;  // 标准尺寸
+  static readonly COLUMN_WIDTH_LG: number = 180;  // 大屏设备
+
+  // 间距配置
+  static readonly GAP_XS: number = 4;
+  static readonly GAP_SM: number = 8;
+  static readonly GAP_MD: number = 12;
+
+  // 图片高度限制
+  static readonly IMAGE_HEIGHT_MIN: number = 120;
+  static readonly IMAGE_HEIGHT_DEFAULT: number = 180;
+  static readonly IMAGE_HEIGHT_MAX: number = 280;
+
+  // 卡片圆角
+  static readonly CARD_RADIUS: number = 12;
+
+  // 预加载数量
+  static readonly CACHED_COUNT: number = 8;
+}
+
+// ==================== 瀑布流布局辅助函数 ====================
+export class MasonryHelper {
+  /**
+   * 计算瀑布流图片高度
+   * @param originalWidth 原始宽度
+   * @param originalHeight 原始高度
+   * @param columnWidth 列宽
+   * @returns 计算后的高度
+   */
+  static calculateImageHeight(
+    originalWidth: number,
+    originalHeight: number,
+    columnWidth: number = MasonryLayout.COLUMN_WIDTH_MD
+  ): number {
+    if (!originalWidth || !originalHeight || originalWidth <= 0) {
+      return MasonryLayout.IMAGE_HEIGHT_DEFAULT;
+    }
+
+    const aspectRatio = originalHeight / originalWidth;
+    const calculatedHeight = columnWidth * aspectRatio;
+
+    return Math.max(
+      MasonryLayout.IMAGE_HEIGHT_MIN,
+      Math.min(calculatedHeight, MasonryLayout.IMAGE_HEIGHT_MAX)
+    );
+  }
+
+  /**
+   * 获取列模板字符串
+   * @param width 列宽
+   * @returns columnsTemplate 字符串
+   */
+  static getColumnsTemplate(width: number = MasonryLayout.COLUMN_WIDTH_MD): string {
+    return `repeat(auto-fill, ${width}vp)`;
+  }
+}
+
 export const DesignConstants: DesignConstantsType = {
   COLOR,
   FONT,

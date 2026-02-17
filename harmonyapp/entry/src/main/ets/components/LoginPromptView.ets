@@ -21,6 +21,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 const DOMAIN_NUMBER: number = 0xFF20;
 const TAG: string = 'LoginPromptView';
 
+@Reusable
 @Component
 export struct LoginPromptView {
   /** 主标题，如 "附近动态需要登录" */
@@ -101,6 +102,7 @@ export struct LoginPromptView {
     .justifyContent(FlexAlign.Center)
     .padding(32)
     .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
     .bindSheet($$this.showQuickStart, this.buildQuickStartSheet(), {
       height: SheetSize.FIT_CONTENT,
       showClose: true,

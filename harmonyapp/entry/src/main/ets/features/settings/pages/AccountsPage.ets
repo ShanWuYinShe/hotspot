@@ -17,11 +17,14 @@ import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
+import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 
 @Component
 export struct AccountsPage {
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
+  @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
 
   @State accounts: AuthData[] = [];
   @State currentUserId: string | null = null;
@@ -32,6 +35,9 @@ export struct AccountsPage {
   private cache = MessageCacheService.getInstance();
 
   async aboutToAppear() {
+    SystemUiController.useSurface({
+      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
+    });
     await this.load();
   }
 
@@ -154,7 +160,8 @@ export struct AccountsPage {
       .width('100%')
       .height(56)
       .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .backgroundColor($r('app.color.bg_secondary'))
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.isLoading) {
         Text('加载中...')
@@ -219,7 +226,7 @@ export struct AccountsPage {
                     .type(ButtonType.Capsule)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .height(32)
-                    .backgroundColor(DesignConstants.COLOR.ERROR)
+                    .backgroundColor($r('app.color.color_danger'))
                     .fontColor(Color.White)
                     .onClick(() => this.remove(acc))
                 }
@@ -227,7 +234,7 @@ export struct AccountsPage {
               .width('100%')
               .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
             }
-            .backgroundColor($r('sys.color.ohos_id_color_background'))
+            .backgroundColor($r('app.color.bg_secondary'))
             .borderRadius(DesignConstants.RADIUS.LG)
             .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
           }, (acc: AuthData) => acc.user_id)
@@ -235,12 +242,13 @@ export struct AccountsPage {
         .width('100%')
         .layoutWeight(1)
         .scrollBar(BarState.Auto)
+        .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    .backgroundColor($r('app.color.bg_primary'))
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {
@@ -253,4 +261,3 @@ export struct AccountsPage {
 export function AccountsPageBuilder() {
   AccountsPage()
 }
-

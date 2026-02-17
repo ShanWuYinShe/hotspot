@@ -365,6 +365,9 @@ export interface PrivateChatItem {
   last_activity_at: string;
   last_message?: PrivateChatLastMessage;
   presence_status?: UserPresenceStatus;
+  created_at?: string;
+  can_message: boolean;
+  cant_message_reason?: CantMessageReason;
 }
 
 export interface PrivateChatOpenResult {
@@ -455,6 +458,8 @@ export interface ChangePasswordRequest {
 
 export type Gender = 'male' | 'female' | 'apache_helicopter';
 export type PrivateChatPermission = 'everyone' | 'friends' | 'nobody';
+export type CantMessageReason = 'privacy' | 'stranger_limit' | 'account_suspended';
+export type ApplicationStatus = 'pending' | 'accepted' | 'rejected';
 
 export interface SearchUsersRequest {
   keyword?: string;
@@ -470,20 +475,8 @@ export interface UserOpenTheDoorRequest {
   reference_point: GeoPoint;
 }
 
-export interface UserFriendsRequest {
-  user_id: string;
-  pagination?: PaginationParams;
-}
-
-export interface UserFollowingRequest {
-  user_id: string;
-  pagination?: PaginationParams;
-}
-
-export interface UserFollowersRequest {
-  user_id: string;
-  pagination?: PaginationParams;
-}
+// UserFriendsRequest / UserFollowingRequest / UserFollowersRequest 已合并入
+// ListFriendsRequest / ListFollowingRequest / ListFollowersRequest（user_id 可选）
 
 export interface UserGroupsRequest {
   user_id: string;
@@ -542,9 +535,7 @@ export interface UserSettings {
   privacy_level: PrivacyLevel;
   location_visible: boolean;
   presence_visible: boolean;
-  friends_visible: boolean;
-  following_visible: boolean;
-  followers_visible: boolean;
+  social_lists_visible: boolean;
   groups_visible: boolean;
   liked_moments_visible: boolean;
   stats_visible: boolean;
@@ -560,9 +551,7 @@ export interface UpdateSettingsRequest {
   privacy_level?: PrivacyLevel;
   location_visible?: boolean;
   presence_visible?: boolean;
-  friends_visible?: boolean;
-  following_visible?: boolean;
-  followers_visible?: boolean;
+  social_lists_visible?: boolean;
   groups_visible?: boolean;
   liked_moments_visible?: boolean;
   stats_visible?: boolean;
@@ -597,15 +586,18 @@ export interface UnblockRequest {
   user_id: string;
 }
 
-export interface MyFriendsRequest {
+export interface ListFriendsRequest {
+  user_id?: string;
   pagination?: PaginationParams;
 }
 
-export interface MyFollowingRequest {
+export interface ListFollowingRequest {
+  user_id?: string;
   pagination?: PaginationParams;
 }
 
-export interface MyFollowersRequest {
+export interface ListFollowersRequest {
+  user_id?: string;
   pagination?: PaginationParams;
 }
 
@@ -1107,7 +1099,7 @@ export interface MapRenderRequest {
   filter?: MapRenderFilter;
 }
 
-export interface MapRenderData {
+export interface MapCanvas {
   items: MapRenderItem[];
   toast_message?: string;
 }

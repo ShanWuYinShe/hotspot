@@ -1,29 +1,25 @@
 use axum::{extract::State, Json};
-use serde::Serialize;
 use std::time::Duration;
 
 use crate::dto::{
     request::{SystemGetMetaRequest, SystemHealthRequest},
-    response::{ApiResponse, HealthCheckData},
+    response::{ApiResponse, ApiVersionMeta, ApiVersionStatus, HealthCheckData},
 };
 use crate::error::Result;
 use crate::state::AppState;
 use crate::types::enums::SystemHealthStatus;
 
-/// 系统元信息
-#[derive(Debug, Serialize)]
-pub struct SystemMetaData {
-    pub api_version: String,
-    pub server_time: String,
-}
-
-/// 获取系统元信息
+/// 获取系统元信息（API 版本状态）
 pub async fn get_meta(
     Json(_req): Json<SystemGetMetaRequest>,
-) -> Result<Json<ApiResponse<SystemMetaData>>> {
-    Ok(Json(ApiResponse::success(SystemMetaData {
-        api_version: "v1".to_string(),
-        server_time: chrono::Utc::now().to_rfc3339(),
+) -> Result<Json<ApiResponse<ApiVersionMeta>>> {
+    Ok(Json(ApiResponse::success(ApiVersionMeta {
+        version: "v1".to_string(),
+        status: ApiVersionStatus::Active,
+        deprecated_at: None,
+        sunset_at: None,
+        message: None,
+        recommended_version: None,
     })))
 }
 
@@ -65,7 +61,6 @@ pub async fn health(
 
     Ok(Json(ApiResponse::success(HealthCheckData {
         status,
-        version: env!("CARGO_PKG_VERSION").to_string(),
         timestamp: chrono::Utc::now().to_rfc3339(),
     })))
 }

@@ -17,6 +17,16 @@ export interface PageHeaderAction {
 export struct SystemPageHeader {
   title: string = '';
   action?: PageHeaderAction;
+  @StorageLink('safeAreaTop') safeAreaTop: number = 0;
+  surfaceColor?: ResourceColor;
+
+  private getHeaderTopPadding(): number {
+    return (this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.LG) + DesignConstants.SPACING.SM;
+  }
+
+  private getBackgroundColor(): ResourceColor {
+    return this.surfaceColor ? this.surfaceColor : $r('app.color.bg_primary');
+  }
 
   build() {
     Row() {
@@ -45,9 +55,14 @@ export struct SystemPageHeader {
       }
     }
     .width('100%')
-    .height(56)
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .alignItems(VerticalAlign.Center)
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: this.getHeaderTopPadding(),
+      bottom: DesignConstants.SPACING.SM
+    })
+    .backgroundColor(this.getBackgroundColor())
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
   }
 }
-

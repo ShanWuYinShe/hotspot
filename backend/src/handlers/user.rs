@@ -3,80 +3,55 @@ use axum::{extract::State, Json};
 use crate::{
     dto::{
         request::{
-            BlockRequest, DeleteAccountRequest, FollowRequest, GeoPoint, GetRelationshipRequest,
-            MyBlockedRequest, MyFollowersRequest, MyFollowingRequest, MyFriendsRequest,
-            MyProfileRequest, MySettingsRequest, SearchUsersByKeywordRequest,
-            SearchUsersByLocationRequest, SearchUsersByTagRequest, SearchUsersRequest,
-            SetRemarkRequest, UnblockRequest, UnfollowRequest, UpdateLocationRequest,
-            UpdateProfileRequest, UpdateSettingsRequest, UpgradeAccountRequest,
-            UserFollowersRequest, UserFollowingRequest, UserFriendsRequest, UserGroupsRequest,
-            UserLikedMomentsRequest, UserMomentsRequest, UserOpenTheDoorRequest,
+            BlockRequest, DeleteAccountRequest, FollowRequest, ListFollowersRequest,
+            ListFollowingRequest, ListFriendsRequest, MyBlockedRequest, MyProfileRequest,
+            MySettingsRequest, SearchUsersRequest, SetRemarkRequest, UnblockRequest,
+            UnfollowRequest, UpdateLocationRequest, UpdateProfileRequest, UpdateSettingsRequest,
+            UpgradeAccountRequest, UserGroupsRequest, UserLikedMomentsRequest, UserMomentsRequest,
+            UserOpenTheDoorRequest,
         },
         response::{
             AdminUserDetail, ApiResponse, AuthData, BlockedUserSearchItem, FollowerItem,
-            FollowingItem, FriendItem, GroupSearchItem, MyProfile, PaginatedData,
-            UserMomentListItem, UserRelation, UserSearchItem, UserSettingsData,
+            FollowingItem, FriendItem, GroupItem, MomentItem, MyProfile, PaginatedData, UserItem,
+            UserSettingsData,
         },
     },
     error::Result,
     middleware::auth::{AuthenticatedUser, OptionalAuthenticatedUser},
     services::admin_audit_service::AuditLogInput,
     state::AppState,
+    utils::validation::Validator,
 };
 
 // ==================== Token 可选 ====================
 
+/// Resolve target user_id: None or empty -> require auth and use current user; Some(s) -> parse to i64
+fn resolve_target_user_id(
+    req_user_id: &Option<String>,
+    auth_user_id: Option<i64>,
+) -> crate::error::Result<i64> {
+    match req_user_id {
+        None => auth_user_id.ok_or_else(|| {
+            crate::error::AppError::Unauthorized("需要登录以查询自己的列表".to_string())
+        }),
+        Some(s) if s.trim().is_empty() => auth_user_id.ok_or_else(|| {
+            crate::error::AppError::Unauthorized("需要登录以查询自己的列表".to_string())
+        }),
+        Some(s) => Validator::parse_user_id(s.trim()),
+    }
+}
+
 /// 统一搜索用户（支持关键字/标签/位置组合）
 pub async fn search(
     State(state): State<AppState>,
+    user: OptionalAuthenticatedUser,
     Json(req): Json<SearchUsersRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<UserSearchItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<UserItem>>>> {
     let sort_by = req.sort_by.as_deref().unwrap_or("relevance");
     tracing::debug!(sort_by = %sort_by, "Search sort parameter");
 
-    let reference_point = req.reference_point.unwrap_or(GeoPoint {
-        latitude: 0.0,
-        longitude: 0.0,
-    });
-
-    // 根据参数分发到不同的搜索逻辑
-    if let Some(radius) = req.radius {
-        // 位置搜索
-        let location_req = SearchUsersByLocationRequest {
-            kw: req.keyword,
-            reference_point,
-            radius,
-            limit: req.limit,
-            cursor: req.cursor,
-        };
-        let response = state.user_service.search_by_location(&location_req).await?;
-        Ok(Json(ApiResponse::success(response)))
-    } else if let Some(tag) = req.tag {
-        // 标签搜索
-        let tag_req = SearchUsersByTagRequest {
-            tag,
-            reference_point,
-            limit: req.limit,
-            cursor: req.cursor,
-        };
-        let response = state.user_service.search_by_tag(&tag_req).await?;
-        Ok(Json(ApiResponse::success(response)))
-    } else if let Some(keyword) = req.keyword {
-        // 关键字搜索
-        let kw_req = SearchUsersByKeywordRequest {
-            kw: keyword,
-            reference_point,
-            limit: req.limit,
-            cursor: req.cursor,
-        };
-        let response = state.user_service.search_by_keyword(&kw_req).await?;
-        Ok(Json(ApiResponse::success(response)))
-    } else {
-        // 至少需要一个搜索条件
-        Err(crate::error::AppError::BadRequest(
-            "至少需要提供 keyword、tag、radius 中的一个搜索条件".to_string(),
-        ))
-    }
+    let response = state.user_service.search(user.user_id, &req).await?;
+    Ok(Json(ApiResponse::success(response)))
 }
 
 /// 获取用户资料（通过 ID 获取指定用户的资料，包含在线状态）
@@ -84,7 +59,7 @@ pub async fn open_the_door(
     State(state): State<AppState>,
     user: OptionalAuthenticatedUser,
     Json(req): Json<UserOpenTheDoorRequest>,
-) -> Result<Json<ApiResponse<UserSearchItem>>> {
+) -> Result<Json<ApiResponse<UserItem>>> {
     let response = state.user_service.open_the_door(user.user_id, &req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -96,18 +71,15 @@ fn is_update_profile_empty(req: &UpdateProfileRequest) -> bool {
         && req.avatar_file_id.is_none()
         && req.bio.is_none()
         && req.tags.is_none()
+        && req.gender.is_none()
 }
 
 fn is_update_settings_empty(req: &UpdateSettingsRequest) -> bool {
     req.privacy_level.is_none()
         && req.location_visible.is_none()
-        && req.online_visible.is_none()
-        && req.last_online_visible.is_none()
-        && req.friends_visible.is_none()
-        && req.following_visible.is_none()
-        && req.followers_visible.is_none()
+        && req.presence_visible.is_none()
+        && req.social_lists_visible.is_none()
         && req.groups_visible.is_none()
-        && req.moments_visible.is_none()
         && req.liked_moments_visible.is_none()
         && req.stats_visible.is_none()
         && req.allow_follow.is_none()
@@ -160,68 +132,81 @@ pub async fn update_my_settings(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<UpdateSettingsRequest>,
-) -> Result<Json<ApiResponse<UserSettingsData>>> {
+) -> Result<Json<ApiResponse<()>>> {
     if !is_update_settings_empty(&req) {
         state
             .user_service
             .update_settings(user.user_id, &req)
             .await?;
     }
-    let data = state.user_service.get_settings(user.user_id).await?;
-    Ok(Json(ApiResponse::success(data)))
+    Ok(Json(ApiResponse::success_empty()))
 }
 
-/// 获取指定用户好友列表（公开 API）
+/// 获取好友列表（user_id 可选，不传时=当前用户，需登录）
 pub async fn get_friends(
     State(state): State<AppState>,
-    Json(req): Json<UserFriendsRequest>,
+    user: OptionalAuthenticatedUser,
+    Json(req): Json<ListFriendsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<FriendItem>>>> {
+    let target_user_id = resolve_target_user_id(&req.user_id, user.user_id)?;
     let response = state
         .user_service
-        .get_friends_list(req.user_id, &req)
+        .get_friends_list(target_user_id, user.user_id, &req)
         .await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
-/// 获取指定用户关注列表（公开 API）
+/// 获取关注列表（user_id 可选，不传时=当前用户，需登录）
 pub async fn get_following(
     State(state): State<AppState>,
-    Json(req): Json<UserFollowingRequest>,
+    user: OptionalAuthenticatedUser,
+    Json(req): Json<ListFollowingRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<FollowingItem>>>> {
+    let target_user_id = resolve_target_user_id(&req.user_id, user.user_id)?;
     let response = state
         .user_service
-        .get_following_list(req.user_id, &req)
+        .get_following_list(target_user_id, user.user_id, &req)
         .await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
-/// 获取指定用户粉丝列表（公开 API）
+/// 获取粉丝列表（user_id 可选，不传时=当前用户，需登录）
 pub async fn get_followers(
     State(state): State<AppState>,
-    Json(req): Json<UserFollowersRequest>,
+    user: OptionalAuthenticatedUser,
+    Json(req): Json<ListFollowersRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<FollowerItem>>>> {
+    let target_user_id = resolve_target_user_id(&req.user_id, user.user_id)?;
     let response = state
         .user_service
-        .get_followers_list(req.user_id, &req)
+        .get_followers_list(target_user_id, user.user_id, &req)
         .await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
-/// 获取指定用户加入的公开群组（公开 API）
+/// 获取指定用户加入的公开群组（受 groups_visible 隐私设置控制）
 pub async fn get_groups(
     State(state): State<AppState>,
+    user: OptionalAuthenticatedUser,
     Json(req): Json<UserGroupsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<GroupSearchItem>>>> {
-    let response = state.user_service.get_user_groups_list(&req).await?;
+) -> Result<Json<ApiResponse<PaginatedData<GroupItem>>>> {
+    let response = state
+        .user_service
+        .get_user_groups_list(&req, user.user_id)
+        .await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
-/// 获取指定用户点赞的瞬间（公开 API）
+/// 获取指定用户点赞的瞬间（受 liked_moments_visible 隐私设置控制）
 pub async fn get_liked_moments(
     State(state): State<AppState>,
+    user: OptionalAuthenticatedUser,
     Json(req): Json<UserLikedMomentsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<UserMomentListItem>>>> {
-    let response = state.user_service.get_user_liked_moments_list(&req).await?;
+) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
+    let response = state
+        .user_service
+        .get_user_liked_moments_list(&req, user.user_id)
+        .await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
@@ -229,7 +214,7 @@ pub async fn get_liked_moments(
 pub async fn get_moments(
     State(state): State<AppState>,
     Json(req): Json<UserMomentsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<UserMomentListItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
     let response = state.moment_service.get_user_moments_list(&req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
@@ -276,83 +261,18 @@ pub async fn follow(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<FollowRequest>,
-) -> Result<Json<ApiResponse<UserRelation>>> {
+) -> Result<Json<ApiResponse<()>>> {
     state.user_service.follow_user(user.user_id, &req).await?;
-    let rel_req = GetRelationshipRequest {
-        user_id: req.user_id,
-    };
-    let data = state
-        .user_service
-        .get_relationship(user.user_id, &rel_req)
-        .await?;
-    Ok(Json(ApiResponse::success(data)))
+    Ok(Json(ApiResponse::success_empty()))
 }
 
 pub async fn unfollow(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<UnfollowRequest>,
-) -> Result<Json<ApiResponse<UserRelation>>> {
+) -> Result<Json<ApiResponse<()>>> {
     state.user_service.unfollow_user(user.user_id, &req).await?;
-    let rel_req = GetRelationshipRequest {
-        user_id: req.user_id,
-    };
-    let data = state
-        .user_service
-        .get_relationship(user.user_id, &rel_req)
-        .await?;
-    Ok(Json(ApiResponse::success(data)))
-}
-
-pub async fn get_my_friends(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(req): Json<MyFriendsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<FriendItem>>>> {
-    let service_req = UserFriendsRequest {
-        user_id: user.user_id,
-        cursor: req.cursor,
-        limit: req.limit,
-    };
-    let response = state
-        .user_service
-        .get_friends_list(user.user_id, &service_req)
-        .await?;
-    Ok(Json(ApiResponse::success(response)))
-}
-
-pub async fn get_my_following(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(req): Json<MyFollowingRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<FollowingItem>>>> {
-    let service_req = UserFollowingRequest {
-        user_id: user.user_id,
-        cursor: req.cursor,
-        limit: req.limit,
-    };
-    let response = state
-        .user_service
-        .get_following_list(user.user_id, &service_req)
-        .await?;
-    Ok(Json(ApiResponse::success(response)))
-}
-
-pub async fn get_my_followers(
-    State(state): State<AppState>,
-    user: AuthenticatedUser,
-    Json(req): Json<MyFollowersRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<FollowerItem>>>> {
-    let service_req = UserFollowersRequest {
-        user_id: user.user_id,
-        cursor: req.cursor,
-        limit: req.limit,
-    };
-    let response = state
-        .user_service
-        .get_followers_list(user.user_id, &service_req)
-        .await?;
-    Ok(Json(ApiResponse::success(response)))
+    Ok(Json(ApiResponse::success_empty()))
 }
 
 // ==================== 拉黑管理 ====================
@@ -361,32 +281,18 @@ pub async fn block(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<BlockRequest>,
-) -> Result<Json<ApiResponse<UserRelation>>> {
+) -> Result<Json<ApiResponse<()>>> {
     state.user_service.block_user(user.user_id, &req).await?;
-    let rel_req = GetRelationshipRequest {
-        user_id: req.user_id,
-    };
-    let data = state
-        .user_service
-        .get_relationship(user.user_id, &rel_req)
-        .await?;
-    Ok(Json(ApiResponse::success(data)))
+    Ok(Json(ApiResponse::success_empty()))
 }
 
 pub async fn unblock(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<UnblockRequest>,
-) -> Result<Json<ApiResponse<UserRelation>>> {
+) -> Result<Json<ApiResponse<()>>> {
     state.user_service.unblock_user(user.user_id, &req).await?;
-    let rel_req = GetRelationshipRequest {
-        user_id: req.user_id,
-    };
-    let data = state
-        .user_service
-        .get_relationship(user.user_id, &rel_req)
-        .await?;
-    Ok(Json(ApiResponse::success(data)))
+    Ok(Json(ApiResponse::success_empty()))
 }
 
 pub async fn get_my_blocked(
@@ -430,37 +336,39 @@ pub async fn admin_ban(
     admin: AuthenticatedUser,
     Json(req): Json<crate::dto::request::AdminBanUserRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    if req.user_id == admin.user_id {
-        return Err(crate::error::AppError::CannotOperateOnSelf);
-    }
-    let operator_is_super = state
+    let target_user_id = Validator::parse_user_id(&req.user_id)?;
+    let is_target_admin = state.admin_rbac_service.is_admin(target_user_id).await?;
+    let is_operator_super = state
         .admin_rbac_service
         .is_super_admin(admin.user_id)
         .await?;
-    if state.admin_rbac_service.is_admin(req.user_id).await? && !operator_is_super {
-        return Err(crate::error::AppError::CannotOperateAdmin(
-            "无法操作管理员账户".to_string(),
-        ));
-    }
-    state.user_service.admin_ban_user(&req).await?;
+
+    // 业务规则校验 + 封禁操作（在 service 内部完成）
+    state
+        .user_service
+        .admin_ban_user(
+            admin.user_id,
+            target_user_id,
+            is_target_admin,
+            is_operator_super,
+            req.reason.clone(),
+            req.duration_days,
+        )
+        .await?;
+
+    // 审计日志（跨服务协调，保留在 handler）
     let details = serde_json::json!({
         "reason": req.reason,
         "duration_days": req.duration_days,
     });
     state
         .admin_audit_service
-        .record(AuditLogInput {
-            action: "user.ban".to_string(),
-            operator_id: admin.user_id,
-            target_type: "user".to_string(),
-            target_id: req.user_id.to_string(),
-            target_name: None,
-            details: Some(details),
-            before_state: None,
-            after_state: None,
-            ip_address: None,
-            user_agent: None,
-        })
+        .record(AuditLogInput::user_action(
+            admin.user_id,
+            "user.ban",
+            target_user_id,
+            Some(details),
+        ))
         .await?;
     Ok(Json(ApiResponse::success_empty()))
 }
@@ -470,10 +378,11 @@ pub async fn admin_detail(
     _admin: AuthenticatedUser,
     Json(req): Json<crate::dto::request::AdminUserDetailRequest>,
 ) -> Result<Json<ApiResponse<AdminUserDetail>>> {
-    let mut detail = state.user_service.admin_user_detail(&req).await?;
+    let target_user_id = Validator::parse_user_id(&req.user_id)?;
+    let mut detail = state.user_service.admin_user_detail(target_user_id).await?;
     detail.ban_history = state
         .admin_audit_service
-        .get_user_ban_history(req.user_id)
+        .get_user_ban_history(target_user_id)
         .await?;
     Ok(Json(ApiResponse::success(detail)))
 }
@@ -483,24 +392,19 @@ pub async fn admin_unban(
     admin: AuthenticatedUser,
     Json(req): Json<crate::dto::request::AdminUnbanUserRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    state.user_service.admin_unban_user(&req).await?;
+    let target_user_id = Validator::parse_user_id(&req.user_id)?;
+    state.user_service.admin_unban_user(target_user_id).await?;
     let details = serde_json::json!({
         "reason": req.reason,
     });
     state
         .admin_audit_service
-        .record(AuditLogInput {
-            action: "user.unban".to_string(),
-            operator_id: admin.user_id,
-            target_type: "user".to_string(),
-            target_id: req.user_id.to_string(),
-            target_name: None,
-            details: Some(details),
-            before_state: None,
-            after_state: None,
-            ip_address: None,
-            user_agent: None,
-        })
+        .record(AuditLogInput::user_action(
+            admin.user_id,
+            "user.unban",
+            target_user_id,
+            Some(details),
+        ))
         .await?;
     Ok(Json(ApiResponse::success_empty()))
 }

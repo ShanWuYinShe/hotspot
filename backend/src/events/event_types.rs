@@ -1,6 +1,6 @@
 use crate::dto::response::MessageMedia;
 use crate::types::enums::{
-    AnnouncementSeverity, GroupRole, MemberLeaveReason, MessageType, ReactionType, ResponseStatus,
+    AnnouncementSeverity, GroupRole, MemberLeaveReason, MessageType, ResponseStatus,
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -33,6 +33,8 @@ pub enum AppEvent {
         follower_id: i64,
         user_id: i64,
         is_mutual: bool,
+        source: Option<crate::types::enums::FollowSource>,
+        source_moment_id: Option<String>,
     },
     MutualFollow {
         user_id: i64,
@@ -95,6 +97,8 @@ pub enum AppEvent {
     GroupMemberMuted {
         group_id: i64,
         user_id: i64,
+        user_nickname: Option<String>,
+        user_avatar_url: Option<String>,
         muted_by: i64,
         muted_until: String,
         duration_minutes: i32,
@@ -103,12 +107,16 @@ pub enum AppEvent {
     GroupMemberUnmuted {
         group_id: i64,
         user_id: i64,
+        user_nickname: Option<String>,
+        user_avatar_url: Option<String>,
         unmuted_by: i64,
     },
     /// 群组解散
     GroupDismissed {
         group_id: i64,
         dismissed_by: i64,
+        /// true = 群主解散 (owner_dismissed), false = 管理员解散 (policy_violation)
+        dismissed_by_owner: bool,
     },
     /// 群公告创建
     GroupAnnouncementCreated {
@@ -117,6 +125,8 @@ pub enum AppEvent {
         title: String,
         content: String,
         created_by_user_id: i64,
+        created_by_nickname: Option<String>,
+        created_by_avatar_url: Option<String>,
         is_pinned: bool,
     },
     /// 群公告更新
@@ -138,6 +148,7 @@ pub enum AppEvent {
         group_id: i64,
         group_name: String,
         group_avatar_url: Option<String>,
+        members_count: i32,
         from_user_id: i64,
         to_user_id: i64,
         message: Option<String>,
@@ -162,6 +173,8 @@ pub enum AppEvent {
         application_id: Uuid,
         group_id: i64,
         group_name: String,
+        group_avatar_url: Option<String>,
+        members_count: i32,
         applicant_id: i64,
         status: ResponseStatus,
     },
@@ -169,47 +182,41 @@ pub enum AppEvent {
     // ========== 群聊消息事件 ==========
     GroupMessageSent {
         message_id: Uuid,
-        group_chat_id: i64,
+        group_id: i64,
         sender_id: i64,
         message_type: MessageType,
         content: Option<String>,
+        share_code: Option<String>,
         reply_to: Option<ReplyToSnapshot>,
         mentions: Option<Vec<i64>>,
         media: Option<MessageMedia>,
     },
     GroupMessageEdited {
         message_id: Uuid,
-        group_chat_id: i64,
+        group_id: i64,
         content: String,
         edited_at: String,
     },
     GroupMessageRecalled {
         message_id: Uuid,
-        group_chat_id: i64,
+        group_id: i64,
         recalled_by: i64,
         recalled_at: String,
     },
     GroupMessageDeleted {
         message_id: Uuid,
-        group_chat_id: i64,
+        group_id: i64,
         deleted_by: i64,
         for_everyone: bool,
     },
     GroupMessageRead {
-        group_chat_id: i64,
+        group_id: i64,
         reader_id: i64,
         up_to: Uuid,
         read_at: String,
     },
-    GroupMessageReaction {
-        message_id: Uuid,
-        group_chat_id: i64,
-        user_id: i64,
-        reaction_type: ReactionType,
-        action: String, // "add" | "remove"
-    },
     GroupUserTyping {
-        group_chat_id: i64,
+        group_id: i64,
         user_id: i64,
         is_typing: bool,
     },
@@ -221,6 +228,7 @@ pub enum AppEvent {
         target_user_id: i64, // 接收者ID (用于多端同步定位会话)
         message_type: MessageType,
         content: Option<String>,
+        share_code: Option<String>,
         reply_to: Option<ReplyToSnapshot>,
         media: Option<MessageMedia>,
     },
@@ -249,13 +257,6 @@ pub enum AppEvent {
         up_to: Uuid,
         read_at: String,
     },
-    PrivateMessageReaction {
-        message_id: Uuid,
-        target_user_id: i64, // 会话对方ID
-        user_id: i64,
-        reaction_type: ReactionType,
-        action: String, // "add" | "remove"
-    },
     PrivateUserTyping {
         target_user_id: i64, // 会话对方ID
         user_id: i64,
@@ -279,6 +280,8 @@ pub enum AppEvent {
         comment_id: Uuid,
         user_id: i64, // 瞬间作者
         commenter_id: i64,
+        commenter_nickname: Option<String>,
+        commenter_avatar_url: Option<String>,
         content: String,
     },
     MomentMentioned {
@@ -339,7 +342,7 @@ pub enum AppEvent {
     // ========== 多端同步 (Self-Sync) ==========
     SelfJoinedGroup {
         user_id: i64,
-        group: serde_json::Value, // GroupSearchItem json
+        group: serde_json::Value, // GroupItem json
     },
     SelfLeftGroup {
         user_id: i64,
@@ -373,6 +376,7 @@ pub struct ReplyToSnapshot {
     pub user_id: i64,
     pub nickname: String,
     pub content: String,
+    pub share_code: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -417,7 +421,6 @@ impl AppEvent {
             AppEvent::GroupMessageRecalled { .. } => "group_message_recalled",
             AppEvent::GroupMessageDeleted { .. } => "group_message_deleted",
             AppEvent::GroupMessageRead { .. } => "group_message_read",
-            AppEvent::GroupMessageReaction { .. } => "group_message_reaction",
             AppEvent::GroupUserTyping { .. } => "group_user_typing",
             // 私聊消息
             AppEvent::PrivateMessageSent { .. } => "private_message_sent",
@@ -425,7 +428,6 @@ impl AppEvent {
             AppEvent::PrivateMessageRecalled { .. } => "private_message_recalled",
             AppEvent::PrivateMessageDeleted { .. } => "private_message_deleted",
             AppEvent::PrivateMessageRead { .. } => "private_message_read",
-            AppEvent::PrivateMessageReaction { .. } => "private_message_reaction",
             AppEvent::PrivateUserTyping { .. } => "private_user_typing",
             // 自同步
             AppEvent::SelfJoinedGroup { .. } => "self_joined_group",

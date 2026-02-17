@@ -19,7 +19,7 @@ CREATE TRIGGER tr_admin_roles_updated_at
 -- ─── RBAC：权限字典 ─────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS admin_permissions (
     permission_id   UUID        PRIMARY KEY DEFAULT uuidv7(),
-    key             VARCHAR(100) UNIQUE NOT NULL,   -- 如 'admin.users.ban'
+    permission_key  VARCHAR(100) UNIQUE NOT NULL,   -- 如 'admin.users.ban'
     name            VARCHAR(100) NOT NULL,
     description     TEXT,
     module          VARCHAR(50) NOT NULL,            -- 所属模块
@@ -29,35 +29,46 @@ CREATE INDEX idx_admin_perms_module ON admin_permissions(module);
 
 -- ─── RBAC：角色 ↔ 权限 ──────────────────────────────────────
 CREATE TABLE IF NOT EXISTS admin_role_permissions (
-    role_id         UUID NOT NULL,
-    permission_id   UUID NOT NULL,
+    role_id         UUID NOT NULL REFERENCES admin_roles(role_id) ON DELETE CASCADE,
+    permission_key  VARCHAR(100) NOT NULL REFERENCES admin_permissions(permission_key),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (role_id, permission_id)
+    PRIMARY KEY (role_id, permission_key)
 );
-CREATE INDEX idx_role_perms_perm ON admin_role_permissions(permission_id);
+CREATE INDEX idx_role_perms_perm ON admin_role_permissions(permission_key);
 
 -- ─── RBAC：管理员用户 ──────────────────────────────────────
 CREATE TABLE IF NOT EXISTS admin_users (
     user_id     BIGINT      PRIMARY KEY,            -- 关联 users.user_id
-    role_id     UUID        NOT NULL,
+    is_super_admin BOOLEAN  NOT NULL DEFAULT FALSE,
     is_active   BOOLEAN     NOT NULL DEFAULT TRUE,
     assigned_by BIGINT,
     assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- ─── RBAC：管理员 ↔ 角色 多对多 ──────────────────────────────
+CREATE TABLE IF NOT EXISTS admin_user_roles (
+    user_id     BIGINT      NOT NULL REFERENCES admin_users(user_id) ON DELETE CASCADE,
+    role_id     UUID        NOT NULL REFERENCES admin_roles(role_id) ON DELETE CASCADE,
+    assigned_by BIGINT,
+    assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, role_id)
+);
+CREATE INDEX idx_admin_user_roles_role ON admin_user_roles(role_id);
 
 CREATE TRIGGER tr_admin_users_updated_at
     BEFORE UPDATE ON admin_users FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 
 -- ─── RBAC：用户直接权限（角色之外的补充权限）──────────────
 CREATE TABLE IF NOT EXISTS admin_user_permissions (
-    user_id         BIGINT NOT NULL,
-    permission_id   UUID   NOT NULL,
+    user_id         BIGINT NOT NULL REFERENCES admin_users(user_id) ON DELETE CASCADE,
+    permission_key  VARCHAR(100) NOT NULL REFERENCES admin_permissions(permission_key),
     granted_by      BIGINT,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (user_id, permission_id)
+    PRIMARY KEY (user_id, permission_key)
 );
-CREATE INDEX idx_admin_user_perms_perm ON admin_user_permissions(permission_id);
+CREATE INDEX idx_admin_user_perms_perm ON admin_user_permissions(permission_key);
 
 -- ─── 审计日志（分区，无 before_state / after_state）──────────
 CREATE TABLE IF NOT EXISTS audit_logs_partitioned (
@@ -66,7 +77,10 @@ CREATE TABLE IF NOT EXISTS audit_logs_partitioned (
     action          VARCHAR(50) NOT NULL,            -- ban_user, unban_user, delete_moment, ...
     target_type     VARCHAR(50) NOT NULL,            -- user, group, moment, comment, system, ...
     target_id       VARCHAR(100),
-    details         JSONB,                           -- 操作细节（替代 before_state/after_state）
+    target_name     VARCHAR(255),
+    details         JSONB,
+    before_state    JSONB,
+    after_state     JSONB,
     ip_address      INET,
     user_agent      TEXT,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -79,30 +93,40 @@ CREATE INDEX idx_audit_operator ON audit_logs_partitioned(operator_id, created_a
 CREATE INDEX idx_audit_action   ON audit_logs_partitioned(action, created_at DESC);
 CREATE INDEX idx_audit_target   ON audit_logs_partitioned(target_type, target_id, created_at DESC);
 
+CREATE OR REPLACE VIEW audit_logs AS
+SELECT * FROM audit_logs_partitioned;
+
 -- ─── 系统公告 ───────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS system_announcements (
+CREATE TABLE IF NOT EXISTS announcements (
     announcement_id UUID                    PRIMARY KEY DEFAULT uuidv7(),
     title           VARCHAR(200)            NOT NULL,
     content         TEXT                    NOT NULL,
+    type            VARCHAR(50)             NOT NULL DEFAULT 'system',
+    target_user_type VARCHAR(50),
     severity        announcement_severity   NOT NULL DEFAULT 'info',
-    publisher_id    BIGINT                  NOT NULL,
-    is_active       BOOLEAN                 NOT NULL DEFAULT TRUE,
-    start_time      TIMESTAMPTZ             NOT NULL DEFAULT NOW(),
-    end_time        TIMESTAMPTZ,
+    action_url      TEXT,
+    send_push       BOOLEAN                 NOT NULL DEFAULT FALSE,
+    is_published    BOOLEAN                 NOT NULL DEFAULT FALSE,
+    publisher_id    BIGINT,
+    start_at        TIMESTAMPTZ             NOT NULL DEFAULT NOW(),
+    end_at          TIMESTAMPTZ,
+    push_sent_at    TIMESTAMPTZ,
+    view_count      INTEGER                 NOT NULL DEFAULT 0,
     created_at      TIMESTAMPTZ             NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ             NOT NULL DEFAULT NOW()
 );
-CREATE INDEX idx_sys_announcements_active
-    ON system_announcements(start_time, end_time) WHERE is_active = TRUE;
+CREATE INDEX idx_announcements_published
+    ON announcements(start_at, end_at) WHERE COALESCE(is_published, FALSE) = TRUE;
 
-CREATE TRIGGER tr_sys_announcements_updated_at
-    BEFORE UPDATE ON system_announcements FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+CREATE TRIGGER tr_announcements_updated_at
+    BEFORE UPDATE ON announcements FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 
 -- ─── 系统配置（键值对，仅管理员访问）────────────────────────
 CREATE TABLE IF NOT EXISTS system_configs (
     config_key  VARCHAR(100) PRIMARY KEY,
-    value       JSONB        NOT NULL DEFAULT '{}',
+    config_value JSONB    NOT NULL DEFAULT '{}'::jsonb,
     description TEXT,
+    is_public   BOOLEAN     NOT NULL DEFAULT FALSE,
     updated_by  BIGINT,
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
@@ -121,7 +145,7 @@ INSERT INTO admin_roles (name, description, is_system) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- 权限字典（按模块组织）
-INSERT INTO admin_permissions (key, name, module, description) VALUES
+INSERT INTO admin_permissions (permission_key, name, module, description) VALUES
     -- 用户管理
     ('admin.users.view',      '查看用户列表',  'users', '查看和搜索用户'),
     ('admin.users.ban',       '封禁用户',      'users', '封禁/解封用户账号'),
@@ -149,26 +173,26 @@ INSERT INTO admin_permissions (key, name, module, description) VALUES
     -- 系统公告
     ('admin.announcements.view',   '查看系统公告', 'announcements', '查看系统公告'),
     ('admin.announcements.manage', '管理系统公告', 'announcements', '创建/编辑/删除系统公告')
-ON CONFLICT (key) DO NOTHING;
+ON CONFLICT (permission_key) DO NOTHING;
 
 -- 为超级管理员赋予全部权限
-INSERT INTO admin_role_permissions (role_id, permission_id)
-SELECT r.role_id, p.permission_id
+INSERT INTO admin_role_permissions (role_id, permission_key)
+SELECT r.role_id, p.permission_key
 FROM admin_roles r, admin_permissions p
 WHERE r.name = 'super_admin'
 ON CONFLICT DO NOTHING;
 
 -- 为内容审核员赋予内容+举报权限
-INSERT INTO admin_role_permissions (role_id, permission_id)
-SELECT r.role_id, p.permission_id
+INSERT INTO admin_role_permissions (role_id, permission_key)
+SELECT r.role_id, p.permission_key
 FROM admin_roles r, admin_permissions p
 WHERE r.name = 'content_moderator'
   AND p.module IN ('content', 'reports')
 ON CONFLICT DO NOTHING;
 
 -- 为用户管理员赋予用户管理权限
-INSERT INTO admin_role_permissions (role_id, permission_id)
-SELECT r.role_id, p.permission_id
+INSERT INTO admin_role_permissions (role_id, permission_key)
+SELECT r.role_id, p.permission_key
 FROM admin_roles r, admin_permissions p
 WHERE r.name = 'user_manager'
   AND p.module = 'users'

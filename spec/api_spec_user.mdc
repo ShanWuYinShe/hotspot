@@ -21,9 +21,9 @@ alwaysApply: true
 |-----|------|------|------|
 | `POST /api/v1/users/search` | 搜索用户（支持关键字/标签/位置组合） | 可选 | 无 |
 | `POST /api/v1/users/open_the_door` | 用户资料详情 | 可选 | 无 |
-| `POST /api/v1/users/list_friends` | 用户好友列表 | 可选 | 无 |
-| `POST /api/v1/users/list_following` | 用户关注列表 | 可选 | 无 |
-| `POST /api/v1/users/list_followers` | 用户粉丝列表 | 可选 | 无 |
+| `POST /api/v1/users/list_friends` | 好友列表（user_id 可选，默认=当前用户） | 可选 | 无 |
+| `POST /api/v1/users/list_following` | 关注列表（user_id 可选，默认=当前用户） | 可选 | 无 |
+| `POST /api/v1/users/list_followers` | 粉丝列表（user_id 可选，默认=当前用户） | 可选 | 无 |
 | `POST /api/v1/users/list_groups` | 用户群组列表 | 可选 | 无 |
 | `POST /api/v1/users/list_moments` | 用户瞬间历史 | 可选 | 无 |
 | `POST /api/v1/users/list_liked_moments` | 用户点赞瞬间列表 | 可选 | 无 |
@@ -38,15 +38,12 @@ alwaysApply: true
 | `POST /api/v1/users/me/unfollow` | 取消关注 | 必须 | 幂等语义 |
 | `POST /api/v1/users/me/block` | 拉黑用户 | 必须 | 幂等语义 |
 | `POST /api/v1/users/me/unblock` | 解除拉黑 | 必须 | 幂等语义 |
-| `POST /api/v1/users/me/list_friends` | 我的好友列表 | 必须 | 无 |
-| `POST /api/v1/users/me/list_following` | 我的关注列表 | 必须 | 无 |
-| `POST /api/v1/users/me/list_followers` | 我的粉丝列表 | 必须 | 无 |
 | `POST /api/v1/users/me/list_blocked` | 我的拉黑列表 | 必须 | 无 |
 | `POST /api/v1/users/me/set_remark` | 设置备注 | 必须 | 幂等语义 |
-| `POST /api/v1/users/me/email/request_change` | 请求变更邮箱 | 必须 | MUST |
-| `POST /api/v1/users/me/email/confirm_change` | 确认变更邮箱 | 必须 | MUST |
-| `POST /api/v1/users/me/phone/request_change` | 请求变更手机 | 必须 | MUST |
-| `POST /api/v1/users/me/phone/confirm_change` | 确认变更手机 | 必须 | MUST |
+| `POST /api/v1/users/me/email/request_change` | 请求变更邮箱 (⏳ 延期) | 必须 | MUST |
+| `POST /api/v1/users/me/email/confirm_change` | 确认变更邮箱 (⏳ 延期) | 必须 | MUST |
+| `POST /api/v1/users/me/phone/request_change` | 请求变更手机 (⏳ 延期) | 必须 | MUST |
+| `POST /api/v1/users/me/phone/confirm_change` | 确认变更手机 (⏳ 延期) | 必须 | MUST |
 
 ## 类型定义
 
@@ -63,16 +60,14 @@ alwaysApply: true
 - `GroupItem`
 - `MomentItem`
 - `FollowSource`
+- `Gender`
+- `PrivateChatPermission`
 
 ## 端点详情
 
 ### POST /api/v1/users/search
 
 统一搜索用户。支持关键字、标签、位置范围三种条件的自由组合。
-
-说明（Token 可选的搜索语义）：
-- 未登录（不带 token）：仅返回可被匿名公开发现/可见的用户；不返回 `@auth-only` 字段
-- 已登录（带 token）：在满足隐私与关系规则前提下，允许返回更多可见用户；返回完整的 `UserItem`（包括 `@auth-only` 字段）
 
 - **认证**: 可选
 - **幂等**: 无
@@ -105,9 +100,7 @@ interface SearchUsersRequest {
 
 ### POST /api/v1/users/open_the_door
 
-获取用户资料详情。
-
-Token 可选；登录态返回完整的 `UserItem`（包括 `@auth-only` 字段如 `relation`、`social_context`、`stats`）；未登录态不返回 `@auth-only` 字段。
+获取用户资料详情。认证可选，字段可见性规则见 `@spec/api_spec_base.mdc`。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -127,18 +120,18 @@ interface UserOpenTheDoorRequest {
 
 ### POST /api/v1/users/list_friends
 
-获取指定用户好友列表（好友 = 双方互相关注的用户）。
+获取好友列表（好友 = 双方互相关注的用户）。
 
-**隐私控制**：受 `friends_visible` 设置控制。
+**统一端点**：`user_id` 可选。不传或传入当前用户 ID 时查询自己的好友列表，返回 `@owner-only` 字段（如 `remark`）。传入其他用户 ID 时查询对方的好友列表，受 `social_lists_visible` 隐私设置控制。
 
-- **认证**: 可选
+- **认证**: 可选（不传 `user_id` 时实际需要登录态）
 - **幂等**: 无
 - **排序**: 默认按 `followed_back_at` **时间倒序**（最近成为好友在前）
 
-**Request**: `UserFriendsRequest`
+**Request**: `ListFriendsRequest`
 ```typescript
-interface UserFriendsRequest {
-  user_id: string;
+interface ListFriendsRequest {
+  user_id?: string;   // 可选，不传时默认当前用户
   pagination?: PaginationParams;
 }
 ```
@@ -149,32 +142,32 @@ interface FriendItem {
   user: UserInfo;
   presence_status?: UserPresenceStatus;  // 隐私受控：对方隐私设置时不返回
   last_online?: string;
-  remark?: string;
-  followed_at: string;        // 我关注对方的时间
-  followed_back_at: string;   // 对方回关我的时间（成为好友的时间）
+  remark?: string;             // @owner-only：仅查询自己时返回
+  followed_at: string;         // 我关注对方的时间
+  followed_back_at: string;    // 对方回关我的时间（成为好友的时间）
 }
 ```
 
-**可见性说明**：`remark` 为 `@owner-only`（仅 `me/list_friends` 返回），`presence_status`/`last_online` 受对方隐私设置控制。
+**可见性说明**：`remark` 为 `@owner-only`（仅查询自己时返回），`presence_status`/`last_online` 受对方隐私设置控制。
 
-**错误码**: `10000` `10300`
+**错误码**: `10000` `10200` `10300`
 
 ---
 
 ### POST /api/v1/users/list_following
 
-获取指定用户关注列表。
+获取关注列表。
 
-**隐私控制**：受 `following_visible` 设置控制。
+**统一端点**：`user_id` 可选。不传或传入当前用户 ID 时查询自己的关注列表。传入其他用户 ID 时查询对方的关注列表，受 `social_lists_visible` 隐私设置控制。
 
-- **认证**: 可选
+- **认证**: 可选（不传 `user_id` 时实际需要登录态）
 - **幂等**: 无
 - **排序**: 默认按 `followed_at` **时间倒序**（最近关注在前）
 
-**Request**: `UserFollowingRequest`
+**Request**: `ListFollowingRequest`
 ```typescript
-interface UserFollowingRequest {
-  user_id: string;
+interface ListFollowingRequest {
+  user_id?: string;   // 可选，不传时默认当前用户
   pagination?: PaginationParams;
 }
 ```
@@ -192,24 +185,24 @@ interface FollowingItem {
 
 **可见性说明**：`presence_status`/`last_online` 受对方隐私设置控制。
 
-**错误码**: `10000` `10300`
+**错误码**: `10000` `10200` `10300`
 
 ---
 
 ### POST /api/v1/users/list_followers
 
-获取指定用户粉丝列表。
+获取粉丝列表。
 
-**隐私控制**：受 `followers_visible` 设置控制。
+**统一端点**：`user_id` 可选。不传或传入当前用户 ID 时查询自己的粉丝列表。传入其他用户 ID 时查询对方的粉丝列表，受 `social_lists_visible` 隐私设置控制。
 
-- **认证**: 可选
+- **认证**: 可选（不传 `user_id` 时实际需要登录态）
 - **幂等**: 无
 - **排序**: 默认按 `followed_at` **时间倒序**（最近关注在前）
 
-**Request**: `UserFollowersRequest`
+**Request**: `ListFollowersRequest`
 ```typescript
-interface UserFollowersRequest {
-  user_id: string;
+interface ListFollowersRequest {
+  user_id?: string;   // 可选，不传时默认当前用户
   pagination?: PaginationParams;
 }
 ```
@@ -227,7 +220,7 @@ interface FollowerItem {
 
 **可见性说明**：`presence_status`/`last_online` 受对方隐私设置控制。
 
-**错误码**: `10000` `10300`
+**错误码**: `10000` `10200` `10300`
 
 ---
 
@@ -236,8 +229,6 @@ interface FollowerItem {
 获取指定用户加入的公开群组。
 
 **隐私控制**：受 `groups_visible` 设置控制。仅返回 `is_searchable=true` 的公开群组。
-
-Token 可选；登录态返回包含 `@auth-only` 字段的完整 `GroupItem`（如 `my_state`）；未登录态不返回 `@auth-only` 字段。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -253,7 +244,7 @@ interface UserGroupsRequest {
 
 **Response**: `ApiResponse<PaginatedData<GroupItem>>`
 
-**错误码**: `10000` `10300`
+**错误码**: `10000` `10200` `10300`
 
 ---
 
@@ -261,9 +252,7 @@ interface UserGroupsRequest {
 
 获取指定用户生活瞬间历史。
 
-**说明**：生活瞬间支持 `privacy_level` 控制可见性（`public` / `private`）。未登录用户仅能访问 `public` 的瞬间；登录用户可额外看到自己的所有瞬间（包括 `private`）。
-
-Token 可选；登录态返回包含 `@auth-only` 字段的完整 `MomentItem`（如 `my_state`）；未登录态不返回 `@auth-only` 字段。
+**说明**：生活瞬间支持 `privacy_level` 控制可见性（`public` / `private`）。未登录用户仅能访问 `public` 的瞬间；登录用户可额外看到自己的所有瞬间（包括 `private`）。认证可选，字段可见性规则见 `@spec/api_spec_base.mdc`。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -289,8 +278,6 @@ interface UserMomentsRequest {
 
 **隐私控制**：受 `liked_moments_visible` 设置控制。
 
-Token 可选；登录态返回包含 `@auth-only` 字段的完整 `MomentItem`（如 `my_state`）；未登录态不返回 `@auth-only` 字段。
-
 - **认证**: 可选
 - **幂等**: 无
 - **排序**: 默认按 `liked_at` **时间倒序**（最近点赞在前）
@@ -305,7 +292,7 @@ interface UserLikedMomentsRequest {
 
 **Response**: `ApiResponse<PaginatedData<MomentItem>>`
 
-**错误码**: `10000` `10300`
+**错误码**: `10000` `10200` `10300`
 
 ---
 
@@ -322,8 +309,7 @@ interface UserLikedMomentsRequest {
 
 **Response**: `ApiResponse<MyProfile>`
 ```typescript
-// 性别枚举
-type Gender = 'male' | 'female' | 'apache_helicopter';
+// Gender 定义于 @spec/api_spec_types.mdc
 
 interface MyProfile {
   user_id: string;
@@ -423,20 +409,17 @@ interface UpgradeAccountRequest {
 
 **Response**: `ApiResponse<UserSettings>`
 ```typescript
-// 私聊权限
-// 注：'friends' 表示"仅好友"，好友 = 双方互相关注的用户
-type PrivateChatPermission = 'everyone' | 'friends' | 'nobody';
+// PrivateChatPermission 定义于 @spec/api_spec_types.mdc
+// 注：当 WebSocket 自同步事件（SelfSettingsUpdatedPayload）实现时，UserSettings 需迁移至 @spec/api_spec_types.mdc（跨模块复用规则）
 
 interface UserSettings {
   privacy_level: PrivacyLevel;
   location_visible: boolean;
-  presence_visible: boolean;       // 在线状态和最后在线时间的可见性（统一控制）
-  friends_visible: boolean;        // 好友列表是否公开（好友 = 互相关注）
-  following_visible: boolean;      // 关注列表是否公开
-  followers_visible: boolean;      // 粉丝列表是否公开
-  groups_visible: boolean;         // 群组列表是否公开
-  liked_moments_visible: boolean;  // 点赞瞬间列表是否公开
-  stats_visible: boolean;          // 统计信息是否公开
+  presence_visible: boolean;         // 在线状态和最后在线时间的可见性（统一控制）
+  social_lists_visible: boolean;     // 好友/关注/粉丝列表是否公开（统一控制）
+  groups_visible: boolean;           // 群组列表是否公开
+  liked_moments_visible: boolean;    // 点赞瞬间列表是否公开
+  stats_visible: boolean;            // 统计信息是否公开
   allow_follow: boolean;
   allow_private_chat: PrivateChatPermission;
   searchable: boolean;
@@ -579,69 +562,6 @@ interface UnblockRequest {
 
 ---
 
-### POST /api/v1/users/me/list_friends
-
-获取好友列表（好友 = 双方互相关注的用户）。
-
-- **认证**: 必须
-- **幂等**: 无
-- **排序**: 默认按 `followed_back_at` **时间倒序**（最近成为好友在前）
-
-**Request**: `MyFriendsRequest`
-```typescript
-interface MyFriendsRequest {
-  pagination?: PaginationParams;
-}
-```
-
-**Response**: `ApiResponse<PaginatedData<FriendItem>>`
-
-**错误码**: `10000`
-
----
-
-### POST /api/v1/users/me/list_following
-
-获取关注列表。
-
-- **认证**: 必须
-- **幂等**: 无
-- **排序**: 默认按 `followed_at` **时间倒序**（最近关注在前）
-
-**Request**: `MyFollowingRequest`
-```typescript
-interface MyFollowingRequest {
-  pagination?: PaginationParams;
-}
-```
-
-**Response**: `ApiResponse<PaginatedData<FollowingItem>>`
-
-**错误码**: `10000`
-
----
-
-### POST /api/v1/users/me/list_followers
-
-获取粉丝列表。
-
-- **认证**: 必须
-- **幂等**: 无
-- **排序**: 默认按 `followed_at` **时间倒序**（最近关注在前）
-
-**Request**: `MyFollowersRequest`
-```typescript
-interface MyFollowersRequest {
-  pagination?: PaginationParams;
-}
-```
-
-**Response**: `ApiResponse<PaginatedData<FollowerItem>>`
-
-**错误码**: `10000`
-
----
-
 ### POST /api/v1/users/me/list_blocked
 
 获取拉黑列表。
@@ -695,6 +615,8 @@ interface SetRemarkRequest {
 
 ### POST /api/v1/users/me/email/request_change
 
+> ⏳ **延期实现**：依赖邮件验证码发送服务，待服务接入后实现。
+
 请求变更邮箱。发送验证码到新邮箱地址。
 
 **安全设计**：需要当前密码验证身份，防止账号被盗后变更邮箱。
@@ -723,6 +645,8 @@ interface VerificationSent {
 
 ### POST /api/v1/users/me/email/confirm_change
 
+> ⏳ **延期实现**：依赖邮件验证码发送服务，待服务接入后实现。
+
 确认变更邮箱。提交发送到新邮箱的验证码完成变更。
 
 - **认证**: 必须
@@ -743,6 +667,8 @@ interface ConfirmEmailChangeRequest {
 ---
 
 ### POST /api/v1/users/me/phone/request_change
+
+> ⏳ **延期实现**：依赖短信验证码发送服务，待服务接入后实现。
 
 请求变更手机号。发送验证码到新手机号。
 
@@ -766,6 +692,8 @@ interface RequestPhoneChangeRequest {
 ---
 
 ### POST /api/v1/users/me/phone/confirm_change
+
+> ⏳ **延期实现**：依赖短信验证码发送服务，待服务接入后实现。
 
 确认变更手机号。提交发送到新手机号的验证码完成变更。
 

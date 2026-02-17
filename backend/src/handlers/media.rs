@@ -3,9 +3,9 @@ use axum::{extract::State, Json};
 use crate::{
     dto::{
         request::{BatchPresignUploadRequest, CompleteUploadRequest, PresignUploadRequest},
-        response::{ApiResponse, PresignUploadData, UploadMediaData},
+        response::{ApiResponse, BatchPresignedUpload, PresignUploadData, UploadMediaData},
     },
-    error::Result,
+    error::{AppError, Result},
     middleware::auth::AuthenticatedUser,
     state::AppState,
 };
@@ -26,16 +26,25 @@ pub async fn batch_presign_upload(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<BatchPresignUploadRequest>,
-) -> Result<Json<ApiResponse<Vec<PresignUploadData>>>> {
-    let mut results = Vec::with_capacity(req.items.len());
-    for item in req.items {
+) -> Result<Json<ApiResponse<BatchPresignedUpload>>> {
+    const MAX_BATCH_FILES: usize = 9;
+    if req.files.len() > MAX_BATCH_FILES {
+        return Err(AppError::OutOfRange(format!(
+            "单次批量上传最多 {} 个文件",
+            MAX_BATCH_FILES
+        )));
+    }
+    let mut results = Vec::with_capacity(req.files.len());
+    for item in req.files {
         let data = state
             .media_service
             .presign_upload(user.user_id, item)
             .await?;
         results.push(data);
     }
-    Ok(Json(ApiResponse::success(results)))
+    Ok(Json(ApiResponse::success(BatchPresignedUpload {
+        uploads: results,
+    })))
 }
 
 pub async fn complete_upload(

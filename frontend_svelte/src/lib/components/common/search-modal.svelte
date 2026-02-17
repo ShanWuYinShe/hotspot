@@ -10,7 +10,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Card, CardContent } from '$lib/components/ui/card';
-	import type { SearchSuggestItem, TrendingTag } from '$lib/types/api';
+	import type { SearchSuggestItem, TagItem } from '$lib/types/api';
 	import Search from 'lucide-svelte/icons/search';
 	import Hash from 'lucide-svelte/icons/hash';
 	import Clock from 'lucide-svelte/icons/clock';
@@ -27,15 +27,27 @@
 	let keyword = $state('');
 	let isLoadingTags = $state(false);
 	let isSuggesting = $state(false);
-	let trendingTags = $state.raw<TrendingTag[]>([]);
+	let trendingTags = $state.raw<TagItem[]>([]);
 	let suggestions = $state.raw<SearchSuggestItem[]>([]);
-	let recentSearches = $state<string[]>([]);
+	let recentSearches = $state.raw<string[]>([]);
 	const trimmedKeyword = $derived(keyword.trim());
 	const recentMatches = $derived(
 		trimmedKeyword ? recentSearches.filter((item) => item.includes(trimmedKeyword)).slice(0, 6) : []
 	);
 	const hasSuggestions = $derived(recentMatches.length > 0 || suggestions.length > 0);
 	let suggestTimer: ReturnType<typeof setTimeout> | null = null;
+	// 用于取消进行中的搜索建议请求，防止竞态条件
+	let suggestAbortController: AbortController | null = null;
+
+	/** 获取搜索建议项的唯一 key */
+	function getSuggestionKey(item: SearchSuggestItem): string {
+		switch (item.type) {
+			case 'user': return `user_${item.payload.user_id}`;
+			case 'group': return `group_${item.payload.group_id}`;
+			case 'moment': return `moment_${item.payload.moment_id}`;
+			case 'tag': return `tag_${item.payload.name}`;
+		}
+	}
 
 	const RECENT_KEY = 'hotspot_recent_searches';
 
@@ -122,6 +134,12 @@
 			suggestions = [];
 			return;
 		}
+
+		// 取消上一次进行中的建议请求
+		suggestAbortController?.abort();
+		const controller = new AbortController();
+		suggestAbortController = controller;
+
 		isSuggesting = true;
 		try {
 			const response = await searchService.suggest({
@@ -130,12 +148,18 @@
 					latitude: mapAnchorStore.latitude,
 					longitude: mapAnchorStore.longitude
 				}
-			});
+			}, { signal: controller.signal });
+
+			if (controller.signal.aborted) return;
 			suggestions = isSuccess(response) && response.data ? response.data.items : [];
 		} catch {
-			suggestions = [];
+			if (!controller.signal.aborted) {
+				suggestions = [];
+			}
 		} finally {
-			isSuggesting = false;
+			if (!controller.signal.aborted) {
+				isSuggesting = false;
+			}
 		}
 	}
 
@@ -193,7 +217,7 @@
 			case 'group':
 				return item.payload.name || '未知群组';
 			case 'moment':
-				return item.payload.content || '瞬间';
+				return item.payload.description_preview || '瞬间';
 			default:
 				return '未知';
 		}
@@ -210,7 +234,7 @@
 			case 'group':
 				return item.payload.description || `${item.payload.members_count || 0} 位成员`;
 			case 'moment':
-				return item.payload.author_nickname ? `来自 ${item.payload.author_nickname}` : null;
+				return item.payload.author?.nickname ? `来自 ${item.payload.author.nickname}` : null;
 			default:
 				return null;
 		}
@@ -242,6 +266,9 @@
 				clearTimeout(suggestTimer);
 				suggestTimer = null;
 			}
+			// 取消进行中的建议请求，防止关闭后仍更新状态
+			suggestAbortController?.abort();
+			suggestAbortController = null;
 		}
 	});
 
@@ -323,7 +350,7 @@
 					<CardContent class="space-y-3 p-4">
 						{#if isSuggesting}
 							<div class="space-y-2">
-								{#each Array(3) as _}
+								{#each Array(3) as _, i (i)}
 									<div class="h-8 w-full animate-pulse rounded-full bg-muted"></div>
 								{/each}
 							</div>
@@ -381,7 +408,7 @@
 											综合建议
 										</div>
 										<div class="space-y-1">
-											{#each suggestions as item (`${item.type}_${'user_id' in item.payload ? item.payload.user_id : 'group_id' in item.payload ? item.payload.group_id : 'moment_id' in item.payload ? item.payload.moment_id : item.payload.name}`)}
+											{#each suggestions as item (getSuggestionKey(item))}
 												<button
 													type="button"
 													class="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-accent/50"
@@ -403,8 +430,8 @@
 														</Avatar>
 													{:else if item.type === 'moment' && item.payload}
 														<Avatar class="h-9 w-9">
-															<AvatarImage src={item.payload.author_avatar_url} alt={item.payload.author_nickname || '用户'} />
-															<AvatarFallback>{(item.payload.author_nickname || '用户').slice(0, 2)}</AvatarFallback>
+															<AvatarImage src={item.payload.author?.avatar_url} alt={item.payload.author?.nickname || '用户'} />
+															<AvatarFallback>{(item.payload.author?.nickname || '用户').slice(0, 2)}</AvatarFallback>
 														</Avatar>
 													{:else}
 														<Avatar class="h-9 w-9">
@@ -491,7 +518,7 @@
 							</div>
 							{#if isLoadingTags}
 								<div class="space-y-2">
-									{#each Array(4) as _}
+									{#each Array(4) as _, i (i)}
 										<div class="h-8 w-full animate-pulse rounded-full bg-muted"></div>
 									{/each}
 								</div>

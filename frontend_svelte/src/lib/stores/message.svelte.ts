@@ -6,6 +6,7 @@
 import { websocketStore } from '$lib/websocket';
 import { browser } from '$app/environment';
 import { authStore } from './auth.svelte';
+import type { PrivateMessageNewPayload, GroupMessageNewPayload } from '$lib/websocket/types';
 
 // ============ 消息类型 ============
 
@@ -36,117 +37,89 @@ class MessageStore {
 
 	// 清理函数数组（用于取消 WebSocket 监听）
 	private cleanupFunctions: (() => void)[] = [];
+	// $effect.root() 清理函数
+	private destroyEffectRoot: (() => void) | null = null;
 
 	constructor() {
 		if (!browser) return;
 
-		// 监听消息事件
 		this.registerMessageHandlers();
+
+		// 响应式监听认证状态：登出时清空消息未读，防止跨用户数据泄漏
+		this.destroyEffectRoot = $effect.root(() => {
+			$effect(() => {
+				if (!authStore.isAuthenticated) {
+					this.unreadConversations = new Map();
+				}
+			});
+		});
 	}
 
-	/**
-	 * 注册消息事件处理器
-	 */
+	// ============ 内部工具方法 ============
+
+	/** 不可变更新 Map：clone → mutate → reassign */
+	private updateMap(mutator: (map: Map<string, UnreadConversation>) => void) {
+		const next = new Map(this.unreadConversations);
+		mutator(next);
+		this.unreadConversations = next;
+	}
+
+	/** 统一的消息未读递增逻辑（私聊/群聊共用） */
+	private incrementUnread(
+		conversationId: string,
+		type: 'private' | 'group',
+		payload: { content?: string; sent_at: string; sender: { nickname: string } }
+	) {
+		const lastMessage = {
+			content: payload.content ?? '',
+			timestamp: payload.sent_at,
+			senderName: payload.sender.nickname
+		};
+
+		this.updateMap((map) => {
+			const existing = map.get(conversationId);
+			map.set(conversationId, {
+				id: conversationId,
+				type,
+				count: (existing?.count ?? 0) + 1,
+				lastMessage
+			});
+		});
+	}
+
+	// ============ WebSocket 事件注册 ============
+
 	private registerMessageHandlers() {
-		// 监听私聊新消息
 		this.cleanupFunctions.push(
-			websocketStore.on('PrivateMessageNew', (payload) => {
-				// 只统计别人发给我的消息（过滤掉自己发送的消息）
-				if (payload.sender.user_id === authStore.currentUserId) {
-					return;
-				}
-
-				const conversationId = `private_${payload.sender.user_id}`;
-				const existing = this.unreadConversations.get(conversationId);
-
-				const newMap = new Map(this.unreadConversations);
-				if (existing) {
-					newMap.set(conversationId, {
-						...existing,
-						count: existing.count + 1,
-						lastMessage: {
-							content: payload.content ?? '',
-							timestamp: payload.sent_at,
-							senderName: payload.sender.nickname
-						}
-					});
-				} else {
-					newMap.set(conversationId, {
-						id: conversationId,
-						type: 'private',
-						count: 1,
-						lastMessage: {
-							content: payload.content ?? '',
-							timestamp: payload.sent_at,
-							senderName: payload.sender.nickname
-						}
-					});
-				}
-
-				this.unreadConversations = newMap;
+			websocketStore.on('PrivateMessageNew', (payload: PrivateMessageNewPayload) => {
+				if (payload.sender.user_id === authStore.currentUserId) return;
+				this.incrementUnread(`private_${payload.sender.user_id}`, 'private', payload);
 			})
 		);
 
-		// 监听群聊新消息
 		this.cleanupFunctions.push(
-			websocketStore.on('GroupMessageNew', (payload) => {
-				// 只统计别人发的消息（过滤掉自己发送的消息）
-				if (payload.sender.user_id === authStore.currentUserId) {
-					return;
-				}
-
-				const conversationId = `group_${payload.group_id}`;
-				const existing = this.unreadConversations.get(conversationId);
-
-				const newMap = new Map(this.unreadConversations);
-				if (existing) {
-					newMap.set(conversationId, {
-						...existing,
-						count: existing.count + 1,
-						lastMessage: {
-							content: payload.content ?? '',
-							timestamp: payload.sent_at,
-							senderName: payload.sender.nickname
-						}
-					});
-				} else {
-					newMap.set(conversationId, {
-						id: conversationId,
-						type: 'group',
-						count: 1,
-						lastMessage: {
-							content: payload.content ?? '',
-							timestamp: payload.sent_at,
-							senderName: payload.sender.nickname
-						}
-					});
-				}
-
-				this.unreadConversations = newMap;
+			websocketStore.on('GroupMessageNew', (payload: GroupMessageNewPayload) => {
+				if (payload.sender.user_id === authStore.currentUserId) return;
+				this.incrementUnread(`group_${payload.group_id}`, 'group', payload);
 			})
 		);
 	}
 
-	/**
-	 * 标记对话为已读
-	 */
+	// ============ 公共方法 ============
+
 	markConversationAsRead(conversationId: string) {
-		const newMap = new Map(this.unreadConversations);
-		newMap.delete(conversationId);
-		this.unreadConversations = newMap;
+		this.updateMap((map) => map.delete(conversationId));
 	}
 
-	/**
-	 * 标记所有消息为已读
-	 */
 	markAllAsRead() {
 		this.unreadConversations = new Map();
 	}
 
-	/**
-	 * 清理所有 WebSocket 监听器
-	 */
 	destroy() {
+		if (this.destroyEffectRoot) {
+			this.destroyEffectRoot();
+			this.destroyEffectRoot = null;
+		}
 		this.cleanupFunctions.forEach((cleanup) => cleanup());
 		this.cleanupFunctions = [];
 	}

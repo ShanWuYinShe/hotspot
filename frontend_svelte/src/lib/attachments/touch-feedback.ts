@@ -115,14 +115,12 @@ export function touchFeedback(options: TouchFeedbackOptions = {}) {
 			}, opts.duration);
 		}
 
-		// 监听触摸和点击事件
+		// pointerdown 涵盖鼠标和触摸，无需额外监听 touchstart
 		node.addEventListener('pointerdown', createRipple);
-		node.addEventListener('touchstart', createRipple, { passive: true });
 
 		// 返回清理函数（Attachment 模式）
 		return () => {
 			node.removeEventListener('pointerdown', createRipple);
-			node.removeEventListener('touchstart', createRipple);
 
 			// 清理残留的ripple
 			const ripples = node.querySelectorAll('.touch-ripple');

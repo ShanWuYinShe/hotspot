@@ -1,4 +1,12 @@
 use axum::http::HeaderMap;
+use rand::RngCore;
+
+/// 生成符合 spec 要求的 CSRF Token（≥32 字节，64 字符 hex）
+pub fn generate_csrf_token() -> String {
+    let mut bytes = [0u8; 32];
+    rand::rng().fill_bytes(&mut bytes);
+    hex::encode(bytes)
+}
 
 /// 极简 Cookie 解析：从请求头中提取某个 cookie 的值。
 ///

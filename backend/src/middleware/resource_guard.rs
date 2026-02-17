@@ -3,6 +3,7 @@
 //! 使用布隆过滤器快速过滤掉不存在的资源请求，
 //! 防止恶意请求穿透缓存直接查询数据库
 
+use crate::{dto::response::ApiResponse, error::AppError, state::AppState};
 use axum::{
     body::{to_bytes, Body},
     extract::State,
@@ -14,9 +15,40 @@ use axum::{
 use serde_json::Value;
 use std::collections::HashSet;
 
-use crate::{dto::response::ApiResponse, error::AppError, state::AppState};
-
 const MAX_GUARD_BODY_BYTES: usize = 512 * 1024;
+
+/// 布隆过滤器存在性检查（宏封装，避免闭包生命周期问题）
+macro_rules! check_bloom_ids {
+    ($ids:expr, $single_expr:expr, $batch_expr:expr, $code:expr, $msg:expr) => {
+        if !$ids.is_empty() {
+            let results = if $ids.len() == 1 {
+                match $single_expr.await {
+                    Ok(v) => vec![v],
+                    Err(e) => {
+                        tracing::warn!("Bloom filter check failed: {}", e);
+                        vec![true]
+                    }
+                }
+            } else {
+                match $batch_expr.await {
+                    Ok(v) => v,
+                    Err(e) => {
+                        tracing::warn!("Bloom filter batch check failed: {}", e);
+                        vec![true; $ids.len()]
+                    }
+                }
+            };
+            if let Some((idx, _)) = results.iter().enumerate().find(|(_, v)| !**v) {
+                tracing::debug!("Bloom filter rejected: {}", &$ids[idx]);
+                return (
+                    StatusCode::OK,
+                    Json(ApiResponse::<()>::error($code, $msg.to_string())),
+                )
+                    .into_response();
+            }
+        }
+    };
+}
 
 /// 资源存在性保护中间件
 ///
@@ -89,190 +121,53 @@ pub async fn resource_guard_middleware(
 
     // Bloom 过滤（false => 一定不存在）
     let user_ids: Vec<i64> = extracted.user_ids.iter().copied().collect();
-    if !user_ids.is_empty() {
-        let results = if user_ids.len() == 1 {
-            match state.resource_checker.user_might_exist(user_ids[0]).await {
-                Ok(v) => vec![v],
-                Err(e) => {
-                    tracing::warn!("Bloom filter check failed: {}", e);
-                    vec![true]
-                }
-            }
-        } else {
-            match state
-                .resource_checker
-                .user_might_exist_batch(&user_ids)
-                .await
-            {
-                Ok(v) => v,
-                Err(e) => {
-                    tracing::warn!("Bloom filter batch check failed: {}", e);
-                    vec![true; user_ids.len()]
-                }
-            }
-        };
-        if let Some((idx, _)) = results.iter().enumerate().find(|(_, v)| !**v) {
-            let rejected_id = user_ids[idx];
-            tracing::debug!("Bloom filter rejected user_id={}", rejected_id);
-            return (
-                StatusCode::OK,
-                Json(ApiResponse::<()>::error(10310, "用户不存在".to_string())),
-            )
-                .into_response();
-        }
-    }
+    check_bloom_ids!(
+        user_ids,
+        state.resource_checker.user_might_exist(user_ids[0]),
+        state.resource_checker.user_might_exist_batch(&user_ids),
+        10310,
+        "用户不存在"
+    );
 
     let group_ids: Vec<String> = extracted.group_ids.iter().cloned().collect();
-    if !group_ids.is_empty() {
-        let results = if group_ids.len() == 1 {
-            match state
-                .resource_checker
-                .group_might_exist(&group_ids[0])
-                .await
-            {
-                Ok(v) => vec![v],
-                Err(e) => {
-                    tracing::warn!("Bloom filter check failed: {}", e);
-                    vec![true]
-                }
-            }
-        } else {
-            match state
-                .resource_checker
-                .group_might_exist_batch(&group_ids)
-                .await
-            {
-                Ok(v) => v,
-                Err(e) => {
-                    tracing::warn!("Bloom filter batch check failed: {}", e);
-                    vec![true; group_ids.len()]
-                }
-            }
-        };
-        if let Some((idx, _)) = results.iter().enumerate().find(|(_, v)| !**v) {
-            let rejected_id = &group_ids[idx];
-            tracing::debug!("Bloom filter rejected group_id={}", rejected_id);
-            return (
-                StatusCode::OK,
-                Json(ApiResponse::<()>::error(10320, "群组不存在".to_string())),
-            )
-                .into_response();
-        }
-    }
+    check_bloom_ids!(
+        group_ids,
+        state.resource_checker.group_might_exist(&group_ids[0]),
+        state.resource_checker.group_might_exist_batch(&group_ids),
+        10320,
+        "群组不存在"
+    );
 
     let moment_ids: Vec<String> = extracted.moment_ids.iter().cloned().collect();
-    if !moment_ids.is_empty() {
-        let results = if moment_ids.len() == 1 {
-            match state
-                .resource_checker
-                .moment_might_exist(&moment_ids[0])
-                .await
-            {
-                Ok(v) => vec![v],
-                Err(e) => {
-                    tracing::warn!("Bloom filter check failed: {}", e);
-                    vec![true]
-                }
-            }
-        } else {
-            match state
-                .resource_checker
-                .moment_might_exist_batch(&moment_ids)
-                .await
-            {
-                Ok(v) => v,
-                Err(e) => {
-                    tracing::warn!("Bloom filter batch check failed: {}", e);
-                    vec![true; moment_ids.len()]
-                }
-            }
-        };
-        if let Some((idx, _)) = results.iter().enumerate().find(|(_, v)| !**v) {
-            let rejected_id = &moment_ids[idx];
-            tracing::debug!("Bloom filter rejected moment_id={}", rejected_id);
-            return (
-                StatusCode::OK,
-                Json(ApiResponse::<()>::error(10330, "瞬间不存在".to_string())),
-            )
-                .into_response();
-        }
-    }
+    check_bloom_ids!(
+        moment_ids,
+        state.resource_checker.moment_might_exist(&moment_ids[0]),
+        state.resource_checker.moment_might_exist_batch(&moment_ids),
+        10330,
+        "瞬间不存在"
+    );
 
     let comment_ids: Vec<String> = extracted.comment_ids.iter().cloned().collect();
-    if !comment_ids.is_empty() {
-        let results = if comment_ids.len() == 1 {
-            match state
-                .resource_checker
-                .comment_might_exist(&comment_ids[0])
-                .await
-            {
-                Ok(v) => vec![v],
-                Err(e) => {
-                    tracing::warn!("Bloom filter check failed: {}", e);
-                    vec![true]
-                }
-            }
-        } else {
-            match state
-                .resource_checker
-                .comment_might_exist_batch(&comment_ids)
-                .await
-            {
-                Ok(v) => v,
-                Err(e) => {
-                    tracing::warn!("Bloom filter batch check failed: {}", e);
-                    vec![true; comment_ids.len()]
-                }
-            }
-        };
-        if let Some((idx, _)) = results.iter().enumerate().find(|(_, v)| !**v) {
-            let rejected_id = &comment_ids[idx];
-            tracing::debug!("Bloom filter rejected comment_id={}", rejected_id);
-            return (
-                StatusCode::OK,
-                Json(ApiResponse::<()>::error(10340, "评论不存在".to_string())),
-            )
-                .into_response();
-        }
-    }
+    check_bloom_ids!(
+        comment_ids,
+        state.resource_checker.comment_might_exist(&comment_ids[0]),
+        state
+            .resource_checker
+            .comment_might_exist_batch(&comment_ids),
+        10340,
+        "评论不存在"
+    );
 
     let message_ids: Vec<String> = extracted.message_ids.iter().cloned().collect();
-    if !message_ids.is_empty() {
-        let results = if message_ids.len() == 1 {
-            match state
-                .resource_checker
-                .message_might_exist(&message_ids[0])
-                .await
-            {
-                Ok(v) => vec![v],
-                Err(e) => {
-                    tracing::warn!("Bloom filter check failed: {}", e);
-                    vec![true]
-                }
-            }
-        } else {
-            match state
-                .resource_checker
-                .message_might_exist_batch(&message_ids)
-                .await
-            {
-                Ok(v) => v,
-                Err(e) => {
-                    tracing::warn!("Bloom filter batch check failed: {}", e);
-                    vec![true; message_ids.len()]
-                }
-            }
-        };
-        if let Some((idx, _)) = results.iter().enumerate().find(|(_, v)| !**v) {
-            let rejected_id = &message_ids[idx];
-            tracing::debug!("Bloom filter rejected message_id={}", rejected_id);
-            return (
-                StatusCode::OK,
-                Json(ApiResponse::<()>::error(10350, "消息不存在".to_string())),
-            )
-                .into_response();
-        }
-    }
+    check_bloom_ids!(
+        message_ids,
+        state.resource_checker.message_might_exist(&message_ids[0]),
+        state
+            .resource_checker
+            .message_might_exist_batch(&message_ids),
+        10350,
+        "消息不存在"
+    );
 
     let request = Request::from_parts(parts, body);
     next.run(request).await
@@ -296,7 +191,7 @@ fn collect_ids_from_query(query: &str, out: &mut ExtractedIds) {
                         out.user_ids.insert(id);
                     }
                 }
-                "group_chat_id" | "group_id" => {
+                "group_id" => {
                     out.group_ids.insert(value.to_string());
                 }
                 "moment_id" => {
@@ -331,7 +226,7 @@ fn collect_ids_from_value(value: &Value, out: &mut ExtractedIds) {
                             out.user_ids.insert(id);
                         }
                     }
-                    "group_chat_id" | "group_id" => {
+                    "group_id" => {
                         if let Some(id) = v.as_str() {
                             out.group_ids.insert(id.to_string());
                         }

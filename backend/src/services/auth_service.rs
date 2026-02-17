@@ -14,7 +14,7 @@ use crate::dto::request::{
     ChangePasswordRequest, GuestRequest, LoginRequest, RegisterRequest,
     RequestPasswordResetRequest, ResetPasswordRequest, RevokeSessionRequest, SessionsRequest,
 };
-use crate::dto::response::{AuthData, CheckStatusData, PaginatedData, SessionItem};
+use crate::dto::response::{AuthData, CheckStatusData, SessionItem, SessionsListData};
 use crate::error::{AppError, Result};
 use crate::repositories::{
     session_repo::SessionRepository, user_repo::UserRepository,
@@ -22,12 +22,7 @@ use crate::repositories::{
 };
 use crate::types::enums::{ClientType, UserStatus, VerificationCodeType};
 use crate::utils::cache_invalidation::{CacheInvalidator, InvalidationEvent};
-use crate::utils::{
-    jwt::JwtUtil, password::PasswordUtil, session_token::SessionTokenGenerator, token::TokenUtil,
-    validation::Validator,
-};
-
-const REVOKE_TOKEN_TTL_SECS: usize = 300;
+use crate::utils::{jwt::JwtUtil, password::PasswordUtil, token::TokenUtil, validation::Validator};
 
 #[derive(Debug, Clone)]
 pub struct AuthIssue {
@@ -121,18 +116,37 @@ impl AuthService {
         user_agent: Option<&str>,
         device_fingerprint: Option<&str>,
     ) -> Result<AuthIssue> {
-        let user = self
-            .user_repo
-            .find_by_identifier(&req.login_id)
-            .await?
-            .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
+        // 安全：用户不存在和密码错误统一返回 10100，防止账号枚举攻击
+        // 真实原因仅记录在服务端日志中，不暴露给客户端
+        let user = match self.user_repo.find_by_identifier(&req.login_id).await? {
+            Some(user) => user,
+            None => {
+                tracing::warn!(
+                    login_id = %req.login_id,
+                    reason = "user_not_found",
+                    "登录失败：用户不存在（客户端收到通用认证错误）"
+                );
+                return Err(AppError::Unauthorized("用户名或密码错误".to_string()));
+            }
+        };
 
         if user.status == UserStatus::Banned {
             return Err(AppError::AccountBanned("账号已被封禁".to_string()));
         }
 
-        if !PasswordUtil::verify_password(&req.password, &user.password_hash)? {
-            return Err(AppError::PasswordError("密码错误".to_string()));
+        let stored_hash = user.password_hash.as_deref().ok_or_else(|| {
+            tracing::warn!(login_id = %req.login_id, reason = "password_missing");
+            AppError::Unauthorized("用户名或密码错误".to_string())
+        })?;
+
+        if !PasswordUtil::verify_password(&req.password, stored_hash)? {
+            tracing::warn!(
+                login_id = %req.login_id,
+                user_id = user.user_id,
+                reason = "wrong_password",
+                "登录失败：密码错误（客户端收到通用认证错误）"
+            );
+            return Err(AppError::Unauthorized("用户名或密码错误".to_string()));
         }
 
         self.issue_tokens(
@@ -270,16 +284,12 @@ impl AuthService {
     /// 登出
     pub async fn logout(&self, user_id: i64, access_token: &str) -> Result<()> {
         let claims = JwtUtil::verify_token(access_token, &self.jwt_secret)?;
-        let token_user_id = claims
-            .sub
-            .parse::<i64>()
-            .map_err(|_| AppError::Unauthorized("无效的用户ID".to_string()))?;
+        let token_user_id = Validator::parse_id(&claims.sub, "用户ID")?;
         if token_user_id != user_id {
             return Err(AppError::Forbidden("无权限登出该会话".to_string()));
         }
 
-        let session_id = Uuid::parse_str(&claims.sid)
-            .map_err(|_| AppError::Unauthorized("无效的会话".to_string()))?;
+        let session_id = Validator::parse_uuid(&claims.sid, "会话")?;
         self.revoke_session_by_id(user_id, session_id).await
     }
 
@@ -289,13 +299,7 @@ impl AuthService {
         user_id: Option<i64>,
         token: Option<&str>,
     ) -> Result<CheckStatusData> {
-        if let Some(user_id) = user_id {
-            let nickname = self
-                .user_repo
-                .find_by_id(user_id)
-                .await?
-                .and_then(|u| u.nickname);
-
+        if let Some(_user_id) = user_id {
             let expires_at = token
                 .and_then(|raw| JwtUtil::verify_token(raw, &self.jwt_secret).ok())
                 .and_then(|claims| Utc.timestamp_opt(claims.exp, 0).single())
@@ -303,16 +307,12 @@ impl AuthService {
 
             return Ok(CheckStatusData {
                 is_valid: true,
-                user_id: Some(user_id),
-                nickname,
                 expires_at,
             });
         }
 
         Ok(CheckStatusData {
             is_valid: false,
-            user_id: None,
-            nickname: None,
             expires_at: None,
         })
     }
@@ -341,7 +341,7 @@ impl AuthService {
             .create_code(
                 &req.login_id,
                 &code,
-                VerificationCodeType::ResetPassword.as_str(),
+                VerificationCodeType::ResetPassword,
                 expires_at,
             )
             .await
@@ -369,7 +369,7 @@ impl AuthService {
             .find_valid(
                 &req.login_id,
                 &req.verification_code,
-                VerificationCodeType::ResetPassword.as_str(),
+                VerificationCodeType::ResetPassword,
             )
             .await
             .map_err(|e| AppError::internal(e.to_string()))?
@@ -381,12 +381,21 @@ impl AuthService {
             .await
             .map_err(|e| AppError::internal(e.to_string()))?;
 
-        // 3. 查找用户
-        let user = self
-            .user_repo
-            .find_by_identifier(&req.login_id)
-            .await?
-            .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
+        // 3. 查找用户（安全：不暴露账号存在性，统一返回 10100）
+        // 真实原因仅记录在服务端日志中，不暴露给客户端
+        let user = match self.user_repo.find_by_identifier(&req.login_id).await? {
+            Some(user) => user,
+            None => {
+                tracing::warn!(
+                    login_id = %req.login_id,
+                    reason = "user_not_found_after_valid_code",
+                    "重置密码失败：验证码有效但用户不存在（客户端收到通用验证码错误）"
+                );
+                return Err(AppError::VerifyTokenInvalid(
+                    "验证码无效或已过期".to_string(),
+                ));
+            }
+        };
 
         // 4. 更新密码
         let password_hash = PasswordUtil::hash_password(&req.new_password)?;
@@ -414,14 +423,25 @@ impl AuthService {
     }
 
     /// 修改密码
-    pub async fn change_password(&self, user_id: i64, req: &ChangePasswordRequest) -> Result<()> {
+    /// 成功后吊销该用户除当前会话外的所有会话，当前会话保持有效
+    pub async fn change_password(
+        &self,
+        user_id: i64,
+        current_session_id: Uuid,
+        req: &ChangePasswordRequest,
+    ) -> Result<()> {
         let user = self
             .user_repo
             .find_by_id(user_id)
             .await?
             .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
 
-        if !PasswordUtil::verify_password(&req.old_password, &user.password_hash)? {
+        let stored_hash = user
+            .password_hash
+            .as_deref()
+            .ok_or_else(|| AppError::PasswordError("原密码错误".to_string()))?;
+
+        if !PasswordUtil::verify_password(&req.old_password, stored_hash)? {
             return Err(AppError::PasswordError("原密码错误".to_string()));
         }
 
@@ -429,39 +449,38 @@ impl AuthService {
         self.user_repo
             .update_password(user_id, &password_hash)
             .await?;
+
+        // 吊销其他会话，当前会话保持有效
+        let session_ids = self
+            .session_repo
+            .revoke_all_except(user_id, current_session_id)
+            .await?;
+        for session_id in session_ids {
+            self.clear_session_whitelist(session_id).await?;
+            self.publish_session_revoked(user_id, session_id).await?;
+        }
+
         Ok(())
     }
 
-    /// 获取会话列表
+    /// 获取会话列表（直接返回全部活跃会话，无需分页）
     pub async fn list_sessions(
         &self,
         user_id: i64,
-        req: &SessionsRequest,
+        _req: &SessionsRequest,
         current_session_id: Option<Uuid>,
-    ) -> Result<PaginatedData<SessionItem>> {
-        let limit = Validator::validate_limit(req.limit, 100)?;
-        let cursor = Validator::parse_cursor(req.cursor.as_deref())?;
+    ) -> Result<SessionsListData> {
+        let rows = self.session_repo.list_all_by_user(user_id).await?;
 
-        let (rows, next_cursor) = self
-            .session_repo
-            .list_by_user(user_id, limit, cursor)
-            .await?;
-
-        let token_generator = SessionTokenGenerator::new(&self.jwt_secret);
         let mut items = Vec::with_capacity(rows.len());
         for row in rows {
-            let revoke_token = token_generator.generate_revoke_token(row.session_id, user_id);
-            self.store_revoke_token(&revoke_token, user_id, row.session_id)
-                .await?;
-
             let ip_address = row.ip_address.as_ref().and_then(mask_ip_address);
             let is_current = current_session_id
                 .map(|current| current == row.session_id)
                 .unwrap_or(false);
 
             items.push(SessionItem {
-                display_id: token_generator.generate_display_id(row.session_id),
-                revoke_token,
+                session_id: row.session_id.to_string(),
                 device_type: row.device_type,
                 device_name: row.device_name,
                 ip_address,
@@ -472,47 +491,36 @@ impl AuthService {
             });
         }
 
-        Ok(PaginatedData {
-            items,
-            next_cursor,
-        })
+        Ok(SessionsListData { items })
     }
 
     /// 撤销会话
-    pub async fn revoke_session(&self, user_id: i64, req: &RevokeSessionRequest) -> Result<()> {
-        let token_generator = SessionTokenGenerator::new(&self.jwt_secret);
-        if !token_generator.verify_revoke_token_format(&req.revoke_token) {
-            return Err(AppError::NotFound("撤销令牌无效".to_string()));
+    /// 禁止撤销当前会话
+    pub async fn revoke_session(
+        &self,
+        user_id: i64,
+        current_session_id: Uuid,
+        req: &RevokeSessionRequest,
+    ) -> Result<()> {
+        let session_id = Validator::parse_uuid(&req.session_id, "会话标识")?;
+
+        if session_id == current_session_id {
+            return Err(AppError::BusinessRuleViolation(
+                "不能撤销当前会话，如需登出请使用登出接口".to_string(),
+            ));
         }
 
-        let key = revoke_token_key(&req.revoke_token);
-        let mut conn = self.redis.clone();
-        let value: Option<String> = conn
-            .get(&key)
-            .await
-            .map_err(|e| AppError::internal(e.to_string()))?;
-        let value = value.ok_or_else(|| AppError::NotFound("撤销令牌无效".to_string()))?;
-        let _ = conn
-            .del::<_, ()>(&key)
-            .await
-            .map_err(|e| AppError::internal(e.to_string()))?;
-
-        let mut parts = value.split(':');
-        let stored_user_id = parts
-            .next()
-            .and_then(|v| v.parse::<i64>().ok())
-            .ok_or_else(|| AppError::NotFound("撤销令牌无效".to_string()))?;
-        let stored_session_id = parts
-            .next()
-            .ok_or_else(|| AppError::NotFound("撤销令牌无效".to_string()))?;
-        let session_id = Uuid::parse_str(stored_session_id)
-            .map_err(|_| AppError::NotFound("撤销令牌无效".to_string()))?;
-
-        if stored_user_id != user_id {
-            return Err(AppError::Forbidden("无权限撤销该会话".to_string()));
+        let revoked = self
+            .session_repo
+            .revoke_if_owned_by(user_id, session_id)
+            .await?;
+        if !revoked {
+            return Err(AppError::NotFound("会话不存在或无权限撤销".to_string()));
         }
 
-        self.revoke_session_by_id(user_id, session_id).await
+        self.clear_session_whitelist(session_id).await?;
+        self.publish_session_revoked(user_id, session_id).await?;
+        Ok(())
     }
 
     async fn issue_tokens(
@@ -575,13 +583,17 @@ impl AuthService {
         Ok(())
     }
 
-    pub async fn revoke_all_sessions(&self, user_id: i64) -> Result<()> {
-        let session_ids = self.session_repo.revoke_all_by_user(user_id).await?;
+    pub async fn revoke_all_sessions(&self, user_id: i64, current_session_id: Uuid) -> Result<i64> {
+        let session_ids = self
+            .session_repo
+            .revoke_all_except(user_id, current_session_id)
+            .await?;
+        let revoked_count = session_ids.len() as i64;
         for session_id in session_ids {
             self.clear_session_whitelist(session_id).await?;
             self.publish_session_revoked(user_id, session_id).await?;
         }
-        Ok(())
+        Ok(revoked_count)
     }
 
     async fn set_session_whitelist(&self, session_id: Uuid, user_id: i64) -> Result<()> {
@@ -617,24 +629,10 @@ impl AuthService {
             .map_err(|e| AppError::internal(e.to_string()))?;
         Ok(())
     }
-
-    async fn store_revoke_token(&self, token: &str, user_id: i64, session_id: Uuid) -> Result<()> {
-        let key = revoke_token_key(token);
-        let value = format!("{}:{}", user_id, session_id);
-        let mut conn = self.redis.clone();
-        conn.set_ex::<_, _, ()>(key, value, REVOKE_TOKEN_TTL_SECS as u64)
-            .await
-            .map_err(|e| AppError::internal(e.to_string()))?;
-        Ok(())
-    }
 }
 
 fn session_key(session_id: Uuid) -> String {
     format!("{}:{}", REDIS_KEY_SESSION, session_id)
-}
-
-fn revoke_token_key(token: &str) -> String {
-    format!("revoke_token:{}", token)
 }
 
 fn mask_ip_address(ip: &IpNetwork) -> Option<String> {

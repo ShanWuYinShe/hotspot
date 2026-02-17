@@ -1,9 +1,0 @@
-pub mod admin;
-pub mod chat;
-pub mod comment;
-pub mod common;
-pub mod group;
-pub mod media;
-pub mod moment;
-pub mod notification;
-pub mod user;
