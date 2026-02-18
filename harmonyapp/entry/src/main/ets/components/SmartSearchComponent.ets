@@ -117,8 +117,9 @@ export struct SmartSearchComponent {
         pagination: { limit: 10 }
       });
 
-      if (response.code === 0 && response.data) {
-        const validUsers = response.data.items.filter((u: UserItem) => u.user?.user_id);
+      if (response.code === 0) {
+        const items = response.data?.items ?? [];
+        const validUsers = items.filter((u: UserItem) => u.user?.user_id);
         const users = typeof myId === 'string'
           ? validUsers.filter((u: UserItem) => u.user.user_id !== myId)
           : validUsers;
@@ -154,8 +155,9 @@ export struct SmartSearchComponent {
         pagination: { limit: 10 }
       });
 
-      if (response.code === 0 && response.data) {
-        const validGroups = response.data.items.filter((g: GroupItem) => g.group?.group_id);
+      if (response.code === 0) {
+        const items = response.data?.items ?? [];
+        const validGroups = items.filter((g: GroupItem) => g.group?.group_id);
         const groupResults: SearchResult[] = validGroups.map((group: GroupItem): SearchResult => ({
           id: `group_${group.group.group_id}`,
           type: 'group',
@@ -187,8 +189,9 @@ export struct SmartSearchComponent {
         pagination: { limit: 10 }
       });
 
-      if (response.code === 0 && response.data) {
-        const validMoments = response.data.items.filter((m: MomentItem) => m.moment_id && m.user);
+      if (response.code === 0) {
+        const items = response.data?.items ?? [];
+        const validMoments = items.filter((m: MomentItem) => m.moment_id && m.user);
         const momentResults: SearchResult[] = validMoments.map((moment: MomentItem): SearchResult => ({
           id: `moment_${moment.moment_id}`,
           type: 'moment',
@@ -247,6 +250,27 @@ export struct SmartSearchComponent {
     }
   }
 
+  @Builder
+  private FilterChip(label: string, filter: string) {
+    Text(label)
+      .fontSize(DesignConstants.FONT.SIZE.SM)
+      .fontWeight(this.currentFilter === filter ? FontWeight.Medium : FontWeight.Normal)
+      .fontColor(this.currentFilter === filter
+        ? $r('sys.color.ohos_id_color_emphasize')
+        : $r('sys.color.ohos_id_color_text_secondary'))
+      .height(30)
+      .layoutWeight(1)
+      .textAlign(TextAlign.Center)
+      .backgroundColor(this.currentFilter === filter
+        ? $r('app.color.chip_selected_bg')
+        : Color.Transparent)
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .padding({ left: 2, right: 2 })
+      .onClick(() => {
+        this.switchFilter(filter as 'all' | 'users' | 'groups' | 'moments');
+      })
+  }
+
   private switchFilter(filter: 'all' | 'users' | 'groups' | 'moments') {
     if (this.currentFilter === filter) {
       return;
@@ -261,74 +285,30 @@ export struct SmartSearchComponent {
 
   build() {
     Column() {
-      Row() {
-        TextInput({
-          placeholder: '搜索用户、群组、瞬间...',
-          text: this.searchText
+      Search({ value: this.searchText, placeholder: '搜索用户、群组、瞬间...' })
+        .searchButton('搜索')
+        .onChange((value: string) => this.onSearchTextChange(value))
+        .onSubmit((value: string) => this.performSearch(value))
+        .onFocus(() => {
+          if (!this.searchText.trim() && this.searchHistory.length > 0) {
+            this.showResults = true;
+          }
         })
-          .layoutWeight(1)
-          .onChange((value: string) => this.onSearchTextChange(value))
-          .onFocus(() => {
-            if (!this.searchText.trim() && this.searchHistory.length > 0) {
-              this.showResults = true;
-            }
-          })
-
-        if (this.isSearching) {
-          LoadingProgress()
-            .width(24)
-            .height(24)
-            .margin({ left: 8 })
-        } else {
-          Button('🔍')
-            .width(40)
-            .height(40)
-            .fontSize(16)
-            .backgroundColor(Color.Transparent)
-            .margin({ left: 8 })
-            .onClick(() => this.performSearch(this.searchText))
-        }
-      }
-      .width('100%')
-      .padding(12)
+        .width('100%')
+        .padding({ left: 12, right: 12, top: 8, bottom: 8 })
 
       if (this.showResults) {
-        Row() {
-          Button('全部')
-            .fontSize(12)
-            .backgroundColor(this.currentFilter === 'all' ?
-            $r('sys.color.ohos_id_color_emphasize') : Color.Transparent)
-            .fontColor(this.currentFilter === 'all' ?
-            Color.White : $r('sys.color.ohos_id_color_text_primary'))
-            .onClick(() => this.switchFilter('all'))
-
-          Button('用户')
-            .fontSize(12)
-            .backgroundColor(this.currentFilter === 'users' ?
-            $r('sys.color.ohos_id_color_emphasize') : Color.Transparent)
-            .fontColor(this.currentFilter === 'users' ?
-            Color.White : $r('sys.color.ohos_id_color_text_primary'))
-            .onClick(() => this.switchFilter('users'))
-
-          Button('群组')
-            .fontSize(12)
-            .backgroundColor(this.currentFilter === 'groups' ?
-            $r('sys.color.ohos_id_color_emphasize') : Color.Transparent)
-            .fontColor(this.currentFilter === 'groups' ?
-            Color.White : $r('sys.color.ohos_id_color_text_primary'))
-            .onClick(() => this.switchFilter('groups'))
-
-          Button('瞬间')
-            .fontSize(12)
-            .backgroundColor(this.currentFilter === 'moments' ?
-            $r('sys.color.ohos_id_color_emphasize') : Color.Transparent)
-            .fontColor(this.currentFilter === 'moments' ?
-            Color.White : $r('sys.color.ohos_id_color_text_primary'))
-            .onClick(() => this.switchFilter('moments'))
+        Row({ space: 0 }) {
+          this.FilterChip('全部', 'all')
+          this.FilterChip('用户', 'users')
+          this.FilterChip('群组', 'groups')
+          this.FilterChip('瞬间', 'moments')
         }
-        .width('100%')
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
-        .justifyContent(FlexAlign.SpaceAround)
+        .padding(3)
+        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+          bottom: DesignConstants.SPACING.SM })
+        .backgroundColor($r('app.color.bg_tertiary'))
+        .borderRadius(DesignConstants.RADIUS.FULL)
         .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
       }
 
@@ -428,7 +408,7 @@ export struct SmartSearchComponent {
         }
         .width('100%')
         .layoutWeight(1)
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .backgroundColor($r('app.color.bg_secondary'))
         .borderRadius({ topLeft: 12, topRight: 12 })
         .shadow({
           radius: 8,

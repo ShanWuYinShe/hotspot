@@ -67,6 +67,10 @@
     {
       "name": "color_success",
       "value": "#34C759"
+    },
+    {
+      "name": "chip_selected_bg",
+      "value": "#FFFFFF"
     }
   ]
 }

@@ -8,7 +8,9 @@ use sqlx::{FromRow, PgPool};
 
 use crate::error::Result;
 use crate::types::enums::GroupJoinMethod;
-use crate::utils::pagination::{decode_cursor, encode_cursor, DistanceCursor, Paginated};
+use crate::utils::pagination::{
+    decode_cursor, decode_cursor_or, encode_cursor, DistanceCursor, Paginated,
+};
 
 /// 群组基础行数据
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
@@ -267,11 +269,7 @@ impl GroupRepository {
         cursor: Option<String>,
         kw: Option<&str>,
     ) -> Paginated<GroupSearchRow> {
-        let (last_dist, last_id) = if let Some(c) = cursor {
-            decode_cursor::<DistanceCursor>(&c)?
-        } else {
-            (0.0, 0)
-        };
+        let (last_dist, last_id): DistanceCursor = decode_cursor_or(cursor, || (0.0, 0))?;
 
         let rows = sqlx::query_as!(
             GroupSearchRow,
@@ -335,11 +333,7 @@ impl GroupRepository {
         cursor: Option<String>,
         dismiss_user_id: Option<i64>,
     ) -> Paginated<FeedGroupRow> {
-        let (last_dist, last_id) = if let Some(c) = cursor {
-            decode_cursor::<DistanceCursor>(&c)?
-        } else {
-            (0.0, 0)
-        };
+        let (last_dist, last_id): DistanceCursor = decode_cursor_or(cursor, || (0.0, 0))?;
 
         let pattern = kw.map(|v| format!("%{}%", v));
 
@@ -376,12 +370,8 @@ impl GroupRepository {
                   OR (ST_Distance(g.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) = $5 AND g.group_id > $6)
               )
               AND (
-                  $8::bigint IS NULL OR NOT EXISTS (
-                      SELECT 1 FROM feed_dismissals fd
-                      WHERE fd.user_id = $8
-                        AND fd.target_type = 'group'
-                        AND fd.target_id = g.group_id::text
-                  )
+                  $8::bigint IS NULL
+                  OR feed_entity_not_dismissed($8, 'group'::dismiss_target_type, g.group_id::text)
               )
             GROUP BY g.group_id, g.name, g.description, g.avatar_url, gs.member_count,
                      g.location, g.location_name, gs_setting.password_hash
@@ -395,11 +385,10 @@ impl GroupRepository {
             last_dist,
             last_id,
             (limit as i64) + 1,
-            dismiss_user_id
+            dismiss_user_id,
         )
         .fetch_all(&self.pool)
         .await?;
-
         let has_more = rows.len() > limit as usize;
         let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
 
@@ -423,11 +412,7 @@ impl GroupRepository {
         limit: i64,
         cursor: Option<String>,
     ) -> Paginated<GroupSearchRow> {
-        let (last_dist, last_id) = if let Some(c) = cursor {
-            decode_cursor::<DistanceCursor>(&c)?
-        } else {
-            (0.0, 0)
-        };
+        let (last_dist, last_id): DistanceCursor = decode_cursor_or(cursor, || (0.0, 0))?;
 
         let pattern = format!("%{}%", kw);
         let rows = sqlx::query_as!(
@@ -548,11 +533,7 @@ impl GroupRepository {
         limit: i64,
         cursor: Option<String>,
     ) -> Paginated<GroupSearchRow> {
-        let (last_dist, last_id) = if let Some(c) = cursor {
-            decode_cursor::<DistanceCursor>(&c)?
-        } else {
-            (0.0, 0)
-        };
+        let (last_dist, last_id): DistanceCursor = decode_cursor_or(cursor, || (0.0, 0))?;
 
         let rows = sqlx::query_as!(
             GroupSearchRow,

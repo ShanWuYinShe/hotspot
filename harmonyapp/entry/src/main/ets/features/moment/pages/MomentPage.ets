@@ -12,6 +12,7 @@ import { LikeMomentRequest, MomentItem, SearchMomentsRequest, MomentImage } from
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { IntelligentLocationCard } from '../../../components/IntelligentLocationCard';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, SystemIcon, IconSize } from '../../../components/SystemIcon';
@@ -39,6 +40,7 @@ export struct MomentPage {
   private momentCacheService = MomentCacheService.getInstance();
 
   @State isLoading: boolean = true;
+  @State isRefreshing: boolean = false;
   @State errorMessage: string = '';
   @State hasData: boolean = false;
   @State hasMore: boolean = false;
@@ -74,9 +76,6 @@ export struct MomentPage {
       await this.loadFromCache();
     }
 
-    if (this.momentsDataSource.totalCount() === 0) {
-      this.isLoading = true;
-    }
     this.errorMessage = '';
 
     try {
@@ -91,13 +90,14 @@ export struct MomentPage {
       };
       const response = await LoadingUtil.withMinimumTime(() => ApiClient.searchMoments(request));
 
-      if (response.code === 0 && response.data) {
-        const validItems = response.data.items.filter((m: MomentItem) => m.moment_id && m.user);
+      if (response.code === 0) {
+        const items = response.data?.items ?? [];
+        const validItems = items.filter((m: MomentItem) => m.moment_id && m.user);
         this.momentsDataSource.setData(validItems);
         this.hasData = validItems.length > 0;
-        this.hasMore = !!(response.data.next_cursor);
-        this.nextCursor = response.data.next_cursor ?? '';
-        this.updateCache(response.data.items);
+        this.hasMore = !!(response.data?.next_cursor);
+        this.nextCursor = response.data?.next_cursor ?? '';
+        this.updateCache(items);
       } else {
         if (this.momentsDataSource.totalCount() === 0) {
           this.errorMessage = response.message || '加载瞬间失败';
@@ -111,6 +111,7 @@ export struct MomentPage {
       }
     } finally {
       this.isLoading = false;
+      this.isRefreshing = false;
     }
   }
 
@@ -129,12 +130,13 @@ export struct MomentPage {
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE, cursor: this.nextCursor }
       };
       const response = await ApiClient.searchMoments(request);
-      if (response.code === 0 && response.data) {
-        const validItems = response.data.items.filter((m: MomentItem) => m.moment_id && m.user);
+      if (response.code === 0) {
+        const items = response.data?.items ?? [];
+        const validItems = items.filter((m: MomentItem) => m.moment_id && m.user);
         this.momentsDataSource.addData(validItems);
         this.hasData = this.momentsDataSource.totalCount() > 0;
-        this.hasMore = !!(response.data.next_cursor);
-        this.nextCursor = response.data.next_cursor ?? '';
+        this.hasMore = !!(response.data?.next_cursor);
+        this.nextCursor = response.data?.next_cursor ?? '';
       }
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `加载更多瞬间失败: ${JSON.stringify(error)}`);
@@ -263,77 +265,37 @@ export struct MomentPage {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .backgroundColor($r('app.color.bg_secondary'))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 内容区域
-      if (this.isLoading && !this.hasData) {
+      if (this.isLoading) {
         SystemLoadingView({ message: '正在加载附近瞬间...' })
           .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (!this.hasData && this.errorMessage) {
-        this.buildEmptyState(AppIcon.WARNING, this.errorMessage, '重试', () => { this.loadNearbyMoments(true); })
+        EmptyState({
+          icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试',
+          onAction: () => { this.isLoading = true; this.loadNearbyMoments(true); }
+        })
           .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (!this.hasData) {
-        Refresh({ refreshing: $$this.isLoading, builder: this.RefreshBuilder() }) {
-          this.buildEmptyState(AppIcon.CAMERA, '附近暂无瞬间\n快来分享第一个吧！', undefined, undefined)
+        Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
+          EmptyState({ icon: AppIcon.CAMERA, message: '附近暂无瞬间\n快来分享第一个吧！' })
         }
         .onRefreshing(() => { this.loadNearbyMoments(true); })
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
-        Refresh({ refreshing: $$this.isLoading, builder: this.RefreshBuilder() }) {
+        Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           this.buildMomentList()
         }
+        .layoutWeight(1)
         .onRefreshing(() => { this.loadNearbyMoments(true); })
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
-  }
-
-  @Builder
-  private buildEmptyState(icon: AppIcon, message: string, actionLabel: string | undefined, action: (() => void) | undefined) {
-    Column({ space: DesignConstants.SPACING.LG }) {
-      Text() {
-        SymbolSpan($r(icon))
-          .fontSize(48)
-          .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
-      }
-
-      Text(message)
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        .textAlign(TextAlign.Center)
-        .lineHeight(24)
-
-      if (actionLabel && action) {
-        Button(actionLabel)
-          .type(ButtonType.Capsule)
-          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-          .fontColor(Color.White)
-          .height(40)
-          .onClick(() => { action(); })
-      }
-    }
-    .width('100%')
-    .height('100%')
-    .justifyContent(FlexAlign.Center)
-    .padding(DesignConstants.SPACING.XXL)
-  }
-
-  @Builder
-  RefreshBuilder() {
-    Row() {
-      LoadingProgress().width(24).height(24)
-      Text('正在刷新...')
-        .fontSize(DesignConstants.FONT.SIZE.MD)
-        .margin({ left: DesignConstants.SPACING.SM })
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-    }
-    .width('100%')
-    .justifyContent(FlexAlign.Center)
-    .padding(DesignConstants.SPACING.SM)
+    .backgroundColor($r('app.color.bg_primary'))
   }
 
   @Builder
@@ -344,23 +306,13 @@ export struct MomentPage {
           this.buildMomentCard(moment, index)
         }
       }, (moment: MomentItem) => moment.moment_id)
-      // 底部加载更多指示器
       if (this.isLoadingMore) {
         ListItem() {
-          Row({ space: DesignConstants.SPACING.SM }) {
-            LoadingProgress().width(20).height(20)
-            Text('加载更多...')
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-          }
-          .width('100%')
-          .justifyContent(FlexAlign.Center)
-          .padding(DesignConstants.SPACING.MD)
+          LoadingMoreIndicator()
         }
       }
     }
     .width('100%')
-    .layoutWeight(1)
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
     .scrollBar(BarState.Auto)
     .cachedCount(5)
@@ -490,7 +442,7 @@ export struct MomentPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.LG)
   }
 }

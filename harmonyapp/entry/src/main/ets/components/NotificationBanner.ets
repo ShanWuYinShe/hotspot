@@ -80,7 +80,7 @@ export struct NotificationBanner {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.LG)
     .shadow(DesignConstants.SHADOW.MEDIUM)
     .onClick(() => {

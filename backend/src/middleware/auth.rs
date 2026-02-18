@@ -5,8 +5,12 @@
 //! ## 性能优化
 //!
 //! - **内存缓存**: 使用 moka 缓存已验证的 token，减少 Redis 查询（TTL: 5分钟）
-//! - **懒验证**: 可选认证模式下，token 无效时降级为未登录而不是拒绝请求
 //! - **并发安全**: 所有缓存操作都是并发安全的
+//!
+//! ## Spec 规则
+//!
+//! 可选认证模式：只要请求携带了 Token，就必须验证有效性；无效返回 10100 而非静默降级。
+//! 客户端想匿名访问时应不携带 Token。
 //!
 //! ## 使用方式
 //!
@@ -255,24 +259,16 @@ pub async fn auth_middleware(
     Ok(next.run(req).await)
 }
 
-/// JWT 可选认证中间件（推荐的容错策略）
+/// JWT 可选认证中间件
 ///
-/// ## 行为说明
+/// ## Spec 规则（api_spec_base.mdc "Token 可选端点的 Token 验证规则"）
 ///
 /// - **未提供 Token**: 请求继续，不注入 user_id（按未登录处理）
 /// - **提供有效 Token**: 注入 user_id 和 session_id
-/// - **提供无效 Token**: 记录警告日志，但**降级为未登录**继续处理（容错策略）
+/// - **提供无效 Token**: 返回 10100 认证错误，**不会**静默降级为未登录状态
 ///
-/// ## 设计理念
-///
-/// 1. **用户体验优先**: token 过期时允许用户继续浏览公开内容
-/// 2. **安全监控**: 记录所有无效 token 尝试（用于检测攻击）
-/// 3. **渐进式降级**: 不因认证问题阻塞整个请求
-///
-/// ## 性能监控
-///
-/// - 记录认证耗时和缓存命中率
-/// - 记录无效 token 尝试（用于安全审计）
+/// > "任何时候，只要请求携带了 Token，服务端都必须验证 Token 的有效性"
+/// > "客户端如果想以匿名身份访问 Token 可选端点，应不携带 Token"
 pub async fn optional_auth_middleware(
     State(state): State<AppState>,
     mut req: Request,
@@ -281,43 +277,29 @@ pub async fn optional_auth_middleware(
     let token = match extract_bearer_token(&req) {
         Ok(Some(token)) => token,
         Ok(None) => {
-            // 未提供 token，正常情况
+            // 未提供 token，按未登录处理
             tracing::trace!("No token provided (optional auth)");
             return Ok(next.run(req).await);
         }
         Err(reason) => {
-            // Token 格式错误，记录警告后降级为未登录
-            tracing::warn!(
-                reason = ?reason,
-                "Invalid token format in optional auth, degrading to unauthenticated"
-            );
-            return Ok(next.run(req).await);
+            // Token 格式错误（如 Authorization header 存在但不是 Bearer 格式）
+            // Spec: 携带了 Token 就必须验证，格式错误 = 验证失败 = 10100
+            tracing::debug!(reason = ?reason, "Invalid token format in optional auth");
+            return Err(AppError::Unauthorized(
+                reason.to_user_message().to_string(),
+            ));
         }
     };
 
-    // 尝试验证 token
-    match authenticate_token(&state, &token).await {
-        Ok((user_id, session_id)) => {
-            // 验证成功，注入用户信息
-            req.extensions_mut().insert(user_id);
-            req.extensions_mut().insert(Some(session_id));
-        }
-        Err(reason) => {
-            // 验证失败，记录详细日志但降级为未登录
-            if reason.should_log_error() {
-                tracing::error!(
-                    reason = ?reason,
-                    "Token validation failed in optional auth (serious issue)"
-                );
-            } else {
-                tracing::warn!(
-                    reason = ?reason,
-                    "Token validation failed in optional auth, degrading to unauthenticated"
-                );
-            }
-            // 不注入任何用户信息，继续处理请求
-        }
-    }
+    // 携带了 Token，必须验证有效性
+    let (user_id, session_id) = authenticate_token(&state, &token).await.map_err(|reason| {
+        tracing::debug!(reason = ?reason, "Token validation failed in optional auth");
+        AppError::Unauthorized(reason.to_user_message().to_string())
+    })?;
+
+    // 验证成功，注入用户信息
+    req.extensions_mut().insert(user_id);
+    req.extensions_mut().insert(Some(session_id));
 
     Ok(next.run(req).await)
 }

@@ -138,6 +138,11 @@ impl AppState {
             .max_capacity(10_000)
             .build();
 
+        let media_signed_url_cache = Cache::builder()
+            .time_to_live(std::time::Duration::from_secs(300))
+            .max_capacity(20_000)
+            .build();
+
         // 启动 Redis 缓存失效监听器（增大容量以防消息丢失）
         let (tx, mut rx) = broadcast::channel::<InvalidationEvent>(1000);
         let _listener_handle = start_invalidation_listener(config.redis_url.clone(), tx);
@@ -259,6 +264,7 @@ impl AppState {
             config.s3_bucket.clone(),
             config.s3_public_base.clone(),
             redis.clone(),
+            media_signed_url_cache.clone(),
         );
 
         let presence_service = PresenceService::new(
@@ -439,8 +445,14 @@ impl AppState {
             media_service.clone(),
         );
 
-        let share_service =
-            ShareService::new(db.clone(), std::sync::Arc::new(media_service.clone()));
+        let share_service = ShareService::new(
+            db.clone(),
+            std::sync::Arc::new(media_service.clone()),
+            cache_manager.clone(),
+            moment_repo.clone(),
+            user_repo.clone(),
+            group_repo.clone(),
+        );
 
         tracing::debug!("All services initialized");
 

@@ -1,3 +1,17 @@
+/**
+ * API 错误码判断工具
+ *
+ * 错误码严格遵循 spec/api_spec_errors.mdc 定义：
+ * - 10000: 参数错误
+ * - 10100: 认证失败（token 无效/过期/缺失）
+ * - 10200: 权限不足/访问受限
+ * - 10201: 账号被封禁（需强制登出+封禁页）
+ * - 10300: 资源不存在
+ * - 10400: 业务冲突
+ * - 10500: 请求过于频繁
+ * - 10600: 服务器错误
+ */
+
 export interface ApiErrorSnapshot {
   code?: number;
   status?: number;
@@ -22,65 +36,38 @@ export function extractApiErrorSnapshot(result: Object, responseCode?: number): 
   return { code, status: typeof responseCode === 'number' ? responseCode : undefined, message };
 }
 
+/** 认证失败（token 无效/过期/缺失），客户端应尝试刷新 token */
 export function isAuthErrorCode(code: Object): boolean {
-  return typeof code === 'number' && (code as number) >= 40100 && (code as number) <= 40199;
+  return code === 10100;
 }
 
-export function isTokenInvalidOrExpiredCode(code: Object): boolean {
-  return code === 40101;
-}
-
-export function isTokenMissingCode(code: Object): boolean {
-  return code === 40102;
-}
-
-export function isReauthRequiredCode(code: Object): boolean {
-  return code === 40106;
-}
-
-export function isSoftTokenRotation(message: Object): boolean {
-  return typeof message === 'string' && (message as string).includes('已被轮换');
-}
-
-export function shouldForceLogoutOnAuthError(code: Object, message?: Object): boolean {
-  if (!isAuthErrorCode(code)) return false;
-  if (isReauthRequiredCode(code)) return true;
-  if (isTokenMissingCode(code)) return true;
-  if (isTokenInvalidOrExpiredCode(code)) {
-    if (message !== null && message !== undefined) {
-      return !isSoftTokenRotation(message);
-    }
-    return true;
-  }
-  return true;
+/** 账号被封禁，客户端必须强制登出并显示封禁页 */
+export function isAccountBannedCode(code: Object): boolean {
+  return code === 10201;
 }
 
 export function isBadRequestCode(code: Object): boolean {
-  return typeof code === 'number' && (code as number) >= 40000 && (code as number) <= 40099;
+  return code === 10000;
 }
 
 export function isForbiddenCode(code: Object): boolean {
-  return typeof code === 'number' && (code as number) >= 40300 && (code as number) <= 40399;
+  return code === 10200;
 }
 
 export function isNotFoundCode(code: Object): boolean {
-  return typeof code === 'number' && (code as number) >= 40400 && (code as number) <= 40499;
+  return code === 10300;
 }
 
 export function isConflictCode(code: Object): boolean {
-  return typeof code === 'number' && (code as number) >= 40900 && (code as number) <= 40999;
-}
-
-export function isCursorInvalidOrExpiredCode(code: Object): boolean {
-  return code === 41000;
+  return code === 10400;
 }
 
 export function isRateLimitCode(code: Object): boolean {
-  return typeof code === 'number' && (code as number) >= 42900 && (code as number) <= 42999;
+  return code === 10500;
 }
 
 export function isServerErrorCode(code: Object): boolean {
-  return typeof code === 'number' && (code as number) >= 50000 && (code as number) <= 59999;
+  return code === 10600;
 }
 
 function isSafeUserMessage(message: Object): boolean {
@@ -88,7 +75,7 @@ function isSafeUserMessage(message: Object): boolean {
   const msg = (message as string).trim();
   if (!msg) return false;
   if (msg.includes('/api/') || msg.includes('baseURL')) return false;
-  if (/^\[[A-Z]+\]\s+\".*\"\:\s+\d{3}\s+/.test(msg)) return false;
+  if (/^\[[A-Z]+\]\s+".*"\:\s+\d{3}\s+/.test(msg)) return false;
   if (msg.includes('Internal Server Error')) return false;
   return true;
 }
@@ -101,19 +88,12 @@ export function guessUserMessageFromSnapshot(
   const status = snapshot.status;
   const message = snapshot.message;
 
-  if ((code !== undefined && isTokenInvalidOrExpiredCode(code)) || (typeof message === 'string' && message.includes('ExpiredSignature'))) {
-    return '登录已过期，请重新登录';
-  }
-
-  if ((code !== undefined && isTokenMissingCode(code)) || (code !== undefined && isAuthErrorCode(code)) || status === 401) {
-    return '请先登录';
-  }
-
+  if (code !== undefined && isAuthErrorCode(code)) return '登录已过期，请重新登录';
+  if (code !== undefined && isAccountBannedCode(code)) return '账号已被封禁';
   if (code !== undefined && isBadRequestCode(code)) return (message !== undefined && isSafeUserMessage(message)) ? message : '请求参数错误';
   if (code !== undefined && isForbiddenCode(code)) return '无权限执行此操作';
   if (code !== undefined && isNotFoundCode(code)) return '资源不存在或已被删除';
   if (code !== undefined && isConflictCode(code)) return (message !== undefined && isSafeUserMessage(message)) ? message : '操作冲突，请稍后重试';
-  if (code !== undefined && isCursorInvalidOrExpiredCode(code)) return '列表已过期，请刷新后重试';
   if ((code !== undefined && isRateLimitCode(code)) || status === 429) return '请求过于频繁，请稍后再试';
 
   if (message !== undefined && isSafeUserMessage(message)) return message;

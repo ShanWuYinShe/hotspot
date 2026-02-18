@@ -93,19 +93,22 @@ export struct SearchPage {
         const res3 = results[2];
 
         const myId = await AuthAccountManager.getCurrentUserId();
-        if (res1.code === 0 && res1.data) {
-          const validUsers = res1.data.items.filter((u: UserItem) => u.user?.user_id);
+        if (res1.code === 0) {
+          const items = res1.data?.items ?? [];
+          const validUsers = items.filter((u: UserItem) => u.user?.user_id);
           this.userResults = (myId !== null && typeof myId === 'string')
             ? validUsers.filter((u: UserItem) => u.user.user_id !== myId)
             : validUsers;
           this.userResultsDataSource.setData(this.userResults);
         }
-        if (res2.code === 0 && res2.data) {
-          this.groupResults = res2.data.items.filter((g: GroupItem) => g.group?.group_id);
+        if (res2.code === 0) {
+          const items = res2.data?.items ?? [];
+          this.groupResults = items.filter((g: GroupItem) => g.group?.group_id);
           this.groupResultsDataSource.setData(this.groupResults);
         }
-        if (res3.code === 0 && res3.data) {
-          this.momentResults = res3.data.items.filter((m: MomentItem) => m.moment_id && m.user);
+        if (res3.code === 0) {
+          const items = res3.data?.items ?? [];
+          this.momentResults = items.filter((m: MomentItem) => m.moment_id && m.user);
           this.momentResultsDataSource.setData(this.momentResults);
         }
       });
@@ -218,7 +221,11 @@ export struct SearchPage {
   UserResultList() {
     if (this.hasSearched && this.userResults.length === 0) {
       Column({ space: 16 }) {
-        Text('🔍').fontSize(48)
+        Text() {
+          SymbolSpan($r(AppIcon.SEARCH))
+            .fontSize(48)
+            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+        }
         Text('未找到相关结果').fontSize(16).fontColor($r('sys.color.ohos_id_color_text_secondary'))
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Center)
@@ -231,7 +238,7 @@ export struct SearchPage {
         }, (item: UserItem) => item.user?.user_id ?? '')
       }
       .width('100%').height('100%')
-      .padding({ left: 16, right: 16, top: 16 })
+      .divider({ strokeWidth: 0.5, color: $r('app.color.divider'), startMargin: 76, endMargin: 0 })
     }
   }
 
@@ -239,7 +246,11 @@ export struct SearchPage {
   GroupResultList() {
     if (this.hasSearched && this.groupResults.length === 0) {
       Column({ space: 16 }) {
-        Text('🔍').fontSize(48)
+        Text() {
+          SymbolSpan($r(AppIcon.SEARCH))
+            .fontSize(48)
+            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+        }
         Text('未找到相关结果').fontSize(16).fontColor($r('sys.color.ohos_id_color_text_secondary'))
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Center)
@@ -252,7 +263,7 @@ export struct SearchPage {
         }, (item: GroupItem) => item.group?.group_id ?? '')
       }
       .width('100%').height('100%')
-      .padding({ left: 16, right: 16, top: 16 })
+      .divider({ strokeWidth: 0.5, color: $r('app.color.divider'), startMargin: 76, endMargin: 0 })
     }
   }
 
@@ -303,23 +314,24 @@ export struct SearchPage {
 
   @Builder
   buildUserItem(item: UserItem) {
-    Row() {
+    Row({ space: 12 }) {
       SystemAvatar({
         avatarUrl: item.user?.avatar_url ?? '',
         name: item.user?.nickname ?? '',
-        avatarSize: 50
+        avatarSize: 48
       })
-      .margin({ right: 12 })
 
-      Column({ space: 4 }) {
+      Column({ space: 2 }) {
         Text(item.user?.nickname ?? '')
           .fontSize(16)
           .fontWeight(FontWeight.Medium)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
-        
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+
         if (item.bio) {
           Text(item.bio)
-            .fontSize(14)
+            .fontSize(13)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -329,49 +341,47 @@ export struct SearchPage {
       .layoutWeight(1)
     }
     .width('100%')
-    .padding(16)
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
-    .borderRadius(DesignConstants.RADIUS.LG)
-    .margin({ bottom: 12 })
+    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
   }
 
   @Builder
   buildGroupItem(item: GroupItem) {
-    Row() {
+    Row({ space: 12 }) {
       SystemAvatar({
         avatarUrl: item.group?.avatar_url ?? '',
         name: item.group?.name ?? '',
-        avatarSize: 50,
-        shape: 'square'
+        avatarSize: 48,
+        shape: 'squircle'
       })
-      .margin({ right: 12 })
 
-      Column({ space: 4 }) {
+      Column({ space: 2 }) {
         Text(item.group?.name ?? '')
           .fontSize(16)
           .fontWeight(FontWeight.Medium)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
-        
-        Text(`${item.group?.members_count ?? 0} 成员`)
-          .fontSize(12)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-        if (item.description) {
-          Text(item.description)
-            .fontSize(14)
+        Row({ space: 8 }) {
+          Text(`${item.group?.members_count ?? 0}人`)
+            .fontSize(13)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+          if (item.description) {
+            Text(item.description)
+              .fontSize(13)
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .layoutWeight(1)
+          }
         }
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
     }
     .width('100%')
-    .padding(16)
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
-    .borderRadius(DesignConstants.RADIUS.LG)
-    .margin({ bottom: 12 })
+    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
     .onClick(() => {
       const p = new GroupDetailRouteParam();
       p.groupId = item.group?.group_id ?? '';
@@ -436,9 +446,9 @@ export struct SearchPage {
       .padding(8)
       .width('100%')
     }
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(12)
-    .shadow({ radius: 6, color: '#0A000000', offsetX: 0, offsetY: 1 })
+    .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 1 })
   }
 
   // 保留原有的列表项构建器用于其他场景
@@ -466,7 +476,7 @@ export struct SearchPage {
     }
     .width('100%')
     .padding(16)
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.LG)
     .margin({ bottom: 12 })
   }

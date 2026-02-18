@@ -64,7 +64,6 @@ export interface PageNamesType {
   CREATE_GROUP: string;
   CREATE_MOMENT: string;
   CHAT: string;
-  ANCHOR_PICK: string;
   LOCATION_PICKER: string;
   SEARCH: string;
   SETTINGS: string;
@@ -87,7 +86,6 @@ export const PageNames: PageNamesType = {
   CREATE_GROUP: 'CreateGroupPage',
   CREATE_MOMENT: 'CreateMomentPage',
   CHAT: 'ChatPage',
-  ANCHOR_PICK: 'AnchorPickPage',
   LOCATION_PICKER: 'LocationPickerPage',
   SEARCH: 'SearchPage',
   SETTINGS: 'SettingsPage',

@@ -334,7 +334,7 @@ export struct ProfilePage {
           this.GuestFeatureItem('搜索用户和内容', AppIcon.SEARCH)
         }
         .width('100%')
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .backgroundColor($r('app.color.bg_secondary'))
         .borderRadius(DesignConstants.RADIUS.LG)
         .padding(DesignConstants.SPACING.LG)
 
@@ -352,7 +352,7 @@ export struct ProfilePage {
           this.GuestFeatureItem('关注好友、管理资料', AppIcon.PERSON)
         }
         .width('100%')
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .backgroundColor($r('app.color.bg_secondary'))
         .borderRadius(DesignConstants.RADIUS.LG)
         .padding(DesignConstants.SPACING.LG)
 
@@ -408,7 +408,7 @@ export struct ProfilePage {
       height: SheetSize.FIT_CONTENT,
       showClose: true,
       dragBar: true,
-      backgroundColor: $r('sys.color.ohos_id_color_background')
+      backgroundColor: $r('app.color.bg_secondary')
     })
   }
 
@@ -450,7 +450,7 @@ export struct ProfilePage {
         .width('100%')
         .padding(DesignConstants.SPACING.LG)
       }
-      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .backgroundColor($r('app.color.bg_secondary'))
       .borderRadius(DesignConstants.RADIUS.LG)
       .margin({ left: 16, right: 16 })
 
@@ -462,7 +462,7 @@ export struct ProfilePage {
           this.UserInfoContent()
         }
       }
-      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .backgroundColor($r('app.color.bg_secondary'))
       .borderRadius(DesignConstants.RADIUS.LG)
       .margin({ left: 16, right: 16 })
       .padding(DesignConstants.SPACING.LG)
@@ -471,7 +471,7 @@ export struct ProfilePage {
       ListItem() {
         this.StatsContent()
       }
-      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .backgroundColor($r('app.color.bg_secondary'))
       .borderRadius(DesignConstants.RADIUS.LG)
       .margin({ left: 16, right: 16 })
       .padding(DesignConstants.SPACING.LG)
@@ -481,19 +481,19 @@ export struct ProfilePage {
         ListItem() {
           this.MenuItemContent('更新位置', AppIcon.LOCATION, () => this.updateLocation())
         }
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .backgroundColor($r('app.color.bg_secondary'))
 
         ListItem() {
           this.MenuItemContent('设置', AppIcon.SETTINGS, () => {
             AppRouter.push(PageNames.SETTINGS);
           })
         }
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .backgroundColor($r('app.color.bg_secondary'))
 
         ListItem() {
           this.MenuItemContent('退出登录', AppIcon.CLOSE, () => this.logout())
         }
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .backgroundColor($r('app.color.bg_secondary'))
       }
       .borderRadius(DesignConstants.RADIUS.LG)
       .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 52, endMargin: DesignConstants.SPACING.LG })
@@ -516,7 +516,7 @@ export struct ProfilePage {
           this.UserInfoContent()
         }
       }
-      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .backgroundColor($r('app.color.bg_secondary'))
       .borderRadius(DesignConstants.RADIUS.LG)
       .margin({ left: 16, right: 16 })
       .padding(DesignConstants.SPACING.LG)
@@ -525,7 +525,7 @@ export struct ProfilePage {
       ListItem() {
         this.StatsContent()
       }
-      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .backgroundColor($r('app.color.bg_secondary'))
       .borderRadius(DesignConstants.RADIUS.LG)
       .margin({ left: 16, right: 16 })
       .padding(DesignConstants.SPACING.LG)
@@ -535,19 +535,19 @@ export struct ProfilePage {
         ListItem() {
           this.MenuItemContent('更新位置', AppIcon.LOCATION, () => this.updateLocation())
         }
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .backgroundColor($r('app.color.bg_secondary'))
 
         ListItem() {
           this.MenuItemContent('设置', AppIcon.SETTINGS, () => {
             AppRouter.push(PageNames.SETTINGS);
           })
         }
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .backgroundColor($r('app.color.bg_secondary'))
 
         ListItem() {
           this.MenuItemContent('退出登录', AppIcon.CLOSE, () => this.logout())
         }
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .backgroundColor($r('app.color.bg_secondary'))
       }
       .borderRadius(DesignConstants.RADIUS.LG)
       .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 52, endMargin: DesignConstants.SPACING.LG })
@@ -576,7 +576,7 @@ export struct ProfilePage {
         TextInput({ placeholder: '邮箱 / 用户名（登录凭证）' })
           .fontSize(16)
           .padding(16)
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
+          .backgroundColor($r('app.color.bg_tertiary'))
           .borderRadius(12)
           .type(InputType.Email)
           .onChange((value: string) => {
@@ -586,7 +586,7 @@ export struct ProfilePage {
         TextInput({ placeholder: '密码（至少8位）' })
           .fontSize(16)
           .padding(16)
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
+          .backgroundColor($r('app.color.bg_tertiary'))
           .borderRadius(12)
           .type(InputType.Password)
           .onChange((value: string) => {
@@ -596,7 +596,7 @@ export struct ProfilePage {
         TextInput({ placeholder: '确认密码' })
           .fontSize(16)
           .padding(16)
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
+          .backgroundColor($r('app.color.bg_tertiary'))
           .borderRadius(12)
           .type(InputType.Password)
           .onChange((value: string) => {
@@ -663,6 +663,7 @@ export struct ProfilePage {
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
           .textAlign(TextAlign.Center)
           .maxLines(3)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
     }
     .width('100%')

@@ -473,17 +473,6 @@ pub enum VerificationCodeType {
     ChangePhone,
 }
 
-impl VerificationCodeType {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            VerificationCodeType::Register => "register",
-            VerificationCodeType::Login => "login",
-            VerificationCodeType::ResetPassword => "reset_password",
-            VerificationCodeType::ChangePhone => "change_phone",
-        }
-    }
-}
-
 // ============================================================
 // Feed & Map
 // ============================================================

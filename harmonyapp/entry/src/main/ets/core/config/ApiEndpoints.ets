@@ -248,11 +248,6 @@ class NotificationsEndpoints {
   readonly MARK_ALL_READ: string = '/api/v1/notifications/mark_all_read';
 }
 
-// Tag
-class TagEndpoints {
-  readonly LIST_TRENDING: string = '/api/v1/tags/list_trending';
-}
-
 // Report
 class ReportMeEndpoints {
   readonly LIST: string = '/api/v1/reports/me/list';
@@ -285,7 +280,6 @@ export class ApiEndpoints {
   static readonly COMMENT: CommentEndpoints = new CommentEndpoints();
   static readonly MAP: MapEndpoints = new MapEndpoints();
   static readonly NOTIFICATIONS: NotificationsEndpoints = new NotificationsEndpoints();
-  static readonly TAG: TagEndpoints = new TagEndpoints();
   static readonly REPORT: ReportEndpoints = new ReportEndpoints();
   static readonly SHARE: ShareEndpoints = new ShareEndpoints();
 }

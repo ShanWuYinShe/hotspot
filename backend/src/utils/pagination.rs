@@ -59,6 +59,17 @@ where
     Ok(value)
 }
 
+/// 解码游标，如为空则返回默认值
+pub fn decode_cursor_or<T, F>(cursor: Option<String>, default: F) -> Result<T>
+where
+    T: for<'de> Deserialize<'de>,
+    F: FnOnce() -> T,
+{
+    match cursor {
+        Some(value) => decode_cursor(&value),
+        None => Ok(default()),
+    }
+}
 /// 编码值生成游标字符串
 pub fn encode_cursor<T>(value: &T) -> Result<String>
 where
@@ -103,6 +114,10 @@ pub type TimeIdCursor = (chrono::DateTime<chrono::Utc>, uuid::Uuid);
 /// 距离排序游标 (Distance, ID)
 /// 适用于: ORDER BY distance ASC, id ASC
 pub type DistanceCursor = (f64, i64);
+
+/// 距离排序游标 (Distance, UUID ID)
+/// 适用于: ORDER BY distance ASC, uuid ASC
+pub type DistanceUuidCursor = (f64, uuid::Uuid);
 
 /// 通用分页处理函数（使用 limit+1 模式）
 ///

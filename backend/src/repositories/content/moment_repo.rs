@@ -10,7 +10,9 @@ use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::enums::PrivacyLevel;
-use crate::utils::pagination::{decode_cursor, encode_cursor, Paginated, TimeIdCursor};
+use crate::utils::pagination::{
+    decode_cursor, decode_cursor_or, encode_cursor, DistanceUuidCursor, Paginated, TimeIdCursor,
+};
 
 /// 瞬间基础行数据
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
@@ -264,11 +266,8 @@ impl MomentRepository {
         limit: i32,
         cursor: Option<String>,
     ) -> Paginated<FeedMomentRow> {
-        let (last_ts, last_id) = if let Some(c) = cursor {
-            decode_cursor::<TimeIdCursor>(&c)?
-        } else {
-            (DateTime::<Utc>::MAX_UTC, Uuid::max())
-        };
+        let (last_ts, last_id) =
+            decode_cursor_or(cursor, || (DateTime::<Utc>::MAX_UTC, Uuid::max()))?;
 
         let rows = sqlx::query_as!(
             FeedMomentRow,
@@ -305,14 +304,7 @@ impl MomentRepository {
                   m.user_id = $1
                   OR m.privacy_level = 'public'
               )
-              AND NOT EXISTS (
-                  SELECT 1 FROM feed_dismissals fd
-                  WHERE fd.user_id = $1
-                    AND (
-                        (fd.target_type = 'moment' AND fd.target_id = m.moment_id::text)
-                        OR (fd.target_type = 'user' AND fd.target_id = m.user_id::text)
-                    )
-              )
+              AND feed_moment_not_dismissed($1, m.moment_id, m.user_id)
               AND (m.created_at, m.moment_id) < ($4, $5)
             GROUP BY m.moment_id, m.user_id, u.nickname, u.avatar_url,
                      m.description, m.mentions, m.created_at, m.like_count, m.comments_count,
@@ -325,11 +317,10 @@ impl MomentRepository {
             viewer_lat,
             last_ts,
             last_id,
-            limit as i64 + 1
+            limit as i64 + 1,
         )
         .fetch_all(&self.pool)
         .await?;
-
         let has_more = rows.len() > limit as usize;
         let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
 
@@ -355,15 +346,8 @@ impl MomentRepository {
         cursor: Option<String>,
         dismiss_user_id: Option<i64>,
     ) -> Paginated<FeedMomentRow> {
-        #[derive(Debug, Serialize, Deserialize)]
-        struct DistanceMomentCursor(f64, Uuid);
-
-        let (last_dist, last_id) = if let Some(c) = cursor {
-            let DistanceMomentCursor(dist, id) = decode_cursor::<DistanceMomentCursor>(&c)?;
-            (dist, id)
-        } else {
-            (0.0, Uuid::nil())
-        };
+        let (last_dist, last_id): DistanceUuidCursor =
+            decode_cursor_or(cursor, || (0.0, Uuid::nil()))?;
 
         let rows = sqlx::query_as!(
             FeedMomentRow,
@@ -398,14 +382,8 @@ impl MomentRepository {
                   OR (ST_Distance(m.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) = $4 AND m.moment_id > $5)
               )
               AND (
-                  $7::bigint IS NULL OR NOT EXISTS (
-                      SELECT 1 FROM feed_dismissals fd
-                      WHERE fd.user_id = $7
-                        AND (
-                            (fd.target_type = 'moment' AND fd.target_id = m.moment_id::text)
-                            OR (fd.target_type = 'user' AND fd.target_id = m.user_id::text)
-                        )
-                  )
+                  $7::bigint IS NULL
+                  OR feed_moment_not_dismissed($7, m.moment_id, m.user_id)
               )
             GROUP BY m.moment_id, m.user_id, u.nickname, u.avatar_url,
                      m.description, m.mentions, m.created_at, m.like_count, m.comments_count,
@@ -419,23 +397,17 @@ impl MomentRepository {
             last_dist,
             last_id,
             limit as i64 + 1,
-            dismiss_user_id
+            dismiss_user_id,
         )
         .fetch_all(&self.pool)
         .await?;
-
         let has_more = rows.len() > limit as usize;
         let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
 
         let next_cursor = if has_more {
             items
                 .last()
-                .map(|r| {
-                    encode_cursor(&DistanceMomentCursor(
-                        r.distance.unwrap_or(0.0),
-                        r.moment_id,
-                    ))
-                })
+                .map(|r| encode_cursor(&(r.distance.unwrap_or(0.0), r.moment_id)))
                 .transpose()?
         } else {
             None
@@ -453,11 +425,8 @@ impl MomentRepository {
         cursor: Option<String>,
         dismiss_user_id: Option<i64>,
     ) -> Paginated<FeedMomentRow> {
-        let (last_ts, last_id) = if let Some(c) = cursor {
-            decode_cursor::<TimeIdCursor>(&c)?
-        } else {
-            (DateTime::<Utc>::MAX_UTC, Uuid::max())
-        };
+        let (last_ts, last_id) =
+            decode_cursor_or(cursor, || (DateTime::<Utc>::MAX_UTC, Uuid::max()))?;
 
         let rows = sqlx::query_as!(
             FeedMomentRow,
@@ -491,14 +460,8 @@ impl MomentRepository {
               AND m.privacy_level = 'public'
               AND (m.created_at, m.moment_id) < ($3, $4)
               AND (
-                  $6::bigint IS NULL OR NOT EXISTS (
-                      SELECT 1 FROM feed_dismissals fd
-                      WHERE fd.user_id = $6
-                        AND (
-                            (fd.target_type = 'moment' AND fd.target_id = m.moment_id::text)
-                            OR (fd.target_type = 'user' AND fd.target_id = m.user_id::text)
-                        )
-                  )
+                  $6::bigint IS NULL
+                  OR feed_moment_not_dismissed($6, m.moment_id, m.user_id)
               )
             GROUP BY m.moment_id, m.user_id, u.nickname, u.avatar_url,
                      m.description, m.mentions, m.created_at, m.like_count, m.comments_count,
@@ -511,11 +474,10 @@ impl MomentRepository {
             last_ts,
             last_id,
             limit as i64 + 1,
-            dismiss_user_id
+            dismiss_user_id,
         )
         .fetch_all(&self.pool)
         .await?;
-
         let has_more = rows.len() > limit as usize;
         let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
 
@@ -877,15 +839,8 @@ impl MomentRepository {
         limit: i64,
         cursor: Option<String>,
     ) -> Paginated<MomentDetailRow> {
-        #[derive(Debug, Serialize, Deserialize)]
-        struct DistanceMomentCursor(f64, Uuid);
-
-        let (last_dist, last_id) = if let Some(c) = cursor {
-            let DistanceMomentCursor(dist, id) = decode_cursor::<DistanceMomentCursor>(&c)?;
-            (dist, id)
-        } else {
-            (0.0, Uuid::nil())
-        };
+        let (last_dist, last_id): DistanceUuidCursor =
+            decode_cursor_or(cursor, || (0.0, Uuid::nil()))?;
 
         let pattern = kw.map(|v| format!("%{}%", v));
 
@@ -932,12 +887,7 @@ impl MomentRepository {
         let next_cursor = if has_more {
             items
                 .last()
-                .map(|r| {
-                    encode_cursor(&DistanceMomentCursor(
-                        r.distance.unwrap_or(0.0),
-                        r.moment_id,
-                    ))
-                })
+                .map(|r| encode_cursor(&(r.distance.unwrap_or(0.0), r.moment_id)))
                 .transpose()?
         } else {
             None

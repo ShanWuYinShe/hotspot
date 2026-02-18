@@ -72,10 +72,6 @@ pub enum AppError {
     #[error("密码错误: {0}")]
     PasswordError(String),
 
-    /// 10106 - 需要重新登录（会话已撤销/风控要求）
-    #[error("需要重新登录: {0}")]
-    ReLoginRequired(String),
-
     /// 10107 - 验证 Token 无效或已过期（verify_token）
     #[error("验证 Token 无效或已过期: {0}")]
     VerifyTokenInvalid(String),
@@ -347,7 +343,6 @@ impl AppError {
             | Self::RefreshTokenMissing
             | Self::PasswordError(_)
             | Self::Bcrypt(_)
-            | Self::ReLoginRequired(_)
             | Self::VerifyTokenInvalid(_) => 10100,
 
             // 10200：权限不足/访问受限

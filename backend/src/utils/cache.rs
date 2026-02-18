@@ -73,6 +73,12 @@ pub mod cache_keys {
     pub const GROUP_INFO: &str = "cache:group:info";
     /// 系统配置缓存
     pub const SYSTEM_CONFIG: &str = "cache:system:config";
+    /// 分享瞬间预览缓存
+    pub const SHARE_MOMENT_PREVIEW: &str = "cache:share:moment_preview";
+    /// 分享用户预览缓存
+    pub const SHARE_USER_PREVIEW: &str = "cache:share:user_preview";
+    /// 分享群组预览缓存
+    pub const SHARE_GROUP_PREVIEW: &str = "cache:share:group_preview";
 }
 
 /// Redis 缓存管理器
@@ -168,6 +174,15 @@ impl CacheManager {
 
         let mut conn = self.redis.clone();
         conn.set_ex::<_, _, ()>(&key, serialized, ttl).await?;
+        Ok(())
+    }
+
+    /// 缓存空值，避免穿透
+    pub async fn set_null(&self, prefix: &str, id: &str) -> Result<(), redis::RedisError> {
+        let key = self.make_key(prefix, id);
+        let ttl = self.get_ttl_with_jitter();
+        let mut conn = self.redis.clone();
+        conn.set_ex::<_, _, ()>(&key, NULL_MARKER, ttl).await?;
         Ok(())
     }
 

@@ -928,19 +928,15 @@ impl UserService {
             return Err(AppError::NotFriends);
         }
 
-        // remark: None (field not present) → no modification; Some("") → clear; Some("text") → set
-        match &req.remark {
-            None => {}
-            Some(r) if r.trim().is_empty() => {
-                self.user_friend_remarks_repo
-                    .delete(user_id, target_user_id)
-                    .await?;
-            }
-            Some(r) => {
-                self.user_friend_remarks_repo
-                    .upsert(user_id, target_user_id, r.trim().to_string())
-                    .await?;
-            }
+        let trimmed = req.remark.trim();
+        if trimmed.is_empty() {
+            self.user_friend_remarks_repo
+                .delete(user_id, target_user_id)
+                .await?;
+        } else {
+            self.user_friend_remarks_repo
+                .upsert(user_id, target_user_id, trimmed.to_string())
+                .await?;
         }
 
         Ok(())

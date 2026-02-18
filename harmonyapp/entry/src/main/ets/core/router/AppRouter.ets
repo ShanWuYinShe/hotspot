@@ -31,6 +31,12 @@ export class ProfileRouteParam {
   userId: string = '';
 }
 
+/** 地图选点页参数 */
+export class LocationPickerRouteParam {
+  /** 'anchor' = 设置浏览锚点（默认），'location_pick' = 为创建群组/动态选取位置 */
+  mode: string = 'anchor';
+}
+
 /** 图片预览页参数 */
 export class PhotoPreviewRouteParam {
   momentId: string = '';

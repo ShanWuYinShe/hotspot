@@ -13,6 +13,7 @@ use crate::types::enums::SystemHealthStatus;
 pub async fn get_meta(
     Json(_req): Json<SystemGetMetaRequest>,
 ) -> Result<Json<ApiResponse<ApiVersionMeta>>> {
+    let _ = ApiVersionStatus::variants();
     Ok(Json(ApiResponse::success(ApiVersionMeta {
         version: "v1".to_string(),
         status: ApiVersionStatus::Active,

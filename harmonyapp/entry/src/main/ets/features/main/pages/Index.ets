@@ -611,19 +611,16 @@ struct Index {
     })
   }
 
-  /**
-   * 附近标签 Builder — 使用 Image + 系统媒体图标
-   * sys.symbol.location 在部分设备不可用，改用 sys.media 图标
-   */
   @Builder
   NearbyTabBuilder() {
     Column() {
-      Image($r('sys.media.ohos_ic_public_location'))
-        .width(24)
-        .height(24)
-        .fillColor(this.currentTabIndex === 0
-          ? $r('sys.color.ohos_id_color_emphasize')
-          : $r('sys.color.ohos_id_color_text_secondary'))
+      Text() {
+        SymbolSpan($r(AppIcon.NEARBY))
+          .fontSize(24)
+          .fontColor([this.currentTabIndex === 0
+            ? $r('sys.color.ohos_id_color_emphasize')
+            : $r('sys.color.ohos_id_color_text_secondary')])
+      }
 
       Text('附近')
         .fontColor(this.currentTabIndex === 0
@@ -691,7 +688,7 @@ struct Index {
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .backgroundColor($r('app.color.bg_secondary'))
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
@@ -754,7 +751,8 @@ struct Index {
         .bindSheet($$this.showCreateSheet, this.CreateSheetContent(), {
           height: SheetSize.FIT_CONTENT,
           dragBar: true,
-          showClose: true
+          showClose: true,
+          backgroundColor: $r('app.color.bg_secondary')
         })
         }
         .mode(NavigationMode.Stack)
@@ -799,7 +797,7 @@ struct Index {
         }
         .width('100%')
         .height('100%')
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .backgroundColor($r('app.color.bg_secondary'))
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.EaseInOut }))
         .onClick(() => {
@@ -816,7 +814,7 @@ struct Index {
         }
         .width('100%')
         .height('100%')
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .backgroundColor($r('app.color.bg_secondary'))
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.EaseInOut }))
         .onClick(() => {
@@ -848,7 +846,7 @@ struct Index {
         .type(ButtonType.Capsule)
         .fontSize(12)
         .height(28)
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .backgroundColor($r('app.color.bg_secondary'))
         .fontColor($r('sys.color.ohos_id_color_emphasize'))
         .onClick(() => {
           AppRouter.push(PageNames.LOGIN);
@@ -909,7 +907,7 @@ struct Index {
       }
       .width('100%')
       .padding(DesignConstants.SPACING.LG)
-      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .backgroundColor($r('app.color.bg_secondary'))
       .borderRadius(DesignConstants.RADIUS.LG)
       .onClick(() => {
         this.showCreateSheet = false;
@@ -951,7 +949,7 @@ struct Index {
       }
       .width('100%')
       .padding(DesignConstants.SPACING.LG)
-      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .backgroundColor($r('app.color.bg_secondary'))
       .borderRadius(DesignConstants.RADIUS.LG)
       .margin({ top: DesignConstants.SPACING.SM })
       .onClick(() => {

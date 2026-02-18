@@ -8,6 +8,7 @@ mod middleware;
 mod repositories;
 mod routes;
 mod services;
+mod sql_macros;
 mod state;
 mod types;
 mod utils;
@@ -311,6 +312,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     );
                 }),
         )
+        .layer(axum::middleware::from_fn(
+            crate::middleware::response_logger::response_logger,
+        ))
         // request_id：提升到 app 全局最外层，保证 TraceLayer / 任意 handler 日志都在 request_id span 内
         .layer(axum::middleware::from_fn(
             crate::middleware::request_id::request_id_middleware,

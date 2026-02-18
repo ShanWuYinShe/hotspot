@@ -187,7 +187,7 @@ export const usersService = {
 	/**
 	 * 设置备注
 	 */
-	setRemark(data: { user_id: string; remark?: string }) {
+	setRemark(data: { user_id: string; remark: string }) {
 		return post<void>(USERS.ME.SET_REMARK, data);
 	},
 

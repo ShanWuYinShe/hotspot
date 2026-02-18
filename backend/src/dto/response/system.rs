@@ -12,6 +12,12 @@ pub enum ApiVersionStatus {
     Sunset,
 }
 
+impl ApiVersionStatus {
+    pub const fn variants() -> [Self; 3] {
+        [Self::Active, Self::Deprecated, Self::Sunset]
+    }
+}
+
 /// API 版本元信息 - API 文档: ApiVersionMeta
 #[derive(Debug, Serialize)]
 pub struct ApiVersionMeta {

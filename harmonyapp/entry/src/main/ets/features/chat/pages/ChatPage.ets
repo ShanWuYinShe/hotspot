@@ -59,6 +59,7 @@ export struct ChatPage {
   private messagesDataSource: BasicDataSource<ChatMessage> = new BasicDataSource<ChatMessage>([]);
   @State inputText: string = '';
   @State isLoading: boolean = true;
+  @State errorMessage: string = '';
   @State isSending: boolean = false;
   @State title: string = '聊天';
   @State hasMoreHistory: boolean = false;
@@ -161,6 +162,7 @@ export struct ChatPage {
 
   private async loadHistory() {
     this.isLoading = true;
+    this.errorMessage = '';
     
     await this.loadFromCache();
 
@@ -176,16 +178,16 @@ export struct ChatPage {
           }
           const request: GetPrivateMessagesHistoryRequest = { target_user_id: targetUserId, pagination: { limit: 20 } };
           const response = await ApiClient.getPrivateMessages(request);
-          if (response.code === 0 && response.data) {
-            items = response.data.items;
-            nextCursor = response.data.next_cursor;
+          if (response.code === 0) {
+            items = response.data?.items ?? [];
+            nextCursor = response.data?.next_cursor;
           }
         } else {
           const request: GetGroupMessagesHistoryRequest = { group_id: this.chatId, pagination: { limit: 20 } };
           const response = await ApiClient.getGroupMessages(request);
-          if (response.code === 0 && response.data) {
-            items = response.data.items;
-            nextCursor = response.data.next_cursor;
+          if (response.code === 0) {
+            items = response.data?.items ?? [];
+            nextCursor = response.data?.next_cursor;
           }
         }
 
@@ -201,7 +203,7 @@ export struct ChatPage {
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `加载历史消息失败: ${error}`);
       if (this.messages.length === 0) {
-        SystemToast.showError('加载消息失败', this.getUIContext());
+        this.errorMessage = '加载消息失败';
       }
     } finally {
       this.isLoading = false;
@@ -223,9 +225,9 @@ export struct ChatPage {
           pagination: { limit: 20, cursor: this.historyNextCursor }
         };
         const response = await ApiClient.getPrivateMessages(request);
-        if (response.code === 0 && response.data) {
-          items = response.data.items;
-          nextCursor = response.data.next_cursor;
+        if (response.code === 0) {
+          items = response.data?.items ?? [];
+          nextCursor = response.data?.next_cursor;
         }
       } else {
         const request: GetGroupMessagesHistoryRequest = {
@@ -233,9 +235,9 @@ export struct ChatPage {
           pagination: { limit: 20, cursor: this.historyNextCursor }
         };
         const response = await ApiClient.getGroupMessages(request);
-        if (response.code === 0 && response.data) {
-          items = response.data.items;
-          nextCursor = response.data.next_cursor;
+        if (response.code === 0) {
+          items = response.data?.items ?? [];
+          nextCursor = response.data?.next_cursor;
         }
       }
 
@@ -456,14 +458,53 @@ export struct ChatPage {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .backgroundColor($r('app.color.bg_secondary'))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
       .zIndex(1)
 
-      if (this.isLoading && this.messages.length === 0) {
+      if (this.isLoading) {
         SystemLoadingView({ message: '加载消息...' })
           .layoutWeight(1)
           .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+      } else if (this.messages.length === 0 && this.errorMessage) {
+        Column({ space: DesignConstants.SPACING.LG }) {
+          Text() {
+            SymbolSpan($r(AppIcon.WARNING))
+              .fontSize(48)
+              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+          }
+          Text(this.errorMessage)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .textAlign(TextAlign.Center)
+          Button('重试')
+            .type(ButtonType.Capsule)
+            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+            .fontColor(Color.White)
+            .height(40)
+            .onClick(() => { this.loadHistory(); })
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+      } else if (this.messages.length === 0) {
+        Column({ space: DesignConstants.SPACING.LG }) {
+          Text() {
+            SymbolSpan($r(AppIcon.MESSAGE))
+              .fontSize(48)
+              .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
+          }
+          Text('暂无消息')
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          Text('发送一条消息开始聊天吧')
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
       } else {
       List({ scroller: this.scroller, initialIndex: this.messages.length - 1 }) {
         // 顶部加载更多历史指示器
@@ -529,7 +570,7 @@ export struct ChatPage {
         top: DesignConstants.SPACING.SM,
         bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, 0, DesignConstants.SPACING.SM)
       })
-      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .backgroundColor($r('app.color.bg_secondary'))
     }
     .width('100%')
     .height('100%')
@@ -594,7 +635,7 @@ export struct ChatPage {
               Text(msg.content)
                 .fontSize(16)
                 .fontColor(msg.isSelf ? Color.White : $r('sys.color.ohos_id_color_text_primary'))
-                .backgroundColor(msg.isSelf ? $r('sys.color.ohos_id_color_emphasize') : $r('sys.color.ohos_id_color_background'))
+                .backgroundColor(msg.isSelf ? $r('sys.color.ohos_id_color_emphasize') : $r('app.color.bg_secondary'))
                 .padding(12)
                 .borderRadius(16)
                 .constraintSize({ maxWidth: '70%' })

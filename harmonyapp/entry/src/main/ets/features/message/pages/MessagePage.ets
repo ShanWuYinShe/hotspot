@@ -14,6 +14,7 @@ import { PrivateChatItem, GroupItem, MyProfile, MyGroupsRequest, LeaveGroupReque
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
+import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -75,18 +76,16 @@ export struct MessagePage {
   onMessageSync() {
     if (this.lastMessageSyncTime > 0) {
       hilog.info(DOMAIN_NUMBER, TAG, '收到消息同步通知，刷新列表');
-      this.loadData(false);
+      this.loadData(false, true);
     }
   }
 
-  private async loadData(forceRefresh: boolean = false) {
+  private async loadData(forceRefresh: boolean = false, refresh: boolean = false) {
     if (!forceRefresh) {
       await this.loadFromCache();
     }
 
-    if (this.chatListDataSource.totalCount() === 0) {
-      this.isLoading = true;
-    }
+    if (!refresh) { this.isLoading = true; }
     this.errorMessage = '';
 
     try {
@@ -176,10 +175,11 @@ export struct MessagePage {
   private async loadPrivateChats(cursor?: string): Promise<ChatItem[]> {
     try {
       const response = await ApiClient.getPrivateChats({ pagination: { limit: 50, cursor: cursor } });
-      if (response.code === 0 && response.data) {
-        this.privateHasMore = !!(response.data.next_cursor);
-        this.privateNextCursor = response.data.next_cursor ?? '';
-        return response.data.items
+      if (response.code === 0) {
+        const items = response.data?.items ?? [];
+        this.privateHasMore = !!(response.data?.next_cursor);
+        this.privateNextCursor = response.data?.next_cursor ?? '';
+        return items
           .filter((item: PrivateChatItem) => item.other_user?.user_id)
           .map((item: PrivateChatItem): ChatItem => {
             const chatItem: ChatItem = {
@@ -206,10 +206,11 @@ export struct MessagePage {
     try {
       const request: MyGroupsRequest = { pagination: { limit: 50, cursor: cursor } };
       const response = await ApiClient.getJoinedGroups(request);
-      if (response.code === 0 && response.data) {
-        this.groupHasMore = !!(response.data.next_cursor);
-        this.groupNextCursor = response.data.next_cursor ?? '';
-        return response.data.items
+      if (response.code === 0) {
+        const items = response.data?.items ?? [];
+        this.groupHasMore = !!(response.data?.next_cursor);
+        this.groupNextCursor = response.data?.next_cursor ?? '';
+        return items
           .filter((item: GroupItem) => item.group?.group_id)
           .map((item: GroupItem): ChatItem => {
             const chatItem: ChatItem = {
@@ -426,23 +427,23 @@ export struct MessagePage {
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 内容区域
-      if (this.isLoading && !this.hasData) {
+      if (this.isLoading) {
         SystemLoadingView({ message: '收取信件中...' })
           .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (!this.hasData && this.errorMessage) {
-        Refresh({ refreshing: $$this.isRefreshing, builder: this.RefreshBuilder() }) {
-          this.buildEmptyState(AppIcon.WARNING, this.errorMessage, '重试', () => { this.loadData(true); })
+        Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
+          EmptyState({ icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试', onAction: () => { this.loadData(true); } })
         }
-        .onRefreshing(() => { this.loadData(true); })
+        .onRefreshing(() => { this.loadData(true, true); })
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (!this.hasData) {
-        Refresh({ refreshing: $$this.isRefreshing, builder: this.RefreshBuilder() }) {
-          this.buildEmptyState(AppIcon.MESSAGE, '暂无消息', undefined, undefined)
+        Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
+          EmptyState({ icon: AppIcon.MESSAGE, message: '暂无消息' })
         }
-        .onRefreshing(() => { this.loadData(true); })
+        .onRefreshing(() => { this.loadData(true, true); })
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
-        Refresh({ refreshing: $$this.isRefreshing, builder: this.RefreshBuilder() }) {
+        Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           List() {
             LazyForEach(this.chatListDataSource, (item: ChatItem) => {
               ListItem() {
@@ -452,76 +453,25 @@ export struct MessagePage {
             }, (item: ChatItem) => item.id + item.type)
             if (this.isLoadingMore) {
               ListItem() {
-                Row({ space: DesignConstants.SPACING.SM }) {
-                  LoadingProgress().width(20).height(20)
-                  Text('加载更多...')
-                    .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-                }
-                .width('100%')
-                .justifyContent(FlexAlign.Center)
-                .padding(DesignConstants.SPACING.MD)
+                LoadingMoreIndicator()
               }
             }
           }
           .width('100%')
-          .layoutWeight(1)
           .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
+          .backgroundColor($r('app.color.bg_secondary'))
           .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 78, endMargin: 0 })
           .cachedCount(10)
           .onReachEnd(() => { this.loadMore(); })
         }
-        .onRefreshing(() => { this.loadData(true); })
+        .layoutWeight(1)
+        .onRefreshing(() => { this.loadData(true, true); })
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
     }
     .width('100%')
     .height('100%')
     .backgroundColor($r('app.color.bg_primary'))
-  }
-
-  @Builder
-  private buildEmptyState(icon: AppIcon, message: string, actionLabel: string | undefined, action: (() => void) | undefined) {
-    Column({ space: DesignConstants.SPACING.LG }) {
-      Text() {
-        SymbolSpan($r(icon))
-          .fontSize(48)
-          .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
-      }
-
-      Text(message)
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        .textAlign(TextAlign.Center)
-
-      if (actionLabel && action) {
-        Button(actionLabel)
-          .type(ButtonType.Capsule)
-          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-          .fontColor(Color.White)
-          .height(40)
-          .onClick(() => { action(); })
-      }
-    }
-    .width('100%')
-    .height('100%')
-    .justifyContent(FlexAlign.Center)
-    .padding(DesignConstants.SPACING.XXL)
-  }
-
-  @Builder
-  RefreshBuilder() {
-    Row() {
-      LoadingProgress().width(24).height(24)
-      Text('正在刷新...')
-        .fontSize(DesignConstants.FONT.SIZE.MD)
-        .margin({ left: DesignConstants.SPACING.SM })
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-    }
-    .width('100%')
-    .justifyContent(FlexAlign.Center)
-    .padding(DesignConstants.SPACING.SM)
   }
 
   @Builder
@@ -549,27 +499,18 @@ export struct MessagePage {
   @Builder
   buildChatItem(item: ChatItem) {
     Row() {
-      // 头像 + 未读角标
-      Stack({ alignContent: Alignment.TopEnd }) {
+      Badge({
+        count: item.unreadCount,
+        maxCount: 99,
+        position: BadgePosition.RightTop,
+        style: { badgeSize: 16, badgeColor: $r('app.color.color_danger'), fontSize: 10 }
+      }) {
         SystemAvatar({
           avatarUrl: item.avatarUrl,
           name: item.name,
           avatarSize: 50,
           shape: item.type === 'group' ? 'squircle' : 'circle'
         })
-
-        if (item.unreadCount > 0) {
-          Text(item.unreadCount > 99 ? '99+' : item.unreadCount.toString())
-            .fontSize(10)
-            .fontColor(Color.White)
-            .backgroundColor($r('app.color.color_danger'))
-            .borderRadius(10)
-            .padding({ left: 4, right: 4 })
-            .height(16)
-            .constraintSize({ minWidth: 16 })
-            .textAlign(TextAlign.Center)
-            .offset({ x: 4, y: -4 })
-        }
       }
       .margin({ right: DesignConstants.SPACING.MD })
 

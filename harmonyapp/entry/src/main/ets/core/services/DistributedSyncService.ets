@@ -9,7 +9,7 @@ import { common } from '@kit.AbilityKit';
 import { ApiClient } from '../api/ApiClient';
 import { GlobalStateManager } from '../state/GlobalStateManager';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
-import { MyProfile, UserMomentsRequest, MyGroupsRequest, GeoPoint } from '../types/api';
+import { MyProfile, UserMomentsRequest, MyGroupsRequest } from '../types/api';
 import { AuthAccountManager } from '../state/AuthAccountManager';
 
 export interface SyncData {
@@ -345,19 +345,13 @@ export class DistributedSyncService {
    */
   private async fetchUserMoments(userId: string): Promise<Object[]> {
     try {
-      // 调用 API 获取用户动态
-      const referencePoint: GeoPoint = {
-        latitude: 0,
-        longitude: 0
-      };
       const params: UserMomentsRequest = {
-        user_id: userId,
-        reference_point: referencePoint
+        user_id: userId
       };
       const response = await ApiClient.getUserMoments(params);
       
-      if (response.code === 0 && response.data) {
-        return response.data.items;
+      if (response.code === 0) {
+        return response.data?.items ?? [];
       }
       return [];
     } catch (error) {
@@ -371,13 +365,12 @@ export class DistributedSyncService {
    */
   private async fetchUserGroups(userId: string): Promise<Object[]> {
     try {
-      // 调用 API 获取用户群组
       const params: MyGroupsRequest = {
         pagination: { limit: 50 }
       };
       const response = await ApiClient.getJoinedGroups(params);
-      if (response.code === 0 && response.data) {
-        return response.data.items;
+      if (response.code === 0) {
+        return response.data?.items ?? [];
       }
       return [];
     } catch (error) {

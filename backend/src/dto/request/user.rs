@@ -124,7 +124,7 @@ pub struct UnblockRequest {
 #[derive(Debug, Deserialize)]
 pub struct SetRemarkRequest {
     pub user_id: String,
-    pub remark: Option<String>,
+    pub remark: String,
 }
 
 #[derive(Debug, Deserialize)]

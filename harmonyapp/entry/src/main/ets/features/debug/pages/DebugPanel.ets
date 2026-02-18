@@ -12,6 +12,7 @@ import { MyProfile } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 
 @Component
 export struct DebugPanel {
@@ -19,6 +20,7 @@ export struct DebugPanel {
   @State logs: string[] = [];
   @State currentUserId: string | null = null;
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
+  @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   private webSocketService = WebSocketService.getInstance();
 
   async aboutToAppear() {
@@ -70,8 +72,12 @@ export struct DebugPanel {
         })
       }
       .width('100%')
-      .height(56)
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
+        bottom: DesignConstants.SPACING.SM
+      })
       .backgroundColor($r('app.color.bg_secondary'))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
@@ -80,7 +86,7 @@ export struct DebugPanel {
           // 状态卡片
           SystemCard({
             cardPadding: 16,
-            cardBackgroundColor: $r('sys.color.ohos_id_color_background')
+            cardBackgroundColor: $r('app.color.bg_secondary')
           }) {
             Column({ space: 8 }) {
               Text('系统状态')

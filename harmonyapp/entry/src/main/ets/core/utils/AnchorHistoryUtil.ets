@@ -1,6 +1,6 @@
 /**
- * 浏览锚点历史记录工具
- * 管理用户设置过的浏览锚点位置历史
+ * 位置历史记录工具
+ * 支持按分类管理历史（浏览锚点 / 创建选点等互不干扰）
  */
 
 import { preferences } from '@kit.ArkData';
@@ -8,10 +8,9 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 
 const DOMAIN_NUMBER: number = 0xFF10;
 const TAG: string = 'AnchorHistoryUtil';
-const PREF_KEY = 'anchor_history';
 const MAX_HISTORY = 10;
 
-/** 锚点历史记录项 */
+/** 历史记录项 */
 export class AnchorHistoryItem {
   latitude: number = 0;
   longitude: number = 0;
@@ -22,7 +21,7 @@ export class AnchorHistoryItem {
 
 export class AnchorHistoryUtil {
   private static prefInstance: preferences.Preferences | null = null;
-  private static historyCache: AnchorHistoryItem[] = [];
+  private static caches: Map<string, AnchorHistoryItem[]> = new Map();
 
   /** 初始化 Preferences（需要在应用启动后调用一次） */
   static init(context: Context): void {
@@ -39,37 +38,41 @@ export class AnchorHistoryUtil {
     return AnchorHistoryUtil.prefInstance;
   }
 
-  /** 获取锚点历史列表 */
-  static getHistory(): AnchorHistoryItem[] {
+  private static prefKey(category: string): string {
+    return `${category}_history`;
+  }
+
+  /** 获取历史列表。category 默认 'anchor'，创建选点用 'location_pick' */
+  static getHistory(category: string = 'anchor'): AnchorHistoryItem[] {
     try {
-      if (AnchorHistoryUtil.historyCache.length > 0) {
-        return AnchorHistoryUtil.historyCache;
+      const cached = AnchorHistoryUtil.caches.get(category);
+      if (cached && cached.length > 0) {
+        return cached;
       }
       const pref = AnchorHistoryUtil.getPreferencesInstance();
       if (!pref) {
         return [];
       }
-      const json = pref.getSync(PREF_KEY, '[]') as string;
+      const json = pref.getSync(AnchorHistoryUtil.prefKey(category), '[]') as string;
       const items: AnchorHistoryItem[] = JSON.parse(json) as AnchorHistoryItem[];
-      AnchorHistoryUtil.historyCache = items;
+      AnchorHistoryUtil.caches.set(category, items);
       return items;
     } catch {
-      hilog.warn(DOMAIN_NUMBER, TAG, '读取锚点历史失败');
+      hilog.warn(DOMAIN_NUMBER, TAG, `读取历史失败: ${category}`);
       return [];
     }
   }
 
-  /** 添加一条锚点记录 */
-  static addToHistory(latitude: number, longitude: number, locationName: string = ''): void {
+  /** 添加一条记录。category 默认 'anchor'，创建选点用 'location_pick' */
+  static addToHistory(latitude: number, longitude: number, locationName: string = '', category: string = 'anchor'): void {
     try {
-      const items = AnchorHistoryUtil.getHistory();
+      const items = AnchorHistoryUtil.getHistory(category);
       const newItem = new AnchorHistoryItem();
       newItem.latitude = latitude;
       newItem.longitude = longitude;
       newItem.locationName = locationName;
       newItem.timestamp = Date.now();
 
-      // 去重：如果距离非常近（约 50m 以内）则替换
       const filtered = items.filter((item: AnchorHistoryItem) => {
         const latDiff = Math.abs(item.latitude - newItem.latitude);
         const lngDiff = Math.abs(item.longitude - newItem.longitude);
@@ -79,28 +82,28 @@ export class AnchorHistoryUtil {
       filtered.unshift(newItem);
       const trimmed = filtered.slice(0, MAX_HISTORY);
 
-      AnchorHistoryUtil.historyCache = trimmed;
+      AnchorHistoryUtil.caches.set(category, trimmed);
       const pref = AnchorHistoryUtil.getPreferencesInstance();
       if (pref) {
-        pref.putSync(PREF_KEY, JSON.stringify(trimmed));
+        pref.putSync(AnchorHistoryUtil.prefKey(category), JSON.stringify(trimmed));
         pref.flush();
       }
     } catch {
-      hilog.warn(DOMAIN_NUMBER, TAG, '保存锚点历史失败');
+      hilog.warn(DOMAIN_NUMBER, TAG, `保存历史失败: ${category}`);
     }
   }
 
-  /** 清空历史 */
-  static clearHistory(): void {
+  /** 清空指定分类的历史。category 默认 'anchor' */
+  static clearHistory(category: string = 'anchor'): void {
     try {
-      AnchorHistoryUtil.historyCache = [];
+      AnchorHistoryUtil.caches.set(category, []);
       const pref = AnchorHistoryUtil.getPreferencesInstance();
       if (pref) {
-        pref.putSync(PREF_KEY, '[]');
+        pref.putSync(AnchorHistoryUtil.prefKey(category), '[]');
         pref.flush();
       }
     } catch {
-      hilog.warn(DOMAIN_NUMBER, TAG, '清空锚点历史失败');
+      hilog.warn(DOMAIN_NUMBER, TAG, `清空历史失败: ${category}`);
     }
   }
 }

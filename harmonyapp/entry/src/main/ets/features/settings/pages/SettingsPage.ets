@@ -6,7 +6,7 @@
 import { GlobalStateManager, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_USER_TYPE } from '../../../core/state/GlobalStateManager';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
-import { AppIcon } from '../../../components/SystemIcon';
+import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { HttpUtil } from '../../../core/network/HttpUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { MyProfile } from '../../../core/types/api';
@@ -15,6 +15,7 @@ import { MessageCacheService } from '../../../core/database/MessageCacheService'
 import { AppRouter, ProfileRouteParam, LoginRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 
 @Component
 export struct SettingsPage {
@@ -25,10 +26,6 @@ export struct SettingsPage {
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
-
-  private getHeaderTopPadding(): number {
-    return (this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.LG) + DesignConstants.SPACING.SM;
-  }
 
   aboutToAppear(): void {
     SystemUiController.useSurface({
@@ -56,17 +53,15 @@ export struct SettingsPage {
     Column() {
       // 标题栏 - 使用 SafeArea 避免与状态栏重叠
       Row() {
-        Text() {
-          SymbolSpan($r(AppIcon.BACK))
-            .fontSize(24)
-            .fontColor([$r('sys.color.ohos_id_color_text_primary')])
-        }
-        .onClick(() => {
-          AppRouter.pop();
+        IconButton({
+          icon: AppIcon.BACK,
+          iconSize: IconSize.LARGE,
+          iconColor: $r('sys.color.ohos_id_color_text_primary'),
+          bgColor: Color.Transparent,
+          onButtonClick: () => {
+            AppRouter.pop();
+          }
         })
-        .width(48)
-        .height(48)
-        .textAlign(TextAlign.Center)
 
         Text('设置')
           .fontSize(DesignConstants.FONT.SIZE.XL)
@@ -82,7 +77,7 @@ export struct SettingsPage {
       .padding({
         left: DesignConstants.SPACING.LG,
         right: DesignConstants.SPACING.LG,
-        top: this.getHeaderTopPadding(),
+        top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
       .backgroundColor($r('app.color.bg_secondary'))
@@ -97,7 +92,7 @@ export struct SettingsPage {
               AppRouter.push(PageNames.ACCOUNTS);
             })
           }
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
+          .backgroundColor($r('app.color.bg_secondary'))
 
           ListItem() {
             this.SettingItem('个人资料', '修改头像、昵称', async () => {
@@ -116,7 +111,7 @@ export struct SettingsPage {
               }
             })
           }
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
+          .backgroundColor($r('app.color.bg_secondary'))
         }
         .borderRadius(DesignConstants.RADIUS.LG)
         .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 16, endMargin: 16 })
@@ -126,17 +121,26 @@ export struct SettingsPage {
         ListItemGroup({ header: this.ListHeader('通用') }) {
           ListItem() {
             this.SettingItem('消息通知', '', () => {
+              if (!this.isLoggedIn) {
+                SystemToast.showWarning('请先登录', this.getUIContext());
+                const loginParams = new LoginRouteParam();
+                loginParams.reason = 'action_required';
+                loginParams.action = '管理通知订阅';
+                loginParams.redirectUrl = PageNames.SUBSCRIPTIONS;
+                AppRouter.push(PageNames.LOGIN, loginParams);
+                return;
+              }
               AppRouter.push(PageNames.SUBSCRIPTIONS);
             })
           }
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
+          .backgroundColor($r('app.color.bg_secondary'))
 
           ListItem() {
             this.SettingItem('高级设置', '开发者选项、网络诊断', () => {
               AppRouter.push(PageNames.ADVANCED_SETTINGS);
             })
           }
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
+          .backgroundColor($r('app.color.bg_secondary'))
         }
         .borderRadius(DesignConstants.RADIUS.LG)
         .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 16, endMargin: 16 })
@@ -149,7 +153,7 @@ export struct SettingsPage {
               SystemToast.show('HotSpot v1.0.0', this.getUIContext());
             })
           }
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
+          .backgroundColor($r('app.color.bg_secondary'))
         }
         .borderRadius(DesignConstants.RADIUS.LG)
         .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 16, endMargin: 16 })
@@ -161,7 +165,7 @@ export struct SettingsPage {
             Button('退出登录')
               .width('100%')
               .height(50)
-              .backgroundColor($r('sys.color.ohos_id_color_background'))
+              .backgroundColor($r('app.color.bg_secondary'))
               .fontColor($r('app.color.color_danger'))
               .fontSize(DesignConstants.FONT.SIZE.LG)
               .type(ButtonType.Normal)

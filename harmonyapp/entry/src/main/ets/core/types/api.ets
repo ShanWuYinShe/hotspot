@@ -3,7 +3,6 @@
 export interface ApiResponse<T = void> {
   code: number;
   message?: string;
-  request_id: string;
   data?: T;
 }
 
@@ -472,7 +471,6 @@ export interface SearchUsersRequest {
 
 export interface UserOpenTheDoorRequest {
   user_id: string;
-  reference_point: GeoPoint;
 }
 
 // UserFriendsRequest / UserFollowingRequest / UserFollowersRequest 已合并入
@@ -485,13 +483,11 @@ export interface UserGroupsRequest {
 
 export interface UserMomentsRequest {
   user_id: string;
-  reference_point: GeoPoint;
   pagination?: PaginationParams;
 }
 
 export interface UserLikedMomentsRequest {
   user_id: string;
-  reference_point: GeoPoint;
   pagination?: PaginationParams;
 }
 
@@ -548,19 +544,7 @@ export interface UserSettings {
 }
 
 export interface UpdateSettingsRequest {
-  privacy_level?: PrivacyLevel;
-  location_visible?: boolean;
-  presence_visible?: boolean;
-  social_lists_visible?: boolean;
-  groups_visible?: boolean;
-  liked_moments_visible?: boolean;
-  stats_visible?: boolean;
-  allow_follow?: boolean;
-  allow_private_chat?: PrivateChatPermission;
-  searchable?: boolean;
-  phone_searchable?: boolean;
-  nickname_searchable?: boolean;
-  location_searchable?: boolean;
+  settings: Partial<UserSettings>;
 }
 
 export interface DeleteAccountRequest {
@@ -654,22 +638,25 @@ export interface SearchMomentsRequest {
 
 export interface MomentOpenTheDoorRequest {
   moment_id: string;
-  reference_point: GeoPoint;
 }
 
 export interface CreateMomentRequest {
   description: string;
   location: Location;
+  privacy_level?: PrivacyLevel;
   tags?: string[];
   image_file_ids?: string[];
-  privacy_level?: PrivacyLevel;
+  mentions?: string[];
 }
 
 export interface EditMomentRequest {
   moment_id: string;
   description?: string;
-  image_file_ids?: string[];
+  location?: Location;
+  privacy_level?: PrivacyLevel;
   tags?: string[];
+  image_file_ids?: string[];
+  mentions?: string[];
 }
 
 export interface DeleteMomentRequest {
@@ -693,12 +680,10 @@ export interface UnfavoriteMomentRequest {
 }
 
 export interface MyMomentsRequest {
-  reference_point: GeoPoint;
   pagination?: PaginationParams;
 }
 
 export interface MyFavoritesRequest {
-  reference_point: GeoPoint;
   pagination?: PaginationParams;
 }
 
@@ -713,6 +698,7 @@ export interface CreateCommentRequest {
   moment_id: string;
   content: string;
   parent_id?: string;
+  mentions?: string[];
 }
 
 export interface DeleteCommentRequest {
@@ -788,7 +774,7 @@ export interface RecallPrivateMessageRequest {
 }
 
 export interface MarkPrivateMessagesReadRequest {
-  target_user_id?: string;
+  target_user_id: string;
   up_to_message_id?: string;
 }
 
@@ -805,7 +791,6 @@ export interface SearchGroupsRequest {
 
 export interface GroupOpenTheDoorRequest {
   group_id: string;
-  reference_point: GeoPoint;
 }
 
 export interface CreateGroupRequest {
@@ -817,7 +802,7 @@ export interface CreateGroupRequest {
   join_method?: GroupJoinMethod;
   is_searchable?: boolean;
   max_members?: number;
-  location?: Location;
+  location: Location;
 }
 
 export interface UpdateGroupRequest {
@@ -854,6 +839,7 @@ export interface GroupMembersRequest {
 export interface SearchGroupMembersRequest {
   group_id: string;
   keyword: string;
+  role?: GroupRole;
   pagination?: PaginationParams;
 }
 
@@ -1042,6 +1028,7 @@ export interface SendGroupMessageRequest {
 
 export interface GetGroupMessagesHistoryRequest {
   group_id: string;
+  include_system?: boolean;
   pagination?: PaginationParams;
 }
 
@@ -1157,25 +1144,26 @@ export interface GetFeedUsersRequest {
   pagination?: PaginationParams;
 }
 
-export interface GetFeedTrendingRequest {
-  limit?: number;
-}
+export interface GetFeedTrendingRequest {}
 
-export interface TrendingBundle {
-  trending_tags: TagItem[];
-  hot_moments: MomentItem[];
-}
-
-// ==================== 标签管理API类型 ====================
-
+// 标签项（搜索、Feed 等模块共用）
 export interface TagItem {
   name: string;
   usage_count: number;
   trend?: 'rising' | 'stable' | 'falling';
 }
 
-export interface TrendingTagsRequest {
-  limit?: number;
+// 热门标签项（feed/list_trending 专用，trend 必填 + hot_moment_preview）
+export interface TrendingTagItem {
+  name: string;
+  usage_count: number;
+  trend: 'rising' | 'stable' | 'falling';
+  hot_moment_preview?: MomentItem;
+}
+
+export interface TrendingBundle {
+  trending_tags: TrendingTagItem[];
+  hot_moments: MomentItem[];
 }
 
 // ==================== 搜索API类型 ====================
@@ -1284,9 +1272,7 @@ export interface HealthStatus {
   timestamp: string;
 }
 
-export interface AnnouncementListRequest {
-  pagination?: PaginationParams;
-}
+export interface AnnouncementListRequest {}
 
 // ==================== 文件与媒体上传API类型 ====================
 
@@ -1796,8 +1782,13 @@ export interface GroupAnnouncementListData {
 
 // ==================== 通知中心 API 类型 ====================
 
+export type NotificationType =
+  'new_follower' | 'mutual_follow' | 'moment_liked' | 'moment_commented'
+  | 'comment_liked' | 'comment_reply' | 'mentioned'
+  | 'group_invite_received' | 'group_application_accepted' | 'system_announcement';
+
 export interface NotificationPayload {
-  type: string;
+  type: NotificationType;
   actor?: UserInfo;
   source?: string;
   source_moment_id?: string;
@@ -1816,7 +1807,7 @@ export interface NotificationPayload {
 
 export interface NotificationItem {
   notification_id: string;
-  type: string;
+  type: NotificationType;
   is_read: boolean;
   created_at: string;
   payload: NotificationPayload;
@@ -1835,9 +1826,8 @@ export interface UnreadCountResult {
 }
 
 export interface NotificationListRequest {
-  type?: string;
-  cursor?: string;
-  limit?: number;
+  type?: NotificationType;
+  pagination?: PaginationParams;
 }
 
 export interface MarkNotificationsReadRequest {

@@ -147,6 +147,26 @@ const manager = GlobalStateManager.getInstance();
 - 错误码 `10201`（账号封禁）须强制登出。
 - 错误码 `10100`（认证失败）须尝试刷新 Token 或跳转登录。
 
+## 图标使用规范
+
+### 官方资源
+
+- **HarmonyOS 主题图标库**：https://developer.huawei.com/consumer/cn/design/harmonyos-symbol/
+- 所有系统图标必须从此库中选取，禁止使用不存在的符号名。
+
+### 使用规则
+
+- **统一使用 `SymbolSpan` / `SymbolGlyph`**：系统图标优先使用 `sys.symbol.*` 符号字体，而非 `Image($r('sys.media.ohos_ic_public_*'))`。符号字体支持动态字号、主题适配、矢量缩放，优于位图。
+- **图标集中定义**：所有图标名称在 `components/SystemIcon.ets` 的 `AppIcon` 枚举中统一管理。新增图标时必须先在官方图标库中确认符号名存在，再添加到枚举。
+- **禁止在业务代码中直接写 `$r('sys.symbol.xxx')` 字符串**，必须通过 `AppIcon` 枚举引用。
+- **验证流程**：修改 `AppIcon` 枚举时，须在 https://developer.huawei.com/consumer/cn/design/harmonyos-symbol/ 中搜索确认符号名存在。
+
+### 常见错误
+
+- `sys.symbol.location` 不存在，正确名称是 `sys.symbol.position`。
+- 并非所有 SF Symbols 名称都有 HarmonyOS 对应项，如 `pencil`、`gear`、`brain` 等在 HarmonyOS 中不存在。
+- `Image($r('sys.media.ohos_ic_public_*'))` 可用但不推荐，应优先查找对应的 `sys.symbol.*` 替代。
+
 ## WebSocket
 
 - `WebSocketService` 单例管理连接。
@@ -168,6 +188,9 @@ const manager = GlobalStateManager.getInstance();
 - [ ] 是否正确使用了 AppStorage 装饰器？
 - [ ] cursor 是否做了解析而非透传？
 - [ ] 新增页面是否放在了正确的 `features/` 子目录下？
+- [ ] 新增图标是否在 [HarmonyOS 主题图标库](https://developer.huawei.com/consumer/cn/design/harmonyos-symbol/) 中验证了符号名存在？
+- [ ] 是否使用了 `Image($r('sys.media.*'))` 而可以改用 `SymbolSpan($r(AppIcon.XXX))`？
+- [ ] 颜色/字体/间距是否使用了 `$r('app.color.*')` / `DesignConstants` 常量而非硬编码值？
 
 ## 文件删除与批量变更规则
 

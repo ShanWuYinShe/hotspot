@@ -12,6 +12,7 @@ import { WebSocketService } from '../../../core/network/WebSocketService';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
 import { MyProfile, AuthData } from '../../../core/types/api';
 import { SystemToast } from '../../../components/SystemToast';
+import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
@@ -24,11 +25,13 @@ import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 export struct AccountsPage {
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
+  @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
 
   @State accounts: AuthData[] = [];
   @State currentUserId: string | null = null;
-  @State isLoading: boolean = false;
+  @State isLoading: boolean = true;
+  @State errorMessage: string = '';
 
   private stateManager = GlobalStateManager.getInstance();
   private ws = WebSocketService.getInstance();
@@ -43,12 +46,17 @@ export struct AccountsPage {
 
   private async load() {
     this.isLoading = true;
+    this.errorMessage = '';
     try {
       await LoadingUtil.withMinimumTime(async () => {
         this.accounts = await AuthAccountManager.listAccounts();
         const uid = await AuthAccountManager.getCurrentUserId();
         this.currentUserId = uid !== null ? String(uid) : null;
       });
+    } catch {
+      if (this.accounts.length === 0) {
+        this.errorMessage = '加载账号列表失败';
+      }
     } finally {
       this.isLoading = false;
     }
@@ -158,17 +166,40 @@ export struct AccountsPage {
         Blank().width(48)
       }
       .width('100%')
-      .height(56)
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
+        bottom: DesignConstants.SPACING.SM
+      })
       .backgroundColor($r('app.color.bg_secondary'))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.isLoading) {
-        Text('加载中...')
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-          .margin({ top: 24 })
+        SystemLoadingView({ message: '加载账号列表...' })
           .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+      } else if (this.accounts.length === 0 && this.errorMessage) {
+        Column({ space: DesignConstants.SPACING.LG }) {
+          Text() {
+            SymbolSpan($r(AppIcon.WARNING))
+              .fontSize(48)
+              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+          }
+          Text(this.errorMessage)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .textAlign(TextAlign.Center)
+          Button('重试')
+            .type(ButtonType.Capsule)
+            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+            .fontColor(Color.White)
+            .height(40)
+            .onClick(() => { this.load(); })
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (this.accounts.length === 0) {
         Column({ space: 12 }) {
           Text('暂无已保存账号')

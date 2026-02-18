@@ -196,6 +196,13 @@ impl AuthService {
     }
 
     /// 刷新 token
+    ///
+    /// ## 宽限期机制（Spec: api_spec_auth.mdc）
+    ///
+    /// 旧 refresh_token 在被轮换后，仍有 30 秒宽限期可用。
+    /// 宽限期内使用旧 refresh_token 刷新，服务端返回与首次刷新相同的新 token 对（不生成新的）。
+    /// 宽限期过后，旧 refresh_token 彻底失效。
+    /// 设计目的：解决多标签页/多并发请求同时触发刷新的竞态问题。
     pub async fn refresh_token(
         &self,
         refresh_token_raw: &str,
@@ -206,6 +213,7 @@ impl AuthService {
     ) -> Result<AuthIssue> {
         let refresh_token_hash = TokenUtil::hash_token(refresh_token_raw, &self.jwt_secret);
 
+        // 1. 当前 refresh_token 有效 → 轮换并返回新 token
         if let Some(session) = self
             .session_repo
             .find_by_refresh_token(&refresh_token_hash)
@@ -249,7 +257,7 @@ impl AuthService {
             self.set_session_whitelist(session.session_id, session.user_id)
                 .await?;
 
-            return Ok(AuthIssue {
+            let auth_issue = AuthIssue {
                 data: AuthData {
                     user_id: user.user_id,
                     nickname: user.nickname.unwrap_or_default(),
@@ -261,24 +269,100 @@ impl AuthService {
                     refresh_token_expires_at: Some(refresh_expires_at.to_rfc3339()),
                 },
                 refresh_token_raw: new_refresh_token_raw,
-            });
+            };
+
+            // 缓存新 token 对到 Redis，供宽限期内的并发请求使用（30 秒 TTL）
+            self.cache_grace_period_tokens(&refresh_token_hash, &auth_issue)
+                .await;
+
+            return Ok(auth_issue);
         }
 
-        if let Some(session) = self
+        // 2. 匹配 previous_refresh_token → 检查宽限期
+        if let Some(_session) = self
             .session_repo
             .find_by_previous_refresh_token(&refresh_token_hash)
             .await?
         {
-            self.revoke_session_by_id(session.user_id, session.session_id)
-                .await?;
-            return Err(AppError::ReLoginRequired(
-                "refresh token 已失效，请重新登录".to_string(),
+            // 尝试从宽限期缓存获取新 token 对
+            if let Some(cached_issue) =
+                self.get_grace_period_tokens(&refresh_token_hash).await
+            {
+                tracing::debug!("Grace period hit: returning cached tokens for rotated refresh_token");
+                return Ok(cached_issue);
+            }
+
+            // 宽限期已过，旧 refresh_token 彻底失效（不撤销会话，只拒绝刷新）
+            return Err(AppError::RefreshTokenInvalid(
+                "refresh token 已被轮换且宽限期已过".to_string(),
             ));
         }
 
+        // 3. 均不匹配 → 无效或已过期
         Err(AppError::RefreshTokenInvalid(
             "refresh token 无效或已过期".to_string(),
         ))
+    }
+
+    /// 将新 token 对缓存到 Redis（宽限期 30 秒）
+    async fn cache_grace_period_tokens(
+        &self,
+        old_refresh_token_hash: &str,
+        auth_issue: &AuthIssue,
+    ) {
+        let cache_key = format!("grace:refresh:{}", old_refresh_token_hash);
+        let cache_value = serde_json::json!({
+            "user_id": auth_issue.data.user_id,
+            "nickname": auth_issue.data.nickname,
+            "access_token": auth_issue.data.access_token,
+            "refresh_token_raw": auth_issue.refresh_token_raw,
+            "access_token_expires_at": auth_issue.data.access_token_expires_at,
+            "refresh_token_expires_at": auth_issue.data.refresh_token_expires_at,
+        });
+
+        let result: redis::RedisResult<()> = redis::cmd("SET")
+            .arg(&cache_key)
+            .arg(cache_value.to_string())
+            .arg("EX")
+            .arg(30_u64)
+            .query_async(&mut self.redis.clone())
+            .await;
+
+        if let Err(e) = result {
+            tracing::warn!(error = %e, "Failed to cache grace period tokens");
+        }
+    }
+
+    /// 从 Redis 获取宽限期缓存的 token 对
+    async fn get_grace_period_tokens(
+        &self,
+        old_refresh_token_hash: &str,
+    ) -> Option<AuthIssue> {
+        let cache_key = format!("grace:refresh:{}", old_refresh_token_hash);
+        let cached: redis::RedisResult<Option<String>> =
+            self.redis.clone().get(&cache_key).await;
+
+        match cached {
+            Ok(Some(json_str)) => {
+                let value: serde_json::Value = serde_json::from_str(&json_str).ok()?;
+                Some(AuthIssue {
+                    data: AuthData {
+                        user_id: value["user_id"].as_i64()?,
+                        nickname: value["nickname"].as_str()?.to_string(),
+                        access_token: value["access_token"].as_str()?.to_string(),
+                        refresh_token: Some(value["refresh_token_raw"].as_str()?.to_string()),
+                        access_token_expires_at: value["access_token_expires_at"]
+                            .as_str()?
+                            .to_string(),
+                        refresh_token_expires_at: value["refresh_token_expires_at"]
+                            .as_str()
+                            .map(|s| s.to_string()),
+                    },
+                    refresh_token_raw: value["refresh_token_raw"].as_str()?.to_string(),
+                })
+            }
+            _ => None,
+        }
     }
 
     /// 登出

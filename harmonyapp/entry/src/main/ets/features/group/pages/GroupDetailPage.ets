@@ -3,9 +3,8 @@
  * 重构：使用 HarmonyOS 原生 List 组件
  */
 
-import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
-import { LocationInfo } from '../../../core/location/LocationUtil';
-import { MyProfile, GeoPoint } from '../../../core/types/api';
+import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
+import { MyProfile } from '../../../core/types/api';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -49,8 +48,6 @@ interface GroupDetailParams {
 export struct GroupDetailPage {
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
-  @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
-  @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   
   private stateManager = GlobalStateManager.getInstance();
@@ -62,6 +59,7 @@ export struct GroupDetailPage {
   private membersDataSource: BasicDataSource<GroupMemberItem> = new BasicDataSource<GroupMemberItem>([]);
   @State isLoading: boolean = true;
   @State isLoadingMembers: boolean = false;
+  @State membersErrorMessage: string = '';
   @State errorMessage: string = '';
   @State showMemberList: boolean = false;
   @State membersHasMore: boolean = false;
@@ -97,14 +95,8 @@ export struct GroupDetailPage {
 
     try {
       await LoadingUtil.withMinimumTime(async () => {
-        const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
-        let referencePoint: GeoPoint = { latitude: 0, longitude: 0 };
-        if (refLoc) {
-          referencePoint = { latitude: refLoc.latitude, longitude: refLoc.longitude };
-        }
         const response = await ApiClient.getGroupDetail({
-          group_id: this.groupId,
-          reference_point: referencePoint
+          group_id: this.groupId
         });
 
         if (response.code === 0 && response.data) {
@@ -127,6 +119,8 @@ export struct GroupDetailPage {
     if (!this.groupInfo) return;
 
     this.isLoadingMembers = true;
+    this.membersErrorMessage = '';
+    this.showMemberList = true;
     try {
       await LoadingUtil.withMinimumTime(async () => {
         const response = await ApiClient.getGroupMembers({
@@ -134,18 +128,21 @@ export struct GroupDetailPage {
           pagination: { limit: 100 }
         });
 
-        if (response.code === 0 && response.data) {
-          this.members = response.data.items;
+        if (response.code === 0) {
+          this.members = response.data?.items ?? [];
           this.membersDataSource.setData(this.members);
-          this.membersHasMore = !!(response.data.next_cursor);
-          this.membersNextCursor = response.data.next_cursor ?? '';
-          this.showMemberList = true;
+          this.membersHasMore = !!(response.data?.next_cursor);
+          this.membersNextCursor = response.data?.next_cursor ?? '';
         } else {
-          SystemToast.showError(response.message || '加载成员列表失败', this.getUIContext());
+          if (this.members.length === 0) {
+            this.membersErrorMessage = response.message || '加载成员列表失败';
+          }
         }
       });
     } catch {
-      SystemToast.showError('加载成员列表失败', this.getUIContext());
+      if (this.members.length === 0) {
+        this.membersErrorMessage = '加载成员列表失败';
+      }
     } finally {
       this.isLoadingMembers = false;
     }
@@ -159,11 +156,12 @@ export struct GroupDetailPage {
         group_id: this.groupId,
         pagination: { limit: 100, cursor: this.membersNextCursor }
       });
-      if (response.code === 0 && response.data) {
-        this.members = this.members.concat(response.data.items);
-        this.membersDataSource.appendData(response.data.items);
-        this.membersHasMore = !!(response.data.next_cursor);
-        this.membersNextCursor = response.data.next_cursor ?? '';
+      if (response.code === 0) {
+        const items = response.data?.items ?? [];
+        this.members = this.members.concat(items);
+        this.membersDataSource.appendData(items);
+        this.membersHasMore = !!(response.data?.next_cursor);
+        this.membersNextCursor = response.data?.next_cursor ?? '';
       }
     } catch {
       // 静默失败
@@ -341,7 +339,7 @@ export struct GroupDetailPage {
       .width('100%')
       .height(56)
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-      .backgroundColor($r('sys.color.ohos_id_color_background'))
+      .backgroundColor($r('app.color.bg_secondary'))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.isLoading) {
@@ -431,7 +429,7 @@ export struct GroupDetailPage {
             }
             .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
           }
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
+          .backgroundColor($r('app.color.bg_secondary'))
           .borderRadius(DesignConstants.RADIUS.LG)
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
@@ -439,10 +437,11 @@ export struct GroupDetailPage {
           ListItem() {
              Column() {
                 Row() {
-                  Image($r('sys.media.ohos_ic_public_location'))
-                    .width(20)
-                    .height(20)
-                    .fillColor($r('sys.color.ohos_id_color_emphasize'))
+                  Text() {
+                    SymbolSpan($r(AppIcon.LOCATION))
+                      .fontSize(20)
+                      .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+                  }
                   Text('位置信息')
                     .fontSize(DesignConstants.FONT.SIZE.LG)
                     .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
@@ -457,17 +456,19 @@ export struct GroupDetailPage {
                   .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                   .width('100%')
 
-                if (this.groupInfo?.location?.point) {
-                  Text(`${this.groupInfo.location.point.latitude.toFixed(6)}, ${this.groupInfo.location.point.longitude.toFixed(6)}`)
+                if (this.groupInfo?.location?.distance !== undefined && this.groupInfo.location.distance >= 0) {
+                  Text(`距你 ${this.groupInfo.location.distance < 1000
+                    ? Math.round(this.groupInfo.location.distance) + 'm'
+                    : (this.groupInfo.location.distance / 1000).toFixed(1) + 'km'}`)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                    .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
                     .width('100%')
                     .margin({ top: 4 })
                 }
              }
              .padding(DesignConstants.SPACING.LG)
           }
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
+          .backgroundColor($r('app.color.bg_secondary'))
           .borderRadius(DesignConstants.RADIUS.LG)
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
@@ -495,7 +496,7 @@ export struct GroupDetailPage {
             .width('100%')
             .padding(DesignConstants.SPACING.LG)
           }
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
+          .backgroundColor($r('app.color.bg_secondary'))
           .borderRadius(DesignConstants.RADIUS.LG)
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
@@ -578,10 +579,9 @@ export struct GroupDetailPage {
     })
     .bindSheet($$this.showMemberList, this.buildMemberListSheet(), {
       height: '70%',
-      // 允许拖拽/点击外部关闭时，不显示右上角关闭按钮（避免冗余）
       showClose: false,
       dragBar: true,
-      backgroundColor: $r('app.color.bg_primary')
+      backgroundColor: $r('app.color.bg_secondary')
     })
   }
 
@@ -604,8 +604,29 @@ export struct GroupDetailPage {
       .padding(DesignConstants.SPACING.LG)
 
       // 成员列表
-      if (this.isLoadingMembers) {
+      if (this.isLoadingMembers && this.members.length === 0) {
         SystemLoadingView({ message: '加载成员列表中...' }).layoutWeight(1)
+      } else if (this.members.length === 0 && this.membersErrorMessage) {
+        Column({ space: DesignConstants.SPACING.LG }) {
+          Text() {
+            SymbolSpan($r(AppIcon.WARNING))
+              .fontSize(48)
+              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+          }
+          Text(this.membersErrorMessage)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .textAlign(TextAlign.Center)
+          Button('重试')
+            .type(ButtonType.Capsule)
+            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+            .fontColor(Color.White)
+            .height(40)
+            .onClick(() => { this.loadGroupMembers(); })
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
       } else if (this.members.length > 0) {
         List() {
           LazyForEach(this.membersDataSource, (member: GroupMemberItem) => {

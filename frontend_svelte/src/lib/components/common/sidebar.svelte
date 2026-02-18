@@ -58,32 +58,47 @@
 	// 预计算所有导航项的激活状态
 	const activeStates = $derived.by(() => {
 		const states = new Map<string, boolean>();
-		
+
+		const normalizePath = (path: string) => {
+			if (path === '/') return '/';
+			return path.replace(/\/+$/, '') || '/';
+		};
+
 		const checkActive = (href: string): boolean => {
 			const url = new URL(href, page.url.origin);
-			
-			// 对含子路由的路径（如 /chat → /chat/users/123）使用前缀匹配
-			const isPrefix = currentPathname === url.pathname || currentPathname.startsWith(url.pathname + '/');
-			if (!isPrefix) return false;
-			
-			// 无查询参数时，前缀匹配即可
-			if (url.searchParams.toString().length === 0) {
+			const targetPath = normalizePath(url.pathname);
+			const currentPath = normalizePath(currentPathname);
+			const hasQuery = url.searchParams.toString().length > 0;
+
+			if (hasQuery) {
+				if (currentPath !== targetPath) return false;
+				for (const [key, value] of url.searchParams) {
+					if (currentParams.get(key) !== value) return false;
+				}
 				return true;
 			}
-			
-			// 有查询参数时需精确匹配
-			if (currentPathname !== url.pathname) return false;
-			for (const [key, value] of url.searchParams) {
-				if (currentParams.get(key) !== value) return false;
+
+			if (currentPath === targetPath) {
+				return true;
 			}
+
+			if (!currentPath.startsWith(targetPath + '/')) {
+				return false;
+			}
+
+			const nextSegment = currentPath.slice(targetPath.length + 1).split('/')[0] || '';
+			if (nextSegment === 'nearby' && !targetPath.endsWith('/nearby')) {
+				return false;
+			}
+
 			return true;
 		};
-		
+
 		// 预计算所有导航项
-		[...mainNavItems, ...personalNavItems].forEach(item => {
+		[...mainNavItems, ...personalNavItems].forEach((item) => {
 			states.set(item.href, checkActive(item.href));
 		});
-		
+
 		return states;
 	});
 	

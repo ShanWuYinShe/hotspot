@@ -310,8 +310,15 @@ export class LocationUtil {
   /**
    * 正向地理编码（地址转坐标）- 多结果版本
    * 返回多个匹配位置，供用户选择
+   *
+   * 传入 centerLat/centerLng 时，系统会优先返回该位置附近的结果，无需客户端再排序
    */
-  static async geocodeMultiple(address: string, maxItems: number = 10): Promise<LocationInfo[]> {
+  static async geocodeMultiple(
+    address: string,
+    maxItems: number = 10,
+    centerLat?: number,
+    centerLng?: number
+  ): Promise<LocationInfo[]> {
     try {
       hilog.debug(DOMAIN_NUMBER, TAG, `正向地理编码（多结果）: ${address}`);
 
@@ -319,6 +326,17 @@ export class LocationUtil {
         description: address,
         maxItems: maxItems
       };
+
+      // 提供参考位置时，设置搜索范围（约 ±110km），让系统优先返回附近结果
+      if (centerLat !== undefined && centerLng !== undefined &&
+        LocationUtil.isValidCoordinate(centerLat, centerLng)) {
+        const latRange = 1.0;
+        const lngRange = 1.0;
+        geocodeRequest.minLatitude = Math.max(-90, centerLat - latRange);
+        geocodeRequest.maxLatitude = Math.min(90, centerLat + latRange);
+        geocodeRequest.minLongitude = Math.max(-180, centerLng - lngRange);
+        geocodeRequest.maxLongitude = Math.min(180, centerLng + lngRange);
+      }
 
       const geoAddresses = await geoLocationManager.getAddressesFromLocationName(geocodeRequest);
 
@@ -389,19 +407,7 @@ export class LocationUtil {
    * 生成位置摘要
    */
   static generateLocationSummary(location: LocationInfo): string {
-    const parts: string[] = [];
-    
-    if (location.locationName) {
-      parts.push(location.locationName);
-    }
-    
-    parts.push(`${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`);
-    
-    if (location.accuracy) {
-      parts.push(`精度: ${location.accuracy}m`);
-    }
-    
-    return parts.join(' | ');
+    return location.locationName || '未知位置';
   }
 
   /**

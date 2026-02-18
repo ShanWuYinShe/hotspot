@@ -18,6 +18,7 @@ export struct NotificationCenter {
   @State private notifications: SmartNotification[] = [];
   @State private selectedFilter: 'all' | 'unread' | 'performance' | 'social' = 'all';
   @State private isLoading: boolean = false;
+  @State private errorMessage: string = '';
   @State private showActions: boolean = false;
 
   private notificationService = SmartNotificationService.getInstance();
@@ -44,6 +45,7 @@ export struct NotificationCenter {
   private loadNotifications(): void {
     try {
       this.isLoading = true;
+      this.errorMessage = '';
       
       let filter: NotificationFilter | undefined = undefined;
       if (this.selectedFilter !== 'all') {
@@ -56,7 +58,9 @@ export struct NotificationCenter {
       this.notifications = this.notificationService.getNotifications(filter);
       
     } catch (error) {
-      SystemToast.showError(`加载通知失败: ${error}`, this.getUIContext());
+      if (this.notifications.length === 0) {
+        this.errorMessage = '加载通知失败';
+      }
     } finally {
       this.isLoading = false;
     }
@@ -276,7 +280,7 @@ export struct NotificationCenter {
               .type(this.selectedFilter === filter.key ? ButtonType.Capsule : ButtonType.Normal)
               .backgroundColor(this.selectedFilter === filter.key 
                 ? $r('sys.color.ohos_id_color_emphasize') 
-                : $r('sys.color.ohos_id_color_background'))
+                : $r('app.color.bg_secondary'))
               .fontColor(this.selectedFilter === filter.key 
                 ? Color.White 
                 : $r('sys.color.ohos_id_color_text_primary'))
@@ -294,7 +298,7 @@ export struct NotificationCenter {
       .scrollBar(BarState.Off)
 
       // 通知列表
-      if (this.isLoading && this.notifications.length === 0) {
+      if (this.isLoading) {
         Column() {
           LoadingProgress()
             .width(32)
@@ -308,6 +312,28 @@ export struct NotificationCenter {
         }
         .width('100%')
         .height(200)
+        .justifyContent(FlexAlign.Center)
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+      } else if (this.notifications.length === 0 && this.errorMessage) {
+        Column({ space: DesignConstants.SPACING.LG }) {
+          SystemIcon({
+            icon: AppIcon.WARNING,
+            iconSize: 48,
+            iconColor: $r('sys.color.ohos_id_color_text_secondary')
+          })
+          Text(this.errorMessage)
+            .fontSize(16)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .textAlign(TextAlign.Center)
+          Button('重试')
+            .type(ButtonType.Capsule)
+            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+            .fontColor(Color.White)
+            .height(40)
+            .onClick(() => { this.loadNotifications(); })
+        }
+        .width('100%')
+        .layoutWeight(1)
         .justifyContent(FlexAlign.Center)
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (this.notifications.length === 0) {
@@ -342,9 +368,9 @@ export struct NotificationCenter {
             }, (item: SmartNotification) => item.id)
           }
           .width('100%')
-          .layoutWeight(1)
           .padding({ left: 16, right: 16 })
         }
+        .layoutWeight(1)
         .onRefreshing(() => {
           this.loadNotifications();
         })
@@ -353,7 +379,7 @@ export struct NotificationCenter {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .backgroundColor($r('app.color.bg_secondary'))
   }
 
   @Builder
@@ -413,7 +439,7 @@ export struct NotificationCenter {
             .fontSize(12)
             .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
             .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 2, bottom: 2 })
-            .backgroundColor($r('sys.color.ohos_id_color_background'))
+            .backgroundColor($r('app.color.bg_secondary'))
             .borderRadius(DesignConstants.SPACING.XS)
         }
         .width('100%')
@@ -441,7 +467,7 @@ export struct NotificationCenter {
                     ? $r('sys.color.ohos_id_color_emphasize')
                     : action.type === 'danger'
                     ? Color.Red
-                    : $r('sys.color.ohos_id_color_background'))
+                    : $r('app.color.bg_secondary'))
                   .fontColor(action.type === 'secondary' 
                     ? $r('sys.color.ohos_id_color_text_primary')
                     : Color.White)
@@ -467,7 +493,7 @@ export struct NotificationCenter {
     }
     .width('100%')
     .padding(16)
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(8)
     .onClick(() => this.onNotificationClick(notification))
     // 无障碍属性

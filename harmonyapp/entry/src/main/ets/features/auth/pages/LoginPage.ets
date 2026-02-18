@@ -206,24 +206,29 @@ export struct LoginPage {
       TextInput({ placeholder: '邮箱 / 用户名', text: $$this.loginId })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .backgroundColor($r('app.color.bg_secondary'))
         .borderRadius(DesignConstants.RADIUS.LG)
         .type(InputType.Email)
 
       TextInput({ placeholder: '密码', text: $$this.password })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .backgroundColor($r('app.color.bg_secondary'))
         .borderRadius(DesignConstants.RADIUS.LG)
         .type(InputType.Password)
 
       Button('登录')
         .type(ButtonType.Capsule)
-        .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-        .fontColor(Color.White)
+        .backgroundColor(this.loginId.trim().length > 0 && this.password.trim().length > 0
+          ? $r('sys.color.ohos_id_color_emphasize')
+          : $r('sys.color.ohos_id_color_component_normal'))
+        .fontColor(this.loginId.trim().length > 0 && this.password.trim().length > 0
+          ? Color.White
+          : $r('sys.color.ohos_id_color_text_secondary'))
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .width('100%')
         .height(48)
+        .enabled(this.loginId.trim().length > 0 && this.password.trim().length > 0)
         .onClick(() => this.userLogin())
 
       Text('没有账号？切换到「注册」标签')
@@ -241,37 +246,51 @@ export struct LoginPage {
       TextInput({ placeholder: '昵称（必填）', text: $$this.registerNickname })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .backgroundColor($r('app.color.bg_secondary'))
         .borderRadius(DesignConstants.RADIUS.LG)
 
       TextInput({ placeholder: '邮箱 / 用户名（登录凭证）', text: $$this.registerLoginId })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .backgroundColor($r('app.color.bg_secondary'))
         .borderRadius(DesignConstants.RADIUS.LG)
         .type(InputType.Email)
 
       TextInput({ placeholder: '密码（至少8位）', text: $$this.registerPassword })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .backgroundColor($r('app.color.bg_secondary'))
         .borderRadius(DesignConstants.RADIUS.LG)
         .type(InputType.Password)
 
       TextInput({ placeholder: '确认密码', text: $$this.registerPasswordConfirm })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .backgroundColor($r('app.color.bg_secondary'))
         .borderRadius(DesignConstants.RADIUS.LG)
         .type(InputType.Password)
 
       Button('注册')
         .type(ButtonType.Capsule)
-        .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-        .fontColor(Color.White)
+        .backgroundColor(this.registerNickname.trim().length > 0
+          && this.registerLoginId.trim().length > 0
+          && this.registerPassword.length >= 8
+          && this.registerPasswordConfirm === this.registerPassword
+          ? $r('sys.color.ohos_id_color_emphasize')
+          : $r('sys.color.ohos_id_color_component_normal'))
+        .fontColor(this.registerNickname.trim().length > 0
+          && this.registerLoginId.trim().length > 0
+          && this.registerPassword.length >= 8
+          && this.registerPasswordConfirm === this.registerPassword
+          ? Color.White
+          : $r('sys.color.ohos_id_color_text_secondary'))
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .width('100%')
         .height(48)
+        .enabled(this.registerNickname.trim().length > 0
+          && this.registerLoginId.trim().length > 0
+          && this.registerPassword.length >= 8
+          && this.registerPasswordConfirm === this.registerPassword)
         .onClick(() => this.userRegister())
 
       Text('已有账号？切换到「登录」标签')

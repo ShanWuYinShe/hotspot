@@ -4,16 +4,19 @@
  */
 
 import { ApiClient } from '../../../core/api/ApiClient';
-import { UserItem, TagItem } from '../../../core/types/api';
+import { UserItem, TrendingTagItem } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemAvatar } from '../../../components/SystemAvatar';
+import { AppIcon } from '../../../components/SystemIcon';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
+import { LocationInfo } from '../../../core/location/LocationUtil';
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'RecommendationPage';
@@ -21,8 +24,11 @@ const TAG: string = 'RecommendationPage';
 @Component
 export struct RecommendationPage {
   pathStack: NavPathStack = new NavPathStack();
+  @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
+  @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @State isLoading: boolean = true;
-  @State trendingTags: TagItem[] = [];
+  @State errorMessage: string = '';
+  @State trendingTags: TrendingTagItem[] = [];
   @State recommendedUsers: UserItem[] = [];
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
 
@@ -33,29 +39,44 @@ export struct RecommendationPage {
     await this.loadData();
   }
 
+  private hasAnyData(): boolean {
+    return this.trendingTags.length > 0 || this.recommendedUsers.length > 0;
+  }
+
   private async loadData() {
     this.isLoading = true;
+    this.errorMessage = '';
     try {
-      await LoadingUtil.withMinimumTime(async () => {
-        // 并行加载推荐数据
-        const results = await Promise.all([
-          ApiClient.getTrendingTags({ limit: 10 }),
-          ApiClient.getFeedUsers({ reference_point: { latitude: 0, longitude: 0 }, pagination: { limit: 5 } })
-        ]);
-        const tagsResponse = results[0];
-        const usersResponse = results[1];
+      const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
+      const trendingPromise = ApiClient.getFeedTrending({});
+      const usersPromise = refLoc
+        ? ApiClient.getFeedUsers({ reference_point: { latitude: refLoc.latitude, longitude: refLoc.longitude }, pagination: { limit: 5 } })
+        : null;
 
-        if (tagsResponse.code === 0 && tagsResponse.data) {
-          this.trendingTags = tagsResponse.data;
+      await LoadingUtil.withMinimumTime(async () => {
+        const trendingResponse = await trendingPromise;
+        if (trendingResponse.code === 0) {
+          this.trendingTags = trendingResponse.data?.trending_tags ?? [];
         }
 
-        if (usersResponse.code === 0 && usersResponse.data) {
-          this.recommendedUsers = usersResponse.data.items;
+        if (usersPromise) {
+          const usersResponse = await usersPromise;
+          if (usersResponse.code === 0) {
+            this.recommendedUsers = usersResponse.data?.items ?? [];
+          } else if (!this.hasAnyData()) {
+            this.errorMessage = usersResponse.message ?? '加载推荐数据失败';
+          }
+        }
+
+        if (trendingResponse.code !== 0 && !this.hasAnyData()) {
+          this.errorMessage = trendingResponse.message ?? '加载推荐数据失败';
         }
       });
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `加载推荐数据失败: ${JSON.stringify(error)}`);
-      SystemToast.showError('加载失败，请重试', this.getUIContext());
+      if (!this.hasAnyData()) {
+        this.errorMessage = '加载推荐数据失败';
+      }
     } finally {
       this.isLoading = false;
     }
@@ -82,6 +103,28 @@ export struct RecommendationPage {
       if (this.isLoading) {
         SystemLoadingView({ message: '加载推荐内容...' })
           .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+      } else if (!this.hasAnyData() && this.errorMessage) {
+        Column({ space: DesignConstants.SPACING.LG }) {
+          Text() {
+            SymbolSpan($r(AppIcon.WARNING))
+              .fontSize(48)
+              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+          }
+          Text(this.errorMessage)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .textAlign(TextAlign.Center)
+          Button('重试')
+            .type(ButtonType.Capsule)
+            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+            .fontColor(Color.White)
+            .height(40)
+            .onClick(() => { this.loadData(); })
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
         List({ space: 16 }) {
           // 热门话题
@@ -95,13 +138,13 @@ export struct RecommendationPage {
               
               Flex({ wrap: FlexWrap.Wrap }) {
                 if (this.trendingTags.length > 0) {
-                  ForEach(this.trendingTags, (tag: TagItem) => {
+                  ForEach(this.trendingTags, (tag: TrendingTagItem) => {
                     Text(`#${tag.name}`)
                       .padding(DesignConstants.SPACING.SM)
                       .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
                       .borderRadius(DesignConstants.RADIUS.XL)
                       .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-                  }, (tag: TagItem) => tag.name)
+                  }, (tag: TrendingTagItem) => tag.name)
                 } else {
                   Text('暂无热门话题')
                     .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -113,58 +156,64 @@ export struct RecommendationPage {
             }
           }
           .width('100%')
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
+          .backgroundColor($r('app.color.bg_secondary'))
           .padding(DesignConstants.SPACING.LG)
           .borderRadius(DesignConstants.RADIUS.LG)
 
 
           // 推荐用户
           if (this.recommendedUsers.length > 0) {
-            ListItemGroup({ header: this.ListHeader('推荐用户') }) {
-              ForEach(this.recommendedUsers, (user: UserItem) => {
-                ListItem() {
-                  Row() {
-                    SystemAvatar({
-                      avatarUrl: user.user?.avatar_url,
-                      name: user.user?.nickname ?? '',
-                      avatarSize: 40
-                    })
-                    .margin({ right: 12 })
-                    
-                    Column() {
-                      Text(user.user?.nickname ?? '')
-                        .fontSize(DesignConstants.FONT.SIZE.LG)
-                        .fontWeight(FontWeight.Medium)
-                      Text('可能会感兴趣')
-                        .fontSize(DesignConstants.FONT.SIZE.SM)
-                        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-                    }
-                    .alignItems(HorizontalAlign.Start)
-                    .layoutWeight(1)
-
-                    Button('关注')
-                      .type(ButtonType.Capsule)
-                      .height(28)
-                      .fontSize(DesignConstants.FONT.SIZE.SM)
-                      .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-                      .onClick(async () => {
-                        try {
-                          await ApiClient.followUser({ user_id: user.user?.user_id ?? '' });
-                          SystemToast.showSuccess('已关注', this.getUIContext());
-                        } catch (error) {
-                          SystemToast.showError('关注失败', this.getUIContext());
-                        }
-                      })
-                  }
-                  .width('100%')
-                  .padding(DesignConstants.SPACING.LG)
-                  .backgroundColor($r('sys.color.ohos_id_color_background'))
-                }
-              }, (user: UserItem) => user.user?.user_id ?? '')
+            ListItem() {
+              Text('推荐用户')
+                .fontSize(DesignConstants.FONT.SIZE.LG)
+                .fontWeight(FontWeight.Bold)
+                .width('100%')
+                .padding({ left: 16, top: 16, bottom: 8 })
+                .fontColor($r('sys.color.ohos_id_color_text_primary'))
             }
-            .borderRadius(DesignConstants.RADIUS.LG)
-            .backgroundColor($r('sys.color.ohos_id_color_background'))
-            .divider({ strokeWidth: 1, color: $r('sys.color.ohos_id_color_component_normal'), startMargin: 68, endMargin: 16 })
+            ForEach(this.recommendedUsers, (user: UserItem) => {
+              ListItem() {
+                Row({ space: 12 }) {
+                  SystemAvatar({
+                    avatarUrl: user.user?.avatar_url,
+                    name: user.user?.nickname ?? '',
+                    avatarSize: 44
+                  })
+
+                  Column({ space: 2 }) {
+                    Text(user.user?.nickname ?? '')
+                      .fontSize(16)
+                      .fontWeight(FontWeight.Medium)
+                      .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                    Text('可能会感兴趣')
+                      .fontSize(13)
+                      .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  }
+                  .alignItems(HorizontalAlign.Start)
+                  .layoutWeight(1)
+
+                  Button('关注')
+                    .type(ButtonType.Capsule)
+                    .backgroundColor(Color.Transparent)
+                    .fontColor($r('sys.color.ohos_id_color_emphasize'))
+                    .fontSize(13)
+                    .fontWeight(FontWeight.Medium)
+                    .height(30)
+                    .borderWidth(1)
+                    .borderColor($r('sys.color.ohos_id_color_emphasize'))
+                    .onClick(async () => {
+                      try {
+                        await ApiClient.followUser({ user_id: user.user?.user_id ?? '' });
+                        SystemToast.showSuccess('已关注', this.getUIContext());
+                      } catch (error) {
+                        SystemToast.showError('关注失败', this.getUIContext());
+                      }
+                    })
+                }
+                .width('100%')
+                .padding({ left: 16, right: 16, top: 10, bottom: 10 })
+              }
+            }, (user: UserItem) => user.user?.user_id ?? '')
           }
         }
         .width('100%')

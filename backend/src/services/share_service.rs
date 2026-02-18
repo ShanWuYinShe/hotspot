@@ -18,6 +18,7 @@ use crate::repositories::{
 use crate::services::media_service::MediaService;
 use crate::types::enums::ShareType;
 use crate::utils::{
+    cache::{cache_keys, CacheManager},
     id_gen,
     pagination::{decode_cursor, encode_cursor, paginate_with_limit_plus_one},
     validation::Validator,
@@ -26,17 +27,36 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::{collections::HashMap, sync::Arc};
+use tracing::{debug, warn};
 use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct ShareService {
     db: PgPool,
     media_service: Arc<MediaService>,
+    cache_manager: CacheManager,
+    moment_repo: MomentRepository,
+    user_repo: UserRepository,
+    group_repo: GroupRepository,
 }
 
 impl ShareService {
-    pub fn new(db: PgPool, media_service: Arc<MediaService>) -> Self {
-        Self { db, media_service }
+    pub fn new(
+        db: PgPool,
+        media_service: Arc<MediaService>,
+        cache_manager: CacheManager,
+        moment_repo: MomentRepository,
+        user_repo: UserRepository,
+        group_repo: GroupRepository,
+    ) -> Self {
+        Self {
+            db,
+            media_service,
+            cache_manager,
+            moment_repo,
+            user_repo,
+            group_repo,
+        }
     }
 
     /// 创建分享
@@ -49,7 +69,8 @@ impl ShareService {
         Self::validate_payload(&req.share_type, &req.payload)?;
 
         // 验证目标资源是否存在
-        Self::verify_share_target(&self.db, &req.share_type, &req.payload).await?;
+        self.verify_share_target(&req.share_type, &req.payload)
+            .await?;
 
         // 计算过期时间（expires_in_seconds 须为正整数且不超过系统允许上限）
         const MAX_EXPIRES_SECONDS: u32 = 86400 * 365; // 1 年
@@ -272,52 +293,22 @@ impl ShareService {
 
         let mut moment_preview_map = HashMap::new();
         if !moment_ids.is_empty() {
-            let moment_repo = MomentRepository::new(self.db.clone());
-            let previews = moment_repo.get_previews(&moment_ids).await?;
+            let previews_by_moment = self.load_moment_previews(&moment_ids).await?;
             for (share_id, moment_id) in &moment_targets {
-                if let Some(data) = previews.get(moment_id) {
-                    moment_preview_map.insert(*share_id, Self::build_moment_preview(data));
+                if let Some(preview) = previews_by_moment.get(moment_id) {
+                    moment_preview_map.insert(*share_id, preview.clone());
                 }
             }
         }
 
         let mut user_preview_map = HashMap::new();
         if !user_ids.is_empty() {
-            let user_repo = UserRepository::new(self.db.clone());
-            let profiles = user_repo.find_profiles(&user_ids).await?;
-            for profile in profiles {
-                let title = profile.nickname.clone().unwrap_or_else(|| {
-                    if profile.username.is_empty() {
-                        "用户".to_string()
-                    } else {
-                        profile.username.clone()
-                    }
-                });
-                user_preview_map.insert(
-                    profile.user_id,
-                    SharePreview {
-                        title,
-                        subtitle: profile.bio.clone(),
-                        cover_url: None,
-                    },
-                );
-            }
+            user_preview_map = self.load_user_previews(&user_ids).await?;
         }
 
         let mut group_preview_map = HashMap::new();
         if !group_ids.is_empty() {
-            let group_repo = GroupRepository::new(self.db.clone());
-            let groups = group_repo.list_by_ids(&group_ids).await?;
-            for group in groups {
-                group_preview_map.insert(
-                    group.group_id,
-                    SharePreview {
-                        title: group.name.clone(),
-                        subtitle: group.description.clone(),
-                        cover_url: group.avatar_url.clone(),
-                    },
-                );
-            }
+            group_preview_map = self.load_group_previews(&group_ids).await?;
         }
 
         let mut items = Vec::with_capacity(share_records.len());
@@ -387,6 +378,281 @@ impl ShareService {
         }
         shortened.push('…');
         shortened
+    }
+
+    async fn load_moment_previews(
+        &self,
+        moment_ids: &[Uuid],
+    ) -> Result<HashMap<Uuid, SharePreview>, AppError> {
+        let mut preview_map = HashMap::new();
+        if moment_ids.is_empty() {
+            return Ok(preview_map);
+        }
+
+        let mut cache_hits = 0usize;
+        let mut cache_null_hits = 0usize;
+        let mut cache_misses = 0usize;
+        let mut db_loaded = 0usize;
+        let mut missing = Vec::new();
+        for moment_id in moment_ids {
+            let key = moment_id.to_string();
+            match self
+                .get_cached_preview(cache_keys::SHARE_MOMENT_PREVIEW, &key)
+                .await
+            {
+                Some(Some(preview)) => {
+                    cache_hits += 1;
+                    preview_map.insert(*moment_id, preview);
+                }
+                Some(None) => {
+                    cache_null_hits += 1;
+                }
+                None => {
+                    cache_misses += 1;
+                    missing.push((*moment_id, key));
+                }
+            }
+        }
+
+        if !missing.is_empty() {
+            let ids: Vec<Uuid> = missing.iter().map(|(id, _)| *id).collect();
+            let db_previews = self.moment_repo.get_previews(&ids).await?;
+            for (moment_id, key) in missing {
+                if let Some(data) = db_previews.get(&moment_id) {
+                    let preview = Self::build_moment_preview(data);
+                    self.cache_preview_value(cache_keys::SHARE_MOMENT_PREVIEW, &key, &preview)
+                        .await;
+                    preview_map.insert(moment_id, preview);
+                    db_loaded += 1;
+                    db_loaded += 1;
+                } else {
+                    self.cache_preview_miss(cache_keys::SHARE_MOMENT_PREVIEW, &key)
+                        .await;
+                }
+            }
+            debug!(
+                target: "share_service",
+                preview_type = "moment",
+                cache_hits,
+                cache_null_hits,
+                cache_misses,
+                db_loaded,
+                "share preview cache stats"
+            );
+        } else {
+            debug!(
+                target: "share_service",
+                preview_type = "moment",
+                cache_hits,
+                cache_null_hits,
+                cache_misses,
+                db_loaded = 0,
+                "share preview cache stats"
+            );
+        }
+
+        Ok(preview_map)
+    }
+
+    async fn load_user_previews(
+        &self,
+        user_ids: &[i64],
+    ) -> Result<HashMap<i64, SharePreview>, AppError> {
+        let mut preview_map = HashMap::new();
+        if user_ids.is_empty() {
+            return Ok(preview_map);
+        }
+
+        let mut cache_hits = 0usize;
+        let mut cache_null_hits = 0usize;
+        let mut cache_misses = 0usize;
+        let mut db_loaded = 0usize;
+        let mut missing = Vec::new();
+        for user_id in user_ids {
+            let key = user_id.to_string();
+            match self
+                .get_cached_preview(cache_keys::SHARE_USER_PREVIEW, &key)
+                .await
+            {
+                Some(Some(preview)) => {
+                    cache_hits += 1;
+                    preview_map.insert(*user_id, preview);
+                }
+                Some(None) => {
+                    cache_null_hits += 1;
+                }
+                None => {
+                    cache_misses += 1;
+                    missing.push((*user_id, key));
+                }
+            }
+        }
+
+        if !missing.is_empty() {
+            let ids: Vec<i64> = missing.iter().map(|(id, _)| *id).collect();
+            let profiles = self.user_repo.find_profiles(&ids).await?;
+            let profile_map: HashMap<i64, SharePreview> = profiles
+                .into_iter()
+                .map(|profile| {
+                    let title = profile.nickname.clone().unwrap_or_else(|| {
+                        if profile.username.is_empty() {
+                            "用户".to_string()
+                        } else {
+                            profile.username.clone()
+                        }
+                    });
+                    (
+                        profile.user_id,
+                        SharePreview {
+                            title,
+                            subtitle: profile.bio.clone(),
+                            cover_url: None,
+                        },
+                    )
+                })
+                .collect();
+
+            for (user_id, key) in missing {
+                if let Some(preview) = profile_map.get(&user_id) {
+                    self.cache_preview_value(cache_keys::SHARE_USER_PREVIEW, &key, preview)
+                        .await;
+                    preview_map.insert(user_id, preview.clone());
+                    db_loaded += 1;
+                } else {
+                    self.cache_preview_miss(cache_keys::SHARE_USER_PREVIEW, &key)
+                        .await;
+                }
+            }
+            debug!(
+                target: "share_service",
+                preview_type = "user",
+                cache_hits,
+                cache_null_hits,
+                cache_misses,
+                db_loaded,
+                "share preview cache stats"
+            );
+        } else {
+            debug!(
+                target: "share_service",
+                preview_type = "user",
+                cache_hits,
+                cache_null_hits,
+                cache_misses,
+                db_loaded,
+                "share preview cache stats"
+            );
+        }
+
+        Ok(preview_map)
+    }
+
+    async fn load_group_previews(
+        &self,
+        group_ids: &[i64],
+    ) -> Result<HashMap<i64, SharePreview>, AppError> {
+        let mut preview_map = HashMap::new();
+        if group_ids.is_empty() {
+            return Ok(preview_map);
+        }
+
+        let mut cache_hits = 0usize;
+        let mut cache_null_hits = 0usize;
+        let mut cache_misses = 0usize;
+        let mut db_loaded = 0usize;
+        let mut missing = Vec::new();
+        for group_id in group_ids {
+            let key = group_id.to_string();
+            match self
+                .get_cached_preview(cache_keys::SHARE_GROUP_PREVIEW, &key)
+                .await
+            {
+                Some(Some(preview)) => {
+                    cache_hits += 1;
+                    preview_map.insert(*group_id, preview);
+                }
+                Some(None) => {
+                    cache_null_hits += 1;
+                }
+                None => {
+                    cache_misses += 1;
+                    missing.push((*group_id, key));
+                }
+            }
+        }
+
+        if !missing.is_empty() {
+            let ids: Vec<i64> = missing.iter().map(|(id, _)| *id).collect();
+            let groups = self.group_repo.list_by_ids(&ids).await?;
+            let group_map: HashMap<i64, SharePreview> = groups
+                .into_iter()
+                .map(|group| {
+                    (
+                        group.group_id,
+                        SharePreview {
+                            title: group.name.clone(),
+                            subtitle: group.description.clone(),
+                            cover_url: group.avatar_url.clone(),
+                        },
+                    )
+                })
+                .collect();
+
+            for (group_id, key) in missing {
+                if let Some(preview) = group_map.get(&group_id) {
+                    self.cache_preview_value(cache_keys::SHARE_GROUP_PREVIEW, &key, preview)
+                        .await;
+                    preview_map.insert(group_id, preview.clone());
+                    db_loaded += 1;
+                } else {
+                    self.cache_preview_miss(cache_keys::SHARE_GROUP_PREVIEW, &key)
+                        .await;
+                }
+            }
+            debug!(
+                target: "share_service",
+                preview_type = "group",
+                cache_hits,
+                cache_null_hits,
+                cache_misses,
+                db_loaded,
+                "share preview cache stats"
+            );
+        } else {
+            debug!(
+                target: "share_service",
+                preview_type = "group",
+                cache_hits,
+                cache_null_hits,
+                cache_misses,
+                db_loaded,
+                "share preview cache stats"
+            );
+        }
+
+        Ok(preview_map)
+    }
+
+    async fn get_cached_preview(&self, prefix: &str, key: &str) -> Option<Option<SharePreview>> {
+        match self.cache_manager.get::<SharePreview>(prefix, key).await {
+            Ok(value) => value,
+            Err(err) => {
+                warn!(target: "share_service", error = %err, "failed to fetch cached preview");
+                None
+            }
+        }
+    }
+
+    async fn cache_preview_value(&self, prefix: &str, key: &str, preview: &SharePreview) {
+        if let Err(err) = self.cache_manager.set(prefix, key, preview).await {
+            warn!(target: "share_service", error = %err, "failed to cache share preview");
+        }
+    }
+
+    async fn cache_preview_miss(&self, prefix: &str, key: &str) {
+        if let Err(err) = self.cache_manager.set_null(prefix, key).await {
+            warn!(target: "share_service", error = %err, "failed to cache empty share preview");
+        }
     }
 
     /// 验证 payload 的有效性
@@ -471,23 +737,19 @@ impl ShareService {
 
     /// 验证分享目标资源是否存在（格式验证已由 validate_payload 完成）
     async fn verify_share_target(
-        pool: &PgPool,
+        &self,
         share_type: &ShareType,
         payload: &serde_json::Value,
     ) -> Result<(), AppError> {
         match share_type {
-            ShareType::Location => {
-                // 位置分享无需验证远程资源
-                Ok(())
-            }
+            ShareType::Location => Ok(()),
             ShareType::Moment => {
                 let moment_id_str = payload
                     .get("shared_moment_id")
                     .and_then(|v| v.as_str())
                     .ok_or_else(|| AppError::BadRequest("缺少 shared_moment_id".to_string()))?;
                 let moment_id = Validator::parse_uuid(moment_id_str, "shared_moment_id")?;
-                let moment_repo = MomentRepository::new(pool.clone());
-                moment_repo
+                self.moment_repo
                     .find_by_id(moment_id)
                     .await?
                     .ok_or(AppError::NotFound("分享的动态不存在".to_string()))?;
@@ -499,8 +761,7 @@ impl ShareService {
                     .and_then(|v| v.as_str())
                     .ok_or_else(|| AppError::BadRequest("缺少 shared_group_id".to_string()))?;
                 let group_id = Validator::parse_id(group_id_str, "shared_group_id")?;
-                let group_repo = GroupRepository::new(pool.clone());
-                group_repo
+                self.group_repo
                     .find_by_id(group_id)
                     .await?
                     .ok_or(AppError::NotFound("分享的群组不存在".to_string()))?;
@@ -512,8 +773,7 @@ impl ShareService {
                     .and_then(|v| v.as_str())
                     .ok_or_else(|| AppError::BadRequest("缺少 shared_user_id".to_string()))?;
                 let user_id = Validator::parse_id(user_id_str, "shared_user_id")?;
-                let user_repo = UserRepository::new(pool.clone());
-                user_repo
+                self.user_repo
                     .find_by_id(user_id)
                     .await?
                     .ok_or(AppError::NotFound("分享的用户不存在".to_string()))?;

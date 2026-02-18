@@ -1,6 +1,6 @@
 //! 分享模块响应类型
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::user::UserInfo;
@@ -28,7 +28,7 @@ pub struct ShareBase {
 }
 
 /// 分享预览 - API 文档: SharePreview
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SharePreview {
     pub title: String,
     #[serde(skip_serializing_if = "Option::is_none")]

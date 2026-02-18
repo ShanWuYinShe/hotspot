@@ -15,7 +15,7 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { PasswordSecurityUtil } from '../../../core/security/PasswordSecurityUtil';
 import { CreateGroupRequest, GeoPoint } from '../../../core/types/api';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
-import { AppRouter, LoginRouteParam, GroupDetailRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, LoginRouteParam, GroupDetailRouteParam, LocationPickerRouteParam } from '../../../core/router/AppRouter';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 
@@ -25,6 +25,7 @@ export struct CreateGroupPage {
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_LOCATION_PICK_RESULT) pickResult: LocationInfo | null = null;
+  @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   
   private stateManager = GlobalStateManager.getInstance();
@@ -40,7 +41,7 @@ export struct CreateGroupPage {
     SystemUiController.useSurface({
       baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
     });
-    // 优先消费“地图选点”结果（从 AnchorPickPage 返回时会写入）
+    // 优先消费“地图选点”结果（从 LocationPickerPage 返回时会写入）
     if (this.pickResult) {
       this.localLocation = {
         latitude: this.pickResult.latitude,
@@ -147,12 +148,10 @@ export struct CreateGroupPage {
     }
   }
 
-  private async openLocationPicker(): Promise<void> {
-    try {
-      AppRouter.push(PageNames.LOCATION_PICKER);
-    } catch (error) {
-      SystemToast.showError('跳转失败', this.getUIContext());
-    }
+  private openLocationPicker(): void {
+    const param = new LocationPickerRouteParam();
+    param.mode = 'location_pick';
+    AppRouter.push(PageNames.LOCATION_PICKER, param);
   }
 
   build() {
@@ -181,16 +180,21 @@ export struct CreateGroupPage {
           Blank().width(48)
         }
         .width('100%')
-        .height(56)
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+        .padding({
+          left: DesignConstants.SPACING.LG,
+          right: DesignConstants.SPACING.LG,
+          top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
+          bottom: DesignConstants.SPACING.SM
+        })
         .backgroundColor($r('app.color.bg_secondary'))
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
         // 表单内容
-        List({ space: 16 }) {
-          // 基本信息组
-          ListItemGroup({ header: this.ListHeader('基本信息') }) {
-            ListItem() {
+        Scroll() {
+          Column({ space: DesignConstants.SPACING.LG }) {
+            // 基本信息
+            this.SectionHeader('基本信息')
+            Column() {
               Column() {
                 Text('群组名称')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -212,9 +216,12 @@ export struct CreateGroupPage {
                 left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
                 top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM
               })
-            }
 
-            ListItem() {
+              Divider()
+                .strokeWidth(1)
+                .color($r('sys.color.ohos_id_color_component_normal'))
+                .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+
               Column() {
                 Text('群组描述')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -237,28 +244,20 @@ export struct CreateGroupPage {
                 top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM
               })
             }
-          }
-          .backgroundColor($r('app.color.bg_secondary'))
-          .borderRadius(DesignConstants.RADIUS.LG)
-          .divider({
-            strokeWidth: 1, color: $r('sys.color.ohos_id_color_component_normal'),
-            startMargin: DesignConstants.SPACING.LG, endMargin: DesignConstants.SPACING.LG
-          })
-          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+            .backgroundColor($r('app.color.bg_secondary'))
+            .borderRadius(DesignConstants.RADIUS.LG)
 
-          // 位置信息组
-          ListItemGroup({ header: this.ListHeader('位置信息') }) {
-            ListItem() {
+            // 位置信息
+            this.SectionHeader('位置信息')
+            Column() {
               Row() {
                 Column() {
                   if (this.localLocation) {
                     Text(this.localLocation.locationName)
                       .fontSize(DesignConstants.FONT.SIZE.MD)
                       .fontColor($r('sys.color.ohos_id_color_text_primary'))
-                    Text(`${this.localLocation.latitude.toFixed(6)}, ${this.localLocation.longitude.toFixed(6)}`)
-                      .fontSize(DesignConstants.FONT.SIZE.SM)
-                      .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-                      .margin({ top: 2 })
+                      .maxLines(2)
+                      .textOverflow({ overflow: TextOverflow.Ellipsis })
                   } else {
                     Text('正在获取位置...')
                       .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -274,7 +273,7 @@ export struct CreateGroupPage {
                     .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
                     .fontColor($r('sys.color.ohos_id_color_emphasize'))
                     .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .height(28)
+                    .height(36)
                     .onClick(() => this.openLocationPicker())
 
                   Button('刷新')
@@ -282,7 +281,7 @@ export struct CreateGroupPage {
                     .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
                     .fontColor($r('sys.color.ohos_id_color_emphasize'))
                     .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .height(28)
+                    .height(36)
                     .onClick(() => this.refreshLocation())
                 }
               }
@@ -292,40 +291,88 @@ export struct CreateGroupPage {
                 top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD
               })
             }
-          }
-          .backgroundColor($r('app.color.bg_secondary'))
-          .borderRadius(DesignConstants.RADIUS.LG)
-          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+            .backgroundColor($r('app.color.bg_secondary'))
+            .borderRadius(DesignConstants.RADIUS.LG)
 
-          // 隐私设置组
-          ListItemGroup({ header: this.ListHeader('隐私与限制') }) {
-            ListItem() {
+            // 隐私与限制
+            this.SectionHeader('隐私与限制')
+            Column() {
               Row() {
                 Text('最大成员数')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
                   .fontColor($r('sys.color.ohos_id_color_text_primary'))
                   .layoutWeight(1)
 
-                Counter() {
-                  Text(this.maxMembers.toString())
+                Row({ space: 4 }) {
+                  Button() {
+                    Text() {
+                      SymbolSpan($r(AppIcon.REMOVE))
+                        .fontSize(16)
+                        .fontColor([this.maxMembers > 10
+                          ? $r('sys.color.ohos_id_color_text_primary')
+                          : $r('sys.color.ohos_id_color_text_tertiary')])
+                    }
+                  }
+                  .type(ButtonType.Circle)
+                  .width(36)
+                  .height(36)
+                  .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+                  .enabled(this.maxMembers > 10)
+                  .onClick(() => {
+                    if (this.maxMembers > 10) this.maxMembers = Math.max(10, this.maxMembers - 10);
+                  })
+
+                  TextInput({ text: this.maxMembers.toString() })
+                    .type(InputType.Number)
+                    .width(64)
+                    .height(36)
+                    .textAlign(TextAlign.Center)
                     .fontSize(DesignConstants.FONT.SIZE.MD)
                     .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                    .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+                    .borderRadius(DesignConstants.RADIUS.MD)
+                    .padding(0)
+                    .onChange((value: string) => {
+                      const num = parseInt(value);
+                      if (!isNaN(num)) {
+                        this.maxMembers = Math.max(10, Math.min(500, num));
+                      }
+                    })
+                    .onBlur(() => {
+                      if (this.maxMembers < 10) this.maxMembers = 10;
+                      if (this.maxMembers > 500) this.maxMembers = 500;
+                    })
+
+                  Button() {
+                    Text() {
+                      SymbolSpan($r(AppIcon.ADD))
+                        .fontSize(16)
+                        .fontColor([this.maxMembers < 500
+                          ? $r('sys.color.ohos_id_color_text_primary')
+                          : $r('sys.color.ohos_id_color_text_tertiary')])
+                    }
+                  }
+                  .type(ButtonType.Circle)
+                  .width(36)
+                  .height(36)
+                  .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+                  .enabled(this.maxMembers < 500)
+                  .onClick(() => {
+                    if (this.maxMembers < 500) this.maxMembers = Math.min(500, this.maxMembers + 10);
+                  })
                 }
-                .onInc(() => {
-                  if (this.maxMembers < 500) this.maxMembers += 10;
-                })
-                .onDec(() => {
-                  if (this.maxMembers > 10) this.maxMembers -= 10;
-                })
               }
               .width('100%')
               .padding({
                 left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
                 top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM
               })
-            }
 
-            ListItem() {
+              Divider()
+                .strokeWidth(1)
+                .color($r('sys.color.ohos_id_color_component_normal'))
+                .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+
               Row() {
                 Text('密码保护')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -344,10 +391,13 @@ export struct CreateGroupPage {
                 left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
                 top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM
               })
-            }
 
-            if (this.isPasswordRequired) {
-              ListItem() {
+              if (this.isPasswordRequired) {
+                Divider()
+                  .strokeWidth(1)
+                  .color($r('sys.color.ohos_id_color_component_normal'))
+                  .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+
                 Column() {
                   Text('群组密码')
                     .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -372,17 +422,10 @@ export struct CreateGroupPage {
                 })
               }
             }
-          }
-          .backgroundColor($r('app.color.bg_secondary'))
-          .borderRadius(DesignConstants.RADIUS.LG)
-          .divider({
-            strokeWidth: 1, color: $r('sys.color.ohos_id_color_component_normal'),
-            startMargin: DesignConstants.SPACING.LG, endMargin: DesignConstants.SPACING.LG
-          })
-          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+            .backgroundColor($r('app.color.bg_secondary'))
+            .borderRadius(DesignConstants.RADIUS.LG)
 
-          // 提交按钮
-          ListItem() {
+            // 提交按钮
             Button('立即创建')
               .type(ButtonType.Capsule)
               .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
@@ -394,11 +437,17 @@ export struct CreateGroupPage {
               .opacity(this.isCreating ? 0.7 : 1)
               .animation({ duration: 200, curve: Curve.EaseInOut })
               .onClick(() => this.createGroup())
+              .margin({ top: DesignConstants.SPACING.SM })
           }
-          .margin({ top: 24, bottom: 48, left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+          .padding({
+            left: DesignConstants.SPACING.LG,
+            right: DesignConstants.SPACING.LG,
+            top: DesignConstants.SPACING.SM,
+            bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, 48, 0)
+          })
         }
-        .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
         .layoutWeight(1)
+        .scrollBar(BarState.Off)
         .backgroundColor($r('app.color.bg_primary'))
       }
       .width('100%')
@@ -421,12 +470,11 @@ export struct CreateGroupPage {
   }
 
   @Builder
-  ListHeader(title: string) {
+  SectionHeader(title: string) {
     Text(title)
-      .fontSize(DesignConstants.FONT.SIZE.MD)
+      .fontSize(DesignConstants.FONT.SIZE.SM)
       .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-      .margin({ left: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.LG })
-      .width('100%')
+      .margin({ bottom: -DesignConstants.SPACING.XS })
   }
 }
 

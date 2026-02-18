@@ -101,13 +101,13 @@ export struct LoginPromptView {
     .height('100%')
     .justifyContent(FlexAlign.Center)
     .padding(32)
-    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    .backgroundColor($r('app.color.bg_primary'))
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
     .bindSheet($$this.showQuickStart, this.buildQuickStartSheet(), {
       height: SheetSize.FIT_CONTENT,
       showClose: true,
       dragBar: true,
-      backgroundColor: $r('sys.color.ohos_id_color_background')
+      backgroundColor: $r('app.color.bg_secondary')
     })
   }
 

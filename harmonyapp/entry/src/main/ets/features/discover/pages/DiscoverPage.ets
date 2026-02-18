@@ -7,9 +7,9 @@ import { KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR } from '../../../core/state/Glo
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter } from '../../../core/router/AppRouter';
-import { PageNames } from '../../../constants/AppConstants';
+import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import {
-  UserItem, TagItem, MomentItem, TrendingBundle, FollowRequest, SearchUsersRequest
+  UserItem, TrendingTagItem, MomentItem, TrendingBundle, FollowRequest, SearchUsersRequest
 } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -37,7 +37,8 @@ export struct DiscoverPage {
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
 
   @State isLoading: boolean = true;
-  @State trendingTags: TagItem[] = [];
+  @State errorMessage: string = '';
+  @State trendingTags: TrendingTagItem[] = [];
   @State recommendedUsers: UserItem[] = [];
   private recommendedUsersDataSource: BasicDataSource<UserItem> = new BasicDataSource<UserItem>([]);
   @State hotMoments: MomentItem[] = [];
@@ -85,8 +86,13 @@ export struct DiscoverPage {
     await this.loadData();
   }
 
-  private async loadData(): Promise<void> {
-    this.isLoading = true;
+  private hasAnyData(): boolean {
+    return this.trendingTags.length > 0 || this.recommendedUsers.length > 0 || this.hotMoments.length > 0;
+  }
+
+  private async loadData(refresh: boolean = false): Promise<void> {
+    if (!refresh) { this.isLoading = true; }
+    this.errorMessage = '';
     try {
       // 热门内容不依赖位置，推荐用户需要位置
       const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
@@ -95,34 +101,44 @@ export struct DiscoverPage {
       if (refLoc) {
         const usersRequest: SearchUsersRequest = {
           reference_point: { latitude: refLoc.latitude, longitude: refLoc.longitude },
+          radius: DefaultConfig.NEARBY_RADIUS,
           pagination: { limit: 10 }
         };
         const results = await LoadingUtil.withMinimumTime(() =>
           Promise.all([trendingPromise, ApiClient.searchUsers(usersRequest)])
         );
         const usersResponse = results[1];
-        if (usersResponse.code === 0 && usersResponse.data) {
-          this.recommendedUsers = usersResponse.data.items.filter((u: UserItem) => u.user?.user_id);
+        if (usersResponse.code === 0) {
+          const items = usersResponse.data?.items ?? [];
+          this.recommendedUsers = items.filter((u: UserItem) => u.user?.user_id);
           this.recommendedUsersDataSource.setData(this.recommendedUsers);
         }
         const trendingResponse = results[0];
-        if (trendingResponse.code === 0 && trendingResponse.data) {
-          const bundle: TrendingBundle = trendingResponse.data;
-          this.trendingTags = bundle.trending_tags || [];
-          this.hotMoments = bundle.hot_moments || [];
+        if (trendingResponse.code === 0) {
+          const bundle = trendingResponse.data;
+          this.trendingTags = bundle?.trending_tags ?? [];
+          this.hotMoments = bundle?.hot_moments ?? [];
           this.hotMomentsDataSource.setData(this.hotMoments);
+        }
+        if (usersResponse.code !== 0 && trendingResponse.code !== 0 && !this.hasAnyData()) {
+          this.errorMessage = trendingResponse.message ?? usersResponse.message ?? '加载发现数据失败';
         }
       } else {
         const trendingResponse = await LoadingUtil.withMinimumTime(() => trendingPromise);
-        if (trendingResponse.code === 0 && trendingResponse.data) {
-          const bundle: TrendingBundle = trendingResponse.data;
-          this.trendingTags = bundle.trending_tags || [];
-          this.hotMoments = bundle.hot_moments || [];
+        if (trendingResponse.code === 0) {
+          const bundle = trendingResponse.data;
+          this.trendingTags = bundle?.trending_tags ?? [];
+          this.hotMoments = bundle?.hot_moments ?? [];
           this.hotMomentsDataSource.setData(this.hotMoments);
+        } else if (!this.hasAnyData()) {
+          this.errorMessage = trendingResponse.message ?? '加载发现数据失败';
         }
       }
     } catch {
       hilog.error(DOMAIN_NUMBER, TAG, '加载发现数据失败');
+      if (!this.hasAnyData()) {
+        this.errorMessage = '加载发现数据失败';
+      }
     } finally {
       this.isLoading = false;
       this.isRefreshing = false;
@@ -163,13 +179,35 @@ export struct DiscoverPage {
         top: this.getHeaderTopPadding(),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_primary'))
+      .backgroundColor($r('app.color.bg_secondary'))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 内容区
-      if (this.isLoading && this.trendingTags.length === 0) {
+      if (this.isLoading) {
         SystemLoadingView({ message: '正在加载发现内容...' })
           .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+      } else if (!this.hasAnyData() && this.errorMessage) {
+        Column({ space: DesignConstants.SPACING.LG }) {
+          Text() {
+            SymbolSpan($r(AppIcon.WARNING))
+              .fontSize(48)
+              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+          }
+          Text(this.errorMessage)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .textAlign(TextAlign.Center)
+          Button('重试')
+            .type(ButtonType.Capsule)
+            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+            .fontColor(Color.White)
+            .height(40)
+            .onClick(() => { this.loadData(); })
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
         Refresh({ refreshing: $$this.isRefreshing }) {
           List({ space: DesignConstants.SPACING.MD }) {
@@ -183,13 +221,19 @@ export struct DiscoverPage {
             // 推荐用户（标题 + LazyForEach）
             if (this.recommendedUsers.length > 0) {
               ListItem() {
-                Column({ space: DesignConstants.SPACING.MD }) {
-                  this.buildSectionHeader('推荐用户', AppIcon.PERSON)
+                Row({ space: DesignConstants.SPACING.SM }) {
+                  Text() {
+                    SymbolSpan($r(AppIcon.PERSON))
+                      .fontSize(18)
+                      .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+                  }
+                  Text('推荐用户')
+                    .fontSize(DesignConstants.FONT.SIZE.LG)
+                    .fontWeight(FontWeight.Bold)
+                    .fontColor($r('sys.color.ohos_id_color_text_primary'))
                 }
                 .width('100%')
-                .padding(DesignConstants.SPACING.LG)
-                .backgroundColor($r('sys.color.ohos_id_color_background'))
-                .borderRadius(DesignConstants.RADIUS.LG)
+                .padding({ left: 16, top: 16, bottom: 8 })
               }
               LazyForEach(this.recommendedUsersDataSource, (user: UserItem) => {
                 ListItem() {
@@ -219,7 +263,7 @@ export struct DiscoverPage {
                 }
                 .width('100%')
                 .padding(DesignConstants.SPACING.LG)
-                .backgroundColor($r('sys.color.ohos_id_color_background'))
+                .backgroundColor($r('app.color.bg_secondary'))
                 .borderRadius(DesignConstants.RADIUS.LG)
               }
             }
@@ -244,13 +288,13 @@ export struct DiscoverPage {
             }
           }
           .width('100%')
-          .layoutWeight(1)
           .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
             top: DesignConstants.SPACING.SM,
             bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
           .scrollBar(BarState.Auto)
         }
-        .onRefreshing(() => { this.loadData(); })
+        .layoutWeight(1)
+        .onRefreshing(() => { this.loadData(true); })
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
     }
@@ -266,7 +310,7 @@ export struct DiscoverPage {
       this.buildSectionHeader('热门话题', AppIcon.CHART)
 
       Flex({ wrap: FlexWrap.Wrap }) {
-        ForEach(this.trendingTags, (tag: TagItem) => {
+        ForEach(this.trendingTags, (tag: TrendingTagItem) => {
           Row({ space: 4 }) {
             Text(`#${tag.name}`)
               .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -289,12 +333,12 @@ export struct DiscoverPage {
             searchParams.keyword = `#${tag.name}`;
             AppRouter.push(PageNames.SEARCH, searchParams);
           })
-        }, (tag: TagItem) => tag.name)
+        }, (tag: TrendingTagItem) => tag.name)
       }
     }
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.LG)
   }
 
@@ -325,16 +369,17 @@ export struct DiscoverPage {
 
       Button('关注')
         .type(ButtonType.Capsule)
-        .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-        .fontColor(Color.White)
-        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .backgroundColor(Color.Transparent)
+        .fontColor($r('sys.color.ohos_id_color_emphasize'))
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
         .height(30)
+        .borderWidth(1)
+        .borderColor($r('sys.color.ohos_id_color_emphasize'))
         .onClick(() => { this.followUser(user); })
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
-      top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .padding({ left: 16, right: 16, top: 10, bottom: 10 })
   }
 
   // ==================== 热门瞬间卡片（masonry 小红书风格）====================
@@ -410,7 +455,7 @@ export struct DiscoverPage {
       .padding(8)
     }
     .width('100%')
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(12)
     .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
   }
@@ -462,7 +507,7 @@ export struct DiscoverPage {
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
       top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .backgroundColor($r('app.color.bg_secondary'))
 
     Divider()
       .strokeWidth(0.5)

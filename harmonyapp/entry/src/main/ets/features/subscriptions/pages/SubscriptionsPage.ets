@@ -9,7 +9,7 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { SystemToast } from '../../../components/SystemToast';
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
-import { AppRouter, LoginRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter } from '../../../core/router/AppRouter';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 
@@ -42,6 +42,7 @@ export struct SubscriptionsPage {
   @State private loading: boolean = true;
   @State private savingKey: string = '';
   @State private data: LocalSubscriptionPrefs | null = null;
+  @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
 
   private items: SubscriptionItem[] = [
@@ -69,13 +70,8 @@ export struct SubscriptionsPage {
     try {
       const token = await PreferencesUtil.get<string>(StorageKeys.ACCESS_TOKEN, '');
       if (!token) {
-        SystemToast.showWarning('请先登录', this.getUIContext());
-        const loginParams = new LoginRouteParam();
-        loginParams.reason = 'action_required';
-        loginParams.action = '管理通知订阅';
-        loginParams.redirectUrl = PageNames.SUBSCRIPTIONS;
-        AppRouter.push(PageNames.LOGIN, loginParams);
-        this.loading = false;
+        // 未登录时直接返回上一页（登录检测应在跳转源头完成）
+        AppRouter.pop();
         return;
       }
       await this.load();
@@ -170,8 +166,12 @@ export struct SubscriptionsPage {
         Blank().width(48)
       }
       .width('100%')
-      .height(56)
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
+        bottom: DesignConstants.SPACING.SM
+      })
       .backgroundColor($r('app.color.bg_secondary'))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
@@ -216,7 +216,7 @@ export struct SubscriptionsPage {
             }, (i: SubscriptionItem) => i.key as string)
           }
           .borderRadius(DesignConstants.RADIUS.LG)
-          .divider({ strokeWidth: 1, color: $r('sys.color.ohos_id_color_component_normal'), startMargin: 16, endMargin: 16 })
+          .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 16, endMargin: 16 })
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XL })
         }
         .layoutWeight(1)

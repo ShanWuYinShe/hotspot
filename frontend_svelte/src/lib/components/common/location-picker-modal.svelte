@@ -16,7 +16,6 @@
 	import MapPin from 'lucide-svelte/icons/map-pin';
 	import Navigation from 'lucide-svelte/icons/navigation';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
-	import Crosshair from 'lucide-svelte/icons/crosshair';
 	import ChevronUp from 'lucide-svelte/icons/chevron-up';
 	import ChevronDown from 'lucide-svelte/icons/chevron-down';
 	import SlidersHorizontal from 'lucide-svelte/icons/sliders-horizontal';
@@ -36,6 +35,7 @@
 
 	let mapContainer = $state<HTMLDivElement | null>(null);
 	let map: AMap.Map | null = null;
+	let centerMarker: AMap.Marker | null = null;
 	let geocoder: AMap.Geocoder | null = null;
 	let isLoadingMap = $state(false);
 	let isMapAvailable = $state(true);
@@ -144,6 +144,7 @@
 		longitude = result.longitude;
 		locationName = result.name;
 		map?.setCenter([result.longitude, result.latitude]);
+		centerMarker?.setPosition([result.longitude, result.latitude]);
 		showSearch = false;
 		searchText = '';
 		searchResults = [];
@@ -154,6 +155,7 @@
 		longitude = item.longitude;
 		locationName = item.locationName;
 		map?.setCenter([item.longitude, item.latitude]);
+		centerMarker?.setPosition([item.longitude, item.latitude]);
 	}
 
 	function handleClearHistory() {
@@ -193,6 +195,7 @@
 		const center = map.getCenter();
 		latitude = center.getLat();
 		longitude = center.getLng();
+		centerMarker?.setPosition([longitude, latitude]);
 
 		if (debounceTimer) clearTimeout(debounceTimer);
 		debounceTimer = setTimeout(() => {
@@ -208,6 +211,7 @@ async function handleDoubleClick(event: MapClickEvent) {
 	latitude = nextLat;
 	longitude = nextLng;
 	map.setCenter([nextLng, nextLat]);
+	centerMarker?.setPosition([nextLng, nextLat]);
 	await reverseGeocode(nextLat, nextLng);
 }
 
@@ -224,6 +228,12 @@ async function handleDoubleClick(event: MapClickEvent) {
 				viewMode: '2D',
 				doubleClickZoom: false,
 				resizeEnable: true
+			});
+
+			centerMarker = new AMap.Marker({
+				position: [longitude, latitude],
+				anchor: 'bottom-center',
+				map
 			});
 
 			map.on('moveend', handleMapChanged);
@@ -250,6 +260,7 @@ async function handleDoubleClick(event: MapClickEvent) {
 			latitude = geoPoint.latitude;
 			longitude = geoPoint.longitude;
 			map?.setZoomAndCenter(15, [longitude, latitude]);
+			centerMarker?.setPosition([longitude, latitude]);
 			const resolvedName = await reverseGeocode(latitude, longitude);
 			locationStore.setLocation({
 				point: {
@@ -292,6 +303,7 @@ async function handleDoubleClick(event: MapClickEvent) {
 					initMap();
 				} else {
 					map?.setZoomAndCenter(14, [longitude, latitude]);
+					centerMarker?.setPosition([longitude, latitude]);
 				}
 				hasSyncedFromAnchor = true;
 			}
@@ -303,6 +315,7 @@ async function handleDoubleClick(event: MapClickEvent) {
 	// 组件卸载时清理资源
 	onMount(() => {
 		return () => {
+			centerMarker = null;
 			map?.destroy();
 			map = null;
 			if (debounceTimer) {
@@ -532,18 +545,6 @@ async function handleDoubleClick(event: MapClickEvent) {
 					<Loader2 class="h-8 w-8 animate-spin text-primary" />
 				</div>
 			{/if}
-
-			<!-- 地图中心标记 -->
-			<div class="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-full">
-				<div class="flex flex-col items-center gap-1">
-					<div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary shadow-lg">
-						<Crosshair class="h-5 w-5 text-primary-foreground" />
-					</div>
-					<div class="rounded-full bg-background/95 px-2.5 py-0.5 text-xs font-medium shadow-md">
-						浏览中心
-					</div>
-				</div>
-			</div>
 
 			<!-- 悬浮定位按钮 (移动端) -->
 			<div class="absolute right-3 top-3 z-10 sm:hidden">

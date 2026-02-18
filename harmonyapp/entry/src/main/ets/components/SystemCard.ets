@@ -64,7 +64,7 @@ export struct SystemCard {
       case CardVariant.OUTLINED:
       case CardVariant.DEFAULT:
       default:
-        return $r('sys.color.ohos_id_color_background');
+        return $r('app.color.bg_secondary');
     }
   }
 
@@ -95,7 +95,7 @@ export struct SystemCard {
       default:
         return {
           radius: 8,
-          color: '#0D000000',
+          color: '#1A000000',
           offsetX: 0,
           offsetY: 2
         };
@@ -110,7 +110,7 @@ export struct SystemCard {
         color: this.cardBorderColor
       };
     }
-    return { width: 0, color: $r('sys.color.ohos_id_color_background') };
+    return { width: 0, color: $r('app.color.bg_secondary') };
   }
 
   // 获取毛玻璃效果
@@ -182,7 +182,7 @@ export struct MasonryCard {
       this.content();
     }
     .width('100%')
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(this.cardRadius)
     .shadow({
       radius: this.shadowRadius,

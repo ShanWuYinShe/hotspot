@@ -6,7 +6,9 @@
 use aws_sdk_s3::operation::head_object::HeadObjectError;
 use aws_sdk_s3::presigning::PresigningConfig;
 use aws_sdk_s3::Client as S3Client;
+use moka::future::Cache;
 use std::time::Duration;
+use tokio::time::sleep;
 use uuid::Uuid;
 
 use crate::{
@@ -18,6 +20,10 @@ use crate::{
     repositories::file_repo::FileRepository,
 };
 
+const SIGNED_URL_CACHE_MAX_TTL: Duration = Duration::from_secs(300);
+const SIGNED_URL_CACHE_FAILURE_TTL: Duration = Duration::from_secs(30);
+const SIGNED_URL_FAILURE_PREFIX: &str = "__FAILED__:";
+
 #[derive(Clone)]
 pub struct MediaService {
     s3_client: S3Client,
@@ -25,6 +31,7 @@ pub struct MediaService {
     s3_public_base: String,
     file_repo: FileRepository,
     redis: redis::aio::ConnectionManager,
+    signed_url_cache: Cache<String, String>,
 }
 
 impl MediaService {
@@ -34,6 +41,7 @@ impl MediaService {
         bucket: String,
         s3_public_base: String,
         redis: redis::aio::ConnectionManager,
+        signed_url_cache: Cache<String, String>,
     ) -> Self {
         Self {
             file_repo,
@@ -41,7 +49,12 @@ impl MediaService {
             bucket,
             s3_public_base,
             redis,
+            signed_url_cache,
         }
+    }
+
+    fn signed_cache_key(key: &str, expires_in: Duration) -> String {
+        format!("{}:{}", key, expires_in.as_secs())
     }
 
     fn build_public_url(&self, presigned_url: &str, path_and_query: &str) -> String {
@@ -289,6 +302,10 @@ impl MediaService {
                 tracing::warn!("Failed to delete upload session: {}", e);
             });
 
+        if let Err(err) = self.invalidate_signed_url(&storage_path).await {
+            tracing::debug!(target: "media_service", error = %err, "failed to invalidate signed url cache after upload");
+        }
+
         Ok(UploadMediaData {
             file_id: file_record.file_id.to_string(),
             thumbnail_url: None,
@@ -300,10 +317,57 @@ impl MediaService {
         })
     }
 
+    pub async fn invalidate_signed_url(&self, key: &str) -> Result<()> {
+        self.invalidate_signed_url_with_expiry(key, Duration::from_secs(604800))
+            .await
+    }
+
+    pub async fn invalidate_signed_url_with_expiry(
+        &self,
+        key: &str,
+        expires_in: Duration,
+    ) -> Result<()> {
+        if key.starts_with("http://") || key.starts_with("https://") {
+            return Err(AppError::BadRequest("无效的存储 key".to_string()));
+        }
+        let cleaned_key = key.trim_start_matches('/');
+        let cache_key = Self::signed_cache_key(cleaned_key, expires_in);
+        self.signed_url_cache.invalidate(&cache_key).await;
+        Ok(())
+    }
+
     /// 生成下载/访问用的 Presigned URL (GET)
     pub async fn sign_url(&self, key: &str) -> Result<String> {
         self.sign_url_with_expiry(key, Duration::from_secs(604800))
             .await
+    }
+
+    fn is_failed_entry(value: &str) -> bool {
+        value.starts_with(SIGNED_URL_FAILURE_PREFIX)
+    }
+
+    async fn cache_success_signed_url(&self, cache_key: &str, url: &str, expires_in: Duration) {
+        let ttl = expires_in.min(SIGNED_URL_CACHE_MAX_TTL);
+        self.insert_with_ttl(cache_key, url.to_string(), ttl).await;
+    }
+
+    async fn cache_failed_signed_url(&self, cache_key: &str) {
+        self.insert_with_ttl(
+            cache_key,
+            format!("{}{}", SIGNED_URL_FAILURE_PREFIX, cache_key),
+            SIGNED_URL_CACHE_FAILURE_TTL,
+        )
+        .await;
+    }
+
+    async fn insert_with_ttl(&self, cache_key: &str, value: String, ttl: Duration) {
+        let cache = self.signed_url_cache.clone();
+        let key = cache_key.to_string();
+        cache.insert(key.clone(), value).await;
+        tokio::spawn(async move {
+            sleep(ttl).await;
+            cache.invalidate(&key).await;
+        });
     }
 
     /// 生成下载/访问用的 Presigned URL (GET) - 可配置过期时间
@@ -316,20 +380,36 @@ impl MediaService {
 
         // 去掉前导斜杠（防止误传 "/uploads/..."）
         let cleaned_key = key.trim_start_matches('/');
+        let cache_key = Self::signed_cache_key(cleaned_key, expires_in);
+        if let Some(cached) = self.signed_url_cache.get(&cache_key).await {
+            if Self::is_failed_entry(&cached) {
+                tracing::debug!(key, "reuse cached failed signed url entry");
+                return Err(AppError::InternalError(
+                    "暂时无法生成下载链接，请稍后再试".to_string(),
+                ));
+            }
+            return Ok(cached);
+        }
 
         let presigned_config = PresigningConfig::builder()
             .expires_in(expires_in)
             .build()
             .map_err(|e| AppError::InternalError(format!("预签名配置构建失败: {}", e)))?;
 
-        let presigned_req = self
+        let presigned_req = match self
             .s3_client
             .get_object()
             .bucket(&self.bucket)
             .key(cleaned_key) // 使用清理后的 key
             .presigned(presigned_config)
             .await
-            .map_err(|e| AppError::InternalError(format!("下载 URL 签名失败: {}", e)))?;
+        {
+            Ok(req) => req,
+            Err(e) => {
+                self.cache_failed_signed_url(&cache_key).await;
+                return Err(AppError::InternalError(format!("下载 URL 签名失败: {}", e)));
+            }
+        };
 
         let presigned_url = presigned_req.uri().to_string();
         let uri_parsed = presigned_url.parse::<http::Uri>().map_err(|e| {
@@ -349,6 +429,9 @@ impl MediaService {
             path_and_query,
             download_url
         );
+
+        self.cache_success_signed_url(&cache_key, &download_url, expires_in)
+            .await;
 
         Ok(download_url)
     }

@@ -18,6 +18,7 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { LocationBar } from '../../../components/LocationBar';
+import { EmptyState, LoadingMoreIndicator } from '../../../components/EmptyState';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
@@ -58,6 +59,7 @@ export struct NearbyPage {
   @State moments: MomentItem[] = [];
   private momentsDataSource: BasicDataSource<MomentItem> = new BasicDataSource<MomentItem>([]);
   @State momentsLoading: boolean = true;
+  @State momentsRefreshing: boolean = false;
   @State momentsError: string = '';
   @State momentsHasMore: boolean = false;
   @State momentsNextCursor: string = '';
@@ -67,6 +69,7 @@ export struct NearbyPage {
   @State users: UserItem[] = [];
   private usersDataSource: BasicDataSource<UserItem> = new BasicDataSource<UserItem>([]);
   @State usersLoading: boolean = true;
+  @State usersRefreshing: boolean = false;
   @State usersError: string = '';
   @State usersHasMore: boolean = false;
   @State usersNextCursor: string = '';
@@ -76,6 +79,7 @@ export struct NearbyPage {
   @State groups: GroupItem[] = [];
   private groupsDataSource: BasicDataSource<GroupItem> = new BasicDataSource<GroupItem>([]);
   @State groupsLoading: boolean = true;
+  @State groupsRefreshing: boolean = false;
   @State groupsError: string = '';
   @State groupsHasMore: boolean = false;
   @State groupsNextCursor: string = '';
@@ -131,7 +135,9 @@ export struct NearbyPage {
   private onBrowseAnchorChange(): void {
     if (!this.initialLoadDone) return;
     hilog.info(DOMAIN_NUMBER, TAG, `浏览锚点变化 -> ${this.browseAnchor ? this.browseAnchor.locationName : '已清除'}`);
-    this.loadCurrentTabData();
+    this.loadNearbyMoments();
+    this.loadNearbyUsers();
+    this.loadNearbyGroups();
   }
 
   /** 判断当前 tab 是否无数据（用于决定 location 变化时是否需要自动加载） */
@@ -151,16 +157,16 @@ export struct NearbyPage {
     return point;
   }
 
-  private async loadCurrentTabData(): Promise<void> {
+  private async loadCurrentTabData(refresh: boolean = false): Promise<void> {
     switch (this.currentSubTab) {
       case 0:
-        await this.loadNearbyMoments();
+        await this.loadNearbyMoments(false, refresh);
         break;
       case 1:
-        await this.loadNearbyUsers();
+        await this.loadNearbyUsers(false, refresh);
         break;
       case 2:
-        await this.loadNearbyGroups();
+        await this.loadNearbyGroups(false, refresh);
         break;
     }
   }
@@ -179,24 +185,52 @@ export struct NearbyPage {
     if (this.currentSubTab === index) {
       return;
     }
+    // 在 Tabs 动画开始前预设目标 tab 的 loading 状态，
+    // 避免 Tabs 捕获旧内容（错误/空状态）用于过渡动画
+    this.prepareTabLoading(index);
     this.subTabController.changeIndex(index);
   }
 
-  private openAnchorPicker(): void {
-    AppRouter.push(PageNames.ANCHOR_PICK);
+  /** 为目标 tab 预设 loading 状态（仅当该 tab 无数据或存在错误时） */
+  private prepareTabLoading(index: number): void {
+    switch (index) {
+      case 0:
+        if (this.moments.length === 0 || this.momentsError.length > 0) {
+          this.momentsLoading = true;
+          this.momentsError = '';
+        }
+        break;
+      case 1:
+        if (this.users.length === 0 || this.usersError.length > 0) {
+          this.usersLoading = true;
+          this.usersError = '';
+        }
+        break;
+      case 2:
+        if (this.groups.length === 0 || this.groupsError.length > 0) {
+          this.groupsLoading = true;
+          this.groupsError = '';
+        }
+        break;
+    }
+  }
+
+  private openLocationPicker(): void {
+    AppRouter.push(PageNames.LOCATION_PICKER);
   }
 
   // ==================== 加载附近动态 ====================
-  private async loadNearbyMoments(loadMore: boolean = false): Promise<void> {
+  private async loadNearbyMoments(loadMore: boolean = false, refresh: boolean = false): Promise<void> {
     const ref = this.getReferencePoint();
     if (!ref) {
+      if (!loadMore) { this.momentsLoading = false; this.momentsRefreshing = false; }
       return;
     }
     if (loadMore) {
       if (this.momentsLoadingMore || !this.momentsHasMore) return;
       this.momentsLoadingMore = true;
     } else {
-      this.momentsLoading = true;
+      if (!refresh || this.moments.length === 0) { this.momentsLoading = true; }
       this.momentsError = '';
     }
     try {
@@ -209,8 +243,9 @@ export struct NearbyPage {
       const response = loadMore
         ? await ApiClient.searchMoments(request)
         : await LoadingUtil.withMinimumTime(() => ApiClient.searchMoments(request));
-      if (response.code === 0 && response.data) {
-        const validItems = response.data.items.filter((m: MomentItem) => m.moment_id && m.user);
+      if (response.code === 0) {
+        const items = response.data?.items ?? [];
+        const validItems = items.filter((m: MomentItem) => m.moment_id && m.user);
         if (loadMore) {
           this.moments = this.moments.concat(validItems);
           this.momentsDataSource.appendData(validItems);
@@ -218,8 +253,8 @@ export struct NearbyPage {
           this.moments = validItems;
           this.momentsDataSource.setData(validItems);
         }
-        this.momentsHasMore = !!(response.data.next_cursor);
-        this.momentsNextCursor = response.data.next_cursor ?? '';
+        this.momentsHasMore = !!(response.data?.next_cursor);
+        this.momentsNextCursor = response.data?.next_cursor ?? '';
         try {
           WidgetDataService.getInstance().updateStats('nearbyMomentCount', this.moments.length);
         } catch {
@@ -238,21 +273,23 @@ export struct NearbyPage {
         this.momentsLoadingMore = false;
       } else {
         this.momentsLoading = false;
+        this.momentsRefreshing = false;
       }
     }
   }
 
   // ==================== 加载附近用户 ====================
-  private async loadNearbyUsers(loadMore: boolean = false): Promise<void> {
+  private async loadNearbyUsers(loadMore: boolean = false, refresh: boolean = false): Promise<void> {
     const ref = this.getReferencePoint();
     if (!ref) {
+      if (!loadMore) { this.usersLoading = false; this.usersRefreshing = false; }
       return;
     }
     if (loadMore) {
       if (this.usersLoadingMore || !this.usersHasMore) return;
       this.usersLoadingMore = true;
     } else {
-      this.usersLoading = true;
+      if (!refresh || this.users.length === 0) { this.usersLoading = true; }
       this.usersError = '';
     }
     try {
@@ -265,8 +302,9 @@ export struct NearbyPage {
       const response = loadMore
         ? await ApiClient.searchUsers(request)
         : await LoadingUtil.withMinimumTime(() => ApiClient.searchUsers(request));
-      if (response.code === 0 && response.data) {
-        const validItems = response.data.items.filter((u: UserItem) => u.user?.user_id);
+      if (response.code === 0) {
+        const items = response.data?.items ?? [];
+        const validItems = items.filter((u: UserItem) => u.user?.user_id);
         if (loadMore) {
           this.users = this.users.concat(validItems);
           this.usersDataSource.appendData(validItems);
@@ -274,8 +312,8 @@ export struct NearbyPage {
           this.users = validItems;
           this.usersDataSource.setData(validItems);
         }
-        this.usersHasMore = !!(response.data.next_cursor);
-        this.usersNextCursor = response.data.next_cursor ?? '';
+        this.usersHasMore = !!(response.data?.next_cursor);
+        this.usersNextCursor = response.data?.next_cursor ?? '';
         try {
           WidgetDataService.getInstance().updateStats('nearbyUserCount', this.users.length);
         } catch {
@@ -294,21 +332,23 @@ export struct NearbyPage {
         this.usersLoadingMore = false;
       } else {
         this.usersLoading = false;
+        this.usersRefreshing = false;
       }
     }
   }
 
   // ==================== 加载附近群组 ====================
-  private async loadNearbyGroups(loadMore: boolean = false): Promise<void> {
+  private async loadNearbyGroups(loadMore: boolean = false, refresh: boolean = false): Promise<void> {
     const ref = this.getReferencePoint();
     if (!ref) {
+      if (!loadMore) { this.groupsLoading = false; this.groupsRefreshing = false; }
       return;
     }
     if (loadMore) {
       if (this.groupsLoadingMore || !this.groupsHasMore) return;
       this.groupsLoadingMore = true;
     } else {
-      this.groupsLoading = true;
+      if (!refresh || this.groups.length === 0) { this.groupsLoading = true; }
       this.groupsError = '';
     }
     try {
@@ -321,8 +361,9 @@ export struct NearbyPage {
       const response = loadMore
         ? await ApiClient.searchGroups(request)
         : await LoadingUtil.withMinimumTime(() => ApiClient.searchGroups(request));
-      if (response.code === 0 && response.data) {
-        const validItems = response.data.items.filter((g: GroupItem) => g.group?.group_id);
+      if (response.code === 0) {
+        const items = response.data?.items ?? [];
+        const validItems = items.filter((g: GroupItem) => g.group?.group_id);
         if (loadMore) {
           this.groups = this.groups.concat(validItems);
           this.groupsDataSource.appendData(validItems);
@@ -330,8 +371,8 @@ export struct NearbyPage {
           this.groups = validItems;
           this.groupsDataSource.setData(validItems);
         }
-        this.groupsHasMore = !!(response.data.next_cursor);
-        this.groupsNextCursor = response.data.next_cursor ?? '';
+        this.groupsHasMore = !!(response.data?.next_cursor);
+        this.groupsNextCursor = response.data?.next_cursor ?? '';
         try {
           WidgetDataService.getInstance().updateStats('nearbyGroupCount', this.groups.length);
         } catch {
@@ -350,6 +391,7 @@ export struct NearbyPage {
         this.groupsLoadingMore = false;
       } else {
         this.groupsLoading = false;
+        this.groupsRefreshing = false;
       }
     }
   }
@@ -378,10 +420,11 @@ export struct NearbyPage {
       .barHeight(0)
       .animationDuration(400)
       .onChange((index: number) => {
+        this.prepareTabLoading(index);
         this.getUIContext().animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
           this.currentSubTab = index;
         });
-        this.loadCurrentTabData();
+        this.loadCurrentTabData(true);
       })
       .layoutWeight(1)
     }
@@ -421,15 +464,15 @@ export struct NearbyPage {
         .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
       }
 
-      Row({ space: DesignConstants.SPACING.SM }) {
-        Row({ space: DesignConstants.SPACING.SM }) {
-          this.SubTabSegment('动态', 0, AppIcon.CAMERA)
-          this.SubTabSegment('用户', 1, AppIcon.PERSON)
-          this.SubTabSegment('群组', 2, AppIcon.GROUP)
-        }
-        .layoutWeight(1)
+      Row({ space: 0 }) {
+        this.SubTabChip('动态', 0, AppIcon.CAMERA)
+        this.SubTabChip('用户', 1, AppIcon.PERSON)
+        this.SubTabChip('群组', 2, AppIcon.GROUP)
       }
-      .alignItems(VerticalAlign.Center)
+      .width('100%')
+      .padding(3)
+      .backgroundColor($r('app.color.bg_tertiary'))
+      .borderRadius(DesignConstants.RADIUS.FULL)
     }
     .width('100%')
     .padding({
@@ -438,32 +481,36 @@ export struct NearbyPage {
       right: DesignConstants.SPACING.LG,
       bottom: DesignConstants.SPACING.SM
     })
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius({ bottomLeft: DesignConstants.RADIUS.XL, bottomRight: DesignConstants.RADIUS.XL })
-    .shadow({ radius: 16, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 4 })
+    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
   }
 
   @Builder
-  private SubTabSegment(label: string, index: number, icon: AppIcon) {
-    Row({ space: DesignConstants.SPACING.XS }) {
+  private SubTabChip(label: string, index: number, icon: AppIcon) {
+    Row({ space: 4 }) {
       Text() {
         SymbolSpan($r(icon))
-          .fontSize(16)
-          .fontColor([this.currentSubTab === index ? Color.White : $r('sys.color.ohos_id_color_text_secondary')])
+          .fontSize(14)
+          .fontColor([this.currentSubTab === index
+            ? $r('sys.color.ohos_id_color_emphasize')
+            : $r('sys.color.ohos_id_color_text_secondary')])
       }
       Text(label)
-        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontWeight(this.currentSubTab === index ? FontWeight.Medium : FontWeight.Normal)
-        .fontColor(this.currentSubTab === index ? Color.White : $r('sys.color.ohos_id_color_text_primary'))
+        .fontColor(this.currentSubTab === index
+          ? $r('sys.color.ohos_id_color_emphasize')
+          : $r('sys.color.ohos_id_color_text_secondary'))
     }
-    .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD,
-      top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+    .height(32)
+    .layoutWeight(1)
+    .justifyContent(FlexAlign.Center)
     .backgroundColor(this.currentSubTab === index
-      ? $r('sys.color.ohos_id_color_emphasize')
-      : $r('sys.color.ohos_id_color_component_normal'))
-    .borderRadius(DesignConstants.RADIUS.XL)
-    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+      ? $r('app.color.chip_selected_bg')
+      : Color.Transparent)
+    .borderRadius(DesignConstants.RADIUS.FULL)
     .onClick(() => {
       this.switchSubTab(index);
     })
@@ -485,41 +532,44 @@ export struct NearbyPage {
   //   .borderRadius(DesignConstants.RADIUS.FULL)
   //   .shadow({ radius: 10, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
   //   .onClick(() => {
-  //     this.openAnchorPicker();
+  //     this.openLocationPicker();
   //   })
   // }
 
   // ==================== 动态内容 ====================
   @Builder
   buildMomentsContent() {
-    if (this.momentsLoading && this.moments.length === 0) {
-      SystemLoadingView({ message: '正在加载附近动态...' })
-    } else if (this.momentsError.length > 0 && this.moments.length === 0) {
-      this.buildEmptyState(AppIcon.WARNING, this.momentsError, '重试', () => { this.loadNearbyMoments(); })
-    } else if (this.moments.length === 0) {
-      this.buildEmptyState(AppIcon.CAMERA, '附近暂无动态\n去发布第一条吧！', undefined, undefined)
-    } else {
-      Refresh({ refreshing: $$this.momentsLoading }) {
-        WaterFlow({ footer: this.buildLoadingMoreIndicator() }) {
-          LazyForEach(this.momentsDataSource, (moment: MomentItem, index: number) => {
-            FlowItem() {
-              this.buildMomentCard(moment, index)
-            }
-          }, (moment: MomentItem) => moment.moment_id)
+    Column() {
+      if (this.momentsLoading) {
+        SystemLoadingView({ message: '正在加载附近动态...' })
+      } else if (this.momentsError.length > 0 && this.moments.length === 0) {
+        EmptyState({ icon: AppIcon.WARNING, message: this.momentsError, actionLabel: '重试', onAction: () => { this.loadNearbyMoments(); } })
+      } else if (this.moments.length === 0) {
+        EmptyState({ icon: AppIcon.CAMERA, message: '附近暂无动态\n去发布第一条吧！' })
+      } else {
+        Refresh({ refreshing: $$this.momentsRefreshing }) {
+          WaterFlow({ footer: (): void => this.buildWaterFlowFooter() }) {
+            LazyForEach(this.momentsDataSource, (moment: MomentItem, index: number) => {
+              FlowItem() {
+                this.buildMomentCard(moment, index)
+              }
+            }, (moment: MomentItem) => moment.moment_id)
+          }
+          .columnsTemplate('repeat(auto-fill, 160vp)')
+          .columnsGap(8)
+          .rowsGap(8)
+          .width('100%')
+          .padding({ left: 8, right: 8, top: 8, bottom: this.getListBottomPadding() })
+          .cachedCount(8)
+          .onReachEnd(() => { this.loadNearbyMoments(true); })
         }
-        // 小红书风格：auto-fill 自动计算列数，每列最小 160vp
-        .columnsTemplate('repeat(auto-fill, 160vp)')
-        .columnsGap(8)
-        .rowsGap(8)
-        .width('100%')
         .layoutWeight(1)
-        .padding({ left: 8, right: 8, top: 8, bottom: this.getListBottomPadding() })
-        .cachedCount(8)  // 预加载8个，提升滚动流畅度
-        .onReachEnd(() => { this.loadNearbyMoments(true); })
+        .onRefreshing(() => { this.loadNearbyMoments(false, true); })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
-      .onRefreshing(() => { this.loadNearbyMoments(); })
-      .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
     }
+    .width('100%')
+    .height('100%')
   }
 
   // 计算卡片图片高度，根据图片比例动态调整（小红书风格）
@@ -614,10 +664,9 @@ export struct NearbyPage {
       .padding(8)
     }
     .width('100%')
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(12)
-    // 小红书风格的微阴影
-    .shadow({ radius: 8, color: '#0D000000', offsetX: 0, offsetY: 2 })
+    .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
     // 点击反馈动画
     .scale(this.pressedIndex === index ? { x: 0.97, y: 0.97 } : { x: 1, y: 1 })
     .animation({ duration: 100, curve: Curve.EaseOut })
@@ -681,194 +730,163 @@ export struct NearbyPage {
   // ==================== 用户内容 ====================
   @Builder
   buildUsersContent() {
-    if (this.usersLoading && this.users.length === 0) {
-      SystemLoadingView({ message: '正在加载附近用户...' })
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
-    } else if (this.usersError.length > 0 && this.users.length === 0) {
-      Stack() {
-        this.buildEmptyState(AppIcon.WARNING, this.usersError, '重试', () => { this.loadNearbyUsers(); })
-      }
-      .width('100%')
-      .height('100%')
-      .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
-    } else if (this.users.length === 0) {
-      Stack() {
-        this.buildEmptyState(AppIcon.PERSON, '附近暂无其他用户', undefined, undefined)
-      }
-      .width('100%')
-      .height('100%')
-      .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
-    } else {
-      Refresh({ refreshing: $$this.usersLoading }) {
-        List({ space: DesignConstants.SPACING.SM }) {
-          LazyForEach(this.usersDataSource, (user: UserItem) => {
-            ListItem() {
-              this.buildUserCard(user)
-            }
-          }, (user: UserItem) => user.user?.user_id ?? '')
-          if (this.usersLoadingMore) {
-            ListItem() {
-              this.buildLoadingMoreIndicator()
+    Column() {
+      if (this.usersLoading) {
+        SystemLoadingView({ message: '正在加载附近用户...' })
+          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+      } else if (this.usersError.length > 0 && this.users.length === 0) {
+        EmptyState({ icon: AppIcon.WARNING, message: this.usersError, actionLabel: '重试', onAction: () => { this.loadNearbyUsers(); } })
+          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+      } else if (this.users.length === 0) {
+        EmptyState({ icon: AppIcon.PERSON, message: '附近暂无其他用户' })
+          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+      } else {
+        Refresh({ refreshing: $$this.usersRefreshing }) {
+          List() {
+            LazyForEach(this.usersDataSource, (user: UserItem) => {
+              ListItem() {
+                this.buildUserCard(user)
+              }
+            }, (user: UserItem) => user.user?.user_id ?? '')
+            if (this.usersLoadingMore) {
+              ListItem() {
+                LoadingMoreIndicator()
+              }
             }
           }
+          .width('100%')
+          .padding({ bottom: this.getListBottomPadding() })
+          .divider({ strokeWidth: 0.5, color: $r('app.color.divider'), startMargin: 76, endMargin: 0 })
+          .scrollBar(BarState.Auto)
+          .onReachEnd(() => { this.loadNearbyUsers(true); })
         }
-        .width('100%')
         .layoutWeight(1)
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
-          top: DesignConstants.SPACING.SM, bottom: this.getListBottomPadding() })
-        .scrollBar(BarState.Auto)
-        .onReachEnd(() => { this.loadNearbyUsers(true); })
+        .onRefreshing(() => { this.loadNearbyUsers(false, true); })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
-      .onRefreshing(() => { this.loadNearbyUsers(); })
-      .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
     }
+    .width('100%')
+    .height('100%')
   }
 
   @Builder
   buildUserCard(user: UserItem) {
-    Row({ space: DesignConstants.SPACING.MD }) {
+    Row({ space: 12 }) {
       SystemAvatar({
         avatarUrl: user.user?.avatar_url ?? '',
         name: user.user?.nickname ?? '',
-        avatarSize: 52
+        avatarSize: 48
       })
 
-      Column({ space: 4 }) {
+      Column({ space: 2 }) {
         Text(user.user?.nickname ?? '')
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
-
-        if (user.bio) {
-          Text(user.bio)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-            .maxLines(2)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-
-        if (user.location?.location_name) {
-          Row({ space: 4 }) {
-            Text() {
-              SymbolSpan($r(AppIcon.LOCATION))
-                .fontSize(12)
-                .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
-            }
-            Text(user.location.location_name)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-
-            if (user.location.distance !== undefined && user.location.distance !== null) {
-              Text(this.formatDistance(user.location.distance))
-                .fontSize(DesignConstants.FONT.SIZE.XS)
-                .fontColor($r('sys.color.ohos_id_color_emphasize'))
-            }
-          }
-        }
-      }
-      .alignItems(HorizontalAlign.Start)
-      .layoutWeight(1)
-
-      // 关注按钮
-      Button('关注')
-        .type(ButtonType.Capsule)
-        .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-        .fontColor(Color.White)
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .height(32)
-        .onClick(() => { this.followUser(user); })
-    }
-    .width('100%')
-    .padding(DesignConstants.SPACING.LG)
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
-    .borderRadius(DesignConstants.RADIUS.LG)
-  }
-
-  // ==================== 群组内容 ====================
-  @Builder
-  buildGroupsContent() {
-    if (this.groupsLoading && this.groups.length === 0) {
-      SystemLoadingView({ message: '正在加载附近群组...' })
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
-    } else if (this.groupsError.length > 0 && this.groups.length === 0) {
-      Stack() {
-        this.buildEmptyState(AppIcon.WARNING, this.groupsError, '重试', () => { this.loadNearbyGroups(); })
-      }
-      .width('100%')
-      .height('100%')
-      .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
-    } else if (this.groups.length === 0) {
-      Stack() {
-        this.buildEmptyState(AppIcon.GROUP, '附近暂无群组', undefined, undefined)
-      }
-      .width('100%')
-      .height('100%')
-      .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
-    } else {
-      Refresh({ refreshing: $$this.groupsLoading }) {
-        List({ space: DesignConstants.SPACING.SM }) {
-          LazyForEach(this.groupsDataSource, (group: GroupItem) => {
-            ListItem() {
-              this.buildGroupCard(group)
-            }
-          }, (group: GroupItem) => group.group?.group_id ?? '')
-          if (this.groupsLoadingMore) {
-            ListItem() {
-              this.buildLoadingMoreIndicator()
-            }
-          }
-        }
-        .width('100%')
-        .layoutWeight(1)
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
-          top: DesignConstants.SPACING.SM, bottom: this.getListBottomPadding() })
-        .scrollBar(BarState.Auto)
-        .onReachEnd(() => { this.loadNearbyGroups(true); })
-      }
-      .onRefreshing(() => { this.loadNearbyGroups(); })
-      .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
-    }
-  }
-
-  @Builder
-  buildGroupCard(group: GroupItem) {
-    Row({ space: DesignConstants.SPACING.MD }) {
-      SystemAvatar({
-        avatarUrl: group.group?.avatar_url ?? '',
-        name: group.group?.name ?? '',
-        avatarSize: 52,
-        shape: 'squircle'
-      })
-
-      Column({ space: 4 }) {
-        Text(group.group?.name ?? '')
-          .fontSize(DesignConstants.FONT.SIZE.LG)
+          .fontSize(16)
           .fontWeight(FontWeight.Medium)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-        Row({ space: DesignConstants.SPACING.SM }) {
-          Text(`${group.group?.members_count ?? 0}人`)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-
-          if (group.location?.location_name) {
-            Text(group.location.location_name)
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .constraintSize({ maxWidth: '50%' })
-          }
-        }
-
-        if (group.description) {
-          Text(group.description)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
+        if (user.bio) {
+          Text(user.bio)
+            .fontSize(13)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
+        } else if (user.location?.distance !== undefined && user.location?.distance !== null) {
+          Text(this.formatDistance(user.location.distance))
+            .fontSize(13)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        }
+      }
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
+
+      Button('关注')
+        .type(ButtonType.Capsule)
+        .backgroundColor(Color.Transparent)
+        .fontColor($r('sys.color.ohos_id_color_emphasize'))
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .height(32)
+        .borderWidth(1)
+        .borderColor($r('sys.color.ohos_id_color_emphasize'))
+        .onClick(() => { this.followUser(user); })
+    }
+    .width('100%')
+    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+    .alignItems(VerticalAlign.Center)
+  }
+
+  // ==================== 群组内容 ====================
+  @Builder
+  buildGroupsContent() {
+    Column() {
+      if (this.groupsLoading) {
+        SystemLoadingView({ message: '正在加载附近群组...' })
+          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+      } else if (this.groupsError.length > 0 && this.groups.length === 0) {
+        EmptyState({ icon: AppIcon.WARNING, message: this.groupsError, actionLabel: '重试', onAction: () => { this.loadNearbyGroups(); } })
+          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+      } else if (this.groups.length === 0) {
+        EmptyState({ icon: AppIcon.GROUP, message: '附近暂无群组' })
+          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+      } else {
+        Refresh({ refreshing: $$this.groupsRefreshing }) {
+          List() {
+            LazyForEach(this.groupsDataSource, (group: GroupItem) => {
+              ListItem() {
+                this.buildGroupCard(group)
+              }
+            }, (group: GroupItem) => group.group?.group_id ?? '')
+            if (this.groupsLoadingMore) {
+              ListItem() {
+                LoadingMoreIndicator()
+              }
+            }
+          }
+          .width('100%')
+          .padding({ bottom: this.getListBottomPadding() })
+          .divider({ strokeWidth: 0.5, color: $r('app.color.divider'), startMargin: 76, endMargin: 0 })
+          .scrollBar(BarState.Auto)
+          .onReachEnd(() => { this.loadNearbyGroups(true); })
+        }
+        .layoutWeight(1)
+        .onRefreshing(() => { this.loadNearbyGroups(false, true); })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+      }
+    }
+    .width('100%')
+    .height('100%')
+  }
+
+  @Builder
+  buildGroupCard(group: GroupItem) {
+    Row({ space: 12 }) {
+      SystemAvatar({
+        avatarUrl: group.group?.avatar_url ?? '',
+        name: group.group?.name ?? '',
+        avatarSize: 48,
+        shape: 'squircle'
+      })
+
+      Column({ space: 2 }) {
+        Text(group.group?.name ?? '')
+          .fontSize(16)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+        Row({ space: 8 }) {
+          Text(`${group.group?.members_count ?? 0}人`)
+            .fontSize(13)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+
+          if (group.location?.distance !== undefined && group.location?.distance !== null) {
+            Text(this.formatDistance(group.location.distance))
+              .fontSize(13)
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          }
         }
       }
       .alignItems(HorizontalAlign.Start)
@@ -876,60 +894,24 @@ export struct NearbyPage {
 
       Button('加入')
         .type(ButtonType.Capsule)
-        .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-        .fontColor(Color.White)
-        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .backgroundColor(Color.Transparent)
+        .fontColor($r('sys.color.ohos_id_color_emphasize'))
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
         .height(32)
+        .borderWidth(1)
+        .borderColor($r('sys.color.ohos_id_color_emphasize'))
         .onClick(() => { this.joinGroup(group); })
     }
     .width('100%')
-    .padding(DesignConstants.SPACING.LG)
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
-    .borderRadius(DesignConstants.RADIUS.LG)
+    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+    .alignItems(VerticalAlign.Center)
     .onClick(() => { this.openGroupDetail(group); })
   }
 
-  // ==================== 底部加载更多指示器 ====================
   @Builder
-  buildLoadingMoreIndicator() {
-    Row({ space: DesignConstants.SPACING.SM }) {
-      LoadingProgress().width(20).height(20)
-      Text('加载更多...')
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-    }
-    .width('100%')
-    .justifyContent(FlexAlign.Center)
-    .padding(DesignConstants.SPACING.MD)
-  }
-
-  // ==================== 通用空状态 ====================
-  @Builder
-  buildEmptyState(icon: AppIcon, message: string, actionLabel: string | undefined, action: (() => void) | undefined) {
-    Column({ space: DesignConstants.SPACING.LG }) {
-      Text() {
-        SymbolSpan($r(icon))
-          .fontSize(48)
-          .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
-      }
-      Text(message)
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        .textAlign(TextAlign.Center)
-        .lineHeight(24)
-      if (actionLabel && action) {
-        Button(actionLabel)
-          .type(ButtonType.Capsule)
-          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-          .fontColor(Color.White)
-          .height(40)
-          .onClick(() => { action(); })
-      }
-    }
-    .width('100%')
-    .height('100%')
-    .justifyContent(FlexAlign.Center)
-    .padding(DesignConstants.SPACING.XXL)
+  buildWaterFlowFooter() {
+    LoadingMoreIndicator()
   }
 
   // ==================== 操作方法 ====================

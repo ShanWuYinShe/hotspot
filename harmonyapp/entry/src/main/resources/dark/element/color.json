@@ -6,7 +6,7 @@
     },
     {
       "name": "color_shadow",
-      "value": "#33FFFFFF"
+      "value": "#14FFFFFF"
     },
     {
       "name": "color_danger",
@@ -34,7 +34,7 @@
     },
     {
       "name": "bg_primary",
-      "value": "#000000"
+      "value": "#0D0D0D"
     },
     {
       "name": "bg_secondary",
@@ -67,6 +67,10 @@
     {
       "name": "color_success",
       "value": "#30D158"
+    },
+    {
+      "name": "chip_selected_bg",
+      "value": "#3A3A3C"
     }
   ]
 }

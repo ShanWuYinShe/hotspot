@@ -20,7 +20,7 @@ import { ApiResponse, CreateMomentRequest, MomentItem, GeoPoint } from '../../..
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
-import { AppRouter } from '../../../core/router/AppRouter';
+import { AppRouter, LocationPickerRouteParam } from '../../../core/router/AppRouter';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 
@@ -270,7 +270,9 @@ export struct CreateMomentPage {
 
   private async openLocationPicker(): Promise<void> {
     try {
-      AppRouter.push(PageNames.LOCATION_PICKER);
+      const param = new LocationPickerRouteParam();
+      param.mode = 'location_pick';
+      AppRouter.push(PageNames.LOCATION_PICKER, param);
     } catch (error) {
       SystemToast.showError('跳转失败', this.getUIContext());
     }
@@ -363,10 +365,11 @@ export struct CreateMomentPage {
                   GridItem() {
                     Button() {
                       Column() {
-                        Image($r('sys.media.ohos_ic_public_add'))
-                          .width(24)
-                          .height(24)
-                          .fillColor($r('sys.color.ohos_id_color_text_secondary'))
+                        Text() {
+                          SymbolSpan($r(AppIcon.ADD))
+                            .fontSize(24)
+                            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+                        }
                         Text('相册')
                           .fontSize(10)
                           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
@@ -386,10 +389,11 @@ export struct CreateMomentPage {
                   GridItem() {
                     Button() {
                       Column() {
-                        Image($r('sys.media.ohos_ic_public_camera'))
-                          .width(24)
-                          .height(24)
-                          .fillColor($r('sys.color.ohos_id_color_text_secondary'))
+                        Text() {
+                          SymbolSpan($r(AppIcon.CAMERA))
+                            .fontSize(24)
+                            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+                        }
                         Text('拍照')
                           .fontSize(10)
                           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
@@ -490,26 +494,19 @@ export struct CreateMomentPage {
 
               if (this.localLocation) {
                 Row() {
-                  Image($r('sys.media.ohos_ic_public_location'))
-                    .width(20)
-                    .height(20)
-                    .fillColor($r('sys.color.ohos_id_color_emphasize'))
-
-                  Column() {
-                    Text(this.localLocation.locationName)
-                      .fontSize(DesignConstants.FONT.SIZE.MD)
-                      .fontColor($r('sys.color.ohos_id_color_text_primary'))
-                      .width('100%')
-
-                    Text(`${this.localLocation.latitude.toFixed(6)}, ${this.localLocation.longitude.toFixed(6)}`)
-                      .fontSize(DesignConstants.FONT.SIZE.SM)
-                      .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-                      .width('100%')
-                      .margin({ top: 2 })
+                  Text() {
+                    SymbolSpan($r(AppIcon.LOCATION))
+                      .fontSize(20)
+                      .fontColor([$r('sys.color.ohos_id_color_emphasize')])
                   }
-                  .alignItems(HorizontalAlign.Start)
-                  .layoutWeight(1)
-                  .margin({ left: DesignConstants.SPACING.MD })
+
+                  Text(this.localLocation.locationName)
+                    .fontSize(DesignConstants.FONT.SIZE.MD)
+                    .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                    .layoutWeight(1)
+                    .maxLines(2)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                    .margin({ left: DesignConstants.SPACING.MD })
                 }
                 .width('100%')
                 .padding(DesignConstants.SPACING.MD)
@@ -600,16 +597,17 @@ export struct CreateMomentPage {
         .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
 
       Button() {
-        Image($r('sys.media.ohos_ic_public_cancel'))
-          .width(12)
-          .height(12)
-          .fillColor(Color.White)
+        Text() {
+          SymbolSpan($r(AppIcon.CANCEL))
+            .fontSize(14)
+            .fontColor([Color.White])
+        }
       }
       .type(ButtonType.Circle)
       .backgroundColor($r('app.color.color_overlay_heavy'))
-      .width(20)
-      .height(20)
-      .margin({top: 4, right: 4})
+      .width(28)
+      .height(28)
+      .margin({ top: 2, right: 2 })
       .onClick(() => this.removeImage(index))
     }
     .width('100%')

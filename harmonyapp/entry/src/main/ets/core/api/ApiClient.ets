@@ -167,8 +167,6 @@ import {
   GetFeedTrendingRequest,
   TrendingBundle,
 
-  // 标签
-  TrendingTagsRequest,
   TagItem,
 
   // 搜索
@@ -760,12 +758,6 @@ export class ApiClient {
 
   static async getFeedTrending(params: GetFeedTrendingRequest): Promise<ApiResponse<TrendingBundle>> {
     return HttpUtil.post<ApiResponse<TrendingBundle>, GetFeedTrendingRequest>(ApiEndpoints.FEED.LIST_TRENDING, params);
-  }
-
-  // ==================== 标签 API ====================
-
-  static async getTrendingTags(params: TrendingTagsRequest): Promise<ApiResponse<TagItem[]>> {
-    return HttpUtil.post<ApiResponse<TagItem[]>, TrendingTagsRequest>(ApiEndpoints.TAG.LIST_TRENDING, params);
   }
 
   // ==================== 搜索 API ====================

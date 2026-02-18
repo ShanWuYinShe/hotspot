@@ -31,11 +31,6 @@
       "buildFunction": "PhotoPreviewPageBuilder"
     },
     {
-      "name": "AnchorPickPage",
-      "pageSourceFile": "src/main/ets/features/map/pages/AnchorPickPage.ets",
-      "buildFunction": "AnchorPickPageBuilder"
-    },
-    {
       "name": "LocationPickerPage",
       "pageSourceFile": "src/main/ets/features/map/pages/LocationPickerPage.ets",
       "buildFunction": "LocationPickerPageBuilder"

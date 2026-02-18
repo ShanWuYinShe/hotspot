@@ -9,7 +9,9 @@ use sqlx::{FromRow, PgPool};
 use crate::error::Result;
 use crate::types::enums::{UserGender, UserStatus, UserType};
 use crate::utils::id_gen;
-use crate::utils::pagination::{decode_cursor, encode_cursor, DistanceCursor, Paginated};
+use crate::utils::pagination::{
+    decode_cursor, decode_cursor_or, encode_cursor, DistanceCursor, Paginated,
+};
 
 /// 用户基础行数据
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
@@ -424,11 +426,7 @@ impl UserRepository {
         cursor: Option<String>,
         kw: Option<&str>,
     ) -> Paginated<UserSearchRow> {
-        let (last_dist, last_id) = if let Some(c) = cursor {
-            decode_cursor::<DistanceCursor>(&c)?
-        } else {
-            (0.0, 0)
-        };
+        let (last_dist, last_id): DistanceCursor = decode_cursor_or(cursor, || (0.0, 0))?;
 
         let rows = sqlx::query_as!(
             UserSearchRow,
@@ -477,11 +475,7 @@ impl UserRepository {
         cursor: Option<String>,
         exclude_user_id: Option<i64>,
     ) -> Paginated<FeedUserRow> {
-        let (last_dist, last_id) = if let Some(c) = cursor {
-            decode_cursor::<DistanceCursor>(&c)?
-        } else {
-            (0.0, 0)
-        };
+        let (last_dist, last_id): DistanceCursor = decode_cursor_or(cursor, || (0.0, 0))?;
 
         let rows: Vec<FeedUserRow> = sqlx::query_as!(
             FeedUserRow,
@@ -513,12 +507,8 @@ impl UserRepository {
                   OR (ST_Distance(u.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) = $4 AND u.user_id > $5)
               )
               AND (
-                  $6::bigint IS NULL OR NOT EXISTS (
-                      SELECT 1 FROM feed_dismissals fd
-                      WHERE fd.user_id = $6
-                        AND fd.target_type = 'user'
-                        AND fd.target_id = u.user_id::text
-                  )
+                  $6::bigint IS NULL
+                  OR feed_entity_not_dismissed($6, 'user'::dismiss_target_type, u.user_id::text)
               )
             GROUP BY u.user_id, u.nickname, u.avatar_url, u.bio, u.user_type,
                      u.location, u.location_name
@@ -535,7 +525,6 @@ impl UserRepository {
         )
         .fetch_all(&self.pool)
         .await?;
-
         let has_more = rows.len() > limit as usize;
         let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
         let next_cursor = if has_more {
@@ -624,11 +613,7 @@ impl UserRepository {
         limit: i64,
         cursor: Option<String>,
     ) -> Paginated<UserSearchRow> {
-        let (last_dist, last_id) = if let Some(c) = cursor {
-            decode_cursor::<DistanceCursor>(&c)?
-        } else {
-            (0.0, 0)
-        };
+        let (last_dist, last_id): DistanceCursor = decode_cursor_or(cursor, || (0.0, 0))?;
 
         let pattern = format!("%{}%", kw);
         let rows = sqlx::query_as!(
@@ -685,11 +670,7 @@ impl UserRepository {
         limit: i64,
         cursor: Option<String>,
     ) -> Paginated<UserSearchRow> {
-        let (last_dist, last_id) = if let Some(c) = cursor {
-            decode_cursor::<DistanceCursor>(&c)?
-        } else {
-            (0.0, 0)
-        };
+        let (last_dist, last_id): DistanceCursor = decode_cursor_or(cursor, || (0.0, 0))?;
 
         let rows = sqlx::query_as!(
             UserSearchRow,

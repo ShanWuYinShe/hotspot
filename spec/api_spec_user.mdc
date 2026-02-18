@@ -603,7 +603,7 @@ interface BlockedUserItem {
 ```typescript
 interface SetRemarkRequest {
   user_id: string;
-  remark?: string;  // 传空字符串 "" 表示清除备注；不传此字段则不修改
+  remark: string;   // 传空字符串 "" 表示清除备注
 }
 ```
 

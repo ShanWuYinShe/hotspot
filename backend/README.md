@@ -730,94 +730,217 @@ ab -n 10000 -c 100 http://localhost:5496/health
 
 ## 部署
 
-### Docker 部署（推荐）
+### Docker 镜像
+
+> 推荐在项目根目录下分别为后端和前端创建 Dockerfile，并使用多阶段构建减少镜像体积。
+
+#### backend/Dockerfile
 
 ```dockerfile
-# Dockerfile
 FROM rust:1.75 AS builder
 WORKDIR /app
-COPY . .
-RUN cargo build --release
+COPY backend/ ./
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/app/target \
+    cargo build --release
 
 FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y libpq5 ca-certificates
+RUN apt-get update && apt-get install -y --no-install-recommends libpq5 ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/target/release/hotspot-backend /usr/local/bin/
+ENV RUST_LOG=info,hotspot_backend=info
+WORKDIR /app
 EXPOSE 5496
 CMD ["hotspot-backend"]
 ```
 
-```bash
-# 构建镜像
-docker build -t hotspot-backend:latest .
+#### frontend_svelte/Dockerfile
 
-# 运行容器
-docker run -d \
-  --name hotspot-backend \
-  -p 5496:5496 \
-  --env-file .env \
-  hotspot-backend:latest
+```dockerfile
+FROM node:20-alpine AS deps
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@latest --activate
+COPY frontend_svelte/pnpm-lock.yaml frontend_svelte/package.json ./
+RUN pnpm install --frozen-lockfile
+
+FROM node:20-alpine AS builder
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@latest --activate
+COPY --from=deps /app/node_modules ./node_modules
+COPY frontend_svelte/ ./
+ENV NODE_ENV=production
+RUN pnpm build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/build ./build
+EXPOSE 4173
+CMD ["node", "build/index.js"]
 ```
 
-### Docker Compose
+> 如需在前端容器中设置 API 地址，请在运行前导出 `PUBLIC_API_BASE`（或通过反向代理与后端同域）。AMap 密钥使用 `VITE_AMAP_KEY`、`VITE_AMAP_SERVICE_HOST` 注入。
+
+### docker-compose 部署栈
+
+在项目根目录新建 `docker/docker-compose.prod.yml`：
 
 ```yaml
-version: '3.8'
+version: '3.9'
 
 services:
-  backend:
-    build: .
-    ports:
-      - "5496:5496"
-    env_file:
-      - .env
-    depends_on:
-      - postgres
-      - redis
-      - minio
-    restart: unless-stopped
-
   postgres:
-    image: postgis/postgis:16-3.4
+    image: postgis/postgis:18-3.4
+    container_name: hotspot-postgres
     environment:
       POSTGRES_DB: hotspot_db
       POSTGRES_USER: hotspot
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: change-me
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
+    image: redis:7.2-alpine
+    container_name: hotspot-redis
+    command: ["redis-server", "--save", "", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    container_name: hotspot-backend
+    env_file:
+      - ../backend/.env.production
+    environment:
+      DATABASE_URL: postgresql://hotspot:change-me@postgres:5432/hotspot_db
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    ports:
+      - "5496:5496"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend_svelte/Dockerfile
+    container_name: hotspot-frontend
+    environment:
+      PUBLIC_API_BASE: http://backend:5496
+      VITE_AMAP_KEY: ""
+      VITE_AMAP_SERVICE_HOST: ""
+    ports:
+      - "4173:4173"
+    depends_on:
+      - backend
     restart: unless-stopped
 
   minio:
-    image: minio/minio
-    command: server /data --console-address ":9001"
-    ports:
-      - "9000:9000"
-      - "9001:9001"
+    image: minio/minio:RELEASE.2024-06-13T22-48-17Z
+    container_name: hotspot-minio
+    command: server /data --console-address :9001
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
     volumes:
       - minio_data:/data
     restart: unless-stopped
 
 volumes:
   postgres_data:
+  redis_data:
   minio_data:
 ```
 
-```bash
-# 启动所有服务
-docker-compose up -d
+### Nginx 反向代理（可选）
 
-# 查看日志
-docker-compose logs -f backend
+为了在同一个域名下暴露前端与后端，并满足 HTTPS/缓存需求，可以再新增一个 Nginx 容器：
 
-# 停止所有服务
-docker-compose down
-```
+1. 新建 `docker/nginx/default.conf`：
+
+    ```nginx
+    server {
+        listen 80;
+        server_name _;
+        client_max_body_size 25m;
+
+        location /api/ {
+            proxy_pass http://backend:5496/api/;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location / {
+            proxy_pass http://frontend:4173/;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+    ```
+
+2. 在 `docker/docker-compose.prod.yml` 中追加服务：
+
+    ```yaml
+      nginx:
+        image: nginx:1.25-alpine
+        container_name: hotspot-nginx
+        ports:
+          - "80:80"
+        volumes:
+          - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+        depends_on:
+          - frontend
+          - backend
+        restart: unless-stopped
+    ```
+
+3. 若需 HTTPS，可在该容器内挂载证书并监听 443，或改用 Caddy/Traefik 获取自动证书。
+
+> 使用反向代理后，请确保 DNS 指向 Nginx 所在实例，并透传 `X-Forwarded-Proto` 等头部，后端才能生成正确的绝对 URL。
+
+### 部署步骤
+
+1. **准备环境变量**
+   - 后端：复制 `backend/.env.example` 为 `.env.production`，将 `DATABASE_URL`/`REDIS_URL` 等指向容器主机名 (`postgres`、`redis`)。
+   - 前端：新建 `frontend_svelte/.env.production`，写入 `PUBLIC_API_BASE=https://api.example.com`、`VITE_AMAP_KEY=xxx` 等公开变量。
+2. **构建镜像**
+   ```bash
+   docker compose -f docker/docker-compose.prod.yml build
+   ```
+3. **启动基础设施**
+   ```bash
+   docker compose -f docker/docker-compose.prod.yml up -d postgres redis minio
+   ```
+4. **运行数据库迁移**：进入 backend 容器 `docker compose exec backend bash`，再运行 `sqlx migrate run`（遵循“由人工触发”原则）。
+5. **启动应用**
+   ```bash
+   docker compose -f docker/docker-compose.prod.yml up -d backend frontend nginx
+   ```
+6. **验证**：通过 `http://localhost`（Nginx 代理）访问前端，通过 `http://localhost/api/v1/system/health` 或直接 `http://localhost:5496/health` 校验后端，并查看日志 `docker compose logs -f backend`。
+
+> 生产环境通常会在前端容器前增加 Nginx/Caddy，将 `/api` 转发到 backend，其他路径交给前端容器或 CDN；记得透传 `X-Forwarded-Proto` 等头部。
 
 ### 生产环境部署清单
 
@@ -900,6 +1023,18 @@ RUST_LOG=info,hotspot_backend=info
 # 排查问题
 RUST_LOG=debug,sqlx=debug,tower_http=debug
 ```
+
+### 响应日志（Response Logger）
+
+- 已在 `main.rs` 全局启用 `response_logger` 中间件，所有 JSON 响应都会被 tracing 记录，方便 App 端排查问题。
+- 日志中自动携带 `request_id`，可与前端/移动端上报的 `X-Request-Id` 对应。
+- 仅在 `Content-Type` 含 `json` 且状态码不为 204/304 时记录，避免泄露二进制或空响应。
+- 默认最多输出前 8KB (`LOG_PREVIEW_BYTES=8 * 1024`)，其余部分以 `truncated=true` 标记，可按需调整该常量。
+- 示例：
+  ```log
+  [INFO] method=POST uri=/api/v1/auth/login status=200 truncated=false response_preview={"code":0,...} response body
+  ```
+- 如需关闭，可在自定义构建中移除 `response_logger` 中间件或通过日志等级控制 (`RUST_LOG`) 过滤。
 
 ---
 

@@ -74,11 +74,6 @@ export struct IntelligentLocationCard {
           }
         }
 
-        // 坐标信息
-        Text(`${this.latitude.toFixed(6)}, ${this.longitude.toFixed(6)}`)
-          .fontSize(11)
-          .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
-          .fontFamily('monospace')
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
@@ -111,7 +106,7 @@ export struct IntelligentLocationCard {
         }
         .width(32)
         .height(32)
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .backgroundColor($r('app.color.bg_secondary'))
         .border({
           width: 1,
           color: $r('sys.color.ohos_id_color_emphasize')
@@ -124,7 +119,7 @@ export struct IntelligentLocationCard {
     }
     .width('100%')
     .padding(16)
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(16)
     .shadow({
       radius: this.cardElevation * 6,

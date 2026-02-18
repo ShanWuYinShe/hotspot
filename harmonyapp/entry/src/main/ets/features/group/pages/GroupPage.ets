@@ -9,9 +9,10 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { GroupItem, SearchGroupsRequest } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
-import { IntelligentLocationCard } from '../../../components/IntelligentLocationCard';
+
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
+import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
@@ -31,6 +32,7 @@ export struct GroupPage {
   @State groups: GroupItem[] = [];
   private groupsDataSource: BasicDataSource<GroupItem> = new BasicDataSource<GroupItem>([]);
   @State isLoading: boolean = true;
+  @State isRefreshing: boolean = false;
   @State errorMessage: string = '';
   @State hasMore: boolean = false;
   @State nextCursor: string = '';
@@ -54,13 +56,15 @@ export struct GroupPage {
     return this.browseAnchor ?? this.currentLocation;
   }
 
-  private async loadNearbyGroups() {
+  private async loadNearbyGroups(refresh: boolean = false) {
     const refLoc = this.getRefLocation();
     if (!refLoc) {
+      this.isLoading = false;
+      this.isRefreshing = false;
       return;
     }
 
-    this.isLoading = true;
+    if (!refresh) { this.isLoading = true; }
     this.errorMessage = '';
 
     try {
@@ -75,11 +79,11 @@ export struct GroupPage {
       };
       const response = await LoadingUtil.withMinimumTime(() => ApiClient.searchGroups(request));
 
-      if (response.code === 0 && response.data) {
-        this.groups = response.data.items;
+      if (response.code === 0) {
+        this.groups = response.data?.items ?? [];
         this.groupsDataSource.setData(this.groups);
-        this.hasMore = !!(response.data.next_cursor);
-        this.nextCursor = response.data.next_cursor ?? '';
+        this.hasMore = !!(response.data?.next_cursor);
+        this.nextCursor = response.data?.next_cursor ?? '';
       } else {
         this.errorMessage = response.message || '加载群组失败';
         this.groups = [];
@@ -89,6 +93,7 @@ export struct GroupPage {
       this.errorMessage = error instanceof Error ? error.message : '加载群组失败';
     } finally {
       this.isLoading = false;
+      this.isRefreshing = false;
     }
   }
 
@@ -107,11 +112,12 @@ export struct GroupPage {
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE, cursor: this.nextCursor }
       };
       const response = await ApiClient.searchGroups(request);
-      if (response.code === 0 && response.data) {
-        this.groups = this.groups.concat(response.data.items);
-        this.groupsDataSource.appendData(response.data.items);
-        this.hasMore = !!(response.data.next_cursor);
-        this.nextCursor = response.data.next_cursor ?? '';
+      if (response.code === 0) {
+        const items = response.data?.items ?? [];
+        this.groups = this.groups.concat(items);
+        this.groupsDataSource.appendData(items);
+        this.hasMore = !!(response.data?.next_cursor);
+        this.nextCursor = response.data?.next_cursor ?? '';
       }
     } catch (error) {
       // 静默失败，用户可再次触底重试
@@ -165,6 +171,13 @@ export struct GroupPage {
     }
   }
 
+  private formatDistance(meters: number): string {
+    if (meters < 1000) {
+      return `${Math.round(meters)}m`;
+    }
+    return `${(meters / 1000).toFixed(1)}km`;
+  }
+
   private async createGroup() {
     const currentUser = this.stateManager.getCurrentUser();
     if (!currentUser) {
@@ -209,26 +222,25 @@ export struct GroupPage {
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 内容区域
-      if (this.isLoading && this.groups.length === 0) {
+      if (this.isLoading) {
         SystemLoadingView({ message: '正在加载附近群组...' })
           .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (this.errorMessage && this.groups.length === 0) {
-        Column() {
-          this.buildEmptyState(AppIcon.WARNING, this.errorMessage, '重试', () => { this.loadNearbyGroups(); })
-        }
-        .layoutWeight(1)
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        EmptyState({ icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试', onAction: () => { this.loadNearbyGroups(); } })
+          .layoutWeight(1)
+          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (this.groups.length === 0) {
-        Refresh({ refreshing: $$this.isLoading, builder: this.RefreshBuilder() }) {
-          this.buildEmptyState(AppIcon.GROUP, '附近暂无群组\n快来创建第一个吧！', undefined, undefined)
+        Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
+          EmptyState({ icon: AppIcon.GROUP, message: '附近暂无群组\n快来创建第一个吧！' })
         }
-        .onRefreshing(() => { this.loadNearbyGroups(); })
+        .onRefreshing(() => { this.loadNearbyGroups(true); })
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
-        Refresh({ refreshing: $$this.isLoading, builder: this.RefreshBuilder() }) {
+        Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           this.buildGroupList()
         }
-        .onRefreshing(() => { this.loadNearbyGroups(); })
+        .layoutWeight(1)
+        .onRefreshing(() => { this.loadNearbyGroups(true); })
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
     }
@@ -238,52 +250,8 @@ export struct GroupPage {
   }
 
   @Builder
-  private buildEmptyState(icon: AppIcon, message: string, actionLabel: string | undefined, action: (() => void) | undefined) {
-    Column({ space: DesignConstants.SPACING.LG }) {
-      Text() {
-        SymbolSpan($r(icon))
-          .fontSize(48)
-          .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
-      }
-
-      Text(message)
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        .textAlign(TextAlign.Center)
-        .lineHeight(24)
-
-      if (actionLabel && action) {
-        Button(actionLabel)
-          .type(ButtonType.Capsule)
-          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-          .fontColor(Color.White)
-          .height(40)
-          .onClick(() => { action(); })
-      }
-    }
-    .width('100%')
-    .height('100%')
-    .justifyContent(FlexAlign.Center)
-    .padding(DesignConstants.SPACING.XXL)
-  }
-
-  @Builder
-  RefreshBuilder() {
-    Row() {
-      LoadingProgress().width(24).height(24)
-      Text('正在刷新...')
-        .fontSize(DesignConstants.FONT.SIZE.MD)
-        .margin({ left: DesignConstants.SPACING.SM })
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-    }
-    .width('100%')
-    .justifyContent(FlexAlign.Center)
-    .padding(DesignConstants.SPACING.SM)
-  }
-
-  @Builder
   private buildGroupList() {
-    List({ space: DesignConstants.SPACING.MD }) {
+    List() {
       LazyForEach(this.groupsDataSource, (group: GroupItem) => {
         ListItem() {
           this.buildGroupCard(group)
@@ -291,94 +259,72 @@ export struct GroupPage {
       }, (group: GroupItem) => group.group?.group_id ?? '')
       if (this.isLoadingMore) {
         ListItem() {
-          Row({ space: DesignConstants.SPACING.SM }) {
-            LoadingProgress().width(20).height(20)
-            Text('加载更多...')
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-          }
-          .width('100%')
-          .justifyContent(FlexAlign.Center)
-          .padding(DesignConstants.SPACING.MD)
+          LoadingMoreIndicator()
         }
       }
     }
     .width('100%')
-    .layoutWeight(1)
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM,
-      bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
+    .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
+    .divider({ strokeWidth: 0.5, color: $r('app.color.divider'), startMargin: 76, endMargin: 0 })
     .scrollBar(BarState.Auto)
     .onReachEnd(() => { this.loadMoreGroups(); })
   }
 
   @Builder
   private buildGroupCard(group: GroupItem) {
-    Column({ space: DesignConstants.SPACING.MD }) {
-      // 群组基本信息
-      Row({ space: DesignConstants.SPACING.MD }) {
-        SystemAvatar({
-          avatarUrl: group.group.avatar_url || '',
-          name: group.group.name,
-          avatarSize: 48,
-          shape: 'squircle'
-        })
+    Row({ space: 12 }) {
+      SystemAvatar({
+        avatarUrl: group.group.avatar_url || '',
+        name: group.group.name,
+        avatarSize: 48,
+        shape: 'squircle'
+      })
 
-        Column({ space: 4 }) {
-          Text(group.group.name)
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
+      Column({ space: 2 }) {
+        Text(group.group.name)
+          .fontSize(16)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-          Row({ space: DesignConstants.SPACING.XS }) {
-            Text() {
-              SymbolSpan($r(AppIcon.PERSON))
-                .fontSize(12)
-                .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
-            }
-            Text(`${group.group.members_count}人`)
-              .fontSize(DesignConstants.FONT.SIZE.SM)
+        Row({ space: 8 }) {
+          Text(`${group.group.members_count}人`)
+            .fontSize(13)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+
+          if (group.location?.distance !== undefined && group.location?.distance !== null) {
+            Text(this.formatDistance(group.location.distance))
+              .fontSize(13)
               .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-          }
-
-          if (group.description) {
-            Text(group.description)
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-              .maxLines(2)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
         }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
 
-        Button('加入')
-          .type(ButtonType.Capsule)
-          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-          .fontColor(Color.White)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .height(32)
-          .onClick(() => this.joinGroup(group))
+        if (group.description) {
+          Text(group.description)
+            .fontSize(13)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
       }
-      .width('100%')
-      .alignItems(VerticalAlign.Top)
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
 
-      // 位置信息
-      if (group.location?.point) {
-        IntelligentLocationCard({
-          latitude: group.location.point.latitude,
-          longitude: group.location.point.longitude,
-          locationName: group.location.location_name,
-          distance: group.location.distance,
-          altitude: 0
-        })
-      }
+      Button('加入')
+        .type(ButtonType.Capsule)
+        .backgroundColor(Color.Transparent)
+        .fontColor($r('sys.color.ohos_id_color_emphasize'))
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .height(32)
+        .borderWidth(1)
+        .borderColor($r('sys.color.ohos_id_color_emphasize'))
+        .onClick(() => this.joinGroup(group))
     }
     .width('100%')
-    .padding(DesignConstants.SPACING.LG)
-    .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.LG)
+    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+    .alignItems(VerticalAlign.Center)
     .onClick(() => {
       const detailParams = new GroupDetailRouteParam();
       detailParams.groupId = group.group.group_id;

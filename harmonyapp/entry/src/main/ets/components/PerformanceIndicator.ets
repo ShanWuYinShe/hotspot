@@ -220,7 +220,7 @@ export struct PerformanceIndicator {
       })
     }
     .padding({ left: 8, right: 8, top: 4, bottom: 4 })
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(12)
     .onClick(() => {
       this.isExpanded = !this.isExpanded;
@@ -230,7 +230,7 @@ export struct PerformanceIndicator {
       builder: this.buildPopupContent,
       placement: Placement.Bottom,
       maskColor: Color.Transparent,
-      popupColor: $r('sys.color.ohos_id_color_background'),
+      popupColor: $r('app.color.bg_secondary'),
       enableArrow: true,
       showInSubWindow: false
     })
@@ -309,7 +309,7 @@ export struct PerformanceIndicator {
         }
         .width('100%')
         .padding(16)
-        .backgroundColor($r('sys.color.ohos_id_color_background'))
+        .backgroundColor($r('app.color.bg_secondary'))
         .borderRadius(8)
       }
 
@@ -414,7 +414,7 @@ export struct PerformanceIndicator {
             }
             .width('100%')
             .padding(12)
-            .backgroundColor($r('sys.color.ohos_id_color_background'))
+            .backgroundColor($r('app.color.bg_secondary'))
             .borderRadius(8)
           }, (alert: PerformanceAlert) => `${alert.timestamp}_${alert.message}`)
         }
@@ -449,7 +449,7 @@ export struct PerformanceIndicator {
     }
     .width('100%')
     .padding(12)
-    .backgroundColor($r('sys.color.ohos_id_color_background'))
+    .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(8)
     .justifyContent(FlexAlign.Center)
     // 无障碍属性

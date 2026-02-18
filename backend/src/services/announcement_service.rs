@@ -181,34 +181,6 @@ impl AnnouncementService {
         Ok(items)
     }
 
-    async fn list_announcements(
-        &self,
-        severity: Option<AnnouncementSeverity>,
-        limit_opt: Option<i32>,
-        cursor: Option<String>,
-    ) -> Result<PaginatedData<SystemAnnouncementItem>> {
-        let limit = Validator::validate_limit(limit_opt, 50)? as i64;
-        let (rows, next_cursor) = self
-            .repo
-            .list(severity.map(|s| s.as_str()), limit, cursor.as_deref())
-            .await?;
-
-        let items: Vec<SystemAnnouncementItem> = rows
-            .into_iter()
-            .map(|row| SystemAnnouncementItem {
-                announcement_id: row.announcement_id.to_string(),
-                title: row.title,
-                content: row.content,
-                severity: AnnouncementSeverity::from_str(&row.severity)
-                    .unwrap_or(AnnouncementSeverity::Info),
-                action_url: row.action_url,
-                created_at: row.created_at.to_rfc3339(),
-            })
-            .collect();
-
-        Ok(PaginatedData { items, next_cursor })
-    }
-
     async fn load_user_map(&self, user_ids: &[i64]) -> HashMap<i64, UserInfo> {
         let mut map = HashMap::new();
         if user_ids.is_empty() {

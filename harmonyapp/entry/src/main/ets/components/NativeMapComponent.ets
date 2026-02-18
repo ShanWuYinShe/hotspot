@@ -69,9 +69,13 @@ export struct NativeMapComponent {
   @Prop showZoomControls: boolean = false;
   /** 是否显示 Map Kit 内置的「我的位置」按钮 */
   @Prop showMyLocationControls: boolean = true;
-  /** 地图边界内边距（像素），用于把控件推离被遮挡的区域 */
+  /** 地图边界内边距（像素），用于把相机中心和内置控件推离被遮挡的区域 */
   @Watch('onContentPaddingChange') @Prop contentPaddingBottom: number = 0;
   @Watch('onContentPaddingChange') @Prop contentPaddingTop: number = 0;
+  /** 地图厂商 Logo 底部偏移（像素），确保 logo 不被底部面板遮挡（合规要求） */
+  @Watch('onLogoPaddingChange') @Prop logoPaddingBottom: number = 0;
+  /** 在地图中心显示图钉 Marker（位置选择器场景），图钉始终绑定在相机目标坐标上 */
+  @Prop showCenterPin: boolean = false;
   
   // 回调函数
   onMapReady?: () => void;
@@ -90,6 +94,13 @@ export struct NativeMapComponent {
   private createdMarkers: Map<string, map.Marker> = new Map();
   // 双击检测
   private lastClickTime: number = 0;
+  // 防止 @Watch 在父组件重渲染时误触发
+  private lastRegionLat: number = NaN;
+  private lastRegionLng: number = NaN;
+  private lastPaddingTop: number = NaN;
+  private lastPaddingBottom: number = NaN;
+  // 中心图钉 Marker（showCenterPin 为 true 时使用）
+  private centerPinMarker: map.Marker | null = null;
 
   // 内部状态
   @State isMapReady: boolean = false;
@@ -119,22 +130,46 @@ export struct NativeMapComponent {
     };
   }
   
-  /**
-   * 监听 contentPadding 变化，更新地图内边距
-   */
   onContentPaddingChange() {
+    if (this.contentPaddingTop === this.lastPaddingTop &&
+      this.contentPaddingBottom === this.lastPaddingBottom) {
+      return;
+    }
+    this.lastPaddingTop = this.contentPaddingTop;
+    this.lastPaddingBottom = this.contentPaddingBottom;
     this.applyContentPadding();
+  }
+
+  onLogoPaddingChange() {
+    this.applyLogoPadding();
   }
 
   private applyContentPadding() {
     if (this.isMapReady && this.mapController) {
       try {
         this.mapController.setPadding({
+          left: 0,
           top: this.contentPaddingTop,
+          right: 0,
           bottom: this.contentPaddingBottom
         });
       } catch (e) {
         hilog.warn(DOMAIN_NUMBER, TAG, `设置地图内边距失败: ${JSON.stringify(e)}`);
+      }
+    }
+  }
+
+  private applyLogoPadding() {
+    if (this.isMapReady && this.mapController) {
+      try {
+        this.mapController.setLogoPadding({
+          left: 0,
+          top: 0,
+          right: 0,
+          bottom: this.logoPaddingBottom
+        });
+      } catch (e) {
+        hilog.warn(DOMAIN_NUMBER, TAG, `设置地图 Logo 位置失败: ${JSON.stringify(e)}`);
       }
     }
   }
@@ -163,30 +198,50 @@ export struct NativeMapComponent {
     }
   }
 
-  /**
-   * 监听区域变化
-   */
   onRegionChangeProp() {
-    if (this.isMapReady && this.mapController) {
+    if (!this.isMapReady || !this.mapController) {
+      return;
+    }
+    if (this.mapRegion.latitude === this.lastRegionLat &&
+      this.mapRegion.longitude === this.lastRegionLng) {
+      return;
+    }
+    this.lastRegionLat = this.mapRegion.latitude;
+    this.lastRegionLng = this.mapRegion.longitude;
+    try {
+      const pos = this.mapController.getCameraPosition();
+      this.moveCamera(this.mapRegion.latitude, this.mapRegion.longitude, pos?.zoom ?? 15);
+    } catch (_) {
       this.moveCamera(this.mapRegion.latitude, this.mapRegion.longitude);
     }
   }
 
   // 注意：Map Kit 在 MapComponent 从组件树移除时自动清理内部事件监听器，无需手动 off
 
+  private async ensureCenterPin(): Promise<void> {
+    if (!this.showCenterPin || !this.mapController) return;
+    try {
+      const pos = this.mapController.getCameraPosition();
+      if (!pos?.target) return;
+      if (this.centerPinMarker) {
+        this.centerPinMarker.setPosition(pos.target);
+      } else {
+        this.centerPinMarker = await this.mapController.addMarker({
+          position: pos.target,
+          clickable: false,
+          icon: $rawfile('marker_center_pin.svg')
+        });
+      }
+    } catch (e) {
+      hilog.warn(DOMAIN_NUMBER, TAG, `中心图钉操作失败: ${JSON.stringify(e)}`);
+    }
+  }
+
   /** 放大地图（zoom + 1） */
   private doZoomIn(): void {
     if (!this.mapController) return;
     try {
-      const pos = this.mapController.getCameraPosition();
-      const newZoom = Math.min(20, pos.zoom + 1);
-      const cameraUpdate = map.newCameraPosition({
-        target: pos.target,
-        zoom: newZoom,
-        tilt: pos.tilt,
-        bearing: pos.bearing
-      });
-      this.mapController.animateCamera(cameraUpdate, 300);
+      this.mapController.animateCamera(map.zoomIn(), 300);
     } catch (e) {
       hilog.warn(DOMAIN_NUMBER, TAG, `放大地图失败: ${JSON.stringify(e)}`);
     }
@@ -196,15 +251,7 @@ export struct NativeMapComponent {
   private doZoomOut(): void {
     if (!this.mapController) return;
     try {
-      const pos = this.mapController.getCameraPosition();
-      const newZoom = Math.max(3, pos.zoom - 1);
-      const cameraUpdate = map.newCameraPosition({
-        target: pos.target,
-        zoom: newZoom,
-        tilt: pos.tilt,
-        bearing: pos.bearing
-      });
-      this.mapController.animateCamera(cameraUpdate, 300);
+      this.mapController.animateCamera(map.zoomOut(), 300);
     } catch (e) {
       hilog.warn(DOMAIN_NUMBER, TAG, `缩小地图失败: ${JSON.stringify(e)}`);
     }
@@ -243,7 +290,14 @@ export struct NativeMapComponent {
     this.mapController.setMinZoom(3);
 
     // 设置地图内边距，让控件避开覆盖层
+    this.lastPaddingTop = this.contentPaddingTop;
+    this.lastPaddingBottom = this.contentPaddingBottom;
     this.applyContentPadding();
+    this.applyLogoPadding();
+
+    // 记录初始 region，防止 @Watch 在后续父组件重渲染时误触发 moveCamera
+    this.lastRegionLat = this.mapRegion.latitude;
+    this.lastRegionLng = this.mapRegion.longitude;
 
     // 通知父组件地图控制能力已就绪
     if (this.onActionsReady) {
@@ -296,19 +350,24 @@ export struct NativeMapComponent {
     // 监听相机空闲（用户停止拖拽/缩放后触发）
     try {
       this.mapController.on("cameraIdle", () => {
-        if (this.onCameraIdle && this.mapController) {
-          try {
-            const cameraPosition = this.mapController.getCameraPosition();
-            if (cameraPosition && cameraPosition.target) {
+        if (!this.mapController) return;
+        try {
+          const cameraPosition = this.mapController.getCameraPosition();
+          if (cameraPosition?.target) {
+            // 更新中心图钉到相机目标位置
+            if (this.showCenterPin && this.centerPinMarker) {
+              this.centerPinMarker.setPosition(cameraPosition.target);
+            }
+            if (this.onCameraIdle) {
               this.onCameraIdle({
                 latitude: cameraPosition.target.latitude,
                 longitude: cameraPosition.target.longitude,
                 zoom: cameraPosition.zoom
               });
             }
-          } catch (e) {
-            hilog.warn(DOMAIN_NUMBER, TAG, `cameraIdle 获取相机位置失败: ${JSON.stringify(e)}`);
           }
+        } catch (e) {
+          hilog.warn(DOMAIN_NUMBER, TAG, `cameraIdle 处理失败: ${JSON.stringify(e)}`);
         }
       });
     } catch (e) {
@@ -327,25 +386,22 @@ export struct NativeMapComponent {
 
     // 初始渲染标记
     this.updateMarkers();
+
+    // 创建中心图钉
+    this.ensureCenterPin();
   }
 
   private async updateMarkers() {
     if (!this.mapController) return;
-    
-    // 简单实现：清除所有旧标记，添加新标记
-    // 生产环境应做 Diff 更新以提升性能
-    
-    // 1. 清除旧标记
+
     try {
-        // 由于没有直接 clearAll 接口，或者需要遍历清除
-        // 这里简化处理，如果 Map Kit 支持 clear 则调用，否则遍历
-        this.mapController.clear(); 
-        this.createdMarkers.clear();
-    } catch(e) {
-        hilog.warn(DOMAIN_NUMBER, TAG, `清除标记失败: ${JSON.stringify(e)}`);
+      this.mapController.clear();
+      this.createdMarkers.clear();
+      this.centerPinMarker = null;
+    } catch (e) {
+      hilog.warn(DOMAIN_NUMBER, TAG, `清除标记失败: ${JSON.stringify(e)}`);
     }
 
-    // 2. 添加新标记
     for (const markerData of this.markers) {
       try {
         const markerOptions: mapCommon.MarkerOptions = {
@@ -358,13 +414,15 @@ export struct NativeMapComponent {
           clickable: true,
           icon: this.getMarkerIcon(markerData.type)
         };
-        
         const marker = await this.mapController.addMarker(markerOptions);
         this.createdMarkers.set(markerData.id, marker);
       } catch (error) {
         hilog.error(DOMAIN_NUMBER, TAG, `添加标记失败 ${markerData.id}: ${JSON.stringify(error)}`);
       }
     }
+
+    // clear() 会移除所有标记，需要重建中心图钉
+    await this.ensureCenterPin();
   }
 
   private getMarkerIcon(type?: string): Resource {

@@ -9,10 +9,12 @@ import { SystemToast } from '../../../components/SystemToast';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 
 @Component
 export struct AdvancedSettingsPage {
   pathStack: NavPathStack = new NavPathStack();
+  @StorageLink('safeAreaTop') safeAreaTop: number = 0;
 
   aboutToAppear(): void {
     SystemUiController.useSurface({
@@ -45,33 +47,38 @@ export struct AdvancedSettingsPage {
         Blank().width(48)
       }
       .width('100%')
-      .height(56)
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
+        bottom: DesignConstants.SPACING.SM
+      })
       .backgroundColor($r('app.color.bg_secondary'))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
-      List({ space: 16 }) {
-        ListItemGroup() {
-          ListItem() {
-            this.SettingItem('清理缓存', () => {
-              SystemToast.show('缓存已清理', this.getUIContext());
-            })
-          }
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
+      Column() {
+        Column() {
+          this.SettingItem('清理缓存', '清除本地缓存数据', () => {
+            SystemToast.show('缓存已清理', this.getUIContext());
+          })
 
-          ListItem() {
-            this.SettingItem('调试面板', () => {
-              AppRouter.push(PageNames.DEBUG_PANEL);
-            })
-          }
-          .backgroundColor($r('sys.color.ohos_id_color_background'))
+          Divider()
+            .strokeWidth(0.5)
+            .color($r('sys.color.ohos_id_color_list_separator'))
+            .margin({ left: 16, right: 16 })
+
+          this.SettingItem('调试面板', '网络诊断、状态检查', () => {
+            AppRouter.push(PageNames.DEBUG_PANEL);
+          })
         }
+        .backgroundColor($r('app.color.bg_secondary'))
         .borderRadius(DesignConstants.RADIUS.LG)
-        .divider({ strokeWidth: 1, color: $r('sys.color.ohos_id_color_component_normal'), startMargin: 16, endMargin: 16 })
-        .margin({ left: 16, right: 16, top: 16 })
+        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+          top: DesignConstants.SPACING.LG })
       }
       .width('100%')
       .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
       .backgroundColor($r('app.color.bg_primary'))
     }
     .width('100%')
@@ -85,19 +92,30 @@ export struct AdvancedSettingsPage {
   }
 
   @Builder
-  SettingItem(title: string, onClick: () => void) {
+  SettingItem(title: string, subtitle: string, onClick: () => void) {
     Row() {
-      Text(title)
-        .fontSize(16)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
-        .layoutWeight(1)
-      
-      Text('>')
-        .fontSize(16)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+      Column({ space: 4 }) {
+        Text(title)
+          .fontSize(DesignConstants.FONT.SIZE.LG)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+
+        if (subtitle) {
+          Text(subtitle)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        }
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+
+      Text() {
+        SymbolSpan($r(AppIcon.ARROW_RIGHT))
+          .fontSize(16)
+          .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+      }
     }
     .width('100%')
-    .padding(16)
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
     .onClick(onClick)
   }
 }

@@ -120,7 +120,7 @@ export struct LocationBar {
               .height(10)
               .borderRadius(5)
               .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-              .border({ width: 2, color: $r('sys.color.ohos_id_color_background') })
+              .border({ width: 2, color: $r('app.color.bg_secondary') })
               .shadow({ radius: 4, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 1 })
           }
           .width(28)
@@ -200,7 +200,7 @@ export struct LocationBar {
   }
 
   private openLocationPicker(): void {
-    AppRouter.push(PageNames.ANCHOR_PICK);
+    AppRouter.push(PageNames.LOCATION_PICKER);
   }
 
   private navigateToSearch(): void {

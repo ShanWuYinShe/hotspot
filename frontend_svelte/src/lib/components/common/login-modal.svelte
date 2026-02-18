@@ -48,17 +48,20 @@
 			usersService.getMyProfile()
 		]);
 
-		if (!isSuccess(statusRes) || !statusRes.data.is_valid || !statusRes.data.expires_at) {
+		if (!isSuccess(statusRes) || !statusRes.data.is_valid) {
 			return false;
 		}
 		if (!isSuccess(profileRes)) {
 			return false;
 		}
 
+		const expiresAt =
+			statusRes.data.expires_at ?? new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
 		authStore.login({
 			user_id: profileRes.data.user_id,
 			user_type: profileRes.data.user_type,
-			access_token_expires_at: statusRes.data.expires_at
+			access_token_expires_at: expiresAt
 		});
 		authStore.setProfile(profileRes.data);
 		await syncLocationAfterAuth();
