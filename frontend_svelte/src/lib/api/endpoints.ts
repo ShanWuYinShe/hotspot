@@ -1,7 +1,7 @@
 /**
  * API 路径常量
  *
- * 严格遵循 spec/openapi/ 下的 OpenAPI 3.1 规范
+ * 严格遵循 spec/ 下的 API 规范文档
  * 所有端点统一使用 POST /api/v1/ 前缀
  */
 
@@ -149,6 +149,8 @@ export const GROUPS = {
 		LIST: `${API_BASE}/groups/members/list`,
 		SEARCH: `${API_BASE}/groups/members/search`,
 		INVITE: `${API_BASE}/groups/members/invite`,
+		INVITES_LIST: `${API_BASE}/groups/members/invites/list`,
+		INVITES_REVOKE: `${API_BASE}/groups/members/invites/revoke`,
 		SET_ROLE: `${API_BASE}/groups/members/set_role`,
 		MUTE: `${API_BASE}/groups/members/mute`,
 		UNMUTE: `${API_BASE}/groups/members/unmute`,
@@ -232,7 +234,7 @@ export const MAP = {
 export const SHARE = {
 	CREATE: `${API_BASE}/share/create`,
 	GET: `${API_BASE}/share/get`,
-	// ME_LIST deferred: share/me/list
+	ME_LIST: `${API_BASE}/share/me/list`,
 	REVOKE: `${API_BASE}/share/revoke`
 } as const;
 
@@ -246,7 +248,7 @@ export const MEDIA = {
 } as const;
 
 // ============================================================================
-// 通知 API（spec/api_spec_notification.mdc）
+// 通知 API（spec/api_spec_notification.md）
 // ============================================================================
 export const NOTIFICATIONS = {
 	LIST: `${API_BASE}/notifications/list`,

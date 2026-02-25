@@ -268,11 +268,12 @@ export struct SystemIcon {
 @Component
 export struct IconButton {
   @Prop icon: AppIcon;
-  @Prop iconSize: IconSize = IconSize.MEDIUM;
+  @Prop iconSize: IconSize = IconSize.LARGE;
   @Prop iconColor: string | ResourceColor = $r('app.color.brand_primary');
   @Prop bgColor: ResourceColor = $r('app.color.bg_tertiary'); // Default background
-  @Prop radius: number = 8;
-  @Prop paddingSize: number = 8;
+  @Prop radius: number = 24;
+  @Prop paddingSize: number = 12;
+  @Prop minButtonSize: number = 48;
   onButtonClick?: () => void;
 
   build() {
@@ -287,6 +288,8 @@ export struct IconButton {
     .backgroundColor(this.bgColor)
     .borderRadius(this.radius)
     .padding(this.paddingSize)
+    .width(this.minButtonSize)
+    .height(this.minButtonSize)
     .onClick(() => {
       if (this.onButtonClick) {
         this.onButtonClick();

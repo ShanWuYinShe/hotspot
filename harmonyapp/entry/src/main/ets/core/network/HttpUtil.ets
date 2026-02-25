@@ -15,7 +15,7 @@ import common from '@ohos.app.ability.common';
 import util from '@ohos.util';
 import { API_BASE_URL, StorageKeys } from '../../constants/AppConstants';
 import { ApiEndpoints } from '../config/ApiEndpoints';
-import { ApiResponse, AuthData, HealthStatus, UploadCategory, UploadedMedia } from '../types/api';
+import { ApiResponse, AuthData, HealthStatus, MediaCategory, UploadedMedia } from '../types/api';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import {
@@ -36,6 +36,10 @@ const MUST_IDEMPOTENT_ENDPOINTS: string[] = [
   ApiEndpoints.AUTH.REQUEST_PASSWORD_RESET,
   ApiEndpoints.AUTH.RESET_PASSWORD,
   ApiEndpoints.AUTH.ME.CHANGE_PASSWORD,
+  ApiEndpoints.USER.ME.EMAIL_REQUEST_CHANGE,
+  ApiEndpoints.USER.ME.EMAIL_CONFIRM_CHANGE,
+  ApiEndpoints.USER.ME.PHONE_REQUEST_CHANGE,
+  ApiEndpoints.USER.ME.PHONE_CONFIRM_CHANGE,
   // 消息
   ApiEndpoints.CHAT.PRIVATE_MESSAGES.SEND,
   ApiEndpoints.CHAT.GROUP_MESSAGES.SEND,
@@ -47,6 +51,7 @@ const MUST_IDEMPOTENT_ENDPOINTS: string[] = [
   // 群组
   ApiEndpoints.GROUP.CREATE,
   ApiEndpoints.GROUP.ME.JOIN,
+  ApiEndpoints.GROUP.MEMBERS.INVITE,
   ApiEndpoints.GROUP.MEMBERS.BAN,
   ApiEndpoints.GROUP.ANNOUNCEMENTS.CREATE,
   ApiEndpoints.GROUP.APPLICATIONS.APPROVE,

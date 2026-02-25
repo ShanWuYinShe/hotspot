@@ -19,10 +19,18 @@ pub async fn me(
     user: AuthenticatedUser,
     Json(req): Json<MyPrivateChatsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<PrivateChatListItem>>>> {
-    let limit = Validator::validate_limit(req.limit, crate::constants::MAX_PAGE_LIMIT)? as i64;
+    let pagination = req.pagination.as_ref();
+    let limit = Validator::validate_limit(
+        pagination.and_then(|p| p.limit),
+        crate::constants::MAX_PAGE_LIMIT,
+    )? as i64;
     let (items, _, next_cursor) = state
         .private_chat_service
-        .get_list_with_details(user.user_id, limit, req.cursor)
+        .get_list_with_details(
+            user.user_id,
+            limit,
+            pagination.and_then(|p| p.cursor.clone()),
+        )
         .await?;
 
     Ok(Json(ApiResponse::success(PaginatedData {

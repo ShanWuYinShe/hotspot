@@ -1,6 +1,6 @@
 /**
  * API 客户端
- * 严格按照 api_spec_*.mdc 定义的 API 端点实现
+ * 严格按照 api_spec_*.md 定义的 API 端点实现
  */
 
 import { HttpUtil } from '../network/HttpUtil';
@@ -15,7 +15,7 @@ import {
   PresignedUpload,
   CompleteUploadRequest,
   UploadedMedia,
-  UploadCategory,
+  MediaCategory,
   BatchPresignUploadRequest,
   BatchPresignedUpload,
 
@@ -182,6 +182,7 @@ import {
   ClientConfig,
   SystemAnnouncementItem,
   AnnouncementListRequest,
+  ApiVersionMeta,
 
   // 分享
   CreateShareRequest,
@@ -189,6 +190,8 @@ import {
   GetShareRequest,
   ShareDetail,
   RevokeShareRequest,
+  ShareListRequest,
+  ShareListItem,
 
   // Response 包装类型
   SystemAnnouncementListData,
@@ -199,7 +202,7 @@ import {
   NotificationItem,
   NotificationListRequest,
   UnreadCountResult,
-  MarkNotificationsReadRequest,
+  MarkAsReadRequest,
 } from '../types/api';
 
 // 空请求体类
@@ -223,7 +226,7 @@ export class ApiClient {
   static async uploadFile(
     context: common.UIAbilityContext,
     fileUri: string,
-    category: UploadCategory
+    category: MediaCategory
   ): Promise<UploadedMedia> {
     let file: fs.File | null = null;
     let size = 0;
@@ -298,6 +301,10 @@ export class ApiClient {
 
   static async healthCheck(): Promise<ApiResponse<HealthStatus>> {
     return HttpUtil.post<ApiResponse<HealthStatus>, EmptyRequest>(ApiEndpoints.SYSTEM.HEALTH, new EmptyRequest());
+  }
+
+  static async getSystemMeta(): Promise<ApiResponse<ApiVersionMeta>> {
+    return HttpUtil.post<ApiResponse<ApiVersionMeta>, EmptyRequest>(ApiEndpoints.SYSTEM.GET_META, new EmptyRequest());
   }
 
   static async getClientConfig(): Promise<ApiResponse<ClientConfig>> {
@@ -786,5 +793,27 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<void>, RevokeShareRequest>(ApiEndpoints.SHARE.REVOKE, params);
   }
 
-  // ⏳ 延期实现: listMyShares (share/me/list)
+  static async listMyShares(params?: ShareListRequest): Promise<ApiResponse<PaginatedData<ShareListItem>>> {
+    const payload: ShareListRequest = params ?? {};
+    return HttpUtil.post<ApiResponse<PaginatedData<ShareListItem>>, ShareListRequest>(ApiEndpoints.SHARE.ME.LIST, payload);
+  }
+
+  // ==================== 通知 API ====================
+
+  static async listNotifications(params?: NotificationListRequest): Promise<ApiResponse<PaginatedData<NotificationItem>>> {
+    const payload: NotificationListRequest = params ?? {};
+    return HttpUtil.post<ApiResponse<PaginatedData<NotificationItem>>, NotificationListRequest>(ApiEndpoints.NOTIFICATIONS.LIST, payload);
+  }
+
+  static async getUnreadNotifications(): Promise<ApiResponse<UnreadCountResult>> {
+    return HttpUtil.post<ApiResponse<UnreadCountResult>, EmptyRequest>(ApiEndpoints.NOTIFICATIONS.UNREAD_COUNT, new EmptyRequest());
+  }
+
+  static async markNotificationsRead(params: MarkAsReadRequest): Promise<ApiResponse<void>> {
+    return HttpUtil.post<ApiResponse<void>, MarkAsReadRequest>(ApiEndpoints.NOTIFICATIONS.MARK_AS_READ, params);
+  }
+
+  static async markAllNotificationsRead(): Promise<ApiResponse<void>> {
+    return HttpUtil.post<ApiResponse<void>, EmptyRequest>(ApiEndpoints.NOTIFICATIONS.MARK_ALL_READ, new EmptyRequest());
+  }
 }

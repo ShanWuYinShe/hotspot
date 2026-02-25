@@ -18,7 +18,7 @@ pub struct MomentImage {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub height: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub content_type: Option<String>,
+    pub mime_type: Option<String>,
 }
 
 /// 我的瞬间互动状态 - API 文档: MyMomentState

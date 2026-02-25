@@ -60,8 +60,19 @@ pub async fn health(
         SystemHealthStatus::Unhealthy
     };
 
-    Ok(Json(ApiResponse::success(HealthCheckData {
-        status,
-        timestamp: chrono::Utc::now().to_rfc3339(),
-    })))
+    let timestamp = chrono::Utc::now().to_rfc3339();
+    if status == SystemHealthStatus::Healthy {
+        return Ok(Json(ApiResponse::success(HealthCheckData {
+            status,
+            timestamp,
+        })));
+    }
+
+    let message = match status {
+        SystemHealthStatus::Degraded => "系统部分依赖异常，请稍后重试".to_string(),
+        SystemHealthStatus::Unhealthy => "系统不可用，请稍后重试".to_string(),
+        SystemHealthStatus::Healthy => unreachable!(),
+    };
+
+    Ok(Json(ApiResponse::error(10600, message)))
 }

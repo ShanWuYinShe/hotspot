@@ -17,7 +17,7 @@ use crate::{
         private_chat_permission::PrivateChatPermissionResolver,
         stranger_message_limiter::StrangerMessageLimiter,
     },
-    types::enums::{CantMessageReason, MessageType, UserPresenceStatus},
+    types::enums::{MessageBlockedReason, MessageType, UserPresenceStatus},
 };
 
 use chrono::{DateTime, Utc};
@@ -253,7 +253,7 @@ impl PrivateChatService {
                 .evaluate(current_user_id, other_user_id, user_map.get(&other_user_id))
                 .await?;
             let mut can_message = permission.can_message;
-            let mut cant_message_reason = permission.reason;
+            let mut message_blocked_reason = permission.reason;
             if can_message && !permission.is_mutual_friend {
                 if self
                     .stranger_limiter
@@ -261,7 +261,7 @@ impl PrivateChatService {
                     .await?
                 {
                     can_message = false;
-                    cant_message_reason = Some(CantMessageReason::StrangerLimit);
+                    message_blocked_reason = Some(MessageBlockedReason::StrangerQuotaExceeded);
                 }
             }
 
@@ -274,7 +274,7 @@ impl PrivateChatService {
                 is_pinned,
                 presence_status,
                 can_message: Some(can_message),
-                cant_message_reason,
+                message_blocked_reason,
             });
         }
 
@@ -337,7 +337,7 @@ impl PrivateChatService {
             .evaluate(current_user_id, target_user_id, other_user.as_ref())
             .await?;
         let mut can_message = permission.can_message;
-        let mut cant_message_reason = permission.reason;
+        let mut message_blocked_reason = permission.reason;
 
         if can_message && !permission.is_mutual_friend {
             if self
@@ -346,7 +346,7 @@ impl PrivateChatService {
                 .await?
             {
                 can_message = false;
-                cant_message_reason = Some(CantMessageReason::StrangerLimit);
+                message_blocked_reason = Some(MessageBlockedReason::StrangerQuotaExceeded);
             }
         }
 
@@ -454,7 +454,7 @@ impl PrivateChatService {
             is_pinned,
             presence_status,
             can_message: Some(can_message),
-            cant_message_reason,
+            message_blocked_reason,
         };
 
         let mut message_items = Vec::with_capacity(messages.len());

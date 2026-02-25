@@ -1,6 +1,7 @@
 {
+  "name": "hotspot",
   "modelVersion": "6.0.2",
-  "description": "Please describe the basic information.",
+  "description": "HotSpot - 基于地理位置的社交应用",
   "dependencies": {
   },
   "devDependencies": {

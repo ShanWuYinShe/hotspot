@@ -6,7 +6,10 @@ use crate::{
     error::AppError,
     repositories::{
         group::{group_repo::GroupRepository, member_repo::GroupMemberRepository},
-        user::{blocks_repo::UserBlocksRepository, user_repo::UserRepository},
+        user::{
+            blocks_repo::UserBlocksRepository, settings_repo::UserSettingsRepository,
+            user_repo::UserRepository,
+        },
     },
     state::AppState,
     types::enums::SubscriptionFailureReason,
@@ -176,6 +179,29 @@ async fn subscribe_to_user(
         }
     };
     if blocked {
+        return Some(build_failed_id(
+            source_id,
+            SubscriptionFailureReason::Forbidden,
+        ));
+    }
+    let settings_repo = UserSettingsRepository::new(state.db.clone());
+    let presence_visible = match settings_repo.find_by_user_id(target_user_id).await {
+        Ok(settings) => settings
+            .and_then(|row| {
+                row.privacy_settings
+                    .get("presence_visible")
+                    .and_then(|value| value.as_bool())
+            })
+            .unwrap_or(true),
+        Err(_) => {
+            return Some(build_failed_id(
+                source_id,
+                SubscriptionFailureReason::InternalError,
+            ));
+        }
+    };
+
+    if target_user_id != user_id && !presence_visible {
         return Some(build_failed_id(
             source_id,
             SubscriptionFailureReason::Forbidden,

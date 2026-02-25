@@ -1,9 +1,9 @@
 /**
  * WebSocket 实时通信类型定义
- * 严格遵循 api_spec_websocket.mdc 定义
+ * 严格遵循 api_spec_websocket.md 定义
  */
 
-import { UserInfo, GroupInfo, ClientType, MessageType, MessageMedia, MessageReplyTo, GroupAnnouncementItem, MomentSummary, UserSettings } from './api';
+import { UserInfo, GroupInfo, ClientType, MessageType, MessageMedia, MessageReplyTo, GroupAnnouncementItem, MomentSummary, UserSettings, FollowSource, GroupJoinMethod, Location } from './api';
 
 // ============================================================================
 // 订阅管理类型
@@ -16,7 +16,7 @@ export interface SubscriptionItem {
 
 export interface FailedSubscriptionId {
   subscription_id: string
-  reason: 'invalid' | 'denied' | 'error'
+  reason: 'invalid' | 'denied' | 'limit_exceeded' | 'error'
 }
 
 export type SubscriptionOperation = 'subscribe' | 'unsubscribe' | 'set';
@@ -127,7 +127,7 @@ export interface PingEvent {
 }
 
 export interface SetSubscriptionsPayload {
-  client_msg_id: string
+  client_request_id: string
   operation: SubscriptionOperation
   type: 'group' | 'user'
   ids: string[]
@@ -139,7 +139,7 @@ export interface SetSubscriptionsEvent {
 }
 
 export interface GetSubscriptionsPayload {
-  client_msg_id: string
+  client_request_id: string
 }
 
 export interface GetSubscriptionsEvent {
@@ -174,7 +174,6 @@ export interface GroupTypingEvent {
 export interface ServerWebSocketEvent {
   type: ServerEventType
   payload: Object
-  event_id: string
 }
 
 // ----- 连接管理事件 -----
@@ -235,9 +234,9 @@ export interface UserOfflineEvent {
 // ----- 关注关系事件 -----
 
 export interface NewFollowerPayload {
-  user: UserInfo
+  actor: UserInfo
   followed_at: string
-  source?: string
+  source?: FollowSource
   source_moment_id?: string
 }
 
@@ -247,7 +246,7 @@ export interface NewFollowerEvent {
 }
 
 export interface MutualFollowPayload {
-  user: UserInfo
+  actor: UserInfo
   mutual_at: string
 }
 
@@ -261,7 +260,7 @@ export interface MutualFollowEvent {
 export interface MomentLikedPayload {
   moment_id: string
   moment_summary: MomentSummary
-  user: UserInfo
+  actor: UserInfo
   liked_at: string
 }
 
@@ -274,7 +273,7 @@ export interface MomentCommentedPayload {
   moment_id: string
   moment_summary: MomentSummary
   comment_id: string
-  user: UserInfo
+  actor: UserInfo
   content: string
   commented_at: string
 }
@@ -287,9 +286,9 @@ export interface MomentCommentedEvent {
 export interface CommentLikedPayload {
   comment_id: string
   moment_id: string
-  moment_summary?: MomentSummary
-  comment_preview?: string
-  user: UserInfo
+  moment_summary: MomentSummary
+  comment_preview: string
+  actor: UserInfo
   liked_at: string
 }
 
@@ -300,10 +299,11 @@ export interface CommentLikedEvent {
 
 export interface CommentReplyPayload {
   moment_id: string
+  moment_summary: MomentSummary
   comment_id: string
-  reply_to_content: string
+  replied_comment_preview: string
   reply_id: string
-  user: UserInfo
+  actor: UserInfo
   content: string
   replied_at: string
 }
@@ -317,9 +317,9 @@ export interface MessageMentionedPayload {
   target_type: 'moment' | 'comment'
   moment_id: string
   comment_id?: string
-  moment_summary?: MomentSummary
+  moment_summary: MomentSummary
   comment_preview?: string
-  user: UserInfo
+  actor: UserInfo
   mentioned_at: string
 }
 
@@ -412,7 +412,7 @@ export interface PrivateMessageRecalledEvent {
 
 export interface PrivateMessageReadPayload {
   target_user_id: string
-  up_to: string
+  up_to_message_id: string
   reader_id: string
   read_at: string
 }
@@ -518,8 +518,8 @@ export interface GroupMemberLeftEvent {
 export interface GroupMemberRemovedPayload {
   group_id: string
   user: UserInfo
-  removed_by: string
-  reason?: string
+  removed_by: UserInfo
+  reason?: 'kicked' | 'banned'
   removed_at: string
   member_count: number
 }
@@ -532,7 +532,7 @@ export interface GroupMemberRemovedEvent {
 export interface GroupMemberMutedPayload {
   group_id: string
   user: UserInfo
-  muted_by: string
+  muted_by: UserInfo
   muted_until: string
   duration_minutes: number
   muted_at: string
@@ -546,7 +546,7 @@ export interface GroupMemberMutedEvent {
 export interface GroupMemberUnmutedPayload {
   group_id: string
   user: UserInfo
-  unmuted_by: string
+  unmuted_by: UserInfo
   unmuted_at: string
 }
 
@@ -562,9 +562,21 @@ export interface GroupAnnouncementCreatedEvent {
   payload: GroupAnnouncementCreatedPayload
 }
 
+export interface GroupUpdatedFields {
+  name?: string
+  avatar_url?: string
+  description?: string
+  tags?: string[]
+  join_method?: GroupJoinMethod
+  is_searchable?: boolean
+  max_members?: number
+  has_password?: boolean
+  location?: Location
+}
+
 export interface GroupUpdatedPayload {
   group_id: string
-  updated_fields: Record<string, Object>
+  updated_fields: GroupUpdatedFields
   updated_by: string
   updated_at: string
 }
@@ -577,7 +589,7 @@ export interface GroupUpdatedEvent {
 export interface GroupDismissedPayload {
   group_id: string
   dismissed_at: string
-  reason?: string
+  reason?: 'owner_dismissed' | 'policy_violation'
 }
 
 export interface GroupDismissedEvent {
@@ -683,7 +695,7 @@ export interface SelfRelationSyncEvent {
 // ----- 系统/订阅事件 -----
 
 export interface SubscribeAckPayload {
-  client_msg_id: string
+  client_request_id: string
   operation: SubscriptionOperation
   type: 'group' | 'user'
   ids: string[]
@@ -698,7 +710,7 @@ export interface SubscribeAckEvent {
 }
 
 export interface SubscriptionsSnapshotPayload {
-  client_msg_id: string
+  client_request_id: string
   user_ids: string[]
   group_ids: string[]
 }
@@ -825,7 +837,7 @@ export function createSetSubscriptionsEvent(
   return {
     type: 'SetSubscriptions',
     payload: {
-      client_msg_id: clientMsgId ?? generateClientMsgId(),
+      client_request_id: clientMsgId ?? generateClientMsgId(),
       operation: operation,
       type: item.type,
       ids: item.ids
@@ -837,7 +849,7 @@ export function createGetSubscriptionsEvent(clientMsgId?: string): GetSubscripti
   return {
     type: 'GetSubscriptions',
     payload: {
-      client_msg_id: clientMsgId ?? generateClientMsgId()
+      client_request_id: clientMsgId ?? generateClientMsgId()
     }
   }
 }
@@ -866,53 +878,9 @@ export function createGroupTypingEvent(
   }
 }
 
-/**
- * 已处理的事件ID集合（用于去重，维护最近1000个）
- */
-const processedEventIds: Set<string> = new Set()
-const MAX_PROCESSED_EVENT_IDS = 1000
-
-function isEventProcessed(eventId: string): boolean {
-  return processedEventIds.has(eventId)
-}
-
-function markEventProcessed(eventId: string): void {
-  if (processedEventIds.size >= MAX_PROCESSED_EVENT_IDS) {
-    const firstId = processedEventIds.values().next().value as Object
-    processedEventIds.delete(firstId as string)
-  }
-  processedEventIds.add(eventId)
-}
-
-/**
- * 解析服务端事件（支持 event_id 去重）
- */
 export function parseServerEvent(data: string): ServerEvent | null {
   try {
-    const raw = JSON.parse(data) as Record<string, Object>
-
-    // 检查是否有 event_id（去重）
-    if (raw['event_id']) {
-      const eventId = raw['event_id'] as string
-
-      if (isEventProcessed(eventId)) {
-        console.warn(`重复事件已忽略: ${eventId}`)
-        return null
-      }
-
-      markEventProcessed(eventId)
-    }
-
-    // 转换为 ServerEvent（移除 event_id）
-    const event: Record<string, Object> = {};
-    const rawKeys = Object.keys(raw);
-    for (let i = 0; i < rawKeys.length; i++) {
-      const key = rawKeys[i];
-      if (key !== 'event_id') {
-        event[key] = raw[key];
-      }
-    }
-    return (event as Object) as ServerEvent
+    return (JSON.parse(data) as Object) as ServerEvent
   } catch (e) {
     console.error('Failed to parse WebSocket message:', e)
     return null

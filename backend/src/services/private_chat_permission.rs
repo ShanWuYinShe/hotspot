@@ -3,7 +3,7 @@ use crate::repositories::user::user_repo::UserRow;
 use crate::repositories::user_blocks_repo::UserBlocksRepository;
 use crate::repositories::user_follows_repo::UserFollowsRepository;
 use crate::repositories::user_settings_repo::{UserSettingsRepository, UserSettingsRow};
-use crate::types::enums::{CantMessageReason, PrivateChatPermission, UserStatus};
+use crate::types::enums::{MessageBlockedReason, PrivateChatPermission, UserStatus};
 use tokio::try_join;
 
 #[derive(Clone)]
@@ -16,7 +16,7 @@ pub struct PrivateChatPermissionResolver {
 #[derive(Debug, Clone)]
 pub struct PermissionCheck {
     pub can_message: bool,
-    pub reason: Option<CantMessageReason>,
+    pub reason: Option<MessageBlockedReason>,
     pub is_mutual_friend: bool,
 }
 
@@ -42,7 +42,7 @@ impl PrivateChatPermissionResolver {
         if current_user_id == target_user_id {
             return Ok(PermissionCheck {
                 can_message: false,
-                reason: Some(CantMessageReason::Privacy),
+                reason: Some(MessageBlockedReason::Privacy),
                 is_mutual_friend: false,
             });
         }
@@ -51,14 +51,14 @@ impl PrivateChatPermissionResolver {
             if user.status == UserStatus::Banned {
                 return Ok(PermissionCheck {
                     can_message: false,
-                    reason: Some(CantMessageReason::AccountSuspended),
+                    reason: Some(MessageBlockedReason::AccountSuspended),
                     is_mutual_friend: false,
                 });
             }
         } else {
             return Ok(PermissionCheck {
                 can_message: false,
-                reason: Some(CantMessageReason::AccountSuspended),
+                reason: Some(MessageBlockedReason::AccountSuspended),
                 is_mutual_friend: false,
             });
         }
@@ -74,7 +74,7 @@ impl PrivateChatPermissionResolver {
         {
             return Ok(PermissionCheck {
                 can_message: false,
-                reason: Some(CantMessageReason::Privacy),
+                reason: Some(MessageBlockedReason::Privacy),
                 is_mutual_friend: false,
             });
         }
@@ -102,7 +102,7 @@ impl PrivateChatPermissionResolver {
             }),
             PrivateChatPermission::Nobody => Ok(PermissionCheck {
                 can_message: false,
-                reason: Some(CantMessageReason::Privacy),
+                reason: Some(MessageBlockedReason::Privacy),
                 is_mutual_friend,
             }),
             PrivateChatPermission::Friends => {
@@ -115,7 +115,7 @@ impl PrivateChatPermissionResolver {
                 } else {
                     Ok(PermissionCheck {
                         can_message: false,
-                        reason: Some(CantMessageReason::Privacy),
+                        reason: Some(MessageBlockedReason::Privacy),
                         is_mutual_friend: false,
                     })
                 }

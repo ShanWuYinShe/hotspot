@@ -2,7 +2,7 @@
 
 use serde::Deserialize;
 
-use crate::dto::request::common::GeoPoint;
+use crate::dto::request::common::{GeoPoint, PaginationParams};
 use crate::types::enums::{DismissTargetType, FeedSource, GroupRole};
 
 #[derive(Debug, Deserialize)]
@@ -10,24 +10,21 @@ pub struct FeedMomentsRequest {
     pub source: FeedSource,
     pub reference_point: GeoPoint,
     pub radius: Option<i32>,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct FeedGroupsRequest {
     pub reference_point: GeoPoint,
     pub radius: Option<i32>,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct FeedUsersRequest {
     pub reference_point: GeoPoint,
     pub radius: Option<i32>,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -48,7 +45,6 @@ pub struct SearchSuggestRequest {
     pub reference_point: GeoPoint,
     pub types: Option<Vec<SearchSuggestType>>,
     pub radius: Option<i32>,
-    pub limit: Option<i32>,
 }
 
 /// 统一用户搜索请求 - POST /api/v1/users/search
@@ -59,8 +55,7 @@ pub struct SearchUsersRequest {
     pub radius: Option<f64>,
     pub sort_by: Option<String>,
     pub reference_point: GeoPoint,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 /// 统一群组搜索请求 - POST /api/v1/groups/search
@@ -71,8 +66,7 @@ pub struct SearchGroupsRequest {
     pub radius: Option<f64>,
     pub sort_by: Option<String>,
     pub reference_point: GeoPoint,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 /// 统一瞬间搜索请求 - POST /api/v1/moments/search
@@ -83,8 +77,7 @@ pub struct SearchMomentsRequest {
     pub radius: Option<f64>,
     pub sort_by: Option<String>,
     pub reference_point: GeoPoint,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 /// 群组成员搜索请求 - POST /api/v1/groups/members/search
@@ -93,8 +86,7 @@ pub struct SearchGroupMembersRequest {
     pub group_id: String,
     pub keyword: String,
     pub role: Option<GroupRole>,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 #[derive(Debug, Deserialize)]

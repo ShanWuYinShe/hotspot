@@ -183,7 +183,7 @@ pub async fn set_role_permissions(
     let role_id = Validator::parse_uuid(&req.role_id, "角色ID")?;
     state
         .admin_rbac_service
-        .set_role_permissions(role_id, &req.permission_keys)
+        .set_role_permissions(user.user_id, role_id, &req.permission_keys)
         .await?;
     let details = serde_json::json!({
         "permission_keys": req.permission_keys,
@@ -213,7 +213,10 @@ pub async fn list_admins(
 ) -> Result<Json<ApiResponse<PaginatedData<AdminAdminItem>>>> {
     let (rows, next_cursor) = state
         .admin_rbac_service
-        .list_admins(req.limit, req.cursor)
+        .list_admins(
+            req.pagination.as_ref().and_then(|p| p.limit),
+            req.pagination.and_then(|p| p.cursor),
+        )
         .await?;
     let items = rows
         .into_iter()

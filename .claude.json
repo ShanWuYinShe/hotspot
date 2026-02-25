@@ -1,0 +1,52 @@
+{
+  "project": {
+    "name": "HotSpot",
+    "description": "基于地理位置的社交应用 (Monorepo)",
+    "languages": ["Rust", "TypeScript", "ArkTS"]
+  },
+  "structure": {
+    "backend": {
+      "path": "backend",
+      "language": "Rust",
+      "testCommand": "cargo test",
+      "buildCommand": "cargo build --release",
+      "typecheckCommand": "cargo check"
+    },
+    "frontend": {
+      "path": "frontend_svelte",
+      "language": "TypeScript",
+      "testCommand": "pnpm test",
+      "buildCommand": "pnpm build",
+      "typecheckCommand": "pnpm check"
+    },
+    "harmony": {
+      "path": "harmonyapp",
+      "language": "ArkTS",
+      "note": "Agent 禁止执行 hvigorw（编译）和 ohpm（依赖安装）命令，须由用户手动运行；codelinter 可由 Agent 直接执行"
+    }
+  },
+  "docs": {
+    "apiSpec": "spec",
+    "agents": "AGENTS.md"
+  },
+  "deployment": {
+    "path": "deploy",
+    "composeFile": "deploy/docker-compose.yml"
+  },
+  "commands": {
+    "install": {
+      "backend": "cd backend && cargo build",
+      "frontend": "cd frontend_svelte && pnpm install",
+      "harmony": "echo '请手动执行: cd harmonyapp && ohpm install --all && hvigorw assembleHap'",
+      "all": "cd backend && cargo build && cd ../frontend_svelte && pnpm install"
+    },
+    "dev": {
+      "backend": "cd backend && cargo run",
+      "frontend": "cd frontend_svelte && pnpm dev"
+    },
+    "typecheck": {
+      "backend": "cd backend && cargo check",
+      "frontend": "cd frontend_svelte && pnpm check"
+    }
+  }
+}

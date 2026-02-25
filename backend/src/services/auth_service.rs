@@ -97,14 +97,8 @@ impl AuthService {
 
         self.settings_repo.create(user.user_id).await?;
 
-        self.issue_tokens(
-            user.user_id,
-            user.nickname,
-            ip_address,
-            user_agent,
-            device_fingerprint,
-        )
-        .await
+        self.issue_tokens(user.user_id, ip_address, user_agent, device_fingerprint)
+            .await
     }
 
     /// 用户登录
@@ -149,14 +143,8 @@ impl AuthService {
             return Err(AppError::Unauthorized("用户名或密码错误".to_string()));
         }
 
-        self.issue_tokens(
-            user.user_id,
-            user.nickname,
-            ip_address,
-            user_agent,
-            device_fingerprint,
-        )
-        .await
+        self.issue_tokens(user.user_id, ip_address, user_agent, device_fingerprint)
+            .await
     }
 
     /// 创建访客用户
@@ -185,19 +173,13 @@ impl AuthService {
 
         self.settings_repo.create(user.user_id).await?;
 
-        self.issue_tokens(
-            user.user_id,
-            user.nickname,
-            ip_address,
-            user_agent,
-            device_fingerprint,
-        )
-        .await
+        self.issue_tokens(user.user_id, ip_address, user_agent, device_fingerprint)
+            .await
     }
 
     /// 刷新 token
     ///
-    /// ## 宽限期机制（Spec: api_spec_auth.mdc）
+    /// ## 宽限期机制（Spec: api_spec_auth.md）
     ///
     /// 旧 refresh_token 在被轮换后，仍有 30 秒宽限期可用。
     /// 宽限期内使用旧 refresh_token 刷新，服务端返回与首次刷新相同的新 token 对（不生成新的）。
@@ -260,7 +242,6 @@ impl AuthService {
             let auth_issue = AuthIssue {
                 data: AuthData {
                     user_id: user.user_id,
-                    nickname: user.nickname.unwrap_or_default(),
                     access_token,
                     refresh_token: Some(new_refresh_token_raw.clone()),
                     access_token_expires_at: (Utc::now()
@@ -285,10 +266,10 @@ impl AuthService {
             .await?
         {
             // 尝试从宽限期缓存获取新 token 对
-            if let Some(cached_issue) =
-                self.get_grace_period_tokens(&refresh_token_hash).await
-            {
-                tracing::debug!("Grace period hit: returning cached tokens for rotated refresh_token");
+            if let Some(cached_issue) = self.get_grace_period_tokens(&refresh_token_hash).await {
+                tracing::debug!(
+                    "Grace period hit: returning cached tokens for rotated refresh_token"
+                );
                 return Ok(cached_issue);
             }
 
@@ -313,7 +294,6 @@ impl AuthService {
         let cache_key = format!("grace:refresh:{}", old_refresh_token_hash);
         let cache_value = serde_json::json!({
             "user_id": auth_issue.data.user_id,
-            "nickname": auth_issue.data.nickname,
             "access_token": auth_issue.data.access_token,
             "refresh_token_raw": auth_issue.refresh_token_raw,
             "access_token_expires_at": auth_issue.data.access_token_expires_at,
@@ -334,13 +314,9 @@ impl AuthService {
     }
 
     /// 从 Redis 获取宽限期缓存的 token 对
-    async fn get_grace_period_tokens(
-        &self,
-        old_refresh_token_hash: &str,
-    ) -> Option<AuthIssue> {
+    async fn get_grace_period_tokens(&self, old_refresh_token_hash: &str) -> Option<AuthIssue> {
         let cache_key = format!("grace:refresh:{}", old_refresh_token_hash);
-        let cached: redis::RedisResult<Option<String>> =
-            self.redis.clone().get(&cache_key).await;
+        let cached: redis::RedisResult<Option<String>> = self.redis.clone().get(&cache_key).await;
 
         match cached {
             Ok(Some(json_str)) => {
@@ -348,7 +324,6 @@ impl AuthService {
                 Some(AuthIssue {
                     data: AuthData {
                         user_id: value["user_id"].as_i64()?,
-                        nickname: value["nickname"].as_str()?.to_string(),
                         access_token: value["access_token"].as_str()?.to_string(),
                         refresh_token: Some(value["refresh_token_raw"].as_str()?.to_string()),
                         access_token_expires_at: value["access_token_expires_at"]
@@ -496,14 +471,8 @@ impl AuthService {
         }
 
         // 6. 自动登录：颁发新 token
-        self.issue_tokens(
-            user.user_id,
-            user.nickname,
-            ip_address,
-            user_agent,
-            device_fingerprint,
-        )
-        .await
+        self.issue_tokens(user.user_id, ip_address, user_agent, device_fingerprint)
+            .await
     }
 
     /// 修改密码
@@ -610,7 +579,6 @@ impl AuthService {
     async fn issue_tokens(
         &self,
         user_id: i64,
-        nickname: Option<String>,
         ip_address: Option<String>,
         user_agent: Option<&str>,
         device_fingerprint: Option<&str>,
@@ -648,7 +616,6 @@ impl AuthService {
         Ok(AuthIssue {
             data: AuthData {
                 user_id,
-                nickname: nickname.unwrap_or_default(),
                 access_token,
                 refresh_token: Some(refresh_token_raw.clone()),
                 access_token_expires_at: (Utc::now()

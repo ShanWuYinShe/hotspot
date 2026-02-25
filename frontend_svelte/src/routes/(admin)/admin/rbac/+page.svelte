@@ -11,6 +11,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Label } from '$lib/components/ui/label';
+	import ConfirmDialog from '$lib/components/common/confirm-dialog.svelte';
 	import type { AdminRoleItem, AdminPermissionItem } from '$lib/types/api';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import Plus from 'lucide-svelte/icons/plus';
@@ -23,6 +24,8 @@
 	let roles = $state.raw<AdminRoleItem[]>([]);
 	let permissions = $state.raw<AdminPermissionItem[]>([]);
 	let isLoading = $state(true);
+	let deleteRoleConfirmOpen = $state(false);
+	let pendingDeleteRoleId = $state<string | null>(null);
 
 	// Create/Edit role dialog
 	let showRoleDialog = $state(false);
@@ -124,19 +127,25 @@
 		}
 	}
 
-	async function handleDeleteRole(roleId: string) {
-		if (!confirm('确定要删除该角色吗？')) return;
+	function requestDeleteRole(roleId: string) {
+		pendingDeleteRoleId = roleId;
+		deleteRoleConfirmOpen = true;
+	}
 
+	async function handleDeleteRole() {
+		if (!pendingDeleteRoleId) return;
 		try {
-			const response = await adminRbacService.deleteRole({ role_id: roleId });
+			const response = await adminRbacService.deleteRole({ role_id: pendingDeleteRoleId });
 			if (isSuccess(response)) {
-				roles = roles.filter(r => r.role_id !== roleId);
+				roles = roles.filter(r => r.role_id !== pendingDeleteRoleId);
 				toast.success('已删除');
 			} else {
 				toast.error(response.message || '删除失败');
 			}
 		} catch {
 			toast.error('删除失败');
+		} finally {
+			pendingDeleteRoleId = null;
 		}
 	}
 
@@ -239,7 +248,7 @@
 										variant="ghost"
 										size="icon"
 										class="text-destructive"
-										onclick={() => handleDeleteRole(role.role_id)}
+										onclick={() => requestDeleteRole(role.role_id)}
 										aria-label="删除角色"
 									>
 										<Trash2 class="h-4 w-4" />
@@ -350,3 +359,12 @@
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
+
+<ConfirmDialog
+	bind:open={deleteRoleConfirmOpen}
+	title="删除角色"
+	description="确定要删除该角色吗？已分配此角色的管理员将失去对应权限。"
+	confirmText="删除"
+	variant="destructive"
+	onconfirm={handleDeleteRole}
+/>

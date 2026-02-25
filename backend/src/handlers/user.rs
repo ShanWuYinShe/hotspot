@@ -11,8 +11,8 @@ use crate::{
             UserOpenTheDoorRequest,
         },
         response::{
-            AdminUserDetail, ApiResponse, AuthData, BlockedUserSearchItem, FollowerItem,
-            FollowingItem, FriendItem, GroupItem, MomentItem, MyProfile, PaginatedData, UserItem,
+            AdminUserDetail, ApiResponse, BlockedUserSearchItem, FollowerItem, FollowingItem,
+            FriendItem, GroupItem, MomentItem, MyProfile, PaginatedData, UserItem,
             UserSettingsData,
         },
     },
@@ -75,19 +75,20 @@ fn is_update_profile_empty(req: &UpdateProfileRequest) -> bool {
 }
 
 fn is_update_settings_empty(req: &UpdateSettingsRequest) -> bool {
-    req.privacy_level.is_none()
-        && req.location_visible.is_none()
-        && req.presence_visible.is_none()
-        && req.social_lists_visible.is_none()
-        && req.groups_visible.is_none()
-        && req.liked_moments_visible.is_none()
-        && req.stats_visible.is_none()
-        && req.allow_follow.is_none()
-        && req.allow_private_chat.is_none()
-        && req.searchable.is_none()
-        && req.phone_searchable.is_none()
-        && req.nickname_searchable.is_none()
-        && req.location_searchable.is_none()
+    let s = &req.settings;
+    s.privacy_level.is_none()
+        && s.location_visible.is_none()
+        && s.presence_visible.is_none()
+        && s.social_lists_visible.is_none()
+        && s.groups_visible.is_none()
+        && s.liked_moments_visible.is_none()
+        && s.stats_visible.is_none()
+        && s.allow_follow.is_none()
+        && s.allow_private_chat.is_none()
+        && s.searchable.is_none()
+        && s.phone_searchable.is_none()
+        && s.nickname_searchable.is_none()
+        && s.location_searchable.is_none()
 }
 
 /// 获取当前用户资料
@@ -235,12 +236,12 @@ pub async fn upgrade_account(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<UpgradeAccountRequest>,
-) -> Result<Json<ApiResponse<AuthData>>> {
-    let auth_data = state
+) -> Result<Json<ApiResponse<()>>> {
+    state
         .user_service
-        .upgrade_account(user.user_id, &req, &state.config.jwt_secret)
+        .upgrade_account(user.user_id, &req)
         .await?;
-    Ok(Json(ApiResponse::success(auth_data)))
+    Ok(Json(ApiResponse::success_empty()))
 }
 
 pub async fn delete_account(

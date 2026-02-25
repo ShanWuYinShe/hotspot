@@ -67,7 +67,7 @@
 				momentDescriptionMaxLength = String(appConfig.limits?.moment_description_max_length || 300);
 				commentMaxLength = String(appConfig.limits?.comment_max_length || 200);
 				maxGroupMembers = String(appConfig.limits?.max_group_members || 500);
-				searchRadiusMax = String(appConfig.limits?.search_radius_max || 50);
+				searchRadiusMax = String(appConfig.limits?.search_radius_max || 50000);
 			}
 		} catch {
 			toast.error('加载配置失败');

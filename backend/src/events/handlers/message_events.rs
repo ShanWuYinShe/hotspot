@@ -42,7 +42,7 @@ pub async fn send_websocket(
                 media: media.clone(),
                 reply_to: reply_to
                     .clone()
-                    .map(|r| crate::websocket::types::MessageReplyTo {
+                    .map(|r| crate::dto::response::MessageReplyTo {
                         message_id: r.message_id.to_string(),
                         user_id: r.user_id,
                         nickname: r.nickname,
@@ -140,7 +140,7 @@ pub async fn send_websocket(
                 media: media.clone(),
                 reply_to: reply_to
                     .clone()
-                    .map(|r| crate::websocket::types::MessageReplyTo {
+                    .map(|r| crate::dto::response::MessageReplyTo {
                         message_id: r.message_id.to_string(),
                         user_id: r.user_id,
                         nickname: r.nickname,
@@ -190,12 +190,12 @@ pub async fn send_websocket(
         AppEvent::PrivateMessageRead {
             target_user_id,
             reader_id,
-            up_to,
+            up_to_message_id,
             read_at,
         } => {
             let message = WsMessage::PrivateMessageRead {
                 target_user_id: *target_user_id,
-                up_to: up_to.to_string(),
+                up_to_message_id: up_to_message_id.to_string(),
                 reader_id: *reader_id,
                 read_at: read_at.clone(),
             };

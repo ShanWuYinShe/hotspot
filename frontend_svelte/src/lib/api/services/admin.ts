@@ -1,6 +1,6 @@
 /**
  * 管理员服务
- * 严格对齐 spec/api_spec_admin_core.mdc + spec/api_spec_admin_moderation.mdc
+ * 严格对齐 spec/api_spec_admin_core.md + spec/api_spec_admin_moderation.md
  */
 
 import { post, paginate, generateIdempotencyKey } from '../client';

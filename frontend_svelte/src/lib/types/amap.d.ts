@@ -39,6 +39,25 @@ declare global {
 			getLat(): number;
 		}
 
+		class Marker {
+			constructor(options?: MarkerOptions);
+			setPosition(position: [number, number]): void;
+			getPosition(): LngLat;
+			setMap(map: Map | null): void;
+			remove(): void;
+		}
+
+		interface MarkerOptions {
+			position?: [number, number];
+			anchor?: 'top-left' | 'top-center' | 'top-right' | 'middle-left' | 'center' | 'middle-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
+			offset?: [number, number];
+			icon?: string;
+			content?: string | HTMLElement;
+			title?: string;
+			clickable?: boolean;
+			map?: Map;
+		}
+
 		class Geocoder {
 			constructor(options?: { city?: string });
 			getAddress(

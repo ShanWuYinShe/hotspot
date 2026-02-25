@@ -12,6 +12,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Label } from '$lib/components/ui/label';
+	import ConfirmDialog from '$lib/components/common/confirm-dialog.svelte';
 	import type { SystemAnnouncementItem, AnnouncementSeverity } from '$lib/types/api';
 	import { formatDateTime } from '$lib/utils/format';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
@@ -19,6 +20,9 @@
 	import Megaphone from 'lucide-svelte/icons/megaphone';
 	import Trash2 from 'lucide-svelte/icons/trash-2';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
+
+	let deleteConfirmOpen = $state(false);
+	let pendingDeleteId = $state<string | null>(null);
 
 	// ============ 分页 ============
 
@@ -82,21 +86,28 @@
 		}
 	}
 
-	async function handleDelete(announcementId: string) {
-		if (!confirm('确定要删除该公告吗？')) return;
+	function requestDelete(announcementId: string) {
+		pendingDeleteId = announcementId;
+		deleteConfirmOpen = true;
+	}
 
+	async function handleDelete() {
+		if (!pendingDeleteId) return;
 		try {
 			const response = await adminAnnouncementsService.delete({
-				announcement_id: announcementId
+				announcement_id: pendingDeleteId
 			});
 			if (isSuccess(response)) {
-				pagination.removeItem((a) => a.announcement_id === announcementId);
+				const deletedId = pendingDeleteId;
+				pagination.removeItem((a) => a.announcement_id === deletedId);
 				toast.success('已删除');
 			} else {
 				toast.error(response.message || '删除失败');
 			}
 		} catch {
 			toast.error('删除失败');
+		} finally {
+			pendingDeleteId = null;
 		}
 	}
 
@@ -179,7 +190,7 @@
 									variant="ghost"
 									size="icon"
 									class="text-destructive"
-									onclick={() => handleDelete(announcement.announcement_id)}
+									onclick={() => requestDelete(announcement.announcement_id)}
 									aria-label="删除公告"
 								>
 									<Trash2 class="h-4 w-4" />
@@ -255,3 +266,12 @@
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
+
+<ConfirmDialog
+	bind:open={deleteConfirmOpen}
+	title="删除公告"
+	description="确定要删除该公告吗？此操作不可撤销。"
+	confirmText="删除"
+	variant="destructive"
+	onconfirm={handleDelete}
+/>

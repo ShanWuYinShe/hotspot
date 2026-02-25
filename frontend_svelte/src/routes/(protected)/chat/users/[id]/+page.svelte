@@ -3,7 +3,7 @@
 	import { page } from '$app/state';
 	import { onMount, untrack } from 'svelte';
 	import { withMinimumLoadingTime } from '$lib/utils/loading';
-	import { privateMessagesService, usersService } from '$lib/api/services';
+	import { privateChatsService, privateMessagesService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { messageStore } from '$lib/stores/message.svelte';
@@ -51,24 +51,13 @@
 	async function loadChat() {
 		try {
 			await withMinimumLoadingTime(async () => {
-				// 获取对方信息
-				const userResponse = await usersService.getUser({ user_id: userId });
+				// spec: 使用 open_the_door 获取/创建会话 + 最近消息（首次聊天自动创建会话）
+				const chatResponse = await privateChatsService.openChat({ target_user_id: userId });
 				if (!isMounted) return;
-				if (isSuccess(userResponse) && userResponse.data) {
-					otherUser = userResponse.data.user;
+				if (isSuccess(chatResponse) && chatResponse.data) {
+					otherUser = chatResponse.data.chat.other_user;
+					messages = (chatResponse.data.recent_messages.items ?? []).reverse();
 				}
-
-				// 获取消息历史
-				const messagesResponse = await privateMessagesService.getHistory({
-					target_user_id: userId,
-					pagination: { limit: 50 }
-				});
-				if (!isMounted) return;
-				if (isSuccess(messagesResponse) && messagesResponse.data) {
-					messages = messagesResponse.data.items.reverse();
-				}
-
-				// ✅ 不再立即标记已读，等待消息可见时自动标记
 			});
 		} catch {
 			if (isMounted) toast.error('加载失败');

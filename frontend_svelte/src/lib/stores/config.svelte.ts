@@ -63,8 +63,8 @@ class ConfigStore {
 		}
 	}
 
-	/** 搜索半径上限（米） */
-	searchRadiusMax = $derived(this.#config?.limits?.search_radius_max ?? 50000);
+	/** 搜索半径上限（米）默认使用 50000 */
+	searchRadiusMax = $derived(50000);
 
 	/** 瞬间最大图片数 */
 	maxMomentImages = $derived(this.#config?.limits?.max_moment_images ?? 9);

@@ -22,8 +22,21 @@ use crate::{
 };
 
 impl GroupService {
+    fn normalize_group_sort(sort_by: Option<&str>) -> &'static str {
+        match sort_by.unwrap_or("relevance").to_lowercase().as_str() {
+            "distance" => "distance",
+            "newest" => "newest",
+            "popular" => "popular",
+            "relevance" => "relevance",
+            _ => "relevance",
+        }
+    }
+
     pub async fn search(&self, req: &SearchGroupsRequest) -> Result<PaginatedData<GroupItem>> {
-        let limit = Validator::validate_limit(req.limit, 50)? as i64;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as i64;
+        let cursor = pagination.and_then(|p| p.cursor.clone());
+        let sort_by = Self::normalize_group_sort(req.sort_by.as_deref());
         let (groups, next_cursor) = if let Some(radius) = req.radius {
             self.group_repo
                 .search_nearby(
@@ -31,8 +44,9 @@ impl GroupService {
                     req.reference_point.latitude,
                     radius,
                     limit,
-                    req.cursor.clone(),
+                    cursor.clone(),
                     req.keyword.as_deref(),
+                    sort_by,
                 )
                 .await?
         } else if let Some(ref tag) = req.tag {
@@ -42,7 +56,8 @@ impl GroupService {
                     req.reference_point.longitude,
                     req.reference_point.latitude,
                     limit,
-                    req.cursor.clone(),
+                    cursor.clone(),
+                    sort_by,
                 )
                 .await?
         } else if let Some(ref keyword) = req.keyword {
@@ -52,7 +67,8 @@ impl GroupService {
                     req.reference_point.longitude,
                     req.reference_point.latitude,
                     limit,
-                    req.cursor.clone(),
+                    cursor.clone(),
+                    sort_by,
                 )
                 .await?
         } else {
@@ -156,7 +172,7 @@ impl GroupService {
         let join_method = req.join_method.unwrap_or(GroupJoinMethod::Open);
         let join_method_str = Self::join_method_to_string(join_method);
 
-        let group = self
+        let mut group = self
             .group_repo
             .create(
                 req.name.clone(),
@@ -190,6 +206,20 @@ impl GroupService {
                 )
                 .await?;
         }
+
+        // spec: location_name 由客户端提供，必须完整存储
+        let loc_point = req.location.point;
+        self.group_repo
+            .update_location(
+                group.group_id,
+                loc_point.longitude,
+                loc_point.latitude,
+                Some(&req.location.location_name),
+            )
+            .await?;
+        group.latitude = Some(loc_point.latitude);
+        group.longitude = Some(loc_point.longitude);
+        group.location_name = Some(req.location.location_name.clone());
 
         let password_hash = if let Some(pwd) = req.password.as_deref() {
             if pwd.is_empty() {
@@ -283,10 +313,11 @@ impl GroupService {
         user_id: i64,
         req: MyGroupChatsRequest,
     ) -> Result<PaginatedData<GroupItem>> {
-        let limit = Validator::validate_limit(req.limit, 50)? as usize;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as usize;
         let (rows, next_cursor) = self
             .member_repo
-            .list_user_groups(user_id, limit, req.cursor.as_deref())
+            .list_user_groups(user_id, limit, pagination.and_then(|p| p.cursor.as_deref()))
             .await?;
 
         let group_ids: Vec<i64> = rows.iter().map(|r| r.group_id).collect();
@@ -399,44 +430,47 @@ impl GroupService {
             || req.is_searchable.is_some()
             || req.max_members.is_some()
             || req.password.is_some()
+            || req.clear_password == Some(true)
         {
+            if req.password.is_some() && req.clear_password == Some(true) {
+                return Err(AppError::BadRequest(
+                    "password 与 clear_password 互斥".to_string(),
+                ));
+            }
+
             let join_method = req.join_method.map(Self::join_method_to_string);
-            match req.password.as_deref() {
-                Some("") => {
-                    self.settings_repo.clear_password(group_id).await?;
-                    self.settings_repo
-                        .update(
-                            group_id,
-                            join_method.as_deref(),
-                            req.is_searchable,
-                            req.max_members,
-                            None,
-                        )
-                        .await?;
-                }
-                Some(pwd) => {
-                    let password_hash = PasswordUtil::hash_password(pwd)?;
-                    self.settings_repo
-                        .update(
-                            group_id,
-                            join_method.as_deref(),
-                            req.is_searchable,
-                            req.max_members,
-                            Some(&password_hash),
-                        )
-                        .await?;
-                }
-                None => {
-                    self.settings_repo
-                        .update(
-                            group_id,
-                            join_method.as_deref(),
-                            req.is_searchable,
-                            req.max_members,
-                            None,
-                        )
-                        .await?;
-                }
+            if req.clear_password == Some(true) {
+                self.settings_repo.clear_password(group_id).await?;
+                self.settings_repo
+                    .update(
+                        group_id,
+                        join_method.as_deref(),
+                        req.is_searchable,
+                        req.max_members,
+                        None,
+                    )
+                    .await?;
+            } else if let Some(pwd) = req.password.as_deref() {
+                let password_hash = PasswordUtil::hash_password(pwd)?;
+                self.settings_repo
+                    .update(
+                        group_id,
+                        join_method.as_deref(),
+                        req.is_searchable,
+                        req.max_members,
+                        Some(&password_hash),
+                    )
+                    .await?;
+            } else {
+                self.settings_repo
+                    .update(
+                        group_id,
+                        join_method.as_deref(),
+                        req.is_searchable,
+                        req.max_members,
+                        None,
+                    )
+                    .await?;
             }
         }
 
@@ -450,7 +484,11 @@ impl GroupService {
             join_method: req.join_method.map(|jm| Self::join_method_to_string(jm)),
             is_searchable: req.is_searchable,
             max_members: req.max_members,
-            has_password: req.password.as_ref().map(|p| !p.is_empty()),
+            has_password: if req.clear_password == Some(true) {
+                Some(false)
+            } else {
+                req.password.as_ref().map(|_| true)
+            },
         });
 
         let _ = self

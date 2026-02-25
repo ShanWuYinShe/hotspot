@@ -50,13 +50,15 @@
 			case 'comment_reply':
 			case 'mentioned':
 				return MessageCircle;
-			case 'group_invite_received':
-			case 'group_application_accepted':
-				return Users;
-			case 'system_announcement':
-				return Info;
-			default:
-				return Bell;
+		case 'group_invite_received':
+		case 'group_invite_accepted':
+		case 'group_application_received':
+		case 'group_application_accepted':
+			return Users;
+		case 'system_announcement':
+			return Info;
+		default:
+			return Bell;
 		}
 	}
 
@@ -77,14 +79,18 @@
 				return '评论被回复';
 			case 'mentioned':
 				return '被提及';
-			case 'group_invite_received':
-				return '群组邀请';
-			case 'group_application_accepted':
-				return '入群申请通过';
-			case 'system_announcement':
-				return '系统公告';
-			default:
-				return '通知';
+		case 'group_invite_received':
+			return '群组邀请';
+		case 'group_invite_accepted':
+			return '邀请被接受';
+		case 'group_application_received':
+			return '入群申请';
+		case 'group_application_accepted':
+			return '入群申请通过';
+		case 'system_announcement':
+			return '系统公告';
+		default:
+			return '通知';
 		}
 	}
 
@@ -102,18 +108,22 @@
 			case 'comment_liked':
 				return `${p.actor.nickname} 赞了你的评论`;
 			case 'comment_reply':
-				return `${p.actor.nickname} 回复了你: ${p.comment_preview}`;
+				return `${p.actor.nickname} 回复了你: ${p.replied_comment_preview}`;
 			case 'mentioned':
 				return `${p.actor.nickname} 在内容中提及了你`;
-			case 'group_invite_received':
-				return `${p.actor.nickname} 邀请你加入 ${p.group_name}`;
-			case 'group_application_accepted':
-				return `你已加入群组 ${p.group_name}`;
-			case 'system_announcement':
-				return p.severity === 'error' ? '重要公告' : p.severity === 'warning' ? '提醒' : '公告';
-			default:
-				return '';
-		}
+		case 'group_invite_received':
+			return `${p.actor.nickname} 邀请你加入 ${p.group_name}`;
+		case 'group_invite_accepted':
+			return `${p.user.nickname} 接受了群组 ${p.group_name} 的邀请`;
+		case 'group_application_received':
+			return `${p.applicant.nickname} 申请加入 ${p.group_name}`;
+		case 'group_application_accepted':
+			return `你已加入群组 ${p.group_name}`;
+		case 'system_announcement':
+			return p.severity === 'error' ? '重要公告' : p.severity === 'warning' ? '提醒' : '公告';
+		default:
+			return '';
+	}
 	}
 
 	function formatTime(dateStr: string): string {
@@ -143,13 +153,15 @@
 			case 'comment_reply':
 			case 'mentioned':
 				return `/moments/${p.moment_id}`;
-			case 'group_invite_received':
-			case 'group_application_accepted':
-				return `/groups/${p.group_id}`;
-			case 'system_announcement':
-				return '#';
-			default:
-				return '#';
+		case 'group_invite_received':
+		case 'group_invite_accepted':
+		case 'group_application_received':
+		case 'group_application_accepted':
+			return `/groups/${p.group_id}`;
+		case 'system_announcement':
+			return '#';
+		default:
+			return '#';
 		}
 	}
 

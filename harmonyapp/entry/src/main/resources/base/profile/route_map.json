@@ -6,6 +6,21 @@
       "buildFunction": "LoginPageBuilder"
     },
     {
+      "name": "ProfilePage",
+      "pageSourceFile": "src/main/ets/features/profile/pages/ProfilePage.ets",
+      "buildFunction": "ProfilePageBuilder"
+    },
+    {
+      "name": "MomentPage",
+      "pageSourceFile": "src/main/ets/features/moment/pages/MomentPage.ets",
+      "buildFunction": "MomentPageBuilder"
+    },
+    {
+      "name": "GroupPage",
+      "pageSourceFile": "src/main/ets/features/group/pages/GroupPage.ets",
+      "buildFunction": "GroupPageBuilder"
+    },
+    {
       "name": "ChatPage",
       "pageSourceFile": "src/main/ets/features/chat/pages/ChatPage.ets",
       "buildFunction": "ChatPageBuilder"
@@ -59,6 +74,11 @@
       "name": "SubscriptionsPage",
       "pageSourceFile": "src/main/ets/features/subscriptions/pages/SubscriptionsPage.ets",
       "buildFunction": "SubscriptionsPageBuilder"
+    },
+    {
+      "name": "MySharesPage",
+      "pageSourceFile": "src/main/ets/features/share/pages/MySharesPage.ets",
+      "buildFunction": "MySharesPageBuilder"
     },
     {
       "name": "RecommendationPage",

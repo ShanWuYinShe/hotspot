@@ -176,11 +176,10 @@ export struct ChatPage {
           if (!targetUserId) {
             throw new Error('target_user_id is required for private chat');
           }
-          const request: GetPrivateMessagesHistoryRequest = { target_user_id: targetUserId, pagination: { limit: 20 } };
-          const response = await ApiClient.getPrivateMessages(request);
-          if (response.code === 0) {
-            items = response.data?.items ?? [];
-            nextCursor = response.data?.next_cursor;
+          const response = await ApiClient.privateChatOpenTheDoor({ target_user_id: targetUserId });
+          if (response.code === 0 && response.data) {
+            items = response.data.recent_messages?.items ?? [];
+            nextCursor = response.data.recent_messages?.next_cursor;
           }
         } else {
           const request: GetGroupMessagesHistoryRequest = { group_id: this.chatId, pagination: { limit: 20 } };
@@ -545,7 +544,7 @@ export struct ChatPage {
           .layoutWeight(1)
           .height(40)
           .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
-          .borderRadius(20)
+          .borderRadius(DesignConstants.RADIUS.XXL)
           .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
           .onChange((value) => {
             this.inputText = value;
@@ -601,7 +600,7 @@ export struct ChatPage {
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
           .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
           .padding({ left: 12, right: 12, top: 4, bottom: 4 })
-          .borderRadius(12)
+          .borderRadius(DesignConstants.RADIUS.LG)
       }
       .width('100%')
       .justifyContent(FlexAlign.Center)
@@ -629,7 +628,7 @@ export struct ChatPage {
             if (msg.type === 'image') {
               Image(msg.content)
                 .width(200)
-                .borderRadius(8)
+                .borderRadius(DesignConstants.RADIUS.MD)
                 .margin(4)
             } else {
               Text(msg.content)
@@ -637,7 +636,7 @@ export struct ChatPage {
                 .fontColor(msg.isSelf ? Color.White : $r('sys.color.ohos_id_color_text_primary'))
                 .backgroundColor(msg.isSelf ? $r('sys.color.ohos_id_color_emphasize') : $r('app.color.bg_secondary'))
                 .padding(12)
-                .borderRadius(16)
+                .borderRadius(DesignConstants.RADIUS.XL)
                 .constraintSize({ maxWidth: '70%' })
             }
           }

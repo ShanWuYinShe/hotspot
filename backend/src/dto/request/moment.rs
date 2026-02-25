@@ -2,7 +2,7 @@
 
 use serde::Deserialize;
 
-use crate::dto::request::common::Location;
+use crate::dto::request::common::{Location, PaginationParams};
 use crate::types::enums::PrivacyLevel;
 
 #[derive(Debug, Deserialize)]
@@ -38,8 +38,7 @@ pub struct UnfavoriteMomentRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct MyFavoritesRequest {
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -50,14 +49,12 @@ pub struct MomentOpenTheDoorRequest {
 #[derive(Debug, Deserialize)]
 pub struct UserMomentsRequest {
     pub user_id: String,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct MyMomentsRequest {
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -78,6 +75,5 @@ pub struct UnlikeMomentRequest {
 #[derive(Debug, Deserialize)]
 pub struct MomentLikesRequest {
     pub moment_id: String,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }

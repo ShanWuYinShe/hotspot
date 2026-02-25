@@ -14,13 +14,9 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use chrono::{Duration, Utc};
-use redis::aio::ConnectionManager;
-use redis::AsyncCommands;
 use uuid::Uuid;
 
 use crate::{
-    constants::REDIS_KEY_SESSION,
     dto::{
         request::{
             AdminUserSearchRequest, BlockRequest, DeleteAccountRequest, FollowRequest,
@@ -31,10 +27,10 @@ use crate::{
             UserOpenTheDoorRequest,
         },
         response::{
-            AdminUserDetail, AdminUserSearchItem, AuthData, BlockedUserSearchItem, FollowerItem,
-            FollowingItem, FriendItem, GroupInfo, GroupItem, MomentItem, MyProfile, PaginatedData,
-            Relationship, RelativeLocation, SocialContext, UserInfo, UserItem, UserSettingsData,
-            UserStats,
+            AdminUserDetail, AdminUserSearchItem, BlockedUserSearchItem, FollowerItem,
+            FollowingItem, FriendItem, GroupInfo, GroupItem, Location, MomentItem, MyProfile,
+            PaginatedData, Relationship, RelativeLocation, SocialContext, UserInfo, UserItem,
+            UserSettingsData, UserStats,
         },
     },
     error::{AppError, Result},
@@ -53,8 +49,8 @@ use crate::{
     },
     types::enums::{PrivacyLevel, PrivateChatPermission, UserPresenceStatus, UserStatus, UserType},
     utils::{
-        bloom_filter::ResourceExistenceChecker, cache::CacheManager, jwt::JwtUtil,
-        password::PasswordUtil, token::TokenUtil, validation::Validator,
+        bloom_filter::ResourceExistenceChecker, cache::CacheManager, password::PasswordUtil,
+        validation::Validator,
     },
     EventBus,
 };
@@ -62,9 +58,6 @@ use crate::{
 #[derive(Clone)]
 pub struct UserService {
     event_bus: Arc<EventBus>,
-    redis: ConnectionManager,
-    access_token_expiration: i64,
-    refresh_token_expiration: i64,
     user_repo: UserRepository,
     user_settings_repo: UserSettingsRepository,
     user_location_history_repo: UserLocationHistoryRepository,
@@ -85,9 +78,6 @@ impl UserService {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         event_bus: Arc<EventBus>,
-        redis: ConnectionManager,
-        access_token_expiration: i64,
-        refresh_token_expiration: i64,
         user_repo: UserRepository,
         user_settings_repo: UserSettingsRepository,
         user_location_history_repo: UserLocationHistoryRepository,
@@ -105,9 +95,6 @@ impl UserService {
     ) -> Self {
         Self {
             event_bus,
-            redis,
-            access_token_expiration,
-            refresh_token_expiration,
             user_repo,
             user_settings_repo,
             user_location_history_repo,
@@ -134,7 +121,9 @@ impl UserService {
             req.reference_point.latitude,
             req.reference_point.longitude,
         )?;
-        let limit = Validator::validate_limit(req.limit, 50)? as i64;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as i64;
+        let cursor = pagination.and_then(|p| p.cursor.clone());
 
         let (rows, next_cursor) = if let Some(radius) = req.radius {
             let radius =
@@ -145,7 +134,7 @@ impl UserService {
                     req.reference_point.latitude,
                     radius,
                     limit,
-                    req.cursor.clone(),
+                    cursor.clone(),
                     req.keyword.as_deref(),
                 )
                 .await?
@@ -157,7 +146,7 @@ impl UserService {
                     req.reference_point.longitude,
                     req.reference_point.latitude,
                     limit,
-                    req.cursor.clone(),
+                    cursor.clone(),
                 )
                 .await?
         } else if let Some(ref keyword) = req.keyword {
@@ -168,7 +157,7 @@ impl UserService {
                     req.reference_point.longitude,
                     req.reference_point.latitude,
                     limit,
-                    req.cursor.clone(),
+                    cursor.clone(),
                 )
                 .await?
         } else {
@@ -195,7 +184,7 @@ impl UserService {
 
         if let Some(viewer_id) = viewer_id {
             if self.blocks_repo.is_blocked(user_id, viewer_id).await? {
-                return Err(AppError::BlockedByUser("已被对方拉黑".to_string()));
+                return Err(AppError::BlockedByUser("privacy_restricted".to_string()));
             }
         }
 
@@ -280,10 +269,15 @@ impl UserService {
             .or_else(|| user.last_login_at.map(|t| t.to_rfc3339()))
             .unwrap_or_else(|| user.created_at.to_rfc3339());
 
-        let location = self
+        let relative_location = self
             .build_location_for_user(user_id)
             .await
-            .unwrap_or(RelativeLocation::without_distance(0.0, 0.0, ""));
+            .unwrap_or_else(|| RelativeLocation::without_distance(0.0, 0.0, ""));
+
+        let location = Location {
+            point: relative_location.point,
+            location_name: relative_location.location_name.clone(),
+        };
 
         let presence_status = if is_online {
             UserPresenceStatus::Online
@@ -402,20 +396,21 @@ impl UserService {
     }
 
     pub async fn update_settings(&self, user_id: i64, req: &UpdateSettingsRequest) -> Result<()> {
+        let s = &req.settings;
         let params = UpdateSettingsParams {
-            privacy_level: req.privacy_level,
-            location_visible: req.location_visible,
-            presence_visible: req.presence_visible,
-            social_lists_visible: req.social_lists_visible,
-            groups_visible: req.groups_visible,
-            liked_moments_visible: req.liked_moments_visible,
-            stats_visible: req.stats_visible,
-            allow_follow: req.allow_follow,
-            allow_private_chat: req.allow_private_chat,
-            searchable: req.searchable,
-            phone_searchable: req.phone_searchable,
-            nickname_searchable: req.nickname_searchable,
-            location_searchable: req.location_searchable,
+            privacy_level: s.privacy_level,
+            location_visible: s.location_visible,
+            presence_visible: s.presence_visible,
+            social_lists_visible: s.social_lists_visible,
+            groups_visible: s.groups_visible,
+            liked_moments_visible: s.liked_moments_visible,
+            stats_visible: s.stats_visible,
+            allow_follow: s.allow_follow,
+            allow_private_chat: s.allow_private_chat,
+            searchable: s.searchable,
+            phone_searchable: s.phone_searchable,
+            nickname_searchable: s.nickname_searchable,
+            location_searchable: s.location_searchable,
         };
 
         self.user_settings_repo.update(user_id, &params).await
@@ -433,10 +428,15 @@ impl UserService {
                 return Err(AppError::Forbidden("对方的好友列表不可见".to_string()));
             }
         }
-        let limit = Validator::validate_limit(req.limit, 50)? as i64;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as i64;
         let (rows, next_cursor) = self
             .follows_repo
-            .list_friends(target_user_id, limit, req.cursor.clone())
+            .list_friends(
+                target_user_id,
+                limit,
+                pagination.and_then(|p| p.cursor.clone()),
+            )
             .await?;
 
         let friend_ids: Vec<i64> = rows.iter().map(|r| r.user_id).collect();
@@ -501,10 +501,15 @@ impl UserService {
                 return Err(AppError::Forbidden("对方的关注列表不可见".to_string()));
             }
         }
-        let limit = Validator::validate_limit(req.limit, 50)? as i64;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as i64;
         let (rows, next_cursor) = self
             .follows_repo
-            .list_following(target_user_id, limit, req.cursor.clone())
+            .list_following(
+                target_user_id,
+                limit,
+                pagination.and_then(|p| p.cursor.clone()),
+            )
             .await?;
 
         let ids: Vec<i64> = rows.iter().map(|r| r.user_id).collect();
@@ -562,10 +567,15 @@ impl UserService {
                 return Err(AppError::Forbidden("对方的粉丝列表不可见".to_string()));
             }
         }
-        let limit = Validator::validate_limit(req.limit, 50)? as i64;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as i64;
         let (rows, next_cursor) = self
             .follows_repo
-            .list_followers(target_user_id, limit, req.cursor.clone())
+            .list_followers(
+                target_user_id,
+                limit,
+                pagination.and_then(|p| p.cursor.clone()),
+            )
             .await?;
 
         let ids: Vec<i64> = rows.iter().map(|r| r.user_id).collect();
@@ -628,10 +638,15 @@ impl UserService {
                 return Err(AppError::Forbidden("对方的群组列表不可见".to_string()));
             }
         }
-        let limit = Validator::validate_limit(req.limit, 50)? as i64;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as i64;
         let (rows, next_cursor) = self
             .group_member_repo
-            .list_user_groups(user_id, limit as usize, req.cursor.as_deref())
+            .list_user_groups(
+                user_id,
+                limit as usize,
+                pagination.and_then(|p| p.cursor.as_deref()),
+            )
             .await?;
 
         let mut items = Vec::with_capacity(rows.len());
@@ -683,10 +698,11 @@ impl UserService {
                 return Err(AppError::Forbidden("对方的点赞列表不可见".to_string()));
             }
         }
-        let limit = Validator::validate_limit(req.limit, 50)? as i64;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as i64;
         let (rows, next_cursor) = self
             .moment_repo
-            .list_user_liked_moments(user_id, limit, req.cursor.clone())
+            .list_user_liked_moments(user_id, limit, pagination.and_then(|p| p.cursor.clone()))
             .await?;
 
         self.build_user_moment_items(rows, next_cursor).await
@@ -720,12 +736,7 @@ impl UserService {
         Ok(())
     }
 
-    pub async fn upgrade_account(
-        &self,
-        user_id: i64,
-        req: &UpgradeAccountRequest,
-        jwt_secret: &str,
-    ) -> Result<AuthData> {
+    pub async fn upgrade_account(&self, user_id: i64, req: &UpgradeAccountRequest) -> Result<()> {
         Validator::validate_not_empty(&req.login_id, "login_id")?;
         Validator::validate_length(&req.password, "password", 6, 64)?;
 
@@ -745,59 +756,14 @@ impl UserService {
         self.user_repo
             .update_user_type(user_id, UserType::Normal)
             .await?;
-
-        let session_id = Uuid::now_v7();
-        let access_token = JwtUtil::generate_token(
-            user_id,
-            session_id,
-            self.access_token_expiration,
-            jwt_secret,
-        )?;
-        let refresh_token_raw = TokenUtil::generate_refresh_token();
-        let access_token_hash = TokenUtil::hash_token(&access_token, jwt_secret);
-        let refresh_token_hash = TokenUtil::hash_token(&refresh_token_raw, jwt_secret);
-        let refresh_expires_at = Utc::now() + Duration::seconds(self.refresh_token_expiration);
-
-        self.session_repo
-            .create(
-                user_id,
-                session_id,
-                None,
-                None,
-                None,
-                None,
-                None,
-                access_token_hash,
-                refresh_token_hash,
-                refresh_expires_at,
-            )
-            .await?;
-
-        let key = format!("{}:{}", REDIS_KEY_SESSION, session_id);
-        let mut conn = self.redis.clone();
-        let _: () = conn
-            .set_ex(
-                key,
-                user_id.to_string(),
-                self.refresh_token_expiration as u64,
-            )
-            .await
-            .map_err(|e| AppError::internal(e.to_string()))?;
-
-        Ok(AuthData {
-            user_id,
-            nickname: req.login_id.clone(),
-            access_token,
-            refresh_token: Some(refresh_token_raw.clone()),
-            access_token_expires_at: (Utc::now() + Duration::seconds(self.access_token_expiration))
-                .to_rfc3339(),
-            refresh_token_expires_at: Some(refresh_expires_at.to_rfc3339()),
-        })
+        Ok(())
     }
 
     pub async fn delete_account(&self, user_id: i64, req: &DeleteAccountRequest) -> Result<()> {
         if req.confirmation != "DELETE_MY_ACCOUNT" {
-            return Err(AppError::Conflict("确认字符串不正确".to_string()));
+            return Err(AppError::BadRequest(
+                "confirmation 必须为 DELETE_MY_ACCOUNT".to_string(),
+            ));
         }
         self.user_repo.mark_deleted(user_id).await?;
         let _ = self.session_repo.revoke_all_by_user(user_id).await;
@@ -815,7 +781,7 @@ impl UserService {
         }
 
         if self.blocks_repo.is_blocked(target_user_id, user_id).await? {
-            return Err(AppError::BlockedByUser("已被对方拉黑".to_string()));
+            return Err(AppError::BlockedByUser("privacy_restricted".to_string()));
         }
 
         let allow_follow = self
@@ -889,10 +855,11 @@ impl UserService {
         user_id: i64,
         req: &MyBlockedRequest,
     ) -> Result<PaginatedData<BlockedUserSearchItem>> {
-        let limit = Validator::validate_limit(req.limit, 50)? as i64;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as i64;
         let (rows, next_cursor) = self
             .blocks_repo
-            .list_blocked(user_id, limit, req.cursor.clone())
+            .list_blocked(user_id, limit, pagination.and_then(|p| p.cursor.clone()))
             .await?;
 
         let ids: Vec<i64> = rows.iter().map(|r| r.user_id).collect();
@@ -946,13 +913,13 @@ impl UserService {
         &self,
         req: &AdminUserSearchRequest,
     ) -> Result<PaginatedData<AdminUserSearchItem>> {
-        let limit = Validator::validate_limit(req.limit, 50)? as i64;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as i64;
         let user_id_filter = req
             .user_id
             .as_ref()
             .map(|id| Validator::parse_user_id(id))
             .transpose()?;
-        // 将 API 层 UserAccountStatus 转换为内部 UserStatus 进行查询
         let status_filter = req.status.map(|s| match s {
             crate::types::enums::UserAccountStatus::Normal => {
                 crate::types::enums::UserStatus::Normal
@@ -970,7 +937,7 @@ impl UserService {
                 status_filter,
                 req.user_type,
                 limit,
-                req.cursor.clone(),
+                pagination.and_then(|p| p.cursor.clone()),
             )
             .await?;
 
@@ -1424,7 +1391,7 @@ impl UserService {
                 thumbnail_url: None,
                 width: row.width,
                 height: row.height,
-                content_type: None,
+                mime_type: None,
             });
         }
         Some(images)

@@ -1,6 +1,6 @@
 //! 错误类型定义
 //!
-//! 所有错误码与 API 规范 (api_spec_errors.mdc) 一一对应
+//! 所有错误码与 API 规范 (api_spec_errors.md) 一一对应
 //! 错误码是契约的唯一来源，禁止在此文件之外定义新的错误码
 
 use axum::{
@@ -99,8 +99,8 @@ pub enum AppError {
     #[error("无法操作管理员账户: {0}")]
     CannotOperateAdmin(String),
 
-    /// 10211 - 已被对方拉黑
-    #[error("已被对方拉黑: {0}")]
+    /// 10211 - 被拉黑（对外显示为隐私限制，不暴露拉黑状态）
+    #[error("对方隐私设置不允许此操作")]
     BlockedByUser(String),
 
     /// 10212 - 群组密码错误
@@ -200,6 +200,10 @@ pub enum AppError {
     #[error("请求过于频繁: {0}")]
     RateLimited(String),
 
+    /// 10500 - 分享请求过于频繁（HTTP 限流，非 WebSocket）
+    #[error("分享请求过于频繁: {message}")]
+    ShareRateLimited { message: String, retry_after: u32 },
+
     /// 10501 - 超过每分钟请求限制
     #[error("超过每分钟请求限制")]
     MinuteRateLimitExceeded,
@@ -239,7 +243,7 @@ pub enum AppError {
     ServiceOverloaded,
 
     // ============================================================
-    // 20000-20999：WebSocket 业务期错误
+    // 20000-20500：WebSocket 业务期错误
     // ============================================================
     /// 20000 - WebSocket 业务期错误（通用）
     #[error("WebSocket 错误: {0}")]
@@ -248,6 +252,10 @@ pub enum AppError {
     /// 20001 - 鉴权失败（Auth 事件）
     #[error("WebSocket 鉴权失败: {0}")]
     WebSocketAuthFailed(String),
+
+    /// 20005 - Token过期（Auth 事件）
+    #[error("WebSocket Token 已过期")]
+    WebSocketTokenExpired,
 
     /// 20002 - 心跳超时
     #[error("WebSocket 心跳超时")]
@@ -319,7 +327,7 @@ pub enum AppError {
 impl AppError {
     /// 获取错误码
     ///
-    /// 错误码严格遵循 spec/api_spec_errors.mdc 定义：
+    /// 错误码严格遵循 spec/api_spec_errors.md 定义：
     /// - 多个 enum variant 映射到同一个 spec 错误码
     /// - 具体业务场景通过 message 字段区分，客户端禁止解析 message
     /// - "编号间隙为预留空间，禁止随意填补"
@@ -399,6 +407,7 @@ impl AppError {
             // 20000：WebSocket 连接/协议错误
             Self::WebSocketError(_)
             | Self::WebSocketAuthFailed(_)
+            | Self::WebSocketTokenExpired
             | Self::WebSocketHeartbeatTimeout
             | Self::WebSocketMessageFormatError(_)
             | Self::WebSocketProtocolIncompatible(_) => 20000,
@@ -408,6 +417,8 @@ impl AppError {
             | Self::SubscriptionPermissionDenied(_)
             | Self::InvalidSubscriptionFormat(_)
             | Self::BatchLimitExceeded => 20100,
+
+            Self::ShareRateLimited { .. } => 10500,
 
             // 22000-22002：幂等性相关错误（各自驱动不同重试策略，不合并）
             Self::IdempotencyKeyConflict(_) => 22000,
@@ -436,16 +447,16 @@ impl IntoResponse for AppError {
         let status = self.http_status();
 
         // 预先提取速率限制 Retry-After（需在 self 引用结束前完成）
-        let retry_after: Option<u32> = if (10500..10600).contains(&code) {
-            Some(match &self {
+        let retry_after: Option<u32> = match &self {
+            Self::ShareRateLimited { retry_after, .. } => Some(*retry_after),
+            other if (10500..10600).contains(&code) => Some(match other {
                 Self::MinuteRateLimitExceeded => 60,
                 Self::HourlyRateLimitExceeded => 300,
                 Self::DailyRateLimitExceeded => 3600,
                 Self::RateLimited(_) | Self::TooManyConcurrentRequests => 60,
                 _ => 60,
-            })
-        } else {
-            None
+            }),
+            _ => None,
         };
 
         // 10600 服务端错误：安全脱敏

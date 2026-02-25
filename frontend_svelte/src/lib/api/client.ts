@@ -14,6 +14,14 @@ import { dev } from '$app/environment';
 import type { ApiResponse, PaginatedData } from '$lib/types/api';
 import { AUTH } from './endpoints';
 
+/**
+ * HTTP 客户端扩展的响应类型，附加 request_id 用于调试追踪。
+ * 线上 JSON 仍为 spec 定义的 ApiResponse，request_id 来自响应头或客户端构造。
+ */
+export interface ClientApiResponse<T = void> extends ApiResponse<T> {
+	request_id?: string;
+}
+
 // Re-export types for external use
 export type { ApiResponse, PaginatedData };
 
@@ -214,7 +222,7 @@ async function request<T>(
 	body?: unknown,
 	options: RequestOptions = {},
 	isRetry = false
-): Promise<ApiResponse<T>> {
+): Promise<ClientApiResponse<T>> {
 	const cfg = getConfig();
 	const headers: Record<string, string> = {
 		'Content-Type': 'application/json',
@@ -390,7 +398,7 @@ export async function post<T>(
 	url: string,
 	body?: unknown,
 	options?: RequestOptions
-): Promise<ApiResponse<T>> {
+): Promise<ClientApiResponse<T>> {
 	return request<T>(url, body, options);
 }
 
@@ -401,21 +409,21 @@ export async function paginate<T>(
 	url: string,
 	params?: Record<string, unknown>,
 	options?: RequestOptions
-): Promise<ApiResponse<PaginatedData<T>>> {
+): Promise<ClientApiResponse<PaginatedData<T>>> {
 	return post<PaginatedData<T>>(url, params, options);
 }
 
 /**
  * 检查响应是否成功
  */
-export function isSuccess<T>(response: ApiResponse<T>): response is ApiResponse<T> & { data: T } {
+export function isSuccess<T>(response: ClientApiResponse<T>): response is ClientApiResponse<T> & { data: T } {
 	return response.code === 0;
 }
 
 /**
  * 提取响应数据（如果成功）
  */
-export function getData<T>(response: ApiResponse<T>): T | undefined {
+export function getData<T>(response: ClientApiResponse<T>): T | undefined {
 	return isSuccess(response) ? response.data : undefined;
 }
 
@@ -426,7 +434,7 @@ export class ApiError extends Error {
 	code: number;
 	requestId: string;
 
-	constructor(response: ApiResponse<unknown>) {
+	constructor(response: ClientApiResponse<unknown>) {
 		super(response.message || '操作失败');
 		this.name = 'ApiError';
 		this.code = response.code;
@@ -437,7 +445,7 @@ export class ApiError extends Error {
 /**
  * 断言响应成功，否则抛出错误
  */
-export function assertSuccess<T>(response: ApiResponse<T>): asserts response is ApiResponse<T> & { data: T } {
+export function assertSuccess<T>(response: ClientApiResponse<T>): asserts response is ClientApiResponse<T> & { data: T } {
 	if (!isSuccess(response)) {
 		throw new ApiError(response);
 	}

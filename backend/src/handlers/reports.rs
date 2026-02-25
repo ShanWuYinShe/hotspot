@@ -3,7 +3,8 @@ use axum::{extract::State, Json};
 use crate::{
     dto::{
         request::{
-            AdminReportSearchRequest, CreateReportRequest, HandleReportRequest, MyReportsRequest,
+            AdminReportHandleRequest, AdminReportSearchRequest, CreateReportRequest,
+            MyReportsRequest,
         },
         response::{AdminReportItem, ApiResponse, CreateReportData, PaginatedData, ReportItem},
     },
@@ -48,7 +49,7 @@ pub async fn get_list(
 pub async fn handle(
     State(state): State<AppState>,
     user: AuthenticatedUser,
-    Json(req): Json<HandleReportRequest>,
+    Json(req): Json<AdminReportHandleRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     state.report_service.handle(user.user_id, req).await?;
     Ok(Json(ApiResponse::success_empty()))

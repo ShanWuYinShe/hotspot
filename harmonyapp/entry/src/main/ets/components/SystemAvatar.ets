@@ -75,7 +75,7 @@ export struct SystemAvatar {
             .fontSize(this.avatarSize * 0.25)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
-            .borderRadius(4)
+            .borderRadius(DesignConstants.RADIUS.SM)
             .padding({ left: 2, right: 2 })
             .margin({ bottom: -2, right: -2 })
         } else if (this.userType && UserTypeUtil.isSystemUser(this.userType)) {
@@ -83,7 +83,7 @@ export struct SystemAvatar {
             .fontSize(this.avatarSize * 0.25)
             .fontColor(Color.White)
             .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-            .borderRadius(4)
+            .borderRadius(DesignConstants.RADIUS.SM)
             .padding({ left: 2, right: 2 })
             .margin({ bottom: -2, right: -2 })
         }

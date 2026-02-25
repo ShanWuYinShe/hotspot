@@ -24,6 +24,10 @@ const MAX_HISTORY_ITEMS: number = 5;
 const PANEL_SNAP_MIN: number = 200;       // 收起：手柄 + 搜索栏 + 确认按钮
 const PANEL_SNAP_HALF: number = 340;      // 半展开：显示部分历史记录
 const PANEL_SNAP_MAX: number = 500;       // 全展开：完整内容
+const DEFAULT_GESTURE_HINT: string = '双击或长按地图可快速定位';
+const DOUBLE_CLICK_PLACEMENT_HINT: string = '已通过双击定位到该位置';
+const LONG_PRESS_PLACEMENT_HINT: string = '已通过长按定位到该位置';
+const GENERIC_PLACEMENT_HINT: string = '已定位到该位置';
 
 interface BoundsDelta {
   latDelta: number;
@@ -91,7 +95,7 @@ function TopBar(props: TopBarProps) {
     }
     .padding({ left: 8, right: 8, top: 4, bottom: 4 })
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(20)
+    .borderRadius(DesignConstants.RADIUS.XXL)
     .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
   }
   .width('100%')
@@ -157,7 +161,7 @@ struct SearchPanel {
           .layoutWeight(1)
           .height(40)
           .backgroundColor($r('app.color.bg_primary'))
-          .borderRadius(20)
+          .borderRadius(DesignConstants.RADIUS.XXL)
           .searchIcon({
             size: 18,
             color: $r('sys.color.ohos_id_color_text_primary'),
@@ -389,7 +393,7 @@ struct MainPanel {
         Column()
           .width(36)
           .height(4)
-          .borderRadius(2)
+          .borderRadius(DesignConstants.RADIUS.SM)
           .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
       }
       .width('100%')
@@ -428,7 +432,7 @@ struct MainPanel {
       .padding({ left: 12, right: 12 })
       .alignItems(VerticalAlign.Center)
       .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
-      .borderRadius(20)
+      .borderRadius(DesignConstants.RADIUS.XXL)
       .margin({ bottom: 12 })
       .onClick(this.onSearchClick)
 
@@ -553,6 +557,7 @@ export struct LocationPickerPage {
   @State showGroups: boolean = true;
   @State showMoments: boolean = true;
   @State mapToastMessage: string = '';
+  private mapToastTimerId: number = 0;
   @State anchorHistory: AnchorHistoryItem[] = [];
   @State pickMode: LocationPickerMode = 'anchor';
 
@@ -570,6 +575,7 @@ export struct LocationPickerPage {
   private renderItems: MapRenderItem[] = [];
   private lastViewportSignature: string = '';
   private mapActions: NativeMapActions | null = null;
+  private hasShownGestureHint: boolean = false;
 
   async aboutToAppear() {
     SystemUiController.useSurface({
@@ -631,7 +637,16 @@ export struct LocationPickerPage {
     }
 
     this.initialised = true;
+    this.showInitialGestureHint();
     await this.fetchMapRenderData();
+  }
+
+  private showInitialGestureHint(): void {
+    if (this.hasShownGestureHint) {
+      return;
+    }
+    this.hasShownGestureHint = true;
+    this.showMapToast(DEFAULT_GESTURE_HINT, 3500);
   }
 
   aboutToDisappear() {
@@ -646,6 +661,10 @@ export struct LocationPickerPage {
     if (this.searchDebounceTimerId > 0) {
       clearTimeout(this.searchDebounceTimerId);
       this.searchDebounceTimerId = 0;
+    }
+    if (this.mapToastTimerId > 0) {
+      clearTimeout(this.mapToastTimerId);
+      this.mapToastTimerId = 0;
     }
   }
 
@@ -691,6 +710,16 @@ export struct LocationPickerPage {
     this.centerLat = lat;
     this.centerLng = lng;
     this.mapRegion = { latitude: lat, longitude: lng, latitudeDelta: 0.01, longitudeDelta: 0.01 };
+  }
+
+  private async focusOnCoordinate(lat: number, lng: number, hintMessage: string = GENERIC_PLACEMENT_HINT): Promise<void> {
+    this.skipNextResolve = true;
+    this.setCenter(lat, lng);
+    if (this.mapActions) {
+      this.mapActions.moveCamera(lat, lng);
+    }
+    await this.resolveLocation(lat, lng);
+    this.showMapToast(hintMessage);
   }
 
   private onCameraIdle(camera: MapCameraPosition): void {
@@ -741,8 +770,12 @@ export struct LocationPickerPage {
     }
   }
 
-  private onMapDoubleClick(coord: MapCoordinate): void {
-    this.setCenter(coord.latitude, coord.longitude);
+  private async onMapDoubleClick(coord: MapCoordinate): Promise<void> {
+    await this.focusOnCoordinate(coord.latitude, coord.longitude, DOUBLE_CLICK_PLACEMENT_HINT);
+  }
+
+  private async onMapLongPress(coord: MapCoordinate): Promise<void> {
+    await this.focusOnCoordinate(coord.latitude, coord.longitude, LONG_PRESS_PLACEMENT_HINT);
   }
 
   private async resolveLocation(lat: number, lng: number): Promise<void> {
@@ -890,12 +923,32 @@ export struct LocationPickerPage {
       const response = await ApiClient.renderMap(request);
       if (response.code === 0) {
         this.renderItems = response.data?.items ?? [];
-        this.mapToastMessage = response.data?.toast_message ?? '';
+        const toastMessage = response.data?.toast_message ?? '';
+        if (toastMessage.length > 0) {
+          this.showMapToast(toastMessage, 3000);
+        } else {
+          this.mapToastMessage = '';
+        }
         this.updateMarkers();
       }
     } catch (error) {
       hilog.warn(DOMAIN_NUMBER, TAG, `render map failed: ${JSON.stringify(error)}`);
     }
+  }
+
+  private showMapToast(message: string, duration: number = 2000): void {
+    if (message.length === 0) {
+      this.mapToastMessage = '';
+      return;
+    }
+    this.mapToastMessage = message;
+    if (this.mapToastTimerId > 0) {
+      clearTimeout(this.mapToastTimerId);
+    }
+    this.mapToastTimerId = setTimeout(() => {
+      this.mapToastMessage = '';
+      this.mapToastTimerId = 0;
+    }, duration);
   }
 
   private buildViewport(): MapViewport {
@@ -924,12 +977,12 @@ export struct LocationPickerPage {
     this.renderItemsMap.clear();
     const nextMarkers: MapMarker[] = [];
     for (const item of this.renderItems) {
-      this.renderItemsMap.set(item.id, item);
+      this.renderItemsMap.set(item.render_id, item);
       if (!this.shouldDisplayItem(item)) {
         continue;
       }
       nextMarkers.push({
-        id: item.id,
+        id: item.render_id,
         latitude: item.location.latitude,
         longitude: item.location.longitude,
         title: this.getMarkerTitle(item),
@@ -999,6 +1052,7 @@ export struct LocationPickerPage {
           onCameraIdle: (camera: MapCameraPosition) => { this.onCameraIdle(camera); },
           onMapClick: () => { this.collapsePanel(); },
           onMapDoubleClick: (coord: MapCoordinate) => { this.onMapDoubleClick(coord); },
+          onMapLongPress: (coord: MapCoordinate) => { this.onMapLongPress(coord); },
           onMarkerClick: (marker: MapMarker) => { this.onMarkerItemClick(marker); },
           onActionsReady: (actions: NativeMapActions) => { this.mapActions = actions; }
         })
@@ -1091,7 +1145,7 @@ export struct LocationPickerPage {
           .height(44)
           .justifyContent(FlexAlign.Center)
           .backgroundColor($r('app.color.bg_secondary'))
-          .borderRadius(22)
+          .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
           .onClick(() => { this.locateUser(); })
 
@@ -1106,7 +1160,7 @@ export struct LocationPickerPage {
           .height(44)
           .justifyContent(FlexAlign.Center)
           .backgroundColor($r('app.color.bg_secondary'))
-          .borderRadius(22)
+          .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
           .onClick(() => { if (this.mapActions) this.mapActions.zoomIn(); })
 
@@ -1121,7 +1175,7 @@ export struct LocationPickerPage {
           .height(44)
           .justifyContent(FlexAlign.Center)
           .backgroundColor($r('app.color.bg_secondary'))
-          .borderRadius(22)
+          .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
           .onClick(() => { if (this.mapActions) this.mapActions.zoomOut(); })
         }
@@ -1166,7 +1220,7 @@ function MapFilterChip(props: MapFilterChipProps) {
   .padding({ left: 12, right: 14 })
   .backgroundColor(props.active ? props.accentColor : $r('app.color.bg_secondary'))
   .border(props.active ? { width: 0 } : { width: 1.5, color: props.accentColor })
-  .borderRadius(17)
+  .borderRadius(DesignConstants.RADIUS.XL)
   .shadow({ radius: 4, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 1 })
   .onClick(() => props.onToggle())
   .animation({ duration: 200 })

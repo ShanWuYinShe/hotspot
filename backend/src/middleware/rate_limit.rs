@@ -1,12 +1,11 @@
 use axum::{extract::Request, extract::State, middleware::Next, response::Response};
-use std::net::IpAddr;
-use std::str::FromStr;
 
 use crate::{
     constants::{SECS_10_MINUTES, SECS_5_MINUTES, SECS_PER_DAY, SECS_PER_HOUR, SECS_PER_MINUTE},
     error::AppError,
     state::AppState,
     utils::cache::CacheManager,
+    utils::client_ip::get_client_ip_from_headers,
 };
 
 async fn apply_limit(
@@ -73,98 +72,6 @@ async fn apply_limit(
     Ok(())
 }
 
-fn parse_ip(s: &str) -> Option<IpAddr> {
-    let ip = s.trim().trim_matches('"');
-    IpAddr::from_str(ip).ok()
-}
-
-fn is_private_ip(ip: &IpAddr) -> bool {
-    match ip {
-        IpAddr::V4(v4) => {
-            let octets = v4.octets();
-            octets[0] == 10 // 10.0.0.0/8
-                || (octets[0] == 172 && (16..=31).contains(&octets[1])) // 172.16.0.0/12
-                || (octets[0] == 192 && octets[1] == 168) // 192.168.0.0/16
-        }
-        IpAddr::V6(v6) => v6.is_loopback() || v6.is_unicast_link_local(),
-    }
-}
-
-fn parse_x_forwarded_for(v: &str) -> Option<IpAddr> {
-    // X-Forwarded-For: client, proxy1, proxy2 — spec: take first non-private IP
-    for part in v.split(',') {
-        let part = part.trim();
-        let ip_part = part.split(':').next().unwrap_or(part);
-        if let Some(ip) = parse_ip(ip_part) {
-            if !is_private_ip(&ip) {
-                return Some(ip);
-            }
-        }
-    }
-    v.split(',').next().and_then(|first| {
-        let ip_part = first.trim().split(':').next().unwrap_or(first.trim());
-        parse_ip(ip_part)
-    })
-}
-
-fn parse_forwarded(v: &str) -> Option<IpAddr> {
-    // Forwarded: for=192.0.2.60;proto=http;by=203.0.113.43
-    // 这里只做最小可用解析：找到 for=... 并取第一个
-    for part in v.split(';') {
-        let part = part.trim();
-        if let Some(rest) = part.strip_prefix("for=") {
-            let token = rest.trim();
-            // 兼容 for="[2001:db8:cafe::17]:4711"
-            let token = token.trim_matches('"');
-            if token.starts_with('[') {
-                let end = token.find(']')?;
-                return parse_ip(&token[1..end]);
-            }
-            let ip_part = token.split(':').next().unwrap_or(token);
-            return parse_ip(ip_part);
-        }
-    }
-    None
-}
-
-fn get_client_ip(req: &Request) -> String {
-    // Spec (api_spec_base): CF-Connecting-IP > X-Real-IP > X-Forwarded-For > TCP (dev only)
-    // 注意：如果未来服务直接暴露公网，应只在“可信反代”场景下信任这些 header
-    if let Some(v) = req
-        .headers()
-        .get("CF-Connecting-IP")
-        .and_then(|v| v.to_str().ok())
-    {
-        if let Some(ip) = parse_ip(v) {
-            return ip.to_string();
-        }
-    }
-
-    if let Some(v) = req.headers().get("x-real-ip").and_then(|v| v.to_str().ok()) {
-        if let Some(ip) = parse_ip(v) {
-            return ip.to_string();
-        }
-    }
-
-    if let Some(v) = req
-        .headers()
-        .get("x-forwarded-for")
-        .and_then(|v| v.to_str().ok())
-    {
-        if let Some(ip) = parse_x_forwarded_for(v) {
-            return ip.to_string();
-        }
-    }
-
-    if let Some(v) = req.headers().get("forwarded").and_then(|v| v.to_str().ok()) {
-        if let Some(ip) = parse_forwarded(v) {
-            return ip.to_string();
-        }
-    }
-
-    "unknown".to_string()
-}
-
 /// 频率限制中间件（全局）
 pub async fn rate_limit_middleware(
     State(state): State<AppState>,
@@ -173,7 +80,7 @@ pub async fn rate_limit_middleware(
 ) -> Result<Response, AppError> {
     let cache = CacheManager::new(state.redis.clone());
     // 获取客户端IP
-    let client_ip = get_client_ip(&req);
+    let client_ip = get_client_ip_from_headers(req.headers());
 
     let user_id = req.extensions().get::<i64>().copied();
 
@@ -229,10 +136,10 @@ pub async fn rate_limit_middleware(
         let _ = cache.expire(&ip_key, SECS_PER_HOUR).await;
     }
 
-    let ip_limit = get_limit("ip_per_hour", state.config.rate_limit_ip_per_hour).await;
+    let ip_limit = get_limit("global_per_hour", state.config.rate_limit_global_per_hour).await;
     if ip_count > ip_limit {
         tracing::warn!(
-            limit_type = "ip_per_hour",
+            limit_type = "global_per_hour",
             client_ip = %client_ip,
             current_count = ip_count,
             limit = ip_limit,

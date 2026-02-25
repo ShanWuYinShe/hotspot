@@ -7,11 +7,7 @@ use crate::{dto::request::common::PaginationParams, types::enums::ShareType};
 #[derive(Debug, Deserialize)]
 pub struct CreateShareRequest {
     pub share_type: ShareType,
-    /// Payload shape depends on share_type; should validate against SharePayload schema.
-    /// Kept as Value as pragmatic tradeoff; full discriminated union typing is complex.
-    #[serde(flatten)]
     pub payload: serde_json::Value,
-    /// 可选，默认由系统配置；若提供须为正整数且不超过系统允许上限
     pub expires_in_seconds: Option<u32>,
 }
 

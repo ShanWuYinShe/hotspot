@@ -212,7 +212,7 @@ pub enum AppEvent {
     GroupMessageRead {
         group_id: i64,
         reader_id: i64,
-        up_to: Uuid,
+        up_to_message_id: Uuid,
         read_at: String,
     },
     GroupUserTyping {
@@ -254,7 +254,7 @@ pub enum AppEvent {
     PrivateMessageRead {
         target_user_id: i64, // 被读消息的所属会话对方ID (对于读者是 sender_id)
         reader_id: i64,
-        up_to: Uuid,
+        up_to_message_id: Uuid,
         read_at: String,
     },
     PrivateUserTyping {
@@ -288,7 +288,7 @@ pub enum AppEvent {
         moment_id: Uuid,
         mentioned_user_id: i64,
         mentioning_user_id: i64,
-        moment_text_preview: String,
+        moment_description_preview: String,
         moment_cover_url: Option<String>,
     },
 
@@ -302,6 +302,7 @@ pub enum AppEvent {
     CommentLiked {
         comment_id: Uuid,
         moment_id: Uuid,
+        moment_summary: MomentSummarySnapshot,
         user_id: i64,
         liker_id: i64,
         comment_preview: String,
@@ -309,15 +310,17 @@ pub enum AppEvent {
     /// 评论被回复
     CommentReplied {
         moment_id: Uuid,
-        comment_id: Uuid,         // 原评论ID
-        reply_to_content: String, // 原评论摘要
-        reply_id: Uuid,           // 回复评论ID
-        user_id: i64,             // 原评论作者
-        replier_id: i64,          // 回复者
+        moment_summary: MomentSummarySnapshot,
+        comment_id: Uuid,                // 原评论ID
+        replied_comment_preview: String, // 被回复评论的内容摘要
+        reply_id: Uuid,                  // 回复评论ID
+        user_id: i64,                    // 原评论作者
+        replier_id: i64,                 // 回复者
         content: String,
     },
     CommentMentioned {
         moment_id: Uuid,
+        moment_summary: MomentSummarySnapshot,
         comment_id: Uuid,
         mentioned_user_id: i64,
         mentioning_user_id: i64,
@@ -383,7 +386,7 @@ pub struct ReplyToSnapshot {
 pub struct MomentSummarySnapshot {
     pub moment_id: Uuid,
     pub cover_url: Option<String>,
-    pub text_preview: String,
+    pub description_preview: String,
 }
 
 impl AppEvent {

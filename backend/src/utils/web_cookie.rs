@@ -20,7 +20,9 @@ pub fn get_cookie_value(headers: &HeaderMap, cookie_name: &str) -> Option<String
     // Cookie: a=1; b=2; refresh_token=xxx
     for part in cookie_header.split(';') {
         let trimmed = part.trim();
-        let (k, v) = trimmed.split_once('=')?;
+        let Some((k, v)) = trimmed.split_once('=') else {
+            continue;
+        };
         if k.trim() == cookie_name {
             return Some(v.trim().to_string());
         }
@@ -32,7 +34,7 @@ pub fn get_cookie_value(headers: &HeaderMap, cookie_name: &str) -> Option<String
 /// 生成 access_token 的 Set-Cookie 字符串（HttpOnly）
 ///
 /// 约定：
-/// - Path=/api：所有 API 请求自动携带
+/// - Path=/：统一覆盖 HTTP API（/api/v1/）和 WebSocket（/ws/v1）端点
 /// - HttpOnly：防止 JavaScript 访问
 /// - SameSite=Lax：防止 CSRF 攻击
 /// - Secure：仅 HTTPS 传输（生产环境）
@@ -41,10 +43,10 @@ pub fn build_access_token_set_cookie(
     max_age_seconds: i64,
     secure: bool,
 ) -> String {
-    let same_site = if secure { "None" } else { "Lax" };
+    let same_site = "Strict";
 
     let mut cookie = format!(
-        "access_token={}; Max-Age={}; Path=/api; HttpOnly; SameSite={}",
+        "access_token={}; Max-Age={}; Path=/; HttpOnly; SameSite={}",
         access_token, max_age_seconds, same_site
     );
 
@@ -67,7 +69,7 @@ pub fn build_refresh_token_set_cookie(
     max_age_seconds: i64,
     secure: bool,
 ) -> String {
-    let same_site = if secure { "None" } else { "Lax" };
+    let same_site = "Strict";
 
     // 注意：Path 限制为 /api/v1/auth/refresh_token，仅刷新 API 可用
     let mut cookie = format!(
@@ -88,7 +90,7 @@ pub fn build_refresh_token_set_cookie(
 /// - Path 使用 "/"：保持与 refresh_token 一致
 /// - SameSite 策略与 refresh_token 对齐
 pub fn build_csrf_token_set_cookie(csrf_token: &str, max_age_seconds: i64, secure: bool) -> String {
-    let same_site = if secure { "None" } else { "Lax" };
+    let same_site = "Strict";
 
     let mut cookie = format!(
         "hs_csrf_token={}; Max-Age={}; Path=/; SameSite={}",
@@ -104,10 +106,10 @@ pub fn build_csrf_token_set_cookie(csrf_token: &str, max_age_seconds: i64, secur
 
 /// 清除 access_token cookie（登出/强制失效）
 pub fn build_access_token_clear_cookie(secure: bool) -> String {
-    let same_site = if secure { "None" } else { "Lax" };
+    let same_site = "Strict";
 
     let mut cookie = format!(
-        "access_token=; Max-Age=0; Path=/api; HttpOnly; SameSite={}",
+        "access_token=; Max-Age=0; Path=/; HttpOnly; SameSite={}",
         same_site
     );
 
@@ -120,7 +122,7 @@ pub fn build_access_token_clear_cookie(secure: bool) -> String {
 
 /// 清除 refresh_token cookie（登出/强制失效）
 pub fn build_refresh_token_clear_cookie(secure: bool) -> String {
-    let same_site = if secure { "None" } else { "Lax" };
+    let same_site = "Strict";
 
     let mut cookie = format!(
         "refresh_token=; Max-Age=0; Path=/api/v1/auth/refresh_token; HttpOnly; SameSite={}",
@@ -136,7 +138,7 @@ pub fn build_refresh_token_clear_cookie(secure: bool) -> String {
 
 /// 清除 CSRF Token cookie
 pub fn build_csrf_token_clear_cookie(secure: bool) -> String {
-    let same_site = if secure { "None" } else { "Lax" };
+    let same_site = "Strict";
 
     let mut cookie = format!("hs_csrf_token=; Max-Age=0; Path=/; SameSite={}", same_site);
 

@@ -5,7 +5,6 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Label } from '$lib/components/ui/label';
 	import { Badge } from '$lib/components/ui/badge';
-	import { Card, CardContent } from '$lib/components/ui/card';
 	import { groupsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { parseTags } from '$lib/utils/format';
@@ -14,6 +13,7 @@
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import LocationPickerModal from './location-picker-modal.svelte';
+	import AnchorSummaryCard from '$lib/components/common/anchor-summary-card.svelte';
 	import MapPin from 'lucide-svelte/icons/map-pin';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 	import UsersRound from 'lucide-svelte/icons/users-round';
@@ -187,16 +187,13 @@
 				</div>
 			</div>
 
-			<Card class="border-0 bg-linear-to-r from-primary/5 to-primary/10">
-				<CardContent class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-					<div class="min-w-0">
-						<div class="text-xs text-muted-foreground">群组位置</div>
-						<div class="truncate font-medium">{mapAnchorStore.displayName}</div>
-						<div class="text-xs text-muted-foreground">
-							{mapAnchorStore.latitude.toFixed(4)}, {mapAnchorStore.longitude.toFixed(4)}
-						</div>
-					</div>
-					<div class="flex items-center gap-2">
+			<AnchorSummaryCard
+				label="群组位置"
+				description="影响附近推荐与搜索"
+				onAdjust={() => (showLocationPicker = true)}
+			>
+				<svelte:fragment slot="actions">
+					<div class="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
 						<Button variant="outline" size="sm" class="gap-2" onclick={() => (showLocationPicker = true)}>
 							<MapPin class="h-4 w-4" />
 							调整位置
@@ -206,8 +203,8 @@
 							启用位置
 						</label>
 					</div>
-				</CardContent>
-			</Card>
+				</svelte:fragment>
+			</AnchorSummaryCard>
 		</div>
 
 		<Dialog.Footer class="pt-2">

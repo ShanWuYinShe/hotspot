@@ -2,12 +2,12 @@
 
 use serde::Deserialize;
 
+use crate::dto::request::common::PaginationParams;
 use crate::types::enums::SendMessageType;
 
 #[derive(Debug, Deserialize)]
 pub struct MyPrivateChatsRequest {
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -35,8 +35,7 @@ pub struct SendPrivateMessageRequest {
 #[derive(Debug, Deserialize)]
 pub struct PrivateMessagesHistoryRequest {
     pub target_user_id: String,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -70,8 +69,7 @@ pub struct SendGroupMessageRequest {
 #[derive(Debug, Deserialize)]
 pub struct GroupMessagesHistoryRequest {
     pub group_id: String,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
     pub include_system: Option<bool>,
 }
 

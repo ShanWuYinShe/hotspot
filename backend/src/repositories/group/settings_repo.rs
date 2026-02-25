@@ -10,9 +10,9 @@ use sqlx::{FromRow, PgPool};
 
 use crate::error::Result;
 
-/// 群组设置Row（如果group_repo.rs中已定义，可以从那里导入）
+/// 群组设置 DB Row（与 dto::response::GroupSettings 区分：这是数据库行映射）
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
-pub struct GroupSettings {
+pub struct GroupSettingsRow {
     pub group_id: i64,
     pub join_method: String,
     pub is_searchable: bool,
@@ -45,9 +45,12 @@ impl GroupSettingsRepository {
     }
 
     /// 根据群聊ID查找群组设置（静态方法）
-    pub async fn find_by_group_id(pool: &PgPool, group_id: i64) -> Result<Option<GroupSettings>> {
+    pub async fn find_by_group_id(
+        pool: &PgPool,
+        group_id: i64,
+    ) -> Result<Option<GroupSettingsRow>> {
         let settings = sqlx::query_as!(
-            GroupSettings,
+            GroupSettingsRow,
             r#"
             SELECT group_id, join_method::TEXT as "join_method!", 
                    is_searchable, max_members, password_hash,
@@ -64,19 +67,22 @@ impl GroupSettingsRepository {
     }
 
     /// 根据群聊ID查找群组设置（实例方法）
-    pub async fn find_by_group(&self, group_id: i64) -> Result<Option<GroupSettings>> {
+    pub async fn find_by_group(&self, group_id: i64) -> Result<Option<GroupSettingsRow>> {
         Self::find_by_group_id(&self.pool, group_id).await
     }
 
     /// 批量根据群组ID查找群组设置
-    /// 返回 HashMap<group_id, GroupSettings>，仅包含存在设置的群组
-    pub async fn find_by_groups(&self, group_ids: &[i64]) -> Result<HashMap<i64, GroupSettings>> {
+    /// 返回 HashMap<group_id, GroupSettingsRow>，仅包含存在设置的群组
+    pub async fn find_by_groups(
+        &self,
+        group_ids: &[i64],
+    ) -> Result<HashMap<i64, GroupSettingsRow>> {
         if group_ids.is_empty() {
             return Ok(HashMap::new());
         }
 
         let rows = sqlx::query_as!(
-            GroupSettings,
+            GroupSettingsRow,
             r#"
             SELECT group_id, join_method::TEXT as "join_method!",
                    is_searchable, max_members, password_hash,

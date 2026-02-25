@@ -332,3 +332,11 @@ export struct GroupPage {
     })
   }
 }
+
+@Builder
+export function GroupPageBuilder() {
+  NavDestination() {
+    GroupPage()
+  }
+  .hideTitleBar(true)
+}

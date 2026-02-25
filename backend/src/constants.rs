@@ -46,7 +46,7 @@ pub const DEFAULT_TRENDING_TAGS_LIMIT: i64 = 50;
 
 pub const MESSAGE_RECALL_MINUTES: i64 = 2; // 消息撤回时间窗口
 pub const INVITE_EXPIRE_DAYS: i64 = 7; // 邀请过期时间
-/// 陌生人私聊消息每日发送上限（参考 spec/api_spec_chat.mdc）
+/// 陌生人私聊消息每日发送上限（参考 spec/api_spec_chat.md）
 pub const STRANGER_MESSAGE_LIMIT_PER_DAY: i64 = 10;
 
 // ============================================================
@@ -56,6 +56,16 @@ pub const STRANGER_MESSAGE_LIMIT_PER_DAY: i64 = 10;
 pub const MAX_SEARCH_RADIUS: f64 = 50000.0;
 /// 最大搜索半径（米，i32 用于 validate_radius）
 pub const MAX_SEARCH_RADIUS_I32: i32 = 50000;
+
+// ============================================================
+// 地图渲染
+// ============================================================
+/// 聚类格子尺寸（像素），用于计算 grid_meters
+pub const MAP_CLUSTER_GRID_PX: f64 = 60.0;
+/// 聚合/明细切换的 zoom 阈值（<= 此值显示聚合点）
+pub const MAP_CLUSTER_ZOOM_THRESHOLD: i32 = 12;
+/// 明细模式下单类型实体查询上限
+pub const MAP_DETAIL_ENTITY_LIMIT: i32 = 200;
 
 // ============================================================
 // WebSocket 心跳配置

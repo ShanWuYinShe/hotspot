@@ -8,11 +8,11 @@ HotSpot 是一个基于地理位置的社交应用，采用 Monorepo 结构管�
 
 | 目录 | 技术栈 | 说明 |
 |------|--------|------|
-| `spec/` | Markdown (.mdc) | **唯一真实来源**：包含所有 API 契约、编码规范、错误码定义 |
+| `spec/` | Markdown (.md) | **唯一真实来源**：包含所有 API 契约、编码规范、错误码定义 |
 | `backend/` | Rust / Axum / SQLx / PostGIS | 后端服务 |
 | `frontend_svelte/` | SvelteKit / Svelte 5 / TypeScript | Web 前端 |
 | `harmonyapp/` | HarmonyOS ArkTS (.ets) | 鸿蒙客户端 |
-| `scripts/` | Shell | 辅助脚本（如数据迁移、维护任务） |
+| `deploy/` | Shell / Docker / Nginx | 部署运维（Docker 编排、数据库脚本、Nginx 配置、部署文档） |
 
 ## 核心原则：Spec-First 开发
 
@@ -33,23 +33,45 @@ spec/ > 实现代码 > 注释 > 口头/文字描述
 
 | 文件名 | 核心内容 | 使用场景 |
 |--------|----------|----------|
-| `spec/api_spec_index.mdc` | API 模块索引 | 查找某个功能属于哪个模块 |
-| `spec/api_spec_base.mdc` | 全局规则（分页/幂等/错误信封/Token） | 实现任何 API 前必须阅读 |
-| `spec/api_spec_types.mdc` | 共享类型定义 | 定义 DTO、枚举等跨模块类型时引用 |
-| `spec/api_spec_errors.mdc` | 错误码定义 | **唯一错误码来源**，禁止自行定义 |
-| `spec/api_spec_websocket.mdc` | WebSocket 事件契约 | 实现或消费 WebSocket 时引用 |
-| `spec/backend_rule.mdc` | 后端编码规范 | Rust 代码风格、数据库操作约束 |
-| `spec/frontend_rule.mdc` | 前端编码规范 | Svelte/TypeScript 编码约束 |
-| `spec/backend_doc.mdc` | 后端功能边界 | 哪些逻辑必须在后端实现（如距离计算） |
-| `spec/frontend_doc.mdc` | 前端功能边界 | 前端不应实现的逻辑 |
-| `spec/api_spec_*.mdc` | 各业务模块 API | 各模块具体端点定义 |
+| `spec/api_spec_index.md` | API 模块索引 | 查找某个功能属于哪个模块 |
+| `spec/api_spec_base.md` | 全局规则（分页/幂等/错误信封/Token） | 实现任何 API 前必须阅读 |
+| `spec/api_spec_types.md` | 共享类型定义 | 定义 DTO、枚举等跨模块类型时引用 |
+| `spec/api_spec_errors.md` | 错误码定义 | **唯一错误码来源**，禁止自行定义 |
+| `spec/api_spec_websocket.md` | WebSocket 事件契约 | 实现或消费 WebSocket 时引用 |
+| `spec/backend_rule.md` | 后端编码规范 | Rust 代码风格、数据库操作约束 |
+| `spec/frontend_rule.md` | 前端编码规范 | Svelte/TypeScript 编码约束 |
+| `spec/harmonyapp_rule.md` | 鸿蒙客户端编码规范 | ArkTS 编码约束、组件规范 |
+| `spec/backend_doc.md` | 后端功能边界 | 哪些逻辑必须在后端实现（如距离计算） |
+| `spec/frontend_doc.md` | 前端功能边界 | 前端不应实现的逻辑 |
+| `spec/harmonyapp_doc.md` | 鸿蒙客户端功能边界 | 鸿蒙端功能范围与非目标 |
+| `spec/api_spec_*.md` | 各业务模块 API | 各模块具体端点定义 |
 
 ### 查找 API 的标准流程
 
-1.  **定位模块**：从 `spec/api_spec_index.mdc` 确定功能所属模块。
-2.  **查阅端点**：打开对应模块 spec（如 `api_spec_auth.mdc`），查看请求/响应格式、认证要求、幂等性要求。
-3.  **复用类型**：如需使用共享类型，查阅 `spec/api_spec_types.mdc`。
-4.  **确认错误码**：若涉及错误处理，查阅 `spec/api_spec_errors.mdc` 获取标准错误码。
+1.  **定位模块**：从 `spec/api_spec_index.md` 确定功能所属模块。
+2.  **查阅端点**：打开对应模块 spec（如 `api_spec_auth.md`），查看请求/响应格式、认证要求、幂等性要求。
+3.  **复用类型**：如需使用共享类型，查阅 `spec/api_spec_types.md`。
+4.  **确认错误码**：若涉及错误处理，查阅 `spec/api_spec_errors.md` 获取标准错误码。
+
+### 新增 API 端点的标准工作流
+
+新增或修改一个 API 端点时，需按以下顺序逐项检查。各技术栈的详细文件清单见 `.cursor/rules/` 下的对应规则文件。
+
+**通用步骤**：
+
+- 确认 `spec/api_spec_*.md` 中端点定义存在且为最新
+- 确认请求/响应字段、类型与 `spec/api_spec_types.md` 一致
+- 确认错误码来自 `spec/api_spec_errors.md`
+- 确认认证级别（token_optional / token_required）正确
+- 确认幂等性要求（MUST 幂等的接口须支持 Idempotency-Key）
+
+**后端**（详见 `.cursor/rules/backend.md`）：DTO → Handler → Service → Repository → Route
+
+**前端**（详见 `.cursor/rules/frontend.md`）：endpoints.ts → services/*.ts → types/api.ts
+
+**鸿蒙**（详见 `.cursor/rules/harmonyapp.md`）：ApiEndpoints.ets → ApiClient.ets → types/api.ets
+
+**跨项目同步**：如果端点涉及新增或修改 DTO/类型，须同步更新所有消费方的类型定义，并对受影响项目重新运行类型检查。
 
 ## 核心原则：简洁至上
 
@@ -117,10 +139,13 @@ pnpm dev             # 启动开发服务器
 
 > **注意**：HarmonyOS 的编译和代码检查是两个独立工具，**必须分别运行**。
 
+> **⚠️ 编译命令限制**：Agent **严禁执行** `hvigorw`（编译）和 `ohpm`（依赖安装）命令。`hvigorw` 在遇到配置错误时会删除整个 `entry/` 源代码目录，造成不可逆的代码丢失。Agent 应将编译命令提供给用户，由用户在终端中手动执行并反馈结果。**`codelinter`（代码风格检查）可由 Agent 直接执行**，不受此限制。
+
 ```bash
 # 环境变量（macOS 默认安装路径，无需修改）
 DEVECO_STUDIO_DIR="/Applications/DevEco-Studio.app"
 DEVECO_SDK_HOME="$DEVECO_STUDIO_DIR/Contents/sdk"
+OHPM="$DEVECO_STUDIO_DIR/Contents/tools/ohpm/bin/ohpm"
 HVIGORW="$DEVECO_STUDIO_DIR/Contents/tools/hvigor/bin/hvigorw.js"
 CODELINTER="$DEVECO_STUDIO_DIR/Contents/plugins/codelinter/run/index.js"
 
@@ -128,13 +153,17 @@ CODELINTER="$DEVECO_STUDIO_DIR/Contents/plugins/codelinter/run/index.js"
 
 cd harmonyapp
 
-# 1. 编译检查（零错误要求）
+# 0. 安装依赖（编译前必须先执行）【⛔ Agent 禁止执行，须由用户手动运行】
+"$OHPM" install --all \
+  --registry https://ohpm.openharmony.cn/ohpm/ --strict_ssl true
+
+# 1. 编译检查（零错误要求）【⛔ Agent 禁止执行，须由用户手动运行】
 DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$HVIGORW" \
-  clean --mode module -p product=default assembleHap \
+  --mode module -p product=default assembleHap \
   --info --analyze=ultrafine --parallel --incremental \
   --enable-build-script-type-check --no-daemon
 
-# 2. 代码风格检查（模拟 IDE 中的 Linter 警告，应尽量修复）
+# 2. 代码风格检查（模拟 IDE 中的 Linter 警告，应尽量修复）【✅ Agent 可直接执行】
 DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$CODELINTER" \
   -c code-linter.json5 entry/src/main/ets/
 ```
@@ -156,7 +185,7 @@ DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$CODELINTER" \
 - 强制使用**游标分页**，**禁止使用 OFFSET/LIMIT** 进行分页。
 - `cursor` 参数对客户端**完全不透明**，后端应将其作为不透明令牌传递，前端只透传，不解析、不构造。
 - 默认每页数量 `limit` 为 20，最大不超过 100。
-- 响应中必须返回 `next_cursor`，若无更多数据则返回 `null`。
+- 响应中必须返回 `next_cursor`，若无更多数据则省略该字段（JSON 中不包含该 key）。
 
 ### 幂等性
 
@@ -166,14 +195,14 @@ DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$CODELINTER" \
 ### 位置与距离
 
 - **距离和方位计算**：必须由后端基于 PostGIS 完成，**前端/客户端严禁自行计算距离或角度**。
-- 请求位置使用 `Location` 类型（包含 `lat` 和 `lng` 字段）。
-- 响应位置使用 `RelativeLocation` 类型（包含 `lat`、`lng`、`distance_m`、`bearing` 等字段，由后端填充）。
+- 请求位置使用 `Location` 类型（包含 `point: GeoPoint` 和 `location_name` 字段）。
+- 响应位置使用 `RelativeLocation` 类型（包含 `point: GeoPoint`、`location_name`、`distance`、`bearing_degrees` 等字段，由后端填充）。
 
 ### 错误处理
 
 - 所有业务响应均使用 HTTP 200 状态码，数据格式统一为 `ApiResponse<T>` 信封。
 - **业务成功判断唯一依据**：`code == 0`。严禁依赖 HTTP 状态码或 `data` 字段是否为 `null`。
-- 错误码**只能**从 `spec/api_spec_errors.mdc` 中选用，**禁止自行定义新错误码**。
+- 错误码**只能**从 `spec/api_spec_errors.md` 中选用，**禁止自行定义新错误码**。
 - 严禁向客户端暴露任何内部细节（如堆栈跟踪、SQL 语句、文件路径）。
 
 ## 任务完成验证流程（强制性）
@@ -186,11 +215,12 @@ DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$CODELINTER" \
 
 - Backend: `cargo check`
 - Frontend: `pnpm check`
-- HarmonyOS: 运行上述编译命令（hvigorw）和代码检查命令（codelinter），两者均需通过。
+- HarmonyOS: 编译（hvigorw）由用户手动执行，Agent 将命令提供给用户并等待结果反馈；代码风格检查（codelinter）由 Agent 直接执行。两者均需通过。
 
 **原则**：
 - 警告应尽量消除，但**禁止使用 `#[allow(...)]` 等属性压制警告**（除非有充分理由并注释）。
 - HarmonyOS 的两项检查（编译 + Linter）必须**分别执行**，缺一不可。
+- **Agent 严禁执行 `hvigorw` 和 `ohpm` 命令**（详见 HarmonyOS 章节说明）。
 
 ### 步骤二：禁止模式扫描
 
@@ -216,10 +246,14 @@ rg '"/api/v1/' frontend_svelte/src/ harmonyapp/entry/src/main/ets/
 - 幂等性要求是否满足（MUST 接口是否携带 `Idempotency-Key`）。
 - 分页参数和响应格式是否符合游标分页规范。
 
-### 步骤四：跨项目回归
+### 步骤四：跨项目回归与类型一致性
 
 - 如果变更涉及 DTO、共享类型、WebSocket 事件等跨项目共享内容，**必须同步更新所有消费方**（backend、frontend_svelte、harmonyapp）。
 - 对受影响的其他项目重复步骤一，确保没有破坏已有功能。
+- **类型对齐检查**：修改任何 DTO/类型定义后，逐一比对以下三端的类型定义是否与 `spec/api_spec_types.md` 和对应模块 spec 一致：
+  - `backend/src/dto/` -- Rust struct
+  - `frontend_svelte/src/lib/types/api.ts` -- TypeScript interface
+  - `harmonyapp/entry/src/main/ets/core/types/api.ets` -- ArkTS interface
 
 ## 权限边界
 
@@ -228,7 +262,7 @@ rg '"/api/v1/' frontend_svelte/src/ harmonyapp/entry/src/main/ets/
 ### ✅ 可直接执行（无需询问）
 
 - 读取文件、搜索代码（如 `rg`、`grep`）、列出目录内容。
-- 运行构建/检查命令（`cargo check`、`pnpm check` 等）、格式化、Lint、单个测试。
+- 运行构建/检查命令（`cargo check`、`pnpm check`、HarmonyOS `codelinter` 等）、格式化、Lint、单个测试。**注意**：HarmonyOS 的 `hvigorw`（编译）和 `ohpm`（依赖安装）命令**不在此列**，详见「构建与验证命令 > HarmonyOS」。
 - 运行上述“禁止模式扫描”中的 rg 命令。
 - 查阅 `spec/` 目录下的任何规范文件。
 
@@ -240,7 +274,6 @@ rg '"/api/v1/' frontend_svelte/src/ harmonyapp/entry/src/main/ets/
 - 变更数据库 migration 文件。
 - **执行数据库重置或迁移命令**（如 `sqlx migrate run`、`sqlx database reset`、`psql` 等）：Agent 必须将命令告知用户，由用户手动执行后将结果反馈给 Agent。
 - **涉及大量文件删除或批量修改的操作**：Agent 必须先列出将受影响的文件清单和操作说明，经用户明确确认后才可执行。禁止自动做决定。
-- **任何 Git 写操作**（详见 Git 安全章节，默认全部禁止）。
 
 ### 🚫 绝对禁止
 
@@ -257,28 +290,60 @@ rg '"/api/v1/' frontend_svelte/src/ harmonyapp/entry/src/main/ets/
 - 如需删除，应在任务末尾**统一列出待删除文件清单**，并说明删除原因，待用户明确同意后方可执行。
 - **批量修改**：当一次操作可能涉及**大量文件的修改、重命名或重构**时，Agent 必须先向用户展示完整的影响范围（受影响文件清单、变更摘要），经用户确认后才可执行。禁止静默批量操作。
 - **禁止的危险 Shell 命令**（可能导致源代码丢失）：
-  `rm`、`rm -rf`、`mv`（批量）、`find ... -delete`、`xargs rm`
-  以及任何 Git 写操作（`git checkout`、`git clean`、`git reset --hard` 等）。
+  `rm`、`rm -rf`、`mv`（批量）、`find ... -delete`、`xargs rm`。
   除非用户在当前对话中明确授权，否则一律禁止。
-- **禁止自行执行 `scripts/` 目录下的脚本**：项目维护脚本可能包含破坏性操作，执行前必须告知用户脚本内容和影响，经用户确认后才可运行。
+  Git 操作的风险管理见「Git 操作规范」章节。
+- **禁止自行执行 `deploy/` 目录下的脚本**：部署脚本可能包含破坏性操作，执行前必须告知用户脚本内容和影响，经用户确认后才可运行。
+- **文件修改安全措施**：
+  - 任何使用 `Write` 工具覆盖或新建文件前，必须先用 `Read` 工具读取该文件内容（如果文件已存在）。
+  - 优先使用 `Edit` 工具进行精确替换，避免使用 `Write` 覆盖整个文件，除非是全新的文件。
+  - 使用 `Edit` 时必须提供足够的上下文（oldString）确保唯一匹配，避免误删内容。
+  - 当 `Edit` 工具报告"oldString not found"或"Found multiple matches"时，禁止继续操作，必须重新检查并修正匹配文本。
 
 ### 🌐 项目目录边界
 
 - Agent **只允许访问项目根目录内的文件和目录**。
-- 禁止访问项目目录以外的任何文件，除非用户在当前对话或本文件中明确指定了需要访问的外部路径（如 DevEco Studio 安装路径）。
+- **禁止任何形式的越界访问**：包括但不限于读取、列出、搜索项目目录外的任何路径。
+- **工具调用前置校验**：在调用任何文件操作工具（Read、Write、Edit、Bash、Glob、Grep）之前，必须验证目标路径是否在项目根目录（`/Users/liyou/Work/hotspot`）下。如果路径包含 `..`、`~`、或指向 `/Users/liyou/Work/hotspot` 之外，**立即拒绝并报错**。
+- **环境变量限制**：Bash 命令中的环境变量（如 `$HOME`、`$USER`、`~`）可能导致越界访问，必须展开验证或避免使用。
+- **禁止的路径模式**：
+  - 绝对路径不以 `/Users/liyou/Work/hotspot` 开头
+  - 相对路径包含 `..`（如 `../spec/`）
+  - 使用 `~` 符号（如 `~/Documents/`）
+  - 环境变量指向项目外（如 `$HOME/Desktop/`）
+- **唯一例外**：仅当用户在当前对话中**逐条明确授权**访问特定外部路径（如 DevEco Studio 安装路径）时，方可访问。且必须使用完整的绝对路径，不得使用通配符或环境变量。
 
-## Git 安全（极严格）
+## Git 操作规范
 
-> **核心原则：Git 写操作可能覆盖用户未提交的更改，造成不可逆的数据丢失。因此，所有 Git 写操作默认禁止。**
+> **核心原则：Git 操作按风险等级分级管理。常规操作可直接执行，有风险的操作需先询问用户。**
 
-- **允许的只读查询**：`git status`、`git diff`、`git log`、`git show`、`git ls-files`。
-- **严格禁止的命令**（包括但不限于）：
-  `git checkout`, `git restore`, `git reset`, `git clean`, `git stash`,
-  `git add`, `git commit`, `git push`, `git pull`, `git merge`,
-  `git rebase`, `git cherry-pick`, `git revert`
-- **无例外**：上述命令除非用户在当前对话中**逐条明确指示**执行，否则一律禁止。
-- **危险参数禁令**：禁止使用 `--force`、`--hard`、`--no-verify` 等可能绕过检查的参数。
-- **子 Agent 同样受约束**：在调用子 Agent 时，必须在 prompt 中明确禁止其执行任何 Git 写操作。
+### ✅ 可直接执行（无需询问）
+
+- **只读查询**：`git status`、`git diff`、`git log`、`git show`、`git ls-files`、`git branch`（列出分支）。
+- **暂存与提交**：`git add`、`git commit`。
+- **临时存储**：`git stash`、`git stash pop`。
+- **分支操作**：`git checkout <branch>`、`git switch`、`git branch <name>`（创建分支）。
+
+### ❓ 需要询问用户意见
+
+以下操作执行前须简要告知用户操作内容，获得同意后再执行：
+
+- **远程操作**：`git push`、`git pull`、`git fetch`。
+- **合并操作**：`git merge`、`git cherry-pick`。
+- **撤销操作**：`git revert`、`git restore`、`git checkout -- <file>`。
+
+### ⚠️ 高风险操作（必须详细说明风险并获得明确确认）
+
+以下操作可能导致数据丢失或历史改写，执行前必须向用户说明具体风险和影响范围，获得明确确认后方可执行：
+
+- **历史改写**：`git rebase`、`git commit --amend`（已推送的提交）。
+- **强制操作**：`git push --force`、`git push --force-with-lease`、`git reset --hard`。
+- **清理操作**：`git clean`、`git branch -D`（强制删除分支）。
+- 任何带 `--force`、`--hard`、`--no-verify` 参数的命令。
+
+### 子 Agent 约束
+
+调用子 Agent 时，必须在 prompt 中告知其遵守本节 Git 操作规范，高风险操作需回报主 Agent 由用户确认。
 
 ## Agent 行为准则
 
@@ -291,6 +356,11 @@ rg '"/api/v1/' frontend_svelte/src/ harmonyapp/entry/src/main/ets/
   - 禁止使用 `head` 或 `tail` 命令读取文件（应使用 `cat` 或直接读取）。
   - 禁止自动更新文档版本号。
   - 阅读文档时注意文档的版本信息，确保基于最新版本。
+- **子任务使用限制**：
+  - **修改项目代码时，谨慎使用 Task 子任务（subagent）**。子任务的执行过程不透明，曾导致源代码文件被意外删除且无法追溯根因。
+  - 修改 harmonyapp 项目代码时，**严禁使用 Task 子任务**（subagent）。所有文件的读取、搜索、修改必须由主 Agent 直接执行，不得委托给子任务。
+  - 唯一例外：只读的代码探索（`subagent_type="explore"`，且设置 `readonly=true`）可以使用。
+  - 调用子 Agent 时，必须在 prompt 中告知其遵守 Git 操作规范（高风险操作需回报确认）、文件删除需用户确认，以及禁止访问项目目录外路径。
 - **文档格式**：本文档（及所有项目文档）不使用数字章节编号，以保持灵活性。
 
 ---

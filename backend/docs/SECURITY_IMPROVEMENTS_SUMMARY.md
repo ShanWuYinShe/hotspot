@@ -233,7 +233,7 @@ pub async fn revoke_session(...) -> Result<()> {
 
 #### 规范层面的不足 ⚠️
 
-`@spec/api_spec_user.mdc` 缺少：
+`@spec/api_spec_user.md` 缺少：
 1. 黑名单影响范围的明确定义
 2. 双向拉黑场景的处理说明
 3. 拉黑后的数据清理策略

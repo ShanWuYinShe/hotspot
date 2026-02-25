@@ -2,8 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::dto::request::common::Location;
-use crate::types::enums::{ApplicationStatusFilter, GroupJoinMethod, GroupRole, SetableGroupRole};
+use crate::dto::request::common::{Location, PaginationParams};
+use crate::types::enums::{ApplicationStatusFilter, GroupJoinMethod, GroupRole, SettableGroupRole};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GroupSettingsUpdate {
@@ -33,8 +33,7 @@ pub struct GroupOpenTheDoorRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct MyGroupChatsRequest {
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -44,7 +43,8 @@ pub struct UpdateGroupChatRequest {
     pub description: Option<String>,
     pub avatar_file_id: Option<String>,
     pub tags: Option<Vec<String>>,
-    pub password: Option<String>, // 设置/更新群组密码（传空字符串清除密码）
+    pub password: Option<String>,
+    pub clear_password: Option<bool>,
     pub join_method: Option<GroupJoinMethod>,
     pub is_searchable: Option<bool>,
     pub max_members: Option<i32>,
@@ -67,8 +67,7 @@ pub struct UpdateGroupMySettingsRequest {
 pub struct GroupMembersRequest {
     pub group_id: String,
     pub role: Option<GroupRole>,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -90,7 +89,7 @@ pub struct JoinGroupRequest {
 pub struct SetMemberRoleRequest {
     pub group_id: String,
     pub user_id: String,
-    pub role: SetableGroupRole,
+    pub role: SettableGroupRole,
 }
 
 #[derive(Debug, Deserialize)]
@@ -133,16 +132,14 @@ pub struct UnbanMemberRequest {
 #[derive(Debug, Deserialize)]
 pub struct BannedMembersRequest {
     pub group_id: String,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct GroupApplicationsRequest {
     pub group_id: String,
     pub status: Option<ApplicationStatusFilter>,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -186,6 +183,7 @@ pub struct UpdateGroupAnnouncementRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct DeleteGroupAnnouncementRequest {
+    pub group_id: String,
     pub announcement_id: String,
 }
 
@@ -197,16 +195,14 @@ pub struct CancelApplicationRequest {
 #[derive(Debug, Deserialize)]
 pub struct MyInvitesRequest {
     pub status: Option<ApplicationStatusFilter>,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 /// 我的入群申请列表请求 - POST /api/v1/groups/me/applications/list
 #[derive(Debug, Deserialize)]
 pub struct MyApplicationsRequest {
     pub status: Option<ApplicationStatusFilter>,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -217,4 +213,18 @@ pub struct AcceptInviteRequest {
 #[derive(Debug, Deserialize)]
 pub struct RejectInviteRequest {
     pub invite_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GroupSentInvitesRequest {
+    pub group_id: String,
+    pub status: Option<ApplicationStatusFilter>,
+    pub pagination: Option<PaginationParams>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RevokeSentInviteRequest {
+    pub group_id: String,
+    pub invite_id: String,
+    pub reason: Option<String>,
 }

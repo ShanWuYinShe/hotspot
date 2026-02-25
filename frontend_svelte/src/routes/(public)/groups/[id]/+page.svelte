@@ -30,7 +30,7 @@
 		GroupItem,
 		GroupAnnouncementItem,
 		GroupMemberItem,
-		SetableGroupRole,
+		SettableGroupRole,
 		GroupJoinMethod
 	} from '$lib/types/api';
 	import { formatDateTime } from '$lib/utils/format';
@@ -368,7 +368,7 @@
 		showRoleDialog = true;
 	}
 
-	async function handleSetRole(role: SetableGroupRole) {
+	async function handleSetRole(role: SettableGroupRole) {
 		if (!authStore.isAuthenticated) {
 			uiStore.saveRedirectUrl();
 			uiStore.openLoginModal();
@@ -482,20 +482,17 @@
 			async () => {
 				const response = await groupsService.getAnnouncements({ group_id: groupId });
 				if (isSuccess(response) && response.data) {
-					// 包装为非分页响应格式
 					return {
 						code: 0,
 						data: {
 							items: response.data.items,
 							next_cursor: undefined
-						},
-						request_id: response.request_id
+						}
 					};
 				}
 				return {
 					code: response.code,
 					message: response.message,
-					request_id: response.request_id,
 					data: {
 						items: [],
 						next_cursor: undefined

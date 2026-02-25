@@ -8,6 +8,7 @@
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
 	import { Label } from '$lib/components/ui/label';
 	import { Skeleton } from '$lib/components/ui/skeleton';
+	import { Switch } from '$lib/components/ui/switch';
 	import type { PrivacyLevel, PrivateChatPermission, UserSettings } from '$lib/types/api';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 
@@ -117,21 +118,21 @@
 						<p class="font-medium">位置可见</p>
 						<p class="text-sm text-muted-foreground">允许展示你的地理位置</p>
 					</div>
-					<input type="checkbox" class="h-4 w-4" bind:checked={locationVisible} />
+					<Switch bind:checked={locationVisible} />
 				</div>
 				<div class="flex items-center justify-between">
 					<div>
 						<p class="font-medium">在线状态可见</p>
 						<p class="text-sm text-muted-foreground">允许显示在线/离线状态</p>
 					</div>
-					<input type="checkbox" class="h-4 w-4" bind:checked={presenceVisible} />
+					<Switch bind:checked={presenceVisible} />
 				</div>
 				<div class="flex items-center justify-between">
 					<div>
 						<p class="font-medium">好友/关注/粉丝列表可见</p>
 						<p class="text-sm text-muted-foreground">控制你的社交列表是否对他人可见</p>
 					</div>
-					<input type="checkbox" class="h-4 w-4" bind:checked={socialListsVisible} />
+					<Switch bind:checked={socialListsVisible} />
 				</div>
 			</CardContent>
 		</Card>
@@ -147,7 +148,7 @@
 						<p class="font-medium">允许关注</p>
 						<p class="text-sm text-muted-foreground">关闭后他人关注需审批</p>
 					</div>
-					<input type="checkbox" class="h-4 w-4" bind:checked={allowFollow} />
+					<Switch bind:checked={allowFollow} />
 				</div>
 				<div class="space-y-2">
 					<Label for="private-chat">私聊权限</Label>
@@ -175,14 +176,14 @@
 						<p class="font-medium">允许被搜索</p>
 						<p class="text-sm text-muted-foreground">关闭后不会出现在搜索结果</p>
 					</div>
-					<input type="checkbox" class="h-4 w-4" bind:checked={searchable} />
+					<Switch bind:checked={searchable} />
 				</div>
 				<div class="flex items-center justify-between">
 					<div>
 						<p class="font-medium">附近可见</p>
 						<p class="text-sm text-muted-foreground">允许出现在附近的人</p>
 					</div>
-					<input type="checkbox" class="h-4 w-4" bind:checked={locationSearchable} />
+					<Switch bind:checked={locationSearchable} />
 				</div>
 			</CardContent>
 		</Card>

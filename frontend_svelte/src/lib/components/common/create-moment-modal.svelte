@@ -5,7 +5,6 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Label } from '$lib/components/ui/label';
 	import { Badge } from '$lib/components/ui/badge';
-	import { Card, CardContent } from '$lib/components/ui/card';
 	import { momentsService, mediaService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { parseTags } from '$lib/utils/format';
@@ -14,9 +13,9 @@
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import LocationPickerModal from './location-picker-modal.svelte';
+	import AnchorSummaryCard from '$lib/components/common/anchor-summary-card.svelte';
 	import type { PrivacyLevel } from '$lib/types/api';
 	import { untrack } from 'svelte';
-	import MapPin from 'lucide-svelte/icons/map-pin';
 	import Image from 'lucide-svelte/icons/image';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 	import Send from 'lucide-svelte/icons/send';
@@ -280,21 +279,10 @@
 				</select>
 			</div>
 
-			<Card class="border-0 bg-linear-to-r from-primary/5 to-primary/10">
-				<CardContent class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-					<div class="min-w-0">
-						<div class="text-xs text-muted-foreground">发布位置</div>
-						<div class="truncate font-medium">{mapAnchorStore.displayName}</div>
-						<div class="text-xs text-muted-foreground">
-							{mapAnchorStore.latitude.toFixed(4)}, {mapAnchorStore.longitude.toFixed(4)}
-						</div>
-					</div>
-					<Button variant="outline" size="sm" class="gap-2" onclick={() => (showLocationPicker = true)}>
-						<MapPin class="h-4 w-4" />
-						调整位置
-					</Button>
-				</CardContent>
-			</Card>
+			<AnchorSummaryCard
+				label="发布位置"
+				onAdjust={() => (showLocationPicker = true)}
+			/>
 		</div>
 
 		<Dialog.Footer class="pt-2">

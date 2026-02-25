@@ -3,7 +3,8 @@ use std::str::FromStr;
 use crate::{
     dto::{
         request::{
-            AdminReportSearchRequest, CreateReportRequest, HandleReportRequest, MyReportsRequest,
+            AdminReportHandleRequest, AdminReportSearchRequest, CreateReportRequest,
+            MyReportsRequest,
         },
         response::{AdminReportItem, CreateReportData, PaginatedData, ReportItem, UserInfo},
     },
@@ -69,6 +70,8 @@ impl ReportService {
         let target_type = req.target_type;
         let target_id = normalize_report_target_id(target_type, req.target_id)?;
         self.validate_target_exists(target_type, &target_id).await?;
+        self.check_self_report(reporter_id, target_type, &target_id)
+            .await?;
 
         let created_report = self
             .report_repo
@@ -92,8 +95,12 @@ impl ReportService {
         reporter_id: i64,
         req: MyReportsRequest,
     ) -> Result<PaginatedData<ReportItem>, AppError> {
-        let limit = Validator::validate_limit(req.limit, crate::constants::MAX_PAGE_LIMIT)?;
-        let cursor = req.cursor.clone();
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(
+            pagination.and_then(|p| p.limit),
+            crate::constants::MAX_PAGE_LIMIT,
+        )?;
+        let cursor = pagination.and_then(|p| p.cursor.clone());
 
         let (reports, next_cursor) = self
             .report_repo
@@ -154,8 +161,21 @@ impl ReportService {
 
         let mut response_items = Vec::with_capacity(reports.len());
         for report in reports {
+            let target_type = report.target_type.clone();
             let report_item = Self::to_report_item(report.clone())?;
             let target_snapshot = report.target_snapshot.and_then(|value| {
+                // 根据目标类型解析对应的快照数据
+                // value 可能已经是结构化的 { "moment": {...} } 或老的扁平格式
+
+                // 处理可能是新的结构化格式
+                if value.get("moment").is_some()
+                    || value.get("comment").is_some()
+                    || value.get("message").is_some()
+                {
+                    return serde_json::from_value(value).ok();
+                }
+
+                // 向下兼容旧的扁平格式，根据 target_type 进行转换
                 let content = value
                     .get("content")
                     .and_then(|v| v.as_str())
@@ -172,15 +192,48 @@ impl ReportService {
                         .map(|s| s.to_string())
                         .or_else(|| v.as_i64().map(|id| id.to_string()))
                 });
+
                 if content.is_none() && media_urls.is_none() && owner_id.is_none() {
-                    None
-                } else {
-                    Some(ReportTargetSnapshot {
-                        content,
-                        media_urls,
-                        owner_id,
-                    })
+                    return None;
                 }
+
+                use crate::dto::response::{CommentSnapshot, MessageSnapshot, MomentSnapshot};
+
+                let mut snapshot = ReportTargetSnapshot {
+                    moment: None,
+                    comment: None,
+                    message: None,
+                };
+
+                match target_type.as_str() {
+                    "moment" => {
+                        snapshot.moment = Some(MomentSnapshot {
+                            description: content,
+                            image_urls: media_urls,
+                            author_id: owner_id,
+                        });
+                    }
+                    "comment" => {
+                        snapshot.comment = Some(CommentSnapshot {
+                            content,
+                            author_id: owner_id,
+                            moment_id: value
+                                .get("moment_id")
+                                .and_then(|v| v.as_str())
+                                .map(|v| v.to_string()),
+                        });
+                    }
+                    "message" => {
+                        snapshot.message = Some(MessageSnapshot {
+                            content,
+                            media_urls,
+                            sender_id: owner_id,
+                        });
+                    }
+                    _ => return None,
+                }
+
+                Some(snapshot)
             });
             let reporter = if let Some(u) = user_map.get(&report.reporter_id) {
                 let avatar_url = self
@@ -238,7 +291,11 @@ impl ReportService {
     }
 
     /// 审核举报（管理员）
-    pub async fn handle(&self, admin_id: i64, req: HandleReportRequest) -> Result<(), AppError> {
+    pub async fn handle(
+        &self,
+        admin_id: i64,
+        req: AdminReportHandleRequest,
+    ) -> Result<(), AppError> {
         use crate::types::enums::ReportHandleAction;
 
         // action 已是强类型枚举
@@ -284,6 +341,68 @@ impl ReportService {
 }
 
 impl ReportService {
+    async fn check_self_report(
+        &self,
+        reporter_id: i64,
+        target_type: ReportTargetType,
+        target_id: &str,
+    ) -> Result<(), AppError> {
+        let is_self = match target_type {
+            ReportTargetType::User => {
+                let uid = crate::utils::validation::Validator::parse_user_id(target_id)?;
+                uid == reporter_id
+            }
+            ReportTargetType::Moment => {
+                let mid = Validator::parse_uuid(target_id, "target_id")?;
+                self.moment_repo
+                    .find_by_id(mid)
+                    .await?
+                    .map(|m| m.user_id == reporter_id)
+                    .unwrap_or(false)
+            }
+            ReportTargetType::Comment => {
+                let cid = Validator::parse_uuid(target_id, "target_id")?;
+                self.comment_repo
+                    .find_by_id(cid)
+                    .await?
+                    .map(|c| c.user_id == reporter_id)
+                    .unwrap_or(false)
+            }
+            ReportTargetType::Group => {
+                let gid = crate::utils::validation::Validator::parse_group_id(target_id)?;
+                self.group_repo
+                    .find_by_id(gid)
+                    .await?
+                    .map(|g| g.owner_id == reporter_id)
+                    .unwrap_or(false)
+            }
+            ReportTargetType::Message => {
+                let mid = Validator::parse_uuid(target_id, "target_id")?;
+                let is_private_self = self
+                    .private_message_repo
+                    .find_by_id(mid)
+                    .await?
+                    .map(|m| m.sender_id == reporter_id)
+                    .unwrap_or(false);
+                if is_private_self {
+                    true
+                } else {
+                    self.group_message_repo
+                        .find_by_id(mid)
+                        .await?
+                        .map(|m| m.sender_id == reporter_id)
+                        .unwrap_or(false)
+                }
+            }
+        };
+        if is_self {
+            return Err(AppError::BusinessRuleViolation(
+                "不能举报自己的内容".to_string(),
+            ));
+        }
+        Ok(())
+    }
+
     async fn validate_target_exists(
         &self,
         target_type: ReportTargetType,

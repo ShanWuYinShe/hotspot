@@ -181,7 +181,7 @@ export struct PhotoPreviewPage {
           .fontWeight(FontWeight.Medium)
           .backgroundColor('rgba(0,0,0,0.3)')
           .padding({ left: 12, right: 12, top: 6, bottom: 6 })
-          .borderRadius(16)
+          .borderRadius(DesignConstants.RADIUS.XL)
       }
       .width('100%')
       .justifyContent(FlexAlign.Center)

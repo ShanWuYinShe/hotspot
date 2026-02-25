@@ -5,7 +5,7 @@
 ## 技术栈
 
 - **框架**：HarmonyOS ArkTS (.ets)
-- **API 版本**：API 11 (SDK 5.1.1)
+- **API 版本**：API 20 (SDK 6.0.0)
 - **构建工具**：hvigor
 - **网络**：`@ohos.net.http`
 - **持久化**：`@ohos.data.preferences`（AppStorage + PersistentStorage）
@@ -171,7 +171,7 @@ const manager = GlobalStateManager.getInstance();
 
 - `WebSocketService` 单例管理连接。
 - 支持鉴权、心跳、自动重连、订阅。
-- 事件类型定义在 `core/types/WebSocketTypes.ets`，必须与 `spec/api_spec_websocket.mdc` 一致。
+- 事件类型定义在 `core/types/WebSocketTypes.ets`，必须与 `spec/api_spec_websocket.md` 一致。
 
 ## 位置与距离
 
@@ -192,11 +192,18 @@ const manager = GlobalStateManager.getInstance();
 - [ ] 是否使用了 `Image($r('sys.media.*'))` 而可以改用 `SymbolSpan($r(AppIcon.XXX))`？
 - [ ] 颜色/字体/间距是否使用了 `$r('app.color.*')` / `DesignConstants` 常量而非硬编码值？
 
-## 文件删除与批量变更规则
+## 安全规则
 
-- Agent **不得自行删除**任何源代码文件。如需删除，须列出清单并说明原因，经用户确认后执行。
-- **批量修改**：当一次操作可能涉及**大量文件的修改、重命名或重构**时，Agent 必须先向用户展示完整的影响范围（受影响文件清单、变更摘要），经用户确认后才可执行。**禁止静默批量操作，必须给用户一个询问提示。**
-- **禁止的危险 Shell 命令**（可能导致源代码丢失）：`rm`、`rm -rf`、`mv`（批量）、`find ... -delete`、`xargs rm`。除非用户明确授权，否则一律禁止。
+文件删除、批量变更、Git 操作规范等全局规则见根目录 `AGENTS.md` 的「权限边界」和「Git 操作规范」章节，此处不重复。
+
+**HarmonyOS 额外约束**：
+
+- **文件修改安全措施**：
+  - 任何使用 `Write` 工具覆盖或新建文件前，必须先用 `Read` 工具读取该文件内容（如果文件已存在）。
+  - 优先使用 `Edit` 工具进行精确替换，避免使用 `Write` 覆盖整个文件，除非是全新的文件。
+  - 使用 `Edit` 时必须提供足够的上下文（oldString）确保唯一匹配，避免误删内容。
+  - 当 `Edit` 工具报告"oldString not found"或"Found multiple matches"时，禁止继续操作，必须重新检查并修正匹配文本。
+- **保护关键目录**：`entry/src/main/ets/` 目录下任何文件的修改或删除，必须使用上述精确修改流程。
 
 ## 禁止使用子任务
 
@@ -204,41 +211,35 @@ const manager = GlobalStateManager.getInstance();
 - 此规则的原因：子任务的执行过程不透明，曾导致源代码文件被意外删除且无法追溯根因。
 - 唯一例外：只读的代码探索（`subagent_type="explore"`，且设置 `readonly=true`）可以使用。
 
-## Git 安全（极严格）
-
-> **所有 Git 写操作默认禁止，防止覆盖用户未提交的更改。**
-
-- **允许的只读查询**：`git status`、`git diff`、`git log`、`git show`、`git ls-files`。
-- **严格禁止的命令**（包括但不限于）：
-  `git checkout`, `git restore`, `git reset`, `git clean`, `git stash`,
-  `git add`, `git commit`, `git push`, `git pull`, `git merge`,
-  `git rebase`, `git cherry-pick`, `git revert`
-- **无例外**：上述命令除非用户在当前对话中**逐条明确指示**执行，否则一律禁止。
-- **危险参数禁令**：禁止使用 `--force`、`--hard`、`--no-verify` 等可能绕过检查的参数。
-- **子 Agent 同样受约束**：在调用子 Agent 时，必须在 prompt 中明确禁止其执行任何 Git 写操作。
-
 ## 编译与检查命令
 
 编译和代码检查是两个独立的工具，**必须分别运行**：
 - **编译（hvigorw）**：检查编译错误，生成 HAP 包。
 - **代码检查（codelinter）**：检查 DevEco Studio IDE 中显示的 linter 警告（性能建议、代码规范等）。
 
+> **⚠️ 编译命令限制**：Agent **严禁执行** `hvigorw`（编译）和 `ohpm`（依赖安装）命令。`hvigorw` 在遇到配置错误时会删除整个 `entry/` 源代码目录，造成不可逆的代码丢失。Agent 应将编译命令提供给用户，由用户在终端中手动执行并反馈结果。**`codelinter`（代码风格检查）可由 Agent 直接执行**，不受此限制。
+
 ```bash
 # macOS 默认路径
 DEVECO_SDK_HOME="/Applications/DevEco-Studio.app/Contents/sdk"
+OHPM="/Applications/DevEco-Studio.app/Contents/tools/ohpm/bin/ohpm"
 HVIGORW="/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw.js"
 CODELINTER="/Applications/DevEco-Studio.app/Contents/plugins/codelinter/run/index.js"
 
-# 编译（检查编译错误）
+# 安装依赖（编译前必须先执行）【⛔ Agent 禁止执行，须由用户手动运行】
+"$OHPM" install --all \
+  --registry https://ohpm.openharmony.cn/ohpm/ --strict_ssl true
+
+# 编译（检查编译错误）【⛔ Agent 禁止执行，须由用户手动运行】
 DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$HVIGORW" \
-  clean --mode module -p product=default assembleHap \
+  --mode module -p product=default assembleHap \
   --info --analyze=ultrafine --parallel --incremental \
   --enable-build-script-type-check --no-daemon
 
-# 代码检查（检查 IDE 中的 linter 警告，基于 code-linter.json5 规则配置）
+# 代码检查（检查 IDE 中的 linter 警告，基于 code-linter.json5 规则配置）【✅ Agent 可直接执行】
 DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$CODELINTER" \
   -c code-linter.json5 entry/src/main/ets/
 
-# 禁止模式扫描
+# 禁止模式扫描【✅ Agent 可直接执行】
 rg '"/api/v1/' entry/src/main/ets/
 ```

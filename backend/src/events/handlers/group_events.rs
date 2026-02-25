@@ -9,10 +9,11 @@ use crate::{
     services::{
         notification_service::NotificationService, subscription_service::SubscriptionService,
     },
-    types::enums::MemberLeaveReason,
+    types::enums::{GroupDismissReason, MemberLeaveReason, MemberRemoveReason},
     websocket::{
-        manager::ConnectionManager as WsConnectionManager, subscription::SubscriptionManager,
-        types::WsMessage,
+        manager::ConnectionManager as WsConnectionManager,
+        subscription::SubscriptionManager,
+        types::{GroupUpdatedFields, WsMessage},
     },
 };
 
@@ -147,16 +148,17 @@ pub async fn send_websocket(
                     .await;
                 ws_manager.send_to_users(&subscribers, &message).await;
             } else {
-                let reason_str = match reason {
-                    MemberLeaveReason::Kick => Some("kicked".to_string()),
+                let remove_reason = match reason {
+                    MemberLeaveReason::Kick => Some(MemberRemoveReason::Kicked),
                     MemberLeaveReason::Dismiss => None,
-                    _ => Some("banned".to_string()),
+                    _ => Some(MemberRemoveReason::Banned),
                 };
+                let removed_by_info = get_user_info(user_repo, *removed_by).await;
                 let message = WsMessage::GroupMemberRemoved {
                     group_id: group_id_str.clone(),
                     user,
-                    removed_by: removed_by.to_string(),
-                    reason: reason_str,
+                    removed_by: removed_by_info,
+                    reason: remove_reason,
                     removed_at: chrono::Utc::now().to_rfc3339(),
                     member_count: *member_count as i32,
                 };
@@ -179,34 +181,22 @@ pub async fn send_websocket(
             max_members,
             has_password,
         } => {
-            let mut fields = serde_json::Map::new();
-            if let Some(v) = name {
-                fields.insert("name".into(), serde_json::Value::String(v.clone()));
-            }
-            if let Some(v) = description {
-                fields.insert("description".into(), serde_json::Value::String(v.clone()));
-            }
-            if let Some(v) = avatar_url {
-                fields.insert("avatar_url".into(), serde_json::Value::String(v.clone()));
-            }
-            if let Some(v) = tags {
-                fields.insert("tags".into(), serde_json::json!(v));
-            }
-            if let Some(v) = join_method {
-                fields.insert("join_method".into(), serde_json::Value::String(v.clone()));
-            }
-            if let Some(v) = is_searchable {
-                fields.insert("is_searchable".into(), serde_json::Value::Bool(*v));
-            }
-            if let Some(v) = max_members {
-                fields.insert("max_members".into(), serde_json::json!(v));
-            }
-            if let Some(v) = has_password {
-                fields.insert("has_password".into(), serde_json::Value::Bool(*v));
-            }
+            let updated_fields = GroupUpdatedFields {
+                name: name.clone(),
+                description: description.clone(),
+                avatar_url: avatar_url.clone(),
+                tags: tags.clone(),
+                join_method: join_method
+                    .as_deref()
+                    .and_then(|s| s.parse().ok()),
+                is_searchable: *is_searchable,
+                max_members: *max_members,
+                has_password: *has_password,
+                ..Default::default()
+            };
             let message = WsMessage::GroupUpdated {
                 group_id: group_id.to_string(),
-                updated_fields: serde_json::Value::Object(fields),
+                updated_fields,
                 updated_by: updated_by.to_string(),
                 updated_at: chrono::Utc::now().to_rfc3339(),
             };
@@ -234,10 +224,11 @@ pub async fn send_websocket(
                 ),
                 None => get_user_info(user_repo, *user_id).await,
             };
+            let muted_by_info = get_user_info(user_repo, *muted_by).await;
             let message = WsMessage::GroupMemberMuted {
                 group_id: group_id.to_string(),
                 user,
-                muted_by: muted_by.to_string(),
+                muted_by: muted_by_info,
                 muted_until: muted_until.clone(),
                 duration_minutes: *duration_minutes,
                 muted_at: chrono::Utc::now().to_rfc3339(),
@@ -264,10 +255,11 @@ pub async fn send_websocket(
                 ),
                 None => get_user_info(user_repo, *user_id).await,
             };
+            let unmuted_by_info = get_user_info(user_repo, *unmuted_by).await;
             let message = WsMessage::GroupMemberUnmuted {
                 group_id: group_id.to_string(),
                 user,
-                unmuted_by: unmuted_by.to_string(),
+                unmuted_by: unmuted_by_info,
                 unmuted_at: chrono::Utc::now().to_rfc3339(),
             };
             let group_id_str = group_id.to_string();
@@ -283,9 +275,9 @@ pub async fn send_websocket(
             ..
         } => {
             let reason = Some(if *dismissed_by_owner {
-                "owner_dismissed".to_string()
+                GroupDismissReason::OwnerDismissed
             } else {
-                "policy_violation".to_string()
+                GroupDismissReason::PolicyViolation
             });
             let message = WsMessage::GroupDismissed {
                 group_id: group_id.to_string(),

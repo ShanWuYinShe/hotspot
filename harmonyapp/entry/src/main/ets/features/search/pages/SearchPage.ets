@@ -138,7 +138,7 @@ export struct SearchPage {
           .layoutWeight(1)
           .height(40)
           .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
-          .borderRadius(20)
+          .borderRadius(DesignConstants.RADIUS.XXL)
           .padding({ left: 16, right: 16 })
           .margin({ left: 8, right: 16 })
           .onChange((value) => {
@@ -447,7 +447,7 @@ export struct SearchPage {
       .width('100%')
     }
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(12)
+    .borderRadius(DesignConstants.RADIUS.LG)
     .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 1 })
   }
 

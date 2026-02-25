@@ -633,22 +633,22 @@ API 规范文档位于项目根目录的 `spec/` 文件夹：
 
 ```
 spec/
-├── api_spec.mdc                  # 主规范（总览）
-├── api_spec_auth.mdc            # 认证接口
-├── api_spec_user.mdc            # 用户管理
-├── api_spec_moment.mdc          # 瞬间/动态
-├── api_spec_chat.mdc            # 私聊
-├── api_spec_group.mdc           # 群聊
-├── api_spec_feed.mdc            # 信息流
-├── api_spec_notification.mdc   # 通知
-├── api_spec_search.mdc          # 搜索
-├── api_spec_share.mdc           # 分享
-├── api_spec_report.mdc          # 举报
-├── api_spec_system.mdc          # 系统配置
-├── api_spec_admin_*.mdc         # 管理员接口
-├── api_spec_websocket.mdc       # WebSocket 事件
-├── api_spec_errors.mdc          # 错误码定义
-└── api_spec_common_types.mdc    # 通用类型
+├── api_spec.md                  # 主规范（总览）
+├── api_spec_auth.md            # 认证接口
+├── api_spec_user.md            # 用户管理
+├── api_spec_moment.md          # 瞬间/动态
+├── api_spec_chat.md            # 私聊
+├── api_spec_group.md           # 群聊
+├── api_spec_feed.md            # 信息流
+├── api_spec_notification.md   # 通知
+├── api_spec_search.md          # 搜索
+├── api_spec_share.md           # 分享
+├── api_spec_report.md          # 举报
+├── api_spec_system.md          # 系统配置
+├── api_spec_admin_*.md         # 管理员接口
+├── api_spec_websocket.md       # WebSocket 事件
+├── api_spec_errors.md          # 错误码定义
+└── api_spec_common_types.md    # 通用类型
 ```
 
 ### API 规范

@@ -261,7 +261,7 @@ pub async fn auth_middleware(
 
 /// JWT 可选认证中间件
 ///
-/// ## Spec 规则（api_spec_base.mdc "Token 可选端点的 Token 验证规则"）
+/// ## Spec 规则（api_spec_base.md "Token 可选端点的 Token 验证规则"）
 ///
 /// - **未提供 Token**: 请求继续，不注入 user_id（按未登录处理）
 /// - **提供有效 Token**: 注入 user_id 和 session_id
@@ -285,9 +285,7 @@ pub async fn optional_auth_middleware(
             // Token 格式错误（如 Authorization header 存在但不是 Bearer 格式）
             // Spec: 携带了 Token 就必须验证，格式错误 = 验证失败 = 10100
             tracing::debug!(reason = ?reason, "Invalid token format in optional auth");
-            return Err(AppError::Unauthorized(
-                reason.to_user_message().to_string(),
-            ));
+            return Err(AppError::Unauthorized(reason.to_user_message().to_string()));
         }
     };
 

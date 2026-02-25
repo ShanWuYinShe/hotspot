@@ -1,6 +1,6 @@
 /**
  * WebSocket 类型定义
- * 严格遵循 @spec/api_spec_websocket.mdc
+ * 严格遵循 @spec/api_spec_websocket.md
  */
 
 import type {
@@ -21,7 +21,7 @@ import type {
 } from '$lib/types/api';
 
 // ============ 基础类型 ============
-// AnnouncementSeverity：定义于 api.ts（spec/api_spec_types.mdc），通过 SystemAnnouncementItem 间接引用
+// AnnouncementSeverity：定义于 api.ts（spec/api_spec_types.md），通过 SystemAnnouncementItem 间接引用
 export type SubscriptionOperation = 'subscribe' | 'unsubscribe' | 'set';
 export type SubscriptionFailureReason = 'invalid' | 'denied' | 'limit_exceeded' | 'error';
 export type ErrorSeverity = 'fatal' | 'recoverable' | 'warning';
@@ -102,7 +102,7 @@ export type ServerWebSocketEvent = WebSocketEvent<ServerEventType, unknown>;
 
 // ============ 辅助类型 ============
 
-// MomentSummary 定义于 api.ts (对应 api_spec_types.mdc)
+// MomentSummary 定义于 api.ts (对应 api_spec_types.md)
 
 // MessageReplyTo 从 $lib/types/api 导入（含 share_code?: string，与 spec 一致）
 export type { MessageReplyTo } from '$lib/types/api';
@@ -146,14 +146,14 @@ export interface UserOfflinePayload {
 
 // 关注关系
 export interface NewFollowerPayload {
-	user: UserInfo;
+	actor: UserInfo;
 	followed_at: string;
 	source?: FollowSource;
 	source_moment_id?: string;
 }
 
 export interface MutualFollowPayload {
-	user: UserInfo;
+	actor: UserInfo;
 	mutual_at: string;
 }
 
@@ -161,7 +161,7 @@ export interface MutualFollowPayload {
 export interface MomentLikedPayload {
 	moment_id: string;
 	moment_summary: MomentSummary;
-	user: UserInfo;
+	actor: UserInfo;
 	liked_at: string;
 }
 
@@ -169,7 +169,7 @@ export interface MomentCommentedPayload {
 	moment_id: string;
 	moment_summary: MomentSummary;
 	comment_id: string;
-	user: UserInfo;
+	actor: UserInfo;
 	content: string;
 	commented_at: string;
 }
@@ -177,19 +177,19 @@ export interface MomentCommentedPayload {
 export interface CommentLikedPayload {
 	comment_id: string;
 	moment_id: string;
-	moment_summary?: MomentSummary;
+	moment_summary: MomentSummary;
 	comment_preview: string;
-	user: UserInfo;
+	actor: UserInfo;
 	liked_at: string;
 }
 
 export interface CommentReplyPayload {
 	moment_id: string;
-	moment_summary?: MomentSummary;
+	moment_summary: MomentSummary;
 	comment_id: string;
-	reply_to_content: string;
+	replied_comment_preview: string;
 	reply_id: string;
-	user: UserInfo;
+	actor: UserInfo;
 	content: string;
 	replied_at: string;
 }
@@ -198,9 +198,9 @@ export interface MessageMentionedPayload {
 	target_type: 'moment' | 'comment';
 	moment_id: string;
 	comment_id?: string;
-	moment_summary?: MomentSummary;
+	moment_summary: MomentSummary;
 	comment_preview?: string;
-	user: UserInfo;
+	actor: UserInfo;
 	mentioned_at: string;
 }
 
@@ -242,7 +242,7 @@ export interface PrivateMessageRecalledPayload {
 
 export interface PrivateMessageReadPayload {
 	target_user_id: string;
-	up_to: string;
+	up_to_message_id: string;
 	reader_id: string;
 	read_at: string;
 }
@@ -308,7 +308,7 @@ export interface GroupMemberLeftPayload {
 export interface GroupMemberRemovedPayload {
 	group_id: string;
 	user: UserInfo;
-	removed_by: string; // user_id（操作者）
+	removed_by: UserInfo; // 操作者
 	reason?: 'kicked' | 'banned'; // 移除原因
 	removed_at: string;
 	member_count: number;
@@ -318,7 +318,7 @@ export interface GroupMemberRemovedPayload {
 export interface GroupMemberMutedPayload {
 	group_id: string;
 	user: UserInfo;
-	muted_by: string; // user_id（操作者）
+	muted_by: UserInfo; // 操作者
 	muted_until: string; // 禁言截止时间
 	duration_minutes: number;
 	muted_at: string;
@@ -328,7 +328,7 @@ export interface GroupMemberMutedPayload {
 export interface GroupMemberUnmutedPayload {
 	group_id: string;
 	user: UserInfo;
-	unmuted_by: string; // user_id（操作者）
+	unmuted_by: UserInfo; // 操作者
 	unmuted_at: string;
 }
 
@@ -403,7 +403,7 @@ export interface ErrorPayload {
 }
 
 export interface SubscribeAckPayload {
-	client_msg_id: string;
+	client_request_id: string;
 	operation: SubscriptionOperation;
 	type: 'user' | 'group';
 	ids: string[];
@@ -414,7 +414,7 @@ export interface SubscribeAckPayload {
 
 // 订阅状态快照（响应 GetSubscriptions）
 export interface SubscriptionsSnapshotPayload {
-	client_msg_id: string;
+	client_request_id: string;
 	user_ids: string[];
 	group_ids: string[];
 }
@@ -464,14 +464,14 @@ export interface AuthPayload {
 export interface PingPayload {}
 
 export interface SetSubscriptionsPayload {
-	client_msg_id: string;
+	client_request_id: string;
 	operation: SubscriptionOperation;
 	type: 'user' | 'group';
 	ids: string[];
 }
 
 export interface GetSubscriptionsPayload {
-	client_msg_id: string;
+	client_request_id: string;
 }
 
 export interface PrivateTypingPayload {

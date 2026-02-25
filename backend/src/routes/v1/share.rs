@@ -1,10 +1,10 @@
 //! 分享 API 路由
 //!
-//! 对应 API 规范: api_spec_share.mdc
+//! 对应 API 规范: api_spec_share.md
 //!
 //! Token 要求：
 //! - token_optional_routes: share/get（认证可选）
-//! - token_required_routes: share/create、share/apply、share/revoke、share/me/list（认证必须）
+//! - token_required_routes: share/create、share/revoke、share/me/list（认证必须）
 
 use crate::handlers::share;
 use crate::state::AppState;

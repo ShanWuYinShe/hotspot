@@ -23,13 +23,14 @@ export type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'share
 export type SendMessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'share';
 
 // 用户类型枚举
-export type UserType = 'temp' | 'normal' | 'admin' | 'system';
+export type UserType = 'temp' | 'normal';
 
 // 隐私级别
 export type PrivacyLevel = 'public' | 'private';
 
 // 角色
 export type GroupRole = 'owner' | 'admin' | 'member';
+export type SettableGroupRole = 'admin' | 'member';
 
 // 客户端类型
 export type ClientType = 'web' | 'app';
@@ -68,6 +69,12 @@ export type FollowSource = 'moment' | 'search' | 'recommendation' | 'profile' | 
 
 // 推荐理由类型
 export type RecommendationType = 'friend_liked' | 'nearby' | 'trending' | 'following' | 'tag_match';
+
+// 标签趋势
+export type TagTrend = 'rising' | 'stable' | 'falling';
+
+// Feed 不感兴趣的目标类型
+export type DismissTargetType = 'moment' | 'user' | 'group';
 
 export interface RecommendationContext {
   type: RecommendationType;
@@ -118,7 +125,7 @@ export interface MomentImage {
   thumbnail_url?: string;
   width?: number;
   height?: number;
-  content_type?: string;
+  mime_type?: string;
 }
 
 export interface MessageMedia {
@@ -154,7 +161,6 @@ export interface Relationship {
   is_following: boolean;
   is_followed_by: boolean;
   is_blocked: boolean;
-  is_blocked_by: boolean;
 }
 
 export interface SocialContext {
@@ -251,7 +257,7 @@ export interface SystemAnnouncementItem {
 export interface MomentSummary {
   moment_id: string;
   cover_url?: string;
-  text_preview: string;
+  description_preview: string;
 }
 
 export interface MomentMyState {
@@ -288,8 +294,8 @@ export interface MessageReplyTo {
   message_id: string;
   user_id: string;
   nickname: string;
-  content: string;
-  share_code?: string;
+  content: string; // 文本预览
+  share_code?: string; // 若被回复的消息为 share 类型，则包含该 share_code
 }
 
 export interface MessageSent {
@@ -334,6 +340,7 @@ export interface CommentItem {
   user: UserInfo;
   content: string;
   parent_id?: string;
+  mentions?: string[];
   created_at: string;
   likes_count: number;
   replies_count: number;
@@ -366,7 +373,7 @@ export interface PrivateChatItem {
   presence_status?: UserPresenceStatus;
   created_at?: string;
   can_message: boolean;
-  cant_message_reason?: CantMessageReason;
+  message_blocked_reason?: MessageBlockedReason;
 }
 
 export interface PrivateChatOpenResult {
@@ -457,8 +464,8 @@ export interface ChangePasswordRequest {
 
 export type Gender = 'male' | 'female' | 'apache_helicopter';
 export type PrivateChatPermission = 'everyone' | 'friends' | 'nobody';
-export type CantMessageReason = 'privacy' | 'stranger_limit' | 'account_suspended';
-export type ApplicationStatus = 'pending' | 'accepted' | 'rejected';
+export type MessageBlockedReason = 'privacy' | 'stranger_quota_exceeded' | 'account_suspended';
+export type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'revoked';
 
 export interface SearchUsersRequest {
   keyword?: string;
@@ -812,6 +819,7 @@ export interface UpdateGroupRequest {
   avatar_file_id?: string;
   tags?: string[];
   password?: string;
+  clear_password?: boolean;
   join_method?: GroupJoinMethod;
   is_searchable?: boolean;
   max_members?: number;
@@ -933,7 +941,7 @@ export interface GroupApplicationItem {
   application_id: string;
   applicant: UserInfo;
   message?: string;
-  status: 'pending' | 'accepted' | 'rejected';
+  status: ApplicationStatus;
   created_at: string;
   handled_at?: string;
   handled_by?: UserInfo;
@@ -971,7 +979,7 @@ export interface GroupInviteItem {
   group: GroupInfo;
   inviter: UserInfo;
   message?: string;
-  status: 'pending' | 'accepted' | 'rejected';
+  status: ApplicationStatus;
   created_at: string;
   expires_at?: string;
 }
@@ -1063,7 +1071,7 @@ export interface MapRenderEntity {
 }
 
 export interface MapRenderItem {
-  id: string;
+  render_id: string;
   type: 'cluster' | 'user' | 'group' | 'moment';
   location: GeoPoint;
   cluster?: MapRenderCluster;
@@ -1146,18 +1154,23 @@ export interface GetFeedUsersRequest {
 
 export interface GetFeedTrendingRequest {}
 
+export interface DismissFeedItemRequest {
+  target_type: DismissTargetType;
+  target_id: string;
+}
+
 // 标签项（搜索、Feed 等模块共用）
 export interface TagItem {
   name: string;
   usage_count: number;
-  trend?: 'rising' | 'stable' | 'falling';
+  trend?: TagTrend;
 }
 
 // 热门标签项（feed/list_trending 专用，trend 必填 + hot_moment_preview）
 export interface TrendingTagItem {
   name: string;
   usage_count: number;
-  trend: 'rising' | 'stable' | 'falling';
+  trend: TagTrend;
   hot_moment_preview?: MomentItem;
 }
 
@@ -1175,29 +1188,30 @@ export interface SearchSuggestRequest {
   reference_point: GeoPoint;
   types?: SearchSuggestType[];
   radius?: number;
-  limit?: number;
 }
 
-export interface UserSuggestItem extends UserInfo {
+export interface UserSuggestItem {
+  user_id: string;
+  nickname: string;
+  avatar_url?: string;
   bio?: string;
-  tags?: string[];
-  distance?: number;
+  location?: RelativeLocation;
 }
 
-export interface GroupSuggestItem extends GroupInfo {
+export interface GroupSuggestItem {
+  group_id: string;
+  name: string;
+  avatar_url?: string;
   description?: string;
-  tags?: string[];
-  has_password?: boolean;
-  distance?: number;
+  members_count: number;
+  location?: RelativeLocation;
 }
 
 export interface MomentSuggestItem {
   moment_id: string;
-  description: string;
-  images?: MomentImage[];
-  tags?: string[];
-  user: UserInfo;
-  distance?: number;
+  description_preview: string;
+  author: UserInfo;
+  location?: RelativeLocation;
 }
 
 export interface TagSuggestItem {
@@ -1260,29 +1274,48 @@ export interface ContactInfo {
   official_website: string;
 }
 
+export interface ClientDefaults {
+  default_location: Location;
+  default_user_avatar: string;
+  default_group_avatar: string;
+}
+
 export interface ClientConfig {
   features: FeatureSwitches;
   limits: AppLimits;
   contact: ContactInfo;
+  defaults: ClientDefaults;
 }
 
+export type SystemHealthStatus = 'healthy' | 'degraded' | 'unhealthy';
+
 export interface HealthStatus {
-  status: 'healthy' | 'degraded';
-  version: string;
+  status: SystemHealthStatus;
   timestamp: string;
+}
+
+export type ApiVersionStatus = 'active' | 'deprecated' | 'sunset';
+
+export interface ApiVersionMeta {
+  version: string;
+  status: ApiVersionStatus;
+  deprecated_at?: string;
+  sunset_at?: string;
+  message?: string;
+  recommended_version?: string;
 }
 
 export interface AnnouncementListRequest {}
 
 // ==================== 文件与媒体上传API类型 ====================
 
-export type UploadCategory = 'avatar' | 'group_avatar' | 'moment_image' | 'chat_image' | 'chat_video' | 'chat_audio' | 'chat_file';
+export type MediaCategory = 'avatar' | 'group_avatar' | 'moment_image' | 'chat_image' | 'chat_video' | 'chat_audio' | 'chat_file';
 
 export interface PresignUploadRequest {
   file_name: string;
   file_size: number;
   mime_type: string;
-  category: UploadCategory;
+  category: MediaCategory;
   md5?: string;
 }
 
@@ -1307,7 +1340,6 @@ export interface CompleteUploadRequest {
 
 export interface UploadedMedia {
   file_id: string;
-  url: string;
   thumbnail_url?: string;
   file_size: number;
   mime_type: string;
@@ -1719,10 +1751,11 @@ export interface AdminReportSearchRequest {
   pagination?: PaginationParams;
 }
 
-export interface HandleReportRequest {
+export interface AdminReportHandleRequest {
   report_id: string;
   action: ReportHandleAction;
   note?: string;
+  ban_duration_days?: number;
 }
 
 // Admin User Types
@@ -1785,24 +1818,35 @@ export interface GroupAnnouncementListData {
 export type NotificationType =
   'new_follower' | 'mutual_follow' | 'moment_liked' | 'moment_commented'
   | 'comment_liked' | 'comment_reply' | 'mentioned'
-  | 'group_invite_received' | 'group_application_accepted' | 'system_announcement';
+  | 'group_invite_received' | 'group_invite_accepted'
+  | 'group_application_received' | 'group_application_accepted' | 'system_announcement';
 
+// Spec 定义 NotificationPayload 为 discriminated union（按 type 区分），
+// 但 ArkTS 对 discriminated union 的类型窄化支持有限，
+// 因此使用扁平接口 + 精确字段类型替代。
 export interface NotificationPayload {
   type: NotificationType;
   actor?: UserInfo;
-  source?: string;
+  applicant?: UserInfo;
+  user?: UserInfo;
+  source?: FollowSource;
   source_moment_id?: string;
   moment_id?: string;
   moment_summary?: MomentSummary;
   comment_id?: string;
   comment_preview?: string;
-  target_type?: string;
+  replied_comment_preview?: string;
+  reply_id?: string;
+  reply_content_preview?: string;
+  target_type?: 'moment' | 'comment';
   group_id?: string;
   group_name?: string;
+  group_avatar_url?: string;
   invite_id?: string;
+  message?: string;
   application_id?: string;
   announcement_id?: string;
-  severity?: string;
+  severity?: AnnouncementSeverity;
 }
 
 export interface NotificationItem {
@@ -1830,6 +1874,6 @@ export interface NotificationListRequest {
   pagination?: PaginationParams;
 }
 
-export interface MarkNotificationsReadRequest {
+export interface MarkAsReadRequest {
   notification_ids: string[];
 }

@@ -16,7 +16,8 @@ import { common } from '@kit.AbilityKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import {
   GroupItem,
-  GroupMemberItem
+  GroupMemberItem,
+  RelativeLocation
 } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DistributedSyncService, SyncData } from '../../../core/services/DistributedSyncService';
@@ -412,7 +413,8 @@ export struct GroupDetailPage {
                 .layoutWeight(1)
 
                 Column() {
-                  Text(this.groupInfo?.location?.distance ? `${Math.round(this.groupInfo.location.distance)}m` : '--')
+                  Text((this.groupInfo?.location as RelativeLocation)?.distance
+                    ? `${Math.round((this.groupInfo!.location as RelativeLocation).distance!)}m` : '--')
                     .fontSize(DesignConstants.FONT.SIZE.LG)
                     .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
                     .fontColor($r('sys.color.ohos_id_color_text_primary'))
@@ -456,10 +458,11 @@ export struct GroupDetailPage {
                   .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                   .width('100%')
 
-                if (this.groupInfo?.location?.distance !== undefined && this.groupInfo.location.distance >= 0) {
-                  Text(`距你 ${this.groupInfo.location.distance < 1000
-                    ? Math.round(this.groupInfo.location.distance) + 'm'
-                    : (this.groupInfo.location.distance / 1000).toFixed(1) + 'km'}`)
+                if ((this.groupInfo?.location as RelativeLocation)?.distance !== undefined &&
+                  (this.groupInfo!.location as RelativeLocation).distance! >= 0) {
+                  Text(`距你 ${(this.groupInfo!.location as RelativeLocation).distance! < 1000
+                    ? Math.round((this.groupInfo!.location as RelativeLocation).distance!) + 'm'
+                    : ((this.groupInfo!.location as RelativeLocation).distance! / 1000).toFixed(1) + 'km'}`)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
                     .width('100%')

@@ -6,15 +6,32 @@ use serde::Serialize;
 // ID → string 序列化辅助
 // ============================================================
 
-/// 将 i64 序列化为 JSON string（spec 要求所有 ID 为 string 类型）
+/// 将 i64 序列化为 JSON string，反序列化时支持 string 或 number
+/// （spec 要求所有 ID 在 API 层为 string 类型）
 pub mod id_as_string {
-    use serde::{self, Serializer};
+    use serde::{self, Deserialize, Deserializer, Serializer};
 
     pub fn serialize<S>(id: &i64, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         serializer.serialize_str(&id.to_string())
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<i64, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum StringOrNumber {
+            Str(String),
+            Num(i64),
+        }
+        match StringOrNumber::deserialize(deserializer)? {
+            StringOrNumber::Str(s) => s.parse::<i64>().map_err(serde::de::Error::custom),
+            StringOrNumber::Num(n) => Ok(n),
+        }
     }
 }
 
@@ -92,6 +109,14 @@ impl ApiResponse<()> {
 pub struct GeoPoint {
     pub latitude: f64,
     pub longitude: f64,
+}
+
+/// 绝对位置 - API 文档: Location
+/// 用途：请求/响应中直接回传客户端提供的坐标，无需距离/方位计算
+#[derive(Debug, Serialize, serde::Deserialize, Clone)]
+pub struct Location {
+    pub point: GeoPoint,
+    pub location_name: String,
 }
 
 /// 相对位置 - API 文档: RelativeLocation

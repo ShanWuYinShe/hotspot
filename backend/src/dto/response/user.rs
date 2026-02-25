@@ -5,7 +5,7 @@ use crate::types::enums::{
 };
 use serde::{Deserialize, Serialize};
 
-use super::common::{id_as_string, RelativeLocation};
+use super::common::{id_as_string, Location, RelativeLocation};
 
 /// 用户基础信息 - API 文档: UserInfo
 /// 注意：不含 user_type（普通 API 不暴露管理员身份）
@@ -107,7 +107,7 @@ pub struct MyProfile {
     pub email: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub phone: Option<String>,
-    pub location: RelativeLocation,
+    pub location: Location,
     pub presence_status: UserPresenceStatus,
     pub last_online: String,
     pub created_at: String,

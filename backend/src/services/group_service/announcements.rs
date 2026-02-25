@@ -66,7 +66,7 @@ impl GroupService {
         let limit = constants::DEFAULT_PAGE_LIMIT;
         let announcements = self
             .announcement_repo
-            .list_by_group(group_id, limit, None)
+            .find_by_group_id(group_id, limit)
             .await?;
 
         let user_ids: Vec<i64> = announcements.iter().map(|a| a.publisher_id).collect();

@@ -8,17 +8,18 @@ use crate::{
             BannedMembersRequest, CancelApplicationRequest, CreateGroupAnnouncementRequest,
             CreateGroupChatRequest, DeleteGroupAnnouncementRequest, GroupAnnouncementsRequest,
             GroupApplicationsRequest, GroupMembersRequest, GroupOpenTheDoorRequest,
-            InviteMemberRequest, JoinGroupRequest, LeaveGroupRequest, MuteMemberRequest,
-            MyApplicationsRequest, MyGroupChatsRequest, MyInvitesRequest,
+            GroupSentInvitesRequest, InviteMemberRequest, JoinGroupRequest, LeaveGroupRequest,
+            MuteMemberRequest, MyApplicationsRequest, MyGroupChatsRequest, MyInvitesRequest,
             RejectGroupApplicationRequest, RejectInviteRequest, RemoveMemberRequest,
-            SearchGroupMembersRequest, SearchGroupsRequest, SetMemberRoleRequest,
-            TransferOwnershipRequest, UnbanMemberRequest, UnmuteMemberRequest,
-            UpdateGroupAnnouncementRequest, UpdateGroupChatRequest, UpdateGroupMySettingsRequest,
+            RevokeSentInviteRequest, SearchGroupMembersRequest, SearchGroupsRequest,
+            SetMemberRoleRequest, TransferOwnershipRequest, UnbanMemberRequest,
+            UnmuteMemberRequest, UpdateGroupAnnouncementRequest, UpdateGroupChatRequest,
+            UpdateGroupMySettingsRequest,
         },
         response::{
             AdminGroupItem, ApiResponse, BannedMemberItem, GroupAnnouncementItem,
-            GroupApplicationItem, GroupInviteItem, GroupItem, GroupMemberItem, InviteMemberData,
-            JoinGroupResult, MyApplicationItem, PaginatedData,
+            GroupApplicationItem, GroupInviteItem, GroupItem, GroupMemberItem, GroupSentInviteItem,
+            InviteMemberData, JoinGroupResult, MyApplicationItem, PaginatedData,
         },
     },
     error::Result,
@@ -44,7 +45,7 @@ pub async fn search(
 /// 搜索群组成员
 pub async fn search_members(
     State(state): State<AppState>,
-    user: AuthenticatedUser,
+    user: OptionalAuthenticatedUser,
     Json(req): Json<SearchGroupMembersRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<GroupMemberItem>>>> {
     let response = state
@@ -99,9 +100,10 @@ pub async fn open_the_door(
 /// 获取成员列表
 pub async fn members(
     State(state): State<AppState>,
+    user: OptionalAuthenticatedUser,
     Json(req): Json<GroupMembersRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<GroupMemberItem>>>> {
-    let response = state.group_service.get_members(req).await?;
+    let response = state.group_service.get_members(user.user_id, req).await?;
     Ok(Json(ApiResponse::success(response)))
 }
 
@@ -301,6 +303,30 @@ pub async fn cancel_application(
 }
 
 // ==================== 邀请管理 ====================
+
+pub async fn list_sent_invites(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    Json(req): Json<GroupSentInvitesRequest>,
+) -> Result<Json<ApiResponse<PaginatedData<GroupSentInviteItem>>>> {
+    let response = state
+        .group_service
+        .list_sent_invites(user.user_id, req)
+        .await?;
+    Ok(Json(ApiResponse::success(response)))
+}
+
+pub async fn revoke_sent_invite(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    Json(req): Json<RevokeSentInviteRequest>,
+) -> Result<Json<ApiResponse<()>>> {
+    state
+        .group_service
+        .revoke_sent_invite(user.user_id, req)
+        .await?;
+    Ok(Json(ApiResponse::success_empty()))
+}
 
 pub async fn my_invites(
     State(state): State<AppState>,

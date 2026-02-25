@@ -5,6 +5,7 @@
 
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { vibrator } from '@kit.SensorServiceKit';
+import { DesignConstants } from '../constants/DesignConstants';
 
 const DOMAIN_NUMBER: number = 0xFF11;
 const TAG: string = 'IntelligentLocationCard';
@@ -120,7 +121,7 @@ export struct IntelligentLocationCard {
     .width('100%')
     .padding(16)
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(16)
+    .borderRadius(DesignConstants.RADIUS.XL)
     .shadow({
       radius: this.cardElevation * 6,
       color: $r('sys.color.ohos_id_color_tertiary'),

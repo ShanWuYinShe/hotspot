@@ -1,6 +1,6 @@
 //! 私聊相关响应类型
 
-use crate::types::enums::{CantMessageReason, MessageType, UserPresenceStatus};
+use crate::types::enums::{MessageBlockedReason, MessageType, UserPresenceStatus};
 use serde::Serialize;
 
 use super::common::PaginatedData;
@@ -37,7 +37,7 @@ pub struct PrivateChatListItem {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_message: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub cant_message_reason: Option<CantMessageReason>,
+    pub message_blocked_reason: Option<MessageBlockedReason>,
 }
 
 /// 私聊项类型别名 - API 文档: PrivateChatItem

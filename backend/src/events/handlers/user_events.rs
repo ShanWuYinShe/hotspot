@@ -131,7 +131,7 @@ pub async fn send_websocket(
             }
             let follower_info = get_user_info(user_repo, *follower_id).await;
             let message = WsMessage::NewFollower {
-                user: follower_info,
+                actor: follower_info,
                 followed_at: chrono::Utc::now().to_rfc3339(),
                 source: *source,
                 source_moment_id: source_moment_id.clone(),
@@ -148,7 +148,7 @@ pub async fn send_websocket(
             let cfg_for_user = subscription_service.get_config(*user_id).await?;
             if cfg_for_user.mutual_follow_enabled {
                 let message_for_user = WsMessage::MutualFollow {
-                    user: mutual_user_info.clone(),
+                    actor: mutual_user_info.clone(),
                     mutual_at: now.clone(),
                 };
                 let _ = ws_manager.send_to_user(*user_id, &message_for_user).await;
@@ -156,7 +156,7 @@ pub async fn send_websocket(
             let cfg_for_mutual = subscription_service.get_config(*mutual_user_id).await?;
             if cfg_for_mutual.mutual_follow_enabled {
                 let message_for_mutual = WsMessage::MutualFollow {
-                    user: user_info,
+                    actor: user_info,
                     mutual_at: now,
                 };
                 let _ = ws_manager

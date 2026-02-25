@@ -7,10 +7,14 @@ use super::common::id_as_string;
 use super::user::UserInfo;
 
 /// 消息回复引用 - API 文档: MessageReplyTo
-#[derive(Debug, Serialize, Clone)]
+///
+/// 字段说明：
+/// - content: 文本预览
+/// - share_code: 若被回复的消息为 share 类型，则包含该 share_code
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MessageReplyTo {
     pub message_id: String,
-    #[serde(serialize_with = "id_as_string::serialize")]
+    #[serde(with = "id_as_string")]
     pub user_id: i64,
     pub nickname: String,
     pub content: String,

@@ -9,7 +9,6 @@ use super::common::id_as_string;
 pub struct AuthData {
     #[serde(serialize_with = "id_as_string::serialize")]
     pub user_id: i64,
-    pub nickname: String,
     pub access_token: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refresh_token: Option<String>,

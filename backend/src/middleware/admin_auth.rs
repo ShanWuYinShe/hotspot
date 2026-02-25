@@ -67,6 +67,9 @@ fn required_permission(path: &str) -> Option<&'static str> {
 
     // 审计日志
     if path.starts_with("/api/v1/admin/audit") {
+        // 审计日志列表和详情：需要 admin.audit.read 权限
+        // IP 地址敏感字段：需要同时具备 admin.audit.read 和 admin.audit.read_ip 权限
+        // 注意：权限层级检查在服务层进行，此处只声明所需权限
         if path.contains("/export") {
             return Some("admin.audit.export");
         }

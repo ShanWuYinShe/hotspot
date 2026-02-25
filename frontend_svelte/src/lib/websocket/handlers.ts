@@ -1,7 +1,7 @@
 /**
  * WebSocket 事件处理器
  * 统一处理 WebSocket 推送的事件，更新应用状态
- * 严格遵循 @spec/api_spec_websocket.mdc
+ * 严格遵循 @spec/api_spec_websocket.md
  */
 
 import { websocketStore } from './store.svelte';
@@ -99,7 +99,7 @@ class SubscriptionManager {
 
 		websocketStore.send({
 			type: 'SetSubscriptions',
-			payload: { client_msg_id: clientMsgId, operation, type, ids }
+			payload: { client_request_id: clientMsgId, operation, type, ids }
 		});
 
 		return new Promise((resolve) => {
@@ -134,17 +134,17 @@ class SubscriptionManager {
 	 * 处理订阅确认
 	 */
 	private handleSubscribeAck(payload: SubscribeAckPayload) {
-		const { client_msg_id, operation, type, ids, code, failed_ids } = payload;
+		const { client_request_id, operation, type, ids, code, failed_ids } = payload;
 
-		const pending = this.pendingAcks.get(client_msg_id);
+		const pending = this.pendingAcks.get(client_request_id);
 		if (!pending) {
-			warn('[WebSocket] 收到未知的 SubscribeAck:', client_msg_id);
+			warn('[WebSocket] 收到未知的 SubscribeAck:', client_request_id);
 			return;
 		}
 
 		// 清理定时器并删除待确认记录
 		clearTimeout(pending.timer);
-		this.pendingAcks.delete(client_msg_id);
+		this.pendingAcks.delete(client_request_id);
 
 		// 计算成功的 ID（排除 failed_ids 中的项）
 		const failedIdSet = new Set(failed_ids?.map((f) => f.subscription_id) ?? []);
@@ -284,14 +284,14 @@ class WebSocketEventHandlers {
 		this.onMessage('GroupMessageRecalled', this.groupMessageRecalledHandlers);
 
 		// 关注关系
-		this.onNotify('NewFollower', (p) => `${p.user.nickname} 关注了你`);
-		this.onNotify('MutualFollow', (p) => `你和 ${p.user.nickname} 成为了好友`, 'success');
+		this.onNotify('NewFollower', (p) => `${p.actor.nickname} 关注了你`);
+		this.onNotify('MutualFollow', (p) => `你和 ${p.actor.nickname} 成为了好友`, 'success');
 
 		// 生活瞬间互动
-		this.onNotify('MomentLiked', (p) => `${p.user.nickname} 赞了你的动态`);
-		this.onNotify('MomentCommented', (p) => `${p.user.nickname} 评论了你的动态`);
-		this.onNotify('CommentLiked', (p) => `${p.user.nickname} 赞了你的评论`);
-		this.onNotify('CommentReply', (p) => `${p.user.nickname} 回复了你的评论`);
+		this.onNotify('MomentLiked', (p) => `${p.actor.nickname} 赞了你的动态`);
+		this.onNotify('MomentCommented', (p) => `${p.actor.nickname} 评论了你的动态`);
+		this.onNotify('CommentLiked', (p) => `${p.actor.nickname} 赞了你的评论`);
+		this.onNotify('CommentReply', (p) => `${p.actor.nickname} 回复了你的评论`);
 
 		// 群组邀请/申请
 		this.onNotify('GroupInviteReceived', (p) => `${p.inviter.nickname} 邀请你加入群组`);
@@ -299,7 +299,7 @@ class WebSocketEventHandlers {
 		this.onNotify('GroupAnnouncementCreated', (p) => `群组发布了新公告: ${p.title}`);
 		this.onNotify(
 			'MessageMentioned',
-			(p) => `${p.user.nickname} 在${p.target_type === 'moment' ? '动态' : '评论'}中提到了你`
+			(p) => `${p.actor.nickname} 在${p.target_type === 'moment' ? '动态' : '评论'}中提到了你`
 		);
 
 		// 群组邀请响应（条件 toast）

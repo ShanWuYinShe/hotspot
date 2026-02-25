@@ -65,6 +65,7 @@ class AuthStore {
 	#currentUserId = $state<string | null>(null);
 	#profile = $state.raw<MyProfile | null>(null);
 	#initialized = $state(false);
+	#sessionValid = $state(false);
 
 	constructor() {
 		// 在浏览器环境中初始化
@@ -90,6 +91,9 @@ class AuthStore {
 	/** 是否已初始化 */
 	initialized = $derived(this.#initialized);
 
+	/** 会话是否已通过服务端校验 */
+	sessionValid = $derived(this.#sessionValid);
+
 	/** 当前账户信息 */
 	currentAccount = $derived(
 		this.#accounts.find((a) => a.user_id === this.#currentUserId && !a.is_locked)
@@ -97,11 +101,10 @@ class AuthStore {
 
 	/**
 	 * 是否已认证
-	 * Web 端 token 在 HttpOnly Cookie 中，前端不可读
-	 * 通过 localStorage 中是否存在有效账户来判断认证状态
+	 * 需要本地存在可用账户且当前会话已通过服务端校验
 	 */
 	isAuthenticated = $derived(
-		!!this.currentAccount
+		!!this.currentAccount && this.sessionValid
 	);
 
 	/** 可用账户列表（未锁定） */
@@ -122,6 +125,12 @@ class AuthStore {
 			accounts: this.#accounts,
 			currentUserId: this.#currentUserId
 		});
+	}
+
+	/** 清除当前会话有效性（不删除账户数据） */
+	invalidateSession() {
+		this.#sessionValid = false;
+		this.#profile = null;
 	}
 
 	/**
@@ -152,6 +161,7 @@ class AuthStore {
 		}
 
 		this.#currentUserId = authData.user_id;
+		this.#sessionValid = true;
 		this.#persist();
 	}
 
@@ -161,7 +171,7 @@ class AuthStore {
 
 		this.#accounts = this.#accounts.filter((a) => a.user_id !== this.#currentUserId);
 		this.#currentUserId = this.#accounts[0]?.user_id ?? null;
-		this.#profile = null;
+		this.invalidateSession();
 		this.#persist();
 	}
 
@@ -169,7 +179,7 @@ class AuthStore {
 	logoutAll() {
 		this.#accounts = [];
 		this.#currentUserId = null;
-		this.#profile = null;
+		this.invalidateSession();
 		this.#persist();
 	}
 
@@ -178,7 +188,7 @@ class AuthStore {
 		const account = this.#accounts.find((a) => a.user_id === userId && !a.is_locked);
 		if (account) {
 			this.#currentUserId = userId;
-			this.#profile = null;
+			this.invalidateSession();
 			this.#persist();
 		}
 	}
@@ -199,7 +209,7 @@ class AuthStore {
 			if (this.#currentUserId === userId) {
 				const nextAccount = this.#accounts.find((a) => !a.is_locked);
 				this.#currentUserId = nextAccount?.user_id ?? null;
-				this.#profile = null;
+				this.invalidateSession();
 			}
 
 			this.#persist();
@@ -227,7 +237,7 @@ class AuthStore {
 
 		if (this.#currentUserId === userId) {
 			this.#currentUserId = this.#accounts[0]?.user_id ?? null;
-			this.#profile = null;
+			this.invalidateSession();
 		}
 
 		this.#persist();

@@ -29,7 +29,7 @@ pub async fn handle_message(
                 WsMessage::Ping { .. } => handle_ping(state, user_id, connection_id).await?,
 
                 WsMessage::SetSubscriptions {
-                    client_msg_id,
+                    client_request_id,
                     operation,
                     r#type,
                     ids,
@@ -38,7 +38,7 @@ pub async fn handle_message(
                         state,
                         user_id,
                         connection_id,
-                        client_msg_id,
+                        client_request_id,
                         operation,
                         r#type,
                         ids,
@@ -56,8 +56,8 @@ pub async fn handle_message(
                     is_typing,
                 } => handle_group_typing(state, user_id, group_id, is_typing).await,
 
-                WsMessage::GetSubscriptions { client_msg_id } => {
-                    handle_get_subscriptions(state, user_id, client_msg_id).await?
+                WsMessage::GetSubscriptions { client_request_id } => {
+                    handle_get_subscriptions(state, user_id, client_request_id).await?
                 }
 
                 _ => {
@@ -105,7 +105,7 @@ async fn handle_set_subscriptions(
     state: &AppState,
     user_id: i64,
     _connection_id: &str,
-    client_msg_id: String,
+    client_request_id: String,
     operation: SubscriptionOperation,
     r#type: String,
     ids: Vec<String>,
@@ -115,7 +115,7 @@ async fn handle_set_subscriptions(
     if let Err(err) = validate_subscription_request(&r#type, &ids, is_set_op) {
         let current_ids = build_current_subscription_ids(user_id, state, &r#type).await;
         let ack_msg = WsMessage::SubscribeAck {
-            client_msg_id,
+            client_request_id,
             operation,
             r#type,
             ids: current_ids,
@@ -134,7 +134,7 @@ async fn handle_set_subscriptions(
         );
         let current_ids = build_current_subscription_ids(user_id, state, &r#type).await;
         let ack_msg = WsMessage::SubscribeAck {
-            client_msg_id,
+            client_request_id,
             operation,
             r#type: r#type.clone(),
             ids: current_ids,
@@ -152,7 +152,7 @@ async fn handle_set_subscriptions(
             let current_ids = build_current_subscription_ids(user_id, state, &r#type).await;
             let code = subscription_ack_code(&failed_ids);
             let ack_msg = WsMessage::SubscribeAck {
-                client_msg_id,
+                client_request_id,
                 operation: SubscriptionOperation::Subscribe,
                 r#type,
                 ids: current_ids,
@@ -174,7 +174,7 @@ async fn handle_set_subscriptions(
             process_unsubscribe(user_id, &r#type, &ids, state).await;
             let current_ids = build_current_subscription_ids(user_id, state, &r#type).await;
             let ack_msg = WsMessage::SubscribeAck {
-                client_msg_id,
+                client_request_id,
                 operation: SubscriptionOperation::Unsubscribe,
                 r#type,
                 ids: current_ids,
@@ -190,7 +190,7 @@ async fn handle_set_subscriptions(
             let current_ids = build_current_subscription_ids(user_id, state, &r#type).await;
             let code = subscription_ack_code(&failed_ids);
             let ack_msg = WsMessage::SubscribeAck {
-                client_msg_id,
+                client_request_id,
                 operation: SubscriptionOperation::Set,
                 r#type,
                 ids: current_ids,
@@ -254,7 +254,7 @@ async fn handle_group_typing(state: &AppState, user_id: i64, group_id: String, i
 async fn handle_get_subscriptions(
     state: &AppState,
     user_id: i64,
-    client_msg_id: String,
+    client_request_id: String,
 ) -> Result<(), String> {
     let subscriptions = state.ws_subscription.get_subscriptions(user_id).await;
     let mut user_ids = Vec::new();
@@ -270,7 +270,7 @@ async fn handle_get_subscriptions(
         }
     }
     let snapshot_msg = WsMessage::SubscriptionsSnapshot {
-        client_msg_id,
+        client_request_id,
         user_ids,
         group_ids,
     };

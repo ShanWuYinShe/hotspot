@@ -1,6 +1,6 @@
 //! API 请求类型定义
 //!
-//! 所有请求类型与 API 规范 (spec/api_spec_*.mdc) 一一对应
+//! 所有请求类型与 API 规范 (spec/api_spec_*.md) 一一对应
 //! 枚举类型字段使用 crate::types::enums 中定义的类型，确保类型安全
 
 mod admin;

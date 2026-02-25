@@ -17,8 +17,7 @@ pub struct CreateReportRequest {
 pub struct MyReportsRequest {
     pub status: Option<ReportStatus>,
     pub target_type: Option<ReportTargetType>,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -29,8 +28,9 @@ pub struct AdminReportSearchRequest {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct HandleReportRequest {
+pub struct AdminReportHandleRequest {
     pub report_id: String,
     pub action: ReportHandleAction,
     pub note: Option<String>,
+    pub ban_duration_days: Option<u32>,
 }

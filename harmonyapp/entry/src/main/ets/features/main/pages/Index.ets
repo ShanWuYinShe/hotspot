@@ -21,6 +21,7 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { AppIcon } from '../../../components/SystemIcon';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { SmartNotificationService, NotificationEvent, CreateNotificationInput, NotificationMetadata, CreateNotificationOptions } from '../../../core/services/SmartNotificationService';
+import { NotificationSyncService } from '../../../core/services/NotificationSyncService';
 import { CacheManager } from '../../../core/cache/CacheManager';
 import { NotificationCenter } from '../../../components/NotificationCenter';
 import { PerformanceIndicator } from '../../../components/PerformanceIndicator';
@@ -50,7 +51,7 @@ struct Index {
   @Provide('NavPathStack') navPathStack: NavPathStack = new NavPathStack();
 
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
-  @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
+  @StorageLink(KEY_IS_LOGGED_IN) @Watch('onLoginStateChanged') isLoggedIn: boolean = false;
   @StorageLink(KEY_USER_TYPE) userType: string = '';
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_UNREAD_COUNT) unreadCount: UnreadCount = { total_unread_count: 0 };
@@ -70,6 +71,7 @@ struct Index {
   private persistentStateManager = PersistentStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
   private smartNotificationService = SmartNotificationService.getInstance();
+  private notificationSyncService = NotificationSyncService.getInstance();
   private cacheManager = CacheManager.getInstance();
   private i18nManager = I18nManager.getInstance();
   private uiContext: UIContext | null = null;
@@ -221,6 +223,15 @@ struct Index {
       hilog.error(DOMAIN_NUMBER, TAG, errorMsg);
       this.lastError = errorMsg;
       this.isInitialized = true; 
+    }
+  }
+
+  private async onLoginStateChanged(): Promise<void> {
+    if (this.isLoggedIn) {
+      await this.notificationSyncService.syncUnreadCount().catch(() => {});
+    } else {
+      this.notificationSyncService.reset();
+      this.stateManager.updateUnreadCount({ total_unread_count: 0 });
     }
   }
 
@@ -545,8 +556,15 @@ struct Index {
       this.smartNotificationListener = (_event: NotificationEvent, notification: SmartNotification): void => {
         hilog.info(DOMAIN_NUMBER, TAG, `收到通知: ${notification.title}`);
         NotificationRenderer.getInstance().showNotification(notification);
+        void this.notificationSyncService.syncUnreadCount().catch(() => {});
       };
       this.smartNotificationService.addEventListener(NotificationEvent.CREATED, this.smartNotificationListener);
+
+      if (this.isLoggedIn) {
+        await this.notificationSyncService.syncUnreadCount().catch(() => {});
+      } else {
+        this.notificationSyncService.reset();
+      }
 
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `智能服务初始化失败: ${JSON.stringify(error)}`);
@@ -691,6 +709,30 @@ struct Index {
         .backgroundColor($r('app.color.bg_secondary'))
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+      } else if (this.lastError) {
+        Column({ space: 16 }) {
+          Text('应用初始化失败')
+            .fontSize(18)
+            .fontWeight(FontWeight.Bold)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          Text(this.lastError)
+            .fontSize(14)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .textAlign(TextAlign.Center)
+            .constraintSize({ maxWidth: 280 })
+          Button('重试')
+            .type(ButtonType.Capsule)
+            .onClick(() => {
+              this.lastError = '';
+              this.isInitialized = false;
+              this.initializeApp();
+            })
+        }
+        .width('100%')
+        .height('100%')
+        .justifyContent(FlexAlign.Center)
+        .backgroundColor($r('app.color.bg_secondary'))
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
       } else {
         Column() {
         Navigation(this.navPathStack) {

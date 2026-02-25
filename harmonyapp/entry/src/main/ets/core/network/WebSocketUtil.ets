@@ -1,6 +1,6 @@
 /**
  * WebSocket工具类
- * 底层WebSocket连接管理，遵循 api_spec.mdc WebSocket 设计规范
+ * 底层WebSocket连接管理，遵循 api_spec.md WebSocket 设计规范
  */
 
 import webSocket from '@ohos.net.webSocket';

@@ -72,25 +72,27 @@ pub struct LimitsUpdate {
 /// 更新频率限制配置请求 - API 文档: UpdateRateLimitsRequest
 #[derive(Debug, Deserialize, Serialize)]
 pub struct UpdateRateLimitsRequest {
-    // IP级限速（单IP限制，考虑多用户共享同一IP的场景）
-    pub ip_per_hour: Option<u32>,
-    // 用户级限流
-    pub user_per_5minutes: Option<u32>,
+    pub rate_limits: RateLimitsPartial,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RateLimitsPartial {
+    pub global_per_hour: Option<u32>,
     pub user_per_hour: Option<u32>,
-    // 认证相关限速
-    pub auth_send_code_per_minute: Option<u32>,
-    pub auth_verify_code_per_10minutes: Option<u32>,
     pub auth_register_per_10minutes: Option<u32>,
     pub auth_login_per_10minutes: Option<u32>,
     pub auth_guest_per_10minutes: Option<u32>,
     pub auth_refresh_per_10minutes: Option<u32>,
-    pub auth_reset_request_per_minute: Option<u32>,
-    pub auth_reset_verify_per_10minutes: Option<u32>,
     pub auth_reset_per_10minutes: Option<u32>,
-    // 业务相关限速
+    pub search_per_minute: Option<u32>,
+    pub write_per_minute: Option<u32>,
     pub moments_create_per_minute: Option<u32>,
     pub comments_create_per_minute: Option<u32>,
     pub reports_create_per_hour: Option<u32>,
+    pub upload_presign_per_hour: Option<u32>,
+    pub ws_subscribe_per_second: Option<u32>,
+    pub admin_read_per_minute: Option<u32>,
+    pub admin_write_per_minute: Option<u32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -130,8 +132,7 @@ pub struct AdminRbacRoleSetPermissionsRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct AdminRbacAdminsListRequest {
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -175,8 +176,7 @@ pub struct AdminUserSearchRequest {
     pub login_id: Option<String>,
     pub status: Option<UserAccountStatus>,
     pub user_type: Option<UserType>,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -188,7 +188,7 @@ pub struct AdminUserDetailRequest {
 pub struct AdminBanUserRequest {
     pub user_id: String,
     pub reason: Option<String>,
-    pub duration_days: Option<i32>, // 0 or null = permanent
+    pub duration_days: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -224,8 +224,7 @@ pub struct AuditLogListRequest {
     pub target_id: Option<String>,
     pub start_time: Option<String>,
     pub end_time: Option<String>,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 #[derive(Debug, Deserialize)]

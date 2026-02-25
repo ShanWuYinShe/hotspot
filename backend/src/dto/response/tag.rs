@@ -18,7 +18,7 @@ pub struct SearchSuggestions {
     pub items: Vec<SearchSuggestItem>,
 }
 
-/// 综合搜索建议项 - API 规范: @api_spec_search.mdc SearchSuggestItem
+/// 综合搜索建议项 - API 规范: @api_spec_search.md SearchSuggestItem
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", content = "payload", rename_all = "snake_case")]
 pub enum SearchSuggestItem {
@@ -28,7 +28,7 @@ pub enum SearchSuggestItem {
     Moment(MomentSuggestItem),
 }
 
-/// 用户建议项 - API 规范: @api_spec_search.mdc UserSuggestItem
+/// 用户建议项 - API 规范: @api_spec_search.md UserSuggestItem
 /// 用途：显示用户基本信息，点击后跳转到用户主页
 #[derive(Debug, Serialize)]
 pub struct UserSuggestItem {
@@ -45,7 +45,7 @@ pub struct UserSuggestItem {
     pub location: Option<RelativeLocation>,
 }
 
-/// 群组建议项 - API 规范: @api_spec_search.mdc GroupSuggestItem
+/// 群组建议项 - API 规范: @api_spec_search.md GroupSuggestItem
 /// 用途：显示群组基本信息，点击后跳转到群组页
 #[derive(Debug, Serialize)]
 pub struct GroupSuggestItem {
@@ -63,7 +63,7 @@ pub struct GroupSuggestItem {
     pub location: Option<RelativeLocation>,
 }
 
-/// 瞬间建议项 - API 规范: @api_spec_search.mdc MomentSuggestItem
+/// 瞬间建议项 - API 规范: @api_spec_search.md MomentSuggestItem
 /// 用途：显示瞬间预览信息，点击后跳转到瞬间详情页
 #[derive(Debug, Serialize)]
 pub struct MomentSuggestItem {

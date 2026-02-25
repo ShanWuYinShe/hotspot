@@ -486,3 +486,11 @@ struct LikeButton {
     }
   }
 }
+
+@Builder
+export function MomentPageBuilder() {
+  NavDestination() {
+    MomentPage()
+  }
+  .hideTitleBar(true)
+}

@@ -18,6 +18,48 @@ use crate::{
 type SplitSink = futures_util::stream::SplitSink<WebSocket, Message>;
 type SplitStream = futures_util::stream::SplitStream<WebSocket>;
 
+fn extract_request_meta(headers: &HeaderMap) -> (String, String) {
+    let origin = headers
+        .get("origin")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("-")
+        .to_string();
+    let user_agent = headers
+        .get("user-agent")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("-")
+        .to_string();
+    (origin, user_agent)
+}
+
+fn log_auth_failure(reason: &str, client_type: Option<ClientType>, headers: &HeaderMap) {
+    let (origin, user_agent) = extract_request_meta(headers);
+    let client_type_label = client_type
+        .map(|ct| ct.to_string())
+        .unwrap_or_else(|| "unknown".to_string());
+    tracing::warn!(
+        target = "ws_auth",
+        reason = %reason,
+        client_type = %client_type_label,
+        origin = %origin,
+        user_agent = %user_agent,
+        "WebSocket authentication failed"
+    );
+}
+
+fn log_auth_success(user_id: i64, client_type: ClientType, auth_source: &str, headers: &HeaderMap) {
+    let (origin, user_agent) = extract_request_meta(headers);
+    tracing::info!(
+        target = "ws_auth",
+        user_id,
+        client_type = %client_type,
+        auth_source = %auth_source,
+        origin = %origin,
+        user_agent = %user_agent,
+        "WebSocket authentication succeeded"
+    );
+}
+
 /// Authenticates the WebSocket connection by reading the first Auth message.
 /// Returns (user_id, device_fingerprint, nickname) on success.
 /// On failure, sends error to client and returns Err(()).
@@ -52,6 +94,7 @@ pub async fn authenticate_ws_connection(
     let auth_event: WsMessage = match serde_json::from_str(auth_msg.as_str()) {
         Ok(m) => m,
         Err(_) => {
+            log_auth_failure("鉴权消息格式无效", None, headers);
             send_auth_error_and_close(
                 sender,
                 AppError::WebSocketMessageFormatError("鉴权消息格式无效".to_string()),
@@ -61,32 +104,39 @@ pub async fn authenticate_ws_connection(
         }
     };
 
-    let access_token = match auth_event {
+    let (client_type, token_from_payload) = match auth_event {
         WsMessage::Auth {
             client_type,
             access_token,
             ..
-        } => access_token.or_else(|| {
-            let is_web = client_type.unwrap_or(ClientType::App) == ClientType::Web;
-            if is_web {
-                get_cookie_value(headers, "access_token")
-            } else {
-                None
-            }
-        }),
+        } => (client_type, access_token),
         _ => {
+            log_auth_failure("协议不兼容：首帧必须是 Auth 事件", None, headers);
             send_auth_error_and_close(
                 sender,
-                AppError::WebSocketAuthFailed("鉴权失败：未提供 Token".to_string()),
+                AppError::WebSocketProtocolIncompatible(
+                    "协议不兼容：首帧必须是 Auth 事件".to_string(),
+                ),
             )
             .await;
             return Err(());
         }
     };
 
-    let access_token = match access_token {
-        Some(t) if !t.is_empty() => t,
+    let mut auth_source: &'static str = "payload";
+    let token_candidate = match token_from_payload {
+        Some(token) if !token.is_empty() => Some(token),
+        _ if client_type == ClientType::Web => {
+            auth_source = "cookie";
+            get_cookie_value(headers, "access_token")
+        }
+        _ => None,
+    };
+
+    let access_token = match token_candidate {
+        Some(token) if !token.is_empty() => token,
         _ => {
+            log_auth_failure("鉴权失败：未提供 Token", Some(client_type), headers);
             send_auth_error_and_close(
                 sender,
                 AppError::WebSocketAuthFailed("鉴权失败：未提供 Token".to_string()),
@@ -98,10 +148,16 @@ pub async fn authenticate_ws_connection(
 
     let claims = match JwtUtil::verify_token(&access_token, &state.config.jwt_secret) {
         Ok(c) => c,
+        Err(AppError::VerifyTokenInvalid(_)) => {
+            log_auth_failure("鉴权失败：Token 已过期", Some(client_type), headers);
+            send_auth_error_and_close(sender, AppError::WebSocketTokenExpired).await;
+            return Err(());
+        }
         Err(_) => {
+            log_auth_failure("鉴权失败：Token 无效", Some(client_type), headers);
             send_auth_error_and_close(
                 sender,
-                AppError::WebSocketAuthFailed("鉴权失败：Token 无效或过期".to_string()),
+                AppError::WebSocketAuthFailed("鉴权失败：Token 无效".to_string()),
             )
             .await;
             return Err(());
@@ -111,6 +167,7 @@ pub async fn authenticate_ws_connection(
     let user_id = match claims.sub.parse::<i64>() {
         Ok(uid) => uid,
         Err(_) => {
+            log_auth_failure("鉴权失败：Token 无效或过期", Some(client_type), headers);
             send_auth_error_and_close(
                 sender,
                 AppError::WebSocketAuthFailed("鉴权失败：Token 无效或过期".to_string()),
@@ -125,6 +182,8 @@ pub async fn authenticate_ws_connection(
         Ok(Some(u)) => u.nickname.unwrap_or_else(|| "Unknown".to_string()),
         _ => "Unknown".to_string(),
     };
+
+    log_auth_success(user_id, client_type, auth_source, headers);
 
     // device_fingerprint not in Auth message; use empty string
     Ok((user_id, String::new(), nickname))

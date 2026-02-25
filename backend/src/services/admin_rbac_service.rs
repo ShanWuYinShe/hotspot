@@ -117,6 +117,10 @@ impl AdminRbacService {
         self.repo.is_super_admin(user_id).await
     }
 
+    pub async fn has_permission(&self, user_id: i64, permission_key: &str) -> Result<bool> {
+        self.repo.user_has_permission(user_id, permission_key).await
+    }
+
     pub async fn require_permission(&self, user_id: i64, permission_key: &str) -> Result<()> {
         // 必须是管理员（此方法由 admin_auth_middleware 调用，已确保是管理员）
         // 再校验权限（超级管理员会自动放行）
@@ -172,9 +176,17 @@ impl AdminRbacService {
 
     pub async fn set_role_permissions(
         &self,
+        operator_id: i64,
         role_id: Uuid,
         permission_keys: &[String],
     ) -> Result<()> {
+        if permission_keys.iter().any(|key| key == "*") && !self.is_super_admin(operator_id).await?
+        {
+            return Err(AppError::AdminPermissionDenied(
+                "只有超级管理员可以设置包含 '*' 的角色权限".to_string(),
+            ));
+        }
+
         self.repo
             .set_role_permissions(role_id, permission_keys)
             .await
@@ -209,11 +221,28 @@ impl AdminRbacService {
         is_super: bool,
         role_ids: &[Uuid],
     ) -> Result<()> {
-        // 只有超级管理员可以授予/撤销超级管理员
-        if is_super && !self.is_super_admin(operator_id).await? {
-            return Err(AppError::Forbidden(
-                "只有超级管理员可以授予超级管理员权限".to_string(),
-            ));
+        let operator_is_super = self.is_super_admin(operator_id).await?;
+
+        if is_super {
+            if !operator_is_super {
+                return Err(AppError::Forbidden(
+                    "只有超级管理员可以授予超级管理员权限".to_string(),
+                ));
+            }
+            if !role_ids.is_empty() {
+                return Err(AppError::InvalidFormat(
+                    "grant_all_permissions 与 role_ids 互斥".to_string(),
+                ));
+            }
+        } else {
+            if role_ids.is_empty() {
+                return Err(AppError::MissingParameter("role_ids".to_string()));
+            }
+            if !operator_is_super && self.repo.roles_have_permission(role_ids, "*").await? {
+                return Err(AppError::AdminPermissionDenied(
+                    "只有超级管理员可以授予包含 '*' 的角色".to_string(),
+                ));
+            }
         }
 
         self.repo

@@ -1,11 +1,12 @@
 /**
  * WebSocket Store - 连接管理、鉴权、心跳
- * 严格遵循 @spec/api_spec_websocket.mdc
+ * 严格遵循 @spec/api_spec_websocket.md
  */
 
 import { browser, dev } from '$app/environment';
 import { authStore } from '$lib/stores/auth.svelte';
 import { toast } from '$lib/stores/toast.svelte';
+import { ensureRefreshToken } from '$lib/api/client';
 import { untrack } from 'svelte';
 import type { 
 	ServerWebSocketEvent,
@@ -270,7 +271,7 @@ class WebSocketStore {
 			this.wsUrl = url;
 		} else if (!this.wsUrl) {
 			const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-			this.wsUrl = `${protocol}//${window.location.host}/ws`;
+			this.wsUrl = `${protocol}//${window.location.host}/ws/v1`;
 		}
 
 		// 更新状态并建立连接
@@ -560,6 +561,30 @@ class WebSocketStore {
 				// 可恢复错误（临时错误、限流等）：提示重试
 				if (payload.retryable && payload.retry_after) {
 					log(`[WebSocket] 可恢复错误，${payload.retry_after}秒后重试`);
+				}
+				
+				// Token 过期：如果是鉴权相关的 recoverable 错误，尝试刷新并重连
+				if (payload.code === 20000 || payload.code === 10100) {
+					log('[WebSocket] Token可能已过期，尝试刷新...');
+					this.shouldReconnect = true; // 允许在刷新后重连
+					this.cleanup();
+					this.connectionState = 'reconnecting';
+					
+					// 触发 HTTP 层面的刷新 Token
+					ensureRefreshToken().then(success => {
+						if (success) {
+							log('[WebSocket] Token刷新成功，准备重连');
+							this.reconnectAttempts = 0;
+							this.connect();
+						} else {
+							log('[WebSocket] Token刷新失败，断开连接并登出');
+							this.shouldReconnect = false;
+							this.connectionState = 'failed';
+							authStore.logout();
+						}
+					}).catch(err => {
+						logError('[WebSocket] Token刷新异常', err);
+					});
 				}
 				break;
 

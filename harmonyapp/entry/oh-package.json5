@@ -1,10 +1,9 @@
 {
-  "name": "geotalk",
+  "name": "entry",
   "version": "1.0.0",
-  "description": "GeoTalk - 基于地理位置的社交应用 HarmonyOS版本",
+  "description": "HotSpot - 基于地理位置的社交应用 HarmonyOS版本",
   "main": "",
-  "author": "GeoTalk Team",
-  "license": "MIT",
-  "dependencies": {},
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {}
 }
-

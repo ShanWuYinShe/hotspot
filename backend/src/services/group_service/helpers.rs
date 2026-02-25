@@ -7,7 +7,7 @@ use crate::{
     error::{AppError, Result},
     repositories::group_member_repo::GroupMemberDetailRow,
     repositories::group_repo::{AdminGroupSearchRow, GroupRow, GroupSearchRow},
-    repositories::group_settings_repo::GroupSettings,
+    repositories::group_settings_repo::GroupSettingsRow,
     types::enums::{GroupJoinMethod, GroupRole},
 };
 use std::collections::HashMap;
@@ -169,6 +169,8 @@ impl GroupService {
 
     pub(super) async fn map_member_detail(
         &self,
+        viewer_id: Option<i64>,
+        can_view_admin_fields: bool,
         m: GroupMemberDetailRow,
     ) -> Result<GroupMemberItem> {
         let nickname = m
@@ -178,11 +180,16 @@ impl GroupService {
             .media_service
             .sign_url_if_path(m.avatar_url.as_deref())
             .await;
+        let can_view_muted = can_view_admin_fields || viewer_id == Some(m.user_id);
         Ok(GroupMemberItem {
             user: UserInfo::new(m.user_id, nickname, avatar_url),
             role: m.role,
             joined_at: m.joined_at.to_rfc3339(),
-            muted_until: m.muted_until.map(|t| t.to_rfc3339()),
+            muted_until: if can_view_muted {
+                m.muted_until.map(|t| t.to_rfc3339())
+            } else {
+                None
+            },
             presence_status: None,
             last_online: None,
         })
@@ -220,7 +227,7 @@ impl GroupService {
         &self,
         row: &AdminGroupSearchRow,
         tags: Option<Vec<String>>,
-        settings: Option<&GroupSettings>,
+        settings: Option<&GroupSettingsRow>,
     ) -> Result<GroupItem> {
         let avatar_url = self
             .media_service
@@ -269,7 +276,7 @@ impl GroupService {
         row: &GroupRow,
         members_count: i32,
         tags: Option<Vec<String>>,
-        settings: Option<&GroupSettings>,
+        settings: Option<&GroupSettingsRow>,
     ) -> Result<GroupItem> {
         let avatar_url = self
             .media_service

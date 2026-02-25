@@ -1,6 +1,7 @@
 pub mod bloom_filter;
 pub mod cache;
 pub mod cache_invalidation;
+pub mod client_ip;
 pub mod id_gen;
 pub mod jwt;
 pub mod pagination;

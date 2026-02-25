@@ -1,7 +1,7 @@
 //! 举报相关响应类型
 
 use crate::types::enums::{ReportReason, ReportStatus, ReportTargetType};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::common::id_as_string;
 use super::user::UserInfo;
@@ -13,14 +13,56 @@ pub struct CreateReportData {
 }
 
 /// 举报内容快照 - API 文档: ReportTargetSnapshot
-#[derive(Debug, Serialize)]
+///
+/// 结构说明：
+/// - moment: 瞬间快照（描述、图片链接、作者ID）
+/// - comment: 评论快照（内容、作者ID、所属瞬间ID）
+/// - message: 消息快照（内容、媒体链接、发送者ID）
+/// - 注意：根据举报目标类型，只有对应类型的快照字段会填充
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ReportTargetSnapshot {
+    // 瞬间快照
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub moment: Option<MomentSnapshot>,
+    // 评论快照
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub comment: Option<CommentSnapshot>,
+    // 消息快照
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<MessageSnapshot>,
+}
+
+/// 瞬间快照
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MomentSnapshot {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image_urls: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub author_id: Option<String>,
+}
+
+/// 评论快照
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CommentSnapshot {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub author_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub moment_id: Option<String>,
+}
+
+/// 消息快照
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MessageSnapshot {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub media_urls: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub owner_id: Option<String>,
+    pub sender_id: Option<String>,
 }
 
 /// 举报项 - API 文档: ReportItem (用户可见，不含 target_snapshot)
@@ -50,7 +92,7 @@ pub struct AdminReportItem {
     pub handled_by: Option<UserInfo>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub handled_action: Option<crate::types::enums::ReportHandleAction>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "handle_note", skip_serializing_if = "Option::is_none")]
     pub handled_note: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub target_snapshot: Option<ReportTargetSnapshot>,

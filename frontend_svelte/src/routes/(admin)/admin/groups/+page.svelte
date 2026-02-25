@@ -11,6 +11,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import ConfirmDialog from '$lib/components/common/confirm-dialog.svelte';
 	import type { AdminGroupItem } from '$lib/types/api';
 	import { formatDate } from '$lib/utils/format';
 	import Search from 'lucide-svelte/icons/search';
@@ -29,6 +30,8 @@
 	});
 
 	let name = $state('');
+	let dissolveConfirmOpen = $state(false);
+	let pendingDissolveId = $state<string | null>(null);
 
 	function loadGroups(refresh = true) {
 		pagination.load(
@@ -47,22 +50,29 @@
 
 	// ============ 操作 ============
 
-	async function handleDissolve(groupId: string) {
-		if (!confirm('确定要解散该群组吗？此操作不可逆。')) return;
+	function requestDissolve(groupId: string) {
+		pendingDissolveId = groupId;
+		dissolveConfirmOpen = true;
+	}
 
+	async function handleDissolve() {
+		if (!pendingDissolveId) return;
 		try {
 			const response = await adminGroupsService.dismiss({
-				group_id: groupId,
+				group_id: pendingDissolveId,
 				reason: '管理员操作'
 			});
 			if (isSuccess(response)) {
-				pagination.removeItem((g) => g.group.group_id === groupId);
+				const dissolvedId = pendingDissolveId;
+				pagination.removeItem((g) => g.group.group_id === dissolvedId);
 				toast.success('已解散群组');
 			} else {
 				toast.error(response.message || '操作失败');
 			}
 		} catch {
 			toast.error('操作失败');
+		} finally {
+			pendingDissolveId = null;
 		}
 	}
 
@@ -170,7 +180,7 @@
 									<DropdownMenu.Separator />
 									<DropdownMenu.Item class="text-destructive">
 										{#snippet child({ props })}
-											<button {...props} onclick={() => handleDissolve(group.group.group_id)}>
+											<button {...props} onclick={() => requestDissolve(group.group.group_id)}>
 												<Trash2 class="mr-2 h-4 w-4" />
 												解散群组
 											</button>
@@ -191,3 +201,12 @@
 		</CardContent>
 	</Card>
 </div>
+
+<ConfirmDialog
+	bind:open={dissolveConfirmOpen}
+	title="解散群组"
+	description="确定要解散该群组吗？此操作不可逆，所有群成员将被移出。"
+	confirmText="解散"
+	variant="destructive"
+	onconfirm={handleDissolve}
+/>

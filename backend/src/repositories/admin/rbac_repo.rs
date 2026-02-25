@@ -187,17 +187,14 @@ impl AdminRbacRepository {
 
     /// 检查用户是否有特定权限
     pub async fn user_has_permission(&self, user_id: i64, permission_key: &str) -> Result<bool> {
+        // 超级管理员自动放行
         if self.is_super_admin(user_id).await? {
             return Ok(true);
         }
 
-        let result = sqlx::query!(
+        let result = sqlx::query_scalar!(
             r#"
             SELECT EXISTS(
-                SELECT 1 FROM admin_user_roles ur
-                JOIN admin_role_permissions rp ON ur.role_id = rp.role_id
-                WHERE ur.user_id = $1 AND rp.permission_key = $2
-                UNION
                 SELECT 1 FROM admin_user_permissions
                 WHERE user_id = $1 AND permission_key = $2
             ) as "exists!"
@@ -208,7 +205,20 @@ impl AdminRbacRepository {
         .fetch_one(&self.pool)
         .await?;
 
-        Ok(result.exists)
+        Ok(result)
+    }
+
+    /// 检查用户是否具备 admin.audit.read_ip 权限（需同时具备 admin.audit.read）
+    pub async fn user_has_read_ip_permission(&self, user_id: i64) -> Result<bool> {
+        // 需要同时具备 admin.audit.read 和 admin.audit.read_ip 权限
+        let has_audit_read = self
+            .user_has_permission(user_id, "admin.audit.read")
+            .await?;
+        let has_read_ip = self
+            .user_has_permission(user_id, "admin.audit.read_ip")
+            .await?;
+
+        Ok(has_audit_read && has_read_ip)
     }
 
     /// 权限列表
@@ -356,6 +366,32 @@ impl AdminRbacRepository {
 
         tx.commit().await?;
         Ok(())
+    }
+
+    /// 检查角色列表是否包含某权限
+    pub async fn roles_have_permission(
+        &self,
+        role_ids: &[Uuid],
+        permission_key: &str,
+    ) -> Result<bool> {
+        if role_ids.is_empty() {
+            return Ok(false);
+        }
+
+        let result = sqlx::query!(
+            r#"
+            SELECT EXISTS(
+                SELECT 1 FROM admin_role_permissions
+                WHERE role_id = ANY($1) AND permission_key = $2
+            ) as "exists!"
+            "#,
+            role_ids,
+            permission_key
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(result.exists)
     }
 
     /// 管理员列表（分页）

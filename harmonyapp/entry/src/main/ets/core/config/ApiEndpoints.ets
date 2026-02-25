@@ -1,5 +1,5 @@
 // Centralized API endpoint registry for HarmonyOS client.
-// Endpoint values MUST match spec/api_spec_*.mdc.
+// Endpoint values MUST match spec/api_spec_*.md.
 // Do NOT add endpoints here unless they exist in the spec.
 
 // Auth
@@ -53,6 +53,10 @@ class UserMeEndpoints {
   readonly UNBLOCK: string = '/api/v1/users/me/unblock';
   readonly LIST_BLOCKED: string = '/api/v1/users/me/list_blocked';
   readonly SET_REMARK: string = '/api/v1/users/me/set_remark';
+  readonly EMAIL_REQUEST_CHANGE: string = '/api/v1/users/me/email/request_change';
+  readonly EMAIL_CONFIRM_CHANGE: string = '/api/v1/users/me/email/confirm_change';
+  readonly PHONE_REQUEST_CHANGE: string = '/api/v1/users/me/phone/request_change';
+  readonly PHONE_CONFIRM_CHANGE: string = '/api/v1/users/me/phone/confirm_change';
 }
 
 class UserEndpoints {
@@ -68,10 +72,16 @@ class UserEndpoints {
 }
 
 // Group
+class GroupMembersInvitesEndpoints {
+  readonly LIST: string = '/api/v1/groups/members/invites/list';
+  readonly REVOKE: string = '/api/v1/groups/members/invites/revoke';
+}
+
 class GroupMembersEndpoints {
   readonly LIST: string = '/api/v1/groups/members/list';
   readonly SEARCH: string = '/api/v1/groups/members/search';
   readonly INVITE: string = '/api/v1/groups/members/invite';
+  readonly INVITES: GroupMembersInvitesEndpoints = new GroupMembersInvitesEndpoints();
   readonly SET_ROLE: string = '/api/v1/groups/members/set_role';
   readonly MUTE: string = '/api/v1/groups/members/mute';
   readonly UNMUTE: string = '/api/v1/groups/members/unmute';
@@ -259,11 +269,15 @@ class ReportEndpoints {
 }
 
 // Share
+class ShareMeEndpoints {
+  readonly LIST: string = '/api/v1/share/me/list';
+}
+
 class ShareEndpoints {
   readonly CREATE: string = '/api/v1/share/create';
   readonly GET: string = '/api/v1/share/get';
   readonly REVOKE: string = '/api/v1/share/revoke';
-  // ⏳ 延期实现: share/me/list
+  readonly ME: ShareMeEndpoints = new ShareMeEndpoints();
 }
 
 // Main entry

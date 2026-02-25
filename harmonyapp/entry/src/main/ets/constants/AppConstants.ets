@@ -8,14 +8,14 @@ import { DEBUG } from 'BuildProfile';
 // API 配置：根据构建模式自动切换
 // debug  → 开发服务器（局域网 IP）
 // release → 正式域名
-const DEV_SERVER = 'http://192.168.0.102:8888';
+const DEV_SERVER = 'http://192.168.1.12:8888';
 const PROD_SERVER = 'https://api.chaoset.com';
 
 export const SERVER_BASE_URL: string = DEBUG ? DEV_SERVER : PROD_SERVER;
 
 // 由同一个 BaseUrl 推导出 API / WebSocket 地址（避免多处硬编码）
 export const API_BASE_URL: string = SERVER_BASE_URL;
-export const WS_BASE_URL: string = SERVER_BASE_URL.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') + '/ws';
+export const WS_BASE_URL: string = SERVER_BASE_URL.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') + '/ws/v1';
 
 // 业务状态码
 export interface BusinessCodeType {
@@ -72,6 +72,7 @@ export interface PageNamesType {
   DEBUG_PANEL: string;
   SUBSCRIPTIONS: string;
   ACCOUNTS: string;
+  MY_SHARES: string;
   RECOMMENDATION: string;
 }
 
@@ -94,6 +95,7 @@ export const PageNames: PageNamesType = {
   DEBUG_PANEL: 'DebugPanel',
   SUBSCRIPTIONS: 'SubscriptionsPage',
   ACCOUNTS: 'AccountsPage',
+  MY_SHARES: 'MySharesPage',
   RECOMMENDATION: 'RecommendationPage'
 };
 

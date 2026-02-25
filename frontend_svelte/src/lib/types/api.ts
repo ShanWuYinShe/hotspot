@@ -10,12 +10,12 @@ export type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'share
 export type SendMessageType = Exclude<MessageType, 'system'>;
 export type PrivacyLevel = 'public' | 'private';
 export type GroupRole = 'owner' | 'admin' | 'member';
-export type SetableGroupRole = 'admin' | 'member';
+export type SettableGroupRole = 'admin' | 'member';
 export type Gender = 'male' | 'female' | 'apache_helicopter';
 export type ClientType = 'web' | 'app';
 export type UserPresenceStatus = 'online' | 'offline';
 export type UserAccountStatus = 'normal' | 'banned';
-export type ApplicationStatus = 'pending' | 'accepted' | 'rejected';
+export type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'revoked';
 export type ReportStatus = 'pending' | 'reviewing' | 'resolved' | 'dismissed';
 export type ReportTargetType = 'user' | 'moment' | 'comment' | 'message' | 'group';
 export type ReportHandleAction = 'resolve' | 'dismiss' | 'escalate';
@@ -46,6 +46,8 @@ export type NotificationType =
 	| 'comment_reply'
 	| 'mentioned'
 	| 'group_invite_received'
+	| 'group_invite_accepted'
+	| 'group_application_received'
 	| 'group_application_accepted'
 	| 'system_announcement';
 // NotificationTargetType 已删除：spec 中不存在该类型，mentioned payload 的 target_type 为内联 'moment' | 'comment'
@@ -61,7 +63,7 @@ export type MapDataType = 'user' | 'group' | 'moment' | 'all';
 export type MapItemType = 'cluster' | 'user' | 'group' | 'moment';
 export type ShareType = 'user' | 'group' | 'moment' | 'location';
 // 设计说明：被拉黑场景统一返回 'privacy'，不暴露拉黑状态
-export type CantMessageReason = 'privacy' | 'stranger_limit' | 'account_suspended';
+export type MessageBlockedReason = 'privacy' | 'stranger_quota_exceeded' | 'account_suspended';
 export type SearchSuggestType = 'tag' | 'user' | 'group' | 'moment';
 export type SystemHealthStatus = 'healthy' | 'degraded' | 'unhealthy';
 
@@ -132,7 +134,7 @@ export interface MomentImage {
 	thumbnail_url?: string;
 	width?: number;
 	height?: number;
-	content_type?: string;
+	mime_type?: string;
 }
 
 export interface MessageMedia {
@@ -398,6 +400,16 @@ export interface GroupInviteItem {
 	expires_at?: string;
 }
 
+export interface GroupSentInviteItem {
+	invite_id: string;
+	invitee: UserInfo;
+	message?: string;
+	status: ApplicationStatus;
+	created_at: string;
+	expires_at?: string;
+	responded_at?: string;
+}
+
 /** 邀请响应 */
 export interface Invitation {
 	invite_id: string;
@@ -423,7 +435,7 @@ export interface JoinGroupResult {
 export interface MomentSummary {
 	moment_id: string;
 	cover_url?: string;
-	text_preview: string;
+	description_preview: string;
 }
 
 /**
@@ -539,7 +551,7 @@ export interface PrivateChatItem {
 	is_pinned: boolean;
 	last_activity_at: string;
 	can_message: boolean;
-	cant_message_reason?: CantMessageReason;
+	message_blocked_reason?: MessageBlockedReason;
 	last_message?: {
 		message_id: string;
 		content?: string;
@@ -580,22 +592,24 @@ export type NotificationPayload =
 			comment_id: string;
 			comment_preview: string;
 			moment_id: string;
-			moment_summary?: MomentSummary;
+			moment_summary: MomentSummary;
 	  }
 	| {
 			type: 'comment_reply';
 			actor: UserInfo;
 			comment_id: string;
-			comment_preview: string;
+			replied_comment_preview: string;
+			reply_id: string;
+			reply_content_preview: string;
 			moment_id: string;
-			moment_summary?: MomentSummary;
+			moment_summary: MomentSummary;
 	  }
 	| {
 			type: 'mentioned';
 			actor: UserInfo;
 			target_type: 'moment' | 'comment';
 			moment_id: string;
-			moment_summary?: MomentSummary;
+			moment_summary: MomentSummary;
 			comment_id?: string;
 			comment_preview?: string;
 	  }
@@ -604,7 +618,23 @@ export type NotificationPayload =
 			actor: UserInfo;
 			group_id: string;
 			group_name: string;
+			group_avatar_url?: string;
 			invite_id: string;
+			message?: string;
+	  }
+	| {
+			type: 'group_invite_accepted';
+			group_id: string;
+			group_name: string;
+			invite_id: string;
+			user: UserInfo;
+	  }
+	| {
+			type: 'group_application_received';
+			applicant: UserInfo;
+			group_id: string;
+			group_name: string;
+			application_id: string;
 	  }
 	| {
 			type: 'group_application_accepted';
@@ -741,7 +771,6 @@ export interface ApiResponse<T = void> {
 	code: number;
 	message?: string;
 	data?: T;
-	request_id?: string;
 }
 
 // ============================================================================
@@ -861,6 +890,7 @@ export type AuditAction =
 	| 'group.member_ban'
 	| 'group.member_remove'
 	| 'announcement.create'
+	| 'announcement.update'
 	| 'announcement.delete'
 	| 'role.create'
 	| 'role.update'
@@ -893,6 +923,7 @@ export type AuditDetails =
 	| { type: 'group.member_ban'; reason?: string }
 	| { type: 'group.member_remove'; reason?: string }
 	| { type: 'announcement.create'; title: string }
+	| { type: 'announcement.update'; title: string; changed_fields?: string[] }
 	| { type: 'announcement.delete'; title: string }
 	| { type: 'role.create'; role_name: string; permissions: string[] }
 	| { type: 'role.update'; role_name: string; added_permissions?: string[]; removed_permissions?: string[] }
@@ -946,17 +977,31 @@ export interface AdminGroupItem extends GroupItem {
 	};
 }
 
+export interface ReportTargetSnapshot {
+	moment?: {
+		description?: string;
+		image_urls?: string[];
+		author_id?: string;
+	};
+	comment?: {
+		content?: string;
+		author_id?: string;
+		moment_id?: string;
+	};
+	message?: {
+		content?: string;
+		media_urls?: string[];
+		sender_id?: string;
+	};
+}
+
 export interface AdminReportItem extends ReportItem {
 	reporter_user_id: string;
 	reporter: UserInfo;
 	handled_by?: UserInfo;
 	handled_action?: ReportHandleAction;
-	handled_note?: string;
-	target_snapshot?: {
-		content?: string;
-		media_urls?: string[];
-		owner_id?: string;
-	};
+	handle_note?: string;
+	target_snapshot?: ReportTargetSnapshot;
 }
 
 export interface AdminAnnouncementItem extends SystemAnnouncementItem {
@@ -969,15 +1014,14 @@ export interface AdminAnnouncementItem extends SystemAnnouncementItem {
 export interface AdminTagItem {
 	name: string;
 	usage_count: number;
+	trend?: TagTrend;
 	created_at: string;
-	last_used_at?: string;
 }
 
 export type AdminTagSortBy =
 	| 'usage_count_desc'
 	| 'usage_count_asc'
-	| 'created_at_desc'
-	| 'last_used_at_desc';
+	| 'created_at_desc';
 
 export interface SystemAnnouncementItem {
 	announcement_id: string;
@@ -1054,9 +1098,15 @@ export interface RateLimitConfig {
 	auth_guest_per_10minutes: number;
 	auth_refresh_per_10minutes: number;
 	auth_reset_per_10minutes: number;
+	search_per_minute: number;
+	write_per_minute: number;
 	moments_create_per_minute: number;
 	comments_create_per_minute: number;
 	reports_create_per_hour: number;
+	upload_presign_per_hour: number;
+	ws_subscribe_per_second: number;
+	admin_read_per_minute: number;
+	admin_write_per_minute: number;
 }
 
 export interface ResponseDefaults {
@@ -1190,6 +1240,11 @@ export interface ShareListItem {
 	preview?: SharePreview;
 }
 
+export interface ShareListRequest extends Record<string, unknown> {
+	share_type?: ShareType;
+	pagination?: PaginationParams;
+}
+
 export interface CreateShareRequest {
 	share_type: ShareType;
 	payload: SharePayload;
@@ -1199,4 +1254,3 @@ export interface CreateShareRequest {
 export interface GetShareRequest {
 	share_code: string;
 }
-

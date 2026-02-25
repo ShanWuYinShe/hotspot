@@ -44,6 +44,8 @@ export struct ProfilePage {
   @State isLoading: boolean = false;
   @State myMomentsCount: number = 0;
   @State myGroupsCount: number = 0;
+  @State myFollowersCount: number = 0;
+  @State myFollowingCount: number = 0;
   // 快速体验弹窗
   @State showQuickStart: boolean = false;
   @State quickNickname: string = '';
@@ -95,7 +97,29 @@ export struct ProfilePage {
     if (this.currentUser.stats) {
       this.myMomentsCount = this.currentUser.stats.moments_count || 0;
       this.myGroupsCount = this.currentUser.stats.groups_count || 0;
+      this.myFollowersCount = this.currentUser.stats.followers_count || 0;
+      this.myFollowingCount = this.currentUser.stats.following_count || 0;
     }
+  }
+
+  private openMyMoments(): void {
+    AppRouter.push(PageNames.MOMENT);
+  }
+
+  private openMyGroups(): void {
+    AppRouter.push(PageNames.GROUP);
+  }
+
+  private openSearchPeople(): void {
+    AppRouter.push(PageNames.SEARCH);
+  }
+
+  private openSubscriptions(): void {
+    AppRouter.push(PageNames.SUBSCRIPTIONS);
+  }
+
+  private openMyShares(): void {
+    AppRouter.push(PageNames.MY_SHARES);
   }
 
   private startEdit(): void {
@@ -245,6 +269,7 @@ export struct ProfilePage {
     Column() {
       SystemPageHeader({
         title: '个人中心',
+        surfaceColor: $r('app.color.bg_secondary'),
         action: (this.isLoggedIn && this.currentUser && !this.isEditing && !this.showUpgradeForm)
           ? { label: '编辑', onClick: () => this.startEdit() }
           : undefined
@@ -476,6 +501,15 @@ export struct ProfilePage {
       .margin({ left: 16, right: 16 })
       .padding(DesignConstants.SPACING.LG)
 
+      // 快捷操作
+      ListItem() {
+        this.QuickActionsSection()
+      }
+      .backgroundColor($r('app.color.bg_secondary'))
+      .borderRadius(DesignConstants.RADIUS.LG)
+      .margin({ left: 16, right: 16 })
+      .padding(DesignConstants.SPACING.LG)
+
       // 菜单
       ListItemGroup() {
         ListItem() {
@@ -530,6 +564,15 @@ export struct ProfilePage {
       .margin({ left: 16, right: 16 })
       .padding(DesignConstants.SPACING.LG)
 
+      // 快捷操作
+      ListItem() {
+        this.QuickActionsSection()
+      }
+      .backgroundColor($r('app.color.bg_secondary'))
+      .borderRadius(DesignConstants.RADIUS.LG)
+      .margin({ left: 16, right: 16 })
+      .padding(DesignConstants.SPACING.LG)
+
       // 菜单列表
       ListItemGroup() {
         ListItem() {
@@ -577,7 +620,7 @@ export struct ProfilePage {
           .fontSize(16)
           .padding(16)
           .backgroundColor($r('app.color.bg_tertiary'))
-          .borderRadius(12)
+          .borderRadius(DesignConstants.RADIUS.LG)
           .type(InputType.Email)
           .onChange((value: string) => {
             this.upgradeLoginId = value;
@@ -587,7 +630,7 @@ export struct ProfilePage {
           .fontSize(16)
           .padding(16)
           .backgroundColor($r('app.color.bg_tertiary'))
-          .borderRadius(12)
+          .borderRadius(DesignConstants.RADIUS.LG)
           .type(InputType.Password)
           .onChange((value: string) => {
             this.upgradePassword = value;
@@ -597,7 +640,7 @@ export struct ProfilePage {
           .fontSize(16)
           .padding(16)
           .backgroundColor($r('app.color.bg_tertiary'))
-          .borderRadius(12)
+          .borderRadius(DesignConstants.RADIUS.LG)
           .type(InputType.Password)
           .onChange((value: string) => {
             this.upgradePasswordConfirm = value;
@@ -653,7 +696,7 @@ export struct ProfilePage {
           .fontSize(12)
           .fontColor($r('sys.color.ohos_id_color_warning'))
           .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
-          .borderRadius(8)
+          .borderRadius(DesignConstants.RADIUS.MD)
           .padding({ left: 8, right: 8, top: 2, bottom: 2 })
       }
 
@@ -682,7 +725,7 @@ export struct ProfilePage {
         .fontSize(16)
         .height(48)
         .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
-        .borderRadius(8)
+        .borderRadius(DesignConstants.RADIUS.MD)
         .onChange((value: string) => {
           this.editNickname = value;
         })
@@ -690,7 +733,7 @@ export struct ProfilePage {
       TextArea({ placeholder: '请输入个人简介', text: this.editBio })
         .fontSize(14)
         .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
-        .borderRadius(8)
+        .borderRadius(DesignConstants.RADIUS.MD)
         .height(80)
         .onChange((value: string) => {
           this.editBio = value;
@@ -718,55 +761,59 @@ export struct ProfilePage {
 
   @Builder
   private StatsContent(): void {
-    Column({ space: 12 }) {
+    Column({ space: 16 }) {
       Text('我的数据')
         .fontSize(16)
         .fontWeight(FontWeight.Medium)
         .fontColor($r('sys.color.ohos_id_color_text_primary'))
         .alignSelf(ItemAlign.Start)
 
-      Row() {
-        Column({ space: 4 }) {
-          Text(this.myMomentsCount.toString())
-            .fontSize(20)
-            .fontWeight(FontWeight.Bold)
-            .fontColor($r('sys.color.ohos_id_color_emphasize'))
+      Row({ space: 12 }) {
+        this.StatCard('我的瞬间', this.myMomentsCount.toString(), '浏览和管理动态', AppIcon.CAMERA, () => this.openMyMoments())
+        this.StatCard('加入群组', this.myGroupsCount.toString(), '查看我加入的圈子', AppIcon.GROUP, () => this.openMyGroups())
+      }
+      .width('100%')
 
-          Text('我的瞬间')
-            .fontSize(12)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        }
-        .layoutWeight(1)
-
-        Column({ space: 4 }) {
-          Text(this.myGroupsCount.toString())
-            .fontSize(20)
-            .fontWeight(FontWeight.Bold)
-            .fontColor($r('sys.color.ohos_id_color_emphasize'))
-
-          Text('加入群组')
-            .fontSize(12)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        }
-        .layoutWeight(1)
-
-        Column({ space: 4 }) {
-          Text(this.currentLocation ? '已获取' : '未获取')
-            .fontSize(14)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(this.currentLocation
-              ? $r('sys.color.ohos_id_color_emphasize')
-              : $r('sys.color.ohos_id_color_warning'))
-
-          Text('位置信息')
-            .fontSize(12)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        }
-        .layoutWeight(1)
+      Row({ space: 12 }) {
+        this.StatCard('关注', this.myFollowingCount.toString(), '我关注的用户', AppIcon.PERSON, () => this.openSearchPeople())
+        this.StatCard('粉丝', this.myFollowersCount.toString(), '谁关注了我', AppIcon.HEART, () => this.openSearchPeople())
       }
       .width('100%')
     }
     .width('100%')
+  }
+
+  @Builder
+  private StatCard(title: string, value: string, description: string, icon: AppIcon, onTap: () => void): void {
+    Button() {
+      Column({ space: 6 }) {
+        Row({ space: 6 }) {
+          Text() {
+            SymbolSpan($r(icon))
+              .fontSize(18)
+              .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+          }
+          Text(title)
+            .fontSize(14)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .layoutWeight(1)
+        }
+        Text(value)
+          .fontSize(22)
+          .fontWeight(FontWeight.Bold)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        Text(description)
+          .fontSize(12)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+      }
+      .width('100%')
+    }
+    .type(ButtonType.Normal)
+    .backgroundColor($r('app.color.bg_primary'))
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .padding(12)
+    .layoutWeight(1)
+    .onClick(onTap)
   }
 
   @Builder
@@ -815,7 +862,69 @@ export struct ProfilePage {
     .onClick(onTap)
   }
 
-  // ==================== 快速体验弹窗 ====================
+    @Builder
+  private QuickActionsSection(): void {
+    Column({ space: 12 }) {
+      Text('快速操作')
+        .fontSize(16)
+        .fontWeight(FontWeight.Medium)
+        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .alignSelf(ItemAlign.Start)
+
+      this.QuickActionItem('我的分享', '查看并管理我的分享链接', AppIcon.SHARE, () => this.openMyShares())
+      this.QuickActionItem('发现周边用户', '查看附近的人并发起互动', AppIcon.PERSON, () => this.openSearchPeople())
+      this.QuickActionItem('浏览附近群组', '加入或管理兴趣圈子', AppIcon.GROUP, () => this.openMyGroups())
+      this.QuickActionItem('查看附近动态', '浏览我的瞬间和周边动态', AppIcon.CAMERA, () => this.openMyMoments())
+    }
+    .width('100%')
+  }
+
+  @Builder
+  private QuickActionItem(title: string, description: string, icon: AppIcon, onTap: () => void): void {
+    Button() {
+      Row({ space: 12 }) {
+        Stack() {
+          Circle()
+            .width(40)
+            .height(40)
+            .fill($r('app.color.bg_tertiary'))
+          Text() {
+            SymbolSpan($r(icon))
+              .fontSize(18)
+              .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+          }
+          .align(Alignment.Center)
+        }
+        .width(40)
+        .height(40)
+
+        Column({ space: 4 }) {
+          Text(title)
+            .fontSize(14)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          Text(description)
+            .fontSize(12)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        }
+        .layoutWeight(1)
+
+        Text() {
+          SymbolSpan($r(AppIcon.FORWARD))
+            .fontSize(16)
+            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+        }
+      }
+      .width('100%')
+    }
+    .type(ButtonType.Normal)
+    .backgroundColor($r('app.color.bg_primary'))
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+    .onClick(onTap)
+  }
+
+// ==================== 快速体验弹窗 ====================
 
   @Builder
   private buildQuickStartSheet() {
@@ -914,4 +1023,12 @@ export struct ProfilePage {
       this.isQuickStarting = false;
     }
   }
+}
+
+@Builder
+export function ProfilePageBuilder() {
+  NavDestination() {
+    ProfilePage()
+  }
+  .hideTitleBar(true)
 }

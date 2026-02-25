@@ -1,14 +1,12 @@
 use super::get_user_info;
 use crate::{
+    dto::response::MomentSummary,
     events::event_types::AppEvent,
     repositories::{notification_repo::NotificationType, user_repo::UserRepository},
     services::{
         notification_service::NotificationService, subscription_service::SubscriptionService,
     },
-    websocket::{
-        manager::ConnectionManager as WsConnectionManager,
-        types::{MomentSummary, WsMessage},
-    },
+    websocket::{manager::ConnectionManager as WsConnectionManager, types::WsMessage},
 };
 
 pub async fn persist_notification(
@@ -36,7 +34,7 @@ pub async fn persist_notification(
                         moment_summary
                             .cover_url
                             .clone()
-                            .unwrap_or(moment_summary.text_preview.clone()),
+                            .unwrap_or(moment_summary.description_preview.clone()),
                     ),
                     None,
                 )
@@ -66,7 +64,7 @@ pub async fn persist_notification(
                         moment_summary
                             .cover_url
                             .clone()
-                            .unwrap_or(moment_summary.text_preview.clone()),
+                            .unwrap_or(moment_summary.description_preview.clone()),
                     ),
                     None,
                 )
@@ -74,8 +72,9 @@ pub async fn persist_notification(
         }
         AppEvent::CommentReplied {
             moment_id,
-            comment_id: _,
-            reply_to_content,
+            moment_summary: _,
+            comment_id,
+            replied_comment_preview,
             reply_id,
             user_id,
             replier_id,
@@ -91,14 +90,15 @@ pub async fn persist_notification(
                     Some("moment".to_string()),
                     Some(moment_id.to_string()),
                     Some(reply_id.to_string()),
-                    Some(reply_to_content.clone()),
-                    None,
+                    Some(replied_comment_preview.clone()),
+                    Some(serde_json::json!({ "comment_id": comment_id.to_string() })),
                 )
                 .await?;
         }
         AppEvent::CommentLiked {
             comment_id,
             moment_id,
+            moment_summary: _,
             user_id,
             liker_id,
             comment_preview,
@@ -124,12 +124,12 @@ pub async fn persist_notification(
             moment_id,
             mentioned_user_id,
             mentioning_user_id,
-            moment_text_preview,
+            moment_description_preview,
             moment_cover_url,
         } => {
             let preview = moment_cover_url
                 .clone()
-                .unwrap_or_else(|| moment_text_preview.clone());
+                .unwrap_or_else(|| moment_description_preview.clone());
             notification_service
                 .create_notification(
                     *mentioned_user_id,
@@ -147,6 +147,7 @@ pub async fn persist_notification(
         }
         AppEvent::CommentMentioned {
             moment_id,
+            moment_summary: _,
             comment_id,
             mentioned_user_id,
             mentioning_user_id,
@@ -198,9 +199,9 @@ pub async fn send_websocket(
                 moment_summary: MomentSummary {
                     moment_id: moment_summary.moment_id.to_string(),
                     cover_url: moment_summary.cover_url.clone(),
-                    text_preview: moment_summary.text_preview.clone(),
+                    description_preview: moment_summary.description_preview.clone(),
                 },
-                user: liker,
+                actor: liker,
                 liked_at: chrono::Utc::now().to_rfc3339(),
             };
             let _ = ws_manager.send_to_user(*user_id, &message).await;
@@ -232,10 +233,10 @@ pub async fn send_websocket(
                 moment_summary: MomentSummary {
                     moment_id: moment_summary.moment_id.to_string(),
                     cover_url: moment_summary.cover_url.clone(),
-                    text_preview: moment_summary.text_preview.clone(),
+                    description_preview: moment_summary.description_preview.clone(),
                 },
                 comment_id: comment_id.to_string(),
-                user: commenter,
+                actor: commenter,
                 content: content.clone(),
                 commented_at: chrono::Utc::now().to_rfc3339(),
             };
@@ -258,6 +259,7 @@ pub async fn send_websocket(
         AppEvent::CommentLiked {
             comment_id,
             moment_id,
+            moment_summary,
             user_id,
             liker_id,
             comment_preview,
@@ -269,17 +271,22 @@ pub async fn send_websocket(
             let message = WsMessage::CommentLiked {
                 comment_id: comment_id.to_string(),
                 moment_id: moment_id.to_string(),
-                moment_summary: None,
+                moment_summary: MomentSummary {
+                    moment_id: moment_summary.moment_id.to_string(),
+                    cover_url: moment_summary.cover_url.clone(),
+                    description_preview: moment_summary.description_preview.clone(),
+                },
                 comment_preview: comment_preview.clone(),
-                user: liker,
+                actor: liker,
                 liked_at: chrono::Utc::now().to_rfc3339(),
             };
             let _ = ws_manager.send_to_user(*user_id, &message).await;
         }
         AppEvent::CommentReplied {
             moment_id,
+            moment_summary,
             comment_id,
-            reply_to_content,
+            replied_comment_preview,
             reply_id,
             user_id,
             replier_id,
@@ -292,11 +299,15 @@ pub async fn send_websocket(
             let replier = get_user_info(user_repo, *replier_id).await;
             let message = WsMessage::CommentReply {
                 moment_id: moment_id.to_string(),
-                moment_summary: None,
+                moment_summary: MomentSummary {
+                    moment_id: moment_summary.moment_id.to_string(),
+                    cover_url: moment_summary.cover_url.clone(),
+                    description_preview: moment_summary.description_preview.clone(),
+                },
                 comment_id: comment_id.to_string(),
-                reply_to_content: reply_to_content.clone(),
+                replied_comment_preview: replied_comment_preview.clone(),
                 reply_id: reply_id.to_string(),
-                user: replier,
+                actor: replier,
                 content: content.clone(),
                 replied_at: chrono::Utc::now().to_rfc3339(),
             };
@@ -306,25 +317,25 @@ pub async fn send_websocket(
             moment_id,
             mentioned_user_id,
             mentioning_user_id,
-            moment_text_preview,
+            moment_description_preview,
             moment_cover_url,
         } => {
             let cfg = subscription_service.get_config(*mentioned_user_id).await?;
             if !cfg.message_mention_enabled {
                 return Ok(());
             }
-            let user = get_user_info(user_repo, *mentioning_user_id).await;
+            let actor = get_user_info(user_repo, *mentioning_user_id).await;
             let message = WsMessage::MessageMentioned {
                 target_type: "moment".to_string(),
                 moment_id: moment_id.to_string(),
                 comment_id: None,
-                moment_summary: Some(MomentSummary {
+                moment_summary: MomentSummary {
                     moment_id: moment_id.to_string(),
                     cover_url: moment_cover_url.clone(),
-                    text_preview: moment_text_preview.clone(),
-                }),
+                    description_preview: moment_description_preview.clone(),
+                },
                 comment_preview: None,
-                user,
+                actor,
                 mentioned_at: chrono::Utc::now().to_rfc3339(),
             };
             let _ = ws_manager.send_to_user(*mentioned_user_id, &message).await;
@@ -333,6 +344,7 @@ pub async fn send_websocket(
             comment_id,
             mentioned_user_id,
             moment_id,
+            moment_summary,
             mentioning_user_id,
             content_preview,
         } => {
@@ -340,14 +352,18 @@ pub async fn send_websocket(
             if !cfg.message_mention_enabled {
                 return Ok(());
             }
-            let user = get_user_info(user_repo, *mentioning_user_id).await;
+            let actor = get_user_info(user_repo, *mentioning_user_id).await;
             let message = WsMessage::MessageMentioned {
                 target_type: "comment".to_string(),
                 moment_id: moment_id.to_string(),
                 comment_id: Some(comment_id.to_string()),
-                moment_summary: None,
+                moment_summary: MomentSummary {
+                    moment_id: moment_summary.moment_id.to_string(),
+                    cover_url: moment_summary.cover_url.clone(),
+                    description_preview: moment_summary.description_preview.clone(),
+                },
                 comment_preview: Some(content_preview.clone()),
-                user,
+                actor,
                 mentioned_at: chrono::Utc::now().to_rfc3339(),
             };
             let _ = ws_manager.send_to_user(*mentioned_user_id, &message).await;

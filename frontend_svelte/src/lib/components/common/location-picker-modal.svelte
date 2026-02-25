@@ -25,6 +25,7 @@
 	import Clock from 'lucide-svelte/icons/clock';
 	import Trash2 from 'lucide-svelte/icons/trash-2';
 	import CreateLocationShareModal from './create-location-share-modal.svelte';
+	import AnchorSummaryCard from './anchor-summary-card.svelte';
 
 	interface Props {
 		open: boolean;
@@ -35,17 +36,55 @@
 
 	let mapContainer = $state<HTMLDivElement | null>(null);
 	let map: AMap.Map | null = null;
-	let centerMarker: AMap.Marker | null = null;
 	let geocoder: AMap.Geocoder | null = null;
 	let isLoadingMap = $state(false);
 	let isMapAvailable = $state(true);
 	let isLocating = $state(false);
+	let isMapInteracting = $state(false);
 	let locationName = $state(mapAnchorStore.name);
 	let latitude = $state(mapAnchorStore.latitude);
 	let longitude = $state(mapAnchorStore.longitude);
+	const REVERSE_GEOCODE_IDLE_MS = 800;
+	const MIN_LOCATION_DELTA = 0.00005;
+	let lastResolvedLat = mapAnchorStore.latitude;
+	let lastResolvedLng = mapAnchorStore.longitude;
+	let reverseGeocodeTimer: ReturnType<typeof setTimeout> | null = null;
+	let skipNextReverseGeocode = false;
+	let mapMoveFrame: number | null = null;
 	let hasInit = $state(false);
 	let hasSyncedFromAnchor = $state(false);
-	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+	const LONG_PRESS_DURATION_MS = 700;
+	const GESTURE_HINT_DURATION_MS = 4000;
+	const GESTURE_HINT_COMBINED = '双击或长按地图可快速定位';
+	const GESTURE_HINT_TOUCH = '长按地图可快速定位';
+	const GESTURE_HINT_POINTER = '双击地图可快速定位';
+
+	function getGestureHintMessage(): string {
+		if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+			return GESTURE_HINT_COMBINED;
+		}
+		const prefersCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+		const prefersHover = window.matchMedia('(hover: hover)').matches;
+		if (prefersCoarsePointer && !prefersHover) {
+			return GESTURE_HINT_TOUCH;
+		}
+		if (!prefersCoarsePointer && prefersHover) {
+			return GESTURE_HINT_POINTER;
+		}
+		return GESTURE_HINT_COMBINED;
+	}
+
+	let gestureHintVisible = $state(false);
+	let gestureHintMessage = $state(getGestureHintMessage());
+	let placementHintVisible = $state(false);
+	let placementHintMessage = $state('');
+	let placementHintTimer: ReturnType<typeof setTimeout> | null = null;
+	let gestureHintTimer: ReturnType<typeof setTimeout> | null = null;
+	let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+	let lastTouchLngLat: { lat: number; lng: number } | null = null;
+	let touchMovedDuringLongPress = false;
+	let detachTouchListeners: (() => void) | null = null;
+
 	let searchRadius = $state(mapAnchorStore.radius);
 	let isBottomSheetExpanded = $state(false);
 	let showShareModal = $state(false);
@@ -65,6 +104,106 @@
 	type MapClickEvent = {
 		lnglat?: AMap.LngLat;
 	};
+
+	const PLACEMENT_HINT_DEFAULT = '已定位到该位置';
+
+	function showGestureHint(message = getGestureHintMessage()) {
+		gestureHintMessage = message;
+		gestureHintVisible = true;
+		if (gestureHintTimer) {
+			clearTimeout(gestureHintTimer);
+		}
+		gestureHintTimer = window.setTimeout(() => {
+			gestureHintVisible = false;
+			gestureHintTimer = null;
+		}, GESTURE_HINT_DURATION_MS);
+	}
+
+	function hideGestureHint() {
+		gestureHintVisible = false;
+		if (gestureHintTimer) {
+			clearTimeout(gestureHintTimer);
+			gestureHintTimer = null;
+		}
+	}
+
+	function showPlacementHint(message = PLACEMENT_HINT_DEFAULT) {
+		placementHintMessage = message;
+		placementHintVisible = true;
+		if (placementHintTimer) {
+			clearTimeout(placementHintTimer);
+		}
+		placementHintTimer = window.setTimeout(() => {
+			placementHintVisible = false;
+			placementHintTimer = null;
+		}, 2000);
+	}
+
+	async function moveToCoordinate(lat: number, lng: number, options?: { hintMessage?: string }) {
+		cancelReverseGeocodeTimer();
+		skipNextReverseGeocode = true;
+		latitude = lat;
+		longitude = lng;
+		map?.setCenter([lng, lat]);
+		await reverseGeocode(lat, lng);
+		hideGestureHint();
+		showPlacementHint(options?.hintMessage ?? PLACEMENT_HINT_DEFAULT);
+	}
+
+	function getLngLatFromTouch(event: TouchEvent): { lat: number; lng: number } | null {
+		if (!map || !mapContainer) return null;
+		const touch = event.touches[0] ?? event.changedTouches[0];
+		if (!touch) return null;
+		const rect = mapContainer.getBoundingClientRect();
+		const pixel = { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+		const lnglat = (map as unknown as { containerToLngLat: (pixel: { x: number; y: number }) => AMap.LngLat }).containerToLngLat(pixel);
+		if (!lnglat) return null;
+		return { lat: lnglat.getLat(), lng: lnglat.getLng() };
+	}
+
+	const handleTouchStart = (event: TouchEvent) => {
+		const lnglat = getLngLatFromTouch(event);
+		if (!lnglat) return;
+		lastTouchLngLat = lnglat;
+		touchMovedDuringLongPress = false;
+		if (longPressTimer) {
+			clearTimeout(longPressTimer);
+		}
+		longPressTimer = window.setTimeout(() => {
+			if (touchMovedDuringLongPress || !lastTouchLngLat) return;
+			void moveToCoordinate(lastTouchLngLat.lat, lastTouchLngLat.lng, { hintMessage: '已通过长按定位到该位置' });
+		}, LONG_PRESS_DURATION_MS);
+	};
+
+	const handleTouchMove = () => {
+		touchMovedDuringLongPress = true;
+		if (longPressTimer) {
+			clearTimeout(longPressTimer);
+			longPressTimer = null;
+		}
+	};
+
+	const handleTouchEnd = () => {
+		if (longPressTimer) {
+			clearTimeout(longPressTimer);
+			longPressTimer = null;
+		}
+		lastTouchLngLat = null;
+	};
+
+	function registerTouchListeners() {
+		detachTouchListeners?.();
+		if (!mapContainer) return;
+		mapContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
+		mapContainer.addEventListener('touchmove', handleTouchMove, { passive: true });
+		mapContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
+		detachTouchListeners = () => {
+			mapContainer?.removeEventListener('touchstart', handleTouchStart);
+			mapContainer?.removeEventListener('touchmove', handleTouchMove);
+			mapContainer?.removeEventListener('touchend', handleTouchEnd);
+			detachTouchListeners = null;
+		};
+	}
 
 	async function ensureGeocoder() {
 		if (geocoder) return;
@@ -140,22 +279,28 @@
 	}
 
 	function selectSearchResult(result: { name: string; address: string; latitude: number; longitude: number }) {
+		cancelReverseGeocodeTimer();
+		skipNextReverseGeocode = true;
 		latitude = result.latitude;
 		longitude = result.longitude;
 		locationName = result.name;
+		lastResolvedLat = result.latitude;
+		lastResolvedLng = result.longitude;
 		map?.setCenter([result.longitude, result.latitude]);
-		centerMarker?.setPosition([result.longitude, result.latitude]);
 		showSearch = false;
 		searchText = '';
 		searchResults = [];
 	}
 
 	function selectHistoryItem(item: AnchorHistoryItem) {
+		cancelReverseGeocodeTimer();
+		skipNextReverseGeocode = true;
 		latitude = item.latitude;
 		longitude = item.longitude;
 		locationName = item.locationName;
+		lastResolvedLat = item.latitude;
+		lastResolvedLng = item.longitude;
 		map?.setCenter([item.longitude, item.latitude]);
-		centerMarker?.setPosition([item.longitude, item.latitude]);
 	}
 
 	function handleClearHistory() {
@@ -177,6 +322,8 @@
 						const poiName = result.regeocode.pois?.[0]?.name;
 						const resolved = poiName || result.regeocode.formattedAddress || '自定义位置';
 						locationName = resolved;
+						lastResolvedLat = lat;
+						lastResolvedLng = lng;
 						resolve(resolved);
 						return;
 					}
@@ -189,31 +336,63 @@
 			return '自定义位置';
 		}
 	}
-
-	function handleMapChanged() {
-		if (!map) return;
-		const center = map.getCenter();
-		latitude = center.getLat();
-		longitude = center.getLng();
-		centerMarker?.setPosition([longitude, latitude]);
-
-		if (debounceTimer) clearTimeout(debounceTimer);
-		debounceTimer = setTimeout(() => {
-			void reverseGeocode(latitude, longitude);
-		}, 300);
+	function cancelReverseGeocodeTimer() {
+		if (reverseGeocodeTimer) {
+			clearTimeout(reverseGeocodeTimer);
+			reverseGeocodeTimer = null;
+		}
 	}
 
-async function handleDoubleClick(event: MapClickEvent) {
-	if (!map) return;
-	const lnglat = event.lnglat ?? map.getCenter();
-	const nextLat = lnglat.getLat();
-	const nextLng = lnglat.getLng();
-	latitude = nextLat;
-	longitude = nextLng;
-	map.setCenter([nextLng, nextLat]);
-	centerMarker?.setPosition([nextLng, nextLat]);
-	await reverseGeocode(nextLat, nextLng);
-}
+	function hasMeaningfulMovement(lat: number, lng: number) {
+		return Math.abs(lat - lastResolvedLat) > MIN_LOCATION_DELTA || Math.abs(lng - lastResolvedLng) > MIN_LOCATION_DELTA;
+	}
+
+	function scheduleReverseGeocode() {
+		cancelReverseGeocodeTimer();
+		reverseGeocodeTimer = setTimeout(() => {
+			reverseGeocodeTimer = null;
+			if (!hasMeaningfulMovement(latitude, longitude)) {
+				return;
+			}
+			void reverseGeocode(latitude, longitude);
+		}, REVERSE_GEOCODE_IDLE_MS);
+	}
+
+
+	function syncCenterFromMap() {
+		if (!map) return;
+		const center = map.getCenter();
+		if (!center) return;
+		latitude = center.getLat();
+		longitude = center.getLng();
+	}
+
+	function handleLiveMapMove() {
+		if (mapMoveFrame !== null) {
+			return;
+		}
+		mapMoveFrame = requestAnimationFrame(() => {
+			mapMoveFrame = null;
+			syncCenterFromMap();
+		});
+	}
+
+	function handleMapChanged() {
+		syncCenterFromMap();
+		if (skipNextReverseGeocode) {
+			skipNextReverseGeocode = false;
+			return;
+		}
+		scheduleReverseGeocode();
+	}
+
+	async function handleDoubleClick(event: MapClickEvent) {
+		if (!map) return;
+		const lnglat = event.lnglat ?? map.getCenter();
+		const nextLat = lnglat.getLat();
+		const nextLng = lnglat.getLng();
+		await moveToCoordinate(nextLat, nextLng, { hintMessage: '已通过双击定位到该位置' });
+	}
 
 	async function initMap() {
 		isLoadingMap = true;
@@ -222,22 +401,32 @@ async function handleDoubleClick(event: MapClickEvent) {
 			await tick();
 			if (!mapContainer) return;
 
-			map = new AMap.Map(mapContainer, {
-				center: [longitude, latitude],
-				zoom: 14,
-				viewMode: '2D',
-				doubleClickZoom: false,
-				resizeEnable: true
-			});
+		map = new AMap.Map(mapContainer, {
+			center: [longitude, latitude],
+			zoom: 14,
+			viewMode: '2D',
+			doubleClickZoom: false,
+			resizeEnable: true
+		});
+		registerTouchListeners();
 
-			centerMarker = new AMap.Marker({
-				position: [longitude, latitude],
-				anchor: 'bottom-center',
-				map
-			});
-
-			map.on('moveend', handleMapChanged);
-			map.on('zoomend', handleMapChanged);
+		map.on('movestart', () => {
+			isMapInteracting = true;
+			cancelReverseGeocodeTimer();
+		});
+		map.on('moveend', () => {
+			isMapInteracting = false;
+			handleMapChanged();
+		});
+		map.on('zoomstart', () => {
+			isMapInteracting = true;
+			cancelReverseGeocodeTimer();
+		});
+		map.on('zoomend', () => {
+			isMapInteracting = false;
+			handleMapChanged();
+		});
+		map.on('mapmove', handleLiveMapMove);
 		map.on('dblclick', handleDoubleClick);
 			await reverseGeocode(latitude, longitude);
 			hasInit = true;
@@ -260,7 +449,6 @@ async function handleDoubleClick(event: MapClickEvent) {
 			latitude = geoPoint.latitude;
 			longitude = geoPoint.longitude;
 			map?.setZoomAndCenter(15, [longitude, latitude]);
-			centerMarker?.setPosition([longitude, latitude]);
 			const resolvedName = await reverseGeocode(latitude, longitude);
 			locationStore.setLocation({
 				point: {
@@ -289,7 +477,10 @@ async function handleDoubleClick(event: MapClickEvent) {
 
 	$effect(() => {
 		if (open) {
-				if (!hasSyncedFromAnchor) {
+			if (!gestureHintVisible) {
+				showGestureHint();
+			}
+			if (!hasSyncedFromAnchor) {
 				latitude = mapAnchorStore.latitude;
 				longitude = mapAnchorStore.longitude;
 				locationName = mapAnchorStore.name;
@@ -303,31 +494,49 @@ async function handleDoubleClick(event: MapClickEvent) {
 					initMap();
 				} else {
 					map?.setZoomAndCenter(14, [longitude, latitude]);
-					centerMarker?.setPosition([longitude, latitude]);
 				}
 				hasSyncedFromAnchor = true;
 			}
 		} else {
 			hasSyncedFromAnchor = false;
+			hideGestureHint();
+			placementHintVisible = false;
 		}
 	});
 
 	// 组件卸载时清理资源
 	onMount(() => {
 		return () => {
-			centerMarker = null;
 			map?.destroy();
 			map = null;
-			if (debounceTimer) {
-				clearTimeout(debounceTimer);
-				debounceTimer = null;
+			detachTouchListeners?.();
+			if (reverseGeocodeTimer) {
+				clearTimeout(reverseGeocodeTimer);
+				reverseGeocodeTimer = null;
+			}
+			if (mapMoveFrame !== null) {
+				cancelAnimationFrame(mapMoveFrame);
+				mapMoveFrame = null;
 			}
 			if (searchDebounceTimer) {
 				clearTimeout(searchDebounceTimer);
 				searchDebounceTimer = null;
 			}
+			if (placementHintTimer) {
+				clearTimeout(placementHintTimer);
+				placementHintTimer = null;
+			}
+			if (gestureHintTimer) {
+				clearTimeout(gestureHintTimer);
+				gestureHintTimer = null;
+			}
+			if (longPressTimer) {
+				clearTimeout(longPressTimer);
+				longPressTimer = null;
+			}
 		};
 	});
+
 </script>
 
 <style>
@@ -378,47 +587,66 @@ async function handleDoubleClick(event: MapClickEvent) {
 		transform: scale(1.2);
 	}
 
-	/* 底部安全区域支持 */
-	.pb-safe {
-		padding-bottom: max(1rem, env(safe-area-inset-bottom));
+	.center-pin {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.2rem;
+		pointer-events: none;
+		transition: transform 150ms ease;
 	}
 
-	/* 优化移动端触摸反馈 */
-	@media (hover: none) and (pointer: coarse) {
-		button:active {
-			transform: scale(0.98);
-		}
+	.center-pin-icon {
+		width: 3rem;
+		height: 3.5rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		filter: drop-shadow(0 12px 16px rgba(15, 23, 42, 0.3));
+	}
+
+	.center-pin-svg {
+		width: 100%;
+		height: 100%;
+	}
+
+	.center-pin-svg path {
+		fill: hsl(var(--primary));
+	}
+
+	.center-pin-svg circle:first-of-type {
+		fill: #fff;
+	}
+
+	.center-pin-core {
+		fill: hsl(var(--primary));
+	}
+
+	.center-pin-shadow {
+		width: 2.5rem;
+		height: 0.55rem;
+		border-radius: 999px;
+		background: rgba(15, 23, 42, 0.3);
+		opacity: 0.6;
+		transition: transform 150ms ease, opacity 150ms ease;
+	}
+
+	.center-pin.dragging {
+		transform: translateY(-4px);
+	}
+
+	.center-pin.dragging .center-pin-shadow {
+		transform: scale(0.82);
+		opacity: 0.4;
 	}
 </style>
 
 <Dialog.Root bind:open onOpenChange={(value) => { open = value; onOpenChange?.(value); }}>
 	<Dialog.Content class="flex h-[90dvh] max-h-[90dvh] flex-col p-0 sm:h-[85vh] sm:max-w-4xl sm:p-6" hideClose>
-		<!-- 桌面端标题 -->
-		<Dialog.Header class="hidden px-6 pt-6 sm:block">
-			<Dialog.Title class="flex items-center gap-2">
-				<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-primary/20 to-primary/10">
-					<MapPin class="h-5 w-5 text-primary" />
-				</div>
-				<div class="flex-1">
-					<div>地图选择锚点</div>
-					<div class="text-sm font-normal text-muted-foreground">拖动地图选择浏览位置</div>
-				</div>
-				<!-- 桌面端搜索按钮 -->
-				<Button variant="ghost" size="icon" class="h-9 w-9 rounded-xl" onclick={toggleSearch} aria-label="搜索">
-					<Search class="h-4 w-4" />
-				</Button>
-				<!-- 桌面端关闭按钮 -->
-				<Button variant="ghost" size="icon" class="h-9 w-9 rounded-xl" onclick={handleClose} aria-label="关闭">
-					<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-					</svg>
-					<span class="sr-only">关闭</span>
-				</Button>
-			</Dialog.Title>
-		</Dialog.Header>
 
 		<!-- 移动端简化标题 -->
-		<div class="flex items-center justify-between border-b bg-background px-4 py-3 sm:hidden">
+		<div class="flex items-center justify-between border-b bg-background/95 px-4 py-2 sm:hidden">
 			<div class="flex items-center gap-2">
 				<MapPin class="h-5 w-5 text-primary" />
 				<span class="font-semibold">选择位置</span>
@@ -440,6 +668,67 @@ async function handleDoubleClick(event: MapClickEvent) {
 		<!-- 地图容器 -->
 		<div class="relative flex-1 overflow-hidden sm:rounded-2xl sm:border">
 			<div class="h-full w-full touch-none" bind:this={mapContainer}></div>
+
+		<!-- 桌面端地图工具栏 -->
+		<div class="pointer-events-none absolute right-4 top-4 z-30 hidden flex-col gap-2 sm:flex">
+			<div class="pointer-events-auto flex flex-col gap-2">
+				<Button
+					size="icon"
+					variant="outline"
+					class="h-10 w-10 rounded-xl border-2 bg-background/95 shadow-md backdrop-blur"
+					onclick={toggleSearch}
+					aria-label="搜索地点"
+				>
+					<Search class="h-4 w-4" />
+				</Button>
+				<Button
+					size="icon"
+					variant="outline"
+					class="h-10 w-10 rounded-xl border-2 bg-background/95 shadow-md backdrop-blur"
+					onclick={handleUseCurrentLocation}
+					disabled={isLocating}
+					aria-label="定位到当前位置"
+				>
+					{#if isLocating}
+						<Loader2 class="h-4 w-4 animate-spin" />
+					{:else}
+						<Navigation class="h-4 w-4" />
+					{/if}
+				</Button>
+				<Button
+					size="icon"
+					variant="outline"
+					class="h-10 w-10 rounded-xl border-2 bg-background/95 shadow-md backdrop-blur"
+					onclick={handleClose}
+					aria-label="关闭"
+				>
+					<X class="h-4 w-4" />
+				</Button>
+			</div>
+		</div>
+
+			{#if gestureHintVisible || placementHintVisible}
+			<div class="pointer-events-none absolute inset-x-0 top-4 z-30 flex justify-center px-4">
+				{#if placementHintVisible}
+					<div class="rounded-full bg-background/95 px-4 py-1.5 text-sm font-medium text-foreground shadow-lg">{placementHintMessage}</div>
+				{:else if gestureHintVisible}
+					<div class="rounded-full border border-dashed border-primary/40 bg-background/90 px-4 py-1 text-xs text-muted-foreground shadow">{gestureHintMessage}</div>
+				{/if}
+			</div>
+		{/if}
+
+		<div class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+				<div class="center-pin" class:dragging={isMapInteracting} aria-hidden="true">
+					<div class="center-pin-icon">
+						<svg class="center-pin-svg" viewBox="0 0 48 56" aria-hidden="true" focusable="false">
+							<path d="M24 0C10.745 0 0 10.745 0 24c0 16.8 24 32 24 32s24-15.2 24-32C48 10.745 37.255 0 24 0z" />
+							<circle cx="24" cy="22" r="10" />
+							<circle cx="24" cy="22" r="5" class="center-pin-core" />
+						</svg>
+					</div>
+					<div class="center-pin-shadow"></div>
+				</div>
+			</div>
 
 			<!-- 搜索覆盖层 -->
 			{#if showSearch}
@@ -586,17 +875,17 @@ async function handleDoubleClick(event: MapClickEvent) {
 					<!-- 底部抽屉内容 -->
 					<div class="max-h-[60vh] overflow-y-auto px-4 pb-safe">
 						<!-- 位置信息 (精简版 - 始终可见) -->
-						<div class="mb-3">
-							<div class="text-xs font-medium text-muted-foreground">当前选中</div>
-							<div class="mt-1 truncate text-lg font-bold">
-								{locationName || '拖动地图选择位置'}
-							</div>
-							<div class="mt-0.5 text-xs text-muted-foreground">
-								{latitude.toFixed(6)}, {longitude.toFixed(6)}
-							</div>
-						</div>
+					<AnchorSummaryCard
+						label="当前选中"
+						description="拖动地图或搜索后，确认才会覆盖锚点"
+						subtle
+						overrideName={locationName || '拖动地图选择位置'}
+						overrideLatitude={latitude}
+						overrideLongitude={longitude}
+						showCoordinates
+					/>
 
-						<!-- 展开后显示的内容 -->
+					<!-- 展开后显示的内容 -->
 						{#if isBottomSheetExpanded}
 							<div class="space-y-4 pb-4">
 								<!-- 提示信息 -->
@@ -653,66 +942,51 @@ async function handleDoubleClick(event: MapClickEvent) {
 		</div>
 
 		<!-- 桌面端信息面板 -->
-		<div class="hidden flex-col gap-4 py-4 sm:flex">
-			<Card class="border-0 bg-linear-to-r from-primary/5 to-primary/10">
-				<CardContent class="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+		<div class="hidden gap-4 py-4 sm:flex">
+			<!-- 左侧：位置信息 + 搜索范围 -->
+			<div class="flex min-w-0 flex-1 flex-col gap-3">
+				<div class="flex items-start gap-3">
+					<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+						<MapPin class="h-5 w-5 text-primary" />
+					</div>
 					<div class="min-w-0 flex-1">
-						<div class="text-xs font-medium text-muted-foreground">选中位置</div>
-						<div class="mt-1 truncate text-lg font-bold">
+						<p class="text-xs font-medium text-muted-foreground">选中位置</p>
+						<p class="truncate text-base font-bold leading-snug">
 							{locationName || '拖动地图选择位置'}
-						</div>
-						<div class="mt-0.5 text-xs text-muted-foreground">
+						</p>
+						<p class="mt-0.5 font-mono text-xs text-muted-foreground">
 							{latitude.toFixed(6)}, {longitude.toFixed(6)}
-						</div>
-						<div class="mt-2 text-xs text-muted-foreground">
-							💡 双击地图可快速选中位置，确认后才会更新锚点
-						</div>
+						</p>
 					</div>
-					<div class="flex shrink-0 items-center gap-2">
-						<Button variant="outline" size="sm" class="gap-2" onclick={handleUseCurrentLocation} disabled={isLocating}>
-							{#if isLocating}
-								<Loader2 class="h-4 w-4 animate-spin" />
-								定位中
-							{:else}
-								<Navigation class="h-4 w-4" />
-								定位到当前
-							{/if}
-						</Button>
-						<Button variant="outline" size="sm" class="gap-2" onclick={() => showShareModal = true} disabled={!locationName}>
-							<Share2 class="h-4 w-4" />
-							分享
-						</Button>
-						<Button size="sm" class="gap-2" onclick={handleConfirm} disabled={!locationName}>
-							<MapPin class="h-4 w-4" />
-							设为锚点
-						</Button>
-					</div>
-				</CardContent>
-			</Card>
-
-			<Card class="border-muted">
-				<CardContent class="flex flex-col gap-3 p-4">
-					<div class="flex items-center justify-between">
-						<div class="flex items-center gap-2 text-sm font-medium">
-							<SlidersHorizontal class="h-4 w-4 text-primary" />
-							<span>搜索范围</span>
-						</div>
-						<span class="text-sm font-bold text-primary">{searchRadius} km</span>
+				</div>
+				<!-- 搜索范围 -->
+				<div class="flex items-center gap-3">
+					<div class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+						<SlidersHorizontal class="h-3.5 w-3.5" />
+						<span>搜索范围</span>
 					</div>
 					<input
 						type="range"
 						min="1"
 						max="50"
 						step="1"
-						class="h-2 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+						class="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-muted accent-primary"
 						bind:value={searchRadius}
 					/>
-					<div class="flex justify-between text-xs text-muted-foreground">
-						<span>1km</span>
-						<span>50km</span>
-					</div>
-				</CardContent>
-			</Card>
+					<span class="min-w-[4ch] text-right text-sm font-bold text-primary">{searchRadius} km</span>
+				</div>
+			</div>
+			<!-- 右侧：操作按钮 -->
+			<div class="flex shrink-0 items-end gap-2">
+				<Button variant="outline" size="sm" class="gap-1.5" onclick={() => showShareModal = true} disabled={!locationName}>
+					<Share2 class="h-3.5 w-3.5" />
+					分享
+				</Button>
+				<Button size="sm" class="gap-1.5" onclick={handleConfirm} disabled={!locationName}>
+					<MapPin class="h-3.5 w-3.5" />
+					设为锚点
+				</Button>
+			</div>
 		</div>
 	</Dialog.Content>
 </Dialog.Root>

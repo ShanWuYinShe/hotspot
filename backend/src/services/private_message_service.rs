@@ -34,7 +34,7 @@ use crate::{
         private_chat_permission::PrivateChatPermissionResolver,
         stranger_message_limiter::StrangerMessageLimiter,
     },
-    types::enums::{CantMessageReason, MessageType},
+    types::enums::{MessageBlockedReason, MessageType},
     utils::validation::Validator,
     EventBus,
 };
@@ -108,7 +108,7 @@ impl PrivateMessageService {
             .await?;
         if !permission.can_message {
             let err_msg = match permission.reason {
-                Some(CantMessageReason::AccountSuspended) => "对方账号暂不可用".to_string(),
+                Some(MessageBlockedReason::AccountSuspended) => "对方账号暂不可用".to_string(),
                 _ => "对方暂时不允许接收私聊".to_string(),
             };
             return Err(AppError::Forbidden(err_msg));
@@ -287,16 +287,28 @@ impl PrivateMessageService {
     ) -> Result<PaginatedData<PrivateMessageItem>> {
         let target_user_id =
             crate::utils::validation::Validator::parse_user_id(&req.target_user_id)?;
-        let chat = self
-            .chat_repo
-            .find_by_users(user_id, target_user_id)
-            .await?
-            .ok_or_else(|| AppError::ChatNotFound("会话不存在".to_string()))?;
+        let chat = match self.chat_repo.find_by_users(user_id, target_user_id).await? {
+            Some(c) => c,
+            None => {
+                return Ok(PaginatedData {
+                    items: vec![],
+                    next_cursor: None,
+                });
+            }
+        };
 
-        let limit = Validator::validate_limit(req.limit, crate::constants::MAX_PAGE_LIMIT)? as i64;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(
+            pagination.and_then(|p| p.limit),
+            crate::constants::MAX_PAGE_LIMIT,
+        )? as i64;
         let (messages, next_cursor) = self
             .message_repo
-            .list_by_chat(chat.chat_id, limit, req.cursor.clone())
+            .list_by_chat(
+                chat.chat_id,
+                limit,
+                pagination.and_then(|p| p.cursor.clone()),
+            )
             .await?;
 
         let chat_id_str = chat.chat_id.to_string();
@@ -469,7 +481,9 @@ impl PrivateMessageService {
         }
 
         if message.r#type != MessageType::Text {
-            return Err(AppError::BadRequest("仅支持编辑文本消息".to_string()));
+            return Err(AppError::BusinessRuleViolation(
+                "仅支持编辑文本消息".to_string(),
+            ));
         }
 
         self.message_repo
@@ -565,7 +579,7 @@ impl PrivateMessageService {
             self.event_bus.publish(AppEvent::PrivateMessageRead {
                 target_user_id,
                 reader_id: user_id,
-                up_to: up_to_id,
+                up_to_message_id: up_to_id,
                 read_at: Utc::now().to_rfc3339(),
             });
         }

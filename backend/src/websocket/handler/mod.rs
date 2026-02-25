@@ -32,6 +32,7 @@ pub async fn ws_handler(
 
 /// 处理WebSocket连接
 async fn handle_socket(socket: WebSocket, state: AppState, headers: HeaderMap) {
+    log_handshake_request(&headers);
     let (mut sender, mut receiver) = socket.split();
 
     let (user_id, _device_fingerprint, nickname) =
@@ -185,5 +186,23 @@ async fn handle_socket(socket: WebSocket, state: AppState, headers: HeaderMap) {
         "WebSocket连接关闭: user_id={}, connection_id={}",
         user_id,
         connection_id
+    );
+}
+fn log_handshake_request(headers: &HeaderMap) {
+    let origin = headers
+        .get("origin")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("-")
+        .to_string();
+    let user_agent = headers
+        .get("user-agent")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("-")
+        .to_string();
+    tracing::info!(
+        target = "ws_handshake",
+        origin = %origin,
+        user_agent = %user_agent,
+        "WebSocket handshake requested"
     );
 }

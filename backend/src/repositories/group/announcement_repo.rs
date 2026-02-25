@@ -71,14 +71,12 @@ impl GroupAnnouncementRepository {
         Ok(announcement)
     }
 
-    /// 根据群组 ID 查找群公告列表
+    /// 根据群组 ID 查找群公告列表（spec 规定不分页，返回最新 N 条）
     pub async fn find_by_group_id(
         &self,
         group_id: i64,
         limit: i64,
-        _cursor: Option<String>,
     ) -> Result<Vec<GroupAnnouncementRow>> {
-        // 简化实现：暂不支持 cursor 分页，直接返回所有公告
         let announcements = sqlx::query_as!(
             GroupAnnouncementRow,
             r#"
@@ -96,16 +94,6 @@ impl GroupAnnouncementRepository {
         .await?;
 
         Ok(announcements)
-    }
-
-    /// 根据群组 ID 查找群公告列表（别名方法）
-    pub async fn list_by_group(
-        &self,
-        group_id: i64,
-        limit: i64,
-        cursor: Option<String>,
-    ) -> Result<Vec<GroupAnnouncementRow>> {
-        self.find_by_group_id(group_id, limit, cursor).await
     }
 
     /// 更新群公告

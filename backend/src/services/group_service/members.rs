@@ -12,20 +12,25 @@ use crate::{
     },
     error::{AppError, Result},
     events::event_types::AppEvent,
-    types::enums::{GroupRole, MemberLeaveReason, SetableGroupRole},
+    types::enums::{GroupRole, MemberLeaveReason, SettableGroupRole},
     utils::validation::Validator,
 };
 
 impl GroupService {
     pub async fn search_members(
         &self,
-        user_id: i64,
+        viewer_id: Option<i64>,
         req: SearchGroupMembersRequest,
     ) -> Result<PaginatedData<GroupMemberItem>> {
         Validator::validate_not_empty(&req.keyword, "keyword")?;
         let group_id = Validator::parse_group_id(&req.group_id)?;
-        let _ = self.require_member(group_id, user_id).await?;
-        let limit = Validator::validate_limit(req.limit, 50)? as usize;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as usize;
+        let can_view_admin_fields = if let Some(user_id) = viewer_id {
+            self.require_admin_or_owner(group_id, user_id).await.is_ok()
+        } else {
+            false
+        };
 
         let (rows, next_cursor) = self
             .member_repo
@@ -34,13 +39,16 @@ impl GroupService {
                 &req.keyword,
                 req.role,
                 limit,
-                req.cursor.as_deref(),
+                pagination.and_then(|p| p.cursor.as_deref()),
             )
             .await?;
 
         let mut items = Vec::with_capacity(rows.len());
         for m in rows {
-            items.push(self.map_member_detail(m).await?);
+            items.push(
+                self.map_member_detail(viewer_id, can_view_admin_fields, m)
+                    .await?,
+            );
         }
 
         Ok(PaginatedData { items, next_cursor })
@@ -48,11 +56,20 @@ impl GroupService {
 
     pub async fn get_members(
         &self,
+        viewer_id: Option<i64>,
         req: GroupMembersRequest,
     ) -> Result<PaginatedData<GroupMemberItem>> {
         let group_id = Validator::parse_group_id(&req.group_id)?;
-        let limit =
-            Validator::validate_limit(req.limit, crate::constants::MAX_PAGE_LIMIT)? as usize;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(
+            pagination.and_then(|p| p.limit),
+            crate::constants::MAX_PAGE_LIMIT,
+        )? as usize;
+        let can_view_admin_fields = if let Some(user_id) = viewer_id {
+            self.require_admin_or_owner(group_id, user_id).await.is_ok()
+        } else {
+            false
+        };
 
         if let Some(ref role) = req.role {
             tracing::debug!(role = ?role, "List members role filter (repo does not support yet)");
@@ -60,12 +77,19 @@ impl GroupService {
 
         let (rows, next_cursor) = self
             .member_repo
-            .list_members(group_id, limit, req.cursor.as_deref())
+            .list_members(
+                group_id,
+                limit,
+                pagination.and_then(|p| p.cursor.as_deref()),
+            )
             .await?;
 
         let mut items = Vec::with_capacity(rows.len());
         for m in rows {
-            items.push(self.map_member_detail(m).await?);
+            items.push(
+                self.map_member_detail(viewer_id, can_view_admin_fields, m)
+                    .await?,
+            );
         }
 
         Ok(PaginatedData { items, next_cursor })
@@ -142,8 +166,8 @@ impl GroupService {
         let _ = self.require_owner(group_id, user_id).await?;
 
         let target_role = match req.role {
-            SetableGroupRole::Admin => GroupRole::Admin,
-            SetableGroupRole::Member => GroupRole::Member,
+            SettableGroupRole::Admin => GroupRole::Admin,
+            SettableGroupRole::Member => GroupRole::Member,
         };
 
         self.member_repo
@@ -300,10 +324,14 @@ impl GroupService {
         // spec: banned_by 仅对群管理员/群主可见 (@group-admin-only)
         let is_admin = self.require_admin_or_owner(group_id, user_id).await.is_ok();
 
-        let limit = Validator::validate_limit(req.limit, crate::constants::MAX_PAGE_LIMIT)? as i32;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(
+            pagination.and_then(|p| p.limit),
+            crate::constants::MAX_PAGE_LIMIT,
+        )? as i32;
         let (rows, next_cursor) = self
             .bans_repo
-            .list_by_group(group_id, limit, req.cursor)
+            .list_by_group(group_id, limit, pagination.and_then(|p| p.cursor.clone()))
             .await?;
         let mut items = Vec::with_capacity(rows.len());
         for r in rows {

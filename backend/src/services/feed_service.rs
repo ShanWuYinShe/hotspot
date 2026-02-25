@@ -74,10 +74,13 @@ impl FeedService {
         user_id: i64,
         req: FeedMomentsRequest,
     ) -> Result<PaginatedData<MomentItem>, AppError> {
-        let limit = Validator::validate_limit(req.limit, crate::constants::MAX_PAGE_LIMIT)? as i32;
-        let cursor = req.cursor;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(
+            pagination.and_then(|p| p.limit),
+            crate::constants::MAX_PAGE_LIMIT,
+        )? as i32;
+        let cursor = pagination.and_then(|p| p.cursor.clone());
 
-        // 根据 source 筛选（使用新的 Feed 方法，返回带距离的结果）
         let source = req.source;
 
         // 根据来源确定推荐理由
@@ -166,10 +169,13 @@ impl FeedService {
         user_id: i64,
         req: FeedGroupsRequest,
     ) -> Result<PaginatedData<GroupItem>, AppError> {
-        let limit = Validator::validate_limit(req.limit, crate::constants::MAX_PAGE_LIMIT)? as i32;
-        let cursor = req.cursor;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(
+            pagination.and_then(|p| p.limit),
+            crate::constants::MAX_PAGE_LIMIT,
+        )? as i32;
+        let cursor = pagination.and_then(|p| p.cursor.clone());
 
-        // 使用请求传入的 reference_point
         Validator::validate_coordinates(
             req.reference_point.latitude,
             req.reference_point.longitude,
@@ -178,7 +184,6 @@ impl FeedService {
         let radius =
             Validator::validate_radius(req.radius, crate::constants::MAX_SEARCH_RADIUS_I32)? as f64;
 
-        // 获取附近群组（使用 PostGIS 计算距离）
         let (groups, next_cursor) = self
             .group_repo
             .search_by_location(
@@ -271,10 +276,13 @@ impl FeedService {
         user_id: i64,
         req: FeedUsersRequest,
     ) -> Result<PaginatedData<UserItem>, AppError> {
-        let limit = Validator::validate_limit(req.limit, crate::constants::MAX_PAGE_LIMIT)? as i32; // Using i32 for repo method
-        let cursor = req.cursor;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(
+            pagination.and_then(|p| p.limit),
+            crate::constants::MAX_PAGE_LIMIT,
+        )? as i32;
+        let cursor = pagination.and_then(|p| p.cursor.clone());
 
-        // 使用请求传入的 reference_point
         Validator::validate_coordinates(
             req.reference_point.latitude,
             req.reference_point.longitude,
@@ -502,7 +510,7 @@ impl FeedService {
                 thumbnail_url: None,
                 width: None,
                 height: None,
-                content_type: None,
+                mime_type: None,
             });
         }
         Some(signed_images)

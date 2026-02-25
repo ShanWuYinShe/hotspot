@@ -94,19 +94,21 @@ impl CommentService {
             .ok_or_else(|| AppError::MomentNotFound("动态不存在".to_string()))?;
 
         // 2. 创建评论 (Trigger 会自动同步 moment.comments_count)
-        let parent_id = req
+        // 两层评论模型：parent_id 指向回复时，自动改写为楼顶层评论 ID
+        let raw_parent_id = req
             .parent_id
             .as_deref()
             .and_then(|id| Uuid::parse_str(id).ok());
-        let (reply_to_comment_id, reply_to_user_id) = if let Some(pid) = parent_id {
+        let (reply_to_comment_id, reply_to_user_id, parent_id) = if let Some(pid) = raw_parent_id {
             let parent = self
                 .comment_repo
                 .find_by_id(pid)
                 .await?
                 .ok_or_else(|| AppError::CommentNotFound("评论不存在".to_string()))?;
-            (Some(pid), Some(parent.user_id))
+            let effective_parent = parent.parent_id.unwrap_or(pid);
+            (Some(pid), Some(parent.user_id), Some(effective_parent))
         } else {
-            (None, None)
+            (None, None, None)
         };
 
         let mentions = Validator::parse_mentions(req.mentions.as_deref())?;
@@ -127,7 +129,7 @@ impl CommentService {
         let summary = crate::events::event_types::MomentSummarySnapshot {
             moment_id: mid,
             cover_url: None,
-            text_preview: moment.description.unwrap_or_default(),
+            description_preview: moment.description.unwrap_or_default(),
         };
 
         let user_info = self
@@ -147,8 +149,31 @@ impl CommentService {
             commenter_nickname: Some(user_info.nickname.clone()),
             commenter_avatar_url: user_info.avatar_url.clone(),
             content: row.content.clone(),
-            moment_summary: summary,
+            moment_summary: summary.clone(),
         });
+
+        // 4. 回复评论时，通知被回复者
+        if let (Some(replied_comment_id), Some(replied_user_id)) =
+            (reply_to_comment_id, reply_to_user_id)
+        {
+            if replied_user_id != user_id {
+                let replied_comment = self.comment_repo.find_by_id(replied_comment_id).await?;
+                let replied_preview = replied_comment
+                    .map(|c| c.content.chars().take(100).collect::<String>())
+                    .unwrap_or_default();
+                let top_level_comment_id = parent_id.unwrap_or(replied_comment_id);
+                self.event_bus.publish(AppEvent::CommentReplied {
+                    moment_id: mid,
+                    moment_summary: summary.clone(),
+                    comment_id: top_level_comment_id,
+                    replied_comment_preview: replied_preview,
+                    reply_id: row.comment_id,
+                    user_id: replied_user_id,
+                    replier_id: user_id,
+                    content: row.content.clone(),
+                });
+            }
+        }
 
         Ok(CommentListItem {
             comment_id: row.comment_id.to_string(),
@@ -175,10 +200,14 @@ impl CommentService {
             return Err(AppError::MomentNotFound("动态不存在".to_string()));
         }
 
-        let limit = Validator::validate_limit(req.limit, crate::constants::MAX_PAGE_LIMIT)? as i64;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(
+            pagination.and_then(|p| p.limit),
+            crate::constants::MAX_PAGE_LIMIT,
+        )? as i64;
         let (rows, next_cursor) = self
             .comment_repo
-            .list_by_moment(mid, limit, req.cursor.clone())
+            .list_by_moment(mid, limit, pagination.and_then(|p| p.cursor.clone()))
             .await?;
 
         let liked_set = if let Some(uid) = viewer_id {
@@ -210,10 +239,14 @@ impl CommentService {
             return Err(AppError::CommentNotFound("评论不存在".to_string()));
         }
 
-        let limit = Validator::validate_limit(req.limit, crate::constants::MAX_PAGE_LIMIT)? as i64;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(
+            pagination.and_then(|p| p.limit),
+            crate::constants::MAX_PAGE_LIMIT,
+        )? as i64;
         let (rows, next_cursor) = self
             .comment_repo
-            .list_replies(comment_id, limit, req.cursor.clone())
+            .list_replies(comment_id, limit, pagination.and_then(|p| p.cursor.clone()))
             .await?;
 
         let liked_set = if let Some(uid) = viewer_id {
@@ -269,10 +302,14 @@ impl CommentService {
             return Err(AppError::CommentNotFound("评论不存在".to_string()));
         }
 
-        let limit = Validator::validate_limit(req.limit, crate::constants::MAX_PAGE_LIMIT)? as i64;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(
+            pagination.and_then(|p| p.limit),
+            crate::constants::MAX_PAGE_LIMIT,
+        )? as i64;
         let (rows, next_cursor) = self
             .comment_repo
-            .list_likes(comment_id, limit, req.cursor.clone())
+            .list_likes(comment_id, limit, pagination.and_then(|p| p.cursor.clone()))
             .await?;
 
         let items = self.build_like_items(rows).await?;
@@ -326,9 +363,19 @@ impl CommentService {
 
         let inserted = self.comment_repo.insert_like(comment_id, user_id).await?;
         if inserted {
+            let moment = self.moment_repo.find_by_id(comment.moment_id).await?;
+            let moment_summary = crate::events::event_types::MomentSummarySnapshot {
+                moment_id: comment.moment_id,
+                cover_url: None,
+                description_preview: moment
+                    .as_ref()
+                    .and_then(|m| m.description.clone())
+                    .unwrap_or_default(),
+            };
             self.event_bus.publish(AppEvent::CommentLiked {
                 comment_id,
                 moment_id: comment.moment_id,
+                moment_summary,
                 user_id: comment.user_id,
                 liker_id: user_id,
                 comment_preview: comment.content.chars().take(100).collect(),

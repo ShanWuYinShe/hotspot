@@ -86,16 +86,16 @@ pub enum UserGender {
 
 pub type Gender = UserGender;
 
-/// 不可发消息原因（spec: privacy | stranger_limit | account_suspended）
+/// 不可发消息原因（spec: privacy | stranger_quota_exceeded | account_suspended）
 /// 设计说明：被拉黑场景统一返回 Privacy，不暴露拉黑状态（隐私保护）
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type, Display, EnumString,
 )]
 #[sqlx(type_name = "cant_message_reason", rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
-pub enum CantMessageReason {
+pub enum MessageBlockedReason {
     Privacy,
-    StrangerLimit,
+    StrangerQuotaExceeded,
     AccountSuspended,
 }
 
@@ -173,6 +173,7 @@ pub enum RequestStatus {
     Pending,
     Accepted,
     Rejected,
+    Revoked,
 }
 
 pub type ApplicationStatus = RequestStatus;
@@ -227,7 +228,7 @@ pub enum GroupRole {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
-pub enum SetableGroupRole {
+pub enum SettableGroupRole {
     Admin,
     Member,
 }
@@ -543,6 +544,8 @@ pub enum NotificationType {
     CommentReply,
     Mentioned,
     GroupInviteReceived,
+    GroupInviteAccepted,
+    GroupApplicationReceived,
     GroupApplicationAccepted,
     SystemAnnouncement,
 }
@@ -615,6 +618,24 @@ pub enum SubscriptionFailureReason {
     LimitExceeded,
     #[serde(rename = "error")]
     InternalError,
+}
+
+/// 群组解散原因（WebSocket GroupDismissed 事件使用）
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum GroupDismissReason {
+    OwnerDismissed,
+    PolicyViolation,
+}
+
+/// 群组成员移除原因（WebSocket GroupMemberRemoved 事件使用）
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum MemberRemoveReason {
+    Kicked,
+    Banned,
 }
 
 // ============================================================

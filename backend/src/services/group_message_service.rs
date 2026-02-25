@@ -295,16 +295,18 @@ impl GroupMessageService {
         user_id: i64,
     ) -> Result<PaginatedData<GroupMessageItem>> {
         // 1. 参数验证
-        let limit = Validator::validate_limit(req.limit, crate::constants::MAX_PAGE_LIMIT)? as i64;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(
+            pagination.and_then(|p| p.limit),
+            crate::constants::MAX_PAGE_LIMIT,
+        )? as i64;
         let group_id = Validator::parse_group_id(&req.group_id)?;
 
-        // 2. 验证用户是否是群成员
         if !self.member_repo.is_member(group_id, user_id).await? {
             return Err(AppError::Forbidden("您不是此群组的成员".to_string()));
         }
 
-        // 3. 解析游标
-        let cursor = req.cursor.clone();
+        let cursor = pagination.and_then(|p| p.cursor.clone());
         let include_system = req.include_system.unwrap_or(false);
 
         // 4. 查询消息历史
@@ -504,6 +506,12 @@ impl GroupMessageService {
         // 4. 验证消息状态
         if message.is_recalled {
             return Err(AppError::MessageAlreadyRecalled);
+        }
+
+        if message.r#type != MessageType::Text {
+            return Err(AppError::BusinessRuleViolation(
+                "仅支持编辑文本消息".to_string(),
+            ));
         }
 
         // 5. 更新消息

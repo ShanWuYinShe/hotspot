@@ -268,6 +268,7 @@ impl GroupRepository {
         limit: i64,
         cursor: Option<String>,
         kw: Option<&str>,
+        sort_by: &str,
     ) -> Paginated<GroupSearchRow> {
         let (last_dist, last_id): DistanceCursor = decode_cursor_or(cursor, || (0.0, 0))?;
 
@@ -293,7 +294,12 @@ impl GroupRepository {
                   OR (ST_Distance(g.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) = $4 AND g.group_id > $5)
               )
               AND ($6::text IS NULL OR g.name ILIKE '%' || $6 || '%')
-            ORDER BY distance ASC, g.group_id ASC
+            ORDER BY
+                CASE WHEN $8 = 'distance' OR $8 = 'relevance' THEN ST_Distance(g.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) END ASC,
+                CASE WHEN $8 = 'popular' THEN COALESCE(gs.member_count, 0) END DESC,
+                CASE WHEN $8 = 'newest' THEN g.created_at END DESC,
+                ST_Distance(g.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) ASC,
+                g.group_id ASC
             LIMIT $7
             "#,
             lon,
@@ -302,7 +308,8 @@ impl GroupRepository {
             last_dist,
             last_id,
             kw,
-            limit + 1
+            limit + 1,
+            sort_by
         )
         .fetch_all(&self.pool)
         .await?;
@@ -411,6 +418,7 @@ impl GroupRepository {
         lat: f64,
         limit: i64,
         cursor: Option<String>,
+        sort_by: &str,
     ) -> Paginated<GroupSearchRow> {
         let (last_dist, last_id): DistanceCursor = decode_cursor_or(cursor, || (0.0, 0))?;
 
@@ -436,7 +444,12 @@ impl GroupRepository {
                   ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) > $4
                   OR (ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) = $4 AND g.group_id > $5)
               )
-            ORDER BY distance ASC, g.group_id ASC
+            ORDER BY
+                CASE WHEN $7 = 'distance' OR $7 = 'relevance' THEN ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) END ASC,
+                CASE WHEN $7 = 'popular' THEN COALESCE(gs.member_count, 0) END DESC,
+                CASE WHEN $7 = 'newest' THEN g.created_at END DESC,
+                ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) ASC,
+                g.group_id ASC
             LIMIT $6
             "#,
             pattern,
@@ -444,7 +457,8 @@ impl GroupRepository {
             lat,
             last_dist,
             last_id,
-            limit + 1
+            limit + 1,
+            sort_by
         )
         .fetch_all(&self.pool)
         .await?;
@@ -532,6 +546,7 @@ impl GroupRepository {
         lat: f64,
         limit: i64,
         cursor: Option<String>,
+        sort_by: &str,
     ) -> Paginated<GroupSearchRow> {
         let (last_dist, last_id): DistanceCursor = decode_cursor_or(cursor, || (0.0, 0))?;
 
@@ -558,14 +573,20 @@ impl GroupRepository {
                   ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) > $4
                   OR (ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) = $4 AND g.group_id > $5)
               )
-            ORDER BY distance ASC, g.group_id ASC
-            LIMIT $6
+            ORDER BY
+                CASE WHEN $6 = 'distance' OR $6 = 'relevance' THEN ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) END ASC,
+                CASE WHEN $6 = 'popular' THEN COALESCE(gs.member_count, 0) END DESC,
+                CASE WHEN $6 = 'newest' THEN g.created_at END DESC,
+                ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) ASC,
+                g.group_id ASC
+            LIMIT $7
             "#,
             tag,
             lon,
             lat,
             last_dist,
             last_id,
+            sort_by,
             limit + 1
         )
         .fetch_all(&self.pool)

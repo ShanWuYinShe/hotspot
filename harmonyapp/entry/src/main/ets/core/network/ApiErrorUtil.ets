@@ -1,7 +1,7 @@
 /**
  * API 错误码判断工具
  *
- * 错误码严格遵循 spec/api_spec_errors.mdc 定义：
+ * 错误码严格遵循 spec/api_spec_errors.md 定义：
  * - 10000: 参数错误
  * - 10100: 认证失败（token 无效/过期/缺失）
  * - 10200: 权限不足/访问受限

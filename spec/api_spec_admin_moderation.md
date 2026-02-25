@@ -1,0 +1,469 @@
+---
+alwaysApply: false
+---
+# HotSpot API - 管理后台审核
+
+> 本文档定义 HotSpot 管理后台内容审核相关的 RPC 接口，包括用户管理、群组管理、举报审核、标签管理和系统公告管理。
+> 核心管理功能（RBAC、审计、配置）定义在 `@spec/api_spec_admin_core.md`。
+
+## 模块信息
+
+- **命名空间**: `admin.users`、`admin.groups`、`admin.reports`、`admin.tags`、`admin.announcements`
+- **基础路径**: `/api/v1/admin/users/`、`/api/v1/admin/groups/`、`/api/v1/admin/reports/`、`/api/v1/admin/tags/`、`/api/v1/admin/announcements/`
+- **引用**:
+  - 基础规范：`@spec/api_spec_base.md`
+  - 通用类型：`@spec/api_spec_types.md`（`UserItem`、`GroupItem`、`SystemAnnouncementItem`、`UserInfo` 等）
+  - 举报类型：`@spec/api_spec_types.md`（`ReportItem`）
+  - 错误码：`@spec/api_spec_errors.md`
+  - 统一访问控制与权限 key 约定：`@spec/api_spec_admin_core.md`
+  - 公开公告 API：`@spec/api_spec_system.md`
+
+## 端点总览
+
+| 端点 | 说明 | 认证 | 幂等 |
+|-----|------|------|------|
+| `POST /api/v1/admin/users/search` | 搜索用户 | 必须 + `admin.users.read` | 无 |
+| `POST /api/v1/admin/users/open_the_door` | 用户详情 | 必须 + `admin.users.read` | 无 |
+| `POST /api/v1/admin/users/ban` | 封禁用户 | 必须 + `admin.users.write` | MUST |
+| `POST /api/v1/admin/users/unban` | 解封用户 | 必须 + `admin.users.write` | 幂等语义 |
+| `POST /api/v1/admin/groups/search` | 搜索群组 | 必须 + `admin.groups.read` | 无 |
+| `POST /api/v1/admin/groups/open_the_door` | 群组详情 | 必须 + `admin.groups.read` | 无 |
+| `POST /api/v1/admin/groups/dismiss` | 解散群组 | 必须 + `admin.groups.write` | MUST |
+| `POST /api/v1/admin/reports/search` | 搜索举报 | 必须 + `admin.reports.read` | 无 |
+| `POST /api/v1/admin/reports/handle` | 处理举报 | 必须 + `admin.reports.write` | MUST |
+| `POST /api/v1/admin/tags/search` | 搜索标签 | 必须 + `admin.tags.read` | 无 |
+| `POST /api/v1/admin/tags/delete` | 删除/屏蔽标签 | 必须 + `admin.tags.write` | 幂等语义 |
+| `POST /api/v1/admin/announcements/search` | 搜索系统公告 | 必须 + `admin.announcements.read` | 无 |
+| `POST /api/v1/admin/announcements/create` | 发布系统公告 | 必须 + `admin.announcements.write` | MUST |
+| `POST /api/v1/admin/announcements/update` | 更新系统公告 | 必须 + `admin.announcements.write` | 幂等语义 |
+| `POST /api/v1/admin/announcements/delete` | 删除系统公告 | 必须 + `admin.announcements.write` | 幂等语义 |
+
+## 类型定义
+
+以下类型定义于 `@spec/api_spec_types.md`：
+- `UserItem`
+- `GroupItem`
+- `SystemAnnouncementItem`
+- `PaginationParams`
+- `PaginatedData`
+- `UserAccountStatus`
+- `UserType`
+- `ReportStatus`
+- `ReportTargetType`
+- `ReportHandleAction`
+- `AnnouncementSeverity`
+- `UserInfo`
+- `ReportItem`
+
+说明：以下 Admin 扩展类型通过 `extends` 继承普通类型，包含管理员视角的完整字段。
+
+## 端点详情
+
+### POST /api/v1/admin/users/search
+
+搜索用户（管理员）。
+
+- **认证**: 必须 + `admin.users.read`
+- **幂等**: 无
+- **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `user.user_id ASC` 作为稳定 tie-breaker；一致性级别为强一致。
+
+**Request**: `AdminUserSearchRequest`
+```typescript
+interface AdminUserSearchRequest {
+  user_id?: string;
+  nickname?: string;
+  login_id?: string;
+  status?: UserAccountStatus;
+  user_type?: UserType;
+  pagination?: PaginationParams;
+}
+```
+
+**Response**: `ApiResponse<PaginatedData<AdminUserItem>>`
+```typescript
+interface AdminUserItem extends UserItem {
+  status: UserAccountStatus;
+  created_at: string;
+  last_active_at?: string;
+  login_id: string;
+  register_ip?: string;
+  register_location?: string;
+  last_login_ip?: string;
+  last_login_location?: string;
+  email?: string;
+  phone?: string;
+}
+```
+
+**错误码**: `10000` `10200`
+
+---
+
+### POST /api/v1/admin/users/open_the_door
+
+获取用户详情（管理员）。
+
+- **认证**: 必须 + `admin.users.read`
+- **幂等**: 无
+
+**Request**: `AdminUserOpenTheDoorRequest`
+```typescript
+interface AdminUserOpenTheDoorRequest {
+  user_id: string;
+}
+```
+
+**Response**: `ApiResponse<AdminUserItem>`
+
+**错误码**: `10000` `10200` `10300`
+
+---
+
+### POST /api/v1/admin/users/ban
+
+封禁用户（管理员）。
+
+- **认证**: 必须 + `admin.users.write`
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+
+**安全约束**：
+- 禁止封禁自身（返回 `10400`）
+- 普通管理员禁止封禁其他管理员（返回 `10200`）
+- 封禁超级管理员仅限超级管理员执行（返回 `10200`）
+- 封禁操作会记录审计日志
+
+**Request**: `AdminBanUserRequest`
+```typescript
+interface AdminBanUserRequest {
+  user_id: string;
+  reason?: string;
+  duration_days?: number;  // 不提供或 0 = 永久封禁
+}
+```
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10200` `10300` `10400`
+
+---
+
+### POST /api/v1/admin/users/unban
+
+解封用户（管理员）。
+
+- **认证**: 必须 + `admin.users.write`
+- **幂等**: 幂等语义操作，重复请求返回一致结果
+
+**安全约束**：
+- 仅已封禁的用户可解封，未封禁时返回 `10400`
+- 解封操作会记录审计日志
+
+**Request**: `AdminUnbanUserRequest`
+```typescript
+interface AdminUnbanUserRequest {
+  user_id: string;
+  reason?: string;  // 解封原因（0-500 字符）
+}
+```
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10200` `10300` `10400`
+
+---
+
+### POST /api/v1/admin/groups/search
+
+搜索群组（管理员）。
+
+- **认证**: 必须 + `admin.groups.read`
+- **幂等**: 无
+- **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `group.group_id ASC` 作为稳定 tie-breaker；一致性级别为强一致。
+
+**Request**: `AdminGroupSearchRequest`
+```typescript
+interface AdminGroupSearchRequest {
+  group_id?: string;
+  name?: string;
+  owner_id?: string;
+  pagination?: PaginationParams;
+}
+```
+
+**Response**: `ApiResponse<PaginatedData<AdminGroupItem>>`
+```typescript
+interface AdminGroupItem extends GroupItem {
+  created_at: string;
+  owner: UserInfo;
+}
+```
+
+**错误码**: `10000` `10200`
+
+---
+
+### POST /api/v1/admin/groups/open_the_door
+
+获取群组详情（管理员）。
+
+- **认证**: 必须 + `admin.groups.read`
+- **幂等**: 无
+
+**Request**: `AdminGroupOpenTheDoorRequest`
+```typescript
+interface AdminGroupOpenTheDoorRequest {
+  group_id: string;
+}
+```
+
+**Response**: `ApiResponse<AdminGroupItem>`
+
+**错误码**: `10000` `10200` `10300`
+
+---
+
+### POST /api/v1/admin/groups/dismiss
+
+解散群组（管理员）。
+
+- **认证**: 必须 + `admin.groups.write`
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+
+**安全约束**：
+- 解散后群内所有成员收到 `GroupDismissed` WebSocket 事件（含 `policy_violation` 原因）
+- 解散操作会记录审计日志
+
+**Request**: `AdminDismissGroupRequest`
+```typescript
+interface AdminDismissGroupRequest {
+  group_id: string;
+  reason?: string;  // 解散原因（0-500 字符）
+}
+```
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10200` `10300`
+
+---
+
+### POST /api/v1/admin/reports/search
+
+搜索举报（管理员）。
+
+- **认证**: 必须 + `admin.reports.read`
+- **幂等**: 无
+- **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `report_id DESC` 作为稳定 tie-breaker；一致性级别为强一致。
+
+**Request**: `AdminReportSearchRequest`
+```typescript
+interface AdminReportSearchRequest {
+  status?: ReportStatus;
+  target_type?: ReportTargetType;
+  pagination?: PaginationParams;
+}
+```
+
+**Response**: `ApiResponse<PaginatedData<AdminReportItem>>`
+```typescript
+interface AdminReportItem extends ReportItem {
+  reporter: UserInfo;
+  handled_by?: UserInfo;
+  handle_note?: string;
+}
+```
+
+**错误码**: `10000` `10200`
+
+---
+
+### POST /api/v1/admin/reports/handle
+
+处理举报（管理员）。
+
+- **认证**: 必须 + `admin.reports.write`
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+
+**安全约束**：
+- 仅 `pending` 或 `reviewing` 状态的举报可处理，已处理的举报返回 `10400`
+- 处理操作会记录审计日志
+
+**动作语义**：
+- `resolve`：确认举报有效，执行处理（如封禁用户、删除内容），状态变更为 `resolved`
+- `dismiss`：驳回举报，不执行任何处理，状态变更为 `dismissed`
+- `escalate`：升级举报，转交更高权限管理员继续审核，状态变更为 `reviewing`
+
+**Request**: `AdminReportHandleRequest`
+```typescript
+interface AdminReportHandleRequest {
+  report_id: string;
+  action: ReportHandleAction;   // resolve | dismiss | escalate
+  note?: string;                // 处理备注（0-500 字符）
+  ban_duration_days?: number;   // action=resolve 时可选：封禁天数（0=永久），不提供则仅标记处理不执行封禁。
+                                // target_type='user': 直接封禁该用户
+                                // target_type='group': 封禁群主
+                                // target_type='moment'/'comment'/'message': 封禁内容发布者/发送者
+                                // 封禁对象始终为人（用户），不是内容本身
+}
+```
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10200` `10300` `10400`
+
+---
+
+### POST /api/v1/admin/tags/search
+
+搜索标签（管理员）。
+
+- **认证**: 必须 + `admin.tags.read`
+- **幂等**: 无
+- **排序**: 默认按照 `usage_count DESC` 排序，数值相同以 `name ASC` 作为稳定 tie-breaker；一致性级别为弱一致。
+
+**Request**: `AdminTagSearchRequest`
+```typescript
+interface AdminTagSearchRequest {
+  keyword?: string;  // 标签名模糊搜索
+  pagination?: PaginationParams;
+}
+```
+
+**Response**: `ApiResponse<PaginatedData<AdminTagItem>>`
+```typescript
+interface AdminTagItem {
+  name: string;
+  usage_count: number;
+  trend?: TagTrend;
+  created_at: string;
+}
+```
+
+**错误码**: `10000` `10200`
+
+---
+
+### POST /api/v1/admin/tags/delete
+
+删除/屏蔽标签（管理员）。删除后该标签将从所有引用中移除。
+
+- **认证**: 必须 + `admin.tags.write`
+- **幂等**: 幂等语义操作，重复请求返回一致结果
+
+**Request**: `AdminDeleteTagRequest`
+```typescript
+interface AdminDeleteTagRequest {
+  name: string;  // 要删除的标签名
+}
+```
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10200` `10300`
+
+---
+
+### POST /api/v1/admin/announcements/search
+
+搜索系统公告（管理员视角），返回包含管理员字段的公告列表。
+
+- **认证**: 必须 + `admin.announcements.read`
+- **幂等**: 无
+- **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `announcement_id DESC` 作为稳定 tie-breaker；一致性级别为弱一致。
+
+**说明**：
+- 普通用户通过 `POST /api/v1/system/list_announcements`（定义于 `@spec/api_spec_system.md`）获取公开公告
+- 此端点返回 `AdminAnnouncementItem`（含 `created_by`、`view_count` 等管理员字段）
+
+**Request**: `AdminAnnouncementSearchRequest`
+```typescript
+interface AdminAnnouncementSearchRequest {
+  severity?: AnnouncementSeverity;
+  pagination?: PaginationParams;
+}
+```
+
+**Response**: `ApiResponse<PaginatedData<AdminAnnouncementItem>>`
+```typescript
+interface AdminAnnouncementItem extends SystemAnnouncementItem {
+  created_by: UserInfo;
+  send_push: boolean;
+  push_sent_at?: string;
+  view_count: number;
+}
+```
+
+**错误码**: `10000` `10200`
+
+---
+
+### POST /api/v1/admin/announcements/create
+
+发布系统公告（管理员）。
+
+- **认证**: 必须 + `admin.announcements.write`
+- **幂等**: MUST（客户端必须携带 `Idempotency-Key`）
+
+**Request**: `CreateAnnouncementRequest`
+```typescript
+interface CreateAnnouncementRequest {
+  title: string;
+  content: string;
+  severity: AnnouncementSeverity;
+  action_url?: string;
+  send_push?: boolean;
+}
+```
+
+**Response**: `ApiResponse<AnnouncementCreated>`
+```typescript
+interface AnnouncementCreated {
+  announcement_id: string;
+}
+```
+
+**错误码**: `10000` `10200`
+
+---
+
+### POST /api/v1/admin/announcements/update
+
+更新系统公告（管理员）。
+
+- **认证**: 必须 + `admin.announcements.write`
+- **幂等**: 幂等语义操作，重复请求返回一致结果
+
+**Request**: `UpdateAnnouncementRequest`
+```typescript
+interface UpdateAnnouncementRequest {
+  announcement_id: string;
+  title?: string;
+  content?: string;
+  severity?: AnnouncementSeverity;
+  action_url?: string;
+}
+```
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10200` `10300`
+
+---
+
+### POST /api/v1/admin/announcements/delete
+
+删除公告（管理员）。
+
+- **认证**: 必须 + `admin.announcements.write`
+- **幂等**: 幂等语义操作，重复请求返回一致结果
+
+**Request**: `DeleteAnnouncementRequest`
+```typescript
+interface DeleteAnnouncementRequest {
+  announcement_id: string;
+}
+```
+
+**Response**: `ApiResponse`
+
+**错误码**: `10000` `10200` `10300`

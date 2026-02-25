@@ -131,11 +131,19 @@ impl AdminAuditService {
         Ok(())
     }
 
-    pub async fn list_logs(&self, req: AuditLogListRequest) -> Result<PaginatedData<AuditLogItem>> {
+    pub async fn list_logs(
+        &self,
+        req: AuditLogListRequest,
+        has_read_ip_permission: bool, // 是否具备 admin.audit.read_ip 权限（需同时具备 admin.audit.read）
+    ) -> Result<PaginatedData<AuditLogItem>> {
         validate_action(&req.action)?;
         validate_target_type(&req.target_type)?;
-        let limit = Validator::validate_limit(req.limit, crate::constants::MAX_PAGE_LIMIT)? as i64;
-        let cursor = req.cursor.clone();
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(
+            pagination.and_then(|p| p.limit),
+            crate::constants::MAX_PAGE_LIMIT,
+        )? as i64;
+        let cursor = pagination.and_then(|p| p.cursor.clone());
         let operator_id_filter = req
             .operator_id
             .as_ref()
@@ -151,12 +159,16 @@ impl AdminAuditService {
         };
 
         let (rows, next_cursor) = self.repo.list_logs(filter, limit, cursor).await?;
-        let items = self.map_rows_to_items(rows).await?;
+        let items = self.map_rows_to_items(rows, has_read_ip_permission).await?;
 
         Ok(PaginatedData { items, next_cursor })
     }
 
-    pub async fn get_detail(&self, req: AuditLogDetailRequest) -> Result<AuditLogDetail> {
+    pub async fn get_detail(
+        &self,
+        req: AuditLogDetailRequest,
+        has_read_ip_permission: bool,
+    ) -> Result<AuditLogDetail> {
         let log_id = Validator::parse_uuid(&req.log_id, "log_id")?;
         let row = self
             .repo
@@ -165,6 +177,7 @@ impl AdminAuditService {
             .ok_or_else(|| AppError::NotFound("日志不存在".to_string()))?;
 
         let operator = self.get_operator_info(row.operator_id).await;
+
         Ok(AuditLogDetail {
             log_id: row.log_id.to_string(),
             action: row.action,
@@ -173,7 +186,11 @@ impl AdminAuditService {
             target_id: row.target_id.unwrap_or_default(),
             target_name: row.target_name,
             details: redact_optional(row.details),
-            ip_address: row.ip_address,
+            ip_address: if has_read_ip_permission {
+                row.ip_address
+            } else {
+                None // 无 admin.audit.read_ip 权限时，不返回 IP 地址
+            },
             user_agent: row.user_agent,
             created_at: row.created_at.to_rfc3339(),
             before_state: redact_optional(row.before_state),
@@ -225,7 +242,11 @@ impl AdminAuditService {
         Ok(Some(records))
     }
 
-    async fn map_rows_to_items(&self, rows: Vec<AuditLogRow>) -> Result<Vec<AuditLogItem>> {
+    async fn map_rows_to_items(
+        &self,
+        rows: Vec<AuditLogRow>,
+        has_read_ip_permission: bool,
+    ) -> Result<Vec<AuditLogItem>> {
         let operator_ids: Vec<i64> = rows.iter().map(|r| r.operator_id).collect();
         let operator_map = self.get_operator_map(&operator_ids).await;
 
@@ -242,7 +263,11 @@ impl AdminAuditService {
                 target_id: r.target_id.unwrap_or_default(),
                 target_name: r.target_name,
                 details: redact_optional(r.details),
-                ip_address: r.ip_address,
+                ip_address: if has_read_ip_permission {
+                    r.ip_address // 有 admin.audit.read_ip 权限时返回 IP 地址
+                } else {
+                    None // 无权限时不返回
+                },
                 user_agent: r.user_agent,
                 created_at: r.created_at.to_rfc3339(),
             })

@@ -5,6 +5,7 @@
  */
 
 import { DesignConstants } from '../constants/DesignConstants';
+import { AppIcon } from './SystemIcon';
 
 export interface PageHeaderAction {
   label: string;
@@ -17,6 +18,8 @@ export interface PageHeaderAction {
 export struct SystemPageHeader {
   title: string = '';
   action?: PageHeaderAction;
+  showBackButton: boolean = false;
+  onBack?: () => void;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   surfaceColor?: ResourceColor;
 
@@ -29,7 +32,29 @@ export struct SystemPageHeader {
   }
 
   build() {
-    Row() {
+    Row({ space: DesignConstants.SPACING.SM }) {
+      if (this.showBackButton) {
+        Button() {
+          Text() {
+            SymbolSpan($r(AppIcon.BACK))
+              .fontSize(24)
+              .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+          }
+        }
+        .type(ButtonType.Normal)
+        .backgroundColor($r('app.color.bg_secondary'))
+        .borderRadius(DesignConstants.RADIUS.XXL)
+        .width(48)
+        .height(48)
+        .onClick(() => {
+          if (this.onBack) {
+            this.onBack();
+          }
+        })
+      } else {
+        Blank().width(16)
+      }
+
       Text(this.title)
         .fontSize(DesignConstants.FONT.SIZE.XL)
         .fontWeight(FontWeight.Bold)
@@ -49,9 +74,10 @@ export struct SystemPageHeader {
             try {
               await this.action?.onClick()
             } catch (_) {
-              // 交由页面侧 toast/日志处理
             }
           })
+      } else {
+        Blank().width(24)
       }
     }
     .width('100%')

@@ -1,9 +1,10 @@
 use std::f64::consts::PI;
 
 use crate::{
+    constants::{MAP_CLUSTER_GRID_PX, MAP_CLUSTER_ZOOM_THRESHOLD, MAP_DETAIL_ENTITY_LIMIT},
     dto::{
         request::{Bounds, MapRenderRequest},
-        response::{MapCanvas, MapClusterData, MapEntityData, MapPoint, MapRenderItem},
+        response::{common::GeoPoint, MapCanvas, MapClusterData, MapEntityData, MapRenderItem},
     },
     error::{AppError, Result},
     repositories::map_repo::{MapClusterRow, MapEntityRow, MapRepository},
@@ -39,8 +40,7 @@ impl MapService {
     }
 
     fn grid_meters(bounds: Bounds, zoom: i32, _grid_size: Option<i32>) -> f64 {
-        // 默认一个 cluster 格子按 60px 算
-        let grid_px = 60.0;
+        let grid_px = MAP_CLUSTER_GRID_PX;
         let z = zoom.max(0).min(22) as f64;
 
         // 使用 bbox 中心纬度做 cos 修正
@@ -81,10 +81,7 @@ impl MapService {
 
         let mut items = Vec::new();
 
-        // 阈值：Zoom <= 12 显示聚合点，Zoom > 12 显示具体实体
-        let cluster_zoom_threshold = 12;
-
-        if zoom <= cluster_zoom_threshold {
+        if zoom <= MAP_CLUSTER_ZOOM_THRESHOLD {
             let grid_meters = Self::grid_meters(bounds, zoom, None);
 
             if filter_type == MapDataType::All || filter_type == MapDataType::User {
@@ -169,7 +166,7 @@ impl MapService {
                 );
             }
         } else {
-            let limit = 200;
+            let limit = MAP_DETAIL_ENTITY_LIMIT;
 
             if filter_type == MapDataType::All || filter_type == MapDataType::User {
                 let users = if let Some(uid) = social_filter_user_id {
@@ -260,6 +257,13 @@ impl MapService {
         })
     }
 
+    fn geo_point(latitude: f64, longitude: f64) -> GeoPoint {
+        GeoPoint {
+            latitude,
+            longitude,
+        }
+    }
+
     fn cluster_to_item(&self, row: MapClusterRow, type_name: &str) -> MapRenderItem {
         // 将预览 URL 转换为 Option<Vec<String>>
         let preview_urls = if row.preview_urls.is_empty() {
@@ -271,10 +275,7 @@ impl MapService {
         MapRenderItem {
             render_id: format!("cluster:{}:{}", type_name, row.key),
             item_type: MapItemType::Cluster,
-            location: MapPoint {
-                latitude: row.latitude,
-                longitude: row.longitude,
-            },
+            location: Self::geo_point(row.latitude, row.longitude),
             cluster: Some(MapClusterData {
                 count: row.count,
                 label: Some(format!("{} {}", row.count, type_name)),
@@ -294,17 +295,14 @@ impl MapService {
         MapRenderItem {
             render_id: format!("{}:{}", type_name, row.id),
             item_type,
-            location: MapPoint {
-                latitude: row.latitude,
-                longitude: row.longitude,
-            },
+            location: Self::geo_point(row.latitude, row.longitude),
             cluster: None,
             entity: Some(MapEntityData {
                 title: row.title,
                 subtitle: row.subtitle,
                 cover_url: row.cover_url,
                 payload_id: row.id,
-                category: None, // 从 DB 获取需扩展 repo，先用 None
+                category: Some(type_name.to_string()),
             }),
         }
     }

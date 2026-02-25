@@ -79,7 +79,9 @@ impl MomentService {
             req.reference_point.latitude,
             req.reference_point.longitude,
         )?;
-        let limit = Validator::validate_limit(req.limit, 50)? as i64;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as i64;
+        let cursor = pagination.and_then(|p| p.cursor.clone());
 
         let (rows, next_cursor) = if let Some(radius) = req.radius {
             let radius =
@@ -91,7 +93,7 @@ impl MomentService {
                     req.reference_point.latitude,
                     radius,
                     limit,
-                    req.cursor.clone(),
+                    cursor.clone(),
                 )
                 .await?
         } else if let Some(ref tag) = req.tag {
@@ -102,7 +104,7 @@ impl MomentService {
                     req.reference_point.longitude,
                     req.reference_point.latitude,
                     limit,
-                    req.cursor.clone(),
+                    cursor.clone(),
                 )
                 .await?
         } else if let Some(ref keyword) = req.keyword {
@@ -113,7 +115,7 @@ impl MomentService {
                     req.reference_point.longitude,
                     req.reference_point.latitude,
                     limit,
-                    req.cursor.clone(),
+                    cursor.clone(),
                 )
                 .await?
         } else {
@@ -131,10 +133,11 @@ impl MomentService {
         user_id: i64,
         req: &MyMomentsRequest,
     ) -> Result<PaginatedData<MomentItem>> {
-        let limit = Validator::validate_limit(req.limit, 50)? as i64;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as i64;
         let (rows, next_cursor) = self
             .moment_repo
-            .list_by_user(user_id, limit, req.cursor.clone())
+            .list_by_user(user_id, limit, pagination.and_then(|p| p.cursor.clone()))
             .await?;
 
         self.build_user_moment_list(rows, next_cursor).await
@@ -146,10 +149,11 @@ impl MomentService {
         req: &UserMomentsRequest,
     ) -> Result<PaginatedData<MomentItem>> {
         let user_id = crate::utils::validation::Validator::parse_user_id(&req.user_id)?;
-        let limit = Validator::validate_limit(req.limit, 50)? as i64;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as i64;
         let (rows, next_cursor) = self
             .moment_repo
-            .list_by_user(user_id, limit, req.cursor.clone())
+            .list_by_user(user_id, limit, pagination.and_then(|p| p.cursor.clone()))
             .await?;
 
         self.build_user_moment_list(rows, next_cursor).await
@@ -203,7 +207,8 @@ impl MomentService {
         req: &MomentLikesRequest,
     ) -> Result<PaginatedData<MomentLikeItem>> {
         let moment_id = Validator::parse_uuid(&req.moment_id, "moment_id")?;
-        let limit = Validator::validate_limit(req.limit, 50)? as i64;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as i64;
 
         if !self.moment_repo.exists(moment_id).await? {
             return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
@@ -211,7 +216,7 @@ impl MomentService {
 
         let (rows, next_cursor) = self
             .moment_repo
-            .list_likes(moment_id, limit, req.cursor.clone())
+            .list_likes(moment_id, limit, pagination.and_then(|p| p.cursor.clone()))
             .await?;
 
         let mut items = Vec::with_capacity(rows.len());
@@ -289,7 +294,7 @@ impl MomentService {
                     thumbnail_url: None,
                     width: *width,
                     height: *height,
-                    content_type: None,
+                    mime_type: None,
                 });
             }
             Some(list)
@@ -492,10 +497,11 @@ impl MomentService {
         user_id: i64,
         req: &MyFavoritesRequest,
     ) -> Result<PaginatedData<MomentItem>> {
-        let limit = Validator::validate_limit(req.limit, 50)? as i64;
+        let pagination = req.pagination.as_ref();
+        let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as i64;
         let (rows, next_cursor) = self
             .moment_repo
-            .list_favorited_moments(user_id, limit, req.cursor.clone())
+            .list_favorited_moments(user_id, limit, pagination.and_then(|p| p.cursor.clone()))
             .await?;
 
         self.build_search_list(rows, Some(user_id), next_cursor)
@@ -683,7 +689,7 @@ impl MomentService {
                 thumbnail_url: None,
                 width: row.width,
                 height: row.height,
-                content_type: None,
+                mime_type: None,
             });
         }
 

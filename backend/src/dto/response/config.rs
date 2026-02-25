@@ -81,25 +81,22 @@ pub struct AppLimits {
 /// 频率限制配置 - API 文档: RateLimitConfig
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RateLimitConfig {
-    // IP级限速（单IP限制，考虑多用户共享同一IP的场景）
-    pub ip_per_hour: u32,
-    // 用户级限流
-    pub user_per_5minutes: u32,
+    pub global_per_hour: u32,
     pub user_per_hour: u32,
-    // 认证相关限速
-    pub auth_send_code_per_minute: u32,
-    pub auth_verify_code_per_10minutes: u32,
     pub auth_register_per_10minutes: u32,
     pub auth_login_per_10minutes: u32,
     pub auth_guest_per_10minutes: u32,
     pub auth_refresh_per_10minutes: u32,
-    pub auth_reset_request_per_minute: u32,
-    pub auth_reset_verify_per_10minutes: u32,
     pub auth_reset_per_10minutes: u32,
-    // 业务相关限速
+    pub search_per_minute: u32,
+    pub write_per_minute: u32,
     pub moments_create_per_minute: u32,
     pub comments_create_per_minute: u32,
     pub reports_create_per_hour: u32,
+    pub upload_presign_per_hour: u32,
+    pub ws_subscribe_per_second: u32,
+    pub admin_read_per_minute: u32,
+    pub admin_write_per_minute: u32,
 }
 
 /// 全局设置 - API 文档: GlobalSettings

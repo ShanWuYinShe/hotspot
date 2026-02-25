@@ -1,14 +1,7 @@
 //! 地图渲染相关响应类型
 
-use crate::types::enums::MapItemType;
+use crate::{dto::response::common::GeoPoint, types::enums::MapItemType};
 use serde::Serialize;
-
-/// 地图点 - API 文档: GeoPoint (地图专用，与 common::GeoPoint 结构一致)
-#[derive(Debug, Serialize, Clone)]
-pub struct MapPoint {
-    pub latitude: f64,
-    pub longitude: f64,
-}
 
 /// 地图聚合数据 - API 文档: MapClusterData
 #[derive(Debug, Serialize)]
@@ -39,7 +32,7 @@ pub struct MapRenderItem {
     pub render_id: String,
     #[serde(rename = "type")]
     pub item_type: MapItemType,
-    pub location: MapPoint,
+    pub location: GeoPoint,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cluster: Option<MapClusterData>,
     #[serde(skip_serializing_if = "Option::is_none")]

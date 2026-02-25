@@ -286,9 +286,6 @@ impl AppState {
 
         let user_service = UserService::new(
             event_bus.clone(),
-            redis.clone(),
-            config.jwt_access_token_expiration,
-            config.jwt_refresh_token_expiration,
             user_repo.clone(),
             user_settings_repo.clone(),
             user_location_history_repo.clone(),
@@ -447,6 +444,7 @@ impl AppState {
 
         let share_service = ShareService::new(
             db.clone(),
+            redis.clone(),
             std::sync::Arc::new(media_service.clone()),
             cache_manager.clone(),
             moment_repo.clone(),

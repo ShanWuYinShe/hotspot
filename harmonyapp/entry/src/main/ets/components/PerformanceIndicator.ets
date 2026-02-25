@@ -6,6 +6,7 @@ import { PerformanceOptimizer, PerformanceMetrics, PerformanceAlert } from '../c
 import { SystemIcon, AppIcon } from './SystemIcon';
 import { SystemToast } from './SystemToast';
 import { AccessibilityManager } from '../core/accessibility/AccessibilityManager';
+import { DesignConstants } from '../constants/DesignConstants';
 
 interface PerformanceLevel {
   level: string;
@@ -221,7 +222,7 @@ export struct PerformanceIndicator {
     }
     .padding({ left: 8, right: 8, top: 4, bottom: 4 })
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(12)
+    .borderRadius(DesignConstants.RADIUS.LG)
     .onClick(() => {
       this.isExpanded = !this.isExpanded;
     })
@@ -310,7 +311,7 @@ export struct PerformanceIndicator {
         .width('100%')
         .padding(16)
         .backgroundColor($r('app.color.bg_secondary'))
-        .borderRadius(8)
+        .borderRadius(DesignConstants.RADIUS.MD)
       }
 
       // 详细指标
@@ -415,7 +416,7 @@ export struct PerformanceIndicator {
             .width('100%')
             .padding(12)
             .backgroundColor($r('app.color.bg_secondary'))
-            .borderRadius(8)
+            .borderRadius(DesignConstants.RADIUS.MD)
           }, (alert: PerformanceAlert) => `${alert.timestamp}_${alert.message}`)
         }
         .width('100%')
@@ -450,7 +451,7 @@ export struct PerformanceIndicator {
     .width('100%')
     .padding(12)
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(8)
+    .borderRadius(DesignConstants.RADIUS.MD)
     .justifyContent(FlexAlign.Center)
     // 无障碍属性
     .accessibilityGroup(true)

@@ -32,13 +32,19 @@ impl NotificationService {
         user_id: i64,
         req: NotificationListRequest,
     ) -> Result<PaginatedData<NotificationItem>> {
+        let pagination = req.pagination.as_ref();
         let limit = Validator::validate_limit(
-            req.limit.and_then(|x: i64| i32::try_from(x).ok()),
+            pagination.and_then(|p| p.limit),
             crate::constants::MAX_PAGE_LIMIT,
         )? as i64;
         let rows = self
             .repo
-            .list_by_user(user_id, req.notification_type, req.cursor.as_deref(), limit)
+            .list_by_user(
+                user_id,
+                req.notification_type,
+                pagination.and_then(|p| p.cursor.as_deref()),
+                limit,
+            )
             .await?;
 
         let (items, next_cursor) = crate::utils::pagination::paginate_with_limit_plus_one(
@@ -149,7 +155,7 @@ impl NotificationService {
         let moment_summary_from_preview = |moment_id: &str, preview: &str| MomentSummary {
             moment_id: moment_id.to_string(),
             cover_url: Some(preview.to_string()).filter(|s| !s.is_empty()),
-            text_preview: preview.to_string(),
+            description_preview: preview.to_string(),
         };
 
         use crate::types::enums::NotificationType as NT;
@@ -185,15 +191,24 @@ impl NotificationService {
                 comment_id: reference_id.to_string(),
                 comment_preview: target_preview.to_string(),
                 moment_id: target_id.to_string(),
-                moment_summary: Some(moment_summary_from_preview(target_id, target_preview)),
+                moment_summary: moment_summary_from_preview(target_id, target_preview),
             },
-            NT::CommentReply => NotificationPayload::CommentReply {
-                actor: actor(payload),
-                comment_id: reference_id.to_string(),
-                comment_preview: target_preview.to_string(),
-                moment_id: target_id.to_string(),
-                moment_summary: Some(moment_summary_from_preview(target_id, target_preview)),
-            },
+            NT::CommentReply => {
+                let comment_id = payload
+                    .get("comment_id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(reference_id)
+                    .to_string();
+                NotificationPayload::CommentReply {
+                    actor: actor(payload),
+                    comment_id,
+                    replied_comment_preview: target_preview.to_string(),
+                    reply_id: reference_id.to_string(),
+                    reply_content_preview: content.to_string(),
+                    moment_id: target_id.to_string(),
+                    moment_summary: moment_summary_from_preview(target_id, target_preview),
+                }
+            }
             NT::Mentioned => {
                 let target_type = payload
                     .get("target_type")
@@ -204,7 +219,7 @@ impl NotificationService {
                     actor: actor(payload),
                     target_type,
                     moment_id: target_id.to_string(),
-                    moment_summary: Some(moment_summary_from_preview(target_id, target_preview)),
+                    moment_summary: moment_summary_from_preview(target_id, target_preview),
                     comment_id: if reference_id.is_empty() {
                         None
                     } else {
@@ -224,7 +239,33 @@ impl NotificationService {
                     .strip_prefix("邀请你加入群组: ")
                     .unwrap_or(content)
                     .to_string(),
+                group_avatar_url: payload
+                    .get("group_avatar_url")
+                    .and_then(|v| v.as_str())
+                    .map(String::from),
                 invite_id: reference_id.to_string(),
+                message: payload
+                    .get("message")
+                    .and_then(|v| v.as_str())
+                    .map(String::from),
+            },
+            NT::GroupInviteAccepted => NotificationPayload::GroupInviteAccepted {
+                group_id: target_id.to_string(),
+                group_name: content
+                    .strip_prefix("接受了群组邀请: ")
+                    .unwrap_or(content)
+                    .to_string(),
+                invite_id: reference_id.to_string(),
+                user: actor(payload),
+            },
+            NT::GroupApplicationReceived => NotificationPayload::GroupApplicationReceived {
+                applicant: actor(payload),
+                group_id: target_id.to_string(),
+                group_name: content
+                    .strip_prefix("申请加入群组: ")
+                    .unwrap_or(content)
+                    .to_string(),
+                application_id: reference_id.to_string(),
             },
             NT::GroupApplicationAccepted => NotificationPayload::GroupApplicationAccepted {
                 group_id: target_id.to_string(),

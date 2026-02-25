@@ -1,7 +1,7 @@
-use crate::dto::response::{GroupInfo, MessageMedia, UserInfo};
+use crate::dto::response::{GroupInfo, MessageMedia, MessageReplyTo, MomentSummary, UserInfo};
 use crate::types::enums::{
-    AnnouncementSeverity, ClientType, GroupRole, MessageType, SubscriptionFailureReason,
-    SubscriptionOperation,
+    AnnouncementSeverity, ClientType, GroupDismissReason, GroupJoinMethod, GroupRole,
+    MemberRemoveReason, MessageType, SubscriptionFailureReason, SubscriptionOperation,
 };
 use serde::{Deserialize, Serialize};
 
@@ -84,7 +84,7 @@ mod ws_option_vec_id_as_string {
 }
 
 /// WebSocket 消息类型定义
-/// 严格遵循 api_spec.mdc WebSocket 实时事件定义
+/// 严格遵循 api_spec.md WebSocket 实时事件定义
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type", content = "payload")]
 pub enum WsMessage {
@@ -119,7 +119,7 @@ pub enum WsMessage {
     /// 新增关注者（有人关注了我）
     /// 心理学优化：通过 source 让被关注者了解"为什么被关注"
     NewFollower {
-        user: UserInfo,
+        actor: UserInfo,
         followed_at: String, // ISO 8601 UTC
         #[serde(skip_serializing_if = "Option::is_none")]
         source: Option<crate::types::enums::FollowSource>,
@@ -129,7 +129,7 @@ pub enum WsMessage {
 
     /// 互相关注（成为好友）
     MutualFollow {
-        user: UserInfo,
+        actor: UserInfo,
         mutual_at: String, // ISO 8601 UTC
     },
 
@@ -138,7 +138,7 @@ pub enum WsMessage {
     MomentLiked {
         moment_id: String,
         moment_summary: MomentSummary,
-        user: UserInfo,
+        actor: UserInfo,
         liked_at: String, // ISO 8601 UTC
     },
 
@@ -147,7 +147,7 @@ pub enum WsMessage {
         moment_id: String,
         moment_summary: MomentSummary,
         comment_id: String,
-        user: UserInfo,
+        actor: UserInfo,
         content: String,
         commented_at: String, // ISO 8601 UTC
     },
@@ -155,12 +155,11 @@ pub enum WsMessage {
     /// 评论被回复
     CommentReply {
         moment_id: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        moment_summary: Option<MomentSummary>, // 所属瞬间的摘要（与 MomentCommented、CommentLiked 保持一致）
-        comment_id: String,       // 原评论ID（被回复的评论）
-        reply_to_content: String, // 原评论内容摘要
-        reply_id: String,         // 回复评论ID
-        user: UserInfo,           // 回复者
+        moment_summary: MomentSummary,
+        comment_id: String,
+        replied_comment_preview: String,
+        reply_id: String,
+        actor: UserInfo,
         content: String,
         replied_at: String, // ISO 8601 UTC
     },
@@ -219,7 +218,7 @@ pub enum WsMessage {
     PrivateMessageRead {
         #[serde(with = "ws_id_as_string")]
         target_user_id: i64,
-        up_to: String, // 读到哪条消息ID
+        up_to_message_id: String, // 读到哪条消息ID
         #[serde(with = "ws_id_as_string")]
         reader_id: i64,
         read_at: String, // ISO 8601 UTC
@@ -346,11 +345,10 @@ pub enum WsMessage {
         moment_id: String,
         #[serde(skip_serializing_if = "Option::is_none")]
         comment_id: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        moment_summary: Option<MomentSummary>,
+        moment_summary: MomentSummary,
         #[serde(skip_serializing_if = "Option::is_none")]
         comment_preview: Option<String>,
-        user: UserInfo,       // 提及我的人
+        actor: UserInfo,
         mentioned_at: String, // ISO 8601 UTC
     },
 
@@ -359,10 +357,9 @@ pub enum WsMessage {
     CommentLiked {
         comment_id: String,
         moment_id: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        moment_summary: Option<MomentSummary>,
+        moment_summary: MomentSummary,
         comment_preview: String,
-        user: UserInfo,
+        actor: UserInfo,
         liked_at: String, // ISO 8601 UTC
     },
 
@@ -379,10 +376,10 @@ pub enum WsMessage {
     GroupMemberRemoved {
         group_id: String,
         user: UserInfo,
-        removed_by: String, // user_id（操作者）
+        removed_by: UserInfo,
         #[serde(skip_serializing_if = "Option::is_none")]
-        reason: Option<String>, // "kicked" | "banned"
-        removed_at: String, // ISO 8601 UTC
+        reason: Option<MemberRemoveReason>,
+        removed_at: String,
         member_count: i32,
     },
 
@@ -390,7 +387,7 @@ pub enum WsMessage {
     GroupMemberMuted {
         group_id: String,
         user: UserInfo,
-        muted_by: String,    // user_id（操作者）
+        muted_by: UserInfo,  // 操作者
         muted_until: String, // 禁言截止时间
         duration_minutes: i32,
         muted_at: String, // ISO 8601 UTC
@@ -400,16 +397,16 @@ pub enum WsMessage {
     GroupMemberUnmuted {
         group_id: String,
         user: UserInfo,
-        unmuted_by: String, // user_id（操作者）
-        unmuted_at: String, // ISO 8601 UTC
+        unmuted_by: UserInfo, // 操作者
+        unmuted_at: String,   // ISO 8601 UTC
     },
 
     /// 群组信息更新
     GroupUpdated {
         group_id: String,
-        updated_fields: serde_json::Value, // 只包含变更的字段
-        updated_by: String,                // user_id（操作者）
-        updated_at: String,                // ISO 8601 UTC
+        updated_fields: GroupUpdatedFields,
+        updated_by: String,
+        updated_at: String,
     },
 
     /// 群组解散（群主主动解散或因违规被解散）
@@ -418,7 +415,7 @@ pub enum WsMessage {
         group_id: String,
         dismissed_at: String, // ISO 8601 UTC
         #[serde(skip_serializing_if = "Option::is_none")]
-        reason: Option<String>, // "owner_dismissed" | "policy_violation"
+        reason: Option<GroupDismissReason>,
     },
 
     // ===== 用户事件 =====
@@ -436,7 +433,7 @@ pub enum WsMessage {
         banned_at: String,  // ISO 8601 UTC
     },
 
-    // ⏳ 延期实现：多端同步事件（spec: api_spec_websocket.mdc）
+    // ⏳ 延期实现：多端同步事件（spec: api_spec_websocket.md）
     // 实现时添加以下变体：
     // SelfReadSync { chat_type, target_id, up_to_message_id? }
     // SelfChatSettingsSync { chat_type, target_id, is_muted?, is_pinned? }
@@ -455,12 +452,11 @@ pub enum WsMessage {
     },
 
     // ========== 客户端发送事件 (Client → Server) ==========
-    /// 鉴权（握手后首帧，spec: client_type, access_token?）
+    /// 鉴权（握手后首帧，spec: client_type 必填, access_token App 端必填）
     Auth {
-        #[serde(default)]
-        client_type: Option<ClientType>, // 可选，默认 "app"
+        client_type: ClientType,
         #[serde(skip_serializing_if = "Option::is_none")]
-        access_token: Option<String>, // App 端必填，Web 端不传（通过 Cookie 鉴权）
+        access_token: Option<String>,
     },
 
     /// 心跳保活（spec: 空 payload）
@@ -471,7 +467,7 @@ pub enum WsMessage {
 
     /// 订阅管理（统一入口，通过 operation 区分操作类型）
     SetSubscriptions {
-        client_msg_id: String,            // 客户端生成，用于与 SubscribeAck 对齐
+        client_request_id: String,        // 客户端生成，用于与 SubscribeAck 对齐
         operation: SubscriptionOperation, // subscribe / unsubscribe / set
         #[serde(rename = "type")]
         r#type: String,
@@ -480,7 +476,7 @@ pub enum WsMessage {
 
     /// 订阅确认（服务端响应）
     SubscribeAck {
-        client_msg_id: String, // 回传客户端消息ID
+        client_request_id: String, // 回传客户端请求ID
         operation: SubscriptionOperation,
         #[serde(rename = "type")]
         r#type: String,
@@ -494,7 +490,7 @@ pub enum WsMessage {
 
     /// 订阅状态快照（响应 GetSubscriptions）
     SubscriptionsSnapshot {
-        client_msg_id: String,
+        client_request_id: String,
         user_ids: Vec<String>,
         group_ids: Vec<String>,
     },
@@ -511,29 +507,7 @@ pub enum WsMessage {
     GroupTyping { group_id: String, is_typing: bool },
 
     /// 查询当前订阅状态
-    GetSubscriptions { client_msg_id: String },
-}
-
-/// 消息回复引用快照
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct MessageReplyTo {
-    pub message_id: String,
-    #[serde(with = "ws_id_as_string")]
-    pub user_id: i64,
-    pub nickname: String,
-    pub content: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub share_code: Option<String>,
-}
-
-/// 瞬间摘要快照
-/// 亦在 api_spec_types.mdc 中定义，保持与 spec 一致
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct MomentSummary {
-    pub moment_id: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cover_url: Option<String>,
-    pub text_preview: String,
+    GetSubscriptions { client_request_id: String },
 }
 
 /// 失败的订阅ID — spec: { subscription_id: string, reason: SubscriptionFailureReason }
@@ -558,13 +532,41 @@ pub struct MaxSubscriptions {
     pub group: u32, // 群组订阅上限
 }
 
-/// 从 AppError 构建 WebSocket Error 消息（连接/协议错误均为 fatal，不可重试）
+/// GroupUpdated 事件中变更字段的强类型定义（spec: GroupUpdatedPayload.updated_fields）
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct GroupUpdatedFields {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avatar_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub join_method: Option<GroupJoinMethod>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_searchable: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_members: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub has_password: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location: Option<crate::dto::response::common::Location>,
+}
+
+/// 从 AppError 构建 WebSocket Error 消息
 pub fn ws_error_from_app_error(err: &crate::error::AppError) -> WsMessage {
+    let (severity, retryable) = match err {
+        crate::error::AppError::WebSocketTokenExpired => ("recoverable".to_string(), false),
+        _ => ("fatal".to_string(), false),
+    };
+
     WsMessage::Error {
         code: err.error_code(),
         message: err.to_string(),
-        severity: "fatal".to_string(),
-        retryable: false,
+        severity,
+        retryable,
         retry_after: None,
         context: None,
     }

@@ -10,7 +10,7 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import {
-  MomentItem, UserItem, GroupItem, GeoPoint,
+  MomentItem, UserItem, GroupItem, GeoPoint, RelativeLocation,
   SearchMomentsRequest, SearchUsersRequest, SearchGroupsRequest,
   MomentImage, FollowRequest, JoinGroupRequest
 } from '../../../core/types/api';
@@ -665,7 +665,7 @@ export struct NearbyPage {
     }
     .width('100%')
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(12)
+    .borderRadius(DesignConstants.RADIUS.LG)
     .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
     // 点击反馈动画
     .scale(this.pressedIndex === index ? { x: 0.97, y: 0.97 } : { x: 1, y: 1 })
@@ -684,9 +684,9 @@ export struct NearbyPage {
   }
 
   private openMomentDetail(moment: MomentItem): void {
-    // 跳转到动态详情页面
     hilog.info(DOMAIN_NUMBER, TAG, `打开动态详情: ${moment.moment_id}`);
-    // TODO: 实现动态详情页跳转
+    // TODO: 创建 MomentDetailPage 并实现跳转
+    SystemToast.show('动态详情页即将上线', this.getUIContext());
   }
 
   @Builder
@@ -882,8 +882,9 @@ export struct NearbyPage {
             .fontSize(13)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
 
-          if (group.location?.distance !== undefined && group.location?.distance !== null) {
-            Text(this.formatDistance(group.location.distance))
+          if ((group.location as RelativeLocation)?.distance !== undefined &&
+            (group.location as RelativeLocation)?.distance !== null) {
+            Text(this.formatDistance((group.location as RelativeLocation).distance!))
               .fontSize(13)
               .fontColor($r('sys.color.ohos_id_color_text_secondary'))
           }

@@ -6,13 +6,13 @@ use serde::{Deserialize, Serialize};
 use super::user::UserInfo;
 
 /// 瞬间摘要快照 - API 文档: MomentSummary
-/// 用于通知负载中的 moment_summary 字段
-#[derive(Debug, Serialize, Clone)]
+/// 用于通知负载、WebSocket 事件中的 moment_summary 字段
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MomentSummary {
     pub moment_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cover_url: Option<String>,
-    pub text_preview: String,
+    pub description_preview: String,
 }
 
 /// 通知负载 - 按 type 区分的联合类型
@@ -47,23 +47,22 @@ pub enum NotificationPayload {
         comment_id: String,
         comment_preview: String,
         moment_id: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        moment_summary: Option<MomentSummary>,
+        moment_summary: MomentSummary,
     },
     CommentReply {
         actor: UserInfo,
         comment_id: String,
-        comment_preview: String,
+        replied_comment_preview: String,
+        reply_id: String,
+        reply_content_preview: String,
         moment_id: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        moment_summary: Option<MomentSummary>,
+        moment_summary: MomentSummary,
     },
     Mentioned {
         actor: UserInfo,
         target_type: String,
         moment_id: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        moment_summary: Option<MomentSummary>,
+        moment_summary: MomentSummary,
         #[serde(skip_serializing_if = "Option::is_none")]
         comment_id: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -73,7 +72,23 @@ pub enum NotificationPayload {
         actor: UserInfo,
         group_id: String,
         group_name: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        group_avatar_url: Option<String>,
         invite_id: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        message: Option<String>,
+    },
+    GroupInviteAccepted {
+        group_id: String,
+        group_name: String,
+        invite_id: String,
+        user: UserInfo,
+    },
+    GroupApplicationReceived {
+        applicant: UserInfo,
+        group_id: String,
+        group_name: String,
+        application_id: String,
     },
     GroupApplicationAccepted {
         group_id: String,

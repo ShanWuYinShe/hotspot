@@ -179,7 +179,7 @@ export class GlobalStateManager {
    */
   updateClientConfig(config: ClientConfig): void {
     AppStorage.setOrCreate<ClientConfig | null>(KEY_CLIENT_CONFIG, config);
-    hilog.info(DOMAIN_NUMBER, TAG, `客户端配置已更新: search_radius_max=${config.limits?.search_radius_max}`);
+    hilog.info(DOMAIN_NUMBER, TAG, `客户端配置已更新`);
   }
 
   /**

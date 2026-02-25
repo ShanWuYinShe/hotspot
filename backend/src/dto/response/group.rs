@@ -39,6 +39,10 @@ pub struct GroupSettings {
 
 /// 群组统一数据类型 - API 文档: GroupItem
 /// 用于列表、搜索、详情、Feed 等所有场景
+///
+/// location 统一使用 RelativeLocation：
+/// - 列表/搜索/Feed 场景：distance / bearing_degrees 由后端基于 reference_point 计算
+/// - 详情场景（open_the_door）：distance / bearing_degrees 为 None
 #[derive(Debug, Serialize)]
 pub struct GroupItem {
     pub group: GroupInfo,
@@ -56,12 +60,12 @@ pub struct GroupItem {
     pub created_at: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub owner_id: Option<String>,
-    // === @auth-only ===
+    // === @auth-only
     #[serde(skip_serializing_if = "Option::is_none")]
     pub my_state: Option<GroupMyStateData>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub friends_in_group: Option<i32>,
-    // === @group-admin-only ===
+    // === @group-admin-only
     #[serde(skip_serializing_if = "Option::is_none")]
     pub join_method: Option<GroupJoinMethod>,
     #[serde(skip_serializing_if = "Option::is_none")]

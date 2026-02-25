@@ -1,6 +1,6 @@
 # WebSocket 客户端实现
 
-严格遵循 `@spec/api_spec_websocket.mdc` 规范。
+严格遵循 `@spec/api_spec_websocket.md` 规范。
 
 ## 文件结构
 

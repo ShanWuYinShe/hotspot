@@ -12,6 +12,7 @@ import { authStore } from '$lib/stores/auth.svelte';
 import { configStore } from '$lib/stores/config.svelte';
 import { initApiClient, ensureRefreshToken, isSuccess } from '$lib/api/client';
 import { authService } from '$lib/api/services/auth';
+import { usersService } from '$lib/api/services/users';
 import { websocketStore } from '$lib/websocket';
 
 /**
@@ -70,6 +71,40 @@ class TokenRefreshManager {
 	}
 }
 
+// ==================== 会话恢复 ====================
+
+async function restoreSessionFromServer() {
+	if (!authStore.currentUserId) {
+		return;
+	}
+
+	try {
+		const statusRes = await authService.checkStatus();
+		if (!isSuccess(statusRes) || !statusRes.data?.is_valid) {
+			authStore.logoutAll();
+			return;
+		}
+
+		const profileRes = await usersService.getMyProfile();
+		if (!isSuccess(profileRes) || !profileRes.data) {
+			authStore.invalidateSession();
+			return;
+		}
+
+		const expiresAt = statusRes.data.expires_at ?? new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
+		authStore.login({
+			user_id: profileRes.data.user_id,
+			user_type: profileRes.data.user_type,
+			access_token_expires_at: expiresAt
+		});
+		authStore.setProfile(profileRes.data);
+	} catch (error) {
+		if (dev) console.warn('[App] 自动恢复登录状态失败:', error);
+		authStore.invalidateSession();
+	}
+}
+
 // ==================== 单例 ====================
 
 const tokenRefreshManager = new TokenRefreshManager();
@@ -122,6 +157,9 @@ if (browser) {
 	}).catch((error) => {
 		if (dev) console.error('[App] ClientConfig 加载失败:', error);
 	});
+
+	// 恢复已保存的登录态（需要服务端确认 Cookie 有效）
+	restoreSessionFromServer();
 
 	// 启动 Token 刷新管理器
 	tokenRefreshManager.start();

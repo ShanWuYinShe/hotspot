@@ -456,7 +456,7 @@ export struct DiscoverPage {
     }
     .width('100%')
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(12)
+    .borderRadius(DesignConstants.RADIUS.LG)
     .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
   }
 

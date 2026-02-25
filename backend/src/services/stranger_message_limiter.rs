@@ -30,7 +30,10 @@ impl StrangerMessageLimiter {
     fn seconds_until_next_day() -> i64 {
         let now = Utc::now();
         let tomorrow = now.date_naive() + Duration::days(1);
-        let midnight = tomorrow.and_hms_opt(0, 0, 0).unwrap().and_utc();
+        let midnight = tomorrow
+            .and_hms_opt(0, 0, 0)
+            .expect("midnight is always valid")
+            .and_utc();
         (midnight - now).num_seconds().max(1)
     }
 

@@ -4,18 +4,20 @@
  */
 
 import { GlobalStateManager, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_USER_TYPE } from '../../../core/state/GlobalStateManager';
+import { ApiClient } from '../../../core/api/ApiClient';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { HttpUtil } from '../../../core/network/HttpUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
-import { MyProfile } from '../../../core/types/api';
+import { MyProfile, ApiVersionMeta } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
 import { AppRouter, ProfileRouteParam, LoginRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { RefreshIndicator } from '../../../components/EmptyState';
 
 @Component
 export struct SettingsPage {
@@ -24,6 +26,11 @@ export struct SettingsPage {
   @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
   @StorageLink(KEY_USER_TYPE) userType: string = '';
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
+  @State systemMeta: ApiVersionMeta | null = null;
+  @State systemMetaLoading: boolean = false;
+  @State systemMetaError: string = '';
+  @State systemMetaLastChecked: string = '';
+  @State metaRefreshing: boolean = false;
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
 
@@ -31,6 +38,33 @@ export struct SettingsPage {
     SystemUiController.useSurface({
       baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
     });
+    this.loadSystemMeta();
+  }
+
+  private async loadSystemMeta(force: boolean = false): Promise<void> {
+    if (this.systemMetaLoading && !force) {
+      return;
+    }
+    this.systemMetaLoading = true;
+    if (force) {
+      this.metaRefreshing = true;
+    }
+    this.systemMetaError = '';
+    try {
+      const response = await ApiClient.getSystemMeta();
+      if (response.code === 0 && response.data) {
+        this.systemMeta = response.data;
+        this.systemMetaLastChecked = new Date().toISOString();
+      } else {
+        this.systemMetaError = response.message || '获取系统信息失败';
+      }
+    } catch (error) {
+      this.systemMetaError = error instanceof Error ? error.message : '获取系统信息失败';
+      SystemToast.showError(this.systemMetaError, this.getUIContext());
+    } finally {
+      this.systemMetaLoading = false;
+      this.metaRefreshing = false;
+    }
   }
 
   private async logout() {
@@ -84,118 +118,125 @@ export struct SettingsPage {
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 设置列表
-      List({ space: DesignConstants.SPACING.MD }) {
-        // 账号设置组
-        ListItemGroup({ header: this.ListHeader('账号') }) {
-          ListItem() {
-            this.SettingItem('账号管理', '切换/删除本地已保存账号', () => {
-              AppRouter.push(PageNames.ACCOUNTS);
-            })
-          }
-          .backgroundColor($r('app.color.bg_secondary'))
-
-          ListItem() {
-            this.SettingItem('个人资料', '修改头像、昵称', async () => {
-              if (this.currentUser) {
-                const userId = await AuthAccountManager.getCurrentUserId();
-                const profileParams = new ProfileRouteParam();
-                profileParams.userId = userId ?? '';
-                AppRouter.push(PageNames.PROFILE, profileParams);
-              } else {
-                SystemToast.showWarning('请先登录', this.getUIContext());
-                const loginParams = new LoginRouteParam();
-                loginParams.reason = 'action_required';
-                loginParams.action = '查看个人资料';
-                loginParams.redirectUrl = PageNames.PROFILE;
-                AppRouter.push(PageNames.LOGIN, loginParams);
-              }
-            })
-          }
-          .backgroundColor($r('app.color.bg_secondary'))
-        }
-        .borderRadius(DesignConstants.RADIUS.LG)
-        .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 16, endMargin: 16 })
-        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-
-        // 通用设置组
-        ListItemGroup({ header: this.ListHeader('通用') }) {
-          ListItem() {
-            this.SettingItem('消息通知', '', () => {
-              if (!this.isLoggedIn) {
-                SystemToast.showWarning('请先登录', this.getUIContext());
-                const loginParams = new LoginRouteParam();
-                loginParams.reason = 'action_required';
-                loginParams.action = '管理通知订阅';
-                loginParams.redirectUrl = PageNames.SUBSCRIPTIONS;
-                AppRouter.push(PageNames.LOGIN, loginParams);
-                return;
-              }
-              AppRouter.push(PageNames.SUBSCRIPTIONS);
-            })
-          }
-          .backgroundColor($r('app.color.bg_secondary'))
-
-          ListItem() {
-            this.SettingItem('高级设置', '开发者选项、网络诊断', () => {
-              AppRouter.push(PageNames.ADVANCED_SETTINGS);
-            })
-          }
-          .backgroundColor($r('app.color.bg_secondary'))
-        }
-        .borderRadius(DesignConstants.RADIUS.LG)
-        .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 16, endMargin: 16 })
-        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-
-        // 关于组
-        ListItemGroup({ header: this.ListHeader('关于') }) {
-          ListItem() {
-            this.SettingItem('关于 HotSpot', 'v1.0.0', () => {
-              SystemToast.show('HotSpot v1.0.0', this.getUIContext());
-            })
-          }
-          .backgroundColor($r('app.color.bg_secondary'))
-        }
-        .borderRadius(DesignConstants.RADIUS.LG)
-        .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 16, endMargin: 16 })
-        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-
-        // 退出登录
-        if (this.isLoggedIn) {
-          ListItem() {
-            Button('退出登录')
-              .width('100%')
-              .height(50)
-              .backgroundColor($r('app.color.bg_secondary'))
-              .fontColor($r('app.color.color_danger'))
-              .fontSize(DesignConstants.FONT.SIZE.LG)
-              .type(ButtonType.Normal)
-              .borderRadius(DesignConstants.RADIUS.LG)
-              .onClick(() => { this.logout(); })
-          }
-          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.XXL })
-        }
-
-        // 未登录时显示登录入口
-        if (!this.isLoggedIn) {
-          ListItem() {
-            Button('登录 / 注册')
-              .width('100%')
-              .height(50)
-              .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-              .fontColor(Color.White)
-              .fontSize(DesignConstants.FONT.SIZE.LG)
-              .type(ButtonType.Capsule)
-              .onClick(() => {
-                AppRouter.push(PageNames.LOGIN);
+      Refresh({ refreshing: $$this.metaRefreshing, builder: RefreshIndicator }) {
+        List({ space: DesignConstants.SPACING.MD }) {
+          // 账号设置组
+          ListItemGroup({ header: this.ListHeader('账号') }) {
+            ListItem() {
+              this.SettingItem('账号管理', '切换/删除本地已保存账号', () => {
+                AppRouter.push(PageNames.ACCOUNTS);
               })
+            }
+            .backgroundColor($r('app.color.bg_secondary'))
+
+            ListItem() {
+              this.SettingItem('个人资料', '修改头像、昵称', async () => {
+                if (this.currentUser) {
+                  const userId = await AuthAccountManager.getCurrentUserId();
+                  const profileParams = new ProfileRouteParam();
+                  profileParams.userId = userId ?? '';
+                  AppRouter.push(PageNames.PROFILE, profileParams);
+                } else {
+                  SystemToast.showWarning('请先登录', this.getUIContext());
+                  const loginParams = new LoginRouteParam();
+                  loginParams.reason = 'action_required';
+                  loginParams.action = '查看个人资料';
+                  loginParams.redirectUrl = PageNames.PROFILE;
+                  AppRouter.push(PageNames.LOGIN, loginParams);
+                }
+              })
+            }
+            .backgroundColor($r('app.color.bg_secondary'))
           }
-          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.XXL })
+          .borderRadius(DesignConstants.RADIUS.LG)
+          .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 16, endMargin: 16 })
+          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+
+          // 通用设置组
+          ListItemGroup({ header: this.ListHeader('通用') }) {
+            ListItem() {
+              this.SettingItem('消息通知', '', () => {
+                if (!this.isLoggedIn) {
+                  SystemToast.showWarning('请先登录', this.getUIContext());
+                  const loginParams = new LoginRouteParam();
+                  loginParams.reason = 'action_required';
+                  loginParams.action = '管理通知订阅';
+                  loginParams.redirectUrl = PageNames.SUBSCRIPTIONS;
+                  AppRouter.push(PageNames.LOGIN, loginParams);
+                  return;
+                }
+                AppRouter.push(PageNames.SUBSCRIPTIONS);
+              })
+            }
+            .backgroundColor($r('app.color.bg_secondary'))
+
+            ListItem() {
+              this.SettingItem('高级设置', '开发者选项、网络诊断', () => {
+                AppRouter.push(PageNames.ADVANCED_SETTINGS);
+              })
+            }
+            .backgroundColor($r('app.color.bg_secondary'))
+          }
+          .borderRadius(DesignConstants.RADIUS.LG)
+          .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 16, endMargin: 16 })
+          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+
+          // 关于组
+          ListItemGroup({ header: this.ListHeader('关于') }) {
+            ListItem() {
+              this.SystemMetaCard()
+            }
+            .backgroundColor($r('app.color.bg_secondary'))
+          }
+          .borderRadius(DesignConstants.RADIUS.LG)
+          .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 16, endMargin: 16 })
+          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+
+          // 退出登录
+          if (this.isLoggedIn) {
+            ListItem() {
+              Button('退出登录')
+                .width('100%')
+                .height(50)
+                .backgroundColor($r('app.color.bg_secondary'))
+                .fontColor($r('app.color.color_danger'))
+                .fontSize(DesignConstants.FONT.SIZE.LG)
+                .type(ButtonType.Normal)
+                .borderRadius(DesignConstants.RADIUS.LG)
+                .onClick(() => { this.logout(); })
+            }
+            .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.XXL })
+          }
+
+          // 未登录时显示登录入口
+          if (!this.isLoggedIn) {
+            ListItem() {
+              Button('登录 / 注册')
+                .width('100%')
+                .height(50)
+                .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+                .fontColor(Color.White)
+                .fontSize(DesignConstants.FONT.SIZE.LG)
+                .type(ButtonType.Capsule)
+                .onClick(() => {
+                  AppRouter.push(PageNames.LOGIN);
+                })
+            }
+            .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.XXL })
+          }
         }
+        .scrollBar(BarState.Auto)
+        .sticky(StickyStyle.Header)
       }
+      .onRefreshing(() => {
+        if (!this.metaRefreshing) {
+          this.metaRefreshing = true;
+          this.loadSystemMeta(true);
+        }
+      })
       .width('100%')
       .layoutWeight(1)
-      .scrollBar(BarState.Auto)
-      .sticky(StickyStyle.Header)
+
     }
     .width('100%')
     .height('100%')
@@ -214,6 +255,150 @@ export struct SettingsPage {
       .fontColor($r('sys.color.ohos_id_color_text_secondary'))
       .margin({ left: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.LG })
       .width('100%')
+  }
+
+  @Builder
+  private SystemMetaCard() {
+    Column({ space: DesignConstants.SPACING.MD }) {
+      Row({ space: DesignConstants.SPACING.SM }) {
+        Column({ space: 4 }) {
+          Text('系统版本状态')
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+
+          Text(this.systemMeta?.status === 'sunset' ? '可能影响正常使用' : '与服务端版本保持同步')
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        }
+        .layoutWeight(1)
+
+        Text(this.getMetaStatusLabel())
+          .fontSize(12)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.getMetaStatusTextColor())
+          .backgroundColor(this.getMetaStatusBackground())
+          .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+          .borderRadius(DesignConstants.RADIUS.SM)
+
+        Stack() {
+          IconButton({
+            icon: AppIcon.REFRESH,
+            iconSize: IconSize.MEDIUM,
+            iconColor: $r('sys.color.ohos_id_color_text_primary'),
+            bgColor: Color.Transparent,
+            onButtonClick: () => { this.loadSystemMeta(true); }
+          })
+            .enabled(!this.systemMetaLoading)
+
+          if (this.systemMetaError) {
+            Circle({ width: 8, height: 8 })
+              .fill($r('app.color.color_danger'))
+              .position({ x: 26, y: 2 })
+          }
+        }
+      }
+
+      if (this.systemMetaLoading) {
+        Row({ space: DesignConstants.SPACING.SM }) {
+          LoadingProgress().width(20).height(20).color($r('sys.color.ohos_id_color_emphasize'))
+          Text('正在获取版本信息...')
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        }
+      } else {
+        this.MetaInfoRow('当前版本', this.systemMeta?.version ?? '--')
+        this.MetaInfoRow('推荐版本', this.systemMeta?.recommended_version ?? '已是最新版本')
+        this.MetaInfoRow('提示', this.systemMeta?.message ?? '服务运行正常')
+        this.MetaInfoRow('检查时间', this.formatMetaTime(this.systemMetaLastChecked))
+      }
+
+      if (this.systemMetaError) {
+        Text(this.systemMetaError)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor($r('sys.color.ohos_id_color_warning'))
+      }
+    }
+    .width('100%')
+    .padding(DesignConstants.SPACING.LG)
+    .backgroundColor($r('app.color.bg_primary'))
+    .borderRadius(DesignConstants.RADIUS.LG)
+  }
+
+  private getMetaStatusLabel(): string {
+    if (!this.systemMeta) {
+      return '未获取';
+    }
+    switch (this.systemMeta.status) {
+      case 'deprecated':
+        return '建议升级';
+      case 'sunset':
+        return '维护中';
+      default:
+        return '正常';
+    }
+  }
+
+  private getMetaStatusTextColor(): ResourceColor {
+    if (!this.systemMeta) {
+      return $r('sys.color.ohos_id_color_text_secondary');
+    }
+    switch (this.systemMeta.status) {
+      case 'deprecated':
+        return $r('sys.color.ohos_id_color_warning');
+      case 'sunset':
+        return $r('app.color.color_danger');
+      default:
+        return $r('app.color.color_success');
+    }
+  }
+
+  private getMetaStatusBackground(): ResourceColor {
+    if (!this.systemMeta) {
+      return '#FFF0F0F0';
+    }
+    switch (this.systemMeta.status) {
+      case 'deprecated':
+        return '#FFFFF4D6';
+      case 'sunset':
+        return '#FFFFEBEC';
+      default:
+        return '#FFE7F8ED';
+    }
+  }
+
+  private formatMetaTime(value?: string): string {
+    if (!value) {
+      return '尚未检查';
+    }
+    try {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return value;
+      }
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      const hour = date.getHours().toString().padStart(2, '0');
+      const minute = date.getMinutes().toString().padStart(2, '0');
+      return `${month}-${day} ${hour}:${minute}`;
+    } catch (_) {
+      return value;
+    }
+  }
+
+  @Builder
+  private MetaInfoRow(label: string, value: string) {
+    Row() {
+      Text(label)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .layoutWeight(1)
+
+      Text(value)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .textAlign(TextAlign.End)
+    }
   }
 
   @Builder

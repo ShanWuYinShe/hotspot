@@ -98,12 +98,12 @@ pub fn next_id() -> i64 {
     ID_GENERATOR.next_id()
 }
 
-/// 生成6位分享码
+/// 生成12位分享码
 pub fn generate_share_code() -> String {
     const CHARSET: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let mut rng = rand::rng();
 
-    (0..6)
+    (0..12)
         .map(|_| {
             let idx = rng.random_range(0..CHARSET.len());
             CHARSET[idx] as char

@@ -148,7 +148,7 @@ export struct DebugPanel {
           .height(300)
           .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
           .padding(8)
-          .borderRadius(8)
+          .borderRadius(DesignConstants.RADIUS.MD)
         }
         .padding(16)
         .width('100%')

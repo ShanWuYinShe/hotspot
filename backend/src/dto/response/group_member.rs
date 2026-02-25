@@ -104,3 +104,18 @@ pub struct GroupInviteItem {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub expires_at: Option<String>,
 }
+
+/// 发出邀请列表项 - API 文档: GroupSentInviteItem
+#[derive(Debug, Serialize)]
+pub struct GroupSentInviteItem {
+    pub invite_id: String,
+    pub invitee: UserInfo,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+    pub status: ApplicationStatus,
+    pub created_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub responded_at: Option<String>,
+}

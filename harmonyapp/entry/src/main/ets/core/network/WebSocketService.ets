@@ -1,7 +1,7 @@
 /**
  * WebSocket服务管理器
  * 统一管理WebSocket连接和消息处理
- * 严格遵循 api_spec_websocket.mdc 设计规范
+ * 严格遵循 api_spec_websocket.md 设计规范
  */
 
 import { WebSocketUtil } from './WebSocketUtil';
@@ -90,7 +90,7 @@ export class WebSocketService {
       const baseUrl = await PreferencesUtil.get<string>(StorageKeys.SERVER_BASE_URL, API_BASE_URL);
       const normalized = typeof baseUrl === 'string' && baseUrl.trim().length > 0 ? baseUrl.trim() : API_BASE_URL;
       let wsUrl = normalized.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
-      if (!wsUrl.endsWith('/ws')) wsUrl = wsUrl.replace(/\/+$/, '') + '/ws';
+      if (!wsUrl.endsWith('/ws/v1')) wsUrl = wsUrl.replace(/\/+$/, '') + '/ws/v1';
       return wsUrl;
     } catch {
       return WS_BASE_URL;

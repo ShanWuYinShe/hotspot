@@ -2,6 +2,8 @@
 
 use serde::Deserialize;
 
+use crate::dto::request::common::PaginationParams;
+
 #[derive(Debug, Deserialize)]
 pub struct CreateCommentRequest {
     pub moment_id: String,
@@ -18,15 +20,13 @@ pub struct DeleteCommentRequest {
 #[derive(Debug, Deserialize)]
 pub struct MomentCommentsRequest {
     pub moment_id: String,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct CommentRepliesRequest {
     pub comment_id: String,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -42,6 +42,5 @@ pub struct UnlikeCommentRequest {
 #[derive(Debug, Deserialize)]
 pub struct CommentLikesRequest {
     pub comment_id: String,
-    pub limit: Option<i32>,
-    pub cursor: Option<String>,
+    pub pagination: Option<PaginationParams>,
 }

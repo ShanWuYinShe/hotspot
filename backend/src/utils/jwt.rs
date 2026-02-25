@@ -43,12 +43,23 @@ impl JwtUtil {
 
     /// 验证 JWT Token
     pub fn verify_token(token: &str, secret: &str) -> Result<Claims> {
-        let token_data = decode::<Claims>(
+        let result = decode::<Claims>(
             token,
             &DecodingKey::from_secret(secret.as_bytes()),
             &Validation::default(),
-        )?;
+        );
 
-        Ok(token_data.claims)
+        match result {
+            Ok(token_data) => Ok(token_data.claims),
+            Err(e) => {
+                if let jsonwebtoken::errors::ErrorKind::ExpiredSignature = e.kind() {
+                    Err(crate::error::AppError::VerifyTokenInvalid(
+                        "Token已过期".to_string(),
+                    ))
+                } else {
+                    Err(crate::error::AppError::Jwt(e))
+                }
+            }
+        }
     }
 }

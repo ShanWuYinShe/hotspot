@@ -1,242 +1,186 @@
 /**
- * 智能通知中心组件
- * 展示和管理所有类型的智能通知
+ * 通知中心（HTTP + WebSocket 联动）
  */
-import { SmartNotification, SmartNotificationService, NotificationFilter, NotificationAction, NotificationEvent } from '../core/services/SmartNotificationService';
+import { NotificationSyncService } from '../core/services/NotificationSyncService';
+import { NotificationItem, NotificationPayload, NotificationType } from '../core/types/api';
 import { SystemIcon, AppIcon } from './SystemIcon';
 import { SystemToast } from './SystemToast';
 import { AccessibilityManager } from '../core/accessibility/AccessibilityManager';
 import { DesignConstants } from '../constants/DesignConstants';
+import { SmartNotificationService, NotificationEvent, SmartNotification } from '../core/services/SmartNotificationService';
+import { LoadingMoreIndicator, RefreshIndicator } from './EmptyState';
 
-interface FilterOption {
-  key: string;
-  label: string;
+type NotificationFilterKey = 'all' | 'unread' | 'social' | 'interaction' | 'group' | 'system';
+
+class NotificationFilterOption {
+  key: string = '';
+  label: string = '';
+  constructor(key: string, label: string) {
+    this.key = key;
+    this.label = label;
+  }
 }
 
 @Component
 export struct NotificationCenter {
-  @State private notifications: SmartNotification[] = [];
-  @State private selectedFilter: 'all' | 'unread' | 'performance' | 'social' = 'all';
+  @State private visibleNotifications: NotificationItem[] = [];
+  @State private selectedFilter: NotificationFilterKey = 'all';
   @State private isLoading: boolean = false;
+  @State private isRefreshing: boolean = false;
+  @State private isLoadingMore: boolean = false;
+  @State private hasMore: boolean = false;
   @State private errorMessage: string = '';
-  @State private showActions: boolean = false;
 
-  private notificationService = SmartNotificationService.getInstance();
+  private syncService = NotificationSyncService.getInstance();
   private accessibilityManager = AccessibilityManager.getInstance();
-  /** 通知创建事件监听器引用，用于 aboutToDisappear 清理 */
+  private smartNotificationService = SmartNotificationService.getInstance();
+  private filterOptions: NotificationFilterOption[] = [
+    new NotificationFilterOption('all', '全部'),
+    new NotificationFilterOption('unread', '未读'),
+    new NotificationFilterOption('social', '社交'),
+    new NotificationFilterOption('interaction', '互动'),
+    new NotificationFilterOption('group', '群组'),
+    new NotificationFilterOption('system', '系统')
+  ];
+
+  private syncListener: (() => void) | null = null;
   private notificationCreatedListener: ((event: NotificationEvent, notification: SmartNotification, extra?: Object) => void) | null = null;
 
   aboutToAppear() {
-    this.loadNotifications();
+    this.attachSyncListener();
+    this.refreshNotifications();
     this.setupNotificationListener();
   }
 
   aboutToDisappear() {
-    // 移除通知事件监听器，避免组件销毁后监听器堆积
+    if (this.syncListener) {
+      this.syncService.unsubscribe(this.syncListener);
+      this.syncListener = null;
+    }
     if (this.notificationCreatedListener) {
-      this.notificationService.removeEventListener(NotificationEvent.CREATED, this.notificationCreatedListener);
+      this.smartNotificationService.removeEventListener(NotificationEvent.CREATED, this.notificationCreatedListener);
       this.notificationCreatedListener = null;
     }
   }
 
-  /**
-   * 加载通知
-   */
-  private loadNotifications(): void {
+  private attachSyncListener(): void {
+    if (this.syncListener) {
+      return;
+    }
+    this.syncListener = () => {
+      this.applyFilter();
+      this.hasMore = this.syncService.hasMoreData();
+      this.errorMessage = this.syncService.getLastError();
+    };
+    this.syncService.subscribe(this.syncListener);
+  }
+
+  private setupNotificationListener(): void {
+    this.notificationCreatedListener = () => {
+      if (!this.isLoading && !this.isRefreshing) {
+        this.refreshNotifications();
+      }
+    };
+    this.smartNotificationService.addEventListener(NotificationEvent.CREATED, this.notificationCreatedListener);
+  }
+
+  private async refreshNotifications(): Promise<void> {
+    if (this.isLoading) {
+      return;
+    }
+
+    this.isLoading = true;
+    this.errorMessage = '';
+
     try {
-      this.isLoading = true;
-      this.errorMessage = '';
-      
-      let filter: NotificationFilter | undefined = undefined;
-      if (this.selectedFilter !== 'all') {
-        filter = {
-          type: this.selectedFilter === 'unread' ? undefined : this.selectedFilter as ('system' | 'performance' | 'social' | 'security'),
-          read: this.selectedFilter === 'unread' ? false : undefined
-        };
-      }
-      
-      this.notifications = this.notificationService.getNotifications(filter);
-      
+      await this.syncService.refresh();
+      await this.syncService.syncUnreadCount();
+      this.applyFilter();
+      this.hasMore = this.syncService.hasMoreData();
     } catch (error) {
-      if (this.notifications.length === 0) {
-        this.errorMessage = '加载通知失败';
+      const message = error instanceof Error ? error.message : '加载通知失败';
+      if (this.visibleNotifications.length === 0) {
+        this.errorMessage = message;
       }
+      SystemToast.showError(message, this.getUIContext());
     } finally {
       this.isLoading = false;
+      this.isRefreshing = false;
     }
   }
 
-  /**
-   * 设置通知监听器
-   */
-  private setupNotificationListener(): void {
-    this.notificationCreatedListener = (_event: NotificationEvent, notification: SmartNotification): void => {
-      this.loadNotifications();
+  private async loadMoreNotifications(): Promise<void> {
+    if (this.isLoadingMore || !this.hasMore) {
+      return;
+    }
 
-      // 无障碍播报新通知
-      this.accessibilityManager.announceText(
-        `收到新通知：${notification.title}`,
-        notification.priority === 'critical' ? 'high' : 'medium'
-      );
-    };
-    this.notificationService.addEventListener(NotificationEvent.CREATED, this.notificationCreatedListener);
-  }
-
-  /**
-   * 处理通知点击
-   */
-  private async onNotificationClick(notification: SmartNotification): Promise<void> {
+    this.isLoadingMore = true;
     try {
-      // 标记为已读
-      if (!notification.read) {
-        await this.notificationService.markAsRead(notification.id);
-        this.loadNotifications();
-      }
-
-      // 无障碍播报
-      await this.accessibilityManager.announceText(`已打开通知：${notification.title}`);
-
-      // 执行通知相关的操作
-      if (notification.actionable && notification.actions && notification.actions.length > 0) {
-        // 如果有操作，显示操作菜单
-        this.showNotificationActions(notification);
-      } else {
-        // 否则显示通知详情
-        this.showNotificationDetail(notification);
-      }
-      
+      await this.syncService.loadMore();
+      this.applyFilter();
+      this.hasMore = this.syncService.hasMoreData();
     } catch (error) {
-      SystemToast.showError(`处理通知失败: ${error}`, this.getUIContext());
+      const message = error instanceof Error ? error.message : '加载更多通知失败';
+      SystemToast.showError(message, this.getUIContext());
+    } finally {
+      this.isLoadingMore = false;
     }
   }
 
-  /**
-   * 执行通知操作
-   */
-  private async executeNotificationAction(notification: SmartNotification, actionId: string): Promise<void> {
-    try {
-      const action = notification.actions?.find(a => a.id === actionId);
-      if (action) {
-        await action.handler();
-        SystemToast.showSuccess(`已执行操作：${action.label}`, this.getUIContext());
-        this.loadNotifications();
-      }
-    } catch (error) {
-      SystemToast.showError(`执行操作失败: ${error}`, this.getUIContext());
+  private applyFilter(): void {
+    const items = this.syncService.getNotifications();
+    let filtered = items;
+
+    if (this.selectedFilter === 'unread') {
+      filtered = items.filter(item => !item.is_read);
+    } else if (this.selectedFilter !== 'all') {
+      filtered = items.filter(item => this.mapTypeToCategory(item.type) === this.selectedFilter);
     }
+
+    this.visibleNotifications = filtered;
   }
 
-  /**
-   * 删除通知
-   */
-  private async deleteNotification(notification: SmartNotification): Promise<void> {
-    try {
-      await this.notificationService.deleteNotification(notification.id);
-      this.loadNotifications();
-      SystemToast.showSuccess('通知已删除', this.getUIContext());
-      
-      // 无障碍播报
-      await this.accessibilityManager.announceText('通知已删除');
-      
-    } catch (error) {
-      SystemToast.showError(`删除通知失败: ${error}`, this.getUIContext());
+  private onFilterSelected(filter: NotificationFilterKey): void {
+    if (this.selectedFilter === filter) {
+      return;
     }
+    this.selectedFilter = filter;
+    this.applyFilter();
   }
 
-  /**
-   * 全部标记为已读
-   */
-  private async markAllAsRead(): Promise<void> {
+  private async onMarkAllRead(): Promise<void> {
     try {
-      let filter: NotificationFilter | undefined = undefined;
-      if (this.selectedFilter !== 'all' && this.selectedFilter !== 'unread') {
-        filter = {
-          type: this.selectedFilter as ('system' | 'performance' | 'social' | 'security')
-        };
-      } else if (this.selectedFilter === 'unread') {
-        filter = {
-          read: false
-        };
-      }
-      
-      await this.notificationService.markAllAsRead(filter);
-      this.loadNotifications();
+      await this.syncService.markAllAsRead();
+      await this.syncService.syncUnreadCount();
+      this.applyFilter();
       SystemToast.showSuccess('已全部标记为已读', this.getUIContext());
-      
-      // 无障碍播报
-      await this.accessibilityManager.announceText('所有通知已标记为已读');
-      
     } catch (error) {
-      SystemToast.showError(`标记失败: ${error}`, this.getUIContext());
+      const message = error instanceof Error ? error.message : '标记失败';
+      SystemToast.showError(message, this.getUIContext());
     }
   }
 
-  /**
-   * 获取通知类型图标
-   */
-  private getNotificationIcon(notification: SmartNotification): AppIcon {
-    switch (notification.type) {
-      case 'system':
-        return AppIcon.SETTINGS;
-      case 'performance':
-        return AppIcon.CHART;
-      case 'social':
-        return AppIcon.PERSON;
-      case 'security':
-        return AppIcon.SHIELD;
-      default:
-        return AppIcon.INFO;
+  private async onMarkRead(notification: NotificationItem): Promise<void> {
+    if (notification.is_read) {
+      return;
+    }
+    try {
+      await this.syncService.markAsRead([notification.notification_id]);
+      await this.syncService.syncUnreadCount();
+      this.applyFilter();
+      await this.accessibilityManager.announceText('通知已标记为已读');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '标记失败';
+      SystemToast.showError(message, this.getUIContext());
     }
   }
 
-  /**
-   * 获取优先级颜色
-   */
-  private getPriorityColor(priority: 'low' | 'medium' | 'high' | 'critical'): ResourceColor {
-    switch (priority) {
-      case 'low':
-        return Color.Gray;
-      case 'medium':
-        return Color.Blue;
-      case 'high':
-        return Color.Orange;
-      case 'critical':
-        return Color.Red;
-      default:
-        return Color.Gray;
+  private async handleNotificationClick(notification: NotificationItem): Promise<void> {
+    await this.onMarkRead(notification);
+    const message = this.buildNotificationMessage(notification);
+    if (message.trim().length > 0) {
+      SystemToast.showInfo(message, this.getUIContext());
     }
-  }
-
-  /**
-   * 获取类型文本
-   */
-  private getTypeText(type: 'system' | 'performance' | 'social' | 'security'): string {
-    switch (type) {
-      case 'system':
-        return '系统';
-      case 'performance':
-        return '性能';
-      case 'social':
-        return '社交';
-      case 'security':
-        return '安全';
-      default:
-        return '未知';
-    }
-  }
-
-  /**
-   * 显示通知操作菜单
-   */
-  private showNotificationActions(notification: SmartNotification): void {
-    SystemToast.showInfo(`显示${notification.title}的操作菜单`, this.getUIContext());
-  }
-
-  /**
-   * 显示通知详情
-   */
-  private showNotificationDetail(notification: SmartNotification): void {
-    SystemToast.showInfo(`显示${notification.title}的详情`, this.getUIContext());
   }
 
   build() {
@@ -249,18 +193,17 @@ export struct NotificationCenter {
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
 
-        // 操作按钮
         Row({ space: 12 }) {
           SystemIcon({
             icon: AppIcon.CHECK_ALL,
             iconSize: 20,
-            onIconClick: () => this.markAllAsRead()
+            onIconClick: () => this.onMarkAllRead()
           })
 
           SystemIcon({
             icon: AppIcon.REFRESH,
             iconSize: 20,
-            onIconClick: () => this.loadNotifications()
+            onIconClick: () => this.refreshNotifications()
           })
         }
       }
@@ -270,51 +213,38 @@ export struct NotificationCenter {
       // 过滤器
       Scroll(new Scroller()) {
         Row({ space: 8 }) {
-          ForEach([
-            { key: 'all', label: '全部' } as FilterOption,
-            { key: 'unread', label: '未读' } as FilterOption,
-            { key: 'performance', label: '性能' } as FilterOption,
-            { key: 'social', label: '社交' } as FilterOption,
-          ], (filter: FilterOption) => {
+          ForEach(this.filterOptions, (filter: NotificationFilterOption) => {
             Button(filter.label)
               .type(this.selectedFilter === filter.key ? ButtonType.Capsule : ButtonType.Normal)
-              .backgroundColor(this.selectedFilter === filter.key 
-                ? $r('sys.color.ohos_id_color_emphasize') 
+              .backgroundColor(this.selectedFilter === filter.key
+                ? $r('sys.color.ohos_id_color_emphasize')
                 : $r('app.color.bg_secondary'))
-              .fontColor(this.selectedFilter === filter.key 
-                ? Color.White 
-                : $r('sys.color.ohos_id_color_text_primary'))
+              .fontColor(this.selectedFilter === filter.key ? Color.White : $r('sys.color.ohos_id_color_text_primary'))
               .fontSize(14)
               .padding({ left: 16, right: 16, top: 8, bottom: 8 })
-              .onClick(() => {
-                this.selectedFilter = filter.key as ('all' | 'unread' | 'performance' | 'social');
-                this.loadNotifications();
-              })
-          }, (filter: FilterOption) => filter.key)
+              .onClick(() => this.onFilterSelected(filter.key as NotificationFilterKey))
+          }, (filter: NotificationFilterOption) => filter.key)
         }
         .padding({ left: 16, right: 16 })
       }
       .scrollable(ScrollDirection.Horizontal)
       .scrollBar(BarState.Off)
 
-      // 通知列表
+      // 内容区域
       if (this.isLoading) {
-        Column() {
+        Column({ space: 12 }) {
           LoadingProgress()
             .width(32)
             .height(32)
             .color($r('sys.color.ohos_id_color_emphasize'))
-          
           Text('加载中...')
             .fontSize(14)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-            .margin({ top: 8 })
         }
         .width('100%')
         .height(200)
         .justifyContent(FlexAlign.Center)
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
-      } else if (this.notifications.length === 0 && this.errorMessage) {
+      } else if (this.visibleNotifications.length === 0 && this.errorMessage) {
         Column({ space: DesignConstants.SPACING.LG }) {
           SystemIcon({
             icon: AppIcon.WARNING,
@@ -330,51 +260,59 @@ export struct NotificationCenter {
             .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
             .fontColor(Color.White)
             .height(40)
-            .onClick(() => { this.loadNotifications(); })
+            .onClick(() => this.refreshNotifications())
         }
         .width('100%')
         .layoutWeight(1)
         .justifyContent(FlexAlign.Center)
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
-      } else if (this.notifications.length === 0) {
-        Refresh({ refreshing: $$this.isLoading, builder: this.RefreshBuilder() }) {
-          Column() {
+      } else if (this.visibleNotifications.length === 0) {
+        Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
+          Column({ space: 12 }) {
             SystemIcon({
               icon: AppIcon.EMPTY,
               iconSize: 48,
               iconColor: $r('sys.color.ohos_id_color_text_tertiary')
             })
-            
             Text('暂无通知')
               .fontSize(16)
               .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-              .margin({ top: 16 })
           }
           .width('100%')
           .height('100%')
           .justifyContent(FlexAlign.Center)
         }
         .onRefreshing(() => {
-          this.loadNotifications();
+          if (!this.isRefreshing) {
+            this.isRefreshing = true;
+            this.refreshNotifications();
+          }
         })
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
-        Refresh({ refreshing: $$this.isLoading, builder: this.RefreshBuilder() }) {
-          List({ space: 8 }) {
-            ForEach(this.notifications, (notification: SmartNotification) => {
+        Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
+          List({ space: 12 }) {
+            ForEach(this.visibleNotifications, (notification: NotificationItem) => {
               ListItem() {
                 this.buildNotificationItem(notification)
               }
-            }, (item: SmartNotification) => item.id)
+            }, (notification: NotificationItem) => notification.notification_id)
+
+            if (this.isLoadingMore) {
+              ListItem() {
+                LoadingMoreIndicator({ message: '正在加载更多通知...' })
+              }
+            }
           }
           .width('100%')
-          .padding({ left: 16, right: 16 })
+          .padding({ left: 16, right: 16, bottom: 4 })
+          .onReachEnd(() => this.loadMoreNotifications())
         }
         .layoutWeight(1)
         .onRefreshing(() => {
-          this.loadNotifications();
+          if (!this.isRefreshing) {
+            this.isRefreshing = true;
+            this.refreshNotifications();
+          }
         })
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
     }
     .width('100%')
@@ -383,39 +321,16 @@ export struct NotificationCenter {
   }
 
   @Builder
-  RefreshBuilder() {
-    Row() {
-      LoadingProgress().width(24).height(24)
-      Text('正在刷新...').fontSize(14).margin({left: 8}).fontColor($r('sys.color.ohos_id_color_text_secondary'))
-    }
-    .width('100%')
-    .justifyContent(FlexAlign.Center)
-    .padding(10)
-  }
-
-  /**
-   * 构建通知项
-   */
-  @Builder
-  private buildNotificationItem(notification: SmartNotification) {
+  private buildNotificationItem(notification: NotificationItem) {
     Row({ space: 12 }) {
-      // 通知图标和优先级指示器
       Stack() {
         SystemIcon({
-          icon: this.getNotificationIcon(notification),
+          icon: this.getNotificationIcon(notification.type),
           iconSize: 24,
           iconColor: $r('sys.color.ohos_id_color_emphasize')
         })
 
-        // 优先级指示器
-        if (notification.priority === 'high' || notification.priority === 'critical') {
-          Circle({ width: 8, height: 8 })
-            .fill(this.getPriorityColor(notification.priority))
-            .position({ x: 20, y: 0 })
-        }
-
-        // 未读指示器
-        if (!notification.read) {
+        if (!notification.is_read) {
           Circle({ width: 6, height: 6 })
             .fill($r('sys.color.ohos_id_color_emphasize'))
             .position({ x: 22, y: 22 })
@@ -424,81 +339,211 @@ export struct NotificationCenter {
       .width(32)
       .height(32)
 
-      // 通知内容
-      Column({ space: 4 }) {
+      Column({ space: 6 }) {
         Row() {
-          Text(notification.title)
+          Text(this.buildNotificationTitle(notification))
             .fontSize(16)
-            .fontWeight(notification.read ? FontWeight.Normal : FontWeight.Medium)
+            .fontWeight(notification.is_read ? FontWeight.Normal : FontWeight.Medium)
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .layoutWeight(1)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .layoutWeight(1)
 
-          Text(this.getTypeText(notification.type))
+          Text(this.getFilterLabel(this.mapTypeToCategory(notification.type)))
             .fontSize(12)
             .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
-            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 2, bottom: 2 })
+            .padding({ left: 8, right: 8, top: 2, bottom: 2 })
             .backgroundColor($r('app.color.bg_secondary'))
-            .borderRadius(DesignConstants.SPACING.XS)
+            .borderRadius(DesignConstants.RADIUS.SM)
         }
-        .width('100%')
 
-        Text(notification.message)
+        Text(this.buildNotificationMessage(notification))
           .fontSize(14)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .alignSelf(ItemAlign.Start)
 
         Row() {
-          Text(new Date(notification.timestamp).toLocaleString())
+          Text(this.formatTimestamp(notification.created_at))
             .fontSize(12)
             .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
             .layoutWeight(1)
 
-          // 操作按钮
-          if (notification.actionable && notification.actions) {
-            Row({ space: 8 }) {
-              ForEach(notification.actions.slice(0, 2), (action: NotificationAction) => {
-                Button(action.label)
-                  .type(ButtonType.Capsule)
-                  .backgroundColor(action.type === 'primary' 
-                    ? $r('sys.color.ohos_id_color_emphasize')
-                    : action.type === 'danger'
-                    ? Color.Red
-                    : $r('app.color.bg_secondary'))
-                  .fontColor(action.type === 'secondary' 
-                    ? $r('sys.color.ohos_id_color_text_primary')
-                    : Color.White)
-                  .fontSize(12)
-                  .padding({ left: 12, right: 12, top: 4, bottom: 4 })
-                  .onClick(() => this.executeNotificationAction(notification, action.id))
-              }, (action: NotificationAction) => action.id)
-            }
+          if (!notification.is_read) {
+            Button('标记已读')
+              .type(ButtonType.Capsule)
+              .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+              .fontColor(Color.White)
+              .fontSize(12)
+              .height(32)
+              .padding({ left: 12, right: 12 })
+              .onClick(() => this.onMarkRead(notification))
           }
-
-          // 删除按钮
-          SystemIcon({
-            icon: AppIcon.DELETE,
-            iconSize: 16,
-            iconColor: $r('sys.color.ohos_id_color_text_tertiary'),
-            onIconClick: () => this.deleteNotification(notification)
-          })
         }
-        .width('100%')
       }
-      .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
     }
     .width('100%')
     .padding(16)
-    .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(8)
-    .onClick(() => this.onNotificationClick(notification))
-    // 无障碍属性
+    .backgroundColor($r('app.color.bg_primary'))
+    .borderRadius(DesignConstants.RADIUS.LG)
+    .onClick(() => this.handleNotificationClick(notification))
     .accessibilityGroup(true)
-    .accessibilityText(`${notification.read ? '' : '未读'}${this.getTypeText(notification.type)}通知：${notification.title}。${notification.message}`)
-    .accessibilityDescription(`发送时间：${new Date(notification.timestamp).toLocaleString()}，点击查看详情`)
+    .accessibilityText(`${notification.is_read ? '' : '未读'}通知：${this.buildNotificationTitle(notification)}。${this.buildNotificationMessage(notification)}`)
+  }
+
+  private getFilterLabel(filter: NotificationFilterKey): string {
+    switch (filter) {
+      case 'unread':
+        return '未读';
+      case 'social':
+        return '社交';
+      case 'interaction':
+        return '互动';
+      case 'group':
+        return '群组';
+      case 'system':
+        return '系统';
+      default:
+        return '全部';
+    }
+  }
+
+  private formatTimestamp(iso: string): string {
+    try {
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) {
+        return iso;
+      }
+      const month = this.padNumber(date.getMonth() + 1);
+      const day = this.padNumber(date.getDate());
+      const hour = this.padNumber(date.getHours());
+      const minute = this.padNumber(date.getMinutes());
+      return `${month}-${day} ${hour}:${minute}`;
+    } catch (_) {
+      return iso;
+    }
+  }
+
+  private padNumber(value: number): string {
+    return value < 10 ? `0${value}` : `${value}`;
+  }
+
+  private buildNotificationTitle(notification: NotificationItem): string {
+    switch (notification.type) {
+      case 'new_follower':
+        return '新的关注者';
+      case 'mutual_follow':
+        return '互相关注';
+      case 'moment_liked':
+        return '瞬间获赞';
+      case 'moment_commented':
+        return '新的评论';
+      case 'comment_liked':
+        return '评论获赞';
+      case 'comment_reply':
+        return '评论被回复';
+      case 'mentioned':
+        return '被提及';
+      case 'group_invite_received':
+        return '群组邀请';
+      case 'group_invite_accepted':
+        return '邀请已接受';
+      case 'group_application_received':
+        return '新的入群申请';
+      case 'group_application_accepted':
+        return '申请已通过';
+      case 'system_announcement':
+        return '系统通知';
+      default:
+        return '通知';
+    }
+  }
+
+  private buildNotificationMessage(notification: NotificationItem): string {
+    const payload = notification.payload;
+    const actor = this.getActorName(payload);
+    switch (notification.type) {
+      case 'new_follower':
+        return `${actor} 关注了你`;
+      case 'mutual_follow':
+        return `你与 ${actor} 已互相关注`;
+      case 'moment_liked':
+        return `${actor} 赞了你的动态`;
+      case 'moment_commented':
+        return `${actor}: ${payload?.comment_preview ?? '发表了评论'}`;
+      case 'comment_liked':
+        return `${actor} 赞了你的评论`;
+      case 'comment_reply':
+        return `${actor}: ${payload?.reply_content_preview ?? '回复了你的评论'}`;
+      case 'mentioned':
+        return `${actor} 在动态中提到了你`;
+      case 'group_invite_received':
+        return `${payload?.group_name ?? '某群组'} 邀请你加入`;
+      case 'group_invite_accepted':
+        return `${actor} 接受了群组邀请`;
+      case 'group_application_received':
+        return `${actor} 申请加入 ${payload?.group_name ?? '群组'}`;
+      case 'group_application_accepted':
+        return `你加入了 ${payload?.group_name ?? '群组'}`;
+      case 'system_announcement':
+        return payload?.message ?? '请查看系统公告';
+      default:
+        return payload?.message ?? '';
+    }
+  }
+
+  private getNotificationIcon(type: NotificationType): AppIcon {
+    switch (this.mapTypeToCategory(type)) {
+      case 'social':
+        return AppIcon.PERSON;
+      case 'interaction':
+        return AppIcon.MESSAGE;
+      case 'group':
+        return AppIcon.GROUP;
+      case 'system':
+        return AppIcon.INFO;
+      default:
+        return AppIcon.NOTIFICATION;
+    }
+  }
+
+  private getActorName(payload?: NotificationPayload): string {
+    if (!payload) {
+      return '有人';
+    }
+    if (payload.actor?.nickname) {
+      return payload.actor.nickname;
+    }
+    if (payload.user?.nickname) {
+      return payload.user.nickname;
+    }
+    if (payload.applicant?.nickname) {
+      return payload.applicant.nickname;
+    }
+    return '有人';
+  }
+
+  private mapTypeToCategory(type: NotificationType): NotificationFilterKey {
+    switch (type) {
+      case 'new_follower':
+      case 'mutual_follow':
+        return 'social';
+      case 'moment_liked':
+      case 'moment_commented':
+      case 'comment_liked':
+      case 'comment_reply':
+      case 'mentioned':
+        return 'interaction';
+      case 'group_invite_received':
+      case 'group_invite_accepted':
+      case 'group_application_received':
+      case 'group_application_accepted':
+        return 'group';
+      case 'system_announcement':
+        return 'system';
+      default:
+        return 'social';
+    }
   }
 }

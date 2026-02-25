@@ -18,12 +18,13 @@ use crate::repositories::{
 use crate::services::media_service::MediaService;
 use crate::types::enums::ShareType;
 use crate::utils::{
-    cache::{cache_keys, CacheManager},
+    cache::{cache_keys, CacheManager, RateLimiter},
     id_gen,
     pagination::{decode_cursor, encode_cursor, paginate_with_limit_plus_one},
     validation::Validator,
 };
 use chrono::{DateTime, Utc};
+use redis::aio::ConnectionManager;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::{collections::HashMap, sync::Arc};
@@ -33,6 +34,7 @@ use uuid::Uuid;
 #[derive(Clone)]
 pub struct ShareService {
     db: PgPool,
+    redis: ConnectionManager,
     media_service: Arc<MediaService>,
     cache_manager: CacheManager,
     moment_repo: MomentRepository,
@@ -43,6 +45,7 @@ pub struct ShareService {
 impl ShareService {
     pub fn new(
         db: PgPool,
+        redis: ConnectionManager,
         media_service: Arc<MediaService>,
         cache_manager: CacheManager,
         moment_repo: MomentRepository,
@@ -51,6 +54,7 @@ impl ShareService {
     ) -> Self {
         Self {
             db,
+            redis,
             media_service,
             cache_manager,
             moment_repo,
@@ -112,7 +116,13 @@ impl ShareService {
     }
 
     /// 获取分享详情
-    pub async fn get_share(&self, req: GetShareRequest) -> Result<ShareDetail, AppError> {
+    pub async fn get_share(
+        &self,
+        req: GetShareRequest,
+        user_id: Option<i64>,
+        client_ip: &str,
+    ) -> Result<ShareDetail, AppError> {
+        self.enforce_get_rate_limit(user_id, client_ip).await?;
         // 获取分享
         let db_share = ShareRepository::get_by_code(&self.db, &req.share_code)
             .await?
@@ -166,6 +176,49 @@ impl ShareService {
             payload: db_share.payload,
             preview: None, // 已撤销、已过期或目标不可访问时不返回 preview
         })
+    }
+
+    async fn enforce_get_rate_limit(
+        &self,
+        user_id: Option<i64>,
+        client_ip: &str,
+    ) -> Result<(), AppError> {
+        const IP_LIMIT: i64 = 10;
+        const USER_LIMIT: i64 = 30;
+        const WINDOW_SECS: i64 = 60;
+        let limiter = RateLimiter::new(self.redis.clone());
+
+        if limiter
+            .is_rate_limited(
+                &format!("share_get:ip:{}", client_ip),
+                IP_LIMIT,
+                WINDOW_SECS,
+            )
+            .await
+            .unwrap_or(false)
+        {
+            tracing::warn!(ip = client_ip, "share get rate limit (ip)");
+            return Err(AppError::ShareRateLimited {
+                message: "分享查看请求过于频繁，请稍后再试".to_string(),
+                retry_after: WINDOW_SECS as u32,
+            });
+        }
+
+        if let Some(uid) = user_id {
+            if limiter
+                .is_rate_limited(&format!("share_get:user:{}", uid), USER_LIMIT, WINDOW_SECS)
+                .await
+                .unwrap_or(false)
+            {
+                tracing::warn!(user_id = uid, "share get rate limit (user)");
+                return Err(AppError::ShareRateLimited {
+                    message: "分享查看请求过于频繁，请稍后再试".to_string(),
+                    retry_after: WINDOW_SECS as u32,
+                });
+            }
+        }
+
+        Ok(())
     }
 
     /// 撤销分享（按 share_id）
@@ -662,35 +715,52 @@ impl ShareService {
     ) -> Result<(), AppError> {
         match share_type {
             ShareType::Location => {
-                // 验证位置分享的 payload
-                let latitude = payload
-                    .get("latitude")
-                    .and_then(|v| v.as_f64())
-                    .ok_or(AppError::OutOfRange("缺少 latitude 字段".to_string()))?;
+                let shared_location = payload
+                    .get("shared_location")
+                    .ok_or(AppError::MissingParameter("shared_location".to_string()))?;
 
-                let longitude = payload
-                    .get("longitude")
-                    .and_then(|v| v.as_f64())
-                    .ok_or(AppError::OutOfRange("缺少 longitude 字段".to_string()))?;
+                let point = shared_location
+                    .get("point")
+                    .ok_or(AppError::MissingParameter(
+                        "shared_location.point".to_string(),
+                    ))?;
 
-                let location_name = payload
+                let lat =
+                    point
+                        .get("lat")
+                        .and_then(|v| v.as_f64())
+                        .ok_or(AppError::MissingParameter(
+                            "shared_location.point.lat".to_string(),
+                        ))?;
+
+                let lng =
+                    point
+                        .get("lng")
+                        .and_then(|v| v.as_f64())
+                        .ok_or(AppError::MissingParameter(
+                            "shared_location.point.lng".to_string(),
+                        ))?;
+
+                let location_name = shared_location
                     .get("location_name")
                     .and_then(|v| v.as_str())
-                    .ok_or(AppError::OutOfRange("缺少 location_name 字段".to_string()))?;
+                    .ok_or(AppError::MissingParameter(
+                        "shared_location.location_name".to_string(),
+                    ))?;
 
-                if !(-90.0..=90.0).contains(&latitude) {
+                if !(-90.0..=90.0).contains(&lat) {
                     return Err(AppError::OutOfRange(
                         "纬度必须在 -90 到 90 之间".to_string(),
                     ));
                 }
-                if !(-180.0..=180.0).contains(&longitude) {
+                if !(-180.0..=180.0).contains(&lng) {
                     return Err(AppError::OutOfRange(
                         "经度必须在 -180 到 180 之间".to_string(),
                     ));
                 }
                 if location_name.is_empty() || location_name.len() > 100 {
                     return Err(AppError::OutOfRange(
-                        "位置名称长度必须在 1-255 之间".to_string(),
+                        "位置名称长度必须在 1-100 之间".to_string(),
                     ));
                 }
 

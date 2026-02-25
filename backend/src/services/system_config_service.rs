@@ -245,51 +245,55 @@ impl SystemConfigService {
         admin_id: i64,
     ) -> Result<GlobalSettings> {
         let mut updates = HashMap::new();
+        let rl = &req.rate_limits;
 
-        if let Some(v) = req.ip_per_hour {
-            updates.insert("rate_limits.ip_per_hour", v.to_string());
+        if let Some(v) = rl.global_per_hour {
+            updates.insert("rate_limits.global_per_hour", v.to_string());
         }
-        if let Some(v) = req.user_per_5minutes {
-            updates.insert("rate_limits.user_per_5minutes", v.to_string());
-        }
-        if let Some(v) = req.user_per_hour {
+        if let Some(v) = rl.user_per_hour {
             updates.insert("rate_limits.user_per_hour", v.to_string());
         }
-        if let Some(v) = req.auth_send_code_per_minute {
-            updates.insert("rate_limits.auth_send_code_per_minute", v.to_string());
-        }
-        if let Some(v) = req.auth_verify_code_per_10minutes {
-            updates.insert("rate_limits.auth_verify_code_per_10minutes", v.to_string());
-        }
-        if let Some(v) = req.auth_register_per_10minutes {
+        if let Some(v) = rl.auth_register_per_10minutes {
             updates.insert("rate_limits.auth_register_per_10minutes", v.to_string());
         }
-        if let Some(v) = req.auth_login_per_10minutes {
+        if let Some(v) = rl.auth_login_per_10minutes {
             updates.insert("rate_limits.auth_login_per_10minutes", v.to_string());
         }
-        if let Some(v) = req.auth_guest_per_10minutes {
+        if let Some(v) = rl.auth_guest_per_10minutes {
             updates.insert("rate_limits.auth_guest_per_10minutes", v.to_string());
         }
-        if let Some(v) = req.auth_refresh_per_10minutes {
+        if let Some(v) = rl.auth_refresh_per_10minutes {
             updates.insert("rate_limits.auth_refresh_per_10minutes", v.to_string());
         }
-        if let Some(v) = req.auth_reset_request_per_minute {
-            updates.insert("rate_limits.auth_reset_request_per_minute", v.to_string());
-        }
-        if let Some(v) = req.auth_reset_verify_per_10minutes {
-            updates.insert("rate_limits.auth_reset_verify_per_10minutes", v.to_string());
-        }
-        if let Some(v) = req.auth_reset_per_10minutes {
+        if let Some(v) = rl.auth_reset_per_10minutes {
             updates.insert("rate_limits.auth_reset_per_10minutes", v.to_string());
         }
-        if let Some(v) = req.moments_create_per_minute {
+        if let Some(v) = rl.moments_create_per_minute {
             updates.insert("rate_limits.moments_create_per_minute", v.to_string());
         }
-        if let Some(v) = req.comments_create_per_minute {
+        if let Some(v) = rl.comments_create_per_minute {
             updates.insert("rate_limits.comments_create_per_minute", v.to_string());
         }
-        if let Some(v) = req.reports_create_per_hour {
+        if let Some(v) = rl.search_per_minute {
+            updates.insert("rate_limits.search_per_minute", v.to_string());
+        }
+        if let Some(v) = rl.write_per_minute {
+            updates.insert("rate_limits.write_per_minute", v.to_string());
+        }
+        if let Some(v) = rl.reports_create_per_hour {
             updates.insert("rate_limits.reports_create_per_hour", v.to_string());
+        }
+        if let Some(v) = rl.upload_presign_per_hour {
+            updates.insert("rate_limits.upload_presign_per_hour", v.to_string());
+        }
+        if let Some(v) = rl.ws_subscribe_per_second {
+            updates.insert("rate_limits.ws_subscribe_per_second", v.to_string());
+        }
+        if let Some(v) = rl.admin_read_per_minute {
+            updates.insert("rate_limits.admin_read_per_minute", v.to_string());
+        }
+        if let Some(v) = rl.admin_write_per_minute {
+            updates.insert("rate_limits.admin_write_per_minute", v.to_string());
         }
 
         self.batch_update_configs(updates, admin_id).await?;
@@ -520,27 +524,22 @@ impl SystemConfigService {
             |k: &str, default: u32| map.get(k).and_then(|v| v.parse().ok()).unwrap_or(default);
 
         let rate_limits = RateLimitConfig {
-            ip_per_hour: get_u32("rate_limits.ip_per_hour", 20000),
-            user_per_5minutes: get_u32("rate_limits.user_per_5minutes", 500),
+            global_per_hour: get_u32("rate_limits.global_per_hour", 20000),
             user_per_hour: get_u32("rate_limits.user_per_hour", 5000),
-            auth_send_code_per_minute: get_u32("rate_limits.auth_send_code_per_minute", 5),
-            auth_verify_code_per_10minutes: get_u32(
-                "rate_limits.auth_verify_code_per_10minutes",
-                30,
-            ),
             auth_register_per_10minutes: get_u32("rate_limits.auth_register_per_10minutes", 10),
             auth_login_per_10minutes: get_u32("rate_limits.auth_login_per_10minutes", 30),
             auth_guest_per_10minutes: get_u32("rate_limits.auth_guest_per_10minutes", 60),
             auth_refresh_per_10minutes: get_u32("rate_limits.auth_refresh_per_10minutes", 120),
-            auth_reset_request_per_minute: get_u32("rate_limits.auth_reset_request_per_minute", 5),
-            auth_reset_verify_per_10minutes: get_u32(
-                "rate_limits.auth_reset_verify_per_10minutes",
-                20,
-            ),
             auth_reset_per_10minutes: get_u32("rate_limits.auth_reset_per_10minutes", 10),
+            search_per_minute: get_u32("rate_limits.search_per_minute", 60),
+            write_per_minute: get_u32("rate_limits.write_per_minute", 30),
             moments_create_per_minute: get_u32("rate_limits.moments_create_per_minute", 20),
             comments_create_per_minute: get_u32("rate_limits.comments_create_per_minute", 60),
             reports_create_per_hour: get_u32("rate_limits.reports_create_per_hour", 10),
+            upload_presign_per_hour: get_u32("rate_limits.upload_presign_per_hour", 100),
+            ws_subscribe_per_second: get_u32("rate_limits.ws_subscribe_per_second", 10),
+            admin_read_per_minute: get_u32("rate_limits.admin_read_per_minute", 100),
+            admin_write_per_minute: get_u32("rate_limits.admin_write_per_minute", 30),
         };
 
         let settings = GlobalSettings {

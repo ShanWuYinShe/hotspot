@@ -13,12 +13,13 @@ import type {
 	GroupApplicationItem,
 	GroupInviteItem,
 	GroupMessageItem,
+	GroupSentInviteItem,
 	MessageSent,
 	JoinGroupResult,
 	Invitation,
 	Location,
 	SendMessageType,
-	SetableGroupRole,
+	SettableGroupRole,
 	PaginationParams,
 	GeoPoint,
 	GroupRole
@@ -79,6 +80,7 @@ export const groupsService = {
 		avatar_file_id?: string;
 		tags?: string[];
 		password?: string;
+		clear_password?: boolean;
 		join_method?: 'open' | 'approval' | 'invite_only';
 		is_searchable?: boolean;
 		max_members?: number;
@@ -128,7 +130,21 @@ export const groupsService = {
 	 * 邀请成员（单个用户）
 	 */
 	invite(data: { group_id: string; user_id: string; message?: string }) {
-		return post<Invitation>(GROUPS.MEMBERS.INVITE, data);
+		return post<Invitation>(GROUPS.MEMBERS.INVITE, data, { idempotencyKey: generateIdempotencyKey() });
+	},
+
+	/**
+	 * 我发出的邀请列表
+	 */
+	getSentInvites(params: { group_id: string; status?: ApplicationStatus | 'all'; pagination?: PaginationParams }) {
+		return paginate<GroupSentInviteItem>(GROUPS.MEMBERS.INVITES_LIST, params);
+	},
+
+	/**
+	 * 撤销已发送的邀请
+	 */
+	revokeSentInvite(data: { group_id: string; invite_id: string; reason?: string }) {
+		return post<void>(GROUPS.MEMBERS.INVITES_REVOKE, data);
 	},
 
 	/**
@@ -141,7 +157,7 @@ export const groupsService = {
 	/**
 	 * 设置成员角色
 	 */
-	setRole(data: { group_id: string; user_id: string; role: SetableGroupRole }) {
+	setRole(data: { group_id: string; user_id: string; role: SettableGroupRole }) {
 		return post<void>(GROUPS.MEMBERS.SET_ROLE, data);
 	},
 

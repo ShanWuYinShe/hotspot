@@ -18,6 +18,8 @@ pub fn token_optional_routes() -> Router<AppState> {
         .route("/open_the_door", post(group_chats::open_the_door))
         // 成员列表（spec: 认证可选，带 Token 返回 @auth-only 字段）
         .route("/members/list", post(group_chats::members))
+        // 成员搜索（spec: 认证可选）
+        .route("/members/search", post(group_chats::search_members))
         // 群公告列表（spec: 认证可选）
         .route("/announcements/list", post(group_chats::list_announcements))
 }
@@ -31,8 +33,15 @@ pub fn token_required_routes() -> Router<AppState> {
         .route("/update", post(group_chats::update))
         .route("/dismiss", post(group_chats::delete))
         // 成员操作
-        .route("/members/search", post(group_chats::search_members))
         .route("/members/invite", post(group_chats::invite))
+        .route(
+            "/members/invites/list",
+            post(group_chats::list_sent_invites),
+        )
+        .route(
+            "/members/invites/revoke",
+            post(group_chats::revoke_sent_invite),
+        )
         .route("/members/set_role", post(group_chats::set_role))
         .route("/members/mute", post(group_chats::mute))
         .route("/members/unmute", post(group_chats::unmute))

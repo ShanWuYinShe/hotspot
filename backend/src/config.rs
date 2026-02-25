@@ -43,7 +43,7 @@ pub struct Config {
     pub db_pool_test_before_acquire: bool,
 
     // Rate Limit — 全局
-    pub rate_limit_ip_per_hour: u32,
+    pub rate_limit_global_per_hour: u32,
     pub rate_limit_user_per_5minutes: u32,
     pub rate_limit_user_per_hour: u32,
     /// Redis 故障时: true = fail-open（放行）, false = fail-closed（拒绝）
@@ -93,7 +93,7 @@ impl Config {
             db_pool_max_lifetime_secs: env_parse("DB_POOL_MAX_LIFETIME_SECS", "1800")?,
             db_pool_test_before_acquire: env_parse("DB_POOL_TEST_BEFORE_ACQUIRE", "true")?,
 
-            rate_limit_ip_per_hour: env_parse("RATE_LIMIT_IP_PER_HOUR", "20000")?,
+            rate_limit_global_per_hour: env_parse("RATE_LIMIT_GLOBAL_PER_HOUR", "20000")?,
             rate_limit_user_per_5minutes: env_parse("RATE_LIMIT_USER_PER_5MINUTES", "500")?,
             rate_limit_user_per_hour: env_parse("RATE_LIMIT_USER_PER_HOUR", "5000")?,
             rate_limit_fail_open: env_parse("RATE_LIMIT_FAIL_OPEN", "true")?,

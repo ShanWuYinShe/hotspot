@@ -53,6 +53,10 @@ export interface NativeMapActions {
   hide: () => void;
 }
 
+interface LongPressCapable {
+  on(eventName: string, handler: (position: mapCommon.LatLng) => void): void;
+}
+
 @Component
 export struct NativeMapComponent {
   @Watch('onDarkModeChange') @StorageProp('isDarkMode') isDarkMode: boolean = false;
@@ -76,6 +80,7 @@ export struct NativeMapComponent {
   @Watch('onLogoPaddingChange') @Prop logoPaddingBottom: number = 0;
   /** 在地图中心显示图钉 Marker（位置选择器场景），图钉始终绑定在相机目标坐标上 */
   @Prop showCenterPin: boolean = false;
+  onMapLongPress?: (coordinate: MapCoordinate) => void;
   
   // 回调函数
   onMapReady?: () => void;
@@ -257,6 +262,27 @@ export struct NativeMapComponent {
     }
   }
 
+  private registerLongPressHandler() {
+    if (!this.mapController || !this.onMapLongPress) {
+      return;
+    }
+    const controller = this.mapController as object as LongPressCapable;
+    const candidateEvents: string[] = ['longPress', 'mapLongPress', 'longClick'];
+    for (const name of candidateEvents) {
+      try {
+        controller.on(name, (position: mapCommon.LatLng) => {
+          if (!this.onMapLongPress || !position) {
+            return;
+          }
+          this.onMapLongPress({ latitude: position.latitude, longitude: position.longitude });
+        });
+        return;
+      } catch (_) {
+        // 忽略不支持的事件名称
+      }
+    }
+  }
+
   private setupMap() {
     if (!this.mapController) return;
     
@@ -346,6 +372,8 @@ export struct NativeMapComponent {
         }
       }
     });
+
+    this.registerLongPressHandler();
 
     // 监听相机空闲（用户停止拖拽/缩放后触发）
     try {
