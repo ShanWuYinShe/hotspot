@@ -11,8 +11,8 @@ use std::collections::HashMap;
 use crate::constants::{REDIS_KEY_PRESENCE_LOCATION, REDIS_KEY_PRESENCE_ONLINE};
 use crate::error::{AppError, Result};
 use crate::repositories::{
-    user_online_status_repo::UserOnlineStatusRepository,
-    user_settings_repo::{UserSettingsRepository, UserSettingsRow},
+    user::online_status_repo::UserOnlineStatusRepository,
+    user::settings_repo::{UserSettingsRepository, UserSettingsRow},
 };
 
 #[derive(Clone)]
@@ -124,7 +124,7 @@ impl PresenceService {
         // 1) 批量拿隐私设置（避免 N+1）
         let mut settings_map: HashMap<
             i64,
-            crate::repositories::user_settings_repo::UserSettingsRow,
+            crate::repositories::user::settings_repo::UserSettingsRow,
         > = HashMap::new();
         if let Ok(settings) = self.user_settings_repo.get_batch(user_ids).await {
             settings_map = settings.into_iter().map(|s| (s.user_id, s)).collect();

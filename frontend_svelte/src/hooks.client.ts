@@ -18,7 +18,7 @@ import { websocketStore } from '$lib/websocket';
 /**
  * Token 刷新管理器
  * 
- * 与 client.ts 的被动刷新（401 触发）互补：
+ * 与 client.ts 的被动刷新（code=10100 触发）互补：
  * - 本管理器：主动定时检查，提前刷新即将过期的 Token
  * - client.ts：被动刷新，API 请求收到 Token 错误码时触发
  * - 两者共享同一个 ensureRefreshToken 锁，避免并发刷新
@@ -74,14 +74,21 @@ class TokenRefreshManager {
 // ==================== 会话恢复 ====================
 
 async function restoreSessionFromServer() {
-	if (!authStore.currentUserId) {
-		return;
-	}
+	authStore.startRestoring();
 
 	try {
-		const statusRes = await authService.checkStatus();
+		let statusRes = await authService.checkStatus();
+		// check_status 是 token_optional，access_token 过期时可能直接返回 is_valid=false，
+		// 不会触发 request 层 code=10100 的自动刷新。恢复阶段显式补一次 refresh。
+		if ((!isSuccess(statusRes) || !statusRes.data?.is_valid) && authStore.currentUserId) {
+			const refreshed = await ensureRefreshToken();
+			if (refreshed) {
+				statusRes = await authService.checkStatus();
+			}
+		}
 		if (!isSuccess(statusRes) || !statusRes.data?.is_valid) {
-			authStore.logoutAll();
+			// 仅标记会话失效，保留本地账户列表，避免“临时用户直接丢失”
+			authStore.invalidateSession();
 			return;
 		}
 
@@ -102,6 +109,8 @@ async function restoreSessionFromServer() {
 	} catch (error) {
 		if (dev) console.warn('[App] 自动恢复登录状态失败:', error);
 		authStore.invalidateSession();
+	} finally {
+		authStore.finishRestoring();
 	}
 }
 
@@ -146,8 +155,8 @@ if (browser) {
 			});
 		},
 		onRefreshFail: () => {
-			// 刷新失败，清除认证状态
-			authStore.logoutAll();
+			// 刷新失败时仅清空会话态，保留账户元数据，便于重新登录恢复
+			authStore.invalidateSession();
 		}
 	});
 

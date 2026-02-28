@@ -10,7 +10,14 @@ import { AppRouter, ChatRouteParam } from '../../../core/router/AppRouter';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { PageNames } from '../../../constants/AppConstants';
-import { PrivateChatItem, GroupItem, MyProfile, MyGroupsRequest, LeaveGroupRequest } from '../../../core/types/api';
+import {
+  PrivateChatItem,
+  GroupItem,
+  MyProfile,
+  MyGroupsRequest,
+  LeaveGroupRequest,
+  DeletePrivateChatRequest
+} from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
@@ -36,10 +43,13 @@ interface ChatItem {
   avatarUrl?: string;
   lastMessage?: string;
   lastTime: string;
+  lastTimestamp: number;
+  isPinned: boolean;
   unreadCount: number;
   data: PrivateChatItem | GroupItem;
 }
 
+@Preview
 @Component
 export struct MessagePage {
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
@@ -65,6 +75,8 @@ export struct MessagePage {
   private groupHasMore: boolean = false;
   private groupNextCursor: string = '';
   @State isLoadingMore: boolean = false;
+  @State deletingChatKeys: string[] = [];
+  @State pressedChatKey: string = '';
 
   async aboutToAppear() {
     SystemUiController.useSurface({
@@ -104,11 +116,7 @@ export struct MessagePage {
         allChats = allChats.concat(groupChatsResult.value);
       }
 
-      allChats.sort((a, b) => {
-        const timeA = new Date(a.lastTime).getTime();
-        const timeB = new Date(b.lastTime).getTime();
-        return timeB - timeA;
-      });
+      allChats = this.mergeAndSortChats([], allChats);
 
       this.chatListDataSource.setData(allChats);
       this.hasData = allChats.length > 0;
@@ -137,15 +145,19 @@ export struct MessagePage {
     const cachedItems = await this.messageCacheService.getCachedChatList();
     if (cachedItems.length > 0) {
       const chats = cachedItems.map(item => {
+        const chatType = item.type as 'private' | 'group';
+        const parsedData = JSON.parse(item.data) as PrivateChatItem | GroupItem;
         const chatItem: ChatItem = {
           id: item.id,
-          type: item.type,
+          type: chatType,
           name: item.name,
           avatarUrl: item.avatarUrl,
           lastMessage: item.lastMessage,
           lastTime: item.lastTime,
+          lastTimestamp: this.parseTimestamp(item.lastTime),
+          isPinned: this.extractPinnedFromData(chatType, parsedData),
           unreadCount: item.unreadCount,
-          data: JSON.parse(item.data)
+          data: parsedData
         };
         return chatItem;
       });
@@ -189,6 +201,8 @@ export struct MessagePage {
               avatarUrl: item.other_user.avatar_url,
               lastMessage: this.formatLastMessage(item.last_message),
               lastTime: item.last_activity_at,
+              lastTimestamp: this.parseTimestamp(item.last_activity_at),
+              isPinned: item.is_pinned ?? false,
               unreadCount: item.unread_count,
               data: item
             };
@@ -220,6 +234,8 @@ export struct MessagePage {
               avatarUrl: item.group.avatar_url,
               lastMessage: '点击进入群聊',
               lastTime: item.last_activity_at || item.created_at || '',
+              lastTimestamp: this.parseTimestamp(item.last_activity_at || item.created_at || ''),
+              isPinned: item.my_state?.is_pinned ?? false,
               unreadCount: item.my_state?.unread_count || 0,
               data: item
             };
@@ -253,9 +269,8 @@ export struct MessagePage {
         }
       }
       if (newChats.length > 0) {
-        newChats.sort((a, b) => new Date(b.lastTime).getTime() - new Date(a.lastTime).getTime());
         const existingItems = this.getAllDataFromSource();
-        const mergedItems = existingItems.concat(newChats);
+        const mergedItems = this.mergeAndSortChats(existingItems, newChats);
         this.chatListDataSource.setData(mergedItems);
         this.updateCache(mergedItems);
       }
@@ -281,8 +296,67 @@ export struct MessagePage {
     return '[消息]';
   }
 
+  private extractPinnedFromData(type: 'private' | 'group', data: PrivateChatItem | GroupItem): boolean {
+    if (type === 'private') {
+      const privateData = data as PrivateChatItem;
+      return privateData.is_pinned ?? false;
+    }
+    const groupData = data as GroupItem;
+    return groupData.my_state?.is_pinned ?? false;
+  }
+
+  private parseTimestamp(value: string): number {
+    const ts = new Date(value).getTime();
+    return Number.isFinite(ts) ? ts : 0;
+  }
+
+  private buildChatKey(item: ChatItem): string {
+    return `${item.type}:${item.id}`;
+  }
+
+  private mergeAndSortChats(existing: ChatItem[], incoming: ChatItem[]): ChatItem[] {
+    const merged = new Map<string, ChatItem>();
+    const upsert = (chat: ChatItem): void => {
+      const key = this.buildChatKey(chat);
+      const previous = merged.get(key);
+      if (!previous || this.compareChatItems(chat, previous) < 0) {
+        merged.set(key, chat);
+      }
+    };
+    existing.forEach(upsert);
+    incoming.forEach(upsert);
+    const items = Array.from(merged.values());
+    items.sort((a, b) => this.compareChatItems(a, b));
+    return items;
+  }
+
+  private compareChatItems(a: ChatItem, b: ChatItem): number {
+    if (a.isPinned !== b.isPinned) {
+      return a.isPinned ? -1 : 1;
+    }
+    const timeDiff = b.lastTimestamp - a.lastTimestamp;
+    if (timeDiff !== 0) {
+      return timeDiff;
+    }
+    if (a.type !== b.type) {
+      return a.type === 'private' ? -1 : 1;
+    }
+    const numberA = Number(a.id);
+    const numberB = Number(b.id);
+    if (Number.isFinite(numberA) && Number.isFinite(numberB) && numberA !== numberB) {
+      return numberA - numberB;
+    }
+    return a.id.localeCompare(b.id);
+  }
+
   private formatTime(timeStr: string): string {
+    if (!timeStr) {
+      return '';
+    }
     const time = new Date(timeStr);
+    if (!Number.isFinite(time.getTime())) {
+      return '';
+    }
     const now = new Date();
     if (time.toDateString() === now.toDateString()) {
       return `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
@@ -310,12 +384,37 @@ export struct MessagePage {
     AppRouter.push(PageNames.CHAT, chatParams);
   }
 
+  private getChatKey(item: ChatItem): string {
+    return `${item.type}:${item.id}`;
+  }
+
+  private isChatDeleting(item: ChatItem): boolean {
+    return this.deletingChatKeys.indexOf(this.getChatKey(item)) >= 0;
+  }
+
+  private setChatDeleting(item: ChatItem, pending: boolean): void {
+    const key = this.getChatKey(item);
+    if (pending) {
+      if (this.deletingChatKeys.indexOf(key) < 0) {
+        this.deletingChatKeys = this.deletingChatKeys.concat([key]);
+      }
+      return;
+    }
+    this.deletingChatKeys = this.deletingChatKeys.filter((existingKey: string) => existingKey !== key);
+  }
+
   private async deleteChat(item: ChatItem): Promise<void> {
+    if (this.isChatDeleting(item)) {
+      return;
+    }
+    this.setChatDeleting(item, true);
     try {
       VibrationUtil.startShort();
       if (item.type === 'private') {
-        // ⏳ 延期实现: private_chats/me/delete 接口尚未上线
-        // 当前仅从本地列表移除，不调用后端
+        const privateData = item.data as PrivateChatItem;
+        const targetUserId = privateData.other_user?.user_id ?? item.id;
+        const request: DeletePrivateChatRequest = { target_user_id: targetUserId };
+        await ApiClient.deletePrivateChat(request);
       } else {
         const groupData = item.data as GroupItem;
         const groupId = groupData.group?.group_id ?? item.id;
@@ -331,6 +430,8 @@ export struct MessagePage {
       SystemToast.show('操作成功', this.getUIContext());
     } catch {
       SystemToast.showError('操作失败', this.getUIContext());
+    } finally {
+      this.setChatDeleting(item, false);
     }
   }
 
@@ -353,23 +454,39 @@ export struct MessagePage {
           .layoutWeight(1)
           .padding({ left: DesignConstants.SPACING.LG })
 
-        Row({ space: DesignConstants.SPACING.LG }) {
+        Row({ space: DesignConstants.SPACING.SM }) {
           // 搜索
-          Text() {
-            SymbolSpan($r(AppIcon.SEARCH))
-              .fontSize(24)
-              .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+          Row() {
+            Text() {
+              SymbolSpan($r(AppIcon.SEARCH))
+                .fontSize(20)
+                .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+            }
           }
+          .width(36)
+          .height(36)
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .backgroundColor($r('app.color.bg_secondary'))
+          .justifyContent(FlexAlign.Center)
+          .alignItems(VerticalAlign.Center)
           .onClick(() => {
             AppRouter.push(PageNames.SEARCH);
           })
 
           // 更多操作
-          Text() {
-            SymbolSpan($r(AppIcon.ADD))
-              .fontSize(24)
-              .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+          Row() {
+            Text() {
+              SymbolSpan($r(AppIcon.ADD))
+                .fontSize(20)
+                .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+            }
           }
+          .width(36)
+          .height(36)
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .backgroundColor($r('app.color.bg_secondary'))
+          .justifyContent(FlexAlign.Center)
+          .alignItems(VerticalAlign.Center)
           .bindMenu([
             {
               value: '发起群聊',
@@ -423,7 +540,7 @@ export struct MessagePage {
         top: this.getHeaderTopPadding(),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor($r('app.color.bg_primary'))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 内容区域
@@ -444,7 +561,7 @@ export struct MessagePage {
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-          List() {
+          List({ space: DesignConstants.SPACING.SM }) {
             LazyForEach(this.chatListDataSource, (item: ChatItem) => {
               ListItem() {
                 this.buildChatItem(item)
@@ -458,9 +575,13 @@ export struct MessagePage {
             }
           }
           .width('100%')
-          .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
-          .backgroundColor($r('app.color.bg_secondary'))
-          .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 78, endMargin: 0 })
+          .padding({
+            left: DesignConstants.SPACING.LG,
+            right: DesignConstants.SPACING.LG,
+            top: DesignConstants.SPACING.SM,
+            bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
+          })
+          .backgroundColor($r('app.color.bg_primary'))
           .cachedCount(10)
           .onReachEnd(() => { this.loadMore(); })
         }
@@ -479,7 +600,7 @@ export struct MessagePage {
     Row() {
       Button({ type: ButtonType.Normal, stateEffect: true }) {
         Column() {
-          Text('删除')
+          Text(this.isChatDeleting(item) ? '处理中...' : '删除')
             .fontColor(Color.White)
             .fontSize(DesignConstants.FONT.SIZE.LG)
         }
@@ -490,6 +611,8 @@ export struct MessagePage {
       .backgroundColor($r('app.color.color_danger'))
       .width(80)
       .height('100%')
+      .opacity(this.isChatDeleting(item) ? 0.62 : 1)
+      .enabled(!this.isChatDeleting(item))
       .onClick(() => this.deleteChat(item))
     }
     .height('100%')
@@ -541,9 +664,27 @@ export struct MessagePage {
       .layoutWeight(1)
     }
     .width('100%')
-    .height(72)
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+    .constraintSize({ minHeight: 78 })
+    .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
     .backgroundColor($r('app.color.bg_secondary'))
-    .onClick(() => this.enterChat(item))
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+    .scale(this.pressedChatKey === this.getChatKey(item) ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })
+    .animation({ duration: 100, curve: Curve.EaseOut })
+    .opacity(this.isChatDeleting(item) ? 0.7 : 1)
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.pressedChatKey = this.getChatKey(item);
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.pressedChatKey = '';
+      }
+    })
+    .onClick(() => {
+      if (this.isChatDeleting(item)) {
+        return;
+      }
+      this.enterChat(item);
+    })
   }
 }

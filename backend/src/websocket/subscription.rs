@@ -8,7 +8,7 @@ use tokio::sync::RwLock;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SubscriptionType {
     /// 群聊消息订阅 - 订阅指定群聊的消息
-    /// source_id: group_id (UUID 字符串)
+    /// source_id: group_id (i64 字符串化)
     /// 私聊消息自动推送，不需要订阅
     Group(String),
 

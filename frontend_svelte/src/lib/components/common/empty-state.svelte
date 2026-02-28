@@ -37,7 +37,7 @@
 	}: Props = $props();
 </script>
 
-<Card class="border-0 bg-card/30 {className}">
+<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md {className}">
 	<CardContent class="flex flex-col items-center justify-center py-16 text-center">
 		<Icon class="mb-4 h-12 w-12 text-muted-foreground/50" />
 		<h3 class="mb-2 text-lg font-medium">{title}</h3>

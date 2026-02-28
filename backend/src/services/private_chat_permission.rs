@@ -1,8 +1,8 @@
 use crate::error::Result;
+use crate::repositories::user::blocks_repo::UserBlocksRepository;
+use crate::repositories::user::follows_repo::UserFollowsRepository;
+use crate::repositories::user::settings_repo::{UserSettingsRepository, UserSettingsRow};
 use crate::repositories::user::user_repo::UserRow;
-use crate::repositories::user_blocks_repo::UserBlocksRepository;
-use crate::repositories::user_follows_repo::UserFollowsRepository;
-use crate::repositories::user_settings_repo::{UserSettingsRepository, UserSettingsRow};
 use crate::types::enums::{MessageBlockedReason, PrivateChatPermission, UserStatus};
 use tokio::try_join;
 

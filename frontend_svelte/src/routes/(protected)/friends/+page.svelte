@@ -96,7 +96,7 @@
 		<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 			{#each friends as friend (friend.user.user_id)}
 				<a href="/users/{friend.user.user_id}">
-					<Card class="cursor-pointer border-0 bg-card/70 shadow-sm shadow-black/5 transition-shadow hover:shadow-lg hover:shadow-black/10">
+					<Card class="cursor-pointer rounded-2xl border border-border/60 bg-card/80 shadow-sm transition-shadow hover:shadow-lg hover:shadow-black/10">
 						<CardContent class="flex items-center gap-3 p-4">
 							<Avatar class="h-12 w-12">
 								<AvatarImage src={friend.user.avatar_url} alt={friend.user.nickname} />

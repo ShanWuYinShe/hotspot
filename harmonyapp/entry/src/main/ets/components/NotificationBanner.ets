@@ -62,11 +62,12 @@ export struct NotificationBanner {
         Row({ space: DesignConstants.SPACING.MD }) {
           ForEach(this.notification.actions, (action: NotificationAction) => {
             Button(action.label)
-              .type(ButtonType.Capsule)
+              .type(ButtonType.Normal)
               .height(28)
               .fontSize(DesignConstants.FONT.SIZE.SM)
-              .backgroundColor(action.type === 'primary' ? $r('sys.color.ohos_id_color_emphasize') : $r('sys.color.ohos_id_color_component_normal'))
+              .backgroundColor(action.type === 'primary' ? $r('sys.color.ohos_id_color_emphasize') : $r('app.color.bg_tertiary'))
               .fontColor(action.type === 'primary' ? Color.White : $r('sys.color.ohos_id_color_text_primary'))
+              .borderRadius(DesignConstants.RADIUS.XL)
               .onClick(() => {
                 if (this.onAction) {
                   this.onAction(action);
@@ -81,7 +82,8 @@ export struct NotificationBanner {
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.LG)
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
     .shadow(DesignConstants.SHADOW.MEDIUM)
     .onClick(() => {
       if (this.onBannerClick) {

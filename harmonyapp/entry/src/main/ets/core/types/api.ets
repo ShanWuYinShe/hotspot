@@ -933,7 +933,7 @@ export interface RemoveMemberRequest {
 
 export interface GroupApplicationsRequest {
   group_id: string;
-  status?: 'pending' | 'accepted' | 'rejected' | 'all';
+  status?: 'pending' | 'accepted' | 'rejected' | 'revoked' | 'all';
   pagination?: PaginationParams;
 }
 
@@ -965,12 +965,17 @@ export interface MyGroupsRequest {
   pagination?: PaginationParams;
 }
 
+export interface MyApplicationsRequest {
+  status?: 'pending' | 'accepted' | 'rejected' | 'revoked' | 'all';
+  pagination?: PaginationParams;
+}
+
 export interface CancelApplicationRequest {
   application_id: string;
 }
 
 export interface MyInvitesRequest {
-  status?: 'pending' | 'accepted' | 'rejected' | 'all';
+  status?: 'pending' | 'accepted' | 'rejected' | 'revoked' | 'all';
   pagination?: PaginationParams;
 }
 
@@ -1036,7 +1041,6 @@ export interface SendGroupMessageRequest {
 
 export interface GetGroupMessagesHistoryRequest {
   group_id: string;
-  include_system?: boolean;
   pagination?: PaginationParams;
 }
 

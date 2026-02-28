@@ -27,12 +27,14 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 const DOMAIN_NUMBER: number = 0xFF06;
 const TAG: string = 'CreateMomentPage';
 
+@Preview
 @Component
 export struct CreateMomentPage {
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_LOCATION_PICK_RESULT) pickResult: LocationInfo | null = null;
+  @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   
   private stateManager = GlobalStateManager.getInstance();
@@ -46,7 +48,7 @@ export struct CreateMomentPage {
 
   async aboutToAppear() {
     SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.SECONDARY_BG_LIGHT,      preferDarkContent: true
+      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
     });
     await this.requestPermissions();
     // 优先消费“地图选点”结果
@@ -96,6 +98,10 @@ export struct CreateMomentPage {
         locationName: refLoc.locationName || '未知位置'
       };
     }
+  }
+
+  private getHeaderTopPadding(): number {
+    return (this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.LG) + DesignConstants.SPACING.SM;
   }
 
   private addTag(): void {
@@ -312,9 +318,14 @@ export struct CreateMomentPage {
           .onClick(() => this.publishMoment())
       }
       .width('100%')
-      .height(56)
-      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-      .backgroundColor($r('app.color.bg_secondary'))
+      .alignItems(VerticalAlign.Center)
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        top: this.getHeaderTopPadding(),
+        bottom: DesignConstants.SPACING.SM
+      })
+      .backgroundColor($r('app.color.bg_primary'))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       List() {
@@ -327,7 +338,7 @@ export struct CreateMomentPage {
                 })
                 .maxLength(500)
                 .height(120)
-                .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+                .backgroundColor($r('app.color.bg_tertiary'))
                 .borderRadius(DesignConstants.RADIUS.MD)
             }
           }
@@ -371,12 +382,12 @@ export struct CreateMomentPage {
                             .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
                         }
                         Text('相册')
-                          .fontSize(10)
+                          .fontSize(DesignConstants.FONT.SIZE.XS)
                           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                       }
                     }
                     .type(ButtonType.Normal)
-                    .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+                    .backgroundColor($r('app.color.bg_tertiary'))
                     .width('100%')
                     .height('100%')
                     .borderRadius(DesignConstants.RADIUS.MD)
@@ -395,12 +406,12 @@ export struct CreateMomentPage {
                             .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
                         }
                         Text('拍照')
-                          .fontSize(10)
+                          .fontSize(DesignConstants.FONT.SIZE.XS)
                           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                       }
                     }
                     .type(ButtonType.Normal)
-                    .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+                    .backgroundColor($r('app.color.bg_tertiary'))
                     .width('100%')
                     .height('100%')
                     .borderRadius(DesignConstants.RADIUS.MD)
@@ -436,14 +447,15 @@ export struct CreateMomentPage {
                   .layoutWeight(1)
                   .maxLength(20)
                   .height(DesignConstants.COMPONENT.INPUT_HEIGHT)
-                  .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+                  .backgroundColor($r('app.color.bg_tertiary'))
                   .borderRadius(DesignConstants.RADIUS.MD)
 
                 Button('添加')
-                  .type(ButtonType.Capsule)
+                  .type(ButtonType.Normal)
                   .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
                   .fontColor(Color.White)
                   .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .borderRadius(DesignConstants.RADIUS.XL)
                   .onClick(() => this.addTag())
                   .margin({ left: DesignConstants.SPACING.SM })
               }
@@ -510,7 +522,7 @@ export struct CreateMomentPage {
                 }
                 .width('100%')
                 .padding(DesignConstants.SPACING.MD)
-                .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+                .backgroundColor($r('app.color.bg_tertiary'))
                 .borderRadius(DesignConstants.RADIUS.MD)
               } else {
                 Text('正在获取位置信息...')
@@ -531,7 +543,7 @@ export struct CreateMomentPage {
     }
       .width('100%')
       .height('100%')
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor($r('app.color.bg_primary'))
 
       if (this.isPublishing) {
         SystemLoadingView({ message: this.publishingMessage })
@@ -581,7 +593,7 @@ export struct CreateMomentPage {
       top: DesignConstants.SPACING.XS,
       bottom: DesignConstants.SPACING.XS
     })
-    .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+    .backgroundColor($r('app.color.bg_tertiary'))
     .borderRadius(DesignConstants.RADIUS.LG)
     .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
   }
@@ -594,7 +606,7 @@ export struct CreateMomentPage {
         .height('100%')
         .borderRadius(DesignConstants.RADIUS.MD)
         .objectFit(ImageFit.Cover)
-        .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+        .backgroundColor($r('app.color.bg_secondary'))
 
       Button() {
         Text() {
@@ -603,10 +615,11 @@ export struct CreateMomentPage {
             .fontColor([Color.White])
         }
       }
-      .type(ButtonType.Circle)
+      .type(ButtonType.Normal)
       .backgroundColor($r('app.color.color_overlay_heavy'))
       .width(28)
       .height(28)
+      .borderRadius(DesignConstants.RADIUS.XL)
       .margin({ top: 2, right: 2 })
       .onClick(() => this.removeImage(index))
     }

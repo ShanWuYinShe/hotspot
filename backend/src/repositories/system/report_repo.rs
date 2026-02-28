@@ -119,6 +119,31 @@ impl ReportRepository {
         Ok(exists)
     }
 
+    /// 检查同一目标是否已有待处理举报（pending/reviewing）
+    pub async fn has_pending_or_reviewing_for_target(
+        &self,
+        target_type: ReportTargetType,
+        target_id: &str,
+    ) -> Result<bool> {
+        let exists = sqlx::query_scalar!(
+            r#"
+            SELECT EXISTS(
+              SELECT 1
+              FROM reports
+              WHERE target_type = $1
+                AND target_id = $2
+                AND status IN ('pending'::report_status, 'reviewing'::report_status)
+            ) as "exists!"
+            "#,
+            target_type as ReportTargetType,
+            target_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(exists)
+    }
+
     /// 用户举报记录
     pub async fn find_reports_by_reporter(
         &self,

@@ -387,8 +387,6 @@ export interface GroupApplicationItem {
 	handled_by?: UserInfo;
 }
 
-// MyApplicationItem 已删除：spec 声明 groups/me/applications/list 返回 GroupApplicationItem，以 spec 为准
-
 /** 群组邀请列表项 */
 export interface GroupInviteItem {
 	invite_id: string;

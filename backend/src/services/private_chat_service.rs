@@ -1,4 +1,5 @@
 use crate::{
+    dto::request::DeletePrivateChatRequest,
     dto::response::{
         MessageMedia, MessageReplyTo, PaginatedData, PrivateChatLastMessage, PrivateChatListItem,
         PrivateChatOpenResult, PrivateMessageItem, UserInfo,
@@ -8,10 +9,10 @@ use crate::{
         chat_unread_repo::ChatUnreadRepository,
         private_chat_repo::{PrivateChatRepository, PrivateChatRow},
         private_message_repo::PrivateMessageRepository,
-        user_blocks_repo::UserBlocksRepository,
-        user_follows_repo::UserFollowsRepository,
+        user::blocks_repo::UserBlocksRepository,
+        user::follows_repo::UserFollowsRepository,
+        user::settings_repo::UserSettingsRepository,
         user_repo::UserRepository,
-        user_settings_repo::UserSettingsRepository,
     },
     services::{
         private_chat_permission::PrivateChatPermissionResolver,
@@ -21,7 +22,7 @@ use crate::{
 };
 
 use chrono::{DateTime, Utc};
-use tracing::warn;
+use tracing::{info, warn};
 use uuid::Uuid;
 
 /// 私聊服务
@@ -38,6 +39,16 @@ pub struct PrivateChatService {
 }
 
 impl PrivateChatService {
+    fn cleared_at_for_user(chat: &PrivateChatRow, current_user_id: i64) -> Option<DateTime<Utc>> {
+        if chat.user1_id == current_user_id {
+            chat.user1_cleared_at
+        } else if chat.user2_id == current_user_id {
+            chat.user2_cleared_at
+        } else {
+            None
+        }
+    }
+
     pub fn new(
         repo: PrivateChatRepository,
         settings_repo: UserSettingsRepository,
@@ -84,6 +95,14 @@ impl PrivateChatService {
         is_muted: Option<bool>,
         is_pinned: Option<bool>,
     ) -> Result<()> {
+        let started_at = std::time::Instant::now();
+        info!(
+            current_user_id,
+            target_user_id,
+            has_is_muted = is_muted.is_some(),
+            has_is_pinned = is_pinned.is_some(),
+            "private_chat.update_settings started"
+        );
         let chat = self
             .repo
             .find_by_users(current_user_id, target_user_id)
@@ -101,6 +120,56 @@ impl PrivateChatService {
                 .await?;
         }
 
+        info!(
+            current_user_id,
+            target_user_id,
+            chat_id = %chat.chat_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "private_chat.update_settings completed"
+        );
+
+        Ok(())
+    }
+
+    /// 删除我的私聊会话（单边删除）：隐藏会话入口并清空当前用户历史视图
+    pub async fn delete_chat(
+        &self,
+        current_user_id: i64,
+        req: &DeletePrivateChatRequest,
+    ) -> Result<()> {
+        let started_at = std::time::Instant::now();
+        let target_user_id =
+            crate::utils::validation::Validator::parse_user_id(&req.target_user_id)?;
+        info!(
+            current_user_id,
+            target_user_id, "private_chat.delete started"
+        );
+        let chat = match self
+            .repo
+            .find_by_users(current_user_id, target_user_id)
+            .await?
+        {
+            Some(chat) => chat,
+            None => {
+                warn!(current_user_id, target_user_id, "删除私聊失败：会话不存在");
+                return Err(AppError::ChatNotFound("私聊不存在".to_string()));
+            }
+        };
+
+        self.repo
+            .mark_cleared_by_user(chat.chat_id, current_user_id)
+            .await?;
+        self.unread_repo
+            .hide_private_chat(current_user_id, &chat.chat_id.to_string())
+            .await?;
+
+        info!(
+            current_user_id,
+            target_user_id,
+            chat_id = %chat.chat_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "删除私聊成功（单边清理）"
+        );
         Ok(())
     }
 
@@ -351,9 +420,10 @@ impl PrivateChatService {
         }
 
         let limit = crate::constants::DEFAULT_PAGE_LIMIT;
+        let cleared_after = Self::cleared_at_for_user(&chat, current_user_id);
         let (messages, next_cursor) = self
             .message_repo
-            .list_by_chat(chat.chat_id, limit, None)
+            .list_by_chat(chat.chat_id, limit, None, cleared_after)
             .await?;
 
         let other_last_read_state: Option<(Uuid, DateTime<Utc>)> =

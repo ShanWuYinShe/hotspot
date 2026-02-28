@@ -13,8 +13,7 @@ use crate::{
         },
         response::{
             GroupApplicationItem, GroupInfo, GroupInviteItem, GroupSentInviteItem,
-            JoinGroupApplication, JoinGroupResult, JoinGroupStatus, MyApplicationItem,
-            PaginatedData, UserInfo,
+            JoinGroupApplication, JoinGroupResult, JoinGroupStatus, PaginatedData, UserInfo,
         },
     },
     error::{AppError, Result},
@@ -27,7 +26,21 @@ use crate::{
 
 impl GroupService {
     pub async fn join_group(&self, user_id: i64, req: JoinGroupRequest) -> Result<JoinGroupResult> {
+        let started_at = std::time::Instant::now();
+        if let Some(message) = req.message.as_deref() {
+            Validator::validate_invite_or_apply_message(message)?;
+        }
+        if let Some(password) = req.password.as_deref() {
+            Validator::validate_group_password(password)?;
+        }
         let group_id = Validator::parse_group_id(&req.group_id)?;
+        tracing::info!(
+            user_id,
+            group_id,
+            has_message = req.message.is_some(),
+            has_password = req.password.is_some(),
+            "group.join started"
+        );
         let _group = self
             .group_repo
             .find_by_id(group_id)
@@ -65,6 +78,13 @@ impl GroupService {
                 .application_repo
                 .create(group_id, user_id, req.message.clone())
                 .await?;
+            tracing::info!(
+                user_id,
+                group_id,
+                application_id = %app.application_id,
+                elapsed_ms = started_at.elapsed().as_millis(),
+                "group.join completed (pending_approval)"
+            );
             return Ok(JoinGroupResult {
                 status: JoinGroupStatus::PendingApproval,
                 application: Some(JoinGroupApplication {
@@ -104,6 +124,13 @@ impl GroupService {
             role: GroupRole::Member,
             member_count,
         });
+        tracing::info!(
+            user_id,
+            group_id,
+            member_count,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "group.join completed (joined)"
+        );
 
         Ok(JoinGroupResult {
             status: JoinGroupStatus::Joined,
@@ -117,7 +144,8 @@ impl GroupService {
         req: GroupApplicationsRequest,
     ) -> Result<PaginatedData<GroupApplicationItem>> {
         let group_id = Validator::parse_group_id(&req.group_id)?;
-        let _ = self.require_admin_or_owner(group_id, user_id).await?;
+        self.require_group_admin_or_system_permission(group_id, user_id, "admin.groups.read")
+            .await?;
 
         let pagination = req.pagination.as_ref();
         let limit = Validator::validate_limit(
@@ -129,6 +157,7 @@ impl GroupService {
             ApplicationStatusFilter::Pending => Some(ApplicationStatus::Pending),
             ApplicationStatusFilter::Accepted => Some(ApplicationStatus::Accepted),
             ApplicationStatusFilter::Rejected => Some(ApplicationStatus::Rejected),
+            ApplicationStatusFilter::Revoked => Some(ApplicationStatus::Revoked),
         };
         let (rows, next_cursor) = self
             .application_repo
@@ -198,7 +227,7 @@ impl GroupService {
         &self,
         user_id: i64,
         req: MyApplicationsRequest,
-    ) -> Result<PaginatedData<MyApplicationItem>> {
+    ) -> Result<PaginatedData<GroupApplicationItem>> {
         let pagination = req.pagination.as_ref();
         let limit = Validator::validate_limit(
             pagination.and_then(|p| p.limit),
@@ -209,6 +238,7 @@ impl GroupService {
             ApplicationStatusFilter::Pending => Some(ApplicationStatus::Pending),
             ApplicationStatusFilter::Accepted => Some(ApplicationStatus::Accepted),
             ApplicationStatusFilter::Rejected => Some(ApplicationStatus::Rejected),
+            ApplicationStatusFilter::Revoked => Some(ApplicationStatus::Revoked),
         };
         let (rows, next_cursor) = self
             .application_repo
@@ -220,20 +250,15 @@ impl GroupService {
             )
             .await?;
 
-        let group_ids: Vec<i64> = rows.iter().map(|r| r.group_id).collect();
         let handler_ids: Vec<i64> = rows.iter().filter_map(|r| r.handled_by).collect();
-        let (groups, handlers, member_counts) = try_join!(
-            self.group_repo.list_by_ids(&group_ids),
+        let (handlers, applicant) = try_join!(
             self.user_repo.find_profiles(&handler_ids),
-            self.member_repo.batch_count_members(&group_ids)
+            self.build_user_info(user_id)
         )?;
-        let group_map: HashMap<i64, _> = groups.into_iter().map(|g| (g.group_id, g)).collect();
         let handler_map: HashMap<i64, _> = handlers.into_iter().map(|u| (u.user_id, u)).collect();
 
         let mut items = Vec::with_capacity(rows.len());
         for r in rows {
-            let group = group_map.get(&r.group_id);
-            let members_count = member_counts.get(&r.group_id).copied().unwrap_or(0) as i32;
             let handled_by = if let Some(id) = r.handled_by {
                 if let Some(u) = handler_map.get(&id) {
                     let avatar_url = self
@@ -253,20 +278,9 @@ impl GroupService {
             } else {
                 None
             };
-            let avatar_url = self
-                .media_service
-                .sign_url_if_path(group.and_then(|g| g.avatar_url.as_deref()))
-                .await;
-            items.push(MyApplicationItem {
+            items.push(GroupApplicationItem {
                 application_id: r.application_id.to_string(),
-                group: GroupInfo {
-                    group_id: r.group_id.to_string(),
-                    name: group
-                        .map(|g| g.name.clone())
-                        .unwrap_or_else(|| "群组".to_string()),
-                    avatar_url,
-                    members_count,
-                },
+                applicant: applicant.clone(),
                 message: r.message,
                 status: r.status,
                 created_at: r.created_at.to_rfc3339(),
@@ -286,6 +300,9 @@ impl GroupService {
         reject_reason: Option<&str>,
     ) -> Result<GroupApplicationItem> {
         use chrono::Utc;
+        if let Some(reason) = reject_reason {
+            Validator::validate_length(reason, "reason", 0, 500)?;
+        }
 
         let app_id = Validator::parse_uuid(application_id, "申请ID")?;
         let application = self
@@ -294,9 +311,12 @@ impl GroupService {
             .await?
             .ok_or_else(|| AppError::NotFound("申请不存在".to_string()))?;
 
-        let _ = self
-            .require_admin_or_owner(application.group_id, operator_id)
-            .await?;
+        self.require_group_admin_or_system_permission(
+            application.group_id,
+            operator_id,
+            "admin.groups.write",
+        )
+        .await?;
 
         let already_accepted = approved
             && application.status == ApplicationStatus::Accepted
@@ -375,8 +395,22 @@ impl GroupService {
         user_id: i64,
         req: ApproveGroupApplicationRequest,
     ) -> Result<GroupApplicationItem> {
-        self.process_application(user_id, &req.application_id, true, None)
-            .await
+        let started_at = std::time::Instant::now();
+        tracing::info!(
+            operator_id = user_id,
+            application_id = %req.application_id,
+            "group.application approve started"
+        );
+        let result = self
+            .process_application(user_id, &req.application_id, true, None)
+            .await?;
+        tracing::info!(
+            operator_id = user_id,
+            application_id = %req.application_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "group.application approve completed"
+        );
+        Ok(result)
     }
 
     pub async fn reject_application(
@@ -384,8 +418,23 @@ impl GroupService {
         user_id: i64,
         req: RejectGroupApplicationRequest,
     ) -> Result<GroupApplicationItem> {
-        self.process_application(user_id, &req.application_id, false, req.reason.as_deref())
-            .await
+        let started_at = std::time::Instant::now();
+        tracing::info!(
+            operator_id = user_id,
+            application_id = %req.application_id,
+            has_reason = req.reason.is_some(),
+            "group.application reject started"
+        );
+        let result = self
+            .process_application(user_id, &req.application_id, false, req.reason.as_deref())
+            .await?;
+        tracing::info!(
+            operator_id = user_id,
+            application_id = %req.application_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "group.application reject completed"
+        );
+        Ok(result)
     }
 
     pub async fn cancel_application(
@@ -393,18 +442,60 @@ impl GroupService {
         user_id: i64,
         req: CancelApplicationRequest,
     ) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let app_id = Validator::parse_uuid(&req.application_id, "申请ID")?;
+        tracing::info!(
+            user_id,
+            application_id = %app_id,
+            "group.application cancel started"
+        );
         let application = self
             .application_repo
             .find_by_application_id(app_id)
             .await?
             .ok_or_else(|| AppError::NotFound("申请不存在".to_string()))?;
         if application.applicant_id != user_id {
+            tracing::warn!(
+                user_id,
+                application_id = %app_id,
+                applicant_id = application.applicant_id,
+                "group.application cancel rejected: applicant mismatch"
+            );
             return Err(AppError::Forbidden("权限不足".to_string()));
         }
-        self.application_repo
-            .delete_by_application_id(app_id)
-            .await?;
+        match application.status {
+            ApplicationStatus::Revoked => {
+                tracing::info!(
+                    user_id,
+                    application_id = %app_id,
+                    elapsed_ms = started_at.elapsed().as_millis(),
+                    "group.application cancel completed (noop_already_revoked)"
+                );
+                return Ok(());
+            }
+            ApplicationStatus::Pending => {
+                self.application_repo
+                    .update_status_by_application_id(app_id, ApplicationStatus::Revoked, user_id)
+                    .await?;
+            }
+            ApplicationStatus::Accepted | ApplicationStatus::Rejected => {
+                tracing::warn!(
+                    user_id,
+                    application_id = %app_id,
+                    application_status = ?application.status,
+                    "group.application cancel rejected: application already handled"
+                );
+                return Err(AppError::BusinessRuleViolation(
+                    "申请已处理，无法取消".to_string(),
+                ));
+            }
+        }
+        tracing::info!(
+            user_id,
+            application_id = %app_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "group.application cancel completed"
+        );
         Ok(())
     }
 
@@ -414,7 +505,8 @@ impl GroupService {
         req: GroupSentInvitesRequest,
     ) -> Result<PaginatedData<GroupSentInviteItem>> {
         let group_id = Validator::parse_group_id(&req.group_id)?;
-        self.require_admin_or_owner(group_id, user_id).await?;
+        self.require_group_admin_or_system_permission(group_id, user_id, "admin.groups.read")
+            .await?;
         let pagination = req.pagination.as_ref();
         let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as i32;
         let status = match req.status.unwrap_or(ApplicationStatusFilter::All) {
@@ -422,6 +514,7 @@ impl GroupService {
             ApplicationStatusFilter::Pending => Some(ApplicationStatus::Pending),
             ApplicationStatusFilter::Accepted => Some(ApplicationStatus::Accepted),
             ApplicationStatusFilter::Rejected => Some(ApplicationStatus::Rejected),
+            ApplicationStatusFilter::Revoked => Some(ApplicationStatus::Revoked),
         };
 
         let (rows, next_cursor) = self
@@ -468,12 +561,13 @@ impl GroupService {
     ) -> Result<PaginatedData<GroupInviteItem>> {
         let pagination = req.pagination.as_ref();
         let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as i32;
-        let status = req.status.map(|s| match s {
-            ApplicationStatusFilter::Pending => ApplicationStatus::Pending,
-            ApplicationStatusFilter::Accepted => ApplicationStatus::Accepted,
-            ApplicationStatusFilter::Rejected => ApplicationStatus::Rejected,
-            ApplicationStatusFilter::All => ApplicationStatus::Pending,
-        });
+        let status = match req.status.unwrap_or(ApplicationStatusFilter::All) {
+            ApplicationStatusFilter::All => None,
+            ApplicationStatusFilter::Pending => Some(ApplicationStatus::Pending),
+            ApplicationStatusFilter::Accepted => Some(ApplicationStatus::Accepted),
+            ApplicationStatusFilter::Rejected => Some(ApplicationStatus::Rejected),
+            ApplicationStatusFilter::Revoked => Some(ApplicationStatus::Revoked),
+        };
 
         let (rows, next_cursor) = self
             .invite_repo
@@ -486,9 +580,10 @@ impl GroupService {
             .await?;
         let group_ids: Vec<i64> = rows.iter().map(|r| r.group_id).collect();
         let inviter_ids: Vec<i64> = rows.iter().map(|r| r.inviter_id).collect();
-        let (groups, users) = try_join!(
+        let (groups, users, member_counts) = try_join!(
             self.group_repo.list_by_ids(&group_ids),
-            self.user_repo.find_profiles(&inviter_ids)
+            self.user_repo.find_profiles(&inviter_ids),
+            self.member_repo.batch_count_members(&group_ids)
         )?;
         let group_map: HashMap<i64, _> = groups.into_iter().map(|g| (g.group_id, g)).collect();
         let user_map: HashMap<i64, _> = users.into_iter().map(|u| (u.user_id, u)).collect();
@@ -513,7 +608,7 @@ impl GroupService {
                         .map(|g| g.name.clone())
                         .unwrap_or_else(|| "群组".to_string()),
                     avatar_url: group_avatar_url,
-                    members_count: group.map(|g| g.max_members).unwrap_or(0),
+                    members_count: member_counts.get(&r.group_id).copied().unwrap_or(0) as i32,
                 },
                 inviter: UserInfo::new(
                     r.inviter_id,
@@ -533,7 +628,13 @@ impl GroupService {
     }
 
     pub async fn accept_invite(&self, user_id: i64, req: AcceptInviteRequest) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let invite_id = Validator::parse_uuid(&req.invite_id, "邀请ID")?;
+        tracing::info!(
+            user_id,
+            invite_id = %invite_id,
+            "group.invite accept started"
+        );
         let invite = self
             .invite_repo
             .find_by_invite_id(invite_id)
@@ -542,6 +643,56 @@ impl GroupService {
 
         if invite.invitee_id != user_id {
             return Err(AppError::Forbidden("权限不足".to_string()));
+        }
+
+        if invite.status == ApplicationStatus::Accepted {
+            if self.member_repo.is_member(invite.group_id, user_id).await? {
+                tracing::info!(
+                    user_id,
+                    invite_id = %invite_id,
+                    group_id = invite.group_id,
+                    elapsed_ms = started_at.elapsed().as_millis(),
+                    "group.invite accept completed (noop_already_accepted)"
+                );
+                return Ok(());
+            }
+
+            // 兼容中间态：状态已 accepted 但成员记录缺失时补齐
+            self.member_repo
+                .add_member(
+                    invite.group_id,
+                    user_id,
+                    GroupRole::Member,
+                    Some(invite.inviter_id),
+                )
+                .await?;
+            tracing::warn!(
+                user_id,
+                invite_id = %invite_id,
+                group_id = invite.group_id,
+                "group.invite accept repaired missing member for accepted invite"
+            );
+            tracing::info!(
+                user_id,
+                invite_id = %invite_id,
+                group_id = invite.group_id,
+                elapsed_ms = started_at.elapsed().as_millis(),
+                "group.invite accept completed (repaired_missing_member)"
+            );
+            return Ok(());
+        }
+
+        if invite.status != ApplicationStatus::Pending {
+            tracing::warn!(
+                user_id,
+                invite_id = %invite_id,
+                group_id = invite.group_id,
+                invite_status = ?invite.status,
+                "group.invite accept rejected: invite already handled"
+            );
+            return Err(AppError::BusinessRuleViolation(
+                "邀请已处理，无法接受".to_string(),
+            ));
         }
 
         self.invite_repo
@@ -563,12 +714,25 @@ impl GroupService {
             invitee_id: invite.invitee_id,
             status: ResponseStatus::Accepted,
         });
+        tracing::info!(
+            user_id,
+            invite_id = %invite_id,
+            group_id = invite.group_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "group.invite accept completed"
+        );
 
         Ok(())
     }
 
     pub async fn reject_invite(&self, user_id: i64, req: RejectInviteRequest) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let invite_id = Validator::parse_uuid(&req.invite_id, "邀请ID")?;
+        tracing::info!(
+            user_id,
+            invite_id = %invite_id,
+            "group.invite reject started"
+        );
         let invite = self
             .invite_repo
             .find_by_invite_id(invite_id)
@@ -576,6 +740,30 @@ impl GroupService {
             .ok_or_else(|| AppError::NotFound("邀请不存在".to_string()))?;
         if invite.invitee_id != user_id {
             return Err(AppError::Forbidden("权限不足".to_string()));
+        }
+
+        if invite.status == ApplicationStatus::Rejected {
+            tracing::info!(
+                user_id,
+                invite_id = %invite_id,
+                group_id = invite.group_id,
+                elapsed_ms = started_at.elapsed().as_millis(),
+                "group.invite reject completed (noop_already_rejected)"
+            );
+            return Ok(());
+        }
+
+        if invite.status != ApplicationStatus::Pending {
+            tracing::warn!(
+                user_id,
+                invite_id = %invite_id,
+                group_id = invite.group_id,
+                invite_status = ?invite.status,
+                "group.invite reject rejected: invite already handled"
+            );
+            return Err(AppError::BusinessRuleViolation(
+                "邀请已处理，无法拒绝".to_string(),
+            ));
         }
 
         self.invite_repo
@@ -588,6 +776,13 @@ impl GroupService {
             invitee_id: invite.invitee_id,
             status: ResponseStatus::Rejected,
         });
+        tracing::info!(
+            user_id,
+            invite_id = %invite_id,
+            group_id = invite.group_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "group.invite reject completed"
+        );
         Ok(())
     }
 
@@ -596,8 +791,19 @@ impl GroupService {
         user_id: i64,
         req: RevokeSentInviteRequest,
     ) -> Result<()> {
+        let started_at = std::time::Instant::now();
+        if let Some(reason) = req.reason.as_deref() {
+            Validator::validate_length(reason, "reason", 0, 500)?;
+        }
         let group_id = Validator::parse_group_id(&req.group_id)?;
-        self.require_admin_or_owner(group_id, user_id).await?;
+        tracing::info!(
+            user_id,
+            group_id,
+            has_reason = req.reason.is_some(),
+            "group.invite revoke started"
+        );
+        self.require_group_admin_or_system_permission(group_id, user_id, "admin.groups.write")
+            .await?;
         let invite_id = Validator::parse_uuid(&req.invite_id, "邀请ID")?;
         let invite = self
             .invite_repo
@@ -605,15 +811,45 @@ impl GroupService {
             .await?
             .ok_or_else(|| AppError::NotFound("邀请不存在".to_string()))?;
         if invite.group_id != group_id {
+            tracing::warn!(
+                user_id,
+                group_id,
+                invite_id = %invite_id,
+                invite_group_id = invite.group_id,
+                "group.invite revoke rejected: invite not in group"
+            );
             return Err(AppError::Forbidden("权限不足".to_string()));
         }
         if invite.status != ApplicationStatus::Pending {
+            if invite.status == ApplicationStatus::Revoked {
+                tracing::info!(
+                    user_id,
+                    group_id,
+                    invite_id = %invite_id,
+                    elapsed_ms = started_at.elapsed().as_millis(),
+                    "group.invite revoke completed (noop_already_revoked)"
+                );
+                return Ok(());
+            }
+            tracing::warn!(
+                user_id,
+                group_id,
+                invite_id = %invite_id,
+                invite_status = ?invite.status,
+                "group.invite revoke rejected: invite is not pending"
+            );
             return Err(AppError::BusinessRuleViolation(
                 "仅可撤销等待处理的邀请".to_string(),
             ));
         }
 
         if !self.invite_repo.revoke_pending_invite(invite_id).await? {
+            tracing::warn!(
+                user_id,
+                group_id,
+                invite_id = %invite_id,
+                "group.invite revoke rejected: invite status changed"
+            );
             return Err(AppError::BusinessRuleViolation(
                 "邀请状态已变更，无法撤销".to_string(),
             ));
@@ -622,14 +858,13 @@ impl GroupService {
         if let Some(reason) = &req.reason {
             tracing::debug!(reason = %reason, "Sent invite revoked");
         }
-
-        self.event_bus.publish(AppEvent::GroupInviteResponse {
-            invite_id,
-            group_id: invite.group_id,
-            inviter_id: invite.inviter_id,
-            invitee_id: invite.invitee_id,
-            status: ResponseStatus::Rejected,
-        });
+        tracing::info!(
+            user_id,
+            group_id,
+            invite_id = %invite_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "group.invite revoke completed"
+        );
         Ok(())
     }
 }

@@ -8,9 +8,11 @@
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { messageStore } from '$lib/stores/message.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
-	import { websocketStore, subscriptionManager, eventHandlers } from '$lib/websocket';
+	import { websocketStore, eventHandlers } from '$lib/websocket';
 	import type { GroupMessageNewPayload } from '$lib/websocket/types';
 	import { useBatchMarkRead } from '$lib/hooks/use-batch-mark-read.svelte';
+	import { createReconnectTracker, mergeMessagesByIdAndSentAt } from '$lib/hooks/use-chat-realtime-sync';
+	import { useChatWsSubscription } from '$lib/hooks/use-chat-ws-subscription.svelte';
 	import { autofocus } from '$lib/attachments';
 	import { Button } from '$lib/components/ui/button';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
@@ -37,21 +39,106 @@
 	let cursor = $state<string | undefined>(undefined);
 	let hasMore = $state(true);
 	let isLoadingMore = $state(false);
+	let groupTypingUserIds = $state.raw<string[]>([]);
 	let scrollContainer: HTMLDivElement | null = $state(null);
 	let showScrollButton = $state(false);
 	let selectedImage = $state<string | null>(null);
 	let shouldFocusInput = $state(0); // 用于触发重新聚焦
-	let isSubscribed = $state(false); // 订阅状态
-	let isAttemptingSubscribe = $state(false); // 是否正在尝试订阅
 	let isMounted = false; // 组件是否挂载（防止异步操作在卸载后更新状态）
+	const MESSAGE_CONTENT_MAX = 5000;
+	const MESSAGE_MENTIONS_MAX = 20;
+	const GROUP_TYPING_INDICATOR_TTL_MS = 4500;
+	const GROUP_TYPING_NAME_PREVIEW_LIMIT = 3;
+	const groupTypingTimers = new Map<string, ReturnType<typeof setTimeout>>();
+	const reconnectTracker = createReconnectTracker();
+	const wsSubscription = useChatWsSubscription();
 
-	const canSendMessage = $derived(group?.my_state?.is_joined && !group?.my_state?.is_muted && isSubscribed);
+	// spec: 群消息发送通过 HTTP API，不应依赖 WS 订阅状态
+	const canSendMessage = $derived(group?.my_state?.is_joined && !group?.my_state?.is_muted);
+
+	function clearGroupTypingTimer(userId: string) {
+		const timer = groupTypingTimers.get(userId);
+		if (!timer) return;
+		clearTimeout(timer);
+		groupTypingTimers.delete(userId);
+	}
+
+	function markGroupUserTypingStopped(userId: string) {
+		clearGroupTypingTimer(userId);
+		groupTypingUserIds = groupTypingUserIds.filter((id) => id !== userId);
+	}
+
+	function markGroupUserTypingActive(userId: string) {
+		if (!groupTypingUserIds.includes(userId)) {
+			groupTypingUserIds = [...groupTypingUserIds, userId];
+		}
+		clearGroupTypingTimer(userId);
+		groupTypingTimers.set(
+			userId,
+			setTimeout(() => {
+				groupTypingTimers.delete(userId);
+				groupTypingUserIds = groupTypingUserIds.filter((id) => id !== userId);
+			}, GROUP_TYPING_INDICATOR_TTL_MS)
+		);
+	}
+
+	function resetGroupTypingUsers() {
+		for (const timer of groupTypingTimers.values()) {
+			clearTimeout(timer);
+		}
+		groupTypingTimers.clear();
+		groupTypingUserIds = [];
+	}
+
+	function resolveGroupTypingDisplayName(userId: string): string {
+		for (let index = messages.length - 1; index >= 0; index--) {
+			const message = messages[index];
+			if (!message || message.sender?.user_id !== userId) continue;
+			const nickname = message.sender.nickname?.trim();
+			if (nickname) return nickname;
+		}
+		const suffix = userId.slice(-4);
+		return `成员${suffix || userId}`;
+	}
+
+	function buildGroupTypingHintText(): string {
+		const count = groupTypingUserIds.length;
+		if (count === 0) return '';
+		const previewNames = groupTypingUserIds
+			.slice(0, GROUP_TYPING_NAME_PREVIEW_LIMIT)
+			.map((id) => resolveGroupTypingDisplayName(id));
+		if (count === 1) {
+			return `${previewNames[0]} 正在输入...`;
+		}
+		if (count <= GROUP_TYPING_NAME_PREVIEW_LIMIT) {
+			return `${previewNames.join('、')} 正在输入...`;
+		}
+		return `${previewNames.join('、')} 等 ${count} 人正在输入...`;
+	}
+
+	function resolveLatestVisibleMessageId(messageIds: string[]): string | undefined {
+		if (messageIds.length === 0) return undefined;
+		const indexMap = new Map(messages.map((message, index) => [message.message_id, index] as const));
+		let latestId: string | undefined;
+		let latestIndex = -1;
+		for (const messageId of messageIds) {
+			const index = indexMap.get(messageId);
+			if (index !== undefined && index > latestIndex) {
+				latestIndex = index;
+				latestId = messageId;
+			}
+		}
+		return latestId ?? messageIds[messageIds.length - 1];
+	}
 
 	// ✨ 批量已读逻辑
 	const batchMarkRead = useBatchMarkRead({
-		markAsRead: async (_messageIds) => {
-			// 群聊消息的标记已读是按群组标记的，不需要传 messageIds
-			await groupMessagesService.markAsRead({ group_id: groupId });
+		markAsRead: async (messageIds) => {
+			const upToMessageId = resolveLatestVisibleMessageId(messageIds ?? []);
+			await groupMessagesService.markAsRead({
+				group_id: groupId,
+				...(upToMessageId ? { up_to_message_id: upToMessageId } : {})
+			});
 		},
 		debounceMs: 2000,
 		visibilityThreshold: 1000
@@ -83,8 +170,7 @@
 				pagination: {
 					limit: 50,
 					cursor: loadMore ? cursor : undefined
-				},
-				include_system: true
+				}
 			});
 
 			if (!isMounted) return;
@@ -126,15 +212,39 @@
 		}
 	}
 
+	async function backfillRecentMessagesAfterReconnect() {
+		try {
+			const response = await groupMessagesService.getHistory({
+				group_id: groupId,
+				pagination: { limit: 50 }
+			});
+			if (!isMounted || !isSuccess(response) || !response.data) return;
+			const recentMessages = response.data.items.reverse();
+			if (recentMessages.length === 0) return;
+			messages = mergeMessagesByIdAndSentAt(messages, recentMessages);
+		} catch (error) {
+			if (dev) console.warn('[GroupChat] 重连回补失败:', error);
+		}
+	}
+
 	async function sendMessage() {
-		if (!messageText.trim() || !canSendMessage) return;
+		const text = messageText.trim();
+		if (!text || !canSendMessage) return;
+		if (text.length > MESSAGE_CONTENT_MAX) {
+			toast.error(`消息内容最多 ${MESSAGE_CONTENT_MAX} 字符`);
+			return;
+		}
 
 		isSending = true;
-		const text = messageText.trim();
 		messageText = '';
 
 		try {
 			const mentions = extractMentions(text);
+			if (mentions.length > MESSAGE_MENTIONS_MAX) {
+				messageText = text;
+				toast.error(`@ 提及最多 ${MESSAGE_MENTIONS_MAX} 人`);
+				return;
+			}
 
 			const response = await groupMessagesService.send({
 				group_id: groupId,
@@ -156,6 +266,7 @@
 			messageText = text;
 			toast.error('发送失败');
 		} finally {
+			eventHandlers.sendGroupTyping(groupId, false);
 			isSending = false;
 		}
 	}
@@ -169,6 +280,9 @@
 			const userId = match[1]!;
 			if (!mentions.includes(userId)) {
 				mentions.push(userId);
+				if (mentions.length >= MESSAGE_MENTIONS_MAX) {
+					break;
+				}
 			}
 		}
 
@@ -286,6 +400,10 @@
 		// 注册 WebSocket 监听器（使用 reactive groupId 自动过滤）
 		const unsubscribeMessage = eventHandlers.onGroupMessage((payload: GroupMessageNewPayload) => {
 			if (payload.group_id === groupId) {
+				// spec: 按 message_id 去重，避免 HTTP 补拉与 WS 推送重复渲染
+				if (messages.some((m) => m.message_id === payload.message_id)) return;
+				markGroupUserTypingStopped(payload.sender.user_id);
+
 				const newMessage: GroupMessageItem = {
 					message_id: payload.message_id,
 					type: payload.type,
@@ -337,15 +455,26 @@
 			}
 		});
 
+		const unsubscribeGroupTyping = websocketStore.on('GroupUserTyping', (payload) => {
+			if (payload.group_id !== groupId) return;
+			if (payload.user_id === authStore.currentUserId) return;
+			if (payload.is_typing) {
+				markGroupUserTypingActive(payload.user_id);
+				return;
+			}
+			markGroupUserTypingStopped(payload.user_id);
+		});
+
 		return () => {
 			isMounted = false;
+			eventHandlers.cancelAllTyping();
+			resetGroupTypingUsers();
 			unsubscribeMessage();
 			unsubscribeRecalled();
 			unsubscribeEdited();
 			unsubscribeMemberJoined();
-			if (isSubscribed) {
-				subscriptionManager.unsubscribe('group', [groupId]);
-			}
+			unsubscribeGroupTyping();
+			wsSubscription.cleanup('group', [groupId]);
 		};
 	});
 
@@ -353,6 +482,7 @@
 	$effect(() => {
 		const id = groupId;
 		untrack(() => {
+			eventHandlers.cancelAllTyping();
 			group = null;
 			messages = [];
 			isLoading = true;
@@ -361,8 +491,9 @@
 			hasMore = true;
 			showScrollButton = false;
 			selectedImage = null;
-			isSubscribed = false;
-			isAttemptingSubscribe = false;
+			resetGroupTypingUsers();
+			wsSubscription.reset();
+			reconnectTracker.reset();
 			messageStore.markConversationAsRead(`group_${id}`);
 			init();
 		});
@@ -413,35 +544,40 @@
 
 		// 使用 derived 状态检查连接
 		const connected = websocketStore.isConnected;
+		const { shouldBackfill } = reconnectTracker.update(
+			connected,
+			websocketStore.lastDisconnectDurationMs
+		);
 		
 		if (!connected) {
 			// 连接断开，重置订阅状态
-			if (isSubscribed) {
+			if (wsSubscription.state.isSubscribed) {
 				if (dev) console.log('[GroupChat] WebSocket 断开，重置订阅状态');
-				isSubscribed = false;
 			}
-			return () => { cancelled = true; };
+			resetGroupTypingUsers();
+			wsSubscription.sync({
+				connected,
+				type: 'group',
+				ids: [groupId]
+			});
+			return () => {
+				cancelled = true;
+			};
+		}
+		if (shouldBackfill) {
+			void backfillRecentMessagesAfterReconnect();
 		}
 
-		// WebSocket 已连接，尝试订阅
-		if (!isSubscribed && !isAttemptingSubscribe) {
-			isAttemptingSubscribe = true;
-			
-			if (dev) console.log('[GroupChat] WebSocket 已连接，订阅群组:', groupId);
-			
-			subscriptionManager.subscribe('group', [groupId]).then((success) => {
+		wsSubscription.sync({
+			connected,
+			type: 'group',
+			ids: [groupId],
+			onSubscribeFailed: () => {
 				if (cancelled) return;
-				isSubscribed = success;
-				isAttemptingSubscribe = false;
-				
-				if (success) {
-					if (dev) console.log('[GroupChat] ✅ 订阅成功');
-				} else {
-					if (dev) console.warn('[GroupChat] ❌ 订阅失败，将在重连后重试');
-					toast.warning('消息订阅失败，正在重试...');
-				}
-			});
-		}
+				if (dev) console.warn('[GroupChat] ❌ 订阅失败，将在重连后重试');
+				toast.warning('消息订阅失败，正在重试...');
+			}
+		});
 
 		return () => { cancelled = true; };
 	});
@@ -529,7 +665,7 @@
 			{#if messages.length === 0}
 				<div class="flex h-full items-center justify-center p-8">
 					<div class="text-center">
-						<div class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+						<div class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
 							<MessageCircle class="h-8 w-8 text-muted-foreground" />
 						</div>
 						<h3 class="mb-1 font-medium">还没有消息</h3>
@@ -547,7 +683,7 @@
 						
 						{#if showDateDivider}
 							<div class="flex justify-center py-4">
-								<span class="rounded-full bg-muted/50 px-3 py-1 text-xs font-medium text-muted-foreground">
+								<span class="rounded-2xl bg-muted/50 px-3 py-1 text-xs font-medium text-muted-foreground">
 									{formatDateDivider(message.sent_at)}
 								</span>
 							</div>
@@ -555,7 +691,7 @@
 
 						{#if isSystemMessage(message)}
 							<div class="flex justify-center py-2">
-								<Badge variant="secondary" class="rounded-full bg-muted/50 px-3 py-1 text-xs font-normal">
+								<Badge variant="secondary" class="rounded-2xl bg-muted/50 px-3 py-1 text-xs font-normal">
 									{message.content}
 								</Badge>
 							</div>
@@ -598,7 +734,7 @@
 										{#if message.recalled_at != null}
 											<p class="text-sm italic opacity-70">消息已撤回</p>
 										{:else if message.type === 'text'}
-											<p class="whitespace-pre-wrap break-words text-sm leading-relaxed">
+											<p class="whitespace-pre-wrap wrap-break-word text-sm leading-relaxed">
 												{message.content}
 											</p>
 										{:else if message.type === 'image' && message.media}
@@ -651,7 +787,7 @@
 			<button
 				type="button"
 				onclick={() => scrollToBottom(true)}
-				class="fixed bottom-24 right-6 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:scale-110"
+				class="fixed bottom-24 right-6 z-10 flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg transition-all hover:scale-110"
 			>
 				<ChevronDown class="h-5 w-5" />
 			</button>
@@ -660,17 +796,22 @@
 
 	<!-- Input Area -->
 	<div class="shrink-0 border-t border-border/50 bg-card/80 p-4 backdrop-blur-sm">
-		{#if !isSubscribed && !isLoading}
+		{#if groupTypingUserIds.length > 0}
+			<div class="mb-2 px-1">
+				<p class="text-xs text-muted-foreground">
+					{buildGroupTypingHintText()}
+				</p>
+			</div>
+		{/if}
+
+		{#if !wsSubscription.state.isSubscribed && !isLoading}
 			<div class="rounded-2xl bg-yellow-500/10 border border-yellow-500/30 px-4 py-3 text-center mb-3">
 				<p class="text-sm text-yellow-700 dark:text-yellow-300 flex items-center justify-center gap-2">
-					{#if isAttemptingSubscribe}
-						<Loader2 class="h-4 w-4 animate-spin" />
-						正在连接服务器...
-					{:else if !websocketStore.isConnected}
-						<Loader2 class="h-4 w-4 animate-spin" />
-						等待 WebSocket 连接...
+					<Loader2 class="h-4 w-4 animate-spin" />
+					{#if wsSubscription.state.isAttemptingSubscribe || !websocketStore.isConnected}
+						实时消息连接中（不影响发送）
 					{:else}
-						订阅失败，正在重试...
+						实时订阅重试中（不影响发送）
 					{/if}
 				</p>
 			</div>
@@ -691,8 +832,12 @@
 					placeholder="发送消息..."
 					bind:value={messageText}
 					rows={1}
+					maxlength={MESSAGE_CONTENT_MAX}
 					class="max-h-32 min-h-[42px] flex w-full resize-none rounded-3xl border border-muted-foreground/20 bg-muted/30 px-4 py-2.5 text-[15px] shadow-sm shadow-black/5 transition-colors placeholder:text-muted-foreground/50 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
 					disabled={isSending}
+					oninput={() => {
+						eventHandlers.sendGroupTyping(groupId, messageText.trim().length > 0);
+					}}
 					onkeydown={(e) => {
 						if (e.key === 'Enter' && !e.shiftKey) {
 							e.preventDefault();
@@ -702,7 +847,7 @@
 				></textarea>
 				<Button
 					size="icon"
-					class="h-[42px] w-[42px] shrink-0 rounded-full transition-transform active:scale-95"
+					class="h-[42px] w-[42px] shrink-0 rounded-2xl transition-transform active:scale-95"
 					onclick={sendMessage}
 					onmousedown={(e) => e.preventDefault()}
 					disabled={!messageText.trim() || isSending}
@@ -731,7 +876,7 @@
 		<button
 			type="button"
 			onclick={closeImagePreview}
-			class="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white backdrop-blur transition-colors hover:bg-white/20"
+			class="absolute right-4 top-4 rounded-2xl bg-white/10 p-2 text-white backdrop-blur transition-colors hover:bg-white/20"
 		>
 			<X class="h-6 w-6" />
 		</button>

@@ -252,7 +252,7 @@ impl GroupInviteRepository {
               AND COALESCE(status, 'pending'::application_status) = 'pending'
             "#,
             invite_id,
-            ApplicationStatus::Rejected as ApplicationStatus
+            ApplicationStatus::Revoked as ApplicationStatus
         )
         .execute(&self.pool)
         .await?;

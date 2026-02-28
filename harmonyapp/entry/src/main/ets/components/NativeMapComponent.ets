@@ -57,6 +57,10 @@ interface LongPressCapable {
   on(eventName: string, handler: (position: mapCommon.LatLng) => void): void;
 }
 
+interface CameraMoveCapable {
+  on(eventName: string, handler: () => void): void;
+}
+
 @Component
 export struct NativeMapComponent {
   @Watch('onDarkModeChange') @StorageProp('isDarkMode') isDarkMode: boolean = false;
@@ -283,6 +287,38 @@ export struct NativeMapComponent {
     }
   }
 
+  private syncCenterPinWithCamera(): void {
+    if (!this.mapController || !this.showCenterPin || !this.centerPinMarker) {
+      return;
+    }
+    try {
+      const cameraPosition = this.mapController.getCameraPosition();
+      if (cameraPosition?.target) {
+        this.centerPinMarker.setPosition(cameraPosition.target);
+      }
+    } catch (_) {
+      // 忽略同步异常，避免影响主交互
+    }
+  }
+
+  private registerCameraMoveHandler() {
+    if (!this.mapController || !this.showCenterPin) {
+      return;
+    }
+    const controller = this.mapController as object as CameraMoveCapable;
+    const candidateEvents: string[] = ['cameraMove', 'cameraMoving', 'cameraChanged'];
+    for (const eventName of candidateEvents) {
+      try {
+        controller.on(eventName, () => {
+          this.syncCenterPinWithCamera();
+        });
+        return;
+      } catch (_) {
+        // 尝试下一个事件名
+      }
+    }
+  }
+
   private setupMap() {
     if (!this.mapController) return;
     
@@ -374,6 +410,7 @@ export struct NativeMapComponent {
     });
 
     this.registerLongPressHandler();
+    this.registerCameraMoveHandler();
 
     // 监听相机空闲（用户停止拖拽/缩放后触发）
     try {
@@ -382,10 +419,8 @@ export struct NativeMapComponent {
         try {
           const cameraPosition = this.mapController.getCameraPosition();
           if (cameraPosition?.target) {
-            // 更新中心图钉到相机目标位置
-            if (this.showCenterPin && this.centerPinMarker) {
-              this.centerPinMarker.setPosition(cameraPosition.target);
-            }
+            // 相机停止后再次对齐中心图钉，避免累计误差
+            this.syncCenterPinWithCamera();
             if (this.onCameraIdle) {
               this.onCameraIdle({
                 latitude: cameraPosition.target.latitude,
@@ -512,7 +547,7 @@ export struct NativeMapComponent {
         .height('100%')
         .justifyContent(FlexAlign.Center)
         .padding(32)
-        .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+        .backgroundColor($r('app.color.bg_primary'))
       } else if (this.mapCallback) {
         MapComponent({
           mapOptions: {

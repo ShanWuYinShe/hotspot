@@ -66,6 +66,7 @@ class AuthStore {
 	#profile = $state.raw<MyProfile | null>(null);
 	#initialized = $state(false);
 	#sessionValid = $state(false);
+	#restoring = $state(false);
 
 	constructor() {
 		// 在浏览器环境中初始化
@@ -73,6 +74,8 @@ class AuthStore {
 			const stored = loadFromStorage();
 			this.#accounts = stored.accounts;
 			this.#currentUserId = stored.currentUserId;
+			// 本地有用户数据时标记为恢复中，等待服务端校验完成
+			this.#restoring = !!stored.currentUserId;
 			this.#initialized = true;
 		}
 	}
@@ -93,6 +96,9 @@ class AuthStore {
 
 	/** 会话是否已通过服务端校验 */
 	sessionValid = $derived(this.#sessionValid);
+
+	/** 是否正在从服务端恢复 session（页面刷新后的自动恢复阶段） */
+	isRestoring = $derived(this.#restoring);
 
 	/** 当前账户信息 */
 	currentAccount = $derived(
@@ -125,6 +131,16 @@ class AuthStore {
 			accounts: this.#accounts,
 			currentUserId: this.#currentUserId
 		});
+	}
+
+	/** 标记 session 恢复完成（无论成功或失败） */
+	finishRestoring() {
+		this.#restoring = false;
+	}
+
+	/** 标记开始进行 session 恢复 */
+	startRestoring() {
+		this.#restoring = true;
 	}
 
 	/** 清除当前会话有效性（不删除账户数据） */

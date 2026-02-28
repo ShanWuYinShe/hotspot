@@ -2,8 +2,10 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { notificationStore } from '$lib/stores/notification.svelte';
+	import { groupsService } from '$lib/api/services';
+	import { toast } from '$lib/stores/toast.svelte';
 	import { usePagination } from '$lib/hooks/use-pagination.svelte';
-	import type { NotificationItem } from '$lib/types/api';
+	import type { NotificationItem, NotificationPayload } from '$lib/types/api';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import EmptyState from '$lib/components/common/empty-state.svelte';
@@ -20,6 +22,7 @@
 		uniqueKey: (item) => item.notification_id,
 		initialLoading: true
 	});
+	let processingNotifications = $state<Set<string>>(new Set());
 
 	onMount(() => {
 		pagination.load(
@@ -35,6 +38,101 @@
 		const ok = await notificationStore.markAllAsRead();
 		if (ok) {
 			pagination.updateItem((i) => ({ ...i, is_read: true }));
+		}
+	}
+
+	function isProcessing(notificationId: string): boolean {
+		return processingNotifications.has(notificationId);
+	}
+
+	function setProcessing(notificationId: string, processing: boolean) {
+		const next = new Set(processingNotifications);
+		if (processing) {
+			next.add(notificationId);
+		} else {
+			next.delete(notificationId);
+		}
+		processingNotifications = next;
+	}
+
+	function canHandleGroupInvite(item: NotificationItem): boolean {
+		return item.payload.type === 'group_invite_received' && !!item.payload.invite_id;
+	}
+
+	function canHandleGroupApplication(item: NotificationItem): boolean {
+		return item.payload.type === 'group_application_received' && !!item.payload.application_id;
+	}
+
+	function getGroupInvitePayload(
+		item: NotificationItem
+	): Extract<NotificationPayload, { type: 'group_invite_received' }> | null {
+		return item.payload.type === 'group_invite_received' ? item.payload : null;
+	}
+
+	function getGroupApplicationPayload(
+		item: NotificationItem
+	): Extract<NotificationPayload, { type: 'group_application_received' }> | null {
+		return item.payload.type === 'group_application_received' ? item.payload : null;
+	}
+
+	async function markNotificationRead(item: NotificationItem) {
+		if (item.is_read) return;
+		const ok = await notificationStore.markAsRead([item.notification_id]);
+		if (ok) {
+			pagination.updateItem((i) =>
+				i.notification_id === item.notification_id ? { ...i, is_read: true } : null
+			);
+		}
+	}
+
+	async function handleInviteAction(item: NotificationItem, action: 'accept' | 'reject') {
+		if (!canHandleGroupInvite(item) || isProcessing(item.notification_id)) return;
+		const payload = getGroupInvitePayload(item);
+		const inviteId = payload?.invite_id;
+		if (!inviteId) return;
+		setProcessing(item.notification_id, true);
+		try {
+			const response =
+				action === 'accept'
+					? await groupsService.acceptInvite({ invite_id: inviteId })
+					: await groupsService.rejectInvite({ invite_id: inviteId });
+			if (response.code !== 0) {
+				toast.error(response.message || (action === 'accept' ? '接受邀请失败' : '拒绝邀请失败'));
+				return;
+			}
+			await markNotificationRead(item);
+			toast.success(action === 'accept' ? '已接受群邀请' : '已拒绝群邀请');
+			if (action === 'accept' && payload?.group_id) {
+				goto(`/groups/${payload.group_id}`);
+			}
+		} catch {
+			toast.error(action === 'accept' ? '接受邀请失败' : '拒绝邀请失败');
+		} finally {
+			setProcessing(item.notification_id, false);
+		}
+	}
+
+	async function handleApplicationAction(item: NotificationItem, action: 'approve' | 'reject') {
+		if (!canHandleGroupApplication(item) || isProcessing(item.notification_id)) return;
+		const payload = getGroupApplicationPayload(item);
+		const applicationId = payload?.application_id;
+		if (!applicationId) return;
+		setProcessing(item.notification_id, true);
+		try {
+			const response =
+				action === 'approve'
+					? await groupsService.approveApplication({ application_id: applicationId })
+					: await groupsService.rejectApplication({ application_id: applicationId });
+			if (response.code !== 0) {
+				toast.error(response.message || (action === 'approve' ? '批准申请失败' : '拒绝申请失败'));
+				return;
+			}
+			await markNotificationRead(item);
+			toast.success(action === 'approve' ? '已批准入群申请' : '已拒绝入群申请');
+		} catch {
+			toast.error(action === 'approve' ? '批准申请失败' : '拒绝申请失败');
+		} finally {
+			setProcessing(item.notification_id, false);
 		}
 	}
 
@@ -203,14 +301,20 @@
 		<div class="space-y-2">
 			{#each pagination.items as item (item.notification_id)}
 				{@const Icon = getNotificationIcon(item.type)}
-				<button
-					type="button"
-					class="w-full text-left"
+				<Card
+					role="button"
+					tabindex={0}
+					class="cursor-pointer transition-colors hover:bg-accent/50"
 					onclick={() => handleNotificationClick(item)}
+					onkeydown={(event) => {
+						if (event.key === 'Enter' || event.key === ' ') {
+							event.preventDefault();
+							handleNotificationClick(item);
+						}
+					}}
 				>
-					<Card class="cursor-pointer transition-colors hover:bg-accent/50">
-						<CardContent class="flex items-start gap-4 p-4">
-							<div class="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+					<CardContent class="flex items-start gap-4 p-4">
+							<div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-muted">
 								<Icon class="h-5 w-5" />
 							</div>
 							<div class="min-w-0 flex-1">
@@ -228,10 +332,58 @@
 								<p class="mt-1 text-xs text-muted-foreground">
 									{formatTime(item.created_at)}
 								</p>
+								{#if canHandleGroupInvite(item)}
+									<div class="mt-3 flex flex-wrap gap-2">
+										<Button
+											size="sm"
+											disabled={isProcessing(item.notification_id)}
+											onclick={(event) => {
+												event.stopPropagation();
+												handleInviteAction(item, 'accept');
+											}}
+										>
+											接受
+										</Button>
+										<Button
+											variant="outline"
+											size="sm"
+											disabled={isProcessing(item.notification_id)}
+											onclick={(event) => {
+												event.stopPropagation();
+												handleInviteAction(item, 'reject');
+											}}
+										>
+											拒绝
+										</Button>
+									</div>
+								{:else if canHandleGroupApplication(item)}
+									<div class="mt-3 flex flex-wrap gap-2">
+										<Button
+											size="sm"
+											disabled={isProcessing(item.notification_id)}
+											onclick={(event) => {
+												event.stopPropagation();
+												handleApplicationAction(item, 'approve');
+											}}
+										>
+											批准
+										</Button>
+										<Button
+											variant="outline"
+											size="sm"
+											disabled={isProcessing(item.notification_id)}
+											onclick={(event) => {
+												event.stopPropagation();
+												handleApplicationAction(item, 'reject');
+											}}
+										>
+											拒绝
+										</Button>
+									</div>
+								{/if}
 							</div>
-						</CardContent>
-					</Card>
-				</button>
+					</CardContent>
+				</Card>
 			{/each}
 		</div>
 		{#if pagination.hasMore}

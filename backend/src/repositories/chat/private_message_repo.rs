@@ -95,6 +95,7 @@ impl PrivateMessageRepository {
         chat_id: Uuid,
         limit: i64,
         cursor: Option<String>,
+        cleared_after: Option<DateTime<Utc>>,
     ) -> Paginated<PrivateMessageRow> {
         let (last_ts, last_id) = if let Some(c) = cursor {
             decode_cursor::<TimeIdCursor>(&c)?
@@ -119,13 +120,15 @@ impl PrivateMessageRepository {
             FROM private_messages
             WHERE chat_id = $1
               AND (sent_at, message_id) < ($2, $3)
+              AND ($5::timestamptz IS NULL OR sent_at > $5)
             ORDER BY sent_at DESC, message_id DESC
             LIMIT $4
             "#,
             chat_id,
             last_ts,
             last_id,
-            limit + 1
+            limit + 1,
+            cleared_after
         )
         .fetch_all(&self.pool)
         .await?;

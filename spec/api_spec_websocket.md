@@ -136,19 +136,13 @@ alwaysApply: false
 
 #### 2. 数据补拉
 
-服务端完全无状态，不保存任何连接状态。客户端判断是否需要补拉：
-
-- **记录断开时间**：连接断开时记录 `disconnected_at`。
-- **判断断开时长**：重连成功后，比对 `ConnectionEstablished` 中的 `server_time` 与 `disconnected_at`。
-- **补拉决策**：
-  - 断开时长 > 10 秒（建议阈值）：通过 HTTP API（如消息历史接口 `get_history`）按游标分页逐页补拉，客户端比对本地最新消息时间与返回消息的 `sent_at`，直到追上断开期间的增量。
-  - 断开时长 ≤ 10 秒：无需补拉，WebSocket 会自动推送新事件。
+服务端不维护离线消息队列或补偿状态——连接存续期间保持订阅与路由信息，连接断开后即丢弃。客户端可按端侧策略设置补拉阈值（如 10 秒）：超阈值时通过 HTTP `get_history` 按游标分页补拉，未超阈值时直接等待后续 WebSocket 推送。
 
 #### 3. 去重规则
 
 HTTP API 返回的数据可能与 WebSocket 推送的事件重复。去重方式按资源主键执行（参见 `@spec/api_spec_base.md`）：
 
-- **持久化事件**：按业务 ID 去重（`message_id`/`moment_id`/`like_id` 等）。
+- **持久化事件**：按业务主键或稳定组合键去重（如 `message_id`、`moment_id`、`comment_id`，或 `moment_id + actor.user_id + liked_at`）。
 - **状态快照事件**：直接覆盖（保留最新状态），无需去重。
 
 ---
@@ -182,7 +176,7 @@ type PongPayload = Record<string, never>;  // 空对象
 
 **说明**：心跳机制只需保活连接，无需传递数据
 
-### 客户端实现要求
+### 客户端实现参考
 
 - 连接建立并鉴权成功后，从 `ConnectionEstablished.config` 读取心跳配置
 - 按 `ping_interval` 间隔发送 `Ping` 事件
@@ -190,15 +184,12 @@ type PongPayload = Record<string, never>;  // 空对象
 - 收到 `Pong` 后重置超时计时器
 - 如果 `ping_timeout` 时间内未收到 `Pong`，视为连接异常，触发重连
 
-### 重连策略
+### 重连参考策略（可按端侧调整）
 
-- 使用指数退避：1s、2s、4s、8s、16s、32s、60s（最大 60s）
-- 加入随机抖动（jitter）：延迟 ± 20%，避免雷鸣效应
-- 最大重连次数：30 次（约 25 分钟），超过后停止自动重连，状态置为 `failed`
-- 连续失败 10 次后：提示用户"连接不稳定，正在重试"
-- 达到最大重连次数后：停止自动重连，通知用户"连接失败，请检查网络"；UI 应提供手动重连按钮
-- 用户手动触发"重新连接"或页面重新可见时：重置退避计数，从 1s 开始
-- 重连成功后：重新发送 `Auth`，等待 `ConnectionEstablished`，恢复订阅
+- 可使用指数退避（如 1s、2s、4s...，最大 60s）
+- 可加入随机抖动（jitter）降低重连风暴风险
+- 可设置最大重连次数，超过后转为手动重连模式
+- 重连成功后应重新发送 `Auth`，等待 `ConnectionEstablished` 并恢复订阅
 
 ### 重连触发条件
 
@@ -238,33 +229,10 @@ type ServerWebSocketEvent = WebSocketEvent<ServerEventType, unknown>;
 type ClientWebSocketEvent = WebSocketEvent<ClientEventType, unknown>;
 ```
 
-**消息可靠性说明**：
-
-- **TCP 保证**：WebSocket 基于 TCP，协议层已保证消息不丢失、不乱序、不重复
-- **业务层去重**：根据事件类型采用不同去重策略
-
-**事件分类与去重策略**：
-
-业务事件分为两类：
-
-**持久化事件**（有业务 ID，需去重）：
-- 私聊/群聊消息：`message_id`（去重依据）
-- 朋友圈互动：`like_id` / `comment_id`（去重依据）
-- 关注/邀请：使用事件负载中的稳定标识或组合键去重（如 `invite_id`、`application_id`、`user.user_id + followed_at`）
-
-客户端通过业务 ID 去重，天然支持 HTTP API + WebSocket 跨协议去重。建议维护最近 1 小时内已处理的业务 ID（滑动时间窗口）。
-
-**状态快照事件**（无业务 ID，保留最新）：
-- 用户状态：UserOnline / UserOffline
-- 群组成员：GroupMemberJoined / GroupMemberLeft
-- 输入状态：PrivateUserTyping / GroupUserTyping
-
-这些事件表示"最新状态"而非持久化数据，客户端通过 `user_id + 事件类型` 或 `group_id + user_id + 事件类型` 保留最新状态即可，无需去重。
-
-**设计理念**：
-- 依赖 TCP 的可靠性保证，不在应用层重复实现序列号机制
-- 持久化事件通过业务 ID 去重，状态事件保留最新值
-- 简化协议：无需维护连接级序列号（seq）
+**消息可靠性与去重**：
+- 基于 TCP：协议层保证消息不丢失、不乱序、不重复，应用层无需维护 seq。
+- **持久化事件**：按业务主键或稳定组合键去重（如 `message_id`、`comment_id`、`moment_id + actor.user_id + liked_at`）。
+- **状态快照事件**：表示最新状态（如在线状态、输入状态、成员变更），按 `user_id + 事件类型` 或 `group_id + user_id + 事件类型` 覆盖即可。
 
 > 重连后的数据补拉与去重策略详见「连接与鉴权」中的「重连恢复策略」。
 
@@ -417,7 +385,6 @@ type UserOfflineEvent = { type: "UserOffline"; payload: UserOfflinePayload; };
     **服务端推送限制**：
     - 3 秒内的重复输入状态自动过滤（相同用户+相同状态）
     - 群聊输入状态合并推送：同一群组多人同时输入时，合并为批量通知
-    - 群聊最多显示 3 个正在输入的用户（UI 限制）
 
 - **PrivateMessageRead**
   - 触发：已读状态发生变化时触发
@@ -686,7 +653,7 @@ interface GroupUpdatedPayload {
 type GroupUpdatedEvent = { type: "GroupUpdated"; payload: GroupUpdatedPayload; };
 
 // 群组解散（群主主动解散或因违规被解散）
-// 注意：系统管理员解散群组时，服务端必须向所有群成员推送此事件（无论是否订阅）；实现上可以通过群组广播频道（如 Redis pub/sub 按 group_id fanout）推送，确保所有在线成员都能收到。
+// 注意：系统管理员解散群组时，服务端必须向所有在线群成员推送此事件（无论客户端是否主动订阅该群组频道）。
 // 设计说明：不暴露操作者身份（deleted_by），不暴露系统管理员的存在。
 // 'policy_violation' 表示因违反平台规则被解散，不透露具体操作方式。
 // 详细操作记录保留在审计日志中（仅管理员可见）。
@@ -871,7 +838,7 @@ WebSocket订阅机制提供用户状态订阅和群组订阅两种类型：
 // SetSubscriptions - 订阅管理（扁平结构）
 // 单次请求仅允许一个 type，不同 type 需分开请求
 interface SetSubscriptionsPayload {
-  client_request_id: string;   // 客户端生成，用于与 SubscribeAck 对齐（建议：UUID）
+  client_request_id: string;   // 客户端生成，用于与 SubscribeAck 对齐
   operation: SubscriptionOperation;
   type: 'user' | 'group';     // 订阅类型
   ids: string[];               // 订阅目标 ID 列表（user_id 或 group_id）

@@ -35,7 +35,12 @@ export const privateChatsService = {
 		return post<void>(PRIVATE_CHATS.ME.UPDATE_SETTINGS, data);
 	},
 
-	// deleteChat deferred: private_chats/me/delete
+	/**
+	 * 删除我的私聊会话（单边删除）
+	 */
+	deleteChat(data: { target_user_id: string }) {
+		return post<void>(PRIVATE_CHATS.ME.DELETE, data);
+	}
 };
 
 export const privateMessagesService = {

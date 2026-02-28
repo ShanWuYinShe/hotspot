@@ -175,6 +175,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 加载配置
     let config = Config::from_env()?;
     tracing::debug!("Configuration loaded");
+    if let Some(node_id) = crate::utils::id_gen::init_node_id_with_redis(&config.redis_url)
+        .await
+        .map_err(|msg| std::io::Error::new(std::io::ErrorKind::Other, msg))?
+    {
+        tracing::info!(node_id, "ID 生成器已启用 Redis 租约分配");
+    }
     error::warmup_error_catalog();
 
     // 创建事件总线
@@ -287,18 +293,55 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         .and_then(|v| v.to_str().ok())
                         .unwrap_or("-");
 
-                    // span 只保留 request_id：便于全局 grep，但不会让每条日志都携带 method/uri 等“噪声”
-                    tracing::info_span!("http_request", request_id = %request_id)
+                    // span 挂载 request_id + 可延迟填充的 user_id/session_id，便于跨层日志关联
+                    tracing::info_span!(
+                        "http_request",
+                        request_id = %request_id,
+                        user_id = tracing::field::Empty,
+                        session_id = tracing::field::Empty
+                    )
                 })
                 // 不使用 DefaultOnRequest/Response：它们的 target 在 tower_http::* 下，容易被 EnvFilter 过滤掉
                 // 这里显式用我们自己的日志事件，并挂在 request span 下，保证按 request_id 可检索到完整链路。
                 .on_request(|req: &axum::http::Request<Body>, span: &Span| {
-                    tracing::info!(parent: span, method = %req.method(), uri = %req.uri(), "request started");
+                    let user_agent = req
+                        .headers()
+                        .get(axum::http::header::USER_AGENT)
+                        .and_then(|v| v.to_str().ok())
+                        .unwrap_or("-");
+                    let content_length = req
+                        .headers()
+                        .get(axum::http::header::CONTENT_LENGTH)
+                        .and_then(|v| v.to_str().ok())
+                        .and_then(|v| v.parse::<u64>().ok());
+                    let client_ip = req
+                        .headers()
+                        .get("x-forwarded-for")
+                        .or_else(|| req.headers().get("x-real-ip"))
+                        .and_then(|v| v.to_str().ok())
+                        .unwrap_or("-");
+
+                    tracing::info!(
+                        parent: span,
+                        method = %req.method(),
+                        uri = %req.uri(),
+                        user_agent = %user_agent,
+                        client_ip = %client_ip,
+                        content_length = ?content_length,
+                        has_authorization = req.headers().contains_key(axum::http::header::AUTHORIZATION),
+                        has_cookie = req.headers().contains_key(axum::http::header::COOKIE),
+                        "request started"
+                    );
                 })
                 .on_response(|res: &axum::http::Response<_>, latency: Duration, span: &Span| {
+                    let response_content_type = res
+                        .headers()
+                        .get(axum::http::header::CONTENT_TYPE)
+                        .and_then(|v| v.to_str().ok());
                     tracing::info!(
                         parent: span,
                         status = %res.status(),
+                        content_type = ?response_content_type,
                         latency_ms = latency.as_millis(),
                         "request finished"
                     );

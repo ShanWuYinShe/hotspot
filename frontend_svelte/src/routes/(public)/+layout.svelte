@@ -36,7 +36,7 @@
 		{/if}
 
 		<!-- Main content -->
-		<main class="flex-1 overflow-y-auto rounded-2xl bg-card/80 p-4 shadow-lg shadow-black/10 ring-1 ring-border/40 mx-3 md:mx-4 md:p-6 no-scrollbar" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
+		<main class="mx-3 flex-1 overflow-y-auto rounded-3xl border border-border/60 bg-card/85 p-4 shadow-sm backdrop-blur-md md:mx-4 md:p-6 no-scrollbar" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
 			<div class="mx-auto w-full max-w-7xl">
 				{@render children()}
 			</div>

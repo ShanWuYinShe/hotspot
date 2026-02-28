@@ -1,3 +1,4 @@
+use chrono::{DateTime, FixedOffset};
 use std::f64::consts::PI;
 
 use crate::{
@@ -36,6 +37,36 @@ impl MapService {
                 "bounds.east 必须 >= bounds.west".to_string(),
             ));
         }
+        Ok(())
+    }
+
+    fn validate_time_range(start_time: Option<&str>, end_time: Option<&str>) -> Result<()> {
+        let parsed_start = match start_time {
+            Some(v) => Some(DateTime::<FixedOffset>::parse_from_rfc3339(v).map_err(|_| {
+                AppError::BadRequest(
+                    "filter.time_range.start_time 格式错误，必须为 UTC ISO 8601".to_string(),
+                )
+            })?),
+            None => None,
+        };
+
+        let parsed_end = match end_time {
+            Some(v) => Some(DateTime::<FixedOffset>::parse_from_rfc3339(v).map_err(|_| {
+                AppError::BadRequest(
+                    "filter.time_range.end_time 格式错误，必须为 UTC ISO 8601".to_string(),
+                )
+            })?),
+            None => None,
+        };
+
+        if let (Some(start), Some(end)) = (parsed_start, parsed_end) {
+            if start > end {
+                return Err(AppError::BadRequest(
+                    "filter.time_range.start_time 必须 <= end_time".to_string(),
+                ));
+            }
+        }
+
         Ok(())
     }
 
@@ -78,6 +109,7 @@ impl MapService {
         } else {
             (None, None)
         };
+        Self::validate_time_range(start_time.as_deref(), end_time.as_deref())?;
 
         let mut items = Vec::new();
 

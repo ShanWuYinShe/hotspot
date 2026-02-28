@@ -10,13 +10,7 @@ alwaysApply: false
 
 - **命名空间**: `admin.users`、`admin.groups`、`admin.reports`、`admin.tags`、`admin.announcements`
 - **基础路径**: `/api/v1/admin/users/`、`/api/v1/admin/groups/`、`/api/v1/admin/reports/`、`/api/v1/admin/tags/`、`/api/v1/admin/announcements/`
-- **引用**:
-  - 基础规范：`@spec/api_spec_base.md`
-  - 通用类型：`@spec/api_spec_types.md`（`UserItem`、`GroupItem`、`SystemAnnouncementItem`、`UserInfo` 等）
-  - 举报类型：`@spec/api_spec_types.md`（`ReportItem`）
-  - 错误码：`@spec/api_spec_errors.md`
-  - 统一访问控制与权限 key 约定：`@spec/api_spec_admin_core.md`
-  - 公开公告 API：`@spec/api_spec_system.md`
+- **引用**: `@spec/api_spec_base.md`、`@spec/api_spec_types.md`（含 `UserItem`/`GroupItem`/`ReportItem` 等）、`@spec/api_spec_errors.md`、`@spec/api_spec_admin_core.md`、`@spec/api_spec_system.md`
 
 ## 端点总览
 
@@ -51,11 +45,12 @@ alwaysApply: false
 - `ReportStatus`
 - `ReportTargetType`
 - `ReportHandleAction`
+- `TagTrend`
 - `AnnouncementSeverity`
 - `UserInfo`
 - `ReportItem`
 
-说明：以下 Admin 扩展类型通过 `extends` 继承普通类型，包含管理员视角的完整字段。
+以下 Admin 扩展类型在通用类型基础上扩展管理员视角字段（部分使用 `extends`，部分为结构化扩展）。
 
 ## 端点详情
 
@@ -152,7 +147,7 @@ interface AdminBanUserRequest {
 解封用户（管理员）。
 
 - **认证**: 必须 + `admin.users.write`
-- **幂等**: 幂等语义操作，重复请求返回一致结果
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **安全约束**：
 - 仅已封禁的用户可解封，未封禁时返回 `10400`
@@ -307,6 +302,8 @@ interface AdminReportHandleRequest {
 }
 ```
 
+**字段映射说明**：本端点的 `note` 会写入举报详情中的 `handle_note` 字段，并记录到审计日志 `AuditDetails.report.handle.note`。
+
 **Response**: `ApiResponse`
 
 **错误码**: `10000` `10200` `10300` `10400`
@@ -348,7 +345,7 @@ interface AdminTagItem {
 删除/屏蔽标签（管理员）。删除后该标签将从所有引用中移除。
 
 - **认证**: 必须 + `admin.tags.write`
-- **幂等**: 幂等语义操作，重复请求返回一致结果
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `AdminDeleteTagRequest`
 ```typescript
@@ -431,7 +428,7 @@ interface AnnouncementCreated {
 更新系统公告（管理员）。
 
 - **认证**: 必须 + `admin.announcements.write`
-- **幂等**: 幂等语义操作，重复请求返回一致结果
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `UpdateAnnouncementRequest`
 ```typescript
@@ -455,7 +452,7 @@ interface UpdateAnnouncementRequest {
 删除公告（管理员）。
 
 - **认证**: 必须 + `admin.announcements.write`
-- **幂等**: 幂等语义操作，重复请求返回一致结果
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `DeleteAnnouncementRequest`
 ```typescript

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { dev } from '$app/environment';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { onMount, untrack } from 'svelte';
 	import { withMinimumLoadingTime } from '$lib/utils/loading';
@@ -8,16 +9,25 @@
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { messageStore } from '$lib/stores/message.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
-	import { websocketStore, subscriptionManager, eventHandlers } from '$lib/websocket';
+	import { websocketStore, eventHandlers } from '$lib/websocket';
 	import type { PrivateMessageNewPayload } from '$lib/websocket/types';
 	import { useBatchMarkRead } from '$lib/hooks/use-batch-mark-read.svelte';
+	import { createReconnectTracker, mergeMessagesByIdAndSentAt } from '$lib/hooks/use-chat-realtime-sync';
+	import { useChatWsSubscription } from '$lib/hooks/use-chat-ws-subscription.svelte';
 	import { autofocus } from '$lib/attachments';
 	import { Button } from '$lib/components/ui/button';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
+	import {
+		DropdownMenu,
+		DropdownMenuContent,
+		DropdownMenuItem,
+		DropdownMenuTrigger
+	} from '$lib/components/ui/dropdown-menu';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { ScrollArea } from '$lib/components/ui/scroll-area';
 	import type { PrivateMessageItem, UserInfo } from '$lib/types/api';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
+	import Trash2 from 'lucide-svelte/icons/trash-2';
 	import Send from 'lucide-svelte/icons/send';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 	import MoreVertical from 'lucide-svelte/icons/more-vertical';
@@ -30,19 +40,62 @@
 	let messageText = $state('');
 	let isSending = $state(false);
 	let isOtherUserTyping = $state(false);
-	let typingTimer: ReturnType<typeof setTimeout> | null = null;
-	let shouldFocusInput = $state(0); // 用于触发重新聚焦
-	let isSubscribed = $state(false); // 订阅状态
-	let isAttemptingSubscribe = $state(false); // 是否正在尝试订阅
-	let isMounted = false; // 组件是否挂载（防止异步操作在卸载后更新状态）
+	let shouldFocusInput = $state(0);
+	let isMounted = false;
+	let isDeletingChat = $state(false);
+	const MESSAGE_CONTENT_MAX = 5000;
+	const TYPING_INDICATOR_TTL_MS = 4500;
+	let otherUserTypingTimer: ReturnType<typeof setTimeout> | null = null;
+	const reconnectTracker = createReconnectTracker();
+	const wsSubscription = useChatWsSubscription();
 
-	const canSendMessage = $derived(isSubscribed);
+	// spec: 私聊消息通过 HTTP API 发送，不依赖 WS 连接或订阅状态
+	const canSendMessage = $derived(authStore.isAuthenticated);
+
+	function clearOtherUserTypingTimer() {
+		if (otherUserTypingTimer) {
+			clearTimeout(otherUserTypingTimer);
+			otherUserTypingTimer = null;
+		}
+	}
+
+	function resetOtherUserTyping() {
+		clearOtherUserTypingTimer();
+		isOtherUserTyping = false;
+	}
+
+	function markOtherUserTypingActive() {
+		isOtherUserTyping = true;
+		clearOtherUserTypingTimer();
+		otherUserTypingTimer = setTimeout(() => {
+			otherUserTypingTimer = null;
+			isOtherUserTyping = false;
+		}, TYPING_INDICATOR_TTL_MS);
+	}
+
+	function resolveLatestVisibleMessageId(messageIds: string[]): string | undefined {
+		if (messageIds.length === 0) return undefined;
+		const indexMap = new Map(messages.map((message, index) => [message.message_id, index] as const));
+		let latestId: string | undefined;
+		let latestIndex = -1;
+		for (const messageId of messageIds) {
+			const index = indexMap.get(messageId);
+			if (index !== undefined && index > latestIndex) {
+				latestIndex = index;
+				latestId = messageId;
+			}
+		}
+		return latestId ?? messageIds[messageIds.length - 1];
+	}
 
 	// ✨ 批量已读逻辑
 	const batchMarkRead = useBatchMarkRead({
-		markAsRead: async (_messageIds) => {
-			// 私聊消息的标记已读是按对话标记的，不需要传 messageIds
-			await privateMessagesService.markAsRead({ target_user_id: userId });
+		markAsRead: async (messageIds) => {
+			const upToMessageId = resolveLatestVisibleMessageId(messageIds ?? []);
+			await privateMessagesService.markAsRead({
+				target_user_id: userId,
+				...(upToMessageId ? { up_to_message_id: upToMessageId } : {})
+			});
 		},
 		debounceMs: 2000,
 		visibilityThreshold: 1000
@@ -66,11 +119,30 @@
 		}
 	}
 
+	async function backfillRecentMessagesAfterReconnect() {
+		try {
+			const response = await privateMessagesService.getHistory({
+				target_user_id: userId,
+				pagination: { limit: 50 }
+			});
+			if (!isMounted || !isSuccess(response) || !response.data) return;
+			const recentMessages = response.data.items.reverse();
+			if (recentMessages.length === 0) return;
+			messages = mergeMessagesByIdAndSentAt(messages, recentMessages);
+		} catch (error) {
+			if (dev) console.warn('[Chat] 重连回补失败:', error);
+		}
+	}
+
 	async function sendMessage() {
-		if (!messageText.trim() || !canSendMessage) return;
+		const text = messageText.trim();
+		if (!text || !canSendMessage) return;
+		if (text.length > MESSAGE_CONTENT_MAX) {
+			toast.error(`消息内容最多 ${MESSAGE_CONTENT_MAX} 字符`);
+			return;
+		}
 
 		isSending = true;
-		const text = messageText.trim();
 		messageText = '';
 
 		try {
@@ -96,34 +168,30 @@
 		}
 	}
 
-	/**
-	 * 处理输入变化（发送正在输入状态）
-	 */
-	function handleInput() {
-		// 发送正在输入状态（使用派生状态）
-		if (websocketStore.isConnected) {
-			websocketStore.send({
-				type: 'PrivateTyping',
-				payload: {
-					target_user_id: userId,
-					is_typing: true
-				}
-			});
-		}
+	async function deleteChat() {
+		if (isDeletingChat) return;
+		if (!confirm('删除后仅清空你的会话视图，不会影响对方。确认删除吗？')) return;
 
-		// 3秒后自动发送停止输入
-		if (typingTimer) clearTimeout(typingTimer);
-		typingTimer = setTimeout(() => {
-			if (websocketStore.isConnected) {
-				websocketStore.send({
-					type: 'PrivateTyping',
-					payload: {
-						target_user_id: userId,
-						is_typing: false
-					}
-				});
+		isDeletingChat = true;
+		try {
+			const response = await privateChatsService.deleteChat({ target_user_id: userId });
+			if (!isSuccess(response)) {
+				toast.error(response.message || '删除会话失败');
+				return;
 			}
-		}, 3000);
+			messageStore.markConversationAsRead(`private_${userId}`);
+			eventHandlers.cancelAllTyping();
+			toast.success('会话已删除');
+			await goto('/chat');
+		} catch {
+			toast.error('删除会话失败');
+		} finally {
+			isDeletingChat = false;
+		}
+	}
+
+	function handleInput() {
+		eventHandlers.sendPrivateTyping(userId, true);
 	}
 
 	function formatTime(dateStr: string): string {
@@ -154,12 +222,17 @@
 	onMount(() => {
 		isMounted = true;
 
-		// 注册 WebSocket 监听器（使用 reactive userId 自动过滤正确的消息）
 		const unsubscribeMessage = eventHandlers.onPrivateMessage((payload: PrivateMessageNewPayload) => {
 			if (
 				payload.target_user_id === userId ||
 				(payload.sender.user_id === userId && payload.target_user_id === authStore.currentUserId)
 			) {
+				// spec: 按 message_id 去重
+				if (messages.some((m) => m.message_id === payload.message_id)) return;
+				if (payload.sender.user_id === userId) {
+					resetOtherUserTyping();
+				}
+
 				const newMessage: PrivateMessageItem = {
 					message_id: payload.message_id,
 					type: payload.type,
@@ -177,7 +250,11 @@
 
 		const unsubscribeTyping = websocketStore.on('PrivateUserTyping', (payload) => {
 			if (payload.user_id === userId) {
-				isOtherUserTyping = payload.is_typing;
+				if (payload.is_typing) {
+					markOtherUserTypingActive();
+				} else {
+					resetOtherUserTyping();
+				}
 			}
 		});
 
@@ -205,14 +282,13 @@
 
 		return () => {
 			isMounted = false;
+			resetOtherUserTyping();
 			unsubscribeMessage();
 			unsubscribeTyping();
 			unsubscribeRecalled();
 			unsubscribeEdited();
-			if (isSubscribed) {
-				subscriptionManager.unsubscribe('user', [userId]);
-			}
-			if (typingTimer) clearTimeout(typingTimer);
+			wsSubscription.cleanup('user', [userId]);
+			eventHandlers.cancelAllTyping();
 		};
 	});
 
@@ -220,15 +296,15 @@
 	$effect(() => {
 		const id = userId;
 		untrack(() => {
+			eventHandlers.cancelAllTyping();
 			otherUser = null;
 			messages = [];
 			isLoading = true;
-			isOtherUserTyping = false;
+			resetOtherUserTyping();
 			messageText = '';
-			isSubscribed = false;
-			isAttemptingSubscribe = false;
+			wsSubscription.reset();
+			reconnectTracker.reset();
 			messageStore.markConversationAsRead(`private_${id}`);
-			if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
 			loadChat();
 		});
 	});
@@ -242,35 +318,40 @@
 
 		// 使用 derived 状态检查连接
 		const connected = websocketStore.isConnected;
+		const { shouldBackfill } = reconnectTracker.update(
+			connected,
+			websocketStore.lastDisconnectDurationMs
+		);
 		
 		if (!connected) {
 			// 连接断开，重置订阅状态
-			if (isSubscribed) {
+			if (wsSubscription.state.isSubscribed) {
 				if (dev) console.log('[Chat] WebSocket 断开，重置订阅状态');
-				isSubscribed = false;
 			}
-			return () => { cancelled = true; };
+			resetOtherUserTyping();
+			wsSubscription.sync({
+				connected,
+				type: 'user',
+				ids: [userId]
+			});
+			return () => {
+				cancelled = true;
+			};
+		}
+		if (shouldBackfill) {
+			void backfillRecentMessagesAfterReconnect();
 		}
 
-		// WebSocket 已连接，尝试订阅
-		if (!isSubscribed && !isAttemptingSubscribe) {
-			isAttemptingSubscribe = true;
-			
-			if (dev) console.log('[Chat] WebSocket 已连接，订阅用户:', userId);
-			
-			subscriptionManager.subscribe('user', [userId]).then((success) => {
+		wsSubscription.sync({
+			connected,
+			type: 'user',
+			ids: [userId],
+			onSubscribeFailed: () => {
 				if (cancelled) return;
-				isSubscribed = success;
-				isAttemptingSubscribe = false;
-				
-				if (success) {
-					if (dev) console.log('[Chat] ✅ 订阅成功');
-				} else {
-					if (dev) console.warn('[Chat] ❌ 订阅失败，将在重连后重试');
-					toast.warning('消息订阅失败，正在重试...');
-				}
-			});
-		}
+				if (dev) console.warn('[Chat] ❌ 订阅失败，将在重连后重试');
+				toast.warning('消息订阅失败，正在重试...');
+			}
+		});
 
 		return () => { cancelled = true; };
 	});
@@ -301,9 +382,24 @@
 			<span class="text-sm text-muted-foreground">用户不存在或加载失败</span>
 		{/if}
 		<div class="ml-auto">
-			<Button variant="ghost" size="icon" aria-label="更多选项">
-				<MoreVertical class="h-5 w-5" />
-			</Button>
+			<DropdownMenu>
+				<DropdownMenuTrigger>
+					<Button variant="ghost" size="icon" aria-label="更多选项">
+						<MoreVertical class="h-5 w-5" />
+					</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end" class="w-44">
+					<DropdownMenuItem onclick={deleteChat} disabled={isDeletingChat} class="text-destructive">
+						{#if isDeletingChat}
+							<Loader2 class="h-4 w-4 animate-spin" />
+							<span>删除中...</span>
+						{:else}
+							<Trash2 class="h-4 w-4" />
+							<span>删除会话</span>
+						{/if}
+					</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>
 		</div>
 	</div>
 
@@ -365,23 +461,25 @@
 
 	<!-- Input -->
 	<div class="border-t border-border/50 bg-card/80 pt-4 px-4 pb-4 backdrop-blur-sm">
-		{#if !isSubscribed && !isLoading}
-			<div class="rounded-xl bg-yellow-500/10 border border-yellow-500/30 px-4 py-2.5 text-center mb-3">
-				<p class="text-sm text-yellow-700 dark:text-yellow-300 flex items-center justify-center gap-2">
-					{#if isAttemptingSubscribe}
-						<Loader2 class="h-4 w-4 animate-spin" />
-						正在连接服务器...
-					{:else if !websocketStore.isConnected}
-						<Loader2 class="h-4 w-4 animate-spin" />
-						等待 WebSocket 连接...
-					{:else}
-						订阅失败，正在重试...
-					{/if}
-				</p>
+		{#if !websocketStore.isConnected && !isLoading}
+			<div class="flex items-center justify-center gap-1.5 mb-2 text-xs text-muted-foreground">
+				<Loader2 class="h-3 w-3 animate-spin" />
+				<span>实时消息连接中…</span>
 			</div>
 		{/if}
-		
-		<!-- 对方正在输入提示 -->
+		{#if websocketStore.isConnected && !wsSubscription.state.isSubscribed && !isLoading}
+			<div class="flex items-center justify-center gap-1.5 mb-2 text-xs text-muted-foreground">
+				<Loader2 class="h-3 w-3 animate-spin" />
+				<span>
+					{#if wsSubscription.state.isAttemptingSubscribe}
+						输入状态订阅中（不影响消息收发）
+					{:else}
+						输入状态订阅重试中（不影响消息收发）
+					{/if}
+				</span>
+			</div>
+		{/if}
+
 		{#if isOtherUserTyping}
 			<div class="mb-2 text-xs text-muted-foreground">
 				{otherUser?.nickname ?? '对方'} 正在输入...
@@ -394,6 +492,7 @@
 				placeholder="输入消息..."
 				bind:value={messageText}
 				rows={1}
+				maxlength={MESSAGE_CONTENT_MAX}
 				class="min-h-[40px] flex w-full resize-none rounded-md border border-input bg-background/80 px-3 py-2 text-base shadow-sm shadow-black/5 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
 				disabled={isSending}
 				oninput={handleInput}

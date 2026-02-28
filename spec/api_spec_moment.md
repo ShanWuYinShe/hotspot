@@ -66,19 +66,26 @@ alwaysApply: false
 
 - **认证**: 可选
 - **幂等**: 无
-- **排序**: 默认 `sort_by='relevance'`：按相关性优先排序，同分时以 `created_at` 倒序作为第二排序，再以 `moment_id ASC` 作为最终稳定 tie-breaker；`sort_by='distance'`：按距离由近到远排序（需要 `radius`）；`sort_by='newest'`：按发布时间倒序；`sort_by='popular'`：按点赞/评论热度排序。一致性级别为弱一致（搜索场景允许短暂延迟）
+- **排序**:
+  - `sort_by='relevance'`（默认）：按相关性优先；同分时按 `created_at` 倒序，再以 `moment_id ASC` 作为稳定 tie-breaker
+  - `sort_by='distance'`：按距离由近到远（未提供 `radius` 时按默认 `5_000` 米计算）
+  - `sort_by='newest'`：按发布时间倒序
+  - `sort_by='popular'`：按点赞/评论热度排序
+  - 一致性级别为弱一致（搜索场景允许短暂延迟）
 
 **Request**: `SearchMomentsRequest`
 ```typescript
 interface SearchMomentsRequest {
   keyword?: string;    // 关键字搜索（匹配描述等）
   tag?: string;        // 标签筛选
-  radius?: number;     // 位置范围（米），100-50000，配合 reference_point 使用；未提供时不限定地理范围（仅按其他条件匹配）
+  radius?: number;     // 位置范围（米），100-50000，配合 reference_point 使用；未提供时默认 5_000 米，并受 AppConfig.limits.search_radius_max 上限约束
   sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';  // 默认: relevance
-  reference_point: GeoPoint; // 浏览锚点位置（客户端必须传入有效坐标，拒绝定位时使用 fallback）
+  reference_point: GeoPoint; // 浏览锚点位置（必填；拒绝定位时使用 ClientConfig.defaults.default_location.point）
   pagination?: PaginationParams;
 }
 // 至少提供 keyword、tag、radius 中的一个；不满足时返回 10000（参数错误）
+// reference_point 不算搜索条件，仅用于距离计算和排序，不能单独作为搜索条件
+// 当仅缺省 radius 且提供了 keyword/tag 时，服务端按默认 5_000 米计算，并受 AppConfig.limits.search_radius_max 上限约束
 ```
 
 **Response**: `ApiResponse<PaginatedData<MomentItem>>`
@@ -133,7 +140,7 @@ interface CreateMomentRequest {
 编辑生活瞬间。
 
 - **认证**: 必须
-- **幂等**: 幂等语义
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `EditMomentRequest`
 ```typescript
@@ -148,6 +155,8 @@ interface EditMomentRequest {
 }
 ```
 
+**Patch 语义**：未传字段保持不变；`tags: []` / `image_file_ids: []` / `mentions: []` 分别表示清空对应列表，传入非空数组表示替换。
+
 **Response**: `ApiResponse<MomentItem>`
 
 **错误码**: `10000` `10200` `10300`
@@ -157,7 +166,7 @@ interface EditMomentRequest {
 删除生活瞬间。
 
 - **认证**: 必须
-- **幂等**: 幂等语义
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `DeleteMomentRequest`
 ```typescript
@@ -174,10 +183,10 @@ interface DeleteMomentRequest {
 
 ### POST /api/v1/moments/me/like
 
-点赞生活瞬间。重复点赞返回成功（不报错），客户端无需担心重复操作。
+点赞生活瞬间（重复点赞返回成功）。
 
 - **认证**: 必须
-- **幂等**: 幂等语义
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `LikeMomentRequest`
 ```typescript
@@ -195,7 +204,7 @@ interface LikeMomentRequest {
 取消点赞生活瞬间。重复取消点赞返回成功（不报错），客户端无需担心重复操作。
 
 - **认证**: 必须
-- **幂等**: 幂等语义
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `UnlikeMomentRequest`
 ```typescript
@@ -213,7 +222,7 @@ interface UnlikeMomentRequest {
 收藏瞬间。重复收藏返回成功（不报错），客户端无需担心重复操作。
 
 - **认证**: 必须
-- **幂等**: 幂等语义
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `FavoriteMomentRequest`
 ```typescript
@@ -231,7 +240,7 @@ interface FavoriteMomentRequest {
 取消收藏瞬间。重复取消收藏返回成功（不报错），客户端无需担心重复操作。
 
 - **认证**: 必须
-- **幂等**: 幂等语义
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `UnfavoriteMomentRequest`
 ```typescript
@@ -300,7 +309,7 @@ interface MomentLikesRequest {
 
 **Response**: `ApiResponse<PaginatedData<LikeItem>>`（`LikeItem` 定义于 `@spec/api_spec_types.md`）
 
-**错误码**: `10300`
+**错误码**: `10000` `10300`
 
 ---
 
@@ -339,7 +348,7 @@ interface CommentItem {
   comment_id: string;
   user: UserInfo;
   content: string;
-  parent_id?: string;       // 父评论ID（回复时存在）
+  parent_id?: string;       // 父评论 ID（回复时存在）
   mentions?: string[];      // @ 提及的用户 ID 列表
   created_at: string;
   likes_count: number;
@@ -357,7 +366,7 @@ interface CommentItem {
 删除评论。
 
 - **认证**: 必须
-- **幂等**: 幂等语义
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `DeleteCommentRequest`
 ```typescript
@@ -388,7 +397,7 @@ interface CommentsRequest {
 
 **Response**: `ApiResponse<PaginatedData<CommentItem>>`
 
-**错误码**: `10300`
+**错误码**: `10000` `10300`
 
 ### POST /api/v1/comments/list_replies
 
@@ -408,14 +417,14 @@ interface CommentRepliesRequest {
 
 **Response**: `ApiResponse<PaginatedData<CommentItem>>`
 
-**错误码**: `10300`
+**错误码**: `10000` `10300`
 
 ### POST /api/v1/comments/me/like
 
-点赞评论。重复点赞返回成功（不报错），客户端无需担心重复操作。
+点赞评论（重复点赞返回成功）。
 
 - **认证**: 必须
-- **幂等**: 幂等语义
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `LikeCommentRequest`
 ```typescript
@@ -433,7 +442,7 @@ interface LikeCommentRequest {
 取消点赞评论。重复取消点赞返回成功（不报错），客户端无需担心重复操作。
 
 - **认证**: 必须
-- **幂等**: 幂等语义
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `UnlikeCommentRequest`
 ```typescript
@@ -464,4 +473,4 @@ interface CommentLikesRequest {
 
 **Response**: `ApiResponse<PaginatedData<LikeItem>>`（`LikeItem` 定义于 `@spec/api_spec_types.md`）
 
-**错误码**: `10300`
+**错误码**: `10000` `10300`

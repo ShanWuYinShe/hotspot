@@ -8,6 +8,7 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
+use std::error::Error as StdError;
 use thiserror::Error;
 
 use crate::dto::response::ApiResponse;
@@ -441,6 +442,105 @@ impl AppError {
     }
 }
 
+fn format_error_chain(err: &(dyn StdError + 'static)) -> String {
+    let mut chain = vec![err.to_string()];
+    let mut source = err.source();
+    while let Some(next) = source {
+        chain.push(next.to_string());
+        source = next.source();
+    }
+    chain.join(" <- ")
+}
+
+fn log_sqlx_error(code: i32, err: &sqlx::Error, error_chain: &str) {
+    match err {
+        sqlx::Error::ColumnDecode { index, source } => {
+            tracing::error!(
+                code,
+                error_kind = "sqlx_column_decode",
+                column_index = ?index,
+                decode_source = %source,
+                error_display = %err,
+                error_debug = ?err,
+                error_chain = %error_chain,
+                "服务端错误（客户端收到通用错误信息）"
+            );
+        }
+        sqlx::Error::Database(db_err) => {
+            tracing::error!(
+                code,
+                error_kind = "sqlx_database",
+                db_code = ?db_err.code(),
+                db_message = %db_err.message(),
+                db_table = ?db_err.table(),
+                db_constraint = ?db_err.constraint(),
+                error_display = %err,
+                error_debug = ?err,
+                error_chain = %error_chain,
+                "服务端错误（客户端收到通用错误信息）"
+            );
+        }
+        _ => {
+            tracing::error!(
+                code,
+                error_kind = "sqlx_other",
+                error_display = %err,
+                error_debug = ?err,
+                error_chain = %error_chain,
+                "服务端错误（客户端收到通用错误信息）"
+            );
+        }
+    }
+}
+
+fn log_server_error(code: i32, err: &AppError) {
+    let error_chain = format_error_chain(err);
+    match err {
+        AppError::Sqlx(sqlx_err) => log_sqlx_error(code, sqlx_err, &error_chain),
+        AppError::Redis(redis_err) => {
+            tracing::error!(
+                code,
+                error_kind = "redis",
+                redis_error_kind = ?redis_err.kind(),
+                error_display = %redis_err,
+                error_debug = ?redis_err,
+                error_chain = %error_chain,
+                "服务端错误（客户端收到通用错误信息）"
+            );
+        }
+        AppError::SerdeJson(serde_err) => {
+            tracing::error!(
+                code,
+                error_kind = "serde_json",
+                error_display = %serde_err,
+                error_debug = ?serde_err,
+                error_chain = %error_chain,
+                "服务端错误（客户端收到通用错误信息）"
+            );
+        }
+        AppError::InternalError(message) => {
+            tracing::error!(
+                code,
+                error_kind = "internal",
+                internal_message = %message,
+                error_debug = ?err,
+                error_chain = %error_chain,
+                "服务端错误（客户端收到通用错误信息）"
+            );
+        }
+        _ => {
+            tracing::error!(
+                code,
+                error_kind = "server_error",
+                error_display = %err,
+                error_debug = ?err,
+                error_chain = %error_chain,
+                "服务端错误（客户端收到通用错误信息）"
+            );
+        }
+    }
+}
+
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let code = self.error_code();
@@ -463,7 +563,7 @@ impl IntoResponse for AppError {
         // - 完整错误信息（含数据库/Redis/序列化等技术细节）仅记录在服务端日志
         // - 客户端只收到通用 "服务器内部错误"，不暴露技术栈细节
         let client_message = if self.is_server_error() {
-            tracing::error!(code = code, error = ?self, "服务端错误（客户端收到通用错误信息）");
+            log_server_error(code, &self);
             "服务器内部错误".to_string()
         } else {
             let message = self.to_string();

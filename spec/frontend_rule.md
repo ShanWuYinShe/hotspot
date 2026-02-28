@@ -47,7 +47,7 @@ alwaysApply: false
 - **成功判定**：仅使用 `ApiResponse.code === 0`
 - **HTTP 层错误**：通过 try/catch 处理网络/超时/非 200（见通用契约）
 - **仅在 HTTP 200 时解析**：非 200 直接视为请求失败，不解析 `ApiResponse`
-- **Cursor 不透明**：前端只透传 `next_cursor`
+- **Cursor 不透明**：请求时透传 `cursor`，收到响应后将 `next_cursor` 作为下一页的 `cursor` 透传，不解析、不构造
 - **RPC + JSON**：仅 POST，不实现 REST 风格
 
 ---

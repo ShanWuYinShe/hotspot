@@ -14,12 +14,14 @@ import { HttpUtil } from '../../../core/network/HttpUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
+import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { MyProfile, UpdateLocationRequest, UpgradeAccountRequest, GuestRequest } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { common } from '@kit.AbilityKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
@@ -29,7 +31,9 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 
 const DOMAIN_NUMBER: number = 0xFF03;
 const TAG: string = 'ProfilePage';
+const PASSWORD_POLICY_HINT: string = '密码需为8-128位且同时包含字母和数字';
 
+@Preview
 @Component
 export struct ProfilePage {
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
@@ -41,6 +45,10 @@ export struct ProfilePage {
   @State isEditing: boolean = false;
   @State editNickname: string = '';
   @State editBio: string = '';
+  @State editAvatarPreviewUrl: string = '';
+  @State editAvatarLocalUri: string = '';
+  @State editAvatarFileId: string = '';
+  @State isAvatarUploading: boolean = false;
   @State isLoading: boolean = false;
   @State myMomentsCount: number = 0;
   @State myGroupsCount: number = 0;
@@ -56,8 +64,42 @@ export struct ProfilePage {
   @State upgradePassword: string = '';
   @State upgradePasswordConfirm: string = '';
   @State isUpgrading: boolean = false;
+  @State hasAdminPrivileges: boolean = false;
+  @State pressedMenuItemKey: string = '';
 
   private webSocketService = WebSocketService.getInstance();
+
+  private isValidLoginId(loginId: string): boolean {
+    const trimmed = loginId.trim();
+    return trimmed.length >= 3 && trimmed.length <= 64;
+  }
+
+  private isValidNickname(nickname: string): boolean {
+    const trimmed = nickname.trim();
+    return trimmed.length >= 1 && trimmed.length <= 30;
+  }
+
+  private hasLetterAndDigit(value: string): boolean {
+    let hasLetter: boolean = false;
+    let hasDigit: boolean = false;
+    for (let i = 0; i < value.length; i++) {
+      const code = value.charCodeAt(i);
+      if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {
+        hasLetter = true;
+      }
+      if (code >= 48 && code <= 57) {
+        hasDigit = true;
+      }
+      if (hasLetter && hasDigit) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private isValidPassword(value: string): boolean {
+    return value.length >= 8 && value.length <= 128 && this.hasLetterAndDigit(value);
+  }
 
   async aboutToAppear() {
     SystemUiController.useSurface({
@@ -66,6 +108,7 @@ export struct ProfilePage {
     if (this.currentUser) {
       this.editNickname = this.currentUser.nickname;
       this.editBio = this.currentUser.bio || '';
+      this.editAvatarPreviewUrl = this.currentUser.avatar_url || '';
       try {
         NfcShareService.getInstance().setShareData(
           NfcShareService.buildUserProfileShare(
@@ -80,6 +123,7 @@ export struct ProfilePage {
       }
     }
     await this.loadUserStats();
+    await this.refreshAdminPrivileges();
   }
 
   aboutToDisappear(): void {
@@ -122,21 +166,110 @@ export struct ProfilePage {
     AppRouter.push(PageNames.MY_SHARES);
   }
 
+  private isAdminUser(): boolean {
+    return this.hasAdminPrivileges;
+  }
+
+  private async refreshAdminPrivileges(): Promise<void> {
+    if (!this.isLoggedIn || !this.currentUser || this.userType === 'temp') {
+      this.hasAdminPrivileges = false;
+      return;
+    }
+
+    try {
+      const response = await ApiClient.getMyAdminPermissions();
+      if (response.code === 0 && response.data) {
+        this.hasAdminPrivileges = true;
+        return;
+      }
+    } catch (_) {
+      // 非管理员返回 10200，静默降级为普通用户视图
+    }
+
+    this.hasAdminPrivileges = false;
+  }
+
+  private openAdminPanel(): void {
+    if (!this.isAdminUser()) {
+      SystemToast.showWarning('仅管理员可访问', this.getUIContext());
+      return;
+    }
+    AppRouter.push(PageNames.DEBUG_PANEL);
+  }
+
   private startEdit(): void {
     if (this.currentUser) {
       this.editNickname = this.currentUser.nickname;
       this.editBio = this.currentUser.bio || '';
+      this.editAvatarPreviewUrl = this.currentUser.avatar_url || '';
+      this.editAvatarLocalUri = '';
+      this.editAvatarFileId = '';
       this.isEditing = true;
     }
   }
 
   private cancelEdit(): void {
+    this.editAvatarLocalUri = '';
+    this.editAvatarFileId = '';
+    this.editAvatarPreviewUrl = this.currentUser?.avatar_url || '';
     this.isEditing = false;
   }
 
+  private async selectAvatarForEdit(): Promise<void> {
+    if (this.isLoading || this.isAvatarUploading) {
+      return;
+    }
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      const selectedUris = await MediaServiceManager.selectImages(context, 1);
+      if (selectedUris.length === 0) {
+        return;
+      }
+      this.editAvatarLocalUri = selectedUris[0];
+      this.editAvatarPreviewUrl = selectedUris[0];
+      this.editAvatarFileId = '';
+      SystemToast.show('头像已选择，保存后生效', this.getUIContext());
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `选择头像失败: ${JSON.stringify(error)}`);
+      SystemToast.showError('选择头像失败，请重试', this.getUIContext());
+    }
+  }
+
+  private async ensureEditAvatarUploaded(context: common.UIAbilityContext): Promise<string | undefined> {
+    if (!this.editAvatarLocalUri) {
+      return undefined;
+    }
+    if (this.editAvatarFileId) {
+      return this.editAvatarFileId;
+    }
+    this.isAvatarUploading = true;
+    try {
+      const compressedPath = await MediaServiceManager.compressImage(context, this.editAvatarLocalUri, 80, 1024 * 1024 * 2);
+      const uploadUri = await MediaServiceManager.prepareFileForUpload(context, compressedPath);
+      const uploadResult = await ApiClient.uploadFile(context, uploadUri, 'avatar');
+      if (!uploadResult.file_id) {
+        throw new Error('头像上传失败');
+      }
+      this.editAvatarFileId = uploadResult.file_id;
+      return this.editAvatarFileId;
+    } finally {
+      this.isAvatarUploading = false;
+    }
+  }
+
   private async saveEdit(): Promise<void> {
-    if (!this.editNickname.trim()) {
+    const trimmedNickname = this.editNickname.trim();
+    const trimmedBio = this.editBio.trim();
+    if (!trimmedNickname) {
       SystemToast.showWarning('昵称不能为空', this.getUIContext());
+      return;
+    }
+    if (!this.isValidNickname(trimmedNickname)) {
+      SystemToast.showWarning('昵称长度需在1-30字符之间', this.getUIContext());
+      return;
+    }
+    if (trimmedBio.length > 500) {
+      SystemToast.showWarning('个人简介不能超过500字符', this.getUIContext());
       return;
     }
 
@@ -144,10 +277,16 @@ export struct ProfilePage {
     try {
       await LoadingUtil.withMinimumTime(async () => {
         if (this.currentUser) {
-          await ApiClient.updateProfile({
-            nickname: this.editNickname,
-            bio: this.editBio
+          const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+          const avatarFileId = await this.ensureEditAvatarUploaded(context);
+          const updateProfileResponse = await ApiClient.updateProfile({
+            nickname: trimmedNickname,
+            bio: trimmedBio,
+            avatar_file_id: avatarFileId
           });
+          if (updateProfileResponse.code !== 0) {
+            throw new Error(updateProfileResponse.message || '资料更新失败');
+          }
 
           const response = await ApiClient.getMyProfile();
           if (response.code === 0 && response.data) {
@@ -155,11 +294,14 @@ export struct ProfilePage {
           }
         }
 
+        this.editAvatarLocalUri = '';
+        this.editAvatarFileId = '';
         this.isEditing = false;
         SystemToast.showSuccess('资料更新成功', this.getUIContext());
       }, LoadingUtil.DEFAULT_ACTION_MS);
     } catch (error) {
-      SystemToast.showError('更新失败', this.getUIContext());
+      const message = error instanceof Error ? error.message : '更新失败';
+      SystemToast.showError(message, this.getUIContext());
     } finally {
       this.isLoading = false;
     }
@@ -224,12 +366,17 @@ export struct ProfilePage {
   }
 
   private async upgradeAccount(): Promise<void> {
-    if (!this.upgradeLoginId.trim()) {
+    const trimmedLoginId = this.upgradeLoginId.trim();
+    if (!trimmedLoginId) {
       SystemToast.showWarning('请输入邮箱/用户名', this.getUIContext());
       return;
     }
-    if (this.upgradePassword.length < 8) {
-      SystemToast.showWarning('密码至少需要8个字符', this.getUIContext());
+    if (!this.isValidLoginId(trimmedLoginId)) {
+      SystemToast.showWarning('登录账号长度需在3-64字符之间', this.getUIContext());
+      return;
+    }
+    if (!this.isValidPassword(this.upgradePassword)) {
+      SystemToast.showWarning(PASSWORD_POLICY_HINT, this.getUIContext());
       return;
     }
     if (this.upgradePassword !== this.upgradePasswordConfirm) {
@@ -240,7 +387,7 @@ export struct ProfilePage {
     this.isUpgrading = true;
     try {
       const request: UpgradeAccountRequest = {
-        login_id: this.upgradeLoginId.trim(),
+        login_id: trimmedLoginId,
         password: this.upgradePassword
       };
       const response = await ApiClient.upgradeAccount(request);
@@ -269,7 +416,6 @@ export struct ProfilePage {
     Column() {
       SystemPageHeader({
         title: '个人中心',
-        surfaceColor: $r('app.color.bg_secondary'),
         action: (this.isLoggedIn && this.currentUser && !this.isEditing && !this.showUpgradeForm)
           ? { label: '编辑', onClick: () => this.startEdit() }
           : undefined
@@ -325,7 +471,7 @@ export struct ProfilePage {
             Circle()
               .width(80)
               .height(80)
-              .fill($r('sys.color.ohos_id_color_component_normal'))
+              .fill($r('app.color.bg_secondary'))
             Text() {
               SymbolSpan($r(AppIcon.PERSON))
                 .fontSize(36)
@@ -384,24 +530,26 @@ export struct ProfilePage {
         Column({ space: 12 }) {
           // 快速体验按钮（弹窗模式）
           Button('快速体验（无需注册）')
-            .type(ButtonType.Capsule)
+            .type(ButtonType.Normal)
             .width('100%')
             .height(48)
             .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
             .fontColor(Color.White)
             .fontSize(16)
+            .borderRadius(DesignConstants.RADIUS.XL)
             .onClick(() => {
               this.showQuickStart = true;
             })
 
           // 登录/注册按钮
           Button('登录 / 注册')
-            .type(ButtonType.Capsule)
+            .type(ButtonType.Normal)
             .width('100%')
             .height(48)
-            .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+            .backgroundColor($r('app.color.bg_secondary'))
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
             .fontSize(16)
+            .borderRadius(DesignConstants.RADIUS.XL)
             .onClick(() => {
               AppRouter.push(PageNames.LOGIN);
             })
@@ -462,12 +610,13 @@ export struct ProfilePage {
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
 
           Button('升级为完整账号')
-            .type(ButtonType.Capsule)
+            .type(ButtonType.Normal)
             .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
             .fontColor(Color.White)
             .fontSize(14)
             .width('100%')
             .height(40)
+            .borderRadius(DesignConstants.RADIUS.XL)
             .onClick(() => {
               this.showUpgradeForm = true;
             })
@@ -524,6 +673,13 @@ export struct ProfilePage {
         }
         .backgroundColor($r('app.color.bg_secondary'))
 
+        if (this.isAdminUser()) {
+          ListItem() {
+            this.MenuItemContent('管理员工具台', AppIcon.SHIELD, () => this.openAdminPanel())
+          }
+          .backgroundColor($r('app.color.bg_secondary'))
+        }
+
         ListItem() {
           this.MenuItemContent('退出登录', AppIcon.CLOSE, () => this.logout())
         }
@@ -534,6 +690,7 @@ export struct ProfilePage {
       .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 24 })
     }
     .width('100%')
+    .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.LG })
     .layoutWeight(1)
     .scrollBar(BarState.Auto)
   }
@@ -587,6 +744,13 @@ export struct ProfilePage {
         }
         .backgroundColor($r('app.color.bg_secondary'))
 
+        if (this.isAdminUser()) {
+          ListItem() {
+            this.MenuItemContent('管理员工具台', AppIcon.SHIELD, () => this.openAdminPanel())
+          }
+          .backgroundColor($r('app.color.bg_secondary'))
+        }
+
         ListItem() {
           this.MenuItemContent('退出登录', AppIcon.CLOSE, () => this.logout())
         }
@@ -597,6 +761,7 @@ export struct ProfilePage {
       .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 24 })
     }
     .width('100%')
+    .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.LG })
     .layoutWeight(1)
     .scrollBar(BarState.Auto)
   }
@@ -648,22 +813,27 @@ export struct ProfilePage {
 
         Row({ space: 12 }) {
           Button('取消')
-            .type(ButtonType.Capsule)
-            .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+            .type(ButtonType.Normal)
+            .backgroundColor($r('app.color.bg_secondary'))
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
             .layoutWeight(1)
             .height(44)
+            .borderRadius(DesignConstants.RADIUS.XL)
+            .enabled(!this.isUpgrading)
+            .opacity(this.isUpgrading ? 0.58 : 1)
             .onClick(() => {
               this.showUpgradeForm = false;
             })
 
           Button(this.isUpgrading ? '升级中...' : '确认升级')
-            .type(ButtonType.Capsule)
+            .type(ButtonType.Normal)
             .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
             .fontColor(Color.White)
             .layoutWeight(1)
             .height(44)
+            .borderRadius(DesignConstants.RADIUS.XL)
             .enabled(!this.isUpgrading)
+            .opacity(this.isUpgrading ? 0.58 : 1)
             .onClick(() => this.upgradeAccount())
         }
         .width('100%')
@@ -695,7 +865,14 @@ export struct ProfilePage {
         Text('临时用户')
           .fontSize(12)
           .fontColor($r('sys.color.ohos_id_color_warning'))
-          .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+          .backgroundColor($r('app.color.bg_tertiary'))
+          .borderRadius(DesignConstants.RADIUS.MD)
+          .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+      } else if (this.isAdminUser()) {
+        Text('管理员')
+          .fontSize(12)
+          .fontColor($r('sys.color.ohos_id_color_emphasize'))
+          .backgroundColor($r('app.color.bg_tertiary'))
           .borderRadius(DesignConstants.RADIUS.MD)
           .padding({ left: 8, right: 8, top: 2, bottom: 2 })
       }
@@ -715,16 +892,37 @@ export struct ProfilePage {
   @Builder
   private EditFormContent(): void {
     Column({ space: 16 }) {
-      SystemAvatar({
-        avatarUrl: this.currentUser?.avatar_url || '',
-        name: this.editNickname,
-        avatarSize: 80
-      })
+      Column({ space: 6 }) {
+        Button() {
+          SystemAvatar({
+            avatarUrl: this.editAvatarPreviewUrl || this.currentUser?.avatar_url || '',
+            name: this.editNickname,
+            avatarSize: 80
+          })
+        }
+        .type(ButtonType.Normal)
+        .backgroundColor(Color.Transparent)
+        .enabled(!this.isLoading && !this.isAvatarUploading)
+        .opacity(this.isLoading || this.isAvatarUploading ? 0.58 : 1)
+        .onClick(() => {
+          this.selectAvatarForEdit();
+        })
+
+        if (this.isAvatarUploading) {
+          Text('头像上传中...')
+            .fontSize(12)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        } else {
+          Text('点击头像更换')
+            .fontSize(12)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        }
+      }
 
       TextInput({ placeholder: '请输入昵称', text: this.editNickname })
         .fontSize(16)
         .height(48)
-        .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+        .backgroundColor($r('app.color.bg_tertiary'))
         .borderRadius(DesignConstants.RADIUS.MD)
         .onChange((value: string) => {
           this.editNickname = value;
@@ -732,7 +930,7 @@ export struct ProfilePage {
 
       TextArea({ placeholder: '请输入个人简介', text: this.editBio })
         .fontSize(14)
-        .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+        .backgroundColor($r('app.color.bg_tertiary'))
         .borderRadius(DesignConstants.RADIUS.MD)
         .height(80)
         .onChange((value: string) => {
@@ -741,17 +939,23 @@ export struct ProfilePage {
 
       Row({ space: 12 }) {
         Button('取消')
-          .type(ButtonType.Capsule)
-          .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+          .type(ButtonType.Normal)
+          .backgroundColor($r('app.color.bg_secondary'))
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .enabled(!this.isLoading && !this.isAvatarUploading)
+          .opacity(this.isLoading || this.isAvatarUploading ? 0.58 : 1)
           .onClick(() => this.cancelEdit())
 
-        Button('保存')
-          .type(ButtonType.Capsule)
+        Button(this.isLoading ? '保存中...' : '保存')
+          .type(ButtonType.Normal)
           .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
           .fontColor(Color.White)
           .layoutWeight(1)
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .enabled(!this.isLoading && !this.isAvatarUploading)
+          .opacity(this.isLoading || this.isAvatarUploading ? 0.58 : 1)
           .onClick(() => this.saveEdit())
       }
       .width('100%')
@@ -809,10 +1013,11 @@ export struct ProfilePage {
       .width('100%')
     }
     .type(ButtonType.Normal)
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(Color.Transparent)
     .borderRadius(DesignConstants.RADIUS.XL)
     .padding(12)
     .layoutWeight(1)
+    .stateEffect(true)
     .onClick(onTap)
   }
 
@@ -859,6 +1064,15 @@ export struct ProfilePage {
       left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
       top: 14, bottom: 14
     })
+    .scale(this.pressedMenuItemKey === title ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })
+    .animation({ duration: 100, curve: Curve.EaseOut })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.pressedMenuItemKey = title;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.pressedMenuItemKey = '';
+      }
+    })
     .onClick(onTap)
   }
 
@@ -875,6 +1089,9 @@ export struct ProfilePage {
       this.QuickActionItem('发现周边用户', '查看附近的人并发起互动', AppIcon.PERSON, () => this.openSearchPeople())
       this.QuickActionItem('浏览附近群组', '加入或管理兴趣圈子', AppIcon.GROUP, () => this.openMyGroups())
       this.QuickActionItem('查看附近动态', '浏览我的瞬间和周边动态', AppIcon.CAMERA, () => this.openMyMoments())
+      if (this.isAdminUser()) {
+        this.QuickActionItem('管理员工具台', '查看管理员专属工具入口', AppIcon.SHIELD, () => this.openAdminPanel())
+      }
     }
     .width('100%')
   }
@@ -918,9 +1135,15 @@ export struct ProfilePage {
       .width('100%')
     }
     .type(ButtonType.Normal)
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(Color.Transparent)
     .borderRadius(DesignConstants.RADIUS.XL)
-    .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+    .padding({
+      left: DesignConstants.SPACING.MD,
+      right: DesignConstants.SPACING.MD,
+      top: DesignConstants.SPACING.MD,
+      bottom: DesignConstants.SPACING.MD
+    })
+    .stateEffect(true)
     .onClick(onTap)
   }
 
@@ -941,18 +1164,19 @@ export struct ProfilePage {
       TextInput({ placeholder: '请输入你的昵称' })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('app.color.bg_primary'))
+        .backgroundColor($r('app.color.bg_tertiary'))
         .borderRadius(DesignConstants.RADIUS.LG)
         .enabled(!this.isQuickStarting)
         .onChange((value: string) => { this.quickNickname = value; })
 
       Button(this.isQuickStarting ? '正在创建...' : '开始体验')
-        .type(ButtonType.Capsule)
+        .type(ButtonType.Normal)
         .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
         .fontColor(Color.White)
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .width('100%')
         .height(48)
+        .borderRadius(DesignConstants.RADIUS.XL)
         .enabled(!this.isQuickStarting)
         .opacity(this.isQuickStarting ? 0.6 : 1.0)
         .onClick(() => this.startQuickExperience())
@@ -975,6 +1199,10 @@ export struct ProfilePage {
     const nickname = this.quickNickname.trim();
     if (!nickname) {
       SystemToast.showWarning('请输入昵称', this.getUIContext());
+      return;
+    }
+    if (!this.isValidNickname(nickname)) {
+      SystemToast.showWarning('昵称长度需在1-30字符之间', this.getUIContext());
       return;
     }
 

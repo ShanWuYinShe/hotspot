@@ -1,4 +1,5 @@
 use std::{collections::HashMap, str::FromStr, sync::Arc};
+use tracing::{info, warn};
 
 use crate::{
     constants::UNKNOWN_USER_NICKNAME,
@@ -49,6 +50,15 @@ impl AnnouncementService {
         creator_id: i64,
         req: CreateAnnouncementRequest,
     ) -> Result<CreateAnnouncementData> {
+        let started_at = std::time::Instant::now();
+        info!(
+            creator_id,
+            severity = ?req.severity,
+            title_len = req.title.chars().count(),
+            content_len = req.content.chars().count(),
+            send_push = req.send_push.unwrap_or(false),
+            "admin_announcement.create started"
+        );
         // severity 已是强类型枚举，无需验证
 
         let announcement = self
@@ -75,6 +85,12 @@ impl AnnouncementService {
                 created_at: announcement.created_at.to_rfc3339(),
             });
         }
+        info!(
+            creator_id,
+            announcement_id = %announcement.announcement_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "admin_announcement.create completed"
+        );
 
         Ok(CreateAnnouncementData {
             announcement_id: announcement.announcement_id.to_string(),
@@ -82,9 +98,19 @@ impl AnnouncementService {
     }
 
     pub async fn update_announcement(&self, req: AdminUpdateAnnouncementRequest) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let announcement_id = Validator::parse_uuid(&req.announcement_id, "公告ID")?;
+        info!(
+            announcement_id = %announcement_id,
+            has_title = req.title.is_some(),
+            has_content = req.content.is_some(),
+            has_severity = req.severity.is_some(),
+            has_action_url = req.action_url.is_some(),
+            "admin_announcement.update started"
+        );
 
         if !self.repo.exists(announcement_id).await? {
+            warn!(announcement_id = %announcement_id, "admin_announcement.update rejected: not found");
             return Err(AppError::NotFound("公告不存在".to_string()));
         }
 
@@ -97,18 +123,31 @@ impl AnnouncementService {
                 req.action_url.as_deref(),
             )
             .await?;
+        info!(
+            announcement_id = %announcement_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "admin_announcement.update completed"
+        );
 
         Ok(())
     }
 
     pub async fn delete_announcement(&self, req: DeleteAnnouncementRequest) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let announcement_id = Validator::parse_uuid(&req.announcement_id, "公告ID")?;
+        info!(announcement_id = %announcement_id, "admin_announcement.delete started");
 
         if !self.repo.exists(announcement_id).await? {
+            warn!(announcement_id = %announcement_id, "admin_announcement.delete rejected: not found");
             return Err(AppError::NotFound("公告不存在".to_string()));
         }
 
         self.repo.delete(announcement_id).await?;
+        info!(
+            announcement_id = %announcement_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "admin_announcement.delete completed"
+        );
         Ok(())
     }
 

@@ -8,6 +8,7 @@ import { StorageKeys, PageNames } from '../../../constants/AppConstants';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { SystemToast } from '../../../components/SystemToast';
+import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
@@ -32,10 +33,12 @@ interface LocalSubscriptionPrefs {
 
 interface SubscriptionItem {
   key: keyof LocalSubscriptionPrefs;
+  icon: AppIcon;
   title: string;
   description: string;
 }
 
+@Preview
 @Component
 export struct SubscriptionsPage {
   pathStack: NavPathStack = new NavPathStack();
@@ -46,17 +49,17 @@ export struct SubscriptionsPage {
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
 
   private items: SubscriptionItem[] = [
-    { key: 'new_follower_enabled', title: '新关注者', description: '有人关注你时通知' },
-    { key: 'mutual_follow_enabled', title: '互相关注', description: '成为好友时通知' },
-    { key: 'group_invite_enabled', title: '群组邀请', description: '收到群组邀请时通知' },
-    { key: 'group_invite_response_enabled', title: '邀请回应', description: '对方接受/拒绝邀请时通知' },
-    { key: 'group_application_enabled', title: '入群申请', description: '收到入群申请时通知' },
-    { key: 'group_application_response_enabled', title: '申请回应', description: '你的入群申请有结果时通知' },
-    { key: 'message_mention_enabled', title: '消息提及', description: '群聊中被 @ 时通知' },
-    { key: 'moment_like_enabled', title: '动态点赞', description: '动态被点赞时通知' },
-    { key: 'moment_comment_enabled', title: '动态评论', description: '动态被评论时通知' },
-    { key: 'comment_reply_enabled', title: '评论回复', description: '评论被回复时通知' },
-    { key: 'system_announcement_enabled', title: '系统公告', description: '接收系统公告通知' }
+    { key: 'new_follower_enabled', icon: AppIcon.PERSON, title: '新关注者', description: '有人关注你时通知' },
+    { key: 'mutual_follow_enabled', icon: AppIcon.HEART, title: '互相关注', description: '成为好友时通知' },
+    { key: 'group_invite_enabled', icon: AppIcon.GROUP, title: '群组邀请', description: '收到群组邀请时通知' },
+    { key: 'group_invite_response_enabled', icon: AppIcon.GROUP, title: '邀请回应', description: '对方接受/拒绝邀请时通知' },
+    { key: 'group_application_enabled', icon: AppIcon.GROUP, title: '入群申请', description: '收到入群申请时通知' },
+    { key: 'group_application_response_enabled', icon: AppIcon.GROUP, title: '申请回应', description: '你的入群申请有结果时通知' },
+    { key: 'message_mention_enabled', icon: AppIcon.MESSAGE, title: '消息提及', description: '群聊中被 @ 时通知' },
+    { key: 'moment_like_enabled', icon: AppIcon.HEART_FILL, title: '动态点赞', description: '动态被点赞时通知' },
+    { key: 'moment_comment_enabled', icon: AppIcon.MESSAGE, title: '动态评论', description: '动态被评论时通知' },
+    { key: 'comment_reply_enabled', icon: AppIcon.MESSAGE, title: '评论回复', description: '评论被回复时通知' },
+    { key: 'system_announcement_enabled', icon: AppIcon.NOTIFICATION, title: '系统公告', description: '接收系统公告通知' }
   ];
 
   aboutToAppear() {
@@ -172,56 +175,43 @@ export struct SubscriptionsPage {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor($r('app.color.bg_primary'))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.loading) {
-        Column() {
-          Text('加载中...')
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        }
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-        .width('100%')
-        .backgroundColor($r('app.color.bg_primary'))
+        SystemLoadingView({ message: '加载订阅设置...' })
+          .layoutWeight(1)
+          .backgroundColor($r('app.color.bg_primary'))
       } else {
-        List({ space: 0 }) {
-          ListItemGroup({ header: this.ListHeader('通知类型') }) {
-            ForEach(this.items, (item: SubscriptionItem) => {
-              ListItem() {
-                Row() {
-                  Column({ space: 4 }) {
-                    Text(item.title)
-                      .fontSize(DesignConstants.FONT.SIZE.LG)
-                      .fontColor($r('sys.color.ohos_id_color_text_primary'))
-                    Text(item.description)
-                      .fontSize(DesignConstants.FONT.SIZE.MD)
-                      .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-                  }
-                  .layoutWeight(1)
-                  .alignItems(HorizontalAlign.Start)
-
-                  Toggle({ type: ToggleType.Switch, isOn: this.getValue(item.key) })
-                    .selectedColor($r('sys.color.ohos_id_color_emphasize'))
-                    .onChange((isOn: boolean) => {
-                      this.update(item.key, isOn);
-                    })
-                    .enabled(!this.savingKey || this.savingKey === String(item.key))
-                }
-                .width('100%')
-                .padding(DesignConstants.SPACING.LG)
-              }
-              .backgroundColor($r('app.color.bg_secondary'))
-            }, (i: SubscriptionItem) => i.key as string)
+        List({ space: DesignConstants.SPACING.MD }) {
+          ListItem() {
+            this.ListHeader('通知类型')
           }
-          .borderRadius(DesignConstants.RADIUS.LG)
-          .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 16, endMargin: 16 })
-          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XL })
+
+          ListItem() {
+            Column({ space: DesignConstants.SPACING.SM }) {
+              ForEach(this.items, (item: SubscriptionItem) => {
+                this.SubscriptionItemRow(item)
+              }, (i: SubscriptionItem) => i.key as string)
+            }
+            .width('100%')
+            .padding(DesignConstants.SPACING.LG)
+            .backgroundColor($r('app.color.bg_secondary'))
+            .borderRadius(DesignConstants.RADIUS.XXL)
+            .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+            .shadow({ radius: 10, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
+            .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+          }
+
+          ListItem() {
+            Text('提示：你可以随时在这里调整通知偏好，变更会即时生效。')
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM })
+          }
         }
         .layoutWeight(1)
         .scrollBar(BarState.Auto)
-        .sticky(StickyStyle.Header)
         .width('100%')
         .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
         .backgroundColor($r('app.color.bg_primary'))
@@ -242,8 +232,54 @@ export struct SubscriptionsPage {
     Text(title)
       .fontSize(DesignConstants.FONT.SIZE.MD)
       .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-      .margin({ left: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.LG })
+      .margin({ left: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.LG })
       .width('100%')
+  }
+
+  @Builder
+  private SubscriptionItemRow(item: SubscriptionItem) {
+    Row({ space: DesignConstants.SPACING.MD }) {
+      Row() {
+        Text() {
+          SymbolSpan($r(item.icon))
+            .fontSize(18)
+            .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+        }
+      }
+      .width(40)
+      .height(40)
+      .borderRadius(DesignConstants.RADIUS.XL)
+      .backgroundColor($r('app.color.bg_tertiary'))
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+
+      Column({ space: 4 }) {
+        Text(item.title)
+          .fontSize(DesignConstants.FONT.SIZE.LG)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(item.description)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+
+      Toggle({ type: ToggleType.Switch, isOn: this.getValue(item.key) })
+        .selectedColor($r('sys.color.ohos_id_color_emphasize'))
+        .onChange((isOn: boolean) => {
+          this.update(item.key, isOn);
+        })
+        .enabled(!this.savingKey || this.savingKey === String(item.key))
+    }
+    .width('100%')
+    .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+    .backgroundColor($r('app.color.bg_secondary'))
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
   }
 }
 

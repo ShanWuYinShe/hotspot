@@ -14,11 +14,17 @@
 	import { toast } from '$lib/stores/toast.svelte';
 	import LocationPickerModal from './location-picker-modal.svelte';
 	import AnchorSummaryCard from '$lib/components/common/anchor-summary-card.svelte';
-	import MapPin from 'lucide-svelte/icons/map-pin';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 	import UsersRound from 'lucide-svelte/icons/users-round';
 
 	type JoinMethod = 'open' | 'approval' | 'invite_only';
+
+	interface SelectedLocation {
+		latitude: number;
+		longitude: number;
+		locationName: string;
+		radius: number;
+	}
 
 	interface Props {
 		open: boolean;
@@ -35,11 +41,30 @@
 	let password = $state('');
 	let maxMembers = $state('');
 	let isSearchable = $state(true);
-	let includeLocation = $state(true);
 	let isSubmitting = $state(false);
 	let showLocationPicker = $state(false);
+	const GROUP_NAME_MAX = 50;
+	const GROUP_DESCRIPTION_MAX = 500;
+	const GROUP_PASSWORD_MIN = 4;
+	const GROUP_PASSWORD_MAX = 32;
+	const GROUP_TAG_MAX = 10;
+	const TAG_MAX_LENGTH = 30;
+	const GROUP_MEMBERS_MIN = 2;
+	const GROUP_MEMBERS_MAX = 2000;
+	const LOCATION_NAME_MAX = 100;
 
 	const tags = $derived(parseTags(tagsInput));
+
+	function getDefaultSelectedLocation(): SelectedLocation {
+		return {
+			latitude: mapAnchorStore.latitude,
+			longitude: mapAnchorStore.longitude,
+			locationName: (mapAnchorStore.name || mapAnchorStore.displayName).trim(),
+			radius: mapAnchorStore.radius
+		};
+	}
+
+	let selectedLocation = $state.raw<SelectedLocation>(getDefaultSelectedLocation());
 
 	function resetForm() {
 		name = '';
@@ -49,7 +74,7 @@
 		password = '';
 		maxMembers = '';
 		isSearchable = true;
-		includeLocation = true;
+		selectedLocation = getDefaultSelectedLocation();
 	}
 
 	async function handleSubmit() {
@@ -61,14 +86,56 @@
 			return;
 		}
 
-		if (!name.trim()) {
+		const trimmedName = name.trim();
+		const trimmedDescription = description.trim();
+		const trimmedPassword = password.trim();
+		const locationName = selectedLocation.locationName.trim();
+		const parsedMaxMembers = maxMembers.trim() ? Number.parseInt(maxMembers.trim(), 10) : undefined;
+
+		if (!trimmedName) {
 			toast.error('请输入群组名称');
+			return;
+		}
+		if (trimmedName.length > GROUP_NAME_MAX) {
+			toast.error(`群组名称最多 ${GROUP_NAME_MAX} 字符`);
+			return;
+		}
+		if (trimmedDescription.length > GROUP_DESCRIPTION_MAX) {
+			toast.error(`群组介绍最多 ${GROUP_DESCRIPTION_MAX} 字符`);
+			return;
+		}
+		if (tags.length > GROUP_TAG_MAX) {
+			toast.error(`标签最多 ${GROUP_TAG_MAX} 个`);
+			return;
+		}
+		if (tags.some((tag) => tag.length < 1 || tag.length > TAG_MAX_LENGTH)) {
+			toast.error(`标签长度需在 1-${TAG_MAX_LENGTH} 字符之间`);
+			return;
+		}
+		if (trimmedPassword && (trimmedPassword.length < GROUP_PASSWORD_MIN || trimmedPassword.length > GROUP_PASSWORD_MAX)) {
+			toast.error(`群组口令长度需在 ${GROUP_PASSWORD_MIN}-${GROUP_PASSWORD_MAX} 字符之间`);
+			return;
+		}
+		if (
+			parsedMaxMembers !== undefined &&
+			(!Number.isInteger(parsedMaxMembers) ||
+				parsedMaxMembers < GROUP_MEMBERS_MIN ||
+				parsedMaxMembers > GROUP_MEMBERS_MAX)
+		) {
+			toast.error(`最大成员数需在 ${GROUP_MEMBERS_MIN}-${GROUP_MEMBERS_MAX} 之间`);
+			return;
+		}
+		if (!locationName) {
+			toast.error('请选择群组位置');
+			return;
+		}
+		if (locationName.length > LOCATION_NAME_MAX) {
+			toast.error(`位置名称最多 ${LOCATION_NAME_MAX} 字符`);
 			return;
 		}
 
 		isSubmitting = true;
 		try {
-			const locationName = mapAnchorStore.name || mapAnchorStore.displayName;
 			const payload: {
 				name: string;
 				location: { point: { latitude: number; longitude: number }; location_name: string };
@@ -79,11 +146,11 @@
 				is_searchable?: boolean;
 				max_members?: number;
 			} = {
-				name: name.trim(),
+				name: trimmedName,
 				location: {
 					point: {
-						latitude: mapAnchorStore.latitude,
-						longitude: mapAnchorStore.longitude
+						latitude: selectedLocation.latitude,
+						longitude: selectedLocation.longitude
 					},
 					location_name: locationName
 				},
@@ -91,10 +158,10 @@
 				is_searchable: isSearchable
 			};
 
-			if (description.trim()) payload.description = description.trim();
+			if (trimmedDescription) payload.description = trimmedDescription;
 			if (tags.length > 0) payload.tags = tags;
-			if (password.trim()) payload.password = password.trim();
-			if (maxMembers.trim()) payload.max_members = parseInt(maxMembers, 10);
+			if (trimmedPassword) payload.password = trimmedPassword;
+			if (parsedMaxMembers !== undefined) payload.max_members = parsedMaxMembers;
 
 			const response = await groupsService.create(payload);
 			if (isSuccess(response)) {
@@ -121,10 +188,10 @@
 </script>
 
 <Dialog.Root bind:open onOpenChange={(value) => { open = value; onOpenChange?.(value); }}>
-	<Dialog.Content class="flex max-h-[85vh] flex-col sm:max-w-2xl">
+	<Dialog.Content class="flex max-h-[85vh] flex-col rounded-3xl border border-border/60 bg-card/95 shadow-xl backdrop-blur-md sm:max-w-2xl">
 		<Dialog.Header>
-			<Dialog.Title class="flex items-center gap-2">
-				<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-primary/20 to-primary/10">
+			<Dialog.Title class="flex items-center gap-3">
+				<div class="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/50 bg-primary/10">
 					<UsersRound class="h-5 w-5 text-primary" />
 				</div>
 				<div>
@@ -134,35 +201,35 @@
 			</Dialog.Title>
 		</Dialog.Header>
 
-		<div class="flex-1 overflow-y-auto min-h-0 py-4 px-1 space-y-4">
-			<div class="space-y-2">
+		<div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-4">
+			<div class="space-y-2 rounded-2xl border border-border/50 bg-background/65 p-4">
 				<Label for="group-name">群组名称</Label>
-				<Input id="group-name" placeholder="例如：城市漫步俱乐部" bind:value={name} />
+				<Input id="group-name" class="h-11 rounded-2xl border-border/60 bg-background/75" placeholder="例如：城市漫步俱乐部" bind:value={name} />
 			</div>
 
-			<div class="space-y-2">
+			<div class="space-y-2 rounded-2xl border border-border/50 bg-background/65 p-4">
 				<Label for="group-desc">群组介绍</Label>
-				<Textarea id="group-desc" placeholder="简单描述群组用途与氛围" class="min-h-[100px]" bind:value={description} />
+				<Textarea id="group-desc" placeholder="简单描述群组用途与氛围" class="min-h-[100px] rounded-2xl border-border/60 bg-background/75" bind:value={description} />
 			</div>
 
-			<div class="space-y-2">
+			<div class="space-y-2 rounded-2xl border border-border/50 bg-background/65 p-4">
 				<Label for="group-tags">群组标签</Label>
-				<Input id="group-tags" placeholder="兴趣、城市、活动" bind:value={tagsInput} />
+				<Input id="group-tags" class="h-11 rounded-2xl border-border/60 bg-background/75" placeholder="兴趣、城市、活动" bind:value={tagsInput} />
 				{#if tags.length > 0}
 					<div class="flex flex-wrap gap-2">
 						{#each tags as tag (tag)}
-							<Badge variant="secondary" class="rounded-full text-xs">#{tag}</Badge>
+							<Badge variant="secondary" class="rounded-2xl text-xs">#{tag}</Badge>
 						{/each}
 					</div>
 				{/if}
 			</div>
 
-			<div class="grid gap-4 sm:grid-cols-2">
+			<div class="grid gap-4 rounded-2xl border border-border/50 bg-background/65 p-4 sm:grid-cols-2">
 				<div class="space-y-2">
 					<Label for="join-method">加入方式</Label>
 					<select
 						id="join-method"
-						class="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+						class="h-11 w-full rounded-2xl border border-border/60 bg-background/75 px-3 text-sm"
 						bind:value={joinMethod}
 					>
 						<option value="open">自由加入</option>
@@ -172,16 +239,16 @@
 				</div>
 				<div class="space-y-2">
 					<Label for="group-password">入群口令 (可选)</Label>
-					<Input id="group-password" type="password" placeholder="设置后需口令加入" bind:value={password} />
+					<Input id="group-password" class="h-11 rounded-2xl border-border/60 bg-background/75" type="password" placeholder="设置后需口令加入" bind:value={password} />
 				</div>
 			</div>
 
-			<div class="grid gap-4 sm:grid-cols-2">
+			<div class="grid gap-4 rounded-2xl border border-border/50 bg-background/65 p-4 sm:grid-cols-2">
 				<div class="space-y-2">
 					<Label for="max-members">最大成员数 (可选)</Label>
-					<Input id="max-members" type="number" min="10" placeholder="例如 200" bind:value={maxMembers} />
+					<Input id="max-members" class="h-11 rounded-2xl border-border/60 bg-background/75" type="number" min="2" max="2000" placeholder="例如 200" bind:value={maxMembers} />
 				</div>
-				<div class="flex items-center justify-between rounded-md border border-input px-3 py-2 text-sm">
+				<div class="flex items-center justify-between rounded-2xl border border-border/60 bg-background/75 px-3 py-2 text-sm">
 					<span>允许被搜索</span>
 					<input type="checkbox" class="h-4 w-4" bind:checked={isSearchable} />
 				</div>
@@ -189,29 +256,19 @@
 
 			<AnchorSummaryCard
 				label="群组位置"
-				description="影响附近推荐与搜索"
+				description="影响附近推荐与搜索，可单独选点且不修改浏览锚点"
+				overrideName={selectedLocation.locationName}
+				overrideLatitude={selectedLocation.latitude}
+				overrideLongitude={selectedLocation.longitude}
 				onAdjust={() => (showLocationPicker = true)}
-			>
-				<svelte:fragment slot="actions">
-					<div class="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-						<Button variant="outline" size="sm" class="gap-2" onclick={() => (showLocationPicker = true)}>
-							<MapPin class="h-4 w-4" />
-							调整位置
-						</Button>
-						<label class="flex items-center gap-2 text-xs text-muted-foreground">
-							<input type="checkbox" class="h-4 w-4" bind:checked={includeLocation} />
-							启用位置
-						</label>
-					</div>
-				</svelte:fragment>
-			</AnchorSummaryCard>
+			/>
 		</div>
 
 		<Dialog.Footer class="pt-2">
-			<Button variant="outline" onclick={() => { open = false; onOpenChange?.(false); }}>
+			<Button variant="outline" class="h-10 rounded-2xl border-border/60 bg-background/70" onclick={() => { open = false; onOpenChange?.(false); }}>
 				取消
 			</Button>
-			<Button onclick={handleSubmit} disabled={isSubmitting}>
+			<Button class="h-10 rounded-2xl" onclick={handleSubmit} disabled={isSubmitting}>
 				{#if isSubmitting}
 					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 				{/if}
@@ -221,4 +278,21 @@
 	</Dialog.Content>
 </Dialog.Root>
 
-<LocationPickerModal bind:open={showLocationPicker} />
+<LocationPickerModal
+	bind:open={showLocationPicker}
+	mode="location_pick"
+	initialLocation={{
+		latitude: selectedLocation.latitude,
+		longitude: selectedLocation.longitude,
+		locationName: selectedLocation.locationName,
+		radius: selectedLocation.radius
+	}}
+	onConfirm={(value) => {
+		selectedLocation = {
+			latitude: value.latitude,
+			longitude: value.longitude,
+			locationName: value.locationName,
+			radius: value.radius
+		};
+	}}
+/>

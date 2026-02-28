@@ -62,13 +62,13 @@
 	<title>会话管理 - HotSpot</title>
 </svelte:head>
 
-<div class="mx-auto max-w-3xl space-y-6">
-	<div class="flex items-center justify-between">
-		<div>
+<div class="mx-auto max-w-3xl space-y-5">
+	<div class="flex items-center justify-between rounded-3xl border border-border/60 bg-linear-to-br from-background via-card/85 to-muted/40 p-5 shadow-sm">
+		<div class="min-w-0">
 			<h1 class="text-2xl font-bold">会话管理</h1>
-			<p class="text-sm text-muted-foreground">查看并管理已登录设备</p>
+			<p class="mt-1 text-sm text-muted-foreground">查看并管理已登录设备</p>
 		</div>
-		<Button variant="outline" size="sm" onclick={loadSessions} disabled={isLoading}>
+		<Button variant="outline" size="sm" class="rounded-2xl border-border/60 bg-background/70" onclick={loadSessions} disabled={isLoading}>
 			<RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
 			刷新
 		</Button>
@@ -77,7 +77,7 @@
 	{#if isLoading}
 		<div class="space-y-3">
 			{#each Array(4) as _, i (i)}
-				<Card>
+				<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 					<CardContent class="flex items-center gap-4 p-4">
 						<Skeleton class="h-12 w-12 rounded-xl" />
 						<div class="flex-1 space-y-2">
@@ -89,7 +89,7 @@
 			{/each}
 		</div>
 	{:else if sessions.length === 0}
-		<Card>
+		<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 			<CardContent class="flex flex-col items-center justify-center py-12">
 				<Shield class="mb-4 h-10 w-10 text-muted-foreground" />
 				<p class="text-muted-foreground">暂无会话记录</p>
@@ -98,7 +98,7 @@
 	{:else}
 		<div class="space-y-3">
 			{#each sessions as session (session.session_id)}
-				<Card class="border-0 bg-card/70 shadow-sm shadow-black/5">
+				<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 					<CardContent class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
 						<div class="min-w-0">
 							<div class="flex items-center gap-2">
@@ -115,6 +115,7 @@
 							<Button
 								variant="outline"
 								size="sm"
+								class="rounded-2xl border-border/60 bg-background/70"
 								disabled={session.is_current || isRevoking === session.session_id}
 								onclick={() => revoke(session.session_id)}
 							>

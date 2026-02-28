@@ -81,53 +81,53 @@
 	<title>隐私设置 - HotSpot</title>
 </svelte:head>
 
-<div class="mx-auto max-w-3xl space-y-6">
-	<div>
+<div class="mx-auto max-w-3xl space-y-5">
+	<div class="rounded-3xl border border-border/60 bg-linear-to-br from-background via-card/85 to-muted/40 p-5 shadow-sm">
 		<h1 class="text-2xl font-bold">隐私设置</h1>
-		<p class="text-sm text-muted-foreground">控制你在 HotSpot 的可见范围</p>
+		<p class="mt-1 text-sm text-muted-foreground">控制你在 HotSpot 的可见范围与互动权限</p>
 	</div>
 
 	{#if isLoading}
-		<Card>
+		<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 			<CardContent class="space-y-4 p-6">
 				{#each Array(5) as _, i (i)}
-					<Skeleton class="h-10 w-full" />
+					<Skeleton class="h-11 w-full rounded-2xl" />
 				{/each}
 			</CardContent>
 		</Card>
 	{:else}
-		<Card>
+		<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 			<CardHeader>
 				<CardTitle class="text-base">基础可见性</CardTitle>
 				<CardDescription>控制大部分信息默认可见范围</CardDescription>
 			</CardHeader>
-			<CardContent class="space-y-4">
-				<div class="space-y-2">
+			<CardContent class="space-y-4 pt-0">
+				<div class="space-y-2 rounded-2xl border border-border/50 bg-background/65 p-4">
 					<Label for="privacy-level">隐私级别</Label>
 					<select
 						id="privacy-level"
-						class="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+						class="h-11 w-full rounded-2xl border border-input bg-background px-3 text-sm"
 						bind:value={privacyLevel}
 					>
 						<option value="public">公开</option>
 						<option value="private">仅自己</option>
 					</select>
 				</div>
-				<div class="flex items-center justify-between">
+				<div class="flex items-center justify-between rounded-2xl border border-border/50 bg-background/65 px-4 py-3.5">
 					<div>
 						<p class="font-medium">位置可见</p>
 						<p class="text-sm text-muted-foreground">允许展示你的地理位置</p>
 					</div>
 					<Switch bind:checked={locationVisible} />
 				</div>
-				<div class="flex items-center justify-between">
+				<div class="flex items-center justify-between rounded-2xl border border-border/50 bg-background/65 px-4 py-3.5">
 					<div>
 						<p class="font-medium">在线状态可见</p>
 						<p class="text-sm text-muted-foreground">允许显示在线/离线状态</p>
 					</div>
 					<Switch bind:checked={presenceVisible} />
 				</div>
-				<div class="flex items-center justify-between">
+				<div class="flex items-center justify-between rounded-2xl border border-border/50 bg-background/65 px-4 py-3.5">
 					<div>
 						<p class="font-medium">好友/关注/粉丝列表可见</p>
 						<p class="text-sm text-muted-foreground">控制你的社交列表是否对他人可见</p>
@@ -137,24 +137,24 @@
 			</CardContent>
 		</Card>
 
-		<Card>
+		<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 			<CardHeader>
 				<CardTitle class="text-base">社交与私聊</CardTitle>
 				<CardDescription>管理关注与私聊权限</CardDescription>
 			</CardHeader>
-			<CardContent class="space-y-4">
-				<div class="flex items-center justify-between">
+			<CardContent class="space-y-4 pt-0">
+				<div class="flex items-center justify-between rounded-2xl border border-border/50 bg-background/65 px-4 py-3.5">
 					<div>
 						<p class="font-medium">允许关注</p>
 						<p class="text-sm text-muted-foreground">关闭后他人关注需审批</p>
 					</div>
 					<Switch bind:checked={allowFollow} />
 				</div>
-				<div class="space-y-2">
+				<div class="space-y-2 rounded-2xl border border-border/50 bg-background/65 p-4">
 					<Label for="private-chat">私聊权限</Label>
 					<select
 						id="private-chat"
-						class="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+						class="h-11 w-full rounded-2xl border border-input bg-background px-3 text-sm"
 						bind:value={allowPrivateChat}
 					>
 						<option value="everyone">所有人可私聊</option>
@@ -165,20 +165,20 @@
 			</CardContent>
 		</Card>
 
-		<Card>
+		<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 			<CardHeader>
 				<CardTitle class="text-base">搜索与发现</CardTitle>
 				<CardDescription>控制你在搜索/附近中的展示</CardDescription>
 			</CardHeader>
-			<CardContent class="space-y-4">
-				<div class="flex items-center justify-between">
+			<CardContent class="space-y-4 pt-0">
+				<div class="flex items-center justify-between rounded-2xl border border-border/50 bg-background/65 px-4 py-3.5">
 					<div>
 						<p class="font-medium">允许被搜索</p>
 						<p class="text-sm text-muted-foreground">关闭后不会出现在搜索结果</p>
 					</div>
 					<Switch bind:checked={searchable} />
 				</div>
-				<div class="flex items-center justify-between">
+				<div class="flex items-center justify-between rounded-2xl border border-border/50 bg-background/65 px-4 py-3.5">
 					<div>
 						<p class="font-medium">附近可见</p>
 						<p class="text-sm text-muted-foreground">允许出现在附近的人</p>
@@ -188,7 +188,7 @@
 			</CardContent>
 		</Card>
 
-		<Button class="w-full" onclick={saveSettings} disabled={isSaving}>
+		<Button class="h-11 w-full rounded-2xl" onclick={saveSettings} disabled={isSaving}>
 			{#if isSaving}
 				<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 			{/if}

@@ -161,7 +161,7 @@ class MomentEndpoints {
 class PrivateChatsMeEndpoints {
   readonly LIST: string = '/api/v1/private_chats/me/list';
   readonly UPDATE_SETTINGS: string = '/api/v1/private_chats/me/update_settings';
-  // ⏳ 延期实现: readonly DELETE: string = '/api/v1/private_chats/me/delete';
+  readonly DELETE: string = '/api/v1/private_chats/me/delete';
 }
 
 class PrivateChatsEndpoints {
@@ -280,6 +280,15 @@ class ShareEndpoints {
   readonly ME: ShareMeEndpoints = new ShareMeEndpoints();
 }
 
+// Admin
+class AdminRbacEndpoints {
+  readonly GET_ME: string = '/api/v1/admin/rbac/get_me';
+}
+
+class AdminEndpoints {
+  readonly RBAC: AdminRbacEndpoints = new AdminRbacEndpoints();
+}
+
 // Main entry
 export class ApiEndpoints {
   static readonly AUTH: AuthEndpoints = new AuthEndpoints();
@@ -296,6 +305,7 @@ export class ApiEndpoints {
   static readonly NOTIFICATIONS: NotificationsEndpoints = new NotificationsEndpoints();
   static readonly REPORT: ReportEndpoints = new ReportEndpoints();
   static readonly SHARE: ShareEndpoints = new ShareEndpoints();
+  static readonly ADMIN: AdminEndpoints = new AdminEndpoints();
 }
 
 export function assertApiEndpointPath(path: string): void {

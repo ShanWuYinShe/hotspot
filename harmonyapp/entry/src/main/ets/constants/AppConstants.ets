@@ -28,7 +28,7 @@ export interface BusinessCodeType {
 export const BusinessCode: BusinessCodeType = {
   SUCCESS: 0,
   ERROR: 40000,
-  UNAUTHORIZED: 40100,
+  UNAUTHORIZED: 10100,
   SERVER_ERROR: 50000
 };
 
@@ -39,7 +39,6 @@ export interface StorageKeysType {
   LOCATION_CACHE: string;
   SERVER_BASE_URL: string;
   AUTH_ACCOUNTS: string;
-  AUTH_CURRENT_USER_ID: string;
 }
 
 export const StorageKeys: StorageKeysType = {
@@ -48,8 +47,7 @@ export const StorageKeys: StorageKeysType = {
   LOCATION_CACHE: 'location_cache',
   SERVER_BASE_URL: 'server_base_url',
   // 多账号：保存所有账户的 AppAuthData（含 refresh_token），并记录当前活跃账号
-  AUTH_ACCOUNTS: 'auth_accounts',
-  AUTH_CURRENT_USER_ID: 'auth_current_user_id'
+  AUTH_ACCOUNTS: 'auth_accounts'
 };
 
 // 页面名称
@@ -59,6 +57,7 @@ export interface PageNamesType {
   GROUP: string;
   MESSAGE: string;
   MOMENT: string;
+  MOMENT_DETAIL: string;
   PROFILE: string;
   GROUP_DETAIL: string;
   CREATE_GROUP: string;
@@ -73,7 +72,6 @@ export interface PageNamesType {
   SUBSCRIPTIONS: string;
   ACCOUNTS: string;
   MY_SHARES: string;
-  RECOMMENDATION: string;
 }
 
 export const PageNames: PageNamesType = {
@@ -82,6 +80,7 @@ export const PageNames: PageNamesType = {
   GROUP: 'GroupPage',
   MESSAGE: 'MessagePage',
   MOMENT: 'MomentPage',
+  MOMENT_DETAIL: 'MomentDetailPage',
   PROFILE: 'ProfilePage',
   GROUP_DETAIL: 'GroupDetailPage',
   CREATE_GROUP: 'CreateGroupPage',
@@ -95,8 +94,7 @@ export const PageNames: PageNamesType = {
   DEBUG_PANEL: 'DebugPanel',
   SUBSCRIPTIONS: 'SubscriptionsPage',
   ACCOUNTS: 'AccountsPage',
-  MY_SHARES: 'MySharesPage',
-  RECOMMENDATION: 'RecommendationPage'
+  MY_SHARES: 'MySharesPage'
 };
 
 // 默认配置（服务端 ClientConfig 加载前的回退值）

@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use tokio::try_join;
-use tracing::warn;
+use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 use crate::constants::MESSAGE_RECALL_MINUTES;
@@ -25,10 +25,13 @@ use crate::{
     error::{AppError, Result},
     events::event_types::{AppEvent, ReplyToSnapshot},
     repositories::{
-        chat_unread_repo::ChatUnreadRepository, private_chat_repo::PrivateChatRepository,
-        private_message_repo::PrivateMessageRepository, user_blocks_repo::UserBlocksRepository,
-        user_follows_repo::UserFollowsRepository, user_repo::UserRepository,
-        user_settings_repo::UserSettingsRepository,
+        chat_unread_repo::ChatUnreadRepository,
+        private_chat_repo::{PrivateChatRepository, PrivateChatRow},
+        private_message_repo::PrivateMessageRepository,
+        user::blocks_repo::UserBlocksRepository,
+        user::follows_repo::UserFollowsRepository,
+        user::settings_repo::UserSettingsRepository,
+        user_repo::UserRepository,
     },
     services::{
         private_chat_permission::PrivateChatPermissionResolver,
@@ -52,6 +55,16 @@ pub struct PrivateMessageService {
 }
 
 impl PrivateMessageService {
+    fn cleared_at_for_user(chat: &PrivateChatRow, user_id: i64) -> Option<DateTime<Utc>> {
+        if chat.user1_id == user_id {
+            chat.user1_cleared_at
+        } else if chat.user2_id == user_id {
+            chat.user2_cleared_at
+        } else {
+            None
+        }
+    }
+
     pub fn new(
         event_bus: Arc<EventBus>,
         message_repo: PrivateMessageRepository,
@@ -85,14 +98,23 @@ impl PrivateMessageService {
         req: &SendPrivateMessageRequest,
         user_id: i64,
     ) -> Result<SendPrivateMessageData> {
+        let started_at = std::time::Instant::now();
         let target_user_id =
             crate::utils::validation::Validator::parse_user_id(&req.target_user_id)?;
+        info!(
+            user_id,
+            target_user_id,
+            message_type = ?req.r#type,
+            has_reply_to = req.reply_to_message_id.is_some(),
+            has_file_id = req.file_id.is_some(),
+            "private_message.send started"
+        );
         if user_id == target_user_id {
             return Err(AppError::CannotOperateOnSelf);
         }
 
         if let Some(content) = req.content.as_deref() {
-            Validator::validate_length(content, "消息内容", 1, 10000)?;
+            Validator::validate_message_content(content)?;
         }
 
         // 校验目标用户存在
@@ -131,6 +153,33 @@ impl PrivateMessageService {
             .chat_repo
             .get_or_create(user_id, target_user_id)
             .await?;
+        let chat_id_str = chat.chat_id.to_string();
+        if let Err(e) = self
+            .unread_repo
+            .unhide_private_chat(user_id, &chat_id_str)
+            .await
+        {
+            warn!(
+                user_id,
+                target_user_id,
+                chat_id = %chat.chat_id,
+                error = %e,
+                "发送私聊前取消隐藏会话失败（发送方）"
+            );
+        }
+        if let Err(e) = self
+            .unread_repo
+            .unhide_private_chat(target_user_id, &chat_id_str)
+            .await
+        {
+            warn!(
+                user_id,
+                target_user_id,
+                chat_id = %chat.chat_id,
+                error = %e,
+                "发送私聊前取消隐藏会话失败（接收方）"
+            );
+        }
 
         let reply_to_message_id = req
             .reply_to_message_id
@@ -272,6 +321,15 @@ impl PrivateMessageService {
             reply_to: reply_to_snapshot,
             media,
         });
+        info!(
+            user_id,
+            target_user_id,
+            chat_id = %chat.chat_id,
+            message_id = %created.message_id,
+            message_type = ?message_type,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "private_message.send completed"
+        );
 
         Ok(SendPrivateMessageData {
             message_id: created.message_id.to_string(),
@@ -287,7 +345,11 @@ impl PrivateMessageService {
     ) -> Result<PaginatedData<PrivateMessageItem>> {
         let target_user_id =
             crate::utils::validation::Validator::parse_user_id(&req.target_user_id)?;
-        let chat = match self.chat_repo.find_by_users(user_id, target_user_id).await? {
+        let chat = match self
+            .chat_repo
+            .find_by_users(user_id, target_user_id)
+            .await?
+        {
             Some(c) => c,
             None => {
                 return Ok(PaginatedData {
@@ -302,12 +364,14 @@ impl PrivateMessageService {
             pagination.and_then(|p| p.limit),
             crate::constants::MAX_PAGE_LIMIT,
         )? as i64;
+        let cleared_after = Self::cleared_at_for_user(&chat, user_id);
         let (messages, next_cursor) = self
             .message_repo
             .list_by_chat(
                 chat.chat_id,
                 limit,
                 pagination.and_then(|p| p.cursor.clone()),
+                cleared_after,
             )
             .await?;
 
@@ -463,8 +527,15 @@ impl PrivateMessageService {
     }
 
     pub async fn update(&self, req: &UpdatePrivateMessageRequest, user_id: i64) -> Result<()> {
-        Validator::validate_length(&req.content, "消息内容", 1, 10000)?;
+        let started_at = std::time::Instant::now();
+        Validator::validate_message_content(&req.content)?;
         let message_id = Validator::parse_uuid(&req.message_id, "消息ID")?;
+        info!(
+            user_id,
+            message_id = %message_id,
+            content_len = req.content.chars().count(),
+            "private_message.update started"
+        );
 
         let message = self
             .message_repo
@@ -503,12 +574,25 @@ impl PrivateMessageService {
             content: req.content.clone(),
             edited_at: Utc::now().to_rfc3339(),
         });
+        info!(
+            user_id,
+            message_id = %message_id,
+            target_user_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "private_message.update completed"
+        );
 
         Ok(())
     }
 
     pub async fn recall(&self, req: &RecallPrivateMessageRequest, user_id: i64) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let message_id = Validator::parse_uuid(&req.message_id, "消息ID")?;
+        info!(
+            user_id,
+            message_id = %message_id,
+            "private_message.recall started"
+        );
 
         let message = self
             .message_repo
@@ -538,6 +622,13 @@ impl PrivateMessageService {
             recalled_by: user_id,
             recalled_at: Utc::now().to_rfc3339(),
         });
+        info!(
+            user_id,
+            message_id = %message_id,
+            target_user_id = message.receiver_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "private_message.recall completed"
+        );
 
         Ok(())
     }
@@ -549,11 +640,17 @@ impl PrivateMessageService {
     ) -> Result<()> {
         let target_user_id =
             crate::utils::validation::Validator::parse_user_id(&req.target_user_id)?;
-        let chat = self
+        let chat = match self
             .chat_repo
             .find_by_users(user_id, target_user_id)
             .await?
-            .ok_or_else(|| AppError::ChatNotFound("会话不存在".to_string()))?;
+        {
+            Some(chat) => chat,
+            None => {
+                warn!(user_id, target_user_id, "私聊标记已读失败：会话不存在");
+                return Err(AppError::ChatNotFound("会话不存在".to_string()));
+            }
+        };
 
         let up_to = req
             .up_to_message_id
@@ -561,9 +658,43 @@ impl PrivateMessageService {
             .map(|id| Validator::parse_uuid(id, "消息ID"))
             .transpose()?;
 
+        if let Some(up_to_id) = up_to {
+            let message = self
+                .message_repo
+                .find_by_id(up_to_id)
+                .await?
+                .ok_or_else(|| {
+                    warn!(
+                        user_id,
+                        target_user_id,
+                        up_to_message_id = %up_to_id,
+                        "私聊标记已读失败：up_to_message_id 不存在"
+                    );
+                    AppError::ChatNotFound("消息不存在".to_string())
+                })?;
+            if message.chat_id != chat.chat_id {
+                warn!(
+                    user_id,
+                    target_user_id,
+                    up_to_message_id = %up_to_id,
+                    chat_id = %chat.chat_id,
+                    message_chat_id = %message.chat_id,
+                    "私聊标记已读失败：up_to_message_id 不属于当前会话"
+                );
+                return Err(AppError::ChatNotFound("消息不属于当前私聊会话".to_string()));
+            }
+        }
+
         self.unread_repo
             .mark_as_read("private", &chat.chat_id.to_string(), user_id, up_to)
             .await?;
+        debug!(
+            user_id,
+            target_user_id,
+            chat_id = %chat.chat_id,
+            up_to_message_id = ?up_to,
+            "私聊标记已读成功"
+        );
 
         let up_to_for_event: Option<Uuid> = match up_to {
             Some(id) => Some(id),

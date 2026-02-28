@@ -3,7 +3,7 @@ use crate::{
     dto::response::GroupInfo,
     events::event_types::AppEvent,
     repositories::{
-        group_member_repo::GroupMemberRepository, notification_repo::NotificationType,
+        group::member_repo::GroupMemberRepository, notification_repo::NotificationType,
         user_repo::UserRepository,
     },
     services::{
@@ -12,7 +12,7 @@ use crate::{
     types::enums::{GroupDismissReason, MemberLeaveReason, MemberRemoveReason},
     websocket::{
         manager::ConnectionManager as WsConnectionManager,
-        subscription::SubscriptionManager,
+        subscription::{SubscriptionManager, SubscriptionType},
         types::{GroupUpdatedFields, WsMessage},
     },
 };
@@ -168,6 +168,10 @@ pub async fn send_websocket(
                 ws_manager.send_to_users(&subscribers, &message).await;
                 let _ = ws_manager.send_to_user(*user_id, &message).await;
             }
+
+            ws_subscription
+                .unsubscribe(*user_id, &SubscriptionType::Group(group_id_str))
+                .await;
         }
         AppEvent::GroupProfileUpdated {
             group_id,
@@ -186,9 +190,7 @@ pub async fn send_websocket(
                 description: description.clone(),
                 avatar_url: avatar_url.clone(),
                 tags: tags.clone(),
-                join_method: join_method
-                    .as_deref()
-                    .and_then(|s| s.parse().ok()),
+                join_method: join_method.as_deref().and_then(|s| s.parse().ok()),
                 is_searchable: *is_searchable,
                 max_members: *max_members,
                 has_password: *has_password,
@@ -284,11 +286,18 @@ pub async fn send_websocket(
                 dismissed_at: chrono::Utc::now().to_rfc3339(),
                 reason,
             };
+            // 群组解散属于系统级事件：向所有群成员推送（在线连接可达即可收到），不依赖订阅状态
+            let member_user_ids = group_member_repo.list_member_user_ids(*group_id).await?;
+            ws_manager.send_to_users(&member_user_ids, &message).await;
             let group_id_str = group_id.to_string();
-            let subscribers = ws_subscription
-                .get_group_chat_subscribers(&group_id_str)
-                .await;
-            ws_manager.send_to_users(&subscribers, &message).await;
+            for member_user_id in member_user_ids {
+                ws_subscription
+                    .unsubscribe(
+                        member_user_id,
+                        &SubscriptionType::Group(group_id_str.clone()),
+                    )
+                    .await;
+            }
         }
         AppEvent::GroupInviteSent {
             invite_id,

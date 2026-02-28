@@ -706,6 +706,7 @@ impl MomentRepository {
         kw: &str,
         lon: f64,
         lat: f64,
+        radius: f64,
         limit: i64,
         cursor: Option<String>,
     ) -> Paginated<MomentDetailRow> {
@@ -735,13 +736,16 @@ impl MomentRepository {
             JOIN users u ON m.user_id = u.user_id
             WHERE m.deleted_at IS NULL
               AND m.description ILIKE $1
-              AND (m.created_at, m.moment_id) < ($4, $5)
+              AND m.location IS NOT NULL
+              AND ST_DWithin(m.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, $4)
+              AND (m.created_at, m.moment_id) < ($5, $6)
             ORDER BY m.created_at DESC, m.moment_id DESC
-            LIMIT $6
+            LIMIT $7
             "#,
             pattern,
             lon,
             lat,
+            radius,
             last_ts,
             last_id,
             limit + 1
@@ -770,6 +774,7 @@ impl MomentRepository {
         tag: &str,
         lon: f64,
         lat: f64,
+        radius: f64,
         limit: i64,
         cursor: Option<String>,
     ) -> Paginated<MomentDetailRow> {
@@ -800,13 +805,16 @@ impl MomentRepository {
             JOIN tags t ON t.tag_id = mt.tag_id
             WHERE m.deleted_at IS NULL
               AND t.name = $1
-              AND (m.created_at, m.moment_id) < ($4, $5)
+              AND m.location IS NOT NULL
+              AND ST_DWithin(m.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, $4)
+              AND (m.created_at, m.moment_id) < ($5, $6)
             ORDER BY m.created_at DESC, m.moment_id DESC
-            LIMIT $6
+            LIMIT $7
             "#,
             tag,
             lon,
             lat,
+            radius,
             last_ts,
             last_id,
             limit + 1

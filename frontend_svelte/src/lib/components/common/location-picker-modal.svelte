@@ -15,6 +15,7 @@
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import MapPin from 'lucide-svelte/icons/map-pin';
 	import Navigation from 'lucide-svelte/icons/navigation';
+	import PersonStanding from 'lucide-svelte/icons/person-standing';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 	import ChevronUp from 'lucide-svelte/icons/chevron-up';
 	import ChevronDown from 'lucide-svelte/icons/chevron-down';
@@ -27,12 +28,37 @@
 	import CreateLocationShareModal from './create-location-share-modal.svelte';
 	import AnchorSummaryCard from './anchor-summary-card.svelte';
 
-	interface Props {
-		open: boolean;
-		onOpenChange?: (open: boolean) => void;
-	}
+type LocationPickerMode = 'anchor' | 'location_pick';
 
-	let { open = $bindable(), onOpenChange }: Props = $props();
+export interface LocationPickerResult {
+	latitude: number;
+	longitude: number;
+	locationName: string;
+	radius: number;
+}
+
+interface LocationPickerInitialLocation {
+	latitude: number;
+	longitude: number;
+	locationName?: string | null;
+	radius?: number | null;
+}
+
+interface Props {
+	open: boolean;
+	mode?: LocationPickerMode;
+	initialLocation?: LocationPickerInitialLocation | null;
+	onConfirm?: (value: LocationPickerResult) => void;
+	onOpenChange?: (open: boolean) => void;
+}
+
+let {
+	open = $bindable(),
+	mode = 'anchor',
+	initialLocation = null,
+	onConfirm,
+	onOpenChange
+}: Props = $props();
 
 	let mapContainer = $state<HTMLDivElement | null>(null);
 	let map: AMap.Map | null = null;
@@ -55,9 +81,9 @@
 	let hasSyncedFromAnchor = $state(false);
 	const LONG_PRESS_DURATION_MS = 700;
 	const GESTURE_HINT_DURATION_MS = 4000;
-	const GESTURE_HINT_COMBINED = '双击或长按地图可快速定位';
+	const GESTURE_HINT_COMBINED = '双击、右键或长按地图可快速定位';
 	const GESTURE_HINT_TOUCH = '长按地图可快速定位';
-	const GESTURE_HINT_POINTER = '双击地图可快速定位';
+	const GESTURE_HINT_POINTER = '双击或右键地图可快速定位';
 
 	function getGestureHintMessage(): string {
 		if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
@@ -84,6 +110,7 @@
 	let lastTouchLngLat: { lat: number; lng: number } | null = null;
 	let touchMovedDuringLongPress = false;
 	let detachTouchListeners: (() => void) | null = null;
+	let detachContextMenuListener: (() => void) | null = null;
 
 	let searchRadius = $state(mapAnchorStore.radius);
 	let isBottomSheetExpanded = $state(false);
@@ -100,6 +127,17 @@
 
 	// 锚点历史
 	let anchorHistory = $state.raw<AnchorHistoryItem[]>([]);
+
+	const isAnchorMode = $derived(mode === 'anchor');
+	const modalTitle = $derived(isAnchorMode ? '设置浏览锚点' : '选择位置');
+	const confirmButtonText = $derived(isAnchorMode ? '设为浏览锚点' : '使用此位置');
+	const confirmSuccessText = $derived(isAnchorMode ? '浏览锚点已更新' : '位置已选定');
+	const selectionDescription = $derived(
+		isAnchorMode ? '拖动地图或搜索后，确认才会覆盖锚点' : '拖动地图或搜索后，确认用于当前操作'
+	);
+	const hintAfterConfirm = $derived(
+		isAnchorMode ? `${gestureHintMessage}，确认后才会更新锚点` : `${gestureHintMessage}，确认后将用于当前操作`
+	);
 
 	type MapClickEvent = {
 		lnglat?: AMap.LngLat;
@@ -202,6 +240,19 @@
 			mapContainer?.removeEventListener('touchmove', handleTouchMove);
 			mapContainer?.removeEventListener('touchend', handleTouchEnd);
 			detachTouchListeners = null;
+		};
+	}
+
+	function registerContextMenuBlocker() {
+		detachContextMenuListener?.();
+		if (!mapContainer) return;
+		const handler = (event: MouseEvent) => {
+			event.preventDefault();
+		};
+		mapContainer.addEventListener('contextmenu', handler);
+		detachContextMenuListener = () => {
+			mapContainer?.removeEventListener('contextmenu', handler);
+			detachContextMenuListener = null;
 		};
 	}
 
@@ -394,6 +445,14 @@
 		await moveToCoordinate(nextLat, nextLng, { hintMessage: '已通过双击定位到该位置' });
 	}
 
+	async function handleRightClick(event: MapClickEvent) {
+		if (!map) return;
+		const lnglat = event.lnglat ?? map.getCenter();
+		const nextLat = lnglat.getLat();
+		const nextLng = lnglat.getLng();
+		await moveToCoordinate(nextLat, nextLng, { hintMessage: '已通过右键定位到该位置' });
+	}
+
 	async function initMap() {
 		isLoadingMap = true;
 		try {
@@ -409,6 +468,7 @@
 			resizeEnable: true
 		});
 		registerTouchListeners();
+		registerContextMenuBlocker();
 
 		map.on('movestart', () => {
 			isMapInteracting = true;
@@ -428,6 +488,7 @@
 		});
 		map.on('mapmove', handleLiveMapMove);
 		map.on('dblclick', handleDoubleClick);
+		map.on('rightclick', handleRightClick);
 			await reverseGeocode(latitude, longitude);
 			hasInit = true;
 	} catch {
@@ -463,11 +524,48 @@
 		isLocating = false;
 	}
 
+	async function handleBackToBrowseAnchor() {
+		const anchorLat = mapAnchorStore.latitude;
+		const anchorLng = mapAnchorStore.longitude;
+		cancelReverseGeocodeTimer();
+		skipNextReverseGeocode = true;
+		latitude = anchorLat;
+		longitude = anchorLng;
+		map?.setZoomAndCenter(14, [anchorLng, anchorLat]);
+		if (mapAnchorStore.name) {
+			locationName = mapAnchorStore.name;
+			lastResolvedLat = anchorLat;
+			lastResolvedLng = anchorLng;
+		} else {
+			await reverseGeocode(anchorLat, anchorLng);
+		}
+		hideGestureHint();
+		showPlacementHint('已回到浏览锚点位置');
+	}
+
 	function handleConfirm() {
-		mapAnchorStore.setAnchor(latitude, longitude, locationName || undefined, searchRadius);
-		addToAnchorHistory(latitude, longitude, locationName || '自定义位置');
-		toast.success(`浏览锚点已更新`);
+		const normalizedName = locationName.trim() || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+		if (isAnchorMode) {
+			mapAnchorStore.setAnchor(latitude, longitude, normalizedName, searchRadius);
+			addToAnchorHistory(latitude, longitude, normalizedName);
+		} else {
+			onConfirm?.({
+				latitude,
+				longitude,
+				locationName: normalizedName,
+				radius: searchRadius
+			});
+		}
+		toast.success(confirmSuccessText);
 		handleClose();
+	}
+
+	function handleRetryMapLoad() {
+		map?.destroy();
+		map = null;
+		isMapAvailable = true;
+		hasInit = false;
+		void initMap();
 	}
 
 	function handleClose() {
@@ -481,11 +579,12 @@
 				showGestureHint();
 			}
 			if (!hasSyncedFromAnchor) {
-				latitude = mapAnchorStore.latitude;
-				longitude = mapAnchorStore.longitude;
-				locationName = mapAnchorStore.name;
-				searchRadius = mapAnchorStore.radius;
-				anchorHistory = getAnchorHistory();
+				const fallbackName = mapAnchorStore.name || mapAnchorStore.displayName;
+				latitude = initialLocation?.latitude ?? mapAnchorStore.latitude;
+				longitude = initialLocation?.longitude ?? mapAnchorStore.longitude;
+				locationName = initialLocation?.locationName?.trim() || fallbackName;
+				searchRadius = initialLocation?.radius ?? mapAnchorStore.radius;
+				anchorHistory = isAnchorMode ? getAnchorHistory() : [];
 				showSearch = false;
 				searchText = '';
 				searchResults = [];
@@ -510,6 +609,7 @@
 			map?.destroy();
 			map = null;
 			detachTouchListeners?.();
+			detachContextMenuListener?.();
 			if (reverseGeocodeTimer) {
 				clearTimeout(reverseGeocodeTimer);
 				reverseGeocodeTimer = null;
@@ -643,13 +743,13 @@
 </style>
 
 <Dialog.Root bind:open onOpenChange={(value) => { open = value; onOpenChange?.(value); }}>
-	<Dialog.Content class="flex h-[90dvh] max-h-[90dvh] flex-col p-0 sm:h-[85vh] sm:max-w-4xl sm:p-6" hideClose>
+	<Dialog.Content class="flex h-[90dvh] max-h-[90dvh] flex-col p-0 sm:h-[85vh] sm:max-w-4xl sm:rounded-3xl sm:border sm:border-border/60 sm:bg-card/95 sm:p-6" hideClose>
 
 		<!-- 移动端简化标题 -->
-		<div class="flex items-center justify-between border-b bg-background/95 px-4 py-2 sm:hidden">
+		<div class="flex items-center justify-between border-b border-border/60 bg-card/95 px-4 py-2 backdrop-blur sm:hidden">
 			<div class="flex items-center gap-2">
 				<MapPin class="h-5 w-5 text-primary" />
-				<span class="font-semibold">选择位置</span>
+				<span class="font-semibold">{modalTitle}</span>
 			</div>
 			<div class="flex items-center gap-1">
 				<Button variant="ghost" size="sm" class="h-8 w-8 p-0" onclick={toggleSearch}>
@@ -666,7 +766,7 @@
 		</div>
 
 		<!-- 地图容器 -->
-		<div class="relative flex-1 overflow-hidden sm:rounded-2xl sm:border">
+		<div class="relative flex-1 overflow-hidden sm:rounded-3xl sm:border sm:border-border/60">
 			<div class="h-full w-full touch-none" bind:this={mapContainer}></div>
 
 		<!-- 桌面端地图工具栏 -->
@@ -675,7 +775,7 @@
 				<Button
 					size="icon"
 					variant="outline"
-					class="h-10 w-10 rounded-xl border-2 bg-background/95 shadow-md backdrop-blur"
+					class="h-10 w-10 rounded-2xl border-border/60 bg-card/90 shadow-md backdrop-blur"
 					onclick={toggleSearch}
 					aria-label="搜索地点"
 				>
@@ -684,7 +784,7 @@
 				<Button
 					size="icon"
 					variant="outline"
-					class="h-10 w-10 rounded-xl border-2 bg-background/95 shadow-md backdrop-blur"
+					class="h-10 w-10 rounded-2xl border-border/60 bg-card/90 shadow-md backdrop-blur"
 					onclick={handleUseCurrentLocation}
 					disabled={isLocating}
 					aria-label="定位到当前位置"
@@ -695,10 +795,21 @@
 						<Navigation class="h-4 w-4" />
 					{/if}
 				</Button>
+				{#if isAnchorMode}
+					<Button
+						size="icon"
+						variant="outline"
+						class="h-10 w-10 rounded-2xl border-border/60 bg-card/90 shadow-md backdrop-blur"
+						onclick={handleBackToBrowseAnchor}
+						aria-label="回到浏览锚点位置"
+					>
+						<PersonStanding class="h-4 w-4" />
+					</Button>
+				{/if}
 				<Button
 					size="icon"
 					variant="outline"
-					class="h-10 w-10 rounded-xl border-2 bg-background/95 shadow-md backdrop-blur"
+					class="h-10 w-10 rounded-2xl border-border/60 bg-card/90 shadow-md backdrop-blur"
 					onclick={handleClose}
 					aria-label="关闭"
 				>
@@ -710,9 +821,9 @@
 			{#if gestureHintVisible || placementHintVisible}
 			<div class="pointer-events-none absolute inset-x-0 top-4 z-30 flex justify-center px-4">
 				{#if placementHintVisible}
-					<div class="rounded-full bg-background/95 px-4 py-1.5 text-sm font-medium text-foreground shadow-lg">{placementHintMessage}</div>
+					<div class="rounded-2xl border border-border/60 bg-card/95 px-4 py-1.5 text-sm font-medium text-foreground shadow-lg">{placementHintMessage}</div>
 				{:else if gestureHintVisible}
-					<div class="rounded-full border border-dashed border-primary/40 bg-background/90 px-4 py-1 text-xs text-muted-foreground shadow">{gestureHintMessage}</div>
+					<div class="rounded-2xl border border-dashed border-primary/40 bg-card/90 px-4 py-1 text-xs text-muted-foreground shadow">{gestureHintMessage}</div>
 				{/if}
 			</div>
 		{/if}
@@ -732,7 +843,7 @@
 
 			<!-- 搜索覆盖层 -->
 			{#if showSearch}
-				<div class="absolute inset-x-0 top-0 z-30 flex flex-col bg-background/95 backdrop-blur-sm shadow-lg">
+				<div class="absolute inset-x-0 top-0 z-30 flex flex-col border-b border-border/60 bg-card/95 backdrop-blur-sm shadow-lg">
 					<!-- 搜索输入框 -->
 					<div class="flex items-center gap-2 border-b px-3 py-2">
 						<Search class="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -822,9 +933,12 @@
 
 			{#if !isMapAvailable}
 				<div class="absolute inset-0 z-20 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-					<div class="text-center">
+					<div class="text-center space-y-3">
 						<p class="font-medium">地图未配置</p>
 						<p class="text-sm text-muted-foreground">请设置 VITE_AMAP_KEY</p>
+						<Button size="sm" variant="outline" onclick={handleRetryMapLoad}>
+							重试加载
+						</Button>
 					</div>
 				</div>
 			{/if}
@@ -836,10 +950,10 @@
 			{/if}
 
 			<!-- 悬浮定位按钮 (移动端) -->
-			<div class="absolute right-3 top-3 z-10 sm:hidden">
+			<div class="absolute right-3 top-3 z-10 flex flex-col gap-2 sm:hidden">
 				<Button 
 					size="icon" 
-					class="h-11 w-11 rounded-full shadow-lg" 
+					class="h-11 w-11 rounded-2xl shadow-lg" 
 					onclick={handleUseCurrentLocation} 
 					disabled={isLocating}
 					aria-label="使用当前位置"
@@ -850,6 +964,17 @@
 						<Navigation class="h-5 w-5" />
 					{/if}
 				</Button>
+				{#if isAnchorMode}
+					<Button
+						size="icon"
+						variant="secondary"
+						class="h-11 w-11 rounded-2xl border border-border/60 bg-card/90 shadow-lg"
+						onclick={handleBackToBrowseAnchor}
+						aria-label="回到浏览锚点位置"
+					>
+						<PersonStanding class="h-5 w-5" />
+					</Button>
+				{/if}
 			</div>
 
 			<!-- 移动端底部抽屉 -->
@@ -858,7 +983,7 @@
 				class:translate-y-0={!isBottomSheetExpanded}
 				style="transform: translateY({isBottomSheetExpanded ? '0' : 'calc(100% - 140px)'})"
 			>
-				<div class="rounded-t-3xl border-t bg-background shadow-2xl">
+				<div class="rounded-t-[28px] border border-border/60 bg-card/95 shadow-2xl backdrop-blur-md">
 					<!-- 展开/收起手柄 -->
 					<button
 						class="flex w-full flex-col items-center gap-1 py-3 active:bg-muted/50"
@@ -877,7 +1002,7 @@
 						<!-- 位置信息 (精简版 - 始终可见) -->
 					<AnchorSummaryCard
 						label="当前选中"
-						description="拖动地图或搜索后，确认才会覆盖锚点"
+						description={selectionDescription}
 						subtle
 						overrideName={locationName || '拖动地图选择位置'}
 						overrideLatitude={latitude}
@@ -889,34 +1014,36 @@
 						{#if isBottomSheetExpanded}
 							<div class="space-y-4 pb-4">
 								<!-- 提示信息 -->
-								<div class="rounded-xl bg-muted/50 p-3 text-xs text-muted-foreground">
-									💡 双击地图可快速选中位置，确认后才会更新锚点
+								<div class="rounded-2xl border border-border/50 bg-background/65 p-3 text-xs text-muted-foreground">
+									💡 {hintAfterConfirm}
 								</div>
 
-							<!-- 搜索范围 -->
-								<Card class="border-muted">
-									<CardContent class="flex flex-col gap-3 p-4">
-										<div class="flex items-center justify-between">
-											<div class="flex items-center gap-2 text-sm font-medium">
-												<SlidersHorizontal class="h-4 w-4 text-primary" />
-												<span>搜索范围</span>
+								{#if isAnchorMode}
+									<!-- 搜索范围 -->
+									<Card class="border-muted">
+										<CardContent class="flex flex-col gap-3 p-4">
+											<div class="flex items-center justify-between">
+												<div class="flex items-center gap-2 text-sm font-medium">
+													<SlidersHorizontal class="h-4 w-4 text-primary" />
+													<span>搜索范围</span>
+												</div>
+												<span class="text-sm font-bold text-primary">{searchRadius} km</span>
 											</div>
-											<span class="text-sm font-bold text-primary">{searchRadius} km</span>
-										</div>
-										<input
-											type="range"
-											min="1"
-											max="50"
-											step="1"
-											class="h-2 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
-											bind:value={searchRadius}
-										/>
-										<div class="flex justify-between text-xs text-muted-foreground">
-											<span>1km</span>
-											<span>50km</span>
-										</div>
-									</CardContent>
-								</Card>
+											<input
+												type="range"
+												min="1"
+												max="50"
+												step="1"
+												class="h-2 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+												bind:value={searchRadius}
+											/>
+											<div class="flex justify-between text-xs text-muted-foreground">
+												<span>1km</span>
+												<span>50km</span>
+											</div>
+										</CardContent>
+									</Card>
+								{/if}
 							</div>
 						{/if}
 
@@ -924,17 +1051,19 @@
 					<div class="sticky bottom-0 bg-background pb-4 pt-3 space-y-2">
 						<Button class="h-12 w-full gap-2 text-base font-semibold" onclick={handleConfirm} disabled={!locationName}>
 							<MapPin class="h-5 w-5" />
-							设为浏览锚点
+							{confirmButtonText}
 						</Button>
-						<Button 
-							variant="outline" 
-							class="h-12 w-full gap-2 text-base font-semibold" 
-							onclick={() => showShareModal = true} 
-							disabled={!locationName}
-						>
-							<Share2 class="h-5 w-5" />
-							分享此位置
-						</Button>
+						{#if isAnchorMode}
+							<Button
+								variant="outline"
+								class="h-12 w-full gap-2 text-base font-semibold"
+								onclick={() => showShareModal = true}
+								disabled={!locationName}
+							>
+								<Share2 class="h-5 w-5" />
+								分享此位置
+							</Button>
+						{/if}
 					</div>
 					</div>
 				</div>
@@ -942,7 +1071,7 @@
 		</div>
 
 		<!-- 桌面端信息面板 -->
-		<div class="hidden gap-4 py-4 sm:flex">
+		<div class="hidden gap-4 rounded-3xl border border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-md sm:flex">
 			<!-- 左侧：位置信息 + 搜索范围 -->
 			<div class="flex min-w-0 flex-1 flex-col gap-3">
 				<div class="flex items-start gap-3">
@@ -959,32 +1088,36 @@
 						</p>
 					</div>
 				</div>
-				<!-- 搜索范围 -->
-				<div class="flex items-center gap-3">
-					<div class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-						<SlidersHorizontal class="h-3.5 w-3.5" />
-						<span>搜索范围</span>
+				{#if isAnchorMode}
+					<!-- 搜索范围 -->
+					<div class="flex items-center gap-3">
+						<div class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+							<SlidersHorizontal class="h-3.5 w-3.5" />
+							<span>搜索范围</span>
+						</div>
+						<input
+							type="range"
+							min="1"
+							max="50"
+							step="1"
+							class="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+							bind:value={searchRadius}
+						/>
+						<span class="min-w-[4ch] text-right text-sm font-bold text-primary">{searchRadius} km</span>
 					</div>
-					<input
-						type="range"
-						min="1"
-						max="50"
-						step="1"
-						class="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-muted accent-primary"
-						bind:value={searchRadius}
-					/>
-					<span class="min-w-[4ch] text-right text-sm font-bold text-primary">{searchRadius} km</span>
-				</div>
+				{/if}
 			</div>
 			<!-- 右侧：操作按钮 -->
 			<div class="flex shrink-0 items-end gap-2">
-				<Button variant="outline" size="sm" class="gap-1.5" onclick={() => showShareModal = true} disabled={!locationName}>
-					<Share2 class="h-3.5 w-3.5" />
-					分享
-				</Button>
-				<Button size="sm" class="gap-1.5" onclick={handleConfirm} disabled={!locationName}>
+				{#if isAnchorMode}
+					<Button variant="outline" size="sm" class="h-10 gap-1.5 rounded-2xl border-border/60 bg-background/70" onclick={() => showShareModal = true} disabled={!locationName}>
+						<Share2 class="h-3.5 w-3.5" />
+						分享
+					</Button>
+				{/if}
+				<Button size="sm" class="h-10 gap-1.5 rounded-2xl" onclick={handleConfirm} disabled={!locationName}>
 					<MapPin class="h-3.5 w-3.5" />
-					设为锚点
+					{confirmButtonText}
 				</Button>
 			</div>
 		</div>

@@ -3,6 +3,7 @@
 //! 核心业务逻辑：发布评论、回复评论、点赞评论、分页检索
 
 use std::sync::Arc;
+use tracing::{info, warn};
 use uuid::Uuid;
 
 use crate::{
@@ -84,14 +85,22 @@ impl CommentService {
         user_id: i64,
         req: &CreateCommentRequest,
     ) -> Result<CommentListItem> {
+        let started_at = std::time::Instant::now();
         let mid = Validator::parse_uuid(&req.moment_id, "动态ID")?;
+        info!(
+            user_id,
+            moment_id = %mid,
+            has_parent_id = req.parent_id.is_some(),
+            mentions_count = req.mentions.as_ref().map(|v| v.len()).unwrap_or(0),
+            content_len = req.content.chars().count(),
+            "comment.add started"
+        );
 
         // 1. 验证动态存在并获取用于事件
-        let moment = self
-            .moment_repo
-            .find_by_id(mid)
-            .await?
-            .ok_or_else(|| AppError::MomentNotFound("动态不存在".to_string()))?;
+        let moment = self.moment_repo.find_by_id(mid).await?.ok_or_else(|| {
+            warn!(user_id, moment_id = %mid, "comment.add rejected: moment not found");
+            AppError::MomentNotFound("动态不存在".to_string())
+        })?;
 
         // 2. 创建评论 (Trigger 会自动同步 moment.comments_count)
         // 两层评论模型：parent_id 指向回复时，自动改写为楼顶层评论 ID
@@ -104,7 +113,10 @@ impl CommentService {
                 .comment_repo
                 .find_by_id(pid)
                 .await?
-                .ok_or_else(|| AppError::CommentNotFound("评论不存在".to_string()))?;
+                .ok_or_else(|| {
+                    warn!(user_id, moment_id = %mid, parent_comment_id = %pid, "comment.add rejected: parent comment not found");
+                    AppError::CommentNotFound("评论不存在".to_string())
+                })?;
             let effective_parent = parent.parent_id.unwrap_or(pid);
             (Some(pid), Some(parent.user_id), Some(effective_parent))
         } else {
@@ -174,6 +186,14 @@ impl CommentService {
                 });
             }
         }
+        info!(
+            user_id,
+            moment_id = %mid,
+            comment_id = %row.comment_id,
+            is_reply = reply_to_comment_id.is_some(),
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "comment.add completed"
+        );
 
         Ok(CommentListItem {
             comment_id: row.comment_id.to_string(),
@@ -336,7 +356,9 @@ impl CommentService {
     }
 
     pub async fn delete_comment(&self, user_id: i64, req: &DeleteCommentRequest) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let comment_id = Validator::parse_uuid(&req.comment_id, "评论ID")?;
+        info!(user_id, comment_id = %comment_id, "comment.delete started");
 
         let comment = self
             .comment_repo
@@ -345,21 +367,38 @@ impl CommentService {
             .ok_or_else(|| AppError::CommentNotFound("评论不存在".to_string()))?;
 
         if comment.user_id != user_id {
+            warn!(
+                user_id,
+                comment_id = %comment_id,
+                owner_id = comment.user_id,
+                "comment.delete rejected: not owner"
+            );
             return Err(AppError::Forbidden("无权删除该评论".to_string()));
         }
 
         self.comment_repo.delete(comment_id).await?;
+        info!(
+            user_id,
+            comment_id = %comment_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "comment.delete completed"
+        );
         Ok(())
     }
 
     pub async fn like_comment(&self, user_id: i64, req: &LikeCommentRequest) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let comment_id = Validator::parse_uuid(&req.comment_id, "评论ID")?;
+        info!(user_id, comment_id = %comment_id, "comment.like started");
 
         let comment = self
             .comment_repo
             .find_by_id(comment_id)
             .await?
-            .ok_or_else(|| AppError::CommentNotFound("评论不存在".to_string()))?;
+            .ok_or_else(|| {
+                warn!(user_id, comment_id = %comment_id, "comment.like rejected: comment not found");
+                AppError::CommentNotFound("评论不存在".to_string())
+            })?;
 
         let inserted = self.comment_repo.insert_like(comment_id, user_id).await?;
         if inserted {
@@ -381,20 +420,38 @@ impl CommentService {
                 comment_preview: comment.content.chars().take(100).collect(),
             });
         }
+        info!(
+            user_id,
+            comment_id = %comment_id,
+            inserted,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "comment.like completed"
+        );
 
         Ok(())
     }
 
     pub async fn unlike_comment(&self, user_id: i64, req: &UnlikeCommentRequest) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let comment_id = Validator::parse_uuid(&req.comment_id, "评论ID")?;
+        info!(user_id, comment_id = %comment_id, "comment.unlike started");
 
         let _comment = self
             .comment_repo
             .find_by_id(comment_id)
             .await?
-            .ok_or_else(|| AppError::CommentNotFound("评论不存在".to_string()))?;
+            .ok_or_else(|| {
+                warn!(user_id, comment_id = %comment_id, "comment.unlike rejected: comment not found");
+                AppError::CommentNotFound("评论不存在".to_string())
+            })?;
 
         self.comment_repo.delete_like(comment_id, user_id).await?;
+        info!(
+            user_id,
+            comment_id = %comment_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "comment.unlike completed"
+        );
         Ok(())
     }
 }

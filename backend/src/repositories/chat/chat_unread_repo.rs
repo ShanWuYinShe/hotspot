@@ -106,6 +106,49 @@ impl ChatUnreadRepository {
         Ok(())
     }
 
+    /// 隐藏私聊会话（单边）：用于会话删除后从 Inbox 移除
+    pub async fn hide_private_chat(&self, user_id: i64, chat_id: &str) -> Result<(), AppError> {
+        sqlx::query!(
+            r#"
+            INSERT INTO chat_conversations_state (
+                user_id, chat_type, chat_id, unread_count, is_hidden, updated_at
+            )
+            VALUES ($1, 'private', $2, 0, TRUE, NOW())
+            ON CONFLICT (user_id, chat_type, chat_id)
+            DO UPDATE SET
+                unread_count = 0,
+                is_hidden = TRUE,
+                updated_at = NOW()
+            "#,
+            user_id,
+            chat_id
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    /// 取消隐藏私聊会话（单边）：当用户再次发送/收到新消息时恢复可见
+    pub async fn unhide_private_chat(&self, user_id: i64, chat_id: &str) -> Result<(), AppError> {
+        sqlx::query!(
+            r#"
+            INSERT INTO chat_conversations_state (
+                user_id, chat_type, chat_id, unread_count, is_hidden, updated_at
+            )
+            VALUES ($1, 'private', $2, 0, FALSE, NOW())
+            ON CONFLICT (user_id, chat_type, chat_id)
+            DO UPDATE SET
+                is_hidden = FALSE,
+                updated_at = NOW()
+            "#,
+            user_id,
+            chat_id
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
     /// 获取指定用户在某个私聊中的最后已读消息 ID
     pub async fn get_last_read_message_id(
         &self,

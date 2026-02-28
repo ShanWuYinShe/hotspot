@@ -4,6 +4,7 @@
 	import MapPin from 'lucide-svelte/icons/map-pin';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
 	import { cn } from '$lib/utils';
+	import type { Snippet } from 'svelte';
 	interface AnchorSummaryCardProps {
 		label?: string;
 		description?: string | null;
@@ -13,6 +14,7 @@
 		overrideName?: string | null;
 		overrideLatitude?: number | null;
 		overrideLongitude?: number | null;
+		actions?: Snippet;
 	}
 
 	let {
@@ -23,19 +25,19 @@
 		onAdjust,
 		overrideName = null,
 		overrideLatitude = null,
-		overrideLongitude = null
+		overrideLongitude = null,
+		actions
 	}: AnchorSummaryCardProps = $props();
 
 	const displayName = $derived(overrideName ?? mapAnchorStore.displayName);
 	const displayLatitude = $derived(overrideLatitude ?? mapAnchorStore.latitude);
 	const displayLongitude = $derived(overrideLongitude ?? mapAnchorStore.longitude);
-	const hasActionsSlot = Boolean($$slots.actions);
 </script>
 
 <Card
 	class={cn(
-		'rounded-2xl border border-border/60 bg-background/90 shadow-sm backdrop-blur',
-		subtle && 'bg-linear-to-r from-primary/5 to-primary/10'
+		'rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md',
+		subtle && 'bg-linear-to-r from-background via-card/85 to-primary/10'
 	)}
 >
 	<CardContent class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -52,13 +54,12 @@
 			{/if}
 		</div>
 
-		{#if hasActionsSlot}
+		{#if actions}
 			<div class="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end">
-				<!-- svelte-ignore slot_element_deprecated -->
-				<slot name="actions" />
+				{@render actions()}
 			</div>
 		{:else if onAdjust}
-			<Button variant="outline" size="sm" class="gap-2" onclick={onAdjust}>
+		<Button variant="outline" size="sm" class="h-10 gap-2 rounded-2xl border-border/60 bg-background/70" onclick={onAdjust}>
 				<MapPin class="h-4 w-4" />
 				调整位置
 			</Button>

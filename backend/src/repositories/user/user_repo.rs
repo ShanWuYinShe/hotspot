@@ -61,8 +61,8 @@ pub struct UserSearchRow {
     pub avatar_url: Option<String>,
     pub bio: Option<String>,
     pub gender: UserGender,
-    pub distance: f64,
-    pub bearing_degrees: f64,
+    pub distance: Option<f64>,
+    pub bearing_degrees: Option<f64>,
     pub is_online: bool,
     pub last_active_at: Option<DateTime<Utc>>,
 }
@@ -433,8 +433,11 @@ impl UserRepository {
             r#"
             SELECT 
                 u.user_id as "user_id!", u.nickname, u.avatar_url, u.bio, u.gender as "gender!: UserGender",
-                ST_Distance(u.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) as "distance!",
-                degrees(ST_Azimuth(ST_SetSRID(ST_MakePoint($1, $2), 4326), u.location::geometry)) as "bearing_degrees!",
+                ST_Distance(u.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) as "distance?",
+                COALESCE(
+                    degrees(ST_Azimuth(ST_SetSRID(ST_MakePoint($1, $2), 4326), u.location::geometry)),
+                    0
+                ) as "bearing_degrees?",
                 COALESCE(os.is_online, false) as "is_online!",
                 os.last_active_at
             FROM users u
@@ -456,7 +459,7 @@ impl UserRepository {
         let next_cursor = if has_more {
             items
                 .last()
-                .map(|r| encode_cursor(&(r.distance, r.user_id)))
+                .map(|r| encode_cursor(&(r.distance.unwrap_or(0.0), r.user_id)))
                 .transpose()?
         } else {
             None
@@ -494,7 +497,10 @@ impl UserRepository {
                 ST_X(u.location::geometry) as "longitude!",
                 COALESCE(u.location_name, '') as "location_name!",
                 ST_Distance(u.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) as "distance!",
-                degrees(ST_Azimuth(ST_SetSRID(ST_MakePoint($1, $2), 4326), u.location::geometry)) as "bearing_degrees!"
+                COALESCE(
+                    degrees(ST_Azimuth(ST_SetSRID(ST_MakePoint($1, $2), 4326), u.location::geometry)),
+                    0
+                ) as "bearing_degrees!"
             FROM users u
             LEFT JOIN user_tags ut ON u.user_id = ut.user_id
             LEFT JOIN tags t ON ut.tag_id = t.tag_id
@@ -610,6 +616,7 @@ impl UserRepository {
         kw: &str,
         lon: f64,
         lat: f64,
+        radius: f64,
         limit: i64,
         cursor: Option<String>,
     ) -> Paginated<UserSearchRow> {
@@ -621,8 +628,11 @@ impl UserRepository {
             r#"
             SELECT 
                 u.user_id as "user_id!", u.nickname, u.avatar_url, u.bio, u.gender as "gender!: UserGender",
-                ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) as "distance!",
-                degrees(ST_Azimuth(ST_SetSRID(ST_MakePoint($2, $3), 4326), u.location::geometry)) as "bearing_degrees!",
+                ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) as "distance?",
+                COALESCE(
+                    degrees(ST_Azimuth(ST_SetSRID(ST_MakePoint($2, $3), 4326), u.location::geometry)),
+                    0
+                ) as "bearing_degrees?",
                 COALESCE(os.is_online, false) as "is_online!",
                 os.last_active_at
             FROM users u
@@ -630,16 +640,18 @@ impl UserRepository {
             WHERE u.status = 'normal' AND u.deleted_at IS NULL
               AND u.location IS NOT NULL
               AND (u.nickname ILIKE $1 OR u.username ILIKE $1)
+              AND ST_DWithin(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, $4)
               AND (
-                  ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) > $4
-                  OR (ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) = $4 AND u.user_id > $5)
+                  ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) > $5
+                  OR (ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) = $5 AND u.user_id > $6)
               )
             ORDER BY ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) ASC, u.user_id ASC
-            LIMIT $6
+            LIMIT $7
             "#,
             pattern,
             lon,
             lat,
+            radius,
             last_dist,
             last_id,
             limit + 1
@@ -652,7 +664,7 @@ impl UserRepository {
         let next_cursor = if has_more {
             items
                 .last()
-                .map(|r| encode_cursor(&(r.distance, r.user_id)))
+                .map(|r| encode_cursor(&(r.distance.unwrap_or(0.0), r.user_id)))
                 .transpose()?
         } else {
             None
@@ -667,6 +679,7 @@ impl UserRepository {
         tag: &str,
         lon: f64,
         lat: f64,
+        radius: f64,
         limit: i64,
         cursor: Option<String>,
     ) -> Paginated<UserSearchRow> {
@@ -677,8 +690,11 @@ impl UserRepository {
             r#"
             SELECT 
                 u.user_id as "user_id!", u.nickname, u.avatar_url, u.bio, u.gender as "gender!: UserGender",
-                ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) as "distance!",
-                degrees(ST_Azimuth(ST_SetSRID(ST_MakePoint($2, $3), 4326), u.location::geometry)) as "bearing_degrees!",
+                ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) as "distance?",
+                COALESCE(
+                    degrees(ST_Azimuth(ST_SetSRID(ST_MakePoint($2, $3), 4326), u.location::geometry)),
+                    0
+                ) as "bearing_degrees?",
                 COALESCE(os.is_online, false) as "is_online!",
                 os.last_active_at
             FROM users u
@@ -688,16 +704,18 @@ impl UserRepository {
             WHERE u.status = 'normal' AND u.deleted_at IS NULL
               AND u.location IS NOT NULL
               AND t.name = $1
+              AND ST_DWithin(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, $4)
               AND (
-                  ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) > $4
-                  OR (ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) = $4 AND u.user_id > $5)
+                  ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) > $5
+                  OR (ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) = $5 AND u.user_id > $6)
               )
             ORDER BY ST_Distance(u.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) ASC, u.user_id ASC
-            LIMIT $6
+            LIMIT $7
             "#,
             tag,
             lon,
             lat,
+            radius,
             last_dist,
             last_id,
             limit + 1
@@ -710,7 +728,7 @@ impl UserRepository {
         let next_cursor = if has_more {
             items
                 .last()
-                .map(|r| encode_cursor(&(r.distance, r.user_id)))
+                .map(|r| encode_cursor(&(r.distance.unwrap_or(0.0), r.user_id)))
                 .transpose()?
         } else {
             None

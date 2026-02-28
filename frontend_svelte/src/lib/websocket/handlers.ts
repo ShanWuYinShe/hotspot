@@ -20,6 +20,7 @@ import type {
 	GroupMessageNewPayload,
 	SubscriptionOperation,
 	SubscribeAckPayload,
+	SubscriptionsSnapshotPayload,
 	UserOnlinePayload,
 	UserOfflinePayload,
 	GroupMemberLeftPayload,
@@ -43,8 +44,11 @@ export type SubscriptionType = 'user' | 'group';
 // ============ 订阅管理器 ============
 
 class SubscriptionManager {
-	// 当前订阅（按类型分组）
-	private subscriptions = new Map<SubscriptionType, Set<string>>();
+	// 客户端“期望订阅”状态（离线也会更新，用于重连恢复）
+	private desiredSubscriptions = new Map<SubscriptionType, Set<string>>();
+
+	// 服务端“已生效订阅”快照（由 SubscribeAck 回传）
+	private effectiveSubscriptions = new Map<SubscriptionType, Set<string>>();
 
 	// 待确认的订阅操作（包含定时器引用）
 	private pendingAcks = new Map<
@@ -58,35 +62,65 @@ class SubscriptionManager {
 		}
 	>();
 
-	constructor() {
-		// 初始化订阅集合
-		this.subscriptions.set('user', new Set());
-		this.subscriptions.set('group', new Set());
+	private isDriftReconciling = false;
+	private lastDriftReconcileAt = 0;
+	private static readonly DRIFT_RECONCILE_COOLDOWN_MS = 5000;
+	private isRestoreInFlight = false;
+	private lastReconcileTrigger: 'subscribe_ack' | 'subscriptions_snapshot' | null = null;
+	private lastReconcileAt = 0;
 
-		// 监听 SubscribeAck
+	constructor() {
+		this.initializeSubscriptionMap(this.desiredSubscriptions);
+		this.initializeSubscriptionMap(this.effectiveSubscriptions);
+
+		// 模块级单例，监听器与应用生命周期一致，无需保存 unsubscribe 引用
 		websocketStore.on('SubscribeAck', (payload) => {
 			this.handleSubscribeAck(payload);
 		});
 
-		// 监听连接建立，恢复订阅
+		websocketStore.on('SubscriptionsSnapshot', (payload) => {
+			this.handleSubscriptionsSnapshot(payload);
+		});
+
 		websocketStore.on('ConnectionEstablished', () => {
-			this.restoreSubscriptions();
+			void this.restoreAndReconcileSubscriptions();
 		});
 	}
 
 	/** 增量添加订阅 */
 	subscribe(type: SubscriptionType, ids: string[]): Promise<boolean> {
-		return ids.length === 0 ? Promise.resolve(true) : this.sendRequest('subscribe', type, ids);
+		const normalizedIds = this.normalizeIds(ids);
+		if (normalizedIds.length === 0) return Promise.resolve(true);
+		this.applyDesiredOperation('subscribe', type, normalizedIds);
+		return this.sendOrQueueRequest('subscribe', type, normalizedIds);
 	}
 
 	/** 增量移除订阅 */
 	unsubscribe(type: SubscriptionType, ids: string[]): Promise<boolean> {
-		return ids.length === 0 ? Promise.resolve(true) : this.sendRequest('unsubscribe', type, ids);
+		const normalizedIds = this.normalizeIds(ids);
+		if (normalizedIds.length === 0) return Promise.resolve(true);
+		this.applyDesiredOperation('unsubscribe', type, normalizedIds);
+		return this.sendOrQueueRequest('unsubscribe', type, normalizedIds);
 	}
 
 	/** 全量覆盖订阅（重连时使用） */
 	setSubscriptions(type: SubscriptionType, ids: string[]): Promise<boolean> {
-		return this.sendRequest('set', type, ids);
+		const normalizedIds = this.normalizeIds(ids);
+		this.applyDesiredOperation('set', type, normalizedIds);
+		return this.sendOrQueueRequest('set', type, normalizedIds);
+	}
+
+	/** 根据连接状态发送请求；离线时仅缓存意图 */
+	private sendOrQueueRequest(
+		operation: SubscriptionOperation,
+		type: SubscriptionType,
+		ids: string[]
+	): Promise<boolean> {
+		if (!websocketStore.isConnected) {
+			log(`[WebSocket] 未连接，缓存订阅意图: operation=${operation}, type=${type}, ids=${ids.length}`);
+			return Promise.resolve(true);
+		}
+		return this.sendRequest(operation, type, ids);
 	}
 
 	/** 统一的订阅请求发送 + 超时等待 */
@@ -95,6 +129,11 @@ class SubscriptionManager {
 		type: SubscriptionType,
 		ids: string[]
 	): Promise<boolean> {
+		if (!websocketStore.isConnected) {
+			log(`[WebSocket] 发送订阅请求时连接已断开，转为缓存意图: operation=${operation}, type=${type}`);
+			return Promise.resolve(true);
+		}
+
 		const clientMsgId = this.generateClientMsgId();
 
 		websocketStore.send({
@@ -119,7 +158,12 @@ class SubscriptionManager {
 	 * 获取当前订阅
 	 */
 	getSubscriptions(type: SubscriptionType): string[] {
-		const subscriptions = this.subscriptions.get(type);
+		const subscriptions = this.desiredSubscriptions.get(type);
+		return subscriptions ? Array.from(subscriptions) : [];
+	}
+
+	getEffectiveSubscriptions(type: SubscriptionType): string[] {
+		const subscriptions = this.effectiveSubscriptions.get(type);
 		return subscriptions ? Array.from(subscriptions) : [];
 	}
 
@@ -127,7 +171,7 @@ class SubscriptionManager {
 	 * 检查是否已订阅
 	 */
 	isSubscribed(type: SubscriptionType, id: string): boolean {
-		return this.subscriptions.get(type)?.has(id) ?? false;
+		return this.desiredSubscriptions.get(type)?.has(id) ?? false;
 	}
 
 	/**
@@ -135,6 +179,17 @@ class SubscriptionManager {
 	 */
 	private handleSubscribeAck(payload: SubscribeAckPayload) {
 		const { client_request_id, operation, type, ids, code, failed_ids } = payload;
+		const subscriptionType = type as SubscriptionType;
+		const failedIds = this.normalizeIds(failed_ids?.map((f) => f.subscription_id) ?? []);
+		const successfulIds = this.excludeFailedIds(ids, failedIds);
+		this.updateEffectiveSnapshot(subscriptionType, successfulIds);
+
+		if (failedIds.length > 0) {
+			this.rollbackDesiredByFailedIds(operation, subscriptionType, failedIds, successfulIds);
+		}
+		if (!this.isRestoreInFlight) {
+			void this.reconcileDriftIfNeeded('subscribe_ack');
+		}
 
 		const pending = this.pendingAcks.get(client_request_id);
 		if (!pending) {
@@ -146,34 +201,12 @@ class SubscriptionManager {
 		clearTimeout(pending.timer);
 		this.pendingAcks.delete(client_request_id);
 
-		// 计算成功的 ID（排除 failed_ids 中的项）
-		const failedIdSet = new Set(failed_ids?.map((f) => f.subscription_id) ?? []);
-		const succeededIds = ids.filter((id) => !failedIdSet.has(id));
-
-		// 无论 code 是否为 0，都更新成功项的本地订阅状态
-		// spec: failed_ids 仅包含失败项，其余为成功
-		const subscriptionSet = this.subscriptions.get(type as SubscriptionType);
-		if (subscriptionSet && succeededIds.length > 0) {
-			switch (operation) {
-				case 'subscribe':
-					succeededIds.forEach((id) => subscriptionSet.add(id));
-					break;
-				case 'unsubscribe':
-					succeededIds.forEach((id) => subscriptionSet.delete(id));
-					break;
-				case 'set':
-					subscriptionSet.clear();
-					succeededIds.forEach((id) => subscriptionSet.add(id));
-					break;
-			}
-		}
-
 		if (code === 0) {
 			log(`[WebSocket] 订阅${operation}成功:`, type, ids.length, '个');
 		} else {
 			logError('[WebSocket] 订阅操作部分失败:', payload.message, failed_ids);
-			if (succeededIds.length > 0) {
-				log(`[WebSocket] 部分成功: ${succeededIds.length}/${ids.length} 个`);
+			if (failedIds.length > 0) {
+				log(`[WebSocket] 已回滚失败订阅项: ${failedIds.length}/${ids.length} 个`);
 			}
 		}
 
@@ -181,16 +214,42 @@ class SubscriptionManager {
 		pending.resolve(code === 0);
 	}
 
+	private handleSubscriptionsSnapshot(payload: SubscriptionsSnapshotPayload) {
+		const normalizedUserIds = this.normalizeIds(payload.user_ids ?? []);
+		const normalizedGroupIds = this.normalizeIds(payload.group_ids ?? []);
+		this.updateEffectiveSnapshot('user', normalizedUserIds);
+		this.updateEffectiveSnapshot('group', normalizedGroupIds);
+		void this.reconcileDriftIfNeeded('subscriptions_snapshot');
+	}
+
+	private async requestSubscriptionsSnapshot() {
+		if (!websocketStore.isConnected) return;
+		websocketStore.send({
+			type: 'GetSubscriptions',
+			payload: { client_request_id: this.generateClientMsgId() }
+		});
+	}
+
 	/**
 	 * 恢复订阅（重连后，使用 set 操作全量覆盖）
 	 */
 	private async restoreSubscriptions() {
-		log('[WebSocket] 恢复订阅...');
+		log('[WebSocket] 恢复订阅（基于离线订阅意图）...');
 
-		for (const [type, ids] of this.subscriptions.entries()) {
-			if (ids.size > 0) {
-				await this.setSubscriptions(type, Array.from(ids));
-			}
+		for (const type of ['user', 'group'] as SubscriptionType[]) {
+			const ids = Array.from(this.desiredSubscriptions.get(type) ?? []);
+			await this.sendOrQueueRequest('set', type, ids);
+		}
+	}
+
+	private async restoreAndReconcileSubscriptions() {
+		this.isRestoreInFlight = true;
+		try {
+			await this.restoreSubscriptions();
+			await this.waitForPendingAcks();
+			await this.requestSubscriptionsSnapshot();
+		} finally {
+			this.isRestoreInFlight = false;
 		}
 	}
 
@@ -216,6 +275,177 @@ class SubscriptionManager {
 	 */
 	private generateClientMsgId(): string {
 		return crypto.randomUUID();
+	}
+
+	private initializeSubscriptionMap(map: Map<SubscriptionType, Set<string>>) {
+		map.set('user', new Set());
+		map.set('group', new Set());
+	}
+
+	private excludeFailedIds(ids: string[], failedIds: string[]): string[] {
+		if (failedIds.length === 0) {
+			return this.normalizeIds(ids);
+		}
+		const failedSet = new Set(this.normalizeIds(failedIds));
+		return this.normalizeIds(ids).filter((id) => !failedSet.has(id));
+	}
+
+	private normalizeIds(ids: string[]): string[] {
+		const unique = new Set<string>();
+		for (const id of ids) {
+			const normalized = id.trim();
+			if (!normalized) continue;
+			unique.add(normalized);
+		}
+		return Array.from(unique);
+	}
+
+	private applyDesiredOperation(
+		operation: SubscriptionOperation,
+		type: SubscriptionType,
+		ids: string[]
+	) {
+		const desiredSet = this.desiredSubscriptions.get(type);
+		if (!desiredSet) return;
+		switch (operation) {
+			case 'subscribe':
+				ids.forEach((id) => desiredSet.add(id));
+				break;
+			case 'unsubscribe':
+				ids.forEach((id) => desiredSet.delete(id));
+				break;
+			case 'set':
+				desiredSet.clear();
+				ids.forEach((id) => desiredSet.add(id));
+				break;
+		}
+	}
+
+	private updateEffectiveSnapshot(type: SubscriptionType, ids: string[]) {
+		const effectiveSet = this.effectiveSubscriptions.get(type);
+		if (!effectiveSet) return;
+		effectiveSet.clear();
+		this.normalizeIds(ids).forEach((id) => effectiveSet.add(id));
+	}
+
+	private rollbackDesiredByFailedIds(
+		operation: SubscriptionOperation,
+		type: SubscriptionType,
+		failedIds: string[],
+		serverSnapshotIds: string[]
+	) {
+		const desiredSet = this.desiredSubscriptions.get(type);
+		if (!desiredSet) return;
+		switch (operation) {
+			case 'subscribe':
+				// spec: failed_ids 需要回滚本地状态
+				failedIds.forEach((id) => desiredSet.delete(id));
+				break;
+			case 'unsubscribe':
+				// 回滚取消失败项，保持继续订阅
+				failedIds.forEach((id) => desiredSet.add(id));
+				break;
+			case 'set': {
+				// set 失败场景直接对齐服务端快照，避免本地意图漂移
+				desiredSet.clear();
+				this.normalizeIds(serverSnapshotIds).forEach((id) => desiredSet.add(id));
+				break;
+			}
+		}
+	}
+
+	private toSortedIds(set: Set<string> | undefined): string[] {
+		return set ? Array.from(set).sort() : [];
+	}
+
+	private async waitForPendingAcks(timeoutMs = 1500) {
+		const startedAt = Date.now();
+		while (this.pendingAcks.size > 0 && Date.now() - startedAt < timeoutMs) {
+			await new Promise((resolve) => setTimeout(resolve, 50));
+		}
+	}
+
+	private computeDrift(type: SubscriptionType): { missing_on_server: string[]; extra_on_server: string[] } {
+		const desired = this.desiredSubscriptions.get(type) ?? new Set<string>();
+		const effective = this.effectiveSubscriptions.get(type) ?? new Set<string>();
+		const missing_on_server = this.toSortedIds(
+			new Set(Array.from(desired).filter((id) => !effective.has(id)))
+		);
+		const extra_on_server = this.toSortedIds(
+			new Set(Array.from(effective).filter((id) => !desired.has(id)))
+		);
+		return { missing_on_server, extra_on_server };
+	}
+
+	getDriftState() {
+		const user = this.computeDrift('user');
+		const group = this.computeDrift('group');
+		return {
+			user,
+			group,
+			has_drift:
+				user.missing_on_server.length > 0 ||
+				user.extra_on_server.length > 0 ||
+				group.missing_on_server.length > 0 ||
+				group.extra_on_server.length > 0
+		};
+	}
+
+	private async reconcileDriftIfNeeded(trigger: 'subscribe_ack' | 'subscriptions_snapshot') {
+		const drift = this.getDriftState();
+		if (!drift.has_drift) return;
+
+		const now = Date.now();
+		if (this.isDriftReconciling || now - this.lastDriftReconcileAt < SubscriptionManager.DRIFT_RECONCILE_COOLDOWN_MS) {
+			return;
+		}
+
+		this.isDriftReconciling = true;
+		this.lastDriftReconcileAt = now;
+		try {
+			warn('[WebSocket] 检测到订阅漂移，准备对账恢复', { trigger, drift });
+			this.lastReconcileTrigger = trigger;
+			this.lastReconcileAt = now;
+			for (const type of ['user', 'group'] as SubscriptionType[]) {
+				const desiredIds = this.toSortedIds(this.desiredSubscriptions.get(type));
+				await this.sendOrQueueRequest('set', type, desiredIds);
+			}
+		} finally {
+			this.isDriftReconciling = false;
+		}
+	}
+
+	debugState() {
+		const drift = this.getDriftState();
+		const snapshot = {
+			desired: {
+				user: this.toSortedIds(this.desiredSubscriptions.get('user')),
+				group: this.toSortedIds(this.desiredSubscriptions.get('group'))
+			},
+			effective: {
+				user: this.toSortedIds(this.effectiveSubscriptions.get('user')),
+				group: this.toSortedIds(this.effectiveSubscriptions.get('group'))
+			},
+			drift,
+			drift_summary: {
+				user_missing_count: drift.user.missing_on_server.length,
+				user_extra_count: drift.user.extra_on_server.length,
+				group_missing_count: drift.group.missing_on_server.length,
+				group_extra_count: drift.group.extra_on_server.length
+			},
+			reconcile: {
+				in_progress: this.isDriftReconciling,
+				last_trigger: this.lastReconcileTrigger,
+				last_at: this.lastReconcileAt > 0 ? new Date(this.lastReconcileAt).toISOString() : null
+			},
+			restore_in_flight: this.isRestoreInFlight
+		};
+		if (dev) {
+			console.group('📡 WebSocket Subscription State');
+			console.log(snapshot);
+			console.groupEnd();
+		}
+		return snapshot;
 	}
 }
 
@@ -684,3 +914,8 @@ class WebSocketEventHandlers {
 // 必须先创建实例，因为 WebSocketEventHandlers 依赖 websocketStore
 export const subscriptionManager = new SubscriptionManager();
 export const eventHandlers = new WebSocketEventHandlers();
+
+if (dev && browser && typeof window !== 'undefined') {
+	const debugWindow = window as Window & { __wsSubscriptions?: SubscriptionManager };
+	debugWindow.__wsSubscriptions = subscriptionManager;
+}

@@ -39,21 +39,6 @@ pub struct InviteMemberData {
     pub expires_at: String,
 }
 
-/// 我的入群申请列表项（含群组信息）- 用于 groups/me/applications/list
-#[derive(Debug, Serialize)]
-pub struct MyApplicationItem {
-    pub application_id: String,
-    pub group: GroupInfo,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub message: Option<String>,
-    pub status: ApplicationStatus,
-    pub created_at: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub handled_at: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub handled_by: Option<UserInfo>,
-}
-
 /// 群组申请项 - API 文档: GroupApplicationItem
 #[derive(Debug, Serialize)]
 pub struct GroupApplicationItem {

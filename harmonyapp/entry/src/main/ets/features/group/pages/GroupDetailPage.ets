@@ -10,14 +10,17 @@ import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
-import { IconButton, AppIcon, IconSize, SystemIcon } from '../../../components/SystemIcon';
+import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
 import { SystemShareService } from '../../../core/services/SystemShareService';
 import { common } from '@kit.AbilityKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import {
   GroupItem,
+  GroupApplicationItem,
   GroupMemberItem,
-  RelativeLocation
+  RelativeLocation,
+  SettableGroupRole,
+  UpdateGroupRequest
 } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DistributedSyncService, SyncData } from '../../../core/services/DistributedSyncService';
@@ -30,6 +33,7 @@ import { NfcShareService } from '../../../core/services/NfcShareService';
 import { AppRouter, LoginRouteParam, ChatRouteParam } from '../../../core/router/AppRouter';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
 
 interface GroupSyncData {
   groupId: string;
@@ -40,15 +44,24 @@ interface GroupSyncData {
 
 const DOMAIN_NUMBER: number = 0xFF17;
 const TAG: string = 'GroupDetailPage';
+const GROUP_NAME_MAX: number = 50;
+const GROUP_DESCRIPTION_MAX: number = 500;
 
 interface GroupDetailParams {
   groupId: string;
 }
 
+interface MemberActionMenuItem {
+  value: string;
+  action: () => void;
+}
+
+@Preview
 @Component
 export struct GroupDetailPage {
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
+  @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   
   private stateManager = GlobalStateManager.getInstance();
@@ -58,20 +71,41 @@ export struct GroupDetailPage {
   @State groupInfo: GroupItem | null = null;
   @State members: GroupMemberItem[] = [];
   private membersDataSource: BasicDataSource<GroupMemberItem> = new BasicDataSource<GroupMemberItem>([]);
+  @State applications: GroupApplicationItem[] = [];
+  private applicationsDataSource: BasicDataSource<GroupApplicationItem> = new BasicDataSource<GroupApplicationItem>([]);
   @State isLoading: boolean = true;
   @State isLoadingMembers: boolean = false;
+  @State isLoadingApplications: boolean = false;
   @State membersErrorMessage: string = '';
+  @State applicationsErrorMessage: string = '';
   @State errorMessage: string = '';
   @State showMemberList: boolean = false;
+  @State showApplicationList: boolean = false;
   @State membersHasMore: boolean = false;
   @State membersNextCursor: string = '';
   @State membersLoadingMore: boolean = false;
+  @State applicationsHasMore: boolean = false;
+  @State applicationsNextCursor: string = '';
+  @State applicationsLoadingMore: boolean = false;
   @State isJoining: boolean = false;
   @State isLeaving: boolean = false;
   @State joinPassword: string = '';
   private groupId: string = '';
+  @State handlingApplicationIds: string[] = [];
 
   @State isMember: boolean = false;
+  @State showEditGroupSheet: boolean = false;
+  @State editGroupName: string = '';
+  @State editGroupDescription: string = '';
+  @State editGroupAvatarPreviewUrl: string = '';
+  @State editGroupAvatarLocalUri: string = '';
+  @State editGroupAvatarFileId: string = '';
+  @State isSavingGroupInfo: boolean = false;
+  @State isEditGroupAvatarUploading: boolean = false;
+
+  private getHeaderTopPadding(): number {
+    return (this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.LG) + DesignConstants.SPACING.SM;
+  }
 
   aboutToAppear(): void {
     SystemUiController.useSurface({
@@ -171,6 +205,146 @@ export struct GroupDetailPage {
     }
   }
 
+  private canManageApplications(): boolean {
+    return this.isMember && this.isAdminOrOwnerRole();
+  }
+
+  private isApplicationHandling(applicationId: string): boolean {
+    return this.handlingApplicationIds.includes(applicationId);
+  }
+
+  private setApplicationHandling(applicationId: string, handling: boolean): void {
+    if (handling) {
+      if (!this.handlingApplicationIds.includes(applicationId)) {
+        const nextIds: string[] = [];
+        for (const id of this.handlingApplicationIds) {
+          nextIds.push(id);
+        }
+        nextIds.push(applicationId);
+        this.handlingApplicationIds = nextIds;
+      }
+      return;
+    }
+    const nextIds: string[] = [];
+    for (const id of this.handlingApplicationIds) {
+      if (id !== applicationId) {
+        nextIds.push(id);
+      }
+    }
+    this.handlingApplicationIds = nextIds;
+  }
+
+  private async loadGroupApplications(): Promise<void> {
+    if (!this.canManageApplications()) {
+      return;
+    }
+    this.isLoadingApplications = true;
+    this.applicationsErrorMessage = '';
+    this.showApplicationList = true;
+    try {
+      const response = await ApiClient.getGroupApplications({
+        group_id: this.groupId,
+        status: 'pending',
+        pagination: { limit: 50 }
+      });
+      if (response.code === 0) {
+        this.applications = response.data?.items ?? [];
+        this.applicationsDataSource.setData(this.applications);
+        this.applicationsHasMore = !!(response.data?.next_cursor);
+        this.applicationsNextCursor = response.data?.next_cursor ?? '';
+      } else if (this.applications.length === 0) {
+        this.applicationsErrorMessage = response.message || '加载入群申请失败';
+      }
+    } catch {
+      if (this.applications.length === 0) {
+        this.applicationsErrorMessage = '加载入群申请失败';
+      }
+    } finally {
+      this.isLoadingApplications = false;
+    }
+  }
+
+  private async loadMoreGroupApplications(): Promise<void> {
+    if (this.applicationsLoadingMore || !this.applicationsHasMore || !this.canManageApplications()) {
+      return;
+    }
+    this.applicationsLoadingMore = true;
+    try {
+      const response = await ApiClient.getGroupApplications({
+        group_id: this.groupId,
+        status: 'pending',
+        pagination: { limit: 50, cursor: this.applicationsNextCursor }
+      });
+      if (response.code === 0) {
+        const items = response.data?.items ?? [];
+        this.applications = this.applications.concat(items);
+        this.applicationsDataSource.appendData(items);
+        this.applicationsHasMore = !!(response.data?.next_cursor);
+        this.applicationsNextCursor = response.data?.next_cursor ?? '';
+      }
+    } catch {
+      // 静默失败
+    } finally {
+      this.applicationsLoadingMore = false;
+    }
+  }
+
+  private removeApplicationById(applicationId: string): void {
+    this.applications = this.applications.filter((item) => item.application_id !== applicationId);
+    this.applicationsDataSource.setData(this.applications);
+  }
+
+  private async approveApplication(application: GroupApplicationItem): Promise<void> {
+    if (!this.ensureLoggedIn('审核入群申请')) return;
+    if (!this.canManageApplications()) {
+      SystemToast.showWarning('无权限处理入群申请', this.getUIContext());
+      return;
+    }
+    const applicationId = application.application_id;
+    if (!applicationId || this.isApplicationHandling(applicationId)) return;
+    this.setApplicationHandling(applicationId, true);
+    try {
+      const response = await ApiClient.approveGroupApplication({ application_id: applicationId });
+      if (response.code === 0) {
+        this.removeApplicationById(applicationId);
+        if (this.groupInfo?.group) {
+          this.groupInfo.group.members_count = (this.groupInfo.group.members_count ?? 0) + 1;
+        }
+        SystemToast.showSuccess('已批准入群申请', this.getUIContext());
+      } else {
+        SystemToast.showError(response.message || '批准申请失败', this.getUIContext());
+      }
+    } catch {
+      SystemToast.showError('批准申请失败', this.getUIContext());
+    } finally {
+      this.setApplicationHandling(applicationId, false);
+    }
+  }
+
+  private async rejectApplication(application: GroupApplicationItem): Promise<void> {
+    if (!this.ensureLoggedIn('审核入群申请')) return;
+    if (!this.canManageApplications()) {
+      SystemToast.showWarning('无权限处理入群申请', this.getUIContext());
+      return;
+    }
+    const applicationId = application.application_id;
+    if (!applicationId || this.isApplicationHandling(applicationId)) return;
+    this.setApplicationHandling(applicationId, true);
+    try {
+      const response = await ApiClient.rejectGroupApplication({ application_id: applicationId });
+      if (response.code === 0) {
+        this.removeApplicationById(applicationId);
+        SystemToast.showSuccess('已拒绝入群申请', this.getUIContext());
+      } else {
+        SystemToast.showError(response.message || '拒绝申请失败', this.getUIContext());
+      }
+    } catch {
+      SystemToast.showError('拒绝申请失败', this.getUIContext());
+    } finally {
+      this.setApplicationHandling(applicationId, false);
+    }
+  }
+
   private async joinGroup(): Promise<void> {
     if (!this.groupInfo) return;
     if (!this.ensureLoggedIn('加入群组')) return;
@@ -253,6 +427,147 @@ export struct GroupDetailPage {
     }
   }
 
+  private canEditGroupInfo(): boolean {
+    return this.isMember && this.isAdminOrOwnerRole();
+  }
+
+  private openEditGroupSheet(): void {
+    if (!this.groupInfo) {
+      return;
+    }
+    if (!this.canEditGroupInfo()) {
+      SystemToast.showWarning('仅群主或管理员可编辑群组信息', this.getUIContext());
+      return;
+    }
+
+    this.editGroupName = this.groupInfo.group?.name ?? '';
+    this.editGroupDescription = this.groupInfo.description ?? '';
+    this.editGroupAvatarPreviewUrl = this.groupInfo.group?.avatar_url ?? '';
+    this.editGroupAvatarLocalUri = '';
+    this.editGroupAvatarFileId = '';
+    this.showEditGroupSheet = true;
+  }
+
+  private closeEditGroupSheet(): void {
+    if (this.isSavingGroupInfo || this.isEditGroupAvatarUploading) {
+      return;
+    }
+    this.showEditGroupSheet = false;
+  }
+
+  private async selectEditGroupAvatar(): Promise<void> {
+    if (this.isSavingGroupInfo || this.isEditGroupAvatarUploading) {
+      return;
+    }
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      const selectedUris = await MediaServiceManager.selectImages(context, 1);
+      if (selectedUris.length === 0) {
+        return;
+      }
+      this.editGroupAvatarLocalUri = selectedUris[0];
+      this.editGroupAvatarPreviewUrl = selectedUris[0];
+      this.editGroupAvatarFileId = '';
+      SystemToast.show('已选择新头像，保存时自动上传', this.getUIContext());
+    } catch {
+      SystemToast.showError('选择群头像失败，请重试', this.getUIContext());
+    }
+  }
+
+  private resetEditGroupAvatarSelection(): void {
+    this.editGroupAvatarLocalUri = '';
+    this.editGroupAvatarFileId = '';
+    this.editGroupAvatarPreviewUrl = this.groupInfo?.group?.avatar_url ?? '';
+  }
+
+  private async ensureEditGroupAvatarUploaded(context: common.UIAbilityContext): Promise<string | undefined> {
+    if (!this.editGroupAvatarLocalUri) {
+      return undefined;
+    }
+    if (this.editGroupAvatarFileId) {
+      return this.editGroupAvatarFileId;
+    }
+
+    this.isEditGroupAvatarUploading = true;
+    try {
+      const compressedPath = await MediaServiceManager.compressImage(
+        context,
+        this.editGroupAvatarLocalUri,
+        80,
+        1024 * 1024 * 2
+      );
+      const uploadUri = await MediaServiceManager.prepareFileForUpload(context, compressedPath);
+      const uploadResult = await ApiClient.uploadFile(context, uploadUri, 'group_avatar');
+      if (!uploadResult.file_id) {
+        throw new Error('群头像上传失败');
+      }
+      this.editGroupAvatarFileId = uploadResult.file_id;
+      return this.editGroupAvatarFileId;
+    } finally {
+      this.isEditGroupAvatarUploading = false;
+    }
+  }
+
+  private async saveGroupInfo(): Promise<void> {
+    if (!this.groupInfo) {
+      return;
+    }
+    if (!this.ensureLoggedIn('编辑群组信息')) {
+      return;
+    }
+    if (!this.canEditGroupInfo()) {
+      SystemToast.showWarning('无权限编辑群组信息', this.getUIContext());
+      return;
+    }
+
+    const trimmedName = this.editGroupName.trim();
+    const trimmedDescription = this.editGroupDescription.trim();
+    const currentName = this.groupInfo.group?.name ?? '';
+    const currentDescription = this.groupInfo.description ?? '';
+    const hasAvatarChange = this.editGroupAvatarLocalUri.length > 0;
+
+    if (!trimmedName) {
+      SystemToast.showWarning('群组名称不能为空', this.getUIContext());
+      return;
+    }
+    if (trimmedName.length > GROUP_NAME_MAX) {
+      SystemToast.showWarning(`群组名称最多 ${GROUP_NAME_MAX} 字符`, this.getUIContext());
+      return;
+    }
+    if (trimmedDescription.length > GROUP_DESCRIPTION_MAX) {
+      SystemToast.showWarning(`群组描述最多 ${GROUP_DESCRIPTION_MAX} 字符`, this.getUIContext());
+      return;
+    }
+    if (trimmedName === currentName && trimmedDescription === currentDescription && !hasAvatarChange) {
+      SystemToast.show('未检测到可保存的变更', this.getUIContext());
+      return;
+    }
+
+    this.isSavingGroupInfo = true;
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      const avatarFileId = await this.ensureEditGroupAvatarUploaded(context);
+      const request: UpdateGroupRequest = {
+        group_id: this.groupId,
+        name: trimmedName,
+        description: trimmedDescription,
+        avatar_file_id: avatarFileId
+      };
+      const response = await ApiClient.updateGroup(request);
+      if (response.code === 0) {
+        this.showEditGroupSheet = false;
+        await this.loadGroupDetail();
+        SystemToast.showSuccess('群组信息已更新', this.getUIContext());
+      } else {
+        SystemToast.showError(response.message || '更新群组信息失败', this.getUIContext());
+      }
+    } catch {
+      SystemToast.showError('更新群组信息失败', this.getUIContext());
+    } finally {
+      this.isSavingGroupInfo = false;
+    }
+  }
+
   private async enterChat(): Promise<void> {
     if (!this.groupInfo) return;
     if (!this.ensureLoggedIn('进入群聊')) return;
@@ -261,6 +576,241 @@ export struct GroupDetailPage {
     chatParams.chatType = 'group_chat';
     chatParams.title = this.groupInfo.group?.name ?? '';
     AppRouter.push(PageNames.CHAT, chatParams);
+  }
+
+  private openPrivateChat(member: GroupMemberItem): void {
+    if (!this.ensureLoggedIn('发起私聊')) return;
+    if (!member.user?.user_id) return;
+    const myId = this.currentUser?.user_id ?? '';
+    if (member.user.user_id === myId) {
+      SystemToast.showWarning('不能和自己发起私聊', this.getUIContext());
+      return;
+    }
+    const chatParams = new ChatRouteParam();
+    chatParams.chatId = member.user.user_id;
+    chatParams.chatType = 'private_chat';
+    chatParams.targetId = member.user.user_id;
+    chatParams.title = member.user.nickname ?? '';
+    AppRouter.push(PageNames.CHAT, chatParams);
+  }
+
+  private currentGroupRole(): string {
+    return this.groupInfo?.my_state?.role ?? 'member';
+  }
+
+  private isOwnerRole(): boolean {
+    return this.currentGroupRole() === 'owner';
+  }
+
+  private isAdminOrOwnerRole(): boolean {
+    const role = this.currentGroupRole();
+    return role === 'owner' || role === 'admin';
+  }
+
+  private isCurrentUser(userId?: string): boolean {
+    if (!userId) return false;
+    return userId === (this.currentUser?.user_id ?? '');
+  }
+
+  private canManageMember(member: GroupMemberItem): boolean {
+    if (!this.isMember || !this.isAdminOrOwnerRole()) return false;
+    const targetUserId = member.user?.user_id;
+    if (!targetUserId) return false;
+    if (this.isCurrentUser(targetUserId)) return false;
+    if (member.role === 'owner') return false;
+    if (!this.isOwnerRole() && member.role === 'admin') return false;
+    return true;
+  }
+
+  private canChangeRole(member: GroupMemberItem): boolean {
+    return this.canManageMember(member);
+  }
+
+  private isMemberMuted(member: GroupMemberItem): boolean {
+    const mutedUntil = member.muted_until;
+    if (!mutedUntil) return false;
+    const ts = new Date(mutedUntil).getTime();
+    return Number.isFinite(ts) && ts > Date.now();
+  }
+
+  private upsertMember(updated: GroupMemberItem): void {
+    const targetUserId = updated.user?.user_id;
+    if (!targetUserId) return;
+    this.members = this.members.map((item) => {
+      if (item.user?.user_id === targetUserId) {
+        return updated;
+      }
+      return item;
+    });
+    this.membersDataSource.setData(this.members);
+  }
+
+  private withMemberRole(member: GroupMemberItem, role: SettableGroupRole): GroupMemberItem {
+    return {
+      user: member.user,
+      role: role,
+      joined_at: member.joined_at,
+      muted_until: member.muted_until,
+      presence_status: member.presence_status,
+      last_online: member.last_online
+    };
+  }
+
+  private withMemberMutedUntil(member: GroupMemberItem, mutedUntil?: string): GroupMemberItem {
+    return {
+      user: member.user,
+      role: member.role,
+      joined_at: member.joined_at,
+      muted_until: mutedUntil,
+      presence_status: member.presence_status,
+      last_online: member.last_online
+    };
+  }
+
+  private async setMemberRole(member: GroupMemberItem, role: SettableGroupRole): Promise<void> {
+    if (!this.ensureLoggedIn('调整成员角色')) return;
+    if (!this.canChangeRole(member)) {
+      SystemToast.showWarning('无权限调整该成员角色', this.getUIContext());
+      return;
+    }
+    const userId = member.user?.user_id;
+    if (!userId) return;
+    try {
+      const response = await ApiClient.setMemberRole({
+        group_id: this.groupId,
+        user_id: userId,
+        role: role
+      });
+      if (response.code === 0) {
+        this.upsertMember(this.withMemberRole(member, role));
+        SystemToast.showSuccess('成员角色已更新', this.getUIContext());
+      } else {
+        SystemToast.showError(response.message || '成员角色更新失败', this.getUIContext());
+      }
+    } catch {
+      SystemToast.showError('成员角色更新失败', this.getUIContext());
+    }
+  }
+
+  private async muteMember(member: GroupMemberItem, durationMinutes: number): Promise<void> {
+    if (!this.ensureLoggedIn('禁言成员')) return;
+    if (!this.canManageMember(member)) {
+      SystemToast.showWarning('无权限禁言该成员', this.getUIContext());
+      return;
+    }
+    const userId = member.user?.user_id;
+    if (!userId) return;
+    try {
+      const response = await ApiClient.muteMember({
+        group_id: this.groupId,
+        user_id: userId,
+        duration_minutes: durationMinutes
+      });
+      if (response.code === 0) {
+        const mutedUntil = new Date(Date.now() + durationMinutes * 60 * 1000).toISOString();
+        this.upsertMember(this.withMemberMutedUntil(member, mutedUntil));
+        SystemToast.showSuccess('已设置禁言', this.getUIContext());
+      } else {
+        SystemToast.showError(response.message || '禁言失败', this.getUIContext());
+      }
+    } catch {
+      SystemToast.showError('禁言失败', this.getUIContext());
+    }
+  }
+
+  private async unmuteMember(member: GroupMemberItem): Promise<void> {
+    if (!this.ensureLoggedIn('解除禁言')) return;
+    if (!this.canManageMember(member)) {
+      SystemToast.showWarning('无权限解除禁言', this.getUIContext());
+      return;
+    }
+    const userId = member.user?.user_id;
+    if (!userId) return;
+    try {
+      const response = await ApiClient.unmuteMember({
+        group_id: this.groupId,
+        user_id: userId
+      });
+      if (response.code === 0) {
+        this.upsertMember(this.withMemberMutedUntil(member, undefined));
+        SystemToast.showSuccess('已解除禁言', this.getUIContext());
+      } else {
+        SystemToast.showError(response.message || '解除禁言失败', this.getUIContext());
+      }
+    } catch {
+      SystemToast.showError('解除禁言失败', this.getUIContext());
+    }
+  }
+
+  private async removeMember(member: GroupMemberItem): Promise<void> {
+    if (!this.ensureLoggedIn('移除成员')) return;
+    if (!this.canManageMember(member)) {
+      SystemToast.showWarning('无权限移除该成员', this.getUIContext());
+      return;
+    }
+    const userId = member.user?.user_id;
+    if (!userId) return;
+    try {
+      const response = await ApiClient.removeMember({
+        group_id: this.groupId,
+        user_id: userId
+      });
+      if (response.code === 0) {
+        this.members = this.members.filter(item => item.user?.user_id !== userId);
+        this.membersDataSource.setData(this.members);
+        if (this.groupInfo?.group) {
+          const nextMembersCount = Math.max(0, (this.groupInfo.group.members_count ?? 0) - 1);
+          this.groupInfo.group.members_count = nextMembersCount;
+        }
+        SystemToast.showSuccess('已移除成员', this.getUIContext());
+      } else {
+        SystemToast.showError(response.message || '移除成员失败', this.getUIContext());
+      }
+    } catch {
+      SystemToast.showError('移除成员失败', this.getUIContext());
+    }
+  }
+
+  private buildMemberActionMenus(member: GroupMemberItem): MemberActionMenuItem[] {
+    const menus: MemberActionMenuItem[] = [];
+    if (member.user?.user_id && !this.isCurrentUser(member.user.user_id)) {
+      menus.push({
+        value: '发起私聊',
+        action: () => { this.openPrivateChat(member); }
+      });
+    }
+    if (!this.canManageMember(member)) {
+      return menus;
+    }
+    if (this.canChangeRole(member)) {
+      if (member.role === 'member') {
+        menus.push({
+          value: '设为管理员',
+          action: () => { this.setMemberRole(member, 'admin'); }
+        });
+      } else if (member.role === 'admin') {
+        menus.push({
+          value: '设为成员',
+          action: () => { this.setMemberRole(member, 'member'); }
+        });
+      }
+    }
+    if (this.isMemberMuted(member)) {
+      menus.push({
+        value: '解除禁言',
+        action: () => { this.unmuteMember(member); }
+      });
+    } else {
+      menus.push({
+        value: '禁言 30 分钟',
+        action: () => { this.muteMember(member, 30); }
+      });
+    }
+    menus.push({
+      value: '移出群组',
+      action: () => { this.removeMember(member); }
+    });
+    return menus;
   }
 
   private getRoleDisplayText(role: string): string {
@@ -316,7 +866,10 @@ export struct GroupDetailPage {
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: Color.Transparent,
+          bgColor: $r('app.color.bg_secondary'),
+          radius: DesignConstants.RADIUS.XL,
+          minButtonSize: 42,
+          paddingSize: 9,
           onButtonClick: () => {
             AppRouter.pop();
           }
@@ -329,18 +882,26 @@ export struct GroupDetailPage {
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
 
-        SystemIcon({
+        IconButton({
           icon: AppIcon.SHARE,
           iconSize: IconSize.LARGE,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          clickable: true,
-          onIconClick: () => this.shareGroup()
+          bgColor: $r('app.color.bg_secondary'),
+          radius: DesignConstants.RADIUS.XL,
+          minButtonSize: 42,
+          paddingSize: 9,
+          onButtonClick: () => this.shareGroup()
         })
       }
       .width('100%')
-      .height(56)
-      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-      .backgroundColor($r('app.color.bg_secondary'))
+      .alignItems(VerticalAlign.Center)
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        top: this.getHeaderTopPadding(),
+        bottom: DesignConstants.SPACING.SM
+      })
+      .backgroundColor($r('app.color.bg_primary'))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.isLoading) {
@@ -349,16 +910,22 @@ export struct GroupDetailPage {
           .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (this.errorMessage) {
         Column() {
-          Text('😕').fontSize(48).margin({ bottom: DesignConstants.SPACING.MD })
+          Text() {
+            SymbolSpan($r(AppIcon.WARNING))
+              .fontSize(48)
+              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+          }
+          .margin({ bottom: DesignConstants.SPACING.MD })
           Text(this.errorMessage)
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .textAlign(TextAlign.Center)
             .margin({ bottom: DesignConstants.SPACING.XL })
           Button('重试')
-            .type(ButtonType.Capsule)
+            .type(ButtonType.Normal)
             .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
             .fontColor(Color.White)
+            .borderRadius(DesignConstants.RADIUS.XL)
             .onClick(() => this.loadGroupDetail())
         }
         .width('100%')
@@ -432,7 +999,9 @@ export struct GroupDetailPage {
             .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
           }
           .backgroundColor($r('app.color.bg_secondary'))
-          .borderRadius(DesignConstants.RADIUS.LG)
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .shadow(DesignConstants.SHADOW.SMALL)
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
           // 2. 位置信息
@@ -472,7 +1041,9 @@ export struct GroupDetailPage {
              .padding(DesignConstants.SPACING.LG)
           }
           .backgroundColor($r('app.color.bg_secondary'))
-          .borderRadius(DesignConstants.RADIUS.LG)
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .shadow(DesignConstants.SHADOW.SMALL)
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
           // 3. 成员列表入口
@@ -500,30 +1071,82 @@ export struct GroupDetailPage {
             .padding(DesignConstants.SPACING.LG)
           }
           .backgroundColor($r('app.color.bg_secondary'))
-          .borderRadius(DesignConstants.RADIUS.LG)
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .shadow(DesignConstants.SHADOW.SMALL)
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+
+          if (this.canManageApplications()) {
+            // 3.5 入群申请入口（仅群主/管理员可见）
+            ListItem() {
+              Row() {
+                Column() {
+                  Text('入群申请')
+                    .fontSize(DesignConstants.FONT.SIZE.LG)
+                    .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                    .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                  Text('处理待审核的入群请求')
+                    .fontSize(DesignConstants.FONT.SIZE.MD)
+                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                    .margin({ top: 4 })
+                }
+                .layoutWeight(1)
+                .alignItems(HorizontalAlign.Start)
+
+                Text('查看全部 >')
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .fontColor($r('sys.color.ohos_id_color_emphasize'))
+                  .onClick(() => this.loadGroupApplications())
+              }
+              .width('100%')
+              .padding(DesignConstants.SPACING.LG)
+            }
+            .backgroundColor($r('app.color.bg_secondary'))
+            .borderRadius(DesignConstants.RADIUS.XL)
+            .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+            .shadow(DesignConstants.SHADOW.SMALL)
+            .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+          }
 
           // 4. 操作按钮
           ListItem() {
              Column() {
                 if (this.isMember) {
+                  if (this.canEditGroupInfo()) {
+                    Button(this.isSavingGroupInfo ? '保存中...' : '编辑群组信息')
+                      .type(ButtonType.Normal)
+                      .backgroundColor(Color.Transparent)
+                      .fontColor($r('sys.color.ohos_id_color_emphasize'))
+                      .border({ width: 1, color: $r('sys.color.ohos_id_color_emphasize') })
+                      .borderRadius(DesignConstants.RADIUS.XL)
+                      .width('100%')
+                      .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
+                      .enabled(!this.isSavingGroupInfo)
+                      .opacity(this.isSavingGroupInfo ? 0.58 : 1)
+                      .onClick(() => this.openEditGroupSheet())
+                      .margin({ bottom: DesignConstants.SPACING.MD })
+                  }
+
                   Button('进入聊天')
-                    .type(ButtonType.Capsule)
+                    .type(ButtonType.Normal)
                     .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
                     .fontColor(Color.White)
+                    .borderRadius(DesignConstants.RADIUS.XL)
                     .width('100%')
                     .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
                     .onClick(() => this.enterChat())
                     .margin({ bottom: DesignConstants.SPACING.MD })
 
                   Button('离开群组')
-                    .type(ButtonType.Capsule)
+                    .type(ButtonType.Normal)
                     .backgroundColor(Color.Transparent)
                     .fontColor($r('app.color.color_danger'))
                     .border({ width: 1, color: $r('app.color.color_danger') })
+                    .borderRadius(DesignConstants.RADIUS.XL)
                     .width('100%')
                     .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
                     .enabled(!this.isLeaving)
+                    .opacity(this.isLeaving ? 0.58 : 1)
                     .onClick(() => this.leaveGroup())
                 } else {
                   if (this.groupInfo?.has_password) {
@@ -534,32 +1157,39 @@ export struct GroupDetailPage {
                       })
                       .fontSize(16)
                       .padding(16)
-                       .backgroundColor($r('app.color.bg_primary'))
+                      .backgroundColor($r('app.color.bg_tertiary'))
                       .borderRadius(DesignConstants.RADIUS.MD)
                       .margin({ bottom: DesignConstants.SPACING.MD })
                   }
 
                   Button(this.groupInfo?.has_password ? '加入群组（需要密码）' : '加入群组')
-                    .type(ButtonType.Capsule)
+                    .type(ButtonType.Normal)
                     .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
                     .fontColor(Color.White)
+                    .borderRadius(DesignConstants.RADIUS.XL)
                     .width('100%')
                     .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
                     .enabled(!this.isJoining)
+                    .opacity(this.isJoining ? 0.58 : 1)
                     .onClick(() => this.joinGroup())
                 }
              }
              .padding(DesignConstants.SPACING.LG)
           }
           .backgroundColor($r('app.color.bg_secondary'))
-          .borderRadius(DesignConstants.RADIUS.LG)
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .shadow(DesignConstants.SHADOW.SMALL)
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 24 })
 
         }
         .width('100%')
         .layoutWeight(1)
         .scrollBar(BarState.Auto)
-        .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
+        .padding({
+          top: DesignConstants.SPACING.SM,
+          bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
+        })
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
     }
@@ -586,6 +1216,170 @@ export struct GroupDetailPage {
       dragBar: true,
       backgroundColor: $r('app.color.bg_secondary')
     })
+    .bindSheet($$this.showApplicationList, this.buildApplicationListSheet(), {
+      height: '70%',
+      showClose: false,
+      dragBar: true,
+      backgroundColor: $r('app.color.bg_secondary')
+    })
+    .bindSheet($$this.showEditGroupSheet, this.buildEditGroupSheet(), {
+      height: '78%',
+      showClose: false,
+      dragBar: true,
+      backgroundColor: $r('app.color.bg_secondary')
+    })
+  }
+
+  @Builder
+  private buildEditGroupSheet() {
+    Column({ space: DesignConstants.SPACING.MD }) {
+      Row({ space: DesignConstants.SPACING.SM }) {
+        Text('编辑群组信息')
+          .fontSize(DesignConstants.FONT.SIZE.XL)
+          .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .layoutWeight(1)
+
+        Button('取消')
+          .type(ButtonType.Normal)
+          .backgroundColor($r('app.color.bg_tertiary'))
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .height(34)
+          .enabled(!this.isSavingGroupInfo && !this.isEditGroupAvatarUploading)
+          .opacity(this.isSavingGroupInfo || this.isEditGroupAvatarUploading ? 0.58 : 1)
+          .onClick(() => this.closeEditGroupSheet())
+
+        Button(this.isSavingGroupInfo ? '保存中...' : '保存')
+          .type(ButtonType.Normal)
+          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+          .fontColor(Color.White)
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .height(34)
+          .enabled(!this.isSavingGroupInfo && !this.isEditGroupAvatarUploading)
+          .opacity(this.isSavingGroupInfo || this.isEditGroupAvatarUploading ? 0.58 : 1)
+          .onClick(() => this.saveGroupInfo())
+      }
+      .width('100%')
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM })
+
+      Scroll() {
+        Column({ space: DesignConstants.SPACING.LG }) {
+          Column({ space: DesignConstants.SPACING.MD }) {
+            Text('群组头像')
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .width('100%')
+
+            Row({ space: DesignConstants.SPACING.MD }) {
+              Button() {
+                SystemAvatar({
+                  src: this.editGroupAvatarPreviewUrl,
+                  name: this.editGroupName,
+                  avatarSize: 72
+                })
+              }
+              .type(ButtonType.Normal)
+              .backgroundColor(Color.Transparent)
+              .onClick(() => this.selectEditGroupAvatar())
+
+              Column({ space: DesignConstants.SPACING.SM }) {
+                Text(this.isEditGroupAvatarUploading ? '头像上传中...' : '点击头像可重新选择')
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+
+                if (this.editGroupAvatarLocalUri) {
+                  Button('恢复原头像')
+                    .type(ButtonType.Normal)
+                    .backgroundColor(Color.Transparent)
+                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+                    .borderRadius(DesignConstants.RADIUS.XL)
+                    .height(30)
+                    .onClick(() => this.resetEditGroupAvatarSelection())
+                }
+              }
+              .alignItems(HorizontalAlign.Start)
+              .layoutWeight(1)
+            }
+            .width('100%')
+          }
+          .padding(DesignConstants.SPACING.LG)
+          .backgroundColor($r('app.color.bg_secondary'))
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .shadow(DesignConstants.SHADOW.SMALL)
+
+          Column({ space: DesignConstants.SPACING.SM }) {
+            Text('群组名称')
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .width('100%')
+
+            TextInput({ placeholder: '请输入群组名称', text: this.editGroupName })
+              .fontSize(DesignConstants.FONT.SIZE.MD)
+              .maxLength(GROUP_NAME_MAX)
+              .onChange((value: string) => { this.editGroupName = value; })
+              .height(42)
+              .backgroundColor($r('app.color.bg_tertiary'))
+              .borderRadius(DesignConstants.RADIUS.MD)
+              .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+
+            Text(`${this.editGroupName.trim().length}/${GROUP_NAME_MAX}`)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+              .width('100%')
+              .textAlign(TextAlign.End)
+          }
+          .padding(DesignConstants.SPACING.LG)
+          .backgroundColor($r('app.color.bg_secondary'))
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .shadow(DesignConstants.SHADOW.SMALL)
+
+          Column({ space: DesignConstants.SPACING.SM }) {
+            Text('群组描述')
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .width('100%')
+
+            TextArea({ placeholder: '请输入群组描述', text: this.editGroupDescription })
+              .fontSize(DesignConstants.FONT.SIZE.MD)
+              .maxLength(GROUP_DESCRIPTION_MAX)
+              .onChange((value: string) => { this.editGroupDescription = value; })
+              .height(120)
+              .backgroundColor($r('app.color.bg_tertiary'))
+              .borderRadius(DesignConstants.RADIUS.MD)
+              .padding(DesignConstants.SPACING.MD)
+
+            Text(`${this.editGroupDescription.trim().length}/${GROUP_DESCRIPTION_MAX}`)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+              .width('100%')
+              .textAlign(TextAlign.End)
+          }
+          .padding(DesignConstants.SPACING.LG)
+          .backgroundColor($r('app.color.bg_secondary'))
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .shadow(DesignConstants.SHADOW.SMALL)
+        }
+        .width('100%')
+        .padding({
+          left: DesignConstants.SPACING.LG,
+          right: DesignConstants.SPACING.LG,
+          top: DesignConstants.SPACING.SM,
+          bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
+        })
+      }
+      .width('100%')
+      .layoutWeight(1)
+      .scrollBar(BarState.Auto)
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('app.color.bg_primary'))
   }
 
   @Builder
@@ -621,9 +1415,10 @@ export struct GroupDetailPage {
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .textAlign(TextAlign.Center)
           Button('重试')
-            .type(ButtonType.Capsule)
+            .type(ButtonType.Normal)
             .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
             .fontColor(Color.White)
+            .borderRadius(DesignConstants.RADIUS.XL)
             .height(40)
             .onClick(() => { this.loadGroupMembers(); })
         }
@@ -670,7 +1465,164 @@ export struct GroupDetailPage {
     .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
     .width('100%')
     .height('100%')
-    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    .backgroundColor($r('app.color.bg_secondary'))
+  }
+
+  @Builder
+  buildApplicationListSheet() {
+    Column() {
+      Row() {
+        Text('入群申请')
+          .fontSize(DesignConstants.FONT.SIZE.XL)
+          .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .layoutWeight(1)
+
+        Text(`${this.applications.length} 条`)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+      }
+      .width('100%')
+      .padding(DesignConstants.SPACING.LG)
+
+      if (this.isLoadingApplications && this.applications.length === 0) {
+        SystemLoadingView({ message: '加载入群申请中...' }).layoutWeight(1)
+      } else if (this.applications.length === 0 && this.applicationsErrorMessage) {
+        Column({ space: DesignConstants.SPACING.LG }) {
+          Text() {
+            SymbolSpan($r(AppIcon.WARNING))
+              .fontSize(48)
+              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+          }
+          Text(this.applicationsErrorMessage)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .textAlign(TextAlign.Center)
+          Button('重试')
+            .type(ButtonType.Normal)
+            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+            .fontColor(Color.White)
+            .borderRadius(DesignConstants.RADIUS.XL)
+            .height(40)
+            .onClick(() => { this.loadGroupApplications(); })
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
+      } else if (this.applications.length > 0) {
+        List() {
+          LazyForEach(this.applicationsDataSource, (application: GroupApplicationItem) => {
+            ListItem() {
+              this.buildApplicationItem(application)
+            }
+          }, (application: GroupApplicationItem) => application.application_id)
+
+          if (this.applicationsLoadingMore) {
+            ListItem() {
+              Row({ space: DesignConstants.SPACING.SM }) {
+                LoadingProgress().width(20).height(20)
+                Text('加载更多...')
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              }
+              .width('100%')
+              .justifyContent(FlexAlign.Center)
+              .padding(DesignConstants.SPACING.MD)
+            }
+          }
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+        .scrollBar(BarState.Auto)
+        .onReachEnd(() => { this.loadMoreGroupApplications(); })
+      } else {
+        Column() {
+          Text('暂无待处理申请')
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
+      }
+    }
+    .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('app.color.bg_secondary'))
+  }
+
+  @Builder
+  buildApplicationItem(application: GroupApplicationItem) {
+    Column({ space: DesignConstants.SPACING.SM }) {
+      Row() {
+        SystemAvatar({
+          src: application.applicant?.avatar_url ?? '',
+          name: application.applicant?.nickname ?? '',
+          avatarSize: 40,
+          userInfo: application.applicant
+        })
+
+        Column() {
+          Text(application.applicant?.nickname ?? '未知用户')
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+          Text(`申请于 ${new Date(application.created_at).toLocaleString()}`)
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .margin({ top: 4 })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+        .margin({ left: DesignConstants.SPACING.MD })
+      }
+      .width('100%')
+
+      if (application.message) {
+        Text(application.message)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .width('100%')
+      }
+
+      Row({ space: DesignConstants.SPACING.SM }) {
+        Button(this.isApplicationHandling(application.application_id) ? '处理中...' : '批准')
+          .type(ButtonType.Normal)
+          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+          .fontColor(Color.White)
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .height(34)
+          .layoutWeight(1)
+          .enabled(!this.isApplicationHandling(application.application_id))
+          .opacity(this.isApplicationHandling(application.application_id) ? 0.58 : 1)
+          .onClick(() => this.approveApplication(application))
+
+        Button('拒绝')
+          .type(ButtonType.Normal)
+          .backgroundColor($r('app.color.bg_tertiary'))
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .height(34)
+          .layoutWeight(1)
+          .enabled(!this.isApplicationHandling(application.application_id))
+          .opacity(this.isApplicationHandling(application.application_id) ? 0.58 : 1)
+          .onClick(() => this.rejectApplication(application))
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .padding(DesignConstants.SPACING.MD)
+    .backgroundColor($r('app.color.bg_secondary'))
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .shadow(DesignConstants.SHADOW.SMALL)
+    .margin({ bottom: DesignConstants.SPACING.SM })
   }
 
   @Builder
@@ -695,7 +1647,7 @@ export struct GroupDetailPage {
           Text(this.getRoleDisplayText(member.role))
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getRoleColor(member.role))
-            .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+            .backgroundColor($r('app.color.bg_tertiary'))
             .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 2, bottom: 2 })
             .borderRadius(DesignConstants.SPACING.XS)
 
@@ -711,11 +1663,24 @@ export struct GroupDetailPage {
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
       .margin({ left: DesignConstants.SPACING.MD })
+
+      if (this.buildMemberActionMenus(member).length > 0) {
+        Text() {
+          SymbolSpan($r(AppIcon.MORE))
+            .fontSize(18)
+            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+        }
+        .padding(DesignConstants.SPACING.SM)
+        .borderRadius(DesignConstants.RADIUS.SM)
+        .bindMenu(this.buildMemberActionMenus(member))
+      }
     }
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
-    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
-    .borderRadius(DesignConstants.RADIUS.MD)
+    .backgroundColor($r('app.color.bg_secondary'))
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .shadow(DesignConstants.SHADOW.SMALL)
     .margin({ bottom: DesignConstants.SPACING.SM })
   }
 }

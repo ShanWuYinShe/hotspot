@@ -1,15 +1,11 @@
 /**
  * 用户类型工具类
  *
- * 用户类型通过 user_type 字段区分：
+ * 用户类型通过 user_type 字段区分（按 spec）：
  * - temp: 临时用户
  * - normal: 注册用户
- * - admin: 管理员用户
- * - system: 系统用户（官方账号等）
  *
- * 用户ID分配规则：
- * - 系统用户区间：1 - 1,000,000
- * - 临时用户和注册用户区间：1,000,001+
+ * 管理员身份不通过 user_type 体现，需通过 admin/rbac/get_me 获取。
  */
 
 /**
@@ -19,8 +15,6 @@
 export enum UserType {
   TEMP = 'temp',     // 临时用户
   NORMAL = 'normal', // 注册用户
-  ADMIN = 'admin',   // 管理员用户
-  SYSTEM = 'system', // 系统用户
 }
 
 /**
@@ -42,10 +36,6 @@ export class UserTypeUtil {
     switch (value) {
       case UserType.TEMP:
         return UserType.TEMP;
-      case UserType.ADMIN:
-        return UserType.ADMIN;
-      case UserType.SYSTEM:
-        return UserType.SYSTEM;
       case UserType.NORMAL:
       default:
         return UserType.NORMAL;
@@ -69,22 +59,6 @@ export class UserTypeUtil {
   }
 
   /**
-   * 判断是否为管理员用户
-   * @param userType 用户类型
-   */
-  static isAdminUser(userType: string): boolean {
-    return userType === UserType.ADMIN;
-  }
-
-  /**
-   * 判断是否为系统用户
-   * @param userType 用户类型
-   */
-  static isSystemUser(userType: string): boolean {
-    return userType === UserType.SYSTEM;
-  }
-
-  /**
    * 获取用户类型名称
    * @param userType 用户类型
    */
@@ -94,10 +68,6 @@ export class UserTypeUtil {
         return '临时用户';
       case UserType.NORMAL:
         return '普通用户';
-      case UserType.ADMIN:
-        return '管理员';
-      case UserType.SYSTEM:
-        return '系统用户';
       default:
         return '未知用户';
     }
@@ -109,9 +79,7 @@ export class UserTypeUtil {
    */
   static isValidUserType(userType: string): boolean {
     return userType === UserType.TEMP ||
-      userType === UserType.NORMAL ||
-      userType === UserType.ADMIN ||
-      userType === UserType.SYSTEM;
+      userType === UserType.NORMAL;
   }
 
   /**
@@ -153,18 +121,6 @@ export class UserTypeUtil {
           can_send_message: true,
           can_kick_member: true
         };
-      case UserType.ADMIN:
-        return {
-          can_create_group: true,
-          can_send_message: true,
-          can_kick_member: true
-        };
-      case UserType.SYSTEM:
-        return {
-          can_create_group: false,
-          can_send_message: true,
-          can_kick_member: false
-        };
       default:
         return {
           can_create_group: false,
@@ -173,27 +129,5 @@ export class UserTypeUtil {
         };
     }
   }
+
 }
-
-/**
- * 系统用户ID常量接口
- */
-export interface SystemUserIds {
-  NOTIFICATION: string;
-  SECURITY_CENTER: string;
-  OPERATIONS_TEAM: string;
-}
-
-/**
- * 系统用户ID常量
- */
-export const SYSTEM_USER_IDS: SystemUserIds = {
-  NOTIFICATION: '1',       // 系统通知
-  SECURITY_CENTER: '2',    // 安全中心
-  OPERATIONS_TEAM: '3',    // 运营团队
-};
-
-/**
- * 系统用户ID区间边界
- */
-export const SYSTEM_USER_ID_MAX = 1000000;

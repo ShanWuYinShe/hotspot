@@ -43,7 +43,8 @@ export struct SystemPageHeader {
         }
         .type(ButtonType.Normal)
         .backgroundColor($r('app.color.bg_secondary'))
-        .borderRadius(DesignConstants.RADIUS.XXL)
+        .borderRadius(DesignConstants.RADIUS.XL)
+        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
         .width(48)
         .height(48)
         .onClick(() => {

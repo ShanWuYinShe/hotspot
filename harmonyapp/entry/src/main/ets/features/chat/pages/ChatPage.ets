@@ -8,7 +8,13 @@ import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/Global
 import { ApiClient } from '../../../core/api/ApiClient';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { MyProfile, MessageType, PrivateMessageItem, GroupMessageItem, SendPrivateMessageRequest, SendGroupMessageRequest, GetPrivateMessagesHistoryRequest, GetGroupMessagesHistoryRequest, MarkPrivateMessagesReadRequest, MarkGroupMessagesReadRequest } from '../../../core/types/api';
-import type { ServerEvent, PrivateMessageNewEvent, GroupMessageNewEvent } from '../../../core/types/WebSocketTypes';
+import type {
+  ServerEvent,
+  PrivateMessageNewEvent,
+  GroupMessageNewEvent,
+  PrivateUserTypingEvent,
+  GroupUserTypingEvent
+} from '../../../core/types/WebSocketTypes';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -23,9 +29,20 @@ import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { AppRouter, LoginRouteParam, GroupDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { KeyboardAvoidMode as UIContextKeyboardAvoidMode } from '@ohos.arkui.UIContext';
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'ChatPage';
+const MESSAGE_CONTENT_MAX: number = 5000;
+const TYPING_THROTTLE_MS: number = 3000;
+const TYPING_INDICATOR_TTL_MS: number = 4500;
+const GROUP_TYPING_NAME_PREVIEW_LIMIT: number = 3;
+const RECONNECT_BACKFILL_THRESHOLD_MS: number = 10000;
+const SAFE_AREA_KEYBOARD_SPIKE_THRESHOLD: number = 120;
+const SAFE_AREA_SPIKE_DELTA: number = 48;
+const DUPLICATE_MESSAGE_TIME_WINDOW_MS: number = 1500;
+const SEND_DUPLICATE_GUARD_WINDOW_MS: number = 1200;
+const KEYBOARD_DISMISS_NAV_GUARD_MS: number = 260;
 
 // 统一消息接口用于UI展示
 interface ChatMessage {
@@ -48,6 +65,7 @@ interface ChatParams {
   targetId?: string;
 }
 
+@Preview
 @Component
 export struct ChatPage {
   pathStack: NavPathStack = new NavPathStack();
@@ -61,6 +79,9 @@ export struct ChatPage {
   @State isLoading: boolean = true;
   @State errorMessage: string = '';
   @State isSending: boolean = false;
+  @State isInputFocused: boolean = false;
+  @State isOtherUserTyping: boolean = false;
+  @State groupTypingUserIds: string[] = [];
   @State title: string = '聊天';
   @State hasMoreHistory: boolean = false;
   @State historyNextCursor: string = '';
@@ -72,11 +93,121 @@ export struct ChatPage {
   private webSocketService = WebSocketService.getInstance();
   private messageCacheService = MessageCacheService.getInstance();
   private scroller: Scroller = new Scroller();
+  private typingStopTimer: number = -1;
+  private lastTypingSentAt: number = 0;
+  private typingStateReported: boolean = false;
+  private privateTypingResetTimer: number = -1;
+  private groupTypingTimers: Map<string, number> = new Map();
+  private wsHasConnectedOnce: boolean = false;
+  private isReconnectReconcileInFlight: boolean = false;
+  private stableSafeAreaBottom: number = 0;
+  private lastSendSignature: string = '';
+  private lastSendAtMs: number = 0;
+  private lastKeyboardDismissAtMs: number = 0;
 
   aboutToAppear(): void {
     SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
+      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,
+      preferDarkContent: true
     });
+    this.stableSafeAreaBottom = Math.max(0, this.safeAreaBottom);
+    this.applyKeyboardAvoidMode(UIContextKeyboardAvoidMode.RESIZE);
+  }
+
+  private getStableBottomInset(): number {
+    const currentInset = Math.max(0, this.safeAreaBottom);
+    if (this.stableSafeAreaBottom <= 0) {
+      this.stableSafeAreaBottom = currentInset;
+      return currentInset;
+    }
+    const isKeyboardSpike = currentInset >= SAFE_AREA_KEYBOARD_SPIKE_THRESHOLD &&
+      currentInset > this.stableSafeAreaBottom + SAFE_AREA_SPIKE_DELTA;
+    if (!isKeyboardSpike) {
+      this.stableSafeAreaBottom = currentInset;
+      return currentInset;
+    }
+    return this.stableSafeAreaBottom;
+  }
+
+  private getComposerBottomPadding(): number {
+    const stableInset = this.getStableBottomInset();
+    return SafeAreaUtils.resolveBottomPadding(stableInset, 0, DesignConstants.SPACING.SM);
+  }
+
+  private dismissKeyboardOnOutsideTap(): void {
+    if (!this.isInputFocused) {
+      return;
+    }
+    try {
+      this.getUIContext().getFocusController().requestFocus('chatKeyboardDismissTarget');
+      this.isInputFocused = false;
+      this.lastKeyboardDismissAtMs = Date.now();
+      this.stopTyping();
+    } catch (error) {
+      hilog.warn(DOMAIN_NUMBER, TAG, `点击空白收起键盘失败: ${JSON.stringify(error)}`);
+    }
+  }
+
+  private shouldConsumePostDismissNavigation(): boolean {
+    if (this.lastKeyboardDismissAtMs <= 0) {
+      return false;
+    }
+    return Date.now() - this.lastKeyboardDismissAtMs <= KEYBOARD_DISMISS_NAV_GUARD_MS;
+  }
+
+  private applyKeyboardAvoidMode(mode: UIContextKeyboardAvoidMode): void {
+    try {
+      this.getUIContext().setKeyboardAvoidMode(mode);
+    } catch (error) {
+      hilog.warn(DOMAIN_NUMBER, TAG, `设置键盘避让模式失败: ${JSON.stringify(error)}`);
+    }
+  }
+
+  private buildMessageFingerprint(message: ChatMessage): string {
+    const sentAtMs = Date.parse(message.sentAt);
+    const normalizedSentAt = Number.isNaN(sentAtMs) ? message.sentAt : String(sentAtMs);
+    return `${message.senderId}|${message.type}|${normalizedSentAt}|${message.content}`;
+  }
+
+  private buildMessageContentSignature(message: ChatMessage): string {
+    return `${message.senderId}|${message.type}|${message.content}`;
+  }
+
+  private dedupeMessages(messages: ChatMessage[]): ChatMessage[] {
+    const seenIds: Set<string> = new Set();
+    const seenFingerprints: Set<string> = new Set();
+    const recentContentSentAt: Map<string, number> = new Map();
+    const uniqueMessages: ChatMessage[] = [];
+
+    messages.forEach((message: ChatMessage) => {
+      const normalizedId = message.id.trim();
+      if (normalizedId.length > 0) {
+        if (seenIds.has(normalizedId)) {
+          return;
+        }
+        seenIds.add(normalizedId);
+      }
+
+      const fingerprint = this.buildMessageFingerprint(message);
+      if (seenFingerprints.has(fingerprint)) {
+        return;
+      }
+
+      const sentAtMs = Date.parse(message.sentAt);
+      if (!Number.isNaN(sentAtMs)) {
+        const contentSignature = this.buildMessageContentSignature(message);
+        const previousSentAt = recentContentSentAt.get(contentSignature);
+        if (previousSentAt !== undefined &&
+          Math.abs(sentAtMs - previousSentAt) <= DUPLICATE_MESSAGE_TIME_WINDOW_MS) {
+          return;
+        }
+        recentContentSentAt.set(contentSignature, sentAtMs);
+      }
+      seenFingerprints.add(fingerprint);
+      uniqueMessages.push(message);
+    });
+
+    return uniqueMessages;
   }
 
   private onPrivateMessageNew = async (event: ServerEvent): Promise<void> => {
@@ -96,6 +227,9 @@ export struct ChatPage {
       (payload.sender.user_id === targetId && payload.target_user_id === currentUserId);
     
     if (!isRelevant) return;
+    if (payload.sender.user_id === targetId) {
+      this.resetPrivateTypingState();
+    }
 
     const newMessage: ChatMessage = {
       id: payload.message_id,
@@ -119,6 +253,11 @@ export struct ChatPage {
     const payload = (event as GroupMessageNewEvent).payload;
     if (payload.group_id !== this.chatId) return;
     if (!payload.sender) return;
+    const senderId = payload.sender.user_id ?? '';
+    if (senderId.length > 0) {
+      this.clearGroupTypingTimer(senderId);
+      this.groupTypingUserIds = this.groupTypingUserIds.filter((id: string) => id !== senderId);
+    }
 
     const currentUserId = await AuthAccountManager.getCurrentUserId();
     const newMessage: ChatMessage = {
@@ -136,9 +275,71 @@ export struct ChatPage {
     this.handleNewMessage(newMessage);
   }
 
+  private onPrivateUserTyping = (event: ServerEvent): void => {
+    if (event.type !== 'PrivateUserTyping') return;
+    if (this.chatType !== 'private_chat') return;
+
+    const payload = (event as PrivateUserTypingEvent).payload;
+    const targetId = this.targetId;
+    if (!targetId) return;
+
+    if (payload.user_id !== targetId) return;
+
+    if (payload.is_typing) {
+      this.isOtherUserTyping = true;
+      this.schedulePrivateTypingAutoClear();
+      return;
+    }
+    this.resetPrivateTypingState();
+  }
+
+  private onGroupUserTyping = (event: ServerEvent): void => {
+    if (event.type !== 'GroupUserTyping') return;
+    if (this.chatType !== 'group_chat') return;
+
+    const payload = (event as GroupUserTypingEvent).payload;
+    if (payload.group_id !== this.chatId) return;
+    if (payload.user_id === (this.currentUser?.user_id ?? '')) return;
+
+    if (payload.is_typing) {
+      if (this.groupTypingUserIds.indexOf(payload.user_id) === -1) {
+        this.groupTypingUserIds = this.groupTypingUserIds.concat([payload.user_id]);
+      }
+      this.scheduleGroupTypingAutoClear(payload.user_id);
+      return;
+    }
+    this.clearGroupTypingTimer(payload.user_id);
+    this.groupTypingUserIds = this.groupTypingUserIds.filter((id: string) => id !== payload.user_id);
+  }
+
+  private onConnectionEstablished = (_event: ServerEvent): void => {
+    if (!this.wsHasConnectedOnce) {
+      this.wsHasConnectedOnce = true;
+      return;
+    }
+    if (!this.shouldBackfillAfterReconnect()) {
+      return;
+    }
+    this.reconcileRecentMessagesAfterReconnect();
+  }
+
   private handleNewMessage(newMessage: ChatMessage) {
-    this.messages.push(newMessage);
-    this.messagesDataSource.appendData([newMessage]);
+    const normalizedId = newMessage.id.trim();
+    const newFingerprint = this.buildMessageFingerprint(newMessage);
+    const duplicated = this.messages.some((item: ChatMessage) => {
+      const itemId = item.id.trim();
+      if (normalizedId.length > 0 && itemId === normalizedId) {
+        return true;
+      }
+      return this.buildMessageFingerprint(item) === newFingerprint;
+    });
+    if (duplicated) {
+      return;
+    }
+
+    const nextMessages = this.messages.concat([newMessage]);
+    this.messages = nextMessages;
+    this.messagesDataSource.setData(nextMessages);
     this.scrollToBottom();
 
     if (!newMessage.isSelf) {
@@ -157,7 +358,18 @@ export struct ChatPage {
   }
 
   aboutToDisappear() {
+    this.applyKeyboardAvoidMode(UIContextKeyboardAvoidMode.OFFSET);
+    this.isInputFocused = false;
+    this.stopTyping();
+    if (this.chatType === 'private_chat' && this.targetId) {
+      this.webSocketService.unsubscribeUsers([this.targetId]);
+    }
+    this.resetPrivateTypingState();
+    this.resetGroupTypingState();
     this.unsubscribeFromEvents();
+    if (this.chatType === 'group_chat' && this.chatId) {
+      this.webSocketService.unsubscribeGroupChats([this.chatId]);
+    }
   }
 
   private async loadHistory() {
@@ -190,7 +402,8 @@ export struct ChatPage {
           }
         }
 
-        const newMessages = await Promise.all(items.reverse().map(item => this.convertMessage(item)));
+        const convertedMessages = await Promise.all(items.reverse().map(item => this.convertMessage(item)));
+        const newMessages = this.dedupeMessages(convertedMessages);
         this.messages = newMessages;
         this.messagesDataSource.setData(newMessages);
         this.hasMoreHistory = !!(nextCursor);
@@ -241,9 +454,9 @@ export struct ChatPage {
       }
 
       const olderMessages = await Promise.all(items.reverse().map(item => this.convertMessage(item)));
-      // 将更早的消息插入到列表开头
-      this.messages = olderMessages.concat(this.messages);
-      this.messagesDataSource.prependData(olderMessages);
+      const mergedMessages = this.dedupeMessages(olderMessages.concat(this.messages));
+      this.messages = mergedMessages;
+      this.messagesDataSource.setData(mergedMessages);
       this.hasMoreHistory = nextCursor !== undefined && nextCursor !== '';
       this.historyNextCursor = nextCursor ?? '';
     } catch (error) {
@@ -256,10 +469,11 @@ export struct ChatPage {
   private async loadFromCache() {
     const cachedMessages = await this.messageCacheService.getCachedMessages(this.chatId);
     if (cachedMessages.length > 0) {
-      const messages = await Promise.all(cachedMessages.reverse().map(async item => {
+      const cachedMapped = await Promise.all(cachedMessages.reverse().map(async item => {
         const rawData = JSON.parse(item.data) as Object;
         return await this.convertMessage(rawData as PrivateMessageItem | GroupMessageItem);
       }));
+      const messages = this.dedupeMessages(cachedMapped);
       this.messages = messages;
       this.messagesDataSource.setData(messages);
       this.scrollToBottom();
@@ -320,14 +534,80 @@ export struct ChatPage {
     };
   }
 
+  private mergeMessagesById(currentMessages: ChatMessage[], recentMessages: ChatMessage[]): ChatMessage[] {
+    const mergedMessages = this.dedupeMessages(currentMessages.concat(recentMessages));
+    mergedMessages.sort((a: ChatMessage, b: ChatMessage) => {
+      const timeDiff = new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime();
+      if (timeDiff !== 0) {
+        return timeDiff;
+      }
+      return a.id.localeCompare(b.id);
+    });
+    return mergedMessages;
+  }
+
+  private shouldBackfillAfterReconnect(): boolean {
+    const disconnectDurationMs = this.webSocketService.getLastDisconnectDurationMs();
+    return disconnectDurationMs > RECONNECT_BACKFILL_THRESHOLD_MS;
+  }
+
+  private async reconcileRecentMessagesAfterReconnect(): Promise<void> {
+    if (this.isReconnectReconcileInFlight || this.isLoading) {
+      return;
+    }
+    this.isReconnectReconcileInFlight = true;
+    try {
+      let items: (PrivateMessageItem | GroupMessageItem)[] = [];
+      if (this.chatType === 'private_chat') {
+        const targetUserId = this.targetId;
+        if (!targetUserId) {
+          return;
+        }
+        const response = await ApiClient.getPrivateMessages({
+          target_user_id: targetUserId,
+          pagination: { limit: 20 }
+        });
+        if (response.code === 0) {
+          items = response.data?.items ?? [];
+        }
+      } else {
+        const response = await ApiClient.getGroupMessages({
+          group_id: this.chatId,
+          pagination: { limit: 20 }
+        });
+        if (response.code === 0) {
+          items = response.data?.items ?? [];
+        }
+      }
+
+      if (items.length === 0) {
+        return;
+      }
+      const recentMessages = await Promise.all(items.reverse().map(item => this.convertMessage(item)));
+      const mergedMessages = this.mergeMessagesById(this.messages, recentMessages);
+      this.messages = mergedMessages;
+      this.messagesDataSource.setData(mergedMessages);
+    } catch (error) {
+      hilog.warn(DOMAIN_NUMBER, TAG, `重连后消息回补失败: ${JSON.stringify(error)}`);
+    } finally {
+      this.isReconnectReconcileInFlight = false;
+    }
+  }
+
   private subscribeToEvents() {
     this.webSocketService.on('PrivateMessageNew', this.onPrivateMessageNew);
     this.webSocketService.on('GroupMessageNew', this.onGroupMessageNew);
+    this.webSocketService.on('PrivateUserTyping', this.onPrivateUserTyping);
+    this.webSocketService.on('GroupUserTyping', this.onGroupUserTyping);
+    this.webSocketService.on('ConnectionEstablished', this.onConnectionEstablished);
   }
 
   private unsubscribeFromEvents() {
     this.webSocketService.off('PrivateMessageNew', this.onPrivateMessageNew);
     this.webSocketService.off('GroupMessageNew', this.onGroupMessageNew);
+    this.webSocketService.off('PrivateUserTyping', this.onPrivateUserTyping);
+    this.webSocketService.off('GroupUserTyping', this.onGroupUserTyping);
+    this.webSocketService.off('ConnectionEstablished', this.onConnectionEstablished);
   }
 
   private scrollToBottom() {
@@ -337,6 +617,9 @@ export struct ChatPage {
   }
 
   private async sendMessage() {
+    if (this.isSending) {
+      return;
+    }
     if (!this.currentUser) {
       SystemToast.showWarning('请先登录后再发送消息', this.getUIContext());
       const loginParams = new LoginRouteParam();
@@ -348,6 +631,20 @@ export struct ChatPage {
 
     const content = this.inputText.trim();
     if (!content) return;
+    if (content.length > MESSAGE_CONTENT_MAX) {
+      SystemToast.showError(`消息内容最多 ${MESSAGE_CONTENT_MAX} 字符`, this.getUIContext());
+      return;
+    }
+
+    const sendSignature = `${this.chatType}|${this.chatId}|${this.targetId ?? ''}|${content}`;
+    const nowMs = Date.now();
+    if (this.lastSendSignature === sendSignature &&
+      nowMs - this.lastSendAtMs <= SEND_DUPLICATE_GUARD_WINDOW_MS) {
+      hilog.warn(DOMAIN_NUMBER, TAG, '检测到短时间重复发送，已拦截');
+      return;
+    }
+    this.lastSendSignature = sendSignature;
+    this.lastSendAtMs = nowMs;
 
     this.isSending = true;
     try {
@@ -362,22 +659,156 @@ export struct ChatPage {
           type: 'text',
           content: content
         };
-        await LoadingUtil.withMinimumTime(async () => ApiClient.sendPrivateMessage(request), LoadingUtil.DEFAULT_ACTION_MS);
+        await ApiClient.sendPrivateMessage(request);
       } else {
         const request: SendGroupMessageRequest = {
           group_id: this.chatId,
           type: 'text',
           content: content
         };
-        await LoadingUtil.withMinimumTime(async () => ApiClient.sendGroupMessage(request), LoadingUtil.DEFAULT_ACTION_MS);
+        await ApiClient.sendGroupMessage(request);
       }
 
       this.inputText = '';
     } catch (error) {
+      this.lastSendSignature = '';
+      this.lastSendAtMs = 0;
       SystemToast.showError('发送失败', this.getUIContext());
     } finally {
+      this.stopTyping();
       this.isSending = false;
     }
+  }
+
+  private handleTypingInput(value: string): void {
+    const isTyping = value.trim().length > 0;
+    if (!isTyping) {
+      this.stopTyping();
+      return;
+    }
+
+    const now = Date.now();
+    if (now - this.lastTypingSentAt >= TYPING_THROTTLE_MS) {
+      this.sendTypingState(true);
+      this.lastTypingSentAt = now;
+    }
+
+    // 防抖：停止输入 3 秒后自动发送 is_typing=false
+    if (this.typingStopTimer !== -1) {
+      clearTimeout(this.typingStopTimer);
+      this.typingStopTimer = -1;
+    }
+    this.typingStopTimer = setTimeout(() => {
+      this.stopTyping();
+    }, TYPING_THROTTLE_MS);
+  }
+
+  private sendTypingState(isTyping: boolean): void {
+    if (this.typingStateReported === isTyping) {
+      return;
+    }
+    if (this.chatType === 'private_chat' && this.targetId) {
+      this.webSocketService.sendPrivateTyping(this.targetId, isTyping);
+      this.typingStateReported = isTyping;
+      return;
+    }
+    if (this.chatType === 'group_chat' && this.chatId) {
+      this.webSocketService.sendGroupTyping(this.chatId, isTyping);
+      this.typingStateReported = isTyping;
+      return;
+    }
+    if (!isTyping) {
+      this.typingStateReported = false;
+    }
+  }
+
+  private stopTyping(): void {
+    if (this.typingStopTimer !== -1) {
+      clearTimeout(this.typingStopTimer);
+      this.typingStopTimer = -1;
+    }
+    this.sendTypingState(false);
+    this.lastTypingSentAt = 0;
+  }
+
+  private schedulePrivateTypingAutoClear(): void {
+    if (this.privateTypingResetTimer !== -1) {
+      clearTimeout(this.privateTypingResetTimer);
+      this.privateTypingResetTimer = -1;
+    }
+    this.privateTypingResetTimer = setTimeout(() => {
+      this.privateTypingResetTimer = -1;
+      this.isOtherUserTyping = false;
+    }, TYPING_INDICATOR_TTL_MS);
+  }
+
+  private resetPrivateTypingState(): void {
+    if (this.privateTypingResetTimer !== -1) {
+      clearTimeout(this.privateTypingResetTimer);
+      this.privateTypingResetTimer = -1;
+    }
+    this.isOtherUserTyping = false;
+  }
+
+  private clearGroupTypingTimer(userId: string): void {
+    const timer = this.groupTypingTimers.get(userId);
+    if (timer === undefined) {
+      return;
+    }
+    clearTimeout(timer);
+    this.groupTypingTimers.delete(userId);
+  }
+
+  private scheduleGroupTypingAutoClear(userId: string): void {
+    this.clearGroupTypingTimer(userId);
+    const timer = setTimeout(() => {
+      this.groupTypingTimers.delete(userId);
+      this.groupTypingUserIds = this.groupTypingUserIds.filter((id: string) => id !== userId);
+    }, TYPING_INDICATOR_TTL_MS);
+    this.groupTypingTimers.set(userId, timer);
+  }
+
+  private resetGroupTypingState(): void {
+    this.groupTypingTimers.forEach((timer: number, _userId: string) => {
+      clearTimeout(timer);
+    });
+    this.groupTypingTimers.clear();
+    this.groupTypingUserIds = [];
+  }
+
+  private groupTypingHintText(): string {
+    const count = this.groupTypingUserIds.length;
+    if (count <= 0) {
+      return '';
+    }
+    const previewCount = count > GROUP_TYPING_NAME_PREVIEW_LIMIT ? GROUP_TYPING_NAME_PREVIEW_LIMIT : count;
+    const previewNames: string[] = [];
+    for (let index = 0; index < previewCount; index++) {
+      previewNames.push(this.resolveGroupTypingDisplayName(this.groupTypingUserIds[index]));
+    }
+    if (count === 1) {
+      return `${previewNames[0]} 正在输入...`;
+    }
+    if (count <= GROUP_TYPING_NAME_PREVIEW_LIMIT) {
+      return `${previewNames.join('、')} 正在输入...`;
+    }
+    return `${previewNames.join('、')} 等 ${count} 人正在输入...`;
+  }
+
+  private resolveGroupTypingDisplayName(userId: string): string {
+    for (let index = this.messages.length - 1; index >= 0; index--) {
+      const message = this.messages[index];
+      if (!message || message.senderId !== userId) {
+        continue;
+      }
+      const nickname = message.senderName ? message.senderName.trim() : '';
+      if (nickname.length > 0) {
+        return nickname;
+      }
+    }
+    const length = userId.length;
+    const suffix = length > 4 ? userId.substring(length - 4, length) : userId;
+    return `成员${suffix}`;
   }
 
   private markAsRead(upToMessageId: string): void {
@@ -405,6 +836,18 @@ export struct ChatPage {
   private async initChatData(): Promise<void> {
     await this.loadHistory();
     this.subscribeToEvents();
+    this.wsHasConnectedOnce = this.webSocketService.isConnected();
+
+    // spec: PrivateUserTyping 依赖 user 订阅
+    if (this.chatType === 'private_chat' && this.targetId) {
+      this.webSocketService.subscribeUsers([this.targetId]);
+    }
+
+    // spec: GroupMessageNew 需要先订阅对应群聊才能收到推送
+    if (this.chatType === 'group_chat' && this.chatId) {
+      this.webSocketService.subscribeGroupChats([this.chatId]);
+    }
+
     const last = this.messages.length > 0 ? this.messages[this.messages.length - 1] : undefined;
     if (last) {
       this.markAsRead(last.id);
@@ -421,6 +864,13 @@ export struct ChatPage {
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
           bgColor: Color.Transparent,
           onButtonClick: () => {
+            if (this.isInputFocused) {
+              this.dismissKeyboardOnOutsideTap();
+              return;
+            }
+            if (this.shouldConsumePostDismissNavigation()) {
+              return;
+            }
             AppRouter.pop();
           }
         })
@@ -438,6 +888,13 @@ export struct ChatPage {
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
           bgColor: Color.Transparent,
           onButtonClick: () => {
+            if (this.isInputFocused) {
+              this.dismissKeyboardOnOutsideTap();
+              return;
+            }
+            if (this.shouldConsumePostDismissNavigation()) {
+              return;
+            }
             if (this.chatType === 'group_chat') {
               const p = new GroupDetailRouteParam();
               p.groupId = this.chatId;
@@ -457,13 +914,23 @@ export struct ChatPage {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor($r('app.color.bg_primary'))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
       .zIndex(1)
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.dismissKeyboardOnOutsideTap();
+        }
+      })
 
       if (this.isLoading) {
         SystemLoadingView({ message: '加载消息...' })
           .layoutWeight(1)
+          .onTouch((event: TouchEvent) => {
+            if (event.type === TouchType.Down) {
+              this.dismissKeyboardOnOutsideTap();
+            }
+          })
           .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (this.messages.length === 0 && this.errorMessage) {
         Column({ space: DesignConstants.SPACING.LG }) {
@@ -477,15 +944,21 @@ export struct ChatPage {
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .textAlign(TextAlign.Center)
           Button('重试')
-            .type(ButtonType.Capsule)
+            .type(ButtonType.Normal)
             .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
             .fontColor(Color.White)
             .height(40)
+            .borderRadius(DesignConstants.RADIUS.XL)
             .onClick(() => { this.loadHistory(); })
         }
         .width('100%')
         .layoutWeight(1)
         .justifyContent(FlexAlign.Center)
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            this.dismissKeyboardOnOutsideTap();
+          }
+        })
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (this.messages.length === 0) {
         Column({ space: DesignConstants.SPACING.LG }) {
@@ -504,6 +977,11 @@ export struct ChatPage {
         .width('100%')
         .layoutWeight(1)
         .justifyContent(FlexAlign.Center)
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            this.dismissKeyboardOnOutsideTap();
+          }
+        })
       } else {
       List({ scroller: this.scroller, initialIndex: this.messages.length - 1 }) {
         // 顶部加载更多历史指示器
@@ -529,36 +1007,89 @@ export struct ChatPage {
       .width('100%')
       .layoutWeight(1)
       .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
-      .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+      .backgroundColor($r('app.color.bg_primary'))
       .onScrollIndex((start: number) => {
         // 当滚动到列表顶部附近时加载更早的消息
         if (start <= 1 && this.hasMoreHistory && !this.isLoadingMoreHistory) {
           this.loadMoreHistory();
         }
       })
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.dismissKeyboardOnOutsideTap();
+        }
+      })
       .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+      }
+
+      if (this.chatType === 'private_chat' && this.isOtherUserTyping) {
+        Row() {
+          Text('对方正在输入...')
+            .fontSize(12)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        }
+        .width('100%')
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: 4 })
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            this.dismissKeyboardOnOutsideTap();
+          }
+        })
+      }
+      if (this.chatType === 'group_chat' && this.groupTypingUserIds.length > 0) {
+        Row() {
+          Text(this.groupTypingHintText())
+            .fontSize(12)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        }
+        .width('100%')
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: 4 })
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            this.dismissKeyboardOnOutsideTap();
+          }
+        })
       }
 
       Row() {
         TextInput({ text: this.inputText, placeholder: '发送消息...' })
           .layoutWeight(1)
+          .maxLength(MESSAGE_CONTENT_MAX)
           .height(40)
-          .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+          .backgroundColor($r('app.color.bg_secondary'))
           .borderRadius(DesignConstants.RADIUS.XXL)
           .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
           .onChange((value) => {
             this.inputText = value;
+            this.handleTypingInput(value);
+          })
+          .onFocus(() => {
+            this.isInputFocused = true;
+          })
+          .onBlur(() => {
+            this.isInputFocused = false;
+            this.stopTyping();
           })
           .onSubmit(() => {
             this.sendMessage();
           })
 
-        Button('发送')
-          .type(ButtonType.Capsule)
-          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-          .fontColor(Color.White)
+        Button(this.isSending ? '发送中...' : '发送')
+          .type(ButtonType.Normal)
+          .backgroundColor(
+            this.isSending || this.inputText.trim().length === 0
+              ? $r('app.color.bg_tertiary')
+              : $r('sys.color.ohos_id_color_emphasize')
+          )
+          .fontColor(
+            this.isSending || this.inputText.trim().length === 0
+              ? $r('sys.color.ohos_id_color_text_secondary')
+              : Color.White
+          )
           .height(36)
+          .borderRadius(DesignConstants.RADIUS.XL)
           .margin({ left: DesignConstants.SPACING.MD })
+          .opacity(this.isSending || this.inputText.trim().length === 0 ? 0.72 : 1)
           .enabled(!this.isSending && this.inputText.trim().length > 0)
           .onClick(() => this.sendMessage())
       }
@@ -567,15 +1098,33 @@ export struct ChatPage {
         left: DesignConstants.SPACING.LG,
         right: DesignConstants.SPACING.LG,
         top: DesignConstants.SPACING.SM,
-        bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, 0, DesignConstants.SPACING.SM)
+        bottom: this.getComposerBottomPadding()
       })
       .backgroundColor($r('app.color.bg_secondary'))
+
+      // 焦点落点：用于将 TextInput 失焦，从而收起软键盘
+      Button('')
+        .id('chatKeyboardDismissTarget')
+        .width(1)
+        .height(1)
+        .opacity(0)
+        .onClick(() => {})
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    .backgroundColor($r('app.color.bg_primary'))
     }
     .hideTitleBar(true)
+    .onBackPressed((): boolean => {
+      if (this.isInputFocused) {
+        this.dismissKeyboardOnOutsideTap();
+        return true;
+      }
+      if (this.shouldConsumePostDismissNavigation()) {
+        return true;
+      }
+      return false;
+    })
     .onReady((context: NavDestinationContext) => {
       this.pathStack = context.pathStack;
       const param = context.pathInfo.param as Record<string, Object> | undefined;
@@ -598,7 +1147,7 @@ export struct ChatPage {
         Text(msg.content)
           .fontSize(12)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-          .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+          .backgroundColor($r('app.color.bg_secondary'))
           .padding({ left: 12, right: 12, top: 4, bottom: 4 })
           .borderRadius(DesignConstants.RADIUS.LG)
       }

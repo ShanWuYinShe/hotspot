@@ -26,6 +26,11 @@ export class GroupDetailRouteParam {
   groupId: string = '';
 }
 
+/** 动态详情页参数 */
+export class MomentDetailRouteParam {
+  momentId: string = '';
+}
+
 /** 用户资料页参数 */
 export class ProfileRouteParam {
   userId: string = '';

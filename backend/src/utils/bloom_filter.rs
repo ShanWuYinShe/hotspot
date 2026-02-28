@@ -52,8 +52,16 @@ impl RedisBloomFilter {
 
     /// 计算给定键的哈希值数组
     fn get_hash_indices(&self, key: &str, filter_name: &str) -> Vec<usize> {
-        let total_bits = self.config.bits_per_element * self.config.expected_elements;
-        let mut indices = Vec::with_capacity(self.config.hash_count);
+        Self::compute_hash_indices(&self.config, key, filter_name)
+    }
+
+    fn compute_hash_indices(
+        config: &BloomFilterConfig,
+        key: &str,
+        filter_name: &str,
+    ) -> Vec<usize> {
+        let total_bits = config.bits_per_element * config.expected_elements;
+        let mut indices = Vec::with_capacity(config.hash_count);
 
         // 使用两个基础哈希值生成多个哈希值（Kirsch-Mitzenmacher 优化）
         let mut hasher1 = DefaultHasher::new();
@@ -67,7 +75,7 @@ impl RedisBloomFilter {
         "salt".hash(&mut hasher2);
         let h2 = hasher2.finish() as usize;
 
-        for i in 0..self.config.hash_count {
+        for i in 0..config.hash_count {
             let index = (h1.wrapping_add(i.wrapping_mul(h2))) % total_bits;
             indices.push(index);
         }
@@ -436,21 +444,16 @@ mod tests {
             expected_elements: 1000,
         };
 
-        // 简单验证哈希索引生成
-        let filter = RedisBloomFilter {
-            redis: unsafe { std::mem::zeroed() }, // 测试时不使用 Redis
-            config,
-        };
-
-        let indices = filter.get_hash_indices("test_key", "test_filter");
+        let indices = RedisBloomFilter::compute_hash_indices(&config, "test_key", "test_filter");
         assert_eq!(indices.len(), 7);
 
         // 相同的键应该产生相同的索引
-        let indices2 = filter.get_hash_indices("test_key", "test_filter");
+        let indices2 = RedisBloomFilter::compute_hash_indices(&config, "test_key", "test_filter");
         assert_eq!(indices, indices2);
 
         // 不同的键应该产生不同的索引
-        let indices3 = filter.get_hash_indices("different_key", "test_filter");
+        let indices3 =
+            RedisBloomFilter::compute_hash_indices(&config, "different_key", "test_filter");
         assert_ne!(indices, indices3);
     }
 }

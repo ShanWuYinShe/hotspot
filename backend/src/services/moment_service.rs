@@ -3,6 +3,7 @@
 //! 核心业务逻辑：发布动态、搜索、互动状态管理
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use redis::aio::ConnectionManager;
 use tokio::try_join;
@@ -26,8 +27,8 @@ use crate::{
     repositories::{
         moment_repo::{MomentDetailRow, MomentImageRow, MomentLikeRow, MomentRepository},
         tag_repo::TagRepository,
+        user::settings_repo::UserSettingsRepository,
         user_repo::UserRepository,
-        user_settings_repo::UserSettingsRepository,
     },
     types::enums::PrivacyLevel,
     utils::{cache::CacheManager, validation::Validator},
@@ -45,6 +46,8 @@ pub struct MomentService {
     media_service: crate::services::media_service::MediaService,
     _cache_manager: CacheManager,
 }
+
+const SEARCH_QUERY_TIMEOUT: Duration = Duration::from_secs(8);
 
 impl MomentService {
     pub fn new(
@@ -75,6 +78,7 @@ impl MomentService {
         viewer_id: Option<i64>,
         req: &SearchMomentsRequest,
     ) -> Result<PaginatedData<MomentItem>> {
+        let query_started_at = std::time::Instant::now();
         Validator::validate_coordinates(
             req.reference_point.latitude,
             req.reference_point.longitude,
@@ -82,49 +86,158 @@ impl MomentService {
         let pagination = req.pagination.as_ref();
         let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as i64;
         let cursor = pagination.and_then(|p| p.cursor.clone());
+        let radius = Validator::validate_radius_required(
+            req.radius.unwrap_or(5000.0),
+            crate::constants::MAX_SEARCH_RADIUS,
+        )?;
+        let has_cursor = cursor.is_some();
+        let query_mode = if req.radius.is_some() {
+            "nearby"
+        } else if req.tag.is_some() {
+            "tag"
+        } else if req.keyword.is_some() {
+            "keyword"
+        } else {
+            "invalid"
+        };
+        tracing::info!(
+            viewer_id,
+            query_mode,
+            has_keyword = req.keyword.is_some(),
+            has_tag = req.tag.is_some(),
+            radius,
+            limit,
+            has_cursor,
+            "moments.search query started"
+        );
 
-        let (rows, next_cursor) = if let Some(radius) = req.radius {
-            let radius =
-                Validator::validate_radius_required(radius, crate::constants::MAX_SEARCH_RADIUS)?;
-            self.moment_repo
-                .search_by_location(
-                    req.keyword.as_deref(),
-                    req.reference_point.longitude,
-                    req.reference_point.latitude,
+        let query_future = async {
+            if req.radius.is_some() {
+                self.moment_repo
+                    .search_by_location(
+                        req.keyword.as_deref(),
+                        req.reference_point.longitude,
+                        req.reference_point.latitude,
+                        radius,
+                        limit,
+                        cursor.clone(),
+                    )
+                    .await
+                    .map_err(|err| {
+                        tracing::error!(
+                            viewer_id,
+                            query_mode = "nearby",
+                            radius,
+                            limit,
+                            has_cursor,
+                            error = ?err,
+                            "moments.search query failed"
+                        );
+                        err
+                    })
+            } else if let Some(ref tag) = req.tag {
+                Validator::validate_not_empty(tag, "tag")?;
+                self.moment_repo
+                    .search_by_tag(
+                        tag,
+                        req.reference_point.longitude,
+                        req.reference_point.latitude,
+                        radius,
+                        limit,
+                        cursor.clone(),
+                    )
+                    .await
+                    .map_err(|err| {
+                        tracing::error!(
+                            viewer_id,
+                            query_mode = "tag",
+                            tag = %tag,
+                            radius,
+                            limit,
+                            has_cursor,
+                            error = ?err,
+                            "moments.search query failed"
+                        );
+                        err
+                    })
+            } else if let Some(ref keyword) = req.keyword {
+                Validator::validate_not_empty(keyword, "keyword")?;
+                self.moment_repo
+                    .search_by_keyword(
+                        keyword,
+                        req.reference_point.longitude,
+                        req.reference_point.latitude,
+                        radius,
+                        limit,
+                        cursor.clone(),
+                    )
+                    .await
+                    .map_err(|err| {
+                        tracing::error!(
+                            viewer_id,
+                            query_mode = "keyword",
+                            keyword = %keyword,
+                            radius,
+                            limit,
+                            has_cursor,
+                            error = ?err,
+                            "moments.search query failed"
+                        );
+                        err
+                    })
+            } else {
+                Err(AppError::BadRequest(
+                    "至少需要提供 keyword、tag、radius 中的一个搜索条件".to_string(),
+                ))
+            }
+        };
+        let (rows, next_cursor) = tokio::time::timeout(SEARCH_QUERY_TIMEOUT, query_future)
+            .await
+            .map_err(|_| {
+                tracing::error!(
+                    viewer_id,
+                    query_mode,
                     radius,
                     limit,
-                    cursor.clone(),
-                )
-                .await?
-        } else if let Some(ref tag) = req.tag {
-            Validator::validate_not_empty(tag, "tag")?;
-            self.moment_repo
-                .search_by_tag(
-                    tag,
-                    req.reference_point.longitude,
-                    req.reference_point.latitude,
-                    limit,
-                    cursor.clone(),
-                )
-                .await?
-        } else if let Some(ref keyword) = req.keyword {
-            Validator::validate_not_empty(keyword, "keyword")?;
-            self.moment_repo
-                .search_by_keyword(
-                    keyword,
-                    req.reference_point.longitude,
-                    req.reference_point.latitude,
-                    limit,
-                    cursor.clone(),
-                )
-                .await?
-        } else {
-            return Err(AppError::BadRequest(
-                "至少需要提供 keyword、tag、radius 中的一个搜索条件".to_string(),
-            ));
-        };
+                    has_cursor,
+                    timeout_ms = SEARCH_QUERY_TIMEOUT.as_millis() as u64,
+                    "moments.search query timeout"
+                );
+                AppError::ServiceUnavailable
+            })??;
+        let rows_count = rows.len();
+        let has_next_cursor = next_cursor.is_some();
+        tracing::info!(
+            viewer_id,
+            rows = rows_count,
+            has_next_cursor,
+            query_mode,
+            elapsed_ms = query_started_at.elapsed().as_millis(),
+            "moments.search query completed"
+        );
 
-        self.build_search_list(rows, viewer_id, next_cursor).await
+        let build_started_at = std::time::Instant::now();
+        let data = self
+            .build_search_list(rows, viewer_id, next_cursor)
+            .await
+            .map_err(|err| {
+                tracing::error!(
+                    viewer_id,
+                    query_mode,
+                    error = ?err,
+                    "moments.search response assemble failed"
+                );
+                err
+            })?;
+        tracing::info!(
+            viewer_id,
+            items = data.items.len(),
+            has_next_cursor = data.next_cursor.is_some(),
+            query_mode,
+            elapsed_ms = build_started_at.elapsed().as_millis(),
+            "moments.search response assembled"
+        );
+        Ok(data)
     }
 
     /// 获取当前用户生活瞬间历史（/me/ API）
@@ -233,6 +346,17 @@ impl MomentService {
         user_id: i64,
         req: &CreateMomentRequest,
     ) -> Result<MomentItem> {
+        let started_at = std::time::Instant::now();
+        tracing::info!(
+            user_id,
+            description_len = req.description.chars().count(),
+            has_tags = req.tags.is_some(),
+            tags_count = req.tags.as_ref().map(|v| v.len()).unwrap_or(0),
+            images_count = req.image_file_ids.as_ref().map(|v| v.len()).unwrap_or(0),
+            mentions_count = req.mentions.as_ref().map(|v| v.len()).unwrap_or(0),
+            privacy_level = ?req.privacy_level.unwrap_or(PrivacyLevel::Public),
+            "moment.create started"
+        );
         Validator::validate_not_empty(&req.description, "description")?;
         Validator::validate_coordinates(req.location.point.latitude, req.location.point.longitude)?;
 
@@ -313,6 +437,12 @@ impl MomentService {
                 .sign_url_if_path(user_row.avatar_url.as_deref())
                 .await,
         );
+        tracing::info!(
+            user_id,
+            moment_id = %moment.moment_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "moment.create completed"
+        );
 
         Ok(MomentItem {
             moment_id: moment.moment_id.to_string(),
@@ -338,7 +468,19 @@ impl MomentService {
 
     /// 编辑瞬间，返回更新后的完整 MomentItem
     pub async fn update_moment(&self, user_id: i64, req: &EditMomentRequest) -> Result<MomentItem> {
+        let started_at = std::time::Instant::now();
         let moment_id = Validator::parse_uuid(&req.moment_id, "moment_id")?;
+        tracing::info!(
+            user_id,
+            moment_id = %moment_id,
+            has_description = req.description.is_some(),
+            has_location = req.location.is_some(),
+            has_tags = req.tags.is_some(),
+            has_images = req.image_file_ids.is_some(),
+            has_mentions = req.mentions.is_some(),
+            has_privacy = req.privacy_level.is_some(),
+            "moment.update started"
+        );
 
         let moment = self
             .moment_repo
@@ -347,11 +489,22 @@ impl MomentService {
             .ok_or_else(|| AppError::MomentNotFound("瞬间不存在".to_string()))?;
 
         if moment.user_id != user_id {
+            tracing::warn!(
+                user_id,
+                moment_id = %moment_id,
+                owner_id = moment.user_id,
+                "moment.update rejected: not owner"
+            );
             return Err(AppError::Forbidden("无权编辑他人的瞬间".to_string()));
         }
 
         if let Some(desc) = &req.description {
             if desc.trim().is_empty() {
+                tracing::warn!(
+                    user_id,
+                    moment_id = %moment_id,
+                    "moment.update rejected: empty description"
+                );
                 return Err(AppError::BadRequest("动态内容不能为空".to_string()));
             }
         }
@@ -418,7 +571,7 @@ impl MomentService {
             self.moment_repo.is_favorited(moment_id, user_id)
         )?;
 
-        Ok(self
+        let result = self
             .build_search_item(
                 detail,
                 tags_map.get(&moment_id).cloned().unwrap_or_default(),
@@ -428,12 +581,21 @@ impl MomentService {
                     is_favorited: favorited,
                 }),
             )
-            .await)
+            .await;
+        tracing::info!(
+            user_id,
+            moment_id = %moment_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "moment.update completed"
+        );
+        Ok(result)
     }
 
     /// 删除瞬间
     pub async fn delete_moment(&self, user_id: i64, req: &DeleteMomentRequest) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let moment_id = Validator::parse_uuid(&req.moment_id, "moment_id")?;
+        tracing::info!(user_id, moment_id = %moment_id, "moment.delete started");
         let moment = self
             .moment_repo
             .find_by_id(moment_id)
@@ -441,40 +603,73 @@ impl MomentService {
             .ok_or_else(|| AppError::MomentNotFound("瞬间不存在".to_string()))?;
 
         if moment.user_id != user_id {
+            tracing::warn!(
+                user_id,
+                moment_id = %moment_id,
+                owner_id = moment.user_id,
+                "moment.delete rejected: not owner"
+            );
             return Err(AppError::Forbidden("无权删除他人的瞬间".to_string()));
         }
 
         self.moment_repo.delete(moment_id).await?;
+        tracing::info!(
+            user_id,
+            moment_id = %moment_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "moment.delete completed"
+        );
         Ok(())
     }
 
     /// 点赞
     pub async fn like_moment(&self, user_id: i64, req: &LikeMomentRequest) -> Result<()> {
         let moment_id = Validator::parse_uuid(&req.moment_id, "moment_id")?;
+        tracing::info!(user_id, moment_id = %moment_id, "moment.like started");
         if !self.moment_repo.exists(moment_id).await? {
+            tracing::warn!(
+                user_id,
+                moment_id = %moment_id,
+                "moment.like rejected: moment not found"
+            );
             return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
         }
         let _ = self.moment_repo.insert_like(moment_id, user_id).await?;
+        tracing::info!(user_id, moment_id = %moment_id, "moment.like completed");
         Ok(())
     }
 
     /// 取消点赞
     pub async fn unlike_moment(&self, user_id: i64, req: &UnlikeMomentRequest) -> Result<()> {
         let moment_id = Validator::parse_uuid(&req.moment_id, "moment_id")?;
+        tracing::info!(user_id, moment_id = %moment_id, "moment.unlike started");
         if !self.moment_repo.exists(moment_id).await? {
+            tracing::warn!(
+                user_id,
+                moment_id = %moment_id,
+                "moment.unlike rejected: moment not found"
+            );
             return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
         }
         self.moment_repo.delete_like(moment_id, user_id).await?;
+        tracing::info!(user_id, moment_id = %moment_id, "moment.unlike completed");
         Ok(())
     }
 
     /// 收藏
     pub async fn favorite_moment(&self, user_id: i64, req: &FavoriteMomentRequest) -> Result<()> {
         let moment_id = Validator::parse_uuid(&req.moment_id, "moment_id")?;
+        tracing::info!(user_id, moment_id = %moment_id, "moment.favorite started");
         if !self.moment_repo.exists(moment_id).await? {
+            tracing::warn!(
+                user_id,
+                moment_id = %moment_id,
+                "moment.favorite rejected: moment not found"
+            );
             return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
         }
         let _ = self.moment_repo.insert_favorite(moment_id, user_id).await?;
+        tracing::info!(user_id, moment_id = %moment_id, "moment.favorite completed");
         Ok(())
     }
 
@@ -485,10 +680,17 @@ impl MomentService {
         req: &UnfavoriteMomentRequest,
     ) -> Result<()> {
         let moment_id = Validator::parse_uuid(&req.moment_id, "moment_id")?;
+        tracing::info!(user_id, moment_id = %moment_id, "moment.unfavorite started");
         if !self.moment_repo.exists(moment_id).await? {
+            tracing::warn!(
+                user_id,
+                moment_id = %moment_id,
+                "moment.unfavorite rejected: moment not found"
+            );
             return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
         }
         self.moment_repo.delete_favorite(moment_id, user_id).await?;
+        tracing::info!(user_id, moment_id = %moment_id, "moment.unfavorite completed");
         Ok(())
     }
 

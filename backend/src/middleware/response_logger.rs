@@ -1,4 +1,6 @@
 use axum::{body::Body, extract::Request, http::header, middleware::Next, response::Response};
+use serde_json::Value;
+use std::time::Instant;
 
 const LOG_PREVIEW_BYTES: usize = 8 * 1024; // 8KB 预览，避免日志过长
 
@@ -10,6 +12,7 @@ const LOG_PREVIEW_BYTES: usize = 8 * 1024; // 8KB 预览，避免日志过长
 pub async fn response_logger(req: Request, next: Next) -> Response {
     let method = req.method().clone();
     let uri = req.uri().clone();
+    let started_at = Instant::now();
 
     let response = next.run(req).await;
 
@@ -29,15 +32,65 @@ pub async fn response_logger(req: Request, next: Next) -> Response {
         bytes.as_ref()
     };
     let preview = String::from_utf8_lossy(preview_bytes);
+    let elapsed_ms = started_at.elapsed().as_millis();
+    let response_size_bytes = bytes.len();
+    let api_meta = extract_api_meta(bytes.as_ref());
 
-    tracing::info!(
-        method = %method,
-        uri = %uri,
-        status = parts.status.as_u16(),
-        truncated = truncated,
-        response_preview = %preview,
-        "response body"
-    );
+    match api_meta {
+        Some((code, message)) if code >= 10600 && code < 10700 => {
+            tracing::error!(
+                method = %method,
+                uri = %uri,
+                status = parts.status.as_u16(),
+                api_code = code,
+                api_message = %message.unwrap_or_default(),
+                latency_ms = elapsed_ms,
+                response_size_bytes,
+                truncated = truncated,
+                response_preview = %preview,
+                "response body (server error)"
+            );
+        }
+        Some((code, message)) if code != 0 => {
+            tracing::warn!(
+                method = %method,
+                uri = %uri,
+                status = parts.status.as_u16(),
+                api_code = code,
+                api_message = %message.unwrap_or_default(),
+                latency_ms = elapsed_ms,
+                response_size_bytes,
+                truncated = truncated,
+                response_preview = %preview,
+                "response body (business error)"
+            );
+        }
+        Some((code, _)) => {
+            tracing::info!(
+                method = %method,
+                uri = %uri,
+                status = parts.status.as_u16(),
+                api_code = code,
+                latency_ms = elapsed_ms,
+                response_size_bytes,
+                truncated = truncated,
+                response_preview = %preview,
+                "response body"
+            );
+        }
+        None => {
+            tracing::info!(
+                method = %method,
+                uri = %uri,
+                status = parts.status.as_u16(),
+                latency_ms = elapsed_ms,
+                response_size_bytes,
+                truncated = truncated,
+                response_preview = %preview,
+                "response body"
+            );
+        }
+    }
 
     Response::from_parts(parts, Body::from(bytes))
 }
@@ -53,4 +106,14 @@ fn should_log_body(response: &Response) -> bool {
         .and_then(|value| value.to_str().ok())
         .map(|value| value.to_ascii_lowercase().contains("json"))
         .unwrap_or(false)
+}
+
+fn extract_api_meta(body: &[u8]) -> Option<(i32, Option<String>)> {
+    let value: Value = serde_json::from_slice(body).ok()?;
+    let code = value.get("code")?.as_i64()? as i32;
+    let message = value
+        .get("message")
+        .and_then(|msg| msg.as_str())
+        .map(|msg| msg.to_string());
+    Some((code, message))
 }

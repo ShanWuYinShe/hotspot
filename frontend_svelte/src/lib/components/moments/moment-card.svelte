@@ -23,9 +23,10 @@
 
 	interface Props {
 		moment: MomentItem;
+	class?: string;
 	}
 
-	let { moment }: Props = $props();
+let { moment, class: className = '' }: Props = $props();
 
 	// 乐观更新 Hooks
 	const likeAction = useOptimisticToggle({
@@ -97,7 +98,7 @@
 	}
 </script>
 
-<Card variant="accent" glow="soft" interactive class="group/card cursor-pointer overflow-hidden animate-bounce-in">
+<Card variant="accent" glow="soft" interactive class="group/card cursor-pointer overflow-hidden animate-bounce-in {className}">
 	<CardHeader class="pb-3 pt-4">
 		<div class="flex items-start justify-between gap-3">
 			<a href="/users/{moment.user.user_id}" class="group/user flex items-center gap-3">
@@ -113,7 +114,7 @@
 						<span>{formatRelativeTime(moment.created_at)}</span>
 						{#if moment.location?.distance != null}
 							{@const distance = moment.location.distance}
-							<span class="flex items-center gap-0.5 rounded-full bg-muted/50 px-1.5 py-0.5">
+							<span class="flex items-center gap-0.5 rounded-2xl bg-muted/50 px-1.5 py-0.5">
 								<MapPin class="h-3 w-3" />
 								{formatDistance(distance)}
 							</span>

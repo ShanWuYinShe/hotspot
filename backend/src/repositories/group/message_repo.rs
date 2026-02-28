@@ -131,7 +131,6 @@ impl GroupMessageRepository {
         group_id: i64,
         limit: i64,
         cursor: Option<String>,
-        include_system: bool,
     ) -> Paginated<GroupMessageRow> {
         let (last_ts, last_id) = if let Some(c) = cursor {
             decode_cursor::<TimeIdCursor>(&c)?
@@ -149,13 +148,11 @@ impl GroupMessageRepository {
                    sent_at as "sent_at!", edited_at, recalled_at, recalled_by
             FROM group_messages
             WHERE group_id = $1
-              AND (sent_at, message_id) < ($3, $4)
-              AND ($2::boolean OR message_type <> 'system')
+              AND (sent_at, message_id) < ($2, $3)
             ORDER BY sent_at DESC, message_id DESC
-            LIMIT $5
+            LIMIT $4
             "#,
             group_id,
-            include_system,
             last_ts,
             last_id,
             limit + 1

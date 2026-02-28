@@ -13,6 +13,7 @@ use crate::{
     repositories::user_repo::UserRepository,
     utils::validation::Validator,
 };
+use tracing::{debug, info};
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -79,22 +80,71 @@ impl NotificationService {
 
     /// 标记已读
     pub async fn mark_as_read(&self, user_id: i64, notification_ids: &[String]) -> Result<()> {
+        let started_at = std::time::Instant::now();
+        info!(
+            user_id,
+            requested_count = notification_ids.len(),
+            "notification.mark_as_read started"
+        );
         if notification_ids.len() > crate::constants::MAX_PAGE_LIMIT as usize {
             return Err(AppError::OutOfRange(format!(
                 "notification_ids 最多 {} 个",
                 crate::constants::MAX_PAGE_LIMIT
             )));
         }
-        let uuids: Vec<Uuid> = notification_ids
-            .iter()
-            .filter_map(|s| Uuid::parse_str(s).ok())
-            .collect();
-        self.repo.mark_as_read(user_id, &uuids).await
+        let mut uuids: Vec<Uuid> = Vec::with_capacity(notification_ids.len());
+        let mut invalid_id_count = 0usize;
+        for id in notification_ids {
+            match Uuid::parse_str(id) {
+                Ok(v) => uuids.push(v),
+                Err(_) => invalid_id_count += 1,
+            }
+        }
+        if invalid_id_count > 0 {
+            debug!(
+                user_id,
+                invalid_id_count, "通知标记已读请求包含无法解析的 notification_id，按契约静默忽略"
+            );
+        }
+        if uuids.is_empty() {
+            debug!(
+                user_id,
+                "通知标记已读请求无有效 notification_id，直接返回成功"
+            );
+            info!(
+                user_id,
+                requested_count = notification_ids.len(),
+                valid_count = 0,
+                elapsed_ms = started_at.elapsed().as_millis(),
+                "notification.mark_as_read completed (noop_no_valid_ids)"
+            );
+            return Ok(());
+        }
+
+        self.repo.mark_as_read(user_id, &uuids).await?;
+        debug!(user_id, marked_count = uuids.len(), "通知标记已读成功");
+        info!(
+            user_id,
+            requested_count = notification_ids.len(),
+            valid_count = uuids.len(),
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "notification.mark_as_read completed"
+        );
+        Ok(())
     }
 
     /// 标记全部已读
     pub async fn mark_all_read(&self, user_id: i64) -> Result<()> {
-        self.repo.mark_all_read(user_id).await
+        let started_at = std::time::Instant::now();
+        info!(user_id, "notification.mark_all_read started");
+        self.repo.mark_all_read(user_id).await?;
+        debug!(user_id, "通知全部已读成功");
+        info!(
+            user_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "notification.mark_all_read completed"
+        );
+        Ok(())
     }
 
     fn row_to_item(&self, row: NotificationListRow) -> Result<NotificationItem> {
@@ -303,6 +353,16 @@ impl NotificationService {
         target_preview: Option<String>,
         extra_payload: Option<serde_json::Value>,
     ) -> Result<()> {
+        let started_at = std::time::Instant::now();
+        debug!(
+            user_id,
+            notification_type = ?r#type,
+            sender_id = ?sender_id,
+            has_target_type = target_type.is_some(),
+            has_target_id = target_id.is_some(),
+            has_reference_id = reference_id.is_some(),
+            "notification.create started"
+        );
         // 获取发送者快照
         let (nickname, avatar_url) = if let Some(sid) = sender_id {
             if let Ok(Some(user)) = self.user_repo.find_by_id(sid).await {
@@ -330,6 +390,11 @@ impl NotificationService {
                 extra_payload,
             )
             .await?;
+        debug!(
+            user_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "notification.create completed"
+        );
 
         Ok(())
     }

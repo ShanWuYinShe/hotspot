@@ -307,6 +307,23 @@ REDIS_URL=redis://localhost:6379
 - Redis Pub/Sub 缓存失效通知
 - 限流计数器
 
+#### Redis node_id 租约（可选，分布式推荐）
+
+```env
+# 启用后，实例启动时从 Redis 自动抢占 node_id（0..=1023）
+ID_NODE_ID_ALLOCATE_WITH_REDIS=true
+
+# 租约键前缀（最终 key 形如 hotspot:id_node:lease:17）
+ID_NODE_ID_REDIS_KEY_PREFIX=hotspot:id_node:lease
+
+# 租约 TTL 与续租间隔（秒）
+ID_NODE_ID_REDIS_LEASE_TTL_SECS=90
+ID_NODE_ID_REDIS_RENEW_INTERVAL_SECS=30
+
+# 租约丢失后是否强制退出（推荐 true，避免 ID 冲突）
+ID_NODE_ID_REDIS_FATAL_ON_LOSS=true
+```
+
 #### 3. JWT 配置
 
 ```env
@@ -339,7 +356,7 @@ SERVER_PORT=5496
 
 ```env
 # 全局限流
-RATE_LIMIT_IP_PER_HOUR=20000              # 单 IP 每小时（约 5.5 次/秒）
+RATE_LIMIT_GLOBAL_PER_HOUR=20000          # 全局每小时（约 5.5 次/秒）
 RATE_LIMIT_USER_PER_5MINUTES=500          # 单用户每 5 分钟（约 1.67 次/秒）
 RATE_LIMIT_USER_PER_HOUR=5000             # 单用户每小时（约 1.39 次/秒）
 
@@ -347,10 +364,11 @@ RATE_LIMIT_USER_PER_HOUR=5000             # 单用户每小时（约 1.39 次/�
 RATE_LIMIT_FAIL_OPEN=true                 # true=允许通过, false=拒绝请求
 
 # 端点级限流（认证相关）
-RATE_LIMIT_SEND_CODE_PER_MINUTE=5         # 发送验证码
-RATE_LIMIT_VERIFY_CODE_PER_10MINUTES=30   # 验证验证码
 RATE_LIMIT_REGISTER_PER_10MINUTES=10      # 用户注册
 RATE_LIMIT_LOGIN_PER_10MINUTES=30         # 用户登录
+RATE_LIMIT_AUTH_RESET_PER_10MINUTES=10    # 请求重置密码
+RATE_LIMIT_GUEST_PER_10MINUTES=60         # 游客登录
+RATE_LIMIT_REFRESH_PER_10MINUTES=120      # Token 刷新
 
 # 端点级限流（业务相关）
 RATE_LIMIT_MOMENTS_CREATE_PER_MINUTE=20   # 创建瞬间
@@ -386,7 +404,20 @@ S3_FORCE_PATH_STYLE=true
 S3_PUBLIC_BASE=/s3  # 本地: /s3，生产: https://cdn.example.com
 ```
 
-#### 7. 超级管理员配置
+#### 密码重置验证码投递（可选）
+
+```env
+# 配置后会将验证码通过 webhook 投递到短信/邮件网关
+AUTH_RESET_DELIVERY_WEBHOOK_URL=
+
+# 可选：Bearer Token
+AUTH_RESET_DELIVERY_WEBHOOK_TOKEN=
+
+# 超时（毫秒）
+AUTH_RESET_DELIVERY_TIMEOUT_MS=3000
+```
+
+#### 超级管理员配置
 
 ```env
 # 超级管理员登录 ID
@@ -410,7 +441,7 @@ CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 
 ### 完整配置清单
 
-共 **42 个配置项**，详见 `.env.example` 文件，所有配置项都有详细的中文注释。
+完整配置项以 `.env.example` 为准，所有配置项都有中文注释与默认建议值。
 
 ---
 
@@ -698,6 +729,9 @@ curl -X POST http://localhost:5496/api/v1/moments/create \
 ```bash
 # 运行所有测试
 cargo test
+
+# 连接指定测试 Redis（例如你本地的 6379/1）
+TEST_REDIS_URL=redis://127.0.0.1:6379/1 cargo test id_gen::tests -- --nocapture
 
 # 运行特定模块测试
 cargo test --test user_tests

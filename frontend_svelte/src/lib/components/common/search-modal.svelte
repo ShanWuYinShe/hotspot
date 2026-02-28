@@ -304,18 +304,20 @@
 </script>
 
 <Dialog.Root bind:open onOpenChange={(value) => { open = value; onOpenChange?.(value); }}>
-	<Dialog.Content class="flex max-h-[85vh] flex-col sm:max-w-3xl">
+	<Dialog.Content class="flex max-h-[85vh] flex-col rounded-3xl border border-border/60 bg-card/95 shadow-xl backdrop-blur-md sm:max-w-3xl">
 		<Dialog.Header>
-			<Dialog.Title class="flex items-center gap-2">
-				<Search class="h-5 w-5 text-primary" />
-				搜索
+			<Dialog.Title class="flex items-center gap-3">
+				<div class="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/50 bg-primary/10 text-primary">
+					<Search class="h-5 w-5" />
+				</div>
+				<div>搜索</div>
 			</Dialog.Title>
 			<Dialog.Description>输入关键词，点击搜索进入结果页</Dialog.Description>
 		</Dialog.Header>
 
 		<div class="flex-1 overflow-y-auto min-h-0 py-4 px-1 space-y-4">
 			<form
-				class="flex items-center gap-2"
+				class="rounded-2xl border border-border/60 bg-background/65 p-2.5 shadow-sm"
 				onsubmit={(event) => {
 					event.preventDefault();
 					handleSearch();
@@ -326,7 +328,7 @@
 					<Input
 						type="text"
 						placeholder="输入关键词开始搜索"
-						class="pl-9 pr-9"
+						class="h-11 rounded-2xl border-border/60 bg-background/75 pl-9 pr-9"
 						bind:value={keyword}
 						autocomplete="off"
 					/>
@@ -340,18 +342,18 @@
 						</button>
 					{/if}
 				</div>
-				<Button size="icon" aria-label="搜索" type="submit" disabled={!keyword.trim()}>
+				<Button size="icon" class="h-11 w-11 rounded-2xl" aria-label="搜索" type="submit" disabled={!keyword.trim()}>
 					<Search class="h-4 w-4" />
 				</Button>
 			</form>
 
 			{#if trimmedKeyword}
-				<Card class="border-0 bg-card/50">
+				<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 					<CardContent class="space-y-3 p-4">
 						{#if isSuggesting}
 							<div class="space-y-2">
 								{#each Array(3) as _, i (i)}
-									<div class="h-8 w-full animate-pulse rounded-full bg-muted"></div>
+									<div class="h-8 w-full animate-pulse rounded-2xl bg-muted"></div>
 								{/each}
 							</div>
 						{:else if !hasSuggestions}
@@ -376,7 +378,7 @@
 										</div>
 										<div class="flex flex-wrap gap-2">
 											{#each recentMatches as term (term)}
-												<div class="group flex items-center gap-1 rounded-full bg-secondary/80 pl-3 pr-1 py-1 transition-all hover:bg-secondary hover:shadow-md hover:scale-105">
+												<div class="group flex items-center gap-1 rounded-2xl bg-secondary/80 py-1 pl-3 pr-1 transition-all hover:scale-105 hover:bg-secondary hover:shadow-md">
 													<button
 														type="button"
 														class="text-sm font-medium transition-colors hover:text-primary"
@@ -386,7 +388,7 @@
 													</button>
 													<button
 														type="button"
-														class="flex items-center justify-center rounded-full p-1 opacity-60 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-all hover:bg-destructive/20 hover:text-destructive hover:scale-110 active:scale-95"
+														class="flex items-center justify-center rounded-xl p-1 opacity-60 transition-all [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 hover:scale-110 hover:bg-destructive/20 hover:text-destructive active:scale-95"
 														onclick={(e) => {
 															e.stopPropagation();
 															removeRecent(term);
@@ -415,7 +417,7 @@
 													onclick={() => handleSuggestionClick(item)}
 												>
 													{#if item.type === 'tag'}
-														<div class="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+														<div class="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary">
 															<Hash class="h-4 w-4" />
 														</div>
 													{:else if item.type === 'user' && item.payload}
@@ -441,7 +443,7 @@
 													<div class="min-w-0 flex-1">
 														<div class="flex items-center gap-2">
 															<div class="truncate text-sm font-medium">{getSuggestionTitle(item)}</div>
-															<Badge variant="secondary" class="rounded-full px-2 py-0.5 text-[10px] font-medium">
+															<Badge variant="secondary" class="rounded-2xl px-2 py-0.5 text-[10px] font-medium">
 																{getSuggestionBadge(item)}
 															</Badge>
 														</div>
@@ -461,7 +463,7 @@
 				</Card>
 			{:else}
 				<div class="grid gap-4 sm:grid-cols-2">
-					<Card class="border-0 bg-card/50">
+					<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 						<CardContent class="space-y-3 p-4">
 							<div class="flex items-center justify-between">
 								<div class="flex items-center gap-2 text-sm font-medium">
@@ -484,7 +486,7 @@
 							{:else}
 								<div class="flex flex-wrap gap-2">
 									{#each recentSearches as term (term)}
-										<div class="group flex items-center gap-1 rounded-full bg-secondary/80 pl-3 pr-1 py-1 transition-all hover:bg-secondary hover:shadow-md hover:scale-105">
+										<div class="group flex items-center gap-1 rounded-2xl bg-secondary/80 py-1 pl-3 pr-1 transition-all hover:scale-105 hover:bg-secondary hover:shadow-md">
 											<button
 												type="button"
 												class="text-sm font-medium transition-colors hover:text-primary"
@@ -494,7 +496,7 @@
 											</button>
 											<button
 												type="button"
-												class="flex items-center justify-center rounded-full p-1 opacity-60 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-all hover:bg-destructive/20 hover:text-destructive hover:scale-110 active:scale-95"
+												class="flex items-center justify-center rounded-xl p-1 opacity-60 transition-all [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 hover:scale-110 hover:bg-destructive/20 hover:text-destructive active:scale-95"
 												onclick={(e) => {
 													e.stopPropagation();
 													removeRecent(term);
@@ -510,7 +512,7 @@
 						</CardContent>
 					</Card>
 
-					<Card class="border-0 bg-card/50">
+					<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 						<CardContent class="space-y-3 p-4">
 							<div class="flex items-center gap-2 text-sm font-medium">
 								<TrendingUp class="h-4 w-4 text-muted-foreground" />
@@ -519,7 +521,7 @@
 							{#if isLoadingTags}
 								<div class="space-y-2">
 									{#each Array(4) as _, i (i)}
-										<div class="h-8 w-full animate-pulse rounded-full bg-muted"></div>
+										<div class="h-8 w-full animate-pulse rounded-2xl bg-muted"></div>
 									{/each}
 								</div>
 							{:else if trendingTags.length === 0}
@@ -529,7 +531,7 @@
 							{#each trendingTags as tag (tag.name)}
 								<Badge
 									variant="secondary"
-									class="cursor-pointer rounded-full px-3 py-1.5 hover:bg-primary/10 hover:text-primary"
+									class="cursor-pointer rounded-2xl px-3 py-1.5 hover:bg-primary/10 hover:text-primary"
 									onclick={() => handleTagClick(tag.name)}
 								>
 									<Hash class="mr-1 h-3 w-3" />

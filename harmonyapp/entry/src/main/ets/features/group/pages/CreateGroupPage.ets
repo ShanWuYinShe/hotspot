@@ -11,14 +11,25 @@ import { PageNames } from '../../../constants/AppConstants';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
+import { SystemAvatar } from '../../../components/SystemAvatar';
 import { DesignConstants } from '../../../constants/DesignConstants';
-import { PasswordSecurityUtil } from '../../../core/security/PasswordSecurityUtil';
 import { CreateGroupRequest, GeoPoint } from '../../../core/types/api';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AppRouter, LoginRouteParam, GroupDetailRouteParam, LocationPickerRouteParam } from '../../../core/router/AppRouter';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
+import { common } from '@kit.AbilityKit';
 
+const GROUP_NAME_MAX: number = 50;
+const GROUP_DESCRIPTION_MAX: number = 500;
+const GROUP_PASSWORD_MIN: number = 4;
+const GROUP_PASSWORD_MAX: number = 32;
+const GROUP_MEMBERS_MIN: number = 2;
+const GROUP_MEMBERS_MAX: number = 2000;
+const LOCATION_NAME_MAX: number = 100;
+
+@Preview
 @Component
 export struct CreateGroupPage {
   pathStack: NavPathStack = new NavPathStack();
@@ -36,6 +47,10 @@ export struct CreateGroupPage {
   @State maxMembers: number = 100;
   @State isCreating: boolean = false;
   @State localLocation: LocationInfo | null = null;
+  @State groupAvatarPreviewUrl: string = '';
+  @State groupAvatarLocalUri: string = '';
+  @State groupAvatarFileId: string = '';
+  @State isGroupAvatarUploading: boolean = false;
 
   async aboutToAppear() {
     SystemUiController.useSurface({
@@ -81,35 +96,63 @@ export struct CreateGroupPage {
       return;
     }
 
-    if (!this.groupName.trim()) {
+    const trimmedName = this.groupName.trim();
+    const trimmedDescription = this.groupDescription.trim();
+    const trimmedPassword = this.groupPassword.trim();
+
+    if (!trimmedName) {
       SystemToast.show('请输入群组名称', this.getUIContext());
+      return;
+    }
+    if (trimmedName.length > GROUP_NAME_MAX) {
+      SystemToast.show(`群组名称最多 ${GROUP_NAME_MAX} 字符`, this.getUIContext());
+      return;
+    }
+    if (trimmedDescription.length > GROUP_DESCRIPTION_MAX) {
+      SystemToast.show(`群组描述最多 ${GROUP_DESCRIPTION_MAX} 字符`, this.getUIContext());
       return;
     }
     if (!this.localLocation) {
       SystemToast.show('位置信息不可用，请选择位置', this.getUIContext());
       return;
     }
-    if (this.isPasswordRequired && !this.groupPassword.trim()) {
+    if (this.maxMembers < GROUP_MEMBERS_MIN || this.maxMembers > GROUP_MEMBERS_MAX) {
+      SystemToast.show(`最大成员数需在 ${GROUP_MEMBERS_MIN}-${GROUP_MEMBERS_MAX} 之间`, this.getUIContext());
+      return;
+    }
+    if (this.isPasswordRequired && !trimmedPassword) {
       SystemToast.show('请输入群组密码', this.getUIContext());
+      return;
+    }
+    if (trimmedPassword && (trimmedPassword.length < GROUP_PASSWORD_MIN || trimmedPassword.length > GROUP_PASSWORD_MAX)) {
+      SystemToast.show(`群组密码长度需在 ${GROUP_PASSWORD_MIN}-${GROUP_PASSWORD_MAX} 字符之间`, this.getUIContext());
       return;
     }
 
     const localLoc = this.localLocation;
+    const locationName = (localLoc.locationName || '未知位置').trim();
+    if (!locationName || locationName.length > LOCATION_NAME_MAX) {
+      SystemToast.show(`位置名称需在 1-${LOCATION_NAME_MAX} 字符之间`, this.getUIContext());
+      return;
+    }
     this.isCreating = true;
     try {
       await LoadingUtil.withMinimumTime(async () => {
+        const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+        const avatarFileId = await this.ensureGroupAvatarUploaded(context);
         const geoPoint: GeoPoint = {
           latitude: localLoc.latitude,
           longitude: localLoc.longitude
         };
         const request: CreateGroupRequest = {
-          name: this.groupName.trim(),
-          description: this.groupDescription.trim() || undefined,
+          name: trimmedName,
+          description: trimmedDescription || undefined,
+          avatar_file_id: avatarFileId,
           location: {
             point: geoPoint,
-            location_name: localLoc.locationName || "未知位置"
+            location_name: locationName
           },
-          password: this.isPasswordRequired ? this.groupPassword.trim() : undefined,
+          password: this.isPasswordRequired ? trimmedPassword : undefined,
           max_members: this.maxMembers,
           join_method: 'open'
         };
@@ -154,6 +197,53 @@ export struct CreateGroupPage {
     AppRouter.push(PageNames.LOCATION_PICKER, param);
   }
 
+  private async selectGroupAvatar(): Promise<void> {
+    if (this.isCreating || this.isGroupAvatarUploading) {
+      return;
+    }
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      const selectedUris = await MediaServiceManager.selectImages(context, 1);
+      if (selectedUris.length === 0) {
+        return;
+      }
+      this.groupAvatarLocalUri = selectedUris[0];
+      this.groupAvatarPreviewUrl = selectedUris[0];
+      this.groupAvatarFileId = '';
+      SystemToast.show('群头像已选择，创建时自动上传', this.getUIContext());
+    } catch (error) {
+      SystemToast.showError('选择群头像失败，请重试', this.getUIContext());
+    }
+  }
+
+  private clearGroupAvatarSelection(): void {
+    this.groupAvatarPreviewUrl = '';
+    this.groupAvatarLocalUri = '';
+    this.groupAvatarFileId = '';
+  }
+
+  private async ensureGroupAvatarUploaded(context: common.UIAbilityContext): Promise<string | undefined> {
+    if (!this.groupAvatarLocalUri) {
+      return undefined;
+    }
+    if (this.groupAvatarFileId) {
+      return this.groupAvatarFileId;
+    }
+    this.isGroupAvatarUploading = true;
+    try {
+      const compressedPath = await MediaServiceManager.compressImage(context, this.groupAvatarLocalUri, 80, 1024 * 1024 * 2);
+      const uploadUri = await MediaServiceManager.prepareFileForUpload(context, compressedPath);
+      const uploadResult = await ApiClient.uploadFile(context, uploadUri, 'group_avatar');
+      if (!uploadResult.file_id) {
+        throw new Error('群头像上传失败');
+      }
+      this.groupAvatarFileId = uploadResult.file_id;
+      return this.groupAvatarFileId;
+    } finally {
+      this.isGroupAvatarUploading = false;
+    }
+  }
+
   build() {
     NavDestination() {
     Stack() {
@@ -186,7 +276,7 @@ export struct CreateGroupPage {
           top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
           bottom: DesignConstants.SPACING.SM
         })
-        .backgroundColor($r('app.color.bg_secondary'))
+        .backgroundColor($r('app.color.bg_primary'))
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
         // 表单内容
@@ -206,7 +296,7 @@ export struct CreateGroupPage {
                   .onChange((value: string) => {
                     this.groupName = value;
                   })
-                  .maxLength(30)
+                  .maxLength(GROUP_NAME_MAX)
                   .height(40)
                   .backgroundColor(Color.Transparent)
                   .padding({ left: 0 })
@@ -219,7 +309,7 @@ export struct CreateGroupPage {
 
               Divider()
                 .strokeWidth(1)
-                .color($r('sys.color.ohos_id_color_component_normal'))
+                .color($r('sys.color.ohos_id_color_list_separator'))
                 .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
               Column() {
@@ -233,7 +323,7 @@ export struct CreateGroupPage {
                   .onChange((value: string) => {
                     this.groupDescription = value;
                   })
-                  .maxLength(200)
+                  .maxLength(GROUP_DESCRIPTION_MAX)
                   .height(80)
                   .backgroundColor(Color.Transparent)
                   .padding({ left: 0 })
@@ -245,7 +335,70 @@ export struct CreateGroupPage {
               })
             }
             .backgroundColor($r('app.color.bg_secondary'))
-            .borderRadius(DesignConstants.RADIUS.LG)
+            .borderRadius(DesignConstants.RADIUS.XL)
+            .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+            .shadow(DesignConstants.SHADOW.SMALL)
+
+            // 群组头像
+            this.SectionHeader('群组头像')
+            Column() {
+              Row({ space: DesignConstants.SPACING.MD }) {
+                SystemAvatar({
+                  avatarUrl: this.groupAvatarPreviewUrl,
+                  name: this.groupName || '群组',
+                  avatarSize: 56,
+                  shape: 'squircle'
+                })
+
+                Column({ space: 4 }) {
+                  Text('建议使用清晰、易识别的头像')
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                  Text(this.isGroupAvatarUploading ? '群头像上传中...' : '未设置时将使用默认群头像')
+                    .fontSize(12)
+                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                }
+                .layoutWeight(1)
+                .alignItems(HorizontalAlign.Start)
+
+                Row({ space: 8 }) {
+                  Button(this.groupAvatarPreviewUrl.length > 0 ? '重选' : '选择')
+                    .type(ButtonType.Normal)
+                    .backgroundColor($r('app.color.bg_tertiary'))
+                    .fontColor($r('sys.color.ohos_id_color_emphasize'))
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .borderRadius(DesignConstants.RADIUS.XL)
+                    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+                    .height(34)
+                    .enabled(!this.isCreating && !this.isGroupAvatarUploading)
+                    .onClick(() => this.selectGroupAvatar())
+
+                  if (this.groupAvatarPreviewUrl.length > 0) {
+                    Button('移除')
+                      .type(ButtonType.Normal)
+                      .backgroundColor($r('app.color.bg_tertiary'))
+                      .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                      .fontSize(DesignConstants.FONT.SIZE.SM)
+                      .borderRadius(DesignConstants.RADIUS.XL)
+                      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+                      .height(34)
+                      .enabled(!this.isCreating && !this.isGroupAvatarUploading)
+                      .onClick(() => this.clearGroupAvatarSelection())
+                  }
+                }
+              }
+              .width('100%')
+              .padding({
+                left: DesignConstants.SPACING.LG,
+                right: DesignConstants.SPACING.LG,
+                top: DesignConstants.SPACING.MD,
+                bottom: DesignConstants.SPACING.MD
+              })
+            }
+            .backgroundColor($r('app.color.bg_secondary'))
+            .borderRadius(DesignConstants.RADIUS.XL)
+            .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+            .shadow(DesignConstants.SHADOW.SMALL)
 
             // 位置信息
             this.SectionHeader('位置信息')
@@ -269,18 +422,22 @@ export struct CreateGroupPage {
 
                 Row({ space: 8 }) {
                   Button('选点')
-                    .type(ButtonType.Capsule)
-                    .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+                    .type(ButtonType.Normal)
+                    .backgroundColor($r('app.color.bg_tertiary'))
                     .fontColor($r('sys.color.ohos_id_color_emphasize'))
                     .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .borderRadius(DesignConstants.RADIUS.XL)
+                    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
                     .height(36)
                     .onClick(() => this.openLocationPicker())
 
                   Button('刷新')
-                    .type(ButtonType.Capsule)
-                    .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+                    .type(ButtonType.Normal)
+                    .backgroundColor($r('app.color.bg_tertiary'))
                     .fontColor($r('sys.color.ohos_id_color_emphasize'))
                     .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .borderRadius(DesignConstants.RADIUS.XL)
+                    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
                     .height(36)
                     .onClick(() => this.refreshLocation())
                 }
@@ -292,7 +449,9 @@ export struct CreateGroupPage {
               })
             }
             .backgroundColor($r('app.color.bg_secondary'))
-            .borderRadius(DesignConstants.RADIUS.LG)
+            .borderRadius(DesignConstants.RADIUS.XL)
+            .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+            .shadow(DesignConstants.SHADOW.SMALL)
 
             // 隐私与限制
             this.SectionHeader('隐私与限制')
@@ -308,18 +467,19 @@ export struct CreateGroupPage {
                     Text() {
                       SymbolSpan($r(AppIcon.REMOVE))
                         .fontSize(16)
-                        .fontColor([this.maxMembers > 10
+                        .fontColor([this.maxMembers > GROUP_MEMBERS_MIN
                           ? $r('sys.color.ohos_id_color_text_primary')
                           : $r('sys.color.ohos_id_color_text_tertiary')])
                     }
                   }
-                  .type(ButtonType.Circle)
+                  .type(ButtonType.Normal)
                   .width(36)
                   .height(36)
-                  .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
-                  .enabled(this.maxMembers > 10)
+                  .backgroundColor($r('app.color.bg_tertiary'))
+                  .borderRadius(DesignConstants.RADIUS.XL)
+                  .enabled(this.maxMembers > GROUP_MEMBERS_MIN)
                   .onClick(() => {
-                    if (this.maxMembers > 10) this.maxMembers = Math.max(10, this.maxMembers - 10);
+                    if (this.maxMembers > GROUP_MEMBERS_MIN) this.maxMembers = Math.max(GROUP_MEMBERS_MIN, this.maxMembers - 10);
                   })
 
                   TextInput({ text: this.maxMembers.toString() })
@@ -329,36 +489,37 @@ export struct CreateGroupPage {
                     .textAlign(TextAlign.Center)
                     .fontSize(DesignConstants.FONT.SIZE.MD)
                     .fontColor($r('sys.color.ohos_id_color_text_primary'))
-                    .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+                    .backgroundColor($r('app.color.bg_tertiary'))
                     .borderRadius(DesignConstants.RADIUS.MD)
                     .padding(0)
                     .onChange((value: string) => {
                       const num = parseInt(value);
                       if (!isNaN(num)) {
-                        this.maxMembers = Math.max(10, Math.min(500, num));
+                        this.maxMembers = Math.max(GROUP_MEMBERS_MIN, Math.min(GROUP_MEMBERS_MAX, num));
                       }
                     })
                     .onBlur(() => {
-                      if (this.maxMembers < 10) this.maxMembers = 10;
-                      if (this.maxMembers > 500) this.maxMembers = 500;
+                      if (this.maxMembers < GROUP_MEMBERS_MIN) this.maxMembers = GROUP_MEMBERS_MIN;
+                      if (this.maxMembers > GROUP_MEMBERS_MAX) this.maxMembers = GROUP_MEMBERS_MAX;
                     })
 
                   Button() {
                     Text() {
                       SymbolSpan($r(AppIcon.ADD))
                         .fontSize(16)
-                        .fontColor([this.maxMembers < 500
+                        .fontColor([this.maxMembers < GROUP_MEMBERS_MAX
                           ? $r('sys.color.ohos_id_color_text_primary')
                           : $r('sys.color.ohos_id_color_text_tertiary')])
                     }
                   }
-                  .type(ButtonType.Circle)
+                  .type(ButtonType.Normal)
                   .width(36)
                   .height(36)
-                  .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
-                  .enabled(this.maxMembers < 500)
+                  .backgroundColor($r('app.color.bg_tertiary'))
+                  .borderRadius(DesignConstants.RADIUS.XL)
+                  .enabled(this.maxMembers < GROUP_MEMBERS_MAX)
                   .onClick(() => {
-                    if (this.maxMembers < 500) this.maxMembers = Math.min(500, this.maxMembers + 10);
+                    if (this.maxMembers < GROUP_MEMBERS_MAX) this.maxMembers = Math.min(GROUP_MEMBERS_MAX, this.maxMembers + 10);
                   })
                 }
               }
@@ -370,7 +531,7 @@ export struct CreateGroupPage {
 
               Divider()
                 .strokeWidth(1)
-                .color($r('sys.color.ohos_id_color_component_normal'))
+                .color($r('sys.color.ohos_id_color_list_separator'))
                 .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
               Row() {
@@ -395,7 +556,7 @@ export struct CreateGroupPage {
               if (this.isPasswordRequired) {
                 Divider()
                   .strokeWidth(1)
-                  .color($r('sys.color.ohos_id_color_component_normal'))
+                  .color($r('sys.color.ohos_id_color_list_separator'))
                   .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
                 Column() {
@@ -405,12 +566,12 @@ export struct CreateGroupPage {
                     .width('100%')
                     .margin({ bottom: 4 })
 
-                  TextInput({ placeholder: '请输入群组密码', text: this.groupPassword })
+                  TextInput({ placeholder: `请输入群组密码（${GROUP_PASSWORD_MIN}-${GROUP_PASSWORD_MAX}位）`, text: this.groupPassword })
                     .type(InputType.Password)
                     .onChange((value: string) => {
                       this.groupPassword = value;
                     })
-                    .maxLength(20)
+                    .maxLength(GROUP_PASSWORD_MAX)
                     .height(40)
                     .backgroundColor(Color.Transparent)
                     .padding({ left: 0 })
@@ -423,13 +584,17 @@ export struct CreateGroupPage {
               }
             }
             .backgroundColor($r('app.color.bg_secondary'))
-            .borderRadius(DesignConstants.RADIUS.LG)
+            .borderRadius(DesignConstants.RADIUS.XL)
+            .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+            .shadow(DesignConstants.SHADOW.SMALL)
 
             // 提交按钮
             Button('立即创建')
-              .type(ButtonType.Capsule)
+              .type(ButtonType.Normal)
               .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
               .fontColor(Color.White)
+              .borderRadius(DesignConstants.RADIUS.XL)
+              .shadow(DesignConstants.SHADOW.SMALL)
               .width('100%')
               .height(48)
               .fontSize(16)

@@ -205,7 +205,7 @@
 			</CardContent>
 		</Card>
 	{:else}
-		<Card class="border-0 bg-card/70 shadow-sm shadow-black/5 ring-1 ring-border/40">
+		<Card class="rounded-3xl border border-border/60 bg-card/85 shadow-sm backdrop-blur-md">
 			<CardContent class="space-y-6 p-6">
 				<div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
 					<div class="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -295,7 +295,7 @@
 		</Card>
 
 		<Tabs value={currentTab} onValueChange={handleTabChange}>
-			<TabsList class="grid w-full grid-cols-3 rounded-2xl bg-card/70 p-1.5 shadow-sm shadow-black/5 ring-1 ring-border/40">
+			<TabsList class="grid w-full grid-cols-3 rounded-3xl bg-card/80 p-1.5 shadow-sm shadow-black/5 ring-1 ring-border/60 backdrop-blur-sm">
 				<TabsTrigger value="moments" class="gap-2 rounded-xl">
 					<Image class="h-4 w-4" />
 					TA的瞬间
@@ -379,7 +379,7 @@
 					<div class="grid gap-3 sm:grid-cols-2">
 						{#each followersPagination.items as follower (follower.user.user_id)}
 							<a href="/users/{follower.user.user_id}">
-								<Card class="cursor-pointer border-0 bg-card/70 shadow-sm shadow-black/5 transition-shadow hover:shadow-lg hover:shadow-black/10">
+								<Card class="cursor-pointer rounded-2xl border border-border/60 bg-card/80 shadow-sm transition-shadow hover:shadow-lg hover:shadow-black/10">
 									<CardContent class="flex items-center gap-3 p-4">
 										<Avatar class="h-12 w-12">
 											<AvatarImage src={follower.user.avatar_url} alt={follower.user.nickname} />
@@ -433,7 +433,7 @@
 					<div class="grid gap-3 sm:grid-cols-2">
 						{#each followingPagination.items as follow (follow.user.user_id)}
 							<a href="/users/{follow.user.user_id}">
-								<Card class="cursor-pointer border-0 bg-card/70 shadow-sm shadow-black/5 transition-shadow hover:shadow-lg hover:shadow-black/10">
+								<Card class="cursor-pointer rounded-2xl border border-border/60 bg-card/80 shadow-sm transition-shadow hover:shadow-lg hover:shadow-black/10">
 									<CardContent class="flex items-center gap-3 p-4">
 										<Avatar class="h-12 w-12">
 											<AvatarImage src={follow.user.avatar_url} alt={follow.user.nickname} />

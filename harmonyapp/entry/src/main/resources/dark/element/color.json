@@ -2,7 +2,7 @@
   "color": [
     {
       "name": "start_window_background",
-      "value": "#000000"
+      "value": "#081325"
     },
     {
       "name": "color_shadow",
@@ -26,31 +26,31 @@
     },
     {
       "name": "color_pin_halo",
-      "value": "#33FF7043"
+      "value": "#335B97FF"
     },
     {
       "name": "color_emphasize_bg",
-      "value": "#33FF8F00"
+      "value": "#1E335A"
     },
     {
       "name": "bg_primary",
-      "value": "#0D0D0D"
+      "value": "#081325"
     },
     {
       "name": "bg_secondary",
-      "value": "#1C1C1E"
+      "value": "#0F1E35"
     },
     {
       "name": "bg_tertiary",
-      "value": "#2C2C2E"
+      "value": "#172947"
     },
     {
       "name": "brand_primary",
-      "value": "#0A84FF"
+      "value": "#5B97FF"
     },
     {
       "name": "divider",
-      "value": "#3A3A3C"
+      "value": "#2A3F66"
     },
     {
       "name": "status_online",
@@ -70,7 +70,7 @@
     },
     {
       "name": "chip_selected_bg",
-      "value": "#3A3A3C"
+      "value": "#1F3660"
     }
   ]
 }

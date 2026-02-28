@@ -1,9 +1,9 @@
 //! Response DTO 定义
 //!
 //! 所有响应类型严格遵循 API 规范 (spec/*.md)
-//! 使用强类型枚举，无向后兼容代码
+//! 使用强类型枚举，禁止保留历史兼容分支
 //!
-//! 按领域拆分为子模块，通过 pub use 统一导出以保持 `dto::response::*` 的兼容性。
+//! 按领域拆分为子模块，通过 pub use 提供统一导出入口。
 
 pub mod admin;
 pub mod auth;
@@ -25,7 +25,7 @@ pub mod system;
 pub mod tag;
 pub mod user;
 
-// Re-export all public types for backward compatibility
+// Re-export all public response types for a single import surface
 pub use admin::*;
 pub use auth::*;
 pub use chat::*;

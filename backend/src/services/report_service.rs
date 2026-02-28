@@ -11,7 +11,7 @@ use crate::{
     error::AppError,
     repositories::{
         comment_repo::CommentRepository,
-        group_message_repo::GroupMessageRepository,
+        group::message_repo::GroupMessageRepository,
         group_repo::GroupRepository,
         moment_repo::MomentRepository,
         private_message_repo::PrivateMessageRepository,
@@ -21,6 +21,7 @@ use crate::{
     types::enums::{ReportReason, ReportStatus, ReportTargetType},
     utils::validation::Validator,
 };
+use tracing::{info, warn};
 
 #[derive(Clone)]
 pub struct ReportService {
@@ -63,6 +64,14 @@ impl ReportService {
         reporter_id: i64,
         req: CreateReportRequest,
     ) -> Result<CreateReportData, AppError> {
+        let started_at = std::time::Instant::now();
+        info!(
+            reporter_id,
+            target_type = ?req.target_type,
+            reason = ?req.reason,
+            has_description = req.description.is_some(),
+            "report.create started"
+        );
         // target_type 和 reason 已是强类型枚举
 
         let reason_str = req.reason.to_string();
@@ -72,6 +81,21 @@ impl ReportService {
         self.validate_target_exists(target_type, &target_id).await?;
         self.check_self_report(reporter_id, target_type, &target_id)
             .await?;
+        if self
+            .report_repo
+            .has_pending_or_reviewing_for_target(target_type, &target_id)
+            .await?
+        {
+            warn!(
+                reporter_id,
+                target_type = ?target_type,
+                target_id = %target_id,
+                "report.create rejected: target already has pending/reviewing report"
+            );
+            return Err(AppError::BusinessRuleViolation(
+                "该目标已有待处理举报，请勿重复提交".to_string(),
+            ));
+        }
 
         let created_report = self
             .report_repo
@@ -83,6 +107,14 @@ impl ReportService {
                 req.description,
             )
             .await?;
+        info!(
+            reporter_id,
+            report_id = %created_report.report_id,
+            target_type = ?target_type,
+            target_id = %target_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "report.create completed"
+        );
 
         Ok(CreateReportData {
             report_id: created_report.report_id.to_string(),
@@ -130,8 +162,6 @@ impl ReportService {
         _admin_id: i64, // 验证在Handler层
         req: &AdminReportSearchRequest,
     ) -> Result<PaginatedData<AdminReportItem>, AppError> {
-        use crate::dto::response::ReportTargetSnapshot;
-
         let pagination = req.pagination.as_ref();
         let limit_value = pagination.and_then(|p| p.limit).unwrap_or(20);
         let limit = Validator::validate_limit(Some(limit_value), crate::constants::MAX_PAGE_LIMIT)?;
@@ -161,79 +191,16 @@ impl ReportService {
 
         let mut response_items = Vec::with_capacity(reports.len());
         for report in reports {
-            let target_type = report.target_type.clone();
             let report_item = Self::to_report_item(report.clone())?;
             let target_snapshot = report.target_snapshot.and_then(|value| {
-                // 根据目标类型解析对应的快照数据
-                // value 可能已经是结构化的 { "moment": {...} } 或老的扁平格式
-
-                // 处理可能是新的结构化格式
+                // 严格按最新结构化快照读取，不再兼容历史扁平格式
                 if value.get("moment").is_some()
                     || value.get("comment").is_some()
                     || value.get("message").is_some()
                 {
                     return serde_json::from_value(value).ok();
                 }
-
-                // 向下兼容旧的扁平格式，根据 target_type 进行转换
-                let content = value
-                    .get("content")
-                    .and_then(|v| v.as_str())
-                    .map(|v| v.to_string());
-                let media_urls = value.get("media_urls").and_then(|v| {
-                    v.as_array().map(|arr| {
-                        arr.iter()
-                            .filter_map(|item| item.as_str().map(|s| s.to_string()))
-                            .collect::<Vec<_>>()
-                    })
-                });
-                let owner_id = value.get("owner_id").and_then(|v| {
-                    v.as_str()
-                        .map(|s| s.to_string())
-                        .or_else(|| v.as_i64().map(|id| id.to_string()))
-                });
-
-                if content.is_none() && media_urls.is_none() && owner_id.is_none() {
-                    return None;
-                }
-
-                use crate::dto::response::{CommentSnapshot, MessageSnapshot, MomentSnapshot};
-
-                let mut snapshot = ReportTargetSnapshot {
-                    moment: None,
-                    comment: None,
-                    message: None,
-                };
-
-                match target_type.as_str() {
-                    "moment" => {
-                        snapshot.moment = Some(MomentSnapshot {
-                            description: content,
-                            image_urls: media_urls,
-                            author_id: owner_id,
-                        });
-                    }
-                    "comment" => {
-                        snapshot.comment = Some(CommentSnapshot {
-                            content,
-                            author_id: owner_id,
-                            moment_id: value
-                                .get("moment_id")
-                                .and_then(|v| v.as_str())
-                                .map(|v| v.to_string()),
-                        });
-                    }
-                    "message" => {
-                        snapshot.message = Some(MessageSnapshot {
-                            content,
-                            media_urls,
-                            sender_id: owner_id,
-                        });
-                    }
-                    _ => return None,
-                }
-
-                Some(snapshot)
+                None
             });
             let reporter = if let Some(u) = user_map.get(&report.reporter_id) {
                 let avatar_url = self
@@ -297,6 +264,14 @@ impl ReportService {
         req: AdminReportHandleRequest,
     ) -> Result<(), AppError> {
         use crate::types::enums::ReportHandleAction;
+        let started_at = std::time::Instant::now();
+        info!(
+            admin_id,
+            report_id = %req.report_id,
+            action = ?req.action,
+            has_note = req.note.is_some(),
+            "report.handle started"
+        );
 
         // action 已是强类型枚举
 
@@ -305,6 +280,7 @@ impl ReportService {
 
         // 仅做存在性校验（避免拉整行）
         if !self.report_repo.exists(report_id).await? {
+            warn!(admin_id, report_id = %report_id, "report.handle rejected: report not found");
             return Err(AppError::NotFound("举报不存在".to_string()));
         }
 
@@ -319,6 +295,13 @@ impl ReportService {
         self.report_repo
             .update_status(report_id, status, req.action, req.note.clone(), admin_id)
             .await?;
+        info!(
+            admin_id,
+            report_id = %report_id,
+            status = ?status,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "report.handle completed"
+        );
 
         Ok(())
     }

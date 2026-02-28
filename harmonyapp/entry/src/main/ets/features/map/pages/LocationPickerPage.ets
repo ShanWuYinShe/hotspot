@@ -24,10 +24,15 @@ const MAX_HISTORY_ITEMS: number = 5;
 const PANEL_SNAP_MIN: number = 200;       // 收起：手柄 + 搜索栏 + 确认按钮
 const PANEL_SNAP_HALF: number = 340;      // 半展开：显示部分历史记录
 const PANEL_SNAP_MAX: number = 500;       // 全展开：完整内容
-const DEFAULT_GESTURE_HINT: string = '双击或长按地图可快速定位';
+const DEFAULT_GESTURE_HINT: string = '双击（桌面）或长按（移动端）地图可快速定位';
 const DOUBLE_CLICK_PLACEMENT_HINT: string = '已通过双击定位到该位置';
 const LONG_PRESS_PLACEMENT_HINT: string = '已通过长按定位到该位置';
+const ANCHOR_PLACEMENT_HINT: string = '已回到浏览锚点位置';
 const GENERIC_PLACEMENT_HINT: string = '已定位到该位置';
+const MARKER_COLOR_PICKER: string = '#8B5CF6';
+const MARKER_COLOR_USER: string = '#1D4ED8';
+const MARKER_COLOR_GROUP: string = '#059669';
+const MARKER_COLOR_MOMENT: string = '#EA580C';
 
 interface BoundsDelta {
   latDelta: number;
@@ -68,33 +73,37 @@ function TopBar(props: TopBarProps) {
     .width(44)
     .height(44)
     .justifyContent(FlexAlign.Center)
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .backgroundColor($r('app.color.bg_secondary'))
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
     .onClick(props.onBack)
 
     Row({ space: 8 }) {
       MapFilterChip({
         label: '用户',
         iconSymbol: $r(AppIcon.PERSON),
-        accentColor: '#007AFF',
+        accentColor: MARKER_COLOR_USER,
         active: props.showUsers,
         onToggle: props.onToggleUsers
       })
       MapFilterChip({
         label: '群组',
         iconSymbol: $r(AppIcon.GROUP),
-        accentColor: '#34C759',
+        accentColor: MARKER_COLOR_GROUP,
         active: props.showGroups,
         onToggle: props.onToggleGroups
       })
       MapFilterChip({
         label: '动态',
         iconSymbol: $r(AppIcon.PHOTO),
-        accentColor: '#FF9500',
+        accentColor: MARKER_COLOR_MOMENT,
         active: props.showMoments,
         onToggle: props.onToggleMoments
       })
     }
     .padding({ left: 8, right: 8, top: 4, bottom: 4 })
     .backgroundColor($r('app.color.bg_secondary'))
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
     .borderRadius(DesignConstants.RADIUS.XXL)
     .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
   }
@@ -121,12 +130,98 @@ function MapToast(props: MapToastProps) {
       .fontSize(DesignConstants.FONT.SIZE.SM)
       .fontColor($r('sys.color.ohos_id_color_text_primary'))
       .backgroundColor($r('app.color.bg_secondary'))
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
       .borderRadius(DesignConstants.RADIUS.MD)
       .padding({ left: 12, right: 12, top: 6, bottom: 6 })
       .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
       .position({ top: SafeAreaUtils.resolveTopPadding(props.safeAreaTop, 100), left: 16 })
       .transition(TransitionEffect.OPACITY.animation({ duration: 250 }))
   }
+}
+
+interface MarkerLegendItemProps {
+  label: string;
+  color: string;
+  asTarget?: boolean;
+  iconSymbol?: Resource;
+}
+
+@Builder
+function MarkerLegendItem(props: MarkerLegendItemProps) {
+  Row({ space: 6 }) {
+    if (props.asTarget) {
+      Stack({ alignContent: Alignment.Center }) {
+        Column()
+          .width(11)
+          .height(11)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .border({ width: 1.5, color: props.color })
+          .backgroundColor(Color.Transparent)
+        Column()
+          .width(4)
+          .height(4)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .backgroundColor(props.color)
+      }
+      .width(12)
+      .height(12)
+    } else {
+      Row() {
+        if (props.iconSymbol) {
+          Text() {
+            SymbolSpan(props.iconSymbol)
+              .fontSize(10)
+              .fontColor([props.color])
+          }
+        } else {
+          Column()
+            .width(8)
+            .height(8)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .backgroundColor(props.color)
+        }
+      }
+      .width(14)
+      .height(14)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .backgroundColor($r('app.color.bg_secondary'))
+    }
+
+    Text(props.label)
+      .fontSize(DesignConstants.FONT.SIZE.XS)
+      .fontColor($r('sys.color.ohos_id_color_text_primary'))
+  }
+}
+
+@Builder
+function MarkerLegend() {
+  Row() {
+    Row({ space: DesignConstants.SPACING.MD }) {
+      MarkerLegendItem({ label: '选点', color: MARKER_COLOR_PICKER, asTarget: true })
+      MarkerLegendItem({ label: '用户', color: MARKER_COLOR_USER, iconSymbol: $r(AppIcon.PERSON) })
+      MarkerLegendItem({ label: '群组', color: MARKER_COLOR_GROUP, iconSymbol: $r(AppIcon.GROUP) })
+      MarkerLegendItem({ label: '动态', color: MARKER_COLOR_MOMENT, iconSymbol: $r(AppIcon.PHOTO) })
+    }
+    .padding({
+      left: DesignConstants.SPACING.MD,
+      right: DesignConstants.SPACING.MD,
+      top: DesignConstants.SPACING.SM,
+      bottom: DesignConstants.SPACING.SM
+    })
+    .backgroundColor($r('app.color.bg_secondary'))
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .shadow({ radius: 5, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 1 })
+  }
+  .width('100%')
+  .padding({
+    left: DesignConstants.SPACING.MD,
+    right: DesignConstants.SPACING.MD,
+    top: DesignConstants.SPACING.SM
+  })
+  .justifyContent(FlexAlign.Start)
 }
 
 /**
@@ -160,7 +255,7 @@ struct SearchPanel {
           .id('locationPickerSearchInput')
           .layoutWeight(1)
           .height(40)
-          .backgroundColor($r('app.color.bg_primary'))
+          .backgroundColor($r('app.color.bg_secondary'))
           .borderRadius(DesignConstants.RADIUS.XXL)
           .searchIcon({
             size: 18,
@@ -239,7 +334,7 @@ struct SearchPanel {
                     .width(32)
                     .height(32)
                     .justifyContent(FlexAlign.Center)
-                    .backgroundColor($r('app.color.bg_primary'))
+                    .backgroundColor($r('app.color.bg_tertiary'))
                     .borderRadius(DesignConstants.RADIUS.MD)
 
                     Text(item.locationName || '未知地点')
@@ -250,7 +345,12 @@ struct SearchPanel {
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
                   }
                   .width('100%')
-                  .padding({ left: 4, right: 4, top: 10, bottom: 10 })
+                  .padding({
+                    left: DesignConstants.SPACING.XS,
+                    right: DesignConstants.SPACING.XS,
+                    top: DesignConstants.SPACING.MD,
+                    bottom: DesignConstants.SPACING.MD
+                  })
                   .onClick(() => { this.onSelectResult(item); })
                 }
               }, (item: LocationInfo) => `search_${item.latitude}_${item.longitude}`)
@@ -347,6 +447,7 @@ struct SearchPanel {
     .height(SEARCH_PANEL_HEIGHT)
     .padding({ left: 16, right: 16, top: 16, bottom: 12 + this.safeAreaBottom })
     .backgroundColor($r('app.color.bg_secondary'))
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
     .borderRadius({ topLeft: 24, topRight: 24 })
     .shadow({ radius: 16, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: -4 })
   }
@@ -394,7 +495,7 @@ struct MainPanel {
           .width(36)
           .height(4)
           .borderRadius(DesignConstants.RADIUS.SM)
-          .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+          .backgroundColor($r('app.color.bg_tertiary'))
       }
       .width('100%')
       .height(36)
@@ -431,7 +532,8 @@ struct MainPanel {
       .height(40)
       .padding({ left: 12, right: 12 })
       .alignItems(VerticalAlign.Center)
-      .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+      .backgroundColor($r('app.color.bg_secondary'))
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
       .borderRadius(DesignConstants.RADIUS.XXL)
       .margin({ bottom: 12 })
       .onClick(this.onSearchClick)
@@ -462,7 +564,7 @@ struct MainPanel {
               List({ space: 0 }) {
                 ForEach(this.anchorHistory.slice(0, MAX_HISTORY_ITEMS), (item: AnchorHistoryItem, index: number) => {
                   ListItem() {
-                    Row({ space: 10 }) {
+                    Row({ space: DesignConstants.SPACING.MD }) {
                       Text() {
                         SymbolSpan($r(AppIcon.TIME))
                           .fontSize(16)
@@ -477,7 +579,7 @@ struct MainPanel {
                         .textOverflow({ overflow: TextOverflow.Ellipsis })
                     }
                     .width('100%')
-                    .padding({ top: 10, bottom: 10 })
+                    .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
                     .onClick(() => { this.onSelectHistory(item); })
                   }
                 }, (item: AnchorHistoryItem) => `hist_m_${item.latitude}_${item.longitude}`)
@@ -510,14 +612,32 @@ struct MainPanel {
       }
 
       // 确认按钮（固定在底部，始终可见）
+      Row({ space: 6 }) {
+        Text() {
+          SymbolSpan($r(AppIcon.LOCATION))
+            .fontSize(14)
+            .fontColor([MARKER_COLOR_PICKER])
+        }
+        Text('紫色靶心是当前选点，蓝色人像/绿色群组/橙色相机分别表示用户、群组、动态')
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .layoutWeight(1)
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+      .margin({ top: 2, bottom: 6 })
+
       Button(this.confirmLabel)
-        .type(ButtonType.Capsule)
+        .type(ButtonType.Normal)
         .width('100%')
         .height(44)
         .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
         .fontColor(Color.White)
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .fontWeight(FontWeight.Medium)
+        .borderRadius(DesignConstants.RADIUS.XL)
         .margin({ top: 8 })
         .onClick(this.onConfirm)
     }
@@ -525,11 +645,13 @@ struct MainPanel {
     .clip(true)
     .padding({ left: 16, right: 16, top: 0, bottom: 12 + this.safeAreaBottom })
     .backgroundColor($r('app.color.bg_secondary'))
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
     .borderRadius({ topLeft: 24, topRight: 24 })
     .shadow({ radius: 16, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: -4 })
   }
 }
 
+@Preview
 @Component
 export struct LocationPickerPage {
   pathStack: NavPathStack = new NavPathStack();
@@ -579,7 +701,7 @@ export struct LocationPickerPage {
 
   async aboutToAppear() {
     SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.SECONDARY_BG_LIGHT,
+      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,
       preferDarkContent: true
     });
     this.initialised = false;
@@ -630,7 +752,7 @@ export struct LocationPickerPage {
     }
 
     if (target) {
-      this.setCenter(target.latitude, target.longitude);
+      this.setCenter(target.latitude, target.longitude, true);
       await this.resolveLocation(target.latitude, target.longitude);
     } else {
       hilog.warn(DOMAIN_NUMBER, TAG, '无法获取当前位置');
@@ -697,27 +819,51 @@ export struct LocationPickerPage {
     return this.isLocationPickMode() ? '使用此位置' : '设为浏览锚点';
   }
 
+  private applyMapRegion(lat: number, lng: number): void {
+    this.mapRegion = { latitude: lat, longitude: lng, latitudeDelta: 0.01, longitudeDelta: 0.01 };
+  }
+
+  private moveCameraSmoothly(lat: number, lng: number): void {
+    if (this.mapActions) {
+      this.mapActions.moveCamera(lat, lng);
+      return;
+    }
+    // 地图控制器尚未就绪时，通过更新 region 兜底
+    this.applyMapRegion(lat, lng);
+  }
+
   /** 定位到当前位置 */
   private locateUser(): void {
-    if (!this.currentLocation || !this.mapActions) return;
+    if (!this.currentLocation) return;
     const converted = CoordinateConverter.convertWgs84ToGcj02(
       this.currentLocation.latitude, this.currentLocation.longitude
     );
-    this.mapActions.moveCamera(converted.latitude, converted.longitude);
+    this.setCenter(converted.latitude, converted.longitude);
+    this.moveCameraSmoothly(converted.latitude, converted.longitude);
   }
 
-  private setCenter(lat: number, lng: number) {
+  /** 回到当前浏览锚点位置（与“回到当前位置”区分） */
+  private async locateBrowseAnchor(): Promise<void> {
+    const anchor = AppStorage.get<LocationInfo | null>(KEY_BROWSE_ANCHOR);
+    if (!anchor) {
+      SystemToast.show('暂无浏览锚点，请先设置锚点', this.getUIContext());
+      return;
+    }
+    await this.focusOnCoordinate(anchor.latitude, anchor.longitude, ANCHOR_PLACEMENT_HINT);
+  }
+
+  private setCenter(lat: number, lng: number, syncRegion: boolean = false): void {
     this.centerLat = lat;
     this.centerLng = lng;
-    this.mapRegion = { latitude: lat, longitude: lng, latitudeDelta: 0.01, longitudeDelta: 0.01 };
+    if (syncRegion) {
+      this.applyMapRegion(lat, lng);
+    }
   }
 
   private async focusOnCoordinate(lat: number, lng: number, hintMessage: string = GENERIC_PLACEMENT_HINT): Promise<void> {
     this.skipNextResolve = true;
     this.setCenter(lat, lng);
-    if (this.mapActions) {
-      this.mapActions.moveCamera(lat, lng);
-    }
+    this.moveCameraSmoothly(lat, lng);
     await this.resolveLocation(lat, lng);
     this.showMapToast(hintMessage);
   }
@@ -867,9 +1013,7 @@ export struct LocationPickerPage {
     this.skipNextResolve = true;
     this.setCenter(result.latitude, result.longitude);
     this.locationName = result.locationName || '';
-    if (this.mapActions) {
-      this.mapActions.moveCamera(result.latitude, result.longitude);
-    }
+    this.moveCameraSmoothly(result.latitude, result.longitude);
     this.closeSearchPanel();
   }
 
@@ -877,9 +1021,7 @@ export struct LocationPickerPage {
     this.skipNextResolve = true;
     this.setCenter(item.latitude, item.longitude);
     this.locationName = item.locationName || '历史位置';
-    if (this.mapActions) {
-      this.mapActions.moveCamera(item.latitude, item.longitude);
-    }
+    this.moveCameraSmoothly(item.latitude, item.longitude);
     this.resolveLocation(item.latitude, item.longitude);
   }
 
@@ -1083,6 +1225,7 @@ export struct LocationPickerPage {
               this.updateMarkers();
             }
           })
+          MarkerLegend()
           Blank()
         }
         .width('100%')
@@ -1133,51 +1276,76 @@ export struct LocationPickerPage {
 
         // 自定义地图控件：用 position(Edges) 定位到右下角，仅占按钮实际面积，
         // 既不阻塞地图拖拽，又能独占按钮区域的点击事件
-        Column({ space: 8 }) {
+        Column({ space: DesignConstants.SPACING.MD }) {
           Column() {
             Text() {
               SymbolSpan($r(AppIcon.LOCATION))
                 .fontSize(20)
-                .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+                .fontColor([MARKER_COLOR_USER])
             }
           }
-          .width(44)
-          .height(44)
+          .width(48)
+          .height(48)
           .justifyContent(FlexAlign.Center)
           .backgroundColor($r('app.color.bg_secondary'))
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+          .shadow({ radius: 12, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 4 })
           .onClick(() => { this.locateUser(); })
 
           Column() {
             Text() {
-              SymbolSpan($r(AppIcon.ADD))
+              SymbolSpan($r(AppIcon.PERSON))
                 .fontSize(20)
-                .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+                .fontColor([MARKER_COLOR_MOMENT])
             }
           }
-          .width(44)
-          .height(44)
+          .width(48)
+          .height(48)
           .justifyContent(FlexAlign.Center)
           .backgroundColor($r('app.color.bg_secondary'))
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
-          .onClick(() => { if (this.mapActions) this.mapActions.zoomIn(); })
+          .shadow({ radius: 12, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 4 })
+          .onClick(() => { this.locateBrowseAnchor(); })
 
           Column() {
-            Text() {
-              SymbolSpan($r(AppIcon.REMOVE))
-                .fontSize(20)
-                .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+            Column() {
+              Text() {
+                SymbolSpan($r(AppIcon.ADD))
+                  .fontSize(20)
+                  .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+              }
             }
+            .width('100%')
+            .height(38)
+            .justifyContent(FlexAlign.Center)
+            .onClick(() => { if (this.mapActions) this.mapActions.zoomIn(); })
+
+            Divider()
+              .strokeWidth(1)
+              .color($r('sys.color.ohos_id_color_list_separator'))
+              .width(20)
+
+            Column() {
+              Text() {
+                SymbolSpan($r(AppIcon.REMOVE))
+                  .fontSize(20)
+                  .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+              }
+            }
+            .width('100%')
+            .height(38)
+            .justifyContent(FlexAlign.Center)
+            .onClick(() => { if (this.mapActions) this.mapActions.zoomOut(); })
           }
-          .width(44)
-          .height(44)
+          .width(48)
+          .height(78)
           .justifyContent(FlexAlign.Center)
           .backgroundColor($r('app.color.bg_secondary'))
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
-          .onClick(() => { if (this.mapActions) this.mapActions.zoomOut(); })
+          .shadow({ radius: 12, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 4 })
         }
         .position({ right: 12, bottom: this.getControlsBottomOffset() })
       }

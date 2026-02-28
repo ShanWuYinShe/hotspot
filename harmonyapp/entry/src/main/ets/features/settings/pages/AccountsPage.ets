@@ -21,6 +21,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 
+@Preview
 @Component
 export struct AccountsPage {
   pathStack: NavPathStack = new NavPathStack();
@@ -172,7 +173,7 @@ export struct AccountsPage {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor($r('app.color.bg_primary'))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.isLoading) {
@@ -190,10 +191,11 @@ export struct AccountsPage {
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .textAlign(TextAlign.Center)
           Button('重试')
-            .type(ButtonType.Capsule)
+            .type(ButtonType.Normal)
             .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
             .fontColor(Color.White)
             .height(40)
+            .borderRadius(DesignConstants.RADIUS.XL)
             .onClick(() => { this.load(); })
         }
         .width('100%')
@@ -207,10 +209,11 @@ export struct AccountsPage {
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
 
           Button('去登录/创建访客')
-            .type(ButtonType.Capsule)
+            .type(ButtonType.Normal)
             .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
             .fontColor(Color.White)
             .height(44)
+            .borderRadius(DesignConstants.RADIUS.XL)
             .onClick(() => {
               AppRouter.push(PageNames.LOGIN);
             })
@@ -219,10 +222,24 @@ export struct AccountsPage {
         .padding(DesignConstants.SPACING.XL)
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
-        List({ space: 12 }) {
+        List({ space: 14 }) {
           ForEach(this.accounts, (acc: AuthData) => {
             ListItem() {
-              Row() {
+              Row({ space: DesignConstants.SPACING.MD }) {
+                Row() {
+                  Text() {
+                    SymbolSpan($r(AppIcon.PERSON))
+                      .fontSize(18)
+                      .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+                  }
+                }
+                .width(40)
+                .height(40)
+                .borderRadius(DesignConstants.RADIUS.XL)
+                .backgroundColor($r('app.color.bg_tertiary'))
+                .justifyContent(FlexAlign.Center)
+                .alignItems(VerticalAlign.Center)
+
                 Column({ space: 4 }) {
                   Row({ space: 8 }) {
                     Text(this.getAccountDisplayName(acc))
@@ -233,7 +250,7 @@ export struct AccountsPage {
                         .fontSize(DesignConstants.FONT.SIZE.SM)
                         .fontColor(Color.White)
                         .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-                        .borderRadius(DesignConstants.RADIUS.MD)
+                        .borderRadius(DesignConstants.RADIUS.XL)
                         .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 2, bottom: 2 })
                     }
                   }
@@ -246,19 +263,23 @@ export struct AccountsPage {
 
                 Row({ space: 8 }) {
                   Button('切换')
-                    .type(ButtonType.Capsule)
+                    .type(ButtonType.Normal)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .height(32)
-                    .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+                    .backgroundColor($r('app.color.bg_tertiary'))
                     .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                    .borderWidth(1)
+                    .borderColor($r('sys.color.ohos_id_color_list_separator'))
+                    .borderRadius(DesignConstants.RADIUS.XL)
                     .onClick(() => this.switchTo(acc))
 
                   Button('删除')
-                    .type(ButtonType.Capsule)
+                    .type(ButtonType.Normal)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .height(32)
                     .backgroundColor($r('app.color.color_danger'))
                     .fontColor(Color.White)
+                    .borderRadius(DesignConstants.RADIUS.XL)
                     .onClick(() => this.remove(acc))
                 }
               }
@@ -266,14 +287,19 @@ export struct AccountsPage {
               .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
             }
             .backgroundColor($r('app.color.bg_secondary'))
-            .borderRadius(DesignConstants.RADIUS.LG)
+            .borderRadius(DesignConstants.RADIUS.XXL)
+            .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+            .shadow({ radius: 10, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
             .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
           }, (acc: AuthData) => acc.user_id)
         }
         .width('100%')
         .layoutWeight(1)
         .scrollBar(BarState.Auto)
-        .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
+        .padding({
+          top: DesignConstants.SPACING.SM,
+          bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
+        })
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       }
     }

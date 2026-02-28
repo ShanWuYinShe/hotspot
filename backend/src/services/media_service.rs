@@ -8,7 +8,7 @@ use aws_sdk_s3::presigning::PresigningConfig;
 use aws_sdk_s3::Client as S3Client;
 use moka::future::Cache;
 use std::time::Duration;
-use tokio::time::sleep;
+use tokio::time::{sleep, timeout};
 use uuid::Uuid;
 
 use crate::{
@@ -23,6 +23,7 @@ use crate::{
 const SIGNED_URL_CACHE_MAX_TTL: Duration = Duration::from_secs(300);
 const SIGNED_URL_CACHE_FAILURE_TTL: Duration = Duration::from_secs(30);
 const SIGNED_URL_FAILURE_PREFIX: &str = "__FAILED__:";
+const SIGNED_URL_GENERATION_TIMEOUT: Duration = Duration::from_millis(1200);
 
 #[derive(Clone)]
 pub struct MediaService {
@@ -64,6 +65,16 @@ impl MediaService {
         }
         let base_trimmed = base.trim_end_matches('/');
         format!("{}{}", base_trimmed, path_and_query)
+    }
+
+    fn build_direct_public_url(&self, key: &str) -> Option<String> {
+        let base = self.s3_public_base.trim();
+        if base.is_empty() || base.eq_ignore_ascii_case("presigned") {
+            return None;
+        }
+        let base_trimmed = base.trim_end_matches('/');
+        let key_trimmed = key.trim_start_matches('/');
+        Some(format!("{}/{}", base_trimmed, key_trimmed))
     }
 
     /// 申请上传（返回 S3 Presigned URL）
@@ -391,23 +402,38 @@ impl MediaService {
             return Ok(cached);
         }
 
+        // 当配置了公开访问域名时，搜索/列表等高频路径无需再走 presign。
+        if let Some(public_url) = self.build_direct_public_url(cleaned_key) {
+            self.cache_success_signed_url(&cache_key, &public_url, expires_in)
+                .await;
+            return Ok(public_url);
+        }
+
         let presigned_config = PresigningConfig::builder()
             .expires_in(expires_in)
             .build()
             .map_err(|e| AppError::InternalError(format!("预签名配置构建失败: {}", e)))?;
 
-        let presigned_req = match self
-            .s3_client
-            .get_object()
-            .bucket(&self.bucket)
-            .key(cleaned_key) // 使用清理后的 key
-            .presigned(presigned_config)
-            .await
+        let presigned_req = match timeout(
+            SIGNED_URL_GENERATION_TIMEOUT,
+            self.s3_client
+                .get_object()
+                .bucket(&self.bucket)
+                .key(cleaned_key) // 使用清理后的 key
+                .presigned(presigned_config),
+        )
+        .await
         {
-            Ok(req) => req,
-            Err(e) => {
+            Ok(Ok(req)) => req,
+            Ok(Err(e)) => {
                 self.cache_failed_signed_url(&cache_key).await;
                 return Err(AppError::InternalError(format!("下载 URL 签名失败: {}", e)));
+            }
+            Err(_) => {
+                self.cache_failed_signed_url(&cache_key).await;
+                return Err(AppError::InternalError(
+                    "下载 URL 签名超时，请稍后重试".to_string(),
+                ));
             }
         };
 

@@ -212,12 +212,12 @@
 <DropdownMenu.Root bind:open>
 	<DropdownMenu.Trigger>
 		{#snippet child({ props })}
-			<Button variant="ghost" size="icon" class="relative rounded-full" aria-label="通知" {...props}>
+			<Button variant="ghost" size="icon" class="relative rounded-2xl" aria-label="通知" {...props}>
 				{#if notificationStore.unreadCount > 0}
 					<BellDot class="h-5 w-5" />
 					<Badge
 						variant="destructive"
-						class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold ring-2 ring-background"
+						class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-xl px-1 text-[10px] font-bold ring-2 ring-background"
 					>
 						{notificationStore.unreadCount > 99 ? '99+' : notificationStore.unreadCount}
 					</Badge>
@@ -234,7 +234,7 @@
 			<div class="flex items-center gap-2">
 				<h3 class="text-sm font-semibold">通知</h3>
 				{#if notificationStore.unreadCount > 0}
-					<Badge variant="secondary" class="h-5 rounded-full px-2 text-[10px]">
+					<Badge variant="secondary" class="h-5 rounded-xl px-2 text-[10px]">
 						{notificationStore.unreadCount}
 					</Badge>
 				{/if}
@@ -273,7 +273,7 @@
 			</div>
 		{:else if recentNotifications.length === 0}
 			<div class="flex flex-col items-center justify-center py-12">
-				<div class="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+				<div class="mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
 					<Bell class="h-8 w-8 text-muted-foreground" />
 				</div>
 				<p class="text-sm font-medium">暂无通知</p>
@@ -290,7 +290,7 @@
 								class="absolute inset-0 flex items-start gap-3 text-left"
 								onclick={() => handleItemClick(item)}
 							>
-								<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+								<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
 									<Icon class="h-5 w-5" />
 								</div>
 								<div class="min-w-0 flex-1 pr-8">
@@ -306,7 +306,7 @@
 							{#if !item.is_read}
 								<button
 									type="button"
-									class="absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full opacity-0 transition-all hover:bg-background group-hover:opacity-100"
+									class="absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-xl opacity-0 transition-all hover:bg-background group-hover:opacity-100"
 									onclick={(e) => handleMarkAsRead(item.notification_id, e)}
 									title="标记为已读"
 								>

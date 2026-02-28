@@ -3,6 +3,8 @@
 	import { goto } from '$app/navigation';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
+	import { adminRbacService } from '$lib/api/services';
+	import { isSuccess } from '$lib/api/client';
 	import { Button } from '$lib/components/ui/button';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
@@ -13,6 +15,7 @@
 	import Search from 'lucide-svelte/icons/search';
 	import User from 'lucide-svelte/icons/user';
 	import Settings from 'lucide-svelte/icons/settings';
+	import Shield from 'lucide-svelte/icons/shield';
 	import LogOut from 'lucide-svelte/icons/log-out';
 	import Menu from 'lucide-svelte/icons/menu';
 	import Plus from 'lucide-svelte/icons/plus';
@@ -30,6 +33,9 @@
 	let showSearchModal = $state(false);
 	let showCreateMoment = $state(false);
 	let showCreateGroup = $state(false);
+	let isAdminUser = $state(false);
+	let adminCheckedUserId = '';
+	let checkingAdmin = false;
 
 	// 监听快捷键（Cmd/Ctrl + K 打开搜索）
 	onMount(() => {
@@ -42,6 +48,34 @@
 
 		window.addEventListener('keydown', handleKeydown);
 		return () => window.removeEventListener('keydown', handleKeydown);
+	});
+
+	$effect(() => {
+		const isAuthenticated = authStore.isAuthenticated;
+		const currentUserId = authStore.currentUserId ?? '';
+		if (!isAuthenticated || !currentUserId) {
+			isAdminUser = false;
+			adminCheckedUserId = '';
+			return;
+		}
+		if (checkingAdmin || adminCheckedUserId === currentUserId) return;
+		checkingAdmin = true;
+		void (async () => {
+			const requestUserId = currentUserId;
+			try {
+				const res = await adminRbacService.getMyPermissions();
+				if (authStore.currentUserId !== requestUserId) return;
+				isAdminUser = isSuccess(res) && !!res.data;
+			} catch {
+				if (authStore.currentUserId !== requestUserId) return;
+				isAdminUser = false;
+			} finally {
+				if (authStore.currentUserId === requestUserId) {
+					adminCheckedUserId = requestUserId;
+				}
+				checkingAdmin = false;
+			}
+		})();
 	});
 
 	function handleLogout() {
@@ -149,7 +183,7 @@
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger>
 						{#snippet child({ props })}
-							<button {...props} class="inline-flex items-center justify-center rounded-full p-0.5 hover:bg-accent transition-colors sm:p-1">
+							<button {...props} class="inline-flex items-center justify-center rounded-2xl p-0.5 transition-colors hover:bg-accent sm:p-1">
 								<Avatar class="h-8 w-8 ring-2 ring-primary/20">
 									<AvatarImage src={authStore.currentAccount?.avatar_url} />
 									<AvatarFallback class="bg-primary/10 text-primary text-xs">
@@ -183,6 +217,16 @@
 								</button>
 							{/snippet}
 						</DropdownMenu.Item>
+						{#if isAdminUser}
+							<DropdownMenu.Item>
+								{#snippet child({ props })}
+									<button {...props} class="flex w-full items-center" onclick={() => goto('/admin')}>
+										<Shield class="mr-2 h-4 w-4" />
+										管理后台
+									</button>
+								{/snippet}
+							</DropdownMenu.Item>
+						{/if}
 						<DropdownMenu.Separator />
 						<DropdownMenu.Item>
 							{#snippet child({ props })}
@@ -206,7 +250,7 @@
 				>
 					<User class="h-4 w-4" />
 				</RippleButton>
-				<Button size="sm" class="hidden rounded-full sm:inline-flex" onclick={handleAuthEntry}>
+				<Button size="sm" class="hidden rounded-2xl sm:inline-flex" onclick={handleAuthEntry}>
 					登录 / 注册
 				</Button>
 			{/if}

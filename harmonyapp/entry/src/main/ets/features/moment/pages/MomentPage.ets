@@ -29,6 +29,7 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 const DOMAIN_NUMBER: number = 0xFF05;
 const TAG: string = 'MomentPage';
 
+@Preview
 @Component
 export struct MomentPage {
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
@@ -209,7 +210,7 @@ export struct MomentPage {
 
   private async shareMoment(moment: MomentItem): Promise<void> {
     try {
-      const context = getContext(this) as common.UIAbilityContext;
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       const content = SystemShareService.buildMomentShareContent(
         moment.description,
         moment.user?.nickname ?? '匿名用户',
@@ -240,11 +241,12 @@ export struct MomentPage {
           .layoutWeight(1)
 
         Button('发布')
-          .type(ButtonType.Capsule)
+          .type(ButtonType.Normal)
           .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
           .fontColor(Color.White)
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .height(32)
+          .borderRadius(DesignConstants.RADIUS.XL)
           .onClick(async () => {
             const currentUser = this.stateManager.getCurrentUser();
             if (!currentUser) {
@@ -265,7 +267,7 @@ export struct MomentPage {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor($r('app.color.bg_primary'))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 内容区域
@@ -300,7 +302,7 @@ export struct MomentPage {
 
   @Builder
   private buildMomentList() {
-    List({ space: DesignConstants.SPACING.MD }) {
+    List({ space: DesignConstants.SPACING.SM }) {
       LazyForEach(this.momentsDataSource, (moment: MomentItem, index: number) => {
         ListItem() {
           this.buildMomentCard(moment, index)
@@ -361,7 +363,7 @@ export struct MomentPage {
                 .height('100%')
                 .objectFit(ImageFit.Cover)
                 .borderRadius(DesignConstants.RADIUS.MD)
-                .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+                .backgroundColor($r('app.color.bg_secondary'))
                 .geometryTransition('moment_img_' + moment.moment_id + '_' + imgIndex)
                 .onClick(() => {
                   const imageUrls: string[] = (moment.images || []).map(i => i.url);
@@ -385,9 +387,10 @@ export struct MomentPage {
             Text(`#${tag}`)
               .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor($r('sys.color.ohos_id_color_emphasize'))
-              .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+              .backgroundColor($r('app.color.bg_tertiary'))
               .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-              .borderRadius(DesignConstants.RADIUS.FULL)
+              .borderRadius(DesignConstants.RADIUS.XL)
+              .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
               .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
           }, (tag: string) => tag)
         }
@@ -443,7 +446,9 @@ export struct MomentPage {
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.LG)
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
   }
 }
 

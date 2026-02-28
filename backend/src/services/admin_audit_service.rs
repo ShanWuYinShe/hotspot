@@ -9,7 +9,7 @@ use crate::{
     },
     error::{AppError, Result},
     repositories::{
-        admin_audit_repo::{AdminAuditRepository, AuditLogFilter, AuditLogRow, NewAuditLog},
+        admin::audit_repo::{AdminAuditRepository, AuditLogFilter, AuditLogRow, NewAuditLog},
         user_repo::UserRepository,
     },
     services::media_service::MediaService,

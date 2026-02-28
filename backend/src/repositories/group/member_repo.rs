@@ -5,6 +5,7 @@ use redis::aio::ConnectionManager;
 use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
+use tracing::warn;
 
 use crate::error::Result;
 use crate::types::enums::GroupRole;
@@ -19,9 +20,12 @@ pub struct UserJoinedGroupInfoRow {
     pub avatar_url: Option<String>,
     pub members_count: i32,
     pub has_password: bool,
+    pub is_muted: bool,
+    pub is_pinned: bool,
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
     pub location_name: Option<String>,
+    pub last_activity_at: DateTime<Utc>,
     pub joined_at: DateTime<Utc>, // From group_members
 }
 
@@ -105,6 +109,21 @@ impl GroupMemberRepository {
         .execute(&self.pool)
         .await?;
 
+        if let Err(err) = sqlx::query!(
+            "UPDATE groups SET last_activity_at = NOW() WHERE group_id = $1",
+            group_id
+        )
+        .execute(&self.pool)
+        .await
+        {
+            warn!(
+                group_id,
+                user_id,
+                error = %err,
+                "更新群组 last_activity_at 失败（add_member）"
+            );
+        }
+
         let role_str = role.to_string();
         // 写入缓存 (1 = is_member)
         let mut conn = self.redis.clone();
@@ -152,6 +171,21 @@ impl GroupMemberRepository {
         .execute(&self.pool)
         .await?;
 
+        if let Err(err) = sqlx::query!(
+            "UPDATE groups SET last_activity_at = NOW() WHERE group_id = $1",
+            group_id
+        )
+        .execute(&self.pool)
+        .await
+        {
+            warn!(
+                group_id,
+                user_id,
+                error = %err,
+                "更新群组 last_activity_at 失败（update_role）"
+            );
+        }
+
         self.invalidate_member_cache(group_id, user_id).await;
         Ok(())
     }
@@ -165,6 +199,21 @@ impl GroupMemberRepository {
         )
         .execute(&self.pool)
         .await?;
+
+        if let Err(err) = sqlx::query!(
+            "UPDATE groups SET last_activity_at = NOW() WHERE group_id = $1",
+            group_id
+        )
+        .execute(&self.pool)
+        .await
+        {
+            warn!(
+                group_id,
+                user_id,
+                error = %err,
+                "更新群组 last_activity_at 失败（remove_member）"
+            );
+        }
 
         self.invalidate_member_cache(group_id, user_id).await;
         Ok(())
@@ -234,28 +283,6 @@ impl GroupMemberRepository {
         Ok(row.map(|r| r.role))
     }
 
-    /// 批量获取多个群组的成员数量
-    /// 返回 HashMap<group_id, count>，仅包含有成员的群组（空群组不会出现在 map 中，视为 0）
-    pub async fn batch_count_members(&self, group_ids: &[i64]) -> Result<HashMap<i64, i64>> {
-        if group_ids.is_empty() {
-            return Ok(HashMap::new());
-        }
-
-        let rows = sqlx::query!(
-            r#"
-            SELECT group_id as "group_id!", COUNT(*) as "count!"
-            FROM group_members
-            WHERE group_id = ANY($1)
-            GROUP BY group_id
-            "#,
-            group_ids
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(rows.into_iter().map(|r| (r.group_id, r.count)).collect())
-    }
-
     /// 获取群组成员数量
     pub async fn count_members(&self, group_id: i64) -> Result<i64> {
         // 先查Redis
@@ -281,16 +308,44 @@ impl GroupMemberRepository {
         Ok(count)
     }
 
+    /// 批量获取群组成员数（用于列表场景避免 N+1）
+    pub async fn batch_count_members(&self, group_ids: &[i64]) -> Result<HashMap<i64, i64>> {
+        if group_ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        let rows = sqlx::query!(
+            r#"
+            SELECT group_id, COUNT(*) as "count!"
+            FROM group_members
+            WHERE group_id = ANY($1)
+            GROUP BY group_id
+            "#,
+            group_ids
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut map = HashMap::with_capacity(rows.len());
+        for row in rows {
+            map.insert(row.group_id, row.count);
+        }
+        Ok(map)
+    }
+
     /// 列出群组成员（带用户详情）
     pub async fn list_members(
         &self,
         group_id: i64,
+        role: Option<GroupRole>,
         limit: usize,
         cursor: Option<&str>,
     ) -> Paginated<GroupMemberDetailRow> {
-        let cursor_time = cursor.and_then(|c| decode_cursor::<DateTime<Utc>>(c).ok());
+        type GroupMemberCursor = (DateTime<Utc>, i64);
+        let cursor_value = cursor.and_then(|c| decode_cursor::<GroupMemberCursor>(c).ok());
+        let role_str = role.map(|r| r.to_string());
 
-        let mut rows = if let Some(time) = cursor_time {
+        let mut rows = if let Some((joined_at, user_id)) = cursor_value {
             sqlx::query_as!(
                 GroupMemberDetailRow,
                 r#"
@@ -302,12 +357,19 @@ impl GroupMemberRepository {
                     u.user_type as "user_type: crate::types::enums::UserType"
                 FROM group_members gm
                 LEFT JOIN users u ON gm.user_id = u.user_id
-                WHERE gm.group_id = $1 AND gm.joined_at > $2
-                ORDER BY gm.joined_at ASC
-                LIMIT $3
+                WHERE gm.group_id = $1
+                  AND ($2::text IS NULL OR gm.role::text = $2)
+                  AND (
+                    gm.joined_at > $3
+                    OR (gm.joined_at = $3 AND gm.user_id > $4)
+                  )
+                ORDER BY gm.joined_at ASC, gm.user_id ASC
+                LIMIT $5
                 "#,
                 group_id,
-                time,
+                role_str.as_deref(),
+                joined_at,
+                user_id,
                 (limit + 1) as i64
             )
             .fetch_all(&self.pool)
@@ -325,10 +387,12 @@ impl GroupMemberRepository {
                 FROM group_members gm
                 LEFT JOIN users u ON gm.user_id = u.user_id
                 WHERE gm.group_id = $1
-                ORDER BY gm.joined_at ASC
-                LIMIT $2
+                  AND ($2::text IS NULL OR gm.role::text = $2)
+                ORDER BY gm.joined_at ASC, gm.user_id ASC
+                LIMIT $3
                 "#,
                 group_id,
+                role_str.as_deref(),
                 (limit + 1) as i64
             )
             .fetch_all(&self.pool)
@@ -341,7 +405,7 @@ impl GroupMemberRepository {
         }
         let next_cursor = if has_more {
             rows.last()
-                .map(|r| encode_cursor(&r.joined_at))
+                .map(|r| encode_cursor(&(r.joined_at, r.user_id)))
                 .transpose()?
         } else {
             None
@@ -360,123 +424,106 @@ impl GroupMemberRepository {
         cursor: Option<&str>,
     ) -> Paginated<GroupMemberDetailRow> {
         let keyword_pattern = format!("%{}%", keyword);
-        let cursor_time = cursor.and_then(|c| decode_cursor::<DateTime<Utc>>(c).ok());
+        let keyword_prefix_pattern = format!("{}%", keyword);
+        type GroupMemberCursor = (i32, DateTime<Utc>, i64);
+        let cursor_value = cursor.and_then(|c| decode_cursor::<GroupMemberCursor>(c).ok());
+        let (cursor_rank, cursor_joined_at, cursor_user_id) =
+            if let Some((rank, joined_at, user_id)) = cursor_value {
+                (Some(rank), Some(joined_at), Some(user_id))
+            } else {
+                (None, None, None)
+            };
         let role_str = role.map(|r| r.to_string());
 
-        let mut rows = match (cursor_time, &role_str) {
-            (Some(time), Some(r)) => {
-                sqlx::query_as!(
-                    GroupMemberDetailRow,
-                    r#"
-                    SELECT 
-                        gm.group_id, gm.user_id, gm.nickname as group_nickname, 
-                        gm.role as "role!: GroupRole", gm.is_muted, gm.muted_until, 
-                        gm.joined_at, gm.inviter_id,
-                        u.nickname as user_nickname, u.avatar_url,
-                        u.user_type as "user_type: crate::types::enums::UserType"
-                    FROM group_members gm
-                    LEFT JOIN users u ON gm.user_id = u.user_id
-                    WHERE gm.group_id = $1
-                      AND (COALESCE(u.nickname, '') ILIKE $2 OR COALESCE(gm.nickname, '') ILIKE $2)
-                      AND gm.role::text = $3
-                      AND gm.joined_at > $4
-                    ORDER BY gm.joined_at ASC
-                    LIMIT $5
-                    "#,
-                    group_id,
-                    &keyword_pattern,
-                    r.as_str(),
-                    time,
-                    (limit + 1) as i64
+        let mut rows = sqlx::query_as!(
+            GroupMemberDetailRow,
+            r#"
+            SELECT 
+                gm.group_id, gm.user_id, gm.nickname as group_nickname, 
+                gm.role as "role!: GroupRole", gm.is_muted, gm.muted_until, 
+                gm.joined_at, gm.inviter_id,
+                u.nickname as user_nickname, u.avatar_url,
+                u.user_type as "user_type: crate::types::enums::UserType"
+            FROM group_members gm
+            LEFT JOIN users u ON gm.user_id = u.user_id
+            WHERE gm.group_id = $1
+              AND (COALESCE(u.nickname, '') ILIKE $2 OR COALESCE(gm.nickname, '') ILIKE $2)
+              AND ($3::text IS NULL OR gm.role::text = $3)
+              AND (
+                $4::int4 IS NULL
+                OR (
+                  $6::timestamptz IS NOT NULL
+                  AND $7::bigint IS NOT NULL
+                  AND (
+                    (
+                      CASE
+                        WHEN COALESCE(u.nickname, '') ILIKE $5 OR COALESCE(gm.nickname, '') ILIKE $5 THEN 0
+                        ELSE 1
+                      END
+                    ) > $4
+                    OR (
+                      (
+                        CASE
+                          WHEN COALESCE(u.nickname, '') ILIKE $5 OR COALESCE(gm.nickname, '') ILIKE $5 THEN 0
+                          ELSE 1
+                        END
+                      ) = $4
+                      AND (
+                        gm.joined_at > $6
+                        OR (gm.joined_at = $6 AND gm.user_id > $7)
+                      )
+                    )
+                  )
                 )
-                .fetch_all(&self.pool)
-                .await?
-            }
-            (Some(time), None) => {
-                sqlx::query_as!(
-                    GroupMemberDetailRow,
-                    r#"
-                    SELECT 
-                        gm.group_id, gm.user_id, gm.nickname as group_nickname, 
-                        gm.role as "role!: GroupRole", gm.is_muted, gm.muted_until, 
-                        gm.joined_at, gm.inviter_id,
-                        u.nickname as user_nickname, u.avatar_url,
-                        u.user_type as "user_type: crate::types::enums::UserType"
-                    FROM group_members gm
-                    LEFT JOIN users u ON gm.user_id = u.user_id
-                    WHERE gm.group_id = $1
-                      AND (COALESCE(u.nickname, '') ILIKE $2 OR COALESCE(gm.nickname, '') ILIKE $2)
-                      AND gm.joined_at > $3
-                    ORDER BY gm.joined_at ASC
-                    LIMIT $4
-                    "#,
-                    group_id,
-                    &keyword_pattern,
-                    time,
-                    (limit + 1) as i64
-                )
-                .fetch_all(&self.pool)
-                .await?
-            }
-            (None, Some(r)) => {
-                sqlx::query_as!(
-                    GroupMemberDetailRow,
-                    r#"
-                    SELECT 
-                        gm.group_id, gm.user_id, gm.nickname as group_nickname, 
-                        gm.role as "role!: GroupRole", gm.is_muted, gm.muted_until, 
-                        gm.joined_at, gm.inviter_id,
-                        u.nickname as user_nickname, u.avatar_url,
-                        u.user_type as "user_type: crate::types::enums::UserType"
-                    FROM group_members gm
-                    LEFT JOIN users u ON gm.user_id = u.user_id
-                    WHERE gm.group_id = $1
-                      AND (COALESCE(u.nickname, '') ILIKE $2 OR COALESCE(gm.nickname, '') ILIKE $2)
-                      AND gm.role::text = $3
-                    ORDER BY gm.joined_at ASC
-                    LIMIT $4
-                    "#,
-                    group_id,
-                    &keyword_pattern,
-                    r.as_str(),
-                    (limit + 1) as i64
-                )
-                .fetch_all(&self.pool)
-                .await?
-            }
-            (None, None) => {
-                sqlx::query_as!(
-                    GroupMemberDetailRow,
-                    r#"
-                    SELECT 
-                        gm.group_id, gm.user_id, gm.nickname as group_nickname, 
-                        gm.role as "role!: GroupRole", gm.is_muted, gm.muted_until, 
-                        gm.joined_at, gm.inviter_id,
-                        u.nickname as user_nickname, u.avatar_url,
-                        u.user_type as "user_type: crate::types::enums::UserType"
-                    FROM group_members gm
-                    LEFT JOIN users u ON gm.user_id = u.user_id
-                    WHERE gm.group_id = $1
-                      AND (COALESCE(u.nickname, '') ILIKE $2 OR COALESCE(gm.nickname, '') ILIKE $2)
-                    ORDER BY gm.joined_at ASC
-                    LIMIT $3
-                    "#,
-                    group_id,
-                    &keyword_pattern,
-                    (limit + 1) as i64
-                )
-                .fetch_all(&self.pool)
-                .await?
-            }
-        };
+              )
+            ORDER BY
+              CASE
+                WHEN COALESCE(u.nickname, '') ILIKE $5 OR COALESCE(gm.nickname, '') ILIKE $5 THEN 0
+                ELSE 1
+              END ASC,
+              gm.joined_at ASC,
+              gm.user_id ASC
+            LIMIT $8
+            "#,
+            group_id,
+            &keyword_pattern,
+            role_str.as_deref(),
+            cursor_rank,
+            &keyword_prefix_pattern,
+            cursor_joined_at,
+            cursor_user_id,
+            (limit + 1) as i64
+        )
+        .fetch_all(&self.pool)
+        .await?;
 
         let has_more = rows.len() > limit;
         if has_more {
             rows.truncate(limit);
         }
+        let keyword_lower = keyword.to_lowercase();
         let next_cursor = if has_more {
             rows.last()
-                .map(|r| encode_cursor(&r.joined_at))
+                .map(|r| {
+                    let user_nickname = r
+                        .user_nickname
+                        .as_deref()
+                        .unwrap_or_default()
+                        .to_lowercase();
+                    let group_nickname = r
+                        .group_nickname
+                        .as_deref()
+                        .unwrap_or_default()
+                        .to_lowercase();
+                    let rank = if user_nickname.starts_with(&keyword_lower)
+                        || group_nickname.starts_with(&keyword_lower)
+                    {
+                        0_i32
+                    } else {
+                        1_i32
+                    };
+                    encode_cursor(&(rank, r.joined_at, r.user_id))
+                })
                 .transpose()?
         } else {
             None
@@ -492,59 +539,91 @@ impl GroupMemberRepository {
         limit: usize,
         cursor: Option<&str>,
     ) -> Paginated<UserJoinedGroupInfoRow> {
-        let cursor_time = cursor.and_then(|c| decode_cursor::<DateTime<Utc>>(c).ok());
+        type JoinedGroupCursor = (i32, DateTime<Utc>, i64);
+        let cursor_value = cursor.and_then(|c| decode_cursor::<JoinedGroupCursor>(c).ok());
 
-        let mut rows = if let Some(time) = cursor_time {
-            sqlx::query_as!(
-                UserJoinedGroupInfoRow,
-                r#"
+        let mut rows =
+            if let Some((cursor_pinned, cursor_joined_at, cursor_group_id)) = cursor_value {
+                sqlx::query_as!(
+                    UserJoinedGroupInfoRow,
+                    r#"
                 SELECT 
                     g.group_id, g.name, g.description, g.avatar_url,
                     COALESCE(gs.member_count, 0)::int as "members_count!",
                     (g.metadata->>'join_password' IS NOT NULL) as "has_password!",
+                    COALESCE(gup.is_muted, FALSE) as "is_muted!",
+                    COALESCE(gup.is_pinned, FALSE) as "is_pinned!",
                     ST_Y(g.location::geometry) as "latitude?",
                     ST_X(g.location::geometry) as "longitude?",
                     g.location_name as "location_name?",
+                    COALESCE(g.last_activity_at, gm.joined_at) as "last_activity_at!",
                     gm.joined_at
                 FROM group_members gm
                 INNER JOIN groups g ON gm.group_id = g.group_id
                 LEFT JOIN group_stats gs ON g.group_id = gs.group_id
+                LEFT JOIN group_user_preferences gup
+                  ON gup.group_id = gm.group_id AND gup.user_id = gm.user_id
                 WHERE gm.user_id = $1 AND g.dismissed_at IS NULL
-                  AND gm.joined_at > $2
-                ORDER BY gm.joined_at DESC
-                LIMIT $3
+                  AND (
+                    COALESCE(gup.is_pinned, FALSE)::int < $2
+                    OR (
+                      COALESCE(gup.is_pinned, FALSE)::int = $2
+                      AND (
+                        COALESCE(g.last_activity_at, gm.joined_at) < $3
+                        OR (
+                          COALESCE(g.last_activity_at, gm.joined_at) = $3
+                          AND g.group_id > $4
+                        )
+                      )
+                    )
+                  )
+                ORDER BY
+                    COALESCE(gup.is_pinned, FALSE) DESC,
+                    COALESCE(g.last_activity_at, gm.joined_at) DESC,
+                    g.group_id ASC
+                LIMIT $5
                 "#,
-                user_id,
-                time,
-                (limit + 1) as i64
-            )
-            .fetch_all(&self.pool)
-            .await?
-        } else {
-            sqlx::query_as!(
-                UserJoinedGroupInfoRow,
-                r#"
+                    user_id,
+                    cursor_pinned,
+                    cursor_joined_at,
+                    cursor_group_id,
+                    (limit + 1) as i64
+                )
+                .fetch_all(&self.pool)
+                .await?
+            } else {
+                sqlx::query_as!(
+                    UserJoinedGroupInfoRow,
+                    r#"
                 SELECT 
                     g.group_id, g.name, g.description, g.avatar_url,
                     COALESCE(gs.member_count, 0)::int as "members_count!",
                     (g.metadata->>'join_password' IS NOT NULL) as "has_password!",
+                    COALESCE(gup.is_muted, FALSE) as "is_muted!",
+                    COALESCE(gup.is_pinned, FALSE) as "is_pinned!",
                     ST_Y(g.location::geometry) as "latitude?",
                     ST_X(g.location::geometry) as "longitude?",
                     g.location_name as "location_name?",
+                    COALESCE(g.last_activity_at, gm.joined_at) as "last_activity_at!",
                     gm.joined_at
                 FROM group_members gm
                 INNER JOIN groups g ON gm.group_id = g.group_id
                 LEFT JOIN group_stats gs ON g.group_id = gs.group_id
+                LEFT JOIN group_user_preferences gup
+                  ON gup.group_id = gm.group_id AND gup.user_id = gm.user_id
                 WHERE gm.user_id = $1 AND g.dismissed_at IS NULL
-                ORDER BY gm.joined_at DESC
+                ORDER BY
+                    COALESCE(gup.is_pinned, FALSE) DESC,
+                    COALESCE(g.last_activity_at, gm.joined_at) DESC,
+                    g.group_id ASC
                 LIMIT $2
                 "#,
-                user_id,
-                (limit + 1) as i64
-            )
-            .fetch_all(&self.pool)
-            .await?
-        };
+                    user_id,
+                    (limit + 1) as i64
+                )
+                .fetch_all(&self.pool)
+                .await?
+            };
 
         let has_more = rows.len() > limit;
         if has_more {
@@ -552,7 +631,13 @@ impl GroupMemberRepository {
         }
         let next_cursor = if has_more {
             rows.last()
-                .map(|r| encode_cursor(&r.joined_at))
+                .map(|r| {
+                    encode_cursor(&(
+                        if r.is_pinned { 1_i32 } else { 0_i32 },
+                        r.last_activity_at,
+                        r.group_id,
+                    ))
+                })
                 .transpose()?
         } else {
             None
@@ -609,6 +694,21 @@ impl GroupMemberRepository {
         .execute(&self.pool)
         .await?;
 
+        if let Err(err) = sqlx::query!(
+            "UPDATE groups SET last_activity_at = NOW() WHERE group_id = $1",
+            group_id
+        )
+        .execute(&self.pool)
+        .await
+        {
+            warn!(
+                group_id,
+                user_id,
+                error = %err,
+                "更新群组 last_activity_at 失败（set_mute）"
+            );
+        }
+
         self.invalidate_member_cache(group_id, user_id).await;
         Ok(())
     }
@@ -620,6 +720,22 @@ impl GroupMemberRepository {
             SELECT user_id
             FROM group_members
             WHERE group_id = $1 AND role IN ('owner', 'admin')
+            "#,
+            group_id
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(|r| r.user_id).collect())
+    }
+
+    /// 列出群组中所有成员的用户ID（用于系统级广播事件）
+    pub async fn list_member_user_ids(&self, group_id: i64) -> Result<Vec<i64>> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT user_id
+            FROM group_members
+            WHERE group_id = $1
             "#,
             group_id
         )

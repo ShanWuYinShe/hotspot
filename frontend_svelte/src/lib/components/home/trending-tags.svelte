@@ -36,15 +36,20 @@
 </script>
 
 {#if tags.length > 0}
-	<section class="space-y-4">
+	<section class="space-y-4 rounded-3xl border border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-md">
 		<div class="flex items-center gap-2 px-1">
-			<Hash class="h-5 w-5 text-primary" />
+			<div class="rounded-xl border border-border/50 bg-primary/10 p-2 text-primary">
+				<Hash class="h-4 w-4" />
+			</div>
 			<h2 class="text-lg font-semibold tracking-tight">热门话题</h2>
 		</div>
 		<div class="flex flex-wrap gap-2">
 			{#each tags as tag (tag.name)}
 				<a href="/search?tag={encodeURIComponent(tag.name)}" class="group">
-					<Badge variant="secondary" class="cursor-pointer rounded-full px-3 py-1.5 text-sm transition-all hover:bg-primary/10 hover:text-primary">
+					<Badge
+						variant="secondary"
+						class="cursor-pointer rounded-2xl border border-border/50 bg-background/65 px-3 py-1.5 text-sm transition-all hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
+					>
 						#{tag.name}
 						<span class="ml-1.5 text-xs opacity-50 group-hover:opacity-100">{tag.usage_count}</span>
 					</Badge>

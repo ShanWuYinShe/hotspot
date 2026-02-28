@@ -65,23 +65,28 @@ export struct LoginPromptView {
       // 按钮区
       Column({ space: 12 }) {
         Button('快速体验（无需注册）')
-          .type(ButtonType.Capsule)
+          .type(ButtonType.Normal)
           .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
           .fontColor(Color.White)
           .fontSize(DesignConstants.FONT.SIZE.LG)
+          .borderRadius(DesignConstants.RADIUS.XXL)
           .width('75%')
           .height(44)
+          .shadow(DesignConstants.SHADOW.SMALL)
           .onClick(() => {
             this.showQuickStart = true;
           })
 
         Button('登录 / 注册')
-          .type(ButtonType.Capsule)
-          .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+          .type(ButtonType.Normal)
+          .backgroundColor($r('app.color.bg_secondary'))
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .fontSize(DesignConstants.FONT.SIZE.LG)
+          .borderRadius(DesignConstants.RADIUS.XXL)
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
           .width('75%')
           .height(44)
+          .shadow(DesignConstants.SHADOW.SMALL)
           .onClick(() => {
             this.navigateToLogin();
           })
@@ -126,18 +131,21 @@ export struct LoginPromptView {
       TextInput({ placeholder: '请输入你的昵称' })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
-        .borderRadius(DesignConstants.RADIUS.LG)
+        .backgroundColor($r('app.color.bg_tertiary'))
+        .borderRadius(DesignConstants.RADIUS.XL)
+        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
         .enabled(!this.isQuickStarting)
         .onChange((value: string) => { this.quickNickname = value; })
 
       Button(this.isQuickStarting ? '正在创建...' : '开始体验')
-        .type(ButtonType.Capsule)
+        .type(ButtonType.Normal)
         .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
         .fontColor(Color.White)
         .fontSize(DesignConstants.FONT.SIZE.LG)
+        .borderRadius(DesignConstants.RADIUS.XXL)
         .width('100%')
         .height(48)
+        .shadow(DesignConstants.SHADOW.SMALL)
         .enabled(!this.isQuickStarting)
         .opacity(this.isQuickStarting ? 0.6 : 1.0)
         .onClick(() => this.startQuickExperience())
@@ -154,6 +162,10 @@ export struct LoginPromptView {
       top: DesignConstants.SPACING.LG,
       bottom: DesignConstants.SPACING.XXL
     })
+    .backgroundColor($r('app.color.bg_secondary'))
+    .borderRadius(DesignConstants.RADIUS.XXL)
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .shadow(DesignConstants.SHADOW.SMALL)
   }
 
   private async startQuickExperience(): Promise<void> {

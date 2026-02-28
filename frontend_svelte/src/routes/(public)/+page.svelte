@@ -170,7 +170,7 @@
 	<title>HotSpot - 发现附近的精彩</title>
 </svelte:head>
 
-<div class="space-y-12">
+<div class="space-y-10">
 	{#if !authStore.isAuthenticated}
 		<!-- Hero section for guests -->
 		<section class="relative overflow-hidden rounded-3xl bg-linear-to-br from-primary/10 via-primary/15 to-secondary/10 p-8 shadow-xl shadow-primary/10 ring-1 ring-primary/10 md:p-16">
@@ -179,7 +179,7 @@
 			<div class="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-secondary/10 blur-3xl"></div>
 			
 			<div class="relative mx-auto max-w-3xl text-center">
-				<div class="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary backdrop-blur-sm">
+				<div class="mb-6 inline-flex items-center gap-2 rounded-2xl bg-primary/10 px-4 py-2 text-sm font-medium text-primary backdrop-blur-sm">
 					<Sparkles class="h-4 w-4" />
 					基于位置的社交平台
 				</div>
@@ -193,11 +193,11 @@
 					开始探索你的世界吧！
 				</p>
 				<div class="flex flex-col gap-4 sm:flex-row sm:justify-center">
-					<Button size="lg" class="gap-2 rounded-full px-8 shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30" onclick={handleGetStarted}>
+					<Button size="lg" class="gap-2 rounded-2xl px-8 shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30" onclick={handleGetStarted}>
 						立即开始
 						<ArrowRight class="h-4 w-4" />
 					</Button>
-					<Button size="lg" variant="outline" class="rounded-full px-8" onclick={handleExplore}>
+					<Button size="lg" variant="outline" class="rounded-2xl px-8" onclick={handleExplore}>
 						先逛逛看
 					</Button>
 				</div>
@@ -207,19 +207,21 @@
 		{#if showExplore}
 			<!-- Explore Content (Trending + Feed) -->
 			<div class="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-				<div class="flex items-center justify-between">
+				<div class="rounded-3xl border border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-md">
+					<div class="flex items-center justify-between">
 					<div class="space-y-1">
 						<h2 class="text-2xl font-bold tracking-tight">探索发现</h2>
 						<p class="text-muted-foreground">发现附近的精彩人与事</p>
 					</div>
-					<Button variant="ghost" size="icon" class="rounded-full" onclick={refreshAll} aria-label="刷新">
+					<Button variant="ghost" size="icon" class="rounded-2xl" onclick={refreshAll} aria-label="刷新">
 						<RefreshCw class="h-4 w-4 {feed.loading ? 'animate-spin' : ''}" />
 					</Button>
+				</div>
 				</div>
 
 				<!-- Trending Topics -->
 				{#if !loadingTags && trendingTags.length > 0}
-					<section class="space-y-4">
+					<section class="space-y-4 rounded-3xl border border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-md">
 						<div class="flex items-center gap-2 px-1">
 							<Hash class="h-5 w-5 text-primary" />
 							<h3 class="text-lg font-semibold tracking-tight">热门话题</h3>
@@ -227,7 +229,10 @@
 						<div class="flex flex-wrap gap-2">
 							{#each trendingTags as tag (tag.name)}
 								<a href="/search?tag={encodeURIComponent(tag.name)}" class="group">
-									<Badge variant="secondary" class="cursor-pointer rounded-full px-3 py-1.5 text-sm transition-all hover:bg-primary/10 hover:text-primary">
+									<Badge
+										variant="secondary"
+										class="cursor-pointer rounded-2xl border border-border/50 bg-background/65 px-3 py-1.5 text-sm transition-all hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
+									>
 										#{tag.name}
 										<span class="ml-1.5 text-xs opacity-50 group-hover:opacity-100">{tag.usage_count}</span>
 									</Badge>
@@ -238,7 +243,7 @@
 				{/if}
 
 				<!-- Moments Feed -->
-				<section class="space-y-6">
+				<section class="space-y-6 rounded-3xl border border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-md">
 					<div class="flex items-center justify-between px-1">
 						<div class="flex items-center gap-2">
 							<Sparkles class="h-5 w-5 text-primary" />
@@ -272,7 +277,10 @@
 						<div class="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
 							{#each feed.items as moment (moment.moment_id)}
 								<div class="mb-3 break-inside-avoid">
-									<MomentCard {moment} />
+									<MomentCard
+										{moment}
+										class="border-border/60 bg-card/95 shadow-md shadow-black/5 dark:shadow-black/30"
+									/>
 								</div>
 							{/each}
 						</div>
@@ -311,7 +319,7 @@
 		{/if}
 
 		<!-- Stats section -->
-		<section class="rounded-2xl bg-linear-to-r from-primary/5 to-secondary/5 p-8 md:p-12">
+			<section class="rounded-3xl border border-border/60 bg-linear-to-r from-primary/5 to-secondary/5 p-8 shadow-sm md:p-12">
 			<div class="grid gap-8 text-center sm:grid-cols-3">
 				<div>
 					<div class="mb-2 text-3xl font-bold text-primary md:text-4xl">10K+</div>
@@ -339,7 +347,7 @@
 						</h1>
 						<p class="text-muted-foreground">发现附近的精彩内容</p>
 					</div>
-					<Button variant="ghost" size="icon" class="rounded-full" onclick={refreshAll} disabled={feed.loading} aria-label="刷新">
+					<Button variant="ghost" size="icon" class="rounded-2xl" onclick={refreshAll} disabled={feed.loading} aria-label="刷新">
 						<RefreshCw class="h-4 w-4 {feed.loading ? 'animate-spin' : ''}" />
 					</Button>
 				</div>
@@ -358,10 +366,12 @@
 
 			<!-- Moments Feed -->
 			<section class="space-y-6">
-				<div class="flex items-center justify-between px-1">
+				<div class="rounded-3xl border border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-md">
+					<div class="flex items-center justify-between px-1">
 					<div class="flex items-center gap-2">
 						<Sparkles class="h-5 w-5 text-primary" />
 						<h2 class="text-lg font-semibold tracking-tight">推荐动态</h2>
+					</div>
 					</div>
 				</div>
 
@@ -369,7 +379,7 @@
 					<div class="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
 						{#each Array(6) as _, i (i)}
 							<div class="mb-3 break-inside-avoid">
-								<Card class="border-0 bg-card/50">
+								<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 									<CardContent class="space-y-3 p-4">
 										<div class="flex items-center gap-3">
 											<Skeleton class="h-10 w-10 rounded-full" />
@@ -398,14 +408,17 @@
 					<div class="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
 						{#each feed.items as moment (moment.moment_id)}
 							<div class="mb-3 break-inside-avoid">
-								<MomentCard {moment} />
+								<MomentCard
+									{moment}
+									class="border-border/60 bg-card/95 shadow-md shadow-black/5 dark:shadow-black/30"
+								/>
 							</div>
 						{/each}
 					</div>
 					
 					{#if feed.hasMore}
 						<div class="flex justify-center pt-4">
-							<Button variant="outline" class="rounded-full px-8" onclick={() => loadFeed(false)} disabled={feed.loadingMore}>
+							<Button variant="outline" class="rounded-2xl px-8" onclick={() => loadFeed(false)} disabled={feed.loadingMore}>
 								{#if feed.loadingMore}
 									<RefreshCw class="mr-2 h-4 w-4 animate-spin" />
 									加载中...

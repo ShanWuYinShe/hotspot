@@ -55,6 +55,17 @@ interface ImageDimensions {
 }
 
 export class MediaServiceManager {
+  private static normalizeUriToFilePath(context: common.Context, uri: string): string {
+    if (uri.startsWith('internal://cache/')) {
+      const cacheRelativePath = uri.substring('internal://cache/'.length);
+      return `${context.cacheDir}/${cacheRelativePath}`;
+    }
+    if (uri.startsWith('file://')) {
+      return uri.substring('file://'.length);
+    }
+    return uri;
+  }
+
   /**
    * 请求媒体相关权限
    * @param context UIAbilityContext
@@ -279,7 +290,8 @@ export class MediaServiceManager {
   public static async compressImage(context: common.Context, uri: string, quality: number = 80, maxSize?: number): Promise<string> {
     try {
       // 1. 创建 ImageSource
-      const file = fileIo.openSync(uri, fileIo.OpenMode.READ_ONLY);
+      const sourcePath = MediaServiceManager.normalizeUriToFilePath(context, uri);
+      const file = fileIo.openSync(sourcePath, fileIo.OpenMode.READ_ONLY);
       const imageSource = image.createImageSource(file.fd);
       
       // 2. 创建 ImagePacker
@@ -324,39 +336,56 @@ export class MediaServiceManager {
 
   /**
    * 准备文件用于上传
-   * 将文件复制到 cache 目录，并返回 internal:// 协议的 URI
-   * 供 request.uploadFile 使用
+   * 将文件复制到 cache 目录，并返回可直接读取的本地路径
    */
   public static async prepareFileForUpload(context: common.Context, uri: string): Promise<string> {
+    let srcFile: fileIo.File | null = null;
+    let destFile: fileIo.File | null = null;
     try {
+      const sourcePath = MediaServiceManager.normalizeUriToFilePath(context, uri);
       const cacheDir = context.cacheDir;
       const fileName = `upload_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
       let extension = 'tmp';
+      const lowerSourcePath = sourcePath.toLowerCase();
       
       // 简单推断扩展名
-      if (uri.endsWith('.jpg') || uri.endsWith('.jpeg')) extension = 'jpg';
-      else if (uri.endsWith('.png')) extension = 'png';
-      else if (uri.endsWith('.mp4')) extension = 'mp4';
-      else if (uri.endsWith('.m4a')) extension = 'm4a';
+      if (lowerSourcePath.endsWith('.jpg') || lowerSourcePath.endsWith('.jpeg')) extension = 'jpg';
+      else if (lowerSourcePath.endsWith('.png')) extension = 'png';
+      else if (lowerSourcePath.endsWith('.gif')) extension = 'gif';
+      else if (lowerSourcePath.endsWith('.webp')) extension = 'webp';
+      else if (lowerSourcePath.endsWith('.mp4')) extension = 'mp4';
+      else if (lowerSourcePath.endsWith('.mov')) extension = 'mov';
+      else if (lowerSourcePath.endsWith('.m4a')) extension = 'm4a';
+      else if (lowerSourcePath.endsWith('.aac')) extension = 'aac';
+      else if (lowerSourcePath.endsWith('.ogg')) extension = 'ogg';
       
       const internalFileName = `${fileName}.${extension}`;
       const internalFilePath = `${cacheDir}/${internalFileName}`;
       
-      const srcFile = fileIo.openSync(uri, fileIo.OpenMode.READ_ONLY);
-      const destFile = fileIo.openSync(internalFilePath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC);
+      srcFile = fileIo.openSync(sourcePath, fileIo.OpenMode.READ_ONLY);
+      destFile = fileIo.openSync(internalFilePath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC);
       
       fileIo.copyFileSync(srcFile.fd, destFile.fd);
-      
-      fileIo.closeSync(srcFile);
-      fileIo.closeSync(destFile);
-      
+
       hilog.info(DOMAIN, TAG, `文件已准备好上传: ${internalFilePath}`);
       
-      // 返回 internal:// 协议路径
-      return `internal://cache/${internalFileName}`;
+      return internalFilePath;
     } catch (error) {
       hilog.error(DOMAIN, TAG, `准备上传文件失败: ${JSON.stringify(error)}`);
       throw (error instanceof Error) ? error : new Error(String(error));
+    } finally {
+      if (srcFile) {
+        try {
+          fileIo.closeSync(srcFile);
+        } catch (_) {
+        }
+      }
+      if (destFile) {
+        try {
+          fileIo.closeSync(destFile);
+        } catch (_) {
+        }
+      }
     }
   }
 
@@ -366,27 +395,21 @@ export class MediaServiceManager {
    */
   private static async getImageInfo(uri: string): Promise<ImageDimensions> {
     try {
-      let fd: number;
-      // 检查是否是 file:// 路径还是直接路径
+      // file:// 走 openSync，datashare 等 URI 直接走 ImageSource(uri)
       if (uri.startsWith('file://')) {
-         const file = fileIo.openSync(uri, fileIo.OpenMode.READ_ONLY);
-         fd = file.fd;
+         const readablePath = uri.substring('file://'.length);
+         const file = fileIo.openSync(readablePath, fileIo.OpenMode.READ_ONLY);
+         const imageSource = image.createImageSource(file.fd);
+         const info = await imageSource.getImageInfo();
+         imageSource.release();
+         fileIo.closeSync(file);
+         return { width: info.size.width, height: info.size.height };
       } else {
-         // 可能是 datashare 路径，ImageSource 支持直接通过 URI 创建
-         // 但为了稳妥，我们尝试直接传 uri
          const imageSource = image.createImageSource(uri);
          const info = await imageSource.getImageInfo();
          imageSource.release();
          return { width: info.size.width, height: info.size.height };
       }
-      
-      const imageSource = image.createImageSource(fd);
-      const info = await imageSource.getImageInfo();
-      imageSource.release();
-      // 不要忘记关闭 fd，如果是在这里打开的
-      // fileIo.closeSync(fd); 
-      // 上面逻辑有瑕疵，重新整理：
-      return { width: info.size.width, height: info.size.height };
     } catch (error) {
       return { width: 0, height: 0 };
     }

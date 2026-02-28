@@ -129,11 +129,9 @@ pub async fn register(
     Json(req): Json<RegisterRequest>,
 ) -> Result<impl IntoResponse> {
     // 参数验证
-    Validator::validate_not_empty(&req.login_id, "登录ID")?;
-    Validator::validate_not_empty(&req.nickname, "昵称")?;
-    Validator::validate_length(&req.nickname, "昵称", 1, 100)?;
-    Validator::validate_not_empty(&req.password, "密码")?;
-    Validator::validate_length(&req.password, "密码", 8, 128)?;
+    Validator::validate_login_id(&req.login_id)?;
+    Validator::validate_nickname(&req.nickname)?;
+    Validator::validate_password(&req.password, "密码")?;
 
     let user_agent = headers
         .get(axum::http::header::USER_AGENT)
@@ -167,8 +165,8 @@ pub async fn login(
     Json(req): Json<LoginRequest>,
 ) -> Result<impl IntoResponse> {
     // 参数验证
-    Validator::validate_not_empty(&req.login_id, "登录ID")?;
-    Validator::validate_not_empty(&req.password, "密码")?;
+    Validator::validate_login_id(&req.login_id)?;
+    Validator::validate_password(&req.password, "密码")?;
 
     let user_agent = headers
         .get(axum::http::header::USER_AGENT)
@@ -202,8 +200,7 @@ pub async fn create_guest(
     Json(req): Json<GuestRequest>,
 ) -> Result<impl IntoResponse> {
     // 参数验证
-    Validator::validate_not_empty(&req.nickname, "昵称")?;
-    Validator::validate_length(&req.nickname, "昵称", 1, 100)?;
+    Validator::validate_nickname(&req.nickname)?;
 
     let user_agent = headers
         .get(axum::http::header::USER_AGENT)
@@ -261,7 +258,10 @@ pub async fn refresh_token(
     let refresh_token_raw = match client_type {
         ClientType::App => req
             .refresh_token
-            .ok_or_else(|| AppError::BadRequest("app 场景必须提供 refresh_token".to_string()))?,
+            .as_deref()
+            .filter(|token| !token.trim().is_empty())
+            .ok_or_else(|| AppError::BadRequest("app 场景必须提供 refresh_token".to_string()))?
+            .to_string(),
         ClientType::Web => {
             if req.refresh_token.is_some() {
                 return Err(AppError::BadRequest(
@@ -319,7 +319,7 @@ pub async fn request_password_reset(
     Json(req): Json<RequestPasswordResetRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     // 参数验证
-    Validator::validate_not_empty(&req.login_id, "登录ID")?;
+    Validator::validate_login_id(&req.login_id)?;
 
     state.auth_service.request_password_reset(&req).await?;
     Ok(Json(ApiResponse::success_empty()))
@@ -331,10 +331,9 @@ pub async fn reset_password(
     Json(req): Json<ResetPasswordRequest>,
 ) -> Result<impl IntoResponse> {
     // 参数验证
-    Validator::validate_not_empty(&req.login_id, "登录ID")?;
+    Validator::validate_login_id(&req.login_id)?;
     Validator::validate_not_empty(&req.verification_code, "验证码")?;
-    Validator::validate_not_empty(&req.new_password, "新密码")?;
-    Validator::validate_length(&req.new_password, "新密码", 8, 128)?;
+    Validator::validate_password(&req.new_password, "新密码")?;
 
     let user_agent = headers
         .get(axum::http::header::USER_AGENT)
@@ -381,6 +380,8 @@ pub async fn change_password(
 ) -> Result<Json<ApiResponse<()>>> {
     // CSRF 校验（Web 端敏感操作）
     validate_csrf_if_web(&headers)?;
+    Validator::validate_not_empty(&req.old_password, "原密码")?;
+    Validator::validate_password(&req.new_password, "新密码")?;
 
     let session_id = user
         .session_id

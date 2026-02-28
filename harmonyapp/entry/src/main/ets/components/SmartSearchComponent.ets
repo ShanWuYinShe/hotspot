@@ -264,7 +264,7 @@ export struct SmartSearchComponent {
       .backgroundColor(this.currentFilter === filter
         ? $r('app.color.chip_selected_bg')
         : Color.Transparent)
-      .borderRadius(DesignConstants.RADIUS.FULL)
+      .borderRadius(DesignConstants.RADIUS.XL)
       .padding({ left: 2, right: 2 })
       .onClick(() => {
         this.switchFilter(filter as 'all' | 'users' | 'groups' | 'moments');
@@ -308,7 +308,7 @@ export struct SmartSearchComponent {
         .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
           bottom: DesignConstants.SPACING.SM })
         .backgroundColor($r('app.color.bg_tertiary'))
-        .borderRadius(DesignConstants.RADIUS.FULL)
+        .borderRadius(DesignConstants.RADIUS.XL)
         .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
       }
 
@@ -410,6 +410,7 @@ export struct SmartSearchComponent {
         .layoutWeight(1)
         .backgroundColor($r('app.color.bg_secondary'))
         .borderRadius({ topLeft: 12, topRight: 12 })
+        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
         .shadow({
           radius: 8,
           color: $r('app.color.color_shadow'),

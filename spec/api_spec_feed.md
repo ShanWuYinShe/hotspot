@@ -55,19 +55,19 @@ type FeedSource = 'following' | 'nearby' | 'all';
 interface GetFeedMomentsRequest {
   source: FeedSource;
   radius?: number;  // 位置范围（米），100-50000，可由 AppConfig.limits.search_radius_max 覆盖
-  reference_point: GeoPoint; // 浏览锚点位置
+  reference_point: GeoPoint; // 浏览锚点位置（必填；拒绝定位时使用 ClientConfig.defaults.default_location.point）
   pagination?: PaginationParams;
 }
 ```
 
-**半径默认值**：未提供 `radius` 时默认使用 `5_000` 米（5 km）作为搜索范围（Feed 侧重附近内容密度，使用比搜索建议的 10 km 更小的范围）；服务端仍按 `AppConfig.limits.search_radius_max` 上限裁剪。
+**半径默认值**：未提供 `radius` 时默认使用 `5_000` 米（5 km）作为搜索范围；服务端仍按 `AppConfig.limits.search_radius_max` 上限裁剪。
 
 **Response**: `ApiResponse<PaginatedData<MomentItem>>`
 
 **来源说明**：
 - `following`：仅关注的人发布的瞬间，按时间倒序（需要 `reference_point`，用于 `MomentItem.location` 的距离/方位计算）
 - `nearby`：附近范围内的瞬间，按距离和热度排序（需要 reference_point）
-- `all`：综合推荐（默认），混合关注动态、附近热门、个性化推荐（需要 reference_point）
+- `all`：综合推荐，混合关注动态、附近热门、个性化推荐（需要 reference_point）
 
 **错误码**: `10000`
 
@@ -88,12 +88,12 @@ interface GetFeedMomentsRequest {
 ```typescript
 interface GetFeedGroupsRequest {
   radius?: number;  // 位置范围（米），100-50000，可由 AppConfig.limits.search_radius_max 覆盖
-  reference_point: GeoPoint; // 浏览锚点位置
+  reference_point: GeoPoint; // 浏览锚点位置（必填；拒绝定位时使用 ClientConfig.defaults.default_location.point）
   pagination?: PaginationParams;
 }
 ```
 
-**半径默认值**：未提供 `radius` 时默认使用 `5_000` 米（5 km），并受 `AppConfig.limits.search_radius_max` 限制。
+**半径默认值**：未提供 `radius` 时默认使用 `5_000` 米（5 km），并受 `AppConfig.limits.search_radius_max` 上限约束。
 
 **Response**: `ApiResponse<PaginatedData<GroupItem>>`
 
@@ -116,12 +116,12 @@ interface GetFeedGroupsRequest {
 ```typescript
 interface GetFeedUsersRequest {
   radius?: number;  // 位置范围（米），100-50000，可由 AppConfig.limits.search_radius_max 覆盖
-  reference_point: GeoPoint; // 浏览锚点位置
+  reference_point: GeoPoint; // 浏览锚点位置（必填；拒绝定位时使用 ClientConfig.defaults.default_location.point）
   pagination?: PaginationParams;
 }
 ```
 
-**半径默认值**：未提供 `radius` 时默认使用 `5_000` 米（5 km），并受 `AppConfig.limits.search_radius_max` 约束。
+**半径默认值**：未提供 `radius` 时默认使用 `5_000` 米（5 km），并受 `AppConfig.limits.search_radius_max` 上限约束。
 
 **Response**: `ApiResponse<PaginatedData<UserItem>>`
 

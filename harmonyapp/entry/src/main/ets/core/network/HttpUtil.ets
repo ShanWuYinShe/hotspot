@@ -62,8 +62,54 @@ const MUST_IDEMPOTENT_ENDPOINTS: string[] = [
   ApiEndpoints.UPLOAD.COMPLETE_UPLOAD,
 ];
 
+/**
+ * token_optional 端点列表
+ * 当携带过期/无效 token 调用这些接口时，允许降级为匿名重试一次，避免“可选认证接口被强制报错”
+ */
+const TOKEN_OPTIONAL_ENDPOINTS: string[] = [
+  ApiEndpoints.AUTH.CHECK_STATUS,
+  ApiEndpoints.SEARCH.SUGGEST,
+  ApiEndpoints.USER.SEARCH,
+  ApiEndpoints.USER.OPEN_THE_DOOR,
+  ApiEndpoints.USER.LIST_FRIENDS,
+  ApiEndpoints.USER.LIST_FOLLOWING,
+  ApiEndpoints.USER.LIST_FOLLOWERS,
+  ApiEndpoints.USER.LIST_GROUPS,
+  ApiEndpoints.USER.LIST_MOMENTS,
+  ApiEndpoints.USER.LIST_LIKED_MOMENTS,
+  ApiEndpoints.GROUP.SEARCH,
+  ApiEndpoints.GROUP.OPEN_THE_DOOR,
+  ApiEndpoints.GROUP.MEMBERS.LIST,
+  ApiEndpoints.GROUP.MEMBERS.SEARCH,
+  ApiEndpoints.GROUP.ANNOUNCEMENTS.LIST,
+  ApiEndpoints.MOMENT.SEARCH,
+  ApiEndpoints.MOMENT.OPEN_THE_DOOR,
+  ApiEndpoints.MOMENT.LIST_LIKES,
+  ApiEndpoints.COMMENT.LIST,
+  ApiEndpoints.COMMENT.LIST_REPLIES,
+  ApiEndpoints.COMMENT.LIST_LIKES,
+  ApiEndpoints.SHARE.GET,
+  ApiEndpoints.FEED.LIST_TRENDING,
+  ApiEndpoints.MAP.RENDER,
+];
+
 const DOMAIN_NUMBER: number = 0xFF08;
 const TAG: string = 'HttpUtil';
+const IDEMPOTENCY_CLIENT_ID: string = util.generateRandomUUID(false).split('-').join('').substring(0, 8);
+const IDEMPOTENCY_KEY_CONFLICT_CODE = 22000;
+const IDEMPOTENCY_CACHE_EXPIRED_CODE = 22001;
+const IDEMPOTENCY_IN_PROGRESS_CODE = 22002;
+const MAX_IDEMPOTENCY_RETRY_COUNT = 1;
+
+/**
+ * 生成 spec 要求格式的幂等键：
+ * {client_id}-{timestamp_ms}-{random}，长度 32-64，字符集 [a-zA-Z0-9-_]
+ */
+function generateIdempotencyKey(): string {
+  const timestampMs = Date.now().toString();
+  const randomPart = util.generateRandomUUID(false).split('-').join('').substring(0, 12);
+  return `${IDEMPOTENCY_CLIENT_ID}-${timestampMs}-${randomPart}`;
+}
 
 interface DebugInfo {
   baseUrl: string;
@@ -79,6 +125,10 @@ function isApiResponse(v: Object): boolean {
   if (!isRecord(v)) return false;
   const record = v as Record<string, Object>;
   return typeof record.code === 'number';
+}
+
+function isTokenOptionalEndpoint(url: string): boolean {
+  return TOKEN_OPTIONAL_ENDPOINTS.includes(url);
 }
 
 
@@ -252,23 +302,29 @@ export class HttpUtil {
     }
   }
 
-  private static async buildHeaders(url?: string): Promise<Record<string, string>> {
+  private static async buildHeaders(
+    url?: string,
+    forcedIdempotencyKey: string = '',
+    omitAuthHeader: boolean = false
+  ): Promise<Record<string, string>> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json'
     };
 
-    try {
-      const token = await HttpUtil.getToken();
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+    if (!omitAuthHeader) {
+      try {
+        const token = await HttpUtil.getToken();
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      } catch (error) {
+        hilog.warn(DOMAIN_NUMBER, TAG, `获取令牌失败，使用无认证请求: ${error}`);
       }
-    } catch (error) {
-      hilog.warn(DOMAIN_NUMBER, TAG, `获取令牌失败，使用无认证请求: ${error}`);
     }
 
     // 自动为 MUST 幂等端点注入 Idempotency-Key
     if (url && MUST_IDEMPOTENT_ENDPOINTS.includes(url)) {
-      headers['Idempotency-Key'] = util.generateRandomUUID(false);
+      headers['Idempotency-Key'] = forcedIdempotencyKey || generateIdempotencyKey();
     }
 
     return headers;
@@ -285,7 +341,10 @@ export class HttpUtil {
     url: string,
     method: http.RequestMethod = http.RequestMethod.POST,
     data?: TRequest,
-    retried: boolean = false
+    retried: boolean = false,
+    forcedIdempotencyKey: string = '',
+    idempotencyRetryCount: number = 0,
+    omitAuthHeader: boolean = false
   ): Promise<TResponse> {
     const baseUrl = await HttpUtil.getBaseUrl();
     const fullUrl = `${baseUrl}${url}`;
@@ -295,15 +354,19 @@ export class HttpUtil {
     hilog.info(DOMAIN_NUMBER, TAG, `HTTP请求: ${method} ${fullUrl}`);
 
     try {
-      const tokenForRetryCheck = await HttpUtil.getToken();
-      const hasAuthHeader = !!tokenForRetryCheck;
+      const tokenForRetryCheck = omitAuthHeader ? '' : await HttpUtil.getToken();
+      const hasAuthHeader = !omitAuthHeader && !!tokenForRetryCheck;
 
       // 主动刷新：如果 token 即将过期，先刷新再发请求
       if (hasAuthHeader && !retried) {
         await HttpUtil.proactiveRefreshIfNeeded();
       }
 
-      const headers = await HttpUtil.buildHeaders(url);
+      const isMustIdempotentEndpoint = MUST_IDEMPOTENT_ENDPOINTS.includes(url);
+      const currentIdempotencyKey = isMustIdempotentEndpoint
+        ? (forcedIdempotencyKey || generateIdempotencyKey())
+        : '';
+      const headers = await HttpUtil.buildHeaders(url, currentIdempotencyKey, omitAuthHeader);
       const requestOptions: http.HttpRequestOptions = {
         method,
         header: headers,
@@ -345,10 +408,62 @@ export class HttpUtil {
         hilog.info(DOMAIN_NUMBER, TAG, '收到 10100 认证失败，尝试刷新 token');
         const refreshed = await HttpUtil.ensureRefreshToken();
         if (refreshed) {
-          return await HttpUtil.request<TResponse, TRequest>(url, method, data, true);
+          return await HttpUtil.request<TResponse, TRequest>(
+            url,
+            method,
+            data,
+            true,
+            currentIdempotencyKey,
+            idempotencyRetryCount,
+            omitAuthHeader
+          );
         }
         // 刷新失败：ensureRefreshToken 内部已清除认证状态
         hilog.warn(DOMAIN_NUMBER, TAG, '令牌刷新失败，已强制登出');
+      }
+
+      // token_optional 端点：若认证失败且本次携带了 Authorization，则匿名降级重试一次
+      if (isAuthErrorCode(resultCode) && hasAuthHeader && isTokenOptionalEndpoint(url) && !omitAuthHeader) {
+        hilog.info(DOMAIN_NUMBER, TAG, `token_optional 端点认证失败，匿名降级重试: ${url}`);
+        return await HttpUtil.request<TResponse, TRequest>(
+          url,
+          method,
+          data,
+          true,
+          currentIdempotencyKey,
+          idempotencyRetryCount,
+          true
+        );
+      }
+
+      // 幂等错误自动重试（仅 MUST 幂等端点）
+      if (isMustIdempotentEndpoint && idempotencyRetryCount < MAX_IDEMPOTENCY_RETRY_COUNT) {
+        if (resultCode === IDEMPOTENCY_IN_PROGRESS_CODE) {
+          await new Promise<void>((resolve) => setTimeout(resolve, 1200));
+          return await HttpUtil.request<TResponse, TRequest>(
+            url,
+            method,
+            data,
+            retried,
+            currentIdempotencyKey,
+            idempotencyRetryCount + 1,
+            omitAuthHeader
+          );
+        }
+        if (
+          resultCode === IDEMPOTENCY_KEY_CONFLICT_CODE ||
+          resultCode === IDEMPOTENCY_CACHE_EXPIRED_CODE
+        ) {
+          return await HttpUtil.request<TResponse, TRequest>(
+            url,
+            method,
+            data,
+            retried,
+            generateIdempotencyKey(),
+            idempotencyRetryCount + 1,
+            omitAuthHeader
+          );
+        }
       }
 
       // 其他业务错误

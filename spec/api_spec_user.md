@@ -74,24 +74,24 @@ alwaysApply: false
 - **幂等**: 无
 - **排序**: 
   - 默认 `sort_by='relevance'`：按相关性优先排序，同分时以最近活跃时间做稳定 tie-breaker
-  - `sort_by='distance'`：按距离由近到远排序（需要 `radius`，未提供时返回 `10000`），距离相近时体现关键词相关性
+  - `sort_by='distance'`：按距离由近到远排序（未提供 `radius` 时按默认 `5_000` 米计算），距离相近时体现关键词相关性
   - `sort_by='newest'`：按注册时间倒序
   - **稳定 tie-breaker**：任意排序模式下，当主序字段和次序均相同时，以 `user_id ASC` 作为最终稳定排序，保证游标分页一致性
   - 一致性级别为弱一致（搜索场景允许短暂延迟；同一 `cursor` 会话内保持排序基准一致，跨会话允许排序轻微波动）
-
-**后端实现说明**：使用 PostgreSQL 的 `($param IS NULL OR condition)` 模式处理可选参数，单条静态 SQL 即可覆盖所有搜索组合，无需 if-else 分支。
 
 **Request**: `SearchUsersRequest`
 ```typescript
 interface SearchUsersRequest {
   keyword?: string;    // 关键字搜索（匹配昵称、bio 等）
   tag?: string;        // 标签筛选
-  radius?: number;     // 位置范围（米），100-50000，配合 reference_point 使用；未提供时不限定地理范围（仅按其他条件匹配）
+  radius?: number;     // 位置范围（米），100-50000，配合 reference_point 使用；未提供时默认 5_000 米，并受 AppConfig.limits.search_radius_max 上限约束
   sort_by?: 'relevance' | 'distance' | 'newest';  // 默认: relevance（有意不提供 popular：用户无明确的公开热度指标，与 moments/groups 不同）
-  reference_point: GeoPoint; // 浏览锚点位置（客户端必须传入有效坐标，拒绝定位时使用 fallback）
+  reference_point: GeoPoint; // 浏览锚点位置（必填；拒绝定位时使用 ClientConfig.defaults.default_location.point）
   pagination?: PaginationParams;
 }
 // 至少提供 keyword、tag、radius 中的一个；不满足时返回 10000（参数错误）
+// reference_point 不算搜索条件，仅用于距离计算和排序，不能单独作为搜索条件
+// 当仅缺省 radius 且提供了 keyword/tag 时，服务端按默认 5_000 米计算，并受 AppConfig.limits.search_radius_max 上限约束
 ```
 
 **Response**: `ApiResponse<PaginatedData<UserItem>>`
@@ -254,7 +254,7 @@ interface UserGroupsRequest {
 
 获取指定用户生活瞬间历史。
 
-**说明**：生活瞬间支持 `privacy_level` 控制可见性（`public` / `private`）。未登录用户仅能访问 `public` 的瞬间；登录用户可额外看到自己的所有瞬间（包括 `private`）。认证可选，字段可见性规则见 `@spec/api_spec_base.md`。
+**说明**：生活瞬间支持 `privacy_level` 控制可见性（`public` / `private`）。未登录用户仅能访问 `public` 的瞬间；登录态可额外看到自己的所有瞬间（包括 `private`）。认证可选，字段可见性规则见 `@spec/api_spec_base.md`。
 
 - **认证**: 可选
 - **幂等**: 无
@@ -323,7 +323,7 @@ interface MyProfile {
   gender?: Gender;
   email?: string;               // 通过 users/me/email/request_change + confirm_change 变更
   phone?: string;               // 通过 users/me/phone/request_change + confirm_change 变更
-  location: Location;  // 直接映射自请求，不经过距离/角度计算
+  location: Location;  // 存储的原始位置，不含 distance/bearing_degrees（与 RelativeLocation 不同）
   presence_status: UserPresenceStatus;
   last_online: string;
   created_at: string;
@@ -340,7 +340,7 @@ interface MyProfile {
 更新用户资料。
 
 - **认证**: 必须
-- **幂等**: 幂等语义操作，重复请求返回一致结果
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `UpdateProfileRequest`
 ```typescript
@@ -353,6 +353,8 @@ interface UpdateProfileRequest {
 }
 ```
 
+**Patch 语义**：未传字段保持不变；`tags: []` 表示清空标签，传入非空数组表示替换。
+
 **Response**: `ApiResponse`
 
 **错误码**: `10000` `10300`
@@ -364,7 +366,7 @@ interface UpdateProfileRequest {
 更新用户位置。
 
 - **认证**: 必须
-- **幂等**: 幂等语义操作，重复请求返回一致结果
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `UpdateLocationRequest`
 ```typescript
@@ -422,7 +424,7 @@ interface UpgradeAccountRequest {
 更新用户设置。
 
 - **认证**: 必须
-- **幂等**: 幂等语义操作，重复请求返回一致结果
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `UpdateSettingsRequest`
 ```typescript
@@ -447,7 +449,7 @@ interface UpdateSettingsRequest {
 **Request**: `DeleteAccountRequest`
 ```typescript
 interface DeleteAccountRequest {
-  confirmation: string;  // 必须精确匹配 "DELETE_MY_ACCOUNT"（区分大小写）
+  confirmation: string;  // 必须精确匹配 "DELETE_MY_ACCOUNT"（区分大小写，客户端应明确提示用户输入）
 }
 ```
 
@@ -465,8 +467,6 @@ interface DeleteAccountRequest {
 - 不存在关注申请流程
 - 对方 `allow_follow=false` 时直接返回失败（`10200`）
 
-**心理学设计说明**：`source` 字段让被关注者了解"为什么被关注"（如"通过你的瞬间"），增强用户发布内容的正向反馈。
-
 - **认证**: 必须
 - **幂等**: 幂等语义（重复关注同一用户返回成功）
 
@@ -474,7 +474,7 @@ interface DeleteAccountRequest {
 ```typescript
 interface FollowRequest {
   user_id: string;
-  source?: FollowSource;        // 可选：关注来源（用于心理学优化，让被关注者知道来源）
+  source?: FollowSource;        // 可选：关注来源（用于来源归因）
   source_moment_id?: string;    // 可选：如果是通过瞬间关注，提供瞬间 ID
 }
 ```

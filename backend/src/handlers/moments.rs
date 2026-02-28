@@ -22,10 +22,31 @@ pub async fn search(
     user: OptionalAuthenticatedUser,
     Json(req): Json<SearchMomentsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<MomentItem>>>> {
+    let started_at = std::time::Instant::now();
     let sort_by = req.sort_by.as_deref().unwrap_or("relevance");
     tracing::debug!(sort_by = %sort_by, "Search sort parameter");
+    tracing::info!(
+        viewer_id = user.user_id,
+        has_keyword = req.keyword.is_some(),
+        has_tag = req.tag.is_some(),
+        radius = req.radius.unwrap_or(5000.0),
+        has_cursor = req
+            .pagination
+            .as_ref()
+            .and_then(|p| p.cursor.as_ref())
+            .is_some(),
+        limit = req.pagination.as_ref().and_then(|p| p.limit).unwrap_or(20),
+        "moments.search request received"
+    );
 
     let response = state.moment_service.search(user.user_id, &req).await?;
+    tracing::info!(
+        viewer_id = user.user_id,
+        items = response.items.len(),
+        has_next_cursor = response.next_cursor.is_some(),
+        elapsed_ms = started_at.elapsed().as_millis(),
+        "moments.search request completed"
+    );
     Ok(Json(ApiResponse::success(response)))
 }
 

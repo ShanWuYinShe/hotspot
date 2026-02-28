@@ -89,7 +89,7 @@ type SettableGroupRole = 'admin' | 'member';
 - **幂等**: 无
 - **排序**: 
   - 默认 `sort_by='relevance'`：按相关性优先排序
-  - `sort_by='distance'`：按距离由近到远排序（需要 `radius`）
+  - `sort_by='distance'`：按距离由近到远排序（未提供 `radius` 时按默认 `5_000` 米计算）
   - `sort_by='newest'`：按创建时间倒序
   - `sort_by='popular'`：按成员数/活跃度排序
   - **稳定 tie-breaker**：任意 `sort_by` 模式下，当主序字段相同，以 `group_id ASC` 作为稳定排序，保证游标分页一致性
@@ -100,13 +100,14 @@ type SettableGroupRole = 'admin' | 'member';
 interface SearchGroupsRequest {
   keyword?: string;    // 关键字搜索（匹配名称、描述等）
   tag?: string;        // 标签筛选
-  radius?: number;     // 位置范围（米），100-50000，配合 reference_point 使用；未提供时不限定地理范围（仅按其他条件匹配）
+  radius?: number;     // 位置范围（米），100-50000，配合 reference_point 使用；未提供时默认 5_000 米，并受 AppConfig.limits.search_radius_max 上限约束
   sort_by?: 'relevance' | 'distance' | 'newest' | 'popular';  // 默认: relevance
-  reference_point: GeoPoint; // 浏览锚点位置（客户端必须传入有效坐标，拒绝定位时使用 fallback）
+  reference_point: GeoPoint; // 浏览锚点位置（必填；拒绝定位时使用 ClientConfig.defaults.default_location.point）
   pagination?: PaginationParams;
 }
 // 至少提供 keyword、tag、radius 中的一个；不满足时返回 10000（参数错误）。
 // reference_point 不算搜索条件，仅用于距离计算和排序，不能单独作为搜索条件。
+// 当仅缺省 radius 且提供了 keyword/tag 时，服务端按默认 5_000 米计算，并受 AppConfig.limits.search_radius_max 上限约束。
 ```
 
 **Response**: `ApiResponse<PaginatedData<GroupItem>>`
@@ -273,6 +274,8 @@ interface SearchGroupMembersRequest {
 
 **错误码**: `10000` `10300` `10400`
 
+`10400` 典型场景：调用方不具备当前群组成员搜索资格（如未加入群组且群设置不允许检索）。
+
 ---
 
 ### POST /api/v1/groups/members/invite
@@ -310,7 +313,7 @@ interface Invitation {
 
 ### POST /api/v1/groups/members/invites/list
 
-我发出的邀请列表。仅群主、群管理员或具备系统管理员对应权限的账户可以访问。
+我发出的邀请列表。权限：群主、群管理员或系统管理员。
 
 - **认证**: 必须
 - **幂等**: 无
@@ -346,7 +349,7 @@ interface GroupSentInviteItem {
 
 ### POST /api/v1/groups/members/invites/revoke
 
-撤销已发出的待处理邀请。仅群主、群管理员或具备系统管理员对应权限的账户可以操作。
+撤销已发出的待处理邀请。权限：群主、群管理员或系统管理员。
 
 - **认证**: 必须
 - **幂等**: 幂等语义（重复撤销返回成功）
@@ -655,7 +658,6 @@ interface GroupAnnouncementsRequest {
 
 **说明**：
 - 普通用户只需获取最新的 N 条群公告，无需分页翻阅历史
-- 按 `is_pinned DESC, created_at DESC` 排序（置顶优先）
 
 **错误码**: `10000` `10300`
 

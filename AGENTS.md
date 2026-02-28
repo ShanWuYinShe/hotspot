@@ -139,7 +139,7 @@ pnpm dev             # 启动开发服务器
 
 > **注意**：HarmonyOS 的编译和代码检查是两个独立工具，**必须分别运行**。
 
-> **⚠️ 编译命令限制**：Agent **严禁执行** `hvigorw`（编译）和 `ohpm`（依赖安装）命令。`hvigorw` 在遇到配置错误时会删除整个 `entry/` 源代码目录，造成不可逆的代码丢失。Agent 应将编译命令提供给用户，由用户在终端中手动执行并反馈结果。**`codelinter`（代码风格检查）可由 Agent 直接执行**，不受此限制。
+> **编译前暂存提示**：在运行 `hvigorw` 编译 HarmonyOS 项目之前，请先执行 `git add` 暂存当前改动，方便在出现意外时用 git 恢复。`ohpm` 与 `codelinter` 可直接运行。
 
 ```bash
 # 环境变量（macOS 默认安装路径，无需修改）
@@ -153,11 +153,11 @@ CODELINTER="$DEVECO_STUDIO_DIR/Contents/plugins/codelinter/run/index.js"
 
 cd harmonyapp
 
-# 0. 安装依赖（编译前必须先执行）【⛔ Agent 禁止执行，须由用户手动运行】
+# 0. 安装依赖（编译前必须先执行）
 "$OHPM" install --all \
   --registry https://ohpm.openharmony.cn/ohpm/ --strict_ssl true
 
-# 1. 编译检查（零错误要求）【⛔ Agent 禁止执行，须由用户手动运行】
+# 1. 编译检查（零错误要求，执行前请先运行 `git add` 暂存当前改动）
 DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$HVIGORW" \
   --mode module -p product=default assembleHap \
   --info --analyze=ultrafine --parallel --incremental \
@@ -215,12 +215,12 @@ DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$CODELINTER" \
 
 - Backend: `cargo check`
 - Frontend: `pnpm check`
-- HarmonyOS: 编译（hvigorw）由用户手动执行，Agent 将命令提供给用户并等待结果反馈；代码风格检查（codelinter）由 Agent 直接执行。两者均需通过。
+- HarmonyOS: `codelinter` 和 `hvigorw`（编译前先 `git add`，详见下方 HarmonyOS 章节）。
 
 **原则**：
 - 警告应尽量消除，但**禁止使用 `#[allow(...)]` 等属性压制警告**（除非有充分理由并注释）。
 - HarmonyOS 的两项检查（编译 + Linter）必须**分别执行**，缺一不可。
-- **Agent 严禁执行 `hvigorw` 和 `ohpm` 命令**（详见 HarmonyOS 章节说明）。
+
 
 ### 步骤二：禁止模式扫描
 
@@ -262,7 +262,7 @@ rg '"/api/v1/' frontend_svelte/src/ harmonyapp/entry/src/main/ets/
 ### ✅ 可直接执行（无需询问）
 
 - 读取文件、搜索代码（如 `rg`、`grep`）、列出目录内容。
-- 运行构建/检查命令（`cargo check`、`pnpm check`、HarmonyOS `codelinter` 等）、格式化、Lint、单个测试。**注意**：HarmonyOS 的 `hvigorw`（编译）和 `ohpm`（依赖安装）命令**不在此列**，详见「构建与验证命令 > HarmonyOS」。
+- 运行构建/检查命令（`cargo check`、`pnpm check`、HarmonyOS `codelinter` / `hvigorw` / `ohpm` 等）、格式化、Lint、单个测试。HarmonyOS 细则参见前文“构建与验证命令”。
 - 运行上述“禁止模式扫描”中的 rg 命令。
 - 查阅 `spec/` 目录下的任何规范文件。
 
@@ -295,10 +295,10 @@ rg '"/api/v1/' frontend_svelte/src/ harmonyapp/entry/src/main/ets/
   Git 操作的风险管理见「Git 操作规范」章节。
 - **禁止自行执行 `deploy/` 目录下的脚本**：部署脚本可能包含破坏性操作，执行前必须告知用户脚本内容和影响，经用户确认后才可运行。
 - **文件修改安全措施**：
-  - 任何使用 `Write` 工具覆盖或新建文件前，必须先用 `Read` 工具读取该文件内容（如果文件已存在）。
-  - 优先使用 `Edit` 工具进行精确替换，避免使用 `Write` 覆盖整个文件，除非是全新的文件。
+  - 在调用 `Edit` 或 `Write` 等修改工具前，必须先用 `Read` 查看该文件的最新内容；禁止在当前会话未读取的情况下直接修改。
+  - 优先使用 `Edit` 进行精确替换，避免用 `Write` 覆盖整文件（除非是新文件）。
   - 使用 `Edit` 时必须提供足够的上下文（oldString）确保唯一匹配，避免误删内容。
-  - 当 `Edit` 工具报告"oldString not found"或"Found multiple matches"时，禁止继续操作，必须重新检查并修正匹配文本。
+  - 当 `Edit` 报告“oldString not found”或“Found multiple matches”时，立即停止并重新确认上下文。
 
 ### 🌐 项目目录边界
 
@@ -352,15 +352,12 @@ rg '"/api/v1/' frontend_svelte/src/ harmonyapp/entry/src/main/ets/
 - **建议原则**：对用户的建议需基于实际情况和最佳实践，经比较分析后给出明确结论和理由，避免无脑同意。
 - **任务分解**：实现复杂功能时应拆分为子任务，使用 Todo 列表跟踪进度，并在完成时同步更新状态。
 - **临时文件管理**：生成的辅助脚本或临时文档应存放于 `/tmp` 目录，任务完成后立即删除，**禁止留在项目代码目录中**。
+- **设计/计划文档存放**：头脑风暴记录、设计说明、实现计划等文档一律写入 `/tmp/hotspot-plans/` 等仓库外路径，禁止在仓库内创建 `docs/`、`plans/` 等目录存放，避免污染 git；如需长期保留由用户另行备份。
 - **命令使用限制**：
   - 禁止使用 `head` 或 `tail` 命令读取文件（应使用 `cat` 或直接读取）。
   - 禁止自动更新文档版本号。
   - 阅读文档时注意文档的版本信息，确保基于最新版本。
-- **子任务使用限制**：
-  - **修改项目代码时，谨慎使用 Task 子任务（subagent）**。子任务的执行过程不透明，曾导致源代码文件被意外删除且无法追溯根因。
-  - 修改 harmonyapp 项目代码时，**严禁使用 Task 子任务**（subagent）。所有文件的读取、搜索、修改必须由主 Agent 直接执行，不得委托给子任务。
-  - 唯一例外：只读的代码探索（`subagent_type="explore"`，且设置 `readonly=true`）可以使用。
-  - 调用子 Agent 时，必须在 prompt 中告知其遵守 Git 操作规范（高风险操作需回报确认）、文件删除需用户确认，以及禁止访问项目目录外路径。
+  - **工具优先**：读取/搜索/修改/写入文件时，必须优先使用平台提供的工具（如 `Read`、`Edit`、`Write`、`Glob`、`Grep`）。只有当这些工具无法满足需求时，才能使用 `python`、`node`、`sed`、`awk` 等脚本命令修改文件，并需在执行前先说明原因。除非用户另有授权，否则不要通过脚本直接写入文件，以便在对话中能够看到清晰的 diff。
 - **文档格式**：本文档（及所有项目文档）不使用数字章节编号，以保持灵活性。
 
 ---

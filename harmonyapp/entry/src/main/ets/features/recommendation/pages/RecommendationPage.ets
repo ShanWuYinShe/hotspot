@@ -13,6 +13,7 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AppRouter } from '../../../core/router/AppRouter';
+import { PageNames } from '../../../constants/AppConstants';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
@@ -21,11 +22,13 @@ import { LocationInfo } from '../../../core/location/LocationUtil';
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'RecommendationPage';
 
+@Preview
 @Component
 export struct RecommendationPage {
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
+  @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @State isLoading: boolean = true;
   @State errorMessage: string = '';
   @State trendingTags: TrendingTagItem[] = [];
@@ -41,6 +44,10 @@ export struct RecommendationPage {
 
   private hasAnyData(): boolean {
     return this.trendingTags.length > 0 || this.recommendedUsers.length > 0;
+  }
+
+  private getHeaderTopPadding(): number {
+    return (this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.LG) + DesignConstants.SPACING.SM;
   }
 
   private async loadData() {
@@ -92,12 +99,33 @@ export struct RecommendationPage {
           .fontWeight(FontWeight.Bold)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+
+        Row() {
+          Text() {
+            SymbolSpan($r(AppIcon.SEARCH))
+              .fontSize(20)
+              .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+          }
+        }
+        .width(36)
+        .height(36)
+        .borderRadius(DesignConstants.RADIUS.XL)
+        .backgroundColor($r('app.color.bg_secondary'))
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+        .onClick(() => {
+          AppRouter.push(PageNames.SEARCH);
+        })
       }
       .width('100%')
-      .height(56)
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-      .backgroundColor($r('app.color.bg_secondary'))
+      .alignItems(VerticalAlign.Center)
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        top: this.getHeaderTopPadding(),
+        bottom: DesignConstants.SPACING.SM
+      })
+      .backgroundColor($r('app.color.bg_primary'))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.isLoading) {
@@ -115,10 +143,11 @@ export struct RecommendationPage {
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .textAlign(TextAlign.Center)
           Button('重试')
-            .type(ButtonType.Capsule)
+            .type(ButtonType.Normal)
             .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
             .fontColor(Color.White)
             .height(40)
+            .borderRadius(DesignConstants.RADIUS.XL)
             .onClick(() => { this.loadData(); })
         }
         .width('100%')
@@ -130,19 +159,16 @@ export struct RecommendationPage {
           // 热门话题
           ListItem() {
             Column({ space: 12 }) {
-              Text('热门话题')
-                .fontSize(DesignConstants.FONT.SIZE.LG)
-                .fontWeight(FontWeight.Bold)
-                .width('100%')
-                .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
+              this.buildSectionHeader('热门话题', AppIcon.CHART)
               
               Flex({ wrap: FlexWrap.Wrap }) {
                 if (this.trendingTags.length > 0) {
                   ForEach(this.trendingTags, (tag: TrendingTagItem) => {
                     Text(`#${tag.name}`)
                       .padding(DesignConstants.SPACING.SM)
-                      .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+                      .backgroundColor($r('app.color.bg_tertiary'))
                       .borderRadius(DesignConstants.RADIUS.XL)
+                      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
                       .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
                   }, (tag: TrendingTagItem) => tag.name)
                 } else {
@@ -158,22 +184,20 @@ export struct RecommendationPage {
           .width('100%')
           .backgroundColor($r('app.color.bg_secondary'))
           .padding(DesignConstants.SPACING.LG)
-          .borderRadius(DesignConstants.RADIUS.LG)
+          .borderRadius(DesignConstants.RADIUS.XXL)
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
 
 
           // 推荐用户
           if (this.recommendedUsers.length > 0) {
             ListItem() {
-              Text('推荐用户')
-                .fontSize(DesignConstants.FONT.SIZE.LG)
-                .fontWeight(FontWeight.Bold)
-                .width('100%')
-                .padding({ left: 16, top: 16, bottom: 8 })
-                .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              this.buildSectionHeader('推荐用户', AppIcon.PERSON)
+                .padding({ left: 12, right: 12, top: 12, bottom: 4 })
             }
             ForEach(this.recommendedUsers, (user: UserItem) => {
               ListItem() {
-                Row({ space: 12 }) {
+                Row({ space: DesignConstants.SPACING.MD }) {
                   SystemAvatar({
                     avatarUrl: user.user?.avatar_url,
                     name: user.user?.nickname ?? '',
@@ -182,23 +206,24 @@ export struct RecommendationPage {
 
                   Column({ space: 2 }) {
                     Text(user.user?.nickname ?? '')
-                      .fontSize(16)
+                      .fontSize(DesignConstants.FONT.SIZE.LG)
                       .fontWeight(FontWeight.Medium)
                       .fontColor($r('sys.color.ohos_id_color_text_primary'))
                     Text('可能会感兴趣')
-                      .fontSize(13)
+                      .fontSize(DesignConstants.FONT.SIZE.SM)
                       .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                   }
                   .alignItems(HorizontalAlign.Start)
                   .layoutWeight(1)
 
                   Button('关注')
-                    .type(ButtonType.Capsule)
-                    .backgroundColor(Color.Transparent)
+                    .type(ButtonType.Normal)
+                    .backgroundColor($r('app.color.bg_tertiary'))
                     .fontColor($r('sys.color.ohos_id_color_emphasize'))
-                    .fontSize(13)
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
                     .fontWeight(FontWeight.Medium)
-                    .height(30)
+                    .height(34)
+                    .borderRadius(DesignConstants.RADIUS.XL)
                     .borderWidth(1)
                     .borderColor($r('sys.color.ohos_id_color_emphasize'))
                     .onClick(async () => {
@@ -211,7 +236,16 @@ export struct RecommendationPage {
                     })
                 }
                 .width('100%')
-                .padding({ left: 16, right: 16, top: 10, bottom: 10 })
+                .padding({
+                  left: DesignConstants.SPACING.MD,
+                  right: DesignConstants.SPACING.MD,
+                  top: DesignConstants.SPACING.MD,
+                  bottom: DesignConstants.SPACING.MD
+                })
+                .backgroundColor($r('app.color.bg_secondary'))
+                .borderRadius(DesignConstants.RADIUS.XL)
+                .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+                .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
               }
             }, (user: UserItem) => user.user?.user_id ?? '')
           }
@@ -241,6 +275,22 @@ export struct RecommendationPage {
       .width('100%')
       .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.SM })
       .fontColor($r('sys.color.ohos_id_color_text_primary'))
+  }
+
+  @Builder
+  private buildSectionHeader(title: string, icon: AppIcon) {
+    Row({ space: DesignConstants.SPACING.SM }) {
+      Text() {
+        SymbolSpan($r(icon))
+          .fontSize(18)
+          .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+      }
+      Text(title)
+        .fontSize(DesignConstants.FONT.SIZE.LG)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+    }
+    .width('100%')
   }
 }
 

@@ -13,6 +13,8 @@ import {
   ServerEvent,
   ConnectionEstablishedPayload,
   ErrorPayload,
+  FailedSubscriptionId,
+  SubscribeAckPayload,
   SubscriptionItem,
   SubscriptionOperation,
   WebSocketState,
@@ -38,6 +40,7 @@ const DEFAULT_RECONNECT_CONFIG: ReconnectConfig = {
 };
 
 const HEARTBEAT_INTERVAL = 45;
+const DEFAULT_PONG_TIMEOUT = 10;
 
 export class WebSocketService {
   private static instance: WebSocketService | null = null;
@@ -45,10 +48,17 @@ export class WebSocketService {
   private state: WebSocketState = WebSocketState.DISCONNECTED;
   private reconnectAttempts: number = 0;
   private reconnectConfig: ReconnectConfig = DEFAULT_RECONNECT_CONFIG;
+  private reconnectTimer: number | null = null;
   private heartbeatTimer: number | null = null;
+  private pongTimeoutTimer: number | null = null;
+  private heartbeatIntervalSec: number = HEARTBEAT_INTERVAL;
+  private pongTimeoutSec: number = DEFAULT_PONG_TIMEOUT;
+  private awaitingPong: boolean = false;
   private currentToken: string = '';
   private subscriptions: SubscriptionItem[] = [];
   private eventHandlers: Map<string, ((event: ServerEvent) => void)[]> = new Map();
+  private lastServerTimeMs: number = 0;
+  private lastDisconnectDurationMs: number = 0;
 
   private constructor() {
     this.webSocketUtil = WebSocketUtil.getInstance();
@@ -70,6 +80,7 @@ export class WebSocketService {
 
     this.currentToken = token;
     this.state = WebSocketState.CONNECTING;
+    this.clearReconnectTimer();
 
     try {
       const wsUrl = await this.getWsUrl();
@@ -100,11 +111,15 @@ export class WebSocketService {
   disconnect(): void {
     try {
       this.stopHeartbeat();
+      this.clearReconnectTimer();
       this.webSocketUtil.disconnect();
       this.state = WebSocketState.DISCONNECTED;
       this.reconnectAttempts = 0;
       this.subscriptions = [];
       this.currentToken = '';
+      this.awaitingPong = false;
+      this.lastDisconnectDurationMs = 0;
+      this.lastServerTimeMs = 0;
       hilog.info(DOMAIN_NUMBER, TAG, 'WebSocket连接已断开');
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `断开WebSocket连接失败: ${JSON.stringify(error)}`);
@@ -119,32 +134,106 @@ export class WebSocketService {
     return this.state === WebSocketState.CONNECTED;
   }
 
+  getLastDisconnectDurationMs(): number {
+    return this.lastDisconnectDurationMs;
+  }
+
   // ============================================================================
   // 订阅管理（统一使用 SetSubscriptions + operation）
   // ============================================================================
 
-  subscribe(item: SubscriptionItem): void {
-    if (!this.isConnected()) {
-      hilog.warn(DOMAIN_NUMBER, TAG, 'WebSocket未连接，无法订阅');
+  private normalizeIds(ids: string[]): string[] {
+    const unique: string[] = [];
+    ids.forEach((id: string) => {
+      if (typeof id !== 'string') {
+        return;
+      }
+      const normalized = id.trim();
+      if (normalized.length === 0) {
+        return;
+      }
+      if (unique.indexOf(normalized) === -1) {
+        unique.push(normalized);
+      }
+    });
+    return unique;
+  }
+
+  private mergeLocalSubscription(item: SubscriptionItem): void {
+    const existingIndex = this.subscriptions.findIndex((sub) => sub.type === item.type);
+    if (existingIndex < 0) {
+      this.subscriptions.push({ type: item.type, ids: item.ids });
       return;
     }
-    this.send(createSetSubscriptionsEvent('subscribe', item));
+    const merged = this.normalizeIds(this.subscriptions[existingIndex].ids.concat(item.ids));
+    this.subscriptions[existingIndex] = { type: item.type, ids: merged };
+  }
+
+  private removeLocalSubscription(item: SubscriptionItem): void {
+    const existingIndex = this.subscriptions.findIndex((sub) => sub.type === item.type);
+    if (existingIndex < 0) {
+      return;
+    }
+    const filtered = this.subscriptions[existingIndex].ids.filter((id: string) => item.ids.indexOf(id) === -1);
+    if (filtered.length === 0) {
+      this.subscriptions.splice(existingIndex, 1);
+      return;
+    }
+    this.subscriptions[existingIndex] = { type: item.type, ids: filtered };
+  }
+
+  subscribe(item: SubscriptionItem): void {
+    const normalizedItem: SubscriptionItem = {
+      type: item.type,
+      ids: this.normalizeIds(item.ids)
+    };
+    if (normalizedItem.ids.length === 0) {
+      return;
+    }
+    this.mergeLocalSubscription(normalizedItem);
+    if (!this.isConnected()) {
+      hilog.info(DOMAIN_NUMBER, TAG, `WebSocket未连接，订阅请求已入队: type=${normalizedItem.type}, ids=${JSON.stringify(normalizedItem.ids)}`);
+      return;
+    }
+    this.send(createSetSubscriptionsEvent('subscribe', normalizedItem));
   }
 
   unsubscribe(item: SubscriptionItem): void {
-    if (!this.isConnected()) {
-      hilog.warn(DOMAIN_NUMBER, TAG, 'WebSocket未连接，无法取消订阅');
+    const normalizedItem: SubscriptionItem = {
+      type: item.type,
+      ids: this.normalizeIds(item.ids)
+    };
+    if (normalizedItem.ids.length === 0) {
       return;
     }
-    this.send(createSetSubscriptionsEvent('unsubscribe', item));
+    this.removeLocalSubscription(normalizedItem);
+    if (!this.isConnected()) {
+      hilog.info(DOMAIN_NUMBER, TAG, `WebSocket未连接，取消订阅请求已入队: type=${normalizedItem.type}, ids=${JSON.stringify(normalizedItem.ids)}`);
+      return;
+    }
+    this.send(createSetSubscriptionsEvent('unsubscribe', normalizedItem));
   }
 
   setSubscriptions(item: SubscriptionItem, operation: SubscriptionOperation = 'set'): void {
-    if (!this.isConnected()) {
-      hilog.warn(DOMAIN_NUMBER, TAG, 'WebSocket未连接，无法设置订阅');
+    const normalizedItem: SubscriptionItem = {
+      type: item.type,
+      ids: this.normalizeIds(item.ids)
+    };
+    if ((operation === 'subscribe' || operation === 'unsubscribe') && normalizedItem.ids.length === 0) {
       return;
     }
-    this.send(createSetSubscriptionsEvent(operation, item));
+    if (operation === 'subscribe') {
+      this.mergeLocalSubscription(normalizedItem);
+    } else if (operation === 'unsubscribe') {
+      this.removeLocalSubscription(normalizedItem);
+    } else {
+      this.upsertSubscription(normalizedItem);
+    }
+    if (!this.isConnected()) {
+      hilog.info(DOMAIN_NUMBER, TAG, `WebSocket未连接，set订阅请求已入队: operation=${operation}, type=${normalizedItem.type}, ids=${JSON.stringify(normalizedItem.ids)}`);
+      return;
+    }
+    this.send(createSetSubscriptionsEvent(operation, normalizedItem));
   }
 
   getSubscriptionsState(): void {
@@ -168,6 +257,52 @@ export class WebSocketService {
     } else {
       this.subscriptions.push(item);
     }
+  }
+
+  private getSubscriptionIdsByType(type: 'group' | 'user'): string[] {
+    const item = this.subscriptions.find((sub) => sub.type === type);
+    if (!item) return [];
+    return this.normalizeIds(item.ids);
+  }
+
+  private setSubscriptionIdsByType(type: 'group' | 'user', ids: string[]): void {
+    this.upsertSubscription({
+      type,
+      ids: this.normalizeIds(ids)
+    });
+  }
+
+  private rollbackSubscriptionByFailedIds(
+    operation: SubscriptionOperation,
+    type: 'group' | 'user',
+    failedIds: string[],
+    serverIds: string[]
+  ): void {
+    const normalizedFailedIds = this.normalizeIds(failedIds);
+    if (normalizedFailedIds.length === 0) {
+      this.setSubscriptionIdsByType(type, serverIds);
+      return;
+    }
+
+    if (operation === 'subscribe') {
+      const currentIds = this.getSubscriptionIdsByType(type);
+      this.setSubscriptionIdsByType(
+        type,
+        currentIds.filter((id: string) => normalizedFailedIds.indexOf(id) === -1)
+      );
+      return;
+    }
+
+    if (operation === 'unsubscribe') {
+      const currentIds = this.getSubscriptionIdsByType(type);
+      this.setSubscriptionIdsByType(type, this.normalizeIds(currentIds.concat(normalizedFailedIds)));
+      return;
+    }
+
+    const successfulIds = this
+      .normalizeIds(serverIds)
+      .filter((id: string) => normalizedFailedIds.indexOf(id) === -1);
+    this.setSubscriptionIdsByType(type, successfulIds);
   }
 
   subscribeGroupChats(groupChatIds: string[]): void {
@@ -206,6 +341,9 @@ export class WebSocketService {
 
   on(eventType: string, handler: (event: ServerEvent) => void): void {
     const handlers = this.eventHandlers.get(eventType) || [];
+    if (handlers.indexOf(handler) !== -1) {
+      return;
+    }
     handlers.push(handler);
     this.eventHandlers.set(eventType, handlers);
   }
@@ -215,7 +353,11 @@ export class WebSocketService {
     const index = handlers.indexOf(handler);
     if (index !== -1) {
       handlers.splice(index, 1);
-      this.eventHandlers.set(eventType, handlers);
+      if (handlers.length === 0) {
+        this.eventHandlers.delete(eventType);
+      } else {
+        this.eventHandlers.set(eventType, handlers);
+      }
     }
   }
 
@@ -256,6 +398,8 @@ export class WebSocketService {
     this.webSocketUtil.onError((error: Error) => {
       hilog.error(DOMAIN_NUMBER, TAG, `WebSocket错误: ${error.message}`);
       this.state = WebSocketState.ERROR;
+      this.stopHeartbeat();
+      this.scheduleReconnect();
     });
   }
 
@@ -271,9 +415,26 @@ export class WebSocketService {
 
         this.state = WebSocketState.CONNECTED;
         this.reconnectAttempts = 0;
+        this.clearReconnectTimer();
+        this.awaitingPong = false;
 
-        const pingInterval = connPayload.config?.ping_interval || HEARTBEAT_INTERVAL;
-        this.startHeartbeat(pingInterval);
+        this.heartbeatIntervalSec = connPayload.config?.ping_interval || HEARTBEAT_INTERVAL;
+        this.pongTimeoutSec = connPayload.config?.ping_timeout || DEFAULT_PONG_TIMEOUT;
+        const currentServerTimeMs = this.parseServerTimeMs(connPayload.server_time);
+        if (currentServerTimeMs > 0 && this.lastServerTimeMs > 0 && currentServerTimeMs > this.lastServerTimeMs) {
+          this.lastDisconnectDurationMs = currentServerTimeMs - this.lastServerTimeMs;
+        } else {
+          this.lastDisconnectDurationMs = 0;
+        }
+        if (currentServerTimeMs > 0) {
+          this.lastServerTimeMs = currentServerTimeMs;
+        }
+        hilog.info(
+          DOMAIN_NUMBER,
+          TAG,
+          `重连断开时长: ${this.lastDisconnectDurationMs}ms`
+        );
+        this.startHeartbeat(this.heartbeatIntervalSec);
 
         if (this.subscriptions.length > 0) {
           this.subscriptions.forEach((item) => this.setSubscriptions(item));
@@ -282,27 +443,46 @@ export class WebSocketService {
 
       case 'Pong':
         hilog.debug(DOMAIN_NUMBER, TAG, '收到服务端Pong');
+        this.awaitingPong = false;
+        this.clearPongTimeout();
         break;
 
       case 'SubscribeAck':
-        if (event.payload.code === 0) {
-          this.upsertSubscription({
-            type: event.payload.type,
-            ids: event.payload.ids
-          });
-          hilog.info(DOMAIN_NUMBER, TAG, `订阅成功: ${JSON.stringify(this.subscriptions)}`);
+        const ackPayload = event.payload as SubscribeAckPayload;
+        const failedItems: FailedSubscriptionId[] = ackPayload.failed_ids ?? [];
+        const failedIds: string[] = failedItems.map((item: FailedSubscriptionId): string => item.subscription_id);
+        if (failedIds.length > 0) {
+          this.rollbackSubscriptionByFailedIds(
+            ackPayload.operation,
+            ackPayload.type,
+            failedIds,
+            ackPayload.ids
+          );
         } else {
-          hilog.error(DOMAIN_NUMBER, TAG, `订阅失败: ${event.payload.message}`);
+          this.setSubscriptionIdsByType(ackPayload.type, ackPayload.ids);
+        }
+        const effectiveIds = this.getSubscriptionIdsByType(ackPayload.type);
+        if (ackPayload.code === 0) {
+          hilog.info(DOMAIN_NUMBER, TAG, `订阅成功: operation=${ackPayload.operation}, type=${ackPayload.type}, ids=${JSON.stringify(effectiveIds)}`);
+        } else if (ackPayload.failed_ids && ackPayload.failed_ids.length > 0) {
+          hilog.warn(
+            DOMAIN_NUMBER,
+            TAG,
+            `订阅部分失败: operation=${ackPayload.operation}, type=${ackPayload.type}, failed=${JSON.stringify(ackPayload.failed_ids)}, current=${JSON.stringify(effectiveIds)}`
+          );
+        } else {
+          const message = typeof ackPayload.message === 'string' ? ackPayload.message : '';
+          hilog.error(DOMAIN_NUMBER, TAG, `订阅失败: operation=${ackPayload.operation}, type=${ackPayload.type}, message=${message}`);
         }
         break;
 
       case 'SubscriptionsSnapshot':
         this.subscriptions = [];
         if (event.payload.user_ids?.length > 0) {
-          this.subscriptions.push({ type: 'user', ids: event.payload.user_ids });
+          this.subscriptions.push({ type: 'user', ids: this.normalizeIds(event.payload.user_ids) });
         }
         if (event.payload.group_ids?.length > 0) {
-          this.subscriptions.push({ type: 'group', ids: event.payload.group_ids });
+          this.subscriptions.push({ type: 'group', ids: this.normalizeIds(event.payload.group_ids) });
         }
         hilog.info(DOMAIN_NUMBER, TAG, `订阅快照更新: ${JSON.stringify(this.subscriptions)}`);
         break;
@@ -353,10 +533,12 @@ export class WebSocketService {
 
   private startHeartbeat(interval?: number): void {
     this.stopHeartbeat();
-    const pingInterval = interval || HEARTBEAT_INTERVAL;
+    const pingInterval = interval || this.heartbeatIntervalSec || HEARTBEAT_INTERVAL;
     this.heartbeatTimer = setInterval(() => {
       if (this.isConnected()) {
         this.send(createPingEvent());
+        this.awaitingPong = true;
+        this.startPongTimeout();
       }
     }, pingInterval * 1000);
   }
@@ -366,9 +548,54 @@ export class WebSocketService {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
     }
+    this.awaitingPong = false;
+    this.clearPongTimeout();
+  }
+
+  private startPongTimeout(): void {
+    this.clearPongTimeout();
+    const timeoutSec = this.pongTimeoutSec > 0 ? this.pongTimeoutSec : DEFAULT_PONG_TIMEOUT;
+    this.pongTimeoutTimer = setTimeout(() => {
+      if (!this.awaitingPong) {
+        return;
+      }
+      this.awaitingPong = false;
+      hilog.warn(DOMAIN_NUMBER, TAG, `Pong超时(${timeoutSec}s)，触发重连`);
+      this.state = WebSocketState.ERROR;
+      this.stopHeartbeat();
+      this.webSocketUtil.disconnect();
+      this.scheduleReconnect();
+    }, timeoutSec * 1000);
+  }
+
+  private clearPongTimeout(): void {
+    if (this.pongTimeoutTimer !== null) {
+      clearTimeout(this.pongTimeoutTimer);
+      this.pongTimeoutTimer = null;
+    }
+  }
+
+  private clearReconnectTimer(): void {
+    if (this.reconnectTimer !== null) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+  }
+
+  private parseServerTimeMs(serverTime: string): number {
+    const parsed = Date.parse(serverTime);
+    if (Number.isNaN(parsed)) {
+      return 0;
+    }
+    return parsed;
   }
 
   private scheduleReconnect(): void {
+    if (this.reconnectTimer !== null) {
+      hilog.debug(DOMAIN_NUMBER, TAG, '重连任务已存在，跳过重复调度');
+      return;
+    }
+
     if (this.reconnectAttempts >= this.reconnectConfig.maxAttempts) {
       hilog.error(DOMAIN_NUMBER, TAG, '达到最大重连次数，停止重连');
       return;
@@ -391,8 +618,13 @@ export class WebSocketService {
 
     hilog.info(DOMAIN_NUMBER, TAG, `${delay}ms后进行第${this.reconnectAttempts}次重连`);
 
-    setTimeout(() => {
-      this.connect(this.currentToken).catch((error: Error) => {
+    this.reconnectTimer = setTimeout(async () => {
+      this.reconnectTimer = null;
+      // 重连前重新读取最新 token（可能已被 HttpUtil 的 refresh 逻辑更新）
+      const freshToken = await PreferencesUtil.get<string>(StorageKeys.ACCESS_TOKEN, '');
+      const tokenToUse = freshToken || this.currentToken;
+
+      this.connect(tokenToUse).catch((error: Error) => {
         hilog.error(DOMAIN_NUMBER, TAG, `重连失败: ${error.message}`);
       });
     }, delay);

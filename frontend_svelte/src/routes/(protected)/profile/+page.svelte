@@ -45,6 +45,7 @@
 	let nickname = $state('');
 	let bio = $state('');
 	let tags = $state('');
+	const MAX_TAGS = 10;
 	
 	// 同步 data.profile 到本地状态
 	$effect(() => {
@@ -64,20 +65,40 @@
 	});
 
 	async function saveProfile() {
-		if (!nickname.trim()) {
+		const trimmedNickname = nickname.trim();
+		const trimmedBio = bio.trim();
+		const parsedTags = tags
+			.split(',')
+			.map((t) => t.trim())
+			.filter((t) => t);
+
+		if (!trimmedNickname) {
 			toast.error('昵称不能为空');
+			return;
+		}
+		if (trimmedNickname.length > 30) {
+			toast.error('昵称长度需在 1-30 字符之间');
+			return;
+		}
+		if (trimmedBio.length > 500) {
+			toast.error('个人简介不能超过 500 字符');
+			return;
+		}
+		if (parsedTags.length > MAX_TAGS) {
+			toast.error('标签最多 10 个');
+			return;
+		}
+		if (parsedTags.some((tag) => tag.length > 30)) {
+			toast.error('每个标签长度不能超过 30 字符');
 			return;
 		}
 
 		isSaving = true;
 		try {
 			const response = await usersService.updateMyProfile({
-				nickname: nickname.trim(),
-				bio: bio.trim() || undefined,
-				tags: tags
-					.split(',')
-					.map((t) => t.trim())
-					.filter((t) => t)
+				nickname: trimmedNickname,
+				bio: trimmedBio || undefined,
+				tags: parsedTags
 			});
 
 			if (isSuccess(response)) {
@@ -113,12 +134,14 @@
 	<title>个人资料 - HotSpot</title>
 </svelte:head>
 
-<div class="mx-auto max-w-4xl space-y-6 pb-8">
+<div class="mx-auto max-w-4xl space-y-5 pb-8">
 	<!-- 页面标题 -->
-	<div class="flex items-center justify-between">
-		<div>
-			<h1 class="text-3xl font-bold">个人资料</h1>
-			<p class="mt-1 text-sm text-muted-foreground">管理你的个人信息和账户设置</p>
+	<div class="rounded-3xl border border-border/60 bg-linear-to-br from-background via-card/85 to-muted/35 p-5 shadow-sm">
+		<div class="flex items-center justify-between">
+			<div>
+				<h1 class="text-3xl font-bold">个人资料</h1>
+				<p class="mt-1 text-sm text-muted-foreground">管理你的个人信息和账户设置</p>
+			</div>
 		</div>
 	</div>
 
@@ -127,7 +150,7 @@
 			<!-- 左侧：主要信息 -->
 			<div class="space-y-6 lg:col-span-2">
 				<!-- 个人资料卡片 -->
-				<Card class="overflow-hidden">
+				<Card class="overflow-hidden rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 					<!-- 头部背景 -->
 					<div class="bg-linear-to-r from-primary/10 via-primary/5 to-transparent p-8">
 						<div class="flex flex-col gap-6 sm:flex-row sm:items-start">
@@ -140,7 +163,7 @@
 								<Button
 									size="icon"
 									variant="secondary"
-									class="absolute -bottom-2 -right-2 h-10 w-10 rounded-full shadow-md"
+									class="absolute -bottom-2 -right-2 h-10 w-10 rounded-2xl shadow-md"
 									title="更换头像"
 									aria-label="更换头像"
 								>
@@ -172,7 +195,7 @@
 								{#if profile.tags && profile.tags.length > 0 && !isEditing}
 									<div class="mt-3 flex flex-wrap gap-2">
 										{#each profile.tags as tag (tag)}
-											<Badge variant="secondary" class="rounded-full">#{tag}</Badge>
+											<Badge variant="secondary" class="rounded-2xl">#{tag}</Badge>
 										{/each}
 									</div>
 								{/if}
@@ -230,7 +253,7 @@
 				</Card>
 
 				<!-- 详细信息 -->
-				<Card>
+				<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 					<CardHeader>
 						<CardTitle class="flex items-center gap-2">
 							<User class="h-5 w-5 text-primary" />
@@ -293,13 +316,13 @@
 			<!-- 右侧：统计数据 -->
 			<div class="space-y-6">
 				<!-- 数据统计 -->
-				<Card>
+				<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 					<CardHeader>
 						<CardTitle class="text-base">数据概览</CardTitle>
 						<CardDescription>你的活动统计</CardDescription>
 					</CardHeader>
 					<CardContent class="space-y-4">
-						<a href="/moments" class="group block rounded-lg border p-4 transition-all hover:border-primary/50 hover:bg-accent/50">
+						<a href="/moments" class="group block rounded-2xl border border-border/50 bg-background/65 p-4 transition-all hover:border-primary/50 hover:bg-accent/55">
 							<div class="flex items-center justify-between">
 								<div class="flex items-center gap-3">
 									<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
@@ -313,7 +336,7 @@
 							</div>
 						</a>
 
-						<a href="/followers" class="group block rounded-lg border p-4 transition-all hover:border-primary/50 hover:bg-accent/50">
+						<a href="/followers" class="group block rounded-2xl border border-border/50 bg-background/65 p-4 transition-all hover:border-primary/50 hover:bg-accent/55">
 							<div class="flex items-center justify-between">
 								<div class="flex items-center gap-3">
 									<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-pink-500/10">
@@ -327,7 +350,7 @@
 							</div>
 						</a>
 
-						<a href="/follows" class="group block rounded-lg border p-4 transition-all hover:border-primary/50 hover:bg-accent/50">
+						<a href="/follows" class="group block rounded-2xl border border-border/50 bg-background/65 p-4 transition-all hover:border-primary/50 hover:bg-accent/55">
 							<div class="flex items-center justify-between">
 								<div class="flex items-center gap-3">
 									<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
@@ -341,7 +364,7 @@
 							</div>
 						</a>
 
-						<div class="rounded-lg border p-4 bg-muted/30">
+						<div class="rounded-2xl border border-border/50 bg-background/65 p-4">
 							<div class="flex items-center justify-between">
 								<div class="flex items-center gap-3">
 									<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10">
@@ -358,25 +381,25 @@
 				</Card>
 
 				<!-- 快捷操作 -->
-				<Card>
+				<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 					<CardHeader>
 						<CardTitle class="text-base">快捷操作</CardTitle>
 					</CardHeader>
 					<CardContent class="space-y-2">
 						<a href="/settings" class="block">
-							<Button variant="outline" class="w-full justify-start">
+							<Button variant="outline" class="h-11 w-full justify-start rounded-2xl border-border/60 bg-background/70">
 								<User class="mr-2 h-4 w-4" />
 								账户设置
 							</Button>
 						</a>
 						<a href="/settings/privacy" class="block">
-							<Button variant="outline" class="w-full justify-start">
+							<Button variant="outline" class="h-11 w-full justify-start rounded-2xl border-border/60 bg-background/70">
 								<Shield class="mr-2 h-4 w-4" />
 								隐私设置
 							</Button>
 						</a>
 						<a href="/settings/notifications" class="block">
-							<Button variant="outline" class="w-full justify-start">
+							<Button variant="outline" class="h-11 w-full justify-start rounded-2xl border-border/60 bg-background/70">
 								<Bell class="mr-2 h-4 w-4" />
 								通知设置
 							</Button>

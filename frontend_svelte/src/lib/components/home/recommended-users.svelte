@@ -50,10 +50,12 @@
 </script>
 
 {#if loading}
-	<section class="space-y-4">
+	<section class="space-y-4 rounded-3xl border border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-md">
 		<div class="flex items-center justify-between">
 			<div class="flex items-center gap-2 px-1">
-				<Users class="h-5 w-5 text-primary" />
+				<div class="rounded-xl border border-border/50 bg-primary/10 p-2 text-primary">
+					<Users class="h-4 w-4" />
+				</div>
 				<h2 class="text-lg font-semibold tracking-tight">推荐用户</h2>
 			</div>
 		</div>
@@ -66,10 +68,12 @@
 		</div>
 	</section>
 {:else if users.length > 0}
-	<section class="space-y-4">
+	<section class="space-y-4 rounded-3xl border border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-md">
 		<div class="flex items-center justify-between">
 			<div class="flex items-center gap-2 px-1">
-				<Users class="h-5 w-5 text-primary" />
+				<div class="rounded-xl border border-border/50 bg-primary/10 p-2 text-primary">
+					<Users class="h-4 w-4" />
+				</div>
 				<h2 class="text-lg font-semibold tracking-tight">推荐用户</h2>
 			</div>
 			<a href="/users/nearby" class="text-sm font-medium text-muted-foreground hover:underline">
@@ -79,7 +83,14 @@
 		<div class="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4">
 			{#each users as user (user.user.user_id)}
 				<div class="mb-3 break-inside-avoid">
-					<UserCard {user} showDistance showBio showTags variant="square" />
+					<UserCard
+						{user}
+						showDistance
+						showBio
+						showTags
+						variant="square"
+						class="border-border/60 bg-card/95 shadow-md shadow-black/5 dark:shadow-black/30"
+					/>
 				</div>
 			{/each}
 		</div>

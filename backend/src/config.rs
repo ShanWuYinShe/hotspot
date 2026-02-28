@@ -51,6 +51,7 @@ pub struct Config {
     // Rate Limit — 端点级
     pub rate_limit_register_per_10minutes: u32,
     pub rate_limit_login_per_10minutes: u32,
+    pub rate_limit_auth_reset_per_10minutes: u32,
     pub rate_limit_guest_per_10minutes: u32,
     pub rate_limit_refresh_per_10minutes: u32,
     pub rate_limit_moments_create_per_minute: u32,
@@ -70,6 +71,13 @@ pub struct Config {
     pub s3_force_path_style: bool,
     /// S3 对外 URL 前缀（相对路径 /s3 用于本地 MinIO；完整 URL 用于生产）
     pub s3_public_base: String,
+
+    /// 可选：密码重置验证码外部投递 Webhook（邮件/短信网关）
+    pub auth_reset_delivery_webhook_url: Option<String>,
+    /// 可选：投递 Webhook 的 Bearer Token
+    pub auth_reset_delivery_webhook_token: Option<String>,
+    /// 投递 Webhook 超时（毫秒）
+    pub auth_reset_delivery_timeout_ms: u64,
 }
 
 impl Config {
@@ -102,6 +110,10 @@ impl Config {
                 "10",
             )?,
             rate_limit_login_per_10minutes: env_parse("RATE_LIMIT_LOGIN_PER_10MINUTES", "30")?,
+            rate_limit_auth_reset_per_10minutes: env_parse(
+                "RATE_LIMIT_AUTH_RESET_PER_10MINUTES",
+                "10",
+            )?,
             rate_limit_guest_per_10minutes: env_parse("RATE_LIMIT_GUEST_PER_10MINUTES", "60")?,
             rate_limit_refresh_per_10minutes: env_parse("RATE_LIMIT_REFRESH_PER_10MINUTES", "120")?,
             rate_limit_moments_create_per_minute: env_parse(
@@ -127,6 +139,13 @@ impl Config {
             s3_secret_key: env_require("S3_SECRET_KEY")?,
             s3_force_path_style: env_parse("S3_FORCE_PATH_STYLE", "true")?,
             s3_public_base: env_require("S3_PUBLIC_BASE")?,
+            auth_reset_delivery_webhook_url: env::var("AUTH_RESET_DELIVERY_WEBHOOK_URL")
+                .ok()
+                .filter(|value| !value.trim().is_empty()),
+            auth_reset_delivery_webhook_token: env::var("AUTH_RESET_DELIVERY_WEBHOOK_TOKEN")
+                .ok()
+                .filter(|value| !value.trim().is_empty()),
+            auth_reset_delivery_timeout_ms: env_parse("AUTH_RESET_DELIVERY_TIMEOUT_MS", "3000")?,
         })
     }
 

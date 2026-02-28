@@ -205,7 +205,7 @@ interface GuestRequest {
 - 宽限期内使用旧 refresh_token 刷新，服务端返回**与首次刷新相同的新 token 对**（不生成新的）
 - 宽限期过后，旧 refresh_token 彻底失效
 - 设计目的：解决多标签页/多并发请求同时触发刷新的竞态问题
-- 客户端侧建议：使用刷新锁（mutex），同一时刻只允许一个刷新请求在飞
+- 客户端侧建议：使用刷新锁（mutex），同一时刻仅允许一个刷新请求执行
 
 **client_type 约束**：
 - `client_type='web'`：请求体不得包含 `refresh_token` 字段（若包含则返回 `10000`）

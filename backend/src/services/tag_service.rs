@@ -12,6 +12,7 @@ use crate::{
         validation::Validator,
     },
 };
+use tracing::{info, warn};
 
 #[derive(Clone)]
 pub struct TagService {
@@ -26,10 +27,18 @@ impl TagService {
     /// 标签搜索建议
     /// 删除标签（管理员）
     pub async fn admin_delete_tag(&self, req: &AdminDeleteTagRequest) -> Result<()> {
+        let started_at = std::time::Instant::now();
+        info!(tag_name = %req.name, "admin_tag.delete started");
         let deleted = self.tag_repo.delete(&req.name).await?;
         if !deleted {
+            warn!(tag_name = %req.name, "admin_tag.delete rejected: tag not found");
             return Err(AppError::NotFound(format!("Tag '{}' not found", req.name)));
         }
+        info!(
+            tag_name = %req.name,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "admin_tag.delete completed"
+        );
         Ok(())
     }
 

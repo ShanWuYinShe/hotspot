@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::time::Duration;
 
 use tokio::{join, try_join};
 
@@ -21,6 +22,8 @@ use crate::{
     utils::{cache::cache_keys, password::PasswordUtil, validation::Validator},
 };
 
+const SEARCH_QUERY_TIMEOUT: Duration = Duration::from_secs(8);
+
 impl GroupService {
     fn normalize_group_sort(sort_by: Option<&str>) -> &'static str {
         match sort_by.unwrap_or("relevance").to_lowercase().as_str() {
@@ -33,51 +36,170 @@ impl GroupService {
     }
 
     pub async fn search(&self, req: &SearchGroupsRequest) -> Result<PaginatedData<GroupItem>> {
+        let query_started_at = std::time::Instant::now();
         let pagination = req.pagination.as_ref();
         let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as i64;
         let cursor = pagination.and_then(|p| p.cursor.clone());
         let sort_by = Self::normalize_group_sort(req.sort_by.as_deref());
-        let (groups, next_cursor) = if let Some(radius) = req.radius {
-            self.group_repo
-                .search_nearby(
-                    req.reference_point.longitude,
-                    req.reference_point.latitude,
+        let has_cursor = cursor.is_some();
+        Validator::validate_coordinates(
+            req.reference_point.latitude,
+            req.reference_point.longitude,
+        )?;
+        if let Some(keyword) = req.keyword.as_deref() {
+            Validator::validate_keyword(keyword, "keyword")?;
+        }
+        if let Some(tag) = req.tag.as_deref() {
+            Validator::validate_not_empty(tag, "tag")?;
+            Validator::validate_length(tag, "tag", 1, 30)?;
+        }
+        let radius = Validator::validate_radius_required(
+            req.radius.unwrap_or(5000.0),
+            crate::constants::MAX_SEARCH_RADIUS,
+        )?;
+        let query_mode = if req.radius.is_some() {
+            "nearby"
+        } else if req.tag.is_some() {
+            "tag"
+        } else if req.keyword.is_some() {
+            "keyword"
+        } else {
+            "invalid"
+        };
+        tracing::info!(
+            query_mode,
+            sort_by,
+            has_keyword = req.keyword.is_some(),
+            has_tag = req.tag.is_some(),
+            radius,
+            limit,
+            has_cursor,
+            "groups.search query started"
+        );
+        let query_future = async {
+            if req.radius.is_some() {
+                self.group_repo
+                    .search_nearby(
+                        req.reference_point.longitude,
+                        req.reference_point.latitude,
+                        radius,
+                        limit,
+                        cursor.clone(),
+                        req.keyword.as_deref(),
+                        sort_by,
+                    )
+                    .await
+                    .map_err(|err| {
+                        tracing::error!(
+                            query_mode = "nearby",
+                            sort_by,
+                            radius,
+                            limit,
+                            has_cursor,
+                            error = ?err,
+                            "groups.search query failed"
+                        );
+                        err
+                    })
+            } else if let Some(ref tag) = req.tag {
+                self.group_repo
+                    .search_by_tag(
+                        tag,
+                        req.reference_point.longitude,
+                        req.reference_point.latitude,
+                        radius,
+                        limit,
+                        cursor.clone(),
+                        sort_by,
+                    )
+                    .await
+                    .map_err(|err| {
+                        tracing::error!(
+                            query_mode = "tag",
+                            tag = %tag,
+                            sort_by,
+                            radius,
+                            limit,
+                            has_cursor,
+                            error = ?err,
+                            "groups.search query failed"
+                        );
+                        err
+                    })
+            } else if let Some(ref keyword) = req.keyword {
+                self.group_repo
+                    .search_by_keyword(
+                        keyword,
+                        req.reference_point.longitude,
+                        req.reference_point.latitude,
+                        radius,
+                        limit,
+                        cursor.clone(),
+                        sort_by,
+                    )
+                    .await
+                    .map_err(|err| {
+                        tracing::error!(
+                            query_mode = "keyword",
+                            keyword = %keyword,
+                            sort_by,
+                            radius,
+                            limit,
+                            has_cursor,
+                            error = ?err,
+                            "groups.search query failed"
+                        );
+                        err
+                    })
+            } else {
+                Err(AppError::BadRequest(
+                    "至少需要提供 keyword、tag、radius 中的一个搜索条件".to_string(),
+                ))
+            }
+        };
+        let (groups, next_cursor) = tokio::time::timeout(SEARCH_QUERY_TIMEOUT, query_future)
+            .await
+            .map_err(|_| {
+                tracing::error!(
+                    query_mode,
+                    sort_by,
                     radius,
                     limit,
-                    cursor.clone(),
-                    req.keyword.as_deref(),
-                    sort_by,
-                )
-                .await?
-        } else if let Some(ref tag) = req.tag {
-            self.group_repo
-                .search_by_tag(
-                    tag,
-                    req.reference_point.longitude,
-                    req.reference_point.latitude,
-                    limit,
-                    cursor.clone(),
-                    sort_by,
-                )
-                .await?
-        } else if let Some(ref keyword) = req.keyword {
-            self.group_repo
-                .search_by_keyword(
-                    keyword,
-                    req.reference_point.longitude,
-                    req.reference_point.latitude,
-                    limit,
-                    cursor.clone(),
-                    sort_by,
-                )
-                .await?
-        } else {
-            return Err(AppError::BadRequest(
-                "至少需要提供 keyword、tag、radius 中的一个搜索条件".to_string(),
-            ));
-        };
+                    has_cursor,
+                    timeout_ms = SEARCH_QUERY_TIMEOUT.as_millis() as u64,
+                    "groups.search query timeout"
+                );
+                AppError::ServiceUnavailable
+            })??;
+        let rows_count = groups.len();
+        let has_next_cursor = next_cursor.is_some();
+        tracing::info!(
+            rows = rows_count,
+            has_next_cursor,
+            query_mode,
+            sort_by,
+            elapsed_ms = query_started_at.elapsed().as_millis(),
+            "groups.search query completed"
+        );
 
-        let items = self.map_search_rows(groups).await?;
+        let build_started_at = std::time::Instant::now();
+        let items = self.map_search_rows(groups).await.map_err(|err| {
+            tracing::error!(
+                query_mode,
+                sort_by,
+                error = ?err,
+                "groups.search response assemble failed"
+            );
+            err
+        })?;
+        tracing::info!(
+            items = items.len(),
+            has_next_cursor,
+            query_mode,
+            sort_by,
+            elapsed_ms = build_started_at.elapsed().as_millis(),
+            "groups.search response assembled"
+        );
         Ok(PaginatedData { items, next_cursor })
     }
 
@@ -164,7 +286,39 @@ impl GroupService {
         owner_id: i64,
         req: CreateGroupChatRequest,
     ) -> Result<GroupItem> {
-        Validator::validate_length(&req.name, "群组名称", 1, 100)?;
+        let started_at = std::time::Instant::now();
+        Validator::validate_group_name(&req.name)?;
+        Validator::validate_coordinates(req.location.point.latitude, req.location.point.longitude)?;
+        Validator::validate_length(&req.location.location_name, "location_name", 0, 100)?;
+        if let Some(description) = req.description.as_deref() {
+            Validator::validate_group_description(description)?;
+        }
+        if let Some(max_members) = req.max_members {
+            Validator::validate_group_max_members(max_members)?;
+        }
+        if let Some(password) = req.password.as_deref() {
+            Validator::validate_group_password(password)?;
+        }
+        if let Some(tags) = req.tags.as_ref() {
+            if tags.len() > 10 {
+                return Err(AppError::BadRequest("tags 最多 10 个".to_string()));
+            }
+            for tag in tags {
+                Validator::validate_length(tag, "tag", 1, 30)?;
+            }
+        }
+        tracing::info!(
+            owner_id,
+            name_len = req.name.chars().count(),
+            has_description = req.description.is_some(),
+            has_avatar_file = req.avatar_file_id.is_some(),
+            has_tags = req.tags.is_some(),
+            join_method = ?req.join_method.unwrap_or(GroupJoinMethod::Open),
+            is_searchable = req.is_searchable.unwrap_or(true),
+            has_password = req.password.is_some(),
+            max_members = req.max_members,
+            "group.create started"
+        );
 
         let lon = Some(req.location.point.longitude);
         let lat = Some(req.location.point.latitude);
@@ -179,8 +333,9 @@ impl GroupService {
                 owner_id,
                 lon,
                 lat,
+                &req.location.location_name,
                 "public".to_string(),
-                Self::join_type_from_join_method(join_method),
+                join_method_str.clone(),
             )
             .await?;
 
@@ -222,11 +377,7 @@ impl GroupService {
         group.location_name = Some(req.location.location_name.clone());
 
         let password_hash = if let Some(pwd) = req.password.as_deref() {
-            if pwd.is_empty() {
-                None
-            } else {
-                Some(PasswordUtil::hash_password(pwd)?)
-            }
+            Some(PasswordUtil::hash_password(pwd)?)
         } else {
             None
         };
@@ -266,6 +417,12 @@ impl GroupService {
         )?;
         let tags = Some(tags_res);
         let has_password = password_hash.is_some();
+        tracing::info!(
+            owner_id,
+            group_id = group.group_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "group.create completed"
+        );
         Ok(GroupItem {
             group: GroupInfo {
                 group_id: group.group_id.to_string(),
@@ -363,15 +520,15 @@ impl GroupService {
                     None,
                     None,
                 ),
-                last_activity_at: Some(row.joined_at.to_rfc3339()),
+                last_activity_at: Some(row.last_activity_at.to_rfc3339()),
                 created_at: None,
                 owner_id: None,
                 my_state: Some(GroupMyStateData {
                     role,
                     unread_count,
                     is_joined: true,
-                    is_muted: false,
-                    is_pinned: false,
+                    is_muted: row.is_muted,
+                    is_pinned: row.is_pinned,
                     joined_at: Some(row.joined_at.to_rfc3339()),
                 }),
                 friends_in_group: None,
@@ -385,8 +542,44 @@ impl GroupService {
     }
 
     pub async fn update_group(&self, user_id: i64, req: UpdateGroupChatRequest) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let group_id = Validator::parse_group_id(&req.group_id)?;
+        tracing::info!(
+            user_id,
+            group_id,
+            has_name = req.name.is_some(),
+            has_description = req.description.is_some(),
+            has_avatar_file = req.avatar_file_id.is_some(),
+            has_location = req.location.is_some(),
+            has_tags = req.tags.is_some(),
+            has_join_method = req.join_method.is_some(),
+            has_is_searchable = req.is_searchable.is_some(),
+            has_max_members = req.max_members.is_some(),
+            has_password = req.password.is_some(),
+            clear_password = req.clear_password.unwrap_or(false),
+            "group.update started"
+        );
         let _ = self.require_admin_or_owner(group_id, user_id).await?;
+        if let Some(name) = req.name.as_deref() {
+            Validator::validate_group_name(name)?;
+        }
+        if let Some(description) = req.description.as_deref() {
+            Validator::validate_group_description(description)?;
+        }
+        if let Some(max_members) = req.max_members {
+            Validator::validate_group_max_members(max_members)?;
+        }
+        if let Some(password) = req.password.as_deref() {
+            Validator::validate_group_password(password)?;
+        }
+        if let Some(tags) = req.tags.as_ref() {
+            if tags.len() > 10 {
+                return Err(AppError::BadRequest("tags 最多 10 个".to_string()));
+            }
+            for tag in tags {
+                Validator::validate_length(tag, "tag", 1, 30)?;
+            }
+        }
 
         let avatar_url = if let Some(fid) = req.avatar_file_id.as_deref() {
             let fid_uuid = Validator::parse_uuid(fid, "文件ID")?;
@@ -411,6 +604,7 @@ impl GroupService {
 
         if let Some(ref loc) = req.location {
             Validator::validate_coordinates(loc.point.latitude, loc.point.longitude)?;
+            Validator::validate_length(&loc.location_name, "location_name", 0, 100)?;
             self.group_repo
                 .update_location(
                     group_id,
@@ -433,6 +627,11 @@ impl GroupService {
             || req.clear_password == Some(true)
         {
             if req.password.is_some() && req.clear_password == Some(true) {
+                tracing::warn!(
+                    user_id,
+                    group_id,
+                    "group.update rejected: password and clear_password are mutually exclusive"
+                );
                 return Err(AppError::BadRequest(
                     "password 与 clear_password 互斥".to_string(),
                 ));
@@ -495,11 +694,19 @@ impl GroupService {
             .cache_manager
             .delete(cache_keys::GROUP_INFO, &group_id.to_string())
             .await;
+        tracing::info!(
+            user_id,
+            group_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "group.update completed"
+        );
         Ok(())
     }
 
     pub async fn delete_group(&self, user_id: i64, req: DeleteGroupChatRequest) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let group_id = Validator::parse_group_id(&req.group_id)?;
+        tracing::info!(user_id, group_id, "group.delete started");
         let _ = self.require_owner(group_id, user_id).await?;
 
         self.group_repo.dismiss(group_id).await?;
@@ -508,6 +715,12 @@ impl GroupService {
             dismissed_by: user_id,
             dismissed_by_owner: true,
         });
+        tracing::info!(
+            user_id,
+            group_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "group.delete completed"
+        );
         Ok(())
     }
 
@@ -516,11 +729,24 @@ impl GroupService {
         user_id: i64,
         req: TransferOwnershipRequest,
     ) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let new_owner_id = Validator::parse_user_id(&req.new_owner_id)?;
         let group_id = Validator::parse_group_id(&req.group_id)?;
+        tracing::info!(
+            user_id,
+            group_id,
+            new_owner_id,
+            "group.transfer_ownership started"
+        );
         let _ = self.require_owner(group_id, user_id).await?;
 
         if !self.member_repo.is_member(group_id, new_owner_id).await? {
+            tracing::warn!(
+                user_id,
+                group_id,
+                new_owner_id,
+                "group.transfer_ownership rejected: target user is not member"
+            );
             return Err(AppError::NotGroupMember("目标用户不在群组中".to_string()));
         }
 
@@ -531,6 +757,13 @@ impl GroupService {
         self.member_repo
             .update_role(group_id, user_id, GroupRole::Member)
             .await?;
+        tracing::info!(
+            user_id,
+            group_id,
+            new_owner_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "group.transfer_ownership completed"
+        );
         Ok(())
     }
 
@@ -539,10 +772,24 @@ impl GroupService {
         user_id: i64,
         req: &UpdateGroupMySettingsRequest,
     ) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let group_id = Validator::parse_group_id(&req.group_id)?;
+        tracing::info!(
+            user_id,
+            group_id,
+            has_is_muted = req.is_muted.is_some(),
+            has_is_pinned = req.is_pinned.is_some(),
+            "groups.my_settings update started"
+        );
         self.settings_repo
             .upsert_user_preferences(group_id, user_id, req.is_muted, req.is_pinned)
             .await?;
+        tracing::info!(
+            user_id,
+            group_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "groups.my_settings update completed"
+        );
         Ok(())
     }
 
@@ -683,13 +930,21 @@ impl GroupService {
         admin_user_id: i64,
         req: &AdminDismissGroupRequest,
     ) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let group_id = Validator::parse_group_id(&req.group_id)?;
+        tracing::info!(admin_user_id, group_id, "group.admin_dismiss started");
         self.group_repo.dismiss(group_id).await?;
         self.event_bus.publish(AppEvent::GroupDismissed {
             group_id,
             dismissed_by: admin_user_id,
             dismissed_by_owner: false,
         });
+        tracing::info!(
+            admin_user_id,
+            group_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "group.admin_dismiss completed"
+        );
         Ok(())
     }
 }

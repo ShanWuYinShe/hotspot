@@ -14,7 +14,7 @@ use crate::{
         },
     },
     repositories::{
-        group_member_repo::GroupMemberRepository, notification_repo::NotificationRepository,
+        group::member_repo::GroupMemberRepository, notification_repo::NotificationRepository,
         user_repo::UserRepository,
     },
     services::{

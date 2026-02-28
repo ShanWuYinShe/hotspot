@@ -26,6 +26,8 @@
 	let isLoading = $state(false);
 	let showPassword = $state(false);
 	let currentTab = $state('login');
+	const PASSWORD_POLICY_TIP = '密码需为 8-128 位且同时包含字母和数字';
+	const hasLetterAndDigit = (value: string) => /[A-Za-z]/.test(value) && /\d/.test(value);
 
 	function handleClose() {
 		uiStore.closeLoginModal();
@@ -69,8 +71,17 @@
 	}
 
 	async function handleLogin() {
-		if (!loginId || !password) {
+		const trimmedLoginId = loginId.trim();
+		if (!trimmedLoginId || !password) {
 			toast.error('请填写登录信息');
+			return;
+		}
+		if (trimmedLoginId.length < 3 || trimmedLoginId.length > 64) {
+			toast.error('登录账号长度需在 3-64 字符之间');
+			return;
+		}
+		if (password.length < 8 || password.length > 128 || !hasLetterAndDigit(password)) {
+			toast.error(PASSWORD_POLICY_TIP);
 			return;
 		}
 
@@ -79,7 +90,7 @@
 			const response = await withMinimumLoadingTime(
 				() =>
 					authService.login({
-						login_id: loginId,
+						login_id: trimmedLoginId,
 						password,
 						client_type: 'web'
 					}),
@@ -107,8 +118,18 @@
 	}
 
 	async function handleRegister() {
-		if (!loginId || !password || !nickname) {
+		const trimmedLoginId = loginId.trim();
+		const trimmedNickname = nickname.trim();
+		if (!trimmedLoginId || !password || !trimmedNickname) {
 			toast.error('请填写完整信息');
+			return;
+		}
+		if (trimmedLoginId.length < 3 || trimmedLoginId.length > 64) {
+			toast.error('登录账号长度需在 3-64 字符之间');
+			return;
+		}
+		if (trimmedNickname.length < 1 || trimmedNickname.length > 30) {
+			toast.error('昵称长度需在 1-30 字符之间');
 			return;
 		}
 
@@ -117,8 +138,8 @@
 			return;
 		}
 
-		if (password.length < 6) {
-			toast.error('密码长度不能少于6位');
+		if (password.length < 8 || password.length > 128 || !hasLetterAndDigit(password)) {
+			toast.error(PASSWORD_POLICY_TIP);
 			return;
 		}
 
@@ -127,8 +148,8 @@
 			const response = await withMinimumLoadingTime(
 				() =>
 					authService.register({
-						login_id: loginId,
-						nickname,
+						login_id: trimmedLoginId,
+						nickname: trimmedNickname,
 						password,
 						client_type: 'web'
 					}),
@@ -156,6 +177,10 @@
 		const trimmedNickname = guestNickname.trim();
 		if (!trimmedNickname) {
 			toast.error('请输入昵称');
+			return;
+		}
+		if (trimmedNickname.length > 30) {
+			toast.error('昵称长度需在 1-30 字符之间');
 			return;
 		}
 
@@ -209,11 +234,13 @@
 		}
 	}}
 >
-	<Dialog.Content class="sm:max-w-md">
+	<Dialog.Content class="sm:max-w-md rounded-3xl border border-border/60 bg-card/95 shadow-xl backdrop-blur-md">
 		<Dialog.Header>
-			<Dialog.Title class="flex items-center gap-2">
-				<MapPin class="h-5 w-5 text-primary" />
-				欢迎来到 HotSpot
+			<Dialog.Title class="flex items-center gap-3">
+				<div class="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/50 bg-primary/10 text-primary">
+					<MapPin class="h-5 w-5" />
+				</div>
+				<div>欢迎来到 HotSpot</div>
 			</Dialog.Title>
 			<Dialog.Description>
 				登录后即可使用完整功能
@@ -221,10 +248,10 @@
 		</Dialog.Header>
 
 		<Tabs bind:value={currentTab} class="mt-4">
-			<TabsList class="grid w-full grid-cols-3">
-				<TabsTrigger value="login">登录</TabsTrigger>
-				<TabsTrigger value="register">注册</TabsTrigger>
-				<TabsTrigger value="guest">访客</TabsTrigger>
+			<TabsList class="grid w-full grid-cols-3 rounded-3xl bg-background/75 p-1.5 ring-1 ring-border/60">
+				<TabsTrigger value="login" class="rounded-2xl">登录</TabsTrigger>
+				<TabsTrigger value="register" class="rounded-2xl">注册</TabsTrigger>
+				<TabsTrigger value="guest" class="rounded-2xl">访客</TabsTrigger>
 			</TabsList>
 
 			<!-- 固定最小高度以防止跳动（需容纳注册表单 4 个输入框 + 按钮） -->
@@ -241,6 +268,7 @@
 							autocomplete="username"
 							bind:value={loginId}
 							disabled={isLoading}
+							class="h-11 rounded-2xl border-border/60 bg-background/70"
 						/>
 					</div>
 					<div class="space-y-2">
@@ -253,12 +281,13 @@
 								autocomplete="current-password"
 								bind:value={password}
 								disabled={isLoading}
+								class="h-11 rounded-2xl border-border/60 bg-background/70"
 							/>
 							<Button
 								type="button"
 								variant="ghost"
 								size="icon"
-								class="absolute right-0 top-0 h-full px-3"
+								class="absolute right-1 top-1 h-9 w-9 rounded-xl px-0"
 								onclick={() => (showPassword = !showPassword)}
 								aria-label={showPassword ? '隐藏密码' : '显示密码'}
 							>
@@ -270,7 +299,7 @@
 							</Button>
 						</div>
 					</div>
-					<Button type="submit" class="w-full" disabled={isLoading}>
+					<Button type="submit" class="h-11 w-full rounded-2xl" disabled={isLoading}>
 						{#if isLoading}
 							<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 						{/if}
@@ -291,6 +320,7 @@
 							autocomplete="nickname"
 							bind:value={nickname}
 							disabled={isLoading}
+							class="h-11 rounded-2xl border-border/60 bg-background/70"
 						/>
 					</div>
 					<div class="space-y-2">
@@ -302,6 +332,7 @@
 							autocomplete="username"
 							bind:value={loginId}
 							disabled={isLoading}
+							class="h-11 rounded-2xl border-border/60 bg-background/70"
 						/>
 					</div>
 					<div class="space-y-2">
@@ -309,10 +340,11 @@
 						<Input
 							id="modal-register-password"
 							type="password"
-							placeholder="至少6位"
+							placeholder="至少8位，包含字母和数字"
 							autocomplete="new-password"
 							bind:value={password}
 							disabled={isLoading}
+							class="h-11 rounded-2xl border-border/60 bg-background/70"
 						/>
 					</div>
 					<div class="space-y-2">
@@ -324,9 +356,10 @@
 							autocomplete="new-password"
 							bind:value={confirmPassword}
 							disabled={isLoading}
+							class="h-11 rounded-2xl border-border/60 bg-background/70"
 						/>
 					</div>
-					<Button type="submit" class="w-full" disabled={isLoading}>
+					<Button type="submit" class="h-11 w-full rounded-2xl" disabled={isLoading}>
 						{#if isLoading}
 							<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 						{/if}
@@ -338,7 +371,7 @@
 			<!-- 访客 -->
 			<TabsContent value="guest">
 				<form onsubmit={(e) => { e.preventDefault(); handleGuestLogin(); }} class="space-y-4 pt-4 animate-in fade-in-0 duration-200">
-					<div class="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
+					<div class="rounded-2xl border border-border/50 bg-background/65 p-3 text-sm text-muted-foreground">
 						访客模式可快速体验，部分功能受限。
 					</div>
 					<div class="space-y-2">
@@ -350,9 +383,10 @@
 							autocomplete="nickname"
 							bind:value={guestNickname}
 							disabled={isLoading}
+							class="h-11 rounded-2xl border-border/60 bg-background/70"
 						/>
 					</div>
-					<Button type="submit" class="w-full" disabled={isLoading}>
+					<Button type="submit" class="h-11 w-full rounded-2xl" disabled={isLoading}>
 						{#if isLoading}
 							<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 						{/if}

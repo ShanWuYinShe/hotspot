@@ -52,7 +52,7 @@ interface MapRenderRequest {
   filter?: {
     data_type?: MapDataType;
     time_range?: TimeRangeParams;
-    only_friends?: boolean;  // 仅登录态生效；未登录时忽略此参数（视为 false）
+    only_friends?: boolean;  // 仅登录态生效；未登录时忽略此参数（视为 false）；已登录但未传时同样视为 false
   };
 }
 ```
@@ -71,6 +71,7 @@ interface Bounds {
   east: number;
   west: number;
 }
+// 约束：north >= south；east >= west（允许退化视口）；east/west 取值范围 [-180, 180]。暂不支持跨国际日期变更线视口（需由客户端拆分请求）。违反时返回 `10000`
 
 interface MapViewport {
   bounds: Bounds;
@@ -81,6 +82,7 @@ interface TimeRangeParams {
   start_time?: string;  // UTC ISO 8601
   end_time?: string;    // UTC ISO 8601
 }
+// 约束：若同时提供，必须满足 start_time <= end_time。违反时返回 `10000`
 
 interface MapRenderItem {
   render_id: string;  // 渲染项唯一 ID（聚合时由服务端生成，实体时为 payload_id）

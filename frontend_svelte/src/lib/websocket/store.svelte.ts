@@ -115,6 +115,8 @@ class WebSocketStore {
 	private lastServerTime: string | null = null;
 	// 断开时间戳（客户端本地），仅在 lastServerTime 不可用时回退使用
 	private disconnectTime = 0;
+	// 最近一次重连前的断开时长（毫秒），用于业务层判定是否需要 HTTP 回补
+	lastDisconnectDurationMs = $state<number | null>(null);
 
 	// 防止并发连接的锁
 	private connectingLock = false;
@@ -260,6 +262,7 @@ class WebSocketStore {
 		this.connectingLock = true;
 		this.shouldReconnect = true;
 		this.lastError = null;
+		this.lastDisconnectDurationMs = null;
 
 		// 手动触发连接（非重连循环）时重置重连计数器
 		if (this.connectionState === 'failed' || this.connectionState === 'disconnected') {
@@ -484,10 +487,12 @@ class WebSocketStore {
 		this.serverConfig = payload.config;
 
 		// 计算断开时长（spec: 使用 server_time 与上次记录的 lastServerTime 比较）
+		let disconnectDurationMs: number | null = null;
 		if (this.lastServerTime) {
 			const lastServerMs = new Date(this.lastServerTime).getTime();
 			const currentServerMs = new Date(payload.server_time).getTime();
 			const disconnectDuration = currentServerMs - lastServerMs;
+			disconnectDurationMs = disconnectDuration > 0 ? disconnectDuration : null;
 			log(`[WebSocket] 断开时长: ${(disconnectDuration / 1000).toFixed(1)}秒（基于 server_time）`);
 
 			// 断开超过 10 秒，建议通过 HTTP API 补拉离线数据
@@ -497,8 +502,10 @@ class WebSocketStore {
 		} else if (this.disconnectTime > 0) {
 			// 首次连接或 lastServerTime 不可用时回退到客户端时间
 			const disconnectDuration = Date.now() - this.disconnectTime;
+			disconnectDurationMs = disconnectDuration > 0 ? disconnectDuration : null;
 			log(`[WebSocket] 断开时长: ${(disconnectDuration / 1000).toFixed(1)}秒（基于客户端时间）`);
 		}
+		this.lastDisconnectDurationMs = disconnectDurationMs;
 		// 记录本次服务端时间，用于下次断线恢复
 		this.lastServerTime = payload.server_time;
 

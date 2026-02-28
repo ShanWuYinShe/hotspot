@@ -2,6 +2,7 @@
  * 通知中心（HTTP + WebSocket 联动）
  */
 import { NotificationSyncService } from '../core/services/NotificationSyncService';
+import { ApiClient } from '../core/api/ApiClient';
 import { NotificationItem, NotificationPayload, NotificationType } from '../core/types/api';
 import { SystemIcon, AppIcon } from './SystemIcon';
 import { SystemToast } from './SystemToast';
@@ -30,6 +31,7 @@ export struct NotificationCenter {
   @State private isLoadingMore: boolean = false;
   @State private hasMore: boolean = false;
   @State private errorMessage: string = '';
+  @State private actionLoadingIds: string[] = [];
 
   private syncService = NotificationSyncService.getInstance();
   private accessibilityManager = AccessibilityManager.getInstance();
@@ -183,6 +185,86 @@ export struct NotificationCenter {
     }
   }
 
+  private isActionLoading(notificationId: string): boolean {
+    return this.actionLoadingIds.includes(notificationId);
+  }
+
+  private setActionLoading(notificationId: string, loading: boolean): void {
+    if (loading) {
+      if (!this.actionLoadingIds.includes(notificationId)) {
+        this.actionLoadingIds = [...this.actionLoadingIds, notificationId];
+      }
+      return;
+    }
+    this.actionLoadingIds = this.actionLoadingIds.filter((id: string) => id !== notificationId);
+  }
+
+  private canHandleGroupInvite(notification: NotificationItem): boolean {
+    return notification.type === 'group_invite_received' && !!notification.payload?.invite_id;
+  }
+
+  private canHandleGroupApplication(notification: NotificationItem): boolean {
+    return notification.type === 'group_application_received' && !!notification.payload?.application_id;
+  }
+
+  private async handleGroupInviteAction(notification: NotificationItem, action: 'accept' | 'reject'): Promise<void> {
+    if (!this.canHandleGroupInvite(notification) || this.isActionLoading(notification.notification_id)) {
+      return;
+    }
+    const inviteId = notification.payload?.invite_id ?? '';
+    if (!inviteId) {
+      SystemToast.showWarning('邀请信息缺失，无法处理', this.getUIContext());
+      return;
+    }
+    this.setActionLoading(notification.notification_id, true);
+    try {
+      const response = action === 'accept'
+        ? await ApiClient.acceptGroupInvite({ invite_id: inviteId })
+        : await ApiClient.rejectGroupInvite({ invite_id: inviteId });
+      if (response.code !== 0) {
+        SystemToast.showError(response.message || (action === 'accept' ? '接受邀请失败' : '拒绝邀请失败'), this.getUIContext());
+        return;
+      }
+      await this.onMarkRead(notification);
+      SystemToast.showSuccess(action === 'accept' ? '已接受群组邀请' : '已拒绝群组邀请', this.getUIContext());
+      await this.refreshNotifications();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : (action === 'accept' ? '接受邀请失败' : '拒绝邀请失败');
+      SystemToast.showError(message, this.getUIContext());
+    } finally {
+      this.setActionLoading(notification.notification_id, false);
+    }
+  }
+
+  private async handleGroupApplicationAction(notification: NotificationItem, action: 'approve' | 'reject'): Promise<void> {
+    if (!this.canHandleGroupApplication(notification) || this.isActionLoading(notification.notification_id)) {
+      return;
+    }
+    const applicationId = notification.payload?.application_id ?? '';
+    if (!applicationId) {
+      SystemToast.showWarning('申请信息缺失，无法处理', this.getUIContext());
+      return;
+    }
+    this.setActionLoading(notification.notification_id, true);
+    try {
+      const response = action === 'approve'
+        ? await ApiClient.approveGroupApplication({ application_id: applicationId })
+        : await ApiClient.rejectGroupApplication({ application_id: applicationId });
+      if (response.code !== 0) {
+        SystemToast.showError(response.message || (action === 'approve' ? '批准申请失败' : '拒绝申请失败'), this.getUIContext());
+        return;
+      }
+      await this.onMarkRead(notification);
+      SystemToast.showSuccess(action === 'approve' ? '已批准入群申请' : '已拒绝入群申请', this.getUIContext());
+      await this.refreshNotifications();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : (action === 'approve' ? '批准申请失败' : '拒绝申请失败');
+      SystemToast.showError(message, this.getUIContext());
+    } finally {
+      this.setActionLoading(notification.notification_id, false);
+    }
+  }
+
   build() {
     Column({ space: 16 }) {
       // 标题栏
@@ -215,13 +297,14 @@ export struct NotificationCenter {
         Row({ space: 8 }) {
           ForEach(this.filterOptions, (filter: NotificationFilterOption) => {
             Button(filter.label)
-              .type(this.selectedFilter === filter.key ? ButtonType.Capsule : ButtonType.Normal)
+              .type(ButtonType.Normal)
               .backgroundColor(this.selectedFilter === filter.key
                 ? $r('sys.color.ohos_id_color_emphasize')
-                : $r('app.color.bg_secondary'))
+                : $r('app.color.bg_tertiary'))
               .fontColor(this.selectedFilter === filter.key ? Color.White : $r('sys.color.ohos_id_color_text_primary'))
               .fontSize(14)
               .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+              .borderRadius(DesignConstants.RADIUS.XL)
               .onClick(() => this.onFilterSelected(filter.key as NotificationFilterKey))
           }, (filter: NotificationFilterOption) => filter.key)
         }
@@ -256,10 +339,11 @@ export struct NotificationCenter {
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .textAlign(TextAlign.Center)
           Button('重试')
-            .type(ButtonType.Capsule)
+            .type(ButtonType.Normal)
             .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
             .fontColor(Color.White)
             .height(40)
+            .borderRadius(DesignConstants.RADIUS.XL)
             .onClick(() => this.refreshNotifications())
         }
         .width('100%')
@@ -317,7 +401,7 @@ export struct NotificationCenter {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor($r('app.color.bg_primary'))
   }
 
   @Builder
@@ -353,7 +437,7 @@ export struct NotificationCenter {
             .fontSize(12)
             .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
             .padding({ left: 8, right: 8, top: 2, bottom: 2 })
-            .backgroundColor($r('app.color.bg_secondary'))
+            .backgroundColor($r('app.color.bg_tertiary'))
             .borderRadius(DesignConstants.RADIUS.SM)
         }
 
@@ -371,21 +455,74 @@ export struct NotificationCenter {
 
           if (!notification.is_read) {
             Button('标记已读')
-              .type(ButtonType.Capsule)
+              .type(ButtonType.Normal)
               .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
               .fontColor(Color.White)
               .fontSize(12)
               .height(32)
+              .borderRadius(DesignConstants.RADIUS.XL)
               .padding({ left: 12, right: 12 })
               .onClick(() => this.onMarkRead(notification))
           }
+        }
+
+        if (this.canHandleGroupInvite(notification)) {
+          Row({ space: 8 }) {
+            Button(this.isActionLoading(notification.notification_id) ? '处理中...' : '接受')
+              .type(ButtonType.Normal)
+              .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+              .fontColor(Color.White)
+              .fontSize(12)
+              .height(32)
+              .borderRadius(DesignConstants.RADIUS.XL)
+              .enabled(!this.isActionLoading(notification.notification_id))
+              .onClick(() => this.handleGroupInviteAction(notification, 'accept'))
+
+            Button('拒绝')
+              .type(ButtonType.Normal)
+              .backgroundColor($r('app.color.bg_tertiary'))
+              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              .fontSize(12)
+              .height(32)
+              .borderRadius(DesignConstants.RADIUS.XL)
+              .borderWidth(1)
+              .borderColor($r('sys.color.ohos_id_color_list_separator'))
+              .enabled(!this.isActionLoading(notification.notification_id))
+              .onClick(() => this.handleGroupInviteAction(notification, 'reject'))
+          }
+          .margin({ top: 8 })
+        } else if (this.canHandleGroupApplication(notification)) {
+          Row({ space: 8 }) {
+            Button(this.isActionLoading(notification.notification_id) ? '处理中...' : '批准')
+              .type(ButtonType.Normal)
+              .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+              .fontColor(Color.White)
+              .fontSize(12)
+              .height(32)
+              .borderRadius(DesignConstants.RADIUS.XL)
+              .enabled(!this.isActionLoading(notification.notification_id))
+              .onClick(() => this.handleGroupApplicationAction(notification, 'approve'))
+
+            Button('拒绝')
+              .type(ButtonType.Normal)
+              .backgroundColor($r('app.color.bg_tertiary'))
+              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              .fontSize(12)
+              .height(32)
+              .borderRadius(DesignConstants.RADIUS.XL)
+              .borderWidth(1)
+              .borderColor($r('sys.color.ohos_id_color_list_separator'))
+              .enabled(!this.isActionLoading(notification.notification_id))
+              .onClick(() => this.handleGroupApplicationAction(notification, 'reject'))
+          }
+          .margin({ top: 8 })
         }
       }
       .layoutWeight(1)
     }
     .width('100%')
     .padding(16)
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.LG)
     .onClick(() => this.handleNotificationClick(notification))
     .accessibilityGroup(true)

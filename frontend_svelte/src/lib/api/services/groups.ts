@@ -332,7 +332,6 @@ export const groupMessagesService = {
 	 */
 	getHistory(params: {
 		group_id: string;
-		include_system?: boolean;
 		pagination?: PaginationParams;
 	}) {
 		return paginate<GroupMessageItem>(GROUP_MESSAGES.GET_HISTORY, params);

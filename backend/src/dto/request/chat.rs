@@ -18,6 +18,11 @@ pub struct UpdatePrivateChatSettingsRequest {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct DeletePrivateChatRequest {
+    pub target_user_id: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct PrivateChatOpenTheDoorRequest {
     pub target_user_id: String,
 }
@@ -70,7 +75,6 @@ pub struct SendGroupMessageRequest {
 pub struct GroupMessagesHistoryRequest {
     pub group_id: String,
     pub pagination: Option<PaginationParams>,
-    pub include_system: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]

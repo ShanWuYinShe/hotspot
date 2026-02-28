@@ -56,7 +56,7 @@
 	$effect(() => {
 		const isAuthenticated = authStore.isAuthenticated;
 
-		if (browser && authStore.initialized && !isAuthenticated) {
+		if (browser && authStore.initialized && !isAuthenticated && !authStore.isRestoring) {
 			uiStore.saveRedirectUrl(`${page.url.pathname}${page.url.search}`);
 		}
 
@@ -161,7 +161,7 @@
 			{/if}
 
 			<!-- Main content -->
-			<main class="flex-1 rounded-2xl bg-card/70 p-4 shadow-sm shadow-black/5 mx-3 md:mx-4 md:p-6" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
+			<main class="mx-3 flex-1 rounded-3xl border border-border/60 bg-card/85 p-4 shadow-sm backdrop-blur-md md:mx-4 md:p-6" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
 				<div class="mx-auto w-full max-w-6xl">
 					{@render children()}
 				</div>
@@ -184,15 +184,15 @@
 	<div class="min-h-screen bg-background">
 		<Navbar onMenuClick={() => {}} />
 		<div class="flex min-h-[calc(100dvh-4rem)] bg-muted/30">
-			<main class="flex-1 rounded-2xl bg-card/70 p-4 shadow-sm shadow-black/5 mx-3 md:mx-4 md:p-6" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
+			<main class="mx-3 flex-1 rounded-3xl border border-border/60 bg-card/85 p-4 shadow-sm backdrop-blur-md md:mx-4 md:p-6" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
 				<div class="mx-auto w-full max-w-6xl">
 					<div class="flex flex-col items-center justify-center py-20 text-center">
-						<div class="mb-4 rounded-full bg-destructive/10 p-6">
+						<div class="mb-4 rounded-3xl bg-destructive/10 p-6">
 							<Shield class="h-10 w-10 text-destructive" />
 						</div>
 						<h2 class="mb-2 text-xl font-semibold">无访问权限</h2>
 						<p class="mb-6 text-muted-foreground">你的账号不是系统管理员，无法访问管理后台</p>
-						<Button class="rounded-full px-8" onclick={() => goto('/')}>
+						<Button class="rounded-2xl px-8" onclick={() => goto('/')}>
 							返回首页
 						</Button>
 					</div>
@@ -200,20 +200,31 @@
 			</main>
 		</div>
 	</div>
+{:else if authStore.isRestoring}
+	<!-- 登录态恢复中 -->
+	<div class="min-h-screen bg-background">
+		<Navbar onMenuClick={() => {}} />
+		<div class="flex min-h-[calc(100dvh-4rem)] items-center justify-center bg-muted/30">
+			<div class="flex flex-col items-center gap-3 text-muted-foreground">
+				<div class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
+				<p class="text-sm">正在恢复登录状态...</p>
+			</div>
+		</div>
+	</div>
 {:else}
 	<!-- 未登录 -->
 	<div class="min-h-screen bg-background">
 		<Navbar onMenuClick={() => (sidebarOpen = !sidebarOpen)} />
 		<div class="flex min-h-[calc(100dvh-4rem)] bg-muted/30">
-			<main class="flex-1 rounded-2xl bg-card/70 p-4 shadow-sm shadow-black/5 mx-3 md:mx-4 md:p-6" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
+			<main class="mx-3 flex-1 rounded-3xl border border-border/60 bg-card/85 p-4 shadow-sm backdrop-blur-md md:mx-4 md:p-6" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
 				<div class="mx-auto w-full max-w-6xl">
 					<div class="flex flex-col items-center justify-center py-20 text-center">
-						<div class="mb-4 rounded-full bg-muted p-6">
+						<div class="mb-4 rounded-3xl bg-muted p-6">
 							<Shield class="h-10 w-10 text-muted-foreground" />
 						</div>
 						<h2 class="mb-2 text-xl font-semibold">需要登录</h2>
 						<p class="mb-6 text-muted-foreground">登录后可访问管理后台</p>
-						<Button class="rounded-full px-8" onclick={handleLoginClick}>
+						<Button class="rounded-2xl px-8" onclick={handleLoginClick}>
 							立即登录
 						</Button>
 					</div>

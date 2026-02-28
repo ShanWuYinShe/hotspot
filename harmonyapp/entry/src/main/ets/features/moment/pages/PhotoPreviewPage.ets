@@ -8,6 +8,7 @@ import { AppIcon, IconButton, IconSize } from '../../../components/SystemIcon';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { AppRouter } from '../../../core/router/AppRouter';
 
+@Preview
 @Component
 export struct PhotoPreviewPage {
   pathStack: NavPathStack = new NavPathStack();
@@ -27,7 +28,7 @@ export struct PhotoPreviewPage {
 
   aboutToAppear(): void {
     SystemUiController.useSurface({
-      baseColor: '#000000',
+      baseColor: DesignConstants.COLOR.PRIMARY_BG_DARK,
       overlayOpacity: 1,
       preferDarkContent: false
     });
@@ -40,7 +41,7 @@ export struct PhotoPreviewPage {
       Column()
         .width('100%')
         .height('100%')
-        .backgroundColor(Color.Black)
+        .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_DARK)
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
 
       // 图片轮播

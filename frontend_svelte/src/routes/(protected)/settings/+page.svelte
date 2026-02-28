@@ -3,7 +3,6 @@
 	import { toast } from '$lib/stores/toast.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
-	import { Separator } from '$lib/components/ui/separator';
 	import ThemeToggle from '$lib/components/common/theme-toggle.svelte';
 	import User from 'lucide-svelte/icons/user';
 	import Bell from 'lucide-svelte/icons/bell';
@@ -47,25 +46,25 @@
 	<title>设置 - HotSpot</title>
 </svelte:head>
 
-<div class="mx-auto max-w-2xl space-y-6">
-	<h1 class="text-2xl font-bold">设置</h1>
+<div class="mx-auto max-w-3xl space-y-5">
+	<div class="rounded-3xl border border-border/60 bg-linear-to-br from-background via-card/85 to-muted/40 p-5 shadow-sm">
+		<h1 class="text-2xl font-bold">设置</h1>
+		<p class="mt-1 text-sm text-muted-foreground">统一管理账户、安全、隐私与通知偏好</p>
+	</div>
 
 	{#each settingsSections as section (section.title)}
-		<Card>
+		<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 			<CardHeader>
 				<CardTitle class="text-lg">{section.title}</CardTitle>
 			</CardHeader>
-			<CardContent class="space-y-1 p-0">
-				{#each section.items as item, i (item.href)}
-					{#if i > 0}
-						<Separator />
-					{/if}
+			<CardContent class="space-y-2 p-4 pt-0">
+				{#each section.items as item (item.href)}
 					<a
 						href={item.href}
-						class="flex items-center justify-between px-6 py-4 transition-colors hover:bg-accent/50"
+						class="flex items-center justify-between rounded-2xl border border-border/50 bg-background/65 px-4 py-4 transition-all hover:border-primary/25 hover:bg-accent/45"
 					>
 						<div class="flex items-center gap-4">
-							<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+							<div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
 								<item.icon class="h-5 w-5" />
 							</div>
 							<div>
@@ -81,14 +80,14 @@
 	{/each}
 
 	<!-- 外观 -->
-	<Card>
+	<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 		<CardHeader>
 			<CardTitle class="text-lg">外观</CardTitle>
 		</CardHeader>
-		<CardContent>
-			<div class="flex items-center justify-between">
+		<CardContent class="pt-0">
+			<div class="flex items-center justify-between rounded-2xl border border-border/50 bg-background/65 px-4 py-4">
 				<div class="flex items-center gap-4">
-					<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+					<div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
 						<Palette class="h-5 w-5" />
 					</div>
 					<div>
@@ -102,16 +101,16 @@
 	</Card>
 
 	<!-- 危险操作 -->
-	<Card>
+	<Card class="rounded-3xl border border-destructive/25 bg-card/80 shadow-sm backdrop-blur-md">
 		<CardHeader>
 			<CardTitle class="text-lg text-destructive">危险操作</CardTitle>
 		</CardHeader>
 		<CardContent class="space-y-4">
-			<Button variant="outline" class="w-full justify-start" onclick={handleLogout}>
+			<Button variant="outline" class="h-11 w-full justify-start rounded-2xl border-border/60 bg-background/70" onclick={handleLogout}>
 				<LogOut class="mr-2 h-4 w-4" />
 				退出登录
 			</Button>
-			<Button variant="outline" class="w-full justify-start text-destructive hover:bg-destructive hover:text-destructive-foreground">
+			<Button variant="outline" class="h-11 w-full justify-start rounded-2xl border-destructive/40 text-destructive hover:bg-destructive hover:text-destructive-foreground">
 				<Trash2 class="mr-2 h-4 w-4" />
 				删除账户
 			</Button>

@@ -3,6 +3,8 @@
  * 使用 ArkUI 声明式动画替代 setInterval 轮询，降低 CPU 开销
  */
 
+import { DesignConstants } from '../constants/DesignConstants';
+
 @Component
 export struct SystemLoadingView {
   @Prop message: string = '加载中...';
@@ -35,16 +37,35 @@ export struct SystemLoadingView {
   build() {
     Column({ space: 24 }) {
       Stack() {
-        Image($r('app.media.logo'))
-          .width(80)
-          .height(80)
-          .objectFit(ImageFit.Contain)
-          .rotate({ angle: this.rotationAngle })
-          .animation({
-            duration: 2000,
-            iterations: -1,
-            curve: Curve.Linear
-          })
+        if (this.showProgress && this.progressType === 'indeterminate') {
+          Column()
+            .width(72)
+            .height(72)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .backgroundColor($r('app.color.bg_secondary'))
+
+          Image($r('app.media.logo'))
+            .width(42)
+            .height(42)
+            .objectFit(ImageFit.Contain)
+            .rotate({ angle: this.rotationAngle })
+            .animation({
+              duration: 1200,
+              iterations: -1,
+              curve: Curve.Linear
+            })
+        } else {
+          Image($r('app.media.logo'))
+            .width(72)
+            .height(72)
+            .objectFit(ImageFit.Contain)
+            .rotate({ angle: this.rotationAngle })
+            .animation({
+              duration: 2000,
+              iterations: -1,
+              curve: Curve.Linear
+            })
+        }
 
         if (this.showProgress && this.progressType === 'determinate') {
           Progress({
@@ -84,7 +105,7 @@ export struct SystemLoadingView {
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor($r('app.color.bg_primary'))
     .padding(32)
   }
 

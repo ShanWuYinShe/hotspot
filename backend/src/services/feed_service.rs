@@ -15,11 +15,11 @@ use crate::{
     error::AppError,
     repositories::{
         dismiss_repo::FeedDismissRepository,
-        group_member_repo::GroupMemberRepository,
+        group::member_repo::GroupMemberRepository,
         group_repo::GroupRepository,
         moment_repo::{FeedMomentRow, MomentRepository},
         tag_repo::TagRepository,
-        user_follows_repo::UserFollowsRepository,
+        user::follows_repo::UserFollowsRepository,
         user_repo::UserRepository,
     },
     types::enums::{
@@ -522,7 +522,15 @@ impl FeedService {
         user_id: i64,
         req: &DismissFeedItemRequest,
     ) -> Result<(), AppError> {
+        let started_at = std::time::Instant::now();
+        tracing::info!(
+            user_id,
+            target_type = ?req.target_type,
+            target_id = %req.target_id,
+            "feed.dismiss_item started"
+        );
         if req.target_id.trim().is_empty() {
+            tracing::warn!(user_id, target_type = ?req.target_type, "feed.dismiss_item rejected: empty target_id");
             return Err(AppError::BadRequest("target_id 不能为空".to_string()));
         }
 
@@ -532,6 +540,7 @@ impl FeedService {
                     .map_err(|_| AppError::InvalidFormat("moment_id 格式错误".to_string()))?;
                 let exists = self.moment_repo.find_by_id(moment_id).await?;
                 if exists.is_none() {
+                    tracing::warn!(user_id, moment_id = %moment_id, "feed.dismiss_item rejected: moment not found");
                     return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
                 }
             }
@@ -541,6 +550,11 @@ impl FeedService {
                     .parse()
                     .map_err(|_| AppError::InvalidFormat("user_id 格式错误".to_string()))?;
                 if self.user_repo.find_by_id(target_user_id).await?.is_none() {
+                    tracing::warn!(
+                        user_id,
+                        target_user_id,
+                        "feed.dismiss_item rejected: user not found"
+                    );
                     return Err(AppError::UserNotFound("用户不存在".to_string()));
                 }
             }
@@ -550,6 +564,11 @@ impl FeedService {
                     .parse()
                     .map_err(|_| AppError::InvalidFormat("group_id 格式错误".to_string()))?;
                 if self.group_repo.find_by_id(target_group_id).await?.is_none() {
+                    tracing::warn!(
+                        user_id,
+                        target_group_id,
+                        "feed.dismiss_item rejected: group not found"
+                    );
                     return Err(AppError::GroupNotFound("群组不存在".to_string()));
                 }
             }
@@ -558,6 +577,13 @@ impl FeedService {
         self.dismiss_repo
             .upsert(user_id, req.target_type, req.target_id.as_str())
             .await?;
+        tracing::info!(
+            user_id,
+            target_type = ?req.target_type,
+            target_id = %req.target_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "feed.dismiss_item completed"
+        );
 
         Ok(())
     }

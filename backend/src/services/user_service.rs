@@ -13,6 +13,7 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Duration;
 
 use uuid::Uuid;
 
@@ -36,16 +37,16 @@ use crate::{
     error::{AppError, Result},
     events::event_types::AppEvent,
     repositories::{
-        group_member_repo::GroupMemberRepository,
+        group::member_repo::GroupMemberRepository,
         moment_repo::{MomentDetailRow, MomentImageRow, MomentRepository},
         session_repo::SessionRepository,
         tag_repo::TagRepository,
-        user_blocks_repo::UserBlocksRepository,
-        user_follows_repo::UserFollowsRepository,
-        user_friend_remarks_repo::UserFriendRemarksRepository,
-        user_location_history_repo::UserLocationHistoryRepository,
+        user::blocks_repo::UserBlocksRepository,
+        user::follows_repo::UserFollowsRepository,
+        user::friend_remarks_repo::UserFriendRemarksRepository,
+        user::location_history_repo::UserLocationHistoryRepository,
+        user::settings_repo::{UpdateSettingsParams, UserSettingsRepository, UserSettingsRow},
         user_repo::{UserRepository, UserRow},
-        user_settings_repo::{UpdateSettingsParams, UserSettingsRepository, UserSettingsRow},
     },
     types::enums::{PrivacyLevel, PrivateChatPermission, UserPresenceStatus, UserStatus, UserType},
     utils::{
@@ -73,6 +74,8 @@ pub struct UserService {
     cache_manager: CacheManager,
     _resource_checker: ResourceExistenceChecker,
 }
+
+const SEARCH_QUERY_TIMEOUT: Duration = Duration::from_secs(8);
 
 impl UserService {
     #[allow(clippy::too_many_arguments)]
@@ -117,6 +120,7 @@ impl UserService {
         viewer_id: Option<i64>,
         req: &SearchUsersRequest,
     ) -> Result<PaginatedData<UserItem>> {
+        let query_started_at = std::time::Instant::now();
         Validator::validate_coordinates(
             req.reference_point.latitude,
             req.reference_point.longitude,
@@ -124,50 +128,156 @@ impl UserService {
         let pagination = req.pagination.as_ref();
         let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as i64;
         let cursor = pagination.and_then(|p| p.cursor.clone());
+        let radius = Validator::validate_radius_required(
+            req.radius.unwrap_or(5000.0),
+            crate::constants::MAX_SEARCH_RADIUS,
+        )?;
+        let has_cursor = cursor.is_some();
+        let query_mode = if req.radius.is_some() {
+            "nearby"
+        } else if req.tag.is_some() {
+            "tag"
+        } else if req.keyword.is_some() {
+            "keyword"
+        } else {
+            "invalid"
+        };
+        tracing::info!(
+            viewer_id,
+            query_mode,
+            has_keyword = req.keyword.is_some(),
+            has_tag = req.tag.is_some(),
+            radius,
+            limit,
+            has_cursor,
+            "users.search query started"
+        );
 
-        let (rows, next_cursor) = if let Some(radius) = req.radius {
-            let radius =
-                Validator::validate_radius_required(radius, crate::constants::MAX_SEARCH_RADIUS)?;
-            self.user_repo
-                .search_nearby(
-                    req.reference_point.longitude,
-                    req.reference_point.latitude,
+        let query_future = async {
+            if req.radius.is_some() {
+                self.user_repo
+                    .search_nearby(
+                        req.reference_point.longitude,
+                        req.reference_point.latitude,
+                        radius,
+                        limit,
+                        cursor.clone(),
+                        req.keyword.as_deref(),
+                    )
+                    .await
+                    .map_err(|err| {
+                        tracing::error!(
+                            viewer_id,
+                            query_mode = "nearby",
+                            radius,
+                            limit,
+                            has_cursor,
+                            error = ?err,
+                            "users.search query failed"
+                        );
+                        err
+                    })
+            } else if let Some(ref tag) = req.tag {
+                Validator::validate_not_empty(tag, "tag")?;
+                self.user_repo
+                    .search_by_tag(
+                        tag,
+                        req.reference_point.longitude,
+                        req.reference_point.latitude,
+                        radius,
+                        limit,
+                        cursor.clone(),
+                    )
+                    .await
+                    .map_err(|err| {
+                        tracing::error!(
+                            viewer_id,
+                            query_mode = "tag",
+                            tag = %tag,
+                            radius,
+                            limit,
+                            has_cursor,
+                            error = ?err,
+                            "users.search query failed"
+                        );
+                        err
+                    })
+            } else if let Some(ref keyword) = req.keyword {
+                Validator::validate_not_empty(keyword, "keyword")?;
+                self.user_repo
+                    .search_by_keyword(
+                        keyword,
+                        req.reference_point.longitude,
+                        req.reference_point.latitude,
+                        radius,
+                        limit,
+                        cursor.clone(),
+                    )
+                    .await
+                    .map_err(|err| {
+                        tracing::error!(
+                            viewer_id,
+                            query_mode = "keyword",
+                            keyword = %keyword,
+                            radius,
+                            limit,
+                            has_cursor,
+                            error = ?err,
+                            "users.search query failed"
+                        );
+                        err
+                    })
+            } else {
+                Err(AppError::BadRequest(
+                    "至少需要提供 keyword、tag、radius 中的一个搜索条件".to_string(),
+                ))
+            }
+        };
+        let (rows, next_cursor) = tokio::time::timeout(SEARCH_QUERY_TIMEOUT, query_future)
+            .await
+            .map_err(|_| {
+                tracing::error!(
+                    viewer_id,
+                    query_mode,
                     radius,
                     limit,
-                    cursor.clone(),
-                    req.keyword.as_deref(),
-                )
-                .await?
-        } else if let Some(ref tag) = req.tag {
-            Validator::validate_not_empty(tag, "tag")?;
-            self.user_repo
-                .search_by_tag(
-                    tag,
-                    req.reference_point.longitude,
-                    req.reference_point.latitude,
-                    limit,
-                    cursor.clone(),
-                )
-                .await?
-        } else if let Some(ref keyword) = req.keyword {
-            Validator::validate_not_empty(keyword, "keyword")?;
-            self.user_repo
-                .search_by_keyword(
-                    keyword,
-                    req.reference_point.longitude,
-                    req.reference_point.latitude,
-                    limit,
-                    cursor.clone(),
-                )
-                .await?
-        } else {
-            return Err(AppError::BadRequest(
-                "至少需要提供 keyword、tag、radius 中的一个搜索条件".to_string(),
-            ));
-        };
+                    has_cursor,
+                    timeout_ms = SEARCH_QUERY_TIMEOUT.as_millis() as u64,
+                    "users.search query timeout"
+                );
+                AppError::ServiceUnavailable
+            })??;
+        let rows_count = rows.len();
+        let has_next_cursor = next_cursor.is_some();
+        tracing::info!(
+            viewer_id,
+            rows = rows_count,
+            has_next_cursor,
+            elapsed_ms = query_started_at.elapsed().as_millis(),
+            "users.search query completed"
+        );
 
-        self.build_user_search_list(rows, next_cursor, viewer_id)
+        let build_started_at = std::time::Instant::now();
+        let data = self
+            .build_user_search_list(rows, next_cursor, viewer_id)
             .await
+            .map_err(|err| {
+                tracing::error!(
+                    viewer_id,
+                    query_mode,
+                    error = ?err,
+                    "users.search response assemble failed"
+                );
+                err
+            })?;
+        tracing::info!(
+            viewer_id,
+            items = data.items.len(),
+            has_next_cursor = data.next_cursor.is_some(),
+            elapsed_ms = build_started_at.elapsed().as_millis(),
+            "users.search response assembled"
+        );
+        Ok(data)
     }
 
     pub async fn open_the_door(
@@ -307,8 +417,21 @@ impl UserService {
     }
 
     pub async fn update_profile(&self, user_id: i64, req: &UpdateProfileRequest) -> Result<()> {
+        let started_at = std::time::Instant::now();
+        tracing::info!(
+            user_id,
+            has_nickname = req.nickname.is_some(),
+            has_bio = req.bio.is_some(),
+            has_avatar_file = req.avatar_file_id.is_some(),
+            has_tags = req.tags.is_some(),
+            has_gender = req.gender.is_some(),
+            "user.update_profile started"
+        );
         if let Some(nickname) = &req.nickname {
-            Validator::validate_length(nickname, "昵称", 1, 50)?;
+            Validator::validate_nickname(nickname)?;
+        }
+        if let Some(bio) = &req.bio {
+            Validator::validate_length(bio, "bio", 0, 500)?;
         }
 
         let avatar_url = if let Some(fid) = req.avatar_file_id.as_deref() {
@@ -334,6 +457,17 @@ impl UserService {
             .await?;
 
         if let Some(tags) = &req.tags {
+            if tags.len() > 10 {
+                tracing::warn!(
+                    user_id,
+                    tags_count = tags.len(),
+                    "user.update_profile rejected: too many tags"
+                );
+                return Err(AppError::BadRequest("tags 最多 10 个".to_string()));
+            }
+            for tag in tags {
+                Validator::validate_length(tag, "tag", 1, 30)?;
+            }
             self.tag_repo.set_user_tags(user_id, tags).await?;
         }
 
@@ -352,6 +486,11 @@ impl UserService {
                 avatar_url: avatar_url.map(|s| s.to_string()),
                 bio: req.bio.clone(),
             });
+        tracing::info!(
+            user_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "user.update_profile completed"
+        );
 
         Ok(())
     }
@@ -396,7 +535,27 @@ impl UserService {
     }
 
     pub async fn update_settings(&self, user_id: i64, req: &UpdateSettingsRequest) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let s = &req.settings;
+        let changed_fields = [
+            s.privacy_level.is_some(),
+            s.location_visible.is_some(),
+            s.presence_visible.is_some(),
+            s.social_lists_visible.is_some(),
+            s.groups_visible.is_some(),
+            s.liked_moments_visible.is_some(),
+            s.stats_visible.is_some(),
+            s.allow_follow.is_some(),
+            s.allow_private_chat.is_some(),
+            s.searchable.is_some(),
+            s.phone_searchable.is_some(),
+            s.nickname_searchable.is_some(),
+            s.location_searchable.is_some(),
+        ]
+        .into_iter()
+        .filter(|changed| *changed)
+        .count();
+        tracing::info!(user_id, changed_fields, "user.update_settings started");
         let params = UpdateSettingsParams {
             privacy_level: s.privacy_level,
             location_visible: s.location_visible,
@@ -413,7 +572,14 @@ impl UserService {
             location_searchable: s.location_searchable,
         };
 
-        self.user_settings_repo.update(user_id, &params).await
+        self.user_settings_repo.update(user_id, &params).await?;
+        tracing::info!(
+            user_id,
+            changed_fields,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "user.update_settings completed"
+        );
+        Ok(())
     }
 
     pub async fn get_friends_list(
@@ -709,6 +875,14 @@ impl UserService {
     }
 
     pub async fn update_location(&self, user_id: i64, req: &UpdateLocationRequest) -> Result<()> {
+        let started_at = std::time::Instant::now();
+        tracing::info!(
+            user_id,
+            latitude = req.location.point.latitude,
+            longitude = req.location.point.longitude,
+            location_name_len = req.location.location_name.chars().count(),
+            "user.update_location started"
+        );
         Validator::validate_coordinates(req.location.point.latitude, req.location.point.longitude)?;
         self.user_repo
             .update_location(
@@ -733,15 +907,31 @@ impl UserService {
                 req.location.point.longitude,
             )
             .await;
+        tracing::info!(
+            user_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "user.update_location completed"
+        );
         Ok(())
     }
 
     pub async fn upgrade_account(&self, user_id: i64, req: &UpgradeAccountRequest) -> Result<()> {
-        Validator::validate_not_empty(&req.login_id, "login_id")?;
-        Validator::validate_length(&req.password, "password", 6, 64)?;
+        let started_at = std::time::Instant::now();
+        tracing::info!(
+            user_id,
+            login_id_len = req.login_id.chars().count(),
+            "user.upgrade_account started"
+        );
+        Validator::validate_login_id(&req.login_id)?;
+        Validator::validate_password(&req.password, "password")?;
 
         if let Some(existing) = self.user_repo.find_by_identifier(&req.login_id).await? {
             if existing.user_id != user_id {
+                tracing::warn!(
+                    user_id,
+                    existing_user_id = existing.user_id,
+                    "user.upgrade_account rejected: login_id already occupied"
+                );
                 return Err(AppError::AlreadyExists("该用户已存在".to_string()));
             }
         }
@@ -756,31 +946,71 @@ impl UserService {
         self.user_repo
             .update_user_type(user_id, UserType::Normal)
             .await?;
+        tracing::info!(
+            user_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "user.upgrade_account completed"
+        );
         Ok(())
     }
 
     pub async fn delete_account(&self, user_id: i64, req: &DeleteAccountRequest) -> Result<()> {
+        let started_at = std::time::Instant::now();
+        tracing::info!(user_id, "user.delete_account started");
         if req.confirmation != "DELETE_MY_ACCOUNT" {
+            tracing::warn!(
+                user_id,
+                confirmation = %req.confirmation,
+                "user.delete_account rejected: invalid confirmation token"
+            );
             return Err(AppError::BadRequest(
                 "confirmation 必须为 DELETE_MY_ACCOUNT".to_string(),
             ));
         }
         self.user_repo.mark_deleted(user_id).await?;
         let _ = self.session_repo.revoke_all_by_user(user_id).await;
+        tracing::info!(
+            user_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "user.delete_account completed"
+        );
         Ok(())
     }
 
     pub async fn follow_user(&self, user_id: i64, req: &FollowRequest) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let target_user_id = Validator::parse_user_id(&req.user_id)?;
+        tracing::info!(
+            user_id,
+            target_user_id,
+            has_source = req.source.is_some(),
+            has_source_moment = req.source_moment_id.is_some(),
+            "user.follow started"
+        );
         if user_id == target_user_id {
+            tracing::warn!(
+                user_id,
+                target_user_id,
+                "user.follow rejected: cannot follow self"
+            );
             return Err(AppError::CannotOperateOnSelf);
         }
 
         if !self.user_repo.exists(target_user_id).await? {
+            tracing::warn!(
+                user_id,
+                target_user_id,
+                "user.follow rejected: target user not found"
+            );
             return Err(AppError::UserNotFound("用户不存在".to_string()));
         }
 
         if self.blocks_repo.is_blocked(target_user_id, user_id).await? {
+            tracing::warn!(
+                user_id,
+                target_user_id,
+                "user.follow rejected: blocked by target user"
+            );
             return Err(AppError::BlockedByUser("privacy_restricted".to_string()));
         }
 
@@ -788,6 +1018,11 @@ impl UserService {
             .bool_from_settings(target_user_id, "allow_follow", true)
             .await;
         if !allow_follow {
+            tracing::warn!(
+                user_id,
+                target_user_id,
+                "user.follow rejected: target disallows follow"
+            );
             return Err(AppError::FollowNotAllowed("对方不允许被关注".to_string()));
         }
 
@@ -812,41 +1047,97 @@ impl UserService {
             source: req.source,
             source_moment_id: req.source_moment_id.clone(),
         });
+        tracing::info!(
+            user_id,
+            target_user_id,
+            is_mutual,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "user.follow completed"
+        );
 
         Ok(())
     }
 
     pub async fn unfollow_user(&self, user_id: i64, req: &UnfollowRequest) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let target_user_id = Validator::parse_user_id(&req.user_id)?;
+        tracing::info!(user_id, target_user_id, "user.unfollow started");
         if user_id == target_user_id {
+            tracing::warn!(
+                user_id,
+                target_user_id,
+                "user.unfollow rejected: cannot unfollow self"
+            );
             return Err(AppError::CannotOperateOnSelf);
         }
 
         self.follows_repo.unfollow(user_id, target_user_id).await?;
+        tracing::info!(
+            user_id,
+            target_user_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "user.unfollow completed"
+        );
         Ok(())
     }
 
     pub async fn block_user(&self, user_id: i64, req: &BlockRequest) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let target_user_id = Validator::parse_user_id(&req.user_id)?;
+        tracing::info!(
+            user_id,
+            target_user_id,
+            has_reason = req.reason.is_some(),
+            "user.block started"
+        );
         if user_id == target_user_id {
+            tracing::warn!(
+                user_id,
+                target_user_id,
+                "user.block rejected: cannot block self"
+            );
             return Err(AppError::CannotOperateOnSelf);
         }
         if !self.user_repo.exists(target_user_id).await? {
+            tracing::warn!(
+                user_id,
+                target_user_id,
+                "user.block rejected: target user not found"
+            );
             return Err(AppError::UserNotFound("用户不存在".to_string()));
         }
         if let Some(ref reason) = req.reason {
             tracing::debug!(block_reason = %reason, "Block reason recorded");
         }
         self.blocks_repo.block(user_id, target_user_id).await?;
+        tracing::info!(
+            user_id,
+            target_user_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "user.block completed"
+        );
         Ok(())
     }
 
     pub async fn unblock_user(&self, user_id: i64, req: &UnblockRequest) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let target_user_id = Validator::parse_user_id(&req.user_id)?;
+        tracing::info!(user_id, target_user_id, "user.unblock started");
         if user_id == target_user_id {
+            tracing::warn!(
+                user_id,
+                target_user_id,
+                "user.unblock rejected: cannot unblock self"
+            );
             return Err(AppError::CannotOperateOnSelf);
         }
         self.blocks_repo.unblock(user_id, target_user_id).await?;
+        tracing::info!(
+            user_id,
+            target_user_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "user.unblock completed"
+        );
         Ok(())
     }
 
@@ -882,8 +1173,21 @@ impl UserService {
     }
 
     pub async fn set_friend_remark(&self, user_id: i64, req: &SetRemarkRequest) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let target_user_id = Validator::parse_user_id(&req.user_id)?;
+        let trimmed = req.remark.trim();
+        tracing::info!(
+            user_id,
+            target_user_id,
+            remark_len = trimmed.chars().count(),
+            "user.set_friend_remark started"
+        );
         if user_id == target_user_id {
+            tracing::warn!(
+                user_id,
+                target_user_id,
+                "user.set_friend_remark rejected: cannot remark self"
+            );
             return Err(AppError::CannotOperateOnSelf);
         }
 
@@ -892,18 +1196,34 @@ impl UserService {
             .is_following(user_id, target_user_id)
             .await?
         {
+            tracing::warn!(
+                user_id,
+                target_user_id,
+                "user.set_friend_remark rejected: target is not followed friend"
+            );
             return Err(AppError::NotFriends);
         }
 
-        let trimmed = req.remark.trim();
         if trimmed.is_empty() {
             self.user_friend_remarks_repo
                 .delete(user_id, target_user_id)
                 .await?;
+            tracing::info!(
+                user_id,
+                target_user_id,
+                elapsed_ms = started_at.elapsed().as_millis(),
+                "user.set_friend_remark completed (deleted)"
+            );
         } else {
             self.user_friend_remarks_repo
                 .upsert(user_id, target_user_id, trimmed.to_string())
                 .await?;
+            tracing::info!(
+                user_id,
+                target_user_id,
+                elapsed_ms = started_at.elapsed().as_millis(),
+                "user.set_friend_remark completed (upserted)"
+            );
         }
 
         Ok(())
@@ -980,10 +1300,30 @@ impl UserService {
         reason: Option<String>,
         duration_days: Option<i32>,
     ) -> Result<()> {
+        let started_at = std::time::Instant::now();
+        tracing::info!(
+            operator_id,
+            target_user_id,
+            is_target_admin,
+            is_operator_super,
+            has_reason = reason.is_some(),
+            duration_days = duration_days.unwrap_or(0),
+            "user.admin_ban started"
+        );
         if operator_id == target_user_id {
+            tracing::warn!(
+                operator_id,
+                target_user_id,
+                "user.admin_ban rejected: cannot ban self"
+            );
             return Err(AppError::CannotOperateOnSelf);
         }
         if is_target_admin && !is_operator_super {
+            tracing::warn!(
+                operator_id,
+                target_user_id,
+                "user.admin_ban rejected: non-super admin cannot ban admin"
+            );
             return Err(AppError::CannotOperateAdmin(
                 "无法操作管理员账户".to_string(),
             ));
@@ -999,14 +1339,28 @@ impl UserService {
                 reason: reason.unwrap_or_else(|| "违规行为".to_string()),
                 duration_days: duration_days.unwrap_or(0),
             });
+        tracing::info!(
+            operator_id,
+            target_user_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "user.admin_ban completed"
+        );
 
         Ok(())
     }
 
     pub async fn admin_unban_user(&self, target_user_id: i64) -> Result<()> {
+        let started_at = std::time::Instant::now();
+        tracing::info!(target_user_id, "user.admin_unban started");
         self.user_repo
             .update_status(target_user_id, UserStatus::Normal)
-            .await
+            .await?;
+        tracing::info!(
+            target_user_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "user.admin_unban completed"
+        );
+        Ok(())
     }
 
     pub async fn admin_user_detail(&self, user_id: i64) -> Result<AdminUserDetail> {
@@ -1098,8 +1452,8 @@ impl UserService {
                     0.0,
                     0.0,
                     "",
-                    row.distance,
-                    row.bearing_degrees,
+                    row.distance.unwrap_or(0.0),
+                    row.bearing_degrees.unwrap_or(0.0),
                 ))
             } else {
                 None

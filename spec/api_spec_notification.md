@@ -103,7 +103,7 @@ interface NotificationListRequest {
 - **认证**: 必须
 - **幂等**: 无
 
-**Request**: 空对象 `{}`
+**Request**: `{}`
 
 **Response**: `ApiResponse<UnreadCountResult>`
 ```typescript
@@ -143,6 +143,8 @@ interface MarkAsReadRequest {
 }
 ```
 
+**非法 ID 处理**：不存在或不属于当前用户的 `notification_ids` 将被服务端静默忽略，不返回错误。
+
 **Response**: `ApiResponse`
 
 **错误码**: `10000`
@@ -156,7 +158,7 @@ interface MarkAsReadRequest {
 - **认证**: 必须
 - **幂等**: 幂等语义（重复调用不产生错误）
 
-**Request**: 空对象 `{}`
+**Request**: `{}`
 
 **Response**: `ApiResponse`
 

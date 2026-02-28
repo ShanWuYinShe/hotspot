@@ -26,7 +26,7 @@ export interface UnreadCount {
 }
 
 /**
- * 全局状态接口定义 (主要用于类型引用兼容)
+ * 全局状态接口定义（用于类型引用）
  */
 export interface GlobalState {
   currentUser: MyProfile | null;
@@ -102,7 +102,7 @@ export class GlobalStateManager {
   /**
    * 更新用户信息
    * isLoggedIn = (user !== null)，表示有 token（含临时用户和注册用户）
-   * userType 区分 'temp' | 'normal' | 'admin' | 'system'
+   * userType 仅区分 'temp' | 'normal'（管理员身份由 RBAC 获取）
    */
   updateUser(user: MyProfile | null): void {
     AppStorage.setOrCreate(KEY_CURRENT_USER, user);
@@ -142,8 +142,7 @@ export class GlobalStateManager {
    * 是否为注册用户
    */
   isRegisteredUser(): boolean {
-    const userType = this.getUserType();
-    return userType === 'normal' || userType === 'admin' || userType === 'system';
+    return this.getUserType() === 'normal';
   }
 
   /**

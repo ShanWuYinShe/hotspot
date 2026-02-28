@@ -46,7 +46,7 @@ Handler -> Service -> Repository
 ## 路由与协议
 
 - 仅 POST，RPC + JSON
-- 所有 API 必须是明确动作子路径，禁止裸资源路径
+- 所有 API 必须是明确动作子路径，禁止裸资源路径（如禁止 `/api/v1/users`，须使用 `/api/v1/users/search` 等动作路径）
 
 ---
 
@@ -67,13 +67,13 @@ Handler -> Service -> Repository
 - Web 端通过 HttpOnly Cookie；App 端通过 `Authorization: Bearer`
 - **失效机制**：登出/撤销写入黑名单，校验时必须检查黑名单
 - 黑名单条目 TTL 不得短于 Token 过期时间
-- 刷新 Token 必须轮转，旧 Token 立即加入黑名单
+- 刷新 Token 必须轮转；旧 refresh_token 进入宽限期（30 秒内仍可使用，返回与首次刷新相同的新 token 对），宽限期后加入黑名单（详见 `@spec/api_spec_auth.md` 并发刷新策略）
 
 ---
 
 ## 幂等性
 
-- 创建/发送类接口必须支持 `Idempotency-Key`
+- 必须支持 `Idempotency-Key` 的接口以 `@spec/api_spec_base.md`「必须使用幂等键的接口（MUST）」列表为准
 - 服务端按 `(user_id + endpoint + key)` 去重
 - 仅缓存 `code == 0` 的成功响应
 
@@ -107,6 +107,7 @@ Handler -> Service -> Repository
 - 事件与订阅格式严格遵循 `@spec/api_spec_websocket.md`
 - 连接鉴权失败必须终止连接
 - 心跳参数由服务端统一下发
+- 群组解散等需要通知所有群成员的事件，可通过 Redis pub/sub 按 `group_id` fanout 实现广播
 
 ---
 
@@ -114,7 +115,7 @@ Handler -> Service -> Repository
 
 - 未读计数由客户端基于 WebSocket 增量维护
 - 服务端仅提供冷启动校准（如历史消息基线）
-- 不维护独立的未读计数字段，通过已读游标（如 `last_read_message_id`）在查询时动态计算
+- 服务端不维护独立的未读计数字段，通过已读游标（如 `last_read_message_id`）在查询时动态计算
 
 ---
 

@@ -37,11 +37,10 @@ alwaysApply: false
 
 - **认证**: 可选
 - **幂等**: 无
-- **排序**: 
-  1. **完全匹配**优先。
-  2. **距离优先**（在匹配度相近的情况下）。
-  3. **热度/活跃度**作为辅助排序信号。
-  - 各类型结果内部以对应资源 ID（`user_id`/`group_id`/`moment_id`/`tag name`）作为稳定 tie-breaker；一致性级别为弱一致（搜索场景允许短暂延迟）
+- **排序**:
+  - 完全匹配优先
+  - 在匹配度相近时按距离优先，热度/活跃度作为辅助信号
+  - 各类型结果内部以对应资源 ID（`user_id`/`group_id`/`moment_id`/`tag name`）作为稳定 tie-breaker；一致性级别为弱一致
 
 **说明**：
 - Token 可选；未登录时仅返回公开内容。
@@ -53,15 +52,15 @@ alwaysApply: false
 ```typescript
 interface SearchSuggestRequest {
   prefix: string;
-  reference_point: GeoPoint; // 必填，用于 LBS 优先排序（用户拒绝定位时使用 ClientConfig.defaults.default_location.point 作为 fallback）
+  reference_point: GeoPoint; // 浏览锚点位置（必填；拒绝定位时使用 ClientConfig.defaults.default_location.point）
   types?: SearchSuggestType[];  // 可选：限定返回的类型（如 ['user', 'group']）。未提供或空数组均表示返回所有类型。
   radius?: number;  // 搜索半径（米），约束见 @spec/api_spec_base.md 通用字段约束
 }
 ```
 
 **半径与定位说明**：
-- `radius` 未提供时默认使用 `10_000` 米（10 km），并会被 `AppConfig.limits.search_radius_max` 上限裁剪。搜索建议使用较大半径（10 km）以提供更丰富的结果多样性，区别于 Feed 的 5 km 默认值（Feed 侧重附近内容密度）。
-- 用户拒绝定位或无法获取实时位置时，客户端必须使用 `ClientConfig.defaults.default_location.point` 作为 `reference_point` fallback（此规则在 base 中已定义，此处再次强调）。
+- `radius` 未提供时默认使用 `5_000` 米（5 km），并会被 `AppConfig.limits.search_radius_max` 上限裁剪。
+- 用户拒绝定位或无法获取实时位置时，客户端必须使用 `ClientConfig.defaults.default_location.point` 作为 `reference_point` fallback（参见 `@spec/api_spec_types.md` 请求位置要求）。
 
 **Response**: `ApiResponse<SearchSuggestResponse>`
 

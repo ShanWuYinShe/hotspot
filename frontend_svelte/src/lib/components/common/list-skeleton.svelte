@@ -31,7 +31,7 @@
 
 <div class="{containerClass} {className}">
 	{#each Array(count) as _, i (i)}
-		<Card class="border-0 bg-card/50">
+		<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 			<CardContent class="p-6">
 				{#if type === 'user'}
 					<!-- 用户骨架屏 -->

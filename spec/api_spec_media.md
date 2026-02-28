@@ -33,20 +33,14 @@ alwaysApply: false
 
 **安全机制**：
 - 上传 API 返回 `file_id`，客户端将 `file_id` 传给业务 API
-- 后端验证：`file_id` 存在性、用户权限、分类匹配
-- URL 由后端内部解析，客户端无法伪造
+- 服务端验证：`file_id` 存在性、用户权限、分类匹配
+- URL 由服务端内部解析，客户端无法伪造
 
-**上传流程**：
-
-采用 "Presigned URL" 模式：
-- **高性能**：客户端直传对象存储，不占用应用服务器带宽
-- **兼容性**：支持 S3 兼容对象存储
-- **安全性**：上传凭证短期有效，且绑定文件特征
-
-**核心流程**：
-1. `presign_upload`：申请上传，获取 `upload_url`
-2. 客户端对 `upload_url` 执行对象存储直传（仅发生在存储服务域名上，不属于 HotSpot API）
-3. `complete_upload`：通知服务端上传完成，生成业务 `file_id`
+**上传流程（Presigned URL 模式）**：
+- 客户端直传对象存储，不占用应用服务器带宽
+- 支持 S3 兼容对象存储
+- 上传凭证短期有效，且绑定文件特征
+- 流程：`presign_upload` 获取 `upload_url` -> 客户端直传 -> `complete_upload` 生成业务 `file_id`
 
 ## 分类限制
 
@@ -94,6 +88,13 @@ interface PresignedUpload {
 
 **错误码**: `10000`
 
+`10000` 触发条件（示例）：
+- `category` 非法或不支持
+- `mime_type` 与 `category` 不匹配
+- `file_size` 超出该 `category` 的限制
+- `file_name` 为空或超出约束长度
+- `md5` 提供但格式非法
+
 ### [客户端操作] 执行上传
 
 - Method: `PUT`（对象存储直传，仅发生在存储服务域名上）
@@ -128,6 +129,10 @@ interface BatchPresignedUpload {
 
 **错误码**: `10000`
 
+`10000` 触发条件（示例）：
+- `files` 为空、超过 9 项、或单项字段不合法
+- 任一文件的 `category` / `mime_type` / `file_size` / `file_name` / `md5` 校验失败（批量请求原子失败）
+
 ### POST /api/v1/media/complete_upload
 
 完成上传。
@@ -161,4 +166,4 @@ interface UploadedMedia {
 
 **错误码说明**：
 - `10300`：upload_id 不存在（如恶意请求发送了不存在的 upload_id）
-- `10400`：业务冲突，包括：文件直传尚未完成（对象存储上传未到位）；使用不同 Idempotency-Key 对已完成的 upload_id 再次提交（相同 Key 重试则返回缓存的成功响应）
+- `10400`：业务冲突，包括：文件直传尚未完成（对象存储上传未到位）；或 `upload_id` 已完成上传，但使用不同 Idempotency-Key 再次提交（相同 Key 重试则返回缓存的成功响应）

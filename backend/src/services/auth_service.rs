@@ -5,8 +5,10 @@
 use chrono::{Duration, TimeZone, Utc};
 use redis::aio::ConnectionManager;
 use redis::AsyncCommands;
+use serde::Serialize;
 use sqlx::types::ipnetwork::IpNetwork;
 use std::net::IpAddr;
+use std::time::Duration as StdDuration;
 use uuid::Uuid;
 
 use crate::constants::REDIS_KEY_SESSION;
@@ -17,12 +19,30 @@ use crate::dto::request::{
 use crate::dto::response::{AuthData, CheckStatusData, SessionItem, SessionsListData};
 use crate::error::{AppError, Result};
 use crate::repositories::{
-    session_repo::SessionRepository, user_repo::UserRepository,
-    user_settings_repo::UserSettingsRepository, verification_repo::VerificationRepository,
+    session_repo::SessionRepository, user::settings_repo::UserSettingsRepository,
+    user_repo::UserRepository, verification_repo::VerificationRepository,
 };
 use crate::types::enums::{ClientType, UserStatus, VerificationCodeType};
 use crate::utils::cache_invalidation::{CacheInvalidator, InvalidationEvent};
 use crate::utils::{jwt::JwtUtil, password::PasswordUtil, token::TokenUtil, validation::Validator};
+
+fn detect_delivery_channel(login_id: &str) -> &'static str {
+    if login_id.contains('@') {
+        "email"
+    } else {
+        "phone"
+    }
+}
+
+#[derive(Serialize)]
+struct ResetCodeDeliveryPayload<'a> {
+    scene: &'static str,
+    login_id: &'a str,
+    client_type: ClientType,
+    channel: &'static str,
+    verification_code: &'a str,
+    expires_at: &'a str,
+}
 
 #[derive(Debug, Clone)]
 pub struct AuthIssue {
@@ -40,6 +60,10 @@ pub struct AuthService {
     session_repo: SessionRepository,
     settings_repo: UserSettingsRepository,
     verification_repo: VerificationRepository,
+    reset_delivery_webhook_url: Option<String>,
+    reset_delivery_webhook_token: Option<String>,
+    reset_delivery_timeout_ms: u64,
+    http_client: reqwest::Client,
 }
 
 impl AuthService {
@@ -52,6 +76,9 @@ impl AuthService {
         session_repo: SessionRepository,
         settings_repo: UserSettingsRepository,
         verification_repo: VerificationRepository,
+        reset_delivery_webhook_url: Option<String>,
+        reset_delivery_webhook_token: Option<String>,
+        reset_delivery_timeout_ms: u64,
     ) -> Self {
         Self {
             redis: redis.clone(),
@@ -62,6 +89,10 @@ impl AuthService {
             session_repo,
             settings_repo,
             verification_repo,
+            reset_delivery_webhook_url,
+            reset_delivery_webhook_token,
+            reset_delivery_timeout_ms,
+            http_client: reqwest::Client::new(),
         }
     }
 
@@ -74,6 +105,15 @@ impl AuthService {
         user_agent: Option<&str>,
         device_fingerprint: Option<&str>,
     ) -> Result<AuthIssue> {
+        let started_at = std::time::Instant::now();
+        tracing::info!(
+            login_id_len = req.login_id.chars().count(),
+            nickname_len = req.nickname.chars().count(),
+            has_ip = ip_address.is_some(),
+            has_user_agent = user_agent.is_some(),
+            has_device_fingerprint = device_fingerprint.is_some(),
+            "auth.register started"
+        );
         if self
             .user_repo
             .find_by_identifier(&req.login_id)
@@ -97,8 +137,15 @@ impl AuthService {
 
         self.settings_repo.create(user.user_id).await?;
 
-        self.issue_tokens(user.user_id, ip_address, user_agent, device_fingerprint)
-            .await
+        let issue = self
+            .issue_tokens(user.user_id, ip_address, user_agent, device_fingerprint)
+            .await?;
+        tracing::info!(
+            user_id = user.user_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "auth.register completed"
+        );
+        Ok(issue)
     }
 
     /// 用户登录
@@ -110,6 +157,14 @@ impl AuthService {
         user_agent: Option<&str>,
         device_fingerprint: Option<&str>,
     ) -> Result<AuthIssue> {
+        let started_at = std::time::Instant::now();
+        tracing::info!(
+            login_id_len = req.login_id.chars().count(),
+            has_ip = ip_address.is_some(),
+            has_user_agent = user_agent.is_some(),
+            has_device_fingerprint = device_fingerprint.is_some(),
+            "auth.login started"
+        );
         // 安全：用户不存在和密码错误统一返回 10100，防止账号枚举攻击
         // 真实原因仅记录在服务端日志中，不暴露给客户端
         let user = match self.user_repo.find_by_identifier(&req.login_id).await? {
@@ -143,8 +198,15 @@ impl AuthService {
             return Err(AppError::Unauthorized("用户名或密码错误".to_string()));
         }
 
-        self.issue_tokens(user.user_id, ip_address, user_agent, device_fingerprint)
-            .await
+        let issue = self
+            .issue_tokens(user.user_id, ip_address, user_agent, device_fingerprint)
+            .await?;
+        tracing::info!(
+            user_id = user.user_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "auth.login completed"
+        );
+        Ok(issue)
     }
 
     /// 创建访客用户
@@ -156,6 +218,14 @@ impl AuthService {
         user_agent: Option<&str>,
         device_fingerprint: Option<&str>,
     ) -> Result<AuthIssue> {
+        let started_at = std::time::Instant::now();
+        tracing::info!(
+            nickname_len = req.nickname.chars().count(),
+            has_ip = ip_address.is_some(),
+            has_user_agent = user_agent.is_some(),
+            has_device_fingerprint = device_fingerprint.is_some(),
+            "auth.create_guest started"
+        );
         let guest_login_id = format!("guest_{}", Uuid::now_v7());
         let guest_password = TokenUtil::generate_token();
         let password_hash = PasswordUtil::hash_password(&guest_password)?;
@@ -173,8 +243,15 @@ impl AuthService {
 
         self.settings_repo.create(user.user_id).await?;
 
-        self.issue_tokens(user.user_id, ip_address, user_agent, device_fingerprint)
-            .await
+        let issue = self
+            .issue_tokens(user.user_id, ip_address, user_agent, device_fingerprint)
+            .await?;
+        tracing::info!(
+            user_id = user.user_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "auth.create_guest completed"
+        );
+        Ok(issue)
     }
 
     /// 刷新 token
@@ -193,6 +270,11 @@ impl AuthService {
         _user_agent: Option<&str>,
         _device_fingerprint: Option<&str>,
     ) -> Result<AuthIssue> {
+        let started_at = std::time::Instant::now();
+        tracing::info!(
+            refresh_token_len = refresh_token_raw.len(),
+            "auth.refresh_token started"
+        );
         let refresh_token_hash = TokenUtil::hash_token(refresh_token_raw, &self.jwt_secret);
 
         // 1. 当前 refresh_token 有效 → 轮换并返回新 token
@@ -255,6 +337,13 @@ impl AuthService {
             // 缓存新 token 对到 Redis，供宽限期内的并发请求使用（30 秒 TTL）
             self.cache_grace_period_tokens(&refresh_token_hash, &auth_issue)
                 .await;
+            tracing::info!(
+                user_id = session.user_id,
+                session_id = %session.session_id,
+                mode = "rotate",
+                elapsed_ms = started_at.elapsed().as_millis(),
+                "auth.refresh_token completed"
+            );
 
             return Ok(auth_issue);
         }
@@ -270,6 +359,11 @@ impl AuthService {
                 tracing::debug!(
                     "Grace period hit: returning cached tokens for rotated refresh_token"
                 );
+                tracing::info!(
+                    mode = "grace_cache_hit",
+                    elapsed_ms = started_at.elapsed().as_millis(),
+                    "auth.refresh_token completed"
+                );
                 return Ok(cached_issue);
             }
 
@@ -280,6 +374,11 @@ impl AuthService {
         }
 
         // 3. 均不匹配 → 无效或已过期
+        tracing::warn!(
+            mode = "invalid",
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "auth.refresh_token rejected"
+        );
         Err(AppError::RefreshTokenInvalid(
             "refresh token 无效或已过期".to_string(),
         ))
@@ -342,6 +441,8 @@ impl AuthService {
 
     /// 登出
     pub async fn logout(&self, user_id: i64, access_token: &str) -> Result<()> {
+        let started_at = std::time::Instant::now();
+        tracing::info!(user_id, "auth.logout started");
         let claims = JwtUtil::verify_token(access_token, &self.jwt_secret)?;
         let token_user_id = Validator::parse_id(&claims.sub, "用户ID")?;
         if token_user_id != user_id {
@@ -349,7 +450,14 @@ impl AuthService {
         }
 
         let session_id = Validator::parse_uuid(&claims.sid, "会话")?;
-        self.revoke_session_by_id(user_id, session_id).await
+        self.revoke_session_by_id(user_id, session_id).await?;
+        tracing::info!(
+            user_id,
+            session_id = %session_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "auth.logout completed"
+        );
+        Ok(())
     }
 
     /// 检查认证状态
@@ -382,12 +490,16 @@ impl AuthService {
         tracing::info!(
             client_type = ?req.client_type,
             login_id = %req.login_id,
-            "Password reset requested (SMS not configured)"
+            "Password reset requested"
         );
 
-        // 无论用户是否存在，都生成验证码流程但仅对已存在用户实际存储
-        let user = self.user_repo.find_by_identifier(&req.login_id).await?;
-        if user.is_none() {
+        // 无论用户是否存在，都返回成功，不暴露账号状态。
+        if self
+            .user_repo
+            .find_by_identifier(&req.login_id)
+            .await?
+            .is_none()
+        {
             // 不暴露用户是否存在，静默返回成功
             return Ok(());
         }
@@ -406,9 +518,71 @@ impl AuthService {
             .await
             .map_err(|e| AppError::internal(e.to_string()))?;
 
-        // TODO: 实际发送验证码（邮件/短信），当前仅日志输出
-        tracing::info!(login_id = %req.login_id, code = %code, "Password reset verification code generated (NOT sent - need email/SMS integration)");
+        // 发送失败不影响统一成功响应，避免通过错误差异泄露账号存在性。
+        if let Err(err) = self
+            .deliver_reset_verification_code(req, &code, expires_at)
+            .await
+        {
+            tracing::error!(
+                login_id = %req.login_id,
+                error = %err,
+                "Password reset verification code delivery failed"
+            );
+        }
 
+        Ok(())
+    }
+
+    async fn deliver_reset_verification_code(
+        &self,
+        req: &RequestPasswordResetRequest,
+        code: &str,
+        expires_at: chrono::DateTime<Utc>,
+    ) -> Result<()> {
+        let Some(webhook_url) = self.reset_delivery_webhook_url.as_deref() else {
+            tracing::warn!(
+                "Password reset delivery webhook is not configured; skip external delivery"
+            );
+            return Ok(());
+        };
+
+        let expires_at_rfc3339 = expires_at.to_rfc3339();
+        let payload = ResetCodeDeliveryPayload {
+            scene: "reset_password",
+            login_id: &req.login_id,
+            client_type: req.client_type,
+            channel: detect_delivery_channel(&req.login_id),
+            verification_code: code,
+            expires_at: &expires_at_rfc3339,
+        };
+
+        let mut request_builder = self
+            .http_client
+            .post(webhook_url)
+            .timeout(StdDuration::from_millis(self.reset_delivery_timeout_ms))
+            .json(&payload);
+        if let Some(token) = self.reset_delivery_webhook_token.as_deref() {
+            request_builder = request_builder.bearer_auth(token);
+        }
+
+        let response = request_builder
+            .send()
+            .await
+            .map_err(|e| AppError::internal(format!("验证码发送请求失败: {}", e)))?;
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            return Err(AppError::internal(format!(
+                "验证码发送返回异常状态: status={}, body={}",
+                status, body
+            )));
+        }
+
+        tracing::info!(
+            login_id = %req.login_id,
+            channel = detect_delivery_channel(&req.login_id),
+            "Password reset verification code delivered"
+        );
         Ok(())
     }
 
@@ -422,6 +596,14 @@ impl AuthService {
         user_agent: Option<&str>,
         device_fingerprint: Option<&str>,
     ) -> Result<AuthIssue> {
+        let started_at = std::time::Instant::now();
+        tracing::info!(
+            login_id_len = req.login_id.chars().count(),
+            has_ip = ip_address.is_some(),
+            has_user_agent = user_agent.is_some(),
+            has_device_fingerprint = device_fingerprint.is_some(),
+            "auth.reset_password started"
+        );
         // 1. 验证码校验
         let verification = self
             .verification_repo
@@ -464,6 +646,7 @@ impl AuthService {
 
         // 5. 吊销该用户所有现有会话（与 change_password 行为一致）
         let session_ids = self.session_repo.revoke_all_by_user(user.user_id).await?;
+        let revoked_count = session_ids.len();
         for session_id in session_ids {
             self.clear_session_whitelist(session_id).await?;
             self.publish_session_revoked(user.user_id, session_id)
@@ -471,8 +654,16 @@ impl AuthService {
         }
 
         // 6. 自动登录：颁发新 token
-        self.issue_tokens(user.user_id, ip_address, user_agent, device_fingerprint)
-            .await
+        let issue = self
+            .issue_tokens(user.user_id, ip_address, user_agent, device_fingerprint)
+            .await?;
+        tracing::info!(
+            user_id = user.user_id,
+            revoked_sessions = revoked_count,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "auth.reset_password completed"
+        );
+        Ok(issue)
     }
 
     /// 修改密码
@@ -483,6 +674,8 @@ impl AuthService {
         current_session_id: Uuid,
         req: &ChangePasswordRequest,
     ) -> Result<()> {
+        let started_at = std::time::Instant::now();
+        tracing::info!(user_id, "auth.change_password started");
         let user = self
             .user_repo
             .find_by_id(user_id)
@@ -508,10 +701,17 @@ impl AuthService {
             .session_repo
             .revoke_all_except(user_id, current_session_id)
             .await?;
+        let revoked_count = session_ids.len();
         for session_id in session_ids {
             self.clear_session_whitelist(session_id).await?;
             self.publish_session_revoked(user_id, session_id).await?;
         }
+        tracing::info!(
+            user_id,
+            revoked_sessions = revoked_count,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "auth.change_password completed"
+        );
 
         Ok(())
     }
@@ -555,9 +755,21 @@ impl AuthService {
         current_session_id: Uuid,
         req: &RevokeSessionRequest,
     ) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let session_id = Validator::parse_uuid(&req.session_id, "会话标识")?;
+        tracing::info!(
+            user_id,
+            current_session_id = %current_session_id,
+            target_session_id = %session_id,
+            "auth.revoke_session started"
+        );
 
         if session_id == current_session_id {
+            tracing::warn!(
+                user_id,
+                session_id = %session_id,
+                "auth.revoke_session rejected: cannot revoke current session"
+            );
             return Err(AppError::BusinessRuleViolation(
                 "不能撤销当前会话，如需登出请使用登出接口".to_string(),
             ));
@@ -568,11 +780,22 @@ impl AuthService {
             .revoke_if_owned_by(user_id, session_id)
             .await?;
         if !revoked {
+            tracing::warn!(
+                user_id,
+                session_id = %session_id,
+                "auth.revoke_session rejected: not found or not owned"
+            );
             return Err(AppError::NotFound("会话不存在或无权限撤销".to_string()));
         }
 
         self.clear_session_whitelist(session_id).await?;
         self.publish_session_revoked(user_id, session_id).await?;
+        tracing::info!(
+            user_id,
+            session_id = %session_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "auth.revoke_session completed"
+        );
         Ok(())
     }
 
@@ -635,6 +858,12 @@ impl AuthService {
     }
 
     pub async fn revoke_all_sessions(&self, user_id: i64, current_session_id: Uuid) -> Result<i64> {
+        let started_at = std::time::Instant::now();
+        tracing::info!(
+            user_id,
+            current_session_id = %current_session_id,
+            "auth.revoke_all_sessions started"
+        );
         let session_ids = self
             .session_repo
             .revoke_all_except(user_id, current_session_id)
@@ -644,6 +873,12 @@ impl AuthService {
             self.clear_session_whitelist(session_id).await?;
             self.publish_session_revoked(user_id, session_id).await?;
         }
+        tracing::info!(
+            user_id,
+            revoked_count,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "auth.revoke_all_sessions completed"
+        );
         Ok(revoked_count)
     }
 
@@ -679,6 +914,15 @@ impl AuthService {
             .await
             .map_err(|e| AppError::internal(e.to_string()))?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn detect_delivery_channel_should_distinguish_email_and_phone() {
+        assert_eq!(super::detect_delivery_channel("user@example.com"), "email");
+        assert_eq!(super::detect_delivery_channel("13800138000"), "phone");
     }
 }
 

@@ -5,7 +5,7 @@ import { cn } from '$lib/utils';
 export const badgeVariants = tv({
 	base: cn(
 		'inline-flex items-center gap-1.5',
-		'rounded-full',
+		'rounded-2xl',
 		'border-2',
 		'px-3 py-1 text-xs font-semibold',
 		'transition-all duration-200',

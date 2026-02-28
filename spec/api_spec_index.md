@@ -3,9 +3,9 @@ alwaysApply: true
 ---
 # HotSpot API 规范文档（契约唯一权威）
 
-> 本文档是 **跨端契约（Contract）** 的唯一权威来源：HTTP 端点、请求/响应字段与类型、错误码、WebSocket 事件与负载、以及统一 envelope。
+> 本文档是跨端契约的唯一权威来源：HTTP 端点、请求/响应字段与类型、错误码、WebSocket 事件与负载、统一 envelope。
 >
-> 本文档已按逻辑层次拆分为多个文件，便于维护和查阅。
+> 内容按逻辑拆分为多个文件，便于维护和查阅。
 
 ## 文档结构
 
@@ -44,7 +44,7 @@ alwaysApply: true
 | [api_spec_media.md](api_spec_media.md) | 文件与媒体上传 API（Presigned 模式） |
 | [api_spec_report.md](api_spec_report.md) | 用户举报 API |
 | [api_spec_notification.md](api_spec_notification.md) | 通知中心 API（通知历史、未读计数、已读标记） |
-| [api_spec_system.md](api_spec_system.md) | 系统健康检查、版本信息、客户端配置、公告、冷启动 API |
+| [api_spec_system.md](api_spec_system.md) | 系统健康检查、版本信息、客户端配置、公告（客户端冷启动时调用以获取初始数据） |
 
 ### 管理员 API
 
@@ -55,9 +55,9 @@ alwaysApply: true
 
 ## 权威边界与冲突处理
 
-- 本规范定义 HotSpot 前后端交互使用的 HTTP API 与 WebSocket 数据契约（端点、字段、类型、错误码、事件、响应 envelope）
-- 若本规范与任何工程实现或其它 doc/rule 文件产生冲突，以本规范为准
-- 禁止使用数字章节号（如"第X章/第X节"）来引用本规范内容；引用时仅使用小节标题或锚点标题
+- 本规范是 HotSpot 前后端交互契约的唯一权威（端点、字段、类型、错误码、事件、响应 envelope）
+- 若本规范与工程实现或其它 doc/rule 文件冲突，以本规范为准
+- 引用本规范时仅使用小节标题或锚点标题，禁止使用数字章节号（如“第X章/第X节”）
 
 **内部优先级**（本规范内部冲突时）：
 1. `@spec/api_spec_base.md`
@@ -67,16 +67,13 @@ alwaysApply: true
 
 ## 文档说明
 
-- 本规范为 **Contract Only**：只定义对外可观测的端点/字段/类型/错误码/事件
-- 所有实现细节、自检、工程化约束不属于本规范范围
-
-通用约定（如时间格式、分页/幂等、Token 可选/必须语义、`@auth-only` 字段）统一放在 `@spec/api_spec_base.md`，通用类型定义放在 `@spec/api_spec_types.md`，避免在索引文件重复。
+- 本规范为 **Contract Only**：仅定义对外可观测的端点/字段/类型/错误码/事件；实现细节、自检与工程化约束不在本规范范围
+- 通用约定（时间格式、分页/幂等、Token 语义、`@auth-only` 等）统一见 `@spec/api_spec_base.md`，通用类型统一见 `@spec/api_spec_types.md`
 
 ## 快速索引（按路径前缀）
 
 | 路径前缀 | 对应文档 |
 |---------|---------|
-| `/api/v1/system/get_meta` | `api_spec_system.md` |
 | `/api/v1/auth/` | `api_spec_auth.md` |
 | `/api/v1/users/` | `api_spec_user.md` |
 | `/api/v1/moments/`, `/api/v1/comments/` | `api_spec_moment.md` |

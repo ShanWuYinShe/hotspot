@@ -16,6 +16,11 @@
       "buildFunction": "MomentPageBuilder"
     },
     {
+      "name": "MomentDetailPage",
+      "pageSourceFile": "src/main/ets/features/moment/pages/MomentDetailPage.ets",
+      "buildFunction": "MomentDetailPageBuilder"
+    },
+    {
       "name": "GroupPage",
       "pageSourceFile": "src/main/ets/features/group/pages/GroupPage.ets",
       "buildFunction": "GroupPageBuilder"
@@ -79,11 +84,6 @@
       "name": "MySharesPage",
       "pageSourceFile": "src/main/ets/features/share/pages/MySharesPage.ets",
       "buildFunction": "MySharesPageBuilder"
-    },
-    {
-      "name": "RecommendationPage",
-      "pageSourceFile": "src/main/ets/features/recommendation/pages/RecommendationPage.ets",
-      "buildFunction": "RecommendationPageBuilder"
     },
     {
       "name": "DebugPanel",

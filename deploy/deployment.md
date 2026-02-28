@@ -569,6 +569,13 @@ DATABASE_URL=postgresql://hotspot:your_secure_password@localhost/hotspot
 # Redis 配置
 REDIS_URL=redis://:your_redis_password@localhost:6379
 
+# 分布式 ID（推荐开启 Redis 自动分配）
+ID_NODE_ID_ALLOCATE_WITH_REDIS=true
+ID_NODE_ID_REDIS_KEY_PREFIX=hotspot:id_node:lease
+ID_NODE_ID_REDIS_LEASE_TTL_SECS=90
+ID_NODE_ID_REDIS_RENEW_INTERVAL_SECS=30
+ID_NODE_ID_REDIS_FATAL_ON_LOSS=true
+
 # JWT 密钥（使用强随机字符串）
 JWT_SECRET=your_jwt_secret_key_here
 
@@ -576,17 +583,20 @@ JWT_SECRET=your_jwt_secret_key_here
 SERVER_HOST=0.0.0.0
 SERVER_PORT=8080
 
-# 管理员 API 配置
-ADMIN_DOMAIN=admin-api.example.com
-ADMIN_SSL_CERT=/etc/hotspot/certs/admin-api-cert.pem
-ADMIN_SSL_KEY=/etc/hotspot/certs/admin-api-key.pem
+# Cookie（HTTPS 生产环境建议 true）
+COOKIE_SECURE=true
 
 # 日志级别
 RUST_LOG=info
 
-# 文件上传配置
-UPLOAD_DIR=/var/hotspot/uploads
-MAX_UPLOAD_SIZE=10485760  # 10MB
+# S3 / MinIO
+S3_ENDPOINT=http://localhost:9000
+S3_REGION=us-east-1
+S3_BUCKET=hotspot
+S3_ACCESS_KEY=change_me
+S3_SECRET_KEY=change_me
+S3_FORCE_PATH_STYLE=true
+S3_PUBLIC_BASE=/s3
 ```
 
 ### 5.3 Systemd 服务配置
@@ -1026,12 +1036,16 @@ volumes:
 | `JWT_SECRET` | JWT 签名密钥 | `your_secret_key` |
 | `SERVER_HOST` | 服务器监听地址 | `0.0.0.0` |
 | `SERVER_PORT` | 服务器监听端口 | `8080` |
-| `ADMIN_DOMAIN` | 管理员 API 域名 | `admin-api.example.com` |
-| `ADMIN_SSL_CERT` | 管理员 API SSL 证书路径 | `/etc/hotspot/certs/cert.pem` |
-| `ADMIN_SSL_KEY` | 管理员 API SSL 私钥路径 | `/etc/hotspot/certs/key.pem` |
+| `ID_NODE_ID_ALLOCATE_WITH_REDIS` | 是否启用 Redis 自动分配 node_id | `true` |
+| `ID_NODE_ID_REDIS_KEY_PREFIX` | node_id 租约 key 前缀 | `hotspot:id_node:lease` |
+| `ID_NODE_ID_REDIS_LEASE_TTL_SECS` | node_id 租约 TTL（秒） | `90` |
+| `ID_NODE_ID_REDIS_RENEW_INTERVAL_SECS` | node_id 续租间隔（秒） | `30` |
+| `ID_NODE_ID_REDIS_FATAL_ON_LOSS` | 租约丢失后是否强制退出 | `true` |
 | `RUST_LOG` | 日志级别 | `info` / `debug` / `warn` |
-| `UPLOAD_DIR` | 文件上传目录 | `/var/hotspot/uploads` |
-| `MAX_UPLOAD_SIZE` | 最大上传大小（字节） | `10485760` (10MB) |
+| `COOKIE_SECURE` | Cookie 是否仅 HTTPS 传输 | `true` |
+| `S3_ENDPOINT` | 对象存储服务地址 | `http://localhost:9000` |
+| `S3_BUCKET` | 对象存储桶名称 | `hotspot` |
+| `S3_PUBLIC_BASE` | 对外访问地址前缀 | `/s3` |
 
 ### 10.2 端口参考
 

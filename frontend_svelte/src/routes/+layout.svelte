@@ -12,8 +12,39 @@
 	import { locationStore } from '$lib/stores/location.svelte';
 	import { mapAnchorStore, DEFAULT_ANCHOR_NAME } from '$lib/stores/map-anchor.svelte';
 	import { loadAMapPlugin } from '$lib/utils/amap';
+	import { usersService } from '$lib/api/services/users';
+	import { isSuccess } from '$lib/api/client';
 
 	let { children } = $props();
+	let isSyncingLocationToServer = false;
+	let lastSyncedLocationSignature = '';
+
+	function buildLocationSignature(
+		userId: string,
+		location: { point: { latitude: number; longitude: number }; location_name: string }
+	): string {
+		return `${userId}:${location.point.latitude.toFixed(6)}:${location.point.longitude.toFixed(6)}:${location.location_name}`;
+	}
+
+	async function syncLocationToServer(
+		userId: string,
+		location: { point: { latitude: number; longitude: number }; location_name: string }
+	) {
+		if (isSyncingLocationToServer) return;
+		const signature = buildLocationSignature(userId, location);
+		if (signature === lastSyncedLocationSignature) return;
+		isSyncingLocationToServer = true;
+		try {
+			const response = await usersService.updateLocation({ location });
+			if (isSuccess(response)) {
+				lastSyncedLocationSignature = signature;
+			}
+		} catch {
+			// 静默失败：避免阻塞主流程；后续登录态或位置变化时会再次触发同步
+		} finally {
+			isSyncingLocationToServer = false;
+		}
+	}
 
 	async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
 		try {
@@ -57,6 +88,21 @@
 			mapAnchorStore.setAnchor(geoPoint.latitude, geoPoint.longitude, name);
 		}
 	}
+
+	$effect(() => {
+		const isAuthenticated = authStore.isAuthenticated;
+		const userId = authStore.currentUserId;
+		const current = locationStore.current;
+		if (!isAuthenticated || !userId || !current) return;
+		const location = {
+			point: {
+				latitude: current.point.latitude,
+				longitude: current.point.longitude
+			},
+			location_name: current.location_name || '当前位置'
+		};
+		void syncLocationToServer(userId, location);
+	});
 
 	onMount(() => {
 		// 处理 URL 中的 redirect 参数（例如外部链接 /?redirect=/profile）

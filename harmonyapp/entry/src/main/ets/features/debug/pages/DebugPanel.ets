@@ -14,6 +14,7 @@ import { AppRouter } from '../../../core/router/AppRouter';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 
+@Preview
 @Component
 export struct DebugPanel {
   pathStack: NavPathStack = new NavPathStack();
@@ -78,7 +79,7 @@ export struct DebugPanel {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor($r('app.color.bg_primary'))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       Scroll() {
@@ -146,7 +147,7 @@ export struct DebugPanel {
           }
           .width('100%')
           .height(300)
-          .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+          .backgroundColor($r('app.color.bg_secondary'))
           .padding(8)
           .borderRadius(DesignConstants.RADIUS.MD)
         }

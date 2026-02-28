@@ -7,12 +7,13 @@
 import { GlobalStateManager, KEY_IS_LOGGED_IN, KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { AppRouter } from '../../../core/router/AppRouter';
+import { AppRouter, ChatRouteParam, MomentDetailRouteParam } from '../../../core/router/AppRouter';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import {
   MomentItem, UserItem, GroupItem, GeoPoint, RelativeLocation,
   SearchMomentsRequest, SearchUsersRequest, SearchGroupsRequest,
-  MomentImage, FollowRequest, JoinGroupRequest
+  MomentImage, FollowRequest, UnfollowRequest, JoinGroupRequest,
+  BlockRequest, UnblockRequest, CreateReportRequest, Relationship
 } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -27,6 +28,7 @@ import { DistributedManager } from '../../../core/distributed/DistributedManager
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { WidgetDataService } from '../../../core/services/WidgetDataService';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
+import pasteboard from '@ohos.pasteboard';
 
 
 const DOMAIN_NUMBER: number = 0xFF10;
@@ -41,6 +43,7 @@ class LoginRedirectParams {
   action: string = '';
 }
 
+@Preview
 @Component
 export struct NearbyPage {
   @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
@@ -84,6 +87,8 @@ export struct NearbyPage {
   @State groupsHasMore: boolean = false;
   @State groupsNextCursor: string = '';
   @State groupsLoadingMore: boolean = false;
+  @State userActionPendingIds: string[] = [];
+  @State groupActionPendingIds: string[] = [];
 
   async aboutToAppear() {
     SystemUiController.useSurface({
@@ -181,14 +186,37 @@ export struct NearbyPage {
     return DesignConstants.SPACING.MD;
   }
 
+  private isUserActionPending(userId: string): boolean {
+    return this.userActionPendingIds.indexOf(userId) >= 0;
+  }
+
+  private isGroupActionPending(groupId: string): boolean {
+    return this.groupActionPendingIds.indexOf(groupId) >= 0;
+  }
+
+  private isUserFollowing(user: UserItem): boolean {
+    return user.relation?.is_following ?? false;
+  }
+
+  private isUserBlocked(user: UserItem): boolean {
+    return user.relation?.is_blocked ?? false;
+  }
+
+  private isGroupJoined(group: GroupItem): boolean {
+    return group.my_state?.is_joined ?? false;
+  }
+
   private switchSubTab(index: number): void {
     if (this.currentSubTab === index) {
       return;
     }
+    this.currentSubTab = index;
     // 在 Tabs 动画开始前预设目标 tab 的 loading 状态，
     // 避免 Tabs 捕获旧内容（错误/空状态）用于过渡动画
     this.prepareTabLoading(index);
     this.subTabController.changeIndex(index);
+    // 兜底触发加载：部分设备上 controller 切换不一定触发 onChange
+    this.loadCurrentTabData(true);
   }
 
   /** 为目标 tab 预设 loading 状态（仅当该 tab 无数据或存在错误时） */
@@ -213,10 +241,6 @@ export struct NearbyPage {
         }
         break;
     }
-  }
-
-  private openLocationPicker(): void {
-    AppRouter.push(PageNames.LOCATION_PICKER);
   }
 
   // ==================== 加载附近动态 ====================
@@ -420,10 +444,11 @@ export struct NearbyPage {
       .barHeight(0)
       .animationDuration(400)
       .onChange((index: number) => {
+        if (this.currentSubTab === index) {
+          return;
+        }
         this.prepareTabLoading(index);
-        this.getUIContext().animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
-          this.currentSubTab = index;
-        });
+        this.currentSubTab = index;
         this.loadCurrentTabData(true);
       })
       .layoutWeight(1)
@@ -459,8 +484,9 @@ export struct NearbyPage {
         .width('100%')
         .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD,
           top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-        .backgroundColor($r('app.color.bg_primary'))
+        .backgroundColor($r('app.color.bg_secondary'))
         .borderRadius(DesignConstants.RADIUS.LG)
+        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
         .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
       }
 
@@ -472,7 +498,7 @@ export struct NearbyPage {
       .width('100%')
       .padding(3)
       .backgroundColor($r('app.color.bg_tertiary'))
-      .borderRadius(DesignConstants.RADIUS.FULL)
+      .borderRadius(DesignConstants.RADIUS.XL)
     }
     .width('100%')
     .padding({
@@ -481,9 +507,7 @@ export struct NearbyPage {
       right: DesignConstants.SPACING.LG,
       bottom: DesignConstants.SPACING.SM
     })
-    .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius({ bottomLeft: DesignConstants.RADIUS.XL, bottomRight: DesignConstants.RADIUS.XL })
-    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+    .backgroundColor($r('app.color.bg_primary'))
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
   }
 
@@ -494,47 +518,27 @@ export struct NearbyPage {
         SymbolSpan($r(icon))
           .fontSize(14)
           .fontColor([this.currentSubTab === index
-            ? $r('sys.color.ohos_id_color_emphasize')
+            ? Color.White
             : $r('sys.color.ohos_id_color_text_secondary')])
       }
       Text(label)
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontWeight(this.currentSubTab === index ? FontWeight.Medium : FontWeight.Normal)
         .fontColor(this.currentSubTab === index
-          ? $r('sys.color.ohos_id_color_emphasize')
+          ? Color.White
           : $r('sys.color.ohos_id_color_text_secondary'))
     }
     .height(32)
     .layoutWeight(1)
     .justifyContent(FlexAlign.Center)
     .backgroundColor(this.currentSubTab === index
-      ? $r('app.color.chip_selected_bg')
+      ? $r('sys.color.ohos_id_color_emphasize')
       : Color.Transparent)
-    .borderRadius(DesignConstants.RADIUS.FULL)
+    .borderRadius(DesignConstants.RADIUS.XL)
     .onClick(() => {
       this.switchSubTab(index);
     })
   }
-
-  // @Builder
-  // private buildMapEntryButton() {
-  //   Column() {
-  //     Text() {
-  //       SymbolSpan($r(AppIcon.MAP))
-  //         .fontSize(20)
-  //         .fontColor([$r('sys.color.ohos_id_color_text_primary')])
-  //     }
-  //   }
-  //   .width(44)
-  //   .height(44)
-  //   .justifyContent(FlexAlign.Center)
-  //   .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
-  //   .borderRadius(DesignConstants.RADIUS.FULL)
-  //   .shadow({ radius: 10, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
-  //   .onClick(() => {
-  //     this.openLocationPicker();
-  //   })
-  // }
 
   // ==================== 动态内容 ====================
   @Builder
@@ -555,11 +559,11 @@ export struct NearbyPage {
               }
             }, (moment: MomentItem) => moment.moment_id)
           }
-          .columnsTemplate('repeat(auto-fill, 160vp)')
-          .columnsGap(8)
-          .rowsGap(8)
+          .columnsTemplate('1fr 1fr')
+          .columnsGap(12)
+          .rowsGap(12)
           .width('100%')
-          .padding({ left: 8, right: 8, top: 8, bottom: this.getListBottomPadding() })
+          .padding({ left: 12, right: 12, top: 10, bottom: this.getListBottomPadding() })
           .cachedCount(8)
           .onReachEnd(() => { this.loadNearbyMoments(true); })
         }
@@ -594,69 +598,91 @@ export struct NearbyPage {
 
   @Builder
   buildMomentCard(moment: MomentItem, index: number) {
-    Column({ space: 0 }) {
+    Column({ space: 10 }) {
+      Row({ space: 6 }) {
+        Row({ space: 4 }) {
+          Text() {
+            SymbolSpan($r(AppIcon.CAMERA))
+              .fontSize(10)
+              .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+          }
+          Text('附近动态')
+            .fontSize(10)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        }
+        .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+        .backgroundColor($r('app.color.bg_tertiary'))
+        .borderRadius(DesignConstants.RADIUS.XL)
+
+        Blank().layoutWeight(1)
+
+        Row({ space: 2 }) {
+          Text() {
+            SymbolSpan($r(AppIcon.HEART))
+              .fontSize(10)
+              .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
+          }
+          Text(`${moment.likes_count}`)
+            .fontSize(10)
+            .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+        }
+      }
+      .width('100%')
+
       // 图片 (封面) - 根据原始比例动态调整高度
       if (moment.images && moment.images.length > 0) {
         Image(moment.images[0].url)
           .width('100%')
           .height(this.calculateImageHeight(moment))
           .objectFit(ImageFit.Cover)
-          .borderRadius({ topLeft: 12, topRight: 12 })
-          .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+          .borderRadius(DesignConstants.RADIUS.LG)
+          .backgroundColor($r('app.color.bg_secondary'))
       } else {
         // 无图占位 - 纯文字卡片
         Column() {
           Text(moment.description)
             .fontSize(12)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-            .maxLines(5)
+            .maxLines(6)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
         .width('100%')
-        .height(160)
+        .height(164)
         .padding(12)
         .justifyContent(FlexAlign.Center)
-        .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
-        .borderRadius({ topLeft: 12, topRight: 12 })
+        .backgroundColor($r('app.color.bg_secondary'))
+        .borderRadius(DesignConstants.RADIUS.LG)
       }
 
       // 内容区域 - 小红书风格
-      Column({ space: 4 }) {
+      Column({ space: 6 }) {
         // 文本描述
         if (moment.description && moment.images && moment.images.length > 0) {
           Text(moment.description)
             .fontSize(13)
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
-            .maxLines(2)
+            .maxLines(3)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .lineHeight(18)
         }
 
         // 用户信息 - 更紧凑的布局
-        Row({ space: 4 }) {
+        Row({ space: 6 }) {
           SystemAvatar({
             avatarUrl: moment.user?.avatar_url ?? '',
             name: moment.user?.nickname ?? '',
-            avatarSize: 16
+            avatarSize: 18
           })
           Text(moment.user?.nickname ?? '未知用户')
-            .fontSize(11)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .layoutWeight(1)
 
-          // 点赞数 - 放在右侧
-          Row({ space: 2 }) {
-            Text() {
-              SymbolSpan($r(AppIcon.HEART))
-                .fontSize(11)
-                .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
-            }
-            Text(`${moment.likes_count}`)
-              .fontSize(11)
-              .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
-          }
+          Text(this.formatTime(moment.created_at))
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
         }
         .width('100%')
         .alignItems(VerticalAlign.Center)
@@ -664,11 +690,13 @@ export struct NearbyPage {
       .padding(8)
     }
     .width('100%')
+    .padding({ left: 10, right: 10, top: 10, bottom: 10 })
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.LG)
-    .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
     // 点击反馈动画
-    .scale(this.pressedIndex === index ? { x: 0.97, y: 0.97 } : { x: 1, y: 1 })
+    .scale(this.pressedIndex === index ? { x: 0.975, y: 0.975 } : { x: 1, y: 1 })
     .animation({ duration: 100, curve: Curve.EaseOut })
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
@@ -685,8 +713,9 @@ export struct NearbyPage {
 
   private openMomentDetail(moment: MomentItem): void {
     hilog.info(DOMAIN_NUMBER, TAG, `打开动态详情: ${moment.moment_id}`);
-    // TODO: 创建 MomentDetailPage 并实现跳转
-    SystemToast.show('动态详情页即将上线', this.getUIContext());
+    const params = new MomentDetailRouteParam();
+    params.momentId = moment.moment_id;
+    AppRouter.push(PageNames.MOMENT_DETAIL, params);
   }
 
   @Builder
@@ -742,8 +771,8 @@ export struct NearbyPage {
           .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
         Refresh({ refreshing: $$this.usersRefreshing }) {
-          List() {
-            LazyForEach(this.usersDataSource, (user: UserItem) => {
+          List({ space: 10 }) {
+            ForEach(this.users, (user: UserItem) => {
               ListItem() {
                 this.buildUserCard(user)
               }
@@ -754,9 +783,7 @@ export struct NearbyPage {
               }
             }
           }
-          .width('100%')
-          .padding({ bottom: this.getListBottomPadding() })
-          .divider({ strokeWidth: 0.5, color: $r('app.color.divider'), startMargin: 76, endMargin: 0 })
+          .padding({ left: 12, right: 12, top: 10, bottom: this.getListBottomPadding() })
           .scrollBar(BarState.Auto)
           .onReachEnd(() => { this.loadNearbyUsers(true); })
         }
@@ -771,50 +798,209 @@ export struct NearbyPage {
 
   @Builder
   buildUserCard(user: UserItem) {
-    Row({ space: 12 }) {
-      SystemAvatar({
-        avatarUrl: user.user?.avatar_url ?? '',
-        name: user.user?.nickname ?? '',
-        avatarSize: 48
-      })
-
-      Column({ space: 2 }) {
-        Text(user.user?.nickname ?? '')
-          .fontSize(16)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        if (user.bio) {
-          Text(user.bio)
-            .fontSize(13)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        } else if (user.location?.distance !== undefined && user.location?.distance !== null) {
-          Text(this.formatDistance(user.location.distance))
-            .fontSize(13)
+    Column({ space: 10 }) {
+      Row({ space: 6 }) {
+        Row({ space: 4 }) {
+          Text() {
+            SymbolSpan($r(AppIcon.LOCATION))
+              .fontSize(10)
+              .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+          }
+          Text('附近用户')
+            .fontSize(10)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         }
-      }
-      .alignItems(HorizontalAlign.Start)
-      .layoutWeight(1)
+        .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+        .backgroundColor($r('app.color.bg_tertiary'))
+        .borderRadius(DesignConstants.RADIUS.XL)
 
-      Button('关注')
-        .type(ButtonType.Capsule)
-        .backgroundColor(Color.Transparent)
-        .fontColor($r('sys.color.ohos_id_color_emphasize'))
-        .fontSize(13)
-        .fontWeight(FontWeight.Medium)
-        .height(32)
-        .borderWidth(1)
-        .borderColor($r('sys.color.ohos_id_color_emphasize'))
-        .onClick(() => { this.followUser(user); })
+        Blank().layoutWeight(1)
+
+        if (user.location?.distance !== undefined && user.location?.distance !== null) {
+          Text(this.formatDistance(user.location.distance))
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor($r('sys.color.ohos_id_color_emphasize'))
+            .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+            .backgroundColor($r('app.color.chip_selected_bg'))
+            .borderRadius(DesignConstants.RADIUS.XL)
+        }
+      }
+      .width('100%')
+
+      Row({ space: 8 }) {
+        Row({ space: 10 }) {
+          SystemAvatar({
+            avatarUrl: user.user?.avatar_url ?? '',
+            name: user.user?.nickname ?? '',
+            avatarSize: 48
+          })
+
+          Column({ space: 4 }) {
+            Text(user.user?.nickname ?? '')
+              .fontSize(15)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+            Row({ space: 4 }) {
+              if (user.presence_status === 'online') {
+                Row()
+                  .width(6)
+                  .height(6)
+                  .borderRadius(DesignConstants.RADIUS.FULL)
+                  .backgroundColor($r('app.color.color_success'))
+                Text('在线')
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .fontColor($r('app.color.color_success'))
+              } else {
+                Row()
+                  .width(6)
+                  .height(6)
+                  .borderRadius(DesignConstants.RADIUS.FULL)
+                  .backgroundColor($r('sys.color.ohos_id_color_text_tertiary'))
+                Text('离线')
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              }
+            }
+            .alignItems(VerticalAlign.Center)
+          }
+          .alignItems(HorizontalAlign.Start)
+          .layoutWeight(1)
+        }
+        .layoutWeight(1)
+
+        Row() {
+          Text() {
+            SymbolSpan($r(AppIcon.MORE))
+              .fontSize(16)
+              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+          }
+        }
+        .width(26)
+        .height(26)
+        .borderRadius(DesignConstants.RADIUS.XL)
+        .backgroundColor($r('app.color.bg_tertiary'))
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+        .bindMenu([
+          {
+            value: '私聊',
+            action: () => this.startPrivateChat(user)
+          },
+          {
+            value: this.isUserFollowing(user) ? '取消关注' : '关注',
+            action: () => this.followUser(user)
+          },
+          {
+            value: this.isUserBlocked(user) ? '取消拉黑' : '拉黑',
+            action: () => {
+              if (this.isUserBlocked(user)) {
+                this.unblockUser(user);
+              } else {
+                this.blockUser(user);
+              }
+            }
+          },
+          {
+            value: '举报用户',
+            action: () => this.reportUser(user)
+          },
+          {
+            value: '复制用户ID',
+            action: () => this.copyText(user.user?.user_id ?? '', '用户ID已复制')
+          }
+        ])
+      }
+      .width('100%')
+
+      if (user.bio) {
+        Text(user.bio)
+          .fontSize(12)
+          .lineHeight(17)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
+      } else {
+        Text('这个人很神秘，暂时还没有留下简介')
+          .fontSize(12)
+          .lineHeight(17)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
+      }
+
+      Row({ space: 6 }) {
+        if ((user.social_context?.mutual_friends_count ?? 0) > 0) {
+          Text(`共同好友 ${user.social_context?.mutual_friends_count ?? 0}`)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+              .backgroundColor($r('app.color.bg_tertiary'))
+            .borderRadius(DesignConstants.RADIUS.XL)
+        }
+      }
+      .width('100%')
+
+      if (user.tags && user.tags.length > 0) {
+        Flex({ wrap: FlexWrap.Wrap }) {
+          ForEach(user.tags.slice(0, 3), (tag: string) => {
+            Text(`#${tag}`)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .padding({ left: 7, right: 7, top: 3, bottom: 3 })
+              .margin({ right: 4, bottom: 4 })
+              .backgroundColor($r('app.color.bg_tertiary'))
+              .borderRadius(DesignConstants.RADIUS.MD)
+          }, (tag: string) => tag)
+        }
+        .width('100%')
+      }
+
+      Row({ space: 8 }) {
+        Button(this.isUserActionPending(user.user?.user_id ?? '') ? '处理中...' :
+          (this.isUserFollowing(user) ? '已关注' : '关注'))
+          .type(ButtonType.Normal)
+          .layoutWeight(1)
+          .height(30)
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .enabled(!this.isUserActionPending(user.user?.user_id ?? '') && !this.isUserBlocked(user))
+          .fontSize(12)
+          .fontWeight(FontWeight.Medium)
+          .backgroundColor(this.isUserFollowing(user) ? Color.Transparent : $r('sys.color.ohos_id_color_emphasize'))
+          .fontColor(this.isUserFollowing(user) ? $r('sys.color.ohos_id_color_emphasize') : Color.White)
+          .borderWidth(this.isUserFollowing(user) ? 1 : 0)
+          .borderColor($r('sys.color.ohos_id_color_emphasize'))
+          .opacity(this.isUserActionPending(user.user?.user_id ?? '') || this.isUserBlocked(user) ? 0.58 : 1)
+          .onClick(() => { this.followUser(user); })
+
+        Button('私聊')
+          .type(ButtonType.Normal)
+          .layoutWeight(1)
+          .height(30)
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .enabled(!this.isUserBlocked(user))
+          .fontSize(12)
+          .fontWeight(FontWeight.Medium)
+          .backgroundColor(Color.Transparent)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .borderWidth(1)
+          .borderColor($r('sys.color.ohos_id_color_list_separator'))
+          .opacity(this.isUserBlocked(user) ? 0.58 : 1)
+          .onClick(() => { this.startPrivateChat(user); })
+      }
+      .width('100%')
     }
     .width('100%')
-    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
-    .alignItems(VerticalAlign.Center)
+    .alignItems(HorizontalAlign.Start)
+    .padding({ left: 12, right: 12, top: 12, bottom: 12 })
+    .backgroundColor($r('app.color.bg_secondary'))
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
   }
 
   // ==================== 群组内容 ====================
@@ -832,8 +1018,8 @@ export struct NearbyPage {
           .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else {
         Refresh({ refreshing: $$this.groupsRefreshing }) {
-          List() {
-            LazyForEach(this.groupsDataSource, (group: GroupItem) => {
+          List({ space: 10 }) {
+            ForEach(this.groups, (group: GroupItem) => {
               ListItem() {
                 this.buildGroupCard(group)
               }
@@ -844,9 +1030,7 @@ export struct NearbyPage {
               }
             }
           }
-          .width('100%')
-          .padding({ bottom: this.getListBottomPadding() })
-          .divider({ strokeWidth: 0.5, color: $r('app.color.divider'), startMargin: 76, endMargin: 0 })
+          .padding({ left: 12, right: 12, top: 10, bottom: this.getListBottomPadding() })
           .scrollBar(BarState.Auto)
           .onReachEnd(() => { this.loadNearbyGroups(true); })
         }
@@ -861,58 +1045,186 @@ export struct NearbyPage {
 
   @Builder
   buildGroupCard(group: GroupItem) {
-    Row({ space: 12 }) {
-      SystemAvatar({
-        avatarUrl: group.group?.avatar_url ?? '',
-        name: group.group?.name ?? '',
-        avatarSize: 48,
-        shape: 'squircle'
-      })
-
-      Column({ space: 2 }) {
-        Text(group.group?.name ?? '')
-          .fontSize(16)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        Row({ space: 8 }) {
-          Text(`${group.group?.members_count ?? 0}人`)
-            .fontSize(13)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-
-          if ((group.location as RelativeLocation)?.distance !== undefined &&
-            (group.location as RelativeLocation)?.distance !== null) {
-            Text(this.formatDistance((group.location as RelativeLocation).distance!))
-              .fontSize(13)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+    Column({ space: 10 }) {
+      Row({ space: 6 }) {
+        Row({ space: 4 }) {
+          Text() {
+            SymbolSpan($r(AppIcon.GROUP))
+              .fontSize(10)
+              .fontColor([$r('sys.color.ohos_id_color_emphasize')])
           }
+          Text('附近群组')
+            .fontSize(10)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        }
+        .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+        .backgroundColor($r('app.color.bg_tertiary'))
+        .borderRadius(DesignConstants.RADIUS.XL)
+
+        Blank().layoutWeight(1)
+
+        if ((group.location as RelativeLocation)?.distance !== undefined &&
+          (group.location as RelativeLocation)?.distance !== null) {
+          Text(this.formatDistance((group.location as RelativeLocation).distance!))
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor($r('sys.color.ohos_id_color_emphasize'))
+            .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+            .backgroundColor($r('app.color.chip_selected_bg'))
+            .borderRadius(DesignConstants.RADIUS.XL)
         }
       }
-      .alignItems(HorizontalAlign.Start)
-      .layoutWeight(1)
+      .width('100%')
 
-      Button('加入')
-        .type(ButtonType.Capsule)
-        .backgroundColor(Color.Transparent)
-        .fontColor($r('sys.color.ohos_id_color_emphasize'))
-        .fontSize(13)
-        .fontWeight(FontWeight.Medium)
-        .height(32)
-        .borderWidth(1)
-        .borderColor($r('sys.color.ohos_id_color_emphasize'))
-        .onClick(() => { this.joinGroup(group); })
+      Row({ space: 8 }) {
+        Row({ space: 10 }) {
+          SystemAvatar({
+            avatarUrl: group.group?.avatar_url ?? '',
+            name: group.group?.name ?? '',
+            avatarSize: 48,
+            shape: 'squircle'
+          })
+
+          Column({ space: 4 }) {
+            Text(group.group?.name ?? '')
+              .fontSize(15)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+            Row({ space: 6 }) {
+              Text(`${group.group?.members_count ?? 0} 人`)
+                .fontSize(DesignConstants.FONT.SIZE.SM)
+                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              if (group.has_password) {
+                Text('需口令')
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              }
+            }
+            .alignItems(VerticalAlign.Center)
+          }
+          .alignItems(HorizontalAlign.Start)
+          .layoutWeight(1)
+        }
+        .layoutWeight(1)
+
+        Row() {
+          Text() {
+            SymbolSpan($r(AppIcon.MORE))
+              .fontSize(16)
+              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+          }
+        }
+        .width(26)
+        .height(26)
+        .borderRadius(DesignConstants.RADIUS.XL)
+        .backgroundColor($r('app.color.bg_tertiary'))
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+        .bindMenu([
+          {
+            value: '查看详情',
+            action: () => this.openGroupDetail(group)
+          },
+          {
+            value: this.isGroupJoined(group) ? '进入群聊' : '加入群组',
+            action: () => this.joinGroup(group)
+          },
+          {
+            value: '举报群组',
+            action: () => this.reportGroup(group)
+          },
+          {
+            value: '复制群组ID',
+            action: () => this.copyText(group.group?.group_id ?? '', '群组ID已复制')
+          }
+        ])
+      }
+      .width('100%')
+
+      if (group.description) {
+        Text(group.description)
+          .fontSize(12)
+          .lineHeight(17)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
+      } else {
+        Text('这个群还没有群介绍')
+          .fontSize(12)
+          .lineHeight(17)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
+      }
+
+      if (group.tags && group.tags.length > 0) {
+        Flex({ wrap: FlexWrap.Wrap }) {
+          ForEach(group.tags.slice(0, 3), (tag: string) => {
+            Text(`#${tag}`)
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+            .backgroundColor($r('app.color.bg_tertiary'))
+            .borderRadius(DesignConstants.RADIUS.MD)
+            .margin({ right: 4, bottom: 4 })
+        }, (tag: string) => tag)
+      }
+      .width('100%')
+      }
+
+      Row({ space: 8 }) {
+        Button(this.isGroupActionPending(group.group?.group_id ?? '') ? '处理中...' :
+          (this.isGroupJoined(group) ? '进入群聊' : '加入群组'))
+          .type(ButtonType.Normal)
+          .layoutWeight(1)
+          .height(30)
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .enabled(!this.isGroupActionPending(group.group?.group_id ?? ''))
+          .fontSize(12)
+          .fontWeight(FontWeight.Medium)
+          .backgroundColor(this.isGroupJoined(group) ? Color.Transparent : $r('sys.color.ohos_id_color_emphasize'))
+          .fontColor(this.isGroupJoined(group) ? $r('sys.color.ohos_id_color_emphasize') : Color.White)
+          .borderWidth(this.isGroupJoined(group) ? 1 : 0)
+          .borderColor($r('sys.color.ohos_id_color_emphasize'))
+          .opacity(this.isGroupActionPending(group.group?.group_id ?? '') ? 0.58 : 1)
+          .onClick(() => { this.joinGroup(group); })
+
+        Button('详情')
+          .type(ButtonType.Normal)
+          .layoutWeight(1)
+          .height(30)
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .fontSize(12)
+          .fontWeight(FontWeight.Medium)
+          .backgroundColor(Color.Transparent)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .borderWidth(1)
+          .borderColor($r('sys.color.ohos_id_color_list_separator'))
+          .onClick(() => { this.openGroupDetail(group); })
+      }
+      .width('100%')
     }
     .width('100%')
-    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
-    .alignItems(VerticalAlign.Center)
-    .onClick(() => { this.openGroupDetail(group); })
+    .alignItems(HorizontalAlign.Start)
+    .padding({ left: 12, right: 12, top: 12, bottom: 12 })
+    .backgroundColor($r('app.color.bg_secondary'))
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
   }
 
   @Builder
   buildWaterFlowFooter() {
-    LoadingMoreIndicator()
+    if (this.momentsLoadingMore) {
+      LoadingMoreIndicator()
+    } else {
+      Blank()
+        .height(0)
+    }
   }
 
   // ==================== 操作方法 ====================
@@ -926,16 +1238,26 @@ export struct NearbyPage {
       AppRouter.push(PageNames.LOGIN, loginParams);
       return;
     }
+
+    const userId = user.user.user_id;
+    if (this.isUserActionPending(userId)) return;
+    this.setUserActionPending(userId, true);
+
+    const isFollowing = user.relation?.is_following ?? false;
     try {
-      const followReq: FollowRequest = { user_id: user.user.user_id };
-      const response = await ApiClient.followUser(followReq);
+      const response = isFollowing
+        ? await ApiClient.unfollowUser({ user_id: userId } as UnfollowRequest)
+        : await ApiClient.followUser({ user_id: userId } as FollowRequest);
       if (response.code === 0) {
-        SystemToast.showSuccess('已关注', this.getUIContext());
+        this.patchUserFollowing(userId, !isFollowing);
+        SystemToast.showSuccess(isFollowing ? '已取消关注' : '已关注', this.getUIContext());
       } else {
-        SystemToast.showError(response.message || '关注失败', this.getUIContext());
+        SystemToast.showError(response.message || (isFollowing ? '取消关注失败' : '关注失败'), this.getUIContext());
       }
     } catch {
-      SystemToast.showError('关注失败', this.getUIContext());
+      SystemToast.showError(isFollowing ? '取消关注失败' : '关注失败', this.getUIContext());
+    } finally {
+      this.setUserActionPending(userId, false);
     }
   }
 
@@ -948,8 +1270,18 @@ export struct NearbyPage {
       AppRouter.push(PageNames.LOGIN, loginParams);
       return;
     }
+
+    const groupId = group.group?.group_id ?? '';
+    if (!groupId) return;
+    if (this.isGroupJoined(group)) {
+      this.enterGroupChat(group);
+      return;
+    }
+    if (this.isGroupActionPending(groupId)) return;
+    this.setGroupActionPending(groupId, true);
+
     try {
-      const joinReq: JoinGroupRequest = { group_id: group.group?.group_id ?? '' };
+      const joinReq: JoinGroupRequest = { group_id: groupId };
       const response = await ApiClient.joinGroup(joinReq);
       if (response.code === 0 && response.data) {
         if (response.data.status === 'joined') {
@@ -965,6 +1297,229 @@ export struct NearbyPage {
       }
     } catch {
       SystemToast.showError('加入群组失败', this.getUIContext());
+    } finally {
+      this.setGroupActionPending(groupId, false);
+    }
+  }
+
+  private startPrivateChat(user: UserItem): void {
+    if (!this.isLoggedIn) {
+      SystemToast.showWarning('请先登录后再发起私聊', this.getUIContext());
+      const loginParams = new LoginRedirectParams();
+      loginParams.reason = 'action_required';
+      loginParams.action = '发起私聊';
+      AppRouter.push(PageNames.LOGIN, loginParams);
+      return;
+    }
+    const userId = user.user?.user_id;
+    if (!userId) return;
+    const params = new ChatRouteParam();
+    params.chatId = userId;
+    params.chatType = 'private_chat';
+    params.targetId = userId;
+    params.title = user.user?.nickname ?? '私聊';
+    AppRouter.push(PageNames.CHAT, params);
+  }
+
+  private enterGroupChat(group: GroupItem): void {
+    if (!this.isLoggedIn) {
+      SystemToast.showWarning('请先登录后再进入群聊', this.getUIContext());
+      const loginParams = new LoginRedirectParams();
+      loginParams.reason = 'action_required';
+      loginParams.action = '进入群聊';
+      AppRouter.push(PageNames.LOGIN, loginParams);
+      return;
+    }
+    const groupId = group.group?.group_id;
+    if (!groupId) return;
+    const params = new ChatRouteParam();
+    params.chatId = groupId;
+    params.chatType = 'group_chat';
+    params.title = group.group?.name ?? '群聊';
+    AppRouter.push(PageNames.CHAT, params);
+  }
+
+  private async reportUser(user: UserItem): Promise<void> {
+    const userId = user.user?.user_id;
+    if (!userId) return;
+    if (!this.isLoggedIn) {
+      SystemToast.showWarning('请先登录后再举报', this.getUIContext());
+      const loginParams = new LoginRedirectParams();
+      loginParams.reason = 'action_required';
+      loginParams.action = '举报用户';
+      AppRouter.push(PageNames.LOGIN, loginParams);
+      return;
+    }
+    try {
+      const req: CreateReportRequest = {
+        target_type: 'user',
+        target_id: userId,
+        reason: 'other'
+      };
+      const response = await ApiClient.createReport(req);
+      if (response.code === 0) {
+        SystemToast.showSuccess('举报已提交', this.getUIContext());
+      } else {
+        SystemToast.showError(response.message || '举报失败', this.getUIContext());
+      }
+    } catch {
+      SystemToast.showError('举报失败', this.getUIContext());
+    }
+  }
+
+  private async reportGroup(group: GroupItem): Promise<void> {
+    const groupId = group.group?.group_id;
+    if (!groupId) return;
+    if (!this.isLoggedIn) {
+      SystemToast.showWarning('请先登录后再举报', this.getUIContext());
+      const loginParams = new LoginRedirectParams();
+      loginParams.reason = 'action_required';
+      loginParams.action = '举报群组';
+      AppRouter.push(PageNames.LOGIN, loginParams);
+      return;
+    }
+    try {
+      const req: CreateReportRequest = {
+        target_type: 'group',
+        target_id: groupId,
+        reason: 'other'
+      };
+      const response = await ApiClient.createReport(req);
+      if (response.code === 0) {
+        SystemToast.showSuccess('举报已提交', this.getUIContext());
+      } else {
+        SystemToast.showError(response.message || '举报失败', this.getUIContext());
+      }
+    } catch {
+      SystemToast.showError('举报失败', this.getUIContext());
+    }
+  }
+
+  private async blockUser(user: UserItem): Promise<void> {
+    const userId = user.user?.user_id;
+    if (!userId) return;
+    if (!this.isLoggedIn) {
+      SystemToast.showWarning('请先登录后再拉黑', this.getUIContext());
+      return;
+    }
+    if (this.isUserActionPending(userId)) return;
+    this.setUserActionPending(userId, true);
+    try {
+      const response = await ApiClient.blockUser({ user_id: userId } as BlockRequest);
+      if (response.code === 0) {
+        this.patchUserBlocked(userId, true);
+        SystemToast.showSuccess('已拉黑', this.getUIContext());
+      } else {
+        SystemToast.showError(response.message || '拉黑失败', this.getUIContext());
+      }
+    } catch {
+      SystemToast.showError('拉黑失败', this.getUIContext());
+    } finally {
+      this.setUserActionPending(userId, false);
+    }
+  }
+
+  private async unblockUser(user: UserItem): Promise<void> {
+    const userId = user.user?.user_id;
+    if (!userId) return;
+    if (!this.isLoggedIn) {
+      SystemToast.showWarning('请先登录后再取消拉黑', this.getUIContext());
+      return;
+    }
+    if (this.isUserActionPending(userId)) return;
+    this.setUserActionPending(userId, true);
+    try {
+      const response = await ApiClient.unblockUser({ user_id: userId } as UnblockRequest);
+      if (response.code === 0) {
+        this.patchUserBlocked(userId, false);
+        SystemToast.showSuccess('已取消拉黑', this.getUIContext());
+      } else {
+        SystemToast.showError(response.message || '取消拉黑失败', this.getUIContext());
+      }
+    } catch {
+      SystemToast.showError('取消拉黑失败', this.getUIContext());
+    } finally {
+      this.setUserActionPending(userId, false);
+    }
+  }
+
+  private ensureUserRelation(user: UserItem): Relationship {
+    if (!user.relation) {
+      const relation: Relationship = {
+        is_following: false,
+        is_followed_by: false,
+        is_blocked: false
+      };
+      user.relation = relation;
+    }
+    return user.relation;
+  }
+
+  private patchUserFollowing(userId: string, isFollowing: boolean): void {
+    const users = this.users;
+    for (let i = 0; i < users.length; i++) {
+      if ((users[i].user?.user_id ?? '') !== userId) {
+        continue;
+      }
+      const relation = this.ensureUserRelation(users[i]);
+      relation.is_following = isFollowing;
+      break;
+    }
+    this.users = users;
+    this.usersDataSource.setData(users);
+  }
+
+  private patchUserBlocked(userId: string, isBlocked: boolean): void {
+    const users = this.users;
+    for (let i = 0; i < users.length; i++) {
+      if ((users[i].user?.user_id ?? '') !== userId) {
+        continue;
+      }
+      const relation = this.ensureUserRelation(users[i]);
+      relation.is_blocked = isBlocked;
+      break;
+    }
+    this.users = users;
+    this.usersDataSource.setData(users);
+  }
+
+  private setUserActionPending(userId: string, pending: boolean): void {
+    const next: string[] = [];
+    for (let i = 0; i < this.userActionPendingIds.length; i++) {
+      const id = this.userActionPendingIds[i];
+      if (id !== userId) {
+        next.push(id);
+      }
+    }
+    if (pending) {
+      next.push(userId);
+    }
+    this.userActionPendingIds = next;
+  }
+
+  private setGroupActionPending(groupId: string, pending: boolean): void {
+    const next: string[] = [];
+    for (let i = 0; i < this.groupActionPendingIds.length; i++) {
+      const id = this.groupActionPendingIds[i];
+      if (id !== groupId) {
+        next.push(id);
+      }
+    }
+    if (pending) {
+      next.push(groupId);
+    }
+    this.groupActionPendingIds = next;
+  }
+
+  private async copyText(text: string, successText: string): Promise<void> {
+    if (!text) return;
+    try {
+      const systemPasteboard = pasteboard.getSystemPasteboard();
+      const pasteData = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, text);
+      await systemPasteboard.setData(pasteData);
+      SystemToast.show(successText, this.getUIContext());
+    } catch {
+      SystemToast.showError('复制失败', this.getUIContext());
     }
   }
 
@@ -980,5 +1535,33 @@ export struct NearbyPage {
       return `${Math.round(meters)}m`;
     }
     return `${(meters / 1000).toFixed(1)}km`;
+  }
+
+  private formatTime(dateTime: string): string {
+    if (!dateTime) {
+      return '';
+    }
+    const createdAt = new Date(dateTime).getTime();
+    const now = Date.now();
+    if (Number.isNaN(createdAt)) {
+      return '';
+    }
+    const diffMs = now - createdAt;
+    const minute = 60 * 1000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+    if (diffMs < hour) {
+      const mins = Math.max(1, Math.floor(diffMs / minute));
+      return `${mins}分钟前`;
+    }
+    if (diffMs < day) {
+      const hours = Math.max(1, Math.floor(diffMs / hour));
+      return `${hours}小时前`;
+    }
+    const days = Math.floor(diffMs / day);
+    if (days < 7) {
+      return `${days}天前`;
+    }
+    return dateTime.slice(0, 10);
   }
 }

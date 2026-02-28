@@ -73,7 +73,9 @@ alwaysApply: false
 
 **业务规则**：
 - 禁止自举报：当 `target_type='user'` 且 `target_id` 为当前用户时，返回 `10400`
-- 当 `target_type='moment'`/`'comment'`/`'message'` 且目标资源为当前用户所有时，同样返回 `10400`
+- 当 `target_type='moment'`/`'comment'`/`'message'` 且目标资源属于当前用户时，返回 `10400`
+- 重复举报：同一 `target_type + target_id` 已存在 `pending` 或 `reviewing` 记录时，返回 `10400`
+- 若该目标历史举报均已进入终态（`resolved` / `dismissed`），允许再次举报（视为新举报单）
 
 **Request**: `CreateReportRequest`
 ```typescript
@@ -100,7 +102,7 @@ interface ReportCreated {
 
 - **认证**: 必须
 - **幂等**: 无
-- **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `report_id DESC` 作为稳定 tie-breaker；一致性级别为弱一致（同一 cursor 会话内有序，跨会话允许轻微抖动）。
+- **排序**: 默认按照 `created_at DESC` 排序，时间相同以 `report_id DESC` 作为稳定 tie-breaker；一致性级别为强一致。
 
 **Request**: `MyReportsRequest`
 ```typescript

@@ -19,7 +19,7 @@ use crate::{
         response::{
             AdminGroupItem, ApiResponse, BannedMemberItem, GroupAnnouncementItem,
             GroupApplicationItem, GroupInviteItem, GroupItem, GroupMemberItem, GroupSentInviteItem,
-            InviteMemberData, JoinGroupResult, MyApplicationItem, PaginatedData,
+            InviteMemberData, JoinGroupResult, PaginatedData,
         },
     },
     error::Result,
@@ -35,10 +35,29 @@ pub async fn search(
     State(state): State<AppState>,
     Json(req): Json<SearchGroupsRequest>,
 ) -> Result<Json<ApiResponse<PaginatedData<GroupItem>>>> {
+    let started_at = std::time::Instant::now();
     let sort_by = req.sort_by.as_deref().unwrap_or("relevance");
     tracing::debug!(sort_by = %sort_by, "Search sort parameter");
+    tracing::info!(
+        has_keyword = req.keyword.is_some(),
+        has_tag = req.tag.is_some(),
+        radius = req.radius.unwrap_or(5000.0),
+        has_cursor = req
+            .pagination
+            .as_ref()
+            .and_then(|p| p.cursor.as_ref())
+            .is_some(),
+        limit = req.pagination.as_ref().and_then(|p| p.limit).unwrap_or(20),
+        "groups.search request received"
+    );
 
     let response = state.group_service.search(&req).await?;
+    tracing::info!(
+        items = response.items.len(),
+        has_next_cursor = response.next_cursor.is_some(),
+        elapsed_ms = started_at.elapsed().as_millis(),
+        "groups.search request completed"
+    );
     Ok(Json(ApiResponse::success(response)))
 }
 
@@ -60,7 +79,7 @@ pub async fn my_applications(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<MyApplicationsRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<MyApplicationItem>>>> {
+) -> Result<Json<ApiResponse<PaginatedData<GroupApplicationItem>>>> {
     let response = state
         .group_service
         .get_my_applications(user.user_id, req)
@@ -113,9 +132,9 @@ pub async fn create(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<CreateGroupChatRequest>,
-) -> Result<Json<ApiResponse<()>>> {
-    state.group_service.create_group(user.user_id, req).await?;
-    Ok(Json(ApiResponse::success_empty()))
+) -> Result<Json<ApiResponse<GroupItem>>> {
+    let created = state.group_service.create_group(user.user_id, req).await?;
+    Ok(Json(ApiResponse::success(created)))
 }
 
 pub async fn me(
@@ -181,36 +200,36 @@ pub async fn set_role(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<SetMemberRoleRequest>,
-) -> Result<Json<ApiResponse<GroupMemberItem>>> {
-    let member = state.group_service.set_role(user.user_id, req).await?;
-    Ok(Json(ApiResponse::success(member)))
+) -> Result<Json<ApiResponse<()>>> {
+    state.group_service.set_role(user.user_id, req).await?;
+    Ok(Json(ApiResponse::success_empty()))
 }
 
 pub async fn mute(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<MuteMemberRequest>,
-) -> Result<Json<ApiResponse<GroupMemberItem>>> {
-    let member = state.group_service.mute_member(user.user_id, req).await?;
-    Ok(Json(ApiResponse::success(member)))
+) -> Result<Json<ApiResponse<()>>> {
+    state.group_service.mute_member(user.user_id, req).await?;
+    Ok(Json(ApiResponse::success_empty()))
 }
 
 pub async fn unmute(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<UnmuteMemberRequest>,
-) -> Result<Json<ApiResponse<GroupMemberItem>>> {
-    let member = state.group_service.unmute_member(user.user_id, req).await?;
-    Ok(Json(ApiResponse::success(member)))
+) -> Result<Json<ApiResponse<()>>> {
+    state.group_service.unmute_member(user.user_id, req).await?;
+    Ok(Json(ApiResponse::success_empty()))
 }
 
 pub async fn ban(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<BanMemberRequest>,
-) -> Result<Json<ApiResponse<BannedMemberItem>>> {
-    let banned = state.group_service.ban_member(user.user_id, req).await?;
-    Ok(Json(ApiResponse::success(banned)))
+) -> Result<Json<ApiResponse<()>>> {
+    state.group_service.ban_member(user.user_id, req).await?;
+    Ok(Json(ApiResponse::success_empty()))
 }
 
 pub async fn unban(
@@ -270,24 +289,24 @@ pub async fn approve_application(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<ApproveGroupApplicationRequest>,
-) -> Result<Json<ApiResponse<GroupApplicationItem>>> {
-    let response = state
+) -> Result<Json<ApiResponse<()>>> {
+    state
         .group_service
         .approve_application(user.user_id, req)
         .await?;
-    Ok(Json(ApiResponse::success(response)))
+    Ok(Json(ApiResponse::success_empty()))
 }
 
 pub async fn reject_application(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<RejectGroupApplicationRequest>,
-) -> Result<Json<ApiResponse<GroupApplicationItem>>> {
-    let response = state
+) -> Result<Json<ApiResponse<()>>> {
+    state
         .group_service
         .reject_application(user.user_id, req)
         .await?;
-    Ok(Json(ApiResponse::success(response)))
+    Ok(Json(ApiResponse::success_empty()))
 }
 
 pub async fn cancel_application(
@@ -427,12 +446,12 @@ pub async fn update_announcement(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(req): Json<UpdateGroupAnnouncementRequest>,
-) -> Result<Json<ApiResponse<GroupAnnouncementItem>>> {
-    let response = state
+) -> Result<Json<ApiResponse<()>>> {
+    state
         .group_service
         .update_announcement(user.user_id, &req)
         .await?;
-    Ok(Json(ApiResponse::success(response)))
+    Ok(Json(ApiResponse::success_empty()))
 }
 
 /// 删除群公告

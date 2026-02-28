@@ -28,7 +28,7 @@ use redis::aio::ConnectionManager;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::{collections::HashMap, sync::Arc};
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -69,6 +69,13 @@ impl ShareService {
         user_id: i64,
         req: CreateShareRequest,
     ) -> Result<ShareCreated, AppError> {
+        let started_at = std::time::Instant::now();
+        info!(
+            user_id,
+            share_type = ?req.share_type,
+            has_expires = req.expires_in_seconds.is_some(),
+            "share.create started"
+        );
         // 验证 payload 格式
         Self::validate_payload(&req.share_type, &req.payload)?;
 
@@ -94,19 +101,22 @@ impl ShareService {
             None
         };
 
-        // 生成唯一的分享码
-        let share_code = Self::generate_unique_share_code(&self.db).await?;
-
-        // 创建分享
-        let share_id = ShareRepository::create(
+        // 直接插入并处理唯一键冲突重试，避免“先查后写”的并发竞态窗口。
+        let (share_id, share_code) = Self::create_share_with_unique_code(
             &self.db,
-            &share_code,
             req.share_type.as_str(),
             user_id,
             &req.payload,
-            expires_at,
+            expires_at.clone(),
         )
         .await?;
+        info!(
+            user_id,
+            share_id = %share_id,
+            share_type = ?req.share_type,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "share.create completed"
+        );
 
         Ok(ShareCreated {
             share_id: share_id.to_string(),
@@ -123,10 +133,28 @@ impl ShareService {
         client_ip: &str,
     ) -> Result<ShareDetail, AppError> {
         self.enforce_get_rate_limit(user_id, client_ip).await?;
+        let normalized_share_code =
+            id_gen::normalize_share_code(&req.share_code).ok_or_else(|| {
+                warn!(
+                    share_code = %req.share_code,
+                    user_id = ?user_id,
+                    client_ip = client_ip,
+                    "share get failed: invalid share_code format"
+                );
+                AppError::BadRequest("share_code 格式错误".to_string())
+            })?;
         // 获取分享
-        let db_share = ShareRepository::get_by_code(&self.db, &req.share_code)
+        let db_share = ShareRepository::get_by_code(&self.db, &normalized_share_code)
             .await?
-            .ok_or(AppError::NotFound("分享不存在或已删除".to_string()))?;
+            .ok_or_else(|| {
+                warn!(
+                    share_code = %normalized_share_code,
+                    user_id = ?user_id,
+                    client_ip = client_ip,
+                    "share get failed: not found or revoked"
+                );
+                AppError::NotFound("分享不存在或已删除".to_string())
+            })?;
 
         // 获取创建者信息
         let creator_row = sqlx::query!(
@@ -227,23 +255,43 @@ impl ShareService {
         user_id: i64,
         req: RevokeShareRequest,
     ) -> Result<(), AppError> {
+        let started_at = std::time::Instant::now();
         let share_id = Validator::parse_uuid(&req.share_id, "share_id")?;
+        info!(user_id, share_id = %share_id, "share.revoke started");
 
         let share = ShareRepository::get_by_id(&self.db, share_id)
             .await?
             .ok_or(AppError::NotFound("分享不存在或已删除".to_string()))?;
 
         if share.creator_id != user_id {
+            warn!(
+                user_id,
+                share_id = %share_id,
+                creator_id = share.creator_id,
+                "share.revoke rejected: not creator"
+            );
             return Err(AppError::Forbidden("无权撤销他人的分享".to_string()));
         }
 
         if share.is_revoked {
+            info!(
+                user_id,
+                share_id = %share_id,
+                elapsed_ms = started_at.elapsed().as_millis(),
+                "share.revoke completed (noop_already_revoked)"
+            );
             return Ok(());
         }
 
         ShareRepository::revoke_by_id(&self.db, share_id)
             .await
             .map_err(|e| AppError::internal(e.to_string()))?;
+        info!(
+            user_id,
+            share_id = %share_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "share.revoke completed"
+        );
 
         Ok(())
     }
@@ -852,19 +900,46 @@ impl ShareService {
         }
     }
 
-    /// 生成唯一的分享码
-    async fn generate_unique_share_code(pool: &PgPool) -> Result<String, AppError> {
+    /// 创建分享并处理 share_code 并发冲突重试
+    async fn create_share_with_unique_code(
+        pool: &PgPool,
+        share_type: &str,
+        creator_id: i64,
+        payload: &serde_json::Value,
+        expires_at: Option<DateTime<Utc>>,
+    ) -> Result<(Uuid, String), AppError> {
         const MAX_ATTEMPTS: u32 = 10;
+        const UNIQUE_VIOLATION_CODE: &str = "23505";
 
-        for _ in 0..MAX_ATTEMPTS {
+        for attempt in 1..=MAX_ATTEMPTS {
             let code = id_gen::generate_share_code();
 
-            // 检查是否已存在
-            if !ShareRepository::exists_by_code(pool, &code).await? {
-                return Ok(code);
+            match ShareRepository::create(
+                pool,
+                &code,
+                share_type,
+                creator_id,
+                payload,
+                expires_at.clone(),
+            )
+            .await
+            {
+                Ok(share_id) => return Ok((share_id, code)),
+                Err(AppError::Sqlx(sqlx::Error::Database(db_err))) => {
+                    if matches!(db_err.code().as_deref(), Some(UNIQUE_VIOLATION_CODE)) {
+                        debug!(attempt, "share_code 插入冲突，重试生成");
+                        continue;
+                    }
+                    return Err(AppError::Sqlx(sqlx::Error::Database(db_err)));
+                }
+                Err(err) => return Err(err),
             }
         }
 
+        warn!(
+            max_attempts = MAX_ATTEMPTS,
+            "share_code 在重试后仍冲突，可能存在异常并发或随机源问题"
+        );
         Err(AppError::BusinessRuleViolation(
             "无法生成唯一的分享码，请稍后重试".to_string(),
         ))

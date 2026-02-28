@@ -53,9 +53,9 @@ alwaysApply: false
 - **禁止硬编码路径**：必须通过 `core/config/ApiEndpoints.ets`
 - **统一入口**：通过 `core/network/HttpUtil.ets` 的 `post()` 方法发起请求
 - **成功判定**：仅使用 `code === 0`，禁止依赖 HTTP 状态码或 `message` 字段
-- **Token 自动携带**：从 `PreferencesUtil` 读取，401 时自动 refresh 并重试
-- **幂等键**：`MUST_IDEMPOTENT_ENDPOINTS` 列表中的接口自动注入 `Idempotency-Key`
-- **Cursor 不透明**：只透传 `next_cursor`，不解析不构造
+- **Token 自动携带**：从 `PreferencesUtil` 读取，收到 `code=10100`（认证失败）时自动 refresh 并重试
+- **幂等键**：MUST 幂等接口以 `@spec/api_spec_base.md`「必须使用幂等键的接口（MUST）」列表为准；实现中 `MUST_IDEMPOTENT_ENDPOINTS` 须与该列表同步（增删端点时需更新），自动注入 `Idempotency-Key`
+- **Cursor 不透明**：请求时透传 `cursor`，收到响应后将 `next_cursor` 作为下一页的 `cursor` 透传，不解析、不构造
 - **RPC + JSON**：仅 POST，不实现 REST 风格
 
 ---

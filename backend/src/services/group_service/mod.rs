@@ -6,13 +6,13 @@ use std::sync::Arc;
 
 use crate::{
     repositories::{
-        chat_unread_repo::ChatUnreadRepository,
-        group_announcement_repo::GroupAnnouncementRepository,
-        group_application_repo::GroupApplicationRepository, group_bans_repo::GroupBansRepository,
-        group_invite_repo::GroupInviteRepository,
-        group_member_history_repo::GroupMemberHistoryRepository,
-        group_member_repo::GroupMemberRepository, group_repo::GroupRepository,
-        group_settings_repo::GroupSettingsRepository, system::report_repo::ReportRepository,
+        admin::rbac_repo::AdminRbacRepository, chat_unread_repo::ChatUnreadRepository,
+        group::announcement_repo::GroupAnnouncementRepository,
+        group::application_repo::GroupApplicationRepository, group::bans_repo::GroupBansRepository,
+        group::invite_repo::GroupInviteRepository,
+        group::member_history_repo::GroupMemberHistoryRepository,
+        group::member_repo::GroupMemberRepository, group::settings_repo::GroupSettingsRepository,
+        group_repo::GroupRepository, system::report_repo::ReportRepository,
         tag_repo::TagRepository, user_repo::UserRepository,
     },
     utils::cache::CacheManager,
@@ -40,6 +40,7 @@ pub struct GroupService {
     pub(crate) report_repo: ReportRepository,
     pub(crate) user_repo: UserRepository,
     pub(crate) unread_repo: ChatUnreadRepository,
+    pub(crate) admin_rbac_repo: AdminRbacRepository,
     pub(crate) media_service: crate::services::media_service::MediaService,
     pub(crate) cache_manager: CacheManager,
 }
@@ -59,6 +60,7 @@ impl GroupService {
         report_repo: ReportRepository,
         user_repo: UserRepository,
         unread_repo: ChatUnreadRepository,
+        admin_rbac_repo: AdminRbacRepository,
         media_service: crate::services::media_service::MediaService,
         cache_manager: CacheManager,
     ) -> Self {
@@ -76,6 +78,7 @@ impl GroupService {
             report_repo,
             user_repo,
             unread_repo,
+            admin_rbac_repo,
             media_service,
             cache_manager,
         }

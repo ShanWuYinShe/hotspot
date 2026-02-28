@@ -255,6 +255,22 @@ pub async fn rate_limit_middleware(
             )
             .await?;
         }
+        ("POST", "/api/v1/auth/request_password_reset") => {
+            let limit = get_limit(
+                "auth_reset_per_10minutes",
+                state.config.rate_limit_auth_reset_per_10minutes,
+            )
+            .await;
+            apply_limit(
+                &cache,
+                "auth:reset:ip",
+                &client_ip,
+                limit,
+                SECS_10_MINUTES,
+                state.config.rate_limit_fail_open,
+            )
+            .await?;
+        }
         ("POST", "/api/v1/auth/guest") => {
             let limit = get_limit(
                 "guest_per_10minutes",

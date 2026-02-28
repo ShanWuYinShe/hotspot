@@ -7,7 +7,12 @@ import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR } from '../
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
-import { GroupItem, SearchGroupsRequest } from '../../../core/types/api';
+import {
+  GroupApplicationItem,
+  GroupInviteItem,
+  GroupItem,
+  SearchGroupsRequest
+} from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -21,6 +26,7 @@ import { AppRouter, LoginRouteParam, GroupDetailRouteParam } from '../../../core
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 
+@Preview
 @Component
 export struct GroupPage {
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
@@ -38,6 +44,29 @@ export struct GroupPage {
   @State nextCursor: string = '';
   @State isLoadingMore: boolean = false;
 
+  @State myInvites: GroupInviteItem[] = [];
+  private invitesDataSource: BasicDataSource<GroupInviteItem> = new BasicDataSource<GroupInviteItem>([]);
+  @State invitesLoading: boolean = false;
+  @State invitesError: string = '';
+  @State invitesHasMore: boolean = false;
+  @State invitesNextCursor: string = '';
+  @State invitesLoadingMore: boolean = false;
+
+  @State myApplications: GroupApplicationItem[] = [];
+  private applicationsDataSource: BasicDataSource<GroupApplicationItem> = new BasicDataSource<GroupApplicationItem>([]);
+  @State applicationsLoading: boolean = false;
+  @State applicationsError: string = '';
+  @State applicationsHasMore: boolean = false;
+  @State applicationsNextCursor: string = '';
+  @State applicationsLoadingMore: boolean = false;
+
+  @State showMyInvitesSheet: boolean = false;
+  @State showMyApplicationsSheet: boolean = false;
+  @State handlingInviteIds: string[] = [];
+  @State handlingApplicationIds: string[] = [];
+  @State joiningGroupIds: string[] = [];
+  @State pressedGroupId: string = '';
+
   private getHeaderTopPadding(): number {
     return (this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.LG) + DesignConstants.SPACING.SM;
   }
@@ -54,6 +83,94 @@ export struct GroupPage {
   /** 获取搜索参考点：优先浏览锚点，回退到当前定位 */
   private getRefLocation(): LocationInfo | null {
     return this.browseAnchor ?? this.currentLocation;
+  }
+
+  private ensureLoggedIn(actionName: string): boolean {
+    const currentUser = this.stateManager.getCurrentUser();
+    if (currentUser) {
+      return true;
+    }
+    SystemToast.showWarning(`请先登录后再${actionName}`, this.getUIContext());
+    const loginParams = new LoginRouteParam();
+    loginParams.reason = 'action_required';
+    loginParams.action = actionName;
+    AppRouter.push(PageNames.LOGIN, loginParams);
+    return false;
+  }
+
+  private isInviteHandling(inviteId: string): boolean {
+    return this.handlingInviteIds.includes(inviteId);
+  }
+
+  private setInviteHandling(inviteId: string, handling: boolean): void {
+    if (handling) {
+      if (!this.handlingInviteIds.includes(inviteId)) {
+        const nextIds: string[] = [];
+        for (const id of this.handlingInviteIds) {
+          nextIds.push(id);
+        }
+        nextIds.push(inviteId);
+        this.handlingInviteIds = nextIds;
+      }
+      return;
+    }
+    const nextIds: string[] = [];
+    for (const id of this.handlingInviteIds) {
+      if (id !== inviteId) {
+        nextIds.push(id);
+      }
+    }
+    this.handlingInviteIds = nextIds;
+  }
+
+  private isApplicationHandling(applicationId: string): boolean {
+    return this.handlingApplicationIds.includes(applicationId);
+  }
+
+  private setApplicationHandling(applicationId: string, handling: boolean): void {
+    if (handling) {
+      if (!this.handlingApplicationIds.includes(applicationId)) {
+        const nextIds: string[] = [];
+        for (const id of this.handlingApplicationIds) {
+          nextIds.push(id);
+        }
+        nextIds.push(applicationId);
+        this.handlingApplicationIds = nextIds;
+      }
+      return;
+    }
+    const nextIds: string[] = [];
+    for (const id of this.handlingApplicationIds) {
+      if (id !== applicationId) {
+        nextIds.push(id);
+      }
+    }
+    this.handlingApplicationIds = nextIds;
+  }
+
+  private isGroupJoining(groupId: string): boolean {
+    return this.joiningGroupIds.includes(groupId);
+  }
+
+  private setGroupJoining(groupId: string, joining: boolean): void {
+    if (joining) {
+      if (!this.joiningGroupIds.includes(groupId)) {
+        const nextIds: string[] = [];
+        for (const id of this.joiningGroupIds) {
+          nextIds.push(id);
+        }
+        nextIds.push(groupId);
+        this.joiningGroupIds = nextIds;
+      }
+      return;
+    }
+    const nextIds: string[] = [];
+    for (const id of this.joiningGroupIds) {
+      if (id !== groupId) {
+        nextIds.push(id);
+      }
+    }
+    this.joiningGroupIds = nextIds;
   }
 
   private async loadNearbyGroups(refresh: boolean = false) {
@@ -126,7 +243,150 @@ export struct GroupPage {
     }
   }
 
+  private async loadMyInvites(): Promise<void> {
+    if (!this.ensureLoggedIn('处理群组邀请')) return;
+    this.invitesLoading = true;
+    this.invitesError = '';
+    this.showMyInvitesSheet = true;
+    try {
+      const response = await ApiClient.getGroupInvites({
+        status: 'pending',
+        pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE }
+      });
+      if (response.code === 0) {
+        this.myInvites = response.data?.items ?? [];
+        this.invitesDataSource.setData(this.myInvites);
+        this.invitesHasMore = !!(response.data?.next_cursor);
+        this.invitesNextCursor = response.data?.next_cursor ?? '';
+      } else if (this.myInvites.length === 0) {
+        this.invitesError = response.message || '加载邀请失败';
+      }
+    } catch (error) {
+      this.invitesError = error instanceof Error ? error.message : '加载邀请失败';
+    } finally {
+      this.invitesLoading = false;
+    }
+  }
+
+  private async loadMoreMyInvites(): Promise<void> {
+    if (this.invitesLoadingMore || !this.invitesHasMore) return;
+    this.invitesLoadingMore = true;
+    try {
+      const response = await ApiClient.getGroupInvites({
+        status: 'pending',
+        pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE, cursor: this.invitesNextCursor }
+      });
+      if (response.code === 0) {
+        const items = response.data?.items ?? [];
+        this.myInvites = this.myInvites.concat(items);
+        this.invitesDataSource.appendData(items);
+        this.invitesHasMore = !!(response.data?.next_cursor);
+        this.invitesNextCursor = response.data?.next_cursor ?? '';
+      }
+    } catch (_) {
+      // 静默失败，保留当前列表
+    } finally {
+      this.invitesLoadingMore = false;
+    }
+  }
+
+  private async handleInviteAction(invite: GroupInviteItem, action: 'accept' | 'reject'): Promise<void> {
+    if (!this.ensureLoggedIn('处理群组邀请')) return;
+    if (this.isInviteHandling(invite.invite_id)) return;
+    this.setInviteHandling(invite.invite_id, true);
+    try {
+      const response = action === 'accept'
+        ? await ApiClient.acceptGroupInvite({ invite_id: invite.invite_id })
+        : await ApiClient.rejectGroupInvite({ invite_id: invite.invite_id });
+      if (response.code === 0) {
+        this.myInvites = this.myInvites.filter((item: GroupInviteItem) => item.invite_id !== invite.invite_id);
+        this.invitesDataSource.setData(this.myInvites);
+        SystemToast.showSuccess(action === 'accept' ? '已接受群邀请' : '已拒绝群邀请', this.getUIContext());
+        if (action === 'accept') {
+          await this.loadNearbyGroups();
+        }
+      } else {
+        SystemToast.showError(response.message || '处理邀请失败', this.getUIContext());
+      }
+    } catch {
+      SystemToast.showError('处理邀请失败', this.getUIContext());
+    } finally {
+      this.setInviteHandling(invite.invite_id, false);
+    }
+  }
+
+  private async loadMyApplications(): Promise<void> {
+    if (!this.ensureLoggedIn('管理入群申请')) return;
+    this.applicationsLoading = true;
+    this.applicationsError = '';
+    this.showMyApplicationsSheet = true;
+    try {
+      const response = await ApiClient.getMyGroupApplications({
+        status: 'pending',
+        pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE }
+      });
+      if (response.code === 0) {
+        this.myApplications = response.data?.items ?? [];
+        this.applicationsDataSource.setData(this.myApplications);
+        this.applicationsHasMore = !!(response.data?.next_cursor);
+        this.applicationsNextCursor = response.data?.next_cursor ?? '';
+      } else if (this.myApplications.length === 0) {
+        this.applicationsError = response.message || '加载申请失败';
+      }
+    } catch (error) {
+      this.applicationsError = error instanceof Error ? error.message : '加载申请失败';
+    } finally {
+      this.applicationsLoading = false;
+    }
+  }
+
+  private async loadMoreMyApplications(): Promise<void> {
+    if (this.applicationsLoadingMore || !this.applicationsHasMore) return;
+    this.applicationsLoadingMore = true;
+    try {
+      const response = await ApiClient.getMyGroupApplications({
+        status: 'pending',
+        pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE, cursor: this.applicationsNextCursor }
+      });
+      if (response.code === 0) {
+        const items = response.data?.items ?? [];
+        this.myApplications = this.myApplications.concat(items);
+        this.applicationsDataSource.appendData(items);
+        this.applicationsHasMore = !!(response.data?.next_cursor);
+        this.applicationsNextCursor = response.data?.next_cursor ?? '';
+      }
+    } catch (_) {
+      // 静默失败
+    } finally {
+      this.applicationsLoadingMore = false;
+    }
+  }
+
+  private async cancelMyApplication(application: GroupApplicationItem): Promise<void> {
+    if (!this.ensureLoggedIn('取消入群申请')) return;
+    if (this.isApplicationHandling(application.application_id)) return;
+    this.setApplicationHandling(application.application_id, true);
+    try {
+      const response = await ApiClient.cancelGroupApplication({ application_id: application.application_id });
+      if (response.code === 0) {
+        this.myApplications = this.myApplications.filter((item: GroupApplicationItem) => item.application_id !== application.application_id);
+        this.applicationsDataSource.setData(this.myApplications);
+        SystemToast.showSuccess('已取消申请', this.getUIContext());
+      } else {
+        SystemToast.showError(response.message || '取消申请失败', this.getUIContext());
+      }
+    } catch {
+      SystemToast.showError('取消申请失败', this.getUIContext());
+    } finally {
+      this.setApplicationHandling(application.application_id, false);
+    }
+  }
+
   private async joinGroup(group: GroupItem) {
+    const groupId = group.group.group_id;
+    if (this.isGroupJoining(groupId)) {
+      return;
+    }
     const currentUser = this.stateManager.getCurrentUser();
     if (!currentUser) {
       SystemToast.showWarning('请先登录后再加入群组', this.getUIContext());
@@ -140,13 +400,14 @@ export struct GroupPage {
     if (group.has_password) {
       SystemToast.show('此群组需要密码，请进入详情页加入', this.getUIContext());
       const detailParams = new GroupDetailRouteParam();
-      detailParams.groupId = group.group.group_id;
+      detailParams.groupId = groupId;
       AppRouter.push(PageNames.GROUP_DETAIL, detailParams);
       return;
     }
 
+    this.setGroupJoining(groupId, true);
     try {
-      const response = await ApiClient.joinGroup({ group_id: group.group.group_id });
+      const response = await ApiClient.joinGroup({ group_id: groupId });
       if (response.code === 0 && response.data) {
         if (response.data.status === 'joined') {
           SystemToast.show('加入群组成功', this.getUIContext());
@@ -168,6 +429,8 @@ export struct GroupPage {
       } else {
         SystemToast.showError(errMsg, this.getUIContext());
       }
+    } finally {
+      this.setGroupJoining(groupId, false);
     }
   }
 
@@ -202,13 +465,38 @@ export struct GroupPage {
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
 
-        Button('创建')
-          .type(ButtonType.Capsule)
-          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-          .fontColor(Color.White)
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .height(32)
-          .onClick(() => this.createGroup())
+        Row({ space: 8 }) {
+          Button('邀请')
+            .type(ButtonType.Normal)
+            .backgroundColor($r('app.color.bg_secondary'))
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .height(32)
+            .borderRadius(DesignConstants.RADIUS.XL)
+            .borderWidth(1)
+            .borderColor($r('sys.color.ohos_id_color_list_separator'))
+            .onClick(() => this.loadMyInvites())
+
+          Button('申请')
+            .type(ButtonType.Normal)
+            .backgroundColor($r('app.color.bg_secondary'))
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .height(32)
+            .borderRadius(DesignConstants.RADIUS.XL)
+            .borderWidth(1)
+            .borderColor($r('sys.color.ohos_id_color_list_separator'))
+            .onClick(() => this.loadMyApplications())
+
+          Button('创建')
+            .type(ButtonType.Normal)
+            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+            .fontColor(Color.White)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .height(32)
+            .borderRadius(DesignConstants.RADIUS.XL)
+            .onClick(() => this.createGroup())
+        }
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
@@ -218,7 +506,7 @@ export struct GroupPage {
         top: this.getHeaderTopPadding(),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor($r('app.color.bg_primary'))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 内容区域
@@ -247,11 +535,252 @@ export struct GroupPage {
     .width('100%')
     .height('100%')
     .backgroundColor($r('app.color.bg_primary'))
+    .bindSheet($$this.showMyInvitesSheet, this.buildMyInvitesSheet(), {
+      height: '68%',
+      showClose: false,
+      dragBar: true,
+      backgroundColor: $r('app.color.bg_secondary')
+    })
+    .bindSheet($$this.showMyApplicationsSheet, this.buildMyApplicationsSheet(), {
+      height: '68%',
+      showClose: false,
+      dragBar: true,
+      backgroundColor: $r('app.color.bg_secondary')
+    })
+  }
+
+  @Builder
+  private buildMyInvitesSheet() {
+    Column() {
+      Row() {
+        Text('我的群邀请')
+          .fontSize(DesignConstants.FONT.SIZE.XL)
+          .fontWeight(FontWeight.Bold)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .layoutWeight(1)
+
+        Text(`${this.myInvites.length} 条`)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+      }
+      .width('100%')
+      .padding(DesignConstants.SPACING.LG)
+
+      if (this.invitesLoading && this.myInvites.length === 0) {
+        SystemLoadingView({ message: '加载邀请中...' }).layoutWeight(1)
+      } else if (this.myInvites.length === 0 && this.invitesError) {
+        EmptyState({ icon: AppIcon.WARNING, message: this.invitesError, actionLabel: '重试', onAction: () => this.loadMyInvites() })
+          .layoutWeight(1)
+      } else if (this.myInvites.length === 0) {
+        EmptyState({ icon: AppIcon.EMPTY, message: '暂无待处理邀请' }).layoutWeight(1)
+      } else {
+        List({ space: DesignConstants.SPACING.SM }) {
+          LazyForEach(this.invitesDataSource, (invite: GroupInviteItem) => {
+            ListItem() {
+              this.buildMyInviteItem(invite)
+            }
+          }, (invite: GroupInviteItem) => invite.invite_id)
+
+          if (this.invitesLoadingMore) {
+            ListItem() {
+              LoadingMoreIndicator({ message: '加载更多邀请...' })
+            }
+          }
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+        .scrollBar(BarState.Auto)
+        .onReachEnd(() => { this.loadMoreMyInvites(); })
+      }
+    }
+    .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('app.color.bg_primary'))
+  }
+
+  @Builder
+  private buildMyInviteItem(invite: GroupInviteItem) {
+    Column({ space: 8 }) {
+      Row({ space: 10 }) {
+        SystemAvatar({
+          avatarUrl: invite.group?.avatar_url ?? '',
+          name: invite.group?.name ?? '群组',
+          avatarSize: 40,
+          shape: 'squircle'
+        })
+        Column({ space: 2 }) {
+          Text(invite.group?.name ?? '群组')
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text(`邀请人：${invite.inviter?.nickname ?? '未知用户'}`)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          if (invite.message) {
+            Text(invite.message)
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .maxLines(2)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+          }
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+      }
+      .width('100%')
+
+      Row({ space: 8 }) {
+        Button(this.isInviteHandling(invite.invite_id) ? '处理中...' : '接受')
+          .type(ButtonType.Normal)
+          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+          .fontColor(Color.White)
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .height(34)
+          .layoutWeight(1)
+          .enabled(!this.isInviteHandling(invite.invite_id))
+          .opacity(this.isInviteHandling(invite.invite_id) ? 0.58 : 1)
+          .onClick(() => this.handleInviteAction(invite, 'accept'))
+
+        Button('拒绝')
+          .type(ButtonType.Normal)
+          .backgroundColor($r('app.color.bg_tertiary'))
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .height(34)
+          .layoutWeight(1)
+          .enabled(!this.isInviteHandling(invite.invite_id))
+          .opacity(this.isInviteHandling(invite.invite_id) ? 0.58 : 1)
+          .onClick(() => this.handleInviteAction(invite, 'reject'))
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .padding(DesignConstants.SPACING.MD)
+    .backgroundColor($r('app.color.bg_secondary'))
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+  }
+
+  @Builder
+  private buildMyApplicationsSheet() {
+    Column() {
+      Row() {
+        Text('我的入群申请')
+          .fontSize(DesignConstants.FONT.SIZE.XL)
+          .fontWeight(FontWeight.Bold)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .layoutWeight(1)
+
+        Text(`${this.myApplications.length} 条`)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+      }
+      .width('100%')
+      .padding(DesignConstants.SPACING.LG)
+
+      if (this.applicationsLoading && this.myApplications.length === 0) {
+        SystemLoadingView({ message: '加载申请中...' }).layoutWeight(1)
+      } else if (this.myApplications.length === 0 && this.applicationsError) {
+        EmptyState({ icon: AppIcon.WARNING, message: this.applicationsError, actionLabel: '重试', onAction: () => this.loadMyApplications() })
+          .layoutWeight(1)
+      } else if (this.myApplications.length === 0) {
+        EmptyState({ icon: AppIcon.EMPTY, message: '暂无待处理申请' }).layoutWeight(1)
+      } else {
+        List({ space: DesignConstants.SPACING.SM }) {
+          LazyForEach(this.applicationsDataSource, (application: GroupApplicationItem) => {
+            ListItem() {
+              this.buildMyApplicationItem(application)
+            }
+          }, (application: GroupApplicationItem) => application.application_id)
+
+          if (this.applicationsLoadingMore) {
+            ListItem() {
+              LoadingMoreIndicator({ message: '加载更多申请...' })
+            }
+          }
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+        .scrollBar(BarState.Auto)
+        .onReachEnd(() => { this.loadMoreMyApplications(); })
+      }
+    }
+    .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('app.color.bg_primary'))
+  }
+
+  @Builder
+  private buildMyApplicationItem(application: GroupApplicationItem) {
+    Column({ space: 8 }) {
+      Row({ space: 10 }) {
+        SystemAvatar({
+          avatarUrl: '',
+          name: '群组申请',
+          avatarSize: 40,
+          shape: 'squircle'
+        })
+        Column({ space: 2 }) {
+          Text('群组申请')
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          if (application.message) {
+            Text(application.message)
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .maxLines(2)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+          }
+          Text(`申请时间：${new Date(application.created_at).toLocaleString()}`)
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+      }
+      .width('100%')
+
+      Row() {
+        Button(this.isApplicationHandling(application.application_id) ? '处理中...' : '取消申请')
+          .type(ButtonType.Normal)
+          .backgroundColor($r('app.color.bg_tertiary'))
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .height(34)
+          .layoutWeight(1)
+          .enabled(!this.isApplicationHandling(application.application_id))
+          .opacity(this.isApplicationHandling(application.application_id) ? 0.58 : 1)
+          .onClick(() => this.cancelMyApplication(application))
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .padding(DesignConstants.SPACING.MD)
+    .backgroundColor($r('app.color.bg_secondary'))
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
   }
 
   @Builder
   private buildGroupList() {
-    List() {
+    List({ space: DesignConstants.SPACING.SM }) {
       LazyForEach(this.groupsDataSource, (group: GroupItem) => {
         ListItem() {
           this.buildGroupCard(group)
@@ -264,15 +793,19 @@ export struct GroupPage {
       }
     }
     .width('100%')
-    .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
-    .divider({ strokeWidth: 0.5, color: $r('app.color.divider'), startMargin: 76, endMargin: 0 })
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.SM,
+      bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
+    })
     .scrollBar(BarState.Auto)
     .onReachEnd(() => { this.loadMoreGroups(); })
   }
 
   @Builder
   private buildGroupCard(group: GroupItem) {
-    Row({ space: 12 }) {
+    Row({ space: DesignConstants.SPACING.MD }) {
       SystemAvatar({
         avatarUrl: group.group.avatar_url || '',
         name: group.group.name,
@@ -282,27 +815,27 @@ export struct GroupPage {
 
       Column({ space: 2 }) {
         Text(group.group.name)
-          .fontSize(16)
+          .fontSize(DesignConstants.FONT.SIZE.LG)
           .fontWeight(FontWeight.Medium)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-        Row({ space: 8 }) {
+        Row({ space: DesignConstants.SPACING.SM }) {
           Text(`${group.group.members_count}人`)
-            .fontSize(13)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
 
           if (group.location?.distance !== undefined && group.location?.distance !== null) {
             Text(this.formatDistance(group.location.distance))
-              .fontSize(13)
+              .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor($r('sys.color.ohos_id_color_text_secondary'))
           }
         }
 
         if (group.description) {
           Text(group.description)
-            .fontSize(13)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -311,20 +844,41 @@ export struct GroupPage {
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
 
-      Button('加入')
-        .type(ButtonType.Capsule)
-        .backgroundColor(Color.Transparent)
+      Button(this.isGroupJoining(group.group.group_id) ? '处理中...' : '加入')
+        .type(ButtonType.Normal)
+        .backgroundColor($r('app.color.bg_tertiary'))
         .fontColor($r('sys.color.ohos_id_color_emphasize'))
-        .fontSize(13)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontWeight(FontWeight.Medium)
-        .height(32)
+        .height(34)
+        .borderRadius(DesignConstants.RADIUS.XL)
+        .enabled(!this.isGroupJoining(group.group.group_id))
+        .opacity(this.isGroupJoining(group.group.group_id) ? 0.58 : 1)
         .borderWidth(1)
         .borderColor($r('sys.color.ohos_id_color_emphasize'))
         .onClick(() => this.joinGroup(group))
     }
     .width('100%')
-    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+    .padding({
+      left: DesignConstants.SPACING.MD,
+      right: DesignConstants.SPACING.MD,
+      top: DesignConstants.SPACING.MD,
+      bottom: DesignConstants.SPACING.MD
+    })
+    .backgroundColor($r('app.color.bg_secondary'))
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
     .alignItems(VerticalAlign.Center)
+    .scale(this.pressedGroupId === group.group.group_id ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })
+    .animation({ duration: 100, curve: Curve.EaseOut })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.pressedGroupId = group.group.group_id;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.pressedGroupId = '';
+      }
+    })
     .onClick(() => {
       const detailParams = new GroupDetailRouteParam();
       detailParams.groupId = group.group.group_id;

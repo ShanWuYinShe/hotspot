@@ -88,19 +88,6 @@ impl ShareRepository {
         Ok(row)
     }
 
-    pub async fn exists_by_code(pool: &PgPool, share_code: &str) -> Result<bool> {
-        let exists = sqlx::query_scalar!(
-            r#"
-            SELECT EXISTS(SELECT 1 FROM shares WHERE share_code = $1) as "exists!"
-            "#,
-            share_code
-        )
-        .fetch_one(pool)
-        .await?;
-
-        Ok(exists)
-    }
-
     /// 按 share_id 获取分享记录
     pub async fn get_by_id(pool: &PgPool, share_id: Uuid) -> Result<Option<ShareRow>> {
         let row = sqlx::query_as!(

@@ -4,9 +4,9 @@ use crate::{
     config::Config,
     error::{AppError, Result},
     repositories::{
-        admin_rbac_repo::{AdminRbacRepository, AdminRoleRow, AdminWithRolesRow},
+        admin::rbac_repo::{AdminRbacRepository, AdminRoleRow, AdminWithRolesRow},
+        user::settings_repo::UserSettingsRepository,
         user_repo::UserRepository,
-        user_settings_repo::UserSettingsRepository,
     },
     utils::password::PasswordUtil,
 };
@@ -32,6 +32,9 @@ impl AdminRbacService {
     }
 
     pub async fn ensure_super_admin_bootstrap(&self, config: &Config) -> Result<()> {
+        // 启动即对齐权限 key 目录，避免 read/write 与历史 view/edit 键名不一致。
+        self.repo.ensure_permission_catalog_alignment().await?;
+
         // 首先检查是否存在超级管理员
         let existing = self.repo.super_admin_exists().await?;
 
@@ -83,7 +86,7 @@ impl AdminRbacService {
 
         // 创建默认 user_settings 并禁用搜索/私聊
         self.user_settings_repo.create(user.user_id).await?;
-        use crate::repositories::user_settings_repo::UpdateSettingsParams;
+        use crate::repositories::user::settings_repo::UpdateSettingsParams;
         use crate::types::enums::PrivateChatPermission;
         let params = UpdateSettingsParams {
             searchable: Some(false),
@@ -158,7 +161,19 @@ impl AdminRbacService {
     }
 
     pub async fn create_role(&self, name: &str, description: Option<&str>) -> Result<Uuid> {
-        self.repo.create_role(name, description).await
+        let started_at = std::time::Instant::now();
+        tracing::info!(
+            role_name = %name,
+            has_description = description.is_some(),
+            "admin_rbac.create_role started"
+        );
+        let role_id = self.repo.create_role(name, description).await?;
+        tracing::info!(
+            role_id = %role_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "admin_rbac.create_role completed"
+        );
+        Ok(role_id)
     }
 
     pub async fn update_role(
@@ -167,11 +182,32 @@ impl AdminRbacService {
         name: Option<&str>,
         description: Option<Option<&str>>,
     ) -> Result<()> {
-        self.repo.update_role(role_id, name, description).await
+        let started_at = std::time::Instant::now();
+        tracing::info!(
+            role_id = %role_id,
+            has_name = name.is_some(),
+            has_description = description.is_some(),
+            "admin_rbac.update_role started"
+        );
+        self.repo.update_role(role_id, name, description).await?;
+        tracing::info!(
+            role_id = %role_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "admin_rbac.update_role completed"
+        );
+        Ok(())
     }
 
     pub async fn delete_role(&self, role_id: Uuid) -> Result<()> {
-        self.repo.delete_role(role_id).await
+        let started_at = std::time::Instant::now();
+        tracing::info!(role_id = %role_id, "admin_rbac.delete_role started");
+        self.repo.delete_role(role_id).await?;
+        tracing::info!(
+            role_id = %role_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "admin_rbac.delete_role completed"
+        );
+        Ok(())
     }
 
     pub async fn set_role_permissions(
@@ -180,8 +216,21 @@ impl AdminRbacService {
         role_id: Uuid,
         permission_keys: &[String],
     ) -> Result<()> {
+        let started_at = std::time::Instant::now();
+        tracing::info!(
+            operator_id,
+            role_id = %role_id,
+            permission_count = permission_keys.len(),
+            has_wildcard = permission_keys.iter().any(|key| key == "*"),
+            "admin_rbac.set_role_permissions started"
+        );
         if permission_keys.iter().any(|key| key == "*") && !self.is_super_admin(operator_id).await?
         {
+            tracing::warn!(
+                operator_id,
+                role_id = %role_id,
+                "admin_rbac.set_role_permissions rejected: wildcard requires super admin"
+            );
             return Err(AppError::AdminPermissionDenied(
                 "只有超级管理员可以设置包含 '*' 的角色权限".to_string(),
             ));
@@ -189,7 +238,14 @@ impl AdminRbacService {
 
         self.repo
             .set_role_permissions(role_id, permission_keys)
-            .await
+            .await?;
+        tracing::info!(
+            operator_id,
+            role_id = %role_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "admin_rbac.set_role_permissions completed"
+        );
+        Ok(())
     }
 
     pub async fn list_admins(
@@ -221,24 +277,52 @@ impl AdminRbacService {
         is_super: bool,
         role_ids: &[Uuid],
     ) -> Result<()> {
+        let started_at = std::time::Instant::now();
+        tracing::info!(
+            operator_id,
+            target_user_id,
+            is_super,
+            role_count = role_ids.len(),
+            "admin_rbac.grant_admin started"
+        );
         let operator_is_super = self.is_super_admin(operator_id).await?;
 
         if is_super {
             if !operator_is_super {
+                tracing::warn!(
+                    operator_id,
+                    target_user_id,
+                    "admin_rbac.grant_admin rejected: only super admin can grant super"
+                );
                 return Err(AppError::Forbidden(
                     "只有超级管理员可以授予超级管理员权限".to_string(),
                 ));
             }
             if !role_ids.is_empty() {
+                tracing::warn!(
+                    operator_id,
+                    target_user_id,
+                    "admin_rbac.grant_admin rejected: super grant cannot include role_ids"
+                );
                 return Err(AppError::InvalidFormat(
                     "grant_all_permissions 与 role_ids 互斥".to_string(),
                 ));
             }
         } else {
             if role_ids.is_empty() {
+                tracing::warn!(
+                    operator_id,
+                    target_user_id,
+                    "admin_rbac.grant_admin rejected: role_ids is empty"
+                );
                 return Err(AppError::MissingParameter("role_ids".to_string()));
             }
             if !operator_is_super && self.repo.roles_have_permission(role_ids, "*").await? {
+                tracing::warn!(
+                    operator_id,
+                    target_user_id,
+                    "admin_rbac.grant_admin rejected: wildcard role requires super admin"
+                );
                 return Err(AppError::AdminPermissionDenied(
                     "只有超级管理员可以授予包含 '*' 的角色".to_string(),
                 ));
@@ -251,18 +335,43 @@ impl AdminRbacService {
         self.repo
             .replace_admin_roles(target_user_id, role_ids)
             .await?;
+        tracing::info!(
+            operator_id,
+            target_user_id,
+            is_super,
+            role_count = role_ids.len(),
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "admin_rbac.grant_admin completed"
+        );
         Ok(())
     }
 
     pub async fn revoke_admin(&self, operator_id: i64, target_user_id: i64) -> Result<()> {
+        let started_at = std::time::Instant::now();
+        tracing::info!(
+            operator_id,
+            target_user_id,
+            "admin_rbac.revoke_admin started"
+        );
         // 只有超级管理员可以撤销超级管理员
         if self.is_super_admin(target_user_id).await? && !self.is_super_admin(operator_id).await? {
+            tracing::warn!(
+                operator_id,
+                target_user_id,
+                "admin_rbac.revoke_admin rejected: only super admin can revoke super admin"
+            );
             return Err(AppError::Forbidden(
                 "只有超级管理员可以撤销超级管理员权限".to_string(),
             ));
         }
 
         self.repo.remove_admin_user(target_user_id).await?;
+        tracing::info!(
+            operator_id,
+            target_user_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "admin_rbac.revoke_admin completed"
+        );
         Ok(())
     }
 }

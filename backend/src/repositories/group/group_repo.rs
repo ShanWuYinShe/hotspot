@@ -116,18 +116,19 @@ impl GroupRepository {
         owner_id: i64,
         lon: Option<f64>,
         lat: Option<f64>,
+        location_name: &str,
         group_type: String,
         join_type: String,
     ) -> Result<GroupRow> {
         let row = sqlx::query_as!(
             GroupRow,
             r#"
-            INSERT INTO groups (name, owner_id, location, group_type, join_type)
+            INSERT INTO groups (name, owner_id, location, location_name, group_type, join_type)
             VALUES ($1, $2, 
                     CASE WHEN $3::float8 IS NOT NULL AND $4::float8 IS NOT NULL 
                          THEN ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography 
                          ELSE NULL END,
-                    $5, $6)
+                    $5, $6, $7)
             RETURNING group_id as "group_id!", name as "name!", description, avatar_url, owner_id as "owner_id!",
                       group_type as "group_type!", max_members as "max_members!", is_muted as "is_muted!",
                       join_type as "join_type!: GroupJoinMethod", metadata as "metadata!",
@@ -140,6 +141,7 @@ impl GroupRepository {
             owner_id,
             lon,
             lat,
+            location_name,
             group_type,
             join_type
         )
@@ -183,9 +185,9 @@ impl GroupRepository {
         Ok(row.unwrap_or(false))
     }
 
-    pub async fn touch_updated_at(&self, group_id: i64) -> Result<()> {
+    pub async fn touch_last_activity(&self, group_id: i64) -> Result<()> {
         sqlx::query!(
-            "UPDATE groups SET updated_at = NOW() WHERE group_id = $1",
+            "UPDATE groups SET last_activity_at = NOW() WHERE group_id = $1",
             group_id
         )
         .execute(&self.pool)
@@ -357,7 +359,10 @@ impl GroupRepository {
                 ST_Y(g.location::geometry) as "latitude!",
                 ST_X(g.location::geometry) as "longitude!",
                 COALESCE(g.location_name, '') as "location_name!",
-                degrees(ST_Azimuth(ST_SetSRID(ST_MakePoint($1, $2), 4326), g.location::geometry)) as "bearing_degrees!",
+                COALESCE(
+                    degrees(ST_Azimuth(ST_SetSRID(ST_MakePoint($1, $2), 4326), g.location::geometry)),
+                    0
+                ) as "bearing_degrees!",
                 COALESCE(gs_setting.password_hash IS NOT NULL, false) as "has_password!",
                 COALESCE(
                     ARRAY_REMOVE(ARRAY_AGG(t.name ORDER BY t.name), NULL),
@@ -416,6 +421,7 @@ impl GroupRepository {
         kw: &str,
         lon: f64,
         lat: f64,
+        radius: f64,
         limit: i64,
         cursor: Option<String>,
         sort_by: &str,
@@ -440,21 +446,23 @@ impl GroupRepository {
             WHERE g.dismissed_at IS NULL
               AND g.name ILIKE $1
               AND g.location IS NOT NULL
+              AND ST_DWithin(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, $4)
               AND (
-                  ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) > $4
-                  OR (ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) = $4 AND g.group_id > $5)
+                  ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) > $5
+                  OR (ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) = $5 AND g.group_id > $6)
               )
             ORDER BY
-                CASE WHEN $7 = 'distance' OR $7 = 'relevance' THEN ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) END ASC,
-                CASE WHEN $7 = 'popular' THEN COALESCE(gs.member_count, 0) END DESC,
-                CASE WHEN $7 = 'newest' THEN g.created_at END DESC,
+                CASE WHEN $8 = 'distance' OR $8 = 'relevance' THEN ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) END ASC,
+                CASE WHEN $8 = 'popular' THEN COALESCE(gs.member_count, 0) END DESC,
+                CASE WHEN $8 = 'newest' THEN g.created_at END DESC,
                 ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) ASC,
                 g.group_id ASC
-            LIMIT $6
+            LIMIT $7
             "#,
             pattern,
             lon,
             lat,
+            radius,
             last_dist,
             last_id,
             limit + 1,
@@ -544,6 +552,7 @@ impl GroupRepository {
         tag: &str,
         lon: f64,
         lat: f64,
+        radius: f64,
         limit: i64,
         cursor: Option<String>,
         sort_by: &str,
@@ -569,14 +578,15 @@ impl GroupRepository {
             WHERE g.dismissed_at IS NULL
               AND t.name = $1
               AND g.location IS NOT NULL
+              AND ST_DWithin(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, $4)
               AND (
-                  ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) > $4
-                  OR (ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) = $4 AND g.group_id > $5)
+                  ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) > $5
+                  OR (ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) = $5 AND g.group_id > $6)
               )
             ORDER BY
-                CASE WHEN $6 = 'distance' OR $6 = 'relevance' THEN ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) END ASC,
-                CASE WHEN $6 = 'popular' THEN COALESCE(gs.member_count, 0) END DESC,
-                CASE WHEN $6 = 'newest' THEN g.created_at END DESC,
+                CASE WHEN $8 = 'distance' OR $8 = 'relevance' THEN ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) END ASC,
+                CASE WHEN $8 = 'popular' THEN COALESCE(gs.member_count, 0) END DESC,
+                CASE WHEN $8 = 'newest' THEN g.created_at END DESC,
                 ST_Distance(g.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography) ASC,
                 g.group_id ASC
             LIMIT $7
@@ -584,10 +594,11 @@ impl GroupRepository {
             tag,
             lon,
             lat,
+            radius,
             last_dist,
             last_id,
-            sort_by,
-            limit + 1
+            limit + 1,
+            sort_by
         )
         .fetch_all(&self.pool)
         .await?;

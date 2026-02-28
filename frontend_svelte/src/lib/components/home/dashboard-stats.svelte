@@ -44,10 +44,10 @@
 </script>
 
 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-	<Card class="border-0 bg-linear-to-br from-pink-500/10 to-rose-500/10">
+	<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 		<CardContent class="flex items-center gap-4 p-6">
-			<div class="rounded-2xl bg-pink-500/20 p-3">
-				<Heart class="h-6 w-6 text-pink-500" />
+			<div class="rounded-2xl border border-border/50 bg-primary/10 p-3 text-primary">
+				<Heart class="h-6 w-6" />
 			</div>
 			<div>
 				{#if loading}
@@ -59,10 +59,10 @@
 			</div>
 		</CardContent>
 	</Card>
-	<Card class="border-0 bg-linear-to-br from-blue-500/10 to-cyan-500/10">
+	<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 		<CardContent class="flex items-center gap-4 p-6">
-			<div class="rounded-2xl bg-blue-500/20 p-3">
-				<Users class="h-6 w-6 text-blue-500" />
+			<div class="rounded-2xl border border-border/50 bg-primary/10 p-3 text-primary">
+				<Users class="h-6 w-6" />
 			</div>
 			<div>
 				{#if loading}
@@ -74,10 +74,10 @@
 			</div>
 		</CardContent>
 	</Card>
-	<Card class="border-0 bg-linear-to-br from-purple-500/10 to-violet-500/10">
+	<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 		<CardContent class="flex items-center gap-4 p-6">
-			<div class="rounded-2xl bg-purple-500/20 p-3">
-				<TrendingUp class="h-6 w-6 text-purple-500" />
+			<div class="rounded-2xl border border-border/50 bg-primary/10 p-3 text-primary">
+				<TrendingUp class="h-6 w-6" />
 			</div>
 			<div>
 				{#if loading}
@@ -89,10 +89,10 @@
 			</div>
 		</CardContent>
 	</Card>
-	<Card class="border-0 bg-linear-to-br from-emerald-500/10 to-teal-500/10">
+	<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 		<CardContent class="flex items-center gap-4 p-6">
-			<div class="rounded-2xl bg-emerald-500/20 p-3">
-				<Users class="h-6 w-6 text-emerald-500" />
+			<div class="rounded-2xl border border-border/50 bg-primary/10 p-3 text-primary">
+				<Users class="h-6 w-6" />
 			</div>
 			<div>
 				{#if loading}

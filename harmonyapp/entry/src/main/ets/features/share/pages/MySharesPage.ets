@@ -13,6 +13,7 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { LoginPromptView } from '../../../components/LoginPromptView';
 
+@Preview
 @Component
 export struct MySharesPage {
   pathStack: NavPathStack = new NavPathStack();
@@ -179,7 +180,10 @@ export struct MySharesPage {
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: Color.Transparent,
+          bgColor: $r('app.color.bg_secondary'),
+          radius: DesignConstants.RADIUS.XL,
+          minButtonSize: 42,
+          paddingSize: 9,
           onButtonClick: () => AppRouter.pop()
         })
 
@@ -190,7 +194,7 @@ export struct MySharesPage {
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
 
-        Blank().width(48)
+        Blank().width(42)
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
@@ -200,7 +204,7 @@ export struct MySharesPage {
         top: this.getHeaderTopPadding(),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor($r('app.color.bg_primary'))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (!this.isLoggedIn) {
@@ -243,7 +247,7 @@ export struct MySharesPage {
 
   @Builder
   private buildShareList() {
-    List({ space: DesignConstants.SPACING.MD }) {
+    List({ space: DesignConstants.SPACING.SM }) {
       LazyForEach(this.sharesDataSource, (share: ShareListItem) => {
         ListItem() {
           this.buildShareCard(share)
@@ -260,6 +264,7 @@ export struct MySharesPage {
     .padding({
       left: DesignConstants.SPACING.LG,
       right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.SM,
       bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.SM, DesignConstants.SPACING.SM)
     })
     .scrollBar(BarState.Auto)
@@ -285,12 +290,18 @@ export struct MySharesPage {
         .layoutWeight(1)
 
         Text(this.shareStatusText(share))
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.shareStatusColor(share))
           .backgroundColor(this.shareStatusBackground(share))
-          .borderRadius(DesignConstants.RADIUS.SM)
-          .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .padding({
+            left: DesignConstants.SPACING.SM,
+            right: DesignConstants.SPACING.SM,
+            top: DesignConstants.SPACING.XS,
+            bottom: DesignConstants.SPACING.XS
+          })
       }
 
       if (share.preview?.subtitle) {
@@ -312,42 +323,53 @@ export struct MySharesPage {
 
       Column({ space: 4 }) {
         Text(`类型：${this.formatShareType(share.share_type)}`)
-          .fontSize(13)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
 
         Text(`创建：${this.formatDate(share.created_at)}`)
-          .fontSize(13)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
 
         Text(`有效期：${this.formatExpiration(share.expires_at)}`)
-          .fontSize(13)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
       }
+      .padding({
+        left: DesignConstants.SPACING.MD,
+        right: DesignConstants.SPACING.MD,
+        top: DesignConstants.SPACING.SM,
+        bottom: DesignConstants.SPACING.SM
+      })
+      .backgroundColor($r('app.color.bg_tertiary'))
+      .borderRadius(DesignConstants.RADIUS.XL)
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
 
       Row({ space: DesignConstants.SPACING.MD }) {
         Column({ space: 2 }) {
           Text('分享状态')
-            .fontSize(13)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
 
           Text(share.is_revoked ? '已停止对外访问' : '对外链接可用')
-            .fontSize(13)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
         }
         .layoutWeight(1)
 
         if (!share.is_revoked) {
           Button(this.revokingShareId === share.share_id ? '撤销中...' : '撤销分享')
-            .type(ButtonType.Capsule)
-            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-            .fontColor(Color.White)
-            .fontSize(13)
+            .type(ButtonType.Normal)
+            .backgroundColor($r('app.color.bg_tertiary'))
+            .fontColor($r('app.color.color_danger'))
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .borderRadius(DesignConstants.RADIUS.XL)
+            .border({ width: 1, color: $r('app.color.color_danger') })
             .height(34)
             .enabled(this.revokingShareId !== share.share_id)
             .onClick(() => this.revokeShare(share))
         } else {
           Text('已撤销')
-            .fontSize(13)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor($r('sys.color.ohos_id_color_warning'))
         }
       }
@@ -355,7 +377,9 @@ export struct MySharesPage {
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.LG)
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .shadow(DesignConstants.SHADOW.SMALL)
   }
 
   private defaultShareTitle(share: ShareListItem): string {
@@ -371,7 +395,7 @@ export struct MySharesPage {
   }
 
   private shareStatusBackground(share: ShareListItem): ResourceColor {
-    return share.is_revoked ? '#FFFFF4F2' : '#FFE8F5FF';
+    return share.is_revoked ? DesignConstants.COLOR.SURFACE_WARNING_SOFT : DesignConstants.COLOR.SURFACE_INFO_SOFT;
   }
 
   private formatShareType(type: ShareType): string {

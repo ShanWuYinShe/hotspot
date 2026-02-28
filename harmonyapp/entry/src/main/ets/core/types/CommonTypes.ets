@@ -9,9 +9,7 @@
 // 重新导出用户类型工具函数，方便使用
 export { 
   UserTypeUtil, 
-  UserType, 
-  SYSTEM_USER_IDS, 
-  SYSTEM_USER_ID_MAX 
+  UserType
 } from '../utils/UserTypeUtil';
 
 /**
@@ -32,18 +30,21 @@ export function isNormalUser(userType: string): boolean {
 
 /**
  * 便捷函数：判断是否为系统用户
- * @param userType 用户类型
+ * 说明：系统身份不由 user_type 承载，保留该函数以保持调用方接口稳定，
+ * 返回 false，系统标识应改为基于 user_id 判断。
  */
 export function isSystemUser(userType: string): boolean {
-  return userType === 'system';
+  void userType;
+  return false;
 }
 
 /**
  * 便捷函数：判断是否为管理员用户
- * @param userType 用户类型
+ * 说明：管理员身份不由 user_type 承载，需通过 admin/rbac/get_me 获取。
  */
 export function isAdminUser(userType: string): boolean {
-  return userType === 'admin';
+  void userType;
+  return false;
 }
 
 /**
@@ -56,10 +57,6 @@ export function getUserTypeDisplayName(userType: string): string {
       return '临时用户';
     case 'normal':
       return '普通用户';
-    case 'admin':
-      return '管理员';
-    case 'system':
-      return '系统用户';
     default:
       return '未知类型';
   }

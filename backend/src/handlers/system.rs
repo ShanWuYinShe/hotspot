@@ -61,7 +61,7 @@ pub async fn health(
     };
 
     let timestamp = chrono::Utc::now().to_rfc3339();
-    if status == SystemHealthStatus::Healthy {
+    if status != SystemHealthStatus::Unhealthy {
         return Ok(Json(ApiResponse::success(HealthCheckData {
             status,
             timestamp,

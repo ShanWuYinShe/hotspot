@@ -3,13 +3,14 @@
  * 展示热门话题、推荐用户、热门瞬间
  */
 
-import { KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR } from '../../../core/state/GlobalStateManager';
+import { KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_IS_LOGGED_IN } from '../../../core/state/GlobalStateManager';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { AppRouter } from '../../../core/router/AppRouter';
+import { AppRouter, ChatRouteParam } from '../../../core/router/AppRouter';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import {
-  UserItem, TrendingTagItem, MomentItem, TrendingBundle, FollowRequest, SearchUsersRequest
+  UserItem, TrendingTagItem, MomentItem, TrendingBundle, FollowRequest, UnfollowRequest,
+  SearchUsersRequest, CreateReportRequest, Relationship
 } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -21,6 +22,7 @@ import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import pasteboard from '@ohos.pasteboard';
 
 const DOMAIN_NUMBER: number = 0xFF11;
 const TAG: string = 'DiscoverPage';
@@ -29,8 +31,15 @@ class SearchParams {
   keyword: string = '';
 }
 
+class LoginRedirectParams {
+  reason: string = '';
+  action: string = '';
+}
+
+@Preview
 @Component
 export struct DiscoverPage {
+  @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
@@ -44,6 +53,7 @@ export struct DiscoverPage {
   @State hotMoments: MomentItem[] = [];
   private hotMomentsDataSource: BasicDataSource<MomentItem> = new BasicDataSource<MomentItem>([]);
   @State isRefreshing: boolean = false;
+  @State userActionPendingIds: string[] = [];
 
   private getHeaderTopPadding(): number {
     return (this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.LG) + DesignConstants.SPACING.SM;
@@ -66,8 +76,8 @@ export struct DiscoverPage {
     if (this.hotMoments.length === 0) return 0;
     let leftH = 0;
     let rightH = 0;
-    const gap = 8;
-    const infoHeight = 64;
+    const gap = 12;
+    const infoHeight = 118;
     for (let i = 0; i < this.hotMoments.length; i++) {
       const cardH = this.calculateImageHeight(this.hotMoments[i]) + infoHeight;
       if (leftH <= rightH) {
@@ -77,6 +87,14 @@ export struct DiscoverPage {
       }
     }
     return Math.max(leftH, rightH);
+  }
+
+  private isUserActionPending(userId: string): boolean {
+    return this.userActionPendingIds.indexOf(userId) >= 0;
+  }
+
+  private isUserFollowing(user: UserItem): boolean {
+    return user.relation?.is_following ?? false;
   }
 
   async aboutToAppear() {
@@ -166,7 +184,9 @@ export struct DiscoverPage {
         .width(40)
         .height(40)
         .justifyContent(FlexAlign.Center)
-        .borderRadius(DesignConstants.RADIUS.FULL)
+        .borderRadius(DesignConstants.RADIUS.XL)
+        .backgroundColor($r('app.color.bg_secondary'))
+        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
         .onClick(() => {
           AppRouter.push(PageNames.SEARCH);
         })
@@ -179,7 +199,7 @@ export struct DiscoverPage {
         top: this.getHeaderTopPadding(),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor($r('app.color.bg_primary'))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 内容区
@@ -198,10 +218,11 @@ export struct DiscoverPage {
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .textAlign(TextAlign.Center)
           Button('重试')
-            .type(ButtonType.Capsule)
+            .type(ButtonType.Normal)
             .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
             .fontColor(Color.White)
             .height(40)
+            .borderRadius(DesignConstants.RADIUS.XL)
             .onClick(() => { this.loadData(); })
         }
         .width('100%')
@@ -218,28 +239,37 @@ export struct DiscoverPage {
               }
             }
 
-            // 推荐用户（标题 + LazyForEach）
+            // 推荐用户（错位方块卡片）
             if (this.recommendedUsers.length > 0) {
               ListItem() {
-                Row({ space: DesignConstants.SPACING.SM }) {
-                  Text() {
-                    SymbolSpan($r(AppIcon.PERSON))
-                      .fontSize(18)
-                      .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+                Column({ space: DesignConstants.SPACING.MD }) {
+                  Row({ space: DesignConstants.SPACING.SM }) {
+                    Text() {
+                      SymbolSpan($r(AppIcon.PERSON))
+                        .fontSize(18)
+                        .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+                    }
+                    Text(`推荐用户 · ${this.recommendedUsers.length}`)
+                      .fontSize(DesignConstants.FONT.SIZE.LG)
+                      .fontWeight(FontWeight.Bold)
+                      .fontColor($r('sys.color.ohos_id_color_text_primary'))
                   }
-                  Text('推荐用户')
-                    .fontSize(DesignConstants.FONT.SIZE.LG)
-                    .fontWeight(FontWeight.Bold)
-                    .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                  .width('100%')
+
+                  Column({ space: 10 }) {
+                    ForEach(this.recommendedUsers, (user: UserItem, index: number) => {
+                      this.buildRecommendedUserCard(user)
+                    }, (user: UserItem) => user.user?.user_id ?? '')
+                  }
+                  .width('100%')
                 }
                 .width('100%')
-                .padding({ left: 16, top: 16, bottom: 8 })
+                .padding(DesignConstants.SPACING.LG)
+                .backgroundColor($r('app.color.bg_secondary'))
+                .borderRadius(DesignConstants.RADIUS.XL)
+                .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+                .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
               }
-              LazyForEach(this.recommendedUsersDataSource, (user: UserItem) => {
-                ListItem() {
-                  this.buildRecommendedUserRow(user)
-                }
-              }, (user: UserItem) => user.user?.user_id ?? '')
             }
 
             // 热门瞬间（瀑布流布局）
@@ -256,15 +286,17 @@ export struct DiscoverPage {
                   }
                   .height(this.getWaterFlowHeight())
                   .columnsTemplate('1fr 1fr')
-                  .columnsGap(8)
-                  .rowsGap(8)
+                  .columnsGap(12)
+                  .rowsGap(12)
                   .cachedCount(10, true)
                   .scrollBar(BarState.Off)
                 }
                 .width('100%')
                 .padding(DesignConstants.SPACING.LG)
                 .backgroundColor($r('app.color.bg_secondary'))
-                .borderRadius(DesignConstants.RADIUS.LG)
+                .borderRadius(DesignConstants.RADIUS.XL)
+                .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+                .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
               }
             }
 
@@ -326,8 +358,9 @@ export struct DiscoverPage {
           }
           .padding({ left: 12, right: 12, top: 8, bottom: 8 })
           .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-          .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+          .backgroundColor($r('app.color.bg_tertiary'))
           .borderRadius(DesignConstants.RADIUS.XL)
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
           .onClick(() => {
             const searchParams = new SearchParams();
             searchParams.keyword = `#${tag.name}`;
@@ -338,62 +371,230 @@ export struct DiscoverPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
-    .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.LG)
+  .backgroundColor($r('app.color.bg_secondary'))
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
   }
 
-  // ==================== 推荐用户（单行，供 LazyForEach 使用）====================
+  // ==================== 推荐用户卡片 ====================
   @Builder
-  buildRecommendedUserRow(user: UserItem) {
-    Row({ space: DesignConstants.SPACING.MD }) {
-      SystemAvatar({
-        avatarUrl: user.user?.avatar_url ?? '',
-        name: user.user?.nickname ?? '',
-        avatarSize: 44
-      })
+  buildRecommendedUserCard(user: UserItem) {
+    Column({ space: 10 }) {
+      Row({ space: 6 }) {
+        Row({ space: 4 }) {
+          Text() {
+            SymbolSpan($r(AppIcon.RECOMMEND))
+              .fontSize(10)
+              .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+          }
+          Text('推荐用户')
+            .fontSize(10)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        }
+        .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+        .backgroundColor($r('app.color.bg_tertiary'))
+        .borderRadius(DesignConstants.RADIUS.XL)
 
-      Column({ space: 2 }) {
-        Text(user.user?.nickname ?? '')
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        Blank().layoutWeight(1)
 
-        Text(user.bio || '可能会感兴趣')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        if (user.location?.distance !== undefined && user.location?.distance !== null) {
+          Text(this.formatDistance(user.location.distance))
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor($r('sys.color.ohos_id_color_emphasize'))
+            .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+            .backgroundColor($r('app.color.chip_selected_bg'))
+            .borderRadius(DesignConstants.RADIUS.XL)
+        }
       }
-      .alignItems(HorizontalAlign.Start)
-      .layoutWeight(1)
+      .width('100%')
 
-      Button('关注')
-        .type(ButtonType.Capsule)
-        .backgroundColor(Color.Transparent)
-        .fontColor($r('sys.color.ohos_id_color_emphasize'))
-        .fontSize(13)
-        .fontWeight(FontWeight.Medium)
-        .height(30)
-        .borderWidth(1)
-        .borderColor($r('sys.color.ohos_id_color_emphasize'))
-        .onClick(() => { this.followUser(user); })
+      Row({ space: 8 }) {
+        Row({ space: 10 }) {
+          SystemAvatar({
+            avatarUrl: user.user?.avatar_url ?? '',
+            name: user.user?.nickname ?? '',
+            avatarSize: 46
+          })
+
+          Column({ space: 4 }) {
+            Text(user.user?.nickname ?? '')
+              .fontSize(15)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+            Row({ space: 4 }) {
+              if (user.presence_status === 'online') {
+                Row()
+                  .width(6)
+                  .height(6)
+                  .borderRadius(DesignConstants.RADIUS.FULL)
+                  .backgroundColor($r('app.color.color_success'))
+                Text('在线')
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .fontColor($r('app.color.color_success'))
+              } else {
+                Row()
+                  .width(6)
+                  .height(6)
+                  .borderRadius(DesignConstants.RADIUS.FULL)
+                  .backgroundColor($r('sys.color.ohos_id_color_text_tertiary'))
+                Text('离线')
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              }
+            }
+            .alignItems(VerticalAlign.Center)
+          }
+          .alignItems(HorizontalAlign.Start)
+          .layoutWeight(1)
+        }
+        .layoutWeight(1)
+
+        Row() {
+          Text() {
+            SymbolSpan($r(AppIcon.MORE))
+              .fontSize(16)
+              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+          }
+        }
+        .width(24)
+        .height(24)
+        .borderRadius(DesignConstants.RADIUS.XL)
+        .backgroundColor($r('app.color.bg_tertiary'))
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+        .bindMenu([
+          {
+            value: '私聊',
+            action: () => this.startPrivateChat(user)
+          },
+          {
+            value: this.isUserFollowing(user) ? '取消关注' : '关注',
+            action: () => this.followUser(user)
+          },
+          {
+            value: '举报用户',
+            action: () => this.reportUser(user)
+          },
+          {
+            value: '复制用户ID',
+            action: () => this.copyText(user.user?.user_id ?? '', '用户ID已复制')
+          }
+        ])
+      }
+      .width('100%')
+
+      Text(user.bio || '可能会感兴趣')
+        .fontSize(12)
+        .lineHeight(17)
+        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+
+      if (user.tags && user.tags.length > 0) {
+        Flex({ wrap: FlexWrap.Wrap }) {
+          ForEach(user.tags.slice(0, 3), (tag: string) => {
+            Text(`#${tag}`)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .padding({ left: 7, right: 7, top: 3, bottom: 3 })
+              .margin({ right: 4, bottom: 4 })
+              .backgroundColor($r('app.color.bg_tertiary'))
+              .borderRadius(DesignConstants.RADIUS.MD)
+              .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          }, (tag: string) => tag)
+        }
+        .width('100%')
+      }
+
+      Row({ space: 8 }) {
+        Button(this.isUserActionPending(user.user?.user_id ?? '') ? '处理中...' :
+          (this.isUserFollowing(user) ? '已关注' : '关注'))
+          .type(ButtonType.Normal)
+          .layoutWeight(1)
+          .height(30)
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .enabled(!this.isUserActionPending(user.user?.user_id ?? ''))
+          .fontSize(12)
+          .fontWeight(FontWeight.Medium)
+          .backgroundColor(this.isUserFollowing(user) ? Color.Transparent : $r('sys.color.ohos_id_color_emphasize'))
+          .fontColor(this.isUserFollowing(user) ? $r('sys.color.ohos_id_color_emphasize') : Color.White)
+          .borderWidth(this.isUserFollowing(user) ? 1 : 0)
+          .borderColor($r('sys.color.ohos_id_color_emphasize'))
+          .opacity(this.isUserActionPending(user.user?.user_id ?? '') ? 0.58 : 1)
+          .onClick(() => { this.followUser(user); })
+
+        Button('私聊')
+          .type(ButtonType.Normal)
+          .layoutWeight(1)
+          .height(30)
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .fontSize(12)
+          .fontWeight(FontWeight.Medium)
+          .backgroundColor(Color.Transparent)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .borderWidth(1)
+          .borderColor($r('sys.color.ohos_id_color_list_separator'))
+          .opacity(this.isUserActionPending(user.user?.user_id ?? '') ? 0.74 : 1)
+          .onClick(() => { this.startPrivateChat(user); })
+      }
+      .width('100%')
     }
     .width('100%')
-    .padding({ left: 16, right: 16, top: 10, bottom: 10 })
+    .alignItems(HorizontalAlign.Start)
+    .padding({ left: 12, right: 12, top: 12, bottom: 12 })
+    .backgroundColor($r('app.color.bg_secondary'))
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
   }
 
   // ==================== 热门瞬间卡片（masonry 小红书风格）====================
   @Builder
   buildHotMomentCard(moment: MomentItem) {
-    Column({ space: 0 }) {
+    Column({ space: 10 }) {
+      Row({ space: 6 }) {
+        Row({ space: 4 }) {
+          Text() {
+            SymbolSpan($r(AppIcon.HEART_FILL))
+              .fontSize(10)
+              .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+          }
+          Text('热门动态')
+            .fontSize(10)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        }
+        .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+        .backgroundColor($r('app.color.bg_tertiary'))
+        .borderRadius(DesignConstants.RADIUS.XL)
+
+        Blank().layoutWeight(1)
+
+        Row({ space: 2 }) {
+          Text() {
+            SymbolSpan($r(AppIcon.HEART))
+              .fontSize(10)
+              .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
+          }
+          Text(`${moment.likes_count}`)
+            .fontSize(10)
+            .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+        }
+      }
+      .width('100%')
+
       // 封面图
       if (moment.images && moment.images.length > 0) {
         Image(moment.images[0].url)
           .width('100%')
           .height(this.calculateImageHeight(moment))
           .objectFit(ImageFit.Cover)
-          .borderRadius({ topLeft: 12, topRight: 12 })
-          .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+          .borderRadius(DesignConstants.RADIUS.LG)
+          .backgroundColor($r('app.color.bg_secondary'))
       } else {
         // 无图纯文本卡片
         Column() {
@@ -408,17 +609,17 @@ export struct DiscoverPage {
         .height(120)
         .padding(12)
         .justifyContent(FlexAlign.Center)
-        .borderRadius({ topLeft: 12, topRight: 12 })
-        .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+        .borderRadius(DesignConstants.RADIUS.LG)
+        .backgroundColor($r('app.color.bg_secondary'))
       }
 
       // 信息区（白底下半部分）
-      Column({ space: 4 }) {
+      Column({ space: 6 }) {
         if (moment.description && moment.images && moment.images.length > 0) {
           Text(moment.description)
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
-            .maxLines(2)
+            .maxLines(3)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .lineHeight(18)
             .width('100%')
@@ -432,22 +633,11 @@ export struct DiscoverPage {
           })
 
           Text(moment.user?.nickname ?? '')
-            .fontSize(11)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .maxLines(1)
             .layoutWeight(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-          Row({ space: 2 }) {
-            Text() {
-              SymbolSpan($r(AppIcon.HEART))
-                .fontSize(11)
-                .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
-            }
-            Text(`${moment.likes_count}`)
-              .fontSize(11)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-          }
         }
         .width('100%')
         .alignItems(VerticalAlign.Center)
@@ -455,9 +645,11 @@ export struct DiscoverPage {
       .padding(8)
     }
     .width('100%')
+    .padding({ left: 10, right: 10, top: 10, bottom: 10 })
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.LG)
-    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
   }
 
   // ==================== 热门瞬间列表项（供 LazyForEach 使用）====================
@@ -511,7 +703,7 @@ export struct DiscoverPage {
 
     Divider()
       .strokeWidth(0.5)
-      .color($r('sys.color.ohos_id_color_component_normal'))
+      .color($r('sys.color.ohos_id_color_list_separator'))
   }
 
   // ==================== 通用构建器 ====================
@@ -547,18 +739,140 @@ export struct DiscoverPage {
 
   // ==================== 操作 ====================
   private async followUser(user: UserItem): Promise<void> {
+    if (!this.isLoggedIn) {
+      SystemToast.showWarning('请先登录后再关注', this.getUIContext());
+      const loginParams = new LoginRedirectParams();
+      loginParams.reason = 'action_required';
+      loginParams.action = '关注用户';
+      AppRouter.push(PageNames.LOGIN, loginParams);
+      return;
+    }
     if (!user.user?.user_id) return;
+    const userId = user.user.user_id;
+    const isFollowing = user.relation?.is_following ?? false;
+    if (this.isUserActionPending(userId)) return;
+    this.setUserActionPending(userId, true);
     try {
-      const followReq: FollowRequest = { user_id: user.user.user_id };
-      const response = await ApiClient.followUser(followReq);
+      const response = isFollowing
+        ? await ApiClient.unfollowUser({ user_id: userId } as UnfollowRequest)
+        : await ApiClient.followUser({ user_id: userId } as FollowRequest);
       if (response.code === 0) {
-        SystemToast.showSuccess('已关注', this.getUIContext());
+        this.patchRecommendedUserFollowing(userId, !isFollowing);
+        SystemToast.showSuccess(isFollowing ? '已取消关注' : '已关注', this.getUIContext());
       } else {
-        SystemToast.showError(response.message || '关注失败', this.getUIContext());
+        SystemToast.showError(response.message || (isFollowing ? '取消关注失败' : '关注失败'), this.getUIContext());
       }
     } catch {
-      SystemToast.showError('关注失败', this.getUIContext());
+      SystemToast.showError(isFollowing ? '取消关注失败' : '关注失败', this.getUIContext());
+    } finally {
+      this.setUserActionPending(userId, false);
     }
+  }
+
+  private ensureUserRelation(user: UserItem): Relationship {
+    if (!user.relation) {
+      const relation: Relationship = {
+        is_following: false,
+        is_followed_by: false,
+        is_blocked: false
+      };
+      user.relation = relation;
+    }
+    return user.relation;
+  }
+
+  private patchRecommendedUserFollowing(userId: string, isFollowing: boolean): void {
+    const users = this.recommendedUsers;
+    for (let i = 0; i < users.length; i++) {
+      if ((users[i].user?.user_id ?? '') !== userId) {
+        continue;
+      }
+      const relation = this.ensureUserRelation(users[i]);
+      relation.is_following = isFollowing;
+      break;
+    }
+    this.recommendedUsers = users;
+    this.recommendedUsersDataSource.setData(users);
+  }
+
+  private setUserActionPending(userId: string, pending: boolean): void {
+    const next: string[] = [];
+    for (let i = 0; i < this.userActionPendingIds.length; i++) {
+      const id = this.userActionPendingIds[i];
+      if (id !== userId) {
+        next.push(id);
+      }
+    }
+    if (pending) {
+      next.push(userId);
+    }
+    this.userActionPendingIds = next;
+  }
+
+  private startPrivateChat(user: UserItem): void {
+    if (!this.isLoggedIn) {
+      SystemToast.showWarning('请先登录后再发起私聊', this.getUIContext());
+      const loginParams = new LoginRedirectParams();
+      loginParams.reason = 'action_required';
+      loginParams.action = '发起私聊';
+      AppRouter.push(PageNames.LOGIN, loginParams);
+      return;
+    }
+    const userId = user.user?.user_id;
+    if (!userId) return;
+    const params = new ChatRouteParam();
+    params.chatId = userId;
+    params.chatType = 'private_chat';
+    params.targetId = userId;
+    params.title = user.user?.nickname ?? '私聊';
+    AppRouter.push(PageNames.CHAT, params);
+  }
+
+  private async reportUser(user: UserItem): Promise<void> {
+    if (!this.isLoggedIn) {
+      SystemToast.showWarning('请先登录后再举报', this.getUIContext());
+      const loginParams = new LoginRedirectParams();
+      loginParams.reason = 'action_required';
+      loginParams.action = '举报用户';
+      AppRouter.push(PageNames.LOGIN, loginParams);
+      return;
+    }
+    const userId = user.user?.user_id;
+    if (!userId) return;
+    try {
+      const req: CreateReportRequest = {
+        target_type: 'user',
+        target_id: userId,
+        reason: 'other'
+      };
+      const response = await ApiClient.createReport(req);
+      if (response.code === 0) {
+        SystemToast.showSuccess('举报已提交', this.getUIContext());
+      } else {
+        SystemToast.showError(response.message || '举报失败', this.getUIContext());
+      }
+    } catch {
+      SystemToast.showError('举报失败', this.getUIContext());
+    }
+  }
+
+  private async copyText(text: string, successText: string): Promise<void> {
+    if (!text) return;
+    try {
+      const systemPasteboard = pasteboard.getSystemPasteboard();
+      const pasteData = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, text);
+      await systemPasteboard.setData(pasteData);
+      SystemToast.show(successText, this.getUIContext());
+    } catch {
+      SystemToast.showError('复制失败', this.getUIContext());
+    }
+  }
+
+  private formatDistance(meters: number): string {
+    if (meters < 1000) {
+      return `${Math.round(meters)}m`;
+    }
+    return `${(meters / 1000).toFixed(1)}km`;
   }
 
 }

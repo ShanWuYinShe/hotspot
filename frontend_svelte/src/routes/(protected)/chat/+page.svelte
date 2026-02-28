@@ -73,23 +73,33 @@
 	<title>消息 - HotSpot</title>
 </svelte:head>
 
-<div class="space-y-6">
-	<h1 class="text-2xl font-bold">消息</h1>
+<div class="space-y-5">
+	<div class="rounded-3xl border border-border/60 bg-linear-to-br from-background via-card/85 to-muted/35 p-5 shadow-sm">
+		<div class="flex items-center gap-3">
+			<div class="rounded-2xl border border-border/50 bg-primary/10 p-2.5 text-primary">
+				<MessageCircle class="h-5 w-5" />
+			</div>
+			<div>
+				<h1 class="text-2xl font-bold">消息</h1>
+				<p class="text-sm text-muted-foreground">私聊与群聊会话统一在这里管理</p>
+			</div>
+		</div>
+	</div>
 
 	<Tabs value={currentTab} onValueChange={handleTabChange}>
-		<TabsList class="grid w-full grid-cols-2">
-			<TabsTrigger value="private">
+		<TabsList class="grid h-auto w-full grid-cols-2 gap-1.5 rounded-3xl bg-card/80 p-1.5 shadow-md shadow-black/10 ring-1 ring-border/50 backdrop-blur-sm">
+			<TabsTrigger value="private" class="rounded-2xl">
 				<MessageCircle class="mr-2 h-4 w-4" />
 				私聊
 			</TabsTrigger>
-			<TabsTrigger value="group">
+			<TabsTrigger value="group" class="rounded-2xl">
 				<Users class="mr-2 h-4 w-4" />
 				群聊
 			</TabsTrigger>
 		</TabsList>
 
 		<!-- 私聊列表 -->
-		<TabsContent value="private" class="mt-6">
+		<TabsContent value="private" class="mt-5">
 			{#if isLoadingPrivate}
 				<ListSkeleton type="chat" count={5} layout="list" />
 			{:else if privateChats.length === 0}
@@ -99,11 +109,16 @@
 					description="去探索发现感兴趣的人吧" 
 				/>
 			{:else}
-				<div class="space-y-6">
+				<div class="space-y-4">
 					{#each privateChats as chat (chat.other_user.user_id)}
 						{@const isOnline = presenceStore.isOnline(chat.other_user.user_id) || chat.presence_status === 'online'}
 						<a href="/chat/users/{chat.other_user.user_id}">
-							<Card variant="default" glow="soft" interactive class="cursor-pointer">
+							<Card
+								variant="default"
+								glow="soft"
+								interactive
+								class="cursor-pointer rounded-3xl border border-border/60 bg-card/85 shadow-sm backdrop-blur-md"
+							>
 								<CardContent class="flex items-center gap-4 p-5">
 									<div class="relative">
 										<Avatar class="h-14 w-14" glow>
@@ -147,7 +162,7 @@
 		</TabsContent>
 
 		<!-- 群聊列表 -->
-		<TabsContent value="group" class="mt-6">
+		<TabsContent value="group" class="mt-5">
 			{#if isLoadingGroup}
 				<ListSkeleton type="chat" count={5} layout="list" />
 			{:else if groupChats.length === 0}
@@ -157,10 +172,15 @@
 					description="去探索加入感兴趣的群组吧" 
 				/>
 			{:else}
-				<div class="space-y-6">
+				<div class="space-y-4">
 					{#each groupChats as group (group.group.group_id)}
 						<a href="/chat/groups/{group.group.group_id}">
-							<Card variant="default" glow="soft" interactive class="cursor-pointer">
+							<Card
+								variant="default"
+								glow="soft"
+								interactive
+								class="cursor-pointer rounded-3xl border border-border/60 bg-card/85 shadow-sm backdrop-blur-md"
+							>
 								<CardContent class="flex items-center gap-4 p-5">
 									<Avatar class="h-14 w-14" glow>
 										<AvatarImage src={group.group.avatar_url} alt={group.group.name} />
@@ -184,7 +204,7 @@
 										</div>
 										<div class="flex items-center justify-between gap-2">
 											<p class="text-sm text-muted-foreground leading-relaxed">
-												{formatRelativeTime(group.my_state?.joined_at ?? '')}
+												{formatRelativeTime(group.last_activity_at ?? group.my_state?.joined_at ?? '')}
 											</p>
 											{#if (group.my_state?.unread_count ?? 0) > 0}
 												<Badge variant="destructive" class="ml-2 shrink-0">

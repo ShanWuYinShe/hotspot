@@ -9,8 +9,8 @@
 //!
 //! ## Spec 规则
 //!
-//! 可选认证模式：只要请求携带了 Token，就必须验证有效性；无效返回 10100 而非静默降级。
-//! 客户端想匿名访问时应不携带 Token。
+//! 可选认证模式：只要请求携带了 Token，就必须验证有效性；
+//! 若 Token 无效（过期/撤销/格式错误），按匿名权限继续处理，不阻塞接口。
 //!
 //! ## 使用方式
 //!
@@ -33,6 +33,7 @@
 use axum::{
     extract::{FromRequestParts, Request, State},
     http::request::Parts,
+    http::{header, HeaderValue},
     middleware::Next,
     response::Response,
 };
@@ -41,7 +42,10 @@ use std::time::Instant;
 use crate::{
     error::AppError,
     state::AppState,
-    utils::{jwt::JwtUtil, web_cookie::get_cookie_value},
+    utils::{
+        jwt::JwtUtil,
+        web_cookie::{build_access_token_clear_cookie, get_cookie_value},
+    },
 };
 
 /// 认证失败原因（用于日志和监控）
@@ -83,6 +87,20 @@ impl AuthFailureReason {
     }
 }
 
+/// access token 来源
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TokenSource {
+    AuthorizationHeader,
+    Cookie,
+}
+
+/// 提取出的 token 及来源
+#[derive(Debug, Clone)]
+struct ExtractedToken {
+    value: String,
+    source: TokenSource,
+}
+
 /// 从请求头或 Cookie 提取 access token
 ///
 /// 优先级：
@@ -90,7 +108,7 @@ impl AuthFailureReason {
 /// 2. Cookie (access_token)
 ///
 /// 这是一个同步函数，避免跨 await 持有 Request 引用导致 Future 非 Send
-fn extract_bearer_token(req: &Request) -> Result<Option<String>, AuthFailureReason> {
+fn extract_bearer_token(req: &Request) -> Result<Option<ExtractedToken>, AuthFailureReason> {
     // 优先从 Authorization Header 提取
     if let Some(auth_header) = req
         .headers()
@@ -100,15 +118,33 @@ fn extract_bearer_token(req: &Request) -> Result<Option<String>, AuthFailureReas
         let token = auth_header
             .strip_prefix("Bearer ")
             .ok_or(AuthFailureReason::InvalidFormat)?;
-        return Ok(Some(token.to_string()));
+        return Ok(Some(ExtractedToken {
+            value: token.to_string(),
+            source: TokenSource::AuthorizationHeader,
+        }));
     }
 
     // 备选：从 Cookie 提取
     if let Some(cookie_token) = get_cookie_value(req.headers(), "access_token") {
-        return Ok(Some(cookie_token));
+        return Ok(Some(ExtractedToken {
+            value: cookie_token,
+            source: TokenSource::Cookie,
+        }));
     }
 
     Ok(None)
+}
+
+/// 检查响应是否已经设置了新的 access_token Cookie
+///
+/// 用于避免可选认证中间件在下游 handler 已经完成登录/刷新写 Cookie 后，
+/// 再追加一个 clear Cookie 覆盖掉新 token。
+fn response_has_new_access_token_cookie(resp: &Response) -> bool {
+    resp.headers()
+        .get_all(header::SET_COOKIE)
+        .iter()
+        .filter_map(|value| value.to_str().ok())
+        .any(|cookie| cookie.starts_with("access_token=") && !cookie.starts_with("access_token=;"))
 }
 
 /// 验证 token 并返回 (user_id, session_id)
@@ -217,7 +253,7 @@ async fn authenticate_token(
 
 /// JWT 必须认证中间件
 ///
-/// - Token 缺失或无效：返回 401 错误
+/// - Token 缺失或无效：返回 10100 认证错误（HTTP 200）
 /// - Token 有效：注入 user_id 和 session_id 到请求扩展
 ///
 /// ## 性能监控
@@ -229,28 +265,47 @@ pub async fn auth_middleware(
     mut req: Request,
     next: Next,
 ) -> Result<Response, AppError> {
+    let method = req.method().clone();
+    let uri = req.uri().clone();
     let token = extract_bearer_token(&req)
         .map_err(|reason| {
             if reason.should_log_error() {
-                tracing::error!(reason = ?reason, "Authentication failed");
+                tracing::error!(%method, %uri, reason = ?reason, "Authentication failed");
             } else {
-                tracing::debug!(reason = ?reason, "Authentication failed");
+                tracing::debug!(%method, %uri, reason = ?reason, "Authentication failed");
             }
             AppError::Unauthorized(reason.to_user_message().to_string())
         })?
         .ok_or_else(|| {
-            tracing::debug!(reason = ?AuthFailureReason::TokenMissing, "Authentication failed");
+            tracing::debug!(
+                %method,
+                %uri,
+                reason = ?AuthFailureReason::TokenMissing,
+                "Authentication failed"
+            );
             AppError::AccessTokenMissing
-        })?;
+        })?
+        .value;
 
     let (user_id, session_id) = authenticate_token(&state, &token).await.map_err(|reason| {
         if reason.should_log_error() {
-            tracing::error!(reason = ?reason, "Authentication failed");
+            tracing::error!(%method, %uri, reason = ?reason, "Authentication failed");
         } else {
-            tracing::debug!(reason = ?reason, "Authentication failed");
+            tracing::debug!(%method, %uri, reason = ?reason, "Authentication failed");
         }
         AppError::Unauthorized(reason.to_user_message().to_string())
     })?;
+
+    tracing::debug!(
+        %method,
+        %uri,
+        user_id,
+        session_id = %session_id,
+        "Authentication passed"
+    );
+    let span = tracing::Span::current();
+    span.record("user_id", user_id);
+    span.record("session_id", tracing::field::display(session_id));
 
     // 将 user_id / session_id 注入到请求扩展中
     req.extensions_mut().insert(user_id);
@@ -265,41 +320,79 @@ pub async fn auth_middleware(
 ///
 /// - **未提供 Token**: 请求继续，不注入 user_id（按未登录处理）
 /// - **提供有效 Token**: 注入 user_id 和 session_id
-/// - **提供无效 Token**: 返回 10100 认证错误，**不会**静默降级为未登录状态
+/// - **提供无效 Token**: 视为未登录继续处理（按匿名权限返回），不会返回 10100
 ///
 /// > "任何时候，只要请求携带了 Token，服务端都必须验证 Token 的有效性"
-/// > "客户端如果想以匿名身份访问 Token 可选端点，应不携带 Token"
+/// > "对于认证可选端点，若 Token 验证失败，服务端必须视为未登录状态继续处理"
 pub async fn optional_auth_middleware(
     State(state): State<AppState>,
     mut req: Request,
     next: Next,
 ) -> Result<Response, AppError> {
-    let token = match extract_bearer_token(&req) {
-        Ok(Some(token)) => token,
+    let method = req.method().clone();
+    let uri = req.uri().clone();
+    let mut clear_access_cookie = false;
+    let extracted = match extract_bearer_token(&req) {
+        Ok(Some(extracted)) => extracted,
         Ok(None) => {
             // 未提供 token，按未登录处理
-            tracing::trace!("No token provided (optional auth)");
+            tracing::trace!(%method, %uri, "No token provided (optional auth)");
             return Ok(next.run(req).await);
         }
         Err(reason) => {
-            // Token 格式错误（如 Authorization header 存在但不是 Bearer 格式）
-            // Spec: 携带了 Token 就必须验证，格式错误 = 验证失败 = 10100
-            tracing::debug!(reason = ?reason, "Invalid token format in optional auth");
-            return Err(AppError::Unauthorized(reason.to_user_message().to_string()));
+            // 可选认证：Token 格式错误也按匿名处理，不阻塞公开接口
+            tracing::debug!(
+                %method,
+                %uri,
+                reason = ?reason,
+                "Invalid token format in optional auth, downgrade to anonymous"
+            );
+            return Ok(next.run(req).await);
         }
     };
 
     // 携带了 Token，必须验证有效性
-    let (user_id, session_id) = authenticate_token(&state, &token).await.map_err(|reason| {
-        tracing::debug!(reason = ?reason, "Token validation failed in optional auth");
-        AppError::Unauthorized(reason.to_user_message().to_string())
-    })?;
+    match authenticate_token(&state, &extracted.value).await {
+        Ok((user_id, session_id)) => {
+            tracing::debug!(
+                %method,
+                %uri,
+                user_id,
+                session_id = %session_id,
+                "Optional auth token validated"
+            );
+            let span = tracing::Span::current();
+            span.record("user_id", user_id);
+            span.record("session_id", tracing::field::display(session_id));
 
-    // 验证成功，注入用户信息
-    req.extensions_mut().insert(user_id);
-    req.extensions_mut().insert(Some(session_id));
+            // 验证成功，注入用户信息
+            req.extensions_mut().insert(user_id);
+            req.extensions_mut().insert(Some(session_id));
+        }
+        Err(reason) => {
+            tracing::debug!(
+                %method,
+                %uri,
+                reason = ?reason,
+                "Token validation failed in optional auth, downgrade to anonymous"
+            );
+            if extracted.source == TokenSource::Cookie {
+                clear_access_cookie = true;
+            }
+        }
+    }
 
-    Ok(next.run(req).await)
+    let mut resp = next.run(req).await;
+    if clear_access_cookie && !response_has_new_access_token_cookie(&resp) {
+        let clear_cookie = build_access_token_clear_cookie(state.config.cookie_secure);
+        if let Ok(header_val) = HeaderValue::from_str(&clear_cookie) {
+            resp.headers_mut().append(header::SET_COOKIE, header_val);
+        } else {
+            tracing::warn!("Failed to build clear access_token cookie header");
+        }
+    }
+
+    Ok(resp)
 }
 
 /// Bearer Token 提取器
@@ -422,6 +515,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::body::Body;
+    use axum::http::Request as HttpRequest;
 
     #[test]
     fn test_auth_failure_reason_messages() {
@@ -443,5 +538,61 @@ mod tests {
     fn test_auth_failure_reason_log_level() {
         assert!(!AuthFailureReason::TokenMissing.should_log_error());
         assert!(!AuthFailureReason::Expired.should_log_error());
+    }
+
+    #[test]
+    fn test_extract_bearer_token_from_authorization_header() {
+        let req = HttpRequest::builder()
+            .header("Authorization", "Bearer test_token")
+            .body(Body::empty())
+            .expect("build request");
+        let extracted = extract_bearer_token(&req)
+            .expect("extract should succeed")
+            .expect("token should exist");
+        assert_eq!(extracted.value, "test_token");
+        assert_eq!(extracted.source, TokenSource::AuthorizationHeader);
+    }
+
+    #[test]
+    fn test_extract_bearer_token_from_cookie() {
+        let req = HttpRequest::builder()
+            .header("Cookie", "access_token=cookie_token; foo=bar")
+            .body(Body::empty())
+            .expect("build request");
+        let extracted = extract_bearer_token(&req)
+            .expect("extract should succeed")
+            .expect("token should exist");
+        assert_eq!(extracted.value, "cookie_token");
+        assert_eq!(extracted.source, TokenSource::Cookie);
+    }
+
+    #[test]
+    fn test_extract_bearer_token_invalid_authorization_format() {
+        let req = HttpRequest::builder()
+            .header("Authorization", "Token abc")
+            .body(Body::empty())
+            .expect("build request");
+        let err = extract_bearer_token(&req).expect_err("should fail");
+        assert!(matches!(err, AuthFailureReason::InvalidFormat));
+    }
+
+    #[test]
+    fn test_response_has_new_access_token_cookie_detects_new_cookie() {
+        let mut resp = Response::new(Body::empty());
+        resp.headers_mut().append(
+            header::SET_COOKIE,
+            HeaderValue::from_static("access_token=new_token; Max-Age=3600; Path=/; HttpOnly"),
+        );
+        assert!(response_has_new_access_token_cookie(&resp));
+    }
+
+    #[test]
+    fn test_response_has_new_access_token_cookie_ignores_clear_cookie() {
+        let mut resp = Response::new(Body::empty());
+        resp.headers_mut().append(
+            header::SET_COOKIE,
+            HeaderValue::from_static("access_token=; Max-Age=0; Path=/; HttpOnly"),
+        );
+        assert!(!response_has_new_access_token_cookie(&resp));
     }
 }

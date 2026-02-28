@@ -45,7 +45,7 @@ export struct SystemCard {
   // 新增：是否显示边框
   @Prop showBorder: boolean = false;
   // 新增：边框颜色（使用系统颜色）
-  @Prop cardBorderColor: ResourceColor = $r('sys.color.ohos_id_color_component_normal');
+  @Prop cardBorderColor: ResourceColor = $r('sys.color.ohos_id_color_list_separator');
 
   @State isPressed: boolean = false;
 
@@ -57,7 +57,7 @@ export struct SystemCard {
 
     switch (this.variant) {
       case CardVariant.FILLED:
-        return $r('sys.color.ohos_id_color_component_normal');
+        return $r('app.color.bg_secondary');
       case CardVariant.GLASS:
         return Color.Transparent;
       case CardVariant.ELEVATED:
@@ -110,7 +110,7 @@ export struct SystemCard {
         color: this.cardBorderColor
       };
     }
-    return { width: 0, color: $r('app.color.bg_secondary') };
+    return { width: 0, color: $r('sys.color.ohos_id_color_list_separator') };
   }
 
   // 获取毛玻璃效果

@@ -336,9 +336,17 @@ impl SystemConfigService {
         updates: HashMap<&str, String>,
         admin_id: i64,
     ) -> Result<()> {
-        if updates.is_empty() {
+        let updates_count = updates.len();
+        if updates_count == 0 {
+            tracing::info!(admin_id, "system_config.batch_update skipped: no changes");
             return Ok(());
         }
+        let started_at = std::time::Instant::now();
+        tracing::info!(
+            admin_id,
+            updates_count,
+            "system_config.batch_update started"
+        );
 
         for (key, value) in updates {
             // 获取旧值用于日志
@@ -386,6 +394,12 @@ impl SystemConfigService {
 
         // 广播配置更新事件 (通知其他服务实例/客户端)
         self.publish_config_update("global.settings").await?;
+        tracing::info!(
+            admin_id,
+            updates_count,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "system_config.batch_update completed"
+        );
 
         Ok(())
     }

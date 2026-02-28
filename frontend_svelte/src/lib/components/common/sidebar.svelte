@@ -3,6 +3,8 @@
 	import { goto } from '$app/navigation';
 	import { cn } from '$lib/utils';
 	import { authStore } from '$lib/stores/auth.svelte';
+	import { adminRbacService } from '$lib/api/services';
+	import { isSuccess } from '$lib/api/client';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { notificationStore } from '$lib/stores/notification.svelte';
@@ -22,6 +24,7 @@
 	import UserCheck from 'lucide-svelte/icons/user-check';
 	import Navigation from 'lucide-svelte/icons/navigation';
 	import Settings from 'lucide-svelte/icons/settings';
+	import Shield from 'lucide-svelte/icons/shield';
 	import Sun from 'lucide-svelte/icons/sun';
 	import Moon from 'lucide-svelte/icons/moon';
 	import ChevronRight from 'lucide-svelte/icons/chevron-right';
@@ -125,6 +128,37 @@
 	let showLocationPicker = $state(false);
 	
 	const currentMode = $derived(mode.current);
+	let isAdminUser = $state(false);
+	let adminCheckedUserId = '';
+	let checkingAdmin = false;
+
+	$effect(() => {
+		const isAuthenticated = authStore.isAuthenticated;
+		const currentUserId = authStore.currentUserId ?? '';
+		if (!isAuthenticated || !currentUserId) {
+			isAdminUser = false;
+			adminCheckedUserId = '';
+			return;
+		}
+		if (checkingAdmin || adminCheckedUserId === currentUserId) return;
+		checkingAdmin = true;
+		void (async () => {
+			const requestUserId = currentUserId;
+			try {
+				const res = await adminRbacService.getMyPermissions();
+				if (authStore.currentUserId !== requestUserId) return;
+				isAdminUser = isSuccess(res) && !!res.data;
+			} catch {
+				if (authStore.currentUserId !== requestUserId) return;
+				isAdminUser = false;
+			} finally {
+				if (authStore.currentUserId === requestUserId) {
+					adminCheckedUserId = requestUserId;
+				}
+				checkingAdmin = false;
+			}
+		})();
+	});
 </script>
 
 <aside
@@ -167,7 +201,7 @@
 							{#if authStore.isAuthenticated && item.href === '/notifications' && notificationStore.unreadCount > 0}
 								<Badge 
 									variant="destructive" 
-									class="absolute -right-2 -top-2 h-5 min-w-[20px] px-1 text-[10px] font-bold flex items-center justify-center rounded-full"
+									class="absolute -right-2 -top-2 h-5 min-w-[20px] px-1 text-[10px] font-bold flex items-center justify-center rounded-2xl"
 								>
 									{notificationStore.unreadCount > 99 ? '99+' : notificationStore.unreadCount}
 								</Badge>
@@ -178,18 +212,30 @@
 						{#if authStore.isAuthenticated && item.href === '/chat' && messageStore.totalUnreadCount > 0}
 							<Badge 
 								variant="destructive" 
-								class="h-5 min-w-5 px-1.5 text-[10px] font-bold flex items-center justify-center rounded-full"
+								class="h-5 min-w-5 px-1.5 text-[10px] font-bold flex items-center justify-center rounded-2xl"
 							>
 								{messageStore.totalUnreadCount > 99 ? '99+' : messageStore.totalUnreadCount}
 							</Badge>
 						{/if}
 						{#if !authStore.isAuthenticated}
-							<span class="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">登录</span>
+							<span class="rounded-2xl bg-muted px-2 py-0.5 text-xs text-muted-foreground">登录</span>
 						{/if}
 					</RippleNavItem>
 				{/each}
 			</div>
 		</div>
+
+		{#if authStore.isAuthenticated && isAdminUser}
+			<div class="mt-6">
+				<h3 class="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+					管理员
+				</h3>
+				<RippleNavItem href="/admin" active={isActive('/admin')}>
+					<Shield class="h-5 w-5 transition-transform group-hover:scale-110" />
+					<span>管理后台</span>
+				</RippleNavItem>
+			</div>
+		{/if}
 	</nav>
 
 	<!-- 底部区域：绝对定位固定在底部 -->
@@ -200,7 +246,7 @@
 		<!-- 浏览锚点按钮 -->
 		<button
 			type="button"
-			class="group relative flex w-full items-center gap-3 overflow-hidden rounded-xl bg-gradient-to-r from-primary/5 to-primary/10 p-3 text-left transition-all duration-200 hover:from-primary/10 hover:to-primary/20 min-h-[56px]"
+			class="group relative flex w-full items-center gap-3 overflow-hidden rounded-xl bg-linear-to-r from-primary/5 to-primary/10 p-3 text-left transition-all duration-200 hover:from-primary/10 hover:to-primary/20 min-h-[56px]"
 			onclick={() => (showLocationPicker = true)}
 			{@attach rippleFeedback}
 		>

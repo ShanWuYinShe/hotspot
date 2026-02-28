@@ -14,7 +14,7 @@
 </script>
 
 <div class="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4 text-center">
-	<div class="flex h-20 w-20 items-center justify-center rounded-full {is404 ? 'bg-muted' : 'bg-destructive/10'}">
+	<div class="flex h-20 w-20 items-center justify-center rounded-3xl {is404 ? 'bg-muted' : 'bg-destructive/10'}">
 		<TriangleAlert class="h-10 w-10 {is404 ? 'text-muted-foreground' : 'text-destructive'}" />
 	</div>
 

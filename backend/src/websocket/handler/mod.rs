@@ -56,7 +56,7 @@ async fn handle_socket(socket: WebSocket, state: AppState, headers: HeaderMap) {
         .add_connection(connection_id.clone(), user_id, tx.clone())
         .await;
 
-    use crate::repositories::user_online_status_repo::UserOnlineStatusRepository;
+    use crate::repositories::user::online_status_repo::UserOnlineStatusRepository;
 
     if let Err(e) = state.presence_service.mark_user_online(user_id).await {
         tracing::error!("标记用户上线失败(Redis): user_id={}, error={}", user_id, e);
@@ -157,7 +157,7 @@ async fn handle_socket(socket: WebSocket, state: AppState, headers: HeaderMap) {
     state.ws_subscription.unsubscribe_all(user_id).await;
 
     if state.ws_manager.get_user_connection_count(user_id).await == 0 {
-        use crate::repositories::user_online_status_repo::UserOnlineStatusRepository;
+        use crate::repositories::user::online_status_repo::UserOnlineStatusRepository;
 
         if let Err(e) = state.presence_service.mark_user_offline(user_id).await {
             tracing::error!("标记用户离线失败(Redis): user_id={}, error={}", user_id, e);

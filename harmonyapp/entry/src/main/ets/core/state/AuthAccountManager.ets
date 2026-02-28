@@ -60,7 +60,8 @@ export class AuthAccountManager {
   }
 
   /**
-   * 保存/更新一个账号，并将其设为当前活跃账号（同时写回兼容键：access_token/user_info）
+   * 保存/更新一个账号，并将其设为当前活跃账号
+   * 同步更新当前会话键（access_token/user_info）
    */
   static async upsertAndActivate(auth: AuthData): Promise<void> {
     const state = await AuthAccountManager.getState();
@@ -78,7 +79,7 @@ export class AuthAccountManager {
     };
     await AuthAccountManager.setState(newState);
 
-    // 兼容旧逻辑：仍维持一份“当前账号”的 user_info/access_token
+    // 维持一份“当前账号”的 user_info/access_token 作为会话快捷读取键
     await PreferencesUtil.setObject(StorageKeys.USER_INFO, auth);
     await PreferencesUtil.set(StorageKeys.ACCESS_TOKEN, auth.access_token);
   }

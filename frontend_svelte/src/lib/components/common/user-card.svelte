@@ -11,6 +11,8 @@
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { presenceStore } from '$lib/stores/presence.svelte';
+	import { isSuccess } from '$lib/api/client';
+	import { reportsService, usersService } from '$lib/api/services';
 	import { formatDistance } from '$lib/utils/format';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import { Card, CardContent, CardFooter } from '$lib/components/ui/card';
@@ -28,6 +30,7 @@
 	import User from 'lucide-svelte/icons/user';
 	import MessageCircle from 'lucide-svelte/icons/message-circle';
 	import UserPlus from 'lucide-svelte/icons/user-plus';
+	import Loader2 from 'lucide-svelte/icons/loader-2';
 	import Share2 from 'lucide-svelte/icons/share-2';
 	import Flag from 'lucide-svelte/icons/flag';
 	import type { UserInfo, UserItem } from '$lib/types/api';
@@ -103,6 +106,14 @@
 
 	// 检查是否是自己
 	const isMe = $derived(authStore.currentUserId === userInfo.user_id);
+	let isFollowing = $state(false);
+	let isFollowPending = $state(false);
+	let isReporting = $state(false);
+
+	$effect(() => {
+		const relation = 'relation' in user ? (user as UserItem).relation : undefined;
+		isFollowing = relation?.is_following ?? false;
+	});
 
 	// 菜单操作处理函数
 	function handleViewProfile(e: MouseEvent) {
@@ -121,15 +132,31 @@
 		goto(`/chat/users/${userInfo.user_id}`);
 	}
 
-	function handleFollow(e: MouseEvent) {
+	async function handleFollow(e: MouseEvent) {
 		e.preventDefault();
 		e.stopPropagation();
 		if (!authStore.isAuthenticated) {
 			uiStore.openLoginModal();
 			return;
 		}
-		// TODO: 实现关注/取消关注功能
-		toast.info('关注功能开发中');
+		if (isFollowPending) return;
+
+		isFollowPending = true;
+		try {
+			const response = isFollowing
+				? await usersService.unfollow({ user_id: userInfo.user_id })
+				: await usersService.follow({ user_id: userInfo.user_id, source: 'profile' });
+			if (!isSuccess(response)) {
+				toast.error(response.message || '操作失败');
+				return;
+			}
+			isFollowing = !isFollowing;
+			toast.success(isFollowing ? '关注成功' : '已取消关注');
+		} catch {
+			toast.error(isFollowing ? '取消关注失败' : '关注失败');
+		} finally {
+			isFollowPending = false;
+		}
 	}
 
 	async function handleShare(e: MouseEvent) {
@@ -156,15 +183,31 @@
 		}
 	}
 
-	function handleReport(e: MouseEvent) {
+	async function handleReport(e: MouseEvent) {
 		e.preventDefault();
 		e.stopPropagation();
 		if (!authStore.isAuthenticated) {
 			uiStore.openLoginModal();
 			return;
 		}
-		// TODO: 实现举报功能
-		toast.info('举报功能开发中');
+		if (isReporting) return;
+		isReporting = true;
+		try {
+			const response = await reportsService.create({
+				target_type: 'user',
+				target_id: userInfo.user_id,
+				reason: 'other'
+			});
+			if (!isSuccess(response)) {
+				toast.error(response.message || '举报提交失败');
+				return;
+			}
+			toast.success('举报已提交，我们会尽快处理');
+		} catch {
+			toast.error('举报提交失败');
+		} finally {
+			isReporting = false;
+		}
 	}
 </script>
 
@@ -177,59 +220,73 @@
 	>
 		<CardContent class="p-6">
 			{#if variant === 'square'}
-				<!-- 方块模式：Pinterest/小红书风格，高度自适应 -->
-				<!-- 使用user_id生成稳定的随机高度变化 -->
-				{@const heightVariants = [120, 140, 160, 130, 150, 135, 145, 155]}
+				<!-- 方块模式：更强调瀑布流层次与信息可读性 -->
+				{@const heightVariants = [188, 214, 236, 206, 248, 220, 198, 232]}
 				{@const userIdHash = userInfo.user_id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)}
 				{@const minHeight = heightVariants[userIdHash % heightVariants.length]}
-				<div class="flex flex-col justify-between space-y-2.5" style="min-height: {minHeight}px;">
-					<!-- 头像和基本信息 -->
-					<div class="flex items-center gap-2.5">
-						<div class="relative shrink-0">
-							<Avatar
-								glow
-								class="size-12"
-							>
-								<AvatarImage src={userInfo.avatar_url} alt={userInfo.nickname} />
-								<AvatarFallback class="bg-linear-to-br from-primary/20 to-secondary/20 text-primary font-bold text-sm">{(userInfo.nickname || '用户').slice(0, 2)}</AvatarFallback>
-							</Avatar>
-							{#if isOnline}
-								<span
-									class="absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-background bg-green-500 shadow-sm shadow-green-500/50"
-								></span>
-							{/if}
-						</div>
-						<div class="min-w-0 flex-1">
-							<h3 class="truncate font-semibold text-sm">{userInfo.nickname}</h3>
+				<div class="flex flex-col gap-3" style="min-height: {minHeight}px;">
+					<div
+						class="relative overflow-hidden rounded-2xl border border-border/40 bg-linear-to-br from-primary/15 via-secondary/10 to-muted/30 p-3.5"
+					>
+						<div class="pointer-events-none absolute inset-0 bg-linear-to-t from-black/5 to-transparent dark:from-white/5"></div>
+
+						<div class="relative flex items-start justify-between gap-3">
+							<div class="flex min-w-0 items-center gap-2.5">
+								<div class="relative shrink-0">
+									<Avatar glow class="size-12">
+										<AvatarImage src={userInfo.avatar_url} alt={userInfo.nickname} />
+										<AvatarFallback class="bg-linear-to-br from-primary/25 to-secondary/25 text-primary font-bold text-sm">
+											{(userInfo.nickname || '用户').slice(0, 2)}
+										</AvatarFallback>
+									</Avatar>
+									{#if isOnline}
+										<span
+											class="absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-background bg-green-500 shadow-sm shadow-green-500/50"
+										></span>
+									{/if}
+								</div>
+
+								<div class="min-w-0 flex-1">
+									<h3 class="truncate text-sm font-semibold">{userInfo.nickname}</h3>
+									<p class="mt-0.5 text-[11px] text-muted-foreground">
+										{isOnline ? '在线中' : '最近活跃'}
+									</p>
+								</div>
+							</div>
+
 							{#if distance}
-								<div class="flex items-center gap-1 text-xs text-muted-foreground">
+								<div
+									class="flex shrink-0 items-center gap-1 rounded-2xl bg-background/70 px-2 py-1 text-[10px] text-muted-foreground"
+								>
 									<MapPin class="size-3" />
 									{formatDistance(distance)}
 								</div>
 							{/if}
 						</div>
-					</div>
 
-					<div class="space-y-2">
-						<!-- 简介（根据长度自适应行数：1-4行） -->
 						{#if showBio && 'bio' in user && user.bio}
-							<p class="text-sm leading-relaxed text-muted-foreground" style="display: -webkit-box; -webkit-line-clamp: {user.bio.length > 100 ? 4 : user.bio.length > 50 ? 3 : 2}; -webkit-box-orient: vertical; overflow: hidden;">
+							<p
+								class="relative mt-3 text-sm leading-relaxed text-muted-foreground"
+								style="display: -webkit-box; -webkit-line-clamp: {user.bio.length > 120 ? 4 : user.bio.length > 60 ? 3 : 2}; -webkit-box-orient: vertical; overflow: hidden;"
+							>
 								{user.bio}
 							</p>
 						{:else if showBio}
-							<!-- 没有bio时显示占位符，增加高度差异 -->
-							<p class="text-xs text-muted-foreground/50 italic">这个人很神秘，什么都没有留下~</p>
-						{/if}
-
-						<!-- 标签（如果有） -->
-						{#if displayTags.length > 0}
-							<div class="flex flex-wrap gap-1.5">
-								{#each displayTags as tag (tag)}
-									<Badge variant="secondary" class="rounded-full text-[10px] px-2 py-0.5">#{tag}</Badge>
-								{/each}
-							</div>
+							<p class="relative mt-3 text-xs italic text-muted-foreground/60">
+								这个人很神秘，暂时还没有留下简介
+							</p>
 						{/if}
 					</div>
+
+					{#if displayTags.length > 0}
+						<div class="flex flex-wrap gap-1.5">
+							{#each displayTags as tag (tag)}
+								<Badge variant="secondary" class="rounded-2xl border border-border/50 bg-muted/50 px-2 py-0.5 text-[10px]">
+									#{tag}
+								</Badge>
+							{/each}
+						</div>
+					{/if}
 				</div>
 			{:else if variant === 'compact'}
 				<!-- 紧凑模式：水平布局，适合列表 -->
@@ -253,7 +310,7 @@
 							<h3 class="truncate font-semibold">{userInfo.nickname}</h3>
 							{#if distance}
 								<span
-									class="flex shrink-0 items-center gap-0.5 rounded-full bg-muted/50 px-1.5 py-0.5 text-[10px] text-muted-foreground"
+									class="flex shrink-0 items-center gap-0.5 rounded-2xl bg-muted/50 px-1.5 py-0.5 text-[10px] text-muted-foreground"
 								>
 									<MapPin class="h-3 w-3" />
 									{formatDistance(distance)}
@@ -299,7 +356,7 @@
 					{#if displayTags.length > 0}
 						<div class="flex flex-wrap gap-2">
 							{#each displayTags as tag (tag)}
-								<Badge variant="secondary" class="rounded-full text-xs">#{tag}</Badge>
+								<Badge variant="secondary" class="rounded-2xl text-xs">#{tag}</Badge>
 							{/each}
 						</div>
 					{/if}
@@ -337,7 +394,7 @@
 				{#if displayTags.length > 0}
 					<div class="mt-3 flex flex-wrap gap-2">
 						{#each displayTags as tag (tag)}
-							<Badge variant="secondary" class="rounded-full text-xs">#{tag}</Badge>
+							<Badge variant="secondary" class="rounded-2xl text-xs">#{tag}</Badge>
 						{/each}
 					</div>
 				{/if}
@@ -361,9 +418,14 @@
 						variant="ghost"
 						size="sm"
 						onclick={handleFollow}
+						disabled={isFollowPending}
 					>
-						<UserPlus class="h-4 w-4" />
-						<span class="font-medium text-xs">关注</span>
+						{#if isFollowPending}
+							<Loader2 class="h-4 w-4 animate-spin" />
+						{:else}
+							<UserPlus class="h-4 w-4" />
+						{/if}
+						<span class="font-medium text-xs">{isFollowing ? '取消关注' : '关注'}</span>
 					</Button>
 					{#if showMenu}
 						<DropdownMenu>

@@ -95,6 +95,7 @@ import {
   PrivateChatOpenTheDoorRequest,
   PrivateChatOpenResult,
   UpdatePrivateChatSettingsRequest,
+  DeletePrivateChatRequest,
 
   // 私聊消息
   SendPrivateMessageRequest,
@@ -132,6 +133,7 @@ import {
   RejectGroupApplicationRequest,
   TransferOwnershipRequest,
   MyGroupsRequest,
+  MyApplicationsRequest,
   CancelApplicationRequest,
   MyInvitesRequest,
   GroupInviteItem,
@@ -183,6 +185,7 @@ import {
   SystemAnnouncementItem,
   AnnouncementListRequest,
   ApiVersionMeta,
+  AdminPermissions,
 
   // 分享
   CreateShareRequest,
@@ -211,6 +214,56 @@ class EmptyRequest {}
 export class ApiClient {
   // ==================== 文件上传 API ====================
 
+  private static resolveReadableFilePath(context: common.UIAbilityContext, fileUri: string): string {
+    if (fileUri.startsWith('internal://cache/')) {
+      const cacheRelativePath = fileUri.substring('internal://cache/'.length);
+      return `${context.cacheDir}/${cacheRelativePath}`;
+    }
+    if (fileUri.startsWith('file://')) {
+      return fileUri.substring('file://'.length);
+    }
+    return fileUri;
+  }
+
+  private static extractFileName(fileUri: string, resolvedPath: string): string {
+    const source = fileUri.length > 0 ? fileUri : resolvedPath;
+    const normalized = source.endsWith('/') ? source.substring(0, source.length - 1) : source;
+    const parts = normalized.split('/');
+    const candidate = parts.length > 0 ? parts[parts.length - 1] : '';
+    const cleanCandidate = candidate.split('?')[0].split('#')[0];
+    if (!cleanCandidate) {
+      return `upload_${Date.now()}`;
+    }
+    return cleanCandidate;
+  }
+
+  private static inferMimeType(fileName: string, category: MediaCategory): string {
+    const lower = fileName.toLowerCase();
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.gif')) return 'image/gif';
+    if (lower.endsWith('.mp4')) return 'video/mp4';
+    if (lower.endsWith('.mov')) return 'video/quicktime';
+    if (lower.endsWith('.mp3')) return 'audio/mpeg';
+    if (lower.endsWith('.aac') || lower.endsWith('.m4a')) return 'audio/aac';
+    if (lower.endsWith('.ogg')) return 'audio/ogg';
+
+    switch (category) {
+      case 'avatar':
+      case 'group_avatar':
+      case 'moment_image':
+      case 'chat_image':
+        return 'image/jpeg';
+      case 'chat_video':
+        return 'video/mp4';
+      case 'chat_audio':
+        return 'audio/aac';
+      default:
+        return 'application/octet-stream';
+    }
+  }
+
   static async presignUpload(params: PresignUploadRequest): Promise<ApiResponse<PresignedUpload>> {
     return HttpUtil.post<ApiResponse<PresignedUpload>, PresignUploadRequest>(ApiEndpoints.UPLOAD.PRESIGN_UPLOAD, params);
   }
@@ -228,19 +281,20 @@ export class ApiClient {
     fileUri: string,
     category: MediaCategory
   ): Promise<UploadedMedia> {
+    const readablePath = ApiClient.resolveReadableFilePath(context, fileUri);
     let file: fs.File | null = null;
     let size = 0;
     let buffer: ArrayBuffer | null = null;
     try {
-      file = fs.openSync(fileUri, fs.OpenMode.READ_ONLY);
+      file = fs.openSync(readablePath, fs.OpenMode.READ_ONLY);
       const stat = fs.statSync(file.fd);
       size = stat.size;
+      if (size <= 0) {
+        throw new Error('文件内容为空');
+      }
       buffer = new ArrayBuffer(size);
       fs.readSync(file.fd, buffer);
     } catch (error) {
-      if (file) {
-        try { fs.closeSync(file); } catch (e) {}
-      }
       throw (error instanceof Error) ? error : new Error(String(error));
     } finally {
       if (file) {
@@ -248,18 +302,13 @@ export class ApiClient {
       }
     }
 
-    let fileName = 'file';
-    try {
-      const parts = fileUri.split('/');
-      if (parts.length > 0) {
-        fileName = parts[parts.length - 1];
-      }
-    } catch (e) {}
+    const fileName = ApiClient.extractFileName(fileUri, readablePath);
+    const mimeType = ApiClient.inferMimeType(fileName, category);
 
     const presignReq: PresignUploadRequest = {
       file_name: fileName,
       file_size: size,
-      mime_type: 'application/octet-stream',
+      mime_type: mimeType,
       category: category
     };
 
@@ -309,6 +358,10 @@ export class ApiClient {
 
   static async getClientConfig(): Promise<ApiResponse<ClientConfig>> {
     return HttpUtil.post<ApiResponse<ClientConfig>, EmptyRequest>(ApiEndpoints.SYSTEM.GET_CLIENT_CONFIG, new EmptyRequest());
+  }
+
+  static async getMyAdminPermissions(): Promise<ApiResponse<AdminPermissions>> {
+    return HttpUtil.post<ApiResponse<AdminPermissions>, EmptyRequest>(ApiEndpoints.ADMIN.RBAC.GET_ME, new EmptyRequest());
   }
 
   static async getSystemAnnouncements(params: AnnouncementListRequest): Promise<ApiResponse<SystemAnnouncementListData>> {
@@ -559,7 +612,9 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<void>, UpdatePrivateChatSettingsRequest>(ApiEndpoints.CHAT.PRIVATE_CHATS.ME.UPDATE_SETTINGS, params);
   }
 
-  // ⏳ 延期实现: deletePrivateChat (private_chats/me/delete)
+  static async deletePrivateChat(params: DeletePrivateChatRequest): Promise<ApiResponse<void>> {
+    return HttpUtil.post<ApiResponse<void>, DeletePrivateChatRequest>(ApiEndpoints.CHAT.PRIVATE_CHATS.ME.DELETE, params);
+  }
 
   // ==================== 私聊消息 API ====================
 
@@ -691,6 +746,10 @@ export class ApiClient {
 
   static async getJoinedGroups(params: MyGroupsRequest): Promise<ApiResponse<PaginatedData<GroupItem>>> {
     return HttpUtil.post<ApiResponse<PaginatedData<GroupItem>>, MyGroupsRequest>(ApiEndpoints.GROUP.ME.LIST, params);
+  }
+
+  static async getMyGroupApplications(params: MyApplicationsRequest): Promise<ApiResponse<PaginatedData<GroupApplicationItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<GroupApplicationItem>>, MyApplicationsRequest>(ApiEndpoints.GROUP.ME.APPLICATIONS.LIST, params);
   }
 
   static async cancelGroupApplication(params: CancelApplicationRequest): Promise<ApiResponse<void>> {

@@ -4,6 +4,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use redis::aio::ConnectionManager as RedisConnectionManager;
+use tracing::{debug, info, warn};
 
 use crate::constants::MESSAGE_RECALL_MINUTES;
 use crate::{
@@ -20,8 +21,8 @@ use crate::{
     error::{AppError, Result},
     events::event_types::AppEvent,
     repositories::{
-        chat_unread_repo::ChatUnreadRepository, group_member_repo::GroupMemberRepository,
-        group_message_repo::GroupMessageRepository, group_repo::GroupRepository,
+        chat_unread_repo::ChatUnreadRepository, group::member_repo::GroupMemberRepository,
+        group::message_repo::GroupMessageRepository, group_repo::GroupRepository,
         user_repo::UserRepository,
     },
     services::media_service::MediaService,
@@ -71,12 +72,22 @@ impl GroupMessageService {
         req: &SendGroupMessageRequest,
         user_id: i64,
     ) -> Result<SendGroupMessageData> {
+        let started_at = std::time::Instant::now();
         // 1. 参数验证
         if let Some(ref content) = req.content {
-            Validator::validate_length(content, "消息内容", 1, 10000)?;
+            Validator::validate_message_content(content)?;
         }
 
         let group_id = Validator::parse_group_id(&req.group_id)?;
+        info!(
+            user_id,
+            group_id,
+            message_type = ?req.r#type,
+            has_reply_to = req.reply_to_message_id.is_some(),
+            has_file_id = req.file_id.is_some(),
+            mentions_count = req.mentions.as_ref().map(|v| v.len()).unwrap_or(0),
+            "group_message.send started"
+        );
 
         // 验证群组是否存在
         if !self.group_repo.exists(group_id).await? {
@@ -246,8 +257,14 @@ impl GroupMessageService {
             )
             .await?;
 
-        // 5. 更新群聊最后活跃时间（通过更新updated_at字段）
-        self.group_repo.touch_updated_at(group_id).await?;
+        // 5. 更新群聊最后活跃时间（失败不影响主流程）
+        if let Err(err) = self.group_repo.touch_last_activity(group_id).await {
+            warn!(
+                group_id,
+                error = %err,
+                "更新群组 last_activity_at 失败（group message send）"
+            );
+        }
 
         // 记录消息到布隆过滤器
         if let Err(e) = ResourceExistenceChecker::new(self.redis.clone())
@@ -281,6 +298,14 @@ impl GroupMessageService {
             mentions,
             media,
         });
+        info!(
+            user_id,
+            group_id,
+            message_id = %created.message_id,
+            message_type = ?message_type,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "group_message.send completed"
+        );
 
         Ok(SendGroupMessageData {
             message_id: created.message_id.to_string(),
@@ -307,12 +332,11 @@ impl GroupMessageService {
         }
 
         let cursor = pagination.and_then(|p| p.cursor.clone());
-        let include_system = req.include_system.unwrap_or(false);
 
         // 4. 查询消息历史
         let (messages, next_cursor) = self
             .message_repo
-            .list_by_group(group_id, limit, cursor, include_system)
+            .list_by_group(group_id, limit, cursor)
             .await?;
 
         let reply_ids: Vec<Uuid> = messages.iter().filter_map(|m| m.reply_to_id).collect();
@@ -487,9 +511,16 @@ impl GroupMessageService {
 
     /// 编辑群聊消息
     pub async fn update(&self, req: &UpdateGroupMessageRequest, user_id: i64) -> Result<()> {
+        let started_at = std::time::Instant::now();
         // 1. 参数验证
-        Validator::validate_length(&req.content, "消息内容", 1, 10000)?;
+        Validator::validate_message_content(&req.content)?;
         let message_id = Validator::parse_uuid(&req.message_id, "消息ID")?;
+        info!(
+            user_id,
+            message_id = %message_id,
+            content_len = req.content.chars().count(),
+            "group_message.update started"
+        );
 
         // 2. 查询消息元数据
         let message = self
@@ -526,13 +557,26 @@ impl GroupMessageService {
             content: req.content.clone(),
             edited_at: chrono::Utc::now().to_rfc3339(),
         });
+        info!(
+            user_id,
+            group_id = message.group_id,
+            message_id = %message_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "group_message.update completed"
+        );
 
         Ok(())
     }
 
     /// 撤回群聊消息
     pub async fn recall(&self, req: &RecallGroupMessageRequest, user_id: i64) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let message_id = Validator::parse_uuid(&req.message_id, "消息ID")?;
+        info!(
+            user_id,
+            message_id = %message_id,
+            "group_message.recall started"
+        );
 
         // 1. 查询消息元数据
         let message = self
@@ -575,6 +619,13 @@ impl GroupMessageService {
             recalled_by: user_id,
             recalled_at: chrono::Utc::now().to_rfc3339(),
         });
+        info!(
+            user_id,
+            group_id = message.group_id,
+            message_id = %message_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "group_message.recall completed"
+        );
 
         Ok(())
     }
@@ -589,6 +640,7 @@ impl GroupMessageService {
 
         // 验证用户是否是群成员
         if !self.member_repo.is_member(group_id, user_id).await? {
+            warn!(user_id, group_id, "群聊标记已读失败：调用者不是群成员");
             return Err(AppError::Forbidden("您不是此群组的成员".to_string()));
         }
 
@@ -599,10 +651,42 @@ impl GroupMessageService {
             .map(|id| Validator::parse_uuid(id, "消息ID"))
             .transpose()?;
 
+        if let Some(up_to_id) = up_to {
+            let message = self
+                .message_repo
+                .find_by_id(up_to_id)
+                .await?
+                .ok_or_else(|| {
+                    warn!(
+                        user_id,
+                        group_id,
+                        up_to_message_id = %up_to_id,
+                        "群聊标记已读失败：up_to_message_id 不存在"
+                    );
+                    AppError::ChatNotFound("消息不存在".to_string())
+                })?;
+            if message.group_id != group_id {
+                warn!(
+                    user_id,
+                    group_id,
+                    up_to_message_id = %up_to_id,
+                    message_group_id = message.group_id,
+                    "群聊标记已读失败：up_to_message_id 不属于当前群组"
+                );
+                return Err(AppError::ChatNotFound("消息不属于当前群聊会话".to_string()));
+            }
+        }
+
         // 更新已读状态
         self.unread_repo
             .mark_as_read("group", &group_id.to_string(), user_id, up_to)
             .await?;
+        debug!(
+            user_id,
+            group_id,
+            up_to_message_id = ?up_to,
+            "群聊标记已读成功"
+        );
 
         Ok(())
     }

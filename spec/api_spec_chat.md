@@ -29,7 +29,7 @@ alwaysApply: false
 | `POST /api/v1/private_chats/me/list` | 私聊列表 | 必须 | 无 |
 | `POST /api/v1/private_chats/open_the_door` | 私聊详情 | 必须 | 幂等语义 |
 | `POST /api/v1/private_chats/me/update_settings` | 更新会话设置 | 必须 | 幂等语义 |
-| `POST /api/v1/private_chats/me/delete` | 删除私聊会话 (⏳ 延期) | 必须 | 幂等语义 |
+| `POST /api/v1/private_chats/me/delete` | 删除私聊会话 | 必须 | 幂等语义 |
 | `POST /api/v1/private_messages/send` | 发送私聊消息 | 必须 | MUST |
 | `POST /api/v1/private_messages/get_history` | 私聊消息历史 | 必须 | 无 |
 | `POST /api/v1/private_messages/update` | 编辑私聊消息 | 必须 | 幂等语义 |
@@ -45,15 +45,12 @@ alwaysApply: false
 
 ## 已读状态设计
 
-**私聊（1v1）**：使用 `is_read: boolean` 标识单条消息是否已被对方读取。
-- 发送方视角：看到 `is_read=true` 表示对方已读
-- WebSocket `PrivateMessageRead` 事件用于实时更新已读状态
-- `mark_as_read` 接口采用"up_to"语义：标记截至某条消息的所有消息为已读
+| 场景 | 字段 | 说明 |
+|------|------|------|
+| 私聊（1v1） | `is_read` | 发送方看到 `is_read=true` 表示对方已读；实时更新依赖 WebSocket `PrivateMessageRead` |
+| 群聊（多人） | `read_count` | 表示已读人数；不推送逐人已读事件，`read_count` 通过历史接口获取 |
 
-**群聊（多人）**：使用 `read_count: number` 标识已读人数。
-- 群消息不推送每人的已读事件（避免大群广播风暴）
-- `read_count` 通过消息历史接口获取，不做实时推送
-- `mark_as_read` 接口采用"up_to"语义：标记截至某条消息的所有消息为已读
+`mark_as_read` 接口统一采用 up_to 语义：标记截至某条消息的所有消息为已读。
 
 ## 类型定义
 
@@ -95,7 +92,7 @@ interface PrivateMessageItem {
 
 ### GroupMessageItem
 
-群聊消息项，用于 `group_messages/get_history` 响应。私聊和群聊消息统一使用 `sender: UserInfo`，保持类型一致性，简化客户端消息渲染逻辑。
+群聊消息项，用于 `group_messages/get_history` 响应；与私聊统一使用 `sender: UserInfo`。
 
 ```typescript
 interface GroupMessageItem {
@@ -183,7 +180,7 @@ interface PrivateChatItem {
 // MessageBlockedReason 定义于 @spec/api_spec_types.md
 ```
 
-**说明**：`can_message` 仅反映调用当下的隐私校验结果；对方在返回后立即调整隐私设置或拉黑，后续 `private_messages/send` 仍可能失败，客户端必须处理发送接口返回的权限错误。
+**说明**：`can_message` 仅反映调用当下的隐私校验结果；若对方后续修改隐私设置或拉黑，`private_messages/send` 仍可能失败，客户端需处理权限错误。
 
 **错误码**: `10000`
 
@@ -231,7 +228,7 @@ interface PrivateChatOpenResult {
 更新私聊设置。
 
 - **认证**: 必须
-- **幂等**: 幂等语义
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `UpdatePrivateChatSettingsRequest`
 ```typescript
@@ -248,8 +245,6 @@ interface UpdatePrivateChatSettingsRequest {
 
 ### POST /api/v1/private_chats/me/delete
 
-> ⏳ **延期实现**：单边删除需要 per-user 消息可见性状态，实现复杂度高，早期阶段性价比低。
-
 删除私聊。
 
 **删除语义**：
@@ -259,7 +254,7 @@ interface UpdatePrivateChatSettingsRequest {
 - 若再次发起私聊，将创建一个新的空白会话
 
 - **认证**: 必须
-- **幂等**: 幂等语义操作，重复请求返回一致结果
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `DeletePrivateChatRequest`
 ```typescript
@@ -339,7 +334,7 @@ interface GetPrivateMessagesHistoryRequest {
 - 已撤回的消息不可编辑，返回 `10400`
 
 - **认证**: 必须
-- **幂等**: 幂等语义
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `UpdatePrivateMessageRequest`
 ```typescript
@@ -358,7 +353,7 @@ interface UpdatePrivateMessageRequest {
 撤回私聊消息。发送者只能撤回 2 分钟内的消息。
 
 - **认证**: 必须
-- **幂等**: 幂等语义
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `RecallPrivateMessageRequest`
 ```typescript
@@ -376,15 +371,16 @@ interface RecallPrivateMessageRequest {
 标记指定私聊会话的消息为已读。
 
 **语义**：标记与指定用户的私聊消息为已读。当不传 `up_to_message_id` 时，标记该会话全部消息为已读。
+**up_to_message_id 校验**：当 `up_to_message_id` 不属于指定私聊会话时，返回 `10300`。
 
 - **认证**: 必须
-- **幂等**: 幂等语义
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `MarkPrivateMessagesReadRequest`
 ```typescript
 interface MarkPrivateMessagesReadRequest {
   target_user_id: string;        // 指定会话（必选）
-  up_to_message_id?: string;     // 标记截至此消息；不传时标记该会话全部
+  up_to_message_id?: string;     // 标记截至此消息（含）及之前的所有消息；不传时标记该会话全部
 }
 ```
 
@@ -397,7 +393,7 @@ interface MarkPrivateMessagesReadRequest {
 标记所有私聊消息为已读。
 
 - **认证**: 必须
-- **幂等**: 幂等语义
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `{}`
 
@@ -447,12 +443,12 @@ interface SendGroupMessageRequest {
 ```typescript
 interface GetGroupMessagesHistoryRequest {
   group_id: string;
-  include_system?: boolean;
   pagination?: PaginationParams;
 }
 ```
 
 **Response**: `ApiResponse<PaginatedData<GroupMessageItem>>`
+**返回说明**：`items` 统一包含完整群聊历史（含 `type='system'` 的群系统消息）；客户端可按展示需求自行过滤。
 
 **错误码**: `10000` `10300` `10400`
 
@@ -465,7 +461,7 @@ interface GetGroupMessagesHistoryRequest {
 - 已撤回的消息不可编辑，返回 `10400`
 
 - **认证**: 必须
-- **幂等**: 幂等语义
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `UpdateGroupMessageRequest`
 ```typescript
@@ -484,7 +480,7 @@ interface UpdateGroupMessageRequest {
 撤回群聊消息。发送者可撤回 2 分钟内消息，群组管理员/群主可撤回任何消息。
 
 - **认证**: 必须
-- **幂等**: 幂等语义
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `RecallGroupMessageRequest`
 ```typescript
@@ -502,15 +498,16 @@ interface RecallGroupMessageRequest {
 标记指定群聊的消息为已读。
 
 **语义**：标记指定群组的群聊消息为已读。当不传 `up_to_message_id` 时，标记该群全部消息为已读。
+**up_to_message_id 校验**：当 `up_to_message_id` 不属于指定群组时，返回 `10300`。
 
 - **认证**: 必须
-- **幂等**: 幂等语义
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `MarkGroupMessagesReadRequest`
 ```typescript
 interface MarkGroupMessagesReadRequest {
   group_id: string;              // 指定群组（必选）
-  up_to_message_id?: string;     // 标记截至此消息；不传时标记该群全部
+  up_to_message_id?: string;     // 标记截至此消息（含）及之前的所有消息；不传时标记该群全部
 }
 ```
 
@@ -523,7 +520,7 @@ interface MarkGroupMessagesReadRequest {
 标记所有群聊消息为已读。
 
 - **认证**: 必须
-- **幂等**: 幂等语义
+- **幂等**: 幂等语义（重复请求返回一致结果）
 
 **Request**: `{}`
 

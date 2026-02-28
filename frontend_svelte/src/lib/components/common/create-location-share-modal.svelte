@@ -92,22 +92,24 @@
 </script>
 
 <Dialog bind:open onOpenChange={(newOpen) => !newOpen && handleClose()}>
-	<DialogContent class="max-w-lg">
+	<DialogContent class="max-w-lg rounded-3xl border border-border/60 bg-card/95 shadow-xl backdrop-blur-md">
 		{#if !shareCode}
 			<!-- 创建表单 -->
 			<DialogHeader>
-				<DialogTitle class="flex items-center gap-2">
-					<Share2 class="h-5 w-5" />
-					分享此位置
+				<DialogTitle class="flex items-center gap-3">
+					<div class="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/50 bg-primary/10 text-primary">
+						<Share2 class="h-5 w-5" />
+					</div>
+					<div>分享此位置</div>
 				</DialogTitle>
 				<DialogDescription>生成分享链接，让朋友快速定位到这个区域</DialogDescription>
 			</DialogHeader>
 
-			<div class="space-y-4 mt-4">
+			<div class="mt-4 space-y-4">
 				<!-- 位置信息展示 -->
-				<div class="rounded-lg bg-muted/50 p-4 space-y-2">
+				<div class="space-y-2 rounded-2xl border border-border/50 bg-background/65 p-4">
 					<div class="flex items-center gap-2 font-medium">
-						<MapPin class="h-5 w-5" />
+						<MapPin class="h-5 w-5 text-primary" />
 						{locationName}
 					</div>
 					<div class="text-xs text-muted-foreground">
@@ -116,7 +118,7 @@
 				</div>
 
 				<!-- 说明 -->
-				<div class="rounded-lg bg-primary/10 p-4 text-sm space-y-2">
+				<div class="space-y-2 rounded-2xl border border-primary/25 bg-primary/10 p-4 text-sm">
 					<p class="font-medium text-primary flex items-center gap-2">
 						<UsersRound class="h-4 w-4" />
 						接收者可以
@@ -129,7 +131,7 @@
 				</div>
 
 				<!-- 操作按钮 -->
-				<Button class="w-full" onclick={handleSubmit} disabled={isSubmitting}>
+				<Button class="h-11 w-full rounded-2xl" onclick={handleSubmit} disabled={isSubmitting}>
 					{#if isSubmitting}
 						<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 						生成中...
@@ -142,20 +144,26 @@
 		{:else}
 			<!-- 分享成功结果 -->
 			<DialogHeader>
-				<DialogTitle class="flex items-center gap-2 text-green-600">
-					<Check class="h-5 w-5" />
-					分享链接已生成！
+				<DialogTitle class="flex items-center gap-3 text-emerald-600">
+					<div class="flex h-10 w-10 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-500/40 dark:bg-emerald-500/15">
+						<Check class="h-5 w-5" />
+					</div>
+					<div>分享链接已生成！</div>
 				</DialogTitle>
 				<DialogDescription>复制链接发送给朋友</DialogDescription>
 			</DialogHeader>
 
-			<div class="space-y-4 mt-4">
+			<div class="mt-4 space-y-4">
 				<!-- 分享链接 -->
-				<div class="space-y-2">
-					<Label>分享链接</Label>
+				<div class="space-y-2 rounded-2xl border border-border/50 bg-background/65 p-4">
+					<Label class="text-sm text-muted-foreground">分享链接</Label>
 					<div class="flex gap-2">
-						<Input value={shareUrl ?? ''} readonly class="flex-1 font-mono text-sm" />
-						<Button variant="outline" onclick={copyToClipboard}>
+						<Input
+							value={shareUrl ?? ''}
+							readonly
+							class="h-11 flex-1 rounded-2xl border-border/60 bg-background/75 font-mono text-sm"
+						/>
+						<Button variant="outline" class="h-11 rounded-2xl border-border/60 bg-background/70" onclick={copyToClipboard}>
 							{#if isCopied}
 								<Check class="h-4 w-4" />
 							{:else}
@@ -165,7 +173,7 @@
 					</div>
 				</div>
 
-				<Button class="w-full" onclick={handleClose}>
+				<Button class="h-11 w-full rounded-2xl" onclick={handleClose}>
 					完成
 				</Button>
 			</div>

@@ -3,7 +3,8 @@ use axum::{extract::State, Json};
 use crate::{
     dto::{
         request::{
-            MyPrivateChatsRequest, PrivateChatOpenTheDoorRequest, UpdatePrivateChatSettingsRequest,
+            DeletePrivateChatRequest, MyPrivateChatsRequest, PrivateChatOpenTheDoorRequest,
+            UpdatePrivateChatSettingsRequest,
         },
         response::{ApiResponse, PaginatedData, PrivateChatListItem, PrivateChatOpenResult},
     },
@@ -66,5 +67,18 @@ pub async fn update_settings(
         .update_settings(target_user_id, user.user_id, req.is_muted, req.is_pinned)
         .await?;
 
+    Ok(Json(ApiResponse::success_empty()))
+}
+
+/// 删除我的私聊会话（单边删除）
+pub async fn delete(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    Json(req): Json<DeletePrivateChatRequest>,
+) -> Result<Json<ApiResponse<()>>> {
+    state
+        .private_chat_service
+        .delete_chat(user.user_id, &req)
+        .await?;
     Ok(Json(ApiResponse::success_empty()))
 }

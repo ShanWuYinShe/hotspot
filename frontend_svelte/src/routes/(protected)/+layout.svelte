@@ -15,13 +15,13 @@
 	}
 
 	$effect(() => {
-		if (browser && authStore.initialized && !authStore.isAuthenticated) {
-			uiStore.saveRedirectUrl(page.url.pathname);
+		if (browser && authStore.initialized && !authStore.isAuthenticated && !authStore.isRestoring) {
+			uiStore.saveRedirectUrl(`${page.url.pathname}${page.url.search}`);
 		}
 	});
 
 	function handleLoginClick() {
-		uiStore.saveRedirectUrl(page.url.pathname);
+		uiStore.saveRedirectUrl(`${page.url.pathname}${page.url.search}`);
 		uiStore.openLoginModal();
 	}
 </script>
@@ -49,15 +49,20 @@
 		{/if}
 
 		<main
-			class="flex-1 overflow-y-auto rounded-2xl bg-card/80 p-4 shadow-lg shadow-black/10 ring-1 ring-border/40 mx-3 md:mx-4 md:p-6"
+			class="mx-3 flex-1 overflow-y-auto rounded-3xl border border-border/60 bg-card/85 p-4 shadow-sm backdrop-blur-md md:mx-4 md:p-6"
 			style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));"
 		>
 			<div class="mx-auto w-full max-w-7xl">
 				{#if authStore.isAuthenticated}
 					{@render children()}
+				{:else if authStore.isRestoring}
+					<div class="flex flex-col items-center justify-center py-20 gap-3">
+						<div class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
+						<p class="text-sm text-muted-foreground">正在恢复登录状态…</p>
+					</div>
 				{:else}
 					<div class="flex flex-col items-center justify-center py-20">
-						<div class="mb-4 rounded-full bg-muted p-6">
+						<div class="mb-4 rounded-3xl bg-muted p-6">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								width="48"
@@ -77,7 +82,7 @@
 						<h2 class="mb-2 text-xl font-semibold">需要登录</h2>
 						<p class="mb-6 text-muted-foreground">登录后即可访问此页面</p>
 						<button
-							class="inline-flex items-center justify-center rounded-full bg-primary px-8 py-3 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30"
+							class="inline-flex items-center justify-center rounded-2xl bg-primary px-8 py-3 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30"
 							onclick={handleLoginClick}
 						>
 							立即登录

@@ -15,8 +15,8 @@ pub fn token_required_routes() -> Router<AppState> {
     // /me 子路由 - 当前用户私聊相关操作
     let me_routes = Router::new()
         .route("/list", post(private_chats::me))
-        .route("/update_settings", post(private_chats::update_settings));
-    // .route("/delete", post(private_chats::delete))  // ⏳ 延期实现
+        .route("/update_settings", post(private_chats::update_settings))
+        .route("/delete", post(private_chats::delete));
 
     main_routes.nest("/me", me_routes)
 }

@@ -67,10 +67,10 @@ type GroupJoinMethod = 'open' | 'approval' | 'invite_only';
 // === 公告 ===
 type AnnouncementSeverity = 'info' | 'warning' | 'error';
 
-// === 关注来源（心理学优化：让被关注者了解"为什么被关注"）===
+// === 关注来源（用于来源归因展示）===
 type FollowSource = 'moment' | 'search' | 'recommendation' | 'profile' | 'group';
 
-// === 推荐理由类型（心理学优化：让用户了解为什么推荐）===
+// === 推荐理由类型（用于解释推荐来源）===
 type RecommendationType = 'friend_liked' | 'nearby' | 'trending' | 'following' | 'tag_match';
 
 interface RecommendationContext {
@@ -121,11 +121,10 @@ type MessageBlockedReason =
 **重要概念：用户真实位置 vs 浏览锚点位置**
 
 本系统区分两种位置：
+- **用户真实位置**：通过「更新我的位置」接口更新；属于隐私数据，用于“被其他人发现我/展示我的大致位置”。
+- **浏览锚点位置（reference_point）**：作为请求参数传入；用于“当前在看哪里/距离计算基准”。
 
-- **用户真实位置**：通过"更新我的位置"接口更新；属于用户隐私数据，用于"被其他人发现我/展示我的大致位置"
-- **浏览锚点位置（reference_point）**：作为请求参数传入；用于"我当前在看哪里/以哪里为基准计算距离"
-
-核心原则：所有 `distance/bearing_degrees` 等距离结果必须由服务端基于 `reference_point` 计算并返回；客户端不得自行计算用于排序。
+核心原则：`distance` / `bearing_degrees` 必须由服务端基于 `reference_point` 计算并返回，客户端不得本地计算用于排序。
 
 **隐私与精度策略（契约级）**：
 - 服务端可基于隐私设置、关系与登录态对位置/距离做降精度或匿名化处理
@@ -133,8 +132,9 @@ type MessageBlockedReason =
 - 为防止位置反推，服务端可对短时间内的查询结果做稳定或随机化处理
 
 **请求位置要求（契约级）**：
-- 任何 Request 中出现 `Location` 字段时，必须为必填字段
-- 若用户拒绝定位或无法获取精确位置，客户端必须使用默认位置填充 `Location`
+- 创建类 Request 中出现 `Location` 字段时，必须为必填字段（如 `groups/create`、`moments/create`、`users/me/location/update`）
+- 更新/Patch 类 Request 中 `Location` 可为可选字段（如 `groups/update`、`moments/update`），允许仅更新其他字段而不修改位置；管理员配置中的 `Partial<Location>` 同理
+- 若用户拒绝定位或无法获取精确位置，客户端必须使用 `ClientConfig.defaults.default_location` 填充 `Location`
 
 ```typescript
 // 基础坐标点 (经纬度)
@@ -147,7 +147,7 @@ interface GeoPoint {
 // 用途：仅用于 request 请求参数
 interface Location {
   point: GeoPoint;
-  location_name: string; // 必填，0-100字符，无名称时使用默认值
+  location_name: string; // 必填，0-100字符，无名称时使用 ClientConfig.defaults.default_location.location_name
 }
 
 // 相对位置 (用于所有 response 响应数据)
@@ -161,13 +161,9 @@ interface RelativeLocation {
 }
 
 // 使用说明：
-// - Request 参数：使用 Location（只有坐标+名称）
-// - Response 数据：
-//   - 经过距离/角度计算的：使用 RelativeLocation
-//     - 搜索/列表/Feed：distance 和 bearing_degrees 有值
-//     - 详情/Admin/当前用户的内容：distance 和 bearing_degrees 为 undefined
-//   - 直接映射自 Request 的（未经距离/角度计算）：使用 Location
-//     - 如：GroupSettings.location、MyProfile.location 等配置/个人数据
+// - Request：使用 Location（仅坐标+名称）
+// - Response：经过距离/角度计算时使用 RelativeLocation（搜索/列表/Feed 有 distance/bearing；详情/Admin/当前用户视角通常为 undefined）
+// - 未经距离/角度计算的响应字段仍使用 Location（如 GroupSettings.location、MyProfile.location）
 ```
 
 ### 分页与元数据
@@ -263,7 +259,7 @@ interface UserItem {
   relation?: Relationship;
   
   // @auth-only
-  // 社交上下文（心理学优化：展示与当前用户的共同点，增强连接感）
+  // 社交上下文（展示与当前用户的共同点）
   // 详情页/Feed 返回，搜索/列表不返回
   social_context?: {
     mutual_friends_count: number;       // 共同好友数
@@ -311,7 +307,7 @@ interface GroupItem {
   has_password: boolean;
   
   // 位置信息：统一使用 RelativeLocation
-  // - 列表/搜索/Feed 场景：distance / bearing_degrees 由后端基于 reference_point 计算
+  // - 列表/搜索/Feed 场景：distance / bearing_degrees 由服务端基于 reference_point 计算
   // - 详情场景（open_the_door）：distance / bearing_degrees 为 undefined
   location: RelativeLocation;
   

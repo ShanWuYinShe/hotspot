@@ -21,6 +21,11 @@ import { RdbManager } from '../core/database/RdbManager';
 import { AnchorHistoryUtil } from '../core/utils/AnchorHistoryUtil';
 import { DesignConstants } from '../constants/DesignConstants';
 import { SystemSurfaceStyle, SystemUiThemeStore } from '../core/utils/SystemUiThemeStore';
+import { KEY_IS_LOGGED_IN } from '../core/state/GlobalStateManager';
+import { WebSocketService } from '../core/network/WebSocketService';
+import { PreferencesUtil } from '../core/storage/PreferencesUtil';
+import { StorageKeys } from '../constants/AppConstants';
+import { ApiClient } from '../core/api/ApiClient';
 
 const DOMAIN_NUMBER: number = 0xFF00;
 const TAG: string = 'GeoTalk';
@@ -405,19 +410,43 @@ export default class EntryAbility extends UIAbility {
   }
 
   /**
-   * 应用前台处理
+   * 应用前台处理：检查 token 有效性 + WS 重连
    */
   private handleAppForeground(): void {
-    // 应用回到前台时可以刷新数据、重新连接等
-    hilog.info(DOMAIN_NUMBER, TAG, '应用回到前台，刷新应用状态');
+    hilog.info(DOMAIN_NUMBER, TAG, '应用回到前台，检查 token 与 WS 状态');
+
+    const isLoggedIn = AppStorage.get<boolean>(KEY_IS_LOGGED_IN) ?? false;
+    if (!isLoggedIn) return;
+
+    this.refreshTokenAndReconnectWs().catch((error: Error) => {
+      hilog.warn(DOMAIN_NUMBER, TAG, `前台恢复失败: ${error.message}`);
+    });
+  }
+
+  private async refreshTokenAndReconnectWs(): Promise<void> {
+    // 调用 check_status 验证 token（HttpUtil 拦截器会自动 refresh 过期 token）
+    const statusResp = await ApiClient.checkAuthStatus();
+    if (statusResp.code !== 0 || !statusResp.data?.is_valid) {
+      hilog.warn(DOMAIN_NUMBER, TAG, '前台恢复：token 已失效');
+      return;
+    }
+
+    // 检查 WS 连接状态，断开则重连
+    const ws = WebSocketService.getInstance();
+    if (!ws.isConnected()) {
+      const token = await PreferencesUtil.get<string>(StorageKeys.ACCESS_TOKEN, '');
+      if (token) {
+        hilog.info(DOMAIN_NUMBER, TAG, '前台恢复：WS 已断开，重新连接');
+        await ws.connect(token);
+      }
+    }
   }
 
   /**
    * 应用后台处理
    */
   private handleAppBackground(): void {
-    // 应用进入后台时可以保存状态、断开连接等
-    hilog.info(DOMAIN_NUMBER, TAG, '应用进入后台，保存应用状态');
+    hilog.info(DOMAIN_NUMBER, TAG, '应用进入后台');
   }
 
   /**

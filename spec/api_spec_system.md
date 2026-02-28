@@ -37,11 +37,9 @@ alwaysApply: false
 - **认证**: 无
 - **幂等**: 无
 
-**说明**：
-- 每个 API 版本都应在其路径下提供此端点
-- 客户端应在启动时调用此接口，检查当前使用的 API 版本状态
+**说明**：各 API 版本路径下都应提供此端点；客户端启动时调用以检查当前版本状态。
 
-**客户端处理建议**：
+**状态语义（供客户端参考）**：
 - `active`: 正常使用，无需处理
 - `deprecated`: 提示用户升级；可展示 `message` 并引导更新
 - `sunset`: 强制升级或提示服务不可用
@@ -79,10 +77,7 @@ type ApiVersionStatus =
 - **认证**: 无
 - **幂等**: 无
 
-**说明**：
-- HTTP 200 + `code=0` 表示系统健康，`data` 返回 `HealthStatus`
-- HTTP 200 + `code=10600` 表示系统不健康，`data` 省略，仅通过 `message` 描述原因
-- HTTP 非 200 表示请求未到达业务层
+**说明**：HTTP 非 200 表示未进入业务层；HTTP 200 时，`code=0` 表示系统可用（`data.status` 为 `healthy` 或 `degraded`），`code=10600` 表示系统不可用（`unhealthy`，`data` 省略，原因见 `message`）。
 
 **Request**: `{}`
 
@@ -133,15 +128,14 @@ interface HealthStatus {
 **说明**：
 - 返回的 `ClientConfig` 由 `AppConfig`（见 `@spec/api_spec_admin_core.md`）投影得来，包含功能开关、输入限制、联系方式
 - 客户端应在启动时调用并缓存，配置变更频率低
+- `defaults.default_location` 必须满足 `Location` 类型约束（尤其 `location_name` 非空）
 
 **Request**: `{}`
 
 **Response**: `ApiResponse<ClientConfig>`
 
 ```typescript
-// 客户端公开配置
-// ClientConfig 是 AppConfig（见 @spec/api_spec_admin_core.md）中客户端可见部分的投影
-// 客户端启动时通过 system/get_client_config 获取并缓存
+// 客户端公开配置（AppConfig 的可见投影；客户端启动时获取并缓存）
 interface ClientConfig {
   features: FeatureSwitches;
   limits: AppLimits;
@@ -175,7 +169,7 @@ interface ContactInfo {
 // 客户端可见的默认值
 // 由管理员在后台配置（见 @spec/api_spec_admin_core.md 中 ContentDefaults）
 interface ClientDefaults {
-  default_location: Location;    // 默认位置，Location 定义于 @spec/api_spec_types.md
+  default_location: Location;    // 默认位置（必须满足 Location 约束），Location 定义于 @spec/api_spec_types.md
   default_user_avatar: string;   // 默认用户头像 URL
   default_group_avatar: string;  // 默认群组头像 URL
 }

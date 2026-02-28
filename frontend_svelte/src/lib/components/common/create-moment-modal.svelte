@@ -27,6 +27,13 @@
 		onCreated?: () => void;
 	}
 
+	interface SelectedLocation {
+		latitude: number;
+		longitude: number;
+		locationName: string;
+		radius: number;
+	}
+
 	let { open = $bindable(), onOpenChange, onCreated }: Props = $props();
 
 	let description = $state('');
@@ -49,6 +56,17 @@
 
 	const tags = $derived(parseTags(tagsInput));
 
+	function getDefaultSelectedLocation(): SelectedLocation {
+		return {
+			latitude: mapAnchorStore.latitude,
+			longitude: mapAnchorStore.longitude,
+			locationName: (mapAnchorStore.name || mapAnchorStore.displayName).trim(),
+			radius: mapAnchorStore.radius
+		};
+	}
+
+	let selectedLocation = $state.raw<SelectedLocation>(getDefaultSelectedLocation());
+
 	function resetForm() {
 		description = '';
 		tagsInput = '';
@@ -56,6 +74,7 @@
 		const images = untrack(() => selectedImages);
 		images.forEach((image) => URL.revokeObjectURL(image.previewUrl));
 		selectedImages = [];
+		selectedLocation = getDefaultSelectedLocation();
 	}
 
 	function handleImageChange(event: Event) {
@@ -143,13 +162,17 @@
 		isSubmitting = true;
 		try {
 			const imageIds = await uploadImages();
-			const locationName = mapAnchorStore.name || mapAnchorStore.displayName;
+			const locationName = selectedLocation.locationName.trim();
+			if (!locationName) {
+				toast.error('请选择发布位置');
+				return;
+			}
 			const response = await momentsService.create({
 				description: description.trim(),
 				location: {
 					point: {
-						latitude: mapAnchorStore.latitude,
-						longitude: mapAnchorStore.longitude
+						latitude: selectedLocation.latitude,
+						longitude: selectedLocation.longitude
 					},
 					location_name: locationName
 				},
@@ -220,7 +243,7 @@
 				{#if tags.length > 0}
 					<div class="flex flex-wrap gap-2">
 						{#each tags as tag (tag)}
-							<Badge variant="secondary" class="rounded-full text-xs">#{tag}</Badge>
+							<Badge variant="secondary" class="rounded-2xl text-xs">#{tag}</Badge>
 						{/each}
 					</div>
 				{/if}
@@ -229,7 +252,7 @@
 			<div class="space-y-2">
 				<Label>图片</Label>
 				<div class="flex flex-wrap items-center gap-2">
-					<label class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-dashed border-border px-4 py-2 text-sm text-muted-foreground hover:bg-accent">
+					<label class="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-dashed border-border px-4 py-2 text-sm text-muted-foreground hover:bg-accent">
 						<Image class="h-4 w-4" />
 						<span>选择图片</span>
 						<input
@@ -256,7 +279,7 @@
 								{/if}
 								<button
 									type="button"
-									class="absolute right-2 top-2 rounded-full bg-background/80 p-1 opacity-0 shadow transition-opacity group-hover:opacity-100"
+									class="absolute right-2 top-2 rounded-2xl bg-background/80 p-1 opacity-0 shadow transition-opacity group-hover:opacity-100"
 									onclick={() => removeImage(index)}
 								>
 									<X class="h-3.5 w-3.5" />
@@ -281,6 +304,10 @@
 
 			<AnchorSummaryCard
 				label="发布位置"
+				description="发布将使用该位置，可单独选点且不修改浏览锚点"
+				overrideName={selectedLocation.locationName}
+				overrideLatitude={selectedLocation.latitude}
+				overrideLongitude={selectedLocation.longitude}
 				onAdjust={() => (showLocationPicker = true)}
 			/>
 		</div>
@@ -299,4 +326,21 @@
 	</Dialog.Content>
 </Dialog.Root>
 
-<LocationPickerModal bind:open={showLocationPicker} />
+<LocationPickerModal
+	bind:open={showLocationPicker}
+	mode="location_pick"
+	initialLocation={{
+		latitude: selectedLocation.latitude,
+		longitude: selectedLocation.longitude,
+		locationName: selectedLocation.locationName,
+		radius: selectedLocation.radius
+	}}
+	onConfirm={(value) => {
+		selectedLocation = {
+			latitude: value.latitude,
+			longitude: value.longitude,
+			locationName: value.locationName,
+			radius: value.radius
+		};
+	}}
+/>

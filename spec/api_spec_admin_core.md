@@ -31,7 +31,9 @@ alwaysApply: false
 
 ## 幂等性（管理员写操作）
 
-所有具有创建/更新/删除/授权语义的管理员接口必须携带 `Idempotency-Key`。
+管理员写操作的幂等性遵循 `@spec/api_spec_base.md` 的分级规则：
+- **MUST**：具有"创建/授权/封禁/解散/处理"语义的接口必须携带 `Idempotency-Key`（见各端点的幂等标记）
+- **幂等语义**：具有"更新/删除/撤销"语义的接口为天然幂等，重复请求返回一致结果，无需 `Idempotency-Key`
 
 ## 权限 key 约定
 
@@ -52,7 +54,7 @@ alwaysApply: false
 | `admin.users.write` | 封禁/解封用户 |
 | `admin.groups.read` | 查看群组列表/详情 |
 | `admin.groups.write` | 解散群组 |
-| `admin.audit.read` | 查看审计日志（不含 IP 地址） |
+| `admin.audit.read` | 查看审计日志（不含 `ip_address` 字段） |
 | `admin.audit.read_ip` | 查看审计日志 IP 地址（敏感 PII，独立权限控制，需同时具备 admin.audit.read） |
 
 ## 端点总览
@@ -257,7 +259,9 @@ interface AdminRbacRoleSetPermissionsRequest {
 }
 ```
 
-**说明**：`permission_keys` 必须来自权限字典（`admin/rbac/permissions`）。仅超级管理员可以在 `permission_keys` 中设置 `'*'`（表示全量权限）；普通管理员尝试赋予 `'*'` 时必须返回 `10200`（权限不足）。
+**说明**：
+- `permission_keys` 必须来自权限字典（`POST /api/v1/admin/rbac/list_permissions` 返回值）
+- 仅超级管理员可以设置 `'*'`（全量权限）；普通管理员设置 `'*'` 时返回 `10200`
 
 **Response**: `ApiResponse`
 
@@ -347,10 +351,13 @@ interface AdminRbacRevokeAdminRequest {
 
 ## 审计日志 API
 
-**安全说明（字段可见性）**：
-- `ip_location`：具有 `admin.audit.read` 权限的管理员可见
-- `ip_address`：具有 `admin.audit.read_ip` 权限的管理员可见（IP 地址属于敏感 PII，通过独立权限控制）；若权限不足，响应中不返回该字段（字段缺失，而非返回 `null`）
-- `device_summary`：从 User-Agent 脱敏提取的设备摘要，不暴露完整 UA 字符串
+**字段可见性**：
+
+| 字段 | 所需权限 | 说明 |
+|------|----------|------|
+| `ip_location` | `admin.audit.read` | 可见 |
+| `ip_address` | `admin.audit.read_ip` | 敏感 PII，独立权限控制；权限不足时字段缺省（key 不出现，不返回 `null`） |
+| `device_summary` | `admin.audit.read` | User-Agent 脱敏后的设备摘要 |
 
 ### POST /api/v1/admin/audit/list
 
@@ -358,7 +365,7 @@ interface AdminRbacRevokeAdminRequest {
 
 - **认证**: 必须 + `admin.audit.read`
 - **幂等**: 无
-- **排序**: 按 `created_at DESC` 排序（最新在前），`audit_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
+- **排序**: 按 `created_at DESC` 排序（最新在前），`log_id DESC` 作为稳定 tie-breaker；一致性级别为强一致
 
 **Request**: `AuditLogListRequest`
 ```typescript
@@ -401,6 +408,7 @@ type AuditAction =
 type AuditTargetType = 'user' | 'group' | 'announcement' | 'role' | 'admin' | 'report' | 'tag' | 'config';
 
 // 注意：AuditDetails.type 必须与 AuditLogItem.action 一致（即每个 action 对应唯一的 details 变体）
+// ReportHandleAction 定义于 @spec/api_spec_types.md
 type AuditDetails = 
   | { type: 'user.ban'; reason?: string; duration_days?: number }
   | { type: 'user.unban'; reason?: string }
@@ -417,7 +425,7 @@ type AuditDetails =
   | { type: 'role.set_permissions'; role_name: string; permissions: string[] }
   | { type: 'admin.grant'; target_user_id: string; role_ids: string[]; grant_all_permissions?: boolean }
   | { type: 'admin.revoke'; target_user_id: string }
-  | { type: 'report.handle'; report_id: string; action: string; note?: string }
+  | { type: 'report.handle'; report_id: string; action: ReportHandleAction; note?: string }
   | { type: 'tag.delete'; name: string }
   | { type: 'permission.grant'; permission: string }
   | { type: 'permission.revoke'; permission: string }
@@ -431,9 +439,9 @@ interface AuditLogItem {
   target_id: string;
   target_name?: string;
   details?: AuditDetails;
-  ip_location?: string;           // IP 地理位置，所有管理员可见
-  ip_address?: string;            // 需要 admin.audit.read_ip 权限
-  device_summary?: string;        // 设备摘要（脱敏后的 UA 信息）
+  ip_location?: string;           // IP 地理位置（需 admin.audit.read）
+  ip_address?: string;            // 需 admin.audit.read_ip；权限不足时字段缺省
+  device_summary?: string;        // 脱敏后的 UA 设备摘要（需 admin.audit.read）
   created_at: string;
 }
 ```
@@ -495,8 +503,6 @@ interface AppConfig {
   updated_by_user_id?: string;
 }
 
-// AdminClientConfig 已不再需要：AppConfig 包含 ClientConfig 的所有字段及元数据
-// 管理员通过 admin/app_config/get 获取完整 AppConfig
 ```
 
 **错误码**: `10200`
@@ -609,19 +615,6 @@ interface UpdateRateLimitsRequest {
 
 **验证规则**：
 - 所有值必须为正整数
-- 全局限速建议范围：`100-10000` 次/小时
-- 用户限速建议范围：`500-50_000` 次/小时
-- 认证相关限速建议最小值：验证码发送 `>= 3` 次/分钟，登录 `>= 10` 次/10分钟，注册 `>= 5` 次/10分钟
-- 搜索限速建议范围：`10-200` 次/分钟
-- 通用写操作限速建议范围：`10-100` 次/分钟
-- 业务限速建议最小值：创建瞬间 `>= 5` 次/分钟，创建评论 `>= 20` 次/分钟，举报 `>= 5` 次/小时
-- 文件上传 presign 建议范围：`10-500` 次/小时
-- WebSocket 订阅建议范围：`5-50` 次/秒
-- 管理员查询建议范围：`50-500` 次/分钟；管理员写操作建议范围：`10-100` 次/分钟
-
-**注意事项**：
-- 配置立即生效，影响所有后续请求
-- 降低限制值时，可能导致正常用户受影响，建议谨慎操作
 
 **错误码**: `10000` `10200`
 
@@ -656,12 +649,6 @@ interface UpdateResponseDefaultsRequest {
 
 **验证规则**：
 - 所有值必须为正整数
-- `search_suggest_count`：建议范围 `1-20`
-- `trending_tags_count`：建议范围 `5-100`
-- `hot_moments_count`：建议范围 `5-100`
-- `chat_recent_messages_count`：建议范围 `10-50`
-- `group_announcements_count`：建议范围 `5-50`
-- `system_announcements_count`：建议范围 `5-50`
 
 **错误码**: `10000` `10200`
 

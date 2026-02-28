@@ -29,24 +29,6 @@ export class PasswordSecurityUtil {
   }
 
   /**
-   * @deprecated 已废弃，使用 calculatePasswordHash 代替
-   * 保留此方法仅为向后兼容，新代码请勿使用
-   */
-  static async calculateTransportHash(password: string, _nonce?: string, _timestamp?: number): Promise<string> {
-    hilog.warn(DOMAIN_NUMBER, TAG, 'calculateTransportHash 已废弃，请使用 calculatePasswordHash');
-    return PasswordSecurityUtil.calculatePasswordHash(password);
-  }
-
-  /**
-   * @deprecated 已废弃，nonce 机制已移除
-   * 保留此方法仅为向后兼容，新代码请勿使用
-   */
-  static validateNonce(_nonce: string, _timestamp: number, _expiresIn: number): boolean {
-    hilog.warn(DOMAIN_NUMBER, TAG, 'validateNonce 已废弃，nonce 机制已移除');
-    return true;
-  }
-
-  /**
    * 清除敏感字符串（例如密码）
    * 尝试覆盖内存中的敏感数据，降低泄露风险
    * @param sensitiveString 敏感字符串

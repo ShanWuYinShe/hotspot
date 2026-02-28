@@ -35,18 +35,28 @@
 	<title>我的瞬间 - HotSpot</title>
 </svelte:head>
 
-<div class="space-y-6">
-	<div class="flex items-center justify-between">
-		<h1 class="text-2xl font-bold">我的瞬间</h1>
-		<div class="flex gap-2">
-			<Button variant="outline" size="sm" onclick={() => loadMoments(true)} disabled={pagination.loading}>
-				<RefreshCw class="mr-2 h-4 w-4 {pagination.loading ? 'animate-spin' : ''}" />
-				刷新
-			</Button>
-			<Button size="sm" onclick={() => (showCreateMoment = true)}>
-				<Plus class="mr-2 h-4 w-4" />
-				发布
-			</Button>
+<div class="space-y-5">
+	<div class="rounded-3xl border border-border/60 bg-linear-to-br from-background via-card/85 to-muted/35 p-5 shadow-sm">
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<div class="flex items-center gap-3">
+				<div class="rounded-2xl border border-border/50 bg-primary/10 p-2.5 text-primary">
+					<Image class="h-5 w-5" />
+				</div>
+				<div>
+					<h1 class="text-2xl font-bold">我的瞬间</h1>
+					<p class="text-sm text-muted-foreground">记录和管理你发布的动态内容</p>
+				</div>
+			</div>
+			<div class="flex gap-2">
+				<Button variant="outline" size="sm" class="h-10 rounded-2xl border-border/60 bg-background/70" onclick={() => loadMoments(true)} disabled={pagination.loading}>
+					<RefreshCw class="mr-2 h-4 w-4 {pagination.loading ? 'animate-spin' : ''}" />
+					刷新
+				</Button>
+				<Button size="sm" class="h-10 rounded-2xl" onclick={() => (showCreateMoment = true)}>
+					<Plus class="mr-2 h-4 w-4" />
+					发布
+				</Button>
+			</div>
 		</div>
 	</div>
 
@@ -73,7 +83,7 @@
 			<div class="columns-1 gap-4 sm:columns-2 xl:columns-3">
 				{#each pagination.items as moment (moment.moment_id)}
 					<div class="mb-4 break-inside-avoid">
-						<Card class="overflow-hidden">
+						<Card class="overflow-hidden rounded-3xl border border-border/60 bg-card/85 shadow-sm backdrop-blur-md">
 							<a href="/moments/{moment.moment_id}" class="block p-4 hover:bg-accent/50">
 								<p class="line-clamp-3 whitespace-pre-wrap">{moment.description}</p>
 								{#if moment.images && moment.images.length > 0}

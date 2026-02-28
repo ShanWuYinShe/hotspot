@@ -5,9 +5,9 @@ use crate::{
         UserInfo,
     },
     error::{AppError, Result},
-    repositories::group_member_repo::GroupMemberDetailRow,
+    repositories::group::member_repo::GroupMemberDetailRow,
+    repositories::group::settings_repo::GroupSettingsRow,
     repositories::group_repo::{AdminGroupSearchRow, GroupRow, GroupSearchRow},
-    repositories::group_settings_repo::GroupSettingsRow,
     types::enums::{GroupJoinMethod, GroupRole},
 };
 use std::collections::HashMap;
@@ -32,6 +32,39 @@ impl GroupService {
             return Err(AppError::Forbidden("需要管理员或群主权限".to_string()));
         }
         Ok(role)
+    }
+
+    /// 群管理统一鉴权：群主/群管理员可操作；系统管理员需具备对应 RBAC 权限。
+    pub(super) async fn require_group_admin_or_system_permission(
+        &self,
+        group_id: i64,
+        user_id: i64,
+        permission_key: &str,
+    ) -> Result<()> {
+        if !self.group_repo.exists(group_id).await? {
+            return Err(AppError::GroupNotFound("群组不存在".to_string()));
+        }
+
+        if self.require_admin_or_owner(group_id, user_id).await.is_ok() {
+            return Ok(());
+        }
+
+        if !self.admin_rbac_repo.is_admin(user_id).await? {
+            return Err(AppError::Forbidden("需要管理员或群主权限".to_string()));
+        }
+
+        if self
+            .admin_rbac_repo
+            .user_has_permission(user_id, permission_key)
+            .await?
+        {
+            return Ok(());
+        }
+
+        Err(AppError::AdminPermissionDenied(format!(
+            "缺少权限: {}",
+            permission_key
+        )))
     }
 
     /// 检查用户是否是群主
@@ -74,18 +107,7 @@ impl GroupService {
             "open" => GroupJoinMethod::Open,
             "approval" => GroupJoinMethod::Approval,
             "invite_only" => GroupJoinMethod::InviteOnly,
-            "free" => GroupJoinMethod::Open,
-            "apply" => GroupJoinMethod::Approval,
-            "invite" => GroupJoinMethod::InviteOnly,
             _ => GroupJoinMethod::Open,
-        }
-    }
-
-    pub(super) fn join_type_from_join_method(join_method: GroupJoinMethod) -> String {
-        match join_method {
-            GroupJoinMethod::Open => "free".to_string(),
-            GroupJoinMethod::Approval => "apply".to_string(),
-            GroupJoinMethod::InviteOnly => "invite".to_string(),
         }
     }
 

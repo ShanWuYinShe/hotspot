@@ -12,7 +12,7 @@ import { LocationInfo } from '../core/location/LocationUtil';
 import { KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../core/state/GlobalStateManager';
 import { DesignConstants } from '../constants/DesignConstants';
 import { PageNames } from '../constants/AppConstants';
-import { AppRouter } from '../core/router/AppRouter';
+import { AppRouter, LocationPickerRouteParam } from '../core/router/AppRouter';
 import { AppIcon } from './SystemIcon';
 
 @Component
@@ -100,7 +100,7 @@ export struct LocationBar {
           .height(28)
           .justifyContent(FlexAlign.Center)
           .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-          .borderRadius(DesignConstants.RADIUS.FULL)
+          .borderRadius(DesignConstants.RADIUS.XL)
           .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
         } else {
           // 当前位置模式：脉冲动画指示器
@@ -161,8 +161,10 @@ export struct LocationBar {
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.SM })
       .backgroundColor(this.isUsingAnchor()
         ? $r('app.color.color_emphasize_bg')
-        : $r('sys.color.ohos_id_color_sub_background'))
+        : $r('app.color.bg_secondary'))
       .borderRadius(DesignConstants.RADIUS.XL)
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
       .onClick(() => {
         this.openLocationPicker();
       })
@@ -175,7 +177,7 @@ export struct LocationBar {
       }
     }
     .width('100%')
-    .height(52)
+    .height(54)
     .padding({
       left: DesignConstants.SPACING.XS,
       right: DesignConstants.SPACING.XS
@@ -194,13 +196,17 @@ export struct LocationBar {
     .width(40)
     .height(40)
     .justifyContent(FlexAlign.Center)
-    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
-    .borderRadius(DesignConstants.RADIUS.FULL)
+    .backgroundColor($r('app.color.bg_secondary'))
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
     .onClick(action)
   }
 
   private openLocationPicker(): void {
-    AppRouter.push(PageNames.LOCATION_PICKER);
+    const param = new LocationPickerRouteParam();
+    param.mode = 'anchor';
+    AppRouter.push(PageNames.LOCATION_PICKER, param);
   }
 
   private navigateToSearch(): void {

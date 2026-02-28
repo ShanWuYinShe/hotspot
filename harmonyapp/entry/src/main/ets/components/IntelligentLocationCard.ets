@@ -18,8 +18,8 @@ export struct IntelligentLocationCard {
   @Prop distance: number = -1;
   @Prop altitude: number = 0; // 新增海拔属性
   @Prop showElevation: boolean = true;
-  @Prop onLocationTap: () => void = () => {};
-  @Prop onNavigationTap: () => void = () => {};
+  onLocationTap?: () => void;
+  onNavigationTap?: () => void;
   @State private cardElevation: number = 1;
   @State private elevationInfo: string = '';
 
@@ -82,7 +82,7 @@ export struct IntelligentLocationCard {
       // 操作按钮组
       Column({ space: 8 }) {
         // 查看详情按钮
-        Button({ type: ButtonType.Circle, stateEffect: true }) {
+        Button({ type: ButtonType.Normal, stateEffect: true }) {
           Text() {
             SymbolSpan($r('sys.symbol.eye'))
               .fontSize(16)
@@ -92,13 +92,16 @@ export struct IntelligentLocationCard {
         .width(32)
         .height(32)
         .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+        .borderRadius(DesignConstants.RADIUS.XL)
         .onClick(() => {
           this.triggerHapticFeedback();
-          this.onLocationTap();
+          if (this.onLocationTap) {
+            this.onLocationTap();
+          }
         })
 
         // 导航按钮
-        Button({ type: ButtonType.Circle, stateEffect: true }) {
+        Button({ type: ButtonType.Normal, stateEffect: true }) {
           Text() {
             SymbolSpan($r('sys.symbol.arrow_up'))
               .fontSize(16)
@@ -112,9 +115,12 @@ export struct IntelligentLocationCard {
           width: 1,
           color: $r('sys.color.ohos_id_color_emphasize')
         })
+        .borderRadius(DesignConstants.RADIUS.XL)
         .onClick(() => {
           this.triggerHapticFeedback();
-          this.onNavigationTap();
+          if (this.onNavigationTap) {
+            this.onNavigationTap();
+          }
         })
       }
     }
@@ -122,6 +128,7 @@ export struct IntelligentLocationCard {
     .padding(16)
     .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.XL)
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
     .shadow({
       radius: this.cardElevation * 6,
       color: $r('sys.color.ohos_id_color_tertiary'),
@@ -140,7 +147,9 @@ export struct IntelligentLocationCard {
       TapGesture()
         .onAction(() => {
           this.triggerHapticFeedback();
-          this.onLocationTap();
+          if (this.onLocationTap) {
+            this.onLocationTap();
+          }
         })
     )
   }

@@ -187,6 +187,7 @@ pub enum ApplicationStatusFilter {
     Pending,
     Accepted,
     Rejected,
+    Revoked,
 }
 
 /// 群组加入方式

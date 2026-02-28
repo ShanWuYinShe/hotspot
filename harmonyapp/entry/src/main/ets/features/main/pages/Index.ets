@@ -14,7 +14,9 @@ import { PersistentStateManager } from '../../../core/state/PersistentStateManag
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { LocationUtil } from '../../../core/location/LocationUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
-import { MyProfile, UpdateLocationRequest, GeoPoint } from '../../../core/types/api';
+import { MyProfile, UpdateLocationRequest, GeoPoint, AuthData } from '../../../core/types/api';
+import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
+import { HttpUtil } from '../../../core/network/HttpUtil';
 import type { ServerEvent } from '../../../core/types/WebSocketTypes';
 import { PermissionManager } from '../../../core/permission/PermissionManager';
 import { ApiClient } from '../../../core/api/ApiClient';
@@ -45,6 +47,7 @@ const TAG: string = 'IndexPage';
 const STORAGE_KEY_VISIBLE_NOTIFICATIONS = 'visibleNotifications';
 
 @Entry
+@Preview
 @Component
 struct Index {
   /** Navigation 路由栈 */
@@ -166,8 +169,12 @@ struct Index {
       if (persistentState.currentLocation) {
         const restoredLoc = persistentState.currentLocation as LocationInfo;
         this.stateManager.updateLocation(restoredLoc);
-        // 若浏览锚点尚未设置，用恢复的位置初始化
         this.initBrowseAnchorIfNeeded(restoredLoc);
+      }
+
+      // 冷启动时验证 token 有效性并刷新 profile（与前端 restoreSessionFromServer 对齐）
+      if (persistentState.isLoggedIn && persistentState.currentUser) {
+        await this.validateSessionOnColdStart();
       }
       // ===== 持续位置追踪（与 MapKit 蓝点共享 Location Kit 数据源） =====
       try {
@@ -278,6 +285,56 @@ struct Index {
     hilog.info(DOMAIN_NUMBER, TAG, `✅ 初始浏览锚点已设置: ${anchor.locationName ?? '未知'}`);
   }
 
+  /**
+   * 冷启动时向服务端验证当前 token 是否仍然有效，并刷新 profile。
+   * 与前端 restoreSessionFromServer() 逻辑对齐。
+   */
+  private async validateSessionOnColdStart(): Promise<void> {
+    try {
+      hilog.info(DOMAIN_NUMBER, TAG, '🔑 冷启动：验证 token 有效性');
+      const statusResp = await ApiClient.checkAuthStatus();
+      if (statusResp.code !== 0 || !statusResp.data?.is_valid) {
+        hilog.warn(DOMAIN_NUMBER, TAG, '冷启动：token 无效，清除登录态');
+        this.stateManager.updateUser(null);
+        await this.persistentStateManager.updateUser(null);
+        await AuthAccountManager.clearAllAccounts();
+        return;
+      }
+
+      const profileResp = await ApiClient.getMyProfile();
+      if (profileResp.code !== 0 || !profileResp.data) {
+        hilog.warn(DOMAIN_NUMBER, TAG, '冷启动：获取 profile 失败，清除登录态');
+        this.stateManager.updateUser(null);
+        await this.persistentStateManager.updateUser(null);
+        return;
+      }
+
+      // 更新 profile 到内存和持久化
+      this.stateManager.updateUser(profileResp.data);
+      await this.persistentStateManager.updateUser(profileResp.data);
+
+      // 更新 token 过期时间（如果 checkStatus 返回了 expires_at）
+      if (statusResp.data.expires_at) {
+        const currentAuth = await AuthAccountManager.getCurrentAuth();
+        if (currentAuth) {
+          const updatedAuth: AuthData = {
+            user_id: currentAuth.user_id,
+            access_token: currentAuth.access_token,
+            refresh_token: currentAuth.refresh_token,
+            access_token_expires_at: statusResp.data.expires_at,
+            refresh_token_expires_at: currentAuth.refresh_token_expires_at
+          };
+          await HttpUtil.setToken(updatedAuth.access_token);
+          await AuthAccountManager.upsertAndActivate(updatedAuth);
+        }
+      }
+
+      hilog.info(DOMAIN_NUMBER, TAG, '✅ 冷启动：token 有效，profile 已刷新');
+    } catch (error) {
+      hilog.warn(DOMAIN_NUMBER, TAG, `冷启动验证失败: ${error}`);
+    }
+  }
+
   private async getAccessToken(): Promise<string | null> {
     try {
       return await PreferencesUtil.get('access_token', '');
@@ -329,12 +386,12 @@ struct Index {
             const payloadRecord = p as Record<string, Object>;
             const metadata = new NotificationMetadata();
             metadata.type = 'new_follower';
-            metadata.user = payloadRecord.user;
+            metadata.user = payloadRecord.actor;
             const notifInput: CreateNotificationInput = {
               type: 'social',
               priority: 'medium',
               title: '新关注者',
-              message: `${(payloadRecord.user as Record<string, Object>).nickname} 关注了你`,
+              message: `${(payloadRecord.actor as Record<string, Object>).nickname} 关注了你`,
               read: false,
               actionable: true,
               metadata: metadata
@@ -348,12 +405,12 @@ struct Index {
             const payloadRecord = p as Record<string, Object>;
             const metadata = new NotificationMetadata();
             metadata.type = 'mutual_follow';
-            metadata.user = payloadRecord.user;
+            metadata.user = payloadRecord.actor;
             const notifInput: CreateNotificationInput = {
               type: 'social',
               priority: 'medium',
               title: '成为好友',
-              message: `你和 ${(payloadRecord.user as Record<string, Object>).nickname} 互相关注了`,
+              message: `你和 ${(payloadRecord.actor as Record<string, Object>).nickname} 互相关注了`,
               read: false,
               actionable: true,
               metadata: metadata
@@ -373,7 +430,7 @@ struct Index {
               type: 'social',
               priority: 'low',
               title: '收到点赞',
-              message: `${(payloadRecord.user as Record<string, Object>).nickname} 赞了你的瞬间`,
+              message: `${(payloadRecord.actor as Record<string, Object>).nickname} 赞了你的瞬间`,
               read: false,
               actionable: true,
               metadata: metadata
@@ -392,7 +449,7 @@ struct Index {
               type: 'social',
               priority: 'medium',
               title: '新评论',
-              message: `${(payloadRecord.user as Record<string, Object>).nickname}: ${String(payloadRecord.content)}`,
+              message: `${(payloadRecord.actor as Record<string, Object>).nickname}: ${String(payloadRecord.content)}`,
               read: false,
               actionable: true,
               metadata: metadata
@@ -411,7 +468,53 @@ struct Index {
               type: 'social',
               priority: 'medium',
               title: '评论被回复',
-              message: `${(payloadRecord.user as Record<string, Object>).nickname}: ${String(payloadRecord.content)}`,
+              message: `${(payloadRecord.actor as Record<string, Object>).nickname}: ${String(payloadRecord.content)}`,
+              read: false,
+              actionable: true,
+              metadata: metadata
+            };
+            const options: CreateNotificationOptions = { immediate: true };
+            await this.smartNotificationService.createNotification(notifInput, options);
+            break;
+          }
+          case 'CommentLiked': {
+            const p: Object = event.payload as Object;
+            const payloadRecord = p as Record<string, Object>;
+            const metadata = new NotificationMetadata();
+            metadata.type = 'comment_like';
+            metadata.targetId = String(payloadRecord.comment_id);
+            metadata.moment_id = String(payloadRecord.moment_id);
+            const notifInput: CreateNotificationInput = {
+              type: 'social',
+              priority: 'low',
+              title: '评论收到点赞',
+              message: `${(payloadRecord.actor as Record<string, Object>).nickname} 赞了你的评论`,
+              read: false,
+              actionable: true,
+              metadata: metadata
+            };
+            const options: CreateNotificationOptions = { immediate: true };
+            await this.smartNotificationService.createNotification(notifInput, options);
+            break;
+          }
+          case 'MessageMentioned': {
+            const p: Object = event.payload as Object;
+            const payloadRecord = p as Record<string, Object>;
+            const targetType = String(payloadRecord.target_type);
+            const metadata = new NotificationMetadata();
+            metadata.type = 'message_mentioned';
+            metadata.moment_id = String(payloadRecord.moment_id);
+            if (typeof payloadRecord.comment_id === 'string') {
+              metadata.comment_id = payloadRecord.comment_id as string;
+            }
+            metadata.targetId = targetType === 'comment'
+              ? (metadata.comment_id ?? metadata.moment_id)
+              : metadata.moment_id;
+            const notifInput: CreateNotificationInput = {
+              type: 'social',
+              priority: 'medium',
+              title: '被提及',
+              message: `${(payloadRecord.actor as Record<string, Object>).nickname} 在${targetType === 'comment' ? '评论' : '动态'}中提到了你`,
               read: false,
               actionable: true,
               metadata: metadata
@@ -504,7 +607,7 @@ struct Index {
             const priority = payloadRecord.severity === 'error' ? 'critical' : (payloadRecord.severity === 'warning' ? 'high' : 'medium');
             const metadata = new NotificationMetadata();
             metadata.type = 'system_announcement';
-            metadata.targetId = String(payloadRecord.id);
+            metadata.targetId = String(payloadRecord.announcement_id);
             const notifInput: CreateNotificationInput = {
               type: 'system',
               priority: priority as 'low' | 'medium' | 'high' | 'critical',
@@ -531,7 +634,9 @@ struct Index {
       'MutualFollow',
       'MomentLiked',
       'MomentCommented',
+      'CommentLiked',
       'CommentReply',
+      'MessageMentioned',
       'GroupInviteReceived',
       'GroupInviteResponse',
       'GroupApplicationReceived',
@@ -613,7 +718,7 @@ struct Index {
         .fontColor(this.currentTabIndex === targetIndex
           ? $r('sys.color.ohos_id_color_emphasize')
           : $r('sys.color.ohos_id_color_text_secondary'))
-        .fontSize(10)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
         .margin({ top: 4 })
         .fontWeight(this.currentTabIndex === targetIndex ? FontWeight.Medium : FontWeight.Normal)
     }
@@ -644,7 +749,7 @@ struct Index {
         .fontColor(this.currentTabIndex === 0
           ? $r('sys.color.ohos_id_color_emphasize')
           : $r('sys.color.ohos_id_color_text_secondary'))
-        .fontSize(10)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
         .margin({ top: 4 })
         .fontWeight(this.currentTabIndex === 0 ? FontWeight.Medium : FontWeight.Normal)
     }
@@ -677,7 +782,7 @@ struct Index {
 
       Text('发布')
         .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        .fontSize(10)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
         .margin({ top: 4 })
     }
     .width('100%')
@@ -706,7 +811,7 @@ struct Index {
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
-        .backgroundColor($r('app.color.bg_secondary'))
+        .backgroundColor($r('app.color.bg_primary'))
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
       } else if (this.lastError) {
@@ -721,7 +826,8 @@ struct Index {
             .textAlign(TextAlign.Center)
             .constraintSize({ maxWidth: 280 })
           Button('重试')
-            .type(ButtonType.Capsule)
+            .type(ButtonType.Normal)
+            .borderRadius(DesignConstants.RADIUS.XL)
             .onClick(() => {
               this.lastError = '';
               this.isInitialized = false;
@@ -731,7 +837,7 @@ struct Index {
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
-        .backgroundColor($r('app.color.bg_secondary'))
+        .backgroundColor($r('app.color.bg_primary'))
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
       } else {
         Column() {
@@ -789,7 +895,7 @@ struct Index {
         .divider({ strokeWidth: 0 })  // 隐藏分隔线，更现代
         .onChange((index: number) => this.handleTabChange(index))
         .backgroundColor($r('app.color.bg_primary'))
-        .shadow({ radius: 8, color: '#0A000000', offsetX: 0, offsetY: -2 })
+        .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: -2 })
         .bindSheet($$this.showCreateSheet, this.CreateSheetContent(), {
           height: SheetSize.FIT_CONTENT,
           dragBar: true,
@@ -839,7 +945,7 @@ struct Index {
         }
         .width('100%')
         .height('100%')
-        .backgroundColor($r('app.color.bg_secondary'))
+        .backgroundColor($r('app.color.bg_primary'))
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.EaseInOut }))
         .onClick(() => {
@@ -856,7 +962,7 @@ struct Index {
         }
         .width('100%')
         .height('100%')
-        .backgroundColor($r('app.color.bg_secondary'))
+        .backgroundColor($r('app.color.bg_primary'))
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.EaseInOut }))
         .onClick(() => {
@@ -885,11 +991,12 @@ struct Index {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
       Button('去注册')
-        .type(ButtonType.Capsule)
+        .type(ButtonType.Normal)
         .fontSize(12)
         .height(28)
         .backgroundColor($r('app.color.bg_secondary'))
         .fontColor($r('sys.color.ohos_id_color_emphasize'))
+        .borderRadius(DesignConstants.RADIUS.XL)
         .onClick(() => {
           AppRouter.push(PageNames.LOGIN);
         })
@@ -926,7 +1033,7 @@ struct Index {
         .width(56)
         .height(56)
         .justifyContent(FlexAlign.Center)
-        .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+        .backgroundColor($r('app.color.bg_secondary'))
         .borderRadius(DesignConstants.RADIUS.LG)
 
         Column({ space: 4 }) {
@@ -950,7 +1057,9 @@ struct Index {
       .width('100%')
       .padding(DesignConstants.SPACING.LG)
       .backgroundColor($r('app.color.bg_secondary'))
-      .borderRadius(DesignConstants.RADIUS.LG)
+      .borderRadius(DesignConstants.RADIUS.XL)
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
       .onClick(() => {
         this.showCreateSheet = false;
         AppRouter.push(PageNames.CREATE_MOMENT);
@@ -968,7 +1077,7 @@ struct Index {
         .width(56)
         .height(56)
         .justifyContent(FlexAlign.Center)
-        .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+        .backgroundColor($r('app.color.bg_secondary'))
         .borderRadius(DesignConstants.RADIUS.LG)
 
         Column({ space: 4 }) {
@@ -992,7 +1101,9 @@ struct Index {
       .width('100%')
       .padding(DesignConstants.SPACING.LG)
       .backgroundColor($r('app.color.bg_secondary'))
-      .borderRadius(DesignConstants.RADIUS.LG)
+      .borderRadius(DesignConstants.RADIUS.XL)
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
       .margin({ top: DesignConstants.SPACING.SM })
       .onClick(() => {
         this.showCreateSheet = false;
@@ -1004,7 +1115,7 @@ struct Index {
       top: DesignConstants.SPACING.LG, bottom: 40 })
   }
 
-  /** 通过路由名跳转页面（兼容旧调用） */
+  /** 通过路由名跳转页面 */
   private navigateToPage(name: string): void {
     AppRouter.push(name);
   }

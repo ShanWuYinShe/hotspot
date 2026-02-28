@@ -113,7 +113,6 @@ export const PRIVATE_CHATS = {
 	ME: {
 		LIST: `${API_BASE}/private_chats/me/list`,
 		UPDATE_SETTINGS: `${API_BASE}/private_chats/me/update_settings`,
-		// ⏳ 延期：删除私聊会话
 		DELETE: `${API_BASE}/private_chats/me/delete`
 	}
 } as const;

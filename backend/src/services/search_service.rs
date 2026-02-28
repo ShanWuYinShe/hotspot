@@ -49,6 +49,7 @@ impl SearchService {
         viewer_id: Option<i64>,
         req: SearchSuggestRequest,
     ) -> Result<SearchSuggestions, AppError> {
+        let started_at = std::time::Instant::now();
         Validator::validate_not_empty(&req.prefix, "prefix")?;
         let limit = DEFAULT_PAGE_LIMIT as i64;
 
@@ -58,11 +59,8 @@ impl SearchService {
             req.reference_point.longitude,
         )?;
         let location = Some((req.reference_point.latitude, req.reference_point.longitude));
-        let radius_opt = if let Some(r) = req.radius {
-            Some(Validator::validate_radius(Some(r), MAX_SEARCH_RADIUS_I32)? as f64)
-        } else {
-            None
-        };
+        let radius_opt =
+            Some(Validator::validate_radius(req.radius, MAX_SEARCH_RADIUS_I32)? as f64);
 
         let type_set: Option<HashSet<SearchSuggestType>> = req
             .types
@@ -72,33 +70,63 @@ impl SearchService {
         let include_user = should_include_type(&type_set, SearchSuggestType::User);
         let include_group = should_include_type(&type_set, SearchSuggestType::Group);
         let include_moment = should_include_type(&type_set, SearchSuggestType::Moment);
+        tracing::info!(
+            viewer_id,
+            prefix_len = req.prefix.chars().count(),
+            include_tag,
+            include_user,
+            include_group,
+            include_moment,
+            radius = radius_opt.unwrap_or(5000.0),
+            limit,
+            "search.suggest started"
+        );
 
         let tag_rows = if include_tag {
-            self.tag_repo.suggest(&req.prefix, limit).await?
+            self.tag_repo.suggest(&req.prefix, limit).await.map_err(|err| {
+                tracing::error!(viewer_id, source = "tag_repo", error = ?err, "search.suggest query failed");
+                err
+            })?
         } else {
             Vec::new()
         };
         let user_rows = if include_user {
             self.user_repo
                 .suggest_by_nickname(&req.prefix, limit, location, radius_opt)
-                .await?
+                .await
+                .map_err(|err| {
+                    tracing::error!(viewer_id, source = "user_repo", error = ?err, "search.suggest query failed");
+                    err
+                })?
         } else {
             Vec::new()
         };
         let group_rows = if include_group {
             self.group_repo
                 .suggest_by_name(&req.prefix, limit, location, radius_opt)
-                .await?
+                .await
+                .map_err(|err| {
+                    tracing::error!(viewer_id, source = "group_repo", error = ?err, "search.suggest query failed");
+                    err
+                })?
         } else {
             Vec::new()
         };
         let moment_rows = if include_moment {
             self.moment_repo
                 .suggest_by_keyword(&req.prefix, viewer_id, limit as i32, location, radius_opt)
-                .await?
+                .await
+                .map_err(|err| {
+                    tracing::error!(viewer_id, source = "moment_repo", error = ?err, "search.suggest query failed");
+                    err
+                })?
         } else {
             Vec::new()
         };
+        let tag_count = tag_rows.len();
+        let user_count = user_rows.len();
+        let group_count = group_rows.len();
+        let moment_count = moment_rows.len();
 
         let mut items: Vec<SearchSuggestItem> = Vec::new();
 
@@ -216,6 +244,16 @@ impl SearchService {
             });
         }
 
+        tracing::info!(
+            viewer_id,
+            tags = tag_count,
+            users = user_count,
+            groups = group_count,
+            moments = moment_count,
+            total_items = items.len(),
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "search.suggest completed"
+        );
         Ok(SearchSuggestions { items })
     }
 }

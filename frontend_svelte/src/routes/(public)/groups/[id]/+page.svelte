@@ -4,10 +4,11 @@
 	import { groupsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { authStore } from '$lib/stores/auth.svelte';
-	import { websocketStore, subscriptionManager } from '$lib/websocket';
+	import { websocketStore } from '$lib/websocket';
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { usePagination } from '$lib/hooks/use-pagination.svelte';
+	import { useChatWsSubscription } from '$lib/hooks/use-chat-ws-subscription.svelte';
 	import type { PageData } from './$types';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent } from '$lib/components/ui/card';
@@ -30,6 +31,7 @@
 		GroupItem,
 		GroupAnnouncementItem,
 		GroupMemberItem,
+		GroupApplicationItem,
 		SettableGroupRole,
 		GroupJoinMethod
 	} from '$lib/types/api';
@@ -64,7 +66,7 @@
 	let joinPassword = $state('');
 	let joinMessage = $state('');
 	let settingsLoaded = $state(false);
-	let currentTab = $state<'overview' | 'announcements' | 'members'>('overview');
+	let currentTab = $state<'overview' | 'announcements' | 'members' | 'applications'>('overview');
 
 	// groupId 变化时重置子数据加载标志，确保切换群组后重新加载公告和成员
 	$effect(() => {
@@ -72,11 +74,13 @@
 		untrack(() => {
 			announcementsLoaded = false;
 			membersLoaded = false;
+			applicationsLoaded = false;
 			settingsLoaded = false;
 			settings = null;
 			currentTab = 'overview';
 			announcementsPagination.reset();
 			membersPagination.reset();
+			applicationsPagination.reset();
 		});
 	});
 
@@ -93,11 +97,29 @@
 	});
 	let membersLoaded = $state(false);
 
+	const applicationsPagination = usePagination<GroupApplicationItem>({
+		initialLoading: false,
+		uniqueKey: 'application_id'
+	});
+	let applicationsLoaded = $state(false);
+	let handlingApplications = $state<Set<string>>(new Set());
+
 	const canAccessGroupData = $derived(authStore.isAuthenticated && !!group?.my_state?.is_joined);
 	const canManageGroup = $derived(
 		authStore.isAuthenticated &&
 			(group?.my_state?.role === 'owner' || group?.my_state?.role === 'admin')
 	);
+	function setApplicationHandling(applicationId: string, handling: boolean) {
+		const next = new Set(handlingApplications);
+		if (handling) next.add(applicationId);
+		else next.delete(applicationId);
+		handlingApplications = next;
+	}
+
+	function isApplicationHandling(applicationId: string) {
+		return handlingApplications.has(applicationId);
+	}
+
 	const isOwner = $derived(group?.my_state?.role === 'owner');
 
 	let showAnnouncementDialog = $state(false);
@@ -113,6 +135,13 @@
 	let muteTarget = $state<GroupMemberItem | null>(null);
 	let muteDurationMinutes = $state('30');
 	let muteSubmitting = $state(false);
+	const GROUP_PASSWORD_MIN = 4;
+	const GROUP_PASSWORD_MAX = 32;
+	const GROUP_JOIN_MESSAGE_MAX = 200;
+	const ANNOUNCEMENT_TITLE_MAX = 100;
+	const ANNOUNCEMENT_CONTENT_MAX = 5000;
+	const MUTE_DURATION_MIN = 1;
+	const MUTE_DURATION_MAX = 43200;
 
 	let showRoleDialog = $state(false);
 	let roleTarget = $state<GroupMemberItem | null>(null);
@@ -197,6 +226,14 @@
 		const content = announcementContent.trim();
 		if (!title || !content) {
 			toast.error('请填写公告标题和内容');
+			return;
+		}
+		if (title.length > ANNOUNCEMENT_TITLE_MAX) {
+			toast.error(`公告标题最多 ${ANNOUNCEMENT_TITLE_MAX} 字符`);
+			return;
+		}
+		if (content.length > ANNOUNCEMENT_CONTENT_MAX) {
+			toast.error(`公告内容最多 ${ANNOUNCEMENT_CONTENT_MAX} 字符`);
 			return;
 		}
 
@@ -284,7 +321,7 @@
 	}
 
 	function canChangeRole(member: GroupMemberItem) {
-		return isOwner && member.role !== 'owner' && member.user.user_id !== authStore.currentUserId;
+		return canManageMember(member);
 	}
 
 	function openMuteDialog(member: GroupMemberItem) {
@@ -303,8 +340,12 @@
 		if (!muteTarget) return;
 		const targetUserId = muteTarget.user.user_id;
 		const duration = Number(muteDurationMinutes);
-		if (!Number.isFinite(duration) || duration <= 0) {
-			toast.error('请输入有效的禁言时长');
+		if (
+			!Number.isInteger(duration) ||
+			duration < MUTE_DURATION_MIN ||
+			duration > MUTE_DURATION_MAX
+		) {
+			toast.error(`禁言时长需在 ${MUTE_DURATION_MIN}-${MUTE_DURATION_MAX} 分钟之间`);
 			return;
 		}
 
@@ -524,6 +565,62 @@
 		}
 	}
 
+	async function loadApplications(refresh = false) {
+		if (!canManageGroup) return;
+		await applicationsPagination.load(
+			(cursor) =>
+				groupsService.getApplications({
+					group_id: groupId,
+					status: 'pending',
+					pagination: { limit: 20, cursor }
+				}),
+			refresh
+		);
+		if (!applicationsPagination.error) {
+			applicationsLoaded = true;
+		}
+	}
+
+	async function handleApplicationDecision(
+		application: GroupApplicationItem,
+		action: 'approve' | 'reject'
+	) {
+		if (!authStore.isAuthenticated) {
+			uiStore.saveRedirectUrl();
+			uiStore.openLoginModal();
+			return;
+		}
+		if (isApplicationHandling(application.application_id)) return;
+		setApplicationHandling(application.application_id, true);
+		try {
+			const response =
+				action === 'approve'
+					? await groupsService.approveApplication({ application_id: application.application_id })
+					: await groupsService.rejectApplication({ application_id: application.application_id });
+			if (isSuccess(response)) {
+				applicationsPagination.removeItem(
+					(item) => item.application_id === application.application_id
+				);
+				if (action === 'approve' && groupData) {
+					groupData = {
+						...groupData,
+						group: {
+							...groupData.group,
+							members_count: groupData.group.members_count + 1
+						}
+					};
+				}
+				toast.success(action === 'approve' ? '已批准入群申请' : '已拒绝入群申请');
+			} else {
+				toast.error(response.message || '操作失败');
+			}
+		} catch {
+			toast.error('操作失败');
+		} finally {
+			setApplicationHandling(application.application_id, false);
+		}
+	}
+
 	function openJoinDialog() {
 		if (!authStore.isAuthenticated) {
 			uiStore.saveRedirectUrl();
@@ -547,13 +644,32 @@
 			toast.error('该群组仅支持邀请加入');
 			return;
 		}
+		const trimmedPassword = joinPassword.trim();
+		const trimmedJoinMessage = joinMessage.trim();
+		if (joinMethod === 'open' && group?.has_password && !trimmedPassword) {
+			toast.error('请输入群组密码');
+			return;
+		}
+		if (
+			joinMethod === 'open' &&
+			group?.has_password &&
+			trimmedPassword &&
+			(trimmedPassword.length < GROUP_PASSWORD_MIN || trimmedPassword.length > GROUP_PASSWORD_MAX)
+		) {
+			toast.error(`群组密码长度需在 ${GROUP_PASSWORD_MIN}-${GROUP_PASSWORD_MAX} 字符之间`);
+			return;
+		}
+		if (joinMethod === 'approval' && trimmedJoinMessage.length > GROUP_JOIN_MESSAGE_MAX) {
+			toast.error(`申请理由最多 ${GROUP_JOIN_MESSAGE_MAX} 字符`);
+			return;
+		}
 
 		isJoining = true;
 		try {
 			const response = await groupsService.join({
 				group_id: groupId,
-				password: joinPassword.trim() || undefined,
-				message: joinMethod === 'approval' ? (joinMessage.trim() || undefined) : undefined
+				password: trimmedPassword || undefined,
+				message: joinMethod === 'approval' ? (trimmedJoinMessage || undefined) : undefined
 			});
 
 			if (isSuccess(response)) {
@@ -613,6 +729,12 @@
 		}
 	});
 
+	$effect(() => {
+		if (currentTab === 'applications' && canManageGroup && !applicationsLoaded) {
+			loadApplications(true);
+		}
+	});
+
 	onMount(() => {
 		if (data.error) {
 			toast.error(data.error);
@@ -621,28 +743,26 @@
 	});
 
 	// WebSocket 群组订阅管理（进入页面时订阅，离开时取消）
-	let isGroupSubscribed = $state(false);
+	const wsGroupSubscription = useChatWsSubscription();
 
 	$effect(() => {
 		let cancelled = false;
 		const connected = websocketStore.isConnected;
 		const id = groupId;
 
-		if (connected && id && !isGroupSubscribed) {
-			subscriptionManager.subscribe('group', [id]).then((success) => {
-				// 防止组件卸载或 groupId 变化后仍修改状态
-				if (!cancelled) isGroupSubscribed = success;
-			});
-		} else if (!connected && isGroupSubscribed) {
-			isGroupSubscribed = false;
-		}
+		wsGroupSubscription.sync({
+			connected,
+			type: 'group',
+			ids: [id],
+			onSubscribeFailed: () => {
+				if (cancelled) return;
+				toast.warning('群组实时订阅失败，正在重试...');
+			}
+		});
 
 		return () => {
 			cancelled = true;
-			if (isGroupSubscribed) {
-				subscriptionManager.unsubscribe('group', [id]);
-				isGroupSubscribed = false;
-			}
+			wsGroupSubscription.cleanup('group', [id]);
 		};
 	});
 
@@ -726,16 +846,35 @@
 	<title>{group?.group.name ?? '群组详情'} - HotSpot</title>
 </svelte:head>
 
-<div class="mx-auto max-w-5xl space-y-6">
-	<div class="flex items-center gap-4">
-		<Button variant="ghost" size="icon" onclick={() => history.back()} aria-label="返回">
-			<ArrowLeft class="h-5 w-5" />
-		</Button>
-		<h1 class="text-2xl font-bold">群组详情</h1>
+<div class="mx-auto max-w-5xl space-y-5">
+	<div class="rounded-3xl border border-border/60 bg-linear-to-br from-background via-card/85 to-muted/40 p-5 shadow-sm">
+		<div class="flex items-center gap-3">
+			<Button variant="outline" size="icon" class="h-10 w-10 rounded-2xl border-border/60 bg-background/70" onclick={() => history.back()} aria-label="返回">
+				<ArrowLeft class="h-5 w-5" />
+			</Button>
+			<div>
+				<h1 class="text-2xl font-bold">群组详情</h1>
+				<p class="text-sm text-muted-foreground">查看群信息、成员与公告管理</p>
+			</div>
+		</div>
 	</div>
+	{#if group && !wsGroupSubscription.state.isSubscribed}
+		<div class="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-sm text-yellow-700 dark:text-yellow-300">
+			<div class="flex items-center gap-2">
+				<Loader2 class="h-4 w-4 animate-spin" />
+				<span>
+					{#if wsGroupSubscription.state.isAttemptingSubscribe || !websocketStore.isConnected}
+						群组实时事件连接中…
+					{:else}
+						群组实时事件订阅重试中…
+					{/if}
+				</span>
+			</div>
+		</div>
+	{/if}
 
 	{#if !group}
-		<Card>
+		<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 			<CardContent class="p-6">
 				<div class="flex flex-col items-center gap-4">
 					<p class="text-muted-foreground">
@@ -745,7 +884,7 @@
 			</CardContent>
 		</Card>
 	{:else}
-		<Card class="border-0 bg-card/80 shadow-lg shadow-black/5 ring-1 ring-border/50">
+		<Card class="rounded-3xl border border-border/60 bg-card/85 shadow-sm backdrop-blur-md">
 			<CardContent class="space-y-6 p-6">
 				<div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
 					<div class="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -828,16 +967,19 @@
 			</CardContent>
 		</Card>
 
-		<Tabs value={currentTab} onValueChange={(value) => (currentTab = value as 'overview' | 'announcements' | 'members')}>
-			<TabsList class="h-auto gap-1.5 rounded-full bg-card/80 p-1.5 shadow-md shadow-black/10 ring-1 ring-border/50 backdrop-blur-sm">
-				<TabsTrigger value="overview" class="rounded-full">概览</TabsTrigger>
-				<TabsTrigger value="announcements" class="rounded-full">公告</TabsTrigger>
-				<TabsTrigger value="members" class="rounded-full">成员</TabsTrigger>
+		<Tabs value={currentTab} onValueChange={(value) => (currentTab = value as 'overview' | 'announcements' | 'members' | 'applications')}>
+			<TabsList class="h-auto gap-1.5 rounded-3xl bg-card/80 p-1.5 shadow-md shadow-black/10 ring-1 ring-border/50 backdrop-blur-sm">
+				<TabsTrigger value="overview" class="rounded-2xl">概览</TabsTrigger>
+				<TabsTrigger value="announcements" class="rounded-2xl">公告</TabsTrigger>
+				<TabsTrigger value="members" class="rounded-2xl">成员</TabsTrigger>
+				{#if canManageGroup}
+					<TabsTrigger value="applications" class="rounded-2xl">申请</TabsTrigger>
+				{/if}
 			</TabsList>
 
 			<TabsContent value="overview" class="mt-6 space-y-4">
 				<div class="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-					<Card class="border-0 bg-card/70 shadow-sm shadow-black/5">
+					<Card class="rounded-3xl border border-border/60 bg-card/85 shadow-sm backdrop-blur-md">
 						<CardContent class="space-y-3 p-5">
 							<h3 class="text-sm font-semibold">群组说明</h3>
 							<p class="text-sm text-muted-foreground">
@@ -846,13 +988,13 @@
 							{#if group.tags && group.tags.length > 0}
 								<div class="flex flex-wrap gap-2">
 									{#each group.tags as tag (tag)}
-										<Badge variant="secondary" class="rounded-full">#{tag}</Badge>
+										<Badge variant="secondary" class="rounded-2xl">#{tag}</Badge>
 									{/each}
 								</div>
 							{/if}
 						</CardContent>
 					</Card>
-					<Card class="border-0 bg-card/70 shadow-sm shadow-black/5">
+					<Card class="rounded-3xl border border-border/60 bg-card/85 shadow-sm backdrop-blur-md">
 						<CardContent class="space-y-3 p-5">
 							<h3 class="text-sm font-semibold">加入须知</h3>
 							<div class="space-y-2 text-sm text-muted-foreground">
@@ -870,7 +1012,7 @@
 								</div>
 							</div>
 							{#if !authStore.isAuthenticated}
-								<Button variant="outline" size="sm" class="w-full rounded-full" onclick={() => uiStore.openLoginModal()}>
+								<Button variant="outline" size="sm" class="h-10 w-full rounded-2xl border-border/60 bg-background/70" onclick={() => uiStore.openLoginModal()}>
 									登录后加入
 								</Button>
 							{:else if group.my_state?.is_joined}
@@ -878,7 +1020,7 @@
 									你已加入该群组
 								</div>
 							{:else}
-								<Button size="sm" class="w-full rounded-full" onclick={openJoinDialog}>
+								<Button size="sm" class="h-10 w-full rounded-2xl" onclick={openJoinDialog}>
 									申请加入
 								</Button>
 							{/if}
@@ -889,19 +1031,19 @@
 
 			<TabsContent value="announcements" class="mt-6 space-y-4">
 				{#if !authStore.isAuthenticated}
-					<Card class="border-0 bg-card/60 shadow-sm shadow-black/5">
+					<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 						<CardContent class="flex flex-col items-center gap-3 py-10 text-sm text-muted-foreground">
 							<p>登录后查看群公告</p>
-							<Button variant="outline" size="sm" class="rounded-full" onclick={() => uiStore.openLoginModal()}>
+							<Button variant="outline" size="sm" class="h-10 rounded-2xl border-border/60 bg-background/70" onclick={() => uiStore.openLoginModal()}>
 								去登录
 							</Button>
 						</CardContent>
 					</Card>
 				{:else if !group.my_state?.is_joined}
-					<Card class="border-0 bg-card/60 shadow-sm shadow-black/5">
+					<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 						<CardContent class="flex flex-col items-center gap-3 py-10 text-sm text-muted-foreground">
 							<p>加入群组后可查看公告</p>
-							<Button size="sm" class="rounded-full" onclick={openJoinDialog}>
+							<Button size="sm" class="h-10 rounded-2xl" onclick={openJoinDialog}>
 								申请加入
 							</Button>
 						</CardContent>
@@ -916,7 +1058,7 @@
 							<Button
 								variant="outline"
 								size="sm"
-								class="rounded-full"
+								class="h-10 rounded-2xl border-border/60 bg-background/70"
 								onclick={() => loadAnnouncements(true)}
 							disabled={announcementsPagination.loading}
 						>
@@ -924,7 +1066,7 @@
 							刷新
 						</Button>
 						{#if canManageGroup}
-							<Button size="sm" class="rounded-full" onclick={() => openAnnouncementDialog()}>
+							<Button size="sm" class="h-10 rounded-2xl" onclick={() => openAnnouncementDialog()}>
 								<Plus class="mr-1.5 h-3.5 w-3.5" />
 								发布公告
 							</Button>
@@ -934,7 +1076,7 @@
 				{#if announcementsPagination.loading && announcementsPagination.items.length === 0}
 					<div class="space-y-3">
 						{#each Array(3) as _, i (i)}
-							<Card class="border-0 bg-card/60 shadow-sm shadow-black/5">
+							<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 								<CardContent class="space-y-2 p-4">
 									<Skeleton class="h-4 w-40" />
 									<Skeleton class="h-4 w-full" />
@@ -944,7 +1086,7 @@
 						{/each}
 					</div>
 				{:else if announcementsPagination.items.length === 0}
-					<Card class="border-0 bg-card/60 shadow-sm shadow-black/5">
+					<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 						<CardContent class="py-10 text-center text-sm text-muted-foreground">
 							暂无公告
 						</CardContent>
@@ -952,14 +1094,14 @@
 				{:else}
 					<div class="space-y-3">
 						{#each announcementsPagination.items as announcement (announcement.announcement_id)}
-								<Card class="border-0 bg-card/70 shadow-sm shadow-black/5">
+								<Card class="rounded-3xl border border-border/60 bg-card/85 shadow-sm backdrop-blur-md">
 									<CardContent class="p-4">
 										<div class="flex items-start justify-between gap-3">
 											<div class="space-y-2">
 												<div class="flex items-center gap-2">
 													<p class="font-medium">{announcement.title}</p>
 													{#if announcement.is_pinned}
-														<Badge variant="secondary" class="rounded-full text-[10px]">置顶</Badge>
+														<Badge variant="secondary" class="rounded-2xl text-[10px]">置顶</Badge>
 													{/if}
 												</div>
 												<p class="whitespace-pre-wrap text-sm text-muted-foreground">{announcement.content}</p>
@@ -970,7 +1112,7 @@
 											{#if canManageGroup}
 												<DropdownMenu>
 													<DropdownMenuTrigger
-														class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-background/80 text-foreground shadow-sm shadow-black/5 transition-colors hover:bg-accent/60"
+														class="inline-flex h-8 w-8 items-center justify-center rounded-2xl border border-border/60 bg-background/80 text-foreground shadow-sm shadow-black/5 transition-colors hover:bg-accent/60"
 														aria-label="公告操作"
 													>
 														<MoreHorizontal class="h-4 w-4" />
@@ -998,7 +1140,7 @@
 							<Button
 								variant="outline"
 								size="sm"
-								class="rounded-full"
+								class="h-10 rounded-2xl border-border/60 bg-background/70"
 								onclick={() => loadAnnouncements(false)}
 								disabled={announcementsPagination.loadingMore}
 							>
@@ -1015,19 +1157,19 @@
 
 			<TabsContent value="members" class="mt-6 space-y-4">
 				{#if !authStore.isAuthenticated}
-					<Card class="border-0 bg-card/60 shadow-sm shadow-black/5">
+					<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 						<CardContent class="flex flex-col items-center gap-3 py-10 text-sm text-muted-foreground">
 							<p>登录后查看成员</p>
-							<Button variant="outline" size="sm" class="rounded-full" onclick={() => uiStore.openLoginModal()}>
+							<Button variant="outline" size="sm" class="h-10 rounded-2xl border-border/60 bg-background/70" onclick={() => uiStore.openLoginModal()}>
 								去登录
 							</Button>
 						</CardContent>
 					</Card>
 				{:else if !group.my_state?.is_joined}
-					<Card class="border-0 bg-card/60 shadow-sm shadow-black/5">
+					<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 						<CardContent class="flex flex-col items-center gap-3 py-10 text-sm text-muted-foreground">
 							<p>加入群组后可查看成员</p>
-							<Button size="sm" class="rounded-full" onclick={openJoinDialog}>
+							<Button size="sm" class="h-10 rounded-2xl" onclick={openJoinDialog}>
 								申请加入
 							</Button>
 						</CardContent>
@@ -1042,7 +1184,7 @@
 						<Button
 							variant="outline"
 							size="sm"
-							class="rounded-full"
+							class="h-10 rounded-2xl border-border/60 bg-background/70"
 							onclick={() => loadMembers(true)}
 							disabled={membersPagination.loading}
 						>
@@ -1050,7 +1192,7 @@
 							刷新
 						</Button>
 						{#if canManageGroup}
-							<Badge variant="secondary" class="rounded-full px-3 py-1 text-[11px]">可管理成员</Badge>
+							<Badge variant="secondary" class="rounded-2xl px-3 py-1 text-[11px]">可管理成员</Badge>
 						{/if}
 					</div>
 				</div>
@@ -1058,7 +1200,7 @@
 					<div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
 						{#each Array(6) as _, i (i)}
 							<div class="mb-3 break-inside-avoid">
-								<Card class="border-0 bg-card/60 shadow-sm shadow-black/5">
+								<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 									<CardContent class="flex items-center gap-3 p-4">
 										<Skeleton class="h-10 w-10 rounded-full" />
 										<div class="flex-1 space-y-2">
@@ -1071,7 +1213,7 @@
 						{/each}
 					</div>
 				{:else if membersPagination.items.length === 0}
-					<Card class="border-0 bg-card/60 shadow-sm shadow-black/5">
+					<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 						<CardContent class="py-10 text-center text-sm text-muted-foreground">
 							暂无成员
 						</CardContent>
@@ -1080,7 +1222,7 @@
 					<div class="columns-1 gap-3 sm:columns-2 lg:columns-3">
 						{#each membersPagination.items as member (member.user.user_id)}
 								<div class="mb-3 break-inside-avoid">
-									<Card class="border-0 bg-card/70 shadow-sm shadow-black/5 transition-colors hover:bg-accent/40">
+									<Card class="rounded-3xl border border-border/60 bg-card/85 shadow-sm backdrop-blur-md transition-colors hover:bg-accent/45">
 										<CardContent class="flex items-center gap-3 p-4">
 											<a
 												href="/users/{member.user.user_id}"
@@ -1093,7 +1235,7 @@
 												<div class="min-w-0 flex-1">
 													<div class="flex items-center gap-2">
 														<p class="truncate font-medium">{member.user.nickname}</p>
-														<Badge variant="secondary" class="rounded-full text-[10px]">{getRoleLabel(member.role)}</Badge>
+														<Badge variant="secondary" class="rounded-2xl text-[10px]">{getRoleLabel(member.role)}</Badge>
 													</div>
 													<p class="text-xs text-muted-foreground">
 														加入于 {formatDateTime(member.joined_at)}
@@ -1107,12 +1249,12 @@
 											</a>
 											<div class="flex items-center gap-2">
 												{#if member.muted_until}
-													<Badge variant="outline" class="rounded-full text-[10px] text-muted-foreground">已禁言</Badge>
+													<Badge variant="outline" class="rounded-2xl text-[10px] text-muted-foreground">已禁言</Badge>
 												{/if}
 												{#if canManageMember(member)}
 													<DropdownMenu>
 														<DropdownMenuTrigger
-															class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-background/80 text-foreground shadow-sm shadow-black/5 transition-colors hover:bg-accent/60"
+															class="inline-flex h-8 w-8 items-center justify-center rounded-2xl border border-border/60 bg-background/80 text-foreground shadow-sm shadow-black/5 transition-colors hover:bg-accent/60"
 															aria-label="成员操作"
 														>
 															<MoreHorizontal class="h-4 w-4" />
@@ -1155,7 +1297,7 @@
 							<Button
 								variant="outline"
 								size="sm"
-								class="rounded-full"
+								class="h-10 rounded-2xl border-border/60 bg-background/70"
 								onclick={() => loadMembers(false)}
 								disabled={membersPagination.loadingMore}
 							>
@@ -1169,12 +1311,113 @@
 				{/if}
 				{/if}
 			</TabsContent>
+
+			{#if canManageGroup}
+				<TabsContent value="applications" class="mt-6 space-y-4">
+					<div class="flex flex-col gap-3 rounded-2xl border border-border/50 bg-card/60 p-4 shadow-sm shadow-black/5 sm:flex-row sm:items-center sm:justify-between">
+						<div>
+							<p class="text-sm font-semibold">待处理申请</p>
+							<p class="mt-1 text-xs text-muted-foreground">仅展示 pending 申请，处理后会自动移出列表</p>
+						</div>
+						<Button
+							variant="outline"
+							size="sm"
+							class="h-10 rounded-2xl border-border/60 bg-background/70"
+							onclick={() => loadApplications(true)}
+							disabled={applicationsPagination.loading}
+						>
+							<RefreshCw class="mr-1.5 h-3.5 w-3.5" />
+							刷新
+						</Button>
+					</div>
+
+					{#if applicationsPagination.loading && applicationsPagination.items.length === 0}
+						<div class="space-y-3">
+							{#each Array(3) as _, i (i)}
+								<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
+									<CardContent class="space-y-2 p-4">
+										<Skeleton class="h-4 w-32" />
+										<Skeleton class="h-4 w-full" />
+										<Skeleton class="h-3 w-36" />
+									</CardContent>
+								</Card>
+							{/each}
+						</div>
+					{:else if applicationsPagination.items.length === 0}
+						<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
+							<CardContent class="py-10 text-center text-sm text-muted-foreground">
+								暂无待处理申请
+							</CardContent>
+						</Card>
+					{:else}
+						<div class="space-y-3">
+							{#each applicationsPagination.items as application (application.application_id)}
+								<Card class="rounded-3xl border border-border/60 bg-card/85 shadow-sm backdrop-blur-md">
+									<CardContent class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+										<div class="min-w-0 space-y-1">
+											<div class="flex items-center gap-2">
+												<Avatar class="h-8 w-8">
+													<AvatarImage src={application.applicant.avatar_url} alt={application.applicant.nickname} />
+													<AvatarFallback>{application.applicant.nickname.slice(0, 2)}</AvatarFallback>
+												</Avatar>
+												<p class="truncate text-sm font-medium">{application.applicant.nickname}</p>
+											</div>
+											{#if application.message}
+												<p class="text-sm text-muted-foreground">{application.message}</p>
+											{/if}
+											<p class="text-xs text-muted-foreground">
+												申请时间：{formatDateTime(application.created_at)}
+											</p>
+										</div>
+										<div class="flex flex-wrap gap-2">
+											<Button
+												size="sm"
+												class="h-9 rounded-2xl"
+												disabled={isApplicationHandling(application.application_id)}
+												onclick={() => handleApplicationDecision(application, 'approve')}
+											>
+												{isApplicationHandling(application.application_id) ? '处理中...' : '批准'}
+											</Button>
+											<Button
+												variant="outline"
+												size="sm"
+												class="h-9 rounded-2xl border-border/60 bg-background/70"
+												disabled={isApplicationHandling(application.application_id)}
+												onclick={() => handleApplicationDecision(application, 'reject')}
+											>
+												拒绝
+											</Button>
+										</div>
+									</CardContent>
+								</Card>
+							{/each}
+						</div>
+
+						{#if applicationsPagination.hasMore}
+							<div class="flex justify-center pt-2">
+								<Button
+									variant="outline"
+									size="sm"
+									class="h-10 rounded-2xl border-border/60 bg-background/70"
+									onclick={() => loadApplications(false)}
+									disabled={applicationsPagination.loadingMore}
+								>
+									{#if applicationsPagination.loadingMore}
+										<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+									{/if}
+									加载更多
+								</Button>
+							</div>
+						{/if}
+					{/if}
+				</TabsContent>
+			{/if}
 		</Tabs>
 	{/if}
 </div>
 
 <Dialog.Root bind:open={showJoinDialog}>
-	<Dialog.Content class="sm:max-w-lg">
+	<Dialog.Content class="sm:max-w-lg rounded-3xl border border-border/60 bg-card/95 shadow-xl backdrop-blur-md">
 		<Dialog.Header>
 			<Dialog.Title>加入群组</Dialog.Title>
 			<Dialog.Description>
@@ -1184,31 +1427,35 @@
 		</Dialog.Header>
 		<div class="space-y-4 py-4">
 			{#if group?.has_password}
-				<div class="space-y-2">
+				<div class="space-y-2 rounded-2xl border border-border/50 bg-background/65 p-4">
 					<Label for="group-password">群组密码</Label>
 					<Input
 						id="group-password"
 						type="password"
 						placeholder="请输入群组密码"
 						bind:value={joinPassword}
+						maxlength={GROUP_PASSWORD_MAX}
+						class="h-11 rounded-2xl border-border/60 bg-background/75"
 					/>
 				</div>
 			{/if}
 			{#if settings?.join_method === 'approval'}
-				<div class="space-y-2">
+				<div class="space-y-2 rounded-2xl border border-border/50 bg-background/65 p-4">
 					<Label for="join-message">申请理由</Label>
 					<Textarea
 						id="join-message"
 						placeholder="简单介绍一下你自己"
 						rows={3}
 						bind:value={joinMessage}
+						maxlength={GROUP_JOIN_MESSAGE_MAX}
+						class="rounded-2xl border-border/60 bg-background/75"
 					/>
 				</div>
 			{/if}
 		</div>
 		<Dialog.Footer>
-			<Button variant="outline" onclick={() => (showJoinDialog = false)}>取消</Button>
-			<Button onclick={handleJoin} disabled={isJoining}>
+			<Button variant="outline" class="h-10 rounded-2xl border-border/60 bg-background/70" onclick={() => (showJoinDialog = false)}>取消</Button>
+			<Button class="h-10 rounded-2xl" onclick={handleJoin} disabled={isJoining}>
 				{#if isJoining}
 					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 				{/if}
@@ -1219,30 +1466,34 @@
 </Dialog.Root>
 
 <Dialog.Root bind:open={showAnnouncementDialog}>
-	<Dialog.Content class="sm:max-w-xl">
+	<Dialog.Content class="sm:max-w-xl rounded-3xl border border-border/60 bg-card/95 shadow-xl backdrop-blur-md">
 		<Dialog.Header>
 			<Dialog.Title>{editingAnnouncement ? '编辑公告' : '发布公告'}</Dialog.Title>
 			<Dialog.Description>发布给所有成员的重要通知与群规提醒。</Dialog.Description>
 		</Dialog.Header>
 		<div class="space-y-4 py-4">
-			<div class="space-y-2">
+			<div class="space-y-2 rounded-2xl border border-border/50 bg-background/65 p-4">
 				<Label for="announcement-title">公告标题</Label>
 				<Input
 					id="announcement-title"
 					placeholder="输入公告标题"
 					bind:value={announcementTitle}
+					maxlength={ANNOUNCEMENT_TITLE_MAX}
+					class="h-11 rounded-2xl border-border/60 bg-background/75"
 				/>
 			</div>
-			<div class="space-y-2">
+			<div class="space-y-2 rounded-2xl border border-border/50 bg-background/65 p-4">
 				<Label for="announcement-content">公告内容</Label>
 				<Textarea
 					id="announcement-content"
 					rows={5}
 					placeholder="输入公告内容"
 					bind:value={announcementContent}
+					maxlength={ANNOUNCEMENT_CONTENT_MAX}
+					class="rounded-2xl border-border/60 bg-background/75"
 				/>
 			</div>
-			<div class="flex items-center justify-between rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm">
+			<div class="flex items-center justify-between rounded-2xl border border-border/50 bg-background/65 px-4 py-3 text-sm">
 				<div>
 					<p class="font-medium">置顶公告</p>
 					<p class="text-xs text-muted-foreground">置顶后将优先展示给成员</p>
@@ -1250,7 +1501,7 @@
 				<Button
 					variant={announcementPinned ? 'default' : 'outline'}
 					size="sm"
-					class="rounded-full"
+					class="h-9 rounded-2xl"
 					onclick={() => (announcementPinned = !announcementPinned)}
 				>
 					{announcementPinned ? '已置顶' : '未置顶'}
@@ -1258,8 +1509,8 @@
 			</div>
 		</div>
 		<Dialog.Footer>
-			<Button variant="outline" onclick={() => (showAnnouncementDialog = false)}>取消</Button>
-			<Button onclick={submitAnnouncement} disabled={announcementSubmitting}>
+			<Button variant="outline" class="h-10 rounded-2xl border-border/60 bg-background/70" onclick={() => (showAnnouncementDialog = false)}>取消</Button>
+			<Button class="h-10 rounded-2xl" onclick={submitAnnouncement} disabled={announcementSubmitting}>
 				{#if announcementSubmitting}
 					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 				{/if}
@@ -1270,23 +1521,23 @@
 </Dialog.Root>
 
 <Dialog.Root bind:open={showAnnouncementDeleteDialog}>
-	<Dialog.Content class="sm:max-w-md">
+	<Dialog.Content class="sm:max-w-md rounded-3xl border border-border/60 bg-card/95 shadow-xl backdrop-blur-md">
 		<Dialog.Header>
 			<Dialog.Title>删除公告</Dialog.Title>
 			<Dialog.Description>删除后成员将无法再看到该公告。</Dialog.Description>
 		</Dialog.Header>
-		<div class="rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+		<div class="rounded-2xl border border-border/50 bg-background/65 px-4 py-3 text-sm text-muted-foreground">
 			{announcementToDelete?.title ?? '该公告'}
 		</div>
 		<Dialog.Footer>
-			<Button variant="outline" onclick={() => (showAnnouncementDeleteDialog = false)}>取消</Button>
-			<Button variant="destructive" onclick={handleDeleteAnnouncement}>确认删除</Button>
+			<Button variant="outline" class="h-10 rounded-2xl border-border/60 bg-background/70" onclick={() => (showAnnouncementDeleteDialog = false)}>取消</Button>
+			<Button variant="destructive" class="h-10 rounded-2xl" onclick={handleDeleteAnnouncement}>确认删除</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
 
 <Dialog.Root bind:open={showMuteDialog}>
-	<Dialog.Content class="sm:max-w-md">
+	<Dialog.Content class="sm:max-w-md rounded-3xl border border-border/60 bg-card/95 shadow-xl backdrop-blur-md">
 		<Dialog.Header>
 			<Dialog.Title>禁言成员</Dialog.Title>
 			<Dialog.Description>被禁言成员仍可浏览，但无法发言。</Dialog.Description>
@@ -1300,7 +1551,7 @@
 					<Button
 						variant={Number(muteDurationMinutes) === preset.value ? 'default' : 'outline'}
 						size="sm"
-						class="rounded-full"
+					class="h-9 rounded-2xl"
 						onclick={() => (muteDurationMinutes = String(preset.value))}
 					>
 						{preset.label}
@@ -1312,14 +1563,16 @@
 				<Input
 					id="mute-duration"
 					type="number"
-					min="1"
+					min={MUTE_DURATION_MIN}
+					max={MUTE_DURATION_MAX}
 					bind:value={muteDurationMinutes}
+					class="h-11 rounded-2xl border-border/60 bg-background/75"
 				/>
 			</div>
 		</div>
 		<Dialog.Footer>
-			<Button variant="outline" onclick={() => (showMuteDialog = false)}>取消</Button>
-			<Button onclick={handleMuteMember} disabled={muteSubmitting}>
+			<Button variant="outline" class="h-10 rounded-2xl border-border/60 bg-background/70" onclick={() => (showMuteDialog = false)}>取消</Button>
+			<Button class="h-10 rounded-2xl" onclick={handleMuteMember} disabled={muteSubmitting}>
 				{#if muteSubmitting}
 					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 				{/if}
@@ -1330,10 +1583,10 @@
 </Dialog.Root>
 
 <Dialog.Root bind:open={showRoleDialog}>
-	<Dialog.Content class="sm:max-w-md">
+	<Dialog.Content class="sm:max-w-md rounded-3xl border border-border/60 bg-card/95 shadow-xl backdrop-blur-md">
 		<Dialog.Header>
 			<Dialog.Title>角色管理</Dialog.Title>
-			<Dialog.Description>仅群主可以调整管理员权限。</Dialog.Description>
+			<Dialog.Description>群主与管理员可调整成员角色；管理员不可操作管理员或群主。</Dialog.Description>
 		</Dialog.Header>
 		<div class="space-y-4 py-2">
 			<div class="text-sm text-muted-foreground">
@@ -1342,7 +1595,7 @@
 			<div class="grid gap-2 sm:grid-cols-2">
 				<Button
 					variant={roleTarget?.role === 'admin' ? 'default' : 'outline'}
-					class="rounded-full"
+					class="h-10 rounded-2xl"
 					disabled={roleTarget?.role === 'admin' || roleSubmitting}
 					onclick={() => handleSetRole('admin')}
 				>
@@ -1350,7 +1603,7 @@
 				</Button>
 				<Button
 					variant={roleTarget?.role === 'member' ? 'default' : 'outline'}
-					class="rounded-full"
+					class="h-10 rounded-2xl"
 					disabled={roleTarget?.role === 'member' || roleSubmitting}
 					onclick={() => handleSetRole('member')}
 				>
@@ -1359,23 +1612,23 @@
 			</div>
 		</div>
 		<Dialog.Footer>
-			<Button variant="outline" onclick={() => (showRoleDialog = false)}>取消</Button>
+			<Button variant="outline" class="h-10 rounded-2xl border-border/60 bg-background/70" onclick={() => (showRoleDialog = false)}>取消</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
 
 <Dialog.Root bind:open={showRemoveDialog}>
-	<Dialog.Content class="sm:max-w-md">
+	<Dialog.Content class="sm:max-w-md rounded-3xl border border-border/60 bg-card/95 shadow-xl backdrop-blur-md">
 		<Dialog.Header>
 			<Dialog.Title>移除成员</Dialog.Title>
 			<Dialog.Description>确认将该成员移出群组吗？</Dialog.Description>
 		</Dialog.Header>
-		<div class="rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+		<div class="rounded-2xl border border-border/50 bg-background/65 px-4 py-3 text-sm text-muted-foreground">
 			{removeTarget?.user.nickname ?? '-'}
 		</div>
 		<Dialog.Footer>
-			<Button variant="outline" onclick={() => (showRemoveDialog = false)}>取消</Button>
-			<Button variant="destructive" onclick={handleRemoveMember} disabled={removeSubmitting}>
+			<Button variant="outline" class="h-10 rounded-2xl border-border/60 bg-background/70" onclick={() => (showRemoveDialog = false)}>取消</Button>
+			<Button variant="destructive" class="h-10 rounded-2xl" onclick={handleRemoveMember} disabled={removeSubmitting}>
 				{#if removeSubmitting}
 					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 				{/if}
@@ -1387,20 +1640,20 @@
 
 <!-- 退出群组确认对话框 -->
 <Dialog.Root bind:open={showLeaveDialog}>
-	<Dialog.Content class="sm:max-w-md">
+	<Dialog.Content class="sm:max-w-md rounded-3xl border border-border/60 bg-card/95 shadow-xl backdrop-blur-md">
 		<Dialog.Header>
 			<Dialog.Title>退出群组</Dialog.Title>
 			<Dialog.Description>确认要退出该群组吗？退出后将无法查看群组内容。</Dialog.Description>
 		</Dialog.Header>
-			<div class="rounded-xl border border-border/60 bg-muted/30 px-4 py-3">
+			<div class="rounded-2xl border border-border/50 bg-background/65 px-4 py-3">
 			<div class="text-sm font-medium">{group?.group.name ?? '群组'}</div>
 			<div class="mt-1 text-xs text-muted-foreground">
 				{group?.group.members_count ?? 0} 位成员
 			</div>
 		</div>
 		<Dialog.Footer>
-			<Button variant="outline" onclick={() => (showLeaveDialog = false)}>取消</Button>
-			<Button variant="destructive" onclick={handleLeave} disabled={isLeaving}>
+			<Button variant="outline" class="h-10 rounded-2xl border-border/60 bg-background/70" onclick={() => (showLeaveDialog = false)}>取消</Button>
+			<Button variant="destructive" class="h-10 rounded-2xl" onclick={handleLeave} disabled={isLeaving}>
 				{#if isLeaving}
 					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 				{/if}

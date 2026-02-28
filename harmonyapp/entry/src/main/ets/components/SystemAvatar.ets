@@ -25,7 +25,7 @@ export struct SystemAvatar {
     }
     const borderOptions: BorderOptions = {
       width: 2,
-      color: $r('sys.color.ohos_id_color_sub_background')
+      color: $r('app.color.bg_primary')
     };
     return borderOptions;
   }
@@ -44,7 +44,7 @@ export struct SystemAvatar {
             .objectFit(ImageFit.Cover)
             .borderRadius(this.getBorderRadius())
             .border(this.getBorderOptions())
-            .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+            .backgroundColor($r('app.color.bg_secondary'))
         } else {
           // 首字母 Fallback
           Flex({ justifyContent: FlexAlign.Center, alignItems: ItemAlign.Center }) {
@@ -74,15 +74,7 @@ export struct SystemAvatar {
           Text('临时')
             .fontSize(this.avatarSize * 0.25)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-            .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
-            .borderRadius(DesignConstants.RADIUS.SM)
-            .padding({ left: 2, right: 2 })
-            .margin({ bottom: -2, right: -2 })
-        } else if (this.userType && UserTypeUtil.isSystemUser(this.userType)) {
-          Text('官方')
-            .fontSize(this.avatarSize * 0.25)
-            .fontColor(Color.White)
-            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+            .backgroundColor($r('app.color.bg_tertiary'))
             .borderRadius(DesignConstants.RADIUS.SM)
             .padding({ left: 2, right: 2 })
             .margin({ bottom: -2, right: -2 })

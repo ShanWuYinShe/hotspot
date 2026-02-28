@@ -22,22 +22,21 @@ export struct EmptyState {
           .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
       }
 
-      Text(this.message)
+      Text(this.message ?? '')
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         .textAlign(TextAlign.Center)
         .lineHeight(24)
 
-      if (this.actionLabel.length > 0 && this.onAction) {
-        Button(this.actionLabel)
-          .type(ButtonType.Capsule)
+      if ((this.actionLabel ?? '').length > 0 && this.onAction) {
+        Button(this.actionLabel ?? '')
+          .type(ButtonType.Normal)
           .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
           .fontColor(Color.White)
           .height(40)
+          .borderRadius(DesignConstants.RADIUS.XL)
           .onClick(() => {
-            if (this.onAction) {
-              this.onAction();
-            }
+            this.onAction?.();
           })
       }
     }

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use tracing::{info, warn};
 
 use super::GroupService;
 use crate::{
@@ -21,7 +22,18 @@ impl GroupService {
         user_id: i64,
         req: &CreateGroupAnnouncementRequest,
     ) -> Result<GroupAnnouncementItem> {
+        let started_at = std::time::Instant::now();
+        Validator::validate_announcement_title(&req.title)?;
+        Validator::validate_announcement_content(&req.content)?;
         let group_id = Validator::parse_group_id(&req.group_id)?;
+        info!(
+            operator_id = user_id,
+            group_id,
+            title_len = req.title.chars().count(),
+            content_len = req.content.chars().count(),
+            is_pinned = req.is_pinned.unwrap_or(false),
+            "group.announcement create started"
+        );
         let _ = self.require_admin_or_owner(group_id, user_id).await?;
 
         let announcement = self
@@ -35,6 +47,14 @@ impl GroupService {
             )
             .await?;
 
+        if let Err(err) = self.group_repo.touch_last_activity(group_id).await {
+            warn!(
+                group_id,
+                error = %err,
+                "更新群组 last_activity_at 失败（create announcement）"
+            );
+        }
+
         let created_by = self.build_user_info(user_id).await?;
         self.event_bus.publish(AppEvent::GroupAnnouncementCreated {
             announcement_id: announcement.announcement_id,
@@ -46,6 +66,13 @@ impl GroupService {
             created_by_avatar_url: created_by.avatar_url.clone(),
             is_pinned: announcement.is_pinned,
         });
+        info!(
+            operator_id = user_id,
+            group_id,
+            announcement_id = %announcement.announcement_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "group.announcement create completed"
+        );
 
         Ok(GroupAnnouncementItem {
             announcement_id: announcement.announcement_id.to_string(),
@@ -107,8 +134,24 @@ impl GroupService {
         user_id: i64,
         req: &UpdateGroupAnnouncementRequest,
     ) -> Result<GroupAnnouncementItem> {
+        let started_at = std::time::Instant::now();
+        if let Some(title) = req.title.as_deref() {
+            Validator::validate_announcement_title(title)?;
+        }
+        if let Some(content) = req.content.as_deref() {
+            Validator::validate_announcement_content(content)?;
+        }
         let group_id = Validator::parse_group_id(&req.group_id)?;
         let announcement_id = Validator::parse_uuid(&req.announcement_id, "公告ID")?;
+        info!(
+            operator_id = user_id,
+            group_id,
+            announcement_id = %announcement_id,
+            has_title = req.title.is_some(),
+            has_content = req.content.is_some(),
+            has_pinned = req.is_pinned.is_some(),
+            "group.announcement update started"
+        );
         let announcement = self
             .announcement_repo
             .find_by_id(announcement_id)
@@ -132,6 +175,18 @@ impl GroupService {
             )
             .await?;
 
+        if let Err(err) = self
+            .group_repo
+            .touch_last_activity(announcement.group_id)
+            .await
+        {
+            warn!(
+                group_id = announcement.group_id,
+                error = %err,
+                "更新群组 last_activity_at 失败（update announcement）"
+            );
+        }
+
         self.event_bus.publish(AppEvent::GroupAnnouncementUpdated {
             announcement_id,
             group_id: announcement.group_id,
@@ -139,6 +194,13 @@ impl GroupService {
             content: req.content.clone(),
             is_pinned: req.is_pinned,
         });
+        info!(
+            operator_id = user_id,
+            group_id = announcement.group_id,
+            announcement_id = %announcement_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "group.announcement update completed"
+        );
 
         Ok(GroupAnnouncementItem {
             announcement_id: announcement_id.to_string(),
@@ -156,7 +218,13 @@ impl GroupService {
         user_id: i64,
         req: &DeleteGroupAnnouncementRequest,
     ) -> Result<()> {
+        let started_at = std::time::Instant::now();
         let announcement_id = Validator::parse_uuid(&req.announcement_id, "公告ID")?;
+        info!(
+            operator_id = user_id,
+            announcement_id = %announcement_id,
+            "group.announcement delete started"
+        );
         let announcement = self
             .announcement_repo
             .find_by_id(announcement_id)
@@ -168,10 +236,28 @@ impl GroupService {
             .await?;
 
         self.announcement_repo.delete(announcement_id).await?;
+        if let Err(err) = self
+            .group_repo
+            .touch_last_activity(announcement.group_id)
+            .await
+        {
+            warn!(
+                group_id = announcement.group_id,
+                error = %err,
+                "更新群组 last_activity_at 失败（delete announcement）"
+            );
+        }
         self.event_bus.publish(AppEvent::GroupAnnouncementDeleted {
             announcement_id,
             group_id: announcement.group_id,
         });
+        info!(
+            operator_id = user_id,
+            group_id = announcement.group_id,
+            announcement_id = %announcement_id,
+            elapsed_ms = started_at.elapsed().as_millis(),
+            "group.announcement delete completed"
+        );
         Ok(())
     }
 }

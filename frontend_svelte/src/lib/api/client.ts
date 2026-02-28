@@ -5,7 +5,7 @@
  * - 所有请求使用 POST 方法
  * - 自动注入 Authorization Token
  * - 自动注入 CSRF Token (Web 端)
- * - 401 时自动刷新 Token 并重试
+ * - code=10100 时自动刷新 Token 并重试
  * - 幂等性支持 (Idempotency-Key)
  * - 业务成功判断: code === 0
  */
@@ -27,6 +27,10 @@ export type { ApiResponse, PaginatedData };
 
 // Token 无效或过期的错误码（spec 定义的宽泛分类码）
 const TOKEN_INVALID_CODE = 10100;
+const IDEMPOTENCY_CONFLICT_CODE = 22000;
+const IDEMPOTENCY_CACHE_EXPIRED_CODE = 22001;
+const IDEMPOTENCY_IN_PROGRESS_CODE = 22002;
+const MAX_IDEMPOTENCY_RETRIES = 1;
 
 // 是否正在刷新 Token
 let isRefreshing = false;
@@ -133,6 +137,10 @@ function isTokenInvalidError(code: number): boolean {
 	return code === TOKEN_INVALID_CODE;
 }
 
+function sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
  * 刷新 Token (Web 端)
  *
@@ -153,7 +161,7 @@ async function refreshToken(): Promise<boolean> {
 			headers['X-CSRF-Token'] = csrfToken;
 		}
 
-		// 超时控制：防止刷新请求挂起导致所有 401 重试路径无限等待
+		// 超时控制：防止刷新请求挂起导致所有待刷新请求无限等待
 		const refreshController = new AbortController();
 		const refreshTimeoutId = setTimeout(() => refreshController.abort(), 10000);
 
@@ -221,7 +229,8 @@ async function request<T>(
 	url: string,
 	body?: unknown,
 	options: RequestOptions = {},
-	isRetry = false
+	isRetry = false,
+	idempotencyRetryCount = 0
 ): Promise<ClientApiResponse<T>> {
 	const cfg = getConfig();
 	const headers: Record<string, string> = {
@@ -268,14 +277,6 @@ async function request<T>(
 
 		// 处理 HTTP 错误
 		if (!response.ok) {
-			// HTTP 401: Cookie 中的 token 可能已过期，尝试刷新后重试
-			if (response.status === 401 && !isRetry && !options.skipAuth) {
-				const refreshed = await ensureRefreshToken();
-				if (refreshed) {
-					return request<T>(url, body, options, true);
-				}
-			}
-
 			let errorMessage = `HTTP Error: ${response.status}`;
 			let requestId = response.headers.get('X-Request-ID') || '';
 			
@@ -318,7 +319,29 @@ async function request<T>(
 			const refreshed = await ensureRefreshToken();
 			if (refreshed) {
 				// Cookie 中的 token 已更新，重试
-				return request<T>(url, body, options, true);
+				return request<T>(url, body, options, true, idempotencyRetryCount);
+			}
+		}
+
+		// 幂等错误自动重试（仅对携带 Idempotency-Key 的请求生效）
+		if (options.idempotencyKey && idempotencyRetryCount < MAX_IDEMPOTENCY_RETRIES) {
+			if (data.code === IDEMPOTENCY_IN_PROGRESS_CODE) {
+				// 22002：同 key 仍在处理中，等待后用相同 key 重试
+				await sleep(1200);
+				return request<T>(url, body, options, isRetry, idempotencyRetryCount + 1);
+			}
+			if (
+				data.code === IDEMPOTENCY_CONFLICT_CODE ||
+				data.code === IDEMPOTENCY_CACHE_EXPIRED_CODE
+			) {
+				// 22000/22001：换新 key 重试一次
+				return request<T>(
+					url,
+					body,
+					{ ...options, idempotencyKey: generateIdempotencyKey() },
+					isRetry,
+					idempotencyRetryCount + 1
+				);
 			}
 		}
 

@@ -23,7 +23,9 @@ import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 
 const DOMAIN_NUMBER: number = 0xFF02;
 const TAG: string = 'LoginPage';
+const PASSWORD_POLICY_HINT: string = '密码需为8-128位且同时包含字母和数字';
 
+@Preview
 @Component
 export struct LoginPage {
   pathStack: NavPathStack = new NavPathStack();
@@ -47,13 +49,45 @@ export struct LoginPage {
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
 
+  private isValidLoginId(loginId: string): boolean {
+    const trimmed = loginId.trim();
+    return trimmed.length >= 3 && trimmed.length <= 64;
+  }
+
+  private isValidNickname(nickname: string): boolean {
+    const trimmed = nickname.trim();
+    return trimmed.length >= 1 && trimmed.length <= 30;
+  }
+
+  private hasLetterAndDigit(value: string): boolean {
+    let hasLetter: boolean = false;
+    let hasDigit: boolean = false;
+    for (let i = 0; i < value.length; i++) {
+      const code = value.charCodeAt(i);
+      if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {
+        hasLetter = true;
+      }
+      if (code >= 48 && code <= 57) {
+        hasDigit = true;
+      }
+      if (hasLetter && hasDigit) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private isValidPassword(value: string): boolean {
+    return value.length >= 8 && value.length <= 128 && this.hasLetterAndDigit(value);
+  }
+
   private getHeaderTopPadding(): number {
     return (this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.LG) + DesignConstants.SPACING.SM;
   }
 
   aboutToAppear(): void {
     SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.SECONDARY_BG_LIGHT,      preferDarkContent: true
+      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
     });
   }
 
@@ -94,7 +128,7 @@ export struct LoginPage {
             top: this.getHeaderTopPadding(),
             bottom: DesignConstants.SPACING.SM
           })
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor($r('app.color.bg_primary'))
           .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
           // 标题区域（固定）
@@ -124,7 +158,7 @@ export struct LoginPage {
             this.ModeTab('注册', 'register')
           }
           .width('100%')
-          .backgroundColor($r('sys.color.ohos_id_color_component_normal'))
+          .backgroundColor($r('app.color.bg_secondary'))
           .borderRadius(DesignConstants.RADIUS.LG)
           .padding(DesignConstants.SPACING.XS)
           .margin({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL })
@@ -154,7 +188,7 @@ export struct LoginPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor($r('app.color.bg_primary'))
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {
@@ -207,28 +241,31 @@ export struct LoginPage {
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
         .backgroundColor($r('app.color.bg_secondary'))
-        .borderRadius(DesignConstants.RADIUS.LG)
+        .borderRadius(DesignConstants.RADIUS.XL)
+        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
         .type(InputType.Email)
 
       TextInput({ placeholder: '密码', text: $$this.password })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
         .backgroundColor($r('app.color.bg_secondary'))
-        .borderRadius(DesignConstants.RADIUS.LG)
+        .borderRadius(DesignConstants.RADIUS.XL)
+        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
         .type(InputType.Password)
 
       Button('登录')
-        .type(ButtonType.Capsule)
-        .backgroundColor(this.loginId.trim().length > 0 && this.password.trim().length > 0
+        .type(ButtonType.Normal)
+        .backgroundColor(this.isValidLoginId(this.loginId) && this.isValidPassword(this.password)
           ? $r('sys.color.ohos_id_color_emphasize')
-          : $r('sys.color.ohos_id_color_component_normal'))
-        .fontColor(this.loginId.trim().length > 0 && this.password.trim().length > 0
+          : $r('app.color.bg_tertiary'))
+        .fontColor(this.isValidLoginId(this.loginId) && this.isValidPassword(this.password)
           ? Color.White
           : $r('sys.color.ohos_id_color_text_secondary'))
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .width('100%')
         .height(48)
-        .enabled(this.loginId.trim().length > 0 && this.password.trim().length > 0)
+        .borderRadius(DesignConstants.RADIUS.XL)
+        .enabled(this.isValidLoginId(this.loginId) && this.isValidPassword(this.password))
         .onClick(() => this.userLogin())
 
       Text('没有账号？切换到「注册」标签')
@@ -247,49 +284,54 @@ export struct LoginPage {
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
         .backgroundColor($r('app.color.bg_secondary'))
-        .borderRadius(DesignConstants.RADIUS.LG)
+        .borderRadius(DesignConstants.RADIUS.XL)
+        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
 
       TextInput({ placeholder: '邮箱 / 用户名（登录凭证）', text: $$this.registerLoginId })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
         .backgroundColor($r('app.color.bg_secondary'))
-        .borderRadius(DesignConstants.RADIUS.LG)
+        .borderRadius(DesignConstants.RADIUS.XL)
+        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
         .type(InputType.Email)
 
-      TextInput({ placeholder: '密码（至少8位）', text: $$this.registerPassword })
+      TextInput({ placeholder: '密码（8-128位，含字母+数字）', text: $$this.registerPassword })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
         .backgroundColor($r('app.color.bg_secondary'))
-        .borderRadius(DesignConstants.RADIUS.LG)
+        .borderRadius(DesignConstants.RADIUS.XL)
+        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
         .type(InputType.Password)
 
       TextInput({ placeholder: '确认密码', text: $$this.registerPasswordConfirm })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
         .backgroundColor($r('app.color.bg_secondary'))
-        .borderRadius(DesignConstants.RADIUS.LG)
+        .borderRadius(DesignConstants.RADIUS.XL)
+        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
         .type(InputType.Password)
 
       Button('注册')
-        .type(ButtonType.Capsule)
-        .backgroundColor(this.registerNickname.trim().length > 0
-          && this.registerLoginId.trim().length > 0
-          && this.registerPassword.length >= 8
+        .type(ButtonType.Normal)
+        .backgroundColor(this.isValidNickname(this.registerNickname)
+          && this.isValidLoginId(this.registerLoginId)
+          && this.isValidPassword(this.registerPassword)
           && this.registerPasswordConfirm === this.registerPassword
           ? $r('sys.color.ohos_id_color_emphasize')
-          : $r('sys.color.ohos_id_color_component_normal'))
-        .fontColor(this.registerNickname.trim().length > 0
-          && this.registerLoginId.trim().length > 0
-          && this.registerPassword.length >= 8
+          : $r('app.color.bg_tertiary'))
+        .fontColor(this.isValidNickname(this.registerNickname)
+          && this.isValidLoginId(this.registerLoginId)
+          && this.isValidPassword(this.registerPassword)
           && this.registerPasswordConfirm === this.registerPassword
           ? Color.White
           : $r('sys.color.ohos_id_color_text_secondary'))
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .width('100%')
         .height(48)
-        .enabled(this.registerNickname.trim().length > 0
-          && this.registerLoginId.trim().length > 0
-          && this.registerPassword.length >= 8
+        .borderRadius(DesignConstants.RADIUS.XL)
+        .enabled(this.isValidNickname(this.registerNickname)
+          && this.isValidLoginId(this.registerLoginId)
+          && this.isValidPassword(this.registerPassword)
           && this.registerPasswordConfirm === this.registerPassword)
         .onClick(() => this.userRegister())
 
@@ -305,8 +347,17 @@ export struct LoginPage {
   // ==================== 认证逻辑 ====================
 
   private async userLogin() {
-    if (!this.loginId.trim() || !this.password.trim()) {
+    const trimmedLoginId = this.loginId.trim();
+    if (!trimmedLoginId || !this.password.trim()) {
       SystemToast.showWarning('请输入邮箱和密码', this.getUIContext());
+      return;
+    }
+    if (!this.isValidLoginId(trimmedLoginId)) {
+      SystemToast.showWarning('登录账号长度需在3-64字符之间', this.getUIContext());
+      return;
+    }
+    if (!this.isValidPassword(this.password)) {
+      SystemToast.showWarning(PASSWORD_POLICY_HINT, this.getUIContext());
       return;
     }
 
@@ -319,7 +370,7 @@ export struct LoginPage {
         this.loadingProgress = 40;
 
         const loginRequest: LoginRequest = {
-          login_id: this.loginId,
+          login_id: trimmedLoginId,
           password: this.password,
           client_type: 'app'
         };
@@ -346,16 +397,26 @@ export struct LoginPage {
   }
 
   private async userRegister() {
-    if (!this.registerNickname.trim()) {
+    const trimmedNickname = this.registerNickname.trim();
+    const trimmedLoginId = this.registerLoginId.trim();
+    if (!trimmedNickname) {
       SystemToast.showWarning('请输入昵称', this.getUIContext());
       return;
     }
-    if (!this.registerLoginId.trim()) {
+    if (!trimmedLoginId) {
       SystemToast.showWarning('请输入邮箱或用户名', this.getUIContext());
       return;
     }
-    if (this.registerPassword.length < 8) {
-      SystemToast.showWarning('密码至少需要8个字符', this.getUIContext());
+    if (!this.isValidNickname(trimmedNickname)) {
+      SystemToast.showWarning('昵称长度需在1-30字符之间', this.getUIContext());
+      return;
+    }
+    if (!this.isValidLoginId(trimmedLoginId)) {
+      SystemToast.showWarning('登录账号长度需在3-64字符之间', this.getUIContext());
+      return;
+    }
+    if (!this.isValidPassword(this.registerPassword)) {
+      SystemToast.showWarning(PASSWORD_POLICY_HINT, this.getUIContext());
       return;
     }
     if (this.registerPassword !== this.registerPasswordConfirm) {
@@ -372,8 +433,8 @@ export struct LoginPage {
         this.loadingProgress = 40;
 
         const registerRequest: RegisterRequest = {
-          nickname: this.registerNickname.trim(),
-          login_id: this.registerLoginId.trim(),
+          nickname: trimmedNickname,
+          login_id: trimmedLoginId,
           password: this.registerPassword,
           client_type: 'app'
         };
