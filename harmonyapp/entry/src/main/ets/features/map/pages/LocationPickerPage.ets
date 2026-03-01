@@ -109,8 +109,8 @@ function TopBar(props: TopBarProps) {
   }
   .width('100%')
   .padding({
-    left: 12,
-    right: 12,
+    left: DesignConstants.SPACING.MD,
+    right: DesignConstants.SPACING.MD,
     top: SafeAreaUtils.resolveTopPadding(props.safeAreaTop, DesignConstants.SPACING.XS)
   })
   .backgroundColor(Color.Transparent)
@@ -132,7 +132,7 @@ function MapToast(props: MapToastProps) {
       .backgroundColor($r('app.color.bg_secondary'))
       .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
       .borderRadius(DesignConstants.RADIUS.MD)
-      .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: 6, bottom: 6 })
       .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
       .position({ top: SafeAreaUtils.resolveTopPadding(props.safeAreaTop, 100), left: 16 })
       .transition(TransitionEffect.OPACITY.animation({ duration: 250 }))
@@ -298,7 +298,7 @@ struct SearchPanel {
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
-      .padding({ bottom: 12 })
+      .padding({ bottom: DesignConstants.SPACING.MD })
 
       // 内容区域 - 可滚动
       Scroll() {
@@ -445,7 +445,12 @@ struct SearchPanel {
       .width('100%')
     }
     .height(SEARCH_PANEL_HEIGHT)
-    .padding({ left: 16, right: 16, top: 16, bottom: 12 + this.safeAreaBottom })
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.LG,
+      bottom: DesignConstants.SPACING.MD + this.safeAreaBottom
+    })
     .backgroundColor($r('app.color.bg_secondary'))
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
     .borderRadius({ topLeft: 24, topRight: 24 })
@@ -530,12 +535,12 @@ struct MainPanel {
       }
       .width('100%')
       .height(40)
-      .padding({ left: 12, right: 12 })
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
       .alignItems(VerticalAlign.Center)
       .backgroundColor($r('app.color.bg_secondary'))
       .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
       .borderRadius(DesignConstants.RADIUS.XXL)
-      .margin({ bottom: 12 })
+      .margin({ bottom: DesignConstants.SPACING.MD })
       .onClick(this.onSearchClick)
 
       // 可滚动历史记录（面板最低档时隐藏，由 clip(true) 保证拖拽过程平滑裁剪）
@@ -643,7 +648,12 @@ struct MainPanel {
     }
     .height(this.panelHeight)
     .clip(true)
-    .padding({ left: 16, right: 16, top: 0, bottom: 12 + this.safeAreaBottom })
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: 0,
+      bottom: DesignConstants.SPACING.MD + this.safeAreaBottom
+    })
     .backgroundColor($r('app.color.bg_secondary'))
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
     .borderRadius({ topLeft: 24, topRight: 24 })
@@ -1347,7 +1357,7 @@ export struct LocationPickerPage {
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow({ radius: 12, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 4 })
         }
-        .position({ right: 12, bottom: this.getControlsBottomOffset() })
+        .position({ right: DesignConstants.SPACING.MD, bottom: this.getControlsBottomOffset() })
       }
     }
     .hideTitleBar(true)
@@ -1385,7 +1395,10 @@ function MapFilterChip(props: MapFilterChipProps) {
       .fontColor(props.active ? Color.White : $r('sys.color.ohos_id_color_text_primary'))
   }
   .height(34)
-  .padding({ left: 12, right: 14 })
+  .padding({
+    left: DesignConstants.SPACING.MD,
+    right: DesignConstants.SPACING.MD + 2
+  })
   .backgroundColor(props.active ? props.accentColor : $r('app.color.bg_secondary'))
   .border(props.active ? { width: 0 } : { width: 1.5, color: props.accentColor })
   .borderRadius(DesignConstants.RADIUS.XL)

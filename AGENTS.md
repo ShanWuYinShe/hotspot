@@ -145,6 +145,7 @@ pnpm dev             # 启动开发服务器
 # 环境变量（macOS 默认安装路径，无需修改）
 DEVECO_STUDIO_DIR="/Applications/DevEco-Studio.app"
 DEVECO_SDK_HOME="$DEVECO_STUDIO_DIR/Contents/sdk"
+DEVECO_SDK_NODE="/Applications/DevEco-Studio.app/Contents/tools/node/bin/node"
 OHPM="$DEVECO_STUDIO_DIR/Contents/tools/ohpm/bin/ohpm"
 HVIGORW="$DEVECO_STUDIO_DIR/Contents/tools/hvigor/bin/hvigorw.js"
 CODELINTER="$DEVECO_STUDIO_DIR/Contents/plugins/codelinter/run/index.js"
@@ -158,13 +159,13 @@ cd harmonyapp
   --registry https://ohpm.openharmony.cn/ohpm/ --strict_ssl true
 
 # 1. 编译检查（零错误要求，执行前请先运行 `git add` 暂存当前改动）
-DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$HVIGORW" \
+DEVECO_SDK_HOME="$DEVECO_SDK_HOME" "$DEVECO_SDK_NODE" "$HVIGORW" \
   --mode module -p product=default assembleHap \
   --info --analyze=ultrafine --parallel --incremental \
-  --enable-build-script-type-check --no-daemon
+  --daemon
 
 # 2. 代码风格检查（模拟 IDE 中的 Linter 警告，应尽量修复）【✅ Agent 可直接执行】
-DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$CODELINTER" \
+DEVECO_SDK_HOME="$DEVECO_SDK_HOME" "$DEVECO_SDK_NODE" "$CODELINTER" \
   -c code-linter.json5 entry/src/main/ets/
 ```
 

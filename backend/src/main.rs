@@ -283,6 +283,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // 后续版本可在此添加：
         // .nest("/api/v2", routes::v2_routes(state.clone()))
         .with_state(state)
+        .layer(axum::middleware::from_fn(
+            crate::middleware::response_logger::response_logger,
+        ))
         .layer(
             TraceLayer::new_for_http()
                 // 让 “request span” 本身就包含 request_id，避免额外 span_list
@@ -355,9 +358,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     );
                 }),
         )
-        .layer(axum::middleware::from_fn(
-            crate::middleware::response_logger::response_logger,
-        ))
         // request_id：提升到 app 全局最外层，保证 TraceLayer / 任意 handler 日志都在 request_id span 内
         .layer(axum::middleware::from_fn(
             crate::middleware::request_id::request_id_middleware,

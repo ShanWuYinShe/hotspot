@@ -260,7 +260,7 @@ export struct SearchPage {
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Center)
     } else {
-      List({ space: 10 }) {
+      List({ space: DesignConstants.SPACING.MD }) {
         ForEach(this.userResults, (item: UserItem) => {
           ListItem() {
             this.buildUserItem(item)
@@ -268,7 +268,12 @@ export struct SearchPage {
         }, (item: UserItem) => item.user?.user_id ?? '')
       }
       .width('100%').height('100%')
-      .padding({ left: 12, right: 12, top: 10, bottom: 12 })
+      .padding({
+        left: DesignConstants.SPACING.MD,
+        right: DesignConstants.SPACING.MD,
+        top: DesignConstants.SPACING.SM + 2,
+        bottom: DesignConstants.SPACING.MD
+      })
       .scrollBar(BarState.Auto)
     }
   }
@@ -286,7 +291,7 @@ export struct SearchPage {
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Center)
     } else {
-      List({ space: 10 }) {
+      List({ space: DesignConstants.SPACING.MD }) {
         ForEach(this.groupResults, (item: GroupItem) => {
           ListItem() {
             this.buildGroupItem(item)
@@ -294,7 +299,12 @@ export struct SearchPage {
         }, (item: GroupItem) => item.group?.group_id ?? '')
       }
       .width('100%').height('100%')
-      .padding({ left: 12, right: 12, top: 10, bottom: 12 })
+      .padding({
+        left: DesignConstants.SPACING.MD,
+        right: DesignConstants.SPACING.MD,
+        top: DesignConstants.SPACING.SM + 2,
+        bottom: DesignConstants.SPACING.MD
+      })
       .scrollBar(BarState.Auto)
     }
   }
@@ -322,10 +332,15 @@ export struct SearchPage {
       }
       .width('100%').height('100%')
       .columnsTemplate('1fr 1fr')
-      .columnsGap(12)
-      .rowsGap(12)
-      .padding({ left: 12, right: 12, top: 10, bottom: 12 })
-      .cachedCount(6, true)
+      .columnsGap(DesignConstants.SPACING.MD)
+      .rowsGap(DesignConstants.SPACING.MD)
+      .padding({
+        left: DesignConstants.SPACING.MD,
+        right: DesignConstants.SPACING.MD,
+        top: DesignConstants.SPACING.SM + 2,
+        bottom: DesignConstants.SPACING.MD
+      })
+      .cachedCount(6)
     }
   }
 
@@ -628,7 +643,7 @@ export struct SearchPage {
           .width('100%')
           .height(this.calculateSearchImageHeight(item))
           .objectFit(ImageFit.Cover)
-          .borderRadius({ topLeft: 12, topRight: 12 })
+          .borderRadius({ topLeft: DesignConstants.RADIUS.XXL, topRight: DesignConstants.RADIUS.XXL })
       } else {
         // 无图片展示文字摘要
         Column() {
@@ -643,7 +658,7 @@ export struct SearchPage {
         .padding(DesignConstants.SPACING.MD)
         .justifyContent(FlexAlign.Center)
         .backgroundColor($r('app.color.bg_secondary'))
-        .borderRadius({ topLeft: 12, topRight: 12 })
+        .borderRadius({ topLeft: DesignConstants.RADIUS.XXL, topRight: DesignConstants.RADIUS.XXL })
       }
 
       // 用户信息
@@ -718,12 +733,12 @@ export struct SearchPage {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
-    .padding(16)
+    .padding(DesignConstants.SPACING.LG)
     .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.XL)
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
     .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
-    .margin({ bottom: 12 })
+    .margin({ bottom: DesignConstants.SPACING.MD })
   }
 
   private setUserActionPending(userId: string, pending: boolean): void {

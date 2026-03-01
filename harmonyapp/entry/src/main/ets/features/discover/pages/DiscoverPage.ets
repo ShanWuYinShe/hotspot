@@ -256,7 +256,7 @@ export struct DiscoverPage {
                   }
                   .width('100%')
 
-                  Column({ space: 10 }) {
+                  Column({ space: DesignConstants.SPACING.MD }) {
                     ForEach(this.recommendedUsers, (user: UserItem, index: number) => {
                       this.buildRecommendedUserCard(user)
                     }, (user: UserItem) => user.user?.user_id ?? '')
@@ -286,9 +286,9 @@ export struct DiscoverPage {
                   }
                   .height(this.getWaterFlowHeight())
                   .columnsTemplate('1fr 1fr')
-                  .columnsGap(12)
-                  .rowsGap(12)
-                  .cachedCount(10, true)
+                  .columnsGap(DesignConstants.SPACING.MD)
+                  .rowsGap(DesignConstants.SPACING.MD)
+                  .cachedCount(10)
                   .scrollBar(BarState.Off)
                 }
                 .width('100%')
@@ -356,7 +356,12 @@ export struct DiscoverPage {
               }
             }
           }
-          .padding({ left: 12, right: 12, top: 8, bottom: 8 })
+          .padding({
+            left: DesignConstants.SPACING.MD,
+            right: DesignConstants.SPACING.MD,
+            top: DesignConstants.SPACING.SM,
+            bottom: DesignConstants.SPACING.SM
+          })
           .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
           .backgroundColor($r('app.color.bg_tertiary'))
           .borderRadius(DesignConstants.RADIUS.XL)
@@ -380,7 +385,7 @@ export struct DiscoverPage {
   // ==================== 推荐用户卡片 ====================
   @Builder
   buildRecommendedUserCard(user: UserItem) {
-    Column({ space: 10 }) {
+    Column({ space: DesignConstants.SPACING.MD }) {
       Row({ space: 6 }) {
         Row({ space: 4 }) {
           Text() {
@@ -409,8 +414,8 @@ export struct DiscoverPage {
       }
       .width('100%')
 
-      Row({ space: 8 }) {
-        Row({ space: 10 }) {
+      Row({ space: DesignConstants.SPACING.SM }) {
+        Row({ space: DesignConstants.SPACING.MD }) {
           SystemAvatar({
             avatarUrl: user.user?.avatar_url ?? '',
             name: user.user?.nickname ?? '',
@@ -546,7 +551,12 @@ export struct DiscoverPage {
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
-    .padding({ left: 12, right: 12, top: 12, bottom: 12 })
+    .padding({
+      left: DesignConstants.SPACING.MD,
+      right: DesignConstants.SPACING.MD,
+      top: DesignConstants.SPACING.MD,
+      bottom: DesignConstants.SPACING.MD
+    })
     .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.XL)
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
@@ -556,7 +566,7 @@ export struct DiscoverPage {
   // ==================== 热门瞬间卡片（masonry 小红书风格）====================
   @Builder
   buildHotMomentCard(moment: MomentItem) {
-    Column({ space: 10 }) {
+    Column({ space: DesignConstants.SPACING.MD }) {
       Row({ space: 6 }) {
         Row({ space: 4 }) {
           Text() {
@@ -607,7 +617,7 @@ export struct DiscoverPage {
         }
         .width('100%')
         .height(120)
-        .padding(12)
+        .padding(DesignConstants.SPACING.MD)
         .justifyContent(FlexAlign.Center)
         .borderRadius(DesignConstants.RADIUS.LG)
         .backgroundColor($r('app.color.bg_secondary'))
@@ -645,7 +655,12 @@ export struct DiscoverPage {
       .padding(8)
     }
     .width('100%')
-    .padding({ left: 10, right: 10, top: 10, bottom: 10 })
+    .padding({
+      left: DesignConstants.SPACING.MD,
+      right: DesignConstants.SPACING.MD,
+      top: DesignConstants.SPACING.MD,
+      bottom: DesignConstants.SPACING.MD
+    })
     .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.XL)
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })

@@ -66,14 +66,14 @@ entry/src/main/ets/
 ```bash
 # 编译（检查编译错误）
 DEVECO_SDK_HOME="/Applications/DevEco-Studio.app/Contents/sdk" \
-node "/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw.js" \
+"/Applications/DevEco-Studio.app/Contents/tools/node/bin/node" "/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw.js" \
   --mode module -p product=default assembleHap \
   --info --analyze=ultrafine --parallel --incremental \
-  --enable-build-script-type-check --no-daemon
+  --daemon
 
 # 代码检查（检查 IDE 中的 linter 警告）
 DEVECO_SDK_HOME="/Applications/DevEco-Studio.app/Contents/sdk" \
-node "/Applications/DevEco-Studio.app/Contents/plugins/codelinter/run/index.js" \
+"/Applications/DevEco-Studio.app/Contents/tools/node/bin/node" "/Applications/DevEco-Studio.app/Contents/plugins/codelinter/run/index.js" \
   -c code-linter.json5 entry/src/main/ets/
 ```
 

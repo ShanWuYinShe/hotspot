@@ -211,6 +211,7 @@ const manager = GlobalStateManager.getInstance();
 ```bash
 # macOS 默认路径
 DEVECO_SDK_HOME="/Applications/DevEco-Studio.app/Contents/sdk"
+DEVECO_SDK_NODE="/Applications/DevEco-Studio.app/Contents/tools/node/bin/node"
 OHPM="/Applications/DevEco-Studio.app/Contents/tools/ohpm/bin/ohpm"
 HVIGORW="/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw.js"
 CODELINTER="/Applications/DevEco-Studio.app/Contents/plugins/codelinter/run/index.js"
@@ -220,10 +221,10 @@ CODELINTER="/Applications/DevEco-Studio.app/Contents/plugins/codelinter/run/inde
   --registry https://ohpm.openharmony.cn/ohpm/ --strict_ssl true
 
 # 编译（检查编译错误，执行前请先运行 `git add` 暂存当前改动）
-DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$HVIGORW" \
+DEVECO_SDK_HOME="$DEVECO_SDK_HOME" "$DEVECO_SDK_NODE" "$HVIGORW" \
   --mode module -p product=default assembleHap \
   --info --analyze=ultrafine --parallel --incremental \
-  --enable-build-script-type-check --no-daemon
+  --daemon
 
 # 代码检查（检查 IDE 中的 linter 警告，基于 code-linter.json5 规则配置）【✅ Agent 可直接执行】
 DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$CODELINTER" \

@@ -197,11 +197,11 @@ const SPACING: SpacingSystem = {
 
 // ==================== 圆角系统 ====================
 const RADIUS: RadiusSystem = {
-  SM: 4,
-  MD: 8,
-  LG: 12,
-  XL: 16,
-  XXL: 24,
+  SM: 6,
+  MD: 10,
+  LG: 14,
+  XL: 20,
+  XXL: 28,
   FULL: 999,
 };
 
@@ -266,7 +266,7 @@ export class MasonryLayout {
   static readonly IMAGE_HEIGHT_MAX: number = 280;
 
   // 卡片圆角
-  static readonly CARD_RADIUS: number = 12;
+  static readonly CARD_RADIUS: number = 16;
 
   // 预加载数量
   static readonly CACHED_COUNT: number = 8;

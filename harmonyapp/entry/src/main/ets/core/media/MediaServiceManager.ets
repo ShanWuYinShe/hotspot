@@ -61,9 +61,38 @@ export class MediaServiceManager {
       return `${context.cacheDir}/${cacheRelativePath}`;
     }
     if (uri.startsWith('file://')) {
-      return uri.substring('file://'.length);
+      const strippedPath = uri.substring('file://'.length);
+      // `file:///xxx` -> 真实绝对路径；`file://media/...` 这类 URI 需保留原样给 fileIo
+      if (strippedPath.startsWith('/')) {
+        return strippedPath;
+      }
+      return uri;
     }
     return uri;
+  }
+
+  private static buildReadablePathCandidates(context: common.Context, uri: string): string[] {
+    const candidates: string[] = [];
+    const pushCandidate = (value: string) => {
+      if (!value) {
+        return;
+      }
+      if (!candidates.includes(value)) {
+        candidates.push(value);
+      }
+    };
+
+    pushCandidate(MediaServiceManager.normalizeUriToFilePath(context, uri));
+    pushCandidate(uri);
+
+    if (uri.startsWith('file://')) {
+      const strippedPath = uri.substring('file://'.length);
+      if (strippedPath.length > 0 && !strippedPath.startsWith('/')) {
+        pushCandidate(`/${strippedPath}`);
+      }
+    }
+
+    return candidates;
   }
 
   /**
@@ -290,8 +319,20 @@ export class MediaServiceManager {
   public static async compressImage(context: common.Context, uri: string, quality: number = 80, maxSize?: number): Promise<string> {
     try {
       // 1. 创建 ImageSource
-      const sourcePath = MediaServiceManager.normalizeUriToFilePath(context, uri);
-      const file = fileIo.openSync(sourcePath, fileIo.OpenMode.READ_ONLY);
+      const readableCandidates = MediaServiceManager.buildReadablePathCandidates(context, uri);
+      let file: fileIo.File | null = null;
+      let openError: Object | string = '';
+      for (let i = 0; i < readableCandidates.length; i++) {
+        try {
+          file = fileIo.openSync(readableCandidates[i], fileIo.OpenMode.READ_ONLY);
+          break;
+        } catch (error) {
+          openError = error;
+        }
+      }
+      if (!file) {
+        throw new Error(`无法读取图片文件: ${JSON.stringify(openError)}`);
+      }
       const imageSource = image.createImageSource(file.fd);
       
       // 2. 创建 ImagePacker
@@ -342,30 +383,54 @@ export class MediaServiceManager {
     let srcFile: fileIo.File | null = null;
     let destFile: fileIo.File | null = null;
     try {
-      const sourcePath = MediaServiceManager.normalizeUriToFilePath(context, uri);
+      const sourceCandidates = MediaServiceManager.buildReadablePathCandidates(context, uri);
       const cacheDir = context.cacheDir;
       const fileName = `upload_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
       let extension = 'tmp';
-      const lowerSourcePath = sourcePath.toLowerCase();
+      const extensionSource = (sourceCandidates[0] ?? uri).toLowerCase();
       
       // 简单推断扩展名
-      if (lowerSourcePath.endsWith('.jpg') || lowerSourcePath.endsWith('.jpeg')) extension = 'jpg';
-      else if (lowerSourcePath.endsWith('.png')) extension = 'png';
-      else if (lowerSourcePath.endsWith('.gif')) extension = 'gif';
-      else if (lowerSourcePath.endsWith('.webp')) extension = 'webp';
-      else if (lowerSourcePath.endsWith('.mp4')) extension = 'mp4';
-      else if (lowerSourcePath.endsWith('.mov')) extension = 'mov';
-      else if (lowerSourcePath.endsWith('.m4a')) extension = 'm4a';
-      else if (lowerSourcePath.endsWith('.aac')) extension = 'aac';
-      else if (lowerSourcePath.endsWith('.ogg')) extension = 'ogg';
+      if (extensionSource.endsWith('.jpg') || extensionSource.endsWith('.jpeg')) extension = 'jpg';
+      else if (extensionSource.endsWith('.png')) extension = 'png';
+      else if (extensionSource.endsWith('.gif')) extension = 'gif';
+      else if (extensionSource.endsWith('.webp')) extension = 'webp';
+      else if (extensionSource.endsWith('.mp4')) extension = 'mp4';
+      else if (extensionSource.endsWith('.mov')) extension = 'mov';
+      else if (extensionSource.endsWith('.m4a')) extension = 'm4a';
+      else if (extensionSource.endsWith('.aac')) extension = 'aac';
+      else if (extensionSource.endsWith('.ogg')) extension = 'ogg';
       
       const internalFileName = `${fileName}.${extension}`;
       const internalFilePath = `${cacheDir}/${internalFileName}`;
-      
-      srcFile = fileIo.openSync(sourcePath, fileIo.OpenMode.READ_ONLY);
-      destFile = fileIo.openSync(internalFilePath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC);
-      
-      fileIo.copyFileSync(srcFile.fd, destFile.fd);
+
+      let copyError: Object | string = '';
+      for (let i = 0; i < sourceCandidates.length; i++) {
+        try {
+          srcFile = fileIo.openSync(sourceCandidates[i], fileIo.OpenMode.READ_ONLY);
+          destFile = fileIo.openSync(internalFilePath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC);
+          fileIo.copyFileSync(srcFile.fd, destFile.fd);
+          break;
+        } catch (error) {
+          copyError = error;
+          if (srcFile) {
+            try {
+              fileIo.closeSync(srcFile);
+            } catch (_) {
+            }
+            srcFile = null;
+          }
+          if (destFile) {
+            try {
+              fileIo.closeSync(destFile);
+            } catch (_) {
+            }
+            destFile = null;
+          }
+        }
+      }
+      if (!srcFile || !destFile) {
+        throw new Error(`复制上传文件失败: ${JSON.stringify(copyError)}`);
+      }
 
       hilog.info(DOMAIN, TAG, `文件已准备好上传: ${internalFilePath}`);
       

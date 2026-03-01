@@ -603,7 +603,7 @@ export struct GroupPage {
   @Builder
   private buildMyInviteItem(invite: GroupInviteItem) {
     Column({ space: 8 }) {
-      Row({ space: 10 }) {
+      Row({ space: DesignConstants.SPACING.MD }) {
         SystemAvatar({
           avatarUrl: invite.group?.avatar_url ?? '',
           name: invite.group?.name ?? '群组',
@@ -723,7 +723,7 @@ export struct GroupPage {
   @Builder
   private buildMyApplicationItem(application: GroupApplicationItem) {
     Column({ space: 8 }) {
-      Row({ space: 10 }) {
+      Row({ space: DesignConstants.SPACING.MD }) {
         SystemAvatar({
           avatarUrl: '',
           name: '群组申请',

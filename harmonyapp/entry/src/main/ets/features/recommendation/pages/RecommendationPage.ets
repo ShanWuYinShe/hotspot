@@ -193,7 +193,12 @@ export struct RecommendationPage {
           if (this.recommendedUsers.length > 0) {
             ListItem() {
               this.buildSectionHeader('推荐用户', AppIcon.PERSON)
-                .padding({ left: 12, right: 12, top: 12, bottom: 4 })
+                .padding({
+                  left: DesignConstants.SPACING.MD,
+                  right: DesignConstants.SPACING.MD,
+                  top: DesignConstants.SPACING.MD,
+                  bottom: DesignConstants.SPACING.XS
+                })
             }
             ForEach(this.recommendedUsers, (user: UserItem) => {
               ListItem() {

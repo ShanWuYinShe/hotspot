@@ -409,7 +409,7 @@ export struct SmartSearchComponent {
         .width('100%')
         .layoutWeight(1)
         .backgroundColor($r('app.color.bg_secondary'))
-        .borderRadius({ topLeft: 12, topRight: 12 })
+        .borderRadius({ topLeft: DesignConstants.RADIUS.XXL, topRight: DesignConstants.RADIUS.XXL })
         .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
         .shadow({
           radius: 8,

@@ -220,7 +220,12 @@ export class ApiClient {
       return `${context.cacheDir}/${cacheRelativePath}`;
     }
     if (fileUri.startsWith('file://')) {
-      return fileUri.substring('file://'.length);
+      const strippedPath = fileUri.substring('file://'.length);
+      // 仅处理 file:///absolute/path；file://media/... 等 URI 保留给文件系统 API 解析
+      if (strippedPath.startsWith('/')) {
+        return strippedPath;
+      }
+      return fileUri;
     }
     return fileUri;
   }

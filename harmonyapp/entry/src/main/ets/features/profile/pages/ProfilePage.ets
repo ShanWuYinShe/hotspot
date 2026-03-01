@@ -1015,7 +1015,7 @@ export struct ProfilePage {
     .type(ButtonType.Normal)
     .backgroundColor(Color.Transparent)
     .borderRadius(DesignConstants.RADIUS.XL)
-    .padding(12)
+    .padding(DesignConstants.SPACING.MD)
     .layoutWeight(1)
     .stateEffect(true)
     .onClick(onTap)

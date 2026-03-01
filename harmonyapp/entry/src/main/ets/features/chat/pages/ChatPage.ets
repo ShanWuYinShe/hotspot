@@ -1148,7 +1148,12 @@ export struct ChatPage {
           .fontSize(12)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
           .backgroundColor($r('app.color.bg_secondary'))
-          .padding({ left: 12, right: 12, top: 4, bottom: 4 })
+          .padding({
+            left: DesignConstants.SPACING.MD,
+            right: DesignConstants.SPACING.MD,
+            top: DesignConstants.SPACING.XS,
+            bottom: DesignConstants.SPACING.XS
+          })
           .borderRadius(DesignConstants.RADIUS.LG)
       }
       .width('100%')
@@ -1184,7 +1189,7 @@ export struct ChatPage {
                 .fontSize(16)
                 .fontColor(msg.isSelf ? Color.White : $r('sys.color.ohos_id_color_text_primary'))
                 .backgroundColor(msg.isSelf ? $r('sys.color.ohos_id_color_emphasize') : $r('app.color.bg_secondary'))
-                .padding(12)
+                .padding(DesignConstants.SPACING.MD)
                 .borderRadius(DesignConstants.RADIUS.XL)
                 .constraintSize({ maxWidth: '70%' })
             }
