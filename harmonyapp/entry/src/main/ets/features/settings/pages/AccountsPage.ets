@@ -151,7 +151,7 @@ export struct AccountsPage {
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: Color.Transparent,
+          bgColor: $r('app.color.bg_tertiary'),
           onButtonClick: () => {
             AppRouter.pop();
           }
@@ -173,7 +173,8 @@ export struct AccountsPage {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_primary'))
+      .backgroundColor($r('app.color.bg_secondary'))
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.isLoading) {
@@ -195,7 +196,7 @@ export struct AccountsPage {
             .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
             .fontColor(Color.White)
             .height(40)
-            .borderRadius(DesignConstants.RADIUS.XL)
+            .borderRadius(DesignConstants.RADIUS.XXL)
             .onClick(() => { this.load(); })
         }
         .width('100%')
@@ -213,7 +214,7 @@ export struct AccountsPage {
             .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
             .fontColor(Color.White)
             .height(44)
-            .borderRadius(DesignConstants.RADIUS.XL)
+            .borderRadius(DesignConstants.RADIUS.XXL)
             .onClick(() => {
               AppRouter.push(PageNames.LOGIN);
             })
@@ -270,7 +271,7 @@ export struct AccountsPage {
                     .fontColor($r('sys.color.ohos_id_color_text_primary'))
                     .borderWidth(1)
                     .borderColor($r('sys.color.ohos_id_color_list_separator'))
-                    .borderRadius(DesignConstants.RADIUS.XL)
+                    .borderRadius(DesignConstants.RADIUS.XXL)
                     .onClick(() => this.switchTo(acc))
 
                   Button('删除')
@@ -279,7 +280,7 @@ export struct AccountsPage {
                     .height(32)
                     .backgroundColor($r('app.color.color_danger'))
                     .fontColor(Color.White)
-                    .borderRadius(DesignConstants.RADIUS.XL)
+                    .borderRadius(DesignConstants.RADIUS.XXL)
                     .onClick(() => this.remove(acc))
                 }
               }
@@ -289,7 +290,7 @@ export struct AccountsPage {
             .backgroundColor($r('app.color.bg_secondary'))
             .borderRadius(DesignConstants.RADIUS.XXL)
             .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-            .shadow({ radius: 10, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
+            .shadow(DesignConstants.SHADOW.SMALL)
             .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
           }, (acc: AuthData) => acc.user_id)
         }

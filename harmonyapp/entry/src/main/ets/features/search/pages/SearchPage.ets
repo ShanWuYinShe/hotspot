@@ -142,7 +142,7 @@ export struct SearchPage {
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: Color.Transparent,
+          bgColor: $r('app.color.bg_tertiary'),
           onButtonClick: () => {
             AppRouter.pop();
           }
@@ -167,7 +167,7 @@ export struct SearchPage {
           icon: AppIcon.SEARCH,
           iconSize: IconSize.MEDIUM,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: $r('app.color.bg_secondary'),
+          bgColor: $r('app.color.bg_tertiary'),
           onButtonClick: () => {
             this.doSearch();
           }
@@ -180,7 +180,8 @@ export struct SearchPage {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_primary'))
+      .backgroundColor($r('app.color.bg_secondary'))
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.isLoading) {
@@ -239,8 +240,8 @@ export struct SearchPage {
     .alignItems(VerticalAlign.Center)
     .margin({ left: 8, right: 8, top: 9, bottom: 9 })
     .padding({ left: 14, right: 14 })
-    .backgroundColor(this.currentIndex === index ? $r('app.color.bg_secondary') : Color.Transparent)
-    .borderRadius(DesignConstants.RADIUS.XL)
+    .backgroundColor(this.currentIndex === index ? $r('app.color.chip_selected_bg') : Color.Transparent)
+    .borderRadius(DesignConstants.RADIUS.XXL)
     .border({
       width: this.currentIndex === index ? 1 : 0,
       color: $r('sys.color.ohos_id_color_list_separator')
@@ -413,7 +414,7 @@ export struct SearchPage {
         }
         .width(24)
         .height(24)
-        .borderRadius(DesignConstants.RADIUS.XL)
+        .borderRadius(DesignConstants.RADIUS.XXL)
         .backgroundColor($r('app.color.bg_tertiary'))
         .justifyContent(FlexAlign.Center)
         .alignItems(VerticalAlign.Center)
@@ -477,7 +478,7 @@ export struct SearchPage {
           .type(ButtonType.Normal)
           .layoutWeight(1)
           .height(30)
-          .borderRadius(DesignConstants.RADIUS.XL)
+          .borderRadius(DesignConstants.RADIUS.XXL)
           .enabled(!this.isUserActionPending(item.user?.user_id ?? ''))
           .fontSize(12)
           .fontWeight(FontWeight.Medium)
@@ -492,7 +493,7 @@ export struct SearchPage {
           .type(ButtonType.Normal)
           .layoutWeight(1)
           .height(30)
-          .borderRadius(DesignConstants.RADIUS.XL)
+          .borderRadius(DesignConstants.RADIUS.XXL)
           .fontSize(12)
           .fontWeight(FontWeight.Medium)
           .backgroundColor(Color.Transparent)
@@ -507,9 +508,9 @@ export struct SearchPage {
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.XL)
+    .borderRadius(DesignConstants.RADIUS.XXL)
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+    .shadow(DesignConstants.SHADOW.SMALL)
   }
 
   @Builder
@@ -550,7 +551,7 @@ export struct SearchPage {
         }
         .width(24)
         .height(24)
-        .borderRadius(DesignConstants.RADIUS.XL)
+        .borderRadius(DesignConstants.RADIUS.XXL)
         .backgroundColor($r('app.color.bg_tertiary'))
         .justifyContent(FlexAlign.Center)
         .alignItems(VerticalAlign.Center)
@@ -599,7 +600,7 @@ export struct SearchPage {
           .type(ButtonType.Normal)
           .layoutWeight(1)
           .height(30)
-          .borderRadius(DesignConstants.RADIUS.XL)
+          .borderRadius(DesignConstants.RADIUS.XXL)
           .enabled(!this.isGroupActionPending(item.group?.group_id ?? ''))
           .fontSize(12)
           .fontWeight(FontWeight.Medium)
@@ -614,7 +615,7 @@ export struct SearchPage {
           .type(ButtonType.Normal)
           .layoutWeight(1)
           .height(30)
-          .borderRadius(DesignConstants.RADIUS.XL)
+          .borderRadius(DesignConstants.RADIUS.XXL)
           .fontSize(12)
           .fontWeight(FontWeight.Medium)
           .backgroundColor(Color.Transparent)
@@ -629,9 +630,9 @@ export struct SearchPage {
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.XL)
+    .borderRadius(DesignConstants.RADIUS.XXL)
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+    .shadow(DesignConstants.SHADOW.SMALL)
   }
 
   @Builder
@@ -692,9 +693,9 @@ export struct SearchPage {
       .width('100%')
     }
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.XL)
+    .borderRadius(DesignConstants.RADIUS.XXL)
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+    .shadow(DesignConstants.SHADOW.SMALL)
     .scale(this.pressedMomentId === item.moment_id ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })
     .animation({ duration: 100, curve: Curve.EaseOut })
     .onTouch((event: TouchEvent) => {
@@ -735,9 +736,9 @@ export struct SearchPage {
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.XL)
+    .borderRadius(DesignConstants.RADIUS.XXL)
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+    .shadow(DesignConstants.SHADOW.SMALL)
     .margin({ bottom: DesignConstants.SPACING.MD })
   }
 

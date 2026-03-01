@@ -32,7 +32,7 @@ export struct AdvancedSettingsPage {
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: Color.Transparent,
+          bgColor: $r('app.color.bg_tertiary'),
           onButtonClick: () => {
             AppRouter.pop();
           }
@@ -54,7 +54,8 @@ export struct AdvancedSettingsPage {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_primary'))
+      .backgroundColor($r('app.color.bg_secondary'))
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       Column() {
@@ -75,7 +76,7 @@ export struct AdvancedSettingsPage {
         .backgroundColor($r('app.color.bg_secondary'))
         .borderRadius(DesignConstants.RADIUS.XXL)
         .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-        .shadow({ radius: 10, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
+        .shadow(DesignConstants.SHADOW.SMALL)
         .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
           top: DesignConstants.SPACING.LG })
       }
@@ -134,14 +135,14 @@ export struct AdvancedSettingsPage {
       }
       .width(28)
       .height(28)
-    .borderRadius(DesignConstants.RADIUS.XL)
+      .borderRadius(DesignConstants.RADIUS.XXL)
       .backgroundColor($r('app.color.bg_tertiary'))
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
-    .borderRadius(DesignConstants.RADIUS.XL)
+    .borderRadius(DesignConstants.RADIUS.XXL)
     .onClick(onClick)
   }
 }

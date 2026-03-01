@@ -186,7 +186,7 @@ export struct RecommendationPage {
           .padding(DesignConstants.SPACING.LG)
           .borderRadius(DesignConstants.RADIUS.XXL)
           .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-          .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+          .shadow(DesignConstants.SHADOW.SMALL)
 
 
           // 推荐用户
@@ -228,7 +228,7 @@ export struct RecommendationPage {
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .fontWeight(FontWeight.Medium)
                     .height(34)
-                    .borderRadius(DesignConstants.RADIUS.XL)
+                    .borderRadius(DesignConstants.RADIUS.XXL)
                     .borderWidth(1)
                     .borderColor($r('sys.color.ohos_id_color_emphasize'))
                     .onClick(async () => {
@@ -248,9 +248,9 @@ export struct RecommendationPage {
                   bottom: DesignConstants.SPACING.MD
                 })
                 .backgroundColor($r('app.color.bg_secondary'))
-                .borderRadius(DesignConstants.RADIUS.XL)
+                .borderRadius(DesignConstants.RADIUS.XXL)
                 .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-                .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+                .shadow(DesignConstants.SHADOW.SMALL)
               }
             }, (user: UserItem) => user.user?.user_id ?? '')
           }

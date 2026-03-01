@@ -92,7 +92,7 @@ export struct SettingsPage {
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: Color.Transparent,
+          bgColor: $r('app.color.bg_tertiary'),
           onButtonClick: () => {
             AppRouter.pop();
           }
@@ -115,7 +115,8 @@ export struct SettingsPage {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_primary'))
+      .backgroundColor($r('app.color.bg_secondary'))
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 设置列表
@@ -152,7 +153,7 @@ export struct SettingsPage {
           .backgroundColor($r('app.color.bg_secondary'))
           .borderRadius(DesignConstants.RADIUS.XXL)
           .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-          .shadow({ radius: 10, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
+          .shadow(DesignConstants.SHADOW.SMALL)
           .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 16, endMargin: 16 })
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
@@ -184,7 +185,7 @@ export struct SettingsPage {
           .backgroundColor($r('app.color.bg_secondary'))
           .borderRadius(DesignConstants.RADIUS.XXL)
           .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-          .shadow({ radius: 10, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
+          .shadow(DesignConstants.SHADOW.SMALL)
           .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 16, endMargin: 16 })
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
@@ -198,7 +199,7 @@ export struct SettingsPage {
           .backgroundColor($r('app.color.bg_secondary'))
           .borderRadius(DesignConstants.RADIUS.XXL)
           .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-          .shadow({ radius: 10, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
+          .shadow(DesignConstants.SHADOW.SMALL)
           .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 16, endMargin: 16 })
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
@@ -215,7 +216,7 @@ export struct SettingsPage {
                 .borderWidth(1)
                 .borderColor($r('sys.color.ohos_id_color_list_separator'))
                 .borderRadius(DesignConstants.RADIUS.XXL)
-                .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
+                .shadow(DesignConstants.SHADOW.SMALL)
                 .onClick(() => { this.logout(); })
             }
             .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.XXL })
@@ -232,7 +233,7 @@ export struct SettingsPage {
                 .fontSize(DesignConstants.FONT.SIZE.LG)
                 .type(ButtonType.Normal)
                 .borderRadius(DesignConstants.RADIUS.XXL)
-                .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
+                .shadow(DesignConstants.SHADOW.SMALL)
                 .onClick(() => {
                   AppRouter.push(PageNames.LOGIN);
                 })
@@ -306,7 +307,7 @@ export struct SettingsPage {
             icon: AppIcon.REFRESH,
             iconSize: IconSize.MEDIUM,
             iconColor: $r('sys.color.ohos_id_color_text_primary'),
-            bgColor: Color.Transparent,
+            bgColor: $r('app.color.bg_tertiary'),
             onButtonClick: () => { this.loadSystemMeta(true); }
           })
             .enabled(!this.systemMetaLoading)
@@ -342,7 +343,7 @@ export struct SettingsPage {
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
     .backgroundColor(Color.Transparent)
-    .borderRadius(DesignConstants.RADIUS.XL)
+    .borderRadius(DesignConstants.RADIUS.XXL)
   }
 
   private getMetaStatusLabel(): string {
@@ -433,7 +434,7 @@ export struct SettingsPage {
       }
       .width(38)
       .height(38)
-      .borderRadius(DesignConstants.RADIUS.XL)
+      .borderRadius(DesignConstants.RADIUS.XXL)
       .backgroundColor($r('app.color.bg_tertiary'))
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
@@ -461,14 +462,14 @@ export struct SettingsPage {
       }
       .width(28)
       .height(28)
-      .borderRadius(DesignConstants.RADIUS.XL)
+      .borderRadius(DesignConstants.RADIUS.XXL)
       .backgroundColor($r('app.color.bg_tertiary'))
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
-    .borderRadius(DesignConstants.RADIUS.XL)
+    .borderRadius(DesignConstants.RADIUS.XXL)
     .onClick(onClick)
   }
 }

@@ -862,7 +862,7 @@ export struct ChatPage {
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: Color.Transparent,
+          bgColor: $r('app.color.bg_tertiary'),
           onButtonClick: () => {
             if (this.isInputFocused) {
               this.dismissKeyboardOnOutsideTap();
@@ -886,7 +886,7 @@ export struct ChatPage {
           icon: AppIcon.MORE,
           iconSize: IconSize.LARGE,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: Color.Transparent,
+          bgColor: $r('app.color.bg_tertiary'),
           onButtonClick: () => {
             if (this.isInputFocused) {
               this.dismissKeyboardOnOutsideTap();
@@ -914,7 +914,8 @@ export struct ChatPage {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_primary'))
+      .backgroundColor($r('app.color.bg_secondary'))
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
       .zIndex(1)
       .onTouch((event: TouchEvent) => {
@@ -1006,7 +1007,12 @@ export struct ChatPage {
       }
       .width('100%')
       .layoutWeight(1)
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        top: DesignConstants.SPACING.MD,
+        bottom: DesignConstants.SPACING.MD
+      })
       .backgroundColor($r('app.color.bg_primary'))
       .onScrollIndex((start: number) => {
         // 当滚动到列表顶部附近时加载更早的消息
@@ -1056,7 +1062,7 @@ export struct ChatPage {
           .layoutWeight(1)
           .maxLength(MESSAGE_CONTENT_MAX)
           .height(40)
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor($r('app.color.bg_tertiary'))
           .borderRadius(DesignConstants.RADIUS.XXL)
           .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
           .onChange((value) => {
@@ -1087,7 +1093,7 @@ export struct ChatPage {
               : Color.White
           )
           .height(36)
-          .borderRadius(DesignConstants.RADIUS.XL)
+          .borderRadius(DesignConstants.RADIUS.XXL)
           .margin({ left: DesignConstants.SPACING.MD })
           .opacity(this.isSending || this.inputText.trim().length === 0 ? 0.72 : 1)
           .enabled(!this.isSending && this.inputText.trim().length > 0)
@@ -1100,7 +1106,8 @@ export struct ChatPage {
         top: DesignConstants.SPACING.SM,
         bottom: this.getComposerBottomPadding()
       })
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor($r('app.color.bg_primary'))
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
 
       // 焦点落点：用于将 TextInput 失焦，从而收起软键盘
       Button('')
@@ -1147,7 +1154,7 @@ export struct ChatPage {
         Text(msg.content)
           .fontSize(12)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor($r('app.color.bg_tertiary'))
           .padding({
             left: DesignConstants.SPACING.MD,
             right: DesignConstants.SPACING.MD,
@@ -1182,15 +1189,15 @@ export struct ChatPage {
             if (msg.type === 'image') {
               Image(msg.content)
                 .width(200)
-                .borderRadius(DesignConstants.RADIUS.MD)
+                .borderRadius(DesignConstants.RADIUS.LG)
                 .margin(4)
             } else {
               Text(msg.content)
                 .fontSize(16)
                 .fontColor(msg.isSelf ? Color.White : $r('sys.color.ohos_id_color_text_primary'))
-                .backgroundColor(msg.isSelf ? $r('sys.color.ohos_id_color_emphasize') : $r('app.color.bg_secondary'))
+                .backgroundColor(msg.isSelf ? $r('sys.color.ohos_id_color_emphasize') : $r('app.color.bg_tertiary'))
                 .padding(DesignConstants.SPACING.MD)
-                .borderRadius(DesignConstants.RADIUS.XL)
+                .borderRadius(DesignConstants.RADIUS.XXL)
                 .constraintSize({ maxWidth: '70%' })
             }
           }

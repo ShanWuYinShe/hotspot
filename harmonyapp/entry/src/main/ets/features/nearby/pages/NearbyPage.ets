@@ -497,8 +497,9 @@ export struct NearbyPage {
       }
       .width('100%')
       .padding(3)
-      .backgroundColor($r('app.color.bg_tertiary'))
-      .borderRadius(DesignConstants.RADIUS.XL)
+      .backgroundColor($r('app.color.bg_secondary'))
+      .borderRadius(DesignConstants.RADIUS.XXL)
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
     }
     .width('100%')
     .padding({
@@ -518,23 +519,23 @@ export struct NearbyPage {
         SymbolSpan($r(icon))
           .fontSize(14)
           .fontColor([this.currentSubTab === index
-            ? Color.White
+            ? $r('sys.color.ohos_id_color_emphasize')
             : $r('sys.color.ohos_id_color_text_secondary')])
       }
       Text(label)
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontWeight(this.currentSubTab === index ? FontWeight.Medium : FontWeight.Normal)
         .fontColor(this.currentSubTab === index
-          ? Color.White
+          ? $r('sys.color.ohos_id_color_emphasize')
           : $r('sys.color.ohos_id_color_text_secondary'))
     }
-    .height(32)
+    .height(34)
     .layoutWeight(1)
     .justifyContent(FlexAlign.Center)
     .backgroundColor(this.currentSubTab === index
-      ? $r('sys.color.ohos_id_color_emphasize')
+      ? $r('app.color.chip_selected_bg')
       : Color.Transparent)
-    .borderRadius(DesignConstants.RADIUS.XL)
+    .borderRadius(DesignConstants.RADIUS.XXL)
     .onClick(() => {
       this.switchSubTab(index);
     })
@@ -704,7 +705,7 @@ export struct NearbyPage {
     .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.XL)
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
+    .shadow(DesignConstants.SHADOW.SMALL)
     // 点击反馈动画
     .scale(this.pressedIndex === index ? { x: 0.975, y: 0.975 } : { x: 1, y: 1 })
     .animation({ duration: 100, curve: Curve.EaseOut })
@@ -1020,7 +1021,7 @@ export struct NearbyPage {
     .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.XL)
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
+    .shadow(DesignConstants.SHADOW.SMALL)
   }
 
   // ==================== 群组内容 ====================
@@ -1244,7 +1245,7 @@ export struct NearbyPage {
     .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.XL)
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
+    .shadow(DesignConstants.SHADOW.SMALL)
   }
 
   @Builder

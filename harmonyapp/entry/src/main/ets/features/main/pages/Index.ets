@@ -771,19 +771,20 @@ struct Index {
         Text() {
           SymbolSpan($r(AppIcon.ADD))
             .fontSize(24)
-            .fontColor([Color.White])
+            .fontColor([$r('sys.color.ohos_id_color_emphasize')])
         }
       }
-      .width(44)
-      .height(28)
+      .width(38)
+      .height(38)
       .justifyContent(FlexAlign.Center)
-      .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-      .borderRadius(DesignConstants.RADIUS.MD)
+      .backgroundColor($r('app.color.bg_secondary'))
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
 
       Text('发布')
         .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         .fontSize(DesignConstants.FONT.SIZE.XS)
-        .margin({ top: 4 })
+        .margin({ top: 2 })
     }
     .width('100%')
     .height(56 + this.safeAreaBottom)
@@ -894,8 +895,8 @@ struct Index {
         .barMode(BarMode.Fixed)
         .divider({ strokeWidth: 0 })  // 隐藏分隔线，更现代
         .onChange((index: number) => this.handleTabChange(index))
-        .backgroundColor($r('app.color.bg_primary'))
-        .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: -2 })
+        .backgroundColor($r('app.color.bg_secondary'))
+        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
         .bindSheet($$this.showCreateSheet, this.CreateSheetContent(), {
           height: SheetSize.FIT_CONTENT,
           dragBar: true,
@@ -1059,7 +1060,7 @@ struct Index {
       .backgroundColor($r('app.color.bg_secondary'))
       .borderRadius(DesignConstants.RADIUS.XL)
       .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-      .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+      .shadow(DesignConstants.SHADOW.SMALL)
       .onClick(() => {
         this.showCreateSheet = false;
         AppRouter.push(PageNames.CREATE_MOMENT);
@@ -1103,7 +1104,7 @@ struct Index {
       .backgroundColor($r('app.color.bg_secondary'))
       .borderRadius(DesignConstants.RADIUS.XL)
       .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-      .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+      .shadow(DesignConstants.SHADOW.SMALL)
       .margin({ top: DesignConstants.SPACING.SM })
       .onClick(() => {
         this.showCreateSheet = false;

@@ -506,7 +506,8 @@ export struct ProfilePage {
         }
         .width('100%')
         .backgroundColor($r('app.color.bg_secondary'))
-        .borderRadius(DesignConstants.RADIUS.LG)
+        .borderRadius(DesignConstants.RADIUS.XXL)
+        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
         .padding(DesignConstants.SPACING.LG)
 
         // 登录解锁功能
@@ -524,7 +525,8 @@ export struct ProfilePage {
         }
         .width('100%')
         .backgroundColor($r('app.color.bg_secondary'))
-        .borderRadius(DesignConstants.RADIUS.LG)
+        .borderRadius(DesignConstants.RADIUS.XXL)
+        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
         .padding(DesignConstants.SPACING.LG)
 
         Column({ space: 12 }) {
@@ -536,7 +538,7 @@ export struct ProfilePage {
             .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
             .fontColor(Color.White)
             .fontSize(16)
-            .borderRadius(DesignConstants.RADIUS.XL)
+            .borderRadius(DesignConstants.RADIUS.XXL)
             .onClick(() => {
               this.showQuickStart = true;
             })
@@ -549,7 +551,8 @@ export struct ProfilePage {
             .backgroundColor($r('app.color.bg_secondary'))
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
             .fontSize(16)
-            .borderRadius(DesignConstants.RADIUS.XL)
+            .borderRadius(DesignConstants.RADIUS.XXL)
+            .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
             .onClick(() => {
               AppRouter.push(PageNames.LOGIN);
             })
@@ -625,7 +628,9 @@ export struct ProfilePage {
         .padding(DesignConstants.SPACING.LG)
       }
       .backgroundColor($r('app.color.bg_secondary'))
-      .borderRadius(DesignConstants.RADIUS.LG)
+      .borderRadius(DesignConstants.RADIUS.XXL)
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .shadow(DesignConstants.SHADOW.SMALL)
       .margin({ left: 16, right: 16 })
 
       // 用户信息卡片
@@ -637,7 +642,9 @@ export struct ProfilePage {
         }
       }
       .backgroundColor($r('app.color.bg_secondary'))
-      .borderRadius(DesignConstants.RADIUS.LG)
+      .borderRadius(DesignConstants.RADIUS.XXL)
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .shadow(DesignConstants.SHADOW.SMALL)
       .margin({ left: 16, right: 16 })
       .padding(DesignConstants.SPACING.LG)
 
@@ -646,7 +653,9 @@ export struct ProfilePage {
         this.StatsContent()
       }
       .backgroundColor($r('app.color.bg_secondary'))
-      .borderRadius(DesignConstants.RADIUS.LG)
+      .borderRadius(DesignConstants.RADIUS.XXL)
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .shadow(DesignConstants.SHADOW.SMALL)
       .margin({ left: 16, right: 16 })
       .padding(DesignConstants.SPACING.LG)
 
@@ -655,7 +664,9 @@ export struct ProfilePage {
         this.QuickActionsSection()
       }
       .backgroundColor($r('app.color.bg_secondary'))
-      .borderRadius(DesignConstants.RADIUS.LG)
+      .borderRadius(DesignConstants.RADIUS.XXL)
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .shadow(DesignConstants.SHADOW.SMALL)
       .margin({ left: 16, right: 16 })
       .padding(DesignConstants.SPACING.LG)
 
@@ -685,7 +696,9 @@ export struct ProfilePage {
         }
         .backgroundColor($r('app.color.bg_secondary'))
       }
-      .borderRadius(DesignConstants.RADIUS.LG)
+      .borderRadius(DesignConstants.RADIUS.XXL)
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .shadow(DesignConstants.SHADOW.SMALL)
       .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 52, endMargin: DesignConstants.SPACING.LG })
       .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 24 })
     }
@@ -708,7 +721,9 @@ export struct ProfilePage {
         }
       }
       .backgroundColor($r('app.color.bg_secondary'))
-      .borderRadius(DesignConstants.RADIUS.LG)
+      .borderRadius(DesignConstants.RADIUS.XXL)
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .shadow(DesignConstants.SHADOW.SMALL)
       .margin({ left: 16, right: 16 })
       .padding(DesignConstants.SPACING.LG)
 
@@ -717,7 +732,9 @@ export struct ProfilePage {
         this.StatsContent()
       }
       .backgroundColor($r('app.color.bg_secondary'))
-      .borderRadius(DesignConstants.RADIUS.LG)
+      .borderRadius(DesignConstants.RADIUS.XXL)
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .shadow(DesignConstants.SHADOW.SMALL)
       .margin({ left: 16, right: 16 })
       .padding(DesignConstants.SPACING.LG)
 
@@ -726,7 +743,9 @@ export struct ProfilePage {
         this.QuickActionsSection()
       }
       .backgroundColor($r('app.color.bg_secondary'))
-      .borderRadius(DesignConstants.RADIUS.LG)
+      .borderRadius(DesignConstants.RADIUS.XXL)
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .shadow(DesignConstants.SHADOW.SMALL)
       .margin({ left: 16, right: 16 })
       .padding(DesignConstants.SPACING.LG)
 
@@ -756,7 +775,9 @@ export struct ProfilePage {
         }
         .backgroundColor($r('app.color.bg_secondary'))
       }
-      .borderRadius(DesignConstants.RADIUS.LG)
+      .borderRadius(DesignConstants.RADIUS.XXL)
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .shadow(DesignConstants.SHADOW.SMALL)
       .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 52, endMargin: DesignConstants.SPACING.LG })
       .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 24 })
     }
@@ -818,7 +839,8 @@ export struct ProfilePage {
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
             .layoutWeight(1)
             .height(44)
-            .borderRadius(DesignConstants.RADIUS.XL)
+            .borderRadius(DesignConstants.RADIUS.XXL)
+            .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
             .enabled(!this.isUpgrading)
             .opacity(this.isUpgrading ? 0.58 : 1)
             .onClick(() => {
@@ -831,7 +853,7 @@ export struct ProfilePage {
             .fontColor(Color.White)
             .layoutWeight(1)
             .height(44)
-            .borderRadius(DesignConstants.RADIUS.XL)
+            .borderRadius(DesignConstants.RADIUS.XXL)
             .enabled(!this.isUpgrading)
             .opacity(this.isUpgrading ? 0.58 : 1)
             .onClick(() => this.upgradeAccount())
@@ -943,7 +965,8 @@ export struct ProfilePage {
           .backgroundColor($r('app.color.bg_secondary'))
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
-          .borderRadius(DesignConstants.RADIUS.XL)
+          .borderRadius(DesignConstants.RADIUS.XXL)
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
           .enabled(!this.isLoading && !this.isAvatarUploading)
           .opacity(this.isLoading || this.isAvatarUploading ? 0.58 : 1)
           .onClick(() => this.cancelEdit())
@@ -953,7 +976,7 @@ export struct ProfilePage {
           .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
           .fontColor(Color.White)
           .layoutWeight(1)
-          .borderRadius(DesignConstants.RADIUS.XL)
+          .borderRadius(DesignConstants.RADIUS.XXL)
           .enabled(!this.isLoading && !this.isAvatarUploading)
           .opacity(this.isLoading || this.isAvatarUploading ? 0.58 : 1)
           .onClick(() => this.saveEdit())
@@ -1176,7 +1199,7 @@ export struct ProfilePage {
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .width('100%')
         .height(48)
-        .borderRadius(DesignConstants.RADIUS.XL)
+        .borderRadius(DesignConstants.RADIUS.XXL)
         .enabled(!this.isQuickStarting)
         .opacity(this.isQuickStarting ? 0.6 : 1.0)
         .onClick(() => this.startQuickExperience())

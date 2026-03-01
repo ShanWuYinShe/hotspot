@@ -30,7 +30,7 @@ interface BorderConfig {
 export struct SystemCard {
   @BuilderParam content: () => void;
   @Prop cardPadding: number = DesignConstants.SPACING.LG;
-  @Prop showShadow: boolean = true;
+  @Prop showShadow: boolean = false;
   @Prop clickable: boolean = false;
   @Prop enableHoverEffect: boolean = false;
 
@@ -41,9 +41,9 @@ export struct SystemCard {
   // 新增：卡片样式变体
   @Prop variant: CardVariant = CardVariant.DEFAULT;
   // 新增：圆角大小（重命名为 cardBorderRadius 避免冲突）
-  @Prop cardBorderRadius: number = DesignConstants.RADIUS.XL;
+  @Prop cardBorderRadius: number = DesignConstants.RADIUS.XXL;
   // 新增：是否显示边框
-  @Prop showBorder: boolean = false;
+  @Prop showBorder: boolean = true;
   // 新增：边框颜色（使用系统颜色）
   @Prop cardBorderColor: ResourceColor = $r('sys.color.ohos_id_color_list_separator');
 
@@ -76,29 +76,14 @@ export struct SystemCard {
 
     switch (this.variant) {
       case CardVariant.ELEVATED:
-        return {
-          radius: 12,
-          color: '#1A000000',
-          offsetX: 0,
-          offsetY: 4
-        };
+        return DesignConstants.SHADOW.MEDIUM;
       case CardVariant.GLASS:
-        return {
-          radius: 16,
-          color: '#26000000',
-          offsetX: 0,
-          offsetY: 8
-        };
+        return DesignConstants.SHADOW.LARGE;
       case CardVariant.DEFAULT:
       case CardVariant.FILLED:
       case CardVariant.OUTLINED:
       default:
-        return {
-          radius: 8,
-          color: '#1A000000',
-          offsetX: 0,
-          offsetY: 2
-        };
+        return DesignConstants.SHADOW.SMALL;
     }
   }
 
@@ -167,9 +152,9 @@ export struct MasonryCard {
   @BuilderParam content: () => void;
   @BuilderParam imageContent?: () => void;
 
-  @Prop cardRadius: number = 12;
-  @Prop shadowRadius: number = 8;
-  @Prop shadowOpacity: number = 0.05;
+  @Prop cardRadius: number = DesignConstants.RADIUS.XL;
+  @Prop shadowRadius: number = 6;
+  @Prop shadowOpacity: number = 0.04;
   @Prop clickable: boolean = false;
 
   @State isPressed: boolean = false;
@@ -184,6 +169,7 @@ export struct MasonryCard {
     .width('100%')
     .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(this.cardRadius)
+    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
     .shadow({
       radius: this.shadowRadius,
       color: `rgba(0,0,0,${this.shadowOpacity})`,

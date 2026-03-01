@@ -254,7 +254,7 @@ export struct CreateGroupPage {
             icon: AppIcon.BACK,
             iconSize: IconSize.LARGE,
             iconColor: $r('sys.color.ohos_id_color_text_primary'),
-            bgColor: Color.Transparent,
+            bgColor: $r('app.color.bg_tertiary'),
             onButtonClick: () => {
               AppRouter.pop();
             }
@@ -262,7 +262,7 @@ export struct CreateGroupPage {
 
           Text('创建群组')
             .fontSize(DesignConstants.FONT.SIZE.XL)
-            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+            .fontWeight(FontWeight.Medium)
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
             .layoutWeight(1)
             .textAlign(TextAlign.Center)
@@ -276,7 +276,8 @@ export struct CreateGroupPage {
           top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
           bottom: DesignConstants.SPACING.SM
         })
-        .backgroundColor($r('app.color.bg_primary'))
+        .backgroundColor($r('app.color.bg_secondary'))
+        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
         // 表单内容
@@ -335,7 +336,7 @@ export struct CreateGroupPage {
               })
             }
             .backgroundColor($r('app.color.bg_secondary'))
-            .borderRadius(DesignConstants.RADIUS.XL)
+            .borderRadius(DesignConstants.RADIUS.XXL)
             .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
             .shadow(DesignConstants.SHADOW.SMALL)
 
@@ -367,7 +368,7 @@ export struct CreateGroupPage {
                     .backgroundColor($r('app.color.bg_tertiary'))
                     .fontColor($r('sys.color.ohos_id_color_emphasize'))
                     .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .borderRadius(DesignConstants.RADIUS.XL)
+                    .borderRadius(DesignConstants.RADIUS.XXL)
                     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
                     .height(34)
                     .enabled(!this.isCreating && !this.isGroupAvatarUploading)
@@ -379,7 +380,7 @@ export struct CreateGroupPage {
                       .backgroundColor($r('app.color.bg_tertiary'))
                       .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                       .fontSize(DesignConstants.FONT.SIZE.SM)
-                      .borderRadius(DesignConstants.RADIUS.XL)
+                      .borderRadius(DesignConstants.RADIUS.XXL)
                       .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
                       .height(34)
                       .enabled(!this.isCreating && !this.isGroupAvatarUploading)
@@ -396,7 +397,7 @@ export struct CreateGroupPage {
               })
             }
             .backgroundColor($r('app.color.bg_secondary'))
-            .borderRadius(DesignConstants.RADIUS.XL)
+            .borderRadius(DesignConstants.RADIUS.XXL)
             .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
             .shadow(DesignConstants.SHADOW.SMALL)
 
@@ -426,7 +427,7 @@ export struct CreateGroupPage {
                     .backgroundColor($r('app.color.bg_tertiary'))
                     .fontColor($r('sys.color.ohos_id_color_emphasize'))
                     .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .borderRadius(DesignConstants.RADIUS.XL)
+                    .borderRadius(DesignConstants.RADIUS.XXL)
                     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
                     .height(36)
                     .onClick(() => this.openLocationPicker())
@@ -436,7 +437,7 @@ export struct CreateGroupPage {
                     .backgroundColor($r('app.color.bg_tertiary'))
                     .fontColor($r('sys.color.ohos_id_color_emphasize'))
                     .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .borderRadius(DesignConstants.RADIUS.XL)
+                    .borderRadius(DesignConstants.RADIUS.XXL)
                     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
                     .height(36)
                     .onClick(() => this.refreshLocation())
@@ -449,7 +450,7 @@ export struct CreateGroupPage {
               })
             }
             .backgroundColor($r('app.color.bg_secondary'))
-            .borderRadius(DesignConstants.RADIUS.XL)
+            .borderRadius(DesignConstants.RADIUS.XXL)
             .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
             .shadow(DesignConstants.SHADOW.SMALL)
 
@@ -476,7 +477,7 @@ export struct CreateGroupPage {
                   .width(36)
                   .height(36)
                   .backgroundColor($r('app.color.bg_tertiary'))
-                  .borderRadius(DesignConstants.RADIUS.XL)
+                  .borderRadius(DesignConstants.RADIUS.XXL)
                   .enabled(this.maxMembers > GROUP_MEMBERS_MIN)
                   .onClick(() => {
                     if (this.maxMembers > GROUP_MEMBERS_MIN) this.maxMembers = Math.max(GROUP_MEMBERS_MIN, this.maxMembers - 10);
@@ -516,7 +517,7 @@ export struct CreateGroupPage {
                   .width(36)
                   .height(36)
                   .backgroundColor($r('app.color.bg_tertiary'))
-                  .borderRadius(DesignConstants.RADIUS.XL)
+                  .borderRadius(DesignConstants.RADIUS.XXL)
                   .enabled(this.maxMembers < GROUP_MEMBERS_MAX)
                   .onClick(() => {
                     if (this.maxMembers < GROUP_MEMBERS_MAX) this.maxMembers = Math.min(GROUP_MEMBERS_MAX, this.maxMembers + 10);
@@ -584,7 +585,7 @@ export struct CreateGroupPage {
               }
             }
             .backgroundColor($r('app.color.bg_secondary'))
-            .borderRadius(DesignConstants.RADIUS.XL)
+            .borderRadius(DesignConstants.RADIUS.XXL)
             .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
             .shadow(DesignConstants.SHADOW.SMALL)
 
@@ -593,7 +594,7 @@ export struct CreateGroupPage {
               .type(ButtonType.Normal)
               .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
               .fontColor(Color.White)
-              .borderRadius(DesignConstants.RADIUS.XL)
+              .borderRadius(DesignConstants.RADIUS.XXL)
               .shadow(DesignConstants.SHADOW.SMALL)
               .width('100%')
               .height(48)

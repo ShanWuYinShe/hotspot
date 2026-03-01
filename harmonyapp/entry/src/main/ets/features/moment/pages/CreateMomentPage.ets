@@ -101,7 +101,7 @@ export struct CreateMomentPage {
   }
 
   private getHeaderTopPadding(): number {
-    return (this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.LG) + DesignConstants.SPACING.SM;
+    return SafeAreaUtils.resolveTopPadding(this.safeAreaTop);
   }
 
   private addTag(): void {
@@ -294,7 +294,7 @@ export struct CreateMomentPage {
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: Color.Transparent,
+          bgColor: $r('app.color.bg_tertiary'),
           onButtonClick: () => {
             AppRouter.pop();
           }
@@ -302,16 +302,19 @@ export struct CreateMomentPage {
 
         Text('发布瞬间')
           .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+          .fontWeight(FontWeight.Medium)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
 
         Button('发布')
           .type(ButtonType.Normal)
-          .backgroundColor(Color.Transparent)
+          .backgroundColor($r('app.color.bg_tertiary'))
           .fontColor($r('sys.color.ohos_id_color_emphasize'))
           .fontSize(DesignConstants.FONT.SIZE.LG)
+          .height(36)
+          .borderRadius(DesignConstants.RADIUS.XXL)
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
           .enabled(!this.isPublishing)
           .opacity(this.isPublishing ? 0.5 : 1)
           .animation({ duration: 200, curve: Curve.EaseInOut })
@@ -325,7 +328,8 @@ export struct CreateMomentPage {
         top: this.getHeaderTopPadding(),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_primary'))
+      .backgroundColor($r('app.color.bg_secondary'))
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       List() {
@@ -455,7 +459,7 @@ export struct CreateMomentPage {
                   .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
                   .fontColor(Color.White)
                   .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .borderRadius(DesignConstants.RADIUS.XL)
+                  .borderRadius(DesignConstants.RADIUS.XXL)
                   .onClick(() => this.addTag())
                   .margin({ left: DesignConstants.SPACING.SM })
               }
@@ -488,16 +492,20 @@ export struct CreateMomentPage {
                 Row({ space: DesignConstants.SPACING.SM }) {
                   Button('选点')
                     .type(ButtonType.Normal)
-                    .backgroundColor(Color.Transparent)
+                    .backgroundColor($r('app.color.bg_tertiary'))
                     .fontColor($r('sys.color.ohos_id_color_emphasize'))
                     .fontSize(DesignConstants.FONT.SIZE.MD)
+                    .borderRadius(DesignConstants.RADIUS.XXL)
+                    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
                     .onClick(() => this.openLocationPicker())
 
                   Button('刷新')
                     .type(ButtonType.Normal)
-                    .backgroundColor(Color.Transparent)
+                    .backgroundColor($r('app.color.bg_tertiary'))
                     .fontColor($r('sys.color.ohos_id_color_emphasize'))
                     .fontSize(DesignConstants.FONT.SIZE.MD)
+                    .borderRadius(DesignConstants.RADIUS.XXL)
+                    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
                     .onClick(() => this.refreshLocation())
                 }
               }
@@ -619,7 +627,7 @@ export struct CreateMomentPage {
       .backgroundColor($r('app.color.color_overlay_heavy'))
       .width(28)
       .height(28)
-      .borderRadius(DesignConstants.RADIUS.XL)
+      .borderRadius(DesignConstants.RADIUS.XXL)
       .margin({ top: 2, right: 2 })
       .onClick(() => this.removeImage(index))
     }

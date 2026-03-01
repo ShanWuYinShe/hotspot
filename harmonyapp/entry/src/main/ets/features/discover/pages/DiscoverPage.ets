@@ -56,7 +56,7 @@ export struct DiscoverPage {
   @State userActionPendingIds: string[] = [];
 
   private getHeaderTopPadding(): number {
-    return (this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.LG) + DesignConstants.SPACING.SM;
+    return SafeAreaUtils.resolveTopPadding(this.safeAreaTop);
   }
 
   private calculateImageHeight(moment: MomentItem): number {
@@ -184,8 +184,8 @@ export struct DiscoverPage {
         .width(40)
         .height(40)
         .justifyContent(FlexAlign.Center)
-        .borderRadius(DesignConstants.RADIUS.XL)
-        .backgroundColor($r('app.color.bg_secondary'))
+        .borderRadius(DesignConstants.RADIUS.XXL)
+        .backgroundColor($r('app.color.bg_tertiary'))
         .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
         .onClick(() => {
           AppRouter.push(PageNames.SEARCH);
@@ -268,7 +268,7 @@ export struct DiscoverPage {
                 .backgroundColor($r('app.color.bg_secondary'))
                 .borderRadius(DesignConstants.RADIUS.XL)
                 .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-                .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+                .shadow(DesignConstants.SHADOW.SMALL)
               }
             }
 
@@ -296,7 +296,7 @@ export struct DiscoverPage {
                 .backgroundColor($r('app.color.bg_secondary'))
                 .borderRadius(DesignConstants.RADIUS.XL)
                 .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-                .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+                .shadow(DesignConstants.SHADOW.SMALL)
               }
             }
 
@@ -379,7 +379,7 @@ export struct DiscoverPage {
   .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.XL)
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+    .shadow(DesignConstants.SHADOW.SMALL)
   }
 
   // ==================== 推荐用户卡片 ====================
@@ -560,7 +560,7 @@ export struct DiscoverPage {
     .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.XL)
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
+    .shadow(DesignConstants.SHADOW.SMALL)
   }
 
   // ==================== 热门瞬间卡片（masonry 小红书风格）====================
@@ -664,7 +664,7 @@ export struct DiscoverPage {
     .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.XL)
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
+    .shadow(DesignConstants.SHADOW.SMALL)
   }
 
   // ==================== 热门瞬间列表项（供 LazyForEach 使用）====================

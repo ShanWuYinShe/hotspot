@@ -153,7 +153,7 @@ export struct SubscriptionsPage {
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: Color.Transparent,
+          bgColor: $r('app.color.bg_tertiary'),
           onButtonClick: () => {
             AppRouter.pop();
           }
@@ -175,7 +175,8 @@ export struct SubscriptionsPage {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_primary'))
+      .backgroundColor($r('app.color.bg_secondary'))
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.loading) {
@@ -199,7 +200,7 @@ export struct SubscriptionsPage {
             .backgroundColor($r('app.color.bg_secondary'))
             .borderRadius(DesignConstants.RADIUS.XXL)
             .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-            .shadow({ radius: 10, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 3 })
+            .shadow(DesignConstants.SHADOW.SMALL)
             .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
           }
 

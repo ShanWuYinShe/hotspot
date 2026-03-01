@@ -6,6 +6,7 @@
 
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppIcon } from './SystemIcon';
+import { SafeAreaUtils } from '../core/utils/SafeAreaUtils';
 
 export interface PageHeaderAction {
   label: string;
@@ -24,7 +25,7 @@ export struct SystemPageHeader {
   surfaceColor?: ResourceColor;
 
   private getHeaderTopPadding(): number {
-    return (this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.LG) + DesignConstants.SPACING.SM;
+    return SafeAreaUtils.resolveTopPadding(this.safeAreaTop);
   }
 
   private getBackgroundColor(): ResourceColor {
@@ -42,11 +43,11 @@ export struct SystemPageHeader {
           }
         }
         .type(ButtonType.Normal)
-        .backgroundColor($r('app.color.bg_secondary'))
-        .borderRadius(DesignConstants.RADIUS.XL)
+        .backgroundColor($r('app.color.bg_tertiary'))
+        .borderRadius(DesignConstants.RADIUS.XXL)
         .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-        .width(48)
-        .height(48)
+        .width(40)
+        .height(40)
         .onClick(() => {
           if (this.onBack) {
             this.onBack();
@@ -58,18 +59,22 @@ export struct SystemPageHeader {
 
       Text(this.title)
         .fontSize(DesignConstants.FONT.SIZE.XL)
-        .fontWeight(FontWeight.Bold)
+        .fontWeight(FontWeight.Medium)
         .fontColor($r('sys.color.ohos_id_color_text_primary'))
         .layoutWeight(1)
 
       if (this.action) {
         Button(this.action.label)
           .type(ButtonType.Normal)
-          .backgroundColor(Color.Transparent)
+          .backgroundColor($r('app.color.bg_secondary'))
+          .borderRadius(DesignConstants.RADIUS.XXL)
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .height(36)
+          .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
           .fontColor(this.action.disabled
             ? $r('sys.color.ohos_id_color_text_secondary')
             : $r('sys.color.ohos_id_color_emphasize'))
-          .fontSize(DesignConstants.FONT.SIZE.LG)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .enabled(!this.action.disabled)
           .onClick(async () => {
             try {
@@ -87,7 +92,7 @@ export struct SystemPageHeader {
       left: DesignConstants.SPACING.LG,
       right: DesignConstants.SPACING.LG,
       top: this.getHeaderTopPadding(),
-      bottom: DesignConstants.SPACING.SM
+      bottom: DesignConstants.SPACING.MD
     })
     .backgroundColor(this.getBackgroundColor())
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])

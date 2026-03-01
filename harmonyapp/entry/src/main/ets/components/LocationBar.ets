@@ -3,9 +3,9 @@
  * 显示当前位置或自定义锚点，提供搜索和地图入口
  *
  * 设计语言：
- * - 悬浮圆角卡片风格，通过阴影和层叠营造深度感
- * - 当前位置模式：脉冲呼吸动画传达「实时定位」
- * - 浏览锚点模式：蓝色调卡片 + 浏览标识，明确区分状态
+ * - 轻量中性底 + 柔和蓝强调，贴近 Stitch 的简洁层级
+ * - 当前位置模式：脉冲动画传达「实时定位」
+ * - 浏览锚点模式：浅蓝状态块明确区分
  */
 
 import { LocationInfo } from '../core/location/LocationUtil';
@@ -100,7 +100,7 @@ export struct LocationBar {
           .height(28)
           .justifyContent(FlexAlign.Center)
           .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-          .borderRadius(DesignConstants.RADIUS.XL)
+          .borderRadius(DesignConstants.RADIUS.XXL)
           .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
         } else {
           // 当前位置模式：脉冲动画指示器
@@ -120,8 +120,7 @@ export struct LocationBar {
               .height(10)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-              .border({ width: 2, color: $r('app.color.bg_secondary') })
-              .shadow({ radius: 4, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 1 })
+              .border({ width: 2, color: $r('app.color.bg_primary') })
           }
           .width(28)
           .height(28)
@@ -157,14 +156,13 @@ export struct LocationBar {
         }
       }
       .layoutWeight(1)
-      .height(44)
+      .height(42)
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.SM })
       .backgroundColor(this.isUsingAnchor()
         ? $r('app.color.color_emphasize_bg')
-        : $r('app.color.bg_secondary'))
-      .borderRadius(DesignConstants.RADIUS.XL)
+        : $r('app.color.bg_tertiary'))
+      .borderRadius(DesignConstants.RADIUS.XXL)
       .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-      .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
       .onClick(() => {
         this.openLocationPicker();
       })
@@ -177,10 +175,10 @@ export struct LocationBar {
       }
     }
     .width('100%')
-    .height(54)
+    .height(50)
     .padding({
-      left: DesignConstants.SPACING.XS,
-      right: DesignConstants.SPACING.XS
+      left: 0,
+      right: 0
     })
   }
 
@@ -193,13 +191,12 @@ export struct LocationBar {
           .fontColor([$r('sys.color.ohos_id_color_text_primary')])
       }
     }
-    .width(40)
-    .height(40)
+    .width(38)
+    .height(38)
     .justifyContent(FlexAlign.Center)
-    .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.XL)
+    .backgroundColor($r('app.color.bg_tertiary'))
+    .borderRadius(DesignConstants.RADIUS.XXL)
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
     .onClick(action)
   }
 

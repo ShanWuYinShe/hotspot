@@ -446,9 +446,9 @@ export struct MomentPage {
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.XL)
+    .borderRadius(DesignConstants.RADIUS.XXL)
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+    .shadow(DesignConstants.SHADOW.SMALL)
   }
 }
 

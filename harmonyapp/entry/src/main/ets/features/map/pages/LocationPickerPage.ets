@@ -73,8 +73,8 @@ function TopBar(props: TopBarProps) {
     .width(44)
     .height(44)
     .justifyContent(FlexAlign.Center)
-    .borderRadius(DesignConstants.RADIUS.XL)
-    .backgroundColor($r('app.color.bg_secondary'))
+    .borderRadius(DesignConstants.RADIUS.XXL)
+    .backgroundColor($r('app.color.bg_tertiary'))
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
     .onClick(props.onBack)
 
@@ -105,7 +105,7 @@ function TopBar(props: TopBarProps) {
     .backgroundColor($r('app.color.bg_secondary'))
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
     .borderRadius(DesignConstants.RADIUS.XXL)
-    .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+    .shadow(DesignConstants.SHADOW.SMALL)
   }
   .width('100%')
   .padding({
@@ -131,9 +131,9 @@ function MapToast(props: MapToastProps) {
       .fontColor($r('sys.color.ohos_id_color_text_primary'))
       .backgroundColor($r('app.color.bg_secondary'))
       .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-      .borderRadius(DesignConstants.RADIUS.MD)
+      .borderRadius(DesignConstants.RADIUS.XL)
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: 6, bottom: 6 })
-      .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+      .shadow(DesignConstants.SHADOW.SMALL)
       .position({ top: SafeAreaUtils.resolveTopPadding(props.safeAreaTop, 100), left: 16 })
       .transition(TransitionEffect.OPACITY.animation({ duration: 250 }))
   }
@@ -212,8 +212,8 @@ function MarkerLegend() {
     })
     .backgroundColor($r('app.color.bg_secondary'))
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .borderRadius(DesignConstants.RADIUS.XL)
-    .shadow({ radius: 5, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 1 })
+    .borderRadius(DesignConstants.RADIUS.XXL)
+    .shadow(DesignConstants.SHADOW.SMALL)
   }
   .width('100%')
   .padding({
@@ -454,7 +454,7 @@ struct SearchPanel {
     .backgroundColor($r('app.color.bg_secondary'))
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
     .borderRadius({ topLeft: 24, topRight: 24 })
-    .shadow({ radius: 16, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: -4 })
+    .shadow({ radius: 10, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: -2 })
   }
 }
 
@@ -657,7 +657,7 @@ struct MainPanel {
     .backgroundColor($r('app.color.bg_secondary'))
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
     .borderRadius({ topLeft: 24, topRight: 24 })
-    .shadow({ radius: 16, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: -4 })
+    .shadow({ radius: 10, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: -2 })
   }
 }
 
@@ -1300,7 +1300,7 @@ export struct LocationPickerPage {
           .backgroundColor($r('app.color.bg_secondary'))
           .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .shadow({ radius: 12, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 4 })
+          .shadow(DesignConstants.SHADOW.SMALL)
           .onClick(() => { this.locateUser(); })
 
           Column() {
@@ -1316,7 +1316,7 @@ export struct LocationPickerPage {
           .backgroundColor($r('app.color.bg_secondary'))
           .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .shadow({ radius: 12, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 4 })
+          .shadow(DesignConstants.SHADOW.SMALL)
           .onClick(() => { this.locateBrowseAnchor(); })
 
           Column() {
@@ -1355,7 +1355,7 @@ export struct LocationPickerPage {
           .backgroundColor($r('app.color.bg_secondary'))
           .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .shadow({ radius: 12, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 4 })
+          .shadow(DesignConstants.SHADOW.SMALL)
         }
         .position({ right: DesignConstants.SPACING.MD, bottom: this.getControlsBottomOffset() })
       }
@@ -1399,10 +1399,10 @@ function MapFilterChip(props: MapFilterChipProps) {
     left: DesignConstants.SPACING.MD,
     right: DesignConstants.SPACING.MD + 2
   })
-  .backgroundColor(props.active ? props.accentColor : $r('app.color.bg_secondary'))
+  .backgroundColor(props.active ? props.accentColor : $r('app.color.bg_tertiary'))
   .border(props.active ? { width: 0 } : { width: 1.5, color: props.accentColor })
-  .borderRadius(DesignConstants.RADIUS.XL)
-  .shadow({ radius: 4, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 1 })
+  .borderRadius(DesignConstants.RADIUS.XXL)
+  .shadow(DesignConstants.SHADOW.SMALL)
   .onClick(() => props.onToggle())
   .animation({ duration: 200 })
 }

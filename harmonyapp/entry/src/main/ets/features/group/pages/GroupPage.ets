@@ -68,7 +68,7 @@ export struct GroupPage {
   @State pressedGroupId: string = '';
 
   private getHeaderTopPadding(): number {
-    return (this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.LG) + DesignConstants.SPACING.SM;
+    return SafeAreaUtils.resolveTopPadding(this.safeAreaTop);
   }
 
   async aboutToAppear() {
@@ -461,29 +461,29 @@ export struct GroupPage {
       Row() {
         Text('附近群组')
           .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Bold)
+          .fontWeight(FontWeight.Medium)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
 
         Row({ space: 8 }) {
           Button('邀请')
             .type(ButtonType.Normal)
-            .backgroundColor($r('app.color.bg_secondary'))
+            .backgroundColor($r('app.color.bg_tertiary'))
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .height(32)
-            .borderRadius(DesignConstants.RADIUS.XL)
+            .borderRadius(DesignConstants.RADIUS.XXL)
             .borderWidth(1)
             .borderColor($r('sys.color.ohos_id_color_list_separator'))
             .onClick(() => this.loadMyInvites())
 
           Button('申请')
             .type(ButtonType.Normal)
-            .backgroundColor($r('app.color.bg_secondary'))
+            .backgroundColor($r('app.color.bg_tertiary'))
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .height(32)
-            .borderRadius(DesignConstants.RADIUS.XL)
+            .borderRadius(DesignConstants.RADIUS.XXL)
             .borderWidth(1)
             .borderColor($r('sys.color.ohos_id_color_list_separator'))
             .onClick(() => this.loadMyApplications())
@@ -494,7 +494,7 @@ export struct GroupPage {
             .fontColor(Color.White)
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .height(32)
-            .borderRadius(DesignConstants.RADIUS.XL)
+            .borderRadius(DesignConstants.RADIUS.XXL)
             .onClick(() => this.createGroup())
         }
       }
@@ -506,7 +506,8 @@ export struct GroupPage {
         top: this.getHeaderTopPadding(),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_primary'))
+      .backgroundColor($r('app.color.bg_secondary'))
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 内容区域
@@ -640,7 +641,7 @@ export struct GroupPage {
           .type(ButtonType.Normal)
           .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
           .fontColor(Color.White)
-          .borderRadius(DesignConstants.RADIUS.XL)
+          .borderRadius(DesignConstants.RADIUS.XXL)
           .height(34)
           .layoutWeight(1)
           .enabled(!this.isInviteHandling(invite.invite_id))
@@ -651,7 +652,7 @@ export struct GroupPage {
           .type(ButtonType.Normal)
           .backgroundColor($r('app.color.bg_tertiary'))
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .borderRadius(DesignConstants.RADIUS.XL)
+          .borderRadius(DesignConstants.RADIUS.XXL)
           .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
           .height(34)
           .layoutWeight(1)
@@ -664,9 +665,9 @@ export struct GroupPage {
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.XL)
+    .borderRadius(DesignConstants.RADIUS.XXL)
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+    .shadow(DesignConstants.SHADOW.SMALL)
   }
 
   @Builder
@@ -760,7 +761,7 @@ export struct GroupPage {
           .type(ButtonType.Normal)
           .backgroundColor($r('app.color.bg_tertiary'))
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .borderRadius(DesignConstants.RADIUS.XL)
+          .borderRadius(DesignConstants.RADIUS.XXL)
           .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
           .height(34)
           .layoutWeight(1)
@@ -773,9 +774,9 @@ export struct GroupPage {
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.XL)
+    .borderRadius(DesignConstants.RADIUS.XXL)
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow({ radius: 6, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+    .shadow(DesignConstants.SHADOW.SMALL)
   }
 
   @Builder
@@ -851,7 +852,7 @@ export struct GroupPage {
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontWeight(FontWeight.Medium)
         .height(34)
-        .borderRadius(DesignConstants.RADIUS.XL)
+        .borderRadius(DesignConstants.RADIUS.XXL)
         .enabled(!this.isGroupJoining(group.group.group_id))
         .opacity(this.isGroupJoining(group.group.group_id) ? 0.58 : 1)
         .borderWidth(1)
@@ -866,9 +867,9 @@ export struct GroupPage {
       bottom: DesignConstants.SPACING.MD
     })
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.XL)
+    .borderRadius(DesignConstants.RADIUS.XXL)
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+    .shadow(DesignConstants.SHADOW.SMALL)
     .alignItems(VerticalAlign.Center)
     .scale(this.pressedGroupId === group.group.group_id ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })
     .animation({ duration: 100, curve: Curve.EaseOut })

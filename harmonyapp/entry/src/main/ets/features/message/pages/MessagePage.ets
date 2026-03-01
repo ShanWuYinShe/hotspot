@@ -61,7 +61,7 @@ export struct MessagePage {
   private messageCacheService = MessageCacheService.getInstance();
 
   private getHeaderTopPadding(): number {
-    return (this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.LG) + DesignConstants.SPACING.SM;
+    return SafeAreaUtils.resolveTopPadding(this.safeAreaTop);
   }
 
   @State isLoading: boolean = true;
@@ -449,7 +449,7 @@ export struct MessagePage {
       Row() {
         Text('消息')
           .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Bold)
+          .fontWeight(FontWeight.Medium)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
           .padding({ left: DesignConstants.SPACING.LG })
@@ -465,8 +465,9 @@ export struct MessagePage {
           }
           .width(36)
           .height(36)
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .backgroundColor($r('app.color.bg_secondary'))
+          .borderRadius(DesignConstants.RADIUS.XXL)
+          .backgroundColor($r('app.color.bg_tertiary'))
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
           .justifyContent(FlexAlign.Center)
           .alignItems(VerticalAlign.Center)
           .onClick(() => {
@@ -483,8 +484,9 @@ export struct MessagePage {
           }
           .width(36)
           .height(36)
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .backgroundColor($r('app.color.bg_secondary'))
+          .borderRadius(DesignConstants.RADIUS.XXL)
+          .backgroundColor($r('app.color.bg_tertiary'))
+          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
           .justifyContent(FlexAlign.Center)
           .alignItems(VerticalAlign.Center)
           .bindMenu([
@@ -540,7 +542,8 @@ export struct MessagePage {
         top: this.getHeaderTopPadding(),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_primary'))
+      .backgroundColor($r('app.color.bg_secondary'))
+      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 内容区域
@@ -667,9 +670,9 @@ export struct MessagePage {
     .constraintSize({ minHeight: 78 })
     .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.XL)
+    .borderRadius(DesignConstants.RADIUS.XXL)
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow({ radius: 8, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: 2 })
+    .shadow(DesignConstants.SHADOW.SMALL)
     .scale(this.pressedChatKey === this.getChatKey(item) ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })
     .animation({ duration: 100, curve: Curve.EaseOut })
     .opacity(this.isChatDeleting(item) ? 0.7 : 1)

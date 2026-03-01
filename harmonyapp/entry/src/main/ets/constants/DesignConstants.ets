@@ -133,34 +133,34 @@ export interface DesignConstantsType {
 
 // ==================== 颜色系统 ====================
 const COLOR: ColorPalette = {
-  PRIMARY_BG_LIGHT: '#EEF4FF',
-  PRIMARY_BG_DARK: '#081325',
-  SECONDARY_BG_LIGHT: '#FAFCFF',
-  SECONDARY_BG_DARK: '#0F1E35',
-  TERTIARY_BG_LIGHT: '#DCE9FF',
-  TERTIARY_BG_DARK: '#172947',
+  PRIMARY_BG_LIGHT: '#F5F6F8',
+  PRIMARY_BG_DARK: '#0F1115',
+  SECONDARY_BG_LIGHT: '#FFFFFF',
+  SECONDARY_BG_DARK: '#171A21',
+  TERTIARY_BG_LIGHT: '#EEF1F5',
+  TERTIARY_BG_DARK: '#202531',
   TEXT_PRIMARY_LIGHT: '#1C1C1E',
   TEXT_PRIMARY_DARK: '#FFFFFF',
-  TEXT_SECONDARY_LIGHT: '#636366',
-  TEXT_SECONDARY_DARK: '#AEAEB2',
-  TEXT_TERTIARY_LIGHT: '#8E8E93',
-  TEXT_TERTIARY_DARK: '#636366',
-  BRAND_PRIMARY: '#2F7DFF',
-  BRAND_PRIMARY_LIGHT: '#2F7DFF',
-  BRAND_PRIMARY_DARK: '#5B97FF',
-  SUCCESS: '#34C759',
-  WARNING: '#FFCC00',
-  ERROR: '#FF3B30',
-  INFO: '#2F7DFF',
-  DIVIDER_LIGHT: '#D0DCF2',
-  DIVIDER_DARK: '#2A3F66',
+  TEXT_SECONDARY_LIGHT: '#6A7280',
+  TEXT_SECONDARY_DARK: '#B7BECA',
+  TEXT_TERTIARY_LIGHT: '#9AA3B4',
+  TEXT_TERTIARY_DARK: '#8D95A3',
+  BRAND_PRIMARY: '#7D9FF7',
+  BRAND_PRIMARY_LIGHT: '#7D9FF7',
+  BRAND_PRIMARY_DARK: '#8AA5FF',
+  SUCCESS: '#36B37E',
+  WARNING: '#F4B400',
+  ERROR: '#E14D4D',
+  INFO: '#7D9FF7',
+  DIVIDER_LIGHT: '#E2E5EA',
+  DIVIDER_DARK: '#30384A',
   ONLINE_STATUS: '#34C759',
-  OFFLINE_STATUS: '#AEAEB2',
-  SURFACE_NEUTRAL_SOFT: '#FFF2F7FF',
-  SURFACE_INFO_SOFT: '#FFE5EEFF',
-  SURFACE_SUCCESS_SOFT: '#FFE7F8ED',
-  SURFACE_WARNING_SOFT: '#FFFFF4D6',
-  SURFACE_DANGER_SOFT: '#FFFFEBEC',
+  OFFLINE_STATUS: '#A3A8B2',
+  SURFACE_NEUTRAL_SOFT: '#FFF9FAFB',
+  SURFACE_INFO_SOFT: '#FFECF2FF',
+  SURFACE_SUCCESS_SOFT: '#FFEFF9F4',
+  SURFACE_WARNING_SOFT: '#FFFFF8E9',
+  SURFACE_DANGER_SOFT: '#FFFFF0F0',
 };
 
 // ==================== 字体系统 ====================
@@ -197,33 +197,33 @@ const SPACING: SpacingSystem = {
 
 // ==================== 圆角系统 ====================
 const RADIUS: RadiusSystem = {
-  SM: 6,
-  MD: 10,
-  LG: 14,
+  SM: 8,
+  MD: 12,
+  LG: 16,
   XL: 20,
-  XXL: 28,
+  XXL: 26,
   FULL: 999,
 };
 
 // ==================== 阴影系统 ====================
 const SHADOW: ShadowSystem = {
   SMALL: {
-    radius: 4,
-    color: '#0000001A',
+    radius: 6,
+    color: '#14000000',
     offsetX: 0,
     offsetY: 2,
   },
   MEDIUM: {
-    radius: 8,
-    color: '#0000001A',
+    radius: 10,
+    color: '#16000000',
     offsetX: 0,
-    offsetY: 4,
+    offsetY: 3,
   },
   LARGE: {
-    radius: 12,
-    color: '#0000001A',
+    radius: 14,
+    color: '#18000000',
     offsetX: 0,
-    offsetY: 6,
+    offsetY: 5,
   },
 };
 
@@ -244,8 +244,8 @@ const COMPONENT: ComponentConstants = {
     LARGE: 64,
     XLARGE: 80,
   },
-  BUTTON_HEIGHT: 44,
-  INPUT_HEIGHT: 44,
+  BUTTON_HEIGHT: 42,
+  INPUT_HEIGHT: 42,
 };
 
 // ==================== 小红书风格布局常量 ====================
@@ -266,7 +266,7 @@ export class MasonryLayout {
   static readonly IMAGE_HEIGHT_MAX: number = 280;
 
   // 卡片圆角
-  static readonly CARD_RADIUS: number = 16;
+  static readonly CARD_RADIUS: number = 20;
 
   // 预加载数量
   static readonly CACHED_COUNT: number = 8;
