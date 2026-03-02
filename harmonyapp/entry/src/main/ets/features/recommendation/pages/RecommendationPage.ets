@@ -11,8 +11,9 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { AppIcon } from '../../../components/SystemIcon';
 import { DesignConstants } from '../../../constants/DesignConstants';
+import { RefreshIndicator } from '../../../components/EmptyState';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
-import { AppRouter } from '../../../core/router/AppRouter';
+import { AppRouter, ProfileRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
@@ -30,6 +31,7 @@ export struct RecommendationPage {
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @State isLoading: boolean = true;
+  @State isRefreshing: boolean = false;
   @State errorMessage: string = '';
   @State trendingTags: TrendingTagItem[] = [];
   @State recommendedUsers: UserItem[] = [];
@@ -50,8 +52,10 @@ export struct RecommendationPage {
     return (this.safeAreaTop > 0 ? this.safeAreaTop : DesignConstants.SPACING.LG) + DesignConstants.SPACING.SM;
   }
 
-  private async loadData() {
-    this.isLoading = true;
+  private async loadData(forRefresh: boolean = false) {
+    if (!forRefresh) {
+      this.isLoading = true;
+    }
     this.errorMessage = '';
     try {
       const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
@@ -103,14 +107,14 @@ export struct RecommendationPage {
         Row() {
           Text() {
             SymbolSpan($r(AppIcon.SEARCH))
-              .fontSize(20)
+              .fontSize(DesignConstants.FONT.SIZE.XL)
               .fontColor([$r('sys.color.ohos_id_color_text_primary')])
           }
         }
         .width(36)
         .height(36)
-        .borderRadius(DesignConstants.RADIUS.XL)
-        .backgroundColor($r('app.color.bg_secondary'))
+        .borderRadius(DesignConstants.RADIUS.MD)
+        .backgroundColor($r('app.color.bg_tertiary'))
         .justifyContent(FlexAlign.Center)
         .alignItems(VerticalAlign.Center)
         .onClick(() => {
@@ -125,12 +129,16 @@ export struct RecommendationPage {
         top: this.getHeaderTopPadding(),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_primary'))
+      .backgroundColor($r('app.color.bg_secondary'))
+      .borderRadius({ bottomLeft: DesignConstants.RADIUS.LG, bottomRight: DesignConstants.RADIUS.LG })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.isLoading) {
         SystemLoadingView({ message: '加载推荐内容...' })
-          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+          .transition(
+            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          )
       } else if (!this.hasAnyData() && this.errorMessage) {
         Column({ space: DesignConstants.SPACING.LG }) {
           Text() {
@@ -144,18 +152,24 @@ export struct RecommendationPage {
             .textAlign(TextAlign.Center)
           Button('重试')
             .type(ButtonType.Normal)
-            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+            .backgroundColor($r('app.color.brand_primary'))
             .fontColor(Color.White)
             .height(40)
-            .borderRadius(DesignConstants.RADIUS.XL)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .shadow(DesignConstants.SHADOW.SMALL)
+            .border({ width: 1, color: $r('app.color.highlight_border') })
             .onClick(() => { this.loadData(); })
         }
         .width('100%')
         .layoutWeight(1)
         .justifyContent(FlexAlign.Center)
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
       } else {
-        List({ space: 16 }) {
+        Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
+        List() {
           // 热门话题
           ListItem() {
             Column({ space: 12 }) {
@@ -167,9 +181,11 @@ export struct RecommendationPage {
                     Text(`#${tag.name}`)
                       .padding(DesignConstants.SPACING.SM)
                       .backgroundColor($r('app.color.bg_tertiary'))
-                      .borderRadius(DesignConstants.RADIUS.XL)
-                      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+                      .borderRadius(DesignConstants.RADIUS.MD)
                       .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+                      .onClick(() => {
+                        AppRouter.push(PageNames.SEARCH, { keyword: `#${tag.name}` });
+                      })
                   }, (tag: TrendingTagItem) => tag.name)
                 } else {
                   Text('暂无热门话题')
@@ -182,12 +198,12 @@ export struct RecommendationPage {
             }
           }
           .width('100%')
-          .backgroundColor($r('app.color.bg_secondary'))
-          .padding(DesignConstants.SPACING.LG)
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-          .shadow(DesignConstants.SHADOW.SMALL)
-
+          .shadow(DesignConstants.SHADOW.MEDIUM)
+          .backgroundColor($r('app.color.bg_secondary'))
+          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .margin({ bottom: 12 })
+          .padding(DesignConstants.SPACING.LG)
 
           // 推荐用户
           if (this.recommendedUsers.length > 0) {
@@ -203,34 +219,40 @@ export struct RecommendationPage {
             ForEach(this.recommendedUsers, (user: UserItem) => {
               ListItem() {
                 Row({ space: DesignConstants.SPACING.MD }) {
-                  SystemAvatar({
-                    avatarUrl: user.user?.avatar_url,
-                    name: user.user?.nickname ?? '',
-                    avatarSize: 44
-                  })
+                  Row({ space: DesignConstants.SPACING.MD }) {
+                    SystemAvatar({
+                      avatarUrl: user.user?.avatar_url,
+                      name: user.user?.nickname ?? '',
+                      avatarSize: 44
+                    })
 
-                  Column({ space: 2 }) {
-                    Text(user.user?.nickname ?? '')
-                      .fontSize(DesignConstants.FONT.SIZE.LG)
-                      .fontWeight(FontWeight.Medium)
-                      .fontColor($r('sys.color.ohos_id_color_text_primary'))
-                    Text('可能会感兴趣')
-                      .fontSize(DesignConstants.FONT.SIZE.SM)
-                      .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                    Column({ space: 2 }) {
+                      Text(user.user?.nickname ?? '')
+                        .fontSize(DesignConstants.FONT.SIZE.LG)
+                        .fontWeight(FontWeight.Medium)
+                        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                      Text('可能会感兴趣')
+                        .fontSize(DesignConstants.FONT.SIZE.SM)
+                        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                    }
+                    .alignItems(HorizontalAlign.Start)
+                    .layoutWeight(1)
                   }
-                  .alignItems(HorizontalAlign.Start)
                   .layoutWeight(1)
+                  .onClick(() => {
+                    this.openUserProfile(user);
+                  })
 
                   Button('关注')
                     .type(ButtonType.Normal)
-                    .backgroundColor($r('app.color.bg_tertiary'))
-                    .fontColor($r('sys.color.ohos_id_color_emphasize'))
+                    .backgroundColor($r('app.color.brand_primary'))
+                    .fontColor(Color.White)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .fontWeight(FontWeight.Medium)
                     .height(34)
-                    .borderRadius(DesignConstants.RADIUS.XXL)
-                    .borderWidth(1)
-                    .borderColor($r('sys.color.ohos_id_color_emphasize'))
+                    .borderRadius(DesignConstants.RADIUS.FULL)
+                    .shadow(DesignConstants.SHADOW.SMALL)
+                    .border({ width: 1, color: $r('app.color.highlight_border') })
                     .onClick(async () => {
                       try {
                         await ApiClient.followUser({ user_id: user.user?.user_id ?? '' });
@@ -247,29 +269,44 @@ export struct RecommendationPage {
                   top: DesignConstants.SPACING.MD,
                   bottom: DesignConstants.SPACING.MD
                 })
-                .backgroundColor($r('app.color.bg_secondary'))
                 .borderRadius(DesignConstants.RADIUS.XXL)
-                .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-                .shadow(DesignConstants.SHADOW.SMALL)
+                .shadow(DesignConstants.SHADOW.MEDIUM)
+                .backgroundColor($r('app.color.bg_secondary'))
+                .border({ width: 1, color: $r('app.color.highlight_border') })
+                .margin({ bottom: 12 })
               }
             }, (user: UserItem) => user.user?.user_id ?? '')
           }
         }
+        .divider({ strokeWidth: 0 })
         .width('100%')
         .layoutWeight(1)
         .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG,
           bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
         .scrollBar(BarState.Auto)
+        }
+        .onRefreshing(async () => {
+          await this.loadData(true);
+          this.isRefreshing = false;
+        })
       }
     }
-    .width('100%')
-    .height('100%')
+        .width('100%')
+        .height('100%')
     .backgroundColor($r('app.color.bg_primary'))
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {
       this.pathStack = context.pathStack;
     })
+  }
+
+  private openUserProfile(user: UserItem): void {
+    const userId = user.user?.user_id;
+    if (!userId) return;
+    const params = new ProfileRouteParam();
+    params.userId = userId;
+    AppRouter.push(PageNames.PROFILE, params);
   }
 
   @Builder

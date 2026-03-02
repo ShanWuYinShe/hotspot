@@ -254,7 +254,7 @@ export struct CreateGroupPage {
             icon: AppIcon.BACK,
             iconSize: IconSize.LARGE,
             iconColor: $r('sys.color.ohos_id_color_text_primary'),
-            bgColor: $r('app.color.bg_tertiary'),
+            bgColor: Color.Transparent,
             onButtonClick: () => {
               AppRouter.pop();
             }
@@ -276,8 +276,7 @@ export struct CreateGroupPage {
           top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
           bottom: DesignConstants.SPACING.SM
         })
-        .backgroundColor($r('app.color.bg_secondary'))
-        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+        .backgroundColor(Color.Transparent)
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
         // 表单内容
@@ -299,8 +298,10 @@ export struct CreateGroupPage {
                   })
                   .maxLength(GROUP_NAME_MAX)
                   .height(40)
-                  .backgroundColor(Color.Transparent)
-                  .padding({ left: 0 })
+                  .backgroundColor($r('app.color.bg_inset'))
+                  .shadow(DesignConstants.SHADOW.INSET)
+                  .borderRadius(DesignConstants.RADIUS.XL)
+                  .padding({ left: DesignConstants.SPACING.MD })
               }
               .alignItems(HorizontalAlign.Start)
               .padding({
@@ -326,8 +327,10 @@ export struct CreateGroupPage {
                   })
                   .maxLength(GROUP_DESCRIPTION_MAX)
                   .height(80)
-                  .backgroundColor(Color.Transparent)
-                  .padding({ left: 0 })
+                  .backgroundColor($r('app.color.bg_inset'))
+                  .shadow(DesignConstants.SHADOW.INSET)
+                  .borderRadius(DesignConstants.RADIUS.XL)
+                  .padding(DesignConstants.SPACING.MD)
               }
               .alignItems(HorizontalAlign.Start)
               .padding({
@@ -337,8 +340,9 @@ export struct CreateGroupPage {
             }
             .backgroundColor($r('app.color.bg_secondary'))
             .borderRadius(DesignConstants.RADIUS.XXL)
-            .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-            .shadow(DesignConstants.SHADOW.SMALL)
+            .shadow(DesignConstants.SHADOW.MEDIUM)
+            .border({ width: 1, color: $r('app.color.highlight_border') })
+            .margin({ bottom: 14 })
 
             // 群组头像
             this.SectionHeader('群组头像')
@@ -351,18 +355,18 @@ export struct CreateGroupPage {
                   shape: 'squircle'
                 })
 
-                Column({ space: 4 }) {
+                Column({ space: DesignConstants.SPACING.XS }) {
                   Text('建议使用清晰、易识别的头像')
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .fontColor($r('sys.color.ohos_id_color_text_primary'))
                   Text(this.isGroupAvatarUploading ? '群头像上传中...' : '未设置时将使用默认群头像')
-                    .fontSize(12)
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
                     .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                 }
                 .layoutWeight(1)
                 .alignItems(HorizontalAlign.Start)
 
-                Row({ space: 8 }) {
+                Row({ space: DesignConstants.SPACING.SM }) {
                   Button(this.groupAvatarPreviewUrl.length > 0 ? '重选' : '选择')
                     .type(ButtonType.Normal)
                     .backgroundColor($r('app.color.bg_tertiary'))
@@ -398,8 +402,9 @@ export struct CreateGroupPage {
             }
             .backgroundColor($r('app.color.bg_secondary'))
             .borderRadius(DesignConstants.RADIUS.XXL)
-            .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-            .shadow(DesignConstants.SHADOW.SMALL)
+            .shadow(DesignConstants.SHADOW.MEDIUM)
+            .border({ width: 1, color: $r('app.color.highlight_border') })
+            .margin({ bottom: 14 })
 
             // 位置信息
             this.SectionHeader('位置信息')
@@ -421,7 +426,7 @@ export struct CreateGroupPage {
                 .layoutWeight(1)
                 .alignItems(HorizontalAlign.Start)
 
-                Row({ space: 8 }) {
+                Row({ space: DesignConstants.SPACING.SM }) {
                   Button('选点')
                     .type(ButtonType.Normal)
                     .backgroundColor($r('app.color.bg_tertiary'))
@@ -451,8 +456,9 @@ export struct CreateGroupPage {
             }
             .backgroundColor($r('app.color.bg_secondary'))
             .borderRadius(DesignConstants.RADIUS.XXL)
-            .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-            .shadow(DesignConstants.SHADOW.SMALL)
+            .shadow(DesignConstants.SHADOW.MEDIUM)
+            .border({ width: 1, color: $r('app.color.highlight_border') })
+            .margin({ bottom: 14 })
 
             // 隐私与限制
             this.SectionHeader('隐私与限制')
@@ -463,11 +469,11 @@ export struct CreateGroupPage {
                   .fontColor($r('sys.color.ohos_id_color_text_primary'))
                   .layoutWeight(1)
 
-                Row({ space: 4 }) {
+                Row({ space: DesignConstants.SPACING.XS }) {
                   Button() {
                     Text() {
                       SymbolSpan($r(AppIcon.REMOVE))
-                        .fontSize(16)
+                        .fontSize(DesignConstants.FONT.SIZE.LG)
                         .fontColor([this.maxMembers > GROUP_MEMBERS_MIN
                           ? $r('sys.color.ohos_id_color_text_primary')
                           : $r('sys.color.ohos_id_color_text_tertiary')])
@@ -477,7 +483,7 @@ export struct CreateGroupPage {
                   .width(36)
                   .height(36)
                   .backgroundColor($r('app.color.bg_tertiary'))
-                  .borderRadius(DesignConstants.RADIUS.XXL)
+                  .borderRadius(DesignConstants.RADIUS.FULL)
                   .enabled(this.maxMembers > GROUP_MEMBERS_MIN)
                   .onClick(() => {
                     if (this.maxMembers > GROUP_MEMBERS_MIN) this.maxMembers = Math.max(GROUP_MEMBERS_MIN, this.maxMembers - 10);
@@ -490,7 +496,8 @@ export struct CreateGroupPage {
                     .textAlign(TextAlign.Center)
                     .fontSize(DesignConstants.FONT.SIZE.MD)
                     .fontColor($r('sys.color.ohos_id_color_text_primary'))
-                    .backgroundColor($r('app.color.bg_tertiary'))
+                    .backgroundColor($r('app.color.bg_inset'))
+                    .shadow(DesignConstants.SHADOW.INSET)
                     .borderRadius(DesignConstants.RADIUS.MD)
                     .padding(0)
                     .onChange((value: string) => {
@@ -507,7 +514,7 @@ export struct CreateGroupPage {
                   Button() {
                     Text() {
                       SymbolSpan($r(AppIcon.ADD))
-                        .fontSize(16)
+                        .fontSize(DesignConstants.FONT.SIZE.LG)
                         .fontColor([this.maxMembers < GROUP_MEMBERS_MAX
                           ? $r('sys.color.ohos_id_color_text_primary')
                           : $r('sys.color.ohos_id_color_text_tertiary')])
@@ -517,7 +524,7 @@ export struct CreateGroupPage {
                   .width(36)
                   .height(36)
                   .backgroundColor($r('app.color.bg_tertiary'))
-                  .borderRadius(DesignConstants.RADIUS.XXL)
+                  .borderRadius(DesignConstants.RADIUS.FULL)
                   .enabled(this.maxMembers < GROUP_MEMBERS_MAX)
                   .onClick(() => {
                     if (this.maxMembers < GROUP_MEMBERS_MAX) this.maxMembers = Math.min(GROUP_MEMBERS_MAX, this.maxMembers + 10);
@@ -574,8 +581,10 @@ export struct CreateGroupPage {
                     })
                     .maxLength(GROUP_PASSWORD_MAX)
                     .height(40)
-                    .backgroundColor(Color.Transparent)
-                    .padding({ left: 0 })
+                    .backgroundColor($r('app.color.bg_inset'))
+                    .shadow(DesignConstants.SHADOW.INSET)
+                    .borderRadius(DesignConstants.RADIUS.XL)
+                    .padding({ left: DesignConstants.SPACING.MD })
                 }
                 .alignItems(HorizontalAlign.Start)
                 .padding({
@@ -586,19 +595,21 @@ export struct CreateGroupPage {
             }
             .backgroundColor($r('app.color.bg_secondary'))
             .borderRadius(DesignConstants.RADIUS.XXL)
-            .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-            .shadow(DesignConstants.SHADOW.SMALL)
+            .shadow(DesignConstants.SHADOW.MEDIUM)
+            .border({ width: 1, color: $r('app.color.highlight_border') })
+            .margin({ bottom: 14 })
 
             // 提交按钮
             Button('立即创建')
               .type(ButtonType.Normal)
-              .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+              .backgroundColor($r('app.color.brand_primary'))
               .fontColor(Color.White)
-              .borderRadius(DesignConstants.RADIUS.XXL)
+              .borderRadius(DesignConstants.RADIUS.FULL)
               .shadow(DesignConstants.SHADOW.SMALL)
+              .border({ width: 1, color: $r('app.color.highlight_border') })
               .width('100%')
               .height(48)
-              .fontSize(16)
+              .fontSize(DesignConstants.FONT.SIZE.LG)
               .enabled(!this.isCreating)
               .opacity(this.isCreating ? 0.7 : 1)
               .animation({ duration: 200, curve: Curve.EaseInOut })
@@ -614,15 +625,18 @@ export struct CreateGroupPage {
         }
         .layoutWeight(1)
         .scrollBar(BarState.Off)
-        .backgroundColor($r('app.color.bg_primary'))
+        .backgroundColor(Color.Transparent)
       }
       .width('100%')
       .height('100%')
-      .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor($r('app.color.bg_primary'))
 
       if (this.isCreating) {
         SystemLoadingView()
-          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+          .transition(
+            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          )
       }
     }
     .width('100%')

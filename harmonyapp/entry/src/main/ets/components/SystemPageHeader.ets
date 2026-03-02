@@ -17,9 +17,9 @@ export interface PageHeaderAction {
 
 @Component
 export struct SystemPageHeader {
-  title: string = '';
+  @Prop title: string = '';
   action?: PageHeaderAction;
-  showBackButton: boolean = false;
+  @Prop showBackButton: boolean = false;
   onBack?: () => void;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   surfaceColor?: ResourceColor;
@@ -29,72 +29,80 @@ export struct SystemPageHeader {
   }
 
   private getBackgroundColor(): ResourceColor {
-    return this.surfaceColor ? this.surfaceColor : $r('app.color.bg_primary');
+    return this.surfaceColor ? this.surfaceColor : Color.Transparent;
   }
 
   build() {
-    Row({ space: DesignConstants.SPACING.SM }) {
-      if (this.showBackButton) {
-        Button() {
-          Text() {
-            SymbolSpan($r(AppIcon.BACK))
-              .fontSize(24)
-              .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+    Column() {
+      Row({ space: DesignConstants.SPACING.SM }) {
+        if (this.showBackButton) {
+          Button() {
+            Text() {
+              SymbolSpan($r(AppIcon.BACK))
+                .fontSize(24)
+                .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+            }
           }
-        }
-        .type(ButtonType.Normal)
-        .backgroundColor($r('app.color.bg_tertiary'))
-        .borderRadius(DesignConstants.RADIUS.XXL)
-        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-        .width(40)
-        .height(40)
-        .onClick(() => {
-          if (this.onBack) {
-            this.onBack();
-          }
-        })
-      } else {
-        Blank().width(16)
-      }
-
-      Text(this.title)
-        .fontSize(DesignConstants.FONT.SIZE.XL)
-        .fontWeight(FontWeight.Medium)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
-        .layoutWeight(1)
-
-      if (this.action) {
-        Button(this.action.label)
           .type(ButtonType.Normal)
-          .backgroundColor($r('app.color.bg_secondary'))
-          .borderRadius(DesignConstants.RADIUS.XXL)
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-          .height(36)
-          .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-          .fontColor(this.action.disabled
-            ? $r('sys.color.ohos_id_color_text_secondary')
-            : $r('sys.color.ohos_id_color_emphasize'))
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .enabled(!this.action.disabled)
-          .onClick(async () => {
-            try {
-              await this.action?.onClick()
-            } catch (_) {
+          .backgroundColor($r('app.color.bg_tertiary'))
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .width(40)
+          .height(40)
+          .onClick(() => {
+            if (this.onBack) {
+              this.onBack();
             }
           })
-      } else {
-        Blank().width(24)
+        } else {
+          Blank().width(16)
+        }
+
+        Text(this.title)
+          .fontSize(DesignConstants.FONT.SIZE.XL)
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .layoutWeight(1)
+          .textAlign(TextAlign.Center)
+
+        if (this.action) {
+          Button(this.action.label)
+            .type(ButtonType.Normal)
+            .backgroundColor($r('app.color.bg_tertiary'))
+            .borderRadius(DesignConstants.RADIUS.XL)
+            .border({ width: 1, color: $r('app.color.highlight_border') })
+            .height(34)
+            .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+            .fontColor(this.action.disabled
+              ? $r('sys.color.ohos_id_color_text_secondary')
+              : $r('app.color.brand_primary'))
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .enabled(!this.action.disabled)
+            .onClick(async () => {
+              try {
+                await this.action?.onClick()
+              } catch (_) {
+              }
+            })
+        } else {
+          Blank().width(24)
+        }
       }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        top: DesignConstants.SPACING.SM,
+        bottom: DesignConstants.SPACING.SM
+      })
     }
     .width('100%')
-    .alignItems(VerticalAlign.Center)
     .padding({
-      left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
       top: this.getHeaderTopPadding(),
-      bottom: DesignConstants.SPACING.MD
+      bottom: DesignConstants.SPACING.SM
     })
-    .backgroundColor(this.getBackgroundColor())
+    .backgroundColor(Color.Transparent)
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
   }
 }

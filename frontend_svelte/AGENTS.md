@@ -4,49 +4,13 @@
 
 ## 技术栈
 
-- **框架**：SvelteKit 2.x + Svelte 5（使用 runes：`$state`、`$derived`、`$effect`）
-- **构建**：Vite 7
+- **框架**：SvelteKit + Svelte 5（使用 runes：`$state`、`$derived`、`$effect`）
+- **构建**：Vite
 - **样式**：Tailwind CSS
 - **UI 组件库**：bits-ui + lucide-svelte
 - **通知**：svelte-sonner
-- **工具**：clsx、tailwind-merge、tailwind-variants、mode-watcher
 
-## 目录结构
-
-```
-src/
-├── app.html                  # HTML 模板
-├── app.css                   # 全局样式
-├── hooks.client.ts           # 客户端钩子（API 客户端 + WebSocket 初始化）
-├── hooks.server.ts           # 服务端钩子
-├── lib/
-│   ├── api/
-│   │   ├── client.ts         # 统一 HTTP 客户端（POST、Token 刷新、幂等键）
-│   │   ├── endpoints.ts      # API 路径常量（唯一路径定义处）
-│   │   └── services/         # 按业务域拆分的 API 服务
-│   │       ├── index.ts      # 服务导出
-│   │       ├── auth.ts
-│   │       ├── moments.ts
-│   │       └── ...
-│   ├── components/
-│   │   ├── common/           # 业务通用组件
-│   │   ├── ui/               # bits-ui 基础组件
-│   │   └── ...               # 其他按功能分组
-│   ├── hooks/                # 复用逻辑钩子
-│   ├── stores/               # Svelte 5 runes 状态管理
-│   ├── types/
-│   │   └── api.ts            # API 类型定义（对齐 spec）
-│   ├── utils/                # 工具函数
-│   └── websocket/            # WebSocket 连接与事件处理
-│       ├── store.svelte.ts   # 连接管理、心跳、重连
-│       ├── handlers.ts       # 事件处理与订阅
-│       └── types.ts          # WebSocket 事件类型
-└── routes/
-    ├── (admin)/              # 管理端页面（需管理员权限）
-    ├── (auth)/               # 认证页面（登录/注册）
-    ├── (protected)/          # 需登录的页面
-    └── (public)/             # 公开页面
-```
+> 具体版本以 `package.json` 为准。
 
 ## API 调用规则（严格执行）
 
@@ -97,21 +61,7 @@ const res = await post<PaginatedData<MomentItem>>(MOMENTS.LIST, {
 // 下一页：使用 res.data.next_cursor
 ```
 
-## 状态管理
-
-使用 Svelte 5 runes 管理状态：
-
-| Store 文件 | 作用 |
-|------------|------|
-| `auth.svelte.ts` | 认证、多账户、Token、用户资料 |
-| `notification.svelte.ts` | 通知（依赖 WebSocket） |
-| `message.svelte.ts` | 未读消息计数（依赖 WebSocket） |
-| `presence.svelte.ts` | 用户在线状态 |
-| `location.svelte.ts` | 当前位置 |
-| `toast.svelte.ts` | 全局 Toast |
-| `ui.svelte.ts` | UI 状态 |
-
-### 状态规则
+## 状态规则
 
 - Token 存储：Web 端只用 HttpOnly Cookie，**禁止在 localStorage/sessionStorage 存 Refresh Token**。
 - 认证持久化：`localStorage`（key: `hotspot_auth`）。
@@ -125,9 +75,7 @@ const res = await post<PaginatedData<MomentItem>>(MOMENTS.LIST, {
 
 ## WebSocket
 
-- 在 `hooks.client.ts` 中初始化，随认证状态自动连接/断开。
-- 事件类型必须与 `spec/api_spec_websocket.md` 一致。
-- 可做「镜像类型」，不扩展 spec 中未定义的事件。
+- 事件类型必须与 `spec/api_spec_websocket.md` 一致，禁止扩展 spec 未定义的事件。
 
 ## 位置与距离
 

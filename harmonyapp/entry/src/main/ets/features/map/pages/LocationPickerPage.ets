@@ -10,7 +10,7 @@ import { curves } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { MapRenderItem, MapRenderRequest, MapViewport } from '../../../core/types/api';
-import { AppRouter, GroupDetailRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, GroupDetailRouteParam, ProfileRouteParam, MomentDetailRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { CoordinateConverter } from '../../../core/geo/CoordinateConverter';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
@@ -29,8 +29,8 @@ const DOUBLE_CLICK_PLACEMENT_HINT: string = '已通过双击定位到该位置';
 const LONG_PRESS_PLACEMENT_HINT: string = '已通过长按定位到该位置';
 const ANCHOR_PLACEMENT_HINT: string = '已回到浏览锚点位置';
 const GENERIC_PLACEMENT_HINT: string = '已定位到该位置';
-const MARKER_COLOR_PICKER: string = '#8B5CF6';
-const MARKER_COLOR_USER: string = '#1D4ED8';
+const MARKER_COLOR_PICKER: string = '#2E7CF6';
+const MARKER_COLOR_USER: string = '#2563EB';
 const MARKER_COLOR_GROUP: string = '#059669';
 const MARKER_COLOR_MOMENT: string = '#EA580C';
 
@@ -46,14 +46,10 @@ interface LocationPickerParamLike {
 }
 
 interface TopBarProps {
-  showUsers: boolean;
-  showGroups: boolean;
-  showMoments: boolean;
+  filterOpen: boolean;
   safeAreaTop: number;
   onBack: () => void;
-  onToggleUsers: () => void;
-  onToggleGroups: () => void;
-  onToggleMoments: () => void;
+  onToggleFilter: () => void;
 }
 
 @Builder
@@ -73,39 +69,31 @@ function TopBar(props: TopBarProps) {
     .width(44)
     .height(44)
     .justifyContent(FlexAlign.Center)
-    .borderRadius(DesignConstants.RADIUS.XXL)
+    .borderRadius(DesignConstants.RADIUS.FULL)
     .backgroundColor($r('app.color.bg_tertiary'))
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
     .onClick(props.onBack)
 
-    Row({ space: 8 }) {
-      MapFilterChip({
-        label: '用户',
-        iconSymbol: $r(AppIcon.PERSON),
-        accentColor: MARKER_COLOR_USER,
-        active: props.showUsers,
-        onToggle: props.onToggleUsers
-      })
-      MapFilterChip({
-        label: '群组',
-        iconSymbol: $r(AppIcon.GROUP),
-        accentColor: MARKER_COLOR_GROUP,
-        active: props.showGroups,
-        onToggle: props.onToggleGroups
-      })
-      MapFilterChip({
-        label: '动态',
-        iconSymbol: $r(AppIcon.PHOTO),
-        accentColor: MARKER_COLOR_MOMENT,
-        active: props.showMoments,
-        onToggle: props.onToggleMoments
-      })
+    Row({ space: 6 }) {
+      Text() {
+        SymbolSpan($r(AppIcon.FILTER))
+          .fontSize(16)
+          .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+      }
+      Text('筛选')
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .fontWeight(FontWeight.Medium)
+        .fontColor($r('sys.color.ohos_id_color_text_primary'))
     }
-    .padding({ left: 8, right: 8, top: 4, bottom: 4 })
-    .backgroundColor($r('app.color.bg_secondary'))
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .borderRadius(DesignConstants.RADIUS.XXL)
+    .height(40)
+    .padding({
+      left: DesignConstants.SPACING.MD,
+      right: DesignConstants.SPACING.MD
+    })
+    .backgroundColor(props.filterOpen ? $r('app.color.bg_tertiary') : $r('app.color.bg_secondary'))
+    .borderRadius(DesignConstants.RADIUS.FULL)
     .shadow(DesignConstants.SHADOW.SMALL)
+    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .onClick(props.onToggleFilter)
   }
   .width('100%')
   .padding({
@@ -113,7 +101,84 @@ function TopBar(props: TopBarProps) {
     right: DesignConstants.SPACING.MD,
     top: SafeAreaUtils.resolveTopPadding(props.safeAreaTop, DesignConstants.SPACING.XS)
   })
-  .backgroundColor(Color.Transparent)
+  .onClick(() => {})
+}
+
+interface FilterMenuItemProps {
+  markerSvg: string;
+  label: string;
+  accentColor: string;
+  active: boolean;
+  onToggle: () => void;
+}
+
+@Builder
+function FilterMenuItem(props: FilterMenuItemProps) {
+  Row({ space: 12 }) {
+    Image($rawfile(props.markerSvg))
+      .width(24)
+      .height(32)
+      .objectFit(ImageFit.Contain)
+    Text(props.label)
+      .fontSize(DesignConstants.FONT.SIZE.MD)
+      .fontWeight(FontWeight.Medium)
+      .fontColor($r('sys.color.ohos_id_color_text_primary'))
+      .layoutWeight(1)
+    Row()
+      .width(10)
+      .height(10)
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .backgroundColor(props.active ? props.accentColor : Color.Transparent)
+      .border({ width: 1.5, color: props.accentColor })
+  }
+  .width('100%')
+  .height(48)
+  .padding({ left: 14, right: 16 })
+  .opacity(props.active ? 1.0 : 0.5)
+  .onClick(() => props.onToggle())
+}
+
+interface FilterPanelProps {
+  showUsers: boolean;
+  showGroups: boolean;
+  showMoments: boolean;
+  onToggleUsers: () => void;
+  onToggleGroups: () => void;
+  onToggleMoments: () => void;
+}
+
+@Builder
+function FilterDropdownPanel(props: FilterPanelProps) {
+  Column() {
+    FilterMenuItem({
+      markerSvg: 'marker_user.svg',
+      label: '用户',
+      accentColor: MARKER_COLOR_USER,
+      active: props.showUsers,
+      onToggle: props.onToggleUsers
+    })
+    FilterMenuItem({
+      markerSvg: 'marker_group.svg',
+      label: '群组',
+      accentColor: MARKER_COLOR_GROUP,
+      active: props.showGroups,
+      onToggle: props.onToggleGroups
+    })
+    FilterMenuItem({
+      markerSvg: 'marker_moment.svg',
+      label: '动态',
+      accentColor: MARKER_COLOR_MOMENT,
+      active: props.showMoments,
+      onToggle: props.onToggleMoments
+    })
+  }
+  .width(170)
+  .padding({ top: 6, bottom: 6 })
+  .backgroundColor($r('app.color.bg_secondary'))
+  .borderRadius(DesignConstants.RADIUS.XXL)
+  .shadow(DesignConstants.SHADOW.MEDIUM)
+  .border({ width: 1, color: $r('app.color.highlight_border') })
+  .onClick(() => {})
 }
 
 interface MapToastProps {
@@ -130,98 +195,15 @@ function MapToast(props: MapToastProps) {
       .fontSize(DesignConstants.FONT.SIZE.SM)
       .fontColor($r('sys.color.ohos_id_color_text_primary'))
       .backgroundColor($r('app.color.bg_secondary'))
-      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-      .borderRadius(DesignConstants.RADIUS.XL)
+      .borderRadius(DesignConstants.RADIUS.MD)
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: 6, bottom: 6 })
-      .shadow(DesignConstants.SHADOW.SMALL)
       .position({ top: SafeAreaUtils.resolveTopPadding(props.safeAreaTop, 100), left: 16 })
-      .transition(TransitionEffect.OPACITY.animation({ duration: 250 }))
+      .onClick(() => {})
+      .transition(
+        TransitionEffect.OPACITY.animation({ duration: 280, curve: Curve.FastOutSlowIn })
+          .combine(TransitionEffect.move(TransitionEdge.TOP).animation({ duration: 280, curve: Curve.FastOutSlowIn }))
+      )
   }
-}
-
-interface MarkerLegendItemProps {
-  label: string;
-  color: string;
-  asTarget?: boolean;
-  iconSymbol?: Resource;
-}
-
-@Builder
-function MarkerLegendItem(props: MarkerLegendItemProps) {
-  Row({ space: 6 }) {
-    if (props.asTarget) {
-      Stack({ alignContent: Alignment.Center }) {
-        Column()
-          .width(11)
-          .height(11)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .border({ width: 1.5, color: props.color })
-          .backgroundColor(Color.Transparent)
-        Column()
-          .width(4)
-          .height(4)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .backgroundColor(props.color)
-      }
-      .width(12)
-      .height(12)
-    } else {
-      Row() {
-        if (props.iconSymbol) {
-          Text() {
-            SymbolSpan(props.iconSymbol)
-              .fontSize(10)
-              .fontColor([props.color])
-          }
-        } else {
-          Column()
-            .width(8)
-            .height(8)
-            .borderRadius(DesignConstants.RADIUS.FULL)
-            .backgroundColor(props.color)
-        }
-      }
-      .width(14)
-      .height(14)
-      .justifyContent(FlexAlign.Center)
-      .alignItems(VerticalAlign.Center)
-      .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor($r('app.color.bg_secondary'))
-    }
-
-    Text(props.label)
-      .fontSize(DesignConstants.FONT.SIZE.XS)
-      .fontColor($r('sys.color.ohos_id_color_text_primary'))
-  }
-}
-
-@Builder
-function MarkerLegend() {
-  Row() {
-    Row({ space: DesignConstants.SPACING.MD }) {
-      MarkerLegendItem({ label: '选点', color: MARKER_COLOR_PICKER, asTarget: true })
-      MarkerLegendItem({ label: '用户', color: MARKER_COLOR_USER, iconSymbol: $r(AppIcon.PERSON) })
-      MarkerLegendItem({ label: '群组', color: MARKER_COLOR_GROUP, iconSymbol: $r(AppIcon.GROUP) })
-      MarkerLegendItem({ label: '动态', color: MARKER_COLOR_MOMENT, iconSymbol: $r(AppIcon.PHOTO) })
-    }
-    .padding({
-      left: DesignConstants.SPACING.MD,
-      right: DesignConstants.SPACING.MD,
-      top: DesignConstants.SPACING.SM,
-      bottom: DesignConstants.SPACING.SM
-    })
-    .backgroundColor($r('app.color.bg_secondary'))
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .borderRadius(DesignConstants.RADIUS.XXL)
-    .shadow(DesignConstants.SHADOW.SMALL)
-  }
-  .width('100%')
-  .padding({
-    left: DesignConstants.SPACING.MD,
-    right: DesignConstants.SPACING.MD,
-    top: DesignConstants.SPACING.SM
-  })
-  .justifyContent(FlexAlign.Start)
 }
 
 /**
@@ -245,7 +227,7 @@ struct SearchPanel {
   build() {
     Column() {
       // 搜索行 - 使用官方 Search 组件
-      Row({ space: 8 }) {
+      Row({ space: DesignConstants.SPACING.SM }) {
         // 官方 Search 组件（全局内置，无需导入）
         Search({
           value: this.searchText,
@@ -255,8 +237,9 @@ struct SearchPanel {
           .id('locationPickerSearchInput')
           .layoutWeight(1)
           .height(40)
-          .backgroundColor($r('app.color.bg_secondary'))
-          .borderRadius(DesignConstants.RADIUS.XXL)
+          .backgroundColor($r('app.color.bg_inset'))
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .shadow(DesignConstants.SHADOW.INSET)
           .searchIcon({
             size: 18,
             color: $r('sys.color.ohos_id_color_text_primary'),
@@ -293,7 +276,7 @@ struct SearchPanel {
         }
         .height(40)
         .justifyContent(FlexAlign.Center)
-        .padding({ left: 8, right: 8 })
+        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
         .onClick(this.onClose)
       }
       .width('100%')
@@ -313,14 +296,14 @@ struct SearchPanel {
               Text('正在搜索...')
                 .fontSize(DesignConstants.FONT.SIZE.MD)
                 .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-                .margin({ left: 8 })
+                .margin({ left: DesignConstants.SPACING.SM })
             }
             .width('100%')
             .height(80)
             .justifyContent(FlexAlign.Center)
           } else if (this.searchResults.length > 0) {
             // 搜索结果列表
-            List({ space: 0 }) {
+            List({ space: DesignConstants.SPACING.SM }) {
               ForEach(this.searchResults, (item: LocationInfo, index: number) => {
                 ListItem() {
                   Row({ space: DesignConstants.SPACING.MD }) {
@@ -346,17 +329,26 @@ struct SearchPanel {
                   }
                   .width('100%')
                   .padding({
-                    left: DesignConstants.SPACING.XS,
-                    right: DesignConstants.SPACING.XS,
+                    left: DesignConstants.SPACING.MD,
+                    right: DesignConstants.SPACING.MD,
                     top: DesignConstants.SPACING.MD,
                     bottom: DesignConstants.SPACING.MD
                   })
+                  .backgroundColor($r('app.color.bg_secondary'))
+                  .borderRadius(DesignConstants.RADIUS.XXL)
+                  .shadow({
+                    radius: DesignConstants.SHADOW.MEDIUM.radius,
+                    color: DesignConstants.SHADOW.MEDIUM.color,
+                    offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
+                    offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
+                  })
+                  .border({ width: 1, color: $r('app.color.highlight_border') })
                   .onClick(() => { this.onSelectResult(item); })
                 }
               }, (item: LocationInfo) => `search_${item.latitude}_${item.longitude}`)
             }
             .width('100%')
-            .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator') })
+            .divider({ strokeWidth: 0, color: $r('sys.color.ohos_id_color_list_separator') })
           } else if (this.searchText.trim().length > 0) {
             // 无搜索结果
             Column() {
@@ -366,7 +358,7 @@ struct SearchPanel {
               Text('请换个关键词试试')
                 .fontSize(DesignConstants.FONT.SIZE.SM)
                 .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-                .margin({ top: 4 })
+                .margin({ top: DesignConstants.SPACING.XS })
             }
             .width('100%')
             .height(120)
@@ -374,7 +366,7 @@ struct SearchPanel {
             .alignItems(HorizontalAlign.Center)
           } else if (this.anchorHistory.length > 0) {
             // 历史锚点列表（搜索未输入时展示）
-            Column({ space: 8 }) {
+            Column({ space: DesignConstants.SPACING.SM }) {
               Row({ space: 6 }) {
                 Text('最近使用')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -388,7 +380,7 @@ struct SearchPanel {
               }
               .width('100%')
 
-              List({ space: 8 }) {
+              List({ space: DesignConstants.SPACING.SM }) {
                 ForEach(this.anchorHistory.slice(0, MAX_HISTORY_ITEMS), (item: AnchorHistoryItem, index: number) => {
                   ListItem() {
                     Row({ space: 12 }) {
@@ -402,6 +394,8 @@ struct SearchPanel {
                       .width(32)
                       .height(32)
                       .justifyContent(FlexAlign.Center)
+                      .backgroundColor($r('app.color.bg_tertiary'))
+                      .borderRadius(DesignConstants.RADIUS.MD)
 
                       Text(item.locationName || '未命名位置')
                         .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -411,7 +405,21 @@ struct SearchPanel {
                         .textOverflow({ overflow: TextOverflow.Ellipsis })
                     }
                     .width('100%')
-                    .padding({ top: 8, bottom: 8 })
+                    .padding({
+                      left: DesignConstants.SPACING.MD,
+                      right: DesignConstants.SPACING.MD,
+                      top: DesignConstants.SPACING.MD,
+                      bottom: DesignConstants.SPACING.MD
+                    })
+                    .backgroundColor($r('app.color.bg_secondary'))
+                    .borderRadius(DesignConstants.RADIUS.XXL)
+                    .shadow({
+                      radius: DesignConstants.SHADOW.MEDIUM.radius,
+                      color: DesignConstants.SHADOW.MEDIUM.color,
+                      offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
+                      offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
+                    })
+                    .border({ width: 1, color: $r('app.color.highlight_border') })
                     .onClick(() => {
                       this.onSelectHistory(item);
                       this.onClose();
@@ -420,7 +428,7 @@ struct SearchPanel {
                 }, (item: AnchorHistoryItem) => `hist_s_${item.latitude}_${item.longitude}`)
               }
               .width('100%')
-              .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator') })
+              .divider({ strokeWidth: 0, color: $r('sys.color.ohos_id_color_list_separator') })
             }
             .width('100%')
           } else {
@@ -452,9 +460,9 @@ struct SearchPanel {
       bottom: DesignConstants.SPACING.MD + this.safeAreaBottom
     })
     .backgroundColor($r('app.color.bg_secondary'))
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .border({ width: { top: 1 }, color: $r('app.color.divider') })
     .borderRadius({ topLeft: 24, topRight: 24 })
-    .shadow({ radius: 10, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: -2 })
+    .onClick(() => {})
   }
 }
 
@@ -521,10 +529,10 @@ struct MainPanel {
       )
 
       // 搜索入口（模拟 Search 输入框外观，点击后展开真正的搜索面板）
-      Row({ space: 8 }) {
+      Row({ space: DesignConstants.SPACING.SM }) {
         Text() {
           SymbolSpan($r(AppIcon.SEARCH))
-            .fontSize(16)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
         }
         Text('搜索地点、地标或坐标')
@@ -537,9 +545,9 @@ struct MainPanel {
       .height(40)
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
       .alignItems(VerticalAlign.Center)
-      .backgroundColor($r('app.color.bg_secondary'))
-      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-      .borderRadius(DesignConstants.RADIUS.XXL)
+      .backgroundColor($r('app.color.bg_inset'))
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .shadow(DesignConstants.SHADOW.INSET)
       .margin({ bottom: DesignConstants.SPACING.MD })
       .onClick(this.onSearchClick)
 
@@ -558,23 +566,30 @@ struct MainPanel {
                 Text('清空')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
                   .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
-                  .padding({ left: 8, top: 4, bottom: 4 })
+                  .padding({ left: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
                   .onClick(this.onClearHistory)
               }
             }
             .width('100%')
-            .margin({ bottom: 8 })
+            .margin({ bottom: DesignConstants.SPACING.SM })
 
             if (this.anchorHistory.length > 0) {
-              List({ space: 0 }) {
+              List({ space: DesignConstants.SPACING.SM }) {
                 ForEach(this.anchorHistory.slice(0, MAX_HISTORY_ITEMS), (item: AnchorHistoryItem, index: number) => {
                   ListItem() {
                     Row({ space: DesignConstants.SPACING.MD }) {
-                      Text() {
-                        SymbolSpan($r(AppIcon.TIME))
-                          .fontSize(16)
-                          .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
+                      Column() {
+                        Text() {
+                          SymbolSpan($r(AppIcon.TIME))
+                            .fontSize(DesignConstants.FONT.SIZE.LG)
+                            .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
+                        }
                       }
+                      .width(32)
+                      .height(32)
+                      .justifyContent(FlexAlign.Center)
+                      .backgroundColor($r('app.color.bg_tertiary'))
+                      .borderRadius(DesignConstants.RADIUS.MD)
 
                       Text(item.locationName || '未命名位置')
                         .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -584,24 +599,38 @@ struct MainPanel {
                         .textOverflow({ overflow: TextOverflow.Ellipsis })
                     }
                     .width('100%')
-                    .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+                    .padding({
+                      left: DesignConstants.SPACING.MD,
+                      right: DesignConstants.SPACING.MD,
+                      top: DesignConstants.SPACING.MD,
+                      bottom: DesignConstants.SPACING.MD
+                    })
+                    .backgroundColor($r('app.color.bg_secondary'))
+                    .borderRadius(DesignConstants.RADIUS.XXL)
+                    .shadow({
+                      radius: DesignConstants.SHADOW.MEDIUM.radius,
+                      color: DesignConstants.SHADOW.MEDIUM.color,
+                      offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
+                      offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
+                    })
+                    .border({ width: 1, color: $r('app.color.highlight_border') })
                     .onClick(() => { this.onSelectHistory(item); })
                   }
                 }, (item: AnchorHistoryItem) => `hist_m_${item.latitude}_${item.longitude}`)
               }
               .width('100%')
-              .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator') })
+              .divider({ strokeWidth: 0, color: $r('sys.color.ohos_id_color_list_separator') })
             } else {
               Column() {
                 Text() {
                   SymbolSpan($r(AppIcon.TIME))
-                    .fontSize(16)
+                    .fontSize(DesignConstants.FONT.SIZE.LG)
                     .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
                 }
                 Text('暂无最近使用的地点')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
                   .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
-                  .margin({ top: 4 })
+                  .margin({ top: DesignConstants.SPACING.XS })
               }
               .width('100%')
               .padding({ top: 16 })
@@ -616,34 +645,18 @@ struct MainPanel {
         .width('100%')
       }
 
-      // 确认按钮（固定在底部，始终可见）
-      Row({ space: 6 }) {
-        Text() {
-          SymbolSpan($r(AppIcon.LOCATION))
-            .fontSize(14)
-            .fontColor([MARKER_COLOR_PICKER])
-        }
-        Text('紫色靶心是当前选点，蓝色人像/绿色群组/橙色相机分别表示用户、群组、动态')
-          .fontSize(DesignConstants.FONT.SIZE.XS)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-          .layoutWeight(1)
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
-      .margin({ top: 2, bottom: 6 })
-
       Button(this.confirmLabel)
         .type(ButtonType.Normal)
         .width('100%')
-        .height(44)
-        .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+        .height(48)
+        .backgroundColor($r('app.color.brand_primary'))
         .fontColor(Color.White)
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .fontWeight(FontWeight.Medium)
-        .borderRadius(DesignConstants.RADIUS.XL)
-        .margin({ top: 8 })
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .shadow(DesignConstants.SHADOW.SMALL)
+        .border({ width: 1, color: $r('app.color.highlight_border') })
+        .margin({ top: DesignConstants.SPACING.SM })
         .onClick(this.onConfirm)
     }
     .height(this.panelHeight)
@@ -655,9 +668,9 @@ struct MainPanel {
       bottom: DesignConstants.SPACING.MD + this.safeAreaBottom
     })
     .backgroundColor($r('app.color.bg_secondary'))
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .border({ width: { top: 1 }, color: $r('app.color.divider') })
     .borderRadius({ topLeft: 24, topRight: 24 })
-    .shadow({ radius: 10, color: $r('app.color.color_shadow'), offsetX: 0, offsetY: -2 })
+    .onClick(() => {})
   }
 }
 
@@ -688,6 +701,7 @@ export struct LocationPickerPage {
   @State showUsers: boolean = true;
   @State showGroups: boolean = true;
   @State showMoments: boolean = true;
+  @State showFilterPanel: boolean = false;
   @State mapToastMessage: string = '';
   private mapToastTimerId: number = 0;
   @State anchorHistory: AnchorHistoryItem[] = [];
@@ -733,13 +747,20 @@ export struct LocationPickerPage {
 
     let target: LocationInfo | null = null;
 
-    // 1. 优先使用浏览锚点（已经是 GCJ02 坐标，直接使用，不再转换）
+    // 1. 优先使用浏览锚点（WGS84 坐标，需要转换为 GCJ02 供地图使用）
     const anchor = AppStorage.get<LocationInfo | null>(KEY_BROWSE_ANCHOR);
     if (anchor) {
-      target = anchor;
+      const converted = CoordinateConverter.convertWgs84ToGcj02(
+        anchor.latitude, anchor.longitude
+      );
+      target = {
+        latitude: converted.latitude,
+        longitude: converted.longitude,
+        locationName: anchor.locationName
+      };
     }
 
-    // 2. 没有锚点时，使用当前定位（WGS84 → 需要转换为 GCJ02）
+    // 2. 没有锚点时，使用当前定位（WGS84 → 转换为 GCJ02）
     if (!target && this.currentLocation) {
       const converted = CoordinateConverter.convertWgs84ToGcj02(
         this.currentLocation.latitude, this.currentLocation.longitude
@@ -747,11 +768,6 @@ export struct LocationPickerPage {
       target = {
         latitude: converted.latitude,
         longitude: converted.longitude,
-        accuracy: this.currentLocation.accuracy,
-        altitude: this.currentLocation.altitude,
-        speed: this.currentLocation.speed,
-        bearing: this.currentLocation.bearing,
-        timestamp: this.currentLocation.timestamp,
         locationName: this.currentLocation.locationName
       };
     }
@@ -859,7 +875,8 @@ export struct LocationPickerPage {
       SystemToast.show('暂无浏览锚点，请先设置锚点', this.getUIContext());
       return;
     }
-    await this.focusOnCoordinate(anchor.latitude, anchor.longitude, ANCHOR_PLACEMENT_HINT);
+    const gcj02 = CoordinateConverter.convertWgs84ToGcj02(anchor.latitude, anchor.longitude);
+    await this.focusOnCoordinate(gcj02.latitude, gcj02.longitude, ANCHOR_PLACEMENT_HINT);
   }
 
   private setCenter(lat: number, lng: number, syncRegion: boolean = false): void {
@@ -1040,12 +1057,13 @@ export struct LocationPickerPage {
       SystemToast.show('请等待位置识别完成', this.getUIContext());
       return;
     }
+    const wgs84 = CoordinateConverter.convertGcj02ToWgs84(this.centerLat, this.centerLng);
     const location: LocationInfo = {
-      latitude: this.centerLat,
-      longitude: this.centerLng,
+      latitude: wgs84.latitude,
+      longitude: wgs84.longitude,
       locationName: this.locationName
     };
-    AnchorHistoryUtil.addToHistory(this.centerLat, this.centerLng, this.locationName);
+    AnchorHistoryUtil.addToHistory(wgs84.latitude, wgs84.longitude, this.locationName);
 
     if (this.isLocationPickMode()) {
       AppStorage.setOrCreate<LocationInfo | null>(KEY_LOCATION_PICK_RESULT, location);
@@ -1104,16 +1122,17 @@ export struct LocationPickerPage {
   }
 
   private buildViewport(): MapViewport {
-    const lat = this.centerLat || this.mapRegion.latitude;
-    const lng = this.centerLng || this.mapRegion.longitude;
+    const gcj02Lat = this.centerLat || this.mapRegion.latitude;
+    const gcj02Lng = this.centerLng || this.mapRegion.longitude;
+    const wgs84 = CoordinateConverter.convertGcj02ToWgs84(gcj02Lat, gcj02Lng);
     const zoom = Math.max(1, Math.min(20, this.mapZoom));
     const delta: BoundsDelta = this.computeBoundsDelta(zoom);
     return {
       bounds: {
-        north: Math.min(90, lat + delta.latDelta / 2),
-        south: Math.max(-90, lat - delta.latDelta / 2),
-        east: Math.min(180, lng + delta.lonDelta / 2),
-        west: Math.max(-180, lng - delta.lonDelta / 2)
+        north: Math.min(90, wgs84.latitude + delta.latDelta / 2),
+        south: Math.max(-90, wgs84.latitude - delta.latDelta / 2),
+        east: Math.min(180, wgs84.longitude + delta.lonDelta / 2),
+        west: Math.max(-180, wgs84.longitude - delta.lonDelta / 2)
       },
       zoom
     };
@@ -1133,13 +1152,17 @@ export struct LocationPickerPage {
       if (!this.shouldDisplayItem(item)) {
         continue;
       }
+      const gcj02 = CoordinateConverter.convertWgs84ToGcj02(
+        item.location.latitude, item.location.longitude
+      );
       nextMarkers.push({
         id: item.render_id,
-        latitude: item.location.latitude,
-        longitude: item.location.longitude,
+        latitude: gcj02.latitude,
+        longitude: gcj02.longitude,
         title: this.getMarkerTitle(item),
         snippet: this.getMarkerSnippet(item),
-        type: item.type === 'cluster' ? 'cluster' : item.type
+        type: item.type === 'cluster' ? 'cluster' : item.type,
+        iconKey: this.getMarkerIconKey(item)
       });
     }
     this.mapMarkers = nextMarkers;
@@ -1160,6 +1183,21 @@ export struct LocationPickerPage {
     }
   }
 
+  private getMarkerIconKey(item: MapRenderItem): 'user' | 'group' | 'moment' | 'cluster' {
+    switch (item.type) {
+      case 'user':
+        return 'user';
+      case 'group':
+        return 'group';
+      case 'moment':
+        return 'moment';
+      case 'cluster':
+        return 'cluster';
+      default:
+        return 'user';
+    }
+  }
+
   private getMarkerTitle(item: MapRenderItem): string {
     if (item.type === 'cluster' && item.cluster) {
       return item.cluster.label || `${item.cluster.count} 个内容`;
@@ -1176,13 +1214,21 @@ export struct LocationPickerPage {
 
   private onMarkerItemClick(marker: MapMarker): void {
     const item = this.renderItemsMap.get(marker.id);
-    if (!item) {
+    if (!item || !item.entity) {
       return;
     }
-    if (item.type === 'group' && item.entity) {
+    if (item.type === 'group') {
       const param = new GroupDetailRouteParam();
       param.groupId = item.entity.payload_id;
       AppRouter.push(PageNames.GROUP_DETAIL, param as Object);
+    } else if (item.type === 'user') {
+      const param = new ProfileRouteParam();
+      param.userId = item.entity.payload_id;
+      AppRouter.push(PageNames.PROFILE, param as Object);
+    } else if (item.type === 'moment') {
+      const param = new MomentDetailRouteParam();
+      param.momentId = item.entity.payload_id;
+      AppRouter.push(PageNames.MOMENT_DETAIL, param as Object);
     }
   }
 
@@ -1214,33 +1260,42 @@ export struct LocationPickerPage {
         // 地图 Toast 提示
         MapToast({ message: this.mapToastMessage, safeAreaTop: this.safeAreaTop })
 
-        // TopBar 浮在地图顶部
+        // TopBar + 筛选下拉面板
         Column() {
           TopBar({
-            showUsers: this.showUsers,
-            showGroups: this.showGroups,
-            showMoments: this.showMoments,
+            filterOpen: this.showFilterPanel,
             safeAreaTop: this.safeAreaTop,
             onBack: () => { AppRouter.pop(); },
-            onToggleUsers: () => {
-              this.showUsers = !this.showUsers;
-              this.updateMarkers();
-            },
-            onToggleGroups: () => {
-              this.showGroups = !this.showGroups;
-              this.updateMarkers();
-            },
-            onToggleMoments: () => {
-              this.showMoments = !this.showMoments;
-              this.updateMarkers();
-            }
+            onToggleFilter: () => { this.showFilterPanel = !this.showFilterPanel; },
           })
-          MarkerLegend()
-          Blank()
+          if (this.showFilterPanel) {
+            Row() {
+              FilterDropdownPanel({
+                showUsers: this.showUsers,
+                showGroups: this.showGroups,
+                showMoments: this.showMoments,
+                onToggleUsers: () => {
+                  this.showUsers = !this.showUsers;
+                  this.updateMarkers();
+                },
+                onToggleGroups: () => {
+                  this.showGroups = !this.showGroups;
+                  this.updateMarkers();
+                },
+                onToggleMoments: () => {
+                  this.showMoments = !this.showMoments;
+                  this.updateMarkers();
+                }
+              })
+            }
+            .width('100%')
+            .justifyContent(FlexAlign.End)
+            .padding({ right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.XS })
+          }
         }
         .width('100%')
-        .height('100%')
-        .hitTestBehavior(HitTestMode.Transparent)
+        .position({ top: 0, left: 0 })
+        .zIndex(30)
 
         // 底部面板
         if (this.showSearchBar) {
@@ -1290,7 +1345,7 @@ export struct LocationPickerPage {
           Column() {
             Text() {
               SymbolSpan($r(AppIcon.LOCATION))
-                .fontSize(20)
+                .fontSize(DesignConstants.FONT.SIZE.XL)
                 .fontColor([MARKER_COLOR_USER])
             }
           }
@@ -1298,68 +1353,84 @@ export struct LocationPickerPage {
           .height(48)
           .justifyContent(FlexAlign.Center)
           .backgroundColor($r('app.color.bg_secondary'))
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .shadow(DesignConstants.SHADOW.SMALL)
+          .shadow({
+            radius: DesignConstants.SHADOW.MEDIUM.radius,
+            color: DesignConstants.SHADOW.MEDIUM.color,
+            offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
+            offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
+          })
+          .border({ width: 1, color: $r('app.color.highlight_border') })
           .onClick(() => { this.locateUser(); })
 
           Column() {
+            Image($rawfile('marker_center_pin.svg'))
+              .width(20)
+              .height(28)
+              .objectFit(ImageFit.Contain)
+          }
+          .width(48)
+          .height(48)
+          .justifyContent(FlexAlign.Center)
+          .backgroundColor($r('app.color.bg_secondary'))
+          .borderRadius(DesignConstants.RADIUS.XXL)
+          .shadow({
+            radius: DesignConstants.SHADOW.MEDIUM.radius,
+            color: DesignConstants.SHADOW.MEDIUM.color,
+            offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
+            offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
+          })
+          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .onClick(() => { this.locateBrowseAnchor(); })
+
+          Column() {
             Text() {
-              SymbolSpan($r(AppIcon.PERSON))
-                .fontSize(20)
-                .fontColor([MARKER_COLOR_MOMENT])
+              SymbolSpan($r(AppIcon.ADD))
+                .fontSize(DesignConstants.FONT.SIZE.XL)
+                .fontColor([$r('sys.color.ohos_id_color_text_primary')])
             }
           }
           .width(48)
           .height(48)
           .justifyContent(FlexAlign.Center)
           .backgroundColor($r('app.color.bg_secondary'))
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .shadow(DesignConstants.SHADOW.SMALL)
-          .onClick(() => { this.locateBrowseAnchor(); })
+          .shadow({
+            radius: DesignConstants.SHADOW.MEDIUM.radius,
+            color: DesignConstants.SHADOW.MEDIUM.color,
+            offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
+            offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
+          })
+          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .onClick(() => { if (this.mapActions) this.mapActions.zoomIn(); })
 
           Column() {
-            Column() {
-              Text() {
-                SymbolSpan($r(AppIcon.ADD))
-                  .fontSize(20)
-                  .fontColor([$r('sys.color.ohos_id_color_text_primary')])
-              }
+            Text() {
+              SymbolSpan($r(AppIcon.REMOVE))
+                .fontSize(DesignConstants.FONT.SIZE.XL)
+                .fontColor([$r('sys.color.ohos_id_color_text_primary')])
             }
-            .width('100%')
-            .height(38)
-            .justifyContent(FlexAlign.Center)
-            .onClick(() => { if (this.mapActions) this.mapActions.zoomIn(); })
-
-            Divider()
-              .strokeWidth(1)
-              .color($r('sys.color.ohos_id_color_list_separator'))
-              .width(20)
-
-            Column() {
-              Text() {
-                SymbolSpan($r(AppIcon.REMOVE))
-                  .fontSize(20)
-                  .fontColor([$r('sys.color.ohos_id_color_text_primary')])
-              }
-            }
-            .width('100%')
-            .height(38)
-            .justifyContent(FlexAlign.Center)
-            .onClick(() => { if (this.mapActions) this.mapActions.zoomOut(); })
           }
           .width(48)
-          .height(78)
+          .height(48)
           .justifyContent(FlexAlign.Center)
           .backgroundColor($r('app.color.bg_secondary'))
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .shadow(DesignConstants.SHADOW.SMALL)
+          .shadow({
+            radius: DesignConstants.SHADOW.MEDIUM.radius,
+            color: DesignConstants.SHADOW.MEDIUM.color,
+            offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
+            offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
+          })
+          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .onClick(() => { if (this.mapActions) this.mapActions.zoomOut(); })
         }
         .position({ right: DesignConstants.SPACING.MD, bottom: this.getControlsBottomOffset() })
       }
     }
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('app.color.bg_primary'))
     .hideTitleBar(true)
     .onShown(() => { if (this.mapActions) { this.mapActions.show(); } })
     .onHidden(() => { if (this.mapActions) { this.mapActions.hide(); } })
@@ -1369,42 +1440,6 @@ export struct LocationPickerPage {
       this.initFromParams(param);
     })
   }
-}
-
-interface MapFilterChipProps {
-  active: boolean;
-  label: string;
-  iconSymbol?: Resource;
-  accentColor: string;
-  onToggle: () => void;
-}
-
-@Builder
-function MapFilterChip(props: MapFilterChipProps) {
-  Row({ space: 6 }) {
-    if (props.iconSymbol) {
-      Text() {
-        SymbolSpan(props.iconSymbol)
-          .fontSize(14)
-          .fontColor([props.active ? Color.White : props.accentColor])
-      }
-    }
-    Text(props.label)
-      .fontSize(DesignConstants.FONT.SIZE.SM)
-      .fontWeight(FontWeight.Medium)
-      .fontColor(props.active ? Color.White : $r('sys.color.ohos_id_color_text_primary'))
-  }
-  .height(34)
-  .padding({
-    left: DesignConstants.SPACING.MD,
-    right: DesignConstants.SPACING.MD + 2
-  })
-  .backgroundColor(props.active ? props.accentColor : $r('app.color.bg_tertiary'))
-  .border(props.active ? { width: 0 } : { width: 1.5, color: props.accentColor })
-  .borderRadius(DesignConstants.RADIUS.XXL)
-  .shadow(DesignConstants.SHADOW.SMALL)
-  .onClick(() => props.onToggle())
-  .animation({ duration: 200 })
 }
 
 @Builder

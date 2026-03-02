@@ -26,9 +26,10 @@ import { MessageCacheService, MessageCacheItem } from '../../../core/database/Me
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
-import { AppRouter, LoginRouteParam, GroupDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, LoginRouteParam, GroupDetailRouteParam } from '../../../core/router/AppRouter';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { KeyboardAvoidMode as UIContextKeyboardAvoidMode } from '@ohos.arkui.UIContext';
 
 const DOMAIN_NUMBER: number = 0xFF09;
@@ -86,6 +87,7 @@ export struct ChatPage {
   @State hasMoreHistory: boolean = false;
   @State historyNextCursor: string = '';
   @State isLoadingMoreHistory: boolean = false;
+  @State showConversationActionsSheet: boolean = false;
   
   private chatId: string = '';
   private chatType: 'private_chat' | 'group_chat' = 'private_chat';
@@ -616,6 +618,25 @@ export struct ChatPage {
     }, 100);
   }
 
+  private openConversationActions(): void {
+    if (this.isInputFocused) {
+      this.dismissKeyboardOnOutsideTap();
+      return;
+    }
+    if (this.shouldConsumePostDismissNavigation()) {
+      return;
+    }
+
+    if (this.chatType === 'group_chat') {
+      const groupParam = new GroupDetailRouteParam();
+      groupParam.groupId = this.chatId;
+      AppRouter.push(PageNames.GROUP_DETAIL, groupParam);
+      return;
+    }
+
+    this.showConversationActionsSheet = true;
+  }
+
   private async sendMessage() {
     if (this.isSending) {
       return;
@@ -857,65 +878,61 @@ export struct ChatPage {
   build() {
     NavDestination() {
     Column() {
+      // 标题栏容器：左右 margin，内部药丸形凸起栏
       Row() {
-        IconButton({
-          icon: AppIcon.BACK,
-          iconSize: IconSize.LARGE,
-          iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: $r('app.color.bg_tertiary'),
-          onButtonClick: () => {
-            if (this.isInputFocused) {
-              this.dismissKeyboardOnOutsideTap();
-              return;
+        Row() {
+          IconButton({
+            icon: AppIcon.BACK,
+            iconSize: IconSize.LARGE,
+            iconColor: $r('sys.color.ohos_id_color_text_primary'),
+            bgColor: $r('app.color.bg_tertiary'),
+            radius: DesignConstants.RADIUS.MD,
+            minButtonSize: 40,
+            paddingSize: DesignConstants.SPACING.SM,
+            onButtonClick: () => {
+              if (this.isInputFocused) {
+                this.dismissKeyboardOnOutsideTap();
+                return;
+              }
+              if (this.shouldConsumePostDismissNavigation()) {
+                return;
+              }
+              AppRouter.pop();
             }
-            if (this.shouldConsumePostDismissNavigation()) {
-              return;
-            }
-            AppRouter.pop();
-          }
-        })
+          })
 
-        Text(this.title)
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
+          Text(this.title)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .layoutWeight(1)
+            .textAlign(TextAlign.Center)
         
-        IconButton({
-          icon: AppIcon.MORE,
-          iconSize: IconSize.LARGE,
-          iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: $r('app.color.bg_tertiary'),
-          onButtonClick: () => {
-            if (this.isInputFocused) {
-              this.dismissKeyboardOnOutsideTap();
-              return;
-            }
-            if (this.shouldConsumePostDismissNavigation()) {
-              return;
-            }
-            if (this.chatType === 'group_chat') {
-              const p = new GroupDetailRouteParam();
-              p.groupId = this.chatId;
-              AppRouter.push(PageNames.GROUP_DETAIL, p);
-            } else if (this.targetId) {
-              const p = new ProfileRouteParam();
-              p.userId = this.targetId;
-              AppRouter.push(PageNames.PROFILE, p);
-            }
-          }
-        })
+          IconButton({
+            icon: AppIcon.INFO,
+            iconSize: IconSize.LARGE,
+            iconColor: $r('sys.color.ohos_id_color_text_primary'),
+            bgColor: $r('app.color.bg_tertiary'),
+            radius: DesignConstants.RADIUS.MD,
+            minButtonSize: 40,
+            paddingSize: DesignConstants.SPACING.SM,
+            onButtonClick: () => this.openConversationActions()
+          })
+        }
+        .layoutWeight(1)
+        .backgroundColor($r('app.color.bg_secondary'))
+        .borderRadius(DesignConstants.RADIUS.XL)
+        .shadow(DesignConstants.SHADOW.MEDIUM)
+        .border({ width: 1, color: $r('app.color.highlight_border') })
       }
       .width('100%')
       .padding({
         left: DesignConstants.SPACING.LG,
         right: DesignConstants.SPACING.LG,
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
-        bottom: DesignConstants.SPACING.SM
+        bottom: DesignConstants.SPACING.XS
       })
-      .backgroundColor($r('app.color.bg_secondary'))
-      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .backgroundColor(Color.Transparent)
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
       .zIndex(1)
       .onTouch((event: TouchEvent) => {
@@ -932,7 +949,10 @@ export struct ChatPage {
               this.dismissKeyboardOnOutsideTap();
             }
           })
-          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+          .transition(
+            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          )
       } else if (this.messages.length === 0 && this.errorMessage) {
         Column({ space: DesignConstants.SPACING.LG }) {
           Text() {
@@ -960,7 +980,10 @@ export struct ChatPage {
             this.dismissKeyboardOnOutsideTap();
           }
         })
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
       } else if (this.messages.length === 0) {
         Column({ space: DesignConstants.SPACING.LG }) {
           Text() {
@@ -1007,13 +1030,15 @@ export struct ChatPage {
       }
       .width('100%')
       .layoutWeight(1)
+      .cachedCount(8)
       .padding({
         left: DesignConstants.SPACING.LG,
         right: DesignConstants.SPACING.LG,
         top: DesignConstants.SPACING.MD,
         bottom: DesignConstants.SPACING.MD
       })
-      .backgroundColor($r('app.color.bg_primary'))
+      .backgroundColor($r('app.color.bg_tertiary'))
+      .borderRadius(DesignConstants.RADIUS.XXL)
       .onScrollIndex((start: number) => {
         // 当滚动到列表顶部附近时加载更早的消息
         if (start <= 1 && this.hasMoreHistory && !this.isLoadingMoreHistory) {
@@ -1025,17 +1050,20 @@ export struct ChatPage {
           this.dismissKeyboardOnOutsideTap();
         }
       })
-      .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+      .transition(
+        TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+          .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+      )
       }
 
       if (this.chatType === 'private_chat' && this.isOtherUserTyping) {
         Row() {
           Text('对方正在输入...')
-            .fontSize(12)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         }
         .width('100%')
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: 4 })
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.XS })
         .onTouch((event: TouchEvent) => {
           if (event.type === TouchType.Down) {
             this.dismissKeyboardOnOutsideTap();
@@ -1045,11 +1073,11 @@ export struct ChatPage {
       if (this.chatType === 'group_chat' && this.groupTypingUserIds.length > 0) {
         Row() {
           Text(this.groupTypingHintText())
-            .fontSize(12)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         }
         .width('100%')
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: 4 })
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.XS })
         .onTouch((event: TouchEvent) => {
           if (event.type === TouchType.Down) {
             this.dismissKeyboardOnOutsideTap();
@@ -1062,9 +1090,10 @@ export struct ChatPage {
           .layoutWeight(1)
           .maxLength(MESSAGE_CONTENT_MAX)
           .height(40)
-          .backgroundColor($r('app.color.bg_tertiary'))
-          .borderRadius(DesignConstants.RADIUS.XXL)
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+          .backgroundColor($r('app.color.bg_inset'))
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .shadow(DesignConstants.SHADOW.INSET)
+          .padding({ left: 16, right: 16 })
           .onChange((value) => {
             this.inputText = value;
             this.handleTypingInput(value);
@@ -1085,7 +1114,7 @@ export struct ChatPage {
           .backgroundColor(
             this.isSending || this.inputText.trim().length === 0
               ? $r('app.color.bg_tertiary')
-              : $r('sys.color.ohos_id_color_emphasize')
+              : $r('app.color.bubble_self_bg')
           )
           .fontColor(
             this.isSending || this.inputText.trim().length === 0
@@ -1093,7 +1122,9 @@ export struct ChatPage {
               : Color.White
           )
           .height(36)
-          .borderRadius(DesignConstants.RADIUS.XXL)
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .shadow(DesignConstants.SHADOW.SMALL)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
           .margin({ left: DesignConstants.SPACING.MD })
           .opacity(this.isSending || this.inputText.trim().length === 0 ? 0.72 : 1)
           .enabled(!this.isSending && this.inputText.trim().length > 0)
@@ -1106,8 +1137,10 @@ export struct ChatPage {
         top: DesignConstants.SPACING.SM,
         bottom: this.getComposerBottomPadding()
       })
-      .backgroundColor($r('app.color.bg_primary'))
-      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .backgroundColor($r('app.color.tab_bar_bg'))
+      .shadow(DesignConstants.SHADOW.MEDIUM)
+      .border({ width: { top: 1 }, color: $r('app.color.highlight_border') })
+      .borderRadius({ topLeft: DesignConstants.RADIUS.LG, topRight: DesignConstants.RADIUS.LG })
 
       // 焦点落点：用于将 TextInput 失焦，从而收起软键盘
       Button('')
@@ -1120,6 +1153,12 @@ export struct ChatPage {
     .width('100%')
     .height('100%')
     .backgroundColor($r('app.color.bg_primary'))
+    .bindSheet($$this.showConversationActionsSheet, this.buildConversationActionsSheet(), {
+      height: SheetSize.FIT_CONTENT,
+      showClose: true,
+      dragBar: true,
+      backgroundColor: $r('app.color.start_window_background')
+    })
     }
     .hideTitleBar(true)
     .onBackPressed((): boolean => {
@@ -1148,24 +1187,87 @@ export struct ChatPage {
   }
 
   @Builder
+  private buildConversationActionsSheet() {
+    Column({ space: DesignConstants.SPACING.MD }) {
+      Text('会话设置')
+        .fontSize(DesignConstants.FONT.SIZE.XL)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+
+      Text(this.chatType === 'group_chat' ? '群聊会话' : '私聊会话')
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+
+      Button('回到最新消息')
+        .type(ButtonType.Normal)
+        .width('100%')
+        .height(44)
+        .backgroundColor($r('app.color.bg_tertiary'))
+        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .border({ width: 1, color: $r('app.color.highlight_border') })
+        .onClick(() => {
+          this.scrollToBottom();
+          this.showConversationActionsSheet = false;
+        })
+
+      Button('清空输入框')
+        .type(ButtonType.Normal)
+        .width('100%')
+        .height(44)
+        .backgroundColor($r('app.color.bg_tertiary'))
+        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .border({ width: 1, color: $r('app.color.highlight_border') })
+        .onClick(() => {
+          this.inputText = '';
+          this.showConversationActionsSheet = false;
+        })
+
+      Button('关闭')
+        .type(ButtonType.Normal)
+        .width('100%')
+        .height(44)
+        .backgroundColor($r('app.color.bg_secondary'))
+        .fontColor($r('app.color.brand_primary'))
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .border({ width: 1, color: $r('app.color.highlight_border') })
+        .onClick(() => {
+          this.showConversationActionsSheet = false;
+        })
+    }
+    .width('100%')
+    .padding({
+      left: DesignConstants.SPACING.XXL,
+      right: DesignConstants.SPACING.XXL,
+      top: DesignConstants.SPACING.LG,
+      bottom: DesignConstants.SPACING.XXL
+    })
+    .backgroundColor($r('app.color.bg_secondary'))
+    .borderRadius(DesignConstants.RADIUS.LG)
+  }
+
+  @Builder
   buildMessageItem(msg: ChatMessage) {
     if (msg.isSystem) {
       Row() {
         Text(msg.content)
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-          .backgroundColor($r('app.color.bg_tertiary'))
+          .backgroundColor($r('app.color.bg_secondary'))
           .padding({
             left: DesignConstants.SPACING.MD,
             right: DesignConstants.SPACING.MD,
             top: DesignConstants.SPACING.XS,
             bottom: DesignConstants.SPACING.XS
           })
-          .borderRadius(DesignConstants.RADIUS.LG)
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .shadow(DesignConstants.SHADOW.SMALL)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
       }
       .width('100%')
       .justifyContent(FlexAlign.Center)
-      .margin({ top: 8, bottom: 8 })
+      .margin({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
     } else {
       Row() {
         if (!msg.isSelf) {
@@ -1174,31 +1276,35 @@ export struct ChatPage {
             name: msg.senderName,
             avatarSize: 40
           })
-          .margin({ right: 8 })
+          .margin({ right: DesignConstants.SPACING.SM })
         }
 
         Column() {
           if (!msg.isSelf && this.chatType === 'group_chat') {
             Text(msg.senderName)
-              .fontSize(12)
+              .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-              .margin({ bottom: 4, left: 4 })
+              .margin({ bottom: DesignConstants.SPACING.XS, left: DesignConstants.SPACING.XS })
           }
 
-          Row() {
+            Row() {
             if (msg.type === 'image') {
-              Image(msg.content)
+              Image(MediaUrlUtil.normalize(msg.content))
                 .width(200)
-                .borderRadius(DesignConstants.RADIUS.LG)
-                .margin(4)
+                .objectFit(ImageFit.Cover)
+                .backgroundColor($r('app.color.bg_tertiary'))
+                .borderRadius(DesignConstants.RADIUS.XL)
+                .shadow(DesignConstants.SHADOW.SMALL)
+                .border({ width: 1, color: $r('app.color.highlight_border') })
+                .margin(DesignConstants.SPACING.XS)
             } else {
               Text(msg.content)
-                .fontSize(16)
+                .fontSize(15)
                 .fontColor(msg.isSelf ? Color.White : $r('sys.color.ohos_id_color_text_primary'))
-                .backgroundColor(msg.isSelf ? $r('sys.color.ohos_id_color_emphasize') : $r('app.color.bg_tertiary'))
-                .padding(DesignConstants.SPACING.MD)
-                .borderRadius(DesignConstants.RADIUS.XXL)
-                .constraintSize({ maxWidth: '70%' })
+                .backgroundColor(msg.isSelf ? $r('app.color.bubble_self_bg') : $r('app.color.bubble_other_bg'))
+                .padding({ left: 16, right: 16, top: 10, bottom: 10 })
+                .borderRadius(DesignConstants.RADIUS.XL)
+                .constraintSize({ maxWidth: '75%' })
             }
           }
           .justifyContent(msg.isSelf ? FlexAlign.End : FlexAlign.Start)
@@ -1212,7 +1318,7 @@ export struct ChatPage {
             name: msg.senderName,
             avatarSize: 40
           })
-          .margin({ left: 8 })
+          .margin({ left: DesignConstants.SPACING.SM })
         }
       }
       .width('100%')

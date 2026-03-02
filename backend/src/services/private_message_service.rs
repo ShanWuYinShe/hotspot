@@ -38,7 +38,7 @@ use crate::{
         stranger_message_limiter::StrangerMessageLimiter,
     },
     types::enums::{MessageBlockedReason, MessageType},
-    utils::validation::Validator,
+    utils::{bloom_filter::ResourceExistenceChecker, validation::Validator},
     EventBus,
 };
 
@@ -52,6 +52,7 @@ pub struct PrivateMessageService {
     media_service: crate::services::media_service::MediaService,
     permission_resolver: PrivateChatPermissionResolver,
     stranger_limiter: StrangerMessageLimiter,
+    resource_checker: ResourceExistenceChecker,
 }
 
 impl PrivateMessageService {
@@ -76,6 +77,7 @@ impl PrivateMessageService {
         follows_repo: UserFollowsRepository,
         media_service: crate::services::media_service::MediaService,
         stranger_limiter: StrangerMessageLimiter,
+        resource_checker: ResourceExistenceChecker,
     ) -> Self {
         let permission_resolver =
             PrivateChatPermissionResolver::new(settings_repo, follows_repo, blocks_repo);
@@ -89,6 +91,7 @@ impl PrivateMessageService {
             media_service,
             permission_resolver,
             stranger_limiter,
+            resource_checker,
         }
     }
 
@@ -269,6 +272,14 @@ impl PrivateMessageService {
                 reply_to_message_id,
             )
             .await?;
+
+        if let Err(e) = self
+            .resource_checker
+            .record_message(&created.message_id.to_string())
+            .await
+        {
+            tracing::warn!(message_id = %created.message_id, error = %e, "record_message bloom failed");
+        }
 
         let reply_to_snapshot = if let Some(reply_id) = reply_to_message_id {
             self.message_repo

@@ -14,6 +14,7 @@ use axum::{
 };
 use serde_json::Value;
 use std::collections::HashSet;
+use uuid::Uuid;
 
 const MAX_GUARD_BODY_BYTES: usize = 512 * 1024;
 
@@ -192,16 +193,16 @@ fn collect_ids_from_query(query: &str, out: &mut ExtractedIds) {
                     }
                 }
                 "group_id" => {
-                    out.group_ids.insert(value.to_string());
+                    out.group_ids.insert(normalize_i64_id(value));
                 }
                 "moment_id" => {
-                    out.moment_ids.insert(value.to_string());
+                    out.moment_ids.insert(normalize_uuid_id(value));
                 }
                 "comment_id" => {
-                    out.comment_ids.insert(value.to_string());
+                    out.comment_ids.insert(normalize_uuid_id(value));
                 }
                 "message_id" => {
-                    out.message_ids.insert(value.to_string());
+                    out.message_ids.insert(normalize_uuid_id(value));
                 }
                 _ => {}
             }
@@ -228,22 +229,22 @@ fn collect_ids_from_value(value: &Value, out: &mut ExtractedIds) {
                     }
                     "group_id" => {
                         if let Some(id) = v.as_str() {
-                            out.group_ids.insert(id.to_string());
+                            out.group_ids.insert(normalize_i64_id(id));
                         }
                     }
                     "moment_id" => {
                         if let Some(id) = v.as_str() {
-                            out.moment_ids.insert(id.to_string());
+                            out.moment_ids.insert(normalize_uuid_id(id));
                         }
                     }
                     "comment_id" => {
                         if let Some(id) = v.as_str() {
-                            out.comment_ids.insert(id.to_string());
+                            out.comment_ids.insert(normalize_uuid_id(id));
                         }
                     }
                     "message_id" => {
                         if let Some(id) = v.as_str() {
-                            out.message_ids.insert(id.to_string());
+                            out.message_ids.insert(normalize_uuid_id(id));
                         }
                     }
                     _ => {}
@@ -258,4 +259,16 @@ fn collect_ids_from_value(value: &Value, out: &mut ExtractedIds) {
         }
         _ => {}
     }
+}
+
+fn normalize_i64_id(raw: &str) -> String {
+    raw.parse::<i64>()
+        .map(|v| v.to_string())
+        .unwrap_or_else(|_| raw.to_string())
+}
+
+fn normalize_uuid_id(raw: &str) -> String {
+    Uuid::parse_str(raw)
+        .map(|v| v.to_string())
+        .unwrap_or_else(|_| raw.to_string())
 }

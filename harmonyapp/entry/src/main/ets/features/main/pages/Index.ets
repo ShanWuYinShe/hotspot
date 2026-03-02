@@ -87,6 +87,8 @@ struct Index {
   private cacheMonitorTimerId: number = 0;
   /** 智能通知监听器引用（用于清理） */
   private smartNotificationListener: ((event: NotificationEvent, notification: SmartNotification, extra?: Object) => void) | null = null;
+  /** WS 通知处理函数引用（用于 aboutToDisappear 解绑） */
+  private wsNotificationHandler: ((event: ServerEvent) => Promise<void>) | null = null;
 
   async aboutToAppear() {
     SystemUiController.useSurface({
@@ -127,6 +129,20 @@ struct Index {
     if (this.smartNotificationListener) {
       this.smartNotificationService.removeEventListener(NotificationEvent.CREATED, this.smartNotificationListener);
       this.smartNotificationListener = null;
+    }
+    // 清理 WebSocket 通知事件监听
+    if (this.wsNotificationHandler) {
+      const wsEventTypes: string[] = [
+        'ConnectionEstablished', 'NewFollower', 'MutualFollow',
+        'MomentLiked', 'MomentCommented', 'CommentLiked', 'CommentReply',
+        'MessageMentioned', 'GroupInviteReceived', 'GroupInviteResponse',
+        'GroupApplicationReceived', 'GroupApplicationResponse', 'SystemAnnouncement',
+      ];
+      wsEventTypes.forEach((t: string) => {
+        this.webSocketService.off(t, this.wsNotificationHandler!);
+      });
+      this.wsNotificationHandler = null;
+      this.wsNotificationsBound = false;
     }
   }
 
@@ -273,16 +289,13 @@ struct Index {
     const currentAnchor = AppStorage.get<LocationInfo | null>(KEY_BROWSE_ANCHOR);
     if (currentAnchor) return;
 
-    const converted = CoordinateConverter.convertWgs84ToGcj02(
-      wgs84Location.latitude, wgs84Location.longitude
-    );
     const anchor: LocationInfo = {
-      latitude: converted.latitude,
-      longitude: converted.longitude,
+      latitude: wgs84Location.latitude,
+      longitude: wgs84Location.longitude,
       locationName: wgs84Location.locationName
     };
     AppStorage.setOrCreate<LocationInfo | null>(KEY_BROWSE_ANCHOR, anchor);
-    hilog.info(DOMAIN_NUMBER, TAG, `✅ 初始浏览锚点已设置: ${anchor.locationName ?? '未知'}`);
+    hilog.info(DOMAIN_NUMBER, TAG, `✅ 初始浏览锚点已设置(WGS84): ${anchor.locationName ?? '未知'}`);
   }
 
   /**
@@ -374,7 +387,7 @@ struct Index {
     // 通知事件为自动推送，无需显式订阅
 
     // 通用处理：把“与我相关的通知事件”落到 SmartNotificationService
-    const handle = async (event: ServerEvent) => {
+    const handle: (event: ServerEvent) => Promise<void> = async (event: ServerEvent) => {
       try {
         switch (event.type) {
           case 'ConnectionEstablished': {
@@ -645,6 +658,7 @@ struct Index {
     ].forEach((t: string) => {
       this.webSocketService.on(t, handle);
     });
+    this.wsNotificationHandler = handle;
   }
 
   private async initializeSmartServices(): Promise<void> {
@@ -706,21 +720,35 @@ struct Index {
   @Builder
   TabBuilderIcon(title: string, targetIndex: number, icon: AppIcon) {
     Column() {
-      Text() {
-        SymbolSpan($r(icon))
-          .fontSize(24)
-          .fontColor([this.currentTabIndex === targetIndex
-            ? $r('sys.color.ohos_id_color_emphasize')
-            : $r('sys.color.ohos_id_color_text_secondary')])
+      Row() {
+        Text() {
+          SymbolSpan($r(icon))
+            .fontSize(23)
+            .fontColor([this.currentTabIndex === targetIndex
+              ? $r('app.color.brand_primary')
+              : $r('sys.color.ohos_id_color_text_secondary')])
+        }
       }
+      .width(24)
+      .height(24)
+      .justifyContent(FlexAlign.Center)
 
       Text(title)
         .fontColor(this.currentTabIndex === targetIndex
-          ? $r('sys.color.ohos_id_color_emphasize')
+          ? $r('app.color.brand_primary')
           : $r('sys.color.ohos_id_color_text_secondary'))
         .fontSize(DesignConstants.FONT.SIZE.XS)
-        .margin({ top: 4 })
+        .margin({ top: 3 })
         .fontWeight(this.currentTabIndex === targetIndex ? FontWeight.Medium : FontWeight.Normal)
+
+      if (this.currentTabIndex === targetIndex) {
+        Row()
+          .width(16)
+          .height(3)
+          .margin({ top: 3 })
+          .backgroundColor($r('app.color.brand_primary'))
+          .borderRadius(DesignConstants.RADIUS.FULL)
+      }
     }
     .width('100%')
     .height(56 + this.safeAreaBottom)
@@ -737,21 +765,35 @@ struct Index {
   @Builder
   NearbyTabBuilder() {
     Column() {
-      Text() {
-        SymbolSpan($r(AppIcon.NEARBY))
-          .fontSize(24)
-          .fontColor([this.currentTabIndex === 0
-            ? $r('sys.color.ohos_id_color_emphasize')
-            : $r('sys.color.ohos_id_color_text_secondary')])
+      Row() {
+        Text() {
+          SymbolSpan($r(AppIcon.NEARBY))
+            .fontSize(23)
+            .fontColor([this.currentTabIndex === 0
+              ? $r('app.color.brand_primary')
+              : $r('sys.color.ohos_id_color_text_secondary')])
+        }
       }
+      .width(24)
+      .height(24)
+      .justifyContent(FlexAlign.Center)
 
       Text('附近')
         .fontColor(this.currentTabIndex === 0
-          ? $r('sys.color.ohos_id_color_emphasize')
+          ? $r('app.color.brand_primary')
           : $r('sys.color.ohos_id_color_text_secondary'))
         .fontSize(DesignConstants.FONT.SIZE.XS)
-        .margin({ top: 4 })
+        .margin({ top: 3 })
         .fontWeight(this.currentTabIndex === 0 ? FontWeight.Medium : FontWeight.Normal)
+
+      if (this.currentTabIndex === 0) {
+        Row()
+          .width(16)
+          .height(3)
+          .margin({ top: 3 })
+          .backgroundColor($r('app.color.brand_primary'))
+          .borderRadius(DesignConstants.RADIUS.FULL)
+      }
     }
     .width('100%')
     .height(56 + this.safeAreaBottom)
@@ -763,28 +805,30 @@ struct Index {
     })
   }
 
-  /** 中间「+」发布按钮 Builder */
+      /** 中间「+」发布按钮 Builder（图标在上、椭圆外框，与其他 tab 一致布局） */
   @Builder
   CreateTabBuilder() {
     Column() {
-      Column() {
+      // 扁平椭圆外框包裹图标
+      Row() {
         Text() {
           SymbolSpan($r(AppIcon.ADD))
-            .fontSize(24)
-            .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+            .fontSize(22)
+            .fontColor([Color.White])
         }
       }
-      .width(38)
-      .height(38)
+      .width(48)
+      .height(28)
       .justifyContent(FlexAlign.Center)
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor($r('app.color.brand_primary'))
       .borderRadius(DesignConstants.RADIUS.FULL)
-      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .shadow(DesignConstants.SHADOW.SMALL)
 
+      // "发布"文字在外框下方，与其他 tab 一致
       Text('发布')
         .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         .fontSize(DesignConstants.FONT.SIZE.XS)
-        .margin({ top: 2 })
+        .margin({ top: 3 })
     }
     .width('100%')
     .height(56 + this.safeAreaBottom)
@@ -805,7 +849,7 @@ struct Index {
             .color($r('sys.color.ohos_id_color_emphasize'))
           
           Text($r('app.string.common_loading'))
-            .fontSize(16)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .margin({ top: 16 })
         }
@@ -814,7 +858,10 @@ struct Index {
         .justifyContent(FlexAlign.Center)
         .backgroundColor($r('app.color.bg_primary'))
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
       } else if (this.lastError) {
         Column({ space: 16 }) {
           Text('应用初始化失败')
@@ -822,7 +869,7 @@ struct Index {
             .fontWeight(FontWeight.Bold)
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
           Text(this.lastError)
-            .fontSize(14)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .textAlign(TextAlign.Center)
             .constraintSize({ maxWidth: 280 })
@@ -893,28 +940,34 @@ struct Index {
         .barHeight(56 + this.safeAreaBottom)
         .scrollable(false)
         .barMode(BarMode.Fixed)
-        .divider({ strokeWidth: 0 })  // 隐藏分隔线，更现代
+        .divider({ strokeWidth: 0, color: $r('app.color.divider'), startMargin: 0, endMargin: 0 })
         .onChange((index: number) => this.handleTabChange(index))
-        .backgroundColor($r('app.color.bg_secondary'))
-        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+        .barBackgroundColor($r('app.color.tab_bar_bg'))
+        .shadow(DesignConstants.SHADOW.MEDIUM)
+        .border({ width: { top: 1 }, color: $r('app.color.highlight_border') })
+        .backgroundColor(Color.Transparent)
         .bindSheet($$this.showCreateSheet, this.CreateSheetContent(), {
           height: SheetSize.FIT_CONTENT,
           dragBar: true,
           showClose: true,
-          backgroundColor: $r('app.color.bg_secondary')
+          backgroundColor: $r('app.color.start_window_background')
         })
         }
         .mode(NavigationMode.Stack)
         .hideTitleBar(true)
         .hideBackButton(true)
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .backgroundColor(Color.Transparent)
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
         }
         .width('100%')
         .height('100%')
       }
 
       if (this.visibleNotifications.length > 0) {
-        Column({ space: 8 }) {
+        Column({ space: DesignConstants.SPACING.SM }) {
           ForEach(this.visibleNotifications, (notification: SmartNotification) => {
             NotificationBanner({
               notification: notification,
@@ -937,7 +990,6 @@ struct Index {
         .width('100%')
         .padding({ top: 12, left: 16, right: 16 })
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
-        .hitTestBehavior(HitTestMode.Transparent)
       }
 
       if (this.showNotificationCenter) {
@@ -948,7 +1000,10 @@ struct Index {
         .height('100%')
         .backgroundColor($r('app.color.bg_primary'))
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.EaseInOut }))
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.EaseInOut })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.EaseInOut }))
+        )
         .onClick(() => {
           this.showNotificationCenter = false;
         })
@@ -965,7 +1020,10 @@ struct Index {
         .height('100%')
         .backgroundColor($r('app.color.bg_primary'))
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.EaseInOut }))
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.EaseInOut })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.EaseInOut }))
+        )
         .onClick(() => {
           this.showPerformanceDetails = false;
         })
@@ -983,9 +1041,9 @@ struct Index {
 
   @Builder
   private buildUpgradeBanner() {
-    Row({ space: 8 }) {
+    Row({ space: DesignConstants.SPACING.SM }) {
       Text('当前为临时用户，注册账号可保留所有数据')
-        .fontSize(12)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontColor($r('sys.color.ohos_id_color_text_primary_contrary'))
         .layoutWeight(1)
         .maxLines(1)
@@ -993,7 +1051,7 @@ struct Index {
 
       Button('去注册')
         .type(ButtonType.Normal)
-        .fontSize(12)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
         .height(28)
         .backgroundColor($r('app.color.bg_secondary'))
         .fontColor($r('sys.color.ohos_id_color_emphasize'))
@@ -1007,9 +1065,10 @@ struct Index {
       left: DesignConstants.SPACING.LG,
       right: DesignConstants.SPACING.LG,
       top: this.getSafeAreaTopPadding(),
-      bottom: 8
+      bottom: DesignConstants.SPACING.SM
     })
     .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+    .borderRadius({ bottomLeft: DesignConstants.RADIUS.LG, bottomRight: DesignConstants.RADIUS.LG })
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
   }
 
@@ -1020,24 +1079,24 @@ struct Index {
         .fontSize(DesignConstants.FONT.SIZE.XL)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('sys.color.ohos_id_color_text_primary'))
-        .margin({ top: 8, bottom: 20 })
+        .margin({ top: DesignConstants.SPACING.SM, bottom: 20 })
 
       // 发布瞬间
       Row({ space: DesignConstants.SPACING.LG }) {
         Column() {
           Text() {
             SymbolSpan($r(AppIcon.CAMERA))
-              .fontSize(28)
-              .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+              .fontSize(26)
+              .fontColor([$r('app.color.brand_primary')])
           }
         }
-        .width(56)
-        .height(56)
+        .width(52)
+        .height(52)
         .justifyContent(FlexAlign.Center)
-        .backgroundColor($r('app.color.bg_secondary'))
-        .borderRadius(DesignConstants.RADIUS.LG)
+        .backgroundColor($r('app.color.chip_selected_bg'))
+        .borderRadius(DesignConstants.RADIUS.MD)
 
-        Column({ space: 4 }) {
+        Column({ space: DesignConstants.SPACING.XS }) {
           Text('发布瞬间')
             .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontWeight(FontWeight.Medium)
@@ -1058,9 +1117,9 @@ struct Index {
       .width('100%')
       .padding(DesignConstants.SPACING.LG)
       .backgroundColor($r('app.color.bg_secondary'))
-      .borderRadius(DesignConstants.RADIUS.XL)
-      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-      .shadow(DesignConstants.SHADOW.SMALL)
+      .borderRadius(DesignConstants.RADIUS.XXL)
+      .shadow(DesignConstants.SHADOW.MEDIUM)
+      .border({ width: 1, color: $r('app.color.highlight_border') })
       .onClick(() => {
         this.showCreateSheet = false;
         AppRouter.push(PageNames.CREATE_MOMENT);
@@ -1071,17 +1130,17 @@ struct Index {
         Column() {
           Text() {
             SymbolSpan($r(AppIcon.GROUP))
-              .fontSize(28)
-              .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+              .fontSize(26)
+              .fontColor([$r('app.color.brand_primary')])
           }
         }
-        .width(56)
-        .height(56)
+        .width(52)
+        .height(52)
         .justifyContent(FlexAlign.Center)
-        .backgroundColor($r('app.color.bg_secondary'))
-        .borderRadius(DesignConstants.RADIUS.LG)
+        .backgroundColor($r('app.color.chip_selected_bg'))
+        .borderRadius(DesignConstants.RADIUS.MD)
 
-        Column({ space: 4 }) {
+        Column({ space: DesignConstants.SPACING.XS }) {
           Text('创建群组')
             .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontWeight(FontWeight.Medium)
@@ -1102,9 +1161,9 @@ struct Index {
       .width('100%')
       .padding(DesignConstants.SPACING.LG)
       .backgroundColor($r('app.color.bg_secondary'))
-      .borderRadius(DesignConstants.RADIUS.XL)
-      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-      .shadow(DesignConstants.SHADOW.SMALL)
+      .borderRadius(DesignConstants.RADIUS.XXL)
+      .shadow(DesignConstants.SHADOW.MEDIUM)
+      .border({ width: 1, color: $r('app.color.highlight_border') })
       .margin({ top: DesignConstants.SPACING.SM })
       .onClick(() => {
         this.showCreateSheet = false;

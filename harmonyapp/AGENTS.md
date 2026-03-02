@@ -5,65 +5,12 @@
 ## 技术栈
 
 - **框架**：HarmonyOS ArkTS (.ets)
-- **API 版本**：API 20 (SDK 6.0.0)
 - **构建工具**：hvigor
 - **网络**：`@ohos.net.http`
 - **持久化**：`@ohos.data.preferences`（AppStorage + PersistentStorage）
 - **UI**：ArkUI 原生组件
 
-## 目录结构
-
-```
-entry/src/main/ets/
-├── entryability/            # 应用入口 Ability
-│   └── EntryAbility.ets
-├── components/              # 公共 ArkUI 组件
-│   ├── LocationBar.ets
-│   ├── SystemAvatar.ets
-│   ├── SystemCard.ets
-│   └── ...
-├── constants/               # 常量定义
-│   ├── AppConstants.ets     # API_BASE_URL、WS_BASE_URL、调试开关
-│   ├── DesignConstants.ets  # 设计常量
-│   └── SystemConstants.ets  # 系统常量
-├── core/                    # 核心逻辑层
-│   ├── api/
-│   │   └── ApiClient.ets    # API 客户端（按业务域封装静态方法）
-│   ├── config/
-│   │   └── ApiEndpoints.ets # API 路径常量（唯一路径定义处）
-│   ├── network/
-│   │   ├── HttpUtil.ets     # HTTP 工具（POST、Token 刷新、幂等键）
-│   │   ├── WebSocketService.ets  # WebSocket 单例
-│   │   ├── WebSocketUtil.ets
-│   │   └── ApiErrorUtil.ets # 错误处理工具
-│   ├── state/
-│   │   ├── GlobalStateManager.ets    # 全局状态单例
-│   │   ├── AuthAccountManager.ets    # 多账户管理
-│   │   └── PersistentStateManager.ets
-│   ├── storage/
-│   │   └── PreferencesUtil.ets       # 持久化工具
-│   ├── types/
-│   │   ├── api.ets                   # API 类型定义（对齐 spec）
-│   │   ├── CommonTypes.ets
-│   │   └── WebSocketTypes.ets        # WebSocket 事件类型
-│   ├── di/
-│   │   └── Container.ets             # 依赖注入容器
-│   ├── services/                     # 各类服务（通知、分布式等）
-│   └── utils/                        # 工具函数
-└── features/                         # 按业务域划分的页面
-    ├── auth/pages/
-    ├── chat/pages/
-    ├── discover/pages/
-    ├── group/pages/
-    ├── map/pages/
-    ├── message/pages/
-    ├── moment/pages/
-    ├── nearby/pages/
-    ├── profile/pages/
-    ├── search/pages/
-    ├── settings/pages/
-    └── subscriptions/pages/
-```
+> API 版本以 `build-profile.json5` 为准。
 
 ## API 调用规则（严格执行）
 
@@ -111,39 +58,12 @@ if (res.code === 0 && res.data) {
 // ❌ 错误：依赖 res.message 做逻辑分支
 ```
 
-## 状态管理
+## 状态与持久化规则
 
-### 全局状态
+- 持久化键名必须有意义、自描述（如 `currentUser`、`isLoggedIn`），禁止使用 `key1`、`temp` 等模糊命名。
 
-- **AppStorage + PersistentStorage**：HarmonyOS 原生状态管理。
-- **GlobalStateManager**：单例，管理 `currentUser`、`isLoggedIn`、`unreadCount` 等。
-- **AuthAccountManager**：多账户支持，`accounts`、`current_user_id` 持久化。
-- UI 绑定使用 `@StorageLink` 等装饰器。
+## 错误处理
 
-### 持久化键命名
-
-- 使用有意义的键名：`currentUser`、`isLoggedIn`、`userType`、`currentLocation`。
-- Token 通过 `PreferencesUtil` 存取。
-
-## 编码模式
-
-### 单例模式
-
-核心服务使用单例：
-
-```typescript
-// GlobalStateManager、WebSocketService、Container 等
-const manager = GlobalStateManager.getInstance();
-```
-
-### 依赖注入
-
-- `core/di/Container.ets` 做服务注册与解析。
-- 页面中通过 Container 获取服务实例。
-
-### 错误处理
-
-- `ApiErrorUtil` 统一处理 API 错误。
 - 错误码 `10201`（账号封禁）须强制登出。
 - 错误码 `10100`（认证失败）须尝试刷新 Token 或跳转登录。
 
@@ -169,9 +89,7 @@ const manager = GlobalStateManager.getInstance();
 
 ## WebSocket
 
-- `WebSocketService` 单例管理连接。
-- 支持鉴权、心跳、自动重连、订阅。
-- 事件类型定义在 `core/types/WebSocketTypes.ets`，必须与 `spec/api_spec_websocket.md` 一致。
+- 事件类型必须与 `spec/api_spec_websocket.md` 一致，禁止扩展 spec 未定义的事件。
 
 ## 位置与距离
 
@@ -206,7 +124,7 @@ const manager = GlobalStateManager.getInstance();
 - **编译（hvigorw）**：检查编译错误，生成 HAP 包。
 - **代码检查（codelinter）**：检查 DevEco Studio IDE 中显示的 linter 警告（性能建议、代码规范等）。
 
-> **编译前暂存提示**：在执行 `hvigorw` 编译 HarmonyOS 项目之前，请先运行 `git add` 暂存当前改动，方便出现异常时用 git 恢复。`ohpm` 与 `codelinter` 不需要额外步骤即可运行。
+> **编译命令限制**：`hvigorw` 编译命令**禁止 Agent 执行**，必须由用户手动运行。Agent 在完成代码改动后会自动执行 `git add` 暂存改动，用户可直接运行 `hvigorw` 验证编译。`codelinter` 可由 Agent 直接执行。
 
 ```bash
 # macOS 默认路径
@@ -220,14 +138,14 @@ CODELINTER="/Applications/DevEco-Studio.app/Contents/plugins/codelinter/run/inde
 "$OHPM" install --all \
   --registry https://ohpm.openharmony.cn/ohpm/ --strict_ssl true
 
-# 编译（检查编译错误，执行前请先运行 `git add` 暂存当前改动）
+# 编译【🚫 禁止 Agent 执行，必须由用户手动运行；Agent 已在任务结束时自动 git add】
 DEVECO_SDK_HOME="$DEVECO_SDK_HOME" "$DEVECO_SDK_NODE" "$HVIGORW" \
   --mode module -p product=default assembleHap \
   --info --analyze=ultrafine --parallel --incremental \
   --daemon
 
 # 代码检查（检查 IDE 中的 linter 警告，基于 code-linter.json5 规则配置）【✅ Agent 可直接执行】
-DEVECO_SDK_HOME="$DEVECO_SDK_HOME" node "$CODELINTER" \
+DEVECO_SDK_HOME="$DEVECO_SDK_HOME" "$DEVECO_SDK_NODE" "$CODELINTER" \
   -c code-linter.json5 entry/src/main/ets/
 
 # 禁止模式扫描【✅ Agent 可直接执行】

@@ -139,7 +139,7 @@ pnpm dev             # 启动开发服务器
 
 > **注意**：HarmonyOS 的编译和代码检查是两个独立工具，**必须分别运行**。
 
-> **编译前暂存提示**：在运行 `hvigorw` 编译 HarmonyOS 项目之前，请先执行 `git add` 暂存当前改动，方便在出现意外时用 git 恢复。`ohpm` 与 `codelinter` 可直接运行。
+> **编译命令限制**：`hvigorw` 编译命令**禁止 Agent 执行**，必须由用户手动运行。`codelinter` 可直接执行。
 
 ```bash
 # 环境变量（macOS 默认安装路径，无需修改）
@@ -158,7 +158,7 @@ cd harmonyapp
 "$OHPM" install --all \
   --registry https://ohpm.openharmony.cn/ohpm/ --strict_ssl true
 
-# 1. 编译检查（零错误要求，执行前请先运行 `git add` 暂存当前改动）
+# 1. 编译检查【🚫 禁止 Agent 执行，必须由用户手动运行；Agent 已在任务结束时自动 git add】
 DEVECO_SDK_HOME="$DEVECO_SDK_HOME" "$DEVECO_SDK_NODE" "$HVIGORW" \
   --mode module -p product=default assembleHap \
   --info --analyze=ultrafine --parallel --incremental \
@@ -216,7 +216,7 @@ DEVECO_SDK_HOME="$DEVECO_SDK_HOME" "$DEVECO_SDK_NODE" "$CODELINTER" \
 
 - Backend: `cargo check`
 - Frontend: `pnpm check`
-- HarmonyOS: `codelinter` 和 `hvigorw`（编译前先 `git add`，详见下方 HarmonyOS 章节）。
+- HarmonyOS: `codelinter`（Agent 可直接执行）；`hvigorw` 编译命令**禁止 Agent 执行**，需告知用户手动运行并反馈结果。
 
 **原则**：
 - 警告应尽量消除，但**禁止使用 `#[allow(...)]` 等属性压制警告**（除非有充分理由并注释）。
@@ -256,6 +256,21 @@ rg '"/api/v1/' frontend_svelte/src/ harmonyapp/entry/src/main/ets/
   - `frontend_svelte/src/lib/types/api.ts` -- TypeScript interface
   - `harmonyapp/entry/src/main/ets/core/types/api.ets` -- ArkTS interface
 
+### 步骤五：暂存改动（强制）
+
+所有检查通过后，**必须立即运行 `git add` 将本次所有修改的文件加入暂存区**，让用户随时可以查看变更并决定是否提交。
+
+```bash
+# 推荐：精确暂存本次涉及的目录/文件，避免误包含无关改动
+git add <涉及改动的文件或目录>
+
+# 也可暂存所有改动（确认 git status 内容无误后使用）
+git add -A
+```
+
+- 暂存前用 `git status` 确认文件列表，确保只包含本次任务相关的改动。
+- **不要自动执行 `git commit`**，提交由用户决定时机和信息。
+
 ## 权限边界
 
 为了保障项目安全和数据完整，AI 的操作权限被严格限制。
@@ -263,7 +278,7 @@ rg '"/api/v1/' frontend_svelte/src/ harmonyapp/entry/src/main/ets/
 ### ✅ 可直接执行（无需询问）
 
 - 读取文件、搜索代码（如 `rg`、`grep`）、列出目录内容。
-- 运行构建/检查命令（`cargo check`、`pnpm check`、HarmonyOS `codelinter` / `hvigorw` / `ohpm` 等）、格式化、Lint、单个测试。HarmonyOS 细则参见前文“构建与验证命令”。
+- 运行构建/检查命令（`cargo check`、`pnpm check`、HarmonyOS `codelinter` / `ohpm` 等）、格式化、Lint、单个测试。**HarmonyOS `hvigorw` 编译命令禁止 Agent 执行，详见“构建与验证命令”。**
 - 运行上述“禁止模式扫描”中的 rg 命令。
 - 查阅 `spec/` 目录下的任何规范文件。
 
@@ -325,6 +340,8 @@ rg '"/api/v1/' frontend_svelte/src/ harmonyapp/entry/src/main/ets/
 - **临时存储**：`git stash`、`git stash pop`。
 - **分支操作**：`git checkout <branch>`、`git switch`、`git branch <name>`（创建分支）。
 
+> **`git add` 是任务完成的必要动作**：每次代码改动结束、验证通过后，Agent 必须主动执行 `git add` 暂存所有修改文件。这是"任务完成验证流程"的**步骤五**，不得省略。
+
 ### ❓ 需要询问用户意见
 
 以下操作执行前须简要告知用户操作内容，获得同意后再执行：
@@ -342,12 +359,23 @@ rg '"/api/v1/' frontend_svelte/src/ harmonyapp/entry/src/main/ets/
 - **清理操作**：`git clean`、`git branch -D`（强制删除分支）。
 - 任何带 `--force`、`--hard`、`--no-verify` 参数的命令。
 
+### 🚫 Git 绝对禁止
+
+- **禁止使用 `git worktree` 命令**（`git worktree add`、`git worktree remove` 等）。所有代码改动必须直接在当前工作目录进行，不得创建独立的 worktree 目录。
+- **禁止强制推送 main/master 分支**，即使用户明确要求也须说明风险后才可执行。
+
 ### 子 Agent 约束
 
 调用子 Agent 时，必须在 prompt 中告知其遵守本节 Git 操作规范，高风险操作需回报主 Agent 由用户确认。
 
 ## Agent 行为准则
 
+- **会话启动：上下文梳理**：收到用户首条消息后，**在动手改代码之前**先建立项目上下文：
+  - **识别目标**：分析用户输入，确定涉及哪个子项目（backend / frontend_svelte / harmonyapp）及功能范围。
+  - **框架分析**：对目标区域的代码做架构梳理（调用链、依赖关系、现有模式），深度与任务复杂度匹配——简单改动快速浏览即可，大型功能需深度分析。
+  - **持久化**：将分析结果写入 `tmp/session-context.md`，供后续操作和子 Agent 引用。内容应包含：涉及的项目和模块、架构要点、关键约束、需要注意的风险。若该文件已存在（前次会话残留），先读取并验证准确性，按需更新而非重建。
+  - **同步更新**：当代码变更导致已梳理的知识失效时（如新增/删除模块、调整调用链、重构组件），及时更新该文件。
+  - **清理**：会话任务全部完成后删除该文件。
 - **语言要求**：所有回复、解释、注释、文档说明**必须使用中文**；仅代码、标识符、命令、配置键、URL、技术术语等无法或不宜翻译的部分可保持原文。
 - **简洁优先**：实现任何功能时，**先选最简单的方案**。只有当简单方案被证明不够用时，才引入更复杂的设计。禁止"预防性架构"——不要为了应对假想的未来需求而增加当前的复杂度。当存在多种实现方案时，优先选择代码量最少、抽象层级最浅、依赖最少的那个。
 - **建议原则**：对用户的建议需基于实际情况和最佳实践，经比较分析后给出明确结论和理由，避免无脑同意。

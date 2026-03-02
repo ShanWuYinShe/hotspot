@@ -309,12 +309,12 @@ export struct CreateMomentPage {
 
         Button('发布')
           .type(ButtonType.Normal)
-          .backgroundColor($r('app.color.bg_tertiary'))
-          .fontColor($r('sys.color.ohos_id_color_emphasize'))
+          .backgroundColor($r('app.color.brand_primary'))
+          .fontColor(Color.White)
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .height(36)
-          .borderRadius(DesignConstants.RADIUS.XXL)
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .shadow(DesignConstants.SHADOW.SMALL)
           .enabled(!this.isPublishing)
           .opacity(this.isPublishing ? 0.5 : 1)
           .animation({ duration: 200, curve: Curve.EaseInOut })
@@ -328,8 +328,7 @@ export struct CreateMomentPage {
         top: this.getHeaderTopPadding(),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_secondary'))
-      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .backgroundColor(Color.Transparent)
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       List() {
@@ -343,11 +342,12 @@ export struct CreateMomentPage {
                 .maxLength(500)
                 .height(120)
                 .backgroundColor($r('app.color.bg_tertiary'))
-                .borderRadius(DesignConstants.RADIUS.MD)
+                .borderRadius(DesignConstants.RADIUS.XL)
             }
           }
         }
         .padding({ top: DesignConstants.SPACING.MD, left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+        .margin({ bottom: 14 })
 
         ListItem() {
           SystemCard({ cardPadding: DesignConstants.SPACING.LG }) {
@@ -382,7 +382,7 @@ export struct CreateMomentPage {
                       Column() {
                         Text() {
                           SymbolSpan($r(AppIcon.ADD))
-                            .fontSize(24)
+                            .fontSize(DesignConstants.FONT.SIZE.XXL)
                             .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
                         }
                         Text('相册')
@@ -394,7 +394,7 @@ export struct CreateMomentPage {
                     .backgroundColor($r('app.color.bg_tertiary'))
                     .width('100%')
                     .height('100%')
-                    .borderRadius(DesignConstants.RADIUS.MD)
+                    .borderRadius(DesignConstants.RADIUS.XL)
                     .onClick(() => this.selectImages())
                   }
                 }
@@ -406,7 +406,7 @@ export struct CreateMomentPage {
                       Column() {
                         Text() {
                           SymbolSpan($r(AppIcon.CAMERA))
-                            .fontSize(24)
+                            .fontSize(DesignConstants.FONT.SIZE.XXL)
                             .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
                         }
                         Text('拍照')
@@ -418,7 +418,7 @@ export struct CreateMomentPage {
                     .backgroundColor($r('app.color.bg_tertiary'))
                     .width('100%')
                     .height('100%')
-                    .borderRadius(DesignConstants.RADIUS.MD)
+                    .borderRadius(DesignConstants.RADIUS.XL)
                     .onClick(() => this.capturePhoto())
                   }
                 }
@@ -432,6 +432,7 @@ export struct CreateMomentPage {
           }
         }
         .padding({ top: DesignConstants.SPACING.MD, left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+        .margin({ bottom: 14 })
 
         ListItem() {
           SystemCard({ cardPadding: DesignConstants.SPACING.LG }) {
@@ -452,14 +453,15 @@ export struct CreateMomentPage {
                   .maxLength(20)
                   .height(DesignConstants.COMPONENT.INPUT_HEIGHT)
                   .backgroundColor($r('app.color.bg_tertiary'))
-                  .borderRadius(DesignConstants.RADIUS.MD)
+                  .borderRadius(DesignConstants.RADIUS.XL)
 
                 Button('添加')
                   .type(ButtonType.Normal)
-                  .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+                  .backgroundColor($r('app.color.brand_primary'))
                   .fontColor(Color.White)
                   .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .borderRadius(DesignConstants.RADIUS.XXL)
+                  .borderRadius(DesignConstants.RADIUS.FULL)
+                  .shadow(DesignConstants.SHADOW.SMALL)
                   .onClick(() => this.addTag())
                   .margin({ left: DesignConstants.SPACING.SM })
               }
@@ -478,6 +480,7 @@ export struct CreateMomentPage {
           }
         }
         .padding({ top: DesignConstants.SPACING.MD, left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+        .margin({ bottom: 14 })
 
         ListItem() {
           SystemCard({ cardPadding: DesignConstants.SPACING.LG }) {
@@ -492,20 +495,18 @@ export struct CreateMomentPage {
                 Row({ space: DesignConstants.SPACING.SM }) {
                   Button('选点')
                     .type(ButtonType.Normal)
-                    .backgroundColor($r('app.color.bg_tertiary'))
-                    .fontColor($r('sys.color.ohos_id_color_emphasize'))
+                    .backgroundColor(Color.Transparent)
+                    .fontColor($r('app.color.brand_primary'))
                     .fontSize(DesignConstants.FONT.SIZE.MD)
-                    .borderRadius(DesignConstants.RADIUS.XXL)
-                    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+                    .borderRadius(DesignConstants.RADIUS.FULL)
                     .onClick(() => this.openLocationPicker())
 
                   Button('刷新')
                     .type(ButtonType.Normal)
-                    .backgroundColor($r('app.color.bg_tertiary'))
-                    .fontColor($r('sys.color.ohos_id_color_emphasize'))
+                    .backgroundColor(Color.Transparent)
+                    .fontColor($r('app.color.brand_primary'))
                     .fontSize(DesignConstants.FONT.SIZE.MD)
-                    .borderRadius(DesignConstants.RADIUS.XXL)
-                    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+                    .borderRadius(DesignConstants.RADIUS.FULL)
                     .onClick(() => this.refreshLocation())
                 }
               }
@@ -516,7 +517,7 @@ export struct CreateMomentPage {
                 Row() {
                   Text() {
                     SymbolSpan($r(AppIcon.LOCATION))
-                      .fontSize(20)
+                      .fontSize(DesignConstants.FONT.SIZE.XL)
                       .fontColor([$r('sys.color.ohos_id_color_emphasize')])
                   }
 
@@ -551,7 +552,7 @@ export struct CreateMomentPage {
     }
       .width('100%')
       .height('100%')
-      .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor($r('app.color.bg_primary'))
 
       if (this.isPublishing) {
         SystemLoadingView({ message: this.publishingMessage })
@@ -619,7 +620,7 @@ export struct CreateMomentPage {
       Button() {
         Text() {
           SymbolSpan($r(AppIcon.CANCEL))
-            .fontSize(14)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor([Color.White])
         }
       }

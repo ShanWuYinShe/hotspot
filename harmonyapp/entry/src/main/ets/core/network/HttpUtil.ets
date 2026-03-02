@@ -24,6 +24,7 @@ import {
   isAuthErrorCode,
   isAccountBannedCode
 } from './ApiErrorUtil';
+import { MediaUrlUtil } from '../utils/MediaUrlUtil';
 
 /**
  * Spec MUST 幂等端点列表
@@ -100,6 +101,7 @@ const IDEMPOTENCY_KEY_CONFLICT_CODE = 22000;
 const IDEMPOTENCY_CACHE_EXPIRED_CODE = 22001;
 const IDEMPOTENCY_IN_PROGRESS_CODE = 22002;
 const MAX_IDEMPOTENCY_RETRY_COUNT = 1;
+const MEDIA_URL_FIELDS: string[] = ['url', 'avatar_url', 'thumbnail_url', 'cover_url'];
 
 /**
  * 生成 spec 要求格式的幂等键：
@@ -145,6 +147,45 @@ export class HttpUtil {
       return typeof url === 'string' && url.trim().length > 0 ? url.trim() : API_BASE_URL;
     } catch {
       return API_BASE_URL;
+    }
+  }
+
+  private static isMediaUrlField(key: string): boolean {
+    return MEDIA_URL_FIELDS.indexOf(key) >= 0;
+  }
+
+  private static toAbsoluteMediaUrl(raw: string, origin: string): string {
+    return MediaUrlUtil.normalize(raw, origin);
+  }
+
+  private static resolveRelativeMediaUrls(value: Object, origin: string): void {
+    if (!origin || !value) {
+      return;
+    }
+    if (Array.isArray(value)) {
+      const arr = value as Object[];
+      for (let i = 0; i < arr.length; i++) {
+        const item = arr[i];
+        if (item && typeof item === 'object') {
+          HttpUtil.resolveRelativeMediaUrls(item, origin);
+        }
+      }
+      return;
+    }
+    if (typeof value !== 'object') {
+      return;
+    }
+
+    const record = value as Record<string, string | number | boolean | Object | null | undefined>;
+    const keys = Object.keys(record);
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      const current = record[key];
+      if (typeof current === 'string' && HttpUtil.isMediaUrlField(key)) {
+        record[key] = HttpUtil.toAbsoluteMediaUrl(current, origin);
+      } else if (current && typeof current === 'object') {
+        HttpUtil.resolveRelativeMediaUrls(current as Object, origin);
+      }
     }
   }
 
@@ -392,6 +433,9 @@ export class HttpUtil {
         throw new Error('响应格式不符合 ApiResponse 约定');
       }
 
+      const origin = HttpUtil.extractOrigin(baseUrl);
+      HttpUtil.resolveRelativeMediaUrls(result, origin);
+
       const resultRecord = result as Record<string, Object>;
       const resultCode = resultRecord.code as number;
 
@@ -496,6 +540,9 @@ export class HttpUtil {
         hilog.error(DOMAIN_NUMBER, TAG, `网络连接问题，请检查服务器地址: ${baseUrl2}`);
       }
 
+      if (error instanceof Error) {
+        throw error;
+      }
       throw new Error(errorMsg);
     } finally {
       httpRequest.destroy();
@@ -514,8 +561,9 @@ export class HttpUtil {
   static async uploadToUrl(url: string, data: ArrayBuffer, headers: Record<string, string>): Promise<void> {
     const httpRequest = http.createHttp();
     try {
-      hilog.info(DOMAIN_NUMBER, TAG, `开始上传文件到: ${url}`);
-      const response = await httpRequest.request(url, {
+      const resolvedUploadUrl = await HttpUtil.resolveUploadUrl(url);
+      hilog.info(DOMAIN_NUMBER, TAG, `开始上传文件到: ${resolvedUploadUrl}`);
+      const response = await httpRequest.request(resolvedUploadUrl, {
         method: http.RequestMethod.PUT,
         header: headers,
         extraData: data,
@@ -535,6 +583,32 @@ export class HttpUtil {
     } finally {
       httpRequest.destroy();
     }
+  }
+
+  /**
+   * 预签名 URL 兼容处理：
+   * - 绝对 URL：直接使用
+   * - 相对 URL（如 /s3/...）：补全为当前服务 origin，避免 ArkTS 网络层拒绝
+   */
+  private static async resolveUploadUrl(url: string): Promise<string> {
+    const trimmed = url.trim();
+    const baseUrl = await HttpUtil.getBaseUrl();
+    const origin = HttpUtil.extractOrigin(baseUrl);
+    const normalized = MediaUrlUtil.normalize(trimmed, origin);
+    if (normalized !== trimmed) {
+      return normalized;
+    }
+    if (!origin) {
+      return trimmed;
+    }
+    if (trimmed.startsWith('/')) {
+      return `${origin}${trimmed}`;
+    }
+    return `${origin}/${trimmed}`;
+  }
+
+  private static extractOrigin(fullUrl: string): string {
+    return MediaUrlUtil.extractOrigin(fullUrl);
   }
 
   /**

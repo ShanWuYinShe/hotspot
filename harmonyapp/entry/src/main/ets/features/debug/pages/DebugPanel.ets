@@ -81,6 +81,7 @@ export struct DebugPanel {
       })
       .backgroundColor($r('app.color.bg_secondary'))
       .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .borderRadius({ bottomLeft: DesignConstants.RADIUS.LG, bottomRight: DesignConstants.RADIUS.LG })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       Scroll() {
@@ -107,6 +108,8 @@ export struct DebugPanel {
           Grid() {
             GridItem() {
               Button('重连WS')
+                .type(ButtonType.Normal)
+                .borderRadius(DesignConstants.RADIUS.XL)
                 .onClick(() => {
                   this.webSocketService.disconnect();
                   this.addLog('WS Disconnected');
@@ -119,6 +122,8 @@ export struct DebugPanel {
             }
             GridItem() {
               Button('测试Toast')
+                .type(ButtonType.Normal)
+                .borderRadius(DesignConstants.RADIUS.XL)
                 .onClick(() => {
                   SystemToast.showSuccess('Test Success', this.getUIContext());
                 })

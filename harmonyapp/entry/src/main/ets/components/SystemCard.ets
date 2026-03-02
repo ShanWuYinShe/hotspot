@@ -30,7 +30,7 @@ interface BorderConfig {
 export struct SystemCard {
   @BuilderParam content: () => void;
   @Prop cardPadding: number = DesignConstants.SPACING.LG;
-  @Prop showShadow: boolean = false;
+  @Prop showShadow: boolean = true;
   @Prop clickable: boolean = false;
   @Prop enableHoverEffect: boolean = false;
 
@@ -49,17 +49,15 @@ export struct SystemCard {
 
   @State isPressed: boolean = false;
 
-  // 根据变体获取背景色
   private getBackgroundColor(): ResourceColor {
     if (this.cardBackgroundColor) {
       return this.cardBackgroundColor as ResourceColor;
     }
 
     switch (this.variant) {
-      case CardVariant.FILLED:
-        return $r('app.color.bg_secondary');
       case CardVariant.GLASS:
         return Color.Transparent;
+      case CardVariant.FILLED:
       case CardVariant.ELEVATED:
       case CardVariant.OUTLINED:
       case CardVariant.DEFAULT:
@@ -68,34 +66,25 @@ export struct SystemCard {
     }
   }
 
-  // 根据变体获取阴影
   private getShadow(): ShadowConfig {
-    if (!this.showShadow) {
-      return { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 };
-    }
-
     switch (this.variant) {
       case CardVariant.ELEVATED:
-        return DesignConstants.SHADOW.MEDIUM;
-      case CardVariant.GLASS:
         return DesignConstants.SHADOW.LARGE;
+      case CardVariant.GLASS:
+        return this.showShadow ? DesignConstants.SHADOW.LARGE : { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 };
       case CardVariant.DEFAULT:
       case CardVariant.FILLED:
       case CardVariant.OUTLINED:
       default:
-        return DesignConstants.SHADOW.SMALL;
+        return DesignConstants.SHADOW.MEDIUM;
     }
   }
 
-  // 根据变体获取边框
   private getBorder(): BorderConfig {
-    if (this.variant === CardVariant.OUTLINED || this.showBorder) {
-      return {
-        width: 1,
-        color: this.cardBorderColor
-      };
+    if (!this.showBorder) {
+      return { width: 0, color: Color.Transparent };
     }
-    return { width: 0, color: $r('sys.color.ohos_id_color_list_separator') };
+    return { width: 1, color: this.cardBorderColor };
   }
 
   // 获取毛玻璃效果
@@ -122,8 +111,7 @@ export struct SystemCard {
     .backgroundColor(this.getBackgroundColor())
     .backgroundBlurStyle(this.getBlurStyle())
     .borderRadius(this.cardBorderRadius)
-    .borderWidth(this.getBorder().width)
-    .borderColor(this.getBorder().color)
+    .border(this.getBorder())
     .padding(this.cardPadding)
     .shadow(this.getShadow())
     .scale(this.getScale())
@@ -169,13 +157,7 @@ export struct MasonryCard {
     .width('100%')
     .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(this.cardRadius)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow({
-      radius: this.shadowRadius,
-      color: `rgba(0,0,0,${this.shadowOpacity})`,
-      offsetX: 0,
-      offsetY: 2
-    })
+    .shadow(DesignConstants.SHADOW.MEDIUM)
     .scale(this.clickable && this.isPressed ? { x: 0.97, y: 0.97 } : { x: 1, y: 1 })
     .animation({ duration: 100, curve: Curve.EaseOut })
     .onTouch((event: TouchEvent) => {

@@ -82,10 +82,13 @@ export class BasicDataSource<T> implements IDataSource {
 
   public addData(data: T[]) {
     if (!data || data.length === 0) return;
+    const startIndex = this.originDataArray.length;
     for (const item of data) {
       this.originDataArray.push(item);
     }
-    this.notifyDataReload();
+    for (let i = startIndex; i < this.originDataArray.length; i++) {
+      this.notifyDataAdd(i);
+    }
   }
 
   /** 追加数据到末尾（别名） */

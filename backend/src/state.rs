@@ -323,6 +323,7 @@ impl AppState {
             moment_repo.clone(),
             user_repo.clone(),
             media_service.clone(),
+            resource_checker.clone(),
         );
 
         let group_service = GroupService::new(
@@ -342,6 +343,7 @@ impl AppState {
             admin_rbac_repo.clone(),
             media_service.clone(),
             cache_manager.clone(),
+            resource_checker.clone(),
         );
 
         let group_message_service = GroupMessageService::new(
@@ -385,6 +387,7 @@ impl AppState {
             user_follows_repo.clone(),
             media_service.clone(),
             stranger_limiter.clone(),
+            resource_checker.clone(),
         );
 
         let tag_service = TagService::new(tag_repo.clone());

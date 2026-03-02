@@ -64,17 +64,18 @@ impl MediaService {
             return presigned_url.to_string();
         }
         let base_trimmed = base.trim_end_matches('/');
-        format!("{}{}", base_trimmed, path_and_query)
-    }
-
-    fn build_direct_public_url(&self, key: &str) -> Option<String> {
-        let base = self.s3_public_base.trim();
-        if base.is_empty() || base.eq_ignore_ascii_case("presigned") {
-            return None;
+        let bucket = self.bucket.trim_matches('/');
+        let bucket_prefix = format!("/{}", bucket);
+        let mut normalized_path = path_and_query.to_string();
+        // 若 base 已包含 bucket（如 /s3/hotspot），避免拼接出 /hotspot/hotspot/...
+        if base_trimmed.ends_with(&bucket_prefix) {
+            if normalized_path == bucket_prefix {
+                normalized_path = "/".to_string();
+            } else if normalized_path.starts_with(&(bucket_prefix.clone() + "/")) {
+                normalized_path = normalized_path[bucket_prefix.len()..].to_string();
+            }
         }
-        let base_trimmed = base.trim_end_matches('/');
-        let key_trimmed = key.trim_start_matches('/');
-        Some(format!("{}/{}", base_trimmed, key_trimmed))
+        format!("{}{}", base_trimmed, normalized_path)
     }
 
     /// 申请上传（返回 S3 Presigned URL）
@@ -402,13 +403,6 @@ impl MediaService {
             return Ok(cached);
         }
 
-        // 当配置了公开访问域名时，搜索/列表等高频路径无需再走 presign。
-        if let Some(public_url) = self.build_direct_public_url(cleaned_key) {
-            self.cache_success_signed_url(&cache_key, &public_url, expires_in)
-                .await;
-            return Ok(public_url);
-        }
-
         let presigned_config = PresigningConfig::builder()
             .expires_in(expires_in)
             .build()
@@ -503,11 +497,12 @@ impl MediaService {
     pub async fn sign_url_if_path(&self, path_or_url: Option<&str>) -> Option<String> {
         match path_or_url {
             Some(s) => {
-                if s.starts_with("uploads/") {
-                    match self.sign_url(s).await {
+                let normalized_key = s.trim().trim_start_matches('/');
+                if normalized_key.starts_with("uploads/") {
+                    match self.sign_url(normalized_key).await {
                         Ok(url) => Some(url),
                         Err(e) => {
-                            tracing::warn!("Failed to sign url for path {}: {}", s, e);
+                            tracing::warn!("Failed to sign url for path {}: {}", normalized_key, e);
                             Some(s.to_string()) // Fallback
                         }
                     }

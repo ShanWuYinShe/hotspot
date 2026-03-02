@@ -1354,11 +1354,14 @@ impl MomentRepository {
         let rows = sqlx::query_as!(
             MomentIdMapRow,
             r#"
-            SELECT (EXTRACT(EPOCH FROM created_at) * 1000)::bigint as "row_id!",
-                   moment_id as "moment_id!"
-            FROM moment_id_map
-            WHERE (EXTRACT(EPOCH FROM created_at) * 1000)::bigint > $1
-            ORDER BY created_at ASC
+            SELECT row_id as "row_id!", moment_id as "moment_id!"
+            FROM (
+                SELECT row_number() OVER (ORDER BY created_at ASC, moment_id ASC)::bigint as row_id,
+                       moment_id
+                FROM moment_id_map
+            ) ranked
+            WHERE row_id > $1
+            ORDER BY row_id ASC
             LIMIT $2
             "#,
             last_row_id,

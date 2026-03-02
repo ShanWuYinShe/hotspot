@@ -101,14 +101,17 @@ export struct LoginPage {
           showProgress: true,
           externalProgress: this.loadingProgress
         })
-          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+          .transition(
+            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          )
       } else {
         Column() {
           // 顶部导航栏（固定）- 使用 SafeArea 避免与状态栏重叠
           Row() {
             Text() {
               SymbolSpan($r(AppIcon.BACK))
-                .fontSize(24)
+                .fontSize(DesignConstants.FONT.SIZE.XXL)
                 .fontColor([$r('sys.color.ohos_id_color_text_primary')])
             }
             .onClick(() => {
@@ -128,12 +131,12 @@ export struct LoginPage {
             top: this.getHeaderTopPadding(),
             bottom: DesignConstants.SPACING.SM
           })
-          .backgroundColor($r('app.color.bg_primary'))
+          .backgroundColor(Color.Transparent)
           .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
           // 标题区域（固定）
           Column({ space: DesignConstants.SPACING.SM }) {
-            Image($r('app.media.logo'))
+            Image($r('app.media.foreground'))
               .width(72)
               .height(72)
               .objectFit(ImageFit.Contain)
@@ -153,24 +156,34 @@ export struct LoginPage {
             bottom: DesignConstants.SPACING.LG })
 
           // 模式切换标签（固定）
-          Row({ space: DesignConstants.SPACING.XS }) {
+          Row({ space: DesignConstants.SPACING.SM }) {
             this.ModeTab('登录', 'login')
             this.ModeTab('注册', 'register')
           }
           .width('100%')
-          .backgroundColor($r('app.color.bg_secondary'))
-          .borderRadius(DesignConstants.RADIUS.LG)
-          .padding(DesignConstants.SPACING.XS)
+          .backgroundColor($r('app.color.bg_tertiary'))
+          .borderRadius(DesignConstants.RADIUS.XXL)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .padding(3)
           .margin({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL })
 
-          // 表单区域（可滚动，填充剩余空间，内容靠近标签栏顶部对齐）
+          // 表单区域（可滚动，凸起卡片包裹）
           Scroll() {
             Column() {
-              if (this.loginMode === 'login') {
-                this.buildLoginForm()
-              } else {
-                this.buildRegisterForm()
+              Column() {
+                if (this.loginMode === 'login') {
+                  this.buildLoginForm()
+                } else {
+                  this.buildRegisterForm()
+                }
               }
+              .width('100%')
+              .padding(DesignConstants.SPACING.LG)
+              .backgroundColor($r('app.color.bg_secondary'))
+              .borderRadius(DesignConstants.RADIUS.XXL)
+              .shadow(DesignConstants.SHADOW.MEDIUM)
+              .border({ width: 1, color: $r('app.color.highlight_border') })
+              .margin({ bottom: 14 })
             }
             .width('100%')
             .padding({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL,
@@ -183,7 +196,10 @@ export struct LoginPage {
         }
         .width('100%')
         .height('100%')
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
       }
     }
     .width('100%')
@@ -211,13 +227,14 @@ export struct LoginPage {
   private ModeTab(label: string, mode: string) {
     Text(label)
       .fontSize(DesignConstants.FONT.SIZE.MD)
-      .fontWeight(this.loginMode === mode ? FontWeight.Medium : FontWeight.Normal)
+      .fontWeight(this.loginMode === mode ? FontWeight.Bold : FontWeight.Medium)
       .fontColor(this.loginMode === mode ? Color.White : $r('sys.color.ohos_id_color_text_primary'))
-      .backgroundColor(this.loginMode === mode ? $r('sys.color.ohos_id_color_emphasize') : Color.Transparent)
-      .borderRadius(DesignConstants.RADIUS.MD)
+      .backgroundColor(this.loginMode === mode ? $r('app.color.brand_primary') : Color.Transparent)
+      .borderRadius(DesignConstants.RADIUS.XL)
       .height(36)
       .layoutWeight(1)
       .textAlign(TextAlign.Center)
+      .shadow(this.loginMode === mode ? DesignConstants.SHADOW.SMALL : { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 })
       .animation({ duration: 250, curve: Curve.FastOutSlowIn })
       .onClick(() => {
         if (mode === 'login') {
@@ -240,23 +257,23 @@ export struct LoginPage {
       TextInput({ placeholder: '邮箱 / 用户名', text: $$this.loginId })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('app.color.bg_secondary'))
+        .backgroundColor($r('app.color.bg_inset'))
         .borderRadius(DesignConstants.RADIUS.XL)
-        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+        .shadow(DesignConstants.SHADOW.INSET)
         .type(InputType.Email)
 
       TextInput({ placeholder: '密码', text: $$this.password })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('app.color.bg_secondary'))
+        .backgroundColor($r('app.color.bg_inset'))
         .borderRadius(DesignConstants.RADIUS.XL)
-        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+        .shadow(DesignConstants.SHADOW.INSET)
         .type(InputType.Password)
 
       Button('登录')
         .type(ButtonType.Normal)
         .backgroundColor(this.isValidLoginId(this.loginId) && this.isValidPassword(this.password)
-          ? $r('sys.color.ohos_id_color_emphasize')
+          ? $r('app.color.brand_primary')
           : $r('app.color.bg_tertiary'))
         .fontColor(this.isValidLoginId(this.loginId) && this.isValidPassword(this.password)
           ? Color.White
@@ -264,7 +281,9 @@ export struct LoginPage {
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .width('100%')
         .height(48)
-        .borderRadius(DesignConstants.RADIUS.XL)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .shadow(DesignConstants.SHADOW.SMALL)
+        .border({ width: 1, color: $r('app.color.highlight_border') })
         .enabled(this.isValidLoginId(this.loginId) && this.isValidPassword(this.password))
         .onClick(() => this.userLogin())
 
@@ -274,7 +293,10 @@ export struct LoginPage {
         .textAlign(TextAlign.Center)
     }
     .width('100%')
-    .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+    .transition(
+      TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+        .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+    )
   }
 
   @Builder
@@ -283,32 +305,32 @@ export struct LoginPage {
       TextInput({ placeholder: '昵称（必填）', text: $$this.registerNickname })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('app.color.bg_secondary'))
+        .backgroundColor($r('app.color.bg_inset'))
         .borderRadius(DesignConstants.RADIUS.XL)
-        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+        .shadow(DesignConstants.SHADOW.INSET)
 
       TextInput({ placeholder: '邮箱 / 用户名（登录凭证）', text: $$this.registerLoginId })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('app.color.bg_secondary'))
+        .backgroundColor($r('app.color.bg_inset'))
         .borderRadius(DesignConstants.RADIUS.XL)
-        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+        .shadow(DesignConstants.SHADOW.INSET)
         .type(InputType.Email)
 
       TextInput({ placeholder: '密码（8-128位，含字母+数字）', text: $$this.registerPassword })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('app.color.bg_secondary'))
+        .backgroundColor($r('app.color.bg_inset'))
         .borderRadius(DesignConstants.RADIUS.XL)
-        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+        .shadow(DesignConstants.SHADOW.INSET)
         .type(InputType.Password)
 
       TextInput({ placeholder: '确认密码', text: $$this.registerPasswordConfirm })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('app.color.bg_secondary'))
+        .backgroundColor($r('app.color.bg_inset'))
         .borderRadius(DesignConstants.RADIUS.XL)
-        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+        .shadow(DesignConstants.SHADOW.INSET)
         .type(InputType.Password)
 
       Button('注册')
@@ -317,7 +339,7 @@ export struct LoginPage {
           && this.isValidLoginId(this.registerLoginId)
           && this.isValidPassword(this.registerPassword)
           && this.registerPasswordConfirm === this.registerPassword
-          ? $r('sys.color.ohos_id_color_emphasize')
+          ? $r('app.color.brand_primary')
           : $r('app.color.bg_tertiary'))
         .fontColor(this.isValidNickname(this.registerNickname)
           && this.isValidLoginId(this.registerLoginId)
@@ -328,7 +350,9 @@ export struct LoginPage {
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .width('100%')
         .height(48)
-        .borderRadius(DesignConstants.RADIUS.XL)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .shadow(DesignConstants.SHADOW.SMALL)
+        .border({ width: 1, color: $r('app.color.highlight_border') })
         .enabled(this.isValidNickname(this.registerNickname)
           && this.isValidLoginId(this.registerLoginId)
           && this.isValidPassword(this.registerPassword)
@@ -341,7 +365,10 @@ export struct LoginPage {
         .textAlign(TextAlign.Center)
     }
     .width('100%')
-    .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+    .transition(
+      TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+        .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+    )
   }
 
   // ==================== 认证逻辑 ====================

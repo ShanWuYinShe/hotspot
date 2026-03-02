@@ -5,13 +5,15 @@
 ## 技术栈
 
 - **语言**：Rust (Edition 2021)
-- **Web 框架**：Axum 0.8
+- **Web 框架**：Axum
 - **运行时**：Tokio
-- **数据库**：PostgreSQL + PostGIS，通过 SQLx 0.8 访问
-- **缓存**：Redis 0.32 + Moka 0.12（本地缓存）
-- **认证**：JWT (jsonwebtoken 10.3) + bcrypt 0.17
+- **数据库**：PostgreSQL + PostGIS，通过 SQLx（编译期宏）访问
+- **缓存**：Redis + Moka（本地缓存）
+- **认证**：JWT (jsonwebtoken) + bcrypt
 - **存储**：AWS S3 SDK (MinIO 兼容)
 - **日志**：tracing + tracing-subscriber
+
+> 具体版本以 `Cargo.toml` 为准。
 
 ## 架构分层（强制）
 
@@ -54,48 +56,6 @@ pub async fn create_moment(/* ... */) -> impl IntoResponse {
     let user = sqlx::query_as!(User, "SELECT ...", user_id).fetch_one(&pool).await?;
 }
 ```
-
-## 目录结构
-
-```
-backend/src/
-├── main.rs              # 应用入口：日志、配置、状态、路由、中间件
-├── config.rs            # 环境变量配置
-├── state.rs             # AppState（持有所有 Service 实例）
-├── error.rs             # AppError 定义与错误码映射
-├── constants.rs         # 常量定义
-├── dto/                 # 请求/响应类型
-│   ├── mod.rs
-│   ├── request/         # 请求 DTO（按业务域拆分）
-│   │   ├── mod.rs
-│   │   ├── auth.rs, chat.rs, group.rs, moment.rs, user.rs ...
-│   │   └── common.rs   # 共享请求类型
-│   └── response/        # 响应 DTO（按业务域拆分）
-│       ├── mod.rs
-│       ├── auth.rs, chat.rs, group.rs, moment.rs, user.rs ...
-│       └── common.rs   # 共享响应类型（ApiResponse 等）
-├── handlers/            # HTTP Handler（按业务域命名）
-├── services/            # 业务逻辑（按业务域命名）
-├── repositories/        # 数据访问（按业务域分子目录：admin/、chat/、content/、group/、system/、user/）
-├── types/               # 枚举等类型定义
-├── routes/v1/           # 路由定义（按业务域拆分）
-├── middleware/           # 中间件（auth、idempotency、rate_limit 等）
-├── events/              # 事件总线与事件处理
-├── websocket/           # WebSocket 连接管理
-└── utils/               # 工具函数（JWT、分页、缓存、验证等）
-```
-
-## 命名约定
-
-| 类别 | 命名模式 | 示例 |
-|------|----------|------|
-| 请求 DTO | `XxxRequest` | `CreateMomentRequest` |
-| 响应数据 | `XxxData` / `XxxItem` | `MomentData`、`UserItem` |
-| Service | `XxxService` | `MomentService` |
-| Repository | `XxxRepository` | `MomentRepository` |
-| Handler 函数 | 动作命名 | `create_moment`、`login` |
-| 路由文件 | 业务域名 | `routes/v1/moments.rs` |
-| 迁移文件 | `NNN_描述.sql` | `001_foundations.sql` |
 
 ## SQL 规则（严格执行）
 
@@ -160,10 +120,7 @@ let user = sqlx::query("SELECT * FROM users WHERE id = $1")
 
 ## 事件系统
 
-- EventBus 使用 `tokio::sync::mpsc` 无界信道。
-- EventHandler 异步消费事件：写通知、WebSocket 推送、缓存失效。
-- 事件类型定义在 `events/event_types.rs`。
-- 新增事件时须同步更新 EventHandler 消费逻辑。
+- 新增事件时须同步更新事件类型定义和对应领域的 handler 分发逻辑。
 
 ## 常见错误清单
 

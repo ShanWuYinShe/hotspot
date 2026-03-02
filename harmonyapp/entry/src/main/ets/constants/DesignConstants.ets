@@ -94,6 +94,8 @@ export interface ShadowSystem {
   SMALL: ShadowConfig;
   MEDIUM: ShadowConfig;
   LARGE: ShadowConfig;
+  INSET: ShadowConfig;
+  HIGHLIGHT: ShadowConfig;
 }
 
 // ==================== 动画系统接口 ====================
@@ -131,36 +133,36 @@ export interface DesignConstantsType {
   COMPONENT: ComponentConstants;
 }
 
-// ==================== 颜色系统 ====================
+// ==================== 颜色系统（干净扁平极简风格）====================
 const COLOR: ColorPalette = {
-  PRIMARY_BG_LIGHT: '#F5F6F8',
+  PRIMARY_BG_LIGHT: '#FFFFFF',
   PRIMARY_BG_DARK: '#0F1115',
   SECONDARY_BG_LIGHT: '#FFFFFF',
-  SECONDARY_BG_DARK: '#171A21',
-  TERTIARY_BG_LIGHT: '#EEF1F5',
-  TERTIARY_BG_DARK: '#202531',
-  TEXT_PRIMARY_LIGHT: '#1C1C1E',
-  TEXT_PRIMARY_DARK: '#FFFFFF',
-  TEXT_SECONDARY_LIGHT: '#6A7280',
-  TEXT_SECONDARY_DARK: '#B7BECA',
-  TEXT_TERTIARY_LIGHT: '#9AA3B4',
-  TEXT_TERTIARY_DARK: '#8D95A3',
-  BRAND_PRIMARY: '#7D9FF7',
-  BRAND_PRIMARY_LIGHT: '#7D9FF7',
-  BRAND_PRIMARY_DARK: '#8AA5FF',
-  SUCCESS: '#36B37E',
-  WARNING: '#F4B400',
-  ERROR: '#E14D4D',
-  INFO: '#7D9FF7',
-  DIVIDER_LIGHT: '#E2E5EA',
-  DIVIDER_DARK: '#30384A',
-  ONLINE_STATUS: '#34C759',
-  OFFLINE_STATUS: '#A3A8B2',
-  SURFACE_NEUTRAL_SOFT: '#FFF9FAFB',
-  SURFACE_INFO_SOFT: '#FFECF2FF',
-  SURFACE_SUCCESS_SOFT: '#FFEFF9F4',
-  SURFACE_WARNING_SOFT: '#FFFFF8E9',
-  SURFACE_DANGER_SOFT: '#FFFFF0F0',
+  SECONDARY_BG_DARK: '#171A20',
+  TERTIARY_BG_LIGHT: '#F3F4F6',
+  TERTIARY_BG_DARK: '#222733',
+  TEXT_PRIMARY_LIGHT: '#111827',
+  TEXT_PRIMARY_DARK: '#F9FAFB',
+  TEXT_SECONDARY_LIGHT: '#6B7280',
+  TEXT_SECONDARY_DARK: '#9CA3AF',
+  TEXT_TERTIARY_LIGHT: '#9CA3AF',
+  TEXT_TERTIARY_DARK: '#6B7280',
+  BRAND_PRIMARY: '#4A7A57',
+  BRAND_PRIMARY_LIGHT: '#4A7A57',
+  BRAND_PRIMARY_DARK: '#6BAF86',
+  SUCCESS: '#22C55E',
+  WARNING: '#FBBF24',
+  ERROR: '#EF4444',
+  INFO: '#3B82F6',
+  DIVIDER_LIGHT: '#F3F4F6',
+  DIVIDER_DARK: '#28303D',
+  ONLINE_STATUS: '#22C55E',
+  OFFLINE_STATUS: '#9CA3AF',
+  SURFACE_NEUTRAL_SOFT: '#F9FAFB',
+  SURFACE_INFO_SOFT: '#EFF6FF',
+  SURFACE_SUCCESS_SOFT: '#F0FDF4',
+  SURFACE_WARNING_SOFT: '#FFFBEB',
+  SURFACE_DANGER_SOFT: '#FEF2F2',
 };
 
 // ==================== 字体系统 ====================
@@ -188,42 +190,54 @@ const FONT: FontSystem = {
 const SPACING: SpacingSystem = {
   XS: 4,
   SM: 8,
-  MD: 12,
-  LG: 16,
+  MD: 14,
+  LG: 18,
   XL: 24,
   XXL: 32,
   XXXL: 48,
 };
 
-// ==================== 圆角系统 ====================
+// ==================== 圆角系统（干净现代风格）====================
 const RADIUS: RadiusSystem = {
   SM: 8,
   MD: 12,
   LG: 16,
   XL: 20,
-  XXL: 26,
+  XXL: 24,
   FULL: 999,
 };
 
-// ==================== 阴影系统 ====================
+// ==================== 阴影系统（干净扁平风格：极轻微阴影）====================
 const SHADOW: ShadowSystem = {
   SMALL: {
-    radius: 6,
-    color: '#14000000',
+    radius: 4,
+    color: '#0A000000',
+    offsetX: 0,
+    offsetY: 1,
+  },
+  MEDIUM: {
+    radius: 8,
+    color: '#0A000000',
     offsetX: 0,
     offsetY: 2,
   },
-  MEDIUM: {
-    radius: 10,
-    color: '#16000000',
-    offsetX: 0,
-    offsetY: 3,
-  },
   LARGE: {
-    radius: 14,
-    color: '#18000000',
+    radius: 16,
+    color: '#0F000000',
     offsetX: 0,
-    offsetY: 5,
+    offsetY: 4,
+  },
+  INSET: {
+    radius: 0,
+    color: '#00000000',
+    offsetX: 0,
+    offsetY: 0,
+  },
+  HIGHLIGHT: {
+    radius: 0,
+    color: '#00000000',
+    offsetX: 0,
+    offsetY: 0,
   },
 };
 

@@ -34,6 +34,8 @@ import { AppRouter, LoginRouteParam, ChatRouteParam } from '../../../core/router
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
+import { formatCount } from '../../../core/utils/FormatUtil';
+import { LocationUtil } from '../../../core/location/LocationUtil';
 
 interface GroupSyncData {
   groupId: string;
@@ -866,7 +868,7 @@ export struct GroupDetailPage {
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: $r('app.color.bg_secondary'),
+          bgColor: Color.Transparent,
           radius: DesignConstants.RADIUS.XL,
           minButtonSize: 42,
           paddingSize: 9,
@@ -876,7 +878,7 @@ export struct GroupDetailPage {
         })
 
         Text('群组详情')
-          .fontSize(DesignConstants.FONT.SIZE.XL)
+          .fontSize(DesignConstants.FONT.SIZE.LG)
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
@@ -886,7 +888,7 @@ export struct GroupDetailPage {
           icon: AppIcon.SHARE,
           iconSize: IconSize.LARGE,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: $r('app.color.bg_secondary'),
+          bgColor: Color.Transparent,
           radius: DesignConstants.RADIUS.XL,
           minButtonSize: 42,
           paddingSize: 9,
@@ -896,18 +898,22 @@ export struct GroupDetailPage {
       .width('100%')
       .alignItems(VerticalAlign.Center)
       .padding({
-        left: DesignConstants.SPACING.LG,
-        right: DesignConstants.SPACING.LG,
+        left: DesignConstants.SPACING.SM,
+        right: DesignConstants.SPACING.SM,
         top: this.getHeaderTopPadding(),
-        bottom: DesignConstants.SPACING.SM
+        bottom: DesignConstants.SPACING.XS
       })
-      .backgroundColor($r('app.color.bg_primary'))
+      .backgroundColor($r('app.color.bg_secondary'))
+      .borderRadius({ bottomLeft: DesignConstants.RADIUS.LG, bottomRight: DesignConstants.RADIUS.LG })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.isLoading) {
         SystemLoadingView({ message: '加载群组信息中...' })
           .layoutWeight(1)
-          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+          .transition(
+            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          )
       } else if (this.errorMessage) {
         Column() {
           Text() {
@@ -932,11 +938,14 @@ export struct GroupDetailPage {
         .layoutWeight(1)
         .justifyContent(FlexAlign.Center)
         .padding(DesignConstants.SPACING.XL)
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
-      } else if (this.groupInfo) {
-        // 使用 List 布局
-        List({ space: 12 }) {
-          // 1. 基本信息卡片
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
+        } else if (this.groupInfo) {
+        // 使用 List 布局（扁平风格）
+        List() {
+          // 1. 基本信息区域
           ListItem() {
             Column() {
               // 头像和名称
@@ -968,14 +977,14 @@ export struct GroupDetailPage {
               // 统计信息
               Row() {
                 Column() {
-                  Text((this.groupInfo?.group?.members_count ?? 0).toString())
+                  Text(formatCount(this.groupInfo?.group?.members_count))
                     .fontSize(DesignConstants.FONT.SIZE.LG)
                     .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
                     .fontColor($r('sys.color.ohos_id_color_text_primary'))
                   Text('成员')
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-                    .margin({ top: 4 })
+                    .margin({ top: DesignConstants.SPACING.XS })
                 }
                 .layoutWeight(1)
 
@@ -988,7 +997,7 @@ export struct GroupDetailPage {
                   Text('距离')
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-                    .margin({ top: 4 })
+                    .margin({ top: DesignConstants.SPACING.XS })
                 }
                 .layoutWeight(1)
               }
@@ -999,10 +1008,10 @@ export struct GroupDetailPage {
             .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
           }
           .backgroundColor($r('app.color.bg_secondary'))
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-          .shadow(DesignConstants.SHADOW.SMALL)
-          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+          .borderRadius(DesignConstants.RADIUS.XXL)
+          .shadow(DesignConstants.SHADOW.MEDIUM)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .margin({ bottom: DesignConstants.SPACING.MD })
 
           // 2. 位置信息
           ListItem() {
@@ -1010,17 +1019,17 @@ export struct GroupDetailPage {
                 Row() {
                   Text() {
                     SymbolSpan($r(AppIcon.LOCATION))
-                      .fontSize(20)
-                      .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+                      .fontSize(18)
+                      .fontColor([$r('app.color.brand_primary')])
                   }
                   Text('位置信息')
-                    .fontSize(DesignConstants.FONT.SIZE.LG)
+                    .fontSize(DesignConstants.FONT.SIZE.MD)
                     .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                     .fontColor($r('sys.color.ohos_id_color_text_primary'))
                     .margin({ left: DesignConstants.SPACING.SM })
                 }
                 .width('100%')
-                .margin({ bottom: DesignConstants.SPACING.MD })
+                .margin({ bottom: DesignConstants.SPACING.SM })
 
                 Text(this.groupInfo?.location?.location_name || '未知位置')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -1029,52 +1038,54 @@ export struct GroupDetailPage {
 
                 if ((this.groupInfo?.location as RelativeLocation)?.distance !== undefined &&
                   (this.groupInfo!.location as RelativeLocation).distance! >= 0) {
-                  Text(`距你 ${(this.groupInfo!.location as RelativeLocation).distance! < 1000
-                    ? Math.round((this.groupInfo!.location as RelativeLocation).distance!) + 'm'
-                    : ((this.groupInfo!.location as RelativeLocation).distance! / 1000).toFixed(1) + 'km'}`)
+                  Text(`距你 ${LocationUtil.formatDistance((this.groupInfo!.location as RelativeLocation).distance!)}`)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
                     .width('100%')
-                    .margin({ top: 4 })
+                    .margin({ top: DesignConstants.SPACING.XS })
                 }
              }
-             .padding(DesignConstants.SPACING.LG)
+             .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+               top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
           }
           .backgroundColor($r('app.color.bg_secondary'))
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-          .shadow(DesignConstants.SHADOW.SMALL)
-          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+          .borderRadius(DesignConstants.RADIUS.XXL)
+          .shadow(DesignConstants.SHADOW.MEDIUM)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .margin({ bottom: DesignConstants.SPACING.MD })
 
           // 3. 成员列表入口
           ListItem() {
             Row() {
               Column() {
                  Text('群组成员')
-                  .fontSize(DesignConstants.FONT.SIZE.LG)
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
                   .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                   .fontColor($r('sys.color.ohos_id_color_text_primary'))
-                 Text(`${this.groupInfo?.group?.members_count ?? 0} 名成员`)
-                  .fontSize(DesignConstants.FONT.SIZE.MD)
+                 Text(`${formatCount(this.groupInfo?.group?.members_count)} 名成员`)
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
                   .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-                  .margin({ top: 4 })
+                  .margin({ top: 2 })
               }
               .layoutWeight(1)
               .alignItems(HorizontalAlign.Start)
 
-              Text('查看全部 >')
-                .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontColor($r('sys.color.ohos_id_color_emphasize'))
-                .onClick(() => this.loadGroupMembers())
+              Text() {
+                SymbolSpan($r(AppIcon.FORWARD))
+                  .fontSize(DesignConstants.FONT.SIZE.LG)
+                  .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+              }
+              .onClick(() => this.loadGroupMembers())
             }
             .width('100%')
-            .padding(DesignConstants.SPACING.LG)
+            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+              top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
           }
           .backgroundColor($r('app.color.bg_secondary'))
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-          .shadow(DesignConstants.SHADOW.SMALL)
-          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+          .borderRadius(DesignConstants.RADIUS.XXL)
+          .shadow(DesignConstants.SHADOW.MEDIUM)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .margin({ bottom: DesignConstants.SPACING.MD })
 
           if (this.canManageApplications()) {
             // 3.5 入群申请入口（仅群主/管理员可见）
@@ -1082,67 +1093,71 @@ export struct GroupDetailPage {
               Row() {
                 Column() {
                   Text('入群申请')
-                    .fontSize(DesignConstants.FONT.SIZE.LG)
+                    .fontSize(DesignConstants.FONT.SIZE.MD)
                     .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                     .fontColor($r('sys.color.ohos_id_color_text_primary'))
                   Text('处理待审核的入群请求')
-                    .fontSize(DesignConstants.FONT.SIZE.MD)
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
                     .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-                    .margin({ top: 4 })
+                    .margin({ top: 2 })
                 }
                 .layoutWeight(1)
                 .alignItems(HorizontalAlign.Start)
 
-                Text('查看全部 >')
-                  .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .fontColor($r('sys.color.ohos_id_color_emphasize'))
-                  .onClick(() => this.loadGroupApplications())
+                Text() {
+                  SymbolSpan($r(AppIcon.FORWARD))
+                    .fontSize(DesignConstants.FONT.SIZE.LG)
+                    .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+                }
+                .onClick(() => this.loadGroupApplications())
               }
               .width('100%')
-              .padding(DesignConstants.SPACING.LG)
+              .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+                top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
             }
             .backgroundColor($r('app.color.bg_secondary'))
-            .borderRadius(DesignConstants.RADIUS.XL)
-            .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-            .shadow(DesignConstants.SHADOW.SMALL)
-            .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+            .borderRadius(DesignConstants.RADIUS.XXL)
+            .shadow(DesignConstants.SHADOW.MEDIUM)
+            .border({ width: 1, color: $r('app.color.highlight_border') })
+            .margin({ bottom: DesignConstants.SPACING.MD })
           }
 
-          // 4. 操作按钮
+          // 4. 操作按钮区域
           ListItem() {
-             Column() {
+             Column({ space: DesignConstants.SPACING.SM }) {
                 if (this.isMember) {
                   if (this.canEditGroupInfo()) {
                     Button(this.isSavingGroupInfo ? '保存中...' : '编辑群组信息')
                       .type(ButtonType.Normal)
-                      .backgroundColor(Color.Transparent)
-                      .fontColor($r('sys.color.ohos_id_color_emphasize'))
-                      .border({ width: 1, color: $r('sys.color.ohos_id_color_emphasize') })
-                      .borderRadius(DesignConstants.RADIUS.XL)
+                      .backgroundColor($r('app.color.bg_tertiary'))
+                      .fontColor($r('app.color.brand_primary'))
+                      .borderRadius(DesignConstants.RADIUS.FULL)
+                      .shadow(DesignConstants.SHADOW.SMALL)
+                      .border({ width: 1, color: $r('app.color.highlight_border') })
                       .width('100%')
                       .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
                       .enabled(!this.isSavingGroupInfo)
                       .opacity(this.isSavingGroupInfo ? 0.58 : 1)
                       .onClick(() => this.openEditGroupSheet())
-                      .margin({ bottom: DesignConstants.SPACING.MD })
                   }
 
                   Button('进入聊天')
                     .type(ButtonType.Normal)
-                    .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+                    .backgroundColor($r('app.color.brand_primary'))
                     .fontColor(Color.White)
-                    .borderRadius(DesignConstants.RADIUS.XL)
+                    .borderRadius(DesignConstants.RADIUS.FULL)
+                    .shadow(DesignConstants.SHADOW.SMALL)
+                    .border({ width: 1, color: $r('app.color.highlight_border') })
                     .width('100%')
                     .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
                     .onClick(() => this.enterChat())
-                    .margin({ bottom: DesignConstants.SPACING.MD })
 
                   Button('离开群组')
                     .type(ButtonType.Normal)
-                    .backgroundColor(Color.Transparent)
+                    .backgroundColor($r('app.color.bg_tertiary'))
                     .fontColor($r('app.color.color_danger'))
-                    .border({ width: 1, color: $r('app.color.color_danger') })
-                    .borderRadius(DesignConstants.RADIUS.XL)
+                    .borderRadius(DesignConstants.RADIUS.FULL)
+                    .shadow(DesignConstants.SHADOW.SMALL)
                     .width('100%')
                     .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
                     .enabled(!this.isLeaving)
@@ -1155,18 +1170,20 @@ export struct GroupDetailPage {
                       .onChange((value: string) => {
                         this.joinPassword = value;
                       })
-                      .fontSize(16)
-                      .padding(16)
-                      .backgroundColor($r('app.color.bg_tertiary'))
-                      .borderRadius(DesignConstants.RADIUS.MD)
-                      .margin({ bottom: DesignConstants.SPACING.MD })
+                      .fontSize(15)
+                      .padding(DesignConstants.SPACING.MD)
+                      .backgroundColor($r('app.color.bg_inset'))
+                      .shadow(DesignConstants.SHADOW.INSET)
+                      .borderRadius(DesignConstants.RADIUS.XL)
                   }
 
-                  Button(this.groupInfo?.has_password ? '加入群组（需要密码）' : '加入群组')
+                    Button(this.groupInfo?.has_password ? '加入群组（需要密码）' : '加入群组')
                     .type(ButtonType.Normal)
-                    .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+                    .backgroundColor($r('app.color.brand_primary'))
                     .fontColor(Color.White)
-                    .borderRadius(DesignConstants.RADIUS.XL)
+                    .borderRadius(DesignConstants.RADIUS.FULL)
+                    .shadow(DesignConstants.SHADOW.SMALL)
+                    .border({ width: 1, color: $r('app.color.highlight_border') })
                     .width('100%')
                     .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
                     .enabled(!this.isJoining)
@@ -1177,20 +1194,22 @@ export struct GroupDetailPage {
              .padding(DesignConstants.SPACING.LG)
           }
           .backgroundColor($r('app.color.bg_secondary'))
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-          .shadow(DesignConstants.SHADOW.SMALL)
-          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 24 })
+          .borderRadius(DesignConstants.RADIUS.XXL)
+          .shadow(DesignConstants.SHADOW.MEDIUM)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
 
         }
         .width('100%')
         .layoutWeight(1)
         .scrollBar(BarState.Auto)
+        .divider({ strokeWidth: 0, color: $r('app.color.divider') })
         .padding({
-          top: DesignConstants.SPACING.SM,
           bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
         })
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
       }
     }
     .width('100%')
@@ -1214,19 +1233,19 @@ export struct GroupDetailPage {
       height: '70%',
       showClose: false,
       dragBar: true,
-      backgroundColor: $r('app.color.bg_secondary')
+      backgroundColor: $r('app.color.start_window_background')
     })
     .bindSheet($$this.showApplicationList, this.buildApplicationListSheet(), {
       height: '70%',
       showClose: false,
       dragBar: true,
-      backgroundColor: $r('app.color.bg_secondary')
+      backgroundColor: $r('app.color.start_window_background')
     })
     .bindSheet($$this.showEditGroupSheet, this.buildEditGroupSheet(), {
       height: '78%',
       showClose: false,
       dragBar: true,
-      backgroundColor: $r('app.color.bg_secondary')
+      backgroundColor: $r('app.color.start_window_background')
     })
   }
 
@@ -1245,7 +1264,8 @@ export struct GroupDetailPage {
           .backgroundColor($r('app.color.bg_tertiary'))
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .borderRadius(DesignConstants.RADIUS.XL)
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .shadow(DesignConstants.SHADOW.SMALL)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
           .height(34)
           .enabled(!this.isSavingGroupInfo && !this.isEditGroupAvatarUploading)
           .opacity(this.isSavingGroupInfo || this.isEditGroupAvatarUploading ? 0.58 : 1)
@@ -1256,6 +1276,8 @@ export struct GroupDetailPage {
           .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
           .fontColor(Color.White)
           .borderRadius(DesignConstants.RADIUS.XL)
+          .shadow(DesignConstants.SHADOW.SMALL)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
           .height(34)
           .enabled(!this.isSavingGroupInfo && !this.isEditGroupAvatarUploading)
           .opacity(this.isSavingGroupInfo || this.isEditGroupAvatarUploading ? 0.58 : 1)
@@ -1294,7 +1316,6 @@ export struct GroupDetailPage {
                     .type(ButtonType.Normal)
                     .backgroundColor(Color.Transparent)
                     .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-                    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
                     .borderRadius(DesignConstants.RADIUS.XL)
                     .height(30)
                     .onClick(() => this.resetEditGroupAvatarSelection())
@@ -1308,7 +1329,6 @@ export struct GroupDetailPage {
           .padding(DesignConstants.SPACING.LG)
           .backgroundColor($r('app.color.bg_secondary'))
           .borderRadius(DesignConstants.RADIUS.XL)
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
           .shadow(DesignConstants.SHADOW.SMALL)
 
           Column({ space: DesignConstants.SPACING.SM }) {
@@ -1322,7 +1342,8 @@ export struct GroupDetailPage {
               .maxLength(GROUP_NAME_MAX)
               .onChange((value: string) => { this.editGroupName = value; })
               .height(42)
-              .backgroundColor($r('app.color.bg_tertiary'))
+              .backgroundColor($r('app.color.bg_inset'))
+              .shadow(DesignConstants.SHADOW.INSET)
               .borderRadius(DesignConstants.RADIUS.MD)
               .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
 
@@ -1335,7 +1356,6 @@ export struct GroupDetailPage {
           .padding(DesignConstants.SPACING.LG)
           .backgroundColor($r('app.color.bg_secondary'))
           .borderRadius(DesignConstants.RADIUS.XL)
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
           .shadow(DesignConstants.SHADOW.SMALL)
 
           Column({ space: DesignConstants.SPACING.SM }) {
@@ -1349,7 +1369,8 @@ export struct GroupDetailPage {
               .maxLength(GROUP_DESCRIPTION_MAX)
               .onChange((value: string) => { this.editGroupDescription = value; })
               .height(120)
-              .backgroundColor($r('app.color.bg_tertiary'))
+              .backgroundColor($r('app.color.bg_inset'))
+              .shadow(DesignConstants.SHADOW.INSET)
               .borderRadius(DesignConstants.RADIUS.MD)
               .padding(DesignConstants.SPACING.MD)
 
@@ -1362,7 +1383,6 @@ export struct GroupDetailPage {
           .padding(DesignConstants.SPACING.LG)
           .backgroundColor($r('app.color.bg_secondary'))
           .borderRadius(DesignConstants.RADIUS.XL)
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
           .shadow(DesignConstants.SHADOW.SMALL)
         }
         .width('100%')
@@ -1450,6 +1470,7 @@ export struct GroupDetailPage {
         .layoutWeight(1)
         .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
         .scrollBar(BarState.Auto)
+        .cachedCount(5)
         .onReachEnd(() => { this.loadMoreMembers(); })
       } else {
         Column() {
@@ -1465,7 +1486,7 @@ export struct GroupDetailPage {
     .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor($r('app.color.bg_primary'))
   }
 
   @Builder
@@ -1535,6 +1556,7 @@ export struct GroupDetailPage {
         .layoutWeight(1)
         .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
         .scrollBar(BarState.Auto)
+        .cachedCount(5)
         .onReachEnd(() => { this.loadMoreGroupApplications(); })
       } else {
         Column() {
@@ -1550,7 +1572,7 @@ export struct GroupDetailPage {
     .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor($r('app.color.bg_primary'))
   }
 
   @Builder
@@ -1607,7 +1629,6 @@ export struct GroupDetailPage {
           .backgroundColor($r('app.color.bg_tertiary'))
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .borderRadius(DesignConstants.RADIUS.XL)
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
           .height(34)
           .layoutWeight(1)
           .enabled(!this.isApplicationHandling(application.application_id))
@@ -1620,7 +1641,6 @@ export struct GroupDetailPage {
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.XL)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
     .shadow(DesignConstants.SHADOW.SMALL)
     .margin({ bottom: DesignConstants.SPACING.SM })
   }
@@ -1649,16 +1669,16 @@ export struct GroupDetailPage {
             .fontColor(this.getRoleColor(member.role))
             .backgroundColor($r('app.color.bg_tertiary'))
             .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 2, bottom: 2 })
-            .borderRadius(DesignConstants.SPACING.XS)
+            .borderRadius(DesignConstants.RADIUS.SM)
 
           if (member.joined_at) {
             Text(`加入于 ${new Date(member.joined_at).toLocaleDateString()}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-              .margin({ left: 8 })
+              .margin({ left: DesignConstants.SPACING.SM })
           }
         }
-        .margin({ top: 4 })
+        .margin({ top: DesignConstants.SPACING.XS })
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
@@ -1679,7 +1699,6 @@ export struct GroupDetailPage {
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.XL)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
     .shadow(DesignConstants.SHADOW.SMALL)
     .margin({ bottom: DesignConstants.SPACING.SM })
   }

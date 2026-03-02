@@ -21,11 +21,14 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { EmptyState } from '../../../components/EmptyState';
 import { AppIcon, IconButton, IconSize } from '../../../components/SystemIcon';
-import { IntelligentLocationCard } from '../../../components/IntelligentLocationCard';
 import { DesignConstants } from '../../../constants/DesignConstants';
+import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
+import { KEY_BROWSE_ANCHOR } from '../../../core/state/GlobalStateManager';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SystemShareService } from '../../../core/services/SystemShareService';
+import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
+import { formatCount } from '../../../core/utils/FormatUtil';
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
@@ -81,12 +84,6 @@ export struct MomentDetailPage {
     return time.toLocaleDateString();
   }
 
-  private formatDistance(distance?: number): string {
-    if (distance === undefined || distance < 0) return '';
-    if (distance < 1000) return `${Math.round(distance)}m`;
-    if (distance < 10000) return `${(distance / 1000).toFixed(1)}km`;
-    return `${Math.round(distance / 1000)}km`;
-  }
 
   private calcImageGridHeight(imageCount: number): number {
     if (imageCount === 0) return 0;
@@ -229,7 +226,7 @@ export struct MomentDetailPage {
     if (!this.moment || !this.moment.images || this.moment.images.length === 0) return;
     const previewParams = new PhotoPreviewRouteParam();
     previewParams.momentId = this.moment.moment_id;
-    previewParams.images = this.moment.images.map((image: MomentImage) => image.url);
+    previewParams.images = this.moment.images.map((image: MomentImage) => MediaUrlUtil.normalize(image.url));
     previewParams.index = index;
     AppRouter.push(PageNames.PHOTO_PREVIEW, previewParams);
   }
@@ -261,13 +258,14 @@ export struct MomentDetailPage {
           }
           .layoutWeight(1)
           .width('100%')
+          .align(Alignment.TopStart)
 
           this.buildActionBar(this.moment as MomentItem)
         }
       }
       .width('100%')
       .height('100%')
-      .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor($r('app.color.bg_primary'))
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {
@@ -284,6 +282,7 @@ export struct MomentDetailPage {
       IconButton({
         icon: AppIcon.BACK,
         iconSize: IconSize.MEDIUM,
+        bgColor: Color.Transparent,
         onButtonClick: () => {
           AppRouter.pop();
         }
@@ -302,7 +301,7 @@ export struct MomentDetailPage {
       top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
       bottom: DesignConstants.SPACING.SM
     })
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(Color.Transparent)
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
   }
 
@@ -317,18 +316,18 @@ export struct MomentDetailPage {
           userInfo: moment.user
         })
 
-        Column({ space: 4 }) {
+        Column({ space: DesignConstants.SPACING.XS }) {
           Text(moment.user?.nickname ?? '未知用户')
             .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontWeight(FontWeight.Medium)
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
 
-          Row({ space: 8 }) {
+          Row({ space: DesignConstants.SPACING.SM }) {
             Text(this.formatTime(moment.created_at))
               .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             if (moment.location?.distance !== undefined) {
-              Text(this.formatDistance(moment.location.distance))
+              Text(LocationUtil.formatDistance(moment.location.distance))
                 .fontSize(DesignConstants.FONT.SIZE.SM)
                 .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             }
@@ -349,7 +348,7 @@ export struct MomentDetailPage {
         Grid() {
           ForEach(moment.images.slice(0, 9), (img: MomentImage, imgIndex: number) => {
             GridItem() {
-              Image(img.url)
+              Image(MediaUrlUtil.normalize(img.url))
                 .width('100%')
                 .height('100%')
                 .objectFit(ImageFit.Cover)
@@ -382,31 +381,47 @@ export struct MomentDetailPage {
                 top: DesignConstants.SPACING.XS,
                 bottom: DesignConstants.SPACING.XS
               })
-              .borderRadius(DesignConstants.RADIUS.XL)
+              .borderRadius(DesignConstants.RADIUS.MD)
               .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
           }, (tag: string, index: number) => `${tag}_${index}`)
         }
         .width('100%')
       }
 
-      if (moment.location) {
-        IntelligentLocationCard({
-          latitude: moment.location.point.latitude,
-          longitude: moment.location.point.longitude,
-          locationName: moment.location.location_name,
-          distance: moment.location.distance ?? 0,
-          altitude: 0
+      if (moment.location?.location_name) {
+        Row({ space: DesignConstants.SPACING.XS }) {
+          Text() {
+            SymbolSpan($r(AppIcon.LOCATION))
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+          }
+          Text(moment.location.location_name)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .onClick(() => {
+          if (moment.location?.point) {
+            const locationInfo: LocationInfo = {
+              latitude: moment.location.point.latitude,
+              longitude: moment.location.point.longitude,
+              locationName: moment.location.location_name ?? ''
+            };
+            AppStorage.setOrCreate<LocationInfo | null>(KEY_BROWSE_ANCHOR, locationInfo);
+            SystemToast.showSuccess('已设为浏览锚点', this.getUIContext());
+          }
         })
       }
 
       Row({ space: DesignConstants.SPACING.LG }) {
-        Text(`点赞 ${moment.likes_count}`)
+        Text(`点赞 ${formatCount(moment.likes_count)}`)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        Text(`评论 ${moment.comments_count}`)
+        Text(`评论 ${formatCount(moment.comments_count)}`)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        Text(`分享 ${moment.shares_count}`)
+        Text(`分享 ${formatCount(moment.shares_count)}`)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
       }
@@ -414,6 +429,7 @@ export struct MomentDetailPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
@@ -434,10 +450,12 @@ export struct MomentDetailPage {
       .type(ButtonType.Normal)
       .layoutWeight(1)
       .height(40)
-      .borderRadius(DesignConstants.RADIUS.XL)
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .shadow(DesignConstants.SHADOW.SMALL)
+      .border({ width: 1, color: $r('app.color.highlight_border') })
       .enabled(!this.likePending)
       .opacity(this.likePending ? 0.58 : 1)
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor($r('app.color.bg_tertiary'))
       .onClick(() => {
         this.toggleLike();
       })
@@ -457,10 +475,12 @@ export struct MomentDetailPage {
       .type(ButtonType.Normal)
       .layoutWeight(1)
       .height(40)
-      .borderRadius(DesignConstants.RADIUS.XL)
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .shadow(DesignConstants.SHADOW.SMALL)
+      .border({ width: 1, color: $r('app.color.highlight_border') })
       .enabled(!this.favoritePending)
       .opacity(this.favoritePending ? 0.58 : 1)
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor($r('app.color.bg_tertiary'))
       .onClick(() => {
         this.toggleFavorite();
       })
@@ -480,8 +500,10 @@ export struct MomentDetailPage {
       .type(ButtonType.Normal)
       .layoutWeight(1)
       .height(40)
-      .borderRadius(DesignConstants.RADIUS.XL)
-      .backgroundColor($r('app.color.bg_secondary'))
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .shadow(DesignConstants.SHADOW.SMALL)
+      .border({ width: 1, color: $r('app.color.highlight_border') })
+      .backgroundColor($r('app.color.bg_tertiary'))
       .onClick(() => {
         this.shareMoment();
       })
@@ -494,6 +516,8 @@ export struct MomentDetailPage {
       bottom: DesignConstants.SPACING.MD + this.safeAreaBottom
     })
     .backgroundColor($r('app.color.bg_secondary'))
+    .border({ width: { top: 1 }, color: $r('app.color.divider') })
+    .borderRadius({ topLeft: DesignConstants.RADIUS.LG, topRight: DesignConstants.RADIUS.LG })
   }
 }
 

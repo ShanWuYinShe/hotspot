@@ -142,8 +142,9 @@ export const AppIconMap: Map<AppIcon, string> = new Map<AppIcon, string>([
   [AppIcon.PHOTO, 'picture'],
   [AppIcon.PLAY, 'play'],
   [AppIcon.PAUSE, 'pause'],
-  [AppIcon.LOCATION, 'location'],
+  [AppIcon.LOCATION, 'position'],
   [AppIcon.MAP, 'map'],
+  [AppIcon.NEARBY, 'discover'],
   [AppIcon.PERSON, 'person'],
   [AppIcon.GROUP, 'person_2'],
   [AppIcon.HEART, 'heart'],
@@ -184,6 +185,7 @@ export const AppIconMap: Map<AppIcon, string> = new Map<AppIcon, string>([
   [AppIcon.DEBUG, 'spanner'],
   [AppIcon.CODE, 'doc_text'],
   [AppIcon.BUG, 'exclamationmark'],
+  [AppIcon.TIME, 'clock'],
   [AppIcon.ALL, 'square_grid_2x2']
 ]);
 
@@ -285,6 +287,7 @@ export struct IconButton {
       }
     }
     .type(ButtonType.Normal)
+    .stateEffect(true)
     .backgroundColor(this.bgColor)
     .borderRadius(this.radius)
     .padding(this.paddingSize)

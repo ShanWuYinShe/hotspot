@@ -17,6 +17,7 @@ import { AppRouter, ProfileRouteParam, LoginRouteParam } from '../../../core/rou
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { RefreshIndicator } from '../../../components/EmptyState';
 
 @Preview
@@ -86,42 +87,15 @@ export struct SettingsPage {
   build() {
     NavDestination() {
     Column() {
-      // 标题栏 - 使用 SafeArea 避免与状态栏重叠
-      Row() {
-        IconButton({
-          icon: AppIcon.BACK,
-          iconSize: IconSize.LARGE,
-          iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: $r('app.color.bg_tertiary'),
-          onButtonClick: () => {
-            AppRouter.pop();
-          }
-        })
-
-        Text('设置')
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Medium)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-
-        Blank().width(48)
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
-      .padding({
-        left: DesignConstants.SPACING.LG,
-        right: DesignConstants.SPACING.LG,
-        top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
-        bottom: DesignConstants.SPACING.SM
+      SystemPageHeader({
+        title: '设置',
+        showBackButton: true,
+        onBack: () => { AppRouter.pop(); }
       })
-      .backgroundColor($r('app.color.bg_secondary'))
-      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 设置列表
       Refresh({ refreshing: $$this.metaRefreshing, builder: RefreshIndicator }) {
-        List({ space: DesignConstants.SPACING.MD }) {
+        List() {
           // 账号设置组
           ListItemGroup({ header: this.ListHeader('账号') }) {
             ListItem() {
@@ -152,10 +126,9 @@ export struct SettingsPage {
           }
           .backgroundColor($r('app.color.bg_secondary'))
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-          .shadow(DesignConstants.SHADOW.SMALL)
-          .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 16, endMargin: 16 })
-          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+          .shadow(DesignConstants.SHADOW.MEDIUM)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 14 })
 
           // 通用设置组
           ListItemGroup({ header: this.ListHeader('通用') }) {
@@ -184,10 +157,9 @@ export struct SettingsPage {
           }
           .backgroundColor($r('app.color.bg_secondary'))
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-          .shadow(DesignConstants.SHADOW.SMALL)
-          .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 16, endMargin: 16 })
-          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+          .shadow(DesignConstants.SHADOW.MEDIUM)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 14 })
 
           // 关于组
           ListItemGroup({ header: this.ListHeader('关于') }) {
@@ -198,10 +170,9 @@ export struct SettingsPage {
           }
           .backgroundColor($r('app.color.bg_secondary'))
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-          .shadow(DesignConstants.SHADOW.SMALL)
-          .divider({ strokeWidth: 0.5, color: $r('sys.color.ohos_id_color_list_separator'), startMargin: 16, endMargin: 16 })
-          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+          .shadow(DesignConstants.SHADOW.MEDIUM)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 14 })
 
           // 退出登录
           if (this.isLoggedIn) {
@@ -209,14 +180,13 @@ export struct SettingsPage {
               Button('退出登录')
                 .width('100%')
                 .height(50)
-                .backgroundColor($r('app.color.bg_secondary'))
+                .backgroundColor(Color.Transparent)
                 .fontColor($r('app.color.color_danger'))
                 .fontSize(DesignConstants.FONT.SIZE.LG)
                 .type(ButtonType.Normal)
-                .borderWidth(1)
-                .borderColor($r('sys.color.ohos_id_color_list_separator'))
-                .borderRadius(DesignConstants.RADIUS.XXL)
+                .borderRadius(DesignConstants.RADIUS.FULL)
                 .shadow(DesignConstants.SHADOW.SMALL)
+                .border({ width: 1, color: $r('app.color.highlight_border') })
                 .onClick(() => { this.logout(); })
             }
             .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.XXL })
@@ -232,8 +202,9 @@ export struct SettingsPage {
                 .fontColor(Color.White)
                 .fontSize(DesignConstants.FONT.SIZE.LG)
                 .type(ButtonType.Normal)
-                .borderRadius(DesignConstants.RADIUS.XXL)
+                .borderRadius(DesignConstants.RADIUS.FULL)
                 .shadow(DesignConstants.SHADOW.SMALL)
+                .border({ width: 1, color: $r('app.color.highlight_border') })
                 .onClick(() => {
                   AppRouter.push(PageNames.LOGIN);
                 })
@@ -290,7 +261,7 @@ export struct SettingsPage {
         .layoutWeight(1)
 
         Text(this.getMetaStatusLabel())
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.getMetaStatusTextColor())
           .backgroundColor(this.getMetaStatusBackground())
@@ -343,7 +314,6 @@ export struct SettingsPage {
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
     .backgroundColor(Color.Transparent)
-    .borderRadius(DesignConstants.RADIUS.XXL)
   }
 
   private getMetaStatusLabel(): string {
@@ -434,7 +404,7 @@ export struct SettingsPage {
       }
       .width(38)
       .height(38)
-      .borderRadius(DesignConstants.RADIUS.XXL)
+      .borderRadius(DesignConstants.RADIUS.MD)
       .backgroundColor($r('app.color.bg_tertiary'))
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
@@ -462,14 +432,13 @@ export struct SettingsPage {
       }
       .width(28)
       .height(28)
-      .borderRadius(DesignConstants.RADIUS.XXL)
+      .borderRadius(DesignConstants.RADIUS.MD)
       .backgroundColor($r('app.color.bg_tertiary'))
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
-    .borderRadius(DesignConstants.RADIUS.XXL)
     .onClick(onClick)
   }
 }

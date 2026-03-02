@@ -195,6 +195,8 @@ export class GlobalStateManager {
   clear(): void {
     this.updateUser(null);
     this.updateUnreadCount({ total_unread_count: 0 });
+    AppStorage.setOrCreate<LocationInfo | null>(KEY_BROWSE_ANCHOR, null);
+    AppStorage.setOrCreate<LocationInfo | null>(KEY_LOCATION_PICK_RESULT, null);
     hilog.info(DOMAIN_NUMBER, TAG, 'GlobalStateManager 状态已重置');
   }
 }

@@ -234,7 +234,8 @@ pub mod filter_names {
     pub const MESSAGE_IDS: &str = "message_ids";
 }
 
-const BLOOM_READY_KEY: &str = "bloom:ready";
+// v2: 重新构建 ready 标记，确保修复增量写入后可触发一次全量暖机
+const BLOOM_READY_KEY: &str = "bloom:ready:v2";
 
 /// 资源存在性检查器
 ///
@@ -305,6 +306,28 @@ impl ResourceExistenceChecker {
         self.bloom
             .might_contain(filter_names::MESSAGE_IDS, message_id)
             .await
+    }
+
+    /// 记录用户存在（新增用户后调用，避免暖机后新增数据出现假阴性）
+    pub async fn record_user(&self, user_id: i64) -> Result<(), redis::RedisError> {
+        self.bloom
+            .add(filter_names::USER_IDS, &user_id.to_string())
+            .await
+    }
+
+    /// 记录群组存在（新增群组后调用）
+    pub async fn record_group(&self, group_id: &str) -> Result<(), redis::RedisError> {
+        self.bloom.add(filter_names::GROUP_IDS, group_id).await
+    }
+
+    /// 记录瞬间存在（新增瞬间后调用）
+    pub async fn record_moment(&self, moment_id: &str) -> Result<(), redis::RedisError> {
+        self.bloom.add(filter_names::MOMENT_IDS, moment_id).await
+    }
+
+    /// 记录评论存在（新增评论后调用）
+    pub async fn record_comment(&self, comment_id: &str) -> Result<(), redis::RedisError> {
+        self.bloom.add(filter_names::COMMENT_IDS, comment_id).await
     }
 
     /// 记录消息存在
@@ -408,6 +431,11 @@ impl ResourceExistenceChecker {
         ] {
             self.bloom.clear(name).await?;
         }
+        let mut conn = self.bloom.redis.clone();
+        let _: () = redis::cmd("DEL")
+            .arg(BLOOM_READY_KEY)
+            .query_async(&mut conn)
+            .await?;
         Ok(())
     }
 

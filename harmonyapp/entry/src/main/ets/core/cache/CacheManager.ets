@@ -406,38 +406,3 @@ export class CacheManager extends BaseSingleton {
     }
   }
 }
-
-/**
- * 便捷函数：获取缓存管理器实例
- */
-export function getCacheManager(): CacheManager {
-  return CacheManager.getInstance();
-}
-
-/**
- * 便捷函数：设置缓存
- */
-export function setCache<T>(key: string, data: T, expiry?: number): void {
-  CacheManager.getInstance().set(key, data, expiry);
-}
-
-/**
- * 便捷函数：获取缓存
- */
-export function getCache<T>(key: string): T | null {
-  return CacheManager.getInstance().get<T>(key);
-}
-
-/**
- * 便捷函数：检查缓存
- */
-export function hasCache(key: string): boolean {
-  return CacheManager.getInstance().has(key);
-}
-
-/**
- * 便捷函数：删除缓存
- */
-export function deleteCache(key: string): boolean {
-  return CacheManager.getInstance().delete(key);
-}

@@ -6,6 +6,8 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { vibrator } from '@kit.SensorServiceKit';
 import { DesignConstants } from '../constants/DesignConstants';
+import { AppIcon } from './SystemIcon';
+import { LocationUtil } from '../core/location/LocationUtil';
 
 const DOMAIN_NUMBER: number = 0xFF11;
 const TAG: string = 'IntelligentLocationCard';
@@ -33,15 +35,15 @@ export struct IntelligentLocationCard {
     Row({ space: 12 }) {
       // 位置图标 - 使用SymbolSpan
       Text() {
-        SymbolSpan($r('sys.symbol.local_fill'))
-          .fontSize(24)
+        SymbolSpan($r(AppIcon.LOCATION))
+          .fontSize(DesignConstants.FONT.SIZE.XXL)
           .fontColor([$r('sys.color.ohos_id_color_emphasize')])
       }
 
       Column({ space: 6 }) {
         // 地址信息
         Text(this.locationName || '未知位置')
-          .fontSize(16)
+          .fontSize(DesignConstants.FONT.SIZE.LG)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .fontWeight(FontWeight.Medium)
           .maxLines(2)
@@ -50,26 +52,26 @@ export struct IntelligentLocationCard {
         Row({ space: 12 }) {
           // 距离信息
           if (this.distance >= 0) {
-              Row({ space: 4 }) {
+              Row({ space: DesignConstants.SPACING.XS }) {
                 Text() {
-                  SymbolSpan($r('sys.symbol.paperplane_right_fill'))
-                    .fontSize(12)
+                  SymbolSpan($r(AppIcon.SEND))
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
                     .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
                 }
-                Text(this.formatDistance(this.distance))
-                  .fontSize(12)
+                Text(LocationUtil.formatDistance(this.distance))
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
                   .fontColor($r('sys.color.ohos_id_color_text_secondary'))
               }
           }
 
           // 海拔信息
           if (this.showElevation && this.elevationInfo) {
-            Row({ space: 4 }) {
+            Row({ space: DesignConstants.SPACING.XS }) {
               Text('⛰️')
-                .fontSize(12)
+                .fontSize(DesignConstants.FONT.SIZE.SM)
               
               Text(this.elevationInfo)
-                .fontSize(12)
+                .fontSize(DesignConstants.FONT.SIZE.SM)
                 .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             }
           }
@@ -80,12 +82,12 @@ export struct IntelligentLocationCard {
       .layoutWeight(1)
 
       // 操作按钮组
-      Column({ space: 8 }) {
+      Column({ space: DesignConstants.SPACING.SM }) {
         // 查看详情按钮
         Button({ type: ButtonType.Normal, stateEffect: true }) {
           Text() {
-            SymbolSpan($r('sys.symbol.eye'))
-              .fontSize(16)
+            SymbolSpan($r(AppIcon.INFO))
+              .fontSize(DesignConstants.FONT.SIZE.LG)
               .fontColor([Color.White])
           }
         }
@@ -103,8 +105,8 @@ export struct IntelligentLocationCard {
         // 导航按钮
         Button({ type: ButtonType.Normal, stateEffect: true }) {
           Text() {
-            SymbolSpan($r('sys.symbol.arrow_up'))
-              .fontSize(16)
+            SymbolSpan($r(AppIcon.UP))
+              .fontSize(DesignConstants.FONT.SIZE.LG)
               .fontColor([$r('sys.color.ohos_id_color_emphasize')])
           }
         }
@@ -154,15 +156,6 @@ export struct IntelligentLocationCard {
     )
   }
 
-  private formatDistance(distance: number): string {
-    if (distance < 1000) {
-      return `${Math.round(distance)}m`;
-    } else if (distance < 10000) {
-      return `${(distance / 1000).toFixed(1)}km`;
-    } else {
-      return `${Math.round(distance / 1000)}km`;
-    }
-  }
 
   private async loadElevationInfo(): Promise<void> {
     try {

@@ -4,9 +4,9 @@
  */
 
 import { KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_IS_LOGGED_IN } from '../../../core/state/GlobalStateManager';
-import { LocationInfo } from '../../../core/location/LocationUtil';
+import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { AppRouter, ChatRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, ChatRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import {
   UserItem, TrendingTagItem, MomentItem, TrendingBundle, FollowRequest, UnfollowRequest,
@@ -21,6 +21,9 @@ import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
+import { formatCount } from '../../../core/utils/FormatUtil';
+import { EmptyState, RefreshIndicator } from '../../../components/EmptyState';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import pasteboard from '@ohos.pasteboard';
 
@@ -165,73 +168,68 @@ export struct DiscoverPage {
 
   build() {
     Column() {
-      // 标题栏 - 使用 SafeArea 避免与状态栏重叠
-      Row() {
-        Text('发现')
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .layoutWeight(1)
-
-        // 搜索按钮
-        Column() {
+      // 顶部搜索 + 标题（与设计图一致）
+      Column({ space: DesignConstants.SPACING.MD }) {
+        Row({ space: DesignConstants.SPACING.SM }) {
           Text() {
             SymbolSpan($r(AppIcon.SEARCH))
-              .fontSize(22)
-              .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+              .fontSize(17)
+              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
           }
+          Text('搜索附近的人和群组')
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .layoutWeight(1)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
-        .width(40)
-        .height(40)
-        .justifyContent(FlexAlign.Center)
-        .borderRadius(DesignConstants.RADIUS.XXL)
+        .height(42)
+        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
         .backgroundColor($r('app.color.bg_tertiary'))
-        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+        .borderRadius(DesignConstants.RADIUS.XL)
+        .border({ width: 1, color: $r('app.color.highlight_border') })
         .onClick(() => {
           AppRouter.push(PageNames.SEARCH);
         })
+
+        Text('发现内容')
+          .fontSize(DesignConstants.FONT.SIZE.XXL)
+          .fontWeight(FontWeight.Bold)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
       }
       .width('100%')
-      .alignItems(VerticalAlign.Center)
+      .alignItems(HorizontalAlign.Start)
       .padding({
         left: DesignConstants.SPACING.LG,
         right: DesignConstants.SPACING.LG,
         top: this.getHeaderTopPadding(),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_primary'))
+      .backgroundColor(Color.Transparent)
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 内容区
       if (this.isLoading) {
         SystemLoadingView({ message: '正在加载发现内容...' })
-          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+          .transition(
+            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          )
       } else if (!this.hasAnyData() && this.errorMessage) {
-        Column({ space: DesignConstants.SPACING.LG }) {
-          Text() {
-            SymbolSpan($r(AppIcon.WARNING))
-              .fontSize(48)
-              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
-          }
-          Text(this.errorMessage)
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-            .textAlign(TextAlign.Center)
-          Button('重试')
-            .type(ButtonType.Normal)
-            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-            .fontColor(Color.White)
-            .height(40)
-            .borderRadius(DesignConstants.RADIUS.XL)
-            .onClick(() => { this.loadData(); })
-        }
-        .width('100%')
+        EmptyState({
+          icon: AppIcon.WARNING,
+          message: this.errorMessage,
+          actionLabel: '重试',
+          onAction: () => { this.loadData(); }
+        })
         .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
       } else {
-        Refresh({ refreshing: $$this.isRefreshing }) {
-          List({ space: DesignConstants.SPACING.MD }) {
+        Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
+          List() {
             // 热门话题
             if (this.trendingTags.length > 0) {
               ListItem() {
@@ -239,22 +237,11 @@ export struct DiscoverPage {
               }
             }
 
-            // 推荐用户（错位方块卡片）
+            // 推荐用户
             if (this.recommendedUsers.length > 0) {
               ListItem() {
                 Column({ space: DesignConstants.SPACING.MD }) {
-                  Row({ space: DesignConstants.SPACING.SM }) {
-                    Text() {
-                      SymbolSpan($r(AppIcon.PERSON))
-                        .fontSize(18)
-                        .fontColor([$r('sys.color.ohos_id_color_emphasize')])
-                    }
-                    Text(`推荐用户 · ${this.recommendedUsers.length}`)
-                      .fontSize(DesignConstants.FONT.SIZE.LG)
-                      .fontWeight(FontWeight.Bold)
-                      .fontColor($r('sys.color.ohos_id_color_text_primary'))
-                  }
-                  .width('100%')
+                  this.buildSectionHeader(`推荐用户 · ${this.recommendedUsers.length}`, AppIcon.PERSON)
 
                   Column({ space: DesignConstants.SPACING.MD }) {
                     ForEach(this.recommendedUsers, (user: UserItem, index: number) => {
@@ -265,10 +252,7 @@ export struct DiscoverPage {
                 }
                 .width('100%')
                 .padding(DesignConstants.SPACING.LG)
-                .backgroundColor($r('app.color.bg_secondary'))
-                .borderRadius(DesignConstants.RADIUS.XL)
-                .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-                .shadow(DesignConstants.SHADOW.SMALL)
+                .backgroundColor(Color.Transparent)
               }
             }
 
@@ -282,6 +266,10 @@ export struct DiscoverPage {
                       FlowItem() {
                         this.buildHotMomentCard(moment)
                       }
+                      .width('100%')
+                      .onClick(() => {
+                        this.openMomentDetail(moment);
+                      })
                     }, (moment: MomentItem) => moment.moment_id)
                   }
                   .height(this.getWaterFlowHeight())
@@ -290,44 +278,37 @@ export struct DiscoverPage {
                   .rowsGap(DesignConstants.SPACING.MD)
                   .cachedCount(10)
                   .scrollBar(BarState.Off)
+                  .nestedScroll({
+                    scrollForward: NestedScrollMode.PARENT_FIRST,
+                    scrollBackward: NestedScrollMode.PARENT_FIRST
+                  })
                 }
                 .width('100%')
                 .padding(DesignConstants.SPACING.LG)
-                .backgroundColor($r('app.color.bg_secondary'))
-                .borderRadius(DesignConstants.RADIUS.XL)
-                .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-                .shadow(DesignConstants.SHADOW.SMALL)
+                .backgroundColor(Color.Transparent)
               }
             }
 
             // 没有任何内容
             if (this.trendingTags.length === 0 && this.recommendedUsers.length === 0 && this.hotMoments.length === 0) {
               ListItem() {
-                Column({ space: DesignConstants.SPACING.LG }) {
-                  Text() {
-                    SymbolSpan($r(AppIcon.RECOMMEND))
-                      .fontSize(48)
-                      .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
-                  }
-                  Text('暂无推荐内容')
-                    .fontSize(DesignConstants.FONT.SIZE.LG)
-                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-                }
-                .width('100%')
-                .height(300)
-                .justifyContent(FlexAlign.Center)
+                EmptyState({ icon: AppIcon.RECOMMEND, message: '暂无推荐内容' })
+                  .height(300)
               }
             }
           }
           .width('100%')
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
-            top: DesignConstants.SPACING.SM,
-            bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
+          .padding({
+            bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
+          })
           .scrollBar(BarState.Auto)
         }
         .layoutWeight(1)
         .onRefreshing(() => { this.loadData(true); })
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
       }
     }
     .width('100%')
@@ -343,15 +324,15 @@ export struct DiscoverPage {
 
       Flex({ wrap: FlexWrap.Wrap }) {
         ForEach(this.trendingTags, (tag: TrendingTagItem) => {
-          Row({ space: 4 }) {
+          Row({ space: DesignConstants.SPACING.XS }) {
             Text(`#${tag.name}`)
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor($r('app.color.brand_primary'))
 
             if (tag.trend === 'rising') {
               Text() {
                 SymbolSpan($r(AppIcon.ARROW_UP))
-                  .fontSize(12)
+                  .fontSize(10)
                   .fontColor([$r('app.color.color_danger')])
               }
             }
@@ -359,13 +340,14 @@ export struct DiscoverPage {
           .padding({
             left: DesignConstants.SPACING.MD,
             right: DesignConstants.SPACING.MD,
-            top: DesignConstants.SPACING.SM,
-            bottom: DesignConstants.SPACING.SM
+            top: DesignConstants.SPACING.XS,
+            bottom: DesignConstants.SPACING.XS
           })
           .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-          .backgroundColor($r('app.color.bg_tertiary'))
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .backgroundColor($r('app.color.bg_secondary'))
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .shadow(DesignConstants.SHADOW.SMALL)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
           .onClick(() => {
             const searchParams = new SearchParams();
             searchParams.keyword = `#${tag.name}`;
@@ -376,10 +358,7 @@ export struct DiscoverPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
-  .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.XL)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow(DesignConstants.SHADOW.SMALL)
+    .backgroundColor(Color.Transparent)
   }
 
   // ==================== 推荐用户卡片 ====================
@@ -387,7 +366,7 @@ export struct DiscoverPage {
   buildRecommendedUserCard(user: UserItem) {
     Column({ space: DesignConstants.SPACING.MD }) {
       Row({ space: 6 }) {
-        Row({ space: 4 }) {
+        Row({ space: DesignConstants.SPACING.XS }) {
           Text() {
             SymbolSpan($r(AppIcon.RECOMMEND))
               .fontSize(10)
@@ -404,7 +383,7 @@ export struct DiscoverPage {
         Blank().layoutWeight(1)
 
         if (user.location?.distance !== undefined && user.location?.distance !== null) {
-          Text(this.formatDistance(user.location.distance))
+          Text(LocationUtil.formatDistance(user.location.distance))
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor($r('sys.color.ohos_id_color_emphasize'))
             .padding({ left: 8, right: 8, top: 3, bottom: 3 })
@@ -419,10 +398,11 @@ export struct DiscoverPage {
           SystemAvatar({
             avatarUrl: user.user?.avatar_url ?? '',
             name: user.user?.nickname ?? '',
-            avatarSize: 46
+            avatarSize: 46,
+            shape: 'circle'
           })
 
-          Column({ space: 4 }) {
+          Column({ space: DesignConstants.SPACING.XS }) {
             Text(user.user?.nickname ?? '')
               .fontSize(15)
               .fontWeight(FontWeight.Medium)
@@ -430,7 +410,7 @@ export struct DiscoverPage {
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-            Row({ space: 4 }) {
+            Row({ space: DesignConstants.SPACING.XS }) {
               if (user.presence_status === 'online') {
                 Row()
                   .width(6)
@@ -456,21 +436,24 @@ export struct DiscoverPage {
           .alignItems(HorizontalAlign.Start)
           .layoutWeight(1)
         }
-        .layoutWeight(1)
+          .layoutWeight(1)
+          .onClick(() => {
+            this.openUserProfile(user);
+          })
 
         Row() {
           Text() {
             SymbolSpan($r(AppIcon.MORE))
-              .fontSize(16)
+              .fontSize(DesignConstants.FONT.SIZE.LG)
               .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
           }
         }
-        .width(24)
-        .height(24)
-        .borderRadius(DesignConstants.RADIUS.XL)
-        .backgroundColor($r('app.color.bg_tertiary'))
+        .width(32)
+        .height(32)
         .justifyContent(FlexAlign.Center)
-        .alignItems(VerticalAlign.Center)
+        .backgroundColor($r('app.color.bg_tertiary'))
+        .borderRadius(DesignConstants.RADIUS.XL)
+        .border({ width: 1, color: $r('app.color.highlight_border') })
         .bindMenu([
           {
             value: '私聊',
@@ -493,7 +476,7 @@ export struct DiscoverPage {
       .width('100%')
 
       Text(user.bio || '可能会感兴趣')
-        .fontSize(12)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
         .lineHeight(17)
         .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         .maxLines(2)
@@ -505,46 +488,45 @@ export struct DiscoverPage {
           ForEach(user.tags.slice(0, 3), (tag: string) => {
             Text(`#${tag}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .fontColor($r('app.color.brand_primary'))
               .padding({ left: 7, right: 7, top: 3, bottom: 3 })
               .margin({ right: 4, bottom: 4 })
-              .backgroundColor($r('app.color.bg_tertiary'))
-              .borderRadius(DesignConstants.RADIUS.MD)
-              .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+              .backgroundColor($r('app.color.chip_selected_bg'))
+              .borderRadius(DesignConstants.RADIUS.XL)
           }, (tag: string) => tag)
         }
         .width('100%')
       }
 
-      Row({ space: 8 }) {
+      Row({ space: DesignConstants.SPACING.SM }) {
         Button(this.isUserActionPending(user.user?.user_id ?? '') ? '处理中...' :
-          (this.isUserFollowing(user) ? '已关注' : '关注'))
-          .type(ButtonType.Normal)
+          (this.isUserFollowing(user) ? '已关注' : '+ 关注'))
+          .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(30)
-          .borderRadius(DesignConstants.RADIUS.XL)
+          .height(36)
+          .borderRadius(DesignConstants.RADIUS.FULL)
           .enabled(!this.isUserActionPending(user.user?.user_id ?? ''))
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor(this.isUserFollowing(user) ? Color.Transparent : $r('sys.color.ohos_id_color_emphasize'))
-          .fontColor(this.isUserFollowing(user) ? $r('sys.color.ohos_id_color_emphasize') : Color.White)
-          .borderWidth(this.isUserFollowing(user) ? 1 : 0)
-          .borderColor($r('sys.color.ohos_id_color_emphasize'))
+          .backgroundColor(this.isUserFollowing(user) ? $r('app.color.bg_tertiary') : $r('app.color.brand_primary'))
+          .fontColor(this.isUserFollowing(user) ? $r('sys.color.ohos_id_color_text_secondary') : Color.White)
           .opacity(this.isUserActionPending(user.user?.user_id ?? '') ? 0.58 : 1)
+          .shadow(DesignConstants.SHADOW.SMALL)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
           .onClick(() => { this.followUser(user); })
 
         Button('私聊')
-          .type(ButtonType.Normal)
+          .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(30)
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .fontSize(12)
+          .height(36)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor(Color.Transparent)
+          .backgroundColor($r('app.color.bg_tertiary'))
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .borderWidth(1)
-          .borderColor($r('sys.color.ohos_id_color_list_separator'))
           .opacity(this.isUserActionPending(user.user?.user_id ?? '') ? 0.74 : 1)
+          .shadow(DesignConstants.SHADOW.SMALL)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
           .onClick(() => { this.startPrivateChat(user); })
       }
       .width('100%')
@@ -558,9 +540,9 @@ export struct DiscoverPage {
       bottom: DesignConstants.SPACING.MD
     })
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.XL)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow(DesignConstants.SHADOW.SMALL)
+    .borderRadius(DesignConstants.RADIUS.XXL)
+    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .border({ width: 1, color: $r('app.color.highlight_border') })
   }
 
   // ==================== 热门瞬间卡片（masonry 小红书风格）====================
@@ -568,7 +550,7 @@ export struct DiscoverPage {
   buildHotMomentCard(moment: MomentItem) {
     Column({ space: DesignConstants.SPACING.MD }) {
       Row({ space: 6 }) {
-        Row({ space: 4 }) {
+        Row({ space: DesignConstants.SPACING.XS }) {
           Text() {
             SymbolSpan($r(AppIcon.HEART_FILL))
               .fontSize(10)
@@ -578,7 +560,7 @@ export struct DiscoverPage {
             .fontSize(10)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         }
-        .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
         .backgroundColor($r('app.color.bg_tertiary'))
         .borderRadius(DesignConstants.RADIUS.XL)
 
@@ -590,7 +572,7 @@ export struct DiscoverPage {
               .fontSize(10)
               .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
           }
-          Text(`${moment.likes_count}`)
+          Text(formatCount(moment.likes_count))
             .fontSize(10)
             .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
         }
@@ -599,7 +581,7 @@ export struct DiscoverPage {
 
       // 封面图
       if (moment.images && moment.images.length > 0) {
-        Image(moment.images[0].url)
+        Image(MediaUrlUtil.normalize(moment.images[0].url))
           .width('100%')
           .height(this.calculateImageHeight(moment))
           .objectFit(ImageFit.Cover)
@@ -635,11 +617,12 @@ export struct DiscoverPage {
             .width('100%')
         }
 
-        Row({ space: 4 }) {
+        Row({ space: DesignConstants.SPACING.XS }) {
           SystemAvatar({
             avatarUrl: moment.user?.avatar_url ?? '',
             name: moment.user?.nickname ?? '',
-            avatarSize: 16
+            avatarSize: 16,
+            shape: 'circle'
           })
 
           Text(moment.user?.nickname ?? '')
@@ -652,7 +635,7 @@ export struct DiscoverPage {
         .width('100%')
         .alignItems(VerticalAlign.Center)
       }
-      .padding(8)
+      .padding(DesignConstants.SPACING.SM)
     }
     .width('100%')
     .padding({
@@ -662,9 +645,9 @@ export struct DiscoverPage {
       bottom: DesignConstants.SPACING.MD
     })
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.XL)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow(DesignConstants.SHADOW.SMALL)
+    .borderRadius(DesignConstants.RADIUS.XXL)
+    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .border({ width: 1, color: $r('app.color.highlight_border') })
   }
 
   // ==================== 热门瞬间列表项（供 LazyForEach 使用）====================
@@ -676,7 +659,8 @@ export struct DiscoverPage {
         SystemAvatar({
           avatarUrl: moment.user?.avatar_url ?? '',
           name: moment.user?.nickname ?? '',
-          avatarSize: 32
+          avatarSize: 32,
+          shape: 'circle'
         })
         Text(moment.user?.nickname ?? '')
           .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -697,17 +681,17 @@ export struct DiscoverPage {
 
       // 图片（只显示第一张）
       if (moment.images && moment.images.length > 0) {
-        Image(moment.images[0].url)
+        Image(MediaUrlUtil.normalize(moment.images[0].url))
           .width('100%')
           .constraintSize({ maxHeight: 180 })
           .objectFit(ImageFit.Cover)
-          .borderRadius(DesignConstants.RADIUS.MD)
+          .borderRadius(DesignConstants.RADIUS.LG)
       }
 
       // 互动数据
-      Row({ space: 24 }) {
-        this.buildStatChip(AppIcon.HEART, `${moment.likes_count}`)
-        this.buildStatChip(AppIcon.MESSAGE, `${moment.comments_count}`)
+      Row({ space: DesignConstants.SPACING.XL }) {
+        this.buildStatChip(AppIcon.HEART, formatCount(moment.likes_count))
+        this.buildStatChip(AppIcon.MESSAGE, formatCount(moment.comments_count))
       }
       .width('100%')
     }
@@ -715,6 +699,7 @@ export struct DiscoverPage {
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
       top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
     .backgroundColor($r('app.color.bg_secondary'))
+    .borderRadius(DesignConstants.RADIUS.XXL)
 
     Divider()
       .strokeWidth(0.5)
@@ -727,23 +712,26 @@ export struct DiscoverPage {
     Row({ space: DesignConstants.SPACING.SM }) {
       Text() {
         SymbolSpan($r(icon))
-          .fontSize(18)
-          .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+          .fontSize(DesignConstants.FONT.SIZE.LG)
+          .fontColor([$r('app.color.brand_primary')])
       }
       Text(title)
-        .fontSize(DesignConstants.FONT.SIZE.LG)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('sys.color.ohos_id_color_text_primary'))
     }
-    .width('100%')
+    .padding({ left: 16, right: 16, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+    .backgroundColor($r('app.color.bg_inset'))
+    .borderRadius(DesignConstants.RADIUS.FULL)
+    .shadow(DesignConstants.SHADOW.INSET)
   }
 
   @Builder
   buildStatChip(icon: AppIcon, text: string) {
-    Row({ space: 4 }) {
+    Row({ space: DesignConstants.SPACING.XS }) {
       Text() {
         SymbolSpan($r(icon))
-          .fontSize(14)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
       }
       Text(text)
@@ -824,6 +812,23 @@ export struct DiscoverPage {
     this.userActionPendingIds = next;
   }
 
+  private openMomentDetail(moment: MomentItem): void {
+    if (!moment.moment_id) return;
+    const params = new MomentDetailRouteParam();
+    params.momentId = moment.moment_id;
+    AppRouter.push(PageNames.MOMENT_DETAIL, params);
+  }
+
+  private openUserProfile(user: UserItem): void {
+    const userId = user.user?.user_id;
+    if (!userId) {
+      return;
+    }
+    const params = new ProfileRouteParam();
+    params.userId = userId;
+    AppRouter.push(PageNames.PROFILE, params);
+  }
+
   private startPrivateChat(user: UserItem): void {
     if (!this.isLoggedIn) {
       SystemToast.showWarning('请先登录后再发起私聊', this.getUIContext());
@@ -883,11 +888,5 @@ export struct DiscoverPage {
     }
   }
 
-  private formatDistance(meters: number): string {
-    if (meters < 1000) {
-      return `${Math.round(meters)}m`;
-    }
-    return `${(meters / 1000).toFixed(1)}km`;
-  }
 
 }

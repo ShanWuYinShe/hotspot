@@ -111,6 +111,7 @@ export function generateIdempotencyKey(): string {
 }
 
 let config: ApiClientConfig | null = null;
+const MEDIA_URL_KEYS = new Set(['url', 'avatar_url', 'thumbnail_url', 'cover_url']);
 
 /**
  * 初始化 API 客户端配置
@@ -127,6 +128,47 @@ function getConfig(): ApiClientConfig {
 		throw new Error('API client not initialized. Call initApiClient first.');
 	}
 	return config;
+}
+
+function resolveApiOrigin(baseUrl: string): string {
+	if (typeof window === 'undefined') return '';
+	const trimmed = baseUrl.trim();
+	if (!trimmed) return window.location.origin;
+	if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+		try {
+			return new URL(trimmed).origin;
+		} catch {
+			return window.location.origin;
+		}
+	}
+	return window.location.origin;
+}
+
+function normalizeMediaUrl(raw: string, origin: string): string {
+	const trimmed = raw.trim();
+	if (!trimmed) return trimmed;
+	if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+	if (!trimmed.startsWith('/s3/')) return trimmed;
+	if (!origin) return trimmed;
+	return `${origin}${trimmed}`;
+}
+
+function patchMediaUrlsDeep(value: unknown, origin: string): void {
+	if (!value || !origin) return;
+	if (Array.isArray(value)) {
+		for (const item of value) patchMediaUrlsDeep(item, origin);
+		return;
+	}
+	if (typeof value !== 'object') return;
+	const record = value as Record<string, unknown>;
+	for (const key of Object.keys(record)) {
+		const current = record[key];
+		if (typeof current === 'string' && MEDIA_URL_KEYS.has(key)) {
+			record[key] = normalizeMediaUrl(current, origin);
+			continue;
+		}
+		patchMediaUrlsDeep(current, origin);
+	}
 }
 
 /**
@@ -307,6 +349,8 @@ async function request<T>(
 				request_id: response.headers.get('X-Request-ID') || ''
 			};
 		}
+		const apiOrigin = resolveApiOrigin(cfg.baseUrl);
+		patchMediaUrlsDeep(data, apiOrigin);
 
 		// 账号封禁拦截（spec 10201：强制登出 + 封禁页）
 		if (data.code === 10201) {

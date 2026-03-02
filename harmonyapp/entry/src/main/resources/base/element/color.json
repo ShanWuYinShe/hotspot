@@ -2,15 +2,15 @@
   "color": [
     {
       "name": "start_window_background",
-      "value": "#F5F6F8"
+      "value": "#FFFFFF"
     },
     {
       "name": "color_shadow",
-      "value": "#14000000"
+      "value": "#0A000000"
     },
     {
       "name": "color_danger",
-      "value": "#E14D4D"
+      "value": "#EF4444"
     },
     {
       "name": "color_overlay_light",
@@ -18,23 +18,23 @@
     },
     {
       "name": "color_overlay_medium",
-      "value": "#24000000"
+      "value": "#1A000000"
     },
     {
       "name": "color_overlay_heavy",
-      "value": "#52000000"
+      "value": "#40000000"
     },
     {
       "name": "color_pin_halo",
-      "value": "#337D9FF7"
+      "value": "#334A7A57"
     },
     {
       "name": "color_emphasize_bg",
-      "value": "#ECF2FF"
+      "value": "#F0FDF4"
     },
     {
       "name": "bg_primary",
-      "value": "#F5F6F8"
+      "value": "#FFFFFF"
     },
     {
       "name": "bg_secondary",
@@ -42,35 +42,59 @@
     },
     {
       "name": "bg_tertiary",
-      "value": "#EEF1F5"
+      "value": "#F3F4F6"
     },
     {
       "name": "brand_primary",
-      "value": "#7D9FF7"
+      "value": "#4A7A57"
     },
     {
       "name": "divider",
-      "value": "#E2E5EA"
+      "value": "#F3F4F6"
     },
     {
       "name": "status_online",
-      "value": "#34C759"
+      "value": "#22C55E"
     },
     {
       "name": "status_offline",
-      "value": "#A3A8B2"
+      "value": "#9CA3AF"
     },
     {
       "name": "color_warning",
-      "value": "#F4B400"
+      "value": "#F59E0B"
     },
     {
       "name": "color_success",
-      "value": "#36B37E"
+      "value": "#22C55E"
     },
     {
       "name": "chip_selected_bg",
-      "value": "#E6EEFF"
+      "value": "#E2F0E7"
+    },
+    {
+      "name": "bubble_self_bg",
+      "value": "#6B8CFF"
+    },
+    {
+      "name": "bubble_other_bg",
+      "value": "#F2F2F2"
+    },
+    {
+      "name": "tab_bar_bg",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "section_header_bg",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "bg_inset",
+      "value": "#F2F2F2"
+    },
+    {
+      "name": "highlight_border",
+      "value": "#F3F4F6"
     }
   ]
 }

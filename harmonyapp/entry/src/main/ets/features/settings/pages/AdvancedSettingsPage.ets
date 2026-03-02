@@ -54,8 +54,7 @@ export struct AdvancedSettingsPage {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_secondary'))
-      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .backgroundColor(Color.Transparent)
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       Column() {
@@ -64,26 +63,21 @@ export struct AdvancedSettingsPage {
             SystemToast.show('缓存已清理', this.getUIContext());
           })
 
-          Divider()
-            .strokeWidth(0.5)
-            .color($r('sys.color.ohos_id_color_list_separator'))
-            .margin({ left: 20, right: 20 })
-
           this.SettingItem(AppIcon.DEBUG, '调试面板', '网络诊断、状态检查', () => {
             AppRouter.push(PageNames.DEBUG_PANEL);
           })
         }
         .backgroundColor($r('app.color.bg_secondary'))
         .borderRadius(DesignConstants.RADIUS.XXL)
-        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-        .shadow(DesignConstants.SHADOW.SMALL)
+        .shadow(DesignConstants.SHADOW.MEDIUM)
+        .border({ width: 1, color: $r('app.color.highlight_border') })
         .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
-          top: DesignConstants.SPACING.LG })
+          top: DesignConstants.SPACING.LG, bottom: 14 })
       }
       .width('100%')
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
-      .backgroundColor($r('app.color.bg_primary'))
+      .backgroundColor(Color.Transparent)
     }
     .width('100%')
     .height('100%')
@@ -107,7 +101,7 @@ export struct AdvancedSettingsPage {
       }
       .width(38)
       .height(38)
-      .borderRadius(DesignConstants.RADIUS.XL)
+      .borderRadius(DesignConstants.RADIUS.MD)
       .backgroundColor($r('app.color.bg_tertiary'))
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
@@ -135,14 +129,13 @@ export struct AdvancedSettingsPage {
       }
       .width(28)
       .height(28)
-      .borderRadius(DesignConstants.RADIUS.XXL)
+      .borderRadius(DesignConstants.RADIUS.MD)
       .backgroundColor($r('app.color.bg_tertiary'))
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
-    .borderRadius(DesignConstants.RADIUS.XXL)
     .onClick(onClick)
   }
 }

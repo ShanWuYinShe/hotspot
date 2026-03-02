@@ -21,7 +21,7 @@ use crate::{
         moment_repo::MomentRepository,
         user_repo::UserRepository,
     },
-    utils::validation::Validator,
+    utils::{bloom_filter::ResourceExistenceChecker, validation::Validator},
     EventBus,
 };
 
@@ -32,6 +32,7 @@ pub struct CommentService {
     moment_repo: MomentRepository,
     user_repo: UserRepository,
     media_service: crate::services::media_service::MediaService,
+    resource_checker: ResourceExistenceChecker,
 }
 
 impl CommentService {
@@ -41,6 +42,7 @@ impl CommentService {
         moment_repo: MomentRepository,
         user_repo: UserRepository,
         media_service: crate::services::media_service::MediaService,
+        resource_checker: ResourceExistenceChecker,
     ) -> Self {
         Self {
             event_bus,
@@ -48,6 +50,7 @@ impl CommentService {
             moment_repo,
             user_repo,
             media_service,
+            resource_checker,
         }
     }
 
@@ -137,6 +140,14 @@ impl CommentService {
                 mentions,
             )
             .await?;
+
+        if let Err(e) = self
+            .resource_checker
+            .record_comment(&row.comment_id.to_string())
+            .await
+        {
+            tracing::warn!(comment_id = %row.comment_id, error = %e, "record_comment bloom failed");
+        }
 
         let summary = crate::events::event_types::MomentSummarySnapshot {
             moment_id: mid,

@@ -45,6 +45,26 @@ export class CoordinateConverter {
   }
 
   /**
+   * GCJ02 → WGS84 反向转换（线性近似法）。
+   * 精度约 1-2 米，满足绝大多数应用场景。
+   */
+  static convertGcj02ToWgs84(lat: number, lng: number): CoordinatePoint {
+    if (!CoordinateConverter.isInsideChina(lat, lng)) {
+      return { latitude: lat, longitude: lng };
+    }
+    try {
+      const gcj = CoordinateConverter.convertWgs84ToGcj02(lat, lng);
+      return {
+        latitude: lat * 2 - gcj.latitude,
+        longitude: lng * 2 - gcj.longitude
+      };
+    } catch (error) {
+      hilog.warn(DOMAIN_NUMBER, TAG, `convertGcj02ToWgs84 failed: ${JSON.stringify(error)}`);
+      return { latitude: lat, longitude: lng };
+    }
+  }
+
+  /**
    * 获取当前位置并自动转换为 GCJ02 坐标。
    * 通过 geoLocationManager 获取 WGS84 坐标后，使用纯数学算法转换。
    */

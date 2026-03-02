@@ -9,7 +9,7 @@ alwaysApply: false
 
 - **实现规范**：`spec/harmonyapp_rule.md` -- ArkTS 编码约束、组件规范
 - **功能边界**：`spec/harmonyapp_doc.md` -- 鸿蒙端功能范围与非目标
-- **Agent 操作指南**：`harmonyapp/AGENTS.md` -- 目录结构、图标规范、编译命令
+- **Agent 操作指南**：`harmonyapp/AGENTS.md` -- API 调用规则、图标规范、编译命令
 
 新增 API 端点时的文件修改清单：
 

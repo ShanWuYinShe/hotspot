@@ -31,7 +31,7 @@ use crate::{
         user_repo::UserRepository,
     },
     types::enums::PrivacyLevel,
-    utils::{cache::CacheManager, validation::Validator},
+    utils::{bloom_filter::ResourceExistenceChecker, cache::CacheManager, validation::Validator},
     EventBus,
 };
 
@@ -400,6 +400,13 @@ impl MomentService {
             self.tag_repo
                 .set_moment_tags(moment.moment_id, &tags)
                 .await?;
+        }
+
+        if let Err(e) = ResourceExistenceChecker::new(self._redis.clone())
+            .record_moment(&moment.moment_id.to_string())
+            .await
+        {
+            tracing::warn!(moment_id = %moment.moment_id, error = %e, "record_moment bloom failed");
         }
 
         self.event_bus.publish(AppEvent::MomentCreated {

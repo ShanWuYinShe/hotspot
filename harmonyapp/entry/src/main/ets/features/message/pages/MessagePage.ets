@@ -445,50 +445,52 @@ export struct MessagePage {
 
   build() {
     Column() {
-      // 标题栏 - 使用 SafeArea 避免与状态栏重叠
+      // 标题栏 - 扁平风格（白色背景）
       Row() {
         Text('消息')
           .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Medium)
+          .fontWeight(FontWeight.Bold)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .layoutWeight(1)
           .padding({ left: DesignConstants.SPACING.LG })
 
-        Row({ space: DesignConstants.SPACING.SM }) {
-          // 搜索
+        Row({ space: DesignConstants.SPACING.MD }) {
+          // 搜索 - 触感木质拟物：轻微凸起
           Row() {
             Text() {
               SymbolSpan($r(AppIcon.SEARCH))
-                .fontSize(20)
+                .fontSize(22)
                 .fontColor([$r('sys.color.ohos_id_color_text_primary')])
             }
           }
-          .width(36)
-          .height(36)
-          .borderRadius(DesignConstants.RADIUS.XXL)
-          .backgroundColor($r('app.color.bg_tertiary'))
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .width(40)
+          .height(40)
           .justifyContent(FlexAlign.Center)
           .alignItems(VerticalAlign.Center)
+          .backgroundColor($r('app.color.bg_secondary'))
+          .borderRadius(DesignConstants.RADIUS.MD)
+          .shadow(DesignConstants.SHADOW.SMALL)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
           .onClick(() => {
             AppRouter.push(PageNames.SEARCH);
           })
 
-          // 更多操作
+          // 更多操作 - 触感木质拟物：轻微凸起
           Row() {
             Text() {
               SymbolSpan($r(AppIcon.ADD))
-                .fontSize(20)
+                .fontSize(22)
                 .fontColor([$r('sys.color.ohos_id_color_text_primary')])
             }
           }
-          .width(36)
-          .height(36)
-          .borderRadius(DesignConstants.RADIUS.XXL)
-          .backgroundColor($r('app.color.bg_tertiary'))
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .width(40)
+          .height(40)
           .justifyContent(FlexAlign.Center)
           .alignItems(VerticalAlign.Center)
+          .backgroundColor($r('app.color.bg_secondary'))
+          .borderRadius(DesignConstants.RADIUS.MD)
+          .shadow(DesignConstants.SHADOW.SMALL)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
           .bindMenu([
             {
               value: '发起群聊',
@@ -542,29 +544,37 @@ export struct MessagePage {
         top: this.getHeaderTopPadding(),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_secondary'))
-      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .backgroundColor(Color.Transparent)
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 内容区域
       if (this.isLoading) {
         SystemLoadingView({ message: '收取信件中...' })
-          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+          .transition(
+            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          )
       } else if (!this.hasData && this.errorMessage) {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           EmptyState({ icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试', onAction: () => { this.loadData(true); } })
         }
         .onRefreshing(() => { this.loadData(true, true); })
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
       } else if (!this.hasData) {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           EmptyState({ icon: AppIcon.MESSAGE, message: '暂无消息' })
         }
         .onRefreshing(() => { this.loadData(true, true); })
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
       } else {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-          List({ space: DesignConstants.SPACING.SM }) {
+          List() {
             LazyForEach(this.chatListDataSource, (item: ChatItem) => {
               ListItem() {
                 this.buildChatItem(item)
@@ -579,18 +589,18 @@ export struct MessagePage {
           }
           .width('100%')
           .padding({
-            left: DesignConstants.SPACING.LG,
-            right: DesignConstants.SPACING.LG,
-            top: DesignConstants.SPACING.SM,
             bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
           })
-          .backgroundColor($r('app.color.bg_primary'))
+          .backgroundColor(Color.Transparent)
           .cachedCount(10)
           .onReachEnd(() => { this.loadMore(); })
         }
         .layoutWeight(1)
         .onRefreshing(() => { this.loadData(true, true); })
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
       }
     }
     .width('100%')
@@ -614,6 +624,7 @@ export struct MessagePage {
       .backgroundColor($r('app.color.color_danger'))
       .width(80)
       .height('100%')
+      .borderRadius(DesignConstants.RADIUS.MD)
       .opacity(this.isChatDeleting(item) ? 0.62 : 1)
       .enabled(!this.isChatDeleting(item))
       .onClick(() => this.deleteChat(item))
@@ -624,57 +635,60 @@ export struct MessagePage {
 
   @Builder
   buildChatItem(item: ChatItem) {
-    Row() {
-      Badge({
-        count: item.unreadCount,
-        maxCount: 99,
-        position: BadgePosition.RightTop,
-        style: { badgeSize: 16, badgeColor: $r('app.color.color_danger'), fontSize: 10 }
-      }) {
-        SystemAvatar({
-          avatarUrl: item.avatarUrl,
-          name: item.name,
-          avatarSize: 50,
-          shape: item.type === 'group' ? 'squircle' : 'circle'
-        })
-      }
-      .margin({ right: DesignConstants.SPACING.MD })
+    Column() {
+      Row() {
+        Badge({
+          count: item.unreadCount,
+          maxCount: 99,
+          position: BadgePosition.RightTop,
+          style: { badgeSize: 16, badgeColor: $r('app.color.color_danger'), fontSize: 10 }
+        }) {
+          SystemAvatar({
+            avatarUrl: item.avatarUrl,
+            name: item.name,
+            avatarSize: 50,
+            shape: item.type === 'group' ? 'squircle' : 'circle',
+            inset: true
+          })
+        }
+        .margin({ right: DesignConstants.SPACING.LG })
 
-      // 内容
-      Column({ space: 4 }) {
-        Row() {
-          Text(item.name)
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
-            .layoutWeight(1)
+        Column({ space: 4 }) {
+          Row() {
+            Text(item.name)
+              .fontSize(DesignConstants.FONT.SIZE.LG)
+              .fontWeight(FontWeight.Medium)
+              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              .layoutWeight(1)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+            Text(this.formatTime(item.lastTime))
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          }
+          .width('100%')
+
+          Text(item.lastMessage)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-          Text(this.formatTime(item.lastTime))
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .width('100%')
         }
-        .width('100%')
-
-        Text(item.lastMessage)
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .width('100%')
+        .layoutWeight(1)
       }
-      .layoutWeight(1)
+      .width('100%')
     }
-    .width('100%')
-    .constraintSize({ minHeight: 78 })
-    .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
-    .backgroundColor($r('app.color.bg_secondary'))
+    .constraintSize({ minHeight: 72 })
+    .padding(18)
+    .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: 8, bottom: 8 })
+    .backgroundColor(this.pressedChatKey === this.getChatKey(item)
+      ? $r('app.color.bg_tertiary')
+      : $r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.XXL)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow(DesignConstants.SHADOW.SMALL)
-    .scale(this.pressedChatKey === this.getChatKey(item) ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })
-    .animation({ duration: 100, curve: Curve.EaseOut })
+    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .border({ width: 1, color: $r('app.color.highlight_border') })
     .opacity(this.isChatDeleting(item) ? 0.7 : 1)
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {

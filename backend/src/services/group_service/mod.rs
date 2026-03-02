@@ -15,7 +15,7 @@ use crate::{
         group_repo::GroupRepository, system::report_repo::ReportRepository,
         tag_repo::TagRepository, user_repo::UserRepository,
     },
-    utils::cache::CacheManager,
+    utils::{bloom_filter::ResourceExistenceChecker, cache::CacheManager},
     EventBus,
 };
 
@@ -43,6 +43,7 @@ pub struct GroupService {
     pub(crate) admin_rbac_repo: AdminRbacRepository,
     pub(crate) media_service: crate::services::media_service::MediaService,
     pub(crate) cache_manager: CacheManager,
+    pub(crate) resource_checker: ResourceExistenceChecker,
 }
 
 impl GroupService {
@@ -63,6 +64,7 @@ impl GroupService {
         admin_rbac_repo: AdminRbacRepository,
         media_service: crate::services::media_service::MediaService,
         cache_manager: CacheManager,
+        resource_checker: ResourceExistenceChecker,
     ) -> Self {
         Self {
             event_bus,
@@ -81,6 +83,7 @@ impl GroupService {
             admin_rbac_repo,
             media_service,
             cache_manager,
+            resource_checker,
         }
     }
 }

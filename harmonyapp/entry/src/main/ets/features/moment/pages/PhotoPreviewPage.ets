@@ -7,6 +7,7 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, IconButton, IconSize } from '../../../components/SystemIcon';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { AppRouter } from '../../../core/router/AppRouter';
+import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 
 @Preview
 @Component
@@ -28,7 +29,7 @@ export struct PhotoPreviewPage {
 
   aboutToAppear(): void {
     SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_DARK,
+      baseColor: '#000000',
       overlayOpacity: 1,
       preferDarkContent: false
     });
@@ -41,13 +42,13 @@ export struct PhotoPreviewPage {
       Column()
         .width('100%')
         .height('100%')
-        .backgroundColor(DesignConstants.COLOR.PRIMARY_BG_DARK)
+        .backgroundColor(Color.Black)
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
 
       // 图片轮播
       Swiper(this.swiperController) {
         ForEach(this.images, (imageUrl: string, index: number) => {
-          Image(imageUrl)
+          Image(MediaUrlUtil.normalize(imageUrl))
             .width('100%')
             .height('100%')
             .objectFit(ImageFit.Contain)
@@ -162,7 +163,7 @@ export struct PhotoPreviewPage {
           icon: AppIcon.CLOSE,
           iconSize: IconSize.LARGE,
           iconColor: Color.White,
-          bgColor: 'rgba(0,0,0,0.3)',
+          bgColor: '#4D000000',
           onButtonClick: () => {
             AppRouter.pop();
           }
@@ -174,20 +175,27 @@ export struct PhotoPreviewPage {
       .position({ x: 0, y: 0 })
       .hitTestBehavior(HitTestMode.Transparent) // 允许点击穿透到空白处（如果有）
 
-      // 底部页码指示器
+      // 底部页码指示器（凸起胶囊化）
       Row() {
         Text(`${this.currentIndex + 1} / ${this.images.length}`)
           .fontColor(Color.White)
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor('rgba(0,0,0,0.3)')
+          .backgroundColor('#80000000')
           .padding({
-            left: DesignConstants.SPACING.MD,
-            right: DesignConstants.SPACING.MD,
-            top: 6,
-            bottom: 6
+            left: DesignConstants.SPACING.LG,
+            right: DesignConstants.SPACING.LG,
+            top: 8,
+            bottom: 8
           })
-          .borderRadius(DesignConstants.RADIUS.XL)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .shadow({
+            radius: DesignConstants.SHADOW.MEDIUM.radius,
+            color: DesignConstants.SHADOW.MEDIUM.color,
+            offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
+            offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
+          })
+          .border({ width: 1, color: $r('app.color.highlight_border') })
       }
       .width('100%')
       .justifyContent(FlexAlign.Center)
@@ -195,6 +203,7 @@ export struct PhotoPreviewPage {
     }
     .width('100%')
     .height('100%')
+    .backgroundColor(Color.Black)
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

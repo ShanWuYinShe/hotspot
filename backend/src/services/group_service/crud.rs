@@ -409,6 +409,14 @@ impl GroupService {
             creator_id: owner_id,
         });
 
+        if let Err(e) = self
+            .resource_checker
+            .record_group(&group.group_id.to_string())
+            .await
+        {
+            tracing::warn!(group_id = group.group_id, error = %e, "record_group bloom failed");
+        }
+
         let members_count = 1i32;
         let (tags_res, prefs) = try_join!(
             self.tag_repo.get_group_tags(group.group_id),

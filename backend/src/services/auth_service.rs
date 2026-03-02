@@ -24,7 +24,10 @@ use crate::repositories::{
 };
 use crate::types::enums::{ClientType, UserStatus, VerificationCodeType};
 use crate::utils::cache_invalidation::{CacheInvalidator, InvalidationEvent};
-use crate::utils::{jwt::JwtUtil, password::PasswordUtil, token::TokenUtil, validation::Validator};
+use crate::utils::{
+    bloom_filter::ResourceExistenceChecker, jwt::JwtUtil, password::PasswordUtil,
+    token::TokenUtil, validation::Validator,
+};
 
 fn detect_delivery_channel(login_id: &str) -> &'static str {
     if login_id.contains('@') {
@@ -135,6 +138,13 @@ impl AuthService {
             )
             .await?;
 
+        if let Err(e) = ResourceExistenceChecker::new(self.redis.clone())
+            .record_user(user.user_id)
+            .await
+        {
+            tracing::warn!(user_id = user.user_id, error = %e, "record_user bloom failed");
+        }
+
         self.settings_repo.create(user.user_id).await?;
 
         let issue = self
@@ -240,6 +250,13 @@ impl AuthService {
                 None,
             )
             .await?;
+
+        if let Err(e) = ResourceExistenceChecker::new(self.redis.clone())
+            .record_user(user.user_id)
+            .await
+        {
+            tracing::warn!(user_id = user.user_id, error = %e, "record_user bloom failed");
+        }
 
         self.settings_repo.create(user.user_id).await?;
 

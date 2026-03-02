@@ -175,34 +175,24 @@ export struct SubscriptionsPage {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_secondary'))
-      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .backgroundColor(Color.Transparent)
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.loading) {
         SystemLoadingView({ message: '加载订阅设置...' })
           .layoutWeight(1)
-          .backgroundColor($r('app.color.bg_primary'))
+          .backgroundColor(Color.Transparent)
       } else {
-        List({ space: DesignConstants.SPACING.MD }) {
+        List() {
           ListItem() {
             this.ListHeader('通知类型')
           }
 
-          ListItem() {
-            Column({ space: DesignConstants.SPACING.SM }) {
-              ForEach(this.items, (item: SubscriptionItem) => {
-                this.SubscriptionItemRow(item)
-              }, (i: SubscriptionItem) => i.key as string)
+          ForEach(this.items, (item: SubscriptionItem) => {
+            ListItem() {
+              this.SubscriptionItemRow(item)
             }
-            .width('100%')
-            .padding(DesignConstants.SPACING.LG)
-            .backgroundColor($r('app.color.bg_secondary'))
-            .borderRadius(DesignConstants.RADIUS.XXL)
-            .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-            .shadow(DesignConstants.SHADOW.SMALL)
-            .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-          }
+          }, (i: SubscriptionItem) => i.key as string)
 
           ListItem() {
             Text('提示：你可以随时在这里调整通知偏好，变更会即时生效。')
@@ -211,11 +201,12 @@ export struct SubscriptionsPage {
               .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM })
           }
         }
+        .divider({ strokeWidth: 0 })
         .layoutWeight(1)
         .scrollBar(BarState.Auto)
         .width('100%')
         .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
-        .backgroundColor($r('app.color.bg_primary'))
+        .backgroundColor(Color.Transparent)
       }
     }
     .width('100%')
@@ -249,7 +240,7 @@ export struct SubscriptionsPage {
       }
       .width(40)
       .height(40)
-      .borderRadius(DesignConstants.RADIUS.XL)
+      .borderRadius(DesignConstants.RADIUS.MD)
       .backgroundColor($r('app.color.bg_tertiary'))
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
@@ -278,9 +269,11 @@ export struct SubscriptionsPage {
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+    .borderRadius(DesignConstants.RADIUS.XXL)
+    .shadow(DesignConstants.SHADOW.MEDIUM)
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.XL)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 12 })
   }
 }
 

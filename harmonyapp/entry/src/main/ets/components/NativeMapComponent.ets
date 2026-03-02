@@ -9,10 +9,14 @@
 import { map, mapCommon, MapComponent } from '@kit.MapKit';
 import { AsyncCallback } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { image } from '@kit.ImageKit';
 
 
 const DOMAIN_NUMBER: number = 0xFF11;
 const TAG: string = 'NativeMapComponent';
+
+type MapMarkerType = 'user' | 'group' | 'moment' | 'cluster';
+type MapMarkerIconKey = MapMarkerType | 'center_pin';
 
 export interface MapMarker {
   id: string;
@@ -20,8 +24,8 @@ export interface MapMarker {
   longitude: number;
   title?: string;
   snippet?: string;
-  icon?: string; // 暂不支持自定义图标路径，仅作为预留
-  type?: 'user' | 'group' | 'moment' | 'cluster';
+  iconKey?: MapMarkerIconKey;
+  type?: MapMarkerType;
 }
 
 export interface MapRegion {
@@ -77,13 +81,13 @@ export struct NativeMapComponent {
   @Prop showZoomControls: boolean = false;
   /** 是否显示 Map Kit 内置的「我的位置」按钮 */
   @Prop showMyLocationControls: boolean = true;
+  /** 是否在地图中心显示选点图钉 marker（由地图引擎管理坐标映射，缩放/布局变化时位置始终精确） */
+  @Prop showCenterPin: boolean = false;
   /** 地图边界内边距（像素），用于把相机中心和内置控件推离被遮挡的区域 */
   @Watch('onContentPaddingChange') @Prop contentPaddingBottom: number = 0;
   @Watch('onContentPaddingChange') @Prop contentPaddingTop: number = 0;
   /** 地图厂商 Logo 底部偏移（像素），确保 logo 不被底部面板遮挡（合规要求） */
   @Watch('onLogoPaddingChange') @Prop logoPaddingBottom: number = 0;
-  /** 在地图中心显示图钉 Marker（位置选择器场景），图钉始终绑定在相机目标坐标上 */
-  @Prop showCenterPin: boolean = false;
   onMapLongPress?: (coordinate: MapCoordinate) => void;
   
   // 回调函数
@@ -101,6 +105,8 @@ export struct NativeMapComponent {
   private mapController: map.MapComponentController | null = null;
   private mapCallback?: AsyncCallback<map.MapComponentController>;
   private createdMarkers: Map<string, map.Marker> = new Map();
+  private centerPinMarker: map.Marker | null = null;
+  private markerIconCache: Map<string, image.PixelMap> = new Map();
   // 双击检测
   private lastClickTime: number = 0;
   // 防止 @Watch 在父组件重渲染时误触发
@@ -108,9 +114,6 @@ export struct NativeMapComponent {
   private lastRegionLng: number = NaN;
   private lastPaddingTop: number = NaN;
   private lastPaddingBottom: number = NaN;
-  // 中心图钉 Marker（showCenterPin 为 true 时使用）
-  private centerPinMarker: map.Marker | null = null;
-
   // 内部状态
   @State isMapReady: boolean = false;
   @State mapError: string = '';
@@ -125,7 +128,7 @@ export struct NativeMapComponent {
         hilog.info(DOMAIN_NUMBER, TAG, 'MapComponentController 初始化成功');
         
         // 初始化地图设置
-        this.setupMap();
+        await this.setupMap();
         
         // 触发回调
         if (this.onMapReady) {
@@ -139,6 +142,39 @@ export struct NativeMapComponent {
     };
   }
   
+  aboutToDisappear() {
+    for (const pixelMap of this.markerIconCache.values()) {
+      pixelMap.release();
+    }
+    this.markerIconCache.clear();
+  }
+
+  private async initMarkerIcons(): Promise<void> {
+    const iconKeys: string[] = ['user', 'group', 'moment', 'cluster', 'center_pin'];
+    const iconFiles: string[] = [
+      'marker_user.svg', 'marker_group.svg', 'marker_moment.svg',
+      'marker_cluster.svg', 'marker_center_pin.svg',
+    ];
+    const hostContext = this.getUIContext().getHostContext();
+    if (!hostContext) {
+      hilog.error(DOMAIN_NUMBER, TAG, 'getHostContext 返回 null，无法加载 marker 图标');
+      return;
+    }
+    const resourceMgr = hostContext.resourceManager;
+    for (let i = 0; i < iconKeys.length; i++) {
+      try {
+        const rawData = await resourceMgr.getRawFileContent(iconFiles[i]);
+        const imgSource = image.createImageSource(rawData.buffer);
+        const pixelMap = await imgSource.createPixelMap();
+        imgSource.release();
+        this.markerIconCache.set(iconKeys[i], pixelMap);
+      } catch (e) {
+        hilog.error(DOMAIN_NUMBER, TAG, `加载 marker 图标失败 ${iconFiles[i]}: ${JSON.stringify(e)}`);
+      }
+    }
+    hilog.info(DOMAIN_NUMBER, TAG, `marker 图标缓存完成，共 ${this.markerIconCache.size} 个`);
+  }
+
   onContentPaddingChange() {
     if (this.contentPaddingTop === this.lastPaddingTop &&
       this.contentPaddingBottom === this.lastPaddingBottom) {
@@ -227,25 +263,6 @@ export struct NativeMapComponent {
 
   // 注意：Map Kit 在 MapComponent 从组件树移除时自动清理内部事件监听器，无需手动 off
 
-  private async ensureCenterPin(): Promise<void> {
-    if (!this.showCenterPin || !this.mapController) return;
-    try {
-      const pos = this.mapController.getCameraPosition();
-      if (!pos?.target) return;
-      if (this.centerPinMarker) {
-        this.centerPinMarker.setPosition(pos.target);
-      } else {
-        this.centerPinMarker = await this.mapController.addMarker({
-          position: pos.target,
-          clickable: false,
-          icon: $rawfile('marker_center_pin.svg')
-        });
-      }
-    } catch (e) {
-      hilog.warn(DOMAIN_NUMBER, TAG, `中心图钉操作失败: ${JSON.stringify(e)}`);
-    }
-  }
-
   /** 放大地图（zoom + 1） */
   private doZoomIn(): void {
     if (!this.mapController) return;
@@ -287,39 +304,7 @@ export struct NativeMapComponent {
     }
   }
 
-  private syncCenterPinWithCamera(): void {
-    if (!this.mapController || !this.showCenterPin || !this.centerPinMarker) {
-      return;
-    }
-    try {
-      const cameraPosition = this.mapController.getCameraPosition();
-      if (cameraPosition?.target) {
-        this.centerPinMarker.setPosition(cameraPosition.target);
-      }
-    } catch (_) {
-      // 忽略同步异常，避免影响主交互
-    }
-  }
-
-  private registerCameraMoveHandler() {
-    if (!this.mapController || !this.showCenterPin) {
-      return;
-    }
-    const controller = this.mapController as object as CameraMoveCapable;
-    const candidateEvents: string[] = ['cameraMove', 'cameraMoving', 'cameraChanged'];
-    for (const eventName of candidateEvents) {
-      try {
-        controller.on(eventName, () => {
-          this.syncCenterPinWithCamera();
-        });
-        return;
-      } catch (_) {
-        // 尝试下一个事件名
-      }
-    }
-  }
-
-  private setupMap() {
+  private async setupMap() {
     if (!this.mapController) return;
     
     // 根据当前深浅模式设置地图夜间样式
@@ -410,17 +395,15 @@ export struct NativeMapComponent {
     });
 
     this.registerLongPressHandler();
-    this.registerCameraMoveHandler();
 
     // 监听相机空闲（用户停止拖拽/缩放后触发）
     try {
       this.mapController.on("cameraIdle", () => {
         if (!this.mapController) return;
         try {
+          this.updateCenterPinPosition();
           const cameraPosition = this.mapController.getCameraPosition();
           if (cameraPosition?.target) {
-            // 相机停止后再次对齐中心图钉，避免累计误差
-            this.syncCenterPinWithCamera();
             if (this.onCameraIdle) {
               this.onCameraIdle({
                 latitude: cameraPosition.target.latitude,
@@ -437,6 +420,9 @@ export struct NativeMapComponent {
       hilog.warn(DOMAIN_NUMBER, TAG, `注册 cameraIdle 事件失败: ${JSON.stringify(e)}`);
     }
 
+    // 注册相机移动事件，使中心图钉实时跟随（cameraIdle 为保底更新）
+    this.registerCameraMoveHandler();
+
     // 监听标记点击
     this.mapController.on("markerClick", (marker: map.Marker) => {
       const markerId = marker.getId();
@@ -447,11 +433,11 @@ export struct NativeMapComponent {
       }
     });
 
+    // 预加载 marker 图标为 PixelMap（绕过 $rawfile Resource 在 Map Kit 中的兼容问题）
+    await this.initMarkerIcons();
+
     // 初始渲染标记
     this.updateMarkers();
-
-    // 创建中心图钉
-    this.ensureCenterPin();
   }
 
   private async updateMarkers() {
@@ -475,7 +461,9 @@ export struct NativeMapComponent {
           title: markerData.title,
           snippet: markerData.snippet,
           clickable: true,
-          icon: this.getMarkerIcon(markerData.type)
+          icon: this.getMarkerIconForMarker(markerData),
+          anchorU: 0.5,
+          anchorV: 1.0
         };
         const marker = await this.mapController.addMarker(markerOptions);
         this.createdMarkers.set(markerData.id, marker);
@@ -484,18 +472,74 @@ export struct NativeMapComponent {
       }
     }
 
-    // clear() 会移除所有标记，需要重建中心图钉
-    await this.ensureCenterPin();
+    if (this.showCenterPin) {
+      await this.createCenterPinMarker();
+    }
   }
 
-  private getMarkerIcon(type?: string): Resource {
-    switch (type) {
-      case 'user': return $rawfile('marker_user.svg');
+  private getMarkerIconForMarker(markerData: MapMarker): image.PixelMap | Resource {
+    const key = markerData.iconKey ?? markerData.type ?? 'user';
+    const cached = this.markerIconCache.get(key);
+    if (cached) {
+      return cached;
+    }
+    hilog.warn(DOMAIN_NUMBER, TAG, `PixelMap 缓存未命中 key=${key}，降级为 $rawfile`);
+    switch (key) {
       case 'group': return $rawfile('marker_group.svg');
       case 'moment': return $rawfile('marker_moment.svg');
       case 'cluster': return $rawfile('marker_cluster.svg');
+      case 'center_pin': return $rawfile('marker_center_pin.svg');
       default: return $rawfile('marker_user.svg');
     }
+  }
+
+  private async createCenterPinMarker() {
+    if (!this.mapController) return;
+    try {
+      const cameraPos = this.mapController.getCameraPosition();
+      const target: mapCommon.LatLng = cameraPos?.target ??
+        { latitude: this.mapRegion.latitude, longitude: this.mapRegion.longitude };
+      const markerOptions: mapCommon.MarkerOptions = {
+        position: target,
+        clickable: false,
+        icon: this.markerIconCache.get('center_pin') ?? $rawfile('marker_center_pin.svg'),
+        anchorU: 0.5,
+        anchorV: 1.0
+      };
+      this.centerPinMarker = await this.mapController.addMarker(markerOptions);
+    } catch (e) {
+      hilog.warn(DOMAIN_NUMBER, TAG, `创建中心图钉失败: ${JSON.stringify(e)}`);
+    }
+  }
+
+  private updateCenterPinPosition() {
+    if (!this.centerPinMarker || !this.mapController) return;
+    try {
+      const pos = this.mapController.getCameraPosition();
+      if (pos?.target) {
+        this.centerPinMarker.setPosition(pos.target);
+      }
+    } catch (_) {
+      // 部分设备不支持 setPosition，忽略
+    }
+  }
+
+  private registerCameraMoveHandler() {
+    if (!this.mapController || !this.showCenterPin) return;
+    const controller = this.mapController as object as CameraMoveCapable;
+    const candidateEvents: string[] = ['cameraMove', 'cameraMoving'];
+    for (const name of candidateEvents) {
+      try {
+        controller.on(name, () => {
+          this.updateCenterPinPosition();
+        });
+        hilog.info(DOMAIN_NUMBER, TAG, `注册 ${name} 事件成功，中心图钉将实时跟随相机`);
+        return;
+      } catch (_) {
+        // 忽略不支持的事件名称
+      }
+    }
+    hilog.info(DOMAIN_NUMBER, TAG, '未找到 cameraMove 事件，中心图钉将在 cameraIdle 时更新');
   }
 
   /**

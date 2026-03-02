@@ -31,9 +31,10 @@ export struct EmptyState {
       if ((this.actionLabel ?? '').length > 0 && this.onAction) {
         Button(this.actionLabel ?? '')
           .type(ButtonType.Normal)
+          .stateEffect(true)
           .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
           .fontColor(Color.White)
-          .height(40)
+          .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
           .borderRadius(DesignConstants.RADIUS.XL)
           .onClick(() => {
             this.onAction?.();

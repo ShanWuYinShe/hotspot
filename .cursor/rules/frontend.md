@@ -9,7 +9,7 @@ alwaysApply: false
 
 - **实现规范**：`spec/frontend_rule.md` -- SvelteKit/TypeScript 编码约束
 - **功能边界**：`spec/frontend_doc.md` -- 前端功能范围与非目标
-- **Agent 操作指南**：`frontend_svelte/AGENTS.md` -- 目录结构、API 调用规则、状态管理
+- **Agent 操作指南**：`frontend_svelte/AGENTS.md` -- API 调用规则、状态规则
 
 新增 API 端点时的文件修改清单：
 

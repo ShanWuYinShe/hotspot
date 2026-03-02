@@ -22,7 +22,7 @@
     "harmony": {
       "path": "harmonyapp",
       "language": "ArkTS",
-      "note": "Agent 可执行 hvigorw（编译）和 ohpm（依赖安装），执行前仅需先 git add -A；禁止在该流程中使用 git stash push/pop；codelinter 可直接执行"
+      "note": "hvigorw 编译命令禁止 Agent 执行，必须由用户手动运行；ohpm（依赖安装）和 codelinter（代码检查）可由 Agent 直接执行，执行前须先 git add -A 保护改动；禁止在该流程中使用 git stash push/pop"
     }
   },
   "docs": {
@@ -37,7 +37,7 @@
     "install": {
       "backend": "cd backend && cargo build",
       "frontend": "cd frontend_svelte && pnpm install",
-      "harmony": "echo '执行前先保护改动: git add -A；然后执行: cd harmonyapp && ohpm install --all && hvigorw assembleHap（不要使用 git stash push/pop）'",
+      "harmony": "echo '执行前先保护改动: git add -A；然后执行: cd harmonyapp && ohpm install --all（hvigorw 编译命令禁止 Agent 执行，须由用户手动运行；不要使用 git stash push/pop）'",
       "all": "cd backend && cargo build && cd ../frontend_svelte && pnpm install"
     },
     "dev": {

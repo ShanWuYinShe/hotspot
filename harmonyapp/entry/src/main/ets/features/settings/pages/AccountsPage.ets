@@ -173,13 +173,15 @@ export struct AccountsPage {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_secondary'))
-      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .backgroundColor(Color.Transparent)
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.isLoading) {
         SystemLoadingView({ message: '加载账号列表...' })
-          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+          .transition(
+            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          )
       } else if (this.accounts.length === 0 && this.errorMessage) {
         Column({ space: DesignConstants.SPACING.LG }) {
           Text() {
@@ -193,16 +195,21 @@ export struct AccountsPage {
             .textAlign(TextAlign.Center)
           Button('重试')
             .type(ButtonType.Normal)
-            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+            .backgroundColor($r('app.color.brand_primary'))
             .fontColor(Color.White)
             .height(40)
-            .borderRadius(DesignConstants.RADIUS.XXL)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .shadow(DesignConstants.SHADOW.SMALL)
+            .border({ width: 1, color: $r('app.color.highlight_border') })
             .onClick(() => { this.load(); })
         }
         .width('100%')
         .layoutWeight(1)
         .justifyContent(FlexAlign.Center)
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
       } else if (this.accounts.length === 0) {
         Column({ space: 12 }) {
           Text('暂无已保存账号')
@@ -214,16 +221,21 @@ export struct AccountsPage {
             .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
             .fontColor(Color.White)
             .height(44)
-            .borderRadius(DesignConstants.RADIUS.XXL)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .shadow(DesignConstants.SHADOW.SMALL)
+            .border({ width: 1, color: $r('app.color.highlight_border') })
             .onClick(() => {
               AppRouter.push(PageNames.LOGIN);
             })
         }
         .width('100%')
         .padding(DesignConstants.SPACING.XL)
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
       } else {
-        List({ space: 14 }) {
+        List() {
           ForEach(this.accounts, (acc: AuthData) => {
             ListItem() {
               Row({ space: DesignConstants.SPACING.MD }) {
@@ -267,11 +279,11 @@ export struct AccountsPage {
                     .type(ButtonType.Normal)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .height(32)
-                    .backgroundColor($r('app.color.bg_tertiary'))
-                    .fontColor($r('sys.color.ohos_id_color_text_primary'))
-                    .borderWidth(1)
-                    .borderColor($r('sys.color.ohos_id_color_list_separator'))
-                    .borderRadius(DesignConstants.RADIUS.XXL)
+                    .backgroundColor(Color.Transparent)
+                    .fontColor($r('app.color.brand_primary'))
+                    .borderRadius(DesignConstants.RADIUS.FULL)
+                    .shadow(DesignConstants.SHADOW.SMALL)
+                    .border({ width: 1, color: $r('app.color.highlight_border') })
                     .onClick(() => this.switchTo(acc))
 
                   Button('删除')
@@ -280,7 +292,9 @@ export struct AccountsPage {
                     .height(32)
                     .backgroundColor($r('app.color.color_danger'))
                     .fontColor(Color.White)
-                    .borderRadius(DesignConstants.RADIUS.XXL)
+                    .borderRadius(DesignConstants.RADIUS.FULL)
+                    .shadow(DesignConstants.SHADOW.SMALL)
+                    .border({ width: 1, color: $r('app.color.highlight_border') })
                     .onClick(() => this.remove(acc))
                 }
               }
@@ -289,9 +303,9 @@ export struct AccountsPage {
             }
             .backgroundColor($r('app.color.bg_secondary'))
             .borderRadius(DesignConstants.RADIUS.XXL)
-            .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-            .shadow(DesignConstants.SHADOW.SMALL)
-            .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+            .shadow(DesignConstants.SHADOW.MEDIUM)
+            .border({ width: 1, color: $r('app.color.highlight_border') })
+            .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 14 })
           }, (acc: AuthData) => acc.user_id)
         }
         .width('100%')
@@ -301,7 +315,10 @@ export struct AccountsPage {
           top: DesignConstants.SPACING.SM,
           bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
         })
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
       }
     }
     .width('100%')

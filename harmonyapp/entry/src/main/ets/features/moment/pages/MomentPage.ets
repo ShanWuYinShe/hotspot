@@ -22,9 +22,11 @@ import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { SystemToast } from '../../../components/SystemToast';
 import { MomentCacheService } from '../../../core/database/MomentCacheService';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
-import { AppRouter, LoginRouteParam, PhotoPreviewRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, LoginRouteParam, MomentDetailRouteParam, PhotoPreviewRouteParam } from '../../../core/router/AppRouter';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
+import { formatCount } from '../../../core/utils/FormatUtil';
 
 const DOMAIN_NUMBER: number = 0xFF05;
 const TAG: string = 'MomentPage';
@@ -242,11 +244,13 @@ export struct MomentPage {
 
         Button('发布')
           .type(ButtonType.Normal)
-          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+          .backgroundColor($r('app.color.brand_primary'))
           .fontColor(Color.White)
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .height(32)
-          .borderRadius(DesignConstants.RADIUS.XL)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .shadow(DesignConstants.SHADOW.SMALL)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
           .onClick(async () => {
             const currentUser = this.stateManager.getCurrentUser();
             if (!currentUser) {
@@ -267,32 +271,45 @@ export struct MomentPage {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_primary'))
+      .backgroundColor($r('app.color.bg_secondary'))
+      .borderRadius({ bottomLeft: DesignConstants.RADIUS.LG, bottomRight: DesignConstants.RADIUS.LG })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 内容区域
       if (this.isLoading) {
         SystemLoadingView({ message: '正在加载附近瞬间...' })
-          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+          .transition(
+            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          )
       } else if (!this.hasData && this.errorMessage) {
         EmptyState({
           icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试',
           onAction: () => { this.isLoading = true; this.loadNearbyMoments(true); }
         })
-          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+          .transition(
+            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          )
       } else if (!this.hasData) {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           EmptyState({ icon: AppIcon.CAMERA, message: '附近暂无瞬间\n快来分享第一个吧！' })
         }
         .onRefreshing(() => { this.loadNearbyMoments(true); })
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
       } else {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           this.buildMomentList()
         }
         .layoutWeight(1)
         .onRefreshing(() => { this.loadNearbyMoments(true); })
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
       }
     }
     .width('100%')
@@ -302,7 +319,7 @@ export struct MomentPage {
 
   @Builder
   private buildMomentList() {
-    List({ space: DesignConstants.SPACING.SM }) {
+    List() {
       LazyForEach(this.momentsDataSource, (moment: MomentItem, index: number) => {
         ListItem() {
           this.buildMomentCard(moment, index)
@@ -314,6 +331,7 @@ export struct MomentPage {
         }
       }
     }
+    .divider({ strokeWidth: 0 })
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
     .scrollBar(BarState.Auto)
@@ -358,7 +376,7 @@ export struct MomentPage {
         Grid() {
           ForEach(moment.images.slice(0, 9), (img: MomentImage, imgIndex: number) => {
             GridItem() {
-              Image(img.url)
+              Image(MediaUrlUtil.normalize(img.url))
                 .width('100%')
                 .height('100%')
                 .objectFit(ImageFit.Cover)
@@ -366,7 +384,7 @@ export struct MomentPage {
                 .backgroundColor($r('app.color.bg_secondary'))
                 .geometryTransition('moment_img_' + moment.moment_id + '_' + imgIndex)
                 .onClick(() => {
-                  const imageUrls: string[] = (moment.images || []).map(i => i.url);
+                  const imageUrls: string[] = (moment.images || []).map(i => MediaUrlUtil.normalize(i.url));
                   this.previewImage(moment.moment_id, imageUrls, imgIndex);
                 })
             }
@@ -389,8 +407,7 @@ export struct MomentPage {
               .fontColor($r('sys.color.ohos_id_color_emphasize'))
               .backgroundColor($r('app.color.bg_tertiary'))
               .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-              .borderRadius(DesignConstants.RADIUS.XL)
-              .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+              .borderRadius(DesignConstants.RADIUS.MD)
               .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
           }, (tag: string) => tag)
         }
@@ -421,7 +438,7 @@ export struct MomentPage {
 
         Row({ space: DesignConstants.SPACING.XS }) {
           SystemIcon({ icon: AppIcon.MESSAGE, iconSize: 20, iconColor: $r('sys.color.ohos_id_color_text_secondary') })
-          Text(moment.comments_count.toString())
+          Text(formatCount(moment.comments_count))
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         }
@@ -436,7 +453,7 @@ export struct MomentPage {
             clickable: true,
             onIconClick: () => this.shareMoment(moment)
           })
-          Text(moment.shares_count.toString())
+          Text(formatCount(moment.shares_count))
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         }
@@ -445,10 +462,21 @@ export struct MomentPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
-    .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.XXL)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow(DesignConstants.SHADOW.SMALL)
+    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .backgroundColor($r('app.color.bg_secondary'))
+    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .margin({ bottom: 12 })
+    .onClick(() => {
+      this.openMomentDetail(moment);
+    })
+  }
+
+  private openMomentDetail(moment: MomentItem): void {
+    if (!moment.moment_id) return;
+    const params = new MomentDetailRouteParam();
+    params.momentId = moment.moment_id;
+    AppRouter.push(PageNames.MOMENT_DETAIL, params);
   }
 }
 
@@ -460,11 +488,19 @@ struct LikeButton {
   @Prop momentId: string;
   @State isLiked: boolean = false;
   @State likesCount: number = 0;
-  @Prop initialLikesCount: number = 0;
-  @Prop initialIsLiked: boolean = false;
+  @Prop @Watch('onLikesCountSync') initialLikesCount: number = 0;
+  @Prop @Watch('onIsLikedSync') initialIsLiked: boolean = false;
   onLike?: () => void;
 
-  async aboutToAppear() {
+  onLikesCountSync() {
+    this.likesCount = this.initialLikesCount;
+  }
+
+  onIsLikedSync() {
+    this.isLiked = this.initialIsLiked;
+  }
+
+  aboutToAppear() {
     this.likesCount = this.initialLikesCount;
     this.isLiked = this.initialIsLiked;
   }
@@ -485,7 +521,7 @@ struct LikeButton {
         }
       })
 
-      Text(this.likesCount.toString())
+      Text(formatCount(this.likesCount))
         .fontSize(DesignConstants.FONT.SIZE.MD)
         .fontColor(this.isLiked ? $r('app.color.color_danger') : $r('sys.color.ohos_id_color_text_secondary'))
     }

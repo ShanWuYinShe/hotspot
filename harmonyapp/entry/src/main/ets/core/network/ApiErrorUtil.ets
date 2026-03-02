@@ -37,36 +37,36 @@ export function extractApiErrorSnapshot(result: Object, responseCode?: number): 
 }
 
 /** 认证失败（token 无效/过期/缺失），客户端应尝试刷新 token */
-export function isAuthErrorCode(code: Object): boolean {
+export function isAuthErrorCode(code: number): boolean {
   return code === 10100;
 }
 
 /** 账号被封禁，客户端必须强制登出并显示封禁页 */
-export function isAccountBannedCode(code: Object): boolean {
+export function isAccountBannedCode(code: number): boolean {
   return code === 10201;
 }
 
-export function isBadRequestCode(code: Object): boolean {
+export function isBadRequestCode(code: number): boolean {
   return code === 10000;
 }
 
-export function isForbiddenCode(code: Object): boolean {
+export function isForbiddenCode(code: number): boolean {
   return code === 10200;
 }
 
-export function isNotFoundCode(code: Object): boolean {
+export function isNotFoundCode(code: number): boolean {
   return code === 10300;
 }
 
-export function isConflictCode(code: Object): boolean {
+export function isConflictCode(code: number): boolean {
   return code === 10400;
 }
 
-export function isRateLimitCode(code: Object): boolean {
+export function isRateLimitCode(code: number): boolean {
   return code === 10500;
 }
 
-export function isServerErrorCode(code: Object): boolean {
+export function isServerErrorCode(code: number): boolean {
   return code === 10600;
 }
 

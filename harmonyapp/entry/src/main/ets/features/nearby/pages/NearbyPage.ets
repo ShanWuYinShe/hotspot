@@ -5,9 +5,9 @@
  */
 
 import { GlobalStateManager, KEY_IS_LOGGED_IN, KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
-import { LocationInfo } from '../../../core/location/LocationUtil';
+import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { AppRouter, ChatRouteParam, MomentDetailRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, ChatRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import {
   MomentItem, UserItem, GroupItem, GeoPoint, RelativeLocation,
@@ -19,7 +19,7 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { LocationBar } from '../../../components/LocationBar';
-import { EmptyState, LoadingMoreIndicator } from '../../../components/EmptyState';
+import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
@@ -29,6 +29,8 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { WidgetDataService } from '../../../core/services/WidgetDataService';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
+import { formatCount, formatRelativeTime } from '../../../core/utils/FormatUtil';
 import pasteboard from '@ohos.pasteboard';
 
 
@@ -473,8 +475,8 @@ export struct NearbyPage {
       if (this.nearbyDeviceCount > 0) {
         Row({ space: DesignConstants.SPACING.SM }) {
           Text() {
-            SymbolSpan($r('sys.symbol.wifi'))
-              .fontSize(14)
+            SymbolSpan($r(AppIcon.DISTRIBUTED))
+              .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontColor([$r('sys.color.ohos_id_color_emphasize')])
           }
           Text(`发现 ${this.nearbyDeviceCount} 台附近设备正在使用 GeoTalk`)
@@ -484,10 +486,11 @@ export struct NearbyPage {
         .width('100%')
         .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD,
           top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-        .backgroundColor($r('app.color.bg_secondary'))
-        .borderRadius(DesignConstants.RADIUS.LG)
-        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-        .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
+        .backgroundColor(Color.Transparent)
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 280, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.TOP).animation({ duration: 280, curve: Curve.FastOutSlowIn }))
+        )
       }
 
       Row({ space: 0 }) {
@@ -497,9 +500,9 @@ export struct NearbyPage {
       }
       .width('100%')
       .padding(3)
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor($r('app.color.bg_inset'))
       .borderRadius(DesignConstants.RADIUS.XXL)
-      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .border({ width: 1, color: $r('app.color.highlight_border') })
     }
     .width('100%')
     .padding({
@@ -508,34 +511,38 @@ export struct NearbyPage {
       right: DesignConstants.SPACING.LG,
       bottom: DesignConstants.SPACING.SM
     })
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(Color.Transparent)
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
   }
 
   @Builder
   private SubTabChip(label: string, index: number, icon: AppIcon) {
-    Row({ space: 4 }) {
+    Row({ space: DesignConstants.SPACING.XS }) {
       Text() {
         SymbolSpan($r(icon))
-          .fontSize(14)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontColor([this.currentSubTab === index
-            ? $r('sys.color.ohos_id_color_emphasize')
+            ? $r('app.color.brand_primary')
             : $r('sys.color.ohos_id_color_text_secondary')])
       }
       Text(label)
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontWeight(this.currentSubTab === index ? FontWeight.Medium : FontWeight.Normal)
         .fontColor(this.currentSubTab === index
-          ? $r('sys.color.ohos_id_color_emphasize')
+          ? $r('app.color.brand_primary')
           : $r('sys.color.ohos_id_color_text_secondary'))
     }
-    .height(34)
+    .height(36)
     .layoutWeight(1)
     .justifyContent(FlexAlign.Center)
     .backgroundColor(this.currentSubTab === index
       ? $r('app.color.chip_selected_bg')
       : Color.Transparent)
-    .borderRadius(DesignConstants.RADIUS.XXL)
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .border(this.currentSubTab === index
+      ? { width: 1, color: $r('app.color.highlight_border') }
+      : { width: 0 })
+    .shadow(this.currentSubTab === index ? DesignConstants.SHADOW.SMALL : { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 })
     .onClick(() => {
       this.switchSubTab(index);
     })
@@ -552,61 +559,62 @@ export struct NearbyPage {
       } else if (this.moments.length === 0) {
         EmptyState({ icon: AppIcon.CAMERA, message: '附近暂无动态\n去发布第一条吧！' })
       } else {
-        Refresh({ refreshing: $$this.momentsRefreshing }) {
-          WaterFlow({ footer: (): void => this.buildWaterFlowFooter() }) {
-            LazyForEach(this.momentsDataSource, (moment: MomentItem, index: number) => {
-              FlowItem() {
-                this.buildMomentCard(moment, index)
+        Refresh({ refreshing: $$this.momentsRefreshing, builder: RefreshIndicator }) {
+          List({ space: DesignConstants.SPACING.MD }) {
+            LazyForEach(this.momentsDataSource, (moment: MomentItem) => {
+              ListItem() {
+                this.buildMomentCard(moment)
               }
             }, (moment: MomentItem) => moment.moment_id)
+            if (this.momentsLoadingMore) {
+              ListItem() {
+                LoadingMoreIndicator()
+              }
+            }
           }
-          .columnsTemplate('1fr 1fr')
-          .columnsGap(DesignConstants.SPACING.MD)
-          .rowsGap(DesignConstants.SPACING.MD)
-          .width('100%')
           .padding({
-            left: DesignConstants.SPACING.MD,
-            right: DesignConstants.SPACING.MD,
-            top: DesignConstants.SPACING.MD,
+            left: DesignConstants.SPACING.LG,
+            right: DesignConstants.SPACING.LG,
+            top: DesignConstants.SPACING.SM,
             bottom: this.getListBottomPadding()
           })
-          .cachedCount(8)
+          .width('100%')
+          .scrollBar(BarState.Auto)
           .onReachEnd(() => { this.loadNearbyMoments(true); })
         }
         .layoutWeight(1)
         .onRefreshing(() => { this.loadNearbyMoments(false, true); })
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
       }
     }
     .width('100%')
     .height('100%')
   }
 
-  // 计算卡片图片高度，根据图片比例动态调整（小红书风格）
+  // 单列卡片：按移动端宽卡估算封面高度，避免过高或过扁
   private calculateImageHeight(moment: MomentItem): number {
     if (!moment.images || moment.images.length === 0) {
-      return 160;  // 无图默认高度
+      return 168;
     }
 
     const image = moment.images[0];
     if (image.width && image.height && image.width > 0) {
-      // 列宽约为 160vp，根据原始比例计算高度
       const aspectRatio = image.height / image.width;
-      const calculatedHeight = 160 * aspectRatio;
-      // 限制高度范围：最小 120，最大 280
-      return Math.max(120, Math.min(calculatedHeight, 280));
+      const calculatedHeight = 320 * aspectRatio;
+      return Math.max(176, Math.min(calculatedHeight, 300));
     }
 
-    return 180;  // 默认高度
+    return 220;
   }
 
-  @State pressedIndex: number = -1  // 记录被按下的卡片索引
-
   @Builder
-  buildMomentCard(moment: MomentItem, index: number) {
-    Column({ space: DesignConstants.SPACING.MD }) {
-      Row({ space: 6 }) {
-        Row({ space: 4 }) {
+  buildMomentCard(moment: MomentItem) {
+    Column({ space: DesignConstants.SPACING.SM }) {
+      Row({ space: 8 }) {
+        Row({ space: DesignConstants.SPACING.XS }) {
           Text() {
             SymbolSpan($r(AppIcon.CAMERA))
               .fontSize(10)
@@ -616,108 +624,101 @@ export struct NearbyPage {
             .fontSize(10)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         }
-        .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
         .backgroundColor($r('app.color.bg_tertiary'))
         .borderRadius(DesignConstants.RADIUS.XL)
 
         Blank().layoutWeight(1)
 
-        Row({ space: 2 }) {
-          Text() {
-            SymbolSpan($r(AppIcon.HEART))
-              .fontSize(10)
-              .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
-          }
-          Text(`${moment.likes_count}`)
+        if (moment.location?.distance !== undefined && moment.location?.distance !== null) {
+          Text(LocationUtil.formatDistance(moment.location.distance))
             .fontSize(10)
-            .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+            .fontColor($r('sys.color.ohos_id_color_emphasize'))
+            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
+            .backgroundColor($r('app.color.chip_selected_bg'))
+            .borderRadius(DesignConstants.RADIUS.XL)
         }
       }
       .width('100%')
 
-      // 图片 (封面) - 根据原始比例动态调整高度
       if (moment.images && moment.images.length > 0) {
-        Image(moment.images[0].url)
+        Image(MediaUrlUtil.normalize(moment.images[0].url))
           .width('100%')
           .height(this.calculateImageHeight(moment))
           .objectFit(ImageFit.Cover)
           .borderRadius(DesignConstants.RADIUS.LG)
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor($r('app.color.bg_tertiary'))
       } else {
-        // 无图占位 - 纯文字卡片
         Column() {
-          Text(moment.description)
-            .fontSize(12)
+          Text(moment.description || '这条动态还没有文案')
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .lineHeight(22)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-            .maxLines(6)
+            .maxLines(5)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
         .width('100%')
-        .height(164)
+        .height(140)
         .padding(DesignConstants.SPACING.MD)
         .justifyContent(FlexAlign.Center)
-        .backgroundColor($r('app.color.bg_secondary'))
+        .backgroundColor($r('app.color.bg_tertiary'))
         .borderRadius(DesignConstants.RADIUS.LG)
       }
 
-      // 内容区域 - 小红书风格
-      Column({ space: 6 }) {
-        // 文本描述
-        if (moment.description && moment.images && moment.images.length > 0) {
-          Text(moment.description)
-            .fontSize(13)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
-            .maxLines(3)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .lineHeight(18)
-        }
-
-        // 用户信息 - 更紧凑的布局
-        Row({ space: 6 }) {
-          SystemAvatar({
-            avatarUrl: moment.user?.avatar_url ?? '',
-            name: moment.user?.nickname ?? '',
-            avatarSize: 18
-          })
-          Text(moment.user?.nickname ?? '未知用户')
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .layoutWeight(1)
-
-          Text(this.formatTime(moment.created_at))
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
+      if (moment.description) {
+        Text(moment.description)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .lineHeight(22)
+          .maxLines(4)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
       }
-      .padding(8)
+
+      Row({ space: DesignConstants.SPACING.SM }) {
+        SystemAvatar({
+          avatarUrl: moment.user?.avatar_url ?? '',
+          name: moment.user?.nickname ?? '',
+          avatarSize: 24,
+          shape: 'circle'
+        })
+        Text(moment.user?.nickname ?? '未知用户')
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .layoutWeight(1)
+        Text(formatRelativeTime(moment.created_at))
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      Row({ space: DesignConstants.SPACING.LG }) {
+        Text(`点赞 ${formatCount(moment.likes_count)}`)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        Text(`评论 ${formatCount(moment.comments_count)}`)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        Text(`分享 ${formatCount(moment.shares_count)}`)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+      }
+      .width('100%')
     }
-    .width('100%')
     .padding({
-      left: DesignConstants.SPACING.MD,
-      right: DesignConstants.SPACING.MD,
-      top: DesignConstants.SPACING.MD,
-      bottom: DesignConstants.SPACING.MD
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.LG,
+      bottom: DesignConstants.SPACING.LG
     })
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.XL)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow(DesignConstants.SHADOW.SMALL)
-    // 点击反馈动画
-    .scale(this.pressedIndex === index ? { x: 0.975, y: 0.975 } : { x: 1, y: 1 })
-    .animation({ duration: 100, curve: Curve.EaseOut })
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        this.pressedIndex = index;
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.pressedIndex = -1;
-      }
-    })
+    .borderRadius(DesignConstants.RADIUS.XXL)
+    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .border({ width: 1, color: $r('app.color.highlight_border') })
     .onClick(() => {
-      // 打开动态详情
       this.openMomentDetail(moment);
     })
   }
@@ -732,18 +733,20 @@ export struct NearbyPage {
   @Builder
   buildImageGrid(images: MomentImage[]) {
     if (images.length === 1) {
-      Image(images[0].url)
+      Image(MediaUrlUtil.normalize(images[0].url))
         .width('100%')
         .constraintSize({ maxHeight: 240 })
         .objectFit(ImageFit.Cover)
+        .backgroundColor($r('app.color.bg_tertiary'))
         .borderRadius(DesignConstants.RADIUS.MD)
     } else {
       Flex({ wrap: FlexWrap.Wrap }) {
         ForEach(images.slice(0, 9), (img: MomentImage) => {
-          Image(img.url)
+          Image(MediaUrlUtil.normalize(img.url))
             .width(images.length <= 4 ? '48%' : '31%')
             .aspectRatio(1)
             .objectFit(ImageFit.Cover)
+            .backgroundColor($r('app.color.bg_tertiary'))
             .borderRadius(DesignConstants.RADIUS.SM)
             .margin(2)
         }, (img: MomentImage, index: number) => `${img.url}_${index}`)
@@ -754,17 +757,17 @@ export struct NearbyPage {
 
   @Builder
   buildStatItem(icon: AppIcon, text: string) {
-    Row({ space: 4 }) {
+    Row({ space: DesignConstants.SPACING.XS }) {
       Text() {
         SymbolSpan($r(icon))
-          .fontSize(16)
+          .fontSize(DesignConstants.FONT.SIZE.LG)
           .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
       }
       Text(text)
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontColor($r('sys.color.ohos_id_color_text_secondary'))
     }
-    .margin({ right: 24 })
+    .margin({ right: DesignConstants.SPACING.XL })
   }
 
   // ==================== 用户内容 ====================
@@ -773,17 +776,26 @@ export struct NearbyPage {
     Column() {
       if (this.usersLoading) {
         SystemLoadingView({ message: '正在加载附近用户...' })
-          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+          .transition(
+            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          )
       } else if (this.usersError.length > 0 && this.users.length === 0) {
         EmptyState({ icon: AppIcon.WARNING, message: this.usersError, actionLabel: '重试', onAction: () => { this.loadNearbyUsers(); } })
-          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+          .transition(
+            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          )
       } else if (this.users.length === 0) {
         EmptyState({ icon: AppIcon.PERSON, message: '附近暂无其他用户' })
-          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+          .transition(
+            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          )
       } else {
-        Refresh({ refreshing: $$this.usersRefreshing }) {
-          List({ space: DesignConstants.SPACING.MD }) {
-            ForEach(this.users, (user: UserItem) => {
+        Refresh({ refreshing: $$this.usersRefreshing, builder: RefreshIndicator }) {
+          List() {
+            LazyForEach(this.usersDataSource, (user: UserItem) => {
               ListItem() {
                 this.buildUserCard(user)
               }
@@ -795,9 +807,9 @@ export struct NearbyPage {
             }
           }
           .padding({
-            left: DesignConstants.SPACING.MD,
-            right: DesignConstants.SPACING.MD,
-            top: DesignConstants.SPACING.MD,
+            left: DesignConstants.SPACING.LG,
+            right: DesignConstants.SPACING.LG,
+            top: DesignConstants.SPACING.SM,
             bottom: this.getListBottomPadding()
           })
           .scrollBar(BarState.Auto)
@@ -805,7 +817,10 @@ export struct NearbyPage {
         }
         .layoutWeight(1)
         .onRefreshing(() => { this.loadNearbyUsers(false, true); })
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
       }
     }
     .width('100%')
@@ -814,9 +829,9 @@ export struct NearbyPage {
 
   @Builder
   buildUserCard(user: UserItem) {
-    Column({ space: DesignConstants.SPACING.MD }) {
+    Column({ space: DesignConstants.SPACING.SM }) {
       Row({ space: 6 }) {
-        Row({ space: 4 }) {
+        Row({ space: DesignConstants.SPACING.XS }) {
           Text() {
             SymbolSpan($r(AppIcon.LOCATION))
               .fontSize(10)
@@ -826,17 +841,17 @@ export struct NearbyPage {
             .fontSize(10)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         }
-        .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
         .backgroundColor($r('app.color.bg_tertiary'))
         .borderRadius(DesignConstants.RADIUS.XL)
 
         Blank().layoutWeight(1)
 
         if (user.location?.distance !== undefined && user.location?.distance !== null) {
-          Text(this.formatDistance(user.location.distance))
+          Text(LocationUtil.formatDistance(user.location.distance))
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor($r('sys.color.ohos_id_color_emphasize'))
-            .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
             .backgroundColor($r('app.color.chip_selected_bg'))
             .borderRadius(DesignConstants.RADIUS.XL)
         }
@@ -844,14 +859,15 @@ export struct NearbyPage {
       .width('100%')
 
       Row({ space: DesignConstants.SPACING.SM }) {
-        Row({ space: DesignConstants.SPACING.MD }) {
+        Row({ space: DesignConstants.SPACING.SM }) {
           SystemAvatar({
             avatarUrl: user.user?.avatar_url ?? '',
             name: user.user?.nickname ?? '',
-            avatarSize: 48
+            avatarSize: 44,
+            shape: 'circle'
           })
 
-          Column({ space: 4 }) {
+          Column({ space: DesignConstants.SPACING.XS }) {
             Text(user.user?.nickname ?? '')
               .fontSize(15)
               .fontWeight(FontWeight.Medium)
@@ -859,7 +875,7 @@ export struct NearbyPage {
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-            Row({ space: 4 }) {
+            Row({ space: DesignConstants.SPACING.XS }) {
               if (user.presence_status === 'online') {
                 Row()
                   .width(6)
@@ -886,18 +902,22 @@ export struct NearbyPage {
           .layoutWeight(1)
         }
         .layoutWeight(1)
+        .onClick(() => {
+          this.openUserProfile(user);
+        })
 
         Row() {
           Text() {
             SymbolSpan($r(AppIcon.MORE))
-              .fontSize(16)
+              .fontSize(DesignConstants.FONT.SIZE.LG)
               .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
           }
         }
-        .width(26)
-        .height(26)
+        .width(30)
+        .height(30)
         .borderRadius(DesignConstants.RADIUS.XL)
         .backgroundColor($r('app.color.bg_tertiary'))
+        .border({ width: 1, color: $r('app.color.highlight_border') })
         .justifyContent(FlexAlign.Center)
         .alignItems(VerticalAlign.Center)
         .bindMenu([
@@ -933,78 +953,74 @@ export struct NearbyPage {
 
       if (user.bio) {
         Text(user.bio)
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .lineHeight(17)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-          .maxLines(2)
+          .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .width('100%')
       } else {
         Text('这个人很神秘，暂时还没有留下简介')
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .lineHeight(17)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-          .maxLines(2)
+          .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .width('100%')
       }
 
-      Row({ space: 6 }) {
-        if ((user.social_context?.mutual_friends_count ?? 0) > 0) {
-          Text(`共同好友 ${user.social_context?.mutual_friends_count ?? 0}`)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-            .padding({ left: 8, right: 8, top: 3, bottom: 3 })
-              .backgroundColor($r('app.color.bg_tertiary'))
-            .borderRadius(DesignConstants.RADIUS.XL)
-        }
-      }
-      .width('100%')
-
-      if (user.tags && user.tags.length > 0) {
+      if ((user.social_context?.mutual_friends_count ?? 0) > 0 || (user.tags && user.tags.length > 0)) {
         Flex({ wrap: FlexWrap.Wrap }) {
-          ForEach(user.tags.slice(0, 3), (tag: string) => {
+          if ((user.social_context?.mutual_friends_count ?? 0) > 0) {
+            Text(`共同好友 ${formatCount(user.social_context?.mutual_friends_count)}`)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
+              .margin({ right: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+              .backgroundColor($r('app.color.bg_tertiary'))
+              .borderRadius(DesignConstants.RADIUS.XL)
+          }
+          ForEach((user.tags ?? []).slice(0, 2), (tag: string) => {
             Text(`#${tag}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor($r('sys.color.ohos_id_color_text_secondary'))
               .padding({ left: 7, right: 7, top: 3, bottom: 3 })
-              .margin({ right: 4, bottom: 4 })
+              .margin({ right: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
               .backgroundColor($r('app.color.bg_tertiary'))
-              .borderRadius(DesignConstants.RADIUS.MD)
+              .borderRadius(DesignConstants.RADIUS.XL)
           }, (tag: string) => tag)
         }
         .width('100%')
       }
 
-      Row({ space: 8 }) {
+      Row({ space: DesignConstants.SPACING.SM }) {
         Button(this.isUserActionPending(user.user?.user_id ?? '') ? '处理中...' :
           (this.isUserFollowing(user) ? '已关注' : '关注'))
-          .type(ButtonType.Normal)
+          .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(30)
-          .borderRadius(DesignConstants.RADIUS.XL)
+          .height(40)
+          .borderRadius(DesignConstants.RADIUS.FULL)
           .enabled(!this.isUserActionPending(user.user?.user_id ?? '') && !this.isUserBlocked(user))
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor(this.isUserFollowing(user) ? Color.Transparent : $r('sys.color.ohos_id_color_emphasize'))
-          .fontColor(this.isUserFollowing(user) ? $r('sys.color.ohos_id_color_emphasize') : Color.White)
-          .borderWidth(this.isUserFollowing(user) ? 1 : 0)
-          .borderColor($r('sys.color.ohos_id_color_emphasize'))
+          .backgroundColor(this.isUserFollowing(user) ? $r('app.color.bg_tertiary') : $r('app.color.brand_primary'))
+          .fontColor(this.isUserFollowing(user) ? $r('app.color.brand_primary') : Color.White)
+          .shadow(this.isUserFollowing(user) ? { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 } : DesignConstants.SHADOW.SMALL)
+          .border(this.isUserFollowing(user) ? { width: 0 } : { width: 1, color: $r('app.color.highlight_border') })
           .opacity(this.isUserActionPending(user.user?.user_id ?? '') || this.isUserBlocked(user) ? 0.58 : 1)
           .onClick(() => { this.followUser(user); })
 
         Button('私聊')
-          .type(ButtonType.Normal)
+          .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(30)
-          .borderRadius(DesignConstants.RADIUS.XL)
+          .height(40)
+          .borderRadius(DesignConstants.RADIUS.FULL)
           .enabled(!this.isUserBlocked(user))
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor(Color.Transparent)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .borderWidth(1)
-          .borderColor($r('sys.color.ohos_id_color_list_separator'))
+          .backgroundColor($r('app.color.bg_tertiary'))
+          .fontColor($r('app.color.brand_primary'))
+          .border({ width: 1, color: $r('app.color.highlight_border') })
           .opacity(this.isUserBlocked(user) ? 0.58 : 1)
           .onClick(() => { this.startPrivateChat(user); })
       }
@@ -1013,15 +1029,16 @@ export struct NearbyPage {
     .width('100%')
     .alignItems(HorizontalAlign.Start)
     .padding({
-      left: DesignConstants.SPACING.MD,
-      right: DesignConstants.SPACING.MD,
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
       top: DesignConstants.SPACING.MD,
       bottom: DesignConstants.SPACING.MD
     })
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.XL)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow(DesignConstants.SHADOW.SMALL)
+    .borderRadius(DesignConstants.RADIUS.XXL)
+    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .margin({ bottom: DesignConstants.SPACING.MD })
   }
 
   // ==================== 群组内容 ====================
@@ -1030,17 +1047,26 @@ export struct NearbyPage {
     Column() {
       if (this.groupsLoading) {
         SystemLoadingView({ message: '正在加载附近群组...' })
-          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+          .transition(
+            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          )
       } else if (this.groupsError.length > 0 && this.groups.length === 0) {
         EmptyState({ icon: AppIcon.WARNING, message: this.groupsError, actionLabel: '重试', onAction: () => { this.loadNearbyGroups(); } })
-          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+          .transition(
+            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          )
       } else if (this.groups.length === 0) {
         EmptyState({ icon: AppIcon.GROUP, message: '附近暂无群组' })
-          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+          .transition(
+            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          )
       } else {
-        Refresh({ refreshing: $$this.groupsRefreshing }) {
-          List({ space: DesignConstants.SPACING.MD }) {
-            ForEach(this.groups, (group: GroupItem) => {
+        Refresh({ refreshing: $$this.groupsRefreshing, builder: RefreshIndicator }) {
+          List() {
+            LazyForEach(this.groupsDataSource, (group: GroupItem) => {
               ListItem() {
                 this.buildGroupCard(group)
               }
@@ -1052,9 +1078,9 @@ export struct NearbyPage {
             }
           }
           .padding({
-            left: DesignConstants.SPACING.MD,
-            right: DesignConstants.SPACING.MD,
-            top: DesignConstants.SPACING.MD,
+            left: DesignConstants.SPACING.LG,
+            right: DesignConstants.SPACING.LG,
+            top: DesignConstants.SPACING.SM,
             bottom: this.getListBottomPadding()
           })
           .scrollBar(BarState.Auto)
@@ -1062,7 +1088,10 @@ export struct NearbyPage {
         }
         .layoutWeight(1)
         .onRefreshing(() => { this.loadNearbyGroups(false, true); })
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
       }
     }
     .width('100%')
@@ -1073,7 +1102,7 @@ export struct NearbyPage {
   buildGroupCard(group: GroupItem) {
     Column({ space: DesignConstants.SPACING.MD }) {
       Row({ space: 6 }) {
-        Row({ space: 4 }) {
+        Row({ space: DesignConstants.SPACING.XS }) {
           Text() {
             SymbolSpan($r(AppIcon.GROUP))
               .fontSize(10)
@@ -1083,7 +1112,7 @@ export struct NearbyPage {
             .fontSize(10)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         }
-        .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
         .backgroundColor($r('app.color.bg_tertiary'))
         .borderRadius(DesignConstants.RADIUS.XL)
 
@@ -1091,10 +1120,10 @@ export struct NearbyPage {
 
         if ((group.location as RelativeLocation)?.distance !== undefined &&
           (group.location as RelativeLocation)?.distance !== null) {
-          Text(this.formatDistance((group.location as RelativeLocation).distance!))
+          Text(LocationUtil.formatDistance((group.location as RelativeLocation).distance!))
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor($r('sys.color.ohos_id_color_emphasize'))
-            .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
             .backgroundColor($r('app.color.chip_selected_bg'))
             .borderRadius(DesignConstants.RADIUS.XL)
         }
@@ -1107,10 +1136,10 @@ export struct NearbyPage {
             avatarUrl: group.group?.avatar_url ?? '',
             name: group.group?.name ?? '',
             avatarSize: 48,
-            shape: 'squircle'
+            shape: 'circle'
           })
 
-          Column({ space: 4 }) {
+          Column({ space: DesignConstants.SPACING.XS }) {
             Text(group.group?.name ?? '')
               .fontSize(15)
               .fontWeight(FontWeight.Medium)
@@ -1119,7 +1148,7 @@ export struct NearbyPage {
               .textOverflow({ overflow: TextOverflow.Ellipsis })
 
             Row({ space: 6 }) {
-              Text(`${group.group?.members_count ?? 0} 人`)
+              Text(`${formatCount(group.group?.members_count)} 人`)
                 .fontSize(DesignConstants.FONT.SIZE.SM)
                 .fontColor($r('sys.color.ohos_id_color_text_secondary'))
               if (group.has_password) {
@@ -1138,14 +1167,15 @@ export struct NearbyPage {
         Row() {
           Text() {
             SymbolSpan($r(AppIcon.MORE))
-              .fontSize(16)
+              .fontSize(DesignConstants.FONT.SIZE.LG)
               .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
           }
         }
-        .width(26)
-        .height(26)
+        .width(30)
+        .height(30)
         .borderRadius(DesignConstants.RADIUS.XL)
         .backgroundColor($r('app.color.bg_tertiary'))
+        .border({ width: 1, color: $r('app.color.highlight_border') })
         .justifyContent(FlexAlign.Center)
         .alignItems(VerticalAlign.Center)
         .bindMenu([
@@ -1171,7 +1201,7 @@ export struct NearbyPage {
 
       if (group.description) {
         Text(group.description)
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .lineHeight(17)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
           .maxLines(2)
@@ -1179,7 +1209,7 @@ export struct NearbyPage {
           .width('100%')
       } else {
         Text('这个群还没有群介绍')
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .lineHeight(17)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
           .maxLines(2)
@@ -1193,43 +1223,42 @@ export struct NearbyPage {
             Text(`#${tag}`)
               .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-            .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
             .backgroundColor($r('app.color.bg_tertiary'))
-            .borderRadius(DesignConstants.RADIUS.MD)
-            .margin({ right: 4, bottom: 4 })
+            .borderRadius(DesignConstants.RADIUS.XL)
+            .margin({ right: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
         }, (tag: string) => tag)
       }
       .width('100%')
       }
 
-      Row({ space: 8 }) {
+      Row({ space: DesignConstants.SPACING.SM }) {
         Button(this.isGroupActionPending(group.group?.group_id ?? '') ? '处理中...' :
           (this.isGroupJoined(group) ? '进入群聊' : '加入群组'))
-          .type(ButtonType.Normal)
+          .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(30)
-          .borderRadius(DesignConstants.RADIUS.XL)
+          .height(40)
+          .borderRadius(DesignConstants.RADIUS.FULL)
           .enabled(!this.isGroupActionPending(group.group?.group_id ?? ''))
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor(this.isGroupJoined(group) ? Color.Transparent : $r('sys.color.ohos_id_color_emphasize'))
-          .fontColor(this.isGroupJoined(group) ? $r('sys.color.ohos_id_color_emphasize') : Color.White)
-          .borderWidth(this.isGroupJoined(group) ? 1 : 0)
-          .borderColor($r('sys.color.ohos_id_color_emphasize'))
+          .backgroundColor(this.isGroupJoined(group) ? $r('app.color.bg_tertiary') : $r('app.color.brand_primary'))
+          .fontColor(this.isGroupJoined(group) ? $r('app.color.brand_primary') : Color.White)
+          .shadow(this.isGroupJoined(group) ? { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 } : DesignConstants.SHADOW.SMALL)
+          .border(this.isGroupJoined(group) ? { width: 0 } : { width: 1, color: $r('app.color.highlight_border') })
           .opacity(this.isGroupActionPending(group.group?.group_id ?? '') ? 0.58 : 1)
           .onClick(() => { this.joinGroup(group); })
 
         Button('详情')
-          .type(ButtonType.Normal)
+          .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(30)
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .fontSize(12)
+          .height(40)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor(Color.Transparent)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .borderWidth(1)
-          .borderColor($r('sys.color.ohos_id_color_list_separator'))
+          .backgroundColor($r('app.color.bg_tertiary'))
+          .fontColor($r('app.color.brand_primary'))
+          .border({ width: 1, color: $r('app.color.highlight_border') })
           .onClick(() => { this.openGroupDetail(group); })
       }
       .width('100%')
@@ -1243,19 +1272,10 @@ export struct NearbyPage {
       bottom: DesignConstants.SPACING.MD
     })
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.XL)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow(DesignConstants.SHADOW.SMALL)
-  }
-
-  @Builder
-  buildWaterFlowFooter() {
-    if (this.momentsLoadingMore) {
-      LoadingMoreIndicator()
-    } else {
-      Blank()
-        .height(0)
-    }
+    .borderRadius(DesignConstants.RADIUS.XXL)
+    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .margin({ bottom: DesignConstants.SPACING.MD })
   }
 
   // ==================== 操作方法 ====================
@@ -1331,6 +1351,16 @@ export struct NearbyPage {
     } finally {
       this.setGroupActionPending(groupId, false);
     }
+  }
+
+  private openUserProfile(user: UserItem): void {
+    const userId = user.user?.user_id;
+    if (!userId) {
+      return;
+    }
+    const params = new ProfileRouteParam();
+    params.userId = userId;
+    AppRouter.push(PageNames.PROFILE, params);
   }
 
   private startPrivateChat(user: UserItem): void {
@@ -1561,38 +1591,4 @@ export struct NearbyPage {
     AppRouter.push(PageNames.GROUP_DETAIL, params);
   }
 
-  private formatDistance(meters: number): string {
-    if (meters < 1000) {
-      return `${Math.round(meters)}m`;
-    }
-    return `${(meters / 1000).toFixed(1)}km`;
-  }
-
-  private formatTime(dateTime: string): string {
-    if (!dateTime) {
-      return '';
-    }
-    const createdAt = new Date(dateTime).getTime();
-    const now = Date.now();
-    if (Number.isNaN(createdAt)) {
-      return '';
-    }
-    const diffMs = now - createdAt;
-    const minute = 60 * 1000;
-    const hour = 60 * minute;
-    const day = 24 * hour;
-    if (diffMs < hour) {
-      const mins = Math.max(1, Math.floor(diffMs / minute));
-      return `${mins}分钟前`;
-    }
-    if (diffMs < day) {
-      const hours = Math.max(1, Math.floor(diffMs / hour));
-      return `${hours}小时前`;
-    }
-    const days = Math.floor(diffMs / day);
-    if (days < 7) {
-      return `${days}天前`;
-    }
-    return dateTime.slice(0, 10);
-  }
 }

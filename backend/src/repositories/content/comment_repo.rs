@@ -344,11 +344,14 @@ impl CommentRepository {
         let rows = sqlx::query_as!(
             CommentIdMapRow,
             r#"
-            SELECT (EXTRACT(EPOCH FROM created_at) * 1000)::bigint as "row_id!",
-                   comment_id as "comment_id!"
-            FROM comment_id_map
-            WHERE (EXTRACT(EPOCH FROM created_at) * 1000)::bigint > $1
-            ORDER BY created_at ASC
+            SELECT row_id as "row_id!", comment_id as "comment_id!"
+            FROM (
+                SELECT row_number() OVER (ORDER BY created_at ASC, comment_id ASC)::bigint as row_id,
+                       comment_id
+                FROM comment_id_map
+            ) ranked
+            WHERE row_id > $1
+            ORDER BY row_id ASC
             LIMIT $2
             "#,
             last_row_id,

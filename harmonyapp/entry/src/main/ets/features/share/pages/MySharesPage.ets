@@ -12,6 +12,7 @@ import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { LoginPromptView } from '../../../components/LoginPromptView';
+import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 
 @Preview
 @Component
@@ -247,7 +248,7 @@ export struct MySharesPage {
 
   @Builder
   private buildShareList() {
-    List({ space: DesignConstants.SPACING.SM }) {
+    List() {
       LazyForEach(this.sharesDataSource, (share: ShareListItem) => {
         ListItem() {
           this.buildShareCard(share)
@@ -260,7 +261,9 @@ export struct MySharesPage {
         }
       }
     }
+    .divider({ strokeWidth: 0 })
     .width('100%')
+    .cachedCount(5)
     .padding({
       left: DesignConstants.SPACING.LG,
       right: DesignConstants.SPACING.LG,
@@ -294,8 +297,7 @@ export struct MySharesPage {
           .fontWeight(FontWeight.Medium)
           .fontColor(this.shareStatusColor(share))
           .backgroundColor(this.shareStatusBackground(share))
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .borderRadius(DesignConstants.RADIUS.MD)
           .padding({
             left: DesignConstants.SPACING.SM,
             right: DesignConstants.SPACING.SM,
@@ -313,7 +315,7 @@ export struct MySharesPage {
       }
 
       if (share.preview?.cover_url) {
-        Image(share.preview.cover_url)
+        Image(MediaUrlUtil.normalize(share.preview.cover_url))
           .width('100%')
           .height(130)
           .objectFit(ImageFit.Cover)
@@ -341,8 +343,7 @@ export struct MySharesPage {
         bottom: DesignConstants.SPACING.SM
       })
       .backgroundColor($r('app.color.bg_tertiary'))
-      .borderRadius(DesignConstants.RADIUS.XL)
-      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .borderRadius(DesignConstants.RADIUS.MD)
 
       Row({ space: DesignConstants.SPACING.MD }) {
         Column({ space: 2 }) {
@@ -359,11 +360,12 @@ export struct MySharesPage {
         if (!share.is_revoked) {
           Button(this.revokingShareId === share.share_id ? '撤销中...' : '撤销分享')
             .type(ButtonType.Normal)
-            .backgroundColor($r('app.color.bg_tertiary'))
+            .backgroundColor(Color.Transparent)
             .fontColor($r('app.color.color_danger'))
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .borderRadius(DesignConstants.RADIUS.XL)
-            .border({ width: 1, color: $r('app.color.color_danger') })
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .shadow(DesignConstants.SHADOW.SMALL)
+            .border({ width: 1, color: $r('app.color.highlight_border') })
             .height(34)
             .enabled(this.revokingShareId !== share.share_id)
             .onClick(() => this.revokeShare(share))
@@ -376,10 +378,11 @@ export struct MySharesPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
+    .borderRadius(DesignConstants.RADIUS.XXL)
+    .shadow(DesignConstants.SHADOW.MEDIUM)
     .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.XL)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow(DesignConstants.SHADOW.SMALL)
+    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .margin({ bottom: 12 })
   }
 
   private defaultShareTitle(share: ShareListItem): string {

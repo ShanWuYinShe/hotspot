@@ -6,6 +6,7 @@ import { RdbManager } from './RdbManager';
 import { relationalStore, ValuesBucket } from '@kit.ArkData';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { MomentItem } from '../types/api';
+import { MediaUrlUtil } from '../utils/MediaUrlUtil';
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG = 'MomentCacheService';
@@ -88,7 +89,9 @@ export class MomentCacheService {
         const jsonData = resultSet.getString(resultSet.getColumnIndex('json_data'));
         if (jsonData) {
           try {
-            items.push(JSON.parse(jsonData) as MomentItem);
+            const moment = JSON.parse(jsonData) as MomentItem;
+            this.normalizeMomentMediaUrls(moment);
+            items.push(moment);
           } catch (e) {
              // ignore parse error
           }
@@ -100,6 +103,21 @@ export class MomentCacheService {
     } catch (err) {
       hilog.error(DOMAIN_NUMBER, TAG, `Get cached moments failed: ${JSON.stringify(err)}`);
       return [];
+    }
+  }
+
+  private normalizeMomentMediaUrls(moment: MomentItem): void {
+    if (moment.user && moment.user.avatar_url) {
+      moment.user.avatar_url = MediaUrlUtil.normalize(moment.user.avatar_url);
+    }
+    if (!moment.images || moment.images.length === 0) {
+      return;
+    }
+    for (let i = 0; i < moment.images.length; i++) {
+      const image = moment.images[i];
+      if (image && image.url) {
+        image.url = MediaUrlUtil.normalize(image.url);
+      }
     }
   }
 }

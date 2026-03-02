@@ -4,7 +4,7 @@
  */
 
 import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR } from '../../../core/state/GlobalStateManager';
-import { LocationInfo } from '../../../core/location/LocationUtil';
+import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import {
@@ -25,6 +25,7 @@ import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { AppRouter, LoginRouteParam, GroupDetailRouteParam } from '../../../core/router/AppRouter';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { formatCount } from '../../../core/utils/FormatUtil';
 
 @Preview
 @Component
@@ -434,12 +435,6 @@ export struct GroupPage {
     }
   }
 
-  private formatDistance(meters: number): string {
-    if (meters < 1000) {
-      return `${Math.round(meters)}m`;
-    }
-    return `${(meters / 1000).toFixed(1)}km`;
-  }
 
   private async createGroup() {
     const currentUser = this.stateManager.getCurrentUser();
@@ -472,9 +467,8 @@ export struct GroupPage {
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .height(32)
-            .borderRadius(DesignConstants.RADIUS.XXL)
-            .borderWidth(1)
-            .borderColor($r('sys.color.ohos_id_color_list_separator'))
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .shadow(DesignConstants.SHADOW.SMALL)
             .onClick(() => this.loadMyInvites())
 
           Button('申请')
@@ -483,18 +477,18 @@ export struct GroupPage {
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .height(32)
-            .borderRadius(DesignConstants.RADIUS.XXL)
-            .borderWidth(1)
-            .borderColor($r('sys.color.ohos_id_color_list_separator'))
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .shadow(DesignConstants.SHADOW.SMALL)
             .onClick(() => this.loadMyApplications())
 
           Button('创建')
             .type(ButtonType.Normal)
-            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+            .backgroundColor($r('app.color.brand_primary'))
             .fontColor(Color.White)
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .height(32)
-            .borderRadius(DesignConstants.RADIUS.XXL)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .shadow(DesignConstants.SHADOW.SMALL)
             .onClick(() => this.createGroup())
         }
       }
@@ -506,31 +500,42 @@ export struct GroupPage {
         top: this.getHeaderTopPadding(),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_secondary'))
-      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .backgroundColor(Color.Transparent)
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       // 内容区域
       if (this.isLoading) {
         SystemLoadingView({ message: '正在加载附近群组...' })
-          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+          .transition(
+            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          )
       } else if (this.errorMessage && this.groups.length === 0) {
         EmptyState({ icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试', onAction: () => { this.loadNearbyGroups(); } })
           .layoutWeight(1)
-          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+          .transition(
+            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          )
       } else if (this.groups.length === 0) {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           EmptyState({ icon: AppIcon.GROUP, message: '附近暂无群组\n快来创建第一个吧！' })
         }
         .onRefreshing(() => { this.loadNearbyGroups(true); })
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
       } else {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           this.buildGroupList()
         }
         .layoutWeight(1)
         .onRefreshing(() => { this.loadNearbyGroups(true); })
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
       }
     }
     .width('100%')
@@ -540,13 +545,13 @@ export struct GroupPage {
       height: '68%',
       showClose: false,
       dragBar: true,
-      backgroundColor: $r('app.color.bg_secondary')
+      backgroundColor: $r('app.color.start_window_background')
     })
     .bindSheet($$this.showMyApplicationsSheet, this.buildMyApplicationsSheet(), {
       height: '68%',
       showClose: false,
       dragBar: true,
-      backgroundColor: $r('app.color.bg_secondary')
+      backgroundColor: $r('app.color.start_window_background')
     })
   }
 
@@ -575,7 +580,7 @@ export struct GroupPage {
       } else if (this.myInvites.length === 0) {
         EmptyState({ icon: AppIcon.EMPTY, message: '暂无待处理邀请' }).layoutWeight(1)
       } else {
-        List({ space: DesignConstants.SPACING.SM }) {
+        List() {
           LazyForEach(this.invitesDataSource, (invite: GroupInviteItem) => {
             ListItem() {
               this.buildMyInviteItem(invite)
@@ -588,10 +593,11 @@ export struct GroupPage {
             }
           }
         }
+        .divider({ strokeWidth: 0 })
         .width('100%')
         .layoutWeight(1)
-        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
         .scrollBar(BarState.Auto)
+        .cachedCount(5)
         .onReachEnd(() => { this.loadMoreMyInvites(); })
       }
     }
@@ -639,9 +645,11 @@ export struct GroupPage {
       Row({ space: 8 }) {
         Button(this.isInviteHandling(invite.invite_id) ? '处理中...' : '接受')
           .type(ButtonType.Normal)
-          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+          .backgroundColor($r('app.color.brand_primary'))
           .fontColor(Color.White)
-          .borderRadius(DesignConstants.RADIUS.XXL)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .shadow(DesignConstants.SHADOW.SMALL)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
           .height(34)
           .layoutWeight(1)
           .enabled(!this.isInviteHandling(invite.invite_id))
@@ -652,8 +660,9 @@ export struct GroupPage {
           .type(ButtonType.Normal)
           .backgroundColor($r('app.color.bg_tertiary'))
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .borderRadius(DesignConstants.RADIUS.XXL)
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .shadow(DesignConstants.SHADOW.SMALL)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
           .height(34)
           .layoutWeight(1)
           .enabled(!this.isInviteHandling(invite.invite_id))
@@ -664,10 +673,11 @@ export struct GroupPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
-    .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.XXL)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow(DesignConstants.SHADOW.SMALL)
+    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .backgroundColor($r('app.color.bg_secondary'))
+    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .margin({ bottom: 12 })
   }
 
   @Builder
@@ -695,7 +705,7 @@ export struct GroupPage {
       } else if (this.myApplications.length === 0) {
         EmptyState({ icon: AppIcon.EMPTY, message: '暂无待处理申请' }).layoutWeight(1)
       } else {
-        List({ space: DesignConstants.SPACING.SM }) {
+        List() {
           LazyForEach(this.applicationsDataSource, (application: GroupApplicationItem) => {
             ListItem() {
               this.buildMyApplicationItem(application)
@@ -708,10 +718,11 @@ export struct GroupPage {
             }
           }
         }
+        .divider({ strokeWidth: 0 })
         .width('100%')
         .layoutWeight(1)
-        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
         .scrollBar(BarState.Auto)
+        .cachedCount(5)
         .onReachEnd(() => { this.loadMoreMyApplications(); })
       }
     }
@@ -761,8 +772,9 @@ export struct GroupPage {
           .type(ButtonType.Normal)
           .backgroundColor($r('app.color.bg_tertiary'))
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .borderRadius(DesignConstants.RADIUS.XXL)
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .shadow(DesignConstants.SHADOW.SMALL)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
           .height(34)
           .layoutWeight(1)
           .enabled(!this.isApplicationHandling(application.application_id))
@@ -773,15 +785,16 @@ export struct GroupPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
-    .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.XXL)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow(DesignConstants.SHADOW.SMALL)
+    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .backgroundColor($r('app.color.bg_secondary'))
+    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .margin({ bottom: 12 })
   }
 
   @Builder
   private buildGroupList() {
-    List({ space: DesignConstants.SPACING.SM }) {
+    List() {
       LazyForEach(this.groupsDataSource, (group: GroupItem) => {
         ListItem() {
           this.buildGroupCard(group)
@@ -793,6 +806,7 @@ export struct GroupPage {
         }
       }
     }
+    .divider({ strokeWidth: 0 })
     .width('100%')
     .padding({
       left: DesignConstants.SPACING.LG,
@@ -801,6 +815,7 @@ export struct GroupPage {
       bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
     })
     .scrollBar(BarState.Auto)
+    .cachedCount(5)
     .onReachEnd(() => { this.loadMoreGroups(); })
   }
 
@@ -823,12 +838,12 @@ export struct GroupPage {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
         Row({ space: DesignConstants.SPACING.SM }) {
-          Text(`${group.group.members_count}人`)
+          Text(`${formatCount(group.group.members_count)}人`)
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
 
           if (group.location?.distance !== undefined && group.location?.distance !== null) {
-            Text(this.formatDistance(group.location.distance))
+            Text(LocationUtil.formatDistance(group.location.distance))
               .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor($r('sys.color.ohos_id_color_text_secondary'))
           }
@@ -848,31 +863,29 @@ export struct GroupPage {
       Button(this.isGroupJoining(group.group.group_id) ? '处理中...' : '加入')
         .type(ButtonType.Normal)
         .backgroundColor($r('app.color.bg_tertiary'))
-        .fontColor($r('sys.color.ohos_id_color_emphasize'))
+        .fontColor($r('app.color.brand_primary'))
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontWeight(FontWeight.Medium)
         .height(34)
-        .borderRadius(DesignConstants.RADIUS.XXL)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .shadow(DesignConstants.SHADOW.SMALL)
+        .border({ width: 1, color: $r('app.color.highlight_border') })
         .enabled(!this.isGroupJoining(group.group.group_id))
         .opacity(this.isGroupJoining(group.group.group_id) ? 0.58 : 1)
-        .borderWidth(1)
-        .borderColor($r('sys.color.ohos_id_color_emphasize'))
         .onClick(() => this.joinGroup(group))
     }
     .width('100%')
     .padding({
-      left: DesignConstants.SPACING.MD,
-      right: DesignConstants.SPACING.MD,
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
       top: DesignConstants.SPACING.MD,
       bottom: DesignConstants.SPACING.MD
     })
-    .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.XXL)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow(DesignConstants.SHADOW.SMALL)
+    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .backgroundColor($r('app.color.bg_secondary'))
+    .margin({ bottom: 12 })
     .alignItems(VerticalAlign.Center)
-    .scale(this.pressedGroupId === group.group.group_id ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })
-    .animation({ duration: 100, curve: Curve.EaseOut })
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
         this.pressedGroupId = group.group.group_id;

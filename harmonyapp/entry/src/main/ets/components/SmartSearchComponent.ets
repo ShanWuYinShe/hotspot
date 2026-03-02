@@ -337,11 +337,13 @@ export struct SmartSearchComponent {
                     .layoutWeight(1)
 
                   Button('✕')
+                    .type(ButtonType.Normal)
                     .width(24)
                     .height(24)
                     .fontSize(12)
                     .backgroundColor(Color.Transparent)
                     .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                    .borderRadius(DesignConstants.RADIUS.FULL)
                     .onClick(() => {
                       const index = this.searchHistory.indexOf(historyItem);
                       if (index > -1) {

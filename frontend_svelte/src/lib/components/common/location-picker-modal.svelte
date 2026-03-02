@@ -698,12 +698,12 @@ let {
 	}
 
 	.center-pin-icon {
-		width: 3rem;
-		height: 3.5rem;
+		width: 40px;
+		height: 43px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		filter: drop-shadow(0 12px 16px rgba(15, 23, 42, 0.3));
+		filter: drop-shadow(0 2px 4px rgba(10, 28, 103, 0.22));
 	}
 
 	.center-pin-svg {
@@ -711,34 +711,8 @@ let {
 		height: 100%;
 	}
 
-	.center-pin-svg path {
-		fill: hsl(var(--primary));
-	}
-
-	.center-pin-svg circle:first-of-type {
-		fill: #fff;
-	}
-
-	.center-pin-core {
-		fill: hsl(var(--primary));
-	}
-
-	.center-pin-shadow {
-		width: 2.5rem;
-		height: 0.55rem;
-		border-radius: 999px;
-		background: rgba(15, 23, 42, 0.3);
-		opacity: 0.6;
-		transition: transform 150ms ease, opacity 150ms ease;
-	}
-
 	.center-pin.dragging {
-		transform: translateY(-4px);
-	}
-
-	.center-pin.dragging .center-pin-shadow {
-		transform: scale(0.82);
-		opacity: 0.4;
+		transform: translateY(-5px);
 	}
 </style>
 
@@ -831,13 +805,26 @@ let {
 		<div class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
 				<div class="center-pin" class:dragging={isMapInteracting} aria-hidden="true">
 					<div class="center-pin-icon">
-						<svg class="center-pin-svg" viewBox="0 0 48 56" aria-hidden="true" focusable="false">
-							<path d="M24 0C10.745 0 0 10.745 0 24c0 16.8 24 32 24 32s24-15.2 24-32C48 10.745 37.255 0 24 0z" />
-							<circle cx="24" cy="22" r="10" />
-							<circle cx="24" cy="22" r="5" class="center-pin-core" />
+						<svg class="center-pin-svg" viewBox="0 0 40 43" aria-hidden="true" focusable="false">
+							<defs>
+								<linearGradient id="picker-ring-gradient" x1="6" y1="3" x2="33" y2="30" gradientUnits="userSpaceOnUse">
+									<stop offset="0" stop-color="#0A1C67" />
+									<stop offset="1" stop-color="#0C2A7B" />
+								</linearGradient>
+								<linearGradient id="picker-core-gradient" x1="10" y1="8" x2="29" y2="26" gradientUnits="userSpaceOnUse">
+									<stop offset="0" stop-color="#63BCFF" />
+									<stop offset="1" stop-color="#3E90FF" />
+								</linearGradient>
+								<linearGradient id="picker-stem-gradient" x1="17.6" y1="24.5" x2="22.4" y2="42" gradientUnits="userSpaceOnUse">
+									<stop offset="0" stop-color="#58B2FF" />
+									<stop offset="1" stop-color="#3A8AFF" />
+								</linearGradient>
+							</defs>
+							<circle cx="20" cy="16.5" r="14" fill="url(#picker-ring-gradient)" />
+							<circle cx="20" cy="16.5" r="9.6" fill="url(#picker-core-gradient)" />
+							<rect x="17.6" y="24.5" width="4.8" height="17.5" rx="2.4" fill="url(#picker-stem-gradient)" />
 						</svg>
 					</div>
-					<div class="center-pin-shadow"></div>
 				</div>
 			</div>
 

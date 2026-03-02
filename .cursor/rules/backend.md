@@ -9,7 +9,7 @@ alwaysApply: false
 
 - **实现规范**：`spec/backend_rule.md` -- Rust/Axum 编码约束、分层架构、SQL 规则
 - **功能边界**：`spec/backend_doc.md` -- 后端提供的能力与非目标
-- **Agent 操作指南**：`backend/AGENTS.md` -- 目录结构、命名约定、验证命令
+- **Agent 操作指南**：`backend/AGENTS.md` -- 架构分层、SQL 规则、验证命令
 
 新增 API 端点时的文件修改清单：
 

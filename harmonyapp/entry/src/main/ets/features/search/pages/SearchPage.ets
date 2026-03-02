@@ -7,7 +7,7 @@ import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_IS_LOG
 import { ApiClient } from '../../../core/api/ApiClient';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { PageNames } from '../../../constants/AppConstants';
-import { AppRouter, ChatRouteParam, GroupDetailRouteParam, MomentDetailRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, ChatRouteParam, GroupDetailRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
 import {
   UserItem, GroupItem, MomentItem, GeoPoint, FollowRequest, UnfollowRequest,
   JoinGroupRequest, CreateReportRequest, Relationship
@@ -23,6 +23,8 @@ import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
+import { formatCount } from '../../../core/utils/FormatUtil';
 import pasteboard from '@ohos.pasteboard';
 
 
@@ -56,7 +58,6 @@ export struct SearchPage {
   private controller: TabsController = new TabsController();
   @State userActionPendingIds: string[] = [];
   @State groupActionPendingIds: string[] = [];
-  @State pressedMomentId: string = '';
 
   aboutToAppear(): void {
     SystemUiController.useSurface({
@@ -142,7 +143,7 @@ export struct SearchPage {
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: $r('app.color.bg_tertiary'),
+          bgColor: Color.Transparent,
           onButtonClick: () => {
             AppRouter.pop();
           }
@@ -151,9 +152,9 @@ export struct SearchPage {
         TextInput({ placeholder: '搜索用户、群组、瞬间...', text: this.keyword })
           .layoutWeight(1)
           .height(42)
-          .backgroundColor($r('app.color.bg_secondary'))
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-          .borderRadius(DesignConstants.RADIUS.XXL)
+          .backgroundColor($r('app.color.bg_inset'))
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .shadow(DesignConstants.SHADOW.INSET)
           .padding({ left: 16, right: 16 })
           .margin({ left: 8, right: 8 })
           .onChange((value) => {
@@ -180,14 +181,17 @@ export struct SearchPage {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_secondary'))
-      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .backgroundColor(Color.Transparent)
+      .border({ width: { bottom: 1 }, color: $r('app.color.divider') })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.isLoading) {
         SystemLoadingView({ message: '搜索中...' })
           .layoutWeight(1)
-          .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+          .transition(
+            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+          )
       } else {
         Tabs({ barPosition: BarPosition.Start, controller: this.controller, index: this.currentIndex }) {
           TabContent() {
@@ -206,14 +210,17 @@ export struct SearchPage {
         .barMode(BarMode.Fixed)
         .barWidth('100%')
         .barHeight(60)
-        .animationDuration(300)
+        .animationDuration(280)
         .onChange((index: number) => {
           this.currentIndex = index;
         })
         .width('100%')
         .layoutWeight(1)
-        .backgroundColor($r('app.color.bg_primary'))
-        .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.FastOutSlowIn }))
+        .backgroundColor(Color.Transparent)
+        .transition(
+          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+        )
       }
     }
     .width('100%')
@@ -227,24 +234,29 @@ export struct SearchPage {
   }
 
   @Builder TabBuilder(index: number, name: string) {
-    Row({ space: 4 }) {
+    Row({ space: DesignConstants.SPACING.XS }) {
       Text(name)
-        .fontColor(this.currentIndex === index ? $r('sys.color.ohos_id_color_text_primary') : $r('sys.color.ohos_id_color_text_secondary'))
-        .fontSize(16)
-        .fontWeight(this.currentIndex === index ? FontWeight.Medium : FontWeight.Normal)
+        .fontColor(this.currentIndex === index ? $r('app.color.brand_primary') : $r('sys.color.ohos_id_color_text_secondary'))
+        .fontSize(DesignConstants.FONT.SIZE.LG)
+        .fontWeight(this.currentIndex === index ? FontWeight.Bold : FontWeight.Normal)
         .lineHeight(20)
     }
     .width('100%')
-    .height(42)
+    .height(40)
     .justifyContent(FlexAlign.Center)
     .alignItems(VerticalAlign.Center)
-    .margin({ left: 8, right: 8, top: 9, bottom: 9 })
-    .padding({ left: 14, right: 14 })
+    .margin({ left: 8, right: 8, top: 10, bottom: 10 })
+    .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
     .backgroundColor(this.currentIndex === index ? $r('app.color.chip_selected_bg') : Color.Transparent)
-    .borderRadius(DesignConstants.RADIUS.XXL)
-    .border({
-      width: this.currentIndex === index ? 1 : 0,
-      color: $r('sys.color.ohos_id_color_list_separator')
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .border(this.currentIndex === index
+      ? { width: 1, color: $r('app.color.highlight_border') }
+      : { width: 0 })
+    .onClick(() => {
+      if (this.currentIndex !== index) {
+        this.currentIndex = index;
+        this.controller.changeIndex(index);
+      }
     })
   }
 
@@ -257,17 +269,18 @@ export struct SearchPage {
             .fontSize(48)
             .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
         }
-        Text('未找到相关结果').fontSize(16).fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        Text('未找到相关结果').fontSize(DesignConstants.FONT.SIZE.LG).fontColor($r('sys.color.ohos_id_color_text_secondary'))
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Center)
     } else {
-      List({ space: DesignConstants.SPACING.MD }) {
+      List({ space: DesignConstants.SPACING.SM }) {
         ForEach(this.userResults, (item: UserItem) => {
           ListItem() {
             this.buildUserItem(item)
           }
         }, (item: UserItem) => item.user?.user_id ?? '')
       }
+      .divider({ strokeWidth: 0, color: $r('app.color.divider') })
       .width('100%').height('100%')
       .padding({
         left: DesignConstants.SPACING.MD,
@@ -288,17 +301,18 @@ export struct SearchPage {
             .fontSize(48)
             .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
         }
-        Text('未找到相关结果').fontSize(16).fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        Text('未找到相关结果').fontSize(DesignConstants.FONT.SIZE.LG).fontColor($r('sys.color.ohos_id_color_text_secondary'))
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Center)
     } else {
-      List({ space: DesignConstants.SPACING.MD }) {
+      List() {
         ForEach(this.groupResults, (item: GroupItem) => {
           ListItem() {
             this.buildGroupItem(item)
           }
         }, (item: GroupItem) => item.group?.group_id ?? '')
       }
+      .divider({ strokeWidth: 0.5, color: $r('app.color.divider') })
       .width('100%').height('100%')
       .padding({
         left: DesignConstants.SPACING.MD,
@@ -319,7 +333,7 @@ export struct SearchPage {
             .fontSize(48)
             .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
         }
-        Text('未找到相关结果').fontSize(16).fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        Text('未找到相关结果').fontSize(DesignConstants.FONT.SIZE.LG).fontColor($r('sys.color.ohos_id_color_text_secondary'))
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Center)
     } else {
@@ -329,6 +343,7 @@ export struct SearchPage {
           FlowItem() {
             this.buildMomentSearchCard(item)
           }
+          .width('100%')
         }, (item: MomentItem) => item.moment_id)
       }
       .width('100%').height('100%')
@@ -383,12 +398,13 @@ export struct SearchPage {
           SystemAvatar({
             avatarUrl: item.user?.avatar_url ?? '',
             name: item.user?.nickname ?? '',
-            avatarSize: 40
+            avatarSize: 40,
+            shape: 'circle'
           })
 
           Column({ space: 2 }) {
             Text(item.user?.nickname ?? '')
-              .fontSize(14)
+              .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('sys.color.ohos_id_color_text_primary'))
               .maxLines(1)
@@ -404,11 +420,14 @@ export struct SearchPage {
           .layoutWeight(1)
         }
         .layoutWeight(1)
+        .onClick(() => {
+          this.openUserProfile(item);
+        })
 
         Row() {
           Text() {
             SymbolSpan($r(AppIcon.MORE))
-              .fontSize(16)
+              .fontSize(DesignConstants.FONT.SIZE.LG)
               .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
           }
         }
@@ -441,7 +460,7 @@ export struct SearchPage {
 
       if (item.bio) {
         Text(item.bio)
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .lineHeight(18)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
           .maxLines(2)
@@ -449,7 +468,7 @@ export struct SearchPage {
           .width('100%')
       } else {
         Text('这个人还没有留下简介')
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .lineHeight(18)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
           .maxLines(2)
@@ -466,7 +485,7 @@ export struct SearchPage {
               .padding({ left: 7, right: 7, top: 3, bottom: 3 })
               .margin({ right: 4, bottom: 4 })
               .backgroundColor($r('app.color.bg_tertiary'))
-              .borderRadius(DesignConstants.RADIUS.MD)
+              .borderRadius(DesignConstants.RADIUS.XL)
           }, (tag: string) => tag)
         }
         .width('100%')
@@ -475,31 +494,33 @@ export struct SearchPage {
       Row({ space: 8 }) {
         Button(this.isUserActionPending(item.user?.user_id ?? '') ? '处理中...' :
           (this.isUserFollowing(item) ? '已关注' : '关注'))
-          .type(ButtonType.Normal)
+          .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(30)
-          .borderRadius(DesignConstants.RADIUS.XXL)
+          .height(36)
+          .borderRadius(DesignConstants.RADIUS.FULL)
           .enabled(!this.isUserActionPending(item.user?.user_id ?? ''))
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor(this.isUserFollowing(item) ? Color.Transparent : $r('sys.color.ohos_id_color_emphasize'))
-          .fontColor(this.isUserFollowing(item) ? $r('sys.color.ohos_id_color_emphasize') : Color.White)
+          .backgroundColor(this.isUserFollowing(item) ? Color.Transparent : $r('app.color.brand_primary'))
+          .fontColor(this.isUserFollowing(item) ? $r('app.color.brand_primary') : Color.White)
           .borderWidth(this.isUserFollowing(item) ? 1 : 0)
-          .borderColor($r('sys.color.ohos_id_color_emphasize'))
+          .borderColor($r('app.color.brand_primary'))
+          .shadow(DesignConstants.SHADOW.SMALL)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
           .opacity(this.isUserActionPending(item.user?.user_id ?? '') ? 0.58 : 1)
           .onClick(() => { this.toggleFollow(item); })
 
         Button('私聊')
-          .type(ButtonType.Normal)
+          .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(30)
-          .borderRadius(DesignConstants.RADIUS.XXL)
-          .fontSize(12)
+          .height(36)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor(Color.Transparent)
+          .backgroundColor($r('app.color.bg_tertiary'))
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .borderWidth(1)
-          .borderColor($r('sys.color.ohos_id_color_list_separator'))
+          .shadow(DesignConstants.SHADOW.SMALL)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
           .opacity(this.isUserActionPending(item.user?.user_id ?? '') ? 0.74 : 1)
           .onClick(() => { this.startPrivateChat(item); })
       }
@@ -509,31 +530,31 @@ export struct SearchPage {
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.XXL)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow(DesignConstants.SHADOW.SMALL)
+    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .border({ width: 1, color: $r('app.color.highlight_border') })
   }
 
   @Builder
   buildGroupItem(item: GroupItem) {
-    Column({ space: 8 }) {
-      Row({ space: 8 }) {
-        Row({ space: 8 }) {
+    Column({ space: DesignConstants.SPACING.SM }) {
+      Row({ space: DesignConstants.SPACING.SM }) {
+        Row({ space: DesignConstants.SPACING.SM }) {
           SystemAvatar({
             avatarUrl: item.group?.avatar_url ?? '',
             name: item.group?.name ?? '',
             avatarSize: 40,
-            shape: 'squircle'
+            shape: 'circle'
           })
 
           Column({ space: 2 }) {
             Text(item.group?.name ?? '')
-              .fontSize(14)
+              .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('sys.color.ohos_id_color_text_primary'))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-            Text(`${item.group?.members_count ?? 0} 人`)
+            Text(`${formatCount(item.group?.members_count)} 人`)
               .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor($r('sys.color.ohos_id_color_text_secondary'))
           }
@@ -545,7 +566,7 @@ export struct SearchPage {
         Row() {
           Text() {
             SymbolSpan($r(AppIcon.MORE))
-              .fontSize(16)
+              .fontSize(DesignConstants.FONT.SIZE.LG)
               .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
           }
         }
@@ -578,7 +599,7 @@ export struct SearchPage {
 
       if (item.description) {
         Text(item.description)
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .lineHeight(18)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
           .maxLines(2)
@@ -586,7 +607,7 @@ export struct SearchPage {
           .width('100%')
       } else {
         Text('这个群还没有群介绍')
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .lineHeight(18)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
           .maxLines(2)
@@ -594,34 +615,36 @@ export struct SearchPage {
           .width('100%')
       }
 
-      Row({ space: 8 }) {
+      Row({ space: DesignConstants.SPACING.SM }) {
         Button(this.isGroupActionPending(item.group?.group_id ?? '') ? '处理中...' :
           (this.isGroupJoined(item) ? '进入群聊' : '加入群组'))
-          .type(ButtonType.Normal)
+          .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(30)
-          .borderRadius(DesignConstants.RADIUS.XXL)
+          .height(36)
+          .borderRadius(DesignConstants.RADIUS.FULL)
           .enabled(!this.isGroupActionPending(item.group?.group_id ?? ''))
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor(this.isGroupJoined(item) ? Color.Transparent : $r('sys.color.ohos_id_color_emphasize'))
-          .fontColor(this.isGroupJoined(item) ? $r('sys.color.ohos_id_color_emphasize') : Color.White)
+          .backgroundColor(this.isGroupJoined(item) ? Color.Transparent : $r('app.color.brand_primary'))
+          .fontColor(this.isGroupJoined(item) ? $r('app.color.brand_primary') : Color.White)
           .borderWidth(this.isGroupJoined(item) ? 1 : 0)
-          .borderColor($r('sys.color.ohos_id_color_emphasize'))
+          .borderColor($r('app.color.brand_primary'))
+          .shadow(DesignConstants.SHADOW.SMALL)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
           .opacity(this.isGroupActionPending(item.group?.group_id ?? '') ? 0.58 : 1)
           .onClick(() => { this.joinGroup(item); })
 
         Button('详情')
-          .type(ButtonType.Normal)
+          .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(30)
-          .borderRadius(DesignConstants.RADIUS.XXL)
-          .fontSize(12)
+          .height(36)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor(Color.Transparent)
+          .backgroundColor($r('app.color.bg_tertiary'))
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .borderWidth(1)
-          .borderColor($r('sys.color.ohos_id_color_list_separator'))
+          .shadow(DesignConstants.SHADOW.SMALL)
+          .border({ width: 1, color: $r('app.color.highlight_border') })
           .opacity(this.isGroupActionPending(item.group?.group_id ?? '') ? 0.74 : 1)
           .onClick(() => { this.openGroupDetail(item); })
       }
@@ -631,8 +654,13 @@ export struct SearchPage {
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.XXL)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow(DesignConstants.SHADOW.SMALL)
+    .shadow({
+      radius: DesignConstants.SHADOW.MEDIUM.radius,
+      color: DesignConstants.SHADOW.MEDIUM.color,
+      offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
+      offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
+    })
+    .border({ width: 1, color: $r('app.color.highlight_border') })
   }
 
   @Builder
@@ -640,16 +668,16 @@ export struct SearchPage {
     Column({ space: 0 }) {
       // 图片展示
       if (item.images && item.images.length > 0) {
-        Image(item.images[0].url)
+        Image(MediaUrlUtil.normalize(item.images[0].url))
           .width('100%')
           .height(this.calculateSearchImageHeight(item))
           .objectFit(ImageFit.Cover)
-          .borderRadius({ topLeft: DesignConstants.RADIUS.XXL, topRight: DesignConstants.RADIUS.XXL })
+          .backgroundColor($r('app.color.bg_tertiary'))
       } else {
         // 无图片展示文字摘要
         Column() {
           Text(item.description.substring(0, 60))
-            .fontSize(12)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .maxLines(4)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -659,7 +687,6 @@ export struct SearchPage {
         .padding(DesignConstants.SPACING.MD)
         .justifyContent(FlexAlign.Center)
         .backgroundColor($r('app.color.bg_secondary'))
-        .borderRadius({ topLeft: DesignConstants.RADIUS.XXL, topRight: DesignConstants.RADIUS.XXL })
       }
 
       // 用户信息
@@ -671,7 +698,7 @@ export struct SearchPage {
         })
 
         Text(item.user?.nickname ?? '')
-          .fontSize(12)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .maxLines(1)
           .layoutWeight(1)
@@ -684,27 +711,24 @@ export struct SearchPage {
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
           }
-          Text(`${item.likes_count}`)
+          Text(formatCount(item.likes_count))
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
         }
       }
-      .padding(8)
+      .padding(DesignConstants.SPACING.SM)
       .width('100%')
     }
     .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.XXL)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow(DesignConstants.SHADOW.SMALL)
-    .scale(this.pressedMomentId === item.moment_id ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })
-    .animation({ duration: 100, curve: Curve.EaseOut })
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        this.pressedMomentId = item.moment_id;
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.pressedMomentId = '';
-      }
+    .clip(true)
+    .shadow({
+      radius: DesignConstants.SHADOW.MEDIUM.radius,
+      color: DesignConstants.SHADOW.MEDIUM.color,
+      offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
+      offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
     })
+    .border({ width: 1, color: $r('app.color.highlight_border') })
     .onClick(() => {
       this.openMomentDetail(item);
     })
@@ -713,7 +737,7 @@ export struct SearchPage {
   // 保留原有的列表项构建器用于其他场景
   @Builder
   buildMomentItem(item: MomentItem) {
-    Column({ space: 8 }) {
+    Column({ space: DesignConstants.SPACING.SM }) {
       Row() {
         SystemAvatar({
           avatarUrl: item.user?.avatar_url ?? '',
@@ -723,12 +747,12 @@ export struct SearchPage {
         .margin({ right: 8 })
 
         Text(item.user?.nickname ?? '')
-          .fontSize(14)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
       }
 
       Text(item.description)
-        .fontSize(16)
+        .fontSize(DesignConstants.FONT.SIZE.LG)
         .fontColor($r('sys.color.ohos_id_color_text_primary'))
         .maxLines(3)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -737,9 +761,6 @@ export struct SearchPage {
     .padding(DesignConstants.SPACING.LG)
     .backgroundColor($r('app.color.bg_secondary'))
     .borderRadius(DesignConstants.RADIUS.XXL)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-    .shadow(DesignConstants.SHADOW.SMALL)
-    .margin({ bottom: DesignConstants.SPACING.MD })
   }
 
   private setUserActionPending(userId: string, pending: boolean): void {
@@ -866,6 +887,16 @@ export struct SearchPage {
     const p = new GroupDetailRouteParam();
     p.groupId = group.group?.group_id ?? '';
     AppRouter.push(PageNames.GROUP_DETAIL, p);
+  }
+
+  private openUserProfile(user: UserItem): void {
+    const userId = user.user?.user_id;
+    if (!userId) {
+      return;
+    }
+    const params = new ProfileRouteParam();
+    params.userId = userId;
+    AppRouter.push(PageNames.PROFILE, params);
   }
 
   private openMomentDetail(moment: MomentItem): void {
