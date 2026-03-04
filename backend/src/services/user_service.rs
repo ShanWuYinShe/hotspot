@@ -1176,6 +1176,7 @@ impl UserService {
         let started_at = std::time::Instant::now();
         let target_user_id = Validator::parse_user_id(&req.user_id)?;
         let trimmed = req.remark.trim();
+        Validator::validate_remark(trimmed)?;
         tracing::info!(
             user_id,
             target_user_id,

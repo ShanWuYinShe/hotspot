@@ -160,7 +160,6 @@ export struct LoginPage {
             this.ModeTab('登录', 'login')
             this.ModeTab('注册', 'register')
           }
-          .width('100%')
           .backgroundColor($r('app.color.bg_tertiary'))
           .borderRadius(DesignConstants.RADIUS.XXL)
           .border({ width: 1, color: $r('app.color.highlight_border') })

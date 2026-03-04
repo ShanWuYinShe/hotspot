@@ -359,11 +359,10 @@ export struct MySharesPage {
 
         if (!share.is_revoked) {
           Button(this.revokingShareId === share.share_id ? '撤销中...' : '撤销分享')
-            .type(ButtonType.Normal)
+            .type(ButtonType.Capsule)
             .backgroundColor(Color.Transparent)
             .fontColor($r('app.color.color_danger'))
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .borderRadius(DesignConstants.RADIUS.FULL)
             .shadow(DesignConstants.SHADOW.SMALL)
             .border({ width: 1, color: $r('app.color.highlight_border') })
             .height(34)

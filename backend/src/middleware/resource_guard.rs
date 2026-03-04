@@ -87,7 +87,7 @@ pub async fn resource_guard_middleware(
             if len > MAX_GUARD_BODY_BYTES {
                 return (
                     StatusCode::OK,
-                    Json(ApiResponse::<()>::error(10005, "请求体过大".to_string())),
+                    Json(ApiResponse::<()>::error(10000, "请求体过大".to_string())),
                 )
                     .into_response();
             }
@@ -98,7 +98,7 @@ pub async fn resource_guard_middleware(
             Err(_) => {
                 return (
                     StatusCode::OK,
-                    Json(ApiResponse::<()>::error(10005, "请求体过大".to_string())),
+                    Json(ApiResponse::<()>::error(10000, "请求体过大".to_string())),
                 )
                     .into_response();
             }
@@ -126,7 +126,7 @@ pub async fn resource_guard_middleware(
         user_ids,
         state.resource_checker.user_might_exist(user_ids[0]),
         state.resource_checker.user_might_exist_batch(&user_ids),
-        10310,
+        10300,
         "用户不存在"
     );
 
@@ -135,7 +135,7 @@ pub async fn resource_guard_middleware(
         group_ids,
         state.resource_checker.group_might_exist(&group_ids[0]),
         state.resource_checker.group_might_exist_batch(&group_ids),
-        10320,
+        10300,
         "群组不存在"
     );
 
@@ -144,7 +144,7 @@ pub async fn resource_guard_middleware(
         moment_ids,
         state.resource_checker.moment_might_exist(&moment_ids[0]),
         state.resource_checker.moment_might_exist_batch(&moment_ids),
-        10330,
+        10300,
         "瞬间不存在"
     );
 
@@ -155,7 +155,7 @@ pub async fn resource_guard_middleware(
         state
             .resource_checker
             .comment_might_exist_batch(&comment_ids),
-        10340,
+        10300,
         "评论不存在"
     );
 
@@ -166,7 +166,7 @@ pub async fn resource_guard_middleware(
         state
             .resource_checker
             .message_might_exist_batch(&message_ids),
-        10350,
+        10300,
         "消息不存在"
     );
 

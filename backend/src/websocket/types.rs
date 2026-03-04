@@ -1,7 +1,8 @@
 use crate::dto::response::{GroupInfo, MessageMedia, MessageReplyTo, MomentSummary, UserInfo};
 use crate::types::enums::{
     AnnouncementSeverity, ClientType, GroupDismissReason, GroupJoinMethod, GroupRole,
-    MemberRemoveReason, MessageType, SubscriptionFailureReason, SubscriptionOperation,
+    MemberRemoveReason, MentionTargetType, MessageType, SubscriptionFailureReason,
+    SubscriptionOperation,
 };
 use serde::{Deserialize, Serialize};
 
@@ -341,7 +342,7 @@ pub enum WsMessage {
     // ===== 提及事件 =====
     /// 瞬间或评论中被 @ 提及
     MessageMentioned {
-        target_type: String, // "moment" | "comment"
+        target_type: MentionTargetType,
         moment_id: String,
         #[serde(skip_serializing_if = "Option::is_none")]
         comment_id: Option<String>,

@@ -263,8 +263,8 @@ impl NotificationService {
                 let target_type = payload
                     .get("target_type")
                     .and_then(|v| v.as_str())
-                    .unwrap_or("moment")
-                    .to_string();
+                    .and_then(|s| s.parse::<crate::types::enums::MentionTargetType>().ok())
+                    .unwrap_or(crate::types::enums::MentionTargetType::Moment);
                 NotificationPayload::Mentioned {
                     actor: actor(payload),
                     target_type,

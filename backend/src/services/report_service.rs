@@ -73,6 +73,9 @@ impl ReportService {
             "report.create started"
         );
         // target_type 和 reason 已是强类型枚举
+        if let Some(ref desc) = req.description {
+            Validator::validate_report_description(desc)?;
+        }
 
         let reason_str = req.reason.to_string();
 

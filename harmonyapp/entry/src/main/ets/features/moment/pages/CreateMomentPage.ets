@@ -308,12 +308,11 @@ export struct CreateMomentPage {
           .textAlign(TextAlign.Center)
 
         Button('发布')
-          .type(ButtonType.Normal)
+          .type(ButtonType.Capsule)
           .backgroundColor($r('app.color.brand_primary'))
           .fontColor(Color.White)
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .height(36)
-          .borderRadius(DesignConstants.RADIUS.FULL)
           .shadow(DesignConstants.SHADOW.SMALL)
           .enabled(!this.isPublishing)
           .opacity(this.isPublishing ? 0.5 : 1)
@@ -456,11 +455,10 @@ export struct CreateMomentPage {
                   .borderRadius(DesignConstants.RADIUS.XL)
 
                 Button('添加')
-                  .type(ButtonType.Normal)
+                  .type(ButtonType.Capsule)
                   .backgroundColor($r('app.color.brand_primary'))
                   .fontColor(Color.White)
                   .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .borderRadius(DesignConstants.RADIUS.FULL)
                   .shadow(DesignConstants.SHADOW.SMALL)
                   .onClick(() => this.addTag())
                   .margin({ left: DesignConstants.SPACING.SM })
@@ -494,19 +492,17 @@ export struct CreateMomentPage {
 
                 Row({ space: DesignConstants.SPACING.SM }) {
                   Button('选点')
-                    .type(ButtonType.Normal)
+                    .type(ButtonType.Capsule)
                     .backgroundColor(Color.Transparent)
                     .fontColor($r('app.color.brand_primary'))
                     .fontSize(DesignConstants.FONT.SIZE.MD)
-                    .borderRadius(DesignConstants.RADIUS.FULL)
                     .onClick(() => this.openLocationPicker())
 
                   Button('刷新')
-                    .type(ButtonType.Normal)
+                    .type(ButtonType.Capsule)
                     .backgroundColor(Color.Transparent)
                     .fontColor($r('app.color.brand_primary'))
                     .fontSize(DesignConstants.FONT.SIZE.MD)
-                    .borderRadius(DesignConstants.RADIUS.FULL)
                     .onClick(() => this.refreshLocation())
                 }
               }

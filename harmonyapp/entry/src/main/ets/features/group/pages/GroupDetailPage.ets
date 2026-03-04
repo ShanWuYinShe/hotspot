@@ -373,8 +373,8 @@ export struct GroupDetailPage {
           } else if (response.data.status === 'pending_approval') {
             SystemToast.showSuccess('已提交申请，等待管理员审批', this.getUIContext());
           }
-        } else if (response.code === 1305) {
-          SystemToast.show('您已是该群组成员', this.getUIContext());
+        } else if (response.code === 10400) {
+          SystemToast.show(response.message || '加入群组失败', this.getUIContext());
           this.isMember = true;
           await this.enterChat();
         } else {
@@ -1128,10 +1128,9 @@ export struct GroupDetailPage {
                 if (this.isMember) {
                   if (this.canEditGroupInfo()) {
                     Button(this.isSavingGroupInfo ? '保存中...' : '编辑群组信息')
-                      .type(ButtonType.Normal)
+                      .type(ButtonType.Capsule)
                       .backgroundColor($r('app.color.bg_tertiary'))
                       .fontColor($r('app.color.brand_primary'))
-                      .borderRadius(DesignConstants.RADIUS.FULL)
                       .shadow(DesignConstants.SHADOW.SMALL)
                       .border({ width: 1, color: $r('app.color.highlight_border') })
                       .width('100%')
@@ -1142,10 +1141,9 @@ export struct GroupDetailPage {
                   }
 
                   Button('进入聊天')
-                    .type(ButtonType.Normal)
+                    .type(ButtonType.Capsule)
                     .backgroundColor($r('app.color.brand_primary'))
                     .fontColor(Color.White)
-                    .borderRadius(DesignConstants.RADIUS.FULL)
                     .shadow(DesignConstants.SHADOW.SMALL)
                     .border({ width: 1, color: $r('app.color.highlight_border') })
                     .width('100%')
@@ -1153,10 +1151,9 @@ export struct GroupDetailPage {
                     .onClick(() => this.enterChat())
 
                   Button('离开群组')
-                    .type(ButtonType.Normal)
+                    .type(ButtonType.Capsule)
                     .backgroundColor($r('app.color.bg_tertiary'))
                     .fontColor($r('app.color.color_danger'))
-                    .borderRadius(DesignConstants.RADIUS.FULL)
                     .shadow(DesignConstants.SHADOW.SMALL)
                     .width('100%')
                     .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
@@ -1178,10 +1175,9 @@ export struct GroupDetailPage {
                   }
 
                     Button(this.groupInfo?.has_password ? '加入群组（需要密码）' : '加入群组')
-                    .type(ButtonType.Normal)
+                    .type(ButtonType.Capsule)
                     .backgroundColor($r('app.color.brand_primary'))
                     .fontColor(Color.White)
-                    .borderRadius(DesignConstants.RADIUS.FULL)
                     .shadow(DesignConstants.SHADOW.SMALL)
                     .border({ width: 1, color: $r('app.color.highlight_border') })
                     .width('100%')

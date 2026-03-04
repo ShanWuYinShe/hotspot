@@ -251,6 +251,10 @@ export class ServiceRegistry {
     logger.info('开始初始化需要Context的服务');
 
     try {
+      // 先初始化存储服务（其他服务依赖它）
+      const storageUtil = await this.lazyServiceManager.get<UnifiedStorageUtil>('UnifiedStorageUtil');
+      await storageUtil.initializeWithContext(context);
+
       // 初始化国际化服务
       if (this.config.enableI18n) {
         const i18nManager = await this.lazyServiceManager.get<I18nManager>('I18nManager');

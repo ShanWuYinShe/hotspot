@@ -447,10 +447,9 @@ export struct MomentDetailPage {
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
         }
       }
-      .type(ButtonType.Normal)
+      .type(ButtonType.Capsule)
       .layoutWeight(1)
       .height(40)
-      .borderRadius(DesignConstants.RADIUS.FULL)
       .shadow(DesignConstants.SHADOW.SMALL)
       .border({ width: 1, color: $r('app.color.highlight_border') })
       .enabled(!this.likePending)
@@ -472,10 +471,9 @@ export struct MomentDetailPage {
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
         }
       }
-      .type(ButtonType.Normal)
+      .type(ButtonType.Capsule)
       .layoutWeight(1)
       .height(40)
-      .borderRadius(DesignConstants.RADIUS.FULL)
       .shadow(DesignConstants.SHADOW.SMALL)
       .border({ width: 1, color: $r('app.color.highlight_border') })
       .enabled(!this.favoritePending)
@@ -497,10 +495,9 @@ export struct MomentDetailPage {
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
         }
       }
-      .type(ButtonType.Normal)
+      .type(ButtonType.Capsule)
       .layoutWeight(1)
       .height(40)
-      .borderRadius(DesignConstants.RADIUS.FULL)
       .shadow(DesignConstants.SHADOW.SMALL)
       .border({ width: 1, color: $r('app.color.highlight_border') })
       .backgroundColor($r('app.color.bg_tertiary'))

@@ -18,7 +18,6 @@ import { GlobalStateManager } from '../core/state/GlobalStateManager';
 import { AuthData, GuestRequest, MyProfile } from '../core/types/api';
 import { SafeAreaUtils } from '../core/utils/SafeAreaUtils';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { KeyboardAvoidMode as UIContextKeyboardAvoidMode } from '@ohos.arkui.UIContext';
 
 const DOMAIN_NUMBER: number = 0xFF20;
 const TAG: string = 'LoginPromptView';
@@ -41,21 +40,6 @@ export struct LoginPromptView {
   @State isQuickStarting: boolean = false;
   @State isQuickInputFocused: boolean = false;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-
-  aboutToAppear(): void {
-    this.applyKeyboardAvoidMode(UIContextKeyboardAvoidMode.RESIZE);
-  }
-
-  aboutToDisappear(): void {
-    this.applyKeyboardAvoidMode(UIContextKeyboardAvoidMode.OFFSET);
-  }
-
-  private applyKeyboardAvoidMode(mode: UIContextKeyboardAvoidMode): void {
-    try {
-      this.getUIContext().setKeyboardAvoidMode(mode);
-    } catch (_) {
-    }
-  }
 
   build() {
     Column({ space: 20 }) {
@@ -84,31 +68,29 @@ export struct LoginPromptView {
       // 按钮区（胶囊化加阴影）
       Column({ space: 12 }) {
         Button('快速体验（无需注册）')
-          .type(ButtonType.Normal)
+          .type(ButtonType.Capsule)
           .backgroundColor($r('app.color.brand_primary'))
           .fontColor(Color.White)
           .fontSize(DesignConstants.FONT.SIZE.LG)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .width('75%')
-          .height(44)
+          .width('100%')
+          .height(48)
           .onClick(() => {
-            this.applyKeyboardAvoidMode(UIContextKeyboardAvoidMode.RESIZE);
             this.showQuickStart = true;
           })
 
         Button('登录 / 注册')
-          .type(ButtonType.Normal)
+          .type(ButtonType.Capsule)
           .backgroundColor($r('app.color.bg_tertiary'))
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .fontSize(DesignConstants.FONT.SIZE.LG)
-          .borderRadius(DesignConstants.RADIUS.FULL)
           .border({ width: 1, color: $r('app.color.highlight_border') })
-          .width('75%')
-          .height(44)
+          .width('100%')
+          .height(48)
           .onClick(() => {
             this.navigateToLogin();
           })
       }
+      .width('80%')
       .margin({ top: 8 })
 
       // 底部提示
@@ -127,48 +109,61 @@ export struct LoginPromptView {
     .backgroundColor($r('app.color.bg_primary'))
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
     .bindSheet($$this.showQuickStart, this.buildQuickStartSheet(), {
-      height: SheetSize.LARGE,
+      height: SheetSize.FIT_CONTENT,
       showClose: true,
       dragBar: true,
-      backgroundColor: $r('app.color.start_window_background')
+      backgroundColor: $r('app.color.start_window_background'),
+      keyboardAvoidMode: SheetKeyboardAvoidMode.TRANSLATE_AND_SCROLL
     })
   }
 
   @Builder
   private buildQuickStartSheet() {
-    Scroll() {
-      Column({ space: DesignConstants.SPACING.MD }) {
-        Text('快速体验')
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+    Column({ space: DesignConstants.SPACING.LG }) {
+      Scroll() {
+        Column({ space: DesignConstants.SPACING.MD }) {
+          Text('快速体验')
+            .fontSize(DesignConstants.FONT.SIZE.XL)
+            .fontWeight(FontWeight.Bold)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
 
-        Text('无需注册，输入昵称即可快速体验')
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          Text('无需注册，输入昵称即可快速体验')
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
 
-        TextInput({ placeholder: '请输入你的昵称' })
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .padding(DesignConstants.SPACING.LG)
-          .backgroundColor($r('app.color.bg_inset'))
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .shadow(DesignConstants.SHADOW.INSET)
-          .enabled(!this.isQuickStarting)
-          .onChange((value: string) => { this.quickNickname = value; })
-          .onFocus(() => {
-            this.isQuickInputFocused = true;
-            this.applyKeyboardAvoidMode(UIContextKeyboardAvoidMode.RESIZE);
-          })
-          .onBlur(() => {
-            this.isQuickInputFocused = false;
-          })
+          TextInput({ placeholder: '请输入你的昵称' })
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .padding(DesignConstants.SPACING.LG)
+            .backgroundColor($r('app.color.bg_inset'))
+            .borderRadius(DesignConstants.RADIUS.XL)
+            .shadow(DesignConstants.SHADOW.INSET)
+            .enabled(!this.isQuickStarting)
+            .onChange((value: string) => { this.quickNickname = value; })
+            .onFocus(() => {
+              this.isQuickInputFocused = true;
+            })
+            .onBlur(() => {
+              this.isQuickInputFocused = false;
+            })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .width('100%')
+        .padding({
+          left: DesignConstants.SPACING.XXL,
+          right: DesignConstants.SPACING.XXL,
+          top: DesignConstants.SPACING.LG,
+          bottom: DesignConstants.SPACING.SM
+        })
+      }
+      .width('100%')
+      .scrollBar(BarState.Off)
 
+      Column({ space: DesignConstants.SPACING.SM }) {
         Button(this.isQuickStarting ? '正在创建...' : '开始体验')
-          .type(ButtonType.Normal)
+          .type(ButtonType.Capsule)
           .backgroundColor($r('app.color.brand_primary'))
           .fontColor(Color.White)
           .fontSize(DesignConstants.FONT.SIZE.LG)
-          .borderRadius(DesignConstants.RADIUS.FULL)
           .width('100%')
           .height(48)
           .enabled(!this.isQuickStarting)
@@ -186,17 +181,15 @@ export struct LoginPromptView {
           .opacity(0)
           .onClick(() => {})
       }
-      .alignItems(HorizontalAlign.Start)
       .width('100%')
       .padding({
         left: DesignConstants.SPACING.XXL,
         right: DesignConstants.SPACING.XXL,
-        top: DesignConstants.SPACING.LG,
+        top: 0,
         bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG)
       })
     }
     .width('100%')
-    .scrollBar(BarState.Off)
     .backgroundColor($r('app.color.bg_secondary'))
     .shadow(DesignConstants.SHADOW.SMALL)
     .border({ width: 1, color: $r('app.color.highlight_border') })

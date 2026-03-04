@@ -22,7 +22,7 @@ pub async fn suggest(
         viewer_id = user.user_id,
         prefix_len = req.prefix.chars().count(),
         types_count = req.types.as_ref().map(|v| v.len()).unwrap_or(0),
-        radius = req.radius.unwrap_or(5000),
+        radius = req.radius.unwrap_or(5000.0),
         "search.suggest request received"
     );
     let result = state.search_service.suggest(user.user_id, req).await?;

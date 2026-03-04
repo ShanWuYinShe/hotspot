@@ -974,6 +974,28 @@ export interface CancelApplicationRequest {
   application_id: string;
 }
 
+export interface GroupSentInvitesRequest {
+  group_id: string;
+  status?: ApplicationStatus | 'all';
+  pagination?: PaginationParams;
+}
+
+export interface SentInviteItem {
+  invite_id: string;
+  invitee: UserInfo;
+  status: ApplicationStatus;
+  message?: string;
+  created_at: string;
+  expires_at?: string;
+  responded_at?: string;
+}
+
+export interface RevokeSentInviteRequest {
+  group_id: string;
+  invite_id: string;
+  reason?: string;
+}
+
 export interface MyInvitesRequest {
   status?: 'pending' | 'accepted' | 'rejected' | 'revoked' | 'all';
   pagination?: PaginationParams;
@@ -1442,7 +1464,7 @@ export interface AdminUserItem {
   created_at: string;
   last_active_at?: string;
   login_id: string;
-  is_online: boolean;
+  presence_status?: UserPresenceStatus;
 }
 
 export interface AdminUserDetail {
@@ -1455,8 +1477,8 @@ export interface AdminUserDetail {
   phone?: string;
   bio?: string;
   tags?: string[];
-  location?: Location;
-  is_online: boolean;
+  location?: RelativeLocation;
+  presence_status?: UserPresenceStatus;
   stats: UserStats;
   ban_history?: AdminBanRecord[];
 }
@@ -1494,7 +1516,7 @@ export interface AdminGroupDetail {
   max_members: number;
   owner: UserInfo;
   created_at: string;
-  location?: Location;
+  location?: RelativeLocation;
   settings: AdminGroupDetailSettings;
   admins?: UserInfo[];
   stats: AdminGroupDetailStats;
@@ -1745,7 +1767,6 @@ export interface CreateAnnouncementRequest {
 
 export interface AnnouncementCreated {
   announcement_id: string;
-  created_at: string;
 }
 
 // Admin Report Types

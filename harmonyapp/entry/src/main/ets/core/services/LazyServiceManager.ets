@@ -632,7 +632,9 @@ export class LazyServiceManager {
         instanceInfo.accessCount++;
         return instanceInfo.instance as T;
       } else if (instanceInfo.status === ServiceStatus.ERROR) {
-        throw new Error(`服务 ${serviceName} 初始化失败`);
+        // 清除错误状态，允许重新初始化
+        this.singletonInstances.delete(serviceName);
+        logger.info(`服务 ${serviceName} 之前初始化失败，尝试重新初始化`);
       }
     }
     
@@ -776,36 +778,57 @@ export class LazyServiceManager {
   
   /**
    * 初始化依赖服务
+   * 循环依赖已在注册阶段由 buildDependencyGraph 静态检测，
+   * 运行时并行初始化时依赖可能正在初始化中，getSingletonInstance 会正确地 await 其 Promise。
    */
   private async initializeDependencies(dependencies: string[]): Promise<void> {
     if (dependencies.length === 0) return;
     
-    // 检查循环依赖
-    this.checkCircularDependencies(dependencies);
-    
-    // 并行初始化依赖
     const dependencyPromises = dependencies.map((dep: string) => this.get<Object>(dep));
     await Promise.all<Object>(dependencyPromises);
   }
   
   /**
-   * 检查循环依赖
-   */
-  private checkCircularDependencies(dependencies: string[]): void {
-    // 简单的循环依赖检测，可以进一步优化
-    for (const dep of dependencies) {
-      if (this.initializingServices.has(dep)) {
-        throw new Error(`检测到循环依赖: ${dep}`);
-      }
-    }
-  }
-  
-  /**
-   * 构建依赖图
+   * 构建依赖图并检测循环依赖
    */
   private buildDependencyGraph(config: ServiceConfig<Object>): void {
     if (config.dependencies && config.dependencies.length > 0) {
       this.dependencyGraph.set(config.name, new Set(config.dependencies));
+    }
+    this.detectCyclicDependency(config.name);
+  }
+  
+  /**
+   * 静态检测循环依赖（DFS）
+   * 在服务注册阶段调用，提前发现依赖环
+   */
+  private detectCyclicDependency(startNode: string): void {
+    const visited = new Set<string>();
+    const recursionStack = new Set<string>();
+    
+    const hasCycle = (node: string): boolean => {
+      visited.add(node);
+      recursionStack.add(node);
+      
+      const deps = this.dependencyGraph.get(node);
+      if (deps) {
+        for (const dep of deps) {
+          if (!visited.has(dep)) {
+            if (hasCycle(dep)) {
+              return true;
+            }
+          } else if (recursionStack.has(dep)) {
+            return true;
+          }
+        }
+      }
+      
+      recursionStack.delete(node);
+      return false;
+    };
+    
+    if (hasCycle(startNode)) {
+      throw new Error(`检测到循环依赖: ${startNode}`);
     }
   }
   

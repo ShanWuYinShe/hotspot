@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::{
-    constants::{DEFAULT_PAGE_LIMIT, MAX_SEARCH_RADIUS_I32},
+    constants::{DEFAULT_PAGE_LIMIT, MAX_SEARCH_RADIUS},
     dto::{
         request::{SearchSuggestRequest, SearchSuggestType},
         response::{
@@ -50,7 +50,7 @@ impl SearchService {
         req: SearchSuggestRequest,
     ) -> Result<SearchSuggestions, AppError> {
         let started_at = std::time::Instant::now();
-        Validator::validate_not_empty(&req.prefix, "prefix")?;
+        Validator::validate_prefix(&req.prefix)?;
         let limit = DEFAULT_PAGE_LIMIT as i64;
 
         // 解析位置参数（reference_point 必填）
@@ -60,7 +60,7 @@ impl SearchService {
         )?;
         let location = Some((req.reference_point.latitude, req.reference_point.longitude));
         let radius_opt =
-            Some(Validator::validate_radius(req.radius, MAX_SEARCH_RADIUS_I32)? as f64);
+            Some(Validator::validate_radius(req.radius, MAX_SEARCH_RADIUS)?);
 
         let type_set: Option<HashSet<SearchSuggestType>> = req
             .types

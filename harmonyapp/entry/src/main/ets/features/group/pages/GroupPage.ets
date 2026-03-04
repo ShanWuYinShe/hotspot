@@ -417,19 +417,15 @@ export struct GroupPage {
           SystemToast.show('已提交申请，等待管理员审批', this.getUIContext());
           await this.loadNearbyGroups();
         }
-      } else if (response.code === 1305) {
-        SystemToast.show('您已是该群成员', this.getUIContext());
+      } else if (response.code === 10400) {
+        SystemToast.show(response.message || '加入群组失败', this.getUIContext());
         await this.loadNearbyGroups();
       } else {
         SystemToast.showError(response.message || '加入群组失败', this.getUIContext());
       }
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : '加入群组失败';
-      if (errMsg.includes('1305')) {
-        SystemToast.show('您已是该群成员', this.getUIContext());
-      } else {
-        SystemToast.showError(errMsg, this.getUIContext());
-      }
+      SystemToast.showError(errMsg, this.getUIContext());
     } finally {
       this.setGroupJoining(groupId, false);
     }
@@ -462,32 +458,29 @@ export struct GroupPage {
 
         Row({ space: 8 }) {
           Button('邀请')
-            .type(ButtonType.Normal)
+            .type(ButtonType.Capsule)
             .backgroundColor($r('app.color.bg_tertiary'))
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .height(32)
-            .borderRadius(DesignConstants.RADIUS.FULL)
             .shadow(DesignConstants.SHADOW.SMALL)
             .onClick(() => this.loadMyInvites())
 
           Button('申请')
-            .type(ButtonType.Normal)
+            .type(ButtonType.Capsule)
             .backgroundColor($r('app.color.bg_tertiary'))
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .height(32)
-            .borderRadius(DesignConstants.RADIUS.FULL)
             .shadow(DesignConstants.SHADOW.SMALL)
             .onClick(() => this.loadMyApplications())
 
           Button('创建')
-            .type(ButtonType.Normal)
+            .type(ButtonType.Capsule)
             .backgroundColor($r('app.color.brand_primary'))
             .fontColor(Color.White)
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .height(32)
-            .borderRadius(DesignConstants.RADIUS.FULL)
             .shadow(DesignConstants.SHADOW.SMALL)
             .onClick(() => this.createGroup())
         }
@@ -644,10 +637,9 @@ export struct GroupPage {
 
       Row({ space: 8 }) {
         Button(this.isInviteHandling(invite.invite_id) ? '处理中...' : '接受')
-          .type(ButtonType.Normal)
+          .type(ButtonType.Capsule)
           .backgroundColor($r('app.color.brand_primary'))
           .fontColor(Color.White)
-          .borderRadius(DesignConstants.RADIUS.FULL)
           .shadow(DesignConstants.SHADOW.SMALL)
           .border({ width: 1, color: $r('app.color.highlight_border') })
           .height(34)
@@ -657,10 +649,9 @@ export struct GroupPage {
           .onClick(() => this.handleInviteAction(invite, 'accept'))
 
         Button('拒绝')
-          .type(ButtonType.Normal)
+          .type(ButtonType.Capsule)
           .backgroundColor($r('app.color.bg_tertiary'))
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .borderRadius(DesignConstants.RADIUS.FULL)
           .shadow(DesignConstants.SHADOW.SMALL)
           .border({ width: 1, color: $r('app.color.highlight_border') })
           .height(34)
@@ -769,10 +760,9 @@ export struct GroupPage {
 
       Row() {
         Button(this.isApplicationHandling(application.application_id) ? '处理中...' : '取消申请')
-          .type(ButtonType.Normal)
+          .type(ButtonType.Capsule)
           .backgroundColor($r('app.color.bg_tertiary'))
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .borderRadius(DesignConstants.RADIUS.FULL)
           .shadow(DesignConstants.SHADOW.SMALL)
           .border({ width: 1, color: $r('app.color.highlight_border') })
           .height(34)
@@ -861,13 +851,12 @@ export struct GroupPage {
       .layoutWeight(1)
 
       Button(this.isGroupJoining(group.group.group_id) ? '处理中...' : '加入')
-        .type(ButtonType.Normal)
+        .type(ButtonType.Capsule)
         .backgroundColor($r('app.color.bg_tertiary'))
         .fontColor($r('app.color.brand_primary'))
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontWeight(FontWeight.Medium)
         .height(34)
-        .borderRadius(DesignConstants.RADIUS.FULL)
         .shadow(DesignConstants.SHADOW.SMALL)
         .border({ width: 1, color: $r('app.color.highlight_border') })
         .enabled(!this.isGroupJoining(group.group.group_id))

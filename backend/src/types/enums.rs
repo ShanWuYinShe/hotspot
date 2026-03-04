@@ -526,6 +526,15 @@ pub enum FeedSource {
     All,
 }
 
+/// 提及目标类型（spec: 'moment' | 'comment'）
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]
+#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
+pub enum MentionTargetType {
+    Moment,
+    Comment,
+}
+
 // ============================================================
 // 通知相关
 // ============================================================

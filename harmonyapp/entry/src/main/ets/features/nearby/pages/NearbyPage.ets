@@ -1341,8 +1341,8 @@ export struct NearbyPage {
         } else if (response.data.status === 'pending_approval') {
           SystemToast.show('已提交申请，等待审批', this.getUIContext());
         }
-      } else if (response.code === 1305) {
-        SystemToast.show('您已是该群成员', this.getUIContext());
+      } else if (response.code === 10400) {
+        SystemToast.show(response.message || '加入失败', this.getUIContext());
       } else {
         SystemToast.showError(response.message || '加入失败', this.getUIContext());
       }

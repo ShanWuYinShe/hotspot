@@ -50,11 +50,12 @@ export const KEY_NETWORK_CONNECTED = 'networkConnected';
 export const KEY_LAST_MESSAGE_SYNC_TIME = 'lastMessageSyncTime';
 export const KEY_CLIENT_CONFIG = 'clientConfig';
 
-// 初始化 PersistentStorage (必须在 AppStorage 使用之前)
-PersistentStorage.persistProp<MyProfile | null>(KEY_CURRENT_USER, null);
+// PersistentStorage 不支持 null 默认值，可空类型改用 AppStorage 初始化
+// 实际持久化由 PersistentStateManager 通过 PreferencesUtil 处理
+AppStorage.setOrCreate<MyProfile | null>(KEY_CURRENT_USER, null);
 PersistentStorage.persistProp<boolean>(KEY_IS_LOGGED_IN, false);
 PersistentStorage.persistProp<string>(KEY_USER_TYPE, '');
-PersistentStorage.persistProp<LocationInfo | null>(KEY_BROWSE_ANCHOR, null);
+AppStorage.setOrCreate<LocationInfo | null>(KEY_BROWSE_ANCHOR, null);
 
 export class GlobalStateManager {
   private static instance: GlobalStateManager | null = null;

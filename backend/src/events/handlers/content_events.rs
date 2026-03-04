@@ -6,6 +6,7 @@ use crate::{
     services::{
         notification_service::NotificationService, subscription_service::SubscriptionService,
     },
+    types::enums::MentionTargetType,
     websocket::{manager::ConnectionManager as WsConnectionManager, types::WsMessage},
 };
 
@@ -326,7 +327,7 @@ pub async fn send_websocket(
             }
             let actor = get_user_info(user_repo, *mentioning_user_id).await;
             let message = WsMessage::MessageMentioned {
-                target_type: "moment".to_string(),
+                target_type: MentionTargetType::Moment,
                 moment_id: moment_id.to_string(),
                 comment_id: None,
                 moment_summary: MomentSummary {
@@ -354,7 +355,7 @@ pub async fn send_websocket(
             }
             let actor = get_user_info(user_repo, *mentioning_user_id).await;
             let message = WsMessage::MessageMentioned {
-                target_type: "comment".to_string(),
+                target_type: MentionTargetType::Comment,
                 moment_id: moment_id.to_string(),
                 comment_id: Some(comment_id.to_string()),
                 moment_summary: MomentSummary {

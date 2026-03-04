@@ -77,6 +77,68 @@ impl Validator {
         Ok(())
     }
 
+    /// 动态内容约束（spec: 1-2000）
+    pub fn validate_moment_description(description: &str) -> Result<()> {
+        Self::validate_not_empty(description, "动态内容")?;
+        Self::validate_length(description, "动态内容", 1, 2000)?;
+        Ok(())
+    }
+
+    /// 评论内容约束（spec: 1-500）
+    pub fn validate_comment_content(content: &str) -> Result<()> {
+        Self::validate_not_empty(content, "评论内容")?;
+        Self::validate_length(content, "评论内容", 1, 500)?;
+        Ok(())
+    }
+
+    /// 图片数量约束（spec: 最多 9 个）
+    pub fn validate_image_count(ids: &[String]) -> Result<()> {
+        if ids.len() > 9 {
+            return Err(AppError::OutOfRange(
+                "图片数量最多 9 张".to_string(),
+            ));
+        }
+        Ok(())
+    }
+
+    /// 动态标签约束（spec: 每标签 1-30 字符，最多 10 个）
+    pub fn validate_moment_tags(tags: &[String]) -> Result<()> {
+        if tags.len() > 10 {
+            return Err(AppError::OutOfRange(
+                "标签数量最多 10 个".to_string(),
+            ));
+        }
+        for tag in tags {
+            Self::validate_length(tag, "标签", 1, 30)?;
+        }
+        Ok(())
+    }
+
+    /// 举报描述约束（spec: 0-1000）
+    pub fn validate_report_description(description: &str) -> Result<()> {
+        Self::validate_length(description, "举报描述", 0, 1000)?;
+        Ok(())
+    }
+
+    /// 好友备注约束（spec: 0-100）
+    pub fn validate_remark(remark: &str) -> Result<()> {
+        Self::validate_length(remark, "备注", 0, 100)?;
+        Ok(())
+    }
+
+    /// 搜索前缀约束（spec: 1-50）
+    pub fn validate_prefix(prefix: &str) -> Result<()> {
+        Self::validate_not_empty(prefix, "搜索前缀")?;
+        Self::validate_length(prefix, "搜索前缀", 1, 50)?;
+        Ok(())
+    }
+
+    /// 位置名称约束（spec: 0-100）
+    pub fn validate_location_name(name: &str) -> Result<()> {
+        Self::validate_length(name, "位置名称", 0, 100)?;
+        Ok(())
+    }
+
     /// 通用关键字约束（spec: 1-100）
     pub fn validate_keyword(keyword: &str, field_name: &str) -> Result<()> {
         Self::validate_not_empty(keyword, field_name)?;
@@ -129,11 +191,11 @@ impl Validator {
     }
 
     /// 验证可选搜索半径
-    /// - None -> 默认值 5000
-    /// - 超出 100..=max_radius 范围 -> 返回错误
-    pub fn validate_radius(radius: Option<i32>, max_radius: i32) -> Result<i32> {
-        let radius = radius.unwrap_or(5000);
-        if !(100..=max_radius).contains(&radius) {
+    /// - None -> 默认值 5000.0
+    /// - 超出 100.0..=max_radius 范围 -> 返回错误
+    pub fn validate_radius(radius: Option<f64>, max_radius: f64) -> Result<f64> {
+        let radius = radius.unwrap_or(5000.0);
+        if !(100.0..=max_radius).contains(&radius) {
             return Err(AppError::OutOfRange(format!(
                 "radius 必须在 100 到 {} 之间",
                 max_radius
@@ -142,7 +204,7 @@ impl Validator {
         Ok(radius)
     }
 
-    /// 验证必填搜索半径 (f64)
+    /// 验证必填搜索半径
     pub fn validate_radius_required(radius: f64, max_radius: f64) -> Result<f64> {
         if !(100.0..=max_radius).contains(&radius) {
             return Err(AppError::OutOfRange(format!(

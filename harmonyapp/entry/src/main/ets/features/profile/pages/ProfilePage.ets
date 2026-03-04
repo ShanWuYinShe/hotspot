@@ -675,10 +675,9 @@ export struct ProfilePage {
 
           Row({ space: DesignConstants.SPACING.SM }) {
             Button('私聊')
-              .type(ButtonType.Normal)
+              .type(ButtonType.Capsule)
               .layoutWeight(1)
               .height(38)
-              .borderRadius(DesignConstants.RADIUS.FULL)
               .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontWeight(FontWeight.Medium)
               .backgroundColor($r('app.color.brand_primary'))
@@ -688,10 +687,9 @@ export struct ProfilePage {
               })
 
             Button('返回')
-              .type(ButtonType.Normal)
+              .type(ButtonType.Capsule)
               .layoutWeight(1)
               .height(38)
-              .borderRadius(DesignConstants.RADIUS.FULL)
               .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontWeight(FontWeight.Medium)
               .backgroundColor($r('app.color.bg_tertiary'))
@@ -723,79 +721,93 @@ export struct ProfilePage {
   // ==================== 匿名用户 - 游客界面 ====================
   @Builder
   private buildGuestView() {
-    Column({ space: DesignConstants.SPACING.LG }) {
-      // 1. 头像区域（紧凑）
+    Column({ space: DesignConstants.SPACING.XL }) {
+      // 1. 头像区域
       Column({ space: DesignConstants.SPACING.SM }) {
         Stack() {
           Circle()
-            .width(56)
-            .height(56)
-            .fill($r('app.color.bg_secondary'))
+            .width(72)
+            .height(72)
+            .fill($r('app.color.bg_tertiary'))
           Text() {
             SymbolSpan($r(AppIcon.PERSON))
-              .fontSize(28)
+              .fontSize(36)
               .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
           }
         }
 
         Text('游客模式')
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontWeight(FontWeight.Medium)
+          .fontSize(DesignConstants.FONT.SIZE.XL)
+          .fontWeight(FontWeight.Bold)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
 
-        Text('登录后体验完整功能')
+        Text('登录后解锁完整体验')
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
       }
       .width('100%')
+      .alignItems(HorizontalAlign.Center)
       .padding({ top: DesignConstants.SPACING.XL })
 
-      // 2. CTA 按钮区域（紧跟头像下方）
-      Column({ space: DesignConstants.SPACING.MD }) {
+      // 2. 功能亮点卡片（2x2 网格）
+      Grid() {
+        GridItem() {
+          this.buildFeatureCard($r(AppIcon.MAP), '探索地图', '发现附近热点')
+        }
+        GridItem() {
+          this.buildFeatureCard($r(AppIcon.SEARCH), '搜索内容', '找到你感兴趣的')
+        }
+        GridItem() {
+          this.buildFeatureCard($r(AppIcon.MESSAGE), '互动交流', '与他人实时沟通')
+        }
+        GridItem() {
+          this.buildFeatureCard($r(AppIcon.EDIT), '发布分享', '记录精彩瞬间')
+        }
+      }
+      .columnsTemplate('1fr 1fr')
+      .rowsTemplate('1fr 1fr')
+      .rowsGap(DesignConstants.SPACING.MD)
+      .columnsGap(DesignConstants.SPACING.MD)
+      .width('100%')
+      .height(200)
+
+      // 3. CTA 按钮区域（居中窄按钮）
+      Column({ space: DesignConstants.SPACING.SM }) {
         Button('快速体验（无需注册）')
-          .type(ButtonType.Normal)
-          .width('100%')
+          .type(ButtonType.Capsule)
+          .width('80%')
           .height(48)
           .backgroundColor($r('app.color.brand_primary'))
           .fontColor(Color.White)
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .borderRadius(DesignConstants.RADIUS.FULL)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
           .onClick(() => {
             this.showQuickStart = true;
           })
 
         Button('登录 / 注册')
-          .type(ButtonType.Normal)
-          .width('100%')
+          .type(ButtonType.Capsule)
+          .width('80%')
           .height(48)
           .backgroundColor($r('app.color.bg_tertiary'))
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .borderRadius(DesignConstants.RADIUS.FULL)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
           .border({ width: 1, color: $r('app.color.highlight_border') })
           .onClick(() => {
             AppRouter.push(PageNames.LOGIN);
           })
       }
       .width('100%')
-      .padding({ left: DesignConstants.SPACING.XL, right: DesignConstants.SPACING.XL })
-
-      // 3. 功能简介（精简一行）
-      Text('浏览附近 · 探索地图 · 搜索内容 · 发布互动')
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        .textAlign(TextAlign.Center)
-        .padding({ left: DesignConstants.SPACING.XL, right: DesignConstants.SPACING.XL })
+      .alignItems(HorizontalAlign.Center)
 
       // 4. 设置入口
-      Row({ space: DesignConstants.SPACING.SM }) {
+      Row({ space: DesignConstants.SPACING.XS }) {
         Text() {
           SymbolSpan($r(AppIcon.SETTINGS))
-            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
         }
         Text('设置')
-          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
       }
       .justifyContent(FlexAlign.Center)
@@ -808,13 +820,39 @@ export struct ProfilePage {
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+    .padding({ left: DesignConstants.SPACING.XL, right: DesignConstants.SPACING.XL })
     .bindSheet($$this.showQuickStart, this.buildQuickStartSheet(), {
       height: SheetSize.FIT_CONTENT,
       showClose: true,
       dragBar: true,
-      backgroundColor: $r('app.color.start_window_background')
+      backgroundColor: $r('app.color.start_window_background'),
+      keyboardAvoidMode: SheetKeyboardAvoidMode.TRANSLATE_AND_SCROLL
     })
+  }
+
+  @Builder
+  private buildFeatureCard(icon: Resource, title: string, subtitle: string) {
+    Column({ space: DesignConstants.SPACING.XS }) {
+      Text() {
+        SymbolSpan(icon)
+          .fontSize(DesignConstants.FONT.SIZE.XXL)
+          .fontColor([$r('app.color.brand_primary')])
+      }
+      Text(title)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .fontWeight(FontWeight.Medium)
+        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+      Text(subtitle)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .textAlign(TextAlign.Center)
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Center)
+    .padding(DesignConstants.SPACING.MD)
+    .backgroundColor($r('app.color.bg_secondary'))
+    .borderRadius(DesignConstants.RADIUS.LG)
+    .border({ width: 1, color: $r('app.color.highlight_border') })
   }
 
   // ==================== 临时用户界面 ====================
@@ -842,13 +880,12 @@ export struct ProfilePage {
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
 
           Button('升级为完整账号')
-            .type(ButtonType.Normal)
+            .type(ButtonType.Capsule)
             .backgroundColor($r('app.color.brand_primary'))
             .fontColor(Color.White)
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .width('100%')
             .height(40)
-            .borderRadius(DesignConstants.RADIUS.FULL)
             .onClick(() => {
               this.showUpgradeForm = true;
             })
@@ -1055,12 +1092,11 @@ export struct ProfilePage {
 
         Row({ space: DesignConstants.SPACING.MD }) {
           Button('取消')
-            .type(ButtonType.Normal)
+            .type(ButtonType.Capsule)
             .backgroundColor($r('app.color.bg_tertiary'))
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
             .layoutWeight(1)
             .height(44)
-            .borderRadius(DesignConstants.RADIUS.FULL)
             .enabled(!this.isUpgrading)
             .opacity(this.isUpgrading ? 0.58 : 1)
             .onClick(() => {
@@ -1068,12 +1104,11 @@ export struct ProfilePage {
             })
 
           Button(this.isUpgrading ? '升级中...' : '确认升级')
-            .type(ButtonType.Normal)
+            .type(ButtonType.Capsule)
             .backgroundColor($r('app.color.brand_primary'))
             .fontColor(Color.White)
             .layoutWeight(1)
             .height(44)
-            .borderRadius(DesignConstants.RADIUS.FULL)
             .enabled(!this.isUpgrading)
             .opacity(this.isUpgrading ? 0.58 : 1)
             .onClick(() => this.upgradeAccount())
@@ -1130,13 +1165,12 @@ export struct ProfilePage {
       }
 
       Button('编辑资料')
-        .type(ButtonType.Normal)
+        .type(ButtonType.Capsule)
         .height(40)
         .padding({ left: DesignConstants.SPACING.XL, right: DesignConstants.SPACING.XL })
         .backgroundColor($r('app.color.bg_secondary'))
         .fontColor($r('app.color.brand_primary'))
         .fontSize(DesignConstants.FONT.SIZE.MD)
-        .borderRadius(DesignConstants.RADIUS.FULL)
         .shadow(DesignConstants.SHADOW.MEDIUM)
         .border({ width: 1, color: $r('app.color.highlight_border') })
         .onClick(() => this.startEdit())
@@ -1155,8 +1189,7 @@ export struct ProfilePage {
             avatarSize: 80
           })
         }
-        .type(ButtonType.Normal)
-        .borderRadius(DesignConstants.RADIUS.FULL)
+        .type(ButtonType.Capsule)
         .backgroundColor(Color.Transparent)
         .enabled(!this.isLoading && !this.isAvatarUploading)
         .opacity(this.isLoading || this.isAvatarUploading ? 0.58 : 1)
@@ -1415,47 +1448,61 @@ export struct ProfilePage {
   @Builder
   private buildQuickStartSheet() {
     Column({ space: DesignConstants.SPACING.LG }) {
-      Text('快速体验')
-        .fontSize(DesignConstants.FONT.SIZE.XL)
-        .fontWeight(FontWeight.Bold)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+      Scroll() {
+        Column({ space: DesignConstants.SPACING.MD }) {
+          Text('快速体验')
+            .fontSize(DesignConstants.FONT.SIZE.XL)
+            .fontWeight(FontWeight.Bold)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
 
-      Text('无需注册，输入昵称即可快速体验')
-        .fontSize(DesignConstants.FONT.SIZE.MD)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          Text('无需注册，输入昵称即可快速体验')
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
 
-      TextInput({ placeholder: '请输入你的昵称' })
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('app.color.bg_tertiary'))
-        .borderRadius(DesignConstants.RADIUS.LG)
-        .enabled(!this.isQuickStarting)
-        .onChange((value: string) => { this.quickNickname = value; })
-
-      Button(this.isQuickStarting ? '正在创建...' : '开始体验')
-        .type(ButtonType.Normal)
-        .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-        .fontColor(Color.White)
-        .fontSize(DesignConstants.FONT.SIZE.LG)
+          TextInput({ placeholder: '请输入你的昵称' })
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .padding(DesignConstants.SPACING.LG)
+            .backgroundColor($r('app.color.bg_tertiary'))
+            .borderRadius(DesignConstants.RADIUS.LG)
+            .enabled(!this.isQuickStarting)
+            .onChange((value: string) => { this.quickNickname = value; })
+        }
         .width('100%')
-        .height(48)
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .enabled(!this.isQuickStarting)
-        .opacity(this.isQuickStarting ? 0.6 : 1.0)
-        .onClick(() => this.startQuickExperience())
+        .padding({
+          left: DesignConstants.SPACING.XXL,
+          right: DesignConstants.SPACING.XXL,
+          top: DesignConstants.SPACING.LG,
+          bottom: DesignConstants.SPACING.SM
+        })
+      }
+      .width('100%')
+      .scrollBar(BarState.Off)
 
-      Text('临时用户可使用大部分功能，随时可升级为完整账号')
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        .textAlign(TextAlign.Center)
+      Column({ space: DesignConstants.SPACING.SM }) {
+        Button(this.isQuickStarting ? '正在创建...' : '开始体验')
+          .type(ButtonType.Capsule)
+          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+          .fontColor(Color.White)
+          .fontSize(DesignConstants.FONT.SIZE.LG)
+          .width('100%')
+          .height(48)
+          .enabled(!this.isQuickStarting)
+          .opacity(this.isQuickStarting ? 0.6 : 1.0)
+          .onClick(() => this.startQuickExperience())
+
+        Text('临时用户可使用大部分功能，随时可升级为完整账号')
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .textAlign(TextAlign.Center)
+      }
+      .width('100%')
+      .padding({
+        left: DesignConstants.SPACING.XXL,
+        right: DesignConstants.SPACING.XXL,
+        bottom: DesignConstants.SPACING.XXL
+      })
     }
     .width('100%')
-    .padding({
-      left: DesignConstants.SPACING.XXL,
-      right: DesignConstants.SPACING.XXL,
-      top: DesignConstants.SPACING.LG,
-      bottom: DesignConstants.SPACING.XXL
-    })
   }
 
   private async startQuickExperience(): Promise<void> {

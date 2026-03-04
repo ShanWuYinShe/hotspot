@@ -530,7 +530,7 @@ impl SystemConfigService {
             comment_max_length: get_i32("limits.comment_max_length", 500),
             search_radius_max: get_i32(
                 "limits.search_radius_max",
-                crate::constants::MAX_SEARCH_RADIUS_I32,
+                crate::constants::MAX_SEARCH_RADIUS as i32,
             ),
         };
 

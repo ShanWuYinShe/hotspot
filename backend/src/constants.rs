@@ -54,8 +54,6 @@ pub const STRANGER_MESSAGE_LIMIT_PER_DAY: i64 = 10;
 // ============================================================
 /// 最大搜索半径（米）
 pub const MAX_SEARCH_RADIUS: f64 = 50000.0;
-/// 最大搜索半径（米，i32 用于 validate_radius）
-pub const MAX_SEARCH_RADIUS_I32: i32 = 50000;
 
 // ============================================================
 // 地图渲染
@@ -63,7 +61,7 @@ pub const MAX_SEARCH_RADIUS_I32: i32 = 50000;
 /// 聚类格子尺寸（像素），用于计算 grid_meters
 pub const MAP_CLUSTER_GRID_PX: f64 = 60.0;
 /// 聚合/明细切换的 zoom 阈值（<= 此值显示聚合点）
-pub const MAP_CLUSTER_ZOOM_THRESHOLD: i32 = 12;
+pub const MAP_CLUSTER_ZOOM_THRESHOLD: f64 = 12.0;
 /// 明细模式下单类型实体查询上限
 pub const MAP_DETAIL_ENTITY_LIMIT: i32 = 200;
 

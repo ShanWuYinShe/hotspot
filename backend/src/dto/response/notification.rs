@@ -1,6 +1,6 @@
 //! 通知相关响应类型
 
-use crate::types::enums::{AnnouncementSeverity, FollowSource, NotificationType};
+use crate::types::enums::{AnnouncementSeverity, FollowSource, MentionTargetType, NotificationType};
 use serde::{Deserialize, Serialize};
 
 use super::user::UserInfo;
@@ -60,7 +60,7 @@ pub enum NotificationPayload {
     },
     Mentioned {
         actor: UserInfo,
-        target_type: String,
+        target_type: MentionTargetType,
         moment_id: String,
         moment_summary: MomentSummary,
         #[serde(skip_serializing_if = "Option::is_none")]

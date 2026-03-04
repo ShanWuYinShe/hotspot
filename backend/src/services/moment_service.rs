@@ -357,8 +357,15 @@ impl MomentService {
             privacy_level = ?req.privacy_level.unwrap_or(PrivacyLevel::Public),
             "moment.create started"
         );
-        Validator::validate_not_empty(&req.description, "description")?;
+        Validator::validate_moment_description(&req.description)?;
         Validator::validate_coordinates(req.location.point.latitude, req.location.point.longitude)?;
+        Validator::validate_location_name(&req.location.location_name)?;
+        if let Some(ref ids) = req.image_file_ids {
+            Validator::validate_image_count(ids)?;
+        }
+        if let Some(ref tags) = req.tags {
+            Validator::validate_moment_tags(tags)?;
+        }
 
         let privacy_level = req.privacy_level.unwrap_or(PrivacyLevel::Public);
 
@@ -506,18 +513,18 @@ impl MomentService {
         }
 
         if let Some(desc) = &req.description {
-            if desc.trim().is_empty() {
-                tracing::warn!(
-                    user_id,
-                    moment_id = %moment_id,
-                    "moment.update rejected: empty description"
-                );
-                return Err(AppError::BadRequest("动态内容不能为空".to_string()));
-            }
+            Validator::validate_moment_description(desc)?;
+        }
+        if let Some(ref ids) = req.image_file_ids {
+            Validator::validate_image_count(ids)?;
+        }
+        if let Some(ref tags) = req.tags {
+            Validator::validate_moment_tags(tags)?;
         }
 
         let (lon, lat, location_name) = if let Some(loc) = &req.location {
             Validator::validate_coordinates(loc.point.latitude, loc.point.longitude)?;
+            Validator::validate_location_name(&loc.location_name)?;
             (
                 Some(loc.point.longitude),
                 Some(loc.point.latitude),

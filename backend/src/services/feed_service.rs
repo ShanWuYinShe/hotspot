@@ -118,8 +118,8 @@ impl FeedService {
             FeedSource::Nearby => {
                 let radius = Validator::validate_radius(
                     req.radius,
-                    crate::constants::MAX_SEARCH_RADIUS as i32,
-                )? as f64;
+                    crate::constants::MAX_SEARCH_RADIUS,
+                )?;
                 self.moment_repo
                     .get_nearby_feed(user_lat, user_lng, radius, limit, cursor, Some(user_id))
                     .await?
@@ -182,7 +182,7 @@ impl FeedService {
         )?;
         let (user_lat, user_lng) = (req.reference_point.latitude, req.reference_point.longitude);
         let radius =
-            Validator::validate_radius(req.radius, crate::constants::MAX_SEARCH_RADIUS_I32)? as f64;
+            Validator::validate_radius(req.radius, crate::constants::MAX_SEARCH_RADIUS)?;
 
         let (groups, next_cursor) = self
             .group_repo
@@ -289,7 +289,7 @@ impl FeedService {
         )?;
         let (user_lat, user_lng) = (req.reference_point.latitude, req.reference_point.longitude);
         let radius =
-            Validator::validate_radius(req.radius, crate::constants::MAX_SEARCH_RADIUS_I32)? as f64;
+            Validator::validate_radius(req.radius, crate::constants::MAX_SEARCH_RADIUS)?;
 
         // 获取附近用户（使用 PostGIS 计算距离）
         // UserRepo::search_for_feed limit expects i64

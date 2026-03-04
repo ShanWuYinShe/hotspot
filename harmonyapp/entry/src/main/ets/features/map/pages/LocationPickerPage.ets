@@ -34,6 +34,16 @@ const MARKER_COLOR_USER: string = '#2563EB';
 const MARKER_COLOR_GROUP: string = '#059669';
 const MARKER_COLOR_MOMENT: string = '#EA580C';
 
+const OVERLAP_GROUP_PREFIX: string = 'overlap_';
+// 坐标分组精度：4 位小数 ≈ 11 米，同一建筑/地点内的多条数据会被合并
+const COORD_GROUP_PRECISION: number = 10000;
+
+interface ConvertedRenderItem {
+  item: MapRenderItem;
+  gcj02Lat: number;
+  gcj02Lng: number;
+}
+
 interface BoundsDelta {
   latDelta: number;
   lonDelta: number;
@@ -646,14 +656,13 @@ struct MainPanel {
       }
 
       Button(this.confirmLabel)
-        .type(ButtonType.Normal)
+        .type(ButtonType.Capsule)
         .width('100%')
         .height(48)
         .backgroundColor($r('app.color.brand_primary'))
         .fontColor(Color.White)
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .fontWeight(FontWeight.Medium)
-        .borderRadius(DesignConstants.RADIUS.FULL)
         .shadow(DesignConstants.SHADOW.SMALL)
         .border({ width: 1, color: $r('app.color.highlight_border') })
         .margin({ top: DesignConstants.SPACING.SM })
@@ -703,6 +712,7 @@ export struct LocationPickerPage {
   @State showMoments: boolean = true;
   @State showFilterPanel: boolean = false;
   @State mapToastMessage: string = '';
+  @State overlappingPanelItems: MapRenderItem[] = [];
   private mapToastTimerId: number = 0;
   @State anchorHistory: AnchorHistoryItem[] = [];
   @State pickMode: LocationPickerMode = 'anchor';
@@ -711,6 +721,7 @@ export struct LocationPickerPage {
   @State panelHeight: number = PANEL_SNAP_HALF;
 
   private renderItemsMap: Map<string, MapRenderItem> = new Map();
+  private overlappingGroupsMap: Map<string, MapRenderItem[]> = new Map();
   private resolveTimerId: number = 0;
   private renderTimerId: number = 0;
   private isFirstCameraIdle: boolean = true;
@@ -931,6 +942,7 @@ export struct LocationPickerPage {
   }
 
   private collapsePanel(): void {
+    this.overlappingPanelItems = [];
     if (this.showSearchBar) {
       this.closeSearchPanel(true);
       return;
@@ -1146,7 +1158,9 @@ export struct LocationPickerPage {
 
   private updateMarkers(): void {
     this.renderItemsMap.clear();
-    const nextMarkers: MapMarker[] = [];
+    this.overlappingGroupsMap.clear();
+
+    const converted: ConvertedRenderItem[] = [];
     for (const item of this.renderItems) {
       this.renderItemsMap.set(item.render_id, item);
       if (!this.shouldDisplayItem(item)) {
@@ -1155,17 +1169,83 @@ export struct LocationPickerPage {
       const gcj02 = CoordinateConverter.convertWgs84ToGcj02(
         item.location.latitude, item.location.longitude
       );
-      nextMarkers.push({
-        id: item.render_id,
-        latitude: gcj02.latitude,
-        longitude: gcj02.longitude,
-        title: this.getMarkerTitle(item),
-        snippet: this.getMarkerSnippet(item),
-        type: item.type === 'cluster' ? 'cluster' : item.type,
-        iconKey: this.getMarkerIconKey(item)
-      });
+      converted.push({ item, gcj02Lat: gcj02.latitude, gcj02Lng: gcj02.longitude });
     }
+
+    // 按坐标分组，后端 cluster 不参与合并
+    const coordGroups = new Map<string, ConvertedRenderItem[]>();
+    const soloItems: ConvertedRenderItem[] = [];
+    for (const c of converted) {
+      if (c.item.type === 'cluster') {
+        soloItems.push(c);
+        continue;
+      }
+      const key = `${Math.round(c.gcj02Lat * COORD_GROUP_PRECISION)}_${Math.round(c.gcj02Lng * COORD_GROUP_PRECISION)}`;
+      const group = coordGroups.get(key);
+      if (group) {
+        group.push(c);
+      } else {
+        coordGroups.set(key, [c]);
+      }
+    }
+
+    const nextMarkers: MapMarker[] = [];
+    // 后端 cluster 直接渲染
+    for (const c of soloItems) {
+      nextMarkers.push(this.buildSingleMarker(c));
+    }
+    // 坐标分组：单个直接渲染，多个合并为复合 marker
+    coordGroups.forEach((items: ConvertedRenderItem[], key: string) => {
+      if (items.length === 1) {
+        nextMarkers.push(this.buildSingleMarker(items[0]));
+      } else {
+        const groupId = `${OVERLAP_GROUP_PREFIX}${key}`;
+        const first = items[0];
+        this.overlappingGroupsMap.set(groupId, items.map((c: ConvertedRenderItem) => c.item));
+        const typeLabels = this.summarizeGroupTypes(items);
+        nextMarkers.push({
+          id: groupId,
+          latitude: first.gcj02Lat,
+          longitude: first.gcj02Lng,
+          title: `${items.length} 个内容`,
+          snippet: typeLabels,
+          type: 'cluster',
+          iconKey: 'cluster'
+        });
+      }
+    });
     this.mapMarkers = nextMarkers;
+  }
+
+  private buildSingleMarker(c: ConvertedRenderItem): MapMarker {
+    return {
+      id: c.item.render_id,
+      latitude: c.gcj02Lat,
+      longitude: c.gcj02Lng,
+      title: this.getMarkerTitle(c.item),
+      snippet: this.getMarkerSnippet(c.item),
+      type: c.item.type === 'cluster' ? 'cluster' : c.item.type,
+      iconKey: this.getMarkerIconKey(c.item)
+    };
+  }
+
+  private summarizeGroupTypes(items: ConvertedRenderItem[]): string {
+    let users = 0;
+    let groups = 0;
+    let moments = 0;
+    for (const c of items) {
+      switch (c.item.type) {
+        case 'user': users++; break;
+        case 'group': groups++; break;
+        case 'moment': moments++; break;
+        default: break;
+      }
+    }
+    const parts: string[] = [];
+    if (users > 0) parts.push(`${users}个用户`);
+    if (groups > 0) parts.push(`${groups}个群组`);
+    if (moments > 0) parts.push(`${moments}个动态`);
+    return parts.join('、');
   }
 
   private shouldDisplayItem(item: MapRenderItem): boolean {
@@ -1213,10 +1293,30 @@ export struct LocationPickerPage {
   }
 
   private onMarkerItemClick(marker: MapMarker): void {
+    // 客户端合并的重叠 marker：弹出选择菜单
+    if (marker.id.startsWith(OVERLAP_GROUP_PREFIX)) {
+      const groupItems = this.overlappingGroupsMap.get(marker.id);
+      if (groupItems && groupItems.length > 0) {
+        this.showOverlappingPanel(groupItems);
+      }
+      return;
+    }
+
     const item = this.renderItemsMap.get(marker.id);
     if (!item || !item.entity) {
       return;
     }
+    this.navigateToItem(item);
+  }
+
+  private showOverlappingPanel(items: MapRenderItem[]): void {
+    const entityItems = items.filter((item: MapRenderItem) => item.entity !== undefined);
+    if (entityItems.length === 0) return;
+    this.overlappingPanelItems = entityItems;
+  }
+
+  private navigateToItem(item: MapRenderItem): void {
+    if (!item.entity) return;
     if (item.type === 'group') {
       const param = new GroupDetailRouteParam();
       param.groupId = item.entity.payload_id;
@@ -1229,6 +1329,33 @@ export struct LocationPickerPage {
       const param = new MomentDetailRouteParam();
       param.momentId = item.entity.payload_id;
       AppRouter.push(PageNames.MOMENT_DETAIL, param as Object);
+    }
+  }
+
+  private getItemTypeLabel(type: string): string {
+    switch (type) {
+      case 'user': return '用户';
+      case 'group': return '群组';
+      case 'moment': return '动态';
+      default: return '内容';
+    }
+  }
+
+  private getTypeColor(type: string): string {
+    switch (type) {
+      case 'user': return MARKER_COLOR_USER;
+      case 'group': return MARKER_COLOR_GROUP;
+      case 'moment': return MARKER_COLOR_MOMENT;
+      default: return '#666666';
+    }
+  }
+
+  private getTypeMarkerSvg(type: string): string {
+    switch (type) {
+      case 'user': return 'marker_user.svg';
+      case 'group': return 'marker_group.svg';
+      case 'moment': return 'marker_moment.svg';
+      default: return 'marker_user.svg';
     }
   }
 
@@ -1337,6 +1464,106 @@ export struct LocationPickerPage {
               TransitionEffect.OPACITY
                 .animation({ duration: 150 })
             ))
+        }
+
+        // 重叠 marker 选择面板
+        if (this.overlappingPanelItems.length > 0) {
+          Column() {
+            // 遮罩层：点击关闭
+            Column()
+              .width('100%')
+              .layoutWeight(1)
+              .onClick(() => { this.overlappingPanelItems = []; })
+
+            Column() {
+              Row() {
+                Text(`该位置有 ${this.overlappingPanelItems.length} 个内容`)
+                  .fontSize(DesignConstants.FONT.SIZE.LG)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                  .layoutWeight(1)
+                Text('关闭')
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .onClick(() => { this.overlappingPanelItems = []; })
+              }
+              .width('100%')
+              .padding({
+                left: DesignConstants.SPACING.LG,
+                right: DesignConstants.SPACING.LG,
+                top: DesignConstants.SPACING.LG,
+                bottom: DesignConstants.SPACING.SM
+              })
+
+              List() {
+                ForEach(this.overlappingPanelItems, (item: MapRenderItem) => {
+                  ListItem() {
+                    Row({ space: DesignConstants.SPACING.MD }) {
+                      Image($rawfile(this.getTypeMarkerSvg(item.type)))
+                        .width(28)
+                        .height(36)
+                        .objectFit(ImageFit.Contain)
+                      Column({ space: 2 }) {
+                        Text(item.entity?.title ?? '')
+                          .fontSize(DesignConstants.FONT.SIZE.MD)
+                          .fontWeight(FontWeight.Medium)
+                          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                          .maxLines(1)
+                          .textOverflow({ overflow: TextOverflow.Ellipsis })
+                        if (item.entity?.subtitle) {
+                          Text(item.entity.subtitle)
+                            .fontSize(DesignConstants.FONT.SIZE.SM)
+                            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                            .maxLines(1)
+                            .textOverflow({ overflow: TextOverflow.Ellipsis })
+                        }
+                      }
+                      .layoutWeight(1)
+                      .alignItems(HorizontalAlign.Start)
+
+                      Text(this.getItemTypeLabel(item.type))
+                        .fontSize(DesignConstants.FONT.SIZE.XS)
+                        .fontColor(this.getTypeColor(item.type))
+                        .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+                        .borderRadius(DesignConstants.RADIUS.SM)
+                        .backgroundColor($r('app.color.bg_inset'))
+                    }
+                    .width('100%')
+                    .padding({
+                      left: DesignConstants.SPACING.LG,
+                      right: DesignConstants.SPACING.LG,
+                      top: DesignConstants.SPACING.SM,
+                      bottom: DesignConstants.SPACING.SM
+                    })
+                    .onClick(() => {
+                      this.overlappingPanelItems = [];
+                      this.navigateToItem(item);
+                    })
+                  }
+                }, (item: MapRenderItem) => item.render_id)
+              }
+              .width('100%')
+              .divider({ strokeWidth: 0.5, color: $r('app.color.divider'), startMargin: 60 })
+              .constraintSize({ maxHeight: 320 })
+              .padding({ bottom: this.safeAreaBottom + DesignConstants.SPACING.MD })
+            }
+            .width('100%')
+            .backgroundColor($r('app.color.bg_secondary'))
+            .borderRadius({ topLeft: 20, topRight: 20 })
+            .shadow({
+              radius: DesignConstants.SHADOW.LARGE.radius,
+              color: DesignConstants.SHADOW.LARGE.color,
+              offsetX: DesignConstants.SHADOW.LARGE.offsetX,
+              offsetY: DesignConstants.SHADOW.LARGE.offsetY
+            })
+          }
+          .width('100%')
+          .height('100%')
+          .zIndex(50)
+          .transition(
+            TransitionEffect.OPACITY.animation({ duration: 200, curve: Curve.FastOutSlowIn })
+              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 250, curve: Curve.FastOutSlowIn }))
+          )
         }
 
         // 自定义地图控件：用 position(Edges) 定位到右下角，仅占按钮实际面积，

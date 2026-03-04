@@ -9,21 +9,21 @@ use crate::types::enums::{DismissTargetType, FeedSource, GroupRole};
 pub struct FeedMomentsRequest {
     pub source: FeedSource,
     pub reference_point: GeoPoint,
-    pub radius: Option<i32>,
+    pub radius: Option<f64>,
     pub pagination: Option<PaginationParams>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct FeedGroupsRequest {
     pub reference_point: GeoPoint,
-    pub radius: Option<i32>,
+    pub radius: Option<f64>,
     pub pagination: Option<PaginationParams>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct FeedUsersRequest {
     pub reference_point: GeoPoint,
-    pub radius: Option<i32>,
+    pub radius: Option<f64>,
     pub pagination: Option<PaginationParams>,
 }
 
@@ -44,7 +44,7 @@ pub struct SearchSuggestRequest {
     pub prefix: String,
     pub reference_point: GeoPoint,
     pub types: Option<Vec<SearchSuggestType>>,
-    pub radius: Option<i32>,
+    pub radius: Option<f64>,
 }
 
 /// 统一用户搜索请求 - POST /api/v1/users/search

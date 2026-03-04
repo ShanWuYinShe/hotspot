@@ -479,11 +479,10 @@ export struct CreateGroupPage {
                           : $r('sys.color.ohos_id_color_text_tertiary')])
                     }
                   }
-                  .type(ButtonType.Normal)
+                  .type(ButtonType.Capsule)
                   .width(36)
                   .height(36)
                   .backgroundColor($r('app.color.bg_tertiary'))
-                  .borderRadius(DesignConstants.RADIUS.FULL)
                   .enabled(this.maxMembers > GROUP_MEMBERS_MIN)
                   .onClick(() => {
                     if (this.maxMembers > GROUP_MEMBERS_MIN) this.maxMembers = Math.max(GROUP_MEMBERS_MIN, this.maxMembers - 10);
@@ -520,11 +519,10 @@ export struct CreateGroupPage {
                           : $r('sys.color.ohos_id_color_text_tertiary')])
                     }
                   }
-                  .type(ButtonType.Normal)
+                  .type(ButtonType.Capsule)
                   .width(36)
                   .height(36)
                   .backgroundColor($r('app.color.bg_tertiary'))
-                  .borderRadius(DesignConstants.RADIUS.FULL)
                   .enabled(this.maxMembers < GROUP_MEMBERS_MAX)
                   .onClick(() => {
                     if (this.maxMembers < GROUP_MEMBERS_MAX) this.maxMembers = Math.min(GROUP_MEMBERS_MAX, this.maxMembers + 10);
@@ -601,10 +599,9 @@ export struct CreateGroupPage {
 
             // 提交按钮
             Button('立即创建')
-              .type(ButtonType.Normal)
+              .type(ButtonType.Capsule)
               .backgroundColor($r('app.color.brand_primary'))
               .fontColor(Color.White)
-              .borderRadius(DesignConstants.RADIUS.FULL)
               .shadow(DesignConstants.SHADOW.SMALL)
               .border({ width: 1, color: $r('app.color.highlight_border') })
               .width('100%')

@@ -27,7 +27,7 @@ pub struct Bounds {
 #[derive(Debug, Deserialize, Clone)]
 pub struct MapViewport {
     pub bounds: Bounds,
-    pub zoom: i32,
+    pub zoom: f64,
 }
 
 #[derive(Debug, Deserialize)]

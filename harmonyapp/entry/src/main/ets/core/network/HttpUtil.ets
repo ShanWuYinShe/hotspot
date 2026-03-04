@@ -22,8 +22,10 @@ import {
   extractApiErrorSnapshot,
   guessUserMessageFromSnapshot,
   isAuthErrorCode,
-  isAccountBannedCode
+  isAccountBannedCode,
+  isRateLimitCode
 } from './ApiErrorUtil';
+import { AppRouter, LoginRouteParam } from '../router/AppRouter';
 import { MediaUrlUtil } from '../utils/MediaUrlUtil';
 
 /**
@@ -385,7 +387,8 @@ export class HttpUtil {
     retried: boolean = false,
     forcedIdempotencyKey: string = '',
     idempotencyRetryCount: number = 0,
-    omitAuthHeader: boolean = false
+    omitAuthHeader: boolean = false,
+    rateLimitRetryCount: number = 0
   ): Promise<TResponse> {
     const baseUrl = await HttpUtil.getBaseUrl();
     const fullUrl = `${baseUrl}${url}`;
@@ -420,6 +423,10 @@ export class HttpUtil {
       const responseTime = Date.now() - startTime;
       hilog.info(DOMAIN_NUMBER, TAG, `HTTP响应: ${response.responseCode} (${responseTime}ms)`);
 
+      if (response.responseCode < 200 || response.responseCode >= 300) {
+        throw new Error(`HTTP ${response.responseCode}`);
+      }
+
       let result: Object;
       try {
         result = JSON.parse(response.result as string);
@@ -439,12 +446,29 @@ export class HttpUtil {
       const resultRecord = result as Record<string, Object>;
       const resultCode = resultRecord.code as number;
 
-      // 10201：账号被封禁 -> 强制登出，不尝试刷新
+      // 10201：账号被封禁 -> 强制登出 + 封禁页
       if (isAccountBannedCode(resultCode)) {
         await HttpUtil.clearAuthData();
+        const param = new LoginRouteParam();
+        param.reason = 'banned';
+        param.action = (resultRecord.message as string) || '账号已被封禁';
+        AppRouter.clear();
+        AppRouter.push('LoginPage', param);
         const err = new Error('账号已被封禁');
         (err as Object as Record<string, Object>).code = resultCode;
         throw err;
+      }
+
+      // 10500：限流 -> 按 Retry-After 等待后重试
+      if (isRateLimitCode(resultCode) && rateLimitRetryCount < 1) {
+        const retryAfterHeader = (response.header as Record<string, string>)?.['Retry-After'] ?? '5';
+        const retryAfterSec = parseInt(retryAfterHeader) || 5;
+        hilog.warn(DOMAIN_NUMBER, TAG, `收到 10500 限流，${retryAfterSec}s 后重试`);
+        await new Promise<void>((resolve) => setTimeout(resolve, retryAfterSec * 1000));
+        return await HttpUtil.request<TResponse, TRequest>(
+          url, method, data, retried, forcedIdempotencyKey,
+          idempotencyRetryCount, omitAuthHeader, rateLimitRetryCount + 1
+        );
       }
 
       // 10100：认证失败 -> 首次尝试时自动刷新 token 并重试
@@ -453,16 +477,10 @@ export class HttpUtil {
         const refreshed = await HttpUtil.ensureRefreshToken();
         if (refreshed) {
           return await HttpUtil.request<TResponse, TRequest>(
-            url,
-            method,
-            data,
-            true,
-            currentIdempotencyKey,
-            idempotencyRetryCount,
-            omitAuthHeader
+            url, method, data, true, currentIdempotencyKey,
+            idempotencyRetryCount, omitAuthHeader, rateLimitRetryCount
           );
         }
-        // 刷新失败：ensureRefreshToken 内部已清除认证状态
         hilog.warn(DOMAIN_NUMBER, TAG, '令牌刷新失败，已强制登出');
       }
 
@@ -470,13 +488,8 @@ export class HttpUtil {
       if (isAuthErrorCode(resultCode) && hasAuthHeader && isTokenOptionalEndpoint(url) && !omitAuthHeader) {
         hilog.info(DOMAIN_NUMBER, TAG, `token_optional 端点认证失败，匿名降级重试: ${url}`);
         return await HttpUtil.request<TResponse, TRequest>(
-          url,
-          method,
-          data,
-          true,
-          currentIdempotencyKey,
-          idempotencyRetryCount,
-          true
+          url, method, data, true, currentIdempotencyKey,
+          idempotencyRetryCount, true, rateLimitRetryCount
         );
       }
 
@@ -485,13 +498,8 @@ export class HttpUtil {
         if (resultCode === IDEMPOTENCY_IN_PROGRESS_CODE) {
           await new Promise<void>((resolve) => setTimeout(resolve, 1200));
           return await HttpUtil.request<TResponse, TRequest>(
-            url,
-            method,
-            data,
-            retried,
-            currentIdempotencyKey,
-            idempotencyRetryCount + 1,
-            omitAuthHeader
+            url, method, data, retried, currentIdempotencyKey,
+            idempotencyRetryCount + 1, omitAuthHeader, rateLimitRetryCount
           );
         }
         if (
@@ -499,13 +507,8 @@ export class HttpUtil {
           resultCode === IDEMPOTENCY_CACHE_EXPIRED_CODE
         ) {
           return await HttpUtil.request<TResponse, TRequest>(
-            url,
-            method,
-            data,
-            retried,
-            generateIdempotencyKey(),
-            idempotencyRetryCount + 1,
-            omitAuthHeader
+            url, method, data, retried, generateIdempotencyKey(),
+            idempotencyRetryCount + 1, omitAuthHeader, rateLimitRetryCount
           );
         }
       }

@@ -9,7 +9,7 @@ pub struct CreateCommentRequest {
     pub moment_id: String,
     pub content: String,
     pub parent_id: Option<String>,
-    pub mentions: Option<Vec<String>>, // @ 提及的用户 ID 列表（最多 10 个）
+    pub mentions: Option<Vec<String>>, // @ 提及的用户 ID 列表（最多 20 个）
 }
 
 #[derive(Debug, Deserialize)]

@@ -135,11 +135,15 @@ import {
   MyGroupsRequest,
   MyApplicationsRequest,
   CancelApplicationRequest,
+  GroupSentInvitesRequest,
+  SentInviteItem,
+  RevokeSentInviteRequest,
   MyInvitesRequest,
   GroupInviteItem,
   AcceptInviteRequest,
   RejectInviteRequest,
   LeaveGroupRequest,
+  DismissFeedItemRequest,
 
   // 群公告
   CreateGroupAnnouncementRequest,
@@ -681,6 +685,14 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<Invitation>, InviteMemberRequest>(ApiEndpoints.GROUP.MEMBERS.INVITE, params);
   }
 
+  static async getSentInvites(params: GroupSentInvitesRequest): Promise<ApiResponse<PaginatedData<SentInviteItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<SentInviteItem>>, GroupSentInvitesRequest>(ApiEndpoints.GROUP.MEMBERS.INVITES.LIST, params);
+  }
+
+  static async revokeSentInvite(params: RevokeSentInviteRequest): Promise<ApiResponse<void>> {
+    return HttpUtil.post<ApiResponse<void>, RevokeSentInviteRequest>(ApiEndpoints.GROUP.MEMBERS.INVITES.REVOKE, params);
+  }
+
   static async joinGroup(params: JoinGroupRequest): Promise<ApiResponse<JoinGroupResult>> {
     return HttpUtil.post<ApiResponse<JoinGroupResult>, JoinGroupRequest>(ApiEndpoints.GROUP.ME.JOIN, params);
   }
@@ -829,6 +841,10 @@ export class ApiClient {
 
   static async getFeedTrending(params: GetFeedTrendingRequest): Promise<ApiResponse<TrendingBundle>> {
     return HttpUtil.post<ApiResponse<TrendingBundle>, GetFeedTrendingRequest>(ApiEndpoints.FEED.LIST_TRENDING, params);
+  }
+
+  static async dismissFeedItem(params: DismissFeedItemRequest): Promise<ApiResponse<void>> {
+    return HttpUtil.post<ApiResponse<void>, DismissFeedItemRequest>(ApiEndpoints.FEED.ME_DISMISS, params);
   }
 
   // ==================== 搜索 API ====================

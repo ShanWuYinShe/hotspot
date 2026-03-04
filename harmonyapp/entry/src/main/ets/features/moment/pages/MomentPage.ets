@@ -243,12 +243,11 @@ export struct MomentPage {
           .layoutWeight(1)
 
         Button('发布')
-          .type(ButtonType.Normal)
+          .type(ButtonType.Capsule)
           .backgroundColor($r('app.color.brand_primary'))
           .fontColor(Color.White)
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .height(32)
-          .borderRadius(DesignConstants.RADIUS.FULL)
           .shadow(DesignConstants.SHADOW.SMALL)
           .border({ width: 1, color: $r('app.color.highlight_border') })
           .onClick(async () => {

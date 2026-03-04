@@ -90,6 +90,7 @@ impl CommentService {
     ) -> Result<CommentListItem> {
         let started_at = std::time::Instant::now();
         let mid = Validator::parse_uuid(&req.moment_id, "动态ID")?;
+        Validator::validate_comment_content(&req.content)?;
         info!(
             user_id,
             moment_id = %mid,

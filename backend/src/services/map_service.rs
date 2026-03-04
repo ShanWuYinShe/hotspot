@@ -70,9 +70,9 @@ impl MapService {
         Ok(())
     }
 
-    fn grid_meters(bounds: Bounds, zoom: i32, _grid_size: Option<i32>) -> f64 {
+    fn grid_meters(bounds: Bounds, zoom: f64, _grid_size: Option<i32>) -> f64 {
         let grid_px = MAP_CLUSTER_GRID_PX;
-        let z = zoom.max(0).min(22) as f64;
+        let z = zoom.max(0.0).min(22.0);
 
         // 使用 bbox 中心纬度做 cos 修正
         let center_lat = ((bounds.north + bounds.south) / 2.0).max(-85.0).min(85.0);
@@ -93,6 +93,11 @@ impl MapService {
         Self::validate_bounds(req.viewport.bounds)?;
 
         let zoom = req.viewport.zoom;
+        if !(1.0..=20.0).contains(&zoom) {
+            return Err(AppError::BadRequest(
+                "zoom 必须在 1 到 20 之间".to_string(),
+            ));
+        }
         let bounds = req.viewport.bounds;
         let filter_type = req
             .filter
