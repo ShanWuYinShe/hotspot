@@ -94,9 +94,7 @@ impl Validator {
     /// 图片数量约束（spec: 最多 9 个）
     pub fn validate_image_count(ids: &[String]) -> Result<()> {
         if ids.len() > 9 {
-            return Err(AppError::OutOfRange(
-                "图片数量最多 9 张".to_string(),
-            ));
+            return Err(AppError::OutOfRange("图片数量最多 9 张".to_string()));
         }
         Ok(())
     }
@@ -104,9 +102,7 @@ impl Validator {
     /// 动态标签约束（spec: 每标签 1-30 字符，最多 10 个）
     pub fn validate_moment_tags(tags: &[String]) -> Result<()> {
         if tags.len() > 10 {
-            return Err(AppError::OutOfRange(
-                "标签数量最多 10 个".to_string(),
-            ));
+            return Err(AppError::OutOfRange("标签数量最多 10 个".to_string()));
         }
         for tag in tags {
             Self::validate_length(tag, "标签", 1, 30)?;

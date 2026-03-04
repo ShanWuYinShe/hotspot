@@ -1,4 +1,5 @@
 use axum::{extract::State, Json};
+use tracing::info;
 
 use crate::{
     dto::{
@@ -26,10 +27,34 @@ pub async fn render(
         .filter(|&b| b)
         .and_then(|_| user.user_id);
 
+    let user_label = user
+        .user_id
+        .map(|id| id.to_string())
+        .unwrap_or_else(|| "guest".to_string());
+    let bounds = &req.viewport.bounds;
+    info!(
+        target = "map::render",
+        user_id = %user_label,
+        zoom = req.viewport.zoom,
+        north = bounds.north,
+        south = bounds.south,
+        east = bounds.east,
+        west = bounds.west,
+        filter = ?req.filter,
+        "map render request"
+    );
+
     let data = state
         .map_service
         .render_map(req, social_filter_user_id)
         .await?;
+    info!(
+        target = "map::render",
+        user_id = %user_label,
+        item_count = data.items.len(),
+        has_toast = data.toast_message.as_ref().map(|s| !s.is_empty()).unwrap_or(false),
+        "map render response"
+    );
     Ok(Json(ApiResponse::success(data)))
 }
 

@@ -14,6 +14,7 @@ import { initApiClient, ensureRefreshToken, isSuccess } from '$lib/api/client';
 import { authService } from '$lib/api/services/auth';
 import { usersService } from '$lib/api/services/users';
 import { websocketStore } from '$lib/websocket';
+import { initKeyboardFocusManager } from '$lib/utils/keyboard-focus';
 
 /**
  * Token 刷新管理器
@@ -124,9 +125,10 @@ const tokenRefreshManager = new TokenRefreshManager();
  * 客户端初始化
  */
 if (browser) {
-	// 初始化 API 客户端
-	// spec: Web 端禁止使用 Authorization Header，token 通过 HttpOnly Cookie 传递
-	initApiClient({
+  initKeyboardFocusManager(window);
+  // 初始化 API 客户端
+  // spec: Web 端禁止使用 Authorization Header，token 通过 HttpOnly Cookie 传递
+  initApiClient({
 		baseUrl: '', // 使用相对路径（与前端同域）
 		onAccountBanned: (message) => {
 			// spec 10201: 强制登出 + 显示封禁页

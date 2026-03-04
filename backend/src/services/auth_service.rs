@@ -25,8 +25,8 @@ use crate::repositories::{
 use crate::types::enums::{ClientType, UserStatus, VerificationCodeType};
 use crate::utils::cache_invalidation::{CacheInvalidator, InvalidationEvent};
 use crate::utils::{
-    bloom_filter::ResourceExistenceChecker, jwt::JwtUtil, password::PasswordUtil,
-    token::TokenUtil, validation::Validator,
+    bloom_filter::ResourceExistenceChecker, jwt::JwtUtil, password::PasswordUtil, token::TokenUtil,
+    validation::Validator,
 };
 
 fn detect_delivery_channel(login_id: &str) -> &'static str {

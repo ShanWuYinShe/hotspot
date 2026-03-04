@@ -94,9 +94,7 @@ impl MapService {
 
         let zoom = req.viewport.zoom;
         if !(1.0..=20.0).contains(&zoom) {
-            return Err(AppError::BadRequest(
-                "zoom 必须在 1 到 20 之间".to_string(),
-            ));
+            return Err(AppError::BadRequest("zoom 必须在 1 到 20 之间".to_string()));
         }
         let bounds = req.viewport.bounds;
         let filter_type = req

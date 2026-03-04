@@ -19,6 +19,7 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 
 const DOMAIN_NUMBER: number = 0xFF02;
@@ -260,6 +261,7 @@ export struct LoginPage {
         .borderRadius(DesignConstants.RADIUS.XL)
         .shadow(DesignConstants.SHADOW.INSET)
         .type(InputType.Email)
+        .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
       TextInput({ placeholder: '密码', text: $$this.password })
         .fontSize(DesignConstants.FONT.SIZE.LG)
@@ -268,6 +270,7 @@ export struct LoginPage {
         .borderRadius(DesignConstants.RADIUS.XL)
         .shadow(DesignConstants.SHADOW.INSET)
         .type(InputType.Password)
+        .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
       Button('登录')
         .type(ButtonType.Normal)
@@ -307,6 +310,7 @@ export struct LoginPage {
         .backgroundColor($r('app.color.bg_inset'))
         .borderRadius(DesignConstants.RADIUS.XL)
         .shadow(DesignConstants.SHADOW.INSET)
+        .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
       TextInput({ placeholder: '邮箱 / 用户名（登录凭证）', text: $$this.registerLoginId })
         .fontSize(DesignConstants.FONT.SIZE.LG)
@@ -315,6 +319,7 @@ export struct LoginPage {
         .borderRadius(DesignConstants.RADIUS.XL)
         .shadow(DesignConstants.SHADOW.INSET)
         .type(InputType.Email)
+        .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
       TextInput({ placeholder: '密码（8-128位，含字母+数字）', text: $$this.registerPassword })
         .fontSize(DesignConstants.FONT.SIZE.LG)
@@ -323,6 +328,7 @@ export struct LoginPage {
         .borderRadius(DesignConstants.RADIUS.XL)
         .shadow(DesignConstants.SHADOW.INSET)
         .type(InputType.Password)
+        .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
       TextInput({ placeholder: '确认密码', text: $$this.registerPasswordConfirm })
         .fontSize(DesignConstants.FONT.SIZE.LG)
@@ -331,6 +337,7 @@ export struct LoginPage {
         .borderRadius(DesignConstants.RADIUS.XL)
         .shadow(DesignConstants.SHADOW.INSET)
         .type(InputType.Password)
+        .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
       Button('注册')
         .type(ButtonType.Normal)

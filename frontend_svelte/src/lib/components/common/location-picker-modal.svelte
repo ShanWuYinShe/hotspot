@@ -25,8 +25,9 @@
 	import X from 'lucide-svelte/icons/x';
 	import Clock from 'lucide-svelte/icons/clock';
 	import Trash2 from 'lucide-svelte/icons/trash-2';
-	import CreateLocationShareModal from './create-location-share-modal.svelte';
-	import AnchorSummaryCard from './anchor-summary-card.svelte';
+import CreateLocationShareModal from './create-location-share-modal.svelte';
+import AnchorSummaryCard from './anchor-summary-card.svelte';
+import { useKeyboardFocus } from '$lib/attachments';
 
 type LocationPickerMode = 'anchor' | 'location_pick';
 
@@ -834,7 +835,8 @@ let {
 					<!-- 搜索输入框 -->
 					<div class="flex items-center gap-2 border-b px-3 py-2">
 						<Search class="h-4 w-4 shrink-0 text-muted-foreground" />
-					<input
+				<input
+					{@attach useKeyboardFocus()}
 						type="text"
 						bind:this={searchInput}
 						bind:value={searchText}

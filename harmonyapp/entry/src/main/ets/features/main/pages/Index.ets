@@ -39,6 +39,7 @@ import { SmartNotification, NotificationAction } from '../../../core/services/no
 import { NotificationBanner } from '../../../components/NotificationBanner';
 import { TimerManager } from '../../../core/utils/TimerManager';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'IndexPage';
@@ -102,6 +103,11 @@ struct Index {
       this.abilityContext = this.uiContext.getHostContext() as common.UIAbilityContext;
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `获取UIContext失败: ${JSON.stringify(error)}`);
+    }
+
+    if (this.uiContext) {
+      const keyboardManager = KeyboardDismissManager.getInstance();
+      keyboardManager.init(this.uiContext, 'GlobalKeyboardDismissTarget');
     }
 
     if (this.abilityContext) {
@@ -1028,6 +1034,14 @@ struct Index {
           this.showPerformanceDetails = false;
         })
       }
+
+      Button('')
+        .id('GlobalKeyboardDismissTarget')
+        .width(1)
+        .height(1)
+        .opacity(0)
+        .focusable(true)
+        .onClick(() => {})
     }
     .width('100%')
     .height('100%')

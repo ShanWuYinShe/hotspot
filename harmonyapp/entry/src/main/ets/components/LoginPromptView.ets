@@ -18,6 +18,7 @@ import { GlobalStateManager } from '../core/state/GlobalStateManager';
 import { AuthData, GuestRequest, MyProfile } from '../core/types/api';
 import { SafeAreaUtils } from '../core/utils/SafeAreaUtils';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { KeyboardDismissManager } from '../core/utils/KeyboardDismissManager';
 
 const DOMAIN_NUMBER: number = 0xFF20;
 const TAG: string = 'LoginPromptView';
@@ -119,46 +120,33 @@ export struct LoginPromptView {
 
   @Builder
   private buildQuickStartSheet() {
-    Column({ space: DesignConstants.SPACING.LG }) {
-      Scroll() {
-        Column({ space: DesignConstants.SPACING.MD }) {
-          Text('快速体验')
-            .fontSize(DesignConstants.FONT.SIZE.XL)
-            .fontWeight(FontWeight.Bold)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+    Scroll() {
+      Column({ space: DesignConstants.SPACING.LG }) {
+        Text('快速体验')
+          .fontSize(DesignConstants.FONT.SIZE.XL)
+          .fontWeight(FontWeight.Bold)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
 
-          Text('无需注册，输入昵称即可快速体验')
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        Text('无需注册，输入昵称即可快速体验')
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
 
-          TextInput({ placeholder: '请输入你的昵称' })
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .padding(DesignConstants.SPACING.LG)
-            .backgroundColor($r('app.color.bg_inset'))
-            .borderRadius(DesignConstants.RADIUS.XL)
-            .shadow(DesignConstants.SHADOW.INSET)
-            .enabled(!this.isQuickStarting)
-            .onChange((value: string) => { this.quickNickname = value; })
-            .onFocus(() => {
-              this.isQuickInputFocused = true;
-            })
-            .onBlur(() => {
-              this.isQuickInputFocused = false;
-            })
-        }
-        .alignItems(HorizontalAlign.Start)
-        .width('100%')
-        .padding({
-          left: DesignConstants.SPACING.XXL,
-          right: DesignConstants.SPACING.XXL,
-          top: DesignConstants.SPACING.LG,
-          bottom: DesignConstants.SPACING.SM
-        })
-      }
-      .width('100%')
-      .scrollBar(BarState.Off)
+        TextInput({ placeholder: '请输入你的昵称' })
+          .fontSize(DesignConstants.FONT.SIZE.LG)
+          .padding(DesignConstants.SPACING.LG)
+          .backgroundColor($r('app.color.bg_inset'))
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .shadow(DesignConstants.SHADOW.INSET)
+          .enabled(!this.isQuickStarting)
+          .onChange((value: string) => { this.quickNickname = value; })
+          .onFocus(() => {
+            this.isQuickInputFocused = true;
+          })
+          .onBlur(() => {
+            this.isQuickInputFocused = false;
+            KeyboardDismissManager.getInstance().dismiss();
+          })
 
-      Column({ space: DesignConstants.SPACING.SM }) {
         Button(this.isQuickStarting ? '正在创建...' : '开始体验')
           .type(ButtonType.Capsule)
           .backgroundColor($r('app.color.brand_primary'))
@@ -173,23 +161,22 @@ export struct LoginPromptView {
             this.startQuickExperience();
           })
 
-        // 焦点落点：用于将输入框失焦以收起键盘
-        Button('')
-          .id('quickStartKeyboardDismissTarget')
-          .width(1)
-          .height(1)
-          .opacity(0)
-          .onClick(() => {})
+        Text('临时用户可使用大部分功能，随时可升级为完整账号')
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .textAlign(TextAlign.Center)
       }
+      .alignItems(HorizontalAlign.Start)
       .width('100%')
       .padding({
         left: DesignConstants.SPACING.XXL,
         right: DesignConstants.SPACING.XXL,
-        top: 0,
+        top: DesignConstants.SPACING.LG,
         bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG)
       })
     }
     .width('100%')
+    .scrollBar(BarState.Off)
     .backgroundColor($r('app.color.bg_secondary'))
     .shadow(DesignConstants.SHADOW.SMALL)
     .border({ width: 1, color: $r('app.color.highlight_border') })
@@ -199,11 +186,8 @@ export struct LoginPromptView {
     if (!this.isQuickInputFocused) {
       return;
     }
-    try {
-      this.getUIContext().getFocusController().requestFocus('quickStartKeyboardDismissTarget');
-      this.isQuickInputFocused = false;
-    } catch (_) {
-    }
+    KeyboardDismissManager.getInstance().dismiss();
+    this.isQuickInputFocused = false;
   }
 
   private async startQuickExperience(): Promise<void> {

@@ -1,6 +1,8 @@
 //! 通知相关响应类型
 
-use crate::types::enums::{AnnouncementSeverity, FollowSource, MentionTargetType, NotificationType};
+use crate::types::enums::{
+    AnnouncementSeverity, FollowSource, MentionTargetType, NotificationType,
+};
 use serde::{Deserialize, Serialize};
 
 use super::user::UserInfo;

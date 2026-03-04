@@ -29,6 +29,8 @@ import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { NfcShareService } from '../../../core/services/NfcShareService';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
+import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { formatCount } from '../../../core/utils/FormatUtil';
 
 const DOMAIN_NUMBER: number = 0xFF03;
@@ -48,6 +50,7 @@ export struct ProfilePage {
   @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
   @StorageLink(KEY_USER_TYPE) userType: string = '';
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
+  @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
 
   private stateManager = GlobalStateManager.getInstance();
   @State isEditing: boolean = false;
@@ -66,6 +69,7 @@ export struct ProfilePage {
   @State showQuickStart: boolean = false;
   @State quickNickname: string = '';
   @State isQuickStarting: boolean = false;
+  @State isQuickInputFocused: boolean = false;
   // 升级表单
   @State showUpgradeForm: boolean = false;
   @State upgradeLoginId: string = '';
@@ -202,6 +206,7 @@ export struct ProfilePage {
   }
 
   aboutToDisappear(): void {
+    KeyboardDismissManager.getInstance().dismiss();
     try {
       NfcShareService.getInstance().clearShareData();
     } catch (_) {
@@ -1069,6 +1074,7 @@ export struct ProfilePage {
           .onChange((value: string) => {
             this.upgradeLoginId = value;
           })
+          .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
         TextInput({ placeholder: '密码（至少8位）' })
           .fontSize(DesignConstants.FONT.SIZE.LG)
@@ -1079,6 +1085,7 @@ export struct ProfilePage {
           .onChange((value: string) => {
             this.upgradePassword = value;
           })
+          .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
         TextInput({ placeholder: '确认密码' })
           .fontSize(DesignConstants.FONT.SIZE.LG)
@@ -1089,6 +1096,7 @@ export struct ProfilePage {
           .onChange((value: string) => {
             this.upgradePasswordConfirm = value;
           })
+          .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
         Row({ space: DesignConstants.SPACING.MD }) {
           Button('取消')
@@ -1216,6 +1224,7 @@ export struct ProfilePage {
         .onChange((value: string) => {
           this.editNickname = value;
         })
+        .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
       TextArea({ placeholder: '请输入个人简介', text: this.editBio })
         .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -1447,38 +1456,32 @@ export struct ProfilePage {
 
   @Builder
   private buildQuickStartSheet() {
-    Column({ space: DesignConstants.SPACING.LG }) {
-      Scroll() {
-        Column({ space: DesignConstants.SPACING.MD }) {
-          Text('快速体验')
-            .fontSize(DesignConstants.FONT.SIZE.XL)
-            .fontWeight(FontWeight.Bold)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+    Scroll() {
+      Column({ space: DesignConstants.SPACING.LG }) {
+        Text('快速体验')
+          .fontSize(DesignConstants.FONT.SIZE.XL)
+          .fontWeight(FontWeight.Bold)
+          .fontColor($r('sys.color.ohos_id_color_text_primary'))
 
-          Text('无需注册，输入昵称即可快速体验')
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        Text('无需注册，输入昵称即可快速体验')
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
 
-          TextInput({ placeholder: '请输入你的昵称' })
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .padding(DesignConstants.SPACING.LG)
-            .backgroundColor($r('app.color.bg_tertiary'))
-            .borderRadius(DesignConstants.RADIUS.LG)
-            .enabled(!this.isQuickStarting)
-            .onChange((value: string) => { this.quickNickname = value; })
-        }
-        .width('100%')
-        .padding({
-          left: DesignConstants.SPACING.XXL,
-          right: DesignConstants.SPACING.XXL,
-          top: DesignConstants.SPACING.LG,
-          bottom: DesignConstants.SPACING.SM
-        })
-      }
-      .width('100%')
-      .scrollBar(BarState.Off)
+        TextInput({ placeholder: '请输入你的昵称' })
+          .fontSize(DesignConstants.FONT.SIZE.LG)
+          .padding(DesignConstants.SPACING.LG)
+          .backgroundColor($r('app.color.bg_tertiary'))
+          .borderRadius(DesignConstants.RADIUS.LG)
+          .enabled(!this.isQuickStarting)
+          .onChange((value: string) => { this.quickNickname = value; })
+          .onFocus(() => {
+            this.isQuickInputFocused = true;
+          })
+          .onBlur(() => {
+            this.isQuickInputFocused = false;
+            KeyboardDismissManager.getInstance().dismiss();
+          })
 
-      Column({ space: DesignConstants.SPACING.SM }) {
         Button(this.isQuickStarting ? '正在创建...' : '开始体验')
           .type(ButtonType.Capsule)
           .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
@@ -1499,10 +1502,12 @@ export struct ProfilePage {
       .padding({
         left: DesignConstants.SPACING.XXL,
         right: DesignConstants.SPACING.XXL,
-        bottom: DesignConstants.SPACING.XXL
+        top: DesignConstants.SPACING.LG,
+        bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG)
       })
     }
     .width('100%')
+    .scrollBar(BarState.Off)
   }
 
   private async startQuickExperience(): Promise<void> {

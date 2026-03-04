@@ -23,6 +23,7 @@ import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { AppRouter, LocationPickerRouteParam } from '../../../core/router/AppRouter';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 
 const DOMAIN_NUMBER: number = 0xFF06;
 const TAG: string = 'CreateMomentPage';
@@ -453,6 +454,7 @@ export struct CreateMomentPage {
                   .height(DesignConstants.COMPONENT.INPUT_HEIGHT)
                   .backgroundColor($r('app.color.bg_tertiary'))
                   .borderRadius(DesignConstants.RADIUS.XL)
+                  .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
                 Button('添加')
                   .type(ButtonType.Capsule)

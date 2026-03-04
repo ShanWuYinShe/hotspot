@@ -13,7 +13,7 @@
 	import { useBatchMarkRead } from '$lib/hooks/use-batch-mark-read.svelte';
 	import { createReconnectTracker, mergeMessagesByIdAndSentAt } from '$lib/hooks/use-chat-realtime-sync';
 	import { useChatWsSubscription } from '$lib/hooks/use-chat-ws-subscription.svelte';
-	import { autofocus } from '$lib/attachments';
+import { autofocus, useKeyboardFocus, KEYBOARD_DISMISS_EVENT } from '$lib/attachments';
 	import { Button } from '$lib/components/ui/button';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import { Skeleton } from '$lib/components/ui/skeleton';
@@ -397,6 +397,14 @@
 	onMount(() => {
 		isMounted = true;
 
+		let keyboardDismissHandler: (() => void) | null = null;
+		if (typeof window !== 'undefined') {
+			keyboardDismissHandler = () => {
+				eventHandlers.sendGroupTyping(groupId, false);
+			};
+			window.addEventListener(KEYBOARD_DISMISS_EVENT, keyboardDismissHandler);
+		}
+
 		// 注册 WebSocket 监听器（使用 reactive groupId 自动过滤）
 		const unsubscribeMessage = eventHandlers.onGroupMessage((payload: GroupMessageNewPayload) => {
 			if (payload.group_id === groupId) {
@@ -474,6 +482,9 @@
 			unsubscribeEdited();
 			unsubscribeMemberJoined();
 			unsubscribeGroupTyping();
+			if (keyboardDismissHandler && typeof window !== 'undefined') {
+				window.removeEventListener(KEYBOARD_DISMISS_EVENT, keyboardDismissHandler);
+			}
 			wsSubscription.cleanup('group', [groupId]);
 		};
 	});
@@ -829,6 +840,7 @@
 			<div class="flex items-end gap-2">
 				<textarea
 					{@attach autofocus(shouldFocusInput)}
+					{@attach useKeyboardFocus()}
 					placeholder="发送消息..."
 					bind:value={messageText}
 					rows={1}

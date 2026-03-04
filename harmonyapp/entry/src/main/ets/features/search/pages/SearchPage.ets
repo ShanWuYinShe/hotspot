@@ -25,6 +25,7 @@ import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { formatCount } from '../../../core/utils/FormatUtil';
+import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 import pasteboard from '@ohos.pasteboard';
 
 
@@ -63,6 +64,10 @@ export struct SearchPage {
     SystemUiController.useSurface({
       baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
     });
+  }
+
+  aboutToDisappear(): void {
+    KeyboardDismissManager.getInstance().dismiss();
   }
 
   private async doSearch() {
@@ -163,6 +168,7 @@ export struct SearchPage {
           .onSubmit(() => {
             this.doSearch();
           })
+          .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
         IconButton({
           icon: AppIcon.SEARCH,

@@ -36,6 +36,7 @@ import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
 import { formatCount } from '../../../core/utils/FormatUtil';
 import { LocationUtil } from '../../../core/location/LocationUtil';
+import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 
 interface GroupSyncData {
   groupId: string;
@@ -113,6 +114,10 @@ export struct GroupDetailPage {
     SystemUiController.useSurface({
       baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
     });
+  }
+
+  aboutToDisappear(): void {
+    KeyboardDismissManager.getInstance().dismiss();
   }
 
   private ensureLoggedIn(actionName: string): boolean {
@@ -1172,6 +1177,7 @@ export struct GroupDetailPage {
                       .backgroundColor($r('app.color.bg_inset'))
                       .shadow(DesignConstants.SHADOW.INSET)
                       .borderRadius(DesignConstants.RADIUS.XL)
+                      .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
                   }
 
                     Button(this.groupInfo?.has_password ? '加入群组（需要密码）' : '加入群组')
@@ -1342,6 +1348,7 @@ export struct GroupDetailPage {
               .shadow(DesignConstants.SHADOW.INSET)
               .borderRadius(DesignConstants.RADIUS.MD)
               .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+              .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
             Text(`${this.editGroupName.trim().length}/${GROUP_NAME_MAX}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)

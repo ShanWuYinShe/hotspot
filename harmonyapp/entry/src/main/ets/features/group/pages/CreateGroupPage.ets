@@ -20,6 +20,7 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
 import { common } from '@kit.AbilityKit';
+import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 
 const GROUP_NAME_MAX: number = 50;
 const GROUP_DESCRIPTION_MAX: number = 500;
@@ -302,6 +303,7 @@ export struct CreateGroupPage {
                   .shadow(DesignConstants.SHADOW.INSET)
                   .borderRadius(DesignConstants.RADIUS.XL)
                   .padding({ left: DesignConstants.SPACING.MD })
+                  .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
               }
               .alignItems(HorizontalAlign.Start)
               .padding({
@@ -508,6 +510,7 @@ export struct CreateGroupPage {
                     .onBlur(() => {
                       if (this.maxMembers < GROUP_MEMBERS_MIN) this.maxMembers = GROUP_MEMBERS_MIN;
                       if (this.maxMembers > GROUP_MEMBERS_MAX) this.maxMembers = GROUP_MEMBERS_MAX;
+                      KeyboardDismissManager.getInstance().dismiss();
                     })
 
                   Button() {
@@ -583,6 +586,7 @@ export struct CreateGroupPage {
                     .shadow(DesignConstants.SHADOW.INSET)
                     .borderRadius(DesignConstants.RADIUS.XL)
                     .padding({ left: DesignConstants.SPACING.MD })
+                    .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
                 }
                 .alignItems(HorizontalAlign.Start)
                 .padding({

@@ -29,6 +29,7 @@ import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { AppRouter, LoginRouteParam, GroupDetailRouteParam } from '../../../core/router/AppRouter';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { KeyboardAvoidMode as UIContextKeyboardAvoidMode } from '@ohos.arkui.UIContext';
 
@@ -88,7 +89,7 @@ export struct ChatPage {
   @State historyNextCursor: string = '';
   @State isLoadingMoreHistory: boolean = false;
   @State showConversationActionsSheet: boolean = false;
-  
+
   private chatId: string = '';
   private chatType: 'private_chat' | 'group_chat' = 'private_chat';
   private targetId?: string;
@@ -112,6 +113,7 @@ export struct ChatPage {
       baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,
       preferDarkContent: true
     });
+
     this.stableSafeAreaBottom = Math.max(0, this.safeAreaBottom);
     this.applyKeyboardAvoidMode(UIContextKeyboardAvoidMode.RESIZE);
   }
@@ -140,14 +142,10 @@ export struct ChatPage {
     if (!this.isInputFocused) {
       return;
     }
-    try {
-      this.getUIContext().getFocusController().requestFocus('chatKeyboardDismissTarget');
-      this.isInputFocused = false;
-      this.lastKeyboardDismissAtMs = Date.now();
-      this.stopTyping();
-    } catch (error) {
-      hilog.warn(DOMAIN_NUMBER, TAG, `点击空白收起键盘失败: ${JSON.stringify(error)}`);
-    }
+    KeyboardDismissManager.getInstance().dismiss();
+    this.isInputFocused = false;
+    this.lastKeyboardDismissAtMs = Date.now();
+    this.stopTyping();
   }
 
   private shouldConsumePostDismissNavigation(): boolean {
@@ -1104,6 +1102,7 @@ export struct ChatPage {
           .onBlur(() => {
             this.isInputFocused = false;
             this.stopTyping();
+            KeyboardDismissManager.getInstance().dismiss();
           })
           .onSubmit(() => {
             this.sendMessage();
@@ -1148,6 +1147,7 @@ export struct ChatPage {
         .width(1)
         .height(1)
         .opacity(0)
+        .focusable(true)
         .onClick(() => {})
     }
     .width('100%')

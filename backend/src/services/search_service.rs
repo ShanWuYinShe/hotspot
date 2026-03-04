@@ -59,8 +59,7 @@ impl SearchService {
             req.reference_point.longitude,
         )?;
         let location = Some((req.reference_point.latitude, req.reference_point.longitude));
-        let radius_opt =
-            Some(Validator::validate_radius(req.radius, MAX_SEARCH_RADIUS)?);
+        let radius_opt = Some(Validator::validate_radius(req.radius, MAX_SEARCH_RADIUS)?);
 
         let type_set: Option<HashSet<SearchSuggestType>> = req
             .types
