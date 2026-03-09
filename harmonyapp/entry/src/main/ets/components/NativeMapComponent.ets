@@ -10,6 +10,8 @@ import { map, mapCommon, MapComponent } from '@kit.MapKit';
 import { AsyncCallback } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { image } from '@kit.ImageKit';
+import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 
 const DOMAIN_NUMBER: number = 0xFF11;
@@ -29,15 +31,33 @@ export interface MapMarker {
 }
 
 export interface MapRegion {
-  latitude: number;
-  longitude: number;
-  latitudeDelta: number;
-  longitudeDelta: number;
+    latitude: number;
+    longitude: number;
+    latitudeDelta: number;
+    longitudeDelta: number;
 }
 
 export interface MapCoordinate {
-  latitude: number;
-  longitude: number;
+    latitude: number;
+    longitude: number;
+}
+
+export interface MapVisibleRegion {
+  northeast: MapCoordinate;
+  northwest: MapCoordinate;
+  southeast: MapCoordinate;
+  southwest: MapCoordinate;
+}
+
+class RawVisibleRegion {
+  northeast?: mapCommon.LatLng;
+  northwest?: mapCommon.LatLng;
+  southeast?: mapCommon.LatLng;
+  southwest?: mapCommon.LatLng;
+}
+
+class RawVisibleRegionController {
+  getVisibleRegion?(): RawVisibleRegion;
 }
 
 /** 摄像头信息（含可选 zoom） */
@@ -68,6 +88,7 @@ interface CameraMoveCapable {
 @Component
 export struct NativeMapComponent {
   @Watch('onDarkModeChange') @StorageProp('isDarkMode') isDarkMode: boolean = false;
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
   @Watch('onRegionChangeProp') @Prop mapRegion: MapRegion = {
     latitude: 39.9042,
     longitude: 116.4074,
@@ -98,6 +119,8 @@ export struct NativeMapComponent {
   onMapDoubleClick?: (coordinate: MapCoordinate) => void;
   /** 相机停止移动回调（用户停止拖拽/缩放后触发） */
   onCameraIdle?: (camera: MapCameraPosition) => void;
+  /** 可视区域变化回调 */
+  onVisibleRegionChange?: (region: MapVisibleRegion) => void;
   /** 地图控制器就绪回调，用于父组件获取缩放等操作能力 */
   onActionsReady?: (actions: NativeMapActions) => void;
   
@@ -117,6 +140,11 @@ export struct NativeMapComponent {
   // 内部状态
   @State isMapReady: boolean = false;
   @State mapError: string = '';
+
+  private isNightMapMode(): boolean {
+    const palette = AppThemeManager.getPaletteById(this.resolvedThemeId);
+    return this.isDarkMode || palette.id === 'default_clean_dark';
+  }
 
   aboutToAppear() {
     // 初始化地图回调
@@ -226,7 +254,7 @@ export struct NativeMapComponent {
     if (this.isMapReady && this.mapController) {
       try {
         this.mapController.setDayNightMode(
-          this.isDarkMode ? mapCommon.DayNightMode.NIGHT : mapCommon.DayNightMode.DAY
+          this.isNightMapMode() ? mapCommon.DayNightMode.NIGHT : mapCommon.DayNightMode.DAY
         );
       } catch (e) {
         hilog.warn(DOMAIN_NUMBER, TAG, `切换地图夜间模式失败: ${JSON.stringify(e)}`);
@@ -310,7 +338,7 @@ export struct NativeMapComponent {
     // 根据当前深浅模式设置地图夜间样式
     try {
       this.mapController.setDayNightMode(
-        this.isDarkMode ? mapCommon.DayNightMode.NIGHT : mapCommon.DayNightMode.DAY
+        this.isNightMapMode() ? mapCommon.DayNightMode.NIGHT : mapCommon.DayNightMode.DAY
       );
     } catch (e) {
       hilog.warn(DOMAIN_NUMBER, TAG, `初始化地图夜间模式失败: ${JSON.stringify(e)}`);
@@ -410,6 +438,39 @@ export struct NativeMapComponent {
                 longitude: cameraPosition.target.longitude,
                 zoom: cameraPosition.zoom
               });
+            }
+          }
+          if (this.onVisibleRegionChange) {
+            try {
+              const controller = this.mapController as object as RawVisibleRegionController;
+              const region = controller.getVisibleRegion ? controller.getVisibleRegion() : undefined;
+              if (
+                region?.northeast &&
+                region?.northwest &&
+                region?.southeast &&
+                region?.southwest
+              ) {
+                this.onVisibleRegionChange({
+                  northeast: {
+                    latitude: region.northeast.latitude,
+                    longitude: region.northeast.longitude
+                  },
+                  northwest: {
+                    latitude: region.northwest.latitude,
+                    longitude: region.northwest.longitude
+                  },
+                  southeast: {
+                    latitude: region.southeast.latitude,
+                    longitude: region.southeast.longitude
+                  },
+                  southwest: {
+                    latitude: region.southwest.latitude,
+                    longitude: region.southwest.longitude
+                  }
+                });
+              }
+            } catch (error) {
+              hilog.warn(DOMAIN_NUMBER, TAG, `获取可视区域失败: ${JSON.stringify(error)}`);
             }
           }
         } catch (e) {
@@ -591,7 +652,7 @@ export struct NativeMapComponent {
         .height('100%')
         .justifyContent(FlexAlign.Center)
         .padding(32)
-        .backgroundColor($r('app.color.bg_primary'))
+        .backgroundColor(AppThemeManager.getPaletteById(this.resolvedThemeId).pageBackground)
       } else if (this.mapCallback) {
         MapComponent({
           mapOptions: {
@@ -603,7 +664,7 @@ export struct NativeMapComponent {
               zoom: 15
             },
             minZoom: 3,
-            dayNightMode: this.isDarkMode ? mapCommon.DayNightMode.NIGHT : mapCommon.DayNightMode.DAY
+            dayNightMode: this.isNightMapMode() ? mapCommon.DayNightMode.NIGHT : mapCommon.DayNightMode.DAY
           },
           mapCallback: this.mapCallback
         })

@@ -34,6 +34,13 @@ export interface ColorPalette {
   SURFACE_SUCCESS_SOFT: string;
   SURFACE_WARNING_SOFT: string;
   SURFACE_DANGER_SOFT: string;
+  CHIP_ACTIVE_BG: string;
+  CHIP_ACTIVE_TEXT: string;
+  CHIP_INACTIVE_TEXT: string;
+  HEADER_ICON_BG: string;
+  HEADER_ICON_BORDER: string;
+  HEADER_ICON_TEXT: string;
+  CHAT_TITLE_ICON_BG: string;
 }
 
 // ==================== 字体系统接口 ====================
@@ -122,6 +129,28 @@ export interface ComponentConstants {
   INPUT_HEIGHT: number;
 }
 
+// ==================== 聊天主题布局常量接口 ====================
+export interface ChatLayoutConstants {
+  /** 气泡圆角 */
+  BUBBLE_RADIUS: number;
+  /** 气泡内边距（水平） */
+  BUBBLE_PADDING_H: number;
+  /** 气泡内边距（垂直） */
+  BUBBLE_PADDING_V: number;
+  /** 气泡最大宽度占比 */
+  BUBBLE_MAX_WIDTH: string;
+  /** 消息间距 */
+  MESSAGE_GAP: number;
+  /** 气泡文字大小 */
+  BUBBLE_FONT_SIZE: number;
+  /** 输入框高度 */
+  INPUT_HEIGHT: number;
+  /** 发送按钮高度 */
+  SEND_BUTTON_HEIGHT: number;
+  /** 头像尺寸 */
+  AVATAR_SIZE: number;
+}
+
 // ==================== 设计常量聚合接口 ====================
 export interface DesignConstantsType {
   COLOR: ColorPalette;
@@ -131,6 +160,19 @@ export interface DesignConstantsType {
   SHADOW: ShadowSystem;
   ANIMATION: AnimationSystem;
   COMPONENT: ComponentConstants;
+  CARD: CardTheme;
+  CHAT: ChatLayoutConstants;
+}
+
+interface CardTheme {
+  BG_LIGHT: string;
+  BG_DARK: string;
+  BORDER_LIGHT: string;
+  BORDER_DARK: string;
+  SHADOW_LIGHT: ShadowConfig;
+  SHADOW_DARK: ShadowConfig;
+  STAT_ICON_LIGHT: string;
+  STAT_ICON_DARK: string;
 }
 
 // ==================== 颜色系统（干净扁平极简风格）====================
@@ -163,6 +205,13 @@ const COLOR: ColorPalette = {
   SURFACE_SUCCESS_SOFT: '#F0FDF4',
   SURFACE_WARNING_SOFT: '#FFFBEB',
   SURFACE_DANGER_SOFT: '#FEF2F2',
+  CHIP_ACTIVE_BG: '#4A7A57',
+  CHIP_ACTIVE_TEXT: '#FFFFFF',
+  CHIP_INACTIVE_TEXT: '#6B7280',
+  HEADER_ICON_BG: '#FDF2F8',
+  HEADER_ICON_BORDER: '#FECDD3',
+  HEADER_ICON_TEXT: '#BE123C',
+  CHAT_TITLE_ICON_BG: '#FFFFFF',
 };
 
 // ==================== 字体系统 ====================
@@ -262,6 +311,29 @@ const COMPONENT: ComponentConstants = {
   INPUT_HEIGHT: 42,
 };
 
+const CARD: CardTheme = {
+  BG_LIGHT: '#F6F7FB',
+  BG_DARK: '#151724',
+  BORDER_LIGHT: '#E2E6F3',
+  BORDER_DARK: '#25293A',
+  SHADOW_LIGHT: { radius: 24, color: '#0A0C1120', offsetX: 0, offsetY: 8 },
+  SHADOW_DARK: { radius: 20, color: '#0000002B', offsetX: 0, offsetY: 6 },
+  STAT_ICON_LIGHT: '#757B94',
+  STAT_ICON_DARK: '#A6AAC5'
+};
+
+const CHAT: ChatLayoutConstants = {
+  BUBBLE_RADIUS: 20,
+  BUBBLE_PADDING_H: 16,
+  BUBBLE_PADDING_V: 10,
+  BUBBLE_MAX_WIDTH: '75%',
+  MESSAGE_GAP: 16,
+  BUBBLE_FONT_SIZE: 15,
+  INPUT_HEIGHT: 40,
+  SEND_BUTTON_HEIGHT: 36,
+  AVATAR_SIZE: 40,
+};
+
 // ==================== 小红书风格布局常量 ====================
 export class MasonryLayout {
   // 列宽配置
@@ -331,4 +403,6 @@ export const DesignConstants: DesignConstantsType = {
   SHADOW,
   ANIMATION,
   COMPONENT,
+  CARD,
+  CHAT,
 };

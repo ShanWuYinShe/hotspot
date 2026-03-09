@@ -12,12 +12,16 @@ import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import {
   MomentItem, UserItem, GroupItem, GeoPoint, RelativeLocation,
   SearchMomentsRequest, SearchUsersRequest, SearchGroupsRequest,
-  MomentImage, FollowRequest, UnfollowRequest, JoinGroupRequest,
+  MomentImage, JoinGroupRequest,
   BlockRequest, UnblockRequest, CreateReportRequest, Relationship
 } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
+import { TabsPillGroup } from '../../../components/TabsPillGroup';
+import { MomentFeedCard } from '../../../components/MomentFeedCard';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
+import { InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
+import { interactionActions } from '../../../core/state/InteractionActions';
 import { LocationBar } from '../../../components/LocationBar';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -32,6 +36,8 @@ import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { formatCount, formatRelativeTime } from '../../../core/utils/FormatUtil';
 import pasteboard from '@ohos.pasteboard';
+import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 
 const DOMAIN_NUMBER: number = 0xFF10;
@@ -55,6 +61,8 @@ export struct NearbyPage {
   @StorageLink('nearbyDeviceCount') nearbyDeviceCount: number = 0;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageLink('interaction_user_state') userStateMap: Record<string, UserRelationState> = {};
 
   @State currentSubTab: number = 0;
   private subTabController: TabsController = new TabsController();
@@ -64,6 +72,7 @@ export struct NearbyPage {
   // 动态数据
   @State moments: MomentItem[] = [];
   private momentsDataSource: BasicDataSource<MomentItem> = new BasicDataSource<MomentItem>([]);
+  private interactionStore = InteractionStateStore.getInstance();
   @State momentsLoading: boolean = true;
   @State momentsRefreshing: boolean = false;
   @State momentsError: string = '';
@@ -94,9 +103,7 @@ export struct NearbyPage {
   @State groupActionPendingIds: string[] = [];
 
   async aboutToAppear() {
-    SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
-    });
+    SystemUiController.syncWithCurrentTheme();
     // 预加载所有 tab 数据（并行），切换 tab 时数据已就绪，无需再显示 loading
     this.loadNearbyMoments();
     this.loadNearbyUsers();
@@ -112,12 +119,36 @@ export struct NearbyPage {
     }
   }
 
+  private getSurfaceBackground(): string {
+    return this.getCurrentThemePalette().surfaceBackground;
+  }
+
+  private getSurfaceSubtle(): string {
+    return this.getCurrentThemePalette().surfaceSubtle;
+  }
+
+  private getSurfaceBorder(): string {
+    return this.getCurrentThemePalette().borderColor;
+  }
+
+  private getAccentBackground(): string {
+    return this.getCurrentThemePalette().accentBackground;
+  }
+
+  private getAccentText(): string {
+    return this.getCurrentThemePalette().accentText;
+  }
+
   aboutToDisappear() {
     try {
       DistributedManager.getInstance().stopDeviceDiscovery();
     } catch {
       // ignore
     }
+  }
+
+  private getCurrentThemePalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
   /**
@@ -194,10 +225,6 @@ export struct NearbyPage {
 
   private isGroupActionPending(groupId: string): boolean {
     return this.groupActionPendingIds.indexOf(groupId) >= 0;
-  }
-
-  private isUserFollowing(user: UserItem): boolean {
-    return user.relation?.is_following ?? false;
   }
 
   private isUserBlocked(user: UserItem): boolean {
@@ -279,6 +306,7 @@ export struct NearbyPage {
           this.moments = validItems;
           this.momentsDataSource.setData(validItems);
         }
+        validItems.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
         this.momentsHasMore = !!(response.data?.next_cursor);
         this.momentsNextCursor = response.data?.next_cursor ?? '';
         try {
@@ -330,7 +358,12 @@ export struct NearbyPage {
         : await LoadingUtil.withMinimumTime(() => ApiClient.searchUsers(request));
       if (response.code === 0) {
         const items = response.data?.items ?? [];
-        const validItems = items.filter((u: UserItem) => u.user?.user_id);
+        const me = GlobalStateManager.getInstance().getCurrentUser();
+        const myId = me?.user_id;
+        const validItemsAll = items.filter((u: UserItem) => u.user?.user_id);
+        const validItems = typeof myId === 'string'
+          ? validItemsAll.filter((u: UserItem) => u.user.user_id !== myId)
+          : validItemsAll;
         if (loadMore) {
           this.users = this.users.concat(validItems);
           this.usersDataSource.appendData(validItems);
@@ -338,6 +371,7 @@ export struct NearbyPage {
           this.users = validItems;
           this.usersDataSource.setData(validItems);
         }
+        validItems.forEach((item: UserItem) => this.interactionStore.patchUserFromItem(item));
         this.usersHasMore = !!(response.data?.next_cursor);
         this.usersNextCursor = response.data?.next_cursor ?? '';
         try {
@@ -457,7 +491,7 @@ export struct NearbyPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
   }
 
   @Builder
@@ -493,16 +527,18 @@ export struct NearbyPage {
         )
       }
 
-      Row({ space: 0 }) {
-        this.SubTabChip('动态', 0, AppIcon.CAMERA)
-        this.SubTabChip('用户', 1, AppIcon.PERSON)
-        this.SubTabChip('群组', 2, AppIcon.GROUP)
-      }
-      .width('100%')
-      .padding(3)
-      .backgroundColor($r('app.color.bg_inset'))
-      .borderRadius(DesignConstants.RADIUS.XXL)
-      .border({ width: 1, color: $r('app.color.highlight_border') })
+      TabsPillGroup({
+        tabs: [
+          { label: '动态', icon: AppIcon.CAMERA },
+          { label: '用户', icon: AppIcon.PERSON },
+          { label: '群组', icon: AppIcon.GROUP }
+        ],
+        activeIndex: this.currentSubTab,
+        gap: DesignConstants.SPACING.XS,
+        actions: {
+          onChange: (index: number) => this.switchSubTab(index)
+        }
+      })
     }
     .width('100%')
     .padding({
@@ -513,39 +549,6 @@ export struct NearbyPage {
     })
     .backgroundColor(Color.Transparent)
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
-  }
-
-  @Builder
-  private SubTabChip(label: string, index: number, icon: AppIcon) {
-    Row({ space: DesignConstants.SPACING.XS }) {
-      Text() {
-        SymbolSpan($r(icon))
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor([this.currentSubTab === index
-            ? $r('app.color.brand_primary')
-            : $r('sys.color.ohos_id_color_text_secondary')])
-      }
-      Text(label)
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontWeight(this.currentSubTab === index ? FontWeight.Medium : FontWeight.Normal)
-        .fontColor(this.currentSubTab === index
-          ? $r('app.color.brand_primary')
-          : $r('sys.color.ohos_id_color_text_secondary'))
-    }
-    .height(36)
-    .layoutWeight(1)
-    .justifyContent(FlexAlign.Center)
-    .backgroundColor(this.currentSubTab === index
-      ? $r('app.color.chip_selected_bg')
-      : Color.Transparent)
-    .borderRadius(DesignConstants.RADIUS.XL)
-    .border(this.currentSubTab === index
-      ? { width: 1, color: $r('app.color.highlight_border') }
-      : { width: 0 })
-    .shadow(this.currentSubTab === index ? DesignConstants.SHADOW.SMALL : { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 })
-    .onClick(() => {
-      this.switchSubTab(index);
-    })
   }
 
   // ==================== 动态内容 ====================
@@ -563,7 +566,10 @@ export struct NearbyPage {
           List({ space: DesignConstants.SPACING.MD }) {
             LazyForEach(this.momentsDataSource, (moment: MomentItem) => {
               ListItem() {
-                this.buildMomentCard(moment)
+                MomentFeedCard({
+                  moment: moment,
+                  onOpenDetail: (item: MomentItem) => this.openMomentDetail(item)
+                })
               }
             }, (moment: MomentItem) => moment.moment_id)
             if (this.momentsLoadingMore) {
@@ -594,180 +600,11 @@ export struct NearbyPage {
     .height('100%')
   }
 
-  // 单列卡片：按移动端宽卡估算封面高度，避免过高或过扁
-  private calculateImageHeight(moment: MomentItem): number {
-    if (!moment.images || moment.images.length === 0) {
-      return 168;
-    }
-
-    const image = moment.images[0];
-    if (image.width && image.height && image.width > 0) {
-      const aspectRatio = image.height / image.width;
-      const calculatedHeight = 320 * aspectRatio;
-      return Math.max(176, Math.min(calculatedHeight, 300));
-    }
-
-    return 220;
-  }
-
-  @Builder
-  buildMomentCard(moment: MomentItem) {
-    Column({ space: DesignConstants.SPACING.SM }) {
-      Row({ space: 8 }) {
-        Row({ space: DesignConstants.SPACING.XS }) {
-          Text() {
-            SymbolSpan($r(AppIcon.CAMERA))
-              .fontSize(10)
-              .fontColor([$r('sys.color.ohos_id_color_emphasize')])
-          }
-          Text('附近动态')
-            .fontSize(10)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        }
-        .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
-        .backgroundColor($r('app.color.bg_tertiary'))
-        .borderRadius(DesignConstants.RADIUS.XL)
-
-        Blank().layoutWeight(1)
-
-        if (moment.location?.distance !== undefined && moment.location?.distance !== null) {
-          Text(LocationUtil.formatDistance(moment.location.distance))
-            .fontSize(10)
-            .fontColor($r('sys.color.ohos_id_color_emphasize'))
-            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
-            .backgroundColor($r('app.color.chip_selected_bg'))
-            .borderRadius(DesignConstants.RADIUS.XL)
-        }
-      }
-      .width('100%')
-
-      if (moment.images && moment.images.length > 0) {
-        Image(MediaUrlUtil.normalize(moment.images[0].url))
-          .width('100%')
-          .height(this.calculateImageHeight(moment))
-          .objectFit(ImageFit.Cover)
-          .borderRadius(DesignConstants.RADIUS.LG)
-          .backgroundColor($r('app.color.bg_tertiary'))
-      } else {
-        Column() {
-          Text(moment.description || '这条动态还没有文案')
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .lineHeight(22)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-            .maxLines(5)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .width('100%')
-        .height(140)
-        .padding(DesignConstants.SPACING.MD)
-        .justifyContent(FlexAlign.Center)
-        .backgroundColor($r('app.color.bg_tertiary'))
-        .borderRadius(DesignConstants.RADIUS.LG)
-      }
-
-      if (moment.description) {
-        Text(moment.description)
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .lineHeight(22)
-          .maxLines(4)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .width('100%')
-      }
-
-      Row({ space: DesignConstants.SPACING.SM }) {
-        SystemAvatar({
-          avatarUrl: moment.user?.avatar_url ?? '',
-          name: moment.user?.nickname ?? '',
-          avatarSize: 24,
-          shape: 'circle'
-        })
-        Text(moment.user?.nickname ?? '未知用户')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .layoutWeight(1)
-        Text(formatRelativeTime(moment.created_at))
-          .fontSize(DesignConstants.FONT.SIZE.XS)
-          .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
-
-      Row({ space: DesignConstants.SPACING.LG }) {
-        Text(`点赞 ${formatCount(moment.likes_count)}`)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        Text(`评论 ${formatCount(moment.comments_count)}`)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        Text(`分享 ${formatCount(moment.shares_count)}`)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-      }
-      .width('100%')
-    }
-    .padding({
-      left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
-      top: DesignConstants.SPACING.LG,
-      bottom: DesignConstants.SPACING.LG
-    })
-    .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.XXL)
-    .shadow(DesignConstants.SHADOW.MEDIUM)
-    .border({ width: 1, color: $r('app.color.highlight_border') })
-    .onClick(() => {
-      this.openMomentDetail(moment);
-    })
-  }
-
   private openMomentDetail(moment: MomentItem): void {
     hilog.info(DOMAIN_NUMBER, TAG, `打开动态详情: ${moment.moment_id}`);
     const params = new MomentDetailRouteParam();
     params.momentId = moment.moment_id;
     AppRouter.push(PageNames.MOMENT_DETAIL, params);
-  }
-
-  @Builder
-  buildImageGrid(images: MomentImage[]) {
-    if (images.length === 1) {
-      Image(MediaUrlUtil.normalize(images[0].url))
-        .width('100%')
-        .constraintSize({ maxHeight: 240 })
-        .objectFit(ImageFit.Cover)
-        .backgroundColor($r('app.color.bg_tertiary'))
-        .borderRadius(DesignConstants.RADIUS.MD)
-    } else {
-      Flex({ wrap: FlexWrap.Wrap }) {
-        ForEach(images.slice(0, 9), (img: MomentImage) => {
-          Image(MediaUrlUtil.normalize(img.url))
-            .width(images.length <= 4 ? '48%' : '31%')
-            .aspectRatio(1)
-            .objectFit(ImageFit.Cover)
-            .backgroundColor($r('app.color.bg_tertiary'))
-            .borderRadius(DesignConstants.RADIUS.SM)
-            .margin(2)
-        }, (img: MomentImage, index: number) => `${img.url}_${index}`)
-      }
-      .width('100%')
-    }
-  }
-
-  @Builder
-  buildStatItem(icon: AppIcon, text: string) {
-    Row({ space: DesignConstants.SPACING.XS }) {
-      Text() {
-        SymbolSpan($r(icon))
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
-      }
-      Text(text)
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-    }
-    .margin({ right: DesignConstants.SPACING.XL })
   }
 
   // ==================== 用户内容 ====================
@@ -842,7 +679,7 @@ export struct NearbyPage {
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         }
         .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
-        .backgroundColor($r('app.color.bg_tertiary'))
+               .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
 
         Blank().layoutWeight(1)
@@ -852,7 +689,7 @@ export struct NearbyPage {
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor($r('sys.color.ohos_id_color_emphasize'))
             .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
-            .backgroundColor($r('app.color.chip_selected_bg'))
+            .backgroundColor(this.getSurfaceSubtle())
             .borderRadius(DesignConstants.RADIUS.XL)
         }
       }
@@ -916,8 +753,8 @@ export struct NearbyPage {
         .width(30)
         .height(30)
         .borderRadius(DesignConstants.RADIUS.XL)
-        .backgroundColor($r('app.color.bg_tertiary'))
-        .border({ width: 1, color: $r('app.color.highlight_border') })
+        .backgroundColor(this.getSurfaceSubtle())
+        .border({ width: 1, color: this.getSurfaceBorder() })
         .justifyContent(FlexAlign.Center)
         .alignItems(VerticalAlign.Center)
         .bindMenu([
@@ -926,7 +763,7 @@ export struct NearbyPage {
             action: () => this.startPrivateChat(user)
           },
           {
-            value: this.isUserFollowing(user) ? '取消关注' : '关注',
+            value: this.isUserFollowing(user.user?.user_id ?? '') ? '取消关注' : '关注',
             action: () => this.followUser(user)
           },
           {
@@ -977,16 +814,16 @@ export struct NearbyPage {
               .fontColor($r('sys.color.ohos_id_color_text_secondary'))
               .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
               .margin({ right: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-              .backgroundColor($r('app.color.bg_tertiary'))
-              .borderRadius(DesignConstants.RADIUS.XL)
+               .backgroundColor(this.getSurfaceSubtle())
+               .borderRadius(DesignConstants.RADIUS.XL)
           }
-          ForEach((user.tags ?? []).slice(0, 2), (tag: string) => {
+           ForEach((user.tags ?? []).slice(0, 2), (tag: string) => {
             Text(`#${tag}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor($r('sys.color.ohos_id_color_text_secondary'))
               .padding({ left: 7, right: 7, top: 3, bottom: 3 })
               .margin({ right: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-              .backgroundColor($r('app.color.bg_tertiary'))
+               .backgroundColor(this.getSurfaceSubtle())
               .borderRadius(DesignConstants.RADIUS.XL)
           }, (tag: string) => tag)
         }
@@ -995,7 +832,7 @@ export struct NearbyPage {
 
       Row({ space: DesignConstants.SPACING.SM }) {
         Button(this.isUserActionPending(user.user?.user_id ?? '') ? '处理中...' :
-          (this.isUserFollowing(user) ? '已关注' : '关注'))
+          (this.isUserFollowing(user.user?.user_id ?? '') ? '已关注' : '关注'))
           .type(ButtonType.Capsule)
           .layoutWeight(1)
           .height(40)
@@ -1003,10 +840,10 @@ export struct NearbyPage {
           .enabled(!this.isUserActionPending(user.user?.user_id ?? '') && !this.isUserBlocked(user))
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor(this.isUserFollowing(user) ? $r('app.color.bg_tertiary') : $r('app.color.brand_primary'))
-          .fontColor(this.isUserFollowing(user) ? $r('app.color.brand_primary') : Color.White)
-          .shadow(this.isUserFollowing(user) ? { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 } : DesignConstants.SHADOW.SMALL)
-          .border(this.isUserFollowing(user) ? { width: 0 } : { width: 1, color: $r('app.color.highlight_border') })
+          .backgroundColor(this.isUserFollowing(user.user?.user_id ?? '') ? this.getSurfaceSubtle() : this.getAccentBackground())
+          .fontColor(this.isUserFollowing(user.user?.user_id ?? '') ? this.getAccentBackground() : this.getAccentText())
+          .shadow(this.isUserFollowing(user.user?.user_id ?? '') ? { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 } : DesignConstants.SHADOW.SMALL)
+          .border(this.isUserFollowing(user.user?.user_id ?? '') ? { width: 0 } : { width: 1, color: this.getSurfaceBorder() })
           .opacity(this.isUserActionPending(user.user?.user_id ?? '') || this.isUserBlocked(user) ? 0.58 : 1)
           .onClick(() => { this.followUser(user); })
 
@@ -1018,9 +855,9 @@ export struct NearbyPage {
           .enabled(!this.isUserBlocked(user))
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor($r('app.color.bg_tertiary'))
-          .fontColor($r('app.color.brand_primary'))
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .backgroundColor(this.getSurfaceSubtle())
+          .fontColor(this.getCurrentThemePalette().accentBackground)
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .opacity(this.isUserBlocked(user) ? 0.58 : 1)
           .onClick(() => { this.startPrivateChat(user); })
       }
@@ -1034,10 +871,10 @@ export struct NearbyPage {
       top: DesignConstants.SPACING.MD,
       bottom: DesignConstants.SPACING.MD
     })
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.XXL)
     .shadow(DesignConstants.SHADOW.MEDIUM)
-    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .border({ width: 1, color: this.getSurfaceBorder() })
     .margin({ bottom: DesignConstants.SPACING.MD })
   }
 
@@ -1113,7 +950,7 @@ export struct NearbyPage {
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         }
         .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
-        .backgroundColor($r('app.color.bg_tertiary'))
+        .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
 
         Blank().layoutWeight(1)
@@ -1124,7 +961,7 @@ export struct NearbyPage {
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor($r('sys.color.ohos_id_color_emphasize'))
             .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
-            .backgroundColor($r('app.color.chip_selected_bg'))
+            .backgroundColor(this.getSurfaceSubtle())
             .borderRadius(DesignConstants.RADIUS.XL)
         }
       }
@@ -1174,8 +1011,8 @@ export struct NearbyPage {
         .width(30)
         .height(30)
         .borderRadius(DesignConstants.RADIUS.XL)
-        .backgroundColor($r('app.color.bg_tertiary'))
-        .border({ width: 1, color: $r('app.color.highlight_border') })
+        .backgroundColor(this.getSurfaceSubtle())
+        .border({ width: 1, color: this.getSurfaceBorder() })
         .justifyContent(FlexAlign.Center)
         .alignItems(VerticalAlign.Center)
         .bindMenu([
@@ -1224,7 +1061,7 @@ export struct NearbyPage {
               .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
-            .backgroundColor($r('app.color.bg_tertiary'))
+            .backgroundColor(this.getSurfaceSubtle())
             .borderRadius(DesignConstants.RADIUS.XL)
             .margin({ right: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
         }, (tag: string) => tag)
@@ -1242,10 +1079,10 @@ export struct NearbyPage {
           .enabled(!this.isGroupActionPending(group.group?.group_id ?? ''))
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor(this.isGroupJoined(group) ? $r('app.color.bg_tertiary') : $r('app.color.brand_primary'))
-          .fontColor(this.isGroupJoined(group) ? $r('app.color.brand_primary') : Color.White)
+          .backgroundColor(this.isGroupJoined(group) ? this.getSurfaceSubtle() : this.getCurrentThemePalette().accentBackground)
+          .fontColor(this.isGroupJoined(group) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().accentText)
           .shadow(this.isGroupJoined(group) ? { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 } : DesignConstants.SHADOW.SMALL)
-          .border(this.isGroupJoined(group) ? { width: 0 } : { width: 1, color: $r('app.color.highlight_border') })
+          .border(this.isGroupJoined(group) ? { width: 0 } : { width: 1, color: this.getSurfaceBorder() })
           .opacity(this.isGroupActionPending(group.group?.group_id ?? '') ? 0.58 : 1)
           .onClick(() => { this.joinGroup(group); })
 
@@ -1256,9 +1093,9 @@ export struct NearbyPage {
           .borderRadius(DesignConstants.RADIUS.FULL)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor($r('app.color.bg_tertiary'))
-          .fontColor($r('app.color.brand_primary'))
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .backgroundColor(this.getSurfaceSubtle())
+          .fontColor(this.getCurrentThemePalette().accentBackground)
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .onClick(() => { this.openGroupDetail(group); })
       }
       .width('100%')
@@ -1271,45 +1108,39 @@ export struct NearbyPage {
       top: DesignConstants.SPACING.MD,
       bottom: DesignConstants.SPACING.MD
     })
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.XXL)
     .shadow(DesignConstants.SHADOW.MEDIUM)
-    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .border({ width: 1, color: this.getSurfaceBorder() })
     .margin({ bottom: DesignConstants.SPACING.MD })
   }
 
   // ==================== 操作方法 ====================
   private async followUser(user: UserItem): Promise<void> {
     if (!user.user?.user_id) return;
-    if (!this.isLoggedIn) {
-      SystemToast.showWarning('请先登录后再关注', this.getUIContext());
-      const loginParams = new LoginRedirectParams();
-      loginParams.reason = 'action_required';
-      loginParams.action = '关注用户';
-      AppRouter.push(PageNames.LOGIN, loginParams);
-      return;
-    }
-
     const userId = user.user.user_id;
     if (this.isUserActionPending(userId)) return;
     this.setUserActionPending(userId, true);
-
-    const isFollowing = user.relation?.is_following ?? false;
     try {
-      const response = isFollowing
-        ? await ApiClient.unfollowUser({ user_id: userId } as UnfollowRequest)
-        : await ApiClient.followUser({ user_id: userId } as FollowRequest);
-      if (response.code === 0) {
+      const isFollowing = this.isUserFollowing(userId);
+      const success = await interactionActions.setFollowUser(userId, !isFollowing, '关注用户');
+      if (success) {
         this.patchUserFollowing(userId, !isFollowing);
         SystemToast.showSuccess(isFollowing ? '已取消关注' : '已关注', this.getUIContext());
       } else {
-        SystemToast.showError(response.message || (isFollowing ? '取消关注失败' : '关注失败'), this.getUIContext());
+        SystemToast.showError('操作失败', this.getUIContext());
       }
-    } catch {
-      SystemToast.showError(isFollowing ? '取消关注失败' : '关注失败', this.getUIContext());
     } finally {
       this.setUserActionPending(userId, false);
     }
+  }
+
+  private isUserFollowing(userId: string): boolean {
+    const state = this.userStateMap[userId];
+    if (state?.relation) {
+      return state.relation.is_following;
+    }
+    return false;
   }
 
   private async joinGroup(group: GroupItem): Promise<void> {
@@ -1336,6 +1167,7 @@ export struct NearbyPage {
       const response = await ApiClient.joinGroup(joinReq);
       if (response.code === 0 && response.data) {
         if (response.data.status === 'joined') {
+          InteractionStateStore.getInstance().updateGroupMembership(groupId, { is_member: true });
           SystemToast.showSuccess('加入成功', this.getUIContext());
           await this.loadNearbyGroups();
         } else if (response.data.status === 'pending_approval') {

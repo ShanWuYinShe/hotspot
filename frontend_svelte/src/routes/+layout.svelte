@@ -11,13 +11,16 @@
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { locationStore } from '$lib/stores/location.svelte';
 	import { mapAnchorStore, DEFAULT_ANCHOR_NAME } from '$lib/stores/map-anchor.svelte';
-	import { loadAMapPlugin } from '$lib/utils/amap';
+	import { loadAMap, loadAMapPlugin } from '$lib/utils/amap';
 	import { usersService } from '$lib/api/services/users';
 	import { isSuccess } from '$lib/api/client';
 
 	let { children } = $props();
 	let isSyncingLocationToServer = false;
 	let lastSyncedLocationSignature = '';
+	const LOCATION_MAX_AGE_MS = 1 * 60 * 1000; // 1 分钟视为位置仍然新鲜
+	const LOCATION_REFRESH_INTERVAL_MS = 1 * 60 * 1000; // 每 1 分钟刷新一次真实位置
+	let locationRefreshTimer: number | null = null;
 
 	function buildLocationSignature(
 		userId: string,
@@ -66,15 +69,32 @@
 		}
 	}
 
-	async function initLocation() {
-		if (locationStore.permissionDenied) return;
-		const existing = locationStore.current;
-		const existingName = existing?.location_name;
-		if (existingName && existingName !== '当前位置') return;
+	function isLocationFresh(): boolean {
+		const lastUpdated = locationStore.lastUpdated;
+		if (!lastUpdated) return false;
+		const timestamp = Date.parse(lastUpdated);
+		if (Number.isNaN(timestamp)) return false;
+		return Date.now() - timestamp < LOCATION_MAX_AGE_MS;
+	}
 
-		const geoPoint = existing
-			? { latitude: existing.point.latitude, longitude: existing.point.longitude }
-			: await locationStore.requestLocation();
+	async function initLocation(force: boolean) {
+		if (locationStore.permissionDenied) return;
+
+		const existing = locationStore.current;
+		if (!force && existing && isLocationFresh()) {
+			// 已有较新的真实位置时，仅在浏览锚点仍为默认值时用它初始化锚点
+			if (mapAnchorStore.name === DEFAULT_ANCHOR_NAME) {
+				const anchorName = existing.location_name || '当前位置';
+				mapAnchorStore.setAnchor(
+					existing.point.latitude,
+					existing.point.longitude,
+					anchorName
+				);
+			}
+			return;
+		}
+
+		const geoPoint = await locationStore.requestLocation();
 		if (!geoPoint) return;
 
 		const resolved = await reverseGeocode(geoPoint.latitude, geoPoint.longitude);
@@ -117,8 +137,23 @@
 			}
 		}
 
-		initLocation();
+		// 首次进入站点时强制刷新一次真实位置
+		void initLocation(true);
+		// 提前加载高德地图 SDK，减少后续位置选择/锚点弹窗首次打开的等待时间
+		void loadAMap().catch(() => {
+			// 忽略加载失败：缺少 Key 或网络问题时保持降级体验
+		});
+		// 周期性刷新真实位置（基于浏览器定位能力），用于定期上报后端
+		locationRefreshTimer = window.setInterval(() => {
+			void initLocation(false);
+		}, LOCATION_REFRESH_INTERVAL_MS);
 		// 注：WebSocket 在 hooks.client.ts 中初始化，无需在组件中管理
+		return () => {
+			if (locationRefreshTimer !== null) {
+				window.clearInterval(locationRefreshTimer);
+				locationRefreshTimer = null;
+			}
+		};
 	});
 </script>
 

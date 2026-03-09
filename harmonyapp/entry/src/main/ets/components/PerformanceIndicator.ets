@@ -7,6 +7,8 @@ import { SystemIcon, AppIcon } from './SystemIcon';
 import { SystemToast } from './SystemToast';
 import { AccessibilityManager } from '../core/accessibility/AccessibilityManager';
 import { DesignConstants } from '../constants/DesignConstants';
+import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 interface PerformanceLevel {
   level: string;
@@ -23,6 +25,7 @@ interface MetricThresholds {
 export struct PerformanceIndicator {
   @Prop showDetails: boolean = false;
   @Prop compact: boolean = false;
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
   @State private metrics: PerformanceMetrics | null = null;
   @State private alerts: PerformanceAlert[] = [];
   @State private isExpanded: boolean = false;
@@ -31,6 +34,10 @@ export struct PerformanceIndicator {
   private performanceOptimizer = PerformanceOptimizer.getInstance();
   private accessibilityManager = AccessibilityManager.getInstance();
   private updateTimer: number = -1;
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
 
   aboutToAppear() {
     this.loadMetrics();
@@ -221,7 +228,7 @@ export struct PerformanceIndicator {
       })
     }
     .padding({ left: 8, right: 8, top: 4, bottom: 4 })
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getPalette().surfaceBackground)
     .borderRadius(DesignConstants.RADIUS.LG)
     .onClick(() => {
       this.isExpanded = !this.isExpanded;
@@ -231,7 +238,7 @@ export struct PerformanceIndicator {
       builder: this.buildPopupContent,
       placement: Placement.Bottom,
       maskColor: Color.Transparent,
-      popupColor: $r('app.color.bg_secondary'),
+      popupColor: this.getPalette().surfaceBackground,
       enableArrow: true,
       showInSubWindow: false
     })
@@ -310,7 +317,7 @@ export struct PerformanceIndicator {
         }
         .width('100%')
         .padding(16)
-        .backgroundColor($r('app.color.bg_secondary'))
+        .backgroundColor(this.getPalette().surfaceBackground)
         .borderRadius(DesignConstants.RADIUS.MD)
       }
 
@@ -415,7 +422,7 @@ export struct PerformanceIndicator {
             }
             .width('100%')
             .padding(12)
-            .backgroundColor($r('app.color.bg_secondary'))
+            .backgroundColor(this.getPalette().surfaceBackground)
             .borderRadius(DesignConstants.RADIUS.MD)
           }, (alert: PerformanceAlert) => `${alert.timestamp}_${alert.message}`)
         }
@@ -450,7 +457,7 @@ export struct PerformanceIndicator {
     }
     .width('100%')
     .padding(12)
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getPalette().surfaceBackground)
     .borderRadius(DesignConstants.RADIUS.MD)
     .justifyContent(FlexAlign.Center)
     // 无障碍属性

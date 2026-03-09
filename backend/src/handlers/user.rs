@@ -32,10 +32,10 @@ fn resolve_target_user_id(
 ) -> crate::error::Result<i64> {
     match req_user_id {
         None => auth_user_id.ok_or_else(|| {
-            crate::error::AppError::Unauthorized("需要登录以查询自己的列表".to_string())
+            crate::error::ApiError::Unauthorized("需要登录以查询自己的列表".to_string())
         }),
         Some(s) if s.trim().is_empty() => auth_user_id.ok_or_else(|| {
-            crate::error::AppError::Unauthorized("需要登录以查询自己的列表".to_string())
+            crate::error::ApiError::Unauthorized("需要登录以查询自己的列表".to_string())
         }),
         Some(s) => Validator::parse_user_id(s.trim()),
     }

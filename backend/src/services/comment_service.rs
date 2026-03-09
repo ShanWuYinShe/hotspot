@@ -14,7 +14,7 @@ use crate::{
         },
         response::{CommentLikeItem, CommentListItem, PaginatedData, UserInfo},
     },
-    error::{AppError, Result},
+    error::{ApiError, Result},
     events::event_types::AppEvent,
     repositories::{
         comment_repo::{CommentLikeRow, CommentRepository, CommentRow},
@@ -103,7 +103,7 @@ impl CommentService {
         // 1. 验证动态存在并获取用于事件
         let moment = self.moment_repo.find_by_id(mid).await?.ok_or_else(|| {
             warn!(user_id, moment_id = %mid, "comment.add rejected: moment not found");
-            AppError::MomentNotFound("动态不存在".to_string())
+            ApiError::MomentNotFound("动态不存在".to_string())
         })?;
 
         // 2. 创建评论 (Trigger 会自动同步 moment.comments_count)
@@ -119,7 +119,7 @@ impl CommentService {
                 .await?
                 .ok_or_else(|| {
                     warn!(user_id, moment_id = %mid, parent_comment_id = %pid, "comment.add rejected: parent comment not found");
-                    AppError::CommentNotFound("评论不存在".to_string())
+                    ApiError::CommentNotFound("评论不存在".to_string())
                 })?;
             let effective_parent = parent.parent_id.unwrap_or(pid);
             (Some(pid), Some(parent.user_id), Some(effective_parent))
@@ -229,7 +229,7 @@ impl CommentService {
         let mid = Validator::parse_uuid(&req.moment_id, "动态ID")?;
 
         if !self.moment_repo.exists(mid).await? {
-            return Err(AppError::MomentNotFound("动态不存在".to_string()));
+            return Err(ApiError::MomentNotFound("动态不存在".to_string()));
         }
 
         let pagination = req.pagination.as_ref();
@@ -268,7 +268,7 @@ impl CommentService {
         let comment_id = Validator::parse_uuid(&req.comment_id, "评论ID")?;
 
         if !self.comment_repo.exists(comment_id).await? {
-            return Err(AppError::CommentNotFound("评论不存在".to_string()));
+            return Err(ApiError::CommentNotFound("评论不存在".to_string()));
         }
 
         let pagination = req.pagination.as_ref();
@@ -331,7 +331,7 @@ impl CommentService {
         let comment_id = Validator::parse_uuid(&req.comment_id, "评论ID")?;
 
         if !self.comment_repo.exists(comment_id).await? {
-            return Err(AppError::CommentNotFound("评论不存在".to_string()));
+            return Err(ApiError::CommentNotFound("评论不存在".to_string()));
         }
 
         let pagination = req.pagination.as_ref();
@@ -376,7 +376,7 @@ impl CommentService {
             .comment_repo
             .find_by_id(comment_id)
             .await?
-            .ok_or_else(|| AppError::CommentNotFound("评论不存在".to_string()))?;
+            .ok_or_else(|| ApiError::CommentNotFound("评论不存在".to_string()))?;
 
         if comment.user_id != user_id {
             warn!(
@@ -385,7 +385,7 @@ impl CommentService {
                 owner_id = comment.user_id,
                 "comment.delete rejected: not owner"
             );
-            return Err(AppError::Forbidden("无权删除该评论".to_string()));
+            return Err(ApiError::Forbidden("无权删除该评论".to_string()));
         }
 
         self.comment_repo.delete(comment_id).await?;
@@ -409,7 +409,7 @@ impl CommentService {
             .await?
             .ok_or_else(|| {
                 warn!(user_id, comment_id = %comment_id, "comment.like rejected: comment not found");
-                AppError::CommentNotFound("评论不存在".to_string())
+                ApiError::CommentNotFound("评论不存在".to_string())
             })?;
 
         let inserted = self.comment_repo.insert_like(comment_id, user_id).await?;
@@ -454,7 +454,7 @@ impl CommentService {
             .await?
             .ok_or_else(|| {
                 warn!(user_id, comment_id = %comment_id, "comment.unlike rejected: comment not found");
-                AppError::CommentNotFound("评论不存在".to_string())
+                ApiError::CommentNotFound("评论不存在".to_string())
             })?;
 
         self.comment_repo.delete_like(comment_id, user_id).await?;

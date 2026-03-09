@@ -7,7 +7,7 @@ use crate::{
         request::{Bounds, MapRenderRequest},
         response::{common::GeoPoint, MapCanvas, MapClusterData, MapEntityData, MapRenderItem},
     },
-    error::{AppError, Result},
+    error::{ApiError, Result},
     repositories::map_repo::{MapClusterRow, MapEntityRow, MapRepository},
     types::enums::{MapDataType, MapItemType},
     utils::validation::Validator,
@@ -28,12 +28,12 @@ impl MapService {
         Validator::validate_coordinates(bounds.south, bounds.west)?;
 
         if bounds.north < bounds.south {
-            return Err(AppError::BadRequest(
+            return Err(ApiError::BadRequest(
                 "bounds.north 必须 >= bounds.south".to_string(),
             ));
         }
         if bounds.east < bounds.west {
-            return Err(AppError::BadRequest(
+            return Err(ApiError::BadRequest(
                 "bounds.east 必须 >= bounds.west".to_string(),
             ));
         }
@@ -43,7 +43,7 @@ impl MapService {
     fn validate_time_range(start_time: Option<&str>, end_time: Option<&str>) -> Result<()> {
         let parsed_start = match start_time {
             Some(v) => Some(DateTime::<FixedOffset>::parse_from_rfc3339(v).map_err(|_| {
-                AppError::BadRequest(
+                ApiError::BadRequest(
                     "filter.time_range.start_time 格式错误，必须为 UTC ISO 8601".to_string(),
                 )
             })?),
@@ -52,7 +52,7 @@ impl MapService {
 
         let parsed_end = match end_time {
             Some(v) => Some(DateTime::<FixedOffset>::parse_from_rfc3339(v).map_err(|_| {
-                AppError::BadRequest(
+                ApiError::BadRequest(
                     "filter.time_range.end_time 格式错误，必须为 UTC ISO 8601".to_string(),
                 )
             })?),
@@ -61,7 +61,7 @@ impl MapService {
 
         if let (Some(start), Some(end)) = (parsed_start, parsed_end) {
             if start > end {
-                return Err(AppError::BadRequest(
+                return Err(ApiError::BadRequest(
                     "filter.time_range.start_time 必须 <= end_time".to_string(),
                 ));
             }
@@ -94,7 +94,7 @@ impl MapService {
 
         let zoom = req.viewport.zoom;
         if !(1.0..=20.0).contains(&zoom) {
-            return Err(AppError::BadRequest("zoom 必须在 1 到 20 之间".to_string()));
+            return Err(ApiError::BadRequest("zoom 必须在 1 到 20 之间".to_string()));
         }
         let bounds = req.viewport.bounds;
         let filter_type = req

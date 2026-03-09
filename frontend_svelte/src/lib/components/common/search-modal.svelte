@@ -4,6 +4,7 @@
 	import { searchService, feedService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
+	import { authStore } from '$lib/stores/auth.svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import { Button } from '$lib/components/ui/button';
@@ -151,7 +152,13 @@
 			}, { signal: controller.signal });
 
 			if (controller.signal.aborted) return;
-			suggestions = isSuccess(response) && response.data ? response.data.items : [];
+			const rawItems = isSuccess(response) && response.data ? response.data.items : [];
+			const currentUserId = authStore.currentUserId;
+			suggestions = currentUserId
+				? rawItems.filter((item) =>
+					item.type !== 'user' || item.payload.user_id !== currentUserId
+				  )
+				: rawItems;
 		} catch {
 			if (!controller.signal.aborted) {
 				suggestions = [];

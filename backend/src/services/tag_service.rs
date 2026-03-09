@@ -5,7 +5,7 @@ use crate::{
         request::{AdminDeleteTagRequest, AdminTagSearchRequest, AdminTagSortBy},
         response::{AdminTagItem, PaginatedData},
     },
-    error::{AppError, Result},
+    error::{ApiError, Result},
     repositories::tag_repo::{AdminTagCursor, AdminTagRow, AdminTagSortOrder, TagRepository},
     utils::{
         pagination::{decode_cursor, encode_cursor, paginate_with_limit_plus_one},
@@ -32,7 +32,7 @@ impl TagService {
         let deleted = self.tag_repo.delete(&req.name).await?;
         if !deleted {
             warn!(tag_name = %req.name, "admin_tag.delete rejected: tag not found");
-            return Err(AppError::NotFound(format!("Tag '{}' not found", req.name)));
+            return Err(ApiError::NotFound(format!("Tag '{}' not found", req.name)));
         }
         info!(
             tag_name = %req.name,

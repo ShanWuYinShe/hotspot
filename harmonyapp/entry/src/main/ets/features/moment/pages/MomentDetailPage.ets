@@ -5,16 +5,13 @@
 
 import { ApiClient } from '../../../core/api/ApiClient';
 import { GlobalStateManager } from '../../../core/state/GlobalStateManager';
-import { AppRouter, LoginRouteParam, PhotoPreviewRouteParam } from '../../../core/router/AppRouter';
+import { interactionActions } from '../../../core/state/InteractionActions';
+import { InteractionStateStore, MomentSocialState } from '../../../core/state/InteractionStateStore';
+import { AppRouter, PhotoPreviewRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import {
-  FavoriteMomentRequest,
-  LikeMomentRequest,
   MomentImage,
   MomentItem,
-  MomentMyState,
-  UnfavoriteMomentRequest,
-  UnlikeMomentRequest
 } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -31,6 +28,8 @@ import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { formatCount } from '../../../core/utils/FormatUtil';
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF1A;
 const TAG: string = 'MomentDetailPage';
@@ -46,6 +45,8 @@ export struct MomentDetailPage {
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
+  @StorageLink('interaction_moment_state') momentStateMap: Record<string, MomentSocialState> = {};
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private stateManager = GlobalStateManager.getInstance();
   private momentId: string = '';
@@ -57,22 +58,23 @@ export struct MomentDetailPage {
   @State favoritePending: boolean = false;
 
   aboutToAppear(): void {
-    SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,
-      preferDarkContent: true
-    });
+    SystemUiController.syncWithCurrentTheme();
   }
 
-  private ensureLoggedIn(actionName: string): boolean {
-    if (this.stateManager.getCurrentUser()) {
-      return true;
-    }
-    SystemToast.showWarning(`请先登录后再${actionName}`, this.getUIContext());
-    const loginParams = new LoginRouteParam();
-    loginParams.reason = 'action_required';
-    loginParams.action = actionName;
-    AppRouter.push(PageNames.LOGIN, loginParams);
-    return false;
+  private getCurrentThemePalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getSurfaceBackground(): string {
+    return this.getCurrentThemePalette().surfaceBackground;
+  }
+
+  private getSurfaceSubtle(): string {
+    return this.getCurrentThemePalette().surfaceSubtle;
+  }
+
+  private getSurfaceBorder(): string {
+    return this.getCurrentThemePalette().borderColor;
   }
 
   private formatTime(timeStr: string): string {
@@ -93,29 +95,6 @@ export struct MomentDetailPage {
     return rows * itemHeight + (rows - 1) * gap;
   }
 
-  private cloneMomentWithState(
-    current: MomentItem,
-    nextMyState: MomentMyState,
-    nextLikesCount: number
-  ): MomentItem {
-    return {
-      moment_id: current.moment_id,
-      description: current.description,
-      images: current.images,
-      tags: current.tags,
-      mentions: current.mentions,
-      created_at: current.created_at,
-      likes_count: nextLikesCount < 0 ? 0 : nextLikesCount,
-      comments_count: current.comments_count,
-      shares_count: current.shares_count,
-      user: current.user,
-      location: current.location,
-      privacy_level: current.privacy_level,
-      my_state: nextMyState,
-      recommendation: current.recommendation
-    };
-  }
-
   private async loadMomentDetail(): Promise<void> {
     if (!this.momentId) {
       this.errorMessage = '缺少动态ID';
@@ -129,6 +108,7 @@ export struct MomentDetailPage {
       const response = await ApiClient.getMomentDetail({ moment_id: this.momentId });
       if (response.code === 0 && response.data) {
         this.moment = response.data;
+        InteractionStateStore.getInstance().patchMomentFromItem(response.data);
       } else {
         this.errorMessage = response.message || '加载动态详情失败';
       }
@@ -142,33 +122,13 @@ export struct MomentDetailPage {
 
   private async toggleLike(): Promise<void> {
     if (!this.moment) return;
-    if (!this.ensureLoggedIn('点赞瞬间')) return;
     if (this.likePending) return;
-
     this.likePending = true;
-    const current = this.moment;
-    const currentLiked = current.my_state?.is_liked ?? false;
-    const currentFavorited = current.my_state?.is_favorited ?? false;
-
     try {
-      const request: LikeMomentRequest | UnlikeMomentRequest = { moment_id: current.moment_id };
-      const response = currentLiked
-        ? await ApiClient.unlikeMoment(request as UnlikeMomentRequest)
-        : await ApiClient.likeMoment(request as LikeMomentRequest);
-      if (response.code !== 0) {
-        SystemToast.showError(response.message || '操作失败', this.getUIContext());
-        return;
+      const success = await interactionActions.toggleMomentLike(this.moment.moment_id);
+      if (!success) {
+        SystemToast.showError('点赞操作失败', this.getUIContext());
       }
-
-      const nextLiked = !currentLiked;
-      const nextLikesCount = current.likes_count + (nextLiked ? 1 : -1);
-      this.moment = this.cloneMomentWithState(
-        current,
-        { is_liked: nextLiked, is_favorited: currentFavorited },
-        nextLikesCount
-      );
-    } catch {
-      SystemToast.showError('点赞操作失败', this.getUIContext());
     } finally {
       this.likePending = false;
     }
@@ -176,32 +136,13 @@ export struct MomentDetailPage {
 
   private async toggleFavorite(): Promise<void> {
     if (!this.moment) return;
-    if (!this.ensureLoggedIn('收藏瞬间')) return;
     if (this.favoritePending) return;
-
     this.favoritePending = true;
-    const current = this.moment;
-    const currentLiked = current.my_state?.is_liked ?? false;
-    const currentFavorited = current.my_state?.is_favorited ?? false;
-
     try {
-      const request: FavoriteMomentRequest | UnfavoriteMomentRequest = { moment_id: current.moment_id };
-      const response = currentFavorited
-        ? await ApiClient.unfavoriteMoment(request as UnfavoriteMomentRequest)
-        : await ApiClient.favoriteMoment(request as FavoriteMomentRequest);
-      if (response.code !== 0) {
-        SystemToast.showError(response.message || '操作失败', this.getUIContext());
-        return;
+      const success = await interactionActions.toggleMomentFavorite(this.moment.moment_id);
+      if (!success) {
+        SystemToast.showError('收藏操作失败', this.getUIContext());
       }
-
-      const nextFavorited = !currentFavorited;
-      this.moment = this.cloneMomentWithState(
-        current,
-        { is_liked: currentLiked, is_favorited: nextFavorited },
-        current.likes_count
-      );
-    } catch {
-      SystemToast.showError('收藏操作失败', this.getUIContext());
     } finally {
       this.favoritePending = false;
     }
@@ -232,11 +173,24 @@ export struct MomentDetailPage {
   }
 
   private isMomentLiked(moment: MomentItem): boolean {
+    const state = this.momentStateMap[moment.moment_id];
+    if (state) {
+      return state.my_state?.is_liked ?? false;
+    }
     return moment.my_state?.is_liked ?? false;
   }
 
   private isMomentFavorited(moment: MomentItem): boolean {
+    const state = this.momentStateMap[moment.moment_id];
+    if (state) {
+      return state.my_state?.is_favorited ?? false;
+    }
     return moment.my_state?.is_favorited ?? false;
+  }
+
+  private getMomentLikesCount(moment: MomentItem): number {
+    const state = this.momentStateMap[moment.moment_id];
+    return state ? state.likes_count : moment.likes_count;
   }
 
   build() {
@@ -265,7 +219,7 @@ export struct MomentDetailPage {
       }
       .width('100%')
       .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {
@@ -353,7 +307,7 @@ export struct MomentDetailPage {
                 .height('100%')
                 .objectFit(ImageFit.Cover)
                 .borderRadius(DesignConstants.RADIUS.MD)
-                .backgroundColor($r('app.color.bg_secondary'))
+                .backgroundColor(this.getSurfaceBackground())
                 .onClick(() => {
                   this.previewImage(imgIndex);
                 })
@@ -374,7 +328,7 @@ export struct MomentDetailPage {
             Text(`#${tag}`)
               .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor($r('sys.color.ohos_id_color_emphasize'))
-              .backgroundColor($r('app.color.bg_tertiary'))
+              .backgroundColor(this.getSurfaceSubtle())
               .padding({
                 left: DesignConstants.SPACING.MD,
                 right: DesignConstants.SPACING.MD,
@@ -415,7 +369,7 @@ export struct MomentDetailPage {
       }
 
       Row({ space: DesignConstants.SPACING.LG }) {
-        Text(`点赞 ${formatCount(moment.likes_count)}`)
+        Text(`点赞 ${formatCount(this.getMomentLikesCount(moment))}`)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         Text(`评论 ${formatCount(moment.comments_count)}`)
@@ -451,10 +405,10 @@ export struct MomentDetailPage {
       .layoutWeight(1)
       .height(40)
       .shadow(DesignConstants.SHADOW.SMALL)
-      .border({ width: 1, color: $r('app.color.highlight_border') })
+      .border({ width: 1, color: this.getSurfaceBorder() })
       .enabled(!this.likePending)
       .opacity(this.likePending ? 0.58 : 1)
-      .backgroundColor($r('app.color.bg_tertiary'))
+      .backgroundColor(this.getSurfaceSubtle())
       .onClick(() => {
         this.toggleLike();
       })
@@ -475,10 +429,10 @@ export struct MomentDetailPage {
       .layoutWeight(1)
       .height(40)
       .shadow(DesignConstants.SHADOW.SMALL)
-      .border({ width: 1, color: $r('app.color.highlight_border') })
+      .border({ width: 1, color: this.getSurfaceBorder() })
       .enabled(!this.favoritePending)
       .opacity(this.favoritePending ? 0.58 : 1)
-      .backgroundColor($r('app.color.bg_tertiary'))
+      .backgroundColor(this.getSurfaceSubtle())
       .onClick(() => {
         this.toggleFavorite();
       })
@@ -499,8 +453,8 @@ export struct MomentDetailPage {
       .layoutWeight(1)
       .height(40)
       .shadow(DesignConstants.SHADOW.SMALL)
-      .border({ width: 1, color: $r('app.color.highlight_border') })
-      .backgroundColor($r('app.color.bg_tertiary'))
+      .border({ width: 1, color: this.getSurfaceBorder() })
+      .backgroundColor(this.getSurfaceSubtle())
       .onClick(() => {
         this.shareMoment();
       })
@@ -512,7 +466,7 @@ export struct MomentDetailPage {
       top: DesignConstants.SPACING.MD,
       bottom: DesignConstants.SPACING.MD + this.safeAreaBottom
     })
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getSurfaceBackground())
     .border({ width: { top: 1 }, color: $r('app.color.divider') })
     .borderRadius({ topLeft: DesignConstants.RADIUS.LG, topRight: DesignConstants.RADIUS.LG })
   }

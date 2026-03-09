@@ -1,5 +1,3 @@
-import { DesignConstants } from '../../constants/DesignConstants';
-
 export interface SystemSurfaceStyle {
   baseColor: string;
   overlayOpacity?: number;
@@ -8,13 +6,15 @@ export interface SystemSurfaceStyle {
 
 type SystemSurfaceListener = (style: SystemSurfaceStyle) => void;
 
+const DEFAULT_SYSTEM_SURFACE_STYLE: SystemSurfaceStyle = {
+  baseColor: '#FFFFFF',
+  overlayOpacity: 1,
+  preferDarkContent: true
+};
+
 export class SystemUiThemeStore {
   private static listeners: SystemSurfaceListener[] = [];
-  private static currentStyle: SystemSurfaceStyle = {
-    baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,
-    overlayOpacity: 1,
-    preferDarkContent: true
-  };
+  private static currentStyle: SystemSurfaceStyle = DEFAULT_SYSTEM_SURFACE_STYLE;
 
   static getStyle(): SystemSurfaceStyle {
     return {
@@ -35,9 +35,9 @@ export class SystemUiThemeStore {
 
   static reset(): void {
     SystemUiThemeStore.currentStyle = {
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,
-      overlayOpacity: 1,
-      preferDarkContent: true
+      baseColor: DEFAULT_SYSTEM_SURFACE_STYLE.baseColor,
+      overlayOpacity: DEFAULT_SYSTEM_SURFACE_STYLE.overlayOpacity,
+      preferDarkContent: DEFAULT_SYSTEM_SURFACE_STYLE.preferDarkContent
     };
     SystemUiThemeStore.notify();
   }

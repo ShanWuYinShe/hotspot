@@ -42,7 +42,6 @@ alwaysApply: false
   - `network/WebSocketService.ets`：WebSocket 单例
   - `state/`：全局状态管理（GlobalStateManager、AuthAccountManager、PersistentStateManager）
   - `types/`：API 类型定义（对齐 spec）、WebSocket 事件类型
-  - `di/Container.ets`：依赖注入容器
   - `utils/`：工具函数
 - `entry/src/main/ets/features/`：按业务域划分的页面（auth/、chat/、group/、moment/ 等）
 
@@ -117,4 +116,3 @@ alwaysApply: false
 - 颜色使用 `$r('app.color.*')` 资源引用或 `DesignConstants` 常量，禁止硬编码色值
 - 字体大小、间距等使用 `DesignConstants` 常量
 - 核心服务使用单例模式（`GlobalStateManager.getInstance()`）
-- 页面通过 `core/di/Container.ets` 获取服务实例

@@ -56,10 +56,12 @@
 	const tags = $derived(parseTags(tagsInput));
 
 	function getDefaultSelectedLocation(): SelectedLocation {
+		const rawName = mapAnchorStore.name || mapAnchorStore.displayName;
+		const normalizedName = typeof rawName === 'string' ? rawName.trim() : '';
 		return {
 			latitude: mapAnchorStore.latitude,
 			longitude: mapAnchorStore.longitude,
-			locationName: (mapAnchorStore.name || mapAnchorStore.displayName).trim(),
+			locationName: normalizedName,
 			radius: mapAnchorStore.radius
 		};
 	}
@@ -86,11 +88,13 @@
 			return;
 		}
 
-		const trimmedName = name.trim();
-		const trimmedDescription = description.trim();
-		const trimmedPassword = password.trim();
-		const locationName = selectedLocation.locationName.trim();
-		const parsedMaxMembers = maxMembers.trim() ? Number.parseInt(maxMembers.trim(), 10) : undefined;
+		const trimmedName = typeof name === 'string' ? name.trim() : '';
+		const trimmedDescription = typeof description === 'string' ? description.trim() : '';
+		const trimmedPassword = typeof password === 'string' ? password.trim() : '';
+		const rawLocationName = selectedLocation.locationName;
+		const locationName = typeof rawLocationName === 'string' ? rawLocationName.trim() : '';
+		const rawMaxMembers = typeof maxMembers === 'string' ? maxMembers.trim() : '';
+		const parsedMaxMembers = rawMaxMembers ? Number.parseInt(rawMaxMembers, 10) : undefined;
 
 		if (!trimmedName) {
 			toast.error('请输入群组名称');

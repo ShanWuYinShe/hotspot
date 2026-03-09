@@ -140,7 +140,7 @@ impl NotificationRepository {
 
         let rows = if let Some(c) = cursor {
             let decoded: CursorPayload = crate::utils::pagination::decode_cursor(c)
-                .map_err(|e| crate::error::AppError::CursorFormatError(e.to_string()))?;
+                .map_err(|e| crate::error::ApiError::CursorFormatError(e.to_string()))?;
 
             if let Some(ref t) = type_filter {
                 sqlx::query_as!(

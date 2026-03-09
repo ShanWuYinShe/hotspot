@@ -27,6 +27,10 @@ export struct PhotoPreviewPage {
   @State compWidth: number = 0;
   @State compHeight: number = 0;
 
+  private getSurfaceBorder(): string {
+    return '#40FFFFFF';
+  }
+
   aboutToAppear(): void {
     SystemUiController.useSurface({
       baseColor: '#000000',
@@ -163,7 +167,7 @@ export struct PhotoPreviewPage {
           icon: AppIcon.CLOSE,
           iconSize: IconSize.LARGE,
           iconColor: Color.White,
-          bgColor: '#4D000000',
+          bgColor: Color.Transparent,
           onButtonClick: () => {
             AppRouter.pop();
           }
@@ -195,7 +199,7 @@ export struct PhotoPreviewPage {
             offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
             offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
           })
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
       }
       .width('100%')
       .justifyContent(FlexAlign.Center)

@@ -24,6 +24,9 @@ import { AppRouter, LocationPickerRouteParam } from '../../../core/router/AppRou
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
+import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
+import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF06;
 const TAG: string = 'CreateMomentPage';
@@ -37,6 +40,7 @@ export struct CreateMomentPage {
   @StorageLink(KEY_LOCATION_PICK_RESULT) pickResult: LocationInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
   
   private stateManager = GlobalStateManager.getInstance();
   @State description: string = '';
@@ -48,9 +52,7 @@ export struct CreateMomentPage {
   @State publishingMessage: string = ''; // 显示发布进度提示
 
   async aboutToAppear() {
-    SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
-    });
+    SystemUiController.syncWithCurrentTheme();
     await this.requestPermissions();
     // 优先消费“地图选点”结果
     if (this.pickResult) {
@@ -103,6 +105,30 @@ export struct CreateMomentPage {
 
   private getHeaderTopPadding(): number {
     return SafeAreaUtils.resolveTopPadding(this.safeAreaTop);
+  }
+
+  private getCurrentThemePalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getSurfaceBackground(): string {
+    return this.getCurrentThemePalette().surfaceBackground;
+  }
+
+  private getSurfaceSubtle(): string {
+    return this.getCurrentThemePalette().surfaceSubtle;
+  }
+
+  private getSurfaceBorder(): string {
+    return this.getCurrentThemePalette().borderColor;
+  }
+
+  private getSoftCardShadow(): ShadowOptions {
+    return AppThemeVisuals.getSurfaceShadow(this.resolvedThemeId);
+  }
+
+  private getPrimaryButtonShadow(): ShadowOptions {
+    return AppThemeVisuals.getAccentShadow(this.resolvedThemeId);
   }
 
   private addTag(): void {
@@ -295,7 +321,7 @@ export struct CreateMomentPage {
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: $r('app.color.bg_tertiary'),
+          bgColor: this.getSurfaceSubtle(),
           onButtonClick: () => {
             AppRouter.pop();
           }
@@ -310,11 +336,14 @@ export struct CreateMomentPage {
 
         Button('发布')
           .type(ButtonType.Capsule)
-          .backgroundColor($r('app.color.brand_primary'))
-          .fontColor(Color.White)
+          .backgroundColor(this.getCurrentThemePalette().accentBackground)
+          .fontColor(this.getCurrentThemePalette().accentText)
           .fontSize(DesignConstants.FONT.SIZE.LG)
-          .height(36)
-          .shadow(DesignConstants.SHADOW.SMALL)
+          .height(40)
+          .padding({ left: DesignConstants.SPACING.XL, right: DesignConstants.SPACING.XL })
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .border({ width: 1, color: this.getSurfaceBorder() })
+          .shadow(this.getPrimaryButtonShadow())
           .enabled(!this.isPublishing)
           .opacity(this.isPublishing ? 0.5 : 1)
           .animation({ duration: 200, curve: Curve.EaseInOut })
@@ -341,8 +370,9 @@ export struct CreateMomentPage {
                 })
                 .maxLength(500)
                 .height(120)
-                .backgroundColor($r('app.color.bg_tertiary'))
+                .backgroundColor(this.getSurfaceSubtle())
                 .borderRadius(DesignConstants.RADIUS.XL)
+                .padding(DesignConstants.SPACING.SM)
             }
           }
         }
@@ -391,10 +421,11 @@ export struct CreateMomentPage {
                       }
                     }
                     .type(ButtonType.Normal)
-                    .backgroundColor($r('app.color.bg_tertiary'))
+                    .backgroundColor(this.getSurfaceSubtle())
                     .width('100%')
                     .height('100%')
                     .borderRadius(DesignConstants.RADIUS.XL)
+                    .border({ width: 1, color: this.getSurfaceBorder() })
                     .onClick(() => this.selectImages())
                   }
                 }
@@ -415,10 +446,11 @@ export struct CreateMomentPage {
                       }
                     }
                     .type(ButtonType.Normal)
-                    .backgroundColor($r('app.color.bg_tertiary'))
+                    .backgroundColor(this.getSurfaceSubtle())
                     .width('100%')
                     .height('100%')
                     .borderRadius(DesignConstants.RADIUS.XL)
+                    .border({ width: 1, color: this.getSurfaceBorder() })
                     .onClick(() => this.capturePhoto())
                   }
                 }
@@ -452,16 +484,17 @@ export struct CreateMomentPage {
                   .layoutWeight(1)
                   .maxLength(20)
                   .height(DesignConstants.COMPONENT.INPUT_HEIGHT)
-                  .backgroundColor($r('app.color.bg_tertiary'))
+                  .backgroundColor(this.getSurfaceSubtle())
                   .borderRadius(DesignConstants.RADIUS.XL)
                   .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
                 Button('添加')
                   .type(ButtonType.Capsule)
-                  .backgroundColor($r('app.color.brand_primary'))
-                  .fontColor(Color.White)
+                  .backgroundColor(this.getCurrentThemePalette().accentBackground)
+                  .fontColor(this.getCurrentThemePalette().accentText)
                   .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .shadow(DesignConstants.SHADOW.SMALL)
+                  .border({ width: 1, color: this.getSurfaceBorder() })
+                  .shadow(this.getPrimaryButtonShadow())
                   .onClick(() => this.addTag())
                   .margin({ left: DesignConstants.SPACING.SM })
               }
@@ -496,14 +529,14 @@ export struct CreateMomentPage {
                   Button('选点')
                     .type(ButtonType.Capsule)
                     .backgroundColor(Color.Transparent)
-                    .fontColor($r('app.color.brand_primary'))
+                    .fontColor(this.getCurrentThemePalette().accentBackground)
                     .fontSize(DesignConstants.FONT.SIZE.MD)
                     .onClick(() => this.openLocationPicker())
 
                   Button('刷新')
                     .type(ButtonType.Capsule)
                     .backgroundColor(Color.Transparent)
-                    .fontColor($r('app.color.brand_primary'))
+                    .fontColor(this.getCurrentThemePalette().accentBackground)
                     .fontSize(DesignConstants.FONT.SIZE.MD)
                     .onClick(() => this.refreshLocation())
                 }
@@ -529,8 +562,9 @@ export struct CreateMomentPage {
                 }
                 .width('100%')
                 .padding(DesignConstants.SPACING.MD)
-                .backgroundColor($r('app.color.bg_tertiary'))
+                .backgroundColor(this.getSurfaceSubtle())
                 .borderRadius(DesignConstants.RADIUS.MD)
+                .border({ width: 1, color: this.getSurfaceBorder() })
               } else {
                 Text('正在获取位置信息...')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -550,7 +584,7 @@ export struct CreateMomentPage {
     }
       .width('100%')
       .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
 
       if (this.isPublishing) {
         SystemLoadingView({ message: this.publishingMessage })
@@ -600,8 +634,9 @@ export struct CreateMomentPage {
       top: DesignConstants.SPACING.XS,
       bottom: DesignConstants.SPACING.XS
     })
-    .backgroundColor($r('app.color.bg_tertiary'))
+    .backgroundColor(this.getSurfaceSubtle())
     .borderRadius(DesignConstants.RADIUS.LG)
+    .border({ width: 1, color: this.getSurfaceBorder() })
     .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
   }
 
@@ -613,7 +648,7 @@ export struct CreateMomentPage {
         .height('100%')
         .borderRadius(DesignConstants.RADIUS.MD)
         .objectFit(ImageFit.Cover)
-        .backgroundColor($r('app.color.bg_secondary'))
+        .backgroundColor(this.getSurfaceBackground())
 
       Button() {
         Text() {
@@ -623,10 +658,11 @@ export struct CreateMomentPage {
         }
       }
       .type(ButtonType.Normal)
-      .backgroundColor($r('app.color.color_overlay_heavy'))
+      .backgroundColor(this.getCurrentThemePalette().overlayStrong)
       .width(28)
       .height(28)
       .borderRadius(DesignConstants.RADIUS.XXL)
+      .border({ width: 1, color: '#40FFFFFF' })
       .margin({ top: 2, right: 2 })
       .onClick(() => this.removeImage(index))
     }

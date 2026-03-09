@@ -19,6 +19,9 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { RefreshIndicator } from '../../../components/EmptyState';
+import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { AppThemePalette } from '../../../core/theme/AppThemeTypes';
+import { KEY_RESOLVED_THEME_ID, KEY_THEME_MODE, ThemeOptionItem, ThemeMode } from '../../../core/theme/AppThemeTypes';
 
 @Preview
 @Component
@@ -28,19 +31,80 @@ export struct SettingsPage {
   @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
   @StorageLink(KEY_USER_TYPE) userType: string = '';
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
+  @StorageLink(KEY_THEME_MODE) themeMode: ThemeMode = 'follow_system';
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
   @State systemMeta: ApiVersionMeta | null = null;
   @State systemMetaLoading: boolean = false;
   @State systemMetaError: string = '';
   @State systemMetaLastChecked: string = '';
   @State metaRefreshing: boolean = false;
+  @State showThemeSheet: boolean = false;
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
 
   aboutToAppear(): void {
-    SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
-    });
+    SystemUiController.syncWithCurrentTheme();
     this.loadSystemMeta();
+  }
+
+  private getThemePreviewColor(): string {
+    return this.getCurrentThemePalette().accentBackground;
+  }
+
+  private getThemeDisplayLabel(): string {
+    return AppThemeManager.getThemeLabel(this.themeMode);
+  }
+
+  private getCurrentThemePalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getSurfaceBackground(): string {
+    return this.getCurrentThemePalette().surfaceBackground;
+  }
+
+  private getSurfaceSubtle(): string {
+    return this.getCurrentThemePalette().surfaceSubtle;
+  }
+
+  private getSurfaceBorder(): string {
+    return this.getCurrentThemePalette().borderColor;
+  }
+
+  private getThemeSheetPalette(): AppThemePalette {
+    return this.getCurrentThemePalette();
+  }
+
+  private getThemeOptionPalette(option: ThemeOptionItem): AppThemePalette {
+    if (this.themeMode === option.mode) {
+      return this.getCurrentThemePalette();
+    }
+    switch (option.mode) {
+      case 'follow_system':
+        return AppThemeManager.getPaletteById(this.resolvedThemeId);
+      case 'tactile_minimal':
+        return AppThemeManager.getPaletteById('tactile_minimal_light');
+      case 'zen_artistic':
+        return AppThemeManager.getPaletteById('zen_artistic_light');
+      case 'default_clean':
+      default:
+        return AppThemeManager.getPaletteById('default_clean_light');
+    }
+  }
+
+  private isThemeOptionActive(option: ThemeOptionItem): boolean {
+    return this.themeMode === option.mode;
+  }
+
+  private async handleThemeChange(mode: ThemeMode): Promise<void> {
+    if (mode === this.themeMode) {
+      this.showThemeSheet = false;
+      return;
+    }
+    await AppThemeManager.setThemeMode(mode);
+    SystemUiController.syncWithCurrentTheme();
+    this.showThemeSheet = false;
+    SystemToast.show(`已切换为${AppThemeManager.getThemeLabel(mode)}`, this.getUIContext());
   }
 
   private async loadSystemMeta(force: boolean = false): Promise<void> {
@@ -124,10 +188,10 @@ export struct SettingsPage {
             }
             .backgroundColor(Color.Transparent)
           }
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow(DesignConstants.SHADOW.MEDIUM)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 14 })
 
           // 通用设置组
@@ -149,16 +213,23 @@ export struct SettingsPage {
             .backgroundColor(Color.Transparent)
 
             ListItem() {
+              this.SettingItem(AppIcon.STAR_FILL, '外观主题', this.getThemeDisplayLabel(), () => {
+                this.showThemeSheet = true;
+              }, this.getThemePreviewColor())
+            }
+            .backgroundColor(Color.Transparent)
+
+            ListItem() {
               this.SettingItem(AppIcon.SETTINGS, '高级设置', '开发者选项、网络诊断', () => {
                 AppRouter.push(PageNames.ADVANCED_SETTINGS);
               })
             }
             .backgroundColor(Color.Transparent)
           }
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow(DesignConstants.SHADOW.MEDIUM)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 14 })
 
           // 关于组
@@ -168,10 +239,10 @@ export struct SettingsPage {
             }
             .backgroundColor(Color.Transparent)
           }
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow(DesignConstants.SHADOW.MEDIUM)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 14 })
 
           // 退出登录
@@ -185,7 +256,7 @@ export struct SettingsPage {
                 .fontSize(DesignConstants.FONT.SIZE.LG)
                 .type(ButtonType.Capsule)
                 .shadow(DesignConstants.SHADOW.SMALL)
-                .border({ width: 1, color: $r('app.color.highlight_border') })
+                .border({ width: 1, color: this.getSurfaceBorder() })
                 .onClick(() => { this.logout(); })
             }
             .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.XXL })
@@ -197,12 +268,12 @@ export struct SettingsPage {
               Button('登录 / 注册')
                 .width('100%')
                 .height(50)
-                .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-                .fontColor(Color.White)
+                .backgroundColor(this.getCurrentThemePalette().accentBackground)
+                .fontColor(this.getCurrentThemePalette().accentText)
                 .fontSize(DesignConstants.FONT.SIZE.LG)
                 .type(ButtonType.Capsule)
                 .shadow(DesignConstants.SHADOW.SMALL)
-                .border({ width: 1, color: $r('app.color.highlight_border') })
+                .border({ width: 1, color: this.getSurfaceBorder() })
                 .onClick(() => {
                   AppRouter.push(PageNames.LOGIN);
                 })
@@ -225,7 +296,13 @@ export struct SettingsPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
+    .bindSheet($$this.showThemeSheet, this.ThemeSheet(), {
+      height: SheetSize.FIT_CONTENT,
+      showClose: true,
+      dragBar: true,
+      backgroundColor: this.getCurrentThemePalette().sheetBackground
+    })
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {
@@ -276,7 +353,7 @@ export struct SettingsPage {
             icon: AppIcon.REFRESH,
             iconSize: IconSize.MEDIUM,
             iconColor: $r('sys.color.ohos_id_color_text_primary'),
-            bgColor: $r('app.color.bg_tertiary'),
+            bgColor: this.getSurfaceSubtle(),
             onButtonClick: () => { this.loadSystemMeta(true); }
           })
             .enabled(!this.systemMetaLoading)
@@ -344,15 +421,15 @@ export struct SettingsPage {
 
   private getMetaStatusBackground(): ResourceColor {
     if (!this.systemMeta) {
-      return DesignConstants.COLOR.SURFACE_NEUTRAL_SOFT;
+      return AppThemeManager.getSoftStatusBackground('neutral');
     }
     switch (this.systemMeta.status) {
       case 'deprecated':
-        return DesignConstants.COLOR.SURFACE_WARNING_SOFT;
+        return AppThemeManager.getSoftStatusBackground('warning');
       case 'sunset':
-        return DesignConstants.COLOR.SURFACE_DANGER_SOFT;
+        return AppThemeManager.getSoftStatusBackground('danger');
       default:
-        return DesignConstants.COLOR.SURFACE_SUCCESS_SOFT;
+        return AppThemeManager.getSoftStatusBackground('success');
     }
   }
 
@@ -391,19 +468,128 @@ export struct SettingsPage {
   }
 
   @Builder
-  SettingItem(icon: AppIcon, title: string, subtitle: string, onClick: () => void) {
+  private ThemeSheet() {
+    Column({ space: DesignConstants.SPACING.MD }) {
+      Text('外观主题')
+        .fontSize(DesignConstants.FONT.SIZE.XL)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+
+      Text('现在可在当前默认、Tactile Minimalist 与 Zen Artistic 间实时切换')
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .textAlign(TextAlign.Center)
+
+      Column({ space: DesignConstants.SPACING.SM }) {
+        ForEach(AppThemeManager.getThemeOptions(), (option: ThemeOptionItem) => {
+          this.ThemeOptionCard(option)
+        }, (option: ThemeOptionItem) => option.mode)
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.LG,
+      bottom: SafeAreaUtils.resolveBottomPadding(0, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG)
+    })
+    .backgroundColor(this.getThemeSheetPalette().sheetBackground)
+  }
+
+  @Builder
+  private ThemeOptionCard(option: ThemeOptionItem) {
+    Row({ space: DesignConstants.SPACING.MD }) {
+      // 左侧单选圆点（用该主题的 accent 色）
+      Column() {
+        Row() {
+          if (this.isThemeOptionActive(option)) {
+            Row()
+              .width(10)
+              .height(10)
+              .borderRadius(DesignConstants.RADIUS.FULL)
+              .backgroundColor(this.getThemeOptionPalette(option).accentBackground)
+          }
+        }
+        .width(18)
+        .height(18)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .border({ width: 2, color: this.getThemeOptionPalette(option).accentBackground })
+      }
+
+      // 中间文案 + “当前使用”标签
+      Column({ space: 4 }) {
+        Row({ space: DesignConstants.SPACING.SM }) {
+          Text(option.label)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+
+          if (this.isThemeOptionActive(option)) {
+            Text('当前使用')
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.getThemeOptionPalette(option).accentBackground)
+              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+              .backgroundColor(this.getThemeOptionPalette(option).surfaceSubtle)
+              .borderRadius(DesignConstants.RADIUS.XL)
+          }
+        }
+
+        Text(option.description)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+
+      // 右侧主题预览块：展示该主题的主背景 + accent 边缘
+      Column({ space: 4 }) {
+        Row() {}
+          .width(32)
+          .height(18)
+          .borderRadius(DesignConstants.RADIUS.XL)
+          .backgroundColor(this.getThemeOptionPalette(option).surfaceBackground)
+          .border({ width: 1, color: this.getThemeOptionPalette(option).borderColor })
+
+        Row() {}
+          .width(32)
+          .height(6)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .backgroundColor(this.getThemeOptionPalette(option).accentBackground)
+      }
+    }
+    .width('100%')
+    .padding(DesignConstants.SPACING.LG)
+    .borderRadius(DesignConstants.RADIUS.XXL)
+    .backgroundColor(this.isThemeOptionActive(option)
+      ? this.getThemeOptionPalette(option).surfaceBackground
+      : this.getThemeOptionPalette(option).surfaceSubtle)
+    .border({ width: this.isThemeOptionActive(option) ? 2 : 1,
+      color: this.isThemeOptionActive(option)
+        ? this.getThemeOptionPalette(option).accentBackground
+        : this.getThemeOptionPalette(option).borderColor })
+    .onClick(() => {
+      this.handleThemeChange(option.mode).catch(() => {
+        SystemToast.showError('切换主题失败', this.getUIContext());
+      });
+    })
+  }
+
+  @Builder
+  SettingItem(icon: AppIcon, title: string, subtitle: string, onClick: () => void, accentColor?: string) {
     Row({ space: DesignConstants.SPACING.MD }) {
       Row() {
         Text() {
           SymbolSpan($r(icon))
             .fontSize(18)
-            .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+            .fontColor([accentColor ? accentColor : $r('sys.color.ohos_id_color_emphasize')])
         }
       }
       .width(38)
       .height(38)
       .borderRadius(DesignConstants.RADIUS.MD)
-      .backgroundColor($r('app.color.bg_tertiary'))
+      .backgroundColor(accentColor ? Color.Transparent : this.getSurfaceSubtle())
+      .border(accentColor ? { width: 1, color: accentColor } : { width: 0, color: Color.Transparent })
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
 
@@ -431,7 +617,7 @@ export struct SettingsPage {
       .width(28)
       .height(28)
       .borderRadius(DesignConstants.RADIUS.MD)
-      .backgroundColor($r('app.color.bg_tertiary'))
+      .backgroundColor(this.getSurfaceSubtle())
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
     }

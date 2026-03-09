@@ -4,7 +4,7 @@ pub const MAX_USER_SUBSCRIPTION_SOURCE_IDS: usize = 500;
 pub const MAX_GROUP_SUBSCRIPTION_SOURCE_IDS: usize = 100;
 
 use crate::{
-    error::AppError,
+    error::ApiError,
     repositories::{
         group::{group_repo::GroupRepository, member_repo::GroupMemberRepository},
         user::{
@@ -507,28 +507,28 @@ pub fn subscription_ack_code(failed_ids: &[FailedSubscriptionId]) -> i32 {
         .iter()
         .any(|i| matches!(i.reason, SubscriptionFailureReason::InternalError))
     {
-        return AppError::SubscriptionFailed("订阅失败".to_string()).error_code();
+        return ApiError::SubscriptionFailed("订阅失败".to_string()).error_code();
     }
     if failed_ids
         .iter()
         .any(|i| matches!(i.reason, SubscriptionFailureReason::Forbidden))
     {
-        return AppError::SubscriptionPermissionDenied("权限不足".to_string()).error_code();
+        return ApiError::SubscriptionPermissionDenied("权限不足".to_string()).error_code();
     }
     if failed_ids
         .iter()
         .any(|i| matches!(i.reason, SubscriptionFailureReason::InvalidTopic))
     {
-        return AppError::InvalidSubscriptionFormat("订阅项格式无效".to_string()).error_code();
+        return ApiError::InvalidSubscriptionFormat("订阅项格式无效".to_string()).error_code();
     }
-    AppError::SubscriptionFailed("订阅失败".to_string()).error_code()
+    ApiError::SubscriptionFailed("订阅失败".to_string()).error_code()
 }
 
 pub fn validate_subscription_request(
     source_type: &str,
     ids: &[String],
     allow_empty: bool,
-) -> Result<(), AppError> {
+) -> Result<(), ApiError> {
     let max_ids = match source_type {
         "group" => MAX_GROUP_SUBSCRIPTION_SOURCE_IDS,
         "user" => MAX_USER_SUBSCRIPTION_SOURCE_IDS,
@@ -538,7 +538,7 @@ pub fn validate_subscription_request(
                 ids_count = ids.len(),
                 "subscription request validation failed: invalid source type"
             );
-            return Err(AppError::InvalidSubscriptionFormat(
+            return Err(ApiError::InvalidSubscriptionFormat(
                 "订阅类型无效".to_string(),
             ));
         }
@@ -549,7 +549,7 @@ pub fn validate_subscription_request(
             allow_empty,
             "subscription request validation failed: ids empty"
         );
-        return Err(AppError::InvalidSubscriptionFormat(
+        return Err(ApiError::InvalidSubscriptionFormat(
             "订阅ID不能为空".to_string(),
         ));
     }
@@ -560,7 +560,7 @@ pub fn validate_subscription_request(
             limit = max_ids,
             "subscription request validation failed: ids exceed limit"
         );
-        return Err(AppError::BatchLimitExceeded);
+        return Err(ApiError::BatchLimitExceeded);
     }
     Ok(())
 }

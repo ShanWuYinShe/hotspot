@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use uuid::Uuid;
 
 use crate::constants::DEFAULT_PAGE_LIMIT;
-use crate::error::{AppError, Result};
+use crate::error::{ApiError, Result};
 
 pub struct Validator;
 
@@ -31,7 +31,7 @@ impl Validator {
     /// 群组密码约束（spec: 4-32）
     pub fn validate_group_password(password: &str) -> Result<()> {
         if password.trim().is_empty() {
-            return Err(AppError::BadRequest("群组密码不能为空".to_string()));
+            return Err(ApiError::BadRequest("群组密码不能为空".to_string()));
         }
         Self::validate_length(password, "群组密码", 4, 32)?;
         Ok(())
@@ -40,7 +40,7 @@ impl Validator {
     /// 群组最大成员数约束（spec: 2-2000）
     pub fn validate_group_max_members(max_members: i32) -> Result<()> {
         if !(2..=2000).contains(&max_members) {
-            return Err(AppError::OutOfRange(
+            return Err(ApiError::OutOfRange(
                 "max_members 必须在 2 到 2000 之间".to_string(),
             ));
         }
@@ -70,7 +70,7 @@ impl Validator {
     /// 成员禁言时长约束（spec: 1-43200 分钟）
     pub fn validate_mute_duration_minutes(duration_minutes: i32) -> Result<()> {
         if !(1..=43200).contains(&duration_minutes) {
-            return Err(AppError::OutOfRange(
+            return Err(ApiError::OutOfRange(
                 "duration_minutes 必须在 1 到 43200 之间".to_string(),
             ));
         }
@@ -94,7 +94,7 @@ impl Validator {
     /// 图片数量约束（spec: 最多 9 个）
     pub fn validate_image_count(ids: &[String]) -> Result<()> {
         if ids.len() > 9 {
-            return Err(AppError::OutOfRange("图片数量最多 9 张".to_string()));
+            return Err(ApiError::OutOfRange("图片数量最多 9 张".to_string()));
         }
         Ok(())
     }
@@ -102,7 +102,7 @@ impl Validator {
     /// 动态标签约束（spec: 每标签 1-30 字符，最多 10 个）
     pub fn validate_moment_tags(tags: &[String]) -> Result<()> {
         if tags.len() > 10 {
-            return Err(AppError::OutOfRange("标签数量最多 10 个".to_string()));
+            return Err(ApiError::OutOfRange("标签数量最多 10 个".to_string()));
         }
         for tag in tags {
             Self::validate_length(tag, "标签", 1, 30)?;
@@ -164,7 +164,7 @@ impl Validator {
         let has_letter = password.chars().any(|c| c.is_alphabetic());
         let has_digit = password.chars().any(|c| c.is_ascii_digit());
         if !has_letter || !has_digit {
-            return Err(AppError::BadRequest(format!(
+            return Err(ApiError::BadRequest(format!(
                 "{field_name} 必须同时包含字母和数字"
             )));
         }
@@ -177,7 +177,7 @@ impl Validator {
     pub fn validate_limit(limit: Option<i32>, max_limit: i32) -> Result<i32> {
         let limit = limit.unwrap_or(DEFAULT_PAGE_LIMIT as i32);
         if limit < 1 {
-            return Err(AppError::OutOfRange(format!(
+            return Err(ApiError::OutOfRange(format!(
                 "limit 必须在 1 到 {} 之间",
                 max_limit
             )));
@@ -192,7 +192,7 @@ impl Validator {
     pub fn validate_radius(radius: Option<f64>, max_radius: f64) -> Result<f64> {
         let radius = radius.unwrap_or(5000.0);
         if !(100.0..=max_radius).contains(&radius) {
-            return Err(AppError::OutOfRange(format!(
+            return Err(ApiError::OutOfRange(format!(
                 "radius 必须在 100 到 {} 之间",
                 max_radius
             )));
@@ -203,7 +203,7 @@ impl Validator {
     /// 验证必填搜索半径
     pub fn validate_radius_required(radius: f64, max_radius: f64) -> Result<f64> {
         if !(100.0..=max_radius).contains(&radius) {
-            return Err(AppError::OutOfRange(format!(
+            return Err(ApiError::OutOfRange(format!(
                 "radius 必须在 100 到 {} 之间",
                 max_radius
             )));
@@ -214,7 +214,7 @@ impl Validator {
     /// 验证非空字符串
     pub fn validate_not_empty(value: &str, field_name: &str) -> Result<()> {
         if value.trim().is_empty() {
-            return Err(AppError::BadRequest(format!("{} 不能为空", field_name)));
+            return Err(ApiError::BadRequest(format!("{} 不能为空", field_name)));
         }
         Ok(())
     }
@@ -223,7 +223,7 @@ impl Validator {
     pub fn validate_length(value: &str, field_name: &str, min: usize, max: usize) -> Result<()> {
         let len = value.chars().count();
         if len < min || len > max {
-            return Err(AppError::BadRequest(format!(
+            return Err(ApiError::BadRequest(format!(
                 "{} 长度必须在 {} 到 {} 之间",
                 field_name, min, max
             )));
@@ -234,12 +234,12 @@ impl Validator {
     /// 验证地理坐标合法性
     pub fn validate_coordinates(latitude: f64, longitude: f64) -> Result<()> {
         if !(-90.0..=90.0).contains(&latitude) {
-            return Err(AppError::BadRequest(
+            return Err(ApiError::BadRequest(
                 "纬度必须在 -90 到 90 之间".to_string(),
             ));
         }
         if !(-180.0..=180.0).contains(&longitude) {
-            return Err(AppError::BadRequest(
+            return Err(ApiError::BadRequest(
                 "经度必须在 -180 到 180 之间".to_string(),
             ));
         }
@@ -249,29 +249,29 @@ impl Validator {
     /// 解析用户 ID (String -> i64)
     pub fn parse_user_id(id: &str) -> Result<i64> {
         id.parse::<i64>()
-            .map_err(|_| AppError::InvalidFormat("无效的用户 ID".to_string()))
+            .map_err(|_| ApiError::InvalidFormat("无效的用户 ID".to_string()))
     }
 
     /// 解析群组 ID (String -> i64)
     pub fn parse_group_id(id: &str) -> Result<i64> {
         id.parse::<i64>()
-            .map_err(|_| AppError::InvalidFormat("无效的群组 ID".to_string()))
+            .map_err(|_| ApiError::InvalidFormat("无效的群组 ID".to_string()))
     }
 
     /// 解析角色 ID (String -> Uuid)
     pub fn parse_role_id(id: &str) -> Result<Uuid> {
-        Uuid::parse_str(id).map_err(|_| AppError::InvalidFormat("无效的角色 ID".to_string()))
+        Uuid::parse_str(id).map_err(|_| ApiError::InvalidFormat("无效的角色 ID".to_string()))
     }
 
     /// 解析 UUID 字符串（通用方法，field_name 用于错误消息）
     pub fn parse_uuid(id: &str, field_name: &str) -> Result<Uuid> {
-        Uuid::parse_str(id).map_err(|_| AppError::InvalidFormat(format!("无效的{field_name}")))
+        Uuid::parse_str(id).map_err(|_| ApiError::InvalidFormat(format!("无效的{field_name}")))
     }
 
     /// 解析 i64 ID 字符串（通用方法，field_name 用于错误消息）
     pub fn parse_id(id: &str, field_name: &str) -> Result<i64> {
         id.parse::<i64>()
-            .map_err(|_| AppError::InvalidFormat(format!("无效的{field_name}")))
+            .map_err(|_| ApiError::InvalidFormat(format!("无效的{field_name}")))
     }
 
     /// 解析 @ 提及的用户 ID 列表（String -> i64）
@@ -288,7 +288,7 @@ impl Validator {
             }
         }
         if parsed.len() > 20 {
-            return Err(AppError::OutOfRange("mentions 最多 20 个".to_string()));
+            return Err(ApiError::OutOfRange("mentions 最多 20 个".to_string()));
         }
         Ok(Some(parsed))
     }

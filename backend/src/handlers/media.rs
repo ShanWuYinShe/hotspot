@@ -5,7 +5,7 @@ use crate::{
         request::{BatchPresignUploadRequest, CompleteUploadRequest, PresignUploadRequest},
         response::{ApiResponse, BatchPresignedUpload, PresignUploadData, UploadMediaData},
     },
-    error::{AppError, Result},
+    error::{ApiError, Result},
     middleware::auth::AuthenticatedUser,
     state::AppState,
 };
@@ -29,7 +29,7 @@ pub async fn batch_presign_upload(
 ) -> Result<Json<ApiResponse<BatchPresignedUpload>>> {
     const MAX_BATCH_FILES: usize = 9;
     if req.files.len() > MAX_BATCH_FILES {
-        return Err(AppError::OutOfRange(format!(
+        return Err(ApiError::OutOfRange(format!(
             "单次批量上传最多 {} 个文件",
             MAX_BATCH_FILES
         )));

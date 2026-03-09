@@ -4,7 +4,7 @@ use crate::{
         MessageMedia, MessageReplyTo, PaginatedData, PrivateChatLastMessage, PrivateChatListItem,
         PrivateChatOpenResult, PrivateMessageItem, UserInfo,
     },
-    error::{AppError, Result},
+    error::{ApiError, Result},
     repositories::{
         chat_unread_repo::ChatUnreadRepository,
         private_chat_repo::{PrivateChatRepository, PrivateChatRow},
@@ -107,7 +107,7 @@ impl PrivateChatService {
             .repo
             .find_by_users(current_user_id, target_user_id)
             .await?
-            .ok_or_else(|| AppError::ChatNotFound("私聊不存在".to_string()))?;
+            .ok_or_else(|| ApiError::ChatNotFound("私聊不存在".to_string()))?;
 
         if is_muted.is_some() || is_pinned.is_some() {
             self.unread_repo
@@ -152,7 +152,7 @@ impl PrivateChatService {
             Some(chat) => chat,
             None => {
                 warn!(current_user_id, target_user_id, "删除私聊失败：会话不存在");
-                return Err(AppError::ChatNotFound("私聊不存在".to_string()));
+                return Err(ApiError::ChatNotFound("私聊不存在".to_string()));
             }
         };
 

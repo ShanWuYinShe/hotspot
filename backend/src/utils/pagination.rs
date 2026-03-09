@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::env;
 
-use crate::error::{AppError, Result};
+use crate::error::{ApiError, Result};
 
 /// 分页返回类型：(数据列表, 下一页游标)
 pub type Paginated<T> = crate::error::Result<(Vec<T>, Option<String>)>;
@@ -38,11 +38,11 @@ where
     // 1. Base64 解码
     let encrypted_bytes = general_purpose::URL_SAFE_NO_PAD
         .decode(cursor)
-        .map_err(|_| AppError::CursorFormatError("无效的游标格式".to_string()))?;
+        .map_err(|_| ApiError::CursorFormatError("无效的游标格式".to_string()))?;
 
     // 2. 提取 Nonce (前12字节) 和 密文
     if encrypted_bytes.len() < 12 {
-        return Err(AppError::CursorFormatError("无效的游标数据".to_string()));
+        return Err(ApiError::CursorFormatError("无效的游标数据".to_string()));
     }
     let (nonce_bytes, ciphertext) = encrypted_bytes.split_at(12);
     let nonce = Nonce::from_slice(nonce_bytes);
@@ -50,11 +50,11 @@ where
     // 3. 解密
     let plaintext = CIPHER
         .decrypt(nonce, ciphertext)
-        .map_err(|_| AppError::CursorInvalidOrExpired("游标解密失败".to_string()))?;
+        .map_err(|_| ApiError::CursorInvalidOrExpired("游标解密失败".to_string()))?;
 
     // 4. JSON 反序列化
     let value = serde_json::from_slice(&plaintext)
-        .map_err(|_| AppError::CursorInvalidOrExpired("无效的游标内容".to_string()))?;
+        .map_err(|_| ApiError::CursorInvalidOrExpired("无效的游标内容".to_string()))?;
 
     Ok(value)
 }
@@ -86,7 +86,7 @@ where
     // 3. 加密
     let ciphertext = CIPHER
         .encrypt(nonce, plaintext.as_ref())
-        .map_err(|_| AppError::InternalError("Cursor encryption failed".to_string()))?;
+        .map_err(|_| ApiError::InternalError("Cursor encryption failed".to_string()))?;
 
     // 4. 拼接 Nonce + 密文
     let mut encrypted_bytes = nonce_bytes.to_vec();

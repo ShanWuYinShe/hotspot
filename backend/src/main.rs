@@ -23,7 +23,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tower_http::trace::TraceLayer;
 
-use crate::error::AppError;
+use crate::error::ApiError;
 use tracing::field::{Field, Visit};
 use tracing::Span;
 use tracing::{Event, Level, Subscriber};
@@ -215,7 +215,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             check_interval.tick().await;
             let timeout_connections = ws_manager_clone.check_timeout().await;
             for connection_id in timeout_connections {
-                let err = AppError::WebSocketHeartbeatTimeout;
+                let err = ApiError::WebSocketHeartbeatTimeout;
                 tracing::warn!(
                     code = err.error_code(),
                     "WebSocket连接超时，移除连接: {}",
@@ -285,6 +285,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(state)
         .layer(axum::middleware::from_fn(
             crate::middleware::response_logger::response_logger,
+        ))
+        .layer(axum::middleware::from_fn(
+            crate::middleware::request_logger::request_logger,
         ))
         .layer(
             TraceLayer::new_for_http()

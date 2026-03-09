@@ -22,7 +22,7 @@ use crate::{
             RelativeLocation, UserInfo,
         },
     },
-    error::{AppError, Result},
+    error::{ApiError, Result},
     events::event_types::AppEvent,
     repositories::{
         moment_repo::{MomentDetailRow, MomentImageRow, MomentLikeRow, MomentRepository},
@@ -186,7 +186,7 @@ impl MomentService {
                         err
                     })
             } else {
-                Err(AppError::BadRequest(
+                Err(ApiError::BadRequest(
                     "至少需要提供 keyword、tag、radius 中的一个搜索条件".to_string(),
                 ))
             }
@@ -203,7 +203,7 @@ impl MomentService {
                     timeout_ms = SEARCH_QUERY_TIMEOUT.as_millis() as u64,
                     "moments.search query timeout"
                 );
-                AppError::ServiceUnavailable
+                ApiError::ServiceUnavailable
             })??;
         let rows_count = rows.len();
         let has_next_cursor = next_cursor.is_some();
@@ -284,7 +284,7 @@ impl MomentService {
             .moment_repo
             .get_detail(moment_id, None, None)
             .await?
-            .ok_or_else(|| AppError::MomentNotFound("瞬间不存在".to_string()))?;
+            .ok_or_else(|| ApiError::MomentNotFound("瞬间不存在".to_string()))?;
 
         let ids = [detail.moment_id];
         let (tags_map, images_map) = try_join!(
@@ -324,7 +324,7 @@ impl MomentService {
         let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as i64;
 
         if !self.moment_repo.exists(moment_id).await? {
-            return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
+            return Err(ApiError::MomentNotFound("瞬间不存在".to_string()));
         }
 
         let (rows, next_cursor) = self
@@ -442,7 +442,7 @@ impl MomentService {
             .user_repo
             .find_by_id(user_id)
             .await?
-            .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
+            .ok_or_else(|| ApiError::UserNotFound("用户不存在".to_string()))?;
 
         let user = UserInfo::new(
             user_id,
@@ -500,7 +500,7 @@ impl MomentService {
             .moment_repo
             .find_by_id(moment_id)
             .await?
-            .ok_or_else(|| AppError::MomentNotFound("瞬间不存在".to_string()))?;
+            .ok_or_else(|| ApiError::MomentNotFound("瞬间不存在".to_string()))?;
 
         if moment.user_id != user_id {
             tracing::warn!(
@@ -509,7 +509,7 @@ impl MomentService {
                 owner_id = moment.user_id,
                 "moment.update rejected: not owner"
             );
-            return Err(AppError::Forbidden("无权编辑他人的瞬间".to_string()));
+            return Err(ApiError::Forbidden("无权编辑他人的瞬间".to_string()));
         }
 
         if let Some(desc) = &req.description {
@@ -572,7 +572,7 @@ impl MomentService {
             .moment_repo
             .get_detail(moment_id, None, None)
             .await?
-            .ok_or_else(|| AppError::MomentNotFound("瞬间不存在".to_string()))?;
+            .ok_or_else(|| ApiError::MomentNotFound("瞬间不存在".to_string()))?;
 
         let ids = [detail.moment_id];
         let (tags_map, images_map) = try_join!(
@@ -614,7 +614,7 @@ impl MomentService {
             .moment_repo
             .find_by_id(moment_id)
             .await?
-            .ok_or_else(|| AppError::MomentNotFound("瞬间不存在".to_string()))?;
+            .ok_or_else(|| ApiError::MomentNotFound("瞬间不存在".to_string()))?;
 
         if moment.user_id != user_id {
             tracing::warn!(
@@ -623,7 +623,7 @@ impl MomentService {
                 owner_id = moment.user_id,
                 "moment.delete rejected: not owner"
             );
-            return Err(AppError::Forbidden("无权删除他人的瞬间".to_string()));
+            return Err(ApiError::Forbidden("无权删除他人的瞬间".to_string()));
         }
 
         self.moment_repo.delete(moment_id).await?;
@@ -646,7 +646,7 @@ impl MomentService {
                 moment_id = %moment_id,
                 "moment.like rejected: moment not found"
             );
-            return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
+            return Err(ApiError::MomentNotFound("瞬间不存在".to_string()));
         }
         let _ = self.moment_repo.insert_like(moment_id, user_id).await?;
         tracing::info!(user_id, moment_id = %moment_id, "moment.like completed");
@@ -663,7 +663,7 @@ impl MomentService {
                 moment_id = %moment_id,
                 "moment.unlike rejected: moment not found"
             );
-            return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
+            return Err(ApiError::MomentNotFound("瞬间不存在".to_string()));
         }
         self.moment_repo.delete_like(moment_id, user_id).await?;
         tracing::info!(user_id, moment_id = %moment_id, "moment.unlike completed");
@@ -680,7 +680,7 @@ impl MomentService {
                 moment_id = %moment_id,
                 "moment.favorite rejected: moment not found"
             );
-            return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
+            return Err(ApiError::MomentNotFound("瞬间不存在".to_string()));
         }
         let _ = self.moment_repo.insert_favorite(moment_id, user_id).await?;
         tracing::info!(user_id, moment_id = %moment_id, "moment.favorite completed");
@@ -701,7 +701,7 @@ impl MomentService {
                 moment_id = %moment_id,
                 "moment.unfavorite rejected: moment not found"
             );
-            return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
+            return Err(ApiError::MomentNotFound("瞬间不存在".to_string()));
         }
         self.moment_repo.delete_favorite(moment_id, user_id).await?;
         tracing::info!(user_id, moment_id = %moment_id, "moment.unfavorite completed");

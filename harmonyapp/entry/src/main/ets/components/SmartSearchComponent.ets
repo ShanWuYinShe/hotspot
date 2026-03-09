@@ -19,6 +19,8 @@ import { SystemToast } from './SystemToast';
 import { PageNames } from '../constants/AppConstants';
 import { AppRouter, GroupDetailRouteParam } from '../core/router/AppRouter';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF13;
 const TAG: string = 'SmartSearchComponent';
@@ -35,6 +37,7 @@ interface SearchResult {
 export struct SmartSearchComponent {
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
   
   @State searchText: string = '';
   @State searchResults: SearchResult[] = [];
@@ -44,6 +47,10 @@ export struct SmartSearchComponent {
   @State currentFilter: 'all' | 'users' | 'groups' | 'moments' = 'all';
   
   private searchTimer: number = -1;
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
 
   aboutToAppear() {
     this.loadSearchHistory();
@@ -262,8 +269,11 @@ export struct SmartSearchComponent {
       .layoutWeight(1)
       .textAlign(TextAlign.Center)
       .backgroundColor(this.currentFilter === filter
-        ? $r('app.color.chip_selected_bg')
+        ? this.getPalette().accentBackground
         : Color.Transparent)
+      .fontColor(this.currentFilter === filter
+        ? this.getPalette().accentText
+        : $r('sys.color.ohos_id_color_text_secondary'))
       .borderRadius(DesignConstants.RADIUS.XL)
       .padding({ left: 2, right: 2 })
       .onClick(() => {
@@ -307,7 +317,7 @@ export struct SmartSearchComponent {
         .padding(3)
         .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
           bottom: DesignConstants.SPACING.SM })
-        .backgroundColor($r('app.color.bg_tertiary'))
+        .backgroundColor(this.getPalette().surfaceSubtle)
         .borderRadius(DesignConstants.RADIUS.XL)
         .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
       }
@@ -409,7 +419,7 @@ export struct SmartSearchComponent {
         }
         .width('100%')
         .layoutWeight(1)
-        .backgroundColor($r('app.color.bg_secondary'))
+        .backgroundColor(this.getPalette().surfaceBackground)
         .borderRadius({ topLeft: DesignConstants.RADIUS.XXL, topRight: DesignConstants.RADIUS.XXL })
         .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
         .shadow({

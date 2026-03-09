@@ -20,6 +20,8 @@ import { AppRouter } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 @Preview
 @Component
@@ -28,6 +30,7 @@ export struct AccountsPage {
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   @State accounts: AuthData[] = [];
   @State currentUserId: string | null = null;
@@ -39,10 +42,24 @@ export struct AccountsPage {
   private cache = MessageCacheService.getInstance();
 
   async aboutToAppear() {
-    SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
-    });
+    SystemUiController.syncWithCurrentTheme();
     await this.load();
+  }
+
+  private getCurrentThemePalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getSurfaceBackground(): string {
+    return this.getCurrentThemePalette().surfaceBackground;
+  }
+
+  private getSurfaceSubtle(): string {
+    return this.getCurrentThemePalette().surfaceSubtle;
+  }
+
+  private getSurfaceBorder(): string {
+    return this.getCurrentThemePalette().borderColor;
   }
 
   private async load() {
@@ -151,7 +168,7 @@ export struct AccountsPage {
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: $r('app.color.bg_tertiary'),
+          bgColor: this.getSurfaceSubtle(),
           onButtonClick: () => {
             AppRouter.pop();
           }
@@ -195,11 +212,11 @@ export struct AccountsPage {
             .textAlign(TextAlign.Center)
           Button('重试')
             .type(ButtonType.Capsule)
-            .backgroundColor($r('app.color.brand_primary'))
-            .fontColor(Color.White)
+            .backgroundColor(this.getCurrentThemePalette().accentBackground)
+            .fontColor(this.getCurrentThemePalette().accentText)
             .height(40)
             .shadow(DesignConstants.SHADOW.SMALL)
-            .border({ width: 1, color: $r('app.color.highlight_border') })
+            .border({ width: 1, color: this.getSurfaceBorder() })
             .onClick(() => { this.load(); })
         }
         .width('100%')
@@ -217,11 +234,11 @@ export struct AccountsPage {
 
           Button('去登录/创建访客')
             .type(ButtonType.Capsule)
-            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-            .fontColor(Color.White)
+            .backgroundColor(this.getCurrentThemePalette().accentBackground)
+            .fontColor(this.getCurrentThemePalette().accentText)
             .height(44)
             .shadow(DesignConstants.SHADOW.SMALL)
-            .border({ width: 1, color: $r('app.color.highlight_border') })
+            .border({ width: 1, color: this.getSurfaceBorder() })
             .onClick(() => {
               AppRouter.push(PageNames.LOGIN);
             })
@@ -247,7 +264,7 @@ export struct AccountsPage {
                 .width(40)
                 .height(40)
                 .borderRadius(DesignConstants.RADIUS.XL)
-                .backgroundColor($r('app.color.bg_tertiary'))
+                .backgroundColor(this.getSurfaceSubtle())
                 .justifyContent(FlexAlign.Center)
                 .alignItems(VerticalAlign.Center)
 
@@ -273,34 +290,34 @@ export struct AccountsPage {
                 .alignItems(HorizontalAlign.Start)
 
                 Row({ space: 8 }) {
-                  Button('切换')
-                    .type(ButtonType.Capsule)
-                    .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .height(32)
-                    .backgroundColor(Color.Transparent)
-                    .fontColor($r('app.color.brand_primary'))
-                    .shadow(DesignConstants.SHADOW.SMALL)
-                    .border({ width: 1, color: $r('app.color.highlight_border') })
-                    .onClick(() => this.switchTo(acc))
+                      Button('切换')
+                        .type(ButtonType.Capsule)
+                        .fontSize(DesignConstants.FONT.SIZE.SM)
+                        .height(32)
+                        .backgroundColor(Color.Transparent)
+                        .fontColor(this.getCurrentThemePalette().accentBackground)
+                        .shadow(DesignConstants.SHADOW.SMALL)
+                        .border({ width: 1, color: this.getSurfaceBorder() })
+                        .onClick(() => this.switchTo(acc))
 
                   Button('删除')
                     .type(ButtonType.Capsule)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .height(32)
-                    .backgroundColor($r('app.color.color_danger'))
-                    .fontColor(Color.White)
-                    .shadow(DesignConstants.SHADOW.SMALL)
-                    .border({ width: 1, color: $r('app.color.highlight_border') })
-                    .onClick(() => this.remove(acc))
+                        .backgroundColor($r('app.color.color_danger'))
+                        .fontColor(Color.White)
+                        .shadow(DesignConstants.SHADOW.SMALL)
+                        .border({ width: 1, color: this.getSurfaceBorder() })
+                        .onClick(() => this.remove(acc))
                 }
               }
               .width('100%')
               .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
             }
-            .backgroundColor($r('app.color.bg_secondary'))
+            .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.XXL)
             .shadow(DesignConstants.SHADOW.MEDIUM)
-            .border({ width: 1, color: $r('app.color.highlight_border') })
+            .border({ width: 1, color: this.getSurfaceBorder() })
             .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 14 })
           }, (acc: AuthData) => acc.user_id)
         }
@@ -319,7 +336,7 @@ export struct AccountsPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

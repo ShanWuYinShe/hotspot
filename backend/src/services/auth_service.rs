@@ -17,7 +17,7 @@ use crate::dto::request::{
     RequestPasswordResetRequest, ResetPasswordRequest, RevokeSessionRequest, SessionsRequest,
 };
 use crate::dto::response::{AuthData, CheckStatusData, SessionItem, SessionsListData};
-use crate::error::{AppError, Result};
+use crate::error::{ApiError, Result};
 use crate::repositories::{
     session_repo::SessionRepository, user::settings_repo::UserSettingsRepository,
     user_repo::UserRepository, verification_repo::VerificationRepository,
@@ -123,7 +123,7 @@ impl AuthService {
             .await?
             .is_some()
         {
-            return Err(AppError::AlreadyExists("该用户已存在".to_string()));
+            return Err(ApiError::AlreadyExists("该用户已存在".to_string()));
         }
 
         let password_hash = PasswordUtil::hash_password(&req.password)?;
@@ -185,17 +185,17 @@ impl AuthService {
                     reason = "user_not_found",
                     "登录失败：用户不存在（客户端收到通用认证错误）"
                 );
-                return Err(AppError::Unauthorized("用户名或密码错误".to_string()));
+                return Err(ApiError::Unauthorized("用户名或密码错误".to_string()));
             }
         };
 
         if user.status == UserStatus::Banned {
-            return Err(AppError::AccountBanned("账号已被封禁".to_string()));
+            return Err(ApiError::AccountBanned("账号已被封禁".to_string()));
         }
 
         let stored_hash = user.password_hash.as_deref().ok_or_else(|| {
             tracing::warn!(login_id = %req.login_id, reason = "password_missing");
-            AppError::Unauthorized("用户名或密码错误".to_string())
+            ApiError::Unauthorized("用户名或密码错误".to_string())
         })?;
 
         if !PasswordUtil::verify_password(&req.password, stored_hash)? {
@@ -205,7 +205,7 @@ impl AuthService {
                 reason = "wrong_password",
                 "登录失败：密码错误（客户端收到通用认证错误）"
             );
-            return Err(AppError::Unauthorized("用户名或密码错误".to_string()));
+            return Err(ApiError::Unauthorized("用户名或密码错误".to_string()));
         }
 
         let issue = self
@@ -304,7 +304,7 @@ impl AuthService {
                 .user_repo
                 .find_by_id(session.user_id)
                 .await?
-                .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
+                .ok_or_else(|| ApiError::UserNotFound("用户不存在".to_string()))?;
 
             let access_token = JwtUtil::generate_token(
                 session.user_id,
@@ -330,7 +330,7 @@ impl AuthService {
                 .await?;
 
             if !rotated {
-                return Err(AppError::RefreshTokenInvalid(
+                return Err(ApiError::RefreshTokenInvalid(
                     "refresh token 已过期".to_string(),
                 ));
             }
@@ -385,7 +385,7 @@ impl AuthService {
             }
 
             // 宽限期已过，旧 refresh_token 彻底失效（不撤销会话，只拒绝刷新）
-            return Err(AppError::RefreshTokenInvalid(
+            return Err(ApiError::RefreshTokenInvalid(
                 "refresh token 已被轮换且宽限期已过".to_string(),
             ));
         }
@@ -396,7 +396,7 @@ impl AuthService {
             elapsed_ms = started_at.elapsed().as_millis(),
             "auth.refresh_token rejected"
         );
-        Err(AppError::RefreshTokenInvalid(
+        Err(ApiError::RefreshTokenInvalid(
             "refresh token 无效或已过期".to_string(),
         ))
     }
@@ -463,7 +463,7 @@ impl AuthService {
         let claims = JwtUtil::verify_token(access_token, &self.jwt_secret)?;
         let token_user_id = Validator::parse_id(&claims.sub, "用户ID")?;
         if token_user_id != user_id {
-            return Err(AppError::Forbidden("无权限登出该会话".to_string()));
+            return Err(ApiError::Forbidden("无权限登出该会话".to_string()));
         }
 
         let session_id = Validator::parse_uuid(&claims.sid, "会话")?;
@@ -533,7 +533,7 @@ impl AuthService {
                 expires_at,
             )
             .await
-            .map_err(|e| AppError::internal(e.to_string()))?;
+            .map_err(|e| ApiError::internal(e.to_string()))?;
 
         // 发送失败不影响统一成功响应，避免通过错误差异泄露账号存在性。
         if let Err(err) = self
@@ -585,11 +585,11 @@ impl AuthService {
         let response = request_builder
             .send()
             .await
-            .map_err(|e| AppError::internal(format!("验证码发送请求失败: {}", e)))?;
+            .map_err(|e| ApiError::internal(format!("验证码发送请求失败: {}", e)))?;
         if !response.status().is_success() {
             let status = response.status();
             let body = response.text().await.unwrap_or_default();
-            return Err(AppError::internal(format!(
+            return Err(ApiError::internal(format!(
                 "验证码发送返回异常状态: status={}, body={}",
                 status, body
             )));
@@ -630,14 +630,14 @@ impl AuthService {
                 VerificationCodeType::ResetPassword,
             )
             .await
-            .map_err(|e| AppError::internal(e.to_string()))?
-            .ok_or_else(|| AppError::VerifyTokenInvalid("验证码无效或已过期".to_string()))?;
+            .map_err(|e| ApiError::internal(e.to_string()))?
+            .ok_or_else(|| ApiError::VerifyTokenInvalid("验证码无效或已过期".to_string()))?;
 
         // 2. 标记验证码已使用
         self.verification_repo
             .mark_used(verification.code_id)
             .await
-            .map_err(|e| AppError::internal(e.to_string()))?;
+            .map_err(|e| ApiError::internal(e.to_string()))?;
 
         // 3. 查找用户（安全：不暴露账号存在性，统一返回 10100）
         // 真实原因仅记录在服务端日志中，不暴露给客户端
@@ -649,7 +649,7 @@ impl AuthService {
                     reason = "user_not_found_after_valid_code",
                     "重置密码失败：验证码有效但用户不存在（客户端收到通用验证码错误）"
                 );
-                return Err(AppError::VerifyTokenInvalid(
+                return Err(ApiError::VerifyTokenInvalid(
                     "验证码无效或已过期".to_string(),
                 ));
             }
@@ -697,15 +697,15 @@ impl AuthService {
             .user_repo
             .find_by_id(user_id)
             .await?
-            .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
+            .ok_or_else(|| ApiError::UserNotFound("用户不存在".to_string()))?;
 
         let stored_hash = user
             .password_hash
             .as_deref()
-            .ok_or_else(|| AppError::PasswordError("原密码错误".to_string()))?;
+            .ok_or_else(|| ApiError::PasswordError("原密码错误".to_string()))?;
 
         if !PasswordUtil::verify_password(&req.old_password, stored_hash)? {
-            return Err(AppError::PasswordError("原密码错误".to_string()));
+            return Err(ApiError::PasswordError("原密码错误".to_string()));
         }
 
         let password_hash = PasswordUtil::hash_password(&req.new_password)?;
@@ -787,7 +787,7 @@ impl AuthService {
                 session_id = %session_id,
                 "auth.revoke_session rejected: cannot revoke current session"
             );
-            return Err(AppError::BusinessRuleViolation(
+            return Err(ApiError::BusinessRuleViolation(
                 "不能撤销当前会话，如需登出请使用登出接口".to_string(),
             ));
         }
@@ -802,7 +802,7 @@ impl AuthService {
                 session_id = %session_id,
                 "auth.revoke_session rejected: not found or not owned"
             );
-            return Err(AppError::NotFound("会话不存在或无权限撤销".to_string()));
+            return Err(ApiError::NotFound("会话不存在或无权限撤销".to_string()));
         }
 
         self.clear_session_whitelist(session_id).await?;
@@ -908,7 +908,7 @@ impl AuthService {
             self.refresh_token_expiration as u64,
         )
         .await
-        .map_err(|e| AppError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(e.to_string()))?;
         Ok(())
     }
 
@@ -917,7 +917,7 @@ impl AuthService {
         let mut conn = self.redis.clone();
         conn.del::<_, ()>(&key)
             .await
-            .map_err(|e| AppError::internal(e.to_string()))?;
+            .map_err(|e| ApiError::internal(e.to_string()))?;
         Ok(())
     }
 
@@ -929,7 +929,7 @@ impl AuthService {
                 session_id: session_id.to_string(),
             })
             .await
-            .map_err(|e| AppError::internal(e.to_string()))?;
+            .map_err(|e| ApiError::internal(e.to_string()))?;
         Ok(())
     }
 }

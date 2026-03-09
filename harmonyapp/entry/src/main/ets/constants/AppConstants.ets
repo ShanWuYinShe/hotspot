@@ -8,7 +8,7 @@ import { DEBUG } from 'BuildProfile';
 // API 配置：根据构建模式自动切换
 // debug  → 开发服务器（局域网 IP）
 // release → 正式域名
-const DEV_SERVER = 'http://192.168.1.10:8888';
+const DEV_SERVER = 'http://192.168.43.4:8888';
 const PROD_SERVER = 'https://api.chaoset.com';
 
 export const SERVER_BASE_URL: string = DEBUG ? DEV_SERVER : PROD_SERVER;
@@ -39,6 +39,7 @@ export interface StorageKeysType {
   LOCATION_CACHE: string;
   SERVER_BASE_URL: string;
   AUTH_ACCOUNTS: string;
+  THEME_MODE: string;
 }
 
 export const StorageKeys: StorageKeysType = {
@@ -47,7 +48,8 @@ export const StorageKeys: StorageKeysType = {
   LOCATION_CACHE: 'location_cache',
   SERVER_BASE_URL: 'server_base_url',
   // 多账号：保存所有账户的 AppAuthData（含 refresh_token），并记录当前活跃账号
-  AUTH_ACCOUNTS: 'auth_accounts'
+  AUTH_ACCOUNTS: 'auth_accounts',
+  THEME_MODE: 'theme_mode'
 };
 
 // 页面名称

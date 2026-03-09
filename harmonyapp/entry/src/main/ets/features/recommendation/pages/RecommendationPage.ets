@@ -19,6 +19,10 @@ import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
 import { LocationInfo } from '../../../core/location/LocationUtil';
+import { interactionActions } from '../../../core/state/InteractionActions';
+import { InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
+import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'RecommendationPage';
@@ -30,18 +34,34 @@ export struct RecommendationPage {
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
+  @StorageLink('interaction_user_state') userStateMap: Record<string, UserRelationState> = {};
   @State isLoading: boolean = true;
   @State isRefreshing: boolean = false;
   @State errorMessage: string = '';
   @State trendingTags: TrendingTagItem[] = [];
   @State recommendedUsers: UserItem[] = [];
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   async aboutToAppear() {
-    SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
-    });
+    SystemUiController.syncWithCurrentTheme();
     await this.loadData();
+  }
+
+  private getCurrentThemePalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getSurfaceBackground(): string {
+    return this.getCurrentThemePalette().surfaceBackground;
+  }
+
+  private getSurfaceSubtle(): string {
+    return this.getCurrentThemePalette().surfaceSubtle;
+  }
+
+  private getSurfaceBorder(): string {
+    return this.getCurrentThemePalette().borderColor;
   }
 
   private hasAnyData(): boolean {
@@ -74,6 +94,10 @@ export struct RecommendationPage {
           const usersResponse = await usersPromise;
           if (usersResponse.code === 0) {
             this.recommendedUsers = usersResponse.data?.items ?? [];
+            const store = InteractionStateStore.getInstance();
+            for (const u of this.recommendedUsers) {
+              store.patchUserFromItem(u);
+            }
           } else if (!this.hasAnyData()) {
             this.errorMessage = usersResponse.message ?? '加载推荐数据失败';
           }
@@ -114,7 +138,7 @@ export struct RecommendationPage {
         .width(36)
         .height(36)
         .borderRadius(DesignConstants.RADIUS.MD)
-        .backgroundColor($r('app.color.bg_tertiary'))
+        .backgroundColor(this.getSurfaceSubtle())
         .justifyContent(FlexAlign.Center)
         .alignItems(VerticalAlign.Center)
         .onClick(() => {
@@ -129,7 +153,7 @@ export struct RecommendationPage {
         top: this.getHeaderTopPadding(),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor(this.getSurfaceBackground())
       .borderRadius({ bottomLeft: DesignConstants.RADIUS.LG, bottomRight: DesignConstants.RADIUS.LG })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
@@ -152,11 +176,11 @@ export struct RecommendationPage {
             .textAlign(TextAlign.Center)
           Button('重试')
             .type(ButtonType.Capsule)
-            .backgroundColor($r('app.color.brand_primary'))
-            .fontColor(Color.White)
+            .backgroundColor(this.getCurrentThemePalette().accentBackground)
+            .fontColor(this.getCurrentThemePalette().accentText)
             .height(40)
             .shadow(DesignConstants.SHADOW.SMALL)
-            .border({ width: 1, color: $r('app.color.highlight_border') })
+            .border({ width: 1, color: this.getSurfaceBorder() })
             .onClick(() => { this.loadData(); })
         }
         .width('100%')
@@ -179,7 +203,7 @@ export struct RecommendationPage {
                   ForEach(this.trendingTags, (tag: TrendingTagItem) => {
                     Text(`#${tag.name}`)
                       .padding(DesignConstants.SPACING.SM)
-                      .backgroundColor($r('app.color.bg_tertiary'))
+                      .backgroundColor(this.getSurfaceSubtle())
                       .borderRadius(DesignConstants.RADIUS.MD)
                       .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
                       .onClick(() => {
@@ -199,8 +223,8 @@ export struct RecommendationPage {
           .width('100%')
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow(DesignConstants.SHADOW.MEDIUM)
-          .backgroundColor($r('app.color.bg_secondary'))
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .backgroundColor(this.getSurfaceBackground())
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .margin({ bottom: 12 })
           .padding(DesignConstants.SPACING.LG)
 
@@ -242,21 +266,24 @@ export struct RecommendationPage {
                     this.openUserProfile(user);
                   })
 
-                  Button('关注')
+                  Button(this.isUserFollowing(user) ? '已关注' : '关注')
                     .type(ButtonType.Capsule)
-                    .backgroundColor($r('app.color.brand_primary'))
-                    .fontColor(Color.White)
+                    .backgroundColor(this.isUserFollowing(user) ? this.getSurfaceSubtle() : this.getCurrentThemePalette().accentBackground)
+                    .fontColor(this.isUserFollowing(user) ? $r('sys.color.ohos_id_color_text_primary') : this.getCurrentThemePalette().accentText)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .fontWeight(FontWeight.Medium)
                     .height(34)
                     .shadow(DesignConstants.SHADOW.SMALL)
-                    .border({ width: 1, color: $r('app.color.highlight_border') })
+                    .border({ width: 1, color: this.getSurfaceBorder() })
                     .onClick(async () => {
-                      try {
-                        await ApiClient.followUser({ user_id: user.user?.user_id ?? '' });
-                        SystemToast.showSuccess('已关注', this.getUIContext());
-                      } catch (error) {
-                        SystemToast.showError('关注失败', this.getUIContext());
+                      const userId = user.user?.user_id ?? '';
+                      if (!userId) return;
+                      const isFollowing = this.userStateMap[userId]?.relation?.is_following ?? false;
+                      const success = await interactionActions.setFollowUser(userId, !isFollowing, '关注用户');
+                      if (success) {
+                        SystemToast.showSuccess(isFollowing ? '已取消关注' : '已关注', this.getUIContext());
+                      } else {
+                        SystemToast.showError('操作失败', this.getUIContext());
                       }
                     })
                 }
@@ -269,11 +296,14 @@ export struct RecommendationPage {
                 })
                 .borderRadius(DesignConstants.RADIUS.XXL)
                 .shadow(DesignConstants.SHADOW.MEDIUM)
-                .backgroundColor($r('app.color.bg_secondary'))
-                .border({ width: 1, color: $r('app.color.highlight_border') })
+                .backgroundColor(this.getSurfaceBackground())
+                .border({ width: 1, color: this.getSurfaceBorder() })
                 .margin({ bottom: 12 })
               }
-            }, (user: UserItem) => user.user?.user_id ?? '')
+            }, (user: UserItem) => {
+              const uid = user.user?.user_id ?? '';
+              return uid + '_f' + (this.userStateMap[uid]?.relation?.is_following ?? false);
+            })
           }
         }
         .divider({ strokeWidth: 0 })
@@ -291,7 +321,7 @@ export struct RecommendationPage {
     }
         .width('100%')
         .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {
@@ -305,6 +335,15 @@ export struct RecommendationPage {
     const params = new ProfileRouteParam();
     params.userId = userId;
     AppRouter.push(PageNames.PROFILE, params);
+  }
+
+  private isUserFollowing(user: UserItem): boolean {
+    const userId = user.user?.user_id ?? '';
+    const state = this.userStateMap[userId];
+    if (state?.relation) {
+      return state.relation.is_following;
+    }
+    return false;
   }
 
   @Builder

@@ -15,7 +15,7 @@ use axum::{
 use redis::AsyncCommands;
 use sha2::{Digest, Sha256};
 
-use crate::{error::AppError, state::AppState};
+use crate::{error::ApiError, state::AppState};
 
 const IDEMPOTENCY_TTL_SECONDS: usize = 24 * 60 * 60; // 24小时
 const IDEMPOTENCY_LOCK_TTL_SECONDS: usize = 30; // 处理锁TTL
@@ -27,7 +27,7 @@ pub async fn idempotency_middleware(
     State(state): State<AppState>,
     req: Request,
     next: Next,
-) -> Result<Response, AppError> {
+) -> Result<Response, ApiError> {
     // 1. 检查是否需要幂等处理
     if !should_check_idempotency(req.uri().path()) {
         return Ok(next.run(req).await);
@@ -37,7 +37,7 @@ pub async fn idempotency_middleware(
     let client_key = match extract_client_idempotency_key(req.headers()) {
         Some(v) => {
             if !validate_idempotency_key_format(&v) {
-                return Err(AppError::BadRequest(
+                return Err(ApiError::BadRequest(
                     "Idempotency-Key 格式无效：要求 32-64 字符，字符集 [a-zA-Z0-9-_]，格式 {client_id}-{timestamp_ms}-{random}".to_string(),
                 ));
             }
@@ -45,7 +45,7 @@ pub async fn idempotency_middleware(
         }
         None => {
             if requires_idempotency_key(req.uri().path()) {
-                return Err(AppError::MissingParameter("Idempotency-Key".to_string()));
+                return Err(ApiError::MissingParameter("Idempotency-Key".to_string()));
             }
             return Ok(next.run(req).await);
         }
@@ -58,7 +58,7 @@ pub async fn idempotency_middleware(
     //    对于 Token 可选的幂等端点（如 auth/register、auth/guest），user_id 可能不存在
     let user_id = req.extensions().get::<i64>().copied();
     if user_id.is_none() && !is_unauthenticated_idempotent_path(&endpoint) {
-        return Err(AppError::Unauthorized("未认证".to_string()));
+        return Err(ApiError::Unauthorized("未认证".to_string()));
     }
 
     // 5. 生成服务端缓存用幂等 hash key
@@ -83,11 +83,11 @@ pub async fn idempotency_middleware(
 
     if let Ok(Some(endpoint)) = redis_conn.get::<&str, Option<String>>(&meta_key).await {
         if endpoint != req.uri().path() {
-            return Err(AppError::IdempotencyKeyConflict(
+            return Err(ApiError::IdempotencyKeyConflict(
                 "幂等键已用于其他请求".to_string(),
             ));
         }
-        return Err(AppError::IdempotencyCacheExpired);
+        return Err(ApiError::IdempotencyCacheExpired);
     }
 
     // 7. 加锁，防止并发重复执行
@@ -102,7 +102,7 @@ pub async fn idempotency_middleware(
         .await
         .unwrap_or(None);
     if lock_result.is_none() {
-        return Err(AppError::IdempotencyOperationInProgress);
+        return Err(ApiError::IdempotencyOperationInProgress);
     }
 
     // 8. 执行业务逻辑

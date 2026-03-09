@@ -1,6 +1,6 @@
 use bcrypt::{hash, verify};
 
-use crate::error::{AppError, Result};
+use crate::error::{ApiError, Result};
 
 pub struct PasswordUtil;
 
@@ -10,7 +10,7 @@ impl PasswordUtil {
     /// 约定：密码在 HTTPS/TLS 中明文传输；服务端负责慢哈希存储（业内最佳实践）。
     pub fn hash_password(password: &str) -> Result<String> {
         if password.is_empty() {
-            return Err(AppError::BadRequest("密码不能为空".to_string()));
+            return Err(ApiError::BadRequest("密码不能为空".to_string()));
         }
 
         // 使用 bcrypt，work factor = 12（后续建议配置化）

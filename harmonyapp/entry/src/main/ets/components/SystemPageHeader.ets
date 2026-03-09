@@ -5,7 +5,10 @@
  */
 
 import { DesignConstants } from '../constants/DesignConstants';
+import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AppIcon } from './SystemIcon';
+import { SurfaceIconButton } from './SurfaceIconButton';
 import { SafeAreaUtils } from '../core/utils/SafeAreaUtils';
 
 export interface PageHeaderAction {
@@ -15,47 +18,91 @@ export interface PageHeaderAction {
   disabled?: boolean;
 }
 
+export interface IconAction {
+  icon: AppIcon;
+  onClick: () => void;
+  kind?: 'primary' | 'neutral';
+  disabled?: boolean;
+  size?: number;
+  iconSize?: number;
+}
+
 @Component
 export struct SystemPageHeader {
   @Prop title: string = '';
-  action?: PageHeaderAction;
+  action: PageHeaderAction | null = null;
   @Prop showBackButton: boolean = false;
-  onBack?: () => void;
+  onBack: (() => void) | null = null;
+  leftAction: IconAction | null = null;
+  rightAction: IconAction | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
-  surfaceColor?: ResourceColor;
+  @Prop surfaceColor: ResourceColor | null = null;
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
 
   private getHeaderTopPadding(): number {
     return SafeAreaUtils.resolveTopPadding(this.safeAreaTop);
   }
 
   private getBackgroundColor(): ResourceColor {
-    return this.surfaceColor ? this.surfaceColor : Color.Transparent;
+    return this.surfaceColor ? this.surfaceColor : this.getPalette().pageBackground;
+  }
+
+  private getHeaderShadow(): ShadowOptions {
+    return this.getPalette().controlShadow;
+  }
+
+  private canShowBackButton(): boolean {
+    return this.showBackButton && this.onBack !== null;
+  }
+
+  private hasLeftAction(): boolean {
+    return this.canShowBackButton() || this.leftAction !== null;
+  }
+
+  private hasRightAction(): boolean {
+    return this.rightAction !== null || this.action !== null;
+  }
+
+  @Builder
+  private buildIconActionButton(action: IconAction) {
+    SurfaceIconButton({
+      icon: action.icon,
+      kind: action.kind ?? 'neutral',
+      buttonSize: action.size ?? 40,
+      glyphSize: action.iconSize ?? 20,
+      disabled: action.disabled ?? false,
+      onPress: action.onClick
+    })
   }
 
   build() {
     Column() {
       Row({ space: DesignConstants.SPACING.SM }) {
-        if (this.showBackButton) {
-          Button() {
-            Text() {
-              SymbolSpan($r(AppIcon.BACK))
-                .fontSize(24)
-                .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+        if (this.hasLeftAction()) {
+          Row({ space: DesignConstants.SPACING.SM }) {
+            if (this.canShowBackButton()) {
+              SurfaceIconButton({
+                icon: AppIcon.BACK,
+                kind: 'neutral',
+                onPress: () => {
+                  if (this.onBack) {
+                    this.onBack();
+                  }
+                }
+              })
+            }
+
+            if (this.leftAction) {
+              this.buildIconActionButton(this.leftAction);
             }
           }
-          .type(ButtonType.Normal)
-          .backgroundColor($r('app.color.bg_tertiary'))
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
-          .width(40)
-          .height(40)
-          .onClick(() => {
-            if (this.onBack) {
-              this.onBack();
-            }
-          })
+          .alignItems(VerticalAlign.Center)
         } else {
-          Blank().width(16)
+          Blank().width(40)
         }
 
         Text(this.title)
@@ -65,25 +112,34 @@ export struct SystemPageHeader {
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
 
-        if (this.action) {
-          Button(this.action.label)
-            .type(ButtonType.Normal)
-            .backgroundColor($r('app.color.bg_tertiary'))
-            .borderRadius(DesignConstants.RADIUS.XL)
-            .border({ width: 1, color: $r('app.color.highlight_border') })
-            .height(34)
-            .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-            .fontColor(this.action.disabled
-              ? $r('sys.color.ohos_id_color_text_secondary')
-              : $r('app.color.brand_primary'))
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .enabled(!this.action.disabled)
-            .onClick(async () => {
-              try {
-                await this.action?.onClick()
-              } catch (_) {
-              }
-            })
+        if (this.hasRightAction()) {
+          Row({ space: DesignConstants.SPACING.SM }) {
+            if (this.rightAction) {
+              this.buildIconActionButton(this.rightAction);
+            }
+
+            if (this.action) {
+              Button(this.action.label)
+                .type(ButtonType.Normal)
+                .backgroundColor(this.getPalette().surfaceSubtle)
+                .borderRadius(DesignConstants.RADIUS.XL)
+                .border({ width: 1, color: this.getPalette().borderColor })
+                .height(34)
+                .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+                .fontColor(this.action.disabled
+                  ? $r('sys.color.ohos_id_color_text_secondary')
+                  : this.getPalette().accentBackground)
+                .fontSize(DesignConstants.FONT.SIZE.SM)
+                .enabled(!this.action.disabled)
+                .onClick(async () => {
+                  try {
+                    await this.action?.onClick()
+                  } catch (_) {
+                  }
+                })
+            }
+          }
+          .alignItems(VerticalAlign.Center)
         } else {
           Blank().width(24)
         }
@@ -102,7 +158,9 @@ export struct SystemPageHeader {
       top: this.getHeaderTopPadding(),
       bottom: DesignConstants.SPACING.SM
     })
-    .backgroundColor(Color.Transparent)
+    .backgroundColor(this.getBackgroundColor())
+    .shadow(this.getHeaderShadow())
+    .border({ width: { bottom: 1 }, color: this.getPalette().borderColor })
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
   }
 }

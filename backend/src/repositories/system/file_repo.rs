@@ -9,7 +9,7 @@ use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::error::{AppError, Result};
+use crate::error::{ApiError, Result};
 
 /// 上传文件数据 - 用于业务层传输
 #[derive(Debug, Clone)]
@@ -122,10 +122,10 @@ impl FileRepository {
         )
         .fetch_optional(&self.pool)
         .await?
-        .ok_or_else(|| AppError::NotFound("文件不存在".to_string()))?;
+        .ok_or_else(|| ApiError::NotFound("文件不存在".to_string()))?;
 
         if row.uploader_id != uploader_id {
-            return Err(AppError::Forbidden("无权操作此文件".to_string()));
+            return Err(ApiError::Forbidden("无权操作此文件".to_string()));
         }
 
         let meta_json = row.meta;

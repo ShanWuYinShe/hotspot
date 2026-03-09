@@ -4,6 +4,12 @@
  */
 
 
+import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+
+const DEFAULT_THEME_ICON_SENTINEL: string = '__theme_icon_default__';
+const DEFAULT_THEME_BG_SENTINEL: string = '__theme_bg_default__';
+
 /**
  * 应用图标枚举
  */
@@ -245,15 +251,24 @@ export interface IconButtonParams {
 export struct SystemIcon {
   @Prop icon: AppIcon;
   @Prop iconSize: IconSize = IconSize.MEDIUM;
-  @Prop iconColor: string | ResourceColor = $r('app.color.brand_primary');
+  @Prop iconColor: string | ResourceColor = DEFAULT_THEME_ICON_SENTINEL;
   @Prop clickable: boolean = false;
   onIconClick?: () => void;
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+
+  private getDefaultIconColor(): string {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId).accentBackground;
+  }
+
+  private getResolvedIconColor(): string | ResourceColor {
+    return this.iconColor === DEFAULT_THEME_ICON_SENTINEL ? this.getDefaultIconColor() : this.iconColor;
+  }
 
   build() {
     Text() {
       SymbolSpan($r(this.icon))
         .fontSize(this.iconSize)
-        .fontColor([this.iconColor as ResourceColor])
+        .fontColor([this.getResolvedIconColor() as ResourceColor])
     }
     .onClick(() => {
       if (this.clickable && this.onIconClick) {
@@ -271,24 +286,37 @@ export struct SystemIcon {
 export struct IconButton {
   @Prop icon: AppIcon;
   @Prop iconSize: IconSize = IconSize.LARGE;
-  @Prop iconColor: string | ResourceColor = $r('app.color.brand_primary');
-  @Prop bgColor: ResourceColor = $r('app.color.bg_tertiary'); // Default background
+  @Prop iconColor: string | ResourceColor = DEFAULT_THEME_ICON_SENTINEL;
+  @Prop bgColor: ResourceColor | string = DEFAULT_THEME_BG_SENTINEL;
   @Prop radius: number = 24;
   @Prop paddingSize: number = 12;
   @Prop minButtonSize: number = 48;
   onButtonClick?: () => void;
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getResolvedIconColor(): string | ResourceColor {
+    return this.iconColor === DEFAULT_THEME_ICON_SENTINEL ? this.getPalette().accentBackground : this.iconColor;
+  }
+
+  private getResolvedBackgroundColor(): ResourceColor | string {
+    return this.bgColor === DEFAULT_THEME_BG_SENTINEL ? this.getPalette().surfaceSubtle : this.bgColor;
+  }
 
   build() {
     Button() {
       Text() {
         SymbolSpan($r(this.icon))
           .fontSize(this.iconSize)
-          .fontColor([this.iconColor as ResourceColor])
+          .fontColor([this.getResolvedIconColor() as ResourceColor])
       }
     }
     .type(ButtonType.Normal)
     .stateEffect(true)
-    .backgroundColor(this.bgColor)
+    .backgroundColor(this.getResolvedBackgroundColor())
     .borderRadius(this.radius)
     .padding(this.paddingSize)
     .width(this.minButtonSize)

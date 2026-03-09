@@ -6,7 +6,7 @@ use crate::dto::request::{
     CreateShareRequest, GetShareRequest, RevokeShareRequest, ShareListRequest,
 };
 use crate::dto::response::{ApiResponse, PaginatedData, ShareCreated, ShareDetail, ShareListItem};
-use crate::error::AppError;
+use crate::error::ApiError;
 use crate::middleware::auth::{AuthenticatedUser, OptionalAuthenticatedUser};
 use crate::state::AppState;
 use axum::{
@@ -22,7 +22,7 @@ impl<S> FromRequestParts<S> for ClientIp
 where
     S: Send + Sync,
 {
-    type Rejection = AppError;
+    type Rejection = ApiError;
 
     fn from_request_parts(
         parts: &mut Parts,
@@ -41,7 +41,7 @@ pub async fn create_share(
     State(state): State<AppState>,
     AuthenticatedUser { user_id, .. }: AuthenticatedUser,
     Json(req): Json<CreateShareRequest>,
-) -> Result<Json<ApiResponse<ShareCreated>>, AppError> {
+) -> Result<Json<ApiResponse<ShareCreated>>, ApiError> {
     let data = state.share_service.create_share(user_id, req).await?;
 
     Ok(Json(ApiResponse::success(data)))
@@ -55,7 +55,7 @@ pub async fn get_share(
     client_ip: ClientIp,
     OptionalAuthenticatedUser { user_id }: OptionalAuthenticatedUser,
     Json(req): Json<GetShareRequest>,
-) -> Result<Json<ApiResponse<ShareDetail>>, AppError> {
+) -> Result<Json<ApiResponse<ShareDetail>>, ApiError> {
     let ClientIp(client_ip) = client_ip;
     let data = state
         .share_service
@@ -72,7 +72,7 @@ pub async fn revoke_share(
     State(state): State<AppState>,
     AuthenticatedUser { user_id, .. }: AuthenticatedUser,
     Json(req): Json<RevokeShareRequest>,
-) -> Result<Json<ApiResponse<()>>, AppError> {
+) -> Result<Json<ApiResponse<()>>, ApiError> {
     state.share_service.revoke_share(user_id, req).await?;
     Ok(Json(ApiResponse::success_empty()))
 }
@@ -82,7 +82,7 @@ pub async fn list_my_shares(
     State(state): State<AppState>,
     AuthenticatedUser { user_id, .. }: AuthenticatedUser,
     Json(req): Json<ShareListRequest>,
-) -> Result<Json<ApiResponse<PaginatedData<ShareListItem>>>, AppError> {
+) -> Result<Json<ApiResponse<PaginatedData<ShareListItem>>>, ApiError> {
     let data = state.share_service.list_my_shares(user_id, req).await?;
     Ok(Json(ApiResponse::success(data)))
 }

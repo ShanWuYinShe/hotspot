@@ -47,16 +47,7 @@ const result = await HttpUtil.post<ApiResponse<AuthData>>(
 
 ### 响应处理
 
-```typescript
-// ✅ 正确：只看 code === 0
-const res = await ApiClient.getUserProfile(userId);
-if (res.code === 0 && res.data) {
-  // 使用 res.data
-}
-
-// ❌ 错误：依赖 HTTP 状态码
-// ❌ 错误：依赖 res.message 做逻辑分支
-```
+- **业务成功判断唯一依据**：`code === 0`，禁止依赖 HTTP 状态码或 `res.message`。
 
 ## 状态与持久化规则
 
@@ -97,22 +88,36 @@ if (res.code === 0 && res.data) {
 - 响应使用 `RelativeLocation`（含 distance、bearing_degrees）。
 - **禁止在客户端计算距离或角度**，由后端 PostGIS 完成。
 
-## 常见错误清单
+## 实现检查清单
 
-- [ ] 是否硬编码了 API 路径 `"/api/v1/..."`？
-- [ ] 新增的写操作接口是否在 `MUST_IDEMPOTENT_ENDPOINTS` 列表中检查？
-- [ ] 是否依赖了 HTTP 状态码而非 `code === 0`？
-- [ ] 是否在客户端计算了距离/角度？
-- [ ] 是否正确使用了 AppStorage 装饰器？
-- [ ] cursor 是否做了解析而非透传？
-- [ ] 新增页面是否放在了正确的 `features/` 子目录下？
-- [ ] 新增图标是否在 [HarmonyOS 主题图标库](https://developer.huawei.com/consumer/cn/design/harmonyos-symbol/) 中验证了符号名存在？
-- [ ] 是否使用了 `Image($r('sys.media.*'))` 而可以改用 `SymbolSpan($r(AppIcon.XXX))`？
-- [ ] 颜色/字体/间距是否使用了 `$r('app.color.*')` / `DesignConstants` 常量而非硬编码值？
+- [ ] 架构一致性：有无类似页面/组件？遵循相同目录结构？
+- [ ] 单例复用：使用现有 `GlobalStateManager`、`AuthAccountManager` 而非新建？
+- [ ] API 客户端复用：`core/api/ApiClient.ets` 中扩展现有方法？
+- [ ] 状态管理复用：使用现有 AppStorage + PersistentStorage？
+- [ ] 类型复用：对齐 `spec/api_spec_types.md`？复用 `core/types/api.ets`？
+- [ ] 组件复用：`components/` 中有可用 ArkUI 组件？
+
+**禁止**：硬编码 API 路径、绕过统一层、新建单例、重复实现、引入不一致方式
+
+## 常见错误
+
+- [ ] 硬编码 API 路径 `"/api/v1/..."`？
+- [ ] 写操作未在 `MUST_IDEMPOTENT_ENDPOINTS` 列表检查？
+- [ ] 依赖 HTTP 状态码而非 `code === 0`？
+- [ ] 客户端计算距离/角度？
+- [ ] AppStorage 装饰器错误？
+- [ ] cursor 解析而非透传？
+- [ ] 页面未放在正确 `features/` 子目录？
+- [ ] 图标未在[官方库](https://developer.huawei.com/consumer/cn/design/harmonyos-symbol/)验证？
+- [ ] 使用 `Image($r('sys.media.*'))` 而非 `SymbolSpan`？
+- [ ] 硬编码颜色/字体/间距？
+- [ ] 绕过统一层或新建单例或重复实现？
 
 ## 安全规则
 
 文件删除、批量变更、Git 操作规范等全局规则见根目录 `AGENTS.md` 的「权限边界」和「Git 操作规范」章节，此处不重复。
+
+> **⚠️ `tmp/` 路径规则（强制）**：所有临时文件、会话文件（`session-context-*.md`、`session-progress-*.md`）、设计文档等必须存放在**项目根目录（Monorepo 根目录）的 `tmp/`** 下，即 `harmonyapp/` 的上级目录中的 `tmp/`。**绝对禁止在 `harmonyapp/` 目录下创建 `tmp/` 目录**（如 `harmonyapp/tmp/`）。详见根目录 `AGENTS.md` 的「Agent 行为准则」章节。
 
 **HarmonyOS 额外约束**：
 

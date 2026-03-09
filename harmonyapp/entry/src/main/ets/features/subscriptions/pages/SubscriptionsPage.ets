@@ -13,6 +13,8 @@ import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 const SUBSCRIPTIONS_STORAGE_KEY = 'notification_subscriptions';
 
@@ -47,6 +49,7 @@ export struct SubscriptionsPage {
   @State private data: LocalSubscriptionPrefs | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private items: SubscriptionItem[] = [
     { key: 'new_follower_enabled', icon: AppIcon.PERSON, title: '新关注者', description: '有人关注你时通知' },
@@ -63,10 +66,24 @@ export struct SubscriptionsPage {
   ];
 
   aboutToAppear() {
-    SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
-    });
+    SystemUiController.syncWithCurrentTheme();
     this.ensureAuthAndLoad();
+  }
+
+  private getCurrentThemePalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getSurfaceBackground(): string {
+    return this.getCurrentThemePalette().surfaceBackground;
+  }
+
+  private getSurfaceSubtle(): string {
+    return this.getCurrentThemePalette().surfaceSubtle;
+  }
+
+  private getSurfaceBorder(): string {
+    return this.getCurrentThemePalette().borderColor;
   }
 
   private async ensureAuthAndLoad(): Promise<void> {
@@ -153,7 +170,7 @@ export struct SubscriptionsPage {
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: $r('app.color.bg_tertiary'),
+          bgColor: this.getSurfaceSubtle(),
           onButtonClick: () => {
             AppRouter.pop();
           }
@@ -192,7 +209,8 @@ export struct SubscriptionsPage {
             ListItem() {
               this.SubscriptionItemRow(item)
             }
-          }, (i: SubscriptionItem) => i.key as string)
+          }, (i: SubscriptionItem) =>
+            (i.key as string) + '_v' + this.getValue(i.key) + '_s' + (this.savingKey === String(i.key)))
 
           ListItem() {
             Text('提示：你可以随时在这里调整通知偏好，变更会即时生效。')
@@ -211,7 +229,7 @@ export struct SubscriptionsPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {
@@ -241,7 +259,7 @@ export struct SubscriptionsPage {
       .width(40)
       .height(40)
       .borderRadius(DesignConstants.RADIUS.MD)
-      .backgroundColor($r('app.color.bg_tertiary'))
+      .backgroundColor(this.getSurfaceSubtle())
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
 
@@ -271,8 +289,8 @@ export struct SubscriptionsPage {
     .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
     .borderRadius(DesignConstants.RADIUS.XXL)
     .shadow(DesignConstants.SHADOW.MEDIUM)
-    .backgroundColor($r('app.color.bg_secondary'))
-    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .backgroundColor(this.getSurfaceBackground())
+    .border({ width: 1, color: this.getSurfaceBorder() })
     .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 12 })
   }
 }

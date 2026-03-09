@@ -40,7 +40,7 @@ use axum::{
 use std::time::Instant;
 
 use crate::{
-    error::AppError,
+    error::ApiError,
     state::AppState,
     utils::{
         jwt::JwtUtil,
@@ -185,7 +185,7 @@ async fn authenticate_token(
     let claims = JwtUtil::verify_token(token, &state.config.jwt_secret).map_err(|e| {
         tracing::debug!(error = %e, "JWT verification failed");
         match e {
-            crate::error::AppError::Unauthorized(msg) if msg.contains("expired") => {
+            crate::error::ApiError::Unauthorized(msg) if msg.contains("expired") => {
                 AuthFailureReason::Expired
             }
             _ => AuthFailureReason::InvalidSignature,
@@ -264,7 +264,7 @@ pub async fn auth_middleware(
     State(state): State<AppState>,
     mut req: Request,
     next: Next,
-) -> Result<Response, AppError> {
+) -> Result<Response, ApiError> {
     let method = req.method().clone();
     let uri = req.uri().clone();
     let token = extract_bearer_token(&req)
@@ -274,7 +274,7 @@ pub async fn auth_middleware(
             } else {
                 tracing::debug!(%method, %uri, reason = ?reason, "Authentication failed");
             }
-            AppError::Unauthorized(reason.to_user_message().to_string())
+            ApiError::Unauthorized(reason.to_user_message().to_string())
         })?
         .ok_or_else(|| {
             tracing::debug!(
@@ -283,7 +283,7 @@ pub async fn auth_middleware(
                 reason = ?AuthFailureReason::TokenMissing,
                 "Authentication failed"
             );
-            AppError::AccessTokenMissing
+            ApiError::AccessTokenMissing
         })?
         .value;
 
@@ -293,7 +293,7 @@ pub async fn auth_middleware(
         } else {
             tracing::debug!(%method, %uri, reason = ?reason, "Authentication failed");
         }
-        AppError::Unauthorized(reason.to_user_message().to_string())
+        ApiError::Unauthorized(reason.to_user_message().to_string())
     })?;
 
     tracing::debug!(
@@ -328,7 +328,7 @@ pub async fn optional_auth_middleware(
     State(state): State<AppState>,
     mut req: Request,
     next: Next,
-) -> Result<Response, AppError> {
+) -> Result<Response, ApiError> {
     let method = req.method().clone();
     let uri = req.uri().clone();
     let mut clear_access_cookie = false;
@@ -404,18 +404,18 @@ impl<S> FromRequestParts<S> for BearerToken
 where
     S: Send + Sync,
 {
-    type Rejection = AppError;
+    type Rejection = ApiError;
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         let auth_header = parts
             .headers
             .get("Authorization")
             .and_then(|h| h.to_str().ok())
-            .ok_or_else(|| AppError::AccessTokenMissing)?;
+            .ok_or_else(|| ApiError::AccessTokenMissing)?;
 
         let token = auth_header
             .strip_prefix("Bearer ")
-            .ok_or_else(|| AppError::AccessTokenMissing)?;
+            .ok_or_else(|| ApiError::AccessTokenMissing)?;
 
         Ok(BearerToken(token.to_string()))
     }
@@ -428,7 +428,7 @@ where
 /// ## 使用示例
 ///
 /// ```rust
-/// async fn handler(user: AuthenticatedUser) -> Result<Json<Response>, AppError> {
+/// async fn handler(user: AuthenticatedUser) -> Result<Json<Response>, ApiError> {
 ///     let user_id = user.user_id;
 ///     let session_id = user.session_id.unwrap();
 ///     // ...
@@ -456,14 +456,14 @@ impl<S> FromRequestParts<S> for AuthenticatedUser
 where
     S: Send + Sync,
 {
-    type Rejection = AppError;
+    type Rejection = ApiError;
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         let user_id = parts
             .extensions
             .get::<i64>()
             .copied()
-            .ok_or_else(|| AppError::Unauthorized("未认证".to_string()))?;
+            .ok_or_else(|| ApiError::Unauthorized("未认证".to_string()))?;
 
         let session_id = parts
             .extensions
@@ -486,7 +486,7 @@ where
 /// ## 使用示例
 ///
 /// ```rust
-/// async fn search_handler(user: OptionalAuthenticatedUser) -> Result<Json<Response>, AppError> {
+/// async fn search_handler(user: OptionalAuthenticatedUser) -> Result<Json<Response>, ApiError> {
 ///     if let Some(user_id) = user.user_id {
 ///         // 返回带有个性化信息的结果
 ///     } else {
@@ -503,7 +503,7 @@ impl<S> FromRequestParts<S> for OptionalAuthenticatedUser
 where
     S: Send + Sync,
 {
-    type Rejection = AppError;
+    type Rejection = ApiError;
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         let user_id = parts.extensions.get::<i64>().copied();

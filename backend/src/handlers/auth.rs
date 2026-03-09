@@ -8,7 +8,7 @@ use crate::{
         },
         response::{ApiResponse, CheckStatusData, RevokeAllResult, SessionsListData},
     },
-    error::{AppError, Result},
+    error::{ApiError, Result},
     middleware::auth::{AuthenticatedUser, BearerToken, OptionalAuthenticatedUser},
     state::AppState,
     types::enums::ClientType,
@@ -30,7 +30,7 @@ use axum::{
 fn append_set_cookie(headers: &mut HeaderMap, cookie: String) -> Result<()> {
     headers.append(
         header::SET_COOKIE,
-        HeaderValue::from_str(&cookie).map_err(|_| AppError::internal("Cookie header error"))?,
+        HeaderValue::from_str(&cookie).map_err(|_| ApiError::internal("Cookie header error"))?,
     );
     Ok(())
 }
@@ -88,7 +88,7 @@ fn build_auth_response(
         serde_json::json!({})
     } else {
         serde_json::to_value(&auth_issue.data)
-            .map_err(|_| AppError::internal("序列化认证数据失败"))?
+            .map_err(|_| ApiError::internal("序列化认证数据失败"))?
     };
     Ok((headers, Json(ApiResponse::success(data))))
 }
@@ -105,19 +105,19 @@ fn validate_csrf_if_web(headers: &HeaderMap) -> Result<()> {
 fn validate_csrf_token(headers: &HeaderMap) -> Result<()> {
     if let Some(fetch_site) = headers.get("Sec-Fetch-Site").and_then(|v| v.to_str().ok()) {
         if fetch_site.eq_ignore_ascii_case("cross-site") {
-            return Err(AppError::Forbidden("CSRF：跨站请求被拒绝".to_string()));
+            return Err(ApiError::Forbidden("CSRF：跨站请求被拒绝".to_string()));
         }
     }
 
     let csrf_cookie = get_cookie_value(headers, "hs_csrf_token")
-        .ok_or_else(|| AppError::Forbidden("CSRF token 缺失".to_string()))?;
+        .ok_or_else(|| ApiError::Forbidden("CSRF token 缺失".to_string()))?;
     let csrf_header = headers
         .get("X-CSRF-Token")
         .and_then(|v| v.to_str().ok())
-        .ok_or_else(|| AppError::Forbidden("CSRF token 缺失".to_string()))?;
+        .ok_or_else(|| ApiError::Forbidden("CSRF token 缺失".to_string()))?;
 
     if csrf_cookie != csrf_header {
-        return Err(AppError::Forbidden("CSRF token 无效".to_string()));
+        return Err(ApiError::Forbidden("CSRF token 无效".to_string()));
     }
 
     Ok(())
@@ -260,16 +260,16 @@ pub async fn refresh_token(
             .refresh_token
             .as_deref()
             .filter(|token| !token.trim().is_empty())
-            .ok_or_else(|| AppError::BadRequest("app 场景必须提供 refresh_token".to_string()))?
+            .ok_or_else(|| ApiError::BadRequest("app 场景必须提供 refresh_token".to_string()))?
             .to_string(),
         ClientType::Web => {
             if req.refresh_token.is_some() {
-                return Err(AppError::BadRequest(
+                return Err(ApiError::BadRequest(
                     "web 场景不得在 body 中传递 refresh_token".to_string(),
                 ));
             }
             get_cookie_value(&headers, "refresh_token")
-                .ok_or_else(|| AppError::RefreshTokenMissing)?
+                .ok_or_else(|| ApiError::RefreshTokenMissing)?
         }
     };
 
@@ -385,7 +385,7 @@ pub async fn change_password(
 
     let session_id = user
         .session_id
-        .ok_or_else(|| AppError::Unauthorized("当前会话不可用".to_string()))?;
+        .ok_or_else(|| ApiError::Unauthorized("当前会话不可用".to_string()))?;
     state
         .auth_service
         .change_password(user.user_id, session_id, &req)
@@ -416,7 +416,7 @@ pub async fn revoke_session(
 
     let session_id = user
         .session_id
-        .ok_or_else(|| AppError::Unauthorized("当前会话不可用".to_string()))?;
+        .ok_or_else(|| ApiError::Unauthorized("当前会话不可用".to_string()))?;
     state
         .auth_service
         .revoke_session(user.user_id, session_id, &revoke_req)
@@ -437,7 +437,7 @@ pub async fn revoke_all_sessions(
 
     let session_id = user
         .session_id
-        .ok_or_else(|| AppError::Unauthorized("当前会话不可用".to_string()))?;
+        .ok_or_else(|| ApiError::Unauthorized("当前会话不可用".to_string()))?;
     let revoked_count = state
         .auth_service
         .revoke_all_sessions(user.user_id, session_id)

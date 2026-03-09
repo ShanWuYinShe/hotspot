@@ -7,7 +7,7 @@ use std::time::Duration;
 use tokio::time::timeout;
 
 use crate::{
-    error::AppError,
+    error::ApiError,
     repositories::user_repo::UserRepository,
     state::AppState,
     types::enums::ClientType,
@@ -76,7 +76,7 @@ pub async fn authenticate_ws_connection(
             log_auth_failure("鉴权失败：首帧不是文本消息", None, headers);
             send_auth_error_and_close(
                 sender,
-                AppError::WebSocketProtocolIncompatible("仅支持文本协议".to_string()),
+                ApiError::WebSocketProtocolIncompatible("仅支持文本协议".to_string()),
             )
             .await;
             return Err(());
@@ -86,7 +86,7 @@ pub async fn authenticate_ws_connection(
             log_auth_failure(reason.as_str(), None, headers);
             send_auth_error_and_close(
                 sender,
-                AppError::WebSocketError("鉴权超时或连接异常".to_string()),
+                ApiError::WebSocketError("鉴权超时或连接异常".to_string()),
             )
             .await;
             return Err(());
@@ -95,7 +95,7 @@ pub async fn authenticate_ws_connection(
             log_auth_failure("鉴权失败：连接在鉴权前已关闭", None, headers);
             send_auth_error_and_close(
                 sender,
-                AppError::WebSocketError("鉴权超时或连接异常".to_string()),
+                ApiError::WebSocketError("鉴权超时或连接异常".to_string()),
             )
             .await;
             return Err(());
@@ -106,7 +106,7 @@ pub async fn authenticate_ws_connection(
             // spec: 鉴权失败或超时，发送 Error(code=20000) 后断开连接
             send_auth_error_and_close(
                 sender,
-                AppError::WebSocketError("鉴权超时或连接异常".to_string()),
+                ApiError::WebSocketError("鉴权超时或连接异常".to_string()),
             )
             .await;
             return Err(());
@@ -120,7 +120,7 @@ pub async fn authenticate_ws_connection(
             log_auth_failure(reason.as_str(), None, headers);
             send_auth_error_and_close(
                 sender,
-                AppError::WebSocketMessageFormatError("鉴权消息格式无效".to_string()),
+                ApiError::WebSocketMessageFormatError("鉴权消息格式无效".to_string()),
             )
             .await;
             return Err(());
@@ -137,7 +137,7 @@ pub async fn authenticate_ws_connection(
             log_auth_failure("协议不兼容：首帧必须是 Auth 事件", None, headers);
             send_auth_error_and_close(
                 sender,
-                AppError::WebSocketProtocolIncompatible(
+                ApiError::WebSocketProtocolIncompatible(
                     "协议不兼容：首帧必须是 Auth 事件".to_string(),
                 ),
             )
@@ -162,7 +162,7 @@ pub async fn authenticate_ws_connection(
             log_auth_failure("鉴权失败：未提供 Token", Some(client_type), headers);
             send_auth_error_and_close(
                 sender,
-                AppError::WebSocketAuthFailed("鉴权失败：未提供 Token".to_string()),
+                ApiError::WebSocketAuthFailed("鉴权失败：未提供 Token".to_string()),
             )
             .await;
             return Err(());
@@ -171,10 +171,10 @@ pub async fn authenticate_ws_connection(
 
     let claims = match JwtUtil::verify_token(&access_token, &state.config.jwt_secret) {
         Ok(c) => c,
-        Err(AppError::VerifyTokenInvalid(detail)) => {
+        Err(ApiError::VerifyTokenInvalid(detail)) => {
             let reason = format!("鉴权失败：Token 已过期或无效: {detail}");
             log_auth_failure(reason.as_str(), Some(client_type), headers);
-            send_auth_error_and_close(sender, AppError::WebSocketTokenExpired).await;
+            send_auth_error_and_close(sender, ApiError::WebSocketTokenExpired).await;
             return Err(());
         }
         Err(err) => {
@@ -182,7 +182,7 @@ pub async fn authenticate_ws_connection(
             log_auth_failure(reason.as_str(), Some(client_type), headers);
             send_auth_error_and_close(
                 sender,
-                AppError::WebSocketAuthFailed("鉴权失败：Token 无效".to_string()),
+                ApiError::WebSocketAuthFailed("鉴权失败：Token 无效".to_string()),
             )
             .await;
             return Err(());
@@ -196,7 +196,7 @@ pub async fn authenticate_ws_connection(
             log_auth_failure(reason.as_str(), Some(client_type), headers);
             send_auth_error_and_close(
                 sender,
-                AppError::WebSocketAuthFailed("鉴权失败：Token 无效或过期".to_string()),
+                ApiError::WebSocketAuthFailed("鉴权失败：Token 无效或过期".to_string()),
             )
             .await;
             return Err(());
@@ -208,7 +208,7 @@ pub async fn authenticate_ws_connection(
         log_auth_failure("鉴权失败：会话已被撤销", Some(client_type), headers);
         send_auth_error_and_close(
             sender,
-            AppError::WebSocketAuthFailed("鉴权失败：会话已失效".to_string()),
+            ApiError::WebSocketAuthFailed("鉴权失败：会话已失效".to_string()),
         )
         .await;
         return Err(());
@@ -227,7 +227,7 @@ pub async fn authenticate_ws_connection(
             log_auth_failure(reason.as_str(), Some(client_type), headers);
             send_auth_error_and_close(
                 sender,
-                AppError::WebSocketAuthFailed("鉴权失败：会话校验失败，请稍后重试".to_string()),
+                ApiError::WebSocketAuthFailed("鉴权失败：会话校验失败，请稍后重试".to_string()),
             )
             .await;
             return Err(());
@@ -238,7 +238,7 @@ pub async fn authenticate_ws_connection(
         log_auth_failure("鉴权失败：会话不在白名单中", Some(client_type), headers);
         send_auth_error_and_close(
             sender,
-            AppError::WebSocketAuthFailed("鉴权失败：会话已失效或过期".to_string()),
+            ApiError::WebSocketAuthFailed("鉴权失败：会话已失效或过期".to_string()),
         )
         .await;
         return Err(());
@@ -272,7 +272,7 @@ pub async fn authenticate_ws_connection(
     Ok((user_id, String::new(), nickname))
 }
 
-async fn send_auth_error_and_close(sender: &mut SplitSink, err: AppError) {
+async fn send_auth_error_and_close(sender: &mut SplitSink, err: ApiError) {
     let err_msg = ws_error_from_app_error(&err);
     if let Ok(json) = serde_json::to_string(&err_msg) {
         if let Err(send_err) = sender.send(Message::Text(json.into())).await {

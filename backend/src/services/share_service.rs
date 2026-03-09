@@ -8,7 +8,7 @@ use crate::dto::request::{
 use crate::dto::response::{
     PaginatedData, ShareCreated, ShareDetail, ShareListItem, SharePreview, UserInfo,
 };
-use crate::error::AppError;
+use crate::error::ApiError;
 use crate::repositories::{
     group_repo::GroupRepository,
     moment_repo::{MomentPreview, MomentRepository},
@@ -68,7 +68,7 @@ impl ShareService {
         &self,
         user_id: i64,
         req: CreateShareRequest,
-    ) -> Result<ShareCreated, AppError> {
+    ) -> Result<ShareCreated, ApiError> {
         let started_at = std::time::Instant::now();
         info!(
             user_id,
@@ -87,12 +87,12 @@ impl ShareService {
         const MAX_EXPIRES_SECONDS: u32 = 86400 * 365; // 1 年
         let expires_at = if let Some(secs) = req.expires_in_seconds {
             if secs == 0 {
-                return Err(AppError::OutOfRange(
+                return Err(ApiError::OutOfRange(
                     "expires_in_seconds 须为正整数".to_string(),
                 ));
             }
             if secs > MAX_EXPIRES_SECONDS {
-                return Err(AppError::OutOfRange(
+                return Err(ApiError::OutOfRange(
                     "expires_in_seconds 超过系统允许上限".to_string(),
                 ));
             }
@@ -131,7 +131,7 @@ impl ShareService {
         req: GetShareRequest,
         user_id: Option<i64>,
         client_ip: &str,
-    ) -> Result<ShareDetail, AppError> {
+    ) -> Result<ShareDetail, ApiError> {
         self.enforce_get_rate_limit(user_id, client_ip).await?;
         let normalized_share_code =
             id_gen::normalize_share_code(&req.share_code).ok_or_else(|| {
@@ -141,7 +141,7 @@ impl ShareService {
                     client_ip = client_ip,
                     "share get failed: invalid share_code format"
                 );
-                AppError::BadRequest("share_code 格式错误".to_string())
+                ApiError::BadRequest("share_code 格式错误".to_string())
             })?;
         // 获取分享
         let db_share = ShareRepository::get_by_code(&self.db, &normalized_share_code)
@@ -153,7 +153,7 @@ impl ShareService {
                     client_ip = client_ip,
                     "share get failed: not found or revoked"
                 );
-                AppError::NotFound("分享不存在或已删除".to_string())
+                ApiError::NotFound("分享不存在或已删除".to_string())
             })?;
 
         // 获取创建者信息
@@ -167,8 +167,8 @@ impl ShareService {
         )
         .fetch_optional(&self.db)
         .await
-        .map_err(|e| AppError::internal(e.to_string()))?
-        .ok_or(AppError::NotFound("用户不存在".to_string()))?;
+        .map_err(|e| ApiError::internal(e.to_string()))?
+        .ok_or(ApiError::NotFound("用户不存在".to_string()))?;
 
         let creator = {
             let avatar_url = self
@@ -188,7 +188,7 @@ impl ShareService {
         let share_type = db_share
             .share_type
             .parse::<ShareType>()
-            .map_err(|_| AppError::NotFound("无效的分享类型".to_string()))?;
+            .map_err(|_| ApiError::NotFound("无效的分享类型".to_string()))?;
 
         let share_base = crate::dto::response::ShareBase {
             share_id: db_share.share_id.to_string(),
@@ -210,7 +210,7 @@ impl ShareService {
         &self,
         user_id: Option<i64>,
         client_ip: &str,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), ApiError> {
         const IP_LIMIT: i64 = 10;
         const USER_LIMIT: i64 = 30;
         const WINDOW_SECS: i64 = 60;
@@ -226,7 +226,7 @@ impl ShareService {
             .unwrap_or(false)
         {
             tracing::warn!(ip = client_ip, "share get rate limit (ip)");
-            return Err(AppError::ShareRateLimited {
+            return Err(ApiError::ShareRateLimited {
                 message: "分享查看请求过于频繁，请稍后再试".to_string(),
                 retry_after: WINDOW_SECS as u32,
             });
@@ -239,7 +239,7 @@ impl ShareService {
                 .unwrap_or(false)
             {
                 tracing::warn!(user_id = uid, "share get rate limit (user)");
-                return Err(AppError::ShareRateLimited {
+                return Err(ApiError::ShareRateLimited {
                     message: "分享查看请求过于频繁，请稍后再试".to_string(),
                     retry_after: WINDOW_SECS as u32,
                 });
@@ -254,14 +254,14 @@ impl ShareService {
         &self,
         user_id: i64,
         req: RevokeShareRequest,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), ApiError> {
         let started_at = std::time::Instant::now();
         let share_id = Validator::parse_uuid(&req.share_id, "share_id")?;
         info!(user_id, share_id = %share_id, "share.revoke started");
 
         let share = ShareRepository::get_by_id(&self.db, share_id)
             .await?
-            .ok_or(AppError::NotFound("分享不存在或已删除".to_string()))?;
+            .ok_or(ApiError::NotFound("分享不存在或已删除".to_string()))?;
 
         if share.creator_id != user_id {
             warn!(
@@ -270,7 +270,7 @@ impl ShareService {
                 creator_id = share.creator_id,
                 "share.revoke rejected: not creator"
             );
-            return Err(AppError::Forbidden("无权撤销他人的分享".to_string()));
+            return Err(ApiError::Forbidden("无权撤销他人的分享".to_string()));
         }
 
         if share.is_revoked {
@@ -285,7 +285,7 @@ impl ShareService {
 
         ShareRepository::revoke_by_id(&self.db, share_id)
             .await
-            .map_err(|e| AppError::internal(e.to_string()))?;
+            .map_err(|e| ApiError::internal(e.to_string()))?;
         info!(
             user_id,
             share_id = %share_id,
@@ -301,7 +301,7 @@ impl ShareService {
         &self,
         user_id: i64,
         req: ShareListRequest,
-    ) -> Result<PaginatedData<ShareListItem>, AppError> {
+    ) -> Result<PaginatedData<ShareListItem>, ApiError> {
         let limit =
             Validator::validate_limit(req.pagination.as_ref().and_then(|p| p.limit), 100)? as i32;
         let cursor_val = req
@@ -321,7 +321,7 @@ impl ShareService {
         )
         .await?;
 
-        let encode_cursor_fn = |row: &ShareListRow| -> Result<String, AppError> {
+        let encode_cursor_fn = |row: &ShareListRow| -> Result<String, ApiError> {
             encode_cursor(&ShareListCursor {
                 created_at: row.created_at,
                 share_id: row.share_id,
@@ -343,7 +343,7 @@ impl ShareService {
             let share_type = row
                 .share_type
                 .parse::<ShareType>()
-                .map_err(|_| AppError::InvalidFormat("share_type 数据损坏".to_string()))?;
+                .map_err(|_| ApiError::InvalidFormat("share_type 数据损坏".to_string()))?;
 
             match share_type {
                 ShareType::Moment => {
@@ -484,7 +484,7 @@ impl ShareService {
     async fn load_moment_previews(
         &self,
         moment_ids: &[Uuid],
-    ) -> Result<HashMap<Uuid, SharePreview>, AppError> {
+    ) -> Result<HashMap<Uuid, SharePreview>, ApiError> {
         let mut preview_map = HashMap::new();
         if moment_ids.is_empty() {
             return Ok(preview_map);
@@ -558,7 +558,7 @@ impl ShareService {
     async fn load_user_previews(
         &self,
         user_ids: &[i64],
-    ) -> Result<HashMap<i64, SharePreview>, AppError> {
+    ) -> Result<HashMap<i64, SharePreview>, ApiError> {
         let mut preview_map = HashMap::new();
         if user_ids.is_empty() {
             return Ok(preview_map);
@@ -651,7 +651,7 @@ impl ShareService {
     async fn load_group_previews(
         &self,
         group_ids: &[i64],
-    ) -> Result<HashMap<i64, SharePreview>, AppError> {
+    ) -> Result<HashMap<i64, SharePreview>, ApiError> {
         let mut preview_map = HashMap::new();
         if group_ids.is_empty() {
             return Ok(preview_map);
@@ -760,16 +760,16 @@ impl ShareService {
     fn validate_payload(
         share_type: &ShareType,
         payload: &serde_json::Value,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), ApiError> {
         match share_type {
             ShareType::Location => {
                 let shared_location = payload
                     .get("shared_location")
-                    .ok_or(AppError::MissingParameter("shared_location".to_string()))?;
+                    .ok_or(ApiError::MissingParameter("shared_location".to_string()))?;
 
                 let point = shared_location
                     .get("point")
-                    .ok_or(AppError::MissingParameter(
+                    .ok_or(ApiError::MissingParameter(
                         "shared_location.point".to_string(),
                     ))?;
 
@@ -777,7 +777,7 @@ impl ShareService {
                     point
                         .get("lat")
                         .and_then(|v| v.as_f64())
-                        .ok_or(AppError::MissingParameter(
+                        .ok_or(ApiError::MissingParameter(
                             "shared_location.point.lat".to_string(),
                         ))?;
 
@@ -785,29 +785,29 @@ impl ShareService {
                     point
                         .get("lng")
                         .and_then(|v| v.as_f64())
-                        .ok_or(AppError::MissingParameter(
+                        .ok_or(ApiError::MissingParameter(
                             "shared_location.point.lng".to_string(),
                         ))?;
 
                 let location_name = shared_location
                     .get("location_name")
                     .and_then(|v| v.as_str())
-                    .ok_or(AppError::MissingParameter(
+                    .ok_or(ApiError::MissingParameter(
                         "shared_location.location_name".to_string(),
                     ))?;
 
                 if !(-90.0..=90.0).contains(&lat) {
-                    return Err(AppError::OutOfRange(
+                    return Err(ApiError::OutOfRange(
                         "纬度必须在 -90 到 90 之间".to_string(),
                     ));
                 }
                 if !(-180.0..=180.0).contains(&lng) {
-                    return Err(AppError::OutOfRange(
+                    return Err(ApiError::OutOfRange(
                         "经度必须在 -180 到 180 之间".to_string(),
                     ));
                 }
                 if location_name.is_empty() || location_name.len() > 100 {
-                    return Err(AppError::OutOfRange(
+                    return Err(ApiError::OutOfRange(
                         "位置名称长度必须在 1-100 之间".to_string(),
                     ));
                 }
@@ -819,7 +819,7 @@ impl ShareService {
                 let moment_id_str = payload
                     .get("shared_moment_id")
                     .and_then(|v| v.as_str())
-                    .ok_or(AppError::MissingParameter("shared_moment_id".to_string()))?;
+                    .ok_or(ApiError::MissingParameter("shared_moment_id".to_string()))?;
 
                 // 验证是合法的 UUID
                 Validator::parse_uuid(moment_id_str, "shared_moment_id")?;
@@ -831,7 +831,7 @@ impl ShareService {
                 let group_id_str = payload
                     .get("shared_group_id")
                     .and_then(|v| v.as_str())
-                    .ok_or(AppError::MissingParameter("shared_group_id".to_string()))?;
+                    .ok_or(ApiError::MissingParameter("shared_group_id".to_string()))?;
 
                 // 验证是合法的数字 ID
                 Validator::parse_id(group_id_str, "shared_group_id")?;
@@ -843,7 +843,7 @@ impl ShareService {
                 let user_id_str = payload
                     .get("shared_user_id")
                     .and_then(|v| v.as_str())
-                    .ok_or(AppError::MissingParameter("shared_user_id".to_string()))?;
+                    .ok_or(ApiError::MissingParameter("shared_user_id".to_string()))?;
 
                 // 验证是合法的数字 ID
                 Validator::parse_id(user_id_str, "shared_user_id")?;
@@ -858,43 +858,43 @@ impl ShareService {
         &self,
         share_type: &ShareType,
         payload: &serde_json::Value,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), ApiError> {
         match share_type {
             ShareType::Location => Ok(()),
             ShareType::Moment => {
                 let moment_id_str = payload
                     .get("shared_moment_id")
                     .and_then(|v| v.as_str())
-                    .ok_or_else(|| AppError::BadRequest("缺少 shared_moment_id".to_string()))?;
+                    .ok_or_else(|| ApiError::BadRequest("缺少 shared_moment_id".to_string()))?;
                 let moment_id = Validator::parse_uuid(moment_id_str, "shared_moment_id")?;
                 self.moment_repo
                     .find_by_id(moment_id)
                     .await?
-                    .ok_or(AppError::NotFound("分享的动态不存在".to_string()))?;
+                    .ok_or(ApiError::NotFound("分享的动态不存在".to_string()))?;
                 Ok(())
             }
             ShareType::Group => {
                 let group_id_str = payload
                     .get("shared_group_id")
                     .and_then(|v| v.as_str())
-                    .ok_or_else(|| AppError::BadRequest("缺少 shared_group_id".to_string()))?;
+                    .ok_or_else(|| ApiError::BadRequest("缺少 shared_group_id".to_string()))?;
                 let group_id = Validator::parse_id(group_id_str, "shared_group_id")?;
                 self.group_repo
                     .find_by_id(group_id)
                     .await?
-                    .ok_or(AppError::NotFound("分享的群组不存在".to_string()))?;
+                    .ok_or(ApiError::NotFound("分享的群组不存在".to_string()))?;
                 Ok(())
             }
             ShareType::User => {
                 let user_id_str = payload
                     .get("shared_user_id")
                     .and_then(|v| v.as_str())
-                    .ok_or_else(|| AppError::BadRequest("缺少 shared_user_id".to_string()))?;
+                    .ok_or_else(|| ApiError::BadRequest("缺少 shared_user_id".to_string()))?;
                 let user_id = Validator::parse_id(user_id_str, "shared_user_id")?;
                 self.user_repo
                     .find_by_id(user_id)
                     .await?
-                    .ok_or(AppError::NotFound("分享的用户不存在".to_string()))?;
+                    .ok_or(ApiError::NotFound("分享的用户不存在".to_string()))?;
                 Ok(())
             }
         }
@@ -907,7 +907,7 @@ impl ShareService {
         creator_id: i64,
         payload: &serde_json::Value,
         expires_at: Option<DateTime<Utc>>,
-    ) -> Result<(Uuid, String), AppError> {
+    ) -> Result<(Uuid, String), ApiError> {
         const MAX_ATTEMPTS: u32 = 10;
         const UNIQUE_VIOLATION_CODE: &str = "23505";
 
@@ -925,12 +925,12 @@ impl ShareService {
             .await
             {
                 Ok(share_id) => return Ok((share_id, code)),
-                Err(AppError::Sqlx(sqlx::Error::Database(db_err))) => {
+                Err(ApiError::Sqlx(sqlx::Error::Database(db_err))) => {
                     if matches!(db_err.code().as_deref(), Some(UNIQUE_VIOLATION_CODE)) {
                         debug!(attempt, "share_code 插入冲突，重试生成");
                         continue;
                     }
-                    return Err(AppError::Sqlx(sqlx::Error::Database(db_err)));
+                    return Err(ApiError::Sqlx(sqlx::Error::Database(db_err)));
                 }
                 Err(err) => return Err(err),
             }
@@ -940,7 +940,7 @@ impl ShareService {
             max_attempts = MAX_ATTEMPTS,
             "share_code 在重试后仍冲突，可能存在异常并发或随机源问题"
         );
-        Err(AppError::BusinessRuleViolation(
+        Err(ApiError::BusinessRuleViolation(
             "无法生成唯一的分享码，请稍后重试".to_string(),
         ))
     }

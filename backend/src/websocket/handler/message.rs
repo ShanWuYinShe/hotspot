@@ -4,7 +4,7 @@ use axum::extract::ws::Message;
 use serde_json::json;
 
 use crate::{
-    error::AppError,
+    error::ApiError,
     repositories::group::member_repo::GroupMemberRepository,
     state::AppState,
     types::enums::SubscriptionOperation,
@@ -170,7 +170,7 @@ pub async fn handle_message(
                         state,
                         user_id,
                         connection_id,
-                        AppError::WebSocketMessageFormatError(
+                        ApiError::WebSocketMessageFormatError(
                             "客户端消息不是合法 JSON".to_string(),
                         )
                         .error_code(),
@@ -232,7 +232,7 @@ pub async fn handle_message(
                         state,
                         user_id,
                         connection_id,
-                        AppError::WebSocketProtocolIncompatible(
+                        ApiError::WebSocketProtocolIncompatible(
                             "协议不兼容：不支持的消息类型".to_string(),
                         )
                         .error_code(),
@@ -248,7 +248,7 @@ pub async fn handle_message(
         }
 
         Message::Binary(_) => {
-            let err = AppError::WebSocketProtocolIncompatible("二进制消息暂不支持".to_string());
+            let err = ApiError::WebSocketProtocolIncompatible("二进制消息暂不支持".to_string());
             tracing::warn!(
                 user_id,
                 connection_id,

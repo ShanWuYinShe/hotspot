@@ -26,6 +26,7 @@ import { WebSocketService } from '../core/network/WebSocketService';
 import { PreferencesUtil } from '../core/storage/PreferencesUtil';
 import { StorageKeys } from '../constants/AppConstants';
 import { ApiClient } from '../core/api/ApiClient';
+import { AppThemeManager } from '../core/theme/AppThemeManager';
 
 const DOMAIN_NUMBER: number = 0xFF00;
 const TAG: string = 'GeoTalk';
@@ -225,7 +226,7 @@ export default class EntryAbility extends UIAbility {
       this.mainWindow = mainWindow;
       this.cachedDensityScale = 0;
       this.isDarkMode = this.context.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
-      AppStorage.setOrCreate('isDarkMode', this.isDarkMode);
+      AppThemeManager.onSystemColorModeChange(this.isDarkMode);
 
       // 全屏布局：内容延伸到屏幕边缘
       // 配合 expandSafeArea 让页面可延伸到状态栏区域
@@ -327,7 +328,7 @@ export default class EntryAbility extends UIAbility {
   }
 
   private getWindowBaseBackgroundColor(isDark: boolean): string {
-    return isDark ? DesignConstants.COLOR.PRIMARY_BG_DARK : DesignConstants.COLOR.PRIMARY_BG_LIGHT;
+    return AppThemeManager.getCurrentSurfaceStyle().baseColor;
   }
 
 
@@ -458,7 +459,7 @@ export default class EntryAbility extends UIAbility {
       hilog.info(DOMAIN_NUMBER, TAG, '主题模式变化: %{public}d', config.colorMode);
       const isDark = config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
       this.isDarkMode = isDark;
-      AppStorage.setOrCreate('isDarkMode', isDark);
+      AppThemeManager.onSystemColorModeChange(isDark);
       this.windowStage.getMainWindow()
         .then((mainWindow: window.Window) => {
           this.applySystemBarStyle(mainWindow, isDark, this.currentSurfaceStyle);

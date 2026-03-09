@@ -29,49 +29,29 @@ Handler → Service → Repository
 | **Service** | 业务规则、权限校验、事务、缓存、事件发布 | 写 SQL、直接构造 HTTP 响应 |
 | **Repository** | SQL 执行与结果映射 | 业务判断、权限校验、发事件 |
 
-### 正确示例
+### 示例
 
 ```rust
-// Handler —— 只做提取和调用
-pub async fn create_moment(
-    State(state): State<AppState>,
-    Extension(user_id): Extension<String>,
-    Json(req): Json<CreateMomentRequest>,
-) -> impl IntoResponse {
-    match state.moment_service.create(&user_id, req).await {
-        Ok(data) => ApiResponse::success(data),
-        Err(e) => ApiResponse::from(e),
-    }
+// ✅ Handler —— 只做提取和调用，禁止写业务逻辑或 SQL
+match state.moment_service.create(&user_id, req).await {
+    Ok(data) => ApiResponse::success(data),
+    Err(e) => ApiResponse::from(e),
 }
 ```
 
-### 错误示例
+### Service 文件命名
 
-```rust
-// 错误：Handler 中写业务逻辑
-pub async fn create_moment(/* ... */) -> impl IntoResponse {
-    // ❌ 不要在 Handler 里做业务校验
-    if req.content.len() > 500 { return ApiResponse::error(10000, "too long"); }
-    // ❌ 不要在 Handler 里直接查数据库
-    let user = sqlx::query_as!(User, "SELECT ...", user_id).fetch_one(&pool).await?;
-}
-```
+- 大部分遵循 `<module>_service.rs` 模式（如 `auth_service.rs`、`moment_service.rs`）。
+- 逻辑较大时拆为目录（如 `group_service/`），内部按子域拆分（`crud.rs`、`members.rs`、`applications.rs` 等）。
+- 辅助/策略模块不带 `_service` 后缀（如 `private_chat_permission.rs`、`stranger_message_limiter.rs`）。
 
 ## SQL 规则（严格执行）
 
 ### 必须使用 SQLx 宏
 
 ```rust
-// ✅ 正确：使用宏，编译期检查
-let user = sqlx::query_as!(User, "SELECT * FROM users WHERE id = $1", user_id)
-    .fetch_one(&pool)
-    .await?;
-
-// ❌ 禁止：非宏调用（无编译期检查）
-let user = sqlx::query("SELECT * FROM users WHERE id = $1")
-    .bind(user_id)
-    .fetch_one(&pool)
-    .await?;
+// ✅ sqlx::query_as!(...) — 编译期检查
+// ❌ sqlx::query("...").bind(x) — 无编译期检查，禁止使用
 ```
 
 **禁止的写法**（会被 rg 扫描拦截）：
@@ -93,7 +73,7 @@ let user = sqlx::query("SELECT * FROM users WHERE id = $1")
 
 ## 错误处理
 
-- 使用 `thiserror` 定义 `AppError` 枚举。
+- 使用 `thiserror` 定义 `ApiError` 枚举。
 - 业务错误码必须来自 `spec/api_spec_errors.md`，禁止自行编号。
 - 多个 Rust variant 可映射同一错误码（便于可读性）。
 - 服务端内部错误统一映射到 `10600`，不泄露技术细节。
@@ -122,22 +102,34 @@ let user = sqlx::query("SELECT * FROM users WHERE id = $1")
 
 - 新增事件时须同步更新事件类型定义和对应领域的 handler 分发逻辑。
 
-## 常见错误清单
+## 实现检查清单
 
-以下是 Agent 最容易犯的错误，每次编写代码前检查：
+- [ ] 架构一致性：有无类似功能？遵循分层模式（Handler → Service → Repository）？
+- [ ] 类型复用：复用现有 DTO？可共享字段？
+- [ ] 错误处理：复用 `ApiError` 或已有错误类型？
+- [ ] 服务复用：扩展现有 Service 而非新建？
+- [ ] 中间件复用：复用认证/限流/幂等中间件？
+- [ ] SQL 复用：扩展现有 Repository 而非新查询？
 
-- [ ] 是否在 Handler 里写了业务逻辑或 SQL？
-- [ ] 是否使用了 `sqlx::query(` 而非 `sqlx::query!`？
-- [ ] 是否使用了 OFFSET 分页？
-- [ ] 是否在 Rust 中计算了距离/角度（应在 PostGIS 中）？
-- [ ] 是否使用了 spec 中不存在的错误码？
-- [ ] 是否在 JWT 中写入了可变字段？
-- [ ] 是否遗漏了 MUST 幂等接口的幂等键支持？
-- [ ] 是否用 `#[allow(...)]` 压制了编译警告？
+**禁止**：绕过统一层、重复实现相同逻辑、引入不一致模式
+
+## 常见错误
+
+- [ ] Handler 里写业务逻辑或 SQL？
+- [ ] 使用 `sqlx::query(` 而非 `sqlx::query!`？
+- [ ] 使用 OFFSET 分页？
+- [ ] Rust 中计算距离/角度（应在 PostGIS）？
+- [ ] 使用 spec 中不存在的错误码？
+- [ ] JWT 中写入可变字段？
+- [ ] 遗漏 MUST 幂等接口的幂等键？
+- [ ] 用 `#[allow(...)]` 压制编译警告？
+- [ ] 绕过统一层或重复实现逻辑？
 
 ## 安全规则
 
 文件删除、批量变更、Git 操作规范、数据库操作安全等全局规则见根目录 `AGENTS.md` 的「权限边界」和「Git 操作规范」章节，此处不重复。
+
+> **⚠️ `tmp/` 路径规则（强制）**：所有临时文件、会话文件（`session-context-*.md`、`session-progress-*.md`）、设计文档等必须存放在**项目根目录（Monorepo 根目录）的 `tmp/`** 下，即 `backend/` 的上级目录中的 `tmp/`。**绝对禁止在 `backend/` 目录下创建 `tmp/` 目录**（如 `backend/tmp/`）。详见根目录 `AGENTS.md` 的「Agent 行为准则」章节。
 
 **后端额外约束**：
 - 禁止自行执行 `deploy/` 目录下的脚本，须告知用户脚本内容和影响后由用户执行。

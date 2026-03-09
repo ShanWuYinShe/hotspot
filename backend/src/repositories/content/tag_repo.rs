@@ -8,7 +8,7 @@ use sqlx::{FromRow, PgPool};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use crate::error::{AppError, Result};
+use crate::error::{ApiError, Result};
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct TagRow {
@@ -355,7 +355,7 @@ impl TagRepository {
                     .await?
                 }
                 Some(_) => {
-                    return Err(AppError::CursorInvalidOrExpired(
+                    return Err(ApiError::CursorInvalidOrExpired(
                         "无效的标签游标".to_string(),
                     ))
                 }
@@ -402,7 +402,7 @@ impl TagRepository {
                     .await?
                 }
                 Some(_) => {
-                    return Err(AppError::CursorInvalidOrExpired(
+                    return Err(ApiError::CursorInvalidOrExpired(
                         "无效的标签游标".to_string(),
                     ))
                 }
@@ -446,7 +446,7 @@ impl TagRepository {
                     .await?
                 }
                 Some(_) => {
-                    return Err(AppError::CursorInvalidOrExpired(
+                    return Err(ApiError::CursorInvalidOrExpired(
                         "无效的标签游标".to_string(),
                     ))
                 }
@@ -493,7 +493,7 @@ impl TagRepository {
                     .await?
                 }
                 Some(_) => {
-                    return Err(AppError::CursorInvalidOrExpired(
+                    return Err(ApiError::CursorInvalidOrExpired(
                         "无效的标签游标".to_string(),
                     ))
                 }

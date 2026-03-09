@@ -13,6 +13,8 @@ import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 @Preview
 @Component
@@ -22,12 +24,11 @@ export struct DebugPanel {
   @State currentUserId: string | null = null;
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
   private webSocketService = WebSocketService.getInstance();
 
   async aboutToAppear() {
-    SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
-    });
+    SystemUiController.syncWithCurrentTheme();
     const uid = await AuthAccountManager.getCurrentUserId();
     this.currentUserId = uid !== null ? String(uid) : null;
     this.addLog('DebugPanel initialized');
@@ -40,6 +41,18 @@ export struct DebugPanel {
     this.logs.unshift(`[${time}] ${log}`);
   }
 
+  private getCurrentThemePalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getSurfaceBackground(): string {
+    return this.getCurrentThemePalette().surfaceBackground;
+  }
+
+  private getSurfaceSubtle(): string {
+    return this.getCurrentThemePalette().surfaceSubtle;
+  }
+
   build() {
     NavDestination() {
     Column() {
@@ -49,7 +62,7 @@ export struct DebugPanel {
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: $r('app.color.bg_tertiary'),
+          bgColor: this.getSurfaceSubtle(),
           onButtonClick: () => {
             AppRouter.pop();
           }
@@ -66,7 +79,7 @@ export struct DebugPanel {
           icon: AppIcon.CLOSE, // Used as Clear
           iconSize: IconSize.LARGE,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: $r('app.color.bg_tertiary'),
+          bgColor: this.getSurfaceSubtle(),
           onButtonClick: () => {
             this.logs = [];
           }
@@ -79,7 +92,7 @@ export struct DebugPanel {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor(this.getSurfaceBackground())
       .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
       .borderRadius({ bottomLeft: DesignConstants.RADIUS.LG, bottomRight: DesignConstants.RADIUS.LG })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
@@ -89,7 +102,7 @@ export struct DebugPanel {
           // 状态卡片
           SystemCard({
             cardPadding: 16,
-            cardBackgroundColor: $r('app.color.bg_secondary')
+            cardBackgroundColor: this.getSurfaceBackground()
           }) {
             Column({ space: 8 }) {
               Text('系统状态')
@@ -153,7 +166,7 @@ export struct DebugPanel {
           }
           .width('100%')
           .height(300)
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor(this.getSurfaceBackground())
           .padding(8)
           .borderRadius(DesignConstants.RADIUS.MD)
         }
@@ -164,7 +177,7 @@ export struct DebugPanel {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {

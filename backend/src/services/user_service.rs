@@ -34,7 +34,7 @@ use crate::{
             UserSettingsData, UserStats,
         },
     },
-    error::{AppError, Result},
+    error::{ApiError, Result},
     events::event_types::AppEvent,
     repositories::{
         group::member_repo::GroupMemberRepository,
@@ -228,7 +228,7 @@ impl UserService {
                         err
                     })
             } else {
-                Err(AppError::BadRequest(
+                Err(ApiError::BadRequest(
                     "至少需要提供 keyword、tag、radius 中的一个搜索条件".to_string(),
                 ))
             }
@@ -245,7 +245,7 @@ impl UserService {
                     timeout_ms = SEARCH_QUERY_TIMEOUT.as_millis() as u64,
                     "users.search query timeout"
                 );
-                AppError::ServiceUnavailable
+                ApiError::ServiceUnavailable
             })??;
         let rows_count = rows.len();
         let has_next_cursor = next_cursor.is_some();
@@ -290,11 +290,11 @@ impl UserService {
             .user_repo
             .find_by_id(user_id)
             .await?
-            .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
+            .ok_or_else(|| ApiError::UserNotFound("用户不存在".to_string()))?;
 
         if let Some(viewer_id) = viewer_id {
             if self.blocks_repo.is_blocked(user_id, viewer_id).await? {
-                return Err(AppError::BlockedByUser("privacy_restricted".to_string()));
+                return Err(ApiError::BlockedByUser("privacy_restricted".to_string()));
             }
         }
 
@@ -365,7 +365,7 @@ impl UserService {
             .user_repo
             .find_by_id(user_id)
             .await?
-            .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
+            .ok_or_else(|| ApiError::UserNotFound("用户不存在".to_string()))?;
 
         let tags = self
             .tag_repo
@@ -463,7 +463,7 @@ impl UserService {
                     tags_count = tags.len(),
                     "user.update_profile rejected: too many tags"
                 );
-                return Err(AppError::BadRequest("tags 最多 10 个".to_string()));
+                return Err(ApiError::BadRequest("tags 最多 10 个".to_string()));
             }
             for tag in tags {
                 Validator::validate_length(tag, "tag", 1, 30)?;
@@ -591,7 +591,7 @@ impl UserService {
         if viewer_id != Some(target_user_id) {
             let social_visible = self.social_lists_visible(target_user_id).await;
             if !social_visible {
-                return Err(AppError::Forbidden("对方的好友列表不可见".to_string()));
+                return Err(ApiError::Forbidden("对方的好友列表不可见".to_string()));
             }
         }
         let pagination = req.pagination.as_ref();
@@ -664,7 +664,7 @@ impl UserService {
         if viewer_id != Some(target_user_id) {
             let social_visible = self.social_lists_visible(target_user_id).await;
             if !social_visible {
-                return Err(AppError::Forbidden("对方的关注列表不可见".to_string()));
+                return Err(ApiError::Forbidden("对方的关注列表不可见".to_string()));
             }
         }
         let pagination = req.pagination.as_ref();
@@ -730,7 +730,7 @@ impl UserService {
         if viewer_id != Some(target_user_id) {
             let social_visible = self.social_lists_visible(target_user_id).await;
             if !social_visible {
-                return Err(AppError::Forbidden("对方的粉丝列表不可见".to_string()));
+                return Err(ApiError::Forbidden("对方的粉丝列表不可见".to_string()));
             }
         }
         let pagination = req.pagination.as_ref();
@@ -801,7 +801,7 @@ impl UserService {
                 .flatten();
             let visible = self.privacy_bool(settings.as_ref(), "groups_visible", true);
             if !visible {
-                return Err(AppError::Forbidden("对方的群组列表不可见".to_string()));
+                return Err(ApiError::Forbidden("对方的群组列表不可见".to_string()));
             }
         }
         let pagination = req.pagination.as_ref();
@@ -861,7 +861,7 @@ impl UserService {
                 .flatten();
             let visible = self.privacy_bool(settings.as_ref(), "liked_moments_visible", true);
             if !visible {
-                return Err(AppError::Forbidden("对方的点赞列表不可见".to_string()));
+                return Err(ApiError::Forbidden("对方的点赞列表不可见".to_string()));
             }
         }
         let pagination = req.pagination.as_ref();
@@ -932,7 +932,7 @@ impl UserService {
                     existing_user_id = existing.user_id,
                     "user.upgrade_account rejected: login_id already occupied"
                 );
-                return Err(AppError::AlreadyExists("该用户已存在".to_string()));
+                return Err(ApiError::AlreadyExists("该用户已存在".to_string()));
             }
         }
 
@@ -963,7 +963,7 @@ impl UserService {
                 confirmation = %req.confirmation,
                 "user.delete_account rejected: invalid confirmation token"
             );
-            return Err(AppError::BadRequest(
+            return Err(ApiError::BadRequest(
                 "confirmation 必须为 DELETE_MY_ACCOUNT".to_string(),
             ));
         }
@@ -993,7 +993,7 @@ impl UserService {
                 target_user_id,
                 "user.follow rejected: cannot follow self"
             );
-            return Err(AppError::CannotOperateOnSelf);
+            return Err(ApiError::CannotOperateOnSelf);
         }
 
         if !self.user_repo.exists(target_user_id).await? {
@@ -1002,7 +1002,7 @@ impl UserService {
                 target_user_id,
                 "user.follow rejected: target user not found"
             );
-            return Err(AppError::UserNotFound("用户不存在".to_string()));
+            return Err(ApiError::UserNotFound("用户不存在".to_string()));
         }
 
         if self.blocks_repo.is_blocked(target_user_id, user_id).await? {
@@ -1011,7 +1011,7 @@ impl UserService {
                 target_user_id,
                 "user.follow rejected: blocked by target user"
             );
-            return Err(AppError::BlockedByUser("privacy_restricted".to_string()));
+            return Err(ApiError::BlockedByUser("privacy_restricted".to_string()));
         }
 
         let allow_follow = self
@@ -1023,7 +1023,7 @@ impl UserService {
                 target_user_id,
                 "user.follow rejected: target disallows follow"
             );
-            return Err(AppError::FollowNotAllowed("对方不允许被关注".to_string()));
+            return Err(ApiError::FollowNotAllowed("对方不允许被关注".to_string()));
         }
 
         if let Some(ref source) = req.source {
@@ -1068,7 +1068,7 @@ impl UserService {
                 target_user_id,
                 "user.unfollow rejected: cannot unfollow self"
             );
-            return Err(AppError::CannotOperateOnSelf);
+            return Err(ApiError::CannotOperateOnSelf);
         }
 
         self.follows_repo.unfollow(user_id, target_user_id).await?;
@@ -1096,7 +1096,7 @@ impl UserService {
                 target_user_id,
                 "user.block rejected: cannot block self"
             );
-            return Err(AppError::CannotOperateOnSelf);
+            return Err(ApiError::CannotOperateOnSelf);
         }
         if !self.user_repo.exists(target_user_id).await? {
             tracing::warn!(
@@ -1104,7 +1104,7 @@ impl UserService {
                 target_user_id,
                 "user.block rejected: target user not found"
             );
-            return Err(AppError::UserNotFound("用户不存在".to_string()));
+            return Err(ApiError::UserNotFound("用户不存在".to_string()));
         }
         if let Some(ref reason) = req.reason {
             tracing::debug!(block_reason = %reason, "Block reason recorded");
@@ -1129,7 +1129,7 @@ impl UserService {
                 target_user_id,
                 "user.unblock rejected: cannot unblock self"
             );
-            return Err(AppError::CannotOperateOnSelf);
+            return Err(ApiError::CannotOperateOnSelf);
         }
         self.blocks_repo.unblock(user_id, target_user_id).await?;
         tracing::info!(
@@ -1189,7 +1189,7 @@ impl UserService {
                 target_user_id,
                 "user.set_friend_remark rejected: cannot remark self"
             );
-            return Err(AppError::CannotOperateOnSelf);
+            return Err(ApiError::CannotOperateOnSelf);
         }
 
         if !self
@@ -1202,7 +1202,7 @@ impl UserService {
                 target_user_id,
                 "user.set_friend_remark rejected: target is not followed friend"
             );
-            return Err(AppError::NotFriends);
+            return Err(ApiError::NotFriends);
         }
 
         if trimmed.is_empty() {
@@ -1317,7 +1317,7 @@ impl UserService {
                 target_user_id,
                 "user.admin_ban rejected: cannot ban self"
             );
-            return Err(AppError::CannotOperateOnSelf);
+            return Err(ApiError::CannotOperateOnSelf);
         }
         if is_target_admin && !is_operator_super {
             tracing::warn!(
@@ -1325,7 +1325,7 @@ impl UserService {
                 target_user_id,
                 "user.admin_ban rejected: non-super admin cannot ban admin"
             );
-            return Err(AppError::CannotOperateAdmin(
+            return Err(ApiError::CannotOperateAdmin(
                 "无法操作管理员账户".to_string(),
             ));
         }
@@ -1369,7 +1369,7 @@ impl UserService {
             .user_repo
             .find_by_id(user_id)
             .await?
-            .ok_or_else(|| AppError::UserNotFound("用户不存在".to_string()))?;
+            .ok_or_else(|| ApiError::UserNotFound("用户不存在".to_string()))?;
 
         let tags = self
             .tag_repo

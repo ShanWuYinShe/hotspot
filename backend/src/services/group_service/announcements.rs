@@ -11,7 +11,7 @@ use crate::{
         },
         response::{GroupAnnouncementItem, UserInfo},
     },
-    error::{AppError, Result},
+    error::{ApiError, Result},
     events::event_types::AppEvent,
     utils::validation::Validator,
 };
@@ -156,10 +156,10 @@ impl GroupService {
             .announcement_repo
             .find_by_id(announcement_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("公告不存在".to_string()))?;
+            .ok_or_else(|| ApiError::NotFound("公告不存在".to_string()))?;
 
         if announcement.group_id != group_id {
-            return Err(AppError::BadRequest("公告不属于该群组".to_string()));
+            return Err(ApiError::BadRequest("公告不属于该群组".to_string()));
         }
 
         let _ = self
@@ -229,7 +229,7 @@ impl GroupService {
             .announcement_repo
             .find_by_id(announcement_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("公告不存在".to_string()))?;
+            .ok_or_else(|| ApiError::NotFound("公告不存在".to_string()))?;
 
         let _ = self
             .require_admin_or_owner(announcement.group_id, user_id)

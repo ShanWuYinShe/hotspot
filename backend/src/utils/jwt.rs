@@ -53,11 +53,11 @@ impl JwtUtil {
             Ok(token_data) => Ok(token_data.claims),
             Err(e) => {
                 if let jsonwebtoken::errors::ErrorKind::ExpiredSignature = e.kind() {
-                    Err(crate::error::AppError::VerifyTokenInvalid(
+                    Err(crate::error::ApiError::VerifyTokenInvalid(
                         "Token已过期".to_string(),
                     ))
                 } else {
-                    Err(crate::error::AppError::Jwt(e))
+                    Err(crate::error::ApiError::Jwt(e))
                 }
             }
         }

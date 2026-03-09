@@ -10,17 +10,26 @@ import { AppRouter } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 @Preview
 @Component
 export struct AdvancedSettingsPage {
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   aboutToAppear(): void {
-    SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
-    });
+    SystemUiController.syncWithCurrentTheme();
+  }
+
+  private getCurrentThemePalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getSurfaceBackground(): string {
+    return this.getCurrentThemePalette().surfaceBackground;
   }
 
   build() {
@@ -32,7 +41,7 @@ export struct AdvancedSettingsPage {
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: $r('app.color.bg_tertiary'),
+          bgColor: this.getCurrentThemePalette().surfaceSubtle,
           onButtonClick: () => {
             AppRouter.pop();
           }
@@ -67,10 +76,10 @@ export struct AdvancedSettingsPage {
             AppRouter.push(PageNames.DEBUG_PANEL);
           })
         }
-        .backgroundColor($r('app.color.bg_secondary'))
+        .backgroundColor(this.getSurfaceBackground())
         .borderRadius(DesignConstants.RADIUS.XXL)
         .shadow(DesignConstants.SHADOW.MEDIUM)
-        .border({ width: 1, color: $r('app.color.highlight_border') })
+        .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
         .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
           top: DesignConstants.SPACING.LG, bottom: 14 })
       }
@@ -81,7 +90,7 @@ export struct AdvancedSettingsPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {
@@ -102,7 +111,7 @@ export struct AdvancedSettingsPage {
       .width(38)
       .height(38)
       .borderRadius(DesignConstants.RADIUS.MD)
-      .backgroundColor($r('app.color.bg_tertiary'))
+      .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
 
@@ -130,7 +139,7 @@ export struct AdvancedSettingsPage {
       .width(28)
       .height(28)
       .borderRadius(DesignConstants.RADIUS.MD)
-      .backgroundColor($r('app.color.bg_tertiary'))
+      .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
     }

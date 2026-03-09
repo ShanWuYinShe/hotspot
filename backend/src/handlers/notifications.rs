@@ -7,7 +7,7 @@ use crate::{
         request::{MarkNotificationsReadRequest, NotificationListRequest},
         response::{ApiResponse, NotificationItem, PaginatedData, UnreadCountResult},
     },
-    error::{AppError, Result},
+    error::{ApiError, Result},
     middleware::auth::AuthenticatedUser,
     state::AppState,
 };
@@ -39,7 +39,7 @@ pub async fn mark_as_read(
     Json(req): Json<MarkNotificationsReadRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
     if req.notification_ids.is_empty() {
-        return Err(AppError::BadRequest(
+        return Err(ApiError::BadRequest(
             "notification_ids 不能为空".to_string(),
         ));
     }

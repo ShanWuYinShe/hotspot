@@ -2,7 +2,7 @@ use axum::{extract::Request, extract::State, middleware::Next, response::Respons
 
 use crate::{
     constants::{SECS_10_MINUTES, SECS_5_MINUTES, SECS_PER_DAY, SECS_PER_HOUR, SECS_PER_MINUTE},
-    error::AppError,
+    error::ApiError,
     state::AppState,
     utils::cache::CacheManager,
     utils::client_ip::get_client_ip_from_headers,
@@ -15,7 +15,7 @@ async fn apply_limit(
     limit: u32,
     window_secs: u64,
     fail_open: bool,
-) -> Result<(), AppError> {
+) -> Result<(), ApiError> {
     let key = format!("rate_limit:endpoint:{}:{}", key_prefix, identity);
 
     // 使用 Lua 脚本保证 INCR 和 EXPIRE 的原子性
@@ -42,7 +42,7 @@ async fn apply_limit(
 
             if !fail_open {
                 // fail-closed: 拒绝请求，优先保证安全性
-                return Err(AppError::ServiceUnavailable);
+                return Err(ApiError::ServiceUnavailable);
             }
 
             // fail-open: 允许请求通过，优先保证可用性
@@ -62,10 +62,10 @@ async fn apply_limit(
         );
 
         return Err(match window_secs {
-            crate::constants::SECS_PER_MINUTE => AppError::MinuteRateLimitExceeded,
-            crate::constants::SECS_PER_HOUR => AppError::HourlyRateLimitExceeded,
-            SECS_PER_DAY => AppError::DailyRateLimitExceeded,
-            _ => AppError::RateLimited("请求过于频繁，请稍后再试".to_string()),
+            crate::constants::SECS_PER_MINUTE => ApiError::MinuteRateLimitExceeded,
+            crate::constants::SECS_PER_HOUR => ApiError::HourlyRateLimitExceeded,
+            SECS_PER_DAY => ApiError::DailyRateLimitExceeded,
+            _ => ApiError::RateLimited("请求过于频繁，请稍后再试".to_string()),
         });
     }
 
@@ -77,7 +77,7 @@ pub async fn rate_limit_middleware(
     State(state): State<AppState>,
     req: Request,
     next: Next,
-) -> Result<Response, AppError> {
+) -> Result<Response, ApiError> {
     let cache = CacheManager::new(state.redis.clone());
     // 获取客户端IP
     let client_ip = get_client_ip_from_headers(req.headers());
@@ -146,7 +146,7 @@ pub async fn rate_limit_middleware(
             path = req.uri().path(),
             "IP rate limit exceeded (multiple users may share this IP)"
         );
-        return Err(AppError::HourlyRateLimitExceeded);
+        return Err(ApiError::HourlyRateLimitExceeded);
     }
 
     // 用户级限流（已认证用户）- 分层限流策略
@@ -182,7 +182,7 @@ pub async fn rate_limit_middleware(
                 path = req.uri().path(),
                 "User rate limit exceeded (5 minutes window)"
             );
-            return Err(AppError::RateLimited(
+            return Err(ApiError::RateLimited(
                 "请求过于频繁，请稍后 5 分钟再试".to_string(),
             ));
         }
@@ -215,7 +215,7 @@ pub async fn rate_limit_middleware(
                 path = req.uri().path(),
                 "User rate limit exceeded (hourly window)"
             );
-            return Err(AppError::HourlyRateLimitExceeded);
+            return Err(ApiError::HourlyRateLimitExceeded);
         }
     }
 

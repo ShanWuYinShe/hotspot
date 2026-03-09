@@ -12,6 +12,10 @@ import { MyProfile, ClientConfig, AppLimits } from '../types/api';
 import type { UserType } from '../types/api';
 import { LocationInfo } from '../location/LocationUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { InteractionStateStore } from './InteractionStateStore';
+import { MessageSyncManager } from './MessageSyncManager';
+import { AppThemeManager } from '../theme/AppThemeManager';
+import { DEFAULT_RESOLVED_THEME_ID, DEFAULT_THEME_MODE, KEY_RESOLVED_THEME_ID, KEY_THEME_MODE } from '../theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF08;
 const TAG: string = 'GlobalStateManager';
@@ -56,6 +60,8 @@ AppStorage.setOrCreate<MyProfile | null>(KEY_CURRENT_USER, null);
 PersistentStorage.persistProp<boolean>(KEY_IS_LOGGED_IN, false);
 PersistentStorage.persistProp<string>(KEY_USER_TYPE, '');
 AppStorage.setOrCreate<LocationInfo | null>(KEY_BROWSE_ANCHOR, null);
+AppStorage.setOrCreate<string>(KEY_THEME_MODE, DEFAULT_THEME_MODE);
+AppStorage.setOrCreate<string>(KEY_RESOLVED_THEME_ID, DEFAULT_RESOLVED_THEME_ID);
 
 export class GlobalStateManager {
   private static instance: GlobalStateManager | null = null;
@@ -96,6 +102,20 @@ export class GlobalStateManager {
     if (!AppStorage.has(KEY_CLIENT_CONFIG)) {
       AppStorage.setOrCreate<ClientConfig | null>(KEY_CLIENT_CONFIG, null);
     }
+    if (!AppStorage.has(KEY_THEME_MODE)) {
+      AppStorage.setOrCreate<string>(KEY_THEME_MODE, DEFAULT_THEME_MODE);
+    }
+    if (!AppStorage.has(KEY_RESOLVED_THEME_ID)) {
+      AppStorage.setOrCreate<string>(KEY_RESOLVED_THEME_ID, DEFAULT_RESOLVED_THEME_ID);
+    }
+
+    await AppThemeManager.initialize();
+
+    // 初始化交互状态存储
+    InteractionStateStore.getInstance();
+
+    // 初始化消息同步管理器
+    MessageSyncManager.getInstance().initialize();
 
     hilog.info(DOMAIN_NUMBER, TAG, 'GlobalStateManager (AppStorage) 初始化成功');
   }
@@ -198,6 +218,7 @@ export class GlobalStateManager {
     this.updateUnreadCount({ total_unread_count: 0 });
     AppStorage.setOrCreate<LocationInfo | null>(KEY_BROWSE_ANCHOR, null);
     AppStorage.setOrCreate<LocationInfo | null>(KEY_LOCATION_PICK_RESULT, null);
+    MessageSyncManager.getInstance().destroy();
     hilog.info(DOMAIN_NUMBER, TAG, 'GlobalStateManager 状态已重置');
   }
 }

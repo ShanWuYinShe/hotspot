@@ -21,6 +21,8 @@ import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
 import { common } from '@kit.AbilityKit';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
+import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 const GROUP_NAME_MAX: number = 50;
 const GROUP_DESCRIPTION_MAX: number = 500;
@@ -39,6 +41,7 @@ export struct CreateGroupPage {
   @StorageLink(KEY_LOCATION_PICK_RESULT) pickResult: LocationInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
   
   private stateManager = GlobalStateManager.getInstance();
   @State groupName: string = '';
@@ -54,9 +57,7 @@ export struct CreateGroupPage {
   @State isGroupAvatarUploading: boolean = false;
 
   async aboutToAppear() {
-    SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
-    });
+    SystemUiController.syncWithCurrentTheme();
     // 优先消费“地图选点”结果（从 LocationPickerPage 返回时会写入）
     if (this.pickResult) {
       this.localLocation = {
@@ -84,6 +85,22 @@ export struct CreateGroupPage {
         locationName: refLoc.locationName || '未知位置'
       };
     }
+  }
+
+  private getCurrentThemePalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getSurfaceBackground(): string {
+    return this.getCurrentThemePalette().surfaceBackground;
+  }
+
+  private getSurfaceSubtle(): string {
+    return this.getCurrentThemePalette().surfaceSubtle;
+  }
+
+  private getSurfaceBorder(): string {
+    return this.getCurrentThemePalette().borderColor;
   }
 
   private async createGroup(): Promise<void> {
@@ -299,7 +316,7 @@ export struct CreateGroupPage {
                   })
                   .maxLength(GROUP_NAME_MAX)
                   .height(40)
-                  .backgroundColor($r('app.color.bg_inset'))
+                  .backgroundColor(this.getSurfaceSubtle())
                   .shadow(DesignConstants.SHADOW.INSET)
                   .borderRadius(DesignConstants.RADIUS.XL)
                   .padding({ left: DesignConstants.SPACING.MD })
@@ -329,7 +346,7 @@ export struct CreateGroupPage {
                   })
                   .maxLength(GROUP_DESCRIPTION_MAX)
                   .height(80)
-                  .backgroundColor($r('app.color.bg_inset'))
+                  .backgroundColor(this.getSurfaceSubtle())
                   .shadow(DesignConstants.SHADOW.INSET)
                   .borderRadius(DesignConstants.RADIUS.XL)
                   .padding(DesignConstants.SPACING.MD)
@@ -340,10 +357,10 @@ export struct CreateGroupPage {
                 top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM
               })
             }
-            .backgroundColor($r('app.color.bg_secondary'))
+            .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.XXL)
             .shadow(DesignConstants.SHADOW.MEDIUM)
-            .border({ width: 1, color: $r('app.color.highlight_border') })
+            .border({ width: 1, color: this.getSurfaceBorder() })
             .margin({ bottom: 14 })
 
             // 群组头像
@@ -371,7 +388,7 @@ export struct CreateGroupPage {
                 Row({ space: DesignConstants.SPACING.SM }) {
                   Button(this.groupAvatarPreviewUrl.length > 0 ? '重选' : '选择')
                     .type(ButtonType.Normal)
-                    .backgroundColor($r('app.color.bg_tertiary'))
+                    .backgroundColor(this.getSurfaceSubtle())
                     .fontColor($r('sys.color.ohos_id_color_emphasize'))
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .borderRadius(DesignConstants.RADIUS.XXL)
@@ -383,7 +400,7 @@ export struct CreateGroupPage {
                   if (this.groupAvatarPreviewUrl.length > 0) {
                     Button('移除')
                       .type(ButtonType.Normal)
-                      .backgroundColor($r('app.color.bg_tertiary'))
+                      .backgroundColor(this.getSurfaceSubtle())
                       .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                       .fontSize(DesignConstants.FONT.SIZE.SM)
                       .borderRadius(DesignConstants.RADIUS.XXL)
@@ -402,10 +419,10 @@ export struct CreateGroupPage {
                 bottom: DesignConstants.SPACING.MD
               })
             }
-            .backgroundColor($r('app.color.bg_secondary'))
+            .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.XXL)
             .shadow(DesignConstants.SHADOW.MEDIUM)
-            .border({ width: 1, color: $r('app.color.highlight_border') })
+            .border({ width: 1, color: this.getSurfaceBorder() })
             .margin({ bottom: 14 })
 
             // 位置信息
@@ -431,7 +448,7 @@ export struct CreateGroupPage {
                 Row({ space: DesignConstants.SPACING.SM }) {
                   Button('选点')
                     .type(ButtonType.Normal)
-                    .backgroundColor($r('app.color.bg_tertiary'))
+                    .backgroundColor(this.getSurfaceSubtle())
                     .fontColor($r('sys.color.ohos_id_color_emphasize'))
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .borderRadius(DesignConstants.RADIUS.XXL)
@@ -441,7 +458,7 @@ export struct CreateGroupPage {
 
                   Button('刷新')
                     .type(ButtonType.Normal)
-                    .backgroundColor($r('app.color.bg_tertiary'))
+                    .backgroundColor(this.getSurfaceSubtle())
                     .fontColor($r('sys.color.ohos_id_color_emphasize'))
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .borderRadius(DesignConstants.RADIUS.XXL)
@@ -456,10 +473,10 @@ export struct CreateGroupPage {
                 top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD
               })
             }
-            .backgroundColor($r('app.color.bg_secondary'))
+            .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.XXL)
             .shadow(DesignConstants.SHADOW.MEDIUM)
-            .border({ width: 1, color: $r('app.color.highlight_border') })
+            .border({ width: 1, color: this.getSurfaceBorder() })
             .margin({ bottom: 14 })
 
             // 隐私与限制
@@ -484,7 +501,7 @@ export struct CreateGroupPage {
                   .type(ButtonType.Capsule)
                   .width(36)
                   .height(36)
-                  .backgroundColor($r('app.color.bg_tertiary'))
+                  .backgroundColor(this.getSurfaceSubtle())
                   .enabled(this.maxMembers > GROUP_MEMBERS_MIN)
                   .onClick(() => {
                     if (this.maxMembers > GROUP_MEMBERS_MIN) this.maxMembers = Math.max(GROUP_MEMBERS_MIN, this.maxMembers - 10);
@@ -497,7 +514,7 @@ export struct CreateGroupPage {
                     .textAlign(TextAlign.Center)
                     .fontSize(DesignConstants.FONT.SIZE.MD)
                     .fontColor($r('sys.color.ohos_id_color_text_primary'))
-                    .backgroundColor($r('app.color.bg_inset'))
+                    .backgroundColor(this.getSurfaceSubtle())
                     .shadow(DesignConstants.SHADOW.INSET)
                     .borderRadius(DesignConstants.RADIUS.MD)
                     .padding(0)
@@ -525,7 +542,7 @@ export struct CreateGroupPage {
                   .type(ButtonType.Capsule)
                   .width(36)
                   .height(36)
-                  .backgroundColor($r('app.color.bg_tertiary'))
+                  .backgroundColor(this.getSurfaceSubtle())
                   .enabled(this.maxMembers < GROUP_MEMBERS_MAX)
                   .onClick(() => {
                     if (this.maxMembers < GROUP_MEMBERS_MAX) this.maxMembers = Math.min(GROUP_MEMBERS_MAX, this.maxMembers + 10);
@@ -582,7 +599,7 @@ export struct CreateGroupPage {
                     })
                     .maxLength(GROUP_PASSWORD_MAX)
                     .height(40)
-                    .backgroundColor($r('app.color.bg_inset'))
+                    .backgroundColor(this.getSurfaceSubtle())
                     .shadow(DesignConstants.SHADOW.INSET)
                     .borderRadius(DesignConstants.RADIUS.XL)
                     .padding({ left: DesignConstants.SPACING.MD })
@@ -595,19 +612,19 @@ export struct CreateGroupPage {
                 })
               }
             }
-            .backgroundColor($r('app.color.bg_secondary'))
+            .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.XXL)
             .shadow(DesignConstants.SHADOW.MEDIUM)
-            .border({ width: 1, color: $r('app.color.highlight_border') })
+            .border({ width: 1, color: this.getSurfaceBorder() })
             .margin({ bottom: 14 })
 
             // 提交按钮
             Button('立即创建')
               .type(ButtonType.Capsule)
-              .backgroundColor($r('app.color.brand_primary'))
-              .fontColor(Color.White)
+              .backgroundColor(this.getCurrentThemePalette().accentBackground)
+              .fontColor(this.getCurrentThemePalette().accentText)
               .shadow(DesignConstants.SHADOW.SMALL)
-              .border({ width: 1, color: $r('app.color.highlight_border') })
+              .border({ width: 1, color: this.getSurfaceBorder() })
               .width('100%')
               .height(48)
               .fontSize(DesignConstants.FONT.SIZE.LG)
@@ -630,7 +647,7 @@ export struct CreateGroupPage {
       }
       .width('100%')
       .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
 
       if (this.isCreating) {
         SystemLoadingView()

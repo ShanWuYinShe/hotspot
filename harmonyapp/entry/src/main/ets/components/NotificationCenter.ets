@@ -10,6 +10,8 @@ import { AccessibilityManager } from '../core/accessibility/AccessibilityManager
 import { DesignConstants } from '../constants/DesignConstants';
 import { SmartNotificationService, NotificationEvent, SmartNotification } from '../core/services/SmartNotificationService';
 import { LoadingMoreIndicator, RefreshIndicator } from './EmptyState';
+import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 type NotificationFilterKey = 'all' | 'unread' | 'social' | 'interaction' | 'group' | 'system';
 
@@ -24,6 +26,7 @@ class NotificationFilterOption {
 
 @Component
 export struct NotificationCenter {
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
   @State private visibleNotifications: NotificationItem[] = [];
   @State private selectedFilter: NotificationFilterKey = 'all';
   @State private isLoading: boolean = false;
@@ -47,6 +50,10 @@ export struct NotificationCenter {
 
   private syncListener: (() => void) | null = null;
   private notificationCreatedListener: ((event: NotificationEvent, notification: SmartNotification, extra?: Object) => void) | null = null;
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
 
   aboutToAppear() {
     this.attachSyncListener();
@@ -299,14 +306,14 @@ export struct NotificationCenter {
             Button(filter.label)
               .type(ButtonType.Normal)
               .backgroundColor(this.selectedFilter === filter.key
-                ? $r('sys.color.ohos_id_color_emphasize')
-                : $r('app.color.bg_tertiary'))
-              .fontColor(this.selectedFilter === filter.key ? Color.White : $r('sys.color.ohos_id_color_text_primary'))
+                ? this.getPalette().accentBackground
+                : this.getPalette().surfaceSubtle)
+              .fontColor(this.selectedFilter === filter.key ? this.getPalette().accentText : $r('sys.color.ohos_id_color_text_primary'))
               .fontSize(14)
               .padding({ left: 16, right: 16, top: 8, bottom: 8 })
               .borderRadius(DesignConstants.RADIUS.XL)
               .onClick(() => this.onFilterSelected(filter.key as NotificationFilterKey))
-          }, (filter: NotificationFilterOption) => filter.key)
+          }, (filter: NotificationFilterOption) => filter.key + '_' + (this.selectedFilter === filter.key))
         }
         .padding({ left: 16, right: 16 })
       }
@@ -378,7 +385,8 @@ export struct NotificationCenter {
               ListItem() {
                 this.buildNotificationItem(notification)
               }
-            }, (notification: NotificationItem) => notification.notification_id)
+            }, (notification: NotificationItem) =>
+              notification.notification_id + '_p' + (this.actionLoadingIds.indexOf(notification.notification_id) >= 0))
 
             if (this.isLoadingMore) {
               ListItem() {
@@ -401,7 +409,7 @@ export struct NotificationCenter {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getPalette().pageBackground)
   }
 
   @Builder
@@ -437,7 +445,7 @@ export struct NotificationCenter {
             .fontSize(12)
             .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
             .padding({ left: 8, right: 8, top: 2, bottom: 2 })
-            .backgroundColor($r('app.color.bg_tertiary'))
+            .backgroundColor(this.getPalette().surfaceSubtle)
             .borderRadius(DesignConstants.RADIUS.SM)
         }
 
@@ -456,8 +464,8 @@ export struct NotificationCenter {
           if (!notification.is_read) {
             Button('标记已读')
               .type(ButtonType.Normal)
-              .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-              .fontColor(Color.White)
+              .backgroundColor(this.getPalette().accentBackground)
+              .fontColor(this.getPalette().accentText)
               .fontSize(12)
               .height(32)
               .borderRadius(DesignConstants.RADIUS.XL)
@@ -470,8 +478,8 @@ export struct NotificationCenter {
           Row({ space: 8 }) {
             Button(this.isActionLoading(notification.notification_id) ? '处理中...' : '接受')
               .type(ButtonType.Normal)
-              .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-              .fontColor(Color.White)
+              .backgroundColor(this.getPalette().accentBackground)
+              .fontColor(this.getPalette().accentText)
               .fontSize(12)
               .height(32)
               .borderRadius(DesignConstants.RADIUS.XL)
@@ -480,7 +488,7 @@ export struct NotificationCenter {
 
             Button('拒绝')
               .type(ButtonType.Normal)
-              .backgroundColor($r('app.color.bg_tertiary'))
+              .backgroundColor(this.getPalette().surfaceSubtle)
               .fontColor($r('sys.color.ohos_id_color_text_primary'))
               .fontSize(12)
               .height(32)
@@ -495,8 +503,8 @@ export struct NotificationCenter {
           Row({ space: 8 }) {
             Button(this.isActionLoading(notification.notification_id) ? '处理中...' : '批准')
               .type(ButtonType.Normal)
-              .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-              .fontColor(Color.White)
+              .backgroundColor(this.getPalette().accentBackground)
+              .fontColor(this.getPalette().accentText)
               .fontSize(12)
               .height(32)
               .borderRadius(DesignConstants.RADIUS.XL)
@@ -505,7 +513,7 @@ export struct NotificationCenter {
 
             Button('拒绝')
               .type(ButtonType.Normal)
-              .backgroundColor($r('app.color.bg_tertiary'))
+              .backgroundColor(this.getPalette().surfaceSubtle)
               .fontColor($r('sys.color.ohos_id_color_text_primary'))
               .fontSize(12)
               .height(32)
@@ -522,7 +530,7 @@ export struct NotificationCenter {
     }
     .width('100%')
     .padding(16)
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getPalette().surfaceBackground)
     .borderRadius(DesignConstants.RADIUS.LG)
     .onClick(() => this.handleNotificationClick(notification))
     .accessibilityGroup(true)

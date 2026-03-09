@@ -3,13 +3,15 @@
  * 展示热门话题、推荐用户、热门瞬间
  */
 
-import { KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_IS_LOGGED_IN } from '../../../core/state/GlobalStateManager';
+import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_IS_LOGGED_IN } from '../../../core/state/GlobalStateManager';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter, ChatRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
+import { interactionActions } from '../../../core/state/InteractionActions';
+import { InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
 import {
-  UserItem, TrendingTagItem, MomentItem, TrendingBundle, FollowRequest, UnfollowRequest,
+  UserItem, TrendingTagItem, MomentItem, TrendingBundle,
   SearchUsersRequest, CreateReportRequest, Relationship
 } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -17,6 +19,7 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
+import { MomentFeedCard } from '../../../components/MomentFeedCard';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
@@ -26,6 +29,8 @@ import { formatCount } from '../../../core/utils/FormatUtil';
 import { EmptyState, RefreshIndicator } from '../../../components/EmptyState';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import pasteboard from '@ohos.pasteboard';
+import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF11;
 const TAG: string = 'DiscoverPage';
@@ -47,6 +52,8 @@ export struct DiscoverPage {
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageLink('interaction_user_state') userStateMap: Record<string, UserRelationState> = {};
 
   @State isLoading: boolean = true;
   @State errorMessage: string = '';
@@ -55,6 +62,7 @@ export struct DiscoverPage {
   private recommendedUsersDataSource: BasicDataSource<UserItem> = new BasicDataSource<UserItem>([]);
   @State hotMoments: MomentItem[] = [];
   private hotMomentsDataSource: BasicDataSource<MomentItem> = new BasicDataSource<MomentItem>([]);
+  private interactionStore = InteractionStateStore.getInstance();
   @State isRefreshing: boolean = false;
   @State userActionPendingIds: string[] = [];
 
@@ -96,15 +104,33 @@ export struct DiscoverPage {
     return this.userActionPendingIds.indexOf(userId) >= 0;
   }
 
-  private isUserFollowing(user: UserItem): boolean {
-    return user.relation?.is_following ?? false;
+  async aboutToAppear() {
+    SystemUiController.syncWithCurrentTheme();
+    await this.loadData();
   }
 
-  async aboutToAppear() {
-    SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
-    });
-    await this.loadData();
+  private getCurrentThemePalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getSurfaceBackground(): string {
+    return this.getCurrentThemePalette().surfaceBackground;
+  }
+
+  private getSurfaceSubtle(): string {
+    return this.getCurrentThemePalette().surfaceSubtle;
+  }
+
+  private getSurfaceBorder(): string {
+    return this.getCurrentThemePalette().borderColor;
+  }
+
+  private getAccentBackground(): string {
+    return this.getCurrentThemePalette().accentBackground;
+  }
+
+  private getAccentText(): string {
+    return this.getCurrentThemePalette().accentText;
   }
 
   private hasAnyData(): boolean {
@@ -131,7 +157,12 @@ export struct DiscoverPage {
         const usersResponse = results[1];
         if (usersResponse.code === 0) {
           const items = usersResponse.data?.items ?? [];
-          this.recommendedUsers = items.filter((u: UserItem) => u.user?.user_id);
+          const me = GlobalStateManager.getInstance().getCurrentUser();
+          const myId = me?.user_id;
+          const validUsersAll = items.filter((u: UserItem) => u.user?.user_id);
+          this.recommendedUsers = typeof myId === 'string'
+            ? validUsersAll.filter((u: UserItem) => u.user.user_id !== myId)
+            : validUsersAll;
           this.recommendedUsersDataSource.setData(this.recommendedUsers);
         }
         const trendingResponse = results[0];
@@ -140,6 +171,7 @@ export struct DiscoverPage {
           this.trendingTags = bundle?.trending_tags ?? [];
           this.hotMoments = bundle?.hot_moments ?? [];
           this.hotMomentsDataSource.setData(this.hotMoments);
+          this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
         }
         if (usersResponse.code !== 0 && trendingResponse.code !== 0 && !this.hasAnyData()) {
           this.errorMessage = trendingResponse.message ?? usersResponse.message ?? '加载发现数据失败';
@@ -151,6 +183,7 @@ export struct DiscoverPage {
           this.trendingTags = bundle?.trending_tags ?? [];
           this.hotMoments = bundle?.hot_moments ?? [];
           this.hotMomentsDataSource.setData(this.hotMoments);
+          this.hotMoments.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
         } else if (!this.hasAnyData()) {
           this.errorMessage = trendingResponse.message ?? '加载发现数据失败';
         }
@@ -185,9 +218,9 @@ export struct DiscoverPage {
         }
         .height(42)
         .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-        .backgroundColor($r('app.color.bg_tertiary'))
+        .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
-        .border({ width: 1, color: $r('app.color.highlight_border') })
+        .border({ width: 1, color: this.getSurfaceBorder() })
         .onClick(() => {
           AppRouter.push(PageNames.SEARCH);
         })
@@ -246,7 +279,11 @@ export struct DiscoverPage {
                   Column({ space: DesignConstants.SPACING.MD }) {
                     ForEach(this.recommendedUsers, (user: UserItem, index: number) => {
                       this.buildRecommendedUserCard(user)
-                    }, (user: UserItem) => user.user?.user_id ?? '')
+                    }, (user: UserItem) => {
+                      const uid = user.user?.user_id ?? '';
+                      return uid + '_f' + (this.userStateMap[uid]?.relation?.is_following ?? false) +
+                        '_p' + (this.userActionPendingIds.indexOf(uid) >= 0);
+                    })
                   }
                   .width('100%')
                 }
@@ -256,32 +293,20 @@ export struct DiscoverPage {
               }
             }
 
-            // 热门瞬间（瀑布流布局）
+            // 热门瞬间
             if (this.hotMoments.length > 0) {
               ListItem() {
                 Column({ space: DesignConstants.SPACING.MD }) {
                   this.buildSectionHeader('热门动态', AppIcon.HEART_FILL)
-                  WaterFlow() {
+                  Column({ space: DesignConstants.SPACING.MD }) {
                     LazyForEach(this.hotMomentsDataSource, (moment: MomentItem) => {
-                      FlowItem() {
-                        this.buildHotMomentCard(moment)
-                      }
-                      .width('100%')
-                      .onClick(() => {
-                        this.openMomentDetail(moment);
+                      MomentFeedCard({
+                        moment: moment,
+                        onOpenDetail: (item: MomentItem) => this.openMomentDetail(item)
                       })
                     }, (moment: MomentItem) => moment.moment_id)
                   }
-                  .height(this.getWaterFlowHeight())
-                  .columnsTemplate('1fr 1fr')
-                  .columnsGap(DesignConstants.SPACING.MD)
-                  .rowsGap(DesignConstants.SPACING.MD)
-                  .cachedCount(10)
-                  .scrollBar(BarState.Off)
-                  .nestedScroll({
-                    scrollForward: NestedScrollMode.PARENT_FIRST,
-                    scrollBackward: NestedScrollMode.PARENT_FIRST
-                  })
+                  .width('100%')
                 }
                 .width('100%')
                 .padding(DesignConstants.SPACING.LG)
@@ -313,8 +338,8 @@ export struct DiscoverPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
-  }
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
+    }
 
   // ==================== 热门话题 ====================
   @Builder
@@ -327,7 +352,7 @@ export struct DiscoverPage {
           Row({ space: DesignConstants.SPACING.XS }) {
             Text(`#${tag.name}`)
               .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor($r('app.color.brand_primary'))
+              .fontColor(this.getCurrentThemePalette().accentBackground)
 
             if (tag.trend === 'rising') {
               Text() {
@@ -344,10 +369,10 @@ export struct DiscoverPage {
             bottom: DesignConstants.SPACING.XS
           })
           .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.FULL)
           .shadow(DesignConstants.SHADOW.SMALL)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .onClick(() => {
             const searchParams = new SearchParams();
             searchParams.keyword = `#${tag.name}`;
@@ -377,7 +402,7 @@ export struct DiscoverPage {
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         }
         .padding({ left: 8, right: 8, top: 3, bottom: 3 })
-        .backgroundColor($r('app.color.bg_tertiary'))
+        .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
 
         Blank().layoutWeight(1)
@@ -387,7 +412,7 @@ export struct DiscoverPage {
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor($r('sys.color.ohos_id_color_emphasize'))
             .padding({ left: 8, right: 8, top: 3, bottom: 3 })
-            .backgroundColor($r('app.color.chip_selected_bg'))
+            .backgroundColor(this.getSurfaceSubtle())
             .borderRadius(DesignConstants.RADIUS.XL)
         }
       }
@@ -451,16 +476,16 @@ export struct DiscoverPage {
         .width(32)
         .height(32)
         .justifyContent(FlexAlign.Center)
-        .backgroundColor($r('app.color.bg_tertiary'))
+        .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
-        .border({ width: 1, color: $r('app.color.highlight_border') })
+        .border({ width: 1, color: this.getSurfaceBorder() })
         .bindMenu([
           {
             value: '私聊',
             action: () => this.startPrivateChat(user)
           },
           {
-            value: this.isUserFollowing(user) ? '取消关注' : '关注',
+            value: this.isUserFollowing(user.user?.user_id ?? '') ? '取消关注' : '关注',
             action: () => this.followUser(user)
           },
           {
@@ -488,10 +513,10 @@ export struct DiscoverPage {
           ForEach(user.tags.slice(0, 3), (tag: string) => {
             Text(`#${tag}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor($r('app.color.brand_primary'))
+              .fontColor(this.getCurrentThemePalette().accentBackground)
               .padding({ left: 7, right: 7, top: 3, bottom: 3 })
               .margin({ right: 4, bottom: 4 })
-              .backgroundColor($r('app.color.chip_selected_bg'))
+              .backgroundColor(this.getSurfaceSubtle())
               .borderRadius(DesignConstants.RADIUS.XL)
           }, (tag: string) => tag)
         }
@@ -500,7 +525,7 @@ export struct DiscoverPage {
 
       Row({ space: DesignConstants.SPACING.SM }) {
         Button(this.isUserActionPending(user.user?.user_id ?? '') ? '处理中...' :
-          (this.isUserFollowing(user) ? '已关注' : '+ 关注'))
+          (this.isUserFollowing(user.user?.user_id ?? '') ? '已关注' : '+ 关注'))
           .type(ButtonType.Capsule)
           .layoutWeight(1)
           .height(36)
@@ -508,11 +533,11 @@ export struct DiscoverPage {
           .enabled(!this.isUserActionPending(user.user?.user_id ?? ''))
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor(this.isUserFollowing(user) ? $r('app.color.bg_tertiary') : $r('app.color.brand_primary'))
-          .fontColor(this.isUserFollowing(user) ? $r('sys.color.ohos_id_color_text_secondary') : Color.White)
+          .backgroundColor(this.isUserFollowing(user.user?.user_id ?? '') ? this.getSurfaceSubtle() : this.getAccentBackground())
+          .fontColor(this.isUserFollowing(user.user?.user_id ?? '') ? $r('sys.color.ohos_id_color_text_secondary') : this.getAccentText())
           .opacity(this.isUserActionPending(user.user?.user_id ?? '') ? 0.58 : 1)
           .shadow(DesignConstants.SHADOW.SMALL)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .onClick(() => { this.followUser(user); })
 
         Button('私聊')
@@ -522,11 +547,11 @@ export struct DiscoverPage {
           .borderRadius(DesignConstants.RADIUS.FULL)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor($r('app.color.bg_tertiary'))
+          .backgroundColor(this.getSurfaceSubtle())
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .opacity(this.isUserActionPending(user.user?.user_id ?? '') ? 0.74 : 1)
           .shadow(DesignConstants.SHADOW.SMALL)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .onClick(() => { this.startPrivateChat(user); })
       }
       .width('100%')
@@ -539,10 +564,10 @@ export struct DiscoverPage {
       top: DesignConstants.SPACING.MD,
       bottom: DesignConstants.SPACING.MD
     })
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.XXL)
     .shadow(DesignConstants.SHADOW.MEDIUM)
-    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .border({ width: 1, color: this.getSurfaceBorder() })
   }
 
   // ==================== 热门瞬间卡片（masonry 小红书风格）====================
@@ -561,7 +586,7 @@ export struct DiscoverPage {
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
         }
         .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
-        .backgroundColor($r('app.color.bg_tertiary'))
+        .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
 
         Blank().layoutWeight(1)
@@ -586,7 +611,7 @@ export struct DiscoverPage {
           .height(this.calculateImageHeight(moment))
           .objectFit(ImageFit.Cover)
           .borderRadius(DesignConstants.RADIUS.LG)
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor(this.getSurfaceBackground())
       } else {
         // 无图纯文本卡片
         Column() {
@@ -602,7 +627,7 @@ export struct DiscoverPage {
         .padding(DesignConstants.SPACING.MD)
         .justifyContent(FlexAlign.Center)
         .borderRadius(DesignConstants.RADIUS.LG)
-        .backgroundColor($r('app.color.bg_secondary'))
+        .backgroundColor(this.getSurfaceBackground())
       }
 
       // 信息区（白底下半部分）
@@ -644,10 +669,10 @@ export struct DiscoverPage {
       top: DesignConstants.SPACING.MD,
       bottom: DesignConstants.SPACING.MD
     })
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.XXL)
     .shadow(DesignConstants.SHADOW.MEDIUM)
-    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .border({ width: 1, color: this.getSurfaceBorder() })
   }
 
   // ==================== 热门瞬间列表项（供 LazyForEach 使用）====================
@@ -698,7 +723,7 @@ export struct DiscoverPage {
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
       top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.XXL)
 
     Divider()
@@ -713,7 +738,7 @@ export struct DiscoverPage {
       Text() {
         SymbolSpan($r(icon))
           .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontColor([$r('app.color.brand_primary')])
+          .fontColor([this.getCurrentThemePalette().accentBackground])
       }
       Text(title)
         .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -721,7 +746,7 @@ export struct DiscoverPage {
         .fontColor($r('sys.color.ohos_id_color_text_primary'))
     }
     .padding({ left: 16, right: 16, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-    .backgroundColor($r('app.color.bg_inset'))
+    .backgroundColor(this.getSurfaceSubtle())
     .borderRadius(DesignConstants.RADIUS.FULL)
     .shadow(DesignConstants.SHADOW.INSET)
   }
@@ -742,34 +767,30 @@ export struct DiscoverPage {
 
   // ==================== 操作 ====================
   private async followUser(user: UserItem): Promise<void> {
-    if (!this.isLoggedIn) {
-      SystemToast.showWarning('请先登录后再关注', this.getUIContext());
-      const loginParams = new LoginRedirectParams();
-      loginParams.reason = 'action_required';
-      loginParams.action = '关注用户';
-      AppRouter.push(PageNames.LOGIN, loginParams);
-      return;
-    }
     if (!user.user?.user_id) return;
     const userId = user.user.user_id;
-    const isFollowing = user.relation?.is_following ?? false;
     if (this.isUserActionPending(userId)) return;
     this.setUserActionPending(userId, true);
     try {
-      const response = isFollowing
-        ? await ApiClient.unfollowUser({ user_id: userId } as UnfollowRequest)
-        : await ApiClient.followUser({ user_id: userId } as FollowRequest);
-      if (response.code === 0) {
+      const isFollowing = this.isUserFollowing(userId);
+      const success = await interactionActions.setFollowUser(userId, !isFollowing, '关注用户');
+      if (success) {
         this.patchRecommendedUserFollowing(userId, !isFollowing);
         SystemToast.showSuccess(isFollowing ? '已取消关注' : '已关注', this.getUIContext());
       } else {
-        SystemToast.showError(response.message || (isFollowing ? '取消关注失败' : '关注失败'), this.getUIContext());
+        SystemToast.showError('操作失败', this.getUIContext());
       }
-    } catch {
-      SystemToast.showError(isFollowing ? '取消关注失败' : '关注失败', this.getUIContext());
     } finally {
       this.setUserActionPending(userId, false);
     }
+  }
+
+  private isUserFollowing(userId: string): boolean {
+    const state = this.userStateMap[userId];
+    if (state?.relation) {
+      return state.relation.is_following;
+    }
+    return false;
   }
 
   private ensureUserRelation(user: UserItem): Relationship {

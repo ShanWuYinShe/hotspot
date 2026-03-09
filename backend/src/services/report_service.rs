@@ -8,7 +8,7 @@ use crate::{
         },
         response::{AdminReportItem, CreateReportData, PaginatedData, ReportItem, UserInfo},
     },
-    error::AppError,
+    error::ApiError,
     repositories::{
         comment_repo::CommentRepository,
         group::message_repo::GroupMessageRepository,
@@ -63,7 +63,7 @@ impl ReportService {
         &self,
         reporter_id: i64,
         req: CreateReportRequest,
-    ) -> Result<CreateReportData, AppError> {
+    ) -> Result<CreateReportData, ApiError> {
         let started_at = std::time::Instant::now();
         info!(
             reporter_id,
@@ -95,7 +95,7 @@ impl ReportService {
                 target_id = %target_id,
                 "report.create rejected: target already has pending/reviewing report"
             );
-            return Err(AppError::BusinessRuleViolation(
+            return Err(ApiError::BusinessRuleViolation(
                 "该目标已有待处理举报，请勿重复提交".to_string(),
             ));
         }
@@ -129,7 +129,7 @@ impl ReportService {
         &self,
         reporter_id: i64,
         req: MyReportsRequest,
-    ) -> Result<PaginatedData<ReportItem>, AppError> {
+    ) -> Result<PaginatedData<ReportItem>, ApiError> {
         let pagination = req.pagination.as_ref();
         let limit = Validator::validate_limit(
             pagination.and_then(|p| p.limit),
@@ -164,7 +164,7 @@ impl ReportService {
         &self,
         _admin_id: i64, // 验证在Handler层
         req: &AdminReportSearchRequest,
-    ) -> Result<PaginatedData<AdminReportItem>, AppError> {
+    ) -> Result<PaginatedData<AdminReportItem>, ApiError> {
         let pagination = req.pagination.as_ref();
         let limit_value = pagination.and_then(|p| p.limit).unwrap_or(20);
         let limit = Validator::validate_limit(Some(limit_value), crate::constants::MAX_PAGE_LIMIT)?;
@@ -265,7 +265,7 @@ impl ReportService {
         &self,
         admin_id: i64,
         req: AdminReportHandleRequest,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), ApiError> {
         use crate::types::enums::ReportHandleAction;
         let started_at = std::time::Instant::now();
         info!(
@@ -284,7 +284,7 @@ impl ReportService {
         // 仅做存在性校验（避免拉整行）
         if !self.report_repo.exists(report_id).await? {
             warn!(admin_id, report_id = %report_id, "report.handle rejected: report not found");
-            return Err(AppError::NotFound("举报不存在".to_string()));
+            return Err(ApiError::NotFound("举报不存在".to_string()));
         }
 
         // 根据action映射status
@@ -310,7 +310,7 @@ impl ReportService {
     }
 
     /// 辅助方法：将ReportRow转换为ReportItem
-    fn to_report_item(report: ReportRow) -> Result<ReportItem, AppError> {
+    fn to_report_item(report: ReportRow) -> Result<ReportItem, ApiError> {
         let reason = ReportReason::from_str(&report.reason).unwrap_or(ReportReason::Other);
 
         Ok(ReportItem {
@@ -332,7 +332,7 @@ impl ReportService {
         reporter_id: i64,
         target_type: ReportTargetType,
         target_id: &str,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), ApiError> {
         let is_self = match target_type {
             ReportTargetType::User => {
                 let uid = crate::utils::validation::Validator::parse_user_id(target_id)?;
@@ -382,7 +382,7 @@ impl ReportService {
             }
         };
         if is_self {
-            return Err(AppError::BusinessRuleViolation(
+            return Err(ApiError::BusinessRuleViolation(
                 "不能举报自己的内容".to_string(),
             ));
         }
@@ -393,30 +393,30 @@ impl ReportService {
         &self,
         target_type: ReportTargetType,
         target_id: &str,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), ApiError> {
         match target_type {
             ReportTargetType::User => {
                 let user_id = crate::utils::validation::Validator::parse_user_id(target_id)?;
                 if !self.user_repo.exists(user_id).await? {
-                    return Err(AppError::NotFound("举报目标不存在".to_string()));
+                    return Err(ApiError::NotFound("举报目标不存在".to_string()));
                 }
             }
             ReportTargetType::Moment => {
                 let moment_id = Validator::parse_uuid(target_id, "target_id")?;
                 if !self.moment_repo.exists(moment_id).await? {
-                    return Err(AppError::NotFound("举报目标不存在".to_string()));
+                    return Err(ApiError::NotFound("举报目标不存在".to_string()));
                 }
             }
             ReportTargetType::Comment => {
                 let comment_id = Validator::parse_uuid(target_id, "target_id")?;
                 if !self.comment_repo.exists(comment_id).await? {
-                    return Err(AppError::NotFound("举报目标不存在".to_string()));
+                    return Err(ApiError::NotFound("举报目标不存在".to_string()));
                 }
             }
             ReportTargetType::Group => {
                 let group_id = crate::utils::validation::Validator::parse_group_id(target_id)?;
                 if !self.group_repo.exists(group_id).await? {
-                    return Err(AppError::NotFound("举报目标不存在".to_string()));
+                    return Err(ApiError::NotFound("举报目标不存在".to_string()));
                 }
             }
             ReportTargetType::Message => {
@@ -435,7 +435,7 @@ impl ReportService {
                     .await?
                     .is_some();
                 if !group_exists {
-                    return Err(AppError::NotFound("举报目标不存在".to_string()));
+                    return Err(ApiError::NotFound("举报目标不存在".to_string()));
                 }
             }
         }
@@ -447,9 +447,9 @@ impl ReportService {
 fn normalize_report_target_id(
     _target_type: crate::types::enums::ReportTargetType,
     target_id: String,
-) -> Result<String, AppError> {
+) -> Result<String, ApiError> {
     if target_id.trim().is_empty() {
-        return Err(AppError::InvalidFormat("target_id 不能为空".to_string()));
+        return Err(ApiError::InvalidFormat("target_id 不能为空".to_string()));
     }
     Ok(target_id)
 }

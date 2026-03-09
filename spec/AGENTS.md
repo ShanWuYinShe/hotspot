@@ -67,6 +67,8 @@ api_spec_base > api_spec_types > api_spec_errors > 各模块 spec
 
 文件删除、批量变更、Git 操作规范等全局规则见项目根目录 `AGENTS.md` 的「权限边界」和「Git 操作规范」章节，此处不重复。
 
+> **⚠️ `tmp/` 路径规则（强制）**：所有临时文件、会话文件（`session-context-*.md`、`session-progress-*.md`）、设计文档等必须存放在**项目根目录（Monorepo 根目录）的 `tmp/`** 下，即 `spec/` 的上级目录中的 `tmp/`。**绝对禁止在 `spec/` 目录下创建 `tmp/` 目录**（如 `spec/tmp/`）。详见根目录 `AGENTS.md` 的「Agent 行为准则」章节。
+
 **Spec 目录额外约束**：禁止自行删除本目录下任何文件，如需删除须列清单并经用户确认。
 
 ### 关键全局约束速查

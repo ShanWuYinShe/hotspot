@@ -2,6 +2,8 @@ import { DesignConstants } from '../constants/DesignConstants';
 import { UserInfo } from '../core/types/api';
 import { UserTypeUtil } from '../core/utils/UserTypeUtil';
 import { MediaUrlUtil } from '../core/utils/MediaUrlUtil';
+import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 /**
  * SystemAvatar - 头像组件
@@ -21,6 +23,11 @@ export struct SystemAvatar {
   @Prop userType: string = '';
   @Prop inset: boolean = false;
   @State private imageLoadFailed: boolean = false;
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
 
   private getBorderOptions(): BorderOptions | undefined {
     if (!this.showBorder) {
@@ -28,7 +35,7 @@ export struct SystemAvatar {
     }
     const borderOptions: BorderOptions = {
       width: 2,
-      color: $r('app.color.bg_primary')
+      color: this.getPalette().pageBackground
     };
     return borderOptions;
   }
@@ -51,7 +58,7 @@ export struct SystemAvatar {
           .objectFit(ImageFit.Cover)
           .borderRadius(this.getBorderRadius())
           .border(this.getBorderOptions())
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor(this.getPalette().surfaceBackground)
           .onError(() => {
             this.imageLoadFailed = true;
           })
@@ -82,7 +89,7 @@ export struct SystemAvatar {
         Text('临时')
           .fontSize(this.avatarSize * 0.25)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-          .backgroundColor($r('app.color.bg_tertiary'))
+          .backgroundColor(this.getPalette().surfaceSubtle)
           .borderRadius(DesignConstants.RADIUS.SM)
           .padding({ left: 2, right: 2 })
           .margin({ bottom: -2, right: -2 })
@@ -113,8 +120,8 @@ export struct SystemAvatar {
     if (!name) return $r('sys.color.ohos_id_color_text_secondary');
 
     const colors: ResourceColor[] = [
-      $r('app.color.brand_primary'),
-      $r('app.color.brand_primary'),
+      this.getPalette().accentBackground,
+      this.getPalette().accentBackground,
       $r('app.color.color_success'),
       $r('app.color.color_warning'),
       $r('app.color.color_danger')

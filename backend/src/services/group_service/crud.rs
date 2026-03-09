@@ -16,7 +16,7 @@ use crate::{
             AdminGroupItem, AdminGroupStats, GroupInfo, GroupItem, GroupMyStateData, PaginatedData,
         },
     },
-    error::{AppError, Result},
+    error::{ApiError, Result},
     events::event_types::AppEvent,
     types::enums::{GroupJoinMethod, GroupRole},
     utils::{cache::cache_keys, password::PasswordUtil, validation::Validator},
@@ -152,7 +152,7 @@ impl GroupService {
                         err
                     })
             } else {
-                Err(AppError::BadRequest(
+                Err(ApiError::BadRequest(
                     "至少需要提供 keyword、tag、radius 中的一个搜索条件".to_string(),
                 ))
             }
@@ -169,7 +169,7 @@ impl GroupService {
                     timeout_ms = SEARCH_QUERY_TIMEOUT.as_millis() as u64,
                     "groups.search query timeout"
                 );
-                AppError::ServiceUnavailable
+                ApiError::ServiceUnavailable
             })??;
         let rows_count = groups.len();
         let has_next_cursor = next_cursor.is_some();
@@ -213,7 +213,7 @@ impl GroupService {
             .group_repo
             .find_by_id(group_id)
             .await?
-            .ok_or_else(|| AppError::GroupNotFound("群组不存在".to_string()))?;
+            .ok_or_else(|| ApiError::GroupNotFound("群组不存在".to_string()))?;
 
         let (tags_res, settings, members_count) = try_join!(
             self.tag_repo.get_group_tags(group_id),
@@ -301,7 +301,7 @@ impl GroupService {
         }
         if let Some(tags) = req.tags.as_ref() {
             if tags.len() > 10 {
-                return Err(AppError::BadRequest("tags 最多 10 个".to_string()));
+                return Err(ApiError::BadRequest("tags 最多 10 个".to_string()));
             }
             for tag in tags {
                 Validator::validate_length(tag, "tag", 1, 30)?;
@@ -582,7 +582,7 @@ impl GroupService {
         }
         if let Some(tags) = req.tags.as_ref() {
             if tags.len() > 10 {
-                return Err(AppError::BadRequest("tags 最多 10 个".to_string()));
+                return Err(ApiError::BadRequest("tags 最多 10 个".to_string()));
             }
             for tag in tags {
                 Validator::validate_length(tag, "tag", 1, 30)?;
@@ -640,7 +640,7 @@ impl GroupService {
                     group_id,
                     "group.update rejected: password and clear_password are mutually exclusive"
                 );
-                return Err(AppError::BadRequest(
+                return Err(ApiError::BadRequest(
                     "password 与 clear_password 互斥".to_string(),
                 ));
             }
@@ -755,7 +755,7 @@ impl GroupService {
                 new_owner_id,
                 "group.transfer_ownership rejected: target user is not member"
             );
-            return Err(AppError::NotGroupMember("目标用户不在群组中".to_string()));
+            return Err(ApiError::NotGroupMember("目标用户不在群组中".to_string()));
         }
 
         self.group_repo.update_owner(group_id, new_owner_id).await?;
@@ -885,7 +885,7 @@ impl GroupService {
             .group_repo
             .find_by_id(group_id)
             .await?
-            .ok_or_else(|| AppError::GroupNotFound("群组不存在".to_string()))?;
+            .ok_or_else(|| ApiError::GroupNotFound("群组不存在".to_string()))?;
         let (members_count, settings, tags_res) = try_join!(
             self.member_repo.count_members(group_id),
             self.settings_repo.find_by_group(group_id),

@@ -13,6 +13,8 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { LoginPromptView } from '../../../components/LoginPromptView';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
+import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 @Preview
 @Component
@@ -21,6 +23,7 @@ export struct MySharesPage {
   @StorageLink(KEY_IS_LOGGED_IN) @Watch('onLoginStateChanged') isLoggedIn: boolean = false;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private sharesDataSource: BasicDataSource<ShareListItem> = new BasicDataSource<ShareListItem>([]);
   @State private shares: ShareListItem[] = [];
@@ -34,9 +37,7 @@ export struct MySharesPage {
   private readonly pageLimit: number = DefaultConfig.PAGE_SIZE;
 
   async aboutToAppear() {
-    SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT, preferDarkContent: true
-    });
+    SystemUiController.syncWithCurrentTheme();
     if (this.isLoggedIn) {
       await this.loadShares();
     } else {
@@ -65,6 +66,22 @@ export struct MySharesPage {
 
   private getHeaderTopPadding(): number {
     return SafeAreaUtils.resolveTopPadding(this.safeAreaTop);
+  }
+
+  private getCurrentThemePalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getSurfaceBackground(): string {
+    return this.getCurrentThemePalette().surfaceBackground;
+  }
+
+  private getSurfaceSubtle(): string {
+    return this.getCurrentThemePalette().surfaceSubtle;
+  }
+
+  private getSurfaceBorder(): string {
+    return this.getCurrentThemePalette().borderColor;
   }
 
   private async loadShares(refresh: boolean = false): Promise<void> {
@@ -181,7 +198,7 @@ export struct MySharesPage {
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: $r('app.color.bg_secondary'),
+          bgColor: this.getSurfaceBackground(),
           radius: DesignConstants.RADIUS.XL,
           minButtonSize: 42,
           paddingSize: 9,
@@ -205,7 +222,7 @@ export struct MySharesPage {
         top: this.getHeaderTopPadding(),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_primary'))
+      .backgroundColor(this.getCurrentThemePalette().pageBackground)
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (!this.isLoggedIn) {
@@ -242,8 +259,9 @@ export struct MySharesPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
     }
+    .hideTitleBar(true)
   }
 
   @Builder
@@ -320,7 +338,7 @@ export struct MySharesPage {
           .height(130)
           .objectFit(ImageFit.Cover)
           .borderRadius(DesignConstants.RADIUS.LG)
-          .backgroundColor($r('app.color.bg_tertiary'))
+          .backgroundColor(this.getSurfaceSubtle())
       }
 
       Column({ space: 4 }) {
@@ -342,7 +360,7 @@ export struct MySharesPage {
         top: DesignConstants.SPACING.SM,
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_tertiary'))
+      .backgroundColor(this.getSurfaceSubtle())
       .borderRadius(DesignConstants.RADIUS.MD)
 
       Row({ space: DesignConstants.SPACING.MD }) {
@@ -364,7 +382,7 @@ export struct MySharesPage {
             .fontColor($r('app.color.color_danger'))
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .shadow(DesignConstants.SHADOW.SMALL)
-            .border({ width: 1, color: $r('app.color.highlight_border') })
+            .border({ width: 1, color: this.getSurfaceBorder() })
             .height(34)
             .enabled(this.revokingShareId !== share.share_id)
             .onClick(() => this.revokeShare(share))
@@ -379,8 +397,8 @@ export struct MySharesPage {
     .padding(DesignConstants.SPACING.LG)
     .borderRadius(DesignConstants.RADIUS.XXL)
     .shadow(DesignConstants.SHADOW.MEDIUM)
-    .backgroundColor($r('app.color.bg_secondary'))
-    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .backgroundColor(this.getSurfaceBackground())
+    .border({ width: 1, color: this.getSurfaceBorder() })
     .margin({ bottom: 12 })
   }
 
@@ -397,7 +415,9 @@ export struct MySharesPage {
   }
 
   private shareStatusBackground(share: ShareListItem): ResourceColor {
-    return share.is_revoked ? DesignConstants.COLOR.SURFACE_WARNING_SOFT : DesignConstants.COLOR.SURFACE_INFO_SOFT;
+    return share.is_revoked
+      ? AppThemeManager.getSoftStatusBackground('warning')
+      : AppThemeManager.getSoftStatusBackground('info');
   }
 
   private formatShareType(type: ShareType): string {

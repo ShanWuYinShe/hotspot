@@ -22,7 +22,7 @@ use crate::{
             SendPrivateMessageData, UserInfo,
         },
     },
-    error::{AppError, Result},
+    error::{ApiError, Result},
     events::event_types::{AppEvent, ReplyToSnapshot},
     repositories::{
         chat_unread_repo::ChatUnreadRepository,
@@ -113,7 +113,7 @@ impl PrivateMessageService {
             "private_message.send started"
         );
         if user_id == target_user_id {
-            return Err(AppError::CannotOperateOnSelf);
+            return Err(ApiError::CannotOperateOnSelf);
         }
 
         if let Some(content) = req.content.as_deref() {
@@ -125,7 +125,7 @@ impl PrivateMessageService {
             .user_repo
             .find_by_id(target_user_id)
             .await?
-            .ok_or_else(|| AppError::UserNotFound("接收者不存在".to_string()))?;
+            .ok_or_else(|| ApiError::UserNotFound("接收者不存在".to_string()))?;
 
         let permission = self
             .permission_resolver
@@ -136,7 +136,7 @@ impl PrivateMessageService {
                 Some(MessageBlockedReason::AccountSuspended) => "对方账号暂不可用".to_string(),
                 _ => "对方暂时不允许接收私聊".to_string(),
             };
-            return Err(AppError::Forbidden(err_msg));
+            return Err(ApiError::Forbidden(err_msg));
         }
 
         if !permission.is_mutual_friend {
@@ -145,7 +145,7 @@ impl PrivateMessageService {
                 .increment_if_allowed(user_id, target_user_id)
                 .await?;
             if !allowed {
-                return Err(AppError::Forbidden(
+                return Err(ApiError::Forbidden(
                     "陌生人消息限额已用完，请稍后再试".to_string(),
                 ));
             }
@@ -195,24 +195,24 @@ impl PrivateMessageService {
                 let content = req
                     .content
                     .clone()
-                    .ok_or_else(|| AppError::BadRequest("消息内容不能为空".to_string()))?;
+                    .ok_or_else(|| ApiError::BadRequest("消息内容不能为空".to_string()))?;
                 (content, None, None)
             }
             MessageType::Share => {
                 // Share 类型消息使用 share_code
                 let share_code = req.share_code.clone().ok_or_else(|| {
-                    AppError::BadRequest("分享消息必须提供 share_code".to_string())
+                    ApiError::BadRequest("分享消息必须提供 share_code".to_string())
                 })?;
                 (share_code, None, None)
             }
             MessageType::System => {
-                return Err(AppError::BadRequest("不允许发送系统消息".to_string()));
+                return Err(ApiError::BadRequest("不允许发送系统消息".to_string()));
             }
             MessageType::Image | MessageType::Video | MessageType::Audio | MessageType::File => {
                 let file_id = req
                     .file_id
                     .as_ref()
-                    .ok_or_else(|| AppError::BadRequest("媒体消息必须提供 file_id".to_string()))?;
+                    .ok_or_else(|| ApiError::BadRequest("媒体消息必须提供 file_id".to_string()))?;
                 let file_uuid = Validator::parse_uuid(file_id, "file_id")?;
 
                 let expected_categories = match message_type {
@@ -552,18 +552,18 @@ impl PrivateMessageService {
             .message_repo
             .get_meta(message_id)
             .await?
-            .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
+            .ok_or_else(|| ApiError::ChatNotFound("消息不存在".to_string()))?;
 
         if message.sender_id != user_id {
-            return Err(AppError::Forbidden("无权编辑此消息".to_string()));
+            return Err(ApiError::Forbidden("无权编辑此消息".to_string()));
         }
 
         if message.is_recalled {
-            return Err(AppError::MessageAlreadyRecalled);
+            return Err(ApiError::MessageAlreadyRecalled);
         }
 
         if message.r#type != MessageType::Text {
-            return Err(AppError::BusinessRuleViolation(
+            return Err(ApiError::BusinessRuleViolation(
                 "仅支持编辑文本消息".to_string(),
             ));
         }
@@ -609,19 +609,19 @@ impl PrivateMessageService {
             .message_repo
             .get_meta(message_id)
             .await?
-            .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
+            .ok_or_else(|| ApiError::ChatNotFound("消息不存在".to_string()))?;
 
         if message.sender_id != user_id {
-            return Err(AppError::Forbidden("无权撤回此消息".to_string()));
+            return Err(ApiError::Forbidden("无权撤回此消息".to_string()));
         }
 
         if message.is_recalled {
-            return Err(AppError::MessageAlreadyRecalled);
+            return Err(ApiError::MessageAlreadyRecalled);
         }
 
         let elapsed = Utc::now().signed_duration_since(message.sent_at);
         if elapsed.num_minutes() >= MESSAGE_RECALL_MINUTES {
-            return Err(AppError::OperationWindowExpired);
+            return Err(ApiError::OperationWindowExpired);
         }
 
         self.message_repo.recall(message_id).await?;
@@ -659,7 +659,7 @@ impl PrivateMessageService {
             Some(chat) => chat,
             None => {
                 warn!(user_id, target_user_id, "私聊标记已读失败：会话不存在");
-                return Err(AppError::ChatNotFound("会话不存在".to_string()));
+                return Err(ApiError::ChatNotFound("会话不存在".to_string()));
             }
         };
 
@@ -681,7 +681,7 @@ impl PrivateMessageService {
                         up_to_message_id = %up_to_id,
                         "私聊标记已读失败：up_to_message_id 不存在"
                     );
-                    AppError::ChatNotFound("消息不存在".to_string())
+                    ApiError::ChatNotFound("消息不存在".to_string())
                 })?;
             if message.chat_id != chat.chat_id {
                 warn!(
@@ -692,7 +692,7 @@ impl PrivateMessageService {
                     message_chat_id = %message.chat_id,
                     "私聊标记已读失败：up_to_message_id 不属于当前会话"
                 );
-                return Err(AppError::ChatNotFound("消息不属于当前私聊会话".to_string()));
+                return Err(ApiError::ChatNotFound("消息不属于当前私聊会话".to_string()));
             }
         }
 

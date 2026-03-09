@@ -10,7 +10,7 @@ use crate::{
         },
         response::{BannedMemberItem, GroupMemberItem, InviteMemberData, PaginatedData, UserInfo},
     },
-    error::{AppError, Result},
+    error::{ApiError, Result},
     events::event_types::AppEvent,
     types::enums::{GroupRole, MemberLeaveReason, SettableGroupRole},
     utils::validation::Validator,
@@ -27,7 +27,7 @@ impl GroupService {
         self.group_repo
             .find_by_id(group_id)
             .await?
-            .ok_or_else(|| AppError::GroupNotFound("群组不存在".to_string()))?;
+            .ok_or_else(|| ApiError::GroupNotFound("群组不存在".to_string()))?;
         let pagination = req.pagination.as_ref();
         let limit = Validator::validate_limit(pagination.and_then(|p| p.limit), 50)? as usize;
 
@@ -42,7 +42,7 @@ impl GroupService {
             let settings = self.settings_repo.find_by_group(group_id).await?;
             let is_searchable = settings.map(|s| s.is_searchable).unwrap_or(true);
             if !is_searchable {
-                return Err(AppError::BusinessRuleViolation(
+                return Err(ApiError::BusinessRuleViolation(
                     "当前群组不允许检索成员".to_string(),
                 ));
             }
@@ -79,7 +79,7 @@ impl GroupService {
         self.group_repo
             .find_by_id(group_id)
             .await?
-            .ok_or_else(|| AppError::GroupNotFound("群组不存在".to_string()))?;
+            .ok_or_else(|| ApiError::GroupNotFound("群组不存在".to_string()))?;
         let pagination = req.pagination.as_ref();
         let limit = Validator::validate_limit(
             pagination.and_then(|p| p.limit),
@@ -136,7 +136,7 @@ impl GroupService {
         let _ = self.require_member(group_id, user_id).await?;
 
         if self.member_repo.is_member(group_id, target_user_id).await? {
-            return Err(AppError::AlreadyInGroup);
+            return Err(ApiError::AlreadyInGroup);
         }
 
         if let Some(existing) = self
@@ -170,7 +170,7 @@ impl GroupService {
             .group_repo
             .find_by_id(group_id)
             .await?
-            .ok_or_else(|| AppError::GroupNotFound("群组不存在".to_string()))?;
+            .ok_or_else(|| ApiError::GroupNotFound("群组不存在".to_string()))?;
 
         let signed_avatar = self
             .media_service
@@ -226,7 +226,7 @@ impl GroupService {
             .member_repo
             .find_member(group_id, target_user_id)
             .await?
-            .ok_or_else(|| AppError::NotGroupMember("目标用户不是群成员".to_string()))?;
+            .ok_or_else(|| ApiError::NotGroupMember("目标用户不是群成员".to_string()))?;
         let old_role = target_member.role;
         if old_role == target_role {
             tracing::info!(
@@ -535,7 +535,7 @@ impl GroupService {
                 group_id,
                 "group.member leave rejected: owner cannot leave"
             );
-            return Err(AppError::BusinessRuleViolation("群主不能退出".to_string()));
+            return Err(ApiError::BusinessRuleViolation("群主不能退出".to_string()));
         }
 
         self.member_repo.remove_member(group_id, user_id).await?;

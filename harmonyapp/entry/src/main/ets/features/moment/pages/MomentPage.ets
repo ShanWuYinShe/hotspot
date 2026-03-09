@@ -2,22 +2,20 @@
  * 生活瞬间页面
  * 使用 HarmonyOS 原生能力 + 系统颜色资源（支持深色模式）
  * LazyForEach + RDB 缓存
+ * 使用统一的 MomentFeedCard 组件展示瞬间卡片
  */
 
 import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR } from '../../../core/state/GlobalStateManager';
+import { InteractionStateStore } from '../../../core/state/InteractionStateStore';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
-import { LikeMomentRequest, MomentItem, SearchMomentsRequest, MomentImage } from '../../../core/types/api';
-import { SystemAvatar } from '../../../components/SystemAvatar';
-import { IntelligentLocationCard } from '../../../components/IntelligentLocationCard';
+import { MomentItem, SearchMomentsRequest } from '../../../core/types/api';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
-import { AppIcon, SystemIcon, IconSize } from '../../../components/SystemIcon';
-import { SystemShareService } from '../../../core/services/SystemShareService';
-import { common } from '@kit.AbilityKit';
+import { AppIcon } from '../../../components/SystemIcon';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { SystemToast } from '../../../components/SystemToast';
 import { MomentCacheService } from '../../../core/database/MomentCacheService';
@@ -25,8 +23,9 @@ import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AppRouter, LoginRouteParam, MomentDetailRouteParam, PhotoPreviewRouteParam } from '../../../core/router/AppRouter';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
-import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
-import { formatCount } from '../../../core/utils/FormatUtil';
+import { MomentFeedCard } from '../../../components/MomentFeedCard';
+import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF05;
 const TAG: string = 'MomentPage';
@@ -37,8 +36,10 @@ export struct MomentPage {
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private stateManager = GlobalStateManager.getInstance();
+  private interactionStore = InteractionStateStore.getInstance();
   private momentsDataSource: BasicDataSource<MomentItem> = new BasicDataSource([]);
   private momentCacheService = MomentCacheService.getInstance();
 
@@ -51,10 +52,20 @@ export struct MomentPage {
   @State isLoadingMore: boolean = false;
 
   async aboutToAppear() {
-    SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
-    });
+    SystemUiController.syncWithCurrentTheme();
     await this.loadNearbyMoments();
+  }
+
+  private getCurrentThemePalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getSurfaceBackground(): string {
+    return this.getCurrentThemePalette().surfaceBackground;
+  }
+
+  private getSurfaceBorder(): string {
+    return this.getCurrentThemePalette().borderColor;
   }
 
   aboutToDisappear() {}
@@ -100,6 +111,7 @@ export struct MomentPage {
         this.hasData = validItems.length > 0;
         this.hasMore = !!(response.data?.next_cursor);
         this.nextCursor = response.data?.next_cursor ?? '';
+        validItems.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
         this.updateCache(items);
       } else {
         if (this.momentsDataSource.totalCount() === 0) {
@@ -140,6 +152,7 @@ export struct MomentPage {
         this.hasData = this.momentsDataSource.totalCount() > 0;
         this.hasMore = !!(response.data?.next_cursor);
         this.nextCursor = response.data?.next_cursor ?? '';
+        validItems.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
       }
     } catch (error) {
       hilog.error(DOMAIN_NUMBER, TAG, `加载更多瞬间失败: ${JSON.stringify(error)}`);
@@ -153,75 +166,13 @@ export struct MomentPage {
     if (cachedItems.length > 0) {
       this.momentsDataSource.setData(cachedItems);
       this.hasData = true;
+      cachedItems.forEach((item: MomentItem) => this.interactionStore.patchMomentFromItem(item));
       hilog.info(DOMAIN_NUMBER, TAG, `Loaded ${cachedItems.length} moments from cache`);
     }
   }
 
   private async updateCache(moments: MomentItem[]) {
     await this.momentCacheService.cacheMoments(moments);
-  }
-
-  private formatTime(timeStr: string): string {
-    const time = new Date(timeStr);
-    const now = new Date();
-    if (time.toDateString() === now.toDateString()) {
-      return `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
-    }
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (time.toDateString() === yesterday.toDateString()) {
-      return '昨天';
-    }
-    if (time.getFullYear() === now.getFullYear()) {
-      return `${(time.getMonth() + 1).toString().padStart(2, '0')}-${time.getDate().toString().padStart(2, '0')}`;
-    }
-    return time.toLocaleDateString();
-  }
-
-  private calcImageGridHeight(imageCount: number): number {
-    if (imageCount === 0) return 0;
-    const rows = Math.ceil(Math.min(imageCount, 9) / 3);
-    const gap = 8;
-    const itemHeight = 100;
-    return rows * itemHeight + (rows - 1) * gap;
-  }
-
-  private async likeMoment(moment: MomentItem, index: number) {
-    const currentUser = this.stateManager.getCurrentUser();
-    if (!currentUser) {
-      SystemToast.showWarning('请先登录后再点赞', this.getUIContext());
-      const loginParams = new LoginRouteParam();
-      loginParams.reason = 'action_required';
-      loginParams.action = '点赞瞬间';
-      AppRouter.push(PageNames.LOGIN, loginParams);
-      return;
-    }
-
-    try {
-      const request: LikeMomentRequest = { moment_id: moment.moment_id };
-      const response = await ApiClient.likeMoment(request);
-      if (response.code === 0) {
-        await this.loadNearbyMoments(true);
-      } else {
-        hilog.error(DOMAIN_NUMBER, TAG, `点赞失败: ${response.message}`);
-      }
-    } catch (error) {
-      hilog.error(DOMAIN_NUMBER, TAG, `点赞失败: ${JSON.stringify(error)}`);
-    }
-  }
-
-  private async shareMoment(moment: MomentItem): Promise<void> {
-    try {
-      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-      const content = SystemShareService.buildMomentShareContent(
-        moment.description,
-        moment.user?.nickname ?? '匿名用户',
-        moment.moment_id
-      );
-      await SystemShareService.getInstance().shareText(context, content);
-    } catch (error) {
-      // User cancelled or share failed - non-fatal
-    }
   }
 
   private previewImage(momentId: string, images: string[], index: number) {
@@ -244,12 +195,12 @@ export struct MomentPage {
 
         Button('发布')
           .type(ButtonType.Capsule)
-          .backgroundColor($r('app.color.brand_primary'))
-          .fontColor(Color.White)
+          .backgroundColor(this.getCurrentThemePalette().accentBackground)
+          .fontColor(this.getCurrentThemePalette().accentText)
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .height(32)
           .shadow(DesignConstants.SHADOW.SMALL)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .onClick(async () => {
             const currentUser = this.stateManager.getCurrentUser();
             if (!currentUser) {
@@ -270,7 +221,7 @@ export struct MomentPage {
         top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
         bottom: DesignConstants.SPACING.SM
       })
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor(this.getSurfaceBackground())
       .borderRadius({ bottomLeft: DesignConstants.RADIUS.LG, bottomRight: DesignConstants.RADIUS.LG })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
@@ -313,16 +264,29 @@ export struct MomentPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
   }
 
   @Builder
   private buildMomentList() {
     List() {
-      LazyForEach(this.momentsDataSource, (moment: MomentItem, index: number) => {
+      LazyForEach(this.momentsDataSource, (moment: MomentItem) => {
         ListItem() {
-          this.buildMomentCard(moment, index)
+          MomentFeedCard({
+            moment: moment,
+            imageMode: 'grid',
+            showTags: true,
+            showLocationCard: true,
+            showTime: true,
+            showFavorite: false,
+            textMaxLines: 0,
+            textFontSize: DesignConstants.FONT.SIZE.LG,
+            onImagePreview: (momentId: string, images: string[], index: number) => {
+              this.previewImage(momentId, images, index);
+            }
+          })
         }
+        .margin({ bottom: 12 })
       }, (moment: MomentItem) => moment.moment_id)
       if (this.isLoadingMore) {
         ListItem() {
@@ -336,194 +300,6 @@ export struct MomentPage {
     .scrollBar(BarState.Auto)
     .cachedCount(5)
     .onReachEnd(() => { this.loadMoreMoments(); })
-  }
-
-  @Builder
-  private buildMomentCard(moment: MomentItem, index: number) {
-    Column({ space: DesignConstants.SPACING.MD }) {
-      // 用户信息
-      Row({ space: DesignConstants.SPACING.MD }) {
-        SystemAvatar({
-          avatarUrl: moment.user?.avatar_url ?? '',
-          name: moment.user?.nickname ?? '',
-          avatarSize: 40
-        })
-
-        Column({ space: 2 }) {
-          Text(moment.user?.nickname ?? '')
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
-
-          Text(this.formatTime(moment.created_at))
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
-      }
-      .width('100%')
-
-      // 瞬间内容
-      Text(moment.description)
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
-        .lineHeight(24)
-
-      // 图片展示
-      if (moment.images && moment.images.length > 0) {
-        Grid() {
-          ForEach(moment.images.slice(0, 9), (img: MomentImage, imgIndex: number) => {
-            GridItem() {
-              Image(MediaUrlUtil.normalize(img.url))
-                .width('100%')
-                .height('100%')
-                .objectFit(ImageFit.Cover)
-                .borderRadius(DesignConstants.RADIUS.MD)
-                .backgroundColor($r('app.color.bg_secondary'))
-                .geometryTransition('moment_img_' + moment.moment_id + '_' + imgIndex)
-                .onClick(() => {
-                  const imageUrls: string[] = (moment.images || []).map(i => MediaUrlUtil.normalize(i.url));
-                  this.previewImage(moment.moment_id, imageUrls, imgIndex);
-                })
-            }
-            .aspectRatio(1)
-          }, (img: MomentImage, idx: number) => img.url + '_' + idx)
-        }
-        .columnsTemplate('1fr 1fr 1fr')
-        .columnsGap(DesignConstants.SPACING.SM)
-        .rowsGap(DesignConstants.SPACING.SM)
-        .height(this.calcImageGridHeight(moment.images.length))
-        .width('100%')
-      }
-
-      // 标签
-      if (moment.tags && moment.tags.length > 0) {
-        Flex({ wrap: FlexWrap.Wrap }) {
-          ForEach(moment.tags, (tag: string) => {
-            Text(`#${tag}`)
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor($r('sys.color.ohos_id_color_emphasize'))
-              .backgroundColor($r('app.color.bg_tertiary'))
-              .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-              .borderRadius(DesignConstants.RADIUS.MD)
-              .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-          }, (tag: string) => tag)
-        }
-        .width('100%')
-      }
-
-      // 位置信息
-      if (moment.location) {
-        IntelligentLocationCard({
-          latitude: moment.location.point.latitude,
-          longitude: moment.location.point.longitude,
-          locationName: moment.location.location_name,
-          distance: moment.location.distance ?? 0,
-          altitude: 0
-        })
-      }
-
-      // 互动区域
-      Row({ space: DesignConstants.SPACING.LG }) {
-        Row({ space: DesignConstants.SPACING.XS }) {
-          LikeButton({
-            momentId: moment.moment_id,
-            initialLikesCount: moment.likes_count,
-            initialIsLiked: moment.my_state?.is_liked ?? false,
-            onLike: (): void => { this.likeMoment(moment, index); }
-          })
-        }
-
-        Row({ space: DesignConstants.SPACING.XS }) {
-          SystemIcon({ icon: AppIcon.MESSAGE, iconSize: 20, iconColor: $r('sys.color.ohos_id_color_text_secondary') })
-          Text(formatCount(moment.comments_count))
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        }
-
-        Blank()
-
-        Row({ space: DesignConstants.SPACING.XS }) {
-          SystemIcon({
-            icon: AppIcon.SHARE,
-            iconSize: IconSize.SMALL,
-            iconColor: $r('sys.color.ohos_id_color_text_secondary'),
-            clickable: true,
-            onIconClick: () => this.shareMoment(moment)
-          })
-          Text(formatCount(moment.shares_count))
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        }
-      }
-      .width('100%')
-    }
-    .width('100%')
-    .padding(DesignConstants.SPACING.LG)
-    .borderRadius(DesignConstants.RADIUS.XXL)
-    .shadow(DesignConstants.SHADOW.MEDIUM)
-    .backgroundColor($r('app.color.bg_secondary'))
-    .border({ width: 1, color: $r('app.color.highlight_border') })
-    .margin({ bottom: 12 })
-    .onClick(() => {
-      this.openMomentDetail(moment);
-    })
-  }
-
-  private openMomentDetail(moment: MomentItem): void {
-    if (!moment.moment_id) return;
-    const params = new MomentDetailRouteParam();
-    params.momentId = moment.moment_id;
-    AppRouter.push(PageNames.MOMENT_DETAIL, params);
-  }
-}
-
-/**
- * 点赞按钮组件
- */
-@Component
-struct LikeButton {
-  @Prop momentId: string;
-  @State isLiked: boolean = false;
-  @State likesCount: number = 0;
-  @Prop @Watch('onLikesCountSync') initialLikesCount: number = 0;
-  @Prop @Watch('onIsLikedSync') initialIsLiked: boolean = false;
-  onLike?: () => void;
-
-  onLikesCountSync() {
-    this.likesCount = this.initialLikesCount;
-  }
-
-  onIsLikedSync() {
-    this.isLiked = this.initialIsLiked;
-  }
-
-  aboutToAppear() {
-    this.likesCount = this.initialLikesCount;
-    this.isLiked = this.initialIsLiked;
-  }
-
-  build() {
-    Row({ space: DesignConstants.SPACING.XS }) {
-      SystemIcon({
-        icon: this.isLiked ? AppIcon.HEART_FILL : AppIcon.HEART,
-        iconSize: 20,
-        iconColor: this.isLiked ? $r('app.color.color_danger') : $r('sys.color.ohos_id_color_text_secondary'),
-        clickable: true,
-        onIconClick: () => {
-          this.isLiked = !this.isLiked;
-          this.likesCount += this.isLiked ? 1 : -1;
-          if (this.onLike) {
-            this.onLike();
-          }
-        }
-      })
-
-      Text(formatCount(this.likesCount))
-        .fontSize(DesignConstants.FONT.SIZE.MD)
-        .fontColor(this.isLiked ? $r('app.color.color_danger') : $r('sys.color.ohos_id_color_text_secondary'))
-    }
   }
 }
 

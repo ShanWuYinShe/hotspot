@@ -4,7 +4,7 @@ use crate::{
         AdminGroupItem, AdminGroupStats, GroupInfo, GroupItem, GroupMemberItem, RelativeLocation,
         UserInfo,
     },
-    error::{AppError, Result},
+    error::{ApiError, Result},
     repositories::group::member_repo::GroupMemberDetailRow,
     repositories::group::settings_repo::GroupSettingsRow,
     repositories::group_repo::{AdminGroupSearchRow, GroupRow, GroupSearchRow},
@@ -18,7 +18,7 @@ impl GroupService {
         self.member_repo
             .get_member_role(group_id, user_id)
             .await?
-            .ok_or_else(|| AppError::NotGroupMember("你不是该群成员".to_string()))
+            .ok_or_else(|| ApiError::NotGroupMember("你不是该群成员".to_string()))
     }
 
     /// 检查用户是否是群管理员或群主
@@ -29,7 +29,7 @@ impl GroupService {
     ) -> Result<GroupRole> {
         let role = self.require_member(group_id, user_id).await?;
         if role != GroupRole::Admin && role != GroupRole::Owner {
-            return Err(AppError::Forbidden("需要管理员或群主权限".to_string()));
+            return Err(ApiError::Forbidden("需要管理员或群主权限".to_string()));
         }
         Ok(role)
     }
@@ -42,7 +42,7 @@ impl GroupService {
         permission_key: &str,
     ) -> Result<()> {
         if !self.group_repo.exists(group_id).await? {
-            return Err(AppError::GroupNotFound("群组不存在".to_string()));
+            return Err(ApiError::GroupNotFound("群组不存在".to_string()));
         }
 
         if self.require_admin_or_owner(group_id, user_id).await.is_ok() {
@@ -50,7 +50,7 @@ impl GroupService {
         }
 
         if !self.admin_rbac_repo.is_admin(user_id).await? {
-            return Err(AppError::Forbidden("需要管理员或群主权限".to_string()));
+            return Err(ApiError::Forbidden("需要管理员或群主权限".to_string()));
         }
 
         if self
@@ -61,7 +61,7 @@ impl GroupService {
             return Ok(());
         }
 
-        Err(AppError::AdminPermissionDenied(format!(
+        Err(ApiError::AdminPermissionDenied(format!(
             "缺少权限: {}",
             permission_key
         )))
@@ -71,7 +71,7 @@ impl GroupService {
     pub(super) async fn require_owner(&self, group_id: i64, user_id: i64) -> Result<GroupRole> {
         let role = self.require_member(group_id, user_id).await?;
         if role != GroupRole::Owner {
-            return Err(AppError::Forbidden("需要群主权限".to_string()));
+            return Err(ApiError::Forbidden("需要群主权限".to_string()));
         }
         Ok(role)
     }

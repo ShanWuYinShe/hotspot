@@ -372,12 +372,13 @@ export class LocationUtil {
    * 客户端严禁基于经纬度自行计算距离（例如 Haversine/地球半径等）。
    */
   static formatDistance(distance: number): string {
-    if (distance < 1000) {
-      return `${distance}m`;
-    } else if (distance < 10000) {
-      return `${(distance / 1000).toFixed(1)}km`;
+    const roundedDistance = Math.max(0, Math.round(distance));
+    if (roundedDistance < 1000) {
+      return `${roundedDistance}m`;
+    } else if (roundedDistance < 10000) {
+      return `${(roundedDistance / 1000).toFixed(1)}km`;
     } else {
-      return `${Math.round(distance / 1000)}km`;
+      return `${Math.round(roundedDistance / 1000)}km`;
     }
   }
 

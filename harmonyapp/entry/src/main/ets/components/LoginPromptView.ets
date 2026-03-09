@@ -19,6 +19,8 @@ import { AuthData, GuestRequest, MyProfile } from '../core/types/api';
 import { SafeAreaUtils } from '../core/utils/SafeAreaUtils';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { KeyboardDismissManager } from '../core/utils/KeyboardDismissManager';
+import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF20;
 const TAG: string = 'LoginPromptView';
@@ -41,6 +43,11 @@ export struct LoginPromptView {
   @State isQuickStarting: boolean = false;
   @State isQuickInputFocused: boolean = false;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
 
   build() {
     Column({ space: 20 }) {
@@ -70,8 +77,8 @@ export struct LoginPromptView {
       Column({ space: 12 }) {
         Button('快速体验（无需注册）')
           .type(ButtonType.Capsule)
-          .backgroundColor($r('app.color.brand_primary'))
-          .fontColor(Color.White)
+          .backgroundColor(this.getPalette().accentBackground)
+          .fontColor(this.getPalette().accentText)
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .width('100%')
           .height(48)
@@ -81,10 +88,10 @@ export struct LoginPromptView {
 
         Button('登录 / 注册')
           .type(ButtonType.Capsule)
-          .backgroundColor($r('app.color.bg_tertiary'))
+          .backgroundColor(this.getPalette().surfaceSubtle)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .fontSize(DesignConstants.FONT.SIZE.LG)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getPalette().borderColor })
           .width('100%')
           .height(48)
           .onClick(() => {
@@ -107,13 +114,13 @@ export struct LoginPromptView {
     .height('100%')
     .justifyContent(FlexAlign.Center)
     .padding(32)
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getPalette().pageBackground)
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
     .bindSheet($$this.showQuickStart, this.buildQuickStartSheet(), {
       height: SheetSize.FIT_CONTENT,
       showClose: true,
       dragBar: true,
-      backgroundColor: $r('app.color.start_window_background'),
+      backgroundColor: this.getPalette().sheetBackground,
       keyboardAvoidMode: SheetKeyboardAvoidMode.TRANSLATE_AND_SCROLL
     })
   }
@@ -134,7 +141,7 @@ export struct LoginPromptView {
         TextInput({ placeholder: '请输入你的昵称' })
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .padding(DesignConstants.SPACING.LG)
-          .backgroundColor($r('app.color.bg_inset'))
+          .backgroundColor(this.getPalette().surfaceSubtle)
           .borderRadius(DesignConstants.RADIUS.XL)
           .shadow(DesignConstants.SHADOW.INSET)
           .enabled(!this.isQuickStarting)
@@ -149,8 +156,8 @@ export struct LoginPromptView {
 
         Button(this.isQuickStarting ? '正在创建...' : '开始体验')
           .type(ButtonType.Capsule)
-          .backgroundColor($r('app.color.brand_primary'))
-          .fontColor(Color.White)
+          .backgroundColor(this.getPalette().accentBackground)
+          .fontColor(this.getPalette().accentText)
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .width('100%')
           .height(48)
@@ -177,9 +184,9 @@ export struct LoginPromptView {
     }
     .width('100%')
     .scrollBar(BarState.Off)
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getPalette().surfaceBackground)
     .shadow(DesignConstants.SHADOW.SMALL)
-    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .border({ width: 1, color: this.getPalette().borderColor })
   }
 
   private dismissQuickStartKeyboard(): void {

@@ -9,7 +9,7 @@ use redis::AsyncCommands;
 use std::collections::HashMap;
 
 use crate::constants::{REDIS_KEY_PRESENCE_LOCATION, REDIS_KEY_PRESENCE_ONLINE};
-use crate::error::{AppError, Result};
+use crate::error::{ApiError, Result};
 use crate::repositories::{
     user::online_status_repo::UserOnlineStatusRepository,
     user::settings_repo::{UserSettingsRepository, UserSettingsRow},
@@ -43,7 +43,7 @@ impl PresenceService {
         let _: () = conn
             .zadd(REDIS_KEY_PRESENCE_ONLINE, user_id, timestamp)
             .await
-            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
+            .map_err(|e| ApiError::InternalError(format!("Redis错误: {}", e)))?;
 
         tracing::debug!("用户上线: user_id={}", user_id);
         Ok(())
@@ -56,14 +56,14 @@ impl PresenceService {
         let _: () = conn
             .zrem(REDIS_KEY_PRESENCE_ONLINE, user_id)
             .await
-            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
+            .map_err(|e| ApiError::InternalError(format!("Redis错误: {}", e)))?;
 
         // 删除位置信息
         let location_key = format!("{}{}", REDIS_KEY_PRESENCE_LOCATION, user_id);
         let _: () = conn
             .del(&location_key)
             .await
-            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
+            .map_err(|e| ApiError::InternalError(format!("Redis错误: {}", e)))?;
 
         tracing::debug!("用户离线: user_id={}", user_id);
         Ok(())
@@ -84,7 +84,7 @@ impl PresenceService {
         let _: () = conn
             .set_ex(&key, value, crate::constants::SECS_PER_HOUR)
             .await
-            .map_err(|e| AppError::InternalError(format!("Redis错误: {}", e)))?;
+            .map_err(|e| ApiError::InternalError(format!("Redis错误: {}", e)))?;
 
         Ok(())
     }

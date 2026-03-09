@@ -14,7 +14,7 @@ use thiserror::Error;
 use crate::dto::response::ApiResponse;
 
 #[derive(Debug, Error)]
-pub enum AppError {
+pub enum ApiError {
     // ============================================================
     // 10000-10099：请求与参数（客户端可修复）
     // ============================================================
@@ -325,7 +325,7 @@ pub enum AppError {
     SerdeJson(#[from] serde_json::Error),
 }
 
-impl AppError {
+impl ApiError {
     /// 获取错误码
     ///
     /// 错误码严格遵循 spec/api_spec_errors.md 定义：
@@ -493,11 +493,11 @@ fn log_sqlx_error(code: i32, err: &sqlx::Error, error_chain: &str) {
     }
 }
 
-fn log_server_error(code: i32, err: &AppError) {
+fn log_server_error(code: i32, err: &ApiError) {
     let error_chain = format_error_chain(err);
     match err {
-        AppError::Sqlx(sqlx_err) => log_sqlx_error(code, sqlx_err, &error_chain),
-        AppError::Redis(redis_err) => {
+        ApiError::Sqlx(sqlx_err) => log_sqlx_error(code, sqlx_err, &error_chain),
+        ApiError::Redis(redis_err) => {
             tracing::error!(
                 code,
                 error_kind = "redis",
@@ -508,7 +508,7 @@ fn log_server_error(code: i32, err: &AppError) {
                 "服务端错误（客户端收到通用错误信息）"
             );
         }
-        AppError::SerdeJson(serde_err) => {
+        ApiError::SerdeJson(serde_err) => {
             tracing::error!(
                 code,
                 error_kind = "serde_json",
@@ -518,7 +518,7 @@ fn log_server_error(code: i32, err: &AppError) {
                 "服务端错误（客户端收到通用错误信息）"
             );
         }
-        AppError::InternalError(message) => {
+        ApiError::InternalError(message) => {
             tracing::error!(
                 code,
                 error_kind = "internal",
@@ -541,7 +541,7 @@ fn log_server_error(code: i32, err: &AppError) {
     }
 }
 
-impl IntoResponse for AppError {
+impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let code = self.error_code();
         let status = self.http_status();
@@ -590,13 +590,13 @@ impl IntoResponse for AppError {
 // 便捷类型别名
 // ============================================================
 
-pub type Result<T> = std::result::Result<T, AppError>;
+pub type Result<T> = std::result::Result<T, ApiError>;
 
 // ============================================================
 // 便捷构造方法
 // ============================================================
 
-impl AppError {
+impl ApiError {
     /// 创建内部错误
     pub fn internal(msg: impl Into<String>) -> Self {
         Self::InternalError(msg.into())
@@ -606,10 +606,10 @@ impl AppError {
 /// 预热错误码映射（用于观测/告警，不影响业务逻辑）
 pub fn warmup_error_catalog() {
     let _ = [
-        AppError::VersionConflict("版本冲突".to_string()),
-        AppError::TooManyConcurrentRequests,
-        AppError::ServiceUnavailable,
-        AppError::SystemMaintenance,
-        AppError::ServiceOverloaded,
+        ApiError::VersionConflict("版本冲突".to_string()),
+        ApiError::TooManyConcurrentRequests,
+        ApiError::ServiceUnavailable,
+        ApiError::SystemMaintenance,
+        ApiError::ServiceOverloaded,
     ];
 }

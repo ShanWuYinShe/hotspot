@@ -2,19 +2,21 @@ import { KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION, KEY_LOCATION_PICK_RESULT } fro
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AnchorHistoryItem, AnchorHistoryUtil } from '../../../core/utils/AnchorHistoryUtil';
-import { NativeMapComponent, NativeMapActions, MapRegion, MapCoordinate, MapMarker, MapCameraPosition } from '../../../components/NativeMapComponent';
+import { NativeMapComponent, NativeMapActions, MapRegion, MapCoordinate, MapMarker, MapCameraPosition, MapVisibleRegion } from '../../../components/NativeMapComponent';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { curves } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { MapRenderItem, MapRenderRequest, MapViewport } from '../../../core/types/api';
+import { MapRenderItem, MapRenderRequest, MapRenderFilter, MapViewport } from '../../../core/types/api';
 import { AppRouter, GroupDetailRouteParam, ProfileRouteParam, MomentDetailRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { CoordinateConverter } from '../../../core/geo/CoordinateConverter';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF13;
 const TAG: string = 'LocationPickerPage';
@@ -58,8 +60,13 @@ interface LocationPickerParamLike {
 interface TopBarProps {
   filterOpen: boolean;
   safeAreaTop: number;
+  resolvedThemeId?: string;
   onBack: () => void;
   onToggleFilter: () => void;
+}
+
+function resolveLocationPickerPalette(themeId?: string) {
+  return AppThemeManager.getPaletteById(themeId ?? 'default_clean_light');
 }
 
 @Builder
@@ -80,7 +87,7 @@ function TopBar(props: TopBarProps) {
     .height(44)
     .justifyContent(FlexAlign.Center)
     .borderRadius(DesignConstants.RADIUS.FULL)
-    .backgroundColor($r('app.color.bg_tertiary'))
+    .backgroundColor(resolveLocationPickerPalette(props.resolvedThemeId).surfaceSubtle)
     .onClick(props.onBack)
 
     Row({ space: 6 }) {
@@ -99,10 +106,12 @@ function TopBar(props: TopBarProps) {
       left: DesignConstants.SPACING.MD,
       right: DesignConstants.SPACING.MD
     })
-    .backgroundColor(props.filterOpen ? $r('app.color.bg_tertiary') : $r('app.color.bg_secondary'))
+    .backgroundColor(props.filterOpen
+      ? resolveLocationPickerPalette(props.resolvedThemeId).surfaceSubtle
+      : resolveLocationPickerPalette(props.resolvedThemeId).surfaceBackground)
     .borderRadius(DesignConstants.RADIUS.FULL)
     .shadow(DesignConstants.SHADOW.SMALL)
-    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .border({ width: 1, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
     .onClick(props.onToggleFilter)
   }
   .width('100%')
@@ -152,6 +161,7 @@ interface FilterPanelProps {
   showUsers: boolean;
   showGroups: boolean;
   showMoments: boolean;
+  resolvedThemeId?: string;
   onToggleUsers: () => void;
   onToggleGroups: () => void;
   onToggleMoments: () => void;
@@ -184,16 +194,17 @@ function FilterDropdownPanel(props: FilterPanelProps) {
   }
   .width(170)
   .padding({ top: 6, bottom: 6 })
-  .backgroundColor($r('app.color.bg_secondary'))
+  .backgroundColor(resolveLocationPickerPalette(props.resolvedThemeId).surfaceBackground)
   .borderRadius(DesignConstants.RADIUS.XXL)
   .shadow(DesignConstants.SHADOW.MEDIUM)
-  .border({ width: 1, color: $r('app.color.highlight_border') })
+  .border({ width: 1, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
   .onClick(() => {})
 }
 
 interface MapToastProps {
   message: string;
   safeAreaTop: number;
+  resolvedThemeId?: string;
 }
 
 @Builder
@@ -204,7 +215,7 @@ function MapToast(props: MapToastProps) {
     Text(props.message)
       .fontSize(DesignConstants.FONT.SIZE.SM)
       .fontColor($r('sys.color.ohos_id_color_text_primary'))
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor(resolveLocationPickerPalette(props.resolvedThemeId).surfaceBackground)
       .borderRadius(DesignConstants.RADIUS.MD)
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: 6, bottom: 6 })
       .position({ top: SafeAreaUtils.resolveTopPadding(props.safeAreaTop, 100), left: 16 })
@@ -233,6 +244,11 @@ struct SearchPanel {
   onSelectHistory: (item: AnchorHistoryItem) => void = (item) => {};
   onTextChange: (value: string) => void = (value) => {};
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
 
   build() {
     Column() {
@@ -247,7 +263,7 @@ struct SearchPanel {
           .id('locationPickerSearchInput')
           .layoutWeight(1)
           .height(40)
-          .backgroundColor($r('app.color.bg_inset'))
+          .backgroundColor(this.getPalette().surfaceSubtle)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .shadow(DesignConstants.SHADOW.INSET)
           .searchIcon({
@@ -327,7 +343,7 @@ struct SearchPanel {
                     .width(32)
                     .height(32)
                     .justifyContent(FlexAlign.Center)
-                    .backgroundColor($r('app.color.bg_tertiary'))
+                    .backgroundColor(this.getPalette().surfaceSubtle)
                     .borderRadius(DesignConstants.RADIUS.MD)
 
                     Text(item.locationName || '未知地点')
@@ -344,7 +360,7 @@ struct SearchPanel {
                     top: DesignConstants.SPACING.MD,
                     bottom: DesignConstants.SPACING.MD
                   })
-                  .backgroundColor($r('app.color.bg_secondary'))
+                  .backgroundColor(this.getPalette().surfaceBackground)
                   .borderRadius(DesignConstants.RADIUS.XXL)
                   .shadow({
                     radius: DesignConstants.SHADOW.MEDIUM.radius,
@@ -352,7 +368,7 @@ struct SearchPanel {
                     offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
                     offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
                   })
-                  .border({ width: 1, color: $r('app.color.highlight_border') })
+                  .border({ width: 1, color: this.getPalette().borderColor })
                   .onClick(() => { this.onSelectResult(item); })
                 }
               }, (item: LocationInfo) => `search_${item.latitude}_${item.longitude}`)
@@ -404,7 +420,7 @@ struct SearchPanel {
                       .width(32)
                       .height(32)
                       .justifyContent(FlexAlign.Center)
-                      .backgroundColor($r('app.color.bg_tertiary'))
+                      .backgroundColor(this.getPalette().surfaceSubtle)
                       .borderRadius(DesignConstants.RADIUS.MD)
 
                       Text(item.locationName || '未命名位置')
@@ -421,7 +437,7 @@ struct SearchPanel {
                       top: DesignConstants.SPACING.MD,
                       bottom: DesignConstants.SPACING.MD
                     })
-                    .backgroundColor($r('app.color.bg_secondary'))
+                    .backgroundColor(this.getPalette().surfaceBackground)
                     .borderRadius(DesignConstants.RADIUS.XXL)
                     .shadow({
                       radius: DesignConstants.SHADOW.MEDIUM.radius,
@@ -429,7 +445,7 @@ struct SearchPanel {
                       offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
                       offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
                     })
-                    .border({ width: 1, color: $r('app.color.highlight_border') })
+                    .border({ width: 1, color: this.getPalette().borderColor })
                     .onClick(() => {
                       this.onSelectHistory(item);
                       this.onClose();
@@ -469,7 +485,7 @@ struct SearchPanel {
       top: DesignConstants.SPACING.LG,
       bottom: DesignConstants.SPACING.MD + this.safeAreaBottom
     })
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getPalette().surfaceBackground)
     .border({ width: { top: 1 }, color: $r('app.color.divider') })
     .borderRadius({ topLeft: 24, topRight: 24 })
     .onClick(() => {})
@@ -490,8 +506,13 @@ struct MainPanel {
   onConfirm: () => void = () => {};
   @Prop confirmLabel: string = '设为浏览锚点';
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private dragStartHeight: number = 0;
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
 
   private snapToNearest(): void {
     const snapPoints: number[] = [PANEL_SNAP_MIN, PANEL_SNAP_HALF, PANEL_SNAP_MAX];
@@ -518,7 +539,7 @@ struct MainPanel {
           .width(36)
           .height(4)
           .borderRadius(DesignConstants.RADIUS.SM)
-          .backgroundColor($r('app.color.bg_tertiary'))
+          .backgroundColor(this.getPalette().surfaceSubtle)
       }
       .width('100%')
       .height(36)
@@ -555,7 +576,7 @@ struct MainPanel {
       .height(40)
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
       .alignItems(VerticalAlign.Center)
-      .backgroundColor($r('app.color.bg_inset'))
+      .backgroundColor(this.getPalette().surfaceSubtle)
       .borderRadius(DesignConstants.RADIUS.FULL)
       .shadow(DesignConstants.SHADOW.INSET)
       .margin({ bottom: DesignConstants.SPACING.MD })
@@ -598,7 +619,7 @@ struct MainPanel {
                       .width(32)
                       .height(32)
                       .justifyContent(FlexAlign.Center)
-                      .backgroundColor($r('app.color.bg_tertiary'))
+                      .backgroundColor(this.getPalette().surfaceSubtle)
                       .borderRadius(DesignConstants.RADIUS.MD)
 
                       Text(item.locationName || '未命名位置')
@@ -615,7 +636,7 @@ struct MainPanel {
                       top: DesignConstants.SPACING.MD,
                       bottom: DesignConstants.SPACING.MD
                     })
-                    .backgroundColor($r('app.color.bg_secondary'))
+                    .backgroundColor(this.getPalette().surfaceBackground)
                     .borderRadius(DesignConstants.RADIUS.XXL)
                     .shadow({
                       radius: DesignConstants.SHADOW.MEDIUM.radius,
@@ -623,7 +644,7 @@ struct MainPanel {
                       offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
                       offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
                     })
-                    .border({ width: 1, color: $r('app.color.highlight_border') })
+                     .border({ width: 1, color: this.getPalette().borderColor })
                     .onClick(() => { this.onSelectHistory(item); })
                   }
                 }, (item: AnchorHistoryItem) => `hist_m_${item.latitude}_${item.longitude}`)
@@ -659,12 +680,12 @@ struct MainPanel {
         .type(ButtonType.Capsule)
         .width('100%')
         .height(48)
-        .backgroundColor($r('app.color.brand_primary'))
-        .fontColor(Color.White)
+        .backgroundColor(this.getPalette().accentBackground)
+        .fontColor(this.getPalette().accentText)
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .fontWeight(FontWeight.Medium)
         .shadow(DesignConstants.SHADOW.SMALL)
-        .border({ width: 1, color: $r('app.color.highlight_border') })
+        .border({ width: 1, color: this.getPalette().borderColor })
         .margin({ top: DesignConstants.SPACING.SM })
         .onClick(this.onConfirm)
     }
@@ -676,7 +697,7 @@ struct MainPanel {
       top: 0,
       bottom: DesignConstants.SPACING.MD + this.safeAreaBottom
     })
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getPalette().surfaceBackground)
     .border({ width: { top: 1 }, color: $r('app.color.divider') })
     .borderRadius({ topLeft: 24, topRight: 24 })
     .onClick(() => {})
@@ -690,6 +711,7 @@ export struct LocationPickerPage {
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   @State mapRegion: MapRegion = {
     latitude: 35.154921,
@@ -707,6 +729,7 @@ export struct LocationPickerPage {
   @State showSearchBar: boolean = false;
   @State searchResults: LocationInfo[] = [];
   @State mapMarkers: MapMarker[] = [];
+  private visibleRegion: MapVisibleRegion | null = null;
   @State showUsers: boolean = true;
   @State showGroups: boolean = true;
   @State showMoments: boolean = true;
@@ -729,18 +752,23 @@ export struct LocationPickerPage {
   private searchDebounceTimerId: number = 0;
   private mapZoom: number = 15;
   private initialised: boolean = false;
+  private mapReady: boolean = false;
   private renderItems: MapRenderItem[] = [];
   private lastViewportSignature: string = '';
   private mapActions: NativeMapActions | null = null;
   private hasShownGestureHint: boolean = false;
 
   async aboutToAppear() {
-    SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,
-      preferDarkContent: true
-    });
+    SystemUiController.syncWithCurrentTheme();
     this.initialised = false;
+    this.mapReady = false;
+    this.visibleRegion = null;
+    this.lastViewportSignature = '';
     this.anchorHistory = AnchorHistoryUtil.getHistory();
+  }
+
+  private getCurrentThemePalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
   private initFromParams(param: Record<string, Object> | undefined): void {
@@ -932,13 +960,13 @@ export struct LocationPickerPage {
       }, 400);
     }
 
-    // 防抖：快速连续拖动时只在最后一次 idle 后请求
-    if (this.renderTimerId > 0) {
-      clearTimeout(this.renderTimerId);
-    }
-    this.renderTimerId = setTimeout(() => {
+  }
+
+  private handleMapReady(): void {
+    this.mapReady = true;
+    if (this.initialised) {
       this.fetchMapRenderData();
-    }, 300);
+    }
   }
 
   private collapsePanel(): void {
@@ -953,6 +981,19 @@ export struct LocationPickerPage {
         () => { this.panelHeight = PANEL_SNAP_MIN; }
       );
     }
+  }
+
+  private handleVisibleRegionChange(region: MapVisibleRegion): void {
+    this.visibleRegion = region;
+    if (!this.initialised || !this.mapReady) {
+      return;
+    }
+    if (this.renderTimerId > 0) {
+      clearTimeout(this.renderTimerId);
+    }
+    this.renderTimerId = setTimeout(() => {
+      this.fetchMapRenderData();
+    }, 120);
   }
 
   private async onMapDoubleClick(coord: MapCoordinate): Promise<void> {
@@ -1090,10 +1131,13 @@ export struct LocationPickerPage {
   }
 
   private async fetchMapRenderData(): Promise<void> {
-    if (!this.initialised) {
+    if (!this.initialised || !this.mapReady) {
       return;
     }
     const viewport = this.buildViewport();
+    if (!viewport) {
+      return;
+    }
     const signature = `${viewport.bounds.north.toFixed(6)}|${viewport.bounds.south.toFixed(6)}|${viewport.bounds.east.toFixed(6)}|${viewport.bounds.west.toFixed(6)}|${viewport.zoom.toFixed(2)}`;
     if (signature === this.lastViewportSignature && this.renderItems.length > 0) {
       this.updateMarkers();
@@ -1101,7 +1145,8 @@ export struct LocationPickerPage {
     }
     this.lastViewportSignature = signature;
     try {
-      const request: MapRenderRequest = { viewport };
+      const filter = this.resolveMapFilter();
+      const request: MapRenderRequest = filter ? { viewport, filter } : { viewport };
       const response = await ApiClient.renderMap(request);
       if (response.code === 0) {
         this.renderItems = response.data?.items ?? [];
@@ -1134,10 +1179,36 @@ export struct LocationPickerPage {
   }
 
   private buildViewport(): MapViewport {
+    const zoom = Math.max(1, Math.min(20, this.mapZoom));
+
+    // 优先使用真实可视区域（如果 MapKit 支持 getVisibleRegion）
+    if (this.visibleRegion) {
+      const corners: MapCoordinate[] = [
+        this.visibleRegion.northeast,
+        this.visibleRegion.northwest,
+        this.visibleRegion.southeast,
+        this.visibleRegion.southwest
+      ];
+      const convertedCorners = corners.map((corner: MapCoordinate) =>
+        CoordinateConverter.convertGcj02ToWgs84(corner.latitude, corner.longitude)
+      );
+      const latitudes = convertedCorners.map((point) => point.latitude);
+      const longitudes = convertedCorners.map((point) => point.longitude);
+      return {
+        bounds: {
+          north: Math.min(90, Math.max(...latitudes)),
+          south: Math.max(-90, Math.min(...latitudes)),
+          east: Math.min(180, Math.max(...longitudes)),
+          west: Math.max(-180, Math.min(...longitudes))
+        },
+        zoom
+      };
+    }
+
+    // 兜底：部分设备/版本不支持 getVisibleRegion 时，退回到“中心点 + zoom 推算”的近似方案
     const gcj02Lat = this.centerLat || this.mapRegion.latitude;
     const gcj02Lng = this.centerLng || this.mapRegion.longitude;
     const wgs84 = CoordinateConverter.convertGcj02ToWgs84(gcj02Lat, gcj02Lng);
-    const zoom = Math.max(1, Math.min(20, this.mapZoom));
     const delta: BoundsDelta = this.computeBoundsDelta(zoom);
     return {
       bounds: {
@@ -1292,6 +1363,36 @@ export struct LocationPickerPage {
     return item.entity?.subtitle || '';
   }
 
+  /**
+   * 根据当前勾选的类型决定向后端传递的 data_type 过滤条件
+   * - 全选或全不选：不下发 filter，让服务端返回所有类型
+   * - 仅单选某一类：下发对应 data_type，减少无关数据
+   */
+  private resolveMapFilter(): MapRenderFilter | undefined {
+    const showUsers = this.showUsers;
+    const showGroups = this.showGroups;
+    const showMoments = this.showMoments;
+
+    const noneSelected = !showUsers && !showGroups && !showMoments;
+    const allSelected = showUsers && showGroups && showMoments;
+    if (noneSelected || allSelected) {
+      return undefined;
+    }
+
+    let dataType: 'user' | 'group' | 'moment' | 'all' = 'all';
+    if (showUsers && !showGroups && !showMoments) {
+      dataType = 'user';
+    } else if (!showUsers && showGroups && !showMoments) {
+      dataType = 'group';
+    } else if (!showUsers && !showGroups && showMoments) {
+      dataType = 'moment';
+    } else {
+      dataType = 'all';
+    }
+
+    return { data_type: dataType };
+  }
+
   private onMarkerItemClick(marker: MapMarker): void {
     // 客户端合并的重叠 marker：弹出选择菜单
     if (marker.id.startsWith(OVERLAP_GROUP_PREFIX)) {
@@ -1379,19 +1480,22 @@ export struct LocationPickerPage {
           onMapDoubleClick: (coord: MapCoordinate) => { this.onMapDoubleClick(coord); },
           onMapLongPress: (coord: MapCoordinate) => { this.onMapLongPress(coord); },
           onMarkerClick: (marker: MapMarker) => { this.onMarkerItemClick(marker); },
-          onActionsReady: (actions: NativeMapActions) => { this.mapActions = actions; }
+          onActionsReady: (actions: NativeMapActions) => { this.mapActions = actions; },
+          onMapReady: () => { this.handleMapReady(); },
+          onVisibleRegionChange: (region: MapVisibleRegion) => { this.handleVisibleRegionChange(region); }
         })
           .width('100%')
           .height('100%')
 
         // 地图 Toast 提示
-        MapToast({ message: this.mapToastMessage, safeAreaTop: this.safeAreaTop })
+        MapToast({ message: this.mapToastMessage, safeAreaTop: this.safeAreaTop, resolvedThemeId: this.resolvedThemeId })
 
         // TopBar + 筛选下拉面板
         Column() {
           TopBar({
             filterOpen: this.showFilterPanel,
             safeAreaTop: this.safeAreaTop,
+            resolvedThemeId: this.resolvedThemeId,
             onBack: () => { AppRouter.pop(); },
             onToggleFilter: () => { this.showFilterPanel = !this.showFilterPanel; },
           })
@@ -1401,6 +1505,7 @@ export struct LocationPickerPage {
                 showUsers: this.showUsers,
                 showGroups: this.showGroups,
                 showMoments: this.showMoments,
+                resolvedThemeId: this.resolvedThemeId,
                 onToggleUsers: () => {
                   this.showUsers = !this.showUsers;
                   this.updateMarkers();
@@ -1526,7 +1631,7 @@ export struct LocationPickerPage {
                         .fontColor(this.getTypeColor(item.type))
                         .padding({ left: 8, right: 8, top: 4, bottom: 4 })
                         .borderRadius(DesignConstants.RADIUS.SM)
-                        .backgroundColor($r('app.color.bg_inset'))
+                        .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
                     }
                     .width('100%')
                     .padding({
@@ -1548,7 +1653,7 @@ export struct LocationPickerPage {
               .padding({ bottom: this.safeAreaBottom + DesignConstants.SPACING.MD })
             }
             .width('100%')
-            .backgroundColor($r('app.color.bg_secondary'))
+            .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
             .borderRadius({ topLeft: 20, topRight: 20 })
             .shadow({
               radius: DesignConstants.SHADOW.LARGE.radius,
@@ -1579,7 +1684,7 @@ export struct LocationPickerPage {
           .width(48)
           .height(48)
           .justifyContent(FlexAlign.Center)
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow({
             radius: DesignConstants.SHADOW.MEDIUM.radius,
@@ -1587,7 +1692,7 @@ export struct LocationPickerPage {
             offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
             offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
           })
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
           .onClick(() => { this.locateUser(); })
 
           Column() {
@@ -1599,7 +1704,7 @@ export struct LocationPickerPage {
           .width(48)
           .height(48)
           .justifyContent(FlexAlign.Center)
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow({
             radius: DesignConstants.SHADOW.MEDIUM.radius,
@@ -1607,7 +1712,7 @@ export struct LocationPickerPage {
             offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
             offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
           })
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
           .onClick(() => { this.locateBrowseAnchor(); })
 
           Column() {
@@ -1620,7 +1725,7 @@ export struct LocationPickerPage {
           .width(48)
           .height(48)
           .justifyContent(FlexAlign.Center)
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow({
             radius: DesignConstants.SHADOW.MEDIUM.radius,
@@ -1628,7 +1733,7 @@ export struct LocationPickerPage {
             offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
             offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
           })
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
           .onClick(() => { if (this.mapActions) this.mapActions.zoomIn(); })
 
           Column() {
@@ -1641,7 +1746,7 @@ export struct LocationPickerPage {
           .width(48)
           .height(48)
           .justifyContent(FlexAlign.Center)
-          .backgroundColor($r('app.color.bg_secondary'))
+           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow({
             radius: DesignConstants.SHADOW.MEDIUM.radius,
@@ -1649,7 +1754,7 @@ export struct LocationPickerPage {
             offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
             offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
           })
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+           .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
           .onClick(() => { if (this.mapActions) this.mapActions.zoomOut(); })
         }
         .position({ right: DesignConstants.SPACING.MD, bottom: this.getControlsBottomOffset() })
@@ -1657,7 +1762,7 @@ export struct LocationPickerPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
     .hideTitleBar(true)
     .onShown(() => { if (this.mapActions) { this.mapActions.show(); } })
     .onHidden(() => { if (this.mapActions) { this.mapActions.hide(); } })

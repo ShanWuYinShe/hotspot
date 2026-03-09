@@ -23,6 +23,7 @@ import {
   UpdateGroupRequest
 } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { InteractionStateStore } from '../../../core/state/InteractionStateStore';
 import { DistributedSyncService, SyncData } from '../../../core/services/DistributedSyncService';
 import { SmartNotificationService } from '../../../core/services/SmartNotificationService';
 import { AccessibilityManager } from '../../../core/accessibility/AccessibilityManager';
@@ -37,6 +38,8 @@ import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
 import { formatCount } from '../../../core/utils/FormatUtil';
 import { LocationUtil } from '../../../core/location/LocationUtil';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
+import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 interface GroupSyncData {
   groupId: string;
@@ -66,6 +69,7 @@ export struct GroupDetailPage {
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
   
   private stateManager = GlobalStateManager.getInstance();
   private distributedSyncService = DistributedSyncService.getInstance();
@@ -111,13 +115,27 @@ export struct GroupDetailPage {
   }
 
   aboutToAppear(): void {
-    SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
-    });
+    SystemUiController.syncWithCurrentTheme();
   }
 
   aboutToDisappear(): void {
     KeyboardDismissManager.getInstance().dismiss();
+  }
+
+  private getCurrentThemePalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getSurfaceBackground(): string {
+    return this.getCurrentThemePalette().surfaceBackground;
+  }
+
+  private getSurfaceSubtle(): string {
+    return this.getCurrentThemePalette().surfaceSubtle;
+  }
+
+  private getSurfaceBorder(): string {
+    return this.getCurrentThemePalette().borderColor;
   }
 
   private ensureLoggedIn(actionName: string): boolean {
@@ -374,6 +392,7 @@ export struct GroupDetailPage {
           if (response.data.status === 'joined') {
             SystemToast.showSuccess('加入群组成功', this.getUIContext());
             this.isMember = true;
+            InteractionStateStore.getInstance().updateGroupMembership(this.groupId, { is_member: true });
             await this.loadGroupDetail();
           } else if (response.data.status === 'pending_approval') {
             SystemToast.showSuccess('已提交申请，等待管理员审批', this.getUIContext());
@@ -381,6 +400,7 @@ export struct GroupDetailPage {
         } else if (response.code === 10400) {
           SystemToast.show(response.message || '加入群组失败', this.getUIContext());
           this.isMember = true;
+          InteractionStateStore.getInstance().updateGroupMembership(this.groupId, { is_member: true });
           await this.enterChat();
         } else {
           SystemToast.showError(response.message || '加入群组失败', this.getUIContext());
@@ -407,6 +427,7 @@ export struct GroupDetailPage {
         if (response.code === 0) {
           SystemToast.showSuccess('已离开群组', this.getUIContext());
           this.isMember = false;
+          InteractionStateStore.getInstance().updateGroupMembership(this.groupId, { is_member: false });
           AppRouter.pop();
         } else {
           SystemToast.showError(response.message || '离开群组失败', this.getUIContext());
@@ -908,7 +929,7 @@ export struct GroupDetailPage {
         top: this.getHeaderTopPadding(),
         bottom: DesignConstants.SPACING.XS
       })
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
       .borderRadius({ bottomLeft: DesignConstants.RADIUS.LG, bottomRight: DesignConstants.RADIUS.LG })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
@@ -1012,10 +1033,10 @@ export struct GroupDetailPage {
             }
             .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
           }
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow(DesignConstants.SHADOW.MEDIUM)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .margin({ bottom: DesignConstants.SPACING.MD })
 
           // 2. 位置信息
@@ -1025,7 +1046,7 @@ export struct GroupDetailPage {
                   Text() {
                     SymbolSpan($r(AppIcon.LOCATION))
                       .fontSize(18)
-                      .fontColor([$r('app.color.brand_primary')])
+                      .fontColor([this.getCurrentThemePalette().accentBackground])
                   }
                   Text('位置信息')
                     .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -1053,10 +1074,10 @@ export struct GroupDetailPage {
              .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
                top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
           }
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow(DesignConstants.SHADOW.MEDIUM)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .margin({ bottom: DesignConstants.SPACING.MD })
 
           // 3. 成员列表入口
@@ -1086,10 +1107,10 @@ export struct GroupDetailPage {
             .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
               top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
           }
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow(DesignConstants.SHADOW.MEDIUM)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .margin({ bottom: DesignConstants.SPACING.MD })
 
           if (this.canManageApplications()) {
@@ -1120,10 +1141,10 @@ export struct GroupDetailPage {
               .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
                 top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
             }
-            .backgroundColor($r('app.color.bg_secondary'))
+            .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.XXL)
             .shadow(DesignConstants.SHADOW.MEDIUM)
-            .border({ width: 1, color: $r('app.color.highlight_border') })
+            .border({ width: 1, color: this.getSurfaceBorder() })
             .margin({ bottom: DesignConstants.SPACING.MD })
           }
 
@@ -1134,10 +1155,10 @@ export struct GroupDetailPage {
                   if (this.canEditGroupInfo()) {
                     Button(this.isSavingGroupInfo ? '保存中...' : '编辑群组信息')
                       .type(ButtonType.Capsule)
-                      .backgroundColor($r('app.color.bg_tertiary'))
-                      .fontColor($r('app.color.brand_primary'))
+                      .backgroundColor(this.getSurfaceSubtle())
+                      .fontColor(this.getCurrentThemePalette().accentBackground)
                       .shadow(DesignConstants.SHADOW.SMALL)
-                      .border({ width: 1, color: $r('app.color.highlight_border') })
+                      .border({ width: 1, color: this.getSurfaceBorder() })
                       .width('100%')
                       .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
                       .enabled(!this.isSavingGroupInfo)
@@ -1147,17 +1168,17 @@ export struct GroupDetailPage {
 
                   Button('进入聊天')
                     .type(ButtonType.Capsule)
-                    .backgroundColor($r('app.color.brand_primary'))
-                    .fontColor(Color.White)
+                    .backgroundColor(this.getCurrentThemePalette().accentBackground)
+                    .fontColor(this.getCurrentThemePalette().accentText)
                     .shadow(DesignConstants.SHADOW.SMALL)
-                    .border({ width: 1, color: $r('app.color.highlight_border') })
+                    .border({ width: 1, color: this.getSurfaceBorder() })
                     .width('100%')
                     .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
                     .onClick(() => this.enterChat())
 
                   Button('离开群组')
                     .type(ButtonType.Capsule)
-                    .backgroundColor($r('app.color.bg_tertiary'))
+                    .backgroundColor(this.getSurfaceSubtle())
                     .fontColor($r('app.color.color_danger'))
                     .shadow(DesignConstants.SHADOW.SMALL)
                     .width('100%')
@@ -1174,7 +1195,7 @@ export struct GroupDetailPage {
                       })
                       .fontSize(15)
                       .padding(DesignConstants.SPACING.MD)
-                      .backgroundColor($r('app.color.bg_inset'))
+                      .backgroundColor(this.getSurfaceSubtle())
                       .shadow(DesignConstants.SHADOW.INSET)
                       .borderRadius(DesignConstants.RADIUS.XL)
                       .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
@@ -1182,10 +1203,10 @@ export struct GroupDetailPage {
 
                     Button(this.groupInfo?.has_password ? '加入群组（需要密码）' : '加入群组')
                     .type(ButtonType.Capsule)
-                    .backgroundColor($r('app.color.brand_primary'))
-                    .fontColor(Color.White)
+                    .backgroundColor(this.getCurrentThemePalette().accentBackground)
+                    .fontColor(this.getCurrentThemePalette().accentText)
                     .shadow(DesignConstants.SHADOW.SMALL)
-                    .border({ width: 1, color: $r('app.color.highlight_border') })
+                    .border({ width: 1, color: this.getSurfaceBorder() })
                     .width('100%')
                     .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
                     .enabled(!this.isJoining)
@@ -1195,10 +1216,10 @@ export struct GroupDetailPage {
              }
              .padding(DesignConstants.SPACING.LG)
           }
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow(DesignConstants.SHADOW.MEDIUM)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
 
         }
         .width('100%')
@@ -1216,7 +1237,7 @@ export struct GroupDetailPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {
@@ -1235,19 +1256,19 @@ export struct GroupDetailPage {
       height: '70%',
       showClose: false,
       dragBar: true,
-      backgroundColor: $r('app.color.start_window_background')
+      backgroundColor: this.getCurrentThemePalette().sheetBackground
     })
     .bindSheet($$this.showApplicationList, this.buildApplicationListSheet(), {
       height: '70%',
       showClose: false,
       dragBar: true,
-      backgroundColor: $r('app.color.start_window_background')
+      backgroundColor: this.getCurrentThemePalette().sheetBackground
     })
     .bindSheet($$this.showEditGroupSheet, this.buildEditGroupSheet(), {
       height: '78%',
       showClose: false,
       dragBar: true,
-      backgroundColor: $r('app.color.start_window_background')
+      backgroundColor: this.getCurrentThemePalette().sheetBackground
     })
   }
 
@@ -1263,11 +1284,11 @@ export struct GroupDetailPage {
 
         Button('取消')
           .type(ButtonType.Normal)
-          .backgroundColor($r('app.color.bg_tertiary'))
+          .backgroundColor(this.getSurfaceSubtle())
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .borderRadius(DesignConstants.RADIUS.XL)
           .shadow(DesignConstants.SHADOW.SMALL)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .height(34)
           .enabled(!this.isSavingGroupInfo && !this.isEditGroupAvatarUploading)
           .opacity(this.isSavingGroupInfo || this.isEditGroupAvatarUploading ? 0.58 : 1)
@@ -1275,11 +1296,11 @@ export struct GroupDetailPage {
 
         Button(this.isSavingGroupInfo ? '保存中...' : '保存')
           .type(ButtonType.Normal)
-          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-          .fontColor(Color.White)
+          .backgroundColor(this.getCurrentThemePalette().accentBackground)
+          .fontColor(this.getCurrentThemePalette().accentText)
           .borderRadius(DesignConstants.RADIUS.XL)
           .shadow(DesignConstants.SHADOW.SMALL)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .height(34)
           .enabled(!this.isSavingGroupInfo && !this.isEditGroupAvatarUploading)
           .opacity(this.isSavingGroupInfo || this.isEditGroupAvatarUploading ? 0.58 : 1)
@@ -1329,7 +1350,7 @@ export struct GroupDetailPage {
             .width('100%')
           }
           .padding(DesignConstants.SPACING.LG)
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XL)
           .shadow(DesignConstants.SHADOW.SMALL)
 
@@ -1344,7 +1365,7 @@ export struct GroupDetailPage {
               .maxLength(GROUP_NAME_MAX)
               .onChange((value: string) => { this.editGroupName = value; })
               .height(42)
-              .backgroundColor($r('app.color.bg_inset'))
+               .backgroundColor(this.getSurfaceSubtle())
               .shadow(DesignConstants.SHADOW.INSET)
               .borderRadius(DesignConstants.RADIUS.MD)
               .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
@@ -1357,7 +1378,7 @@ export struct GroupDetailPage {
               .textAlign(TextAlign.End)
           }
           .padding(DesignConstants.SPACING.LG)
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XL)
           .shadow(DesignConstants.SHADOW.SMALL)
 
@@ -1372,7 +1393,7 @@ export struct GroupDetailPage {
               .maxLength(GROUP_DESCRIPTION_MAX)
               .onChange((value: string) => { this.editGroupDescription = value; })
               .height(120)
-              .backgroundColor($r('app.color.bg_inset'))
+               .backgroundColor(this.getSurfaceSubtle())
               .shadow(DesignConstants.SHADOW.INSET)
               .borderRadius(DesignConstants.RADIUS.MD)
               .padding(DesignConstants.SPACING.MD)
@@ -1384,7 +1405,7 @@ export struct GroupDetailPage {
               .textAlign(TextAlign.End)
           }
           .padding(DesignConstants.SPACING.LG)
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XL)
           .shadow(DesignConstants.SHADOW.SMALL)
         }
@@ -1402,7 +1423,7 @@ export struct GroupDetailPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
   }
 
   @Builder
@@ -1489,7 +1510,7 @@ export struct GroupDetailPage {
     .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
   }
 
   @Builder
@@ -1575,7 +1596,7 @@ export struct GroupDetailPage {
     .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
   }
 
   @Builder
@@ -1629,7 +1650,7 @@ export struct GroupDetailPage {
 
         Button('拒绝')
           .type(ButtonType.Normal)
-          .backgroundColor($r('app.color.bg_tertiary'))
+          .backgroundColor(this.getSurfaceSubtle())
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .borderRadius(DesignConstants.RADIUS.XL)
           .height(34)
@@ -1642,7 +1663,7 @@ export struct GroupDetailPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.XL)
     .shadow(DesignConstants.SHADOW.SMALL)
     .margin({ bottom: DesignConstants.SPACING.SM })
@@ -1670,7 +1691,7 @@ export struct GroupDetailPage {
           Text(this.getRoleDisplayText(member.role))
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getRoleColor(member.role))
-            .backgroundColor($r('app.color.bg_tertiary'))
+            .backgroundColor(this.getSurfaceSubtle())
             .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 2, bottom: 2 })
             .borderRadius(DesignConstants.RADIUS.SM)
 
@@ -1700,7 +1721,7 @@ export struct GroupDetailPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.XL)
     .shadow(DesignConstants.SHADOW.SMALL)
     .margin({ bottom: DesignConstants.SPACING.SM })

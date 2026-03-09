@@ -4,6 +4,8 @@
  */
 
 import { DesignConstants } from '../constants/DesignConstants';
+import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 @Component
 export struct SystemLoadingView {
@@ -13,6 +15,11 @@ export struct SystemLoadingView {
   @Prop progressType: 'indeterminate' | 'determinate' = 'indeterminate';
   @Prop maxProgress: number = 100;
   @Prop externalProgress: number = 0;
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
 
   build() {
     Column({ space: DesignConstants.SPACING.MD }) {
@@ -25,13 +32,13 @@ export struct SystemLoadingView {
           })
             .width(56)
             .height(56)
-            .color($r('app.color.brand_primary'))
+            .color(this.getPalette().accentBackground)
             .style({ strokeWidth: 4 })
         } else {
           LoadingProgress()
             .width(36)
             .height(36)
-            .color($r('app.color.brand_primary'))
+            .color(this.getPalette().accentBackground)
         }
       }
 
@@ -50,7 +57,7 @@ export struct SystemLoadingView {
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getPalette().pageBackground)
     .padding(DesignConstants.SPACING.XXL)
   }
 }

@@ -12,7 +12,7 @@ use crate::{
             TrendingTagItem, UserInfo, UserItem,
         },
     },
-    error::AppError,
+    error::ApiError,
     repositories::{
         dismiss_repo::FeedDismissRepository,
         group::member_repo::GroupMemberRepository,
@@ -73,7 +73,7 @@ impl FeedService {
         &self,
         user_id: i64,
         req: FeedMomentsRequest,
-    ) -> Result<PaginatedData<MomentItem>, AppError> {
+    ) -> Result<PaginatedData<MomentItem>, ApiError> {
         let pagination = req.pagination.as_ref();
         let limit = Validator::validate_limit(
             pagination.and_then(|p| p.limit),
@@ -166,7 +166,7 @@ impl FeedService {
         &self,
         user_id: i64,
         req: FeedGroupsRequest,
-    ) -> Result<PaginatedData<GroupItem>, AppError> {
+    ) -> Result<PaginatedData<GroupItem>, ApiError> {
         let pagination = req.pagination.as_ref();
         let limit = Validator::validate_limit(
             pagination.and_then(|p| p.limit),
@@ -272,7 +272,7 @@ impl FeedService {
         &self,
         user_id: i64,
         req: FeedUsersRequest,
-    ) -> Result<PaginatedData<UserItem>, AppError> {
+    ) -> Result<PaginatedData<UserItem>, ApiError> {
         let pagination = req.pagination.as_ref();
         let limit = Validator::validate_limit(
             pagination.and_then(|p| p.limit),
@@ -378,7 +378,7 @@ impl FeedService {
         &self,
         user_id: Option<i64>,
         _req: FeedTrendingRequest,
-    ) -> Result<FeedTrendingData, AppError> {
+    ) -> Result<FeedTrendingData, ApiError> {
         let limit = crate::constants::DEFAULT_TRENDING_TAGS_LIMIT;
         let since =
             chrono::Utc::now() - chrono::Duration::days(crate::constants::TRENDING_WEEKLY_DAYS);
@@ -517,7 +517,7 @@ impl FeedService {
         &self,
         user_id: i64,
         req: &DismissFeedItemRequest,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), ApiError> {
         let started_at = std::time::Instant::now();
         tracing::info!(
             user_id,
@@ -527,45 +527,45 @@ impl FeedService {
         );
         if req.target_id.trim().is_empty() {
             tracing::warn!(user_id, target_type = ?req.target_type, "feed.dismiss_item rejected: empty target_id");
-            return Err(AppError::BadRequest("target_id 不能为空".to_string()));
+            return Err(ApiError::BadRequest("target_id 不能为空".to_string()));
         }
 
         match req.target_type {
             DismissTargetType::Moment => {
                 let moment_id = Uuid::parse_str(&req.target_id)
-                    .map_err(|_| AppError::InvalidFormat("moment_id 格式错误".to_string()))?;
+                    .map_err(|_| ApiError::InvalidFormat("moment_id 格式错误".to_string()))?;
                 let exists = self.moment_repo.find_by_id(moment_id).await?;
                 if exists.is_none() {
                     tracing::warn!(user_id, moment_id = %moment_id, "feed.dismiss_item rejected: moment not found");
-                    return Err(AppError::MomentNotFound("瞬间不存在".to_string()));
+                    return Err(ApiError::MomentNotFound("瞬间不存在".to_string()));
                 }
             }
             DismissTargetType::User => {
                 let target_user_id: i64 = req
                     .target_id
                     .parse()
-                    .map_err(|_| AppError::InvalidFormat("user_id 格式错误".to_string()))?;
+                    .map_err(|_| ApiError::InvalidFormat("user_id 格式错误".to_string()))?;
                 if self.user_repo.find_by_id(target_user_id).await?.is_none() {
                     tracing::warn!(
                         user_id,
                         target_user_id,
                         "feed.dismiss_item rejected: user not found"
                     );
-                    return Err(AppError::UserNotFound("用户不存在".to_string()));
+                    return Err(ApiError::UserNotFound("用户不存在".to_string()));
                 }
             }
             DismissTargetType::Group => {
                 let target_group_id: i64 = req
                     .target_id
                     .parse()
-                    .map_err(|_| AppError::InvalidFormat("group_id 格式错误".to_string()))?;
+                    .map_err(|_| ApiError::InvalidFormat("group_id 格式错误".to_string()))?;
                 if self.group_repo.find_by_id(target_group_id).await?.is_none() {
                     tracing::warn!(
                         user_id,
                         target_group_id,
                         "feed.dismiss_item rejected: group not found"
                     );
-                    return Err(AppError::GroupNotFound("群组不存在".to_string()));
+                    return Err(ApiError::GroupNotFound("群组不存在".to_string()));
                 }
             }
         }

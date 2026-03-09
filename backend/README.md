@@ -494,7 +494,7 @@ pub async fn create_moment(
     State(state): State<AppState>,
     AuthenticatedUser { user_id, .. }: AuthenticatedUser,
     Json(req): Json<CreateMomentRequest>,
-) -> Result<Json<ApiResponse<Moment>>, AppError> {
+) -> Result<Json<ApiResponse<Moment>>, ApiError> {
     let moment = MomentService::create(&state.db, user_id, req).await?;
     Ok(Json(ApiResponse::success(moment)))
 }
@@ -519,13 +519,13 @@ pub async fn create_moment(
 ) -> Result<Moment> {
     // 验证用户是否存在
     if !UserRepository::exists(db, user_id).await? {
-        return Err(AppError::UserNotFound);
+        return Err(ApiError::UserNotFound);
     }
     
     // 验证提及的用户是否存在
     if let Some(mentions) = &req.mentions {
         if !UserRepository::exists_all(db, mentions).await? {
-            return Err(AppError::InvalidMentions);
+            return Err(ApiError::InvalidMentions);
         }
     }
     
@@ -571,7 +571,7 @@ pub async fn create(
 pub async fn create(...) -> Result<Moment> {
     // ❌ 不要在 Repository 中进行业务验证
     if req.content.len() > 1000 {
-        return Err(AppError::ContentTooLong);
+        return Err(ApiError::ContentTooLong);
     }
     // ...
 }
@@ -584,7 +584,7 @@ pub async fn create(...) -> Result<Moment> {
 pub async fn get_user(db: &PgPool, user_id: i64) -> Result<User> {
     UserRepository::find_by_id(db, user_id)
         .await?
-        .ok_or(AppError::UserNotFound)
+        .ok_or(ApiError::UserNotFound)
 }
 
 // ❌ 错误：unwrap() 可能导致 panic

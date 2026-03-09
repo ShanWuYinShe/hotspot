@@ -103,7 +103,7 @@ impl MapRepository {
                 ST_Y(u.location::geometry) as "latitude!",
                 ST_X(u.location::geometry) as "longitude!"
             FROM users u
-            WHERE u.status = 'normal' AND u.deleted_at IS NULL AND u.location && ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography
+            WHERE u.status = 'normal' AND u.deleted_at IS NULL AND ST_Intersects(u.location, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
             LIMIT $5
             "#,
             west, south, east, north, limit as i64
@@ -183,7 +183,7 @@ impl MapRepository {
             FROM groups g
             WHERE g.dismissed_at IS NULL
               AND g.location IS NOT NULL
-              AND g.location && ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography
+              AND ST_Intersects(g.location, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
             LIMIT $5
             "#,
             west,
@@ -282,7 +282,7 @@ impl MapRepository {
             ) mi ON TRUE
             WHERE m.deleted_at IS NULL
               AND m.location IS NOT NULL
-              AND m.location && ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography
+              AND ST_Intersects(m.location, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
               AND ($6::text IS NULL OR m.created_at >= ($6::text)::timestamptz)
               AND ($7::text IS NULL OR m.created_at <= ($7::text)::timestamptz)
             LIMIT $5
@@ -372,7 +372,7 @@ impl MapRepository {
             FROM users u
             WHERE u.status = 'normal' AND u.deleted_at IS NULL
               AND u.location IS NOT NULL
-              AND u.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)::geography
+              AND ST_Intersects(u.location, ST_MakeEnvelope($2, $3, $4, $5, 4326)::geography)
               AND (
                   u.user_id = $1
                   OR (
@@ -489,7 +489,7 @@ impl MapRepository {
             ) mi ON TRUE
             WHERE m.deleted_at IS NULL
               AND m.location IS NOT NULL
-              AND m.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)::geography
+              AND ST_Intersects(m.location, ST_MakeEnvelope($2, $3, $4, $5, 4326)::geography)
               AND (
                   m.user_id = $1
                   OR (

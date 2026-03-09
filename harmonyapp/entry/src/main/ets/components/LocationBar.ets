@@ -14,11 +14,14 @@ import { DesignConstants } from '../constants/DesignConstants';
 import { PageNames } from '../constants/AppConstants';
 import { AppRouter, LocationPickerRouteParam } from '../core/router/AppRouter';
 import { AppIcon } from './SystemIcon';
+import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 @Component
 export struct LocationBar {
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   /** 是否显示搜索按钮 */
   @Prop showSearchButton: boolean = true;
@@ -40,6 +43,10 @@ export struct LocationBar {
 
   private isUsingAnchor(): boolean {
     return this.browseAnchor !== null && this.browseAnchor !== undefined;
+  }
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
   /** 启动脉冲呼吸动画 */
@@ -120,7 +127,7 @@ export struct LocationBar {
               .height(10)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-              .border({ width: 2, color: $r('app.color.bg_primary') })
+              .border({ width: 2, color: this.getPalette().pageBackground })
           }
           .width(28)
           .height(28)
@@ -160,7 +167,7 @@ export struct LocationBar {
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.SM })
       .backgroundColor(this.isUsingAnchor()
         ? $r('app.color.color_emphasize_bg')
-        : $r('app.color.bg_tertiary'))
+        : this.getPalette().surfaceSubtle)
       .borderRadius(DesignConstants.RADIUS.XL)
       .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
       .onClick(() => {
@@ -194,7 +201,7 @@ export struct LocationBar {
     .width(40)
     .height(40)
     .justifyContent(FlexAlign.Center)
-    .backgroundColor($r('app.color.bg_tertiary'))
+    .backgroundColor(this.getPalette().surfaceSubtle)
     .borderRadius(DesignConstants.RADIUS.XL)
     .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
     .onClick(action)

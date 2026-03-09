@@ -32,6 +32,9 @@ import { scanBarcode, scanCore } from '@kit.ScanKit';
 import { common } from '@kit.AbilityKit';
 import pasteboard from '@ohos.pasteboard';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
+import { InteractionStateStore } from '../../../core/state/InteractionStateStore';
+import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF08;
 const TAG: string = 'MessagePage';
@@ -56,6 +59,7 @@ export struct MessagePage {
   @StorageLink(KEY_LAST_MESSAGE_SYNC_TIME) @Watch('onMessageSync') lastMessageSyncTime: number = 0;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private chatListDataSource: BasicDataSource<ChatItem> = new BasicDataSource([]);
   private messageCacheService = MessageCacheService.getInstance();
@@ -79,10 +83,10 @@ export struct MessagePage {
   @State pressedChatKey: string = '';
 
   async aboutToAppear() {
-    SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
-    });
-    await this.loadData();
+    SystemUiController.syncWithCurrentTheme();
+    // 先从缓存加载（避免白屏），再强制调接口刷新
+    await this.loadFromCache();
+    await this.loadData(true);
   }
 
   onMessageSync() {
@@ -90,6 +94,22 @@ export struct MessagePage {
       hilog.info(DOMAIN_NUMBER, TAG, '收到消息同步通知，刷新列表');
       this.loadData(false, true);
     }
+  }
+
+  private getCurrentThemePalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getSurfaceBackground(): string {
+    return this.getCurrentThemePalette().surfaceBackground;
+  }
+
+  private getSurfaceSubtle(): string {
+    return this.getCurrentThemePalette().surfaceSubtle;
+  }
+
+  private getSurfaceBorder(): string {
+    return this.getCurrentThemePalette().borderColor;
   }
 
   private async loadData(forceRefresh: boolean = false, refresh: boolean = false) {
@@ -121,7 +141,8 @@ export struct MessagePage {
       this.chatListDataSource.setData(allChats);
       this.hasData = allChats.length > 0;
 
-      if (forceRefresh) {
+      // 仅用户主动下拉刷新时触发振动反馈
+      if (this.isRefreshing) {
         VibrationUtil.startSuccess();
       }
 
@@ -132,7 +153,7 @@ export struct MessagePage {
         this.errorMessage = '加载消息失败，请检查网络';
         this.hasData = false;
       }
-      if (forceRefresh) {
+      if (this.isRefreshing) {
         VibrationUtil.startFail();
       }
     } finally {
@@ -420,6 +441,7 @@ export struct MessagePage {
         const groupId = groupData.group?.group_id ?? item.id;
         const request: LeaveGroupRequest = { group_id: groupId };
         await ApiClient.leaveGroup(request);
+        InteractionStateStore.getInstance().updateGroupMembership(groupId, { is_member: false });
       }
 
       const index = this.chatListDataSource.getDataIndex(item);
@@ -467,10 +489,10 @@ export struct MessagePage {
           .height(40)
           .justifyContent(FlexAlign.Center)
           .alignItems(VerticalAlign.Center)
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.MD)
           .shadow(DesignConstants.SHADOW.SMALL)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .onClick(() => {
             AppRouter.push(PageNames.SEARCH);
           })
@@ -487,10 +509,10 @@ export struct MessagePage {
           .height(40)
           .justifyContent(FlexAlign.Center)
           .alignItems(VerticalAlign.Center)
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.MD)
           .shadow(DesignConstants.SHADOW.SMALL)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .bindMenu([
             {
               value: '发起群聊',
@@ -605,7 +627,7 @@ export struct MessagePage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
   }
 
   @Builder
@@ -684,11 +706,11 @@ export struct MessagePage {
     .padding(18)
     .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: 8, bottom: 8 })
     .backgroundColor(this.pressedChatKey === this.getChatKey(item)
-      ? $r('app.color.bg_tertiary')
-      : $r('app.color.bg_secondary'))
+      ? this.getSurfaceSubtle()
+      : this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.XXL)
     .shadow(DesignConstants.SHADOW.MEDIUM)
-    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .border({ width: 1, color: this.getSurfaceBorder() })
     .opacity(this.isChatDeleting(item) ? 0.7 : 1)
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {

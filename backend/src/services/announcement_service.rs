@@ -13,7 +13,7 @@ use crate::{
             UserInfo,
         },
     },
-    error::{AppError, Result},
+    error::{ApiError, Result},
     events::event_types::AppEvent,
     repositories::{announcement_repo::AnnouncementRepository, user::user_repo::UserRepository},
     services::media_service::MediaService,
@@ -111,7 +111,7 @@ impl AnnouncementService {
 
         if !self.repo.exists(announcement_id).await? {
             warn!(announcement_id = %announcement_id, "admin_announcement.update rejected: not found");
-            return Err(AppError::NotFound("公告不存在".to_string()));
+            return Err(ApiError::NotFound("公告不存在".to_string()));
         }
 
         self.repo
@@ -139,7 +139,7 @@ impl AnnouncementService {
 
         if !self.repo.exists(announcement_id).await? {
             warn!(announcement_id = %announcement_id, "admin_announcement.delete rejected: not found");
-            return Err(AppError::NotFound("公告不存在".to_string()));
+            return Err(ApiError::NotFound("公告不存在".to_string()));
         }
 
         self.repo.delete(announcement_id).await?;

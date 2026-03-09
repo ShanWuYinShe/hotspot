@@ -9,7 +9,7 @@ use crate::{
             SearchSuggestions, TagSuggestItem, UserInfo, UserSuggestItem,
         },
     },
-    error::AppError,
+    error::ApiError,
     repositories::{
         group_repo::GroupRepository, moment_repo::MomentRepository, tag_repo::TagRepository,
         user_repo::UserRepository,
@@ -48,7 +48,7 @@ impl SearchService {
         &self,
         viewer_id: Option<i64>,
         req: SearchSuggestRequest,
-    ) -> Result<SearchSuggestions, AppError> {
+    ) -> Result<SearchSuggestions, ApiError> {
         let started_at = std::time::Instant::now();
         Validator::validate_prefix(&req.prefix)?;
         let limit = DEFAULT_PAGE_LIMIT as i64;

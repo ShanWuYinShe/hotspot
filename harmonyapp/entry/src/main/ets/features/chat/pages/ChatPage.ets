@@ -7,6 +7,7 @@
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { WebSocketService } from '../../../core/network/WebSocketService';
+import { MessageSyncManager } from '../../../core/state/MessageSyncManager';
 import { MyProfile, MessageType, PrivateMessageItem, GroupMessageItem, SendPrivateMessageRequest, SendGroupMessageRequest, GetPrivateMessagesHistoryRequest, GetGroupMessagesHistoryRequest, MarkPrivateMessagesReadRequest, MarkGroupMessagesReadRequest } from '../../../core/types/api';
 import type {
   ServerEvent,
@@ -20,7 +21,8 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants } from '../../../constants/DesignConstants';
-import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
+import { AppIcon } from '../../../components/SystemIcon';
+import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { MessageCacheService, MessageCacheItem } from '../../../core/database/MessageCacheService';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
@@ -32,6 +34,8 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { KeyboardAvoidMode as UIContextKeyboardAvoidMode } from '@ohos.arkui.UIContext';
+import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'ChatPage';
@@ -74,6 +78,7 @@ export struct ChatPage {
   @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
   
   @State messages: ChatMessage[] = [];
   private messagesDataSource: BasicDataSource<ChatMessage> = new BasicDataSource<ChatMessage>([]);
@@ -109,13 +114,30 @@ export struct ChatPage {
   private lastKeyboardDismissAtMs: number = 0;
 
   aboutToAppear(): void {
-    SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,
-      preferDarkContent: true
-    });
+    SystemUiController.syncWithCurrentTheme();
 
     this.stableSafeAreaBottom = Math.max(0, this.safeAreaBottom);
     this.applyKeyboardAvoidMode(UIContextKeyboardAvoidMode.RESIZE);
+  }
+
+  private getCurrentThemePalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getSurfaceBackground(): string {
+    return this.getCurrentThemePalette().surfaceBackground;
+  }
+
+  private getSurfaceSubtle(): string {
+    return this.getCurrentThemePalette().surfaceSubtle;
+  }
+
+  private getSurfaceBorder(): string {
+    return this.getCurrentThemePalette().borderColor;
+  }
+
+  private getAccentBackground(): string {
+    return this.getCurrentThemePalette().accentBackground;
   }
 
   private getStableBottomInset(): number {
@@ -146,6 +168,18 @@ export struct ChatPage {
     this.isInputFocused = false;
     this.lastKeyboardDismissAtMs = Date.now();
     this.stopTyping();
+  }
+
+  private handleBackNavigation(): boolean {
+    if (this.isInputFocused) {
+      this.dismissKeyboardOnOutsideTap();
+      return true;
+    }
+    if (this.shouldConsumePostDismissNavigation()) {
+      return true;
+    }
+    AppRouter.pop();
+    return true;
   }
 
   private shouldConsumePostDismissNavigation(): boolean {
@@ -361,6 +395,7 @@ export struct ChatPage {
     this.applyKeyboardAvoidMode(UIContextKeyboardAvoidMode.OFFSET);
     this.isInputFocused = false;
     this.stopTyping();
+    MessageSyncManager.getInstance().leaveChat();
     if (this.chatType === 'private_chat' && this.targetId) {
       this.webSocketService.unsubscribeUsers([this.targetId]);
     }
@@ -853,6 +888,10 @@ export struct ChatPage {
 
   /** 从 onReady 参数初始化后，异步加载聊天数据 */
   private async initChatData(): Promise<void> {
+    // 通知 MessageSyncManager 当前正在查看此会话，避免重复刷新消息列表
+    const activeChatId = this.chatType === 'private_chat' ? (this.targetId ?? this.chatId) : this.chatId;
+    MessageSyncManager.getInstance().enterChat(activeChatId);
+
     await this.loadHistory();
     this.subscribeToEvents();
     this.wsHasConnectedOnce = this.webSocketService.isConnected();
@@ -876,68 +915,32 @@ export struct ChatPage {
   build() {
     NavDestination() {
     Column() {
-      // 标题栏容器：左右 margin，内部药丸形凸起栏
-      Row() {
-        Row() {
-          IconButton({
-            icon: AppIcon.BACK,
-            iconSize: IconSize.LARGE,
-            iconColor: $r('sys.color.ohos_id_color_text_primary'),
-            bgColor: $r('app.color.bg_tertiary'),
-            radius: DesignConstants.RADIUS.MD,
-            minButtonSize: 40,
-            paddingSize: DesignConstants.SPACING.SM,
-            onButtonClick: () => {
-              if (this.isInputFocused) {
-                this.dismissKeyboardOnOutsideTap();
-                return;
-              }
-              if (this.shouldConsumePostDismissNavigation()) {
-                return;
-              }
-              AppRouter.pop();
-            }
-          })
-
-          Text(this.title)
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
-            .layoutWeight(1)
-            .textAlign(TextAlign.Center)
-        
-          IconButton({
-            icon: AppIcon.INFO,
-            iconSize: IconSize.LARGE,
-            iconColor: $r('sys.color.ohos_id_color_text_primary'),
-            bgColor: $r('app.color.bg_tertiary'),
-            radius: DesignConstants.RADIUS.MD,
-            minButtonSize: 40,
-            paddingSize: DesignConstants.SPACING.SM,
-            onButtonClick: () => this.openConversationActions()
-          })
-        }
-        .layoutWeight(1)
-        .backgroundColor($r('app.color.bg_secondary'))
-        .borderRadius(DesignConstants.RADIUS.XL)
+      SystemPageHeader({
+        title: this.title,
+        showBackButton: true,
+        onBack: () => {
+          this.handleBackNavigation();
+        },
+        rightAction: {
+          icon: AppIcon.INFO,
+          kind: 'neutral',
+          onClick: () => this.openConversationActions()
+        },
+        surfaceColor: $r('app.color.chat_title_bar_bg')
+      })
+        .width('100%')
+        .margin({
+          bottom: DesignConstants.SPACING.XS
+        })
         .shadow(DesignConstants.SHADOW.MEDIUM)
-        .border({ width: 1, color: $r('app.color.highlight_border') })
-      }
-      .width('100%')
-      .padding({
-        left: DesignConstants.SPACING.LG,
-        right: DesignConstants.SPACING.LG,
-        top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
-        bottom: DesignConstants.SPACING.XS
-      })
-      .backgroundColor(Color.Transparent)
-      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
-      .zIndex(1)
-      .onTouch((event: TouchEvent) => {
-        if (event.type === TouchType.Down) {
-          this.dismissKeyboardOnOutsideTap();
-        }
-      })
+        .border({ width: 1, color: $r('app.color.chat_title_bar_border') })
+        .borderRadius(DesignConstants.RADIUS.XL)
+        .zIndex(1)
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            this.dismissKeyboardOnOutsideTap();
+          }
+        })
 
       if (this.isLoading) {
         SystemLoadingView({ message: '加载消息...' })
@@ -1035,7 +1038,7 @@ export struct ChatPage {
         top: DesignConstants.SPACING.MD,
         bottom: DesignConstants.SPACING.MD
       })
-      .backgroundColor($r('app.color.bg_tertiary'))
+      .backgroundColor($r('app.color.chat_list_bg'))
       .borderRadius(DesignConstants.RADIUS.XXL)
       .onScrollIndex((start: number) => {
         // 当滚动到列表顶部附近时加载更早的消息
@@ -1087,11 +1090,11 @@ export struct ChatPage {
         TextInput({ text: this.inputText, placeholder: '发送消息...' })
           .layoutWeight(1)
           .maxLength(MESSAGE_CONTENT_MAX)
-          .height(40)
-          .backgroundColor($r('app.color.bg_inset'))
+          .height(DesignConstants.CHAT.INPUT_HEIGHT)
+          .backgroundColor($r('app.color.chat_input_field_bg'))
           .borderRadius(DesignConstants.RADIUS.XL)
           .shadow(DesignConstants.SHADOW.INSET)
-          .padding({ left: 16, right: 16 })
+          .padding({ left: DesignConstants.CHAT.BUBBLE_PADDING_H, right: DesignConstants.CHAT.BUBBLE_PADDING_H })
           .onChange((value) => {
             this.inputText = value;
             this.handleTypingInput(value);
@@ -1112,18 +1115,18 @@ export struct ChatPage {
           .type(ButtonType.Normal)
           .backgroundColor(
             this.isSending || this.inputText.trim().length === 0
-              ? $r('app.color.bg_tertiary')
-              : $r('app.color.bubble_self_bg')
+              ? $r('app.color.chat_send_disabled')
+              : $r('app.color.chat_send_active')
           )
           .fontColor(
             this.isSending || this.inputText.trim().length === 0
               ? $r('sys.color.ohos_id_color_text_secondary')
               : Color.White
           )
-          .height(36)
+          .height(DesignConstants.CHAT.SEND_BUTTON_HEIGHT)
           .borderRadius(DesignConstants.RADIUS.XL)
           .shadow(DesignConstants.SHADOW.SMALL)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: $r('app.color.chat_input_border') })
           .margin({ left: DesignConstants.SPACING.MD })
           .opacity(this.isSending || this.inputText.trim().length === 0 ? 0.72 : 1)
           .enabled(!this.isSending && this.inputText.trim().length > 0)
@@ -1136,9 +1139,9 @@ export struct ChatPage {
         top: DesignConstants.SPACING.SM,
         bottom: this.getComposerBottomPadding()
       })
-      .backgroundColor($r('app.color.tab_bar_bg'))
+      .backgroundColor($r('app.color.chat_input_bar_bg'))
       .shadow(DesignConstants.SHADOW.MEDIUM)
-      .border({ width: { top: 1 }, color: $r('app.color.highlight_border') })
+      .border({ width: { top: 1 }, color: $r('app.color.chat_input_border') })
       .borderRadius({ topLeft: DesignConstants.RADIUS.LG, topRight: DesignConstants.RADIUS.LG })
 
       // 焦点落点：用于将 TextInput 失焦，从而收起软键盘
@@ -1152,25 +1155,16 @@ export struct ChatPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().chatBackground)
     .bindSheet($$this.showConversationActionsSheet, this.buildConversationActionsSheet(), {
       height: SheetSize.FIT_CONTENT,
       showClose: true,
       dragBar: true,
-      backgroundColor: $r('app.color.start_window_background')
+      backgroundColor: this.getCurrentThemePalette().sheetBackground
     })
     }
     .hideTitleBar(true)
-    .onBackPressed((): boolean => {
-      if (this.isInputFocused) {
-        this.dismissKeyboardOnOutsideTap();
-        return true;
-      }
-      if (this.shouldConsumePostDismissNavigation()) {
-        return true;
-      }
-      return false;
-    })
+    .onBackPressed((): boolean => this.handleBackNavigation())
     .onReady((context: NavDestinationContext) => {
       this.pathStack = context.pathStack;
       const param = context.pathInfo.param as Record<string, Object> | undefined;
@@ -1202,10 +1196,10 @@ export struct ChatPage {
         .type(ButtonType.Normal)
         .width('100%')
         .height(44)
-        .backgroundColor($r('app.color.bg_tertiary'))
+        .backgroundColor(this.getSurfaceSubtle())
         .fontColor($r('sys.color.ohos_id_color_text_primary'))
         .borderRadius(DesignConstants.RADIUS.FULL)
-        .border({ width: 1, color: $r('app.color.highlight_border') })
+        .border({ width: 1, color: this.getSurfaceBorder() })
         .onClick(() => {
           this.scrollToBottom();
           this.showConversationActionsSheet = false;
@@ -1215,10 +1209,10 @@ export struct ChatPage {
         .type(ButtonType.Normal)
         .width('100%')
         .height(44)
-        .backgroundColor($r('app.color.bg_tertiary'))
+        .backgroundColor(this.getSurfaceSubtle())
         .fontColor($r('sys.color.ohos_id_color_text_primary'))
         .borderRadius(DesignConstants.RADIUS.FULL)
-        .border({ width: 1, color: $r('app.color.highlight_border') })
+        .border({ width: 1, color: this.getSurfaceBorder() })
         .onClick(() => {
           this.inputText = '';
           this.showConversationActionsSheet = false;
@@ -1228,10 +1222,10 @@ export struct ChatPage {
         .type(ButtonType.Normal)
         .width('100%')
         .height(44)
-        .backgroundColor($r('app.color.bg_secondary'))
-        .fontColor($r('app.color.brand_primary'))
+        .backgroundColor(this.getSurfaceBackground())
+        .fontColor(this.getAccentBackground())
         .borderRadius(DesignConstants.RADIUS.FULL)
-        .border({ width: 1, color: $r('app.color.highlight_border') })
+        .border({ width: 1, color: this.getSurfaceBorder() })
         .onClick(() => {
           this.showConversationActionsSheet = false;
         })
@@ -1243,7 +1237,7 @@ export struct ChatPage {
       top: DesignConstants.SPACING.LG,
       bottom: DesignConstants.SPACING.XXL
     })
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.LG)
   }
 
@@ -1254,16 +1248,16 @@ export struct ChatPage {
         Text(msg.content)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor($r('app.color.chat_bubble_system'))
           .padding({
             left: DesignConstants.SPACING.MD,
             right: DesignConstants.SPACING.MD,
             top: DesignConstants.SPACING.XS,
             bottom: DesignConstants.SPACING.XS
           })
-          .borderRadius(DesignConstants.RADIUS.XL)
+          .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)
           .shadow(DesignConstants.SHADOW.SMALL)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: $r('app.color.chat_divider') })
       }
       .width('100%')
       .justifyContent(FlexAlign.Center)
@@ -1274,7 +1268,7 @@ export struct ChatPage {
           SystemAvatar({
             avatarUrl: msg.senderAvatar,
             name: msg.senderName,
-            avatarSize: 40
+            avatarSize: DesignConstants.CHAT.AVATAR_SIZE
           })
           .margin({ right: DesignConstants.SPACING.SM })
         }
@@ -1292,19 +1286,24 @@ export struct ChatPage {
               Image(MediaUrlUtil.normalize(msg.content))
                 .width(200)
                 .objectFit(ImageFit.Cover)
-                .backgroundColor($r('app.color.bg_tertiary'))
-                .borderRadius(DesignConstants.RADIUS.XL)
+                .backgroundColor($r('app.color.chat_list_bg'))
+                .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)
                 .shadow(DesignConstants.SHADOW.SMALL)
-                .border({ width: 1, color: $r('app.color.highlight_border') })
+                .border({ width: 1, color: $r('app.color.chat_divider') })
                 .margin(DesignConstants.SPACING.XS)
             } else {
               Text(msg.content)
-                .fontSize(15)
+                .fontSize(DesignConstants.CHAT.BUBBLE_FONT_SIZE)
                 .fontColor(msg.isSelf ? Color.White : $r('sys.color.ohos_id_color_text_primary'))
-                .backgroundColor(msg.isSelf ? $r('app.color.bubble_self_bg') : $r('app.color.bubble_other_bg'))
-                .padding({ left: 16, right: 16, top: 10, bottom: 10 })
-                .borderRadius(DesignConstants.RADIUS.XL)
-                .constraintSize({ maxWidth: '75%' })
+                .backgroundColor(msg.isSelf ? $r('app.color.chat_bubble_self') : $r('app.color.chat_bubble_peer'))
+                .padding({
+                  left: DesignConstants.CHAT.BUBBLE_PADDING_H,
+                  right: DesignConstants.CHAT.BUBBLE_PADDING_H,
+                  top: DesignConstants.CHAT.BUBBLE_PADDING_V,
+                  bottom: DesignConstants.CHAT.BUBBLE_PADDING_V
+                })
+                .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)
+                .constraintSize({ maxWidth: DesignConstants.CHAT.BUBBLE_MAX_WIDTH })
             }
           }
           .justifyContent(msg.isSelf ? FlexAlign.End : FlexAlign.Start)
@@ -1316,7 +1315,7 @@ export struct ChatPage {
           SystemAvatar({
             avatarUrl: msg.senderAvatar,
             name: msg.senderName,
-            avatarSize: 40
+            avatarSize: DesignConstants.CHAT.AVATAR_SIZE
           })
           .margin({ left: DesignConstants.SPACING.SM })
         }
@@ -1324,7 +1323,7 @@ export struct ChatPage {
       .width('100%')
       .justifyContent(msg.isSelf ? FlexAlign.End : FlexAlign.Start)
       .alignItems(VerticalAlign.Top)
-      .margin({ bottom: 16 })
+      .margin({ bottom: DesignConstants.CHAT.MESSAGE_GAP })
     }
   }
 }

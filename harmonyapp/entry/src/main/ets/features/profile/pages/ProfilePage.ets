@@ -32,6 +32,9 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { formatCount } from '../../../core/utils/FormatUtil';
+import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
+import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF03;
 const TAG: string = 'ProfilePage';
@@ -51,6 +54,7 @@ export struct ProfilePage {
   @StorageLink(KEY_USER_TYPE) userType: string = '';
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private stateManager = GlobalStateManager.getInstance();
   @State isEditing: boolean = false;
@@ -181,9 +185,7 @@ export struct ProfilePage {
   }
 
   async aboutToAppear() {
-    SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
-    });
+    SystemUiController.syncWithCurrentTheme();
     if (this.currentUser) {
       this.editNickname = this.currentUser.nickname;
       this.editBio = this.currentUser.bio || '';
@@ -214,6 +216,38 @@ export struct ProfilePage {
     }
   }
 
+  private getCurrentThemePalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getSurfaceBackground(): string {
+    return this.getCurrentThemePalette().surfaceBackground;
+  }
+
+  private getSurfaceSubtle(): string {
+    return this.getCurrentThemePalette().surfaceSubtle;
+  }
+
+  private getSurfaceBorder(): string {
+    return this.getCurrentThemePalette().borderColor;
+  }
+
+  private getAccentBackground(): string {
+    return this.getCurrentThemePalette().accentBackground;
+  }
+
+  private getAccentText(): string {
+    return this.getCurrentThemePalette().accentText;
+  }
+
+  private getSoftCardShadow(): ShadowOptions {
+    return AppThemeVisuals.getSurfaceShadow(this.resolvedThemeId);
+  }
+
+  private getPrimaryButtonShadow(): ShadowOptions {
+    return AppThemeVisuals.getAccentShadow(this.resolvedThemeId);
+  }
+
   private async loadUserStats(): Promise<void> {
     if (!this.isLoggedIn || !this.currentUser) {
       return;
@@ -240,10 +274,6 @@ export struct ProfilePage {
 
   private openSubscriptions(): void {
     AppRouter.push(PageNames.SUBSCRIPTIONS);
-  }
-
-  private openMyShares(): void {
-    AppRouter.push(PageNames.MY_SHARES);
   }
 
   private isAdminUser(): boolean {
@@ -567,7 +597,7 @@ export struct ProfilePage {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor($r('app.color.bg_primary'))
+      .backgroundColor(this.getCurrentThemePalette().pageBackground)
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {
@@ -637,10 +667,10 @@ export struct ProfilePage {
             top: DesignConstants.SPACING.LG,
             bottom: DesignConstants.SPACING.LG
           })
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
-          .shadow(DesignConstants.SHADOW.MEDIUM)
+          .border({ width: 1, color: this.getSurfaceBorder() })
+          .shadow(this.getSoftCardShadow())
 
           Column({ space: DesignConstants.SPACING.SM }) {
             Text('个人简介')
@@ -653,29 +683,29 @@ export struct ProfilePage {
           }
           .width('100%')
           .padding(DesignConstants.SPACING.LG)
-          .backgroundColor($r('app.color.bg_secondary'))
+          .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
-          .shadow(DesignConstants.SHADOW.MEDIUM)
+          .border({ width: 1, color: this.getSurfaceBorder() })
+          .shadow(this.getSoftCardShadow())
 
           if ((this.viewedUserProfile?.tags?.length ?? 0) > 0) {
             Flex({ wrap: FlexWrap.Wrap }) {
               ForEach((this.viewedUserProfile?.tags ?? []).slice(0, 8), (tag: string) => {
                 Text(`#${tag}`)
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor($r('app.color.brand_primary'))
+                  .fontColor(this.getAccentBackground())
                   .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
                   .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-                  .backgroundColor($r('app.color.chip_selected_bg'))
+                  .backgroundColor(this.getSurfaceSubtle())
                   .borderRadius(DesignConstants.RADIUS.XL)
               }, (tag: string) => tag)
             }
             .width('100%')
             .padding(DesignConstants.SPACING.LG)
-            .backgroundColor($r('app.color.bg_secondary'))
+            .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.XXL)
-            .border({ width: 1, color: $r('app.color.highlight_border') })
-            .shadow(DesignConstants.SHADOW.MEDIUM)
+            .border({ width: 1, color: this.getSurfaceBorder() })
+            .shadow(this.getSoftCardShadow())
           }
 
           Row({ space: DesignConstants.SPACING.SM }) {
@@ -685,8 +715,8 @@ export struct ProfilePage {
               .height(38)
               .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontWeight(FontWeight.Medium)
-              .backgroundColor($r('app.color.brand_primary'))
-              .fontColor(Color.White)
+              .backgroundColor(this.getAccentBackground())
+              .fontColor(this.getAccentText())
               .onClick(() => {
                 this.startPrivateChatWithViewedUser();
               })
@@ -697,9 +727,9 @@ export struct ProfilePage {
               .height(38)
               .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontWeight(FontWeight.Medium)
-              .backgroundColor($r('app.color.bg_tertiary'))
+              .backgroundColor(this.getSurfaceSubtle())
               .fontColor($r('sys.color.ohos_id_color_text_primary'))
-              .border({ width: 1, color: $r('app.color.highlight_border') })
+              .border({ width: 1, color: this.getSurfaceBorder() })
               .onClick(() => {
                 AppRouter.pop();
               })
@@ -733,7 +763,7 @@ export struct ProfilePage {
           Circle()
             .width(72)
             .height(72)
-            .fill($r('app.color.bg_tertiary'))
+            .fill(this.getSurfaceSubtle())
           Text() {
             SymbolSpan($r(AppIcon.PERSON))
               .fontSize(36)
@@ -782,8 +812,8 @@ export struct ProfilePage {
           .type(ButtonType.Capsule)
           .width('80%')
           .height(48)
-          .backgroundColor($r('app.color.brand_primary'))
-          .fontColor(Color.White)
+          .backgroundColor(this.getAccentBackground())
+          .fontColor(this.getAccentText())
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .onClick(() => {
             this.showQuickStart = true;
@@ -793,10 +823,10 @@ export struct ProfilePage {
           .type(ButtonType.Capsule)
           .width('80%')
           .height(48)
-          .backgroundColor($r('app.color.bg_tertiary'))
+          .backgroundColor(this.getSurfaceSubtle())
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .onClick(() => {
             AppRouter.push(PageNames.LOGIN);
           })
@@ -830,7 +860,7 @@ export struct ProfilePage {
       height: SheetSize.FIT_CONTENT,
       showClose: true,
       dragBar: true,
-      backgroundColor: $r('app.color.start_window_background'),
+      backgroundColor: this.getCurrentThemePalette().sheetBackground,
       keyboardAvoidMode: SheetKeyboardAvoidMode.TRANSLATE_AND_SCROLL
     })
   }
@@ -841,7 +871,7 @@ export struct ProfilePage {
       Text() {
         SymbolSpan(icon)
           .fontSize(DesignConstants.FONT.SIZE.XXL)
-          .fontColor([$r('app.color.brand_primary')])
+          .fontColor([this.getAccentBackground()])
       }
       Text(title)
         .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -855,16 +885,73 @@ export struct ProfilePage {
     .width('100%')
     .alignItems(HorizontalAlign.Center)
     .padding(DesignConstants.SPACING.MD)
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.LG)
-    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .border({ width: 1, color: this.getSurfaceBorder() })
+    .shadow(this.getSoftCardShadow())
   }
 
   // ==================== 临时用户界面 ====================
   @Builder
   private buildTempUserView() {
     List() {
-      // 升级提示区域
+      ListItem() {
+        if (this.isEditing) {
+          this.EditFormContent()
+        } else {
+          this.UserInfoContent()
+        }
+      }
+      .backgroundColor(this.getSurfaceBackground())
+      .borderRadius(DesignConstants.RADIUS.XXL)
+      .shadow(this.getSoftCardShadow())
+      .border({ width: 1, color: this.getSurfaceBorder() })
+      .padding(DesignConstants.SPACING.LG)
+      .margin({ bottom: DesignConstants.SPACING.MD })
+
+      ListItem() {
+        this.StatsContent()
+      }
+      .backgroundColor(this.getSurfaceBackground())
+      .borderRadius(DesignConstants.RADIUS.XXL)
+      .shadow(this.getSoftCardShadow())
+      .border({ width: 1, color: this.getSurfaceBorder() })
+      .padding(DesignConstants.SPACING.LG)
+      .margin({ bottom: DesignConstants.SPACING.MD })
+
+      ListItemGroup() {
+        ListItem() {
+          this.MenuItemContent('更新位置', AppIcon.LOCATION, () => this.updateLocation())
+        }
+        .backgroundColor(Color.Transparent)
+
+        ListItem() {
+          this.MenuItemContent('设置', AppIcon.SETTINGS, () => {
+            AppRouter.push(PageNames.SETTINGS);
+          })
+        }
+        .backgroundColor(Color.Transparent)
+
+        if (this.isAdminUser()) {
+          ListItem() {
+            this.MenuItemContent('管理员工具台', AppIcon.SHIELD, () => this.openAdminPanel())
+          }
+          .backgroundColor(Color.Transparent)
+        }
+
+        ListItem() {
+          this.MenuItemContent('退出登录', AppIcon.CLOSE, () => this.logout())
+        }
+        .backgroundColor(Color.Transparent)
+      }
+       .divider({ strokeWidth: 0.5, color: $r('app.color.divider'), startMargin: 52, endMargin: DesignConstants.SPACING.LG })
+       .backgroundColor(this.getSurfaceBackground())
+      .borderRadius(DesignConstants.RADIUS.XXL)
+       .shadow(this.getSoftCardShadow())
+      .border({ width: 1, color: this.getSurfaceBorder() })
+      .margin({ bottom: DesignConstants.SPACING.MD })
+
+      // 升级提示区域（保持在数据模块之后，避免打乱信息顺序）
       ListItem() {
         Column({ space: DesignConstants.SPACING.MD }) {
           Row({ space: DesignConstants.SPACING.SM }) {
@@ -884,89 +971,26 @@ export struct ProfilePage {
             .fontSize(13)
             .fontColor($r('sys.color.ohos_id_color_text_secondary'))
 
-          Button('升级为完整账号')
-            .type(ButtonType.Capsule)
-            .backgroundColor($r('app.color.brand_primary'))
-            .fontColor(Color.White)
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .width('100%')
-            .height(40)
-            .onClick(() => {
-              this.showUpgradeForm = true;
-            })
+           Button('升级为完整账号')
+             .type(ButtonType.Capsule)
+             .backgroundColor(this.getAccentBackground())
+             .fontColor(this.getAccentText())
+             .fontSize(DesignConstants.FONT.SIZE.MD)
+             .width('100%')
+             .height(42)
+             .borderRadius(DesignConstants.RADIUS.FULL)
+             .border({ width: 1, color: this.getSurfaceBorder() })
+             .shadow(this.getPrimaryButtonShadow())
+             .onClick(() => {
+               this.showUpgradeForm = true;
+             })
         }
         .width('100%')
         .padding(DesignConstants.SPACING.LG)
       }
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor(this.getSurfaceBackground())
       .borderRadius(DesignConstants.RADIUS.XXL)
-      .border({ width: 1, color: $r('app.color.highlight_border') })
-
-      ListItem() {
-        if (this.isEditing) {
-          this.EditFormContent()
-        } else {
-          this.UserInfoContent()
-        }
-      }
-      .backgroundColor($r('app.color.bg_secondary'))
-      .borderRadius(DesignConstants.RADIUS.XXL)
-      .shadow(DesignConstants.SHADOW.MEDIUM)
-      .border({ width: 1, color: $r('app.color.highlight_border') })
-      .padding(DesignConstants.SPACING.LG)
-      .margin({ bottom: DesignConstants.SPACING.MD })
-
-      ListItem() {
-        this.StatsContent()
-      }
-      .backgroundColor($r('app.color.bg_secondary'))
-      .borderRadius(DesignConstants.RADIUS.XXL)
-      .shadow(DesignConstants.SHADOW.MEDIUM)
-      .border({ width: 1, color: $r('app.color.highlight_border') })
-      .padding(DesignConstants.SPACING.LG)
-      .margin({ bottom: DesignConstants.SPACING.MD })
-
-      ListItem() {
-        this.QuickActionsSection()
-      }
-      .backgroundColor($r('app.color.bg_secondary'))
-      .borderRadius(DesignConstants.RADIUS.XXL)
-      .shadow(DesignConstants.SHADOW.MEDIUM)
-      .border({ width: 1, color: $r('app.color.highlight_border') })
-      .padding(DesignConstants.SPACING.LG)
-      .margin({ bottom: DesignConstants.SPACING.MD })
-
-      ListItemGroup() {
-        ListItem() {
-          this.MenuItemContent('更新位置', AppIcon.LOCATION, () => this.updateLocation())
-        }
-        .backgroundColor(Color.Transparent)
-
-        ListItem() {
-          this.MenuItemContent('设置', AppIcon.SETTINGS, () => {
-            AppRouter.push(PageNames.SETTINGS);
-          })
-        }
-        .backgroundColor(Color.Transparent)
-
-        if (this.isAdminUser()) {
-          ListItem() {
-            this.MenuItemContent('管理员工具台', AppIcon.SHIELD, () => this.openAdminPanel())
-          }
-          .backgroundColor(Color.Transparent)
-        }
-
-        ListItem() {
-          this.MenuItemContent('退出登录', AppIcon.CLOSE, () => this.logout())
-        }
-        .backgroundColor(Color.Transparent)
-      }
-      .divider({ strokeWidth: 0.5, color: $r('app.color.divider'), startMargin: 52, endMargin: DesignConstants.SPACING.LG })
-      .backgroundColor($r('app.color.bg_secondary'))
-      .borderRadius(DesignConstants.RADIUS.XXL)
-      .shadow(DesignConstants.SHADOW.MEDIUM)
-      .border({ width: 1, color: $r('app.color.highlight_border') })
-      .margin({ bottom: DesignConstants.SPACING.MD })
+      .border({ width: 1, color: this.getSurfaceBorder() })
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
@@ -985,30 +1009,20 @@ export struct ProfilePage {
           this.UserInfoContent()
         }
       }
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor(this.getSurfaceBackground())
       .borderRadius(DesignConstants.RADIUS.XXL)
-      .shadow(DesignConstants.SHADOW.MEDIUM)
-      .border({ width: 1, color: $r('app.color.highlight_border') })
+      .shadow(this.getSoftCardShadow())
+      .border({ width: 1, color: this.getSurfaceBorder() })
       .padding(DesignConstants.SPACING.LG)
       .margin({ bottom: DesignConstants.SPACING.MD })
 
       ListItem() {
         this.StatsContent()
       }
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor(this.getSurfaceBackground())
       .borderRadius(DesignConstants.RADIUS.XXL)
-      .shadow(DesignConstants.SHADOW.MEDIUM)
-      .border({ width: 1, color: $r('app.color.highlight_border') })
-      .padding(DesignConstants.SPACING.LG)
-      .margin({ bottom: DesignConstants.SPACING.MD })
-
-      ListItem() {
-        this.QuickActionsSection()
-      }
-      .backgroundColor($r('app.color.bg_secondary'))
-      .borderRadius(DesignConstants.RADIUS.XXL)
-      .shadow(DesignConstants.SHADOW.MEDIUM)
-      .border({ width: 1, color: $r('app.color.highlight_border') })
+      .shadow(this.getSoftCardShadow())
+      .border({ width: 1, color: this.getSurfaceBorder() })
       .padding(DesignConstants.SPACING.LG)
       .margin({ bottom: DesignConstants.SPACING.MD })
 
@@ -1038,10 +1052,10 @@ export struct ProfilePage {
         .backgroundColor(Color.Transparent)
       }
       .divider({ strokeWidth: 0.5, color: $r('app.color.divider'), startMargin: 52, endMargin: DesignConstants.SPACING.LG })
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor(this.getSurfaceBackground())
       .borderRadius(DesignConstants.RADIUS.XXL)
-      .shadow(DesignConstants.SHADOW.MEDIUM)
-      .border({ width: 1, color: $r('app.color.highlight_border') })
+      .shadow(this.getSoftCardShadow())
+      .border({ width: 1, color: this.getSurfaceBorder() })
       .margin({ bottom: DesignConstants.SPACING.MD })
     }
     .width('100%')
@@ -1068,7 +1082,7 @@ export struct ProfilePage {
         TextInput({ placeholder: '邮箱 / 用户名（登录凭证）' })
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .padding(DesignConstants.SPACING.LG)
-          .backgroundColor($r('app.color.bg_tertiary'))
+          .backgroundColor(this.getSurfaceSubtle())
           .borderRadius(DesignConstants.RADIUS.LG)
           .type(InputType.Email)
           .onChange((value: string) => {
@@ -1079,7 +1093,7 @@ export struct ProfilePage {
         TextInput({ placeholder: '密码（至少8位）' })
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .padding(DesignConstants.SPACING.LG)
-          .backgroundColor($r('app.color.bg_tertiary'))
+          .backgroundColor(this.getSurfaceSubtle())
           .borderRadius(DesignConstants.RADIUS.LG)
           .type(InputType.Password)
           .onChange((value: string) => {
@@ -1090,7 +1104,7 @@ export struct ProfilePage {
         TextInput({ placeholder: '确认密码' })
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .padding(DesignConstants.SPACING.LG)
-          .backgroundColor($r('app.color.bg_tertiary'))
+          .backgroundColor(this.getSurfaceSubtle())
           .borderRadius(DesignConstants.RADIUS.LG)
           .type(InputType.Password)
           .onChange((value: string) => {
@@ -1101,7 +1115,7 @@ export struct ProfilePage {
         Row({ space: DesignConstants.SPACING.MD }) {
           Button('取消')
             .type(ButtonType.Capsule)
-            .backgroundColor($r('app.color.bg_tertiary'))
+            .backgroundColor(this.getSurfaceSubtle())
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
             .layoutWeight(1)
             .height(44)
@@ -1113,8 +1127,8 @@ export struct ProfilePage {
 
           Button(this.isUpgrading ? '升级中...' : '确认升级')
             .type(ButtonType.Capsule)
-            .backgroundColor($r('app.color.brand_primary'))
-            .fontColor(Color.White)
+            .backgroundColor(this.getAccentBackground())
+            .fontColor(this.getAccentText())
             .layoutWeight(1)
             .height(44)
             .enabled(!this.isUpgrading)
@@ -1151,14 +1165,14 @@ export struct ProfilePage {
         Text('临时用户')
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor($r('sys.color.ohos_id_color_warning'))
-          .backgroundColor($r('app.color.bg_tertiary'))
+          .backgroundColor(this.getSurfaceSubtle())
           .borderRadius(DesignConstants.RADIUS.MD)
           .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
       } else if (this.isAdminUser()) {
         Text('管理员')
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor($r('sys.color.ohos_id_color_emphasize'))
-          .backgroundColor($r('app.color.bg_tertiary'))
+          .backgroundColor(this.getSurfaceSubtle())
           .borderRadius(DesignConstants.RADIUS.MD)
           .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
       }
@@ -1172,15 +1186,16 @@ export struct ProfilePage {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
 
-      Button('编辑资料')
+        Button('编辑资料')
         .type(ButtonType.Capsule)
-        .height(40)
-        .padding({ left: DesignConstants.SPACING.XL, right: DesignConstants.SPACING.XL })
-        .backgroundColor($r('app.color.bg_secondary'))
-        .fontColor($r('app.color.brand_primary'))
+        .height(42)
+        .padding({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL })
+        .backgroundColor(this.getAccentBackground())
+        .fontColor(this.getAccentText())
         .fontSize(DesignConstants.FONT.SIZE.MD)
-        .shadow(DesignConstants.SHADOW.MEDIUM)
-        .border({ width: 1, color: $r('app.color.highlight_border') })
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .shadow(this.getPrimaryButtonShadow())
+        .border({ width: 1, color: this.getSurfaceBorder() })
         .onClick(() => this.startEdit())
     }
     .width('100%')
@@ -1216,10 +1231,10 @@ export struct ProfilePage {
         }
       }
 
-      TextInput({ placeholder: '请输入昵称', text: this.editNickname })
+        TextInput({ placeholder: '请输入昵称', text: this.editNickname })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .height(48)
-        .backgroundColor($r('app.color.bg_tertiary'))
+        .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.MD)
         .onChange((value: string) => {
           this.editNickname = value;
@@ -1228,7 +1243,7 @@ export struct ProfilePage {
 
       TextArea({ placeholder: '请输入个人简介', text: this.editBio })
         .fontSize(DesignConstants.FONT.SIZE.MD)
-        .backgroundColor($r('app.color.bg_tertiary'))
+        .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.MD)
         .height(80)
         .onChange((value: string) => {
@@ -1312,30 +1327,16 @@ export struct ProfilePage {
       .width('100%')
     }
     .type(ButtonType.Normal)
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.XXL)
     .shadow(DesignConstants.SHADOW.MEDIUM)
-    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .border({ width: 1, color: this.getSurfaceBorder() })
     .padding(DesignConstants.SPACING.MD)
     .layoutWeight(1)
     .stateEffect(true)
+    .scale(this.pressedMenuItemKey === title ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })
+    .animation({ duration: 120, curve: Curve.EaseOut })
     .onClick(onTap)
-  }
-
-  @Builder
-  private GuestFeatureItem(label: string, icon: AppIcon): void {
-    Row({ space: DesignConstants.SPACING.MD }) {
-      Text() {
-        SymbolSpan($r(icon))
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontColor([$r('sys.color.ohos_id_color_emphasize')])
-      }
-      Text(label)
-        .fontSize(DesignConstants.FONT.SIZE.MD)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
-    }
-    .width('100%')
-    .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
   }
 
   @Builder
@@ -1377,81 +1378,6 @@ export struct ProfilePage {
     .onClick(onTap)
   }
 
-    @Builder
-  private QuickActionsSection(): void {
-    Column({ space: DesignConstants.SPACING.MD }) {
-      Text('快速操作')
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontWeight(FontWeight.Medium)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
-        .alignSelf(ItemAlign.Start)
-
-      this.QuickActionItem('我的分享', '查看并管理我的分享链接', AppIcon.SHARE, () => this.openMyShares())
-      this.QuickActionItem('发现周边用户', '查看附近的人并发起互动', AppIcon.PERSON, () => this.openSearchPeople())
-      this.QuickActionItem('浏览附近群组', '加入或管理兴趣圈子', AppIcon.GROUP, () => this.openMyGroups())
-      this.QuickActionItem('查看附近动态', '浏览我的瞬间和周边动态', AppIcon.CAMERA, () => this.openMyMoments())
-      if (this.isAdminUser()) {
-        this.QuickActionItem('管理员工具台', '查看管理员专属工具入口', AppIcon.SHIELD, () => this.openAdminPanel())
-      }
-    }
-    .width('100%')
-  }
-
-  @Builder
-  private QuickActionItem(title: string, description: string, icon: AppIcon, onTap: () => void): void {
-    Button() {
-      Row({ space: DesignConstants.SPACING.MD }) {
-        Stack() {
-          Circle()
-            .width(40)
-            .height(40)
-            .fill($r('app.color.bg_inset'))
-            .shadow(DesignConstants.SHADOW.INSET)
-          Text() {
-            SymbolSpan($r(icon))
-              .fontSize(18)
-              .fontColor([$r('sys.color.ohos_id_color_text_primary')])
-          }
-          .align(Alignment.Center)
-        }
-        .width(40)
-        .height(40)
-
-        Column({ space: DesignConstants.SPACING.XS }) {
-          Text(title)
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          Text(description)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-        }
-        .layoutWeight(1)
-
-        Text() {
-          SymbolSpan($r(AppIcon.FORWARD))
-            .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
-        }
-      }
-      .width('100%')
-    }
-    .type(ButtonType.Normal)
-    .backgroundColor($r('app.color.bg_secondary'))
-    .borderRadius(DesignConstants.RADIUS.XXL)
-    .shadow(DesignConstants.SHADOW.SMALL)
-    .border({ width: 1, color: $r('app.color.highlight_border') })
-    .padding({
-      left: DesignConstants.SPACING.MD,
-      right: DesignConstants.SPACING.MD,
-      top: DesignConstants.SPACING.MD,
-      bottom: DesignConstants.SPACING.MD
-    })
-    .margin({ bottom: DesignConstants.SPACING.XS })
-    .stateEffect(true)
-    .onClick(onTap)
-  }
-
 // ==================== 快速体验弹窗 ====================
 
   @Builder
@@ -1470,7 +1396,7 @@ export struct ProfilePage {
         TextInput({ placeholder: '请输入你的昵称' })
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .padding(DesignConstants.SPACING.LG)
-          .backgroundColor($r('app.color.bg_tertiary'))
+          .backgroundColor(this.getSurfaceSubtle())
           .borderRadius(DesignConstants.RADIUS.LG)
           .enabled(!this.isQuickStarting)
           .onChange((value: string) => { this.quickNickname = value; })

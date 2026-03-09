@@ -6,7 +6,7 @@ use crate::{
             UnreadCountResult, UserInfo,
         },
     },
-    error::{AppError, Result},
+    error::{ApiError, Result},
     repositories::notification_repo::{
         NotificationListRow, NotificationRepository, NotificationType as RepoNotificationType,
     },
@@ -87,7 +87,7 @@ impl NotificationService {
             "notification.mark_as_read started"
         );
         if notification_ids.len() > crate::constants::MAX_PAGE_LIMIT as usize {
-            return Err(AppError::OutOfRange(format!(
+            return Err(ApiError::OutOfRange(format!(
                 "notification_ids 最多 {} 个",
                 crate::constants::MAX_PAGE_LIMIT
             )));
@@ -151,7 +151,7 @@ impl NotificationService {
         let ntype: RepoNotificationType = row
             .notification_type
             .parse()
-            .map_err(|_| AppError::InternalError("无效的 notification_type".to_string()))?;
+            .map_err(|_| ApiError::InternalError("无效的 notification_type".to_string()))?;
 
         let payload = Self::payload_from_row(&ntype, &row.payload)?;
 

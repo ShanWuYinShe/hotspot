@@ -16,7 +16,7 @@ use crate::{
             JoinGroupApplication, JoinGroupResult, JoinGroupStatus, PaginatedData, UserInfo,
         },
     },
-    error::{AppError, Result},
+    error::{ApiError, Result},
     events::event_types::AppEvent,
     types::enums::{
         ApplicationStatus, ApplicationStatusFilter, GroupJoinMethod, GroupRole, ResponseStatus,
@@ -45,14 +45,14 @@ impl GroupService {
             .group_repo
             .find_by_id(group_id)
             .await?
-            .ok_or_else(|| AppError::GroupNotFound("群组不存在".to_string()))?;
+            .ok_or_else(|| ApiError::GroupNotFound("群组不存在".to_string()))?;
 
         if self.member_repo.is_member(group_id, user_id).await? {
-            return Err(AppError::AlreadyInGroup);
+            return Err(ApiError::AlreadyInGroup);
         }
 
         if self.bans_repo.is_banned(group_id, user_id).await? {
-            return Err(AppError::Forbidden("已被封禁".to_string()));
+            return Err(ApiError::Forbidden("已被封禁".to_string()));
         }
 
         let settings = self.settings_repo.find_by_group(group_id).await?;
@@ -62,7 +62,7 @@ impl GroupService {
             .unwrap_or(GroupJoinMethod::Open);
 
         if join_method == GroupJoinMethod::InviteOnly {
-            return Err(AppError::BusinessRuleViolation(
+            return Err(ApiError::BusinessRuleViolation(
                 "该群组仅限邀请加入".to_string(),
             ));
         }
@@ -71,7 +71,7 @@ impl GroupService {
             if let Some(max) = settings.as_ref().and_then(|s| s.max_members) {
                 let count = self.member_repo.count_members(group_id).await? as i32;
                 if count >= max {
-                    return Err(AppError::GroupFull);
+                    return Err(ApiError::GroupFull);
                 }
             }
             let app = self
@@ -97,13 +97,13 @@ impl GroupService {
             if let Some(pwd_hash) = settings.password_hash.as_deref() {
                 let pwd = req.password.as_deref().unwrap_or("");
                 if !PasswordUtil::verify_password(pwd, pwd_hash)? {
-                    return Err(AppError::GroupPasswordError("群组密码错误".to_string()));
+                    return Err(ApiError::GroupPasswordError("群组密码错误".to_string()));
                 }
             }
             if let Some(max) = settings.max_members {
                 let count = self.member_repo.count_members(group_id).await? as i32;
                 if count >= max {
-                    return Err(AppError::GroupFull);
+                    return Err(ApiError::GroupFull);
                 }
             }
         }
@@ -309,7 +309,7 @@ impl GroupService {
             .application_repo
             .find_by_application_id(app_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("申请不存在".to_string()))?;
+            .ok_or_else(|| ApiError::NotFound("申请不存在".to_string()))?;
 
         self.require_group_admin_or_system_permission(
             application.group_id,
@@ -356,7 +356,7 @@ impl GroupService {
             .group_repo
             .find_by_id(application.group_id)
             .await?
-            .ok_or_else(|| AppError::GroupNotFound("群组不存在".to_string()))?;
+            .ok_or_else(|| ApiError::GroupNotFound("群组不存在".to_string()))?;
         let signed_avatar = self
             .media_service
             .sign_url_if_path(group.avatar_url.as_deref())
@@ -453,7 +453,7 @@ impl GroupService {
             .application_repo
             .find_by_application_id(app_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("申请不存在".to_string()))?;
+            .ok_or_else(|| ApiError::NotFound("申请不存在".to_string()))?;
         if application.applicant_id != user_id {
             tracing::warn!(
                 user_id,
@@ -461,7 +461,7 @@ impl GroupService {
                 applicant_id = application.applicant_id,
                 "group.application cancel rejected: applicant mismatch"
             );
-            return Err(AppError::Forbidden("权限不足".to_string()));
+            return Err(ApiError::Forbidden("权限不足".to_string()));
         }
         match application.status {
             ApplicationStatus::Revoked => {
@@ -485,7 +485,7 @@ impl GroupService {
                     application_status = ?application.status,
                     "group.application cancel rejected: application already handled"
                 );
-                return Err(AppError::BusinessRuleViolation(
+                return Err(ApiError::BusinessRuleViolation(
                     "申请已处理，无法取消".to_string(),
                 ));
             }
@@ -639,10 +639,10 @@ impl GroupService {
             .invite_repo
             .find_by_invite_id(invite_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("邀请不存在".to_string()))?;
+            .ok_or_else(|| ApiError::NotFound("邀请不存在".to_string()))?;
 
         if invite.invitee_id != user_id {
-            return Err(AppError::Forbidden("权限不足".to_string()));
+            return Err(ApiError::Forbidden("权限不足".to_string()));
         }
 
         if invite.status == ApplicationStatus::Accepted {
@@ -690,7 +690,7 @@ impl GroupService {
                 invite_status = ?invite.status,
                 "group.invite accept rejected: invite already handled"
             );
-            return Err(AppError::BusinessRuleViolation(
+            return Err(ApiError::BusinessRuleViolation(
                 "邀请已处理，无法接受".to_string(),
             ));
         }
@@ -737,9 +737,9 @@ impl GroupService {
             .invite_repo
             .find_by_invite_id(invite_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("邀请不存在".to_string()))?;
+            .ok_or_else(|| ApiError::NotFound("邀请不存在".to_string()))?;
         if invite.invitee_id != user_id {
-            return Err(AppError::Forbidden("权限不足".to_string()));
+            return Err(ApiError::Forbidden("权限不足".to_string()));
         }
 
         if invite.status == ApplicationStatus::Rejected {
@@ -761,7 +761,7 @@ impl GroupService {
                 invite_status = ?invite.status,
                 "group.invite reject rejected: invite already handled"
             );
-            return Err(AppError::BusinessRuleViolation(
+            return Err(ApiError::BusinessRuleViolation(
                 "邀请已处理，无法拒绝".to_string(),
             ));
         }
@@ -809,7 +809,7 @@ impl GroupService {
             .invite_repo
             .find_by_invite_id(invite_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("邀请不存在".to_string()))?;
+            .ok_or_else(|| ApiError::NotFound("邀请不存在".to_string()))?;
         if invite.group_id != group_id {
             tracing::warn!(
                 user_id,
@@ -818,7 +818,7 @@ impl GroupService {
                 invite_group_id = invite.group_id,
                 "group.invite revoke rejected: invite not in group"
             );
-            return Err(AppError::Forbidden("权限不足".to_string()));
+            return Err(ApiError::Forbidden("权限不足".to_string()));
         }
         if invite.status != ApplicationStatus::Pending {
             if invite.status == ApplicationStatus::Revoked {
@@ -838,7 +838,7 @@ impl GroupService {
                 invite_status = ?invite.status,
                 "group.invite revoke rejected: invite is not pending"
             );
-            return Err(AppError::BusinessRuleViolation(
+            return Err(ApiError::BusinessRuleViolation(
                 "仅可撤销等待处理的邀请".to_string(),
             ));
         }
@@ -850,7 +850,7 @@ impl GroupService {
                 invite_id = %invite_id,
                 "group.invite revoke rejected: invite status changed"
             );
-            return Err(AppError::BusinessRuleViolation(
+            return Err(ApiError::BusinessRuleViolation(
                 "邀请状态已变更，无法撤销".to_string(),
             ));
         }

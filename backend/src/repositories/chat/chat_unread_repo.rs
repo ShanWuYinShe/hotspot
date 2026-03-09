@@ -1,6 +1,6 @@
 //! 聊天未读计数 Repository — 统一管理私聊和群聊的未读计数
 
-use crate::error::AppError;
+use crate::error::ApiError;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -34,7 +34,7 @@ impl ChatUnreadRepository {
         chat_id: &str,
         user_id: i64,
         last_message_id: Option<Uuid>,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), ApiError> {
         sqlx::query!(
             r#"
             INSERT INTO chat_conversations_state (
@@ -59,7 +59,7 @@ impl ChatUnreadRepository {
     }
 
     /// 标记指定类型下当前用户所有会话为已读
-    pub async fn mark_all_as_read(&self, chat_type: &str, user_id: i64) -> Result<(), AppError> {
+    pub async fn mark_all_as_read(&self, chat_type: &str, user_id: i64) -> Result<(), ApiError> {
         sqlx::query!(
             r#"
             UPDATE chat_conversations_state
@@ -82,7 +82,7 @@ impl ChatUnreadRepository {
         chat_id: &str,
         is_muted: Option<bool>,
         is_pinned: Option<bool>,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), ApiError> {
         sqlx::query!(
             r#"
             INSERT INTO chat_conversations_state (
@@ -107,7 +107,7 @@ impl ChatUnreadRepository {
     }
 
     /// 隐藏私聊会话（单边）：用于会话删除后从 Inbox 移除
-    pub async fn hide_private_chat(&self, user_id: i64, chat_id: &str) -> Result<(), AppError> {
+    pub async fn hide_private_chat(&self, user_id: i64, chat_id: &str) -> Result<(), ApiError> {
         sqlx::query!(
             r#"
             INSERT INTO chat_conversations_state (
@@ -129,7 +129,7 @@ impl ChatUnreadRepository {
     }
 
     /// 取消隐藏私聊会话（单边）：当用户再次发送/收到新消息时恢复可见
-    pub async fn unhide_private_chat(&self, user_id: i64, chat_id: &str) -> Result<(), AppError> {
+    pub async fn unhide_private_chat(&self, user_id: i64, chat_id: &str) -> Result<(), ApiError> {
         sqlx::query!(
             r#"
             INSERT INTO chat_conversations_state (
@@ -154,7 +154,7 @@ impl ChatUnreadRepository {
         &self,
         user_id: i64,
         chat_id: &str,
-    ) -> Result<Option<Uuid>, AppError> {
+    ) -> Result<Option<Uuid>, ApiError> {
         let row = sqlx::query!(
             r#"
             SELECT last_read_message_id
@@ -176,7 +176,7 @@ impl ChatUnreadRepository {
         chat_type: &str,
         chat_id: &str,
         user_id: i64,
-    ) -> Result<i64, AppError> {
+    ) -> Result<i64, ApiError> {
         let row = sqlx::query!(
             r#"
             SELECT COALESCE(
@@ -203,7 +203,7 @@ impl ChatUnreadRepository {
         chat_type: &str,
         chat_ids: &[String],
         user_id: i64,
-    ) -> Result<std::collections::HashMap<String, i64>, AppError> {
+    ) -> Result<std::collections::HashMap<String, i64>, ApiError> {
         if chat_ids.is_empty() {
             return Ok(std::collections::HashMap::new());
         }
@@ -230,7 +230,7 @@ impl ChatUnreadRepository {
         &self,
         chat_ids: &[String],
         user_id: i64,
-    ) -> Result<std::collections::HashMap<String, (bool, bool)>, AppError> {
+    ) -> Result<std::collections::HashMap<String, (bool, bool)>, ApiError> {
         if chat_ids.is_empty() {
             return Ok(std::collections::HashMap::new());
         }
@@ -259,7 +259,7 @@ impl ChatUnreadRepository {
         &self,
         chat_id: &str,
         user_id: i64,
-    ) -> Result<(bool, bool), AppError> {
+    ) -> Result<(bool, bool), ApiError> {
         let row = sqlx::query!(
             r#"
             SELECT is_muted as "is_muted!", is_pinned as "is_pinned!"

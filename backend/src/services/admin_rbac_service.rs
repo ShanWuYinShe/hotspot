@@ -2,7 +2,7 @@ use uuid::Uuid;
 
 use crate::{
     config::Config,
-    error::{AppError, Result},
+    error::{ApiError, Result},
     repositories::{
         admin::rbac_repo::{AdminRbacRepository, AdminRoleRow, AdminWithRolesRow},
         user::settings_repo::UserSettingsRepository,
@@ -48,7 +48,7 @@ impl AdminRbacService {
         let password = match &config.super_admin_password {
             Some(p) if !p.is_empty() => p.clone(),
             _ => {
-                return Err(AppError::InternalError(
+                return Err(ApiError::InternalError(
                     "系统启动失败：未检测到超级管理员，且 SUPER_ADMIN_PASSWORD 环境变量未设置。请设置 SUPER_ADMIN_PASSWORD 环境变量以创建初始超级管理员。".to_string()
                 ));
             }
@@ -132,7 +132,7 @@ impl AdminRbacService {
             .user_has_permission(user_id, permission_key)
             .await?;
         if !ok {
-            return Err(AppError::AdminPermissionDenied(format!(
+            return Err(ApiError::AdminPermissionDenied(format!(
                 "缺少权限: {}",
                 permission_key
             )));
@@ -231,7 +231,7 @@ impl AdminRbacService {
                 role_id = %role_id,
                 "admin_rbac.set_role_permissions rejected: wildcard requires super admin"
             );
-            return Err(AppError::AdminPermissionDenied(
+            return Err(ApiError::AdminPermissionDenied(
                 "只有超级管理员可以设置包含 '*' 的角色权限".to_string(),
             ));
         }
@@ -263,7 +263,7 @@ impl AdminRbacService {
             .repo
             .get_admin_user(user_id)
             .await?
-            .ok_or_else(|| AppError::Forbidden("需要管理员权限".to_string()))?;
+            .ok_or_else(|| ApiError::Forbidden("需要管理员权限".to_string()))?;
 
         let permissions = self.repo.list_user_permissions(user_id).await?;
         let roles = self.repo.list_user_roles(user_id).await?;
@@ -294,7 +294,7 @@ impl AdminRbacService {
                     target_user_id,
                     "admin_rbac.grant_admin rejected: only super admin can grant super"
                 );
-                return Err(AppError::Forbidden(
+                return Err(ApiError::Forbidden(
                     "只有超级管理员可以授予超级管理员权限".to_string(),
                 ));
             }
@@ -304,7 +304,7 @@ impl AdminRbacService {
                     target_user_id,
                     "admin_rbac.grant_admin rejected: super grant cannot include role_ids"
                 );
-                return Err(AppError::InvalidFormat(
+                return Err(ApiError::InvalidFormat(
                     "grant_all_permissions 与 role_ids 互斥".to_string(),
                 ));
             }
@@ -315,7 +315,7 @@ impl AdminRbacService {
                     target_user_id,
                     "admin_rbac.grant_admin rejected: role_ids is empty"
                 );
-                return Err(AppError::MissingParameter("role_ids".to_string()));
+                return Err(ApiError::MissingParameter("role_ids".to_string()));
             }
             if !operator_is_super && self.repo.roles_have_permission(role_ids, "*").await? {
                 tracing::warn!(
@@ -323,7 +323,7 @@ impl AdminRbacService {
                     target_user_id,
                     "admin_rbac.grant_admin rejected: wildcard role requires super admin"
                 );
-                return Err(AppError::AdminPermissionDenied(
+                return Err(ApiError::AdminPermissionDenied(
                     "只有超级管理员可以授予包含 '*' 的角色".to_string(),
                 ));
             }
@@ -360,7 +360,7 @@ impl AdminRbacService {
                 target_user_id,
                 "admin_rbac.revoke_admin rejected: only super admin can revoke super admin"
             );
-            return Err(AppError::Forbidden(
+            return Err(ApiError::Forbidden(
                 "只有超级管理员可以撤销超级管理员权限".to_string(),
             ));
         }

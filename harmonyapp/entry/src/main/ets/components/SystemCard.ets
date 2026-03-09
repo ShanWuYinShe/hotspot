@@ -1,4 +1,6 @@
 import { DesignConstants } from '../constants/DesignConstants';
+import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 /**
  * 卡片样式变体
@@ -45,9 +47,19 @@ export struct SystemCard {
   // 新增：是否显示边框
   @Prop showBorder: boolean = true;
   // 新增：边框颜色（使用系统颜色）
-  @Prop cardBorderColor: ResourceColor = $r('sys.color.ohos_id_color_list_separator');
+  @Prop cardBorderColor: ResourceColor | string = '';
 
   @State isPressed: boolean = false;
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getThemeShadow(kind: 'default' | 'elevated'): ShadowConfig {
+    const palette = this.getPalette();
+    return kind === 'elevated' ? palette.elevatedShadow : palette.surfaceShadow;
+  }
 
   private getBackgroundColor(): ResourceColor {
     if (this.cardBackgroundColor) {
@@ -62,21 +74,21 @@ export struct SystemCard {
       case CardVariant.OUTLINED:
       case CardVariant.DEFAULT:
       default:
-        return $r('app.color.bg_secondary');
+        return this.getPalette().surfaceBackground;
     }
   }
 
   private getShadow(): ShadowConfig {
     switch (this.variant) {
       case CardVariant.ELEVATED:
-        return DesignConstants.SHADOW.LARGE;
+        return this.getThemeShadow('elevated');
       case CardVariant.GLASS:
-        return this.showShadow ? DesignConstants.SHADOW.LARGE : { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 };
+        return this.showShadow ? this.getThemeShadow('elevated') : { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 };
       case CardVariant.DEFAULT:
       case CardVariant.FILLED:
       case CardVariant.OUTLINED:
       default:
-        return DesignConstants.SHADOW.MEDIUM;
+        return this.getThemeShadow('default');
     }
   }
 
@@ -84,7 +96,7 @@ export struct SystemCard {
     if (!this.showBorder) {
       return { width: 0, color: Color.Transparent };
     }
-    return { width: 1, color: this.cardBorderColor };
+    return { width: 1, color: (this.cardBorderColor || this.getPalette().borderColor) as ResourceColor };
   }
 
   // 获取毛玻璃效果
@@ -146,6 +158,11 @@ export struct MasonryCard {
   @Prop clickable: boolean = false;
 
   @State isPressed: boolean = false;
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
 
   build() {
     Column() {
@@ -155,9 +172,10 @@ export struct MasonryCard {
       this.content();
     }
     .width('100%')
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getPalette().surfaceBackground)
     .borderRadius(this.cardRadius)
-    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .shadow(this.getPalette().surfaceShadow)
+    .border({ width: 1, color: this.getPalette().borderColor })
     .scale(this.clickable && this.isPressed ? { x: 0.97, y: 0.97 } : { x: 1, y: 1 })
     .animation({ duration: 100, curve: Curve.EaseOut })
     .onTouch((event: TouchEvent) => {

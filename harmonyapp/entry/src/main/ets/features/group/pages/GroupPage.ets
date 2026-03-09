@@ -23,9 +23,12 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { AppRouter, LoginRouteParam, GroupDetailRouteParam } from '../../../core/router/AppRouter';
+import { InteractionStateStore } from '../../../core/state/InteractionStateStore';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { formatCount } from '../../../core/utils/FormatUtil';
+import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 @Preview
 @Component
@@ -34,6 +37,7 @@ export struct GroupPage {
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private stateManager = GlobalStateManager.getInstance();
   @State groups: GroupItem[] = [];
@@ -73,10 +77,24 @@ export struct GroupPage {
   }
 
   async aboutToAppear() {
-    SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
-    });
+    SystemUiController.syncWithCurrentTheme();
     await this.loadNearbyGroups();
+  }
+
+  private getCurrentThemePalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getSurfaceBackground(): string {
+    return this.getCurrentThemePalette().surfaceBackground;
+  }
+
+  private getSurfaceSubtle(): string {
+    return this.getCurrentThemePalette().surfaceSubtle;
+  }
+
+  private getSurfaceBorder(): string {
+    return this.getCurrentThemePalette().borderColor;
   }
 
   aboutToDisappear() {}
@@ -412,6 +430,7 @@ export struct GroupPage {
       if (response.code === 0 && response.data) {
         if (response.data.status === 'joined') {
           SystemToast.show('加入群组成功', this.getUIContext());
+          InteractionStateStore.getInstance().updateGroupMembership(groupId, { is_member: true });
           await this.loadNearbyGroups();
         } else if (response.data.status === 'pending_approval') {
           SystemToast.show('已提交申请，等待管理员审批', this.getUIContext());
@@ -459,7 +478,7 @@ export struct GroupPage {
         Row({ space: 8 }) {
           Button('邀请')
             .type(ButtonType.Capsule)
-            .backgroundColor($r('app.color.bg_tertiary'))
+            .backgroundColor(this.getSurfaceSubtle())
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .height(32)
@@ -468,7 +487,7 @@ export struct GroupPage {
 
           Button('申请')
             .type(ButtonType.Capsule)
-            .backgroundColor($r('app.color.bg_tertiary'))
+            .backgroundColor(this.getSurfaceSubtle())
             .fontColor($r('sys.color.ohos_id_color_text_primary'))
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .height(32)
@@ -477,8 +496,8 @@ export struct GroupPage {
 
           Button('创建')
             .type(ButtonType.Capsule)
-            .backgroundColor($r('app.color.brand_primary'))
-            .fontColor(Color.White)
+            .backgroundColor(this.getCurrentThemePalette().accentBackground)
+            .fontColor(this.getCurrentThemePalette().accentText)
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .height(32)
             .shadow(DesignConstants.SHADOW.SMALL)
@@ -533,18 +552,18 @@ export struct GroupPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
     .bindSheet($$this.showMyInvitesSheet, this.buildMyInvitesSheet(), {
       height: '68%',
       showClose: false,
       dragBar: true,
-      backgroundColor: $r('app.color.start_window_background')
+      backgroundColor: this.getCurrentThemePalette().sheetBackground
     })
     .bindSheet($$this.showMyApplicationsSheet, this.buildMyApplicationsSheet(), {
       height: '68%',
       showClose: false,
       dragBar: true,
-      backgroundColor: $r('app.color.start_window_background')
+      backgroundColor: this.getCurrentThemePalette().sheetBackground
     })
   }
 
@@ -597,7 +616,7 @@ export struct GroupPage {
     .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
   }
 
   @Builder
@@ -638,10 +657,10 @@ export struct GroupPage {
       Row({ space: 8 }) {
         Button(this.isInviteHandling(invite.invite_id) ? '处理中...' : '接受')
           .type(ButtonType.Capsule)
-          .backgroundColor($r('app.color.brand_primary'))
-          .fontColor(Color.White)
+          .backgroundColor(this.getCurrentThemePalette().accentBackground)
+          .fontColor(this.getCurrentThemePalette().accentText)
           .shadow(DesignConstants.SHADOW.SMALL)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .height(34)
           .layoutWeight(1)
           .enabled(!this.isInviteHandling(invite.invite_id))
@@ -650,10 +669,10 @@ export struct GroupPage {
 
         Button('拒绝')
           .type(ButtonType.Capsule)
-          .backgroundColor($r('app.color.bg_tertiary'))
+          .backgroundColor(this.getSurfaceSubtle())
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .shadow(DesignConstants.SHADOW.SMALL)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .height(34)
           .layoutWeight(1)
           .enabled(!this.isInviteHandling(invite.invite_id))
@@ -666,8 +685,8 @@ export struct GroupPage {
     .padding(DesignConstants.SPACING.MD)
     .borderRadius(DesignConstants.RADIUS.XXL)
     .shadow(DesignConstants.SHADOW.MEDIUM)
-    .backgroundColor($r('app.color.bg_secondary'))
-    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .backgroundColor(this.getSurfaceBackground())
+    .border({ width: 1, color: this.getSurfaceBorder() })
     .margin({ bottom: 12 })
   }
 
@@ -720,7 +739,7 @@ export struct GroupPage {
     .padding({ bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0) })
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
   }
 
   @Builder
@@ -761,10 +780,10 @@ export struct GroupPage {
       Row() {
         Button(this.isApplicationHandling(application.application_id) ? '处理中...' : '取消申请')
           .type(ButtonType.Capsule)
-          .backgroundColor($r('app.color.bg_tertiary'))
+          .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .shadow(DesignConstants.SHADOW.SMALL)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
           .height(34)
           .layoutWeight(1)
           .enabled(!this.isApplicationHandling(application.application_id))
@@ -777,8 +796,8 @@ export struct GroupPage {
     .padding(DesignConstants.SPACING.MD)
     .borderRadius(DesignConstants.RADIUS.XXL)
     .shadow(DesignConstants.SHADOW.MEDIUM)
-    .backgroundColor($r('app.color.bg_secondary'))
-    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+    .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
     .margin({ bottom: 12 })
   }
 
@@ -852,13 +871,13 @@ export struct GroupPage {
 
       Button(this.isGroupJoining(group.group.group_id) ? '处理中...' : '加入')
         .type(ButtonType.Capsule)
-        .backgroundColor($r('app.color.bg_tertiary'))
-        .fontColor($r('app.color.brand_primary'))
+        .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
+        .fontColor(this.getCurrentThemePalette().accentBackground)
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontWeight(FontWeight.Medium)
         .height(34)
         .shadow(DesignConstants.SHADOW.SMALL)
-        .border({ width: 1, color: $r('app.color.highlight_border') })
+        .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
         .enabled(!this.isGroupJoining(group.group.group_id))
         .opacity(this.isGroupJoining(group.group.group_id) ? 0.58 : 1)
         .onClick(() => this.joinGroup(group))
@@ -872,7 +891,7 @@ export struct GroupPage {
     })
     .borderRadius(DesignConstants.RADIUS.XXL)
     .shadow(DesignConstants.SHADOW.MEDIUM)
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
     .margin({ bottom: 12 })
     .alignItems(VerticalAlign.Center)
     .onTouch((event: TouchEvent) => {

@@ -21,6 +21,8 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF02;
 const TAG: string = 'LoginPage';
@@ -33,6 +35,7 @@ export struct LoginPage {
   @StorageLink('isLoggedIn') isLoggedIn: boolean = false;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   @State loginId: string = '';
   @State password: string = '';
@@ -87,9 +90,23 @@ export struct LoginPage {
   }
 
   aboutToAppear(): void {
-    SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
-    });
+    SystemUiController.syncWithCurrentTheme();
+  }
+
+  private getCurrentThemePalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getSurfaceBackground(): string {
+    return this.getCurrentThemePalette().surfaceBackground;
+  }
+
+  private getSurfaceSubtle(): string {
+    return this.getCurrentThemePalette().surfaceSubtle;
+  }
+
+  private getSurfaceBorder(): string {
+    return this.getCurrentThemePalette().borderColor;
   }
 
   build() {
@@ -161,9 +178,9 @@ export struct LoginPage {
             this.ModeTab('登录', 'login')
             this.ModeTab('注册', 'register')
           }
-          .backgroundColor($r('app.color.bg_tertiary'))
+          .backgroundColor(this.getSurfaceSubtle())
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .padding(3)
           .margin({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL })
 
@@ -179,10 +196,10 @@ export struct LoginPage {
               }
               .width('100%')
               .padding(DesignConstants.SPACING.LG)
-              .backgroundColor($r('app.color.bg_secondary'))
+              .backgroundColor(this.getSurfaceBackground())
               .borderRadius(DesignConstants.RADIUS.XXL)
               .shadow(DesignConstants.SHADOW.MEDIUM)
-              .border({ width: 1, color: $r('app.color.highlight_border') })
+              .border({ width: 1, color: this.getSurfaceBorder() })
               .margin({ bottom: 14 })
             }
             .width('100%')
@@ -204,7 +221,7 @@ export struct LoginPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {
@@ -228,8 +245,8 @@ export struct LoginPage {
     Text(label)
       .fontSize(DesignConstants.FONT.SIZE.MD)
       .fontWeight(this.loginMode === mode ? FontWeight.Bold : FontWeight.Medium)
-      .fontColor(this.loginMode === mode ? Color.White : $r('sys.color.ohos_id_color_text_primary'))
-      .backgroundColor(this.loginMode === mode ? $r('app.color.brand_primary') : Color.Transparent)
+      .fontColor(this.loginMode === mode ? this.getCurrentThemePalette().accentText : $r('sys.color.ohos_id_color_text_primary'))
+      .backgroundColor(this.loginMode === mode ? this.getCurrentThemePalette().accentBackground : Color.Transparent)
       .borderRadius(DesignConstants.RADIUS.XL)
       .height(36)
       .layoutWeight(1)
@@ -257,7 +274,7 @@ export struct LoginPage {
       TextInput({ placeholder: '邮箱 / 用户名', text: $$this.loginId })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('app.color.bg_inset'))
+        .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
         .shadow(DesignConstants.SHADOW.INSET)
         .type(InputType.Email)
@@ -266,7 +283,7 @@ export struct LoginPage {
       TextInput({ placeholder: '密码', text: $$this.password })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('app.color.bg_inset'))
+        .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
         .shadow(DesignConstants.SHADOW.INSET)
         .type(InputType.Password)
@@ -275,17 +292,17 @@ export struct LoginPage {
       Button('登录')
         .type(ButtonType.Normal)
         .backgroundColor(this.isValidLoginId(this.loginId) && this.isValidPassword(this.password)
-          ? $r('app.color.brand_primary')
-          : $r('app.color.bg_tertiary'))
+          ? this.getCurrentThemePalette().accentBackground
+          : this.getSurfaceSubtle())
         .fontColor(this.isValidLoginId(this.loginId) && this.isValidPassword(this.password)
-          ? Color.White
+          ? this.getCurrentThemePalette().accentText
           : $r('sys.color.ohos_id_color_text_secondary'))
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .width('100%')
         .height(48)
         .borderRadius(DesignConstants.RADIUS.FULL)
         .shadow(DesignConstants.SHADOW.SMALL)
-        .border({ width: 1, color: $r('app.color.highlight_border') })
+        .border({ width: 1, color: this.getSurfaceBorder() })
         .enabled(this.isValidLoginId(this.loginId) && this.isValidPassword(this.password))
         .onClick(() => this.userLogin())
 
@@ -307,7 +324,7 @@ export struct LoginPage {
       TextInput({ placeholder: '昵称（必填）', text: $$this.registerNickname })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('app.color.bg_inset'))
+        .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
         .shadow(DesignConstants.SHADOW.INSET)
         .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
@@ -315,7 +332,7 @@ export struct LoginPage {
       TextInput({ placeholder: '邮箱 / 用户名（登录凭证）', text: $$this.registerLoginId })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('app.color.bg_inset'))
+        .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
         .shadow(DesignConstants.SHADOW.INSET)
         .type(InputType.Email)
@@ -324,7 +341,7 @@ export struct LoginPage {
       TextInput({ placeholder: '密码（8-128位，含字母+数字）', text: $$this.registerPassword })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('app.color.bg_inset'))
+        .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
         .shadow(DesignConstants.SHADOW.INSET)
         .type(InputType.Password)
@@ -333,7 +350,7 @@ export struct LoginPage {
       TextInput({ placeholder: '确认密码', text: $$this.registerPasswordConfirm })
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .padding(DesignConstants.SPACING.LG)
-        .backgroundColor($r('app.color.bg_inset'))
+        .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
         .shadow(DesignConstants.SHADOW.INSET)
         .type(InputType.Password)
@@ -345,20 +362,20 @@ export struct LoginPage {
           && this.isValidLoginId(this.registerLoginId)
           && this.isValidPassword(this.registerPassword)
           && this.registerPasswordConfirm === this.registerPassword
-          ? $r('app.color.brand_primary')
-          : $r('app.color.bg_tertiary'))
+          ? this.getCurrentThemePalette().accentBackground
+          : this.getSurfaceSubtle())
         .fontColor(this.isValidNickname(this.registerNickname)
           && this.isValidLoginId(this.registerLoginId)
           && this.isValidPassword(this.registerPassword)
           && this.registerPasswordConfirm === this.registerPassword
-          ? Color.White
+          ? this.getCurrentThemePalette().accentText
           : $r('sys.color.ohos_id_color_text_secondary'))
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .width('100%')
         .height(48)
         .borderRadius(DesignConstants.RADIUS.FULL)
         .shadow(DesignConstants.SHADOW.SMALL)
-        .border({ width: 1, color: $r('app.color.highlight_border') })
+        .border({ width: 1, color: this.getSurfaceBorder() })
         .enabled(this.isValidNickname(this.registerNickname)
           && this.isValidLoginId(this.registerLoginId)
           && this.isValidPassword(this.registerPassword)

@@ -16,7 +16,7 @@ use crate::{
         request::{CompleteUploadRequest, PresignUploadRequest},
         response::{PresignUploadData, UploadMediaData},
     },
-    error::{AppError, Result},
+    error::{ApiError, Result},
     repositories::file_repo::FileRepository,
 };
 
@@ -96,7 +96,7 @@ impl MediaService {
 
         // 按分类验证 MIME 类型
         if !req.category.validate_mime_type(&req.mime_type) {
-            return Err(AppError::InvalidFormat(format!(
+            return Err(ApiError::InvalidFormat(format!(
                 "该分类不支持此 MIME 类型: {} (允许: {:?})",
                 req.mime_type,
                 req.category.allowed_mime_types()
@@ -104,11 +104,11 @@ impl MediaService {
         }
 
         let file_size = u64::try_from(req.file_size)
-            .map_err(|_| AppError::InvalidFormat("文件大小无效".to_string()))?;
+            .map_err(|_| ApiError::InvalidFormat("文件大小无效".to_string()))?;
 
         // 按分类验证文件大小
         if !req.category.validate_file_size(file_size) {
-            return Err(AppError::PayloadTooLarge(format!(
+            return Err(ApiError::PayloadTooLarge(format!(
                 "文件大小超出限制: {} 字节 (最大: {} 字节)",
                 req.file_size,
                 req.category.max_file_size()
@@ -135,7 +135,7 @@ impl MediaService {
         let presigned_config = PresigningConfig::builder()
             .expires_in(Duration::from_secs(900)) // 15分钟
             .build()
-            .map_err(|e| AppError::InternalError(format!("预签名配置构建失败: {}", e)))?;
+            .map_err(|e| ApiError::InternalError(format!("预签名配置构建失败: {}", e)))?;
 
         let presigned_request = self
             .s3_client
@@ -145,14 +145,14 @@ impl MediaService {
             .content_type(&req.mime_type)
             .presigned(presigned_config)
             .await
-            .map_err(|e| AppError::InternalError(format!("预签名 URL 生成失败: {}", e)))?;
+            .map_err(|e| ApiError::InternalError(format!("预签名 URL 生成失败: {}", e)))?;
 
         // 提取 presigned URL 并转换为客户端可访问的 URL
         let upload_url = presigned_request.uri().to_string();
 
         // 解析 URI，提取 path_and_query
         let uri = upload_url.parse::<http::Uri>().map_err(|e| {
-            AppError::InternalError(format!("Failed to parse presigned URI: {}", e))
+            ApiError::InternalError(format!("Failed to parse presigned URI: {}", e))
         })?;
         let path_and_query = uri.path_and_query().map(|pq| pq.as_str()).unwrap_or("");
 
@@ -196,7 +196,7 @@ impl MediaService {
             .arg(session_data.to_string())
             .query_async(&mut redis_conn)
             .await
-            .map_err(|e| AppError::InternalError(format!("上传会话保存失败: {}", e)))?;
+            .map_err(|e| ApiError::InternalError(format!("上传会话保存失败: {}", e)))?;
 
         Ok(PresignUploadData {
             upload_id: s3_key.clone(), // 返回 S3 Key 作为 upload_id，供 complete_upload 使用
@@ -224,14 +224,14 @@ impl MediaService {
             .await
             .map_err(|e| match e.into_service_error() {
                 HeadObjectError::NotFound(_) => {
-                    AppError::FileNotFound("File not found in storage".to_string())
+                    ApiError::FileNotFound("File not found in storage".to_string())
                 }
-                err => AppError::InternalError(format!("存储服务错误: {}", err)),
+                err => ApiError::InternalError(format!("存储服务错误: {}", err)),
             })?;
 
         let size = head_output
             .content_length
-            .ok_or_else(|| AppError::InternalError("File size missing".to_string()))?;
+            .ok_or_else(|| ApiError::InternalError("File size missing".to_string()))?;
         let content_type = head_output.content_type.unwrap_or_default();
         let etag = head_output.e_tag.unwrap_or_default().replace("\"", "");
 
@@ -260,7 +260,7 @@ impl MediaService {
             .arg(&redis_key)
             .query_async(&mut redis_conn)
             .await
-            .map_err(|e| AppError::InternalError(format!("获取上传会话失败: {}", e)))?;
+            .map_err(|e| ApiError::InternalError(format!("获取上传会话失败: {}", e)))?;
 
         tracing::debug!(
             "complete_upload: redis_key={}, session_json={:?}",
@@ -269,15 +269,15 @@ impl MediaService {
         );
 
         let session_str = session_json.ok_or_else(|| {
-            AppError::FileNotFound("Upload session not found or expired".to_string())
+            ApiError::FileNotFound("Upload session not found or expired".to_string())
         })?;
 
         let session_data: serde_json::Value = serde_json::from_str(&session_str)
-            .map_err(|e| AppError::InternalError(format!("Failed to parse session data: {}", e)))?;
+            .map_err(|e| ApiError::InternalError(format!("Failed to parse session data: {}", e)))?;
 
         let category = session_data["category"]
             .as_str()
-            .ok_or_else(|| AppError::InternalError("Category missing in session".to_string()))?;
+            .ok_or_else(|| ApiError::InternalError("Category missing in session".to_string()))?;
 
         tracing::info!(
             "complete_upload: user_id={}, upload_id={}, category={}",
@@ -340,7 +340,7 @@ impl MediaService {
         expires_in: Duration,
     ) -> Result<()> {
         if key.starts_with("http://") || key.starts_with("https://") {
-            return Err(AppError::BadRequest("无效的存储 key".to_string()));
+            return Err(ApiError::BadRequest("无效的存储 key".to_string()));
         }
         let cleaned_key = key.trim_start_matches('/');
         let cache_key = Self::signed_cache_key(cleaned_key, expires_in);
@@ -387,7 +387,7 @@ impl MediaService {
         // 严格模式：只接受“对象存储 key”（例如 uploads/{user_id}/{uuid}.ext）
         // 不接受完整 URL，也不做旧格式兼容。
         if key.starts_with("http://") || key.starts_with("https://") {
-            return Err(AppError::BadRequest("无效的存储 key".to_string()));
+            return Err(ApiError::BadRequest("无效的存储 key".to_string()));
         }
 
         // 去掉前导斜杠（防止误传 "/uploads/..."）
@@ -396,7 +396,7 @@ impl MediaService {
         if let Some(cached) = self.signed_url_cache.get(&cache_key).await {
             if Self::is_failed_entry(&cached) {
                 tracing::debug!(key, "reuse cached failed signed url entry");
-                return Err(AppError::InternalError(
+                return Err(ApiError::InternalError(
                     "暂时无法生成下载链接，请稍后再试".to_string(),
                 ));
             }
@@ -406,7 +406,7 @@ impl MediaService {
         let presigned_config = PresigningConfig::builder()
             .expires_in(expires_in)
             .build()
-            .map_err(|e| AppError::InternalError(format!("预签名配置构建失败: {}", e)))?;
+            .map_err(|e| ApiError::InternalError(format!("预签名配置构建失败: {}", e)))?;
 
         let presigned_req = match timeout(
             SIGNED_URL_GENERATION_TIMEOUT,
@@ -421,11 +421,11 @@ impl MediaService {
             Ok(Ok(req)) => req,
             Ok(Err(e)) => {
                 self.cache_failed_signed_url(&cache_key).await;
-                return Err(AppError::InternalError(format!("下载 URL 签名失败: {}", e)));
+                return Err(ApiError::InternalError(format!("下载 URL 签名失败: {}", e)));
             }
             Err(_) => {
                 self.cache_failed_signed_url(&cache_key).await;
-                return Err(AppError::InternalError(
+                return Err(ApiError::InternalError(
                     "下载 URL 签名超时，请稍后重试".to_string(),
                 ));
             }
@@ -433,7 +433,7 @@ impl MediaService {
 
         let presigned_url = presigned_req.uri().to_string();
         let uri_parsed = presigned_url.parse::<http::Uri>().map_err(|e| {
-            AppError::InternalError(format!("Failed to parse presigned URI: {}", e))
+            ApiError::InternalError(format!("Failed to parse presigned URI: {}", e))
         })?;
         let path_and_query = uri_parsed
             .path_and_query()

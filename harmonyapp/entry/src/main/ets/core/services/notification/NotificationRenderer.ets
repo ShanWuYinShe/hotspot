@@ -9,6 +9,7 @@ import { ErrorHandler, ErrorType, ErrorLevel } from '../../utils/ErrorHandler';
 import { ConfigMerger } from '../../utils/ConfigMerger';
 import { UI_CONSTANTS } from '../../../constants/SystemConstants';
 import { SmartNotification, NotificationAction } from './NotificationDataManager';
+import { AppThemeManager } from '../../theme/AppThemeManager';
 
 const logger = createLogger('NotificationRenderer');
 
@@ -497,14 +498,15 @@ export class NotificationRenderer extends BaseSingleton {
    * 生成通知样式
    */
   private generateNotificationStyle(type: string, priority: string): NotificationStyle {
-    const isDark = this.config.theme === 'dark' || 
+    const palette = AppThemeManager.getSafeCurrentPalette();
+    const isDark = palette.id === 'default_clean_dark' || this.config.theme === 'dark' || 
       (this.config.theme === 'auto' && this.isSystemDarkMode());
     
     // 基础样式
-    let backgroundColor = isDark ? '#2C2C2C' : '#FFFFFF';
-    let textColor = isDark ? '#FFFFFF' : '#000000';
-    let borderColor = '#E0E0E0';
-    let iconColor = '#666666';
+    let backgroundColor = isDark ? '#2C2C2C' : palette.surfaceBackground;
+    let textColor = isDark ? '#FFFFFF' : '#1F2937';
+    let borderColor = palette.borderColor;
+    let iconColor = palette.accentBackground;
     
     // 根据类型调整颜色
     switch (type) {
@@ -835,8 +837,8 @@ export class NotificationRenderer extends BaseSingleton {
    * 设置主题监听
    */
   private setupThemeListener(): void {
-    // 这里应该监听系统主题变化
-    // 当主题改变时重新初始化样式缓存
+    // 当前通过 AppStorage 驱动页面重建，这里先在初始化时刷新样式缓存
+    this.initializeStyleCache();
     logger.debug('主题监听器已设置');
   }
   
@@ -844,9 +846,7 @@ export class NotificationRenderer extends BaseSingleton {
    * 检查是否为系统暗色模式
    */
   private isSystemDarkMode(): boolean {
-    // 这里应该检查系统主题设置
-    // 暂时返回false
-    return false;
+    return AppStorage.get<boolean>('isDarkMode') === true;
   }
   
   /**

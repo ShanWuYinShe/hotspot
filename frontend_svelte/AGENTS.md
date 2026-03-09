@@ -39,27 +39,11 @@ const result = await post<AuthData>('/api/v1/auth/login', data);
 
 ### 响应处理
 
-```typescript
-// ✅ 正确：只看 code === 0
-const res = await post<UserData>(USERS.PROFILE, { user_id });
-if (res.code === 0 && res.data) {
-  // 使用 res.data
-}
-
-// ❌ 错误：依赖 HTTP 状态码或假设 data 一定有值
-// ❌ 错误：依赖 res.message 做逻辑分支
-```
+- **业务成功判断唯一依据**：`code === 0`，禁止依赖 HTTP 状态码或 `res.message`。
 
 ### 分页
 
-```typescript
-// ✅ 正确：透传 cursor，不解析
-const res = await post<PaginatedData<MomentItem>>(MOMENTS.LIST, {
-  limit: 20,
-  cursor: nextCursor, // 不透明，直接透传
-});
-// 下一页：使用 res.data.next_cursor
-```
+- 透传 `cursor`，不解析、不构造。下一页使用 `res.data.next_cursor`。
 
 ## 状态规则
 
@@ -83,20 +67,34 @@ const res = await post<PaginatedData<MomentItem>>(MOMENTS.LIST, {
 - 响应使用 `RelativeLocation`（含 distance、bearing_degrees）。
 - **禁止在前端计算距离或角度**，由后端 PostGIS 完成。
 
-## 常见错误清单
+## 实现检查清单
 
-- [ ] 是否硬编码了 API 路径 `"/api/v1/..."`？
-- [ ] 是否依赖了 HTTP 状态码而非 `code === 0`？
-- [ ] 是否使用了 `any` 类型？
-- [ ] 是否在 localStorage 存了 Refresh Token？
-- [ ] 是否解析了 JWT？
-- [ ] 是否在前端计算了距离/角度？
-- [ ] 是否遗漏了幂等接口的幂等键？
-- [ ] cursor 是否做了解析而非透传？
+- [ ] 架构一致性：有无类似页面/组件？遵循相同结构？
+- [ ] API 客户端复用：`src/lib/api/services/` 中有现有方法？
+- [ ] 状态管理复用：使用现有 Svelte stores 而非新方式？
+- [ ] 组件复用：`src/lib/components/` 中有可用组件？
+- [ ] 类型复用：对齐 `spec/api_spec_types.md`？复用 `src/lib/types/api.ts`？
+- [ ] 错误处理复用：复用现有错误处理模式？
+
+**禁止**：硬编码 API 路径、绕过统一层、重复实现、引入不一致状态管理
+
+## 常见错误
+
+- [ ] 硬编码 API 路径 `"/api/v1/..."`？
+- [ ] 依赖 HTTP 状态码而非 `code === 0`？
+- [ ] 使用 `any` 类型？
+- [ ] localStorage 存 Refresh Token？
+- [ ] 解析 JWT？
+- [ ] 前端计算距离/角度？
+- [ ] 遗漏幂等键？
+- [ ] cursor 解析而非透传？
+- [ ] 绕过统一层或重复实现？
 
 ## 安全规则
 
 文件删除、批量变更、Git 操作规范等全局规则见根目录 `AGENTS.md` 的「权限边界」和「Git 操作规范」章节，此处不重复。
+
+> **⚠️ `tmp/` 路径规则（强制）**：所有临时文件、会话文件（`session-context-*.md`、`session-progress-*.md`）、设计文档等必须存放在**项目根目录（Monorepo 根目录）的 `tmp/`** 下，即 `frontend_svelte/` 的上级目录中的 `tmp/`。**绝对禁止在 `frontend_svelte/` 目录下创建 `tmp/` 目录**（如 `frontend_svelte/tmp/`）。详见根目录 `AGENTS.md` 的「Agent 行为准则」章节。
 
 ## 验证命令
 

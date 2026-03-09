@@ -18,7 +18,7 @@ use crate::{
             UserInfo,
         },
     },
-    error::{AppError, Result},
+    error::{ApiError, Result},
     events::event_types::AppEvent,
     repositories::{
         chat_unread_repo::ChatUnreadRepository, group::member_repo::GroupMemberRepository,
@@ -91,7 +91,7 @@ impl GroupMessageService {
 
         // 验证群组是否存在
         if !self.group_repo.exists(group_id).await? {
-            return Err(AppError::GroupNotFound("群组不存在".to_string()));
+            return Err(ApiError::GroupNotFound("群组不存在".to_string()));
         }
 
         let message_type: MessageType = req.r#type.into();
@@ -147,12 +147,12 @@ impl GroupMessageService {
             .member_repo
             .find_member(group_id, user_id)
             .await?
-            .ok_or_else(|| AppError::Forbidden("您不是此群组的成员".to_string()))?;
+            .ok_or_else(|| ApiError::Forbidden("您不是此群组的成员".to_string()))?;
 
         // 检查是否被禁言
         if let Some(muted_until) = member.muted_until {
             if muted_until > chrono::Utc::now() {
-                return Err(AppError::UserMuted);
+                return Err(ApiError::UserMuted);
             }
         }
 
@@ -164,13 +164,13 @@ impl GroupMessageService {
                 let content = req
                     .content
                     .clone()
-                    .ok_or_else(|| AppError::BadRequest("文本消息必须提供 content".to_string()))?;
+                    .ok_or_else(|| ApiError::BadRequest("文本消息必须提供 content".to_string()))?;
                 (content, None)
             }
             MessageType::Share => {
                 // Share 类型消息使用 share_code
                 let share_code = req.share_code.clone().ok_or_else(|| {
-                    AppError::BadRequest("分享消息必须提供 share_code".to_string())
+                    ApiError::BadRequest("分享消息必须提供 share_code".to_string())
                 })?;
                 (share_code, None)
             }
@@ -183,7 +183,7 @@ impl GroupMessageService {
                 let file_id_str = req
                     .file_id
                     .as_ref()
-                    .ok_or_else(|| AppError::BadRequest("媒体消息必须提供 file_id".to_string()))?;
+                    .ok_or_else(|| ApiError::BadRequest("媒体消息必须提供 file_id".to_string()))?;
                 let file_id = Validator::parse_uuid(file_id_str, "file_id")?;
 
                 // 验证文件所有权并获取文件信息
@@ -328,7 +328,7 @@ impl GroupMessageService {
         let group_id = Validator::parse_group_id(&req.group_id)?;
 
         if !self.member_repo.is_member(group_id, user_id).await? {
-            return Err(AppError::Forbidden("您不是此群组的成员".to_string()));
+            return Err(ApiError::Forbidden("您不是此群组的成员".to_string()));
         }
 
         let cursor = pagination.and_then(|p| p.cursor.clone());
@@ -527,20 +527,20 @@ impl GroupMessageService {
             .message_repo
             .get_meta(message_id)
             .await?
-            .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
+            .ok_or_else(|| ApiError::ChatNotFound("消息不存在".to_string()))?;
 
         // 3. 验证权限（只能编辑自己的消息）
         if message.sender_id != user_id {
-            return Err(AppError::Forbidden("无权编辑此消息".to_string()));
+            return Err(ApiError::Forbidden("无权编辑此消息".to_string()));
         }
 
         // 4. 验证消息状态
         if message.is_recalled {
-            return Err(AppError::MessageAlreadyRecalled);
+            return Err(ApiError::MessageAlreadyRecalled);
         }
 
         if message.r#type != MessageType::Text {
-            return Err(AppError::BusinessRuleViolation(
+            return Err(ApiError::BusinessRuleViolation(
                 "仅支持编辑文本消息".to_string(),
             ));
         }
@@ -583,7 +583,7 @@ impl GroupMessageService {
             .message_repo
             .get_meta(message_id)
             .await?
-            .ok_or_else(|| AppError::ChatNotFound("消息不存在".to_string()))?;
+            .ok_or_else(|| ApiError::ChatNotFound("消息不存在".to_string()))?;
 
         // 2. 验证权限
         if message.sender_id == user_id {
@@ -591,7 +591,7 @@ impl GroupMessageService {
             let now = chrono::Utc::now();
             let elapsed = now.signed_duration_since(message.sent_at);
             if elapsed.num_minutes() >= MESSAGE_RECALL_MINUTES {
-                return Err(AppError::OperationWindowExpired);
+                return Err(ApiError::OperationWindowExpired);
             }
         } else {
             // 检查是否是管理员/群主
@@ -600,13 +600,13 @@ impl GroupMessageService {
                 .get_member_role(message.group_id, user_id)
                 .await?;
             if role != Some(GroupRole::Owner) && role != Some(GroupRole::Admin) {
-                return Err(AppError::Forbidden("无权撤回此消息".to_string()));
+                return Err(ApiError::Forbidden("无权撤回此消息".to_string()));
             }
         }
 
         // 3. 验证消息状态
         if message.is_recalled {
-            return Err(AppError::MessageAlreadyRecalled);
+            return Err(ApiError::MessageAlreadyRecalled);
         }
 
         // 4. 撤回消息
@@ -641,7 +641,7 @@ impl GroupMessageService {
         // 验证用户是否是群成员
         if !self.member_repo.is_member(group_id, user_id).await? {
             warn!(user_id, group_id, "群聊标记已读失败：调用者不是群成员");
-            return Err(AppError::Forbidden("您不是此群组的成员".to_string()));
+            return Err(ApiError::Forbidden("您不是此群组的成员".to_string()));
         }
 
         // 解析截止消息ID
@@ -663,7 +663,7 @@ impl GroupMessageService {
                         up_to_message_id = %up_to_id,
                         "群聊标记已读失败：up_to_message_id 不存在"
                     );
-                    AppError::ChatNotFound("消息不存在".to_string())
+                    ApiError::ChatNotFound("消息不存在".to_string())
                 })?;
             if message.group_id != group_id {
                 warn!(
@@ -673,7 +673,7 @@ impl GroupMessageService {
                     message_group_id = message.group_id,
                     "群聊标记已读失败：up_to_message_id 不属于当前群组"
                 );
-                return Err(AppError::ChatNotFound("消息不属于当前群聊会话".to_string()));
+                return Err(ApiError::ChatNotFound("消息不属于当前群聊会话".to_string()));
             }
         }
 

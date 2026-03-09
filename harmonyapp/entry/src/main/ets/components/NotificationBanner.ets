@@ -1,6 +1,8 @@
 import { SmartNotification, NotificationAction } from '../core/services/notification/NotificationDataManager';
 import { DesignConstants } from '../constants/DesignConstants';
 import { SystemIcon, AppIcon } from './SystemIcon';
+import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 @Reusable
 @Component
@@ -9,6 +11,11 @@ export struct NotificationBanner {
   onClose?: () => void;
   onAction?: (action: NotificationAction) => void;
   onBannerClick?: () => void;
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
 
   build() {
     Column() {
@@ -65,8 +72,8 @@ export struct NotificationBanner {
               .type(ButtonType.Normal)
               .height(28)
               .fontSize(DesignConstants.FONT.SIZE.SM)
-              .backgroundColor(action.type === 'primary' ? $r('sys.color.ohos_id_color_emphasize') : $r('app.color.bg_tertiary'))
-              .fontColor(action.type === 'primary' ? Color.White : $r('sys.color.ohos_id_color_text_primary'))
+              .backgroundColor(action.type === 'primary' ? this.getPalette().accentBackground : this.getPalette().surfaceSubtle)
+              .fontColor(action.type === 'primary' ? this.getPalette().accentText : $r('sys.color.ohos_id_color_text_primary'))
               .borderRadius(DesignConstants.RADIUS.XL)
               .onClick(() => {
                 if (this.onAction) {
@@ -81,9 +88,9 @@ export struct NotificationBanner {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getPalette().surfaceBackground)
     .borderRadius(DesignConstants.RADIUS.XL)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .border({ width: 1, color: this.getPalette().borderColor })
     .shadow(DesignConstants.SHADOW.MEDIUM)
     .onClick(() => {
       if (this.onBannerClick) {
@@ -106,7 +113,7 @@ export struct NotificationBanner {
     switch (priority) {
       case 'critical': return $r('app.color.color_danger');
       case 'high': return $r('app.color.color_warning');
-      case 'medium': return $r('app.color.brand_primary');
+      case 'medium': return this.getPalette().accentBackground;
       default: return $r('sys.color.ohos_id_color_text_secondary');
     }
   }

@@ -3,7 +3,7 @@
 //! 使用布隆过滤器快速过滤掉不存在的资源请求，
 //! 防止恶意请求穿透缓存直接查询数据库
 
-use crate::{dto::response::ApiResponse, error::AppError, state::AppState};
+use crate::{dto::response::ApiResponse, error::ApiError, state::AppState};
 use axum::{
     body::{to_bytes, Body},
     extract::State,
@@ -106,7 +106,7 @@ pub async fn resource_guard_middleware(
         let value: Value = match serde_json::from_slice(&bytes) {
             Ok(v) => v,
             Err(e) => {
-                let err = AppError::JsonParseError(e.to_string());
+                let err = ApiError::JsonParseError(e.to_string());
                 return (
                     StatusCode::OK,
                     Json(ApiResponse::<()>::error(err.error_code(), err.to_string())),

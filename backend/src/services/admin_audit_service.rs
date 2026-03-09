@@ -7,7 +7,7 @@ use crate::{
         request::{AuditLogDetailRequest, AuditLogListRequest},
         response::{AdminBanRecord, AuditLogDetail, AuditLogItem, PaginatedData, UserInfo},
     },
-    error::{AppError, Result},
+    error::{ApiError, Result},
     repositories::{
         admin::audit_repo::{AdminAuditRepository, AuditLogFilter, AuditLogRow, NewAuditLog},
         user_repo::UserRepository,
@@ -174,7 +174,7 @@ impl AdminAuditService {
             .repo
             .get_detail(log_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("日志不存在".to_string()))?;
+            .ok_or_else(|| ApiError::NotFound("日志不存在".to_string()))?;
 
         let operator = self.get_operator_info(row.operator_id).await;
 
@@ -310,7 +310,7 @@ fn parse_time(input: Option<&str>, field: &str) -> Result<Option<DateTime<Utc>>>
         return Ok(None);
     };
     let parsed = DateTime::parse_from_rfc3339(raw)
-        .map_err(|_| AppError::InvalidFormat(format!("{} 格式错误", field)))?;
+        .map_err(|_| ApiError::InvalidFormat(format!("{} 格式错误", field)))?;
     Ok(Some(parsed.with_timezone(&Utc)))
 }
 
@@ -362,7 +362,7 @@ fn validate_action(action: &Option<String>) -> Result<()> {
         return Ok(());
     };
     if !ALLOWED_AUDIT_ACTIONS.contains(&action.as_str()) {
-        return Err(AppError::InvalidFormat("action 无效".to_string()));
+        return Err(ApiError::InvalidFormat("action 无效".to_string()));
     }
     Ok(())
 }
@@ -372,7 +372,7 @@ fn validate_target_type(target_type: &Option<String>) -> Result<()> {
         return Ok(());
     };
     if !ALLOWED_AUDIT_TARGET_TYPES.contains(&target_type.as_str()) {
-        return Err(AppError::InvalidFormat("target_type 无效".to_string()));
+        return Err(ApiError::InvalidFormat("target_type 无效".to_string()));
     }
     Ok(())
 }

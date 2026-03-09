@@ -40,6 +40,9 @@ import { NotificationBanner } from '../../../components/NotificationBanner';
 import { TimerManager } from '../../../core/utils/TimerManager';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
+import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
+import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF09;
 const TAG: string = 'IndexPage';
@@ -62,6 +65,7 @@ struct Index {
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(STORAGE_KEY_VISIBLE_NOTIFICATIONS) visibleNotifications: SmartNotification[] = [];
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   @State currentTabIndex: number = 0;
   @State previousTabIndex: number = 0;
@@ -92,9 +96,7 @@ struct Index {
   private wsNotificationHandler: ((event: ServerEvent) => Promise<void>) | null = null;
 
   async aboutToAppear() {
-    SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
-    });
+    SystemUiController.syncWithCurrentTheme();
     // 初始化全局路由
     AppRouter.init(this.navPathStack);
 
@@ -116,6 +118,22 @@ struct Index {
     }
 
     await this.initializeApp();
+  }
+
+  private getCurrentThemePalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getBrandAccent(): string {
+    return this.getCurrentThemePalette().accentBackground;
+  }
+
+  private getBrandAccentText(): string {
+    return this.getCurrentThemePalette().accentText;
+  }
+
+  private getTabBarShadow(): ShadowOptions {
+    return AppThemeVisuals.getTabBarShadow(this.resolvedThemeId);
   }
 
   aboutToDisappear() {
@@ -728,11 +746,11 @@ struct Index {
     Column() {
       Row() {
         Text() {
-          SymbolSpan($r(icon))
-            .fontSize(23)
-            .fontColor([this.currentTabIndex === targetIndex
-              ? $r('app.color.brand_primary')
-              : $r('sys.color.ohos_id_color_text_secondary')])
+            SymbolSpan($r(icon))
+              .fontSize(23)
+              .fontColor([this.currentTabIndex === targetIndex
+                ? this.getBrandAccent()
+                : $r('sys.color.ohos_id_color_text_secondary')])
         }
       }
       .width(24)
@@ -741,7 +759,7 @@ struct Index {
 
       Text(title)
         .fontColor(this.currentTabIndex === targetIndex
-          ? $r('app.color.brand_primary')
+          ? this.getBrandAccent()
           : $r('sys.color.ohos_id_color_text_secondary'))
         .fontSize(DesignConstants.FONT.SIZE.XS)
         .margin({ top: 3 })
@@ -749,17 +767,18 @@ struct Index {
 
       if (this.currentTabIndex === targetIndex) {
         Row()
-          .width(16)
-          .height(3)
-          .margin({ top: 3 })
-          .backgroundColor($r('app.color.brand_primary'))
+          .width(18)
+          .height(4)
+          .margin({ top: 4 })
+          .backgroundColor(this.getBrandAccent())
           .borderRadius(DesignConstants.RADIUS.FULL)
       }
     }
     .width('100%')
-    .height(56 + this.safeAreaBottom)
-    .padding({ bottom: this.safeAreaBottom })
+    .height(56)
     .justifyContent(FlexAlign.Center)
+    .backgroundColor(this.currentTabIndex === targetIndex ? this.getCurrentThemePalette().surfaceSubtle : Color.Transparent)
+    .borderRadius(DesignConstants.RADIUS.LG)
     .onClick(() => {
       this.handleTabChange(targetIndex);
       if (targetIndex !== 2) {
@@ -773,11 +792,11 @@ struct Index {
     Column() {
       Row() {
         Text() {
-          SymbolSpan($r(AppIcon.NEARBY))
-            .fontSize(23)
-            .fontColor([this.currentTabIndex === 0
-              ? $r('app.color.brand_primary')
-              : $r('sys.color.ohos_id_color_text_secondary')])
+            SymbolSpan($r(AppIcon.NEARBY))
+              .fontSize(23)
+              .fontColor([this.currentTabIndex === 0
+                ? this.getBrandAccent()
+                : $r('sys.color.ohos_id_color_text_secondary')])
         }
       }
       .width(24)
@@ -786,7 +805,7 @@ struct Index {
 
       Text('附近')
         .fontColor(this.currentTabIndex === 0
-          ? $r('app.color.brand_primary')
+          ? this.getBrandAccent()
           : $r('sys.color.ohos_id_color_text_secondary'))
         .fontSize(DesignConstants.FONT.SIZE.XS)
         .margin({ top: 3 })
@@ -794,17 +813,18 @@ struct Index {
 
       if (this.currentTabIndex === 0) {
         Row()
-          .width(16)
-          .height(3)
-          .margin({ top: 3 })
-          .backgroundColor($r('app.color.brand_primary'))
+          .width(18)
+          .height(4)
+          .margin({ top: 4 })
+          .backgroundColor(this.getBrandAccent())
           .borderRadius(DesignConstants.RADIUS.FULL)
       }
     }
     .width('100%')
-    .height(56 + this.safeAreaBottom)
-    .padding({ bottom: this.safeAreaBottom })
+    .height(56)
     .justifyContent(FlexAlign.Center)
+    .backgroundColor(this.currentTabIndex === 0 ? this.getCurrentThemePalette().surfaceSubtle : Color.Transparent)
+    .borderRadius(DesignConstants.RADIUS.LG)
     .onClick(() => {
       this.handleTabChange(0);
       this.tabsController.changeIndex(0);
@@ -820,15 +840,16 @@ struct Index {
         Text() {
           SymbolSpan($r(AppIcon.ADD))
             .fontSize(22)
-            .fontColor([Color.White])
+            .fontColor([this.getBrandAccentText()])
         }
       }
-      .width(48)
-      .height(28)
+      .width(54)
+      .height(34)
       .justifyContent(FlexAlign.Center)
-      .backgroundColor($r('app.color.brand_primary'))
+      .backgroundColor(this.getBrandAccent())
       .borderRadius(DesignConstants.RADIUS.FULL)
-      .shadow(DesignConstants.SHADOW.SMALL)
+      .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
+      .shadow(this.getCurrentThemePalette().accentShadow)
 
       // "发布"文字在外框下方，与其他 tab 一致
       Text('发布')
@@ -837,9 +858,10 @@ struct Index {
         .margin({ top: 3 })
     }
     .width('100%')
-    .height(56 + this.safeAreaBottom)
-    .padding({ bottom: this.safeAreaBottom })
+    .height(56)
     .justifyContent(FlexAlign.Center)
+    .backgroundColor(this.currentTabIndex === 2 ? this.getCurrentThemePalette().surfaceSubtle : Color.Transparent)
+    .borderRadius(DesignConstants.RADIUS.LG)
     .onClick(() => {
       this.handleTabChange(2);
     })
@@ -862,7 +884,7 @@ struct Index {
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
-        .backgroundColor($r('app.color.bg_primary'))
+        .backgroundColor(this.getCurrentThemePalette().pageBackground)
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .transition(
           TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
@@ -891,7 +913,7 @@ struct Index {
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
-        .backgroundColor($r('app.color.bg_primary'))
+        .backgroundColor(this.getCurrentThemePalette().pageBackground)
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
       } else {
         Column() {
@@ -943,20 +965,20 @@ struct Index {
           }
           .tabBar(this.TabBuilderIcon('我的', 4, AppIcon.PERSON))
         }
-        .barHeight(56 + this.safeAreaBottom)
+        .barHeight(56)
         .scrollable(false)
         .barMode(BarMode.Fixed)
-        .divider({ strokeWidth: 0, color: $r('app.color.divider'), startMargin: 0, endMargin: 0 })
+        .divider({ strokeWidth: 0, color: Color.Transparent, startMargin: 0, endMargin: 0 })
         .onChange((index: number) => this.handleTabChange(index))
-        .barBackgroundColor($r('app.color.tab_bar_bg'))
-        .shadow(DesignConstants.SHADOW.MEDIUM)
-        .border({ width: { top: 1 }, color: $r('app.color.highlight_border') })
+        .barBackgroundColor(this.getCurrentThemePalette().pageBackground)
+        .shadow({ radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 })
+        .border({ width: { top: 0 }, color: Color.Transparent })
         .backgroundColor(Color.Transparent)
         .bindSheet($$this.showCreateSheet, this.CreateSheetContent(), {
           height: SheetSize.FIT_CONTENT,
           dragBar: true,
           showClose: true,
-          backgroundColor: $r('app.color.start_window_background')
+          backgroundColor: this.getCurrentThemePalette().sheetBackground
         })
         }
         .mode(NavigationMode.Stack)
@@ -970,6 +992,7 @@ struct Index {
         }
         .width('100%')
         .height('100%')
+        .padding({ bottom: this.safeAreaBottom })
       }
 
       if (this.visibleNotifications.length > 0) {
@@ -1004,7 +1027,7 @@ struct Index {
         }
         .width('100%')
         .height('100%')
-        .backgroundColor($r('app.color.bg_primary'))
+        .backgroundColor(this.getCurrentThemePalette().pageBackground)
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .transition(
           TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.EaseInOut })
@@ -1024,7 +1047,7 @@ struct Index {
         }
         .width('100%')
         .height('100%')
-        .backgroundColor($r('app.color.bg_primary'))
+        .backgroundColor(this.getCurrentThemePalette().pageBackground)
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .transition(
           TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.EaseInOut })
@@ -1045,7 +1068,7 @@ struct Index {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
   }
 
   /** 获取安全区域顶部内边距（状态栏高度 + 间距） */
@@ -1067,8 +1090,8 @@ struct Index {
         .type(ButtonType.Normal)
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .height(28)
-        .backgroundColor($r('app.color.bg_secondary'))
-        .fontColor($r('sys.color.ohos_id_color_emphasize'))
+        .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+        .fontColor(this.getCurrentThemePalette().accentBackground)
         .borderRadius(DesignConstants.RADIUS.XL)
         .onClick(() => {
           AppRouter.push(PageNames.LOGIN);
@@ -1101,13 +1124,13 @@ struct Index {
           Text() {
             SymbolSpan($r(AppIcon.CAMERA))
               .fontSize(26)
-              .fontColor([$r('app.color.brand_primary')])
+              .fontColor([this.getCurrentThemePalette().accentBackground])
           }
         }
         .width(52)
         .height(52)
         .justifyContent(FlexAlign.Center)
-        .backgroundColor($r('app.color.chip_selected_bg'))
+        .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
         .borderRadius(DesignConstants.RADIUS.MD)
 
         Column({ space: DesignConstants.SPACING.XS }) {
@@ -1130,10 +1153,10 @@ struct Index {
       }
       .width('100%')
       .padding(DesignConstants.SPACING.LG)
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
       .borderRadius(DesignConstants.RADIUS.XXL)
       .shadow(DesignConstants.SHADOW.MEDIUM)
-      .border({ width: 1, color: $r('app.color.highlight_border') })
+      .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
       .onClick(() => {
         this.showCreateSheet = false;
         AppRouter.push(PageNames.CREATE_MOMENT);
@@ -1145,13 +1168,13 @@ struct Index {
           Text() {
             SymbolSpan($r(AppIcon.GROUP))
               .fontSize(26)
-              .fontColor([$r('app.color.brand_primary')])
+              .fontColor([this.getCurrentThemePalette().accentBackground])
           }
         }
         .width(52)
         .height(52)
         .justifyContent(FlexAlign.Center)
-        .backgroundColor($r('app.color.chip_selected_bg'))
+        .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
         .borderRadius(DesignConstants.RADIUS.MD)
 
         Column({ space: DesignConstants.SPACING.XS }) {
@@ -1174,10 +1197,10 @@ struct Index {
       }
       .width('100%')
       .padding(DesignConstants.SPACING.LG)
-      .backgroundColor($r('app.color.bg_secondary'))
+      .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
       .borderRadius(DesignConstants.RADIUS.XXL)
       .shadow(DesignConstants.SHADOW.MEDIUM)
-      .border({ width: 1, color: $r('app.color.highlight_border') })
+      .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
       .margin({ top: DesignConstants.SPACING.SM })
       .onClick(() => {
         this.showCreateSheet = false;

@@ -9,9 +9,11 @@ import { LocationInfo } from '../../../core/location/LocationUtil';
 import { PageNames } from '../../../constants/AppConstants';
 import { AppRouter, ChatRouteParam, GroupDetailRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
 import {
-  UserItem, GroupItem, MomentItem, GeoPoint, FollowRequest, UnfollowRequest,
+  UserItem, GroupItem, MomentItem, GeoPoint,
   JoinGroupRequest, CreateReportRequest, Relationship
 } from '../../../core/types/api';
+import { interactionActions } from '../../../core/state/InteractionActions';
+import { InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
@@ -27,6 +29,8 @@ import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { formatCount } from '../../../core/utils/FormatUtil';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 import pasteboard from '@ohos.pasteboard';
+import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 
 const DOMAIN_NUMBER: number = 0xFF10;
@@ -45,6 +49,8 @@ export struct SearchPage {
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
+  @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @StorageLink('interaction_user_state') userStateMap: Record<string, UserRelationState> = {};
   
   @State currentIndex: number = 0;
   @State keyword: string = '';
@@ -61,13 +67,27 @@ export struct SearchPage {
   @State groupActionPendingIds: string[] = [];
 
   aboutToAppear(): void {
-    SystemUiController.useSurface({
-      baseColor: DesignConstants.COLOR.PRIMARY_BG_LIGHT,      preferDarkContent: true
-    });
+    SystemUiController.syncWithCurrentTheme();
   }
 
   aboutToDisappear(): void {
     KeyboardDismissManager.getInstance().dismiss();
+  }
+
+  private getCurrentThemePalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getSurfaceBackground(): string {
+    return this.getCurrentThemePalette().surfaceBackground;
+  }
+
+  private getSurfaceSubtle(): string {
+    return this.getCurrentThemePalette().surfaceSubtle;
+  }
+
+  private getSurfaceBorder(): string {
+    return this.getCurrentThemePalette().borderColor;
   }
 
   private async doSearch() {
@@ -157,7 +177,7 @@ export struct SearchPage {
         TextInput({ placeholder: '搜索用户、群组、瞬间...', text: this.keyword })
           .layoutWeight(1)
           .height(42)
-          .backgroundColor($r('app.color.bg_inset'))
+          .backgroundColor(this.getSurfaceSubtle())
           .borderRadius(DesignConstants.RADIUS.XL)
           .shadow(DesignConstants.SHADOW.INSET)
           .padding({ left: 16, right: 16 })
@@ -174,7 +194,7 @@ export struct SearchPage {
           icon: AppIcon.SEARCH,
           iconSize: IconSize.MEDIUM,
           iconColor: $r('sys.color.ohos_id_color_text_primary'),
-          bgColor: $r('app.color.bg_tertiary'),
+          bgColor: this.getSurfaceSubtle(),
           onButtonClick: () => {
             this.doSearch();
           }
@@ -231,7 +251,7 @@ export struct SearchPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.bg_primary'))
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {
@@ -242,7 +262,7 @@ export struct SearchPage {
   @Builder TabBuilder(index: number, name: string) {
     Row({ space: DesignConstants.SPACING.XS }) {
       Text(name)
-        .fontColor(this.currentIndex === index ? $r('app.color.brand_primary') : $r('sys.color.ohos_id_color_text_secondary'))
+        .fontColor(this.currentIndex === index ? this.getCurrentThemePalette().accentBackground : $r('sys.color.ohos_id_color_text_secondary'))
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .fontWeight(this.currentIndex === index ? FontWeight.Bold : FontWeight.Normal)
         .lineHeight(20)
@@ -253,10 +273,10 @@ export struct SearchPage {
     .alignItems(VerticalAlign.Center)
     .margin({ left: 8, right: 8, top: 10, bottom: 10 })
     .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
-    .backgroundColor(this.currentIndex === index ? $r('app.color.chip_selected_bg') : Color.Transparent)
+    .backgroundColor(this.currentIndex === index ? this.getSurfaceSubtle() : Color.Transparent)
     .borderRadius(DesignConstants.RADIUS.XL)
     .border(this.currentIndex === index
-      ? { width: 1, color: $r('app.color.highlight_border') }
+      ? { width: 1, color: this.getSurfaceBorder() }
       : { width: 0 })
     .onClick(() => {
       if (this.currentIndex !== index) {
@@ -284,7 +304,11 @@ export struct SearchPage {
           ListItem() {
             this.buildUserItem(item)
           }
-        }, (item: UserItem) => item.user?.user_id ?? '')
+        }, (item: UserItem) => {
+          const uid = item.user?.user_id ?? '';
+          return uid + '_f' + (this.userStateMap[uid]?.relation?.is_following ?? false) +
+            '_p' + (this.userActionPendingIds.indexOf(uid) >= 0);
+        })
       }
       .divider({ strokeWidth: 0, color: $r('app.color.divider') })
       .width('100%').height('100%')
@@ -316,7 +340,11 @@ export struct SearchPage {
           ListItem() {
             this.buildGroupItem(item)
           }
-        }, (item: GroupItem) => item.group?.group_id ?? '')
+        }, (item: GroupItem) => {
+          const gid = item.group?.group_id ?? '';
+          return gid + '_j' + (item.my_state?.is_joined ?? false) +
+            '_p' + (this.groupActionPendingIds.indexOf(gid) >= 0);
+        })
       }
       .divider({ strokeWidth: 0.5, color: $r('app.color.divider') })
       .width('100%').height('100%')
@@ -388,10 +416,6 @@ export struct SearchPage {
     return this.groupActionPendingIds.indexOf(groupId) >= 0;
   }
 
-  private isUserFollowing(user: UserItem): boolean {
-    return user.relation?.is_following ?? false;
-  }
-
   private isGroupJoined(group: GroupItem): boolean {
     return group.my_state?.is_joined ?? false;
   }
@@ -440,7 +464,7 @@ export struct SearchPage {
         .width(24)
         .height(24)
         .borderRadius(DesignConstants.RADIUS.XXL)
-        .backgroundColor($r('app.color.bg_tertiary'))
+        .backgroundColor(this.getSurfaceSubtle())
         .justifyContent(FlexAlign.Center)
         .alignItems(VerticalAlign.Center)
         .bindMenu([
@@ -449,7 +473,7 @@ export struct SearchPage {
             action: () => this.startPrivateChat(item)
           },
           {
-            value: this.isUserFollowing(item) ? '取消关注' : '关注',
+            value: this.isUserFollowing(item.user?.user_id ?? '') ? '取消关注' : '关注',
             action: () => this.toggleFollow(item)
           },
           {
@@ -490,7 +514,7 @@ export struct SearchPage {
               .fontColor($r('sys.color.ohos_id_color_text_secondary'))
               .padding({ left: 7, right: 7, top: 3, bottom: 3 })
               .margin({ right: 4, bottom: 4 })
-              .backgroundColor($r('app.color.bg_tertiary'))
+              .backgroundColor(this.getSurfaceSubtle())
               .borderRadius(DesignConstants.RADIUS.XL)
           }, (tag: string) => tag)
         }
@@ -499,7 +523,7 @@ export struct SearchPage {
 
       Row({ space: 8 }) {
         Button(this.isUserActionPending(item.user?.user_id ?? '') ? '处理中...' :
-          (this.isUserFollowing(item) ? '已关注' : '关注'))
+          (this.isUserFollowing(item.user?.user_id ?? '') ? '已关注' : '关注'))
           .type(ButtonType.Capsule)
           .layoutWeight(1)
           .height(36)
@@ -507,12 +531,12 @@ export struct SearchPage {
           .enabled(!this.isUserActionPending(item.user?.user_id ?? ''))
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor(this.isUserFollowing(item) ? Color.Transparent : $r('app.color.brand_primary'))
-          .fontColor(this.isUserFollowing(item) ? $r('app.color.brand_primary') : Color.White)
-          .borderWidth(this.isUserFollowing(item) ? 1 : 0)
-          .borderColor($r('app.color.brand_primary'))
+          .backgroundColor(this.isUserFollowing(item.user?.user_id ?? '') ? Color.Transparent : this.getCurrentThemePalette().accentBackground)
+          .fontColor(this.isUserFollowing(item.user?.user_id ?? '') ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().accentText)
+          .borderWidth(this.isUserFollowing(item.user?.user_id ?? '') ? 1 : 0)
+          .borderColor(this.getCurrentThemePalette().accentBackground)
           .shadow(DesignConstants.SHADOW.SMALL)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .opacity(this.isUserActionPending(item.user?.user_id ?? '') ? 0.58 : 1)
           .onClick(() => { this.toggleFollow(item); })
 
@@ -523,10 +547,10 @@ export struct SearchPage {
           .borderRadius(DesignConstants.RADIUS.FULL)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor($r('app.color.bg_tertiary'))
+          .backgroundColor(this.getSurfaceSubtle())
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .shadow(DesignConstants.SHADOW.SMALL)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .opacity(this.isUserActionPending(item.user?.user_id ?? '') ? 0.74 : 1)
           .onClick(() => { this.startPrivateChat(item); })
       }
@@ -534,10 +558,10 @@ export struct SearchPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.XXL)
     .shadow(DesignConstants.SHADOW.MEDIUM)
-    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .border({ width: 1, color: this.getSurfaceBorder() })
   }
 
   @Builder
@@ -579,7 +603,7 @@ export struct SearchPage {
         .width(24)
         .height(24)
         .borderRadius(DesignConstants.RADIUS.XXL)
-        .backgroundColor($r('app.color.bg_tertiary'))
+        .backgroundColor(this.getSurfaceSubtle())
         .justifyContent(FlexAlign.Center)
         .alignItems(VerticalAlign.Center)
         .bindMenu([
@@ -631,12 +655,12 @@ export struct SearchPage {
           .enabled(!this.isGroupActionPending(item.group?.group_id ?? ''))
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor(this.isGroupJoined(item) ? Color.Transparent : $r('app.color.brand_primary'))
-          .fontColor(this.isGroupJoined(item) ? $r('app.color.brand_primary') : Color.White)
+          .backgroundColor(this.isGroupJoined(item) ? Color.Transparent : this.getCurrentThemePalette().accentBackground)
+          .fontColor(this.isGroupJoined(item) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().accentText)
           .borderWidth(this.isGroupJoined(item) ? 1 : 0)
-          .borderColor($r('app.color.brand_primary'))
+          .borderColor(this.getCurrentThemePalette().accentBackground)
           .shadow(DesignConstants.SHADOW.SMALL)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .opacity(this.isGroupActionPending(item.group?.group_id ?? '') ? 0.58 : 1)
           .onClick(() => { this.joinGroup(item); })
 
@@ -647,10 +671,10 @@ export struct SearchPage {
           .borderRadius(DesignConstants.RADIUS.FULL)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
-          .backgroundColor($r('app.color.bg_tertiary'))
+          .backgroundColor(this.getSurfaceSubtle())
           .fontColor($r('sys.color.ohos_id_color_text_primary'))
           .shadow(DesignConstants.SHADOW.SMALL)
-          .border({ width: 1, color: $r('app.color.highlight_border') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .opacity(this.isGroupActionPending(item.group?.group_id ?? '') ? 0.74 : 1)
           .onClick(() => { this.openGroupDetail(item); })
       }
@@ -658,7 +682,7 @@ export struct SearchPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.XXL)
     .shadow({
       radius: DesignConstants.SHADOW.MEDIUM.radius,
@@ -666,7 +690,7 @@ export struct SearchPage {
       offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
       offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
     })
-    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .border({ width: 1, color: this.getSurfaceBorder() })
   }
 
   @Builder
@@ -678,7 +702,7 @@ export struct SearchPage {
           .width('100%')
           .height(this.calculateSearchImageHeight(item))
           .objectFit(ImageFit.Cover)
-          .backgroundColor($r('app.color.bg_tertiary'))
+          .backgroundColor(this.getSurfaceSubtle())
       } else {
         // 无图片展示文字摘要
         Column() {
@@ -692,7 +716,7 @@ export struct SearchPage {
         .height(120)
         .padding(DesignConstants.SPACING.MD)
         .justifyContent(FlexAlign.Center)
-        .backgroundColor($r('app.color.bg_secondary'))
+        .backgroundColor(this.getSurfaceBackground())
       }
 
       // 用户信息
@@ -725,7 +749,7 @@ export struct SearchPage {
       .padding(DesignConstants.SPACING.SM)
       .width('100%')
     }
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.XXL)
     .clip(true)
     .shadow({
@@ -734,7 +758,7 @@ export struct SearchPage {
       offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
       offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
     })
-    .border({ width: 1, color: $r('app.color.highlight_border') })
+    .border({ width: 1, color: this.getSurfaceBorder() })
     .onClick(() => {
       this.openMomentDetail(item);
     })
@@ -765,7 +789,7 @@ export struct SearchPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.XXL)
   }
 
@@ -821,34 +845,30 @@ export struct SearchPage {
   }
 
   private async toggleFollow(user: UserItem): Promise<void> {
-    if (!this.isLoggedIn) {
-      SystemToast.showWarning('请先登录后再关注', this.getUIContext());
-      const loginParams = new LoginRedirectParams();
-      loginParams.reason = 'action_required';
-      loginParams.action = '关注用户';
-      AppRouter.push(PageNames.LOGIN, loginParams);
-      return;
-    }
     const userId = user.user?.user_id;
     if (!userId) return;
-    const isFollowing = user.relation?.is_following ?? false;
     if (this.isUserActionPending(userId)) return;
     this.setUserActionPending(userId, true);
     try {
-      const response = isFollowing
-        ? await ApiClient.unfollowUser({ user_id: userId } as UnfollowRequest)
-        : await ApiClient.followUser({ user_id: userId } as FollowRequest);
-      if (response.code === 0) {
+      const isFollowing = this.isUserFollowing(userId);
+      const success = await interactionActions.setFollowUser(userId, !isFollowing, '关注用户');
+      if (success) {
         this.patchUserRelation(userId, !isFollowing);
         SystemToast.showSuccess(isFollowing ? '已取消关注' : '已关注', this.getUIContext());
       } else {
-        SystemToast.showError(response.message || (isFollowing ? '取消关注失败' : '关注失败'), this.getUIContext());
+        SystemToast.showError('操作失败', this.getUIContext());
       }
-    } catch {
-      SystemToast.showError(isFollowing ? '取消关注失败' : '关注失败', this.getUIContext());
     } finally {
       this.setUserActionPending(userId, false);
     }
+  }
+
+  private isUserFollowing(userId: string): boolean {
+    const state = this.userStateMap[userId];
+    if (state?.relation) {
+      return state.relation.is_following;
+    }
+    return false;
   }
 
   private async joinGroup(group: GroupItem): Promise<void> {
@@ -872,6 +892,7 @@ export struct SearchPage {
       const response = await ApiClient.joinGroup({ group_id: groupId } as JoinGroupRequest);
       if (response.code === 0 && response.data) {
         if (response.data.status === 'joined') {
+          InteractionStateStore.getInstance().updateGroupMembership(groupId, { is_member: true });
           SystemToast.showSuccess('加入成功', this.getUIContext());
           await this.doSearch();
         } else {

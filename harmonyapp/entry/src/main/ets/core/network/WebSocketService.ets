@@ -8,6 +8,7 @@ import { WebSocketUtil } from './WebSocketUtil';
 import { API_BASE_URL, StorageKeys, WS_BASE_URL } from '../../constants/AppConstants';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { PreferencesUtil } from '../storage/PreferencesUtil';
+import { InteractionStateStore } from '../state/InteractionStateStore';
 import {
   ClientEvent,
   ServerEvent,
@@ -59,6 +60,7 @@ export class WebSocketService {
   private eventHandlers: Map<string, ((event: ServerEvent) => void)[]> = new Map();
   private lastServerTimeMs: number = 0;
   private lastDisconnectDurationMs: number = 0;
+  private interactionStore = InteractionStateStore.getInstance();
 
   private constructor() {
     this.webSocketUtil = WebSocketUtil.getInstance();

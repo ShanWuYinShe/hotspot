@@ -556,10 +556,10 @@ pub struct GroupUpdatedFields {
     pub location: Option<crate::dto::response::common::Location>,
 }
 
-/// 从 AppError 构建 WebSocket Error 消息
-pub fn ws_error_from_app_error(err: &crate::error::AppError) -> WsMessage {
+/// 从 ApiError 构建 WebSocket Error 消息
+pub fn ws_error_from_app_error(err: &crate::error::ApiError) -> WsMessage {
     let (severity, retryable) = match err {
-        crate::error::AppError::WebSocketTokenExpired => ("recoverable".to_string(), false),
+        crate::error::ApiError::WebSocketTokenExpired => ("recoverable".to_string(), false),
         _ => ("fatal".to_string(), false),
     };
 

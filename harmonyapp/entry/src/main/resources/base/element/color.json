@@ -73,6 +73,18 @@
       "value": "#E2F0E7"
     },
     {
+      "name": "chip_active_bg",
+      "value": "#4A7A57"
+    },
+    {
+      "name": "chip_active_text",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "chip_inactive_text",
+      "value": "#6B7280"
+    },
+    {
       "name": "bubble_self_bg",
       "value": "#6B8CFF"
     },
@@ -94,6 +106,74 @@
     },
     {
       "name": "highlight_border",
+      "value": "#F3F4F6"
+    },
+    {
+      "name": "chat_bg",
+      "value": "#F5F6FA"
+    },
+    {
+      "name": "chat_list_bg",
+      "value": "#EEF0F5"
+    },
+    {
+      "name": "chat_bubble_self",
+      "value": "#6B8CFF"
+    },
+    {
+      "name": "chat_bubble_peer",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "chat_bubble_system",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "chat_input_bar_bg",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "chat_input_field_bg",
+      "value": "#F2F2F2"
+    },
+    {
+      "name": "chat_input_border",
+      "value": "#E8EAF0"
+    },
+    {
+      "name": "chat_send_active",
+      "value": "#6B8CFF"
+    },
+    {
+      "name": "chat_send_disabled",
+      "value": "#F3F4F6"
+    },
+    {
+      "name": "header_icon_bg",
+      "value": "#FDF2F8"
+    },
+    {
+      "name": "header_icon_border",
+      "value": "#FECDD3"
+    },
+    {
+      "name": "header_icon_text",
+      "value": "#BE123C"
+    },
+    {
+      "name": "chat_title_icon_bg",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "chat_title_bar_bg",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "chat_title_bar_border",
+      "value": "#F3F4F6"
+    },
+    {
+      "name": "chat_divider",
       "value": "#F3F4F6"
     }
   ]

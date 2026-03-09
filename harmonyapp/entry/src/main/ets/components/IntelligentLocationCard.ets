@@ -8,6 +8,8 @@ import { vibrator } from '@kit.SensorServiceKit';
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppIcon } from './SystemIcon';
 import { LocationUtil } from '../core/location/LocationUtil';
+import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF11;
 const TAG: string = 'IntelligentLocationCard';
@@ -24,6 +26,11 @@ export struct IntelligentLocationCard {
   onNavigationTap?: () => void;
   @State private cardElevation: number = 1;
   @State private elevationInfo: string = '';
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
 
   aboutToAppear() {
     if (this.showElevation) {
@@ -93,7 +100,7 @@ export struct IntelligentLocationCard {
         }
         .width(32)
         .height(32)
-        .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+        .backgroundColor(this.getPalette().accentBackground)
         .borderRadius(DesignConstants.RADIUS.XL)
         .onClick(() => {
           this.triggerHapticFeedback();
@@ -112,10 +119,10 @@ export struct IntelligentLocationCard {
         }
         .width(32)
         .height(32)
-        .backgroundColor($r('app.color.bg_secondary'))
+        .backgroundColor(this.getPalette().surfaceBackground)
         .border({
           width: 1,
-          color: $r('sys.color.ohos_id_color_emphasize')
+          color: this.getPalette().accentBackground
         })
         .borderRadius(DesignConstants.RADIUS.XL)
         .onClick(() => {
@@ -128,9 +135,9 @@ export struct IntelligentLocationCard {
     }
     .width('100%')
     .padding(16)
-    .backgroundColor($r('app.color.bg_secondary'))
+    .backgroundColor(this.getPalette().surfaceBackground)
     .borderRadius(DesignConstants.RADIUS.XL)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .border({ width: 1, color: this.getPalette().borderColor })
     .shadow({
       radius: this.cardElevation * 6,
       color: $r('sys.color.ohos_id_color_tertiary'),
