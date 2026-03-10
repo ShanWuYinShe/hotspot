@@ -37,12 +37,23 @@
 	let adminCheckedUserId = '';
 	let checkingAdmin = false;
 
+	function closeTopbarModals() {
+		showSearchModal = false;
+		showCreateMoment = false;
+		showCreateGroup = false;
+	}
+
+	function openSearchModal() {
+		closeTopbarModals();
+		showSearchModal = true;
+	}
+
 	// 监听快捷键（Cmd/Ctrl + K 打开搜索）
 	onMount(() => {
 		const handleKeydown = (event: KeyboardEvent) => {
 			if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
 				event.preventDefault();
-				showSearchModal = true;
+				openSearchModal();
 			}
 		};
 
@@ -92,6 +103,7 @@
 			uiStore.openLoginModal();
 			return;
 		}
+		closeTopbarModals();
 		showCreateMoment = true;
 	}
 
@@ -100,6 +112,7 @@
 			uiStore.openLoginModal();
 			return;
 		}
+		closeTopbarModals();
 		showCreateGroup = true;
 	}
 </script>
@@ -137,7 +150,7 @@
 				size="icon"
 				class="h-9 w-9 sm:h-10 sm:w-10"
 				aria-label="打开搜索"
-				onclick={() => (showSearchModal = true)}
+				onclick={openSearchModal}
 				circular
 			>
 				<Search class="h-4 w-4 sm:h-5 sm:w-5" />

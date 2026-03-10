@@ -10,6 +10,7 @@ use crate::{
     },
     error::Result,
     middleware::auth::AuthenticatedUser,
+    services::admin_audit_service::AuditLogInput,
     state::AppState,
 };
 
@@ -51,6 +52,26 @@ pub async fn handle(
     user: AuthenticatedUser,
     Json(req): Json<AdminReportHandleRequest>,
 ) -> Result<Json<ApiResponse<()>>> {
-    state.report_service.handle(user.user_id, req).await?;
+    state.report_service.handle(user.user_id, req.clone()).await?;
+    let details = serde_json::json!({
+        "action": req.action,
+        "note": req.note,
+        "ban_duration_days": req.ban_duration_days,
+    });
+    state
+        .admin_audit_service
+        .record(AuditLogInput {
+            action: "report.handle".to_string(),
+            operator_id: user.user_id,
+            target_type: "report".to_string(),
+            target_id: req.report_id,
+            target_name: None,
+            details: Some(details),
+            before_state: None,
+            after_state: None,
+            ip_address: None,
+            user_agent: None,
+        })
+        .await?;
     Ok(Json(ApiResponse::success_empty()))
 }

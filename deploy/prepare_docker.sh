@@ -1,36 +1,77 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-# 确保脚本在项目根目录运行
-cd "$(dirname "$0")/.."
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+BACKEND_DIR="$ROOT_DIR/backend"
+COMPOSE_FILE="$ROOT_DIR/deploy/docker-compose.yml"
 
-echo "Preparing for Docker deployment..."
+# shellcheck source=/dev/null
+source "$ROOT_DIR/deploy/config.sh"
 
-# 检查 sqlx-cli 是否安装
-if ! command -v sqlx &> /dev/null; then
-    echo "sqlx-cli could not be found. Installing..."
-    cargo install sqlx-cli --no-default-features --features postgres
-fi
-
-# 检查是否有运行中的数据库用于 prepare
-# 如果没有，提示用户
-echo "Checking for running database..."
-# 这里我们假设用户本地开发环境已经有一个 DB (如 docker-compose up postgres)
-# 如果没有，sqlx prepare 会失败。
-# 但我们可以尝试启动 docker-compose 中的 postgres 吗？太复杂。
-
-# 尝试生成 sqlx-data.json
-if [ -f "backend/Cargo.toml" ]; then
-    echo "Generating sqlx-data.json for offline build..."
-    cd backend
-    # 确保 DATABASE_URL 设置正确（通常是 localhost）
-    # 如果 .env 存在，sqlx 会读取
-    cargo sqlx prepare --workspace
-    cd ..
+if docker compose version >/dev/null 2>&1; then
+    COMPOSE_CMD=(docker compose -f "$COMPOSE_FILE")
+elif command -v docker-compose >/dev/null 2>&1; then
+    COMPOSE_CMD=(docker-compose -f "$COMPOSE_FILE")
 else
-    echo "backend directory not found!"
+    echo "未检测到 docker compose 或 docker-compose，无法准备 Docker 编译环境"
     exit 1
 fi
 
-echo "Preparation complete. You can now run:"
-echo "  docker-compose up --build"
+if [ ! -f "$BACKEND_DIR/Cargo.toml" ]; then
+    echo "backend/Cargo.toml 不存在，无法执行 SQLx prepare"
+    exit 1
+fi
+
+echo "Preparing Docker-backed SQLx environment..."
+
+ensure_postgres_database() {
+    local database_name="$1"
+    local exists
+    exists=$("${COMPOSE_CMD[@]}" exec -T postgres psql -U "$DOCKER_DB_USER" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='${database_name}'" | tr -d ' \n' || true)
+    if [ "$exists" = "1" ]; then
+        return
+    fi
+    echo "Creating database ${database_name}..."
+    "${COMPOSE_CMD[@]}" exec -T postgres psql -U "$DOCKER_DB_USER" -d postgres -c "CREATE DATABASE ${database_name};" >/dev/null
+}
+
+if ! command -v sqlx >/dev/null 2>&1; then
+    echo "sqlx-cli 未安装，开始安装..."
+    cargo install sqlx-cli --no-default-features --features postgres
+fi
+
+echo "Starting PostgreSQL and test Redis containers..."
+"${COMPOSE_CMD[@]}" up -d postgres redis-test
+
+echo "Waiting for PostgreSQL to become ready..."
+for _ in $(seq 1 30); do
+    if "${COMPOSE_CMD[@]}" exec -T postgres pg_isready -U "$DOCKER_DB_USER" -d "$DOCKER_DB_NAME" >/dev/null 2>&1; then
+        break
+    fi
+    sleep 2
+done
+
+if ! "${COMPOSE_CMD[@]}" exec -T postgres pg_isready -U "$DOCKER_DB_USER" -d "$DOCKER_DB_NAME" >/dev/null 2>&1; then
+    echo "PostgreSQL 未在预期时间内就绪"
+    exit 1
+fi
+
+ensure_postgres_database "$DOCKER_DB_NAME"
+ensure_postgres_database "$TEST_DB_NAME"
+
+cd "$BACKEND_DIR"
+
+echo "Running migrations against runtime database..."
+DATABASE_URL="$DOCKER_DATABASE_URL" cargo sqlx migrate run
+
+echo "Running migrations against test database..."
+DATABASE_URL="$TEST_DATABASE_URL" cargo sqlx migrate run
+
+echo "Generating SQLx offline metadata..."
+DATABASE_URL="$DOCKER_DATABASE_URL" cargo sqlx prepare --workspace
+
+echo "Preparation complete. Recommended follow-up commands:"
+echo "  cd backend"
+echo "  DATABASE_URL=\"$DOCKER_DATABASE_URL\" cargo check"
+echo "  DATABASE_URL=\"$TEST_DATABASE_URL\" REDIS_URL=\"$TEST_REDIS_URL\" TEST_REDIS_URL=\"$TEST_REDIS_URL\" cargo test"
+echo "  ${COMPOSE_CMD[*]} up --build"

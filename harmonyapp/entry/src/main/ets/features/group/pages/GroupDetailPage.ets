@@ -149,6 +149,12 @@ export struct GroupDetailPage {
     return false;
   }
 
+  private closeOverlaySheets(): void {
+    this.showMemberList = false;
+    this.showApplicationList = false;
+    this.showEditGroupSheet = false;
+  }
+
   private async loadGroupDetail(): Promise<void> {
     this.isLoading = true;
     this.errorMessage = '';
@@ -180,6 +186,7 @@ export struct GroupDetailPage {
 
     this.isLoadingMembers = true;
     this.membersErrorMessage = '';
+    this.closeOverlaySheets();
     this.showMemberList = true;
     try {
       await LoadingUtil.withMinimumTime(async () => {
@@ -265,6 +272,7 @@ export struct GroupDetailPage {
     }
     this.isLoadingApplications = true;
     this.applicationsErrorMessage = '';
+    this.closeOverlaySheets();
     this.showApplicationList = true;
     try {
       const response = await ApiClient.getGroupApplications({
@@ -473,6 +481,7 @@ export struct GroupDetailPage {
     this.editGroupAvatarPreviewUrl = this.groupInfo.group?.avatar_url ?? '';
     this.editGroupAvatarLocalUri = '';
     this.editGroupAvatarFileId = '';
+    this.closeOverlaySheets();
     this.showEditGroupSheet = true;
   }
 

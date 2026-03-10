@@ -27,7 +27,8 @@
 git clone <repository-url>
 cd hotspot
 
-# 2. 启动基础设施（数据库、Redis、MinIO）
+# 2. 启动基础设施层（数据库、Redis、测试 Redis、MinIO）
+# 注意：默认不会启动 backend/frontend 容器，避免与本机 cargo run / pnpm dev 冲突
 docker compose -f deploy/docker-compose.yml up -d
 
 # 3. 初始化数据库
@@ -48,6 +49,30 @@ pnpm dev
 
 # 6. 启动鸿蒙客户端
 # 使用 DevEco Studio 打开 harmonyapp 目录
+```
+
+### 单机分层运行
+
+同一台机器上建议分成三层，避免互相抢端口或污染数据：
+
+- 开发层：本机进程运行 `cargo run`、`pnpm dev`，推荐端口分别为 `5496`、`5173`
+- 测试层：使用 `hotspot_test` 数据库和 `6380` 端口的 `redis-test`
+- 运行预演层：使用 Docker `runtime` profile 启动容器化前后端，默认端口 `8080`、`3000`
+
+单机预演部署/运行时，使用：
+
+```bash
+docker compose -f deploy/docker-compose.yml --profile runtime up -d backend frontend
+```
+
+如果本机已有其他服务占用这些端口，可在启动前覆盖 host 端口：
+
+```bash
+HOTSPOT_BACKEND_HOST_PORT=18080 \
+HOTSPOT_FRONTEND_HOST_PORT=13000 \
+HOTSPOT_MINIO_API_HOST_PORT=19000 \
+HOTSPOT_MINIO_CONSOLE_HOST_PORT=19001 \
+docker compose -f deploy/docker-compose.yml --profile runtime up -d backend frontend minio
 ```
 
 ## 项目结构

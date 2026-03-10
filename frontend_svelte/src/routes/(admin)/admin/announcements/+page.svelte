@@ -51,7 +51,14 @@
 	let content = $state('');
 	let severity = $state<AnnouncementSeverity>('info');
 
+	function closeOverlayDialogs() {
+		showDialog = false;
+		deleteConfirmOpen = false;
+		pendingDeleteId = null;
+	}
+
 	function openCreateDialog() {
+		closeOverlayDialogs();
 		title = '';
 		content = '';
 		severity = 'info';
@@ -87,6 +94,7 @@
 	}
 
 	function requestDelete(announcementId: string) {
+		closeOverlayDialogs();
 		pendingDeleteId = announcementId;
 		deleteConfirmOpen = true;
 	}
@@ -256,7 +264,7 @@
 			</div>
 		</div>
 		<Dialog.Footer>
-			<Button variant="outline" onclick={() => (showDialog = false)}>取消</Button>
+			<Button variant="outline" onclick={closeOverlayDialogs}>取消</Button>
 			<Button onclick={handleSubmit} disabled={isSubmitting}>
 				{#if isSubmitting}
 					<Loader2 class="mr-2 h-4 w-4 animate-spin" />

@@ -458,7 +458,7 @@ mod tests {
 
     async fn connect_test_redis() -> Option<ConnectionManager> {
         let redis_url =
-            env::var("TEST_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379/1".to_string());
+            env::var("TEST_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6380/0".to_string());
         let client = match redis::Client::open(redis_url.clone()) {
             Ok(client) => client,
             Err(err) => {

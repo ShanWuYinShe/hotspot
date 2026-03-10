@@ -6,6 +6,25 @@ const SDK_LOAD_TIMEOUT_MS = 15000;
 let loadPromise: Promise<void> | null = null;
 let securityConfigured = false;
 
+export interface AMapCoordinate {
+	latitude: number;
+	longitude: number;
+}
+
+export interface AMapVisibleRegion {
+	northeast: AMapCoordinate;
+	northwest: AMapCoordinate;
+	southeast: AMapCoordinate;
+	southwest: AMapCoordinate;
+	bounds: {
+		north: number;
+		south: number;
+		east: number;
+		west: number;
+	};
+	zoom: number;
+}
+
 function configureSecurity() {
 	if (securityConfigured || typeof window === 'undefined') return;
 	window._AMapSecurityConfig = { serviceHost: AMAP_SERVICE_HOST };
@@ -104,4 +123,32 @@ export function loadAMapPlugin(plugins: string[]): Promise<void> {
 			})
 			.catch(reject);
 	});
+}
+
+export function getAMapVisibleRegion(map: AMap.Map): AMapVisibleRegion | null {
+	const bounds = map.getBounds();
+	const northEast = bounds?.getNorthEast();
+	const southWest = bounds?.getSouthWest();
+	if (!northEast || !southWest) {
+		return null;
+	}
+
+	const north = northEast.getLat();
+	const east = northEast.getLng();
+	const south = southWest.getLat();
+	const west = southWest.getLng();
+
+	return {
+		northeast: { latitude: north, longitude: east },
+		northwest: { latitude: north, longitude: west },
+		southeast: { latitude: south, longitude: east },
+		southwest: { latitude: south, longitude: west },
+		bounds: {
+			north,
+			south,
+			east,
+			west
+		},
+		zoom: map.getZoom()
+	};
 }

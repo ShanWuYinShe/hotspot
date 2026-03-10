@@ -1,14 +1,16 @@
+use std::sync::Arc;
 use std::str::FromStr;
 
 use crate::{
     dto::{
         request::{
-            AdminReportHandleRequest, AdminReportSearchRequest, CreateReportRequest,
-            MyReportsRequest,
+            AdminReportHandleRequest, AdminReportSearchRequest,
+            CreateReportRequest, MyReportsRequest,
         },
         response::{AdminReportItem, CreateReportData, PaginatedData, ReportItem, UserInfo},
     },
     error::ApiError,
+    events::event_types::AppEvent,
     repositories::{
         comment_repo::CommentRepository,
         group::message_repo::GroupMessageRepository,
@@ -18,8 +20,10 @@ use crate::{
         report_repo::{ReportRepository, ReportRow},
         user_repo::UserRepository,
     },
+    services::{admin_rbac_service::AdminRbacService, user_service::UserService},
     types::enums::{ReportReason, ReportStatus, ReportTargetType},
     utils::validation::Validator,
+    EventBus,
 };
 use tracing::{info, warn};
 
@@ -33,6 +37,9 @@ pub struct ReportService {
     private_message_repo: PrivateMessageRepository,
     group_message_repo: GroupMessageRepository,
     media_service: crate::services::media_service::MediaService,
+    user_service: UserService,
+    admin_rbac_service: AdminRbacService,
+    event_bus: Arc<EventBus>,
 }
 
 impl ReportService {
@@ -45,6 +52,9 @@ impl ReportService {
         private_message_repo: PrivateMessageRepository,
         group_message_repo: GroupMessageRepository,
         media_service: crate::services::media_service::MediaService,
+        user_service: UserService,
+        admin_rbac_service: AdminRbacService,
+        event_bus: Arc<EventBus>,
     ) -> Self {
         Self {
             report_repo,
@@ -55,6 +65,9 @@ impl ReportService {
             private_message_repo,
             group_message_repo,
             media_service,
+            user_service,
+            admin_rbac_service,
+            event_bus,
         }
     }
 
@@ -281,10 +294,24 @@ impl ReportService {
         // 解析report_id
         let report_id = Validator::parse_uuid(&req.report_id, "举报ID")?;
 
-        // 仅做存在性校验（避免拉整行）
-        if !self.report_repo.exists(report_id).await? {
-            warn!(admin_id, report_id = %report_id, "report.handle rejected: report not found");
-            return Err(ApiError::NotFound("举报不存在".to_string()));
+        let report = self
+            .report_repo
+            .find_by_id(report_id)
+            .await?
+            .ok_or_else(|| {
+                warn!(admin_id, report_id = %report_id, "report.handle rejected: report not found");
+                ApiError::NotFound("举报不存在".to_string())
+            })?;
+
+        if !matches!(report.status, ReportStatus::Pending | ReportStatus::Reviewing) {
+            return Err(ApiError::BusinessRuleViolation(
+                "该举报已处理，不能重复操作".to_string(),
+            ));
+        }
+
+        if matches!(req.action, ReportHandleAction::Resolve) {
+            self.apply_resolve_action(admin_id, &report, req.note.clone(), req.ban_duration_days)
+                .await?;
         }
 
         // 根据action映射status
@@ -307,6 +334,136 @@ impl ReportService {
         );
 
         Ok(())
+    }
+
+    async fn apply_resolve_action(
+        &self,
+        admin_id: i64,
+        report: &ReportRow,
+        note: Option<String>,
+        ban_duration_days: Option<u32>,
+    ) -> Result<(), ApiError> {
+        self.moderate_report_target(admin_id, report).await?;
+
+        let Some(duration_days) = ban_duration_days else {
+            return Ok(());
+        };
+        let Some(target_user_id) = self.resolve_report_target_user_id(report).await? else {
+            return Ok(());
+        };
+
+        let duration_days = i32::try_from(duration_days)
+            .map_err(|_| ApiError::OutOfRange("ban_duration_days 超出范围".to_string()))?;
+        let is_target_admin = self.admin_rbac_service.is_admin(target_user_id).await?;
+        let is_operator_super = self.admin_rbac_service.is_super_admin(admin_id).await?;
+
+        self.user_service
+            .admin_ban_user(
+                admin_id,
+                target_user_id,
+                is_target_admin,
+                is_operator_super,
+                note,
+                Some(duration_days),
+            )
+            .await
+    }
+
+    async fn moderate_report_target(
+        &self,
+        admin_id: i64,
+        report: &ReportRow,
+    ) -> Result<(), ApiError> {
+        match report.target_type {
+            ReportTargetType::User => Ok(()),
+            ReportTargetType::Moment => {
+                let moment_id = Validator::parse_uuid(&report.target_id, "target_id")?;
+                if self.moment_repo.find_by_id(moment_id).await?.is_some() {
+                    self.moment_repo.delete(moment_id).await?;
+                }
+                Ok(())
+            }
+            ReportTargetType::Comment => {
+                let comment_id = Validator::parse_uuid(&report.target_id, "target_id")?;
+                if self.comment_repo.find_by_id(comment_id).await?.is_some() {
+                    self.comment_repo.delete(comment_id).await?;
+                }
+                Ok(())
+            }
+            ReportTargetType::Group => {
+                let group_id = Validator::parse_group_id(&report.target_id)?;
+                if self.group_repo.find_by_id(group_id).await?.is_some() {
+                    self.group_repo.dismiss(group_id).await?;
+                    self.event_bus.publish(AppEvent::GroupDismissed {
+                        group_id,
+                        dismissed_by: admin_id,
+                        dismissed_by_owner: false,
+                    });
+                }
+                Ok(())
+            }
+            ReportTargetType::Message => {
+                let message_id = Validator::parse_uuid(&report.target_id, "target_id")?;
+                if let Some(message) = self.private_message_repo.get_meta(message_id).await? {
+                    if !message.is_recalled {
+                        self.private_message_repo.recall(message_id).await?;
+                        self.event_bus.publish(AppEvent::PrivateMessageRecalled {
+                            message_id,
+                            sender_id: message.sender_id,
+                            target_user_id: message.receiver_id,
+                            recalled_by: admin_id,
+                            recalled_at: chrono::Utc::now().to_rfc3339(),
+                        });
+                    }
+                    return Ok(());
+                }
+
+                if let Some(message) = self.group_message_repo.get_meta(message_id).await? {
+                    if !message.is_recalled {
+                        self.group_message_repo.recall(message_id, admin_id).await?;
+                        self.event_bus.publish(AppEvent::GroupMessageRecalled {
+                            message_id,
+                            group_id: message.group_id,
+                            recalled_by: admin_id,
+                            recalled_at: chrono::Utc::now().to_rfc3339(),
+                        });
+                    }
+                }
+                Ok(())
+            }
+        }
+    }
+
+    async fn resolve_report_target_user_id(
+        &self,
+        report: &ReportRow,
+    ) -> Result<Option<i64>, ApiError> {
+        match report.target_type {
+            ReportTargetType::User => Ok(Some(Validator::parse_user_id(&report.target_id)?)),
+            ReportTargetType::Moment => {
+                let moment_id = Validator::parse_uuid(&report.target_id, "target_id")?;
+                Ok(self.moment_repo.find_by_id(moment_id).await?.map(|moment| moment.user_id))
+            }
+            ReportTargetType::Comment => {
+                let comment_id = Validator::parse_uuid(&report.target_id, "target_id")?;
+                Ok(self.comment_repo.find_by_id(comment_id).await?.map(|comment| comment.user_id))
+            }
+            ReportTargetType::Group => {
+                let group_id = Validator::parse_group_id(&report.target_id)?;
+                Ok(self.group_repo.find_by_id(group_id).await?.map(|group| group.owner_id))
+            }
+            ReportTargetType::Message => {
+                let message_id = Validator::parse_uuid(&report.target_id, "target_id")?;
+                if let Some(message) = self.private_message_repo.find_by_id(message_id).await? {
+                    return Ok(Some(message.sender_id));
+                }
+                Ok(self
+                    .group_message_repo
+                    .find_by_id(message_id)
+                    .await?
+                    .map(|message| message.sender_id))
+            }
+        }
     }
 
     /// 辅助方法：将ReportRow转换为ReportItem

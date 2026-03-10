@@ -117,6 +117,11 @@ export struct GroupPage {
     return false;
   }
 
+  private closeOverlaySheets(): void {
+    this.showMyInvitesSheet = false;
+    this.showMyApplicationsSheet = false;
+  }
+
   private isInviteHandling(inviteId: string): boolean {
     return this.handlingInviteIds.includes(inviteId);
   }
@@ -266,6 +271,7 @@ export struct GroupPage {
     if (!this.ensureLoggedIn('处理群组邀请')) return;
     this.invitesLoading = true;
     this.invitesError = '';
+    this.closeOverlaySheets();
     this.showMyInvitesSheet = true;
     try {
       const response = await ApiClient.getGroupInvites({
@@ -338,6 +344,7 @@ export struct GroupPage {
     if (!this.ensureLoggedIn('管理入群申请')) return;
     this.applicationsLoading = true;
     this.applicationsError = '';
+    this.closeOverlaySheets();
     this.showMyApplicationsSheet = true;
     try {
       const response = await ApiClient.getMyGroupApplications({

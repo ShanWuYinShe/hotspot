@@ -130,8 +130,10 @@ export struct NativeMapComponent {
   private createdMarkers: Map<string, map.Marker> = new Map();
   private centerPinMarker: map.Marker | null = null;
   private markerIconCache: Map<string, image.PixelMap> = new Map();
+  private syntheticCameraIdleTimerId: number = 0;
   // 双击检测
   private lastClickTime: number = 0;
+  private clickTimerId: number = 0;
   // 防止 @Watch 在父组件重渲染时误触发
   private lastRegionLat: number = NaN;
   private lastRegionLng: number = NaN;
@@ -171,6 +173,14 @@ export struct NativeMapComponent {
   }
   
   aboutToDisappear() {
+    if (this.clickTimerId > 0) {
+      clearTimeout(this.clickTimerId);
+      this.clickTimerId = 0;
+    }
+    if (this.syntheticCameraIdleTimerId > 0) {
+      clearTimeout(this.syntheticCameraIdleTimerId);
+      this.syntheticCameraIdleTimerId = 0;
+    }
     for (const pixelMap of this.markerIconCache.values()) {
       pixelMap.release();
     }
@@ -317,6 +327,7 @@ export struct NativeMapComponent {
     }
     const controller = this.mapController as object as LongPressCapable;
     const candidateEvents: string[] = ['longPress', 'mapLongPress', 'longClick'];
+    let registered = false;
     for (const name of candidateEvents) {
       try {
         controller.on(name, (position: mapCommon.LatLng) => {
@@ -325,11 +336,79 @@ export struct NativeMapComponent {
           }
           this.onMapLongPress({ latitude: position.latitude, longitude: position.longitude });
         });
+        hilog.info(DOMAIN_NUMBER, TAG, `注册 ${name} 长按事件成功`);
+        registered = true;
         return;
       } catch (_) {
         // 忽略不支持的事件名称
       }
     }
+    if (!registered) {
+      hilog.warn(DOMAIN_NUMBER, TAG, '未找到可用的长按事件，长按定位能力可能不可用');
+    }
+  }
+
+  private emitCameraViewportChange(): void {
+    if (!this.mapController) {
+      return;
+    }
+    try {
+      this.updateCenterPinPosition();
+      const cameraPosition = this.mapController.getCameraPosition();
+      if (cameraPosition?.target && this.onCameraIdle) {
+        this.onCameraIdle({
+          latitude: cameraPosition.target.latitude,
+          longitude: cameraPosition.target.longitude,
+          zoom: cameraPosition.zoom
+        });
+      }
+
+      if (this.onVisibleRegionChange) {
+        try {
+          const controller = this.mapController as object as RawVisibleRegionController;
+          const region = controller.getVisibleRegion ? controller.getVisibleRegion() : undefined;
+          if (
+            region?.northeast &&
+            region?.northwest &&
+            region?.southeast &&
+            region?.southwest
+          ) {
+            this.onVisibleRegionChange({
+              northeast: {
+                latitude: region.northeast.latitude,
+                longitude: region.northeast.longitude
+              },
+              northwest: {
+                latitude: region.northwest.latitude,
+                longitude: region.northwest.longitude
+              },
+              southeast: {
+                latitude: region.southeast.latitude,
+                longitude: region.southeast.longitude
+              },
+              southwest: {
+                latitude: region.southwest.latitude,
+                longitude: region.southwest.longitude
+              }
+            });
+          }
+        } catch (error) {
+          hilog.warn(DOMAIN_NUMBER, TAG, `获取可视区域失败: ${JSON.stringify(error)}`);
+        }
+      }
+    } catch (e) {
+      hilog.warn(DOMAIN_NUMBER, TAG, `相机/可视区域变更处理失败: ${JSON.stringify(e)}`);
+    }
+  }
+
+  private scheduleSyntheticCameraIdle(): void {
+    if (this.syntheticCameraIdleTimerId > 0) {
+      clearTimeout(this.syntheticCameraIdleTimerId);
+    }
+    this.syntheticCameraIdleTimerId = setTimeout(() => {
+      this.syntheticCameraIdleTimerId = 0;
+      this.emitCameraViewportChange();
+    }, 180);
   }
 
   private async setupMap() {
@@ -392,6 +471,7 @@ export struct NativeMapComponent {
                 bearing: 0
               });
               ctrl.animateCamera(cameraUpdate, 500);
+              self.scheduleSyntheticCameraIdle();
             } catch (e) {
               self.moveCamera(lat, lng);
             }
@@ -409,16 +489,26 @@ export struct NativeMapComponent {
       const coord: MapCoordinate = { latitude: position.latitude, longitude: position.longitude };
 
       if (now - this.lastClickTime < 400) {
-        // 双击：两次点击间隔 < 400ms
+        if (this.clickTimerId > 0) {
+          clearTimeout(this.clickTimerId);
+          this.clickTimerId = 0;
+        }
         this.lastClickTime = 0;
         if (this.onMapDoubleClick) {
           this.onMapDoubleClick(coord);
         }
       } else {
         this.lastClickTime = now;
-        if (this.onMapClick) {
-          this.onMapClick(coord);
+        if (this.clickTimerId > 0) {
+          clearTimeout(this.clickTimerId);
         }
+        this.clickTimerId = setTimeout(() => {
+          this.clickTimerId = 0;
+          if (this.lastClickTime !== 0 && this.onMapClick) {
+            this.onMapClick(coord);
+          }
+          this.lastClickTime = 0;
+        }, 400);
       }
     });
 
@@ -427,55 +517,7 @@ export struct NativeMapComponent {
     // 监听相机空闲（用户停止拖拽/缩放后触发）
     try {
       this.mapController.on("cameraIdle", () => {
-        if (!this.mapController) return;
-        try {
-          this.updateCenterPinPosition();
-          const cameraPosition = this.mapController.getCameraPosition();
-          if (cameraPosition?.target) {
-            if (this.onCameraIdle) {
-              this.onCameraIdle({
-                latitude: cameraPosition.target.latitude,
-                longitude: cameraPosition.target.longitude,
-                zoom: cameraPosition.zoom
-              });
-            }
-          }
-          if (this.onVisibleRegionChange) {
-            try {
-              const controller = this.mapController as object as RawVisibleRegionController;
-              const region = controller.getVisibleRegion ? controller.getVisibleRegion() : undefined;
-              if (
-                region?.northeast &&
-                region?.northwest &&
-                region?.southeast &&
-                region?.southwest
-              ) {
-                this.onVisibleRegionChange({
-                  northeast: {
-                    latitude: region.northeast.latitude,
-                    longitude: region.northeast.longitude
-                  },
-                  northwest: {
-                    latitude: region.northwest.latitude,
-                    longitude: region.northwest.longitude
-                  },
-                  southeast: {
-                    latitude: region.southeast.latitude,
-                    longitude: region.southeast.longitude
-                  },
-                  southwest: {
-                    latitude: region.southwest.latitude,
-                    longitude: region.southwest.longitude
-                  }
-                });
-              }
-            } catch (error) {
-              hilog.warn(DOMAIN_NUMBER, TAG, `获取可视区域失败: ${JSON.stringify(error)}`);
-            }
-          }
-        } catch (e) {
-          hilog.warn(DOMAIN_NUMBER, TAG, `cameraIdle 处理失败: ${JSON.stringify(e)}`);
-        }
+        this.emitCameraViewportChange();
       });
     } catch (e) {
       hilog.warn(DOMAIN_NUMBER, TAG, `注册 cameraIdle 事件失败: ${JSON.stringify(e)}`);
@@ -499,6 +541,9 @@ export struct NativeMapComponent {
 
     // 初始渲染标记
     this.updateMarkers();
+
+    // 首帧主动同步一次相机与可视区域，避免某些设备首次不触发 cameraIdle
+    this.scheduleSyntheticCameraIdle();
   }
 
   private async updateMarkers() {
@@ -586,21 +631,27 @@ export struct NativeMapComponent {
   }
 
   private registerCameraMoveHandler() {
-    if (!this.mapController || !this.showCenterPin) return;
+    if (!this.mapController) return;
     const controller = this.mapController as object as CameraMoveCapable;
-    const candidateEvents: string[] = ['cameraMove', 'cameraMoving'];
+    const candidateEvents: string[] = ['cameraMove', 'cameraMoving', 'regionChange', 'regionChanging'];
+    let registered = false;
     for (const name of candidateEvents) {
       try {
         controller.on(name, () => {
-          this.updateCenterPinPosition();
+          if (this.showCenterPin) {
+            this.updateCenterPinPosition();
+          }
+          this.scheduleSyntheticCameraIdle();
         });
-        hilog.info(DOMAIN_NUMBER, TAG, `注册 ${name} 事件成功，中心图钉将实时跟随相机`);
-        return;
+        hilog.info(DOMAIN_NUMBER, TAG, `注册 ${name} 事件成功，将用于相机移动与 render 刷新兜底`);
+        registered = true;
       } catch (_) {
         // 忽略不支持的事件名称
       }
     }
-    hilog.info(DOMAIN_NUMBER, TAG, '未找到 cameraMove 事件，中心图钉将在 cameraIdle 时更新');
+    if (!registered) {
+      hilog.info(DOMAIN_NUMBER, TAG, '未找到可用的相机移动事件，render 刷新将仅依赖 cameraIdle');
+    }
   }
 
   /**
@@ -618,6 +669,7 @@ export struct NativeMapComponent {
         bearing: 0
       });
       this.mapController.animateCamera(cameraUpdate, 1000); // 1000ms 动画
+      this.scheduleSyntheticCameraIdle();
     }
   }
 

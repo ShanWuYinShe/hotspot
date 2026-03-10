@@ -60,6 +60,22 @@ function handleFocusOut() {
   scheduleDismissCheck();
 }
 
+export function dismissActiveKeyboardFocus(targetWindow?: Window): boolean {
+  const nextWindow = targetWindow ?? managedWindow;
+  if (!nextWindow) {
+    return false;
+  }
+
+  const active = nextWindow.document.activeElement as HTMLElement | null;
+  if (!isRegisteredInput(active)) {
+    return false;
+  }
+
+  active.blur();
+  scheduleDismissCheck();
+  return true;
+}
+
 export function initKeyboardFocusManager(targetWindow: Window) {
   if (initialized || !targetWindow) {
     return;

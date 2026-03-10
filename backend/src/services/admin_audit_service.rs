@@ -16,10 +16,11 @@ use crate::{
     utils::validation::Validator,
 };
 
-const ALLOWED_AUDIT_ACTIONS: [&str; 15] = [
+const ALLOWED_AUDIT_ACTIONS: [&str; 16] = [
     "user.ban",
     "user.unban",
     "group.dismiss",
+    "report.handle",
     "group.member_mute",
     "group.member_ban",
     "group.member_remove",
@@ -33,8 +34,8 @@ const ALLOWED_AUDIT_ACTIONS: [&str; 15] = [
     "config.update",
     "tag.delete",
 ];
-const ALLOWED_AUDIT_TARGET_TYPES: [&str; 6] =
-    ["user", "group", "announcement", "role", "config", "tag"];
+const ALLOWED_AUDIT_TARGET_TYPES: [&str; 7] =
+    ["user", "group", "announcement", "role", "config", "tag", "report"];
 
 #[derive(Debug, Clone)]
 pub struct AuditLogInput {

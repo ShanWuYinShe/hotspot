@@ -106,17 +106,33 @@ impl ReportRepository {
         Ok(())
     }
 
-    pub async fn exists(&self, report_id: Uuid) -> Result<bool> {
-        let exists = sqlx::query_scalar!(
+    pub async fn find_by_id(&self, report_id: Uuid) -> Result<Option<ReportRow>> {
+        let row = sqlx::query_as!(
+            ReportRow,
             r#"
-            SELECT EXISTS(SELECT 1 FROM reports WHERE report_id = $1) as "exists!"
+            SELECT report_id,
+                   reporter_id,
+                   target_type as "target_type: ReportTargetType",
+                   target_id,
+                   reason,
+                   description,
+                   status as "status!: ReportStatus",
+                   handled_at,
+                   handled_by,
+                   handled_action as "handled_action: ReportHandleAction",
+                   handled_note,
+                   target_snapshot,
+                   created_at,
+                   updated_at
+            FROM reports
+            WHERE report_id = $1
             "#,
             report_id
         )
-        .fetch_one(&self.pool)
+        .fetch_optional(&self.pool)
         .await?;
 
-        Ok(exists)
+        Ok(row)
     }
 
     /// 检查同一目标是否已有待处理举报（pending/reviewing）

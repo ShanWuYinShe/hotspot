@@ -35,6 +35,12 @@
 	let roleDescription = $state('');
 	let rolePermissions = $state.raw<string[]>([]);
 
+	function closeOverlayDialogs() {
+		showRoleDialog = false;
+		deleteRoleConfirmOpen = false;
+		pendingDeleteRoleId = null;
+	}
+
 	async function loadData() {
 		isLoading = true;
 		try {
@@ -59,6 +65,7 @@
 	}
 
 	function openCreateRoleDialog() {
+		closeOverlayDialogs();
 		editingRoleId = null;
 		roleName = '';
 		roleDescription = '';
@@ -67,6 +74,7 @@
 	}
 
 	function openEditRoleDialog(role: AdminRoleItem) {
+		closeOverlayDialogs();
 		editingRoleId = role.role_id;
 		roleName = role.name;
 		roleDescription = role.description || '';
@@ -128,6 +136,7 @@
 	}
 
 	function requestDeleteRole(roleId: string) {
+		closeOverlayDialogs();
 		pendingDeleteRoleId = roleId;
 		deleteRoleConfirmOpen = true;
 	}
@@ -349,7 +358,7 @@
 			</div>
 		</div>
 		<Dialog.Footer>
-			<Button variant="outline" onclick={() => (showRoleDialog = false)}>取消</Button>
+			<Button variant="outline" onclick={closeOverlayDialogs}>取消</Button>
 			<Button onclick={handleSubmitRole} disabled={isSubmitting}>
 				{#if isSubmitting}
 					<Loader2 class="mr-2 h-4 w-4 animate-spin" />

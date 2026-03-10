@@ -27,7 +27,7 @@ pub struct AdminReportSearchRequest {
     pub pagination: Option<PaginationParams>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct AdminReportHandleRequest {
     pub report_id: String,
     pub action: ReportHandleAction,

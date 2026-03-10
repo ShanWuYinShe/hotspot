@@ -39,21 +39,42 @@ export interface OverlappingGroup {
 	longitude: number;
 }
 
+export interface PreparedRenderMarker {
+	item: MapRenderItem;
+	offset?: [number, number];
+}
+
+const OVERLAP_CLUSTER_MAX_ZOOM = 16;
+
+export function isOverlapGroupRenderId(renderId: string): boolean {
+	return renderId.startsWith(OVERLAP_GROUP_PREFIX);
+}
+
+export function getOverlapClusterExpandZoom(): number {
+	return OVERLAP_CLUSTER_MAX_ZOOM + 1;
+}
+
+function getFanOutOffset(index: number, total: number): [number, number] {
+	const ringRadius = total <= 4 ? 18 : 26;
+	const angle = (Math.PI * 2 * index) / total - Math.PI / 2;
+	return [Math.round(Math.cos(angle) * ringRadius), Math.round(Math.sin(angle) * ringRadius)];
+}
+
 /**
  * 将同坐标（~11m 内）的非 cluster 渲染项合并为 OverlappingGroup，
  * 合并后的条目使用 type='cluster' 便于统一渲染。
  * 返回新的 items 数组和分组映射（groupId → 原始 items）。
  */
-export function groupOverlappingRenderItems(items: MapRenderItem[]): {
-	merged: MapRenderItem[];
+export function groupOverlappingRenderItems(items: MapRenderItem[], zoom: number): {
+	merged: PreparedRenderMarker[];
 	groups: Map<string, MapRenderItem[]>;
 } {
 	const coordGroups = new Map<string, MapRenderItem[]>();
-	const passThrough: MapRenderItem[] = [];
+	const passThrough: PreparedRenderMarker[] = [];
 
 	for (const item of items) {
 		if (item.type === 'cluster') {
-			passThrough.push(item);
+			passThrough.push({ item });
 			continue;
 		}
 		const key = `${Math.round(item.location.latitude * COORD_GROUP_PRECISION)}_${Math.round(item.location.longitude * COORD_GROUP_PRECISION)}`;
@@ -65,24 +86,33 @@ export function groupOverlappingRenderItems(items: MapRenderItem[]): {
 		}
 	}
 
-	const merged: MapRenderItem[] = [...passThrough];
+	const merged: PreparedRenderMarker[] = [...passThrough];
 	const groups = new Map<string, MapRenderItem[]>();
 
 	for (const [key, groupItems] of coordGroups) {
 		const first = groupItems[0];
 		if (!first) continue;
 		if (groupItems.length === 1) {
-			merged.push(first);
+			merged.push({ item: first });
+		} else if (zoom > OVERLAP_CLUSTER_MAX_ZOOM) {
+			groupItems.forEach((item, index) => {
+				merged.push({
+					item,
+					offset: getFanOutOffset(index, groupItems.length)
+				});
+			});
 		} else {
 			const groupId = `${OVERLAP_GROUP_PREFIX}${key}`;
 			groups.set(groupId, groupItems);
 			merged.push({
-				render_id: groupId,
-				type: 'cluster',
-				location: first.location,
-				cluster: {
-					count: groupItems.length,
-					label: `${groupItems.length} 个内容`
+				item: {
+					render_id: groupId,
+					type: 'cluster',
+					location: first.location,
+					cluster: {
+						count: groupItems.length,
+						label: `${groupItems.length} 个内容`
+					}
 				}
 			});
 		}

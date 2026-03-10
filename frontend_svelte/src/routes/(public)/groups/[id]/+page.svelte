@@ -186,12 +186,29 @@
 		editingAnnouncement = null;
 	}
 
+	function closeOverlayDialogs() {
+		showJoinDialog = false;
+		showAnnouncementDialog = false;
+		showAnnouncementDeleteDialog = false;
+		showMuteDialog = false;
+		showRoleDialog = false;
+		showRemoveDialog = false;
+		showLeaveDialog = false;
+		announcementToDelete = null;
+		muteTarget = null;
+		roleTarget = null;
+		removeTarget = null;
+		resetAnnouncementForm();
+	}
+
 	function openAnnouncementDialog(announcement?: GroupAnnouncementItem) {
 		if (!authStore.isAuthenticated) {
 			uiStore.saveRedirectUrl();
 			uiStore.openLoginModal();
 			return;
 		}
+
+		closeOverlayDialogs();
 
 		if (announcement) {
 			editingAnnouncement = announcement;
@@ -210,6 +227,7 @@
 			uiStore.openLoginModal();
 			return;
 		}
+		closeOverlayDialogs();
 		announcementToDelete = announcement;
 		showAnnouncementDeleteDialog = true;
 	}
@@ -326,6 +344,7 @@
 
 	function openMuteDialog(member: GroupMemberItem) {
 		if (!canManageMember(member)) return;
+		closeOverlayDialogs();
 		muteTarget = member;
 		muteDurationMinutes = '30';
 		showMuteDialog = true;
@@ -405,6 +424,7 @@
 
 	function openRoleDialog(member: GroupMemberItem) {
 		if (!canChangeRole(member)) return;
+		closeOverlayDialogs();
 		roleTarget = member;
 		showRoleDialog = true;
 	}
@@ -445,6 +465,7 @@
 
 	function openRemoveDialog(member: GroupMemberItem) {
 		if (!canManageMember(member)) return;
+		closeOverlayDialogs();
 		removeTarget = member;
 		showRemoveDialog = true;
 	}
@@ -627,6 +648,7 @@
 			uiStore.openLoginModal();
 			return;
 		}
+		closeOverlayDialogs();
 		joinPassword = '';
 		joinMessage = '';
 		showJoinDialog = true;
@@ -694,6 +716,7 @@
 			uiStore.openLoginModal();
 			return;
 		}
+		closeOverlayDialogs();
 		showLeaveDialog = true;
 	}
 

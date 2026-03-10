@@ -81,6 +81,28 @@ const TACTILE_MINIMAL_LIGHT: AppThemePalette = {
   overlayStrong: '#8A6F584D'
 };
 
+const TACTILE_MINIMAL_DARK: AppThemePalette = {
+  id: 'tactile_minimal_dark',
+  label: 'Tactile Minimalist',
+  description: '深海蓝、暖金、柔和泛光',
+  pageBackground: '#09131E',
+  surfaceBackground: '#102030',
+  surfaceSubtle: '#0C1A29',
+  borderColor: '#24384B',
+  sheetBackground: '#112334',
+  accentBackground: '#E3C9A5',
+  accentText: '#182638',
+  chatBackground: '#0B1725',
+  systemSurfaceBaseColor: '#09131E',
+  preferDarkContent: false,
+  surfaceShadow: { radius: 18, color: '#2A5A84A6', offsetX: 0, offsetY: 0 },
+  elevatedShadow: { radius: 24, color: '#304F74C0', offsetX: 0, offsetY: 8 },
+  accentShadow: { radius: 22, color: '#28E3C9A5', offsetX: 0, offsetY: 7 },
+  controlShadow: { radius: 14, color: '#264A6B96', offsetX: 0, offsetY: 4 },
+  tabBarShadow: { radius: 20, color: '#30516D9E', offsetX: 0, offsetY: -2 },
+  overlayStrong: '#B0000000'
+};
+
 const ZEN_ARTISTIC_LIGHT: AppThemePalette = {
   id: 'zen_artistic_light',
   label: 'Zen Artistic',
@@ -159,6 +181,8 @@ export class AppThemeManager {
         return DEFAULT_CLEAN_DARK;
       case 'tactile_minimal_light':
         return TACTILE_MINIMAL_LIGHT;
+      case 'tactile_minimal_dark':
+        return TACTILE_MINIMAL_DARK;
       case 'zen_artistic_light':
         return ZEN_ARTISTIC_LIGHT;
       case 'default_clean_light':
@@ -230,7 +254,7 @@ export class AppThemeManager {
       case 'default_clean':
         return isDarkMode ? 'default_clean_dark' : 'default_clean_light';
       case 'tactile_minimal':
-        return 'tactile_minimal_light';
+        return isDarkMode ? 'tactile_minimal_dark' : 'tactile_minimal_light';
       case 'zen_artistic':
         return 'zen_artistic_light';
       default:
@@ -254,6 +278,7 @@ export class AppThemeManager {
     switch (resolvedThemeId) {
       case 'default_clean_dark':
       case 'tactile_minimal_light':
+      case 'tactile_minimal_dark':
       case 'zen_artistic_light':
       case 'default_clean_light':
         return resolvedThemeId;

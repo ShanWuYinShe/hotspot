@@ -10,6 +10,7 @@
 
 use redis::aio::ConnectionManager;
 use redis::AsyncCommands;
+use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
@@ -236,6 +237,7 @@ pub mod filter_names {
 
 // v2: 重新构建 ready 标记，确保修复增量写入后可触发一次全量暖机
 const BLOOM_READY_KEY: &str = "bloom:ready:v2";
+const BLOOM_COUNTS_KEY: &str = "bloom:counts:v1";
 
 /// 资源存在性检查器
 ///
@@ -259,7 +261,38 @@ impl ResourceExistenceChecker {
             .arg(BLOOM_READY_KEY)
             .query_async(&mut conn)
             .await?;
-        Ok(exists)
+        if !exists {
+            return Ok(false);
+        }
+
+        let counts: HashMap<String, u64> = redis::cmd("HGETALL")
+            .arg(BLOOM_COUNTS_KEY)
+            .query_async(&mut conn)
+            .await?;
+
+        for name in [
+            filter_names::USER_IDS,
+            filter_names::GROUP_IDS,
+            filter_names::MOMENT_IDS,
+            filter_names::COMMENT_IDS,
+            filter_names::MESSAGE_IDS,
+        ] {
+            let expected_count = counts.get(name).copied().unwrap_or(0);
+            if expected_count == 0 {
+                continue;
+            }
+
+            let filter_key_exists: bool = redis::cmd("EXISTS")
+                .arg(self.bloom.get_redis_key(name))
+                .query_async(&mut conn)
+                .await?;
+            if !filter_key_exists {
+                tracing::warn!(filter = name, expected_count, "bloom ready marker exists but filter key missing");
+                return Ok(false);
+            }
+        }
+
+        Ok(true)
     }
 
     /// 标记布隆过滤器已完成初始化
@@ -312,27 +345,32 @@ impl ResourceExistenceChecker {
     pub async fn record_user(&self, user_id: i64) -> Result<(), redis::RedisError> {
         self.bloom
             .add(filter_names::USER_IDS, &user_id.to_string())
-            .await
+            .await?;
+        self.increment_count(filter_names::USER_IDS, 1).await
     }
 
     /// 记录群组存在（新增群组后调用）
     pub async fn record_group(&self, group_id: &str) -> Result<(), redis::RedisError> {
-        self.bloom.add(filter_names::GROUP_IDS, group_id).await
+        self.bloom.add(filter_names::GROUP_IDS, group_id).await?;
+        self.increment_count(filter_names::GROUP_IDS, 1).await
     }
 
     /// 记录瞬间存在（新增瞬间后调用）
     pub async fn record_moment(&self, moment_id: &str) -> Result<(), redis::RedisError> {
-        self.bloom.add(filter_names::MOMENT_IDS, moment_id).await
+        self.bloom.add(filter_names::MOMENT_IDS, moment_id).await?;
+        self.increment_count(filter_names::MOMENT_IDS, 1).await
     }
 
     /// 记录评论存在（新增评论后调用）
     pub async fn record_comment(&self, comment_id: &str) -> Result<(), redis::RedisError> {
-        self.bloom.add(filter_names::COMMENT_IDS, comment_id).await
+        self.bloom.add(filter_names::COMMENT_IDS, comment_id).await?;
+        self.increment_count(filter_names::COMMENT_IDS, 1).await
     }
 
     /// 记录消息存在
     pub async fn record_message(&self, message_id: &str) -> Result<(), redis::RedisError> {
-        self.bloom.add(filter_names::MESSAGE_IDS, message_id).await
+        self.bloom.add(filter_names::MESSAGE_IDS, message_id).await?;
+        self.increment_count(filter_names::MESSAGE_IDS, 1).await
     }
 
     /// 批量检查用户是否可能存在
@@ -389,13 +427,16 @@ impl ResourceExistenceChecker {
     /// 批量同步用户到布隆过滤器
     pub async fn sync_users(&self, user_ids: &[i64]) -> Result<(), redis::RedisError> {
         let keys: Vec<String> = user_ids.iter().map(|id| id.to_string()).collect();
-        self.bloom.add_batch(filter_names::USER_IDS, &keys).await
+        self.bloom.add_batch(filter_names::USER_IDS, &keys).await?;
+        self.increment_count(filter_names::USER_IDS, keys.len()).await
     }
 
     /// 批量同步群组到布隆过滤器
     pub async fn sync_groups(&self, group_ids: &[String]) -> Result<(), redis::RedisError> {
         self.bloom
             .add_batch(filter_names::GROUP_IDS, group_ids)
+            .await?;
+        self.increment_count(filter_names::GROUP_IDS, group_ids.len())
             .await
     }
 
@@ -403,6 +444,8 @@ impl ResourceExistenceChecker {
     pub async fn sync_moments(&self, moment_ids: &[String]) -> Result<(), redis::RedisError> {
         self.bloom
             .add_batch(filter_names::MOMENT_IDS, moment_ids)
+            .await?;
+        self.increment_count(filter_names::MOMENT_IDS, moment_ids.len())
             .await
     }
 
@@ -410,6 +453,8 @@ impl ResourceExistenceChecker {
     pub async fn sync_comments(&self, comment_ids: &[String]) -> Result<(), redis::RedisError> {
         self.bloom
             .add_batch(filter_names::COMMENT_IDS, comment_ids)
+            .await?;
+        self.increment_count(filter_names::COMMENT_IDS, comment_ids.len())
             .await
     }
 
@@ -417,7 +462,28 @@ impl ResourceExistenceChecker {
     pub async fn sync_messages(&self, message_ids: &[String]) -> Result<(), redis::RedisError> {
         self.bloom
             .add_batch(filter_names::MESSAGE_IDS, message_ids)
+            .await?;
+        self.increment_count(filter_names::MESSAGE_IDS, message_ids.len())
             .await
+    }
+
+    async fn increment_count(
+        &self,
+        filter_name: &str,
+        delta: usize,
+    ) -> Result<(), redis::RedisError> {
+        if delta == 0 {
+            return Ok(());
+        }
+
+        let mut conn = self.bloom.redis.clone();
+        let _: i64 = redis::cmd("HINCRBY")
+            .arg(BLOOM_COUNTS_KEY)
+            .arg(filter_name)
+            .arg(delta as i64)
+            .query_async(&mut conn)
+            .await?;
+        Ok(())
     }
 
     /// 清空全部布隆过滤器（用于重新初始化）
@@ -434,6 +500,7 @@ impl ResourceExistenceChecker {
         let mut conn = self.bloom.redis.clone();
         let _: () = redis::cmd("DEL")
             .arg(BLOOM_READY_KEY)
+            .arg(BLOOM_COUNTS_KEY)
             .query_async(&mut conn)
             .await?;
         Ok(())

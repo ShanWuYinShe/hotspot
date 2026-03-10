@@ -404,6 +404,22 @@ impl AppState {
             feed_dismiss_repo.clone(),
         );
 
+        let system_config_service = SystemConfigService::new(
+            system_config_repo.clone(),
+            redis_client.clone(),
+            cache_manager.clone(),
+        );
+
+        let admin_rbac_service = AdminRbacService::new(
+            redis.clone(),
+            admin_rbac_repo.clone(),
+            user_repo.clone(),
+            user_settings_repo.clone(),
+        );
+
+        let admin_audit_service =
+            AdminAuditService::new(admin_audit_repo, user_repo.clone(), media_service.clone());
+
         let report_service = ReportService::new(
             report_repo.clone(),
             user_repo.clone(),
@@ -413,22 +429,10 @@ impl AppState {
             private_message_repo.clone(),
             group_message_repo.clone(),
             media_service.clone(),
+            user_service.clone(),
+            admin_rbac_service.clone(),
+            event_bus.clone(),
         );
-
-        let system_config_service = SystemConfigService::new(
-            system_config_repo.clone(),
-            redis_client.clone(),
-            cache_manager.clone(),
-        );
-
-        let admin_rbac_service = AdminRbacService::new(
-            admin_rbac_repo.clone(),
-            user_repo.clone(),
-            user_settings_repo.clone(),
-        );
-
-        let admin_audit_service =
-            AdminAuditService::new(admin_audit_repo, user_repo.clone(), media_service.clone());
 
         let map_service = MapService::new(map_repo.clone());
 
@@ -478,6 +482,30 @@ impl AppState {
             tokio::spawn(async move {
                 if let Err(e) = warmup_bloom_filters(db, checker).await {
                     tracing::warn!("Bloom filter warmup failed: {}", e);
+                }
+            });
+        }
+
+        {
+            let db = db.clone();
+            let checker = resource_checker.clone();
+            tokio::spawn(async move {
+                let mut interval = tokio::time::interval(Duration::from_secs(60));
+                interval.tick().await;
+                loop {
+                    interval.tick().await;
+                    match checker.is_ready().await {
+                        Ok(true) => {}
+                        Ok(false) => {
+                            tracing::warn!("Bloom filter marked unready, attempting rebuild");
+                            if let Err(e) = warmup_bloom_filters(db.clone(), checker.clone()).await {
+                                tracing::warn!("Bloom filter rebuild failed: {}", e);
+                            }
+                        }
+                        Err(e) => {
+                            tracing::warn!("Bloom filter readiness check failed: {}", e);
+                        }
+                    }
                 }
             });
         }
@@ -538,7 +566,7 @@ macro_rules! warmup_ids_loop {
 async fn warmup_bloom_filters(
     db: PgPool,
     checker: crate::utils::bloom_filter::ResourceExistenceChecker,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> crate::error::Result<()> {
     if checker.is_ready().await.unwrap_or(false) {
         return Ok(());
     }

@@ -8,6 +8,7 @@
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { goto } from '$app/navigation';
+	import { dismissActiveKeyboardFocus, useKeyboardFocus } from '$lib/attachments';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardHeader } from '$lib/components/ui/card';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
@@ -166,6 +167,13 @@
 		return date.toLocaleString('zh-CN');
 	}
 
+	function handleBackClick() {
+		if (typeof window !== 'undefined' && dismissActiveKeyboardFocus(window)) {
+			return;
+		}
+		history.back();
+	}
+
 	// momentId 变化时重置状态并重新加载（含首次加载）
 	$effect(() => {
 		const id = momentId;
@@ -194,7 +202,7 @@
 <div class="mx-auto max-w-2xl space-y-6">
 	<!-- Header -->
 	<div class="flex items-center gap-4">
-		<Button variant="ghost" size="icon" onclick={() => history.back()} aria-label="返回">
+		<Button variant="ghost" size="icon" onclick={handleBackClick} aria-label="返回">
 			<ArrowLeft class="h-5 w-5" />
 		</Button>
 		<h1 class="text-xl font-bold">瞬间详情</h1>
@@ -308,6 +316,7 @@
 						</Avatar>
 						<div class="flex-1">
 							<Textarea
+								{@attach useKeyboardFocus()}
 								placeholder="写下你的评论..."
 								bind:value={commentText}
 								rows={2}

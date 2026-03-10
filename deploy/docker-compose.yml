@@ -2,6 +2,7 @@ version: '3.8'
 
 services:
   # Database
+  # 该容器同时用于本地 Docker 开发和 SQLx prepare / cargo check / cargo test 预备环境
   postgres:
     image: postgis/postgis:15-3.3
     container_name: hotspot-postgres
@@ -11,7 +12,7 @@ services:
       POSTGRES_PASSWORD: hotspot
       POSTGRES_DB: hotspot
     ports:
-      - "5432:5432"
+      - "${HOTSPOT_POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -28,9 +29,26 @@ services:
     container_name: hotspot-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${HOTSPOT_REDIS_HOST_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hotspot-net
+
+  # Test Cache
+  redis-test:
+    image: redis:7-alpine
+    container_name: hotspot-redis-test
+    restart: unless-stopped
+    ports:
+      - "${HOTSPOT_TEST_REDIS_HOST_PORT:-6380}:6379"
+    volumes:
+      - redis_test_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -45,8 +63,8 @@ services:
     container_name: hotspot-minio
     restart: unless-stopped
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${HOTSPOT_MINIO_API_HOST_PORT:-9000}:9000"
+      - "${HOTSPOT_MINIO_CONSOLE_HOST_PORT:-9001}:9001"
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
@@ -84,8 +102,10 @@ services:
       dockerfile: Dockerfile
     container_name: hotspot-backend
     restart: unless-stopped
+    profiles:
+      - runtime
     ports:
-      - "8080:8080"
+      - "${HOTSPOT_BACKEND_HOST_PORT:-8080}:8080"
     environment:
       - DATABASE_URL=postgresql://hotspot:hotspot@postgres:5432/hotspot
       - REDIS_URL=redis://redis:6379
@@ -121,8 +141,10 @@ services:
       dockerfile: Dockerfile
     container_name: hotspot-frontend
     restart: unless-stopped
+    profiles:
+      - runtime
     ports:
-      - "3000:3000"
+      - "${HOTSPOT_FRONTEND_HOST_PORT:-3000}:3000"
     environment:
       - PORT=3000
       - HOST=0.0.0.0
@@ -136,6 +158,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  redis_test_data:
   minio_data:
 
 networks:

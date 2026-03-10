@@ -15,6 +15,7 @@ declare global {
 			constructor(container: string | HTMLElement, options?: MapOptions);
 			destroy(): void;
 			getCenter(): LngLat;
+				getBounds(): Bounds;
 			setCenter(center: [number, number]): void;
 			setZoom(zoom: number): void;
 			getZoom(): number;
@@ -38,6 +39,11 @@ declare global {
 			getLng(): number;
 			getLat(): number;
 		}
+
+			class Bounds {
+				getNorthEast(): LngLat;
+				getSouthWest(): LngLat;
+			}
 
 		class Marker {
 			constructor(options?: MarkerOptions);

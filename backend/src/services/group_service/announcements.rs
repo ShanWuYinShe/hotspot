@@ -219,6 +219,7 @@ impl GroupService {
         req: &DeleteGroupAnnouncementRequest,
     ) -> Result<()> {
         let started_at = std::time::Instant::now();
+        let request_group_id = Validator::parse_group_id(&req.group_id)?;
         let announcement_id = Validator::parse_uuid(&req.announcement_id, "公告ID")?;
         info!(
             operator_id = user_id,
@@ -230,6 +231,10 @@ impl GroupService {
             .find_by_id(announcement_id)
             .await?
             .ok_or_else(|| ApiError::NotFound("公告不存在".to_string()))?;
+
+        if announcement.group_id != request_group_id {
+            return Err(ApiError::GroupNotFound("群组与公告不匹配".to_string()));
+        }
 
         let _ = self
             .require_admin_or_owner(announcement.group_id, user_id)

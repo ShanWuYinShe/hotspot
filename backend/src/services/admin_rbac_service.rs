@@ -1,4 +1,5 @@
 use uuid::Uuid;
+use redis::aio::ConnectionManager;
 
 use crate::{
     config::Config,
@@ -8,11 +9,12 @@ use crate::{
         user::settings_repo::UserSettingsRepository,
         user_repo::UserRepository,
     },
-    utils::password::PasswordUtil,
+    utils::{bloom_filter::ResourceExistenceChecker, password::PasswordUtil},
 };
 
 #[derive(Clone)]
 pub struct AdminRbacService {
+    redis: ConnectionManager,
     repo: AdminRbacRepository,
     user_repo: UserRepository,
     user_settings_repo: UserSettingsRepository,
@@ -20,11 +22,13 @@ pub struct AdminRbacService {
 
 impl AdminRbacService {
     pub fn new(
+        redis: ConnectionManager,
         repo: AdminRbacRepository,
         user_repo: UserRepository,
         user_settings_repo: UserSettingsRepository,
     ) -> Self {
         Self {
+            redis,
             repo,
             user_repo,
             user_settings_repo,
@@ -83,6 +87,13 @@ impl AdminRbacService {
                 None,
             )
             .await?;
+
+        if let Err(e) = ResourceExistenceChecker::new(self.redis.clone())
+            .record_user(user.user_id)
+            .await
+        {
+            tracing::warn!(user_id = user.user_id, error = %e, "record_user bloom failed during super admin bootstrap");
+        }
 
         // 创建默认 user_settings 并禁用搜索/私聊
         self.user_settings_repo.create(user.user_id).await?;

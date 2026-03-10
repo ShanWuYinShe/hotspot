@@ -22,3 +22,6 @@ pub mod subscription_service;
 pub mod system_config_service;
 pub mod tag_service;
 pub mod user_service;
+
+#[cfg(test)]
+mod bloom_write_guard_tests;

@@ -62,7 +62,7 @@ pub async fn resource_guard_middleware(
 ) -> Response {
     let ready = state.resource_checker.is_ready().await.unwrap_or(false);
     if !ready {
-        return next.run(request).await;
+        return ApiError::ServiceUnavailable.into_response();
     }
 
     let (parts, body) = request.into_parts();

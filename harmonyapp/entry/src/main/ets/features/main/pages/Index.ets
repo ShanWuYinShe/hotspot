@@ -136,6 +136,14 @@ struct Index {
     return AppThemeVisuals.getTabBarShadow(this.resolvedThemeId);
   }
 
+  private getTabBarBackground(): string {
+    return this.getCurrentThemePalette().surfaceBackground;
+  }
+
+  private getTabInactiveColor(): ResourceColor {
+    return $r('sys.color.ohos_id_color_text_secondary');
+  }
+
   aboutToDisappear() {
     // 清理定时任务（避免页面销毁后继续跑）
     if (this.locationSyncTimerId) {
@@ -750,26 +758,27 @@ struct Index {
               .fontSize(23)
               .fontColor([this.currentTabIndex === targetIndex
                 ? this.getBrandAccent()
-                : $r('sys.color.ohos_id_color_text_secondary')])
+                : this.getTabInactiveColor()])
         }
       }
       .width(24)
       .height(24)
       .justifyContent(FlexAlign.Center)
+      .margin({ top: this.currentTabIndex === targetIndex ? 0 : 4 })
 
       Text(title)
         .fontColor(this.currentTabIndex === targetIndex
           ? this.getBrandAccent()
-          : $r('sys.color.ohos_id_color_text_secondary'))
+          : this.getTabInactiveColor())
         .fontSize(DesignConstants.FONT.SIZE.XS)
-        .margin({ top: 3 })
+        .margin({ top: this.currentTabIndex === targetIndex ? 1 : 4 })
         .fontWeight(this.currentTabIndex === targetIndex ? FontWeight.Medium : FontWeight.Normal)
 
       if (this.currentTabIndex === targetIndex) {
         Row()
           .width(18)
           .height(4)
-          .margin({ top: 4 })
+          .margin({ top: 5 })
           .backgroundColor(this.getBrandAccent())
           .borderRadius(DesignConstants.RADIUS.FULL)
       }
@@ -777,8 +786,8 @@ struct Index {
     .width('100%')
     .height(56)
     .justifyContent(FlexAlign.Center)
-    .backgroundColor(this.currentTabIndex === targetIndex ? this.getCurrentThemePalette().surfaceSubtle : Color.Transparent)
-    .borderRadius(DesignConstants.RADIUS.LG)
+    .padding({ top: this.currentTabIndex === targetIndex ? 0 : 2, bottom: this.currentTabIndex === targetIndex ? 0 : 2 })
+    .backgroundColor(Color.Transparent)
     .onClick(() => {
       this.handleTabChange(targetIndex);
       if (targetIndex !== 2) {
@@ -796,26 +805,27 @@ struct Index {
               .fontSize(23)
               .fontColor([this.currentTabIndex === 0
                 ? this.getBrandAccent()
-                : $r('sys.color.ohos_id_color_text_secondary')])
+                : this.getTabInactiveColor()])
         }
       }
       .width(24)
       .height(24)
       .justifyContent(FlexAlign.Center)
+      .margin({ top: this.currentTabIndex === 0 ? 0 : 4 })
 
       Text('附近')
         .fontColor(this.currentTabIndex === 0
           ? this.getBrandAccent()
-          : $r('sys.color.ohos_id_color_text_secondary'))
+          : this.getTabInactiveColor())
         .fontSize(DesignConstants.FONT.SIZE.XS)
-        .margin({ top: 3 })
+        .margin({ top: this.currentTabIndex === 0 ? 1 : 4 })
         .fontWeight(this.currentTabIndex === 0 ? FontWeight.Medium : FontWeight.Normal)
 
       if (this.currentTabIndex === 0) {
         Row()
           .width(18)
           .height(4)
-          .margin({ top: 4 })
+          .margin({ top: 5 })
           .backgroundColor(this.getBrandAccent())
           .borderRadius(DesignConstants.RADIUS.FULL)
       }
@@ -823,8 +833,8 @@ struct Index {
     .width('100%')
     .height(56)
     .justifyContent(FlexAlign.Center)
-    .backgroundColor(this.currentTabIndex === 0 ? this.getCurrentThemePalette().surfaceSubtle : Color.Transparent)
-    .borderRadius(DesignConstants.RADIUS.LG)
+    .padding({ top: this.currentTabIndex === 0 ? 0 : 2, bottom: this.currentTabIndex === 0 ? 0 : 2 })
+    .backgroundColor(Color.Transparent)
     .onClick(() => {
       this.handleTabChange(0);
       this.tabsController.changeIndex(0);
@@ -853,15 +863,24 @@ struct Index {
 
       // "发布"文字在外框下方，与其他 tab 一致
       Text('发布')
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .fontColor(this.currentTabIndex === 2 ? this.getBrandAccent() : this.getTabInactiveColor())
         .fontSize(DesignConstants.FONT.SIZE.XS)
-        .margin({ top: 3 })
+        .margin({ top: this.currentTabIndex === 2 ? 1 : 4 })
+
+      if (this.currentTabIndex === 2) {
+        Row()
+          .width(18)
+          .height(4)
+          .margin({ top: 5 })
+          .backgroundColor(this.getBrandAccent())
+          .borderRadius(DesignConstants.RADIUS.FULL)
+      }
     }
     .width('100%')
     .height(56)
     .justifyContent(FlexAlign.Center)
-    .backgroundColor(this.currentTabIndex === 2 ? this.getCurrentThemePalette().surfaceSubtle : Color.Transparent)
-    .borderRadius(DesignConstants.RADIUS.LG)
+    .padding({ top: this.currentTabIndex === 2 ? 0 : 2, bottom: this.currentTabIndex === 2 ? 0 : 2 })
+    .backgroundColor(Color.Transparent)
     .onClick(() => {
       this.handleTabChange(2);
     })
@@ -916,7 +935,15 @@ struct Index {
         .backgroundColor(this.getCurrentThemePalette().pageBackground)
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
       } else {
-        Column() {
+        Stack({ alignContent: Alignment.Bottom }) {
+          // 底部统一背景容器：覆盖导航栏 + 安全区，视觉上形成一整块底部区域
+          Column() {}
+            .width('100%')
+            .height(56 + this.safeAreaBottom)
+            .backgroundColor(this.getTabBarBackground())
+            .shadow(this.getTabBarShadow())
+
+          Column() {
         Navigation(this.navPathStack) {
         Tabs({ barPosition: BarPosition.End, controller: this.tabsController }) {
           // 1. 附近（含动态/用户/群组子标签）
@@ -970,8 +997,7 @@ struct Index {
         .barMode(BarMode.Fixed)
         .divider({ strokeWidth: 0, color: Color.Transparent, startMargin: 0, endMargin: 0 })
         .onChange((index: number) => this.handleTabChange(index))
-        .barBackgroundColor(this.getCurrentThemePalette().pageBackground)
-        .shadow({ radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 })
+        .barBackgroundColor(Color.Transparent)
         .border({ width: { top: 0 }, color: Color.Transparent })
         .backgroundColor(Color.Transparent)
         .bindSheet($$this.showCreateSheet, this.CreateSheetContent(), {
@@ -993,6 +1019,9 @@ struct Index {
         .width('100%')
         .height('100%')
         .padding({ bottom: this.safeAreaBottom })
+        }
+        .width('100%')
+        .height('100%')
       }
 
       if (this.visibleNotifications.length > 0) {

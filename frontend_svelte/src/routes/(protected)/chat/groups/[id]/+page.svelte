@@ -13,7 +13,7 @@
 	import { useBatchMarkRead } from '$lib/hooks/use-batch-mark-read.svelte';
 	import { createReconnectTracker, mergeMessagesByIdAndSentAt } from '$lib/hooks/use-chat-realtime-sync';
 	import { useChatWsSubscription } from '$lib/hooks/use-chat-ws-subscription.svelte';
-import { autofocus, useKeyboardFocus, KEYBOARD_DISMISS_EVENT } from '$lib/attachments';
+	import { autofocus, useKeyboardFocus, KEYBOARD_DISMISS_EVENT, dismissActiveKeyboardFocus } from '$lib/attachments';
 	import { Button } from '$lib/components/ui/button';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import { Skeleton } from '$lib/components/ui/skeleton';
@@ -387,6 +387,13 @@ import { autofocus, useKeyboardFocus, KEYBOARD_DISMISS_EVENT } from '$lib/attach
 		selectedImage = null;
 	}
 
+	function handleBackClick() {
+		if (typeof window !== 'undefined' && dismissActiveKeyboardFocus(window)) {
+			return;
+		}
+		history.back();
+	}
+
 	async function init() {
 		await withMinimumLoadingTime(async () => {
 			await loadGroup();
@@ -603,7 +610,7 @@ import { autofocus, useKeyboardFocus, KEYBOARD_DISMISS_EVENT } from '$lib/attach
 <div class="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-xl border border-border/50 bg-card shadow-lg">
 	<!-- Header -->
 	<header class="flex h-16 shrink-0 items-center gap-3 border-b border-border/50 bg-card/80 px-4 backdrop-blur-sm">
-		<Button variant="ghost" size="icon" class="h-9 w-9" onclick={() => history.back()} aria-label="返回">
+		<Button variant="ghost" size="icon" class="h-9 w-9" onclick={handleBackClick} aria-label="返回">
 			<ArrowLeft class="h-5 w-5" />
 		</Button>
 		

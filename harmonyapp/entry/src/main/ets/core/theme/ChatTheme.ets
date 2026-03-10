@@ -124,6 +124,26 @@ export class ChatThemeManager {
         divider: '#D9D0C4'
       };
     }
+    if (palette.id === 'tactile_minimal_dark') {
+      return {
+        background: '#0C1723',
+        listBackground: '#10202F',
+        bubbleSelf: '#D8C1A0',
+        bubbleSelfText: '#1B2A3B',
+        bubblePeer: '#142637',
+        bubblePeerText: '#E6E9EE',
+        bubbleSystem: '#112130',
+        inputBarBg: '#102030',
+        inputFieldBg: '#0C1A29',
+        inputBorder: '#24384B',
+        sendButtonActive: '#E3C9A5',
+        sendButtonActiveText: '#182638',
+        sendButtonDisabled: '#24384B',
+        titleBarBg: '#102030',
+        titleBarBorder: '#24384B',
+        divider: '#223648'
+      };
+    }
     if (palette.id === 'zen_artistic_light') {
       return {
         background: '#CFDADD',

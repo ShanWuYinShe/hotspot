@@ -57,6 +57,18 @@ export DB_PORT="5432"
 # ============================================================================
 export DATABASE_URL="postgresql://${DB_USER}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
 
+# Docker 开发栈（deploy/docker-compose.yml）使用的独立连接配置
+export DOCKER_DB_USER="hotspot"
+export DOCKER_DB_PASSWORD="hotspot"
+export DOCKER_DB_NAME="hotspot"
+export DOCKER_DATABASE_URL="postgresql://${DOCKER_DB_USER}:${DOCKER_DB_PASSWORD}@127.0.0.1:5432/${DOCKER_DB_NAME}"
+
+# 测试环境使用独立数据库与独立 Redis，避免污染运行时实例
+export TEST_DB_NAME="hotspot_test"
+export TEST_DATABASE_URL="${TEST_DATABASE_URL:-postgresql://${DOCKER_DB_USER}:${DOCKER_DB_PASSWORD}@127.0.0.1:5432/${TEST_DB_NAME}}"
+export TEST_REDIS_PORT="6380"
+export TEST_REDIS_URL="${TEST_REDIS_URL:-redis://127.0.0.1:${TEST_REDIS_PORT}/0}"
+
 # ============================================================================
 # 函数：显示当前配置
 # ============================================================================
@@ -72,5 +84,8 @@ show_config() {
     echo "用户数据库: ${DB_NAME}"
     echo "连接地址: ${DB_HOST}:${DB_PORT}"
     echo "连接字符串: ${DATABASE_URL}"
+    echo "Docker 开发库: ${DOCKER_DATABASE_URL}"
+    echo "测试数据库: ${TEST_DATABASE_URL}"
+    echo "测试 Redis: ${TEST_REDIS_URL}"
 }
 

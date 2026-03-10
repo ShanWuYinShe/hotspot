@@ -730,8 +730,14 @@ curl -X POST http://localhost:5496/api/v1/moments/create \
 # 运行所有测试
 cargo test
 
-# 连接指定测试 Redis（例如你本地的 6379/1）
-TEST_REDIS_URL=redis://127.0.0.1:6379/1 cargo test id_gen::tests -- --nocapture
+# 使用独立测试数据库和独立测试 Redis
+DATABASE_URL=postgresql://hotspot:hotspot@127.0.0.1:5432/hotspot_test \
+REDIS_URL=redis://127.0.0.1:6380/0 \
+TEST_REDIS_URL=redis://127.0.0.1:6380/0 \
+cargo test
+
+# 仅连接指定测试 Redis 运行 Redis 相关测试
+TEST_REDIS_URL=redis://127.0.0.1:6380/0 cargo test id_gen::tests -- --nocapture
 
 # 运行特定模块测试
 cargo test --test user_tests

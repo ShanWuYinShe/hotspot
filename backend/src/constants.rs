@@ -60,10 +60,8 @@ pub const MAX_SEARCH_RADIUS: f64 = 50000.0;
 // ============================================================
 /// 聚类格子尺寸（像素），用于计算 grid_meters
 pub const MAP_CLUSTER_GRID_PX: f64 = 60.0;
-/// 聚合/明细切换的 zoom 阈值（<= 此值显示聚合点）
-pub const MAP_CLUSTER_ZOOM_THRESHOLD: f64 = 12.0;
-/// 明细模式下单类型实体查询上限
-pub const MAP_DETAIL_ENTITY_LIMIT: i32 = 200;
+/// 地图渲染项最大返回数量，超过后必须自动聚合
+pub const MAP_RENDER_ITEM_LIMIT: usize = 500;
 
 // ============================================================
 // WebSocket 心跳配置

@@ -79,16 +79,17 @@ export struct SettingsPage {
     if (this.themeMode === option.mode) {
       return this.getCurrentThemePalette();
     }
+    const isDarkMode = AppStorage.get<boolean>('isDarkMode') === true;
     switch (option.mode) {
       case 'follow_system':
         return AppThemeManager.getPaletteById(this.resolvedThemeId);
       case 'tactile_minimal':
-        return AppThemeManager.getPaletteById('tactile_minimal_light');
+        return AppThemeManager.getPaletteById(isDarkMode ? 'tactile_minimal_dark' : 'tactile_minimal_light');
       case 'zen_artistic':
         return AppThemeManager.getPaletteById('zen_artistic_light');
       case 'default_clean':
       default:
-        return AppThemeManager.getPaletteById('default_clean_light');
+        return AppThemeManager.getPaletteById(isDarkMode ? 'default_clean_dark' : 'default_clean_light');
     }
   }
 

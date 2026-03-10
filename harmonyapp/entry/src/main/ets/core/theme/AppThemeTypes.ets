@@ -4,6 +4,7 @@ export type ResolvedThemeId =
   | 'default_clean_light'
   | 'default_clean_dark'
   | 'tactile_minimal_light'
+  | 'tactile_minimal_dark'
   | 'zen_artistic_light';
 
 export interface AppThemeShadow {

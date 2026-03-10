@@ -2,6 +2,18 @@
 
 ## 1. 系统架构
 
+## 0. 单机建议拓扑
+
+如果在同一台电脑上同时承担开发、测试、部署预演、运行，建议按以下边界拆分：
+
+| 层级 | 进程形态 | 默认端口 | 数据隔离 |
+|---|---|---|---|
+| 开发层 | 本机 `cargo run` / `pnpm dev` | backend `5496`、frontend `5173` | 可连本地开发库 |
+| 测试层 | 本机测试进程 + Docker 基础设施 | PostgreSQL `5432`、Redis `6380` | 强制使用 `hotspot_test` + `redis-test` |
+| 运行预演层 | Docker `runtime` profile | backend `8080`、frontend `3000` | 与测试层 Redis 分离 |
+
+`deploy/docker-compose.yml` 已将 `backend` 和 `frontend` 放入 `runtime` profile，因此默认 `docker compose up -d` 只启动基础设施层；只有显式带上 `--profile runtime` 才会启动容器化应用层。
+
 ### 1.1 整体架构
 
 HotSpot 采用前后端分离架构，通过 Nginx 作为反向代理和负载均衡器。
@@ -988,6 +1000,30 @@ redis-sentinel /etc/redis/sentinel.conf
 
 ### 9.3 容器化部署
 
+在执行 Docker 离线构建前，先在仓库根目录运行以下命令，确保 SQLx 元数据与数据库 schema 已同步：
+
+```bash
+./deploy/prepare_docker.sh
+```
+
+其中测试命令必须使用独立的测试数据库和测试 Redis，不要复用运行时实例。
+
+若是在同一台机器上做运行预演，请使用：
+
+```bash
+docker compose -f deploy/docker-compose.yml --profile runtime up -d backend frontend
+```
+
+若宿主机已有同类服务占用端口，可在启动前覆盖 host 端口：
+
+```bash
+HOTSPOT_BACKEND_HOST_PORT=18080 \
+HOTSPOT_FRONTEND_HOST_PORT=13000 \
+HOTSPOT_MINIO_API_HOST_PORT=19000 \
+HOTSPOT_MINIO_CONSOLE_HOST_PORT=19001 \
+docker compose -f deploy/docker-compose.yml --profile runtime up -d backend frontend minio
+```
+
 **Docker Compose 示例**：
 
 ```yaml
@@ -999,7 +1035,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - DATABASE_URL=postgresql://hotspot:password@postgres:5432/hotspot
+      - DATABASE_URL=postgresql://hotspot:hotspot@postgres:5432/hotspot
       - REDIS_URL=redis://:password@redis:6379
     depends_on:
       - postgres

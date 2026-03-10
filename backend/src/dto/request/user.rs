@@ -83,8 +83,6 @@ pub struct UpdateProfileRequest {
     pub gender: Option<Gender>,
     pub avatar_file_id: Option<String>,
     pub tags: Option<Vec<String>>,
-    pub privacy_level: Option<PrivacyLevel>,
-    pub clear_bio: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]

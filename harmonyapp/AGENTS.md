@@ -88,6 +88,22 @@ const result = await HttpUtil.post<ApiResponse<AuthData>>(
 - 响应使用 `RelativeLocation`（含 distance、bearing_degrees）。
 - **禁止在客户端计算距离或角度**，由后端 PostGIS 完成。
 
+## 顶部/底部安全区（Safe Area）规则
+
+- 应用入口在 `EntryAbility` 中通过 `setWindowLayoutFullScreen(true)` 打开全屏布局，并使用
+  `getWindowAvoidArea(TYPE_SYSTEM / TYPE_NAVIGATION_INDICATOR)` 计算 `safeAreaTop` / `safeAreaBottom`，
+  这两个值就是系统状态栏和系统导航栏对应的**不可放置交互内容区域高度（vp）**。
+- **可交互组件和正文内容**（按钮、输入框、列表、卡片、文字等）必须全部布局在 Safe Area 内：
+  页面根布局应至少使用 `safeAreaTop` / `safeAreaBottom` 或 `SafeAreaUtils.resolveTopPadding/resolveBottomPadding`
+  进行内边距计算，确保不会被状态栏或导航栏遮挡。
+- **允许扩展的内容**：纯背景层（纯色、渐变、模糊蒙层、阴影等非交互元素）可以通过 `expandSafeArea`
+  或 `Stack` 等方式延伸到状态栏 / 导航栏区域，以获得沉浸式效果。但这些区域内**不得出现可点击组件或正文文本**。
+- 是否可以把交互内容放到屏幕最顶部/最底部，必须以系统返回的 avoid area 为准：
+  当 `safeAreaTop == 0` 或 `safeAreaBottom == 0` 时，说明对应系统栏当前不存在（例如某些全屏场景、
+  手势导航下无可见导航条），此时才允许交互内容延伸到该边缘；禁止自行硬编码“某些设备没有导航栏”。
+- 顶部通用头部组件 `SystemPageHeader`、主壳页面 `features/main/pages/Index.ets` 等必须持续复用
+  `safeAreaTop` / `safeAreaBottom`，不得绕过统一 Safe Area 处理在局部硬编码固定高度。
+
 ## 实现检查清单
 
 - [ ] 架构一致性：有无类似页面/组件？遵循相同目录结构？
@@ -112,6 +128,7 @@ const result = await HttpUtil.post<ApiResponse<AuthData>>(
 - [ ] 使用 `Image($r('sys.media.*'))` 而非 `SymbolSpan`？
 - [ ] 硬编码颜色/字体/间距？
 - [ ] 绕过统一层或新建单例或重复实现？
+- [ ] 将按钮、输入框、列表项等交互组件放入系统状态栏 / 系统导航栏覆盖区域（未按 `safeAreaTop` / `safeAreaBottom` 预留内边距）？
 
 ## 安全规则
 

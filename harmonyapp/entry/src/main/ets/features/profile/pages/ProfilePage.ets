@@ -240,6 +240,21 @@ export struct ProfilePage {
     return this.getCurrentThemePalette().accentText;
   }
 
+  private getPrimaryTextColor(): string {
+    const palette = this.getCurrentThemePalette();
+    return palette.id === 'tactile_minimal_dark' ? '#E7E0D6' : '#7B5D43';
+  }
+
+  private getSecondaryTextColor(): string {
+    const palette = this.getCurrentThemePalette();
+    return palette.id === 'tactile_minimal_dark' ? '#AAB7C4' : '#8E735C';
+  }
+
+  private getWarningTextColor(): string {
+    const palette = this.getCurrentThemePalette();
+    return palette.id === 'tactile_minimal_dark' ? '#E6CFAE' : '#9A7241';
+  }
+
   private getSoftCardShadow(): ShadowOptions {
     return AppThemeVisuals.getSurfaceShadow(this.resolvedThemeId);
   }
@@ -644,7 +659,7 @@ export struct ProfilePage {
             Text(this.viewedUserProfile?.user?.nickname ?? '未知用户')
               .fontSize(DesignConstants.FONT.SIZE.XXL)
               .fontWeight(FontWeight.Bold)
-              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              .fontColor(this.getPrimaryTextColor())
               .textAlign(TextAlign.Center)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -656,7 +671,7 @@ export struct ProfilePage {
             } else {
               Text('离线')
                 .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                .fontColor(this.getSecondaryTextColor())
             }
           }
           .width('100%')
@@ -675,11 +690,11 @@ export struct ProfilePage {
           Column({ space: DesignConstants.SPACING.SM }) {
             Text('个人简介')
               .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .fontColor(this.getSecondaryTextColor())
             Text(this.viewedUserProfile?.bio?.length ? this.viewedUserProfile?.bio : '这个人很神秘，暂时还没有留下简介')
               .fontSize(DesignConstants.FONT.SIZE.MD)
               .lineHeight(22)
-              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              .fontColor(this.getPrimaryTextColor())
           }
           .width('100%')
           .padding(DesignConstants.SPACING.LG)
@@ -728,7 +743,7 @@ export struct ProfilePage {
               .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontWeight(FontWeight.Medium)
               .backgroundColor(this.getSurfaceSubtle())
-              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              .fontColor(this.getPrimaryTextColor())
               .border({ width: 1, color: this.getSurfaceBorder() })
               .onClick(() => {
                 AppRouter.pop();
@@ -767,18 +782,18 @@ export struct ProfilePage {
           Text() {
             SymbolSpan($r(AppIcon.PERSON))
               .fontSize(36)
-              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+              .fontColor([this.getSecondaryTextColor()])
           }
         }
 
         Text('游客模式')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Bold)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getPrimaryTextColor())
 
         Text('登录后解锁完整体验')
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getSecondaryTextColor())
       }
       .width('100%')
       .alignItems(HorizontalAlign.Center)
@@ -824,7 +839,7 @@ export struct ProfilePage {
           .width('80%')
           .height(48)
           .backgroundColor(this.getSurfaceSubtle())
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getPrimaryTextColor())
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .onClick(() => {
@@ -839,11 +854,11 @@ export struct ProfilePage {
         Text() {
           SymbolSpan($r(AppIcon.SETTINGS))
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+            .fontColor([this.getSecondaryTextColor()])
         }
         Text('设置')
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getSecondaryTextColor())
       }
       .justifyContent(FlexAlign.Center)
       .width('100%')
@@ -876,10 +891,10 @@ export struct ProfilePage {
       Text(title)
         .fontSize(DesignConstants.FONT.SIZE.MD)
         .fontWeight(FontWeight.Medium)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .fontColor(this.getPrimaryTextColor())
       Text(subtitle)
         .fontSize(DesignConstants.FONT.SIZE.XS)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .fontColor(this.getSecondaryTextColor())
         .textAlign(TextAlign.Center)
     }
     .width('100%')
@@ -958,18 +973,18 @@ export struct ProfilePage {
             Text() {
               SymbolSpan($r(AppIcon.INFO))
                 .fontSize(DesignConstants.FONT.SIZE.LG)
-                .fontColor([$r('sys.color.ohos_id_color_warning')])
+                .fontColor([this.getWarningTextColor()])
             }
             Text('临时用户')
               .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontWeight(FontWeight.Medium)
-              .fontColor($r('sys.color.ohos_id_color_warning'))
+              .fontColor(this.getWarningTextColor())
           }
           .width('100%')
 
           Text('当前为临时用户，数据可能不会永久保留。注册账号可保留所有数据并解锁完整功能。')
             .fontSize(13)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getSecondaryTextColor())
 
            Button('升级为完整账号')
              .type(ButtonType.Capsule)
@@ -1072,12 +1087,12 @@ export struct ProfilePage {
         Text('升级为完整账号')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Bold)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getPrimaryTextColor())
           .alignSelf(ItemAlign.Start)
 
         Text('设置登录凭证后，你的临时账号将升级为完整账号，所有数据都会保留。')
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getSecondaryTextColor())
 
         TextInput({ placeholder: '邮箱 / 用户名（登录凭证）' })
           .fontSize(DesignConstants.FONT.SIZE.LG)
@@ -1116,7 +1131,7 @@ export struct ProfilePage {
           Button('取消')
             .type(ButtonType.Capsule)
             .backgroundColor(this.getSurfaceSubtle())
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getPrimaryTextColor())
             .layoutWeight(1)
             .height(44)
             .enabled(!this.isUpgrading)
@@ -1159,19 +1174,19 @@ export struct ProfilePage {
       Text(this.currentUser?.nickname || '')
         .fontSize(DesignConstants.FONT.SIZE.XL)
         .fontWeight(FontWeight.Medium)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .fontColor(this.getPrimaryTextColor())
 
       if (this.userType === 'temp') {
         Text('临时用户')
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_warning'))
+          .fontColor(this.getWarningTextColor())
           .backgroundColor(this.getSurfaceSubtle())
           .borderRadius(DesignConstants.RADIUS.MD)
           .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
       } else if (this.isAdminUser()) {
         Text('管理员')
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_emphasize'))
+          .fontColor(this.getAccentBackground())
           .backgroundColor(this.getSurfaceSubtle())
           .borderRadius(DesignConstants.RADIUS.MD)
           .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
@@ -1180,7 +1195,7 @@ export struct ProfilePage {
       if (this.currentUser?.bio) {
         Text(this.currentUser.bio)
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getSecondaryTextColor())
           .textAlign(TextAlign.Center)
           .maxLines(3)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -1223,11 +1238,11 @@ export struct ProfilePage {
         if (this.isAvatarUploading) {
           Text('头像上传中...')
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getSecondaryTextColor())
         } else {
           Text('点击头像更换')
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getSecondaryTextColor())
         }
       }
 
@@ -1254,18 +1269,18 @@ export struct ProfilePage {
         Button('取消')
           .type(ButtonType.Normal)
           .backgroundColor(Color.Transparent)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getPrimaryTextColor())
           .layoutWeight(1)
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+          .border({ width: 1, color: this.getSurfaceBorder() })
           .enabled(!this.isLoading && !this.isAvatarUploading)
           .opacity(this.isLoading || this.isAvatarUploading ? 0.58 : 1)
           .onClick(() => this.cancelEdit())
 
         Button(this.isLoading ? '保存中...' : '保存')
           .type(ButtonType.Normal)
-          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-          .fontColor(Color.White)
+          .backgroundColor(this.getAccentBackground())
+          .fontColor(this.getAccentText())
           .layoutWeight(1)
           .borderRadius(DesignConstants.RADIUS.XXL)
           .enabled(!this.isLoading && !this.isAvatarUploading)
@@ -1283,7 +1298,7 @@ export struct ProfilePage {
       Text('我的数据')
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .fontWeight(FontWeight.Medium)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .fontColor(this.getPrimaryTextColor())
         .alignSelf(ItemAlign.Start)
 
       Row({ space: DesignConstants.SPACING.MD }) {
@@ -1309,20 +1324,20 @@ export struct ProfilePage {
           Text() {
             SymbolSpan($r(icon))
               .fontSize(18)
-              .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+              .fontColor([this.getAccentBackground()])
           }
           Text(title)
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getSecondaryTextColor())
             .layoutWeight(1)
         }
         Text(value)
           .fontSize(22)
           .fontWeight(FontWeight.Bold)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getPrimaryTextColor())
         Text(description)
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getSecondaryTextColor())
       }
       .width('100%')
     }
@@ -1345,20 +1360,20 @@ export struct ProfilePage {
       Text() {
         SymbolSpan($r(icon))
           .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+          .fontColor([this.getAccentBackground()])
       }
       .width(24)
       .textAlign(TextAlign.Center)
 
       Text(title)
         .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .fontColor(this.getPrimaryTextColor())
         .layoutWeight(1)
 
       Text() {
         SymbolSpan($r(AppIcon.FORWARD))
           .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+          .fontColor([this.getSecondaryTextColor()])
       }
     }
     .width('100%')
@@ -1387,11 +1402,11 @@ export struct ProfilePage {
         Text('快速体验')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Bold)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getPrimaryTextColor())
 
         Text('无需注册，输入昵称即可快速体验')
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getSecondaryTextColor())
 
         TextInput({ placeholder: '请输入你的昵称' })
           .fontSize(DesignConstants.FONT.SIZE.LG)
@@ -1410,8 +1425,8 @@ export struct ProfilePage {
 
         Button(this.isQuickStarting ? '正在创建...' : '开始体验')
           .type(ButtonType.Capsule)
-          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-          .fontColor(Color.White)
+          .backgroundColor(this.getAccentBackground())
+          .fontColor(this.getAccentText())
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .width('100%')
           .height(48)
@@ -1421,7 +1436,7 @@ export struct ProfilePage {
 
         Text('临时用户可使用大部分功能，随时可升级为完整账号')
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getSecondaryTextColor())
           .textAlign(TextAlign.Center)
       }
       .width('100%')

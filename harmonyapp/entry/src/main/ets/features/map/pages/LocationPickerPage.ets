@@ -20,12 +20,12 @@ import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF13;
 const TAG: string = 'LocationPickerPage';
-const SEARCH_PANEL_HEIGHT: number = 520;
+const SEARCH_PANEL_HEIGHT: number = 440;
 const MAX_HISTORY_ITEMS: number = 5;
 // 底部面板三段式吸附位置
-const PANEL_SNAP_MIN: number = 200;       // 收起：手柄 + 搜索栏 + 确认按钮
-const PANEL_SNAP_HALF: number = 340;      // 半展开：显示部分历史记录
-const PANEL_SNAP_MAX: number = 500;       // 全展开：完整内容
+const PANEL_SNAP_MIN: number = 148;       // 收起：手柄 + 搜索栏 + 确认按钮
+const PANEL_SNAP_HALF: number = 252;      // 半展开：显示部分历史记录
+const PANEL_SNAP_MAX: number = 420;       // 全展开：完整内容
 const DEFAULT_GESTURE_HINT: string = '双击（桌面）或长按（移动端）地图可快速定位';
 const DOUBLE_CLICK_PLACEMENT_HINT: string = '已通过双击定位到该位置';
 const LONG_PRESS_PLACEMENT_HINT: string = '已通过长按定位到该位置';
@@ -237,6 +237,7 @@ struct SearchPanel {
   @Link isSearching: boolean;
   @Link searchResults: LocationInfo[];
   @Link anchorHistory: AnchorHistoryItem[];
+  controller: SearchController = new SearchController();
   onSearch: () => void = () => {};
   onClose: () => void = () => {};
   onClearHistory: () => void = () => {};
@@ -250,6 +251,10 @@ struct SearchPanel {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
+  private getBottomInset(): number {
+    return this.safeAreaBottom > 0 ? this.safeAreaBottom + 8 : DesignConstants.SPACING.SM;
+  }
+
   build() {
     Column() {
       // 搜索行 - 使用官方 Search 组件
@@ -258,7 +263,7 @@ struct SearchPanel {
         Search({
           value: this.searchText,
           placeholder: '搜索地点、地标或坐标',
-          controller: new SearchController()
+          controller: this.controller
         })
           .id('locationPickerSearchInput')
           .layoutWeight(1)
@@ -483,7 +488,7 @@ struct SearchPanel {
       left: DesignConstants.SPACING.LG,
       right: DesignConstants.SPACING.LG,
       top: DesignConstants.SPACING.LG,
-      bottom: DesignConstants.SPACING.MD + this.safeAreaBottom
+      bottom: this.getBottomInset()
     })
     .backgroundColor(this.getPalette().surfaceBackground)
     .border({ width: { top: 1 }, color: $r('app.color.divider') })
@@ -512,6 +517,10 @@ struct MainPanel {
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private getBottomInset(): number {
+    return this.safeAreaBottom > 0 ? this.safeAreaBottom + 8 : DesignConstants.SPACING.SM;
   }
 
   private snapToNearest(): void {
@@ -695,7 +704,7 @@ struct MainPanel {
       left: DesignConstants.SPACING.LG,
       right: DesignConstants.SPACING.LG,
       top: 0,
-      bottom: DesignConstants.SPACING.MD + this.safeAreaBottom
+      bottom: this.getBottomInset()
     })
     .backgroundColor(this.getPalette().surfaceBackground)
     .border({ width: { top: 1 }, color: $r('app.color.divider') })
@@ -747,6 +756,8 @@ export struct LocationPickerPage {
   private overlappingGroupsMap: Map<string, MapRenderItem[]> = new Map();
   private resolveTimerId: number = 0;
   private renderTimerId: number = 0;
+  private renderRequestId: number = 0;
+  private resolveRequestId: number = 0;
   private isFirstCameraIdle: boolean = true;
   private skipNextResolve: boolean = false;
   private searchDebounceTimerId: number = 0;
@@ -757,6 +768,7 @@ export struct LocationPickerPage {
   private lastViewportSignature: string = '';
   private mapActions: NativeMapActions | null = null;
   private hasShownGestureHint: boolean = false;
+  private searchController: SearchController = new SearchController();
 
   async aboutToAppear() {
     SystemUiController.syncWithCurrentTheme();
@@ -825,7 +837,7 @@ export struct LocationPickerPage {
 
     this.initialised = true;
     this.showInitialGestureHint();
-    await this.fetchMapRenderData();
+    await this.fetchMapRenderData('init_location');
   }
 
   private showInitialGestureHint(): void {
@@ -861,7 +873,7 @@ export struct LocationPickerPage {
 
   /** MapKit camera padding：根据面板/搜索面板高度动态计算 */
   private getMapPaddingBottom(): number {
-    return this.getActivePanelHeight() + this.safeAreaBottom + 12;
+    return this.getActivePanelHeight() + 8;
   }
 
   private getOverlayOffset(): number {
@@ -869,11 +881,11 @@ export struct LocationPickerPage {
   }
 
   private getControlsBottomOffset(): number {
-    return this.getOverlayOffset();
+    return this.getOverlayOffset() + 12;
   }
 
   private getLogoPaddingBottom(): number {
-    return this.getOverlayOffset();
+    return this.getOverlayOffset() + 8;
   }
 
   private isLocationPickMode(): boolean {
@@ -954,10 +966,18 @@ export struct LocationPickerPage {
       if (this.resolveTimerId > 0) {
         clearTimeout(this.resolveTimerId);
       }
-      this.isLoading = true;
       this.resolveTimerId = setTimeout(() => {
         this.resolveLocation(camera.latitude, camera.longitude);
-      }, 400);
+      }, 180);
+    }
+
+    if (this.initialised && this.mapReady) {
+      if (this.renderTimerId > 0) {
+        clearTimeout(this.renderTimerId);
+      }
+      this.renderTimerId = setTimeout(() => {
+        this.fetchMapRenderData('camera_idle');
+      }, 150);
     }
 
   }
@@ -965,12 +985,15 @@ export struct LocationPickerPage {
   private handleMapReady(): void {
     this.mapReady = true;
     if (this.initialised) {
-      this.fetchMapRenderData();
+      this.fetchMapRenderData('map_ready');
     }
   }
 
   private collapsePanel(): void {
     this.overlappingPanelItems = [];
+    if (this.showFilterPanel) {
+      this.showFilterPanel = false;
+    }
     if (this.showSearchBar) {
       this.closeSearchPanel(true);
       return;
@@ -992,8 +1015,8 @@ export struct LocationPickerPage {
       clearTimeout(this.renderTimerId);
     }
     this.renderTimerId = setTimeout(() => {
-      this.fetchMapRenderData();
-    }, 120);
+      this.fetchMapRenderData('visible_region_change');
+    }, 150);
   }
 
   private async onMapDoubleClick(coord: MapCoordinate): Promise<void> {
@@ -1005,17 +1028,23 @@ export struct LocationPickerPage {
   }
 
   private async resolveLocation(lat: number, lng: number): Promise<void> {
+    const requestId = ++this.resolveRequestId;
     this.isLoading = true;
     try {
-      const addr = await LoadingUtil.withMinimumTime(() => LocationUtil.reverseGeocode(lat, lng), LoadingUtil.DEFAULT_ACTION_MS);
+      const addr = await LocationUtil.reverseGeocode(lat, lng);
+      if (requestId !== this.resolveRequestId) {
+        return;
+      }
       this.locationName = addr?.fullAddress || '未知位置';
     } catch (error) {
       hilog.warn(DOMAIN_NUMBER, TAG, `解析位置失败: ${JSON.stringify(error)}`);
-      if (this.locationName.length === 0) {
+      if (requestId === this.resolveRequestId && this.locationName.length === 0) {
         this.locationName = '未知位置';
       }
     } finally {
-      this.isLoading = false;
+      if (requestId === this.resolveRequestId) {
+        this.isLoading = false;
+      }
     }
   }
 
@@ -1053,6 +1082,8 @@ export struct LocationPickerPage {
   }
 
   private openSearchPanel(): void {
+    this.showFilterPanel = false;
+    this.overlappingPanelItems = [];
     this.searchText = '';
     this.searchResults = [];
     this.getUIContext().animateTo({ duration: 250, curve: Curve.FastOutSlowIn }, () => {
@@ -1090,6 +1121,7 @@ export struct LocationPickerPage {
   }
 
   private selectSearchResult(result: LocationInfo): void {
+    this.overlappingPanelItems = [];
     this.skipNextResolve = true;
     this.setCenter(result.latitude, result.longitude);
     this.locationName = result.locationName || '';
@@ -1098,6 +1130,7 @@ export struct LocationPickerPage {
   }
 
   private selectHistoryItem(item: AnchorHistoryItem): void {
+    this.overlappingPanelItems = [];
     this.skipNextResolve = true;
     this.setCenter(item.latitude, item.longitude);
     this.locationName = item.locationName || '历史位置';
@@ -1106,7 +1139,7 @@ export struct LocationPickerPage {
   }
 
   private confirm(): void {
-    if (this.locationName.length === 0 || this.isLoading) {
+    if (this.locationName.length === 0) {
       SystemToast.show('请等待位置识别完成', this.getUIContext());
       return;
     }
@@ -1130,7 +1163,7 @@ export struct LocationPickerPage {
     AppRouter.pop();
   }
 
-  private async fetchMapRenderData(): Promise<void> {
+  private async fetchMapRenderData(trigger: string = 'unknown'): Promise<void> {
     if (!this.initialised || !this.mapReady) {
       return;
     }
@@ -1138,18 +1171,27 @@ export struct LocationPickerPage {
     if (!viewport) {
       return;
     }
-    const signature = `${viewport.bounds.north.toFixed(6)}|${viewport.bounds.south.toFixed(6)}|${viewport.bounds.east.toFixed(6)}|${viewport.bounds.west.toFixed(6)}|${viewport.zoom.toFixed(2)}`;
-    if (signature === this.lastViewportSignature && this.renderItems.length > 0) {
+    const filter = this.resolveMapFilter();
+    const filterSignature = filter?.data_type ?? 'all';
+    const signature = `${viewport.bounds.north.toFixed(6)}|${viewport.bounds.south.toFixed(6)}|${viewport.bounds.east.toFixed(6)}|${viewport.bounds.west.toFixed(6)}|${viewport.zoom.toFixed(2)}|${filterSignature}`;
+    if (signature === this.lastViewportSignature) {
+      hilog.info(DOMAIN_NUMBER, TAG, `skip map/render duplicate trigger=${trigger} signature=${signature}`);
       this.updateMarkers();
       return;
     }
-    this.lastViewportSignature = signature;
+    const requestId = ++this.renderRequestId;
     try {
-      const filter = this.resolveMapFilter();
+      hilog.info(DOMAIN_NUMBER, TAG, `start map/render trigger=${trigger} requestId=${requestId} signature=${signature}`);
       const request: MapRenderRequest = filter ? { viewport, filter } : { viewport };
       const response = await ApiClient.renderMap(request);
+      if (requestId !== this.renderRequestId) {
+        hilog.info(DOMAIN_NUMBER, TAG, `ignore stale map/render response trigger=${trigger} requestId=${requestId}`);
+        return;
+      }
       if (response.code === 0) {
+        this.lastViewportSignature = signature;
         this.renderItems = response.data?.items ?? [];
+        hilog.info(DOMAIN_NUMBER, TAG, `finish map/render trigger=${trigger} requestId=${requestId} items=${this.renderItems.length}`);
         const toastMessage = response.data?.toast_message ?? '';
         if (toastMessage.length > 0) {
           this.showMapToast(toastMessage, 3000);
@@ -1157,9 +1199,11 @@ export struct LocationPickerPage {
           this.mapToastMessage = '';
         }
         this.updateMarkers();
+      } else {
+        hilog.warn(DOMAIN_NUMBER, TAG, `map/render business error trigger=${trigger} requestId=${requestId} code=${response.code} message=${response.message ?? ''}`);
       }
     } catch (error) {
-      hilog.warn(DOMAIN_NUMBER, TAG, `render map failed: ${JSON.stringify(error)}`);
+      hilog.warn(DOMAIN_NUMBER, TAG, `render map failed trigger=${trigger} requestId=${requestId}: ${JSON.stringify(error)}`);
     }
   }
 
@@ -1393,7 +1437,24 @@ export struct LocationPickerPage {
     return { data_type: dataType };
   }
 
+  private applyFilterChange(toggle: () => void): void {
+    toggle();
+    this.lastViewportSignature = '';
+    if (this.renderTimerId > 0) {
+      clearTimeout(this.renderTimerId);
+    }
+    if (this.initialised && this.mapReady) {
+      this.fetchMapRenderData('filter_change');
+    } else {
+      this.updateMarkers();
+    }
+  }
+
   private onMarkerItemClick(marker: MapMarker): void {
+    this.showFilterPanel = false;
+    if (this.showSearchBar) {
+      this.closeSearchPanel();
+    }
     // 客户端合并的重叠 marker：弹出选择菜单
     if (marker.id.startsWith(OVERLAP_GROUP_PREFIX)) {
       const groupItems = this.overlappingGroupsMap.get(marker.id);
@@ -1413,11 +1474,14 @@ export struct LocationPickerPage {
   private showOverlappingPanel(items: MapRenderItem[]): void {
     const entityItems = items.filter((item: MapRenderItem) => item.entity !== undefined);
     if (entityItems.length === 0) return;
+    this.showFilterPanel = false;
     this.overlappingPanelItems = entityItems;
   }
 
   private navigateToItem(item: MapRenderItem): void {
     if (!item.entity) return;
+    this.overlappingPanelItems = [];
+    this.showFilterPanel = false;
     if (item.type === 'group') {
       const param = new GroupDetailRouteParam();
       param.groupId = item.entity.payload_id;
@@ -1497,7 +1561,13 @@ export struct LocationPickerPage {
             safeAreaTop: this.safeAreaTop,
             resolvedThemeId: this.resolvedThemeId,
             onBack: () => { AppRouter.pop(); },
-            onToggleFilter: () => { this.showFilterPanel = !this.showFilterPanel; },
+            onToggleFilter: () => {
+              this.overlappingPanelItems = [];
+              if (!this.showFilterPanel) {
+                this.closeSearchPanel();
+              }
+              this.showFilterPanel = !this.showFilterPanel;
+            },
           })
           if (this.showFilterPanel) {
             Row() {
@@ -1507,16 +1577,13 @@ export struct LocationPickerPage {
                 showMoments: this.showMoments,
                 resolvedThemeId: this.resolvedThemeId,
                 onToggleUsers: () => {
-                  this.showUsers = !this.showUsers;
-                  this.updateMarkers();
+                  this.applyFilterChange(() => { this.showUsers = !this.showUsers; });
                 },
                 onToggleGroups: () => {
-                  this.showGroups = !this.showGroups;
-                  this.updateMarkers();
+                  this.applyFilterChange(() => { this.showGroups = !this.showGroups; });
                 },
                 onToggleMoments: () => {
-                  this.showMoments = !this.showMoments;
-                  this.updateMarkers();
+                  this.applyFilterChange(() => { this.showMoments = !this.showMoments; });
                 }
               })
             }
@@ -1536,6 +1603,7 @@ export struct LocationPickerPage {
             isSearching: this.isSearching,
             searchResults: this.searchResults,
             anchorHistory: this.anchorHistory,
+            controller: this.searchController,
             onSearch: (): void => { this.doSearch(); },
             onClose: (): void => this.closeSearchPanel(),
             onClearHistory: (): void => this.clearAnchorHistory(),

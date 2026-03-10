@@ -14,6 +14,162 @@ impl MapRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
+
+    pub async fn count_users_by_bounds(
+        &self,
+        west: f64,
+        south: f64,
+        east: f64,
+        north: f64,
+    ) -> Result<i64> {
+        let row = sqlx::query!(
+            r#"
+            SELECT COUNT(*)::bigint as "count!"
+            FROM users u
+            WHERE u.status = 'normal'
+              AND u.deleted_at IS NULL
+              AND ST_Intersects(u.location, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
+            "#,
+            west,
+            south,
+            east,
+            north
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(row.count)
+    }
+
+    pub async fn count_groups_by_bounds(
+        &self,
+        west: f64,
+        south: f64,
+        east: f64,
+        north: f64,
+    ) -> Result<i64> {
+        let row = sqlx::query!(
+            r#"
+            SELECT COUNT(*)::bigint as "count!"
+            FROM groups g
+            WHERE g.dismissed_at IS NULL
+              AND g.location IS NOT NULL
+              AND ST_Intersects(g.location, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
+            "#,
+            west,
+            south,
+            east,
+            north
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(row.count)
+    }
+
+    pub async fn count_moments_by_bounds(
+        &self,
+        west: f64,
+        south: f64,
+        east: f64,
+        north: f64,
+        start_time: Option<String>,
+        end_time: Option<String>,
+    ) -> Result<i64> {
+        let row = sqlx::query!(
+            r#"
+            SELECT COUNT(*)::bigint as "count!"
+            FROM moments m
+            WHERE m.deleted_at IS NULL
+              AND m.location IS NOT NULL
+              AND ST_Intersects(m.location, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
+              AND ($5::text IS NULL OR m.created_at >= ($5::text)::timestamptz)
+              AND ($6::text IS NULL OR m.created_at <= ($6::text)::timestamptz)
+            "#,
+            west,
+            south,
+            east,
+            north,
+            start_time,
+            end_time
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(row.count)
+    }
+
+    pub async fn count_friend_users_by_bounds(
+        &self,
+        user_id: i64,
+        west: f64,
+        south: f64,
+        east: f64,
+        north: f64,
+    ) -> Result<i64> {
+        let row = sqlx::query!(
+            r#"
+            SELECT COUNT(*)::bigint as "count!"
+            FROM users u
+            WHERE u.status = 'normal'
+              AND u.deleted_at IS NULL
+              AND u.location IS NOT NULL
+              AND ST_Intersects(u.location, ST_MakeEnvelope($2, $3, $4, $5, 4326)::geography)
+              AND (
+                  u.user_id = $1
+                  OR (
+                      EXISTS (SELECT 1 FROM follows f1 WHERE f1.follower_id = $1 AND f1.following_id = u.user_id)
+                      AND EXISTS (SELECT 1 FROM follows f2 WHERE f2.follower_id = u.user_id AND f2.following_id = $1)
+                  )
+              )
+            "#,
+            user_id,
+            west,
+            south,
+            east,
+            north
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(row.count)
+    }
+
+    pub async fn count_friend_moments_by_bounds(
+        &self,
+        user_id: i64,
+        west: f64,
+        south: f64,
+        east: f64,
+        north: f64,
+        start_time: Option<String>,
+        end_time: Option<String>,
+    ) -> Result<i64> {
+        let row = sqlx::query!(
+            r#"
+            SELECT COUNT(*)::bigint as "count!"
+            FROM moments m
+            WHERE m.deleted_at IS NULL
+              AND m.location IS NOT NULL
+              AND ST_Intersects(m.location, ST_MakeEnvelope($2, $3, $4, $5, 4326)::geography)
+              AND (
+                  m.user_id = $1
+                  OR (
+                      EXISTS (SELECT 1 FROM follows f1 WHERE f1.follower_id = $1 AND f1.following_id = m.user_id)
+                      AND EXISTS (SELECT 1 FROM follows f2 WHERE f2.follower_id = m.user_id AND f2.following_id = $1)
+                  )
+              )
+              AND ($6::text IS NULL OR m.created_at >= ($6::text)::timestamptz)
+              AND ($7::text IS NULL OR m.created_at <= ($7::text)::timestamptz)
+            "#,
+            user_id,
+            west,
+            south,
+            east,
+            north,
+            start_time,
+            end_time
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(row.count)
+    }
 }
 
 /// 地图聚类结果
