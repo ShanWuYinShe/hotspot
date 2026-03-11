@@ -69,9 +69,31 @@ export function mergeMessagesByIdAndSentAt<T extends MessageWithIdAndTime>(
 	for (const message of recentMessages) {
 		merged.set(message.message_id, message);
 	}
-	return Array.from(merged.values()).sort((a, b) => {
-		const timeDiff = new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime();
-		if (timeDiff !== 0) return timeDiff;
-		return a.message_id.localeCompare(b.message_id);
-	});
+		return Array.from(merged.values()).sort((a, b) => {
+			const timeDiff = new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime();
+			if (timeDiff !== 0) return timeDiff;
+			return a.message_id.localeCompare(b.message_id);
+		});
+}
+
+/**
+ * 在当前消息列表中，根据一批可见消息 ID 计算“最后一条可见消息”的 ID。
+ * 用于批量已读场景，确保 up_to_message_id 对应时间上最后的一条消息。
+ */
+export function resolveLatestVisibleMessageId<T extends { message_id: string }>(
+	messages: T[],
+	visibleMessageIds: string[]
+): string | undefined {
+	if (visibleMessageIds.length === 0) return undefined;
+	const indexMap = new Map(messages.map((message, index) => [message.message_id, index] as const));
+	let latestId: string | undefined;
+	let latestIndex = -1;
+	for (const messageId of visibleMessageIds) {
+		const index = indexMap.get(messageId);
+		if (index !== undefined && index > latestIndex) {
+			latestIndex = index;
+			latestId = messageId;
+		}
+	}
+	return latestId ?? visibleMessageIds[visibleMessageIds.length - 1];
 }

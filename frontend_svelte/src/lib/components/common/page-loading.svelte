@@ -12,7 +12,7 @@
 		style="box-shadow: 0 0 20px var(--color-glow-primary);"
 	>
 		<div
-			class="h-full animate-pulse bg-gradient-to-r from-transparent via-white/50 to-transparent"
+			class="h-full animate-pulse bg-gradient-to-r from-transparent via-white/50 to-transparent dark:via-white/25"
 			style="animation: shimmer 1.5s infinite;"
 		></div>
 	</div>

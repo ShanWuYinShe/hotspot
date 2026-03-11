@@ -633,10 +633,10 @@ export struct MessagePage {
   @Builder
   SwipeActionEnd(item: ChatItem) {
     Row() {
-      Button({ type: ButtonType.Normal, stateEffect: true }) {
-        Column() {
-          Text(this.isChatDeleting(item) ? '处理中...' : '删除')
-            .fontColor(Color.White)
+          Button({ type: ButtonType.Normal, stateEffect: true }) {
+            Column() {
+              Text(this.isChatDeleting(item) ? '处理中...' : '删除')
+            .fontColor($r('app.color.chip_active_text'))
             .fontSize(DesignConstants.FONT.SIZE.LG)
         }
         .width('100%')

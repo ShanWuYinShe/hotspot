@@ -72,10 +72,10 @@ export const buttonVariants = tv({
 				'active:shadow-[1px_1px_0px_currentColor]'
 			),
 			ghost: cn(
-				// Ghost button - no border/shadow until hover
+				// Ghost button - 仅轻微背景高亮，避免按下时出现透明感
 				'border-transparent text-foreground',
-				'hover:bg-primary/10 hover:border-primary/20 hover:text-primary',
-				'active:bg-primary/15'
+				'hover:bg-muted/60 hover:text-foreground',
+				'active:bg-muted/80'
 			),
 			link: cn(
 				// Link button - no border/shadow

@@ -95,7 +95,7 @@ export struct IntelligentLocationCard {
           Text() {
             SymbolSpan($r(AppIcon.INFO))
               .fontSize(DesignConstants.FONT.SIZE.LG)
-              .fontColor([Color.White])
+              .fontColor([this.getPalette().accentText as ResourceColor])
           }
         }
         .width(32)

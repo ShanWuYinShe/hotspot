@@ -100,7 +100,7 @@ export struct LocationBar {
             Text() {
               SymbolSpan($r(AppIcon.LOCATION))
                 .fontSize(14)
-                .fontColor([Color.White])
+                .fontColor([this.getPalette().accentText as ResourceColor])
             }
           }
           .width(28)

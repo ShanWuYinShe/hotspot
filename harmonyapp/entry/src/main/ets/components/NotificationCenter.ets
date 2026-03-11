@@ -348,7 +348,7 @@ export struct NotificationCenter {
           Button('重试')
             .type(ButtonType.Normal)
             .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-            .fontColor(Color.White)
+            .fontColor($r('app.color.chip_active_text'))
             .height(40)
             .borderRadius(DesignConstants.RADIUS.XL)
             .onClick(() => this.refreshNotifications())

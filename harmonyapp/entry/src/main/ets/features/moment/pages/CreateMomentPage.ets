@@ -654,7 +654,7 @@ export struct CreateMomentPage {
         Text() {
           SymbolSpan($r(AppIcon.CANCEL))
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor([Color.White])
+            .fontColor([$r('app.color.chip_active_text')])
         }
       }
       .type(ButtonType.Normal)

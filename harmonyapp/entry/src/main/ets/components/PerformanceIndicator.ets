@@ -134,7 +134,7 @@ export struct PerformanceIndicator {
    */
   private getPerformanceLevel(): PerformanceLevel {
     if (!this.metrics) {
-      const unknownLevel: PerformanceLevel = { level: '未知', color: Color.Gray, icon: AppIcon.QUESTION };
+      const unknownLevel: PerformanceLevel = { level: '未知', color: $r('sys.color.ohos_id_color_text_secondary'), icon: AppIcon.QUESTION };
       return unknownLevel;
     }
 
@@ -149,16 +149,16 @@ export struct PerformanceIndicator {
     score -= Math.min(averageResponseTime / 1000, 1) * 30; // 响应时间影响30分
 
     if (score >= 80) {
-      const excellentLevel: PerformanceLevel = { level: '优秀', color: Color.Green, icon: AppIcon.CHECK };
+      const excellentLevel: PerformanceLevel = { level: '优秀', color: $r('app.color.color_success'), icon: AppIcon.CHECK };
       return excellentLevel;
     } else if (score >= 60) {
-      const goodLevel: PerformanceLevel = { level: '良好', color: Color.Blue, icon: AppIcon.INFO };
+      const goodLevel: PerformanceLevel = { level: '良好', color: $r('sys.color.ohos_id_color_emphasize'), icon: AppIcon.INFO };
       return goodLevel;
     } else if (score >= 40) {
-      const averageLevel: PerformanceLevel = { level: '一般', color: Color.Orange, icon: AppIcon.WARNING };
+      const averageLevel: PerformanceLevel = { level: '一般', color: $r('app.color.color_warning'), icon: AppIcon.WARNING };
       return averageLevel;
     } else {
-      const poorLevel: PerformanceLevel = { level: '较差', color: Color.Red, icon: AppIcon.ERROR };
+      const poorLevel: PerformanceLevel = { level: '较差', color: $r('app.color.color_danger'), icon: AppIcon.ERROR };
       return poorLevel;
     }
   }
@@ -167,9 +167,9 @@ export struct PerformanceIndicator {
    * 获取指标颜色
    */
   private getMetricColor(value: number, thresholds: MetricThresholds): ResourceColor {
-    if (value <= thresholds.good) return Color.Green;
-    if (value <= thresholds.warning) return Color.Orange;
-    return Color.Red;
+    if (value <= thresholds.good) return $r('app.color.color_success');
+    if (value <= thresholds.warning) return $r('app.color.color_warning');
+    return $r('app.color.color_danger');
   }
 
   build() {
@@ -209,12 +209,12 @@ export struct PerformanceIndicator {
           SystemIcon({
             icon: AppIcon.WARNING,
             iconSize: 14,
-            iconColor: Color.Orange
+            iconColor: $r('app.color.color_warning')
           })
           
           Text(this.alerts.length.toString())
             .fontSize(11)
-            .fontColor(Color.Orange)
+            .fontColor($r('app.color.color_warning'))
         }
       }
 
@@ -403,7 +403,7 @@ export struct PerformanceIndicator {
               SystemIcon({
                 icon: alert.level === 'critical' ? AppIcon.ERROR : AppIcon.WARNING,
                 iconSize: 20,
-                iconColor: alert.level === 'critical' ? Color.Red : Color.Orange
+                iconColor: alert.level === 'critical' ? $r('app.color.color_danger') : $r('app.color.color_warning')
               })
 
               Column({ space: 4 }) {
@@ -508,7 +508,7 @@ export struct PerformanceIndicator {
 
           Text(`${this.alerts.length} 个告警`)
             .fontSize(12)
-            .fontColor(Color.Orange)
+            .fontColor($r('app.color.color_warning'))
         }
       }
     }

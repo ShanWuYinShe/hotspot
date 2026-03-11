@@ -5,6 +5,8 @@
 
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppIcon } from './SystemIcon';
+import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 @Reusable
 @Component
@@ -13,6 +15,12 @@ export struct EmptyState {
   @Prop message: string = '';
   @Prop actionLabel: string = '';
   onAction?: () => void;
+
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
 
   build() {
     Column({ space: DesignConstants.SPACING.LG }) {
@@ -32,8 +40,8 @@ export struct EmptyState {
         Button(this.actionLabel ?? '')
           .type(ButtonType.Normal)
           .stateEffect(true)
-          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-          .fontColor(Color.White)
+          .backgroundColor(this.getPalette().accentBackground)
+          .fontColor(this.getPalette().accentText as ResourceColor)
           .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
           .borderRadius(DesignConstants.RADIUS.XL)
           .onClick(() => {

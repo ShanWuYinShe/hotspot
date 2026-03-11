@@ -200,15 +200,12 @@
 		variant="secondary"
 		glow="soft"
 		interactive
-		class="group/card h-full {className}"
+		class="group/card flex h-full flex-col {className}"
 	>
-		<CardContent class="p-5">
+		<CardContent class="flex flex-1 flex-col p-5">
 			{#if variant === 'square'}
-				<!-- 方块模式：强调瀑布流层次与群组身份 -->
-				{@const heightVariants = [196, 218, 244, 208, 232, 220, 204, 238]}
-				{@const idHash = groupInfo.group_id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)}
-				{@const minHeight = heightVariants[idHash % heightVariants.length]}
-				<div class="flex flex-col gap-3" style="min-height: {minHeight}px;">
+				<!-- 方块模式：强调群组信息，同时让卡片高度随内容自适应 -->
+				<div class="flex flex-1 flex-col gap-3">
 					<div
 						class="relative overflow-hidden rounded-2xl border border-border/40 bg-linear-to-br from-secondary/15 via-primary/10 to-muted/30 p-3.5"
 					>

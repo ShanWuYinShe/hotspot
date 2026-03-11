@@ -276,7 +276,7 @@ export struct AccountsPage {
                     if (this.currentUserId === acc.user_id) {
                       Text('当前')
                         .fontSize(DesignConstants.FONT.SIZE.SM)
-                        .fontColor(Color.White)
+                        .fontColor($r('app.color.chip_active_text'))
                         .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
                         .borderRadius(DesignConstants.RADIUS.XL)
                         .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 2, bottom: 2 })
@@ -305,7 +305,7 @@ export struct AccountsPage {
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .height(32)
                         .backgroundColor($r('app.color.color_danger'))
-                        .fontColor(Color.White)
+                        .fontColor($r('app.color.chip_active_text'))
                         .shadow(DesignConstants.SHADOW.SMALL)
                         .border({ width: 1, color: this.getSurfaceBorder() })
                         .onClick(() => this.remove(acc))

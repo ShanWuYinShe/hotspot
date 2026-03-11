@@ -512,12 +512,15 @@ export function getData<T>(response: ClientApiResponse<T>): T | undefined {
 export class ApiError extends Error {
 	code: number;
 	requestId: string;
+  /** 原始响应，便于上层根据 code/data 决定 UI 行为 */
+	original: ClientApiResponse<unknown>;
 
 	constructor(response: ClientApiResponse<unknown>) {
 		super(response.message || '操作失败');
 		this.name = 'ApiError';
 		this.code = response.code;
 		this.requestId = response.request_id ?? '';
+		this.original = response;
 	}
 }
 

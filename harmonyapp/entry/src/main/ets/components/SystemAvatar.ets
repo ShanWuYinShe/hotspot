@@ -67,7 +67,7 @@ export struct SystemAvatar {
           Text(this.getInitials(this.name))
             .fontSize(this.avatarSize * 0.4)
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-            .fontColor(Color.White)
+            .fontColor(this.getPalette().accentText as ResourceColor)
             .textAlign(TextAlign.Center)
             .width(this.avatarSize)
             .height(this.avatarSize)

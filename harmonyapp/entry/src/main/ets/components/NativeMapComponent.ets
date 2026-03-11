@@ -12,6 +12,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { image } from '@kit.ImageKit';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { AppIcon } from './SystemIcon';
 
 
 const DOMAIN_NUMBER: number = 0xFF11;
@@ -679,7 +680,7 @@ export struct NativeMapComponent {
         // 地图加载失败提示
         Column({ space: 12 }) {
           Text() {
-            SymbolSpan($r('sys.symbol.map'))
+            SymbolSpan($r(AppIcon.MAP))
               .fontSize(48)
               .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
           }

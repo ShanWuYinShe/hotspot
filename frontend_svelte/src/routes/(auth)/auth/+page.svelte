@@ -31,7 +31,7 @@
 </svelte:head>
 
 <div class="flex min-h-screen items-center justify-center bg-background">
-	<div class="rounded-2xl border border-border/60 bg-card/80 px-8 py-10 text-center shadow-sm shadow-black/5">
+	<div class="rounded-2xl border border-border/60 bg-card/80 px-8 py-10 text-center shadow-sm shadow-black/5 dark:shadow-black/20">
 		<div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
 			<Shield class="h-6 w-6 text-muted-foreground" />
 		</div>

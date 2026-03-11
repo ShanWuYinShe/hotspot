@@ -163,7 +163,7 @@
 
 <aside
 	class={cn(
-		'relative flex h-full flex-col border-r border-sidebar-border/60 bg-sidebar/95 text-sidebar-foreground shadow-sm shadow-black/5 backdrop-blur',
+		'relative flex h-full flex-col border-r border-sidebar-border/60 bg-sidebar/95 text-sidebar-foreground shadow-sm shadow-black/5 dark:shadow-black/20 backdrop-blur',
 		className
 	)}
 >

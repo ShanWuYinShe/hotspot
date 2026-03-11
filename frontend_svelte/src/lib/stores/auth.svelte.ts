@@ -38,11 +38,19 @@ function loadFromStorage(): AuthState {
 
 	try {
 		const stored = localStorage.getItem(STORAGE_KEY);
-		if (stored) {
-			return JSON.parse(stored);
+		if (!stored) return { accounts: [], currentUserId: null };
+		const parsed = JSON.parse(stored) as Partial<AuthState>;
+		if (!parsed || !Array.isArray(parsed.accounts)) {
+			return { accounts: [], currentUserId: null };
 		}
+		return {
+			accounts: parsed.accounts,
+			currentUserId: typeof parsed.currentUserId === 'string' || parsed.currentUserId === null
+				? parsed.currentUserId ?? null
+				: null
+		};
 	} catch {
-		// 忽略解析错误
+		// 忽略解析错误，回退到空状态
 	}
 
 	return { accounts: [], currentUserId: null };

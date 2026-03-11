@@ -265,7 +265,7 @@
 
 	{#if keyword}
 		<Tabs bind:value={currentTab}>
-			<TabsList class="h-auto gap-1.5 rounded-3xl bg-card/80 p-1.5 shadow-md shadow-black/10 ring-1 ring-border/50 backdrop-blur-sm">
+			<TabsList class="h-auto gap-1.5 rounded-3xl bg-card/80 p-1.5 shadow-md shadow-black/10 dark:shadow-black/30 ring-1 ring-border/50 backdrop-blur-sm">
 				<TabsTrigger value="users" class="gap-2 rounded-2xl">
 					<Users class="h-4 w-4" />
 					用户 ({users.length})

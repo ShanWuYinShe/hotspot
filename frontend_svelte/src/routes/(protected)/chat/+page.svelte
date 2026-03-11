@@ -87,7 +87,7 @@
 	</div>
 
 	<Tabs value={currentTab} onValueChange={handleTabChange}>
-		<TabsList class="grid h-auto w-full grid-cols-2 gap-1.5 rounded-3xl bg-card/80 p-1.5 shadow-md shadow-black/10 ring-1 ring-border/50 backdrop-blur-sm">
+		<TabsList class="grid h-auto w-full grid-cols-2 gap-1.5 rounded-3xl bg-card/80 p-1.5 shadow-md shadow-black/10 dark:shadow-black/30 ring-1 ring-border/50 backdrop-blur-sm">
 			<TabsTrigger value="private" class="rounded-2xl">
 				<MessageCircle class="mr-2 h-4 w-4" />
 				私聊

@@ -15,20 +15,26 @@ interface LocationState {
 }
 
 function loadFromStorage(): LocationState {
+	const fallback: LocationState = { current: null, lastUpdated: null, permissionDenied: false };
 	if (!browser) {
-		return { current: null, lastUpdated: null, permissionDenied: false };
+		return fallback;
 	}
 
 	try {
 		const stored = localStorage.getItem(STORAGE_KEY);
-		if (stored) {
-			return JSON.parse(stored);
-		}
+		if (!stored) return fallback;
+		const parsed = JSON.parse(stored) as Partial<LocationState>;
+		if (!parsed) return fallback;
+		return {
+			current: parsed.current ?? null,
+			lastUpdated: typeof parsed.lastUpdated === 'string' ? parsed.lastUpdated : null,
+			permissionDenied: typeof parsed.permissionDenied === 'boolean' ? parsed.permissionDenied : false
+		};
 	} catch {
-		// 忽略解析错误
+		// 忽略解析错误，回退到默认状态
 	}
 
-	return { current: null, lastUpdated: null, permissionDenied: false };
+	return fallback;
 }
 
 function saveToStorage(state: LocationState) {

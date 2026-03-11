@@ -268,7 +268,7 @@
 				<div class="grid gap-3 sm:grid-cols-3">
 					<button
 						type="button"
-						class="rounded-2xl border border-border/60 bg-background/70 p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/10"
+						class="rounded-2xl border border-border/60 bg-background/70 p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/10 dark:hover:shadow-black/30"
 						onclick={() => handleTabChange('moments')}
 					>
 						<div class="text-2xl font-bold">{user.stats?.moments_count ?? 0}</div>
@@ -276,7 +276,7 @@
 					</button>
 					<button
 						type="button"
-						class="rounded-2xl border border-border/60 bg-background/70 p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/10"
+						class="rounded-2xl border border-border/60 bg-background/70 p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/10 dark:hover:shadow-black/30"
 						onclick={() => handleTabChange('followers')}
 					>
 						<div class="text-2xl font-bold">{user.stats?.followers_count ?? 0}</div>
@@ -284,7 +284,7 @@
 					</button>
 					<button
 						type="button"
-						class="rounded-2xl border border-border/60 bg-background/70 p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/10"
+						class="rounded-2xl border border-border/60 bg-background/70 p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/10 dark:hover:shadow-black/30"
 						onclick={() => handleTabChange('following')}
 					>
 						<div class="text-2xl font-bold">{user.stats?.following_count ?? 0}</div>
@@ -295,7 +295,7 @@
 		</Card>
 
 		<Tabs value={currentTab} onValueChange={handleTabChange}>
-			<TabsList class="grid w-full grid-cols-3 rounded-3xl bg-card/80 p-1.5 shadow-sm shadow-black/5 ring-1 ring-border/60 backdrop-blur-sm">
+			<TabsList class="grid w-full grid-cols-3 rounded-3xl bg-card/80 p-1.5 shadow-sm shadow-black/5 dark:shadow-black/20 ring-1 ring-border/60 backdrop-blur-sm">
 				<TabsTrigger value="moments" class="gap-2 rounded-xl">
 					<Image class="h-4 w-4" />
 					TA的瞬间
@@ -379,7 +379,7 @@
 					<div class="grid gap-3 sm:grid-cols-2">
 						{#each followersPagination.items as follower (follower.user.user_id)}
 							<a href="/users/{follower.user.user_id}">
-								<Card class="cursor-pointer rounded-2xl border border-border/60 bg-card/80 shadow-sm transition-shadow hover:shadow-lg hover:shadow-black/10">
+								<Card class="cursor-pointer rounded-2xl border border-border/60 bg-card/80 shadow-sm transition-shadow hover:shadow-lg hover:shadow-black/10 dark:hover:shadow-black/30">
 									<CardContent class="flex items-center gap-3 p-4">
 										<Avatar class="h-12 w-12">
 											<AvatarImage src={follower.user.avatar_url} alt={follower.user.nickname} />
@@ -433,7 +433,7 @@
 					<div class="grid gap-3 sm:grid-cols-2">
 						{#each followingPagination.items as follow (follow.user.user_id)}
 							<a href="/users/{follow.user.user_id}">
-								<Card class="cursor-pointer rounded-2xl border border-border/60 bg-card/80 shadow-sm transition-shadow hover:shadow-lg hover:shadow-black/10">
+								<Card class="cursor-pointer rounded-2xl border border-border/60 bg-card/80 shadow-sm transition-shadow hover:shadow-lg hover:shadow-black/10 dark:hover:shadow-black/30">
 									<CardContent class="flex items-center gap-3 p-4">
 										<Avatar class="h-12 w-12">
 											<AvatarImage src={follow.user.avatar_url} alt={follow.user.nickname} />

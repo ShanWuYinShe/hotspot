@@ -8,6 +8,7 @@ import { createLogger } from '../../utils/LogManager';
 import { ErrorHandler, ErrorType, ErrorLevel } from '../../utils/ErrorHandler';
 import { ConfigMerger } from '../../utils/ConfigMerger';
 import { UI_CONSTANTS } from '../../../constants/SystemConstants';
+import { DesignConstants } from '../../../constants/DesignConstants';
 import { SmartNotification, NotificationAction } from './NotificationDataManager';
 import { AppThemeManager } from '../../theme/AppThemeManager';
 
@@ -499,53 +500,61 @@ export class NotificationRenderer extends BaseSingleton {
    */
   private generateNotificationStyle(type: string, priority: string): NotificationStyle {
     const palette = AppThemeManager.getSafeCurrentPalette();
-    const isDark = palette.id === 'default_clean_dark' || this.config.theme === 'dark' || 
+    const paletteIsDark = palette.id.endsWith('_dark');
+    const isDark = paletteIsDark || this.config.theme === 'dark' ||
       (this.config.theme === 'auto' && this.isSystemDarkMode());
-    
-    // 基础样式
-    let backgroundColor = isDark ? '#2C2C2C' : palette.surfaceBackground;
-    let textColor = isDark ? '#FFFFFF' : '#1F2937';
+
+    // 基础样式：使用主题调色板与设计常量
+    let backgroundColor = palette.surfaceBackground;
+    let textColor = isDark
+      ? DesignConstants.COLOR.TEXT_PRIMARY_DARK
+      : DesignConstants.COLOR.TEXT_PRIMARY_LIGHT;
     let borderColor = palette.borderColor;
     let iconColor = palette.accentBackground;
-    
-    // 根据类型调整颜色
+    let shadowColor = palette.elevatedShadow.color;
+
+    // 根据类型调整颜色（信息 / 性能 / 社交 / 安全）
     switch (type) {
       case 'system':
-        borderColor = '#2196F3';
-        iconColor = '#2196F3';
+        borderColor = DesignConstants.COLOR.INFO;
+        iconColor = DesignConstants.COLOR.INFO;
         break;
       case 'performance':
-        borderColor = '#FF9800';
-        iconColor = '#FF9800';
+        borderColor = DesignConstants.COLOR.WARNING;
+        iconColor = DesignConstants.COLOR.WARNING;
         break;
       case 'social':
-        borderColor = '#4CAF50';
-        iconColor = '#4CAF50';
+        borderColor = DesignConstants.COLOR.SUCCESS;
+        iconColor = DesignConstants.COLOR.SUCCESS;
         break;
       case 'security':
-        borderColor = '#F44336';
-        iconColor = '#F44336';
+        borderColor = DesignConstants.COLOR.ERROR;
+        iconColor = DesignConstants.COLOR.ERROR;
         break;
     }
-    
-    // 根据优先级调整样式
+
+    // 根据优先级调整背景与边框
     switch (priority) {
       case 'critical':
-        backgroundColor = isDark ? '#4A1A1A' : '#FFEBEE';
-        borderColor = '#F44336';
+        if (palette.preferDarkContent) {
+          backgroundColor = DesignConstants.COLOR.SURFACE_DANGER_SOFT;
+        }
+        borderColor = DesignConstants.COLOR.ERROR;
         break;
       case 'high':
-        backgroundColor = isDark ? '#4A3A1A' : '#FFF3E0';
-        borderColor = '#FF9800';
+        if (palette.preferDarkContent) {
+          backgroundColor = DesignConstants.COLOR.SURFACE_WARNING_SOFT;
+        }
+        borderColor = DesignConstants.COLOR.WARNING;
         break;
     }
-    
+
     return {
       backgroundColor,
       textColor,
       borderColor,
       iconColor,
-      shadowColor: isDark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.1)',
+      shadowColor,
       borderRadius: UI_CONSTANTS.SPACING.SM,
       padding: UI_CONSTANTS.SPACING.MD,
       margin: UI_CONSTANTS.SPACING.SM

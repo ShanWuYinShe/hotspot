@@ -7,6 +7,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { groupsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
+	import { showApiError } from '$lib/utils/api-error';
 	import { parseTags } from '$lib/utils/format';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
@@ -175,7 +176,7 @@
 				onOpenChange?.(false);
 				onCreated?.();
 			} else {
-				toast.error(response.message || '创建失败');
+				showApiError(toast, response, '创建失败');
 			}
 		} catch {
 			toast.error('创建失败');

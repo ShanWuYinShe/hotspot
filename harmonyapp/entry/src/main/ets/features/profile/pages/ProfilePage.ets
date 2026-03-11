@@ -242,17 +242,38 @@ export struct ProfilePage {
 
   private getPrimaryTextColor(): string {
     const palette = this.getCurrentThemePalette();
-    return palette.id === 'tactile_minimal_dark' ? '#E7E0D6' : '#7B5D43';
+    switch (palette.id) {
+      case 'default_clean_light': return '#111827';
+      case 'default_clean_dark': return '#F9FAFB';
+      case 'tactile_minimal_light': return '#7B5D43';
+      case 'tactile_minimal_dark': return '#E7E0D6';
+      case 'zen_artistic_light': return '#4A5568';
+      default: return '#111827';
+    }
   }
 
   private getSecondaryTextColor(): string {
     const palette = this.getCurrentThemePalette();
-    return palette.id === 'tactile_minimal_dark' ? '#AAB7C4' : '#8E735C';
+    switch (palette.id) {
+      case 'default_clean_light': return '#6B7280';
+      case 'default_clean_dark': return '#9CA3AF';
+      case 'tactile_minimal_light': return '#8E735C';
+      case 'tactile_minimal_dark': return '#AAB7C4';
+      case 'zen_artistic_light': return '#718096';
+      default: return '#6B7280';
+    }
   }
 
   private getWarningTextColor(): string {
     const palette = this.getCurrentThemePalette();
-    return palette.id === 'tactile_minimal_dark' ? '#E6CFAE' : '#9A7241';
+    switch (palette.id) {
+      case 'default_clean_light': return '#92400E';
+      case 'default_clean_dark': return '#FCD34D';
+      case 'tactile_minimal_light': return '#9A7241';
+      case 'tactile_minimal_dark': return '#E6CFAE';
+      case 'zen_artistic_light': return '#8B6914';
+      default: return '#92400E';
+    }
   }
 
   private getSoftCardShadow(): ShadowOptions {

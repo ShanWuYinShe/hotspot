@@ -12,7 +12,7 @@
 	import { websocketStore, eventHandlers } from '$lib/websocket';
 	import type { PrivateMessageNewPayload } from '$lib/websocket/types';
 	import { useBatchMarkRead } from '$lib/hooks/use-batch-mark-read.svelte';
-	import { createReconnectTracker, mergeMessagesByIdAndSentAt } from '$lib/hooks/use-chat-realtime-sync';
+	import { createReconnectTracker, mergeMessagesByIdAndSentAt, resolveLatestVisibleMessageId } from '$lib/hooks/use-chat-realtime-sync';
 	import { useChatWsSubscription } from '$lib/hooks/use-chat-ws-subscription.svelte';
 	import { autofocus, useKeyboardFocus, KEYBOARD_DISMISS_EVENT, dismissActiveKeyboardFocus } from '$lib/attachments';
 	import { Button } from '$lib/components/ui/button';
@@ -73,25 +73,10 @@
 		}, TYPING_INDICATOR_TTL_MS);
 	}
 
-	function resolveLatestVisibleMessageId(messageIds: string[]): string | undefined {
-		if (messageIds.length === 0) return undefined;
-		const indexMap = new Map(messages.map((message, index) => [message.message_id, index] as const));
-		let latestId: string | undefined;
-		let latestIndex = -1;
-		for (const messageId of messageIds) {
-			const index = indexMap.get(messageId);
-			if (index !== undefined && index > latestIndex) {
-				latestIndex = index;
-				latestId = messageId;
-			}
-		}
-		return latestId ?? messageIds[messageIds.length - 1];
-	}
-
 	// ✨ 批量已读逻辑
 	const batchMarkRead = useBatchMarkRead({
 		markAsRead: async (messageIds) => {
-			const upToMessageId = resolveLatestVisibleMessageId(messageIds ?? []);
+			const upToMessageId = resolveLatestVisibleMessageId(messages, messageIds ?? []);
 			await privateMessagesService.markAsRead({
 				target_user_id: userId,
 				...(upToMessageId ? { up_to_message_id: upToMessageId } : {})
@@ -512,7 +497,7 @@
 				bind:value={messageText}
 				rows={1}
 				maxlength={MESSAGE_CONTENT_MAX}
-				class="min-h-[40px] flex w-full resize-none rounded-md border border-input bg-background/80 px-3 py-2 text-base shadow-sm shadow-black/5 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+				class="min-h-[40px] flex w-full resize-none rounded-md border border-input bg-background/80 px-3 py-2 text-base shadow-sm shadow-black/5 dark:shadow-black/20 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
 				disabled={isSending}
 				oninput={handleInput}
 				onkeydown={(e) => {

@@ -66,6 +66,7 @@ const result = await post<AuthData>('/api/v1/auth/login', data);
 - 请求参数使用 `Location`（point + location_name）。
 - 响应使用 `RelativeLocation`（含 distance、bearing_degrees）。
 - **禁止在前端计算距离或角度**，由后端 PostGIS 完成。
+- 所有地图上的定位点 / 标记（marker）必须使用地图 SDK 提供的原生 marker/overlay 来渲染，**禁止在地图容器上用绝对定位的 DOM 自己绘制 marker**。位置选择页面（如 `location-picker-modal` 等）中的选点标记必须跟随地图坐标系的平移与缩放，否则会在缩放时产生位置偏差，这是前端实现必须避免的根本性错误。
 
 ## 实现检查清单
 

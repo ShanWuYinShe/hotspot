@@ -346,7 +346,7 @@
 											type="checkbox"
 											checked={rolePermissions.includes(perm.key)}
 											onchange={() => togglePermission(perm.key)}
-											class="h-4 w-4 rounded border-gray-300"
+											class="h-4 w-4 rounded border-gray-300 dark:border-gray-600"
 										/>
 										<span class="text-sm">{perm.description || perm.key}</span>
 									</label>

@@ -160,19 +160,7 @@ export interface DesignConstantsType {
   SHADOW: ShadowSystem;
   ANIMATION: AnimationSystem;
   COMPONENT: ComponentConstants;
-  CARD: CardTheme;
   CHAT: ChatLayoutConstants;
-}
-
-interface CardTheme {
-  BG_LIGHT: string;
-  BG_DARK: string;
-  BORDER_LIGHT: string;
-  BORDER_DARK: string;
-  SHADOW_LIGHT: ShadowConfig;
-  SHADOW_DARK: ShadowConfig;
-  STAT_ICON_LIGHT: string;
-  STAT_ICON_DARK: string;
 }
 
 // ==================== 颜色系统（干净扁平极简风格）====================
@@ -311,17 +299,6 @@ const COMPONENT: ComponentConstants = {
   INPUT_HEIGHT: 42,
 };
 
-const CARD: CardTheme = {
-  BG_LIGHT: '#F6F7FB',
-  BG_DARK: '#151724',
-  BORDER_LIGHT: '#E2E6F3',
-  BORDER_DARK: '#25293A',
-  SHADOW_LIGHT: { radius: 24, color: '#0A0C1120', offsetX: 0, offsetY: 8 },
-  SHADOW_DARK: { radius: 20, color: '#0000002B', offsetX: 0, offsetY: 6 },
-  STAT_ICON_LIGHT: '#757B94',
-  STAT_ICON_DARK: '#A6AAC5'
-};
-
 const CHAT: ChatLayoutConstants = {
   BUBBLE_RADIUS: 20,
   BUBBLE_PADDING_H: 16,
@@ -403,6 +380,5 @@ export const DesignConstants: DesignConstantsType = {
   SHADOW,
   ANIMATION,
   COMPONENT,
-  CARD,
   CHAT,
 };

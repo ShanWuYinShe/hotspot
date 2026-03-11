@@ -11,7 +11,7 @@
 	import { websocketStore, eventHandlers } from '$lib/websocket';
 	import type { GroupMessageNewPayload } from '$lib/websocket/types';
 	import { useBatchMarkRead } from '$lib/hooks/use-batch-mark-read.svelte';
-	import { createReconnectTracker, mergeMessagesByIdAndSentAt } from '$lib/hooks/use-chat-realtime-sync';
+	import { createReconnectTracker, mergeMessagesByIdAndSentAt, resolveLatestVisibleMessageId } from '$lib/hooks/use-chat-realtime-sync';
 	import { useChatWsSubscription } from '$lib/hooks/use-chat-ws-subscription.svelte';
 	import { autofocus, useKeyboardFocus, KEYBOARD_DISMISS_EVENT, dismissActiveKeyboardFocus } from '$lib/attachments';
 	import { Button } from '$lib/components/ui/button';
@@ -116,25 +116,10 @@
 		return `${previewNames.join('、')} 等 ${count} 人正在输入...`;
 	}
 
-	function resolveLatestVisibleMessageId(messageIds: string[]): string | undefined {
-		if (messageIds.length === 0) return undefined;
-		const indexMap = new Map(messages.map((message, index) => [message.message_id, index] as const));
-		let latestId: string | undefined;
-		let latestIndex = -1;
-		for (const messageId of messageIds) {
-			const index = indexMap.get(messageId);
-			if (index !== undefined && index > latestIndex) {
-				latestIndex = index;
-				latestId = messageId;
-			}
-		}
-		return latestId ?? messageIds[messageIds.length - 1];
-	}
-
 	// ✨ 批量已读逻辑
 	const batchMarkRead = useBatchMarkRead({
 		markAsRead: async (messageIds) => {
-			const upToMessageId = resolveLatestVisibleMessageId(messageIds ?? []);
+			const upToMessageId = resolveLatestVisibleMessageId(messages, messageIds ?? []);
 			await groupMessagesService.markAsRead({
 				group_id: groupId,
 				...(upToMessageId ? { up_to_message_id: upToMessageId } : {})
@@ -852,7 +837,7 @@
 					bind:value={messageText}
 					rows={1}
 					maxlength={MESSAGE_CONTENT_MAX}
-					class="max-h-32 min-h-[42px] flex w-full resize-none rounded-3xl border border-muted-foreground/20 bg-muted/30 px-4 py-2.5 text-[15px] shadow-sm shadow-black/5 transition-colors placeholder:text-muted-foreground/50 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+					class="max-h-32 min-h-[42px] flex w-full resize-none rounded-3xl border border-muted-foreground/20 bg-muted/30 px-4 py-2.5 text-[15px] shadow-sm shadow-black/5 dark:shadow-black/20 transition-colors placeholder:text-muted-foreground/50 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
 					disabled={isSending}
 					oninput={() => {
 						eventHandlers.sendGroupTyping(groupId, messageText.trim().length > 0);

@@ -20,9 +20,31 @@ export function getAnchorHistory(): AnchorHistoryItem[] {
 	if (!browser) return [];
 	try {
 		const json = localStorage.getItem(STORAGE_KEY);
-		if (json) {
-			return JSON.parse(json) as AnchorHistoryItem[];
-		}
+		if (!json) return [];
+		const parsed = JSON.parse(json);
+		if (!Array.isArray(parsed)) return [];
+		return parsed
+			.map((item) => {
+				if (!item || typeof item !== 'object') return null;
+				const { latitude, longitude, locationName, timestamp } = item as Partial<AnchorHistoryItem>;
+				if (
+					typeof latitude !== 'number' ||
+					typeof longitude !== 'number' ||
+					typeof timestamp !== 'number'
+				) {
+					return null;
+				}
+				return {
+					latitude,
+					longitude,
+					locationName: typeof locationName === 'string' && locationName.trim()
+						? locationName.trim()
+						: '自定义位置',
+					timestamp
+				} satisfies AnchorHistoryItem;
+			})
+			.filter((item): item is AnchorHistoryItem => item !== null)
+			.slice(0, MAX_ITEMS);
 	} catch {
 		// 忽略解析错误
 	}

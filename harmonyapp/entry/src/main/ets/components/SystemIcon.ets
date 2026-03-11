@@ -205,19 +205,7 @@ export enum IconSize {
   EXTRA_LARGE = 48
 }
 
-/**
- * 图标颜色枚举
- */
-export enum IconColor {
-  PRIMARY = '#007AFF', // DesignConstants.COLOR.BRAND_PRIMARY
-  SECONDARY = '#8E8E93', // DesignConstants.COLOR.TEXT_SECONDARY_LIGHT
-  SUCCESS = '#34C759', // DesignConstants.COLOR.SUCCESS
-  WARNING = '#FFCC00', // DesignConstants.COLOR.WARNING
-  ERROR = '#FF3B30', // DesignConstants.COLOR.ERROR
-  WHITE = '#FFFFFF',
-  BLACK = '#000000',
-  GRAY = '#8E8E93'
-}
+// IconColor 已被基于主题调色板的颜色逻辑取代，保留按需使用 AppThemeManager 与 DesignConstants。
 
 /**
  * 系统图标组件参数接口

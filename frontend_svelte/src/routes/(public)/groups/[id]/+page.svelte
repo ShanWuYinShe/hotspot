@@ -991,7 +991,7 @@
 		</Card>
 
 		<Tabs value={currentTab} onValueChange={(value) => (currentTab = value as 'overview' | 'announcements' | 'members' | 'applications')}>
-			<TabsList class="h-auto gap-1.5 rounded-3xl bg-card/80 p-1.5 shadow-md shadow-black/10 ring-1 ring-border/50 backdrop-blur-sm">
+			<TabsList class="h-auto gap-1.5 rounded-3xl bg-card/80 p-1.5 shadow-md shadow-black/10 dark:shadow-black/30 ring-1 ring-border/50 backdrop-blur-sm">
 				<TabsTrigger value="overview" class="rounded-2xl">概览</TabsTrigger>
 				<TabsTrigger value="announcements" class="rounded-2xl">公告</TabsTrigger>
 				<TabsTrigger value="members" class="rounded-2xl">成员</TabsTrigger>
@@ -1072,7 +1072,7 @@
 						</CardContent>
 					</Card>
 				{:else}
-					<div class="flex flex-col gap-3 rounded-2xl border border-border/50 bg-card/60 p-4 shadow-sm shadow-black/5 sm:flex-row sm:items-center sm:justify-between">
+					<div class="flex flex-col gap-3 rounded-2xl border border-border/50 bg-card/60 p-4 shadow-sm shadow-black/5 dark:shadow-black/20 sm:flex-row sm:items-center sm:justify-between">
 						<div>
 							<p class="text-sm font-semibold">群公告</p>
 							<p class="mt-1 text-xs text-muted-foreground">重要通知与管理提示将展示在这里</p>
@@ -1135,7 +1135,7 @@
 											{#if canManageGroup}
 												<DropdownMenu>
 													<DropdownMenuTrigger
-														class="inline-flex h-8 w-8 items-center justify-center rounded-2xl border border-border/60 bg-background/80 text-foreground shadow-sm shadow-black/5 transition-colors hover:bg-accent/60"
+														class="inline-flex h-8 w-8 items-center justify-center rounded-2xl border border-border/60 bg-background/80 text-foreground shadow-sm shadow-black/5 dark:shadow-black/20 transition-colors hover:bg-accent/60"
 														aria-label="公告操作"
 													>
 														<MoreHorizontal class="h-4 w-4" />
@@ -1198,7 +1198,7 @@
 						</CardContent>
 					</Card>
 				{:else}
-					<div class="flex flex-col gap-3 rounded-2xl border border-border/50 bg-card/60 p-4 shadow-sm shadow-black/5 sm:flex-row sm:items-center sm:justify-between">
+					<div class="flex flex-col gap-3 rounded-2xl border border-border/50 bg-card/60 p-4 shadow-sm shadow-black/5 dark:shadow-black/20 sm:flex-row sm:items-center sm:justify-between">
 						<div>
 							<p class="text-sm font-semibold">成员列表</p>
 							<p class="mt-1 text-xs text-muted-foreground">支持群主/管理员进行禁言与角色管理</p>
@@ -1277,7 +1277,7 @@
 												{#if canManageMember(member)}
 													<DropdownMenu>
 														<DropdownMenuTrigger
-															class="inline-flex h-8 w-8 items-center justify-center rounded-2xl border border-border/60 bg-background/80 text-foreground shadow-sm shadow-black/5 transition-colors hover:bg-accent/60"
+															class="inline-flex h-8 w-8 items-center justify-center rounded-2xl border border-border/60 bg-background/80 text-foreground shadow-sm shadow-black/5 dark:shadow-black/20 transition-colors hover:bg-accent/60"
 															aria-label="成员操作"
 														>
 															<MoreHorizontal class="h-4 w-4" />
@@ -1337,7 +1337,7 @@
 
 			{#if canManageGroup}
 				<TabsContent value="applications" class="mt-6 space-y-4">
-					<div class="flex flex-col gap-3 rounded-2xl border border-border/50 bg-card/60 p-4 shadow-sm shadow-black/5 sm:flex-row sm:items-center sm:justify-between">
+					<div class="flex flex-col gap-3 rounded-2xl border border-border/50 bg-card/60 p-4 shadow-sm shadow-black/5 dark:shadow-black/20 sm:flex-row sm:items-center sm:justify-between">
 						<div>
 							<p class="text-sm font-semibold">待处理申请</p>
 							<p class="mt-1 text-xs text-muted-foreground">仅展示 pending 申请，处理后会自动移出列表</p>

@@ -968,7 +968,7 @@ export struct ChatPage {
           Button('重试')
             .type(ButtonType.Normal)
             .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-            .fontColor(Color.White)
+            .fontColor($r('app.color.chip_active_text'))
             .height(40)
             .borderRadius(DesignConstants.RADIUS.XL)
             .onClick(() => { this.loadHistory(); })
@@ -1121,7 +1121,7 @@ export struct ChatPage {
           .fontColor(
             this.isSending || this.inputText.trim().length === 0
               ? $r('sys.color.ohos_id_color_text_secondary')
-              : Color.White
+              : $r('app.color.chip_active_text')
           )
           .height(DesignConstants.CHAT.SEND_BUTTON_HEIGHT)
           .borderRadius(DesignConstants.RADIUS.XL)
@@ -1294,7 +1294,7 @@ export struct ChatPage {
             } else {
               Text(msg.content)
                 .fontSize(DesignConstants.CHAT.BUBBLE_FONT_SIZE)
-                .fontColor(msg.isSelf ? Color.White : $r('sys.color.ohos_id_color_text_primary'))
+                .fontColor(msg.isSelf ? $r('app.color.chip_active_text') : $r('sys.color.ohos_id_color_text_primary'))
                 .backgroundColor(msg.isSelf ? $r('app.color.chat_bubble_self') : $r('app.color.chat_bubble_peer'))
                 .padding({
                   left: DesignConstants.CHAT.BUBBLE_PADDING_H,

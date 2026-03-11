@@ -211,20 +211,18 @@
 	}
 </script>
 
+
 <a href={actualHref} class="group block animate-bounce-in">
 	<Card
 		variant="default"
 		glow="soft"
 		interactive
-		class="group/card h-full {className}"
+		class="group/card flex h-full flex-col {className}"
 	>
-		<CardContent class="p-6">
+		<CardContent class="flex flex-1 flex-col p-6">
 			{#if variant === 'square'}
-				<!-- 方块模式：更强调瀑布流层次与信息可读性 -->
-				{@const heightVariants = [188, 214, 236, 206, 248, 220, 198, 232]}
-				{@const userIdHash = userInfo.user_id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)}
-				{@const minHeight = heightVariants[userIdHash % heightVariants.length]}
-				<div class="flex flex-col gap-3" style="min-height: {minHeight}px;">
+				<!-- 方块模式：信息密度更高，卡片高度随内容自适应 -->
+				<div class="flex flex-1 flex-col gap-3">
 					<div
 						class="relative overflow-hidden rounded-2xl border border-border/40 bg-linear-to-br from-primary/15 via-secondary/10 to-muted/30 p-3.5"
 					>

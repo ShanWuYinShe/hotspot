@@ -51,9 +51,20 @@ function loadFromStorage(): MapAnchor {
 
 	try {
 		const stored = localStorage.getItem(STORAGE_KEY);
-		if (stored) {
-			return JSON.parse(stored);
+		if (!stored) {
+			return { ...getDefaults(), updatedAt: Date.now() };
 		}
+		const parsed = JSON.parse(stored) as Partial<MapAnchor>;
+		if (!parsed || typeof parsed.latitude !== 'number' || typeof parsed.longitude !== 'number') {
+			return { ...getDefaults(), updatedAt: Date.now() };
+		}
+		return {
+			latitude: parsed.latitude,
+			longitude: parsed.longitude,
+			name: typeof parsed.name === 'string' ? parsed.name : undefined,
+			radius: typeof parsed.radius === 'number' && parsed.radius > 0 ? parsed.radius : undefined,
+			updatedAt: typeof parsed.updatedAt === 'number' ? parsed.updatedAt : Date.now()
+		};
 	} catch {
 		// 忽略解析错误
 	}
@@ -108,13 +119,26 @@ class MapAnchorStore {
 		`${this.#anchor.latitude.toFixed(4)}, ${this.#anchor.longitude.toFixed(4)}`
 	);
 
+	/**
+	 * 获取允许的最大搜索半径（公里）
+	 * 来源：ClientConfig.limits.search_radius_max（米），未配置时回退 50000 米
+	 */
+	private getMaxRadiusKm(): number {
+		const maxMeters = configStore.searchRadiusMax;
+		const maxKm = maxMeters / 1000;
+		// 防御性处理：确保上限为正数
+		return maxKm > 0 ? maxKm : FALLBACK_DEFAULTS.radius;
+	}
+
 	/** 设置锚点 */
 	setAnchor(latitude: number, longitude: number, name?: string, radius?: number) {
+		const baseRadius = radius ?? this.#anchor.radius ?? FALLBACK_DEFAULTS.radius;
+		const clampedRadius = Math.min(baseRadius, this.getMaxRadiusKm());
 		this.#anchor = {
 			latitude,
 			longitude,
 			name,
-			radius: radius || this.#anchor.radius || 5,
+			radius: clampedRadius,
 			updatedAt: Date.now()
 		};
 		saveToStorage(this.#anchor);
@@ -122,9 +146,11 @@ class MapAnchorStore {
 
 	/** 设置搜索半径 */
 	setRadius(radius: number) {
+		const baseRadius = radius > 0 ? radius : (this.#anchor.radius ?? FALLBACK_DEFAULTS.radius);
+		const clampedRadius = Math.min(baseRadius, this.getMaxRadiusKm());
 		this.#anchor = {
 			...this.#anchor,
-			radius,
+			radius: clampedRadius,
 			updatedAt: Date.now()
 		};
 		saveToStorage(this.#anchor);
