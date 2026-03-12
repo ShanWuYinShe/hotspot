@@ -6,6 +6,8 @@
 	import { toast } from '$lib/stores/toast.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
+	import { Switch } from '$lib/components/ui/switch';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Skeleton } from '$lib/components/ui/skeleton';
@@ -158,13 +160,19 @@
 </svelte:head>
 
 <div class="space-y-6">
-	<div class="flex items-center justify-between">
-		<h1 class="text-2xl font-bold">系统配置</h1>
-		<Button variant="outline" size="sm" onclick={loadConfig} disabled={isLoading}>
-			<RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
-			刷新
-		</Button>
-	</div>
+	<PageHeader title="系统配置">
+		{#snippet actions()}
+			<Button
+				variant="outline"
+				size="sm"
+				onclick={loadConfig}
+				disabled={isLoading}
+			>
+				<RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
+				刷新
+			</Button>
+		{/snippet}
+	</PageHeader>
 
 	{#if isLoading}
 		<div class="grid gap-6 lg:grid-cols-2">
@@ -261,45 +269,33 @@
 					<CardDescription>启用或禁用系统功能（客户端配置）</CardDescription>
 				</CardHeader>
 				<CardContent class="space-y-4">
-					<div class="flex items-center justify-between">
+					<div class="flex items-center justify-between gap-4">
 						<div>
 							<Label>允许新用户注册</Label>
 							<p class="text-sm text-muted-foreground">关闭后新用户无法注册</p>
 						</div>
-						<label class="relative inline-flex cursor-pointer items-center">
-							<input type="checkbox" bind:checked={enablePublicRegistration} class="peer sr-only" />
-							<div class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white dark:border-gray-600 dark:bg-gray-700 dark:after:border-gray-600 dark:after:bg-gray-300"></div>
-						</label>
+						<Switch bind:checked={enablePublicRegistration} aria-label="允许新用户注册" />
 					</div>
-					<div class="flex items-center justify-between">
+					<div class="flex items-center justify-between gap-4">
 						<div>
 							<Label>允许访客模式</Label>
 							<p class="text-sm text-muted-foreground">允许用户以访客身份使用</p>
 						</div>
-						<label class="relative inline-flex cursor-pointer items-center">
-							<input type="checkbox" bind:checked={enableGuestLogin} class="peer sr-only" />
-							<div class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white dark:border-gray-600 dark:bg-gray-700 dark:after:border-gray-600 dark:after:bg-gray-300"></div>
-						</label>
+						<Switch bind:checked={enableGuestLogin} aria-label="允许访客模式" />
 					</div>
-					<div class="flex items-center justify-between">
+					<div class="flex items-center justify-between gap-4">
 						<div>
 							<Label>启用动态功能</Label>
 							<p class="text-sm text-muted-foreground">控制是否开放生活瞬间</p>
 						</div>
-						<label class="relative inline-flex cursor-pointer items-center">
-							<input type="checkbox" bind:checked={enableMoments} class="peer sr-only" />
-							<div class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white dark:border-gray-600 dark:bg-gray-700 dark:after:border-gray-600 dark:after:bg-gray-300"></div>
-						</label>
+						<Switch bind:checked={enableMoments} aria-label="启用动态功能" />
 					</div>
-					<div class="flex items-center justify-between">
+					<div class="flex items-center justify-between gap-4">
 						<div>
 							<Label>启用附近的人</Label>
 							<p class="text-sm text-muted-foreground">是否展示附近用户</p>
 						</div>
-						<label class="relative inline-flex cursor-pointer items-center">
-							<input type="checkbox" bind:checked={enableNearbyPeople} class="peer sr-only" />
-							<div class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white dark:border-gray-600 dark:bg-gray-700 dark:after:border-gray-600 dark:after:bg-gray-300"></div>
-						</label>
+						<Switch bind:checked={enableNearbyPeople} aria-label="启用附近的人" />
 					</div>
 					<Button onclick={handleSaveFeatures} disabled={isSaving}>
 						{#if isSaving}

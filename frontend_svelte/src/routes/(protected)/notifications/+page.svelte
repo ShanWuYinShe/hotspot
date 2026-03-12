@@ -8,6 +8,7 @@
 	import type { NotificationItem, NotificationPayload } from '$lib/types/api';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent } from '$lib/components/ui/card';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import EmptyState from '$lib/components/common/empty-state.svelte';
 	import Bell from 'lucide-svelte/icons/bell';
 	import Heart from 'lucide-svelte/icons/heart';
@@ -279,15 +280,16 @@
 </svelte:head>
 
 <div class="space-y-6">
-	<div class="flex items-center justify-between">
-		<h1 class="text-2xl font-bold">通知</h1>
-		{#if notificationStore.unreadCount > 0}
-			<Button variant="outline" size="sm" onclick={markAllRead}>
-				<CheckCheck class="mr-2 h-4 w-4" />
-				全部已读
-			</Button>
-		{/if}
-	</div>
+	<PageHeader title="通知">
+		{#snippet actions()}
+			{#if notificationStore.unreadCount > 0}
+				<Button variant="outline" size="sm" onclick={markAllRead}>
+					<CheckCheck class="mr-2 h-4 w-4" />
+					全部已读
+				</Button>
+			{/if}
+		{/snippet}
+	</PageHeader>
 
 	{#if pagination.loading}
 		<div class="flex justify-center py-12">

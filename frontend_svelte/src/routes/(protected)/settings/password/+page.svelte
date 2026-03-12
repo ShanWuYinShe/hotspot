@@ -4,6 +4,7 @@
 	import { toast } from '$lib/stores/toast.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
@@ -55,10 +56,10 @@
 </svelte:head>
 
 <div class="mx-auto max-w-3xl space-y-5">
-	<div class="rounded-3xl border border-border/60 bg-linear-to-br from-background via-card/85 to-muted/40 p-5 shadow-sm">
-		<h1 class="text-2xl font-bold">修改密码</h1>
-		<p class="mt-1 text-sm text-muted-foreground">请确保新密码足够安全，避免与其他平台重复</p>
-	</div>
+	<PageHeader
+		title="修改密码"
+		description="请确保新密码足够安全，避免与其他平台重复"
+	/>
 
 	<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 		<CardHeader>

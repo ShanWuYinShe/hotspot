@@ -128,13 +128,15 @@
 
 			<!-- Mobile sidebar overlay -->
 			{#if sidebarOpen}
-				<button
+				<Button
 					type="button"
-					class="fixed inset-0 z-40 bg-black/50 md:hidden"
+					variant="ghost"
+					size="icon"
+					class="fixed inset-0 z-40 h-full w-full cursor-pointer bg-black/50 p-0 md:hidden border-none shadow-none"
 					onclick={closeSidebar}
 					onkeydown={(e) => e.key === 'Escape' && closeSidebar()}
 					aria-label="关闭侧边栏"
-				></button>
+				/>
 				<aside 
 					class="fixed left-0 top-14 z-50 w-64 bg-sidebar text-sidebar-foreground md:hidden"
 					style="height: calc(100dvh - 3.5rem - env(safe-area-inset-bottom, 0px));"

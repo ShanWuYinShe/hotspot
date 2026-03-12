@@ -4,6 +4,7 @@
 	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import UserCard from '$lib/components/common/user-card.svelte';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import ListSkeleton from '$lib/components/common/list-skeleton.svelte';
 	import EmptyState from '$lib/components/common/empty-state.svelte';
 	import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
@@ -33,16 +34,19 @@
 </svelte:head>
 
 <div class="space-y-6">
-	<div class="flex items-center justify-between">
-		<div>
-			<h1 class="text-2xl font-bold">粉丝</h1>
-			<p class="text-sm text-muted-foreground">关注你的用户</p>
-		</div>
-		<Button variant="outline" size="sm" onclick={() => loadFollowers(true)} disabled={pagination.loading}>
-			<RefreshCw class="mr-2 h-4 w-4 {pagination.loading ? 'animate-spin' : ''}" />
-			刷新
-		</Button>
-	</div>
+	<PageHeader title="粉丝" description="关注你的用户">
+		{#snippet actions()}
+			<Button
+				variant="outline"
+				size="sm"
+				onclick={() => loadFollowers(true)}
+				disabled={pagination.loading}
+			>
+				<RefreshCw class="mr-2 h-4 w-4 {pagination.loading ? 'animate-spin' : ''}" />
+				刷新
+			</Button>
+		{/snippet}
+	</PageHeader>
 
 	{#if pagination.loading}
 		<ListSkeleton type="user" count={6} />

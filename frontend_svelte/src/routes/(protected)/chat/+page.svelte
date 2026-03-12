@@ -10,6 +10,7 @@
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import ListSkeleton from '$lib/components/common/list-skeleton.svelte';
 	import EmptyState from '$lib/components/common/empty-state.svelte';
 	import type { PrivateChatItem, GroupItem } from '$lib/types/api';
@@ -74,17 +75,10 @@
 </svelte:head>
 
 <div class="space-y-5">
-	<div class="rounded-3xl border border-border/60 bg-linear-to-br from-background via-card/85 to-muted/35 p-5 shadow-sm">
-		<div class="flex items-center gap-3">
-			<div class="rounded-2xl border border-border/50 bg-primary/10 p-2.5 text-primary">
-				<MessageCircle class="h-5 w-5" />
-			</div>
-			<div>
-				<h1 class="text-2xl font-bold">消息</h1>
-				<p class="text-sm text-muted-foreground">私聊与群聊会话统一在这里管理</p>
-			</div>
-		</div>
-	</div>
+	<PageHeader
+		title="消息"
+		description="私聊与群聊会话统一在这里管理"
+	/>
 
 	<Tabs value={currentTab} onValueChange={handleTabChange}>
 		<TabsList class="grid h-auto w-full grid-cols-2 gap-1.5 rounded-3xl bg-card/80 p-1.5 shadow-md shadow-black/10 dark:shadow-black/30 ring-1 ring-border/50 backdrop-blur-sm">

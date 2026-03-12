@@ -113,11 +113,8 @@ class MapAnchorStore {
 	/** 搜索半径（公里） */
 	radius = $derived(this.#anchor.radius || 5);
 
-	/** 显示名称（如果没有名称则显示坐标） */
-	displayName = $derived(
-		this.#anchor.name || 
-		`${this.#anchor.latitude.toFixed(4)}, ${this.#anchor.longitude.toFixed(4)}`
-	);
+	/** 显示名称（如果没有名称则使用固定占位，不展示坐标） */
+	displayName = $derived(this.#anchor.name || DEFAULT_ANCHOR_NAME);
 
 	/**
 	 * 获取允许的最大搜索半径（公里）

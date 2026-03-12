@@ -1031,7 +1031,8 @@ export struct LocationPickerPage {
     const requestId = ++this.resolveRequestId;
     this.isLoading = true;
     try {
-      const addr = await LocationUtil.reverseGeocode(lat, lng);
+      const wgs84 = CoordinateConverter.convertGcj02ToWgs84(lat, lng);
+      const addr = await LocationUtil.reverseGeocode(wgs84.latitude, wgs84.longitude);
       if (requestId !== this.resolveRequestId) {
         return;
       }
@@ -1123,19 +1124,25 @@ export struct LocationPickerPage {
   private selectSearchResult(result: LocationInfo): void {
     this.overlappingPanelItems = [];
     this.skipNextResolve = true;
-    this.setCenter(result.latitude, result.longitude);
+    const gcj02 = CoordinateConverter.convertWgs84ToGcj02(
+      result.latitude, result.longitude
+    );
+    this.setCenter(gcj02.latitude, gcj02.longitude);
     this.locationName = result.locationName || '';
-    this.moveCameraSmoothly(result.latitude, result.longitude);
+    this.moveCameraSmoothly(gcj02.latitude, gcj02.longitude);
     this.closeSearchPanel();
   }
 
   private selectHistoryItem(item: AnchorHistoryItem): void {
     this.overlappingPanelItems = [];
     this.skipNextResolve = true;
-    this.setCenter(item.latitude, item.longitude);
+    const gcj02 = CoordinateConverter.convertWgs84ToGcj02(
+      item.latitude, item.longitude
+    );
+    this.setCenter(gcj02.latitude, gcj02.longitude);
     this.locationName = item.locationName || '历史位置';
-    this.moveCameraSmoothly(item.latitude, item.longitude);
-    this.resolveLocation(item.latitude, item.longitude);
+    this.moveCameraSmoothly(gcj02.latitude, gcj02.longitude);
+    this.resolveLocation(gcj02.latitude, gcj02.longitude);
   }
 
   private confirm(): void {

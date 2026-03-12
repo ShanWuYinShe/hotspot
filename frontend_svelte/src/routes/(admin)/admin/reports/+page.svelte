@@ -5,6 +5,7 @@
 	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Avatar, AvatarFallback } from '$lib/components/ui/avatar';
@@ -105,13 +106,19 @@
 </svelte:head>
 
 <div class="space-y-6">
-	<div class="flex items-center justify-between">
-		<h1 class="text-2xl font-bold">举报审核</h1>
-		<Button variant="outline" size="sm" onclick={() => loadReports()} disabled={pagination.loading}>
-			<RefreshCw class="mr-2 h-4 w-4 {pagination.loading ? 'animate-spin' : ''}" />
-			刷新
-		</Button>
-	</div>
+	<PageHeader title="举报审核">
+		{#snippet actions()}
+			<Button
+				variant="outline"
+				size="sm"
+				onclick={() => loadReports()}
+				disabled={pagination.loading}
+			>
+				<RefreshCw class="mr-2 h-4 w-4 {pagination.loading ? 'animate-spin' : ''}" />
+				刷新
+			</Button>
+		{/snippet}
+	</PageHeader>
 
 	<!-- Filter -->
 	<div class="flex gap-2">

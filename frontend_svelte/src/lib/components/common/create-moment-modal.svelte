@@ -306,8 +306,6 @@
 				label="发布位置"
 				description="发布将使用该位置，可单独选点且不修改浏览锚点"
 				overrideName={selectedLocation.locationName}
-				overrideLatitude={selectedLocation.latitude}
-				overrideLongitude={selectedLocation.longitude}
 				onAdjust={() => (showLocationPicker = true)}
 			/>
 		</div>

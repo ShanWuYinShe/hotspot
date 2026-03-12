@@ -5,6 +5,7 @@
 	import { isSuccess } from '$lib/api/client';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Skeleton } from '$lib/components/ui/skeleton';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import Image from 'lucide-svelte/icons/image';
 	import Users from 'lucide-svelte/icons/users';
 	import MessageCircle from 'lucide-svelte/icons/message-circle';
@@ -51,10 +52,10 @@
 </svelte:head>
 
 <div class="space-y-6">
-	<div>
-		<h1 class="text-2xl font-bold">欢迎回来，{authStore.currentAccount?.nickname}！</h1>
-		<p class="text-muted-foreground">这是你的个人仪表板</p>
-	</div>
+	<PageHeader
+		title={`欢迎回来，${authStore.currentAccount?.nickname ?? ''}！`}
+		description="这是你的个人仪表板"
+	/>
 
 	{#if isLoading}
 		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

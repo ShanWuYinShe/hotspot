@@ -6,6 +6,7 @@
 	import { toast } from '$lib/stores/toast.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent } from '$lib/components/ui/card';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import type { FriendItem } from '$lib/types/api';
@@ -60,16 +61,19 @@
 </svelte:head>
 
 <div class="space-y-6">
-	<div class="flex items-center justify-between">
-		<div>
-			<h1 class="text-2xl font-bold">好友</h1>
-			<p class="text-sm text-muted-foreground">你们的互相关注列表</p>
-		</div>
-		<Button variant="outline" size="sm" onclick={() => loadFriends(true)} disabled={isLoading}>
-			<RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
-			刷新
-		</Button>
-	</div>
+	<PageHeader title="好友" description="你们的互相关注列表">
+		{#snippet actions()}
+			<Button
+				variant="outline"
+				size="sm"
+				onclick={() => loadFriends(true)}
+				disabled={isLoading}
+			>
+				<RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
+				刷新
+			</Button>
+		{/snippet}
+	</PageHeader>
 
 	{#if isLoading}
 		<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

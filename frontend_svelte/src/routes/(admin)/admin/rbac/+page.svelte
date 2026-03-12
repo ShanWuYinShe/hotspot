@@ -6,6 +6,7 @@
 	import { toast } from '$lib/stores/toast.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
@@ -193,19 +194,25 @@
 </svelte:head>
 
 <div class="space-y-6">
-	<div class="flex items-center justify-between">
-		<h1 class="text-2xl font-bold">权限管理</h1>
-		<div class="flex gap-2">
-			<Button variant="outline" size="sm" onclick={loadData} disabled={isLoading}>
-				<RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
-				刷新
-			</Button>
-			<Button size="sm" onclick={openCreateRoleDialog}>
-				<Plus class="mr-2 h-4 w-4" />
-				创建角色
-			</Button>
-		</div>
-	</div>
+	<PageHeader title="权限管理">
+		{#snippet actions()}
+			<div class="flex gap-2">
+				<Button
+					variant="outline"
+					size="sm"
+					onclick={loadData}
+					disabled={isLoading}
+				>
+					<RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
+					刷新
+				</Button>
+				<Button size="sm" onclick={openCreateRoleDialog}>
+					<Plus class="mr-2 h-4 w-4" />
+					创建角色
+				</Button>
+			</div>
+		{/snippet}
+	</PageHeader>
 
 	<div class="grid gap-6 lg:grid-cols-2">
 		<!-- Roles -->

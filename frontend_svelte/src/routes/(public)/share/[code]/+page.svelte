@@ -6,6 +6,7 @@
 	import { MapPin, Share2, UsersRound } from 'lucide-svelte';
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import type {
 		ShareDetail,
@@ -88,26 +89,21 @@
 		</Card>
 	{:else if share.share.share_type === 'location'}
 		{@const payload = share.payload as LocationSharePayload}
-		<!-- 位置分享详情卡片 -->
 		<Card class="overflow-hidden">
-			<!-- 头部 -->
 			<div class="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6">
-				<div class="space-y-4">
-					<div class="flex-1 min-w-0">
-						<h1 class="text-2xl font-bold">{payload.shared_location.location_name}</h1>
-					</div>
-
-					<!-- 分享者信息 -->
-					<div class="flex items-center gap-3">
-						<Avatar class="h-8 w-8">
-							<AvatarImage src={share.share.creator.avatar_url} alt={share.share.creator.nickname} />
-							<AvatarFallback>{share.share.creator.nickname.slice(0, 2)}</AvatarFallback>
-						</Avatar>
-						<span class="text-sm text-muted-foreground">
-							<span class="font-medium text-foreground">{share.share.creator.nickname}</span> 分享了此位置
-						</span>
-					</div>
-				</div>
+				<PageHeader title={payload.shared_location.location_name}>
+					{#snippet actions()}
+						<div class="flex items-center gap-3">
+							<Avatar class="h-8 w-8">
+								<AvatarImage src={share.share.creator.avatar_url} alt={share.share.creator.nickname} />
+								<AvatarFallback>{share.share.creator.nickname.slice(0, 2)}</AvatarFallback>
+							</Avatar>
+							<span class="text-sm text-muted-foreground">
+								<span class="font-medium text-foreground">{share.share.creator.nickname}</span> 分享了此位置
+							</span>
+						</div>
+					{/snippet}
+				</PageHeader>
 			</div>
 
 			<CardContent class="space-y-6 p-6">
@@ -142,11 +138,11 @@
 					</ul>
 				</div>
 
-				<!-- 位置信息 -->
+				<!-- 位置信息（仅展示名称，不展示经纬度） -->
 				<div class="space-y-2">
-					<h3 class="text-sm font-medium text-muted-foreground">位置坐标</h3>
-					<div class="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground font-mono">
-						{payload.shared_location.point.latitude.toFixed(6)}, {payload.shared_location.point.longitude.toFixed(6)}
+					<h3 class="text-sm font-medium text-muted-foreground">位置说明</h3>
+					<div class="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
+						以「{payload.shared_location.location_name}」为中心区域进行浏览和推荐。
 					</div>
 				</div>
 

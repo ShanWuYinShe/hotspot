@@ -6,6 +6,7 @@
 	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import * as Dialog from '$lib/components/ui/dialog';
@@ -139,19 +140,25 @@
 </svelte:head>
 
 <div class="space-y-6">
-	<div class="flex items-center justify-between">
-		<h1 class="text-2xl font-bold">公告管理</h1>
-		<div class="flex gap-2">
-			<Button variant="outline" size="sm" onclick={() => loadAnnouncements()} disabled={pagination.loading}>
-				<RefreshCw class="mr-2 h-4 w-4 {pagination.loading ? 'animate-spin' : ''}" />
-				刷新
-			</Button>
-			<Button size="sm" onclick={openCreateDialog}>
-				<Plus class="mr-2 h-4 w-4" />
-				发布公告
-			</Button>
-		</div>
-	</div>
+	<PageHeader title="公告管理">
+		{#snippet actions()}
+			<div class="flex gap-2">
+				<Button
+					variant="outline"
+					size="sm"
+					onclick={() => loadAnnouncements()}
+					disabled={pagination.loading}
+				>
+					<RefreshCw class="mr-2 h-4 w-4 {pagination.loading ? 'animate-spin' : ''}" />
+					刷新
+				</Button>
+				<Button size="sm" onclick={openCreateDialog}>
+					<Plus class="mr-2 h-4 w-4" />
+					发布公告
+				</Button>
+			</div>
+		{/snippet}
+	</PageHeader>
 
 	<!-- Announcements list -->
 	<Card>

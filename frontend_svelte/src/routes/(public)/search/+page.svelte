@@ -10,6 +10,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Card, CardContent } from '$lib/components/ui/card';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
 	import MomentCard from '$lib/components/moments/moment-card.svelte';
 	import UserCard from '$lib/components/common/user-card.svelte';
@@ -202,17 +203,10 @@
 </svelte:head>
 
 <div class="space-y-5">
-	<div class="rounded-3xl border border-border/60 bg-linear-to-br from-background via-card/85 to-muted/35 p-5 shadow-sm">
-		<div class="flex items-center gap-3">
-			<div class="rounded-2xl border border-border/50 bg-primary/10 p-2.5 text-primary">
-				<Search class="h-5 w-5" />
-			</div>
-			<div>
-				<h1 class="text-2xl font-bold">搜索</h1>
-				<p class="text-sm text-muted-foreground">发现用户、群组与附近动态</p>
-			</div>
-		</div>
-	</div>
+	<PageHeader
+		title="搜索"
+		description="发现用户、群组与附近动态"
+	/>
 
 	<AnchorSummaryCard
 		label="搜索参考锚点"
@@ -247,13 +241,16 @@
 					bind:value={keyword}
 				/>
 				{#if keyword}
-					<button
+					<Button
 						type="button"
-						class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+						variant="ghost"
+						size="icon"
+						class="absolute right-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border-none bg-transparent text-muted-foreground shadow-none hover:text-foreground"
 						onclick={clearSearch}
+						aria-label="清除搜索"
 					>
-						<X class="h-4 w-4" />
-					</button>
+						<X class="h-3 w-3" />
+					</Button>
 				{/if}
 			</div>
 			<Button type="submit" class="h-11 rounded-2xl border border-border/60 bg-background/70 px-5 text-foreground hover:bg-accent/70" disabled={!keyword.trim()}>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import Bell from 'lucide-svelte/icons/bell';
 </script>
 
@@ -8,10 +9,10 @@
 </svelte:head>
 
 <div class="mx-auto max-w-3xl space-y-5">
-	<div class="rounded-3xl border border-border/60 bg-linear-to-br from-background via-card/85 to-muted/40 p-5 shadow-sm">
-		<h1 class="text-2xl font-bold">通知设置</h1>
-		<p class="mt-1 text-sm text-muted-foreground">管理你的通知偏好</p>
-	</div>
+	<PageHeader
+		title="通知设置"
+		description="管理你的通知偏好"
+	/>
 
 	<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 		<CardHeader>

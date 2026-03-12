@@ -73,6 +73,7 @@ export const cardVariants = tv({
 		interactive: {
 			true: [
 				'cursor-pointer',
+				'select-none',
 				// Hover - move up-left, increase shadow
 				'hover:-translate-x-0.5 hover:-translate-y-0.5',
 				'hover:shadow-[5px_5px_0px_theme(colors.border)]',

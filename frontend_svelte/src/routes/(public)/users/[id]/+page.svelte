@@ -9,10 +9,12 @@
 	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent } from '$lib/components/ui/card';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
+	import ProfileStatCard from '$lib/components/profile/profile-stat-card.svelte';
 	import MomentCard from '$lib/components/moments/moment-card.svelte';
 	import type { UserItem, MomentItem, FollowerItem, FollowingItem } from '$lib/types/api';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
@@ -186,13 +188,18 @@
 </svelte:head>
 
 <div class="mx-auto max-w-5xl space-y-8">
-	<!-- Header -->
-	<div class="flex items-center gap-4">
-		<Button variant="ghost" size="icon" onclick={() => history.back()} aria-label="返回">
-			<ArrowLeft class="h-5 w-5" />
-		</Button>
-		<h1 class="text-2xl font-bold">用户主页</h1>
-	</div>
+	<PageHeader title="用户主页">
+		{#snippet actions()}
+			<Button
+				variant="ghost"
+				size="icon"
+				onclick={() => history.back()}
+				aria-label="返回"
+			>
+				<ArrowLeft class="h-5 w-5" />
+			</Button>
+		{/snippet}
+	</PageHeader>
 
 	{#if !user}
 		<Card>
@@ -266,30 +273,21 @@
 				{/if}
 
 				<div class="grid gap-3 sm:grid-cols-3">
-					<button
-						type="button"
-						class="rounded-2xl border border-border/60 bg-background/70 p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/10 dark:hover:shadow-black/30"
+					<ProfileStatCard
+						value={user.stats?.moments_count ?? 0}
+						label="瞬间"
 						onclick={() => handleTabChange('moments')}
-					>
-						<div class="text-2xl font-bold">{user.stats?.moments_count ?? 0}</div>
-						<div class="text-sm text-muted-foreground">瞬间</div>
-					</button>
-					<button
-						type="button"
-						class="rounded-2xl border border-border/60 bg-background/70 p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/10 dark:hover:shadow-black/30"
+					/>
+					<ProfileStatCard
+						value={user.stats?.followers_count ?? 0}
+						label="粉丝"
 						onclick={() => handleTabChange('followers')}
-					>
-						<div class="text-2xl font-bold">{user.stats?.followers_count ?? 0}</div>
-						<div class="text-sm text-muted-foreground">粉丝</div>
-					</button>
-					<button
-						type="button"
-						class="rounded-2xl border border-border/60 bg-background/70 p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/10 dark:hover:shadow-black/30"
+					/>
+					<ProfileStatCard
+						value={user.stats?.following_count ?? 0}
+						label="关注"
 						onclick={() => handleTabChange('following')}
-					>
-						<div class="text-2xl font-bold">{user.stats?.following_count ?? 0}</div>
-						<div class="text-sm text-muted-foreground">关注</div>
-					</button>
+					/>
 				</div>
 			</CardContent>
 		</Card>

@@ -740,18 +740,21 @@
 											<p class="whitespace-pre-wrap wrap-break-word text-sm leading-relaxed">
 												{message.content}
 											</p>
-										{:else if message.type === 'image' && message.media}
-											<button
-												type="button"
-												onclick={() => openImagePreview(message.media!.url)}
-												class="block overflow-hidden rounded-xl transition-opacity hover:opacity-90"
-											>
-												<img
-													src={message.media.url}
-													alt="图片"
-													class="max-h-[300px] max-w-[250px] object-cover"
-												/>
-											</button>
+						{:else if message.type === 'image' && message.media}
+							<Button
+								type="button"
+								variant="ghost"
+								size="icon"
+								class="block overflow-hidden rounded-xl border-none bg-transparent p-0 shadow-none transition-opacity hover:opacity-90"
+								onclick={() => openImagePreview(message.media!.url)}
+								aria-label="查看图片"
+							>
+								<img
+									src={message.media.url}
+									alt="图片"
+									class="max-h-[300px] max-w-[250px] object-cover"
+								/>
+							</Button>
 										{:else if message.type === 'share' && message.share_code}
 											<div class="flex items-center gap-2 text-sm">
 												<MapPin class="h-4 w-4 shrink-0" />
@@ -787,13 +790,15 @@
 
 		<!-- Scroll to Bottom Button -->
 		{#if showScrollButton}
-			<button
-				type="button"
+			<Button
+				variant="default"
+				size="icon"
+				class="fixed bottom-24 right-6 z-10 h-10 w-10 rounded-2xl bg-primary text-primary-foreground shadow-lg transition-all hover:scale-110"
 				onclick={() => scrollToBottom(true)}
-				class="fixed bottom-24 right-6 z-10 flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg transition-all hover:scale-110"
+				aria-label="滚动到底部"
 			>
 				<ChevronDown class="h-5 w-5" />
-			</button>
+			</Button>
 		{/if}
 	</div>
 
@@ -877,13 +882,16 @@
 		tabindex="0"
 		onkeydown={(e) => e.key === 'Escape' && closeImagePreview()}
 	>
-		<button
+		<Button
 			type="button"
-			onclick={closeImagePreview}
+			variant="ghost"
+			size="icon"
 			class="absolute right-4 top-4 rounded-2xl bg-white/10 p-2 text-white backdrop-blur transition-colors hover:bg-white/20"
+			onclick={closeImagePreview}
+			aria-label="关闭图片预览"
 		>
 			<X class="h-6 w-6" />
-		</button>
+		</Button>
 		<img
 			src={selectedImage}
 			alt="预览"

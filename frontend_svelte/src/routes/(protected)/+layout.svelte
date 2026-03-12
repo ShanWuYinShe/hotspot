@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
-	import { page } from '$app/state';
-	import { authStore } from '$lib/stores/auth.svelte';
-	import { uiStore } from '$lib/stores/ui.svelte';
-	import Navbar from '$lib/components/common/navbar.svelte';
-	import Sidebar from '$lib/components/common/sidebar.svelte';
+	import { browser } from "$app/environment";
+	import { page } from "$app/state";
+	import { authStore } from "$lib/stores/auth.svelte";
+	import { uiStore } from "$lib/stores/ui.svelte";
+	import Navbar from "$lib/components/common/navbar.svelte";
+	import Sidebar from "$lib/components/common/sidebar.svelte";
+	import { Button } from "$lib/components/ui/button";
 
 	let { children } = $props();
 
@@ -15,7 +16,12 @@
 	}
 
 	$effect(() => {
-		if (browser && authStore.initialized && !authStore.isAuthenticated && !authStore.isRestoring) {
+		if (
+			browser &&
+			authStore.initialized &&
+			!authStore.isAuthenticated &&
+			!authStore.isRestoring
+		) {
 			uiStore.saveRedirectUrl(`${page.url.pathname}${page.url.search}`);
 		}
 	});
@@ -29,17 +35,21 @@
 <div class="min-h-screen bg-background">
 	<Navbar onMenuClick={() => (sidebarOpen = !sidebarOpen)} />
 
-	<div class="flex h-[calc(100dvh-4rem)] min-h-[calc(100dvh-4rem)] overflow-hidden bg-muted/30">
+	<div
+		class="flex h-[calc(100dvh-4rem)] min-h-[calc(100dvh-4rem)] overflow-hidden bg-muted/30"
+	>
 		<Sidebar class="hidden w-64 shrink-0 md:block" />
 
 		{#if sidebarOpen}
-			<button
+			<Button
 				type="button"
-				class="fixed inset-0 z-40 bg-black/50 md:hidden"
+				variant="ghost"
+				size="icon"
+				class="fixed inset-0 z-40 h-full w-full cursor-pointer bg-black/50 p-0 md:hidden border-none shadow-none"
 				onclick={closeSidebar}
-				onkeydown={(e) => e.key === 'Escape' && closeSidebar()}
+				onkeydown={(e) => e.key === "Escape" && closeSidebar()}
 				aria-label="关闭侧边栏"
-			></button>
+			/>
 			<div
 				class="fixed left-0 top-14 z-50 w-64 md:hidden"
 				style="height: calc(100dvh - 3.5rem - env(safe-area-inset-bottom, 0px));"
@@ -56,12 +66,20 @@
 				{#if authStore.isAuthenticated}
 					{@render children()}
 				{:else if authStore.isRestoring}
-					<div class="flex flex-col items-center justify-center py-20 gap-3">
-						<div class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
-						<p class="text-sm text-muted-foreground">正在恢复登录状态…</p>
+					<div
+						class="flex flex-col items-center justify-center py-20 gap-3"
+					>
+						<div
+							class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"
+						></div>
+						<p class="text-sm text-muted-foreground">
+							正在恢复登录状态…
+						</p>
 					</div>
 				{:else}
-					<div class="flex flex-col items-center justify-center py-20">
+					<div
+						class="flex flex-col items-center justify-center py-20"
+					>
 						<div class="mb-4 rounded-3xl bg-muted p-6">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -75,18 +93,24 @@
 								stroke-linejoin="round"
 								class="text-muted-foreground"
 							>
-								<rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+								<rect
+									width="18"
+									height="11"
+									x="3"
+									y="11"
+									rx="2"
+									ry="2"
+								/>
 								<path d="M7 11V7a5 5 0 0 1 10 0v4" />
 							</svg>
 						</div>
 						<h2 class="mb-2 text-xl font-semibold">需要登录</h2>
-						<p class="mb-6 text-muted-foreground">登录后即可访问此页面</p>
-						<button
-							class="inline-flex items-center justify-center rounded-2xl bg-primary px-8 py-3 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30"
-							onclick={handleLoginClick}
-						>
+						<p class="mb-6 text-muted-foreground">
+							登录后即可访问此页面
+						</p>
+						<Button class="rounded-2xl px-8" onclick={handleLoginClick}>
 							立即登录
-						</button>
+						</Button>
 					</div>
 				{/if}
 			</div>

@@ -12,6 +12,7 @@
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Separator } from '$lib/components/ui/separator';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import type { MyProfile } from '$lib/types/api';
 	import { formatDate } from '$lib/utils/format';
 	import Camera from 'lucide-svelte/icons/camera';
@@ -135,15 +136,10 @@
 </svelte:head>
 
 <div class="mx-auto max-w-4xl space-y-5 pb-8">
-	<!-- 页面标题 -->
-	<div class="rounded-3xl border border-border/60 bg-linear-to-br from-background via-card/85 to-muted/35 p-5 shadow-sm">
-		<div class="flex items-center justify-between">
-			<div>
-				<h1 class="text-3xl font-bold">个人资料</h1>
-				<p class="mt-1 text-sm text-muted-foreground">管理你的个人信息和账户设置</p>
-			</div>
-		</div>
-	</div>
+	<PageHeader
+		title="个人资料"
+		description="管理你的个人信息和账户设置"
+	/>
 
 	{#if profile}
 		<div class="grid gap-6 lg:grid-cols-3">

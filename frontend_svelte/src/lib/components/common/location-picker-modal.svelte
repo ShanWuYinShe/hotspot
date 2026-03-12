@@ -10,11 +10,11 @@
     import { mapAnchorStore } from "$lib/stores/map-anchor.svelte";
     import { locationStore } from "$lib/stores/location.svelte";
     import { toast } from "$lib/stores/toast.svelte";
-	import {
-		getAMapVisibleRegion,
-		loadAMap,
-		loadAMapPlugin,
-	} from "$lib/utils/amap";
+    import {
+        getAMapVisibleRegion,
+        loadAMap,
+        loadAMapPlugin,
+    } from "$lib/utils/amap";
     import type { MapRenderItem, MapViewport } from "$lib/types/api";
     import {
         getAnchorHistory,
@@ -31,6 +31,10 @@
     import Loader2 from "lucide-svelte/icons/loader-2";
     import ChevronUp from "lucide-svelte/icons/chevron-up";
     import ChevronDown from "lucide-svelte/icons/chevron-down";
+    import Maximize2 from "lucide-svelte/icons/maximize-2";
+    import Minimize2 from "lucide-svelte/icons/minimize-2";
+    import XIcon from "lucide-svelte/icons/x";
+    import { browser } from "$app/environment";
     import Share2 from "lucide-svelte/icons/share-2";
     import Search from "lucide-svelte/icons/search";
     import ListFilter from "lucide-svelte/icons/list-filter";
@@ -39,8 +43,9 @@
     import Trash2 from "lucide-svelte/icons/trash-2";
     import CreateLocationShareModal from "./create-location-share-modal.svelte";
     import AnchorSummaryCard from "./anchor-summary-card.svelte";
-	 import { useKeyboardFocus } from "$lib/attachments";
-	 import { configStore } from "$lib/stores/config.svelte";
+    import { useKeyboardFocus } from "$lib/attachments";
+    import { configStore } from "$lib/stores/config.svelte";
+    import { toGcjLngLat, gcj02ToWgs84 } from "$lib/utils/geo";
 
     type LocationPickerMode = "anchor" | "location_pick";
 
@@ -91,8 +96,7 @@
     let renderMapTimer: number | null = null;
     let skipNextReverseGeocode = false;
     let mapMoveFrame: number | null = null;
-    let isLoadingRenderItems = $state(false);
-    let activeRenderRequestId = 0;
+	let activeRenderRequestId = 0;
     let lastRenderedViewportSignature = "";
     let lastToastMessage = "";
     let renderMarkers: AMap.Marker[] = [];
@@ -185,6 +189,14 @@
     // 锚点历史
     let anchorHistory = $state.raw<AnchorHistoryItem[]>([]);
 
+    // 桌面端对话框全屏切换状态
+    let isFullscreen = $state(false);
+
+    // 手势提示持久化关闭标记（localStorage）
+    const GESTURE_HINT_DISMISS_KEY =
+        "hotspot_location_picker_gesture_hint_dismissed";
+    let gestureHintDismissed = $state(false);
+
     const isAnchorMode = $derived(mode === "anchor");
     const modalTitle = $derived(isAnchorMode ? "设置浏览锚点" : "选择位置");
     const confirmButtonText = $derived(
@@ -194,37 +206,21 @@
         isAnchorMode ? "浏览锚点已更新" : "位置已选定",
     );
     const selectionDescription = $derived(
-        isAnchorMode
-            ? "拖动地图或搜索后，确认才会覆盖锚点"
-            : "拖动地图或搜索后，确认用于当前操作",
-    );
-    const hintAfterConfirm = $derived(
-        isAnchorMode
-            ? `${gestureHintMessage}，确认后才会更新锚点`
-            : `${gestureHintMessage}，确认后将用于当前操作`,
+        isAnchorMode ? "用于浏览锚点的位置" : "用于当前操作的位置",
     );
     const mapModeLabel = $derived(isAnchorMode ? "浏览锚点" : "位置选择");
-    const mapStatusText = $derived.by(() => {
-        if (isLoadingRenderItems) return "地图内容更新中";
-        if (isLocating) return "正在获取当前位置";
-        return "拖动地图可继续探索";
-    });
-    const locationReadyText = $derived(
-        locationName
-            ? "位置已锁定，可直接确认或分享"
-            : "还没有精确地点名称，继续拖动或搜索",
-    );
     const activeFilterCount = $derived(
         [showUsers, showGroups, showMoments].filter(Boolean).length,
     );
 
-    type MapClickEvent = {
-        lnglat?: AMap.LngLat;
-    };
-
-    const PLACEMENT_HINT_DEFAULT = "已定位到该位置";
+		type MapClickEvent = {
+			lnglat?: AMap.LngLat;
+		};
+		
+		const PLACEMENT_HINT_DEFAULT = "已定位到该位置";
 
     function showGestureHint(message = getGestureHintMessage()) {
+        if (gestureHintDismissed) return;
         gestureHintMessage = message;
         gestureHintVisible = true;
         if (gestureHintTimer) {
@@ -241,6 +237,18 @@
         if (gestureHintTimer) {
             clearTimeout(gestureHintTimer);
             gestureHintTimer = null;
+        }
+    }
+
+    function dismissGestureHintPermanently() {
+        gestureHintVisible = false;
+        gestureHintDismissed = true;
+        if (browser) {
+            try {
+                window.localStorage.setItem(GESTURE_HINT_DISMISS_KEY, "1");
+            } catch {
+                // ignore
+            }
         }
     }
 
@@ -264,38 +272,39 @@
         renderMarkers = [];
     }
 
-	function createSelectionMarkerContent() {
-		const container = document.createElement("div");
-		container.className = "map-selection-marker";
-		container.setAttribute("aria-hidden", "true");
-
-		const img = document.createElement("img");
-		// 与 Harmony 端保持一致：使用独立的中心定位图标
-		img.src = "/map/marker_center_pin.svg";
-		img.alt = "选择位置";
-        img.className = "map-selection-marker-svg";
-
-        container.append(img);
-        return container;
-    }
-
     function ensureSelectedMarker() {
         if (!map || selectedMarker) return;
+        const AMapAny = AMap as any;
+        const centerIcon = new AMapAny.Icon({
+            size: new AMapAny.Size(40, 50),
+            image: "/map/marker_center_pin.svg",
+            imageSize: new AMapAny.Size(40, 50),
+            imageOffset: new AMapAny.Pixel(0, 0),
+        });
+        const [gcjLng, gcjLat] = toGcjLngLat({
+            latitude,
+            longitude,
+        });
         selectedMarker = new AMap.Marker({
-            position: [longitude, latitude],
-            content: createSelectionMarkerContent(),
+            position: [gcjLng, gcjLat],
+            icon: centerIcon,
             anchor: "bottom-center",
-            offset: [0, 6],
+            offset: new AMapAny.Pixel(0, 0),
             clickable: false,
             map,
         });
     }
 
-	function updateSelectedMarker() {
-		if (!map) return;
-		ensureSelectedMarker();
-		selectedMarker?.setPosition([longitude, latitude]);
-	}
+    function updateSelectedMarker() {
+        if (!map) return;
+        ensureSelectedMarker();
+        if (!selectedMarker) return;
+        const [gcjLng, gcjLat] = toGcjLngLat({
+            latitude,
+            longitude,
+        });
+        selectedMarker.setPosition([gcjLng, gcjLat]);
+    }
 
     function clearSelectedMarker() {
         selectedMarker?.setMap(null);
@@ -364,27 +373,49 @@
         ].join("|");
     }
 
-    function buildViewport(): MapViewport | null {
-        if (!map) return null;
-        const visibleRegion = getAMapVisibleRegion(map);
-        if (!visibleRegion) return null;
-        return {
-            bounds: visibleRegion.bounds,
-            zoom: Math.max(1, Math.min(20, visibleRegion.zoom)),
-        };
-    }
+	function buildViewport(): MapViewport | null {
+		if (!map) return null;
+		const visibleRegion = getAMapVisibleRegion(map);
+		if (!visibleRegion) return null;
+		const northEastWgs = gcj02ToWgs84({
+			latitude: visibleRegion.bounds.north,
+			longitude: visibleRegion.bounds.east,
+		});
+		const southWestWgs = gcj02ToWgs84({
+			latitude: visibleRegion.bounds.south,
+			longitude: visibleRegion.bounds.west,
+		});
+		const north = clampLatitude(northEastWgs.latitude);
+		const south = clampLatitude(southWestWgs.latitude);
+		let east = normalizeLongitude(northEastWgs.longitude);
+		let west = normalizeLongitude(southWestWgs.longitude);
+		if (Number.isFinite(east) && Number.isFinite(west) && east < west) {
+			const tmp = east;
+			east = west;
+			west = tmp;
+		}
+		return {
+			bounds: {
+				north,
+				south,
+				east,
+				west,
+			},
+			zoom: Math.max(1, Math.min(20, visibleRegion.zoom)),
+		};
+	}
 
-    function getMarkerClass(kind: RenderMarkerKind) {
+    function getMarkerIconUrl(kind: RenderMarkerKind): string {
         switch (kind) {
-            case "cluster":
-                return "map-render-marker map-render-marker-cluster";
             case "group":
-                return "map-render-marker map-render-marker-group";
+                return "/map/marker_group.svg";
             case "moment":
-                return "map-render-marker map-render-marker-moment";
+                return "/map/marker_moment.svg";
+            case "cluster":
+                return "/map/marker_cluster.svg";
             case "user":
             default:
-                return "map-render-marker map-render-marker-user";
+                return "/map/marker_user.svg";
         }
     }
 
@@ -423,11 +454,24 @@
         return { data_type: "all" };
     }
 
-    function applyCurrentFilter() {
-        renderMapItems(
-            latestRenderItems.filter((item) => shouldDisplayItem(item)),
-        );
-    }
+	function applyCurrentFilter() {
+		renderMapItems(
+			latestRenderItems.filter((item) => shouldDisplayItem(item)),
+		);
+	}
+
+	function clampLatitude(lat: number): number {
+		if (!Number.isFinite(lat)) return lat;
+		// 避免极区附近数值异常，约束到常见 Web 地图用的可视范围
+		return Math.max(-85, Math.min(85, lat));
+	}
+
+	function normalizeLongitude(lng: number): number {
+		if (!Number.isFinite(lng)) return lng;
+		// 归一化到 [-180, 180]，避免出现 229 之类超过 180 的经度
+		const normalized = ((lng + 180) % 360 + 360) % 360 - 180;
+		return normalized;
+	}
 
     function toggleRenderFilter(kind: "user" | "group" | "moment") {
         if (kind === "user") showUsers = !showUsers;
@@ -444,13 +488,6 @@
         // 先在前端根据当前筛选条件重新渲染已有 items，确保 UI 立即响应
         applyCurrentFilter();
         void fetchMapRenderData();
-    }
-
-    function getMarkerText(item: MapRenderItem) {
-        if (item.type === "cluster") {
-            return item.cluster?.label?.trim() || `${item.cluster?.count ?? 0}`;
-        }
-        return item.entity?.title?.trim() || item.type;
     }
 
     function getMarkerBadgeText(item: MapRenderItem) {
@@ -535,11 +572,15 @@
         };
     }
 
-	function zoomToClusterPreview() {
-		if (!clusterPreview || !map) {
-			return;
-		}
-		map.setCenter([clusterPreview.longitude, clusterPreview.latitude]);
+    function zoomToClusterPreview() {
+        if (!clusterPreview || !map) {
+            return;
+        }
+        const [gcjLng, gcjLat] = toGcjLngLat({
+            latitude: clusterPreview.latitude,
+            longitude: clusterPreview.longitude,
+        });
+        map.setCenter([gcjLng, gcjLat]);
         map.setZoom(clusterPreview.zoomTarget);
         showPlacementHint(
             clusterPreview.kind === "overlap_group"
@@ -554,34 +595,68 @@
         focusRenderItem(item);
     }
 
-    function createMarkerContent(item: MapRenderItem, onClick: () => void) {
-        const element = document.createElement("button");
-        element.type = "button";
-        element.className = getMarkerClass(item.type);
-
-        const badge = document.createElement("span");
-        badge.className = "map-render-marker-badge";
-        badge.textContent = getMarkerBadgeText(item);
-
-        const title = document.createElement("span");
-        title.className = "map-render-marker-title";
-        title.textContent = getMarkerText(item);
-
-        element.append(badge, title);
-        element.addEventListener("click", (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            onClick();
+    function createMarkerForItem(
+        item: MapRenderItem,
+        offset?: [number, number],
+    ) {
+        if (!map) return null;
+        const position = toGcjLngLat({
+            latitude: item.location.latitude,
+            longitude: item.location.longitude,
         });
-        return element;
+
+        const AMapAny = AMap as any;
+        const icon = new AMapAny.Icon({
+            size: new AMapAny.Size(40, 50),
+            image: getMarkerIconUrl(item.type),
+            imageSize: new AMapAny.Size(40, 50),
+            imageOffset: new AMapAny.Pixel(0, 0),
+        });
+
+        const marker = new AMap.Marker({
+            position,
+            icon,
+            anchor: "bottom-center",
+            offset,
+            clickable: true,
+            map,
+        });
+
+        (
+            marker as unknown as {
+                on: (type: "click", handler: () => void) => void;
+            }
+        ).on("click", () => {
+            focusRenderItem(item);
+        });
+
+        if (item.type === "cluster") {
+            (
+                marker as unknown as {
+                    setLabel: (opts: {
+                        content: string;
+                        direction?: string;
+                    }) => void;
+                }
+            ).setLabel({
+                content: getMarkerBadgeText(item),
+                direction: "top",
+            });
+        }
+
+        return marker;
     }
 
     function focusRenderItem(item: MapRenderItem) {
         showSearch = false;
         showFilterPanel = false;
-		if (item.type === "cluster") {
-			openClusterPreview(item);
-			map?.setCenter([item.location.longitude, item.location.latitude]);
+        if (item.type === "cluster") {
+            openClusterPreview(item);
+            const [gcjLng, gcjLat] = toGcjLngLat({
+                latitude: item.location.latitude,
+                longitude: item.location.longitude,
+            });
+            map?.setCenter([gcjLng, gcjLat]);
             showPlacementHint(
                 item.cluster?.label?.trim() ||
                     `已聚焦 ${item.cluster?.count ?? 0} 个内容`,
@@ -589,25 +664,36 @@
             return;
         }
         closeClusterPreview();
-		const nextLat = item.location.latitude;
-		const nextLng = item.location.longitude;
-		map?.setCenter([nextLng, nextLat]);
-		latitude = nextLat;
-		longitude = nextLng;
+        const nextLat = item.location.latitude;
+        const nextLng = item.location.longitude;
+        const [gcjLng, gcjLat] = toGcjLngLat({
+            latitude: nextLat,
+            longitude: nextLng,
+        });
+        map?.setCenter([gcjLng, gcjLat]);
+        latitude = nextLat;
+        longitude = nextLng;
+        updateSelectedMarker();
         skipNextReverseGeocode = true;
         const title = item.entity?.title?.trim();
         if (title) {
             locationName = title;
             lastResolvedLat = nextLat;
             lastResolvedLng = nextLng;
-            showPlacementHint(`已定位到 ${title}`);
+            showPlacementHint(
+                isAnchorMode
+                    ? `已定位到 ${title}，请点击下方按钮确认`
+                    : `已定位到 ${title}`,
+            );
             return;
         }
-        showPlacementHint();
+        showPlacementHint(
+            isAnchorMode ? "已定位，请点击下方按钮确认" : "已定位到该位置",
+        );
     }
 
-	function renderMapItems(items: MapRenderItem[]) {
-		if (!map) return;
+    function renderMapItems(items: MapRenderItem[]) {
+        if (!map) return;
         clearRenderMarkers();
         const { merged, groups } = groupOverlappingRenderItems(
             items,
@@ -621,19 +707,9 @@
         ) {
             closeClusterPreview();
         }
-		renderMarkers = merged.map(({ item, offset }) => {
-			const content = createMarkerContent(item, () =>
-				focusRenderItem(item),
-			);
-			return new AMap.Marker({
-				position: [item.location.longitude, item.location.latitude],
-				content,
-				anchor: "bottom-center",
-				offset,
-				clickable: true,
-				map: map ?? undefined,
-			});
-		});
+        renderMarkers = merged
+            .map(({ item, offset }) => createMarkerForItem(item, offset))
+            .filter((marker): marker is AMap.Marker => Boolean(marker));
         updateSelectedMarker();
     }
 
@@ -657,33 +733,28 @@
             return;
         }
 
-        const requestId = ++activeRenderRequestId;
-        isLoadingRenderItems = true;
-        try {
-            const response = await mapService.render(
-                filter ? { viewport, filter } : { viewport },
-            );
-            assertSuccess(response);
-            if (requestId !== activeRenderRequestId) {
-                return;
-            }
-            lastRenderedViewportSignature = signature;
-            latestRenderItems = response.data.items ?? [];
-            applyCurrentFilter();
-            const nextToastMessage = response.data.toast_message?.trim() ?? "";
-            if (nextToastMessage && nextToastMessage !== lastToastMessage) {
-                toast.info(nextToastMessage);
-            }
-            lastToastMessage = nextToastMessage;
-        } catch {
-            if (requestId === activeRenderRequestId) {
-                toast.error("地图渲染数据加载失败");
-            }
-        } finally {
-            if (requestId === activeRenderRequestId) {
-                isLoadingRenderItems = false;
-            }
-        }
+		const requestId = ++activeRenderRequestId;
+		try {
+			const response = await mapService.render(
+				filter ? { viewport, filter } : { viewport },
+			);
+			assertSuccess(response);
+			if (requestId !== activeRenderRequestId) {
+				return;
+			}
+			lastRenderedViewportSignature = signature;
+			latestRenderItems = response.data.items ?? [];
+			applyCurrentFilter();
+			const nextToastMessage = response.data.toast_message?.trim() ?? "";
+			if (nextToastMessage && nextToastMessage !== lastToastMessage) {
+				toast.info(nextToastMessage);
+			}
+			lastToastMessage = nextToastMessage;
+		} catch {
+			if (requestId === activeRenderRequestId) {
+				toast.error("地图渲染数据加载失败");
+			}
+		}
     }
 
     function scheduleMapRender() {
@@ -696,45 +767,51 @@
         }, MAP_RENDER_IDLE_MS);
     }
 
-	async function moveToCoordinate(
-        lat: number,
-        lng: number,
+    async function moveToCoordinate(
+        mapLat: number,
+        mapLng: number,
         options?: { hintMessage?: string },
     ) {
         cancelReverseGeocodeTimer();
         closeClusterPreview();
         skipNextReverseGeocode = true;
-		latitude = lat;
-		longitude = lng;
-		updateSelectedMarker();
-		map?.setCenter([lng, lat]);
-        await reverseGeocode(lat, lng);
+        const wgs = gcj02ToWgs84({
+            latitude: mapLat,
+            longitude: mapLng,
+        });
+        latitude = wgs.latitude;
+        longitude = wgs.longitude;
+        if (map) {
+            map.setCenter([mapLng, mapLat]);
+        }
+        updateSelectedMarker();
+        await reverseGeocode(latitude, longitude);
         hideGestureHint();
         showPlacementHint(options?.hintMessage ?? PLACEMENT_HINT_DEFAULT);
     }
 
-	function getLngLatFromTouch(
-		event: TouchEvent,
-	): { lat: number; lng: number } | null {
-		if (!map || !mapContainer) return null;
-		const touch = event.touches[0] ?? event.changedTouches[0];
-		if (!touch) return null;
-		const rect = mapContainer.getBoundingClientRect();
-		const pixel = {
-			x: touch.clientX - rect.left,
-			y: touch.clientY - rect.top,
-		};
-		const lnglat = (
-			map as unknown as {
-				containerToLngLat: (pixel: {
-					x: number;
-					y: number;
-				}) => AMap.LngLat;
-			}
-		).containerToLngLat(pixel);
-		if (!lnglat) return null;
-		return { lat: lnglat.getLat(), lng: lnglat.getLng() };
-	}
+    function getLngLatFromTouch(
+        event: TouchEvent,
+    ): { lat: number; lng: number } | null {
+        if (!map || !mapContainer) return null;
+        const touch = event.touches[0] ?? event.changedTouches[0];
+        if (!touch) return null;
+        const rect = mapContainer.getBoundingClientRect();
+        const pixel = {
+            x: touch.clientX - rect.left,
+            y: touch.clientY - rect.top,
+        };
+        const lnglat = (
+            map as unknown as {
+                containerToLngLat: (pixel: {
+                    x: number;
+                    y: number;
+                }) => AMap.LngLat;
+            }
+        ).containerToLngLat(pixel);
+        if (!lnglat) return null;
+        return { lat: lnglat.getLat(), lng: lnglat.getLng() };
+    }
 
     const handleTouchStart = (event: TouchEvent) => {
         const lnglat = getLngLatFromTouch(event);
@@ -747,7 +824,9 @@
         longPressTimer = window.setTimeout(() => {
             if (touchMovedDuringLongPress || !lastTouchLngLat) return;
             void moveToCoordinate(lastTouchLngLat.lat, lastTouchLngLat.lng, {
-                hintMessage: "已通过长按定位到该位置",
+                hintMessage: isAnchorMode
+                    ? "已定位，请点击下方按钮确认"
+                    : "已定位到该位置",
             });
         }, LONG_PRESS_DURATION_MS);
     };
@@ -855,24 +934,34 @@
                     longitude: number;
                 }>
             >((resolve) => {
-				placeSearch!.searchNearBy(
-					keyword,
-					[longitude, latitude],
-					configStore.searchRadiusMax, // 使用后端配置的搜索半径上限（米）
+                const centerForSearch = toGcjLngLat({
+                    latitude,
+                    longitude,
+                });
+                placeSearch!.searchNearBy(
+                    keyword,
+                    centerForSearch,
+                    configStore.searchRadiusMax, // 使用后端配置的搜索半径上限（米）
                     (status: string, result: AMap.PlaceSearchResult) => {
                         if (
                             status === "complete" &&
                             result.poiList?.pois?.length
                         ) {
                             resolve(
-                                result.poiList.pois.map((poi) => ({
-                                    name: poi.name,
-                                    address: [poi.adname, poi.address]
-                                        .filter(Boolean)
-                                        .join(" "),
-                                    latitude: poi.location.getLat(),
-                                    longitude: poi.location.getLng(),
-                                })),
+                                result.poiList.pois.map((poi) => {
+                                    const wgs = gcj02ToWgs84({
+                                        latitude: poi.location.getLat(),
+                                        longitude: poi.location.getLng(),
+                                    });
+                                    return {
+                                        name: poi.name,
+                                        address: [poi.adname, poi.address]
+                                            .filter(Boolean)
+                                            .join(" "),
+                                        latitude: wgs.latitude,
+                                        longitude: wgs.longitude,
+                                    };
+                                }),
                             );
                         } else {
                             resolve([]);
@@ -902,7 +991,7 @@
         }
     }
 
-	function selectSearchResult(result: {
+    function selectSearchResult(result: {
         name: string;
         address: string;
         latitude: number;
@@ -916,20 +1005,24 @@
         isSearching = false;
         cancelReverseGeocodeTimer();
         skipNextReverseGeocode = true;
-		latitude = result.latitude;
-		longitude = result.longitude;
+        latitude = result.latitude;
+        longitude = result.longitude;
         locationName = result.name;
         lastResolvedLat = result.latitude;
         lastResolvedLng = result.longitude;
-		closeClusterPreview();
-		updateSelectedMarker();
-		map?.setCenter([result.longitude, result.latitude]);
+        closeClusterPreview();
+        updateSelectedMarker();
+        const [gcjLng, gcjLat] = toGcjLngLat({
+            latitude: result.latitude,
+            longitude: result.longitude,
+        });
+        map?.setCenter([gcjLng, gcjLat]);
         showSearch = false;
         searchText = "";
         searchResults = [];
     }
 
-	function selectHistoryItem(item: AnchorHistoryItem) {
+    function selectHistoryItem(item: AnchorHistoryItem) {
         if (searchDebounceTimer) {
             clearTimeout(searchDebounceTimer);
             searchDebounceTimer = null;
@@ -938,14 +1031,18 @@
         isSearching = false;
         cancelReverseGeocodeTimer();
         skipNextReverseGeocode = true;
-		latitude = item.latitude;
-		longitude = item.longitude;
+        latitude = item.latitude;
+        longitude = item.longitude;
         locationName = item.locationName;
         lastResolvedLat = item.latitude;
         lastResolvedLng = item.longitude;
-		closeClusterPreview();
-		updateSelectedMarker();
-		map?.setCenter([item.longitude, item.latitude]);
+        closeClusterPreview();
+        updateSelectedMarker();
+        const [gcjLng, gcjLat] = toGcjLngLat({
+            latitude: item.latitude,
+            longitude: item.longitude,
+        });
+        map?.setCenter([gcjLng, gcjLat]);
     }
 
     function handleClearHistory() {
@@ -961,9 +1058,13 @@
                 locationName = "自定义位置";
                 return "自定义位置";
             }
+            const [gcjLng, gcjLat] = toGcjLngLat({
+                latitude: lat,
+                longitude: lng,
+            });
             return await new Promise<string>((resolve) => {
                 currentGeocoder.getAddress(
-                    [lng, lat],
+                    [gcjLng, gcjLat],
                     (status: string, result: AMap.GeocodeResult) => {
                         if (status === "complete" && result.regeocode) {
                             const poiName = result.regeocode.pois?.[0]?.name;
@@ -1012,14 +1113,12 @@
         }, REVERSE_GEOCODE_IDLE_MS);
     }
 
-	function syncCenterFromMap() {
-		if (!map) return;
-		const center = map.getCenter();
-		if (!center) return;
-		latitude = center.getLat();
-		longitude = center.getLng();
-		updateSelectedMarker();
-	}
+    function syncCenterFromMap() {
+        if (!map) return;
+        const center = map.getCenter();
+        if (!center) return;
+        // 仅用于触发地图渲染，不再自动修改当前选中位置
+    }
 
     function handleLiveMapMove() {
         if (mapMoveFrame !== null) {
@@ -1048,7 +1147,9 @@
         const nextLat = lnglat.getLat();
         const nextLng = lnglat.getLng();
         await moveToCoordinate(nextLat, nextLng, {
-            hintMessage: "已通过双击定位到该位置",
+            hintMessage: isAnchorMode
+                ? "已定位，请点击下方按钮确认"
+                : "已定位到该位置",
         });
     }
 
@@ -1058,19 +1159,26 @@
         const nextLat = lnglat.getLat();
         const nextLng = lnglat.getLng();
         await moveToCoordinate(nextLat, nextLng, {
-            hintMessage: "已通过右键定位到该位置",
+            hintMessage: isAnchorMode
+                ? "已定位，请点击下方按钮确认"
+                : "已定位到该位置",
         });
     }
 
     async function initMap() {
         isLoadingMap = true;
         try {
-			await loadAMap();
-			await tick();
-			if (!mapContainer) return;
+            await loadAMap();
+            await tick();
+            if (!mapContainer) return;
 
-			map = new AMap.Map(mapContainer, {
-				center: [longitude, latitude],
+            const [gcjLng, gcjLat] = toGcjLngLat({
+                latitude,
+                longitude,
+            });
+
+            map = new AMap.Map(mapContainer, {
+                center: [gcjLng, gcjLat],
                 zoom: 14,
                 viewMode: "2D",
                 doubleClickZoom: false,
@@ -1114,15 +1222,19 @@
         }
     }
 
-	async function handleUseCurrentLocation() {
+    async function handleUseCurrentLocation() {
         isLocating = true;
         closeClusterPreview();
-		const geoPoint = await locationStore.requestLocation();
-		if (geoPoint) {
-			latitude = geoPoint.latitude;
-			longitude = geoPoint.longitude;
-			updateSelectedMarker();
-			map?.setZoomAndCenter(15, [longitude, latitude]);
+        const geoPoint = await locationStore.requestLocation();
+        if (geoPoint) {
+            latitude = geoPoint.latitude;
+            longitude = geoPoint.longitude;
+            const [gcjLng, gcjLat] = toGcjLngLat({
+                latitude,
+                longitude,
+            });
+            map?.setZoomAndCenter(15, [gcjLng, gcjLat]);
+            updateSelectedMarker();
             const resolvedName = await reverseGeocode(latitude, longitude);
             locationStore.setLocation({
                 point: {
@@ -1137,16 +1249,20 @@
         isLocating = false;
     }
 
-	async function handleBackToBrowseAnchor() {
-		const anchorLat = mapAnchorStore.latitude;
-		const anchorLng = mapAnchorStore.longitude;
+    async function handleBackToBrowseAnchor() {
+        const anchorLat = mapAnchorStore.latitude;
+        const anchorLng = mapAnchorStore.longitude;
         closeClusterPreview();
         cancelReverseGeocodeTimer();
         skipNextReverseGeocode = true;
-		latitude = anchorLat;
-		longitude = anchorLng;
-		updateSelectedMarker();
-		map?.setZoomAndCenter(14, [anchorLng, anchorLat]);
+        latitude = anchorLat;
+        longitude = anchorLng;
+        const [gcjLng, gcjLat] = toGcjLngLat({
+            latitude: anchorLat,
+            longitude: anchorLng,
+        });
+        map?.setZoomAndCenter(14, [gcjLng, gcjLat]);
+        updateSelectedMarker();
         if (mapAnchorStore.name) {
             locationName = mapAnchorStore.name;
             lastResolvedLat = anchorLat;
@@ -1159,9 +1275,7 @@
     }
 
     function handleConfirm() {
-        const normalizedName =
-            locationName.trim() ||
-            `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+        const normalizedName = locationName.trim() || "自定义位置";
         if (isAnchorMode) {
             mapAnchorStore.setAnchor(
                 latitude,
@@ -1209,10 +1323,10 @@
         onOpenChange?.(false);
     }
 
-    $effect(() => {
-        if (open) {
-            if (!gestureHintVisible) {
-                showGestureHint();
+	$effect(() => {
+		if (open) {
+			if (!gestureHintVisible) {
+				showGestureHint();
             }
             if (!hasSyncedFromAnchor) {
                 const fallbackName =
@@ -1234,22 +1348,33 @@
 					initMap();
 				} else {
 					updateSelectedMarker();
-					map?.setZoomAndCenter(14, [longitude, latitude]);
+					const [gcjLng, gcjLat] = toGcjLngLat({
+						latitude,
+						longitude,
+					});
+					map?.setZoomAndCenter(14, [gcjLng, gcjLat]);
 				}
-                hasSyncedFromAnchor = true;
-            }
-        } else {
-            hasSyncedFromAnchor = false;
-            lastRenderedViewportSignature = "";
-            closeClusterPreview();
-            activeSearchRequestId += 1;
-            isSearching = false;
-            showSearch = false;
-            showFilterPanel = false;
-            hideGestureHint();
-            placementHintVisible = false;
-        }
-    });
+				hasSyncedFromAnchor = true;
+			}
+		} else {
+			hasSyncedFromAnchor = false;
+			lastRenderedViewportSignature = "";
+			closeClusterPreview();
+			activeSearchRequestId += 1;
+			isSearching = false;
+			showSearch = false;
+			showFilterPanel = false;
+			hideGestureHint();
+			placementHintVisible = false;
+			// 关闭弹窗时销毁地图实例，避免下次打开时复用已失效的 DOM 容器
+			clearRenderMarkers();
+			clearSelectedMarker();
+			map?.destroy();
+			map = null;
+			isMapAvailable = true;
+			hasInit = false;
+		}
+	});
 
     // 组件卸载时清理资源
     onMount(() => {
@@ -1293,6 +1418,15 @@
     });
 
     onMount(() => {
+        if (browser) {
+            try {
+                gestureHintDismissed =
+                    window.localStorage.getItem(GESTURE_HINT_DISMISS_KEY) ===
+                    "1";
+            } catch {
+                gestureHintDismissed = false;
+            }
+        }
         registerOutsidePointerListener();
     });
 </script>
@@ -1304,8 +1438,12 @@
         onOpenChange?.(value);
     }}
 >
-    <Dialog.Content
-        class="flex h-[90dvh] max-h-[90dvh] flex-col p-0 sm:h-[85vh] sm:max-w-4xl sm:rounded-3xl sm:border sm:border-border/60 sm:bg-card/95 sm:p-6"
+	<Dialog.Content
+		class={`flex h-[90dvh] max-h-[90dvh] flex-col p-0 transition-all duration-200 ease-out sm:flex-row sm:gap-4 select-none ${
+			isFullscreen
+				? "sm:h-screen sm:max-h-screen sm:w-screen sm:max-w-none sm:rounded-none sm:border-0 sm:bg-background sm:p-4"
+				: "sm:h-[88vh] sm:w-[92vw] sm:max-w-6xl lg:max-w-7xl sm:rounded-3xl sm:border sm:border-border/60 sm:bg-card/95 sm:p-6"
+        }`}
         hideClose
     >
         <!-- 移动端简化标题 -->
@@ -1372,8 +1510,7 @@
                 </Button>
             </div>
         </div>
-
-        <!-- 地图容器 -->
+        <!-- 左侧：地图容器 -->
         <div
             class="relative flex-1 overflow-hidden sm:rounded-3xl sm:border sm:border-border/60"
         >
@@ -1382,20 +1519,11 @@
                 bind:this={mapContainer}
             ></div>
 
-            <!-- 桌面端地图工具栏：右上角为筛选/搜索，右下角为地图操作（当前位置、锚点、放大、缩小） -->
+            <!-- 桌面端地图工具栏：右上角仅保留“筛选”入口，与地图区域靠近 -->
             <div
                 class="pointer-events-none absolute right-4 top-4 z-30 hidden flex-col gap-2 sm:flex"
             >
                 <div class="pointer-events-auto flex flex-col gap-2">
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        class="h-11 w-11 rounded-[20px] border border-white/60 bg-white/78 text-foreground shadow-[0_14px_28px_rgba(15,23,42,0.14)] backdrop-blur hover:bg-white/90 active:bg-white dark:border-border/60 dark:bg-card/90 dark:shadow-[0_14px_28px_rgba(0,0,0,0.4)] dark:hover:bg-card dark:active:bg-card"
-                        onclick={toggleSearch}
-                        aria-label="搜索地点"
-                    >
-                        <Search class="h-4 w-4" />
-                    </Button>
                     <Button
                         data-location-filter-trigger="true"
                         size="icon"
@@ -1424,7 +1552,9 @@
                         {#if isLocating}
                             <Loader2 class="h-4 w-4 animate-spin" />
                         {:else}
-                            <LocateFixed class="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                            <LocateFixed
+                                class="h-6 w-6 text-blue-600 dark:text-blue-400"
+                            />
                         {/if}
                     </Button>
                     {#if isAnchorMode}
@@ -1442,10 +1572,10 @@
                             />
                         </Button>
                     {/if}
-                        <Button
-                            size="icon"
-                            variant="ghost"
-                            class="h-11 w-11 rounded-[20px] border border-slate-300/70 bg-white/95 text-foreground shadow-[0_16px_30px_rgba(15,23,42,0.26)] transition hover:border-primary/70 hover:bg-white hover:text-primary dark:border-border/60 dark:bg-card/95 dark:shadow-[0_16px_30px_rgba(0,0,0,0.5)] dark:hover:border-primary/70 dark:hover:bg-card dark:hover:text-primary"
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        class="h-11 w-11 rounded-[20px] border border-slate-300/70 bg-white/95 text-foreground shadow-[0_16px_30px_rgba(15,23,42,0.26)] transition hover:border-primary/70 hover:bg-white hover:text-primary dark:border-border/60 dark:bg-card/95 dark:shadow-[0_16px_30px_rgba(0,0,0,0.5)] dark:hover:border-primary/70 dark:hover:bg-card dark:hover:text-primary"
                         onclick={() => {
                             if (!map) return;
                             const currentZoom = map.getZoom?.() ?? 14;
@@ -1455,10 +1585,10 @@
                     >
                         <Plus class="h-5 w-5" />
                     </Button>
-                        <Button
-                            size="icon"
-                            variant="ghost"
-                            class="h-11 w-11 rounded-[20px] border border-slate-300/70 bg-white/95 text-foreground shadow-[0_16px_30px_rgba(15,23,42,0.26)] transition hover:border-primary/70 hover:bg-white hover:text-primary dark:border-border/60 dark:bg-card/95 dark:shadow-[0_16px_30px_rgba(0,0,0,0.5)] dark:hover:border-primary/70 dark:hover:bg-card dark:hover:text-primary"
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        class="h-11 w-11 rounded-[20px] border border-slate-300/70 bg-white/95 text-foreground shadow-[0_16px_30px_rgba(15,23,42,0.26)] transition hover:border-primary/70 hover:bg-white hover:text-primary dark:border-border/60 dark:bg-card/95 dark:shadow-[0_16px_30px_rgba(0,0,0,0.5)] dark:hover:border-primary/70 dark:hover:bg-card dark:hover:text-primary"
                         onclick={() => {
                             if (!map) return;
                             const currentZoom = map.getZoom?.() ?? 14;
@@ -1471,36 +1601,19 @@
                 </div>
             </div>
 
-            {#if isAnchorMode || isLoadingRenderItems || isLocating}
-                <div
-                    class="pointer-events-none absolute left-3 top-3 z-30 flex max-w-[min(78vw,22rem)] flex-wrap gap-2 sm:left-4 sm:top-4"
-                >
-                    <span
-                        class="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/84 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.10)] backdrop-blur dark:border-border/60 dark:bg-card/90 dark:text-foreground dark:shadow-[0_10px_24px_rgba(0,0,0,0.3)]"
-                    >
-                        <MapPin class="h-3.5 w-3.5 text-primary" />
-                        {mapModeLabel}
-                    </span>
-                    <span
-                        class="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/84 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-[0_10px_24px_rgba(15,23,42,0.10)] backdrop-blur dark:border-border/60 dark:bg-card/90 dark:text-muted-foreground dark:shadow-[0_10px_24px_rgba(0,0,0,0.3)]"
-                    >
-                        {#if isLoadingRenderItems || isLocating}
-                            <Loader2
-                                class="h-3.5 w-3.5 animate-spin text-primary"
-                            />
-                        {/if}
-                        <span>{mapStatusText}</span>
-                    </span>
-                </div>
-            {/if}
+			<!-- 移除地图左上角的“地图内容更新中/正在获取当前位置”浮层，避免缩放时闪烁 -->
 
             {#if showFilterPanel}
                 <div
                     bind:this={filterPanelElement}
-                    class="absolute right-3 top-16 z-30 w-40 overflow-hidden rounded-3xl border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] p-2 shadow-[0_24px_60px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-border/60 dark:bg-[linear-gradient(180deg,rgba(30,30,36,0.96),rgba(24,24,30,0.92))] dark:shadow-[0_24px_60px_rgba(0,0,0,0.5)] sm:right-4 sm:top-16"
+                    class="absolute right-3 top-16 z-30 w-40 select-none overflow-hidden rounded-3xl border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] p-2 shadow-[0_24px_60px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-border/60 dark:bg-[linear-gradient(180deg,rgba(30,30,36,0.96),rgba(24,24,30,0.92))] dark:shadow-[0_24px_60px_rgba(0,0,0,0.5)] sm:right-4 sm:top-16"
                 >
                     <button
-                        class={`flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left text-sm font-medium transition ${showUsers ? "bg-primary/8 text-foreground" : "text-muted-foreground hover:bg-muted/60"}`}
+                        class={`flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left text-sm font-medium transition ${
+                            showUsers
+                                ? "border border-blue-500/80 bg-blue-50 text-blue-900 shadow-sm"
+                                : "border border-white/70 bg-white/90 text-slate-400 hover:border-slate-200 hover:bg-slate-50"
+                        }`}
                         onclick={() => toggleRenderFilter("user")}
                     >
                         <span class="flex items-center gap-2">
@@ -1516,7 +1629,11 @@
                         ></span>
                     </button>
                     <button
-                        class={`mt-1 flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left text-sm font-medium transition ${showGroups ? "bg-primary/8 text-foreground" : "text-muted-foreground hover:bg-muted/60"}`}
+                        class={`mt-1 flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left text-sm font-medium transition ${
+                            showGroups
+                                ? "border border-emerald-500/80 bg-emerald-50 text-emerald-900 shadow-sm"
+                                : "border border-white/70 bg-white/90 text-slate-400 hover:border-slate-200 hover:bg-slate-50"
+                        }`}
                         onclick={() => toggleRenderFilter("group")}
                     >
                         <span class="flex items-center gap-2">
@@ -1532,7 +1649,11 @@
                         ></span>
                     </button>
                     <button
-                        class={`mt-1 flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left text-sm font-medium transition ${showMoments ? "bg-primary/8 text-foreground" : "text-muted-foreground hover:bg-muted/60"}`}
+                        class={`mt-1 flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left text-sm font-medium transition ${
+                            showMoments
+                                ? "border border-orange-500/80 bg-orange-50 text-orange-900 shadow-sm"
+                                : "border border-white/70 bg-white/90 text-slate-400 hover:border-slate-200 hover:bg-slate-50"
+                        }`}
                         onclick={() => toggleRenderFilter("moment")}
                     >
                         <span class="flex items-center gap-2">
@@ -1567,18 +1688,26 @@
                         </div>
                     {:else if gestureHintVisible}
                         <div
-                            class="rounded-2xl border border-dashed border-primary/40 bg-card/90 px-4 py-1 text-xs text-muted-foreground shadow"
+                            class="pointer-events-auto inline-flex items-center gap-3 rounded-2xl border border-dashed border-primary/40 bg-card/90 px-4 py-1.5 text-xs text-muted-foreground shadow"
                         >
-                            {gestureHintMessage}
+                            <span>{gestureHintMessage}</span>
+                            <button
+                                type="button"
+                                class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-primary hover:bg-primary/10"
+                                onclick={dismissGestureHintPermanently}
+                            >
+                                <XIcon class="h-3 w-3" />
+                                <span>不再提示</span>
+                            </button>
                         </div>
                     {/if}
                 </div>
             {/if}
 
-            <!-- 搜索覆盖层 -->
+            <!-- 搜索覆盖层（移动端使用，桌面端由右侧信息栏承载搜索） -->
             {#if showSearch}
                 <div
-                    class="absolute inset-x-3 top-3 z-30 overflow-hidden rounded-[28px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] shadow-[0_24px_60px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-border/60 dark:bg-[linear-gradient(180deg,rgba(30,30,36,0.96),rgba(24,24,30,0.92))] dark:shadow-[0_24px_60px_rgba(0,0,0,0.5)] sm:inset-x-auto sm:left-4 sm:right-auto sm:top-4 sm:w-[26rem]"
+                    class="absolute inset-x-3 top-3 z-30 overflow-hidden rounded-[28px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] shadow-[0_24px_60px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-border/60 dark:bg-[linear-gradient(180deg,rgba(30,30,36,0.96),rgba(24,24,30,0.92))] dark:shadow-[0_24px_60px_rgba(0,0,0,0.5)] sm:inset-x-auto sm:left-4 sm:right-auto sm:top-4 sm:w-104 sm:hidden"
                 >
                     <div
                         class="border-b border-border/50 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.14),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.95),rgba(248,250,252,0.88))] px-4 py-3 dark:bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.12),transparent_42%),linear-gradient(180deg,rgba(30,30,36,0.95),rgba(24,24,30,0.88))]"
@@ -1614,7 +1743,7 @@
                     <!-- 搜索输入框 -->
                     <div class="px-4 py-3">
                         <div
-                            class="flex items-center gap-2 rounded-2xl border border-border/60 bg-white/80 px-3 py-2.5 shadow-sm dark:bg-card/80"
+                            class="flex h-12 items-center gap-2 rounded-2xl border border-border/60 bg-white/80 px-3 shadow-sm dark:bg-card/80"
                         >
                             <Search
                                 class="h-4 w-4 shrink-0 text-muted-foreground"
@@ -1698,8 +1827,7 @@
                                         <div
                                             class="mt-1 text-xs text-muted-foreground"
                                         >
-                                            {result.address ||
-                                                `${result.latitude.toFixed(6)}, ${result.longitude.toFixed(6)}`}
+                                            {result.address || "未提供详细地址"}
                                         </div>
                                     </div>
                                     <span
@@ -1825,7 +1953,9 @@
                     {#if isLocating}
                         <Loader2 class="h-5 w-5 animate-spin" />
                     {:else}
-                        <LocateFixed class="h-7 w-7 text-blue-600 dark:text-blue-400" />
+                        <LocateFixed
+                            class="h-7 w-7 text-blue-600 dark:text-blue-400"
+                        />
                     {/if}
                 </Button>
                 {#if isAnchorMode}
@@ -1873,7 +2003,7 @@
 
             {#if clusterPreview}
                 <div
-                    class="absolute inset-x-3 bottom-32 z-30 sm:bottom-6 sm:left-4 sm:right-auto sm:w-[25rem]"
+                    class="absolute inset-x-3 bottom-32 z-30 select-none sm:bottom-6 sm:left-4 sm:right-auto sm:w-100"
                 >
                     <div
                         class="overflow-hidden rounded-[28px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] shadow-[0_24px_60px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-border/60 dark:bg-[linear-gradient(180deg,rgba(30,30,36,0.96),rgba(24,24,30,0.92))] dark:shadow-[0_24px_60px_rgba(0,0,0,0.5)]"
@@ -1976,7 +2106,7 @@
 
             <!-- 移动端底部抽屉 -->
             <div
-                class="absolute bottom-0 left-0 right-0 z-20 transition-transform duration-300 sm:hidden"
+                class="absolute bottom-0 left-0 right-0 z-20 transition-transform duration-250 ease-out sm:hidden"
                 class:translate-y-0={!isBottomSheetExpanded}
                 style="transform: translateY({isBottomSheetExpanded
                     ? '0'
@@ -2003,38 +2133,15 @@
                         {/if}
                     </button>
 
-                    <!-- 底部抽屉内容 -->
-                    <div class="max-h-[60vh] overflow-y-auto px-4 pb-safe">
-                        <!-- 位置信息 (精简版 - 始终可见) -->
-                        <AnchorSummaryCard
-                            label="当前选中"
-                            description={selectionDescription}
-                            subtle
-                            overrideName={locationName || "拖动地图选择位置"}
-                            overrideLatitude={latitude}
-                            overrideLongitude={longitude}
-                            showCoordinates
-                        />
-
-                        <!-- 展开后显示的内容 -->
-                        {#if isBottomSheetExpanded}
-                            <div class="space-y-4 pb-4">
-                                <!-- 提示信息 -->
-                                <div
-                                    class="rounded-2xl border border-border/50 bg-background/65 p-3 text-xs text-muted-foreground"
-                                >
-                                    💡 {hintAfterConfirm}
-                                </div>
-
-                                {#if isAnchorMode}
-                                    <div
-                                        class="rounded-2xl border border-border/60 bg-background/70 p-3 text-xs text-muted-foreground"
-                                    >
-                                        搜索范围将继续使用当前偏好设置；如果你确实需要修改，建议放到设置页统一调整。
-                                    </div>
-                                {/if}
-                            </div>
-                        {/if}
+						<!-- 底部抽屉内容 -->
+						<div class="max-h-[60vh] overflow-y-auto px-4 pb-safe">
+							<!-- 位置信息 (精简版 - 始终可见) -->
+							<AnchorSummaryCard
+								label="当前选中"
+								description={selectionDescription}
+								subtle
+								overrideName={locationName || "拖动地图选择位置"}
+							/>
 
                         <!-- 操作按钮 -->
                         <div
@@ -2063,85 +2170,207 @@
                     </div>
                 </div>
 
-                <div
-                    class="pointer-events-none absolute inset-x-4 bottom-4 z-30 hidden sm:block"
-                >
-                    <div
-                        class="pointer-events-auto flex items-end gap-3 rounded-[28px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(248,250,252,0.82))] p-3 shadow-[0_24px_60px_rgba(15,23,42,0.16)] backdrop-blur-md dark:border-border/60 dark:bg-[linear-gradient(180deg,rgba(30,30,36,0.88),rgba(24,24,30,0.82))] dark:shadow-[0_24px_60px_rgba(0,0,0,0.5)]"
+                <!-- 原桌面底部操作卡片在引入右侧信息栏后不再展示，避免重复操作区域 -->
+            </div>
+        </div>
+
+        <!-- 右侧：桌面信息栏（标题 / 搜索 / 历史 / 确认） -->
+        <div
+            class="hidden h-full w-[320px] shrink-0 select-none flex-col gap-4 overflow-hidden rounded-3xl border border-border/60 bg-card/95 p-4 shadow-lg sm:flex lg:w-90"
+        >
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <p
+                        class="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary/70"
                     >
-                        <div
-                            class="min-w-0 flex-1 rounded-[22px] bg-white/78 px-4 py-3 shadow-sm dark:bg-card/78"
+                        {mapModeLabel}
+                    </p>
+                    <p class="mt-1 truncate text-base font-bold">
+                        {modalTitle}
+                    </p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        class="h-9 w-9 rounded-2xl border border-border/60 bg-background/80 p-0 shadow-sm"
+                        onclick={() => (isFullscreen = !isFullscreen)}
+                        aria-pressed={isFullscreen}
+                        aria-label={isFullscreen ? "退出全屏" : "进入全屏"}
+                    >
+                        {#if isFullscreen}
+                            <Minimize2 class="h-4 w-4" />
+                        {:else}
+                            <Maximize2 class="h-4 w-4" />
+                        {/if}
+                    </Button>
+                </div>
+            </div>
+
+			<!-- 去掉右侧顶部的“地图内容更新中”等瞬时提示，避免缩放时闪烁扰动 -->
+
+            <!-- 搜索与结果（桌面端常驻在信息栏中） -->
+            <div class="space-y-2">
+                <div
+                    class="flex h-12 items-center gap-2 rounded-2xl border border-border/60 bg-background/80 px-3 text-sm shadow-sm"
+                >
+                    <Search class="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <input
+                        {@attach useKeyboardFocus()}
+                        type="text"
+                        bind:this={searchInput}
+                        bind:value={searchText}
+                        placeholder="搜索地点、地标或坐标"
+                        class="flex-1 select-text bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                        oninput={() => {
+                            if (searchDebounceTimer)
+                                clearTimeout(searchDebounceTimer);
+                            if (searchText.trim().length > 0) {
+                                searchDebounceTimer = window.setTimeout(() => {
+                                    doSearch();
+                                }, 500);
+                            } else {
+                                activeSearchRequestId += 1;
+                                isSearching = false;
+                                searchResults = [];
+                            }
+                        }}
+                        onkeydown={(e) => {
+                            if (e.key === "Enter") {
+                                if (searchDebounceTimer)
+                                    clearTimeout(searchDebounceTimer);
+                                doSearch();
+                            }
+                        }}
+                    />
+                    {#if isSearching}
+                        <Loader2
+                            class="h-4 w-4 shrink-0 animate-spin text-primary"
+                        />
+                    {:else if searchText.length > 0}
+                        <button
+                            class="shrink-0 text-muted-foreground hover:text-foreground"
+                            onclick={() => {
+                                if (searchDebounceTimer)
+                                    clearTimeout(searchDebounceTimer);
+                                searchDebounceTimer = null;
+                                activeSearchRequestId += 1;
+                                isSearching = false;
+                                searchText = "";
+                                searchResults = [];
+                                searchInput?.focus();
+                            }}
                         >
-                            <div class="flex items-start gap-3">
+                            <X class="h-4 w-4" />
+                        </button>
+                    {/if}
+                </div>
+
+                <div class="max-h-56 space-y-2 overflow-y-auto pr-1">
+                    {#if searchResults.length > 0}
+                        {#each searchResults as result (`desktop_${result.latitude}_${result.longitude}`)}
+                            <button
+                                class="flex w-full items-start gap-3 rounded-2xl border border-border/50 bg-card/80 px-3 py-2 text-left text-xs shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:bg-card"
+                                onclick={() => selectSearchResult(result)}
+                            >
                                 <div
-                                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10"
+                                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-primary/10"
                                 >
-                                    <MapPin class="h-5 w-5 text-primary" />
+                                    <MapPin class="h-4 w-4 text-primary" />
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <p
-                                        class="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary/70"
-                                    >
-                                        当前选中
+                                    <p class="truncate text-sm font-medium">
+                                        {result.name}
                                     </p>
                                     <p
-                                        class="truncate text-base font-bold leading-snug text-foreground"
+                                        class="mt-0.5 text-[11px] text-muted-foreground"
                                     >
-                                        {locationName || "拖动地图选择位置"}
+                                        {result.address || "未提供详细地址"}
                                     </p>
-                                    <p
-                                        class="mt-1 font-mono text-[11px] text-muted-foreground"
-                                    >
-                                        {latitude.toFixed(6)}, {longitude.toFixed(
-                                            6,
-                                        )}
-                                    </p>
-                                    {#if isAnchorMode}
-                                        <p
-                                            class="mt-2 text-xs text-muted-foreground"
-                                        >
-                                            搜索范围使用当前偏好设置，主视图优先留给地图浏览。
-                                        </p>
-                                    {/if}
                                 </div>
-                            </div>
-                        </div>
+                            </button>
+                        {/each}
+                    {:else if searchText.trim().length === 0 && anchorHistory.length > 0}
                         <div
-                            class="w-[13.5rem] shrink-0 rounded-[24px] bg-slate-950 px-3 py-3 text-white shadow-[0_18px_36px_rgba(15,23,42,0.24)] dark:bg-slate-900 dark:shadow-[0_18px_36px_rgba(0,0,0,0.5)]"
+                            class="flex items-center justify-between px-1 pb-1"
                         >
-                            <p
-                                class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60"
+                            <div
+                                class="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground"
                             >
-                                操作
-                            </p>
-                            <p class="mt-2 text-sm font-medium text-white/80">
-                                {locationReadyText}
-                            </p>
-                            <div class="mt-3 space-y-2">
-                                {#if isAnchorMode}
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        class="h-10 w-full gap-1.5 rounded-2xl border-white/15 bg-white/10 text-white hover:bg-white/15"
-                                        onclick={() => (showShareModal = true)}
-                                        disabled={!locationName}
-                                    >
-                                        <Share2 class="h-3.5 w-3.5" />
-                                        分享此位置
-                                    </Button>
-                                {/if}
-                                <Button
-                                    size="sm"
-                                    class="h-10 w-full gap-1.5 rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90"
-                                    onclick={handleConfirm}
-                                    disabled={!locationName}
-                                >
-                                    <MapPin class="h-3.5 w-3.5" />
-                                    {confirmButtonText}
-                                </Button>
+                                <Clock class="h-3.5 w-3.5" />
+                                <span>最近使用</span>
                             </div>
+                            <button
+                                class="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+                                onclick={handleClearHistory}
+                            >
+                                <Trash2 class="h-3 w-3" />
+                                <span>清空</span>
+                            </button>
                         </div>
-                    </div>
+                        {#each anchorHistory as item (item.timestamp)}
+                            <button
+                                class="flex w-full items-center gap-3 rounded-2xl border border-border/50 bg-card/80 px-3 py-2 text-left text-xs shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:bg-card"
+                                onclick={() => selectHistoryItem(item)}
+                            >
+                                <div
+                                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-muted"
+                                >
+                                    <Clock
+                                        class="h-4 w-4 text-muted-foreground"
+                                    />
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm font-medium">
+                                        {item.locationName}
+                                    </p>
+                                    <p
+                                        class="mt-0.5 text-[11px] text-muted-foreground"
+                                    >
+                                        一键回到该位置继续浏览
+                                    </p>
+                                </div>
+                            </button>
+                        {/each}
+                    {:else if searchText.trim().length > 0 && !isSearching}
+                        <div
+                            class="rounded-2xl border border-dashed border-border/70 bg-background/60 px-3 py-4 text-[11px] text-muted-foreground"
+                        >
+                            没有找到匹配地点，换个关键词试试，或者直接拖动地图到目标区域。
+                        </div>
+                    {/if}
+                </div>
+            </div>
+
+            <!-- 当前位置摘要与操作 -->
+            <div class="mt-auto space-y-3 border-t border-border/60 pt-3">
+                <div class="space-y-1 text-xs text-muted-foreground">
+                    <p class="font-medium text-foreground">当前选中</p>
+                    <p class="truncate text-sm font-semibold">
+                        {locationName || "拖动地图选择位置"}
+                    </p>
+                </div>
+
+                <div class="space-y-2">
+                    <Button
+                        class="h-11 w-full gap-2 text-sm font-semibold"
+                        onclick={handleConfirm}
+                        disabled={!locationName}
+                    >
+                        <MapPin class="h-4 w-4" />
+                        {confirmButtonText}
+                    </Button>
+                    {#if isAnchorMode}
+                        <Button
+                            variant="outline"
+                            class="h-11 w-full gap-2 text-sm font-semibold"
+                            onclick={() => (showShareModal = true)}
+                            disabled={!locationName}
+                        >
+                            <Share2 class="h-4 w-4" />
+                            分享此位置
+                        </Button>
+                    {/if}
                 </div>
             </div>
         </div>
@@ -2157,19 +2386,6 @@
 />
 
 <style>
-    :global(.map-selection-marker) {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        pointer-events: none;
-    }
-
-    :global(.map-selection-marker-svg) {
-        width: 36px;
-        height: 48px;
-        transform: translateY(-4px);
-    }
-
     :global(.map-render-marker) {
         display: flex;
         min-width: 4.4rem;
@@ -2188,6 +2404,9 @@
         white-space: normal;
         text-align: left;
         backdrop-filter: blur(10px);
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
     }
 
     :global(.map-render-marker::before) {
@@ -2218,6 +2437,7 @@
         font-size: 0.76rem;
         font-weight: 800;
         line-height: 1.15;
+        line-clamp: 2;
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 2;
     }

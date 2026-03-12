@@ -6,6 +6,7 @@
 	import { toast } from '$lib/stores/toast.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent } from '$lib/components/ui/card';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import { Badge } from '$lib/components/ui/badge';
 	import ListSkeleton from '$lib/components/common/list-skeleton.svelte';
@@ -158,19 +159,16 @@
 </svelte:head>
 
 <div class="space-y-5">
-	<div class="rounded-3xl border border-border/60 bg-linear-to-br from-background via-card/85 to-muted/35 p-5 shadow-sm">
-		<div class="flex flex-wrap items-center justify-between gap-3">
-			<div class="flex items-center gap-3">
-				<div class="rounded-2xl border border-border/50 bg-primary/10 p-2.5 text-primary">
-					<Users class="h-5 w-5" />
-				</div>
-				<div>
-					<h1 class="text-2xl font-bold">我的群组</h1>
-					<p class="text-sm text-muted-foreground">管理已加入群组、邀请与申请</p>
-				</div>
-			</div>
+	<PageHeader title="我的群组" description="管理已加入群组、邀请与申请">
+		{#snippet actions()}
 			<div class="flex gap-2">
-				<Button variant="outline" size="sm" class="h-10 rounded-2xl border-border/60 bg-background/70" onclick={loadGroups} disabled={isLoading}>
+				<Button
+					variant="outline"
+					size="sm"
+					class="h-10 rounded-2xl border-border/60 bg-background/70"
+					onclick={loadGroups}
+					disabled={isLoading}
+				>
 					<RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
 					刷新
 				</Button>
@@ -179,8 +177,8 @@
 					创建群组
 				</Button>
 			</div>
-		</div>
-	</div>
+		{/snippet}
+	</PageHeader>
 
 	{#if isLoading}
 		<ListSkeleton type="group" count={6} layout="grid" />

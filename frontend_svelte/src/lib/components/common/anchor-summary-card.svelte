@@ -9,11 +9,8 @@
 		label?: string;
 		description?: string | null;
 		subtle?: boolean;
-		showCoordinates?: boolean;
 		onAdjust?: () => void;
 		overrideName?: string | null;
-		overrideLatitude?: number | null;
-		overrideLongitude?: number | null;
 		actions?: Snippet;
 	}
 
@@ -21,17 +18,12 @@
 		label = '当前锚点',
 		description = null,
 		subtle = false,
-		showCoordinates = true,
 		onAdjust,
 		overrideName = null,
-		overrideLatitude = null,
-		overrideLongitude = null,
 		actions
 	}: AnchorSummaryCardProps = $props();
 
 	const displayName = $derived(overrideName ?? mapAnchorStore.displayName);
-	const displayLatitude = $derived(overrideLatitude ?? mapAnchorStore.latitude);
-	const displayLongitude = $derived(overrideLongitude ?? mapAnchorStore.longitude);
 </script>
 
 <Card
@@ -46,11 +38,6 @@
 			<div class="truncate font-semibold text-foreground">{displayName || '未设置锚点'}</div>
 			{#if description}
 				<div class="text-xs text-muted-foreground">{description}</div>
-			{/if}
-			{#if showCoordinates}
-				<div class="text-xs text-muted-foreground">
-					{displayLatitude.toFixed(4)}, {displayLongitude.toFixed(4)}
-				</div>
 			{/if}
 		</div>
 

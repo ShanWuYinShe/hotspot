@@ -6,6 +6,7 @@
 	import { toast } from '$lib/stores/toast.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Label } from '$lib/components/ui/label';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Switch } from '$lib/components/ui/switch';
@@ -82,10 +83,10 @@
 </svelte:head>
 
 <div class="mx-auto max-w-3xl space-y-5">
-	<div class="rounded-3xl border border-border/60 bg-linear-to-br from-background via-card/85 to-muted/40 p-5 shadow-sm">
-		<h1 class="text-2xl font-bold">隐私设置</h1>
-		<p class="mt-1 text-sm text-muted-foreground">控制你在 HotSpot 的可见范围与互动权限</p>
-	</div>
+	<PageHeader
+		title="隐私设置"
+		description="控制你在 HotSpot 的可见范围与互动权限"
+	/>
 
 	{#if isLoading}
 		<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">

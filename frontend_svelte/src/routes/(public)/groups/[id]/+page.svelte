@@ -19,6 +19,7 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Label } from '$lib/components/ui/label';
 	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import {
 		DropdownMenu,
 		DropdownMenuContent,
@@ -870,17 +871,19 @@
 </svelte:head>
 
 <div class="mx-auto max-w-5xl space-y-5">
-	<div class="rounded-3xl border border-border/60 bg-linear-to-br from-background via-card/85 to-muted/40 p-5 shadow-sm">
-		<div class="flex items-center gap-3">
-			<Button variant="outline" size="icon" class="h-10 w-10 rounded-2xl border-border/60 bg-background/70" onclick={() => history.back()} aria-label="返回">
+	<PageHeader title="群组详情" description="查看群信息、成员与公告管理">
+		{#snippet actions()}
+			<Button
+				variant="outline"
+				size="icon"
+				class="h-10 w-10 rounded-2xl border-border/60 bg-background/70"
+				onclick={() => history.back()}
+				aria-label="返回"
+			>
 				<ArrowLeft class="h-5 w-5" />
 			</Button>
-			<div>
-				<h1 class="text-2xl font-bold">群组详情</h1>
-				<p class="text-sm text-muted-foreground">查看群信息、成员与公告管理</p>
-			</div>
-		</div>
-	</div>
+		{/snippet}
+	</PageHeader>
 	{#if group && !wsGroupSubscription.state.isSubscribed}
 		<div class="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-sm text-yellow-700 dark:text-yellow-300">
 			<div class="flex items-center gap-2">

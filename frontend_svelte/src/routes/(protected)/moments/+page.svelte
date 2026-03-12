@@ -4,6 +4,7 @@
 	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card } from '$lib/components/ui/card';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import ListSkeleton from '$lib/components/common/list-skeleton.svelte';
 	import EmptyState from '$lib/components/common/empty-state.svelte';
 	import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
@@ -36,19 +37,16 @@
 </svelte:head>
 
 <div class="space-y-5">
-	<div class="rounded-3xl border border-border/60 bg-linear-to-br from-background via-card/85 to-muted/35 p-5 shadow-sm">
-		<div class="flex flex-wrap items-center justify-between gap-3">
-			<div class="flex items-center gap-3">
-				<div class="rounded-2xl border border-border/50 bg-primary/10 p-2.5 text-primary">
-					<Image class="h-5 w-5" />
-				</div>
-				<div>
-					<h1 class="text-2xl font-bold">我的瞬间</h1>
-					<p class="text-sm text-muted-foreground">记录和管理你发布的动态内容</p>
-				</div>
-			</div>
+	<PageHeader title="我的瞬间" description="记录和管理你发布的动态内容">
+		{#snippet actions()}
 			<div class="flex gap-2">
-				<Button variant="outline" size="sm" class="h-10 rounded-2xl border-border/60 bg-background/70" onclick={() => loadMoments(true)} disabled={pagination.loading}>
+				<Button
+					variant="outline"
+					size="sm"
+					class="h-10 rounded-2xl border-border/60 bg-background/70"
+					onclick={() => loadMoments(true)}
+					disabled={pagination.loading}
+				>
 					<RefreshCw class="mr-2 h-4 w-4 {pagination.loading ? 'animate-spin' : ''}" />
 					刷新
 				</Button>
@@ -57,8 +55,8 @@
 					发布
 				</Button>
 			</div>
-		</div>
-	</div>
+		{/snippet}
+	</PageHeader>
 
 	{#if pagination.loading}
 		<ListSkeleton type="moment" count={3} layout="grid" />

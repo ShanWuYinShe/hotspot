@@ -106,14 +106,14 @@
 			</DialogHeader>
 
 			<div class="mt-4 space-y-4">
-				<!-- 位置信息展示 -->
+				<!-- 位置信息展示（仅展示名称，不展示经纬度） -->
 				<div class="space-y-2 rounded-2xl border border-border/50 bg-background/65 p-4">
 					<div class="flex items-center gap-2 font-medium">
 						<MapPin class="h-5 w-5 text-primary" />
 						{locationName}
 					</div>
 					<div class="text-xs text-muted-foreground">
-						{latitude.toFixed(6)}, {longitude.toFixed(6)}
+						接收者将看到以此位置为中心的内容推荐。
 					</div>
 				</div>
 

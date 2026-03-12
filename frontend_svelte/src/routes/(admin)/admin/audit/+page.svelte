@@ -5,6 +5,7 @@
 	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Input } from '$lib/components/ui/input';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Skeleton } from '$lib/components/ui/skeleton';
@@ -58,13 +59,19 @@
 </svelte:head>
 
 <div class="space-y-6">
-	<div class="flex items-center justify-between">
-		<h1 class="text-2xl font-bold">审计日志</h1>
-		<Button variant="outline" size="sm" onclick={() => loadLogs()} disabled={pagination.loading}>
-			<RefreshCw class="mr-2 h-4 w-4 {pagination.loading ? 'animate-spin' : ''}" />
-			刷新
-		</Button>
-	</div>
+	<PageHeader title="审计日志">
+		{#snippet actions()}
+			<Button
+				variant="outline"
+				size="sm"
+				onclick={() => loadLogs()}
+				disabled={pagination.loading}
+			>
+				<RefreshCw class="mr-2 h-4 w-4 {pagination.loading ? 'animate-spin' : ''}" />
+				刷新
+			</Button>
+		{/snippet}
+	</PageHeader>
 
 	<!-- Search -->
 	<div class="flex gap-2">

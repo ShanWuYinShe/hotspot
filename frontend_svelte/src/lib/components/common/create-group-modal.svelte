@@ -263,8 +263,6 @@
 				label="群组位置"
 				description="影响附近推荐与搜索，可单独选点且不修改浏览锚点"
 				overrideName={selectedLocation.locationName}
-				overrideLatitude={selectedLocation.latitude}
-				overrideLongitude={selectedLocation.longitude}
 				onAdjust={() => (showLocationPicker = true)}
 			/>
 		</div>

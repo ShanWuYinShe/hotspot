@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import Users from 'lucide-svelte/icons/users';
 	import UsersRound from 'lucide-svelte/icons/users-round';
 	import FileText from 'lucide-svelte/icons/file-text';
@@ -10,9 +11,8 @@
 	<title>管理后台 - HotSpot</title>
 </svelte:head>
 
-<div class="space-y-6">
-	<h1 class="text-2xl font-bold">管理后台</h1>
-	<p class="text-muted-foreground">系统管理概览</p>
+			<div class="space-y-6">
+	<PageHeader title="管理后台" description="系统管理概览" />
 
 	<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
 		<Card>

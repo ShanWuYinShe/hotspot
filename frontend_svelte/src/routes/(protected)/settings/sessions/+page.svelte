@@ -6,6 +6,7 @@
 	import { toast } from '$lib/stores/toast.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent } from '$lib/components/ui/card';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import type { SessionItem } from '$lib/types/api';
@@ -63,16 +64,20 @@
 </svelte:head>
 
 <div class="mx-auto max-w-3xl space-y-5">
-	<div class="flex items-center justify-between rounded-3xl border border-border/60 bg-linear-to-br from-background via-card/85 to-muted/40 p-5 shadow-sm">
-		<div class="min-w-0">
-			<h1 class="text-2xl font-bold">会话管理</h1>
-			<p class="mt-1 text-sm text-muted-foreground">查看并管理已登录设备</p>
-		</div>
-		<Button variant="outline" size="sm" class="rounded-2xl border-border/60 bg-background/70" onclick={loadSessions} disabled={isLoading}>
-			<RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
-			刷新
-		</Button>
-	</div>
+	<PageHeader title="会话管理" description="查看并管理已登录设备">
+		{#snippet actions()}
+			<Button
+				variant="outline"
+				size="sm"
+				class="rounded-2xl border-border/60 bg-background/70"
+				onclick={loadSessions}
+				disabled={isLoading}
+			>
+				<RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
+				刷新
+			</Button>
+		{/snippet}
+	</PageHeader>
 
 	{#if isLoading}
 		<div class="space-y-3">

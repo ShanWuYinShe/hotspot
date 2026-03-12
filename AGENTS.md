@@ -204,12 +204,15 @@ DEVECO_SDK_HOME="$DEVECO_SDK_HOME" "$DEVECO_SDK_NODE" "$CODELINTER" \
 
 #### 地图 SDK 与中心点（前端 + Harmony 通用约束）
 
-- 所有地图实现（Web 高德 AMap、Harmony NativeMapComponent 等）在**画地图上的点位时，必须以地图 SDK 提供的原生 Marker / overlay 为唯一来源**，禁止在地图容器上叠加绝对定位的 DOM 当“伪 marker”，否则在缩放/拖动时必然出现位置偏移。具体到前端：位置选择页面（如 `location-picker-modal`）的中心点、用户/群组/动态等标记都必须通过 SDK 自身的 Marker 渲染。
-- 位置选择器的**中心点（center pin）必须始终绑定地图相机中心**：任何时候都由 `map.getCenter()` / `cameraPosition` 决定，不允许在业务层自行维护一个“接近中心”的坐标再尝试对齐。中心 pin 的坐标写回业务状态时，必须直接使用地图 SDK 返回的经纬度，缩放前后回到同一 zoom 时，中心 pin 才能保证不漂移。
-- 如果存在坐标系转换（例如 WGS-84 与 GCJ-02（火星坐标）之间的转换），**必须在单一边界层完成且只做一次**：
-  - 后端存什么坐标系，由 `spec/` 和后端实现统一约定；
-  - 前端 / Harmony 在与地图 SDK 交互时，只在“业务坐标 → 地图坐标”或“地图坐标 → 业务坐标”的边界做转换，严禁在同一流程中对同一坐标反复正反转换，否则会出现累计误差，缩放/拖动后中心点和 marker 相对底图的位置会发生肉眼可见的轻微漂移。
+- 在中国境内使用国内地图 SDK（如高德 AMap、Harmony NativeMapComponent）渲染地图时，**传入 SDK 的坐标必须是 GCJ-02（火星坐标）**，否则 marker 相对底图会产生系统性的偏移；在中国境外渲染地图时统一使用 WGS-84 坐标，不得对 WGS-84 再做 GCJ 偏移。
+- 所有地图实现在**画地图上的点位时，必须以地图 SDK 提供的原生 Marker / overlay 为唯一来源**，禁止在地图容器上叠加绝对定位的 DOM 当“伪 marker”，否则在缩放/拖动时必然出现位置偏移。位置选择页面（如 Web 的 `location-picker-modal`、Harmony 的 `LocationPickerPage`）中的中心点、用户/群组/动态等标记都必须通过 SDK 自身的 Marker 渲染。
+- 位置选择器的**中心点（center pin）必须始终绑定地图相机中心**：任何时候都由 `map.getCenter()` / `cameraPosition` 等 SDK 提供的相机位置决定，不允许在业务层自行维护一个“接近中心”的坐标再尝试对齐。中心 pin 的坐标写回业务状态时，应直接使用地图 SDK 返回的经纬度，保证在同一 zoom 下缩放前后中心 pin 不会漂移。
+- 是否需要做坐标转换（例如 WGS-84 与 GCJ-02 之间的转换），**取决于“坐标的真实来源”与“地图 SDK 使用的坐标系”是否一致**，与后端存什么无关：
+  - Harmony 端：系统定位 API 返回的是 GPS/WGS-84 坐标，必须在喂给地图 SDK 之前通过 `CoordinateConverter.convertWgs84ToGcj02` 转成 GCJ-02；从地图相机读出的坐标如果要回写业务状态，则通过 `convertGcj02ToWgs84` 转回 WGS-84。
+  - Web 端：`navigator.geolocation` 返回的是 WGS-84 坐标，若直接将其用于国内地图 SDK（如 AMap）做定位/marker，必须首先确认 SDK 期望的坐标系；若 SDK 期望 GCJ-02，则必须在“业务坐标 → 地图坐标”的单一边界层做一次 WGS-84→GCJ-02 转换；若后端或其他服务已经返回 GCJ-02，则**严禁再做一次转换**。
+- 当确实存在坐标系差异且需要转换时，**必须在单一边界层完成且只做一次**：前端 / Harmony 在与地图 SDK 交互时，只在“业务坐标 → 地图坐标”或“地图坐标 → 业务坐标”的边界做转换，严禁在同一流程中对同一坐标反复正反转换，否则会出现累计误差，缩放/拖动后中心点和 marker 相对底图的位置会发生肉眼可见的轻微漂移。
 - 中心点图标（center pin）应使用**独立的视觉资源**，与用户/群组/动态的 marker 图标区分开（如 Web 端使用 `marker_center_pin.svg`，Harmony 端使用单独的 Symbol），避免视觉上把“当前位置/锚点”误认成普通用户 marker，造成交互混乱。
+- 对于只需要“图标 + 简单锚点”的场景（如位置选择器中心 pin），**必须使用地图 SDK 自带的 icon / marker 能力**（例如 AMap.Marker 的 `icon` 参数或等效能力），禁止为了“可扩展”再用复杂 DOM content 或自定义渲染层重复造轮子；简单 marker 一律走 SDK 自带的图片 / icon 配置，由地图自己维护缩放与位置。
 ### 错误处理
 
 - 所有业务响应均使用 HTTP 200 状态码，数据格式统一为 `ApiResponse<T>` 信封。
