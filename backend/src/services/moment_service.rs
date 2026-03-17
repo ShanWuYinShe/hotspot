@@ -37,40 +37,43 @@ use crate::{
 
 #[derive(Clone)]
 pub struct MomentService {
-    _redis: ConnectionManager,
-    event_bus: Arc<EventBus>,
-    moment_repo: MomentRepository,
-    tag_repo: TagRepository,
-    user_repo: UserRepository,
-    _user_settings_repo: UserSettingsRepository,
-    media_service: crate::services::media_service::MediaService,
-    _cache_manager: CacheManager,
+	_redis: ConnectionManager,
+	event_bus: Arc<EventBus>,
+	moment_repo: MomentRepository,
+	tag_repo: TagRepository,
+	user_repo: UserRepository,
+	_user_settings_repo: UserSettingsRepository,
+	media_service: crate::services::media_service::MediaService,
+	_cache_manager: CacheManager,
+	region_boundary_service: crate::services::region_boundary_service::RegionBoundaryService,
 }
 
 const SEARCH_QUERY_TIMEOUT: Duration = Duration::from_secs(8);
 
 impl MomentService {
-    pub fn new(
-        redis: ConnectionManager,
-        event_bus: Arc<EventBus>,
-        moment_repo: MomentRepository,
-        tag_repo: TagRepository,
-        user_repo: UserRepository,
-        user_settings_repo: UserSettingsRepository,
-        media_service: crate::services::media_service::MediaService,
-        cache_manager: CacheManager,
-    ) -> Self {
-        Self {
-            _redis: redis,
-            event_bus,
-            moment_repo,
-            tag_repo,
-            user_repo,
-            _user_settings_repo: user_settings_repo,
-            media_service,
-            _cache_manager: cache_manager,
-        }
-    }
+	pub fn new(
+		redis: ConnectionManager,
+		event_bus: Arc<EventBus>,
+		moment_repo: MomentRepository,
+		tag_repo: TagRepository,
+		user_repo: UserRepository,
+		user_settings_repo: UserSettingsRepository,
+		media_service: crate::services::media_service::MediaService,
+		cache_manager: CacheManager,
+		region_boundary_service: crate::services::region_boundary_service::RegionBoundaryService,
+	) -> Self {
+		Self {
+			_redis: redis,
+			event_bus,
+			moment_repo,
+			tag_repo,
+			user_repo,
+			_user_settings_repo: user_settings_repo,
+			media_service,
+			_cache_manager: cache_manager,
+			region_boundary_service,
+		}
+	}
 
     /// 统一搜索生活瞬间（支持关键字/标签/位置）
     pub async fn search(
@@ -341,11 +344,11 @@ impl MomentService {
     }
 
     /// 创建瞬间
-    pub async fn create_moment(
-        &self,
-        user_id: i64,
-        req: &CreateMomentRequest,
-    ) -> Result<MomentItem> {
+	pub async fn create_moment(
+		&self,
+		user_id: i64,
+		req: &CreateMomentRequest,
+	) -> Result<MomentItem> {
         let started_at = std::time::Instant::now();
         tracing::info!(
             user_id,
@@ -371,18 +374,25 @@ impl MomentService {
 
         let mentions = Validator::parse_mentions(req.mentions.as_deref())?;
 
-        let moment = self
-            .moment_repo
-            .create(
-                user_id,
-                Some(req.description.clone()),
-                mentions,
-                Some(req.location.point.longitude),
-                Some(req.location.point.latitude),
-                Some(req.location.location_name.clone()),
-                privacy_level,
-            )
-            .await?;
+		let lat = req.location.point.latitude;
+		let lon = req.location.point.longitude;
+		let region_id = self
+			.region_boundary_service
+			.assign_region_for_point(lat, lon)
+			.await;
+		let moment = self
+			.moment_repo
+			.create(
+				user_id,
+				Some(req.description.clone()),
+				mentions,
+				Some(lon),
+				Some(lat),
+				Some(req.location.location_name.clone()),
+				privacy_level,
+				region_id,
+			)
+			.await?;
 
         let mut image_rows: Vec<(Uuid, String, Option<i32>, Option<i32>, i32)> = Vec::new();
         if let Some(image_ids) = &req.image_file_ids {
@@ -522,32 +532,39 @@ impl MomentService {
             Validator::validate_moment_tags(tags)?;
         }
 
-        let (lon, lat, location_name) = if let Some(loc) = &req.location {
-            Validator::validate_coordinates(loc.point.latitude, loc.point.longitude)?;
-            Validator::validate_location_name(&loc.location_name)?;
-            (
-                Some(loc.point.longitude),
-                Some(loc.point.latitude),
-                Some(loc.location_name.clone()),
-            )
-        } else {
-            (None, None, None)
-        };
+		let (lon, lat, location_name, region_id) = if let Some(loc) = &req.location {
+			Validator::validate_coordinates(loc.point.latitude, loc.point.longitude)?;
+			Validator::validate_location_name(&loc.location_name)?;
+			let region_id = self
+				.region_boundary_service
+				.assign_region_for_point(loc.point.latitude, loc.point.longitude)
+				.await;
+			(
+				Some(loc.point.longitude),
+				Some(loc.point.latitude),
+				Some(loc.location_name.clone()),
+				Some(region_id),
+			)
+		} else {
+			(None, None, None, None)
+		};
 
         let privacy_level = req.privacy_level;
         let mentions = Validator::parse_mentions(req.mentions.as_deref())?;
 
-        self.moment_repo
-            .update(
-                moment_id,
-                req.description.clone(),
-                mentions,
-                lon,
-                lat,
-                location_name,
-                privacy_level,
-            )
-            .await?;
+		self
+			.moment_repo
+			.update(
+				moment_id,
+				req.description.clone(),
+				mentions,
+				lon,
+				lat,
+				location_name,
+				privacy_level,
+				region_id.flatten(),
+			)
+			.await?;
 
         if let Some(tags) = &req.tags {
             self.tag_repo.set_moment_tags(moment_id, tags).await?;

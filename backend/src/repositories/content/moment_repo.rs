@@ -128,41 +128,43 @@ impl MomentRepository {
         Self { pool }
     }
 
-    /// 创建瞬间
-    pub async fn create(
-        &self,
-        user_id: i64,
-        description: Option<String>,
-        mentions: Option<Vec<i64>>,
-        lon: Option<f64>,
-        lat: Option<f64>,
-        location_name: Option<String>,
-        privacy_level: PrivacyLevel,
-    ) -> Result<MomentRow> {
+	/// 创建瞬间
+	pub async fn create(
+		&self,
+		user_id: i64,
+		description: Option<String>,
+		mentions: Option<Vec<i64>>,
+		lon: Option<f64>,
+		lat: Option<f64>,
+		location_name: Option<String>,
+		privacy_level: PrivacyLevel,
+		region_id: Option<i64>,
+	) -> Result<MomentRow> {
         // 使用 query_as! 进行编译期类型检查
-        let row = sqlx::query_as!(
-            MomentRow,
-            r#"
-            INSERT INTO moments_partitioned (user_id, description, mentions, location, location_name, privacy_level)
-            VALUES ($1, $2, $3,
-                    CASE WHEN $4::float8 IS NOT NULL AND $5::float8 IS NOT NULL 
-                         THEN ST_SetSRID(ST_MakePoint($4, $5), 4326)::geography 
-                         ELSE NULL END, 
-                    $6, $7)
+		let row = sqlx::query_as!(
+			MomentRow,
+			r#"
+			INSERT INTO moments_partitioned (user_id, description, mentions, location, location_name, privacy_level, region_id)
+			VALUES ($1, $2, $3,
+			        CASE WHEN $4::float8 IS NOT NULL AND $5::float8 IS NOT NULL 
+			             THEN ST_SetSRID(ST_MakePoint($4, $5), 4326)::geography 
+			             ELSE NULL END, 
+			        $6, $7, $8)
             RETURNING moment_id as "moment_id!", user_id as "user_id!",
                       description, mentions, location_name,
                       privacy_level as "privacy_level!: crate::types::enums::PrivacyLevel",
                       0::int as "view_count!", 0::int as "like_count!", 0::int as "comments_count!", 0::int as "share_count!",
                       created_at as "created_at!", updated_at as "updated_at!", deleted_at
             "#,
-            user_id,
-            description,
-            mentions.as_deref(),
-            lon,
-            lat,
-            location_name,
-            privacy_level as PrivacyLevel
-        )
+			user_id,
+			description,
+			mentions.as_deref(),
+			lon,
+			lat,
+			location_name,
+			privacy_level as PrivacyLevel,
+			region_id
+		)
         .fetch_one(&self.pool)
         .await?;
 
@@ -904,39 +906,42 @@ impl MomentRepository {
         Ok((items, next_cursor))
     }
 
-    /// 更新瞬间
-    pub async fn update(
-        &self,
-        moment_id: Uuid,
-        description: Option<String>,
-        mentions: Option<Vec<i64>>,
-        lon: Option<f64>,
-        lat: Option<f64>,
-        location_name: Option<String>,
-        privacy_level: Option<PrivacyLevel>,
-    ) -> Result<()> {
-        let privacy_level = privacy_level.map(|level| level.to_string());
-        sqlx::query!(
-            r#"
-            UPDATE moments_partitioned
-            SET description = COALESCE($2, description),
-                mentions = COALESCE($3, mentions),
-                location = CASE WHEN $4::float8 IS NOT NULL AND $5::float8 IS NOT NULL
-                                THEN ST_SetSRID(ST_MakePoint($4, $5), 4326)::geography
-                                ELSE location END,
-                location_name = COALESCE($6, location_name),
-                privacy_level = COALESCE($7::text::privacy_level, privacy_level),
-                updated_at = NOW()
-            WHERE moment_id = $1
-            "#,
-            moment_id,
-            description,
-            mentions.as_deref(),
-            lon,
-            lat,
-            location_name,
-            privacy_level
-        )
+	/// 更新瞬间
+	pub async fn update(
+		&self,
+		moment_id: Uuid,
+		description: Option<String>,
+		mentions: Option<Vec<i64>>,
+		lon: Option<f64>,
+		lat: Option<f64>,
+		location_name: Option<String>,
+		privacy_level: Option<PrivacyLevel>,
+		region_id: Option<i64>,
+	) -> Result<()> {
+		let privacy_level = privacy_level.map(|level| level.to_string());
+		sqlx::query!(
+			r#"
+			UPDATE moments_partitioned
+			SET description = COALESCE($2, description),
+			    mentions = COALESCE($3, mentions),
+			    location = CASE WHEN $4::float8 IS NOT NULL AND $5::float8 IS NOT NULL
+			                    THEN ST_SetSRID(ST_MakePoint($4, $5), 4326)::geography
+			                    ELSE location END,
+			    location_name = COALESCE($6, location_name),
+			    privacy_level = COALESCE($7::text::privacy_level, privacy_level),
+			    region_id = COALESCE($8, region_id),
+			    updated_at = NOW()
+			WHERE moment_id = $1
+			"#,
+			moment_id,
+			description,
+			mentions.as_deref(),
+			lon,
+			lat,
+			location_name,
+			privacy_level,
+			region_id
+		)
         .execute(&self.pool)
         .await?;
 

@@ -60,7 +60,6 @@ export type MediaCategory =
 	| 'chat_audio'
 	| 'chat_file';
 export type MapDataType = 'user' | 'group' | 'moment' | 'all';
-export type MapItemType = 'cluster' | 'user' | 'group' | 'moment';
 export type ShareType = 'user' | 'group' | 'moment' | 'location';
 // 设计说明：被拉黑场景统一返回 'privacy'，不暴露拉黑状态
 export type MessageBlockedReason = 'privacy' | 'stranger_quota_exceeded' | 'account_suspended';
@@ -675,26 +674,46 @@ export interface MarkAsReadRequest {
 // 地图类型（map.yaml）
 // ============================================================================
 
-export interface MapRenderItem {
-	render_id: string;
-	type: MapItemType;
-	location: GeoPoint;
-	cluster?: {
-		count: number;
-		label?: string;
-		preview_urls?: string[];
-	};
-	entity?: {
-		title: string;
-		subtitle?: string;
-		cover_url?: string;
-		payload_id: string;
-		category?: string;
-	};
+export interface MapHeatBreakdown {
+	user?: number;
+	group?: number;
+	moment?: number;
 }
 
-export interface MapCanvas {
-	items: MapRenderItem[];
+// 与 spec/api_spec_map.md 中的 MapHeatBucket 对齐
+export interface MapHeatBucket {
+	/** 聚合单元的代表坐标（例如行政区多边形的质心） */
+	location: GeoPoint;
+	/** 当前过滤条件下，该区域内参与统计实体的总数 */
+	total_count: number;
+	/** 按类型拆分；当 data_type != 'all' 时可选 */
+	breakdown?: MapHeatBreakdown;
+	/** 可选的调试/展示标签（例如行政区名称） */
+	name?: string;
+}
+
+export interface MapHeatCanvas {
+	items: MapHeatBucket[];
+	toast_message?: string;
+}
+
+// 与 spec/api_spec_map.md 中的 MapHotspotItem / MapHotspotsCanvas 对齐
+export type HotspotObjectType = 'user' | 'group' | 'moment';
+
+export interface MapHotspotItem {
+	object_type: HotspotObjectType;
+	object_id: string;
+	title: string;
+	subtitle?: string;
+	cover_url?: string;
+	location: GeoPoint;
+	created_at?: string;
+	distance_meters?: number;
+}
+
+export interface MapHotspotsCanvas {
+	items: MapHotspotItem[];
+	next_cursor?: string;
 	toast_message?: string;
 }
 

@@ -388,14 +388,34 @@ impl UserRepository {
         Ok(())
     }
 
-    /// 更新位置
-    pub async fn update_location(&self, user_id: i64, lon: f64, lat: f64) -> Result<()> {
-        sqlx::query!(
-            "UPDATE users SET location = ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, location_updated_at = NOW() WHERE user_id = $1",
-            user_id, lon, lat
-        ).execute(&self.pool).await?;
-        Ok(())
-    }
+	/// 更新位置
+	pub async fn update_location(&self, user_id: i64, lon: f64, lat: f64) -> Result<()> {
+		sqlx::query!(
+			"UPDATE users SET location = ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, location_updated_at = NOW() WHERE user_id = $1",
+			user_id, lon, lat
+		).execute(&self.pool).await?;
+		Ok(())
+	}
+
+	/// 更新位置并写入区域归属
+	pub async fn update_location_with_region(
+		&self,
+		user_id: i64,
+		lon: f64,
+		lat: f64,
+		region_id: Option<i64>,
+	) -> Result<()> {
+		sqlx::query!(
+			"UPDATE users SET location = ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, location_updated_at = NOW(), region_id = $4 WHERE user_id = $1",
+			user_id,
+			lon,
+			lat,
+			region_id
+		)
+		.execute(&self.pool)
+		.await?;
+		Ok(())
+	}
 
     pub async fn get_current_location(&self, user_id: i64) -> Result<Option<(f64, f64)>> {
         let row = sqlx::query!(

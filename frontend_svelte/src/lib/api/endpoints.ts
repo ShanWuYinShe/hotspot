@@ -221,10 +221,11 @@ export const SEARCH = {
 } as const;
 
 // ============================================================================
-// 地图 API（spec/openapi/paths/map.yaml）
+// 地图 API（spec/api_spec_map.md）
 // ============================================================================
 export const MAP = {
-	RENDER: `${API_BASE}/map/render`
+	HEATMAP: `${API_BASE}/map/heatmap`,
+	HOTSPOTS: `${API_BASE}/map/hotspots`
 } as const;
 
 // ============================================================================

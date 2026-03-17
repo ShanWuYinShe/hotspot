@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS groups (
     -- PostGIS 位置
     location        GEOGRAPHY(POINT, 4326) NOT NULL,
     location_name   VARCHAR(255)    NOT NULL,
+    region_id       BIGINT,                         -- 行政区 region_id（最小行政区）
     -- 活跃度
     last_activity_at TIMESTAMPTZ,
     -- 时间戳

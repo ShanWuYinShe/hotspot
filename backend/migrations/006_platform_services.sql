@@ -121,16 +121,18 @@ CREATE TRIGGER tr_reports_updated_at
 
 -- ─── 分享 ───────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS shares (
-    share_id        UUID        PRIMARY KEY DEFAULT uuidv7(),
-    sharer_id       BIGINT      NOT NULL,
-    share_type      share_type  NOT NULL,
-    share_code      VARCHAR(16) NOT NULL UNIQUE,
-    -- 分享内容（按 share_type 对应不同字段有值）
-    content_id      VARCHAR(100),                   -- user_id / group_id / moment_id
-    payload         JSONB,                          -- reference_point 坐标等额外数据
-    expires_at      TIMESTAMPTZ,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+	    share_id        UUID        PRIMARY KEY DEFAULT uuidv7(),
+	    sharer_id       BIGINT      NOT NULL,
+	    share_type      share_type  NOT NULL,
+	    share_code      VARCHAR(16) NOT NULL UNIQUE,
+	    -- 分享内容（按 share_type 对应不同字段有值）
+	    content_id      VARCHAR(100),                   -- user_id / group_id / moment_id
+	    payload         JSONB,                          -- reference_point 坐标等额外数据
+	    expires_at      TIMESTAMPTZ,
+	    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	    is_revoked      BOOLEAN     NOT NULL DEFAULT FALSE,
+	    revoked_at      TIMESTAMPTZ
+	);
 CREATE INDEX idx_shares_code    ON shares(share_code);
 CREATE INDEX idx_shares_creator ON shares(sharer_id, created_at DESC);
 CREATE INDEX idx_shares_expires ON shares(expires_at) WHERE expires_at IS NOT NULL;

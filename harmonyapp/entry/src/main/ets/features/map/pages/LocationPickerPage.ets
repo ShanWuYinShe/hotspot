@@ -9,7 +9,7 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { curves } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { MapRenderItem, MapRenderRequest, MapRenderFilter, MapViewport } from '../../../core/types/api';
+import { MapHeatBucket, MapHeatRequest, MapHeatFilter, MapHeatCanvas, MapViewport } from '../../../core/types/api';
 import { AppRouter, GroupDetailRouteParam, ProfileRouteParam, MomentDetailRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { CoordinateConverter } from '../../../core/geo/CoordinateConverter';
@@ -40,10 +40,42 @@ const OVERLAP_GROUP_PREFIX: string = 'overlap_';
 // 坐标分组精度：4 位小数 ≈ 11 米，同一建筑/地点内的多条数据会被合并
 const COORD_GROUP_PRECISION: number = 10000;
 
+type MapRenderItemType = 'cluster' | 'user' | 'group' | 'moment';
+
+// 地图渲染聚合单元相关类型
+interface MapRenderItemLocation {
+	latitude: number;
+	longitude: number;
+}
+
+interface MapRenderItemCluster {
+	count: number;
+	category: 'all';
+	label?: string;
+}
+
+// 旧版 MapRenderItem 带有 entity 明细；当前热力图仅填充 cluster，后续如需展示实体详情可补充 entity
+interface MapRenderEntity {
+	payload_id: string;
+	title: string;
+	subtitle?: string;
+	type: 'user' | 'group' | 'moment';
+}
+
+// 本地渲染用聚合单元，基于 `/map/heatmap` 返回的 MapHeatBucket 构造
+interface MapRenderItem {
+	render_id: string;
+	location: MapRenderItemLocation;
+	type: MapRenderItemType;
+	total_count: number;
+	cluster?: MapRenderItemCluster;
+	entity?: MapRenderEntity;
+}
+
 interface ConvertedRenderItem {
-  item: MapRenderItem;
-  gcj02Lat: number;
-  gcj02Lng: number;
+	item: MapRenderItem;
+	gcj02Lat: number;
+	gcj02Lng: number;
 }
 
 interface BoundsDelta {
@@ -140,12 +172,14 @@ function FilterMenuItem(props: FilterMenuItemProps) {
       .objectFit(ImageFit.Contain)
     Text(props.label)
       .fontSize(DesignConstants.FONT.SIZE.MD)
-      .fontWeight(FontWeight.Medium)
-      .fontColor($r('sys.color.ohos_id_color_text_primary'))
+      .fontWeight(props.active ? FontWeight.Medium : FontWeight.Normal)
+      .fontColor(props.active
+        ? $r('sys.color.ohos_id_color_text_primary')
+        : $r('sys.color.ohos_id_color_text_secondary'))
       .layoutWeight(1)
     Row()
-      .width(10)
-      .height(10)
+      .width(12)
+      .height(12)
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(props.active ? props.accentColor : Color.Transparent)
       .border({ width: 1.5, color: props.accentColor })
@@ -153,7 +187,9 @@ function FilterMenuItem(props: FilterMenuItemProps) {
   .width('100%')
   .height(48)
   .padding({ left: 14, right: 16 })
-  .opacity(props.active ? 1.0 : 0.5)
+  .backgroundColor(props.active ? '#1E293B' : Color.Transparent)
+  .borderRadius(DesignConstants.RADIUS.XL)
+  .opacity(props.active ? 1.0 : 0.85)
   .onClick(() => props.onToggle())
 }
 
@@ -742,9 +778,9 @@ export struct LocationPickerPage {
   @State showUsers: boolean = true;
   @State showGroups: boolean = true;
   @State showMoments: boolean = true;
-  @State showFilterPanel: boolean = false;
-  @State mapToastMessage: string = '';
-  @State overlappingPanelItems: MapRenderItem[] = [];
+	@State showFilterPanel: boolean = false;
+	@State mapToastMessage: string = '';
+	@State overlappingPanelItems: MapRenderItem[] = [];
   private mapToastTimerId: number = 0;
   @State anchorHistory: AnchorHistoryItem[] = [];
   @State pickMode: LocationPickerMode = 'anchor';
@@ -752,8 +788,8 @@ export struct LocationPickerPage {
   // 底部面板高度（仅在主面板时使用，初始为半展开位置）
   @State panelHeight: number = PANEL_SNAP_HALF;
 
-  private renderItemsMap: Map<string, MapRenderItem> = new Map();
-  private overlappingGroupsMap: Map<string, MapRenderItem[]> = new Map();
+	private renderItemsMap: Map<string, MapRenderItem> = new Map();
+	private overlappingGroupsMap: Map<string, MapRenderItem[]> = new Map();
   private resolveTimerId: number = 0;
   private renderTimerId: number = 0;
   private renderRequestId: number = 0;
@@ -764,11 +800,13 @@ export struct LocationPickerPage {
   private mapZoom: number = 15;
   private initialised: boolean = false;
   private mapReady: boolean = false;
-  private renderItems: MapRenderItem[] = [];
+	private renderItems: MapRenderItem[] = [];
   private lastViewportSignature: string = '';
   private mapActions: NativeMapActions | null = null;
   private hasShownGestureHint: boolean = false;
   private searchController: SearchController = new SearchController();
+  private lastCameraLat: number = NaN;
+  private lastCameraLng: number = NaN;
 
   async aboutToAppear() {
     SystemUiController.syncWithCurrentTheme();
@@ -830,6 +868,8 @@ export struct LocationPickerPage {
 
     if (target) {
       this.setCenter(target.latitude, target.longitude, true);
+      // 初始化时立即在地图上显示选中图钉
+      this.updateMarkers();
       await this.resolveLocation(target.latitude, target.longitude);
     } else {
       hilog.warn(DOMAIN_NUMBER, TAG, '无法获取当前位置');
@@ -916,7 +956,12 @@ export struct LocationPickerPage {
       this.currentLocation.latitude, this.currentLocation.longitude
     );
     this.setCenter(converted.latitude, converted.longitude);
+    this.updateMarkers();
     this.moveCameraSmoothly(converted.latitude, converted.longitude);
+    // Harmony 端对齐 Web：显式动作才更新选中位置并解析名称
+    this.resolveLocation(converted.latitude, converted.longitude).catch((e: Error) => {
+      hilog.warn(DOMAIN_NUMBER, TAG, `locateUser 解析位置失败: ${e?.message ?? e}`);
+    });
   }
 
   /** 回到当前浏览锚点位置（与“回到当前位置”区分） */
@@ -941,6 +986,7 @@ export struct LocationPickerPage {
   private async focusOnCoordinate(lat: number, lng: number, hintMessage: string = GENERIC_PLACEMENT_HINT): Promise<void> {
     this.skipNextResolve = true;
     this.setCenter(lat, lng);
+    this.updateMarkers();
     this.moveCameraSmoothly(lat, lng);
     await this.resolveLocation(lat, lng);
     this.showMapToast(hintMessage);
@@ -951,34 +997,27 @@ export struct LocationPickerPage {
       this.isFirstCameraIdle = false;
     }
 
-    this.centerLat = camera.latitude;
-    this.centerLng = camera.longitude;
-    if (camera.zoom) {
-      this.mapZoom = camera.zoom;
-    }
+    const prevZoom = this.mapZoom;
+    const currentZoom = camera.zoom !== undefined ? camera.zoom : prevZoom;
+    this.mapZoom = currentZoom;
 
-    const shouldResolve = !this.skipNextResolve;
+		// 仅用于判断是否需要触发地图热力渲染，拖动/缩放都不会修改选中位置 centerLat/centerLng
+    this.lastCameraLat = camera.latitude;
+    this.lastCameraLng = camera.longitude;
+
     if (this.skipNextResolve) {
+      // 下次相机空闲仅用于消费 skip 标记，不再自动解析位置
       this.skipNextResolve = false;
     }
 
-    if (shouldResolve) {
-      if (this.resolveTimerId > 0) {
-        clearTimeout(this.resolveTimerId);
-      }
-      this.resolveTimerId = setTimeout(() => {
-        this.resolveLocation(camera.latitude, camera.longitude);
-      }, 180);
-    }
-
-    if (this.initialised && this.mapReady) {
-      if (this.renderTimerId > 0) {
-        clearTimeout(this.renderTimerId);
-      }
-      this.renderTimerId = setTimeout(() => {
-        this.fetchMapRenderData('camera_idle');
-      }, 150);
-    }
+		if (this.initialised && this.mapReady) {
+			if (this.renderTimerId > 0) {
+				clearTimeout(this.renderTimerId);
+			}
+			this.renderTimerId = setTimeout(() => {
+				this.fetchMapRenderData('camera_idle');
+			}, 150);
+		}
 
   }
 
@@ -1140,6 +1179,7 @@ export struct LocationPickerPage {
       item.latitude, item.longitude
     );
     this.setCenter(gcj02.latitude, gcj02.longitude);
+    this.updateMarkers();
     this.locationName = item.locationName || '历史位置';
     this.moveCameraSmoothly(gcj02.latitude, gcj02.longitude);
     this.resolveLocation(gcj02.latitude, gcj02.longitude);
@@ -1170,48 +1210,69 @@ export struct LocationPickerPage {
     AppRouter.pop();
   }
 
-  private async fetchMapRenderData(trigger: string = 'unknown'): Promise<void> {
-    if (!this.initialised || !this.mapReady) {
-      return;
-    }
+	private async fetchMapRenderData(trigger: string = 'unknown'): Promise<void> {
+		if (!this.initialised || !this.mapReady) {
+			return;
+		}
     const viewport = this.buildViewport();
     if (!viewport) {
       return;
     }
-    const filter = this.resolveMapFilter();
-    const filterSignature = filter?.data_type ?? 'all';
-    const signature = `${viewport.bounds.north.toFixed(6)}|${viewport.bounds.south.toFixed(6)}|${viewport.bounds.east.toFixed(6)}|${viewport.bounds.west.toFixed(6)}|${viewport.zoom.toFixed(2)}|${filterSignature}`;
-    if (signature === this.lastViewportSignature) {
-      hilog.info(DOMAIN_NUMBER, TAG, `skip map/render duplicate trigger=${trigger} signature=${signature}`);
-      this.updateMarkers();
-      return;
-    }
+		const filter = this.resolveMapFilter();
+		const filterSignature = filter?.data_type ?? 'all';
+		const signature = `${viewport.bounds.north.toFixed(6)}|${viewport.bounds.south.toFixed(6)}|${viewport.bounds.east.toFixed(6)}|${viewport.bounds.west.toFixed(6)}|${viewport.zoom.toFixed(2)}|${filterSignature}`;
+		if (signature === this.lastViewportSignature) {
+			hilog.info(DOMAIN_NUMBER, TAG, `skip map/heatmap duplicate trigger=${trigger} signature=${signature}`);
+			this.updateMarkers();
+			return;
+		}
     const requestId = ++this.renderRequestId;
-    try {
-      hilog.info(DOMAIN_NUMBER, TAG, `start map/render trigger=${trigger} requestId=${requestId} signature=${signature}`);
-      const request: MapRenderRequest = filter ? { viewport, filter } : { viewport };
-      const response = await ApiClient.renderMap(request);
-      if (requestId !== this.renderRequestId) {
-        hilog.info(DOMAIN_NUMBER, TAG, `ignore stale map/render response trigger=${trigger} requestId=${requestId}`);
-        return;
-      }
-      if (response.code === 0) {
-        this.lastViewportSignature = signature;
-        this.renderItems = response.data?.items ?? [];
-        hilog.info(DOMAIN_NUMBER, TAG, `finish map/render trigger=${trigger} requestId=${requestId} items=${this.renderItems.length}`);
-        const toastMessage = response.data?.toast_message ?? '';
-        if (toastMessage.length > 0) {
-          this.showMapToast(toastMessage, 3000);
-        } else {
-          this.mapToastMessage = '';
-        }
-        this.updateMarkers();
-      } else {
-        hilog.warn(DOMAIN_NUMBER, TAG, `map/render business error trigger=${trigger} requestId=${requestId} code=${response.code} message=${response.message ?? ''}`);
-      }
-    } catch (error) {
-      hilog.warn(DOMAIN_NUMBER, TAG, `render map failed trigger=${trigger} requestId=${requestId}: ${JSON.stringify(error)}`);
-    }
+		try {
+			hilog.info(DOMAIN_NUMBER, TAG, `start map/heatmap trigger=${trigger} requestId=${requestId} signature=${signature}`);
+			const request: MapHeatRequest = filter ? { viewport, filter } : { viewport };
+			const response = await ApiClient.getMapHeat(request);
+			if (requestId !== this.renderRequestId) {
+				hilog.info(DOMAIN_NUMBER, TAG, `ignore stale map/heatmap response trigger=${trigger} requestId=${requestId}`);
+				return;
+			}
+			if (response.code === 0) {
+				this.lastViewportSignature = signature;
+				const canvas: MapHeatCanvas | undefined = response.data as MapHeatCanvas | undefined;
+				const buckets: MapHeatBucket[] = canvas?.items ?? [];
+				const nextItems: MapRenderItem[] = [];
+				for (let index = 0; index < buckets.length; index++) {
+					const bucket = buckets[index];
+					const renderId = `${index}_${bucket.location.latitude.toFixed(6)}_${bucket.location.longitude.toFixed(6)}`;
+					nextItems.push({
+						render_id: renderId,
+						location: {
+							latitude: bucket.location.latitude,
+							longitude: bucket.location.longitude
+						},
+						type: 'cluster',
+						total_count: bucket.total_count,
+						cluster: {
+							count: bucket.total_count,
+							category: 'all',
+							label: bucket.name
+						}
+					});
+				}
+				this.renderItems = nextItems;
+				hilog.info(DOMAIN_NUMBER, TAG, `finish map/heatmap trigger=${trigger} requestId=${requestId} items=${this.renderItems.length}`);
+				const toastMessage = canvas?.toast_message ?? '';
+				if (toastMessage.length > 0) {
+					this.showMapToast(toastMessage, 3000);
+				} else {
+					this.mapToastMessage = '';
+				}
+				this.updateMarkers();
+			} else {
+				hilog.warn(DOMAIN_NUMBER, TAG, `map/heatmap business error trigger=${trigger} requestId=${requestId} code=${response.code} message=${response.message ?? ''}`);
+			}
+		} catch (error) {
+			hilog.warn(DOMAIN_NUMBER, TAG, `render heatmap failed trigger=${trigger} requestId=${requestId}: ${JSON.stringify(error)}`);
+		}
   }
 
   private showMapToast(message: string, duration: number = 2000): void {
@@ -1245,14 +1306,20 @@ export struct LocationPickerPage {
       );
       const latitudes = convertedCorners.map((point) => point.latitude);
       const longitudes = convertedCorners.map((point) => point.longitude);
+      const north = Math.min(90, Math.max(...latitudes));
+      const south = Math.max(-90, Math.min(...latitudes));
+      const east = Math.min(180, Math.max(...longitudes));
+      const west = Math.max(-180, Math.min(...longitudes));
+
+      // 视口中心由后端根据 bounds 自行计算，这里不下发额外字段
       return {
         bounds: {
-          north: Math.min(90, Math.max(...latitudes)),
-          south: Math.max(-90, Math.min(...latitudes)),
-          east: Math.min(180, Math.max(...longitudes)),
-          west: Math.max(-180, Math.min(...longitudes))
+          north,
+          south,
+          east,
+          west
         },
-        zoom
+        zoom,
       };
     }
 
@@ -1268,7 +1335,7 @@ export struct LocationPickerPage {
         east: Math.min(180, wgs84.longitude + delta.lonDelta / 2),
         west: Math.max(-180, wgs84.longitude - delta.lonDelta / 2)
       },
-      zoom
+      zoom,
     };
   }
 
@@ -1302,7 +1369,7 @@ export struct LocationPickerPage {
         soloItems.push(c);
         continue;
       }
-      const key = `${Math.round(c.gcj02Lat * COORD_GROUP_PRECISION)}_${Math.round(c.gcj02Lng * COORD_GROUP_PRECISION)}`;
+      const key = `${Math.floor(c.gcj02Lat * COORD_GROUP_PRECISION)}_${Math.floor(c.gcj02Lng * COORD_GROUP_PRECISION)}`;
       const group = coordGroups.get(key);
       if (group) {
         group.push(c);
@@ -1336,6 +1403,19 @@ export struct LocationPickerPage {
         });
       }
     });
+
+    // 在所有渲染标记之上叠加“当前选中位置”图钉（GCJ-02），避免随相机中心漂移
+    if (this.centerLat !== 0 || this.centerLng !== 0) {
+      nextMarkers.push({
+        id: 'center_pin_selection',
+        latitude: this.centerLat,
+        longitude: this.centerLng,
+        title: '',
+        snippet: '',
+        type: 'user',
+        iconKey: 'center_pin'
+      });
+    }
     this.mapMarkers = nextMarkers;
   }
 
@@ -1370,48 +1450,28 @@ export struct LocationPickerPage {
     return parts.join('、');
   }
 
-  private shouldDisplayItem(item: MapRenderItem): boolean {
-    switch (item.type) {
-      case 'user':
-        return this.showUsers;
-      case 'group':
-        return this.showGroups;
-      case 'moment':
-        return this.showMoments;
-      case 'cluster':
-        return this.showUsers || this.showGroups || this.showMoments;
-      default:
-        return true;
-    }
+  private shouldDisplayItem(_item: MapRenderItem): boolean {
+    // 当前 /map/heatmap 返回聚合格网，是否展示由筛选开关整体决定
+    return this.showUsers || this.showGroups || this.showMoments;
   }
 
-  private getMarkerIconKey(item: MapRenderItem): 'user' | 'group' | 'moment' | 'cluster' {
-    switch (item.type) {
-      case 'user':
-        return 'user';
-      case 'group':
-        return 'group';
-      case 'moment':
-        return 'moment';
-      case 'cluster':
-        return 'cluster';
-      default:
-        return 'user';
-    }
+  private getMarkerIconKey(_item: MapRenderItem): 'user' | 'group' | 'moment' | 'cluster' {
+    // 地图渲染仅使用聚合 cluster 图标
+    return 'cluster';
   }
 
   private getMarkerTitle(item: MapRenderItem): string {
-    if (item.type === 'cluster' && item.cluster) {
+    if (item.cluster) {
       return item.cluster.label || `${item.cluster.count} 个内容`;
     }
-    return item.entity?.title || '';
+    return '';
   }
 
   private getMarkerSnippet(item: MapRenderItem): string {
-    if (item.type === 'cluster' && item.cluster) {
+    if (item.cluster) {
       return `共 ${item.cluster.count} 项`;
     }
-    return item.entity?.subtitle || '';
+    return '';
   }
 
   /**
@@ -1419,7 +1479,7 @@ export struct LocationPickerPage {
    * - 全选或全不选：不下发 filter，让服务端返回所有类型
    * - 仅单选某一类：下发对应 data_type，减少无关数据
    */
-  private resolveMapFilter(): MapRenderFilter | undefined {
+  private resolveMapFilter(): MapHeatFilter | undefined {
     const showUsers = this.showUsers;
     const showGroups = this.showGroups;
     const showMoments = this.showMoments;
@@ -1542,7 +1602,7 @@ export struct LocationPickerPage {
           showScale: false,
           showZoomControls: false,
           showMyLocationControls: false,
-          showCenterPin: true,
+          showCenterPin: false,
           contentPaddingTop: SafeAreaUtils.resolveTopPadding(this.safeAreaTop, 110, 20),
           contentPaddingBottom: this.getMapPaddingBottom(),
           logoPaddingBottom: this.getLogoPaddingBottom(),
@@ -1684,13 +1744,13 @@ export struct LocationPickerPage {
                         .height(36)
                         .objectFit(ImageFit.Contain)
                       Column({ space: 2 }) {
-                        Text(item.entity?.title ?? '')
+                        Text(item.entity ? item.entity.title : '')
                           .fontSize(DesignConstants.FONT.SIZE.MD)
                           .fontWeight(FontWeight.Medium)
                           .fontColor($r('sys.color.ohos_id_color_text_primary'))
                           .maxLines(1)
                           .textOverflow({ overflow: TextOverflow.Ellipsis })
-                        if (item.entity?.subtitle) {
+                        if (item.entity && item.entity.subtitle) {
                           Text(item.entity.subtitle)
                             .fontSize(DesignConstants.FONT.SIZE.SM)
                             .fontColor($r('sys.color.ohos_id_color_text_secondary'))

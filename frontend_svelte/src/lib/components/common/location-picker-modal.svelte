@@ -1,21 +1,20 @@
 <script lang="ts">
     import { onMount, tick } from "svelte";
     import { assertSuccess } from "$lib/api/client";
-    import {
-        mapService,
-        groupOverlappingRenderItems,
-        getOverlapClusterExpandZoom,
-        isOverlapGroupRenderId,
-    } from "$lib/api/services/map";
+	import {
+		mapService,
+		groupOverlappingRenderItems,
+		isOverlapGroupRenderId,
+	} from "$lib/api/services/map";
     import { mapAnchorStore } from "$lib/stores/map-anchor.svelte";
     import { locationStore } from "$lib/stores/location.svelte";
-    import { toast } from "$lib/stores/toast.svelte";
+	import { toast } from "$lib/stores/toast.svelte";
     import {
         getAMapVisibleRegion,
         loadAMap,
         loadAMapPlugin,
     } from "$lib/utils/amap";
-    import type { MapRenderItem, MapViewport } from "$lib/types/api";
+	import type { MapHeatBucket, MapHeatCanvas, MapViewport } from "$lib/types/api";
     import {
         getAnchorHistory,
         addToAnchorHistory,
@@ -44,8 +43,9 @@
     import CreateLocationShareModal from "./create-location-share-modal.svelte";
     import AnchorSummaryCard from "./anchor-summary-card.svelte";
     import { useKeyboardFocus } from "$lib/attachments";
-    import { configStore } from "$lib/stores/config.svelte";
-    import { toGcjLngLat, gcj02ToWgs84 } from "$lib/utils/geo";
+	import { configStore } from "$lib/stores/config.svelte";
+	import { toGcjLngLat, gcj02ToWgs84 } from "$lib/utils/geo";
+	import { mode as themeMode } from "mode-watcher";
 
     type LocationPickerMode = "anchor" | "location_pick";
 
@@ -88,42 +88,57 @@
     let locationName = $state(mapAnchorStore.name);
     let latitude = $state(mapAnchorStore.latitude);
     let longitude = $state(mapAnchorStore.longitude);
-    const REVERSE_GEOCODE_IDLE_MS = 800;
-    const MIN_LOCATION_DELTA = 0.00005;
-    let lastResolvedLat = mapAnchorStore.latitude;
-    let lastResolvedLng = mapAnchorStore.longitude;
-    let reverseGeocodeTimer: number | null = null;
-    let renderMapTimer: number | null = null;
-    let skipNextReverseGeocode = false;
-    let mapMoveFrame: number | null = null;
+	let reverseGeocodeTimer: number | null = null;
+	let renderMapTimer: number | null = null;
+	let mapMoveFrame: number | null = null;
 	let activeRenderRequestId = 0;
-    let lastRenderedViewportSignature = "";
-    let lastToastMessage = "";
+	let lastRenderedViewportSignature = "";
+	let lastToastMessage = "";
+	let lastMapZoom = 14;
     let renderMarkers: AMap.Marker[] = [];
     let selectedMarker: AMap.Marker | null = null;
-    let hasInit = $state(false);
-    let hasSyncedFromAnchor = $state(false);
-    const LONG_PRESS_DURATION_MS = 700;
+	let hasInit = $state(false);
+	let hasSyncedFromAnchor = $state(false);
+	let modalRoot = $state<HTMLDivElement | null>(null);
+	const LONG_PRESS_DURATION_MS = 700;
     const GESTURE_HINT_DURATION_MS = 4000;
     const MAP_RENDER_IDLE_MS = 250;
-    const GESTURE_HINT_COMBINED = "双击、右键或长按地图可快速定位";
-    const GESTURE_HINT_TOUCH = "长按地图可快速定位";
-    const GESTURE_HINT_POINTER = "双击或右键地图可快速定位";
+	const GESTURE_HINT_COMBINED = "双击、右键或长按地图可快速定位";
+	const GESTURE_HINT_TOUCH = "长按地图可快速定位";
+	const GESTURE_HINT_POINTER = "双击或右键地图可快速定位";
+	const currentMode = $derived(themeMode.current);
+	let suppressNextMapClick = false;
 
-    type RenderMarkerKind = "cluster" | "user" | "group" | "moment";
-    type ClusterPreviewKind = "server_cluster" | "overlap_group";
+	// 低缩放级别下的行政区聚合展示阈值
+	const ADMIN_REGION_ZOOM_THRESHOLD = 10;
+	type RegionKey = string;
+	interface RegionMeta {
+		key: RegionKey;
+		name: string;
+		adcode: string;
+		center: { lat: number; lng: number };
+		centerIsOfficial?: boolean;
+	}
+	const regionMetaCache = new Map<RegionKey, RegionMeta>();
+	const regionResolveCache = new Map<string, RegionKey>();
+	let districtSearch: any = null;
 
-    interface ClusterPreviewState {
-        kind: ClusterPreviewKind;
-        renderId: string;
-        title: string;
-        description: string;
-        count: number;
-        latitude: number;
-        longitude: number;
-        zoomTarget: number;
-        items: MapRenderItem[];
-    }
+	type RenderMarkerKind = "cluster";
+	type ClusterPreviewKind = "server_cluster" | "overlap_group";
+
+	type RenderItem = MapHeatBucket & { render_id: string };
+
+	interface ClusterPreviewState {
+		kind: ClusterPreviewKind;
+		render_id: string;
+		title: string;
+		description: string;
+		count: number;
+		latitude: number;
+		longitude: number;
+		zoomTarget: number;
+		items: RenderItem[];
+	}
 
     function getGestureHintMessage(): string {
         if (
@@ -165,8 +180,8 @@
     let showUsers = $state(true);
     let showGroups = $state(true);
     let showMoments = $state(true);
-    let latestRenderItems = $state.raw<MapRenderItem[]>([]);
-    let overlapGroupItems = $state.raw<Map<string, MapRenderItem[]>>(new Map());
+    let latestRenderItems = $state.raw<RenderItem[]>([]);
+    let overlapGroupItems = $state.raw<Map<string, RenderItem[]>>(new Map());
     let clusterPreview = $state<ClusterPreviewState | null>(null);
 
     // 搜索相关状态
@@ -213,11 +228,11 @@
         [showUsers, showGroups, showMoments].filter(Boolean).length,
     );
 
-		type MapClickEvent = {
-			lnglat?: AMap.LngLat;
-		};
-		
-		const PLACEMENT_HINT_DEFAULT = "已定位到该位置";
+    type MapClickEvent = {
+        lnglat?: AMap.LngLat;
+    };
+
+    const PLACEMENT_HINT_DEFAULT = "已定位到该位置";
 
     function showGestureHint(message = getGestureHintMessage()) {
         if (gestureHintDismissed) return;
@@ -306,6 +321,7 @@
         selectedMarker.setPosition([gcjLng, gcjLat]);
     }
 
+
     function clearSelectedMarker() {
         selectedMarker?.setMap(null);
         selectedMarker?.remove();
@@ -325,10 +341,14 @@
         showFilterPanel = nextOpen;
     }
 
-    function handleMapSurfaceClick() {
-        showSearch = false;
-        showFilterPanel = false;
-        closeClusterPreview();
+	function handleMapSurfaceClick() {
+		if (suppressNextMapClick) {
+			suppressNextMapClick = false;
+			return;
+		}
+		showSearch = false;
+		showFilterPanel = false;
+		closeClusterPreview();
     }
 
     function isClickInsideFilterControls(event: PointerEvent) {
@@ -373,66 +393,48 @@
         ].join("|");
     }
 
-	function buildViewport(): MapViewport | null {
-		if (!map) return null;
-		const visibleRegion = getAMapVisibleRegion(map);
-		if (!visibleRegion) return null;
-		const northEastWgs = gcj02ToWgs84({
-			latitude: visibleRegion.bounds.north,
-			longitude: visibleRegion.bounds.east,
-		});
-		const southWestWgs = gcj02ToWgs84({
-			latitude: visibleRegion.bounds.south,
-			longitude: visibleRegion.bounds.west,
-		});
-		const north = clampLatitude(northEastWgs.latitude);
-		const south = clampLatitude(southWestWgs.latitude);
-		let east = normalizeLongitude(northEastWgs.longitude);
-		let west = normalizeLongitude(southWestWgs.longitude);
-		if (Number.isFinite(east) && Number.isFinite(west) && east < west) {
-			const tmp = east;
-			east = west;
-			west = tmp;
-		}
-		return {
-			bounds: {
-				north,
-				south,
-				east,
-				west,
-			},
-			zoom: Math.max(1, Math.min(20, visibleRegion.zoom)),
-		};
-	}
-
-    function getMarkerIconUrl(kind: RenderMarkerKind): string {
-        switch (kind) {
-            case "group":
-                return "/map/marker_group.svg";
-            case "moment":
-                return "/map/marker_moment.svg";
-            case "cluster":
-                return "/map/marker_cluster.svg";
-            case "user":
-            default:
-                return "/map/marker_user.svg";
+    function buildViewport(): MapViewport | null {
+        if (!map) return null;
+        const visibleRegion = getAMapVisibleRegion(map);
+        if (!visibleRegion) return null;
+        const northEastWgs = gcj02ToWgs84({
+            latitude: visibleRegion.bounds.north,
+            longitude: visibleRegion.bounds.east,
+        });
+        const southWestWgs = gcj02ToWgs84({
+            latitude: visibleRegion.bounds.south,
+            longitude: visibleRegion.bounds.west,
+        });
+        const north = clampLatitude(northEastWgs.latitude);
+        const south = clampLatitude(southWestWgs.latitude);
+        let east = normalizeLongitude(northEastWgs.longitude);
+        let west = normalizeLongitude(southWestWgs.longitude);
+        if (Number.isFinite(east) && Number.isFinite(west) && east < west) {
+            const tmp = east;
+            east = west;
+            west = tmp;
         }
+		const viewport: MapViewport = {
+            bounds: {
+                north,
+                south,
+                east,
+                west,
+            },
+            zoom: Math.max(1, Math.min(20, visibleRegion.zoom)),
+        };
+        return viewport;
     }
 
-    function shouldDisplayItem(item: MapRenderItem) {
-        switch (item.type) {
-            case "user":
-                return showUsers;
-            case "group":
-                return showGroups;
-            case "moment":
-                return showMoments;
-            case "cluster":
-                return showUsers || showGroups || showMoments;
-            default:
-                return true;
-        }
-    }
+function getMarkerIconUrl(_kind: RenderMarkerKind): string {
+	// 仅 cluster 热力格网用于地图展示
+	return "/map/marker_cluster.svg";
+}
+
+function shouldDisplayItem(_item: RenderItem) {
+	// 目前 /map/render 仅返回热力格网统计项，是否显示由筛选开关整体决定
+	return showUsers || showGroups || showMoments;
+}
 
     function resolveMapFilter():
         | { data_type?: "user" | "group" | "moment" | "all" }
@@ -454,24 +456,24 @@
         return { data_type: "all" };
     }
 
-	function applyCurrentFilter() {
-		renderMapItems(
-			latestRenderItems.filter((item) => shouldDisplayItem(item)),
-		);
-	}
+    function applyCurrentFilter() {
+        renderMapItems(
+            latestRenderItems.filter((item) => shouldDisplayItem(item)),
+        );
+    }
 
-	function clampLatitude(lat: number): number {
-		if (!Number.isFinite(lat)) return lat;
-		// 避免极区附近数值异常，约束到常见 Web 地图用的可视范围
-		return Math.max(-85, Math.min(85, lat));
-	}
+    function clampLatitude(lat: number): number {
+        if (!Number.isFinite(lat)) return lat;
+        // 避免极区附近数值异常，约束到常见 Web 地图用的可视范围
+        return Math.max(-85, Math.min(85, lat));
+    }
 
-	function normalizeLongitude(lng: number): number {
-		if (!Number.isFinite(lng)) return lng;
-		// 归一化到 [-180, 180]，避免出现 229 之类超过 180 的经度
-		const normalized = ((lng + 180) % 360 + 360) % 360 - 180;
-		return normalized;
-	}
+    function normalizeLongitude(lng: number): number {
+        if (!Number.isFinite(lng)) return lng;
+        // 归一化到 [-180, 180]，避免出现 229 之类超过 180 的经度
+        const normalized = ((((lng + 180) % 360) + 360) % 360) - 180;
+        return normalized;
+    }
 
     function toggleRenderFilter(kind: "user" | "group" | "moment") {
         if (kind === "user") showUsers = !showUsers;
@@ -490,84 +492,44 @@
         void fetchMapRenderData();
     }
 
-    function getMarkerBadgeText(item: MapRenderItem) {
-        switch (item.type) {
-            case "cluster":
-                return `${item.cluster?.count ?? 0} 个点`;
-            case "group":
-                return "群组";
-            case "moment":
-                return "动态";
-            case "user":
-            default:
-                return "用户";
-        }
-    }
+function getMarkerBadgeText(item: RenderItem) {
+	return `${item.total_count} 个点`;
+}
 
-    function getItemTypeLabel(item: MapRenderItem) {
-        switch (item.type) {
-            case "group":
-                return "群组";
-            case "moment":
-                return "动态";
-            case "user":
-                return "用户";
-            case "cluster":
-            default:
-                return "内容";
-        }
-    }
+	function getItemTypeLabel(_item: RenderItem) {
+		return "内容";
+	}
 
-    function getItemBadgeClass(item: MapRenderItem) {
-        switch (item.type) {
-            case "group":
-                return "bg-sky-100 text-sky-700";
-            case "moment":
-                return "bg-orange-100 text-orange-700";
-            case "user":
-            default:
-                return "bg-slate-100 text-slate-700";
-        }
-    }
+	function getItemBadgeClass(_item: RenderItem) {
+		return "bg-slate-100 text-slate-700";
+	}
 
-    function buildOverlapPreviewDescription(items: MapRenderItem[]) {
-        const typeCounts = new Map<string, number>();
-        for (const item of items) {
-            typeCounts.set(item.type, (typeCounts.get(item.type) ?? 0) + 1);
-        }
-        return Array.from(typeCounts.entries())
-            .map(
-                ([type, count]) =>
-                    `${count} 个${getItemTypeLabel({ type } as MapRenderItem)}`,
-            )
-            .join("，");
-    }
+function buildOverlapPreviewDescription(items: RenderItem[]) {
+	const total = items.reduce((sum, item) => sum + item.total_count, 0);
+	return `${total} 个内容`;
+}
 
-    function openClusterPreview(item: MapRenderItem) {
-        if (item.type !== "cluster") {
-            return;
-        }
-        const overlapItems = overlapGroupItems.get(item.render_id) ?? [];
-        const isOverlapGroup =
-            isOverlapGroupRenderId(item.render_id) && overlapItems.length > 0;
+    function openClusterPreview(item: RenderItem) {
+		const overlapItems = overlapGroupItems.get(item.render_id) ?? [];
+		const isOverlapGroup =
+			isOverlapGroupRenderId(item.render_id) && overlapItems.length > 0;
         const currentZoom = map?.getZoom() ?? 14;
-        clusterPreview = {
-            kind: isOverlapGroup ? "overlap_group" : "server_cluster",
-            renderId: item.render_id,
-            title:
-                item.cluster?.label?.trim() ||
-                `${item.cluster?.count ?? overlapItems.length} 个内容`,
+        const baseCount = item.total_count ||
+            overlapItems.reduce((sum, it) => sum + it.total_count, 0);
+
+			clusterPreview = {
+			kind: isOverlapGroup ? "overlap_group" : "server_cluster",
+				render_id: item.render_id,
+            title: `${baseCount} 个内容`,
             description: isOverlapGroup
-                ? `${buildOverlapPreviewDescription(overlapItems)}。继续放大后会拆成单独 marker。`
-                : "当前层级仍在聚合显示，继续放大后会拆成具体对象。",
-            count: item.cluster?.count ?? overlapItems.length,
+                ? `${buildOverlapPreviewDescription(overlapItems)}。继续放大后会拆成单独单元。`
+                : "当前层级仍在聚合显示，继续放大后会拆成更细的区域。",
+            count: baseCount,
             latitude: item.location.latitude,
             longitude: item.location.longitude,
-            zoomTarget: isOverlapGroup
-                ? Math.max(currentZoom + 1, getOverlapClusterExpandZoom())
-                : (item.cluster?.count ?? 0) > 100
-                  ? Math.min(20, currentZoom + 2)
-                  : Math.min(20, currentZoom + 3),
+			zoomTarget: baseCount > 100
+				? Math.min(20, currentZoom + 2)
+				: Math.min(20, currentZoom + 3),
             items: overlapItems,
         };
     }
@@ -590,28 +552,28 @@
         closeClusterPreview();
     }
 
-    function focusPreviewEntity(item: MapRenderItem) {
-        closeClusterPreview();
-        focusRenderItem(item);
-    }
+function focusPreviewEntity(item: RenderItem) {
+	closeClusterPreview();
+	focusRenderItem(item);
+}
 
-    function createMarkerForItem(
-        item: MapRenderItem,
-        offset?: [number, number],
-    ) {
+	function createMarkerForItem(
+		item: RenderItem,
+		offset?: [number, number],
+	) {
         if (!map) return null;
         const position = toGcjLngLat({
             latitude: item.location.latitude,
             longitude: item.location.longitude,
         });
 
-        const AMapAny = AMap as any;
-        const icon = new AMapAny.Icon({
-            size: new AMapAny.Size(40, 50),
-            image: getMarkerIconUrl(item.type),
-            imageSize: new AMapAny.Size(40, 50),
-            imageOffset: new AMapAny.Pixel(0, 0),
-        });
+		const AMapAny = AMap as any;
+		const icon = new AMapAny.Icon({
+			size: new AMapAny.Size(40, 50),
+			image: getMarkerIconUrl("cluster"),
+			imageSize: new AMapAny.Size(40, 50),
+			imageOffset: new AMapAny.Pixel(0, 0),
+		});
 
         const marker = new AMap.Marker({
             position,
@@ -622,96 +584,215 @@
             map,
         });
 
-        (
-            marker as unknown as {
-                on: (type: "click", handler: () => void) => void;
-            }
-        ).on("click", () => {
-            focusRenderItem(item);
-        });
+		(
+			marker as unknown as {
+				on: (type: "click", handler: () => void) => void;
+			}
+		).on("click", () => {
+			suppressNextMapClick = true;
+			focusRenderItemFromMarkerClick(item);
+		});
 
-        if (item.type === "cluster") {
-            (
-                marker as unknown as {
-                    setLabel: (opts: {
-                        content: string;
-                        direction?: string;
-                    }) => void;
-                }
-            ).setLabel({
-                content: getMarkerBadgeText(item),
-                direction: "top",
-            });
-        }
+		(
+			marker as unknown as {
+				setLabel: (opts: {
+					content: string;
+					direction?: string;
+				}) => void;
+			}
+		).setLabel({
+			content: getMarkerBadgeText(item),
+			direction: "top",
+		});
 
         return marker;
     }
 
-    function focusRenderItem(item: MapRenderItem) {
-        showSearch = false;
-        showFilterPanel = false;
-        if (item.type === "cluster") {
-            openClusterPreview(item);
-            const [gcjLng, gcjLat] = toGcjLngLat({
-                latitude: item.location.latitude,
-                longitude: item.location.longitude,
-            });
-            map?.setCenter([gcjLng, gcjLat]);
-            showPlacementHint(
-                item.cluster?.label?.trim() ||
-                    `已聚焦 ${item.cluster?.count ?? 0} 个内容`,
-            );
-            return;
-        }
-        closeClusterPreview();
-        const nextLat = item.location.latitude;
-        const nextLng = item.location.longitude;
-        const [gcjLng, gcjLat] = toGcjLngLat({
-            latitude: nextLat,
-            longitude: nextLng,
-        });
-        map?.setCenter([gcjLng, gcjLat]);
-        latitude = nextLat;
-        longitude = nextLng;
-        updateSelectedMarker();
-        skipNextReverseGeocode = true;
-        const title = item.entity?.title?.trim();
-        if (title) {
-            locationName = title;
-            lastResolvedLat = nextLat;
-            lastResolvedLng = nextLng;
-            showPlacementHint(
-                isAnchorMode
-                    ? `已定位到 ${title}，请点击下方按钮确认`
-                    : `已定位到 ${title}`,
-            );
-            return;
-        }
-        showPlacementHint(
-            isAnchorMode ? "已定位，请点击下方按钮确认" : "已定位到该位置",
-        );
-    }
+	// 地图上的 marker 点击只用于“浏览”聚合信息，不改变位置选择器的选中坐标；
+	// 真正修改选中位置仍然只通过双击/右键/长按/搜索结果/历史记录/拖动结束等显式操作完成。
+	function focusRenderItemFromMarkerClick(item: RenderItem) {
+		showSearch = false;
+		showFilterPanel = false;
+		// 仅展示聚合预览信息，不移动相机
+		openClusterPreview(item);
+		showPlacementHint(
+			`已聚焦 ${item.total_count} 个内容，双击或长按可设为选中位置`,
+		);
+	}
 
-    function renderMapItems(items: MapRenderItem[]) {
-        if (!map) return;
-        clearRenderMarkers();
-        const { merged, groups } = groupOverlappingRenderItems(
-            items,
-            map.getZoom(),
-        );
-        overlapGroupItems = groups;
-        const currentCluster = clusterPreview;
-        if (
-            currentCluster &&
-            !items.some((item) => item.render_id === currentCluster.renderId)
-        ) {
-            closeClusterPreview();
-        }
-        renderMarkers = merged
-            .map(({ item, offset }) => createMarkerForItem(item, offset))
-            .filter((marker): marker is AMap.Marker => Boolean(marker));
-        updateSelectedMarker();
-    }
+	function focusRenderItem(item: RenderItem) {
+		showSearch = false;
+		showFilterPanel = false;
+		openClusterPreview(item);
+		const [gcjLng, gcjLat] = toGcjLngLat({
+			latitude: item.location.latitude,
+			longitude: item.location.longitude,
+		});
+		map?.setCenter([gcjLng, gcjLat]);
+		showPlacementHint(`已聚焦 ${item.total_count} 个内容`);
+	}
+
+	async function resolveClusterRegion(item: RenderItem): Promise<RegionKey | null> {
+		const cacheKey = item.render_id;
+		const cached = regionResolveCache.get(cacheKey);
+		if (cached) return cached;
+
+		const [gcjLng, gcjLat] = toGcjLngLat({
+			latitude: item.location.latitude,
+			longitude: item.location.longitude,
+		});
+
+		await ensureGeocoder();
+		if (!geocoder) return null;
+
+		const key = await new Promise<RegionKey | null>((resolve) => {
+			geocoder!.getAddress([gcjLng, gcjLat], (status: string, result: any) => {
+				if (status !== "complete" || !result?.regeocode) {
+					resolve(null);
+					return;
+				}
+				const comp = (result.regeocode as any).addressComponent as any;
+				const rawAdcode: string | undefined = comp?.adcode ?? comp?.citycode;
+				const rawCity: string | string[] | undefined = comp?.city;
+				const province: string | undefined = comp?.province;
+				const district: string | undefined = comp?.district;
+				const city = Array.isArray(rawCity) ? rawCity[0] : rawCity;
+				const adcode = rawAdcode;
+				const name = city || province || district;
+				if (!adcode || !name) {
+					resolve(null);
+					return;
+				}
+				const regionKey: RegionKey = `city:${adcode}`;
+				if (!regionMetaCache.has(regionKey)) {
+					regionMetaCache.set(regionKey, {
+						key: regionKey,
+						name,
+						adcode,
+						center: { lat: gcjLat, lng: gcjLng },
+						centerIsOfficial: false,
+					});
+				}
+				resolve(regionKey);
+			});
+		});
+
+		if (key) {
+			regionResolveCache.set(cacheKey, key);
+		}
+		return key;
+	}
+
+	async function ensureRegionCenter(meta: RegionMeta): Promise<RegionMeta> {
+		if (meta.centerIsOfficial) return meta;
+		await ensureDistrictSearch();
+		if (!districtSearch) return meta;
+		const updated = await new Promise<RegionMeta>((resolve) => {
+			(districtSearch as any).search(meta.adcode, (status: string, result: any) => {
+				if (status !== "complete" || !result.districts?.length) {
+					resolve(meta);
+					return;
+				}
+				const d = result.districts[0];
+				const center = d.center;
+				if (!center) {
+					resolve(meta);
+					return;
+				}
+				const next: RegionMeta = {
+					...meta,
+					center: { lat: center.getLat(), lng: center.getLng() },
+					centerIsOfficial: true,
+				};
+				resolve(next);
+			});
+		});
+		regionMetaCache.set(updated.key, updated);
+		return updated;
+	}
+
+	async function renderRegionClusters(items: RenderItem[]) {
+		if (!map) return;
+		const groups = new Map<RegionKey, { items: RenderItem[]; total: number }>();
+		for (const item of items) {
+			const regionKey = await resolveClusterRegion(item);
+			if (!regionKey) continue;
+			const group = groups.get(regionKey) ?? { items: [], total: 0 };
+			group.items.push(item);
+			group.total += item.total_count;
+			groups.set(regionKey, group);
+		}
+
+		clearRenderMarkers();
+		const markers: AMap.Marker[] = [];
+		const AMapAny = AMap as any;
+		for (const [key, group] of groups) {
+			const baseMeta = regionMetaCache.get(key);
+			if (!baseMeta) continue;
+			const meta = await ensureRegionCenter(baseMeta);
+			const position: [number, number] = [meta.center.lng, meta.center.lat];
+			const icon = new AMapAny.Icon({
+				size: new AMapAny.Size(40, 50),
+				image: "/map/marker_cluster.svg",
+				imageSize: new AMapAny.Size(40, 50),
+				imageOffset: new AMapAny.Pixel(0, 0),
+			});
+			const marker = new AMap.Marker({
+				position,
+				icon,
+				anchor: "bottom-center",
+				clickable: true,
+				map,
+			});
+			(marker as any).setLabel?.({
+				content: `${meta.name} ${group.total} 个内容`,
+				direction: "top",
+			});
+			(marker as any).on("click", () => {
+				// 低缩放级别下，点击行政区聚合 marker 仅展示该区域的聚合信息，不移动相机
+				clusterPreview = {
+					kind: "server_cluster",
+					render_id: key,
+					title: `${meta.name} ${group.total} 个内容`,
+					description: "当前层级按城市/区域聚合显示，继续放大后可查看更精细内容。",
+					count: group.total,
+					latitude: group.items[0]?.location.latitude ?? 0,
+					longitude: group.items[0]?.location.longitude ?? 0,
+					zoomTarget:
+						group.total > 100
+							? Math.min(20, (map?.getZoom() ?? lastMapZoom) + 2)
+							: Math.min(20, (map?.getZoom() ?? lastMapZoom) + 3),
+					items: group.items,
+				};
+			});
+			markers.push(marker);
+		}
+		renderMarkers = markers;
+	}
+
+	async function renderMapItems(items: RenderItem[]) {
+		if (!map) return;
+		const zoom = map.getZoom() ?? lastMapZoom;
+		if (zoom <= ADMIN_REGION_ZOOM_THRESHOLD) {
+			await renderRegionClusters(items);
+			updateSelectedMarker();
+			return;
+		}
+		clearRenderMarkers();
+		const { merged, groups } = groupOverlappingRenderItems(items, zoom);
+		overlapGroupItems = groups;
+		const currentCluster = clusterPreview;
+		if (
+			currentCluster &&
+				!items.some((item) => item.render_id === currentCluster.render_id)
+		) {
+			closeClusterPreview();
+		}
+		renderMarkers = merged
+			.map(({ item }) => createMarkerForItem(item))
+			.filter((marker): marker is AMap.Marker => Boolean(marker));
+		updateSelectedMarker();
+	}
 
     async function fetchMapRenderData() {
         if (!map || !open || !isMapAvailable) return;
@@ -733,9 +814,9 @@
             return;
         }
 
-		const requestId = ++activeRenderRequestId;
-		try {
-			const response = await mapService.render(
+        const requestId = ++activeRenderRequestId;
+        try {
+			const response = await mapService.heatmap(
 				filter ? { viewport, filter } : { viewport },
 			);
 			assertSuccess(response);
@@ -743,18 +824,23 @@
 				return;
 			}
 			lastRenderedViewportSignature = signature;
-			latestRenderItems = response.data.items ?? [];
+			const data = (response.data ?? {}) as MapHeatCanvas;
+			const buckets: MapHeatBucket[] = data.items ?? [];
+			latestRenderItems = buckets.map((bucket: MapHeatBucket, index: number) => ({
+				...bucket,
+				render_id: `${index}_${bucket.location.latitude.toFixed(6)}_${bucket.location.longitude.toFixed(6)}`,
+			}));
 			applyCurrentFilter();
-			const nextToastMessage = response.data.toast_message?.trim() ?? "";
-			if (nextToastMessage && nextToastMessage !== lastToastMessage) {
-				toast.info(nextToastMessage);
-			}
-			lastToastMessage = nextToastMessage;
-		} catch {
-			if (requestId === activeRenderRequestId) {
-				toast.error("地图渲染数据加载失败");
-			}
-		}
+			const nextToastMessage = data.toast_message?.trim() ?? "";
+            if (nextToastMessage && nextToastMessage !== lastToastMessage) {
+                toast.info(nextToastMessage);
+            }
+            lastToastMessage = nextToastMessage;
+        } catch {
+            if (requestId === activeRenderRequestId) {
+                toast.error("地图渲染数据加载失败");
+            }
+        }
     }
 
     function scheduleMapRender() {
@@ -767,15 +853,14 @@
         }, MAP_RENDER_IDLE_MS);
     }
 
-    async function moveToCoordinate(
-        mapLat: number,
-        mapLng: number,
-        options?: { hintMessage?: string },
-    ) {
-        cancelReverseGeocodeTimer();
-        closeClusterPreview();
-        skipNextReverseGeocode = true;
-        const wgs = gcj02ToWgs84({
+	async function moveToCoordinate(
+		mapLat: number,
+		mapLng: number,
+		options?: { hintMessage?: string },
+	) {
+		cancelReverseGeocodeTimer();
+		closeClusterPreview();
+		const wgs = gcj02ToWgs84({
             latitude: mapLat,
             longitude: mapLng,
         });
@@ -867,24 +952,31 @@
         };
     }
 
-    function registerContextMenuBlocker() {
+	function registerContextMenuBlocker() {
         detachContextMenuListener?.();
         if (!mapContainer) return;
         const handler = (event: MouseEvent) => {
             event.preventDefault();
         };
         mapContainer.addEventListener("contextmenu", handler);
-        detachContextMenuListener = () => {
+		detachContextMenuListener = () => {
             mapContainer?.removeEventListener("contextmenu", handler);
             detachContextMenuListener = null;
-        };
-    }
+		};
+	}
 
-    async function ensureGeocoder() {
+	async function ensureGeocoder() {
         if (geocoder) return;
         await loadAMapPlugin(["AMap.Geocoder"]);
-        geocoder = new AMap.Geocoder();
-    }
+		geocoder = new AMap.Geocoder();
+	}
+
+	async function ensureDistrictSearch() {
+		if (districtSearch) return;
+		await loadAMapPlugin(["AMap.DistrictSearch"]);
+		const AMapAny = AMap as any;
+		districtSearch = new AMapAny.DistrictSearch({ subdistrict: 0, extensions: "base" });
+	}
 
     // ========== 搜索功能 ==========
 
@@ -1001,15 +1093,12 @@
             clearTimeout(searchDebounceTimer);
             searchDebounceTimer = null;
         }
-        activeSearchRequestId += 1;
-        isSearching = false;
-        cancelReverseGeocodeTimer();
-        skipNextReverseGeocode = true;
-        latitude = result.latitude;
-        longitude = result.longitude;
-        locationName = result.name;
-        lastResolvedLat = result.latitude;
-        lastResolvedLng = result.longitude;
+		activeSearchRequestId += 1;
+		isSearching = false;
+		cancelReverseGeocodeTimer();
+		latitude = result.latitude;
+		longitude = result.longitude;
+		locationName = result.name;
         closeClusterPreview();
         updateSelectedMarker();
         const [gcjLng, gcjLat] = toGcjLngLat({
@@ -1027,15 +1116,12 @@
             clearTimeout(searchDebounceTimer);
             searchDebounceTimer = null;
         }
-        activeSearchRequestId += 1;
-        isSearching = false;
-        cancelReverseGeocodeTimer();
-        skipNextReverseGeocode = true;
-        latitude = item.latitude;
-        longitude = item.longitude;
-        locationName = item.locationName;
-        lastResolvedLat = item.latitude;
-        lastResolvedLng = item.longitude;
+		activeSearchRequestId += 1;
+		isSearching = false;
+		cancelReverseGeocodeTimer();
+		latitude = item.latitude;
+		longitude = item.longitude;
+		locationName = item.locationName;
         closeClusterPreview();
         updateSelectedMarker();
         const [gcjLng, gcjLat] = toGcjLngLat({
@@ -1068,13 +1154,11 @@
                     (status: string, result: AMap.GeocodeResult) => {
                         if (status === "complete" && result.regeocode) {
                             const poiName = result.regeocode.pois?.[0]?.name;
-                            const resolved =
-                                poiName ||
-                                result.regeocode.formattedAddress ||
-                                "自定义位置";
-                            locationName = resolved;
-                            lastResolvedLat = lat;
-                            lastResolvedLng = lng;
+							const resolved =
+								poiName ||
+								result.regeocode.formattedAddress ||
+								"自定义位置";
+							locationName = resolved;
                             resolve(resolved);
                             return;
                         }
@@ -1095,51 +1179,24 @@
         }
     }
 
-    function hasMeaningfulMovement(lat: number, lng: number) {
-        return (
-            Math.abs(lat - lastResolvedLat) > MIN_LOCATION_DELTA ||
-            Math.abs(lng - lastResolvedLng) > MIN_LOCATION_DELTA
-        );
-    }
+    // 选中位置的解析在显式选点（双击/长按/搜索/历史/回到锚点等）时直接调用
+    // reverseGeocode()，拖动/缩放地图不再自动触发位置解析。
 
-    function scheduleReverseGeocode() {
-        cancelReverseGeocodeTimer();
-        reverseGeocodeTimer = window.setTimeout(() => {
-            reverseGeocodeTimer = null;
-            if (!hasMeaningfulMovement(latitude, longitude)) {
-                return;
-            }
-            void reverseGeocode(latitude, longitude);
-        }, REVERSE_GEOCODE_IDLE_MS);
-    }
+	function handleMoveEnd() {
+		if (!map) return;
+		// 拖动结束仅刷新地图渲染，不修改选中位置，也不触发逆地理
+		closeClusterPreview();
+		scheduleMapRender();
+	}
 
-    function syncCenterFromMap() {
-        if (!map) return;
-        const center = map.getCenter();
-        if (!center) return;
-        // 仅用于触发地图渲染，不再自动修改当前选中位置
-    }
-
-    function handleLiveMapMove() {
-        if (mapMoveFrame !== null) {
-            return;
-        }
-        mapMoveFrame = requestAnimationFrame(() => {
-            mapMoveFrame = null;
-            syncCenterFromMap();
-        });
-    }
-
-    function handleMapChanged() {
-        syncCenterFromMap();
-        closeClusterPreview();
-        scheduleMapRender();
-        if (skipNextReverseGeocode) {
-            skipNextReverseGeocode = false;
-            return;
-        }
-        scheduleReverseGeocode();
-    }
+	function handleZoomEnd() {
+		if (!map) return;
+		const currentZoom = map.getZoom() ?? lastMapZoom;
+		lastMapZoom = currentZoom;
+		closeClusterPreview();
+		scheduleMapRender();
+		// 纯缩放不改选中位置，也不触发逆地理
+	}
 
     async function handleDoubleClick(event: MapClickEvent) {
         if (!map) return;
@@ -1165,7 +1222,7 @@
         });
     }
 
-    async function initMap() {
+	async function initMap() {
         isLoadingMap = true;
         try {
             await loadAMap();
@@ -1177,30 +1234,41 @@
                 longitude,
             });
 
-            map = new AMap.Map(mapContainer, {
-                center: [gcjLng, gcjLat],
-                zoom: 14,
-                viewMode: "2D",
-                doubleClickZoom: false,
-                resizeEnable: true,
-            });
-            ensureSelectedMarker();
-            registerTouchListeners();
-            registerContextMenuBlocker();
+			map = new AMap.Map(mapContainer, {
+				center: [gcjLng, gcjLat],
+				zoom: 14,
+				viewMode: "2D",
+				doubleClickZoom: false,
+				resizeEnable: true,
+			});
+			try {
+				const anyMap = map as unknown as { setMapStyle?: (style: string) => void };
+				if (anyMap?.setMapStyle) {
+					anyMap.setMapStyle(
+						currentMode === "dark"
+							? "amap://styles/dark"
+							: "amap://styles/normal",
+					);
+				}
+			} catch {
+				// ignore style errors
+			}
+			ensureSelectedMarker();
+			registerTouchListeners();
+			registerContextMenuBlocker();
 
-            map.on("movestart", () => {
-                cancelReverseGeocodeTimer();
-            });
-            map.on("moveend", () => {
-                handleMapChanged();
-            });
-            map.on("zoomstart", () => {
-                cancelReverseGeocodeTimer();
-            });
-            map.on("zoomend", () => {
-                handleMapChanged();
-            });
-            map.on("mapmove", handleLiveMapMove);
+			map.on("movestart", () => {
+				cancelReverseGeocodeTimer();
+			});
+			map.on("moveend", () => {
+				handleMoveEnd();
+			});
+			map.on("zoomstart", () => {
+				cancelReverseGeocodeTimer();
+			});
+			map.on("zoomend", () => {
+				handleZoomEnd();
+			});
             map.on("click", handleMapSurfaceClick);
             map.on("dblclick", handleDoubleClick);
             map.on("rightclick", handleRightClick);
@@ -1249,24 +1317,21 @@
         isLocating = false;
     }
 
-    async function handleBackToBrowseAnchor() {
-        const anchorLat = mapAnchorStore.latitude;
-        const anchorLng = mapAnchorStore.longitude;
-        closeClusterPreview();
-        cancelReverseGeocodeTimer();
-        skipNextReverseGeocode = true;
-        latitude = anchorLat;
-        longitude = anchorLng;
+	async function handleBackToBrowseAnchor() {
+		const anchorLat = mapAnchorStore.latitude;
+		const anchorLng = mapAnchorStore.longitude;
+		closeClusterPreview();
+		cancelReverseGeocodeTimer();
+		latitude = anchorLat;
+		longitude = anchorLng;
         const [gcjLng, gcjLat] = toGcjLngLat({
             latitude: anchorLat,
             longitude: anchorLng,
         });
         map?.setZoomAndCenter(14, [gcjLng, gcjLat]);
-        updateSelectedMarker();
-        if (mapAnchorStore.name) {
-            locationName = mapAnchorStore.name;
-            lastResolvedLat = anchorLat;
-            lastResolvedLng = anchorLng;
+		updateSelectedMarker();
+		if (mapAnchorStore.name) {
+			locationName = mapAnchorStore.name;
         } else {
             await reverseGeocode(anchorLat, anchorLng);
         }
@@ -1327,7 +1392,7 @@
 		if (open) {
 			if (!gestureHintVisible) {
 				showGestureHint();
-            }
+			}
             if (!hasSyncedFromAnchor) {
                 const fallbackName =
                     mapAnchorStore.name || mapAnchorStore.displayName;
@@ -1344,18 +1409,18 @@
                 searchResults = [];
                 isSearching = false;
 
-				if (!hasInit) {
-					initMap();
-				} else {
-					updateSelectedMarker();
-					const [gcjLng, gcjLat] = toGcjLngLat({
-						latitude,
-						longitude,
-					});
-					map?.setZoomAndCenter(14, [gcjLng, gcjLat]);
-				}
-				hasSyncedFromAnchor = true;
-			}
+                if (!hasInit) {
+                    initMap();
+                } else {
+                    updateSelectedMarker();
+                    const [gcjLng, gcjLat] = toGcjLngLat({
+                        latitude,
+                        longitude,
+                    });
+                    map?.setZoomAndCenter(14, [gcjLng, gcjLat]);
+                }
+                hasSyncedFromAnchor = true;
+            }
 		} else {
 			hasSyncedFromAnchor = false;
 			lastRenderedViewportSignature = "";
@@ -1366,14 +1431,53 @@
 			showFilterPanel = false;
 			hideGestureHint();
 			placementHintVisible = false;
-			// 关闭弹窗时销毁地图实例，避免下次打开时复用已失效的 DOM 容器
+			// 如果当前 selection 的屏幕区域与位置选择器弹窗区域有明显重叠
+			// 则认为选中状态是由本弹窗交互产生的，在关闭前主动清理，避免浏览器
+			// 在 DOM 卸载后将选区“迁移”到主内容区域导致大段文字被选中
+			if (browser && modalRoot) {
+				const selection = window.getSelection();
+				if (selection && selection.rangeCount > 0) {
+					const range = selection.getRangeAt(0);
+					const rects = Array.from(range.getClientRects());
+					if (rects.length > 0) {
+						const modalRect = modalRoot.getBoundingClientRect();
+						let intersects = false;
+						for (const rect of rects) {
+							const separated =
+								rect.right < modalRect.left ||
+								rect.left > modalRect.right ||
+								rect.bottom < modalRect.top ||
+								rect.top > modalRect.bottom;
+							if (!separated) {
+								intersects = true;
+								break;
+							}
+						}
+						if (intersects) {
+							selection.removeAllRanges();
+						}
+					}
+				}
+			}
+			// 如果当前选区来自位置选择器自身，在关闭弹窗时清理掉避免浏览器把选区“迁移”到主内容
+			if (browser && modalRoot) {
+				const selection = window.getSelection();
+				if (selection && selection.rangeCount > 0) {
+					const range = selection.getRangeAt(0);
+					const node = range.commonAncestorContainer as Node;
+					if (modalRoot.contains(node)) {
+						selection.removeAllRanges();
+					}
+				}
+			}
+            // 关闭弹窗时销毁地图实例，避免下次打开时复用已失效的 DOM 容器
 			clearRenderMarkers();
 			clearSelectedMarker();
 			map?.destroy();
-			map = null;
-			isMapAvailable = true;
-			hasInit = false;
-		}
+            map = null;
+            isMapAvailable = true;
+            hasInit = false;
+        }
 	});
 
     // 组件卸载时清理资源
@@ -1431,21 +1535,22 @@
     });
 </script>
 
-<Dialog.Root
-    bind:open
-    onOpenChange={(value) => {
-        open = value;
-        onOpenChange?.(value);
-    }}
->
-	<Dialog.Content
-		class={`flex h-[90dvh] max-h-[90dvh] flex-col p-0 transition-all duration-200 ease-out sm:flex-row sm:gap-4 select-none ${
-			isFullscreen
-				? "sm:h-screen sm:max-h-screen sm:w-screen sm:max-w-none sm:rounded-none sm:border-0 sm:bg-background sm:p-4"
-				: "sm:h-[88vh] sm:w-[92vw] sm:max-w-6xl lg:max-w-7xl sm:rounded-3xl sm:border sm:border-border/60 sm:bg-card/95 sm:p-6"
-        }`}
-        hideClose
-    >
+	<div bind:this={modalRoot}>
+		<Dialog.Root
+			bind:open
+			onOpenChange={(value) => {
+				open = value;
+				onOpenChange?.(value);
+			}}
+		>
+			<Dialog.Content
+			class={`flex h-[90dvh] max-h-[90dvh] flex-col p-0 transition-all duration-200 ease-out sm:flex-row sm:gap-4 select-none ${
+				isFullscreen
+					? "sm:h-screen sm:max-h-screen sm:w-screen sm:max-w-none sm:rounded-none sm:border-0 sm:bg-background sm:p-4"
+					: "sm:h-[88vh] sm:w-[92vw] sm:max-w-6xl lg:max-w-7xl sm:rounded-3xl sm:border sm:border-border/60 sm:bg-card/95 sm:p-6"
+			}`}
+			hideClose
+		>
         <!-- 移动端简化标题 -->
         <div
             class="flex items-center justify-between border-b border-border/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.95),rgba(248,250,252,0.92))] px-4 py-3 backdrop-blur dark:bg-[linear-gradient(180deg,rgba(30,30,36,0.95),rgba(24,24,30,0.92))] sm:hidden"
@@ -1601,7 +1706,7 @@
                 </div>
             </div>
 
-			<!-- 移除地图左上角的“地图内容更新中/正在获取当前位置”浮层，避免缩放时闪烁 -->
+            <!-- 移除地图左上角的“地图内容更新中/正在获取当前位置”浮层，避免缩放时闪烁 -->
 
             {#if showFilterPanel}
                 <div
@@ -1806,8 +1911,8 @@
                     </div>
 
                     <!-- 搜索结果列表 -->
-                    {#if searchResults.length > 0}
-                        <div class="max-h-80 overflow-y-auto px-2 pb-2">
+				{#if searchResults.length > 0}
+					<div class="max-h-[60vh] overflow-y-auto px-2 pb-2">
                             {#each searchResults as result (`${result.latitude}_${result.longitude}`)}
                                 <button
                                     class="mx-2 mb-2 flex w-[calc(100%-1rem)] items-start gap-3 rounded-2xl border border-border/50 bg-white/72 px-4 py-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:bg-white dark:bg-card/72 dark:hover:bg-card"
@@ -1839,7 +1944,7 @@
                         </div>
                     {:else if searchText.trim().length === 0 && anchorHistory.length > 0}
                         <!-- 无输入时展示历史记录 -->
-                        <div class="max-h-80 overflow-y-auto px-2 pb-2">
+					<div class="max-h-[60vh] overflow-y-auto px-2 pb-2">
                             <div
                                 class="flex items-center justify-between px-4 py-2"
                             >
@@ -2012,12 +2117,12 @@
                             class="flex items-start justify-between gap-3 border-b border-border/50 px-4 py-3"
                         >
                             <div class="min-w-0">
-                                <p
-                                    class="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary/70"
-                                >
-                                    {clusterPreview.kind === "overlap_group"
-                                        ? "同点内容预览"
-                                        : "聚合内容预览"}
+				<p
+					class="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary/70"
+				>
+					{clusterPreview.kind === "overlap_group"
+						? "同点内容预览"
+						: "聚合内容预览"}
                                 </p>
                                 <p
                                     class="truncate text-base font-bold text-foreground"
@@ -2043,7 +2148,7 @@
                             <div
                                 class="max-h-64 space-y-2 overflow-y-auto px-3 py-3"
                             >
-                                {#each clusterPreview.items as previewItem (previewItem.render_id)}
+                                {#each clusterPreview.items as previewItem (`preview_${previewItem.location.latitude}_${previewItem.location.longitude}_${previewItem.total_count}`)}
                                     <button
                                         class="flex w-full items-start gap-3 rounded-2xl border border-border/50 bg-white/78 px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/25 hover:bg-white dark:bg-card/78 dark:hover:bg-card"
                                         onclick={() =>
@@ -2055,20 +2160,16 @@
                                             {getItemTypeLabel(previewItem)}
                                         </div>
                                         <div class="min-w-0 flex-1">
-                                            <p
-                                                class="truncate text-sm font-semibold text-foreground"
-                                            >
-                                                {previewItem.entity?.title ||
-                                                    "未命名内容"}
-                                            </p>
-                                            {#if previewItem.entity?.subtitle}
-                                                <p
-                                                    class="mt-1 line-clamp-2 text-xs text-muted-foreground"
-                                                >
-                                                    {previewItem.entity
-                                                        .subtitle}
-                                                </p>
-                                            {/if}
+							<p
+								class="truncate text-sm font-semibold text-foreground"
+							>
+								{previewItem.name ?? "聚合区域"}
+							</p>
+							<p
+								class="mt-1 line-clamp-2 text-xs text-muted-foreground"
+							>
+								{previewItem.total_count} 个内容
+							</p>
                                         </div>
                                     </button>
                                 {/each}
@@ -2084,21 +2185,21 @@
                         <div
                             class="flex gap-2 border-t border-border/50 px-4 py-3"
                         >
-                            <Button
-                                variant="outline"
-                                class="h-10 flex-1 rounded-2xl"
-                                onclick={closeClusterPreview}
-                            >
-                                稍后再看
-                            </Button>
-                            <Button
-                                class="h-10 flex-1 rounded-2xl"
-                                onclick={zoomToClusterPreview}
-                            >
-                                {clusterPreview.kind === "overlap_group"
-                                    ? "放大展开"
-                                    : "继续放大"}
-                            </Button>
+				<Button
+					variant="outline"
+					class="h-10 flex-1 rounded-2xl"
+					onclick={closeClusterPreview}
+				>
+					稍后再看
+				</Button>
+				<Button
+					class="h-10 flex-1 rounded-2xl"
+					onclick={zoomToClusterPreview}
+				>
+					{clusterPreview.kind === "overlap_group"
+						? "放大展开"
+						: "继续放大"}
+				</Button>
                         </div>
                     </div>
                 </div>
@@ -2133,15 +2234,15 @@
                         {/if}
                     </button>
 
-						<!-- 底部抽屉内容 -->
-						<div class="max-h-[60vh] overflow-y-auto px-4 pb-safe">
-							<!-- 位置信息 (精简版 - 始终可见) -->
-							<AnchorSummaryCard
-								label="当前选中"
-								description={selectionDescription}
-								subtle
-								overrideName={locationName || "拖动地图选择位置"}
-							/>
+                    <!-- 底部抽屉内容 -->
+                    <div class="max-h-[60vh] overflow-y-auto px-4 pb-safe">
+                        <!-- 位置信息 (精简版 - 始终可见) -->
+                        <AnchorSummaryCard
+                            label="当前选中"
+                            description={selectionDescription}
+                            subtle
+                            overrideName={locationName || "拖动地图选择位置"}
+                        />
 
                         <!-- 操作按钮 -->
                         <div
@@ -2207,7 +2308,7 @@
                 </div>
             </div>
 
-			<!-- 去掉右侧顶部的“地图内容更新中”等瞬时提示，避免缩放时闪烁扰动 -->
+            <!-- 去掉右侧顶部的“地图内容更新中”等瞬时提示，避免缩放时闪烁扰动 -->
 
             <!-- 搜索与结果（桌面端常驻在信息栏中） -->
             <div class="space-y-2">
@@ -2266,7 +2367,7 @@
                     {/if}
                 </div>
 
-                <div class="max-h-56 space-y-2 overflow-y-auto pr-1">
+				<div class="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
                     {#if searchResults.length > 0}
                         {#each searchResults as result (`desktop_${result.latitude}_${result.longitude}`)}
                             <button
@@ -2374,8 +2475,9 @@
                 </div>
             </div>
         </div>
-    </Dialog.Content>
-</Dialog.Root>
+		</Dialog.Content>
+		</Dialog.Root>
+	</div>
 
 <!-- 位置分享模态框 -->
 <CreateLocationShareModal

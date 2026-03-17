@@ -7,47 +7,74 @@ use std::time::Duration;
 use tokio::sync::broadcast;
 
 use crate::{
-    config::Config,
-    events::event_bus::EventBus,
-    repositories::{
-        admin::audit_repo::AdminAuditRepository, admin::rbac_repo::AdminRbacRepository,
-        announcement_repo::AnnouncementRepository, chat_unread_repo::ChatUnreadRepository,
-        comment_repo::CommentRepository, dismiss_repo::FeedDismissRepository,
-        group::announcement_repo::GroupAnnouncementRepository,
-        group::application_repo::GroupApplicationRepository, group::bans_repo::GroupBansRepository,
-        group::invite_repo::GroupInviteRepository,
-        group::member_history_repo::GroupMemberHistoryRepository,
-        group::member_repo::GroupMemberRepository, group::message_repo::GroupMessageRepository,
-        group::settings_repo::GroupSettingsRepository, group_repo::GroupRepository,
-        map_repo::MapRepository, moment_repo::MomentRepository,
-        notification_repo::NotificationRepository, private_chat_repo::PrivateChatRepository,
-        private_message_repo::PrivateMessageRepository, report_repo::ReportRepository,
-        session_repo::SessionRepository, system_config_repo::SystemConfigRepository,
-        tag_repo::TagRepository, user::blocks_repo::UserBlocksRepository,
-        user::follows_repo::UserFollowsRepository,
-        user::friend_remarks_repo::UserFriendRemarksRepository,
-        user::location_history_repo::UserLocationHistoryRepository,
-        user::online_status_repo::UserOnlineStatusRepository,
-        user::settings_repo::UserSettingsRepository, user_repo::UserRepository,
-        verification_repo::VerificationRepository,
-    },
-    services::{
-        admin_audit_service::AdminAuditService, admin_rbac_service::AdminRbacService,
-        announcement_service::AnnouncementService, auth_service::AuthService,
-        comment_service::CommentService, feed_service::FeedService,
-        group_message_service::GroupMessageService, group_service::GroupService,
-        map_service::MapService, media_service::MediaService, moment_service::MomentService,
-        notification_service::NotificationService, presence_service::PresenceService,
-        private_chat_service::PrivateChatService, private_message_service::PrivateMessageService,
-        report_service::ReportService, search_service::SearchService, share_service::ShareService,
-        stranger_message_limiter::StrangerMessageLimiter,
-        system_config_service::SystemConfigService, tag_service::TagService,
-        user_service::UserService,
-    },
-    utils::cache_invalidation::{start_invalidation_listener, InvalidationEvent},
-    websocket::{
-        manager::ConnectionManager as WsConnectionManager, subscription::SubscriptionManager,
-    },
+	config::Config,
+	events::event_bus::EventBus,
+	repositories::{
+		admin::audit_repo::AdminAuditRepository,
+		admin::rbac_repo::AdminRbacRepository,
+		announcement_repo::AnnouncementRepository,
+		chat_unread_repo::ChatUnreadRepository,
+		comment_repo::CommentRepository,
+		dismiss_repo::FeedDismissRepository,
+		group::announcement_repo::GroupAnnouncementRepository,
+		group::application_repo::GroupApplicationRepository,
+		group::bans_repo::GroupBansRepository,
+		group::invite_repo::GroupInviteRepository,
+		group::member_history_repo::GroupMemberHistoryRepository,
+		group::member_repo::GroupMemberRepository,
+		group::message_repo::GroupMessageRepository,
+		group::settings_repo::GroupSettingsRepository,
+		group_repo::GroupRepository,
+		map_repo::MapRepository,
+		moment_repo::MomentRepository,
+		notification_repo::NotificationRepository,
+		private_chat_repo::PrivateChatRepository,
+		private_message_repo::PrivateMessageRepository,
+		report_repo::ReportRepository,
+		session_repo::SessionRepository,
+		system_config_repo::SystemConfigRepository,
+		tag_repo::TagRepository,
+		user::blocks_repo::UserBlocksRepository,
+		user::follows_repo::UserFollowsRepository,
+		user::friend_remarks_repo::UserFriendRemarksRepository,
+		user::location_history_repo::UserLocationHistoryRepository,
+			user::online_status_repo::UserOnlineStatusRepository,
+			user::settings_repo::UserSettingsRepository,
+			user_repo::UserRepository,
+			verification_repo::VerificationRepository,
+			region_boundary_repo::RegionBoundaryRepo,
+			region_boundary_stats_repo::RegionBoundaryStatsRepository,
+	},
+	services::{
+		admin_audit_service::AdminAuditService,
+			admin_rbac_service::AdminRbacService,
+			announcement_service::AnnouncementService,
+			region_boundary_service::RegionBoundaryService,
+		auth_service::AuthService,
+		comment_service::CommentService,
+		feed_service::FeedService,
+		group_message_service::GroupMessageService,
+		group_service::GroupService,
+		map_service::MapService,
+		media_service::MediaService,
+		moment_service::MomentService,
+		notification_service::NotificationService,
+		presence_service::PresenceService,
+		private_chat_service::PrivateChatService,
+		private_message_service::PrivateMessageService,
+		report_service::ReportService,
+		search_service::SearchService,
+		share_service::ShareService,
+		stranger_message_limiter::StrangerMessageLimiter,
+		system_config_service::SystemConfigService,
+		tag_service::TagService,
+		user_service::UserService,
+	},
+	utils::cache_invalidation::{start_invalidation_listener, InvalidationEvent},
+	websocket::{
+		manager::ConnectionManager as WsConnectionManager,
+		subscription::SubscriptionManager,
+	},
 };
 
 #[derive(Clone)]
@@ -234,12 +261,14 @@ impl AppState {
         let group_invite_repo = GroupInviteRepository::new(db.clone());
         let group_member_history_repo = GroupMemberHistoryRepository::new(db.clone());
         let group_member_repo = GroupMemberRepository::new(db.clone(), redis.clone());
-        let group_message_repo = GroupMessageRepository::new(db.clone());
-        let group_repo = GroupRepository::new(db.clone());
-        let group_settings_repo = GroupSettingsRepository::new(db.clone());
-        let map_repo = MapRepository::new(db.clone());
-        let moment_repo = MomentRepository::new(db.clone());
-        let notification_repo = NotificationRepository::new(db.clone());
+		let group_message_repo = GroupMessageRepository::new(db.clone());
+		let group_repo = GroupRepository::new(db.clone());
+		let group_settings_repo = GroupSettingsRepository::new(db.clone());
+		let map_repo = MapRepository::new(db.clone());
+		let moment_repo = MomentRepository::new(db.clone());
+		let region_boundary_repo = RegionBoundaryRepo::new(db.clone());
+		let region_boundary_stats_repo = RegionBoundaryStatsRepository::new(db.clone());
+		let notification_repo = NotificationRepository::new(db.clone());
         let private_chat_repo = PrivateChatRepository::new(db.clone());
         let private_message_repo = PrivateMessageRepository::new(db.clone());
         let report_repo = ReportRepository::new(db.clone());
@@ -274,9 +303,9 @@ impl AppState {
             user_settings_repo.clone(),
         );
 
-        let auth_service = AuthService::new(
-            &redis,
-            config.jwt_secret.clone(),
+		let auth_service = AuthService::new(
+			&redis,
+			config.jwt_secret.clone(),
             config.jwt_access_token_expiration,
             config.jwt_refresh_token_expiration,
             user_repo.clone(),
@@ -284,13 +313,15 @@ impl AppState {
             user_settings_repo.clone(),
             verification_repo.clone(),
             config.auth_reset_delivery_webhook_url.clone(),
-            config.auth_reset_delivery_webhook_token.clone(),
-            config.auth_reset_delivery_timeout_ms,
-        );
+			config.auth_reset_delivery_webhook_token.clone(),
+			config.auth_reset_delivery_timeout_ms,
+		);
 
-        let user_service = UserService::new(
-            event_bus.clone(),
-            user_repo.clone(),
+		let region_boundary_service = RegionBoundaryService::new(region_boundary_repo.clone());
+
+		let user_service = UserService::new(
+				event_bus.clone(),
+				user_repo.clone(),
             user_settings_repo.clone(),
             user_location_history_repo.clone(),
             user_follows_repo.clone(),
@@ -299,23 +330,25 @@ impl AppState {
             session_repo.clone(),
             tag_repo.clone(),
             group_member_repo.clone(),
-            moment_repo.clone(),
-            presence_service.clone(),
-            media_service.clone(),
-            cache_manager.clone(),
-            resource_checker.clone(),
-        );
+				moment_repo.clone(),
+				presence_service.clone(),
+				media_service.clone(),
+				cache_manager.clone(),
+				resource_checker.clone(),
+				region_boundary_service.clone(),
+		);
 
-        let moment_service = MomentService::new(
-            redis.clone(),
-            event_bus.clone(),
-            moment_repo.clone(),
-            tag_repo.clone(),
-            user_repo.clone(),
-            user_settings_repo.clone(),
-            media_service.clone(),
-            cache_manager.clone(),
-        );
+		let moment_service = MomentService::new(
+			redis.clone(),
+			event_bus.clone(),
+			moment_repo.clone(),
+			tag_repo.clone(),
+			user_repo.clone(),
+			user_settings_repo.clone(),
+			media_service.clone(),
+			cache_manager.clone(),
+			region_boundary_service.clone(),
+		);
 
         let comment_service = CommentService::new(
             event_bus.clone(),
@@ -326,25 +359,26 @@ impl AppState {
             resource_checker.clone(),
         );
 
-        let group_service = GroupService::new(
-            event_bus.clone(),
-            group_repo.clone(),
-            group_member_repo.clone(),
-            group_member_history_repo.clone(),
-            group_application_repo.clone(),
-            group_bans_repo.clone(),
-            group_invite_repo.clone(),
-            group_settings_repo.clone(),
-            group_announcement_repo.clone(),
-            tag_repo.clone(),
-            report_repo.clone(),
-            user_repo.clone(),
-            chat_unread_repo.clone(),
-            admin_rbac_repo.clone(),
-            media_service.clone(),
-            cache_manager.clone(),
-            resource_checker.clone(),
-        );
+		let group_service = GroupService::new(
+			event_bus.clone(),
+			group_repo.clone(),
+			group_member_repo.clone(),
+			group_member_history_repo.clone(),
+			group_application_repo.clone(),
+			group_bans_repo.clone(),
+			group_invite_repo.clone(),
+			group_settings_repo.clone(),
+			group_announcement_repo.clone(),
+			tag_repo.clone(),
+			report_repo.clone(),
+			user_repo.clone(),
+			chat_unread_repo.clone(),
+			admin_rbac_repo.clone(),
+			media_service.clone(),
+			cache_manager.clone(),
+			resource_checker.clone(),
+			region_boundary_service.clone(),
+		);
 
         let group_message_service = GroupMessageService::new(
             redis.clone(),
@@ -420,21 +454,25 @@ impl AppState {
         let admin_audit_service =
             AdminAuditService::new(admin_audit_repo, user_repo.clone(), media_service.clone());
 
-        let report_service = ReportService::new(
-            report_repo.clone(),
-            user_repo.clone(),
-            moment_repo.clone(),
-            comment_repo.clone(),
-            group_repo.clone(),
-            private_message_repo.clone(),
-            group_message_repo.clone(),
-            media_service.clone(),
-            user_service.clone(),
-            admin_rbac_service.clone(),
-            event_bus.clone(),
-        );
+		let report_service = ReportService::new(
+			report_repo.clone(),
+			user_repo.clone(),
+			moment_repo.clone(),
+			comment_repo.clone(),
+			group_repo.clone(),
+			private_message_repo.clone(),
+			group_message_repo.clone(),
+			media_service.clone(),
+			user_service.clone(),
+			admin_rbac_service.clone(),
+			event_bus.clone(),
+		);
 
-        let map_service = MapService::new(map_repo.clone());
+		let map_service = MapService::new(
+			region_boundary_service.clone(),
+			region_boundary_stats_repo.clone(),
+			map_repo.clone(),
+		);
 
         let notification_service =
             NotificationService::new(notification_repo.clone(), user_repo.clone());

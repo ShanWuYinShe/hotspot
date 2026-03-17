@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
     location            GEOGRAPHY(POINT, 4326),
     location_name       VARCHAR(255),
     location_updated_at TIMESTAMPTZ,
+    region_id           BIGINT,
     -- 注册 & 登录
     register_ip         INET,
     register_location   VARCHAR(255),

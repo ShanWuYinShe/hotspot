@@ -87,13 +87,14 @@ const TOKEN_OPTIONAL_ENDPOINTS: string[] = [
   ApiEndpoints.GROUP.ANNOUNCEMENTS.LIST,
   ApiEndpoints.MOMENT.SEARCH,
   ApiEndpoints.MOMENT.OPEN_THE_DOOR,
-  ApiEndpoints.MOMENT.LIST_LIKES,
-  ApiEndpoints.COMMENT.LIST,
-  ApiEndpoints.COMMENT.LIST_REPLIES,
-  ApiEndpoints.COMMENT.LIST_LIKES,
-  ApiEndpoints.SHARE.GET,
-  ApiEndpoints.FEED.LIST_TRENDING,
-  ApiEndpoints.MAP.RENDER,
+	ApiEndpoints.MOMENT.LIST_LIKES,
+	ApiEndpoints.COMMENT.LIST,
+	ApiEndpoints.COMMENT.LIST_REPLIES,
+	ApiEndpoints.COMMENT.LIST_LIKES,
+	ApiEndpoints.SHARE.GET,
+	ApiEndpoints.FEED.LIST_TRENDING,
+	ApiEndpoints.MAP.HEATMAP,
+	ApiEndpoints.MAP.HOTSPOTS,
 ];
 
 const DOMAIN_NUMBER: number = 0xFF08;

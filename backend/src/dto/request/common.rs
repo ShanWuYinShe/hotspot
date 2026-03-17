@@ -37,9 +37,14 @@ pub struct TimeRangeParams {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct MapFilter {
+pub struct MapHeatFilter {
     pub data_type: Option<MapDataType>,
-    pub only_friends: Option<bool>,
+    pub time_range: Option<TimeRangeParams>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MapHotspotFilter {
+    pub data_type: Option<MapDataType>,
     pub time_range: Option<TimeRangeParams>,
 }
 

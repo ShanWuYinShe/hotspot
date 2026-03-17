@@ -320,24 +320,24 @@ impl GroupService {
             "group.create started"
         );
 
-        let lon = Some(req.location.point.longitude);
-        let lat = Some(req.location.point.latitude);
+		let lon = Some(req.location.point.longitude);
+		let lat = Some(req.location.point.latitude);
 
         let join_method = req.join_method.unwrap_or(GroupJoinMethod::Open);
         let join_method_str = Self::join_method_to_string(join_method);
 
-        let mut group = self
-            .group_repo
-            .create(
-                req.name.clone(),
-                owner_id,
-                lon,
-                lat,
-                &req.location.location_name,
-                "public".to_string(),
-                join_method_str.clone(),
-            )
-            .await?;
+		let mut group = self
+			.group_repo
+			.create(
+				req.name.clone(),
+				owner_id,
+				lon,
+				lat,
+				&req.location.location_name,
+				"public".to_string(),
+				join_method_str.clone(),
+			)
+			.await?;
 
         let avatar_url = if let Some(fid) = req.avatar_file_id {
             let fid_uuid = Validator::parse_uuid(&fid, "文件ID")?;
@@ -362,16 +362,22 @@ impl GroupService {
                 .await?;
         }
 
-        // spec: location_name 由客户端提供，必须完整存储
-        let loc_point = req.location.point;
-        self.group_repo
-            .update_location(
-                group.group_id,
-                loc_point.longitude,
-                loc_point.latitude,
-                Some(&req.location.location_name),
-            )
-            .await?;
+		// spec: location_name 由客户端提供，必须完整存储
+		let loc_point = req.location.point;
+		let region_id = self
+			.region_boundary_service
+			.assign_region_for_point(loc_point.latitude, loc_point.longitude)
+			.await;
+		self
+			.group_repo
+			.update_location_with_region(
+				group.group_id,
+				loc_point.longitude,
+				loc_point.latitude,
+				Some(&req.location.location_name),
+				region_id,
+			)
+			.await?;
         group.latitude = Some(loc_point.latitude);
         group.longitude = Some(loc_point.longitude);
         group.location_name = Some(req.location.location_name.clone());
@@ -610,18 +616,24 @@ impl GroupService {
             )
             .await?;
 
-        if let Some(ref loc) = req.location {
-            Validator::validate_coordinates(loc.point.latitude, loc.point.longitude)?;
-            Validator::validate_length(&loc.location_name, "location_name", 0, 100)?;
-            self.group_repo
-                .update_location(
-                    group_id,
-                    loc.point.longitude,
-                    loc.point.latitude,
-                    Some(&loc.location_name),
-                )
-                .await?;
-        }
+		if let Some(ref loc) = req.location {
+			Validator::validate_coordinates(loc.point.latitude, loc.point.longitude)?;
+			Validator::validate_length(&loc.location_name, "location_name", 0, 100)?;
+			let region_id = self
+				.region_boundary_service
+				.assign_region_for_point(loc.point.latitude, loc.point.longitude)
+				.await;
+			self
+				.group_repo
+				.update_location_with_region(
+					group_id,
+					loc.point.longitude,
+					loc.point.latitude,
+					Some(&loc.location_name),
+					region_id,
+				)
+				.await?;
+		}
 
         let event_tags = req.tags.clone();
         if let Some(tags) = req.tags {

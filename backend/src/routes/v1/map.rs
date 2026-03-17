@@ -11,5 +11,7 @@ use crate::state::AppState;
 
 /// Token 可选的地图路由
 pub fn token_optional_routes() -> Router<AppState> {
-    Router::new().route("/render", post(map_handlers::render))
+    Router::new()
+        .route("/heatmap", post(map_handlers::heatmap))
+        .route("/hotspots", post(map_handlers::hotspots))
 }

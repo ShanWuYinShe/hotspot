@@ -1080,48 +1080,70 @@ export interface MarkGroupMessagesReadRequest {
   up_to_message_id?: string;
 }
 
-// ==================== 地图渲染 API ====================
+// ==================== 地图 API ====================
 
-export interface MapRenderCluster {
-  count: number;
-  label?: string;
-  preview_urls?: string[];
-}
+export type MapDataType = 'user' | 'group' | 'moment' | 'all';
 
-export interface MapRenderEntity {
-  title: string;
-  subtitle?: string;
-  cover_url?: string;
-  payload_id: string;
-  category?: string;
-}
-
-export interface MapRenderItem {
-  render_id: string;
-  type: 'cluster' | 'user' | 'group' | 'moment';
-  location: GeoPoint;
-  cluster?: MapRenderCluster;
-  entity?: MapRenderEntity;
-}
-
-export interface MapRenderTimeRange {
+export interface TimeRangeParams {
   start_time?: string;
   end_time?: string;
 }
 
-export interface MapRenderFilter {
-  data_type?: 'user' | 'group' | 'moment' | 'all';
-  only_friends?: boolean;
-  time_range?: MapRenderTimeRange;
+export interface MapHeatBreakdown {
+  user?: number;
+  group?: number;
+  moment?: number;
 }
 
-export interface MapRenderRequest {
+export interface MapHeatBucket {
+  location: GeoPoint;
+  total_count: number;
+  breakdown?: MapHeatBreakdown;
+  name?: string;
+}
+
+export interface MapHeatCanvas {
+  items: MapHeatBucket[];
+  toast_message?: string;
+}
+
+export type HotspotObjectType = 'user' | 'group' | 'moment';
+
+export interface MapHotspotItem {
+  object_type: HotspotObjectType;
+  object_id: string;
+  title: string;
+  subtitle?: string;
+  cover_url?: string;
+  location: GeoPoint;
+  created_at?: string;
+  distance_meters?: number;
+}
+
+export interface MapHeatFilter {
+  data_type?: MapDataType;
+  time_range?: TimeRangeParams;
+}
+
+export interface MapHotspotFilter {
+  data_type?: MapDataType;
+  time_range?: TimeRangeParams;
+}
+
+export interface MapHeatRequest {
   viewport: MapViewport;
-  filter?: MapRenderFilter;
+  filter?: MapHeatFilter;
 }
 
-export interface MapCanvas {
-  items: MapRenderItem[];
+export interface MapHotspotsRequest {
+  viewport: MapViewport;
+  filter?: MapHotspotFilter;
+  pagination?: PaginationParams;
+}
+
+export interface MapHotspotsCanvas {
+  items: MapHotspotItem[];
+  next_cursor?: string;
   toast_message?: string;
 }
 

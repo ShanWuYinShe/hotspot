@@ -1,6 +1,7 @@
 pub mod admin_audit_service;
 pub mod admin_rbac_service;
 pub mod announcement_service;
+pub mod region_boundary_service;
 pub mod auth_service;
 pub mod comment_service;
 pub mod feed_service;

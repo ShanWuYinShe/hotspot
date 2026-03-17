@@ -224,31 +224,61 @@ impl GroupRepository {
         Ok(())
     }
 
-    pub async fn update_location(
-        &self,
-        group_id: i64,
-        lon: f64,
-        lat: f64,
-        location_name: Option<&str>,
-    ) -> Result<()> {
-        let loc_name = location_name.unwrap_or("Unknown");
-        sqlx::query!(
-            r#"
-            UPDATE groups SET
-                location = ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography,
-                location_name = $4,
-                updated_at = NOW()
-            WHERE group_id = $1
-            "#,
-            group_id,
-            lon,
-            lat,
-            loc_name
-        )
-        .execute(&self.pool)
-        .await?;
-        Ok(())
-    }
+	pub async fn update_location(
+		&self,
+		group_id: i64,
+		lon: f64,
+		lat: f64,
+		location_name: Option<&str>,
+	) -> Result<()> {
+		let loc_name = location_name.unwrap_or("Unknown");
+		sqlx::query!(
+			 r#"
+			 UPDATE groups SET
+			     location = ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography,
+			     location_name = $4,
+			     updated_at = NOW()
+			 WHERE group_id = $1
+			 "#,
+			 group_id,
+			 lon,
+			 lat,
+			 loc_name
+		)
+		.execute(&self.pool)
+		.await?;
+		Ok(())
+	}
+
+	/// 更新位置并写入区域归属
+	pub async fn update_location_with_region(
+		&self,
+		group_id: i64,
+		lon: f64,
+		lat: f64,
+		location_name: Option<&str>,
+		region_id: Option<i64>,
+	) -> Result<()> {
+		let loc_name = location_name.unwrap_or("Unknown");
+		sqlx::query!(
+			 r#"
+			 UPDATE groups SET
+			     location = ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography,
+			     location_name = $4,
+			     region_id = $5,
+			     updated_at = NOW()
+			 WHERE group_id = $1
+			 "#,
+			 group_id,
+			 lon,
+			 lat,
+			 loc_name,
+			 region_id
+		)
+		.execute(&self.pool)
+		.await?;
+		Ok(())
+	}
 
     pub async fn update_owner(&self, group_id: i64, owner_id: i64) -> Result<()> {
         sqlx::query!(

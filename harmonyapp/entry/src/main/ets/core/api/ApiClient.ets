@@ -175,13 +175,15 @@ import {
 
   TagItem,
 
-  // 搜索
-  SearchSuggestRequest,
-  SearchSuggestResponse,
+	// 搜索
+	SearchSuggestRequest,
+	SearchSuggestResponse,
 
-  // 地图
-  MapRenderRequest,
-  MapCanvas,
+	// 地图
+	MapHeatRequest,
+	MapHeatCanvas,
+	MapHotspotsRequest,
+	MapHotspotsCanvas,
 
   // 系统
   HealthStatus,
@@ -853,11 +855,15 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<SearchSuggestResponse>, SearchSuggestRequest>(ApiEndpoints.SEARCH.SUGGEST, params);
   }
 
-  // ==================== 地图 API ====================
+	// ==================== 地图 API ====================
 
-  static async renderMap(params: MapRenderRequest): Promise<ApiResponse<MapCanvas>> {
-    return HttpUtil.post<ApiResponse<MapCanvas>, MapRenderRequest>(ApiEndpoints.MAP.RENDER, params);
-  }
+	static async getMapHeat(params: MapHeatRequest): Promise<ApiResponse<MapHeatCanvas>> {
+		return HttpUtil.post<ApiResponse<MapHeatCanvas>, MapHeatRequest>(ApiEndpoints.MAP.HEATMAP, params);
+	}
+
+	static async getMapHotspots(params: MapHotspotsRequest): Promise<ApiResponse<MapHotspotsCanvas>> {
+		return HttpUtil.post<ApiResponse<MapHotspotsCanvas>, MapHotspotsRequest>(ApiEndpoints.MAP.HOTSPOTS, params);
+	}
 
   // ==================== 分享 API ====================
 

@@ -14,7 +14,7 @@ pub use content::{comment_repo, moment_repo, tag_repo};
 pub use feed::dismiss_repo;
 pub use group::group_repo;
 pub use system::{
-    announcement_repo, file_repo, map_repo, notification_repo, report_repo, session_repo,
-    share_repo, system_config_repo,
+	announcement_repo, file_repo, map_repo, notification_repo, region_boundary_repo,
+	region_boundary_stats_repo, report_repo, session_repo, share_repo, system_config_repo,
 };
 pub use user::{user_repo, verification_repo};

@@ -102,6 +102,43 @@ fn moment_creation_must_record_moment_in_bloom() {
 }
 
 #[test]
+fn user_update_location_must_assign_region_id() {
+    assert_function_contains(
+        "services/user_service.rs",
+        "update_location",
+        &["assign_region_for_point", "update_location_with_region"],
+    );
+}
+
+#[test]
+fn group_location_change_must_assign_region_id() {
+    assert_function_contains(
+        "services/group_service/crud.rs",
+        "create_group",
+        &["assign_region_for_point", "update_location_with_region"],
+    );
+    assert_function_contains(
+        "services/group_service/crud.rs",
+        "update_group",
+        &["assign_region_for_point", "update_location_with_region"],
+    );
+}
+
+#[test]
+fn moment_location_change_must_assign_region_id() {
+    assert_function_contains(
+        "services/moment_service.rs",
+        "create_moment",
+        &["assign_region_for_point", "moment_repo.create"],
+    );
+    assert_function_contains(
+        "services/moment_service.rs",
+        "update_moment",
+        &["assign_region_for_point", "moment_repo.update"],
+    );
+}
+
+#[test]
 fn comment_creation_must_record_comment_in_bloom() {
     assert_function_contains(
         "services/comment_service.rs",
@@ -115,7 +152,10 @@ fn group_message_send_must_record_message_in_bloom() {
     assert_function_contains(
         "services/group_message_service.rs",
         "send",
-        &[".create(", ".record_message(&created.message_id.to_string())"],
+        &[
+            ".create(",
+            ".record_message(&created.message_id.to_string())",
+        ],
     );
 }
 
@@ -124,6 +164,9 @@ fn private_message_send_must_record_message_in_bloom() {
     assert_function_contains(
         "services/private_message_service.rs",
         "send",
-        &[".create(", ".record_message(&created.message_id.to_string())"],
+        &[
+            ".create(",
+            ".record_message(&created.message_id.to_string())",
+        ],
     );
 }

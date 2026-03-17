@@ -479,21 +479,6 @@ pub enum VerificationCodeType {
 // Feed & Map
 // ============================================================
 
-/// 地图渲染项类型（spec: 'cluster' | 'user' | 'group' | 'moment'）
-/// 用于 response 中的 MapRenderItem.type
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type, Display, EnumString,
-)]
-#[sqlx(type_name = "varchar", rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
-#[strum(serialize_all = "lowercase")]
-pub enum MapItemType {
-    Cluster,
-    User,
-    Group,
-    Moment,
-}
-
 /// 地图数据过滤类型（spec: 'user' | 'group' | 'moment' | 'all'）
 /// 用于 request 中的 MapFilter.data_type
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]

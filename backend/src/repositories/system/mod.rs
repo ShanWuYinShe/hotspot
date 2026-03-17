@@ -2,6 +2,8 @@
 
 pub mod announcement_repo;
 pub mod file_repo;
+pub mod region_boundary_repo;
+pub mod region_boundary_stats_repo;
 pub mod map_repo;
 pub mod notification_repo;
 pub mod report_repo;

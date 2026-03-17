@@ -247,7 +247,8 @@ class CommentEndpoints {
 
 // Map
 class MapEndpoints {
-  readonly RENDER: string = '/api/v1/map/render';
+	readonly HEATMAP: string = '/api/v1/map/heatmap';
+	readonly HOTSPOTS: string = '/api/v1/map/hotspots';
 }
 
 // Notification

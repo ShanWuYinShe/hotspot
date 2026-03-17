@@ -58,48 +58,50 @@ use crate::{
 
 #[derive(Clone)]
 pub struct UserService {
-    event_bus: Arc<EventBus>,
-    user_repo: UserRepository,
-    user_settings_repo: UserSettingsRepository,
-    user_location_history_repo: UserLocationHistoryRepository,
+		event_bus: Arc<EventBus>,
+		user_repo: UserRepository,
+		user_settings_repo: UserSettingsRepository,
+		user_location_history_repo: UserLocationHistoryRepository,
     follows_repo: UserFollowsRepository,
     blocks_repo: UserBlocksRepository,
     user_friend_remarks_repo: UserFriendRemarksRepository,
     session_repo: SessionRepository,
     tag_repo: TagRepository,
     group_member_repo: GroupMemberRepository,
-    moment_repo: MomentRepository,
-    presence_service: crate::services::presence_service::PresenceService,
-    media_service: crate::services::media_service::MediaService,
-    cache_manager: CacheManager,
-    _resource_checker: ResourceExistenceChecker,
+		moment_repo: MomentRepository,
+		presence_service: crate::services::presence_service::PresenceService,
+		media_service: crate::services::media_service::MediaService,
+		cache_manager: CacheManager,
+		_resource_checker: ResourceExistenceChecker,
+		region_boundary_service: crate::services::region_boundary_service::RegionBoundaryService,
 }
 
 const SEARCH_QUERY_TIMEOUT: Duration = Duration::from_secs(8);
 
 impl UserService {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        event_bus: Arc<EventBus>,
-        user_repo: UserRepository,
-        user_settings_repo: UserSettingsRepository,
-        user_location_history_repo: UserLocationHistoryRepository,
+	pub fn new(
+			event_bus: Arc<EventBus>,
+			user_repo: UserRepository,
+			user_settings_repo: UserSettingsRepository,
+			user_location_history_repo: UserLocationHistoryRepository,
         follows_repo: UserFollowsRepository,
         blocks_repo: UserBlocksRepository,
         user_friend_remarks_repo: UserFriendRemarksRepository,
         session_repo: SessionRepository,
         tag_repo: TagRepository,
         group_member_repo: GroupMemberRepository,
-        moment_repo: MomentRepository,
-        presence_service: crate::services::presence_service::PresenceService,
-        media_service: crate::services::media_service::MediaService,
-        cache_manager: CacheManager,
-        resource_checker: ResourceExistenceChecker,
-    ) -> Self {
-        Self {
-            event_bus,
-            user_repo,
-            user_settings_repo,
+			moment_repo: MomentRepository,
+			presence_service: crate::services::presence_service::PresenceService,
+			media_service: crate::services::media_service::MediaService,
+			cache_manager: CacheManager,
+			resource_checker: ResourceExistenceChecker,
+			region_boundary_service: crate::services::region_boundary_service::RegionBoundaryService,
+		) -> Self {
+			Self {
+					event_bus,
+					user_repo,
+					user_settings_repo,
             user_location_history_repo,
             follows_repo,
             blocks_repo,
@@ -107,13 +109,14 @@ impl UserService {
             session_repo,
             tag_repo,
             group_member_repo,
-            moment_repo,
-            presence_service,
-            media_service,
-            cache_manager,
-            _resource_checker: resource_checker,
-        }
-    }
+					moment_repo,
+					presence_service,
+				media_service,
+				cache_manager,
+				_resource_checker: resource_checker,
+				region_boundary_service,
+			}
+		}
 
     pub async fn search(
         &self,
@@ -874,39 +877,34 @@ impl UserService {
         self.build_user_moment_items(rows, next_cursor).await
     }
 
-    pub async fn update_location(&self, user_id: i64, req: &UpdateLocationRequest) -> Result<()> {
-        let started_at = std::time::Instant::now();
-        tracing::info!(
-            user_id,
-            latitude = req.location.point.latitude,
-            longitude = req.location.point.longitude,
-            location_name_len = req.location.location_name.chars().count(),
-            "user.update_location started"
-        );
-        Validator::validate_coordinates(req.location.point.latitude, req.location.point.longitude)?;
-        self.user_repo
-            .update_location(
-                user_id,
-                req.location.point.longitude,
-                req.location.point.latitude,
-            )
-            .await?;
-        let _ = self
-            .user_location_history_repo
-            .record(
-                user_id,
-                req.location.point.longitude,
-                req.location.point.latitude,
-            )
-            .await;
-        let _ = self
-            .presence_service
-            .update_location_cache(
-                user_id,
-                req.location.point.latitude,
-                req.location.point.longitude,
-            )
-            .await;
+	pub async fn update_location(&self, user_id: i64, req: &UpdateLocationRequest) -> Result<()> {
+		let started_at = std::time::Instant::now();
+		tracing::info!(
+			user_id,
+			latitude = req.location.point.latitude,
+			longitude = req.location.point.longitude,
+			location_name_len = req.location.location_name.chars().count(),
+			"user.update_location started"
+		);
+		let lat = req.location.point.latitude;
+		let lon = req.location.point.longitude;
+		Validator::validate_coordinates(lat, lon)?;
+		let region_id = self
+			.region_boundary_service
+			.assign_region_for_point(lat, lon)
+			.await;
+		self
+			.user_repo
+			.update_location_with_region(user_id, lon, lat, region_id)
+			.await?;
+		let _ = self
+			.user_location_history_repo
+			.record(user_id, lon, lat)
+			.await;
+		let _ = self
+			.presence_service
+			.update_location_cache(user_id, lat, lon)
+			.await;
         tracing::info!(
             user_id,
             elapsed_ms = started_at.elapsed().as_millis(),

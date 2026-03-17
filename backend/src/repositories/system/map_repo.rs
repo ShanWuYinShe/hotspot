@@ -3,671 +3,270 @@
 //! 基于 PostGIS 提供高性能的 LBS 聚类和实体检索
 
 use crate::error::Result;
+use crate::utils::pagination::{decode_cursor_or, encode_cursor, DistanceCursor, DistanceUuidCursor, Paginated};
+use chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgPool};
+use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct MapRepository {
-    pool: PgPool,
+	    pool: PgPool,
+}
+
+/// 热点列表行（用户）
+#[derive(Debug, FromRow)]
+pub struct UserHotspotRow {
+	pub user_id: i64,
+	pub nickname: Option<String>,
+	pub location_name: Option<String>,
+	pub avatar_url: Option<String>,
+	pub latitude: f64,
+	pub longitude: f64,
+	pub created_at: DateTime<Utc>,
+	pub distance: f64,
+}
+
+/// 热点列表行（群组）
+#[derive(Debug, FromRow)]
+pub struct GroupHotspotRow {
+	pub group_id: i64,
+	pub name: String,
+	pub location_name: String,
+	pub avatar_url: Option<String>,
+	pub latitude: f64,
+	pub longitude: f64,
+	pub created_at: DateTime<Utc>,
+	pub distance: f64,
+}
+
+/// 热点列表行（动态）
+#[derive(Debug, FromRow)]
+pub struct MomentHotspotRow {
+	pub moment_id: Uuid,
+	pub description: Option<String>,
+	pub location_name: Option<String>,
+	pub latitude: f64,
+	pub longitude: f64,
+	pub created_at: DateTime<Utc>,
+	pub distance: f64,
 }
 
 impl MapRepository {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
-    }
+	    pub fn new(pool: PgPool) -> Self {
+	        Self { pool }
+	    }
 
-    pub async fn count_users_by_bounds(
-        &self,
-        west: f64,
-        south: f64,
-        east: f64,
-        north: f64,
-    ) -> Result<i64> {
-        let row = sqlx::query!(
-            r#"
-            SELECT COUNT(*)::bigint as "count!"
-            FROM users u
-            WHERE u.status = 'normal'
-              AND u.deleted_at IS NULL
-              AND ST_Intersects(u.location, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
-            "#,
-            west,
-            south,
-            east,
-            north
-        )
-        .fetch_one(&self.pool)
-        .await?;
-        Ok(row.count)
-    }
+		/// 视口内用户热点（按距离排序，游标分页）
+		pub async fn list_user_hotspots(
+		&self,
+		west: f64,
+		south: f64,
+		east: f64,
+		north: f64,
+		start_time: Option<String>,
+		end_time: Option<String>,
+		limit: i32,
+		cursor: Option<String>,
+	) -> Paginated<UserHotspotRow> {
+		let (last_dist, last_id): DistanceCursor =
+			decode_cursor_or(cursor, || (0.0, 0_i64))?;
 
-    pub async fn count_groups_by_bounds(
-        &self,
-        west: f64,
-        south: f64,
-        east: f64,
-        north: f64,
-    ) -> Result<i64> {
-        let row = sqlx::query!(
-            r#"
-            SELECT COUNT(*)::bigint as "count!"
-            FROM groups g
-            WHERE g.dismissed_at IS NULL
-              AND g.location IS NOT NULL
-              AND ST_Intersects(g.location, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
-            "#,
-            west,
-            south,
-            east,
-            north
-        )
-        .fetch_one(&self.pool)
-        .await?;
-        Ok(row.count)
-    }
+		let rows: Vec<UserHotspotRow> = sqlx::query_as!(
+			UserHotspotRow,
+			r#"
+			WITH env AS (
+			  SELECT ST_MakeEnvelope($1, $2, $3, $4, 4326) AS bbox,
+			         ST_Centroid(ST_MakeEnvelope($1, $2, $3, $4, 4326)) AS center
+			)
+			SELECT
+			  u.user_id        as "user_id!",
+			  u.nickname       as "nickname?",
+			  u.location_name  as "location_name?",
+			  u.avatar_url     as "avatar_url?",
+			  ST_Y(u.location::geometry) as "latitude!",
+			  ST_X(u.location::geometry) as "longitude!",
+			  u.created_at     as "created_at!",
+			  ST_Distance(u.location, env.center::geography) as "distance!"
+			FROM users u, env
+			WHERE u.status = 'normal'
+			  AND u.deleted_at IS NULL
+			  AND u.location IS NOT NULL
+			  AND ST_Intersects(u.location, env.bbox::geography)
+			  AND ($5::text IS NULL OR u.created_at >= ($5::text)::timestamptz)
+			  AND ($6::text IS NULL OR u.created_at <= ($6::text)::timestamptz)
+			  AND (
+			    ST_Distance(u.location, env.center::geography) > $7
+			    OR (ST_Distance(u.location, env.center::geography) = $7 AND u.user_id > $8)
+			  )
+			ORDER BY ST_Distance(u.location, env.center::geography) ASC, u.user_id ASC
+			LIMIT $9
+			"#,
+			west,
+			south,
+			east,
+			north,
+			start_time,
+			end_time,
+			last_dist,
+			last_id,
+			(limit + 1) as i64,
+		)
+		.fetch_all(&self.pool)
+		.await?;
 
-    pub async fn count_moments_by_bounds(
-        &self,
-        west: f64,
-        south: f64,
-        east: f64,
-        north: f64,
-        start_time: Option<String>,
-        end_time: Option<String>,
-    ) -> Result<i64> {
-        let row = sqlx::query!(
-            r#"
-            SELECT COUNT(*)::bigint as "count!"
-            FROM moments m
-            WHERE m.deleted_at IS NULL
-              AND m.location IS NOT NULL
-              AND ST_Intersects(m.location, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
-              AND ($5::text IS NULL OR m.created_at >= ($5::text)::timestamptz)
-              AND ($6::text IS NULL OR m.created_at <= ($6::text)::timestamptz)
-            "#,
-            west,
-            south,
-            east,
-            north,
-            start_time,
-            end_time
-        )
-        .fetch_one(&self.pool)
-        .await?;
-        Ok(row.count)
-    }
+		let has_more = rows.len() > limit as usize;
+		let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
+		let next_cursor = if has_more {
+			items
+				.last()
+				.map(|r| encode_cursor(&(r.distance, r.user_id)))
+				.transpose()?
+		} else {
+			None
+		};
 
-    pub async fn count_friend_users_by_bounds(
-        &self,
-        user_id: i64,
-        west: f64,
-        south: f64,
-        east: f64,
-        north: f64,
-    ) -> Result<i64> {
-        let row = sqlx::query!(
-            r#"
-            SELECT COUNT(*)::bigint as "count!"
-            FROM users u
-            WHERE u.status = 'normal'
-              AND u.deleted_at IS NULL
-              AND u.location IS NOT NULL
-              AND ST_Intersects(u.location, ST_MakeEnvelope($2, $3, $4, $5, 4326)::geography)
-              AND (
-                  u.user_id = $1
-                  OR (
-                      EXISTS (SELECT 1 FROM follows f1 WHERE f1.follower_id = $1 AND f1.following_id = u.user_id)
-                      AND EXISTS (SELECT 1 FROM follows f2 WHERE f2.follower_id = u.user_id AND f2.following_id = $1)
-                  )
-              )
-            "#,
-            user_id,
-            west,
-            south,
-            east,
-            north
-        )
-        .fetch_one(&self.pool)
-        .await?;
-        Ok(row.count)
-    }
+		Ok((items, next_cursor))
+	}
 
-    pub async fn count_friend_moments_by_bounds(
-        &self,
-        user_id: i64,
-        west: f64,
-        south: f64,
-        east: f64,
-        north: f64,
-        start_time: Option<String>,
-        end_time: Option<String>,
-    ) -> Result<i64> {
-        let row = sqlx::query!(
-            r#"
-            SELECT COUNT(*)::bigint as "count!"
-            FROM moments m
-            WHERE m.deleted_at IS NULL
-              AND m.location IS NOT NULL
-              AND ST_Intersects(m.location, ST_MakeEnvelope($2, $3, $4, $5, 4326)::geography)
-              AND (
-                  m.user_id = $1
-                  OR (
-                      EXISTS (SELECT 1 FROM follows f1 WHERE f1.follower_id = $1 AND f1.following_id = m.user_id)
-                      AND EXISTS (SELECT 1 FROM follows f2 WHERE f2.follower_id = m.user_id AND f2.following_id = $1)
-                  )
-              )
-              AND ($6::text IS NULL OR m.created_at >= ($6::text)::timestamptz)
-              AND ($7::text IS NULL OR m.created_at <= ($7::text)::timestamptz)
-            "#,
-            user_id,
-            west,
-            south,
-            east,
-            north,
-            start_time,
-            end_time
-        )
-        .fetch_one(&self.pool)
-        .await?;
-        Ok(row.count)
-    }
-}
+	/// 视口内群组热点（按距离排序，游标分页）
+	pub async fn list_group_hotspots(
+		&self,
+		west: f64,
+		south: f64,
+		east: f64,
+		north: f64,
+		start_time: Option<String>,
+		end_time: Option<String>,
+		limit: i32,
+		cursor: Option<String>,
+	) -> Paginated<GroupHotspotRow> {
+		let (last_dist, last_id): DistanceCursor =
+			decode_cursor_or(cursor, || (0.0, 0_i64))?;
 
-/// 地图聚类结果
-#[derive(Debug, FromRow)]
-pub struct MapClusterRow {
-    pub key: String,
-    pub latitude: f64,
-    pub longitude: f64,
-    pub count: i64,
-    pub preview_urls: Vec<String>,
-}
+		let rows: Vec<GroupHotspotRow> = sqlx::query_as!(
+			GroupHotspotRow,
+			r#"
+			WITH env AS (
+			  SELECT ST_MakeEnvelope($1, $2, $3, $4, 4326) AS bbox,
+			         ST_Centroid(ST_MakeEnvelope($1, $2, $3, $4, 4326)) AS center
+			)
+			SELECT
+			  g.group_id      as "group_id!",
+			  g.name          as "name!",
+			  g.location_name as "location_name!",
+			  g.avatar_url    as "avatar_url?",
+			  ST_Y(g.location::geometry) as "latitude!",
+			  ST_X(g.location::geometry) as "longitude!",
+			  g.created_at    as "created_at!",
+			  ST_Distance(g.location, env.center::geography) as "distance!"
+			FROM groups g, env
+			WHERE g.dismissed_at IS NULL
+			  AND g.location IS NOT NULL
+			  AND ST_Intersects(g.location, env.bbox::geography)
+			  AND ($5::text IS NULL OR g.created_at >= ($5::text)::timestamptz)
+			  AND ($6::text IS NULL OR g.created_at <= ($6::text)::timestamptz)
+			  AND (
+			    ST_Distance(g.location, env.center::geography) > $7
+			    OR (ST_Distance(g.location, env.center::geography) = $7 AND g.group_id > $8)
+			  )
+			ORDER BY ST_Distance(g.location, env.center::geography) ASC, g.group_id ASC
+			LIMIT $9
+			"#,
+			west,
+			south,
+			east,
+			north,
+			start_time,
+			end_time,
+			last_dist,
+			last_id,
+			(limit + 1) as i64,
+		)
+		.fetch_all(&self.pool)
+		.await?;
 
-/// 地图实体结果
-#[derive(Debug, FromRow)]
-pub struct MapEntityRow {
-    pub id: String,
-    pub title: String,
-    pub subtitle: Option<String>,
-    pub cover_url: Option<String>,
-    pub latitude: f64,
-    pub longitude: f64,
-}
+		let has_more = rows.len() > limit as usize;
+		let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
+		let next_cursor = if has_more {
+			items
+				.last()
+				.map(|r| encode_cursor(&(r.distance, r.group_id)))
+				.transpose()?
+		} else {
+			None
+		};
 
-impl MapRepository {
-    /// 聚类查询附近的用户
-    pub async fn cluster_users(
-        &self,
-        west: f64,
-        south: f64,
-        east: f64,
-        north: f64,
-        grid_meters: f64,
-    ) -> Result<Vec<MapClusterRow>> {
-        let rows = sqlx::query_as!(
-            MapClusterRow,
-            r#"
-            WITH env AS (SELECT ST_MakeEnvelope($1, $2, $3, $4, 4326) AS bbox),
-            snapped AS (
-              SELECT ST_SnapToGrid(ST_Transform(u.location::geometry, 3857), $5) AS p,
-                     u.avatar_url
-              FROM users u, env
-              WHERE u.status = 'normal' AND u.deleted_at IS NULL AND ST_Intersects(u.location, env.bbox::geography)
-            )
-            SELECT 
-              CONCAT(FLOOR(ST_X(p)/$5), ':', FLOOR(ST_Y(p)/$5)) as "key!",
-              ST_Y(ST_Transform(p, 4326)) as "latitude!",
-              ST_X(ST_Transform(p, 4326)) as "longitude!",
-              COUNT(*) as "count!",
-              COALESCE(ARRAY_REMOVE(ARRAY_AGG(avatar_url), NULL), ARRAY[]::text[]) as "preview_urls!"
-            FROM snapped GROUP BY p
-            "#,
-            west, south, east, north, grid_meters
-        ).fetch_all(&self.pool).await?;
-        Ok(rows)
-    }
+		Ok((items, next_cursor))
+	}
 
-    /// 与 map_service 对齐的接口名称
-    pub async fn cluster_users_by_bounds(
-        &self,
-        west: f64,
-        south: f64,
-        east: f64,
-        north: f64,
-        grid_meters: f64,
-    ) -> Result<Vec<MapClusterRow>> {
-        self.cluster_users(west, south, east, north, grid_meters)
-            .await
-    }
+	/// 视口内动态热点（按距离排序，游标分页）
+	pub async fn list_moment_hotspots(
+		&self,
+		west: f64,
+		south: f64,
+		east: f64,
+		north: f64,
+		start_time: Option<String>,
+		end_time: Option<String>,
+		limit: i32,
+		cursor: Option<String>,
+	) -> Paginated<MomentHotspotRow> {
+		let (last_dist, last_id): DistanceUuidCursor =
+			decode_cursor_or(cursor, || (0.0, Uuid::nil()))?;
 
-    /// 搜索矩形区域内的用户
-    pub async fn search_users(
-        &self,
-        west: f64,
-        south: f64,
-        east: f64,
-        north: f64,
-        limit: i32,
-    ) -> Result<Vec<MapEntityRow>> {
-        let rows = sqlx::query_as!(
-            MapEntityRow,
-            r#"
-            SELECT 
-                u.user_id::text as "id!",
-                u.nickname as "title!",
-                u.bio as subtitle,
-                u.avatar_url as cover_url,
-                ST_Y(u.location::geometry) as "latitude!",
-                ST_X(u.location::geometry) as "longitude!"
-            FROM users u
-            WHERE u.status = 'normal' AND u.deleted_at IS NULL AND ST_Intersects(u.location, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
-            LIMIT $5
-            "#,
-            west, south, east, north, limit as i64
-        ).fetch_all(&self.pool).await?;
-        Ok(rows)
-    }
+		let rows: Vec<MomentHotspotRow> = sqlx::query_as!(
+			MomentHotspotRow,
+			r#"
+			WITH env AS (
+			  SELECT ST_MakeEnvelope($1, $2, $3, $4, 4326) AS bbox,
+			         ST_Centroid(ST_MakeEnvelope($1, $2, $3, $4, 4326)) AS center
+			)
+			SELECT
+			  m.moment_id     as "moment_id!",
+			  m.description   as "description?",
+			  m.location_name as "location_name?",
+			  ST_Y(m.location::geometry) as "latitude!",
+			  ST_X(m.location::geometry) as "longitude!",
+			  m.created_at    as "created_at!",
+			  ST_Distance(m.location, env.center::geography) as "distance!"
+			FROM moments m, env
+			WHERE m.deleted_at IS NULL
+			  AND m.location IS NOT NULL
+			  AND m.privacy_level = 'public'
+			  AND ST_Intersects(m.location, env.bbox::geography)
+			  AND ($5::text IS NULL OR m.created_at >= ($5::text)::timestamptz)
+			  AND ($6::text IS NULL OR m.created_at <= ($6::text)::timestamptz)
+			  AND (
+			    ST_Distance(m.location, env.center::geography) > $7
+			    OR (ST_Distance(m.location, env.center::geography) = $7 AND m.moment_id > $8)
+			  )
+			ORDER BY ST_Distance(m.location, env.center::geography) ASC, m.moment_id ASC
+			LIMIT $9
+			"#,
+			west,
+			south,
+			east,
+			north,
+			start_time,
+			end_time,
+			last_dist,
+			last_id,
+			(limit + 1) as i64,
+		)
+		.fetch_all(&self.pool)
+		.await?;
 
-    pub async fn search_users_by_bounds(
-        &self,
-        west: f64,
-        south: f64,
-        east: f64,
-        north: f64,
-        limit: i32,
-    ) -> Result<Vec<MapEntityRow>> {
-        self.search_users(west, south, east, north, limit).await
-    }
+		let has_more = rows.len() > limit as usize;
+		let items: Vec<_> = rows.into_iter().take(limit as usize).collect();
+		let next_cursor = if has_more {
+			items
+				.last()
+				.map(|r| encode_cursor(&(r.distance, r.moment_id)))
+				.transpose()?
+		} else {
+			None
+		};
 
-    /// 聚类查询群组
-    pub async fn cluster_groups_by_bounds(
-        &self,
-        west: f64,
-        south: f64,
-        east: f64,
-        north: f64,
-        grid_meters: f64,
-    ) -> Result<Vec<MapClusterRow>> {
-        let rows = sqlx::query_as!(
-            MapClusterRow,
-            r#"
-            WITH env AS (SELECT ST_MakeEnvelope($1, $2, $3, $4, 4326) AS bbox),
-            snapped AS (
-              SELECT ST_SnapToGrid(ST_Transform(g.location::geometry, 3857), $5) AS p,
-                     g.avatar_url
-              FROM groups g, env
-              WHERE g.dismissed_at IS NULL AND g.location IS NOT NULL
-                AND ST_Intersects(g.location, env.bbox::geography)
-            )
-            SELECT 
-              CONCAT(FLOOR(ST_X(p)/$5), ':', FLOOR(ST_Y(p)/$5)) as "key!",
-              ST_Y(ST_Transform(p, 4326)) as "latitude!",
-              ST_X(ST_Transform(p, 4326)) as "longitude!",
-              COUNT(*) as "count!",
-              COALESCE(ARRAY_REMOVE(ARRAY_AGG(avatar_url), NULL), ARRAY[]::text[]) as "preview_urls!"
-            FROM snapped GROUP BY p
-            "#,
-            west,
-            south,
-            east,
-            north,
-            grid_meters
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(rows)
-    }
-
-    /// 搜索矩形区域内的群组
-    pub async fn search_groups_by_bounds(
-        &self,
-        west: f64,
-        south: f64,
-        east: f64,
-        north: f64,
-        limit: i32,
-    ) -> Result<Vec<MapEntityRow>> {
-        let rows = sqlx::query_as!(
-            MapEntityRow,
-            r#"
-            SELECT 
-                g.group_id::text as "id!",
-                g.name as "title!",
-                g.description as subtitle,
-                g.avatar_url as cover_url,
-                ST_Y(g.location::geometry) as "latitude!",
-                ST_X(g.location::geometry) as "longitude!"
-            FROM groups g
-            WHERE g.dismissed_at IS NULL
-              AND g.location IS NOT NULL
-              AND ST_Intersects(g.location, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
-            LIMIT $5
-            "#,
-            west,
-            south,
-            east,
-            north,
-            limit as i64
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(rows)
-    }
-
-    /// 聚类查询瞬间
-    pub async fn cluster_moments_by_bounds(
-        &self,
-        west: f64,
-        south: f64,
-        east: f64,
-        north: f64,
-        grid_meters: f64,
-        start_time: Option<String>,
-        end_time: Option<String>,
-    ) -> Result<Vec<MapClusterRow>> {
-        let rows = sqlx::query_as!(
-            MapClusterRow,
-            r#"
-            WITH env AS (SELECT ST_MakeEnvelope($1, $2, $3, $4, 4326) AS bbox),
-            snapped AS (
-              SELECT ST_SnapToGrid(ST_Transform(m.location::geometry, 3857), $5) AS p,
-                     m.moment_id,
-                     mi.url as preview_url
-              FROM moments m
-              LEFT JOIN LATERAL (
-                SELECT url
-                FROM moment_images
-                WHERE moment_id = m.moment_id
-                ORDER BY sort_order ASC, created_at ASC
-                LIMIT 1
-              ) mi ON TRUE
-              WHERE m.deleted_at IS NULL
-                AND m.location IS NOT NULL
-                AND ST_Intersects(m.location, (SELECT bbox FROM env)::geography)
-                AND ($6::text IS NULL OR m.created_at >= ($6::text)::timestamptz)
-                AND ($7::text IS NULL OR m.created_at <= ($7::text)::timestamptz)
-            )
-            SELECT 
-              CONCAT(FLOOR(ST_X(p)/$5), ':', FLOOR(ST_Y(p)/$5)) as "key!",
-              ST_Y(ST_Transform(p, 4326)) as "latitude!",
-              ST_X(ST_Transform(p, 4326)) as "longitude!",
-              COUNT(DISTINCT moment_id) as "count!",
-              COALESCE(ARRAY_REMOVE(ARRAY_AGG(preview_url), NULL), ARRAY[]::text[]) as "preview_urls!"
-            FROM snapped GROUP BY p
-            "#,
-            west,
-            south,
-            east,
-            north,
-            grid_meters,
-            start_time,
-            end_time
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(rows)
-    }
-
-    /// 搜索矩形区域内的瞬间
-    pub async fn search_moments_by_bounds(
-        &self,
-        west: f64,
-        south: f64,
-        east: f64,
-        north: f64,
-        limit: i32,
-        start_time: Option<String>,
-        end_time: Option<String>,
-    ) -> Result<Vec<MapEntityRow>> {
-        let rows = sqlx::query_as!(
-            MapEntityRow,
-            r#"
-            SELECT 
-                m.moment_id::text as "id!",
-                COALESCE(m.description, '') as "title!",
-                m.location_name as subtitle,
-                mi.url as cover_url,
-                ST_Y(m.location::geometry) as "latitude!",
-                ST_X(m.location::geometry) as "longitude!"
-            FROM moments m
-            LEFT JOIN LATERAL (
-                SELECT url
-                FROM moment_images
-                WHERE moment_id = m.moment_id
-                ORDER BY sort_order ASC, created_at ASC
-                LIMIT 1
-            ) mi ON TRUE
-            WHERE m.deleted_at IS NULL
-              AND m.location IS NOT NULL
-              AND ST_Intersects(m.location, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
-              AND ($6::text IS NULL OR m.created_at >= ($6::text)::timestamptz)
-              AND ($7::text IS NULL OR m.created_at <= ($7::text)::timestamptz)
-            LIMIT $5
-            "#,
-            west,
-            south,
-            east,
-            north,
-            limit as i64,
-            start_time,
-            end_time
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(rows)
-    }
-
-    /// 仅好友用户聚类
-    pub async fn cluster_friend_users_by_bounds(
-        &self,
-        user_id: i64,
-        west: f64,
-        south: f64,
-        east: f64,
-        north: f64,
-        grid_meters: f64,
-    ) -> Result<Vec<MapClusterRow>> {
-        let rows = sqlx::query_as!(
-            MapClusterRow,
-            r#"
-            WITH env AS (SELECT ST_MakeEnvelope($2, $3, $4, $5, 4326) AS bbox),
-            snapped AS (
-              SELECT ST_SnapToGrid(ST_Transform(u.location::geometry, 3857), $6) AS p,
-                     u.avatar_url
-              FROM users u, env
-              WHERE u.status = 'normal' AND u.deleted_at IS NULL
-                AND u.location IS NOT NULL
-                AND ST_Intersects(u.location, env.bbox::geography)
-                AND (
-                    u.user_id = $1
-                    OR (
-                        EXISTS (SELECT 1 FROM follows f1 WHERE f1.follower_id = $1 AND f1.following_id = u.user_id)
-                        AND EXISTS (SELECT 1 FROM follows f2 WHERE f2.follower_id = u.user_id AND f2.following_id = $1)
-                    )
-                )
-            )
-            SELECT 
-              CONCAT(FLOOR(ST_X(p)/$6), ':', FLOOR(ST_Y(p)/$6)) as "key!",
-              ST_Y(ST_Transform(p, 4326)) as "latitude!",
-              ST_X(ST_Transform(p, 4326)) as "longitude!",
-              COUNT(*) as "count!",
-              COALESCE(ARRAY_REMOVE(ARRAY_AGG(avatar_url), NULL), ARRAY[]::text[]) as "preview_urls!"
-            FROM snapped GROUP BY p
-            "#,
-            user_id,
-            west,
-            south,
-            east,
-            north,
-            grid_meters
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(rows)
-    }
-
-    /// 仅好友用户搜索
-    pub async fn search_friend_users_by_bounds(
-        &self,
-        user_id: i64,
-        west: f64,
-        south: f64,
-        east: f64,
-        north: f64,
-        limit: i32,
-    ) -> Result<Vec<MapEntityRow>> {
-        let rows = sqlx::query_as!(
-            MapEntityRow,
-            r#"
-            SELECT 
-                u.user_id::text as "id!",
-                COALESCE(u.nickname, '') as "title!",
-                u.bio as subtitle,
-                u.avatar_url as cover_url,
-                ST_Y(u.location::geometry) as "latitude!",
-                ST_X(u.location::geometry) as "longitude!"
-            FROM users u
-            WHERE u.status = 'normal' AND u.deleted_at IS NULL
-              AND u.location IS NOT NULL
-              AND ST_Intersects(u.location, ST_MakeEnvelope($2, $3, $4, $5, 4326)::geography)
-              AND (
-                  u.user_id = $1
-                  OR (
-                      EXISTS (SELECT 1 FROM follows f1 WHERE f1.follower_id = $1 AND f1.following_id = u.user_id)
-                      AND EXISTS (SELECT 1 FROM follows f2 WHERE f2.follower_id = u.user_id AND f2.following_id = $1)
-                  )
-              )
-            LIMIT $6
-            "#,
-            user_id,
-            west,
-            south,
-            east,
-            north,
-            limit as i64
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(rows)
-    }
-
-    /// 仅好友瞬间聚类
-    pub async fn cluster_friend_moments_by_bounds(
-        &self,
-        user_id: i64,
-        west: f64,
-        south: f64,
-        east: f64,
-        north: f64,
-        grid_meters: f64,
-        start_time: Option<String>,
-        end_time: Option<String>,
-    ) -> Result<Vec<MapClusterRow>> {
-        let rows = sqlx::query_as!(
-            MapClusterRow,
-            r#"
-            WITH env AS (SELECT ST_MakeEnvelope($2, $3, $4, $5, 4326) AS bbox),
-            snapped AS (
-              SELECT ST_SnapToGrid(ST_Transform(m.location::geometry, 3857), $6) AS p,
-                     m.moment_id,
-                     mi.url as preview_url
-              FROM moments m
-              LEFT JOIN LATERAL (
-                SELECT url
-                FROM moment_images
-                WHERE moment_id = m.moment_id
-                ORDER BY sort_order ASC, created_at ASC
-                LIMIT 1
-              ) mi ON TRUE
-              WHERE m.deleted_at IS NULL
-                AND m.location IS NOT NULL
-                AND ST_Intersects(m.location, (SELECT bbox FROM env)::geography)
-                AND (
-                    m.user_id = $1
-                    OR (
-                        EXISTS (SELECT 1 FROM follows f1 WHERE f1.follower_id = $1 AND f1.following_id = m.user_id)
-                        AND EXISTS (SELECT 1 FROM follows f2 WHERE f2.follower_id = m.user_id AND f2.following_id = $1)
-                    )
-                )
-                AND ($7::text IS NULL OR m.created_at >= ($7::text)::timestamptz)
-                AND ($8::text IS NULL OR m.created_at <= ($8::text)::timestamptz)
-            )
-            SELECT 
-              CONCAT(FLOOR(ST_X(p)/$6), ':', FLOOR(ST_Y(p)/$6)) as "key!",
-              ST_Y(ST_Transform(p, 4326)) as "latitude!",
-              ST_X(ST_Transform(p, 4326)) as "longitude!",
-              COUNT(DISTINCT moment_id) as "count!",
-              COALESCE(ARRAY_REMOVE(ARRAY_AGG(preview_url), NULL), ARRAY[]::text[]) as "preview_urls!"
-            FROM snapped GROUP BY p
-            "#,
-            user_id,
-            west,
-            south,
-            east,
-            north,
-            grid_meters,
-            start_time,
-            end_time
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(rows)
-    }
-
-    /// 仅好友瞬间搜索
-    pub async fn search_friend_moments_by_bounds(
-        &self,
-        user_id: i64,
-        west: f64,
-        south: f64,
-        east: f64,
-        north: f64,
-        limit: i32,
-        start_time: Option<String>,
-        end_time: Option<String>,
-    ) -> Result<Vec<MapEntityRow>> {
-        let rows = sqlx::query_as!(
-            MapEntityRow,
-            r#"
-            SELECT 
-                m.moment_id::text as "id!",
-                COALESCE(m.description, '') as "title!",
-                m.location_name as subtitle,
-                mi.url as cover_url,
-                ST_Y(m.location::geometry) as "latitude!",
-                ST_X(m.location::geometry) as "longitude!"
-            FROM moments m
-            LEFT JOIN LATERAL (
-                SELECT url
-                FROM moment_images
-                WHERE moment_id = m.moment_id
-                ORDER BY sort_order ASC, created_at ASC
-                LIMIT 1
-            ) mi ON TRUE
-            WHERE m.deleted_at IS NULL
-              AND m.location IS NOT NULL
-              AND ST_Intersects(m.location, ST_MakeEnvelope($2, $3, $4, $5, 4326)::geography)
-              AND (
-                  m.user_id = $1
-                  OR (
-                      EXISTS (SELECT 1 FROM follows f1 WHERE f1.follower_id = $1 AND f1.following_id = m.user_id)
-                      AND EXISTS (SELECT 1 FROM follows f2 WHERE f2.follower_id = m.user_id AND f2.following_id = $1)
-                  )
-              )
-              AND ($7::text IS NULL OR m.created_at >= ($7::text)::timestamptz)
-              AND ($8::text IS NULL OR m.created_at <= ($8::text)::timestamptz)
-            LIMIT $6
-            "#,
-            user_id,
-            west,
-            south,
-            east,
-            north,
-            limit as i64,
-            start_time,
-            end_time
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(rows)
-    }
+		Ok((items, next_cursor))
+	}
 }

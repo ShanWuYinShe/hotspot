@@ -37,13 +37,14 @@ pub struct GroupService {
     pub(crate) settings_repo: GroupSettingsRepository,
     pub(crate) announcement_repo: GroupAnnouncementRepository,
     pub(crate) tag_repo: TagRepository,
-    pub(crate) report_repo: ReportRepository,
-    pub(crate) user_repo: UserRepository,
-    pub(crate) unread_repo: ChatUnreadRepository,
-    pub(crate) admin_rbac_repo: AdminRbacRepository,
-    pub(crate) media_service: crate::services::media_service::MediaService,
-    pub(crate) cache_manager: CacheManager,
-    pub(crate) resource_checker: ResourceExistenceChecker,
+	pub(crate) report_repo: ReportRepository,
+	pub(crate) user_repo: UserRepository,
+	pub(crate) unread_repo: ChatUnreadRepository,
+	pub(crate) admin_rbac_repo: AdminRbacRepository,
+	pub(crate) media_service: crate::services::media_service::MediaService,
+	pub(crate) cache_manager: CacheManager,
+	pub(crate) resource_checker: ResourceExistenceChecker,
+	pub(crate) region_boundary_service: crate::services::region_boundary_service::RegionBoundaryService,
 }
 
 impl GroupService {
@@ -61,12 +62,13 @@ impl GroupService {
         report_repo: ReportRepository,
         user_repo: UserRepository,
         unread_repo: ChatUnreadRepository,
-        admin_rbac_repo: AdminRbacRepository,
-        media_service: crate::services::media_service::MediaService,
-        cache_manager: CacheManager,
-        resource_checker: ResourceExistenceChecker,
-    ) -> Self {
-        Self {
+			admin_rbac_repo: AdminRbacRepository,
+			media_service: crate::services::media_service::MediaService,
+				cache_manager: CacheManager,
+				resource_checker: ResourceExistenceChecker,
+				region_boundary_service: crate::services::region_boundary_service::RegionBoundaryService,
+			) -> Self {
+			Self {
             event_bus,
             group_repo,
             member_repo,
@@ -79,11 +81,12 @@ impl GroupService {
             tag_repo,
             report_repo,
             user_repo,
-            unread_repo,
-            admin_rbac_repo,
-            media_service,
-            cache_manager,
-            resource_checker,
-        }
-    }
+				unread_repo,
+				admin_rbac_repo,
+				media_service,
+				cache_manager,
+				resource_checker,
+				region_boundary_service,
+			}
+		}
 }
