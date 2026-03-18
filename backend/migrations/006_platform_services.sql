@@ -188,3 +188,5 @@ CREATE TABLE IF NOT EXISTS upload_sessions (
     created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     expires_at      TIMESTAMPTZ     NOT NULL
 );
+
+CREATE INDEX idx_shares_creator_type_created ON shares (sharer_id, share_type, created_at DESC, share_id DESC);

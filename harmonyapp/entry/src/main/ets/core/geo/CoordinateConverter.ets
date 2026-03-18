@@ -119,4 +119,15 @@ export class CoordinateConverter {
       300.0 * Math.sin(x / 30.0 * TRANSFORM_PI)) * 2.0 / 3.0;
     return ret;
   }
+
+  /**
+   * 使用与后端相同的近似公式计算视口物理跨度（米）。
+   * 返回值为南北/东西方向跨度中的较大者。
+   */
+  static calculateViewportSpanMeters(bounds: { north: number; south: number; east: number; west: number }): number {
+    const centerLat: number = (bounds.north + bounds.south) / 2.0;
+    const latSpan: number = (bounds.north - bounds.south) * 111320.0;
+    const lngSpan: number = (bounds.east - bounds.west) * 111320.0 * Math.cos(centerLat * Math.PI / 180.0);
+    return Math.max(latSpan, lngSpan);
+  }
 }

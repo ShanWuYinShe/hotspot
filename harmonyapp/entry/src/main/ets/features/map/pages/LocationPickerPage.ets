@@ -9,7 +9,7 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { curves } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { MapHeatBucket, MapHeatRequest, MapHeatFilter, MapHeatCanvas, MapViewport } from '../../../core/types/api';
+import { MapHeatBucket, MapHeatCanvas, MapViewport, MapHotspotItem, MapHotspotsCanvas, MapCanvasRequest, MapCanvasResponse } from '../../../core/types/api';
 import { AppRouter, GroupDetailRouteParam, ProfileRouteParam, MomentDetailRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { CoordinateConverter } from '../../../core/geo/CoordinateConverter';
@@ -1214,66 +1214,123 @@ export struct LocationPickerPage {
 		if (!this.initialised || !this.mapReady) {
 			return;
 		}
-    const viewport = this.buildViewport();
-    if (!viewport) {
-      return;
-    }
+		const viewport = this.buildViewport();
+		if (!viewport) {
+			return;
+		}
 		const filter = this.resolveMapFilter();
 		const filterSignature = filter?.data_type ?? 'all';
-		const signature = `${viewport.bounds.north.toFixed(6)}|${viewport.bounds.south.toFixed(6)}|${viewport.bounds.east.toFixed(6)}|${viewport.bounds.west.toFixed(6)}|${viewport.zoom.toFixed(2)}|${filterSignature}`;
+		const spanM: number = CoordinateConverter.calculateViewportSpanMeters(viewport.bounds);
+		const shouldUseHotspots: boolean = spanM <= 3000 && viewport.zoom >= 13;
+		const mode: string = shouldUseHotspots ? 'hotspots' : 'heatmap';
+		const signature = `${viewport.bounds.north.toFixed(6)}|${viewport.bounds.south.toFixed(6)}|${viewport.bounds.east.toFixed(6)}|${viewport.bounds.west.toFixed(6)}|${viewport.zoom.toFixed(2)}|${filterSignature}|${mode}`;
 		if (signature === this.lastViewportSignature) {
-			hilog.info(DOMAIN_NUMBER, TAG, `skip map/heatmap duplicate trigger=${trigger} signature=${signature}`);
+			hilog.info(DOMAIN_NUMBER, TAG, `skip map/${mode} duplicate trigger=${trigger} signature=${signature}`);
 			this.updateMarkers();
 			return;
 		}
-    const requestId = ++this.renderRequestId;
+		const requestId = ++this.renderRequestId;
 		try {
-			hilog.info(DOMAIN_NUMBER, TAG, `start map/heatmap trigger=${trigger} requestId=${requestId} signature=${signature}`);
-			const request: MapHeatRequest = filter ? { viewport, filter } : { viewport };
-			const response = await ApiClient.getMapHeat(request);
-			if (requestId !== this.renderRequestId) {
-				hilog.info(DOMAIN_NUMBER, TAG, `ignore stale map/heatmap response trigger=${trigger} requestId=${requestId}`);
-				return;
-			}
-			if (response.code === 0) {
-				this.lastViewportSignature = signature;
-				const canvas: MapHeatCanvas | undefined = response.data as MapHeatCanvas | undefined;
-				const buckets: MapHeatBucket[] = canvas?.items ?? [];
-				const nextItems: MapRenderItem[] = [];
-				for (let index = 0; index < buckets.length; index++) {
-					const bucket = buckets[index];
-					const renderId = `${index}_${bucket.location.latitude.toFixed(6)}_${bucket.location.longitude.toFixed(6)}`;
-					nextItems.push({
-						render_id: renderId,
-						location: {
-							latitude: bucket.location.latitude,
-							longitude: bucket.location.longitude
-						},
-						type: 'cluster',
-						total_count: bucket.total_count,
-						cluster: {
-							count: bucket.total_count,
-							category: 'all',
-							label: bucket.name
+			if (shouldUseHotspots) {
+					hilog.info(DOMAIN_NUMBER, TAG, `start map/hotspots trigger=${trigger} requestId=${requestId} signature=${signature}`);
+					const request: MapCanvasRequest = {
+						viewport,
+						filter: filter ? { data_type: filter.data_type, time_range: filter.time_range } : undefined,
+						pagination: { limit: 100 }
+					};
+					const response = await ApiClient.getMapCanvas(request);
+				if (requestId !== this.renderRequestId) {
+					hilog.info(DOMAIN_NUMBER, TAG, `ignore stale map/hotspots response trigger=${trigger} requestId=${requestId}`);
+					return;
+				}
+					if (response.code === 0) {
+						this.lastViewportSignature = signature;
+						const canvas: MapCanvasResponse | undefined = response.data as MapCanvasResponse | undefined;
+						const allItems: MapHotspotItem[] = canvas?.hotspots?.items ?? [];
+					const nextItems: MapRenderItem[] = [];
+					for (let index = 0; index < allItems.length; index++) {
+						const item = allItems[index];
+						// 保证筛选对单个点和聚合后的 ClusterOverlay 一致生效
+						if (item.object_type === 'user' && !this.showUsers) {
+							continue;
 						}
-					});
-				}
-				this.renderItems = nextItems;
-				hilog.info(DOMAIN_NUMBER, TAG, `finish map/heatmap trigger=${trigger} requestId=${requestId} items=${this.renderItems.length}`);
-				const toastMessage = canvas?.toast_message ?? '';
-				if (toastMessage.length > 0) {
-					this.showMapToast(toastMessage, 3000);
+						if (item.object_type === 'group' && !this.showGroups) {
+							continue;
+						}
+						if (item.object_type === 'moment' && !this.showMoments) {
+							continue;
+						}
+						const renderId = `${index}_${item.object_type}_${item.object_id}`;
+						nextItems.push({
+							render_id: renderId,
+							location: {
+								latitude: item.location.latitude,
+								longitude: item.location.longitude
+							},
+							type: item.object_type,
+							total_count: 1,
+							cluster: {
+								count: 1,
+								category: 'all',
+								label: item.title
+							}
+						});
+					}
+					this.renderItems = nextItems;
+					hilog.info(DOMAIN_NUMBER, TAG, `finish map/hotspots trigger=${trigger} requestId=${requestId} items=${this.renderItems.length}`);
+					const toastMessage = canvas?.toast_message ?? '';
+					if (toastMessage.length > 0) {
+						this.showMapToast(toastMessage, 3000);
+					} else {
+						this.mapToastMessage = '';
+					}
+					this.updateMarkers();
 				} else {
-					this.mapToastMessage = '';
+					hilog.warn(DOMAIN_NUMBER, TAG, `map/hotspots business error trigger=${trigger} requestId=${requestId} code=${response.code} message=${response.message ?? ''}`);
 				}
-				this.updateMarkers();
 			} else {
-				hilog.warn(DOMAIN_NUMBER, TAG, `map/heatmap business error trigger=${trigger} requestId=${requestId} code=${response.code} message=${response.message ?? ''}`);
+					hilog.info(DOMAIN_NUMBER, TAG, `start map/heatmap trigger=${trigger} requestId=${requestId} signature=${signature}`);
+					const request: MapCanvasRequest = filter ? { viewport, filter } : { viewport };
+					const response = await ApiClient.getMapCanvas(request);
+				if (requestId !== this.renderRequestId) {
+					hilog.info(DOMAIN_NUMBER, TAG, `ignore stale map/heatmap response trigger=${trigger} requestId=${requestId}`);
+					return;
+				}
+					if (response.code === 0) {
+						this.lastViewportSignature = signature;
+						const canvas: MapCanvasResponse | undefined = response.data as MapCanvasResponse | undefined;
+						const buckets: MapHeatBucket[] = canvas?.heatmap?.items ?? [];
+					const nextItems: MapRenderItem[] = [];
+					for (let index = 0; index < buckets.length; index++) {
+						const bucket = buckets[index];
+						const renderId = `${index}_${bucket.location.latitude.toFixed(6)}_${bucket.location.longitude.toFixed(6)}`;
+						nextItems.push({
+							render_id: renderId,
+								location: {
+									latitude: bucket.location.latitude,
+									longitude: bucket.location.longitude
+								},
+								type: 'cluster',
+								total_count: bucket.total_count,
+								cluster: {
+									count: bucket.total_count,
+									category: 'all',
+								}
+							}
+						});
+					}
+						this.renderItems = nextItems;
+						hilog.info(DOMAIN_NUMBER, TAG, `finish map/heatmap trigger=${trigger} requestId=${requestId} items=${this.renderItems.length}`);
+						this.mapToastMessage = '';
+						this.updateMarkers();
+				} else {
+					hilog.warn(DOMAIN_NUMBER, TAG, `map/heatmap business error trigger=${trigger} requestId=${requestId} code=${response.code} message=${response.message ?? ''}`);
+				}
 			}
 		} catch (error) {
-			hilog.warn(DOMAIN_NUMBER, TAG, `render heatmap failed trigger=${trigger} requestId=${requestId}: ${JSON.stringify(error)}`);
+			hilog.warn(DOMAIN_NUMBER, TAG, `render map data failed trigger=${trigger} requestId=${requestId}: ${JSON.stringify(error)}`);
 		}
-  }
+	}
 
   private showMapToast(message: string, duration: number = 2000): void {
     if (message.length === 0) {
@@ -1349,7 +1406,7 @@ export struct LocationPickerPage {
     this.renderItemsMap.clear();
     this.overlappingGroupsMap.clear();
 
-    const converted: ConvertedRenderItem[] = [];
+    const nextMarkers: MapMarker[] = [];
     for (const item of this.renderItems) {
       this.renderItemsMap.set(item.render_id, item);
       if (!this.shouldDisplayItem(item)) {
@@ -1358,51 +1415,16 @@ export struct LocationPickerPage {
       const gcj02 = CoordinateConverter.convertWgs84ToGcj02(
         item.location.latitude, item.location.longitude
       );
-      converted.push({ item, gcj02Lat: gcj02.latitude, gcj02Lng: gcj02.longitude });
+      nextMarkers.push({
+        id: item.render_id,
+        latitude: gcj02.latitude,
+        longitude: gcj02.longitude,
+        title: this.getMarkerTitle(item),
+        snippet: this.getMarkerSnippet(item),
+        type: item.type === 'cluster' ? 'cluster' : item.type,
+        iconKey: this.getMarkerIconKey(item)
+      });
     }
-
-    // 按坐标分组，后端 cluster 不参与合并
-    const coordGroups = new Map<string, ConvertedRenderItem[]>();
-    const soloItems: ConvertedRenderItem[] = [];
-    for (const c of converted) {
-      if (c.item.type === 'cluster') {
-        soloItems.push(c);
-        continue;
-      }
-      const key = `${Math.floor(c.gcj02Lat * COORD_GROUP_PRECISION)}_${Math.floor(c.gcj02Lng * COORD_GROUP_PRECISION)}`;
-      const group = coordGroups.get(key);
-      if (group) {
-        group.push(c);
-      } else {
-        coordGroups.set(key, [c]);
-      }
-    }
-
-    const nextMarkers: MapMarker[] = [];
-    // 后端 cluster 直接渲染
-    for (const c of soloItems) {
-      nextMarkers.push(this.buildSingleMarker(c));
-    }
-    // 坐标分组：单个直接渲染，多个合并为复合 marker
-    coordGroups.forEach((items: ConvertedRenderItem[], key: string) => {
-      if (items.length === 1) {
-        nextMarkers.push(this.buildSingleMarker(items[0]));
-      } else {
-        const groupId = `${OVERLAP_GROUP_PREFIX}${key}`;
-        const first = items[0];
-        this.overlappingGroupsMap.set(groupId, items.map((c: ConvertedRenderItem) => c.item));
-        const typeLabels = this.summarizeGroupTypes(items);
-        nextMarkers.push({
-          id: groupId,
-          latitude: first.gcj02Lat,
-          longitude: first.gcj02Lng,
-          title: `${items.length} 个内容`,
-          snippet: typeLabels,
-          type: 'cluster',
-          iconKey: 'cluster'
-        });
-      }
-    });
 
     // 在所有渲染标记之上叠加“当前选中位置”图钉（GCJ-02），避免随相机中心漂移
     if (this.centerLat !== 0 || this.centerLng !== 0) {
@@ -1456,8 +1478,10 @@ export struct LocationPickerPage {
   }
 
   private getMarkerIconKey(_item: MapRenderItem): 'user' | 'group' | 'moment' | 'cluster' {
-    // 地图渲染仅使用聚合 cluster 图标
-    return 'cluster';
+		if (_item.type === 'user' || _item.type === 'group' || _item.type === 'moment') {
+			return _item.type;
+		}
+		return 'cluster';
   }
 
   private getMarkerTitle(item: MapRenderItem): string {
@@ -1522,20 +1546,12 @@ export struct LocationPickerPage {
     if (this.showSearchBar) {
       this.closeSearchPanel();
     }
-    // 客户端合并的重叠 marker：弹出选择菜单
-    if (marker.id.startsWith(OVERLAP_GROUP_PREFIX)) {
-      const groupItems = this.overlappingGroupsMap.get(marker.id);
-      if (groupItems && groupItems.length > 0) {
-        this.showOverlappingPanel(groupItems);
-      }
-      return;
-    }
-
     const item = this.renderItemsMap.get(marker.id);
     if (!item || !item.entity) {
       return;
     }
-    this.navigateToItem(item);
+    // 点击 marker 或聚合单个点时，仅弹出详情面板，由用户在面板内选择是否跳转
+    this.showOverlappingPanel([item]);
   }
 
   private showOverlappingPanel(items: MapRenderItem[]): void {

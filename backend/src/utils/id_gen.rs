@@ -457,12 +457,15 @@ mod tests {
     }
 
     async fn connect_test_redis() -> Option<ConnectionManager> {
+        // 测试用 Redis 连接统一复用 REDIS_URL 这一配置 key，
+        // 不再引入 TEST_REDIS_URL 这样的环境变量名，避免多套 key 漂移。
+        // 值层面仍建议在 .env.test 中指向独立 Redis 实例。
         let redis_url =
-            env::var("TEST_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6380/0".to_string());
+            env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6380/0".to_string());
         let client = match redis::Client::open(redis_url.clone()) {
             Ok(client) => client,
             Err(err) => {
-                eprintln!("skip redis test: invalid TEST_REDIS_URL, err={err}");
+				eprintln!("skip redis test: invalid REDIS_URL, err={err}");
                 return None;
             }
         };

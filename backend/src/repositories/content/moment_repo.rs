@@ -737,7 +737,7 @@ impl MomentRepository {
             FROM moments m
             JOIN users u ON m.user_id = u.user_id
             WHERE m.deleted_at IS NULL
-              AND m.description ILIKE $1
+              AND COALESCE(m.description, '') ILIKE $1
               AND m.location IS NOT NULL
               AND ST_DWithin(m.location, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, $4)
               AND (m.created_at, m.moment_id) < ($5, $6)

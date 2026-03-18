@@ -16,35 +16,29 @@ alwaysApply: false
 
 ## 设计理念
 
-地图模块的核心目标是：
+地图模块不再依赖任何行政区或 region 概念，完全基于 S2 网格进行空间划分与聚合：
 
-- 按**行政区域**对用户、群组、动态进行划分与聚合；
-- 在不同视角（zoom/视口大小）下，返回**合适尺度**的结果：
-  - 视角大时：按国家/省/市/区县返回**区域统计**，用于热力分布；
-  - 视角小时：返回当前视野内的**具体对象列表**，用于查看/点击明细。
+- 所有带位置的实体（用户、群组、动态）在服务端被投影到固定层级的 S2 网格单元；
+- 服务端根据当前视口的物理跨度和预估结果规模，自动选择合适的 S2 层级（`level`），并使用 S2 覆盖算法确定视口内的网格集合；
+- 在大尺度视野下返回**网格热力统计**，在小尺度视野下返回**具体热点对象列表**，对客户端透明；
+- 查询实现依赖预聚合的 S2 统计表，而不是直接扫描明细记录，以保证在大数据量和高并发场景下的可扩展性。
 
-本模块提供两个端点：
+本模块通过单一端点实现上述能力：
 
-- **热力统计（heatmap）**：按行政区聚合统计总量和按类型拆分，不返回任何实体详情；
-- **热点明细（hotspots）**：在足够小的视口内返回具体的用户/群组/动态列表，使用游标分页控制返回量。
-
-服务端负责：
-
-- 基于 `viewport.bounds` 计算视口物理跨度（米），动态选择合适的行政级别（国家/省/市/区县）；
-- 控制最大返回条数，当数据量过大时只返回最热的前 N 个区域或对象；
-- 在大数据量和高并发场景下依然保持查询可扩展（依赖预聚合统计表，而非直接扫描明细）。
+- **地图画布（canvas）**：基于视口范围和 S2 网格预聚合，自动返回热力统计（heatmap）或热点明细（hotspots）中的一种。
 
 ## 端点总览
 
 | 端点 | 说明 | 认证 | 幂等 |
-|-----|------|------|------|
-| `POST /api/v1/map/heatmap`  | 获取按行政区聚合的热力统计 | 可选 | 无 |
-| `POST /api/v1/map/hotspots` | 获取当前视野内的热点对象列表 | 可选 | 无 |
+|------|------|------|------|
+| `POST /api/v1/map/canvas` | 根据视口返回统计或热点明细 | 可选 | 无 |
 
 ## 类型定义
 
-以下类型定义于 `@spec/api_spec_types.md`：
+以下基础类型定义于 `@spec/api_spec_types.md`：
+
 - `GeoPoint`
+- `PaginationParams`
 
 本节仅补充地图模块特有的请求/响应结构。
 
@@ -67,9 +61,9 @@ interface Bounds {
 // 约束：north >= south；east >= west（允许退化视口）；east/west 取值范围 [-180, 180]。
 // 暂不支持跨国际日期变更线视口（需由客户端拆分请求）。违反时返回 `10000`。
 
+// 地图视口：仅由经纬度边界决定，不需要客户端提供 zoom
 interface MapViewport {
   bounds: Bounds;
-  zoom: number;   // 取值范围 1-20，约束定义见 @spec/api_spec_base.md 通用字段约束
 }
 
 interface TimeRangeParams {
@@ -79,112 +73,47 @@ interface TimeRangeParams {
 // 约束：若同时提供，必须满足 start_time <= end_time。违反时返回 `10000`。
 ```
 
-## 端点详情
+### 统计与明细类型
 
-### POST /api/v1/map/heatmap —— 按行政区聚合的热力统计
-
-获取地图热力统计数据，仅返回**按行政区聚合**的统计信息，不返回任何实体详情。适用于全国/省/市/区县等“概览视角”，用于渲染“哪里比较热”。
-
-- **认证**: 可选
-- **幂等**: 无
-
-#### 请求
-
-```typescript
-interface MapHeatFilter {
-  data_type?: MapDataType;
-  time_range?: TimeRangeParams;  // 可选，限定统计时间范围
-}
-
-interface MapHeatRequest {
-  viewport: MapViewport;
-  filter?: MapHeatFilter;
-}
-```
-
-行为约束：
-
-- 服务端根据 `viewport.bounds` 计算视口物理跨度 `span_m`（单位：米）并结合视口中心位置，在内部选择合适的行政区聚合层级（基于 OSM admin_level），但不会在响应中暴露具体层级数值；
-- 当 `span_m` 过小（例如 ≤ 3km）时，不再返回行政区热力统计，服务端应返回空列表并在 `toast_message` 中提示“当前视野已足够细，请使用热点接口查看具体对象”；
-- 服务端可限制最大返回区域数量（例如 500 个），当区域过多时按热度排序仅返回前 N 个，并在 `toast_message` 中给出说明。
-
-#### 响应
+> 下列类型由本模块统一端点 `/api/v1/map/canvas` 复用，用于承载统计结果和热点明细结果。
 
 ```typescript
 interface MapHeatBreakdown {
-  user?: number;   // 该行政区内用户数量
-  group?: number;  // 该行政区内群组数量
-  moment?: number; // 该行政区内动态数量
+  user?: number;   // 该网格内用户数量
+  group?: number;  // 该网格内群组数量
+  moment?: number; // 该网格内动态数量
 }
+
+// S2 网格的标识。为避免 JS 精度问题，对外暴露的是 S2 cell 的字符串 token。
+type S2CellToken = string;
 
 interface MapHeatBucket {
   /**
-   * 聚合单元的代表坐标（例如行政区多边形的质心）。
-   * 客户端仅将其视为一个热力点，至于如何在地图上展示、是否叠加自己的行政区边界，由客户端自行决定。
+   * 网格标识：
+   * - cell_token：S2 单元格的字符串 token，可用于前端作为 key 或调试。
+   * - level：该单元格所在的 S2 level。
+   * 客户端不需要理解 token 细节，只需视为不透明字符串。
+   */
+  cell_token: S2CellToken;
+  level: number;
+
+  /**
+   * 聚合单元的代表坐标（例如 S2 单元格的中心点）。
+   * 客户端仅将其视为一个热力点，如何展示由客户端自行决定。
    */
   location: GeoPoint;
 
-  /** 当前过滤条件下，该区域内参与统计实体的总数 */
+  /** 当前过滤条件下，该网格内参与统计实体的总数 */
   total_count: number;
 
   /** 按类型拆分；当 data_type != 'all' 时可选 */
   breakdown?: MapHeatBreakdown;
-
-  /**
-   * 可选的调试/展示标签（例如行政区名称）。
-   * 客户端可以直接忽略该字段，仅用于在开发/调试或简单列表展示时辅助理解。
-   */
-  name?: string;
 }
 
 interface MapHeatCanvas {
   items: MapHeatBucket[];
-  toast_message?: string;
-}
-```
-
-**错误码**: `10000`（请求参数不合法，如 bounds/zoom/time_range 约束违反）
-
----
-
-### POST /api/v1/map/hotspots —— 视野内热点对象列表
-
-获取当前视图内的热点对象列表（用户/群组/动态的明细）。仅在视口足够小、缩放级别足够高时使用，用于用户在地图上查看具体对象，而不是统计分布。
-
-- **认证**: 可选
-- **幂等**: 无
-
-#### 请求
-
-```typescript
-interface PaginationParams {
-  limit?: number;   // 单页数量，默认 50，最大不超过 200
-  cursor?: string;  // 游标，不透明，由服务端生成和回传
 }
 
-interface MapHotspotFilter {
-  data_type?: MapDataType;       // 仅用户 / 仅群组 / 仅动态 / 全部
-  time_range?: TimeRangeParams;  // 对动态尤为重要
-}
-
-interface MapHotspotsRequest {
-  viewport: MapViewport;
-  filter?: MapHotspotFilter;
-  pagination?: PaginationParams;
-}
-```
-
-行为约束：
-
-- 服务端根据 `viewport.bounds` 计算视口物理跨度 `span_m`，并结合 `zoom` 判断是否允许返回明细：
-  - 仅当 `span_m` 不超过实现定义的阈值（例如 3km）**且** `zoom` 足够大（例如 `zoom >= 13`）时返回热点列表；
-  - 否则应返回错误（`10000`）或空列表，并在 `toast_message` 中提示“请放大地图后再查看该区域的详细内容”。
-- 分页必须使用游标（cursor）进行 keyset 分页，禁止使用 offset-based 分页；
-- `limit` 上限固定（例如 200），超出时服务端按上限处理。
-
-#### 响应
-
-```typescript
 type HotspotObjectType = 'user' | 'group' | 'moment';
 
 interface MapHotspotItem {
@@ -201,8 +130,79 @@ interface MapHotspotItem {
 interface MapHotspotsCanvas {
   items: MapHotspotItem[];
   next_cursor?: string;    // 若有下一页则返回游标
-  toast_message?: string;  // 用于提示视口过大、结果被截断等情况
 }
 ```
 
-**错误码**: `10000`（请求参数不合法或视口/zoom 不在允许范围内）
+### 请求与响应
+
+```typescript
+interface MapCanvasFilter {
+  data_type?: MapDataType;       // 与 MapHeatBreakdown / MapHotspotItem 含义一致
+  time_range?: TimeRangeParams;  // 时间过滤
+}
+
+interface MapCanvasRequest {
+  viewport: MapViewport;         // 覆盖区域由 bounds 决定
+  filter?: MapCanvasFilter;
+  pagination?: PaginationParams; // 仅在返回 hotspots 时使用
+}
+
+interface MapCanvasResponse {
+  heatmap?: MapHeatCanvas;       // 有统计数据时出现
+  hotspots?: MapHotspotsCanvas;  // 有明细数据时出现
+}
+```
+
+约束：
+
+- 同一次响应中，`heatmap` 与 `hotspots` 最多出现一个字段：要么只返回统计，要么只返回明细，不会同时出现；
+- 当某类结果没有任何数据时，不返回对应字段：没有 bucket 就不返回 `heatmap`，没有热点对象就不返回 `hotspots`。
+
+## 行为约束
+
+服务端在实现 `/api/v1/map/canvas` 时，必须遵循以下行为约束。
+
+### 视口与 S2 网格选择
+
+- 服务端基于 `viewport.bounds` 计算视口的大致物理跨度（例如对角线长度，单位米）；
+- 根据视口大小和预估结果规模，选择一个内部使用的 S2 `level`：
+  - 目标是在该 `level` 下，视口覆盖的 S2 单元格数量处于一个合理区间（例如 50–200）；
+  - 具体 heuristic 可根据实际数据分布调整，但必须保证在全局范围和局部范围下都具有可扩展性；
+  - 该 `level` 对客户端不透明，不作为请求参数出现。
+- 使用 S2 覆盖算法（例如 `RegionCoverer`）在选定的 `level` 上计算 `viewport.bounds` 覆盖的 S2 单元格集合，记为 `CoveringCells`。
+- 若 `CoveringCells` 为空，视为当前视口范围内没有任何已知对象，此时响应中既不返回 `heatmap`，也不返回 `hotspots`。
+
+### 统计视图（heatmap）与明细视图（hotspots）的选择
+
+服务端基于当前视口、过滤条件以及预估结果规模，在“热力统计”和“明细列表”之间进行自动选择：
+
+- 定义实现层面的阈值（示例，具体数值由实现决定）：
+  - `MAX_HOTSPOT_ITEMS`：单次请求允许返回的热点对象最大数量（例如 200）；
+  - `MAX_HEATMAP_BUCKETS`：单次请求允许返回的热力网格最大数量（例如 500）。
+- 典型行为模式：
+  1. 服务端先基于预聚合统计和/或近似估算，判断在当前视口和过滤条件下的对象规模：
+     - 若预估对象数量远大于 `MAX_HOTSPOT_ITEMS`：
+       - 返回 **热力统计**：
+         - 在内部选定的 S2 `level` 上，对 `CoveringCells` 做聚合，得到每个单元格的 `total_count` 及按类型拆分的 `breakdown`（若需要）；
+         - 仅返回前 `MAX_HEATMAP_BUCKETS` 个最“热”的单元格（按 `total_count` 降序截断）；
+         - 在响应中只设置 `heatmap` 字段，不返回 `hotspots` 字段。
+     - 否则（对象规模较小或视口范围足够小）：
+       - 返回 **热点明细**：
+         - 在当前视口范围内（由 `viewport.bounds` 定义），按空间范围和过滤条件查询具体对象；
+         - 支持基于游标的分页，`limit` 默认 50，最大不超过 200（由 `PaginationParams` 中的限制规则约束）；
+         - 在响应中只设置 `hotspots` 字段，不返回 `heatmap` 字段。
+  2. 当选定的结果类型对应的数据为空时：
+     - 响应体中既不返回对应字段，也不返回另一种类型字段。
+
+实现方可以根据实际数据量和性能需求调整判断逻辑，但必须满足：
+
+- 对客户端而言，接口行为稳定可预期：在大范围/高密度场景下倾向返回 `heatmap`，在小范围/低密度场景下倾向返回 `hotspots`；
+- 任何情况下都不会同时返回 `heatmap` 和 `hotspots`；
+- 聚合和查询实现必须基于 S2 网格和视口范围，不得重新引入行政区或 region 概念。
+
+## 错误码
+
+- `10000`：请求参数不合法，例如：
+  - `viewport.bounds` 超出允许范围或 east/west 不满足约束；
+  - `TimeRangeParams` 中 `start_time > end_time`；
+  - 其他违反本模块参数约束的情况。

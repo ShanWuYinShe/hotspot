@@ -21,17 +21,12 @@ pub struct MapHeatBucket {
     pub total_count: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub breakdown: Option<MapHeatBreakdown>,
-    /// 可选的调试/展示标签（例如行政区名称），客户端可忽略
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
 }
 
 /// 热力统计响应 - 对应 spec 中的 MapHeatCanvas
 #[derive(Debug, Serialize)]
 pub struct MapHeatCanvas {
     pub items: Vec<MapHeatBucket>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub toast_message: Option<String>,
 }
 
 /// 热点对象类型 - 对应 spec 中的 HotspotObjectType
@@ -57,6 +52,13 @@ pub struct MapHotspotsCanvas {
     pub items: Vec<MapHotspotItem>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub next_cursor: Option<String>,
+}
+
+/// 统一地图画布响应 - 对应 spec 中的 MapCanvasResponse
+#[derive(Debug, Serialize)]
+pub struct MapCanvasResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub toast_message: Option<String>,
+    pub heatmap: Option<MapHeatCanvas>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hotspots: Option<MapHotspotsCanvas>,
 }

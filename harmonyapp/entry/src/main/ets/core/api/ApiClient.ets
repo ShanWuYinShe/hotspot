@@ -180,10 +180,10 @@ import {
 	SearchSuggestResponse,
 
 	// 地图
-	MapHeatRequest,
 	MapHeatCanvas,
-	MapHotspotsRequest,
 	MapHotspotsCanvas,
+	MapCanvasRequest,
+	MapCanvasResponse,
 
   // 系统
   HealthStatus,
@@ -857,12 +857,8 @@ export class ApiClient {
 
 	// ==================== 地图 API ====================
 
-	static async getMapHeat(params: MapHeatRequest): Promise<ApiResponse<MapHeatCanvas>> {
-		return HttpUtil.post<ApiResponse<MapHeatCanvas>, MapHeatRequest>(ApiEndpoints.MAP.HEATMAP, params);
-	}
-
-	static async getMapHotspots(params: MapHotspotsRequest): Promise<ApiResponse<MapHotspotsCanvas>> {
-		return HttpUtil.post<ApiResponse<MapHotspotsCanvas>, MapHotspotsRequest>(ApiEndpoints.MAP.HOTSPOTS, params);
+	static async getMapCanvas(params: MapCanvasRequest): Promise<ApiResponse<MapCanvasResponse>> {
+		return HttpUtil.post<ApiResponse<MapCanvasResponse>, MapCanvasRequest>(ApiEndpoints.MAP.CANVAS, params);
 	}
 
   // ==================== 分享 API ====================

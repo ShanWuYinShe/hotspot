@@ -36,14 +36,9 @@ pub struct TimeRangeParams {
     pub end_time: Option<String>,
 }
 
+/// 地图过滤条件：统一用于 heatmap / hotspots / canvas
 #[derive(Debug, Deserialize)]
-pub struct MapHeatFilter {
-    pub data_type: Option<MapDataType>,
-    pub time_range: Option<TimeRangeParams>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct MapHotspotFilter {
+pub struct MapCanvasFilter {
     pub data_type: Option<MapDataType>,
     pub time_range: Option<TimeRangeParams>,
 }

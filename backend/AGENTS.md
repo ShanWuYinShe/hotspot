@@ -2,18 +2,9 @@
 
 > Rust / Axum 后端服务的 AI Agent 操作指南。
 
-## 技术栈
+## 使用范围
 
-- **语言**：Rust (Edition 2021)
-- **Web 框架**：Axum
-- **运行时**：Tokio
-- **数据库**：PostgreSQL + PostGIS，通过 SQLx（编译期宏）访问
-- **缓存**：Redis + Moka（本地缓存）
-- **认证**：JWT (jsonwebtoken) + bcrypt
-- **存储**：AWS S3 SDK (MinIO 兼容)
-- **日志**：tracing + tracing-subscriber
-
-> 具体版本以 `Cargo.toml` 为准。
+本文件只补充 Rust 后端特有的硬约束（分层、SQLx、地理查询等），其他实现细节和功能结构请 Agent 通过代码与 `spec/` 自行探索。
 
 ## 架构分层（强制）
 
@@ -29,21 +20,7 @@ Handler → Service → Repository
 | **Service** | 业务规则、权限校验、事务、缓存、事件发布 | 写 SQL、直接构造 HTTP 响应 |
 | **Repository** | SQL 执行与结果映射 | 业务判断、权限校验、发事件 |
 
-### 示例
-
-```rust
-// ✅ Handler —— 只做提取和调用，禁止写业务逻辑或 SQL
-match state.moment_service.create(&user_id, req).await {
-    Ok(data) => ApiResponse::success(data),
-    Err(e) => ApiResponse::from(e),
-}
-```
-
-### Service 文件命名
-
-- 大部分遵循 `<module>_service.rs` 模式（如 `auth_service.rs`、`moment_service.rs`）。
-- 逻辑较大时拆为目录（如 `group_service/`），内部按子域拆分（`crud.rs`、`members.rs`、`applications.rs` 等）。
-- 辅助/策略模块不带 `_service` 后缀（如 `private_chat_permission.rs`、`stranger_message_limiter.rs`）。
+> Handler / Service / Repository 的具体文件命名和目录结构，以现有代码为准，本文件不做约束。
 
 ## SQL 规则（严格执行）
 
@@ -102,34 +79,18 @@ match state.moment_service.create(&user_id, req).await {
 
 - 新增事件时须同步更新事件类型定义和对应领域的 handler 分发逻辑。
 
-## 实现检查清单
+## 额外禁止
 
-- [ ] 架构一致性：有无类似功能？遵循分层模式（Handler → Service → Repository）？
-- [ ] 类型复用：复用现有 DTO？可共享字段？
-- [ ] 错误处理：复用 `ApiError` 或已有错误类型？
-- [ ] 服务复用：扩展现有 Service 而非新建？
-- [ ] 中间件复用：复用认证/限流/幂等中间件？
-- [ ] SQL 复用：扩展现有 Repository 而非新查询？
-
-**禁止**：绕过统一层、重复实现相同逻辑、引入不一致模式
-
-## 常见错误
-
-- [ ] Handler 里写业务逻辑或 SQL？
-- [ ] 使用 `sqlx::query(` 而非 `sqlx::query!`？
-- [ ] 使用 OFFSET 分页？
-- [ ] Rust 中计算距离/角度（应在 PostGIS）？
-- [ ] 使用 spec 中不存在的错误码？
-- [ ] JWT 中写入可变字段？
-- [ ] 遗漏 MUST 幂等接口的幂等键？
-- [ ] 用 `#[allow(...)]` 压制编译警告？
-- [ ] 绕过统一层或重复实现逻辑？
+除根目录 `AGENTS.md` 中的全局禁止项外，后端额外禁止：
+- 绕过 Handler → Service → Repository 分层直接跨层访问。
+- 在 Handler 或 Service 中直接写 SQL，或使用非宏 `sqlx::query("...")` 系列。
+- 使用 OFFSET 进行分页，或在 Rust 代码中自行计算距离/角度。
 
 ## 安全规则
 
 文件删除、批量变更、Git 操作规范、数据库操作安全等全局规则见根目录 `AGENTS.md` 的「权限边界」和「Git 操作规范」章节，此处不重复。
 
-> **⚠️ `tmp/` 路径规则（强制）**：所有临时文件、会话文件（`session-context-*.md`、`session-progress-*.md`）、设计文档等必须存放在**项目根目录（Monorepo 根目录）的 `tmp/`** 下，即 `backend/` 的上级目录中的 `tmp/`。**绝对禁止在 `backend/` 目录下创建 `tmp/` 目录**（如 `backend/tmp/`）。详见根目录 `AGENTS.md` 的「Agent 行为准则」章节。
+> **⚠️ `tmp/` 路径规则**：所有临时文件必须存放在项目根目录的 `tmp/` 下。详见根目录 `AGENTS.md` 的「Agent 行为准则」章节。
 
 **后端额外约束**：
 - 禁止自行执行 `deploy/` 目录下的脚本，须告知用户脚本内容和影响后由用户执行。

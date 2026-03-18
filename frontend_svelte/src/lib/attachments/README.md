@@ -1,6 +1,6 @@
 # Svelte 5 Attachments
 
-这个目录包含符合 **Svelte 5.29+ 最佳实践**的 attachment 实现。
+这个目录包含符合 **Svelte 5+ 最佳实践**的 attachment 实现。
 
 ## 什么是 Attachments？
 

@@ -1099,12 +1099,10 @@ export interface MapHeatBucket {
   location: GeoPoint;
   total_count: number;
   breakdown?: MapHeatBreakdown;
-  name?: string;
 }
 
 export interface MapHeatCanvas {
   items: MapHeatBucket[];
-  toast_message?: string;
 }
 
 export type HotspotObjectType = 'user' | 'group' | 'moment';
@@ -1131,20 +1129,35 @@ export interface MapHotspotFilter {
 }
 
 export interface MapHeatRequest {
-  viewport: MapViewport;
-  filter?: MapHeatFilter;
+	viewport: MapViewport;
+	filter?: MapHeatFilter;
 }
 
 export interface MapHotspotsRequest {
-  viewport: MapViewport;
-  filter?: MapHotspotFilter;
-  pagination?: PaginationParams;
+	viewport: MapViewport;
+	filter?: MapHotspotFilter;
+	pagination?: PaginationParams;
 }
 
 export interface MapHotspotsCanvas {
   items: MapHotspotItem[];
   next_cursor?: string;
-  toast_message?: string;
+}
+
+export interface MapCanvasFilter {
+  data_type?: MapDataType;
+  time_range?: TimeRangeParams;
+}
+
+export interface MapCanvasRequest {
+  viewport: MapViewport;
+  filter?: MapCanvasFilter;
+  pagination?: PaginationParams;
+}
+
+export interface MapCanvasResponse {
+  heatmap?: MapHeatCanvas;
+  hotspots?: MapHotspotsCanvas;
 }
 
 // ==================== 举报API类型 ====================

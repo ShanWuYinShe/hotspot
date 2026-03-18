@@ -1,9 +1,6 @@
--- Additional indexes for feed & share performance
-
--- 优化分享列表（按分享者/类型/时间排序）
-CREATE INDEX IF NOT EXISTS idx_shares_creator_type_created
-    ON shares (sharer_id, share_type, created_at DESC, share_id DESC);
-
--- 优化按目标统计/查询 feed dismiss 记录
-CREATE INDEX IF NOT EXISTS idx_feed_dismissals_target
-    ON feed_dismissals (target_type, target_id, user_id);
+-- 012_feed_share_indexes.sql
+-- 说明：原本用于补充 shares 与 feed_dismissals 的索引。
+-- 目前这些索引已收口到各自表的迁移文件中：
+--   - shares 相关索引：见 006_platform_services.sql
+--   - feed_dismissals 相关索引与 helper：见 011_feed_dismissals.sql
+-- 本迁移保留占位，不再包含额外 DDL。

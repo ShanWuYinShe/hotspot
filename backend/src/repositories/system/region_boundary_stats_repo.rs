@@ -119,7 +119,7 @@ impl RegionBoundaryStatsRepository {
 	/// - 统计写入 region_boundary_stats_daily 也是按最小行政区写；
 	/// - 在 heatmap 聚合时，根据视口和中心位置选择一批“要展示的行政区”（display_regions），
 	///   然后对每个展示行政区，汇总其几何范围内所有子区域（包含自身以外）的统计：
-	///   - 子区域判断只依赖几何（ST_Contains(parent.geom, child.centroid)），不强依赖 admin_level；
+	///   - 子区域判断只依赖几何（ST_Contains(parent.geom, child.centroid)），不强依赖 region_level；
 	///   - 排除 child.region_id = parent.region_id，避免把自己当成自己的子区域；
 	pub async fn aggregate_for_heatmap(
 		&self,
@@ -143,7 +143,7 @@ impl RegionBoundaryStatsRepository {
 			visible_regions AS (
 			  SELECT
 			    rb.region_id,
-			    rb.admin_level AS region_level,
+			    rb.region_level AS region_level,
 			    rb.name,
 			    rb.centroid,
 			    rb.geom
@@ -193,7 +193,9 @@ impl RegionBoundaryStatsRepository {
 			    c.region_id AS child_region_id
 			  FROM display_regions p
 			  JOIN region_boundary c
-			    ON ST_Contains(p.geom, c.centroid)
+			    ON c.region_id <> p.region_id
+	   AND c.centroid && p.geom
+	   AND ST_Within(c.centroid, p.geom)
 			   AND c.region_id <> p.region_id
 			)
 			SELECT

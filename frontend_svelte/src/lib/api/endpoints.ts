@@ -224,8 +224,7 @@ export const SEARCH = {
 // 地图 API（spec/api_spec_map.md）
 // ============================================================================
 export const MAP = {
-	HEATMAP: `${API_BASE}/map/heatmap`,
-	HOTSPOTS: `${API_BASE}/map/hotspots`
+	CANVAS: `${API_BASE}/map/canvas`
 } as const;
 
 // ============================================================================

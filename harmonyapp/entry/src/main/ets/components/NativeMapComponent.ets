@@ -111,7 +111,7 @@ export struct NativeMapComponent {
   /** 地图厂商 Logo 底部偏移（像素），确保 logo 不被底部面板遮挡（合规要求） */
   @Watch('onLogoPaddingChange') @Prop logoPaddingBottom: number = 0;
   onMapLongPress?: (coordinate: MapCoordinate) => void;
-  
+
   // 回调函数
   onMapReady?: () => void;
   onMarkerClick?: (marker: MapMarker) => void;
@@ -124,13 +124,16 @@ export struct NativeMapComponent {
   onVisibleRegionChange?: (region: MapVisibleRegion) => void;
   /** 地图控制器就绪回调，用于父组件获取缩放等操作能力 */
   onActionsReady?: (actions: NativeMapActions) => void;
-  
+
   // 地图控制器
   private mapController: map.MapComponentController | null = null;
   private mapCallback?: AsyncCallback<map.MapComponentController>;
   private createdMarkers: Map<string, map.Marker> = new Map();
   private centerPinMarker: map.Marker | null = null;
   private markerIconCache: Map<string, image.PixelMap> = new Map();
+  private userClusterOverlay: map.ClusterOverlay | null = null;
+  private groupClusterOverlay: map.ClusterOverlay | null = null;
+  private momentClusterOverlay: map.ClusterOverlay | null = null;
   private syntheticCameraIdleTimerId: number = 0;
   // 双击检测
   private lastClickTime: number = 0;
@@ -157,10 +160,10 @@ export struct NativeMapComponent {
         this.isMapReady = true;
         this.mapError = '';
         hilog.info(DOMAIN_NUMBER, TAG, 'MapComponentController 初始化成功');
-        
+
         // 初始化地图设置
         await this.setupMap();
-        
+
         // 触发回调
         if (this.onMapReady) {
           this.onMapReady();
@@ -172,7 +175,7 @@ export struct NativeMapComponent {
       }
     };
   }
-  
+
   aboutToDisappear() {
     if (this.clickTimerId > 0) {
       clearTimeout(this.clickTimerId);
@@ -182,6 +185,20 @@ export struct NativeMapComponent {
       clearTimeout(this.syntheticCameraIdleTimerId);
       this.syntheticCameraIdleTimerId = 0;
     }
+    const overlays: (map.ClusterOverlay | null)[] = [
+      this.userClusterOverlay,
+      this.groupClusterOverlay,
+      this.momentClusterOverlay
+    ];
+    for (const ov of overlays) {
+      if (ov) {
+        // 移除聚合图层，避免泄漏
+        ov.remove().catch((_err: Error) => {
+          // 忽略清理异常
+        });
+    this.userClusterOverlay = null;
+    this.groupClusterOverlay = null;
+    this.momentClusterOverlay = null;
     for (const pixelMap of this.markerIconCache.values()) {
       pixelMap.release();
     }
@@ -189,10 +206,12 @@ export struct NativeMapComponent {
   }
 
   private async initMarkerIcons(): Promise<void> {
-    const iconKeys: string[] = ['user', 'group', 'moment', 'cluster', 'center_pin'];
+    // 预加载单点与聚合点的所有 SVG 图标为 PixelMap
+    const iconKeys: string[] = ['user', 'group', 'moment', 'cluster', 'center_pin', 'user_cluster', 'group_cluster', 'moment_cluster'];
     const iconFiles: string[] = [
       'marker_user.svg', 'marker_group.svg', 'marker_moment.svg',
-      'marker_cluster.svg', 'marker_center_pin.svg',
+      'marker_mixed_cluster.svg', 'marker_center_pin.svg',
+      'marker_user_cluster.svg', 'marker_group_cluster.svg', 'marker_moment_cluster.svg',
     ];
     const hostContext = this.getUIContext().getHostContext();
     if (!hostContext) {
@@ -414,7 +433,7 @@ export struct NativeMapComponent {
 
   private async setupMap() {
     if (!this.mapController) return;
-    
+
     // 根据当前深浅模式设置地图夜间样式
     try {
       this.mapController.setDayNightMode(
@@ -427,10 +446,10 @@ export struct NativeMapComponent {
     // 设置定位启用
     this.mapController.setMyLocationEnabled(this.showUserLocation);
     this.mapController.setMyLocationControlsEnabled(this.showMyLocationControls);
-    
+
     // 设置比例尺
     this.mapController.setScaleControlsEnabled(this.showScale);
-    
+
     // 设置缩放按钮
     this.mapController.setZoomControlsEnabled(this.showZoomControls);
 
@@ -554,11 +573,47 @@ export struct NativeMapComponent {
       this.mapController.clear();
       this.createdMarkers.clear();
       this.centerPinMarker = null;
+      const overlays: (map.ClusterOverlay | null)[] = [
+        this.userClusterOverlay,
+        this.groupClusterOverlay,
+        this.momentClusterOverlay
+      ];
+      for (const ov of overlays) {
+        if (ov) {
+          await ov.remove();
+        }
+      }
+      this.userClusterOverlay = null;
+      this.groupClusterOverlay = null;
+      this.momentClusterOverlay = null;
     } catch (e) {
       hilog.warn(DOMAIN_NUMBER, TAG, `清除标记失败: ${JSON.stringify(e)}`);
     }
 
+    // 按类型拆分：用户/群组/动态交给 ClusterOverlay，其余（如 server cluster、中心图钉）仍使用普通 Marker。
+    const userCandidates: MapMarker[] = [];
+    const groupCandidates: MapMarker[] = [];
+    const momentCandidates: MapMarker[] = [];
+    const plainMarkers: MapMarker[] = [];
     for (const markerData of this.markers) {
+      switch (markerData.type) {
+        case 'user':
+          userCandidates.push(markerData);
+          break;
+        case 'group':
+          groupCandidates.push(markerData);
+          break;
+        case 'moment':
+          momentCandidates.push(markerData);
+          break;
+        default:
+          plainMarkers.push(markerData);
+          break;
+      }
+    }
+
+    // 先渲染普通标记（如 server cluster、中心图钉）
+    for (const markerData of plainMarkers) {
       try {
         const markerOptions: mapCommon.MarkerOptions = {
           position: {
@@ -579,9 +634,127 @@ export struct NativeMapComponent {
       }
     }
 
+    // 使用官方 ClusterOverlay 聚合用户/群组/动态热点（按类型分别创建聚合图层）。
+    const buildOverlay = async (candidates: MapMarker[], assign: (ov: map.ClusterOverlay | null) => void) => {
+      if (!this.mapController || candidates.length === 0) {
+        assign(null);
+        return;
+      }
+      try {
+        const items: Array<mapCommon.ClusterItem> = candidates.map((m: MapMarker) => {
+          const markerType: string = m.type ?? 'user';
+          const anyItem: any = {
+            position: {
+              latitude: m.latitude,
+              longitude: m.longitude
+            },
+            // 展开状态下的单个点使用与 MapMarker 一致的 SVG 图标与标题
+            icon: this.getMarkerIconForMarker(m),
+            title: m.title,
+            snippet: m.snippet,
+            markerType
+          };
+          return anyItem as mapCommon.ClusterItem;
+        });
+        const params: mapCommon.ClusterOverlayParams = {
+          distance: 40,
+          clusterItems: items,
+          // 使用 getCustomIcon 为聚合点返回自定义 PixelMap 图标
+          getCustomIcon: async (clusterItemsParam: Array<mapCommon.ClusterItem>): Promise<image.PixelMap> => {
+            const key: string = this.getClusterIconForClusterItems(clusterItemsParam);
+            const cached = this.markerIconCache.get(key);
+            if (cached) {
+              return cached;
+            }
+            const fallback = this.markerIconCache.get('user');
+            if (fallback) {
+              return fallback;
+            }
+            // 极端情况下（图标未能预加载），尝试退回任意已缓存图标
+            const iterator = this.markerIconCache.values().next();
+            if (!iterator.done) {
+              return iterator.value;
+            }
+            throw new Error('Cluster icon PixelMap not available');
+          }
+        };
+        const overlay = await this.mapController.addClusterOverlay(params);
+        assign(overlay);
+
+        overlay.on('markerClusterClick', (info: map.MarkerClusterInfo) => {
+          const clusterItems = info.clusterItems;
+          if (!clusterItems || clusterItems.length === 0) {
+            return;
+          }
+
+          if (clusterItems.length === 1 && this.onMarkerClick) {
+            const pos = clusterItems[0].position;
+            // 在原始 markers 中按坐标近似匹配业务标记
+            const logical = this.markers.find((m: MapMarker) => {
+              const dLat = Math.abs(m.latitude - pos.latitude);
+              const dLng = Math.abs(m.longitude - pos.longitude);
+              return dLat < 1e-6 && dLng < 1e-6;
+            });
+            if (logical) {
+              this.onMarkerClick(logical);
+              return;
+            }
+          }
+
+          // 聚合点：根据节点位置放大地图
+          const first = clusterItems[0].position;
+          let zoom = 15;
+          try {
+            const cameraPos = this.mapController?.getCameraPosition();
+            zoom = (cameraPos?.zoom ?? 15) + 1;
+          } catch (_e) {
+            // 保持默认 zoom
+          }
+          this.moveCamera(first.latitude, first.longitude, Math.min(20, zoom));
+        });
+      } catch (e) {
+        hilog.warn(DOMAIN_NUMBER, TAG, `创建 ClusterOverlay 失败: ${JSON.stringify(e)}`);
+        assign(null);
+      }
+    };
+
+    await buildOverlay(userCandidates, (ov) => (this.userClusterOverlay = ov));
+    await buildOverlay(groupCandidates, (ov) => (this.groupClusterOverlay = ov));
+    await buildOverlay(momentCandidates, (ov) => (this.momentClusterOverlay = ov));
+
     if (this.showCenterPin) {
       await this.createCenterPinMarker();
     }
+  }
+
+  private getClusterIconForClusterItems(clusterItems: Array<mapCommon.ClusterItem>): string {
+    let hasUser: boolean = false;
+    let hasGroup: boolean = false;
+    let hasMoment: boolean = false;
+
+    for (const item of clusterItems) {
+      const anyItem: any = item as any;
+      const markerType: string = anyItem.markerType ?? 'user';
+      if (markerType === 'user') {
+        hasUser = true;
+      } else if (markerType === 'group') {
+        hasGroup = true;
+      } else if (markerType === 'moment') {
+        hasMoment = true;
+      }
+    }
+
+    if (hasUser && !hasGroup && !hasMoment) {
+      return 'user_cluster';
+    }
+    if (!hasUser && hasGroup && !hasMoment) {
+      return 'group_cluster';
+    }
+    if (!hasUser && !hasGroup && hasMoment) {
+      return 'moment_cluster';
+    }
+    // 混合场景：返回通用聚合图标 key
+    return 'user_cluster';
   }
 
   private getMarkerIconForMarker(markerData: MapMarker): image.PixelMap | Resource {
@@ -594,7 +767,7 @@ export struct NativeMapComponent {
     switch (key) {
       case 'group': return $rawfile('marker_group.svg');
       case 'moment': return $rawfile('marker_moment.svg');
-      case 'cluster': return $rawfile('marker_cluster.svg');
+      case 'cluster': return $rawfile('marker_mixed_cluster.svg');
       case 'center_pin': return $rawfile('marker_center_pin.svg');
       default: return $rawfile('marker_user.svg');
     }
@@ -741,4 +914,6 @@ export struct NativeMapComponent {
     .width('100%')
     .height('100%')
   }
+}
+ }
 }

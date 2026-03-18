@@ -5,40 +5,17 @@
 import { post } from '../client';
 import { MAP } from '../endpoints';
 import type {
-	MapHeatCanvas,
-	MapHotspotsCanvas,
+	MapCanvasRequest,
+	MapCanvasResponse,
 	MapHeatBucket,
-	MapDataType,
-	MapViewport,
-	TimeRangeParams
 } from '$lib/types/api';
 
 export const mapService = {
 	/**
-	 * 获取热力统计数据（按行政区聚合），对应 /map/heatmap
+	 * 地图画布：根据视口自动选择返回统计或热点明细，对应 /map/canvas
 	 */
-	heatmap(data: {
-		viewport: MapViewport;
-		filter?: {
-			data_type?: MapDataType;
-			time_range?: TimeRangeParams;
-		};
-	}) {
-		return post<MapHeatCanvas>(MAP.HEATMAP, data);
-	},
-
-	/**
-	 * 获取热点对象列表，对应 /map/hotspots
-	 */
-	hotspots(data: {
-		viewport: MapViewport;
-		filter?: {
-			data_type?: MapDataType;
-			time_range?: TimeRangeParams;
-		};
-		pagination?: { limit?: number; cursor?: string };
-	}) {
-		return post<MapHotspotsCanvas>(MAP.HOTSPOTS, data);
+	canvas(data: MapCanvasRequest) {
+		return post<MapCanvasResponse>(MAP.CANVAS, data);
 	}
 };
 

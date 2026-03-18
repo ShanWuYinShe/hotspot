@@ -25,12 +25,16 @@ CREATE TABLE IF NOT EXISTS moments_partitioned (
 -- 默认分区（兜底）
 CREATE TABLE IF NOT EXISTS moments_default PARTITION OF moments_partitioned DEFAULT;
 
--- 索引
 CREATE INDEX idx_moments_user_feed        ON moments_partitioned(user_id, created_at DESC) WHERE deleted_at IS NULL;
 CREATE INDEX idx_moments_location         ON moments_partitioned USING GIST(location) WHERE deleted_at IS NULL;
 CREATE INDEX idx_moments_global           ON moments_partitioned(created_at DESC) WHERE deleted_at IS NULL AND privacy_level = 'public';
 CREATE INDEX idx_moments_mentions_gin     ON moments_partitioned USING GIN(mentions) WHERE deleted_at IS NULL;
 CREATE INDEX idx_moments_partition_region_id ON moments_partitioned(region_id);
+-- 内容全文检索：按描述模糊搜索使用 trgm 索引
+CREATE INDEX idx_moments_description_trgm
+    ON moments_partitioned
+ USING GIN ((COALESCE(description, '')) gin_trgm_ops)
+   WHERE deleted_at IS NULL;
 
 -- ─── 瞬间图片 ───────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS moment_images (

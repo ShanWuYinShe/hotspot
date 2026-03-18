@@ -2,15 +2,9 @@
 
 > HarmonyOS ArkTS (.ets) 鸿蒙客户端的 AI Agent 操作指南。
 
-## 技术栈
+## 使用范围
 
-- **框架**：HarmonyOS ArkTS (.ets)
-- **构建工具**：hvigor
-- **网络**：`@ohos.net.http`
-- **持久化**：`@ohos.data.preferences`（AppStorage + PersistentStorage）
-- **UI**：ArkUI 原生组件
-
-> API 版本以 `build-profile.json5` 为准。
+本文件只补充鸿蒙端特有的硬约束（API 调用、图标、安全区等），其他页面结构和组件划分请 Agent 通过代码与 `spec/` 自行探索。
 
 ## API 调用规则（严格执行）
 
@@ -69,14 +63,10 @@ const result = await HttpUtil.post<ApiResponse<AuthData>>(
 
 - **统一使用 `SymbolSpan` / `SymbolGlyph`**：系统图标优先使用 `sys.symbol.*` 符号字体，而非 `Image($r('sys.media.ohos_ic_public_*'))`。符号字体支持动态字号、主题适配、矢量缩放，优于位图。
 - **图标集中定义**：所有图标名称在 `components/SystemIcon.ets` 的 `AppIcon` 枚举中统一管理。新增图标时必须先在官方图标库中确认符号名存在，再添加到枚举。
-- **禁止在业务代码中直接写 `$r('sys.symbol.xxx')` 字符串**，必须通过 `AppIcon` 枚举引用。
-- **验证流程**：修改 `AppIcon` 枚举时，须在 https://developer.huawei.com/consumer/cn/design/harmonyos-symbol/ 中搜索确认符号名存在。
+- **系统图标引用方式**：禁止在业务代码中直接写 `$r('sys.symbol.xxx')` 字符串，必须通过 `AppIcon` 枚举引用。
+- **业务图形例外**：地图 marker、自定义品牌图标等业务相关图形可以使用自定义图片资源（例如 SVG 或 `Image($r('app.media.*'))`），不强制使用 `sys.symbol.*`。
 
-### 常见错误
-
-- `sys.symbol.location` 不存在，正确名称是 `sys.symbol.position`。
-- 并非所有 SF Symbols 名称都有 HarmonyOS 对应项，如 `pencil`、`gear`、`brain` 等在 HarmonyOS 中不存在。
-- `Image($r('sys.media.ohos_ic_public_*'))` 可用但不推荐，应优先查找对应的 `sys.symbol.*` 替代。
+> 具体符号名是否存在，请以官方图标库为准（以实际文档为准），本文件不维护完整列表。
 
 ## WebSocket
 
@@ -86,55 +76,27 @@ const result = await HttpUtil.post<ApiResponse<AuthData>>(
 
 - 请求参数使用 `Location`（point + location_name）。
 - 响应使用 `RelativeLocation`（含 distance、bearing_degrees）。
-- **禁止在客户端计算距离或角度**，由后端 PostGIS 完成。
+- **禁止在客户端计算距离或角度**，一律由后端完成（具体实现以 `spec/` 和后端代码为准）。
 
 ## 顶部/底部安全区（Safe Area）规则
 
-- 应用入口在 `EntryAbility` 中通过 `setWindowLayoutFullScreen(true)` 打开全屏布局，并使用
-  `getWindowAvoidArea(TYPE_SYSTEM / TYPE_NAVIGATION_INDICATOR)` 计算 `safeAreaTop` / `safeAreaBottom`，
-  这两个值就是系统状态栏和系统导航栏对应的**不可放置交互内容区域高度（vp）**。
-- **可交互组件和正文内容**（按钮、输入框、列表、卡片、文字等）必须全部布局在 Safe Area 内：
-  页面根布局应至少使用 `safeAreaTop` / `safeAreaBottom` 或 `SafeAreaUtils.resolveTopPadding/resolveBottomPadding`
-  进行内边距计算，确保不会被状态栏或导航栏遮挡。
-- **允许扩展的内容**：纯背景层（纯色、渐变、模糊蒙层、阴影等非交互元素）可以通过 `expandSafeArea`
-  或 `Stack` 等方式延伸到状态栏 / 导航栏区域，以获得沉浸式效果。但这些区域内**不得出现可点击组件或正文文本**。
-- 是否可以把交互内容放到屏幕最顶部/最底部，必须以系统返回的 avoid area 为准：
-  当 `safeAreaTop == 0` 或 `safeAreaBottom == 0` 时，说明对应系统栏当前不存在（例如某些全屏场景、
-  手势导航下无可见导航条），此时才允许交互内容延伸到该边缘；禁止自行硬编码“某些设备没有导航栏”。
-- 顶部通用头部组件 `SystemPageHeader`、主壳页面 `features/main/pages/Index.ets` 等必须持续复用
-  `safeAreaTop` / `safeAreaBottom`，不得绕过统一 Safe Area 处理在局部硬编码固定高度。
+- 使用系统提供的 avoid area 计算 `safeAreaTop` / `safeAreaBottom`，所有可交互组件和正文内容必须布局在 Safe Area 内。
+- 纯背景层可以扩展到状态栏 / 导航栏区域，但这些区域内不得放置可点击组件或正文文本。
+- 只有当 `safeAreaTop` 或 `safeAreaBottom` 为 0（系统栏实际不存在）时，才允许交互内容延伸到对应屏幕边缘，禁止自行假设“某些设备没有导航栏”。
+- 头部和主壳等通用组件必须复用统一的 Safe Area 处理，不得在局部硬编码固定高度。
 
-## 实现检查清单
+## 额外禁止
 
-- [ ] 架构一致性：有无类似页面/组件？遵循相同目录结构？
-- [ ] 单例复用：使用现有 `GlobalStateManager`、`AuthAccountManager` 而非新建？
-- [ ] API 客户端复用：`core/api/ApiClient.ets` 中扩展现有方法？
-- [ ] 状态管理复用：使用现有 AppStorage + PersistentStorage？
-- [ ] 类型复用：对齐 `spec/api_spec_types.md`？复用 `core/types/api.ets`？
-- [ ] 组件复用：`components/` 中有可用 ArkUI 组件？
-
-**禁止**：硬编码 API 路径、绕过统一层、新建单例、重复实现、引入不一致方式
-
-## 常见错误
-
-- [ ] 硬编码 API 路径 `"/api/v1/..."`？
-- [ ] 写操作未在 `MUST_IDEMPOTENT_ENDPOINTS` 列表检查？
-- [ ] 依赖 HTTP 状态码而非 `code === 0`？
-- [ ] 客户端计算距离/角度？
-- [ ] AppStorage 装饰器错误？
-- [ ] cursor 解析而非透传？
-- [ ] 页面未放在正确 `features/` 子目录？
-- [ ] 图标未在[官方库](https://developer.huawei.com/consumer/cn/design/harmonyos-symbol/)验证？
-- [ ] 使用 `Image($r('sys.media.*'))` 而非 `SymbolSpan`？
-- [ ] 硬编码颜色/字体/间距？
-- [ ] 绕过统一层或新建单例或重复实现？
-- [ ] 将按钮、输入框、列表项等交互组件放入系统状态栏 / 系统导航栏覆盖区域（未按 `safeAreaTop` / `safeAreaBottom` 预留内边距）？
+除根目录 `AGENTS.md` 中的全局禁止项外，鸿蒙端额外禁止：
+- 硬编码 API 路径 `"/api/v1/..."`，或绕过 `ApiEndpoints` / `HttpUtil` / `ApiClient` 自行封装 HTTP。
+- 在**需要系统图标的场景**使用未在官方图标库中验证的 `sys.symbol.*` 名称，或在业务代码中直接写 `$r('sys.symbol.xxx')` / 使用 `Image($r('sys.media.*'))` 替代 `SymbolSpan` / `SymbolGlyph`（地图 marker 等业务自定义图形不在此限）。
+- 在客户端计算距离/角度，或解析/构造游标（只能透传），或将交互组件放在系统状态栏 / 导航栏覆盖区域内。
 
 ## 安全规则
 
 文件删除、批量变更、Git 操作规范等全局规则见根目录 `AGENTS.md` 的「权限边界」和「Git 操作规范」章节，此处不重复。
 
-> **⚠️ `tmp/` 路径规则（强制）**：所有临时文件、会话文件（`session-context-*.md`、`session-progress-*.md`）、设计文档等必须存放在**项目根目录（Monorepo 根目录）的 `tmp/`** 下，即 `harmonyapp/` 的上级目录中的 `tmp/`。**绝对禁止在 `harmonyapp/` 目录下创建 `tmp/` 目录**（如 `harmonyapp/tmp/`）。详见根目录 `AGENTS.md` 的「Agent 行为准则」章节。
+> **⚠️ `tmp/` 路径规则**：所有临时文件必须存放在项目根目录的 `tmp/` 下。详见根目录 `AGENTS.md` 的「Agent 行为准则」章节。
 
 **HarmonyOS 额外约束**：
 
@@ -161,7 +123,7 @@ CODELINTER="/Applications/DevEco-Studio.app/Contents/plugins/codelinter/run/inde
   --registry https://ohpm.openharmony.cn/ohpm/ --strict_ssl true
 
 # 编译【🚫 禁止 Agent 执行，必须由用户手动运行；Agent 已在任务结束时自动 git add】
-DEVECO_SDK_HOME="$DEVECO_SDK_HOME" "$DEVECO_SDK_NODE" "$HVIGORW" \
+"$DEVECO_SDK_NODE" "$HVIGORW" \
   --mode module -p product=default assembleHap \
   --info --analyze=ultrafine --parallel --incremental \
   --daemon

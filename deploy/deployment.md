@@ -9,10 +9,10 @@
 | 层级 | 进程形态 | 默认端口 | 数据隔离 |
 |---|---|---|---|
 | 开发层 | 本机 `cargo run` / `pnpm dev` | backend `5496`、frontend `5173` | 可连本地开发库 |
-| 测试层 | 本机测试进程 + Docker 基础设施 | PostgreSQL `5432`、Redis `6380` | 强制使用 `hotspot_test` + `redis-test` |
-| 运行预演层 | Docker `runtime` profile | backend `8080`、frontend `3000` | 与测试层 Redis 分离 |
+| 测试层 | 本机测试进程 + Docker 基础设施 | PostgreSQL `5432`、Redis `6379` | 推荐使用独立测试数据库或 Redis DB 索引隔离 |
+| 运行预演层 | Docker compose (dev/app.yml) | backend `8080`、frontend `3000`、Nginx `8888` | 模拟接近生产的统一入口 |
 
-`deploy/docker-compose.yml` 已将 `backend` 和 `frontend` 放入 `runtime` profile，因此默认 `docker compose up -d` 只启动基础设施层；只有显式带上 `--profile runtime` 才会启动容器化应用层。
+开发/测试/运行预演的具体 docker-compose 用法，详见 `deploy/README.md` 中对 `deploy/dev/` 目录的说明。
 
 ### 1.1 整体架构
 
@@ -1000,65 +1000,24 @@ redis-sentinel /etc/redis/sentinel.conf
 
 ### 9.3 容器化部署
 
-在执行 Docker 离线构建前，先在仓库根目录运行以下命令，确保 SQLx 元数据与数据库 schema 已同步：
+推荐使用仓库自带的 `deploy/docker-compose.yml` 作为唯一容器化部署入口。
+
+**开发/测试环境**：
 
 ```bash
-./deploy/prepare_docker.sh
-```
+# 启动基础设施
+docker compose -f deploy/docker-compose.yml up -d postgres redis redis-test minio createbuckets
 
-其中测试命令必须使用独立的测试数据库和测试 Redis，不要复用运行时实例。
+# 启动运行预演层（前端 + 后端 + Nginx）
+docker compose -f deploy/dev/docker-compose.infra.yml -f deploy/dev/docker-compose.app.yml up -d nginx backend frontend
 
-若是在同一台机器上做运行预演，请使用：
-
-```bash
-docker compose -f deploy/docker-compose.yml --profile runtime up -d backend frontend
-```
-
-若宿主机已有同类服务占用端口，可在启动前覆盖 host 端口：
-
-```bash
+# 覆盖宿主机端口（如有冲突）
 HOTSPOT_BACKEND_HOST_PORT=18080 \
 HOTSPOT_FRONTEND_HOST_PORT=13000 \
 HOTSPOT_MINIO_API_HOST_PORT=19000 \
 HOTSPOT_MINIO_CONSOLE_HOST_PORT=19001 \
-docker compose -f deploy/docker-compose.yml --profile runtime up -d backend frontend minio
-```
-
-**Docker Compose 示例**：
-
-```yaml
-version: '3.8'
-
-services:
-  backend:
-    build: ./backend
-    ports:
-      - "8080:8080"
-    environment:
-      - DATABASE_URL=postgresql://hotspot:hotspot@postgres:5432/hotspot
-      - REDIS_URL=redis://:password@redis:6379
-    depends_on:
-      - postgres
-      - redis
-
-  postgres:
-    image: postgis/postgis:15-3.3
-    environment:
-      - POSTGRES_USER=hotspot
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=hotspot
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7-alpine
-    command: redis-server --requirepass password
-    volumes:
-      - redis_data:/data
-
-volumes:
-  postgres_data:
-  redis_data:
+HOTSPOT_NGINX_HTTP_PORT=18888 \
+  docker compose -f deploy/dev/docker-compose.infra.yml -f deploy/dev/docker-compose.app.yml up -d nginx backend frontend minio
 ```
 
 ## 10. 附录
@@ -1102,9 +1061,6 @@ volumes:
 - [PostgreSQL 官方文档](https://www.postgresql.org/docs/)
 - [Redis 官方文档](https://redis.io/documentation)
 - [Nginx 官方文档](https://nginx.org/en/docs/)
-
-
-
 
 
 

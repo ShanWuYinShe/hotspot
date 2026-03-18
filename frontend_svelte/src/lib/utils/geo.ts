@@ -9,8 +9,15 @@
  */
 
 export interface GeoPointLike {
-  latitude: number;
-  longitude: number;
+	latitude: number;
+	longitude: number;
+}
+
+export interface BoundsLike {
+	north: number;
+	south: number;
+	east: number;
+	west: number;
 }
 
 const PI = Math.PI;
@@ -80,4 +87,16 @@ export function gcj02ToWgs84(point: GeoPointLike): GeoPointLike {
 export function toGcjLngLat(point: GeoPointLike): [number, number] {
   const gcj = wgs84ToGcj02(point);
   return [gcj.longitude, gcj.latitude];
+}
+
+/**
+ * 使用与后端相同的近似公式计算视口物理跨度（米）。
+ * 返回值为南北/东西方向跨度中的较大者。
+ */
+export function calculateViewportSpanMeters(bounds: BoundsLike): number {
+	const centerLat = (bounds.north + bounds.south) / 2;
+	const latSpan = (bounds.north - bounds.south) * 111_320;
+	const lngSpan =
+		(bounds.east - bounds.west) * 111_320 * Math.cos((centerLat * Math.PI) / 180);
+	return Math.max(latSpan, lngSpan);
 }

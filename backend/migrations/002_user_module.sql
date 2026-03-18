@@ -219,3 +219,5 @@ CREATE TABLE IF NOT EXISTS user_location_history (
 );
 CREATE INDEX idx_user_loc_hist_user ON user_location_history(user_id, created_at DESC);
 CREATE INDEX idx_user_loc_hist_geo  ON user_location_history USING GIST(location);
+
+CREATE INDEX idx_users_region_id ON users(region_id);

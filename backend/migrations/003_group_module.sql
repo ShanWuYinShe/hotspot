@@ -217,3 +217,5 @@ CREATE TABLE IF NOT EXISTS group_member_history (
     created_at  TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
 CREATE INDEX idx_group_member_history ON group_member_history(group_id, created_at DESC);
+
+CREATE INDEX idx_groups_region_id ON groups(region_id) WHERE dismissed_at IS NULL;

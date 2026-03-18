@@ -688,13 +688,10 @@ export interface MapHeatBucket {
 	total_count: number;
 	/** 按类型拆分；当 data_type != 'all' 时可选 */
 	breakdown?: MapHeatBreakdown;
-	/** 可选的调试/展示标签（例如行政区名称） */
-	name?: string;
 }
 
 export interface MapHeatCanvas {
 	items: MapHeatBucket[];
-	toast_message?: string;
 }
 
 // 与 spec/api_spec_map.md 中的 MapHotspotItem / MapHotspotsCanvas 对齐
@@ -714,7 +711,22 @@ export interface MapHotspotItem {
 export interface MapHotspotsCanvas {
 	items: MapHotspotItem[];
 	next_cursor?: string;
-	toast_message?: string;
+}
+
+export interface MapCanvasFilter {
+	data_type?: MapDataType;
+	time_range?: TimeRangeParams;
+}
+
+export interface MapCanvasRequest {
+	viewport: MapViewport;
+	filter?: MapCanvasFilter;
+	pagination?: PaginationParams;
+}
+
+export interface MapCanvasResponse {
+	heatmap?: MapHeatCanvas;
+	hotspots?: MapHotspotsCanvas;
 }
 
 // ============================================================================

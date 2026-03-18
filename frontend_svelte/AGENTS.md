@@ -2,15 +2,9 @@
 
 > SvelteKit / Svelte 5 / TypeScript Web 前端的 AI Agent 操作指南。
 
-## 技术栈
+## 使用范围
 
-- **框架**：SvelteKit + Svelte 5（使用 runes：`$state`、`$derived`、`$effect`）
-- **构建**：Vite
-- **样式**：Tailwind CSS
-- **UI 组件库**：bits-ui + lucide-svelte
-- **通知**：svelte-sonner
-
-> 具体版本以 `package.json` 为准。
+本文件只补充 Web 前端特有的硬约束（API 调用、类型、安全等），其他页面结构和组件划分请 Agent 通过代码与 `spec/` 自行探索。
 
 ## API 调用规则（严格执行）
 
@@ -65,37 +59,21 @@ const result = await post<AuthData>('/api/v1/auth/login', data);
 
 - 请求参数使用 `Location`（point + location_name）。
 - 响应使用 `RelativeLocation`（含 distance、bearing_degrees）。
-- **禁止在前端计算距离或角度**，由后端 PostGIS 完成。
+- **禁止在前端计算距离或角度**，一律由后端完成（具体实现以 `spec/` 和后端代码为准）。
 - 地图上的 marker 与中心点（包括位置选择器的 center pin）必须遵守根目录 `AGENTS.md` 中「位置与距离 / 地图 SDK 与中心点」小节的全局约束，不在本文件重复描述实现细节。
 
-## 实现检查清单
+## 额外禁止
 
-- [ ] 架构一致性：有无类似页面/组件？遵循相同结构？
-- [ ] API 客户端复用：`src/lib/api/services/` 中有现有方法？
-- [ ] 状态管理复用：使用现有 Svelte stores 而非新方式？
-- [ ] 组件复用：`src/lib/components/` 中有可用组件？
-- [ ] 类型复用：对齐 `spec/api_spec_types.md`？复用 `src/lib/types/api.ts`？
-- [ ] 错误处理复用：复用现有错误处理模式？
-
-**禁止**：硬编码 API 路径、绕过统一层、重复实现、引入不一致状态管理
-
-## 常见错误
-
-- [ ] 硬编码 API 路径 `"/api/v1/..."`？
-- [ ] 依赖 HTTP 状态码而非 `code === 0`？
-- [ ] 使用 `any` 类型？
-- [ ] localStorage 存 Refresh Token？
-- [ ] 解析 JWT？
-- [ ] 前端计算距离/角度？
-- [ ] 遗漏幂等键？
-- [ ] cursor 解析而非透传？
-- [ ] 绕过统一层或重复实现？
+除根目录 `AGENTS.md` 中的全局禁止项外，前端额外禁止：
+- 直接在代码中写 `"/api/v1/..."`，或绕过 `endpoints.ts` / `post<T>()` 自行封装 HTTP。
+- 使用 `any` 类型、在本地存储 Refresh Token、解析 JWT 判断登录态。
+- 在前端计算距离/角度，或对游标做任何解析/构造（只能透传）。
 
 ## 安全规则
 
 文件删除、批量变更、Git 操作规范等全局规则见根目录 `AGENTS.md` 的「权限边界」和「Git 操作规范」章节，此处不重复。
 
-> **⚠️ `tmp/` 路径规则（强制）**：所有临时文件、会话文件（`session-context-*.md`、`session-progress-*.md`）、设计文档等必须存放在**项目根目录（Monorepo 根目录）的 `tmp/`** 下，即 `frontend_svelte/` 的上级目录中的 `tmp/`。**绝对禁止在 `frontend_svelte/` 目录下创建 `tmp/` 目录**（如 `frontend_svelte/tmp/`）。详见根目录 `AGENTS.md` 的「Agent 行为准则」章节。
+> **⚠️ `tmp/` 路径规则**：所有临时文件必须存放在项目根目录的 `tmp/` 下。详见根目录 `AGENTS.md` 的「Agent 行为准则」章节。
 
 ## 验证命令
 

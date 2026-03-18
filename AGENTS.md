@@ -2,17 +2,10 @@
 
 > 本指南为 AI 编码工具在 HotSpot 项目中的全局操作规范。旨在确保所有代码变更安全、可回退、严格遵循 Spec-First 原则。**请在执行任何任务前仔细阅读并遵守。**
 
-## 项目全景
+## 使用范围
 
-HotSpot 是一个基于地理位置的社交应用，采用 Monorepo 结构管理多个子项目。
-
-| 目录 | 技术栈 | 说明 |
-|------|--------|------|
-| `spec/` | Markdown (.md) | **唯一真实来源**：包含所有 API 契约、编码规范、错误码定义 |
-| `backend/` | Rust / Axum / SQLx / PostGIS | 后端服务 |
-| `frontend_svelte/` | SvelteKit / Svelte 5 / TypeScript | Web 前端 |
-| `harmonyapp/` | HarmonyOS ArkTS (.ets) | 鸿蒙客户端 |
-| `deploy/` | Shell / Docker / Nginx | 部署运维（Docker 编排、数据库脚本、Nginx 配置、部署文档） |
+本文件只定义 AI Agent 在整个仓库中必须遵守的全局强约束（Spec 优先级、安全边界、跨项目通用规则等）。
+项目的目录结构、模块划分、具体功能和实现细节，Agent 应通过阅读 `spec/`、源码与配置自行探索，而不是依赖本文件。
 
 ## 核心原则：Spec-First 开发
 
@@ -27,31 +20,11 @@ spec/ > 实现代码 > 注释 > 口头/文字描述
 - **冲突处理**：实现与 spec 不符时，**必须修改实现以匹配 spec**，禁止反向修改 spec（除非用户明确要求）。
 - **不确定性处理**：对字段、路径、行为有任何疑问，**必须首先查阅对应的 spec 文件**，严禁猜测或引入未定义内容。
 
-### 规范文件索引
+### Spec 查阅指引（精简）
 
-以下为关键规范文件，**不要在本文档中重复其内容**，按需引用：
-
-| 文件名 | 核心内容 | 使用场景 |
-|--------|----------|----------|
-| `spec/api_spec_index.md` | API 模块索引 | 查找某个功能属于哪个模块 |
-| `spec/api_spec_base.md` | 全局规则（分页/幂等/错误信封/Token） | 实现任何 API 前必须阅读 |
-| `spec/api_spec_types.md` | 共享类型定义 | 定义 DTO、枚举等跨模块类型时引用 |
-| `spec/api_spec_errors.md` | 错误码定义 | **唯一错误码来源**，禁止自行定义 |
-| `spec/api_spec_websocket.md` | WebSocket 事件契约 | 实现或消费 WebSocket 时引用 |
-| `spec/backend_rule.md` | 后端编码规范 | Rust 代码风格、数据库操作约束 |
-| `spec/frontend_rule.md` | 前端编码规范 | Svelte/TypeScript 编码约束 |
-| `spec/harmonyapp_rule.md` | 鸿蒙客户端编码规范 | ArkTS 编码约束、组件规范 |
-| `spec/backend_doc.md` | 后端功能边界 | 哪些逻辑必须在后端实现（如距离计算） |
-| `spec/frontend_doc.md` | 前端功能边界 | 前端不应实现的逻辑 |
-| `spec/harmonyapp_doc.md` | 鸿蒙客户端功能边界 | 鸿蒙端功能范围与非目标 |
-| `spec/api_spec_*.md` | 各业务模块 API | 各模块具体端点定义 |
-
-### 查找 API 的标准流程
-
-1.  **定位模块**：从 `spec/api_spec_index.md` 确定功能所属模块。
-2.  **查阅端点**：打开对应模块 spec（如 `api_spec_auth.md`），查看请求/响应格式、认证要求、幂等性要求。
-3.  **复用类型**：如需使用共享类型，查阅 `spec/api_spec_types.md`。
-4.  **确认错误码**：若涉及错误处理，查阅 `spec/api_spec_errors.md` 获取标准错误码。
+- 所有 API 契约、共享类型、错误码、编码规范都在 `spec/` 目录中维护。
+- 需要某个接口时：先看 `spec/api_spec_index.md` 确定属于哪个模块，再查看对应的 `api_spec_*.md` 文件。
+- 不确定类型、错误码、分页/幂等等通用规则时，请直接阅读相关 spec 文件；本 `AGENTS.md` 不再列出完整文件清单，也不保证示例列表始终最新。
 
 ### 新增 API 端点的标准工作流
 
@@ -110,67 +83,12 @@ spec/ > 实现代码 > 注释 > 口头/文字描述
 - **Rust**：善用 enum + match，优先组合，`impl` 直接写方法。复用 `ApiError` 或已有错误类型。
 - **TypeScript/Svelte**：简单函数 + 响应式变量，组件小而专注。使用 Svelte stores，复用 API 客户端。
 - **ArkTS**：直接写组件逻辑，不模仿 ViewModel+Repository+UseCase。复用 `GlobalStateManager` 等单例。
-- **SQL**：单查询解决，善用 PostgreSQL/PostGIS。复用迁移脚本和索引策略。
+- **SQL**：单查询解决，善用 PostgreSQL。Rust 后端可结合 PostGIS（存量实现），Go 后端不引入 PostGIS，所有地理计算由 S2 完成。复用迁移脚本和索引策略。
 
-## 构建与验证命令
+## 构建与验证命令位置
 
-以下为各子项目的关键命令，用于日常开发和任务完成验证。
-
-### Backend (Rust)
-
-```bash
-cd backend
-cargo check          # 类型检查（最常用，优先使用）
-cargo fmt            # 代码格式化
-cargo clippy         # Lint 检查
-cargo test           # 运行所有测试
-cargo test <name>    # 运行单个测试
-cargo build --release # 生产构建
-```
-
-### Frontend (SvelteKit)
-
-```bash
-cd frontend_svelte
-pnpm install         # 安装依赖（需询问）
-pnpm check           # TypeScript 类型检查（最常用，优先使用）
-pnpm build           # 生产构建
-pnpm dev             # 启动开发服务器
-```
-
-### HarmonyOS (ArkTS)
-
-> **注意**：HarmonyOS 的编译和代码检查是两个独立工具，**必须分别运行**。
-
-> **编译命令限制**：`hvigorw` 编译命令**禁止 Agent 执行**，必须由用户手动运行。`codelinter` 可直接执行。
-
-```bash
-# 环境变量（macOS 默认安装路径，无需修改）
-DEVECO_STUDIO_DIR="/Applications/DevEco-Studio.app"
-DEVECO_SDK_HOME="$DEVECO_STUDIO_DIR/Contents/sdk"
-DEVECO_SDK_NODE="/Applications/DevEco-Studio.app/Contents/tools/node/bin/node"
-OHPM="$DEVECO_STUDIO_DIR/Contents/tools/ohpm/bin/ohpm"
-HVIGORW="$DEVECO_STUDIO_DIR/Contents/tools/hvigor/bin/hvigorw.js"
-CODELINTER="$DEVECO_STUDIO_DIR/Contents/plugins/codelinter/run/index.js"
-
-# 非 macOS 环境，请用户自行提供 DEVECO_STUDIO_DIR 路径
-
-cd harmonyapp
-
-# 0. 安装依赖（编译前必须先执行）
-"$OHPM" install --all \
-  --registry https://ohpm.openharmony.cn/ohpm/ --strict_ssl true
-
-# 1. 编译检查【🚫 禁止 Agent 执行，必须由用户手动运行；Agent 已在任务结束时自动 git add】
-DEVECO_SDK_HOME="$DEVECO_SDK_HOME" "$DEVECO_SDK_NODE" "$HVIGORW" \
-  --mode module -p product=default assembleHap \
-  --info --analyze=ultrafine --parallel --incremental \
-  --daemon
-
-# 2. 代码风格检查（模拟 IDE 中的 Linter 警告，应尽量修复）【✅ Agent 可直接执行】
-DEVECO_SDK_HOME="$DEVECO_SDK_HOME" "$DEVECO_SDK_NODE" "$CODELINTER" \
-  -c code-linter.json5 entry/src/main/ets/
-```
+各子项目的具体编译、检查、构建命令不在根 `AGENTS.md` 展开，统一放在对应子目录的 `AGENTS.md` 中（例如 `backend/AGENTS.md`、`backend-go/AGENTS.md`、`frontend_svelte/AGENTS.md`、`harmonyapp/AGENTS.md` 等）。
+当本次改动涉及某个子项目时，请在该目录下的 `AGENTS.md` 中查找并优先执行类型/编译检查命令。
 
 ## 跨项目关键规则（必须遵守）
 
@@ -198,7 +116,7 @@ DEVECO_SDK_HOME="$DEVECO_SDK_HOME" "$DEVECO_SDK_NODE" "$CODELINTER" \
 
 ### 位置与距离
 
-- **距离和方位计算**：必须由后端基于 PostGIS 完成，**前端/客户端严禁自行计算距离或角度**。
+- **距离和方位计算**：必须由后端在服务端完成（Rust 后端可使用 PostGIS；Go 后端使用 S2 结合经纬度计算），**前端/客户端严禁自行计算距离或角度**。
 - 请求位置使用 `Location` 类型（包含 `point: GeoPoint` 和 `location_name` 字段）。
 - 响应位置使用 `RelativeLocation` 类型（包含 `point: GeoPoint`、`location_name`、`distance`、`bearing_degrees` 等字段，由后端填充）。
 
@@ -226,7 +144,7 @@ DEVECO_SDK_HOME="$DEVECO_SDK_HOME" "$DEVECO_SDK_NODE" "$CODELINTER" \
 
 ### 步骤一：编译/类型检查
 
-对**所有涉及改动的项目**运行对应的检查命令（见「构建与验证命令」章节），确保**零错误**。
+对**所有涉及改动的项目**运行对应子项目 `AGENTS.md` 中推荐的检查命令，确保**零错误**。
 
 **原则**：
 - 警告应尽量消除，但**禁止使用 `#[allow(...)]` 等属性压制警告**（除非有充分理由并注释）。
@@ -263,6 +181,7 @@ rg '"/api/v1/' frontend_svelte/src/ harmonyapp/entry/src/main/ets/
 - 对受影响的其他项目重复步骤一，确保没有破坏已有功能。
 - **类型对齐检查**：修改任何 DTO/类型定义后，逐一比对以下三端的类型定义是否与 `spec/api_spec_types.md` 和对应模块 spec 一致：
   - `backend/src/dto/` -- Rust struct
+  - `backend-go/internal/types/api_types.go` -- Go struct
   - `frontend_svelte/src/lib/types/api.ts` -- TypeScript interface
   - `harmonyapp/entry/src/main/ets/core/types/api.ets` -- ArkTS interface
 
