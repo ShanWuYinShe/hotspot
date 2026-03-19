@@ -51,10 +51,10 @@ func writeAuthTokens(w http.ResponseWriter, r *http.Request, clientType types.Cl
 	}
 	// App：token 在 body 中返回
 	resp := types.AuthTokenPairApp{
-		UserID:               tokens.UserID,
-		AccessToken:          tokens.AccessToken,
-		RefreshToken:         tokens.RefreshToken,
-		AccessTokenExpiresAt: tokens.AccessTokenExpiresAt.UTC().Format(time.RFC3339Nano),
+		UserID:                tokens.UserID,
+		AccessToken:           tokens.AccessToken,
+		RefreshToken:          tokens.RefreshToken,
+		AccessTokenExpiresAt:  tokens.AccessTokenExpiresAt.UTC().Format(time.RFC3339Nano),
 		RefreshTokenExpiresAt: tokens.RefreshTokenExpiresAt.UTC().Format(time.RFC3339Nano),
 	}
 	api.WriteSuccess(w, r, resp)
@@ -99,7 +99,6 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
-	// TODO: 解析当前用户与会话信息，标记黑名单并撤销 session
 	if err := h.service.Logout(r.Context()); err != nil {
 		if ae, ok := err.(*apierr.APIError); ok {
 			api.WriteError(w, r, ae.Code, ae.Message)
@@ -108,6 +107,31 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		api.WriteError(w, r, apierr.ErrInternal("").Code, apierr.ErrInternal("").Message)
 		return
 	}
+
+	// Web 端：若存在 Cookie，则通过 MaxAge=0 清除 access_token / refresh_token
+	if _, err := r.Cookie("access_token"); err == nil {
+		http.SetCookie(w, &http.Cookie{
+			Name:     "access_token",
+			Value:    "",
+			Path:     "/",
+			MaxAge:   0,
+			HttpOnly: true,
+			Secure:   true,
+			SameSite: http.SameSiteStrictMode,
+		})
+	}
+	if _, err := r.Cookie("refresh_token"); err == nil {
+		http.SetCookie(w, &http.Cookie{
+			Name:     "refresh_token",
+			Value:    "",
+			Path:     "/api/v1/auth/refresh_token",
+			MaxAge:   0,
+			HttpOnly: true,
+			Secure:   true,
+			SameSite: http.SameSiteStrictMode,
+		})
+	}
+
 	api.WriteSuccess(w, r, struct{}{})
 }
 
@@ -255,7 +279,7 @@ func (h *AuthHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 		api.WriteError(w, r, apierr.ErrInternal("").Code, apierr.ErrInternal("").Message)
 		return
 	}
-	api.WriteSuccess(w, r, struct{
+	api.WriteSuccess(w, r, struct {
 		Items []types.SessionItem `json:"items"`
 	}{Items: items})
 }

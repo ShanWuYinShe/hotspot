@@ -1,12 +1,18 @@
 package types
 
 // 与 spec/api_spec_types.md 和各模块 spec 对应的 Go 端类型定义。
-// 目前包含地图与认证模块所需的部分类型，后续可按需扩展。
+// 目前包含地图、认证以及用户 profile/settings 模块所需的部分类型，后续可按需扩展。
 
 // GeoPoint 对应规范中的 GeoPoint，使用 WGS-84 坐标。
 type GeoPoint struct {
 	Lat float64 `json:"lat"`
 	Lng float64 `json:"lng"`
+}
+
+// Location 对应规范中的 Location（用于请求），仅包含坐标与位置名称。
+type Location struct {
+	Point        GeoPoint `json:"point"`
+	LocationName string   `json:"location_name"`
 }
 
 // ---- Map 模块相关类型 ----
@@ -128,10 +134,10 @@ type AuthTokenPairWeb struct{}
 
 // App 端 Token 对。
 type AuthTokenPairApp struct {
-	UserID               string `json:"user_id"`
-	AccessToken          string `json:"access_token"`
-	RefreshToken         string `json:"refresh_token"`
-	AccessTokenExpiresAt string `json:"access_token_expires_at"`
+	UserID                string `json:"user_id"`
+	AccessToken           string `json:"access_token"`
+	RefreshToken          string `json:"refresh_token"`
+	AccessTokenExpiresAt  string `json:"access_token_expires_at"`
 	RefreshTokenExpiresAt string `json:"refresh_token_expires_at"`
 }
 
@@ -211,4 +217,106 @@ type RevokeSessionRequest struct {
 // RevokeAllResult 对应 /auth/me/sessions/revoke_all 响应 data。
 type RevokeAllResult struct {
 	RevokedCount int `json:"revoked_count"`
+}
+
+// ---- User 模块相关类型 ----
+
+// Gender 对应规范中的 Gender。
+type Gender string
+
+const (
+	GenderMale             Gender = "male"
+	GenderFemale           Gender = "female"
+	GenderApacheHelicopter Gender = "apache_helicopter"
+)
+
+// UserSettings 对应规范中的 UserSettings。
+type UserSettings struct {
+	PrivacyLevel        string `json:"privacy_level"`
+	LocationVisible     bool   `json:"location_visible"`
+	PresenceVisible     bool   `json:"presence_visible"`
+	SocialListsVisible  bool   `json:"social_lists_visible"`
+	GroupsVisible       bool   `json:"groups_visible"`
+	LikedMomentsVisible bool   `json:"liked_moments_visible"`
+	StatsVisible        bool   `json:"stats_visible"`
+	AllowFollow         bool   `json:"allow_follow"`
+	AllowPrivateChat    string `json:"allow_private_chat"`
+	Searchable          bool   `json:"searchable"`
+	PhoneSearchable     bool   `json:"phone_searchable"`
+	NicknameSearchable  bool   `json:"nickname_searchable"`
+	LocationSearchable  bool   `json:"location_searchable"`
+}
+
+// MyProfile 对应 /users/me/profile/get 响应中的 data。
+type MyProfile struct {
+	UserID         string    `json:"user_id"`
+	Nickname       string    `json:"nickname"`
+	AvatarURL      *string   `json:"avatar_url,omitempty"`
+	UserType       string    `json:"user_type"`
+	Bio            *string   `json:"bio,omitempty"`
+	Tags           []string  `json:"tags,omitempty"`
+	Gender         *Gender   `json:"gender,omitempty"`
+	Email          *string   `json:"email,omitempty"`
+	Phone          *string   `json:"phone,omitempty"`
+	Location       Location  `json:"location"`
+	PresenceStatus string    `json:"presence_status"`
+	LastOnline     string    `json:"last_online"`
+	CreatedAt      string    `json:"created_at"`
+	Stats          UserStats `json:"stats"`
+}
+
+// UserStats 对应规范中的 UserStats。
+type UserStats struct {
+	MomentsCount   int64 `json:"moments_count"`
+	FriendsCount   int64 `json:"friends_count"`
+	FollowersCount int64 `json:"followers_count"`
+	FollowingCount int64 `json:"following_count"`
+	GroupsCount    int64 `json:"groups_count"`
+}
+
+// UpdateProfileRequest 对应 /users/me/profile/update。
+type UpdateProfileRequest struct {
+	Nickname     *string  `json:"nickname,omitempty"`
+	AvatarFileID *string  `json:"avatar_file_id,omitempty"`
+	Bio          *string  `json:"bio,omitempty"`
+	Tags         []string `json:"tags,omitempty"`
+	Gender       *Gender  `json:"gender,omitempty"`
+}
+
+// UpdateLocationRequest 对应 /users/me/location/update。
+type UpdateLocationRequest struct {
+	Location Location `json:"location"`
+}
+
+// UpgradeAccountRequest 对应 /users/me/upgrade。
+type UpgradeAccountRequest struct {
+	LoginID  string `json:"login_id"`
+	Password string `json:"password"`
+}
+
+// UpdateSettingsRequest 对应 /users/me/settings/update` 中的请求体。
+// 为了表达 Partial<UserSettings> 语义，这里所有字段均为指针。
+type UpdateSettingsRequest struct {
+	Settings UserSettingsPatch `json:"settings"`
+}
+
+type UserSettingsPatch struct {
+	PrivacyLevel        *string `json:"privacy_level,omitempty"`
+	LocationVisible     *bool   `json:"location_visible,omitempty"`
+	PresenceVisible     *bool   `json:"presence_visible,omitempty"`
+	SocialListsVisible  *bool   `json:"social_lists_visible,omitempty"`
+	GroupsVisible       *bool   `json:"groups_visible,omitempty"`
+	LikedMomentsVisible *bool   `json:"liked_moments_visible,omitempty"`
+	StatsVisible        *bool   `json:"stats_visible,omitempty"`
+	AllowFollow         *bool   `json:"allow_follow,omitempty"`
+	AllowPrivateChat    *string `json:"allow_private_chat,omitempty"`
+	Searchable          *bool   `json:"searchable,omitempty"`
+	PhoneSearchable     *bool   `json:"phone_searchable,omitempty"`
+	NicknameSearchable  *bool   `json:"nickname_searchable,omitempty"`
+	LocationSearchable  *bool   `json:"location_searchable,omitempty"`
+}
+
+// DeleteAccountRequest 对应 /users/me/delete。
+type DeleteAccountRequest struct {
+	Confirmation string `json:"confirmation"`
 }

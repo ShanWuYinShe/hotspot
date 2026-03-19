@@ -15,10 +15,10 @@ import (
 
 // AuthTokens 为内部使用的 Token 返回值，由 Handler 根据 client_type 转换为对外类型。
 type AuthTokens struct {
-	UserID               string
-	AccessToken          string
-	RefreshToken         string
-	AccessTokenExpiresAt time.Time
+	UserID                string
+	AccessToken           string
+	RefreshToken          string
+	AccessTokenExpiresAt  time.Time
 	RefreshTokenExpiresAt time.Time
 }
 
@@ -39,16 +39,18 @@ type AuthService interface {
 }
 
 type authService struct {
-	users    repository.UserRepository
-	sessions repository.SessionRepository
-	tokens   auth.TokenManager
+	users      repository.UserRepository
+	sessions   repository.SessionRepository
+	tokens     auth.TokenManager
+	blacklists repository.TokenBlacklistRepository
 }
 
-func NewAuthService(users repository.UserRepository, sessions repository.SessionRepository, tokens auth.TokenManager) AuthService {
+func NewAuthService(users repository.UserRepository, sessions repository.SessionRepository, tokens auth.TokenManager, blacklists repository.TokenBlacklistRepository) AuthService {
 	return &authService{
-		users:    users,
-		sessions: sessions,
-		tokens:   tokens,
+		users:      users,
+		sessions:   sessions,
+		tokens:     tokens,
+		blacklists: blacklists,
 	}
 }
 
@@ -75,11 +77,11 @@ func (s *authService) Register(ctx context.Context, req types.RegisterRequest) (
 
 	now := time.Now().UTC()
 	user := &domain.User{
-		UserID:   uuid.NewString(),
-		LoginID:  &req.LoginID,
-		Nickname: req.Nickname,
-		Password: &passwordHash,
-		UserType: "normal",
+		UserID:    uuid.NewString(),
+		LoginID:   &req.LoginID,
+		Nickname:  req.Nickname,
+		Password:  &passwordHash,
+		UserType:  "normal",
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
@@ -104,10 +106,10 @@ func (s *authService) Register(ctx context.Context, req types.RegisterRequest) (
 	}
 
 	return &AuthTokens{
-		UserID:               user.UserID,
-		AccessToken:          access,
-		RefreshToken:         refresh,
-		AccessTokenExpiresAt: accessExp,
+		UserID:                user.UserID,
+		AccessToken:           access,
+		RefreshToken:          refresh,
+		AccessTokenExpiresAt:  accessExp,
 		RefreshTokenExpiresAt: refreshExp,
 	}, nil
 }
@@ -148,10 +150,10 @@ func (s *authService) Login(ctx context.Context, req types.LoginRequest) (*AuthT
 	}
 
 	return &AuthTokens{
-		UserID:               user.UserID,
-		AccessToken:          access,
-		RefreshToken:         refresh,
-		AccessTokenExpiresAt: accessExp,
+		UserID:                user.UserID,
+		AccessToken:           access,
+		RefreshToken:          refresh,
+		AccessTokenExpiresAt:  accessExp,
 		RefreshTokenExpiresAt: refreshExp,
 	}, nil
 }
@@ -162,11 +164,11 @@ func (s *authService) Guest(ctx context.Context, req types.GuestRequest) (*AuthT
 	}
 	now := time.Now().UTC()
 	user := &domain.User{
-		UserID:   uuid.NewString(),
-		LoginID:  nil,
-		Nickname: req.Nickname,
-		Password: nil,
-		UserType: "temp",
+		UserID:    uuid.NewString(),
+		LoginID:   nil,
+		Nickname:  req.Nickname,
+		Password:  nil,
+		UserType:  "temp",
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
@@ -191,10 +193,10 @@ func (s *authService) Guest(ctx context.Context, req types.GuestRequest) (*AuthT
 	}
 
 	return &AuthTokens{
-		UserID:               user.UserID,
-		AccessToken:          access,
-		RefreshToken:         refresh,
-		AccessTokenExpiresAt: accessExp,
+		UserID:                user.UserID,
+		AccessToken:           access,
+		RefreshToken:          refresh,
+		AccessTokenExpiresAt:  accessExp,
 		RefreshTokenExpiresAt: refreshExp,
 	}, nil
 }
@@ -221,10 +223,10 @@ func (s *authService) RefreshToken(ctx context.Context, req types.RefreshTokenRe
 	}
 
 	return &AuthTokens{
-		UserID:               userID,
-		AccessToken:          access,
-		RefreshToken:         refresh,
-		AccessTokenExpiresAt: accessExp,
+		UserID:                userID,
+		AccessToken:           access,
+		RefreshToken:          refresh,
+		AccessTokenExpiresAt:  accessExp,
 		RefreshTokenExpiresAt: refreshExp,
 	}, nil
 }
@@ -241,10 +243,22 @@ func (s *authService) CheckStatus(ctx context.Context, tokenStr string) (*types.
 	return &types.AuthStatus{IsValid: true, ExpiresAt: &expStr}, nil
 }
 
-// TODO: 下面这些仍按 not_implemented 占位，后续按 spec 补全。
-
 func (s *authService) Logout(ctx context.Context) error {
-	return apierr.ErrInternal("logout_not_implemented")
+	info, ok := auth.FromContext(ctx)
+	if !ok {
+		// 缺少认证上下文，视为未登录 / 认证失败
+		return apierr.New(10100, "auth_failed")
+	}
+
+	// 当前 access_token / refresh_token 写入黑名单（最佳努力，忽略 Redis 错误）
+	_ = s.blacklists.BlacklistToken(ctx, info.AccessToken, info.AccessExpiresAt)
+	_ = s.blacklists.BlacklistToken(ctx, info.RefreshToken, info.RefreshExpiresAt)
+
+	// 撤销当前会话
+	if err := s.sessions.RevokeSession(ctx, info.UserID, info.SessionID); err != nil {
+		return apierr.ErrInternal("revoke_session_failed")
+	}
+	return nil
 }
 
 func (s *authService) RequestPasswordReset(ctx context.Context, req types.RequestPasswordResetRequest) error {
@@ -260,13 +274,73 @@ func (s *authService) ChangePassword(ctx context.Context, userID string, req typ
 }
 
 func (s *authService) ListSessions(ctx context.Context, userID string) ([]types.SessionItem, error) {
-	return nil, apierr.ErrInternal("list_sessions_not_implemented")
+	info, _ := auth.FromContext(ctx)
+	uid := userID
+	if uid == "" && info != nil {
+		uid = info.UserID
+	}
+	if uid == "" {
+		return nil, apierr.New(10100, "auth_failed")
+	}
+
+	sessions, err := s.sessions.ListSessionsByUser(ctx, uid)
+	if err != nil {
+		return nil, apierr.ErrInternal("db_error")
+	}
+
+	currentSessionID := ""
+	if info != nil {
+		currentSessionID = info.SessionID
+	}
+
+	items := make([]types.SessionItem, 0, len(sessions))
+	for _, s := range sessions {
+		// 仅返回未被撤销的会话
+		if s.RevokedAt != nil {
+			continue
+		}
+		item := types.SessionItem{
+			SessionID:    s.SessionID,
+			CreatedAt:    s.CreatedAt.UTC().Format(time.RFC3339Nano),
+			LastActiveAt: s.LastActiveAt.UTC().Format(time.RFC3339Nano),
+			IsCurrent:    s.SessionID == currentSessionID,
+		}
+		item.DeviceType = s.DeviceType
+		item.DeviceName = s.DeviceName
+		item.IPAddress = s.IPAddress
+		item.IPLocation = s.IPLocation
+		items = append(items, item)
+	}
+	return items, nil
 }
 
 func (s *authService) RevokeSession(ctx context.Context, userID string, req types.RevokeSessionRequest) error {
-	return apierr.ErrInternal("revoke_session_not_implemented")
+	info, ok := auth.FromContext(ctx)
+	if !ok {
+		return apierr.New(10100, "auth_failed")
+	}
+	if req.SessionID == "" {
+		return apierr.ErrInvalidRequest("missing_session_id")
+	}
+	if req.SessionID == info.SessionID {
+		// 当前会话需使用 Logout，而不是 revoke
+		return apierr.ErrInvalidRequest("cannot_revoke_current_session")
+	}
+	if err := s.sessions.RevokeSession(ctx, info.UserID, req.SessionID); err != nil {
+		return apierr.ErrInternal("revoke_session_failed")
+	}
+	return nil
 }
 
 func (s *authService) RevokeAllSessions(ctx context.Context, userID string) (*types.RevokeAllResult, error) {
-	return nil, apierr.ErrInternal("revoke_all_sessions_not_implemented")
+	info, ok := auth.FromContext(ctx)
+	if !ok {
+		return nil, apierr.New(10100, "auth_failed")
+	}
+
+	count, err := s.sessions.RevokeAllExcept(ctx, info.UserID, info.SessionID)
+	if err != nil {
+		return nil, apierr.ErrInternal("revoke_all_sessions_failed")
+	}
+	return &types.RevokeAllResult{RevokedCount: int(count)}, nil
 }

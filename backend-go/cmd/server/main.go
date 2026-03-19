@@ -13,6 +13,7 @@ import (
 
 	"backend-go/internal/app"
 	"backend-go/internal/config"
+	"backend-go/internal/middlewares"
 )
 
 func main() {
@@ -34,10 +35,11 @@ func main() {
 	defer application.Close()
 
 	r := chi.NewRouter()
-	r.Use(middleware.RequestID)
+	r.Use(middlewares.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.Timeout(10 * time.Second))
+	r.Use(middlewares.Recovery(logger))
+	r.Use(middlewares.Logging(logger))
+	r.Use(middlewares.Timeout(10 * time.Second))
 
 	application.RegisterRoutes(r)
 
