@@ -5,7 +5,8 @@ export type ResolvedThemeId =
   | 'default_clean_dark'
   | 'tactile_minimal_light'
   | 'tactile_minimal_dark'
-  | 'zen_artistic_light';
+  | 'zen_artistic_light'
+  | 'zen_artistic_dark';
 
 export interface AppThemeShadow {
   radius: number;

@@ -86,7 +86,7 @@ export struct SettingsPage {
       case 'tactile_minimal':
         return AppThemeManager.getPaletteById(isDarkMode ? 'tactile_minimal_dark' : 'tactile_minimal_light');
       case 'zen_artistic':
-        return AppThemeManager.getPaletteById('zen_artistic_light');
+        return AppThemeManager.getPaletteById(isDarkMode ? 'zen_artistic_dark' : 'zen_artistic_light');
       case 'default_clean':
       default:
         return AppThemeManager.getPaletteById(isDarkMode ? 'default_clean_dark' : 'default_clean_light');

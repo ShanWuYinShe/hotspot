@@ -11,127 +11,145 @@ import {
   ThemeMode,
   ThemeOptionItem
 } from './AppThemeTypes';
+import { ThemeConstants } from './ThemeConstants';
 
-const DEFAULT_CLEAN_LIGHT: AppThemePalette = {
-  id: 'default_clean_light',
+const DEFAULT_CLEAN_LIGHT = {
+  id: 'default_clean_light' as ResolvedThemeId,
   label: '当前默认',
   description: '清爽、干净、通用',
-  pageBackground: '#FFFFFF',
-  surfaceBackground: '#FFFFFF',
-  surfaceSubtle: '#F3F4F6',
-  borderColor: '#E5E7EB',
-  sheetBackground: '#FFFFFF',
-  accentBackground: '#4A7A57',
-  accentText: '#FFFFFF',
-  chatBackground: '#F5F6FA',
-  systemSurfaceBaseColor: '#FFFFFF',
+  pageBackground: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.pageBackground,
+  surfaceBackground: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.surfaceBackground,
+  surfaceSubtle: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.surfaceSubtle,
+  borderColor: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.borderColor,
+  sheetBackground: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.sheetBackground,
+  accentBackground: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.accentBackground,
+  accentText: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.accentText,
+  chatBackground: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.chatBackground,
+  systemSurfaceBaseColor: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.systemSurfaceBaseColor,
   preferDarkContent: true,
-  surfaceShadow: { radius: 6, color: '#00000000', offsetX: 0, offsetY: 0 },
-  elevatedShadow: { radius: 8, color: '#14000000', offsetX: 0, offsetY: 3 },
-  accentShadow: { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 },
-  controlShadow: { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 },
-  tabBarShadow: { radius: 6, color: '#12000000', offsetX: 0, offsetY: -1 },
-  overlayStrong: '#80000000'
-};
+  surfaceShadow: ThemeConstants.SHADOWS.DEFAULT_CLEAN_LIGHT.surface,
+  elevatedShadow: ThemeConstants.SHADOWS.DEFAULT_CLEAN_LIGHT.elevated,
+  accentShadow: ThemeConstants.SHADOWS.DEFAULT_CLEAN_LIGHT.accent,
+  controlShadow: ThemeConstants.SHADOWS.DEFAULT_CLEAN_LIGHT.control,
+  tabBarShadow: ThemeConstants.SHADOWS.DEFAULT_CLEAN_LIGHT.tabBar,
+  overlayStrong: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.overlayStrong
+} as AppThemePalette;
 
-const DEFAULT_CLEAN_DARK: AppThemePalette = {
-  id: 'default_clean_dark',
+const DEFAULT_CLEAN_DARK = {
+  id: 'default_clean_dark' as ResolvedThemeId,
   label: '当前默认',
   description: '清爽、干净、通用',
-  pageBackground: '#0F1115',
-  surfaceBackground: '#171A20',
-  surfaceSubtle: '#222733',
-  borderColor: '#2D3544',
-  sheetBackground: '#171A20',
-  accentBackground: '#6BAF86',
-  accentText: '#0F1115',
-  chatBackground: '#11131D',
-  systemSurfaceBaseColor: '#0F1115',
+  pageBackground: ThemeConstants.DEFAULT_CLEAN_DARK_COLORS.pageBackground,
+  surfaceBackground: ThemeConstants.DEFAULT_CLEAN_DARK_COLORS.surfaceBackground,
+  surfaceSubtle: ThemeConstants.DEFAULT_CLEAN_DARK_COLORS.surfaceSubtle,
+  borderColor: ThemeConstants.DEFAULT_CLEAN_DARK_COLORS.borderColor,
+  sheetBackground: ThemeConstants.DEFAULT_CLEAN_DARK_COLORS.sheetBackground,
+  accentBackground: ThemeConstants.DEFAULT_CLEAN_DARK_COLORS.accentBackground,
+  accentText: ThemeConstants.DEFAULT_CLEAN_DARK_COLORS.accentText,
+  chatBackground: ThemeConstants.DEFAULT_CLEAN_DARK_COLORS.chatBackground,
+  systemSurfaceBaseColor: ThemeConstants.DEFAULT_CLEAN_DARK_COLORS.systemSurfaceBaseColor,
   preferDarkContent: false,
-  surfaceShadow: { radius: 8, color: '#26000000', offsetX: 0, offsetY: 3 },
-  elevatedShadow: { radius: 10, color: '#2A000000', offsetX: 0, offsetY: 4 },
-  accentShadow: { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 },
-  controlShadow: { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 },
-  tabBarShadow: { radius: 10, color: '#26000000', offsetX: 0, offsetY: -1 },
-  overlayStrong: '#99000000'
-};
+  surfaceShadow: ThemeConstants.SHADOWS.DEFAULT_CLEAN_DARK.surface,
+  elevatedShadow: ThemeConstants.SHADOWS.DEFAULT_CLEAN_DARK.elevated,
+  accentShadow: ThemeConstants.SHADOWS.DEFAULT_CLEAN_DARK.accent,
+  controlShadow: ThemeConstants.SHADOWS.DEFAULT_CLEAN_DARK.control,
+  tabBarShadow: ThemeConstants.SHADOWS.DEFAULT_CLEAN_DARK.tabBar,
+  overlayStrong: ThemeConstants.DEFAULT_CLEAN_DARK_COLORS.overlayStrong
+} as AppThemePalette;
 
-const TACTILE_MINIMAL_LIGHT: AppThemePalette = {
-  id: 'tactile_minimal_light',
+const TACTILE_MINIMAL_LIGHT = {
+  id: 'tactile_minimal_light' as ResolvedThemeId,
   label: 'Tactile Minimalist',
   description: '奶白、柔和、带轻触感',
-  // 参考拟物截图：整体偏暖米白，背景略深、卡片略浅
-  pageBackground: '#E9E1D4',      // 页面大背景：柔和奶油米色
-  surfaceBackground: '#F6EFE4',   // 卡片 / 底栏背景：更亮一点的象牙白
-  surfaceSubtle: '#DDD1C2',       // 次级区域 / 按钮背景：略深，用于凹槽对比
-  borderColor: '#D0C4B4',         // 卡片描边：低对比暖灰
-  sheetBackground: '#F4EDDF',     // 底部弹窗：介于背景和卡片之间
-  accentBackground: '#E4C899',    // 主要操作按钮：金杏色高亮，模拟渐变中位色
-  accentText: '#6C5234',          // 按钮文字：偏深棕色，保证可读性
-  chatBackground: '#EDE3D6',      // 聊天列表背景：略浅于 pageBackground
-  systemSurfaceBaseColor: '#E9E1D4',
+  pageBackground: ThemeConstants.TACTILE_MINIMAL_LIGHT_COLORS.pageBackground,
+  surfaceBackground: ThemeConstants.TACTILE_MINIMAL_LIGHT_COLORS.surfaceBackground,
+  surfaceSubtle: ThemeConstants.TACTILE_MINIMAL_LIGHT_COLORS.surfaceSubtle,
+  borderColor: ThemeConstants.TACTILE_MINIMAL_LIGHT_COLORS.borderColor,
+  sheetBackground: ThemeConstants.TACTILE_MINIMAL_LIGHT_COLORS.sheetBackground,
+  accentBackground: ThemeConstants.TACTILE_MINIMAL_LIGHT_COLORS.accentBackground,
+  accentText: ThemeConstants.TACTILE_MINIMAL_LIGHT_COLORS.accentText,
+  chatBackground: ThemeConstants.TACTILE_MINIMAL_LIGHT_COLORS.chatBackground,
+  systemSurfaceBaseColor: ThemeConstants.TACTILE_MINIMAL_LIGHT_COLORS.systemSurfaceBaseColor,
   preferDarkContent: true,
-  // 卡片希望是柔和的“整圈泛光”，不要只在下边缘有阴影
-  surfaceShadow: { radius: 22, color: '#1F9A826418', offsetX: 0, offsetY: 0 },
-  // 更高一层的浮起可以略微向下偏一点
-  elevatedShadow: { radius: 26, color: '#2C9A82661C', offsetX: 0, offsetY: 6 },
-  accentShadow: { radius: 18, color: '#2A9E7D621E', offsetX: 0, offsetY: 6 },
-  controlShadow: { radius: 12, color: '#1E9E846818', offsetX: 0, offsetY: 4 },
-  tabBarShadow: { radius: 18, color: '#24A18E7A1A', offsetX: 0, offsetY: -2 },
-  overlayStrong: '#8A6F584D'
-};
+  surfaceShadow: ThemeConstants.SHADOWS.TACTILE_MINIMAL_LIGHT.surface,
+  elevatedShadow: ThemeConstants.SHADOWS.TACTILE_MINIMAL_LIGHT.elevated,
+  accentShadow: ThemeConstants.SHADOWS.TACTILE_MINIMAL_LIGHT.accent,
+  controlShadow: ThemeConstants.SHADOWS.TACTILE_MINIMAL_LIGHT.control,
+  tabBarShadow: ThemeConstants.SHADOWS.TACTILE_MINIMAL_LIGHT.tabBar,
+  overlayStrong: ThemeConstants.TACTILE_MINIMAL_LIGHT_COLORS.overlayStrong
+} as AppThemePalette;
 
-const TACTILE_MINIMAL_DARK: AppThemePalette = {
-  id: 'tactile_minimal_dark',
+const TACTILE_MINIMAL_DARK = {
+  id: 'tactile_minimal_dark' as ResolvedThemeId,
   label: 'Tactile Minimalist',
   description: '深海蓝、暖金、柔和泛光',
-  pageBackground: '#09131E',
-  surfaceBackground: '#102030',
-  surfaceSubtle: '#0C1A29',
-  borderColor: '#24384B',
-  sheetBackground: '#112334',
-  accentBackground: '#E3C9A5',
-  accentText: '#182638',
-  chatBackground: '#0B1725',
-  systemSurfaceBaseColor: '#09131E',
+  pageBackground: ThemeConstants.TACTILE_MINIMAL_DARK_COLORS.pageBackground,
+  surfaceBackground: ThemeConstants.TACTILE_MINIMAL_DARK_COLORS.surfaceBackground,
+  surfaceSubtle: ThemeConstants.TACTILE_MINIMAL_DARK_COLORS.surfaceSubtle,
+  borderColor: ThemeConstants.TACTILE_MINIMAL_DARK_COLORS.borderColor,
+  sheetBackground: ThemeConstants.TACTILE_MINIMAL_DARK_COLORS.sheetBackground,
+  accentBackground: ThemeConstants.TACTILE_MINIMAL_DARK_COLORS.accentBackground,
+  accentText: ThemeConstants.TACTILE_MINIMAL_DARK_COLORS.accentText,
+  chatBackground: ThemeConstants.TACTILE_MINIMAL_DARK_COLORS.chatBackground,
+  systemSurfaceBaseColor: ThemeConstants.TACTILE_MINIMAL_DARK_COLORS.systemSurfaceBaseColor,
   preferDarkContent: false,
-  surfaceShadow: { radius: 18, color: '#2A5A84A6', offsetX: 0, offsetY: 0 },
-  elevatedShadow: { radius: 24, color: '#304F74C0', offsetX: 0, offsetY: 8 },
-  accentShadow: { radius: 22, color: '#28E3C9A5', offsetX: 0, offsetY: 7 },
-  controlShadow: { radius: 14, color: '#264A6B96', offsetX: 0, offsetY: 4 },
-  tabBarShadow: { radius: 20, color: '#30516D9E', offsetX: 0, offsetY: -2 },
-  overlayStrong: '#B0000000'
-};
+  surfaceShadow: ThemeConstants.SHADOWS.TACTILE_MINIMAL_DARK.surface,
+  elevatedShadow: ThemeConstants.SHADOWS.TACTILE_MINIMAL_DARK.elevated,
+  accentShadow: ThemeConstants.SHADOWS.TACTILE_MINIMAL_DARK.accent,
+  controlShadow: ThemeConstants.SHADOWS.TACTILE_MINIMAL_DARK.control,
+  tabBarShadow: ThemeConstants.SHADOWS.TACTILE_MINIMAL_DARK.tabBar,
+  overlayStrong: ThemeConstants.TACTILE_MINIMAL_DARK_COLORS.overlayStrong
+} as AppThemePalette;
 
-const ZEN_ARTISTIC_LIGHT: AppThemePalette = {
-  id: 'zen_artistic_light',
+const ZEN_ARTISTIC_LIGHT = {
+  id: 'zen_artistic_light' as ResolvedThemeId,
   label: 'Zen Artistic',
   description: '雾蓝、安静、艺术感',
-  // 参考禅意截图：丝绒质感的雾蓝背景，凹槽区域略深
-  pageBackground: '#C7D2D8',      // 页面大背景：偏灰的雾蓝
-  surfaceBackground: '#D3DDE2',   // 卡片 / 底栏：比背景更亮一点
-  surfaceSubtle: '#B7C4CB',       // 凹槽 / 次级区域：更深的蓝灰
-  borderColor: '#ACBAC2',         // 轮廓线：低对比冷灰
-  sheetBackground: '#D5E0E4',     // 底部弹窗：介于背景与卡片之间
-  accentBackground: '#E3D5C4',    // 主要操作按钮：温暖米金色，与蓝灰形成对比
-  accentText: '#705743',          // 按钮文字：暖棕色，保持柔和
-  chatBackground: '#C1CDD3',      // 聊天背景：略深，避免过曝
-  systemSurfaceBaseColor: '#C7D2D8',
+  pageBackground: ThemeConstants.ZEN_ARTISTIC_LIGHT_COLORS.pageBackground,
+  surfaceBackground: ThemeConstants.ZEN_ARTISTIC_LIGHT_COLORS.surfaceBackground,
+  surfaceSubtle: ThemeConstants.ZEN_ARTISTIC_LIGHT_COLORS.surfaceSubtle,
+  borderColor: ThemeConstants.ZEN_ARTISTIC_LIGHT_COLORS.borderColor,
+  sheetBackground: ThemeConstants.ZEN_ARTISTIC_LIGHT_COLORS.sheetBackground,
+  accentBackground: ThemeConstants.ZEN_ARTISTIC_LIGHT_COLORS.accentBackground,
+  accentText: ThemeConstants.ZEN_ARTISTIC_LIGHT_COLORS.accentText,
+  chatBackground: ThemeConstants.ZEN_ARTISTIC_LIGHT_COLORS.chatBackground,
+  systemSurfaceBaseColor: ThemeConstants.ZEN_ARTISTIC_LIGHT_COLORS.systemSurfaceBaseColor,
   preferDarkContent: true,
-  // 雾蓝主题卡片同样使用“整圈泛光”，偏冷一点的柔光
-  surfaceShadow: { radius: 20, color: '#1E4F677018', offsetX: 0, offsetY: 0 },
-  elevatedShadow: { radius: 24, color: '#28566B7A24', offsetX: 0, offsetY: 6 },
-  accentShadow: { radius: 16, color: '#245A6D7A22', offsetX: 0, offsetY: 6 },
-  controlShadow: { radius: 10, color: '#1E4F677018', offsetX: 0, offsetY: 4 },
-  tabBarShadow: { radius: 16, color: '#224F67701C', offsetX: 0, offsetY: -2 },
-  overlayStrong: '#8A7D7166'
-};
+  surfaceShadow: ThemeConstants.SHADOWS.ZEN_ARTISTIC_LIGHT.surface,
+  elevatedShadow: ThemeConstants.SHADOWS.ZEN_ARTISTIC_LIGHT.elevated,
+  accentShadow: ThemeConstants.SHADOWS.ZEN_ARTISTIC_LIGHT.accent,
+  controlShadow: ThemeConstants.SHADOWS.ZEN_ARTISTIC_LIGHT.control,
+  tabBarShadow: ThemeConstants.SHADOWS.ZEN_ARTISTIC_LIGHT.tabBar,
+  overlayStrong: ThemeConstants.ZEN_ARTISTIC_LIGHT_COLORS.overlayStrong
+} as AppThemePalette;
+
+const ZEN_ARTISTIC_DARK = {
+  id: 'zen_artistic_dark' as ResolvedThemeId,
+  label: 'Zen Artistic',
+  description: '深蓝、静谧、艺术感',
+  pageBackground: ThemeConstants.ZEN_ARTISTIC_DARK_COLORS.pageBackground,
+  surfaceBackground: ThemeConstants.ZEN_ARTISTIC_DARK_COLORS.surfaceBackground,
+  surfaceSubtle: ThemeConstants.ZEN_ARTISTIC_DARK_COLORS.surfaceSubtle,
+  borderColor: ThemeConstants.ZEN_ARTISTIC_DARK_COLORS.borderColor,
+  sheetBackground: ThemeConstants.ZEN_ARTISTIC_DARK_COLORS.sheetBackground,
+  accentBackground: ThemeConstants.ZEN_ARTISTIC_DARK_COLORS.accentBackground,
+  accentText: ThemeConstants.ZEN_ARTISTIC_DARK_COLORS.accentText,
+  chatBackground: ThemeConstants.ZEN_ARTISTIC_DARK_COLORS.chatBackground,
+  systemSurfaceBaseColor: ThemeConstants.ZEN_ARTISTIC_DARK_COLORS.systemSurfaceBaseColor,
+  preferDarkContent: false,
+  surfaceShadow: ThemeConstants.SHADOWS.ZEN_ARTISTIC_DARK.surface,
+  elevatedShadow: ThemeConstants.SHADOWS.ZEN_ARTISTIC_DARK.elevated,
+  accentShadow: ThemeConstants.SHADOWS.ZEN_ARTISTIC_DARK.accent,
+  controlShadow: ThemeConstants.SHADOWS.ZEN_ARTISTIC_DARK.control,
+  tabBarShadow: ThemeConstants.SHADOWS.ZEN_ARTISTIC_DARK.tabBar,
+  overlayStrong: ThemeConstants.ZEN_ARTISTIC_DARK_COLORS.overlayStrong
+} as AppThemePalette;
 
 const THEME_OPTIONS: ThemeOptionItem[] = [
-  { mode: 'follow_system', label: '跟随系统', description: '自动切换深浅主题' },
-  { mode: 'default_clean', label: '当前默认', description: '清爽、干净、通用' },
-  { mode: 'tactile_minimal', label: 'Tactile Minimalist', description: '奶白、柔和、带轻触感' },
-  { mode: 'zen_artistic', label: 'Zen Artistic', description: '雾蓝、安静、艺术感' }
+  { mode: 'follow_system', label: '跟随系统', description: '自动切换深浅主题' } as ThemeOptionItem,
+  { mode: 'default_clean', label: '当前默认', description: '清爽、干净、通用' } as ThemeOptionItem,
+  { mode: 'tactile_minimal', label: 'Tactile Minimalist', description: '奶白、柔和、带轻触感' } as ThemeOptionItem,
+  { mode: 'zen_artistic', label: 'Zen Artistic', description: '雾蓝、安静、艺术感' } as ThemeOptionItem
 ];
 
 export class AppThemeManager {
@@ -185,6 +203,8 @@ export class AppThemeManager {
         return TACTILE_MINIMAL_DARK;
       case 'zen_artistic_light':
         return ZEN_ARTISTIC_LIGHT;
+      case 'zen_artistic_dark':
+        return ZEN_ARTISTIC_DARK;
       case 'default_clean_light':
       default:
         return DEFAULT_CLEAN_LIGHT;
@@ -256,7 +276,7 @@ export class AppThemeManager {
       case 'tactile_minimal':
         return isDarkMode ? 'tactile_minimal_dark' : 'tactile_minimal_light';
       case 'zen_artistic':
-        return 'zen_artistic_light';
+        return isDarkMode ? 'zen_artistic_dark' : 'zen_artistic_light';
       default:
         return DEFAULT_RESOLVED_THEME_ID;
     }
@@ -280,6 +300,7 @@ export class AppThemeManager {
       case 'tactile_minimal_light':
       case 'tactile_minimal_dark':
       case 'zen_artistic_light':
+      case 'zen_artistic_dark':
       case 'default_clean_light':
         return resolvedThemeId;
       default:
