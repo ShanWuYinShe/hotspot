@@ -24,18 +24,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 不要自行执行 `deploy/` 目录脚本、数据库重置或 destructive 运维动作，除非用户明确要求。
 - 修改 API、字段、错误码、事件 payload 前，先对照 `spec/`。
 
-## 推荐工作流（重要）
-- 复杂任务默认使用 **多 agent + worktree + 多分支 + PR**。
-- 若主工作区存在未提交改动，优先在独立 worktree 中开发，不要直接污染主工作区。
-- 各主题任务拆到不同 worktree / 分支中实现，分别验证通过后再汇总或走 PR。
+## 工作流说明
+- 通用的 **主分支 clean -> 多 agent/worktree/feature 分支并行 -> 集成分支汇总 -> PR -> 清理分支** 流程，以仓库根 `CLAUDE.md` 为准；这里不重复展开。
 
 ## Docker 测试 / 运行验证（重要）
-- 测试导向改动优先运行：
-  - `./deploy/scripts/test-in-docker.sh --env-name <name>`
-- 影响 runtime 行为的改动优先运行：
-  - `./deploy/scripts/up-runtime.sh --env-name <name> --recreate backend,frontend,nginx --http-port <http> --https-port <https>`
-  - 然后运行：`./deploy/scripts/inspect-runtime.sh --env-name <name> --https-port <https>`
-- 测试与运行继续遵循：**同一套配置 key，不同 datasource value**。不要引入多余环境模式抽象或 Redis key-prefix 机制，除非用户明确要求。
+- 子项目开发时继续遵循根 `CLAUDE.md` 中定义的 Docker 测试 / runtime 验证流程：
+  - 测试优先：`./deploy/scripts/test-in-docker.sh --env-name <name>`
+  - runtime 变更：`./deploy/scripts/up-runtime.sh ...` + `./deploy/scripts/inspect-runtime.sh ...`
 
 ## 运行配置
 - 当前后端主要使用环境变量：
