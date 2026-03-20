@@ -46,11 +46,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	_ = conn.SetReadDeadline(time.Time{})
 
 	sink := &socketSink{conn: conn}
-	if DefaultHub().RegisterUser(principal.UserID, sink) {
+	if DefaultHub().RegisterUser(principal.UserID, principal.SessionID, sink) {
 		DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: "UserOnline", Payload: UserOnlinePayload{UserID: principal.UserID, OnlineAt: time.Now().UTC().Format(time.RFC3339)}})
 	}
 	defer func() {
-		if DefaultHub().UnregisterUser(principal.UserID, sink) {
+		if DefaultHub().UnregisterUser(principal.UserID, principal.SessionID, sink) {
 			DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: "UserOffline", Payload: UserOfflinePayload{UserID: principal.UserID, OfflineAt: time.Now().UTC().Format(time.RFC3339)}})
 		}
 	}()

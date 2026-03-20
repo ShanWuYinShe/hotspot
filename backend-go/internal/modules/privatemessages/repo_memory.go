@@ -3,6 +3,7 @@ package private_messages
 import (
 	"context"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -56,4 +57,77 @@ func (r *InMemoryRepository) Last(ctx context.Context, userID, targetUserID stri
 		return nil
 	}
 	return &history.Items[0]
+}
+
+func (r *InMemoryRepository) Update(_ context.Context, userID string, req UpdatePrivateMessageRequest) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for key, msgs := range r.messages {
+		for i := range msgs {
+			if msgs[i].MessageID != req.MessageID {
+				continue
+			}
+			if msgs[i].Sender.UserID != userID {
+				return context.Canceled
+			}
+			if msgs[i].Type != "text" || msgs[i].RecalledAt != "" {
+				return context.DeadlineExceeded
+			}
+			msgs[i].Content = req.Content
+			msgs[i].EditedAt = time.Now().UTC().Format(time.RFC3339)
+			r.messages[key] = msgs
+			return nil
+		}
+	}
+	return context.DeadlineExceeded
+}
+
+func (r *InMemoryRepository) Recall(_ context.Context, userID string, req RecallPrivateMessageRequest) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for key, msgs := range r.messages {
+		for i := range msgs {
+			if msgs[i].MessageID != req.MessageID {
+				continue
+			}
+			if msgs[i].Sender.UserID != userID {
+				return context.Canceled
+			}
+			msgs[i].RecalledAt = time.Now().UTC().Format(time.RFC3339)
+			r.messages[key] = msgs
+			return nil
+		}
+	}
+	return context.DeadlineExceeded
+}
+
+func (r *InMemoryRepository) MarkAsRead(_ context.Context, userID string, req MarkPrivateMessagesReadRequest) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	key := conversationKey(userID, req.TargetUserID)
+	msgs := r.messages[key]
+	for i := range msgs {
+		msgs[i].IsRead = true
+		if req.UpToMessageID != "" && msgs[i].MessageID == req.UpToMessageID {
+			break
+		}
+	}
+	r.messages[key] = msgs
+	return nil
+}
+
+func (r *InMemoryRepository) MarkAllRead(_ context.Context, userID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for key, msgs := range r.messages {
+		parts := strings.Split(key, ":")
+		if len(parts) != 2 || (parts[0] != userID && parts[1] != userID) {
+			continue
+		}
+		for i := range msgs {
+			msgs[i].IsRead = true
+		}
+		r.messages[key] = msgs
+	}
+	return nil
 }

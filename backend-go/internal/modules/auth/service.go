@@ -5,6 +5,7 @@ import (
 	"time"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/realtime"
 )
 
 type Service struct {
@@ -70,7 +71,11 @@ func (s *Service) RevokeSession(ctx context.Context, req RevokeSessionRequest) e
 	if !ok {
 		return platformauth.Unauthorized("Access Token 无效或过期")
 	}
-	return s.auth.RevokeSession(principal.UserID, principal.SessionID, req.SessionID)
+	if err := s.auth.RevokeSession(principal.UserID, principal.SessionID, req.SessionID); err != nil {
+		return err
+	}
+	realtime.DefaultHub().CloseSession(req.SessionID, realtime.Event{Type: "Error", Payload: realtime.ErrorPayload{Code: 20000, Message: "会话已失效", Severity: "fatal", Retryable: false}})
+	return nil
 }
 
 func (s *Service) RequestPasswordReset(req RequestPasswordResetRequest) {}
@@ -84,6 +89,13 @@ func (s *Service) ChangePassword(ctx context.Context, req ChangePasswordRequest)
 	if !ok || principal.UserID == "" {
 		return platformauth.Unauthorized("Access Token 无效或过期")
 	}
+	sessions := s.auth.ListSessions(principal.UserID, principal.SessionID)
+	for _, session := range sessions {
+		if session.SessionID == principal.SessionID {
+			continue
+		}
+		realtime.DefaultHub().CloseSession(session.SessionID, realtime.Event{Type: "Error", Payload: realtime.ErrorPayload{Code: 20000, Message: "会话已失效", Severity: "fatal", Retryable: false}})
+	}
 	s.auth.RevokeOtherSessions(principal.UserID, principal.SessionID)
 	return nil
 }
@@ -92,6 +104,13 @@ func (s *Service) RevokeAll(ctx context.Context) RevokeAllResult {
 	principal, ok := platformauth.PrincipalFromContext(ctx)
 	if !ok {
 		return RevokeAllResult{}
+	}
+	sessions := s.auth.ListSessions(principal.UserID, principal.SessionID)
+	for _, session := range sessions {
+		if session.SessionID == principal.SessionID {
+			continue
+		}
+		realtime.DefaultHub().CloseSession(session.SessionID, realtime.Event{Type: "Error", Payload: realtime.ErrorPayload{Code: 20000, Message: "会话已失效", Severity: "fatal", Retryable: false}})
 	}
 	return RevokeAllResult{RevokedCount: s.auth.RevokeOtherSessions(principal.UserID, principal.SessionID)}
 }

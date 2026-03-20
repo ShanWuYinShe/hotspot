@@ -14,27 +14,33 @@ func (s *Service) RefreshSession(refreshToken string) (AuthResult, error) {
 	if now.After(session.ExpiresAt) {
 		return AuthResult{}, errors.New("expired refresh token")
 	}
-	if session.RotatedTo != "" && now.Before(session.GraceUntil) {
-		rotated, ok := s.refreshes.Get(session.RotatedTo)
-		if !ok {
-			return AuthResult{}, errors.New("invalid refresh token")
+	if storedSession, ok := s.sessions.Get(session.SessionID); !ok || storedSession.RevokedAt != nil {
+		return AuthResult{}, errors.New("revoked session")
+	}
+	if session.RotatedTo != "" {
+		if !now.After(session.GraceUntil) {
+			rotated, ok := s.refreshes.Get(session.RotatedTo)
+			if !ok {
+				return AuthResult{}, errors.New("invalid refresh token")
+			}
+			accessToken, accessExp, err := s.tokens.MintAccessToken(rotated.UserID, rotated.SessionID, s.accessTTL)
+			if err != nil {
+				return AuthResult{}, err
+			}
+			csrfToken, err := GenerateCSRFToken()
+			if err != nil {
+				return AuthResult{}, err
+			}
+			return AuthResult{
+				Principal:      Principal{UserID: rotated.UserID, SessionID: rotated.SessionID},
+				AccessToken:    accessToken,
+				RefreshToken:   rotated.RefreshToken,
+				AccessExpires:  accessExp,
+				RefreshExpires: rotated.ExpiresAt,
+				CSRFToken:      csrfToken,
+			}, nil
 		}
-		accessToken, accessExp, err := s.tokens.MintAccessToken(rotated.UserID, rotated.SessionID, s.accessTTL)
-		if err != nil {
-			return AuthResult{}, err
-		}
-		csrfToken, err := GenerateCSRFToken()
-		if err != nil {
-			return AuthResult{}, err
-		}
-		return AuthResult{
-			Principal:      Principal{UserID: rotated.UserID, SessionID: rotated.SessionID},
-			AccessToken:    accessToken,
-			RefreshToken:   rotated.RefreshToken,
-			AccessExpires:  accessExp,
-			RefreshExpires: rotated.ExpiresAt,
-			CSRFToken:      csrfToken,
-		}, nil
+		return AuthResult{}, errors.New("expired refresh rotation window")
 	}
 	newRefreshToken, err := GenerateOpaqueToken()
 	if err != nil {

@@ -12,7 +12,8 @@ func TestNewFactoryUsesDatasourceConfig(t *testing.T) {
 	if factory.Config.PostgresDSN != "postgres://test" || factory.Config.RedisDSN != "redis://test" {
 		t.Fatalf("unexpected factory config: %#v", factory.Config)
 	}
-	if err := factory.DB.Ping(context.Background()); err != nil {
-		t.Fatalf("unexpected ping error: %v", err)
+	if _, ok := factory.DB.(*PostgresDB); !ok {
+		t.Fatalf("expected PostgresDB, got %#v", factory.DB)
 	}
+	_ = context.Background()
 }

@@ -29,10 +29,11 @@ func TestRequiredAuthRejectsMissingToken(t *testing.T) {
 func TestOptionalAuthInjectsPrincipalForValidBearer(t *testing.T) {
 	service := NewService(config.Config{AuthTokenSecret: "test-secret"})
 	SetDefaultService(service)
-	token, _, err := service.tokens.MintAccessToken("user_alice", "sess_1", service.accessTTL)
+	result, err := service.IssueSession("user_alice")
 	if err != nil {
-		t.Fatalf("mint token: %v", err)
+		t.Fatalf("issue session: %v", err)
 	}
+	token := result.AccessToken
 
 	handler := OptionalAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		principal, ok := PrincipalFromContext(r.Context())
