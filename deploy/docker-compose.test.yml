@@ -1,0 +1,48 @@
+services:
+  postgres-test:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: hotspot
+      POSTGRES_PASSWORD: hotspot
+      POSTGRES_DB: hotspot_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hotspot -d hotspot_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis-test:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend-go-test:
+    build:
+      context: ../backend-go
+      dockerfile: Dockerfile
+      target: test
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8080
+      AUTH_TOKEN_SECRET: test-secret
+      POSTGRES_DSN: postgres://hotspot:hotspot@postgres-test:5432/hotspot_test?sslmode=disable
+      REDIS_DSN: redis://redis-test:6379/0
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+
+  frontend-validate:
+    build:
+      context: ../frontend_svelte
+      dockerfile: Dockerfile
+      target: validate
+      args:
+        VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
+        VITE_AMAP_SERVICE_HOST: /_AMapService
+    environment:
+      ORIGIN: https://localhost:8443

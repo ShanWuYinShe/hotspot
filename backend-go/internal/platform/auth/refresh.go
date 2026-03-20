@@ -1,0 +1,66 @@
+package auth
+
+import (
+	"errors"
+	"time"
+)
+
+func (s *Service) RefreshSession(refreshToken string) (AuthResult, error) {
+	session, ok := s.refreshes.Get(refreshToken)
+	if !ok {
+		return AuthResult{}, errors.New("invalid refresh token")
+	}
+	now := time.Now().UTC()
+	if now.After(session.ExpiresAt) {
+		return AuthResult{}, errors.New("expired refresh token")
+	}
+	if session.RotatedTo != "" && now.Before(session.GraceUntil) {
+		rotated, ok := s.refreshes.Get(session.RotatedTo)
+		if !ok {
+			return AuthResult{}, errors.New("invalid refresh token")
+		}
+		accessToken, accessExp, err := s.tokens.MintAccessToken(rotated.UserID, rotated.SessionID, s.accessTTL)
+		if err != nil {
+			return AuthResult{}, err
+		}
+		csrfToken, err := GenerateCSRFToken()
+		if err != nil {
+			return AuthResult{}, err
+		}
+		return AuthResult{
+			Principal:      Principal{UserID: rotated.UserID, SessionID: rotated.SessionID},
+			AccessToken:    accessToken,
+			RefreshToken:   rotated.RefreshToken,
+			AccessExpires:  accessExp,
+			RefreshExpires: rotated.ExpiresAt,
+			CSRFToken:      csrfToken,
+		}, nil
+	}
+	newRefreshToken, err := GenerateOpaqueToken()
+	if err != nil {
+		return AuthResult{}, err
+	}
+	newAccessToken, accessExp, err := s.tokens.MintAccessToken(session.UserID, session.SessionID, s.accessTTL)
+	if err != nil {
+		return AuthResult{}, err
+	}
+	csrfToken, err := GenerateCSRFToken()
+	if err != nil {
+		return AuthResult{}, err
+	}
+	next := RefreshSession{
+		UserID:       session.UserID,
+		SessionID:    session.SessionID,
+		RefreshToken: newRefreshToken,
+		ExpiresAt:    now.Add(s.refreshTTL),
+	}
+	s.refreshes.Rotate(refreshToken, session, next)
+	return AuthResult{
+		Principal:      Principal{UserID: session.UserID, SessionID: session.SessionID},
+		AccessToken:    newAccessToken,
+		RefreshToken:   newRefreshToken,
+		AccessExpires:  accessExp,
+		RefreshExpires: next.ExpiresAt,
+		CSRFToken:      csrfToken,
+	}, nil
+}

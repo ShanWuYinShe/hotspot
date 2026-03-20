@@ -48,3 +48,41 @@ HotSpot 是一个多端 monorepo：
 - `spec/` 是唯一权威契约来源；除非用户明确要求，不要修改其中文件。
 - 临时文件统一放在仓库根目录 `tmp/`。
 - 涉及破坏性删除、批量改动、数据库迁移/重置、`deploy/` 脚本、`git push` 之类操作时，先确认用户意图。
+
+## 推荐工作流（重要）
+- 当前仓库默认采用 **多 agent + worktree + 多分支 + PR** 的协作方式推进复杂任务。
+- 当主工作区存在未提交改动时，**不要**直接在主工作区上继续开发；优先创建独立 worktree，在干净分支中实现变更。
+- 复杂任务应优先拆成多个独立主题分支，每个主题在自己的 worktree 中开发、测试、修复。
+- 每个分支在本地验证通过后，再创建 PR 合并回主分支；不要把多个无关主题堆到同一个分支。
+- 若使用多个 agent 并行开发，优先让它们在各自 worktree 中工作，避免互相污染未提交改动。
+
+## Docker 测试 / 运行验证流程（重要）
+- `deploy/` 目录现在是标准入口：
+  - `deploy/scripts/test-in-docker.sh`：干净的 Docker 测试入口
+  - `deploy/scripts/up-runtime.sh`：构建并启动隔离 runtime 环境
+  - `deploy/scripts/inspect-runtime.sh`：统一巡检 runtime 状态、入口与日志
+- 对 **测试导向** 变更，优先运行：
+  - `./deploy/scripts/test-in-docker.sh --env-name <name>`
+- 对 **影响 runtime 行为** 的变更，优先运行：
+  - `./deploy/scripts/up-runtime.sh --env-name <name> --recreate backend,frontend,nginx --http-port <http> --https-port <https>`
+  - 然后运行：`./deploy/scripts/inspect-runtime.sh --env-name <name> --https-port <https>`
+- 后端运行与测试都继续遵循“同一套配置 key，不同 datasource value”的原则；不要引入额外环境模式抽象或 Redis key-prefix 机制，除非用户明确要求。
+
+## 推荐工作流（重要）
+- 当前仓库默认采用 **多 agent + worktree + 多分支 + PR** 的协作方式推进复杂任务。
+- 当主工作区存在未提交改动时，**不要**直接在主工作区上继续开发；优先创建独立 worktree，在干净分支中实现变更。
+- 复杂任务应优先拆成多个独立主题分支，每个主题在自己的 worktree 中开发、测试、修复。
+- 每个分支在本地验证通过后，再创建 PR 合并回主分支；不要把多个无关主题堆到同一个分支。
+- 若使用多个 agent 并行开发，优先让它们在各自 worktree 中工作，避免互相污染未提交改动。
+
+## Docker 测试 / 运行验证流程（重要）
+- `deploy/` 目录现在是标准入口：
+  - `deploy/scripts/test-in-docker.sh`：干净的 Docker 测试入口
+  - `deploy/scripts/up-runtime.sh`：构建并启动隔离 runtime 环境
+  - `deploy/scripts/inspect-runtime.sh`：统一巡检 runtime 状态、入口与日志
+- 对 **测试导向** 变更，优先运行：
+  - `./deploy/scripts/test-in-docker.sh --env-name <name>`
+- 对 **影响 runtime 行为** 的变更，优先运行：
+  - `./deploy/scripts/up-runtime.sh --env-name <name> --recreate backend,frontend,nginx --http-port <http> --https-port <https>`
+  - 然后运行：`./deploy/scripts/inspect-runtime.sh --env-name <name> --https-port <https>`
+- 后端运行与测试都继续遵循“同一套配置 key，不同 datasource value”的原则；不要引入额外环境模式抽象或 Redis key-prefix 机制，除非用户明确要求。
