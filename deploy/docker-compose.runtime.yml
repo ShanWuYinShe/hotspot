@@ -1,0 +1,142 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hotspot
+      POSTGRES_PASSWORD: hotspot
+      POSTGRES_DB: hotspot
+    volumes:
+      - runtime_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hotspot -d hotspot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - hotspot-runtime
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - runtime_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - hotspot-runtime
+
+  minio:
+    image: minio/minio:RELEASE.2024-01-18T22-51-28Z
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    command: server /data --console-address ":9001"
+    volumes:
+      - runtime_minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 5
+    networks:
+      - hotspot-runtime
+
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin};
+      /usr/bin/mc mb --ignore-existing myminio/${S3_BUCKET:-hotspot};
+      /usr/bin/mc anonymous set download myminio/${S3_BUCKET:-hotspot};
+      exit 0;
+      "
+    networks:
+      - hotspot-runtime
+
+  backend:
+    image: ${HOTSPOT_BACKEND_IMAGE:-hotspot/backend-go:runtime}
+    build:
+      context: ../backend-go
+      dockerfile: Dockerfile
+      target: runtime
+    restart: unless-stopped
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8080
+      POSTGRES_DSN: postgres://hotspot:hotspot@postgres:5432/hotspot?sslmode=disable
+      REDIS_DSN: redis://redis:6379/0
+      AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:-dev-secret-change-me}
+      APP_SUPPORT_EMAIL: ${APP_SUPPORT_EMAIL:-support@example.com}
+      APP_PRIVACY_POLICY_URL: ${APP_PRIVACY_POLICY_URL:-https://localhost:8443/privacy}
+      APP_TERMS_OF_SERVICE_URL: ${APP_TERMS_OF_SERVICE_URL:-https://localhost:8443/terms}
+      APP_OFFICIAL_WEBSITE_URL: ${APP_OFFICIAL_WEBSITE_URL:-https://localhost:8443}
+      APP_DEFAULT_USER_AVATAR_URL: ${APP_DEFAULT_USER_AVATAR_URL:-}
+      APP_DEFAULT_GROUP_AVATAR_URL: ${APP_DEFAULT_GROUP_AVATAR_URL:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - hotspot-runtime
+
+  frontend:
+    image: ${HOTSPOT_FRONTEND_IMAGE:-hotspot/frontend-svelte:runtime}
+    build:
+      context: ../frontend_svelte
+      dockerfile: Dockerfile
+      target: runtime
+      args:
+        VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
+        VITE_AMAP_SERVICE_HOST: /_AMapService
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      HOST: 0.0.0.0
+      ORIGIN: ${HOTSPOT_PUBLIC_ORIGIN:-https://localhost:8443}
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - hotspot-runtime
+
+  nginx:
+    image: nginx:1.25-alpine
+    restart: unless-stopped
+    ports:
+      - "${HOTSPOT_RUNTIME_HTTP_PORT:-8088}:80"
+      - "${HOTSPOT_RUNTIME_HTTPS_PORT:-8443}:443"
+    environment:
+      HOTSPOT_HTTPS_REDIRECT_PORT: ${HOTSPOT_RUNTIME_HTTPS_PORT:-8443}
+    volumes:
+      - ./nginx/hotspot.runtime.nginx.conf:/etc/nginx/templates/default.conf.template:ro
+      - ${HOTSPOT_TLS_CERT_PATH:?set HOTSPOT_TLS_CERT_PATH}:/etc/nginx/certs/tls.crt:ro
+      - ${HOTSPOT_TLS_KEY_PATH:?set HOTSPOT_TLS_KEY_PATH}:/etc/nginx/certs/tls.key:ro
+    depends_on:
+      backend:
+        condition: service_started
+      frontend:
+        condition: service_started
+      minio:
+        condition: service_healthy
+      createbuckets:
+        condition: service_completed_successfully
+    networks:
+      - hotspot-runtime
+
+volumes:
+  runtime_postgres_data:
+  runtime_redis_data:
+  runtime_minio_data:
+
+networks:
+  hotspot-runtime:
+    driver: bridge

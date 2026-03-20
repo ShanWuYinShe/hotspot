@@ -3,48 +3,33 @@
 # Multi-stage build for production deployment
 # ===========================================
 
-# Stage 1: Build
-FROM node:20-alpine AS builder
+FROM node:20-alpine AS base
 WORKDIR /app
-
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-# Copy dependency files first (for better caching)
+RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
 COPY package.json pnpm-lock.yaml ./
-
-# Install all dependencies (including devDependencies for build)
 RUN pnpm install --frozen-lockfile
 
-# Copy source code
+FROM base AS source
+ARG VITE_AMAP_KEY=
+ARG VITE_AMAP_SERVICE_HOST=/_AMapService
+ENV VITE_AMAP_KEY=$VITE_AMAP_KEY
+ENV VITE_AMAP_SERVICE_HOST=$VITE_AMAP_SERVICE_HOST
 COPY . .
 
-# Build the SvelteKit app (adapter-node output to ./build)
+FROM source AS validate
+CMD ["sh", "-c", "pnpm check && pnpm build --mode test"]
+
+FROM source AS builder
 RUN pnpm build
 
-# Stage 2: Runtime
 FROM node:20-alpine AS runtime
 WORKDIR /app
-
-# Install pnpm for production dependency install
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-# Copy package files
+RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
 COPY package.json pnpm-lock.yaml ./
-
-# Install production dependencies only
 RUN pnpm install --frozen-lockfile --prod
-
-# Copy built app from builder stage
 COPY --from=builder /app/build ./build
-
-# Expose port
 EXPOSE 3000
-
-# Environment variables
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOST=0.0.0.0
-
-# Start the Node.js server
 CMD ["node", "build"]

@@ -1,107 +1,240 @@
-# HotSpot 部署与数据库（Docker）
+# HotSpot Docker 部署入口
 
-本目录包含 HotSpot 项目的 Docker 部署配置和数据库相关说明，开发/测试与生产环境使用不同的 compose 文件组合。
+当前 `deploy/` 目录收敛为两条主流程：
 
-> **📌 环境说明**
-> - 开发/测试环境使用 `deploy/dev/` 下的 compose 文件组合。
-> - 生产环境使用 `deploy/prod/` 下的 compose 文件组合。
+- **一键测试**：Docker 内启动测试依赖并直接执行 `backend-go` 测试与前端校验
+- **一键运行预演**：只暴露 nginx 端口，通过 nginx 统一访问 frontend + backend-go + MinIO
 
-## 📦 关键文件
+两条流程都使用 Dockerfile 在容器内从头构建并启动，尽量减少环境干扰，并让 runtime 与将来发布时的运行内容保持一致。
+
+## 关键文件
 
 | 文件 | 用途 |
-|------|------|
-| `dev/docker-compose.infra.yml` | 开发/测试环境基础设施（Postgres、Redis、MinIO） |
-| `dev/docker-compose.app.yml`   | 开发/测试环境应用层（Backend、Frontend、Nginx） |
-| `prod/docker-compose.infra.yml` | 生产环境基础设施（Postgres、Redis、MinIO） |
-| `prod/docker-compose.app.yml`   | 生产环境应用层（Backend、Frontend、Nginx） |
+|---|---|
+| `docker-compose.test.yml` | Docker 测试入口：`postgres-test`、`redis-test`、`backend-go-test`、`frontend-validate` |
+| `docker-compose.runtime.yml` | 运行预演入口：使用 Dockerfile 构建 backend-go / frontend 镜像并统一通过 nginx 提供服务 |
+| `nginx/hotspot.runtime.nginx.conf` | 统一入口 nginx 配置，代理 `/`、`/api/v1/`、`/ws/v1`、`/s3/` |
+| `scripts/test-in-docker.sh` | 一键测试脚本（每次从干净环境开始） |
+| `scripts/up-runtime.sh` | 一键运行预演脚本 |
+| `scripts/down-runtime.sh` | 停止、移除或清理指定 runtime 环境 |
+| `scripts/status-runtime.sh` | 查看指定 runtime 环境的容器与数据卷状态 |
+| `scripts/logs-runtime.sh` | 查看指定 runtime 环境的日志 |
+| `scripts/check-runtime.sh` | 对指定 runtime 环境做入口与健康检查 |
+| `scripts/inspect-runtime.sh` | 一条命令串联状态、检查，并在失败时自动打印日志 |
 
-## ⚙️ 配置管理
-
-数据库用户、库名、密码等配置统一在对应环境目录下的 compose 文件（尤其是 `docker-compose.infra.yml` 的 `postgres` 服务）中管理。如需调整，请直接修改对应文件并重新启动容器。
-
-## 🎯 设计理念
-
-**职责分离（基于 docker-compose）**：
-- **infra compose** - 管理数据库、缓存、对象存储等基础设施容器。
-- **app compose** - 管理后端、前端、Nginx 等应用层容器。
-
-## 🚀 快速开始
-
-### 单机推荐拓扑
-
-一台电脑上建议同时保留三套互不冲突的角色（可以按需选择是否全部启用 Docker）：
-
-| 角色 | 运行方式 | 默认宿主机端口 | 说明 |
-|------|----------|----------------|------|
-| 开发 | 本机进程 | backend `5496` / frontend `5173` | 改代码、热更新、调试 |
-| 测试 | 本机测试进程 + Docker 基础设施 | PostgreSQL `5432` / Redis `6379` | 测试可使用独立数据库或 Redis DB 索引隔离 |
-| 运行预演 | Docker compose (dev/app.yml) | backend `8080` / frontend `3000` / Nginx `8888` | 模拟部署后运行状态 |
-
-### 编译 / 测试环境准备（Docker 推荐）
-
-如果你要在全新机器上运行后端类型检查、测试或 Docker 离线构建，推荐使用 dev 环境的 compose 文件：
+## 一键测试
 
 ```bash
-# 启动基础设施（PostgreSQL + Redis + MinIO）
-docker compose -f deploy/dev/docker-compose.infra.yml up -d
-
-# 然后即可运行
-cd backend
-DATABASE_URL="postgresql://hotspot:hotspot@127.0.0.1:5432/hotspot" cargo check
-
-# 测试环境推荐：使用独立数据库或 Redis DB 索引隔离
-DATABASE_URL="postgresql://hotspot:hotspot@127.0.0.1:5432/hotspot_test" \
-  REDIS_URL="redis://127.0.0.1:6379/0" cargo test
+./deploy/scripts/test-in-docker.sh
 ```
 
-## 🔄 日常开发与使用场景
-
-所有与数据库/缓存相关的开发和测试场景，均建议通过 `deploy/dev/docker-compose.infra.yml` 管理：
-
-- **首次设置**：`docker compose -f deploy/dev/docker-compose.infra.yml up -d`
-- **重置容器数据**：通过 `docker compose -f deploy/dev/docker-compose.infra.yml down -v` + 重新 `up` 完成
-- **查看和修改配置**：直接阅读和修改 `deploy/dev/docker-compose.infra.yml`
-
-## 📚 其他文档
-
-- [部署运维文档](deployment.md) - 完整的生产环境部署指南
-
-## 🧪 环境约定
-
-- `DOCKER_DATABASE_URL`：Docker 开发栈数据库，默认 `postgresql://hotspot:hotspot@127.0.0.1:5432/hotspot`
-- 测试环境推荐复用 `DATABASE_URL` / `REDIS_URL` 这组 key，通过 `.env.test` 或命令行覆盖值指向测试专用数据库或 Redis DB 索引
-
-## 🐳 运行预演层
-
-需要在同一台机器上启动“接近部署态”的容器服务时，使用 dev 环境 app compose：
+如果你同时有多个分支/工作树在开发，可以给每个测试环境一个独立名字：
 
 ```bash
-docker compose -f deploy/dev/docker-compose.infra.yml -f deploy/dev/docker-compose.app.yml up -d nginx backend frontend
+./deploy/scripts/test-in-docker.sh --env-name feature-a
+./deploy/scripts/test-in-docker.sh --env-name feature-b
 ```
 
-如果默认端口冲突，可以临时覆盖 host 端口：
+这个脚本会：
+
+1. 启动 `postgres-test` 与 `redis-test`
+2. 在 Docker 中执行 `backend-go` 的 `go test ./...`
+3. 在 Docker 中执行前端校验：`pnpm check && pnpm build --mode test`
+4. 返回真实退出码并自动清理测试容器
+
+默认测试范围：
+
+- `backend-go`
+- `frontend_svelte` 校验
+
+## 一键运行预演
+
+这条流程会：
+
+- 使用 Dockerfile 构建 backend-go / frontend 镜像
+- 在容器里从头启动整套服务
+- 启动前清空旧容器和卷，保证每次都是干净环境
+- 只暴露 nginx 入口
+
+### 先准备本地 HTTPS 证书
+
+当前 Web 鉴权 Cookie 是 `Secure`，所以要通过 **HTTPS 的 nginx 入口** 使用整套服务。
+
+推荐使用 `mkcert` 生成：
 
 ```bash
-HOTSPOT_BACKEND_HOST_PORT=18080 \
-HOTSPOT_FRONTEND_HOST_PORT=13000 \
-HOTSPOT_MINIO_API_HOST_PORT=19000 \
-HOTSPOT_MINIO_CONSOLE_HOST_PORT=19001 \
-HOTSPOT_NGINX_HTTP_PORT=18888 \
-  docker compose -f deploy/dev/docker-compose.infra.yml -f deploy/dev/docker-compose.app.yml up -d nginx backend frontend minio
+mkdir -p tmp/certs
+mkcert -cert-file tmp/certs/localhost.crt -key-file tmp/certs/localhost.key localhost 127.0.0.1 ::1
 ```
 
-停止运行预演层：
+### 启动
 
 ```bash
-docker compose -f deploy/dev/docker-compose.infra.yml -f deploy/dev/docker-compose.app.yml stop nginx backend frontend
+./deploy/scripts/up-runtime.sh
 ```
 
-## ⚙️ 配置摘要
+多个分支并行开发时，建议给每套环境单独指定名字和端口：
 
-- **用户**：`hotspot_user`（CREATEDB 权限，无密码本地认证）
-- **模板数据库**：`hotspot_template`（包含 PostGIS 等扩展，不可连接）
-- **用户数据库**：`hotspot`（基于模板创建）
+```bash
+./deploy/scripts/up-runtime.sh --env-name feature-a --http-port 18088 --https-port 18443
+./deploy/scripts/up-runtime.sh --env-name feature-b --http-port 28088 --https-port 28443
+```
 
-## ⚠️ 注意事项
+默认入口：
 
-这些脚本仅用于**开发环境**。
+- HTTPS：`https://localhost:8443`
+- HTTP 重定向入口：`http://localhost:8088`
+
+### 运行链路
+
+宿主机只需要访问 nginx：
+
+- `/` -> `frontend_svelte`
+- `/api/v1/*` -> `backend-go`
+- `/ws/v1` -> `backend-go`
+- `/s3/*` -> `minio`
+
+也就是说你不需要单独去连 frontend、backend-go、MinIO 的宿主机端口。
+
+### 查看 / 检查 / 日志 / 停止 / 删除环境
+
+```bash
+# 查看环境状态
+./deploy/scripts/status-runtime.sh --env-name feature-a
+
+# 查看整套日志
+./deploy/scripts/logs-runtime.sh --env-name feature-a
+
+# 只看 backend 和 nginx 日志
+./deploy/scripts/logs-runtime.sh --env-name feature-a --services backend,nginx
+
+# 对入口做烟雾检查
+./deploy/scripts/check-runtime.sh --env-name feature-a --https-port 18443
+
+# 停掉整套环境，但保留容器和数据
+./deploy/scripts/down-runtime.sh --env-name feature-a
+
+# 删除整套环境容器，但保留数据
+./deploy/scripts/down-runtime.sh --env-name feature-a --remove
+
+# 删除整套环境和全部数据
+./deploy/scripts/down-runtime.sh --env-name feature-a --clean-all
+
+# 只删 postgres 数据
+./deploy/scripts/down-runtime.sh --env-name feature-a --clean postgres
+```
+
+### 给 AI / 自动化巡检的推荐入口
+
+在 AI 改完代码后，推荐默认这样做：
+
+```bash
+# 代码改动影响 runtime 行为时，先重建 app 层
+./deploy/scripts/up-runtime.sh --env-name feature-a --recreate backend,frontend,nginx --http-port 18088 --https-port 18443
+
+# 然后统一巡检
+./deploy/scripts/inspect-runtime.sh --env-name feature-a --https-port 18443
+```
+
+如果改动主要是测试逻辑或接口实现，也可以直接先跑：
+
+```bash
+./deploy/scripts/test-in-docker.sh --env-name feature-a
+```
+
+`inspect-runtime.sh` 会自动：
+
+1. 查看环境状态
+2. 做入口与健康检查
+3. 仅在失败时自动打印关键日志
+
+如果你想强制把日志也一起打出来：
+
+```bash
+./deploy/scripts/inspect-runtime.sh --env-name feature-a --https-port 18443 --logs
+```
+
+## 运行控制
+
+### runtime 脚本参数
+
+- `--env-name NAME`：给当前环境命名，用于隔离容器 / network / volume
+- `--http-port PORT`：指定 nginx 的 HTTP 入口端口
+- `--https-port PORT`：指定 nginx 的 HTTPS 入口端口
+- `--services a,b,c`：只启动指定服务
+- `--recreate a,b,c`：强制重建指定服务
+- `--clean-all`：清空整套 runtime 数据后重启
+- `--clean postgres,redis,minio`：只清指定数据服务
+
+示例：
+
+```bash
+# 保留数据，只重建 app 层
+./deploy/scripts/up-runtime.sh --env-name feature-a --recreate backend,frontend,nginx --http-port 18088 --https-port 18443
+
+# 只清 postgres 数据，再启动同一套环境
+./deploy/scripts/up-runtime.sh --env-name feature-a --clean postgres --http-port 18088 --https-port 18443
+
+# 全量清空这套环境
+./deploy/scripts/up-runtime.sh --env-name feature-a --clean-all --http-port 18088 --https-port 18443
+```
+
+## 可选环境变量
+
+### 运行预演
+
+- `HOTSPOT_ENV_NAME`：默认 `default`
+- `HOTSPOT_RUNTIME_HTTP_PORT`：默认 `8088`
+- `HOTSPOT_RUNTIME_HTTPS_PORT`：默认 `8443`
+- `HOTSPOT_PUBLIC_ORIGIN`：默认 `https://localhost:8443`
+- `HOTSPOT_TLS_CERT_PATH`：默认 `tmp/certs/localhost.crt`
+- `HOTSPOT_TLS_KEY_PATH`：默认 `tmp/certs/localhost.key`
+- `AUTH_TOKEN_SECRET`
+- `MINIO_ROOT_USER`
+- `MINIO_ROOT_PASSWORD`
+- `S3_BUCKET`
+- `VITE_AMAP_KEY`
+
+### backend-go 运行时配置
+
+`backend-go` 主要使用这些环境变量：
+
+- `APP_HOST`
+- `APP_PORT`
+- `POSTGRES_DSN`
+- `REDIS_DSN`
+- `AUTH_TOKEN_SECRET`
+- `APP_SUPPORT_EMAIL`
+- `APP_PRIVACY_POLICY_URL`
+- `APP_TERMS_OF_SERVICE_URL`
+- `APP_OFFICIAL_WEBSITE_URL`
+- `APP_DEFAULT_USER_AVATAR_URL`
+- `APP_DEFAULT_GROUP_AVATAR_URL`
+
+## 验证建议
+
+启动后可通过 nginx 入口检查：
+
+```bash
+curl -k https://localhost:8443/
+curl -k -X POST https://localhost:8443/api/v1/system/health -H 'Content-Type: application/json' -d '{}'
+```
+
+WebSocket 入口：
+
+- `wss://localhost:8443/ws/v1`
+
+MinIO 文件入口：
+
+- `https://localhost:8443/s3/...`
+
+## 说明
+
+- `deploy/` 目录负责定义容器编排、统一入口、数据生命周期和多环境隔离策略
+- runtime 默认保留 `postgres` / `redis` / `minio` 数据；需要时使用 `--clean` 或 `--clean-all`
+- 多环境并行运行时，请为每套环境指定不同的 `--env-name`、`--http-port`、`--https-port`
+- 如果通过 Cloudflare Full 模式接入，nginx 源站证书可以使用 Cloudflare Origin Certificate
+
+## 其他文档
+
+- [deployment.md](deployment.md)

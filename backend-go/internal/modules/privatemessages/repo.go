@@ -1,0 +1,10 @@
+package private_messages
+
+import "context"
+
+type Repository interface {
+	Send(context.Context, string, string, SendPrivateMessageRequest) MessageSent
+	History(context.Context, string, string) PaginatedMessages
+	Recent(context.Context, string, string, int) PaginatedMessages
+	Last(context.Context, string, string) *PrivateMessageItem
+}

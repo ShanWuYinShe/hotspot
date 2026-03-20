@@ -1,0 +1,25 @@
+package search
+
+import (
+	"encoding/json"
+	"net/http"
+
+	"hotspot/backend-go/internal/platform/httpx"
+)
+
+type Handler struct {
+	service *Service
+}
+
+func NewHandler(service *Service) *Handler {
+	return &Handler{service: service}
+}
+
+func (h *Handler) Suggest(w http.ResponseWriter, r *http.Request) {
+	var req SearchSuggestRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Prefix == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.Suggest(r.Context(), req)))
+}
