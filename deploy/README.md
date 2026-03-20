@@ -28,7 +28,9 @@
 ./deploy/scripts/test-in-docker.sh
 ```
 
-如果你同时有多个分支/工作树在开发，可以给每个测试环境一个独立名字：
+如果不传 `--env-name`，脚本会自动使用当前 git 分支 / worktree 名生成隔离环境名，减少多 agent / 多 worktree 并行时的手动命名负担。
+
+如果你同时有多个分支/工作树在开发，也仍然可以手动指定一个更明确的测试环境名：
 
 ```bash
 ./deploy/scripts/test-in-docker.sh --env-name feature-a
@@ -73,7 +75,9 @@ mkcert -cert-file tmp/certs/localhost.crt -key-file tmp/certs/localhost.key loca
 ./deploy/scripts/up-runtime.sh
 ```
 
-多个分支并行开发时，建议给每套环境单独指定名字和端口：
+如果不传 `--env-name`，脚本会自动使用当前 git 分支 / worktree 名生成隔离环境名；如果不显式指定端口，脚本会基于环境名派生一组默认端口，并在端口冲突时自动向后寻找可用端口。
+
+多个分支并行开发时，你仍然可以显式指定名字和端口，获得更可控的环境：
 
 ```bash
 ./deploy/scripts/up-runtime.sh --env-name feature-a --http-port 18088 --https-port 18443

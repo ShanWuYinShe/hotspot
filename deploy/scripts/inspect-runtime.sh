@@ -2,8 +2,11 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_NAME="default"
-HTTPS_PORT="8443"
+source "$ROOT/common.sh"
+REPO_ROOT="$(cd "$ROOT/../.." && pwd)"
+ENV_NAME="$(detect_env_name "$REPO_ROOT")"
+read -r _ DEFAULT_HTTPS_PORT <<< "$(derive_runtime_ports "$ENV_NAME")"
+HTTPS_PORT="$DEFAULT_HTTPS_PORT"
 HOSTNAME="localhost"
 LOG_SERVICES="backend,frontend,nginx"
 LOG_TAIL="300"
