@@ -8,6 +8,7 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
+	"hotspot/backend-go/internal/platform/realtime"
 )
 
 type Handler struct {
@@ -246,6 +247,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	principal, ok := platformauth.PrincipalFromContext(r.Context())
 	if ok {
 		_ = h.service.auth.RevokeSession(principal.UserID, principal.SessionID, principal.SessionID)
+		realtime.DefaultHub().CloseSession(principal.SessionID, realtime.Event{Type: "Error", Payload: realtime.ErrorPayload{Code: 20000, Message: "会话已失效", Severity: "fatal", Retryable: false}})
 	}
 	platformauth.ClearAuthCookies(w)
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())

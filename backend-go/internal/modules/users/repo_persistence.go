@@ -6,54 +6,52 @@ import (
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
-type PersistenceRepository struct {
-	factory *persistence.Factory
-	memory  *InMemoryRepository
-}
+type PersistenceRepository struct{ impl Repository }
 
 func NewPersistenceRepository(factory *persistence.Factory) *PersistenceRepository {
-	if factory == nil {
-		factory = &persistence.Factory{}
+	memory := NewInMemoryRepository()
+	if factory == nil || factory.Config.PostgresDSN == "" {
+		return &PersistenceRepository{impl: memory}
 	}
-	return &PersistenceRepository{factory: factory, memory: NewInMemoryRepository()}
+	return &PersistenceRepository{impl: NewPostgresRepository(factory, memory)}
 }
 
 func (r *PersistenceRepository) GetProfile(ctx context.Context, userID string) (MyProfile, bool) {
-	return r.memory.GetProfile(ctx, userID)
+	return r.impl.GetProfile(ctx, userID)
 }
 func (r *PersistenceRepository) PutProfile(ctx context.Context, profile MyProfile) {
-	r.memory.PutProfile(ctx, profile)
+	r.impl.PutProfile(ctx, profile)
 }
 func (r *PersistenceRepository) DeleteProfile(ctx context.Context, userID string) {
-	r.memory.DeleteProfile(ctx, userID)
+	r.impl.DeleteProfile(ctx, userID)
 }
 func (r *PersistenceRepository) GetSettings(ctx context.Context, userID string) (UserSettings, bool) {
-	return r.memory.GetSettings(ctx, userID)
+	return r.impl.GetSettings(ctx, userID)
 }
 func (r *PersistenceRepository) PutSettings(ctx context.Context, userID string, settings UserSettings) {
-	r.memory.PutSettings(ctx, userID, settings)
+	r.impl.PutSettings(ctx, userID, settings)
 }
 func (r *PersistenceRepository) SearchProfiles(ctx context.Context, req SearchUsersRequest) []MyProfile {
-	return r.memory.SearchProfiles(ctx, req)
+	return r.impl.SearchProfiles(ctx, req)
 }
 func (r *PersistenceRepository) Follow(ctx context.Context, userID, targetUserID string) {
-	r.memory.Follow(ctx, userID, targetUserID)
+	r.impl.Follow(ctx, userID, targetUserID)
 }
 func (r *PersistenceRepository) Unfollow(ctx context.Context, userID, targetUserID string) {
-	r.memory.Unfollow(ctx, userID, targetUserID)
+	r.impl.Unfollow(ctx, userID, targetUserID)
 }
 func (r *PersistenceRepository) Block(ctx context.Context, userID, targetUserID string) {
-	r.memory.Block(ctx, userID, targetUserID)
+	r.impl.Block(ctx, userID, targetUserID)
 }
 func (r *PersistenceRepository) Unblock(ctx context.Context, userID, targetUserID string) {
-	r.memory.Unblock(ctx, userID, targetUserID)
+	r.impl.Unblock(ctx, userID, targetUserID)
 }
 func (r *PersistenceRepository) SetRemark(ctx context.Context, userID, targetUserID, remark string) {
-	r.memory.SetRemark(ctx, userID, targetUserID, remark)
+	r.impl.SetRemark(ctx, userID, targetUserID, remark)
 }
 func (r *PersistenceRepository) ListBlocked(ctx context.Context, userID string) []BlockedUserItem {
-	return r.memory.ListBlocked(ctx, userID)
+	return r.impl.ListBlocked(ctx, userID)
 }
 func (r *PersistenceRepository) Relationship(ctx context.Context, userID, targetUserID string) Relationship {
-	return r.memory.Relationship(ctx, userID, targetUserID)
+	return r.impl.Relationship(ctx, userID, targetUserID)
 }

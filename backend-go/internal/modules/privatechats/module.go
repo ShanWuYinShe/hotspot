@@ -44,6 +44,10 @@ func (m *Module) Mount(r chi.Router) {
 			group.Use(idempotency.Middleware)
 			group.Post("/send", m.messageHandler.Send)
 			group.Post("/get_history", m.messageHandler.GetHistory)
+			group.Post("/update", m.messageHandler.Update)
+			group.Post("/recall", m.messageHandler.Recall)
+			group.Post("/me/mark_as_read", m.messageHandler.MarkAsRead)
+			group.Post("/me/mark_all_read", m.messageHandler.MarkAllRead)
 		})
 	})
 }

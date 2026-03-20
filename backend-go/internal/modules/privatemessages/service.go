@@ -40,3 +40,24 @@ func (s *Service) Last(ctx context.Context, targetUserID string) *PrivateMessage
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	return s.repo.Last(ctx, principal.UserID, targetUserID)
 }
+
+func (s *Service) Update(ctx context.Context, req UpdatePrivateMessageRequest) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	return s.repo.Update(ctx, principal.UserID, req)
+}
+
+func (s *Service) Recall(ctx context.Context, req RecallPrivateMessageRequest) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	return s.repo.Recall(ctx, principal.UserID, req)
+}
+
+func (s *Service) MarkAsRead(ctx context.Context, req MarkPrivateMessagesReadRequest) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	_ = principal
+	return s.repo.MarkAsRead(ctx, principal.UserID, req)
+}
+
+func (s *Service) MarkAllRead(ctx context.Context) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	return s.repo.MarkAllRead(ctx, principal.UserID)
+}

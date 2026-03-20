@@ -36,6 +36,20 @@ type GetHistoryRequest struct {
 	TargetUserID string `json:"target_user_id"`
 }
 
+type UpdatePrivateMessageRequest struct {
+	MessageID string `json:"message_id"`
+	Content   string `json:"content"`
+}
+
+type RecallPrivateMessageRequest struct {
+	MessageID string `json:"message_id"`
+}
+
+type MarkPrivateMessagesReadRequest struct {
+	TargetUserID  string `json:"target_user_id"`
+	UpToMessageID string `json:"up_to_message_id,omitempty"`
+}
+
 type MessageSent struct {
 	MessageID string `json:"message_id"`
 	SentAt    string `json:"sent_at"`

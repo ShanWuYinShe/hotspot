@@ -63,6 +63,10 @@ func (s *Service) AuthenticateRequest(rctx context.Context, authHeader string, a
 	if err != nil {
 		return Principal{}, time.Time{}, false
 	}
+	session, ok := s.sessions.Get(claims.SessionID)
+	if !ok || session.UserID != claims.UserID || session.RevokedAt != nil {
+		return Principal{}, time.Time{}, false
+	}
 	principal := Principal{UserID: claims.UserID, SessionID: claims.SessionID, Platform: platformFromContext(rctx)}
 	if claims.UserID == "admin" || strings.HasPrefix(claims.UserID, "admin_") {
 		principal.IsAdmin = true
