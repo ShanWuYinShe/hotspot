@@ -25,7 +25,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 修改 API、字段、错误码、事件 payload 前，先对照 `spec/`。
 
 ## 工作流说明
-- 通用的 **主分支 clean -> 多 agent/worktree/feature 分支并行 -> 集成分支汇总 -> PR -> 清理分支** 流程，以仓库根 `CLAUDE.md` 为准；这里不重复展开。
+- 通用的多 agent / 多 worktree / 多 feature 分支 / 本地集成分支汇总流程，以仓库根 `CLAUDE.md` 为准；这里不重复展开。
 
 ## Docker 测试 / 运行验证（重要）
 - 子项目开发时继续遵循根 `CLAUDE.md` 中定义的 Docker 测试 / runtime 验证流程：

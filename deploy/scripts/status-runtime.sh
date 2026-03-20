@@ -3,7 +3,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 COMPOSE_FILE="$ROOT/deploy/docker-compose.runtime.yml"
-ENV_NAME="${HOTSPOT_ENV_NAME:-default}"
+source "$ROOT/deploy/scripts/common.sh"
+ENV_NAME="$(detect_env_name "$ROOT")"
 PROJECT_NAME=""
 SHOW_VOLUMES=1
 CERT_PATH="${HOTSPOT_TLS_CERT_PATH:-/tmp/missing.crt}"

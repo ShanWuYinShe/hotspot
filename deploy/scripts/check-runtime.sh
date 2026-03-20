@@ -3,9 +3,11 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 COMPOSE_FILE="$ROOT/deploy/docker-compose.runtime.yml"
-ENV_NAME="${HOTSPOT_ENV_NAME:-default}"
+source "$ROOT/deploy/scripts/common.sh"
+ENV_NAME="$(detect_env_name "$ROOT")"
 PROJECT_NAME=""
-HTTPS_PORT="${HOTSPOT_RUNTIME_HTTPS_PORT:-8443}"
+read -r _ DEFAULT_HTTPS_PORT <<< "$(derive_runtime_ports "$ENV_NAME")"
+HTTPS_PORT="${HOTSPOT_RUNTIME_HTTPS_PORT:-$DEFAULT_HTTPS_PORT}"
 HOSTNAME="${HOTSPOT_RUNTIME_HOST:-localhost}"
 CERT_PATH="${HOTSPOT_TLS_CERT_PATH:-/tmp/missing.crt}"
 KEY_PATH="${HOTSPOT_TLS_KEY_PATH:-/tmp/missing.key}"
@@ -103,8 +105,11 @@ fi
 if [[ $SKIP_S3 -eq 0 ]]; then
   echo
   echo "[check] GET /s3/"
-  curl -k -sS -o /tmp/hotspot-s3-check.out -w "%{http_code}" "$BASE_URL/s3/" >/tmp/hotspot-s3-check.code
-  code="$(cat /tmp/hotspot-s3-check.code)"
+  s3_out="$(mktemp)"
+  s3_code="$(mktemp)"
+  trap 'rm -f "$s3_out" "$s3_code"' RETURN
+  curl -k -sS -o "$s3_out" -w "%{http_code}" "$BASE_URL/s3/" >"$s3_code"
+  code="$(cat "$s3_code")"
   if [[ "$code" == "200" || "$code" == "403" || "$code" == "404" ]]; then
     echo "ok (status $code)"
   else

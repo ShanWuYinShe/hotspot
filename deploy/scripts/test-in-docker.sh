@@ -3,12 +3,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 COMPOSE_FILE="$ROOT/deploy/docker-compose.test.yml"
-ENV_NAME="${HOTSPOT_ENV_NAME:-default}"
+source "$ROOT/deploy/scripts/common.sh"
+ENV_NAME="$(detect_env_name "$ROOT")"
 PROJECT_NAME=""
-
-sanitize_name() {
-  printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-'
-}
 
 usage() {
   cat <<'EOF'

@@ -4,10 +4,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 COMPOSE_FILE="$ROOT/deploy/docker-compose.runtime.yml"
 CERT_DIR="$ROOT/tmp/certs"
-ENV_NAME="${HOTSPOT_ENV_NAME:-default}"
+source "$ROOT/deploy/scripts/common.sh"
+ENV_NAME="$(detect_env_name "$ROOT")"
 PROJECT_NAME=""
-HTTP_PORT="${HOTSPOT_RUNTIME_HTTP_PORT:-8088}"
-HTTPS_PORT="${HOTSPOT_RUNTIME_HTTPS_PORT:-8443}"
+read -r DEFAULT_HTTP_PORT DEFAULT_HTTPS_PORT <<< "$(derive_runtime_ports "$ENV_NAME")"
+HTTP_PORT="${HOTSPOT_RUNTIME_HTTP_PORT:-$DEFAULT_HTTP_PORT}"
+HTTPS_PORT="${HOTSPOT_RUNTIME_HTTPS_PORT:-$DEFAULT_HTTPS_PORT}"
 PUBLIC_ORIGIN="${HOTSPOT_PUBLIC_ORIGIN:-https://localhost:${HTTPS_PORT}}"
 CERT_PATH="${HOTSPOT_TLS_CERT_PATH:-$CERT_DIR/localhost.crt}"
 KEY_PATH="${HOTSPOT_TLS_KEY_PATH:-$CERT_DIR/localhost.key}"
@@ -114,6 +116,12 @@ done
 
 ENV_NAME="$(sanitize_name "$ENV_NAME")"
 PROJECT_NAME="hotspot-runtime-${ENV_NAME}"
+if [[ -z "${HOTSPOT_RUNTIME_HTTP_PORT:-}" ]]; then
+  HTTP_PORT="$(next_free_port "$HTTP_PORT")"
+fi
+if [[ -z "${HOTSPOT_RUNTIME_HTTPS_PORT:-}" ]]; then
+  HTTPS_PORT="$(next_free_port "$HTTPS_PORT")"
+fi
 PUBLIC_ORIGIN="${HOTSPOT_PUBLIC_ORIGIN:-https://localhost:${HTTPS_PORT}}"
 
 if [[ ! -f "$CERT_PATH" || ! -f "$KEY_PATH" ]]; then
