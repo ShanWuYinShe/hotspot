@@ -27,7 +27,11 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	idempotency.ReplayOrStore(w, r, "moments/create", func() httpx.ApiResponse[MomentItem] {
-		return httpx.Success(h.service.Create(r.Context(), req))
+		item, err := h.service.Create(r.Context(), req)
+		if err != nil {
+			return httpx.ApiResponse[MomentItem]{Code: 10600, Message: "服务暂时不可用"}
+		}
+		return httpx.Success(item)
 	})
 }
 
@@ -37,7 +41,11 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	item, ok := h.service.OpenTheDoor(r.Context(), req.MomentID)
+	item, ok, err := h.service.OpenTheDoor(r.Context(), req.MomentID)
+	if err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
 	if !ok {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "瞬间不存在"))
 		return
@@ -50,5 +58,10 @@ func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.ListMine(r.Context())))
+	list, err := h.service.ListMine(r.Context())
+	if err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(list))
 }

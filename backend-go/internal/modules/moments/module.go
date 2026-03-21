@@ -19,7 +19,7 @@ type Module struct {
 func NewModule(factory *persistence.Factory) *Module {
 	momentRepo := NewPersistenceRepository(factory)
 	momentService := NewServiceWithRepo(momentRepo)
-	commentService := comments.NewService(comments.NewInMemoryRepository(), momentService)
+	commentService := comments.NewService(comments.NewPersistenceRepository(factory), momentService)
 	return &Module{
 		momentsHandler:  NewHandler(momentService),
 		commentsHandler: comments.NewHandler(commentService),

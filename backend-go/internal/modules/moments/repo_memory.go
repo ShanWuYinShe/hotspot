@@ -18,7 +18,7 @@ func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{moments: make(map[string]MomentItem), byUser: make(map[string][]string)}
 }
 
-func (r *InMemoryRepository) Create(_ context.Context, userID string, req CreateMomentRequest) MomentItem {
+func (r *InMemoryRepository) Create(_ context.Context, userID string, req CreateMomentRequest) (MomentItem, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	now := time.Now().UTC()
@@ -30,15 +30,17 @@ func (r *InMemoryRepository) Create(_ context.Context, userID string, req Create
 	item := MomentItem{MomentID: momentID, Description: req.Description, Tags: req.Tags, Mentions: req.Mentions, CreatedAt: now.Format(time.RFC3339), LikesCount: 0, CommentsCount: 0, SharesCount: 0, User: UserInfo{UserID: userID, Nickname: userID}, Location: req.Location, PrivacyLevel: privacy, MyState: &MyMomentState{IsLiked: false, IsFavorited: false}}
 	r.moments[momentID] = item
 	r.byUser[userID] = append(r.byUser[userID], momentID)
-	return item
+	return item, nil
 }
-func (r *InMemoryRepository) Get(_ context.Context, momentID string) (MomentItem, bool) {
+
+func (r *InMemoryRepository) Get(_ context.Context, momentID string) (MomentItem, bool, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	item, ok := r.moments[momentID]
-	return item, ok
+	return item, ok, nil
 }
-func (r *InMemoryRepository) ListMine(_ context.Context, userID string) PaginatedMoments {
+
+func (r *InMemoryRepository) ListMine(_ context.Context, userID string) (PaginatedMoments, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	ids := append([]string(nil), r.byUser[userID]...)
@@ -47,15 +49,17 @@ func (r *InMemoryRepository) ListMine(_ context.Context, userID string) Paginate
 	for _, id := range ids {
 		items = append(items, r.moments[id])
 	}
-	return PaginatedMoments{Items: items}
+	return PaginatedMoments{Items: items}, nil
 }
-func (r *InMemoryRepository) IncrementCommentCount(_ context.Context, momentID string) {
+
+func (r *InMemoryRepository) IncrementCommentCount(_ context.Context, momentID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	item, ok := r.moments[momentID]
 	if !ok {
-		return
+		return nil
 	}
 	item.CommentsCount++
 	r.moments[momentID] = item
+	return nil
 }

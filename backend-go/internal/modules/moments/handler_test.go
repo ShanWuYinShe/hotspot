@@ -1,7 +1,9 @@
 package moments
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,6 +13,18 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
 )
+
+type failingMomentCounter struct {
+	repo    *InMemoryRepository
+	failErr error
+}
+
+func (c *failingMomentCounter) IncrementCommentCount(ctx context.Context, momentID string) error {
+	if c.failErr != nil {
+		return c.failErr
+	}
+	return c.repo.IncrementCommentCount(ctx, momentID)
+}
 
 func TestCreateOpenAndListMoment(t *testing.T) {
 	idempotency.SetStore(idempotency.NewInMemoryStore())
@@ -101,5 +115,57 @@ func TestCreateCommentIncrementsMomentCount(t *testing.T) {
 	_ = json.NewDecoder(openRR.Body).Decode(&openResp)
 	if openResp.Data.CommentsCount != 1 {
 		t.Fatalf("expected comments_count=1, got %#v", openResp)
+	}
+}
+
+func TestCreateCommentDoesNotIncrementMomentCountWhenCounterFails(t *testing.T) {
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+	momentRepo := NewInMemoryRepository()
+	momentService := NewServiceWithRepo(momentRepo)
+	counter := &failingMomentCounter{repo: momentRepo, failErr: errors.New("update failed")}
+	commentRepo := comments.NewInMemoryRepository()
+	commentService := comments.NewService(commentRepo, counter)
+	commentHandler := comments.NewHandler(commentService)
+	momentHandler := NewHandler(momentService)
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+
+	createdMoment, err := momentRepo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Somewhere"}})
+	if err != nil {
+		t.Fatalf("create moment: %v", err)
+	}
+
+	createCommentReq := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"moment_id":"`+createdMoment.MomentID+`","content":"nice"}`))
+	createCommentReq.Header.Set("Idempotency-Key", "yyyy1234yyyy1234yyyy1234yyyy1234")
+	createCommentReq = createCommentReq.WithContext(ctx)
+	createCommentRR := httptest.NewRecorder()
+	commentHandler.Create(createCommentRR, createCommentReq)
+	var commentResp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(createCommentRR.Body).Decode(&commentResp); err != nil {
+		t.Fatalf("decode comment response: %v", err)
+	}
+	if commentResp.Code != 10600 {
+		t.Fatalf("expected service unavailable, got %#v", commentResp)
+	}
+	commentsList, err := commentRepo.List(context.Background(), createdMoment.MomentID)
+	if err != nil {
+		t.Fatalf("list comments: %v", err)
+	}
+	if len(commentsList.Items) != 0 {
+		t.Fatalf("comment should be rolled back, got %#v", commentsList)
+	}
+	openReq := httptest.NewRequest(http.MethodPost, "/open_the_door", strings.NewReader(`{"moment_id":"`+createdMoment.MomentID+`"}`))
+	openRR := httptest.NewRecorder()
+	momentHandler.OpenTheDoor(openRR, openReq)
+	var openResp struct {
+		Code int        `json:"code"`
+		Data MomentItem `json:"data"`
+	}
+	if err := json.NewDecoder(openRR.Body).Decode(&openResp); err != nil {
+		t.Fatalf("decode open response: %v", err)
+	}
+	if openResp.Data.CommentsCount != 0 {
+		t.Fatalf("expected comments_count=0, got %#v", openResp)
 	}
 }

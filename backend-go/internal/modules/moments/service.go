@@ -19,22 +19,25 @@ func NewServiceWithRepo(repo Repository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) Create(ctx context.Context, req CreateMomentRequest) MomentItem {
+func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (MomentItem, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	item := s.repo.Create(ctx, principal.UserID, req)
+	item, err := s.repo.Create(ctx, principal.UserID, req)
+	if err != nil {
+		return MomentItem{}, err
+	}
 	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: "MomentCommented", Payload: map[string]any{"moment_id": item.MomentID, "moment_summary": map[string]any{"moment_id": item.MomentID, "description_preview": item.Description}, "comment_id": "created", "comment_preview": item.Description}})
-	return item
+	return item, nil
 }
 
-func (s *Service) OpenTheDoor(ctx context.Context, momentID string) (MomentItem, bool) {
+func (s *Service) OpenTheDoor(ctx context.Context, momentID string) (MomentItem, bool, error) {
 	return s.repo.Get(ctx, momentID)
 }
 
-func (s *Service) ListMine(ctx context.Context) PaginatedMoments {
+func (s *Service) ListMine(ctx context.Context) (PaginatedMoments, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	return s.repo.ListMine(ctx, principal.UserID)
 }
 
-func (s *Service) IncrementCommentCount(momentID string) {
-	s.repo.IncrementCommentCount(context.Background(), momentID)
+func (s *Service) IncrementCommentCount(ctx context.Context, momentID string) error {
+	return s.repo.IncrementCommentCount(ctx, momentID)
 }

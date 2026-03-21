@@ -1,5 +1,7 @@
 package comments
 
+import "context"
+
 type MomentCounter interface {
-	IncrementCommentCount(momentID string)
+	IncrementCommentCount(context.Context, string) error
 }
