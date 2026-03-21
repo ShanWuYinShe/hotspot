@@ -60,11 +60,12 @@ HotSpot 是一个多端 monorepo：
 - 在仓库里写入密钥、凭据、`.env` 内容或提交本地私有配置。
 - 为了省事绕过安全边界、跳过确认、或编造未定义契约。
 
-## 本地验证入口
-- 测试优先：`./deploy/scripts/test-in-docker.sh --env-name <name>`
-- runtime 变更：`./deploy/scripts/up-runtime.sh --env-name <name> --recreate backend,frontend,nginx --http-port <http> --https-port <https>`，然后运行 `./deploy/scripts/inspect-runtime.sh --env-name <name> --https-port <https>`
-- 状态、日志和巡检：`status-runtime.sh`、`logs-runtime.sh`、`check-runtime.sh`、`inspect-runtime.sh`
-- 多分支或多 worktree 并行时，使用独立的 `--env-name`，必要时显式指定不同端口。
+## 本地验证与交付入口
+- 默认验证入口：`./deploy/scripts/verify.sh --env-name <name>`。
+- `verify` 默认验证的是**当前工作树快照**，不是直接把当前目录作为 Docker build context。
+- `preview` 是唯一的本地预演环境：先运行 `./deploy/scripts/preview-build.sh`，再运行 `./deploy/scripts/preview-up.sh`，最后用 `./deploy/scripts/preview-inspect.sh` 巡检。
+- `release` 只产部署输入物：`./deploy/scripts/release-build.sh --ref <git-ref>`。
+- 只有 `verify` 支持多 env / 多 worktree 并行；`preview` 只有一个实例。
 - 运行与测试继续遵循：**同一套配置 key，不同 datasource value**。不要引入额外环境模式抽象或 Redis key-prefix 机制，除非用户明确要求。
 
 ## 跨端地图与坐标规则

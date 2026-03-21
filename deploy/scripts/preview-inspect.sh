@@ -1,46 +1,37 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-COMPOSE_FILE="$ROOT/deploy/docker-compose.runtime.yml"
-source "$ROOT/deploy/scripts/common.sh"
-ENV_NAME="$(detect_env_name "$ROOT")"
-PROJECT_NAME=""
-read -r _ DEFAULT_HTTPS_PORT <<< "$(derive_runtime_ports "$ENV_NAME")"
-HTTPS_PORT="${HOTSPOT_RUNTIME_HTTPS_PORT:-$DEFAULT_HTTPS_PORT}"
-HOSTNAME="${HOTSPOT_RUNTIME_HOST:-localhost}"
-CERT_PATH="${HOTSPOT_TLS_CERT_PATH:-/tmp/missing.crt}"
-KEY_PATH="${HOTSPOT_TLS_KEY_PATH:-/tmp/missing.key}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
+ROOT="$(project_root)"
+COMPOSE_FILE="$ROOT/deploy/compose/preview.yml"
+PROJECT_NAME="$(preview_project_name)"
+HTTPS_PORT="8443"
+HOSTNAME="localhost"
+TAIL_LINES="300"
+FORCE_LOGS=0
 SKIP_HOME=0
 SKIP_HEALTH=0
 SKIP_S3=0
 
-sanitize_name() {
-  printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-'
-}
-
 usage() {
   cat <<'EOF'
-Usage: ./deploy/scripts/check-runtime.sh [options]
+Usage: ./deploy/scripts/preview-inspect.sh [options]
 
 Options:
-  --env-name NAME     Target isolated environment name (default: default)
   --https-port PORT   HTTPS port to check (default: 8443)
   --host HOST         Hostname to check (default: localhost)
+  --tail N            Number of log lines to show if logs are needed (default: 300)
   --skip-home         Skip checking GET /
   --skip-health       Skip checking POST /api/v1/system/health
   --skip-s3           Skip checking GET /s3/
+  --logs              Always show logs, even if checks pass
   -h, --help          Show this help message
 EOF
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --env-name)
-      shift
-      [[ $# -gt 0 ]] || { echo "missing value for --env-name" >&2; exit 1; }
-      ENV_NAME="$1"
-      ;;
     --https-port)
       shift
       [[ $# -gt 0 ]] || { echo "missing value for --https-port" >&2; exit 1; }
@@ -51,6 +42,11 @@ while [[ $# -gt 0 ]]; do
       [[ $# -gt 0 ]] || { echo "missing value for --host" >&2; exit 1; }
       HOSTNAME="$1"
       ;;
+    --tail)
+      shift
+      [[ $# -gt 0 ]] || { echo "missing value for --tail" >&2; exit 1; }
+      TAIL_LINES="$1"
+      ;;
     --skip-home)
       SKIP_HOME=1
       ;;
@@ -59,6 +55,9 @@ while [[ $# -gt 0 ]]; do
       ;;
     --skip-s3)
       SKIP_S3=1
+      ;;
+    --logs)
+      FORCE_LOGS=1
       ;;
     -h|--help)
       usage
@@ -73,38 +72,46 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-ENV_NAME="$(sanitize_name "$ENV_NAME")"
-PROJECT_NAME="hotspot-runtime-${ENV_NAME}"
+export HOTSPOT_PREVIEW_BACKEND_IMAGE="$(preview_backend_image)"
+export HOTSPOT_PREVIEW_FRONTEND_IMAGE="$(preview_frontend_image)"
+export HOTSPOT_TLS_CERT_PATH="${HOTSPOT_TLS_CERT_PATH:-/tmp/missing.crt}"
+export HOTSPOT_TLS_KEY_PATH="${HOTSPOT_TLS_KEY_PATH:-/tmp/missing.key}"
+
 BASE_URL="https://${HOSTNAME}:${HTTPS_PORT}"
-
-export HOTSPOT_TLS_CERT_PATH="$CERT_PATH"
-export HOTSPOT_TLS_KEY_PATH="$KEY_PATH"
-
 cd "$ROOT"
 
-echo "Environment name: $ENV_NAME"
 echo "Compose project: $PROJECT_NAME"
-echo "Checking base URL: $BASE_URL"
+echo "Backend image: $HOTSPOT_PREVIEW_BACKEND_IMAGE"
+echo "Frontend image: $HOTSPOT_PREVIEW_FRONTEND_IMAGE"
+echo
 
-docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" ps
+echo "[preview] status"
+docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" ps || true
 
-if [[ $SKIP_HOME -eq 0 ]]; then
+run_logs() {
   echo
-  echo "[check] GET /"
+  echo "[preview] logs"
+  docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" logs --tail "$TAIL_LINES"
+}
+
+echo
+echo "[preview] checks"
+if [[ $SKIP_HOME -eq 0 ]]; then
+  echo "GET /"
   curl -k -f -sS "$BASE_URL/" >/dev/null
   echo "ok"
 fi
 
 if [[ $SKIP_HEALTH -eq 0 ]]; then
   echo
-  echo "[check] POST /api/v1/system/health"
+  echo "POST /api/v1/system/health"
   curl -k -f -sS -X POST "$BASE_URL/api/v1/system/health" -H "Content-Type: application/json" -d "{}"
   echo
 fi
 
 if [[ $SKIP_S3 -eq 0 ]]; then
   echo
-  echo "[check] GET /s3/"
+  echo "GET /s3/"
   s3_out="$(mktemp)"
   s3_code="$(mktemp)"
   trap 'rm -f "$s3_out" "$s3_code"' RETURN
@@ -114,10 +121,14 @@ if [[ $SKIP_S3 -eq 0 ]]; then
     echo "ok (status $code)"
   else
     echo "unexpected status $code" >&2
+    run_logs
     exit 1
   fi
 fi
 
-echo
+if [[ $FORCE_LOGS -eq 1 ]]; then
+  run_logs
+fi
 
-echo "Runtime checks passed."
+echo
+echo "Preview inspection passed."

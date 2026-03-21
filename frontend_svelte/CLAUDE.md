@@ -16,7 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `src/hooks.server.ts`：服务端会话/认证钩子。
 
 ## 与根流程的关系
-- 本地分支、可选 worktree、本地集成分支、本地验证入口和风险边界，以仓库根 `CLAUDE.md` 为准；涉及 API、WebSocket 或地图行为时，再对照 `spec/`。
+- 本地分支、可选 worktree、本地集成分支、本地验证入口和风险边界，以仓库根 `CLAUDE.md` 为准；默认验证入口是 `verify.sh`，默认验证的是当前工作树快照；涉及 API、WebSocket 或地图行为时，再对照 `spec/`。
 
 ## 关键约束
 - 禁止硬编码 `/api/v1/...`，必须通过 `src/lib/api/endpoints.ts`。

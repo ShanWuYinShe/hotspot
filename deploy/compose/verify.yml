@@ -1,0 +1,55 @@
+services:
+  postgres-test:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: hotspot
+      POSTGRES_PASSWORD: hotspot
+      POSTGRES_DB: hotspot_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hotspot -d hotspot_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis-test:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend-go-verify:
+    image: ${HOTSPOT_BACKEND_GO_RUNNER_IMAGE:?set HOTSPOT_BACKEND_GO_RUNNER_IMAGE}
+    working_dir: /workspace/backend-go
+    command: ["go", "test", "./..."]
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8080
+      AUTH_TOKEN_SECRET: test-secret
+      POSTGRES_DSN: postgres://hotspot:hotspot@postgres-test:5432/hotspot_test?sslmode=disable
+      REDIS_DSN: redis://redis-test:6379/0
+      GOMODCACHE: /cache/go/pkg
+      GOCACHE: /cache/go/build
+    volumes:
+      - ${HOTSPOT_SOURCE_SNAPSHOT_ROOT:?set HOTSPOT_SOURCE_SNAPSHOT_ROOT}:/workspace
+      - ${HOTSPOT_GO_MOD_CACHE:?set HOTSPOT_GO_MOD_CACHE}:/cache/go/pkg
+      - ${HOTSPOT_GO_BUILD_CACHE:?set HOTSPOT_GO_BUILD_CACHE}:/cache/go/build
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+
+  frontend-verify:
+    image: ${HOTSPOT_FRONTEND_RUNNER_IMAGE:?set HOTSPOT_FRONTEND_RUNNER_IMAGE}
+    working_dir: /workspace/frontend_svelte
+    command: ["sh", "-c", "pnpm install --frozen-lockfile && pnpm check && pnpm build --mode test"]
+    environment:
+      ORIGIN: https://localhost:8443
+      VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
+      VITE_AMAP_SERVICE_HOST: /_AMapService
+      PNPM_STORE_DIR: /cache/pnpm/store
+    volumes:
+      - ${HOTSPOT_SOURCE_SNAPSHOT_ROOT:?set HOTSPOT_SOURCE_SNAPSHOT_ROOT}:/workspace
+      - ${HOTSPOT_PNPM_STORE_CACHE:?set HOTSPOT_PNPM_STORE_CACHE}:/cache/pnpm/store

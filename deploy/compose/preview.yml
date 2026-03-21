@@ -7,27 +7,27 @@ services:
       POSTGRES_PASSWORD: hotspot
       POSTGRES_DB: hotspot
     volumes:
-      - runtime_postgres_data:/var/lib/postgresql/data
+      - preview_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U hotspot -d hotspot"]
       interval: 10s
       timeout: 5s
       retries: 10
     networks:
-      - hotspot-runtime
+      - hotspot-preview
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
     volumes:
-      - runtime_redis_data:/data
+      - preview_redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 10
     networks:
-      - hotspot-runtime
+      - hotspot-preview
 
   minio:
     image: minio/minio:RELEASE.2024-01-18T22-51-28Z
@@ -37,36 +37,34 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     command: server /data --console-address ":9001"
     volumes:
-      - runtime_minio_data:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 20s
-      retries: 5
+      - preview_minio_data:/data
     networks:
-      - hotspot-runtime
+      - hotspot-preview
 
   createbuckets:
     image: minio/mc
     depends_on:
       minio:
-        condition: service_healthy
+        condition: service_started
     entrypoint: >
       /bin/sh -c "
-      /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin};
+      attempts=0;
+      until /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin}; do
+        attempts=$$((attempts + 1));
+        if [ $$attempts -ge 30 ]; then
+          exit 1;
+        fi;
+        sleep 2;
+      done;
       /usr/bin/mc mb --ignore-existing myminio/${S3_BUCKET:-hotspot};
       /usr/bin/mc anonymous set download myminio/${S3_BUCKET:-hotspot};
       exit 0;
       "
     networks:
-      - hotspot-runtime
+      - hotspot-preview
 
   backend:
-    image: ${HOTSPOT_BACKEND_IMAGE:-hotspot/backend-go:runtime}
-    build:
-      context: ../backend-go
-      dockerfile: Dockerfile
-      target: runtime
+    image: ${HOTSPOT_PREVIEW_BACKEND_IMAGE:?set HOTSPOT_PREVIEW_BACKEND_IMAGE}
     restart: unless-stopped
     environment:
       APP_HOST: 0.0.0.0
@@ -86,38 +84,31 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - hotspot-runtime
+      - hotspot-preview
 
   frontend:
-    image: ${HOTSPOT_FRONTEND_IMAGE:-hotspot/frontend-svelte:runtime}
-    build:
-      context: ../frontend_svelte
-      dockerfile: Dockerfile
-      target: runtime
-      args:
-        VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
-        VITE_AMAP_SERVICE_HOST: /_AMapService
+    image: ${HOTSPOT_PREVIEW_FRONTEND_IMAGE:?set HOTSPOT_PREVIEW_FRONTEND_IMAGE}
     restart: unless-stopped
     environment:
       PORT: 3000
       HOST: 0.0.0.0
-      ORIGIN: ${HOTSPOT_PUBLIC_ORIGIN:-https://localhost:8443}
+      ORIGIN: ${HOTSPOT_PREVIEW_PUBLIC_ORIGIN:-https://localhost:8443}
     depends_on:
       backend:
         condition: service_started
     networks:
-      - hotspot-runtime
+      - hotspot-preview
 
   nginx:
     image: nginx:1.25-alpine
     restart: unless-stopped
     ports:
-      - "${HOTSPOT_RUNTIME_HTTP_PORT:-8088}:80"
-      - "${HOTSPOT_RUNTIME_HTTPS_PORT:-8443}:443"
+      - "${HOTSPOT_PREVIEW_HTTP_PORT:-8088}:80"
+      - "${HOTSPOT_PREVIEW_HTTPS_PORT:-8443}:443"
     environment:
-      HOTSPOT_HTTPS_REDIRECT_PORT: ${HOTSPOT_RUNTIME_HTTPS_PORT:-8443}
+      HOTSPOT_HTTPS_REDIRECT_PORT: ${HOTSPOT_PREVIEW_HTTPS_PORT:-8443}
     volumes:
-      - ./nginx/hotspot.runtime.nginx.conf:/etc/nginx/templates/default.conf.template:ro
+      - ../nginx/hotspot.preview.nginx.conf:/etc/nginx/templates/default.conf.template:ro
       - ${HOTSPOT_TLS_CERT_PATH:?set HOTSPOT_TLS_CERT_PATH}:/etc/nginx/certs/tls.crt:ro
       - ${HOTSPOT_TLS_KEY_PATH:?set HOTSPOT_TLS_KEY_PATH}:/etc/nginx/certs/tls.key:ro
     depends_on:
@@ -126,17 +117,17 @@ services:
       frontend:
         condition: service_started
       minio:
-        condition: service_healthy
+        condition: service_started
       createbuckets:
         condition: service_completed_successfully
     networks:
-      - hotspot-runtime
+      - hotspot-preview
 
 volumes:
-  runtime_postgres_data:
-  runtime_redis_data:
-  runtime_minio_data:
+  preview_postgres_data:
+  preview_redis_data:
+  preview_minio_data:
 
 networks:
-  hotspot-runtime:
+  hotspot-preview:
     driver: bridge
