@@ -94,9 +94,6 @@ prepare_deploy_dirs() {
   local deploy_tmp
   deploy_tmp="$(deploy_tmp_root "$root")"
   ensure_dir "$deploy_tmp"
-  ensure_dir "$deploy_tmp/snapshots/verify"
-  ensure_dir "$deploy_tmp/snapshots/preview"
-  ensure_dir "$deploy_tmp/snapshots/release"
   ensure_dir "$deploy_tmp/artifacts/preview"
   ensure_dir "$deploy_tmp/artifacts/release"
   ensure_dir "$deploy_tmp/cache/go/pkg"
@@ -104,23 +101,7 @@ prepare_deploy_dirs() {
   ensure_dir "$deploy_tmp/cache/pnpm/store"
   ensure_dir "$deploy_tmp/locks"
   ensure_dir "$deploy_tmp/release"
-}
-
-verify_snapshot_dir() {
-  local root="$1"
-  local env_name="$2"
-  printf '%s/snapshots/verify/%s\n' "$(deploy_tmp_root "$root")" "$(sanitize_name "$env_name")"
-}
-
-preview_snapshot_dir() {
-  local root="$1"
-  printf '%s/snapshots/preview/current\n' "$(deploy_tmp_root "$root")"
-}
-
-release_snapshot_dir() {
-  local root="$1"
-  local label="$2"
-  printf '%s/snapshots/release/%s\n' "$(deploy_tmp_root "$root")" "$(sanitize_name "$label")"
+  ensure_dir "$deploy_tmp/worktrees"
 }
 
 preview_artifact_root() {
@@ -188,45 +169,32 @@ cleanup_path() {
   rm -rf "$path" >/dev/null 2>&1 || true
 }
 
-copy_worktree_snapshot() {
+source_root_from_current_worktree() {
   local root="$1"
-  local destination="$2"
-  python3 - "$root" "$destination" <<'PY'
-import os
-import shutil
-import subprocess
-import sys
-src, dest = sys.argv[1], sys.argv[2]
-shutil.rmtree(dest, ignore_errors=True)
-os.makedirs(dest, exist_ok=True)
-proc = subprocess.run([
-    'git','-C',src,'ls-files','-z','--cached','--others','--exclude-standard'
-], check=True, capture_output=True)
-paths = [p for p in proc.stdout.decode().split('\0') if p]
-for rel in paths:
-    src_path = os.path.join(src, rel)
-    if not os.path.lexists(src_path):
-        continue
-    dest_path = os.path.join(dest, rel)
-    os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-    if os.path.islink(src_path):
-        if os.path.lexists(dest_path):
-            os.unlink(dest_path)
-        os.symlink(os.readlink(src_path), dest_path)
-    elif os.path.isdir(src_path):
-        os.makedirs(dest_path, exist_ok=True)
-    else:
-        shutil.copy2(src_path, dest_path)
-PY
+  printf '%s\n' "$root"
 }
 
-copy_git_ref_snapshot() {
+release_worktree_dir() {
+  local root="$1"
+  local label="$2"
+  printf '%s/worktrees/%s\n' "$(deploy_tmp_root "$root")" "$(sanitize_name "$label")"
+}
+
+ensure_release_worktree() {
   local root="$1"
   local ref="$2"
-  local destination="$3"
+  local label="$3"
+  local destination
+  destination="$(release_worktree_dir "$root" "$label")"
   cleanup_path "$destination"
-  ensure_dir "$destination"
-  git -C "$root" archive "$ref" | tar -x -C "$destination"
+  git -C "$root" worktree add --detach "$destination" "$ref" >/dev/null
+  printf '%s\n' "$destination"
+}
+
+remove_release_worktree() {
+  local root="$1"
+  local path="$2"
+  git -C "$root" worktree remove --force "$path" >/dev/null 2>&1 || cleanup_path "$path"
 }
 
 resolved_git_ref() {

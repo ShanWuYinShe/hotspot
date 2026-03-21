@@ -61,11 +61,15 @@ HotSpot 是一个多端 monorepo：
 - 为了省事绕过安全边界、跳过确认、或编造未定义契约。
 
 ## 本地验证与交付入口
-- 默认验证入口：`./deploy/scripts/verify.sh --env-name <name>`。
-- `verify` 默认验证的是**当前工作树快照**，不是直接把当前目录作为 Docker build context。
-- `preview` 是唯一的本地预演环境：先运行 `./deploy/scripts/preview-build.sh`，再运行 `./deploy/scripts/preview-up.sh`，最后用 `./deploy/scripts/preview-inspect.sh` 巡检。
-- `release` 只产部署输入物：`./deploy/scripts/release-build.sh --ref <git-ref>`。
+### 短版工作流
+- `verify`：面向并行开发验证，支持多 agent + 多 worktree；默认验证当前工作目录 / worktree。用法：`./deploy/scripts/verify.sh --env-name <name>`。
+- `preview`：面向最终候选结果预演，只有一个实例。先运行 `./deploy/scripts/preview-build.sh`，再运行 `./deploy/scripts/preview-up.sh`，最后用 `./deploy/scripts/preview-inspect.sh` 巡检。
+- `release`：面向交付，只产部署输入物，不运行环境。用法：`./deploy/scripts/release-build.sh --ref <git-ref>`。
+
+### 原则
 - 只有 `verify` 支持多 env / 多 worktree 并行；`preview` 只有一个实例。
+- `verify` 默认验证的是**当前工作目录 / worktree**，不是直接把当前目录作为 Docker build context。
+- `preview` / `release` 面向候选结果与确定性版本，不再承担多 env 开发隔离语义。
 - 运行与测试继续遵循：**同一套配置 key，不同 datasource value**。不要引入额外环境模式抽象或 Redis key-prefix 机制，除非用户明确要求。
 
 ## 跨端地图与坐标规则

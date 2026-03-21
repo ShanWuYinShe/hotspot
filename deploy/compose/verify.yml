@@ -32,7 +32,7 @@ services:
       GOMODCACHE: /cache/go/pkg
       GOCACHE: /cache/go/build
     volumes:
-      - ${HOTSPOT_SOURCE_SNAPSHOT_ROOT:?set HOTSPOT_SOURCE_SNAPSHOT_ROOT}:/workspace
+      - ${HOTSPOT_SOURCE_ROOT:?set HOTSPOT_SOURCE_ROOT}:/workspace
       - ${HOTSPOT_GO_MOD_CACHE:?set HOTSPOT_GO_MOD_CACHE}:/cache/go/pkg
       - ${HOTSPOT_GO_BUILD_CACHE:?set HOTSPOT_GO_BUILD_CACHE}:/cache/go/build
     depends_on:
@@ -50,6 +50,7 @@ services:
       VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
       VITE_AMAP_SERVICE_HOST: /_AMapService
       PNPM_STORE_DIR: /cache/pnpm/store
+      CI: "true"
     volumes:
-      - ${HOTSPOT_SOURCE_SNAPSHOT_ROOT:?set HOTSPOT_SOURCE_SNAPSHOT_ROOT}:/workspace
+      - ${HOTSPOT_SOURCE_ROOT:?set HOTSPOT_SOURCE_ROOT}:/workspace
       - ${HOTSPOT_PNPM_STORE_CACHE:?set HOTSPOT_PNPM_STORE_CACHE}:/cache/pnpm/store

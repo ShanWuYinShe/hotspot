@@ -25,13 +25,13 @@
 
 ### 语义
 - 面向开发内环
-- 默认验证当前工作树快照
+- 默认验证当前工作目录 / worktree
 - 包含未提交修改
 - 支持多 worktree 并行
 
 ### 隔离模型
 按 `env-name` 隔离：
-- snapshot
+- 当前工作目录 / worktree
 - compose project
 - cache
 - lock
@@ -67,7 +67,7 @@
 ```
 
 ### 输入
-- 默认：当前工作树快照
+- 默认：当前工作目录 / worktree
 - 可选：通过 `preview-build.sh --ref <git-ref>` 使用确定性 git 版本
 
 ### 运行拓扑
@@ -164,7 +164,7 @@ deploy/
 ## 六、必须保留的行为
 - 本地优先开发与本地集成分支流程不变
 - verify 默认继续走 Docker
-- verify 默认继续验证当前工作树快照
+- verify 默认继续验证当前工作目录 / worktree
 - preview 保留 HTTPS + nginx + MinIO + inspect 链
 - 数据保留 / 清理语义保留
 - 多 worktree 并行隔离只属于 verify
@@ -173,7 +173,7 @@ deploy/
 
 ### verify
 - 不同 worktree 使用不同 `env-name` 可以并行运行
-- snapshot / compose project / cache / lock 不串
+- 工作目录 / compose project / cache / lock 不串
 - backend-go 与 frontend 验证都能通过
 
 ### preview

@@ -7,7 +7,8 @@ ROOT="$(project_root)"
 REF="HEAD"
 LABEL=""
 LOCK_PATH=""
-SNAPSHOT_DIR=""
+SOURCE_ROOT=""
+RELEASE_WORKTREE=""
 ARTIFACT_ROOT=""
 BACKEND_RUNNER_IMAGE="$(backend_go_runner_image "$ROOT")"
 FRONTEND_RUNNER_IMAGE="$(frontend_runner_image "$ROOT")"
@@ -53,7 +54,6 @@ if [[ -z "$LABEL" ]]; then
   LABEL="$SHA"
 fi
 LABEL="$(sanitize_name "$LABEL")"
-SNAPSHOT_DIR="$(release_snapshot_dir "$ROOT" "$LABEL")"
 ARTIFACT_ROOT="$(release_artifact_root "$ROOT" "$LABEL")"
 BACKEND_ARTIFACT_DIR="$(backend_go_artifact_dir "$ARTIFACT_ROOT")"
 FRONTEND_ARTIFACT_DIR="$(frontend_artifact_dir "$ARTIFACT_ROOT")"
@@ -65,11 +65,15 @@ MANIFEST_PATH="$MANIFEST_DIR/manifest.json"
 prepare_deploy_dirs "$ROOT"
 LOCK_PATH="$(acquire_lock "$ROOT" "release-$LABEL")"
 cleanup() {
+  if [[ -n "$RELEASE_WORKTREE" ]]; then
+    remove_release_worktree "$ROOT" "$RELEASE_WORKTREE"
+  fi
   release_lock "$LOCK_PATH"
 }
 trap cleanup EXIT
 
-copy_git_ref_snapshot "$ROOT" "$REF" "$SNAPSHOT_DIR"
+RELEASE_WORKTREE="$(ensure_release_worktree "$ROOT" "$REF" "$LABEL")"
+SOURCE_ROOT="$RELEASE_WORKTREE"
 ensure_runner_image "$BACKEND_RUNNER_IMAGE" "$ROOT/deploy/dockerfiles/backend-go.verify.Dockerfile" "$ROOT"
 ensure_runner_image "$FRONTEND_RUNNER_IMAGE" "$ROOT/deploy/dockerfiles/frontend.verify.Dockerfile" "$ROOT"
 cleanup_path "$ARTIFACT_ROOT"
@@ -78,7 +82,7 @@ ensure_dir "$FRONTEND_ARTIFACT_DIR"
 ensure_dir "$MANIFEST_DIR"
 
 docker run --rm \
-  -v "$SNAPSHOT_DIR:/workspace:ro" \
+  -v "$SOURCE_ROOT:/workspace:ro" \
   -v "$BACKEND_ARTIFACT_DIR:/out" \
   -v "$(go_mod_cache_dir "$ROOT"):/cache/go/pkg" \
   -v "$(go_build_cache_dir "$ROOT"):/cache/go/build" \
@@ -87,15 +91,15 @@ docker run --rm \
   sh -c 'go build -o /out/backend-go ./cmd/server'
 
 docker run --rm \
-  -v "$SNAPSHOT_DIR:/workspace" \
+  -v "$SOURCE_ROOT:/workspace" \
   -v "$(pnpm_store_dir "$ROOT"):/cache/pnpm/store" \
   -w /workspace/frontend_svelte \
   "$FRONTEND_RUNNER_IMAGE" \
-  sh -c 'pnpm install --frozen-lockfile && pnpm build'
+  sh -c 'CI=true pnpm install --frozen-lockfile && CI=true pnpm build'
 
-cp "$SNAPSHOT_DIR/frontend_svelte/package.json" "$SNAPSHOT_DIR/frontend_svelte/pnpm-lock.yaml" "$FRONTEND_ARTIFACT_DIR/"
+cp "$SOURCE_ROOT/frontend_svelte/package.json" "$SOURCE_ROOT/frontend_svelte/pnpm-lock.yaml" "$FRONTEND_ARTIFACT_DIR/"
 rm -rf "$FRONTEND_ARTIFACT_DIR/build"
-cp -R "$SNAPSHOT_DIR/frontend_svelte/build" "$FRONTEND_ARTIFACT_DIR/build"
+cp -R "$SOURCE_ROOT/frontend_svelte/build" "$FRONTEND_ARTIFACT_DIR/build"
 
 build_app_image "$RELEASE_BACKEND_IMAGE" "$ROOT/deploy/dockerfiles/backend-go.release.Dockerfile" "$BACKEND_ARTIFACT_DIR"
 build_app_image "$RELEASE_FRONTEND_IMAGE" "$ROOT/deploy/dockerfiles/frontend.release.Dockerfile" "$FRONTEND_ARTIFACT_DIR"

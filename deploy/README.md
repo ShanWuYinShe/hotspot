@@ -8,16 +8,19 @@
 
 ## 快速入口
 
-### verify
-验证当前工作树快照，支持多 worktree 并行：
+### 短版工作流
+- `verify`：用于并行开发验证，支持多 agent + 多 worktree。默认验证当前工作目录 / worktree。示例：`./deploy/scripts/verify.sh --env-name feature-a`
+- `preview`：用于最终候选结果预演，只有一个实例。先 `./deploy/scripts/preview-build.sh`，再 `./deploy/scripts/preview-up.sh`，最后 `./deploy/scripts/preview-inspect.sh`
+- `release`：用于产出正式部署输入物，不运行环境。示例：`./deploy/scripts/release-build.sh --ref HEAD --label release-2026-03-21`
 
+### 常用命令
+
+#### verify
 ```bash
 ./deploy/scripts/verify.sh --env-name feature-a
 ```
 
-### preview
-先产出单实例 preview image，再启动单实例 preview 环境：
-
+#### preview
 ```bash
 ./deploy/scripts/preview-build.sh
 ./deploy/scripts/preview-up.sh
@@ -32,9 +35,7 @@
 ./deploy/scripts/preview-down.sh --clean-all
 ```
 
-### release
-从确定性 git 版本构建正式部署输入物：
-
+#### release
 ```bash
 ./deploy/scripts/release-build.sh --ref HEAD
 ./deploy/scripts/release-build.sh --ref <sha-or-tag> --label release-2026-03-21
@@ -44,7 +45,7 @@
 - 只有 `verify` 支持多实例并行。
 - `preview` 只有一个实例，不再按 worktree 并行。
 - `release` 不运行环境，只产物。
-- `verify` 默认验证当前工作树快照，包含未提交修改。
+- `verify` 默认验证当前工作目录 / worktree，包含未提交修改。
 - `preview` / `release` 面向候选结果与确定性版本，不再承担多 env 开发隔离语义。
 
 ## 目录结构
