@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "language": "chinese",
+  "autoMemoryEnabled": true,
+  "respectGitignore": true,
+  "permissions": {
+    "ask": [
+      "EnterWorktree",
+      "ExitWorktree",
+      "Edit(.claude/settings.json)",
+      "Write(.claude/settings.json)",
+      "Bash(git fetch:*)",
+      "Bash(git pull:*)",
+      "Bash(git merge:*)",
+      "Bash(git cherry-pick:*)",
+      "Bash(git push:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean:*)",
+      "Bash(git branch -D:*)",
+      "Bash(*--force*)",
+      "Bash(*sqlx migrate*)",
+      "Bash(*database reset*)",
+      "Bash(*psql*)",
+      "Bash(*deploy/scripts/down-runtime.sh*)",
+      "Bash(*deploy/scripts/up-runtime.sh*--clean*)",
+      "Bash(*deploy/scripts/down-runtime.sh*--clean*)",
+      "Bash(*deploy/scripts/down-runtime.sh*--remove*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 - <<'PY'\nimport json, subprocess\nroot = subprocess.run(['git', 'rev-parse', '--show-toplevel'], capture_output=True, text=True).stdout.strip() or '.'\nbranch = subprocess.run(['git', '-C', root, 'branch', '--show-current'], capture_output=True, text=True).stdout.strip() or '(detached)'\ndirty = bool(subprocess.run(['git', '-C', root, 'status', '--short'], capture_output=True, text=True).stdout.strip())\nstate = 'dirty' if dirty else 'clean'\nmsg = f'当前分支: {branch}；工作区: {state}。开始新一轮任务前，请先确认最新成果已回到本地 main。'\nprint(json.dumps({'systemMessage': msg}, ensure_ascii=False))\nPY"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 - <<'PY'\nimport json\nmsg = '若本次改动涉及代码，请确认：是否已完成 task list、是否已运行本地标准验证、是否需要在本地集成分支汇总。'\nprint(json.dumps({'systemMessage': msg}, ensure_ascii=False))\nPY"
+          }
+        ]
+      }
+    ]
+  }
+}

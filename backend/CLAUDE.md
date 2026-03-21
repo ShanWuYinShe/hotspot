@@ -16,21 +16,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `src/middleware/`：request id 等 HTTP 中间件。
 - `src/utils/`：缓存、token、web cookie、客户端 IP 等通用工具。
 
+## 与根流程的关系
+- 本地分支、可选 worktree、本地集成分支、本地验证入口和风险边界，以仓库根 `CLAUDE.md` 为准。
+- 后端改动完成后，优先运行根文档定义的本地 Docker 验证流程；影响 runtime 行为时，再补跑 runtime 验证。
+
 ## 关键约束
 - 只用 `POST` + JSON，业务响应统一为 `HTTP 200 + ApiResponse<T>`。
 - 严格遵守 `Handler -> Service -> Repository` 分层，不跨层访问。
 - SQL 只在 repository 层写，使用 `sqlx` 宏，不要写非宏查询。
-- 分页只用 cursor / keyset，不用 OFFSET。
+- 分页只用 cursor / keyset，不用 OFFSET；cursor 编解码只在 repository 层完成。
 - 距离、范围和排序计算在 PostGIS 完成，不在 Rust 代码里手算。
 - 修改接口前先读对应 `spec/api_spec_*.md`。
 - 日志要带 request id，不记录密码、Token、隐私内容。
+
+## 运行时提示
+- 认证与会话逻辑、黑名单和 WebSocket 行为都已经在现有结构里分层，改动时优先沿用现有模式。
+- 新增路由时优先放在 `src/routes/v1/`，再由 `src/main.rs` 的总路由挂载。
+- 如果需要自查旧式 SQL 写法，重点检查是否出现非宏 `sqlx::query(`、`sqlx::query_as::<`、`sqlx::query_scalar::<`。
 
 ## 常用命令
 - `cargo check`
 - `cargo clippy`
 - `cargo test`
 - 单测：`cargo test <测试名> -- --exact`
-
-## 运行时提示
-- 认证与会话逻辑、黑名单和 WebSocket 行为都已经在现有结构里分层，改动时优先沿用现有模式。
-- 新增路由时优先放在 `src/routes/v1/`，再由 `src/main.rs` 的总路由挂载。

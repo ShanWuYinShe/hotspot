@@ -23,8 +23,8 @@ cd backend && cargo run
 cd frontend_svelte && pnpm dev
 ```
 
-## 规范
+## 入口
 
-- [AGENTS.md](AGENTS.md) - AI Agent 操作指南
-- [spec/](spec/) - API 规范文档
-- [deploy/](deploy/) - 部署配置
+- 协作与实现说明先读 [CLAUDE.md](CLAUDE.md)，进入子项目后再读对应目录下的 `CLAUDE.md`。
+- [spec/](spec/) - API 规范
+- [deploy/](deploy/) - 本地验证与运行入口

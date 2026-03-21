@@ -13,24 +13,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `migrations/`：数据库迁移。
 - `test/`：集成测试与后续 PG/Redis harness 的扩展入口。
 
+## 与根流程的关系
+- 本地分支、可选 worktree、本地集成分支、本地验证入口和风险边界，以仓库根 `CLAUDE.md` 为准；`test-in-docker.sh`、`up-runtime.sh`、`inspect-runtime.sh` 是默认本地验证入口。
+
 ## 关键约束
 - 严格遵守 `Handler -> Service -> Repository` 分层。
 - SQL 只在 repository / store 层写，不要在 handler/service 里直接查库。
 - PostgreSQL 是权威存储；Redis 只承担热点读缓存与失效，不承载最终真相。
-- 分页只用 cursor / keyset，不用 OFFSET。
+- 分页只用 cursor / keyset，不用 OFFSET；cursor 对上层保持不透明。
 - 地理相关搜索、发现、附近能力统一复用 `internal/platform/geo` 的 S2 planner，不要在业务模块里重复写 geo 逻辑。
+- backend-go 不使用 PostGIS、geometry/geography 类型或 `ST_*` 查询。
+- 动态 SQL 片段必须走白名单映射，不直接拼接客户端输入。
 - WebSocket 与 HTTP 必须共享同一套 auth authority；不要单独 new 一份独立的 auth service。
 - MUST 写接口优先复用平台层 idempotency replay，不要为单模块另起一套幂等实现。
-- 不要自行执行 `deploy/` 目录脚本、数据库重置或 destructive 运维动作，除非用户明确要求。
 - 修改 API、字段、错误码、事件 payload 前，先对照 `spec/`。
 
-## 工作流说明
-- 通用的多 agent / 多 worktree / 多 feature 分支 / 本地集成分支汇总流程，以仓库根 `CLAUDE.md` 为准；这里不重复展开。
-
-## Docker 测试 / 运行验证（重要）
-- 子项目开发时继续遵循根 `CLAUDE.md` 中定义的 Docker 测试 / runtime 验证流程：
-  - 测试优先：`./deploy/scripts/test-in-docker.sh --env-name <name>`
-  - runtime 变更：`./deploy/scripts/up-runtime.sh ...` + `./deploy/scripts/inspect-runtime.sh ...`
+## 运行与实现提示
+- 事务由 service 控制；repository 负责在已有事务或连接上执行 SQL，不自行开启业务事务。
+- 新增 geo 逻辑时，优先看 `internal/platform/geo`、`internal/modules/map` 和已有附近搜索实现，而不是在模块里重写一套 S2 计算。
+- 错误码只能来自 spec，HTTP 统一返回 `HTTP 200 + ApiResponse<T>`，业务成功唯一依据是 `code == 0`。
 
 ## 运行配置
 - 当前后端主要使用环境变量：

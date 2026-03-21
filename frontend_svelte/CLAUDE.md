@@ -15,13 +15,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `src/lib/websocket/`：WebSocket 协议、处理器和 store。
 - `src/hooks.server.ts`：服务端会话/认证钩子。
 
+## 与根流程的关系
+- 本地分支、可选 worktree、本地集成分支、本地验证入口和风险边界，以仓库根 `CLAUDE.md` 为准；涉及 API、WebSocket 或地图行为时，再对照 `spec/`。
+
 ## 关键约束
 - 禁止硬编码 `/api/v1/...`，必须通过 `src/lib/api/endpoints.ts`。
+- 所有请求统一走 `src/lib/api/client.ts` 和 `src/lib/api/services/*`；不要另起一套 HTTP 封装。
 - 所有请求都是 `POST`，业务成功只看 `code === 0`。
 - `cursor` 只透传，不解析、不构造。
 - Web 端只用 HttpOnly Cookie，不在 localStorage / sessionStorage 放 refresh token，也不解析 JWT。
 - TypeScript 禁止 `any`。
 - WebSocket 事件类型必须和 spec 对齐。
+- 地图、位置和列表展示中不在前端计算距离或角度。
+
+## 地图与坐标边界
+- 只在“业务坐标 ↔ 地图坐标”的单一边界层做一次转换；如果输入已经是地图坐标系，不要重复转换。
+- marker、overlay、位置选择器中心点必须使用地图 SDK 原生能力，禁止 DOM 伪 marker。
+- center pin 必须绑定地图相机中心；回写业务状态时直接使用地图 SDK 返回的中心坐标。
 
 ## 常用命令
 - `pnpm check`

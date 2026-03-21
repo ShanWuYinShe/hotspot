@@ -18,5 +18,6 @@ pnpm build
 
 ## 规范与文档
 
-- 完整规范见 [AGENTS.md](AGENTS.md)
+- 完整协作规范见 [CLAUDE.md](CLAUDE.md)
+- 本地优先工作流见根目录 [CLAUDE.md](../CLAUDE.md)
 - API 规范见 [spec/](../spec/)
