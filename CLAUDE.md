@@ -28,7 +28,7 @@ HotSpot 是一个多端 monorepo：
 - 不要猜测 spec 中不存在的接口、字段、错误码或行为；实现与 spec 冲突时，优先修改实现而不是反改 spec。
 - 临时文件统一放在仓库根目录 `tmp/`。
 - 默认只在仓库内工作；确需访问仓库外路径时，只使用用户明确提供或仓库文档已约定的绝对路径。
-- 标准本地 Docker 测试与 runtime 验证属于默认开发流程；清理数据、重置环境、正式部署、数据库重置和远程同步仍需先确认。
+- 标准本地 Docker 测试与 runtime 验证属于默认开发流程；所有测试、check、build 验证默认都必须通过 `deploy/` 下的 Docker 流程执行，不要直接在宿主环境运行 `go test`、`pnpm check`、`pnpm build` 等。清理数据、重置环境、正式部署、数据库重置和远程同步仍需先确认。
 
 ## 本地优先开发流程
 1. 开始新一轮开发前，先确认上一轮成果已经同步回本地 `main`，并确保当前工作区 clean。
@@ -42,7 +42,7 @@ HotSpot 是一个多端 monorepo：
 ### 可直接执行
 - 读取文件、搜索代码、编辑仓库内已有文件。
 - 使用 task list、plan mode、AskUserQuestion、subagents 组织工作。
-- 运行本地非破坏性的构建、类型检查、lint、单测和标准 Docker 验证。
+- 运行本地非破坏性的标准 Docker 验证；如需构建、类型检查、lint、单测，默认通过 `deploy/` 脚本在 Docker 内执行，而不是直接在宿主环境执行。
 
 ### 需要先确认
 - 大量文件删除、批量重命名、跨目录大改。
@@ -62,13 +62,14 @@ HotSpot 是一个多端 monorepo：
 
 ## 本地验证与交付入口
 ### 短版工作流
-- `verify`：面向并行开发验证，支持多 agent + 多 worktree；默认验证当前工作目录 / worktree。用法：`./deploy/scripts/verify.sh --env-name <name>`。
+- `verify`：面向并行开发验证，支持多 agent + 多 worktree；默认验证当前工作目录 / worktree，并且在 Docker 隔离环境里完成 backend-go/frontend 的测试与构建检查。用法：`./deploy/scripts/verify.sh --env-name <name>`。
 - `preview`：面向最终候选结果预演，只有一个实例。先运行 `./deploy/scripts/preview-build.sh`，再运行 `./deploy/scripts/preview-up.sh`，最后用 `./deploy/scripts/preview-inspect.sh` 巡检。
 - `release`：面向交付，只产部署输入物，不运行环境。用法：`./deploy/scripts/release-build.sh --ref <git-ref>`。
 
 ### 原则
 - 只有 `verify` 支持多 env / 多 worktree 并行；`preview` 只有一个实例。
-- `verify` 默认验证的是**当前工作目录 / worktree**，不是直接把当前目录作为 Docker build context。
+- `verify` 默认验证的是**当前工作目录 / worktree**，但执行发生在 Docker 隔离环境中，不应把宿主机运行结果视为最终验证结论。
+- 测试过程中产生的缓存、store、构建产物必须落在 `tmp/` 或容器临时目录，不能把 `.pnpm-store` 之类的临时目录写回仓库根。
 - `preview` / `release` 面向候选结果与确定性版本，不再承担多 env 开发隔离语义。
 - 运行与测试继续遵循：**同一套配置 key，不同 datasource value**。不要引入额外环境模式抽象或 Redis key-prefix 机制，除非用户明确要求。
 

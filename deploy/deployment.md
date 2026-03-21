@@ -48,7 +48,7 @@
 - 固定 runner image：
   - `dockerfiles/backend-go.verify.Dockerfile`
   - `dockerfiles/frontend.verify.Dockerfile`
-- 当前工作树通过 snapshot 注入容器执行测试
+- 当前工作树通过只读挂载注入容器，并复制到容器临时目录后执行测试，避免把 pnpm store、node_modules 或其他临时产物写回仓库根
 
 ## 二、preview
 
@@ -165,6 +165,8 @@ deploy/
 - 本地优先开发与本地集成分支流程不变
 - verify 默认继续走 Docker
 - verify 默认继续验证当前工作目录 / worktree
+- 所有测试、check、build 验证默认都通过 `deploy/` 下的 Docker 流程执行，不直接依赖宿主环境
+- 测试与构建过程中产生的缓存、pnpm store、临时产物不得写回仓库根
 - preview 保留 HTTPS + nginx + MinIO + inspect 链
 - 数据保留 / 清理语义保留
 - 多 worktree 并行隔离只属于 verify

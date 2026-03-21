@@ -73,20 +73,15 @@ docker run --rm \
   -v "$BACKEND_ARTIFACT_DIR:/out" \
   -v "$(go_mod_cache_dir "$ROOT"):/cache/go/pkg" \
   -v "$(go_build_cache_dir "$ROOT"):/cache/go/build" \
-  -w /workspace/backend-go \
   "$BACKEND_RUNNER_IMAGE" \
-  sh -c 'go build -o /out/backend-go ./cmd/server'
+  sh -c 'rm -rf /tmp/workspace && mkdir -p /tmp/workspace/backend-go && cp -a /workspace/backend-go/. /tmp/workspace/backend-go/ && cd /tmp/workspace/backend-go && go build -o /out/backend-go ./cmd/server'
 
 docker run --rm \
-  -v "$SOURCE_ROOT:/workspace" \
+  -v "$SOURCE_ROOT:/workspace:ro" \
+  -v "$FRONTEND_ARTIFACT_DIR:/out" \
   -v "$(pnpm_store_dir "$ROOT"):/cache/pnpm/store" \
-  -w /workspace/frontend_svelte \
   "$FRONTEND_RUNNER_IMAGE" \
-  sh -c 'CI=true pnpm install --frozen-lockfile && CI=true pnpm build'
-
-cp "$SOURCE_ROOT/frontend_svelte/package.json" "$SOURCE_ROOT/frontend_svelte/pnpm-lock.yaml" "$FRONTEND_ARTIFACT_DIR/"
-rm -rf "$FRONTEND_ARTIFACT_DIR/build"
-cp -R "$SOURCE_ROOT/frontend_svelte/build" "$FRONTEND_ARTIFACT_DIR/build"
+  sh -c 'rm -rf /tmp/workspace && mkdir -p /tmp/workspace/frontend_svelte && cp -a /workspace/frontend_svelte/. /tmp/workspace/frontend_svelte/ && cd /tmp/workspace/frontend_svelte && CI=true pnpm install --frozen-lockfile && CI=true pnpm build && cp package.json pnpm-lock.yaml /out/ && rm -rf /out/build && cp -R build /out/build'
 
 build_app_image "$PREVIEW_BACKEND_IMAGE" "$ROOT/deploy/dockerfiles/backend-go.preview.Dockerfile" "$BACKEND_ARTIFACT_DIR"
 build_app_image "$PREVIEW_FRONTEND_IMAGE" "$ROOT/deploy/dockerfiles/frontend.preview.Dockerfile" "$FRONTEND_ARTIFACT_DIR"

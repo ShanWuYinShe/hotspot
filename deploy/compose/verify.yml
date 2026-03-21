@@ -22,7 +22,10 @@ services:
   backend-go-verify:
     image: ${HOTSPOT_BACKEND_GO_RUNNER_IMAGE:?set HOTSPOT_BACKEND_GO_RUNNER_IMAGE}
     working_dir: /workspace/backend-go
-    command: ["go", "test", "./..."]
+    command:
+      - sh
+      - -c
+      - rm -rf /tmp/workspace && mkdir -p /tmp/workspace/backend-go && cp -a /workspace/backend-go/. /tmp/workspace/backend-go/ && cd /tmp/workspace/backend-go && go test ./...
     environment:
       APP_HOST: 0.0.0.0
       APP_PORT: 8080
@@ -32,7 +35,7 @@ services:
       GOMODCACHE: /cache/go/pkg
       GOCACHE: /cache/go/build
     volumes:
-      - ${HOTSPOT_SOURCE_ROOT:?set HOTSPOT_SOURCE_ROOT}:/workspace
+      - ${HOTSPOT_SOURCE_ROOT:?set HOTSPOT_SOURCE_ROOT}:/workspace:ro
       - ${HOTSPOT_GO_MOD_CACHE:?set HOTSPOT_GO_MOD_CACHE}:/cache/go/pkg
       - ${HOTSPOT_GO_BUILD_CACHE:?set HOTSPOT_GO_BUILD_CACHE}:/cache/go/build
     depends_on:
@@ -44,7 +47,10 @@ services:
   frontend-verify:
     image: ${HOTSPOT_FRONTEND_RUNNER_IMAGE:?set HOTSPOT_FRONTEND_RUNNER_IMAGE}
     working_dir: /workspace/frontend_svelte
-    command: ["sh", "-c", "pnpm install --frozen-lockfile && pnpm check && pnpm build --mode test"]
+    command:
+      - sh
+      - -c
+      - rm -rf /tmp/workspace && mkdir -p /tmp/workspace/frontend_svelte && cp -a /workspace/frontend_svelte/. /tmp/workspace/frontend_svelte/ && cd /tmp/workspace/frontend_svelte && pnpm install --frozen-lockfile && pnpm check && pnpm build --mode test
     environment:
       ORIGIN: https://localhost:8443
       VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
@@ -52,5 +58,5 @@ services:
       PNPM_STORE_DIR: /cache/pnpm/store
       CI: "true"
     volumes:
-      - ${HOTSPOT_SOURCE_ROOT:?set HOTSPOT_SOURCE_ROOT}:/workspace
+      - ${HOTSPOT_SOURCE_ROOT:?set HOTSPOT_SOURCE_ROOT}:/workspace:ro
       - ${HOTSPOT_PNPM_STORE_CACHE:?set HOTSPOT_PNPM_STORE_CACHE}:/cache/pnpm/store

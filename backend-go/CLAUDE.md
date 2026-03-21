@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `test/`：集成测试与后续 PG/Redis harness 的扩展入口。
 
 ## 与根流程的关系
-- 本地分支、可选 worktree、本地集成分支、本地验证入口和风险边界，以仓库根 `CLAUDE.md` 为准；默认验证入口是 `verify.sh`，默认验证的是当前工作树快照；runtime 行为确认走单实例 `preview`。
+- 本地分支、可选 worktree、本地集成分支、本地验证入口和风险边界，以仓库根 `CLAUDE.md` 为准；默认验证入口是 `verify.sh`，默认验证的是当前工作树快照，并且测试/构建检查必须在 Docker 内完成；runtime 行为确认走单实例 `preview`。
 
 ## 关键约束
 - 严格遵守 `Handler -> Service -> Repository` 分层。
@@ -43,7 +43,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - 以及 app config 相关的公开站点/默认资源配置
 
 ## 常用命令
-- `go build ./cmd/server`
-- `go test ./...`
-- `go vet ./...`
-- 单测：`go test ./... -run 'TestName$'`
+- 默认验证入口：`./deploy/scripts/verify.sh --env-name <name>`
+- 需要 backend-go 构建产物时：`./deploy/scripts/preview-build.sh`
+- 需要确定性发布产物时：`./deploy/scripts/release-build.sh --ref <git-ref>`
+- 如无用户明确要求，不要直接在宿主环境运行 `go build ./cmd/server`、`go test ./...`、`go vet ./...`
