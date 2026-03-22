@@ -19,7 +19,7 @@ func (h *Handler) GetMeta(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.GetMeta()))
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.GetMeta(r.Context())))
 }
 
 func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
@@ -27,7 +27,7 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 		return
 	}
-	code, message, data := h.service.Health()
+	code, message, data := h.service.Health(r.Context())
 	if code != 0 {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(code, message))
 		return
@@ -40,7 +40,7 @@ func (h *Handler) ListAnnouncements(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.ListAnnouncements()))
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.ListAnnouncements(r.Context())))
 }
 
 func (h *Handler) GetClientConfig(w http.ResponseWriter, r *http.Request) {
@@ -48,5 +48,5 @@ func (h *Handler) GetClientConfig(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.GetClientConfig()))
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.GetClientConfig(r.Context())))
 }

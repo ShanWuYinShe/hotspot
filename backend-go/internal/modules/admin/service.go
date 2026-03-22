@@ -2,16 +2,27 @@ package admin
 
 import (
 	"context"
+
 	"hotspot/backend-go/internal/platform/appconfig"
-	platformauth "hotspot/backend-go/internal/platform/auth"
 )
 
-type Service struct{ appCfg appconfig.Source }
-
-func NewService(appCfg appconfig.Source) *Service { return &Service{appCfg: appCfg} }
-func (s *Service) GetMe(ctx context.Context) AdminPermissions {
-	principal, _ := platformauth.PrincipalFromContext(ctx)
-	_ = principal
-	return AdminPermissions{Permissions: []string{"*"}, Roles: []AdminRoleBasic{{RoleID: "role_super", Name: "Super Admin"}}}
+type Service struct {
+	store    Store
+	provider Provider
 }
-func (s *Service) GetAppConfig(ctx context.Context) any { return s.appCfg.Get(ctx) }
+
+func NewService(appCfg appconfig.Source) *Service {
+	return NewServiceWithDeps(NewInMemoryStore(), NewAppConfigProvider(appCfg))
+}
+
+func NewServiceWithDeps(store Store, provider Provider) *Service {
+	return &Service{store: store, provider: provider}
+}
+
+func (s *Service) GetMe(ctx context.Context) AdminPermissions {
+	return s.store.GetMe(ctx)
+}
+
+func (s *Service) GetAppConfig(ctx context.Context) any {
+	return s.provider.GetAppConfig(ctx)
+}

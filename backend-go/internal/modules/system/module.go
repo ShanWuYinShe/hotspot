@@ -20,10 +20,12 @@ func NewModule(cfg config.Config) *Module {
 }
 
 func (m *Module) Mount(r chi.Router) {
-	r.Group(func(group chi.Router) {
-		group.Use(ratelimit.Middleware)
-		group.Use(resourceguard.Middleware)
-		group.Use(idempotency.Middleware)
-		group.Mount("/api/v1/system", Routes(m.handler))
+	r.Route("/api/v1/system", func(systemRouter chi.Router) {
+		systemRouter.Group(func(group chi.Router) {
+			group.Use(ratelimit.Middleware)
+			group.Use(resourceguard.Middleware)
+			group.Use(idempotency.Middleware)
+			MountRoutes(group, m.handler)
+		})
 	})
 }

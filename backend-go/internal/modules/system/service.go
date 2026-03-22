@@ -2,70 +2,35 @@ package system
 
 import (
 	"context"
-	"time"
 
 	"hotspot/backend-go/internal/platform/appconfig"
 )
 
 type Service struct {
-	appConfig appconfig.Source
+	store    Store
+	provider Provider
 }
 
 func NewService(appConfig appconfig.Source) *Service {
-	return &Service{appConfig: appConfig}
+	return NewServiceWithDeps(NewInMemoryStore(), NewAppConfigProvider(appConfig))
 }
 
-func (s *Service) GetMeta() ApiVersionMeta {
-	return ApiVersionMeta{
-		Version: "v1",
-		Status:  ApiVersionStatusActive,
-	}
+func NewServiceWithDeps(store Store, provider Provider) *Service {
+	return &Service{store: store, provider: provider}
 }
 
-func (s *Service) Health() (int, string, *HealthStatus) {
-	return 0, "", &HealthStatus{
-		Status:    SystemHealthHealthy,
-		Timestamp: time.Now().UTC().Format(time.RFC3339),
-	}
+func (s *Service) GetMeta(ctx context.Context) ApiVersionMeta {
+	return s.store.GetMeta(ctx)
 }
 
-func (s *Service) ListAnnouncements() SystemAnnouncementList {
-	return SystemAnnouncementList{Items: []SystemAnnouncementItem{}}
+func (s *Service) Health(ctx context.Context) (int, string, *HealthStatus) {
+	return s.store.Health(ctx)
 }
 
-func (s *Service) GetClientConfig() ClientConfig {
-	cfg := s.appConfig.Get(context.Background())
-	return ClientConfig{
-		Features: FeatureSwitches{
-			EnablePublicRegistration: cfg.Features.EnablePublicRegistration,
-			EnableGuestLogin:         cfg.Features.EnableGuestLogin,
-			EnableMoments:            cfg.Features.EnableMoments,
-			EnableNearbyPeople:       cfg.Features.EnableNearbyPeople,
-		},
-		Limits: AppLimits{
-			MaxGroupMembers:            cfg.Limits.MaxGroupMembers,
-			MaxMomentTags:              cfg.Limits.MaxMomentTags,
-			MaxMomentImages:            cfg.Limits.MaxMomentImages,
-			MomentDescriptionMaxLength: cfg.Limits.MomentDescriptionMaxLength,
-			CommentMaxLength:           cfg.Limits.CommentMaxLength,
-			SearchRadiusMax:            cfg.Limits.SearchRadiusMax,
-		},
-		Contact: ContactInfo{
-			SupportEmail:      cfg.Contact.SupportEmail,
-			PrivacyPolicyURL:  cfg.Contact.PrivacyPolicyURL,
-			TermsOfServiceURL: cfg.Contact.TermsOfServiceURL,
-			OfficialWebsite:   cfg.Contact.OfficialWebsite,
-		},
-		Defaults: ClientDefaults{
-			DefaultLocation: Location{
-				Point: GeoPoint{
-					Latitude:  cfg.Defaults.DefaultLocation.Point.Latitude,
-					Longitude: cfg.Defaults.DefaultLocation.Point.Longitude,
-				},
-				LocationName: cfg.Defaults.DefaultLocation.LocationName,
-			},
-			DefaultUserAvatar:  cfg.Defaults.DefaultUserAvatar,
-			DefaultGroupAvatar: cfg.Defaults.DefaultGroupAvatar,
-		},
-	}
+func (s *Service) ListAnnouncements(ctx context.Context) SystemAnnouncementList {
+	return s.store.ListAnnouncements(ctx)
+}
+
+func (s *Service) GetClientConfig(ctx context.Context) ClientConfig {
+	return s.provider.GetClientConfig(ctx)
 }
