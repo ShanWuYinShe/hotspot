@@ -2,18 +2,20 @@ package reports
 
 import (
 	"context"
+	"errors"
+	"sort"
 	"testing"
 
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
-type rowValues struct {
+type reportRowValues struct {
 	values []any
 	err    error
 }
 
-func (r rowValues) Scan(dest ...any) error {
+func (r reportRowValues) Scan(dest ...any) error {
 	if r.err != nil {
 		return r.err
 	}
@@ -26,39 +28,154 @@ func (r rowValues) Scan(dest ...any) error {
 	return nil
 }
 
-type rowsValues struct {
+type reportRowsValues struct {
 	rows [][]any
 	idx  int
+	err  error
 }
 
-func (r *rowsValues) Next() bool { return r.idx < len(r.rows) }
-func (r *rowsValues) Scan(dest ...any) error {
-	row := rowValues{values: r.rows[r.idx]}
+func (r *reportRowsValues) Next() bool { return r.idx < len(r.rows) }
+func (r *reportRowsValues) Scan(dest ...any) error {
+	row := reportRowValues{values: r.rows[r.idx]}
 	r.idx++
 	return row.Scan(dest...)
 }
-func (r *rowsValues) Close() error { return nil }
-func (r *rowsValues) Err() error   { return nil }
+func (r *reportRowsValues) Close() error { return nil }
+func (r *reportRowsValues) Err() error   { return r.err }
 
-type backendStub struct{}
+type reportFallbackRepo struct{ used bool }
 
-func (b *backendStub) Exec(context.Context, string, ...any) error { return nil }
-func (b *backendStub) QueryRow(context.Context, string, ...any) persistence.Row {
-	return rowValues{err: persistence.ErrNotImplemented}
+func (r *reportFallbackRepo) Create(context.Context, string, CreateReportRequest) (ReportCreated, error) {
+	r.used = true
+	return ReportCreated{}, nil
 }
-func (b *backendStub) Query(_ context.Context, query string, _ ...any) (persistence.Rows, error) {
-	if query == queryListReports {
-		return &rowsValues{rows: [][]any{{"report_1", "moment", "moment_1", "spam", "", "pending", "2026-03-20T00:00:00Z"}}}, nil
+func (r *reportFallbackRepo) List(context.Context, string) (PaginatedReports, error) {
+	r.used = true
+	return PaginatedReports{}, nil
+}
+
+type reportBackendStub struct {
+	reports   map[string][]ReportItem
+	execErrs  map[string]error
+	queryErrs map[string]error
+}
+
+func newReportBackendStub() *reportBackendStub {
+	return &reportBackendStub{reports: make(map[string][]ReportItem), execErrs: make(map[string]error), queryErrs: make(map[string]error)}
+}
+
+func (b *reportBackendStub) Exec(_ context.Context, query string, args ...any) error {
+	if err := b.execErrs[query]; err != nil {
+		return err
 	}
-	return &persistence.InMemoryRows{}, nil
+	if query == queryInsertReport {
+		userID := args[1].(string)
+		item := ReportItem{ReportID: args[0].(string), TargetType: args[2].(string), TargetID: args[3].(string), Reason: args[4].(string), Description: args[5].(string), Status: args[6].(string), CreatedAt: args[7].(string)}
+		b.reports[userID] = append(b.reports[userID], item)
+	}
+	return nil
 }
 
-func TestPostgresRepositoryReadsQueryableDB(t *testing.T) {
+func (b *reportBackendStub) QueryRow(context.Context, string, ...any) persistence.Row {
+	return reportRowValues{err: persistence.ErrNotImplemented}
+}
+
+func (b *reportBackendStub) Query(_ context.Context, query string, args ...any) (persistence.Rows, error) {
+	if err := b.queryErrs[query]; err != nil {
+		return nil, err
+	}
+	if query != queryListReports {
+		return &persistence.InMemoryRows{}, nil
+	}
+	userID := args[0].(string)
+	items := append([]ReportItem(nil), b.reports[userID]...)
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].CreatedAt == items[j].CreatedAt {
+			return items[i].ReportID > items[j].ReportID
+		}
+		return items[i].CreatedAt > items[j].CreatedAt
+	})
+	rows := make([][]any, 0, len(items))
+	for _, item := range items {
+		rows = append(rows, []any{item.ReportID, item.TargetType, item.TargetID, item.Reason, item.Description, item.Status, item.CreatedAt})
+	}
+	return &reportRowsValues{rows: rows}, nil
+}
+
+func TestNewPersistenceRepositoryUsesPostgresWhenDSNConfigured(t *testing.T) {
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
-	factory.DB.(*persistence.PostgresDB).Backend = &backendStub{}
-	repo := NewPostgresRepository(factory, nil)
-	list := repo.List(context.Background(), "user_alice")
-	if len(list.Items) != 1 || list.Items[0].ReportID != "report_1" {
-		t.Fatalf("unexpected list: %#v", list)
+	repo := NewPersistenceRepository(factory)
+	if _, ok := repo.impl.(*PostgresRepository); !ok {
+		t.Fatalf("expected postgres impl, got %T", repo.impl)
+	}
+}
+
+func TestPostgresRepositoryCreateAndList(t *testing.T) {
+	backend := newReportBackendStub()
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	fallback := &reportFallbackRepo{}
+	repo := NewPostgresRepository(factory, fallback)
+
+	created, err := repo.Create(context.Background(), "user_alice", CreateReportRequest{TargetType: "moment", TargetID: "moment_1", Reason: "spam", Description: "bad"})
+	if err != nil || created.ReportID == "" {
+		t.Fatalf("unexpected create result: %#v err=%v", created, err)
+	}
+	list, err := repo.List(context.Background(), "user_alice")
+	if err != nil || len(list.Items) != 1 || list.Items[0].ReportID != created.ReportID {
+		t.Fatalf("unexpected list: %#v err=%v", list, err)
+	}
+	if fallback.used {
+		t.Fatal("unexpected fallback usage")
+	}
+}
+
+func TestPostgresRepositoryListReturnsEmptyWithoutFallback(t *testing.T) {
+	backend := newReportBackendStub()
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	fallback := &reportFallbackRepo{}
+	repo := NewPostgresRepository(factory, fallback)
+
+	list, err := repo.List(context.Background(), "user_alice")
+	if err != nil || len(list.Items) != 0 {
+		t.Fatalf("unexpected list: %#v err=%v", list, err)
+	}
+	if fallback.used {
+		t.Fatal("unexpected fallback usage")
+	}
+}
+
+func TestPostgresRepositoryCreateReturnsErrorOnExecFailure(t *testing.T) {
+	backend := newReportBackendStub()
+	backend.execErrs[queryInsertReport] = errors.New("write failed")
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	fallback := &reportFallbackRepo{}
+	repo := NewPostgresRepository(factory, fallback)
+
+	_, err := repo.Create(context.Background(), "user_alice", CreateReportRequest{TargetType: "moment", TargetID: "moment_1", Reason: "spam"})
+	if err == nil {
+		t.Fatal("expected create error")
+	}
+	if fallback.used {
+		t.Fatal("unexpected fallback usage")
+	}
+}
+
+func TestPostgresRepositoryListReturnsErrorOnQueryFailure(t *testing.T) {
+	backend := newReportBackendStub()
+	backend.queryErrs[queryListReports] = errors.New("query failed")
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	fallback := &reportFallbackRepo{}
+	repo := NewPostgresRepository(factory, fallback)
+
+	_, err := repo.List(context.Background(), "user_alice")
+	if err == nil {
+		t.Fatal("expected list error")
+	}
+	if fallback.used {
+		t.Fatal("unexpected fallback usage")
 	}
 }

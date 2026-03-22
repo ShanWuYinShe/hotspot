@@ -18,9 +18,24 @@ func NewPostgresRepository(factory *persistence.Factory, fallback Repository) *P
 	return &PostgresRepository{factory: factory, fallback: fallback}
 }
 
-func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, ids []string) {
-	r.fallback.MarkAsRead(ctx, userID, ids)
+func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, ids []string) error {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.MarkAsRead(ctx, userID, ids)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryMarkNotificationsRead, userID, ids)
 }
-func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) {
-	r.fallback.MarkAllRead(ctx, userID)
+
+func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) error {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.MarkAllRead(ctx, userID)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryMarkAllNotificationsRead, userID)
 }
