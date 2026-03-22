@@ -2,50 +2,41 @@ package mapmodule
 
 import (
 	"context"
-	"fmt"
-	"time"
 
 	"hotspot/backend-go/internal/platform/geo"
 )
 
-type Service struct{}
+type Service struct{ repo Repository }
 
-func NewService() *Service {
-	return &Service{}
-}
+const heatmapViewportThresholdMeters = 50000
 
-func (s *Service) Canvas(ctx context.Context, req MapCanvasRequest) MapCanvasResponse {
-	_ = ctx
-	bounds := geo.Bounds{North: req.Viewport.Bounds.North, South: req.Viewport.Bounds.South, East: req.Viewport.Bounds.East, West: req.Viewport.Bounds.West}
-	center := geo.Center(bounds)
-	spanMeters := geo.ApproxViewportSpanMeters(bounds)
-	level := geo.SuggestedLevel(spanMeters)
+func NewService() *Service                        { return NewServiceWithRepo(NewInMemoryRepository()) }
+func NewServiceWithRepo(repo Repository) *Service { return &Service{repo: repo} }
 
-	if spanMeters > 50000 {
-		covering := geo.CoveringTokens(bounds, level, 32)
-		items := make([]MapHeatBucket, 0, len(covering))
-		for i, token := range covering {
-			if i >= 5 {
-				break
-			}
-			items = append(items, MapHeatBucket{
-				CellToken:  token,
-				Level:      level,
-				Location:   GeoPoint{Latitude: center.Latitude, Longitude: center.Longitude},
-				TotalCount: 3,
-				Breakdown:  &MapHeatBreakdown{User: 1, Group: 1, Moment: 1},
-			})
+func (s *Service) Canvas(ctx context.Context, req MapCanvasRequest) (MapCanvasResponse, error) {
+	query := newCanvasQuery(req)
+	if query.SpanMeters > heatmapViewportThresholdMeters {
+		heatmap, err := s.repo.Heatmap(ctx, query)
+		if err != nil {
+			return MapCanvasResponse{}, err
 		}
-		return MapCanvasResponse{Heatmap: &MapHeatCanvas{Items: items}}
+		return MapCanvasResponse{Heatmap: &heatmap}, nil
 	}
 
-	point := geo.Point{Latitude: center.Latitude, Longitude: center.Longitude}
-	return MapCanvasResponse{Hotspots: &MapHotspotsCanvas{Items: []MapHotspotItem{{
-		ObjectType:     "moment",
-		ObjectID:       fmt.Sprintf("moment_map_%d", level),
-		Title:          "Map hotspot",
-		Location:       GeoPoint{Latitude: point.Latitude, Longitude: point.Longitude},
-		CreatedAt:      time.Now().UTC().Format(time.RFC3339),
-		DistanceMeters: geo.DistanceMeters(point, point),
-	}}}}
+	hotspots, err := s.repo.Hotspots(ctx, query)
+	if err != nil {
+		return MapCanvasResponse{}, err
+	}
+	return MapCanvasResponse{Hotspots: &hotspots}, nil
+}
+
+func newCanvasQuery(req MapCanvasRequest) canvasQuery {
+	bounds := geo.Bounds{North: req.Viewport.Bounds.North, South: req.Viewport.Bounds.South, East: req.Viewport.Bounds.East, West: req.Viewport.Bounds.West}
+	spanMeters := geo.ApproxViewportSpanMeters(bounds)
+	return canvasQuery{
+		Bounds:     bounds,
+		Center:     geo.Center(bounds),
+		SpanMeters: spanMeters,
+		Level:      geo.SuggestedLevel(spanMeters),
+	}
 }

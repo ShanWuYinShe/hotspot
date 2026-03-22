@@ -14,7 +14,7 @@ type Module struct {
 }
 
 func NewModule() *Module {
-	return &Module{handler: NewHandler(NewService())}
+	return &Module{handler: NewHandler(NewServiceWithRepo(NewPersistenceRepository()))}
 }
 
 func (m *Module) Mount(r chi.Router) {
