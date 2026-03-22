@@ -20,7 +20,12 @@ func (h *Handler) GetMyProfile(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.GetMyProfile(r.Context())))
+	profile, err := h.service.GetMyProfile(r.Context())
+	if err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(profile))
 }
 
 func (h *Handler) UpdateMyProfile(w http.ResponseWriter, r *http.Request) {
@@ -29,7 +34,10 @@ func (h *Handler) UpdateMyProfile(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
-	h.service.UpdateMyProfile(r.Context(), req)
+	if err := h.service.UpdateMyProfile(r.Context(), req); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
@@ -38,7 +46,12 @@ func (h *Handler) GetMySettings(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.GetMySettings(r.Context())))
+	settings, err := h.service.GetMySettings(r.Context())
+	if err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(settings))
 }
 
 func (h *Handler) UpdateMySettings(w http.ResponseWriter, r *http.Request) {
@@ -47,6 +60,9 @@ func (h *Handler) UpdateMySettings(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
-	h.service.UpdateMySettings(r.Context(), req)
+	if err := h.service.UpdateMySettings(r.Context(), req); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }

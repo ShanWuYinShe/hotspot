@@ -6,6 +6,12 @@ SELECT user_id, nickname, avatar_url, user_type, bio, gender, email, phone, loca
 FROM users
 WHERE user_id = $1`
 
+	querySearchUserProfiles = `
+SELECT user_id, nickname, avatar_url, user_type, bio, gender, email, phone, location_name, latitude, longitude, presence_status, last_online, created_at
+FROM users
+WHERE ($1 = '' OR nickname = $1)
+ORDER BY user_id ASC`
+
 	queryUpsertUserProfile = `
 INSERT INTO users (user_id, nickname, avatar_url, user_type, bio, gender, email, phone, location_name, latitude, longitude, presence_status, last_online, created_at)
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)

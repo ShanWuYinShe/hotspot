@@ -18,119 +18,88 @@ func NewPostgresRepository(factory *persistence.Factory, fallback Repository) *P
 	return &PostgresRepository{factory: factory, fallback: fallback}
 }
 
-func (r *PostgresRepository) PutProfile(ctx context.Context, profile MyProfile) {
+func (r *PostgresRepository) PutProfile(ctx context.Context, profile MyProfile) error {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.PutProfile(ctx, profile)
+	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		r.fallback.PutProfile(ctx, profile)
-		return
+		return persistence.ErrNotImplemented
 	}
-	_ = queryable.Exec(ctx, queryUpsertUserProfile, profile.UserID, profile.Nickname, profile.AvatarURL, profile.UserType, profile.Bio, profile.Gender, profile.Email, profile.Phone, profile.Location.LocationName, profile.Location.Point.Latitude, profile.Location.Point.Longitude, profile.PresenceStatus, profile.LastOnline, profile.CreatedAt)
+	return queryable.Exec(ctx, queryUpsertUserProfile, profile.UserID, profile.Nickname, profile.AvatarURL, profile.UserType, profile.Bio, profile.Gender, profile.Email, profile.Phone, profile.Location.LocationName, profile.Location.Point.Latitude, profile.Location.Point.Longitude, profile.PresenceStatus, profile.LastOnline, profile.CreatedAt)
 }
-func (r *PostgresRepository) DeleteProfile(ctx context.Context, userID string) {
+func (r *PostgresRepository) DeleteProfile(ctx context.Context, userID string) error {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.DeleteProfile(ctx, userID)
+	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		r.fallback.DeleteProfile(ctx, userID)
-		return
+		return persistence.ErrNotImplemented
 	}
-	_ = queryable.Exec(ctx, queryDeleteUserProfile, userID)
+	return queryable.Exec(ctx, queryDeleteUserProfile, userID)
 }
-func (r *PostgresRepository) PutSettings(ctx context.Context, userID string, settings UserSettings) {
+func (r *PostgresRepository) PutSettings(ctx context.Context, userID string, settings UserSettings) error {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.PutSettings(ctx, userID, settings)
+	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		r.fallback.PutSettings(ctx, userID, settings)
-		return
+		return persistence.ErrNotImplemented
 	}
-	_ = queryable.Exec(ctx, queryUpsertUserSettings, userID, settings.PrivacyLevel, settings.LocationVisible, settings.PresenceVisible, settings.SocialListsVisible, settings.GroupsVisible, settings.LikedMomentsVisible, settings.StatsVisible, settings.AllowFollow, settings.AllowPrivateChat, settings.Searchable, settings.PhoneSearchable, settings.NicknameSearchable, settings.LocationSearchable)
+	return queryable.Exec(ctx, queryUpsertUserSettings, userID, settings.PrivacyLevel, settings.LocationVisible, settings.PresenceVisible, settings.SocialListsVisible, settings.GroupsVisible, settings.LikedMomentsVisible, settings.StatsVisible, settings.AllowFollow, settings.AllowPrivateChat, settings.Searchable, settings.PhoneSearchable, settings.NicknameSearchable, settings.LocationSearchable)
 }
-func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsersRequest) []MyProfile {
-	return r.fallback.SearchProfiles(ctx, req)
-}
-func (r *PostgresRepository) Follow(ctx context.Context, userID, targetUserID string) {
+func (r *PostgresRepository) Follow(ctx context.Context, userID, targetUserID string) error {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.Follow(ctx, userID, targetUserID)
+	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		r.fallback.Follow(ctx, userID, targetUserID)
-		return
+		return persistence.ErrNotImplemented
 	}
-	_, blocked, remark := r.getRelationFields(ctx, userID, targetUserID)
-	_ = queryable.Exec(ctx, queryUpsertUserRelation, userID, targetUserID, true, blocked, remark)
+	_, blocked, remark, _ := r.getRelationFields(ctx, userID, targetUserID)
+	return queryable.Exec(ctx, queryUpsertUserRelation, userID, targetUserID, true, blocked, remark)
 }
-func (r *PostgresRepository) Unfollow(ctx context.Context, userID, targetUserID string) {
+func (r *PostgresRepository) Unfollow(ctx context.Context, userID, targetUserID string) error {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.Unfollow(ctx, userID, targetUserID)
+	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		r.fallback.Unfollow(ctx, userID, targetUserID)
-		return
+		return persistence.ErrNotImplemented
 	}
-	_, blocked, remark := r.getRelationFields(ctx, userID, targetUserID)
-	_ = queryable.Exec(ctx, queryUpsertUserRelation, userID, targetUserID, false, blocked, remark)
+	_, blocked, remark, _ := r.getRelationFields(ctx, userID, targetUserID)
+	return queryable.Exec(ctx, queryUpsertUserRelation, userID, targetUserID, false, blocked, remark)
 }
-func (r *PostgresRepository) Block(ctx context.Context, userID, targetUserID string) {
+func (r *PostgresRepository) Block(ctx context.Context, userID, targetUserID string) error {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.Block(ctx, userID, targetUserID)
+	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		r.fallback.Block(ctx, userID, targetUserID)
-		return
+		return persistence.ErrNotImplemented
 	}
-	following, _, remark := r.getRelationFields(ctx, userID, targetUserID)
-	_ = queryable.Exec(ctx, queryUpsertUserRelation, userID, targetUserID, following, true, remark)
+	following, _, remark, _ := r.getRelationFields(ctx, userID, targetUserID)
+	return queryable.Exec(ctx, queryUpsertUserRelation, userID, targetUserID, following, true, remark)
 }
-func (r *PostgresRepository) Unblock(ctx context.Context, userID, targetUserID string) {
+func (r *PostgresRepository) Unblock(ctx context.Context, userID, targetUserID string) error {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.Unblock(ctx, userID, targetUserID)
+	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		r.fallback.Unblock(ctx, userID, targetUserID)
-		return
+		return persistence.ErrNotImplemented
 	}
-	following, _, remark := r.getRelationFields(ctx, userID, targetUserID)
-	_ = queryable.Exec(ctx, queryUpsertUserRelation, userID, targetUserID, following, false, remark)
+	following, _, remark, _ := r.getRelationFields(ctx, userID, targetUserID)
+	return queryable.Exec(ctx, queryUpsertUserRelation, userID, targetUserID, following, false, remark)
 }
-func (r *PostgresRepository) SetRemark(ctx context.Context, userID, targetUserID, remark string) {
+func (r *PostgresRepository) SetRemark(ctx context.Context, userID, targetUserID, remark string) error {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.SetRemark(ctx, userID, targetUserID, remark)
+	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		r.fallback.SetRemark(ctx, userID, targetUserID, remark)
-		return
+		return persistence.ErrNotImplemented
 	}
-	following, blocked, _ := r.getRelationFields(ctx, userID, targetUserID)
-	_ = queryable.Exec(ctx, queryUpsertUserRelation, userID, targetUserID, following, blocked, remark)
-}
-func (r *PostgresRepository) ListBlocked(ctx context.Context, userID string) []BlockedUserItem {
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
-	if !ok {
-		return r.fallback.ListBlocked(ctx, userID)
-	}
-	rows, err := queryable.Query(ctx, queryListBlockedUsers, userID)
-	if err != nil {
-		return r.fallback.ListBlocked(ctx, userID)
-	}
-	defer rows.Close()
-	items := []BlockedUserItem{}
-	for rows.Next() {
-		var targetUserID, remark string
-		if err := rows.Scan(&targetUserID, &remark); err != nil {
-			return r.fallback.ListBlocked(ctx, userID)
-		}
-		items = append(items, BlockedUserItem{User: UserInfo{UserID: targetUserID, Nickname: targetUserID}, Remark: remark})
-	}
-	return items
-}
-func (r *PostgresRepository) Relationship(ctx context.Context, userID, targetUserID string) Relationship {
-	following, blocked, _ := r.getRelationFields(ctx, userID, targetUserID)
-	if blocked {
-		return RelationshipBlocked
-	}
-	if following {
-		return RelationshipFollowing
-	}
-	return RelationshipNone
-}
-
-func (r *PostgresRepository) getRelationFields(ctx context.Context, userID, targetUserID string) (bool, bool, string) {
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
-	if !ok {
-		rel := r.fallback.Relationship(ctx, userID, targetUserID)
-		return rel == RelationshipFollowing || rel == RelationshipFriend, rel == RelationshipBlocked, ""
-	}
-	var following, blocked bool
-	var remark string
-	if err := queryable.QueryRow(ctx, queryGetUserRelation, userID, targetUserID).Scan(&following, &blocked, &remark); err != nil {
-		return false, false, ""
-	}
-	return following, blocked, remark
+	following, blocked, _, _ := r.getRelationFields(ctx, userID, targetUserID)
+	return queryable.Exec(ctx, queryUpsertUserRelation, userID, targetUserID, following, blocked, remark)
 }
