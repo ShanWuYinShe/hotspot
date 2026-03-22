@@ -22,7 +22,12 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.List(r.Context())))
+	list, err := h.service.List(r.Context())
+	if err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(list))
 }
 
 func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
@@ -32,5 +37,10 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cfg := h.appConfig.Get(r.Context())
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.OpenTheDoor(r.Context(), req.TargetUserID, cfg.ResponseDefaults.ChatRecentMessagesCount)))
+	result, err := h.service.OpenTheDoor(r.Context(), req.TargetUserID, cfg.ResponseDefaults.ChatRecentMessagesCount)
+	if err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(result))
 }

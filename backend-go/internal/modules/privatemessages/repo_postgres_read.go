@@ -6,15 +6,18 @@ import (
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
-func (r *PostgresRepository) History(ctx context.Context, userID, targetUserID string) PaginatedMessages {
+func (r *PostgresRepository) History(ctx context.Context, userID, targetUserID string) (PaginatedMessages, error) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.History(ctx, userID, targetUserID)
+	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		return r.fallback.History(ctx, userID, targetUserID)
+		return PaginatedMessages{}, persistence.ErrNotImplemented
 	}
 	chatKey := conversationKey(userID, targetUserID)
 	rows, err := queryable.Query(ctx, queryPrivateMessagesHistory, chatKey)
 	if err != nil {
-		return r.fallback.History(ctx, userID, targetUserID)
+		return PaginatedMessages{}, err
 	}
 	defer rows.Close()
 	items := []PrivateMessageItem{}
@@ -22,29 +25,35 @@ func (r *PostgresRepository) History(ctx context.Context, userID, targetUserID s
 		var item PrivateMessageItem
 		var senderUserID string
 		if err := rows.Scan(&item.MessageID, &item.Type, &item.Content, &item.ShareCode, &senderUserID, &item.SentAt); err != nil {
-			return r.fallback.History(ctx, userID, targetUserID)
+			return PaginatedMessages{}, err
 		}
 		item.Sender = UserInfo{UserID: senderUserID, Nickname: senderUserID}
 		items = append(items, item)
 	}
-	if len(items) == 0 {
-		return r.fallback.History(ctx, userID, targetUserID)
+	if err := rows.Err(); err != nil {
+		return PaginatedMessages{}, err
 	}
-	return PaginatedMessages{Items: items}
+	return PaginatedMessages{Items: items}, nil
 }
 
-func (r *PostgresRepository) Recent(ctx context.Context, userID, targetUserID string, limit int) PaginatedMessages {
-	history := r.History(ctx, userID, targetUserID)
+func (r *PostgresRepository) Recent(ctx context.Context, userID, targetUserID string, limit int) (PaginatedMessages, error) {
+	history, err := r.History(ctx, userID, targetUserID)
+	if err != nil {
+		return PaginatedMessages{}, err
+	}
 	if len(history.Items) > limit {
 		history.Items = history.Items[:limit]
 	}
-	return history
+	return history, nil
 }
 
-func (r *PostgresRepository) Last(ctx context.Context, userID, targetUserID string) *PrivateMessageItem {
-	history := r.History(ctx, userID, targetUserID)
-	if len(history.Items) == 0 {
-		return nil
+func (r *PostgresRepository) Last(ctx context.Context, userID, targetUserID string) (*PrivateMessageItem, error) {
+	history, err := r.History(ctx, userID, targetUserID)
+	if err != nil {
+		return nil, err
 	}
-	return &history.Items[0]
+	if len(history.Items) == 0 {
+		return nil, nil
+	}
+	return &history.Items[0], nil
 }

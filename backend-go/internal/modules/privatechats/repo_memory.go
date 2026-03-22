@@ -20,23 +20,24 @@ func key(a, b string) string {
 	}
 	return b + ":" + a
 }
-func (r *InMemoryRepository) GetOrCreate(_ context.Context, userID, targetUserID string) time.Time {
+func (r *InMemoryRepository) GetOrCreate(_ context.Context, userID, targetUserID string) (time.Time, error) {
 	k := key(userID, targetUserID)
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if createdAt, ok := r.created[k]; ok {
-		return createdAt
+		return createdAt, nil
 	}
 	now := time.Now().UTC()
 	r.created[k] = now
-	return now
+	return now, nil
 }
-func (r *InMemoryRepository) List(_ context.Context, userID string) map[string]time.Time {
+func (r *InMemoryRepository) List(_ context.Context, userID string) (map[string]time.Time, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	out := map[string]time.Time{}
 	for k, createdAt := range r.created {
 		out[k] = createdAt
 	}
-	return out
+	_ = userID
+	return out, nil
 }

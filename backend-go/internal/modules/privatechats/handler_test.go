@@ -1,17 +1,62 @@
 package privatechats
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	private_messages "hotspot/backend-go/internal/modules/privatemessages"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
 )
+
+type privateChatErrorRepo struct {
+	getOrCreateErr error
+	listErr        error
+}
+
+func (r *privateChatErrorRepo) GetOrCreate(context.Context, string, string) (time.Time, error) {
+	return time.Time{}, r.getOrCreateErr
+}
+func (r *privateChatErrorRepo) List(context.Context, string) (map[string]time.Time, error) {
+	return nil, r.listErr
+}
+
+type privateChatMessageErrorRepo struct {
+	recentErr error
+	lastErr   error
+}
+
+func (r *privateChatMessageErrorRepo) Send(context.Context, string, string, private_messages.SendPrivateMessageRequest) (private_messages.MessageSent, error) {
+	return private_messages.MessageSent{}, nil
+}
+func (r *privateChatMessageErrorRepo) History(context.Context, string, string) (private_messages.PaginatedMessages, error) {
+	return private_messages.PaginatedMessages{}, nil
+}
+func (r *privateChatMessageErrorRepo) Recent(context.Context, string, string, int) (private_messages.PaginatedMessages, error) {
+	return private_messages.PaginatedMessages{}, r.recentErr
+}
+func (r *privateChatMessageErrorRepo) Last(context.Context, string, string) (*private_messages.PrivateMessageItem, error) {
+	return nil, r.lastErr
+}
+func (r *privateChatMessageErrorRepo) Update(context.Context, string, private_messages.UpdatePrivateMessageRequest) error {
+	return nil
+}
+func (r *privateChatMessageErrorRepo) Recall(context.Context, string, private_messages.RecallPrivateMessageRequest) error {
+	return nil
+}
+func (r *privateChatMessageErrorRepo) MarkAsRead(context.Context, string, private_messages.MarkPrivateMessagesReadRequest) error {
+	return nil
+}
+func (r *privateChatMessageErrorRepo) MarkAllRead(context.Context, string) error {
+	return nil
+}
 
 func newHandlers() (*Handler, *private_messages.Handler) {
 	repo := private_messages.NewInMemoryRepository()
@@ -80,5 +125,40 @@ func TestSendAndHistoryWorkTogether(t *testing.T) {
 	}
 	if openResp.Data.Chat.LastMessage == nil || openResp.Data.Chat.LastMessage.Content != "hello" {
 		t.Fatalf("unexpected chat open response: %#v", openResp)
+	}
+}
+
+func TestPrivateChatsHandlerReturns10600OnServiceError(t *testing.T) {
+	chatHandler := NewHandler(
+		NewServiceWithRepos(
+			&privateChatErrorRepo{getOrCreateErr: errors.New("boom"), listErr: errors.New("boom")},
+			private_messages.NewServiceWithRepo(&privateChatMessageErrorRepo{recentErr: errors.New("boom"), lastErr: errors.New("boom")}),
+		),
+		appconfig.NewStaticSource(config.Load()),
+	)
+
+	listReq := httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{}`))
+	listReq = listReq.WithContext(platformauth.WithPrincipal(listReq.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	listRR := httptest.NewRecorder()
+	chatHandler.List(listRR, listReq)
+	assertPrivateChatCode(t, listRR, 10600)
+
+	openReq := httptest.NewRequest(http.MethodPost, "/open_the_door", strings.NewReader(`{"target_user_id":"user_bob"}`))
+	openReq = openReq.WithContext(platformauth.WithPrincipal(openReq.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	openRR := httptest.NewRecorder()
+	chatHandler.OpenTheDoor(openRR, openReq)
+	assertPrivateChatCode(t, openRR, 10600)
+}
+
+func assertPrivateChatCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
+	t.Helper()
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != expected {
+		t.Fatalf("expected code %d, got %#v", expected, resp)
 	}
 }

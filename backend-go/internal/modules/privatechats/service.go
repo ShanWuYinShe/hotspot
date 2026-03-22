@@ -21,14 +21,28 @@ func NewService() *Service {
 func NewServiceWithRepos(repo Repository, messages *private_messages.Service) *Service {
 	return &Service{repo: repo, messages: messages}
 }
-func (s *Service) OpenTheDoor(ctx context.Context, targetUserID string, recentLimit int) PrivateChatOpenResult {
+func (s *Service) OpenTheDoor(ctx context.Context, targetUserID string, recentLimit int) (PrivateChatOpenResult, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	createdAt := s.repo.GetOrCreate(ctx, principal.UserID, targetUserID)
-	return PrivateChatOpenResult{Chat: s.buildChat(ctx, principal.UserID, targetUserID, createdAt), RecentMessages: s.messages.Recent(ctx, targetUserID, recentLimit)}
+	createdAt, err := s.repo.GetOrCreate(ctx, principal.UserID, targetUserID)
+	if err != nil {
+		return PrivateChatOpenResult{}, err
+	}
+	chat, err := s.buildChat(ctx, principal.UserID, targetUserID, createdAt)
+	if err != nil {
+		return PrivateChatOpenResult{}, err
+	}
+	recent, err := s.messages.Recent(ctx, targetUserID, recentLimit)
+	if err != nil {
+		return PrivateChatOpenResult{}, err
+	}
+	return PrivateChatOpenResult{Chat: chat, RecentMessages: recent}, nil
 }
-func (s *Service) List(ctx context.Context) PaginatedPrivateChats {
+func (s *Service) List(ctx context.Context) (PaginatedPrivateChats, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	created := s.repo.List(ctx, principal.UserID)
+	created, err := s.repo.List(ctx, principal.UserID)
+	if err != nil {
+		return PaginatedPrivateChats{}, err
+	}
 	items := make([]PrivateChatItem, 0)
 	for k, createdAt := range created {
 		parts := strings.Split(k, ":")
@@ -44,7 +58,11 @@ func (s *Service) List(ctx context.Context) PaginatedPrivateChats {
 		default:
 			continue
 		}
-		items = append(items, s.buildChat(ctx, principal.UserID, target, createdAt))
+		item, err := s.buildChat(ctx, principal.UserID, target, createdAt)
+		if err != nil {
+			return PaginatedPrivateChats{}, err
+		}
+		items = append(items, item)
 	}
 	sort.Slice(items, func(i, j int) bool {
 		if items[i].IsPinned != items[j].IsPinned {
@@ -55,14 +73,18 @@ func (s *Service) List(ctx context.Context) PaginatedPrivateChats {
 		}
 		return items[i].LastActivityAt > items[j].LastActivityAt
 	})
-	return PaginatedPrivateChats{Items: items}
+	return PaginatedPrivateChats{Items: items}, nil
 }
-func (s *Service) buildChat(ctx context.Context, userID, targetUserID string, createdAt time.Time) PrivateChatItem {
-	last := s.messages.Last(ctx, targetUserID)
+func (s *Service) buildChat(ctx context.Context, userID, targetUserID string, createdAt time.Time) (PrivateChatItem, error) {
+	last, err := s.messages.Last(ctx, targetUserID)
+	if err != nil {
+		return PrivateChatItem{}, err
+	}
 	item := PrivateChatItem{OtherUser: UserInfo{UserID: targetUserID, Nickname: targetUserID}, UnreadCount: 0, IsMuted: false, IsPinned: false, LastActivityAt: createdAt.UTC().Format(time.RFC3339), CreatedAt: createdAt.UTC().Format(time.RFC3339), CanMessage: true}
 	if last != nil {
 		item.LastActivityAt = last.SentAt
 		item.LastMessage = &LastMessage{MessageID: last.MessageID, Content: last.Content, Type: last.Type, ShareCode: last.ShareCode, Sender: UserInfo{UserID: last.Sender.UserID, Nickname: last.Sender.Nickname}, SentAt: last.SentAt}
 	}
-	return item
+	_ = userID
+	return item, nil
 }

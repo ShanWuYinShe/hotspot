@@ -19,24 +19,27 @@ func NewServiceWithRepo(repo Repository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) MessageSent {
+func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (MessageSent, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	msg := s.repo.Send(ctx, principal.UserID, req.TargetUserID, req)
+	msg, err := s.repo.Send(ctx, principal.UserID, req.TargetUserID, req)
+	if err != nil {
+		return MessageSent{}, err
+	}
 	realtime.DefaultHub().BroadcastToUser(req.TargetUserID, realtime.Event{Type: "PrivateMessageNew", Payload: map[string]any{"message_id": msg.MessageID, "sent_at": msg.SentAt}})
-	return msg
+	return msg, nil
 }
 
-func (s *Service) History(ctx context.Context, targetUserID string) PaginatedMessages {
+func (s *Service) History(ctx context.Context, targetUserID string) (PaginatedMessages, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	return s.repo.History(ctx, principal.UserID, targetUserID)
 }
 
-func (s *Service) Recent(ctx context.Context, targetUserID string, limit int) PaginatedMessages {
+func (s *Service) Recent(ctx context.Context, targetUserID string, limit int) (PaginatedMessages, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	return s.repo.Recent(ctx, principal.UserID, targetUserID, limit)
 }
 
-func (s *Service) Last(ctx context.Context, targetUserID string) *PrivateMessageItem {
+func (s *Service) Last(ctx context.Context, targetUserID string) (*PrivateMessageItem, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	return s.repo.Last(ctx, principal.UserID, targetUserID)
 }
@@ -53,7 +56,6 @@ func (s *Service) Recall(ctx context.Context, req RecallPrivateMessageRequest) e
 
 func (s *Service) MarkAsRead(ctx context.Context, req MarkPrivateMessagesReadRequest) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	_ = principal
 	return s.repo.MarkAsRead(ctx, principal.UserID, req)
 }
 

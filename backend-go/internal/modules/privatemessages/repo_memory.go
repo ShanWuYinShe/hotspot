@@ -22,16 +22,16 @@ func conversationKey(a, b string) string {
 	}
 	return b + ":" + a
 }
-func (r *InMemoryRepository) Send(_ context.Context, senderID, targetUserID string, req SendPrivateMessageRequest) MessageSent {
+func (r *InMemoryRepository) Send(_ context.Context, senderID, targetUserID string, req SendPrivateMessageRequest) (MessageSent, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	now := time.Now().UTC()
 	msg := PrivateMessageItem{MessageID: "pm_" + now.Format("20060102150405.000000000"), Type: req.Type, Content: req.Content, ShareCode: req.ShareCode, Sender: UserInfo{UserID: senderID, Nickname: senderID}, SentAt: now.Format(time.RFC3339), IsRead: false}
 	key := conversationKey(senderID, targetUserID)
 	r.messages[key] = append(r.messages[key], msg)
-	return MessageSent{MessageID: msg.MessageID, SentAt: msg.SentAt}
+	return MessageSent{MessageID: msg.MessageID, SentAt: msg.SentAt}, nil
 }
-func (r *InMemoryRepository) History(_ context.Context, userID, targetUserID string) PaginatedMessages {
+func (r *InMemoryRepository) History(_ context.Context, userID, targetUserID string) (PaginatedMessages, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	key := conversationKey(userID, targetUserID)
@@ -42,21 +42,27 @@ func (r *InMemoryRepository) History(_ context.Context, userID, targetUserID str
 		}
 		return items[i].SentAt > items[j].SentAt
 	})
-	return PaginatedMessages{Items: items}
+	return PaginatedMessages{Items: items}, nil
 }
-func (r *InMemoryRepository) Recent(ctx context.Context, userID, targetUserID string, limit int) PaginatedMessages {
-	history := r.History(ctx, userID, targetUserID)
+func (r *InMemoryRepository) Recent(ctx context.Context, userID, targetUserID string, limit int) (PaginatedMessages, error) {
+	history, err := r.History(ctx, userID, targetUserID)
+	if err != nil {
+		return PaginatedMessages{}, err
+	}
 	if len(history.Items) > limit {
 		history.Items = history.Items[:limit]
 	}
-	return history
+	return history, nil
 }
-func (r *InMemoryRepository) Last(ctx context.Context, userID, targetUserID string) *PrivateMessageItem {
-	history := r.History(ctx, userID, targetUserID)
-	if len(history.Items) == 0 {
-		return nil
+func (r *InMemoryRepository) Last(ctx context.Context, userID, targetUserID string) (*PrivateMessageItem, error) {
+	history, err := r.History(ctx, userID, targetUserID)
+	if err != nil {
+		return nil, err
 	}
-	return &history.Items[0]
+	if len(history.Items) == 0 {
+		return nil, nil
+	}
+	return &history.Items[0], nil
 }
 
 func (r *InMemoryRepository) Update(_ context.Context, userID string, req UpdatePrivateMessageRequest) error {
@@ -68,10 +74,10 @@ func (r *InMemoryRepository) Update(_ context.Context, userID string, req Update
 				continue
 			}
 			if msgs[i].Sender.UserID != userID {
-				return context.Canceled
+				return ErrMessagePermissionDenied
 			}
 			if msgs[i].Type != "text" || msgs[i].RecalledAt != "" {
-				return context.DeadlineExceeded
+				return ErrMessageNotEditable
 			}
 			msgs[i].Content = req.Content
 			msgs[i].EditedAt = time.Now().UTC().Format(time.RFC3339)
@@ -79,7 +85,7 @@ func (r *InMemoryRepository) Update(_ context.Context, userID string, req Update
 			return nil
 		}
 	}
-	return context.DeadlineExceeded
+	return ErrMessageNotFound
 }
 
 func (r *InMemoryRepository) Recall(_ context.Context, userID string, req RecallPrivateMessageRequest) error {
@@ -91,14 +97,14 @@ func (r *InMemoryRepository) Recall(_ context.Context, userID string, req Recall
 				continue
 			}
 			if msgs[i].Sender.UserID != userID {
-				return context.Canceled
+				return ErrMessagePermissionDenied
 			}
 			msgs[i].RecalledAt = time.Now().UTC().Format(time.RFC3339)
 			r.messages[key] = msgs
 			return nil
 		}
 	}
-	return context.DeadlineExceeded
+	return ErrMessageNotFound
 }
 
 func (r *InMemoryRepository) MarkAsRead(_ context.Context, userID string, req MarkPrivateMessagesReadRequest) error {
@@ -106,6 +112,18 @@ func (r *InMemoryRepository) MarkAsRead(_ context.Context, userID string, req Ma
 	defer r.mu.Unlock()
 	key := conversationKey(userID, req.TargetUserID)
 	msgs := r.messages[key]
+	if req.UpToMessageID != "" {
+		found := false
+		for i := range msgs {
+			if msgs[i].MessageID == req.UpToMessageID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return ErrMessageNotFound
+		}
+	}
 	for i := range msgs {
 		msgs[i].IsRead = true
 		if req.UpToMessageID != "" && msgs[i].MessageID == req.UpToMessageID {

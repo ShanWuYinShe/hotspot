@@ -2,6 +2,7 @@ package private_messages
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/httpx"
@@ -31,7 +32,11 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	idempotency.ReplayOrStore(w, r, "private_messages/send", func() httpx.ApiResponse[MessageSent] {
-		return httpx.Success(h.service.Send(r.Context(), req))
+		msg, err := h.service.Send(r.Context(), req)
+		if err != nil {
+			return httpx.ApiResponse[MessageSent]{Code: 10600, Message: "服务暂时不可用"}
+		}
+		return httpx.Success(msg)
 	})
 }
 
@@ -41,7 +46,12 @@ func (h *Handler) GetHistory(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.History(r.Context(), req.TargetUserID)))
+	history, err := h.service.History(r.Context(), req.TargetUserID)
+	if err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(history))
 }
 
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
@@ -51,7 +61,16 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.service.Update(r.Context(), req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "消息不可编辑"))
+		switch {
+		case errors.Is(err, ErrMessageNotFound):
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "消息不存在"))
+		case errors.Is(err, ErrMessagePermissionDenied):
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "无权限编辑消息"))
+		case errors.Is(err, ErrMessageNotEditable):
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "消息不可编辑"))
+		default:
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		}
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
@@ -64,7 +83,16 @@ func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.service.Recall(r.Context(), req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "消息不可撤回"))
+		switch {
+		case errors.Is(err, ErrMessageNotFound):
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "消息不存在"))
+		case errors.Is(err, ErrMessagePermissionDenied):
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "无权限撤回消息"))
+		case errors.Is(err, ErrMessageNotRecallable):
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "消息不可撤回"))
+		default:
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		}
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
@@ -77,7 +105,11 @@ func (h *Handler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.service.MarkAsRead(r.Context(), req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "消息不存在"))
+		if errors.Is(err, ErrMessageNotFound) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "消息不存在"))
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
