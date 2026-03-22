@@ -23,24 +23,26 @@ func NewInMemorySessionStore() *InMemorySessionStore {
 	return &InMemorySessionStore{items: make(map[string]SessionRecord)}
 }
 
-func (s *InMemorySessionStore) Save(session SessionRecord) {
+func (s *InMemorySessionStore) Save(session SessionRecord) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.items[session.SessionID] = session
+	return nil
 }
 
-func (s *InMemorySessionStore) Touch(sessionID string) {
+func (s *InMemorySessionStore) Touch(sessionID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	session, ok := s.items[sessionID]
 	if !ok || session.RevokedAt != nil {
-		return
+		return nil
 	}
 	session.LastActiveAt = time.Now().UTC()
 	s.items[sessionID] = session
+	return nil
 }
 
-func (s *InMemorySessionStore) ListActiveByUser(userID string) []SessionRecord {
+func (s *InMemorySessionStore) ListActiveByUser(userID string) ([]SessionRecord, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	var out []SessionRecord
@@ -55,23 +57,23 @@ func (s *InMemorySessionStore) ListActiveByUser(userID string) []SessionRecord {
 		}
 		return out[i].LastActiveAt.After(out[j].LastActiveAt)
 	})
-	return out
+	return out, nil
 }
 
-func (s *InMemorySessionStore) Revoke(sessionID string) bool {
+func (s *InMemorySessionStore) Revoke(sessionID string) (bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	session, ok := s.items[sessionID]
 	if !ok || session.RevokedAt != nil {
-		return false
+		return false, nil
 	}
 	now := time.Now().UTC()
 	session.RevokedAt = &now
 	s.items[sessionID] = session
-	return true
+	return true, nil
 }
 
-func (s *InMemorySessionStore) RevokeOthers(userID, currentSessionID string) int {
+func (s *InMemorySessionStore) RevokeOthers(userID, currentSessionID string) (int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	count := 0
@@ -84,12 +86,12 @@ func (s *InMemorySessionStore) RevokeOthers(userID, currentSessionID string) int
 		s.items[id] = session
 		count++
 	}
-	return count
+	return count, nil
 }
 
-func (s *InMemorySessionStore) Get(sessionID string) (SessionRecord, bool) {
+func (s *InMemorySessionStore) Get(sessionID string) (SessionRecord, bool, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	session, ok := s.items[sessionID]
-	return session, ok
+	return session, ok, nil
 }

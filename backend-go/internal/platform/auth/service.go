@@ -63,8 +63,8 @@ func (s *Service) AuthenticateRequest(rctx context.Context, authHeader string, a
 	if err != nil {
 		return Principal{}, time.Time{}, false
 	}
-	session, ok := s.sessions.Get(claims.SessionID)
-	if !ok || session.UserID != claims.UserID || session.RevokedAt != nil {
+	session, ok, err := s.sessions.Get(claims.SessionID)
+	if err != nil || !ok || session.UserID != claims.UserID || session.RevokedAt != nil {
 		return Principal{}, time.Time{}, false
 	}
 	principal := Principal{UserID: claims.UserID, SessionID: claims.SessionID, Platform: platformFromContext(rctx)}
@@ -93,8 +93,12 @@ func (s *Service) IssueSession(userID string) (AuthResult, error) {
 		return AuthResult{}, err
 	}
 	refreshExpires := time.Now().UTC().Add(s.refreshTTL)
-	s.sessions.Save(SessionRecord{SessionID: sessionID, UserID: userID, CreatedAt: createdAt, LastActiveAt: createdAt})
-	s.refreshes.Save(RefreshSession{UserID: userID, SessionID: sessionID, RefreshToken: refreshToken, ExpiresAt: refreshExpires})
+	if err := s.sessions.Save(SessionRecord{SessionID: sessionID, UserID: userID, CreatedAt: createdAt, LastActiveAt: createdAt}); err != nil {
+		return AuthResult{}, err
+	}
+	if err := s.refreshes.Save(RefreshSession{UserID: userID, SessionID: sessionID, RefreshToken: refreshToken, ExpiresAt: refreshExpires}); err != nil {
+		return AuthResult{}, err
+	}
 	return AuthResult{Principal: Principal{UserID: userID, SessionID: sessionID}, AccessToken: accessToken, RefreshToken: refreshToken, AccessExpires: accessExp, RefreshExpires: refreshExpires, CSRFToken: csrfToken}, nil
 }
 

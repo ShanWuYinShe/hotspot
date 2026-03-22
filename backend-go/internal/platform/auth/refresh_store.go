@@ -23,24 +23,26 @@ func NewRefreshStore() *RefreshStore {
 	return &RefreshStore{items: make(map[string]RefreshSession)}
 }
 
-func (s *RefreshStore) Save(session RefreshSession) {
+func (s *RefreshStore) Save(session RefreshSession) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.items[session.RefreshToken] = session
+	return nil
 }
 
-func (s *RefreshStore) Get(token string) (RefreshSession, bool) {
+func (s *RefreshStore) Get(token string) (RefreshSession, bool, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	session, ok := s.items[token]
-	return session, ok
+	return session, ok, nil
 }
 
-func (s *RefreshStore) Rotate(oldToken string, current RefreshSession, next RefreshSession) {
+func (s *RefreshStore) Rotate(oldToken string, current RefreshSession, next RefreshSession) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	current.RotatedTo = next.RefreshToken
 	current.GraceUntil = time.Now().UTC().Add(30 * time.Second)
 	s.items[oldToken] = current
 	s.items[next.RefreshToken] = next
+	return nil
 }

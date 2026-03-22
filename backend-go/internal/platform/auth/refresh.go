@@ -6,7 +6,10 @@ import (
 )
 
 func (s *Service) RefreshSession(refreshToken string) (AuthResult, error) {
-	session, ok := s.refreshes.Get(refreshToken)
+	session, ok, err := s.refreshes.Get(refreshToken)
+	if err != nil {
+		return AuthResult{}, err
+	}
 	if !ok {
 		return AuthResult{}, errors.New("invalid refresh token")
 	}
@@ -14,12 +17,17 @@ func (s *Service) RefreshSession(refreshToken string) (AuthResult, error) {
 	if now.After(session.ExpiresAt) {
 		return AuthResult{}, errors.New("expired refresh token")
 	}
-	if storedSession, ok := s.sessions.Get(session.SessionID); !ok || storedSession.RevokedAt != nil {
+	if storedSession, ok, err := s.sessions.Get(session.SessionID); err != nil {
+		return AuthResult{}, err
+	} else if !ok || storedSession.RevokedAt != nil {
 		return AuthResult{}, errors.New("revoked session")
 	}
 	if session.RotatedTo != "" {
 		if !now.After(session.GraceUntil) {
-			rotated, ok := s.refreshes.Get(session.RotatedTo)
+			rotated, ok, err := s.refreshes.Get(session.RotatedTo)
+			if err != nil {
+				return AuthResult{}, err
+			}
 			if !ok {
 				return AuthResult{}, errors.New("invalid refresh token")
 			}
@@ -60,7 +68,9 @@ func (s *Service) RefreshSession(refreshToken string) (AuthResult, error) {
 		RefreshToken: newRefreshToken,
 		ExpiresAt:    now.Add(s.refreshTTL),
 	}
-	s.refreshes.Rotate(refreshToken, session, next)
+	if err := s.refreshes.Rotate(refreshToken, session, next); err != nil {
+		return AuthResult{}, err
+	}
 	return AuthResult{
 		Principal:      Principal{UserID: session.UserID, SessionID: session.SessionID},
 		AccessToken:    newAccessToken,
