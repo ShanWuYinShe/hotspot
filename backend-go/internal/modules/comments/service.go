@@ -2,22 +2,28 @@ package comments
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
+var ErrMomentNotFound = errors.New("comments: moment not found")
+
 type Service struct {
 	repo    Repository
-	moments MomentCounter
+	moments MomentProvider
 }
 
-func NewService(repo Repository, momentsStore MomentCounter) *Service {
-	return &Service{repo: repo, moments: momentsStore}
+func NewService(repo Repository, moments MomentProvider) *Service {
+	return &Service{repo: repo, moments: moments}
 }
 
 func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (CommentItem, error) {
+	if err := s.ensureMomentExists(ctx, req.MomentID); err != nil {
+		return CommentItem{}, err
+	}
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	item, err := s.repo.Create(ctx, principal.UserID, req)
 	if err != nil {
@@ -34,5 +40,19 @@ func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (Comment
 }
 
 func (s *Service) List(ctx context.Context, momentID string) (PaginatedComments, error) {
+	if err := s.ensureMomentExists(ctx, momentID); err != nil {
+		return PaginatedComments{}, err
+	}
 	return s.repo.List(ctx, momentID)
+}
+
+func (s *Service) ensureMomentExists(ctx context.Context, momentID string) error {
+	exists, err := s.moments.Exists(ctx, momentID)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return ErrMomentNotFound
+	}
+	return nil
 }

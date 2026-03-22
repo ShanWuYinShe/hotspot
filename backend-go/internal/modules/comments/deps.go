@@ -2,6 +2,7 @@ package comments
 
 import "context"
 
-type MomentCounter interface {
+type MomentProvider interface {
+	Exists(context.Context, string) (bool, error)
 	IncrementCommentCount(context.Context, string) error
 }

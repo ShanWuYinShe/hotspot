@@ -19,6 +19,10 @@ type failingMomentCounter struct {
 	failErr error
 }
 
+func (c *failingMomentCounter) Exists(ctx context.Context, momentID string) (bool, error) {
+	return c.repo.Exists(ctx, momentID)
+}
+
 func (c *failingMomentCounter) IncrementCommentCount(ctx context.Context, momentID string) error {
 	if c.failErr != nil {
 		return c.failErr
@@ -139,15 +143,7 @@ func TestCreateCommentDoesNotIncrementMomentCountWhenCounterFails(t *testing.T) 
 	createCommentReq = createCommentReq.WithContext(ctx)
 	createCommentRR := httptest.NewRecorder()
 	commentHandler.Create(createCommentRR, createCommentReq)
-	var commentResp struct {
-		Code int `json:"code"`
-	}
-	if err := json.NewDecoder(createCommentRR.Body).Decode(&commentResp); err != nil {
-		t.Fatalf("decode comment response: %v", err)
-	}
-	if commentResp.Code != 10600 {
-		t.Fatalf("expected service unavailable, got %#v", commentResp)
-	}
+	assertCommentCode(t, createCommentRR, 10600)
 	commentsList, err := commentRepo.List(context.Background(), createdMoment.MomentID)
 	if err != nil {
 		t.Fatalf("list comments: %v", err)
@@ -167,5 +163,43 @@ func TestCreateCommentDoesNotIncrementMomentCountWhenCounterFails(t *testing.T) 
 	}
 	if openResp.Data.CommentsCount != 0 {
 		t.Fatalf("expected comments_count=0, got %#v", openResp)
+	}
+}
+
+func TestCreateCommentReturns10300WhenMomentMissing(t *testing.T) {
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+	momentRepo := NewInMemoryRepository()
+	commentService := comments.NewService(comments.NewInMemoryRepository(), momentRepo)
+	commentHandler := comments.NewHandler(commentService)
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+
+	createCommentReq := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"moment_id":"moment_missing","content":"nice"}`))
+	createCommentReq.Header.Set("Idempotency-Key", "xxxx1234xxxx1234xxxx1234xxxx1234")
+	createCommentReq = createCommentReq.WithContext(ctx)
+	createCommentRR := httptest.NewRecorder()
+	commentHandler.Create(createCommentRR, createCommentReq)
+	assertCommentCode(t, createCommentRR, 10300)
+}
+
+func TestListCommentsReturns10300WhenMomentMissing(t *testing.T) {
+	commentService := comments.NewService(comments.NewInMemoryRepository(), NewInMemoryRepository())
+	commentHandler := comments.NewHandler(commentService)
+
+	listReq := httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"moment_id":"moment_missing"}`))
+	listRR := httptest.NewRecorder()
+	commentHandler.List(listRR, listReq)
+	assertCommentCode(t, listRR, 10300)
+}
+
+func assertCommentCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
+	t.Helper()
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != expected {
+		t.Fatalf("expected code %d, got %#v", expected, resp)
 	}
 }

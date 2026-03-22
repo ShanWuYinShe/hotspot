@@ -52,6 +52,13 @@ func (r *InMemoryRepository) ListMine(_ context.Context, userID string) (Paginat
 	return PaginatedMoments{Items: items}, nil
 }
 
+func (r *InMemoryRepository) Exists(_ context.Context, momentID string) (bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	_, ok := r.moments[momentID]
+	return ok, nil
+}
+
 func (r *InMemoryRepository) IncrementCommentCount(_ context.Context, momentID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

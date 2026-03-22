@@ -2,6 +2,7 @@ package comments
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/httpx"
@@ -29,6 +30,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	idempotency.ReplayOrStore(w, r, "comments/create", func() httpx.ApiResponse[CommentItem] {
 		item, err := h.service.Create(r.Context(), req)
 		if err != nil {
+			if errors.Is(err, ErrMomentNotFound) {
+				return httpx.ApiResponse[CommentItem]{Code: 10300, Message: "瞬间不存在"}
+			}
 			return httpx.ApiResponse[CommentItem]{Code: 10600, Message: "服务暂时不可用"}
 		}
 		return httpx.Success(item)
@@ -43,6 +47,10 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	list, err := h.service.List(r.Context(), req.MomentID)
 	if err != nil {
+		if errors.Is(err, ErrMomentNotFound) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "瞬间不存在"))
+			return
+		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		return
 	}

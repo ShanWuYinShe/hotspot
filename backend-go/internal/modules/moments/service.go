@@ -38,6 +38,10 @@ func (s *Service) ListMine(ctx context.Context) (PaginatedMoments, error) {
 	return s.repo.ListMine(ctx, principal.UserID)
 }
 
+func (s *Service) Exists(ctx context.Context, momentID string) (bool, error) {
+	return s.repo.Exists(ctx, momentID)
+}
+
 func (s *Service) IncrementCommentCount(ctx context.Context, momentID string) error {
 	return s.repo.IncrementCommentCount(ctx, momentID)
 }

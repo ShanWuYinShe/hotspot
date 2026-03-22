@@ -28,6 +28,10 @@ func (r *PersistenceRepository) ListMine(ctx context.Context, userID string) (Pa
 	return r.impl.ListMine(ctx, userID)
 }
 
+func (r *PersistenceRepository) Exists(ctx context.Context, momentID string) (bool, error) {
+	return r.impl.Exists(ctx, momentID)
+}
+
 func (r *PersistenceRepository) IncrementCommentCount(ctx context.Context, momentID string) error {
 	return r.impl.IncrementCommentCount(ctx, momentID)
 }
