@@ -21,5 +21,10 @@ func (h *Handler) Suggest(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.Suggest(r.Context(), req)))
+	result, err := h.service.Suggest(r.Context(), req)
+	if err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(result))
 }
