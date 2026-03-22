@@ -27,7 +27,11 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	idempotency.ReplayOrStore(w, r, "groups/create", func() httpx.ApiResponse[GroupItem] {
-		return httpx.Success(h.service.Create(r.Context(), req))
+		item, err := h.service.Create(r.Context(), req)
+		if err != nil {
+			return httpx.ApiResponse[GroupItem]{Code: 10600, Message: "服务暂时不可用"}
+		}
+		return httpx.Success(item)
 	})
 }
 
@@ -37,7 +41,11 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	item, ok := h.service.OpenTheDoor(r.Context(), req.GroupID)
+	item, ok, err := h.service.OpenTheDoor(r.Context(), req.GroupID)
+	if err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
 	if !ok {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 		return
@@ -51,5 +59,10 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.Search(r.Context(), req.Keyword)))
+	list, err := h.service.Search(r.Context(), req.Keyword)
+	if err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(list))
 }

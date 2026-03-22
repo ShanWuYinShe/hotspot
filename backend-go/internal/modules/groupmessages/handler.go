@@ -21,7 +21,11 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	idempotency.ReplayOrStore(w, r, "group_messages/send", func() httpx.ApiResponse[MessageSent] {
-		return httpx.Success(h.service.Send(r.Context(), req))
+		msg, err := h.service.Send(r.Context(), req)
+		if err != nil {
+			return httpx.ApiResponse[MessageSent]{Code: 10600, Message: "服务暂时不可用"}
+		}
+		return httpx.Success(msg)
 	})
 }
 func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
@@ -30,5 +34,10 @@ func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.History(r.Context(), req.GroupID)))
+	history, err := h.service.History(r.Context(), req.GroupID)
+	if err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(history))
 }

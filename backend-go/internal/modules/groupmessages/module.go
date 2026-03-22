@@ -12,7 +12,7 @@ import (
 type Module struct{ handler *Handler }
 
 func NewModule(factory *persistence.Factory) *Module {
-	return &Module{handler: NewHandler(NewServiceWithRepo(NewPostgresRepository(factory, nil)))}
+	return &Module{handler: NewHandler(NewServiceWithRepo(NewPersistenceRepository(factory)))}
 }
 func (m *Module) Mount(r chi.Router) {
 	r.Route("/api/v1/group_messages", func(gr chi.Router) {

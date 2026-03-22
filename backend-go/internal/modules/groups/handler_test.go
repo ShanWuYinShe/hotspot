@@ -1,7 +1,9 @@
 package groups
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -9,6 +11,22 @@ import (
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
 )
+
+type groupErrorRepo struct {
+	createErr error
+	getErr    error
+	searchErr error
+}
+
+func (r *groupErrorRepo) Create(context.Context, string, CreateGroupRequest) (GroupItem, error) {
+	return GroupItem{}, r.createErr
+}
+func (r *groupErrorRepo) Get(context.Context, string) (GroupItem, bool, error) {
+	return GroupItem{}, false, r.getErr
+}
+func (r *groupErrorRepo) Search(context.Context, string) (PaginatedGroups, error) {
+	return PaginatedGroups{}, r.searchErr
+}
 
 func TestCreateAndOpenGroup(t *testing.T) {
 	handler := NewHandler(NewService())
@@ -48,10 +66,13 @@ func TestCreateAndOpenGroup(t *testing.T) {
 }
 
 func TestSearchGroupsReturnsMatches(t *testing.T) {
-	service := NewService()
+	repo := NewInMemoryRepository()
+	service := NewServiceWithRepo(repo)
 	handler := NewHandler(service)
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	service.Create(ctx, CreateGroupRequest{Name: "Searchable", Location: Location{LocationName: "Here"}})
+	if _, err := service.Create(ctx, CreateGroupRequest{Name: "Searchable", Location: Location{LocationName: "Here"}}); err != nil {
+		t.Fatalf("create group: %v", err)
+	}
 
 	req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(`{"keyword":"Searchable"}`))
 	rr := httptest.NewRecorder()
@@ -66,5 +87,39 @@ func TestSearchGroupsReturnsMatches(t *testing.T) {
 	}
 	if resp.Code != 0 || len(resp.Data.Items) == 0 {
 		t.Fatalf("unexpected response: %#v", resp)
+	}
+}
+
+func TestGroupsHandlerReturns10600OnServiceError(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&groupErrorRepo{createErr: errors.New("boom"), getErr: errors.New("boom"), searchErr: errors.New("boom")}))
+
+	createReq := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"name":"Hot Group","location":{"point":{"latitude":1,"longitude":2},"location_name":"Somewhere"}}`))
+	createReq.Header.Set("Idempotency-Key", "efgh1234efgh1234efgh1234efgh1234")
+	createReq = createReq.WithContext(platformauth.WithPrincipal(createReq.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+	createRR := httptest.NewRecorder()
+	handler.Create(createRR, createReq)
+	assertGroupCode(t, createRR, 10600)
+
+	openReq := httptest.NewRequest(http.MethodPost, "/open_the_door", strings.NewReader(`{"group_id":"group_1"}`))
+	openRR := httptest.NewRecorder()
+	handler.OpenTheDoor(openRR, openReq)
+	assertGroupCode(t, openRR, 10600)
+
+	searchReq := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(`{"keyword":"Hot Group"}`))
+	searchRR := httptest.NewRecorder()
+	handler.Search(searchRR, searchReq)
+	assertGroupCode(t, searchRR, 10600)
+}
+
+func assertGroupCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
+	t.Helper()
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != expected {
+		t.Fatalf("expected code %d, got %#v", expected, resp)
 	}
 }

@@ -27,7 +27,7 @@ func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.M
 		auth.NewModule(cfg, factory),
 		feed.NewModule(),
 		groupmessages.NewModule(factory),
-		groups.NewModule(),
+		groups.NewModule(factory),
 		mapmodule.NewModule(),
 		media.NewModule(),
 		moments.NewModule(factory),
