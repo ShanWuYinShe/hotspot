@@ -1,68 +1,71 @@
 package media
 
-import (
-	"context"
-	"fmt"
-	"sync"
-	"time"
-)
-
-type pendingUpload struct {
-	Request   PresignUploadRequest
-	Completed bool
-	File      UploadedMedia
-}
+import "context"
 
 type Service struct {
-	mu      sync.RWMutex
-	uploads map[string]pendingUpload
+	repo     Repository
+	provider Provider
 }
 
-func NewService() *Service {
-	return &Service{uploads: make(map[string]pendingUpload)}
+func NewService() *Service { return NewServiceWithRepo(NewPersistenceRepository()) }
+func NewServiceWithRepo(repo Repository) *Service {
+	return NewServiceWithRepoAndProvider(repo, NewStubProvider())
+}
+func NewServiceWithRepoAndProvider(repo Repository, provider Provider) *Service {
+	return &Service{repo: repo, provider: provider}
 }
 
-func (s *Service) Presign(ctx context.Context, req PresignUploadRequest) PresignedUpload {
-	_ = ctx
-	uploadID := fmt.Sprintf("upload_%d", time.Now().UTC().UnixNano())
-	s.mu.Lock()
-	s.uploads[uploadID] = pendingUpload{Request: req}
-	s.mu.Unlock()
-	return PresignedUpload{
-		UploadID:  uploadID,
-		UploadURL: "https://upload.example.com/" + uploadID,
-		Headers:   map[string]string{"Content-Type": req.MimeType},
-		ExpiresAt: time.Now().UTC().Add(15 * time.Minute).Format(time.RFC3339),
+func (s *Service) Presign(ctx context.Context, req PresignUploadRequest) (PresignedUpload, error) {
+	upload, err := s.provider.Presign(ctx, req)
+	if err != nil {
+		return PresignedUpload{}, err
 	}
+	if err := s.repo.Save(ctx, upload.UploadID, pendingUpload{Request: req}); err != nil {
+		return PresignedUpload{}, err
+	}
+	return upload, nil
 }
 
-func (s *Service) BatchPresign(ctx context.Context, req BatchPresignUploadRequest) BatchPresignedUpload {
+func (s *Service) BatchPresign(ctx context.Context, req BatchPresignUploadRequest) (BatchPresignedUpload, error) {
 	uploads := make([]PresignedUpload, 0, len(req.Files))
+	pending := make([]pendingUpload, 0, len(req.Files))
 	for _, file := range req.Files {
-		uploads = append(uploads, s.Presign(ctx, file))
+		upload, err := s.provider.Presign(ctx, file)
+		if err != nil {
+			return BatchPresignedUpload{}, err
+		}
+		uploads = append(uploads, upload)
+		pending = append(pending, pendingUpload{Request: file})
 	}
-	return BatchPresignedUpload{Uploads: uploads}
+	for i, upload := range pending {
+		if err := s.repo.Save(ctx, uploads[i].UploadID, upload); err != nil {
+			return BatchPresignedUpload{}, err
+		}
+	}
+	return BatchPresignedUpload{Uploads: uploads}, nil
 }
 
-func (s *Service) Complete(ctx context.Context, uploadID string) (UploadedMedia, bool, bool) {
-	_ = ctx
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	upload, ok := s.uploads[uploadID]
+func (s *Service) Complete(ctx context.Context, uploadID string) (UploadedMedia, bool, error) {
+	upload, ok, err := s.repo.Get(ctx, uploadID)
+	if err != nil {
+		return UploadedMedia{}, false, err
+	}
 	if !ok {
-		return UploadedMedia{}, false, false
+		return UploadedMedia{}, false, nil
 	}
 	if upload.Completed {
-		return upload.File, true, true
+		return upload.File, true, nil
 	}
-	file := UploadedMedia{FileID: "file_" + uploadID, FileSize: upload.Request.FileSize, MimeType: upload.Request.MimeType}
-	if upload.Request.Category == CategoryMomentImage || upload.Request.Category == CategoryChatImage || upload.Request.Category == CategoryAvatar || upload.Request.Category == CategoryGroupAvatar {
-		file.Width = 1080
-		file.Height = 1080
-		file.ThumbnailURL = "https://cdn.example.com/thumb/" + uploadID
+	file, err := s.provider.Complete(ctx, uploadID, upload.Request)
+	if err != nil {
+		return UploadedMedia{}, false, err
 	}
-	upload.Completed = true
-	upload.File = file
-	s.uploads[uploadID] = upload
-	return file, true, false
+	completed, ok, err := s.repo.Complete(ctx, uploadID, file)
+	if err != nil {
+		return UploadedMedia{}, false, err
+	}
+	if !ok {
+		return UploadedMedia{}, false, nil
+	}
+	return completed.File, true, nil
 }
