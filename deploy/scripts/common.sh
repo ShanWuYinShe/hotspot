@@ -139,6 +139,10 @@ prepare_deploy_dirs() {
   ensure_dir "$deploy_tmp/cache/go/build"
   ensure_dir "$deploy_tmp/cache/pnpm/store"
   ensure_dir "$deploy_tmp/locks"
+  ensure_dir "$deploy_tmp/logs"
+  ensure_dir "$deploy_tmp/logs/verify"
+  ensure_dir "$deploy_tmp/logs/preview/current"
+  ensure_dir "$deploy_tmp/logs/release"
   ensure_dir "$deploy_tmp/release"
   ensure_dir "$deploy_tmp/worktrees"
   ensure_writable_dir "$deploy_tmp"
@@ -148,6 +152,10 @@ prepare_deploy_dirs() {
   ensure_writable_dir "$deploy_tmp/cache/go/build"
   ensure_writable_dir "$deploy_tmp/cache/pnpm/store"
   ensure_writable_dir "$deploy_tmp/locks"
+  ensure_writable_dir "$deploy_tmp/logs"
+  ensure_writable_dir "$deploy_tmp/logs/verify"
+  ensure_writable_dir "$deploy_tmp/logs/preview/current"
+  ensure_writable_dir "$deploy_tmp/logs/release"
   ensure_writable_dir "$deploy_tmp/release"
   ensure_writable_dir "$deploy_tmp/worktrees"
 }
@@ -173,6 +181,58 @@ release_artifact_root() {
   local root="$1"
   local label="$2"
   printf '%s/artifacts/release/%s\n' "$(deploy_tmp_root "$root")" "$(sanitize_name "$label")"
+}
+
+verify_log_root() {
+  local root="$1"
+  local env_name="$2"
+  local run_id="$3"
+  printf '%s/logs/verify/%s/%s\n' "$(deploy_tmp_root "$root")" "$(sanitize_name "$env_name")" "$(sanitize_name "$run_id")"
+}
+
+preview_log_root() {
+  local root="$1"
+  printf '%s/logs/preview/current\n' "$(deploy_tmp_root "$root")"
+}
+
+release_log_root() {
+  local root="$1"
+  local label="$2"
+  printf '%s/logs/release/%s\n' "$(deploy_tmp_root "$root")" "$(sanitize_name "$label")"
+}
+
+log_file_path() {
+  local root="$1"
+  local name="$2"
+  printf '%s/%s\n' "$root" "$name"
+}
+
+timestamp_run_id() {
+  date +%Y%m%d-%H%M%S
+}
+
+run_and_capture() {
+  local log_path="$1"
+  shift
+  mkdir -p "$(dirname "$log_path")"
+  "$@" 2>&1 | tee "$log_path"
+}
+
+capture_compose_ps() {
+  local project_name="$1"
+  local compose_file="$2"
+  local log_path="$3"
+  mkdir -p "$(dirname "$log_path")"
+  docker compose -p "$project_name" -f "$compose_file" ps >"$log_path" 2>&1 || true
+}
+
+capture_compose_logs() {
+  local project_name="$1"
+  local compose_file="$2"
+  local log_path="$3"
+  shift 3
+  mkdir -p "$(dirname "$log_path")"
+  docker compose -p "$project_name" -f "$compose_file" logs --no-color "$@" >"$log_path" 2>&1 || true
 }
 
 backend_go_artifact_dir() {
@@ -231,7 +291,7 @@ cleanup_path() {
   fi
   if ! rm -rf "$path"; then
     echo "failed to remove path: $path" >&2
-    exit 1
+    return 1
   fi
 }
 
@@ -240,10 +300,47 @@ source_root_from_current_worktree() {
   printf '%s\n' "$root"
 }
 
+acquire_worktree_metadata_lock() {
+  local root="$1"
+  acquire_lock "$root" git-worktree-metadata
+}
+
+deploy_worktrees_root() {
+  local root="$1"
+  printf '%s/worktrees\n' "$(deploy_tmp_root "$root")"
+}
+
+is_deploy_managed_worktree_path() {
+  local root="$1"
+  local path="$2"
+  local managed_root
+  managed_root="$(deploy_worktrees_root "$root")"
+  case "$path" in
+    "$managed_root"/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+worktree_is_registered() {
+  local root="$1"
+  local target="$2"
+  local line
+  local candidate
+  while IFS= read -r line; do
+    if [[ "$line" == worktree\ * ]]; then
+      candidate="${line#worktree }"
+      if [[ "$candidate" == "$target" ]]; then
+        return 0
+      fi
+    fi
+  done < <(git -C "$root" worktree list --porcelain 2>/dev/null || true)
+  return 1
+}
+
 release_worktree_dir() {
   local root="$1"
   local label="$2"
-  printf '%s/worktrees/%s\n' "$(deploy_tmp_root "$root")" "$(sanitize_name "$label")"
+  printf '%s/%s\n' "$(deploy_worktrees_root "$root")" "$(sanitize_name "$label")"
 }
 
 ensure_release_worktree() {
@@ -251,21 +348,51 @@ ensure_release_worktree() {
   local ref="$2"
   local label="$3"
   local destination
+  local metadata_lock
   destination="$(release_worktree_dir "$root" "$label")"
-  cleanup_path "$destination"
-  git -C "$root" worktree add --detach "$destination" "$ref" >/dev/null
+  metadata_lock="$(acquire_worktree_metadata_lock "$root")"
+  if worktree_is_registered "$root" "$destination"; then
+    echo "deploy-managed worktree is already registered: $destination" >&2
+    release_lock "$metadata_lock"
+    return 1
+  fi
+  if ! cleanup_path "$destination"; then
+    release_lock "$metadata_lock"
+    return 1
+  fi
+  if ! git -C "$root" worktree add --detach "$destination" "$ref" >/dev/null; then
+    release_lock "$metadata_lock"
+    return 1
+  fi
+  release_lock "$metadata_lock"
   printf '%s\n' "$destination"
 }
 
 remove_release_worktree() {
   local root="$1"
   local path="$2"
+  local metadata_lock
+  metadata_lock="$(acquire_worktree_metadata_lock "$root")"
   if git -C "$root" worktree remove --force "$path" >/dev/null 2>&1; then
+    release_lock "$metadata_lock"
     return 0
   fi
-  echo "git worktree remove failed for $path; trying direct cleanup for deploy-managed path" >&2
-  cleanup_path "$path"
-  git -C "$root" worktree prune >/dev/null 2>&1 || true
+  if ! is_deploy_managed_worktree_path "$root" "$path"; then
+    echo "refusing fallback cleanup outside deploy-managed worktrees: $path" >&2
+    release_lock "$metadata_lock"
+    return 1
+  fi
+  if worktree_is_registered "$root" "$path"; then
+    echo "git worktree remove failed while $path is still registered; refusing direct cleanup and prune." >&2
+    release_lock "$metadata_lock"
+    return 1
+  fi
+  echo "git worktree remove failed for $path, but it is no longer registered; cleaning leftover deploy-managed path only" >&2
+  if ! cleanup_path "$path"; then
+    release_lock "$metadata_lock"
+    return 1
+  fi
+  release_lock "$metadata_lock"
 }
 
 resolved_git_ref() {
@@ -310,21 +437,46 @@ release_frontend_image() {
   printf 'hotspot/frontend-svelte:release-%s\n' "$(sanitize_name "$label")"
 }
 
+common_docker_build_args() {
+  local -a build_args=()
+  [[ -n "${HOTSPOT_GOLANG_BASE_IMAGE:-}" ]] && build_args+=(--build-arg "HOTSPOT_GOLANG_BASE_IMAGE=$HOTSPOT_GOLANG_BASE_IMAGE")
+  [[ -n "${HOTSPOT_NODE_BASE_IMAGE:-}" ]] && build_args+=(--build-arg "HOTSPOT_NODE_BASE_IMAGE=$HOTSPOT_NODE_BASE_IMAGE")
+  [[ -n "${HOTSPOT_ALPINE_BASE_IMAGE:-}" ]] && build_args+=(--build-arg "HOTSPOT_ALPINE_BASE_IMAGE=$HOTSPOT_ALPINE_BASE_IMAGE")
+  [[ -n "${HOTSPOT_ALPINE_REPO:-}" ]] && build_args+=(--build-arg "HOTSPOT_ALPINE_REPO=$HOTSPOT_ALPINE_REPO")
+  printf '%s\0' "${build_args[@]}"
+}
+
 ensure_runner_image() {
   local image="$1"
   local dockerfile="$2"
   local context="$3"
+  local -a build_args=()
   if docker image inspect "$image" >/dev/null 2>&1; then
     return 0
   fi
-  docker build -t "$image" -f "$dockerfile" "$context"
+  while IFS= read -r -d '' arg; do
+    build_args+=("$arg")
+  done < <(common_docker_build_args)
+  if ((${#build_args[@]} > 0)); then
+    docker build "${build_args[@]}" -t "$image" -f "$dockerfile" "$context"
+  else
+    docker build -t "$image" -f "$dockerfile" "$context"
+  fi
 }
 
 build_app_image() {
   local image="$1"
   local dockerfile="$2"
   local context="$3"
-  docker build -t "$image" -f "$dockerfile" "$context"
+  local -a build_args=()
+  while IFS= read -r -d '' arg; do
+    build_args+=("$arg")
+  done < <(common_docker_build_args)
+  if ((${#build_args[@]} > 0)); then
+    docker build "${build_args[@]}" -t "$image" -f "$dockerfile" "$context"
+  else
+    docker build -t "$image" -f "$dockerfile" "$context"
+  fi
 }
 
 remove_preview_images() {

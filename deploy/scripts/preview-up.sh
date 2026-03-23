@@ -6,6 +6,8 @@ source "$SCRIPT_DIR/common.sh"
 ROOT="$(project_root)"
 COMPOSE_FILE="$ROOT/deploy/compose/preview.yml"
 CERT_DIR="$ROOT/tmp/certs"
+PRIMARY_ROOT="$(cd "$(git -C "$ROOT" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)/.." 2>/dev/null && pwd)"
+PRIMARY_CERT_DIR="$PRIMARY_ROOT/tmp/certs"
 PROJECT_NAME="$(preview_project_name)"
 HTTP_PORT="8088"
 HTTPS_PORT="8443"
@@ -53,10 +55,22 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+LOG_ROOT="$(preview_log_root "$ROOT")"
+PREVIEW_UP_LOG="$(log_file_path "$LOG_ROOT" "compose-up.log")"
+PREVIEW_UP_CONSOLE_LOG="$(log_file_path "$LOG_ROOT" "preview-up.console.log")"
+PREVIEW_PS_LOG="$(log_file_path "$LOG_ROOT" "compose.ps.log")"
+PREVIEW_STARTUP_LOG="$(log_file_path "$LOG_ROOT" "compose.startup.log")"
+PREVIEW_UP_META_LOG="$(log_file_path "$LOG_ROOT" "up.meta.log")"
 PUBLIC_ORIGIN="${HOTSPOT_PREVIEW_PUBLIC_ORIGIN:-https://localhost:${HTTPS_PORT}}"
 
 if [[ ! -f "$CERT_PATH" || ! -f "$KEY_PATH" ]]; then
-  cat >&2 <<EOF
+  fallback_cert="$PRIMARY_CERT_DIR/localhost.crt"
+  fallback_key="$PRIMARY_CERT_DIR/localhost.key"
+  if [[ -f "$fallback_cert" && -f "$fallback_key" ]]; then
+    CERT_PATH="$fallback_cert"
+    KEY_PATH="$fallback_key"
+  else
+    cat >&2 <<EOF
 TLS certificate or key not found.
 Expected:
   HOTSPOT_TLS_CERT_PATH=$CERT_PATH
@@ -66,7 +80,8 @@ For local testing, you can generate certs with mkcert, for example:
   mkdir -p "$CERT_DIR"
   mkcert -cert-file "$CERT_PATH" -key-file "$KEY_PATH" localhost 127.0.0.1 ::1
 EOF
-  exit 1
+    exit 1
+  fi
 fi
 
 if ! docker image inspect "$(preview_backend_image)" >/dev/null 2>&1 || ! docker image inspect "$(preview_frontend_image)" >/dev/null 2>&1; then
@@ -101,10 +116,23 @@ export HOTSPOT_PREVIEW_PUBLIC_ORIGIN="$PUBLIC_ORIGIN"
 export HOTSPOT_TLS_CERT_PATH="$CERT_PATH"
 export HOTSPOT_TLS_KEY_PATH="$KEY_PATH"
 
+prepare_deploy_dirs "$ROOT"
+ensure_dir "$LOG_ROOT"
+{
+  echo "Compose project: $PROJECT_NAME"
+  echo "HTTPS entrypoint: $PUBLIC_ORIGIN"
+  echo "HTTP redirect entrypoint: http://localhost:${HTTP_PORT}"
+  echo "TLS cert: $CERT_PATH"
+  echo "TLS key: $KEY_PATH"
+} | tee "$PREVIEW_UP_META_LOG"
+
 cd "$ROOT"
-docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" up -d
+run_and_capture "$PREVIEW_UP_LOG" "$PREVIEW_UP_CONSOLE_LOG" docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" up -d
+capture_compose_ps "$PROJECT_NAME" "$COMPOSE_FILE" "$PREVIEW_PS_LOG"
+capture_compose_logs "$PROJECT_NAME" "$COMPOSE_FILE" "$PREVIEW_STARTUP_LOG" --tail 300
 
 echo "Preview environment is running."
 echo "Compose project: $PROJECT_NAME"
 echo "HTTPS entrypoint: $PUBLIC_ORIGIN"
 echo "HTTP redirect entrypoint: http://localhost:${HTTP_PORT}"
+echo "Logs: $LOG_ROOT"

@@ -37,7 +37,7 @@
 - lock
 - 测试依赖容器
 
-缓存与构建产物统一落在当前 checkout 的 `tmp/deploy/` 下，但必须由当前宿主用户写入，避免 worktree 清理时出现无法删除的 root/foreign-owned 文件。
+缓存、构建产物与日志统一落在当前 checkout 的 `tmp/deploy/` 下，但必须由当前宿主用户写入，避免 worktree 清理时出现无法删除的 root/foreign-owned 文件。
 
 ### 入口
 
@@ -52,6 +52,7 @@
   - `dockerfiles/frontend.verify.Dockerfile`
 - 当前工作树通过只读挂载注入容器，并复制到容器临时目录后执行测试，避免把 pnpm store、node_modules 或其他临时产物写回仓库根
 - verify runner 以当前宿主 UID/GID 写入 `tmp/deploy/` 下的 cache，并在 `go test ./...` 前先执行 backend-go schema bootstrap
+- 每次 verify 都会额外把完整 runner 输出、`docker compose ps` 和完整 compose logs 归档到 `tmp/deploy/logs/verify/<env-name>/<run-id>/`
 
 ## 二、preview
 
@@ -92,6 +93,8 @@
 - 默认保留 postgres / redis / minio 数据
 - 支持 `--clean` / `--clean-all`
 - backend-go 在启动时会自动执行 schema bootstrap 并校验关键表；对空库 preview，先清 postgres volume 再启动也应能自举成功
+- preview 构建、启动与 inspect 结果都会归档到 `tmp/deploy/logs/preview/current/`，其中既保留构建期完整 stdout/stderr，也保留 runtime `compose ps` / `compose logs` 快照与 HTTP/S3 检查结果
+- `createbuckets` 会安静重试 MinIO 连接；只有超过重试上限时才输出失败，而不是在 MinIO 启动早期连续刷瞬时连接拒绝日志
 
 ## 三、release
 
@@ -111,6 +114,7 @@
 - backend image
 - frontend image
 - manifest.json
+- `tmp/deploy/logs/release/<label>/` 下的完整构建日志
 
 manifest 至少包含：
 - ref
@@ -139,7 +143,36 @@ manifest 至少包含：
 
 因此当前 `release-build.sh` 只负责**产出正式部署输入物**，不负责真正远端发布。
 
-## 五、目录约定
+## 五、依赖下载镜像源与镜像引用覆盖
+
+### 依赖下载镜像源
+- 这一层解决的是墙内环境下容器内部下载 Go 模块、npm 包、Alpine 包时的访问问题。
+- 当前默认值：
+  - Alpine：`https://mirrors.ustc.edu.cn/alpine`
+  - Go：
+    - `GOPROXY=https://goproxy.cn,direct`
+    - `GOSUMDB=sum.golang.google.cn`
+  - npm / pnpm：`https://registry.npmmirror.com`
+- 当前 `deploy/` 范围内没有 Rust Dockerfile，因此这轮没有补 cargo/rustup 镜像源；若后续引入 Rust Docker 构建链，再单独补齐。
+
+### 容器镜像引用覆盖
+- 这一层是“容器镜像引用/版本”的覆盖能力，不等于依赖下载镜像源。
+- `compose/preview.yml` 与 `compose/verify.yml` 中的服务镜像默认跟随最新标签（`latest`），同时支持通过环境变量覆盖。
+- 当前支持的覆盖项包括：
+  - `HOTSPOT_PREVIEW_POSTGRES_IMAGE`
+  - `HOTSPOT_PREVIEW_REDIS_IMAGE`
+  - `HOTSPOT_PREVIEW_MINIO_IMAGE`
+  - `HOTSPOT_PREVIEW_MINIO_MC_IMAGE`
+  - `HOTSPOT_PREVIEW_NGINX_IMAGE`
+  - `HOTSPOT_VERIFY_POSTGRES_IMAGE`
+  - `HOTSPOT_VERIFY_REDIS_IMAGE`
+- Dockerfile 基础镜像默认跟随最新 Alpine 通道（Node 默认使用 `node:alpine`，并直接通过 npm 安装 `pnpm`），并支持 build arg 覆盖：
+  - `HOTSPOT_GOLANG_BASE_IMAGE`
+  - `HOTSPOT_NODE_BASE_IMAGE`
+  - `HOTSPOT_ALPINE_BASE_IMAGE`
+  - `HOTSPOT_ALPINE_REPO`
+
+## 六、目录约定
 
 ```text
 deploy/
@@ -165,7 +198,7 @@ deploy/
     hotspot.preview.nginx.conf
 ```
 
-## 六、必须保留的行为
+## 七、必须保留的行为
 - 本地优先开发与本地集成分支流程不变
 - verify 默认继续走 Docker
 - verify 默认继续验证当前工作目录 / worktree
@@ -175,7 +208,7 @@ deploy/
 - 数据保留 / 清理语义保留
 - 多 worktree 并行隔离只属于 verify
 
-## 七、验证要求
+## 八、验证要求
 
 ### verify
 - 不同 worktree 使用不同 `env-name` 可以并行运行

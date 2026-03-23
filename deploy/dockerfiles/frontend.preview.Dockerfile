@@ -1,6 +1,9 @@
-FROM node:20-alpine
+ARG HOTSPOT_NODE_BASE_IMAGE=node:alpine
+FROM ${HOTSPOT_NODE_BASE_IMAGE}
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
+ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
+ENV npm_config_registry=https://registry.npmmirror.com
+RUN npm install -g pnpm@10.28.0
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile --prod
 COPY build ./build
