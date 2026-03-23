@@ -38,9 +38,14 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	if err := queryable.Exec(ctx, queryInsertMoment, momentID, userID, req.Description, createdAt, 0, 0, 0, req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, privacy); err != nil {
 		return MomentItem{}, err
 	}
+	tags := normalizeMomentTags(req.Tags)
+	if err := insertMomentTags(ctx, queryable, momentID, tags, now); err != nil {
+		return MomentItem{}, err
+	}
 	return MomentItem{
 		MomentID:      momentID,
 		Description:   req.Description,
+		Tags:          tags,
 		CreatedAt:     createdAt,
 		LikesCount:    0,
 		CommentsCount: 0,

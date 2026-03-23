@@ -18,6 +18,13 @@ type FeatureSwitches = systemmodule.FeatureSwitches
 type AppLimits = systemmodule.AppLimits
 
 type ContactInfo = systemmodule.ContactInfo
+type AnnouncementSeverity = systemmodule.AnnouncementSeverity
+
+const (
+	AnnouncementSeverityInfo    = systemmodule.AnnouncementSeverityInfo
+	AnnouncementSeverityWarning = systemmodule.AnnouncementSeverityWarning
+	AnnouncementSeverityError   = systemmodule.AnnouncementSeverityError
+)
 
 type PaginationParams struct {
 	Limit  int    `json:"limit,omitempty"`
@@ -161,6 +168,74 @@ type AppConfig struct {
 	ResponseDefaults ResponseDefaults `json:"response_defaults"`
 	UpdatedAt        string           `json:"updated_at,omitempty"`
 	UpdatedByUserID  string           `json:"updated_by_user_id,omitempty"`
+}
+
+type AdminTagItem struct {
+	Name       string `json:"name"`
+	UsageCount int    `json:"usage_count"`
+	Trend      string `json:"trend,omitempty"`
+	CreatedAt  string `json:"created_at"`
+}
+
+type PaginatedAdminTags struct {
+	Items      []AdminTagItem `json:"items"`
+	NextCursor string         `json:"next_cursor,omitempty"`
+}
+
+type AdminTagSearchRequest struct {
+	Keyword    string            `json:"keyword,omitempty"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
+}
+
+type AdminDeleteTagRequest struct {
+	Name string `json:"name"`
+}
+
+type AdminAnnouncementItem struct {
+	AnnouncementID string               `json:"announcement_id"`
+	Title          string               `json:"title"`
+	Content        string               `json:"content"`
+	Severity       AnnouncementSeverity `json:"severity"`
+	ActionURL      string               `json:"action_url,omitempty"`
+	CreatedAt      string               `json:"created_at"`
+	CreatedBy      UserInfo             `json:"created_by"`
+	SendPush       bool                 `json:"send_push"`
+	PushSentAt     string               `json:"push_sent_at,omitempty"`
+	ViewCount      int                  `json:"view_count"`
+}
+
+type PaginatedAdminAnnouncements struct {
+	Items      []AdminAnnouncementItem `json:"items"`
+	NextCursor string                  `json:"next_cursor,omitempty"`
+}
+
+type AdminAnnouncementSearchRequest struct {
+	Severity   AnnouncementSeverity `json:"severity,omitempty"`
+	Pagination *PaginationParams    `json:"pagination,omitempty"`
+}
+
+type CreateAnnouncementRequest struct {
+	Title     string               `json:"title"`
+	Content   string               `json:"content"`
+	Severity  AnnouncementSeverity `json:"severity"`
+	ActionURL string               `json:"action_url,omitempty"`
+	SendPush  bool                 `json:"send_push,omitempty"`
+}
+
+type AnnouncementCreated struct {
+	AnnouncementID string `json:"announcement_id"`
+}
+
+type UpdateAnnouncementRequest struct {
+	AnnouncementID string                `json:"announcement_id"`
+	Title          *string               `json:"title,omitempty"`
+	Content        *string               `json:"content,omitempty"`
+	Severity       *AnnouncementSeverity `json:"severity,omitempty"`
+	ActionURL      *string               `json:"action_url,omitempty"`
+}
+
+type DeleteAnnouncementRequest struct {
+	AnnouncementID string `json:"announcement_id"`
 }
 
 type AdminActor struct {

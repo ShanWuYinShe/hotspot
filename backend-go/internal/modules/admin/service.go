@@ -2,19 +2,31 @@ package admin
 
 import (
 	"context"
+	"errors"
 	"strings"
+	"time"
 
+	systemmodule "hotspot/backend-go/internal/modules/system"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
 )
 
 type Service struct {
-	repo     Repository
-	provider Provider
+	repo            Repository
+	provider        Provider
+	moderationStore ModerationStore
+	pushService     announcementPushService
 }
 
-func NewService(repo Repository, provider Provider) *Service {
-	return &Service{repo: repo, provider: provider}
+type announcementPushService interface {
+	PushSystemAnnouncement(userID, announcementID, severity string)
+}
+
+func NewService(repo Repository, provider Provider, moderationStore ModerationStore, pushService announcementPushService) *Service {
+	if moderationStore == nil {
+		moderationStore = NewInMemoryModerationStore()
+	}
+	return &Service{repo: repo, provider: provider, moderationStore: moderationStore, pushService: pushService}
 }
 
 func (s *Service) actorFromContext(ctx context.Context) (AdminActor, bool, error) {
@@ -226,6 +238,144 @@ func (s *Service) GetAppConfig(ctx context.Context) (AppConfig, *httpx.APIError,
 		return AppConfig{}, nil, err
 	}
 	return cfg, nil, nil
+}
+
+func (s *Service) SearchTags(ctx context.Context, req AdminTagSearchRequest) (PaginatedAdminTags, *httpx.APIError, error) {
+	if _, apiErr, err := s.requirePermission(ctx, permissionTagsRead); apiErr != nil || err != nil {
+		return PaginatedAdminTags{}, apiErr, err
+	}
+	if apiErr := validateTagSearchRequest(req); apiErr != nil {
+		return PaginatedAdminTags{}, apiErr, nil
+	}
+	pagination := PaginationParams{}
+	if req.Pagination != nil {
+		pagination = *req.Pagination
+	}
+	cursor, apiErr := decodeTagCursor(pagination.Cursor)
+	if apiErr != nil {
+		return PaginatedAdminTags{}, apiErr, nil
+	}
+	var cursorPtr *tagCursor
+	if pagination.Cursor != "" {
+		cursorPtr = &cursor
+	}
+	page, err := s.moderationStore.SearchTags(ctx, TagSearchFilter{Keyword: req.Keyword, Limit: pagination.Limit, Cursor: cursorPtr})
+	if err != nil {
+		return PaginatedAdminTags{}, nil, err
+	}
+	resp := PaginatedAdminTags{Items: make([]AdminTagItem, 0, len(page.Items))}
+	for _, item := range page.Items {
+		resp.Items = append(resp.Items, AdminTagItem{Name: item.Name, UsageCount: item.UsageCount, Trend: defaultTagTrend, CreatedAt: item.CreatedAt.UTC().Format(time.RFC3339)})
+	}
+	if page.Next != nil {
+		resp.NextCursor = encodeTagCursor(*page.Next)
+	}
+	return resp, nil, nil
+}
+
+func (s *Service) DeleteTag(ctx context.Context, name string) (*httpx.APIError, error) {
+	if _, apiErr, err := s.requirePermission(ctx, permissionTagsWrite); apiErr != nil || err != nil {
+		return apiErr, err
+	}
+	if normalizeTagName(name) == "" {
+		return httpx.InvalidRequest("参数错误"), nil
+	}
+	if err := s.moderationStore.DeleteTag(ctx, name); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+func (s *Service) SearchAnnouncements(ctx context.Context, req AdminAnnouncementSearchRequest) (PaginatedAdminAnnouncements, *httpx.APIError, error) {
+	if _, apiErr, err := s.requirePermission(ctx, permissionAnnouncementsRead); apiErr != nil || err != nil {
+		return PaginatedAdminAnnouncements{}, apiErr, err
+	}
+	pagination := PaginationParams{}
+	if req.Pagination != nil {
+		pagination = *req.Pagination
+	}
+	cursor, apiErr := decodeAnnouncementCursor(pagination.Cursor)
+	if apiErr != nil {
+		return PaginatedAdminAnnouncements{}, apiErr, nil
+	}
+	var cursorPtr *systemmodule.AnnouncementCursor
+	if pagination.Cursor != "" {
+		cursorPtr = &systemmodule.AnnouncementCursor{CreatedAt: cursor.CreatedAt, AnnouncementID: cursor.AnnouncementID}
+	}
+	page, err := s.moderationStore.SearchAnnouncements(ctx, systemmodule.AnnouncementSearchFilter{Severity: req.Severity, Limit: pagination.Limit, Cursor: cursorPtr})
+	if err != nil {
+		return PaginatedAdminAnnouncements{}, nil, err
+	}
+	resp := PaginatedAdminAnnouncements{Items: make([]AdminAnnouncementItem, 0, len(page.Items))}
+	for _, item := range page.Items {
+		resp.Items = append(resp.Items, toAdminAnnouncementItem(item))
+	}
+	if page.Next != nil {
+		resp.NextCursor = encodeAnnouncementCursor(announcementCursor{CreatedAt: page.Next.CreatedAt, AnnouncementID: page.Next.AnnouncementID})
+	}
+	return resp, nil, nil
+}
+
+func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncementRequest) (AnnouncementCreated, *httpx.APIError, error) {
+	actor, apiErr, err := s.requirePermission(ctx, permissionAnnouncementsWrite)
+	if apiErr != nil || err != nil {
+		return AnnouncementCreated{}, apiErr, err
+	}
+	if apiErr := validateAnnouncementCreate(req); apiErr != nil {
+		return AnnouncementCreated{}, apiErr, nil
+	}
+	input := systemmodule.AnnouncementCreateInput{
+		Actor: systemmodule.AnnouncementActor{UserID: actor.UserID, Nickname: actor.UserID},
+		Title: strings.TrimSpace(req.Title), Content: strings.TrimSpace(req.Content), Severity: req.Severity,
+		ActionURL: strings.TrimSpace(req.ActionURL), SendPush: req.SendPush,
+	}
+	item, err := s.moderationStore.CreateAnnouncement(ctx, input)
+	if err != nil {
+		return AnnouncementCreated{}, nil, err
+	}
+	if req.SendPush && s.pushService != nil {
+		s.pushService.PushSystemAnnouncement(actor.UserID, item.AnnouncementID, string(item.Severity))
+	}
+	return AnnouncementCreated{AnnouncementID: item.AnnouncementID}, nil, nil
+}
+
+func (s *Service) UpdateAnnouncement(ctx context.Context, req UpdateAnnouncementRequest) (*httpx.APIError, error) {
+	if _, apiErr, err := s.requirePermission(ctx, permissionAnnouncementsWrite); apiErr != nil || err != nil {
+		return apiErr, err
+	}
+	if apiErr := validateAnnouncementUpdate(req); apiErr != nil {
+		return apiErr, nil
+	}
+	_, err := s.moderationStore.UpdateAnnouncement(ctx, systemmodule.AnnouncementUpdateInput{
+		AnnouncementID: req.AnnouncementID,
+		Title:          trimOptional(req.Title),
+		Content:        trimOptional(req.Content),
+		Severity:       req.Severity,
+		ActionURL:      trimOptional(req.ActionURL),
+	})
+	if err != nil {
+		if errors.Is(err, systemmodule.ErrAnnouncementNotFound()) || err.Error() == "announcement not found" {
+			return &httpx.APIError{Code: 10300, Message: "公告不存在"}, nil
+		}
+		return nil, err
+	}
+	return nil, nil
+}
+
+func (s *Service) DeleteAnnouncement(ctx context.Context, announcementID string) (*httpx.APIError, error) {
+	if _, apiErr, err := s.requirePermission(ctx, permissionAnnouncementsWrite); apiErr != nil || err != nil {
+		return apiErr, err
+	}
+	if strings.TrimSpace(announcementID) == "" {
+		return httpx.InvalidRequest("参数错误"), nil
+	}
+	if err := s.moderationStore.DeleteAnnouncement(ctx, announcementID); err != nil {
+		if errors.Is(err, systemmodule.ErrAnnouncementNotFound()) || err.Error() == "announcement not found" {
+			return &httpx.APIError{Code: 10300, Message: "公告不存在"}, nil
+		}
+		return nil, err
+	}
+	return nil, nil
 }
 
 func (s *Service) requirePermission(ctx context.Context, permission string) (AdminActor, *httpx.APIError, error) {

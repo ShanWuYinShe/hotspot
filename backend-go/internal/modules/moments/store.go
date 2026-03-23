@@ -29,7 +29,7 @@ func (s *Store) Create(userID string, req CreateMomentRequest) MomentItem {
 	item := MomentItem{
 		MomentID:      momentID,
 		Description:   req.Description,
-		Tags:          req.Tags,
+		Tags:          normalizeMomentTags(req.Tags),
 		Mentions:      req.Mentions,
 		CreatedAt:     now.Format(time.RFC3339),
 		LikesCount:    0,

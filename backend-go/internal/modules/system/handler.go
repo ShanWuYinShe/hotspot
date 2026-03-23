@@ -40,7 +40,12 @@ func (h *Handler) ListAnnouncements(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.ListAnnouncements(r.Context())))
+	payload, err := h.service.ListAnnouncements(r.Context())
+	if err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
 }
 
 func (h *Handler) GetClientConfig(w http.ResponseWriter, r *http.Request) {

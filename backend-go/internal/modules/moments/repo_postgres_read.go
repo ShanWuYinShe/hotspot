@@ -3,6 +3,7 @@ package moments
 import (
 	"context"
 	"errors"
+	"sort"
 
 	"hotspot/backend-go/internal/platform/persistence"
 
@@ -24,6 +25,11 @@ func (r *PostgresRepository) Get(ctx context.Context, momentID string) (MomentIt
 		}
 		return MomentItem{}, false, err
 	}
+	tagsByMomentID, err := loadMomentTags(ctx, queryable, []string{momentID})
+	if err != nil {
+		return MomentItem{}, false, err
+	}
+	item.Tags = tagsByMomentID[momentID]
 	return item, true, nil
 }
 
@@ -41,15 +47,24 @@ func (r *PostgresRepository) ListMine(ctx context.Context, userID string) (Pagin
 	}
 	defer rows.Close()
 	items := []MomentItem{}
+	momentIDs := make([]string, 0)
 	for rows.Next() {
 		item, err := scanMomentRow(rows)
 		if err != nil {
 			return PaginatedMoments{}, err
 		}
 		items = append(items, item)
+		momentIDs = append(momentIDs, item.MomentID)
 	}
 	if err := rows.Err(); err != nil {
 		return PaginatedMoments{}, err
+	}
+	tagsByMomentID, err := loadMomentTags(ctx, queryable, momentIDs)
+	if err != nil {
+		return PaginatedMoments{}, err
+	}
+	for i := range items {
+		items[i].Tags = tagsByMomentID[items[i].MomentID]
 	}
 	return PaginatedMoments{Items: items}, nil
 }
@@ -74,4 +89,36 @@ func scanMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, error) 
 	}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
 	item.PrivacyLevel = privacyLevel
 	return item, nil
+}
+
+func loadMomentTags(ctx context.Context, queryable persistence.QueryableDB, momentIDs []string) (map[string][]string, error) {
+	if len(momentIDs) == 0 {
+		return map[string][]string{}, nil
+	}
+	tagsByMomentID := make(map[string][]string, len(momentIDs))
+	for _, momentID := range momentIDs {
+		rows, err := queryable.Query(ctx, queryListMomentTagsByMomentID, momentID)
+		if err != nil {
+			return nil, err
+		}
+		tags := make([]string, 0)
+		for rows.Next() {
+			var tag string
+			if err := rows.Scan(&tag); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			tags = append(tags, tag)
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		if err := rows.Close(); err != nil {
+			return nil, err
+		}
+		sort.Strings(tags)
+		tagsByMomentID[momentID] = tags
+	}
+	return tagsByMomentID, nil
 }

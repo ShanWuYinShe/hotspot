@@ -214,6 +214,118 @@ func (h *Handler) GetAppConfig(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
 }
 
+func (h *Handler) SearchTags(w http.ResponseWriter, r *http.Request) {
+	var req AdminTagSearchRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	payload, apiErr, err := h.service.SearchTags(r.Context(), req)
+	if err != nil {
+		h.writeUnavailable(w)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
+}
+
+func (h *Handler) DeleteTag(w http.ResponseWriter, r *http.Request) {
+	var req AdminDeleteTagRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	apiErr, err := h.service.DeleteTag(r.Context(), req.Name)
+	if err != nil {
+		h.writeUnavailable(w)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
+}
+
+func (h *Handler) SearchAnnouncements(w http.ResponseWriter, r *http.Request) {
+	var req AdminAnnouncementSearchRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	payload, apiErr, err := h.service.SearchAnnouncements(r.Context(), req)
+	if err != nil {
+		h.writeUnavailable(w)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
+}
+
+func (h *Handler) CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
+	if err := idempotency.RequireKey(r); err != nil {
+		h.writeAPIError(w, err)
+		return
+	}
+	var req CreateAnnouncementRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	idempotency.ReplayOrStore(w, r, "admin/announcements/create", func() httpx.ApiResponse[AnnouncementCreated] {
+		payload, apiErr, err := h.service.CreateAnnouncement(r.Context(), req)
+		if err != nil {
+			return httpx.ApiResponse[AnnouncementCreated]{Code: 10600, Message: "服务暂时不可用"}
+		}
+		if apiErr != nil {
+			return httpx.ApiResponse[AnnouncementCreated]{Code: apiErr.Code, Message: apiErr.Message}
+		}
+		return httpx.Success(payload)
+	})
+}
+
+func (h *Handler) UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
+	var req UpdateAnnouncementRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	apiErr, err := h.service.UpdateAnnouncement(r.Context(), req)
+	if err != nil {
+		h.writeUnavailable(w)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
+}
+
+func (h *Handler) DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {
+	var req DeleteAnnouncementRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	apiErr, err := h.service.DeleteAnnouncement(r.Context(), req.AnnouncementID)
+	if err != nil {
+		h.writeUnavailable(w)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
+}
+
 func (h *Handler) writeAPIError(w http.ResponseWriter, err *httpx.APIError) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 }

@@ -3,6 +3,8 @@ package admin
 import (
 	"github.com/go-chi/chi/v5"
 
+	"hotspot/backend-go/internal/modules/notifications"
+	systemmodule "hotspot/backend-go/internal/modules/system"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
@@ -17,7 +19,14 @@ type Module struct{ handler *Handler }
 func NewModule(cfg config.Config, factory *persistence.Factory) *Module {
 	repo := NewPersistenceRepository(factory)
 	provider := NewAppConfigProvider(appconfig.NewStaticSource(cfg))
-	service := NewService(repo, provider)
+	systemRepo := systemmodule.NewPersistenceRepository(factory)
+	moderationStore := NewPersistenceModerationStore(factory, systemRepo)
+	pushService := notifications.NewServiceWithRepo(notifications.NewPersistenceRepository(factory))
+	return NewModuleWithDeps(repo, provider, moderationStore, pushService)
+}
+
+func NewModuleWithDeps(repo Repository, provider Provider, moderationStore ModerationStore, pushService announcementPushService) *Module {
+	service := NewService(repo, provider, moderationStore, pushService)
 	return &Module{handler: NewHandler(service)}
 }
 

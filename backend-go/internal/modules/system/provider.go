@@ -8,6 +8,7 @@ import (
 
 type Provider interface {
 	GetClientConfig(context.Context) ClientConfig
+	GetSystemAnnouncementsCount(context.Context) int
 }
 
 type AppConfigProvider struct {
@@ -53,4 +54,12 @@ func (p *AppConfigProvider) GetClientConfig(ctx context.Context) ClientConfig {
 			DefaultGroupAvatar: cfg.Defaults.DefaultGroupAvatar,
 		},
 	}
+}
+
+func (p *AppConfigProvider) GetSystemAnnouncementsCount(ctx context.Context) int {
+	cfg := p.source.Get(ctx)
+	if cfg.ResponseDefaults.SystemAnnouncementsCount <= 0 {
+		return 10
+	}
+	return cfg.ResponseDefaults.SystemAnnouncementsCount
 }

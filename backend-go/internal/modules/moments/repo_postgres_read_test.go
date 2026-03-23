@@ -108,6 +108,13 @@ func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
 		item.Location.Point.Latitude = args[8].(float64)
 		item.Location.Point.Longitude = args[9].(float64)
 		b.moments[item.MomentID] = item
+	case queryInsertMomentTagAssignment:
+		momentID := args[0].(string)
+		item := b.moments[momentID]
+		tag := args[1].(string)
+		item.Tags = append(item.Tags, tag)
+		sort.Strings(item.Tags)
+		b.moments[momentID] = item
 	case queryIncrementMomentCommentCount:
 		momentID := args[0].(string)
 		item := b.moments[momentID]
@@ -135,27 +142,40 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 	if b.queryErr != nil {
 		return nil, b.queryErr
 	}
-	if query != queryListMyMoments {
+	switch query {
+	case queryListMyMoments:
+		userID := args[0].(string)
+		items := make([]MomentItem, 0)
+		for _, item := range b.moments {
+			if item.User.UserID == userID {
+				items = append(items, item)
+			}
+		}
+		sort.Slice(items, func(i, j int) bool {
+			if items[i].CreatedAt == items[j].CreatedAt {
+				return items[i].MomentID > items[j].MomentID
+			}
+			return items[i].CreatedAt > items[j].CreatedAt
+		})
+		rows := make([][]any, 0, len(items))
+		for _, item := range items {
+			rows = append(rows, []any{item.MomentID, item.User.UserID, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel})
+		}
+		return &rowsValues{rows: rows}, nil
+	case queryListMomentTagsByMomentID:
+		momentID := args[0].(string)
+		item, ok := b.moments[momentID]
+		if !ok {
+			return &rowsValues{rows: nil}, nil
+		}
+		rows := make([][]any, 0, len(item.Tags))
+		for _, tag := range item.Tags {
+			rows = append(rows, []any{tag})
+		}
+		return &rowsValues{rows: rows}, nil
+	default:
 		return &persistence.InMemoryRows{}, nil
 	}
-	userID := args[0].(string)
-	items := make([]MomentItem, 0)
-	for _, item := range b.moments {
-		if item.User.UserID == userID {
-			items = append(items, item)
-		}
-	}
-	sort.Slice(items, func(i, j int) bool {
-		if items[i].CreatedAt == items[j].CreatedAt {
-			return items[i].MomentID > items[j].MomentID
-		}
-		return items[i].CreatedAt > items[j].CreatedAt
-	})
-	rows := make([][]any, 0, len(items))
-	for _, item := range items {
-		rows = append(rows, []any{item.MomentID, item.User.UserID, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel})
-	}
-	return &rowsValues{rows: rows}, nil
 }
 
 func TestPostgresRepositoryReadsQueryableDB(t *testing.T) {
@@ -191,15 +211,18 @@ func TestPostgresRepositoryWritesQueryableDB(t *testing.T) {
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	fallback := &fallbackRepo{}
 	repo := NewPostgresRepository(factory, fallback)
-	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Location: Location{Point: struct {
+	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Tags: []string{" travel ", "hotspot", "travel"}, Location: Location{Point: struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	}{Latitude: 35.0, Longitude: 112.0}, LocationName: "南天门"}})
 	if err != nil || created.MomentID == "" || created.Description != "hello" {
 		t.Fatalf("unexpected created item: %#v err=%v", created, err)
 	}
-	if len(created.Tags) != 0 || len(created.Mentions) != 0 {
-		t.Fatalf("postgres create should not return non-persisted fields: %#v", created)
+	if len(created.Tags) != 2 || created.Tags[0] != "travel" || created.Tags[1] != "hotspot" {
+		t.Fatalf("unexpected persisted tags: %#v", created.Tags)
+	}
+	if len(created.Mentions) != 0 {
+		t.Fatalf("postgres create should not return non-persisted mentions: %#v", created)
 	}
 	if err := repo.IncrementCommentCount(context.Background(), created.MomentID); err != nil {
 		t.Fatalf("increment comment count: %v", err)

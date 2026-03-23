@@ -22,4 +22,14 @@ func MountRoutes(r chi.Router, handler *Handler) {
 	r.Route("/app_config", func(appConfig chi.Router) {
 		appConfig.Post("/get", handler.GetAppConfig)
 	})
+	r.Route("/tags", func(tags chi.Router) {
+		tags.Post("/search", handler.SearchTags)
+		tags.Post("/delete", handler.DeleteTag)
+	})
+	r.Route("/announcements", func(announcements chi.Router) {
+		announcements.Post("/search", handler.SearchAnnouncements)
+		announcements.Post("/create", handler.CreateAnnouncement)
+		announcements.Post("/update", handler.UpdateAnnouncement)
+		announcements.Post("/delete", handler.DeleteAnnouncement)
+	})
 }

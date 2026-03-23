@@ -11,9 +11,13 @@ import (
 )
 
 const (
-	permissionRbacManage    = "admin.rbac.manage"
-	permissionAppConfigRead = "admin.app_config.read"
-	wildcardPermission      = "*"
+	permissionRbacManage         = "admin.rbac.manage"
+	permissionAppConfigRead      = "admin.app_config.read"
+	permissionTagsRead           = "admin.tags.read"
+	permissionTagsWrite          = "admin.tags.write"
+	permissionAnnouncementsRead  = "admin.announcements.read"
+	permissionAnnouncementsWrite = "admin.announcements.write"
+	wildcardPermission           = "*"
 )
 
 var permissionDictionary = []AdminPermissionItem{
@@ -22,10 +26,10 @@ var permissionDictionary = []AdminPermissionItem{
 	{Key: "admin.reports.write", Description: "处理举报"},
 	{Key: permissionAppConfigRead, Description: "查看应用配置（AppConfig）"},
 	{Key: "admin.app_config.write", Description: "修改应用配置（AppConfig）"},
-	{Key: "admin.tags.read", Description: "查看标签列表"},
-	{Key: "admin.tags.write", Description: "删除/屏蔽标签"},
-	{Key: "admin.announcements.read", Description: "查看公告列表"},
-	{Key: "admin.announcements.write", Description: "发布/删除公告"},
+	{Key: permissionTagsRead, Description: "查看标签列表"},
+	{Key: permissionTagsWrite, Description: "删除/屏蔽标签"},
+	{Key: permissionAnnouncementsRead, Description: "查看公告列表"},
+	{Key: permissionAnnouncementsWrite, Description: "发布/删除公告"},
 	{Key: "admin.users.read", Description: "查看用户列表/详情"},
 	{Key: "admin.users.write", Description: "封禁/解封用户"},
 	{Key: "admin.groups.read", Description: "查看群组列表/详情"},
