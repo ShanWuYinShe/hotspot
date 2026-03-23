@@ -2,6 +2,8 @@ package admin
 
 import (
 	"context"
+	groupsmodule "hotspot/backend-go/internal/modules/groups"
+	usersmodule "hotspot/backend-go/internal/modules/users"
 	"encoding/json"
 	"errors"
 	"time"
@@ -237,3 +239,228 @@ func matchAuditFilter(entry AuditLogEntry, filter AuditLogFilter) bool {
 	}
 	return true
 }
+
+type adminUserRow struct {
+	UserID            string
+	Nickname          string
+	AvatarURL         string
+	Bio               string
+	PresenceStatus    string
+	LastOnline        time.Time
+	LocationName      string
+	Latitude          float64
+	Longitude         float64
+	UserType          string
+	CreatedAt         time.Time
+	Status            string
+	LoginID           string
+	RegisterIP        string
+	RegisterLocation  string
+	LastLoginIP       string
+	LastLoginLocation string
+	Email             string
+	Phone             string
+}
+
+
+type adminGroupRow struct {
+	GroupID        string
+	Name           string
+	AvatarURL      string
+	Description    string
+	HasPassword    bool
+	LocationName   string
+	Latitude       float64
+	Longitude      float64
+	JoinMethod     string
+	IsSearchable   bool
+	MaxMembers     int
+	CreatedAt      time.Time
+	OwnerID        string
+	OwnerNickname  string
+	OwnerAvatarURL string
+	MembersCount   int
+	LastActivityAt time.Time
+}
+
+
+type adminReportRow struct {
+	ReportID          string
+	TargetType        string
+	TargetID          string
+	Reason            string
+	Description       string
+	Status            string
+	CreatedAt         time.Time
+	HandledAt         *time.Time
+	ReporterUserID    string
+	ReporterNickname  string
+	ReporterAvatarURL string
+	HandledByUserID   string
+	HandledByNickname string
+	HandledByAvatar   string
+	HandleNote        string
+	TargetUserID      string
+	TargetUserNickname string
+	TargetUserAvatar  string
+}
+
+
+func scanAdminUserRow(row persistence.Row) (AdminUserItem, error) {
+	var record adminUserRow
+	if err := row.Scan(
+		&record.UserID,
+		&record.Nickname,
+		&record.AvatarURL,
+		&record.Bio,
+		&record.PresenceStatus,
+		&record.LastOnline,
+		&record.LocationName,
+		&record.Latitude,
+		&record.Longitude,
+		&record.UserType,
+		&record.CreatedAt,
+		&record.Status,
+		&record.LoginID,
+		&record.RegisterIP,
+		&record.RegisterLocation,
+		&record.LastLoginIP,
+		&record.LastLoginLocation,
+		&record.Email,
+		&record.Phone,
+	); err != nil {
+		return AdminUserItem{}, err
+	}
+	return AdminUserItem{
+		User: usersmodule.UserInfo{UserID: record.UserID, Nickname: record.Nickname, AvatarURL: record.AvatarURL},
+		Bio:            record.Bio,
+		PresenceStatus: usersmodule.UserPresenceStatus(record.PresenceStatus),
+		LastOnline:     record.LastOnline.UTC().Format(time.RFC3339),
+		Location: &usersmodule.RelativeLocation{Point: usersmodule.GeoPoint{Latitude: record.Latitude, Longitude: record.Longitude}, LocationName: record.LocationName},
+		Relation:       usersmodule.RelationshipNone,
+		Status:         UserAccountStatus(record.Status),
+		CreatedAt:      record.CreatedAt.UTC().Format(time.RFC3339),
+		LastActiveAt:   record.LastOnline.UTC().Format(time.RFC3339),
+		LoginID:        record.LoginID,
+		RegisterIP:     record.RegisterIP,
+		RegisterLocation: record.RegisterLocation,
+		LastLoginIP:    record.LastLoginIP,
+		LastLoginLocation: record.LastLoginLocation,
+		Email:          record.Email,
+		Phone:          record.Phone,
+	}, nil
+}
+
+
+func scanAdminGroupRow(row persistence.Row) (AdminGroupItem, error) {
+	var record adminGroupRow
+	if err := row.Scan(
+		&record.GroupID,
+		&record.Name,
+		&record.AvatarURL,
+		&record.Description,
+		&record.HasPassword,
+		&record.LocationName,
+		&record.Latitude,
+		&record.Longitude,
+		&record.JoinMethod,
+		&record.IsSearchable,
+		&record.MaxMembers,
+		&record.CreatedAt,
+		&record.OwnerID,
+		&record.OwnerNickname,
+		&record.OwnerAvatarURL,
+		&record.MembersCount,
+		&record.LastActivityAt,
+	); err != nil {
+		return AdminGroupItem{}, err
+	}
+	return AdminGroupItem{
+		Group: groupsmodule.GroupInfo{GroupID: record.GroupID, Name: record.Name, AvatarURL: record.AvatarURL, MembersCount: record.MembersCount},
+		Description: record.Description,
+		HasPassword: record.HasPassword,
+		Location: groupsmodule.Location{Point: struct {
+			Latitude  float64 `json:"latitude"`
+			Longitude float64 `json:"longitude"`
+		}{Latitude: record.Latitude, Longitude: record.Longitude}, LocationName: record.LocationName},
+		JoinMethod:     groupsmodule.GroupJoinMethod(record.JoinMethod),
+		IsSearchable:   record.IsSearchable,
+		MaxMembers:     record.MaxMembers,
+		CreatedAt:      record.CreatedAt.UTC().Format(time.RFC3339),
+		Owner:          usersmodule.UserInfo{UserID: record.OwnerID, Nickname: record.OwnerNickname, AvatarURL: record.OwnerAvatarURL},
+		LastActivityAt: record.LastActivityAt.UTC().Format(time.RFC3339),
+	}, nil
+}
+
+
+func scanAdminReportRow(row persistence.Row, withTargetUser bool) (reportHandleRecord, error) {
+	var record adminReportRow
+	if withTargetUser {
+		if err := row.Scan(
+			&record.ReportID,
+			&record.TargetType,
+			&record.TargetID,
+			&record.Reason,
+			&record.Description,
+			&record.Status,
+			&record.CreatedAt,
+			&record.HandledAt,
+			&record.ReporterUserID,
+			&record.ReporterNickname,
+			&record.ReporterAvatarURL,
+			&record.HandledByUserID,
+			&record.HandledByNickname,
+			&record.HandledByAvatar,
+			&record.HandleNote,
+			&record.TargetUserID,
+			&record.TargetUserNickname,
+			&record.TargetUserAvatar,
+		); err != nil {
+			return reportHandleRecord{}, err
+		}
+	} else {
+		if err := row.Scan(
+			&record.ReportID,
+			&record.TargetType,
+			&record.TargetID,
+			&record.Reason,
+			&record.Description,
+			&record.Status,
+			&record.CreatedAt,
+			&record.HandledAt,
+			&record.ReporterUserID,
+			&record.ReporterNickname,
+			&record.ReporterAvatarURL,
+			&record.HandledByUserID,
+			&record.HandledByNickname,
+			&record.HandledByAvatar,
+			&record.HandleNote,
+		); err != nil {
+			return reportHandleRecord{}, err
+		}
+	}
+	item := AdminReportItem{
+		ReportID:    record.ReportID,
+		TargetType:  ReportTargetType(record.TargetType),
+		TargetID:    record.TargetID,
+		Reason:      record.Reason,
+		Description: record.Description,
+		Status:      ReportStatus(record.Status),
+		CreatedAt:   record.CreatedAt.UTC().Format(time.RFC3339),
+		Reporter:    usersmodule.UserInfo{UserID: record.ReporterUserID, Nickname: record.ReporterNickname, AvatarURL: record.ReporterAvatarURL},
+		HandleNote:  record.HandleNote,
+	}
+	if record.HandledAt != nil {
+		item.HandledAt = record.HandledAt.UTC().Format(time.RFC3339)
+	}
+	if record.HandledByUserID != "" {
+		handledBy := usersmodule.UserInfo{UserID: record.HandledByUserID, Nickname: record.HandledByNickname, AvatarURL: record.HandledByAvatar}
+		item.HandledBy = &handledBy
+	}
+	result := reportHandleRecord{Item: item}
+	if withTargetUser && record.TargetUserID != "" {
+		result.TargetUser = usersmodule.UserInfo{UserID: record.TargetUserID, Nickname: record.TargetUserNickname, AvatarURL: record.TargetUserAvatar}
+	}
+	return result, nil
+}
+

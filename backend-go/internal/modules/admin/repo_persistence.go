@@ -64,6 +64,69 @@ func (r *PersistenceRepository) GetAuditLog(ctx context.Context, logID string, i
 	return r.impl.GetAuditLog(ctx, logID, includeIPAddress)
 }
 
+func (r *PersistenceRepository) SearchUsers(ctx context.Context, req AdminUserSearchRequest) (adminUserPage, error) {
+	return r.impl.SearchUsers(ctx, req)
+}
+
+func (r *PersistenceRepository) GetUser(ctx context.Context, userID string) (AdminUserItem, bool, error) {
+	return r.impl.GetUser(ctx, userID)
+}
+
+func (r *PersistenceRepository) GetUserBanState(ctx context.Context, userID string) (UserBanState, bool, error) {
+	return r.impl.GetUserBanState(ctx, userID)
+}
+
+func (r *PersistenceRepository) SetUserBanState(ctx context.Context, userID string, state UserBanState) error {
+	return r.impl.SetUserBanState(ctx, userID, state)
+}
+
+func (r *PersistenceRepository) ListUserSessions(ctx context.Context, userID string) ([]string, error) {
+	return r.impl.ListUserSessions(ctx, userID)
+}
+
+func (r *PersistenceRepository) RevokeSession(ctx context.Context, sessionID string) error {
+	return r.impl.RevokeSession(ctx, sessionID)
+}
+
+func (r *PersistenceRepository) SearchGroups(ctx context.Context, req AdminGroupSearchRequest) (adminGroupPage, error) {
+	return r.impl.SearchGroups(ctx, req)
+}
+
+func (r *PersistenceRepository) GetGroup(ctx context.Context, groupID string) (AdminGroupItem, bool, error) {
+	return r.impl.GetGroup(ctx, groupID)
+}
+
+func (r *PersistenceRepository) DismissGroup(ctx context.Context, groupID string) (AdminGroupItem, bool, error) {
+	return r.impl.DismissGroup(ctx, groupID)
+}
+
+func (r *PersistenceRepository) ListGroupMemberIDs(ctx context.Context, groupID string) ([]string, error) {
+	return r.impl.ListGroupMemberIDs(ctx, groupID)
+}
+
+func (r *PersistenceRepository) SearchReports(ctx context.Context, req AdminReportSearchRequest) (adminReportPage, error) {
+	return r.impl.SearchReports(ctx, req)
+}
+
+func (r *PersistenceRepository) GetReportHandleRecord(ctx context.Context, reportID string) (reportHandleRecord, bool, error) {
+	return r.impl.GetReportHandleRecord(ctx, reportID)
+}
+
+func (r *PersistenceRepository) HandleReport(ctx context.Context, reportID string, action ReportHandleAction, note string, handledBy *UserInfo) (AdminReportItem, bool, error) {
+	return r.impl.HandleReport(ctx, reportID, action, note, handledBy)
+}
+
 func (r *PersistenceRepository) AppendAuditLog(ctx context.Context, entry AuditLogEntry) error {
 	return r.impl.AppendAuditLog(ctx, entry)
+}
+
+func (r *PersistenceRepository) IsBanned(ctx context.Context, userID string) (bool, error) {
+	type banChecker interface {
+		IsBanned(context.Context, string) (bool, error)
+	}
+	checker, ok := r.impl.(banChecker)
+	if !ok {
+		return false, nil
+	}
+	return checker.IsBanned(ctx, userID)
 }

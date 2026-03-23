@@ -15,5 +15,18 @@ type Repository interface {
 	RevokeAdmin(context.Context, string) error
 	ListAuditLogs(context.Context, AuditLogFilter, bool) (auditLogPage, error)
 	GetAuditLog(context.Context, string, bool) (AuditLogItem, bool, error)
+	SearchUsers(context.Context, AdminUserSearchRequest) (adminUserPage, error)
+	GetUser(context.Context, string) (AdminUserItem, bool, error)
+	GetUserBanState(context.Context, string) (UserBanState, bool, error)
+	SetUserBanState(context.Context, string, UserBanState) error
+	ListUserSessions(context.Context, string) ([]string, error)
+	RevokeSession(context.Context, string) error
+	SearchGroups(context.Context, AdminGroupSearchRequest) (adminGroupPage, error)
+	GetGroup(context.Context, string) (AdminGroupItem, bool, error)
+	DismissGroup(context.Context, string) (AdminGroupItem, bool, error)
+	ListGroupMemberIDs(context.Context, string) ([]string, error)
+	SearchReports(context.Context, AdminReportSearchRequest) (adminReportPage, error)
+	GetReportHandleRecord(context.Context, string) (reportHandleRecord, bool, error)
+	HandleReport(context.Context, string, ReportHandleAction, string, *UserInfo) (AdminReportItem, bool, error)
 	AppendAuditLog(context.Context, AuditLogEntry) error
 }

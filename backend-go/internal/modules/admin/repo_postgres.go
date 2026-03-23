@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -391,4 +392,364 @@ func nullableString(value string) any {
 func isUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"
+}
+
+func (r *PostgresRepository) SearchUsers(ctx context.Context, req AdminUserSearchRequest) (adminUserPage, error) {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.SearchUsers(ctx, req)
+	}
+	rows, err := queryable.Query(ctx, queryAdminSearchUsers, req.UserID, req.Nickname, req.LoginID, string(req.Status), string(req.UserType))
+	if err != nil {
+		return adminUserPage{}, err
+	}
+	defer rows.Close()
+	items := make([]AdminUserItem, 0)
+	for rows.Next() {
+		item, err := scanAdminUserRow(rows)
+		if err != nil {
+			return adminUserPage{}, err
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return adminUserPage{}, err
+	}
+	cursorRaw := paginationCursor(req.Pagination)
+	cursor, apiErr := decodeAdminUserCursor(cursorRaw)
+	if apiErr != nil {
+		return adminUserPage{}, apiErr
+	}
+	filtered := make([]AdminUserItem, 0, len(items))
+	for _, item := range items {
+		if cursorRaw != "" {
+			createdAt := timeFromRFC3339(item.CreatedAt)
+			if createdAt.After(cursor.CreatedAt) {
+				continue
+			}
+			if createdAt.Equal(cursor.CreatedAt) && item.User.UserID <= cursor.UserID {
+				continue
+			}
+		}
+		filtered = append(filtered, item)
+	}
+	limit := normalizeLimit(paginationLimit(req.Pagination))
+	page := adminUserPage{Items: make([]AdminUserItem, 0, limit)}
+	for idx, item := range filtered {
+		if idx >= limit {
+			page.Next = &adminUserCursor{CreatedAt: timeFromRFC3339(item.CreatedAt), UserID: item.User.UserID}
+			break
+		}
+		page.Items = append(page.Items, item)
+	}
+	return page, nil
+}
+
+func (r *PostgresRepository) GetUser(ctx context.Context, userID string) (AdminUserItem, bool, error) {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.GetUser(ctx, userID)
+	}
+	item, err := scanAdminUserRow(queryable.QueryRow(ctx, queryAdminGetUser, userID))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return AdminUserItem{}, false, nil
+		}
+		return AdminUserItem{}, false, err
+	}
+	return item, true, nil
+}
+
+func (r *PostgresRepository) GetUserBanState(ctx context.Context, userID string) (UserBanState, bool, error) {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.GetUserBanState(ctx, userID)
+	}
+	var state UserBanState
+	var bannedAt *time.Time
+	if err := queryable.QueryRow(ctx, queryAdminGetUserBanState, userID).Scan(&state.Status, &state.Reason, &state.DurationDays, &bannedAt); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return UserBanState{}, false, nil
+		}
+		return UserBanState{}, false, err
+	}
+	if bannedAt != nil {
+		state.BannedAt = *bannedAt
+	}
+	return state, true, nil
+}
+
+func (r *PostgresRepository) SetUserBanState(ctx context.Context, userID string, state UserBanState) error {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.SetUserBanState(ctx, userID, state)
+	}
+	status := state.Status
+	if status == "" {
+		status = UserAccountStatusNormal
+	}
+	var reason any
+	var duration any
+	var bannedAt any
+	if status == UserAccountStatusBanned {
+		reason = nullableString(strings.TrimSpace(state.Reason))
+		duration = state.DurationDays
+		if state.BannedAt.IsZero() {
+			bannedAt = time.Now().UTC()
+		} else {
+			bannedAt = state.BannedAt
+		}
+	} else {
+		reason = nil
+		duration = nil
+		bannedAt = nil
+	}
+	return queryable.Exec(ctx, queryAdminSetUserBanState, userID, string(status), reason, duration, bannedAt)
+}
+
+func (r *PostgresRepository) ListUserSessions(ctx context.Context, userID string) ([]string, error) {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.ListUserSessions(ctx, userID)
+	}
+	rows, err := queryable.Query(ctx, queryAdminListUserSessions, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]string, 0)
+	for rows.Next() {
+		var sessionID string
+		if err := rows.Scan(&sessionID); err != nil {
+			return nil, err
+		}
+		items = append(items, sessionID)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (r *PostgresRepository) RevokeSession(ctx context.Context, sessionID string) error {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.RevokeSession(ctx, sessionID)
+	}
+	return queryable.Exec(ctx, queryAdminRevokeSession, sessionID)
+}
+
+func (r *PostgresRepository) SearchGroups(ctx context.Context, req AdminGroupSearchRequest) (adminGroupPage, error) {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.SearchGroups(ctx, req)
+	}
+	rows, err := queryable.Query(ctx, queryAdminSearchGroups, req.GroupID, req.Name, req.OwnerID)
+	if err != nil {
+		return adminGroupPage{}, err
+	}
+	defer rows.Close()
+	items := make([]AdminGroupItem, 0)
+	for rows.Next() {
+		item, err := scanAdminGroupRow(rows)
+		if err != nil {
+			return adminGroupPage{}, err
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return adminGroupPage{}, err
+	}
+	cursorRaw := paginationCursor(req.Pagination)
+	cursor, apiErr := decodeAdminGroupCursor(cursorRaw)
+	if apiErr != nil {
+		return adminGroupPage{}, apiErr
+	}
+	filtered := make([]AdminGroupItem, 0, len(items))
+	for _, item := range items {
+		if cursorRaw != "" {
+			createdAt := timeFromRFC3339(item.CreatedAt)
+			if createdAt.After(cursor.CreatedAt) {
+				continue
+			}
+			if createdAt.Equal(cursor.CreatedAt) && item.Group.GroupID <= cursor.GroupID {
+				continue
+			}
+		}
+		filtered = append(filtered, item)
+	}
+	limit := normalizeLimit(paginationLimit(req.Pagination))
+	page := adminGroupPage{Items: make([]AdminGroupItem, 0, limit)}
+	for idx, item := range filtered {
+		if idx >= limit {
+			page.Next = &adminGroupCursor{CreatedAt: timeFromRFC3339(item.CreatedAt), GroupID: item.Group.GroupID}
+			break
+		}
+		page.Items = append(page.Items, item)
+	}
+	return page, nil
+}
+
+func (r *PostgresRepository) GetGroup(ctx context.Context, groupID string) (AdminGroupItem, bool, error) {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.GetGroup(ctx, groupID)
+	}
+	item, err := scanAdminGroupRow(queryable.QueryRow(ctx, queryAdminGetGroup, groupID))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return AdminGroupItem{}, false, nil
+		}
+		return AdminGroupItem{}, false, err
+	}
+	return item, true, nil
+}
+
+func (r *PostgresRepository) DismissGroup(ctx context.Context, groupID string) (AdminGroupItem, bool, error) {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.DismissGroup(ctx, groupID)
+	}
+	item, found, err := r.GetGroup(ctx, groupID)
+	if err != nil || !found {
+		return AdminGroupItem{}, found, err
+	}
+	if err := queryable.Exec(ctx, queryAdminDismissGroup, groupID); err != nil {
+		return AdminGroupItem{}, false, err
+	}
+	return item, true, nil
+}
+
+func (r *PostgresRepository) ListGroupMemberIDs(ctx context.Context, groupID string) ([]string, error) {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.ListGroupMemberIDs(ctx, groupID)
+	}
+	rows, err := queryable.Query(ctx, queryAdminListGroupMemberIDs, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]string, 0)
+	for rows.Next() {
+		var userID string
+		if err := rows.Scan(&userID); err != nil {
+			return nil, err
+		}
+		items = append(items, userID)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (r *PostgresRepository) SearchReports(ctx context.Context, req AdminReportSearchRequest) (adminReportPage, error) {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.SearchReports(ctx, req)
+	}
+	rows, err := queryable.Query(ctx, queryAdminSearchReports, string(req.Status), string(req.TargetType))
+	if err != nil {
+		return adminReportPage{}, err
+	}
+	defer rows.Close()
+	items := make([]AdminReportItem, 0)
+	for rows.Next() {
+		record, err := scanAdminReportRow(rows, false)
+		if err != nil {
+			return adminReportPage{}, err
+		}
+		items = append(items, record.Item)
+	}
+	if err := rows.Err(); err != nil {
+		return adminReportPage{}, err
+	}
+	cursorRaw := paginationCursor(req.Pagination)
+	cursor, apiErr := decodeAdminReportCursor(cursorRaw)
+	if apiErr != nil {
+		return adminReportPage{}, apiErr
+	}
+	filtered := make([]AdminReportItem, 0, len(items))
+	for _, item := range items {
+		if cursorRaw != "" {
+			createdAt := timeFromRFC3339(item.CreatedAt)
+			if createdAt.After(cursor.CreatedAt) {
+				continue
+			}
+			if createdAt.Equal(cursor.CreatedAt) && item.ReportID >= cursor.ReportID {
+				continue
+			}
+		}
+		filtered = append(filtered, item)
+	}
+	limit := normalizeLimit(paginationLimit(req.Pagination))
+	page := adminReportPage{Items: make([]AdminReportItem, 0, limit)}
+	for idx, item := range filtered {
+		if idx >= limit {
+			page.Next = &adminReportCursor{CreatedAt: timeFromRFC3339(item.CreatedAt), ReportID: item.ReportID}
+			break
+		}
+		page.Items = append(page.Items, item)
+	}
+	return page, nil
+}
+
+func (r *PostgresRepository) GetReportHandleRecord(ctx context.Context, reportID string) (reportHandleRecord, bool, error) {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.GetReportHandleRecord(ctx, reportID)
+	}
+	record, err := scanAdminReportRow(queryable.QueryRow(ctx, queryAdminGetReportHandleRecord, reportID), true)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return reportHandleRecord{}, false, nil
+		}
+		return reportHandleRecord{}, false, err
+	}
+	return record, true, nil
+}
+
+func (r *PostgresRepository) HandleReport(ctx context.Context, reportID string, action ReportHandleAction, note string, handledBy *UserInfo) (AdminReportItem, bool, error) {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.HandleReport(ctx, reportID, action, note, handledBy)
+	}
+	record, found, err := r.GetReportHandleRecord(ctx, reportID)
+	if err != nil || !found {
+		return AdminReportItem{}, found, err
+	}
+	status := ReportStatusReviewing
+	switch action {
+	case ReportHandleResolve:
+		status = ReportStatusResolved
+	case ReportHandleDismiss:
+		status = ReportStatusDismissed
+	case ReportHandleEscalate:
+		status = ReportStatusReviewing
+	}
+	now := time.Now().UTC()
+	var handledByID any
+	if handledBy != nil {
+		handledByID = handledBy.UserID
+	}
+	if err := queryable.Exec(ctx, queryAdminHandleReport, reportID, string(status), now, handledByID, nullableString(strings.TrimSpace(note))); err != nil {
+		return AdminReportItem{}, false, err
+	}
+	record.Item.Status = status
+	record.Item.HandledAt = now.Format(time.RFC3339)
+	record.Item.HandleNote = strings.TrimSpace(note)
+	if handledBy != nil {
+		hb := *handledBy
+		record.Item.HandledBy = &hb
+	}
+	return record.Item, true, nil
+}
+
+func (r *PostgresRepository) IsBanned(ctx context.Context, userID string) (bool, error) {
+	state, found, err := r.GetUserBanState(ctx, userID)
+	if err != nil || !found {
+		return false, err
+	}
+	return state.Status == UserAccountStatusBanned, nil
 }

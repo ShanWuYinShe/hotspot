@@ -2,24 +2,36 @@ package admin
 
 import (
 	"context"
+	"fmt"
 	"errors"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 
+	systemmodule "hotspot/backend-go/internal/modules/system"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
+	"hotspot/backend-go/internal/platform/realtime"
 )
 
 type Service struct {
-	repo     Repository
-	provider Provider
+	repo            Repository
+	provider        Provider
+	moderationStore ModerationStore
+	pushService     announcementPushService
 }
 
-func NewService(repo Repository, provider Provider) *Service {
-	return &Service{repo: repo, provider: provider}
+type announcementPushService interface {
+	PushSystemAnnouncement(userID, announcementID, severity string)
+}
+
+func NewService(repo Repository, provider Provider, moderationStore ModerationStore, pushService announcementPushService) *Service {
+	if moderationStore == nil {
+		moderationStore = NewInMemoryModerationStore()
+	}
+	return &Service{repo: repo, provider: provider, moderationStore: moderationStore, pushService: pushService}
 }
 
 func (s *Service) actorFromContext(ctx context.Context) (AdminActor, bool, error) {
@@ -816,6 +828,321 @@ func (s *Service) DeleteAnnouncement(ctx context.Context, announcementID string)
 		return nil, err
 	}
 	return nil, nil
+}
+
+func (s *Service) SearchUsers(ctx context.Context, req AdminUserSearchRequest) (PaginatedAdminUsers, *httpx.APIError, error) {
+	if _, apiErr, err := s.requirePermission(ctx, permissionUsersRead); apiErr != nil || err != nil {
+		return PaginatedAdminUsers{}, apiErr, err
+	}
+	if err := validateAdminUserSearchRequest(req); err != nil {
+		return PaginatedAdminUsers{}, err, nil
+	}
+	page, err := s.repo.SearchUsers(ctx, req)
+	if err != nil {
+		if apiErr, ok := err.(*httpx.APIError); ok {
+			return PaginatedAdminUsers{}, apiErr, nil
+		}
+		return PaginatedAdminUsers{}, nil, err
+	}
+	resp := PaginatedAdminUsers{Items: page.Items}
+	if page.Next != nil {
+		resp.NextCursor = encodeAdminUserCursor(*page.Next)
+	}
+	return resp, nil, nil
+}
+
+func (s *Service) OpenAdminUser(ctx context.Context, userID string) (AdminUserItem, *httpx.APIError, error) {
+	if _, apiErr, err := s.requirePermission(ctx, permissionUsersRead); apiErr != nil || err != nil {
+		return AdminUserItem{}, apiErr, err
+	}
+	if strings.TrimSpace(userID) == "" {
+		return AdminUserItem{}, httpx.InvalidRequest("参数错误"), nil
+	}
+	item, found, err := s.repo.GetUser(ctx, userID)
+	if err != nil {
+		if apiErr, ok := err.(*httpx.APIError); ok {
+			return AdminUserItem{}, apiErr, nil
+		}
+		return AdminUserItem{}, nil, err
+	}
+	if !found {
+		return AdminUserItem{}, &httpx.APIError{Code: 10300, Message: "用户不存在"}, nil
+	}
+	return item, nil, nil
+}
+
+func (s *Service) BanUser(ctx context.Context, req AdminBanUserRequest) (*httpx.APIError, error) {
+	actor, apiErr, err := s.requirePermission(ctx, permissionUsersWrite)
+	if apiErr != nil || err != nil {
+		return apiErr, err
+	}
+	return s.banUser(ctx, actor, req.UserID, req.Reason, req.DurationDays, true)
+}
+
+func (s *Service) UnbanUser(ctx context.Context, req AdminUnbanUserRequest) (*httpx.APIError, error) {
+	actor, apiErr, err := s.requirePermission(ctx, permissionUsersWrite)
+	if apiErr != nil || err != nil {
+		return apiErr, err
+	}
+	if strings.TrimSpace(req.UserID) == "" || len(req.Reason) > 500 {
+		return httpx.InvalidRequest("参数错误"), nil
+	}
+	item, found, err := s.repo.GetUser(ctx, req.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return &httpx.APIError{Code: 10300, Message: "用户不存在"}, nil
+	}
+	state, ok, err := s.repo.GetUserBanState(ctx, req.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if !ok || state.Status != UserAccountStatusBanned {
+		return &httpx.APIError{Code: 10400, Message: "用户未被封禁"}, nil
+	}
+	if _, isAdmin, err := s.repo.GetActor(ctx, req.UserID); err != nil {
+		return nil, err
+	} else if isAdmin && !actor.IsSuperAdmin() {
+		return &httpx.APIError{Code: 10200, Message: "系统管理员权限不足: admin.users.write"}, nil
+	}
+	if err := s.repo.SetUserBanState(ctx, req.UserID, UserBanState{Status: UserAccountStatusNormal}); err != nil {
+		if apiErr, ok := err.(*httpx.APIError); ok {
+			return apiErr, nil
+		}
+		return nil, err
+	}
+	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("user.unban"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetType("user"), TargetID: req.UserID, TargetName: item.User.Nickname, Details: map[string]any{"type": "user.unban", "reason": strings.TrimSpace(req.Reason)}}); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+func (s *Service) SearchGroups(ctx context.Context, req AdminGroupSearchRequest) (PaginatedAdminGroups, *httpx.APIError, error) {
+	if _, apiErr, err := s.requirePermission(ctx, permissionGroupsRead); apiErr != nil || err != nil {
+		return PaginatedAdminGroups{}, apiErr, err
+	}
+	if req.Pagination != nil {
+		if _, apiErr := decodeAdminGroupCursor(req.Pagination.Cursor); apiErr != nil {
+			return PaginatedAdminGroups{}, apiErr, nil
+		}
+	}
+	page, err := s.repo.SearchGroups(ctx, req)
+	if err != nil {
+		if apiErr, ok := err.(*httpx.APIError); ok {
+			return PaginatedAdminGroups{}, apiErr, nil
+		}
+		return PaginatedAdminGroups{}, nil, err
+	}
+	resp := PaginatedAdminGroups{Items: page.Items}
+	if page.Next != nil {
+		resp.NextCursor = encodeAdminGroupCursor(*page.Next)
+	}
+	return resp, nil, nil
+}
+
+func (s *Service) OpenAdminGroup(ctx context.Context, groupID string) (AdminGroupItem, *httpx.APIError, error) {
+	if _, apiErr, err := s.requirePermission(ctx, permissionGroupsRead); apiErr != nil || err != nil {
+		return AdminGroupItem{}, apiErr, err
+	}
+	if strings.TrimSpace(groupID) == "" {
+		return AdminGroupItem{}, httpx.InvalidRequest("参数错误"), nil
+	}
+	item, found, err := s.repo.GetGroup(ctx, groupID)
+	if err != nil {
+		return AdminGroupItem{}, nil, err
+	}
+	if !found {
+		return AdminGroupItem{}, &httpx.APIError{Code: 10300, Message: "群组不存在"}, nil
+	}
+	return item, nil, nil
+}
+
+func (s *Service) DismissGroup(ctx context.Context, req AdminDismissGroupRequest) (*httpx.APIError, error) {
+	actor, apiErr, err := s.requirePermission(ctx, permissionGroupsWrite)
+	if apiErr != nil || err != nil {
+		return apiErr, err
+	}
+	if strings.TrimSpace(req.GroupID) == "" || len(req.Reason) > 500 {
+		return httpx.InvalidRequest("参数错误"), nil
+	}
+	memberIDs, err := s.repo.ListGroupMemberIDs(ctx, req.GroupID)
+	if err != nil {
+		return nil, err
+	}
+	item, found, err := s.repo.DismissGroup(ctx, req.GroupID)
+	if err != nil {
+		if apiErr, ok := err.(*httpx.APIError); ok {
+			return apiErr, nil
+		}
+		return nil, err
+	}
+	if !found {
+		return &httpx.APIError{Code: 10300, Message: "群组不存在"}, nil
+	}
+	event := realtime.Event{Type: "GroupDismissed", Payload: map[string]any{"group_id": req.GroupID, "dismissed_at": time.Now().UTC().Format(time.RFC3339), "reason": "policy_violation"}}
+	for _, userID := range memberIDs {
+		realtime.DefaultHub().BroadcastToUser(userID, event)
+	}
+	realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
+	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("group.dismiss"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetType("group"), TargetID: req.GroupID, TargetName: item.Group.Name, Details: map[string]any{"type": "group.dismiss", "reason": strings.TrimSpace(req.Reason)}}); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+func (s *Service) SearchReports(ctx context.Context, req AdminReportSearchRequest) (PaginatedAdminReports, *httpx.APIError, error) {
+	if _, apiErr, err := s.requirePermission(ctx, permissionReportsRead); apiErr != nil || err != nil {
+		return PaginatedAdminReports{}, apiErr, err
+	}
+	if req.Pagination != nil {
+		if _, apiErr := decodeAdminReportCursor(req.Pagination.Cursor); apiErr != nil {
+			return PaginatedAdminReports{}, apiErr, nil
+		}
+	}
+	page, err := s.repo.SearchReports(ctx, req)
+	if err != nil {
+		if apiErr, ok := err.(*httpx.APIError); ok {
+			return PaginatedAdminReports{}, apiErr, nil
+		}
+		return PaginatedAdminReports{}, nil, err
+	}
+	resp := PaginatedAdminReports{Items: page.Items}
+	if page.Next != nil {
+		resp.NextCursor = encodeAdminReportCursor(*page.Next)
+	}
+	return resp, nil, nil
+}
+
+func (s *Service) HandleReport(ctx context.Context, req AdminReportHandleRequest) (*httpx.APIError, error) {
+	actor, apiErr, err := s.requirePermission(ctx, permissionReportsWrite)
+	if apiErr != nil || err != nil {
+		return apiErr, err
+	}
+	if strings.TrimSpace(req.ReportID) == "" || !isValidReportHandleAction(req.Action) || len(req.Note) > 500 {
+		return httpx.InvalidRequest("参数错误"), nil
+	}
+	if req.BanDurationDays != nil && *req.BanDurationDays < 0 {
+		return httpx.InvalidRequest("参数错误"), nil
+	}
+	record, found, err := s.repo.GetReportHandleRecord(ctx, req.ReportID)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return &httpx.APIError{Code: 10300, Message: "举报不存在"}, nil
+	}
+	if record.Item.Status != ReportStatusPending && record.Item.Status != ReportStatusReviewing {
+		return &httpx.APIError{Code: 10400, Message: "举报已处理"}, nil
+	}
+	if req.Action == ReportHandleResolve && req.BanDurationDays != nil {
+		if apiErr, err := s.banUser(ctx, actor, record.TargetUser.UserID, req.Note, req.BanDurationDays, false); apiErr != nil || err != nil {
+			return apiErr, err
+		}
+	}
+	_, ok, err := s.repo.HandleReport(ctx, req.ReportID, req.Action, strings.TrimSpace(req.Note), &UserInfo{UserID: actor.UserID, Nickname: actor.UserID})
+	if err != nil {
+		if apiErr, ok := err.(*httpx.APIError); ok {
+			return apiErr, nil
+		}
+		return nil, err
+	}
+	if !ok {
+		return &httpx.APIError{Code: 10300, Message: "举报不存在"}, nil
+	}
+	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("report.handle"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetType("report"), TargetID: req.ReportID, TargetName: req.ReportID, Details: map[string]any{"type": "report.handle", "report_id": req.ReportID, "action": string(req.Action), "note": strings.TrimSpace(req.Note)}}); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason string, durationDays *int, appendAudit bool) (*httpx.APIError, error) {
+	if strings.TrimSpace(userID) == "" || len(reason) > 500 {
+		return httpx.InvalidRequest("参数错误"), nil
+	}
+	if durationDays != nil && *durationDays < 0 {
+		return httpx.InvalidRequest("参数错误"), nil
+	}
+	if actor.UserID == userID {
+		return &httpx.APIError{Code: 10400, Message: "不能封禁自己"}, nil
+	}
+	item, found, err := s.repo.GetUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return &httpx.APIError{Code: 10300, Message: "用户不存在"}, nil
+	}
+	targetActor, isAdmin, err := s.repo.GetActor(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if isAdmin {
+		if !actor.IsSuperAdmin() {
+			return &httpx.APIError{Code: 10200, Message: "系统管理员权限不足: admin.users.write"}, nil
+		}
+		if targetActor.IsSuperAdmin() && !actor.IsSuperAdmin() {
+			return &httpx.APIError{Code: 10200, Message: "系统管理员权限不足: admin.users.write"}, nil
+		}
+	}
+	duration := 0
+	if durationDays != nil {
+		duration = *durationDays
+	}
+	bannedAt := time.Now().UTC()
+	state := UserBanState{Status: UserAccountStatusBanned, Reason: strings.TrimSpace(reason), DurationDays: duration, BannedAt: bannedAt}
+	if err := s.repo.SetUserBanState(ctx, userID, state); err != nil {
+		if apiErr, ok := err.(*httpx.APIError); ok {
+			return apiErr, nil
+		}
+		return nil, err
+	}
+	payload := map[string]any{"reason": strings.TrimSpace(reason), "duration_days": duration, "banned_at": bannedAt.Format(time.RFC3339)}
+	sessionIDs, err := s.repo.ListUserSessions(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	for _, sessionID := range sessionIDs {
+		realtime.DefaultHub().CloseSession(sessionID, realtime.Event{Type: "AccountBanned", Payload: payload})
+		if err := s.repo.RevokeSession(ctx, sessionID); err != nil {
+			return nil, err
+		}
+	}
+	if appendAudit {
+		if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("user.ban"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetType("user"), TargetID: userID, TargetName: item.User.Nickname, Details: map[string]any{"type": "user.ban", "reason": strings.TrimSpace(reason), "duration_days": duration}}); err != nil {
+			return nil, err
+		}
+	}
+	return nil, nil
+}
+
+func (s *Service) appendAudit(ctx context.Context, entry AuditLogEntry) error {
+	return s.repo.AppendAuditLog(ctx, entry)
+}
+
+func validateAdminUserSearchRequest(req AdminUserSearchRequest) *httpx.APIError {
+	if req.Pagination != nil {
+		if _, apiErr := decodeAdminUserCursor(req.Pagination.Cursor); apiErr != nil {
+			return apiErr
+		}
+	}
+	if req.Status != "" && req.Status != UserAccountStatusNormal && req.Status != UserAccountStatusBanned {
+		return httpx.InvalidRequest("参数错误")
+	}
+	return nil
+}
+
+func isValidReportHandleAction(action ReportHandleAction) bool {
+	switch action {
+	case ReportHandleResolve, ReportHandleDismiss, ReportHandleEscalate:
+		return true
+	default:
+		return false
+	}
+}
+
+func formatAuditLogID(action, targetID string, ts time.Time) string {
+	return fmt.Sprintf("audit_%s_%s_%d", action, targetID, ts.UnixNano())
 }
 
 func (s *Service) requirePermission(ctx context.Context, permission string) (AdminActor, *httpx.APIError, error) {

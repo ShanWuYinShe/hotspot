@@ -32,7 +32,6 @@ func MountRoutes(r chi.Router, handler *Handler) {
 		appConfig.Post("/update_features", handler.UpdateFeatures)
 		appConfig.Post("/update_limits", handler.UpdateLimits)
 		appConfig.Post("/update_contact", handler.UpdateContact)
-<<<<<<< HEAD
 	})
 	r.Route("/tags", func(tags chi.Router) {
 		tags.Post("/search", handler.SearchTags)
@@ -43,7 +42,5 @@ func MountRoutes(r chi.Router, handler *Handler) {
 		announcements.Post("/create", handler.CreateAnnouncement)
 		announcements.Post("/update", handler.UpdateAnnouncement)
 		announcements.Post("/delete", handler.DeleteAnnouncement)
-=======
->>>>>>> 297d2ea (补齐 admin 审计与配置写路径)
 	})
 }

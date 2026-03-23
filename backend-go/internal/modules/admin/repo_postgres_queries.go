@@ -128,4 +128,217 @@ ORDER BY created_at DESC, log_id DESC`
 SELECT log_id, action, operator_id, operator_name, COALESCE(operator_avatar_url, ''), target_type, target_id, COALESCE(target_name, ''), COALESCE(details_json, '{}'), COALESCE(ip_location, ''), COALESCE(ip_address, ''), COALESCE(device_summary, ''), created_at
 FROM admin_audit_logs
 WHERE log_id = $1`
+	queryAdminSearchUsers = `
+SELECT u.user_id,
+       u.nickname,
+       COALESCE(u.avatar_url, ''),
+       COALESCE(u.bio, ''),
+       u.presence_status,
+       u.last_online,
+       u.location_name,
+       u.latitude,
+       u.longitude,
+       u.user_type,
+       u.created_at,
+       COALESCE(u.status, 'normal'),
+       COALESCE(a.login_id, ''),
+       COALESCE(u.register_ip, ''),
+       COALESCE(u.register_location, ''),
+       COALESCE(u.last_login_ip, ''),
+       COALESCE(u.last_login_location, ''),
+       COALESCE(u.email, ''),
+       COALESCE(u.phone, '')
+FROM users u
+LEFT JOIN auth_accounts a ON a.user_id = u.user_id
+WHERE ($1 = '' OR u.user_id = $1)
+  AND ($2 = '' OR lower(u.nickname) LIKE '%' || lower($2) || '%')
+  AND ($3 = '' OR lower(COALESCE(a.login_id, '')) LIKE '%' || lower($3) || '%')
+  AND ($4 = '' OR COALESCE(u.status, 'normal') = $4)
+  AND ($5 = '' OR u.user_type = $5)
+ORDER BY u.created_at DESC, u.user_id ASC`
+	queryAdminGetUser = `
+SELECT u.user_id,
+       u.nickname,
+       COALESCE(u.avatar_url, ''),
+       COALESCE(u.bio, ''),
+       u.presence_status,
+       u.last_online,
+       u.location_name,
+       u.latitude,
+       u.longitude,
+       u.user_type,
+       u.created_at,
+       COALESCE(u.status, 'normal'),
+       COALESCE(a.login_id, ''),
+       COALESCE(u.register_ip, ''),
+       COALESCE(u.register_location, ''),
+       COALESCE(u.last_login_ip, ''),
+       COALESCE(u.last_login_location, ''),
+       COALESCE(u.email, ''),
+       COALESCE(u.phone, '')
+FROM users u
+LEFT JOIN auth_accounts a ON a.user_id = u.user_id
+WHERE u.user_id = $1`
+	queryAdminGetUserBanState = `
+SELECT COALESCE(status, 'normal'), COALESCE(banned_reason, ''), COALESCE(banned_duration_days, 0), banned_at
+FROM users
+WHERE user_id = $1`
+	queryAdminSetUserBanState = `
+UPDATE users
+SET status = $2,
+    banned_reason = $3,
+    banned_duration_days = $4,
+    banned_at = $5
+WHERE user_id = $1`
+	queryAdminListUserSessions = `
+SELECT session_id
+FROM auth_sessions
+WHERE user_id = $1 AND revoked_at IS NULL
+ORDER BY last_active_at DESC, session_id ASC`
+	queryAdminRevokeSession = `
+UPDATE auth_sessions
+SET revoked_at = NOW()
+WHERE session_id = $1 AND revoked_at IS NULL`
+	queryAdminSearchGroups = `
+SELECT g.group_id,
+       g.name,
+       COALESCE(g.avatar_url, ''),
+       COALESCE(g.description, ''),
+       g.has_password,
+       g.location_name,
+       g.latitude,
+       g.longitude,
+       g.join_method,
+       g.is_searchable,
+       g.max_members,
+       g.created_at,
+       COALESCE(g.owner_id, ''),
+       COALESCE(owner.nickname, COALESCE(g.owner_id, '')),
+       COALESCE(owner.avatar_url, ''),
+       COALESCE(members.members_count, 0),
+       COALESCE(last_message.last_activity_at, g.created_at)
+FROM groups g
+LEFT JOIN users owner ON owner.user_id = g.owner_id
+LEFT JOIN (
+    SELECT group_id, COUNT(*)::int AS members_count
+    FROM group_members
+    GROUP BY group_id
+) members ON members.group_id = g.group_id
+LEFT JOIN (
+    SELECT group_id, MAX(sent_at) AS last_activity_at
+    FROM group_messages
+    GROUP BY group_id
+) last_message ON last_message.group_id = g.group_id
+WHERE g.deleted_at IS NULL
+  AND ($1 = '' OR g.group_id = $1)
+  AND ($2 = '' OR lower(g.name) LIKE '%' || lower($2) || '%')
+  AND ($3 = '' OR COALESCE(g.owner_id, '') = $3)
+ORDER BY g.created_at DESC, g.group_id ASC`
+	queryAdminGetGroup = `
+SELECT g.group_id,
+       g.name,
+       COALESCE(g.avatar_url, ''),
+       COALESCE(g.description, ''),
+       g.has_password,
+       g.location_name,
+       g.latitude,
+       g.longitude,
+       g.join_method,
+       g.is_searchable,
+       g.max_members,
+       g.created_at,
+       COALESCE(g.owner_id, ''),
+       COALESCE(owner.nickname, COALESCE(g.owner_id, '')),
+       COALESCE(owner.avatar_url, ''),
+       COALESCE(members.members_count, 0),
+       COALESCE(last_message.last_activity_at, g.created_at)
+FROM groups g
+LEFT JOIN users owner ON owner.user_id = g.owner_id
+LEFT JOIN (
+    SELECT group_id, COUNT(*)::int AS members_count
+    FROM group_members
+    GROUP BY group_id
+) members ON members.group_id = g.group_id
+LEFT JOIN (
+    SELECT group_id, MAX(sent_at) AS last_activity_at
+    FROM group_messages
+    GROUP BY group_id
+) last_message ON last_message.group_id = g.group_id
+WHERE g.deleted_at IS NULL AND g.group_id = $1`
+	queryAdminDismissGroup = `
+UPDATE groups
+SET deleted_at = NOW()
+WHERE group_id = $1 AND deleted_at IS NULL`
+	queryAdminListGroupMemberIDs = `
+SELECT user_id
+FROM group_members
+WHERE group_id = $1
+ORDER BY user_id ASC`
+	queryAdminSearchReports = `
+SELECT r.report_id,
+       r.target_type,
+       r.target_id,
+       r.reason,
+       COALESCE(r.description, ''),
+       r.status,
+       r.created_at,
+       r.handled_at,
+       reporter.user_id,
+       COALESCE(reporter.nickname, reporter.user_id),
+       COALESCE(reporter.avatar_url, ''),
+       COALESCE(handler.user_id, ''),
+       COALESCE(handler.nickname, ''),
+       COALESCE(handler.avatar_url, ''),
+       COALESCE(r.handle_note, '')
+FROM reports r
+JOIN users reporter ON reporter.user_id = r.creator_user_id
+LEFT JOIN users handler ON handler.user_id = r.handled_by_user_id
+WHERE ($1 = '' OR r.status = $1)
+  AND ($2 = '' OR r.target_type = $2)
+ORDER BY r.created_at DESC, r.report_id DESC`
+	queryAdminGetReportHandleRecord = `
+SELECT r.report_id,
+       r.target_type,
+       r.target_id,
+       r.reason,
+       COALESCE(r.description, ''),
+       r.status,
+       r.created_at,
+       r.handled_at,
+       reporter.user_id,
+       COALESCE(reporter.nickname, reporter.user_id),
+       COALESCE(reporter.avatar_url, ''),
+       COALESCE(handler.user_id, ''),
+       COALESCE(handler.nickname, ''),
+       COALESCE(handler.avatar_url, ''),
+       COALESCE(r.handle_note, ''),
+       COALESCE(target_user.user_id, ''),
+       COALESCE(target_user.nickname, ''),
+       COALESCE(target_user.avatar_url, '')
+FROM reports r
+JOIN users reporter ON reporter.user_id = r.creator_user_id
+LEFT JOIN users handler ON handler.user_id = r.handled_by_user_id
+LEFT JOIN users target_user ON target_user.user_id = (
+    CASE
+        WHEN r.target_type = 'user' THEN r.target_id
+        WHEN r.target_type = 'group' THEN (SELECT owner_id FROM groups WHERE group_id = r.target_id)
+        WHEN r.target_type = 'moment' THEN (SELECT user_id FROM moments WHERE moment_id = r.target_id)
+        WHEN r.target_type = 'comment' THEN (SELECT user_id FROM comments WHERE comment_id = r.target_id)
+        WHEN r.target_type = 'message' THEN (
+            SELECT sender_user_id FROM group_messages WHERE message_id = r.target_id
+            UNION ALL
+            SELECT sender_user_id FROM private_messages WHERE message_id = r.target_id
+            LIMIT 1
+        )
+        ELSE NULL
+    END
+)
+WHERE r.report_id = $1`
+	queryAdminHandleReport = `
+UPDATE reports
+SET status = $2,
+    handled_at = $3,
+    handled_by_user_id = $4,
+    handle_note = $5
+WHERE report_id = $1`
 )

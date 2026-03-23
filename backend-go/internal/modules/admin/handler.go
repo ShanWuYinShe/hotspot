@@ -233,6 +233,180 @@ func (h *Handler) OpenAuditLog(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
 }
 
+func (h *Handler) SearchUsers(w http.ResponseWriter, r *http.Request) {
+	var req AdminUserSearchRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	payload, apiErr, err := h.service.SearchUsers(r.Context(), req)
+	if err != nil {
+		h.writeUnavailable(w)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
+}
+
+func (h *Handler) OpenAdminUser(w http.ResponseWriter, r *http.Request) {
+	var req AdminUserOpenTheDoorRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	payload, apiErr, err := h.service.OpenAdminUser(r.Context(), req.UserID)
+	if err != nil {
+		h.writeUnavailable(w)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
+}
+
+func (h *Handler) BanUser(w http.ResponseWriter, r *http.Request) {
+	if err := idempotency.RequireKey(r); err != nil {
+		h.writeAPIError(w, err)
+		return
+	}
+	var req AdminBanUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	idempotency.ReplayOrStore(w, r, "admin/users/ban", func() httpx.ApiResponse[struct{}] {
+		apiErr, err := h.service.BanUser(r.Context(), req)
+		if err != nil {
+			return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
+		}
+		if apiErr != nil {
+			return httpx.ApiResponse[struct{}]{Code: apiErr.Code, Message: apiErr.Message}
+		}
+		return httpx.SuccessEmpty()
+	})
+}
+
+func (h *Handler) UnbanUser(w http.ResponseWriter, r *http.Request) {
+	var req AdminUnbanUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	apiErr, err := h.service.UnbanUser(r.Context(), req)
+	if err != nil {
+		h.writeUnavailable(w)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
+}
+
+func (h *Handler) SearchGroups(w http.ResponseWriter, r *http.Request) {
+	var req AdminGroupSearchRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	payload, apiErr, err := h.service.SearchGroups(r.Context(), req)
+	if err != nil {
+		h.writeUnavailable(w)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
+}
+
+func (h *Handler) OpenAdminGroup(w http.ResponseWriter, r *http.Request) {
+	var req AdminGroupOpenTheDoorRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	payload, apiErr, err := h.service.OpenAdminGroup(r.Context(), req.GroupID)
+	if err != nil {
+		h.writeUnavailable(w)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
+}
+
+func (h *Handler) DismissGroup(w http.ResponseWriter, r *http.Request) {
+	if err := idempotency.RequireKey(r); err != nil {
+		h.writeAPIError(w, err)
+		return
+	}
+	var req AdminDismissGroupRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	idempotency.ReplayOrStore(w, r, "admin/groups/dismiss", func() httpx.ApiResponse[struct{}] {
+		apiErr, err := h.service.DismissGroup(r.Context(), req)
+		if err != nil {
+			return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
+		}
+		if apiErr != nil {
+			return httpx.ApiResponse[struct{}]{Code: apiErr.Code, Message: apiErr.Message}
+		}
+		return httpx.SuccessEmpty()
+	})
+}
+
+func (h *Handler) SearchReports(w http.ResponseWriter, r *http.Request) {
+	var req AdminReportSearchRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	payload, apiErr, err := h.service.SearchReports(r.Context(), req)
+	if err != nil {
+		h.writeUnavailable(w)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
+}
+
+func (h *Handler) HandleReport(w http.ResponseWriter, r *http.Request) {
+	if err := idempotency.RequireKey(r); err != nil {
+		h.writeAPIError(w, err)
+		return
+	}
+	var req AdminReportHandleRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	idempotency.ReplayOrStore(w, r, "admin/reports/handle", func() httpx.ApiResponse[struct{}] {
+		apiErr, err := h.service.HandleReport(r.Context(), req)
+		if err != nil {
+			return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
+		}
+		if apiErr != nil {
+			return httpx.ApiResponse[struct{}]{Code: apiErr.Code, Message: apiErr.Message}
+		}
+		return httpx.SuccessEmpty()
+	})
+}
+
 func (h *Handler) GetAppConfig(w http.ResponseWriter, r *http.Request) {
 	if err := httpx.RequireEmptyObject(r); err != nil {
 		h.writeAPIError(w, err)

@@ -2,6 +2,7 @@ package admin
 
 import (
 	groupsmodule "hotspot/backend-go/internal/modules/groups"
+	reportsmodule "hotspot/backend-go/internal/modules/reports"
 	systemmodule "hotspot/backend-go/internal/modules/system"
 	usersmodule "hotspot/backend-go/internal/modules/users"
 	"time"
@@ -105,6 +106,152 @@ type AdminRbacGrantAdminRequest struct {
 
 type AdminRbacRevokeAdminRequest struct {
 	UserID string `json:"user_id"`
+}
+
+type UserAccountStatus string
+
+type ReportStatus string
+
+type ReportTargetType string
+
+type ReportHandleAction string
+
+const (
+	UserAccountStatusNormal UserAccountStatus = "normal"
+	UserAccountStatusBanned UserAccountStatus = "banned"
+
+	ReportStatusPending   ReportStatus = "pending"
+	ReportStatusReviewing ReportStatus = "reviewing"
+	ReportStatusResolved  ReportStatus = "resolved"
+	ReportStatusDismissed ReportStatus = "dismissed"
+
+	ReportTargetTypeUser    ReportTargetType = "user"
+	ReportTargetTypeMoment  ReportTargetType = "moment"
+	ReportTargetTypeComment ReportTargetType = "comment"
+	ReportTargetTypeMessage ReportTargetType = "message"
+	ReportTargetTypeGroup   ReportTargetType = "group"
+
+	ReportHandleResolve  ReportHandleAction = "resolve"
+	ReportHandleDismiss  ReportHandleAction = "dismiss"
+	ReportHandleEscalate ReportHandleAction = "escalate"
+)
+
+type AdminUserItem struct {
+	User              usersmodule.UserInfo           `json:"user"`
+	Bio               string                         `json:"bio,omitempty"`
+	Tags              []string                       `json:"tags,omitempty"`
+	PresenceStatus    usersmodule.UserPresenceStatus `json:"presence_status,omitempty"`
+	LastOnline        string                         `json:"last_online,omitempty"`
+	Location          *usersmodule.RelativeLocation  `json:"location,omitempty"`
+	Stats             *usersmodule.UserStats         `json:"stats,omitempty"`
+	Relation          usersmodule.Relationship       `json:"relation,omitempty"`
+	Status            UserAccountStatus              `json:"status"`
+	CreatedAt         string                         `json:"created_at"`
+	LastActiveAt      string                         `json:"last_active_at,omitempty"`
+	LoginID           string                         `json:"login_id"`
+	RegisterIP        string                         `json:"register_ip,omitempty"`
+	RegisterLocation  string                         `json:"register_location,omitempty"`
+	LastLoginIP       string                         `json:"last_login_ip,omitempty"`
+	LastLoginLocation string                         `json:"last_login_location,omitempty"`
+	Email             string                         `json:"email,omitempty"`
+	Phone             string                         `json:"phone,omitempty"`
+}
+
+type PaginatedAdminUsers struct {
+	Items      []AdminUserItem `json:"items"`
+	NextCursor string          `json:"next_cursor,omitempty"`
+}
+
+type AdminUserSearchRequest struct {
+	UserID     string               `json:"user_id,omitempty"`
+	Nickname   string               `json:"nickname,omitempty"`
+	LoginID    string               `json:"login_id,omitempty"`
+	Status     UserAccountStatus    `json:"status,omitempty"`
+	UserType   usersmodule.UserType `json:"user_type,omitempty"`
+	Pagination *PaginationParams    `json:"pagination,omitempty"`
+}
+
+type AdminUserOpenTheDoorRequest struct {
+	UserID string `json:"user_id"`
+}
+
+type AdminBanUserRequest struct {
+	UserID       string `json:"user_id"`
+	Reason       string `json:"reason,omitempty"`
+	DurationDays *int   `json:"duration_days,omitempty"`
+}
+
+type AdminUnbanUserRequest struct {
+	UserID string `json:"user_id"`
+	Reason string `json:"reason,omitempty"`
+}
+
+type AdminGroupItem struct {
+	Group          groupsmodule.GroupInfo       `json:"group"`
+	Description    string                       `json:"description,omitempty"`
+	Tags           []string                     `json:"tags,omitempty"`
+	HasPassword    bool                         `json:"has_password"`
+	Location       groupsmodule.Location        `json:"location"`
+	MyState        *groupsmodule.MyGroupState   `json:"my_state,omitempty"`
+	JoinMethod     groupsmodule.GroupJoinMethod `json:"join_method,omitempty"`
+	IsSearchable   bool                         `json:"is_searchable,omitempty"`
+	MaxMembers     int                          `json:"max_members,omitempty"`
+	CreatedAt      string                       `json:"created_at"`
+	Owner          usersmodule.UserInfo         `json:"owner"`
+	LastActivityAt string                       `json:"last_activity_at,omitempty"`
+}
+
+type PaginatedAdminGroups struct {
+	Items      []AdminGroupItem `json:"items"`
+	NextCursor string           `json:"next_cursor,omitempty"`
+}
+
+type AdminGroupSearchRequest struct {
+	GroupID    string            `json:"group_id,omitempty"`
+	Name       string            `json:"name,omitempty"`
+	OwnerID    string            `json:"owner_id,omitempty"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
+}
+
+type AdminGroupOpenTheDoorRequest struct {
+	GroupID string `json:"group_id"`
+}
+
+type AdminDismissGroupRequest struct {
+	GroupID string `json:"group_id"`
+	Reason  string `json:"reason,omitempty"`
+}
+
+type AdminReportItem struct {
+	ReportID    string                `json:"report_id"`
+	TargetType  ReportTargetType      `json:"target_type"`
+	TargetID    string                `json:"target_id"`
+	Reason      string                `json:"reason"`
+	Description string                `json:"description,omitempty"`
+	Status      ReportStatus          `json:"status"`
+	CreatedAt   string                `json:"created_at"`
+	HandledAt   string                `json:"handled_at,omitempty"`
+	Reporter    usersmodule.UserInfo  `json:"reporter"`
+	HandledBy   *usersmodule.UserInfo `json:"handled_by,omitempty"`
+	HandleNote  string                `json:"handle_note,omitempty"`
+}
+
+type PaginatedAdminReports struct {
+	Items      []AdminReportItem `json:"items"`
+	NextCursor string            `json:"next_cursor,omitempty"`
+}
+
+type AdminReportSearchRequest struct {
+	Status     ReportStatus      `json:"status,omitempty"`
+	TargetType ReportTargetType  `json:"target_type,omitempty"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
+}
+
+type AdminReportHandleRequest struct {
+	ReportID        string             `json:"report_id"`
+	Action          ReportHandleAction `json:"action"`
+	Note            string             `json:"note,omitempty"`
+	BanDurationDays *int               `json:"ban_duration_days,omitempty"`
 }
 
 type AuditAction string
@@ -450,4 +597,61 @@ type AuditLogEntry struct {
 type auditLogPage struct {
 	Items []AuditLogItem
 	Next  *auditCursor
+}
+
+type adminUserCursor struct {
+	CreatedAt time.Time `json:"created_at"`
+	UserID    string    `json:"user_id"`
+}
+
+type adminUserPage struct {
+	Items []AdminUserItem
+	Next  *adminUserCursor
+}
+
+type adminGroupCursor struct {
+	CreatedAt time.Time `json:"created_at"`
+	GroupID   string    `json:"group_id"`
+}
+
+type adminGroupPage struct {
+	Items []AdminGroupItem
+	Next  *adminGroupCursor
+}
+
+type adminReportCursor struct {
+	CreatedAt time.Time `json:"created_at"`
+	ReportID  string    `json:"report_id"`
+}
+
+type adminReportPage struct {
+	Items []AdminReportItem
+	Next  *adminReportCursor
+}
+
+type UserBanState struct {
+	Status       UserAccountStatus
+	Reason       string
+	DurationDays int
+	BannedAt     time.Time
+}
+
+type reportHandleRecord struct {
+	Item       AdminReportItem
+	TargetUser usersmodule.UserInfo
+}
+
+func reportItemFromModule(item reportsmodule.ReportItem, reporter usersmodule.UserInfo, handledBy *usersmodule.UserInfo, handleNote string) AdminReportItem {
+	return AdminReportItem{
+		ReportID:    item.ReportID,
+		TargetType:  ReportTargetType(item.TargetType),
+		TargetID:    item.TargetID,
+		Reason:      item.Reason,
+		Description: item.Description,
+		Status:      ReportStatus(item.Status),
+		CreatedAt:   item.CreatedAt,
+		Reporter:    reporter,
+		HandledBy:   handledBy,
+		HandleNote:  handleNote,
+	}
 }

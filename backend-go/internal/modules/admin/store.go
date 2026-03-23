@@ -20,6 +20,12 @@ const (
 	permissionTagsWrite          = "admin.tags.write"
 	permissionAnnouncementsRead  = "admin.announcements.read"
 	permissionAnnouncementsWrite = "admin.announcements.write"
+	permissionUsersRead          = "admin.users.read"
+	permissionUsersWrite         = "admin.users.write"
+	permissionGroupsRead         = "admin.groups.read"
+	permissionGroupsWrite        = "admin.groups.write"
+	permissionReportsRead        = "admin.reports.read"
+	permissionReportsWrite       = "admin.reports.write"
 	wildcardPermission           = "*"
 )
 
@@ -117,6 +123,13 @@ func normalizeLimit(limit int) int {
 	}
 }
 
+func limitPageItems[T any](items []T, limit int) ([]T, bool) {
+	if len(items) <= limit {
+		return items, false
+	}
+	return items[:limit], true
+}
+
 func encodeAdminCursor(cursor adminCursor) string {
 	blob, err := json.Marshal(cursor)
 	if err != nil {
@@ -165,6 +178,84 @@ func decodeAuditCursor(raw string) (auditCursor, *httpx.APIError) {
 	}
 	if cursor.LogID == "" || cursor.CreatedAt.IsZero() {
 		return auditCursor{}, httpx.InvalidRequest("pagination.cursor 无效")
+	}
+	return cursor, nil
+}
+
+func encodeAdminUserCursor(cursor adminUserCursor) string {
+	blob, err := json.Marshal(cursor)
+	if err != nil {
+		return ""
+	}
+	return base64.RawURLEncoding.EncodeToString(blob)
+}
+
+func decodeAdminUserCursor(raw string) (adminUserCursor, *httpx.APIError) {
+	if strings.TrimSpace(raw) == "" {
+		return adminUserCursor{}, nil
+	}
+	blob, err := base64.RawURLEncoding.DecodeString(raw)
+	if err != nil {
+		return adminUserCursor{}, httpx.InvalidRequest("pagination.cursor 无效")
+	}
+	var cursor adminUserCursor
+	if err := json.Unmarshal(blob, &cursor); err != nil {
+		return adminUserCursor{}, httpx.InvalidRequest("pagination.cursor 无效")
+	}
+	if cursor.UserID == "" || cursor.CreatedAt.IsZero() {
+		return adminUserCursor{}, httpx.InvalidRequest("pagination.cursor 无效")
+	}
+	return cursor, nil
+}
+
+func encodeAdminGroupCursor(cursor adminGroupCursor) string {
+	blob, err := json.Marshal(cursor)
+	if err != nil {
+		return ""
+	}
+	return base64.RawURLEncoding.EncodeToString(blob)
+}
+
+func decodeAdminGroupCursor(raw string) (adminGroupCursor, *httpx.APIError) {
+	if strings.TrimSpace(raw) == "" {
+		return adminGroupCursor{}, nil
+	}
+	blob, err := base64.RawURLEncoding.DecodeString(raw)
+	if err != nil {
+		return adminGroupCursor{}, httpx.InvalidRequest("pagination.cursor 无效")
+	}
+	var cursor adminGroupCursor
+	if err := json.Unmarshal(blob, &cursor); err != nil {
+		return adminGroupCursor{}, httpx.InvalidRequest("pagination.cursor 无效")
+	}
+	if cursor.GroupID == "" || cursor.CreatedAt.IsZero() {
+		return adminGroupCursor{}, httpx.InvalidRequest("pagination.cursor 无效")
+	}
+	return cursor, nil
+}
+
+func encodeAdminReportCursor(cursor adminReportCursor) string {
+	blob, err := json.Marshal(cursor)
+	if err != nil {
+		return ""
+	}
+	return base64.RawURLEncoding.EncodeToString(blob)
+}
+
+func decodeAdminReportCursor(raw string) (adminReportCursor, *httpx.APIError) {
+	if strings.TrimSpace(raw) == "" {
+		return adminReportCursor{}, nil
+	}
+	blob, err := base64.RawURLEncoding.DecodeString(raw)
+	if err != nil {
+		return adminReportCursor{}, httpx.InvalidRequest("pagination.cursor 无效")
+	}
+	var cursor adminReportCursor
+	if err := json.Unmarshal(blob, &cursor); err != nil {
+		return adminReportCursor{}, httpx.InvalidRequest("pagination.cursor 无效")
+	}
+	if cursor.ReportID == "" || cursor.CreatedAt.IsZero() {
+		return adminReportCursor{}, httpx.InvalidRequest("pagination.cursor 无效")
 	}
 	return cursor, nil
 }

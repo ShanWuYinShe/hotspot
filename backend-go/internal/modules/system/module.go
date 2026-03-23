@@ -5,7 +5,6 @@ import (
 
 	"hotspot/backend-go/internal/platform/appconfig"
 	"hotspot/backend-go/internal/platform/idempotency"
-	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/ratelimit"
 	"hotspot/backend-go/internal/platform/resourceguard"
 )

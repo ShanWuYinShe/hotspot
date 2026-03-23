@@ -107,6 +107,58 @@ func (r *adminFallbackRepo) AppendAuditLog(context.Context, AuditLogEntry) error
 	r.used = true
 	return nil
 }
+func (r *adminFallbackRepo) SearchUsers(context.Context, AdminUserSearchRequest) (adminUserPage, error) {
+	r.used = true
+	return adminUserPage{}, nil
+}
+func (r *adminFallbackRepo) GetUser(context.Context, string) (AdminUserItem, bool, error) {
+	r.used = true
+	return AdminUserItem{}, false, nil
+}
+func (r *adminFallbackRepo) GetUserBanState(context.Context, string) (UserBanState, bool, error) {
+	r.used = true
+	return UserBanState{}, false, nil
+}
+func (r *adminFallbackRepo) SetUserBanState(context.Context, string, UserBanState) error {
+	r.used = true
+	return nil
+}
+func (r *adminFallbackRepo) ListUserSessions(context.Context, string) ([]string, error) {
+	r.used = true
+	return nil, nil
+}
+func (r *adminFallbackRepo) RevokeSession(context.Context, string) error {
+	r.used = true
+	return nil
+}
+func (r *adminFallbackRepo) SearchGroups(context.Context, AdminGroupSearchRequest) (adminGroupPage, error) {
+	r.used = true
+	return adminGroupPage{}, nil
+}
+func (r *adminFallbackRepo) GetGroup(context.Context, string) (AdminGroupItem, bool, error) {
+	r.used = true
+	return AdminGroupItem{}, false, nil
+}
+func (r *adminFallbackRepo) DismissGroup(context.Context, string) (AdminGroupItem, bool, error) {
+	r.used = true
+	return AdminGroupItem{}, false, nil
+}
+func (r *adminFallbackRepo) ListGroupMemberIDs(context.Context, string) ([]string, error) {
+	r.used = true
+	return nil, nil
+}
+func (r *adminFallbackRepo) SearchReports(context.Context, AdminReportSearchRequest) (adminReportPage, error) {
+	r.used = true
+	return adminReportPage{}, nil
+}
+func (r *adminFallbackRepo) GetReportHandleRecord(context.Context, string) (reportHandleRecord, bool, error) {
+	r.used = true
+	return reportHandleRecord{}, false, nil
+}
+func (r *adminFallbackRepo) HandleReport(context.Context, string, ReportHandleAction, string, *UserInfo) (AdminReportItem, bool, error) {
+	r.used = true
+	return AdminReportItem{}, false, nil
+}
 
 type adminRoleStub struct {
 	RoleID      string

@@ -2,6 +2,8 @@ package admin
 
 import (
 	"context"
+	groupsmodule "hotspot/backend-go/internal/modules/groups"
+	usersmodule "hotspot/backend-go/internal/modules/users"
 	"fmt"
 	"sort"
 	"strings"
@@ -30,6 +32,12 @@ type InMemoryRepository struct {
 	roles          map[string]roleRecord
 	admins         map[string]adminGrantRecord
 	users          map[string]UserInfo
+	adminUsers     map[string]AdminUserItem
+	groups         map[string]AdminGroupItem
+	groupMembers   map[string][]string
+	reports        map[string]reportHandleRecord
+	banStates      map[string]UserBanState
+	userSessions   map[string][]string
 	auditLogs      map[string]AuditLogEntry
 	auditOrder     []string
 	deletedRoleIDs map[string]struct{}
@@ -37,15 +45,113 @@ type InMemoryRepository struct {
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
-	repo := &InMemoryRepository{
-		roles:  make(map[string]roleRecord),
-		admins: make(map[string]adminGrantRecord),
-		users: map[string]UserInfo{
-			"admin":      {UserID: "admin", Nickname: "admin"},
-			"user_alice": {UserID: "user_alice", Nickname: "Alice"},
-			"user_bob":   {UserID: "user_bob", Nickname: "Bob"},
-			"user_cindy": {UserID: "user_cindy", Nickname: "Cindy"},
+	now := time.Now().UTC()
+	aliceCreatedAt := now.Add(-72 * time.Hour).Format(time.RFC3339)
+	bobCreatedAt := now.Add(-48 * time.Hour).Format(time.RFC3339)
+	cindyCreatedAt := now.Add(-24 * time.Hour).Format(time.RFC3339)
+	adminCreatedAt := now.Add(-96 * time.Hour).Format(time.RFC3339)
+
+	adminUsers := map[string]AdminUserItem{
+		"admin": {
+			User:              UserInfo{UserID: "admin", Nickname: "admin"},
+			Status:            UserAccountStatusNormal,
+			CreatedAt:         adminCreatedAt,
+			LastActiveAt:      now.Add(-time.Hour).Format(time.RFC3339),
+			LoginID:           "admin",
+			PresenceStatus:    usersmodule.UserPresenceOnline,
+			LastOnline:        now.Add(-time.Hour).Format(time.RFC3339),
+			RegisterIP:        "127.0.0.1",
+			RegisterLocation:  "Local",
+			LastLoginIP:       "127.0.0.1",
+			LastLoginLocation: "Local",
 		},
+		"user_alice": {
+			User:              UserInfo{UserID: "user_alice", Nickname: "Alice"},
+			Status:            UserAccountStatusNormal,
+			CreatedAt:         aliceCreatedAt,
+			LastActiveAt:      now.Add(-2 * time.Hour).Format(time.RFC3339),
+			LoginID:           "alice",
+			PresenceStatus:    usersmodule.UserPresenceOnline,
+			LastOnline:        now.Add(-2 * time.Hour).Format(time.RFC3339),
+			RegisterIP:        "10.0.0.2",
+			RegisterLocation:  "Shanghai",
+			LastLoginIP:       "10.0.0.3",
+			LastLoginLocation: "Shanghai",
+		},
+		"user_bob": {
+			User:              UserInfo{UserID: "user_bob", Nickname: "Bob"},
+			Status:            UserAccountStatusNormal,
+			CreatedAt:         bobCreatedAt,
+			LastActiveAt:      now.Add(-3 * time.Hour).Format(time.RFC3339),
+			LoginID:           "bob",
+			PresenceStatus:    usersmodule.UserPresenceOffline,
+			LastOnline:        now.Add(-3 * time.Hour).Format(time.RFC3339),
+			RegisterIP:        "10.0.0.4",
+			RegisterLocation:  "Hangzhou",
+			LastLoginIP:       "10.0.0.4",
+			LastLoginLocation: "Hangzhou",
+		},
+		"user_cindy": {
+			User:              UserInfo{UserID: "user_cindy", Nickname: "Cindy"},
+			Status:            UserAccountStatusNormal,
+			CreatedAt:         cindyCreatedAt,
+			LastActiveAt:      now.Add(-4 * time.Hour).Format(time.RFC3339),
+			LoginID:           "cindy",
+			PresenceStatus:    usersmodule.UserPresenceOffline,
+			LastOnline:        now.Add(-4 * time.Hour).Format(time.RFC3339),
+			RegisterIP:        "10.0.0.5",
+			RegisterLocation:  "Beijing",
+			LastLoginIP:       "10.0.0.5",
+			LastLoginLocation: "Beijing",
+		},
+	}
+
+	groups := map[string]AdminGroupItem{
+		"group_hotspot": {
+			Group: groupsmodule.GroupInfo{GroupID: "group_hotspot", Name: "HotSpot", MembersCount: 2},
+			Location: groupsmodule.Location{Point: struct {
+				Latitude  float64 `json:"latitude"`
+				Longitude float64 `json:"longitude"`
+			}{Latitude: 31.2304, Longitude: 121.4737}, LocationName: "Shanghai"},
+			CreatedAt:      now.Add(-36 * time.Hour).Format(time.RFC3339),
+			Owner:          UserInfo{UserID: "user_alice", Nickname: "Alice"},
+			JoinMethod:     groupsmodule.GroupJoinMethod("open"),
+			IsSearchable:   true,
+			MaxMembers:     200,
+			LastActivityAt: now.Add(-30 * time.Minute).Format(time.RFC3339),
+		},
+	}
+
+	reports := map[string]reportHandleRecord{
+		"report_1": {
+			Item: AdminReportItem{
+				ReportID:   "report_1",
+				TargetType: ReportTargetTypeUser,
+				TargetID:   "user_bob",
+				Reason:     "spam",
+				Status:     ReportStatusPending,
+				CreatedAt:  now.Add(-6 * time.Hour).Format(time.RFC3339),
+				Reporter:   UserInfo{UserID: "user_alice", Nickname: "Alice"},
+			},
+			TargetUser: UserInfo{UserID: "user_bob", Nickname: "Bob"},
+		},
+	}
+
+	users := map[string]UserInfo{}
+	for userID, item := range adminUsers {
+		users[userID] = item.User
+	}
+
+	repo := &InMemoryRepository{
+		roles:          make(map[string]roleRecord),
+		admins:         make(map[string]adminGrantRecord),
+		users:          users,
+		adminUsers:     adminUsers,
+		groups:         groups,
+		groupMembers:   map[string][]string{"group_hotspot": {"user_alice", "user_bob"}},
+		reports:        reports,
+		banStates:      map[string]UserBanState{"admin": {Status: UserAccountStatusNormal}, "user_alice": {Status: UserAccountStatusNormal}, "user_bob": {Status: UserAccountStatusNormal}, "user_cindy": {Status: UserAccountStatusNormal}},
+		userSessions:   map[string][]string{"user_alice": {"sess_user_alice_1"}, "user_bob": {"sess_user_bob_1"}},
 		auditLogs:      make(map[string]AuditLogEntry),
 		deletedRoleIDs: make(map[string]struct{}),
 		revokedAdmins:  make(map[string]struct{}),
@@ -443,6 +549,67 @@ func cloneAuditDetails(details AuditDetails) AuditDetails {
 	return cloned
 }
 
+func paginationLimit(pagination *PaginationParams) int {
+	if pagination == nil {
+		return 0
+	}
+	return pagination.Limit
+}
+
+func paginationCursor(pagination *PaginationParams) string {
+	if pagination == nil {
+		return ""
+	}
+	return pagination.Cursor
+}
+
+func timeFromRFC3339(value string) time.Time {
+	parsed, err := time.Parse(time.RFC3339, value)
+	if err != nil {
+		return time.Time{}
+	}
+	return parsed
+}
+
+func cloneAdminUserItem(item AdminUserItem) AdminUserItem {
+	cloned := item
+	cloned.Tags = cloneStrings(item.Tags)
+	if item.Location != nil {
+		loc := *item.Location
+		cloned.Location = &loc
+	}
+	if item.Stats != nil {
+		stats := *item.Stats
+		cloned.Stats = &stats
+	}
+	return cloned
+}
+
+func cloneAdminGroupItem(item AdminGroupItem) AdminGroupItem {
+	cloned := item
+	cloned.Tags = cloneStrings(item.Tags)
+	if item.MyState != nil {
+		state := *item.MyState
+		cloned.MyState = &state
+	}
+	return cloned
+}
+
+func cloneAdminReportItem(item AdminReportItem) AdminReportItem {
+	cloned := item
+	if item.HandledBy != nil {
+		handledBy := *item.HandledBy
+		cloned.HandledBy = &handledBy
+	}
+	return cloned
+}
+
+func cloneReportHandleRecord(record reportHandleRecord) reportHandleRecord {
+	cloned := record
+	cloned.Item = cloneAdminReportItem(record.Item)
+	return cloned
+}
+
 func (r *InMemoryRepository) seedAuditLogs() {
 	now := time.Now().UTC()
 	logs := []AuditLogEntry{
@@ -487,4 +654,298 @@ func (r *InMemoryRepository) seedAuditLogs() {
 		r.auditLogs[log.LogID] = cloneAuditEntry(log)
 		r.auditOrder = append(r.auditOrder, log.LogID)
 	}
+}
+
+func (r *InMemoryRepository) SearchUsers(_ context.Context, req AdminUserSearchRequest) (adminUserPage, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	cursor, apiErr := decodeAdminUserCursor(paginationCursor(req.Pagination))
+	if apiErr != nil {
+		return adminUserPage{}, apiErr
+	}
+	items := make([]AdminUserItem, 0, len(r.adminUsers))
+	for _, item := range r.adminUsers {
+		if req.UserID != "" && item.User.UserID != req.UserID {
+			continue
+		}
+		if req.Nickname != "" && !strings.Contains(strings.ToLower(item.User.Nickname), strings.ToLower(req.Nickname)) {
+			continue
+		}
+		if req.LoginID != "" && !strings.Contains(strings.ToLower(item.LoginID), strings.ToLower(req.LoginID)) {
+			continue
+		}
+		if req.Status != "" && item.Status != req.Status {
+			continue
+		}
+		if req.UserType != "" && item.User.UserID != "admin" && req.UserType != usersmodule.UserTypeNormal {
+			continue
+		}
+		items = append(items, cloneAdminUserItem(item))
+	}
+	sort.Slice(items, func(i, j int) bool {
+		it, jt := timeFromRFC3339(items[i].CreatedAt), timeFromRFC3339(items[j].CreatedAt)
+		if it.Equal(jt) {
+			return items[i].User.UserID < items[j].User.UserID
+		}
+		return it.After(jt)
+	})
+	filtered := make([]AdminUserItem, 0, len(items))
+	for _, item := range items {
+		if paginationCursor(req.Pagination) != "" {
+			createdAt := timeFromRFC3339(item.CreatedAt)
+			if createdAt.After(cursor.CreatedAt) {
+				continue
+			}
+			if createdAt.Equal(cursor.CreatedAt) && item.User.UserID <= cursor.UserID {
+				continue
+			}
+		}
+		filtered = append(filtered, item)
+	}
+	limit := normalizeLimit(paginationLimit(req.Pagination))
+	paged, hasMore := limitPageItems(filtered, limit)
+	page := adminUserPage{Items: append(make([]AdminUserItem, 0, len(paged)), paged...)}
+	if hasMore {
+		last := paged[len(paged)-1]
+		page.Next = &adminUserCursor{CreatedAt: timeFromRFC3339(last.CreatedAt), UserID: last.User.UserID}
+	}
+	return page, nil
+}
+
+func (r *InMemoryRepository) GetUser(_ context.Context, userID string) (AdminUserItem, bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	item, ok := r.adminUsers[userID]
+	if !ok {
+		return AdminUserItem{}, false, nil
+	}
+	return cloneAdminUserItem(item), true, nil
+}
+
+func (r *InMemoryRepository) GetUserBanState(_ context.Context, userID string) (UserBanState, bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if _, ok := r.adminUsers[userID]; !ok {
+		return UserBanState{}, false, nil
+	}
+	state, ok := r.banStates[userID]
+	if !ok {
+		return UserBanState{Status: UserAccountStatusNormal}, true, nil
+	}
+	return state, true, nil
+}
+
+func (r *InMemoryRepository) SetUserBanState(_ context.Context, userID string, state UserBanState) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	item, ok := r.adminUsers[userID]
+	if !ok {
+		return &httpx.APIError{Code: 10300, Message: "用户不存在"}
+	}
+	if state.Status == "" {
+		state.Status = UserAccountStatusNormal
+	}
+	if state.Status != UserAccountStatusBanned {
+		state = UserBanState{Status: UserAccountStatusNormal}
+	}
+	r.banStates[userID] = state
+	item.Status = state.Status
+	r.adminUsers[userID] = item
+	return nil
+}
+
+func (r *InMemoryRepository) ListUserSessions(_ context.Context, userID string) ([]string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return cloneStrings(r.userSessions[userID]), nil
+}
+
+func (r *InMemoryRepository) RevokeSession(_ context.Context, sessionID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for userID, sessions := range r.userSessions {
+		filtered := make([]string, 0, len(sessions))
+		for _, candidate := range sessions {
+			if candidate != sessionID {
+				filtered = append(filtered, candidate)
+			}
+		}
+		if len(filtered) == 0 {
+			delete(r.userSessions, userID)
+			continue
+		}
+		r.userSessions[userID] = filtered
+	}
+	return nil
+}
+
+func (r *InMemoryRepository) SearchGroups(_ context.Context, req AdminGroupSearchRequest) (adminGroupPage, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	cursor, apiErr := decodeAdminGroupCursor(paginationCursor(req.Pagination))
+	if apiErr != nil {
+		return adminGroupPage{}, apiErr
+	}
+	items := make([]AdminGroupItem, 0, len(r.groups))
+	for _, item := range r.groups {
+		if req.GroupID != "" && item.Group.GroupID != req.GroupID {
+			continue
+		}
+		if req.Name != "" && !strings.Contains(strings.ToLower(item.Group.Name), strings.ToLower(req.Name)) {
+			continue
+		}
+		if req.OwnerID != "" && item.Owner.UserID != req.OwnerID {
+			continue
+		}
+		items = append(items, cloneAdminGroupItem(item))
+	}
+	sort.Slice(items, func(i, j int) bool {
+		it, jt := timeFromRFC3339(items[i].CreatedAt), timeFromRFC3339(items[j].CreatedAt)
+		if it.Equal(jt) {
+			return items[i].Group.GroupID < items[j].Group.GroupID
+		}
+		return it.After(jt)
+	})
+	filtered := make([]AdminGroupItem, 0, len(items))
+	for _, item := range items {
+		if paginationCursor(req.Pagination) != "" {
+			createdAt := timeFromRFC3339(item.CreatedAt)
+			if createdAt.After(cursor.CreatedAt) {
+				continue
+			}
+			if createdAt.Equal(cursor.CreatedAt) && item.Group.GroupID <= cursor.GroupID {
+				continue
+			}
+		}
+		filtered = append(filtered, item)
+	}
+	limit := normalizeLimit(paginationLimit(req.Pagination))
+	paged, hasMore := limitPageItems(filtered, limit)
+	page := adminGroupPage{Items: append(make([]AdminGroupItem, 0, len(paged)), paged...)}
+	if hasMore {
+		last := paged[len(paged)-1]
+		page.Next = &adminGroupCursor{CreatedAt: timeFromRFC3339(last.CreatedAt), GroupID: last.Group.GroupID}
+	}
+	return page, nil
+}
+
+func (r *InMemoryRepository) GetGroup(_ context.Context, groupID string) (AdminGroupItem, bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	item, ok := r.groups[groupID]
+	if !ok {
+		return AdminGroupItem{}, false, nil
+	}
+	return cloneAdminGroupItem(item), true, nil
+}
+
+func (r *InMemoryRepository) DismissGroup(_ context.Context, groupID string) (AdminGroupItem, bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	item, ok := r.groups[groupID]
+	if !ok {
+		return AdminGroupItem{}, false, nil
+	}
+	delete(r.groups, groupID)
+	delete(r.groupMembers, groupID)
+	return cloneAdminGroupItem(item), true, nil
+}
+
+func (r *InMemoryRepository) ListGroupMemberIDs(_ context.Context, groupID string) ([]string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return cloneStrings(r.groupMembers[groupID]), nil
+}
+
+func (r *InMemoryRepository) SearchReports(_ context.Context, req AdminReportSearchRequest) (adminReportPage, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	cursor, apiErr := decodeAdminReportCursor(paginationCursor(req.Pagination))
+	if apiErr != nil {
+		return adminReportPage{}, apiErr
+	}
+	items := make([]AdminReportItem, 0, len(r.reports))
+	for _, record := range r.reports {
+		if req.Status != "" && record.Item.Status != req.Status {
+			continue
+		}
+		if req.TargetType != "" && record.Item.TargetType != req.TargetType {
+			continue
+		}
+		items = append(items, cloneAdminReportItem(record.Item))
+	}
+	sort.Slice(items, func(i, j int) bool {
+		it, jt := timeFromRFC3339(items[i].CreatedAt), timeFromRFC3339(items[j].CreatedAt)
+		if it.Equal(jt) {
+			return items[i].ReportID > items[j].ReportID
+		}
+		return it.After(jt)
+	})
+	filtered := make([]AdminReportItem, 0, len(items))
+	for _, item := range items {
+		if paginationCursor(req.Pagination) != "" {
+			createdAt := timeFromRFC3339(item.CreatedAt)
+			if createdAt.After(cursor.CreatedAt) {
+				continue
+			}
+			if createdAt.Equal(cursor.CreatedAt) && item.ReportID >= cursor.ReportID {
+				continue
+			}
+		}
+		filtered = append(filtered, item)
+	}
+	limit := normalizeLimit(paginationLimit(req.Pagination))
+	paged, hasMore := limitPageItems(filtered, limit)
+	page := adminReportPage{Items: append(make([]AdminReportItem, 0, len(paged)), paged...)}
+	if hasMore {
+		last := paged[len(paged)-1]
+		page.Next = &adminReportCursor{CreatedAt: timeFromRFC3339(last.CreatedAt), ReportID: last.ReportID}
+	}
+	return page, nil
+}
+
+func (r *InMemoryRepository) GetReportHandleRecord(_ context.Context, reportID string) (reportHandleRecord, bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	record, ok := r.reports[reportID]
+	if !ok {
+		return reportHandleRecord{}, false, nil
+	}
+	return cloneReportHandleRecord(record), true, nil
+}
+
+func (r *InMemoryRepository) HandleReport(_ context.Context, reportID string, action ReportHandleAction, note string, handledBy *UserInfo) (AdminReportItem, bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	record, ok := r.reports[reportID]
+	if !ok {
+		return AdminReportItem{}, false, nil
+	}
+	now := time.Now().UTC().Format(time.RFC3339)
+	switch action {
+	case ReportHandleResolve:
+		record.Item.Status = ReportStatusResolved
+	case ReportHandleDismiss:
+		record.Item.Status = ReportStatusDismissed
+	case ReportHandleEscalate:
+		record.Item.Status = ReportStatusReviewing
+	}
+	record.Item.HandledAt = now
+	record.Item.HandleNote = note
+	if handledBy != nil {
+		h := *handledBy
+		record.Item.HandledBy = &h
+	}
+	r.reports[reportID] = record
+	return cloneAdminReportItem(record.Item), true, nil
+}
+
+func (r *InMemoryRepository) IsBanned(_ context.Context, userID string) (bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	state, ok := r.banStates[userID]
+	if !ok {
+		return false, nil
+	}
+	return state.Status == UserAccountStatusBanned, nil
 }

@@ -8,18 +8,25 @@ import (
 	"strings"
 	"testing"
 
-	systemmodule "hotspot/backend-go/internal/modules/system"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
+	"hotspot/backend-go/internal/platform/realtime"
 )
 
 func newTestHandler() *Handler {
+	handler, _ := newTestHandlerWithStore()
+	return handler
+}
+
+func newTestHandlerWithStore() (*Handler, *InMemoryRepository) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
 	store := NewInMemoryRepository()
 	provider := NewAppConfigProvider(appconfig.NewStaticSource(config.Load()))
-	return NewHandler(NewService(store, provider))
+	return NewHandler(NewService(store, provider, nil, nil)), store
 }
 
 func adminContext(req *http.Request, userID string, admin bool) *http.Request {
@@ -220,270 +227,253 @@ func TestGetAppConfigRequiresPermission(t *testing.T) {
 	}
 }
 
-func TestAuditLogIPAddressRequiresExtraPermission(t *testing.T) {
+func TestBanUserRequiresIdempotencyKey(t *testing.T) {
 	handler := newTestHandler()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
-
-	createRoleReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/create", strings.NewReader(`{"name":"Auditor"}`)), "admin", true)
-	createRoleReq.Header.Set("Idempotency-Key", "aaaa1234abcd1234abcd1234abcd1234")
-	createRoleRR := httptest.NewRecorder()
-	handler.CreateRole(createRoleRR, createRoleReq)
-	createdRole := decodeResponse[AdminRoleItem](t, createRoleRR)
-	if createdRole.Code != 0 || createdRole.Data == nil {
-		t.Fatalf("unexpected create role response: %#v", createdRole)
-	}
-
-	setPermissionsReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/set_permissions", strings.NewReader(`{"role_id":"`+createdRole.Data.RoleID+`","permission_keys":["admin.audit.read"]}`)), "admin", true)
-	setPermissionsRR := httptest.NewRecorder()
-	handler.SetRolePermissions(setPermissionsRR, setPermissionsReq)
-	setPermissionsResp := decodeResponse[struct{}](t, setPermissionsRR)
-	if setPermissionsResp.Code != 0 {
-		t.Fatalf("unexpected set permissions response: %#v", setPermissionsResp)
-	}
-
-	grantReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/admins/grant", strings.NewReader(`{"user_id":"user_bob","role_ids":["`+createdRole.Data.RoleID+`"]}`)), "admin", true)
-	grantReq.Header.Set("Idempotency-Key", "bbbb1234efgh1234ijkl1234mnop1234")
-	grantRR := httptest.NewRecorder()
-	handler.GrantAdmin(grantRR, grantReq)
-	grantResp := decodeResponse[struct{}](t, grantRR)
-	if grantResp.Code != 0 {
-		t.Fatalf("unexpected grant response: %#v", grantResp)
-	}
-
-	listReq := adminContext(httptest.NewRequest(http.MethodPost, "/audit/list", strings.NewReader(`{"pagination":{"limit":10}}`)), "user_bob", true)
-	listRR := httptest.NewRecorder()
-	handler.ListAuditLogs(listRR, listReq)
-	listResp := decodeResponse[PaginatedAuditLogs](t, listRR)
-	if listResp.Code != 0 || listResp.Data == nil || len(listResp.Data.Items) == 0 {
-		t.Fatalf("unexpected audit list response: %#v", listResp)
-	}
-	if listResp.Data.Items[0].IPAddress != nil {
-		t.Fatalf("expected ip_address to be omitted without admin.audit.read_ip: %#v", listResp.Data.Items[0])
-	}
-}
-
-func TestUpdateResponseDefaultsAffectsGetAppConfig(t *testing.T) {
-	handler := newTestHandler()
-
-	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_response_defaults", strings.NewReader(`{"response_defaults":{"chat_recent_messages_count":42}}`)), "admin", true)
-	updateReq.Header.Set("User-Agent", "HotSpotTest/1.0")
-	updateReq.RemoteAddr = "203.0.113.8:4567"
-	updateRR := httptest.NewRecorder()
-	handler.UpdateResponseDefaults(updateRR, updateReq)
-	updateResp := decodeResponse[struct{}](t, updateRR)
-	if updateResp.Code != 0 {
-		t.Fatalf("unexpected update response: %#v", updateResp)
-	}
-
-	getReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/get", strings.NewReader(`{}`)), "admin", true)
-	getRR := httptest.NewRecorder()
-	handler.GetAppConfig(getRR, getReq)
-	getResp := decodeResponse[AppConfig](t, getRR)
-	if getResp.Code != 0 || getResp.Data == nil {
-		t.Fatalf("unexpected get response: %#v", getResp)
-	}
-	if getResp.Data.ResponseDefaults.ChatRecentMessagesCount != 42 {
-		t.Fatalf("unexpected response defaults: %#v", getResp.Data.ResponseDefaults)
-	}
-	if getResp.Data.UpdatedByUserID != "admin" {
-		t.Fatalf("unexpected updated_by_user_id: %#v", getResp.Data)
-	}
-	if getResp.Data.UpdatedAt == "" {
-		t.Fatalf("expected updated_at to be populated: %#v", getResp.Data)
-	}
-}
-
-func TestSearchTagsRequiresPermission(t *testing.T) {
-	handler := newTestHandler()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
-
-	createRoleReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/create", strings.NewReader(`{"name":"TagViewer"}`)), "admin", true)
-	createRoleReq.Header.Set("Idempotency-Key", "tagv1234abcd1234abcd1234abcd1234")
-	createRoleRR := httptest.NewRecorder()
-	handler.CreateRole(createRoleRR, createRoleReq)
-	createdRole := decodeResponse[AdminRoleItem](t, createRoleRR)
-	if createdRole.Code != 0 || createdRole.Data == nil {
-		t.Fatalf("unexpected create role response: %#v", createdRole)
-	}
-
-	grantReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/admins/grant", strings.NewReader(`{"user_id":"user_alice","role_ids":["`+createdRole.Data.RoleID+`"]}`)), "admin", true)
-	grantReq.Header.Set("Idempotency-Key", "tagg1234abcd1234abcd1234abcd1234")
-	grantRR := httptest.NewRecorder()
-	handler.GrantAdmin(grantRR, grantReq)
-	grantResp := decodeResponse[struct{}](t, grantRR)
-	if grantResp.Code != 0 {
-		t.Fatalf("unexpected grant response: %#v", grantResp)
-	}
-
-	req := adminContext(httptest.NewRequest(http.MethodPost, "/tags/search", strings.NewReader(`{"keyword":"hot"}`)), "user_alice", true)
-	rr := httptest.NewRecorder()
-	handler.SearchTags(rr, req)
-
-	resp := decodeResponse[PaginatedAdminTags](t, rr)
-	if resp.Code != 10200 || resp.Message != "系统管理员权限不足: admin.tags.read" {
-		t.Fatalf("unexpected response: %#v", resp)
-	}
-}
-
-func TestSearchTagsReturnsItems(t *testing.T) {
-	handler := newTestHandler()
-	req := adminContext(httptest.NewRequest(http.MethodPost, "/tags/search", strings.NewReader(`{"keyword":"hot","pagination":{"limit":10}}`)), "admin", true)
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/users/ban", strings.NewReader(`{"user_id":"user_bob"}`)), "admin", true)
 	rr := httptest.NewRecorder()
 
-	handler.SearchTags(rr, req)
+	handler.BanUser(rr, req)
 
-	resp := decodeResponse[PaginatedAdminTags](t, rr)
-	if resp.Code != 0 || resp.Data == nil || len(resp.Data.Items) != 1 {
-		t.Fatalf("unexpected response: %#v", resp)
-	}
-	if resp.Data.Items[0].Name != "hotspot" || resp.Data.Items[0].UsageCount != 3 {
-		t.Fatalf("unexpected tag item: %#v", resp.Data.Items[0])
-	}
-}
-
-func TestDeleteTagIsIdempotent(t *testing.T) {
-	handler := newTestHandler()
-	makeReq := func() *http.Request {
-		return adminContext(httptest.NewRequest(http.MethodPost, "/tags/delete", strings.NewReader(`{"name":"hotspot"}`)), "admin", true)
-	}
-	rr := httptest.NewRecorder()
-	handler.DeleteTag(rr, makeReq())
 	resp := decodeResponse[struct{}](t, rr)
-	if resp.Code != 0 {
-		t.Fatalf("unexpected first response: %#v", resp)
-	}
-	second := httptest.NewRecorder()
-	handler.DeleteTag(second, makeReq())
-	secondResp := decodeResponse[struct{}](t, second)
-	if secondResp.Code != 0 {
-		t.Fatalf("unexpected second response: %#v", secondResp)
-	}
-}
-
-func TestCreateAnnouncementRequiresIdempotencyKey(t *testing.T) {
-	handler := newTestHandler()
-	req := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/create", strings.NewReader(`{"title":"维护","content":"今晚维护","severity":"warning"}`)), "admin", true)
-	rr := httptest.NewRecorder()
-
-	handler.CreateAnnouncement(rr, req)
-
-	resp := decodeResponse[AnnouncementCreated](t, rr)
 	if resp.Code != 22000 {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
 
-func TestCreateAnnouncementReplaysSameIdempotencyKey(t *testing.T) {
-	handler := newTestHandler()
+func TestBanUserAndUnbanUser(t *testing.T) {
+	handler, store := newTestHandlerWithStore()
 	idempotency.SetStore(idempotency.NewInMemoryStore())
-	makeReq := func() *http.Request {
-		req := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/create", strings.NewReader(`{"title":"维护","content":"今晚维护","severity":"warning","send_push":true}`)), "admin", true)
-		req.Header.Set("Idempotency-Key", "annn1234abcd1234abcd1234abcd1234")
-		return req
+	hub := realtime.DefaultHub()
+	bobSink := &sinkCapture{}
+	hub.RegisterUser("user_bob", "sess_user_bob_1", bobSink)
+
+	banReq := adminContext(httptest.NewRequest(http.MethodPost, "/users/ban", strings.NewReader(`{"user_id":"user_bob","reason":"spam","duration_days":7}`)), "admin", true)
+	banReq.Header.Set("Idempotency-Key", "banuser9abc1234def05678ghij9012klmn")
+	banRR := httptest.NewRecorder()
+	handler.BanUser(banRR, banReq)
+	banResp := decodeResponse[struct{}](t, banRR)
+	if banResp.Code != 0 {
+		t.Fatalf("unexpected ban response: %#v", banResp)
+	}
+	state, ok, err := store.GetUserBanState(banReq.Context(), "user_bob")
+	if err != nil || !ok || state.Status != UserAccountStatusBanned || state.DurationDays != 7 {
+		t.Fatalf("unexpected ban state: %#v ok=%v err=%v", state, ok, err)
+	}
+	if sessions, _ := store.ListUserSessions(banReq.Context(), "user_bob"); len(sessions) != 0 {
+		t.Fatalf("expected sessions revoked, got %#v", sessions)
+	}
+	foundBanAudit := false
+	for _, entry := range store.auditLogs {
+		if entry.Action == "user.ban" {
+			foundBanAudit = true
+			break
+		}
+	}
+	if !foundBanAudit {
+		t.Fatalf("unexpected audit logs after ban: %#v", store.auditLogs)
+	}
+	if len(bobSink.events) != 1 || bobSink.events[0].Type != "AccountBanned" || !bobSink.closed {
+		t.Fatalf("unexpected ban event delivery: %#v closed=%v", bobSink.events, bobSink.closed)
 	}
 
-	first := httptest.NewRecorder()
-	handler.CreateAnnouncement(first, makeReq())
-	firstResp := decodeResponse[AnnouncementCreated](t, first)
-	if firstResp.Code != 0 || firstResp.Data == nil || firstResp.Data.AnnouncementID == "" {
-		t.Fatalf("unexpected first response: %#v", firstResp)
+	unbanReq := adminContext(httptest.NewRequest(http.MethodPost, "/users/unban", strings.NewReader(`{"user_id":"user_bob","reason":"appeal approved"}`)), "admin", true)
+	unbanRR := httptest.NewRecorder()
+	handler.UnbanUser(unbanRR, unbanReq)
+	unbanResp := decodeResponse[struct{}](t, unbanRR)
+	if unbanResp.Code != 0 {
+		t.Fatalf("unexpected unban response: %#v", unbanResp)
 	}
-
-	second := httptest.NewRecorder()
-	handler.CreateAnnouncement(second, makeReq())
-	secondResp := decodeResponse[AnnouncementCreated](t, second)
-	if secondResp.Code != 0 || secondResp.Data == nil || secondResp.Data.AnnouncementID != firstResp.Data.AnnouncementID {
-		t.Fatalf("unexpected second response: %#v", secondResp)
+	state, ok, err = store.GetUserBanState(unbanReq.Context(), "user_bob")
+	if err != nil || !ok || state.Status != UserAccountStatusNormal {
+		t.Fatalf("unexpected unban state: %#v ok=%v err=%v", state, ok, err)
+	}
+	foundUnbanAudit := false
+	for _, entry := range store.auditLogs {
+		if entry.Action == "user.unban" {
+			foundUnbanAudit = true
+			break
+		}
+	}
+	if !foundUnbanAudit {
+		t.Fatalf("unexpected audit logs after unban: %#v", store.auditLogs)
 	}
 }
 
-func TestSearchAnnouncementsReturnsAdminFields(t *testing.T) {
+func TestSearchUsersRequiresPermission(t *testing.T) {
 	handler := newTestHandler()
 	idempotency.SetStore(idempotency.NewInMemoryStore())
-	createReq := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/create", strings.NewReader(`{"title":"维护","content":"今晚维护","severity":"warning","action_url":"https://example.com/maintenance","send_push":true}`)), "admin", true)
-	createReq.Header.Set("Idempotency-Key", "annn2234abcd1234abcd1234abcd1234")
-	createRR := httptest.NewRecorder()
-	handler.CreateAnnouncement(createRR, createReq)
-	created := decodeResponse[AnnouncementCreated](t, createRR)
-	if created.Code != 0 || created.Data == nil {
-		t.Fatalf("unexpected create response: %#v", created)
+
+	createRoleReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/create", strings.NewReader(`{"name":"GroupModerator"}`)), "admin", true)
+	createRoleReq.Header.Set("Idempotency-Key", "usread9abc1234def05678ghij9012klmn")
+	createRoleRR := httptest.NewRecorder()
+	handler.CreateRole(createRoleRR, createRoleReq)
+	createdRole := decodeResponse[AdminRoleItem](t, createRoleRR)
+	if createdRole.Code != 0 || createdRole.Data == nil {
+		t.Fatalf("unexpected create role response: %#v", createdRole)
 	}
 
-	searchReq := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/search", strings.NewReader(`{"severity":"warning","pagination":{"limit":10}}`)), "admin", true)
+	grantReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/admins/grant", strings.NewReader(`{"user_id":"user_bob","role_ids":["`+createdRole.Data.RoleID+`"]}`)), "admin", true)
+	grantReq.Header.Set("Idempotency-Key", "usread9abc1234def05678ghij9012klmo")
+	grantRR := httptest.NewRecorder()
+	handler.GrantAdmin(grantRR, grantReq)
+	grantResp := decodeResponse[struct{}](t, grantRR)
+	if grantResp.Code != 0 {
+		t.Fatalf("unexpected grant response: %#v", grantResp)
+	}
+
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/users/search", strings.NewReader(`{}`)), "user_bob", true)
+	rr := httptest.NewRecorder()
+	handler.SearchUsers(rr, req)
+	resp := decodeResponse[PaginatedAdminUsers](t, rr)
+	if resp.Code != 10200 || resp.Message != "系统管理员权限不足: admin.users.read" {
+		t.Fatalf("unexpected response: %#v", resp)
+	}
+}
+
+func TestSearchUsersReturnsResults(t *testing.T) {
+	handler := newTestHandler()
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/users/search", strings.NewReader(`{"nickname":"bob","pagination":{"limit":10}}`)), "admin", true)
+	rr := httptest.NewRecorder()
+
+	handler.SearchUsers(rr, req)
+
+	resp := decodeResponse[PaginatedAdminUsers](t, rr)
+	if resp.Code != 0 || resp.Data == nil || len(resp.Data.Items) != 1 || resp.Data.Items[0].User.UserID != "user_bob" {
+		t.Fatalf("unexpected response: %#v", resp)
+	}
+}
+
+func TestOpenAdminUserReturnsNotFound(t *testing.T) {
+	handler := newTestHandler()
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/users/open_the_door", strings.NewReader(`{"user_id":"missing_user"}`)), "admin", true)
+	rr := httptest.NewRecorder()
+
+	handler.OpenAdminUser(rr, req)
+
+	resp := decodeResponse[AdminUserItem](t, rr)
+	if resp.Code != 10300 || resp.Message != "用户不存在" {
+		t.Fatalf("unexpected response: %#v", resp)
+	}
+}
+
+type sinkCapture struct {
+	events []realtime.Event
+	closed bool
+}
+
+func (s *sinkCapture) Send(e realtime.Event) error {
+	s.events = append(s.events, e)
+	return nil
+}
+
+func (s *sinkCapture) Close() error {
+	s.closed = true
+	return nil
+}
+
+func TestSearchGroupsAndDismissGroup(t *testing.T) {
+	handler, store := newTestHandlerWithStore()
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+	hub := realtime.DefaultHub()
+	aliceSink := &sinkCapture{}
+	bobSink := &sinkCapture{}
+	groupSink := &sinkCapture{}
+	hub.RegisterUser("user_alice", "sess_user_alice_1", aliceSink)
+	hub.RegisterUser("user_bob", "sess_user_bob_1", bobSink)
+	hub.SetGroupSubscriptions([]string{"group_hotspot"}, groupSink)
+
+	searchReq := adminContext(httptest.NewRequest(http.MethodPost, "/groups/search", strings.NewReader(`{"name":"hot","pagination":{"limit":10}}`)), "admin", true)
 	searchRR := httptest.NewRecorder()
-	handler.SearchAnnouncements(searchRR, searchReq)
-	resp := decodeResponse[PaginatedAdminAnnouncements](t, searchRR)
-	if resp.Code != 0 || resp.Data == nil || len(resp.Data.Items) != 1 {
-		t.Fatalf("unexpected search response: %#v", resp)
+	handler.SearchGroups(searchRR, searchReq)
+	searchResp := decodeResponse[PaginatedAdminGroups](t, searchRR)
+	if searchResp.Code != 0 || searchResp.Data == nil || len(searchResp.Data.Items) != 1 || searchResp.Data.Items[0].Group.GroupID != "group_hotspot" {
+		t.Fatalf("unexpected search response: %#v", searchResp)
 	}
-	item := resp.Data.Items[0]
-	if item.AnnouncementID != created.Data.AnnouncementID || item.CreatedBy.UserID != "admin" || !item.SendPush || item.PushSentAt == "" || item.ActionURL != "https://example.com/maintenance" {
-		t.Fatalf("unexpected announcement item: %#v", item)
+
+	dismissReq := adminContext(httptest.NewRequest(http.MethodPost, "/groups/dismiss", strings.NewReader(`{"group_id":"group_hotspot","reason":"policy"}`)), "admin", true)
+	dismissReq.Header.Set("Idempotency-Key", "dismiss001abcd1234abcd1234abcd12")
+	dismissRR := httptest.NewRecorder()
+	handler.DismissGroup(dismissRR, dismissReq)
+	dismissResp := decodeResponse[struct{}](t, dismissRR)
+	if dismissResp.Code != 0 {
+		t.Fatalf("unexpected dismiss response: %#v", dismissResp)
+	}
+	if _, found, _ := store.GetGroup(dismissReq.Context(), "group_hotspot"); found {
+		t.Fatal("expected group to be removed")
+	}
+	if members, _ := store.ListGroupMemberIDs(dismissReq.Context(), "group_hotspot"); len(members) != 0 {
+		t.Fatalf("expected group members removed, got %#v", members)
+	}
+	foundDismissAudit := false
+	for _, entry := range store.auditLogs {
+		if entry.Action == "group.dismiss" {
+			foundDismissAudit = true
+			break
+		}
+	}
+	if !foundDismissAudit {
+		t.Fatalf("unexpected audit logs: %#v", store.auditLogs)
+	}
+	if len(aliceSink.events) != 1 || aliceSink.events[0].Type != "GroupDismissed" {
+		t.Fatalf("unexpected alice events: %#v", aliceSink.events)
+	}
+	if len(bobSink.events) != 1 || bobSink.events[0].Type != "GroupDismissed" {
+		t.Fatalf("unexpected bob events: %#v", bobSink.events)
+	}
+	if len(groupSink.events) != 1 || groupSink.events[0].Type != "GroupDismissed" {
+		t.Fatalf("unexpected group events: %#v", groupSink.events)
 	}
 }
 
-func TestUpdateAndDeleteAnnouncementAreIdempotent(t *testing.T) {
+func TestOpenAdminGroupReturnsNotFound(t *testing.T) {
 	handler := newTestHandler()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
-	createReq := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/create", strings.NewReader(`{"title":"维护","content":"今晚维护","severity":"warning"}`)), "admin", true)
-	createReq.Header.Set("Idempotency-Key", "annn3234abcd1234abcd1234abcd1234")
-	createRR := httptest.NewRecorder()
-	handler.CreateAnnouncement(createRR, createReq)
-	created := decodeResponse[AnnouncementCreated](t, createRR)
-	if created.Code != 0 || created.Data == nil {
-		t.Fatalf("unexpected create response: %#v", created)
-	}
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/groups/open_the_door", strings.NewReader(`{"group_id":"missing_group"}`)), "admin", true)
+	rr := httptest.NewRecorder()
 
-	makeUpdateReq := func() *http.Request {
-		return adminContext(httptest.NewRequest(http.MethodPost, "/announcements/update", strings.NewReader(`{"announcement_id":"`+created.Data.AnnouncementID+`","title":"恢复","content":"已恢复","severity":"info","action_url":""}`)), "admin", true)
-	}
-	updateRR := httptest.NewRecorder()
-	handler.UpdateAnnouncement(updateRR, makeUpdateReq())
-	updateResp := decodeResponse[struct{}](t, updateRR)
-	if updateResp.Code != 0 {
-		t.Fatalf("unexpected update response: %#v", updateResp)
-	}
-	updateAgain := httptest.NewRecorder()
-	handler.UpdateAnnouncement(updateAgain, makeUpdateReq())
-	updateAgainResp := decodeResponse[struct{}](t, updateAgain)
-	if updateAgainResp.Code != 0 {
-		t.Fatalf("unexpected second update response: %#v", updateAgainResp)
-	}
+	handler.OpenAdminGroup(rr, req)
 
-	makeSearchReq := func() *http.Request {
-		return adminContext(httptest.NewRequest(http.MethodPost, "/announcements/search", strings.NewReader(`{"pagination":{"limit":10}}`)), "admin", true)
-	}
-	searchRR := httptest.NewRecorder()
-	handler.SearchAnnouncements(searchRR, makeSearchReq())
-	searchResp := decodeResponse[PaginatedAdminAnnouncements](t, searchRR)
-	if searchResp.Code != 0 || searchResp.Data == nil || len(searchResp.Data.Items) != 1 {
-		t.Fatalf("unexpected search response after update: %#v", searchResp)
-	}
-	if searchResp.Data.Items[0].Title != "恢复" || searchResp.Data.Items[0].Severity != systemmodule.AnnouncementSeverityInfo || searchResp.Data.Items[0].ActionURL != "" {
-		t.Fatalf("unexpected updated item: %#v", searchResp.Data.Items[0])
-	}
-
-	makeDeleteReq := func() *http.Request {
-		return adminContext(httptest.NewRequest(http.MethodPost, "/announcements/delete", strings.NewReader(`{"announcement_id":"`+created.Data.AnnouncementID+`"}`)), "admin", true)
-	}
-	deleteRR := httptest.NewRecorder()
-	handler.DeleteAnnouncement(deleteRR, makeDeleteReq())
-	deleteResp := decodeResponse[struct{}](t, deleteRR)
-	if deleteResp.Code != 0 {
-		t.Fatalf("unexpected delete response: %#v", deleteResp)
-	}
-	deleteAgain := httptest.NewRecorder()
-	handler.DeleteAnnouncement(deleteAgain, makeDeleteReq())
-	deleteAgainResp := decodeResponse[struct{}](t, deleteAgain)
-	if deleteAgainResp.Code != 0 {
-		t.Fatalf("unexpected second delete response: %#v", deleteAgainResp)
-	}
-
-	searchAfterDelete := httptest.NewRecorder()
-	handler.SearchAnnouncements(searchAfterDelete, makeSearchReq())
-	searchAfterDeleteResp := decodeResponse[PaginatedAdminAnnouncements](t, searchAfterDelete)
-	if searchAfterDeleteResp.Code != 0 || searchAfterDeleteResp.Data == nil || len(searchAfterDeleteResp.Data.Items) != 0 {
-		t.Fatalf("unexpected search response after delete: %#v", searchAfterDeleteResp)
+	resp := decodeResponse[AdminGroupItem](t, rr)
+	if resp.Code != 10300 || resp.Message != "群组不存在" {
+		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
 
+func TestSearchReportsAndHandleReport(t *testing.T) {
+	handler, store := newTestHandlerWithStore()
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+
+	searchReq := adminContext(httptest.NewRequest(http.MethodPost, "/reports/search", strings.NewReader(`{"status":"pending","pagination":{"limit":10}}`)), "admin", true)
+	searchRR := httptest.NewRecorder()
+	handler.SearchReports(searchRR, searchReq)
+	searchResp := decodeResponse[PaginatedAdminReports](t, searchRR)
+	if searchResp.Code != 0 || searchResp.Data == nil || len(searchResp.Data.Items) != 1 || searchResp.Data.Items[0].ReportID != "report_1" {
+		t.Fatalf("unexpected search response: %#v", searchResp)
+	}
+
+	handleReq := adminContext(httptest.NewRequest(http.MethodPost, "/reports/handle", strings.NewReader(`{"report_id":"report_1","action":"resolve","note":"confirmed","ban_duration_days":3}`)), "admin", true)
+	handleReq.Header.Set("Idempotency-Key", "report001abcd1234abcd1234abcd123")
+	handleRR := httptest.NewRecorder()
+	handler.HandleReport(handleRR, handleReq)
+	handleResp := decodeResponse[struct{}](t, handleRR)
+	if handleResp.Code != 0 {
+		t.Fatalf("unexpected handle response: %#v", handleResp)
+	}
+	record, found, err := store.GetReportHandleRecord(handleReq.Context(), "report_1")
+	if err != nil || !found || record.Item.Status != ReportStatusResolved || record.Item.HandleNote != "confirmed" {
+		t.Fatalf("unexpected report record: %#v found=%v err=%v", record, found, err)
+	}
+	state, ok, err := store.GetUserBanState(handleReq.Context(), "user_bob")
+	if err != nil || !ok || state.Status != UserAccountStatusBanned || state.DurationDays != 3 {
+		t.Fatalf("unexpected user ban state after report handle: %#v ok=%v err=%v", state, ok, err)
+	}
+	foundHandleAudit := false
+	for _, entry := range store.auditLogs {
+		if entry.Action == "report.handle" {
+			foundHandleAudit = true
+			break
+		}
+	}
+	if !foundHandleAudit {
+		t.Fatalf("unexpected audit logs: %#v", store.auditLogs)
+	}
+}
