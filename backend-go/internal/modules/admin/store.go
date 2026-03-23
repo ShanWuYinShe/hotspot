@@ -13,6 +13,9 @@ import (
 const (
 	permissionRbacManage         = "admin.rbac.manage"
 	permissionAppConfigRead      = "admin.app_config.read"
+	permissionAppConfigWrite     = "admin.app_config.write"
+	permissionAuditRead          = "admin.audit.read"
+	permissionAuditReadIP        = "admin.audit.read_ip"
 	permissionTagsRead           = "admin.tags.read"
 	permissionTagsWrite          = "admin.tags.write"
 	permissionAnnouncementsRead  = "admin.announcements.read"
@@ -25,7 +28,7 @@ var permissionDictionary = []AdminPermissionItem{
 	{Key: "admin.reports.read", Description: "查看举报列表"},
 	{Key: "admin.reports.write", Description: "处理举报"},
 	{Key: permissionAppConfigRead, Description: "查看应用配置（AppConfig）"},
-	{Key: "admin.app_config.write", Description: "修改应用配置（AppConfig）"},
+	{Key: permissionAppConfigWrite, Description: "修改应用配置（AppConfig）"},
 	{Key: permissionTagsRead, Description: "查看标签列表"},
 	{Key: permissionTagsWrite, Description: "删除/屏蔽标签"},
 	{Key: permissionAnnouncementsRead, Description: "查看公告列表"},
@@ -34,8 +37,8 @@ var permissionDictionary = []AdminPermissionItem{
 	{Key: "admin.users.write", Description: "封禁/解封用户"},
 	{Key: "admin.groups.read", Description: "查看群组列表/详情"},
 	{Key: "admin.groups.write", Description: "解散群组"},
-	{Key: "admin.audit.read", Description: "查看审计日志（不含 ip_address 字段）"},
-	{Key: "admin.audit.read_ip", Description: "查看审计日志 IP 地址"},
+	{Key: permissionAuditRead, Description: "查看审计日志（不含 ip_address 字段）"},
+	{Key: permissionAuditReadIP, Description: "查看审计日志 IP 地址"},
 }
 
 type AdminGrantUpsert struct {
@@ -136,6 +139,32 @@ func decodeAdminCursor(raw string) (adminCursor, *httpx.APIError) {
 	}
 	if cursor.UserID == "" || cursor.GrantedAt.IsZero() {
 		return adminCursor{}, httpx.InvalidRequest("pagination.cursor 无效")
+	}
+	return cursor, nil
+}
+
+func encodeAuditCursor(cursor auditCursor) string {
+	blob, err := json.Marshal(cursor)
+	if err != nil {
+		return ""
+	}
+	return base64.RawURLEncoding.EncodeToString(blob)
+}
+
+func decodeAuditCursor(raw string) (auditCursor, *httpx.APIError) {
+	if strings.TrimSpace(raw) == "" {
+		return auditCursor{}, nil
+	}
+	blob, err := base64.RawURLEncoding.DecodeString(raw)
+	if err != nil {
+		return auditCursor{}, httpx.InvalidRequest("pagination.cursor 无效")
+	}
+	var cursor auditCursor
+	if err := json.Unmarshal(blob, &cursor); err != nil {
+		return auditCursor{}, httpx.InvalidRequest("pagination.cursor 无效")
+	}
+	if cursor.LogID == "" || cursor.CreatedAt.IsZero() {
+		return auditCursor{}, httpx.InvalidRequest("pagination.cursor 无效")
 	}
 	return cursor, nil
 }

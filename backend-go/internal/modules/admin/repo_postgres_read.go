@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -180,4 +181,59 @@ func (r *PostgresRepository) listAdminRecords(ctx context.Context, queryable per
 		}
 	}
 	return items, nil
+}
+
+func getAuditEntryByRow(row persistence.Row) (AuditLogEntry, error) {
+	var (
+		entry       AuditLogEntry
+		action      string
+		targetType  string
+		detailsJSON string
+	)
+	if err := row.Scan(&entry.LogID, &action, &entry.Operator.UserID, &entry.Operator.Nickname, &entry.Operator.AvatarURL, &targetType, &entry.TargetID, &entry.TargetName, &detailsJSON, &entry.IPLocation, &entry.IPAddress, &entry.DeviceSummary, &entry.CreatedAt); err != nil {
+		return AuditLogEntry{}, err
+	}
+	entry.Action = AuditAction(action)
+	entry.TargetType = AuditTargetType(targetType)
+	if err := json.Unmarshal([]byte(detailsJSON), &entry.Details); err != nil {
+		return AuditLogEntry{}, err
+	}
+	return entry, nil
+}
+
+func (r *PostgresRepository) getAuditEntryByID(ctx context.Context, queryable persistence.QueryableDB, logID string) (AuditLogEntry, bool, error) {
+	entry, err := getAuditEntryByRow(queryable.QueryRow(ctx, queryAuditByID, logID))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return AuditLogEntry{}, false, nil
+		}
+		return AuditLogEntry{}, false, err
+	}
+	return entry, true, nil
+}
+
+func scanAuditEntry(rows persistence.Rows) (AuditLogEntry, error) {
+	return getAuditEntryByRow(rows)
+}
+
+func matchAuditFilter(entry AuditLogEntry, filter AuditLogFilter) bool {
+	if filter.Action != "" && entry.Action != filter.Action {
+		return false
+	}
+	if filter.OperatorID != "" && entry.Operator.UserID != filter.OperatorID {
+		return false
+	}
+	if filter.TargetType != "" && entry.TargetType != filter.TargetType {
+		return false
+	}
+	if filter.TargetID != "" && entry.TargetID != filter.TargetID {
+		return false
+	}
+	if filter.StartTime != nil && entry.CreatedAt.Before(*filter.StartTime) {
+		return false
+	}
+	if filter.EndTime != nil && entry.CreatedAt.After(*filter.EndTime) {
+		return false
+	}
+	return true
 }

@@ -55,3 +55,15 @@ func (r *PersistenceRepository) GrantAdmin(ctx context.Context, grant AdminGrant
 func (r *PersistenceRepository) RevokeAdmin(ctx context.Context, userID string) error {
 	return r.impl.RevokeAdmin(ctx, userID)
 }
+
+func (r *PersistenceRepository) ListAuditLogs(ctx context.Context, filter AuditLogFilter, includeIPAddress bool) (auditLogPage, error) {
+	return r.impl.ListAuditLogs(ctx, filter, includeIPAddress)
+}
+
+func (r *PersistenceRepository) GetAuditLog(ctx context.Context, logID string, includeIPAddress bool) (AuditLogItem, bool, error) {
+	return r.impl.GetAuditLog(ctx, logID, includeIPAddress)
+}
+
+func (r *PersistenceRepository) AppendAuditLog(ctx context.Context, entry AuditLogEntry) error {
+	return r.impl.AppendAuditLog(ctx, entry)
+}

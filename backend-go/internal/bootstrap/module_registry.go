@@ -16,14 +16,16 @@ import (
 	"hotspot/backend-go/internal/modules/share"
 	"hotspot/backend-go/internal/modules/system"
 	"hotspot/backend-go/internal/modules/users"
+	"hotspot/backend-go/internal/platform/appconfig"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/modulekit"
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
 func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.Module {
+	sharedAppConfig := appconfig.NewPersistenceSource(cfg, factory)
 	return []modulekit.Module{
-		admin.NewModule(cfg, factory),
+		admin.NewModule(factory, sharedAppConfig),
 		auth.NewModule(cfg, factory),
 		feed.NewModule(),
 		groupmessages.NewModule(factory),
@@ -32,11 +34,11 @@ func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.M
 		media.NewModule(),
 		moments.NewModule(factory),
 		notifications.NewModule(factory),
-		privatechats.NewModule(cfg, factory),
+		privatechats.NewModule(factory, sharedAppConfig),
 		reports.NewModule(factory),
 		search.NewModule(),
 		share.NewModule(factory),
-		system.NewModule(cfg),
+		system.NewModule(sharedAppConfig),
 		users.NewModule(factory),
 	}
 }

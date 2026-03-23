@@ -3,30 +3,24 @@ package admin
 import (
 	"context"
 	"errors"
+	"net"
+	"net/http"
 	"strings"
 	"time"
 
 	systemmodule "hotspot/backend-go/internal/modules/system"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
+	"hotspot/backend-go/internal/platform/observability"
 )
 
 type Service struct {
-	repo            Repository
-	provider        Provider
-	moderationStore ModerationStore
-	pushService     announcementPushService
+	repo     Repository
+	provider Provider
 }
 
-type announcementPushService interface {
-	PushSystemAnnouncement(userID, announcementID, severity string)
-}
-
-func NewService(repo Repository, provider Provider, moderationStore ModerationStore, pushService announcementPushService) *Service {
-	if moderationStore == nil {
-		moderationStore = NewInMemoryModerationStore()
-	}
-	return &Service{repo: repo, provider: provider, moderationStore: moderationStore, pushService: pushService}
+func NewService(repo Repository, provider Provider) *Service {
+	return &Service{repo: repo, provider: provider}
 }
 
 func (s *Service) actorFromContext(ctx context.Context) (AdminActor, bool, error) {
@@ -78,7 +72,8 @@ func (s *Service) ListRoles(ctx context.Context) (AdminRoleList, *httpx.APIError
 }
 
 func (s *Service) CreateRole(ctx context.Context, req AdminRbacRoleCreateRequest) (AdminRoleItem, *httpx.APIError, error) {
-	if _, apiErr, err := s.requirePermission(ctx, permissionRbacManage); apiErr != nil || err != nil {
+	actor, apiErr, err := s.requirePermission(ctx, permissionRbacManage)
+	if apiErr != nil || err != nil {
 		return AdminRoleItem{}, apiErr, err
 	}
 	if strings.TrimSpace(req.Name) == "" {
@@ -91,11 +86,23 @@ func (s *Service) CreateRole(ctx context.Context, req AdminRbacRoleCreateRequest
 		}
 		return AdminRoleItem{}, nil, err
 	}
+	_ = s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
+		Action:     AuditActionRoleCreate,
+		TargetType: AuditTargetTypeRole,
+		TargetID:   item.RoleID,
+		TargetName: item.Name,
+		Details: AuditDetails{
+			"type":        string(AuditActionRoleCreate),
+			"role_name":   item.Name,
+			"permissions": item.Permissions,
+		},
+	}))
 	return item, nil, nil
 }
 
 func (s *Service) UpdateRole(ctx context.Context, req AdminRbacRoleUpdateRequest) (*httpx.APIError, error) {
-	if _, apiErr, err := s.requirePermission(ctx, permissionRbacManage); apiErr != nil || err != nil {
+	actor, apiErr, err := s.requirePermission(ctx, permissionRbacManage)
+	if apiErr != nil || err != nil {
 		return apiErr, err
 	}
 	if req.RoleID == "" {
@@ -104,21 +111,51 @@ func (s *Service) UpdateRole(ctx context.Context, req AdminRbacRoleUpdateRequest
 	if req.Name != nil && strings.TrimSpace(*req.Name) == "" {
 		return httpx.InvalidRequest("参数错误"), nil
 	}
+	before, found, err := s.findRole(ctx, req.RoleID)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return &httpx.APIError{Code: 10300, Message: "角色不存在"}, nil
+	}
 	if err := s.repo.UpdateRole(ctx, req); err != nil {
 		if apiErr, ok := err.(*httpx.APIError); ok {
 			return apiErr, nil
 		}
 		return nil, err
 	}
+	after, _, err := s.findRole(ctx, req.RoleID)
+	if err == nil {
+		_ = s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
+			Action:     AuditActionRoleUpdate,
+			TargetType: AuditTargetTypeRole,
+			TargetID:   after.RoleID,
+			TargetName: after.Name,
+			Details: AuditDetails{
+				"type":                string(AuditActionRoleUpdate),
+				"role_name":           after.Name,
+				"added_permissions":   diffStrings(after.Permissions, before.Permissions),
+				"removed_permissions": diffStrings(before.Permissions, after.Permissions),
+			},
+		}))
+	}
 	return nil, nil
 }
 
 func (s *Service) DeleteRole(ctx context.Context, roleID string) (*httpx.APIError, error) {
-	if _, apiErr, err := s.requirePermission(ctx, permissionRbacManage); apiErr != nil || err != nil {
+	actor, apiErr, err := s.requirePermission(ctx, permissionRbacManage)
+	if apiErr != nil || err != nil {
 		return apiErr, err
 	}
 	if roleID == "" {
 		return httpx.InvalidRequest("参数错误"), nil
+	}
+	before, found, err := s.findRole(ctx, roleID)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return &httpx.APIError{Code: 10300, Message: "角色不存在"}, nil
 	}
 	if err := s.repo.DeleteRole(ctx, roleID); err != nil {
 		if apiErr, ok := err.(*httpx.APIError); ok {
@@ -126,6 +163,16 @@ func (s *Service) DeleteRole(ctx context.Context, roleID string) (*httpx.APIErro
 		}
 		return nil, err
 	}
+	_ = s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
+		Action:     AuditActionRoleDelete,
+		TargetType: AuditTargetTypeRole,
+		TargetID:   before.RoleID,
+		TargetName: before.Name,
+		Details: AuditDetails{
+			"type":      string(AuditActionRoleDelete),
+			"role_name": before.Name,
+		},
+	}))
 	return nil, nil
 }
 
@@ -144,12 +191,30 @@ func (s *Service) SetRolePermissions(ctx context.Context, req AdminRbacRoleSetPe
 	if containsString(permissionKeys, wildcardPermission) && !actor.IsSuperAdmin() {
 		return &httpx.APIError{Code: 10200, Message: "系统管理员权限不足: admin.rbac.manage"}, nil
 	}
+	before, found, err := s.findRole(ctx, req.RoleID)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return &httpx.APIError{Code: 10300, Message: "角色不存在"}, nil
+	}
 	if err := s.repo.SetRolePermissions(ctx, req.RoleID, permissionKeys); err != nil {
 		if apiErr, ok := err.(*httpx.APIError); ok {
 			return apiErr, nil
 		}
 		return nil, err
 	}
+	_ = s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
+		Action:     AuditActionRoleSetPermissions,
+		TargetType: AuditTargetTypeRole,
+		TargetID:   before.RoleID,
+		TargetName: before.Name,
+		Details: AuditDetails{
+			"type":        string(AuditActionRoleSetPermissions),
+			"role_name":   before.Name,
+			"permissions": permissionKeys,
+		},
+	}))
 	return nil, nil
 }
 
@@ -199,6 +264,18 @@ func (s *Service) GrantAdmin(ctx context.Context, req AdminRbacGrantAdminRequest
 		}
 		return nil, err
 	}
+	_ = s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
+		Action:     AuditActionAdminGrant,
+		TargetType: AuditTargetTypeAdmin,
+		TargetID:   req.UserID,
+		TargetName: req.UserID,
+		Details: AuditDetails{
+			"type":                  string(AuditActionAdminGrant),
+			"target_user_id":        req.UserID,
+			"role_ids":              roleIDs,
+			"grant_all_permissions": req.GrantAllPermissions,
+		},
+	}))
 	return nil, nil
 }
 
@@ -226,7 +303,58 @@ func (s *Service) RevokeAdmin(ctx context.Context, userID string) (*httpx.APIErr
 		}
 		return nil, err
 	}
+	_ = s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
+		Action:     AuditActionAdminRevoke,
+		TargetType: AuditTargetTypeAdmin,
+		TargetID:   userID,
+		TargetName: userID,
+		Details: AuditDetails{
+			"type":           string(AuditActionAdminRevoke),
+			"target_user_id": userID,
+		},
+	}))
 	return nil, nil
+}
+
+func (s *Service) ListAuditLogs(ctx context.Context, req AuditLogListRequest) (PaginatedAuditLogs, *httpx.APIError, error) {
+	actor, apiErr, err := s.requirePermission(ctx, permissionAuditRead)
+	if apiErr != nil || err != nil {
+		return PaginatedAuditLogs{}, apiErr, err
+	}
+	filter, apiErr := validateAuditFilter(req)
+	if apiErr != nil {
+		return PaginatedAuditLogs{}, apiErr, nil
+	}
+	page, err := s.repo.ListAuditLogs(ctx, filter, actor.HasPermission(permissionAuditReadIP))
+	if err != nil {
+		if apiErr, ok := err.(*httpx.APIError); ok {
+			return PaginatedAuditLogs{}, apiErr, nil
+		}
+		return PaginatedAuditLogs{}, nil, err
+	}
+	resp := PaginatedAuditLogs{Items: page.Items}
+	if page.Next != nil {
+		resp.NextCursor = encodeAuditCursor(*page.Next)
+	}
+	return resp, nil, nil
+}
+
+func (s *Service) GetAuditLog(ctx context.Context, logID string) (AuditLogItem, *httpx.APIError, error) {
+	actor, apiErr, err := s.requirePermission(ctx, permissionAuditRead)
+	if apiErr != nil || err != nil {
+		return AuditLogItem{}, apiErr, err
+	}
+	if strings.TrimSpace(logID) == "" {
+		return AuditLogItem{}, httpx.InvalidRequest("参数错误"), nil
+	}
+	item, found, err := s.repo.GetAuditLog(ctx, logID, actor.HasPermission(permissionAuditReadIP))
+	if err != nil {
+		return AuditLogItem{}, nil, err
+	}
+	if !found {
+		return AuditLogItem{}, &httpx.APIError{Code: 10300, Message: "审计日志不存在"}, nil
+	}
+	return item, nil, nil
 }
 
 func (s *Service) GetAppConfig(ctx context.Context) (AppConfig, *httpx.APIError, error) {
@@ -238,6 +366,319 @@ func (s *Service) GetAppConfig(ctx context.Context) (AppConfig, *httpx.APIError,
 		return AppConfig{}, nil, err
 	}
 	return cfg, nil, nil
+}
+
+func (s *Service) UpdateUpload(ctx context.Context, req UpdateUploadConfigRequest) (*httpx.APIError, error) {
+	actor, apiErr, err := s.requirePermission(ctx, permissionAppConfigWrite)
+	if apiErr != nil || err != nil {
+		return apiErr, err
+	}
+	before, err := s.provider.GetAppConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+	updated, apiErr, err := s.provider.UpdateAppConfig(ctx, actor.UserID, func(cfg AppConfig) (AppConfig, *httpx.APIError) {
+		if req.Upload.ImageMaxSize != nil {
+			if *req.Upload.ImageMaxSize <= 0 {
+				return AppConfig{}, httpx.InvalidRequest("参数错误")
+			}
+			cfg.Upload.ImageMaxSize = *req.Upload.ImageMaxSize
+		}
+		if req.Upload.VideoMaxSize != nil {
+			if *req.Upload.VideoMaxSize <= 0 {
+				return AppConfig{}, httpx.InvalidRequest("参数错误")
+			}
+			cfg.Upload.VideoMaxSize = *req.Upload.VideoMaxSize
+		}
+		if req.Upload.AudioMaxSize != nil {
+			if *req.Upload.AudioMaxSize <= 0 {
+				return AppConfig{}, httpx.InvalidRequest("参数错误")
+			}
+			cfg.Upload.AudioMaxSize = *req.Upload.AudioMaxSize
+		}
+		if req.Upload.FileMaxSize != nil {
+			if *req.Upload.FileMaxSize <= 0 {
+				return AppConfig{}, httpx.InvalidRequest("参数错误")
+			}
+			cfg.Upload.FileMaxSize = *req.Upload.FileMaxSize
+		}
+		if req.Upload.AllowedImageTypes != nil {
+			cfg.Upload.AllowedImageTypes = sortAndUniqueStrings(req.Upload.AllowedImageTypes)
+		}
+		if req.Upload.AllowedVideoTypes != nil {
+			cfg.Upload.AllowedVideoTypes = sortAndUniqueStrings(req.Upload.AllowedVideoTypes)
+		}
+		return cfg, nil
+	})
+	if apiErr != nil || err != nil {
+		return apiErr, err
+	}
+	return nil, s.appendConfigAudit(ctx, actor, "upload", before.Upload, updated.Upload)
+}
+
+func (s *Service) UpdateDefaults(ctx context.Context, req UpdateDefaultsRequest) (*httpx.APIError, error) {
+	actor, apiErr, err := s.requirePermission(ctx, permissionAppConfigWrite)
+	if apiErr != nil || err != nil {
+		return apiErr, err
+	}
+	before, err := s.provider.GetAppConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+	updated, apiErr, err := s.provider.UpdateAppConfig(ctx, actor.UserID, func(cfg AppConfig) (AppConfig, *httpx.APIError) {
+		if req.DefaultLocation != nil {
+			if req.DefaultLocation.Point != nil {
+				cfg.Defaults.DefaultLocation.Point = *req.DefaultLocation.Point
+			}
+			if req.DefaultLocation.LocationName != nil {
+				if strings.TrimSpace(*req.DefaultLocation.LocationName) == "" {
+					return AppConfig{}, httpx.InvalidRequest("参数错误")
+				}
+				cfg.Defaults.DefaultLocation.LocationName = strings.TrimSpace(*req.DefaultLocation.LocationName)
+			}
+		}
+		if req.DefaultGroupAvatar != nil {
+			cfg.Defaults.DefaultGroupAvatar = strings.TrimSpace(*req.DefaultGroupAvatar)
+		}
+		if req.DefaultUserAvatar != nil {
+			cfg.Defaults.DefaultUserAvatar = strings.TrimSpace(*req.DefaultUserAvatar)
+		}
+		if req.DefaultGroupSettings != nil {
+			if req.DefaultGroupSettings.JoinMethod != nil {
+				joinMethod := strings.TrimSpace(string(*req.DefaultGroupSettings.JoinMethod))
+				if joinMethod == "" {
+					return AppConfig{}, httpx.InvalidRequest("参数错误")
+				}
+				cfg.Defaults.DefaultGroupSettings.JoinMethod = *req.DefaultGroupSettings.JoinMethod
+			}
+			if req.DefaultGroupSettings.IsSearchable != nil {
+				cfg.Defaults.DefaultGroupSettings.IsSearchable = *req.DefaultGroupSettings.IsSearchable
+			}
+			if req.DefaultGroupSettings.MaxMembers != nil {
+				if *req.DefaultGroupSettings.MaxMembers <= 0 {
+					return AppConfig{}, httpx.InvalidRequest("参数错误")
+				}
+				cfg.Defaults.DefaultGroupSettings.MaxMembers = *req.DefaultGroupSettings.MaxMembers
+			}
+			if req.DefaultGroupSettings.Location != nil {
+				if req.DefaultGroupSettings.Location.Point != nil {
+					cfg.Defaults.DefaultGroupSettings.Location.Point = *req.DefaultGroupSettings.Location.Point
+				}
+				if req.DefaultGroupSettings.Location.LocationName != nil {
+					if strings.TrimSpace(*req.DefaultGroupSettings.Location.LocationName) == "" {
+						return AppConfig{}, httpx.InvalidRequest("参数错误")
+					}
+					cfg.Defaults.DefaultGroupSettings.Location.LocationName = strings.TrimSpace(*req.DefaultGroupSettings.Location.LocationName)
+				}
+			}
+		}
+		return cfg, nil
+	})
+	if apiErr != nil || err != nil {
+		return apiErr, err
+	}
+	return nil, s.appendConfigAudit(ctx, actor, "defaults", before.Defaults, updated.Defaults)
+}
+
+func (s *Service) UpdateRateLimits(ctx context.Context, req UpdateRateLimitsRequest) (*httpx.APIError, error) {
+	actor, apiErr, err := s.requirePermission(ctx, permissionAppConfigWrite)
+	if apiErr != nil || err != nil {
+		return apiErr, err
+	}
+	before, err := s.provider.GetAppConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+	updated, apiErr, err := s.provider.UpdateAppConfig(ctx, actor.UserID, func(cfg AppConfig) (AppConfig, *httpx.APIError) {
+		if err := applyPositiveIntPatch(&cfg.RateLimits.GlobalPerHour, req.RateLimits.GlobalPerHour); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.RateLimits.UserPerHour, req.RateLimits.UserPerHour); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.RateLimits.AuthRegisterPer10Minutes, req.RateLimits.AuthRegisterPer10Minutes); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.RateLimits.AuthLoginPer10Minutes, req.RateLimits.AuthLoginPer10Minutes); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.RateLimits.AuthGuestPer10Minutes, req.RateLimits.AuthGuestPer10Minutes); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.RateLimits.AuthRefreshPer10Minutes, req.RateLimits.AuthRefreshPer10Minutes); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.RateLimits.AuthResetPer10Minutes, req.RateLimits.AuthResetPer10Minutes); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.RateLimits.SearchPerMinute, req.RateLimits.SearchPerMinute); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.RateLimits.WritePerMinute, req.RateLimits.WritePerMinute); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.RateLimits.MomentsCreatePerMinute, req.RateLimits.MomentsCreatePerMinute); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.RateLimits.CommentsCreatePerMinute, req.RateLimits.CommentsCreatePerMinute); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.RateLimits.ReportsCreatePerHour, req.RateLimits.ReportsCreatePerHour); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.RateLimits.UploadPresignPerHour, req.RateLimits.UploadPresignPerHour); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.RateLimits.WSSubscribePerSecond, req.RateLimits.WSSubscribePerSecond); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.RateLimits.AdminReadPerMinute, req.RateLimits.AdminReadPerMinute); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.RateLimits.AdminWritePerMinute, req.RateLimits.AdminWritePerMinute); err != nil {
+			return AppConfig{}, err
+		}
+		return cfg, nil
+	})
+	if apiErr != nil || err != nil {
+		return apiErr, err
+	}
+	return nil, s.appendConfigAudit(ctx, actor, "rate_limits", before.RateLimits, updated.RateLimits)
+}
+
+func (s *Service) UpdateResponseDefaults(ctx context.Context, req UpdateResponseDefaultsRequest) (*httpx.APIError, error) {
+	actor, apiErr, err := s.requirePermission(ctx, permissionAppConfigWrite)
+	if apiErr != nil || err != nil {
+		return apiErr, err
+	}
+	before, err := s.provider.GetAppConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+	updated, apiErr, err := s.provider.UpdateAppConfig(ctx, actor.UserID, func(cfg AppConfig) (AppConfig, *httpx.APIError) {
+		if err := applyPositiveIntPatch(&cfg.ResponseDefaults.SearchSuggestCount, req.ResponseDefaults.SearchSuggestCount); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.ResponseDefaults.TrendingTagsCount, req.ResponseDefaults.TrendingTagsCount); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.ResponseDefaults.HotMomentsCount, req.ResponseDefaults.HotMomentsCount); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.ResponseDefaults.ChatRecentMessagesCount, req.ResponseDefaults.ChatRecentMessagesCount); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.ResponseDefaults.GroupAnnouncementsCount, req.ResponseDefaults.GroupAnnouncementsCount); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.ResponseDefaults.SystemAnnouncementsCount, req.ResponseDefaults.SystemAnnouncementsCount); err != nil {
+			return AppConfig{}, err
+		}
+		return cfg, nil
+	})
+	if apiErr != nil || err != nil {
+		return apiErr, err
+	}
+	return nil, s.appendConfigAudit(ctx, actor, "response_defaults", before.ResponseDefaults, updated.ResponseDefaults)
+}
+
+func (s *Service) UpdateFeatures(ctx context.Context, req UpdateFeaturesRequest) (*httpx.APIError, error) {
+	actor, apiErr, err := s.requirePermission(ctx, permissionAppConfigWrite)
+	if apiErr != nil || err != nil {
+		return apiErr, err
+	}
+	before, err := s.provider.GetAppConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+	updated, apiErr, err := s.provider.UpdateAppConfig(ctx, actor.UserID, func(cfg AppConfig) (AppConfig, *httpx.APIError) {
+		if req.EnablePublicRegistration != nil {
+			cfg.Features.EnablePublicRegistration = *req.EnablePublicRegistration
+		}
+		if req.EnableGuestLogin != nil {
+			cfg.Features.EnableGuestLogin = *req.EnableGuestLogin
+		}
+		if req.EnableMoments != nil {
+			cfg.Features.EnableMoments = *req.EnableMoments
+		}
+		if req.EnableNearbyPeople != nil {
+			cfg.Features.EnableNearbyPeople = *req.EnableNearbyPeople
+		}
+		return cfg, nil
+	})
+	if apiErr != nil || err != nil {
+		return apiErr, err
+	}
+	return nil, s.appendConfigAudit(ctx, actor, "features", before.Features, updated.Features)
+}
+
+func (s *Service) UpdateLimits(ctx context.Context, req UpdateLimitsRequest) (*httpx.APIError, error) {
+	actor, apiErr, err := s.requirePermission(ctx, permissionAppConfigWrite)
+	if apiErr != nil || err != nil {
+		return apiErr, err
+	}
+	before, err := s.provider.GetAppConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+	updated, apiErr, err := s.provider.UpdateAppConfig(ctx, actor.UserID, func(cfg AppConfig) (AppConfig, *httpx.APIError) {
+		if err := applyPositiveIntPatch(&cfg.Limits.MaxGroupMembers, req.Limits.MaxGroupMembers); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.Limits.MaxMomentTags, req.Limits.MaxMomentTags); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.Limits.MaxMomentImages, req.Limits.MaxMomentImages); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.Limits.MomentDescriptionMaxLength, req.Limits.MomentDescriptionMaxLength); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.Limits.CommentMaxLength, req.Limits.CommentMaxLength); err != nil {
+			return AppConfig{}, err
+		}
+		if err := applyPositiveIntPatch(&cfg.Limits.SearchRadiusMax, req.Limits.SearchRadiusMax); err != nil {
+			return AppConfig{}, err
+		}
+		return cfg, nil
+	})
+	if apiErr != nil || err != nil {
+		return apiErr, err
+	}
+	return nil, s.appendConfigAudit(ctx, actor, "limits", before.Limits, updated.Limits)
+}
+
+func (s *Service) UpdateContact(ctx context.Context, req UpdateContactRequest) (*httpx.APIError, error) {
+	actor, apiErr, err := s.requirePermission(ctx, permissionAppConfigWrite)
+	if apiErr != nil || err != nil {
+		return apiErr, err
+	}
+	before, err := s.provider.GetAppConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+	updated, apiErr, err := s.provider.UpdateAppConfig(ctx, actor.UserID, func(cfg AppConfig) (AppConfig, *httpx.APIError) {
+		if req.SupportEmail != nil {
+			if !strings.Contains(strings.TrimSpace(*req.SupportEmail), "@") {
+				return AppConfig{}, httpx.InvalidRequest("参数错误")
+			}
+			cfg.Contact.SupportEmail = strings.TrimSpace(*req.SupportEmail)
+		}
+		if req.PrivacyPolicyURL != nil {
+			cfg.Contact.PrivacyPolicyURL = strings.TrimSpace(*req.PrivacyPolicyURL)
+		}
+		if req.TermsOfServiceURL != nil {
+			cfg.Contact.TermsOfServiceURL = strings.TrimSpace(*req.TermsOfServiceURL)
+		}
+		if req.OfficialWebsite != nil {
+			cfg.Contact.OfficialWebsite = strings.TrimSpace(*req.OfficialWebsite)
+		}
+		return cfg, nil
+	})
+	if apiErr != nil || err != nil {
+		return apiErr, err
+	}
+	return nil, s.appendConfigAudit(ctx, actor, "contact", before.Contact, updated.Contact)
 }
 
 func (s *Service) SearchTags(ctx context.Context, req AdminTagSearchRequest) (PaginatedAdminTags, *httpx.APIError, error) {
@@ -393,4 +834,157 @@ func (s *Service) requirePermission(ctx context.Context, permission string) (Adm
 		return AdminActor{}, &httpx.APIError{Code: 10200, Message: "系统管理员权限不足: " + permission}, nil
 	}
 	return actor, nil, nil
+}
+
+func (s *Service) findRole(ctx context.Context, roleID string) (AdminRoleItem, bool, error) {
+	roles, err := s.repo.ListRoles(ctx)
+	if err != nil {
+		return AdminRoleItem{}, false, err
+	}
+	for _, role := range roles {
+		if role.RoleID == roleID {
+			return role, true, nil
+		}
+	}
+	return AdminRoleItem{}, false, nil
+}
+
+func validateAuditFilter(req AuditLogListRequest) (AuditLogFilter, *httpx.APIError) {
+	filter := AuditLogFilter{Action: req.Action, OperatorID: strings.TrimSpace(req.OperatorID), TargetType: req.TargetType, TargetID: strings.TrimSpace(req.TargetID)}
+	if req.Pagination != nil {
+		filter.Pagination = *req.Pagination
+	}
+	if strings.TrimSpace(req.StartTime) != "" {
+		parsed, err := time.Parse(time.RFC3339, strings.TrimSpace(req.StartTime))
+		if err != nil {
+			return AuditLogFilter{}, httpx.InvalidRequest("参数错误")
+		}
+		filter.StartTime = &parsed
+	}
+	if strings.TrimSpace(req.EndTime) != "" {
+		parsed, err := time.Parse(time.RFC3339, strings.TrimSpace(req.EndTime))
+		if err != nil {
+			return AuditLogFilter{}, httpx.InvalidRequest("参数错误")
+		}
+		filter.EndTime = &parsed
+	}
+	if filter.StartTime != nil && filter.EndTime != nil && filter.StartTime.After(*filter.EndTime) {
+		return AuditLogFilter{}, httpx.InvalidRequest("参数错误")
+	}
+	if _, apiErr := decodeAuditCursor(filter.Pagination.Cursor); apiErr != nil {
+		return AuditLogFilter{}, apiErr
+	}
+	return filter, nil
+}
+
+func applyPositiveIntPatch(target *int, patch *int) *httpx.APIError {
+	if patch == nil {
+		return nil
+	}
+	if *patch <= 0 {
+		return httpx.InvalidRequest("参数错误")
+	}
+	*target = *patch
+	return nil
+}
+
+func newAuditEntry(ctx context.Context, actor AdminActor, entry AuditLogEntry) AuditLogEntry {
+	if entry.LogID == "" {
+		entry.LogID = "audit_" + observability.RequestIDFromContext(ctx)
+	}
+	if entry.Operator.UserID == "" {
+		entry.Operator = UserInfo{UserID: actor.UserID, Nickname: actor.UserID}
+	}
+	if entry.CreatedAt.IsZero() {
+		entry.CreatedAt = time.Now().UTC()
+	}
+	if entry.IPAddress == "" {
+		entry.IPAddress = requestIPFromContext(ctx)
+	}
+	if entry.DeviceSummary == "" {
+		entry.DeviceSummary = deviceSummaryFromContext(ctx)
+	}
+	if entry.IPLocation == "" && entry.IPAddress != "" {
+		entry.IPLocation = "unknown"
+	}
+	return entry
+}
+
+func requestIPFromContext(ctx context.Context) string {
+	req, _ := requestFromContext(ctx)
+	if req == nil {
+		return ""
+	}
+	if ip := strings.TrimSpace(req.Header.Get("CF-Connecting-IP")); ip != "" {
+		return ip
+	}
+	if ip := strings.TrimSpace(req.Header.Get("X-Real-IP")); ip != "" {
+		return ip
+	}
+	if forwarded := strings.TrimSpace(req.Header.Get("X-Forwarded-For")); forwarded != "" {
+		parts := strings.Split(forwarded, ",")
+		if len(parts) > 0 {
+			return strings.TrimSpace(parts[0])
+		}
+	}
+	host, _, err := net.SplitHostPort(strings.TrimSpace(req.RemoteAddr))
+	if err == nil {
+		return host
+	}
+	return strings.TrimSpace(req.RemoteAddr)
+}
+
+func deviceSummaryFromContext(ctx context.Context) string {
+	req, _ := requestFromContext(ctx)
+	if req == nil {
+		return ""
+	}
+	ua := strings.TrimSpace(req.Header.Get("User-Agent"))
+	if ua == "" {
+		return ""
+	}
+	if len(ua) > 120 {
+		return ua[:120]
+	}
+	return ua
+}
+
+type requestContextKey struct{}
+
+func withRequest(ctx context.Context, req *http.Request) context.Context {
+	return context.WithValue(ctx, requestContextKey{}, req)
+}
+
+func requestFromContext(ctx context.Context) (*http.Request, bool) {
+	req, ok := ctx.Value(requestContextKey{}).(*http.Request)
+	return req, ok
+}
+
+func (s *Service) appendConfigAudit(ctx context.Context, actor AdminActor, configKey string, oldValue, newValue any) error {
+	return s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
+		Action:     AuditActionConfigUpdate,
+		TargetType: AuditTargetTypeConfig,
+		TargetID:   configKey,
+		TargetName: configKey,
+		Details: AuditDetails{
+			"type":       string(AuditActionConfigUpdate),
+			"config_key": configKey,
+			"old_value":  oldValue,
+			"new_value":  newValue,
+		},
+	}))
+}
+
+func diffStrings(current, previous []string) []string {
+	set := make(map[string]struct{}, len(previous))
+	for _, item := range previous {
+		set[item] = struct{}{}
+	}
+	result := make([]string, 0)
+	for _, item := range current {
+		if _, ok := set[item]; !ok {
+			result = append(result, item)
+		}
+	}
+	return result
 }

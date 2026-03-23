@@ -7,7 +7,6 @@ import (
 	systemmodule "hotspot/backend-go/internal/modules/system"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
-	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/ratelimit"
@@ -16,9 +15,9 @@ import (
 
 type Module struct{ handler *Handler }
 
-func NewModule(cfg config.Config, factory *persistence.Factory) *Module {
+func NewModule(factory *persistence.Factory, source appconfig.MutableSource) *Module {
 	repo := NewPersistenceRepository(factory)
-	provider := NewAppConfigProvider(appconfig.NewStaticSource(cfg))
+	provider := NewAppConfigProvider(source)
 	systemRepo := systemmodule.NewPersistenceRepository(factory)
 	moderationStore := NewPersistenceModerationStore(factory, systemRepo)
 	pushService := notifications.NewServiceWithRepo(notifications.NewPersistenceRepository(factory))

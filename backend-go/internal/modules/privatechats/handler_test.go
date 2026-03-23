@@ -131,6 +131,65 @@ func TestPrivateChatsHandlerReturns10600OnServiceError(t *testing.T) {
 	assertPrivateChatCode(t, openRR, 10600)
 }
 
+func TestOpenTheDoorUsesSharedResponseDefaults(t *testing.T) {
+	source := appconfig.NewStaticSource(config.Load())
+	_, err := source.Update(context.Background(), func(current appconfig.AppConfig) appconfig.AppConfig {
+		current.ResponseDefaults.ChatRecentMessagesCount = 1
+		return current
+	})
+	if err != nil {
+		t.Fatalf("update shared source: %v", err)
+	}
+
+	messageRepo := private_messages.NewInMemoryRepository()
+	messageRuntime := private_messages.NewRuntimeWithRepo(messageRepo)
+	chatHandler := NewHandler(NewServiceWithRepos(NewInMemoryRepository(), messageRuntime.ReadService()), source)
+	messageHandler := messageRuntime.Handler()
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+
+	for _, body := range []string{
+		`{"target_user_id":"user_bob","type":"text","content":"one"}`,
+		`{"target_user_id":"user_bob","type":"text","content":"two"}`,
+	} {
+		sendReq := httptest.NewRequest(http.MethodPost, "/send", strings.NewReader(body))
+		sendReq = sendReq.WithContext(ctx)
+		sendReq.Header.Set("Idempotency-Key", "shared1234abcd1234abcd1234abcd1234")
+		if strings.Contains(body, "two") {
+			sendReq.Header.Set("Idempotency-Key", "shared5678abcd1234abcd1234abcd1234")
+		}
+		sendRR := httptest.NewRecorder()
+		messageHandler.Send(sendRR, sendReq)
+		var sendResp struct {
+			Code int `json:"code"`
+		}
+		if err := json.NewDecoder(sendRR.Body).Decode(&sendResp); err != nil {
+			t.Fatalf("decode send response: %v", err)
+		}
+		if sendResp.Code != 0 {
+			t.Fatalf("unexpected send response: %#v", sendResp)
+		}
+	}
+
+	openReq := httptest.NewRequest(http.MethodPost, "/open_the_door", strings.NewReader(`{"target_user_id":"user_bob"}`))
+	openReq = openReq.WithContext(ctx)
+	openRR := httptest.NewRecorder()
+	chatHandler.OpenTheDoor(openRR, openReq)
+
+	var openResp struct {
+		Code int                   `json:"code"`
+		Data PrivateChatOpenResult `json:"data"`
+	}
+	if err := json.NewDecoder(openRR.Body).Decode(&openResp); err != nil {
+		t.Fatalf("decode open response: %v", err)
+	}
+	if openResp.Code != 0 {
+		t.Fatalf("unexpected open response: %#v", openResp)
+	}
+	if len(openResp.Data.RecentMessages.Items) != 1 {
+		t.Fatalf("expected shared recent message limit to apply: %#v", openResp.Data.RecentMessages)
+	}
+}
+
 func assertPrivateChatCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
 	t.Helper()
 	var resp struct {

@@ -19,8 +19,19 @@ func MountRoutes(r chi.Router, handler *Handler) {
 			admins.Post("/revoke", handler.RevokeAdmin)
 		})
 	})
+	r.Route("/audit", func(audit chi.Router) {
+		audit.Post("/list", handler.ListAuditLogs)
+		audit.Post("/open_the_door", handler.OpenAuditLog)
+	})
 	r.Route("/app_config", func(appConfig chi.Router) {
 		appConfig.Post("/get", handler.GetAppConfig)
+		appConfig.Post("/update_upload", handler.UpdateUpload)
+		appConfig.Post("/update_defaults", handler.UpdateDefaults)
+		appConfig.Post("/update_rate_limits", handler.UpdateRateLimits)
+		appConfig.Post("/update_response_defaults", handler.UpdateResponseDefaults)
+		appConfig.Post("/update_features", handler.UpdateFeatures)
+		appConfig.Post("/update_limits", handler.UpdateLimits)
+		appConfig.Post("/update_contact", handler.UpdateContact)
 	})
 	r.Route("/tags", func(tags chi.Router) {
 		tags.Post("/search", handler.SearchTags)

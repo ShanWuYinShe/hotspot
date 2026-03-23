@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	systemmodule "hotspot/backend-go/internal/modules/system"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
@@ -19,8 +18,7 @@ import (
 func newTestHandler() *Handler {
 	store := NewInMemoryRepository()
 	provider := NewAppConfigProvider(appconfig.NewStaticSource(config.Load()))
-	moderationStore := NewInMemoryModerationStore()
-	return NewHandler(NewService(store, provider, moderationStore, nil))
+	return NewHandler(NewService(store, provider))
 }
 
 func adminContext(req *http.Request, userID string, admin bool) *http.Request {
@@ -221,6 +219,79 @@ func TestGetAppConfigRequiresPermission(t *testing.T) {
 	}
 }
 
+func TestAuditLogIPAddressRequiresExtraPermission(t *testing.T) {
+	handler := newTestHandler()
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+
+	createRoleReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/create", strings.NewReader(`{"name":"Auditor"}`)), "admin", true)
+	createRoleReq.Header.Set("Idempotency-Key", "aaaa1234abcd1234abcd1234abcd1234")
+	createRoleRR := httptest.NewRecorder()
+	handler.CreateRole(createRoleRR, createRoleReq)
+	createdRole := decodeResponse[AdminRoleItem](t, createRoleRR)
+	if createdRole.Code != 0 || createdRole.Data == nil {
+		t.Fatalf("unexpected create role response: %#v", createdRole)
+	}
+
+	setPermissionsReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/set_permissions", strings.NewReader(`{"role_id":"`+createdRole.Data.RoleID+`","permission_keys":["admin.audit.read"]}`)), "admin", true)
+	setPermissionsRR := httptest.NewRecorder()
+	handler.SetRolePermissions(setPermissionsRR, setPermissionsReq)
+	setPermissionsResp := decodeResponse[struct{}](t, setPermissionsRR)
+	if setPermissionsResp.Code != 0 {
+		t.Fatalf("unexpected set permissions response: %#v", setPermissionsResp)
+	}
+
+	grantReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/admins/grant", strings.NewReader(`{"user_id":"user_bob","role_ids":["`+createdRole.Data.RoleID+`"]}`)), "admin", true)
+	grantReq.Header.Set("Idempotency-Key", "bbbb1234efgh1234ijkl1234mnop1234")
+	grantRR := httptest.NewRecorder()
+	handler.GrantAdmin(grantRR, grantReq)
+	grantResp := decodeResponse[struct{}](t, grantRR)
+	if grantResp.Code != 0 {
+		t.Fatalf("unexpected grant response: %#v", grantResp)
+	}
+
+	listReq := adminContext(httptest.NewRequest(http.MethodPost, "/audit/list", strings.NewReader(`{"pagination":{"limit":10}}`)), "user_bob", true)
+	listRR := httptest.NewRecorder()
+	handler.ListAuditLogs(listRR, listReq)
+	listResp := decodeResponse[PaginatedAuditLogs](t, listRR)
+	if listResp.Code != 0 || listResp.Data == nil || len(listResp.Data.Items) == 0 {
+		t.Fatalf("unexpected audit list response: %#v", listResp)
+	}
+	if listResp.Data.Items[0].IPAddress != nil {
+		t.Fatalf("expected ip_address to be omitted without admin.audit.read_ip: %#v", listResp.Data.Items[0])
+	}
+}
+
+func TestUpdateResponseDefaultsAffectsGetAppConfig(t *testing.T) {
+	handler := newTestHandler()
+
+	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/update_response_defaults", strings.NewReader(`{"response_defaults":{"chat_recent_messages_count":42}}`)), "admin", true)
+	updateReq.Header.Set("User-Agent", "HotSpotTest/1.0")
+	updateReq.RemoteAddr = "203.0.113.8:4567"
+	updateRR := httptest.NewRecorder()
+	handler.UpdateResponseDefaults(updateRR, updateReq)
+	updateResp := decodeResponse[struct{}](t, updateRR)
+	if updateResp.Code != 0 {
+		t.Fatalf("unexpected update response: %#v", updateResp)
+	}
+
+	getReq := adminContext(httptest.NewRequest(http.MethodPost, "/app_config/get", strings.NewReader(`{}`)), "admin", true)
+	getRR := httptest.NewRecorder()
+	handler.GetAppConfig(getRR, getReq)
+	getResp := decodeResponse[AppConfig](t, getRR)
+	if getResp.Code != 0 || getResp.Data == nil {
+		t.Fatalf("unexpected get response: %#v", getResp)
+	}
+	if getResp.Data.ResponseDefaults.ChatRecentMessagesCount != 42 {
+		t.Fatalf("unexpected response defaults: %#v", getResp.Data.ResponseDefaults)
+	}
+	if getResp.Data.UpdatedByUserID != "admin" {
+		t.Fatalf("unexpected updated_by_user_id: %#v", getResp.Data)
+	}
+	if getResp.Data.UpdatedAt == "" {
+		t.Fatalf("expected updated_at to be populated: %#v", getResp.Data)
+	}
+}
+
 func TestSearchTagsRequiresPermission(t *testing.T) {
 	handler := newTestHandler()
 	idempotency.SetStore(idempotency.NewInMemoryStore())
@@ -414,3 +485,4 @@ func TestUpdateAndDeleteAnnouncementAreIdempotent(t *testing.T) {
 		t.Fatalf("unexpected search response after delete: %#v", searchAfterDeleteResp)
 	}
 }
+

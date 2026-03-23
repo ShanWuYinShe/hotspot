@@ -6,7 +6,6 @@ import (
 	private_messages "hotspot/backend-go/internal/modules/privatemessages"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
-	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/ratelimit"
@@ -18,11 +17,10 @@ type Module struct {
 	messageHandler *private_messages.Handler
 }
 
-func NewModule(cfg config.Config, factory *persistence.Factory) *Module {
-	appCfg := appconfig.NewStaticSource(cfg)
+func NewModule(factory *persistence.Factory, source appconfig.Source) *Module {
 	messageRuntime := private_messages.NewRuntime(factory)
 	chatService := NewServiceWithRepos(NewPostgresRepository(factory, nil), messageRuntime.ReadService())
-	return &Module{chatHandler: NewHandler(chatService, appCfg), messageHandler: messageRuntime.Handler()}
+	return &Module{chatHandler: NewHandler(chatService, source), messageHandler: messageRuntime.Handler()}
 }
 func (m *Module) Mount(r chi.Router) {
 	r.Route("/api/v1/private_chats", func(chatRouter chi.Router) {

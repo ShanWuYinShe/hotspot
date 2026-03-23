@@ -162,3 +162,55 @@ func TestListAnnouncementsReturnsUnavailableOnRepoError(t *testing.T) {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
+
+func TestGetClientConfigUsesSharedAppConfigSource(t *testing.T) {
+	cfg := config.Load()
+	source := appconfig.NewStaticSource(cfg)
+	_, err := source.Update(context.Background(), func(current appconfig.AppConfig) appconfig.AppConfig {
+		current.Features.EnableNearbyPeople = false
+		current.Contact.SupportEmail = "shared@example.com"
+		current.Defaults.DefaultLocation.LocationName = "共享配置位置"
+		return current
+	})
+	if err != nil {
+		t.Fatalf("update shared source: %v", err)
+	}
+
+	handler := NewHandler(NewService(source))
+	req := httptest.NewRequest(http.MethodPost, "/get_client_config", strings.NewReader(`{}`))
+	rr := httptest.NewRecorder()
+
+	handler.GetClientConfig(rr, req)
+
+	var resp struct {
+		Code int `json:"code"`
+		Data struct {
+			Features struct {
+				EnableNearbyPeople bool `json:"enable_nearby_people"`
+			} `json:"features"`
+			Contact struct {
+				SupportEmail string `json:"support_email"`
+			} `json:"contact"`
+			Defaults struct {
+				DefaultLocation struct {
+					LocationName string `json:"location_name"`
+				} `json:"default_location"`
+			} `json:"defaults"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("unexpected code: %d", resp.Code)
+	}
+	if resp.Data.Features.EnableNearbyPeople {
+		t.Fatalf("expected shared feature switch update to be visible: %#v", resp.Data.Features)
+	}
+	if resp.Data.Contact.SupportEmail != "shared@example.com" {
+		t.Fatalf("unexpected support email: %#v", resp.Data.Contact)
+	}
+	if resp.Data.Defaults.DefaultLocation.LocationName != "共享配置位置" {
+		t.Fatalf("unexpected default location: %#v", resp.Data.Defaults.DefaultLocation)
+	}
+}

@@ -13,4 +13,7 @@ type Repository interface {
 	ListAdmins(context.Context, PaginationParams) (adminListPage, error)
 	GrantAdmin(context.Context, AdminGrantUpsert) error
 	RevokeAdmin(context.Context, string) error
+	ListAuditLogs(context.Context, AuditLogFilter, bool) (auditLogPage, error)
+	GetAuditLog(context.Context, string, bool) (AuditLogItem, bool, error)
+	AppendAuditLog(context.Context, AuditLogEntry) error
 }

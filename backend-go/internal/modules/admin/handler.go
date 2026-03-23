@@ -74,7 +74,7 @@ func (h *Handler) CreateRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	idempotency.ReplayOrStore(w, r, "admin/rbac/roles/create", func() httpx.ApiResponse[AdminRoleItem] {
-		payload, apiErr, err := h.service.CreateRole(r.Context(), req)
+		payload, apiErr, err := h.service.CreateRole(withRequest(r.Context(), r), req)
 		if err != nil {
 			return httpx.ApiResponse[AdminRoleItem]{Code: 10600, Message: "服务暂时不可用"}
 		}
@@ -91,7 +91,7 @@ func (h *Handler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
 		return
 	}
-	apiErr, err := h.service.UpdateRole(r.Context(), req)
+	apiErr, err := h.service.UpdateRole(withRequest(r.Context(), r), req)
 	if err != nil {
 		h.writeUnavailable(w)
 		return
@@ -109,7 +109,7 @@ func (h *Handler) DeleteRole(w http.ResponseWriter, r *http.Request) {
 		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
 		return
 	}
-	apiErr, err := h.service.DeleteRole(r.Context(), req.RoleID)
+	apiErr, err := h.service.DeleteRole(withRequest(r.Context(), r), req.RoleID)
 	if err != nil {
 		h.writeUnavailable(w)
 		return
@@ -127,7 +127,7 @@ func (h *Handler) SetRolePermissions(w http.ResponseWriter, r *http.Request) {
 		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
 		return
 	}
-	apiErr, err := h.service.SetRolePermissions(r.Context(), req)
+	apiErr, err := h.service.SetRolePermissions(withRequest(r.Context(), r), req)
 	if err != nil {
 		h.writeUnavailable(w)
 		return
@@ -168,7 +168,7 @@ func (h *Handler) GrantAdmin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	idempotency.ReplayOrStore(w, r, "admin/rbac/admins/grant", func() httpx.ApiResponse[struct{}] {
-		apiErr, err := h.service.GrantAdmin(r.Context(), req)
+		apiErr, err := h.service.GrantAdmin(withRequest(r.Context(), r), req)
 		if err != nil {
 			return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
 		}
@@ -185,7 +185,7 @@ func (h *Handler) RevokeAdmin(w http.ResponseWriter, r *http.Request) {
 		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
 		return
 	}
-	apiErr, err := h.service.RevokeAdmin(r.Context(), req.UserID)
+	apiErr, err := h.service.RevokeAdmin(withRequest(r.Context(), r), req.UserID)
 	if err != nil {
 		h.writeUnavailable(w)
 		return
@@ -195,6 +195,42 @@ func (h *Handler) RevokeAdmin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
+}
+
+func (h *Handler) ListAuditLogs(w http.ResponseWriter, r *http.Request) {
+	var req AuditLogListRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	payload, apiErr, err := h.service.ListAuditLogs(r.Context(), req)
+	if err != nil {
+		h.writeUnavailable(w)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
+}
+
+func (h *Handler) OpenAuditLog(w http.ResponseWriter, r *http.Request) {
+	var req AuditLogOpenTheDoorRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	payload, apiErr, err := h.service.GetAuditLog(r.Context(), req.LogID)
+	if err != nil {
+		h.writeUnavailable(w)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
 }
 
 func (h *Handler) GetAppConfig(w http.ResponseWriter, r *http.Request) {
@@ -212,6 +248,132 @@ func (h *Handler) GetAppConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
+}
+
+func (h *Handler) UpdateUpload(w http.ResponseWriter, r *http.Request) {
+	var req UpdateUploadConfigRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	apiErr, err := h.service.UpdateUpload(withRequest(r.Context(), r), req)
+	if err != nil {
+		h.writeUnavailable(w)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
+}
+
+func (h *Handler) UpdateDefaults(w http.ResponseWriter, r *http.Request) {
+	var req UpdateDefaultsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	apiErr, err := h.service.UpdateDefaults(withRequest(r.Context(), r), req)
+	if err != nil {
+		h.writeUnavailable(w)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
+}
+
+func (h *Handler) UpdateRateLimits(w http.ResponseWriter, r *http.Request) {
+	var req UpdateRateLimitsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	apiErr, err := h.service.UpdateRateLimits(withRequest(r.Context(), r), req)
+	if err != nil {
+		h.writeUnavailable(w)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
+}
+
+func (h *Handler) UpdateResponseDefaults(w http.ResponseWriter, r *http.Request) {
+	var req UpdateResponseDefaultsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	apiErr, err := h.service.UpdateResponseDefaults(withRequest(r.Context(), r), req)
+	if err != nil {
+		h.writeUnavailable(w)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
+}
+
+func (h *Handler) UpdateFeatures(w http.ResponseWriter, r *http.Request) {
+	var req UpdateFeaturesRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	apiErr, err := h.service.UpdateFeatures(withRequest(r.Context(), r), req)
+	if err != nil {
+		h.writeUnavailable(w)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
+}
+
+func (h *Handler) UpdateLimits(w http.ResponseWriter, r *http.Request) {
+	var req UpdateLimitsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	apiErr, err := h.service.UpdateLimits(withRequest(r.Context(), r), req)
+	if err != nil {
+		h.writeUnavailable(w)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
+}
+
+func (h *Handler) UpdateContact(w http.ResponseWriter, r *http.Request) {
+	var req UpdateContactRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
+		return
+	}
+	apiErr, err := h.service.UpdateContact(withRequest(r.Context(), r), req)
+	if err != nil {
+		h.writeUnavailable(w)
+		return
+	}
+	if apiErr != nil {
+		h.writeAPIError(w, apiErr)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
 func (h *Handler) SearchTags(w http.ResponseWriter, r *http.Request) {

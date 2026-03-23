@@ -114,4 +114,18 @@ ORDER BY au.granted_at DESC, au.user_id ASC, ar.name ASC, ar.role_id ASC`
 SELECT user_id, nickname, COALESCE(avatar_url, '')
 FROM users
 WHERE user_id = $1`
+
+	queryAuditInsert = `
+INSERT INTO admin_audit_logs (log_id, action, operator_id, operator_name, operator_avatar_url, target_type, target_id, target_name, details_json, ip_location, ip_address, device_summary, created_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`
+
+	queryAuditList = `
+SELECT log_id, action, operator_id, operator_name, COALESCE(operator_avatar_url, ''), target_type, target_id, COALESCE(target_name, ''), COALESCE(details_json, '{}'), COALESCE(ip_location, ''), COALESCE(ip_address, ''), COALESCE(device_summary, ''), created_at
+FROM admin_audit_logs
+ORDER BY created_at DESC, log_id DESC`
+
+	queryAuditByID = `
+SELECT log_id, action, operator_id, operator_name, COALESCE(operator_avatar_url, ''), target_type, target_id, COALESCE(target_name, ''), COALESCE(details_json, '{}'), COALESCE(ip_location, ''), COALESCE(ip_address, ''), COALESCE(device_summary, ''), created_at
+FROM admin_audit_logs
+WHERE log_id = $1`
 )
