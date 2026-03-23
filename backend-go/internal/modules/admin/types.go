@@ -387,7 +387,6 @@ type UpdateAnnouncementRequest struct {
 type DeleteAnnouncementRequest struct {
 	AnnouncementID string `json:"announcement_id"`
 }
-
 type AdminActor struct {
 	UserID              string
 	Permissions         []string
