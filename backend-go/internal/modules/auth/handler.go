@@ -41,16 +41,23 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "auth/register", func() httpx.ApiResponse[AuthTokenPairApp] {
-		result, err := h.service.Register(req)
-		if err != nil {
-			return httpx.ApiResponse[AuthTokenPairApp]{Code: 10400, Message: "资源已存在"}
-		}
-		if req.ClientType == ClientTypeWeb {
+	if req.ClientType == ClientTypeWeb {
+		idempotency.ReplayOrStore(w, r, "auth/register", func() httpx.ApiResponse[AuthTokenPairWeb] {
+			result, err := h.service.Register(r.Context(), req)
+			if err != nil {
+				return errorResponse[AuthTokenPairWeb](apiErrorFrom(err))
+			}
 			platformauth.SetAuthCookies(w, result.AccessToken, 15*time.Minute, result.RefreshToken, 30*24*time.Hour, result.CSRFToken)
-			return httpx.ApiResponse[AuthTokenPairApp]{Code: 0}
+			return httpx.Success(AuthTokenPairWeb{})
+		})
+		return
+	}
+	idempotency.ReplayOrStore(w, r, "auth/register", func() httpx.ApiResponse[AuthTokenPairApp] {
+		result, err := h.service.Register(r.Context(), req)
+		if err != nil {
+			return errorResponse[AuthTokenPairApp](apiErrorFrom(err))
 		}
-		return httpx.Success(AuthTokenPairApp{UserID: result.Principal.UserID, AccessToken: result.AccessToken, RefreshToken: result.RefreshToken, AccessTokenExpiresAt: result.AccessExpires.UTC().Format(time.RFC3339), RefreshTokenExpiresAt: result.RefreshExpires.UTC().Format(time.RFC3339)})
+		return authSuccessApp(result)
 	})
 }
 
@@ -64,9 +71,10 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	result, err := h.service.Login(req)
+	result, err := h.service.Login(r.Context(), req)
 	if err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10100, "密码错误"))
+		apiErr := apiErrorFrom(err)
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(apiErr.Code, apiErr.Message))
 		return
 	}
 	h.writeAuthSuccess(w, req.ClientType, result)
@@ -86,16 +94,23 @@ func (h *Handler) Guest(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "auth/guest", func() httpx.ApiResponse[AuthTokenPairApp] {
-		result, err := h.service.Guest(req)
-		if err != nil {
-			return httpx.ApiResponse[AuthTokenPairApp]{Code: 10600, Message: "服务暂时不可用"}
-		}
-		if req.ClientType == ClientTypeWeb {
+	if req.ClientType == ClientTypeWeb {
+		idempotency.ReplayOrStore(w, r, "auth/guest", func() httpx.ApiResponse[AuthTokenPairWeb] {
+			result, err := h.service.Guest(r.Context(), req)
+			if err != nil {
+				return errorResponse[AuthTokenPairWeb](apiErrorFrom(err))
+			}
 			platformauth.SetAuthCookies(w, result.AccessToken, 15*time.Minute, result.RefreshToken, 30*24*time.Hour, result.CSRFToken)
-			return httpx.ApiResponse[AuthTokenPairApp]{Code: 0}
+			return httpx.Success(AuthTokenPairWeb{})
+		})
+		return
+	}
+	idempotency.ReplayOrStore(w, r, "auth/guest", func() httpx.ApiResponse[AuthTokenPairApp] {
+		result, err := h.service.Guest(r.Context(), req)
+		if err != nil {
+			return errorResponse[AuthTokenPairApp](apiErrorFrom(err))
 		}
-		return httpx.Success(AuthTokenPairApp{UserID: result.Principal.UserID, AccessToken: result.AccessToken, RefreshToken: result.RefreshToken, AccessTokenExpiresAt: result.AccessExpires.UTC().Format(time.RFC3339), RefreshTokenExpiresAt: result.RefreshExpires.UTC().Format(time.RFC3339)})
+		return authSuccessApp(result)
 	})
 }
 
@@ -153,7 +168,9 @@ func (h *Handler) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	idempotency.ReplayOrStore(w, r, "auth/request_password_reset", func() httpx.ApiResponse[struct{}] {
-		h.service.RequestPasswordReset(req)
+		if err := h.service.RequestPasswordReset(r.Context(), req); err != nil {
+			return errorResponse[struct{}](apiErrorFrom(err))
+		}
 		return httpx.SuccessEmpty()
 	})
 }
@@ -172,16 +189,23 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	idempotency.ReplayOrStore(w, r, "auth/reset_password", func() httpx.ApiResponse[AuthTokenPairApp] {
-		result, err := h.service.ResetPassword(req)
-		if err != nil {
-			return httpx.ApiResponse[AuthTokenPairApp]{Code: 10300, Message: "重置请求不存在或已过期"}
-		}
-		if req.ClientType == ClientTypeWeb {
+	if req.ClientType == ClientTypeWeb {
+		idempotency.ReplayOrStore(w, r, "auth/reset_password", func() httpx.ApiResponse[AuthTokenPairWeb] {
+			result, err := h.service.ResetPassword(r.Context(), req)
+			if err != nil {
+				return errorResponse[AuthTokenPairWeb](apiErrorFrom(err))
+			}
 			platformauth.SetAuthCookies(w, result.AccessToken, 15*time.Minute, result.RefreshToken, 30*24*time.Hour, result.CSRFToken)
-			return httpx.ApiResponse[AuthTokenPairApp]{Code: 0}
+			return httpx.Success(AuthTokenPairWeb{})
+		})
+		return
+	}
+	idempotency.ReplayOrStore(w, r, "auth/reset_password", func() httpx.ApiResponse[AuthTokenPairApp] {
+		result, err := h.service.ResetPassword(r.Context(), req)
+		if err != nil {
+			return errorResponse[AuthTokenPairApp](apiErrorFrom(err))
 		}
-		return httpx.Success(AuthTokenPairApp{UserID: result.Principal.UserID, AccessToken: result.AccessToken, RefreshToken: result.RefreshToken, AccessTokenExpiresAt: result.AccessExpires.UTC().Format(time.RFC3339), RefreshTokenExpiresAt: result.RefreshExpires.UTC().Format(time.RFC3339)})
+		return authSuccessApp(result)
 	})
 }
 
@@ -197,10 +221,7 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	}
 	idempotency.ReplayOrStore(w, r, "auth/me/change_password", func() httpx.ApiResponse[struct{}] {
 		if err := h.service.ChangePassword(r.Context(), req); err != nil {
-			if apiErr, ok := err.(*httpx.APIError); ok {
-				return httpx.ApiResponse[struct{}]{Code: apiErr.Code, Message: apiErr.Message}
-			}
-			return httpx.ApiResponse[struct{}]{Code: 10100, Message: "密码错误"}
+			return errorResponse[struct{}](apiErrorFrom(err))
 		}
 		return httpx.SuccessEmpty()
 	})
@@ -247,7 +268,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	principal, ok := platformauth.PrincipalFromContext(r.Context())
 	if ok {
 		_ = h.service.auth.RevokeSession(principal.UserID, principal.SessionID, principal.SessionID)
-		realtime.DefaultHub().CloseSession(principal.SessionID, realtime.Event{Type: "Error", Payload: realtime.ErrorPayload{Code: 20000, Message: "会话已失效", Severity: "fatal", Retryable: false}})
+		realtime.DefaultHub().CloseSession(principal.SessionID, sessionRevokedEvent())
 	}
 	platformauth.ClearAuthCookies(w)
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
@@ -256,16 +277,25 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) writeAuthSuccess(w http.ResponseWriter, clientType ClientType, result platformauth.AuthResult) {
 	if clientType == ClientTypeWeb {
 		platformauth.SetAuthCookies(w, result.AccessToken, 15*time.Minute, result.RefreshToken, 30*24*time.Hour, result.CSRFToken)
-		payload := AuthTokenPairWeb{}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
+		httpx.WriteJSON(w, http.StatusOK, httpx.Success(AuthTokenPairWeb{}))
 		return
 	}
-	payload := AuthTokenPairApp{
+	httpx.WriteJSON(w, http.StatusOK, authSuccessApp(result))
+}
+
+func authSuccessApp(result platformauth.AuthResult) httpx.ApiResponse[AuthTokenPairApp] {
+	return httpx.Success(AuthTokenPairApp{
 		UserID:                result.Principal.UserID,
 		AccessToken:           result.AccessToken,
 		RefreshToken:          result.RefreshToken,
 		AccessTokenExpiresAt:  result.AccessExpires.UTC().Format(time.RFC3339),
 		RefreshTokenExpiresAt: result.RefreshExpires.UTC().Format(time.RFC3339),
+	})
+}
+
+func errorResponse[T any](apiErr *httpx.APIError) httpx.ApiResponse[T] {
+	if apiErr == nil {
+		apiErr = &httpx.APIError{Code: 10600, Message: "服务暂时不可用"}
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(payload))
+	return httpx.ApiResponse[T]{Code: apiErr.Code, Message: apiErr.Message}
 }

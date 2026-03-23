@@ -2,18 +2,25 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
 type Service struct {
 	auth *platformauth.Service
+	repo Repository
+	cfg  config.Config
 }
 
-func NewService(auth *platformauth.Service) *Service {
-	return &Service{auth: auth}
+func NewService(auth *platformauth.Service, repo Repository, cfg config.Config) *Service {
+	if repo == nil {
+		repo = NewInMemoryRepository()
+	}
+	return &Service{auth: auth, repo: repo, cfg: cfg}
 }
 
 func (s *Service) CheckStatus(ctx context.Context) AuthStatus {
@@ -28,16 +35,33 @@ func (s *Service) CheckStatus(ctx context.Context) AuthStatus {
 	return AuthStatus{IsValid: true, ExpiresAt: expiresAt.UTC().Format(time.RFC3339)}
 }
 
-func (s *Service) Register(req RegisterRequest) (platformauth.AuthResult, error) {
-	return s.auth.IssueSession(mockUserID(req.LoginID))
+func (s *Service) Register(ctx context.Context, req RegisterRequest) (platformauth.AuthResult, error) {
+	account, err := s.repo.Register(ctx, RegisterParams{
+		LoginID:  req.LoginID,
+		Nickname: req.Nickname,
+		Password: req.Password,
+		Defaults: s.profileDefaults(),
+	})
+	if err != nil {
+		return platformauth.AuthResult{}, err
+	}
+	return s.auth.IssueSession(account.UserID)
 }
 
-func (s *Service) Login(req LoginRequest) (platformauth.AuthResult, error) {
-	return s.auth.IssueSession(mockUserID(req.LoginID))
+func (s *Service) Login(ctx context.Context, req LoginRequest) (platformauth.AuthResult, error) {
+	account, err := s.repo.Authenticate(ctx, req.LoginID, req.Password)
+	if err != nil {
+		return platformauth.AuthResult{}, err
+	}
+	return s.auth.IssueSession(account.UserID)
 }
 
-func (s *Service) Guest(req GuestRequest) (platformauth.AuthResult, error) {
-	return s.auth.IssueSession(mockUserID(req.Nickname))
+func (s *Service) Guest(ctx context.Context, req GuestRequest) (platformauth.AuthResult, error) {
+	account, err := s.repo.CreateGuest(ctx, GuestParams{Nickname: req.Nickname, Defaults: s.profileDefaults()})
+	if err != nil {
+		return platformauth.AuthResult{}, err
+	}
+	return s.auth.IssueSession(account.UserID)
 }
 
 func (s *Service) Refresh(req RefreshTokenRequest, refreshCookie string) (platformauth.AuthResult, error) {
@@ -71,17 +95,32 @@ func (s *Service) RevokeSession(ctx context.Context, req RevokeSessionRequest) e
 	if !ok {
 		return platformauth.Unauthorized("Access Token 无效或过期")
 	}
+	if req.SessionID == principal.SessionID {
+		return platformauth.Forbidden("不允许撤销当前会话")
+	}
 	if err := s.auth.RevokeSession(principal.UserID, principal.SessionID, req.SessionID); err != nil {
 		return err
 	}
-	realtime.DefaultHub().CloseSession(req.SessionID, realtime.Event{Type: "Error", Payload: realtime.ErrorPayload{Code: 20000, Message: "会话已失效", Severity: "fatal", Retryable: false}})
+	realtime.DefaultHub().CloseSession(req.SessionID, sessionRevokedEvent())
 	return nil
 }
 
-func (s *Service) RequestPasswordReset(req RequestPasswordResetRequest) {}
+func (s *Service) RequestPasswordReset(ctx context.Context, req RequestPasswordResetRequest) error {
+	err := s.repo.CreatePasswordReset(ctx, req.LoginID, time.Now().UTC().Add(10*time.Minute))
+	if errors.Is(err, ErrPasswordResetThrottled) {
+		return nil
+	}
+	return err
+}
 
-func (s *Service) ResetPassword(req ResetPasswordRequest) (platformauth.AuthResult, error) {
-	return s.auth.IssueSession(mockUserID(req.LoginID))
+func (s *Service) ResetPassword(ctx context.Context, req ResetPasswordRequest) (platformauth.AuthResult, error) {
+	account, err := s.repo.ResetPassword(ctx, req.LoginID, req.VerificationCode, req.NewPassword)
+	if err != nil {
+		return platformauth.AuthResult{}, err
+	}
+	s.closeAllSessions(account.UserID)
+	s.auth.RevokeOtherSessions(account.UserID, "")
+	return s.auth.IssueSession(account.UserID)
 }
 
 func (s *Service) ChangePassword(ctx context.Context, req ChangePasswordRequest) error {
@@ -89,13 +128,10 @@ func (s *Service) ChangePassword(ctx context.Context, req ChangePasswordRequest)
 	if !ok || principal.UserID == "" {
 		return platformauth.Unauthorized("Access Token 无效或过期")
 	}
-	sessions := s.auth.ListSessions(principal.UserID, principal.SessionID)
-	for _, session := range sessions {
-		if session.SessionID == principal.SessionID {
-			continue
-		}
-		realtime.DefaultHub().CloseSession(session.SessionID, realtime.Event{Type: "Error", Payload: realtime.ErrorPayload{Code: 20000, Message: "会话已失效", Severity: "fatal", Retryable: false}})
+	if err := s.repo.ChangePassword(ctx, principal.UserID, req.OldPassword, req.NewPassword); err != nil {
+		return err
 	}
+	s.closeOtherSessions(principal.UserID, principal.SessionID)
 	s.auth.RevokeOtherSessions(principal.UserID, principal.SessionID)
 	return nil
 }
@@ -105,19 +141,38 @@ func (s *Service) RevokeAll(ctx context.Context) RevokeAllResult {
 	if !ok {
 		return RevokeAllResult{}
 	}
-	sessions := s.auth.ListSessions(principal.UserID, principal.SessionID)
-	for _, session := range sessions {
-		if session.SessionID == principal.SessionID {
-			continue
-		}
-		realtime.DefaultHub().CloseSession(session.SessionID, realtime.Event{Type: "Error", Payload: realtime.ErrorPayload{Code: 20000, Message: "会话已失效", Severity: "fatal", Retryable: false}})
-	}
+	s.closeOtherSessions(principal.UserID, principal.SessionID)
 	return RevokeAllResult{RevokedCount: s.auth.RevokeOtherSessions(principal.UserID, principal.SessionID)}
 }
 
-func mockUserID(loginID string) string {
-	if loginID == "" {
-		return "user_mock"
+func (s *Service) profileDefaults() ProfileDefaults {
+	now := time.Now().UTC()
+	return ProfileDefaults{
+		AvatarURL:    s.cfg.DefaultUserAvatar,
+		LocationName: "南天门",
+		Latitude:     35.154922,
+		Longitude:    112.682524,
+		CreatedAt:    now,
 	}
-	return "user_" + loginID
+}
+
+func (s *Service) closeAllSessions(userID string) {
+	sessions := s.auth.ListSessions(userID, "")
+	for _, session := range sessions {
+		realtime.DefaultHub().CloseSession(session.SessionID, sessionRevokedEvent())
+	}
+}
+
+func (s *Service) closeOtherSessions(userID, currentSessionID string) {
+	sessions := s.auth.ListSessions(userID, currentSessionID)
+	for _, session := range sessions {
+		if session.SessionID == currentSessionID {
+			continue
+		}
+		realtime.DefaultHub().CloseSession(session.SessionID, sessionRevokedEvent())
+	}
+}
+
+func sessionRevokedEvent() realtime.Event {
+	return realtime.Event{Type: "Error", Payload: realtime.ErrorPayload{Code: 20000, Message: "会话已失效", Severity: "fatal", Retryable: false}}
 }

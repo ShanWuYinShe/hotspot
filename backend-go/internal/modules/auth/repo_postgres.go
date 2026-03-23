@@ -1,0 +1,231 @@
+package auth
+
+import (
+	"context"
+	"errors"
+	"time"
+
+	"hotspot/backend-go/internal/platform/persistence"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+)
+
+type PostgresRepository struct {
+	factory  *persistence.Factory
+	fallback Repository
+}
+
+func NewPostgresRepository(factory *persistence.Factory, fallback Repository) *PostgresRepository {
+	if fallback == nil {
+		fallback = NewInMemoryRepository()
+	}
+	return &PostgresRepository{factory: factory, fallback: fallback}
+}
+
+func (r *PostgresRepository) Register(ctx context.Context, params RegisterParams) (Account, error) {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.Register(ctx, params)
+	}
+	userID, err := generateUserID()
+	if err != nil {
+		return Account{}, err
+	}
+	hashed, err := hashPassword(params.Password)
+	if err != nil {
+		return Account{}, err
+	}
+	now := params.Defaults.CreatedAt.UTC()
+	if err := queryable.Exec(ctx, queryInsertAuthAccount, params.LoginID, userID, hashed, now, now); err != nil {
+		if isUniqueViolation(err) {
+			return Account{}, ErrLoginIDConflict
+		}
+		return Account{}, err
+	}
+	if err := queryable.Exec(ctx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "normal", params.LoginID, params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, now, now); err != nil {
+		_ = queryable.Exec(ctx, queryDeleteAuthAccountByLoginID, params.LoginID)
+		return Account{}, err
+	}
+	if err := queryable.Exec(ctx, queryUpsertUserSettings, userID); err != nil {
+		_ = queryable.Exec(ctx, queryDeleteUserProfileByUserID, userID)
+		_ = queryable.Exec(ctx, queryDeleteAuthAccountByLoginID, params.LoginID)
+		return Account{}, err
+	}
+	return Account{UserID: userID, LoginID: params.LoginID, Nickname: params.Nickname, UserType: "normal"}, nil
+}
+
+func (r *PostgresRepository) CreateGuest(ctx context.Context, params GuestParams) (Account, error) {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.CreateGuest(ctx, params)
+	}
+	userID, err := generateUserID()
+	if err != nil {
+		return Account{}, err
+	}
+	now := params.Defaults.CreatedAt.UTC()
+	if err := queryable.Exec(ctx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "temp", "", params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, now, now); err != nil {
+		return Account{}, err
+	}
+	if err := queryable.Exec(ctx, queryUpsertUserSettings, userID); err != nil {
+		return Account{}, err
+	}
+	return Account{UserID: userID, Nickname: params.Nickname, UserType: "temp"}, nil
+}
+
+func (r *PostgresRepository) Authenticate(ctx context.Context, loginID, password string) (Account, error) {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.Authenticate(ctx, loginID, password)
+	}
+	record, found, err := r.accountByLoginID(ctx, queryable, loginID)
+	if err != nil {
+		return Account{}, err
+	}
+	if !found || !verifyPassword(record.PasswordHash, password) {
+		return Account{}, ErrInvalidCredentials
+	}
+	return record.Account, nil
+}
+
+func (r *PostgresRepository) CreatePasswordReset(ctx context.Context, loginID string, expiresAt time.Time) error {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.CreatePasswordReset(ctx, loginID, expiresAt)
+	}
+	if _, found, err := r.accountByLoginID(ctx, queryable, loginID); err != nil {
+		return err
+	} else if !found {
+		return nil
+	}
+	requestID, err := generateUserID()
+	if err != nil {
+		return err
+	}
+	code, err := generateVerificationCode()
+	if err != nil {
+		return err
+	}
+	now := time.Now().UTC()
+	if latest, found, err := r.latestPasswordResetByLoginID(ctx, queryable, loginID); err != nil {
+		return err
+	} else if found && now.Sub(latest.CreatedAt) < passwordResetThrottleWindow {
+		return ErrPasswordResetThrottled
+	}
+	return queryable.Exec(ctx, queryInsertPasswordReset, requestID, loginID, code, expiresAt.UTC(), now)
+}
+
+func (r *PostgresRepository) ResetPassword(ctx context.Context, loginID, verificationCode, newPassword string) (Account, error) {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.ResetPassword(ctx, loginID, verificationCode, newPassword)
+	}
+	account, found, err := r.accountByLoginID(ctx, queryable, loginID)
+	if err != nil {
+		return Account{}, err
+	}
+	if !found {
+		return Account{}, ErrPasswordResetNotFound
+	}
+	request, ok, err := r.passwordResetByCode(ctx, queryable, loginID, verificationCode)
+	if err != nil {
+		return Account{}, err
+	}
+	now := time.Now().UTC()
+	if !ok || request.UsedAt != nil || now.After(request.ExpiresAt) {
+		return Account{}, ErrPasswordResetNotFound
+	}
+	hashed, err := hashPassword(newPassword)
+	if err != nil {
+		return Account{}, err
+	}
+	if err := queryable.Exec(ctx, queryUpdateAccountPassword, account.UserID, hashed, now); err != nil {
+		return Account{}, err
+	}
+	if err := queryable.Exec(ctx, queryUsePasswordReset, request.RequestID, now); err != nil {
+		return Account{}, err
+	}
+	return account.Account, nil
+}
+
+func (r *PostgresRepository) ChangePassword(ctx context.Context, userID, oldPassword, newPassword string) error {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.ChangePassword(ctx, userID, oldPassword, newPassword)
+	}
+	account, found, err := r.accountByUserID(ctx, queryable, userID)
+	if err != nil {
+		return err
+	}
+	if !found || !verifyPassword(account.PasswordHash, oldPassword) {
+		return ErrInvalidOldPassword
+	}
+	hashed, err := hashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+	return queryable.Exec(ctx, queryUpdateAccountPassword, userID, hashed, time.Now().UTC())
+}
+
+func (r *PostgresRepository) accountByLoginID(ctx context.Context, queryable persistence.QueryableDB, loginID string) (accountRecord, bool, error) {
+	var record accountRecord
+	if err := queryable.QueryRow(ctx, queryGetAccountByLoginID, loginID).Scan(&record.LoginID, &record.UserID, &record.PasswordHash); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return accountRecord{}, false, nil
+		}
+		return accountRecord{}, false, err
+	}
+	return record.withDerivedFields(), true, nil
+}
+
+func (r *PostgresRepository) accountByUserID(ctx context.Context, queryable persistence.QueryableDB, userID string) (accountRecord, bool, error) {
+	var record accountRecord
+	if err := queryable.QueryRow(ctx, queryGetAccountByUserID, userID).Scan(&record.LoginID, &record.UserID, &record.PasswordHash); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return accountRecord{}, false, nil
+		}
+		return accountRecord{}, false, err
+	}
+	return record.withDerivedFields(), true, nil
+}
+
+func (r *PostgresRepository) passwordResetByCode(ctx context.Context, queryable persistence.QueryableDB, loginID, verificationCode string) (passwordResetRecord, bool, error) {
+	var record passwordResetRecord
+	if err := queryable.QueryRow(ctx, queryGetPasswordReset, loginID, verificationCode).Scan(&record.RequestID, &record.LoginID, &record.VerificationCode, &record.ExpiresAt, &record.CreatedAt, &record.UsedAt); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return passwordResetRecord{}, false, nil
+		}
+		return passwordResetRecord{}, false, err
+	}
+	return record, true, nil
+}
+
+func (r *PostgresRepository) latestPasswordResetByLoginID(ctx context.Context, queryable persistence.QueryableDB, loginID string) (passwordResetRecord, bool, error) {
+	var record passwordResetRecord
+	if err := queryable.QueryRow(ctx, queryLatestPasswordResetByLoginID, loginID).Scan(&record.RequestID, &record.LoginID, &record.VerificationCode, &record.ExpiresAt, &record.CreatedAt, &record.UsedAt); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return passwordResetRecord{}, false, nil
+		}
+		return passwordResetRecord{}, false, err
+	}
+	return record, true, nil
+}
+
+func (r *PostgresRepository) queryable() (persistence.QueryableDB, bool) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return nil, false
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	return queryable, ok
+}
+
+func (r accountRecord) withDerivedFields() accountRecord {
+	r.Account = Account{UserID: r.UserID, LoginID: r.LoginID, Nickname: r.LoginID, UserType: "normal"}
+	return r
+}
+
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505"
+}

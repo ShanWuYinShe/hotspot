@@ -18,7 +18,8 @@ type Module struct {
 func NewModule(cfg config.Config, factory *persistence.Factory) *Module {
 	authService := platformauth.NewServiceWithPersistence(cfg, factory)
 	platformauth.SetDefaultService(authService)
-	service := NewService(authService)
+	repo := NewPersistenceRepository(factory)
+	service := NewService(authService, repo, cfg)
 	return &Module{handler: NewHandler(service)}
 }
 
@@ -29,13 +30,7 @@ func (m *Module) Mount(r chi.Router) {
 			group.Use(ratelimit.Middleware)
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)
-			group.Post("/register", m.handler.Register)
-			group.Post("/login", m.handler.Login)
-			group.Post("/guest", m.handler.Guest)
-			group.Post("/refresh_token", m.handler.RefreshToken)
-			group.Post("/check_status", m.handler.CheckStatus)
-			group.Post("/request_password_reset", m.handler.RequestPasswordReset)
-			group.Post("/reset_password", m.handler.ResetPassword)
+			MountRoutes(group, m.handler)
 		})
 
 		authRouter.Group(func(group chi.Router) {
@@ -43,11 +38,7 @@ func (m *Module) Mount(r chi.Router) {
 			group.Use(ratelimit.Middleware)
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)
-			group.Post("/logout", m.handler.Logout)
-			group.Post("/me/change_password", m.handler.ChangePassword)
-			group.Post("/me/sessions/list", m.handler.ListSessions)
-			group.Post("/me/sessions/revoke", m.handler.RevokeSession)
-			group.Post("/me/sessions/revoke_all", m.handler.RevokeAllSessions)
+			MountAuthenticatedRoutes(group, m.handler)
 		})
 	})
 }
