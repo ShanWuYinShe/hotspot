@@ -143,7 +143,15 @@ func TestCreateCommentDoesNotIncrementMomentCountWhenCounterFails(t *testing.T) 
 	createCommentReq = createCommentReq.WithContext(ctx)
 	createCommentRR := httptest.NewRecorder()
 	commentHandler.Create(createCommentRR, createCommentReq)
-	assertCommentCode(t, createCommentRR, 10600)
+	var createCommentResp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(createCommentRR.Body).Decode(&createCommentResp); err != nil {
+		t.Fatalf("decode create comment response: %v", err)
+	}
+	if createCommentResp.Code != 10600 {
+		t.Fatalf("expected code 10600, got %#v", createCommentResp)
+	}
 	commentsList, err := commentRepo.List(context.Background(), createdMoment.MomentID)
 	if err != nil {
 		t.Fatalf("list comments: %v", err)
