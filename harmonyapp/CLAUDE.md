@@ -19,7 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `entry/src/main/ets/core/geo/CoordinateConverter.ets`：坐标转换。
 
 ## 与根流程的关系
-- 本地分支、可选 worktree、本地集成分支、本地验证入口和风险边界，以仓库根 `CLAUDE.md` 为准；涉及 API、地图、Safe Area、登录态或 WebSocket 的改动时，再对照 `spec/`。
+- 主目录保持 `main` + clean，所有实际改动都在 worktree 中完成；本地分支、本地集成 worktree、本地验证入口和风险边界，以仓库根 `CLAUDE.md` 为准；涉及 API、地图、Safe Area、登录态或 WebSocket 的改动时，再对照 `spec/`。
 
 ## 关键约束
 - API 路径只在 `core/config/ApiEndpoints.ets` 定义，禁止业务代码硬编码。
@@ -42,6 +42,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Safe Area 只通过统一能力计算和复用；不要在页面里硬编码状态栏、导航栏高度。
 
 ## 常用命令
-- 先安装依赖：`ohpm install --all --registry https://ohpm.openharmony.cn/ohpm/ --strict_ssl true`
-- 代码检查：`DEVECO_SDK_HOME="/Applications/DevEco-Studio.app/Contents/sdk" DEVECO_SDK_NODE="/Applications/DevEco-Studio.app/Contents/tools/node/bin/node" CODELINTER="/Applications/DevEco-Studio.app/Contents/plugins/codelinter/run/index.js" "$DEVECO_SDK_NODE" "$CODELINTER" -c code-linter.json5 entry/src/main/ets/`
+- 本仓库默认最终验证入口以根 `CLAUDE.md` 约定为准。
+- `ohpm install`、代码检查命令仅作为用户显式要求时的本地调试参考。
 - `hvigorw` 编译由用户手动运行，不要代跑。

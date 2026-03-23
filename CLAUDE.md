@@ -31,12 +31,12 @@ HotSpot 是一个多端 monorepo：
 - 标准本地 Docker 测试与 runtime 验证属于默认开发流程；所有测试、check、build 验证默认都必须通过 `deploy/` 下的 Docker 流程执行，不要直接在宿主环境运行 `go test`、`pnpm check`、`pnpm build` 等。清理数据、重置环境、正式部署、数据库重置和远程同步仍需先确认。
 
 ## 本地优先开发流程
-1. 开始新一轮开发前，先确认上一轮成果已经同步回本地 `main`，并确保当前工作区 clean。
-2. 默认在本地完成开发、测试、review 和集成；远程仓库只作为最终同步出口。
-3. 在本地分支上工作；worktree 只在并行任务、长任务或需要隔离上下文时使用。
-4. 每个本地分支先完成本地验证；多分支结果统一在本地集成分支汇总、review、补测。
-5. 只有本地集成分支通过验证后，才由用户决定是否同步到远程 `main`；PR 不是默认流程。
-6. 全部完成后，清理本轮使用到的本地分支和不再需要的 worktree。
+1. 开始新一轮开发前，先确认上一轮成果已经同步回本地 `main`，并确保主目录工作区 clean。
+2. 主目录默认始终保持在本地 `main` 且 clean，只承担同步、审阅、创建/回收 worktree 和本地集成控制，不承载实际代码修改。
+3. 任何实现性改动、验证和构建都在 worktree 中完成；需要本地分支时，也是在对应 worktree 中使用。
+4. 每个 worktree / 本地分支先完成本地验证；多分支结果统一在专门的本地集成 worktree 汇总、review、补测。
+5. 只有本地集成结果通过验证后，才由用户决定是否同步到远程 `main`；PR 不是默认流程。
+6. 全部完成后，清理本轮使用到的本地分支和不再需要的 worktree，主目录继续保持 `main` + clean。
 
 ## 风险边界
 ### 可直接执行
@@ -62,7 +62,7 @@ HotSpot 是一个多端 monorepo：
 
 ## 本地验证与交付入口
 ### 短版工作流
-- `verify`：面向并行开发验证，支持多 agent + 多 worktree；默认验证当前工作目录 / worktree，并且在 Docker 隔离环境里完成 backend-go/frontend 的测试与构建检查。用法：`./deploy/scripts/verify.sh --env-name <name>`。
+- `verify`：面向并行开发验证，支持多 agent + 多 worktree；默认在当前 worktree 上下文验证，并且在 Docker 隔离环境里完成 backend-go/frontend 的测试与构建检查。用法：`./deploy/scripts/verify.sh --env-name <name>`。
 - `preview`：面向最终候选结果预演，只有一个实例。先运行 `./deploy/scripts/preview-build.sh`，再运行 `./deploy/scripts/preview-up.sh`，最后用 `./deploy/scripts/preview-inspect.sh` 巡检。
 - `release`：面向交付，只产部署输入物，不运行环境。用法：`./deploy/scripts/release-build.sh --ref <git-ref>`。
 

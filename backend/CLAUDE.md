@@ -17,7 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `src/utils/`：缓存、token、web cookie、客户端 IP 等通用工具。
 
 ## 与根流程的关系
-- 本地分支、可选 worktree、本地集成分支、本地验证入口和风险边界，以仓库根 `CLAUDE.md` 为准。
+- 主目录保持 `main` + clean，所有实际改动都在 worktree 中完成；本地分支、本地集成 worktree、本地验证入口和风险边界，以仓库根 `CLAUDE.md` 为准。
 - 后端改动完成后，优先运行根文档定义的本地 Docker 验证流程；影响 runtime 行为时，再补跑 runtime 验证。
 
 ## 关键约束
@@ -35,7 +35,5 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 如果需要自查旧式 SQL 写法，重点检查是否出现非宏 `sqlx::query(`、`sqlx::query_as::<`、`sqlx::query_scalar::<`。
 
 ## 常用命令
-- `cargo check`
-- `cargo clippy`
-- `cargo test`
-- 单测：`cargo test <测试名> -- --exact`
+- 默认验证入口遵循仓库根 `CLAUDE.md` 与 `deploy/` Docker 流程。
+- `cargo check`、`cargo clippy`、`cargo test`、`cargo test <测试名> -- --exact` 仅作为用户显式要求时的本地调试参考，不作为默认最终验证入口。

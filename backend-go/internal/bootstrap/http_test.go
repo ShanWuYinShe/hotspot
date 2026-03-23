@@ -12,7 +12,8 @@ import (
 )
 
 func TestNewHTTPRouterMountsSystemRoutes(t *testing.T) {
-	router := NewHTTPRouter(BuildModules(config.Load(), persistence.NewFactory(config.Load())))
+	cfg := config.Config{}
+	router := NewHTTPRouter(BuildModules(cfg, persistence.NewFactory(cfg)))
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/system/get_meta", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 

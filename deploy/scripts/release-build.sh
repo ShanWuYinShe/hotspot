@@ -49,6 +49,7 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+ensure_current_tree_flow_allowed "$ROOT" "release-build"
 SHA="$(resolved_git_ref "$ROOT" "$REF")"
 if [[ -z "$LABEL" ]]; then
   LABEL="$SHA"
@@ -82,6 +83,9 @@ ensure_dir "$FRONTEND_ARTIFACT_DIR"
 ensure_dir "$MANIFEST_DIR"
 
 docker run --rm \
+  --user "$(host_uid):$(host_gid)" \
+  -e HOME="$(runner_home_dir)" \
+  -e XDG_CACHE_HOME="$(runner_home_dir)/.cache" \
   -v "$SOURCE_ROOT:/workspace:ro" \
   -v "$BACKEND_ARTIFACT_DIR:/out" \
   -v "$(go_mod_cache_dir "$ROOT"):/cache/go/pkg" \
@@ -90,6 +94,9 @@ docker run --rm \
   sh -c 'rm -rf /tmp/workspace && mkdir -p /tmp/workspace/backend-go && cp -a /workspace/backend-go/. /tmp/workspace/backend-go/ && cd /tmp/workspace/backend-go && go build -o /out/backend-go ./cmd/server'
 
 docker run --rm \
+  --user "$(host_uid):$(host_gid)" \
+  -e HOME="$(runner_home_dir)" \
+  -e XDG_CACHE_HOME="$(runner_home_dir)/.cache" \
   -v "$SOURCE_ROOT:/workspace:ro" \
   -v "$FRONTEND_ARTIFACT_DIR:/out" \
   -v "$(pnpm_store_dir "$ROOT"):/cache/pnpm/store" \

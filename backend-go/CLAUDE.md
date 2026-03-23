@@ -14,7 +14,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `test/`：集成测试与后续 PG/Redis harness 的扩展入口。
 
 ## 与根流程的关系
-- 本地分支、可选 worktree、本地集成分支、本地验证入口和风险边界，以仓库根 `CLAUDE.md` 为准；默认验证入口是 `verify.sh`，默认验证的是当前工作树快照，并且测试/构建检查必须在 Docker 内完成；runtime 行为确认走单实例 `preview`。
+- 主目录保持 `main` + clean，所有实际改动都在 worktree 中完成；本地分支、本地集成 worktree、本地验证入口和风险边界，以仓库根 `CLAUDE.md` 为准。
+- 默认验证入口是 `verify.sh`，默认验证的是当前 worktree 快照，并且测试/构建检查必须在 Docker 内完成；runtime 行为确认走单实例 `preview`。
 
 ## 关键约束
 - 严格遵守 `Handler -> Service -> Repository` 分层。

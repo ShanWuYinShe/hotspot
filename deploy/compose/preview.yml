@@ -66,6 +66,11 @@ services:
   backend:
     image: ${HOTSPOT_PREVIEW_BACKEND_IMAGE:?set HOTSPOT_PREVIEW_BACKEND_IMAGE}
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -X POST http://127.0.0.1:8080/api/v1/system/health -H 'Content-Type: application/json' -d '{}' >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     environment:
       APP_HOST: 0.0.0.0
       APP_PORT: 8080
@@ -95,7 +100,7 @@ services:
       ORIGIN: ${HOTSPOT_PREVIEW_PUBLIC_ORIGIN:-https://localhost:8443}
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
     networks:
       - hotspot-preview
 
@@ -113,7 +118,7 @@ services:
       - ${HOTSPOT_TLS_KEY_PATH:?set HOTSPOT_TLS_KEY_PATH}:/etc/nginx/certs/tls.key:ro
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
       frontend:
         condition: service_started
       minio:

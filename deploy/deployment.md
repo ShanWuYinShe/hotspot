@@ -25,17 +25,19 @@
 
 ### 语义
 - 面向开发内环
-- 默认验证当前工作目录 / worktree
+- 默认验证当前 worktree
 - 包含未提交修改
 - 支持多 worktree 并行
+- 主目录应始终保持 `main` + clean；如果要验证带修改的结果，应在承载改动的 worktree 中运行
 
 ### 隔离模型
 按 `env-name` 隔离：
 - 当前工作目录 / worktree
 - compose project
-- cache
 - lock
 - 测试依赖容器
+
+缓存与构建产物统一落在当前 checkout 的 `tmp/deploy/` 下，但必须由当前宿主用户写入，避免 worktree 清理时出现无法删除的 root/foreign-owned 文件。
 
 ### 入口
 
@@ -49,6 +51,7 @@
   - `dockerfiles/backend-go.verify.Dockerfile`
   - `dockerfiles/frontend.verify.Dockerfile`
 - 当前工作树通过只读挂载注入容器，并复制到容器临时目录后执行测试，避免把 pnpm store、node_modules 或其他临时产物写回仓库根
+- verify runner 以当前宿主 UID/GID 写入 `tmp/deploy/` 下的 cache，并在 `go test ./...` 前先执行 backend-go schema bootstrap
 
 ## 二、preview
 
@@ -88,6 +91,7 @@
 保留：
 - 默认保留 postgres / redis / minio 数据
 - 支持 `--clean` / `--clean-all`
+- backend-go 在启动时会自动执行 schema bootstrap 并校验关键表；对空库 preview，先清 postgres volume 再启动也应能自举成功
 
 ## 三、release
 
@@ -189,3 +193,4 @@ deploy/
 ### release
 - `release-build.sh --ref <sha>` 能稳定产出 release image 与 manifest
 - release 结果不依赖当前未提交工作树
+- 产物、cache 与临时 worktree 都应由当前宿主用户创建，完成后可直接清理，不需要 sudo

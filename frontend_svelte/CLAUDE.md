@@ -16,7 +16,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `src/hooks.server.ts`：服务端会话/认证钩子。
 
 ## 与根流程的关系
-- 本地分支、可选 worktree、本地集成分支、本地验证入口和风险边界，以仓库根 `CLAUDE.md` 为准；默认验证入口是 `verify.sh`，默认验证的是当前工作树快照；涉及 API、WebSocket 或地图行为时，再对照 `spec/`。
+- 主目录保持 `main` + clean，所有实际改动都在 worktree 中完成；本地分支、本地集成 worktree、本地验证入口和风险边界，以仓库根 `CLAUDE.md` 为准。
+- 默认验证入口是 `verify.sh`，默认验证的是当前 worktree 快照；涉及 API、WebSocket 或地图行为时，再对照 `spec/`。
 
 ## 关键约束
 - 禁止硬编码 `/api/v1/...`，必须通过 `src/lib/api/endpoints.ts`。
@@ -34,7 +35,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - center pin 必须绑定地图相机中心；回写业务状态时直接使用地图 SDK 返回的中心坐标。
 
 ## 常用命令
-- `pnpm check`
-- `pnpm build`
-- `pnpm dev`
-- 当前仓库未配置独立前端单测脚本，主要用 `pnpm check` / `pnpm build` 验证。
+- 默认验证入口：`./deploy/scripts/verify.sh --env-name <name>`
+- 需要预演候选结果时：`./deploy/scripts/preview-build.sh` + `./deploy/scripts/preview-up.sh`
+- `pnpm check`、`pnpm build`、`pnpm dev` 仅作为本地调试参考，不作为默认最终验证入口。
+- 当前仓库未配置独立前端单测脚本，最终验证仍以 `deploy/` 下的 Docker 流程为准。

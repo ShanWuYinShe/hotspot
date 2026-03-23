@@ -22,7 +22,7 @@ func Load() Config {
 		AppName:            envOrDefault("APP_NAME", "hotspot-backend-go"),
 		Host:               envOrDefault("APP_HOST", "0.0.0.0"),
 		Port:               envOrDefault("APP_PORT", "8081"),
-		PostgresDSN:        envOrDefault("POSTGRES_DSN", "postgres://localhost:5432/hotspot"),
+		PostgresDSN:        os.Getenv("POSTGRES_DSN"),
 		RedisDSN:           envOrDefault("REDIS_DSN", "redis://localhost:6379/0"),
 		AuthTokenSecret:    envOrDefault("AUTH_TOKEN_SECRET", "dev-secret-change-me"),
 		SupportEmail:       envOrDefault("APP_SUPPORT_EMAIL", "support@example.com"),

@@ -5,6 +5,20 @@ CREATE TABLE IF NOT EXISTS private_chats (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS groups (
+  group_id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  avatar_url TEXT,
+  description TEXT,
+  has_password BOOLEAN NOT NULL DEFAULT FALSE,
+  location_name TEXT NOT NULL,
+  latitude DOUBLE PRECISION NOT NULL,
+  longitude DOUBLE PRECISION NOT NULL,
+  join_method TEXT NOT NULL DEFAULT 'open',
+  is_searchable BOOLEAN NOT NULL DEFAULT TRUE,
+  max_members INTEGER NOT NULL DEFAULT 200
+);
+
 CREATE TABLE IF NOT EXISTS private_messages (
   message_id TEXT PRIMARY KEY,
   chat_key TEXT NOT NULL REFERENCES private_chats(chat_key) ON DELETE CASCADE,

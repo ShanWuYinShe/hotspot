@@ -1,6 +1,6 @@
 FROM alpine:3.21
 WORKDIR /app
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates curl
 COPY backend-go /usr/local/bin/backend-go
 EXPOSE 8080
 ENV APP_HOST=0.0.0.0

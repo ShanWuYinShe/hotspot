@@ -1,6 +1,9 @@
 package config
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 func TestConfigHTTPAddr(t *testing.T) {
 	cfg := Config{Host: "127.0.0.1", Port: "9000"}
@@ -18,6 +21,34 @@ func TestConfigCarriesDatasourceValues(t *testing.T) {
 		t.Fatalf("unexpected postgres dsn: %s", cfg.PostgresDSN)
 	}
 	if cfg.RedisDSN != "redis://test-redis:6379/1" {
+		t.Fatalf("unexpected redis dsn: %s", cfg.RedisDSN)
+	}
+}
+
+func TestLoadLeavesPostgresDSNEmptyWhenUnset(t *testing.T) {
+	oldPostgres := os.Getenv("POSTGRES_DSN")
+	oldRedis := os.Getenv("REDIS_DSN")
+	defer func() {
+		if oldPostgres == "" {
+			_ = os.Unsetenv("POSTGRES_DSN")
+		} else {
+			_ = os.Setenv("POSTGRES_DSN", oldPostgres)
+		}
+		if oldRedis == "" {
+			_ = os.Unsetenv("REDIS_DSN")
+		} else {
+			_ = os.Setenv("REDIS_DSN", oldRedis)
+		}
+	}()
+
+	_ = os.Unsetenv("POSTGRES_DSN")
+	_ = os.Unsetenv("REDIS_DSN")
+
+	cfg := Load()
+	if cfg.PostgresDSN != "" {
+		t.Fatalf("expected empty postgres dsn, got %q", cfg.PostgresDSN)
+	}
+	if cfg.RedisDSN != "redis://localhost:6379/0" {
 		t.Fatalf("unexpected redis dsn: %s", cfg.RedisDSN)
 	}
 }

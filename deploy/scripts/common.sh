@@ -18,6 +18,36 @@ current_worktree_label() {
   basename "$root"
 }
 
+current_git_branch() {
+  local root="$1"
+  git -C "$root" branch --show-current 2>/dev/null || true
+}
+
+ensure_current_tree_flow_allowed() {
+  local root="$1"
+  local flow_name="$2"
+  local branch
+  local status
+
+  if is_linked_worktree "$root"; then
+    return 0
+  fi
+
+  branch="$(current_git_branch "$root")"
+  if [[ "$branch" != "main" ]]; then
+    echo "$flow_name must run from a linked worktree when the primary checkout is not on main (current: ${branch:-detached})." >&2
+    echo "Keep the primary checkout on main and move actual changes into a worktree." >&2
+    exit 1
+  fi
+
+  status="$(git -C "$root" status --porcelain 2>/dev/null || true)"
+  if [[ -n "$status" ]]; then
+    echo "$flow_name must run from a linked worktree while the primary checkout has local changes." >&2
+    echo "Keep the primary checkout clean on main, or switch into the worktree that holds the changes." >&2
+    exit 1
+  fi
+}
+
 detect_verify_env_name() {
   local root="$1"
   local value="${HOTSPOT_VERIFY_ENV_NAME:-${HOTSPOT_ENV_NAME:-}}"
@@ -89,6 +119,15 @@ ensure_dir() {
   mkdir -p "$1"
 }
 
+ensure_writable_dir() {
+  local path="$1"
+  if [[ ! -w "$path" ]]; then
+    echo "deploy path is not writable by the current user: $path" >&2
+    echo "fix the ownership of this tmp/deploy path before rerunning the flow." >&2
+    exit 1
+  fi
+}
+
 prepare_deploy_dirs() {
   local root="$1"
   local deploy_tmp
@@ -102,6 +141,27 @@ prepare_deploy_dirs() {
   ensure_dir "$deploy_tmp/locks"
   ensure_dir "$deploy_tmp/release"
   ensure_dir "$deploy_tmp/worktrees"
+  ensure_writable_dir "$deploy_tmp"
+  ensure_writable_dir "$deploy_tmp/artifacts/preview"
+  ensure_writable_dir "$deploy_tmp/artifacts/release"
+  ensure_writable_dir "$deploy_tmp/cache/go/pkg"
+  ensure_writable_dir "$deploy_tmp/cache/go/build"
+  ensure_writable_dir "$deploy_tmp/cache/pnpm/store"
+  ensure_writable_dir "$deploy_tmp/locks"
+  ensure_writable_dir "$deploy_tmp/release"
+  ensure_writable_dir "$deploy_tmp/worktrees"
+}
+
+host_uid() {
+  id -u
+}
+
+host_gid() {
+  id -g
+}
+
+runner_home_dir() {
+  printf '/tmp/hotspot-home\n'
 }
 
 preview_artifact_root() {
@@ -166,7 +226,13 @@ release_lock() {
 
 cleanup_path() {
   local path="$1"
-  rm -rf "$path" >/dev/null 2>&1 || true
+  if [[ ! -e "$path" ]]; then
+    return 0
+  fi
+  if ! rm -rf "$path"; then
+    echo "failed to remove path: $path" >&2
+    exit 1
+  fi
 }
 
 source_root_from_current_worktree() {
@@ -194,7 +260,12 @@ ensure_release_worktree() {
 remove_release_worktree() {
   local root="$1"
   local path="$2"
-  git -C "$root" worktree remove --force "$path" >/dev/null 2>&1 || cleanup_path "$path"
+  if git -C "$root" worktree remove --force "$path" >/dev/null 2>&1; then
+    return 0
+  fi
+  echo "git worktree remove failed for $path; trying direct cleanup for deploy-managed path" >&2
+  cleanup_path "$path"
+  git -C "$root" worktree prune >/dev/null 2>&1 || true
 }
 
 resolved_git_ref() {

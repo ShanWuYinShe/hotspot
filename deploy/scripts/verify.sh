@@ -44,6 +44,7 @@ done
 
 ENV_NAME="$(sanitize_name "$ENV_NAME")"
 PROJECT_NAME="$(verify_project_name "$ENV_NAME")"
+ensure_current_tree_flow_allowed "$ROOT" "verify"
 prepare_deploy_dirs "$ROOT"
 LOCK_PATH="$(acquire_lock "$ROOT" "verify-$ENV_NAME")"
 
@@ -63,6 +64,9 @@ export HOTSPOT_FRONTEND_RUNNER_IMAGE="$FRONTEND_RUNNER_IMAGE"
 export HOTSPOT_GO_MOD_CACHE="$(go_mod_cache_dir "$ROOT")"
 export HOTSPOT_GO_BUILD_CACHE="$(go_build_cache_dir "$ROOT")"
 export HOTSPOT_PNPM_STORE_CACHE="$(pnpm_store_dir "$ROOT")"
+export HOTSPOT_DOCKER_UID="$(host_uid)"
+export HOTSPOT_DOCKER_GID="$(host_gid)"
+export HOTSPOT_RUNNER_HOME="$(runner_home_dir)"
 
 cd "$ROOT"
 docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" up -d postgres-test redis-test

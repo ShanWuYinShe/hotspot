@@ -21,12 +21,15 @@ services:
 
   backend-go-verify:
     image: ${HOTSPOT_BACKEND_GO_RUNNER_IMAGE:?set HOTSPOT_BACKEND_GO_RUNNER_IMAGE}
+    user: "${HOTSPOT_DOCKER_UID:?set HOTSPOT_DOCKER_UID}:${HOTSPOT_DOCKER_GID:?set HOTSPOT_DOCKER_GID}"
     working_dir: /workspace/backend-go
     command:
       - sh
       - -c
-      - rm -rf /tmp/workspace && mkdir -p /tmp/workspace/backend-go && cp -a /workspace/backend-go/. /tmp/workspace/backend-go/ && cd /tmp/workspace/backend-go && go test ./...
+      - rm -rf /tmp/workspace && mkdir -p /tmp/workspace/backend-go && cp -a /workspace/backend-go/. /tmp/workspace/backend-go/ && cd /tmp/workspace/backend-go && go run ./cmd/migrate && go test ./...
     environment:
+      HOME: ${HOTSPOT_RUNNER_HOME:?set HOTSPOT_RUNNER_HOME}
+      XDG_CACHE_HOME: ${HOTSPOT_RUNNER_HOME:?set HOTSPOT_RUNNER_HOME}/.cache
       APP_HOST: 0.0.0.0
       APP_PORT: 8080
       AUTH_TOKEN_SECRET: test-secret
@@ -46,12 +49,15 @@ services:
 
   frontend-verify:
     image: ${HOTSPOT_FRONTEND_RUNNER_IMAGE:?set HOTSPOT_FRONTEND_RUNNER_IMAGE}
+    user: "${HOTSPOT_DOCKER_UID:?set HOTSPOT_DOCKER_UID}:${HOTSPOT_DOCKER_GID:?set HOTSPOT_DOCKER_GID}"
     working_dir: /workspace/frontend_svelte
     command:
       - sh
       - -c
       - rm -rf /tmp/workspace && mkdir -p /tmp/workspace/frontend_svelte && cp -a /workspace/frontend_svelte/. /tmp/workspace/frontend_svelte/ && cd /tmp/workspace/frontend_svelte && pnpm install --frozen-lockfile && pnpm check && pnpm build --mode test
     environment:
+      HOME: ${HOTSPOT_RUNNER_HOME:?set HOTSPOT_RUNNER_HOME}
+      XDG_CACHE_HOME: ${HOTSPOT_RUNNER_HOME:?set HOTSPOT_RUNNER_HOME}/.cache
       ORIGIN: https://localhost:8443
       VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
       VITE_AMAP_SERVICE_HOST: /_AMapService
