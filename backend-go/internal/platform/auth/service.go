@@ -67,11 +67,7 @@ func (s *Service) AuthenticateRequest(rctx context.Context, authHeader string, a
 	if err != nil || !ok || session.UserID != claims.UserID || session.RevokedAt != nil {
 		return Principal{}, time.Time{}, false
 	}
-	principal := Principal{UserID: claims.UserID, SessionID: claims.SessionID, Platform: platformFromContext(rctx)}
-	if claims.UserID == "admin" || strings.HasPrefix(claims.UserID, "admin_") {
-		principal.IsAdmin = true
-	}
-	return principal, claims.ExpiresAt, true
+	return newPrincipal(claims.UserID, claims.SessionID, platformFromContext(rctx)), claims.ExpiresAt, true
 }
 
 func (s *Service) IssueSession(userID string) (AuthResult, error) {
@@ -99,7 +95,7 @@ func (s *Service) IssueSession(userID string) (AuthResult, error) {
 	if err := s.refreshes.Save(RefreshSession{UserID: userID, SessionID: sessionID, RefreshToken: refreshToken, ExpiresAt: refreshExpires}); err != nil {
 		return AuthResult{}, err
 	}
-	return AuthResult{Principal: Principal{UserID: userID, SessionID: sessionID}, AccessToken: accessToken, RefreshToken: refreshToken, AccessExpires: accessExp, RefreshExpires: refreshExpires, CSRFToken: csrfToken}, nil
+	return AuthResult{Principal: newPrincipal(userID, sessionID, ""), AccessToken: accessToken, RefreshToken: refreshToken, AccessExpires: accessExp, RefreshExpires: refreshExpires, CSRFToken: csrfToken}, nil
 }
 
 func bearerToken(header string) string {

@@ -23,7 +23,7 @@ import (
 
 func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.Module {
 	return []modulekit.Module{
-		admin.NewModule(cfg),
+		admin.NewModule(cfg, factory),
 		auth.NewModule(cfg, factory),
 		feed.NewModule(),
 		groupmessages.NewModule(factory),

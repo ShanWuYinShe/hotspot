@@ -39,8 +39,9 @@ func (s *Service) RefreshSession(refreshToken string) (AuthResult, error) {
 			if err != nil {
 				return AuthResult{}, err
 			}
+			principal := newPrincipal(rotated.UserID, rotated.SessionID, "")
 			return AuthResult{
-				Principal:      Principal{UserID: rotated.UserID, SessionID: rotated.SessionID},
+				Principal:      principal,
 				AccessToken:    accessToken,
 				RefreshToken:   rotated.RefreshToken,
 				AccessExpires:  accessExp,
@@ -71,8 +72,9 @@ func (s *Service) RefreshSession(refreshToken string) (AuthResult, error) {
 	if err := s.refreshes.Rotate(refreshToken, session, next); err != nil {
 		return AuthResult{}, err
 	}
+	principal := newPrincipal(session.UserID, session.SessionID, "")
 	return AuthResult{
-		Principal:      Principal{UserID: session.UserID, SessionID: session.SessionID},
+		Principal:      principal,
 		AccessToken:    newAccessToken,
 		RefreshToken:   newRefreshToken,
 		AccessExpires:  accessExp,

@@ -54,3 +54,21 @@ func TestOptionalAuthInjectsPrincipalForValidBearer(t *testing.T) {
 		t.Fatalf("unexpected status: %d", rr.Code)
 	}
 }
+
+func TestAdminAccessRejectsNonAdminPrincipal(t *testing.T) {
+	handler := AdminAccess(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	req := httptest.NewRequest(http.MethodPost, "/admin", http.NoBody)
+	req = req.WithContext(WithPrincipal(req.Context(), Principal{UserID: "user_alice", SessionID: "sess"}))
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("unexpected status: %d", rr.Code)
+	}
+	if body := rr.Body.String(); body == "" || body == "{}\n" {
+		t.Fatal("expected api error body")
+	}
+}

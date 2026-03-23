@@ -44,9 +44,13 @@ func RequiredAuth(next http.Handler) http.Handler {
 }
 
 func AdminAuth(next http.Handler) http.Handler {
+	return AdminAccess(next)
+}
+
+func AdminAccess(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		principal, ok := PrincipalFromContext(r.Context())
-		if !ok || !principal.IsAdmin {
+		if !ok || !principal.IsAdmin() {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "非系统管理员"))
 			return
 		}

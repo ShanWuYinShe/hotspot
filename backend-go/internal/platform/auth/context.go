@@ -2,14 +2,32 @@ package auth
 
 import (
 	"context"
+	"strings"
 	"time"
 )
 
+type AdminMembership struct {
+	Permissions []string
+	Roles       []string
+}
+
 type Principal struct {
-	UserID    string
-	SessionID string
-	Platform  string
-	IsAdmin   bool
+	UserID          string
+	SessionID       string
+	Platform        string
+	AdminMembership *AdminMembership
+}
+
+func (p Principal) IsAdmin() bool {
+	return p.AdminMembership != nil
+}
+
+func newPrincipal(userID, sessionID, platform string) Principal {
+	principal := Principal{UserID: userID, SessionID: sessionID, Platform: platform}
+	if userID == "admin" || strings.HasPrefix(userID, "admin_") {
+		principal.AdminMembership = &AdminMembership{}
+	}
+	return principal
 }
 
 type contextKey string
