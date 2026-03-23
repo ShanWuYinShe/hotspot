@@ -33,7 +33,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 - <<'PY'\nimport json, subprocess\nroot = subprocess.run(['git', 'rev-parse', '--show-toplevel'], capture_output=True, text=True).stdout.strip() or '.'\nbranch = subprocess.run(['git', '-C', root, 'branch', '--show-current'], capture_output=True, text=True).stdout.strip() or '(detached)'\ndirty = bool(subprocess.run(['git', '-C', root, 'status', '--short'], capture_output=True, text=True).stdout.strip())\nstate = 'dirty' if dirty else 'clean'\nmsg = f'当前分支: {branch}；工作区: {state}。开始新一轮任务前，请先确认最新成果已回到本地 main。'\nprint(json.dumps({'systemMessage': msg}, ensure_ascii=False))\nPY"
+            "command": "python3 - <<'PY'\nimport json, os, re, subprocess\n\ndef run(*args):\n    return subprocess.run(args, capture_output=True, text=True).stdout.strip()\n\nroot = run('git', 'rev-parse', '--show-toplevel') or '.'\nbranch = run('git', '-C', root, 'branch', '--show-current') or '(detached)'\nrole = 'worktree' if os.path.isfile(os.path.join(root, '.git')) else '主目录'\ndirty = bool(run('git', '-C', root, 'status', '--short'))\nstate = 'dirty' if dirty else 'clean'\n\nlines = [f'位置: {role}；分支: {branch}；工作区: {state}。']\nif role == '主目录':\n    if branch != 'main':\n        lines.append('主目录应保持在本地 main；如需承载改动，请切到 worktree。')\n    if dirty:\n        lines.append('主目录应保持 clean，不要在主目录承载实现性改动。')\n\nporcelain = run('git', '-C', root, 'worktree', 'list', '--porcelain')\npaths = []\nfor block in porcelain.split('\\n\\n'):\n    if not block.strip():\n        continue\n    first = block.splitlines()[0]\n    if first.startswith('worktree '):\n        paths.append(first.split(' ', 1)[1].strip())\nlinked = [p for p in paths if p != root]\ndirty_worktrees = 0\nfor path in linked:\n    if run('git', '-C', path, 'status', '--short'):\n        dirty_worktrees += 1\nif linked:\n    lines.append(f'当前共有 {len(linked)} 个 linked worktree，其中 {dirty_worktrees} 个仍有本地改动；请在集成完成后及时回收。')\n\nsettings_local = os.path.join(root, '.claude', 'settings.local.json')\nif os.path.exists(settings_local):\n    try:\n        text = open(settings_local, 'r', encoding='utf-8').read()\n        refs = set(re.findall(r'\\.claude/worktrees/([^/\\s]+)', text))\n        existing = {os.path.basename(p.rstrip('/')) for p in linked}\n        stale = sorted(name for name in refs if name not in existing)\n        if stale:\n            lines.append(f'本地 settings.local.json 仍引用 {len(stale)} 个不存在的 worktree 路径，建议清理历史授权。')\n    except OSError:\n        pass\n\nlines.append('开始新一轮任务前，请先确认最近成果已回到本地 main。')\nprint(json.dumps({'systemMessage': ' '.join(lines)}, ensure_ascii=False))\nPY"
           }
         ]
       }
@@ -43,7 +43,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 - <<'PY'\nimport json\nmsg = '若本次改动涉及代码，请确认：是否已完成 task list、是否已运行本地标准验证、是否需要在本地集成分支汇总。'\nprint(json.dumps({'systemMessage': msg}, ensure_ascii=False))\nPY"
+            "command": "python3 - <<'PY'\nimport json\nmsg = '收尾检查：1) task list 与计划是否已收尾；2) 是否已运行标准 verify；3) 是否已先用 simplify 收敛代码；4) 是否已完成严格 review；5) 多 worktree 任务是否已汇总到 integration worktree；6) 是否已回收完成的 feature worktree / branch；7) 主目录是否回到 main + clean。'\nprint(json.dumps({'systemMessage': msg}, ensure_ascii=False))\nPY"
           }
         ]
       }

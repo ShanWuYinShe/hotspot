@@ -1,6 +1,9 @@
-FROM node:20-alpine
+ARG HOTSPOT_NODE_BASE_IMAGE=node:alpine
+FROM ${HOTSPOT_NODE_BASE_IMAGE}
 WORKDIR /workspace
-RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
+ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
+ENV npm_config_registry=https://registry.npmmirror.com
+RUN npm install -g pnpm@10.28.0
 ENV HOME=/tmp/hotspot-home
 ENV XDG_CACHE_HOME=/tmp/hotspot-home/.cache
 ENV PNPM_STORE_DIR=/cache/pnpm/store

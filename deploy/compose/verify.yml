@@ -1,6 +1,6 @@
 services:
   postgres-test:
-    image: postgres:17-alpine
+    image: ${HOTSPOT_VERIFY_POSTGRES_IMAGE:-postgres:latest}
     environment:
       POSTGRES_USER: hotspot
       POSTGRES_PASSWORD: hotspot
@@ -12,7 +12,7 @@ services:
       retries: 20
 
   redis-test:
-    image: redis:7-alpine
+    image: ${HOTSPOT_VERIFY_REDIS_IMAGE:-redis:latest}
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s

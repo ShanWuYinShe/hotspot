@@ -77,50 +77,73 @@ export HOTSPOT_PREVIEW_FRONTEND_IMAGE="$(preview_frontend_image)"
 export HOTSPOT_TLS_CERT_PATH="${HOTSPOT_TLS_CERT_PATH:-/tmp/missing.crt}"
 export HOTSPOT_TLS_KEY_PATH="${HOTSPOT_TLS_KEY_PATH:-/tmp/missing.key}"
 
+LOG_ROOT="$(preview_log_root "$ROOT")"
+INSPECT_CONSOLE_LOG="$(log_file_path "$LOG_ROOT" "inspect.console.log")"
+INSPECT_PS_LOG="$(log_file_path "$LOG_ROOT" "compose.ps.inspect.log")"
+INSPECT_FULL_LOG="$(log_file_path "$LOG_ROOT" "compose.full.inspect.log")"
+INSPECT_HOME_LOG="$(log_file_path "$LOG_ROOT" "curl-home.log")"
+INSPECT_HEALTH_LOG="$(log_file_path "$LOG_ROOT" "curl-health.log")"
+INSPECT_S3_LOG="$(log_file_path "$LOG_ROOT" "curl-s3.log")"
+INSPECT_META_LOG="$(log_file_path "$LOG_ROOT" "inspect.meta.log")"
 BASE_URL="https://${HOSTNAME}:${HTTPS_PORT}"
+prepare_deploy_dirs "$ROOT"
+ensure_dir "$LOG_ROOT"
 cd "$ROOT"
 
-echo "Compose project: $PROJECT_NAME"
-echo "Backend image: $HOTSPOT_PREVIEW_BACKEND_IMAGE"
-echo "Frontend image: $HOTSPOT_PREVIEW_FRONTEND_IMAGE"
-echo
+{
+  echo "Compose project: $PROJECT_NAME"
+  echo "Backend image: $HOTSPOT_PREVIEW_BACKEND_IMAGE"
+  echo "Frontend image: $HOTSPOT_PREVIEW_FRONTEND_IMAGE"
+  echo "Base URL: $BASE_URL"
+  echo "Tail lines: $TAIL_LINES"
+} | tee "$INSPECT_META_LOG"
 
-echo "[preview] status"
-docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" ps || true
+echo "Compose project: $PROJECT_NAME" | tee "$INSPECT_CONSOLE_LOG"
+echo "Backend image: $HOTSPOT_PREVIEW_BACKEND_IMAGE" | tee -a "$INSPECT_CONSOLE_LOG"
+echo "Frontend image: $HOTSPOT_PREVIEW_FRONTEND_IMAGE" | tee -a "$INSPECT_CONSOLE_LOG"
+echo | tee -a "$INSPECT_CONSOLE_LOG"
+
+echo "[preview] status" | tee -a "$INSPECT_CONSOLE_LOG"
+capture_compose_ps "$PROJECT_NAME" "$COMPOSE_FILE" "$INSPECT_PS_LOG"
+cat "$INSPECT_PS_LOG"
 
 run_logs() {
-  echo
-  echo "[preview] logs"
-  docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" logs --tail "$TAIL_LINES"
+  echo | tee -a "$INSPECT_CONSOLE_LOG"
+  echo "[preview] logs" | tee -a "$INSPECT_CONSOLE_LOG"
+  capture_compose_logs "$PROJECT_NAME" "$COMPOSE_FILE" "$INSPECT_FULL_LOG"
+  docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" logs --tail "$TAIL_LINES" 2>&1 | tee -a "$INSPECT_CONSOLE_LOG"
 }
 
-echo
-echo "[preview] checks"
+echo | tee -a "$INSPECT_CONSOLE_LOG"
+echo "[preview] checks" | tee -a "$INSPECT_CONSOLE_LOG"
 if [[ $SKIP_HOME -eq 0 ]]; then
-  echo "GET /"
-  curl -k -f -sS "$BASE_URL/" >/dev/null
-  echo "ok"
+  echo "GET /" | tee -a "$INSPECT_CONSOLE_LOG"
+  curl -k -f -sS "$BASE_URL/" 2>&1 | tee "$INSPECT_HOME_LOG" >/dev/null
+  echo "ok" | tee -a "$INSPECT_CONSOLE_LOG"
 fi
 
 if [[ $SKIP_HEALTH -eq 0 ]]; then
-  echo
-  echo "POST /api/v1/system/health"
-  curl -k -f -sS -X POST "$BASE_URL/api/v1/system/health" -H "Content-Type: application/json" -d "{}"
-  echo
+  echo | tee -a "$INSPECT_CONSOLE_LOG"
+  echo "POST /api/v1/system/health" | tee -a "$INSPECT_CONSOLE_LOG"
+  curl -k -f -sS -X POST "$BASE_URL/api/v1/system/health" -H "Content-Type: application/json" -d "{}" 2>&1 | tee "$INSPECT_HEALTH_LOG"
+  echo | tee -a "$INSPECT_CONSOLE_LOG"
 fi
 
 if [[ $SKIP_S3 -eq 0 ]]; then
-  echo
-  echo "GET /s3/"
-  s3_out="$(mktemp)"
-  s3_code="$(mktemp)"
-  trap 'rm -f "$s3_out" "$s3_code"' RETURN
-  curl -k -sS -o "$s3_out" -w "%{http_code}" "$BASE_URL/s3/" >"$s3_code"
-  code="$(cat "$s3_code")"
+  echo | tee -a "$INSPECT_CONSOLE_LOG"
+  echo "GET /s3/" | tee -a "$INSPECT_CONSOLE_LOG"
+  s3_body="$(log_file_path "$LOG_ROOT" "curl-s3.body.log")"
+  s3_code_file="$(log_file_path "$LOG_ROOT" "curl-s3.code.log")"
+  curl -k -sS -o "$s3_body" -w "%{http_code}" "$BASE_URL/s3/" >"$s3_code_file"
+  code="$(cat "$s3_code_file")"
+  {
+    echo "status=$code"
+    cat "$s3_body"
+  } >"$INSPECT_S3_LOG"
   if [[ "$code" == "200" || "$code" == "403" || "$code" == "404" ]]; then
-    echo "ok (status $code)"
+    echo "ok (status $code)" | tee -a "$INSPECT_CONSOLE_LOG"
   else
-    echo "unexpected status $code" >&2
+    echo "unexpected status $code" | tee -a "$INSPECT_CONSOLE_LOG" >&2
     run_logs
     exit 1
   fi
@@ -130,5 +153,6 @@ if [[ $FORCE_LOGS -eq 1 ]]; then
   run_logs
 fi
 
-echo
-echo "Preview inspection passed."
+echo | tee -a "$INSPECT_CONSOLE_LOG"
+echo "Preview inspection passed." | tee -a "$INSPECT_CONSOLE_LOG"
+echo "Logs: $LOG_ROOT" | tee -a "$INSPECT_CONSOLE_LOG"
