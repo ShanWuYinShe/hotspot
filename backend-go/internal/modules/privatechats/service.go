@@ -12,13 +12,13 @@ import (
 
 type Service struct {
 	repo     Repository
-	messages *private_messages.Service
+	messages private_messages.ReadService
 }
 
 func NewService() *Service {
 	return NewServiceWithRepos(NewInMemoryRepository(), private_messages.NewService())
 }
-func NewServiceWithRepos(repo Repository, messages *private_messages.Service) *Service {
+func NewServiceWithRepos(repo Repository, messages private_messages.ReadService) *Service {
 	return &Service{repo: repo, messages: messages}
 }
 func (s *Service) OpenTheDoor(ctx context.Context, targetUserID string, recentLimit int) (PrivateChatOpenResult, error) {

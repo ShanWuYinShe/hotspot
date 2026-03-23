@@ -28,42 +28,23 @@ func (r *privateChatErrorRepo) List(context.Context, string) (map[string]time.Ti
 	return nil, r.listErr
 }
 
-type privateChatMessageErrorRepo struct {
+type privateChatMessageReader struct {
 	recentErr error
 	lastErr   error
 }
 
-func (r *privateChatMessageErrorRepo) Send(context.Context, string, string, private_messages.SendPrivateMessageRequest) (private_messages.MessageSent, error) {
-	return private_messages.MessageSent{}, nil
-}
-func (r *privateChatMessageErrorRepo) History(context.Context, string, string) (private_messages.PaginatedMessages, error) {
-	return private_messages.PaginatedMessages{}, nil
-}
-func (r *privateChatMessageErrorRepo) Recent(context.Context, string, string, int) (private_messages.PaginatedMessages, error) {
+func (r *privateChatMessageReader) Recent(context.Context, string, int) (private_messages.PaginatedMessages, error) {
 	return private_messages.PaginatedMessages{}, r.recentErr
 }
-func (r *privateChatMessageErrorRepo) Last(context.Context, string, string) (*private_messages.PrivateMessageItem, error) {
+
+func (r *privateChatMessageReader) Last(context.Context, string) (*private_messages.PrivateMessageItem, error) {
 	return nil, r.lastErr
-}
-func (r *privateChatMessageErrorRepo) Update(context.Context, string, private_messages.UpdatePrivateMessageRequest) error {
-	return nil
-}
-func (r *privateChatMessageErrorRepo) Recall(context.Context, string, private_messages.RecallPrivateMessageRequest) error {
-	return nil
-}
-func (r *privateChatMessageErrorRepo) MarkAsRead(context.Context, string, private_messages.MarkPrivateMessagesReadRequest) error {
-	return nil
-}
-func (r *privateChatMessageErrorRepo) MarkAllRead(context.Context, string) error {
-	return nil
 }
 
 func newHandlers() (*Handler, *private_messages.Handler) {
-	repo := private_messages.NewInMemoryRepository()
-	messageService := private_messages.NewServiceWithRepo(repo)
-	chatHandler := NewHandler(NewServiceWithRepos(NewInMemoryRepository(), messageService), appconfig.NewStaticSource(config.Load()))
-	messageHandler := private_messages.NewHandler(messageService)
-	return chatHandler, messageHandler
+	messageRuntime := private_messages.NewRuntimeWithRepo(private_messages.NewInMemoryRepository())
+	chatHandler := NewHandler(NewServiceWithRepos(NewInMemoryRepository(), messageRuntime.ReadService()), appconfig.NewStaticSource(config.Load()))
+	return chatHandler, messageRuntime.Handler()
 }
 
 func TestOpenTheDoorReturnsChatAndRecentMessages(t *testing.T) {
@@ -132,7 +113,7 @@ func TestPrivateChatsHandlerReturns10600OnServiceError(t *testing.T) {
 	chatHandler := NewHandler(
 		NewServiceWithRepos(
 			&privateChatErrorRepo{getOrCreateErr: errors.New("boom"), listErr: errors.New("boom")},
-			private_messages.NewServiceWithRepo(&privateChatMessageErrorRepo{recentErr: errors.New("boom"), lastErr: errors.New("boom")}),
+			&privateChatMessageReader{recentErr: errors.New("boom"), lastErr: errors.New("boom")},
 		),
 		appconfig.NewStaticSource(config.Load()),
 	)

@@ -4,8 +4,19 @@ import (
 	"context"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/realtime"
 )
+
+type ReadService interface {
+	Recent(context.Context, string, int) (PaginatedMessages, error)
+	Last(context.Context, string) (*PrivateMessageItem, error)
+}
+
+type Runtime struct {
+	handler     *Handler
+	readService ReadService
+}
 
 type Service struct {
 	repo Repository
@@ -17,6 +28,26 @@ func NewService() *Service {
 
 func NewServiceWithRepo(repo Repository) *Service {
 	return &Service{repo: repo}
+}
+
+func NewRuntime(factory *persistence.Factory) *Runtime {
+	return NewRuntimeWithRepo(NewPostgresRepository(factory, nil))
+}
+
+func NewRuntimeWithRepo(repo Repository) *Runtime {
+	service := NewServiceWithRepo(repo)
+	return &Runtime{
+		handler:     NewHandler(service),
+		readService: service,
+	}
+}
+
+func (r *Runtime) Handler() *Handler {
+	return r.handler
+}
+
+func (r *Runtime) ReadService() ReadService {
+	return r.readService
 }
 
 func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (MessageSent, error) {

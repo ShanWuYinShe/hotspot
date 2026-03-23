@@ -20,10 +20,9 @@ type Module struct {
 
 func NewModule(cfg config.Config, factory *persistence.Factory) *Module {
 	appCfg := appconfig.NewStaticSource(cfg)
-	messageRepo := private_messages.NewPostgresRepository(factory, nil)
-	messageService := private_messages.NewServiceWithRepo(messageRepo)
-	chatService := NewServiceWithRepos(NewPostgresRepository(factory, nil), messageService)
-	return &Module{chatHandler: NewHandler(chatService, appCfg), messageHandler: private_messages.NewHandler(messageService)}
+	messageRuntime := private_messages.NewRuntime(factory)
+	chatService := NewServiceWithRepos(NewPostgresRepository(factory, nil), messageRuntime.ReadService())
+	return &Module{chatHandler: NewHandler(chatService, appCfg), messageHandler: messageRuntime.Handler()}
 }
 func (m *Module) Mount(r chi.Router) {
 	r.Route("/api/v1/private_chats", func(chatRouter chi.Router) {
