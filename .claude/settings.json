@@ -38,6 +38,16 @@
         ]
       }
     ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude/scripts/pre_tool_use.py"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [

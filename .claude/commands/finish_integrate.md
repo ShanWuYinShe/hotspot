@@ -1,0 +1,32 @@
+---
+description: 检查当前 integration 是否已满足线性同步回主目录 main 的条件
+argument-hint: [optional notes]
+---
+
+请对当前 integration worktree 做最后的完成检查。当前命令的参数为：
+
+$ARGUMENTS
+
+目标不是直接自动同步回主目录 `main`，而是确认这轮 integration 是否已经满足“可线性同步回 main”的全部条件，并给出明确结论：`ready to sync`、`blocked` 或 `must refresh`。
+
+执行要求：
+
+1. 先确认当前位于 integration worktree；如果不是，停止并说明原因。
+2. 检查当前 integration 基线是否仍然有效；若主目录 `main` 已前进，则输出 `must refresh`，并提示改走 `/refresh_integrate`。
+3. 检查 integration verify 是否已经完成并通过；不要把 feature worktree 的局部通过当作 integration verify 通过。
+4. 检查 simplify、严格 review 与 review 问题修复是否已经完成。
+5. 检查当前提交历史是否已适合线性同步回主目录 `main`；优先采用 `rebase + squash` 后的干净历史，避免 merge commit。
+6. 可使用 `integration-review-gate` subagent 复核当前 gate 结论。
+7. 只给出结论和阻塞项，不要默认自动同步回 `main`，不要 push。
+
+结束时请输出：
+
+- integration worktree 路径与分支
+- 当前 integration 基线 `main HEAD`
+- 主目录当前最新本地 `main HEAD`
+- integration verify 状态
+- simplify 状态
+- strict review 状态
+- 历史线性化状态
+- 当前结论：`ready to sync`、`blocked` 或 `must refresh`
+- 若不是 `ready to sync`，明确列出阻塞项
