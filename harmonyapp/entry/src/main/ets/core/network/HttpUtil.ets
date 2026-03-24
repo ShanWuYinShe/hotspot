@@ -93,8 +93,7 @@ const TOKEN_OPTIONAL_ENDPOINTS: string[] = [
 	ApiEndpoints.COMMENT.LIST_LIKES,
 	ApiEndpoints.SHARE.GET,
 	ApiEndpoints.FEED.LIST_TRENDING,
-	ApiEndpoints.MAP.HEATMAP,
-	ApiEndpoints.MAP.HOTSPOTS,
+	ApiEndpoints.MAP.CANVAS,
 ];
 
 const DOMAIN_NUMBER: number = 0xFF08;

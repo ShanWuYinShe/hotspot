@@ -14,6 +14,20 @@ export interface CoordinatePoint {
   longitude: number;
 }
 
+export class CoordinateBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+
+  constructor(north: number, south: number, east: number, west: number) {
+    this.north = north;
+    this.south = south;
+    this.east = east;
+    this.west = west;
+  }
+}
+
 export class CoordinateConverter {
   /**
    * 使用数学算法将 WGS84 坐标转换为 GCJ02（国测局坐标）。
@@ -124,7 +138,7 @@ export class CoordinateConverter {
    * 使用与后端相同的近似公式计算视口物理跨度（米）。
    * 返回值为南北/东西方向跨度中的较大者。
    */
-  static calculateViewportSpanMeters(bounds: { north: number; south: number; east: number; west: number }): number {
+  static calculateViewportSpanMeters(bounds: CoordinateBounds): number {
     const centerLat: number = (bounds.north + bounds.south) / 2.0;
     const latSpan: number = (bounds.north - bounds.south) * 111320.0;
     const lngSpan: number = (bounds.east - bounds.west) * 111320.0 * Math.cos(centerLat * Math.PI / 180.0);

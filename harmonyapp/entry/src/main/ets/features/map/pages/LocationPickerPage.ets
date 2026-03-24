@@ -9,10 +9,10 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { curves } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { MapHeatBucket, MapHeatCanvas, MapViewport, MapHotspotItem, MapHotspotsCanvas, MapCanvasRequest, MapCanvasResponse } from '../../../core/types/api';
+import { Bounds, MapCanvasFilter, MapCanvasRequest, MapCanvasResponse, MapHeatBucket, MapHotspotItem, MapViewport, PaginationParams } from '../../../core/types/api';
 import { AppRouter, GroupDetailRouteParam, ProfileRouteParam, MomentDetailRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
-import { CoordinateConverter } from '../../../core/geo/CoordinateConverter';
+import { CoordinateBounds, CoordinateConverter } from '../../../core/geo/CoordinateConverter';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
@@ -112,7 +112,7 @@ function TopBar(props: TopBarProps) {
       Text() {
         SymbolSpan($r(AppIcon.BACK))
           .fontSize(22)
-          .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).textPrimary])
+          .fontColor([$r('sys.color.ohos_id_color_text_primary')])
       }
     }
     .width(44)
@@ -126,12 +126,12 @@ function TopBar(props: TopBarProps) {
       Text() {
         SymbolSpan($r(AppIcon.FILTER))
           .fontSize(16)
-          .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).textPrimary])
+          .fontColor([$r('sys.color.ohos_id_color_text_primary')])
       }
       Text('筛选')
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontWeight(FontWeight.Medium)
-        .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
+        .fontColor($r('sys.color.ohos_id_color_text_primary'))
     }
     .height(40)
     .padding({
@@ -142,7 +142,7 @@ function TopBar(props: TopBarProps) {
       ? resolveLocationPickerPalette(props.resolvedThemeId).surfaceSubtle
       : resolveLocationPickerPalette(props.resolvedThemeId).surfaceBackground)
     .borderRadius(DesignConstants.RADIUS.FULL)
-    .shadow(resolveLocationPickerPalette(props.resolvedThemeId).controlShadow)
+    .shadow(DesignConstants.SHADOW.SMALL)
     .border({ width: 1, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
     .onClick(props.onToggleFilter)
   }
@@ -160,7 +160,6 @@ interface FilterMenuItemProps {
   label: string;
   accentColor: string;
   active: boolean;
-  resolvedThemeId?: string;
   onToggle: () => void;
 }
 
@@ -175,8 +174,8 @@ function FilterMenuItem(props: FilterMenuItemProps) {
       .fontSize(DesignConstants.FONT.SIZE.MD)
       .fontWeight(props.active ? FontWeight.Medium : FontWeight.Normal)
       .fontColor(props.active
-        ? resolveLocationPickerPalette(props.resolvedThemeId).textPrimary
-        : resolveLocationPickerPalette(props.resolvedThemeId).textSecondary)
+        ? $r('sys.color.ohos_id_color_text_primary')
+        : $r('sys.color.ohos_id_color_text_secondary'))
       .layoutWeight(1)
     Row()
       .width(12)
@@ -212,7 +211,6 @@ function FilterDropdownPanel(props: FilterPanelProps) {
       label: '用户',
       accentColor: MARKER_COLOR_USER,
       active: props.showUsers,
-      resolvedThemeId: props.resolvedThemeId,
       onToggle: props.onToggleUsers
     })
     FilterMenuItem({
@@ -220,7 +218,6 @@ function FilterDropdownPanel(props: FilterPanelProps) {
       label: '群组',
       accentColor: MARKER_COLOR_GROUP,
       active: props.showGroups,
-      resolvedThemeId: props.resolvedThemeId,
       onToggle: props.onToggleGroups
     })
     FilterMenuItem({
@@ -228,7 +225,6 @@ function FilterDropdownPanel(props: FilterPanelProps) {
       label: '动态',
       accentColor: MARKER_COLOR_MOMENT,
       active: props.showMoments,
-      resolvedThemeId: props.resolvedThemeId,
       onToggle: props.onToggleMoments
     })
   }
@@ -236,7 +232,7 @@ function FilterDropdownPanel(props: FilterPanelProps) {
   .padding({ top: 6, bottom: 6 })
   .backgroundColor(resolveLocationPickerPalette(props.resolvedThemeId).surfaceBackground)
   .borderRadius(DesignConstants.RADIUS.XXL)
-  .shadow(resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow)
+  .shadow(DesignConstants.SHADOW.MEDIUM)
   .border({ width: 1, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
   .onClick(() => {})
 }
@@ -254,7 +250,7 @@ function MapToast(props: MapToastProps) {
   } else {
     Text(props.message)
       .fontSize(DesignConstants.FONT.SIZE.SM)
-      .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
+      .fontColor($r('sys.color.ohos_id_color_text_primary'))
       .backgroundColor(resolveLocationPickerPalette(props.resolvedThemeId).surfaceBackground)
       .borderRadius(DesignConstants.RADIUS.MD)
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: 6, bottom: 6 })
@@ -287,10 +283,6 @@ struct SearchPanel {
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
-  private get props() {
-    return { resolvedThemeId: this.resolvedThemeId };
-  }
-
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
@@ -314,14 +306,10 @@ struct SearchPanel {
           .height(40)
           .backgroundColor(this.getPalette().surfaceSubtle)
           .borderRadius(DesignConstants.RADIUS.FULL)
-          .shadow(resolveLocationPickerPalette(props.resolvedThemeId).controlShadow)
+          .shadow(DesignConstants.SHADOW.INSET)
           .searchIcon({
             size: 18,
-            color: resolveLocationPickerPalette(props.resolvedThemeId).textPrimary,
-            src: '' // 使用默认搜索图标
-          })
-          .cancelButton({
-            style: CancelButtonStyle.INPUT // 使用内置清除按钮样式，不指定图标，采用默认图标
+            color: this.getPalette().textPrimary
           })
           .searchButton('搜索')
           .onChange((value: string) => {
@@ -340,14 +328,14 @@ struct SearchPanel {
           LoadingProgress()
             .width(18)
             .height(18)
-            .color(resolveLocationPickerPalette(props.resolvedThemeId).accentBackground)
+            .color($r('sys.color.ohos_id_color_emphasize'))
         }
 
         // 取消按钮
         Column() {
           Text('取消')
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
         }
         .height(40)
         .justifyContent(FlexAlign.Center)
@@ -367,10 +355,10 @@ struct SearchPanel {
               LoadingProgress()
                 .width(24)
                 .height(24)
-                .color(resolveLocationPickerPalette(props.resolvedThemeId).accentBackground)
+                .color($r('sys.color.ohos_id_color_emphasize'))
               Text('正在搜索...')
                 .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textSecondary)
+                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                 .margin({ left: DesignConstants.SPACING.SM })
             }
             .width('100%')
@@ -386,7 +374,7 @@ struct SearchPanel {
                       Text() {
                         SymbolSpan($r(AppIcon.LOCATION))
                           .fontSize(18)
-                          .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).accentBackground])
+                          .fontColor([$r('sys.color.ohos_id_color_emphasize')])
                       }
                     }
                     .width(32)
@@ -397,7 +385,7 @@ struct SearchPanel {
 
                     Text(item.locationName || '未知地点')
                       .fontSize(DesignConstants.FONT.SIZE.MD)
-                      .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
+                      .fontColor($r('sys.color.ohos_id_color_text_primary'))
                       .layoutWeight(1)
                       .maxLines(2)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -412,10 +400,10 @@ struct SearchPanel {
                   .backgroundColor(this.getPalette().surfaceBackground)
                   .borderRadius(DesignConstants.RADIUS.XXL)
                   .shadow({
-                    radius: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.radius,
-                    color: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.color,
-                    offsetX: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetX,
-                    offsetY: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetY
+                    radius: DesignConstants.SHADOW.MEDIUM.radius,
+                    color: DesignConstants.SHADOW.MEDIUM.color,
+                    offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
+                    offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
                   })
                   .border({ width: 1, color: this.getPalette().borderColor })
                   .onClick(() => { this.onSelectResult(item); })
@@ -423,16 +411,16 @@ struct SearchPanel {
               }, (item: LocationInfo) => `search_${item.latitude}_${item.longitude}`)
             }
             .width('100%')
-            .divider({ strokeWidth: 0, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
+            .divider({ strokeWidth: 0, color: $r('sys.color.ohos_id_color_list_separator') })
           } else if (this.searchText.trim().length > 0) {
             // 无搜索结果
             Column() {
               Text('未找到该地点')
                 .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
+                .fontColor($r('sys.color.ohos_id_color_text_primary'))
               Text('请换个关键词试试')
                 .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textSecondary)
+                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                 .margin({ top: DesignConstants.SPACING.XS })
             }
             .width('100%')
@@ -446,11 +434,11 @@ struct SearchPanel {
                 Text('最近使用')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
                   .fontWeight(FontWeight.Medium)
-                  .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
+                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
                 Blank()
                 Text('清空')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textSecondary)
+                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                   .onClick(this.onClearHistory)
               }
               .width('100%')
@@ -463,7 +451,7 @@ struct SearchPanel {
                         Text() {
                           SymbolSpan($r(AppIcon.TIME))
                             .fontSize(18)
-                            .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).textSecondary])
+                            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
                         }
                       }
                       .width(32)
@@ -474,7 +462,7 @@ struct SearchPanel {
 
                       Text(item.locationName || '未命名位置')
                         .fontSize(DesignConstants.FONT.SIZE.MD)
-                        .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
+                        .fontColor($r('sys.color.ohos_id_color_text_primary'))
                         .layoutWeight(1)
                         .maxLines(1)
                         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -489,10 +477,10 @@ struct SearchPanel {
                     .backgroundColor(this.getPalette().surfaceBackground)
                     .borderRadius(DesignConstants.RADIUS.XXL)
                     .shadow({
-                      radius: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.radius,
-                      color: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.color,
-                      offsetX: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetX,
-                      offsetY: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetY
+                      radius: DesignConstants.SHADOW.MEDIUM.radius,
+                      color: DesignConstants.SHADOW.MEDIUM.color,
+                      offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
+                      offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
                     })
                     .border({ width: 1, color: this.getPalette().borderColor })
                     .onClick(() => {
@@ -503,7 +491,7 @@ struct SearchPanel {
                 }, (item: AnchorHistoryItem) => `hist_s_${item.latitude}_${item.longitude}`)
               }
               .width('100%')
-              .divider({ strokeWidth: 0, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
+              .divider({ strokeWidth: 0, color: $r('sys.color.ohos_id_color_list_separator') })
             }
             .width('100%')
           } else {
@@ -511,7 +499,7 @@ struct SearchPanel {
             Column() {
               Text('暂无搜索历史')
                 .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textSecondary)
+                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             }
             .width('100%')
             .height(100)
@@ -535,7 +523,7 @@ struct SearchPanel {
       bottom: this.getBottomInset()
     })
     .backgroundColor(this.getPalette().surfaceBackground)
-    .border({ width: { top: 1 }, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
+    .border({ width: { top: 1 }, color: $r('app.color.divider') })
     .borderRadius({ topLeft: 24, topRight: 24 })
     .onClick(() => {})
   }
@@ -558,10 +546,6 @@ struct MainPanel {
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private dragStartHeight: number = 0;
-
-  private get props() {
-    return { resolvedThemeId: this.resolvedThemeId };
-  }
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -621,11 +605,11 @@ struct MainPanel {
         Text() {
           SymbolSpan($r(AppIcon.SEARCH))
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).textTertiary])
+            .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
         }
         Text('搜索地点、地标或坐标')
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textTertiary)
+          .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
@@ -635,7 +619,7 @@ struct MainPanel {
       .alignItems(VerticalAlign.Center)
       .backgroundColor(this.getPalette().surfaceSubtle)
       .borderRadius(DesignConstants.RADIUS.FULL)
-      .shadow(resolveLocationPickerPalette(props.resolvedThemeId).controlShadow)
+      .shadow(DesignConstants.SHADOW.INSET)
       .margin({ bottom: DesignConstants.SPACING.MD })
       .onClick(this.onSearchClick)
 
@@ -648,12 +632,12 @@ struct MainPanel {
               Text('最近使用')
                 .fontSize(DesignConstants.FONT.SIZE.SM)
                 .fontWeight(FontWeight.Medium)
-                .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textSecondary)
+                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
               Blank()
               if (this.anchorHistory.length > 0) {
                 Text('清空')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textTertiary)
+                  .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
                   .padding({ left: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
                   .onClick(this.onClearHistory)
               }
@@ -670,7 +654,7 @@ struct MainPanel {
                         Text() {
                           SymbolSpan($r(AppIcon.TIME))
                             .fontSize(DesignConstants.FONT.SIZE.LG)
-                            .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).textTertiary])
+                            .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
                         }
                       }
                       .width(32)
@@ -681,7 +665,7 @@ struct MainPanel {
 
                       Text(item.locationName || '未命名位置')
                         .fontSize(DesignConstants.FONT.SIZE.MD)
-                        .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
+                        .fontColor($r('sys.color.ohos_id_color_text_primary'))
                         .layoutWeight(1)
                         .maxLines(1)
                         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -696,10 +680,10 @@ struct MainPanel {
                     .backgroundColor(this.getPalette().surfaceBackground)
                     .borderRadius(DesignConstants.RADIUS.XXL)
                     .shadow({
-                      radius: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.radius,
-                      color: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.color,
-                      offsetX: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetX,
-                      offsetY: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetY
+                      radius: DesignConstants.SHADOW.MEDIUM.radius,
+                      color: DesignConstants.SHADOW.MEDIUM.color,
+                      offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
+                      offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
                     })
                      .border({ width: 1, color: this.getPalette().borderColor })
                     .onClick(() => { this.onSelectHistory(item); })
@@ -707,17 +691,17 @@ struct MainPanel {
                 }, (item: AnchorHistoryItem) => `hist_m_${item.latitude}_${item.longitude}`)
               }
               .width('100%')
-              .divider({ strokeWidth: 0, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
+              .divider({ strokeWidth: 0, color: $r('sys.color.ohos_id_color_list_separator') })
             } else {
               Column() {
                 Text() {
                   SymbolSpan($r(AppIcon.TIME))
                     .fontSize(DesignConstants.FONT.SIZE.LG)
-                    .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).textTertiary])
+                    .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
                 }
                 Text('暂无最近使用的地点')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textTertiary)
+                  .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
                   .margin({ top: DesignConstants.SPACING.XS })
               }
               .width('100%')
@@ -741,7 +725,7 @@ struct MainPanel {
         .fontColor(this.getPalette().accentText)
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .fontWeight(FontWeight.Medium)
-        .shadow(resolveLocationPickerPalette(props.resolvedThemeId).controlShadow)
+        .shadow(DesignConstants.SHADOW.SMALL)
         .border({ width: 1, color: this.getPalette().borderColor })
         .margin({ top: DesignConstants.SPACING.SM })
         .onClick(this.onConfirm)
@@ -755,7 +739,7 @@ struct MainPanel {
       bottom: this.getBottomInset()
     })
     .backgroundColor(this.getPalette().surfaceBackground)
-    .border({ width: { top: 1 }, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
+    .border({ width: { top: 1 }, color: $r('app.color.divider') })
     .borderRadius({ topLeft: 24, topRight: 24 })
     .onClick(() => {})
   }
@@ -769,10 +753,6 @@ export struct LocationPickerPage {
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
-
-  private get props() {
-    return { resolvedThemeId: this.resolvedThemeId };
-  }
 
   @State mapRegion: MapRegion = {
     latitude: 35.154921,
@@ -1030,9 +1010,10 @@ export struct LocationPickerPage {
 			if (this.renderTimerId > 0) {
 				clearTimeout(this.renderTimerId);
 			}
-			this.renderTimerId = setTimeout(() => {
+			const timerId: number = setTimeout(() => {
 				this.fetchMapRenderData('camera_idle');
-			}, 150);
+			}, 150) as number;
+			this.renderTimerId = timerId;
 		}
 
   }
@@ -1069,9 +1050,10 @@ export struct LocationPickerPage {
     if (this.renderTimerId > 0) {
       clearTimeout(this.renderTimerId);
     }
-    this.renderTimerId = setTimeout(() => {
+    const timerId: number = setTimeout(() => {
       this.fetchMapRenderData('visible_region_change');
-    }, 150);
+    }, 150) as number;
+    this.renderTimerId = timerId;
   }
 
   private async onMapDoubleClick(coord: MapCoordinate): Promise<void> {
@@ -1236,7 +1218,13 @@ export struct LocationPickerPage {
 		}
 		const filter = this.resolveMapFilter();
 		const filterSignature = filter?.data_type ?? 'all';
-		const spanM: number = CoordinateConverter.calculateViewportSpanMeters(viewport.bounds);
+		const boundsForSpan = new CoordinateBounds(
+			viewport.bounds.north,
+			viewport.bounds.south,
+			viewport.bounds.east,
+			viewport.bounds.west
+		);
+		const spanM: number = CoordinateConverter.calculateViewportSpanMeters(boundsForSpan);
 		const shouldUseHotspots: boolean = spanM <= 3000 && viewport.zoom >= 13;
 		const mode: string = shouldUseHotspots ? 'hotspots' : 'heatmap';
 		const signature = `${viewport.bounds.north.toFixed(6)}|${viewport.bounds.south.toFixed(6)}|${viewport.bounds.east.toFixed(6)}|${viewport.bounds.west.toFixed(6)}|${viewport.zoom.toFixed(2)}|${filterSignature}|${mode}`;
@@ -1249,10 +1237,15 @@ export struct LocationPickerPage {
 		try {
 			if (shouldUseHotspots) {
 					hilog.info(DOMAIN_NUMBER, TAG, `start map/hotspots trigger=${trigger} requestId=${requestId} signature=${signature}`);
+					const pagination: PaginationParams = { limit: 100 };
+					const requestFilter: MapCanvasFilter | undefined = filter ? {
+						data_type: filter.data_type,
+						time_range: filter.time_range
+					} : undefined;
 					const request: MapCanvasRequest = {
-						viewport,
-						filter: filter ? { data_type: filter.data_type, time_range: filter.time_range } : undefined,
-						pagination: { limit: 100 }
+						viewport: viewport,
+						filter: requestFilter,
+						pagination: pagination
 					};
 					const response = await ApiClient.getMapCanvas(request);
 				if (requestId !== this.renderRequestId) {
@@ -1277,36 +1270,39 @@ export struct LocationPickerPage {
 							continue;
 						}
 						const renderId = `${index}_${item.object_type}_${item.object_id}`;
-						nextItems.push({
+						const renderLocation: MapRenderItemLocation = {
+							latitude: item.location.latitude,
+							longitude: item.location.longitude
+						};
+						const renderCluster: MapRenderItemCluster = {
+							count: 1,
+							category: 'all',
+							label: item.title
+						};
+						const renderItem: MapRenderItem = {
 							render_id: renderId,
-							location: {
-								latitude: item.location.latitude,
-								longitude: item.location.longitude
-							},
+							location: renderLocation,
 							type: item.object_type,
 							total_count: 1,
-							cluster: {
-								count: 1,
-								category: 'all',
-								label: item.title
-							}
-						});
+							cluster: renderCluster
+						};
+						nextItems.push(renderItem);
 					}
 					this.renderItems = nextItems;
 					hilog.info(DOMAIN_NUMBER, TAG, `finish map/hotspots trigger=${trigger} requestId=${requestId} items=${this.renderItems.length}`);
-					const toastMessage = canvas?.toast_message ?? '';
-					if (toastMessage.length > 0) {
-						this.showMapToast(toastMessage, 3000);
-					} else {
-						this.mapToastMessage = '';
-					}
+					this.mapToastMessage = '';
 					this.updateMarkers();
 				} else {
 					hilog.warn(DOMAIN_NUMBER, TAG, `map/hotspots business error trigger=${trigger} requestId=${requestId} code=${response.code} message=${response.message ?? ''}`);
 				}
 			} else {
 					hilog.info(DOMAIN_NUMBER, TAG, `start map/heatmap trigger=${trigger} requestId=${requestId} signature=${signature}`);
-					const request: MapCanvasRequest = filter ? { viewport, filter } : { viewport };
+					let request: MapCanvasRequest;
+					if (filter) {
+						request = { viewport: viewport, filter: filter };
+					} else {
+						request = { viewport: viewport };
+					}
 					const response = await ApiClient.getMapCanvas(request);
 				if (requestId !== this.renderRequestId) {
 					hilog.info(DOMAIN_NUMBER, TAG, `ignore stale map/heatmap response trigger=${trigger} requestId=${requestId}`);
@@ -1320,20 +1316,22 @@ export struct LocationPickerPage {
 					for (let index = 0; index < buckets.length; index++) {
 						const bucket = buckets[index];
 						const renderId = `${index}_${bucket.location.latitude.toFixed(6)}_${bucket.location.longitude.toFixed(6)}`;
-						nextItems.push({
+						const renderLocation: MapRenderItemLocation = {
+							latitude: bucket.location.latitude,
+							longitude: bucket.location.longitude
+						};
+						const renderCluster: MapRenderItemCluster = {
+							count: bucket.total_count,
+							category: 'all'
+						};
+						const renderItem: MapRenderItem = {
 							render_id: renderId,
-								location: {
-									latitude: bucket.location.latitude,
-									longitude: bucket.location.longitude
-								},
-								type: 'cluster',
-								total_count: bucket.total_count,
-								cluster: {
-									count: bucket.total_count,
-									category: 'all',
-								}
-							}
-						});
+							location: renderLocation,
+							type: 'cluster',
+							total_count: bucket.total_count,
+							cluster: renderCluster
+						};
+						nextItems.push(renderItem);
 					}
 						this.renderItems = nextItems;
 						hilog.info(DOMAIN_NUMBER, TAG, `finish map/heatmap trigger=${trigger} requestId=${requestId} items=${this.renderItems.length}`);
@@ -1357,10 +1355,11 @@ export struct LocationPickerPage {
     if (this.mapToastTimerId > 0) {
       clearTimeout(this.mapToastTimerId);
     }
-    this.mapToastTimerId = setTimeout(() => {
+    const timerId: number = setTimeout(() => {
       this.mapToastMessage = '';
       this.mapToastTimerId = 0;
-    }, duration);
+    }, duration) as number;
+    this.mapToastTimerId = timerId;
   }
 
   private buildViewport(): MapViewport {
@@ -1385,15 +1384,17 @@ export struct LocationPickerPage {
       const west = Math.max(-180, Math.min(...longitudes));
 
       // 视口中心由后端根据 bounds 自行计算，这里不下发额外字段
-      return {
-        bounds: {
-          north,
-          south,
-          east,
-          west
-        },
-        zoom,
+      const bounds: Bounds = {
+        north: north,
+        south: south,
+        east: east,
+        west: west
       };
+      const viewport: MapViewport = {
+        bounds: bounds,
+        zoom: zoom,
+      };
+      return viewport;
     }
 
     // 兜底：部分设备/版本不支持 getVisibleRegion 时，退回到“中心点 + zoom 推算”的近似方案
@@ -1401,50 +1402,86 @@ export struct LocationPickerPage {
     const gcj02Lng = this.centerLng || this.mapRegion.longitude;
     const wgs84 = CoordinateConverter.convertGcj02ToWgs84(gcj02Lat, gcj02Lng);
     const delta: BoundsDelta = this.computeBoundsDelta(zoom);
-    return {
-      bounds: {
-        north: Math.min(90, wgs84.latitude + delta.latDelta / 2),
-        south: Math.max(-90, wgs84.latitude - delta.latDelta / 2),
-        east: Math.min(180, wgs84.longitude + delta.lonDelta / 2),
-        west: Math.max(-180, wgs84.longitude - delta.lonDelta / 2)
-      },
-      zoom,
+    const bounds: Bounds = {
+      north: Math.min(90, wgs84.latitude + delta.latDelta / 2),
+      south: Math.max(-90, wgs84.latitude - delta.latDelta / 2),
+      east: Math.min(180, wgs84.longitude + delta.lonDelta / 2),
+      west: Math.max(-180, wgs84.longitude - delta.lonDelta / 2)
     };
+    const viewport: MapViewport = {
+      bounds: bounds,
+      zoom: zoom,
+    };
+    return viewport;
   }
 
   private computeBoundsDelta(zoom: number): BoundsDelta {
     const latDelta = 180 / Math.pow(2, zoom);
     const lonDelta = 360 / Math.pow(2, zoom);
-    return { latDelta, lonDelta };
+    const delta: BoundsDelta = { latDelta: latDelta, lonDelta: lonDelta };
+    return delta;
   }
 
   private updateMarkers(): void {
     this.renderItemsMap.clear();
     this.overlappingGroupsMap.clear();
 
-    const nextMarkers: MapMarker[] = [];
+    const convertedItems: ConvertedRenderItem[] = [];
     for (const item of this.renderItems) {
       this.renderItemsMap.set(item.render_id, item);
       if (!this.shouldDisplayItem(item)) {
         continue;
       }
       const gcj02 = CoordinateConverter.convertWgs84ToGcj02(
-        item.location.latitude, item.location.longitude
+        item.location.latitude,
+        item.location.longitude
       );
-      nextMarkers.push({
-        id: item.render_id,
-        latitude: gcj02.latitude,
-        longitude: gcj02.longitude,
-        title: this.getMarkerTitle(item),
-        snippet: this.getMarkerSnippet(item),
-        type: item.type === 'cluster' ? 'cluster' : item.type,
-        iconKey: this.getMarkerIconKey(item)
+      convertedItems.push({
+        item: item,
+        gcj02Lat: gcj02.latitude,
+        gcj02Lng: gcj02.longitude
       });
     }
 
-    // 在所有渲染标记之上叠加“当前选中位置”图钉（GCJ-02），避免随相机中心漂移
+    const groupedItems: Map<string, ConvertedRenderItem[]> = new Map();
+    for (const converted of convertedItems) {
+      const latKey = Math.round(converted.gcj02Lat * COORD_GROUP_PRECISION);
+      const lngKey = Math.round(converted.gcj02Lng * COORD_GROUP_PRECISION);
+      const groupKey = `${latKey}_${lngKey}`;
+      const currentGroup = groupedItems.get(groupKey);
+      if (currentGroup) {
+        currentGroup.push(converted);
+      } else {
+        groupedItems.set(groupKey, [converted]);
+      }
+    }
+
+    const nextMarkers: MapMarker[] = [];
+    for (const grouped of groupedItems.values()) {
+      if (grouped.length === 1) {
+        nextMarkers.push(this.buildSingleMarker(grouped[0]));
+        continue;
+      }
+
+      const first = grouped[0];
+      const groupedItemsList = grouped.map((entry: ConvertedRenderItem) => entry.item);
+      const overlapId = `${OVERLAP_GROUP_PREFIX}${first.item.render_id}`;
+      this.overlappingGroupsMap.set(overlapId, groupedItemsList);
+      const clusterLabel = this.summarizeGroupTypes(grouped);
+      const clusterMarker: MapMarker = {
+        id: overlapId,
+        latitude: first.gcj02Lat,
+        longitude: first.gcj02Lng,
+        title: `${grouped.length} 个内容`,
+        snippet: clusterLabel.length > 0 ? clusterLabel : '点击查看详情',
+        type: 'cluster',
+        iconKey: 'cluster'
+      };
+      nextMarkers.push(clusterMarker);
+    }
+
     if (this.centerLat !== 0 || this.centerLng !== 0) {
-      nextMarkers.push({
+      const centerPinMarker: MapMarker = {
         id: 'center_pin_selection',
         latitude: this.centerLat,
         longitude: this.centerLng,
@@ -1452,13 +1489,14 @@ export struct LocationPickerPage {
         snippet: '',
         type: 'user',
         iconKey: 'center_pin'
-      });
+      };
+      nextMarkers.push(centerPinMarker);
     }
     this.mapMarkers = nextMarkers;
   }
 
   private buildSingleMarker(c: ConvertedRenderItem): MapMarker {
-    return {
+    const marker: MapMarker = {
       id: c.item.render_id,
       latitude: c.gcj02Lat,
       longitude: c.gcj02Lng,
@@ -1467,6 +1505,7 @@ export struct LocationPickerPage {
       type: c.item.type === 'cluster' ? 'cluster' : c.item.type,
       iconKey: this.getMarkerIconKey(c.item)
     };
+    return marker;
   }
 
   private summarizeGroupTypes(items: ConvertedRenderItem[]): string {
@@ -1519,7 +1558,7 @@ export struct LocationPickerPage {
    * - 全选或全不选：不下发 filter，让服务端返回所有类型
    * - 仅单选某一类：下发对应 data_type，减少无关数据
    */
-  private resolveMapFilter(): MapHeatFilter | undefined {
+  private resolveMapFilter(): MapCanvasFilter | undefined {
     const showUsers = this.showUsers;
     const showGroups = this.showGroups;
     const showMoments = this.showMoments;
@@ -1541,7 +1580,8 @@ export struct LocationPickerPage {
       dataType = 'all';
     }
 
-    return { data_type: dataType };
+    const filter: MapCanvasFilter = { data_type: dataType };
+    return filter;
   }
 
   private applyFilterChange(toggle: () => void): void {
@@ -1562,11 +1602,21 @@ export struct LocationPickerPage {
     if (this.showSearchBar) {
       this.closeSearchPanel();
     }
+
+    const overlapItems = this.overlappingGroupsMap.get(marker.id);
+    if (overlapItems && overlapItems.length > 0) {
+      this.showFilterPanel = false;
+      if (this.showSearchBar) {
+        this.closeSearchPanel();
+      }
+      this.showOverlappingPanel(overlapItems);
+      return;
+    }
+
     const item = this.renderItemsMap.get(marker.id);
     if (!item || !item.entity) {
       return;
     }
-    // 点击 marker 或聚合单个点时，仅弹出详情面板，由用户在面板内选择是否跳转
     this.showOverlappingPanel([item]);
   }
 
@@ -1639,7 +1689,7 @@ export struct LocationPickerPage {
           contentPaddingBottom: this.getMapPaddingBottom(),
           logoPaddingBottom: this.getLogoPaddingBottom(),
           onCameraIdle: (camera: MapCameraPosition) => { this.onCameraIdle(camera); },
-          onMapClick: () => { this.collapsePanel(); },
+          onMapClick: (_coord: MapCoordinate) => { this.collapsePanel(); },
           onMapDoubleClick: (coord: MapCoordinate) => { this.onMapDoubleClick(coord); },
           onMapLongPress: (coord: MapCoordinate) => { this.onMapLongPress(coord); },
           onMarkerClick: (marker: MapMarker) => { this.onMarkerItemClick(marker); },
@@ -1704,11 +1754,11 @@ export struct LocationPickerPage {
             anchorHistory: this.anchorHistory,
             controller: this.searchController,
             onSearch: (): void => { this.doSearch(); },
-            onClose: (): void => this.closeSearchPanel(),
-            onClearHistory: (): void => this.clearAnchorHistory(),
-            onSelectResult: (result): void => this.selectSearchResult(result),
-            onSelectHistory: (item): void => this.selectHistoryItem(item),
-            onTextChange: (value): void => { this.searchText = value; }
+            onClose: (): void => { this.closeSearchPanel(); },
+            onClearHistory: (): void => { this.clearAnchorHistory(); },
+            onSelectResult: (result: LocationInfo): void => { this.selectSearchResult(result); },
+            onSelectHistory: (item: AnchorHistoryItem): void => { this.selectHistoryItem(item); },
+            onTextChange: (value: string): void => { this.searchText = value; }
           })
             .transition(TransitionEffect.asymmetric(
               TransitionEffect.move(TransitionEdge.BOTTOM)
@@ -1722,12 +1772,12 @@ export struct LocationPickerPage {
             anchorHistory: this.anchorHistory,
             panelHeight: this.panelHeight,
             confirmLabel: this.getConfirmButtonLabel(),
-            onSearchClick: (): void => this.openSearchPanel(),
-            onClearHistory: (): void => this.clearAnchorHistory(),
-            onSelectHistory: (item): void => {
+            onSearchClick: (): void => { this.openSearchPanel(); },
+            onClearHistory: (): void => { this.clearAnchorHistory(); },
+            onSelectHistory: (item: AnchorHistoryItem): void => {
               this.selectHistoryItem(item);
             },
-            onConfirm: (): void => this.confirm()
+            onConfirm: (): void => { this.confirm(); }
           })
             .transition(TransitionEffect.asymmetric(
               TransitionEffect.OPACITY
@@ -1752,11 +1802,11 @@ export struct LocationPickerPage {
                 Text(`该位置有 ${this.overlappingPanelItems.length} 个内容`)
                   .fontSize(DesignConstants.FONT.SIZE.LG)
                   .fontWeight(FontWeight.Medium)
-                  .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
+                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
                   .layoutWeight(1)
                 Text('关闭')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textSecondary)
+                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                   .onClick(() => { this.overlappingPanelItems = []; })
               }
               .width('100%')
@@ -1779,13 +1829,13 @@ export struct LocationPickerPage {
                         Text(item.entity ? item.entity.title : '')
                           .fontSize(DesignConstants.FONT.SIZE.MD)
                           .fontWeight(FontWeight.Medium)
-                          .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
+                          .fontColor($r('sys.color.ohos_id_color_text_primary'))
                           .maxLines(1)
                           .textOverflow({ overflow: TextOverflow.Ellipsis })
                         if (item.entity && item.entity.subtitle) {
                           Text(item.entity.subtitle)
                             .fontSize(DesignConstants.FONT.SIZE.SM)
-                            .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textSecondary)
+                            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                             .maxLines(1)
                             .textOverflow({ overflow: TextOverflow.Ellipsis })
                         }
@@ -1815,14 +1865,19 @@ export struct LocationPickerPage {
                 }, (item: MapRenderItem) => item.render_id)
               }
               .width('100%')
-              .divider({ strokeWidth: 0.5, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor, startMargin: 60 })
+              .divider({ strokeWidth: 0.5, color: $r('app.color.divider'), startMargin: 60 })
               .constraintSize({ maxHeight: 320 })
               .padding({ bottom: this.safeAreaBottom + DesignConstants.SPACING.MD })
             }
             .width('100%')
             .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
             .borderRadius({ topLeft: 20, topRight: 20 })
-            .shadow(this.getCurrentThemePalette().elevatedShadow)
+            .shadow({
+              radius: DesignConstants.SHADOW.LARGE.radius,
+              color: DesignConstants.SHADOW.LARGE.color,
+              offsetX: DesignConstants.SHADOW.LARGE.offsetX,
+              offsetY: DesignConstants.SHADOW.LARGE.offsetY
+            })
           }
           .width('100%')
           .height('100%')
@@ -1849,10 +1904,10 @@ export struct LocationPickerPage {
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow({
-            radius: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.radius,
-            color: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.color,
-            offsetX: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetX,
-            offsetY: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetY
+            radius: DesignConstants.SHADOW.MEDIUM.radius,
+            color: DesignConstants.SHADOW.MEDIUM.color,
+            offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
+            offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
           })
           .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
           .onClick(() => { this.locateUser(); })
@@ -1869,10 +1924,10 @@ export struct LocationPickerPage {
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow({
-            radius: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.radius,
-            color: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.color,
-            offsetX: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetX,
-            offsetY: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetY
+            radius: DesignConstants.SHADOW.MEDIUM.radius,
+            color: DesignConstants.SHADOW.MEDIUM.color,
+            offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
+            offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
           })
           .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
           .onClick(() => { this.locateBrowseAnchor(); })
@@ -1881,7 +1936,7 @@ export struct LocationPickerPage {
             Text() {
               SymbolSpan($r(AppIcon.ADD))
                 .fontSize(DesignConstants.FONT.SIZE.XL)
-                .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).textPrimary])
+                .fontColor([$r('sys.color.ohos_id_color_text_primary')])
             }
           }
           .width(48)
@@ -1890,10 +1945,10 @@ export struct LocationPickerPage {
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow({
-            radius: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.radius,
-            color: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.color,
-            offsetX: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetX,
-            offsetY: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetY
+            radius: DesignConstants.SHADOW.MEDIUM.radius,
+            color: DesignConstants.SHADOW.MEDIUM.color,
+            offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
+            offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
           })
           .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
           .onClick(() => { if (this.mapActions) this.mapActions.zoomIn(); })
@@ -1902,7 +1957,7 @@ export struct LocationPickerPage {
             Text() {
               SymbolSpan($r(AppIcon.REMOVE))
                 .fontSize(DesignConstants.FONT.SIZE.XL)
-                .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).textPrimary])
+                .fontColor([$r('sys.color.ohos_id_color_text_primary')])
             }
           }
           .width(48)
@@ -1911,10 +1966,10 @@ export struct LocationPickerPage {
            .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow({
-            radius: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.radius,
-            color: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.color,
-            offsetX: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetX,
-            offsetY: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetY
+            radius: DesignConstants.SHADOW.MEDIUM.radius,
+            color: DesignConstants.SHADOW.MEDIUM.color,
+            offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
+            offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
           })
            .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
           .onClick(() => { if (this.mapActions) this.mapActions.zoomOut(); })

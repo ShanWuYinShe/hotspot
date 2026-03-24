@@ -12,7 +12,6 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { image } from '@kit.ImageKit';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
-import { SystemLoadingView } from './SystemLoadingView';
 import { AppIcon } from './SystemIcon';
 
 
@@ -132,9 +131,6 @@ export struct NativeMapComponent {
   private createdMarkers: Map<string, map.Marker> = new Map();
   private centerPinMarker: map.Marker | null = null;
   private markerIconCache: Map<string, image.PixelMap> = new Map();
-  private userClusterOverlay: map.ClusterOverlay | null = null;
-  private groupClusterOverlay: map.ClusterOverlay | null = null;
-  private momentClusterOverlay: map.ClusterOverlay | null = null;
   private syntheticCameraIdleTimerId: number = 0;
   // 双击检测
   private lastClickTime: number = 0;
@@ -150,10 +146,10 @@ export struct NativeMapComponent {
 
   private isNightMapMode(): boolean {
     const palette = AppThemeManager.getPaletteById(this.resolvedThemeId);
-    return this.isDarkMode || palette.isDarkTheme;
+    return this.isDarkMode || palette.id === 'default_clean_dark';
   }
 
-  aboutToAppear() {
+  aboutToAppear(): void {
     // 初始化地图回调
     this.mapCallback = async (err, mapController) => {
       if (!err && mapController) {
@@ -177,7 +173,7 @@ export struct NativeMapComponent {
     };
   }
 
-  aboutToDisappear() {
+  aboutToDisappear(): void {
     if (this.clickTimerId > 0) {
       clearTimeout(this.clickTimerId);
       this.clickTimerId = 0;
@@ -186,20 +182,6 @@ export struct NativeMapComponent {
       clearTimeout(this.syntheticCameraIdleTimerId);
       this.syntheticCameraIdleTimerId = 0;
     }
-    const overlays: (map.ClusterOverlay | null)[] = [
-      this.userClusterOverlay,
-      this.groupClusterOverlay,
-      this.momentClusterOverlay
-    ];
-    for (const ov of overlays) {
-      if (ov) {
-        // 移除聚合图层，避免泄漏
-        ov.remove().catch((_err: Error) => {
-          // 忽略清理异常
-        });
-    this.userClusterOverlay = null;
-    this.groupClusterOverlay = null;
-    this.momentClusterOverlay = null;
     for (const pixelMap of this.markerIconCache.values()) {
       pixelMap.release();
     }
@@ -248,7 +230,7 @@ export struct NativeMapComponent {
     this.applyLogoPadding();
   }
 
-  private applyContentPadding() {
+  private applyContentPadding(): void {
     if (this.isMapReady && this.mapController) {
       try {
         this.mapController.setPadding({
@@ -263,7 +245,7 @@ export struct NativeMapComponent {
     }
   }
 
-  private applyLogoPadding() {
+  private applyLogoPadding(): void {
     if (this.isMapReady && this.mapController) {
       try {
         this.mapController.setLogoPadding({
@@ -342,7 +324,7 @@ export struct NativeMapComponent {
     }
   }
 
-  private registerLongPressHandler() {
+  private registerLongPressHandler(): void {
     if (!this.mapController || !this.onMapLongPress) {
       return;
     }
@@ -432,7 +414,7 @@ export struct NativeMapComponent {
     }, 180);
   }
 
-  private async setupMap() {
+  private async setupMap(): Promise<void> {
     if (!this.mapController) return;
 
     // 根据当前深浅模式设置地图夜间样式
@@ -567,54 +549,18 @@ export struct NativeMapComponent {
     this.scheduleSyntheticCameraIdle();
   }
 
-  private async updateMarkers() {
+  private async updateMarkers(): Promise<void> {
     if (!this.mapController) return;
 
     try {
       this.mapController.clear();
       this.createdMarkers.clear();
       this.centerPinMarker = null;
-      const overlays: (map.ClusterOverlay | null)[] = [
-        this.userClusterOverlay,
-        this.groupClusterOverlay,
-        this.momentClusterOverlay
-      ];
-      for (const ov of overlays) {
-        if (ov) {
-          await ov.remove();
-        }
-      }
-      this.userClusterOverlay = null;
-      this.groupClusterOverlay = null;
-      this.momentClusterOverlay = null;
     } catch (e) {
       hilog.warn(DOMAIN_NUMBER, TAG, `清除标记失败: ${JSON.stringify(e)}`);
     }
 
-    // 按类型拆分：用户/群组/动态交给 ClusterOverlay，其余（如 server cluster、中心图钉）仍使用普通 Marker。
-    const userCandidates: MapMarker[] = [];
-    const groupCandidates: MapMarker[] = [];
-    const momentCandidates: MapMarker[] = [];
-    const plainMarkers: MapMarker[] = [];
     for (const markerData of this.markers) {
-      switch (markerData.type) {
-        case 'user':
-          userCandidates.push(markerData);
-          break;
-        case 'group':
-          groupCandidates.push(markerData);
-          break;
-        case 'moment':
-          momentCandidates.push(markerData);
-          break;
-        default:
-          plainMarkers.push(markerData);
-          break;
-      }
-    }
-
-    // 先渲染普通标记（如 server cluster、中心图钉）
-    for (const markerData of plainMarkers) {
       try {
         const markerOptions: mapCommon.MarkerOptions = {
           position: {
@@ -635,151 +581,32 @@ export struct NativeMapComponent {
       }
     }
 
-    // 使用官方 ClusterOverlay 聚合用户/群组/动态热点（按类型分别创建聚合图层）。
-    const buildOverlay = async (candidates: MapMarker[], assign: (ov: map.ClusterOverlay | null) => void) => {
-      if (!this.mapController || candidates.length === 0) {
-        assign(null);
-        return;
-      }
-      try {
-        const items: Array<mapCommon.ClusterItem> = candidates.map((m: MapMarker) => {
-          const markerType: string = m.type ?? 'user';
-          const anyItem: any = {
-            position: {
-              latitude: m.latitude,
-              longitude: m.longitude
-            },
-            // 展开状态下的单个点使用与 MapMarker 一致的 SVG 图标与标题
-            icon: this.getMarkerIconForMarker(m),
-            title: m.title,
-            snippet: m.snippet,
-            markerType
-          };
-          return anyItem as mapCommon.ClusterItem;
-        });
-        const params: mapCommon.ClusterOverlayParams = {
-          distance: 40,
-          clusterItems: items,
-          // 使用 getCustomIcon 为聚合点返回自定义 PixelMap 图标
-          getCustomIcon: async (clusterItemsParam: Array<mapCommon.ClusterItem>): Promise<image.PixelMap> => {
-            const key: string = this.getClusterIconForClusterItems(clusterItemsParam);
-            const cached = this.markerIconCache.get(key);
-            if (cached) {
-              return cached;
-            }
-            const fallback = this.markerIconCache.get('user');
-            if (fallback) {
-              return fallback;
-            }
-            // 极端情况下（图标未能预加载），尝试退回任意已缓存图标
-            const iterator = this.markerIconCache.values().next();
-            if (!iterator.done) {
-              return iterator.value;
-            }
-            throw new Error('Cluster icon PixelMap not available');
-          }
-        };
-        const overlay = await this.mapController.addClusterOverlay(params);
-        assign(overlay);
-
-        overlay.on('markerClusterClick', (info: map.MarkerClusterInfo) => {
-          const clusterItems = info.clusterItems;
-          if (!clusterItems || clusterItems.length === 0) {
-            return;
-          }
-
-          if (clusterItems.length === 1 && this.onMarkerClick) {
-            const pos = clusterItems[0].position;
-            // 在原始 markers 中按坐标近似匹配业务标记
-            const logical = this.markers.find((m: MapMarker) => {
-              const dLat = Math.abs(m.latitude - pos.latitude);
-              const dLng = Math.abs(m.longitude - pos.longitude);
-              return dLat < 1e-6 && dLng < 1e-6;
-            });
-            if (logical) {
-              this.onMarkerClick(logical);
-              return;
-            }
-          }
-
-          // 聚合点：根据节点位置放大地图
-          const first = clusterItems[0].position;
-          let zoom = 15;
-          try {
-            const cameraPos = this.mapController?.getCameraPosition();
-            zoom = (cameraPos?.zoom ?? 15) + 1;
-          } catch (_e) {
-            // 保持默认 zoom
-          }
-          this.moveCamera(first.latitude, first.longitude, Math.min(20, zoom));
-        });
-      } catch (e) {
-        hilog.warn(DOMAIN_NUMBER, TAG, `创建 ClusterOverlay 失败: ${JSON.stringify(e)}`);
-        assign(null);
-      }
-    };
-
-    await buildOverlay(userCandidates, (ov) => (this.userClusterOverlay = ov));
-    await buildOverlay(groupCandidates, (ov) => (this.groupClusterOverlay = ov));
-    await buildOverlay(momentCandidates, (ov) => (this.momentClusterOverlay = ov));
-
     if (this.showCenterPin) {
       await this.createCenterPinMarker();
     }
   }
 
-  private getClusterIconForClusterItems(clusterItems: Array<mapCommon.ClusterItem>): string {
-    let hasUser: boolean = false;
-    let hasGroup: boolean = false;
-    let hasMoment: boolean = false;
-
-    for (const item of clusterItems) {
-      const anyItem: any = item as any;
-      const markerType: string = anyItem.markerType ?? 'user';
-      if (markerType === 'user') {
-        hasUser = true;
-      } else if (markerType === 'group') {
-        hasGroup = true;
-      } else if (markerType === 'moment') {
-        hasMoment = true;
-      }
-    }
-
-    if (hasUser && !hasGroup && !hasMoment) {
-      return 'user_cluster';
-    }
-    if (!hasUser && hasGroup && !hasMoment) {
-      return 'group_cluster';
-    }
-    if (!hasUser && !hasGroup && hasMoment) {
-      return 'moment_cluster';
-    }
-    // 混合场景：返回通用聚合图标 key
-    return 'user_cluster';
-  }
-
-  private getMarkerIconForMarker(markerData: MapMarker): image.PixelMap | Resource {
+  private getMarkerIconForMarker(markerData: MapMarker): image.PixelMap {
     const key = markerData.iconKey ?? markerData.type ?? 'user';
     const cached = this.markerIconCache.get(key);
     if (cached) {
       return cached;
     }
-    hilog.warn(DOMAIN_NUMBER, TAG, `PixelMap 缓存未命中 key=${key}，降级为 $rawfile`);
-    switch (key) {
-      case 'group': return $rawfile('marker_group.svg');
-      case 'moment': return $rawfile('marker_moment.svg');
-      case 'cluster': return $rawfile('marker_mixed_cluster.svg');
-      case 'center_pin': return $rawfile('marker_center_pin.svg');
-      default: return $rawfile('marker_user.svg');
+    const fallback = this.markerIconCache.get('user');
+    if (fallback) {
+      return fallback;
     }
+    throw new Error(`PixelMap 缓存未命中 key=${key}`);
   }
 
-  private async createCenterPinMarker() {
+  private async createCenterPinMarker(): Promise<void> {
     if (!this.mapController) return;
     try {
       const cameraPos = this.mapController.getCameraPosition();
-      const target: mapCommon.LatLng = cameraPos?.target ??
-        { latitude: this.mapRegion.latitude, longitude: this.mapRegion.longitude };
+      const target: mapCommon.LatLng = cameraPos?.target ?? {
+        latitude: this.mapRegion.latitude,
+        longitude: this.mapRegion.longitude
+      };
       const markerOptions: mapCommon.MarkerOptions = {
         position: target,
         clickable: false,
@@ -793,7 +620,7 @@ export struct NativeMapComponent {
     }
   }
 
-  private updateCenterPinPosition() {
+  private updateCenterPinPosition(): void {
     if (!this.centerPinMarker || !this.mapController) return;
     try {
       const pos = this.mapController.getCameraPosition();
@@ -805,7 +632,7 @@ export struct NativeMapComponent {
     }
   }
 
-  private registerCameraMoveHandler() {
+  private registerCameraMoveHandler(): void {
     if (!this.mapController) return;
     const controller = this.mapController as object as CameraMoveCapable;
     const candidateEvents: string[] = ['cameraMove', 'cameraMoving', 'regionChange', 'regionChanging'];
@@ -832,7 +659,7 @@ export struct NativeMapComponent {
   /**
    * 移动相机到指定位置
    */
-  public moveCamera(latitude: number, longitude: number, zoom: number = 15) {
+  public moveCamera(latitude: number, longitude: number, zoom: number = 15): void {
     if (this.mapController) {
       const cameraUpdate = map.newCameraPosition({
         target: {
@@ -856,22 +683,22 @@ export struct NativeMapComponent {
           Text() {
             SymbolSpan($r(AppIcon.MAP))
               .fontSize(48)
-              .fontColor([AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary])
+              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
           }
 
           Text('地图服务不可用')
             .fontSize(16)
             .fontWeight(FontWeight.Medium)
-            .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textPrimary)
+            .fontColor($r('sys.color.ohos_id_color_text_primary'))
 
           Text(this.mapError)
             .fontSize(13)
-            .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .textAlign(TextAlign.Center)
 
           Text('请在 DevEco Studio 中配置项目签名\n并在 AppGallery Connect 中注册指纹、启用 Map Kit')
             .fontSize(12)
-            .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
             .textAlign(TextAlign.Center)
             .lineHeight(18)
         }
@@ -898,7 +725,14 @@ export struct NativeMapComponent {
         .width('100%')
         .height('100%')
       } else {
-        SystemLoadingView({ message: '加载地图中...' })
+        Column({ space: 12 }) {
+          LoadingProgress()
+            .width(40)
+            .height(40)
+          Text('加载地图中...')
+            .fontSize(14)
+            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        }
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
@@ -907,6 +741,4 @@ export struct NativeMapComponent {
     .width('100%')
     .height('100%')
   }
-}
- }
 }

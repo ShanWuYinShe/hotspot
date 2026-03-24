@@ -35,6 +35,40 @@ interface ThemeShadows {
   tabBar: AppThemeShadow;
 }
 
+class ThemeShadowRegistry {
+  readonly DEFAULT_CLEAN_LIGHT: ThemeShadows = {
+    surface: new AppThemeShadow(6, '#00000000', 0, 0),
+    elevated: new AppThemeShadow(8, '#14000000', 0, 3),
+    accent: new AppThemeShadow(0, '#00000000', 0, 0),
+    control: new AppThemeShadow(0, '#00000000', 0, 0),
+    tabBar: new AppThemeShadow(6, '#12000000', 0, -1)
+  };
+
+  readonly DEFAULT_CLEAN_DARK: ThemeShadows = {
+    surface: new AppThemeShadow(8, '#26000000', 0, 3),
+    elevated: new AppThemeShadow(10, '#2A000000', 0, 4),
+    accent: new AppThemeShadow(0, '#00000000', 0, 0),
+    control: new AppThemeShadow(0, '#00000000', 0, 0),
+    tabBar: new AppThemeShadow(10, '#26000000', 0, -1)
+  };
+
+  readonly SOFT_GALLERY_LIGHT: ThemeShadows = {
+    surface: new AppThemeShadow(28, '#24D3C1A2', 0, 5),
+    elevated: new AppThemeShadow(34, '#2CB89D74', 0, 10),
+    accent: new AppThemeShadow(24, '#34E2C39A', 0, 8),
+    control: new AppThemeShadow(20, '#28CCB7A0', 0, 6),
+    tabBar: new AppThemeShadow(28, '#2AD6C2A0', 0, -2)
+  };
+
+  readonly SOFT_GALLERY_DARK: ThemeShadows = {
+    surface: new AppThemeShadow(24, '#36577EBA', 0, 4),
+    elevated: new AppThemeShadow(32, '#3B6288CE', 0, 10),
+    accent: new AppThemeShadow(24, '#34E8CEA7', 0, 8),
+    control: new AppThemeShadow(20, '#345F80B2', 0, 6),
+    tabBar: new AppThemeShadow(28, '#386489CC', 0, -2)
+  };
+}
+
 export class ThemeConstants {
   static readonly DEFAULT_CLEAN_LIGHT_COLORS: ColorConfig = {
     pageBackground: '#FFFFFF',
@@ -124,34 +158,5 @@ export class ThemeConstants {
     isDarkTheme: true
   };
 
-  static readonly SHADOWS: Record<string, ThemeShadows> = {
-    DEFAULT_CLEAN_LIGHT: {
-      surface: { radius: 6, color: '#00000000', offsetX: 0, offsetY: 0 },
-      elevated: { radius: 8, color: '#14000000', offsetX: 0, offsetY: 3 },
-      accent: { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 },
-      control: { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 },
-      tabBar: { radius: 6, color: '#12000000', offsetX: 0, offsetY: -1 }
-    },
-    DEFAULT_CLEAN_DARK: {
-      surface: { radius: 8, color: '#26000000', offsetX: 0, offsetY: 3 },
-      elevated: { radius: 10, color: '#2A000000', offsetX: 0, offsetY: 4 },
-      accent: { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 },
-      control: { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 },
-      tabBar: { radius: 10, color: '#26000000', offsetX: 0, offsetY: -1 }
-    },
-    SOFT_GALLERY_LIGHT: {
-      surface: { radius: 28, color: '#24D3C1A220', offsetX: 0, offsetY: 5 },
-      elevated: { radius: 34, color: '#2CB89D742C', offsetX: 0, offsetY: 10 },
-      accent: { radius: 24, color: '#34E2C39A', offsetX: 0, offsetY: 8 },
-      control: { radius: 20, color: '#28CCB7A0', offsetX: 0, offsetY: 6 },
-      tabBar: { radius: 28, color: '#2AD6C2A024', offsetX: 0, offsetY: -2 }
-    },
-    SOFT_GALLERY_DARK: {
-      surface: { radius: 24, color: '#36577EBA', offsetX: 0, offsetY: 4 },
-      elevated: { radius: 32, color: '#3B6288CE', offsetX: 0, offsetY: 10 },
-      accent: { radius: 24, color: '#34E8CEA7', offsetX: 0, offsetY: 8 },
-      control: { radius: 20, color: '#345F80B2', offsetX: 0, offsetY: 6 },
-      tabBar: { radius: 28, color: '#386489CC', offsetX: 0, offsetY: -2 }
-    }
-  };
+  static readonly SHADOWS: ThemeShadowRegistry = new ThemeShadowRegistry();
 }

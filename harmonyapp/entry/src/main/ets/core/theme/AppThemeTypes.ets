@@ -6,11 +6,18 @@ export type ResolvedThemeId =
   | 'soft_gallery_light'
   | 'soft_gallery_dark';
 
-export interface AppThemeShadow {
+export class AppThemeShadow {
   radius: number;
   color: string;
   offsetX: number;
   offsetY: number;
+
+  constructor(radius: number, color: string, offsetX: number, offsetY: number) {
+    this.radius = radius;
+    this.color = color;
+    this.offsetX = offsetX;
+    this.offsetY = offsetY;
+  }
 }
 
 export interface AppThemePalette {

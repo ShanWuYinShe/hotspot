@@ -70,7 +70,7 @@ export struct LoadingMoreIndicator {
       LoadingProgress().width(20).height(20)
       Text(this.message)
         .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor(this.getPalette().textSecondary)
+        .fontColor(AppThemeManager.getSafeCurrentPalette().textSecondary)
     }
     .width('100%')
     .justifyContent(FlexAlign.Center)
