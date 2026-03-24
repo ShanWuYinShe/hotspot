@@ -135,9 +135,6 @@ prepare_deploy_dirs() {
   ensure_dir "$deploy_tmp"
   ensure_dir "$deploy_tmp/artifacts/preview"
   ensure_dir "$deploy_tmp/artifacts/release"
-  ensure_dir "$deploy_tmp/cache/go/pkg"
-  ensure_dir "$deploy_tmp/cache/go/build"
-  ensure_dir "$deploy_tmp/cache/pnpm/store"
   ensure_dir "$deploy_tmp/locks"
   ensure_dir "$deploy_tmp/logs"
   ensure_dir "$deploy_tmp/logs/verify"
@@ -148,9 +145,6 @@ prepare_deploy_dirs() {
   ensure_writable_dir "$deploy_tmp"
   ensure_writable_dir "$deploy_tmp/artifacts/preview"
   ensure_writable_dir "$deploy_tmp/artifacts/release"
-  ensure_writable_dir "$deploy_tmp/cache/go/pkg"
-  ensure_writable_dir "$deploy_tmp/cache/go/build"
-  ensure_writable_dir "$deploy_tmp/cache/pnpm/store"
   ensure_writable_dir "$deploy_tmp/locks"
   ensure_writable_dir "$deploy_tmp/logs"
   ensure_writable_dir "$deploy_tmp/logs/verify"
@@ -245,21 +239,6 @@ frontend_artifact_dir() {
   printf '%s/frontend\n' "$artifact_root"
 }
 
-go_mod_cache_dir() {
-  local root="$1"
-  printf '%s/cache/go/pkg\n' "$(deploy_tmp_root "$root")"
-}
-
-go_build_cache_dir() {
-  local root="$1"
-  printf '%s/cache/go/build\n' "$(deploy_tmp_root "$root")"
-}
-
-pnpm_store_dir() {
-  local root="$1"
-  printf '%s/cache/pnpm/store\n' "$(deploy_tmp_root "$root")"
-}
-
 lock_path() {
   local root="$1"
   local name="$2"
@@ -289,6 +268,7 @@ cleanup_path() {
   if [[ ! -e "$path" ]]; then
     return 0
   fi
+  chmod -R u+rwX "$path" >/dev/null 2>&1 || true
   if ! rm -rf "$path"; then
     echo "failed to remove path: $path" >&2
     return 1
@@ -443,7 +423,9 @@ common_docker_build_args() {
   [[ -n "${HOTSPOT_NODE_BASE_IMAGE:-}" ]] && build_args+=(--build-arg "HOTSPOT_NODE_BASE_IMAGE=$HOTSPOT_NODE_BASE_IMAGE")
   [[ -n "${HOTSPOT_ALPINE_BASE_IMAGE:-}" ]] && build_args+=(--build-arg "HOTSPOT_ALPINE_BASE_IMAGE=$HOTSPOT_ALPINE_BASE_IMAGE")
   [[ -n "${HOTSPOT_ALPINE_REPO:-}" ]] && build_args+=(--build-arg "HOTSPOT_ALPINE_REPO=$HOTSPOT_ALPINE_REPO")
-  printf '%s\0' "${build_args[@]}"
+  if ((${#build_args[@]} > 0)); then
+    printf '%s\0' "${build_args[@]}"
+  fi
 }
 
 ensure_runner_image() {

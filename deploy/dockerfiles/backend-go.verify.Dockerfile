@@ -5,7 +5,8 @@ ARG HOTSPOT_ALPINE_REPO=https://mirrors.ustc.edu.cn/alpine
 RUN sed -i "s#https://dl-cdn.alpinelinux.org/alpine#${HOTSPOT_ALPINE_REPO}#g" /etc/apk/repositories && apk add --no-cache ca-certificates git bash
 ENV HOME=/tmp/hotspot-home
 ENV XDG_CACHE_HOME=/tmp/hotspot-home/.cache
-ENV GOMODCACHE=/cache/go/pkg
-ENV GOCACHE=/cache/go/build
+ENV GOPATH=/tmp/hotspot-go
+ENV GOMODCACHE=/tmp/hotspot-go/pkg/mod
+ENV GOCACHE=/tmp/hotspot-home/.cache/go-build
 ENV GOPROXY=https://goproxy.cn,direct
 ENV GOSUMDB=sum.golang.google.cn

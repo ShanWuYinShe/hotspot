@@ -35,12 +35,8 @@ services:
       AUTH_TOKEN_SECRET: test-secret
       POSTGRES_DSN: postgres://hotspot:hotspot@postgres-test:5432/hotspot_test?sslmode=disable
       REDIS_DSN: redis://redis-test:6379/0
-      GOMODCACHE: /cache/go/pkg
-      GOCACHE: /cache/go/build
     volumes:
       - ${HOTSPOT_SOURCE_ROOT:?set HOTSPOT_SOURCE_ROOT}:/workspace:ro
-      - ${HOTSPOT_GO_MOD_CACHE:?set HOTSPOT_GO_MOD_CACHE}:/cache/go/pkg
-      - ${HOTSPOT_GO_BUILD_CACHE:?set HOTSPOT_GO_BUILD_CACHE}:/cache/go/build
     depends_on:
       postgres-test:
         condition: service_healthy
@@ -61,8 +57,6 @@ services:
       ORIGIN: https://localhost:8443
       VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
       VITE_AMAP_SERVICE_HOST: /_AMapService
-      PNPM_STORE_DIR: /cache/pnpm/store
       CI: "true"
     volumes:
       - ${HOTSPOT_SOURCE_ROOT:?set HOTSPOT_SOURCE_ROOT}:/workspace:ro
-      - ${HOTSPOT_PNPM_STORE_CACHE:?set HOTSPOT_PNPM_STORE_CACHE}:/cache/pnpm/store

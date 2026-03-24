@@ -47,7 +47,7 @@
 - `release` 不运行环境，只产物。
 - `verify` 默认验证当前工作目录 / worktree，包含未提交修改。
 - 所有测试、check、build 验证默认都通过 `deploy/` 下的 Docker 流程完成；不要把宿主环境直接运行 `go test`、`pnpm check`、`pnpm build` 当成最终验证。
-- 测试和构建流程产生的缓存、pnpm store、临时产物必须落在 `tmp/` 或容器临时目录，不能写回仓库根。
+- 测试和构建流程产生的中间缓存默认保留在容器临时目录中，不写回宿主 worktree；宿主侧只保留日志、release/preview 产物等需要交付或复盘的输出。
 - `preview` / `release` 面向候选结果与确定性版本，不再承担多 env 开发隔离语义。
 - `verify` / `preview` / `release` 现在都会把关键日志归档到 `tmp/deploy/logs/`，便于人工复盘与 AI 分析完整错误链。
 
