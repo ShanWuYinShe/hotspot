@@ -252,6 +252,10 @@ export struct ProfilePage {
     return this.getCurrentThemePalette().accentBackground;
   }
 
+  private isSoftGalleryTheme(): boolean {
+    return AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId);
+  }
+
   private getSoftCardShadow(): ShadowOptions {
     return AppThemeVisuals.getSurfaceShadow(this.resolvedThemeId);
   }
@@ -1163,13 +1167,13 @@ export struct ProfilePage {
       SystemAvatar({
         avatarUrl: this.currentUser?.avatar_url || '',
         name: this.currentUser?.nickname || '',
-        avatarSize: 116,
+        avatarSize: this.isSoftGalleryTheme() ? 116 : 96,
         isOnline: this.currentUser?.presence_status === 'online',
         inset: true
       })
 
       Text(this.currentUser?.nickname || '')
-        .fontSize(DesignConstants.FONT.SIZE.XXL)
+        .fontSize(this.isSoftGalleryTheme() ? DesignConstants.FONT.SIZE.XXL : DesignConstants.FONT.SIZE.XL)
         .fontWeight(FontWeight.Medium)
         .fontColor(this.getPrimaryTextColor())
 
@@ -1201,8 +1205,11 @@ export struct ProfilePage {
         Button('编辑资料')
         .type(ButtonType.Capsule)
         .width('100%')
-        .height(54)
-        .padding({ left: DesignConstants.SPACING.XXL + 8, right: DesignConstants.SPACING.XXL + 8 })
+        .height(this.isSoftGalleryTheme() ? 54 : 42)
+        .padding({
+          left: this.isSoftGalleryTheme() ? DesignConstants.SPACING.XXL + 8 : DesignConstants.SPACING.XXL,
+          right: this.isSoftGalleryTheme() ? DesignConstants.SPACING.XXL + 8 : DesignConstants.SPACING.XXL
+        })
         .backgroundColor(this.getAccentBackground())
         .fontColor(this.getAccentText())
         .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -1341,11 +1348,11 @@ export struct ProfilePage {
     }
     .type(ButtonType.Normal)
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.XXL + 4)
+    .borderRadius(this.isSoftGalleryTheme() ? DesignConstants.RADIUS.XXL + 4 : DesignConstants.RADIUS.XXL)
     .shadow(this.getSoftCardShadow())
     .border({ width: 1, color: this.getSurfaceBorder() })
-    .padding(DesignConstants.SPACING.XL)
-    .constraintSize({ minHeight: 176 })
+    .padding(this.isSoftGalleryTheme() ? DesignConstants.SPACING.XL : DesignConstants.SPACING.LG)
+    .constraintSize({ minHeight: this.isSoftGalleryTheme() ? 176 : 164 })
     .layoutWeight(1)
     .stateEffect(true)
     .scale(this.pressedMenuItemKey === title ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })

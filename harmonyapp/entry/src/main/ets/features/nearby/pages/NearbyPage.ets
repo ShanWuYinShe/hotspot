@@ -872,7 +872,7 @@ export struct NearbyPage {
       bottom: DesignConstants.SPACING.LG
     })
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.XXL + 6)
+    .borderRadius(AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId) ? DesignConstants.RADIUS.XXL + 6 : DesignConstants.RADIUS.XXL)
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
     .margin({ bottom: DesignConstants.SPACING.MD })

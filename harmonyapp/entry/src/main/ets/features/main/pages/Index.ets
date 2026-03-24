@@ -132,6 +132,10 @@ struct Index {
     return this.getCurrentThemePalette().accentText;
   }
 
+  private isSoftGalleryTheme(): boolean {
+    return AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId);
+  }
+
   private getTabBarShadow(): ShadowOptions {
     return AppThemeVisuals.getTabBarShadow(this.resolvedThemeId);
   }
@@ -853,8 +857,8 @@ struct Index {
             .fontColor([this.getBrandAccentText()])
         }
       }
-      .width(66)
-      .height(40)
+      .width(this.isSoftGalleryTheme() ? 66 : 54)
+      .height(this.isSoftGalleryTheme() ? 40 : 34)
       .justifyContent(FlexAlign.Center)
       .backgroundColor(this.getBrandAccent())
       .borderRadius(DesignConstants.RADIUS.FULL)
@@ -939,11 +943,13 @@ struct Index {
           // 底部统一背景容器：覆盖导航栏 + 安全区，视觉上形成一整块底部区域
           Column() {}
             .width('100%')
-            .height(60 + this.safeAreaBottom)
+            .height((this.isSoftGalleryTheme() ? 60 : 56) + this.safeAreaBottom)
             .backgroundColor(this.getTabBarBackground())
             .shadow(this.getTabBarShadow())
-            .borderRadius({ topLeft: 28, topRight: 28 })
-            .border({ width: { top: 1 }, color: this.getCurrentThemePalette().borderColor })
+            .borderRadius(this.isSoftGalleryTheme() ? { topLeft: 28, topRight: 28 } : { topLeft: 0, topRight: 0 })
+            .border(this.isSoftGalleryTheme()
+              ? { width: { top: 1 }, color: this.getCurrentThemePalette().borderColor }
+              : { width: { top: 0 }, color: Color.Transparent })
 
           Column() {
         Navigation(this.navPathStack) {
@@ -994,7 +1000,7 @@ struct Index {
           }
           .tabBar(this.TabBuilderIcon('我的', 4, AppIcon.PERSON))
         }
-        .barHeight(60)
+        .barHeight(this.isSoftGalleryTheme() ? 60 : 56)
         .scrollable(false)
         .barMode(BarMode.Fixed)
         .divider({ strokeWidth: 0, color: Color.Transparent, startMargin: 0, endMargin: 0 })

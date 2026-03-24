@@ -141,6 +141,10 @@ export struct ChatPage {
     return this.getCurrentThemePalette().accentBackground;
   }
 
+  private isSoftGalleryTheme(): boolean {
+    return AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId);
+  }
+
   private getChatTheme() {
     return ChatThemeManager.current();
   }
@@ -1044,7 +1048,7 @@ export struct ChatPage {
         bottom: DesignConstants.SPACING.MD
       })
       .backgroundColor(this.getChatTheme().listBackground)
-      .borderRadius(DesignConstants.RADIUS.XXL + 4)
+      .borderRadius(this.isSoftGalleryTheme() ? DesignConstants.RADIUS.XXL + 4 : DesignConstants.RADIUS.XXL)
       .onScrollIndex((start: number) => {
         // 当滚动到列表顶部附近时加载更早的消息
         if (start <= 1 && this.hasMoreHistory && !this.isLoadingMoreHistory) {
@@ -1128,7 +1132,7 @@ export struct ChatPage {
               ? this.getCurrentThemePalette().textSecondary
               : this.getChatTheme().sendButtonActiveText
           )
-          .height(DesignConstants.CHAT.SEND_BUTTON_HEIGHT + 4)
+          .height(this.isSoftGalleryTheme() ? DesignConstants.CHAT.SEND_BUTTON_HEIGHT + 4 : DesignConstants.CHAT.SEND_BUTTON_HEIGHT)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getChatTheme().inputBorder })

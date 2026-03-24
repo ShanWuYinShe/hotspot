@@ -279,8 +279,11 @@ export class AppThemeManager {
       case 'soft_gallery':
       case 'follow_system':
         return themeMode;
+      case 'tactile_minimal':
+      case 'zen_artistic':
+        return 'soft_gallery';
       default:
-        return themeMode.length > 0 ? 'soft_gallery' : DEFAULT_THEME_MODE;
+        return DEFAULT_THEME_MODE;
     }
   }
 
@@ -291,13 +294,13 @@ export class AppThemeManager {
       case 'soft_gallery_dark':
       case 'default_clean_light':
         return resolvedThemeId;
+      case 'tactile_minimal_light':
+      case 'zen_artistic_light':
+        return 'soft_gallery_light';
+      case 'tactile_minimal_dark':
+      case 'zen_artistic_dark':
+        return 'soft_gallery_dark';
       default:
-        if (resolvedThemeId.includes('_dark')) {
-          return 'soft_gallery_dark';
-        }
-        if (resolvedThemeId.includes('_light')) {
-          return 'soft_gallery_light';
-        }
         return DEFAULT_RESOLVED_THEME_ID;
     }
   }

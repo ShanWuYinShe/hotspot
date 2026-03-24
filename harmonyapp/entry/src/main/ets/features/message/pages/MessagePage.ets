@@ -702,13 +702,13 @@ export struct MessagePage {
       }
       .width('100%')
     }
-    .constraintSize({ minHeight: 84 })
+    .constraintSize({ minHeight: AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId) ? 84 : 72 })
     .padding(22)
     .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: 8, bottom: 8 })
     .backgroundColor(this.pressedChatKey === this.getChatKey(item)
       ? this.getSurfaceSubtle()
       : this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.XXL + 4)
+    .borderRadius(AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId) ? DesignConstants.RADIUS.XXL + 4 : DesignConstants.RADIUS.XXL)
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
     .opacity(this.isChatDeleting(item) ? 0.7 : 1)

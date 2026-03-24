@@ -528,7 +528,7 @@ export struct DiscoverPage {
           (this.isUserFollowing(user.user?.user_id ?? '') ? '已关注' : '+ 关注'))
           .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(44)
+          .height(AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId) ? 44 : 36)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .enabled(!this.isUserActionPending(user.user?.user_id ?? ''))
           .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -543,7 +543,7 @@ export struct DiscoverPage {
         Button('私聊')
           .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(44)
+          .height(AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId) ? 44 : 36)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
@@ -565,7 +565,7 @@ export struct DiscoverPage {
       bottom: DesignConstants.SPACING.MD
     })
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.XXL + 4)
+    .borderRadius(AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId) ? DesignConstants.RADIUS.XXL + 4 : DesignConstants.RADIUS.XXL)
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
   }
@@ -670,7 +670,7 @@ export struct DiscoverPage {
       bottom: DesignConstants.SPACING.MD
     })
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.XXL + 4)
+    .borderRadius(AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId) ? DesignConstants.RADIUS.XXL + 4 : DesignConstants.RADIUS.XXL)
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
   }
@@ -724,7 +724,7 @@ export struct DiscoverPage {
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
       top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.XXL + 4)
+    .borderRadius(AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId) ? DesignConstants.RADIUS.XXL + 4 : DesignConstants.RADIUS.XXL)
 
     Divider()
       .strokeWidth(0.5)
