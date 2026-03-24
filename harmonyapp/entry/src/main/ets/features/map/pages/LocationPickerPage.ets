@@ -9,7 +9,7 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { curves } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { Bounds, MapCanvasFilter, MapCanvasRequest, MapCanvasResponse, MapHeatBucket, MapHotspotItem, MapViewport, PaginationParams } from '../../../core/types/api';
+import { MapCanvasFilter, MapCanvasRequest, MapCanvasResponse, MapHeatBucket, MapHotspotItem, MapViewport } from '../../../core/types/api';
 import { AppRouter, GroupDetailRouteParam, ProfileRouteParam, MomentDetailRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { CoordinateBounds, CoordinateConverter } from '../../../core/geo/CoordinateConverter';
@@ -31,51 +31,56 @@ const DOUBLE_CLICK_PLACEMENT_HINT: string = '已通过双击定位到该位置';
 const LONG_PRESS_PLACEMENT_HINT: string = '已通过长按定位到该位置';
 const ANCHOR_PLACEMENT_HINT: string = '已回到浏览锚点位置';
 const GENERIC_PLACEMENT_HINT: string = '已定位到该位置';
-const MARKER_COLOR_PICKER: string = '#2E7CF6';
 const MARKER_COLOR_USER: string = '#2563EB';
 const MARKER_COLOR_GROUP: string = '#059669';
 const MARKER_COLOR_MOMENT: string = '#EA580C';
 
-const OVERLAP_GROUP_PREFIX: string = 'overlap_';
-// 坐标分组精度：4 位小数 ≈ 11 米，同一建筑/地点内的多条数据会被合并
-const COORD_GROUP_PRECISION: number = 10000;
+const HOTSPOT_CLUSTER_PREFIX: string = 'hotspot_cluster_';
+const LOCAL_CLUSTER_RADIUS_METERS: number = 56;
 
-type MapRenderItemType = 'cluster' | 'user' | 'group' | 'moment';
+type MapRenderItemType = 'heat_bucket' | 'user' | 'group' | 'moment';
+type MapRenderableEntityType = 'user' | 'group' | 'moment';
+type ClusterIconKey = 'cluster' | 'user_cluster' | 'group_cluster' | 'moment_cluster';
 
-// 地图渲染聚合单元相关类型
 interface MapRenderItemLocation {
-	latitude: number;
-	longitude: number;
+  latitude: number;
+  longitude: number;
 }
 
-interface MapRenderItemCluster {
-	count: number;
-	category: 'all';
-	label?: string;
-}
-
-// 旧版 MapRenderItem 带有 entity 明细；当前热力图仅填充 cluster，后续如需展示实体详情可补充 entity
 interface MapRenderEntity {
-	payload_id: string;
-	title: string;
-	subtitle?: string;
-	type: 'user' | 'group' | 'moment';
+  payload_id: string;
+  title: string;
+  subtitle?: string;
+  type: MapRenderableEntityType;
+  distance_meters?: number;
 }
 
-// 本地渲染用聚合单元，基于 `/map/heatmap` 返回的 MapHeatBucket 构造
+interface MapRenderCluster {
+  memberIds: string[];
+  iconKey: ClusterIconKey;
+  label: string;
+  summary?: string;
+}
+
+interface MapHeatBucketMeta {
+  level: number;
+  breakdown?: string;
+}
+
 interface MapRenderItem {
-	render_id: string;
-	location: MapRenderItemLocation;
-	type: MapRenderItemType;
-	total_count: number;
-	cluster?: MapRenderItemCluster;
-	entity?: MapRenderEntity;
+  render_id: string;
+  location: MapRenderItemLocation;
+  type: MapRenderItemType;
+  total_count: number;
+  cluster?: MapRenderCluster;
+  entity?: MapRenderEntity;
+  heatBucket?: MapHeatBucketMeta;
 }
 
 interface ConvertedRenderItem {
-	item: MapRenderItem;
-	gcj02Lat: number;
-	gcj02Lng: number;
+  item: MapRenderItem;
+  gcj02Lat: number;
+  gcj02Lng: number;
 }
 
 interface BoundsDelta {
@@ -160,6 +165,7 @@ interface FilterMenuItemProps {
   label: string;
   accentColor: string;
   active: boolean;
+  resolvedThemeId?: string;
   onToggle: () => void;
 }
 
@@ -187,7 +193,9 @@ function FilterMenuItem(props: FilterMenuItemProps) {
   .width('100%')
   .height(48)
   .padding({ left: 14, right: 16 })
-  .backgroundColor(props.active ? '#1E293B' : Color.Transparent)
+  .backgroundColor(props.active
+    ? resolveLocationPickerPalette(props.resolvedThemeId).surfaceSubtle
+    : Color.Transparent)
   .borderRadius(DesignConstants.RADIUS.XL)
   .opacity(props.active ? 1.0 : 0.85)
   .onClick(() => props.onToggle())
@@ -211,6 +219,7 @@ function FilterDropdownPanel(props: FilterPanelProps) {
       label: '用户',
       accentColor: MARKER_COLOR_USER,
       active: props.showUsers,
+      resolvedThemeId: props.resolvedThemeId,
       onToggle: props.onToggleUsers
     })
     FilterMenuItem({
@@ -218,6 +227,7 @@ function FilterDropdownPanel(props: FilterPanelProps) {
       label: '群组',
       accentColor: MARKER_COLOR_GROUP,
       active: props.showGroups,
+      resolvedThemeId: props.resolvedThemeId,
       onToggle: props.onToggleGroups
     })
     FilterMenuItem({
@@ -225,6 +235,7 @@ function FilterDropdownPanel(props: FilterPanelProps) {
       label: '动态',
       accentColor: MARKER_COLOR_MOMENT,
       active: props.showMoments,
+      resolvedThemeId: props.resolvedThemeId,
       onToggle: props.onToggleMoments
     })
   }
@@ -1208,143 +1219,150 @@ export struct LocationPickerPage {
     AppRouter.pop();
   }
 
-	private async fetchMapRenderData(trigger: string = 'unknown'): Promise<void> {
-		if (!this.initialised || !this.mapReady) {
-			return;
-		}
-		const viewport = this.buildViewport();
-		if (!viewport) {
-			return;
-		}
-		const filter = this.resolveMapFilter();
-		const filterSignature = filter?.data_type ?? 'all';
-		const boundsForSpan = new CoordinateBounds(
-			viewport.bounds.north,
-			viewport.bounds.south,
-			viewport.bounds.east,
-			viewport.bounds.west
-		);
-		const spanM: number = CoordinateConverter.calculateViewportSpanMeters(boundsForSpan);
-		const shouldUseHotspots: boolean = spanM <= 3000 && viewport.zoom >= 13;
-		const mode: string = shouldUseHotspots ? 'hotspots' : 'heatmap';
-		const signature = `${viewport.bounds.north.toFixed(6)}|${viewport.bounds.south.toFixed(6)}|${viewport.bounds.east.toFixed(6)}|${viewport.bounds.west.toFixed(6)}|${viewport.zoom.toFixed(2)}|${filterSignature}|${mode}`;
-		if (signature === this.lastViewportSignature) {
-			hilog.info(DOMAIN_NUMBER, TAG, `skip map/${mode} duplicate trigger=${trigger} signature=${signature}`);
-			this.updateMarkers();
-			return;
-		}
-		const requestId = ++this.renderRequestId;
-		try {
-			if (shouldUseHotspots) {
-					hilog.info(DOMAIN_NUMBER, TAG, `start map/hotspots trigger=${trigger} requestId=${requestId} signature=${signature}`);
-					const pagination: PaginationParams = { limit: 100 };
-					const requestFilter: MapCanvasFilter | undefined = filter ? {
-						data_type: filter.data_type,
-						time_range: filter.time_range
-					} : undefined;
-					const request: MapCanvasRequest = {
-						viewport: viewport,
-						filter: requestFilter,
-						pagination: pagination
-					};
-					const response = await ApiClient.getMapCanvas(request);
-				if (requestId !== this.renderRequestId) {
-					hilog.info(DOMAIN_NUMBER, TAG, `ignore stale map/hotspots response trigger=${trigger} requestId=${requestId}`);
-					return;
-				}
-					if (response.code === 0) {
-						this.lastViewportSignature = signature;
-						const canvas: MapCanvasResponse | undefined = response.data as MapCanvasResponse | undefined;
-						const allItems: MapHotspotItem[] = canvas?.hotspots?.items ?? [];
-					const nextItems: MapRenderItem[] = [];
-					for (let index = 0; index < allItems.length; index++) {
-						const item = allItems[index];
-						// 保证筛选对单个点和聚合后的 ClusterOverlay 一致生效
-						if (item.object_type === 'user' && !this.showUsers) {
-							continue;
-						}
-						if (item.object_type === 'group' && !this.showGroups) {
-							continue;
-						}
-						if (item.object_type === 'moment' && !this.showMoments) {
-							continue;
-						}
-						const renderId = `${index}_${item.object_type}_${item.object_id}`;
-						const renderLocation: MapRenderItemLocation = {
-							latitude: item.location.latitude,
-							longitude: item.location.longitude
-						};
-						const renderCluster: MapRenderItemCluster = {
-							count: 1,
-							category: 'all',
-							label: item.title
-						};
-						const renderItem: MapRenderItem = {
-							render_id: renderId,
-							location: renderLocation,
-							type: item.object_type,
-							total_count: 1,
-							cluster: renderCluster
-						};
-						nextItems.push(renderItem);
-					}
-					this.renderItems = nextItems;
-					hilog.info(DOMAIN_NUMBER, TAG, `finish map/hotspots trigger=${trigger} requestId=${requestId} items=${this.renderItems.length}`);
-					this.mapToastMessage = '';
-					this.updateMarkers();
-				} else {
-					hilog.warn(DOMAIN_NUMBER, TAG, `map/hotspots business error trigger=${trigger} requestId=${requestId} code=${response.code} message=${response.message ?? ''}`);
-				}
-			} else {
-					hilog.info(DOMAIN_NUMBER, TAG, `start map/heatmap trigger=${trigger} requestId=${requestId} signature=${signature}`);
-					let request: MapCanvasRequest;
-					if (filter) {
-						request = { viewport: viewport, filter: filter };
-					} else {
-						request = { viewport: viewport };
-					}
-					const response = await ApiClient.getMapCanvas(request);
-				if (requestId !== this.renderRequestId) {
-					hilog.info(DOMAIN_NUMBER, TAG, `ignore stale map/heatmap response trigger=${trigger} requestId=${requestId}`);
-					return;
-				}
-					if (response.code === 0) {
-						this.lastViewportSignature = signature;
-						const canvas: MapCanvasResponse | undefined = response.data as MapCanvasResponse | undefined;
-						const buckets: MapHeatBucket[] = canvas?.heatmap?.items ?? [];
-					const nextItems: MapRenderItem[] = [];
-					for (let index = 0; index < buckets.length; index++) {
-						const bucket = buckets[index];
-						const renderId = `${index}_${bucket.location.latitude.toFixed(6)}_${bucket.location.longitude.toFixed(6)}`;
-						const renderLocation: MapRenderItemLocation = {
-							latitude: bucket.location.latitude,
-							longitude: bucket.location.longitude
-						};
-						const renderCluster: MapRenderItemCluster = {
-							count: bucket.total_count,
-							category: 'all'
-						};
-						const renderItem: MapRenderItem = {
-							render_id: renderId,
-							location: renderLocation,
-							type: 'cluster',
-							total_count: bucket.total_count,
-							cluster: renderCluster
-						};
-						nextItems.push(renderItem);
-					}
-						this.renderItems = nextItems;
-						hilog.info(DOMAIN_NUMBER, TAG, `finish map/heatmap trigger=${trigger} requestId=${requestId} items=${this.renderItems.length}`);
-						this.mapToastMessage = '';
-						this.updateMarkers();
-				} else {
-					hilog.warn(DOMAIN_NUMBER, TAG, `map/heatmap business error trigger=${trigger} requestId=${requestId} code=${response.code} message=${response.message ?? ''}`);
-				}
-			}
-		} catch (error) {
-			hilog.warn(DOMAIN_NUMBER, TAG, `render map data failed trigger=${trigger} requestId=${requestId}: ${JSON.stringify(error)}`);
-		}
-	}
+  private async fetchMapRenderData(trigger: string = 'unknown'): Promise<void> {
+    if (!this.initialised || !this.mapReady) {
+      return;
+    }
+
+    const viewport = this.buildViewport();
+    const filter = this.resolveMapFilter();
+    const signature = this.buildViewportSignature(viewport, filter);
+    if (signature === this.lastViewportSignature) {
+      hilog.info(DOMAIN_NUMBER, TAG, `skip map/canvas duplicate trigger=${trigger} signature=${signature}`);
+      this.updateMarkers();
+      return;
+    }
+
+    const requestId = ++this.renderRequestId;
+    const request: MapCanvasRequest = {
+      viewport: viewport,
+      pagination: { limit: 100 }
+    };
+    if (filter) {
+      request.filter = filter;
+    }
+
+    try {
+      hilog.info(DOMAIN_NUMBER, TAG, `start map/canvas trigger=${trigger} requestId=${requestId} signature=${signature}`);
+      const response = await ApiClient.getMapCanvas(request);
+      if (requestId !== this.renderRequestId) {
+        hilog.info(DOMAIN_NUMBER, TAG, `ignore stale map/canvas response trigger=${trigger} requestId=${requestId}`);
+        return;
+      }
+      if (response.code !== 0) {
+        hilog.warn(DOMAIN_NUMBER, TAG, `map/canvas business error trigger=${trigger} requestId=${requestId} code=${response.code} message=${response.message ?? ''}`);
+        return;
+      }
+
+      const canvas: MapCanvasResponse | undefined = response.data as MapCanvasResponse | undefined;
+      this.renderItems = this.buildRenderItemsFromCanvas(canvas);
+      this.lastViewportSignature = signature;
+      this.mapToastMessage = '';
+      this.updateMarkers();
+      hilog.info(DOMAIN_NUMBER, TAG, `finish map/canvas trigger=${trigger} requestId=${requestId} items=${this.renderItems.length} mode=${this.resolveCanvasMode(canvas)}`);
+    } catch (error) {
+      hilog.warn(DOMAIN_NUMBER, TAG, `render map/canvas failed trigger=${trigger} requestId=${requestId}: ${JSON.stringify(error)}`);
+    }
+  }
+
+  private buildViewportSignature(viewport: MapViewport, filter?: MapCanvasFilter): string {
+    const boundsForSpan = new CoordinateBounds(
+      viewport.bounds.north,
+      viewport.bounds.south,
+      viewport.bounds.east,
+      viewport.bounds.west
+    );
+    const spanM: number = CoordinateConverter.calculateViewportSpanMeters(boundsForSpan);
+    return [
+      viewport.bounds.north.toFixed(6),
+      viewport.bounds.south.toFixed(6),
+      viewport.bounds.east.toFixed(6),
+      viewport.bounds.west.toFixed(6),
+      spanM.toFixed(0),
+      this.mapZoom.toFixed(2),
+      filter?.data_type ?? 'all'
+    ].join('|');
+  }
+
+  private resolveCanvasMode(canvas?: MapCanvasResponse): string {
+    if (canvas?.hotspots?.items && canvas.hotspots.items.length > 0) {
+      return 'hotspots';
+    }
+    if (canvas?.heatmap?.items && canvas.heatmap.items.length > 0) {
+      return 'heatmap';
+    }
+    return 'empty';
+  }
+
+  private buildRenderItemsFromCanvas(canvas?: MapCanvasResponse): MapRenderItem[] {
+    if (canvas?.hotspots?.items && canvas.hotspots.items.length > 0) {
+      return this.buildHotspotRenderItems(canvas.hotspots.items);
+    }
+    if (canvas?.heatmap?.items && canvas.heatmap.items.length > 0) {
+      return this.buildHeatBucketRenderItems(canvas.heatmap.items);
+    }
+    return [];
+  }
+
+  private buildHotspotRenderItems(items: MapHotspotItem[]): MapRenderItem[] {
+    const nextItems: MapRenderItem[] = [];
+    for (let index = 0; index < items.length; index++) {
+      const item = items[index];
+      const renderId = `${item.object_type}_${item.object_id}_${index}`;
+      nextItems.push({
+        render_id: renderId,
+        location: {
+          latitude: item.location.latitude,
+          longitude: item.location.longitude
+        },
+        type: item.object_type,
+        total_count: 1,
+        entity: {
+          payload_id: item.object_id,
+          title: item.title,
+          subtitle: item.subtitle,
+          type: item.object_type,
+          distance_meters: item.distance_meters
+        }
+      });
+    }
+    return nextItems;
+  }
+
+  private buildHeatBucketRenderItems(buckets: MapHeatBucket[]): MapRenderItem[] {
+    const nextItems: MapRenderItem[] = [];
+    for (let index = 0; index < buckets.length; index++) {
+      const bucket = buckets[index];
+      nextItems.push({
+        render_id: `heat_${bucket.cell_token}_${index}`,
+        location: {
+          latitude: bucket.location.latitude,
+          longitude: bucket.location.longitude
+        },
+        type: 'heat_bucket',
+        total_count: bucket.total_count,
+        heatBucket: {
+          level: bucket.level,
+          breakdown: this.formatHeatBreakdown(bucket)
+        }
+      });
+    }
+    return nextItems;
+  }
+
+  private formatHeatBreakdown(bucket: MapHeatBucket): string | undefined {
+    const parts: string[] = [];
+    if (bucket.breakdown?.user) {
+      parts.push(`${bucket.breakdown.user} 个用户`);
+    }
+    if (bucket.breakdown?.group) {
+      parts.push(`${bucket.breakdown.group} 个群组`);
+    }
+    if (bucket.breakdown?.moment) {
+      parts.push(`${bucket.breakdown.moment} 条动态`);
+    }
+    return parts.length > 0 ? parts.join(' · ') : undefined;
+  }
 
   private showMapToast(message: string, duration: number = 2000): void {
     if (message.length === 0) {
@@ -1365,7 +1383,6 @@ export struct LocationPickerPage {
   private buildViewport(): MapViewport {
     const zoom = Math.max(1, Math.min(20, this.mapZoom));
 
-    // 优先使用真实可视区域（如果 MapKit 支持 getVisibleRegion）
     if (this.visibleRegion) {
       const corners: MapCoordinate[] = [
         this.visibleRegion.northeast,
@@ -1378,48 +1395,34 @@ export struct LocationPickerPage {
       );
       const latitudes = convertedCorners.map((point) => point.latitude);
       const longitudes = convertedCorners.map((point) => point.longitude);
-      const north = Math.min(90, Math.max(...latitudes));
-      const south = Math.max(-90, Math.min(...latitudes));
-      const east = Math.min(180, Math.max(...longitudes));
-      const west = Math.max(-180, Math.min(...longitudes));
-
-      // 视口中心由后端根据 bounds 自行计算，这里不下发额外字段
-      const bounds: Bounds = {
-        north: north,
-        south: south,
-        east: east,
-        west: west
+      return {
+        bounds: {
+          north: Math.min(90, Math.max(...latitudes)),
+          south: Math.max(-90, Math.min(...latitudes)),
+          east: Math.min(180, Math.max(...longitudes)),
+          west: Math.max(-180, Math.min(...longitudes))
+        }
       };
-      const viewport: MapViewport = {
-        bounds: bounds,
-        zoom: zoom,
-      };
-      return viewport;
     }
 
-    // 兜底：部分设备/版本不支持 getVisibleRegion 时，退回到“中心点 + zoom 推算”的近似方案
     const gcj02Lat = this.centerLat || this.mapRegion.latitude;
     const gcj02Lng = this.centerLng || this.mapRegion.longitude;
     const wgs84 = CoordinateConverter.convertGcj02ToWgs84(gcj02Lat, gcj02Lng);
     const delta: BoundsDelta = this.computeBoundsDelta(zoom);
-    const bounds: Bounds = {
-      north: Math.min(90, wgs84.latitude + delta.latDelta / 2),
-      south: Math.max(-90, wgs84.latitude - delta.latDelta / 2),
-      east: Math.min(180, wgs84.longitude + delta.lonDelta / 2),
-      west: Math.max(-180, wgs84.longitude - delta.lonDelta / 2)
+    return {
+      bounds: {
+        north: Math.min(90, wgs84.latitude + delta.latDelta / 2),
+        south: Math.max(-90, wgs84.latitude - delta.latDelta / 2),
+        east: Math.min(180, wgs84.longitude + delta.lonDelta / 2),
+        west: Math.max(-180, wgs84.longitude - delta.lonDelta / 2)
+      }
     };
-    const viewport: MapViewport = {
-      bounds: bounds,
-      zoom: zoom,
-    };
-    return viewport;
   }
 
   private computeBoundsDelta(zoom: number): BoundsDelta {
     const latDelta = 180 / Math.pow(2, zoom);
     const lonDelta = 360 / Math.pow(2, zoom);
-    const delta: BoundsDelta = { latDelta: latDelta, lonDelta: lonDelta };
-    return delta;
+    return { latDelta: latDelta, lonDelta: lonDelta };
   }
 
   private updateMarkers(): void {
@@ -1432,10 +1435,7 @@ export struct LocationPickerPage {
       if (!this.shouldDisplayItem(item)) {
         continue;
       }
-      const gcj02 = CoordinateConverter.convertWgs84ToGcj02(
-        item.location.latitude,
-        item.location.longitude
-      );
+      const gcj02 = CoordinateConverter.convertWgs84ToGcj02(item.location.latitude, item.location.longitude);
       convertedItems.push({
         item: item,
         gcj02Lat: gcj02.latitude,
@@ -1443,45 +1443,27 @@ export struct LocationPickerPage {
       });
     }
 
-    const groupedItems: Map<string, ConvertedRenderItem[]> = new Map();
+    const nextMarkers: MapMarker[] = [];
+    const hotspotCandidates: ConvertedRenderItem[] = [];
     for (const converted of convertedItems) {
-      const latKey = Math.round(converted.gcj02Lat * COORD_GROUP_PRECISION);
-      const lngKey = Math.round(converted.gcj02Lng * COORD_GROUP_PRECISION);
-      const groupKey = `${latKey}_${lngKey}`;
-      const currentGroup = groupedItems.get(groupKey);
-      if (currentGroup) {
-        currentGroup.push(converted);
+      if (converted.item.type === 'heat_bucket') {
+        nextMarkers.push(this.buildSingleMarker(converted));
       } else {
-        groupedItems.set(groupKey, [converted]);
+        hotspotCandidates.push(converted);
       }
     }
 
-    const nextMarkers: MapMarker[] = [];
-    for (const grouped of groupedItems.values()) {
-      if (grouped.length === 1) {
-        nextMarkers.push(this.buildSingleMarker(grouped[0]));
+    const hotspotClusters = this.clusterHotspotItems(hotspotCandidates);
+    for (const clusterItems of hotspotClusters) {
+      if (clusterItems.length === 1) {
+        nextMarkers.push(this.buildSingleMarker(clusterItems[0]));
         continue;
       }
-
-      const first = grouped[0];
-      const groupedItemsList = grouped.map((entry: ConvertedRenderItem) => entry.item);
-      const overlapId = `${OVERLAP_GROUP_PREFIX}${first.item.render_id}`;
-      this.overlappingGroupsMap.set(overlapId, groupedItemsList);
-      const clusterLabel = this.summarizeGroupTypes(grouped);
-      const clusterMarker: MapMarker = {
-        id: overlapId,
-        latitude: first.gcj02Lat,
-        longitude: first.gcj02Lng,
-        title: `${grouped.length} 个内容`,
-        snippet: clusterLabel.length > 0 ? clusterLabel : '点击查看详情',
-        type: 'cluster',
-        iconKey: 'cluster'
-      };
-      nextMarkers.push(clusterMarker);
+      nextMarkers.push(this.buildClusterMarker(clusterItems));
     }
 
     if (this.centerLat !== 0 || this.centerLng !== 0) {
-      const centerPinMarker: MapMarker = {
+      nextMarkers.push({
         id: 'center_pin_selection',
         latitude: this.centerLat,
         longitude: this.centerLng,
@@ -1489,75 +1471,202 @@ export struct LocationPickerPage {
         snippet: '',
         type: 'user',
         iconKey: 'center_pin'
-      };
-      nextMarkers.push(centerPinMarker);
+      });
     }
     this.mapMarkers = nextMarkers;
   }
 
-  private buildSingleMarker(c: ConvertedRenderItem): MapMarker {
-    const marker: MapMarker = {
-      id: c.item.render_id,
-      latitude: c.gcj02Lat,
-      longitude: c.gcj02Lng,
-      title: this.getMarkerTitle(c.item),
-      snippet: this.getMarkerSnippet(c.item),
-      type: c.item.type === 'cluster' ? 'cluster' : c.item.type,
-      iconKey: this.getMarkerIconKey(c.item)
-    };
-    return marker;
+  private clusterHotspotItems(items: ConvertedRenderItem[]): ConvertedRenderItem[][] {
+    const clusters: ConvertedRenderItem[][] = [];
+    for (const item of items) {
+      let targetCluster: ConvertedRenderItem[] | undefined;
+      for (const existingCluster of clusters) {
+        const center = this.getClusterCenter(existingCluster);
+        const distance = this.distanceBetweenGcj02Meters(item.gcj02Lat, item.gcj02Lng, center.latitude, center.longitude);
+        if (distance <= LOCAL_CLUSTER_RADIUS_METERS) {
+          targetCluster = existingCluster;
+          break;
+        }
+      }
+      if (targetCluster) {
+        targetCluster.push(item);
+      } else {
+        clusters.push([item]);
+      }
+    }
+    return clusters;
   }
 
-  private summarizeGroupTypes(items: ConvertedRenderItem[]): string {
+  private getClusterCenter(items: ConvertedRenderItem[]): MapCoordinate {
+    let latTotal = 0;
+    let lngTotal = 0;
+    for (const item of items) {
+      latTotal += item.gcj02Lat;
+      lngTotal += item.gcj02Lng;
+    }
+    return {
+      latitude: latTotal / items.length,
+      longitude: lngTotal / items.length
+    };
+  }
+
+  private distanceBetweenGcj02Meters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    const radLat1 = lat1 * Math.PI / 180;
+    const radLat2 = lat2 * Math.PI / 180;
+    const deltaLat = (lat2 - lat1) * Math.PI / 180;
+    const deltaLng = (lng2 - lng1) * Math.PI / 180;
+    const sinLat = Math.sin(deltaLat / 2);
+    const sinLng = Math.sin(deltaLng / 2);
+    const a = sinLat * sinLat + Math.cos(radLat1) * Math.cos(radLat2) * sinLng * sinLng;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return 6378137 * c;
+  }
+
+  private buildClusterMarker(clusterItems: ConvertedRenderItem[]): MapMarker {
+    const center = this.getClusterCenter(clusterItems);
+    const renderItems = clusterItems.map((entry: ConvertedRenderItem) => entry.item);
+    const clusterData = this.buildClusterData(renderItems);
+    const clusterId = `${HOTSPOT_CLUSTER_PREFIX}${clusterData.memberIds.join('_')}`;
+    this.overlappingGroupsMap.set(clusterId, renderItems);
+    return {
+      id: clusterId,
+      latitude: center.latitude,
+      longitude: center.longitude,
+      title: clusterData.label,
+      snippet: clusterData.summary ?? '点击查看内容',
+      type: 'cluster',
+      iconKey: clusterData.iconKey
+    };
+  }
+
+  private buildClusterData(items: MapRenderItem[]): MapRenderCluster {
     let users = 0;
     let groups = 0;
     let moments = 0;
-    for (const c of items) {
-      switch (c.item.type) {
-        case 'user': users++; break;
-        case 'group': groups++; break;
-        case 'moment': moments++; break;
-        default: break;
+    for (const item of items) {
+      switch (item.type) {
+        case 'user':
+          users++;
+          break;
+        case 'group':
+          groups++;
+          break;
+        case 'moment':
+          moments++;
+          break;
+        default:
+          break;
       }
     }
+
+    const entityCount = users + groups + moments;
+    const iconKey = this.resolveClusterIconKey(users, groups, moments);
+    return {
+      memberIds: items.map((item: MapRenderItem) => item.render_id),
+      iconKey: iconKey,
+      label: `${entityCount} 个热点`,
+      summary: this.formatClusterSummary(users, groups, moments)
+    };
+  }
+
+  private resolveClusterIconKey(users: number, groups: number, moments: number): ClusterIconKey {
+    const nonZeroTypeCount = (users > 0 ? 1 : 0) + (groups > 0 ? 1 : 0) + (moments > 0 ? 1 : 0);
+    if (nonZeroTypeCount > 1) {
+      return 'cluster';
+    }
+    if (users > 0) {
+      return 'user_cluster';
+    }
+    if (groups > 0) {
+      return 'group_cluster';
+    }
+    if (moments > 0) {
+      return 'moment_cluster';
+    }
+    return 'cluster';
+  }
+
+  private formatClusterSummary(users: number, groups: number, moments: number): string {
     const parts: string[] = [];
-    if (users > 0) parts.push(`${users}个用户`);
-    if (groups > 0) parts.push(`${groups}个群组`);
-    if (moments > 0) parts.push(`${moments}个动态`);
-    return parts.join('、');
+    if (users > 0) {
+      parts.push(`${users} 个用户`);
+    }
+    if (groups > 0) {
+      parts.push(`${groups} 个群组`);
+    }
+    if (moments > 0) {
+      parts.push(`${moments} 条动态`);
+    }
+    return parts.join(' · ');
   }
 
-  private shouldDisplayItem(_item: MapRenderItem): boolean {
-    // 当前 /map/heatmap 返回聚合格网，是否展示由筛选开关整体决定
-    return this.showUsers || this.showGroups || this.showMoments;
+  private buildSingleMarker(converted: ConvertedRenderItem): MapMarker {
+    const markerType = converted.item.type === 'heat_bucket' ? 'cluster' : converted.item.type;
+    return {
+      id: converted.item.render_id,
+      latitude: converted.gcj02Lat,
+      longitude: converted.gcj02Lng,
+      title: this.getMarkerTitle(converted.item),
+      snippet: this.getMarkerSnippet(converted.item),
+      type: markerType,
+      iconKey: this.getMarkerIconKey(converted.item)
+    };
   }
 
-  private getMarkerIconKey(_item: MapRenderItem): 'user' | 'group' | 'moment' | 'cluster' {
-		if (_item.type === 'user' || _item.type === 'group' || _item.type === 'moment') {
-			return _item.type;
-		}
-		return 'cluster';
+  private shouldDisplayItem(item: MapRenderItem): boolean {
+    switch (item.type) {
+      case 'user':
+        return this.showUsers;
+      case 'group':
+        return this.showGroups;
+      case 'moment':
+        return this.showMoments;
+      case 'heat_bucket':
+        return this.showUsers || this.showGroups || this.showMoments;
+      default:
+        return true;
+    }
+  }
+
+  private getMarkerIconKey(item: MapRenderItem): 'user' | 'group' | 'moment' | 'cluster' | 'user_cluster' | 'group_cluster' | 'moment_cluster' {
+    if (item.type === 'user' || item.type === 'group' || item.type === 'moment') {
+      return item.type;
+    }
+    if (item.cluster) {
+      return item.cluster.iconKey;
+    }
+    return 'cluster';
   }
 
   private getMarkerTitle(item: MapRenderItem): string {
+    if (item.entity) {
+      return item.entity.title;
+    }
+    if (item.type === 'heat_bucket') {
+      return `${item.total_count} 个热点`;
+    }
     if (item.cluster) {
-      return item.cluster.label || `${item.cluster.count} 个内容`;
+      return item.cluster.label;
     }
     return '';
   }
 
   private getMarkerSnippet(item: MapRenderItem): string {
-    if (item.cluster) {
-      return `共 ${item.cluster.count} 项`;
+    if (item.entity?.subtitle && item.entity.subtitle.length > 0) {
+      return item.entity.subtitle;
+    }
+    if (item.type === 'heat_bucket') {
+      return item.heatBucket?.breakdown ?? `S2 L${item.heatBucket?.level ?? 0}`;
+    }
+    if (item.cluster?.summary && item.cluster.summary.length > 0) {
+      return item.cluster.summary;
+    }
+    if (item.entity?.distance_meters !== undefined) {
+      return `距你 ${LocationUtil.formatDistance(item.entity.distance_meters)}`;
     }
     return '';
   }
 
-  /**
-   * 根据当前勾选的类型决定向后端传递的 data_type 过滤条件
-   * - 全选或全不选：不下发 filter，让服务端返回所有类型
-   * - 仅单选某一类：下发对应 data_type，减少无关数据
-   */
   private resolveMapFilter(): MapCanvasFilter | undefined {
     const showUsers = this.showUsers;
     const showGroups = this.showGroups;
@@ -1576,17 +1685,15 @@ export struct LocationPickerPage {
       dataType = 'group';
     } else if (!showUsers && !showGroups && showMoments) {
       dataType = 'moment';
-    } else {
-      dataType = 'all';
     }
 
-    const filter: MapCanvasFilter = { data_type: dataType };
-    return filter;
+    return { data_type: dataType };
   }
 
   private applyFilterChange(toggle: () => void): void {
     toggle();
     this.lastViewportSignature = '';
+    this.overlappingPanelItems = [];
     if (this.renderTimerId > 0) {
       clearTimeout(this.renderTimerId);
     }
@@ -1605,31 +1712,43 @@ export struct LocationPickerPage {
 
     const overlapItems = this.overlappingGroupsMap.get(marker.id);
     if (overlapItems && overlapItems.length > 0) {
-      this.showFilterPanel = false;
-      if (this.showSearchBar) {
-        this.closeSearchPanel();
-      }
       this.showOverlappingPanel(overlapItems);
       return;
     }
 
     const item = this.renderItemsMap.get(marker.id);
-    if (!item || !item.entity) {
+    if (!item) {
+      return;
+    }
+    if (item.type === 'heat_bucket') {
+      this.closeOverlappingPanel();
       return;
     }
     this.showOverlappingPanel([item]);
   }
 
+  private closeOverlappingPanel(): void {
+    this.overlappingPanelItems = [];
+  }
+
   private showOverlappingPanel(items: MapRenderItem[]): void {
     const entityItems = items.filter((item: MapRenderItem) => item.entity !== undefined);
-    if (entityItems.length === 0) return;
     this.showFilterPanel = false;
     this.overlappingPanelItems = entityItems;
   }
 
+  private getOverlappingPanelTitle(): string {
+    if (this.overlappingPanelItems.length === 1) {
+      return '可打开的内容';
+    }
+    return `该位置有 ${this.overlappingPanelItems.length} 个可打开的内容`;
+  }
+
   private navigateToItem(item: MapRenderItem): void {
-    if (!item.entity) return;
-    this.overlappingPanelItems = [];
+    if (!item.entity) {
+      return;
+    }
+    this.closeOverlappingPanel();
     this.showFilterPanel = false;
     if (item.type === 'group') {
       const param = new GroupDetailRouteParam();
@@ -1648,28 +1767,40 @@ export struct LocationPickerPage {
 
   private getItemTypeLabel(type: string): string {
     switch (type) {
-      case 'user': return '用户';
-      case 'group': return '群组';
-      case 'moment': return '动态';
-      default: return '内容';
+      case 'user':
+        return '用户';
+      case 'group':
+        return '群组';
+      case 'moment':
+        return '动态';
+      default:
+        return '内容';
     }
   }
 
   private getTypeColor(type: string): string {
     switch (type) {
-      case 'user': return MARKER_COLOR_USER;
-      case 'group': return MARKER_COLOR_GROUP;
-      case 'moment': return MARKER_COLOR_MOMENT;
-      default: return '#666666';
+      case 'user':
+        return MARKER_COLOR_USER;
+      case 'group':
+        return MARKER_COLOR_GROUP;
+      case 'moment':
+        return MARKER_COLOR_MOMENT;
+      default:
+        return this.getCurrentThemePalette().textSecondary;
     }
   }
 
   private getTypeMarkerSvg(type: string): string {
     switch (type) {
-      case 'user': return 'marker_user.svg';
-      case 'group': return 'marker_group.svg';
-      case 'moment': return 'marker_moment.svg';
-      default: return 'marker_user.svg';
+      case 'user':
+        return 'marker_user.svg';
+      case 'group':
+        return 'marker_group.svg';
+      case 'moment':
+        return 'marker_moment.svg';
+      default:
+        return 'marker_user.svg';
     }
   }
 
@@ -1791,23 +1922,22 @@ export struct LocationPickerPage {
         // 重叠 marker 选择面板
         if (this.overlappingPanelItems.length > 0) {
           Column() {
-            // 遮罩层：点击关闭
             Column()
               .width('100%')
               .layoutWeight(1)
-              .onClick(() => { this.overlappingPanelItems = []; })
+              .onClick(() => { this.closeOverlappingPanel(); })
 
             Column() {
               Row() {
-                Text(`该位置有 ${this.overlappingPanelItems.length} 个内容`)
+                Text(this.getOverlappingPanelTitle())
                   .fontSize(DesignConstants.FONT.SIZE.LG)
                   .fontWeight(FontWeight.Medium)
                   .fontColor($r('sys.color.ohos_id_color_text_primary'))
                   .layoutWeight(1)
                 Text('关闭')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-                  .onClick(() => { this.overlappingPanelItems = []; })
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
+                  .onClick(() => { this.closeOverlappingPanel(); })
               }
               .width('100%')
               .padding({
@@ -1835,7 +1965,7 @@ export struct LocationPickerPage {
                         if (item.entity && item.entity.subtitle) {
                           Text(item.entity.subtitle)
                             .fontSize(DesignConstants.FONT.SIZE.SM)
-                            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                            .fontColor(this.getCurrentThemePalette().textSecondary)
                             .maxLines(1)
                             .textOverflow({ overflow: TextOverflow.Ellipsis })
                         }
@@ -1857,8 +1987,8 @@ export struct LocationPickerPage {
                       top: DesignConstants.SPACING.SM,
                       bottom: DesignConstants.SPACING.SM
                     })
+                    .borderRadius(DesignConstants.RADIUS.LG)
                     .onClick(() => {
-                      this.overlappingPanelItems = [];
                       this.navigateToItem(item);
                     })
                   }
@@ -1871,7 +2001,8 @@ export struct LocationPickerPage {
             }
             .width('100%')
             .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-            .borderRadius({ topLeft: 20, topRight: 20 })
+            .borderRadius({ topLeft: 24, topRight: 24 })
+            .border({ width: { top: 1 }, color: this.getCurrentThemePalette().borderColor })
             .shadow({
               radius: DesignConstants.SHADOW.LARGE.radius,
               color: DesignConstants.SHADOW.LARGE.color,

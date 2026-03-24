@@ -115,7 +115,6 @@ export interface Bounds {
 
 export interface MapViewport {
   bounds: Bounds;
-  zoom: number;
 }
 
 // ==================== 媒体资源 ====================
@@ -1096,6 +1095,8 @@ export interface MapHeatBreakdown {
 }
 
 export interface MapHeatBucket {
+  cell_token: string;
+  level: number;
   location: GeoPoint;
   total_count: number;
   breakdown?: MapHeatBreakdown;

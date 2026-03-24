@@ -19,7 +19,7 @@ const DOMAIN_NUMBER: number = 0xFF11;
 const TAG: string = 'NativeMapComponent';
 
 type MapMarkerType = 'user' | 'group' | 'moment' | 'cluster';
-type MapMarkerIconKey = MapMarkerType | 'center_pin';
+type MapMarkerIconKey = MapMarkerType | 'center_pin' | 'user_cluster' | 'group_cluster' | 'moment_cluster';
 
 export interface MapMarker {
   id: string;
