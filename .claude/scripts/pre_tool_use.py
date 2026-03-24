@@ -8,6 +8,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
 from integration_meta import load_meta, stale as integration_meta_stale
+from repo_context import checkout_root_from_cwd, main_root_from_checkout
 
 
 def run(*args):
@@ -49,19 +50,11 @@ def emit_deny(message):
 
 
 def current_checkout_root():
-    try:
-        cwd = os.getcwd()
-    except OSError:
-        return ""
-    return cwd if os.path.exists(os.path.join(cwd, ".git")) else (run("git", "rev-parse", "--show-toplevel") or "")
+    return checkout_root_from_cwd()
 
 
 def repo_main_root(root):
-    common_dir = run("git", "-C", root, "rev-parse", "--git-common-dir")
-    if not common_dir:
-        return root
-    common_dir = os.path.abspath(os.path.join(root, common_dir))
-    return os.path.abspath(os.path.join(common_dir, os.pardir))
+    return main_root_from_checkout(root)
 
 
 def is_linked_worktree(root):
