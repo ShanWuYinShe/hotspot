@@ -43,7 +43,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .claude/scripts/pre_tool_use.py"
+            "command": "checkout_root=\"$(git rev-parse --show-toplevel 2>/dev/null || true)\"; common_dir=\"$(git rev-parse --git-common-dir 2>/dev/null || true)\"; if [ -z \"$checkout_root\" ] || [ -z \"$common_dir\" ]; then python3 -c 'import json; msg=\"PreToolUse bootstrap 未能解析 git 根；已按 fail-open 放行。\"; print(json.dumps({\"hookSpecificOutput\": {\"permissionDecision\": \"allow\", \"permissionDecisionReason\": msg}, \"systemMessage\": msg}, ensure_ascii=False))'; exit 0; fi; main_root=\"$(python3 -c 'import os,sys; print(os.path.abspath(os.path.join(sys.argv[1], sys.argv[2], os.pardir)))' \"$checkout_root\" \"$common_dir\")\"; script=\"$checkout_root/.claude/scripts/pre_tool_use.py\"; if [ ! -f \"$script\" ]; then script=\"$main_root/.claude/scripts/pre_tool_use.py\"; fi; if [ ! -f \"$script\" ]; then python3 -c 'import json; msg=\"PreToolUse bootstrap 未找到脚本；已按 fail-open 放行。\"; print(json.dumps({\"hookSpecificOutput\": {\"permissionDecision\": \"allow\", \"permissionDecisionReason\": msg}, \"systemMessage\": msg}, ensure_ascii=False))'; exit 0; fi; exec python3 \"$script\" --main-root \"$main_root\" --checkout-root \"$checkout_root\""
           }
         ]
       }

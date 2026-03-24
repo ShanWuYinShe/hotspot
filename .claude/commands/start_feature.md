@@ -1,6 +1,7 @@
 ---
 description: 启动新的 feature 开发流并推进到 ready for integration
 argument-hint: <task description>
+allowed-tools: Read, Glob, Grep, AskUserQuestion, TaskCreate, TaskUpdate, TaskList, EnterWorktree, Bash(git status:*), Bash(git branch:*), Bash(git rev-parse:*), Bash(git worktree list:*), Bash(git log:*), Bash(*deploy/scripts/verify.sh*)
 ---
 
 围绕以下任务启动新的 feature 开发流：

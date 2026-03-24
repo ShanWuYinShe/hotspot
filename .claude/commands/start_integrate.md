@@ -17,7 +17,7 @@ $ARGUMENTS
 3. 确认本次待集成的 feature 列表；如用户未明确指定，先列出候选项并请求确认，不要默默扩大范围。
 4. 在列出本轮纳入项与进入 replay 前，先调用 `local-integration-playbook` subagent 校准当前阶段、边界、风险点与推荐命令，并在输出中复述其 `## 当前阶段`、`## 风险点`、`## 推荐命令`。
 5. 从主目录当前最新本地 `main HEAD` 创建新的临时 integration worktree；不要复用旧 integration worktree，不要在主目录做集成修改。
-6. 在仓库根 `tmp/claude/integrations/<integration-id>.json` 初始化本轮 integration 元信息，至少记录：`integration_id`、`baseline_main_sha`、`integration_branch`、`integration_worktree_path`、`planned_features`、`verify_status`、`review_status`、`gate_status`、`updated_at`。
+6. 通过共享脚本 `.claude/scripts/integration_meta.py` 初始化本轮 integration 元信息，并写入仓库根 `tmp/claude/integrations/<integration-id>.json`；至少记录：`integration_id`、`baseline_main_sha`、`integration_branch`、`integration_worktree_path`、`planned_features`、`verify_status`、`review_status`、`gate_status`、`created_at`、`updated_at`。
 7. 将各 ready feature 的成果按顺序 cherry-pick / replay 到 integration worktree；不要使用 merge。冲突只在 integration worktree 中解决。
 8. 在 integration worktree 中运行集成验证，最终有效结论以 `deploy/scripts/verify.sh --env-name <name>` 为准。
 9. 完成 simplify、严格 review 和必要的修复；如主目录 `main` 在集成过程中前进，则当前 integration 基线视为过期，应改走 `/refresh_integrate`，不要继续在旧 integration 上推进。

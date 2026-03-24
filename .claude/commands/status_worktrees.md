@@ -16,7 +16,7 @@ $ARGUMENTS
 2. 列出当前 linked worktree，并尽量推断其角色：feature、integration 或其他。
 3. 输出每个 worktree 的当前分支和 dirty 状态。
 4. 结合上下文判断哪些 feature worktree 已达到 `ready for integration`；如无法完全自动判断，要明确列出候选项和不确定项。
-5. 读取仓库根 `tmp/claude/integrations/*.json`，判断是否存在 integration 状态锚点；若存在，输出其 baseline main SHA、当前 main SHA 以及 `active` / `stale` 判定。
+5. 通过共享脚本 `.claude/scripts/integration_meta.py` 扫描仓库根 `tmp/claude/integrations/*.json`，判断是否存在 integration 状态锚点；若存在，输出其 baseline main SHA、当前 main SHA 以及 `active` / `stale` 判定。
 6. 判断是否存在 integration worktree；若存在，输出其路径、分支以及基线是否可能过期。
 7. 根据当前状态给出下一步建议：`/start_feature`、`/start_integrate`、`/refresh_integrate`、`/verify_integrate`、`/finish_integrate` 或 `/cleanup_worktrees`。
 8. 不要默认修改任何 worktree，不要 cleanup，不要同步回 `main`。

@@ -2,6 +2,12 @@ import json
 import os
 import subprocess
 import sys
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR))
+
+from integration_meta import load_meta, stale as integration_meta_stale
 
 
 def run(*args):
@@ -43,7 +49,10 @@ def emit_deny(message):
 
 
 def current_checkout_root():
-    cwd = os.getcwd()
+    try:
+        cwd = os.getcwd()
+    except OSError:
+        return ""
     return cwd if os.path.exists(os.path.join(cwd, ".git")) else (run("git", "rev-parse", "--show-toplevel") or "")
 
 
@@ -118,21 +127,13 @@ def is_release_build_script(cmd):
     return "deploy/scripts/release-build.sh" in cmd
 
 
-def integration_meta_path(main_root, root):
+def integration_id(root):
     branch = current_branch(root)
-    label = branch if branch and branch != "(detached)" else os.path.basename(root)
-    return os.path.join(main_root, "tmp", "claude", "integrations", f"{label}.json")
+    return branch if branch and branch != "(detached)" else os.path.basename(root)
 
 
 def load_integration_meta(main_root, root):
-    path = integration_meta_path(main_root, root)
-    if not os.path.exists(path):
-        return None
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return None
+    return load_meta(main_root, integration_id(root))
 
 
 def is_integration_like(main_root, root):
@@ -151,9 +152,15 @@ def integration_is_stale(main_root, root):
     meta = load_integration_meta(main_root, root)
     if not meta:
         return False
-    baseline = meta.get("baseline_main_sha", "")
-    current = current_main_head(main_root)
-    return bool(baseline and current and baseline != current)
+    return integration_meta_stale(main_root, meta, current_main_head(main_root))
+
+
+def arg_value(flag):
+    if flag in sys.argv:
+        idx = sys.argv.index(flag)
+        if idx + 1 < len(sys.argv):
+            return sys.argv[idx + 1]
+    return ""
 
 
 def main():
@@ -169,11 +176,11 @@ def main():
     tool_input = payload.get("tool_input") or payload.get("input") or {}
     command = tool_input.get("command", "") if tool_name == "Bash" else ""
 
-    root = current_checkout_root()
+    root = arg_value("--checkout-root") or current_checkout_root()
     if not root:
-        emit_allow()
+        emit_allow("PreToolUse 未能解析当前 checkout；已按 fail-open 放行。")
 
-    main_root = repo_main_root(root)
+    main_root = arg_value("--main-root") or repo_main_root(root)
     linked = is_linked_worktree(root)
     summary = state_summary(root)
     integration_like = linked and is_integration_like(main_root, root)
