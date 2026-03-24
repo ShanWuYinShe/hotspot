@@ -5,17 +5,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 ROOT="$(project_root)"
 COMPOSE_FILE="$ROOT/deploy/compose/preview.yml"
-CERT_DIR="$ROOT/tmp/certs"
 PRIMARY_ROOT="$(cd "$(git -C "$ROOT" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)/.." 2>/dev/null && pwd)"
-PRIMARY_CERT_DIR="$PRIMARY_ROOT/tmp/certs"
 PROJECT_NAME="$(preview_project_name)"
 HTTP_PORT="8088"
 HTTPS_PORT="8443"
 HTTP_PORT_EXPLICIT=0
 HTTPS_PORT_EXPLICIT=0
 PUBLIC_ORIGIN=""
-CERT_PATH="${HOTSPOT_TLS_CERT_PATH:-$CERT_DIR/localhost.crt}"
-KEY_PATH="${HOTSPOT_TLS_KEY_PATH:-$CERT_DIR/localhost.key}"
+CERT_PATH=""
+KEY_PATH=""
 
 usage() {
   cat <<'EOF'
@@ -57,32 +55,18 @@ done
 
 LOG_ROOT="$(preview_log_root "$ROOT")"
 PREVIEW_UP_LOG="$(log_file_path "$LOG_ROOT" "compose-up.log")"
-PREVIEW_UP_CONSOLE_LOG="$(log_file_path "$LOG_ROOT" "preview-up.console.log")"
 PREVIEW_PS_LOG="$(log_file_path "$LOG_ROOT" "compose.ps.log")"
 PREVIEW_STARTUP_LOG="$(log_file_path "$LOG_ROOT" "compose.startup.log")"
 PREVIEW_UP_META_LOG="$(log_file_path "$LOG_ROOT" "up.meta.log")"
 PUBLIC_ORIGIN="${HOTSPOT_PREVIEW_PUBLIC_ORIGIN:-https://localhost:${HTTPS_PORT}}"
 
-if [[ ! -f "$CERT_PATH" || ! -f "$KEY_PATH" ]]; then
-  fallback_cert="$PRIMARY_CERT_DIR/localhost.crt"
-  fallback_key="$PRIMARY_CERT_DIR/localhost.key"
-  if [[ -f "$fallback_cert" && -f "$fallback_key" ]]; then
-    CERT_PATH="$fallback_cert"
-    KEY_PATH="$fallback_key"
-  else
-    cat >&2 <<EOF
-TLS certificate or key not found.
-Expected:
-  HOTSPOT_TLS_CERT_PATH=$CERT_PATH
-  HOTSPOT_TLS_KEY_PATH=$KEY_PATH
-
-For local testing, you can generate certs with mkcert, for example:
-  mkdir -p "$CERT_DIR"
-  mkcert -cert-file "$CERT_PATH" -key-file "$KEY_PATH" localhost 127.0.0.1 ::1
-EOF
-    exit 1
-  fi
-fi
+IFS=$'\t' read -r CERT_PATH KEY_PATH < <(
+  resolve_preview_tls_paths \
+    "$ROOT" \
+    "$PRIMARY_ROOT" \
+    "${HOTSPOT_TLS_CERT_PATH:-}" \
+    "${HOTSPOT_TLS_KEY_PATH:-}"
+)
 
 if ! docker image inspect "$(preview_backend_image)" >/dev/null 2>&1 || ! docker image inspect "$(preview_frontend_image)" >/dev/null 2>&1; then
   echo "preview images are missing. Run ./deploy/scripts/preview-build.sh first." >&2
@@ -127,7 +111,7 @@ ensure_dir "$LOG_ROOT"
 } | tee "$PREVIEW_UP_META_LOG"
 
 cd "$ROOT"
-run_and_capture "$PREVIEW_UP_LOG" "$PREVIEW_UP_CONSOLE_LOG" docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" up -d
+run_and_capture "$PREVIEW_UP_LOG" docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" up -d
 capture_compose_ps "$PROJECT_NAME" "$COMPOSE_FILE" "$PREVIEW_PS_LOG"
 capture_compose_logs "$PROJECT_NAME" "$COMPOSE_FILE" "$PREVIEW_STARTUP_LOG" --tail 300
 
