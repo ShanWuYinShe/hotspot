@@ -167,7 +167,7 @@ export struct SearchPage {
         IconButton({
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
-          iconColor: $r('sys.color.ohos_id_color_text_primary'),
+          iconColor: this.getCurrentThemePalette().textPrimary,
           bgColor: Color.Transparent,
           onButtonClick: () => {
             AppRouter.pop();
@@ -179,7 +179,7 @@ export struct SearchPage {
           .height(42)
           .backgroundColor(this.getSurfaceSubtle())
           .borderRadius(DesignConstants.RADIUS.XL)
-          .shadow(DesignConstants.SHADOW.INSET)
+          .shadow(this.getCurrentThemePalette().controlShadow)
           .padding({ left: 16, right: 16 })
           .margin({ left: 8, right: 8 })
           .onChange((value) => {
@@ -193,7 +193,7 @@ export struct SearchPage {
         IconButton({
           icon: AppIcon.SEARCH,
           iconSize: IconSize.MEDIUM,
-          iconColor: $r('sys.color.ohos_id_color_text_primary'),
+          iconColor: this.getCurrentThemePalette().textPrimary,
           bgColor: this.getSurfaceSubtle(),
           onButtonClick: () => {
             this.doSearch();
@@ -208,7 +208,7 @@ export struct SearchPage {
         bottom: DesignConstants.SPACING.SM
       })
       .backgroundColor(Color.Transparent)
-      .border({ width: { bottom: 1 }, color: $r('app.color.divider') })
+      .border({ width: { bottom: 1 }, color: this.getSurfaceBorder() })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.isLoading) {
@@ -262,7 +262,7 @@ export struct SearchPage {
   @Builder TabBuilder(index: number, name: string) {
     Row({ space: DesignConstants.SPACING.XS }) {
       Text(name)
-        .fontColor(this.currentIndex === index ? this.getCurrentThemePalette().accentBackground : $r('sys.color.ohos_id_color_text_secondary'))
+        .fontColor(this.currentIndex === index ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary)
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .fontWeight(this.currentIndex === index ? FontWeight.Bold : FontWeight.Normal)
         .lineHeight(20)
@@ -293,9 +293,9 @@ export struct SearchPage {
         Text() {
           SymbolSpan($r(AppIcon.SEARCH))
             .fontSize(48)
-            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+            .fontColor([this.getCurrentThemePalette().textSecondary])
         }
-        Text('未找到相关结果').fontSize(DesignConstants.FONT.SIZE.LG).fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        Text('未找到相关结果').fontSize(DesignConstants.FONT.SIZE.LG).fontColor(this.getCurrentThemePalette().textSecondary)
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Center)
     } else {
@@ -310,7 +310,7 @@ export struct SearchPage {
             '_p' + (this.userActionPendingIds.indexOf(uid) >= 0);
         })
       }
-      .divider({ strokeWidth: 0, color: $r('app.color.divider') })
+      .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
       .width('100%').height('100%')
       .padding({
         left: DesignConstants.SPACING.MD,
@@ -329,9 +329,9 @@ export struct SearchPage {
         Text() {
           SymbolSpan($r(AppIcon.SEARCH))
             .fontSize(48)
-            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+            .fontColor([this.getCurrentThemePalette().textSecondary])
         }
-        Text('未找到相关结果').fontSize(DesignConstants.FONT.SIZE.LG).fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        Text('未找到相关结果').fontSize(DesignConstants.FONT.SIZE.LG).fontColor(this.getCurrentThemePalette().textSecondary)
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Center)
     } else {
@@ -346,7 +346,7 @@ export struct SearchPage {
             '_p' + (this.groupActionPendingIds.indexOf(gid) >= 0);
         })
       }
-      .divider({ strokeWidth: 0.5, color: $r('app.color.divider') })
+      .divider({ strokeWidth: 0.5, color: this.getSurfaceBorder() })
       .width('100%').height('100%')
       .padding({
         left: DesignConstants.SPACING.MD,
@@ -365,9 +365,9 @@ export struct SearchPage {
         Text() {
           SymbolSpan($r(AppIcon.SEARCH))
             .fontSize(48)
-            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+            .fontColor([this.getCurrentThemePalette().textSecondary])
         }
-        Text('未找到相关结果').fontSize(DesignConstants.FONT.SIZE.LG).fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        Text('未找到相关结果').fontSize(DesignConstants.FONT.SIZE.LG).fontColor(this.getCurrentThemePalette().textSecondary)
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Center)
     } else {
@@ -436,14 +436,14 @@ export struct SearchPage {
             Text(item.user?.nickname ?? '')
               .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontWeight(FontWeight.Medium)
-              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              .fontColor(this.getCurrentThemePalette().textPrimary)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
 
             if (item.presence_status === 'online') {
               Text('在线')
                 .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor($r('app.color.color_success'))
+                .fontColor(this.getCurrentThemePalette().accentBackground)
             }
           }
           .alignItems(HorizontalAlign.Start)
@@ -458,7 +458,7 @@ export struct SearchPage {
           Text() {
             SymbolSpan($r(AppIcon.MORE))
               .fontSize(DesignConstants.FONT.SIZE.LG)
-              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+              .fontColor([this.getCurrentThemePalette().textSecondary])
           }
         }
         .width(24)
@@ -492,7 +492,7 @@ export struct SearchPage {
         Text(item.bio)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .lineHeight(18)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .width('100%')
@@ -500,7 +500,7 @@ export struct SearchPage {
         Text('这个人还没有留下简介')
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .lineHeight(18)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .width('100%')
@@ -511,7 +511,7 @@ export struct SearchPage {
           ForEach(item.tags.slice(0, 3), (tag: string) => {
             Text(`#${tag}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .fontColor(this.getCurrentThemePalette().textSecondary)
               .padding({ left: 7, right: 7, top: 3, bottom: 3 })
               .margin({ right: 4, bottom: 4 })
               .backgroundColor(this.getSurfaceSubtle())
@@ -535,7 +535,7 @@ export struct SearchPage {
           .fontColor(this.isUserFollowing(item.user?.user_id ?? '') ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().accentText)
           .borderWidth(this.isUserFollowing(item.user?.user_id ?? '') ? 1 : 0)
           .borderColor(this.getCurrentThemePalette().accentBackground)
-          .shadow(DesignConstants.SHADOW.SMALL)
+          .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .opacity(this.isUserActionPending(item.user?.user_id ?? '') ? 0.58 : 1)
           .onClick(() => { this.toggleFollow(item); })
@@ -548,8 +548,8 @@ export struct SearchPage {
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
           .backgroundColor(this.getSurfaceSubtle())
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .shadow(DesignConstants.SHADOW.SMALL)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+          .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .opacity(this.isUserActionPending(item.user?.user_id ?? '') ? 0.74 : 1)
           .onClick(() => { this.startPrivateChat(item); })
@@ -560,7 +560,7 @@ export struct SearchPage {
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.XXL)
-    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .shadow(this.getCurrentThemePalette().elevatedShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
   }
 
@@ -580,13 +580,13 @@ export struct SearchPage {
             Text(item.group?.name ?? '')
               .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontWeight(FontWeight.Medium)
-              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              .fontColor(this.getCurrentThemePalette().textPrimary)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
 
             Text(`${formatCount(item.group?.members_count)} 人`)
               .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .fontColor(this.getCurrentThemePalette().textSecondary)
           }
           .alignItems(HorizontalAlign.Start)
           .layoutWeight(1)
@@ -597,7 +597,7 @@ export struct SearchPage {
           Text() {
             SymbolSpan($r(AppIcon.MORE))
               .fontSize(DesignConstants.FONT.SIZE.LG)
-              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+              .fontColor([this.getCurrentThemePalette().textSecondary])
           }
         }
         .width(24)
@@ -631,7 +631,7 @@ export struct SearchPage {
         Text(item.description)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .lineHeight(18)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .width('100%')
@@ -639,7 +639,7 @@ export struct SearchPage {
         Text('这个群还没有群介绍')
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .lineHeight(18)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .width('100%')
@@ -659,7 +659,7 @@ export struct SearchPage {
           .fontColor(this.isGroupJoined(item) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().accentText)
           .borderWidth(this.isGroupJoined(item) ? 1 : 0)
           .borderColor(this.getCurrentThemePalette().accentBackground)
-          .shadow(DesignConstants.SHADOW.SMALL)
+          .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .opacity(this.isGroupActionPending(item.group?.group_id ?? '') ? 0.58 : 1)
           .onClick(() => { this.joinGroup(item); })
@@ -672,8 +672,8 @@ export struct SearchPage {
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
           .backgroundColor(this.getSurfaceSubtle())
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .shadow(DesignConstants.SHADOW.SMALL)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+          .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .opacity(this.isGroupActionPending(item.group?.group_id ?? '') ? 0.74 : 1)
           .onClick(() => { this.openGroupDetail(item); })
@@ -685,10 +685,10 @@ export struct SearchPage {
     .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.XXL)
     .shadow({
-      radius: DesignConstants.SHADOW.MEDIUM.radius,
-      color: DesignConstants.SHADOW.MEDIUM.color,
-      offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
-      offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
+      radius: this.getCurrentThemePalette().elevatedShadow.radius,
+      color: this.getCurrentThemePalette().elevatedShadow.color,
+      offsetX: this.getCurrentThemePalette().elevatedShadow.offsetX,
+      offsetY: this.getCurrentThemePalette().elevatedShadow.offsetY
     })
     .border({ width: 1, color: this.getSurfaceBorder() })
   }
@@ -708,7 +708,7 @@ export struct SearchPage {
         Column() {
           Text(item.description.substring(0, 60))
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
             .maxLines(4)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
@@ -729,7 +729,7 @@ export struct SearchPage {
 
         Text(item.user?.nickname ?? '')
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .maxLines(1)
           .layoutWeight(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -739,11 +739,11 @@ export struct SearchPage {
           Text() {
             SymbolSpan($r(AppIcon.HEART))
               .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
+              .fontColor([this.getCurrentThemePalette().textTertiary])
           }
           Text(formatCount(item.likes_count))
             .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+            .fontColor(this.getCurrentThemePalette().textTertiary)
         }
       }
       .padding(DesignConstants.SPACING.SM)
@@ -753,10 +753,10 @@ export struct SearchPage {
     .borderRadius(DesignConstants.RADIUS.XXL)
     .clip(true)
     .shadow({
-      radius: DesignConstants.SHADOW.MEDIUM.radius,
-      color: DesignConstants.SHADOW.MEDIUM.color,
-      offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
-      offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
+      radius: this.getCurrentThemePalette().elevatedShadow.radius,
+      color: this.getCurrentThemePalette().elevatedShadow.color,
+      offsetX: this.getCurrentThemePalette().elevatedShadow.offsetX,
+      offsetY: this.getCurrentThemePalette().elevatedShadow.offsetY
     })
     .border({ width: 1, color: this.getSurfaceBorder() })
     .onClick(() => {
@@ -778,12 +778,12 @@ export struct SearchPage {
 
         Text(item.user?.nickname ?? '')
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
       }
 
       Text(item.description)
         .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .fontColor(this.getCurrentThemePalette().textPrimary)
         .maxLines(3)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }

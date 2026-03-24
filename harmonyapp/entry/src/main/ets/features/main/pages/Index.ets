@@ -137,11 +137,11 @@ struct Index {
   }
 
   private getTabBarBackground(): string {
-    return this.getCurrentThemePalette().surfaceBackground;
+    return this.getCurrentThemePalette().tabBarBackground;
   }
 
   private getTabInactiveColor(): ResourceColor {
-    return $r('sys.color.ohos_id_color_text_secondary');
+    return this.getCurrentThemePalette().tabBarInactive;
   }
 
   aboutToDisappear() {
@@ -784,7 +784,7 @@ struct Index {
       }
     }
     .width('100%')
-    .height(56)
+    .height(60)
     .justifyContent(FlexAlign.Center)
     .padding({ top: this.currentTabIndex === targetIndex ? 0 : 2, bottom: this.currentTabIndex === targetIndex ? 0 : 2 })
     .backgroundColor(Color.Transparent)
@@ -831,7 +831,7 @@ struct Index {
       }
     }
     .width('100%')
-    .height(56)
+    .height(60)
     .justifyContent(FlexAlign.Center)
     .padding({ top: this.currentTabIndex === 0 ? 0 : 2, bottom: this.currentTabIndex === 0 ? 0 : 2 })
     .backgroundColor(Color.Transparent)
@@ -853,8 +853,8 @@ struct Index {
             .fontColor([this.getBrandAccentText()])
         }
       }
-      .width(54)
-      .height(34)
+      .width(66)
+      .height(40)
       .justifyContent(FlexAlign.Center)
       .backgroundColor(this.getBrandAccent())
       .borderRadius(DesignConstants.RADIUS.FULL)
@@ -877,7 +877,7 @@ struct Index {
       }
     }
     .width('100%')
-    .height(56)
+    .height(60)
     .justifyContent(FlexAlign.Center)
     .padding({ top: this.currentTabIndex === 2 ? 0 : 2, bottom: this.currentTabIndex === 2 ? 0 : 2 })
     .backgroundColor(Color.Transparent)
@@ -893,11 +893,11 @@ struct Index {
           LoadingProgress()
             .width(48)
             .height(48)
-            .color($r('sys.color.ohos_id_color_emphasize'))
-          
+            .color(this.getCurrentThemePalette().accentBackground)
+
           Text($r('app.string.common_loading'))
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
             .margin({ top: 16 })
         }
         .width('100%')
@@ -914,10 +914,10 @@ struct Index {
           Text('应用初始化失败')
             .fontSize(18)
             .fontWeight(FontWeight.Bold)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getCurrentThemePalette().textPrimary)
           Text(this.lastError)
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
             .textAlign(TextAlign.Center)
             .constraintSize({ maxWidth: 280 })
           Button('重试')
@@ -939,9 +939,11 @@ struct Index {
           // 底部统一背景容器：覆盖导航栏 + 安全区，视觉上形成一整块底部区域
           Column() {}
             .width('100%')
-            .height(56 + this.safeAreaBottom)
+            .height(60 + this.safeAreaBottom)
             .backgroundColor(this.getTabBarBackground())
             .shadow(this.getTabBarShadow())
+            .borderRadius({ topLeft: 28, topRight: 28 })
+            .border({ width: { top: 1 }, color: this.getCurrentThemePalette().borderColor })
 
           Column() {
         Navigation(this.navPathStack) {
@@ -992,7 +994,7 @@ struct Index {
           }
           .tabBar(this.TabBuilderIcon('我的', 4, AppIcon.PERSON))
         }
-        .barHeight(56)
+        .barHeight(60)
         .scrollable(false)
         .barMode(BarMode.Fixed)
         .divider({ strokeWidth: 0, color: Color.Transparent, startMargin: 0, endMargin: 0 })
@@ -1110,7 +1112,7 @@ struct Index {
     Row({ space: DesignConstants.SPACING.SM }) {
       Text('当前为临时用户，注册账号可保留所有数据')
         .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor($r('sys.color.ohos_id_color_text_primary_contrary'))
+        .fontColor(this.getCurrentThemePalette().accentText)
         .layoutWeight(1)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -1133,7 +1135,7 @@ struct Index {
       top: this.getSafeAreaTopPadding(),
       bottom: DesignConstants.SPACING.SM
     })
-    .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+    .backgroundColor(this.getCurrentThemePalette().accentBackground)
     .borderRadius({ bottomLeft: DesignConstants.RADIUS.LG, bottomRight: DesignConstants.RADIUS.LG })
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
   }
@@ -1144,7 +1146,7 @@ struct Index {
       Text('创建内容')
         .fontSize(DesignConstants.FONT.SIZE.XL)
         .fontWeight(FontWeight.Bold)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .fontColor(this.getCurrentThemePalette().textPrimary)
         .margin({ top: DesignConstants.SPACING.SM, bottom: 20 })
 
       // 发布瞬间
@@ -1166,10 +1168,10 @@ struct Index {
           Text('发布瞬间')
             .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontWeight(FontWeight.Medium)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getCurrentThemePalette().textPrimary)
           Text('分享你身边的精彩时刻')
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
@@ -1177,14 +1179,14 @@ struct Index {
         Text() {
           SymbolSpan($r(AppIcon.FORWARD))
             .fontSize(18)
-            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+            .fontColor([this.getCurrentThemePalette().textSecondary])
         }
       }
       .width('100%')
       .padding(DesignConstants.SPACING.LG)
       .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
       .borderRadius(DesignConstants.RADIUS.XXL)
-      .shadow(DesignConstants.SHADOW.MEDIUM)
+      .shadow(this.getCurrentThemePalette().elevatedShadow)
       .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
       .onClick(() => {
         this.showCreateSheet = false;
@@ -1210,10 +1212,10 @@ struct Index {
           Text('创建群组')
             .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontWeight(FontWeight.Medium)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getCurrentThemePalette().textPrimary)
           Text('创建一个附近的群组讨论')
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
@@ -1221,14 +1223,14 @@ struct Index {
         Text() {
           SymbolSpan($r(AppIcon.FORWARD))
             .fontSize(18)
-            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+            .fontColor([this.getCurrentThemePalette().textSecondary])
         }
       }
       .width('100%')
       .padding(DesignConstants.SPACING.LG)
       .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
       .borderRadius(DesignConstants.RADIUS.XXL)
-      .shadow(DesignConstants.SHADOW.MEDIUM)
+      .shadow(this.getCurrentThemePalette().elevatedShadow)
       .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
       .margin({ top: DesignConstants.SPACING.SM })
       .onClick(() => {

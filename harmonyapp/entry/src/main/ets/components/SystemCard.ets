@@ -61,6 +61,10 @@ export struct SystemCard {
     return kind === 'elevated' ? palette.elevatedShadow : palette.surfaceShadow;
   }
 
+  private isSoftGallery(): boolean {
+    return AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId);
+  }
+
   private getBackgroundColor(): ResourceColor {
     if (this.cardBackgroundColor) {
       return this.cardBackgroundColor as ResourceColor;
@@ -70,6 +74,7 @@ export struct SystemCard {
       case CardVariant.GLASS:
         return Color.Transparent;
       case CardVariant.FILLED:
+        return this.isSoftGallery() ? this.getPalette().buttonSecondaryBackground : this.getPalette().surfaceBackground;
       case CardVariant.ELEVATED:
       case CardVariant.OUTLINED:
       case CardVariant.DEFAULT:
@@ -107,10 +112,21 @@ export struct SystemCard {
     return BlurStyle.NONE;
   }
 
+  private getCardRadius(): number {
+    if (this.isSoftGallery() && this.cardBorderRadius === DesignConstants.RADIUS.XXL) {
+      return DesignConstants.RADIUS.XXL + 4;
+    }
+    return this.cardBorderRadius;
+  }
+
+  private getCardPadding(): number {
+    return this.isSoftGallery() ? this.cardPadding + 2 : this.cardPadding;
+  }
+
   // 获取点击缩放比例
   private getScale(): ScaleOptions {
     if (this.clickable && this.isPressed) {
-      return { x: 0.97, y: 0.97 };
+      return this.isSoftGallery() ? { x: 0.985, y: 0.985 } : { x: 0.97, y: 0.97 };
     }
     return { x: 1, y: 1 };
   }
@@ -122,9 +138,9 @@ export struct SystemCard {
     .width('100%')
     .backgroundColor(this.getBackgroundColor())
     .backgroundBlurStyle(this.getBlurStyle())
-    .borderRadius(this.cardBorderRadius)
+    .borderRadius(this.getCardRadius())
     .border(this.getBorder())
-    .padding(this.cardPadding)
+    .padding(this.getCardPadding())
     .shadow(this.getShadow())
     .scale(this.getScale())
     .animation({

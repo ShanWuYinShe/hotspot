@@ -1,12 +1,10 @@
-export type ThemeMode = 'follow_system' | 'default_clean' | 'tactile_minimal' | 'zen_artistic';
+export type ThemeMode = 'follow_system' | 'default_clean' | 'soft_gallery';
 
 export type ResolvedThemeId =
   | 'default_clean_light'
   | 'default_clean_dark'
-  | 'tactile_minimal_light'
-  | 'tactile_minimal_dark'
-  | 'zen_artistic_light'
-  | 'zen_artistic_dark';
+  | 'soft_gallery_light'
+  | 'soft_gallery_dark';
 
 export interface AppThemeShadow {
   radius: number;
@@ -29,13 +27,22 @@ export interface AppThemePalette {
   chatBackground: string;
   systemSurfaceBaseColor: string;
   preferDarkContent: boolean;
+  isDarkTheme: boolean;
+  textPrimary: string;
+  textSecondary: string;
+  textTertiary: string;
+  iconMuted: string;
+  buttonSecondaryBackground: string;
+  buttonSecondaryText: string;
+  tabBarBackground: string;
+  tabBarInactive: string;
   surfaceShadow: AppThemeShadow;
   elevatedShadow: AppThemeShadow;
   accentShadow: AppThemeShadow;
   controlShadow: AppThemeShadow;
   tabBarShadow: AppThemeShadow;
   overlayStrong: string;
-  }
+}
 
 export interface ThemeOptionItem {
   mode: ThemeMode;

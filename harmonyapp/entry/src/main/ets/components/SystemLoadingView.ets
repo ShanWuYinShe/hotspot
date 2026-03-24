@@ -44,13 +44,13 @@ export struct SystemLoadingView {
 
       Text(this.message)
         .fontSize(DesignConstants.FONT.SIZE.MD)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .fontColor(this.getPalette().textSecondary)
         .textAlign(TextAlign.Center)
 
       if (this.showProgress && this.progressType === 'determinate') {
         Text(`${Math.round(this.externalProgress)}%`)
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+          .fontColor(this.getPalette().textTertiary)
           .textAlign(TextAlign.Center)
       }
     }

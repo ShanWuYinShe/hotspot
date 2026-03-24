@@ -500,15 +500,12 @@ export class NotificationRenderer extends BaseSingleton {
    */
   private generateNotificationStyle(type: string, priority: string): NotificationStyle {
     const palette = AppThemeManager.getSafeCurrentPalette();
-    const paletteIsDark = palette.id.endsWith('_dark');
-    const isDark = paletteIsDark || this.config.theme === 'dark' ||
+    const isDark = palette.isDarkTheme || this.config.theme === 'dark' ||
       (this.config.theme === 'auto' && this.isSystemDarkMode());
 
     // 基础样式：使用主题调色板与设计常量
     let backgroundColor = palette.surfaceBackground;
-    let textColor = isDark
-      ? DesignConstants.COLOR.TEXT_PRIMARY_DARK
-      : DesignConstants.COLOR.TEXT_PRIMARY_LIGHT;
+    let textColor = palette.textPrimary;
     let borderColor = palette.borderColor;
     let iconColor = palette.accentBackground;
     let shadowColor = palette.elevatedShadow.color;
@@ -536,13 +533,13 @@ export class NotificationRenderer extends BaseSingleton {
     // 根据优先级调整背景与边框
     switch (priority) {
       case 'critical':
-        if (palette.preferDarkContent) {
+        if (!isDark) {
           backgroundColor = DesignConstants.COLOR.SURFACE_DANGER_SOFT;
         }
         borderColor = DesignConstants.COLOR.ERROR;
         break;
       case 'high':
-        if (palette.preferDarkContent) {
+        if (!isDark) {
           backgroundColor = DesignConstants.COLOR.SURFACE_WARNING_SOFT;
         }
         borderColor = DesignConstants.COLOR.WARNING;

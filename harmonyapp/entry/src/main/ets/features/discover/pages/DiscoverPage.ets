@@ -207,17 +207,17 @@ export struct DiscoverPage {
           Text() {
             SymbolSpan($r(AppIcon.SEARCH))
               .fontSize(17)
-              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+              .fontColor([this.getCurrentThemePalette().textSecondary])
           }
           Text('搜索附近的人和群组')
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
             .layoutWeight(1)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
         .height(42)
-        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
         .border({ width: 1, color: this.getSurfaceBorder() })
@@ -228,7 +228,7 @@ export struct DiscoverPage {
         Text('发现内容')
           .fontSize(DesignConstants.FONT.SIZE.XXL)
           .fontWeight(FontWeight.Bold)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
       }
       .width('100%')
       .alignItems(HorizontalAlign.Start)
@@ -358,7 +358,7 @@ export struct DiscoverPage {
               Text() {
                 SymbolSpan($r(AppIcon.ARROW_UP))
                   .fontSize(10)
-                  .fontColor([$r('app.color.color_danger')])
+                  .fontColor([this.getCurrentThemePalette().accentBackground])
               }
             }
           }
@@ -371,7 +371,7 @@ export struct DiscoverPage {
           .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.FULL)
-          .shadow(DesignConstants.SHADOW.SMALL)
+          .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .onClick(() => {
             const searchParams = new SearchParams();
@@ -395,11 +395,11 @@ export struct DiscoverPage {
           Text() {
             SymbolSpan($r(AppIcon.RECOMMEND))
               .fontSize(10)
-              .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+              .fontColor([this.getCurrentThemePalette().accentBackground])
           }
           Text('推荐用户')
             .fontSize(10)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .padding({ left: 8, right: 8, top: 3, bottom: 3 })
         .backgroundColor(this.getSurfaceSubtle())
@@ -410,7 +410,7 @@ export struct DiscoverPage {
         if (user.location?.distance !== undefined && user.location?.distance !== null) {
           Text(LocationUtil.formatDistance(user.location.distance))
             .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor($r('sys.color.ohos_id_color_emphasize'))
+            .fontColor(this.getCurrentThemePalette().accentBackground)
             .padding({ left: 8, right: 8, top: 3, bottom: 3 })
             .backgroundColor(this.getSurfaceSubtle())
             .borderRadius(DesignConstants.RADIUS.XL)
@@ -431,7 +431,7 @@ export struct DiscoverPage {
             Text(user.user?.nickname ?? '')
               .fontSize(15)
               .fontWeight(FontWeight.Medium)
-              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              .fontColor(this.getCurrentThemePalette().textPrimary)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
 
@@ -441,19 +441,19 @@ export struct DiscoverPage {
                   .width(6)
                   .height(6)
                   .borderRadius(DesignConstants.RADIUS.FULL)
-                  .backgroundColor($r('app.color.color_success'))
+                  .backgroundColor(this.getCurrentThemePalette().accentBackground)
                 Text('在线')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor($r('app.color.color_success'))
+                  .fontColor(this.getCurrentThemePalette().accentBackground)
               } else {
                 Row()
                   .width(6)
                   .height(6)
                   .borderRadius(DesignConstants.RADIUS.FULL)
-                  .backgroundColor($r('sys.color.ohos_id_color_text_tertiary'))
+                  .backgroundColor(this.getCurrentThemePalette().textTertiary)
                 Text('离线')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
               }
             }
             .alignItems(VerticalAlign.Center)
@@ -470,7 +470,7 @@ export struct DiscoverPage {
           Text() {
             SymbolSpan($r(AppIcon.MORE))
               .fontSize(DesignConstants.FONT.SIZE.LG)
-              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+              .fontColor([this.getCurrentThemePalette().textSecondary])
           }
         }
         .width(32)
@@ -503,7 +503,7 @@ export struct DiscoverPage {
       Text(user.bio || '可能会感兴趣')
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .lineHeight(17)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .fontColor(this.getCurrentThemePalette().textSecondary)
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
@@ -528,29 +528,29 @@ export struct DiscoverPage {
           (this.isUserFollowing(user.user?.user_id ?? '') ? '已关注' : '+ 关注'))
           .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(36)
+          .height(44)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .enabled(!this.isUserActionPending(user.user?.user_id ?? ''))
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
           .backgroundColor(this.isUserFollowing(user.user?.user_id ?? '') ? this.getSurfaceSubtle() : this.getAccentBackground())
-          .fontColor(this.isUserFollowing(user.user?.user_id ?? '') ? $r('sys.color.ohos_id_color_text_secondary') : this.getAccentText())
+          .fontColor(this.isUserFollowing(user.user?.user_id ?? '') ? this.getCurrentThemePalette().textSecondary : this.getAccentText())
           .opacity(this.isUserActionPending(user.user?.user_id ?? '') ? 0.58 : 1)
-          .shadow(DesignConstants.SHADOW.SMALL)
+          .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .onClick(() => { this.followUser(user); })
 
         Button('私聊')
           .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(36)
+          .height(44)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
           .backgroundColor(this.getSurfaceSubtle())
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .opacity(this.isUserActionPending(user.user?.user_id ?? '') ? 0.74 : 1)
-          .shadow(DesignConstants.SHADOW.SMALL)
+          .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .onClick(() => { this.startPrivateChat(user); })
       }
@@ -565,8 +565,8 @@ export struct DiscoverPage {
       bottom: DesignConstants.SPACING.MD
     })
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.XXL)
-    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .borderRadius(DesignConstants.RADIUS.XXL + 4)
+    .shadow(this.getCurrentThemePalette().elevatedShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
   }
 
@@ -579,11 +579,11 @@ export struct DiscoverPage {
           Text() {
             SymbolSpan($r(AppIcon.HEART_FILL))
               .fontSize(10)
-              .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+              .fontColor([this.getCurrentThemePalette().accentBackground])
           }
           Text('热门动态')
             .fontSize(10)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
         .backgroundColor(this.getSurfaceSubtle())
@@ -595,11 +595,11 @@ export struct DiscoverPage {
           Text() {
             SymbolSpan($r(AppIcon.HEART))
               .fontSize(10)
-              .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
+              .fontColor([this.getCurrentThemePalette().textTertiary])
           }
           Text(formatCount(moment.likes_count))
             .fontSize(10)
-            .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+            .fontColor(this.getCurrentThemePalette().textTertiary)
         }
       }
       .width('100%')
@@ -617,7 +617,7 @@ export struct DiscoverPage {
         Column() {
           Text(moment.description ?? '')
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getCurrentThemePalette().textPrimary)
             .maxLines(6)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .lineHeight(22)
@@ -635,7 +635,7 @@ export struct DiscoverPage {
         if (moment.description && moment.images && moment.images.length > 0) {
           Text(moment.description)
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getCurrentThemePalette().textPrimary)
             .maxLines(3)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .lineHeight(18)
@@ -652,7 +652,7 @@ export struct DiscoverPage {
 
           Text(moment.user?.nickname ?? '')
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
             .maxLines(1)
             .layoutWeight(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -670,8 +670,8 @@ export struct DiscoverPage {
       bottom: DesignConstants.SPACING.MD
     })
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.XXL)
-    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .borderRadius(DesignConstants.RADIUS.XXL + 4)
+    .shadow(this.getCurrentThemePalette().elevatedShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
   }
 
@@ -690,7 +690,7 @@ export struct DiscoverPage {
         Text(moment.user?.nickname ?? '')
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
       }
       .width('100%')
@@ -698,7 +698,7 @@ export struct DiscoverPage {
       // 文本
       Text(moment.description)
         .fontSize(DesignConstants.FONT.SIZE.MD)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .fontColor(this.getCurrentThemePalette().textPrimary)
         .maxLines(3)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .lineHeight(22)
@@ -724,11 +724,11 @@ export struct DiscoverPage {
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
       top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.XXL)
+    .borderRadius(DesignConstants.RADIUS.XXL + 4)
 
     Divider()
       .strokeWidth(0.5)
-      .color($r('sys.color.ohos_id_color_list_separator'))
+      .color(this.getSurfaceBorder())
   }
 
   // ==================== 通用构建器 ====================
@@ -743,12 +743,12 @@ export struct DiscoverPage {
       Text(title)
         .fontSize(DesignConstants.FONT.SIZE.MD)
         .fontWeight(FontWeight.Bold)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .fontColor(this.getCurrentThemePalette().textPrimary)
     }
     .padding({ left: 16, right: 16, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
     .backgroundColor(this.getSurfaceSubtle())
     .borderRadius(DesignConstants.RADIUS.FULL)
-    .shadow(DesignConstants.SHADOW.INSET)
+    .shadow(this.getCurrentThemePalette().controlShadow)
   }
 
   @Builder
@@ -757,11 +757,11 @@ export struct DiscoverPage {
       Text() {
         SymbolSpan($r(icon))
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+          .fontColor([this.getCurrentThemePalette().textSecondary])
       }
       Text(text)
         .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .fontColor(this.getCurrentThemePalette().textSecondary)
     }
   }
 

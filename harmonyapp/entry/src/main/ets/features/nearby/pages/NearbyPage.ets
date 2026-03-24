@@ -511,11 +511,11 @@ export struct NearbyPage {
           Text() {
             SymbolSpan($r(AppIcon.DISTRIBUTED))
               .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+              .fontColor([this.getCurrentThemePalette().accentBackground])
           }
           Text(`发现 ${this.nearbyDeviceCount} 台附近设备正在使用 GeoTalk`)
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .width('100%')
         .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD,
@@ -672,11 +672,11 @@ export struct NearbyPage {
           Text() {
             SymbolSpan($r(AppIcon.LOCATION))
               .fontSize(10)
-              .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+              .fontColor([this.getCurrentThemePalette().accentBackground])
           }
           Text('附近用户')
             .fontSize(10)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
                .backgroundColor(this.getSurfaceSubtle())
@@ -687,7 +687,7 @@ export struct NearbyPage {
         if (user.location?.distance !== undefined && user.location?.distance !== null) {
           Text(LocationUtil.formatDistance(user.location.distance))
             .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor($r('sys.color.ohos_id_color_emphasize'))
+            .fontColor(this.getCurrentThemePalette().accentBackground)
             .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
             .backgroundColor(this.getSurfaceSubtle())
             .borderRadius(DesignConstants.RADIUS.XL)
@@ -708,7 +708,7 @@ export struct NearbyPage {
             Text(user.user?.nickname ?? '')
               .fontSize(15)
               .fontWeight(FontWeight.Medium)
-              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              .fontColor(this.getCurrentThemePalette().textPrimary)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
 
@@ -718,19 +718,19 @@ export struct NearbyPage {
                   .width(6)
                   .height(6)
                   .borderRadius(DesignConstants.RADIUS.FULL)
-                  .backgroundColor($r('app.color.color_success'))
+                  .backgroundColor(this.getCurrentThemePalette().accentBackground)
                 Text('在线')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor($r('app.color.color_success'))
+                  .fontColor(this.getCurrentThemePalette().accentBackground)
               } else {
                 Row()
                   .width(6)
                   .height(6)
                   .borderRadius(DesignConstants.RADIUS.FULL)
-                  .backgroundColor($r('sys.color.ohos_id_color_text_tertiary'))
+                  .backgroundColor(this.getCurrentThemePalette().textTertiary)
                 Text('离线')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
               }
             }
             .alignItems(VerticalAlign.Center)
@@ -747,7 +747,7 @@ export struct NearbyPage {
           Text() {
             SymbolSpan($r(AppIcon.MORE))
               .fontSize(DesignConstants.FONT.SIZE.LG)
-              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+              .fontColor([this.getCurrentThemePalette().textSecondary])
           }
         }
         .width(30)
@@ -792,7 +792,7 @@ export struct NearbyPage {
         Text(user.bio)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .lineHeight(17)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .width('100%')
@@ -800,7 +800,7 @@ export struct NearbyPage {
         Text('这个人很神秘，暂时还没有留下简介')
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .lineHeight(17)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .width('100%')
@@ -811,7 +811,7 @@ export struct NearbyPage {
           if ((user.social_context?.mutual_friends_count ?? 0) > 0) {
             Text(`共同好友 ${formatCount(user.social_context?.mutual_friends_count)}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .fontColor(this.getCurrentThemePalette().textSecondary)
               .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
               .margin({ right: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
                .backgroundColor(this.getSurfaceSubtle())
@@ -820,7 +820,7 @@ export struct NearbyPage {
            ForEach((user.tags ?? []).slice(0, 2), (tag: string) => {
             Text(`#${tag}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .fontColor(this.getCurrentThemePalette().textSecondary)
               .padding({ left: 7, right: 7, top: 3, bottom: 3 })
               .margin({ right: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
                .backgroundColor(this.getSurfaceSubtle())
@@ -842,7 +842,7 @@ export struct NearbyPage {
           .fontWeight(FontWeight.Medium)
           .backgroundColor(this.isUserFollowing(user.user?.user_id ?? '') ? this.getSurfaceSubtle() : this.getAccentBackground())
           .fontColor(this.isUserFollowing(user.user?.user_id ?? '') ? this.getAccentBackground() : this.getAccentText())
-          .shadow(this.isUserFollowing(user.user?.user_id ?? '') ? { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 } : DesignConstants.SHADOW.SMALL)
+          .shadow(this.isUserFollowing(user.user?.user_id ?? '') ? { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 } : this.getCurrentThemePalette().controlShadow)
           .border(this.isUserFollowing(user.user?.user_id ?? '') ? { width: 0 } : { width: 1, color: this.getSurfaceBorder() })
           .opacity(this.isUserActionPending(user.user?.user_id ?? '') || this.isUserBlocked(user) ? 0.58 : 1)
           .onClick(() => { this.followUser(user); })
@@ -866,14 +866,14 @@ export struct NearbyPage {
     .width('100%')
     .alignItems(HorizontalAlign.Start)
     .padding({
-      left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
-      top: DesignConstants.SPACING.MD,
-      bottom: DesignConstants.SPACING.MD
+      left: DesignConstants.SPACING.XL,
+      right: DesignConstants.SPACING.XL,
+      top: DesignConstants.SPACING.LG,
+      bottom: DesignConstants.SPACING.LG
     })
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.XXL)
-    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .borderRadius(DesignConstants.RADIUS.XXL + 6)
+    .shadow(this.getCurrentThemePalette().elevatedShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
     .margin({ bottom: DesignConstants.SPACING.MD })
   }
@@ -943,11 +943,11 @@ export struct NearbyPage {
           Text() {
             SymbolSpan($r(AppIcon.GROUP))
               .fontSize(10)
-              .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+              .fontColor([this.getCurrentThemePalette().accentBackground])
           }
           Text('附近群组')
             .fontSize(10)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
         .backgroundColor(this.getSurfaceSubtle())
@@ -959,7 +959,7 @@ export struct NearbyPage {
           (group.location as RelativeLocation)?.distance !== null) {
           Text(LocationUtil.formatDistance((group.location as RelativeLocation).distance!))
             .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor($r('sys.color.ohos_id_color_emphasize'))
+            .fontColor(this.getCurrentThemePalette().accentBackground)
             .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
             .backgroundColor(this.getSurfaceSubtle())
             .borderRadius(DesignConstants.RADIUS.XL)
@@ -980,18 +980,18 @@ export struct NearbyPage {
             Text(group.group?.name ?? '')
               .fontSize(15)
               .fontWeight(FontWeight.Medium)
-              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              .fontColor(this.getCurrentThemePalette().textPrimary)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
 
             Row({ space: 6 }) {
               Text(`${formatCount(group.group?.members_count)} 人`)
                 .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                .fontColor(this.getCurrentThemePalette().textSecondary)
               if (group.has_password) {
                 Text('需口令')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
               }
             }
             .alignItems(VerticalAlign.Center)
@@ -1005,7 +1005,7 @@ export struct NearbyPage {
           Text() {
             SymbolSpan($r(AppIcon.MORE))
               .fontSize(DesignConstants.FONT.SIZE.LG)
-              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+              .fontColor([this.getCurrentThemePalette().textSecondary])
           }
         }
         .width(30)
@@ -1040,7 +1040,7 @@ export struct NearbyPage {
         Text(group.description)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .lineHeight(17)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .width('100%')
@@ -1048,7 +1048,7 @@ export struct NearbyPage {
         Text('这个群还没有群介绍')
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .lineHeight(17)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .width('100%')
@@ -1059,7 +1059,7 @@ export struct NearbyPage {
           ForEach(group.tags.slice(0, 3), (tag: string) => {
             Text(`#${tag}`)
               .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .fontColor(this.getCurrentThemePalette().textSecondary)
             .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 3, bottom: 3 })
             .backgroundColor(this.getSurfaceSubtle())
             .borderRadius(DesignConstants.RADIUS.XL)
@@ -1081,7 +1081,7 @@ export struct NearbyPage {
           .fontWeight(FontWeight.Medium)
           .backgroundColor(this.isGroupJoined(group) ? this.getSurfaceSubtle() : this.getCurrentThemePalette().accentBackground)
           .fontColor(this.isGroupJoined(group) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().accentText)
-          .shadow(this.isGroupJoined(group) ? { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 } : DesignConstants.SHADOW.SMALL)
+          .shadow(this.isGroupJoined(group) ? { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 } : this.getCurrentThemePalette().controlShadow)
           .border(this.isGroupJoined(group) ? { width: 0 } : { width: 1, color: this.getSurfaceBorder() })
           .opacity(this.isGroupActionPending(group.group?.group_id ?? '') ? 0.58 : 1)
           .onClick(() => { this.joinGroup(group); })
@@ -1110,7 +1110,7 @@ export struct NearbyPage {
     })
     .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.XXL)
-    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .shadow(this.getCurrentThemePalette().elevatedShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
     .margin({ bottom: DesignConstants.SPACING.MD })
   }

@@ -44,14 +44,14 @@ export struct IntelligentLocationCard {
       Text() {
         SymbolSpan($r(AppIcon.LOCATION))
           .fontSize(DesignConstants.FONT.SIZE.XXL)
-          .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+          .fontColor([this.getPalette().accentBackground])
       }
 
       Column({ space: 6 }) {
         // 地址信息
         Text(this.locationName || '未知位置')
           .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getPalette().textPrimary)
           .fontWeight(FontWeight.Medium)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -63,11 +63,11 @@ export struct IntelligentLocationCard {
                 Text() {
                   SymbolSpan($r(AppIcon.SEND))
                     .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+                    .fontColor([this.getPalette().textSecondary])
                 }
                 Text(LocationUtil.formatDistance(this.distance))
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .fontColor(this.getPalette().textSecondary)
               }
           }
 
@@ -79,7 +79,7 @@ export struct IntelligentLocationCard {
               
               Text(this.elevationInfo)
                 .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                .fontColor(this.getPalette().textSecondary)
             }
           }
         }
@@ -114,7 +114,7 @@ export struct IntelligentLocationCard {
           Text() {
             SymbolSpan($r(AppIcon.UP))
               .fontSize(DesignConstants.FONT.SIZE.LG)
-              .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+              .fontColor([this.getPalette().accentBackground])
           }
         }
         .width(32)
@@ -139,10 +139,10 @@ export struct IntelligentLocationCard {
     .borderRadius(DesignConstants.RADIUS.XL)
     .border({ width: 1, color: this.getPalette().borderColor })
     .shadow({
-      radius: this.cardElevation * 6,
-      color: $r('sys.color.ohos_id_color_tertiary'),
-      offsetX: 0,
-      offsetY: this.cardElevation * 3
+      radius: this.getPalette().surfaceShadow.radius + this.cardElevation * 2,
+      color: this.getPalette().surfaceShadow.color,
+      offsetX: this.getPalette().surfaceShadow.offsetX,
+      offsetY: this.getPalette().surfaceShadow.offsetY + this.cardElevation
     })
     .onHover((isHover: boolean) => {
       // 使用最新的动画API

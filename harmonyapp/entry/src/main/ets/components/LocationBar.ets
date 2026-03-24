@@ -106,7 +106,7 @@ export struct LocationBar {
           .width(28)
           .height(28)
           .justifyContent(FlexAlign.Center)
-          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+          .backgroundColor(this.getPalette().accentBackground)
           .borderRadius(DesignConstants.RADIUS.XXL)
           .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
         } else {
@@ -117,7 +117,7 @@ export struct LocationBar {
               .width(10)
               .height(10)
               .borderRadius(DesignConstants.RADIUS.FULL)
-              .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+              .backgroundColor(this.getPalette().accentBackground)
               .scale({ x: this.pulseScale, y: this.pulseScale })
               .opacity(this.pulseOpacity)
 
@@ -126,7 +126,7 @@ export struct LocationBar {
               .width(10)
               .height(10)
               .borderRadius(DesignConstants.RADIUS.FULL)
-              .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+              .backgroundColor(this.getPalette().accentBackground)
               .border({ width: 2, color: this.getPalette().pageBackground })
           }
           .width(28)
@@ -142,13 +142,13 @@ export struct LocationBar {
           Text(this.isUsingAnchor() ? '浏览位置' : '当前位置')
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.isUsingAnchor()
-              ? $r('sys.color.ohos_id_color_emphasize')
-              : $r('sys.color.ohos_id_color_text_tertiary'))
+              ? this.getPalette().accentBackground
+              : this.getPalette().textTertiary)
 
           Text(this.getDisplayLocation())
             .fontSize(DesignConstants.FONT.SIZE.SM)
             .fontWeight(FontWeight.Medium)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getPalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
@@ -159,17 +159,17 @@ export struct LocationBar {
         Text() {
           SymbolSpan($r(AppIcon.FORWARD))
             .fontSize(14)
-            .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
+            .fontColor([this.getPalette().textTertiary])
         }
       }
       .layoutWeight(1)
       .height(40)
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.SM })
       .backgroundColor(this.isUsingAnchor()
-        ? $r('app.color.color_emphasize_bg')
+        ? this.getPalette().buttonSecondaryBackground
         : this.getPalette().surfaceSubtle)
       .borderRadius(DesignConstants.RADIUS.XL)
-      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .border({ width: 1, color: this.getPalette().borderColor })
       .onClick(() => {
         this.openLocationPicker();
       })
@@ -195,15 +195,15 @@ export struct LocationBar {
       Text() {
         SymbolSpan($r(icon))
           .fontSize(20)
-          .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+          .fontColor([this.getPalette().buttonSecondaryText])
       }
     }
     .width(40)
     .height(40)
     .justifyContent(FlexAlign.Center)
-    .backgroundColor(this.getPalette().surfaceSubtle)
+    .backgroundColor(this.getPalette().buttonSecondaryBackground)
     .borderRadius(DesignConstants.RADIUS.XL)
-    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+    .border({ width: 1, color: this.getPalette().borderColor })
     .onClick(action)
   }
 

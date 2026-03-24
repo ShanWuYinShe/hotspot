@@ -279,7 +279,7 @@ export struct NotificationCenter {
         Text('通知中心')
           .fontSize(20)
           .fontWeight(FontWeight.Bold)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getPalette().textPrimary)
           .layoutWeight(1)
 
         Row({ space: 12 }) {
@@ -308,7 +308,7 @@ export struct NotificationCenter {
               .backgroundColor(this.selectedFilter === filter.key
                 ? this.getPalette().accentBackground
                 : this.getPalette().surfaceSubtle)
-              .fontColor(this.selectedFilter === filter.key ? this.getPalette().accentText : $r('sys.color.ohos_id_color_text_primary'))
+              .fontColor(this.selectedFilter === filter.key ? this.getPalette().accentText : this.getPalette().buttonSecondaryText)
               .fontSize(14)
               .padding({ left: 16, right: 16, top: 8, bottom: 8 })
               .borderRadius(DesignConstants.RADIUS.XL)
@@ -326,10 +326,10 @@ export struct NotificationCenter {
           LoadingProgress()
             .width(32)
             .height(32)
-            .color($r('sys.color.ohos_id_color_emphasize'))
+            .color(this.getPalette().accentBackground)
           Text('加载中...')
             .fontSize(14)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getPalette().textSecondary)
         }
         .width('100%')
         .height(200)
@@ -339,16 +339,16 @@ export struct NotificationCenter {
           SystemIcon({
             icon: AppIcon.WARNING,
             iconSize: 48,
-            iconColor: $r('sys.color.ohos_id_color_text_secondary')
+            iconColor: this.getPalette().textSecondary
           })
           Text(this.errorMessage)
             .fontSize(16)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getPalette().textSecondary)
             .textAlign(TextAlign.Center)
           Button('重试')
             .type(ButtonType.Normal)
-            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-            .fontColor($r('app.color.chip_active_text'))
+            .backgroundColor(this.getPalette().accentBackground)
+            .fontColor(this.getPalette().accentText)
             .height(40)
             .borderRadius(DesignConstants.RADIUS.XL)
             .onClick(() => this.refreshNotifications())
@@ -362,11 +362,11 @@ export struct NotificationCenter {
             SystemIcon({
               icon: AppIcon.EMPTY,
               iconSize: 48,
-              iconColor: $r('sys.color.ohos_id_color_text_tertiary')
+              iconColor: this.getPalette().textTertiary
             })
             Text('暂无通知')
               .fontSize(16)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .fontColor(this.getPalette().textSecondary)
           }
           .width('100%')
           .height('100%')
@@ -419,12 +419,12 @@ export struct NotificationCenter {
         SystemIcon({
           icon: this.getNotificationIcon(notification.type),
           iconSize: 24,
-          iconColor: $r('sys.color.ohos_id_color_emphasize')
+          iconColor: this.getPalette().accentBackground
         })
 
         if (!notification.is_read) {
           Circle({ width: 6, height: 6 })
-            .fill($r('sys.color.ohos_id_color_emphasize'))
+            .fill(this.getPalette().accentBackground)
             .position({ x: 22, y: 22 })
         }
       }
@@ -436,14 +436,14 @@ export struct NotificationCenter {
           Text(this.buildNotificationTitle(notification))
             .fontSize(16)
             .fontWeight(notification.is_read ? FontWeight.Normal : FontWeight.Medium)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getPalette().textPrimary)
             .layoutWeight(1)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
           Text(this.getFilterLabel(this.mapTypeToCategory(notification.type)))
             .fontSize(12)
-            .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+            .fontColor(this.getPalette().textTertiary)
             .padding({ left: 8, right: 8, top: 2, bottom: 2 })
             .backgroundColor(this.getPalette().surfaceSubtle)
             .borderRadius(DesignConstants.RADIUS.SM)
@@ -451,14 +451,14 @@ export struct NotificationCenter {
 
         Text(this.buildNotificationMessage(notification))
           .fontSize(14)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getPalette().textSecondary)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
         Row() {
           Text(this.formatTimestamp(notification.created_at))
             .fontSize(12)
-            .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+            .fontColor(this.getPalette().textTertiary)
             .layoutWeight(1)
 
           if (!notification.is_read) {
@@ -489,12 +489,12 @@ export struct NotificationCenter {
             Button('拒绝')
               .type(ButtonType.Normal)
               .backgroundColor(this.getPalette().surfaceSubtle)
-              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              .fontColor(this.getPalette().textPrimary)
               .fontSize(12)
               .height(32)
               .borderRadius(DesignConstants.RADIUS.XL)
               .borderWidth(1)
-              .borderColor($r('sys.color.ohos_id_color_list_separator'))
+              .borderColor(this.getPalette().borderColor)
               .enabled(!this.isActionLoading(notification.notification_id))
               .onClick(() => this.handleGroupInviteAction(notification, 'reject'))
           }
@@ -514,12 +514,12 @@ export struct NotificationCenter {
             Button('拒绝')
               .type(ButtonType.Normal)
               .backgroundColor(this.getPalette().surfaceSubtle)
-              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              .fontColor(this.getPalette().textPrimary)
               .fontSize(12)
               .height(32)
               .borderRadius(DesignConstants.RADIUS.XL)
               .borderWidth(1)
-              .borderColor($r('sys.color.ohos_id_color_list_separator'))
+              .borderColor(this.getPalette().borderColor)
               .enabled(!this.isActionLoading(notification.notification_id))
               .onClick(() => this.handleGroupApplicationAction(notification, 'reject'))
           }

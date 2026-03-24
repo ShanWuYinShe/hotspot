@@ -35,6 +35,7 @@ import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManag
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { KeyboardAvoidMode as UIContextKeyboardAvoidMode } from '@ohos.arkui.UIContext';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { ChatThemeManager } from '../../../core/theme/ChatTheme';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF09;
@@ -138,6 +139,10 @@ export struct ChatPage {
 
   private getAccentBackground(): string {
     return this.getCurrentThemePalette().accentBackground;
+  }
+
+  private getChatTheme() {
+    return ChatThemeManager.current();
   }
 
   private getStableBottomInset(): number {
@@ -926,14 +931,14 @@ export struct ChatPage {
           kind: 'neutral',
           onClick: () => this.openConversationActions()
         },
-        surfaceColor: $r('app.color.chat_title_bar_bg')
+        surfaceColor: this.getChatTheme().titleBarBg
       })
         .width('100%')
         .margin({
           bottom: DesignConstants.SPACING.XS
         })
-        .shadow(DesignConstants.SHADOW.MEDIUM)
-        .border({ width: 1, color: $r('app.color.chat_title_bar_border') })
+        .shadow(this.getCurrentThemePalette().elevatedShadow)
+        .border({ width: 1, color: this.getChatTheme().titleBarBorder })
         .borderRadius(DesignConstants.RADIUS.XL)
         .zIndex(1)
         .onTouch((event: TouchEvent) => {
@@ -959,16 +964,16 @@ export struct ChatPage {
           Text() {
             SymbolSpan($r(AppIcon.WARNING))
               .fontSize(48)
-              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+              .fontColor([this.getCurrentThemePalette().textSecondary])
           }
           Text(this.errorMessage)
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
             .textAlign(TextAlign.Center)
           Button('重试')
             .type(ButtonType.Normal)
-            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-            .fontColor($r('app.color.chip_active_text'))
+            .backgroundColor(this.getCurrentThemePalette().accentBackground)
+            .fontColor(this.getCurrentThemePalette().accentText)
             .height(40)
             .borderRadius(DesignConstants.RADIUS.XL)
             .onClick(() => { this.loadHistory(); })
@@ -990,14 +995,14 @@ export struct ChatPage {
           Text() {
             SymbolSpan($r(AppIcon.MESSAGE))
               .fontSize(48)
-              .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
+              .fontColor([this.getCurrentThemePalette().textTertiary])
           }
           Text('暂无消息')
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
           Text('发送一条消息开始聊天吧')
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+            .fontColor(this.getCurrentThemePalette().textTertiary)
         }
         .width('100%')
         .layoutWeight(1)
@@ -1016,7 +1021,7 @@ export struct ChatPage {
               LoadingProgress().width(20).height(20)
               Text('加载更早消息...')
                 .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                .fontColor(this.getCurrentThemePalette().textSecondary)
             }
             .width('100%')
             .justifyContent(FlexAlign.Center)
@@ -1038,8 +1043,8 @@ export struct ChatPage {
         top: DesignConstants.SPACING.MD,
         bottom: DesignConstants.SPACING.MD
       })
-      .backgroundColor($r('app.color.chat_list_bg'))
-      .borderRadius(DesignConstants.RADIUS.XXL)
+      .backgroundColor(this.getChatTheme().listBackground)
+      .borderRadius(DesignConstants.RADIUS.XXL + 4)
       .onScrollIndex((start: number) => {
         // 当滚动到列表顶部附近时加载更早的消息
         if (start <= 1 && this.hasMoreHistory && !this.isLoadingMoreHistory) {
@@ -1061,7 +1066,7 @@ export struct ChatPage {
         Row() {
           Text('对方正在输入...')
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .width('100%')
         .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.XS })
@@ -1075,7 +1080,7 @@ export struct ChatPage {
         Row() {
           Text(this.groupTypingHintText())
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .width('100%')
         .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.XS })
@@ -1091,9 +1096,9 @@ export struct ChatPage {
           .layoutWeight(1)
           .maxLength(MESSAGE_CONTENT_MAX)
           .height(DesignConstants.CHAT.INPUT_HEIGHT)
-          .backgroundColor($r('app.color.chat_input_field_bg'))
+          .backgroundColor(this.getChatTheme().inputFieldBg)
           .borderRadius(DesignConstants.RADIUS.XL)
-          .shadow(DesignConstants.SHADOW.INSET)
+          .shadow(this.getCurrentThemePalette().controlShadow)
           .padding({ left: DesignConstants.CHAT.BUBBLE_PADDING_H, right: DesignConstants.CHAT.BUBBLE_PADDING_H })
           .onChange((value) => {
             this.inputText = value;
@@ -1115,18 +1120,19 @@ export struct ChatPage {
           .type(ButtonType.Normal)
           .backgroundColor(
             this.isSending || this.inputText.trim().length === 0
-              ? $r('app.color.chat_send_disabled')
-              : $r('app.color.chat_send_active')
+              ? this.getChatTheme().sendButtonDisabled
+              : this.getChatTheme().sendButtonActive
           )
           .fontColor(
             this.isSending || this.inputText.trim().length === 0
-              ? $r('sys.color.ohos_id_color_text_secondary')
-              : $r('app.color.chip_active_text')
+              ? this.getCurrentThemePalette().textSecondary
+              : this.getChatTheme().sendButtonActiveText
           )
-          .height(DesignConstants.CHAT.SEND_BUTTON_HEIGHT)
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .shadow(DesignConstants.SHADOW.SMALL)
-          .border({ width: 1, color: $r('app.color.chat_input_border') })
+          .height(DesignConstants.CHAT.SEND_BUTTON_HEIGHT + 4)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .shadow(this.getCurrentThemePalette().controlShadow)
+          .border({ width: 1, color: this.getChatTheme().inputBorder })
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
           .margin({ left: DesignConstants.SPACING.MD })
           .opacity(this.isSending || this.inputText.trim().length === 0 ? 0.72 : 1)
           .enabled(!this.isSending && this.inputText.trim().length > 0)
@@ -1139,9 +1145,9 @@ export struct ChatPage {
         top: DesignConstants.SPACING.SM,
         bottom: this.getComposerBottomPadding()
       })
-      .backgroundColor($r('app.color.chat_input_bar_bg'))
-      .shadow(DesignConstants.SHADOW.MEDIUM)
-      .border({ width: { top: 1 }, color: $r('app.color.chat_input_border') })
+      .backgroundColor(this.getChatTheme().inputBarBg)
+      .shadow(this.getCurrentThemePalette().elevatedShadow)
+      .border({ width: { top: 1 }, color: this.getChatTheme().inputBorder })
       .borderRadius({ topLeft: DesignConstants.RADIUS.LG, topRight: DesignConstants.RADIUS.LG })
 
       // 焦点落点：用于将 TextInput 失焦，从而收起软键盘
@@ -1186,18 +1192,18 @@ export struct ChatPage {
       Text('会话设置')
         .fontSize(DesignConstants.FONT.SIZE.XL)
         .fontWeight(FontWeight.Bold)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .fontColor(this.getCurrentThemePalette().textPrimary)
 
       Text(this.chatType === 'group_chat' ? '群聊会话' : '私聊会话')
         .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .fontColor(this.getCurrentThemePalette().textSecondary)
 
       Button('回到最新消息')
         .type(ButtonType.Normal)
         .width('100%')
         .height(44)
         .backgroundColor(this.getSurfaceSubtle())
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .fontColor(this.getCurrentThemePalette().textPrimary)
         .borderRadius(DesignConstants.RADIUS.FULL)
         .border({ width: 1, color: this.getSurfaceBorder() })
         .onClick(() => {
@@ -1210,7 +1216,7 @@ export struct ChatPage {
         .width('100%')
         .height(44)
         .backgroundColor(this.getSurfaceSubtle())
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .fontColor(this.getCurrentThemePalette().textPrimary)
         .borderRadius(DesignConstants.RADIUS.FULL)
         .border({ width: 1, color: this.getSurfaceBorder() })
         .onClick(() => {
@@ -1247,17 +1253,17 @@ export struct ChatPage {
       Row() {
         Text(msg.content)
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-          .backgroundColor($r('app.color.chat_bubble_system'))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+          .backgroundColor(this.getChatTheme().bubbleSystem)
           .padding({
-            left: DesignConstants.SPACING.MD,
-            right: DesignConstants.SPACING.MD,
-            top: DesignConstants.SPACING.XS,
-            bottom: DesignConstants.SPACING.XS
+            left: DesignConstants.SPACING.MD + 2,
+            right: DesignConstants.SPACING.MD + 2,
+            top: DesignConstants.SPACING.XS + 2,
+            bottom: DesignConstants.SPACING.XS + 2
           })
           .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)
-          .shadow(DesignConstants.SHADOW.SMALL)
-          .border({ width: 1, color: $r('app.color.chat_divider') })
+          .shadow(this.getCurrentThemePalette().controlShadow)
+          .border({ width: 1, color: this.getChatTheme().divider })
       }
       .width('100%')
       .justifyContent(FlexAlign.Center)
@@ -1277,7 +1283,7 @@ export struct ChatPage {
           if (!msg.isSelf && this.chatType === 'group_chat') {
             Text(msg.senderName)
               .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .fontColor(this.getCurrentThemePalette().textSecondary)
               .margin({ bottom: DesignConstants.SPACING.XS, left: DesignConstants.SPACING.XS })
           }
 
@@ -1286,24 +1292,25 @@ export struct ChatPage {
               Image(MediaUrlUtil.normalize(msg.content))
                 .width(200)
                 .objectFit(ImageFit.Cover)
-                .backgroundColor($r('app.color.chat_list_bg'))
+                .backgroundColor(this.getChatTheme().listBackground)
                 .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)
-                .shadow(DesignConstants.SHADOW.SMALL)
-                .border({ width: 1, color: $r('app.color.chat_divider') })
+                .shadow(this.getCurrentThemePalette().controlShadow)
+                .border({ width: 1, color: this.getChatTheme().divider })
                 .margin(DesignConstants.SPACING.XS)
             } else {
               Text(msg.content)
                 .fontSize(DesignConstants.CHAT.BUBBLE_FONT_SIZE)
-                .fontColor(msg.isSelf ? $r('app.color.chip_active_text') : $r('sys.color.ohos_id_color_text_primary'))
-                .backgroundColor(msg.isSelf ? $r('app.color.chat_bubble_self') : $r('app.color.chat_bubble_peer'))
+                .fontColor(msg.isSelf ? this.getChatTheme().sendButtonActiveText : this.getCurrentThemePalette().textPrimary)
+                .backgroundColor(msg.isSelf ? this.getChatTheme().bubbleSelf : this.getChatTheme().bubblePeer)
                 .padding({
-                  left: DesignConstants.CHAT.BUBBLE_PADDING_H,
-                  right: DesignConstants.CHAT.BUBBLE_PADDING_H,
-                  top: DesignConstants.CHAT.BUBBLE_PADDING_V,
-                  bottom: DesignConstants.CHAT.BUBBLE_PADDING_V
+                  left: DesignConstants.CHAT.BUBBLE_PADDING_H + 2,
+                  right: DesignConstants.CHAT.BUBBLE_PADDING_H + 2,
+                  top: DesignConstants.CHAT.BUBBLE_PADDING_V + 1,
+                  bottom: DesignConstants.CHAT.BUBBLE_PADDING_V + 1
                 })
                 .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)
                 .constraintSize({ maxWidth: DesignConstants.CHAT.BUBBLE_MAX_WIDTH })
+                .shadow(msg.isSelf ? this.getCurrentThemePalette().accentShadow : this.getCurrentThemePalette().controlShadow)
             }
           }
           .justifyContent(msg.isSelf ? FlexAlign.End : FlexAlign.Start)

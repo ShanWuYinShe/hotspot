@@ -291,7 +291,7 @@ export struct IconButton {
   }
 
   private getResolvedBackgroundColor(): ResourceColor | string {
-    return this.bgColor === DEFAULT_THEME_BG_SENTINEL ? this.getPalette().surfaceSubtle : this.bgColor;
+    return this.bgColor === DEFAULT_THEME_BG_SENTINEL ? this.getPalette().buttonSecondaryBackground : this.bgColor;
   }
 
   build() {
@@ -306,6 +306,8 @@ export struct IconButton {
     .stateEffect(true)
     .backgroundColor(this.getResolvedBackgroundColor())
     .borderRadius(this.radius)
+    .border({ width: 1, color: this.getPalette().borderColor })
+    .shadow(this.getPalette().controlShadow)
     .padding(this.paddingSize)
     .width(this.minButtonSize)
     .height(this.minButtonSize)

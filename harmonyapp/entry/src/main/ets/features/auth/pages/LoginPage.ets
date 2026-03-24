@@ -130,7 +130,7 @@ export struct LoginPage {
             Text() {
               SymbolSpan($r(AppIcon.BACK))
                 .fontSize(DesignConstants.FONT.SIZE.XXL)
-                .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+                .fontColor([this.getCurrentThemePalette().textPrimary])
             }
             .onClick(() => {
               AppRouter.pop();
@@ -162,11 +162,11 @@ export struct LoginPage {
             Text($r('app.string.app_name'))
               .fontSize(28)
               .fontWeight(FontWeight.Bold)
-              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              .fontColor(this.getCurrentThemePalette().textPrimary)
 
             Text($r('app.string.app_description'))
               .fontSize(DesignConstants.FONT.SIZE.LG)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .fontColor(this.getCurrentThemePalette().textSecondary)
           }
           .width('100%')
           .alignItems(HorizontalAlign.Center)
@@ -198,7 +198,7 @@ export struct LoginPage {
               .padding(DesignConstants.SPACING.LG)
               .backgroundColor(this.getSurfaceBackground())
               .borderRadius(DesignConstants.RADIUS.XXL)
-              .shadow(DesignConstants.SHADOW.MEDIUM)
+              .shadow(this.getCurrentThemePalette().elevatedShadow)
               .border({ width: 1, color: this.getSurfaceBorder() })
               .margin({ bottom: 14 })
             }
@@ -245,13 +245,13 @@ export struct LoginPage {
     Text(label)
       .fontSize(DesignConstants.FONT.SIZE.MD)
       .fontWeight(this.loginMode === mode ? FontWeight.Bold : FontWeight.Medium)
-      .fontColor(this.loginMode === mode ? this.getCurrentThemePalette().accentText : $r('sys.color.ohos_id_color_text_primary'))
+      .fontColor(this.loginMode === mode ? this.getCurrentThemePalette().accentText : this.getCurrentThemePalette().buttonSecondaryText)
       .backgroundColor(this.loginMode === mode ? this.getCurrentThemePalette().accentBackground : Color.Transparent)
       .borderRadius(DesignConstants.RADIUS.XL)
       .height(36)
       .layoutWeight(1)
       .textAlign(TextAlign.Center)
-      .shadow(this.loginMode === mode ? DesignConstants.SHADOW.SMALL : { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 })
+      .shadow(this.loginMode === mode ? this.getCurrentThemePalette().controlShadow : { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 })
       .animation({ duration: 250, curve: Curve.FastOutSlowIn })
       .onClick(() => {
         if (mode === 'login') {
@@ -276,7 +276,7 @@ export struct LoginPage {
         .padding(DesignConstants.SPACING.LG)
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
-        .shadow(DesignConstants.SHADOW.INSET)
+        .shadow(this.getCurrentThemePalette().controlShadow)
         .type(InputType.Email)
         .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
@@ -285,7 +285,7 @@ export struct LoginPage {
         .padding(DesignConstants.SPACING.LG)
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
-        .shadow(DesignConstants.SHADOW.INSET)
+        .shadow(this.getCurrentThemePalette().controlShadow)
         .type(InputType.Password)
         .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
@@ -293,22 +293,22 @@ export struct LoginPage {
         .type(ButtonType.Normal)
         .backgroundColor(this.isValidLoginId(this.loginId) && this.isValidPassword(this.password)
           ? this.getCurrentThemePalette().accentBackground
-          : this.getSurfaceSubtle())
+          : this.getCurrentThemePalette().buttonSecondaryBackground)
         .fontColor(this.isValidLoginId(this.loginId) && this.isValidPassword(this.password)
           ? this.getCurrentThemePalette().accentText
-          : $r('sys.color.ohos_id_color_text_secondary'))
+          : this.getCurrentThemePalette().textSecondary)
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .width('100%')
         .height(48)
         .borderRadius(DesignConstants.RADIUS.FULL)
-        .shadow(DesignConstants.SHADOW.SMALL)
+        .shadow(this.getCurrentThemePalette().controlShadow)
         .border({ width: 1, color: this.getSurfaceBorder() })
         .enabled(this.isValidLoginId(this.loginId) && this.isValidPassword(this.password))
         .onClick(() => this.userLogin())
 
       Text('没有账号？切换到「注册」标签')
         .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .fontColor(this.getCurrentThemePalette().textSecondary)
         .textAlign(TextAlign.Center)
     }
     .width('100%')
@@ -326,7 +326,7 @@ export struct LoginPage {
         .padding(DesignConstants.SPACING.LG)
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
-        .shadow(DesignConstants.SHADOW.INSET)
+        .shadow(this.getCurrentThemePalette().controlShadow)
         .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
       TextInput({ placeholder: '邮箱 / 用户名（登录凭证）', text: $$this.registerLoginId })
@@ -334,7 +334,7 @@ export struct LoginPage {
         .padding(DesignConstants.SPACING.LG)
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
-        .shadow(DesignConstants.SHADOW.INSET)
+        .shadow(this.getCurrentThemePalette().controlShadow)
         .type(InputType.Email)
         .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
@@ -343,7 +343,7 @@ export struct LoginPage {
         .padding(DesignConstants.SPACING.LG)
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
-        .shadow(DesignConstants.SHADOW.INSET)
+        .shadow(this.getCurrentThemePalette().controlShadow)
         .type(InputType.Password)
         .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
@@ -352,7 +352,7 @@ export struct LoginPage {
         .padding(DesignConstants.SPACING.LG)
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)
-        .shadow(DesignConstants.SHADOW.INSET)
+        .shadow(this.getCurrentThemePalette().controlShadow)
         .type(InputType.Password)
         .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
@@ -363,18 +363,18 @@ export struct LoginPage {
           && this.isValidPassword(this.registerPassword)
           && this.registerPasswordConfirm === this.registerPassword
           ? this.getCurrentThemePalette().accentBackground
-          : this.getSurfaceSubtle())
+          : this.getCurrentThemePalette().buttonSecondaryBackground)
         .fontColor(this.isValidNickname(this.registerNickname)
           && this.isValidLoginId(this.registerLoginId)
           && this.isValidPassword(this.registerPassword)
           && this.registerPasswordConfirm === this.registerPassword
           ? this.getCurrentThemePalette().accentText
-          : $r('sys.color.ohos_id_color_text_secondary'))
+          : this.getCurrentThemePalette().textSecondary)
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .width('100%')
         .height(48)
         .borderRadius(DesignConstants.RADIUS.FULL)
-        .shadow(DesignConstants.SHADOW.SMALL)
+        .shadow(this.getCurrentThemePalette().controlShadow)
         .border({ width: 1, color: this.getSurfaceBorder() })
         .enabled(this.isValidNickname(this.registerNickname)
           && this.isValidLoginId(this.registerLoginId)
@@ -384,7 +384,7 @@ export struct LoginPage {
 
       Text('已有账号？切换到「登录」标签')
         .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .fontColor(this.getCurrentThemePalette().textSecondary)
         .textAlign(TextAlign.Center)
     }
     .width('100%')

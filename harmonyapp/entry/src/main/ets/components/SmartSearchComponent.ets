@@ -263,8 +263,8 @@ export struct SmartSearchComponent {
       .fontSize(DesignConstants.FONT.SIZE.SM)
       .fontWeight(this.currentFilter === filter ? FontWeight.Medium : FontWeight.Normal)
       .fontColor(this.currentFilter === filter
-        ? $r('sys.color.ohos_id_color_emphasize')
-        : $r('sys.color.ohos_id_color_text_secondary'))
+        ? this.getPalette().accentBackground
+        : this.getPalette().textSecondary)
       .height(30)
       .layoutWeight(1)
       .textAlign(TextAlign.Center)
@@ -273,7 +273,7 @@ export struct SmartSearchComponent {
         : Color.Transparent)
       .fontColor(this.currentFilter === filter
         ? this.getPalette().accentText
-        : $r('sys.color.ohos_id_color_text_secondary'))
+        : this.getPalette().textSecondary)
       .borderRadius(DesignConstants.RADIUS.XL)
       .padding({ left: 2, right: 2 })
       .onClick(() => {
@@ -328,7 +328,7 @@ export struct SmartSearchComponent {
             ListItem() {
               Text('搜索历史')
                 .fontSize(14)
-                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                .fontColor(this.getPalette().textSecondary)
                 .padding({
                   left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
                   top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM
@@ -352,7 +352,7 @@ export struct SmartSearchComponent {
                     .height(24)
                     .fontSize(12)
                     .backgroundColor(Color.Transparent)
-                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                    .fontColor(this.getPalette().textSecondary)
                     .onClick(() => {
                       const index = this.searchHistory.indexOf(historyItem);
                       if (index > -1) {
@@ -386,7 +386,7 @@ export struct SmartSearchComponent {
 
                     Text(result.subtitle)
                       .fontSize(12)
-                      .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                      .fontColor(this.getPalette().textSecondary)
                       .maxLines(1)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
                       .alignSelf(ItemAlign.Start)
@@ -408,7 +408,7 @@ export struct SmartSearchComponent {
 
                 Text('未找到相关内容')
                   .fontSize(14)
-                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .fontColor(this.getPalette().textSecondary)
               }
               .width('100%')
               .padding(40)
@@ -421,13 +421,8 @@ export struct SmartSearchComponent {
         .layoutWeight(1)
         .backgroundColor(this.getPalette().surfaceBackground)
         .borderRadius({ topLeft: DesignConstants.RADIUS.XXL, topRight: DesignConstants.RADIUS.XXL })
-        .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
-        .shadow({
-          radius: 8,
-          color: $r('app.color.color_shadow'),
-          offsetX: 0,
-          offsetY: -2
-        })
+        .border({ width: 1, color: this.getPalette().borderColor })
+        .shadow(this.getPalette().elevatedShadow)
         .transition(TransitionEffect.OPACITY.animation({ duration: 250, curve: Curve.FastOutSlowIn }))
       }
     }

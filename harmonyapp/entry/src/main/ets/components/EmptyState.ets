@@ -27,12 +27,12 @@ export struct EmptyState {
       Text() {
         SymbolSpan($r(this.icon))
           .fontSize(48)
-          .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+          .fontColor([this.getPalette().iconMuted])
       }
 
       Text(this.message ?? '')
         .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .fontColor(this.getPalette().textSecondary)
         .textAlign(TextAlign.Center)
         .lineHeight(24)
 
@@ -70,7 +70,7 @@ export struct LoadingMoreIndicator {
       LoadingProgress().width(20).height(20)
       Text(this.message)
         .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .fontColor(this.getPalette().textSecondary)
     }
     .width('100%')
     .justifyContent(FlexAlign.Center)
@@ -89,7 +89,7 @@ export function RefreshIndicator() {
     Text('正在刷新...')
       .fontSize(DesignConstants.FONT.SIZE.MD)
       .margin({ left: DesignConstants.SPACING.SM })
-      .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+      .fontColor(AppThemeManager.getSafeCurrentPalette().textSecondary)
   }
   .width('100%')
   .justifyContent(FlexAlign.Center)

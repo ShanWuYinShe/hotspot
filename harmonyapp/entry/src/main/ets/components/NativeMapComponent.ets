@@ -12,6 +12,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { image } from '@kit.ImageKit';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { SystemLoadingView } from './SystemLoadingView';
 import { AppIcon } from './SystemIcon';
 
 
@@ -149,7 +150,7 @@ export struct NativeMapComponent {
 
   private isNightMapMode(): boolean {
     const palette = AppThemeManager.getPaletteById(this.resolvedThemeId);
-    return this.isDarkMode || palette.id === 'default_clean_dark';
+    return this.isDarkMode || palette.isDarkTheme;
   }
 
   aboutToAppear() {
@@ -855,22 +856,22 @@ export struct NativeMapComponent {
           Text() {
             SymbolSpan($r(AppIcon.MAP))
               .fontSize(48)
-              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+              .fontColor([AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary])
           }
 
           Text('地图服务不可用')
             .fontSize(16)
             .fontWeight(FontWeight.Medium)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textPrimary)
 
           Text(this.mapError)
             .fontSize(13)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
             .textAlign(TextAlign.Center)
 
           Text('请在 DevEco Studio 中配置项目签名\n并在 AppGallery Connect 中注册指纹、启用 Map Kit')
             .fontSize(12)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
             .textAlign(TextAlign.Center)
             .lineHeight(18)
         }
@@ -897,15 +898,7 @@ export struct NativeMapComponent {
         .width('100%')
         .height('100%')
       } else {
-        Column() {
-          LoadingProgress()
-            .width(40)
-            .height(40)
-          Text('加载地图中...')
-            .fontSize(14)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
-            .margin({ top: 12 })
-        }
+        SystemLoadingView({ message: '加载地图中...' })
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)

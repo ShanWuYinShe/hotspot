@@ -271,7 +271,7 @@ export struct CreateGroupPage {
           IconButton({
             icon: AppIcon.BACK,
             iconSize: IconSize.LARGE,
-            iconColor: $r('sys.color.ohos_id_color_text_primary'),
+            iconColor: this.getCurrentThemePalette().textPrimary,
             bgColor: Color.Transparent,
             onButtonClick: () => {
               AppRouter.pop();
@@ -281,7 +281,7 @@ export struct CreateGroupPage {
           Text('创建群组')
             .fontSize(DesignConstants.FONT.SIZE.XL)
             .fontWeight(FontWeight.Medium)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getCurrentThemePalette().textPrimary)
             .layoutWeight(1)
             .textAlign(TextAlign.Center)
           
@@ -306,7 +306,7 @@ export struct CreateGroupPage {
               Column() {
                 Text('群组名称')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
                   .width('100%')
                   .margin({ bottom: 4 })
 
@@ -317,7 +317,7 @@ export struct CreateGroupPage {
                   .maxLength(GROUP_NAME_MAX)
                   .height(40)
                   .backgroundColor(this.getSurfaceSubtle())
-                  .shadow(DesignConstants.SHADOW.INSET)
+                  .shadow(this.getCurrentThemePalette().controlShadow)
                   .borderRadius(DesignConstants.RADIUS.XL)
                   .padding({ left: DesignConstants.SPACING.MD })
                   .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
@@ -330,13 +330,13 @@ export struct CreateGroupPage {
 
               Divider()
                 .strokeWidth(1)
-                .color($r('sys.color.ohos_id_color_list_separator'))
+                .color(this.getSurfaceBorder())
                 .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
               Column() {
                 Text('群组描述')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
                   .width('100%')
                   .margin({ bottom: 4 })
 
@@ -347,7 +347,7 @@ export struct CreateGroupPage {
                   .maxLength(GROUP_DESCRIPTION_MAX)
                   .height(80)
                   .backgroundColor(this.getSurfaceSubtle())
-                  .shadow(DesignConstants.SHADOW.INSET)
+                  .shadow(this.getCurrentThemePalette().controlShadow)
                   .borderRadius(DesignConstants.RADIUS.XL)
                   .padding(DesignConstants.SPACING.MD)
               }
@@ -359,7 +359,7 @@ export struct CreateGroupPage {
             }
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.XXL)
-            .shadow(DesignConstants.SHADOW.MEDIUM)
+            .shadow(this.getCurrentThemePalette().elevatedShadow)
             .border({ width: 1, color: this.getSurfaceBorder() })
             .margin({ bottom: 14 })
 
@@ -377,10 +377,10 @@ export struct CreateGroupPage {
                 Column({ space: DesignConstants.SPACING.XS }) {
                   Text('建议使用清晰、易识别的头像')
                     .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                    .fontColor(this.getCurrentThemePalette().textPrimary)
                   Text(this.isGroupAvatarUploading ? '群头像上传中...' : '未设置时将使用默认群头像')
                     .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                    .fontColor(this.getCurrentThemePalette().textSecondary)
                 }
                 .layoutWeight(1)
                 .alignItems(HorizontalAlign.Start)
@@ -389,10 +389,10 @@ export struct CreateGroupPage {
                   Button(this.groupAvatarPreviewUrl.length > 0 ? '重选' : '选择')
                     .type(ButtonType.Normal)
                     .backgroundColor(this.getSurfaceSubtle())
-                    .fontColor($r('sys.color.ohos_id_color_emphasize'))
+                    .fontColor(this.getCurrentThemePalette().accentBackground)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .borderRadius(DesignConstants.RADIUS.XXL)
-                    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+                    .border({ width: 1, color: this.getSurfaceBorder() })
                     .height(34)
                     .enabled(!this.isCreating && !this.isGroupAvatarUploading)
                     .onClick(() => this.selectGroupAvatar())
@@ -401,10 +401,10 @@ export struct CreateGroupPage {
                     Button('移除')
                       .type(ButtonType.Normal)
                       .backgroundColor(this.getSurfaceSubtle())
-                      .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                      .fontColor(this.getCurrentThemePalette().textSecondary)
                       .fontSize(DesignConstants.FONT.SIZE.SM)
                       .borderRadius(DesignConstants.RADIUS.XXL)
-                      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+                      .border({ width: 1, color: this.getSurfaceBorder() })
                       .height(34)
                       .enabled(!this.isCreating && !this.isGroupAvatarUploading)
                       .onClick(() => this.clearGroupAvatarSelection())
@@ -421,7 +421,7 @@ export struct CreateGroupPage {
             }
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.XXL)
-            .shadow(DesignConstants.SHADOW.MEDIUM)
+            .shadow(this.getCurrentThemePalette().elevatedShadow)
             .border({ width: 1, color: this.getSurfaceBorder() })
             .margin({ bottom: 14 })
 
@@ -433,13 +433,13 @@ export struct CreateGroupPage {
                   if (this.localLocation) {
                     Text(this.localLocation.locationName)
                       .fontSize(DesignConstants.FONT.SIZE.MD)
-                      .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                      .fontColor(this.getCurrentThemePalette().textPrimary)
                       .maxLines(2)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
                   } else {
                     Text('正在获取位置...')
                       .fontSize(DesignConstants.FONT.SIZE.MD)
-                      .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                      .fontColor(this.getCurrentThemePalette().textSecondary)
                   }
                 }
                 .layoutWeight(1)
@@ -449,20 +449,20 @@ export struct CreateGroupPage {
                   Button('选点')
                     .type(ButtonType.Normal)
                     .backgroundColor(this.getSurfaceSubtle())
-                    .fontColor($r('sys.color.ohos_id_color_emphasize'))
+                    .fontColor(this.getCurrentThemePalette().accentBackground)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .borderRadius(DesignConstants.RADIUS.XXL)
-                    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+                    .border({ width: 1, color: this.getSurfaceBorder() })
                     .height(36)
                     .onClick(() => this.openLocationPicker())
 
                   Button('刷新')
                     .type(ButtonType.Normal)
                     .backgroundColor(this.getSurfaceSubtle())
-                    .fontColor($r('sys.color.ohos_id_color_emphasize'))
+                    .fontColor(this.getCurrentThemePalette().accentBackground)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .borderRadius(DesignConstants.RADIUS.XXL)
-                    .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+                    .border({ width: 1, color: this.getSurfaceBorder() })
                     .height(36)
                     .onClick(() => this.refreshLocation())
                 }
@@ -475,7 +475,7 @@ export struct CreateGroupPage {
             }
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.XXL)
-            .shadow(DesignConstants.SHADOW.MEDIUM)
+            .shadow(this.getCurrentThemePalette().elevatedShadow)
             .border({ width: 1, color: this.getSurfaceBorder() })
             .margin({ bottom: 14 })
 
@@ -485,7 +485,7 @@ export struct CreateGroupPage {
               Row() {
                 Text('最大成员数')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                  .fontColor(this.getCurrentThemePalette().textPrimary)
                   .layoutWeight(1)
 
                 Row({ space: DesignConstants.SPACING.XS }) {
@@ -494,8 +494,8 @@ export struct CreateGroupPage {
                       SymbolSpan($r(AppIcon.REMOVE))
                         .fontSize(DesignConstants.FONT.SIZE.LG)
                         .fontColor([this.maxMembers > GROUP_MEMBERS_MIN
-                          ? $r('sys.color.ohos_id_color_text_primary')
-                          : $r('sys.color.ohos_id_color_text_tertiary')])
+                          ? this.getCurrentThemePalette().textPrimary
+                          : this.getCurrentThemePalette().textTertiary])
                     }
                   }
                   .type(ButtonType.Capsule)
@@ -513,9 +513,9 @@ export struct CreateGroupPage {
                     .height(36)
                     .textAlign(TextAlign.Center)
                     .fontSize(DesignConstants.FONT.SIZE.MD)
-                    .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                    .fontColor(this.getCurrentThemePalette().textPrimary)
                     .backgroundColor(this.getSurfaceSubtle())
-                    .shadow(DesignConstants.SHADOW.INSET)
+                    .shadow(this.getCurrentThemePalette().controlShadow)
                     .borderRadius(DesignConstants.RADIUS.MD)
                     .padding(0)
                     .onChange((value: string) => {
@@ -535,8 +535,8 @@ export struct CreateGroupPage {
                       SymbolSpan($r(AppIcon.ADD))
                         .fontSize(DesignConstants.FONT.SIZE.LG)
                         .fontColor([this.maxMembers < GROUP_MEMBERS_MAX
-                          ? $r('sys.color.ohos_id_color_text_primary')
-                          : $r('sys.color.ohos_id_color_text_tertiary')])
+                          ? this.getCurrentThemePalette().textPrimary
+                          : this.getCurrentThemePalette().textTertiary])
                     }
                   }
                   .type(ButtonType.Capsule)
@@ -557,17 +557,17 @@ export struct CreateGroupPage {
 
               Divider()
                 .strokeWidth(1)
-                .color($r('sys.color.ohos_id_color_list_separator'))
+                .color(this.getSurfaceBorder())
                 .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
               Row() {
                 Text('密码保护')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                  .fontColor(this.getCurrentThemePalette().textPrimary)
                   .layoutWeight(1)
 
                 Toggle({ type: ToggleType.Switch, isOn: this.isPasswordRequired })
-                  .selectedColor($r('sys.color.ohos_id_color_emphasize'))
+                  .selectedColor(this.getCurrentThemePalette().accentBackground)
                   .onChange((isOn: boolean) => {
                     this.isPasswordRequired = isOn;
                     if (!isOn) this.groupPassword = '';
@@ -582,13 +582,13 @@ export struct CreateGroupPage {
               if (this.isPasswordRequired) {
                 Divider()
                   .strokeWidth(1)
-                  .color($r('sys.color.ohos_id_color_list_separator'))
+                  .color(this.getSurfaceBorder())
                   .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
                 Column() {
                   Text('群组密码')
                     .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                    .fontColor(this.getCurrentThemePalette().textSecondary)
                     .width('100%')
                     .margin({ bottom: 4 })
 
@@ -600,7 +600,7 @@ export struct CreateGroupPage {
                     .maxLength(GROUP_PASSWORD_MAX)
                     .height(40)
                     .backgroundColor(this.getSurfaceSubtle())
-                    .shadow(DesignConstants.SHADOW.INSET)
+                    .shadow(this.getCurrentThemePalette().controlShadow)
                     .borderRadius(DesignConstants.RADIUS.XL)
                     .padding({ left: DesignConstants.SPACING.MD })
                     .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
@@ -614,7 +614,7 @@ export struct CreateGroupPage {
             }
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.XXL)
-            .shadow(DesignConstants.SHADOW.MEDIUM)
+            .shadow(this.getCurrentThemePalette().elevatedShadow)
             .border({ width: 1, color: this.getSurfaceBorder() })
             .margin({ bottom: 14 })
 
@@ -623,7 +623,7 @@ export struct CreateGroupPage {
               .type(ButtonType.Capsule)
               .backgroundColor(this.getCurrentThemePalette().accentBackground)
               .fontColor(this.getCurrentThemePalette().accentText)
-              .shadow(DesignConstants.SHADOW.SMALL)
+              .shadow(this.getCurrentThemePalette().controlShadow)
               .border({ width: 1, color: this.getSurfaceBorder() })
               .width('100%')
               .height(48)
@@ -671,7 +671,7 @@ export struct CreateGroupPage {
   SectionHeader(title: string) {
     Text(title)
       .fontSize(DesignConstants.FONT.SIZE.SM)
-      .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+      .fontColor(this.getCurrentThemePalette().textSecondary)
       .margin({ bottom: -DesignConstants.SPACING.XS })
   }
 }

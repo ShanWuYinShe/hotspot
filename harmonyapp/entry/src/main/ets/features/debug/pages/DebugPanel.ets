@@ -61,7 +61,7 @@ export struct DebugPanel {
         IconButton({
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
-          iconColor: $r('sys.color.ohos_id_color_text_primary'),
+          iconColor: this.getCurrentThemePalette().textPrimary,
           bgColor: this.getSurfaceSubtle(),
           onButtonClick: () => {
             AppRouter.pop();
@@ -71,14 +71,14 @@ export struct DebugPanel {
         Text('调试面板')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
 
         IconButton({
           icon: AppIcon.CLOSE, // Used as Clear
           iconSize: IconSize.LARGE,
-          iconColor: $r('sys.color.ohos_id_color_text_primary'),
+          iconColor: this.getCurrentThemePalette().textPrimary,
           bgColor: this.getSurfaceSubtle(),
           onButtonClick: () => {
             this.logs = [];
@@ -93,7 +93,7 @@ export struct DebugPanel {
         bottom: DesignConstants.SPACING.SM
       })
       .backgroundColor(this.getSurfaceBackground())
-      .border({ width: 1, color: $r('sys.color.ohos_id_color_list_separator') })
+      .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
       .borderRadius({ bottomLeft: DesignConstants.RADIUS.LG, bottomRight: DesignConstants.RADIUS.LG })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 

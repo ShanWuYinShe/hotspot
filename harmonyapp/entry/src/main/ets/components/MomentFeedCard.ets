@@ -170,16 +170,16 @@ export struct MomentFeedCard {
         Text(this.moment.user?.nickname ?? '匿名用户')
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getPalette().textPrimary)
 
         if (this.showTime && this.moment.created_at) {
           Text(this.formatTime(this.moment.created_at))
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getPalette().textSecondary)
         } else if (this.moment.location?.location_name) {
           Text(this.moment.location.location_name)
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getPalette().textSecondary)
         }
       }
       .layoutWeight(1)
@@ -190,7 +190,7 @@ export struct MomentFeedCard {
           iconSize: IconSize.MEDIUM,
           iconColor: this.getMomentState()?.my_state?.is_favorited
             ? this.getPalette().accentBackground
-            : $r('sys.color.ohos_id_color_text_secondary'),
+            : this.getPalette().textSecondary,
           onButtonClick: () => this.onFavoriteClick(this.moment)
         })
       }
@@ -202,12 +202,12 @@ export struct MomentFeedCard {
     if (this.textMaxLines === 0) {
       Text(this.moment.description)
         .fontSize(this.textFontSize)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .fontColor(this.getPalette().textPrimary)
         .lineHeight(24)
     } else {
       Text(this.moment.description)
         .fontSize(this.textFontSize)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .fontColor(this.getPalette().textPrimary)
         .maxLines(this.textMaxLines)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
@@ -272,7 +272,7 @@ export struct MomentFeedCard {
         ForEach(this.moment.tags, (tag: string) => {
           Text(`#${tag}`)
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_emphasize'))
+            .fontColor(this.getPalette().accentBackground)
             .backgroundColor(this.getPalette().surfaceSubtle)
             .borderRadius(DesignConstants.RADIUS.SM)
             .padding({
@@ -307,37 +307,37 @@ export struct MomentFeedCard {
           icon: AppIcon.HEART,
           iconSize: IconSize.MEDIUM,
           iconColor: this.getMomentState()?.my_state?.is_liked
-            ? $r('app.color.color_danger')
-            : $r('sys.color.ohos_id_color_text_secondary'),
+            ? this.getPalette().accentBackground
+            : this.getPalette().textSecondary,
           onButtonClick: () => this.onLikeClick(this.moment)
         })
         Text(this.formatCount(this.getMomentState()?.likes_count ?? this.moment.likes_count))
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getPalette().textSecondary)
       }
 
       Row({ space: DesignConstants.SPACING.XS }) {
         IconButton({
           icon: AppIcon.MESSAGE,
           iconSize: IconSize.MEDIUM,
-          iconColor: $r('sys.color.ohos_id_color_text_secondary'),
+          iconColor: this.getPalette().textSecondary,
           onButtonClick: () => this.openMomentDetail(this.moment)
         })
         Text(this.formatCount(this.getMomentState()?.comments_count ?? this.moment.comments_count))
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getPalette().textSecondary)
       }
 
       Row({ space: DesignConstants.SPACING.XS }) {
         IconButton({
           icon: AppIcon.SHARE,
           iconSize: IconSize.MEDIUM,
-          iconColor: $r('sys.color.ohos_id_color_text_secondary'),
+          iconColor: this.getPalette().textSecondary,
           onButtonClick: () => this.shareMoment(this.moment)
         })
         Text(this.formatCount(this.getMomentState()?.shares_count ?? this.moment.shares_count))
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getPalette().textSecondary)
       }
     }
   }

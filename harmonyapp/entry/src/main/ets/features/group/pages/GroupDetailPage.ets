@@ -861,10 +861,10 @@ export struct GroupDetailPage {
 
   private getRoleColor(role: string): ResourceColor {
     switch (role) {
-      case 'owner': return $r('app.color.color_warning');
-      case 'admin': return $r('sys.color.ohos_id_color_emphasize');
-      case 'member': return $r('sys.color.ohos_id_color_text_secondary');
-      default: return $r('sys.color.ohos_id_color_text_secondary');
+      case 'owner': return this.getCurrentThemePalette().accentBackground;
+      case 'admin': return this.getCurrentThemePalette().accentBackground;
+      case 'member': return this.getCurrentThemePalette().textSecondary;
+      default: return this.getCurrentThemePalette().textSecondary;
     }
   }
 
@@ -902,7 +902,7 @@ export struct GroupDetailPage {
         IconButton({
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
-          iconColor: $r('sys.color.ohos_id_color_text_primary'),
+          iconColor: this.getCurrentThemePalette().textPrimary,
           bgColor: Color.Transparent,
           radius: DesignConstants.RADIUS.XL,
           minButtonSize: 42,
@@ -915,14 +915,14 @@ export struct GroupDetailPage {
         Text('群组详情')
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
 
         IconButton({
           icon: AppIcon.SHARE,
           iconSize: IconSize.LARGE,
-          iconColor: $r('sys.color.ohos_id_color_text_primary'),
+          iconColor: this.getCurrentThemePalette().textPrimary,
           bgColor: Color.Transparent,
           radius: DesignConstants.RADIUS.XL,
           minButtonSize: 42,
@@ -954,18 +954,18 @@ export struct GroupDetailPage {
           Text() {
             SymbolSpan($r(AppIcon.WARNING))
               .fontSize(48)
-              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+              .fontColor([this.getCurrentThemePalette().textSecondary])
           }
           .margin({ bottom: DesignConstants.SPACING.MD })
           Text(this.errorMessage)
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
             .textAlign(TextAlign.Center)
             .margin({ bottom: DesignConstants.SPACING.XL })
           Button('重试')
             .type(ButtonType.Normal)
-            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-            .fontColor($r('app.color.chip_active_text'))
+            .backgroundColor(this.getCurrentThemePalette().accentBackground)
+            .fontColor(this.getCurrentThemePalette().accentText)
             .borderRadius(DesignConstants.RADIUS.XL)
             .onClick(() => this.loadGroupDetail())
         }
@@ -993,13 +993,13 @@ export struct GroupDetailPage {
                 Text(this.groupInfo?.group?.name ?? '')
                   .fontSize(DesignConstants.FONT.SIZE.XL)
                   .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                  .fontColor(this.getCurrentThemePalette().textPrimary)
                   .margin({ top: DesignConstants.SPACING.MD })
 
                 if (this.groupInfo?.description) {
                   Text(this.groupInfo?.description)
                     .fontSize(DesignConstants.FONT.SIZE.MD)
-                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                    .fontColor(this.getCurrentThemePalette().textSecondary)
                     .textAlign(TextAlign.Center)
                     .maxLines(3)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -1015,10 +1015,10 @@ export struct GroupDetailPage {
                   Text(formatCount(this.groupInfo?.group?.members_count))
                     .fontSize(DesignConstants.FONT.SIZE.LG)
                     .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-                    .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                    .fontColor(this.getCurrentThemePalette().textPrimary)
                   Text('成员')
                     .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                    .fontColor(this.getCurrentThemePalette().textSecondary)
                     .margin({ top: DesignConstants.SPACING.XS })
                 }
                 .layoutWeight(1)
@@ -1028,10 +1028,10 @@ export struct GroupDetailPage {
                     ? `${Math.round((this.groupInfo!.location as RelativeLocation).distance!)}m` : '--')
                     .fontSize(DesignConstants.FONT.SIZE.LG)
                     .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-                    .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                    .fontColor(this.getCurrentThemePalette().textPrimary)
                   Text('距离')
                     .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                    .fontColor(this.getCurrentThemePalette().textSecondary)
                     .margin({ top: DesignConstants.SPACING.XS })
                 }
                 .layoutWeight(1)
@@ -1044,7 +1044,7 @@ export struct GroupDetailPage {
           }
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .shadow(DesignConstants.SHADOW.MEDIUM)
+          .shadow(this.getCurrentThemePalette().elevatedShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .margin({ bottom: DesignConstants.SPACING.MD })
 
@@ -1060,7 +1060,7 @@ export struct GroupDetailPage {
                   Text('位置信息')
                     .fontSize(DesignConstants.FONT.SIZE.MD)
                     .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                    .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                    .fontColor(this.getCurrentThemePalette().textPrimary)
                     .margin({ left: DesignConstants.SPACING.SM })
                 }
                 .width('100%')
@@ -1068,14 +1068,14 @@ export struct GroupDetailPage {
 
                 Text(this.groupInfo?.location?.location_name || '未知位置')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
                   .width('100%')
 
                 if ((this.groupInfo?.location as RelativeLocation)?.distance !== undefined &&
                   (this.groupInfo!.location as RelativeLocation).distance! >= 0) {
                   Text(`距你 ${LocationUtil.formatDistance((this.groupInfo!.location as RelativeLocation).distance!)}`)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+                    .fontColor(this.getCurrentThemePalette().textTertiary)
                     .width('100%')
                     .margin({ top: DesignConstants.SPACING.XS })
                 }
@@ -1085,7 +1085,7 @@ export struct GroupDetailPage {
           }
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .shadow(DesignConstants.SHADOW.MEDIUM)
+          .shadow(this.getCurrentThemePalette().elevatedShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .margin({ bottom: DesignConstants.SPACING.MD })
 
@@ -1096,10 +1096,10 @@ export struct GroupDetailPage {
                  Text('群组成员')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
                   .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                  .fontColor(this.getCurrentThemePalette().textPrimary)
                  Text(`${formatCount(this.groupInfo?.group?.members_count)} 名成员`)
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
                   .margin({ top: 2 })
               }
               .layoutWeight(1)
@@ -1108,7 +1108,7 @@ export struct GroupDetailPage {
               Text() {
                 SymbolSpan($r(AppIcon.FORWARD))
                   .fontSize(DesignConstants.FONT.SIZE.LG)
-                  .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+                  .fontColor([this.getCurrentThemePalette().textSecondary])
               }
               .onClick(() => this.loadGroupMembers())
             }
@@ -1118,7 +1118,7 @@ export struct GroupDetailPage {
           }
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .shadow(DesignConstants.SHADOW.MEDIUM)
+          .shadow(this.getCurrentThemePalette().elevatedShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .margin({ bottom: DesignConstants.SPACING.MD })
 
@@ -1130,10 +1130,10 @@ export struct GroupDetailPage {
                   Text('入群申请')
                     .fontSize(DesignConstants.FONT.SIZE.MD)
                     .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                    .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                    .fontColor(this.getCurrentThemePalette().textPrimary)
                   Text('处理待审核的入群请求')
                     .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                    .fontColor(this.getCurrentThemePalette().textSecondary)
                     .margin({ top: 2 })
                 }
                 .layoutWeight(1)
@@ -1142,7 +1142,7 @@ export struct GroupDetailPage {
                 Text() {
                   SymbolSpan($r(AppIcon.FORWARD))
                     .fontSize(DesignConstants.FONT.SIZE.LG)
-                    .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+                    .fontColor([this.getCurrentThemePalette().textSecondary])
                 }
                 .onClick(() => this.loadGroupApplications())
               }
@@ -1152,7 +1152,7 @@ export struct GroupDetailPage {
             }
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.XXL)
-            .shadow(DesignConstants.SHADOW.MEDIUM)
+            .shadow(this.getCurrentThemePalette().elevatedShadow)
             .border({ width: 1, color: this.getSurfaceBorder() })
             .margin({ bottom: DesignConstants.SPACING.MD })
           }
@@ -1166,7 +1166,7 @@ export struct GroupDetailPage {
                       .type(ButtonType.Capsule)
                       .backgroundColor(this.getSurfaceSubtle())
                       .fontColor(this.getCurrentThemePalette().accentBackground)
-                      .shadow(DesignConstants.SHADOW.SMALL)
+                      .shadow(this.getCurrentThemePalette().controlShadow)
                       .border({ width: 1, color: this.getSurfaceBorder() })
                       .width('100%')
                       .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
@@ -1179,7 +1179,7 @@ export struct GroupDetailPage {
                     .type(ButtonType.Capsule)
                     .backgroundColor(this.getCurrentThemePalette().accentBackground)
                     .fontColor(this.getCurrentThemePalette().accentText)
-                    .shadow(DesignConstants.SHADOW.SMALL)
+                    .shadow(this.getCurrentThemePalette().controlShadow)
                     .border({ width: 1, color: this.getSurfaceBorder() })
                     .width('100%')
                     .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
@@ -1188,8 +1188,8 @@ export struct GroupDetailPage {
                   Button('离开群组')
                     .type(ButtonType.Capsule)
                     .backgroundColor(this.getSurfaceSubtle())
-                    .fontColor($r('app.color.color_danger'))
-                    .shadow(DesignConstants.SHADOW.SMALL)
+                    .fontColor(this.getCurrentThemePalette().textTertiary)
+                    .shadow(this.getCurrentThemePalette().controlShadow)
                     .width('100%')
                     .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
                     .enabled(!this.isLeaving)
@@ -1205,7 +1205,7 @@ export struct GroupDetailPage {
                       .fontSize(15)
                       .padding(DesignConstants.SPACING.MD)
                       .backgroundColor(this.getSurfaceSubtle())
-                      .shadow(DesignConstants.SHADOW.INSET)
+                      .shadow(this.getCurrentThemePalette().controlShadow)
                       .borderRadius(DesignConstants.RADIUS.XL)
                       .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
                   }
@@ -1214,7 +1214,7 @@ export struct GroupDetailPage {
                     .type(ButtonType.Capsule)
                     .backgroundColor(this.getCurrentThemePalette().accentBackground)
                     .fontColor(this.getCurrentThemePalette().accentText)
-                    .shadow(DesignConstants.SHADOW.SMALL)
+                    .shadow(this.getCurrentThemePalette().controlShadow)
                     .border({ width: 1, color: this.getSurfaceBorder() })
                     .width('100%')
                     .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
@@ -1227,14 +1227,14 @@ export struct GroupDetailPage {
           }
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .shadow(DesignConstants.SHADOW.MEDIUM)
+          .shadow(this.getCurrentThemePalette().elevatedShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
 
         }
         .width('100%')
         .layoutWeight(1)
         .scrollBar(BarState.Auto)
-        .divider({ strokeWidth: 0, color: $r('app.color.divider') })
+        .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
         .padding({
           bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
         })
@@ -1288,15 +1288,15 @@ export struct GroupDetailPage {
         Text('编辑群组信息')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
 
         Button('取消')
           .type(ButtonType.Normal)
           .backgroundColor(this.getSurfaceSubtle())
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .borderRadius(DesignConstants.RADIUS.XL)
-          .shadow(DesignConstants.SHADOW.SMALL)
+          .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .height(34)
           .enabled(!this.isSavingGroupInfo && !this.isEditGroupAvatarUploading)
@@ -1308,7 +1308,7 @@ export struct GroupDetailPage {
           .backgroundColor(this.getCurrentThemePalette().accentBackground)
           .fontColor(this.getCurrentThemePalette().accentText)
           .borderRadius(DesignConstants.RADIUS.XL)
-          .shadow(DesignConstants.SHADOW.SMALL)
+          .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .height(34)
           .enabled(!this.isSavingGroupInfo && !this.isEditGroupAvatarUploading)
@@ -1323,7 +1323,7 @@ export struct GroupDetailPage {
           Column({ space: DesignConstants.SPACING.MD }) {
             Text('群组头像')
               .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .fontColor(this.getCurrentThemePalette().textSecondary)
               .width('100%')
 
             Row({ space: DesignConstants.SPACING.MD }) {
@@ -1341,13 +1341,13 @@ export struct GroupDetailPage {
               Column({ space: DesignConstants.SPACING.SM }) {
                 Text(this.isEditGroupAvatarUploading ? '头像上传中...' : '点击头像可重新选择')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
 
                 if (this.editGroupAvatarLocalUri) {
                   Button('恢复原头像')
                     .type(ButtonType.Normal)
                     .backgroundColor(Color.Transparent)
-                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                    .fontColor(this.getCurrentThemePalette().textSecondary)
                     .borderRadius(DesignConstants.RADIUS.XL)
                     .height(30)
                     .onClick(() => this.resetEditGroupAvatarSelection())
@@ -1361,12 +1361,12 @@ export struct GroupDetailPage {
           .padding(DesignConstants.SPACING.LG)
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XL)
-          .shadow(DesignConstants.SHADOW.SMALL)
+          .shadow(this.getCurrentThemePalette().controlShadow)
 
           Column({ space: DesignConstants.SPACING.SM }) {
             Text('群组名称')
               .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .fontColor(this.getCurrentThemePalette().textSecondary)
               .width('100%')
 
             TextInput({ placeholder: '请输入群组名称', text: this.editGroupName })
@@ -1375,26 +1375,26 @@ export struct GroupDetailPage {
               .onChange((value: string) => { this.editGroupName = value; })
               .height(42)
                .backgroundColor(this.getSurfaceSubtle())
-              .shadow(DesignConstants.SHADOW.INSET)
+              .shadow(this.getCurrentThemePalette().controlShadow)
               .borderRadius(DesignConstants.RADIUS.MD)
               .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
               .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
 
             Text(`${this.editGroupName.trim().length}/${GROUP_NAME_MAX}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+              .fontColor(this.getCurrentThemePalette().textTertiary)
               .width('100%')
               .textAlign(TextAlign.End)
           }
           .padding(DesignConstants.SPACING.LG)
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XL)
-          .shadow(DesignConstants.SHADOW.SMALL)
+          .shadow(this.getCurrentThemePalette().controlShadow)
 
           Column({ space: DesignConstants.SPACING.SM }) {
             Text('群组描述')
               .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .fontColor(this.getCurrentThemePalette().textSecondary)
               .width('100%')
 
             TextArea({ placeholder: '请输入群组描述', text: this.editGroupDescription })
@@ -1403,20 +1403,20 @@ export struct GroupDetailPage {
               .onChange((value: string) => { this.editGroupDescription = value; })
               .height(120)
                .backgroundColor(this.getSurfaceSubtle())
-              .shadow(DesignConstants.SHADOW.INSET)
+              .shadow(this.getCurrentThemePalette().controlShadow)
               .borderRadius(DesignConstants.RADIUS.MD)
               .padding(DesignConstants.SPACING.MD)
 
             Text(`${this.editGroupDescription.trim().length}/${GROUP_DESCRIPTION_MAX}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+              .fontColor(this.getCurrentThemePalette().textTertiary)
               .width('100%')
               .textAlign(TextAlign.End)
           }
           .padding(DesignConstants.SPACING.LG)
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XL)
-          .shadow(DesignConstants.SHADOW.SMALL)
+          .shadow(this.getCurrentThemePalette().controlShadow)
         }
         .width('100%')
         .padding({
@@ -1443,12 +1443,12 @@ export struct GroupDetailPage {
         Text('群组成员')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
 
         Text(`${this.members.length} 人`)
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
       }
       .width('100%')
       .padding(DesignConstants.SPACING.LG)
@@ -1461,16 +1461,16 @@ export struct GroupDetailPage {
           Text() {
             SymbolSpan($r(AppIcon.WARNING))
               .fontSize(48)
-              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+              .fontColor([this.getCurrentThemePalette().textSecondary])
           }
           Text(this.membersErrorMessage)
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
             .textAlign(TextAlign.Center)
           Button('重试')
             .type(ButtonType.Normal)
-            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-            .fontColor($r('app.color.chip_active_text'))
+            .backgroundColor(this.getCurrentThemePalette().accentBackground)
+            .fontColor(this.getCurrentThemePalette().accentText)
             .borderRadius(DesignConstants.RADIUS.XL)
             .height(40)
             .onClick(() => { this.loadGroupMembers(); })
@@ -1491,7 +1491,7 @@ export struct GroupDetailPage {
                 LoadingProgress().width(20).height(20)
                 Text('加载更多...')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
               }
               .width('100%')
               .justifyContent(FlexAlign.Center)
@@ -1509,7 +1509,7 @@ export struct GroupDetailPage {
         Column() {
           Text('暂无成员信息')
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .width('100%')
         .layoutWeight(1)
@@ -1529,12 +1529,12 @@ export struct GroupDetailPage {
         Text('入群申请')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
 
         Text(`${this.applications.length} 条`)
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
       }
       .width('100%')
       .padding(DesignConstants.SPACING.LG)
@@ -1546,16 +1546,16 @@ export struct GroupDetailPage {
           Text() {
             SymbolSpan($r(AppIcon.WARNING))
               .fontSize(48)
-              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+              .fontColor([this.getCurrentThemePalette().textSecondary])
           }
           Text(this.applicationsErrorMessage)
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
             .textAlign(TextAlign.Center)
           Button('重试')
             .type(ButtonType.Normal)
-            .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-            .fontColor($r('app.color.chip_active_text'))
+            .backgroundColor(this.getCurrentThemePalette().accentBackground)
+            .fontColor(this.getCurrentThemePalette().accentText)
             .borderRadius(DesignConstants.RADIUS.XL)
             .height(40)
             .onClick(() => { this.loadGroupApplications(); })
@@ -1577,7 +1577,7 @@ export struct GroupDetailPage {
                 LoadingProgress().width(20).height(20)
                 Text('加载更多...')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
               }
               .width('100%')
               .justifyContent(FlexAlign.Center)
@@ -1595,7 +1595,7 @@ export struct GroupDetailPage {
         Column() {
           Text('暂无待处理申请')
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .width('100%')
         .layoutWeight(1)
@@ -1623,13 +1623,13 @@ export struct GroupDetailPage {
           Text(application.applicant?.nickname ?? '未知用户')
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getCurrentThemePalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
           Text(`申请于 ${new Date(application.created_at).toLocaleString()}`)
             .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
             .margin({ top: 4 })
         }
         .alignItems(HorizontalAlign.Start)
@@ -1641,15 +1641,15 @@ export struct GroupDetailPage {
       if (application.message) {
         Text(application.message)
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
           .width('100%')
       }
 
       Row({ space: DesignConstants.SPACING.SM }) {
         Button(this.isApplicationHandling(application.application_id) ? '处理中...' : '批准')
           .type(ButtonType.Normal)
-          .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
-          .fontColor($r('app.color.chip_active_text'))
+          .backgroundColor(this.getCurrentThemePalette().accentBackground)
+          .fontColor(this.getCurrentThemePalette().accentText)
           .borderRadius(DesignConstants.RADIUS.XL)
           .height(34)
           .layoutWeight(1)
@@ -1660,7 +1660,7 @@ export struct GroupDetailPage {
         Button('拒绝')
           .type(ButtonType.Normal)
           .backgroundColor(this.getSurfaceSubtle())
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .borderRadius(DesignConstants.RADIUS.XL)
           .height(34)
           .layoutWeight(1)
@@ -1674,7 +1674,7 @@ export struct GroupDetailPage {
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.XL)
-    .shadow(DesignConstants.SHADOW.SMALL)
+    .shadow(this.getCurrentThemePalette().controlShadow)
     .margin({ bottom: DesignConstants.SPACING.SM })
   }
 
@@ -1692,7 +1692,7 @@ export struct GroupDetailPage {
         Text(member.user?.nickname ?? '')
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
@@ -1707,7 +1707,7 @@ export struct GroupDetailPage {
           if (member.joined_at) {
             Text(`加入于 ${new Date(member.joined_at).toLocaleDateString()}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .fontColor(this.getCurrentThemePalette().textSecondary)
               .margin({ left: DesignConstants.SPACING.SM })
           }
         }
@@ -1721,7 +1721,7 @@ export struct GroupDetailPage {
         Text() {
           SymbolSpan($r(AppIcon.MORE))
             .fontSize(18)
-            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+            .fontColor([this.getCurrentThemePalette().textSecondary])
         }
         .padding(DesignConstants.SPACING.SM)
         .borderRadius(DesignConstants.RADIUS.SM)
@@ -1732,7 +1732,7 @@ export struct GroupDetailPage {
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.XL)
-    .shadow(DesignConstants.SHADOW.SMALL)
+    .shadow(this.getCurrentThemePalette().controlShadow)
     .margin({ bottom: DesignConstants.SPACING.SM })
   }
 }

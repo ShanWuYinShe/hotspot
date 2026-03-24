@@ -197,7 +197,7 @@ export struct MySharesPage {
         IconButton({
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
-          iconColor: $r('sys.color.ohos_id_color_text_primary'),
+          iconColor: this.getCurrentThemePalette().textPrimary,
           bgColor: this.getSurfaceBackground(),
           radius: DesignConstants.RADIUS.XL,
           minButtonSize: 42,
@@ -208,7 +208,7 @@ export struct MySharesPage {
         Text('我的分享')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
 
@@ -300,13 +300,13 @@ export struct MySharesPage {
           Text(share.preview?.title ?? this.defaultShareTitle(share))
             .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontWeight(FontWeight.Medium)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getCurrentThemePalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
           Text(`分享代码 ${share.share_code}`)
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .layoutWeight(1)
 
@@ -327,7 +327,7 @@ export struct MySharesPage {
       if (share.preview?.subtitle) {
         Text(share.preview.subtitle)
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
@@ -344,15 +344,15 @@ export struct MySharesPage {
       Column({ space: 4 }) {
         Text(`类型：${this.formatShareType(share.share_type)}`)
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
 
         Text(`创建：${this.formatDate(share.created_at)}`)
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
 
         Text(`有效期：${this.formatExpiration(share.expires_at)}`)
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
       }
       .padding({
         left: DesignConstants.SPACING.MD,
@@ -367,11 +367,11 @@ export struct MySharesPage {
         Column({ space: 2 }) {
           Text('分享状态')
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
 
           Text(share.is_revoked ? '已停止对外访问' : '对外链接可用')
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getCurrentThemePalette().textPrimary)
         }
         .layoutWeight(1)
 
@@ -379,9 +379,9 @@ export struct MySharesPage {
           Button(this.revokingShareId === share.share_id ? '撤销中...' : '撤销分享')
             .type(ButtonType.Capsule)
             .backgroundColor(Color.Transparent)
-            .fontColor($r('app.color.color_danger'))
+            .fontColor(this.getCurrentThemePalette().accentBackground)
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .shadow(DesignConstants.SHADOW.SMALL)
+            .shadow(this.getCurrentThemePalette().controlShadow)
             .border({ width: 1, color: this.getSurfaceBorder() })
             .height(34)
             .enabled(this.revokingShareId !== share.share_id)
@@ -389,14 +389,14 @@ export struct MySharesPage {
         } else {
           Text('已撤销')
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_warning'))
+            .fontColor(this.getCurrentThemePalette().textTertiary)
         }
       }
     }
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
     .borderRadius(DesignConstants.RADIUS.XXL)
-    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .shadow(this.getCurrentThemePalette().elevatedShadow)
     .backgroundColor(this.getSurfaceBackground())
     .border({ width: 1, color: this.getSurfaceBorder() })
     .margin({ bottom: 12 })
@@ -411,7 +411,7 @@ export struct MySharesPage {
   }
 
   private shareStatusColor(share: ShareListItem) {
-    return share.is_revoked ? $r('sys.color.ohos_id_color_warning') : $r('sys.color.ohos_id_color_emphasize');
+    return share.is_revoked ? this.getCurrentThemePalette().textTertiary : this.getCurrentThemePalette().accentBackground;
   }
 
   private shareStatusBackground(share: ShareListItem): ResourceColor {

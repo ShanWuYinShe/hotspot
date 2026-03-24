@@ -166,7 +166,7 @@ export struct PhotoPreviewPage {
         IconButton({
           icon: AppIcon.CLOSE,
           iconSize: IconSize.LARGE,
-          iconColor: $r('app.color.chip_active_text'),
+          iconColor: '#F6F0E7',
           bgColor: Color.Transparent,
           onButtonClick: () => {
             AppRouter.pop();
@@ -182,7 +182,7 @@ export struct PhotoPreviewPage {
       // 底部页码指示器（凸起胶囊化）
       Row() {
         Text(`${this.currentIndex + 1} / ${this.images.length}`)
-          .fontColor($r('app.color.chip_active_text'))
+          .fontColor('#F6F0E7')
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontWeight(FontWeight.Medium)
           .backgroundColor('#80000000')
@@ -194,10 +194,10 @@ export struct PhotoPreviewPage {
           })
           .borderRadius(DesignConstants.RADIUS.FULL)
           .shadow({
-            radius: DesignConstants.SHADOW.MEDIUM.radius,
-            color: DesignConstants.SHADOW.MEDIUM.color,
-            offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
-            offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
+            radius: 22,
+            color: '#30000000',
+            offsetX: 0,
+            offsetY: 6
           })
           .border({ width: 1, color: this.getSurfaceBorder() })
       }

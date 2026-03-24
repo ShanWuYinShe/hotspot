@@ -55,7 +55,7 @@ export struct LoginPromptView {
       Text() {
         SymbolSpan($r(this.icon))
           .fontSize(56)
-          .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+          .fontColor([this.getPalette().iconMuted])
       }
       .margin({ bottom: 4 })
 
@@ -63,13 +63,13 @@ export struct LoginPromptView {
       Text(this.title)
         .fontSize(DesignConstants.FONT.SIZE.XL)
         .fontWeight(FontWeight.Bold)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .fontColor(this.getPalette().textPrimary)
         .textAlign(TextAlign.Center)
 
       // 副标题
       Text(this.subtitle)
         .fontSize(DesignConstants.FONT.SIZE.MD)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .fontColor(this.getPalette().textSecondary)
         .textAlign(TextAlign.Center)
         .lineHeight(22)
 
@@ -88,8 +88,8 @@ export struct LoginPromptView {
 
         Button('登录 / 注册')
           .type(ButtonType.Capsule)
-          .backgroundColor(this.getPalette().surfaceSubtle)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .backgroundColor(this.getPalette().buttonSecondaryBackground)
+          .fontColor(this.getPalette().buttonSecondaryText)
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .border({ width: 1, color: this.getPalette().borderColor })
           .width('100%')
@@ -105,7 +105,7 @@ export struct LoginPromptView {
       if (this.hint.length > 0) {
         Text(this.hint)
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getPalette().textSecondary)
           .textAlign(TextAlign.Center)
           .margin({ top: 4 })
       }
@@ -132,18 +132,18 @@ export struct LoginPromptView {
         Text('快速体验')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Bold)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getPalette().textPrimary)
 
         Text('无需注册，输入昵称即可快速体验')
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getPalette().textSecondary)
 
         TextInput({ placeholder: '请输入你的昵称' })
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .padding(DesignConstants.SPACING.LG)
           .backgroundColor(this.getPalette().surfaceSubtle)
           .borderRadius(DesignConstants.RADIUS.XL)
-          .shadow(DesignConstants.SHADOW.INSET)
+          .shadow(this.getPalette().controlShadow)
           .enabled(!this.isQuickStarting)
           .onChange((value: string) => { this.quickNickname = value; })
           .onFocus(() => {
@@ -170,7 +170,7 @@ export struct LoginPromptView {
 
         Text('临时用户可使用大部分功能，随时可升级为完整账号')
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getPalette().textSecondary)
           .textAlign(TextAlign.Center)
       }
       .alignItems(HorizontalAlign.Start)
@@ -185,7 +185,7 @@ export struct LoginPromptView {
     .width('100%')
     .scrollBar(BarState.Off)
     .backgroundColor(this.getPalette().surfaceBackground)
-    .shadow(DesignConstants.SHADOW.SMALL)
+    .shadow(this.getPalette().elevatedShadow)
     .border({ width: 1, color: this.getPalette().borderColor })
   }
 

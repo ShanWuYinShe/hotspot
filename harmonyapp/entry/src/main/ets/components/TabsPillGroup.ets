@@ -51,14 +51,14 @@ export struct TabsPillGroup {
           Text() {
             SymbolSpan($r(tab.icon))
               .fontSize(14)
-              .fontColor(isActiveTab ? [this.getPalette().accentText] : [$r('sys.color.ohos_id_color_text_secondary')])
+              .fontColor(isActiveTab ? [this.getPalette().accentText] : [this.getPalette().tabBarInactive])
           }
         }
 
         Text(tab.label)
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontWeight(isActiveTab ? FontWeight.Medium : FontWeight.Regular)
-          .fontColor(isActiveTab ? this.getPalette().accentText : $r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(isActiveTab ? this.getPalette().accentText : this.getPalette().tabBarInactive)
       }
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
@@ -66,12 +66,7 @@ export struct TabsPillGroup {
       .height(34)
       .borderRadius(DesignConstants.RADIUS.XL)
       .backgroundColor(isActiveTab ? this.getPalette().accentBackground : Color.Transparent)
-      .shadow(isActiveTab ? {
-        radius: 6,
-        color: '#1A000000',
-        offsetX: 0,
-        offsetY: 2
-      } : {
+      .shadow(isActiveTab ? this.getPalette().controlShadow : {
         radius: 0,
         color: '#00000000',
         offsetX: 0,

@@ -108,7 +108,7 @@ export struct SystemPageHeader {
         Text(this.title)
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getPalette().textPrimary)
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
 
@@ -127,7 +127,7 @@ export struct SystemPageHeader {
                 .height(34)
                 .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
                 .fontColor(this.action.disabled
-                  ? $r('sys.color.ohos_id_color_text_secondary')
+                  ? this.getPalette().textSecondary
                   : this.getPalette().accentBackground)
                 .fontSize(DesignConstants.FONT.SIZE.SM)
                 .enabled(!this.action.disabled)

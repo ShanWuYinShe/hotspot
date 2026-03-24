@@ -245,7 +245,7 @@ export struct MomentDetailPage {
       Text('动态详情')
         .fontSize(DesignConstants.FONT.SIZE.XL)
         .fontWeight(FontWeight.Bold)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .fontColor(this.getCurrentThemePalette().textPrimary)
         .layoutWeight(1)
     }
     .width('100%')
@@ -274,16 +274,16 @@ export struct MomentDetailPage {
           Text(moment.user?.nickname ?? '未知用户')
             .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontWeight(FontWeight.Medium)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getCurrentThemePalette().textPrimary)
 
           Row({ space: DesignConstants.SPACING.SM }) {
             Text(this.formatTime(moment.created_at))
               .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .fontColor(this.getCurrentThemePalette().textSecondary)
             if (moment.location?.distance !== undefined) {
               Text(LocationUtil.formatDistance(moment.location.distance))
                 .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                .fontColor(this.getCurrentThemePalette().textSecondary)
             }
           }
         }
@@ -295,7 +295,7 @@ export struct MomentDetailPage {
       Text(moment.description)
         .width('100%')
         .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .fontColor(this.getCurrentThemePalette().textPrimary)
         .lineHeight(26)
 
       if (moment.images && moment.images.length > 0) {
@@ -327,7 +327,7 @@ export struct MomentDetailPage {
           ForEach(moment.tags, (tag: string, index: number) => {
             Text(`#${tag}`)
               .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor($r('sys.color.ohos_id_color_emphasize'))
+              .fontColor(this.getCurrentThemePalette().accentBackground)
               .backgroundColor(this.getSurfaceSubtle())
               .padding({
                 left: DesignConstants.SPACING.MD,
@@ -347,11 +347,11 @@ export struct MomentDetailPage {
           Text() {
             SymbolSpan($r(AppIcon.LOCATION))
               .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+              .fontColor([this.getCurrentThemePalette().textSecondary])
           }
           Text(moment.location.location_name)
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
@@ -371,13 +371,13 @@ export struct MomentDetailPage {
       Row({ space: DesignConstants.SPACING.LG }) {
         Text(`点赞 ${formatCount(this.getMomentLikesCount(moment))}`)
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
         Text(`评论 ${formatCount(moment.comments_count)}`)
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
         Text(`分享 ${formatCount(moment.shares_count)}`)
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
       }
       .width('100%')
     }
@@ -394,17 +394,17 @@ export struct MomentDetailPage {
           Text() {
             SymbolSpan($r(this.isMomentLiked(moment) ? AppIcon.HEART_FILL : AppIcon.HEART))
               .fontSize(18)
-              .fontColor([this.isMomentLiked(moment) ? $r('app.color.color_danger') : $r('sys.color.ohos_id_color_text_secondary')])
+              .fontColor([this.isMomentLiked(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary])
           }
           Text(this.likePending ? '处理中...' : (this.isMomentLiked(moment) ? '已点赞' : '点赞'))
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getCurrentThemePalette().textPrimary)
         }
       }
       .type(ButtonType.Capsule)
       .layoutWeight(1)
       .height(40)
-      .shadow(DesignConstants.SHADOW.SMALL)
+      .shadow(this.getCurrentThemePalette().controlShadow)
       .border({ width: 1, color: this.getSurfaceBorder() })
       .enabled(!this.likePending)
       .opacity(this.likePending ? 0.58 : 1)
@@ -418,17 +418,17 @@ export struct MomentDetailPage {
           Text() {
             SymbolSpan($r(this.isMomentFavorited(moment) ? AppIcon.STAR_FILL : AppIcon.STAR))
               .fontSize(18)
-              .fontColor([this.isMomentFavorited(moment) ? $r('sys.color.ohos_id_color_warning') : $r('sys.color.ohos_id_color_text_secondary')])
+              .fontColor([this.isMomentFavorited(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary])
           }
           Text(this.favoritePending ? '处理中...' : (this.isMomentFavorited(moment) ? '已收藏' : '收藏'))
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getCurrentThemePalette().textPrimary)
         }
       }
       .type(ButtonType.Capsule)
       .layoutWeight(1)
       .height(40)
-      .shadow(DesignConstants.SHADOW.SMALL)
+      .shadow(this.getCurrentThemePalette().controlShadow)
       .border({ width: 1, color: this.getSurfaceBorder() })
       .enabled(!this.favoritePending)
       .opacity(this.favoritePending ? 0.58 : 1)
@@ -442,17 +442,17 @@ export struct MomentDetailPage {
           Text() {
             SymbolSpan($r(AppIcon.SHARE))
               .fontSize(18)
-              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+              .fontColor([this.getCurrentThemePalette().textSecondary])
           }
           Text('分享')
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getCurrentThemePalette().textPrimary)
         }
       }
       .type(ButtonType.Capsule)
       .layoutWeight(1)
       .height(40)
-      .shadow(DesignConstants.SHADOW.SMALL)
+      .shadow(this.getCurrentThemePalette().controlShadow)
       .border({ width: 1, color: this.getSurfaceBorder() })
       .backgroundColor(this.getSurfaceSubtle())
       .onClick(() => {
@@ -467,7 +467,7 @@ export struct MomentDetailPage {
       bottom: DesignConstants.SPACING.MD + this.safeAreaBottom
     })
     .backgroundColor(this.getSurfaceBackground())
-    .border({ width: { top: 1 }, color: $r('app.color.divider') })
+    .border({ width: { top: 1 }, color: this.getSurfaceBorder() })
     .borderRadius({ topLeft: DesignConstants.RADIUS.LG, topRight: DesignConstants.RADIUS.LG })
   }
 }

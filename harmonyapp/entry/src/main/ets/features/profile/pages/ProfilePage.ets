@@ -241,39 +241,15 @@ export struct ProfilePage {
   }
 
   private getPrimaryTextColor(): string {
-    const palette = this.getCurrentThemePalette();
-    switch (palette.id) {
-      case 'default_clean_light': return '#111827';
-      case 'default_clean_dark': return '#F9FAFB';
-      case 'tactile_minimal_light': return '#7B5D43';
-      case 'tactile_minimal_dark': return '#E7E0D6';
-      case 'zen_artistic_light': return '#4A5568';
-      default: return '#111827';
-    }
+    return this.getCurrentThemePalette().textPrimary;
   }
 
   private getSecondaryTextColor(): string {
-    const palette = this.getCurrentThemePalette();
-    switch (palette.id) {
-      case 'default_clean_light': return '#6B7280';
-      case 'default_clean_dark': return '#9CA3AF';
-      case 'tactile_minimal_light': return '#8E735C';
-      case 'tactile_minimal_dark': return '#AAB7C4';
-      case 'zen_artistic_light': return '#718096';
-      default: return '#6B7280';
-    }
+    return this.getCurrentThemePalette().textSecondary;
   }
 
   private getWarningTextColor(): string {
-    const palette = this.getCurrentThemePalette();
-    switch (palette.id) {
-      case 'default_clean_light': return '#92400E';
-      case 'default_clean_dark': return '#FCD34D';
-      case 'tactile_minimal_light': return '#9A7241';
-      case 'tactile_minimal_dark': return '#E6CFAE';
-      case 'zen_artistic_light': return '#8B6914';
-      default: return '#92400E';
-    }
+    return this.getCurrentThemePalette().accentBackground;
   }
 
   private getSoftCardShadow(): ShadowOptions {
@@ -688,7 +664,7 @@ export struct ProfilePage {
             if (this.viewedUserProfile?.presence_status === 'online') {
               Text('在线')
                 .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor($r('app.color.color_success'))
+                .fontColor(this.getAccentBackground())
             } else {
               Text('离线')
                 .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -980,7 +956,7 @@ export struct ProfilePage {
         }
         .backgroundColor(Color.Transparent)
       }
-       .divider({ strokeWidth: 0.5, color: $r('app.color.divider'), startMargin: 52, endMargin: DesignConstants.SPACING.LG })
+       .divider({ strokeWidth: 0.5, color: this.getSurfaceBorder(), startMargin: 52, endMargin: DesignConstants.SPACING.LG })
        .backgroundColor(this.getSurfaceBackground())
       .borderRadius(DesignConstants.RADIUS.XXL)
        .shadow(this.getSoftCardShadow())
@@ -1087,7 +1063,7 @@ export struct ProfilePage {
         }
         .backgroundColor(Color.Transparent)
       }
-      .divider({ strokeWidth: 0.5, color: $r('app.color.divider'), startMargin: 52, endMargin: DesignConstants.SPACING.LG })
+      .divider({ strokeWidth: 0.5, color: this.getSurfaceBorder(), startMargin: 52, endMargin: DesignConstants.SPACING.LG })
       .backgroundColor(this.getSurfaceBackground())
       .borderRadius(DesignConstants.RADIUS.XXL)
       .shadow(this.getSoftCardShadow())
@@ -1187,13 +1163,13 @@ export struct ProfilePage {
       SystemAvatar({
         avatarUrl: this.currentUser?.avatar_url || '',
         name: this.currentUser?.nickname || '',
-        avatarSize: 96,
+        avatarSize: 116,
         isOnline: this.currentUser?.presence_status === 'online',
         inset: true
       })
 
       Text(this.currentUser?.nickname || '')
-        .fontSize(DesignConstants.FONT.SIZE.XL)
+        .fontSize(DesignConstants.FONT.SIZE.XXL)
         .fontWeight(FontWeight.Medium)
         .fontColor(this.getPrimaryTextColor())
 
@@ -1224,8 +1200,9 @@ export struct ProfilePage {
 
         Button('编辑资料')
         .type(ButtonType.Capsule)
-        .height(42)
-        .padding({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL })
+        .width('100%')
+        .height(54)
+        .padding({ left: DesignConstants.SPACING.XXL + 8, right: DesignConstants.SPACING.XXL + 8 })
         .backgroundColor(this.getAccentBackground())
         .fontColor(this.getAccentText())
         .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -1364,10 +1341,11 @@ export struct ProfilePage {
     }
     .type(ButtonType.Normal)
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.XXL)
-    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .borderRadius(DesignConstants.RADIUS.XXL + 4)
+    .shadow(this.getSoftCardShadow())
     .border({ width: 1, color: this.getSurfaceBorder() })
-    .padding(DesignConstants.SPACING.MD)
+    .padding(DesignConstants.SPACING.XL)
+    .constraintSize({ minHeight: 176 })
     .layoutWeight(1)
     .stateEffect(true)
     .scale(this.pressedMenuItemKey === title ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })

@@ -320,7 +320,7 @@ export struct CreateMomentPage {
         IconButton({
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
-          iconColor: $r('sys.color.ohos_id_color_text_primary'),
+          iconColor: this.getCurrentThemePalette().textPrimary,
           bgColor: this.getSurfaceSubtle(),
           onButtonClick: () => {
             AppRouter.pop();
@@ -330,7 +330,7 @@ export struct CreateMomentPage {
         Text('发布瞬间')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
 
@@ -386,12 +386,12 @@ export struct CreateMomentPage {
                 Text('添加图片')
                   .fontSize(DesignConstants.FONT.SIZE.LG)
                   .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                  .fontColor(this.getCurrentThemePalette().textPrimary)
                   .layoutWeight(1)
 
                 Text(`${this.imageUrls.length}/9`)
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
               }
               .width('100%')
               .margin({ bottom: DesignConstants.SPACING.MD })
@@ -413,11 +413,11 @@ export struct CreateMomentPage {
                         Text() {
                           SymbolSpan($r(AppIcon.ADD))
                             .fontSize(DesignConstants.FONT.SIZE.XXL)
-                            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+                            .fontColor([this.getCurrentThemePalette().textSecondary])
                         }
                         Text('相册')
                           .fontSize(DesignConstants.FONT.SIZE.XS)
-                          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                          .fontColor(this.getCurrentThemePalette().textSecondary)
                       }
                     }
                     .type(ButtonType.Normal)
@@ -438,11 +438,11 @@ export struct CreateMomentPage {
                         Text() {
                           SymbolSpan($r(AppIcon.CAMERA))
                             .fontSize(DesignConstants.FONT.SIZE.XXL)
-                            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+                            .fontColor([this.getCurrentThemePalette().textSecondary])
                         }
                         Text('拍照')
                           .fontSize(DesignConstants.FONT.SIZE.XS)
-                          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                          .fontColor(this.getCurrentThemePalette().textSecondary)
                       }
                     }
                     .type(ButtonType.Normal)
@@ -472,7 +472,7 @@ export struct CreateMomentPage {
               Text('添加标签')
                 .fontSize(DesignConstants.FONT.SIZE.LG)
                 .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                .fontColor(this.getCurrentThemePalette().textPrimary)
                 .width('100%')
                 .margin({ bottom: DesignConstants.SPACING.MD })
 
@@ -522,7 +522,7 @@ export struct CreateMomentPage {
                 Text('位置信息')
                   .fontSize(DesignConstants.FONT.SIZE.LG)
                   .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                  .fontColor(this.getCurrentThemePalette().textPrimary)
                   .layoutWeight(1)
 
                 Row({ space: DesignConstants.SPACING.SM }) {
@@ -549,12 +549,12 @@ export struct CreateMomentPage {
                   Text() {
                     SymbolSpan($r(AppIcon.LOCATION))
                       .fontSize(DesignConstants.FONT.SIZE.XL)
-                      .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+                      .fontColor([this.getCurrentThemePalette().accentBackground])
                   }
 
                   Text(this.localLocation.locationName)
                     .fontSize(DesignConstants.FONT.SIZE.MD)
-                    .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                    .fontColor(this.getCurrentThemePalette().textPrimary)
                     .layoutWeight(1)
                     .maxLines(2)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -568,7 +568,7 @@ export struct CreateMomentPage {
               } else {
                 Text('正在获取位置信息...')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
                   .width('100%')
                   .textAlign(TextAlign.Center)
                   .padding(DesignConstants.SPACING.LG)
@@ -617,7 +617,7 @@ export struct CreateMomentPage {
     Row() {
       Text(`#${tag}`)
         .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor($r('sys.color.ohos_id_color_emphasize'))
+        .fontColor(this.getCurrentThemePalette().accentBackground)
 
       IconButton({
         icon: AppIcon.CLOSE,
@@ -654,7 +654,7 @@ export struct CreateMomentPage {
         Text() {
           SymbolSpan($r(AppIcon.CANCEL))
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor([$r('app.color.chip_active_text')])
+            .fontColor([this.getCurrentThemePalette().accentText])
         }
       }
       .type(ButtonType.Normal)

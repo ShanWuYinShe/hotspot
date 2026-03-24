@@ -134,7 +134,7 @@ export struct PerformanceIndicator {
    */
   private getPerformanceLevel(): PerformanceLevel {
     if (!this.metrics) {
-      const unknownLevel: PerformanceLevel = { level: '未知', color: $r('sys.color.ohos_id_color_text_secondary'), icon: AppIcon.QUESTION };
+      const unknownLevel: PerformanceLevel = { level: '未知', color: this.getPalette().textSecondary, icon: AppIcon.QUESTION };
       return unknownLevel;
     }
 
@@ -149,16 +149,16 @@ export struct PerformanceIndicator {
     score -= Math.min(averageResponseTime / 1000, 1) * 30; // 响应时间影响30分
 
     if (score >= 80) {
-      const excellentLevel: PerformanceLevel = { level: '优秀', color: $r('app.color.color_success'), icon: AppIcon.CHECK };
+      const excellentLevel: PerformanceLevel = { level: '优秀', color: this.getPalette().accentBackground, icon: AppIcon.CHECK };
       return excellentLevel;
     } else if (score >= 60) {
-      const goodLevel: PerformanceLevel = { level: '良好', color: $r('sys.color.ohos_id_color_emphasize'), icon: AppIcon.INFO };
+      const goodLevel: PerformanceLevel = { level: '良好', color: this.getPalette().textPrimary, icon: AppIcon.INFO };
       return goodLevel;
     } else if (score >= 40) {
-      const averageLevel: PerformanceLevel = { level: '一般', color: $r('app.color.color_warning'), icon: AppIcon.WARNING };
+      const averageLevel: PerformanceLevel = { level: '一般', color: this.getPalette().textSecondary, icon: AppIcon.WARNING };
       return averageLevel;
     } else {
-      const poorLevel: PerformanceLevel = { level: '较差', color: $r('app.color.color_danger'), icon: AppIcon.ERROR };
+      const poorLevel: PerformanceLevel = { level: '较差', color: this.getPalette().textTertiary, icon: AppIcon.ERROR };
       return poorLevel;
     }
   }
@@ -167,9 +167,9 @@ export struct PerformanceIndicator {
    * 获取指标颜色
    */
   private getMetricColor(value: number, thresholds: MetricThresholds): ResourceColor {
-    if (value <= thresholds.good) return $r('app.color.color_success');
-    if (value <= thresholds.warning) return $r('app.color.color_warning');
-    return $r('app.color.color_danger');
+    if (value <= thresholds.good) return this.getPalette().accentBackground;
+    if (value <= thresholds.warning) return this.getPalette().textSecondary;
+    return this.getPalette().textTertiary;
   }
 
   build() {
@@ -209,12 +209,12 @@ export struct PerformanceIndicator {
           SystemIcon({
             icon: AppIcon.WARNING,
             iconSize: 14,
-            iconColor: $r('app.color.color_warning')
+            iconColor: this.getPalette().accentBackground
           })
-          
+
           Text(this.alerts.length.toString())
             .fontSize(11)
-            .fontColor($r('app.color.color_warning'))
+            .fontColor(this.getPalette().accentBackground)
         }
       }
 
@@ -259,7 +259,7 @@ export struct PerformanceIndicator {
         Text('性能监控')
           .fontSize(18)
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getPalette().textPrimary)
           .layoutWeight(1)
 
         Row({ space: 12 }) {
@@ -283,11 +283,11 @@ export struct PerformanceIndicator {
           LoadingProgress()
             .width(16)
             .height(16)
-            .color($r('sys.color.ohos_id_color_emphasize'))
-          
+            .color(this.getPalette().accentBackground)
+
           Text('刷新中...')
             .fontSize(14)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getPalette().textSecondary)
         }
       }
 
@@ -303,7 +303,7 @@ export struct PerformanceIndicator {
           Column({ space: 4 }) {
             Text('整体性能')
               .fontSize(14)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .fontColor(this.getPalette().textSecondary)
               .alignSelf(ItemAlign.Start)
 
             Text(this.getPerformanceLevel().level)
@@ -395,7 +395,7 @@ export struct PerformanceIndicator {
           Text(`性能告警 (${this.alerts.length})`)
             .fontSize(16)
             .fontWeight(FontWeight.Medium)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getPalette().textPrimary)
             .alignSelf(ItemAlign.Start)
 
           ForEach(this.alerts, (alert: PerformanceAlert) => {
@@ -403,18 +403,18 @@ export struct PerformanceIndicator {
               SystemIcon({
                 icon: alert.level === 'critical' ? AppIcon.ERROR : AppIcon.WARNING,
                 iconSize: 20,
-                iconColor: alert.level === 'critical' ? $r('app.color.color_danger') : $r('app.color.color_warning')
+                iconColor: alert.level === 'critical' ? this.getPalette().textTertiary : this.getPalette().accentBackground
               })
 
               Column({ space: 4 }) {
                 Text(alert.message)
                   .fontSize(14)
-                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                  .fontColor(this.getPalette().textPrimary)
                   .alignSelf(ItemAlign.Start)
 
                 Text(new Date(alert.timestamp).toLocaleString())
                   .fontSize(12)
-                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .fontColor(this.getPalette().textSecondary)
                   .alignSelf(ItemAlign.Start)
               }
               .alignItems(HorizontalAlign.Start)
@@ -452,7 +452,7 @@ export struct PerformanceIndicator {
 
       Text(title)
         .fontSize(12)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .fontColor(this.getPalette().textSecondary)
         .textAlign(TextAlign.Center)
     }
     .width('100%')
@@ -475,12 +475,12 @@ export struct PerformanceIndicator {
         Text('性能概览')
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getPalette().textPrimary)
 
         Row() {
           Text('内存:')
             .fontSize(12)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getPalette().textSecondary)
             .width(60)
 
           Text(`${(this.metrics.memoryUsage * 100).toFixed(1)}%`)
@@ -492,7 +492,7 @@ export struct PerformanceIndicator {
         Row() {
           Text('响应:')
             .fontSize(12)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getPalette().textSecondary)
             .width(60)
 
           Text(`${this.metrics.averageResponseTime.toFixed(0)}ms`)
@@ -503,12 +503,12 @@ export struct PerformanceIndicator {
 
         if (this.alerts.length > 0) {
           Divider()
-            .color($r('sys.color.ohos_id_color_list_separator'))
+            .color(this.getPalette().borderColor)
             .margin({ top: 4, bottom: 4 })
 
           Text(`${this.alerts.length} 个告警`)
             .fontSize(12)
-            .fontColor($r('app.color.color_warning'))
+            .fontColor(this.getPalette().accentBackground)
         }
       }
     }

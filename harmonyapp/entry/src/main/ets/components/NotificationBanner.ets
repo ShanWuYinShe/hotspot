@@ -33,13 +33,13 @@ export struct NotificationBanner {
           Text(this.notification.title)
             .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontWeight(FontWeight.Bold)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getPalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
           Text(this.notification.message)
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getPalette().textSecondary)
             .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .margin({ top: DesignConstants.SPACING.XS })
@@ -51,7 +51,7 @@ export struct NotificationBanner {
         SystemIcon({
           icon: AppIcon.CLOSE,
           iconSize: 16,
-          iconColor: $r('sys.color.ohos_id_color_text_tertiary'),
+          iconColor: this.getPalette().textTertiary,
           clickable: true,
           onIconClick: () => {
             if (this.onClose) {
@@ -72,8 +72,8 @@ export struct NotificationBanner {
               .type(ButtonType.Normal)
               .height(28)
               .fontSize(DesignConstants.FONT.SIZE.SM)
-              .backgroundColor(action.type === 'primary' ? this.getPalette().accentBackground : this.getPalette().surfaceSubtle)
-              .fontColor(action.type === 'primary' ? this.getPalette().accentText : $r('sys.color.ohos_id_color_text_primary'))
+              .backgroundColor(action.type === 'primary' ? this.getPalette().accentBackground : this.getPalette().buttonSecondaryBackground)
+              .fontColor(action.type === 'primary' ? this.getPalette().accentText : this.getPalette().buttonSecondaryText)
               .borderRadius(DesignConstants.RADIUS.XL)
               .onClick(() => {
                 if (this.onAction) {
@@ -91,7 +91,7 @@ export struct NotificationBanner {
     .backgroundColor(this.getPalette().surfaceBackground)
     .borderRadius(DesignConstants.RADIUS.XL)
     .border({ width: 1, color: this.getPalette().borderColor })
-    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .shadow(this.getPalette().elevatedShadow)
     .onClick(() => {
       if (this.onBannerClick) {
         this.onBannerClick();
@@ -111,10 +111,10 @@ export struct NotificationBanner {
 
   private getPriorityColor(priority: string): string | Resource {
     switch (priority) {
-      case 'critical': return $r('app.color.color_danger');
-      case 'high': return $r('app.color.color_warning');
+      case 'critical': return this.getPalette().textTertiary;
+      case 'high': return this.getPalette().textSecondary;
       case 'medium': return this.getPalette().accentBackground;
-      default: return $r('sys.color.ohos_id_color_text_secondary');
+      default: return this.getPalette().textSecondary;
     }
   }
 }

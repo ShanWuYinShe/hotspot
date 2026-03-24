@@ -75,6 +75,10 @@ export struct SettingsPage {
     return this.getCurrentThemePalette();
   }
 
+  private getSoftCardShadow(): ShadowOptions {
+    return this.getCurrentThemePalette().elevatedShadow;
+  }
+
   private getThemeOptionPalette(option: ThemeOptionItem): AppThemePalette {
     if (this.themeMode === option.mode) {
       return this.getCurrentThemePalette();
@@ -83,10 +87,8 @@ export struct SettingsPage {
     switch (option.mode) {
       case 'follow_system':
         return AppThemeManager.getPaletteById(this.resolvedThemeId);
-      case 'tactile_minimal':
-        return AppThemeManager.getPaletteById(isDarkMode ? 'tactile_minimal_dark' : 'tactile_minimal_light');
-      case 'zen_artistic':
-        return AppThemeManager.getPaletteById(isDarkMode ? 'zen_artistic_dark' : 'zen_artistic_light');
+      case 'soft_gallery':
+        return AppThemeManager.getPaletteById(isDarkMode ? 'soft_gallery_dark' : 'soft_gallery_light');
       case 'default_clean':
       default:
         return AppThemeManager.getPaletteById(isDarkMode ? 'default_clean_dark' : 'default_clean_light');
@@ -191,7 +193,7 @@ export struct SettingsPage {
           }
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .shadow(DesignConstants.SHADOW.MEDIUM)
+          .shadow(this.getSoftCardShadow())
           .border({ width: 1, color: this.getSurfaceBorder() })
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 14 })
 
@@ -229,7 +231,7 @@ export struct SettingsPage {
           }
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .shadow(DesignConstants.SHADOW.MEDIUM)
+          .shadow(this.getSoftCardShadow())
           .border({ width: 1, color: this.getSurfaceBorder() })
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 14 })
 
@@ -242,7 +244,7 @@ export struct SettingsPage {
           }
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .shadow(DesignConstants.SHADOW.MEDIUM)
+          .shadow(this.getSoftCardShadow())
           .border({ width: 1, color: this.getSurfaceBorder() })
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 14 })
 
@@ -253,10 +255,10 @@ export struct SettingsPage {
                 .width('100%')
                 .height(50)
                 .backgroundColor(Color.Transparent)
-                .fontColor($r('app.color.color_danger'))
+                .fontColor(this.getCurrentThemePalette().accentBackground)
                 .fontSize(DesignConstants.FONT.SIZE.LG)
                 .type(ButtonType.Capsule)
-                .shadow(DesignConstants.SHADOW.SMALL)
+                .shadow(this.getCurrentThemePalette().controlShadow)
                 .border({ width: 1, color: this.getSurfaceBorder() })
                 .onClick(() => { this.logout(); })
             }
@@ -273,7 +275,7 @@ export struct SettingsPage {
                 .fontColor(this.getCurrentThemePalette().accentText)
                 .fontSize(DesignConstants.FONT.SIZE.LG)
                 .type(ButtonType.Capsule)
-                .shadow(DesignConstants.SHADOW.SMALL)
+                .shadow(this.getCurrentThemePalette().controlShadow)
                 .border({ width: 1, color: this.getSurfaceBorder() })
                 .onClick(() => {
                   AppRouter.push(PageNames.LOGIN);
@@ -315,7 +317,7 @@ export struct SettingsPage {
   ListHeader(title: string) {
     Text(title)
       .fontSize(DesignConstants.FONT.SIZE.MD)
-      .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+      .fontColor(this.getCurrentThemePalette().textSecondary)
       .margin({ left: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.LG })
       .width('100%')
   }
@@ -328,11 +330,11 @@ export struct SettingsPage {
           Text('系统版本状态')
             .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontWeight(FontWeight.Medium)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getCurrentThemePalette().textPrimary)
 
           Text(this.systemMeta?.status === 'sunset' ? '可能影响正常使用' : '与服务端版本保持同步')
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .layoutWeight(1)
 
@@ -353,7 +355,7 @@ export struct SettingsPage {
           IconButton({
             icon: AppIcon.REFRESH,
             iconSize: IconSize.MEDIUM,
-            iconColor: $r('sys.color.ohos_id_color_text_primary'),
+            iconColor: this.getCurrentThemePalette().textPrimary,
             bgColor: this.getSurfaceSubtle(),
             onButtonClick: () => { this.loadSystemMeta(true); }
           })
@@ -361,7 +363,7 @@ export struct SettingsPage {
 
           if (this.systemMetaError) {
             Circle({ width: 8, height: 8 })
-              .fill($r('app.color.color_danger'))
+              .fill(this.getCurrentThemePalette().accentBackground)
               .position({ x: 26, y: 2 })
           }
         }
@@ -369,10 +371,10 @@ export struct SettingsPage {
 
       if (this.systemMetaLoading) {
         Row({ space: DesignConstants.SPACING.SM }) {
-          LoadingProgress().width(20).height(20).color($r('sys.color.ohos_id_color_emphasize'))
+          LoadingProgress().width(20).height(20).color(this.getCurrentThemePalette().accentBackground)
           Text('正在获取版本信息...')
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
         }
       } else {
         this.MetaInfoRow('当前版本', this.systemMeta?.version ?? '--')
@@ -384,7 +386,7 @@ export struct SettingsPage {
       if (this.systemMetaError) {
         Text(this.systemMetaError)
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_warning'))
+          .fontColor(this.getCurrentThemePalette().accentBackground)
       }
     }
     .width('100%')
@@ -408,15 +410,14 @@ export struct SettingsPage {
 
   private getMetaStatusTextColor(): ResourceColor {
     if (!this.systemMeta) {
-      return $r('sys.color.ohos_id_color_text_secondary');
+      return this.getCurrentThemePalette().textSecondary;
     }
     switch (this.systemMeta.status) {
       case 'deprecated':
-        return $r('sys.color.ohos_id_color_warning');
       case 'sunset':
-        return $r('app.color.color_danger');
+        return this.getCurrentThemePalette().accentBackground;
       default:
-        return $r('app.color.color_success');
+        return this.getCurrentThemePalette().textPrimary;
     }
   }
 
@@ -458,12 +459,12 @@ export struct SettingsPage {
     Row() {
       Text(label)
         .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .fontColor(this.getCurrentThemePalette().textSecondary)
         .layoutWeight(1)
 
       Text(value)
         .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .fontColor(this.getCurrentThemePalette().textPrimary)
         .textAlign(TextAlign.End)
     }
   }
@@ -474,11 +475,11 @@ export struct SettingsPage {
       Text('外观主题')
         .fontSize(DesignConstants.FONT.SIZE.XL)
         .fontWeight(FontWeight.Bold)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .fontColor(this.getThemeSheetPalette().textPrimary)
 
-      Text('现在可在当前默认、Tactile Minimalist 与 Zen Artistic 间实时切换')
+      Text('现在可在当前默认与 Soft Gallery 间实时切换')
         .fontSize(DesignConstants.FONT.SIZE.SM)
-        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+        .fontColor(this.getThemeSheetPalette().textSecondary)
         .textAlign(TextAlign.Center)
 
       Column({ space: DesignConstants.SPACING.SM }) {
@@ -524,7 +525,7 @@ export struct SettingsPage {
           Text(option.label)
             .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontWeight(FontWeight.Medium)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getThemeOptionPalette(option).textPrimary)
 
           if (this.isThemeOptionActive(option)) {
             Text('当前使用')
@@ -538,25 +539,51 @@ export struct SettingsPage {
 
         Text(option.description)
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getThemeOptionPalette(option).textSecondary)
       }
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
 
-      // 右侧主题预览块：展示该主题的主背景 + accent 边缘
+      // 右侧主题预览块：用缩略 profile mock 展示主题气质
       Column({ space: 4 }) {
-        Row() {}
-          .width(32)
-          .height(18)
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .backgroundColor(this.getThemeOptionPalette(option).surfaceBackground)
-          .border({ width: 1, color: this.getThemeOptionPalette(option).borderColor })
+        Stack({ alignContent: Alignment.Top }) {
+          Column({ space: 4 }) {
+            Blank()
+              .width(18)
+              .height(18)
+              .borderRadius(DesignConstants.RADIUS.FULL)
+              .backgroundColor(this.getThemeOptionPalette(option).surfaceSubtle)
+              .border({ width: 1, color: this.getThemeOptionPalette(option).borderColor })
 
-        Row() {}
-          .width(32)
-          .height(6)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .backgroundColor(this.getThemeOptionPalette(option).accentBackground)
+            Blank()
+              .width(34)
+              .height(8)
+              .borderRadius(DesignConstants.RADIUS.FULL)
+              .backgroundColor(this.getThemeOptionPalette(option).accentBackground)
+
+            Row({ space: 4 }) {
+              Blank()
+                .layoutWeight(1)
+                .height(18)
+                .borderRadius(DesignConstants.RADIUS.MD)
+                .backgroundColor(this.getThemeOptionPalette(option).surfaceSubtle)
+              Blank()
+                .layoutWeight(1)
+                .height(18)
+                .borderRadius(DesignConstants.RADIUS.MD)
+                .backgroundColor(this.getThemeOptionPalette(option).surfaceSubtle)
+            }
+            .width('100%')
+          }
+          .width('100%')
+          .padding(6)
+        }
+        .width(46)
+        .height(58)
+        .borderRadius(DesignConstants.RADIUS.XL)
+        .backgroundColor(this.getThemeOptionPalette(option).surfaceBackground)
+        .border({ width: 1, color: this.getThemeOptionPalette(option).borderColor })
+        .shadow(this.getThemeOptionPalette(option).surfaceShadow)
       }
     }
     .width('100%')
@@ -583,7 +610,7 @@ export struct SettingsPage {
         Text() {
           SymbolSpan($r(icon))
             .fontSize(18)
-            .fontColor([accentColor ? accentColor : $r('sys.color.ohos_id_color_emphasize')])
+            .fontColor([accentColor ? accentColor : this.getCurrentThemePalette().iconMuted])
         }
       }
       .width(38)
@@ -597,12 +624,12 @@ export struct SettingsPage {
       Column({ space: 4 }) {
         Text(title)
           .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
 
         if (subtitle) {
           Text(subtitle)
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
         }
       }
       .layoutWeight(1)
@@ -612,7 +639,7 @@ export struct SettingsPage {
         Text() {
           SymbolSpan($r(AppIcon.ARROW_RIGHT))
             .fontSize(15)
-            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+            .fontColor([this.getCurrentThemePalette().textSecondary])
         }
       }
       .width(28)

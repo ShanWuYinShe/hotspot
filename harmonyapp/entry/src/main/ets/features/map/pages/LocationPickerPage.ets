@@ -112,7 +112,7 @@ function TopBar(props: TopBarProps) {
       Text() {
         SymbolSpan($r(AppIcon.BACK))
           .fontSize(22)
-          .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+          .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).textPrimary])
       }
     }
     .width(44)
@@ -126,12 +126,12 @@ function TopBar(props: TopBarProps) {
       Text() {
         SymbolSpan($r(AppIcon.FILTER))
           .fontSize(16)
-          .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+          .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).textPrimary])
       }
       Text('筛选')
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontWeight(FontWeight.Medium)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
     }
     .height(40)
     .padding({
@@ -142,7 +142,7 @@ function TopBar(props: TopBarProps) {
       ? resolveLocationPickerPalette(props.resolvedThemeId).surfaceSubtle
       : resolveLocationPickerPalette(props.resolvedThemeId).surfaceBackground)
     .borderRadius(DesignConstants.RADIUS.FULL)
-    .shadow(DesignConstants.SHADOW.SMALL)
+    .shadow(resolveLocationPickerPalette(props.resolvedThemeId).controlShadow)
     .border({ width: 1, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
     .onClick(props.onToggleFilter)
   }
@@ -160,6 +160,7 @@ interface FilterMenuItemProps {
   label: string;
   accentColor: string;
   active: boolean;
+  resolvedThemeId?: string;
   onToggle: () => void;
 }
 
@@ -174,8 +175,8 @@ function FilterMenuItem(props: FilterMenuItemProps) {
       .fontSize(DesignConstants.FONT.SIZE.MD)
       .fontWeight(props.active ? FontWeight.Medium : FontWeight.Normal)
       .fontColor(props.active
-        ? $r('sys.color.ohos_id_color_text_primary')
-        : $r('sys.color.ohos_id_color_text_secondary'))
+        ? resolveLocationPickerPalette(props.resolvedThemeId).textPrimary
+        : resolveLocationPickerPalette(props.resolvedThemeId).textSecondary)
       .layoutWeight(1)
     Row()
       .width(12)
@@ -211,6 +212,7 @@ function FilterDropdownPanel(props: FilterPanelProps) {
       label: '用户',
       accentColor: MARKER_COLOR_USER,
       active: props.showUsers,
+      resolvedThemeId: props.resolvedThemeId,
       onToggle: props.onToggleUsers
     })
     FilterMenuItem({
@@ -218,6 +220,7 @@ function FilterDropdownPanel(props: FilterPanelProps) {
       label: '群组',
       accentColor: MARKER_COLOR_GROUP,
       active: props.showGroups,
+      resolvedThemeId: props.resolvedThemeId,
       onToggle: props.onToggleGroups
     })
     FilterMenuItem({
@@ -225,6 +228,7 @@ function FilterDropdownPanel(props: FilterPanelProps) {
       label: '动态',
       accentColor: MARKER_COLOR_MOMENT,
       active: props.showMoments,
+      resolvedThemeId: props.resolvedThemeId,
       onToggle: props.onToggleMoments
     })
   }
@@ -232,7 +236,7 @@ function FilterDropdownPanel(props: FilterPanelProps) {
   .padding({ top: 6, bottom: 6 })
   .backgroundColor(resolveLocationPickerPalette(props.resolvedThemeId).surfaceBackground)
   .borderRadius(DesignConstants.RADIUS.XXL)
-  .shadow(DesignConstants.SHADOW.MEDIUM)
+  .shadow(resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow)
   .border({ width: 1, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
   .onClick(() => {})
 }
@@ -250,7 +254,7 @@ function MapToast(props: MapToastProps) {
   } else {
     Text(props.message)
       .fontSize(DesignConstants.FONT.SIZE.SM)
-      .fontColor($r('sys.color.ohos_id_color_text_primary'))
+      .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
       .backgroundColor(resolveLocationPickerPalette(props.resolvedThemeId).surfaceBackground)
       .borderRadius(DesignConstants.RADIUS.MD)
       .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: 6, bottom: 6 })
@@ -283,6 +287,10 @@ struct SearchPanel {
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
+  private get props() {
+    return { resolvedThemeId: this.resolvedThemeId };
+  }
+
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
@@ -306,10 +314,10 @@ struct SearchPanel {
           .height(40)
           .backgroundColor(this.getPalette().surfaceSubtle)
           .borderRadius(DesignConstants.RADIUS.FULL)
-          .shadow(DesignConstants.SHADOW.INSET)
+          .shadow(resolveLocationPickerPalette(props.resolvedThemeId).controlShadow)
           .searchIcon({
             size: 18,
-            color: $r('sys.color.ohos_id_color_text_primary'),
+            color: resolveLocationPickerPalette(props.resolvedThemeId).textPrimary,
             src: '' // 使用默认搜索图标
           })
           .cancelButton({
@@ -332,14 +340,14 @@ struct SearchPanel {
           LoadingProgress()
             .width(18)
             .height(18)
-            .color($r('sys.color.ohos_id_color_emphasize'))
+            .color(resolveLocationPickerPalette(props.resolvedThemeId).accentBackground)
         }
 
         // 取消按钮
         Column() {
           Text('取消')
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
         }
         .height(40)
         .justifyContent(FlexAlign.Center)
@@ -359,10 +367,10 @@ struct SearchPanel {
               LoadingProgress()
                 .width(24)
                 .height(24)
-                .color($r('sys.color.ohos_id_color_emphasize'))
+                .color(resolveLocationPickerPalette(props.resolvedThemeId).accentBackground)
               Text('正在搜索...')
                 .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textSecondary)
                 .margin({ left: DesignConstants.SPACING.SM })
             }
             .width('100%')
@@ -378,7 +386,7 @@ struct SearchPanel {
                       Text() {
                         SymbolSpan($r(AppIcon.LOCATION))
                           .fontSize(18)
-                          .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+                          .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).accentBackground])
                       }
                     }
                     .width(32)
@@ -389,7 +397,7 @@ struct SearchPanel {
 
                     Text(item.locationName || '未知地点')
                       .fontSize(DesignConstants.FONT.SIZE.MD)
-                      .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                      .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
                       .layoutWeight(1)
                       .maxLines(2)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -404,10 +412,10 @@ struct SearchPanel {
                   .backgroundColor(this.getPalette().surfaceBackground)
                   .borderRadius(DesignConstants.RADIUS.XXL)
                   .shadow({
-                    radius: DesignConstants.SHADOW.MEDIUM.radius,
-                    color: DesignConstants.SHADOW.MEDIUM.color,
-                    offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
-                    offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
+                    radius: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.radius,
+                    color: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.color,
+                    offsetX: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetX,
+                    offsetY: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetY
                   })
                   .border({ width: 1, color: this.getPalette().borderColor })
                   .onClick(() => { this.onSelectResult(item); })
@@ -415,16 +423,16 @@ struct SearchPanel {
               }, (item: LocationInfo) => `search_${item.latitude}_${item.longitude}`)
             }
             .width('100%')
-            .divider({ strokeWidth: 0, color: $r('sys.color.ohos_id_color_list_separator') })
+            .divider({ strokeWidth: 0, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
           } else if (this.searchText.trim().length > 0) {
             // 无搜索结果
             Column() {
               Text('未找到该地点')
                 .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
               Text('请换个关键词试试')
                 .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textSecondary)
                 .margin({ top: DesignConstants.SPACING.XS })
             }
             .width('100%')
@@ -438,11 +446,11 @@ struct SearchPanel {
                 Text('最近使用')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
                   .fontWeight(FontWeight.Medium)
-                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                  .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
                 Blank()
                 Text('清空')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textSecondary)
                   .onClick(this.onClearHistory)
               }
               .width('100%')
@@ -455,7 +463,7 @@ struct SearchPanel {
                         Text() {
                           SymbolSpan($r(AppIcon.TIME))
                             .fontSize(18)
-                            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+                            .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).textSecondary])
                         }
                       }
                       .width(32)
@@ -466,7 +474,7 @@ struct SearchPanel {
 
                       Text(item.locationName || '未命名位置')
                         .fontSize(DesignConstants.FONT.SIZE.MD)
-                        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                        .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
                         .layoutWeight(1)
                         .maxLines(1)
                         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -481,10 +489,10 @@ struct SearchPanel {
                     .backgroundColor(this.getPalette().surfaceBackground)
                     .borderRadius(DesignConstants.RADIUS.XXL)
                     .shadow({
-                      radius: DesignConstants.SHADOW.MEDIUM.radius,
-                      color: DesignConstants.SHADOW.MEDIUM.color,
-                      offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
-                      offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
+                      radius: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.radius,
+                      color: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.color,
+                      offsetX: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetX,
+                      offsetY: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetY
                     })
                     .border({ width: 1, color: this.getPalette().borderColor })
                     .onClick(() => {
@@ -495,7 +503,7 @@ struct SearchPanel {
                 }, (item: AnchorHistoryItem) => `hist_s_${item.latitude}_${item.longitude}`)
               }
               .width('100%')
-              .divider({ strokeWidth: 0, color: $r('sys.color.ohos_id_color_list_separator') })
+              .divider({ strokeWidth: 0, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
             }
             .width('100%')
           } else {
@@ -503,7 +511,7 @@ struct SearchPanel {
             Column() {
               Text('暂无搜索历史')
                 .fontSize(DesignConstants.FONT.SIZE.MD)
-                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textSecondary)
             }
             .width('100%')
             .height(100)
@@ -527,7 +535,7 @@ struct SearchPanel {
       bottom: this.getBottomInset()
     })
     .backgroundColor(this.getPalette().surfaceBackground)
-    .border({ width: { top: 1 }, color: $r('app.color.divider') })
+    .border({ width: { top: 1 }, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
     .borderRadius({ topLeft: 24, topRight: 24 })
     .onClick(() => {})
   }
@@ -550,6 +558,10 @@ struct MainPanel {
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   private dragStartHeight: number = 0;
+
+  private get props() {
+    return { resolvedThemeId: this.resolvedThemeId };
+  }
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -609,11 +621,11 @@ struct MainPanel {
         Text() {
           SymbolSpan($r(AppIcon.SEARCH))
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
+            .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).textTertiary])
         }
         Text('搜索地点、地标或坐标')
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+          .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textTertiary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
@@ -623,7 +635,7 @@ struct MainPanel {
       .alignItems(VerticalAlign.Center)
       .backgroundColor(this.getPalette().surfaceSubtle)
       .borderRadius(DesignConstants.RADIUS.FULL)
-      .shadow(DesignConstants.SHADOW.INSET)
+      .shadow(resolveLocationPickerPalette(props.resolvedThemeId).controlShadow)
       .margin({ bottom: DesignConstants.SPACING.MD })
       .onClick(this.onSearchClick)
 
@@ -636,12 +648,12 @@ struct MainPanel {
               Text('最近使用')
                 .fontSize(DesignConstants.FONT.SIZE.SM)
                 .fontWeight(FontWeight.Medium)
-                .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textSecondary)
               Blank()
               if (this.anchorHistory.length > 0) {
                 Text('清空')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+                  .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textTertiary)
                   .padding({ left: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
                   .onClick(this.onClearHistory)
               }
@@ -658,7 +670,7 @@ struct MainPanel {
                         Text() {
                           SymbolSpan($r(AppIcon.TIME))
                             .fontSize(DesignConstants.FONT.SIZE.LG)
-                            .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
+                            .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).textTertiary])
                         }
                       }
                       .width(32)
@@ -669,7 +681,7 @@ struct MainPanel {
 
                       Text(item.locationName || '未命名位置')
                         .fontSize(DesignConstants.FONT.SIZE.MD)
-                        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                        .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
                         .layoutWeight(1)
                         .maxLines(1)
                         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -684,10 +696,10 @@ struct MainPanel {
                     .backgroundColor(this.getPalette().surfaceBackground)
                     .borderRadius(DesignConstants.RADIUS.XXL)
                     .shadow({
-                      radius: DesignConstants.SHADOW.MEDIUM.radius,
-                      color: DesignConstants.SHADOW.MEDIUM.color,
-                      offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
-                      offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
+                      radius: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.radius,
+                      color: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.color,
+                      offsetX: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetX,
+                      offsetY: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetY
                     })
                      .border({ width: 1, color: this.getPalette().borderColor })
                     .onClick(() => { this.onSelectHistory(item); })
@@ -695,17 +707,17 @@ struct MainPanel {
                 }, (item: AnchorHistoryItem) => `hist_m_${item.latitude}_${item.longitude}`)
               }
               .width('100%')
-              .divider({ strokeWidth: 0, color: $r('sys.color.ohos_id_color_list_separator') })
+              .divider({ strokeWidth: 0, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
             } else {
               Column() {
                 Text() {
                   SymbolSpan($r(AppIcon.TIME))
                     .fontSize(DesignConstants.FONT.SIZE.LG)
-                    .fontColor([$r('sys.color.ohos_id_color_text_tertiary')])
+                    .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).textTertiary])
                 }
                 Text('暂无最近使用的地点')
                   .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .fontColor($r('sys.color.ohos_id_color_text_tertiary'))
+                  .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textTertiary)
                   .margin({ top: DesignConstants.SPACING.XS })
               }
               .width('100%')
@@ -729,7 +741,7 @@ struct MainPanel {
         .fontColor(this.getPalette().accentText)
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .fontWeight(FontWeight.Medium)
-        .shadow(DesignConstants.SHADOW.SMALL)
+        .shadow(resolveLocationPickerPalette(props.resolvedThemeId).controlShadow)
         .border({ width: 1, color: this.getPalette().borderColor })
         .margin({ top: DesignConstants.SPACING.SM })
         .onClick(this.onConfirm)
@@ -743,7 +755,7 @@ struct MainPanel {
       bottom: this.getBottomInset()
     })
     .backgroundColor(this.getPalette().surfaceBackground)
-    .border({ width: { top: 1 }, color: $r('app.color.divider') })
+    .border({ width: { top: 1 }, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
     .borderRadius({ topLeft: 24, topRight: 24 })
     .onClick(() => {})
   }
@@ -757,6 +769,10 @@ export struct LocationPickerPage {
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+
+  private get props() {
+    return { resolvedThemeId: this.resolvedThemeId };
+  }
 
   @State mapRegion: MapRegion = {
     latitude: 35.154921,
@@ -1736,11 +1752,11 @@ export struct LocationPickerPage {
                 Text(`该位置有 ${this.overlappingPanelItems.length} 个内容`)
                   .fontSize(DesignConstants.FONT.SIZE.LG)
                   .fontWeight(FontWeight.Medium)
-                  .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                  .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
                   .layoutWeight(1)
                 Text('关闭')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textSecondary)
                   .onClick(() => { this.overlappingPanelItems = []; })
               }
               .width('100%')
@@ -1763,13 +1779,13 @@ export struct LocationPickerPage {
                         Text(item.entity ? item.entity.title : '')
                           .fontSize(DesignConstants.FONT.SIZE.MD)
                           .fontWeight(FontWeight.Medium)
-                          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                          .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
                           .maxLines(1)
                           .textOverflow({ overflow: TextOverflow.Ellipsis })
                         if (item.entity && item.entity.subtitle) {
                           Text(item.entity.subtitle)
                             .fontSize(DesignConstants.FONT.SIZE.SM)
-                            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                            .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textSecondary)
                             .maxLines(1)
                             .textOverflow({ overflow: TextOverflow.Ellipsis })
                         }
@@ -1799,19 +1815,14 @@ export struct LocationPickerPage {
                 }, (item: MapRenderItem) => item.render_id)
               }
               .width('100%')
-              .divider({ strokeWidth: 0.5, color: $r('app.color.divider'), startMargin: 60 })
+              .divider({ strokeWidth: 0.5, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor, startMargin: 60 })
               .constraintSize({ maxHeight: 320 })
               .padding({ bottom: this.safeAreaBottom + DesignConstants.SPACING.MD })
             }
             .width('100%')
             .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
             .borderRadius({ topLeft: 20, topRight: 20 })
-            .shadow({
-              radius: DesignConstants.SHADOW.LARGE.radius,
-              color: DesignConstants.SHADOW.LARGE.color,
-              offsetX: DesignConstants.SHADOW.LARGE.offsetX,
-              offsetY: DesignConstants.SHADOW.LARGE.offsetY
-            })
+            .shadow(this.getCurrentThemePalette().elevatedShadow)
           }
           .width('100%')
           .height('100%')
@@ -1838,10 +1849,10 @@ export struct LocationPickerPage {
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow({
-            radius: DesignConstants.SHADOW.MEDIUM.radius,
-            color: DesignConstants.SHADOW.MEDIUM.color,
-            offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
-            offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
+            radius: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.radius,
+            color: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.color,
+            offsetX: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetX,
+            offsetY: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetY
           })
           .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
           .onClick(() => { this.locateUser(); })
@@ -1858,10 +1869,10 @@ export struct LocationPickerPage {
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow({
-            radius: DesignConstants.SHADOW.MEDIUM.radius,
-            color: DesignConstants.SHADOW.MEDIUM.color,
-            offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
-            offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
+            radius: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.radius,
+            color: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.color,
+            offsetX: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetX,
+            offsetY: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetY
           })
           .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
           .onClick(() => { this.locateBrowseAnchor(); })
@@ -1870,7 +1881,7 @@ export struct LocationPickerPage {
             Text() {
               SymbolSpan($r(AppIcon.ADD))
                 .fontSize(DesignConstants.FONT.SIZE.XL)
-                .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+                .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).textPrimary])
             }
           }
           .width(48)
@@ -1879,10 +1890,10 @@ export struct LocationPickerPage {
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow({
-            radius: DesignConstants.SHADOW.MEDIUM.radius,
-            color: DesignConstants.SHADOW.MEDIUM.color,
-            offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
-            offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
+            radius: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.radius,
+            color: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.color,
+            offsetX: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetX,
+            offsetY: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetY
           })
           .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
           .onClick(() => { if (this.mapActions) this.mapActions.zoomIn(); })
@@ -1891,7 +1902,7 @@ export struct LocationPickerPage {
             Text() {
               SymbolSpan($r(AppIcon.REMOVE))
                 .fontSize(DesignConstants.FONT.SIZE.XL)
-                .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+                .fontColor([resolveLocationPickerPalette(props.resolvedThemeId).textPrimary])
             }
           }
           .width(48)
@@ -1900,10 +1911,10 @@ export struct LocationPickerPage {
            .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .borderRadius(DesignConstants.RADIUS.XXL)
           .shadow({
-            radius: DesignConstants.SHADOW.MEDIUM.radius,
-            color: DesignConstants.SHADOW.MEDIUM.color,
-            offsetX: DesignConstants.SHADOW.MEDIUM.offsetX,
-            offsetY: DesignConstants.SHADOW.MEDIUM.offsetY
+            radius: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.radius,
+            color: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.color,
+            offsetX: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetX,
+            offsetY: resolveLocationPickerPalette(props.resolvedThemeId).elevatedShadow.offsetY
           })
            .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
           .onClick(() => { if (this.mapActions) this.mapActions.zoomOut(); })

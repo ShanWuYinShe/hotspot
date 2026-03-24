@@ -23,7 +23,7 @@ export struct SurfaceIconButton {
     if (this.kind === 'primary') {
       return this.getPalette().accentBackground;
     }
-    return this.getPalette().surfaceSubtle;
+    return this.getPalette().buttonSecondaryBackground;
   }
 
   private getBorderColor(): ResourceColor | Color {
@@ -41,7 +41,7 @@ export struct SurfaceIconButton {
     if (this.kind === 'primary') {
       return this.getPalette().accentText;
     }
-    return $r('sys.color.ohos_id_color_text_primary');
+    return this.getPalette().buttonSecondaryText;
   }
 
   build() {
@@ -57,7 +57,7 @@ export struct SurfaceIconButton {
     .width(this.buttonSize)
     .height(this.buttonSize)
     .backgroundColor(this.getBackgroundColor())
-    .borderRadius(DesignConstants.RADIUS.XL)
+    .borderRadius(DesignConstants.RADIUS.FULL)
     .border({ width: 1, color: this.getBorderColor() })
     .shadow(this.getShadowColor())
     .enabled(!this.disabled)

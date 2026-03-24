@@ -30,14 +30,21 @@ export struct SystemAvatar {
   }
 
   private getBorderOptions(): BorderOptions | undefined {
-    if (!this.showBorder) {
+    if (!this.showBorder && !this.inset) {
       return undefined;
     }
     const borderOptions: BorderOptions = {
-      width: 2,
-      color: this.getPalette().pageBackground
+      width: this.inset ? 3 : 2,
+      color: this.getPalette().surfaceBackground
     };
     return borderOptions;
+  }
+
+  private getAvatarShadow(): ShadowOptions {
+    if (!AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId)) {
+      return { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 };
+    }
+    return this.avatarSize >= 80 ? this.getPalette().elevatedShadow : this.getPalette().controlShadow;
   }
 
   private getActualSrc(): string | Resource | undefined {
@@ -81,14 +88,14 @@ export struct SystemAvatar {
         Row()
           .width(this.avatarSize * 0.28)
           .height(this.avatarSize * 0.28)
-          .backgroundColor($r('app.color.status_online'))
+          .backgroundColor(this.getPalette().accentBackground)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .border(this.getBorderOptions())
           .margin({ bottom: -1, right: -1 })
       } else if (this.userType && UserTypeUtil.isTempUser(this.userType)) {
         Text('临时')
           .fontSize(this.avatarSize * 0.25)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getPalette().textSecondary)
           .backgroundColor(this.getPalette().surfaceSubtle)
           .borderRadius(DesignConstants.RADIUS.SM)
           .padding({ left: 2, right: 2 })
@@ -97,6 +104,7 @@ export struct SystemAvatar {
     }
     .width(this.avatarSize)
     .height(this.avatarSize)
+    .shadow(this.getAvatarShadow())
   }
 
   build() {
@@ -117,14 +125,14 @@ export struct SystemAvatar {
   }
 
   private generateAvatarColor(name: string): ResourceColor {
-    if (!name) return $r('sys.color.ohos_id_color_text_secondary');
+    if (!name) return this.getPalette().iconMuted;
 
     const colors: ResourceColor[] = [
       this.getPalette().accentBackground,
-      this.getPalette().accentBackground,
-      $r('app.color.color_success'),
-      $r('app.color.color_warning'),
-      $r('app.color.color_danger')
+      this.getPalette().surfaceSubtle,
+      this.getPalette().buttonSecondaryBackground,
+      this.getPalette().iconMuted,
+      this.getPalette().borderColor
     ];
 
     let hash = 0;

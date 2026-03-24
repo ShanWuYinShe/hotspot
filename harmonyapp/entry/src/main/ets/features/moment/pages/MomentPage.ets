@@ -190,7 +190,7 @@ export struct MomentPage {
         Text('附近瞬间')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Bold)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
 
         Button('发布')
@@ -199,7 +199,7 @@ export struct MomentPage {
           .fontColor(this.getCurrentThemePalette().accentText)
           .fontSize(DesignConstants.FONT.SIZE.MD)
           .height(32)
-          .shadow(DesignConstants.SHADOW.SMALL)
+          .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .onClick(async () => {
             const currentUser = this.stateManager.getCurrentUser();

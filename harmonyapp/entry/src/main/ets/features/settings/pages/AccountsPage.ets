@@ -167,7 +167,7 @@ export struct AccountsPage {
         IconButton({
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
-          iconColor: $r('sys.color.ohos_id_color_text_primary'),
+          iconColor: this.getCurrentThemePalette().textPrimary,
           bgColor: this.getSurfaceSubtle(),
           onButtonClick: () => {
             AppRouter.pop();
@@ -177,7 +177,7 @@ export struct AccountsPage {
         Text('账号管理')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
 
@@ -204,18 +204,18 @@ export struct AccountsPage {
           Text() {
             SymbolSpan($r(AppIcon.WARNING))
               .fontSize(48)
-              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+              .fontColor([this.getCurrentThemePalette().textSecondary])
           }
           Text(this.errorMessage)
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
             .textAlign(TextAlign.Center)
           Button('重试')
             .type(ButtonType.Capsule)
             .backgroundColor(this.getCurrentThemePalette().accentBackground)
             .fontColor(this.getCurrentThemePalette().accentText)
             .height(40)
-            .shadow(DesignConstants.SHADOW.SMALL)
+            .shadow(this.getCurrentThemePalette().controlShadow)
             .border({ width: 1, color: this.getSurfaceBorder() })
             .onClick(() => { this.load(); })
         }
@@ -230,14 +230,14 @@ export struct AccountsPage {
         Column({ space: 12 }) {
           Text('暂无已保存账号')
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
 
           Button('去登录/创建访客')
             .type(ButtonType.Capsule)
             .backgroundColor(this.getCurrentThemePalette().accentBackground)
             .fontColor(this.getCurrentThemePalette().accentText)
             .height(44)
-            .shadow(DesignConstants.SHADOW.SMALL)
+            .shadow(this.getCurrentThemePalette().controlShadow)
             .border({ width: 1, color: this.getSurfaceBorder() })
             .onClick(() => {
               AppRouter.push(PageNames.LOGIN);
@@ -258,7 +258,7 @@ export struct AccountsPage {
                   Text() {
                     SymbolSpan($r(AppIcon.PERSON))
                       .fontSize(18)
-                      .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+                      .fontColor([this.getCurrentThemePalette().accentBackground])
                   }
                 }
                 .width(40)
@@ -272,19 +272,19 @@ export struct AccountsPage {
                   Row({ space: 8 }) {
                     Text(this.getAccountDisplayName(acc))
                       .fontSize(DesignConstants.FONT.SIZE.LG)
-                      .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                      .fontColor(this.getCurrentThemePalette().textPrimary)
                     if (this.currentUserId === acc.user_id) {
                       Text('当前')
                         .fontSize(DesignConstants.FONT.SIZE.SM)
-                        .fontColor($r('app.color.chip_active_text'))
-                        .backgroundColor($r('sys.color.ohos_id_color_emphasize'))
+                        .fontColor(this.getCurrentThemePalette().accentText)
+                        .backgroundColor(this.getCurrentThemePalette().accentBackground)
                         .borderRadius(DesignConstants.RADIUS.XL)
                         .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: 2, bottom: 2 })
                     }
                   }
                   Text(`ID: ${acc.user_id}`)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
-                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                    .fontColor(this.getCurrentThemePalette().textSecondary)
                 }
                 .layoutWeight(1)
                 .alignItems(HorizontalAlign.Start)
@@ -296,7 +296,7 @@ export struct AccountsPage {
                         .height(32)
                         .backgroundColor(Color.Transparent)
                         .fontColor(this.getCurrentThemePalette().accentBackground)
-                        .shadow(DesignConstants.SHADOW.SMALL)
+                        .shadow(this.getCurrentThemePalette().controlShadow)
                         .border({ width: 1, color: this.getSurfaceBorder() })
                         .onClick(() => this.switchTo(acc))
 
@@ -304,9 +304,9 @@ export struct AccountsPage {
                     .type(ButtonType.Capsule)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .height(32)
-                        .backgroundColor($r('app.color.color_danger'))
-                        .fontColor($r('app.color.chip_active_text'))
-                        .shadow(DesignConstants.SHADOW.SMALL)
+                        .backgroundColor(this.getCurrentThemePalette().accentBackground)
+                        .fontColor(this.getCurrentThemePalette().accentText)
+                        .shadow(this.getCurrentThemePalette().controlShadow)
                         .border({ width: 1, color: this.getSurfaceBorder() })
                         .onClick(() => this.remove(acc))
                 }
@@ -316,7 +316,7 @@ export struct AccountsPage {
             }
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.XXL)
-            .shadow(DesignConstants.SHADOW.MEDIUM)
+            .shadow(this.getCurrentThemePalette().elevatedShadow)
             .border({ width: 1, color: this.getSurfaceBorder() })
             .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 14 })
           }, (acc: AuthData) => acc.user_id)

@@ -169,7 +169,7 @@ export struct SubscriptionsPage {
         IconButton({
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
-          iconColor: $r('sys.color.ohos_id_color_text_primary'),
+          iconColor: this.getCurrentThemePalette().textPrimary,
           bgColor: this.getSurfaceSubtle(),
           onButtonClick: () => {
             AppRouter.pop();
@@ -179,7 +179,7 @@ export struct SubscriptionsPage {
         Text('通知订阅')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
 
@@ -215,7 +215,7 @@ export struct SubscriptionsPage {
           ListItem() {
             Text('提示：你可以随时在这里调整通知偏好，变更会即时生效。')
               .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .fontColor(this.getCurrentThemePalette().textSecondary)
               .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM })
           }
         }
@@ -241,7 +241,7 @@ export struct SubscriptionsPage {
   private ListHeader(title: string) {
     Text(title)
       .fontSize(DesignConstants.FONT.SIZE.MD)
-      .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+      .fontColor(this.getCurrentThemePalette().textSecondary)
       .margin({ left: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.LG })
       .width('100%')
   }
@@ -253,7 +253,7 @@ export struct SubscriptionsPage {
         Text() {
           SymbolSpan($r(item.icon))
             .fontSize(18)
-            .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+            .fontColor([this.getCurrentThemePalette().accentBackground])
         }
       }
       .width(40)
@@ -266,12 +266,12 @@ export struct SubscriptionsPage {
       Column({ space: 4 }) {
         Text(item.title)
           .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         Text(item.description)
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
@@ -279,7 +279,7 @@ export struct SubscriptionsPage {
       .alignItems(HorizontalAlign.Start)
 
       Toggle({ type: ToggleType.Switch, isOn: this.getValue(item.key) })
-        .selectedColor($r('sys.color.ohos_id_color_emphasize'))
+        .selectedColor(this.getCurrentThemePalette().accentBackground)
         .onChange((isOn: boolean) => {
           this.update(item.key, isOn);
         })
@@ -288,7 +288,7 @@ export struct SubscriptionsPage {
     .width('100%')
     .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
     .borderRadius(DesignConstants.RADIUS.XXL)
-    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .shadow(this.getCurrentThemePalette().elevatedShadow)
     .backgroundColor(this.getSurfaceBackground())
     .border({ width: 1, color: this.getSurfaceBorder() })
     .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 12 })

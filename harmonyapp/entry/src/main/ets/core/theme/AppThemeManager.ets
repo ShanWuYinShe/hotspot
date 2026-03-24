@@ -27,6 +27,15 @@ const DEFAULT_CLEAN_LIGHT = {
   chatBackground: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.chatBackground,
   systemSurfaceBaseColor: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.systemSurfaceBaseColor,
   preferDarkContent: true,
+  isDarkTheme: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.isDarkTheme,
+  textPrimary: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.textPrimary,
+  textSecondary: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.textSecondary,
+  textTertiary: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.textTertiary,
+  iconMuted: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.iconMuted,
+  buttonSecondaryBackground: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.buttonSecondaryBackground,
+  buttonSecondaryText: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.buttonSecondaryText,
+  tabBarBackground: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.tabBarBackground,
+  tabBarInactive: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.tabBarInactive,
   surfaceShadow: ThemeConstants.SHADOWS.DEFAULT_CLEAN_LIGHT.surface,
   elevatedShadow: ThemeConstants.SHADOWS.DEFAULT_CLEAN_LIGHT.elevated,
   accentShadow: ThemeConstants.SHADOWS.DEFAULT_CLEAN_LIGHT.accent,
@@ -49,6 +58,15 @@ const DEFAULT_CLEAN_DARK = {
   chatBackground: ThemeConstants.DEFAULT_CLEAN_DARK_COLORS.chatBackground,
   systemSurfaceBaseColor: ThemeConstants.DEFAULT_CLEAN_DARK_COLORS.systemSurfaceBaseColor,
   preferDarkContent: false,
+  isDarkTheme: ThemeConstants.DEFAULT_CLEAN_DARK_COLORS.isDarkTheme,
+  textPrimary: ThemeConstants.DEFAULT_CLEAN_DARK_COLORS.textPrimary,
+  textSecondary: ThemeConstants.DEFAULT_CLEAN_DARK_COLORS.textSecondary,
+  textTertiary: ThemeConstants.DEFAULT_CLEAN_DARK_COLORS.textTertiary,
+  iconMuted: ThemeConstants.DEFAULT_CLEAN_DARK_COLORS.iconMuted,
+  buttonSecondaryBackground: ThemeConstants.DEFAULT_CLEAN_DARK_COLORS.buttonSecondaryBackground,
+  buttonSecondaryText: ThemeConstants.DEFAULT_CLEAN_DARK_COLORS.buttonSecondaryText,
+  tabBarBackground: ThemeConstants.DEFAULT_CLEAN_DARK_COLORS.tabBarBackground,
+  tabBarInactive: ThemeConstants.DEFAULT_CLEAN_DARK_COLORS.tabBarInactive,
   surfaceShadow: ThemeConstants.SHADOWS.DEFAULT_CLEAN_DARK.surface,
   elevatedShadow: ThemeConstants.SHADOWS.DEFAULT_CLEAN_DARK.elevated,
   accentShadow: ThemeConstants.SHADOWS.DEFAULT_CLEAN_DARK.accent,
@@ -57,99 +75,72 @@ const DEFAULT_CLEAN_DARK = {
   overlayStrong: ThemeConstants.DEFAULT_CLEAN_DARK_COLORS.overlayStrong
 } as AppThemePalette;
 
-const TACTILE_MINIMAL_LIGHT = {
-  id: 'tactile_minimal_light' as ResolvedThemeId,
-  label: 'Tactile Minimalist',
-  description: '奶白、柔和、带轻触感',
-  pageBackground: ThemeConstants.TACTILE_MINIMAL_LIGHT_COLORS.pageBackground,
-  surfaceBackground: ThemeConstants.TACTILE_MINIMAL_LIGHT_COLORS.surfaceBackground,
-  surfaceSubtle: ThemeConstants.TACTILE_MINIMAL_LIGHT_COLORS.surfaceSubtle,
-  borderColor: ThemeConstants.TACTILE_MINIMAL_LIGHT_COLORS.borderColor,
-  sheetBackground: ThemeConstants.TACTILE_MINIMAL_LIGHT_COLORS.sheetBackground,
-  accentBackground: ThemeConstants.TACTILE_MINIMAL_LIGHT_COLORS.accentBackground,
-  accentText: ThemeConstants.TACTILE_MINIMAL_LIGHT_COLORS.accentText,
-  chatBackground: ThemeConstants.TACTILE_MINIMAL_LIGHT_COLORS.chatBackground,
-  systemSurfaceBaseColor: ThemeConstants.TACTILE_MINIMAL_LIGHT_COLORS.systemSurfaceBaseColor,
+const SOFT_GALLERY_LIGHT = {
+  id: 'soft_gallery_light' as ResolvedThemeId,
+  label: 'Soft Gallery',
+  description: '奶白、柔光、静谧质感',
+  pageBackground: ThemeConstants.SOFT_GALLERY_LIGHT_COLORS.pageBackground,
+  surfaceBackground: ThemeConstants.SOFT_GALLERY_LIGHT_COLORS.surfaceBackground,
+  surfaceSubtle: ThemeConstants.SOFT_GALLERY_LIGHT_COLORS.surfaceSubtle,
+  borderColor: ThemeConstants.SOFT_GALLERY_LIGHT_COLORS.borderColor,
+  sheetBackground: ThemeConstants.SOFT_GALLERY_LIGHT_COLORS.sheetBackground,
+  accentBackground: ThemeConstants.SOFT_GALLERY_LIGHT_COLORS.accentBackground,
+  accentText: ThemeConstants.SOFT_GALLERY_LIGHT_COLORS.accentText,
+  chatBackground: ThemeConstants.SOFT_GALLERY_LIGHT_COLORS.chatBackground,
+  systemSurfaceBaseColor: ThemeConstants.SOFT_GALLERY_LIGHT_COLORS.systemSurfaceBaseColor,
   preferDarkContent: true,
-  surfaceShadow: ThemeConstants.SHADOWS.TACTILE_MINIMAL_LIGHT.surface,
-  elevatedShadow: ThemeConstants.SHADOWS.TACTILE_MINIMAL_LIGHT.elevated,
-  accentShadow: ThemeConstants.SHADOWS.TACTILE_MINIMAL_LIGHT.accent,
-  controlShadow: ThemeConstants.SHADOWS.TACTILE_MINIMAL_LIGHT.control,
-  tabBarShadow: ThemeConstants.SHADOWS.TACTILE_MINIMAL_LIGHT.tabBar,
-  overlayStrong: ThemeConstants.TACTILE_MINIMAL_LIGHT_COLORS.overlayStrong
+  isDarkTheme: ThemeConstants.SOFT_GALLERY_LIGHT_COLORS.isDarkTheme,
+  textPrimary: ThemeConstants.SOFT_GALLERY_LIGHT_COLORS.textPrimary,
+  textSecondary: ThemeConstants.SOFT_GALLERY_LIGHT_COLORS.textSecondary,
+  textTertiary: ThemeConstants.SOFT_GALLERY_LIGHT_COLORS.textTertiary,
+  iconMuted: ThemeConstants.SOFT_GALLERY_LIGHT_COLORS.iconMuted,
+  buttonSecondaryBackground: ThemeConstants.SOFT_GALLERY_LIGHT_COLORS.buttonSecondaryBackground,
+  buttonSecondaryText: ThemeConstants.SOFT_GALLERY_LIGHT_COLORS.buttonSecondaryText,
+  tabBarBackground: ThemeConstants.SOFT_GALLERY_LIGHT_COLORS.tabBarBackground,
+  tabBarInactive: ThemeConstants.SOFT_GALLERY_LIGHT_COLORS.tabBarInactive,
+  surfaceShadow: ThemeConstants.SHADOWS.SOFT_GALLERY_LIGHT.surface,
+  elevatedShadow: ThemeConstants.SHADOWS.SOFT_GALLERY_LIGHT.elevated,
+  accentShadow: ThemeConstants.SHADOWS.SOFT_GALLERY_LIGHT.accent,
+  controlShadow: ThemeConstants.SHADOWS.SOFT_GALLERY_LIGHT.control,
+  tabBarShadow: ThemeConstants.SHADOWS.SOFT_GALLERY_LIGHT.tabBar,
+  overlayStrong: ThemeConstants.SOFT_GALLERY_LIGHT_COLORS.overlayStrong
 } as AppThemePalette;
 
-const TACTILE_MINIMAL_DARK = {
-  id: 'tactile_minimal_dark' as ResolvedThemeId,
-  label: 'Tactile Minimalist',
-  description: '深海蓝、暖金、柔和泛光',
-  pageBackground: ThemeConstants.TACTILE_MINIMAL_DARK_COLORS.pageBackground,
-  surfaceBackground: ThemeConstants.TACTILE_MINIMAL_DARK_COLORS.surfaceBackground,
-  surfaceSubtle: ThemeConstants.TACTILE_MINIMAL_DARK_COLORS.surfaceSubtle,
-  borderColor: ThemeConstants.TACTILE_MINIMAL_DARK_COLORS.borderColor,
-  sheetBackground: ThemeConstants.TACTILE_MINIMAL_DARK_COLORS.sheetBackground,
-  accentBackground: ThemeConstants.TACTILE_MINIMAL_DARK_COLORS.accentBackground,
-  accentText: ThemeConstants.TACTILE_MINIMAL_DARK_COLORS.accentText,
-  chatBackground: ThemeConstants.TACTILE_MINIMAL_DARK_COLORS.chatBackground,
-  systemSurfaceBaseColor: ThemeConstants.TACTILE_MINIMAL_DARK_COLORS.systemSurfaceBaseColor,
+const SOFT_GALLERY_DARK = {
+  id: 'soft_gallery_dark' as ResolvedThemeId,
+  label: 'Soft Gallery',
+  description: '深蓝、冷光、暖金点缀',
+  pageBackground: ThemeConstants.SOFT_GALLERY_DARK_COLORS.pageBackground,
+  surfaceBackground: ThemeConstants.SOFT_GALLERY_DARK_COLORS.surfaceBackground,
+  surfaceSubtle: ThemeConstants.SOFT_GALLERY_DARK_COLORS.surfaceSubtle,
+  borderColor: ThemeConstants.SOFT_GALLERY_DARK_COLORS.borderColor,
+  sheetBackground: ThemeConstants.SOFT_GALLERY_DARK_COLORS.sheetBackground,
+  accentBackground: ThemeConstants.SOFT_GALLERY_DARK_COLORS.accentBackground,
+  accentText: ThemeConstants.SOFT_GALLERY_DARK_COLORS.accentText,
+  chatBackground: ThemeConstants.SOFT_GALLERY_DARK_COLORS.chatBackground,
+  systemSurfaceBaseColor: ThemeConstants.SOFT_GALLERY_DARK_COLORS.systemSurfaceBaseColor,
   preferDarkContent: false,
-  surfaceShadow: ThemeConstants.SHADOWS.TACTILE_MINIMAL_DARK.surface,
-  elevatedShadow: ThemeConstants.SHADOWS.TACTILE_MINIMAL_DARK.elevated,
-  accentShadow: ThemeConstants.SHADOWS.TACTILE_MINIMAL_DARK.accent,
-  controlShadow: ThemeConstants.SHADOWS.TACTILE_MINIMAL_DARK.control,
-  tabBarShadow: ThemeConstants.SHADOWS.TACTILE_MINIMAL_DARK.tabBar,
-  overlayStrong: ThemeConstants.TACTILE_MINIMAL_DARK_COLORS.overlayStrong
-} as AppThemePalette;
-
-const ZEN_ARTISTIC_LIGHT = {
-  id: 'zen_artistic_light' as ResolvedThemeId,
-  label: 'Zen Artistic',
-  description: '雾蓝、安静、艺术感',
-  pageBackground: ThemeConstants.ZEN_ARTISTIC_LIGHT_COLORS.pageBackground,
-  surfaceBackground: ThemeConstants.ZEN_ARTISTIC_LIGHT_COLORS.surfaceBackground,
-  surfaceSubtle: ThemeConstants.ZEN_ARTISTIC_LIGHT_COLORS.surfaceSubtle,
-  borderColor: ThemeConstants.ZEN_ARTISTIC_LIGHT_COLORS.borderColor,
-  sheetBackground: ThemeConstants.ZEN_ARTISTIC_LIGHT_COLORS.sheetBackground,
-  accentBackground: ThemeConstants.ZEN_ARTISTIC_LIGHT_COLORS.accentBackground,
-  accentText: ThemeConstants.ZEN_ARTISTIC_LIGHT_COLORS.accentText,
-  chatBackground: ThemeConstants.ZEN_ARTISTIC_LIGHT_COLORS.chatBackground,
-  systemSurfaceBaseColor: ThemeConstants.ZEN_ARTISTIC_LIGHT_COLORS.systemSurfaceBaseColor,
-  preferDarkContent: true,
-  surfaceShadow: ThemeConstants.SHADOWS.ZEN_ARTISTIC_LIGHT.surface,
-  elevatedShadow: ThemeConstants.SHADOWS.ZEN_ARTISTIC_LIGHT.elevated,
-  accentShadow: ThemeConstants.SHADOWS.ZEN_ARTISTIC_LIGHT.accent,
-  controlShadow: ThemeConstants.SHADOWS.ZEN_ARTISTIC_LIGHT.control,
-  tabBarShadow: ThemeConstants.SHADOWS.ZEN_ARTISTIC_LIGHT.tabBar,
-  overlayStrong: ThemeConstants.ZEN_ARTISTIC_LIGHT_COLORS.overlayStrong
-} as AppThemePalette;
-
-const ZEN_ARTISTIC_DARK = {
-  id: 'zen_artistic_dark' as ResolvedThemeId,
-  label: 'Zen Artistic',
-  description: '深蓝、静谧、艺术感',
-  pageBackground: ThemeConstants.ZEN_ARTISTIC_DARK_COLORS.pageBackground,
-  surfaceBackground: ThemeConstants.ZEN_ARTISTIC_DARK_COLORS.surfaceBackground,
-  surfaceSubtle: ThemeConstants.ZEN_ARTISTIC_DARK_COLORS.surfaceSubtle,
-  borderColor: ThemeConstants.ZEN_ARTISTIC_DARK_COLORS.borderColor,
-  sheetBackground: ThemeConstants.ZEN_ARTISTIC_DARK_COLORS.sheetBackground,
-  accentBackground: ThemeConstants.ZEN_ARTISTIC_DARK_COLORS.accentBackground,
-  accentText: ThemeConstants.ZEN_ARTISTIC_DARK_COLORS.accentText,
-  chatBackground: ThemeConstants.ZEN_ARTISTIC_DARK_COLORS.chatBackground,
-  systemSurfaceBaseColor: ThemeConstants.ZEN_ARTISTIC_DARK_COLORS.systemSurfaceBaseColor,
-  preferDarkContent: false,
-  surfaceShadow: ThemeConstants.SHADOWS.ZEN_ARTISTIC_DARK.surface,
-  elevatedShadow: ThemeConstants.SHADOWS.ZEN_ARTISTIC_DARK.elevated,
-  accentShadow: ThemeConstants.SHADOWS.ZEN_ARTISTIC_DARK.accent,
-  controlShadow: ThemeConstants.SHADOWS.ZEN_ARTISTIC_DARK.control,
-  tabBarShadow: ThemeConstants.SHADOWS.ZEN_ARTISTIC_DARK.tabBar,
-  overlayStrong: ThemeConstants.ZEN_ARTISTIC_DARK_COLORS.overlayStrong
+  isDarkTheme: ThemeConstants.SOFT_GALLERY_DARK_COLORS.isDarkTheme,
+  textPrimary: ThemeConstants.SOFT_GALLERY_DARK_COLORS.textPrimary,
+  textSecondary: ThemeConstants.SOFT_GALLERY_DARK_COLORS.textSecondary,
+  textTertiary: ThemeConstants.SOFT_GALLERY_DARK_COLORS.textTertiary,
+  iconMuted: ThemeConstants.SOFT_GALLERY_DARK_COLORS.iconMuted,
+  buttonSecondaryBackground: ThemeConstants.SOFT_GALLERY_DARK_COLORS.buttonSecondaryBackground,
+  buttonSecondaryText: ThemeConstants.SOFT_GALLERY_DARK_COLORS.buttonSecondaryText,
+  tabBarBackground: ThemeConstants.SOFT_GALLERY_DARK_COLORS.tabBarBackground,
+  tabBarInactive: ThemeConstants.SOFT_GALLERY_DARK_COLORS.tabBarInactive,
+  surfaceShadow: ThemeConstants.SHADOWS.SOFT_GALLERY_DARK.surface,
+  elevatedShadow: ThemeConstants.SHADOWS.SOFT_GALLERY_DARK.elevated,
+  accentShadow: ThemeConstants.SHADOWS.SOFT_GALLERY_DARK.accent,
+  controlShadow: ThemeConstants.SHADOWS.SOFT_GALLERY_DARK.control,
+  tabBarShadow: ThemeConstants.SHADOWS.SOFT_GALLERY_DARK.tabBar,
+  overlayStrong: ThemeConstants.SOFT_GALLERY_DARK_COLORS.overlayStrong
 } as AppThemePalette;
 
 const THEME_OPTIONS: ThemeOptionItem[] = [
   { mode: 'follow_system', label: '跟随系统', description: '自动切换深浅主题' } as ThemeOptionItem,
   { mode: 'default_clean', label: '当前默认', description: '清爽、干净、通用' } as ThemeOptionItem,
-  { mode: 'tactile_minimal', label: 'Tactile Minimalist', description: '奶白、柔和、带轻触感' } as ThemeOptionItem,
-  { mode: 'zen_artistic', label: 'Zen Artistic', description: '雾蓝、安静、艺术感' } as ThemeOptionItem
+  { mode: 'soft_gallery', label: 'Soft Gallery', description: '柔光、奶油感、软拟物' } as ThemeOptionItem
 ];
 
 export class AppThemeManager {
@@ -197,14 +188,10 @@ export class AppThemeManager {
     switch (AppThemeManager.normalizeResolvedThemeId(resolvedThemeId)) {
       case 'default_clean_dark':
         return DEFAULT_CLEAN_DARK;
-      case 'tactile_minimal_light':
-        return TACTILE_MINIMAL_LIGHT;
-      case 'tactile_minimal_dark':
-        return TACTILE_MINIMAL_DARK;
-      case 'zen_artistic_light':
-        return ZEN_ARTISTIC_LIGHT;
-      case 'zen_artistic_dark':
-        return ZEN_ARTISTIC_DARK;
+      case 'soft_gallery_light':
+        return SOFT_GALLERY_LIGHT;
+      case 'soft_gallery_dark':
+        return SOFT_GALLERY_DARK;
       case 'default_clean_light':
       default:
         return DEFAULT_CLEAN_LIGHT;
@@ -236,15 +223,16 @@ export class AppThemeManager {
 
   static getSoftStatusBackground(status: 'neutral' | 'success' | 'warning' | 'danger' | 'info'): string {
     const palette = AppThemeManager.getSafeCurrentPalette();
+    const isDark = palette.isDarkTheme;
     switch (status) {
       case 'success':
-        return palette.id === 'default_clean_dark' ? '#183428' : '#E7F6EC';
+        return isDark ? '#1B352A' : '#EAF6ED';
       case 'warning':
-        return palette.id === 'default_clean_dark' ? '#3B2B16' : '#FFF4DF';
+        return isDark ? '#403019' : '#FFF4DF';
       case 'danger':
-        return palette.id === 'default_clean_dark' ? '#3A1F24' : '#FDEAEC';
+        return isDark ? '#40242A' : '#FDEAEC';
       case 'info':
-        return palette.id === 'default_clean_dark' ? '#1D2B35' : '#E8F1FB';
+        return isDark ? '#223241' : '#EAF0F7';
       case 'neutral':
       default:
         return palette.surfaceSubtle;
@@ -257,6 +245,11 @@ export class AppThemeManager {
 
   static getBrandAccentText(): string {
     return AppThemeManager.getSafeCurrentPalette().accentText;
+  }
+
+  static isSoftGalleryTheme(themeId: string): boolean {
+    const normalizedThemeId = AppThemeManager.normalizeResolvedThemeId(themeId);
+    return normalizedThemeId === 'soft_gallery_light' || normalizedThemeId === 'soft_gallery_dark';
   }
 
   private static refreshResolvedTheme(): void {
@@ -273,10 +266,8 @@ export class AppThemeManager {
       case 'follow_system':
       case 'default_clean':
         return isDarkMode ? 'default_clean_dark' : 'default_clean_light';
-      case 'tactile_minimal':
-        return isDarkMode ? 'tactile_minimal_dark' : 'tactile_minimal_light';
-      case 'zen_artistic':
-        return isDarkMode ? 'zen_artistic_dark' : 'zen_artistic_light';
+      case 'soft_gallery':
+        return isDarkMode ? 'soft_gallery_dark' : 'soft_gallery_light';
       default:
         return DEFAULT_RESOLVED_THEME_ID;
     }
@@ -285,25 +276,28 @@ export class AppThemeManager {
   private static normalizeThemeMode(themeMode: string): ThemeMode {
     switch (themeMode) {
       case 'default_clean':
-      case 'tactile_minimal':
-      case 'zen_artistic':
+      case 'soft_gallery':
       case 'follow_system':
         return themeMode;
       default:
-        return DEFAULT_THEME_MODE;
+        return themeMode.length > 0 ? 'soft_gallery' : DEFAULT_THEME_MODE;
     }
   }
 
   private static normalizeResolvedThemeId(resolvedThemeId: string): ResolvedThemeId {
     switch (resolvedThemeId) {
       case 'default_clean_dark':
-      case 'tactile_minimal_light':
-      case 'tactile_minimal_dark':
-      case 'zen_artistic_light':
-      case 'zen_artistic_dark':
+      case 'soft_gallery_light':
+      case 'soft_gallery_dark':
       case 'default_clean_light':
         return resolvedThemeId;
       default:
+        if (resolvedThemeId.includes('_dark')) {
+          return 'soft_gallery_dark';
+        }
+        if (resolvedThemeId.includes('_light')) {
+          return 'soft_gallery_light';
+        }
         return DEFAULT_RESOLVED_THEME_ID;
     }
   }

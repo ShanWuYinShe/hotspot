@@ -472,7 +472,7 @@ export struct MessagePage {
         Text('消息')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Bold)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
           .padding({ left: DesignConstants.SPACING.LG })
 
@@ -482,7 +482,7 @@ export struct MessagePage {
             Text() {
               SymbolSpan($r(AppIcon.SEARCH))
                 .fontSize(22)
-                .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+                .fontColor([this.getCurrentThemePalette().textPrimary])
             }
           }
           .width(40)
@@ -491,7 +491,7 @@ export struct MessagePage {
           .alignItems(VerticalAlign.Center)
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.MD)
-          .shadow(DesignConstants.SHADOW.SMALL)
+          .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .onClick(() => {
             AppRouter.push(PageNames.SEARCH);
@@ -502,7 +502,7 @@ export struct MessagePage {
             Text() {
               SymbolSpan($r(AppIcon.ADD))
                 .fontSize(22)
-                .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+                .fontColor([this.getCurrentThemePalette().textPrimary])
             }
           }
           .width(40)
@@ -511,7 +511,7 @@ export struct MessagePage {
           .alignItems(VerticalAlign.Center)
           .backgroundColor(this.getSurfaceBackground())
           .borderRadius(DesignConstants.RADIUS.MD)
-          .shadow(DesignConstants.SHADOW.SMALL)
+          .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .bindMenu([
             {
@@ -636,14 +636,14 @@ export struct MessagePage {
           Button({ type: ButtonType.Normal, stateEffect: true }) {
             Column() {
               Text(this.isChatDeleting(item) ? '处理中...' : '删除')
-            .fontColor($r('app.color.chip_active_text'))
+            .fontColor(this.getCurrentThemePalette().accentText)
             .fontSize(DesignConstants.FONT.SIZE.LG)
         }
         .width('100%')
         .height('100%')
         .justifyContent(FlexAlign.Center)
       }
-      .backgroundColor($r('app.color.color_danger'))
+      .backgroundColor(this.getCurrentThemePalette().accentBackground)
       .width(80)
       .height('100%')
       .borderRadius(DesignConstants.RADIUS.MD)
@@ -663,7 +663,7 @@ export struct MessagePage {
           count: item.unreadCount,
           maxCount: 99,
           position: BadgePosition.RightTop,
-          style: { badgeSize: 16, badgeColor: $r('app.color.color_danger'), fontSize: 10 }
+          style: { badgeSize: 16, badgeColor: this.getCurrentThemePalette().accentBackground, fontSize: 10 }
         }) {
           SystemAvatar({
             avatarUrl: item.avatarUrl,
@@ -680,20 +680,20 @@ export struct MessagePage {
             Text(item.name)
               .fontSize(DesignConstants.FONT.SIZE.LG)
               .fontWeight(FontWeight.Medium)
-              .fontColor($r('sys.color.ohos_id_color_text_primary'))
+              .fontColor(this.getCurrentThemePalette().textPrimary)
               .layoutWeight(1)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
 
             Text(this.formatTime(item.lastTime))
               .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .fontColor(this.getCurrentThemePalette().textSecondary)
           }
           .width('100%')
 
           Text(item.lastMessage)
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .width('100%')
@@ -702,14 +702,14 @@ export struct MessagePage {
       }
       .width('100%')
     }
-    .constraintSize({ minHeight: 72 })
-    .padding(18)
+    .constraintSize({ minHeight: 84 })
+    .padding(22)
     .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: 8, bottom: 8 })
     .backgroundColor(this.pressedChatKey === this.getChatKey(item)
       ? this.getSurfaceSubtle()
       : this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.XXL)
-    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .borderRadius(DesignConstants.RADIUS.XXL + 4)
+    .shadow(this.getCurrentThemePalette().elevatedShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
     .opacity(this.isChatDeleting(item) ? 0.7 : 1)
     .onTouch((event: TouchEvent) => {

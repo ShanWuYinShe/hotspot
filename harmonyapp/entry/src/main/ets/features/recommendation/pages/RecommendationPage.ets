@@ -125,14 +125,14 @@ export struct RecommendationPage {
         Text('推荐')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Bold)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
 
         Row() {
           Text() {
             SymbolSpan($r(AppIcon.SEARCH))
               .fontSize(DesignConstants.FONT.SIZE.XL)
-              .fontColor([$r('sys.color.ohos_id_color_text_primary')])
+              .fontColor([this.getCurrentThemePalette().textPrimary])
           }
         }
         .width(36)
@@ -168,18 +168,18 @@ export struct RecommendationPage {
           Text() {
             SymbolSpan($r(AppIcon.WARNING))
               .fontSize(48)
-              .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+              .fontColor([this.getCurrentThemePalette().textSecondary])
           }
           Text(this.errorMessage)
             .fontSize(DesignConstants.FONT.SIZE.LG)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
             .textAlign(TextAlign.Center)
           Button('重试')
             .type(ButtonType.Capsule)
             .backgroundColor(this.getCurrentThemePalette().accentBackground)
             .fontColor(this.getCurrentThemePalette().accentText)
             .height(40)
-            .shadow(DesignConstants.SHADOW.SMALL)
+            .shadow(this.getCurrentThemePalette().controlShadow)
             .border({ width: 1, color: this.getSurfaceBorder() })
             .onClick(() => { this.loadData(); })
         }
@@ -213,7 +213,7 @@ export struct RecommendationPage {
                 } else {
                   Text('暂无热门话题')
                     .fontSize(DesignConstants.FONT.SIZE.MD)
-                    .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                    .fontColor(this.getCurrentThemePalette().textSecondary)
                     .padding(DesignConstants.SPACING.SM)
                 }
               }
@@ -222,7 +222,7 @@ export struct RecommendationPage {
           }
           .width('100%')
           .borderRadius(DesignConstants.RADIUS.XXL)
-          .shadow(DesignConstants.SHADOW.MEDIUM)
+          .shadow(this.getCurrentThemePalette().elevatedShadow)
           .backgroundColor(this.getSurfaceBackground())
           .border({ width: 1, color: this.getSurfaceBorder() })
           .margin({ bottom: 12 })
@@ -253,10 +253,10 @@ export struct RecommendationPage {
                       Text(user.user?.nickname ?? '')
                         .fontSize(DesignConstants.FONT.SIZE.LG)
                         .fontWeight(FontWeight.Medium)
-                        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+                        .fontColor(this.getCurrentThemePalette().textPrimary)
                       Text('可能会感兴趣')
                         .fontSize(DesignConstants.FONT.SIZE.SM)
-                        .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                        .fontColor(this.getCurrentThemePalette().textSecondary)
                     }
                     .alignItems(HorizontalAlign.Start)
                     .layoutWeight(1)
@@ -269,11 +269,11 @@ export struct RecommendationPage {
                   Button(this.isUserFollowing(user) ? '已关注' : '关注')
                     .type(ButtonType.Capsule)
                     .backgroundColor(this.isUserFollowing(user) ? this.getSurfaceSubtle() : this.getCurrentThemePalette().accentBackground)
-                    .fontColor(this.isUserFollowing(user) ? $r('sys.color.ohos_id_color_text_primary') : this.getCurrentThemePalette().accentText)
+                    .fontColor(this.isUserFollowing(user) ? this.getCurrentThemePalette().textPrimary : this.getCurrentThemePalette().accentText)
                     .fontSize(DesignConstants.FONT.SIZE.SM)
                     .fontWeight(FontWeight.Medium)
                     .height(34)
-                    .shadow(DesignConstants.SHADOW.SMALL)
+                    .shadow(this.getCurrentThemePalette().controlShadow)
                     .border({ width: 1, color: this.getSurfaceBorder() })
                     .onClick(async () => {
                       const userId = user.user?.user_id ?? '';
@@ -295,7 +295,7 @@ export struct RecommendationPage {
                   bottom: DesignConstants.SPACING.MD
                 })
                 .borderRadius(DesignConstants.RADIUS.XXL)
-                .shadow(DesignConstants.SHADOW.MEDIUM)
+                .shadow(this.getCurrentThemePalette().elevatedShadow)
                 .backgroundColor(this.getSurfaceBackground())
                 .border({ width: 1, color: this.getSurfaceBorder() })
                 .margin({ bottom: 12 })
@@ -353,7 +353,7 @@ export struct RecommendationPage {
       .fontWeight(FontWeight.Bold)
       .width('100%')
       .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.SM })
-      .fontColor($r('sys.color.ohos_id_color_text_primary'))
+      .fontColor(this.getCurrentThemePalette().textPrimary)
   }
 
   @Builder
@@ -362,12 +362,12 @@ export struct RecommendationPage {
       Text() {
         SymbolSpan($r(icon))
           .fontSize(18)
-          .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+          .fontColor([this.getCurrentThemePalette().accentBackground])
       }
       Text(title)
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .fontWeight(FontWeight.Bold)
-        .fontColor($r('sys.color.ohos_id_color_text_primary'))
+        .fontColor(this.getCurrentThemePalette().textPrimary)
     }
     .width('100%')
   }

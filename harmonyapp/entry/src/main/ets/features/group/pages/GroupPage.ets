@@ -479,26 +479,26 @@ export struct GroupPage {
         Text('附近群组')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
 
         Row({ space: 8 }) {
           Button('邀请')
             .type(ButtonType.Capsule)
             .backgroundColor(this.getSurfaceSubtle())
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getCurrentThemePalette().textPrimary)
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .height(32)
-            .shadow(DesignConstants.SHADOW.SMALL)
+            .height(36)
+            .shadow(this.getCurrentThemePalette().controlShadow)
             .onClick(() => this.loadMyInvites())
 
           Button('申请')
             .type(ButtonType.Capsule)
             .backgroundColor(this.getSurfaceSubtle())
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getCurrentThemePalette().textPrimary)
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .height(32)
-            .shadow(DesignConstants.SHADOW.SMALL)
+            .height(36)
+            .shadow(this.getCurrentThemePalette().controlShadow)
             .onClick(() => this.loadMyApplications())
 
           Button('创建')
@@ -506,8 +506,8 @@ export struct GroupPage {
             .backgroundColor(this.getCurrentThemePalette().accentBackground)
             .fontColor(this.getCurrentThemePalette().accentText)
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .height(32)
-            .shadow(DesignConstants.SHADOW.SMALL)
+            .height(36)
+            .shadow(this.getCurrentThemePalette().controlShadow)
             .onClick(() => this.createGroup())
         }
       }
@@ -581,12 +581,12 @@ export struct GroupPage {
         Text('我的群邀请')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Bold)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
 
         Text(`${this.myInvites.length} 条`)
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
       }
       .width('100%')
       .padding(DesignConstants.SPACING.LG)
@@ -640,18 +640,18 @@ export struct GroupPage {
           Text(invite.group?.name ?? '群组')
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontWeight(FontWeight.Medium)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getCurrentThemePalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
           Text(`邀请人：${invite.inviter?.nickname ?? '未知用户'}`)
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
           if (invite.message) {
             Text(invite.message)
               .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .fontColor(this.getCurrentThemePalette().textSecondary)
               .maxLines(2)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
@@ -666,9 +666,9 @@ export struct GroupPage {
           .type(ButtonType.Capsule)
           .backgroundColor(this.getCurrentThemePalette().accentBackground)
           .fontColor(this.getCurrentThemePalette().accentText)
-          .shadow(DesignConstants.SHADOW.SMALL)
+          .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
-          .height(34)
+          .height(38)
           .layoutWeight(1)
           .enabled(!this.isInviteHandling(invite.invite_id))
           .opacity(this.isInviteHandling(invite.invite_id) ? 0.58 : 1)
@@ -677,10 +677,10 @@ export struct GroupPage {
         Button('拒绝')
           .type(ButtonType.Capsule)
           .backgroundColor(this.getSurfaceSubtle())
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .shadow(DesignConstants.SHADOW.SMALL)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+          .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
-          .height(34)
+          .height(38)
           .layoutWeight(1)
           .enabled(!this.isInviteHandling(invite.invite_id))
           .opacity(this.isInviteHandling(invite.invite_id) ? 0.58 : 1)
@@ -690,8 +690,8 @@ export struct GroupPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
-    .borderRadius(DesignConstants.RADIUS.XXL)
-    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .borderRadius(DesignConstants.RADIUS.XXL + 4)
+    .shadow(this.getCurrentThemePalette().elevatedShadow)
     .backgroundColor(this.getSurfaceBackground())
     .border({ width: 1, color: this.getSurfaceBorder() })
     .margin({ bottom: 12 })
@@ -704,12 +704,12 @@ export struct GroupPage {
         Text('我的入群申请')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Bold)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
 
         Text(`${this.myApplications.length} 条`)
           .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
       }
       .width('100%')
       .padding(DesignConstants.SPACING.LG)
@@ -763,19 +763,19 @@ export struct GroupPage {
           Text('群组申请')
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontWeight(FontWeight.Medium)
-            .fontColor($r('sys.color.ohos_id_color_text_primary'))
+            .fontColor(this.getCurrentThemePalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
           if (application.message) {
             Text(application.message)
               .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .fontColor(this.getCurrentThemePalette().textSecondary)
               .maxLines(2)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
           Text(`申请时间：${new Date(application.created_at).toLocaleString()}`)
             .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
@@ -788,10 +788,10 @@ export struct GroupPage {
         Button(this.isApplicationHandling(application.application_id) ? '处理中...' : '取消申请')
           .type(ButtonType.Capsule)
           .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
-          .shadow(DesignConstants.SHADOW.SMALL)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+          .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
-          .height(34)
+          .height(38)
           .layoutWeight(1)
           .enabled(!this.isApplicationHandling(application.application_id))
           .opacity(this.isApplicationHandling(application.application_id) ? 0.58 : 1)
@@ -801,8 +801,8 @@ export struct GroupPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
-    .borderRadius(DesignConstants.RADIUS.XXL)
-    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .borderRadius(DesignConstants.RADIUS.XXL + 4)
+    .shadow(this.getCurrentThemePalette().elevatedShadow)
     .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
     .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
     .margin({ bottom: 12 })
@@ -849,26 +849,26 @@ export struct GroupPage {
         Text(group.group.name)
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
         Row({ space: DesignConstants.SPACING.SM }) {
           Text(`${formatCount(group.group.members_count)}人`)
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
 
           if (group.location?.distance !== undefined && group.location?.distance !== null) {
             Text(LocationUtil.formatDistance(group.location.distance))
               .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+              .fontColor(this.getCurrentThemePalette().textSecondary)
           }
         }
 
         if (group.description) {
           Text(group.description)
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
@@ -883,7 +883,7 @@ export struct GroupPage {
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontWeight(FontWeight.Medium)
         .height(34)
-        .shadow(DesignConstants.SHADOW.SMALL)
+        .shadow(this.getCurrentThemePalette().controlShadow)
         .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
         .enabled(!this.isGroupJoining(group.group.group_id))
         .opacity(this.isGroupJoining(group.group.group_id) ? 0.58 : 1)
@@ -893,11 +893,11 @@ export struct GroupPage {
     .padding({
       left: DesignConstants.SPACING.LG,
       right: DesignConstants.SPACING.LG,
-      top: DesignConstants.SPACING.MD,
-      bottom: DesignConstants.SPACING.MD
+      top: DesignConstants.SPACING.LG,
+      bottom: DesignConstants.SPACING.LG
     })
-    .borderRadius(DesignConstants.RADIUS.XXL)
-    .shadow(DesignConstants.SHADOW.MEDIUM)
+    .borderRadius(DesignConstants.RADIUS.XXL + 4)
+    .shadow(this.getCurrentThemePalette().elevatedShadow)
     .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
     .margin({ bottom: 12 })
     .alignItems(VerticalAlign.Center)

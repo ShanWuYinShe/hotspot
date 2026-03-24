@@ -40,7 +40,7 @@ export struct AdvancedSettingsPage {
         IconButton({
           icon: AppIcon.BACK,
           iconSize: IconSize.LARGE,
-          iconColor: $r('sys.color.ohos_id_color_text_primary'),
+          iconColor: this.getCurrentThemePalette().textPrimary,
           bgColor: this.getCurrentThemePalette().surfaceSubtle,
           onButtonClick: () => {
             AppRouter.pop();
@@ -50,7 +50,7 @@ export struct AdvancedSettingsPage {
         Text('高级设置')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Medium)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
 
@@ -78,7 +78,7 @@ export struct AdvancedSettingsPage {
         }
         .backgroundColor(this.getSurfaceBackground())
         .borderRadius(DesignConstants.RADIUS.XXL)
-        .shadow(DesignConstants.SHADOW.MEDIUM)
+        .shadow(this.getCurrentThemePalette().elevatedShadow)
         .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
         .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
           top: DesignConstants.SPACING.LG, bottom: 14 })
@@ -105,7 +105,7 @@ export struct AdvancedSettingsPage {
         Text() {
           SymbolSpan($r(icon))
             .fontSize(18)
-            .fontColor([$r('sys.color.ohos_id_color_emphasize')])
+            .fontColor([this.getCurrentThemePalette().accentBackground])
         }
       }
       .width(38)
@@ -118,12 +118,12 @@ export struct AdvancedSettingsPage {
       Column({ space: 4 }) {
         Text(title)
           .fontSize(DesignConstants.FONT.SIZE.LG)
-          .fontColor($r('sys.color.ohos_id_color_text_primary'))
+          .fontColor(this.getCurrentThemePalette().textPrimary)
 
         if (subtitle) {
           Text(subtitle)
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
         }
       }
       .layoutWeight(1)
@@ -133,7 +133,7 @@ export struct AdvancedSettingsPage {
         Text() {
           SymbolSpan($r(AppIcon.ARROW_RIGHT))
             .fontSize(15)
-            .fontColor([$r('sys.color.ohos_id_color_text_secondary')])
+            .fontColor([this.getCurrentThemePalette().textSecondary])
         }
       }
       .width(28)
