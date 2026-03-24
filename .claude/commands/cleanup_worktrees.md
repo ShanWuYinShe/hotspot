@@ -14,7 +14,7 @@ $ARGUMENTS
 
 1. 盘点当前所有 linked worktree，并标记其角色、dirty 状态、是否已完成、是否状态不明。
 2. 对每个 worktree 判断：是否已完成使命、是否已同步回本地 `main`、是否仍有未提交或未合并改动、当前会话是否仍在使用它。
-3. 若当前会话仍驻留在某个通过 Claude worktree session 创建的 worktree 中，必须先执行 `ExitWorktree`，再做 `git worktree remove`；不要直接删除当前会话所在 worktree。
+3. 若当前会话仍驻留在某个通过 Claude worktree session 创建的 worktree 中，必须先执行 `ExitWorktree`，再做 `git worktree remove`；不要直接删除当前会话所在 worktree。不要依赖全局 `PreToolUse` 去兜底纠正这个顺序，这个命令本身必须承担这条规则。
 4. 仅对明确满足“已完成且可安全回收”的 worktree 进行 cleanup；对状态不明或仍有未合并改动的 worktree，明确保留原因。
 5. 不要在该命令里使用 `branch -D`、`--force`、`git clean`、`git reset --hard` 等危险动作；安全回收优先使用 `git worktree remove` 与 `git branch -d`。
 6. cleanup 完成后，确认主目录是否仍然是 `main + clean`。

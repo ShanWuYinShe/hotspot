@@ -13,7 +13,7 @@ $ARGUMENTS
 执行要求：
 
 1. 先检查最近一轮已完成成果是否已经回到本地 `main`；如果不确定，先问用户。
-2. 检查主目录是否保持本地 `main + clean`；如果不是，先停下来说明原因，不要继续实现。
+2. 检查主目录是否保持本地 `main + clean`；如果不是，先停下来说明原因，不要继续实现。不要依赖全局 `PreToolUse` 做前置拦截，这个命令本身就是进入正确流程的主入口。
 3. 先读根 `CLAUDE.md`，再按任务范围读对应子项目 `CLAUDE.md`；如涉及接口、字段、错误码、分页、幂等或 WebSocket，先读 `spec/`，但不要默认修改 `spec/`。
 4. 对非极小任务，优先进入 plan mode；然后立即建立 task list。
 5. 创建新的 feature worktree；后续所有实现、验证、review、commit 都在该 worktree 中完成，不要在主目录写代码。

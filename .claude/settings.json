@@ -38,17 +38,6 @@
         ]
       }
     ],
-    "PreToolUse": [
-      {
-        "matcher": "Bash|Edit|Write|NotebookEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 .claude/scripts/pre_tool_use_bootstrap.py"
-          }
-        ]
-      }
-    ],
     "Stop": [
       {
         "hooks": [
