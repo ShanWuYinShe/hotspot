@@ -156,6 +156,7 @@
 	html,
 	body {
 		@apply h-full overflow-hidden bg-background text-foreground;
+		-webkit-tap-highlight-color: transparent;
 		/* Game UI - Enhanced gradients with social blue theme */
 		background-image:
 			radial-gradient(1000px circle at 15% -10%, oklch(0.85 0.15 250 / 0.5), transparent 55%),
@@ -380,12 +381,40 @@
 	.safe-area-bottom {
 		padding-bottom: calc(var(--safe-area-inset-bottom) + 1rem);
 	}
-	
+
+	.pb-safe {
+		padding-bottom: calc(var(--safe-area-inset-bottom) + 1rem);
+	}
+
 	/* 全屏内容需要考虑所有安全区域 */
 	.safe-area-all {
 		padding-top: var(--safe-area-inset-top);
 		padding-right: var(--safe-area-inset-right);
 		padding-bottom: var(--safe-area-inset-bottom);
 		padding-left: var(--safe-area-inset-left);
+	}
+
+	.mobile-app-main {
+		@apply flex-1 overflow-y-auto px-0 py-0;
+		-ms-overflow-style: none;
+		scrollbar-width: none;
+	}
+
+	.mobile-app-main::-webkit-scrollbar {
+		display: none;
+	}
+
+	.mobile-page-shell {
+		@apply w-full px-3 py-3;
+	}
+
+	@media (min-width: 768px) {
+		.mobile-app-main {
+			@apply px-0 py-0;
+		}
+
+		.mobile-page-shell {
+			@apply px-0 py-0;
+		}
 	}
 }

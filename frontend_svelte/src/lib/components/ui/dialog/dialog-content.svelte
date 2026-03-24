@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import { Dialog as DialogPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
 	import { cn } from '$lib/utils';
 	import type { Snippet } from 'svelte';
@@ -11,20 +12,62 @@
 		hideClose?: boolean;
 	}
 
-	let { class: className, children, hideClose = false, ...restProps }: Props = $props();
+	let {
+		class: className,
+		children,
+		hideClose = false,
+		ref = $bindable(null),
+		onCloseAutoFocus,
+		...restProps
+	}: Props = $props();
+
+	function clearDialogRelatedSelection(content: HTMLElement | null) {
+		if (!browser || !content) return;
+		const selection = window.getSelection();
+		if (!selection || selection.rangeCount === 0) return;
+
+		const range = selection.getRangeAt(0);
+		const commonAncestor = range.commonAncestorContainer;
+		let shouldClear = content.contains(commonAncestor);
+
+		if (!shouldClear) {
+			const rects = Array.from(range.getClientRects());
+			if (rects.length === 0) return;
+			const contentRect = content.getBoundingClientRect();
+			shouldClear = rects.some((rect) => {
+				const separated =
+					rect.right < contentRect.left ||
+					rect.left > contentRect.right ||
+					rect.bottom < contentRect.top ||
+					rect.top > contentRect.bottom;
+				return !separated;
+			});
+		}
+
+		if (shouldClear) {
+			selection.removeAllRanges();
+		}
+	}
+
+	function handleCloseAutoFocus(event: Event) {
+		clearDialogRelatedSelection(ref);
+		onCloseAutoFocus?.(event);
+	}
 </script>
 
 <DialogPrimitive.Portal>
 	<Overlay />
 	<DialogPrimitive.Content
+		bind:ref
+		onCloseAutoFocus={handleCloseAutoFocus}
 		class={cn(
 			'fixed left-[50%] top-[50%] z-50',
-			'grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4',
+				'grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4',
 			'rounded-3xl border-2 border-primary/20',
 			'bg-white/95 dark:bg-card/90',
 			'backdrop-blur-xl',
 			'p-6',
-			'shadow-2xl shadow-black/20',
+				'select-none shadow-2xl shadow-black/20',
 			'dark:shadow-2xl dark:shadow-black/40',
 			'ring-4 ring-primary/10',
 			'duration-300',

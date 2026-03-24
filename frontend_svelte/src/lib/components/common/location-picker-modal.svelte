@@ -130,6 +130,8 @@
     }
     const regionMetaCache = new Map<RegionKey, RegionMeta>();
     const regionResolveCache = new Map<string, RegionKey>();
+    const regionResolvePromiseCache = new Map<string, Promise<RegionKey | null>>();
+    const regionCenterPromiseCache = new Map<RegionKey, Promise<RegionMeta>>();
     let districtSearch: any = null;
 
     type RenderMarkerKind = "cluster";
@@ -289,25 +291,50 @@
         }, 2000);
     }
 
-    function clearRenderMarkers() {
-        // 清理聚合器（如有）
-        if (hotspotsClusterer) {
+    function disposeRenderMarkers(markers: AMap.Marker[], clusterer: any) {
+        if (clusterer) {
             try {
-                // 部分版本提供 clearMarkers，部分版本通过 setMap(null) 解绑
-                hotspotsClusterer.clearMarkers?.();
-                hotspotsClusterer.setMap?.(null);
+                clusterer.clearMarkers?.();
+                clusterer.setMap?.(null);
             } catch {
                 // 忽略清理异常，避免影响后续渲染
             }
-            hotspotsClusterer = null;
         }
 
-        for (const marker of renderMarkers) {
+        for (const marker of markers) {
             marker.setMap(null);
             marker.remove();
         }
+    }
+
+    function clearRenderMarkers() {
+        disposeRenderMarkers(renderMarkers, hotspotsClusterer);
         renderMarkers = [];
+        hotspotsClusterer = null;
         hotspotPreviewItems = [];
+    }
+
+    function replaceRenderMarkers(
+        nextMarkers: AMap.Marker[],
+        options?: { clusterer?: any; clearHotspotPreview?: boolean },
+    ) {
+        const previousMarkers = renderMarkers;
+        const previousClusterer = hotspotsClusterer;
+        const nextClusterer = options?.clusterer ?? null;
+
+        renderMarkers = nextMarkers;
+        hotspotsClusterer = nextClusterer;
+        if (options?.clearHotspotPreview ?? true) {
+            hotspotPreviewItems = [];
+        }
+
+        if (!nextClusterer) {
+            for (const marker of nextMarkers) {
+                marker.setMap(map);
+            }
+        }
+
+        disposeRenderMarkers(previousMarkers, previousClusterer);
     }
 
     function ensureSelectedMarker() {
@@ -352,13 +379,18 @@
 
     function closeClusterPreview() {
         clusterPreview = null;
+        if (hotspotPreviewItems.length === 0 && !showSearch && !showFilterPanel) {
+            isBottomSheetExpanded = false;
+        }
     }
 
     function toggleFilterPanel() {
         const nextOpen = !showFilterPanel;
         if (nextOpen) {
             showSearch = false;
+            hotspotPreviewItems = [];
             closeClusterPreview();
+            isBottomSheetExpanded = true;
         }
         showFilterPanel = nextOpen;
     }
@@ -370,6 +402,7 @@
         }
         showSearch = false;
         showFilterPanel = false;
+        hotspotPreviewItems = [];
         closeClusterPreview();
     }
 
@@ -514,6 +547,8 @@
         lastRenderedViewportSignature = "";
         if (!showUsers && !showGroups && !showMoments) {
             latestRenderItems = [];
+            overlapGroupItems = new Map();
+            closeClusterPreview();
             clearRenderMarkers();
             return;
         }
@@ -549,6 +584,8 @@
             item.total_count ||
             overlapItems.reduce((sum, it) => sum + it.total_count, 0);
 
+        hotspotPreviewItems = [];
+        isBottomSheetExpanded = true;
         clusterPreview = {
             kind: isOverlapGroup ? "overlap_group" : "server_cluster",
             render_id: item.render_id,
@@ -590,7 +627,11 @@
         focusRenderItem(item);
     }
 
-    function createMarkerForItem(item: RenderItem, offset?: [number, number]) {
+    function createMarkerForItem(
+        item: RenderItem,
+        offset?: [number, number],
+        attachToMap = true,
+    ) {
         if (!map) return null;
         const position = toGcjLngLat({
             latitude: item.location.latitude,
@@ -611,7 +652,7 @@
             anchor: "bottom-center",
             offset,
             clickable: true,
-            map,
+            map: attachToMap ? map : undefined,
         });
 
         (
@@ -669,110 +710,150 @@
         const cached = regionResolveCache.get(cacheKey);
         if (cached) return cached;
 
-        const [gcjLng, gcjLat] = toGcjLngLat({
-            latitude: item.location.latitude,
-            longitude: item.location.longitude,
-        });
+        const pending = regionResolvePromiseCache.get(cacheKey);
+        if (pending) return pending;
 
-        await ensureGeocoder();
-        if (!geocoder) return null;
+        const promise = (async () => {
+            const [gcjLng, gcjLat] = toGcjLngLat({
+                latitude: item.location.latitude,
+                longitude: item.location.longitude,
+            });
 
-        const key = await new Promise<RegionKey | null>((resolve) => {
-            geocoder!.getAddress(
-                [gcjLng, gcjLat],
-                (status: string, result: any) => {
-                    if (status !== "complete" || !result?.regeocode) {
-                        resolve(null);
-                        return;
-                    }
-                    const comp = (result.regeocode as any)
-                        .addressComponent as any;
-                    const rawAdcode: string | undefined =
-                        comp?.adcode ?? comp?.citycode;
-                    const rawCity: string | string[] | undefined = comp?.city;
-                    const province: string | undefined = comp?.province;
-                    const district: string | undefined = comp?.district;
-                    const city = Array.isArray(rawCity) ? rawCity[0] : rawCity;
-                    const adcode = rawAdcode;
-                    const name = city || province || district;
-                    if (!adcode || !name) {
-                        resolve(null);
-                        return;
-                    }
-                    const regionKey: RegionKey = `city:${adcode}`;
-                    if (!regionMetaCache.has(regionKey)) {
-                        regionMetaCache.set(regionKey, {
-                            key: regionKey,
-                            name,
-                            adcode,
-                            center: { lat: gcjLat, lng: gcjLng },
-                            centerIsOfficial: false,
-                        });
-                    }
-                    resolve(regionKey);
-                },
-            );
-        });
+            await ensureGeocoder();
+            if (!geocoder) return null;
 
-        if (key) {
-            regionResolveCache.set(cacheKey, key);
+            const key = await new Promise<RegionKey | null>((resolve) => {
+                geocoder!.getAddress(
+                    [gcjLng, gcjLat],
+                    (status: string, result: any) => {
+                        if (status !== "complete" || !result?.regeocode) {
+                            resolve(null);
+                            return;
+                        }
+                        const comp = (result.regeocode as any)
+                            .addressComponent as any;
+                        const rawAdcode: string | undefined =
+                            comp?.adcode ?? comp?.citycode;
+                        const rawCity: string | string[] | undefined = comp?.city;
+                        const province: string | undefined = comp?.province;
+                        const district: string | undefined = comp?.district;
+                        const city = Array.isArray(rawCity) ? rawCity[0] : rawCity;
+                        const adcode = rawAdcode;
+                        const name = city || province || district;
+                        if (!adcode || !name) {
+                            resolve(null);
+                            return;
+                        }
+                        const regionKey: RegionKey = `city:${adcode}`;
+                        if (!regionMetaCache.has(regionKey)) {
+                            regionMetaCache.set(regionKey, {
+                                key: regionKey,
+                                name,
+                                adcode,
+                                center: { lat: gcjLat, lng: gcjLng },
+                                centerIsOfficial: false,
+                            });
+                        }
+                        resolve(regionKey);
+                    },
+                );
+            });
+
+            if (key) {
+                regionResolveCache.set(cacheKey, key);
+            }
+            return key;
+        })();
+
+        regionResolvePromiseCache.set(cacheKey, promise);
+        try {
+            return await promise;
+        } finally {
+            regionResolvePromiseCache.delete(cacheKey);
         }
-        return key;
     }
 
     async function ensureRegionCenter(meta: RegionMeta): Promise<RegionMeta> {
         if (meta.centerIsOfficial) return meta;
-        await ensureDistrictSearch();
-        if (!districtSearch) return meta;
-        const updated = await new Promise<RegionMeta>((resolve) => {
-            (districtSearch as any).search(
-                meta.adcode,
-                (status: string, result: any) => {
-                    if (status !== "complete" || !result.districts?.length) {
-                        resolve(meta);
-                        return;
-                    }
-                    const d = result.districts[0];
-                    const center = d.center;
-                    if (!center) {
-                        resolve(meta);
-                        return;
-                    }
-                    const next: RegionMeta = {
-                        ...meta,
-                        center: { lat: center.getLat(), lng: center.getLng() },
-                        centerIsOfficial: true,
-                    };
-                    resolve(next);
-                },
-            );
-        });
-        regionMetaCache.set(updated.key, updated);
-        return updated;
+
+        const pending = regionCenterPromiseCache.get(meta.key);
+        if (pending) return pending;
+
+        const promise = (async () => {
+            await ensureDistrictSearch();
+            if (!districtSearch) return meta;
+            const updated = await new Promise<RegionMeta>((resolve) => {
+                (districtSearch as any).search(
+                    meta.adcode,
+                    (status: string, result: any) => {
+                        if (status !== "complete" || !result.districts?.length) {
+                            resolve(meta);
+                            return;
+                        }
+                        const d = result.districts[0];
+                        const center = d.center;
+                        if (!center) {
+                            resolve(meta);
+                            return;
+                        }
+                        const next: RegionMeta = {
+                            ...meta,
+                            center: { lat: center.getLat(), lng: center.getLng() },
+                            centerIsOfficial: true,
+                        };
+                        resolve(next);
+                    },
+                );
+            });
+            regionMetaCache.set(updated.key, updated);
+            return updated;
+        })();
+
+        regionCenterPromiseCache.set(meta.key, promise);
+        try {
+            return await promise;
+        } finally {
+            regionCenterPromiseCache.delete(meta.key);
+        }
     }
 
     async function renderRegionClusters(items: RenderItem[]) {
         if (!map) return;
+        const regionEntries = await Promise.all(
+            items.map(async (item) => ({
+                item,
+                regionKey: await resolveClusterRegion(item),
+            })),
+        );
+
         const groups = new Map<
             RegionKey,
             { items: RenderItem[]; total: number }
         >();
-        for (const item of items) {
-            const regionKey = await resolveClusterRegion(item);
-            if (!regionKey) continue;
-            const group = groups.get(regionKey) ?? { items: [], total: 0 };
-            group.items.push(item);
-            group.total += item.total_count;
-            groups.set(regionKey, group);
+        for (const entry of regionEntries) {
+            if (!entry.regionKey) continue;
+            const group = groups.get(entry.regionKey) ?? { items: [], total: 0 };
+            group.items.push(entry.item);
+            group.total += entry.item.total_count;
+            groups.set(entry.regionKey, group);
         }
 
-        clearRenderMarkers();
+        const metaEntries = await Promise.all(
+            Array.from(groups.entries()).map(async ([key, group]) => {
+                const baseMeta = regionMetaCache.get(key);
+                if (!baseMeta) {
+                    return null;
+                }
+                const meta = await ensureRegionCenter(baseMeta);
+                return { key, group, meta };
+            }),
+        );
+
         const markers: AMap.Marker[] = [];
         const AMapAny = AMap as any;
-        for (const [key, group] of groups) {
-            const baseMeta = regionMetaCache.get(key);
-            if (!baseMeta) continue;
-            const meta = await ensureRegionCenter(baseMeta);
+        for (const entry of metaEntries) {
+            if (!entry) continue;
+            const { key, group, meta } = entry;
             const position: [number, number] = [
                 meta.center.lng,
                 meta.center.lat,
@@ -788,14 +869,12 @@
                 icon,
                 anchor: "bottom-center",
                 clickable: true,
-                map,
             });
             (marker as any).setLabel?.({
                 content: `${meta.name} ${group.total} 个内容`,
                 direction: "top",
             });
             (marker as any).on("click", () => {
-                // 低缩放级别下，点击行政区聚合 marker 仅展示该区域的聚合信息，不移动相机
                 clusterPreview = {
                     kind: "server_cluster",
                     render_id: key,
@@ -814,7 +893,7 @@
             });
             markers.push(marker);
         }
-        renderMarkers = markers;
+        replaceRenderMarkers(markers, { clearHotspotPreview: true });
     }
 
     async function renderMapItems(items: RenderItem[]) {
@@ -825,7 +904,6 @@
             updateSelectedMarker();
             return;
         }
-        clearRenderMarkers();
         const { merged, groups } = groupOverlappingRenderItems(items, zoom);
         overlapGroupItems = groups;
         const currentCluster = clusterPreview;
@@ -835,9 +913,10 @@
         ) {
             closeClusterPreview();
         }
-        renderMarkers = merged
-            .map(({ item }) => createMarkerForItem(item))
+        const nextMarkers = merged
+            .map(({ item }) => createMarkerForItem(item, undefined, false))
             .filter((marker): marker is AMap.Marker => Boolean(marker));
+        replaceRenderMarkers(nextMarkers, { clearHotspotPreview: true });
         updateSelectedMarker();
     }
 
@@ -845,6 +924,8 @@
 		if (!map || !open || !isMapAvailable) return;
 		if (!showUsers && !showGroups && !showMoments) {
 			latestRenderItems = [];
+			overlapGroupItems = new Map();
+			closeClusterPreview();
 			clearRenderMarkers();
 			lastRenderedViewportSignature = "";
 			return;
@@ -857,7 +938,9 @@
 			signature === lastRenderedViewportSignature &&
 			renderMarkers.length > 0
 		) {
-			applyCurrentFilter();
+			if (latestRenderItems.length > 0) {
+				applyCurrentFilter();
+			}
 			return;
 		}
 
@@ -876,13 +959,9 @@
 			lastRenderedViewportSignature = signature;
 			const canvas = (response.data ?? {}) as MapCanvasResponse;
 
-			// 先清空当前渲染状态
-			latestRenderItems = [];
-			clearRenderMarkers();
-			hotspotsClusterer = null;
-			hotspotPreviewItems = [];
-
 			if (canvas.hotspots) {
+				latestRenderItems = [];
+				overlapGroupItems = new Map();
 				const data = canvas.hotspots as MapHotspotsCanvas;
 				const allItems: MapHotspotItem[] = data.items ?? [];
 				const items: MapHotspotItem[] = allItems.filter((item: MapHotspotItem) => {
@@ -912,16 +991,19 @@
 							icon,
 							anchor: "bottom-center",
 							clickable: true,
-							map,
 						});
 						(marker as any).setExtData?.(item);
 						marker.on("click", (ev: any) => {
 							ev?.stopPropagation?.();
+							showSearch = false;
+							showFilterPanel = false;
+							closeClusterPreview();
 							hotspotPreviewItems = [item];
+							isBottomSheetExpanded = true;
 						});
 						markers.push(marker);
 					}
-					hotspotsClusterer = new AMapAny.MarkerClusterer(map, markers, {
+					const nextClusterer = new AMapAny.MarkerClusterer(map, markers, {
 						gridSize: 60,
 						minClusterSize: 2,
 						maxZoom: 18,
@@ -958,12 +1040,21 @@
 										clusterItems.push(data);
 									}
 								}
+								showSearch = false;
+								showFilterPanel = false;
+								closeClusterPreview();
 								hotspotPreviewItems = clusterItems;
+								isBottomSheetExpanded = true;
 							};
 							context.marker.setContent(div);
 						},
 					});
-					renderMarkers = markers;
+					replaceRenderMarkers(markers, {
+						clusterer: nextClusterer,
+						clearHotspotPreview: true,
+					});
+				} else {
+					clearRenderMarkers();
 				}
 			} else if (canvas.heatmap) {
 				const data = canvas.heatmap as MapHeatCanvas;
@@ -1132,7 +1223,9 @@
         showSearch = !showSearch;
         if (showSearch) {
             showFilterPanel = false;
+            hotspotPreviewItems = [];
             closeClusterPreview();
+            isBottomSheetExpanded = true;
             searchText = "";
             searchResults = [];
             isSearching = false;
@@ -1250,6 +1343,8 @@
         });
         map?.setCenter([gcjLng, gcjLat]);
         showSearch = false;
+        isBottomSheetExpanded = false;
+        showPlacementHint("已定位到搜索结果");
         searchText = "";
         searchResults = [];
     }
@@ -1272,6 +1367,8 @@
             longitude: item.longitude,
         });
         map?.setCenter([gcjLng, gcjLat]);
+        isBottomSheetExpanded = false;
+        showPlacementHint("已回到最近使用的位置");
     }
 
     function handleClearHistory() {
@@ -1510,6 +1607,8 @@
         clearRenderMarkers();
         clearSelectedMarker();
         closeClusterPreview();
+        overlapGroupItems = new Map();
+        latestRenderItems = [];
         lastRenderedViewportSignature = "";
         map?.destroy();
         map = null;
@@ -1617,6 +1716,8 @@
             }
             // 关闭弹窗时销毁地图实例，避免下次打开时复用已失效的 DOM 容器
             clearRenderMarkers();
+            overlapGroupItems = new Map();
+            latestRenderItems = [];
             clearSelectedMarker();
             map?.destroy();
             map = null;
@@ -1698,45 +1799,26 @@
         >
             <!-- 移动端简化标题 -->
             <div
-                class="flex items-center justify-between border-b border-border/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.95),rgba(248,250,252,0.92))] px-4 py-3 backdrop-blur dark:bg-[linear-gradient(180deg,rgba(30,30,36,0.95),rgba(24,24,30,0.92))] sm:hidden"
+                class="flex items-center justify-between border-b border-white/50 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.88))] px-4 py-3 shadow-[0_12px_30px_rgba(15,23,42,0.08)] backdrop-blur-md dark:border-border/60 dark:bg-[linear-gradient(180deg,rgba(30,30,36,0.96),rgba(24,24,30,0.9))] dark:shadow-[0_12px_30px_rgba(0,0,0,0.22)] sm:hidden"
             >
                 <div class="flex min-w-0 items-center gap-3">
                     <div
-                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#0f172a,#2563eb)] shadow-[0_10px_24px_rgba(37,99,235,0.22)]"
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#0f172a,#2563eb)] shadow-[0_14px_32px_rgba(37,99,235,0.24)] ring-1 ring-white/40"
                     >
                         <MapPin class="h-5 w-5 text-white" />
                     </div>
                     <div class="min-w-0">
                         <p
-                            class="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary/70"
+                            class="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary/75"
                         >
                             {mapModeLabel}
                         </p>
-                        <span class="block truncate font-semibold"
+                        <span class="block truncate text-[15px] font-semibold text-foreground"
                             >{modalTitle}</span
                         >
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        class="h-9 w-9 rounded-2xl border border-border/60 bg-white/70 p-0 shadow-sm dark:bg-card/80"
-                        onclick={toggleSearch}
-                    >
-                        <Search class="h-4 w-4" />
-                        <span class="sr-only">搜索</span>
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        data-location-filter-trigger="true"
-                        class="h-9 w-9 rounded-2xl border border-border/60 bg-white/70 p-0 shadow-sm dark:bg-card/80"
-                        onclick={toggleFilterPanel}
-                    >
-                        <ListFilter class="h-4 w-4" />
-                        <span class="sr-only">筛选</span>
-                    </Button>
                     <Button
                         variant="ghost"
                         size="sm"
@@ -1765,7 +1847,7 @@
                 class="relative flex-1 overflow-hidden sm:rounded-3xl sm:border sm:border-border/60"
             >
                 <div
-                    class="h-full w-full touch-none"
+                    class="h-full w-full touch-pan-x touch-pan-y"
                     bind:this={mapContainer}
                 ></div>
 
@@ -1856,7 +1938,7 @@
                 {#if showFilterPanel}
                     <div
                         bind:this={filterPanelElement}
-                        class="absolute right-3 top-16 z-30 w-40 select-none overflow-hidden rounded-3xl border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] p-2 shadow-[0_24px_60px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-border/60 dark:bg-[linear-gradient(180deg,rgba(30,30,36,0.96),rgba(24,24,30,0.92))] dark:shadow-[0_24px_60px_rgba(0,0,0,0.5)] sm:right-4 sm:top-16"
+                        class="absolute right-4 top-16 z-30 hidden w-40 select-none overflow-hidden rounded-3xl border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] p-2 shadow-[0_24px_60px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-border/60 dark:bg-[linear-gradient(180deg,rgba(30,30,36,0.96),rgba(24,24,30,0.92))] dark:shadow-[0_24px_60px_rgba(0,0,0,0.5)] sm:block"
                     >
                         <button
                             class={`flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left text-sm font-medium transition ${
@@ -1954,222 +2036,6 @@
                     </div>
                 {/if}
 
-                <!-- 搜索覆盖层（移动端使用，桌面端由右侧信息栏承载搜索） -->
-                {#if showSearch}
-                    <div
-                        class="absolute inset-x-3 top-3 z-30 overflow-hidden rounded-[28px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] shadow-[0_24px_60px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-border/60 dark:bg-[linear-gradient(180deg,rgba(30,30,36,0.96),rgba(24,24,30,0.92))] dark:shadow-[0_24px_60px_rgba(0,0,0,0.5)] sm:inset-x-auto sm:left-4 sm:right-auto sm:top-4 sm:w-104 sm:hidden"
-                    >
-                        <div
-                            class="border-b border-border/50 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.14),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.95),rgba(248,250,252,0.88))] px-4 py-3 dark:bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.12),transparent_42%),linear-gradient(180deg,rgba(30,30,36,0.95),rgba(24,24,30,0.88))]"
-                        >
-                            <div class="flex items-start justify-between gap-3">
-                                <div>
-                                    <div
-                                        class="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-white/75 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary/80 dark:bg-card/75"
-                                    >
-                                        <Search class="h-3.5 w-3.5" />
-                                        <span>地点搜索</span>
-                                    </div>
-                                    <p
-                                        class="mt-3 text-base font-bold leading-tight text-foreground"
-                                    >
-                                        搜索一个地点，或直接回到最近用过的位置
-                                    </p>
-                                    <p
-                                        class="mt-1 text-xs text-muted-foreground"
-                                    >
-                                        输入地标、商圈、街道名，结果会直接落到地图中心。
-                                    </p>
-                                </div>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    class="h-9 w-9 shrink-0 rounded-2xl border border-border/60 bg-white/70 p-0 shadow-sm dark:bg-card/80"
-                                    onclick={toggleSearch}
-                                >
-                                    <X class="h-4 w-4" />
-                                    <span class="sr-only">关闭搜索</span>
-                                </Button>
-                            </div>
-                        </div>
-                        <!-- 搜索输入框 -->
-                        <div class="px-4 py-3">
-                            <div
-                                class="flex h-12 items-center gap-2 rounded-2xl border border-border/60 bg-white/80 px-3 shadow-sm dark:bg-card/80"
-                            >
-                                <Search
-                                    class="h-4 w-4 shrink-0 text-muted-foreground"
-                                />
-                                <input
-                                    {@attach useKeyboardFocus()}
-                                    type="text"
-                                    bind:this={searchInput}
-                                    bind:value={searchText}
-                                    placeholder="搜索地点名称、街道或商圈"
-                                    class="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-                                    oninput={() => {
-                                        if (searchDebounceTimer)
-                                            clearTimeout(searchDebounceTimer);
-                                        if (searchText.trim().length > 0) {
-                                            searchDebounceTimer =
-                                                window.setTimeout(() => {
-                                                    doSearch();
-                                                }, 500);
-                                        } else {
-                                            activeSearchRequestId += 1;
-                                            isSearching = false;
-                                            searchResults = [];
-                                        }
-                                    }}
-                                    onkeydown={(e) => {
-                                        if (e.key === "Enter") {
-                                            if (searchDebounceTimer)
-                                                clearTimeout(
-                                                    searchDebounceTimer,
-                                                );
-                                            doSearch();
-                                        } else if (e.key === "Escape") {
-                                            toggleSearch();
-                                        }
-                                    }}
-                                />
-                                {#if isSearching}
-                                    <Loader2
-                                        class="h-4 w-4 shrink-0 animate-spin text-primary"
-                                    />
-                                {:else if searchText.length > 0}
-                                    <button
-                                        class="shrink-0 text-muted-foreground hover:text-foreground"
-                                        onclick={() => {
-                                            if (searchDebounceTimer)
-                                                clearTimeout(
-                                                    searchDebounceTimer,
-                                                );
-                                            searchDebounceTimer = null;
-                                            activeSearchRequestId += 1;
-                                            isSearching = false;
-                                            searchText = "";
-                                            searchResults = [];
-                                            searchInput?.focus();
-                                        }}
-                                    >
-                                        <X class="h-4 w-4" />
-                                    </button>
-                                {/if}
-                            </div>
-                        </div>
-
-                        <!-- 搜索结果列表 -->
-                        {#if searchResults.length > 0}
-                            <div class="max-h-[60vh] overflow-y-auto px-2 pb-2">
-                                {#each searchResults as result (`${result.latitude}_${result.longitude}`)}
-                                    <button
-                                        class="mx-2 mb-2 flex w-[calc(100%-1rem)] items-start gap-3 rounded-2xl border border-border/50 bg-white/72 px-4 py-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:bg-white dark:bg-card/72 dark:hover:bg-card"
-                                        onclick={() =>
-                                            selectSearchResult(result)}
-                                    >
-                                        <div
-                                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10"
-                                        >
-                                            <MapPin
-                                                class="h-4 w-4 text-primary"
-                                            />
-                                        </div>
-                                        <div class="min-w-0 flex-1">
-                                            <div
-                                                class="truncate text-sm font-medium"
-                                            >
-                                                {result.name}
-                                            </div>
-                                            <div
-                                                class="mt-1 text-xs text-muted-foreground"
-                                            >
-                                                {result.address ||
-                                                    "未提供详细地址"}
-                                            </div>
-                                        </div>
-                                        <span
-                                            class="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600 dark:bg-muted dark:text-muted-foreground"
-                                            >定位</span
-                                        >
-                                    </button>
-                                {/each}
-                            </div>
-                        {:else if searchText.trim().length === 0 && anchorHistory.length > 0}
-                            <!-- 无输入时展示历史记录 -->
-                            <div class="max-h-[60vh] overflow-y-auto px-2 pb-2">
-                                <div
-                                    class="flex items-center justify-between px-4 py-2"
-                                >
-                                    <div
-                                        class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"
-                                    >
-                                        <Clock class="h-3.5 w-3.5" />
-                                        <span>最近使用</span>
-                                    </div>
-                                    <button
-                                        class="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-                                        onclick={handleClearHistory}
-                                    >
-                                        <Trash2 class="h-3 w-3" />
-                                        <span>清空</span>
-                                    </button>
-                                </div>
-                                {#each anchorHistory as item (item.timestamp)}
-                                    <button
-                                        class="mx-2 mb-2 flex w-[calc(100%-1rem)] items-center gap-3 rounded-2xl border border-border/50 bg-white/72 px-4 py-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:bg-white dark:bg-card/72 dark:hover:bg-card"
-                                        onclick={() => {
-                                            selectHistoryItem(item);
-                                            showSearch = false;
-                                        }}
-                                    >
-                                        <div
-                                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-slate-100 dark:bg-muted"
-                                        >
-                                            <Clock
-                                                class="h-4 w-4 text-muted-foreground"
-                                            />
-                                        </div>
-                                        <div class="min-w-0 flex-1">
-                                            <div
-                                                class="truncate text-sm font-medium"
-                                            >
-                                                {item.locationName}
-                                            </div>
-                                            <div
-                                                class="mt-1 text-[11px] text-muted-foreground"
-                                            >
-                                                一键回到这个位置继续浏览
-                                            </div>
-                                        </div>
-                                        <span
-                                            class="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600 dark:bg-muted dark:text-muted-foreground"
-                                            >最近</span
-                                        >
-                                    </button>
-                                {/each}
-                            </div>
-                        {:else if searchText.trim().length > 0 && !isSearching}
-                            <div class="px-4 pb-4 pt-1">
-                                <div
-                                    class="rounded-2xl border border-dashed border-border/70 bg-white/60 px-4 py-6 text-center shadow-sm dark:bg-card/60"
-                                >
-                                    <p
-                                        class="text-sm font-semibold text-foreground"
-                                    >
-                                        没有找到匹配地点
-                                    </p>
-                                    <p
-                                        class="mt-1 text-xs text-muted-foreground"
-                                    >
-                                        换个关键词试试，或者直接拖动地图到目标区域。
-                                    </p>
-                                </div>
-                            </div>
-                        {/if}
-                    </div>
-                {/if}
-
                 {#if !isMapAvailable}
                     <div
                         class="absolute inset-0 z-20 flex items-center justify-center bg-background/80 backdrop-blur-sm"
@@ -2205,7 +2071,7 @@
                     <Button
                         size="icon"
                         variant="ghost"
-                        class="h-11 w-11 rounded-2xl border border-slate-300/70 bg-white/95 text-foreground shadow-[0_16px_30px_rgba(15,23,42,0.26)] transition hover:border-primary/70 hover:bg-white hover:text-primary dark:border-border/60 dark:bg-card/95 dark:shadow-[0_16px_30px_rgba(0,0,0,0.5)] dark:hover:border-primary/70 dark:hover:bg-card dark:hover:text-primary"
+                        class="h-12 w-12 rounded-[22px] border border-white/65 bg-white/92 text-foreground shadow-[0_18px_34px_rgba(15,23,42,0.24)] backdrop-blur-md transition hover:border-primary/70 hover:bg-white hover:text-primary dark:border-border/60 dark:bg-card/92 dark:shadow-[0_18px_34px_rgba(0,0,0,0.48)] dark:hover:border-primary/70 dark:hover:bg-card dark:hover:text-primary"
                         onclick={handleUseCurrentLocation}
                         disabled={isLocating}
                         aria-label="使用当前位置"
@@ -2222,7 +2088,7 @@
                         <Button
                             size="icon"
                             variant="ghost"
-                            class="h-11 w-11 rounded-2xl border border-slate-300/70 bg-white/95 text-foreground shadow-[0_16px_30px_rgba(15,23,42,0.26)] transition hover:border-primary/70 hover:bg-white hover:text-primary dark:border-border/60 dark:bg-card/95 dark:shadow-[0_16px_30px_rgba(0,0,0,0.5)] dark:hover:border-primary/70 dark:hover:bg-card dark:hover:text-primary"
+                            class="h-12 w-12 rounded-[22px] border border-white/65 bg-white/92 text-foreground shadow-[0_18px_34px_rgba(15,23,42,0.24)] backdrop-blur-md transition hover:border-primary/70 hover:bg-white hover:text-primary dark:border-border/60 dark:bg-card/92 dark:shadow-[0_18px_34px_rgba(0,0,0,0.48)] dark:hover:border-primary/70 dark:hover:bg-card dark:hover:text-primary"
                             onclick={handleBackToBrowseAnchor}
                             aria-label="回到浏览锚点位置"
                         >
@@ -2233,37 +2099,11 @@
                             />
                         </Button>
                     {/if}
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        class="h-11 w-11 rounded-2xl border border-slate-300/70 bg-white/95 text-foreground shadow-[0_16px_30px_rgba(15,23,42,0.26)] transition hover:border-primary/70 hover:bg-white hover:text-primary dark:border-border/60 dark:bg-card/95 dark:shadow-[0_16px_30px_rgba(0,0,0,0.5)] dark:hover:border-primary/70 dark:hover:bg-card dark:hover:text-primary"
-                        onclick={() => {
-                            if (!map) return;
-                            const currentZoom = map.getZoom?.() ?? 14;
-                            map.setZoom(Math.min(20, currentZoom + 1));
-                        }}
-                        aria-label="放大"
-                    >
-                        <Plus class="h-5 w-5" />
-                    </Button>
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        class="h-11 w-11 rounded-2xl border border-slate-300/70 bg-white/95 text-foreground shadow-[0_16px_30px_rgba(15,23,42,0.26)] transition hover:border-primary/70 hover:bg-white hover:text-primary dark:border-border/60 dark:bg-card/95 dark:shadow-[0_16px_30px_rgba(0,0,0,0.5)] dark:hover:border-primary/70 dark:hover:bg-card dark:hover:text-primary"
-                        onclick={() => {
-                            if (!map) return;
-                            const currentZoom = map.getZoom?.() ?? 14;
-                            map.setZoom(Math.max(1, currentZoom - 1));
-                        }}
-                        aria-label="缩小"
-                    >
-                        <Minus class="h-5 w-5" />
-                    </Button>
                 </div>
 
                 {#if clusterPreview}
                     <div
-                        class="absolute inset-x-3 bottom-32 z-30 select-none sm:bottom-6 sm:left-4 sm:right-auto sm:w-100"
+                        class="absolute bottom-6 left-4 right-auto z-30 hidden w-100 select-none sm:block"
                     >
                         <div
                             class="overflow-hidden rounded-[28px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] shadow-[0_24px_60px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-border/60 dark:bg-[linear-gradient(180deg,rgba(30,30,36,0.96),rgba(24,24,30,0.92))] dark:shadow-[0_24px_60px_rgba(0,0,0,0.5)]"
@@ -2364,7 +2204,7 @@
 
                 {#if hotspotPreviewItems.length > 0}
                     <div
-                        class="absolute inset-x-3 bottom-32 z-30 select-none sm:bottom-6 sm:left-1/2 sm:right-auto sm:w-[420px] sm:-translate-x-1/2"
+                        class="absolute bottom-6 left-1/2 right-auto z-30 hidden w-[420px] -translate-x-1/2 select-none sm:block"
                     >
                         <div
                             class="overflow-hidden rounded-[28px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] shadow-[0_24px_60px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-border/60 dark:bg-[linear-gradient(180deg,rgba(30,30,36,0.96),rgba(24,24,30,0.92))] dark:shadow-[0_24px_60px_rgba(0,0,0,0.5)]"
@@ -2391,7 +2231,10 @@
                                     variant="ghost"
                                     size="sm"
                                     class="h-9 w-9 shrink-0 rounded-2xl border border-border/60 bg-white/70 p-0 shadow-sm dark:bg-card/80"
-                                    onclick={() => (hotspotPreviewItems = [])}
+                                    onclick={() => {
+                                        hotspotPreviewItems = [];
+                                        isBottomSheetExpanded = false;
+                                    }}
                                 >
                                     <X class="h-4 w-4" />
                                     <span class="sr-only">关闭详情</span>
@@ -2476,41 +2319,449 @@
                         : 'calc(100% - 116px)'})"
                 >
                     <div
-                        class="rounded-t-[28px] border border-border/60 bg-card/95 shadow-2xl backdrop-blur-md"
+                        class="rounded-t-[30px] border border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] shadow-[0_-20px_48px_rgba(15,23,42,0.18)] backdrop-blur-xl dark:border-border/60 dark:bg-[linear-gradient(180deg,rgba(30,30,36,0.96),rgba(24,24,30,0.92))] dark:shadow-[0_-20px_48px_rgba(0,0,0,0.42)]"
                     >
                         <!-- 展开/收起手柄 -->
                         <button
-                            class="flex w-full flex-col items-center gap-1 py-3 active:bg-muted/50"
+                            class="flex w-full flex-col items-center gap-1 px-4 py-3 active:bg-muted/50"
                             onclick={() =>
                                 (isBottomSheetExpanded =
                                     !isBottomSheetExpanded)}
+                            aria-expanded={isBottomSheetExpanded}
+                            aria-label={isBottomSheetExpanded
+                                ? "收起位置面板"
+                                : "展开位置面板"}
                         >
                             <div
                                 class="h-1 w-12 rounded-full bg-muted-foreground/20"
                             ></div>
-                            {#if isBottomSheetExpanded}
-                                <ChevronDown
-                                    class="h-4 w-4 text-muted-foreground"
-                                />
-                            {:else}
-                                <ChevronUp
-                                    class="h-4 w-4 text-muted-foreground"
-                                />
-                            {/if}
+                            <div class="flex items-center gap-2 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground/90 uppercase">
+                                <span>{isBottomSheetExpanded ? "收起面板" : "展开面板"}</span>
+                                {#if isBottomSheetExpanded}
+                                    <ChevronDown
+                                        class="h-4 w-4 text-muted-foreground"
+                                    />
+                                {:else}
+                                    <ChevronUp
+                                        class="h-4 w-4 text-muted-foreground"
+                                    />
+                                {/if}
+                            </div>
                         </button>
 
                         <!-- 底部抽屉内容 -->
-                        <div class="max-h-[60vh] overflow-y-auto px-4 pb-safe">
-                            <!-- 位置信息 (精简版 - 始终可见) -->
-                            <AnchorSummaryCard
-                                label="当前选中"
-                                description={selectionDescription}
-                                subtle
-                                overrideName={locationName ||
-                                    "拖动地图选择位置"}
-                            />
+                        <div class="max-h-[70dvh] overflow-y-auto px-4 pb-safe">
+                            <div class="space-y-3 pb-4">
+                                <AnchorSummaryCard
+                                    label="当前选中"
+                                    description={selectionDescription}
+                                    subtle
+                                    overrideName={locationName ||
+                                        "拖动地图选择位置"}
+                                >
+                                    {#snippet actions()}
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            class="h-10 rounded-2xl border-border/60 bg-background/75"
+                                            onclick={toggleSearch}
+                                        >
+                                            <Search class="h-4 w-4" />
+                                            搜索地点
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            class="h-10 rounded-2xl border-border/60 bg-background/75"
+                                            onclick={toggleFilterPanel}
+                                        >
+                                            <ListFilter class="h-4 w-4" />
+                                            内容筛选
+                                        </Button>
+                                    {/snippet}
+                                </AnchorSummaryCard>
 
-                            <!-- 操作按钮 -->
+                                {#if showSearch}
+                                    <div class="overflow-hidden rounded-[28px] border border-border/60 bg-card/92 shadow-lg backdrop-blur-md">
+                                        <div class="border-b border-border/50 px-4 py-3">
+                                            <div class="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary/70">
+                                                        地点搜索
+                                                    </p>
+                                                    <p class="mt-2 text-sm font-semibold text-foreground">
+                                                        搜索地标、商圈或街道名，结果会直接落到地图中心。
+                                                    </p>
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    class="h-9 w-9 shrink-0 rounded-2xl border border-border/60 bg-background/75 p-0"
+                                                    onclick={toggleSearch}
+                                                >
+                                                    <X class="h-4 w-4" />
+                                                    <span class="sr-only">关闭搜索</span>
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        <div class="space-y-3 px-4 py-3">
+                                            <div class="flex h-12 items-center gap-2 rounded-2xl border border-border/60 bg-background/80 px-3 shadow-sm">
+                                                <Search class="h-4 w-4 shrink-0 text-muted-foreground" />
+                                                <input
+                                                    {@attach useKeyboardFocus()}
+                                                    type="text"
+                                                    bind:this={searchInput}
+                                                    bind:value={searchText}
+                                                    placeholder="搜索地点名称、街道或商圈"
+                                                    class="flex-1 select-text bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                                                    oninput={() => {
+                                                        if (searchDebounceTimer)
+                                                            clearTimeout(searchDebounceTimer);
+                                                        if (searchText.trim().length > 0) {
+                                                            searchDebounceTimer =
+                                                                window.setTimeout(() => {
+                                                                    doSearch();
+                                                                }, 500);
+                                                        } else {
+                                                            activeSearchRequestId += 1;
+                                                            isSearching = false;
+                                                            searchResults = [];
+                                                        }
+                                                    }}
+                                                    onkeydown={(e) => {
+                                                        if (e.key === "Enter") {
+                                                            if (searchDebounceTimer)
+                                                                clearTimeout(
+                                                                    searchDebounceTimer,
+                                                                );
+                                                            doSearch();
+                                                        } else if (e.key === "Escape") {
+                                                            toggleSearch();
+                                                        }
+                                                    }}
+                                                />
+                                                {#if isSearching}
+                                                    <Loader2 class="h-4 w-4 shrink-0 animate-spin text-primary" />
+                                                {:else if searchText.length > 0}
+                                                    <button
+                                                        class="shrink-0 text-muted-foreground hover:text-foreground"
+                                                        onclick={() => {
+                                                            if (searchDebounceTimer)
+                                                                clearTimeout(
+                                                                    searchDebounceTimer,
+                                                                );
+                                                            searchDebounceTimer = null;
+                                                            activeSearchRequestId += 1;
+                                                            isSearching = false;
+                                                            searchText = "";
+                                                            searchResults = [];
+                                                            searchInput?.focus();
+                                                        }}
+                                                    >
+                                                        <X class="h-4 w-4" />
+                                                    </button>
+                                                {/if}
+                                            </div>
+
+                                            {#if searchResults.length > 0}
+                                                <div class="max-h-[38dvh] space-y-2 overflow-y-auto">
+                                                    {#each searchResults as result (`sheet_${result.latitude}_${result.longitude}`)}
+                                                        <button
+                                                            class="flex w-full items-start gap-3 rounded-2xl border border-border/50 bg-background/70 px-4 py-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:bg-background"
+                                                            onclick={() => selectSearchResult(result)}
+                                                        >
+                                                            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
+                                                                <MapPin class="h-4 w-4 text-primary" />
+                                                            </div>
+                                                            <div class="min-w-0 flex-1">
+                                                                <div class="truncate text-sm font-medium">
+                                                                    {result.name}
+                                                                </div>
+                                                                <div class="mt-1 text-xs text-muted-foreground">
+                                                                    {result.address ||
+                                                                        "未提供详细地址"}
+                                                                </div>
+                                                            </div>
+                                                        </button>
+                                                    {/each}
+                                                </div>
+                                            {:else if searchText.trim().length === 0 && anchorHistory.length > 0}
+                                                <div class="space-y-2">
+                                                    <div class="flex items-center justify-between px-1">
+                                                        <div class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                                            <Clock class="h-3.5 w-3.5" />
+                                                            <span>最近使用</span>
+                                                        </div>
+                                                        <button
+                                                            class="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                                                            onclick={handleClearHistory}
+                                                        >
+                                                            <Trash2 class="h-3 w-3" />
+                                                            <span>清空</span>
+                                                        </button>
+                                                    </div>
+                                                    <div class="max-h-[32dvh] space-y-2 overflow-y-auto">
+                                                        {#each anchorHistory as item (item.timestamp)}
+                                                            <button
+                                                                class="flex w-full items-center gap-3 rounded-2xl border border-border/50 bg-background/70 px-4 py-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:bg-background"
+                                                                onclick={() => {
+                                                                    selectHistoryItem(item);
+                                                                    showSearch = false;
+                                                                }}
+                                                            >
+                                                                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-muted">
+                                                                    <Clock class="h-4 w-4 text-muted-foreground" />
+                                                                </div>
+                                                                <div class="min-w-0 flex-1">
+                                                                    <div class="truncate text-sm font-medium">
+                                                                        {item.locationName}
+                                                                    </div>
+                                                                    <div class="mt-1 text-[11px] text-muted-foreground">
+                                                                        一键回到这个位置继续浏览
+                                                                    </div>
+                                                                </div>
+                                                            </button>
+                                                        {/each}
+                                                    </div>
+                                                </div>
+                                            {:else if searchText.trim().length > 0 && !isSearching}
+                                                <div class="rounded-2xl border border-dashed border-border/70 bg-background/60 px-4 py-6 text-center shadow-sm">
+                                                    <p class="text-sm font-semibold text-foreground">
+                                                        没有找到匹配地点
+                                                    </p>
+                                                    <p class="mt-1 text-xs text-muted-foreground">
+                                                        换个关键词试试，或者直接拖动地图到目标区域。
+                                                    </p>
+                                                </div>
+                                            {/if}
+                                        </div>
+                                    </div>
+                                {/if}
+
+                                {#if showFilterPanel}
+                                    <div class="overflow-hidden rounded-[28px] border border-border/60 bg-card/92 p-3 shadow-lg backdrop-blur-md">
+                                        <div class="mb-2 flex items-center justify-between px-1">
+                                            <div>
+                                                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary/70">
+                                                    地图内容筛选
+                                                </p>
+                                                <p class="mt-1 text-xs text-muted-foreground">
+                                                    已启用 {activeFilterCount} 项筛选
+                                                </p>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                class="h-9 w-9 rounded-2xl border border-border/60 bg-background/75 p-0"
+                                                onclick={toggleFilterPanel}
+                                            >
+                                                <X class="h-4 w-4" />
+                                                <span class="sr-only">关闭筛选</span>
+                                            </Button>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <button
+                                                class={`flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left text-sm font-medium transition ${
+                                                    showUsers
+                                                        ? "border border-blue-500/80 bg-blue-50 text-blue-900 shadow-sm"
+                                                        : "border border-border/60 bg-background/70 text-muted-foreground"
+                                                }`}
+                                                onclick={() => toggleRenderFilter("user")}
+                                            >
+                                                <span class="flex items-center gap-2">
+                                                    <img src="/map/marker_user.svg" alt="用户标记" class="h-8 w-auto" />
+                                                    <span>用户</span>
+                                                </span>
+                                                <span class={`h-2.5 w-2.5 rounded-full ${showUsers ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-600"}`}></span>
+                                            </button>
+                                            <button
+                                                class={`flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left text-sm font-medium transition ${
+                                                    showGroups
+                                                        ? "border border-emerald-500/80 bg-emerald-50 text-emerald-900 shadow-sm"
+                                                        : "border border-border/60 bg-background/70 text-muted-foreground"
+                                                }`}
+                                                onclick={() => toggleRenderFilter("group")}
+                                            >
+                                                <span class="flex items-center gap-2">
+                                                    <img src="/map/marker_group.svg" alt="群组标记" class="h-8 w-auto" />
+                                                    <span>群组</span>
+                                                </span>
+                                                <span class={`h-2.5 w-2.5 rounded-full ${showGroups ? "bg-emerald-600" : "bg-slate-300 dark:bg-slate-600"}`}></span>
+                                            </button>
+                                            <button
+                                                class={`flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left text-sm font-medium transition ${
+                                                    showMoments
+                                                        ? "border border-orange-500/80 bg-orange-50 text-orange-900 shadow-sm"
+                                                        : "border border-border/60 bg-background/70 text-muted-foreground"
+                                                }`}
+                                                onclick={() => toggleRenderFilter("moment")}
+                                            >
+                                                <span class="flex items-center gap-2">
+                                                    <img src="/map/marker_moment.svg" alt="动态标记" class="h-8 w-auto" />
+                                                    <span>动态</span>
+                                                </span>
+                                                <span class={`h-2.5 w-2.5 rounded-full ${showMoments ? "bg-orange-500" : "bg-slate-300 dark:bg-slate-600"}`}></span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                {/if}
+
+                                {#if clusterPreview}
+                                    <div class="overflow-hidden rounded-[28px] border border-border/60 bg-card/92 shadow-lg backdrop-blur-md">
+                                        <div class="flex items-start justify-between gap-3 border-b border-border/50 px-4 py-3">
+                                            <div class="min-w-0">
+                                                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary/70">
+                                                    {clusterPreview.kind === "overlap_group"
+                                                        ? "同点内容预览"
+                                                        : "聚合内容预览"}
+                                                </p>
+                                                <p class="truncate text-base font-bold text-foreground">
+                                                    {clusterPreview.title}
+                                                </p>
+                                                <p class="mt-1 text-xs text-muted-foreground">
+                                                    {clusterPreview.description}
+                                                </p>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                class="h-9 w-9 shrink-0 rounded-2xl border border-border/60 bg-background/75 p-0"
+                                                onclick={closeClusterPreview}
+                                            >
+                                                <X class="h-4 w-4" />
+                                                <span class="sr-only">关闭预览</span>
+                                            </Button>
+                                        </div>
+                                        {#if clusterPreview.items.length > 0}
+                                            <div class="max-h-[32dvh] space-y-2 overflow-y-auto px-3 py-3">
+                                                {#each clusterPreview.items as previewItem (`sheet_preview_${previewItem.location.latitude}_${previewItem.location.longitude}_${previewItem.total_count}`)}
+                                                    <button
+                                                        class="flex w-full items-start gap-3 rounded-2xl border border-border/50 bg-background/70 px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/25 hover:bg-background"
+                                                        onclick={() => focusPreviewEntity(previewItem)}
+                                                    >
+                                                        <div class={`rounded-full px-2 py-1 text-[11px] font-semibold ${getItemBadgeClass(previewItem)}`}>
+                                                            {getItemTypeLabel(previewItem)}
+                                                        </div>
+                                                        <div class="min-w-0 flex-1">
+                                                            <p class="truncate text-sm font-semibold text-foreground">
+                                                                聚合区域
+                                                            </p>
+                                                            <p class="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                                                                {previewItem.total_count} 个内容
+                                                            </p>
+                                                        </div>
+                                                    </button>
+                                                {/each}
+                                            </div>
+                                        {:else}
+                                            <div class="px-4 py-4 text-sm text-muted-foreground">
+                                                当前层级只有聚合摘要，继续放大后才能看到具体对象列表。
+                                            </div>
+                                        {/if}
+                                        <div class="flex gap-2 border-t border-border/50 px-4 py-3">
+                                            <Button
+                                                variant="outline"
+                                                class="h-10 flex-1 rounded-2xl"
+                                                onclick={closeClusterPreview}
+                                            >
+                                                稍后再看
+                                            </Button>
+                                            <Button
+                                                class="h-10 flex-1 rounded-2xl"
+                                                onclick={zoomToClusterPreview}
+                                            >
+                                                {clusterPreview.kind === "overlap_group"
+                                                    ? "放大展开"
+                                                    : "继续放大"}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                {/if}
+
+                                {#if hotspotPreviewItems.length > 0}
+                                    <div class="overflow-hidden rounded-[28px] border border-border/60 bg-card/92 shadow-lg backdrop-blur-md">
+                                        <div class="flex items-start justify-between gap-3 border-b border-border/50 px-4 py-3">
+                                            <div class="min-w-0">
+                                                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary/70">
+                                                    地图对象详情
+                                                </p>
+                                                <p class="truncate text-base font-bold text-foreground">
+                                                    {hotspotPreviewItems.length === 1
+                                                        ? (hotspotPreviewItems[0]?.title ??
+                                                          "")
+                                                        : `${hotspotPreviewItems.length} 个内容`}
+                                                </p>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                class="h-9 w-9 shrink-0 rounded-2xl border border-border/60 bg-background/75 p-0"
+                                                onclick={() => {
+                                                    hotspotPreviewItems = [];
+                                                    isBottomSheetExpanded = false;
+                                                }}
+                                            >
+                                                <X class="h-4 w-4" />
+                                                <span class="sr-only">关闭详情</span>
+                                            </Button>
+                                        </div>
+                                        <div class="max-h-[32dvh] space-y-2 overflow-y-auto px-3 py-3">
+                                            {#each hotspotPreviewItems as item (item.object_type + "_" + item.object_id)}
+                                                <button
+                                                    class="flex w-full items-start gap-3 rounded-2xl border border-border/50 bg-background/70 px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/25 hover:bg-background"
+                                                    onclick={() => {
+                                                        hotspotPreviewItems = [];
+                                                        if (item.object_type === "user") {
+                                                            goto(`/users/${item.object_id}`);
+                                                        } else if (
+                                                            item.object_type === "group"
+                                                        ) {
+                                                            goto(`/groups/${item.object_id}`);
+                                                        } else if (
+                                                            item.object_type === "moment"
+                                                        ) {
+                                                            goto(`/moments/${item.object_id}`);
+                                                        }
+                                                    }}
+                                                >
+                                                    <div
+                                                        class="rounded-full px-2 py-1 text-[11px] font-semibold"
+                                                        class:text-blue-700={item.object_type ===
+                                                            "user"}
+                                                        class:bg-blue-50={item.object_type ===
+                                                            "user"}
+                                                        class:text-emerald-700={item.object_type ===
+                                                            "group"}
+                                                        class:bg-emerald-50={item.object_type ===
+                                                            "group"}
+                                                        class:text-orange-700={item.object_type ===
+                                                            "moment"}
+                                                        class:bg-orange-50={item.object_type ===
+                                                            "moment"}
+                                                    >
+                                                        {item.object_type === "user"
+                                                            ? "用户"
+                                                            : item.object_type === "group"
+                                                              ? "群组"
+                                                              : "动态"}
+                                                    </div>
+                                                    <div class="min-w-0 flex-1">
+                                                        <p class="truncate text-sm font-semibold text-foreground">
+                                                            {item.title ?? ""}
+                                                        </p>
+                                                        {#if item.subtitle}
+                                                            <p class="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                                                                {item.subtitle}
+                                                            </p>
+                                                        {/if}
+                                                    </div>
+                                                </button>
+                                            {/each}
+                                        </div>
+                                    </div>
+                                {/if}
+                            </div>
+
                             <div
                                 class="sticky bottom-0 space-y-2 bg-[linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,0.92)_18%,rgba(255,255,255,0.98)_100%)] pb-4 pt-3 backdrop-blur-sm dark:bg-[linear-gradient(180deg,rgba(24,24,30,0),rgba(24,24,30,0.92)_18%,rgba(24,24,30,0.98)_100%)]"
                             >

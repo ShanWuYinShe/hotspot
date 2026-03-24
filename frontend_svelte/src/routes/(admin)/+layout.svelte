@@ -163,8 +163,8 @@
 			{/if}
 
 			<!-- Main content -->
-			<main class="mx-3 flex-1 rounded-3xl border border-border/60 bg-card/85 p-4 shadow-sm backdrop-blur-md md:mx-4 md:p-6" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
-				<div class="mx-auto w-full max-w-6xl">
+			<main class="mobile-app-main md:mx-4 md:rounded-3xl md:border md:border-border/60 md:bg-card/85 md:p-6 md:shadow-sm md:backdrop-blur-md" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
+				<div class="mobile-page-shell md:mx-auto md:max-w-6xl">
 					{@render children()}
 				</div>
 			</main>
@@ -186,8 +186,8 @@
 	<div class="min-h-screen bg-background">
 		<Navbar onMenuClick={() => {}} />
 		<div class="flex min-h-[calc(100dvh-4rem)] bg-muted/30">
-			<main class="mx-3 flex-1 rounded-3xl border border-border/60 bg-card/85 p-4 shadow-sm backdrop-blur-md md:mx-4 md:p-6" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
-				<div class="mx-auto w-full max-w-6xl">
+			<main class="mobile-app-main md:mx-4 md:rounded-3xl md:border md:border-border/60 md:bg-card/85 md:p-6 md:shadow-sm md:backdrop-blur-md" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
+				<div class="mobile-page-shell md:mx-auto md:max-w-6xl">
 					<div class="flex flex-col items-center justify-center py-20 text-center">
 						<div class="mb-4 rounded-3xl bg-destructive/10 p-6">
 							<Shield class="h-10 w-10 text-destructive" />
@@ -218,8 +218,8 @@
 	<div class="min-h-screen bg-background">
 		<Navbar onMenuClick={() => (sidebarOpen = !sidebarOpen)} />
 		<div class="flex min-h-[calc(100dvh-4rem)] bg-muted/30">
-			<main class="mx-3 flex-1 rounded-3xl border border-border/60 bg-card/85 p-4 shadow-sm backdrop-blur-md md:mx-4 md:p-6" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
-				<div class="mx-auto w-full max-w-6xl">
+			<main class="mobile-app-main md:mx-4 md:rounded-3xl md:border md:border-border/60 md:bg-card/85 md:p-6 md:shadow-sm md:backdrop-blur-md" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
+				<div class="mobile-page-shell md:mx-auto md:max-w-6xl">
 					<div class="flex flex-col items-center justify-center py-20 text-center">
 						<div class="mb-4 rounded-3xl bg-muted p-6">
 							<Shield class="h-10 w-10 text-muted-foreground" />

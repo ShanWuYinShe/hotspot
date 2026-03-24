@@ -59,10 +59,10 @@
 		{/if}
 
 		<main
-			class="mx-3 flex-1 overflow-y-auto rounded-3xl border border-border/60 bg-card/85 p-4 shadow-sm backdrop-blur-md md:mx-4 md:p-6"
+			class="mobile-app-main md:mx-4 md:rounded-3xl md:border md:border-border/60 md:bg-card/85 md:p-6 md:shadow-sm md:backdrop-blur-md"
 			style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));"
 		>
-			<div class="mx-auto w-full max-w-7xl">
+			<div class="mobile-page-shell md:mx-auto md:max-w-7xl">
 				{#if authStore.isAuthenticated}
 					{@render children()}
 				{:else if authStore.isRestoring}
