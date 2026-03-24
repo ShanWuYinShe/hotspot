@@ -13,4 +13,32 @@ description: 复核当前 integration worktree 是否已经满足 ready to sync 
 4. 检查 simplify、严格 review 和 review 问题修复是否已经完成。
 5. 检查当前历史是否已经整理为适合回 `main` 的线性结果，优先采用 rebase / squash，避免 merge commit。
 6. 检查 integration 基线是否仍然新鲜；若主目录当前最新本地 `main HEAD` 已经前进，则当前结论必须是 `must refresh`。
-7. 输出时必须给出明确结论：`ready to sync`、`blocked` 或 `must refresh`；如果未通过，列出阻塞项和推荐下一步。不要自动同步回 `main`，除非上层任务明确要求。
+7. 结论枚举必须只使用：`ready to sync`、`blocked`、`must refresh`。
+8. 输出必须使用以下 Markdown 结构，标题名不要改：
+
+## 结论
+- `ready to sync` | `blocked` | `must refresh`
+
+## Baseline
+- integration baseline main SHA：
+- current main SHA：
+
+## Replay 完整性
+- 状态：
+- 依据：
+
+## Integration verify
+- 状态：
+- 依据：
+
+## 历史线性化
+- 状态：
+- 依据：
+
+## 阻塞项
+- 若无阻塞项，写 `无`
+
+## 建议下一步
+- 给出 1-3 条具体下一步
+
+9. 不要自动同步回 `main`，除非上层任务明确要求。

@@ -1,6 +1,7 @@
 ---
 description: 检查当前 integration 是否已满足线性同步回主目录 main 的条件
 argument-hint: [optional notes]
+allowed-tools: Bash(git status:*), Bash(git branch:*), Bash(git rev-parse:*), Bash(git log:*), Bash(git diff:*), Read, Glob, Grep
 ---
 
 请对当前 integration worktree 做最后的完成检查。当前命令的参数为：
@@ -16,8 +17,10 @@ $ARGUMENTS
 3. 检查 integration verify 是否已经完成并通过；不要把 feature worktree 的局部通过当作 integration verify 通过。
 4. 检查 simplify、严格 review 与 review 问题修复是否已经完成。
 5. 检查当前提交历史是否已适合线性同步回主目录 `main`；优先采用 `rebase + squash` 后的干净历史，避免 merge commit。
-6. 可使用 `integration-review-gate` subagent 复核当前 gate 结论。
-7. 只给出结论和阻塞项，不要默认自动同步回 `main`，不要 push。
+6. 读取仓库根 `tmp/claude/integrations/<integration-id>.json`，同步校验 `baseline_main_sha`、`verify_status`、`review_status`、`gate_status`。
+7. 必须调用 `integration-review-gate` subagent 复核当前 gate 结论，并在最终输出中复述其 `## 结论`、`## Baseline`、`## 阻塞项`、`## 建议下一步`。
+8. 将最终 gate 结果回写到 integration 元信息中的 `gate_status`、`review_status` 与 `updated_at`。
+9. 只给出结论和阻塞项，不要默认自动同步回 `main`，不要 push。
 
 结束时请输出：
 

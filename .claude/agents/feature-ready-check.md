@@ -12,5 +12,32 @@ description: 复核当前 feature worktree 是否已经达到 ready for integrat
 3. 检查是否已经完成标准 verify；最终有效结论默认以 `deploy/scripts/verify.sh --env-name <name>` 为准，不要把宿主机临时命令结果当作最终结论。
 4. 检查是否已经完成 simplify 和严格 review，且 review 问题是否已经修复。
 5. 检查提交状态是否清晰，当前 worktree 是否处于可交接、可 replay 的状态。
-6. 输出时必须给出明确结论：`ready for integration`、`blocked` 或 `needs clarification`。
-7. 如果未通过，必须列出阻塞项和推荐下一步；不要自动修改文件，除非上层任务明确要求。
+6. 结论枚举必须只使用：`ready for integration`、`blocked`、`needs clarification`。
+7. 输出必须使用以下 Markdown 结构，标题名不要改：
+
+## 结论
+- `ready for integration` | `blocked` | `needs clarification`
+
+## 范围
+- 当前 feature worktree：
+- 当前任务摘要：
+
+## Verify
+- 状态：
+- 依据：
+
+## Simplify
+- 状态：
+- 依据：
+
+## Strict review
+- 状态：
+- 依据：
+
+## 阻塞项
+- 若无阻塞项，写 `无`
+
+## 建议下一步
+- 给出 1-3 条具体下一步
+
+8. 不要自动修改文件，除非上层任务明确要求。

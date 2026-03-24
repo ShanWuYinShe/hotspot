@@ -18,8 +18,8 @@ $ARGUMENTS
 5. 创建新的 feature worktree；后续所有实现、验证、review、commit 都在该 worktree 中完成，不要在主目录写代码。
 6. 在 feature worktree 中完成实现，避免无关重构、额外环境模式抽象和与任务无关的复杂化。
 7. 运行标准验证；最终有效结论以 `deploy/scripts/verify.sh --env-name <name>` 为准，不要把宿主机临时命令结果当成最终结论。
-8. 完成 simplify 和严格 review；必要时可使用 `feature-ready-check` subagent 复核当前 feature 是否达到进入 integration 的质量门。
-9. 当任务真正完成且 review 通过后，创建本地 commit。
+8. 完成 simplify 和严格 review 后，必须调用 `feature-ready-check` subagent 做最终 readiness 复核，并在输出中复述其 `## 结论`、`## 阻塞项`、`## 建议下一步`。
+9. 当任务真正完成且 `feature-ready-check` 结论为 `ready for integration` 时，再创建本地 commit。
 10. 不要默认进入 integration，不要同步回 `main`，不要 push。
 
 结束时请输出：

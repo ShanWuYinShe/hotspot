@@ -1,6 +1,7 @@
 ---
 description: 在 integration worktree 中运行标准集成验证并给出下一步建议
 argument-hint: [env-name]
+allowed-tools: Bash(git status:*), Bash(git branch:*), Bash(git rev-parse:*), Bash(*deploy/scripts/verify.sh*), Read, Glob, Grep
 ---
 
 请对当前 integration worktree 运行一轮标准集成验证。当前命令的参数为：
@@ -12,12 +13,13 @@ $ARGUMENTS
 执行要求：
 
 1. 先确认当前位于 integration worktree；如果不是，停止并说明原因。
-2. 检查当前 integration 基线是否仍然有效；若主目录 `main` 已前进，先提示改走 `/refresh_integrate`。
+2. 读取仓库根 `tmp/claude/integrations/<integration-id>.json`，检查当前 integration 基线是否仍然有效；若主目录 `main` 已前进，先提示改走 `/refresh_integrate`。
 3. 使用仓库标准入口运行验证；最终有效结论统一以 `deploy/scripts/verify.sh --env-name <name>` 为准。
-4. 汇总 verify 结果时，区分编译错误、测试失败、构建失败、环境问题，以及基线问题。
-5. 若 verify 通过，说明当前 integration 已具备进入 simplify / strict review / `/finish_integrate` 的基础。
-6. 若 verify 失败，明确列出失败范围和建议修复方向。
-7. 不要默认同步回 `main`，不要 push。
+4. 将 verify 结果回写到 integration 元信息中的 `verify_status` 与 `updated_at`。
+5. 汇总 verify 结果时，区分编译错误、测试失败、构建失败、环境问题，以及基线问题。
+6. 若 verify 通过，说明当前 integration 已具备进入 simplify / strict review / `/finish_integrate` 的基础。
+7. 若 verify 失败，明确列出失败范围和建议修复方向。
+8. 不要默认同步回 `main`，不要 push。
 
 结束时请输出：
 
