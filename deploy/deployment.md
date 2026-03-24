@@ -37,7 +37,7 @@
 - lock
 - 测试依赖容器
 
-缓存、构建产物与日志统一落在当前 checkout 的 `tmp/deploy/` 下，但必须由当前宿主用户写入，避免 worktree 清理时出现无法删除的 root/foreign-owned 文件。
+宿主侧只保留当前 checkout 下 `tmp/deploy/` 里的日志、构建产物、release manifest 与 deploy-managed worktree；Go / pnpm 等中间缓存默认留在容器临时目录内，不再写回宿主 worktree，从根上避免 worktree 清理时被缓存权限卡住。
 
 ### 入口
 
@@ -50,8 +50,8 @@
 - 固定 runner image：
   - `dockerfiles/backend-go.verify.Dockerfile`
   - `dockerfiles/frontend.verify.Dockerfile`
-- 当前工作树通过只读挂载注入容器，并复制到容器临时目录后执行测试，避免把 pnpm store、node_modules 或其他临时产物写回仓库根
-- verify runner 以当前宿主 UID/GID 写入 `tmp/deploy/` 下的 cache，并在 `go test ./...` 前先执行 backend-go schema bootstrap
+- 当前工作树通过只读挂载注入容器，并复制到容器临时目录后执行测试，避免把 pnpm store、node_modules、Go module cache 或其他中间产物写回仓库根
+- verify runner 以内置的容器临时缓存运行 backend/frontend 校验，并在 `go test ./...` 前先执行 backend-go schema bootstrap
 - 每次 verify 都会额外把完整 runner 输出、`docker compose ps` 和完整 compose logs 归档到 `tmp/deploy/logs/verify/<env-name>/<run-id>/`
 
 ## 二、preview
@@ -212,7 +212,7 @@ deploy/
 
 ### verify
 - 不同 worktree 使用不同 `env-name` 可以并行运行
-- 工作目录 / compose project / cache / lock 不串
+- 工作目录 / compose project / lock 不串；容器内中间缓存不写回宿主 worktree
 - backend-go 与 frontend 验证都能通过
 
 ### preview
@@ -226,4 +226,4 @@ deploy/
 ### release
 - `release-build.sh --ref <sha>` 能稳定产出 release image 与 manifest
 - release 结果不依赖当前未提交工作树
-- 产物、cache 与临时 worktree 都应由当前宿主用户创建，完成后可直接清理，不需要 sudo
+- 产物、manifest 与临时 worktree 都应由当前宿主用户创建，完成后可直接清理，不需要 sudo

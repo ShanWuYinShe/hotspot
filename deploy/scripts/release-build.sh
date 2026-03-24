@@ -108,8 +108,6 @@ run_and_capture "$BACKEND_BUILD_LOG" docker run --rm \
   -e XDG_CACHE_HOME="$(runner_home_dir)/.cache" \
   -v "$SOURCE_ROOT:/workspace:ro" \
   -v "$BACKEND_ARTIFACT_DIR:/out" \
-  -v "$(go_mod_cache_dir "$ROOT"):/cache/go/pkg" \
-  -v "$(go_build_cache_dir "$ROOT"):/cache/go/build" \
   "$BACKEND_RUNNER_IMAGE" \
   sh -c 'rm -rf /tmp/workspace && mkdir -p /tmp/workspace/backend-go && cp -a /workspace/backend-go/. /tmp/workspace/backend-go/ && cd /tmp/workspace/backend-go && go build -o /out/backend-go ./cmd/server'
 
@@ -119,7 +117,6 @@ run_and_capture "$FRONTEND_BUILD_LOG" docker run --rm \
   -e XDG_CACHE_HOME="$(runner_home_dir)/.cache" \
   -v "$SOURCE_ROOT:/workspace:ro" \
   -v "$FRONTEND_ARTIFACT_DIR:/out" \
-  -v "$(pnpm_store_dir "$ROOT"):/cache/pnpm/store" \
   "$FRONTEND_RUNNER_IMAGE" \
   sh -c 'rm -rf /tmp/workspace && mkdir -p /tmp/workspace/frontend_svelte && cp -a /workspace/frontend_svelte/. /tmp/workspace/frontend_svelte/ && cd /tmp/workspace/frontend_svelte && CI=true pnpm install --frozen-lockfile && CI=true pnpm build && cp package.json pnpm-lock.yaml /out/ && rm -rf /out/build && cp -R build /out/build'
 
