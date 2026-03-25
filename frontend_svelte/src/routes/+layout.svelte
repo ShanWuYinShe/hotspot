@@ -8,7 +8,7 @@
     import PageLoading from "$lib/components/common/page-loading.svelte";
     import { goto } from "$app/navigation";
     import { authStore } from "$lib/stores/auth.svelte";
-    import { uiStore } from "$lib/stores/ui.svelte";
+    import { normalizeRedirectPath, uiStore } from "$lib/stores/ui.svelte";
     import { locationStore } from "$lib/stores/location.svelte";
     import {
         mapAnchorStore,
@@ -22,8 +22,10 @@
     let { children } = $props();
     let isSyncingLocationToServer = false;
     let lastSyncedLocationSignature = "";
+    let hasBootstrappedLocation = false;
     const LOCATION_MAX_AGE_MS = 1 * 60 * 1000; // 1 分钟视为位置仍然新鲜
     const LOCATION_REFRESH_INTERVAL_MS = 1 * 60 * 1000; // 每 1 分钟刷新一次真实位置
+    const MAP_PRELOAD_ROUTES = ["/map", "/groups", "/moments"];
     let locationRefreshTimer: number | null = null;
 
     function buildLocationSignature(
@@ -100,12 +102,29 @@
         return Date.now() - timestamp < LOCATION_MAX_AGE_MS;
     }
 
+    function shouldPreloadAMap(pathname: string): boolean {
+        return MAP_PRELOAD_ROUTES.some(
+            (route) => pathname === route || pathname.startsWith(`${route}/`),
+        );
+    }
+
     async function initLocation(force: boolean) {
         if (locationStore.permissionDenied) return;
 
         const existing = locationStore.current;
         if (!force && existing && isLocationFresh()) {
             // 已有较新的真实位置时，仅在浏览锚点仍为默认值时用它初始化锚点
+            if (mapAnchorStore.name === DEFAULT_ANCHOR_NAME) {
+                const anchorName = existing.location_name || "当前位置";
+                mapAnchorStore.setAnchor(
+                    existing.point.latitude,
+                    existing.point.longitude,
+                    anchorName,
+                );
+            }
+            return;
+        }
+        if (force && existing) {
             if (mapAnchorStore.name === DEFAULT_ANCHOR_NAME) {
                 const anchorName = existing.location_name || "当前位置";
                 mapAnchorStore.setAnchor(
@@ -147,7 +166,7 @@
         const isAuthenticated = authStore.isAuthenticated;
         const userId = authStore.currentUserId;
         const current = locationStore.current;
-        if (!isAuthenticated || !userId || !current) return;
+        if (!isAuthenticated || !userId || !current || !hasBootstrappedLocation) return;
         const location = {
             point: {
                 latitude: current.point.latitude,
@@ -159,29 +178,33 @@
     });
 
     onMount(() => {
-        // 处理 URL 中的 redirect 参数（例如外部链接 /?redirect=/profile）
         const redirectParam = page.url.searchParams.get("redirect");
+        const safeRedirect = normalizeRedirectPath(redirectParam);
         if (redirectParam) {
-            if (authStore.isAuthenticated) {
-                // 已登录：直接跳转到目标页面
-                goto(redirectParam, { replaceState: true });
+            if (safeRedirect) {
+                if (authStore.isAuthenticated) {
+                    goto(safeRedirect, { replaceState: true });
+                } else {
+                    uiStore.saveRedirectUrl(safeRedirect);
+                }
             } else {
-                // 未登录：保存目标 URL，登录后自动跳转
-                uiStore.saveRedirectUrl(redirectParam);
+                uiStore.clearRedirectUrl();
             }
         }
 
-        // 首次进入站点时强制刷新一次真实位置
-        void initLocation(true);
-        // 提前加载高德地图 SDK，减少后续位置选择/锚点弹窗首次打开的等待时间
-        void loadAMap().catch(() => {
-            // 忽略加载失败：缺少 Key 或网络问题时保持降级体验
+        const pathname = page.url.pathname;
+        if (shouldPreloadAMap(pathname)) {
+            void loadAMap().catch(() => {
+                // 忽略加载失败：缺少 Key 或网络问题时保持降级体验
+            });
+        }
+
+        void initLocation(true).finally(() => {
+            hasBootstrappedLocation = true;
         });
-        // 周期性刷新真实位置（基于浏览器定位能力），用于定期上报后端
         locationRefreshTimer = window.setInterval(() => {
             void initLocation(false);
         }, LOCATION_REFRESH_INTERVAL_MS);
-        // 注：WebSocket 在 hooks.client.ts 中初始化，无需在组件中管理
         return () => {
             if (locationRefreshTimer !== null) {
                 window.clearInterval(locationRefreshTimer);

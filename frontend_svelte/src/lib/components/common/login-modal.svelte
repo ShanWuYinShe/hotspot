@@ -1,10 +1,8 @@
 <script lang="ts">
 	import { withMinimumLoadingTime, MIN_LOADING_ACTION } from '$lib/utils/loading';
 	import { authService, usersService } from '$lib/api/services';
-	import { isSuccess } from '$lib/api/client';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
-	import { locationStore } from '$lib/stores/location.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Button } from '$lib/components/ui/button';
@@ -66,7 +64,6 @@
 			access_token_expires_at: expiresAt
 		});
 		authStore.setProfile(profileRes.data);
-		await syncLocationAfterAuth();
 		return true;
 	}
 
@@ -212,18 +209,6 @@
 		}
 	}
 
-	async function syncLocationAfterAuth() {
-		const current = locationStore.current;
-		if (!current?.location_name) return;
-		try {
-			const response = await usersService.updateLocation({ location: current });
-			if (!isSuccess(response)) {
-				// 静默失败，避免打扰登录流程
-			}
-		} catch {
-			// ignore
-		}
-	}
 </script>
 
 <Dialog.Root 

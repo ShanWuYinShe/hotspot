@@ -4,7 +4,7 @@
 	import { page } from '$app/state';
 	import { untrack } from 'svelte';
 	import { authStore } from '$lib/stores/auth.svelte';
-	import { uiStore } from '$lib/stores/ui.svelte';
+	import { normalizeRedirectPath, uiStore } from '$lib/stores/ui.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import Shield from 'lucide-svelte/icons/shield';
 
@@ -12,17 +12,14 @@
 	$effect(() => {
 		if (browser && authStore.isAuthenticated) {
 			untrack(() => {
-				const redirect = page.url.searchParams.get('redirect') || '/';
-				// 防止自引用循环（redirect 指向 /auth 自身）
-				const target = redirect.startsWith('/auth') ? '/' : redirect;
-				goto(target, { replaceState: true });
+				const redirect = normalizeRedirectPath(page.url.searchParams.get('redirect')) ?? '/';
+				goto(redirect, { replaceState: true });
 			});
 		}
 	});
 
 	function handleLoginClick() {
-		const redirect = page.url.searchParams.get('redirect') || '/';
-		uiStore.openLoginModal(() => goto(redirect));
+		uiStore.openLoginModal();
 	}
 </script>
 

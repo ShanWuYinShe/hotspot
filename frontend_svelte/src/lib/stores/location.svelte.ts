@@ -52,6 +52,7 @@ class LocationStore {
 	#lastUpdated = $state<string | null>(null);
 	#permissionDenied = $state(false);
 	#isLoading = $state(false);
+	#pendingLocationRequest = $state<Promise<GeoPoint | null> | null>(null);
 
 	constructor() {
 		if (browser) {
@@ -133,44 +134,52 @@ class LocationStore {
 		if (!browser || !navigator.geolocation) {
 			return null;
 		}
+		if (this.#pendingLocationRequest) {
+			return this.#pendingLocationRequest;
+		}
 
 		this.#isLoading = true;
-
-		try {
-			const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-				navigator.geolocation.getCurrentPosition(resolve, reject, {
-					enableHighAccuracy: true,
-					timeout: 10000,
-					maximumAge: 60000
+		const request = (async () => {
+			try {
+				const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+					navigator.geolocation.getCurrentPosition(resolve, reject, {
+						enableHighAccuracy: true,
+						timeout: 10000,
+						maximumAge: 60000
+					});
 				});
-			});
 
-			const geoPoint: GeoPoint = {
-				latitude: position.coords.latitude,
-				longitude: position.coords.longitude
-			};
+				const geoPoint: GeoPoint = {
+					latitude: position.coords.latitude,
+					longitude: position.coords.longitude
+				};
 
-			// 注意：这里只返回坐标，location_name 使用默认占位
-			this.#current = {
-				point: geoPoint,
-				location_name: '当前位置'
-			};
-			this.#lastUpdated = new Date().toISOString();
-			this.#permissionDenied = false;
-			this.#persist();
-
-			return geoPoint;
-		} catch (error) {
-			if (error instanceof GeolocationPositionError && error.code === error.PERMISSION_DENIED) {
-				this.#permissionDenied = true;
+				// 注意：这里只返回坐标，location_name 使用默认占位
+				this.#current = {
+					point: geoPoint,
+					location_name: '当前位置'
+				};
+				this.#lastUpdated = new Date().toISOString();
+				this.#permissionDenied = false;
 				this.#persist();
+
+				return geoPoint;
+			} catch (error) {
+				if (error instanceof GeolocationPositionError && error.code === error.PERMISSION_DENIED) {
+					this.#permissionDenied = true;
+					this.#persist();
+				}
+				// 定位失败时，尝试使用 ClientConfig 默认位置
+				this.#applyDefaultLocation();
+				return null;
+			} finally {
+				this.#isLoading = false;
+				this.#pendingLocationRequest = null;
 			}
-			// 定位失败时，尝试使用 ClientConfig 默认位置
-			this.#applyDefaultLocation();
-			return null;
-		} finally {
-			this.#isLoading = false;
-		}
+		})();
+
+		this.#pendingLocationRequest = request;
+		return request;
 	}
 }
 

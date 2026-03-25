@@ -7,6 +7,45 @@ import { browser } from '$app/environment';
 import { goto } from '$app/navigation';
 
 const REDIRECT_KEY = 'hotspot_redirect_url';
+const DEFAULT_REDIRECT_PATH = '/';
+
+function safelyDecodeRedirectPath(value: string): string {
+	try {
+		return decodeURIComponent(value);
+	} catch {
+		return value;
+	}
+}
+
+function isAuthPath(pathname: string): boolean {
+	return pathname === '/auth' || pathname.startsWith('/auth/');
+}
+
+export function normalizeRedirectPath(url?: string | null): string | null {
+	if (!url) return null;
+
+	const trimmed = url.trim();
+	if (!trimmed) return null;
+	if (/[^\S ]|[\u0000-\u001F\u007F]/.test(trimmed)) return null;
+
+	const decoded = safelyDecodeRedirectPath(trimmed).trim();
+	if (!decoded.startsWith('/')) return null;
+	if (decoded.startsWith('//') || decoded.startsWith('/\\')) return null;
+	if (decoded.includes('\\')) return null;
+
+	const lowered = decoded.toLowerCase();
+	if (lowered.startsWith('/javascript:')) return null;
+	if (lowered.startsWith('/http:') || lowered.startsWith('/https:')) return null;
+
+	try {
+		const normalized = new URL(decoded, 'https://hotspot.local');
+		if (normalized.origin !== 'https://hotspot.local') return null;
+		if (isAuthPath(normalized.pathname)) return null;
+		return `${normalized.pathname}${normalized.search}${normalized.hash}`;
+	} catch {
+		return null;
+	}
+}
 
 class UIStore {
 	// 登录模态框状态
@@ -44,7 +83,7 @@ class UIStore {
 			callback();
 		}
 		if (redirectUrl && browser) {
-			const currentUrl = window.location.pathname + window.location.search;
+			const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
 			if (redirectUrl !== currentUrl) {
 				goto(redirectUrl);
 			}
@@ -56,29 +95,49 @@ class UIStore {
 	/** 保存当前 URL，用于登录后返回 */
 	saveRedirectUrl(url?: string) {
 		if (!browser) return;
-		const targetUrl = url ?? window.location.pathname + window.location.search;
-		// 不保存认证相关页面
-		if (!targetUrl.startsWith('/auth')) {
-			try { sessionStorage.setItem(REDIRECT_KEY, targetUrl); } catch { /* 隐私模式或配额满 */ }
+		const fallbackUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+		const targetUrl = normalizeRedirectPath(url ?? fallbackUrl);
+		if (!targetUrl) {
+			this.clearRedirectUrl();
+			return;
+		}
+		try {
+			sessionStorage.setItem(REDIRECT_KEY, targetUrl);
+		} catch {
+			// 隐私模式或配额满
 		}
 	}
-	
+
+	/** 清除保存的重定向 URL */
+	clearRedirectUrl() {
+		if (!browser) return;
+		try {
+			sessionStorage.removeItem(REDIRECT_KEY);
+		} catch {
+			// 忽略存储错误
+		}
+	}
+
 	/** 获取并清除保存的重定向 URL */
 	getAndClearRedirectUrl(): string {
-		if (!browser) return '/';
+		if (!browser) return DEFAULT_REDIRECT_PATH;
 		try {
 			const url = sessionStorage.getItem(REDIRECT_KEY);
 			sessionStorage.removeItem(REDIRECT_KEY);
-			return url || '/';
+			return normalizeRedirectPath(url) ?? DEFAULT_REDIRECT_PATH;
 		} catch {
-			return '/';
+			return DEFAULT_REDIRECT_PATH;
 		}
 	}
-	
+
 	/** 检查是否有保存的重定向 URL */
 	hasRedirectUrl(): boolean {
 		if (!browser) return false;
-		try { return !!sessionStorage.getItem(REDIRECT_KEY); } catch { return false; }
+		try {
+			return normalizeRedirectPath(sessionStorage.getItem(REDIRECT_KEY)) !== null;
+		} catch {
+			return false;
+		}
 	}
 }
 

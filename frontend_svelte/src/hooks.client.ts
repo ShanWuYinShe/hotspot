@@ -11,7 +11,6 @@ import { browser, dev } from '$app/environment';
 import { authStore } from '$lib/stores/auth.svelte';
 import { configStore } from '$lib/stores/config.svelte';
 import { initApiClient, ensureRefreshToken, isSuccess } from '$lib/api/client';
-import { loadAMap } from '$lib/utils/amap';
 import { authService } from '$lib/api/services/auth';
 import { usersService } from '$lib/api/services/users';
 import { websocketStore } from '$lib/websocket';
@@ -169,16 +168,6 @@ if (browser) {
 	}).catch((error) => {
 		if (dev) console.error('[App] ClientConfig 加载失败:', error);
 	});
-
-	// 预加载高德地图 SDK，避免首次打开地图页面时的长时间白屏
-	loadAMap()
-		.then(() => {
-			if (dev) console.log('[Map] AMap SDK 已预加载');
-		})
-		.catch((error) => {
-			// 地图是可选能力，预加载失败不影响整体应用
-			if (dev) console.warn('[Map] AMap SDK 预加载失败:', error);
-		});
 
 	// 恢复已保存的登录态（需要服务端确认 Cookie 有效）
 	restoreSessionFromServer();
