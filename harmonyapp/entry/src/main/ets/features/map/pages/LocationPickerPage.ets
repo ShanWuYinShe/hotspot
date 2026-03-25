@@ -36,7 +36,13 @@ const MARKER_COLOR_GROUP: string = '#059669';
 const MARKER_COLOR_MOMENT: string = '#EA580C';
 
 const HOTSPOT_CLUSTER_PREFIX: string = 'hotspot_cluster_';
-const LOCAL_CLUSTER_RADIUS_METERS: number = 56;
+const CLUSTER_RADIUS_ZOOM_STOPS: Array<{ minZoom: number; radiusMeters: number }> = [
+  { minZoom: 17, radiusMeters: 24 },
+  { minZoom: 15, radiusMeters: 40 },
+  { minZoom: 13, radiusMeters: 56 },
+  { minZoom: 11, radiusMeters: 88 },
+  { minZoom: 0, radiusMeters: 128 }
+];
 
 type MapRenderItemType = 'heat_bucket' | 'user' | 'group' | 'moment';
 type MapRenderableEntityType = 'user' | 'group' | 'moment';
@@ -1478,12 +1484,13 @@ export struct LocationPickerPage {
 
   private clusterHotspotItems(items: ConvertedRenderItem[]): ConvertedRenderItem[][] {
     const clusters: ConvertedRenderItem[][] = [];
+    const clusterRadiusMeters = this.resolveClusterRadiusMeters();
     for (const item of items) {
       let targetCluster: ConvertedRenderItem[] | undefined;
       for (const existingCluster of clusters) {
         const center = this.getClusterCenter(existingCluster);
         const distance = this.distanceBetweenGcj02Meters(item.gcj02Lat, item.gcj02Lng, center.latitude, center.longitude);
-        if (distance <= LOCAL_CLUSTER_RADIUS_METERS) {
+        if (distance <= clusterRadiusMeters) {
           targetCluster = existingCluster;
           break;
         }
@@ -1495,6 +1502,16 @@ export struct LocationPickerPage {
       }
     }
     return clusters;
+  }
+
+  private resolveClusterRadiusMeters(): number {
+    const zoom = Math.max(1, Math.min(20, this.mapZoom));
+    for (const stop of CLUSTER_RADIUS_ZOOM_STOPS) {
+      if (zoom >= stop.minZoom) {
+        return stop.radiusMeters;
+      }
+    }
+    return CLUSTER_RADIUS_ZOOM_STOPS[CLUSTER_RADIUS_ZOOM_STOPS.length - 1].radiusMeters;
   }
 
   private getClusterCenter(items: ConvertedRenderItem[]): MapCoordinate {
