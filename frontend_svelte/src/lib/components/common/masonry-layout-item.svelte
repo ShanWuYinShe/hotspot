@@ -25,7 +25,7 @@
 	}: Props = $props();
 </script>
 
-<div class={cn('masonry-item', className)}>
+<div class={cn('masonry-item relative z-0 w-full', className)}>
 	{#if children}
 		{@render children()}
 	{/if}

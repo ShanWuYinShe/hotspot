@@ -115,6 +115,35 @@
 		isFollowing = relation?.is_following ?? false;
 	});
 
+	function isInteractiveTarget(target: EventTarget | null): boolean {
+		return target instanceof HTMLElement
+			? Boolean(
+				target.closest(
+					'button, a, input, select, textarea, summary, [role="button"], [role="menuitem"], [data-card-action]'
+				)
+			)
+			: false;
+	}
+
+	function handleCardClick(event: MouseEvent) {
+		if (event.defaultPrevented || isInteractiveTarget(event.target)) {
+			return;
+		}
+
+		goto(actualHref);
+	}
+
+	function handleCardKeydown(event: KeyboardEvent) {
+		if (event.defaultPrevented || isInteractiveTarget(event.target)) {
+			return;
+		}
+
+		if (event.key === 'Enter' || event.key === ' ') {
+			event.preventDefault();
+			goto(actualHref);
+		}
+	}
+
 	// 菜单操作处理函数
 	function handleViewProfile(e: MouseEvent) {
 		e.preventDefault();
@@ -212,12 +241,16 @@
 </script>
 
 
-<a href={actualHref} class="group block animate-bounce-in">
+<div class="group block animate-bounce-in">
 	<Card
 		variant="default"
 		glow="soft"
 		interactive
-		class="group/card flex h-full flex-col {className}"
+		tabindex="0"
+		role="link"
+		onclick={handleCardClick}
+		onkeydown={handleCardKeydown}
+		class="group/card flex h-full flex-col overflow-hidden {className}"
 	>
 		<CardContent class="flex flex-1 flex-col p-6">
 			{#if variant === 'square'}
@@ -401,45 +434,49 @@
 
 		<!-- 操作按钮区域 -->
 		{#if !isMe}
-			<CardFooter class="border-t border-border/40 bg-muted/5 p-3 transition-colors group-hover/card:bg-muted/20">
-				<div class="flex w-full items-center justify-between">
-				<Button
-					variant="ghost"
-					size="sm"
-					onclick={handleSendMessage}
-				>
-					<MessageCircle class="h-4 w-4" />
-					<span class="font-medium text-xs">消息</span>
-				</Button>
-				<div class="flex gap-2">
+			<CardFooter class="border-t border-border/40 bg-muted/10 p-3 md:bg-muted/5 md:transition-colors md:group-hover/card:bg-muted/20">
+				<div class="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 					<Button
 						variant="ghost"
 						size="sm"
-						onclick={handleFollow}
-						disabled={isFollowPending}
+						data-card-action
+						class="justify-start sm:justify-center"
+						onclick={handleSendMessage}
 					>
-						{#if isFollowPending}
-							<Loader2 class="h-4 w-4 animate-spin" />
-						{:else}
-							<UserPlus class="h-4 w-4" />
-						{/if}
-						<span class="font-medium text-xs">{isFollowing ? '取消关注' : '关注'}</span>
+						<MessageCircle class="h-4 w-4" />
+						<span class="font-medium text-xs">消息</span>
 					</Button>
-					{#if showMenu}
-						<DropdownMenu>
-							<DropdownMenuTrigger>
-								<Button
-									variant="ghost"
-									size="icon"
-									onclick={(e: MouseEvent) => {
-										e.preventDefault();
-										e.stopPropagation();
-									}}
-									aria-label="更多操作"
-								>
-									<MoreVertical class="h-4 w-4" />
-								</Button>
-							</DropdownMenuTrigger>
+					<div class="flex flex-wrap items-center justify-end gap-2">
+						<Button
+							variant="ghost"
+							size="sm"
+							data-card-action
+							onclick={handleFollow}
+							disabled={isFollowPending}
+						>
+							{#if isFollowPending}
+								<Loader2 class="h-4 w-4 animate-spin" />
+							{:else}
+								<UserPlus class="h-4 w-4" />
+							{/if}
+							<span class="font-medium text-xs">{isFollowing ? '取消关注' : '关注'}</span>
+						</Button>
+						{#if showMenu}
+							<DropdownMenu>
+								<DropdownMenuTrigger>
+									<Button
+										variant="ghost"
+										size="icon"
+										data-card-action
+										onclick={(e: MouseEvent) => {
+											e.preventDefault();
+											e.stopPropagation();
+										}}
+										aria-label="更多操作"
+									>
+										<MoreVertical class="h-4 w-4" />
+									</Button>
+								</DropdownMenuTrigger>
 								<DropdownMenuContent align="end" class="w-48">
 									<DropdownMenuItem onclick={handleViewProfile}>
 										<User class="mr-2 h-4 w-4" />
@@ -462,4 +499,4 @@
 			</CardFooter>
 		{/if}
 	</Card>
-</a>
+</div>

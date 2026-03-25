@@ -42,7 +42,38 @@ let { moment, class: className = '' }: Props = $props();
 		onFalse: () => momentsService.unfavorite({ moment_id: moment.moment_id })
 	});
 
-	function handleLike() {
+	function isInteractiveTarget(target: EventTarget | null): boolean {
+		return target instanceof HTMLElement
+			? Boolean(
+				target.closest(
+					'button, a, input, select, textarea, summary, [role="button"], [role="menuitem"], [data-card-action]'
+				)
+			)
+			: false;
+	}
+
+	function handleCardClick(event: MouseEvent) {
+		if (event.defaultPrevented || isInteractiveTarget(event.target)) {
+			return;
+		}
+
+		goto(`/moments/${moment.moment_id}`);
+	}
+
+	function handleCardKeydown(event: KeyboardEvent) {
+		if (event.defaultPrevented || isInteractiveTarget(event.target)) {
+			return;
+		}
+
+		if (event.key === 'Enter' || event.key === ' ') {
+			event.preventDefault();
+			goto(`/moments/${moment.moment_id}`);
+		}
+	}
+
+	function handleLike(event: MouseEvent) {
+		event.preventDefault();
+		event.stopPropagation();
 		if (!authStore.isAuthenticated) {
 			uiStore.openLoginModal(likeAction.toggle);
 			return;
@@ -50,7 +81,9 @@ let { moment, class: className = '' }: Props = $props();
 		likeAction.toggle();
 	}
 
-	function handleFavorite() {
+	function handleFavorite(event: MouseEvent) {
+		event.preventDefault();
+		event.stopPropagation();
 		if (!authStore.isAuthenticated) {
 			uiStore.openLoginModal(favoriteAction.toggle);
 			return;
@@ -65,7 +98,9 @@ let { moment, class: className = '' }: Props = $props();
 		url: `${window.location.origin}/moments/${moment.moment_id}`
 	});
 
-	function handleShare() {
+	function handleShare(event: MouseEvent) {
+		event.preventDefault();
+		event.stopPropagation();
 		if (navigator.share) {
 			navigator.share(shareData).catch((error) => {
 				// 用户取消分享（AbortError）不需要提示
@@ -77,6 +112,18 @@ let { moment, class: className = '' }: Props = $props();
 			navigator.clipboard.writeText(shareData.url);
 			toast.success('链接已复制');
 		}
+	}
+
+	function handleMomentAuthorClick(event: MouseEvent) {
+		event.preventDefault();
+		event.stopPropagation();
+		goto(`/users/${moment.user.user_id}`);
+	}
+
+	function handleCommentClick(event: MouseEvent) {
+		event.preventDefault();
+		event.stopPropagation();
+		goto(`/moments/${moment.moment_id}`);
 	}
 
 
@@ -98,10 +145,24 @@ let { moment, class: className = '' }: Props = $props();
 	}
 </script>
 
-<Card variant="accent" glow="soft" interactive class="group/card cursor-pointer overflow-hidden animate-bounce-in {className}">
+<Card
+	variant="accent"
+	glow="soft"
+	interactive
+	tabindex="0"
+	role="link"
+	onclick={handleCardClick}
+	onkeydown={handleCardKeydown}
+	class="group/card cursor-pointer overflow-hidden animate-bounce-in {className}"
+>
 	<CardHeader class="pb-3 pt-4">
 		<div class="flex items-start justify-between gap-3">
-			<a href="/users/{moment.user.user_id}" class="group/user flex items-center gap-3">
+			<a
+				href="/users/{moment.user.user_id}"
+				data-card-action
+				class="group/user flex items-center gap-3"
+				onclick={handleMomentAuthorClick}
+			>
 				<div class="relative">
 					<Avatar glow class="h-10 w-10">
 						<AvatarImage src={moment.user.avatar_url} alt={moment.user.nickname} />
@@ -145,7 +206,7 @@ let { moment, class: className = '' }: Props = $props();
 	</CardHeader>
 
 	<CardContent class="pb-3">
-		<a href="/moments/{moment.moment_id}" class="block space-y-3">
+		<div class="block space-y-3">
 			{#if moment.description}
 				<p class="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">{moment.description}</p>
 			{/if}
@@ -188,50 +249,54 @@ let { moment, class: className = '' }: Props = $props();
 					{/each}
 				</div>
 			{/if}
-		</a>
+		</div>
 	</CardContent>
 
-	<CardFooter class="border-t border-border/40 bg-muted/5 py-2 transition-colors group-hover/card:bg-muted/20">
-		<div class="flex w-full items-center justify-between px-1">
-			<div class="flex gap-3">
-		<Button
-			variant="ghost"
-			size="sm"
-			class={likeAction.isOn ? 'bg-red-500/15 text-red-500' : ''}
-			onclick={handleLike}
-			disabled={likeAction.isLoading}
-		>
-				<Heart class="h-5 w-5 transition-all {likeAction.isOn && 'fill-current animate-bounce-in'}" />
-				<span class="font-semibold text-sm">{likeAction.count > 0 ? likeAction.count : '点赞'}</span>
-			</Button>
-			<Button 
-				variant="ghost" 
-				size="sm"
-				onclick={() => goto(`/moments/${moment.moment_id}`)}
-			>
-				<MessageCircle class="h-5 w-5" />
-				<span class="font-semibold text-sm">{moment.comments_count > 0 ? moment.comments_count : '评论'}</span>
-			</Button>
-		</div>
-		<div class="flex gap-2">
-		<Button
-			variant="ghost"
-			size="icon"
-			class={favoriteAction.isOn ? 'bg-yellow-500/15 text-yellow-500' : ''}
-			onclick={handleFavorite}
-			disabled={favoriteAction.isLoading}
-			aria-label={favoriteAction.isOn ? '取消收藏' : '收藏'}
-		>
-				<Bookmark class="h-5 w-5 {favoriteAction.isOn && 'fill-current animate-bounce-in'}" />
-			</Button>
-			<Button 
-				variant="ghost" 
-				size="icon"
-				onclick={handleShare}
-				aria-label="分享"
-			>
-				<Share2 class="h-5 w-5" />
-			</Button>
+	<CardFooter class="border-t border-border/40 bg-muted/10 py-2 md:bg-muted/5 md:transition-colors md:group-hover/card:bg-muted/20">
+		<div class="flex w-full flex-col gap-2 px-1 sm:flex-row sm:items-center sm:justify-between">
+			<div class="flex flex-wrap gap-2">
+				<Button
+					variant="ghost"
+					size="sm"
+					data-card-action
+					class={likeAction.isOn ? 'bg-red-500/15 text-red-500' : ''}
+					onclick={handleLike}
+					disabled={likeAction.isLoading}
+				>
+					<Heart class="h-5 w-5 transition-all {likeAction.isOn && 'fill-current animate-bounce-in'}" />
+					<span class="font-semibold text-sm">{likeAction.count > 0 ? likeAction.count : '点赞'}</span>
+				</Button>
+				<Button
+					variant="ghost"
+					size="sm"
+					data-card-action
+					onclick={handleCommentClick}
+				>
+					<MessageCircle class="h-5 w-5" />
+					<span class="font-semibold text-sm">{moment.comments_count > 0 ? moment.comments_count : '评论'}</span>
+				</Button>
+			</div>
+			<div class="flex flex-wrap items-center justify-end gap-2">
+				<Button
+					variant="ghost"
+					size="icon"
+					data-card-action
+					class={favoriteAction.isOn ? 'bg-yellow-500/15 text-yellow-500' : ''}
+					onclick={handleFavorite}
+					disabled={favoriteAction.isLoading}
+					aria-label={favoriteAction.isOn ? '取消收藏' : '收藏'}
+				>
+					<Bookmark class="h-5 w-5 {favoriteAction.isOn && 'fill-current animate-bounce-in'}" />
+				</Button>
+				<Button
+					variant="ghost"
+					size="icon"
+					data-card-action
+					onclick={handleShare}
+					aria-label="分享"
+				>
+					<Share2 class="h-5 w-5" />
+				</Button>
 			</div>
 		</div>
 	</CardFooter>

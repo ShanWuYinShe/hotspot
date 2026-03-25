@@ -80,6 +80,8 @@
 	let containerHeight = $state(0);
 	let currentColumns = $state(1);
 	let isReady = $state(false);
+	let queuedLayoutFrame: number | null = null;
+	let itemResizeObserver: ResizeObserver | null = null;
 
 	// 记录每列的当前高度
 	let columnHeights = $state<number[]>([]);
@@ -107,6 +109,28 @@
 	 */
 	function getShortestColumn(): number {
 		return columnHeights.indexOf(Math.min(...columnHeights));
+	}
+
+	function scheduleLayout() {
+		if (queuedLayoutFrame != null) {
+			cancelAnimationFrame(queuedLayoutFrame);
+		}
+
+		queuedLayoutFrame = requestAnimationFrame(() => {
+			queuedLayoutFrame = null;
+			layoutMasonry();
+		});
+	}
+
+	function observeItems() {
+		itemResizeObserver?.disconnect();
+		itemResizeObserver = new ResizeObserver(() => {
+			scheduleLayout();
+		});
+
+		items.forEach((item) => {
+			itemResizeObserver?.observe(item);
+		});
 	}
 
 	/**
@@ -152,6 +176,7 @@
 		// 设置容器高度为最高列的高度
 		containerHeight = Math.max(...columnHeights) - gapSize;
 		isReady = true;
+		observeItems();
 	}
 
 	/**
@@ -167,7 +192,7 @@
 		if (newWidth !== containerWidth || newColumns !== currentColumns) {
 			containerWidth = newWidth;
 			currentColumns = newColumns;
-			tick().then(layoutMasonry);
+			tick().then(scheduleLayout);
 		}
 	}
 
@@ -196,7 +221,8 @@
 		// 使用 MutationObserver 监听子元素变化
 		mutationObserver = new MutationObserver(() => {
 			items = Array.from(container.children) as HTMLElement[];
-			tick().then(layoutMasonry);
+			observeItems();
+			tick().then(scheduleLayout);
 		});
 		mutationObserver.observe(container, {
 			childList: true,
@@ -214,13 +240,13 @@
 				if (img.complete) {
 					loadedCount++;
 					if (loadedCount === totalImages) {
-						tick().then(layoutMasonry);
+						tick().then(scheduleLayout);
 					}
 				} else {
 					const handler = () => {
 						loadedCount++;
 						if (loadedCount === totalImages) {
-							tick().then(layoutMasonry);
+							tick().then(scheduleLayout);
 						}
 					};
 					img.addEventListener('load', handler);
@@ -233,6 +259,10 @@
 			window.removeEventListener('resize', updateLayout);
 			resizeObserver?.disconnect();
 			mutationObserver?.disconnect();
+			itemResizeObserver?.disconnect();
+			if (queuedLayoutFrame != null) {
+				cancelAnimationFrame(queuedLayoutFrame);
+			}
 			// 清理图片 load 事件监听器
 			imgLoadHandlers.forEach(({ img, handler }) => {
 				img.removeEventListener('load', handler);
@@ -244,7 +274,7 @@
 	 * 公开方法：手动触发布局更新
 	 */
 	export function refresh() {
-		tick().then(layoutMasonry);
+		tick().then(scheduleLayout);
 	}
 
 	/**
@@ -252,7 +282,8 @@
 	 */
 	export function append() {
 		items = Array.from(container.children) as HTMLElement[];
-		tick().then(layoutMasonry);
+		observeItems();
+		tick().then(scheduleLayout);
 	}
 </script>
 
