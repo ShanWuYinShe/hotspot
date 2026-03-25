@@ -81,6 +81,38 @@ preview_default_ports() {
   printf '8088 8443\n'
 }
 
+default_postgres_image() {
+  printf 'postgres:17.9-alpine3.23\n'
+}
+
+default_redis_image() {
+  printf 'redis:7.4.8-alpine3.21\n'
+}
+
+default_preview_minio_image() {
+  printf 'minio/minio:RELEASE.2025-09-07T16-13-09Z\n'
+}
+
+default_preview_minio_mc_image() {
+  printf 'minio/mc:RELEASE.2025-08-13T08-35-41Z\n'
+}
+
+default_preview_nginx_image() {
+  printf 'nginx:1.28.3-alpine3.23\n'
+}
+
+default_golang_base_image() {
+  printf 'golang:1.26.1-alpine3.23\n'
+}
+
+default_node_base_image() {
+  printf 'node:22.22.1-alpine3.23\n'
+}
+
+default_alpine_base_image() {
+  printf 'alpine:3.23.3\n'
+}
+
 port_in_use() {
   local port="$1"
   if command -v lsof >/dev/null 2>&1; then
@@ -571,13 +603,11 @@ release_frontend_image() {
 
 common_docker_build_args() {
   local -a build_args=()
-  [[ -n "${HOTSPOT_GOLANG_BASE_IMAGE:-}" ]] && build_args+=(--build-arg "HOTSPOT_GOLANG_BASE_IMAGE=$HOTSPOT_GOLANG_BASE_IMAGE")
-  [[ -n "${HOTSPOT_NODE_BASE_IMAGE:-}" ]] && build_args+=(--build-arg "HOTSPOT_NODE_BASE_IMAGE=$HOTSPOT_NODE_BASE_IMAGE")
-  [[ -n "${HOTSPOT_ALPINE_BASE_IMAGE:-}" ]] && build_args+=(--build-arg "HOTSPOT_ALPINE_BASE_IMAGE=$HOTSPOT_ALPINE_BASE_IMAGE")
+  build_args+=(--build-arg "HOTSPOT_GOLANG_BASE_IMAGE=${HOTSPOT_GOLANG_BASE_IMAGE:-$(default_golang_base_image)}")
+  build_args+=(--build-arg "HOTSPOT_NODE_BASE_IMAGE=${HOTSPOT_NODE_BASE_IMAGE:-$(default_node_base_image)}")
+  build_args+=(--build-arg "HOTSPOT_ALPINE_BASE_IMAGE=${HOTSPOT_ALPINE_BASE_IMAGE:-$(default_alpine_base_image)}")
   [[ -n "${HOTSPOT_ALPINE_REPO:-}" ]] && build_args+=(--build-arg "HOTSPOT_ALPINE_REPO=$HOTSPOT_ALPINE_REPO")
-  if ((${#build_args[@]} > 0)); then
-    printf '%s\0' "${build_args[@]}"
-  fi
+  printf '%s\0' "${build_args[@]}"
 }
 
 ensure_runner_image() {
@@ -611,6 +641,57 @@ build_app_image() {
   else
     docker build -t "$image" -f "$dockerfile" "$context"
   fi
+}
+
+backend_build_command() {
+  printf '%s\n' 'rm -rf /tmp/workspace && mkdir -p /tmp/workspace/backend-go && cp -a /workspace/backend-go/. /tmp/workspace/backend-go/ && cd /tmp/workspace/backend-go && go build -o /out/backend-go ./cmd/server'
+}
+
+frontend_build_command() {
+  printf '%s\n' 'rm -rf /tmp/workspace && mkdir -p /tmp/workspace/frontend_svelte && cp -a /workspace/frontend_svelte/. /tmp/workspace/frontend_svelte/ && cd /tmp/workspace/frontend_svelte && CI=true pnpm install --frozen-lockfile && CI=true pnpm build && cp package.json pnpm-lock.yaml /out/ && rm -rf /out/build && cp -R build /out/build'
+}
+
+run_backend_artifact_build() {
+  local log_path="$1"
+  local source_root="$2"
+  local artifact_dir="$3"
+  local runner_image="$4"
+  run_and_capture "$log_path" docker run --rm \
+    --user "$(host_uid):$(host_gid)" \
+    -e HOME="$(runner_home_dir)" \
+    -e XDG_CACHE_HOME="$(runner_home_dir)/.cache" \
+    -v "$source_root:/workspace:ro" \
+    -v "$artifact_dir:/out" \
+    "$runner_image" \
+    sh -c "$(backend_build_command)"
+}
+
+run_frontend_artifact_build() {
+  local log_path="$1"
+  local source_root="$2"
+  local artifact_dir="$3"
+  local runner_image="$4"
+  run_and_capture "$log_path" docker run --rm \
+    --user "$(host_uid):$(host_gid)" \
+    -e HOME="$(runner_home_dir)" \
+    -e XDG_CACHE_HOME="$(runner_home_dir)/.cache" \
+    -v "$source_root:/workspace:ro" \
+    -v "$artifact_dir:/out" \
+    "$runner_image" \
+    sh -c "$(frontend_build_command)"
+}
+
+export_verify_image_defaults() {
+  export HOTSPOT_VERIFY_POSTGRES_IMAGE="${HOTSPOT_VERIFY_POSTGRES_IMAGE:-$(default_postgres_image)}"
+  export HOTSPOT_VERIFY_REDIS_IMAGE="${HOTSPOT_VERIFY_REDIS_IMAGE:-$(default_redis_image)}"
+}
+
+export_preview_image_defaults() {
+  export HOTSPOT_PREVIEW_POSTGRES_IMAGE="${HOTSPOT_PREVIEW_POSTGRES_IMAGE:-$(default_postgres_image)}"
+  export HOTSPOT_PREVIEW_REDIS_IMAGE="${HOTSPOT_PREVIEW_REDIS_IMAGE:-$(default_redis_image)}"
+  export HOTSPOT_PREVIEW_MINIO_IMAGE="${HOTSPOT_PREVIEW_MINIO_IMAGE:-$(default_preview_minio_image)}"
+  export HOTSPOT_PREVIEW_MINIO_MC_IMAGE="${HOTSPOT_PREVIEW_MINIO_MC_IMAGE:-$(default_preview_minio_mc_image)}"
+  export HOTSPOT_PREVIEW_NGINX_IMAGE="${HOTSPOT_PREVIEW_NGINX_IMAGE:-$(default_preview_nginx_image)}"
 }
 
 remove_preview_images() {

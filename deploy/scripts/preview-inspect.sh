@@ -72,6 +72,7 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+export_preview_image_defaults
 export HOTSPOT_PREVIEW_BACKEND_IMAGE="$(preview_backend_image)"
 export HOTSPOT_PREVIEW_FRONTEND_IMAGE="$(preview_frontend_image)"
 export HOTSPOT_TLS_CERT_PATH="${HOTSPOT_TLS_CERT_PATH:-/tmp/missing.crt}"

@@ -88,26 +88,10 @@ ensure_dir "$FRONTEND_ARTIFACT_DIR"
   fi
 } | tee "$PREVIEW_BUILD_META_LOG"
 
-run_and_capture "$BACKEND_BUILD_LOG" docker run --rm \
-  --user "$(host_uid):$(host_gid)" \
-  -e HOME="$(runner_home_dir)" \
-  -e XDG_CACHE_HOME="$(runner_home_dir)/.cache" \
-  -v "$SOURCE_ROOT:/workspace:ro" \
-  -v "$BACKEND_ARTIFACT_DIR:/out" \
-  "$BACKEND_RUNNER_IMAGE" \
-  sh -c 'rm -rf /tmp/workspace && mkdir -p /tmp/workspace/backend-go && cp -a /workspace/backend-go/. /tmp/workspace/backend-go/ && cd /tmp/workspace/backend-go && go build -o /out/backend-go ./cmd/server'
-
-run_and_capture "$FRONTEND_BUILD_LOG" docker run --rm \
-  --user "$(host_uid):$(host_gid)" \
-  -e HOME="$(runner_home_dir)" \
-  -e XDG_CACHE_HOME="$(runner_home_dir)/.cache" \
-  -v "$SOURCE_ROOT:/workspace:ro" \
-  -v "$FRONTEND_ARTIFACT_DIR:/out" \
-  "$FRONTEND_RUNNER_IMAGE" \
-  sh -c 'rm -rf /tmp/workspace && mkdir -p /tmp/workspace/frontend_svelte && cp -a /workspace/frontend_svelte/. /tmp/workspace/frontend_svelte/ && cd /tmp/workspace/frontend_svelte && CI=true pnpm install --frozen-lockfile && CI=true pnpm build && cp package.json pnpm-lock.yaml /out/ && rm -rf /out/build && cp -R build /out/build'
-
-run_and_capture "$BACKEND_IMAGE_BUILD_LOG" build_app_image "$PREVIEW_BACKEND_IMAGE" "$ROOT/deploy/dockerfiles/backend-go.preview.Dockerfile" "$BACKEND_ARTIFACT_DIR"
-run_and_capture "$FRONTEND_IMAGE_BUILD_LOG" build_app_image "$PREVIEW_FRONTEND_IMAGE" "$ROOT/deploy/dockerfiles/frontend.preview.Dockerfile" "$FRONTEND_ARTIFACT_DIR"
+run_backend_artifact_build "$BACKEND_BUILD_LOG" "$SOURCE_ROOT" "$BACKEND_ARTIFACT_DIR" "$BACKEND_RUNNER_IMAGE"
+run_frontend_artifact_build "$FRONTEND_BUILD_LOG" "$SOURCE_ROOT" "$FRONTEND_ARTIFACT_DIR" "$FRONTEND_RUNNER_IMAGE"
+run_and_capture "$BACKEND_IMAGE_BUILD_LOG" build_app_image "$PREVIEW_BACKEND_IMAGE" "$ROOT/deploy/dockerfiles/backend-go.app.Dockerfile" "$BACKEND_ARTIFACT_DIR"
+run_and_capture "$FRONTEND_IMAGE_BUILD_LOG" build_app_image "$PREVIEW_FRONTEND_IMAGE" "$ROOT/deploy/dockerfiles/frontend.app.Dockerfile" "$FRONTEND_ARTIFACT_DIR"
 
 echo "Preview build completed." | tee -a "$PREVIEW_BUILD_CONSOLE_LOG"
 echo "Backend image: $PREVIEW_BACKEND_IMAGE" | tee -a "$PREVIEW_BUILD_CONSOLE_LOG"

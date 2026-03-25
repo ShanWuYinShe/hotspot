@@ -68,18 +68,18 @@
   - Alpine：`https://mirrors.ustc.edu.cn/alpine`
   - Go：`GOPROXY=https://goproxy.cn,direct`
   - npm / pnpm：`https://registry.npmmirror.com`
-- 外部服务镜像默认跟随最新标签（`latest` 或最新 Alpine 变体），同时支持环境变量覆盖，例如：
-  - `HOTSPOT_PREVIEW_MINIO_IMAGE`
-  - `HOTSPOT_PREVIEW_MINIO_MC_IMAGE`
-  - `HOTSPOT_PREVIEW_NGINX_IMAGE`
-  - `HOTSPOT_PREVIEW_POSTGRES_IMAGE`
-  - `HOTSPOT_PREVIEW_REDIS_IMAGE`
-  - `HOTSPOT_VERIFY_POSTGRES_IMAGE`
-  - `HOTSPOT_VERIFY_REDIS_IMAGE`
-- Dockerfile 基础镜像默认使用最新通道（例如 `golang:alpine`、`node:alpine`、`alpine:latest`），同时支持 build arg 覆盖，例如：
-  - `HOTSPOT_GOLANG_BASE_IMAGE`
-  - `HOTSPOT_NODE_BASE_IMAGE`
-  - `HOTSPOT_ALPINE_BASE_IMAGE`
+- 外部服务镜像默认固定为仓库内的明确版本，同时支持环境变量覆盖，例如：
+  - `HOTSPOT_PREVIEW_MINIO_IMAGE`（默认 `minio/minio:RELEASE.2025-09-07T16-13-09Z`）
+  - `HOTSPOT_PREVIEW_MINIO_MC_IMAGE`（默认 `minio/mc:RELEASE.2025-08-13T08-35-41Z`）
+  - `HOTSPOT_PREVIEW_NGINX_IMAGE`（默认 `nginx:1.28.3-alpine3.23`）
+  - `HOTSPOT_PREVIEW_POSTGRES_IMAGE`（默认 `postgres:17.9-alpine3.23`）
+  - `HOTSPOT_PREVIEW_REDIS_IMAGE`（默认 `redis:7.4.8-alpine3.21`）
+  - `HOTSPOT_VERIFY_POSTGRES_IMAGE`（默认 `postgres:17.9-alpine3.23`）
+  - `HOTSPOT_VERIFY_REDIS_IMAGE`（默认 `redis:7.4.8-alpine3.21`）
+- Dockerfile 基础镜像默认固定为明确版本，同时支持 build arg 覆盖，例如：
+  - `HOTSPOT_GOLANG_BASE_IMAGE`（默认 `golang:1.26.1-alpine3.23`）
+  - `HOTSPOT_NODE_BASE_IMAGE`（默认 `node:22.22.1-alpine3.23`）
+  - `HOTSPOT_ALPINE_BASE_IMAGE`（默认 `alpine:3.23.3`）
   - `HOTSPOT_ALPINE_REPO`
 - 当前 `deploy/` 范围内没有 Rust Docker 构建链，因此这轮没有新增 cargo/rustup 镜像源配置；若后续引入 Rust Dockerfile，再单独补齐。
 

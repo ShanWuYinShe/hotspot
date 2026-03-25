@@ -71,6 +71,7 @@ trap cleanup EXIT
 docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" down -v --remove-orphans >/dev/null 2>&1 || true
 ensure_runner_image "$BACKEND_RUNNER_IMAGE" "$ROOT/deploy/dockerfiles/backend-go.verify.Dockerfile" "$ROOT"
 ensure_runner_image "$FRONTEND_RUNNER_IMAGE" "$ROOT/deploy/dockerfiles/frontend.verify.Dockerfile" "$ROOT"
+export_verify_image_defaults
 
 export HOTSPOT_SOURCE_ROOT="$SOURCE_ROOT"
 export HOTSPOT_BACKEND_GO_RUNNER_IMAGE="$BACKEND_RUNNER_IMAGE"

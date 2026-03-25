@@ -1,4 +1,4 @@
-ARG HOTSPOT_GOLANG_BASE_IMAGE=golang:alpine
+ARG HOTSPOT_GOLANG_BASE_IMAGE=golang:1.26.1-alpine3.23
 FROM ${HOTSPOT_GOLANG_BASE_IMAGE}
 WORKDIR /workspace
 ARG HOTSPOT_ALPINE_REPO=https://mirrors.ustc.edu.cn/alpine

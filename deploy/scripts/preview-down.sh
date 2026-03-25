@@ -48,6 +48,7 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+export_preview_image_defaults
 export HOTSPOT_PREVIEW_BACKEND_IMAGE="$(preview_backend_image)"
 export HOTSPOT_PREVIEW_FRONTEND_IMAGE="$(preview_frontend_image)"
 export HOTSPOT_PREVIEW_HTTP_PORT="${HOTSPOT_PREVIEW_HTTP_PORT:-8088}"
@@ -68,8 +69,7 @@ case "$MODE" in
     ;;
   clean-all)
     docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" down -v --remove-orphans
-    docker image rm -f "$(preview_backend_image)" >/dev/null 2>&1 || true
-    docker image rm -f "$(preview_frontend_image)" >/dev/null 2>&1 || true
+    remove_preview_images
     echo "Removed preview containers, data, and preview images"
     ;;
   clean-partial)

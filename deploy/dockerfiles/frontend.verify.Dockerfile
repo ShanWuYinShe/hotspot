@@ -1,4 +1,4 @@
-ARG HOTSPOT_NODE_BASE_IMAGE=node:alpine
+ARG HOTSPOT_NODE_BASE_IMAGE=node:22.22.1-alpine3.23
 FROM ${HOTSPOT_NODE_BASE_IMAGE}
 WORKDIR /workspace
 ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com

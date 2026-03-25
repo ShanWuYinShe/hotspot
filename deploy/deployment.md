@@ -157,7 +157,13 @@ manifest 至少包含：
 
 ### 容器镜像引用覆盖
 - 这一层是“容器镜像引用/版本”的覆盖能力，不等于依赖下载镜像源。
-- `compose/preview.yml` 与 `compose/verify.yml` 中的服务镜像默认跟随最新标签（`latest`），同时支持通过环境变量覆盖。
+- `compose/preview.yml` 与 `compose/verify.yml` 中的服务镜像默认固定为明确版本，同时支持通过环境变量覆盖。
+- 当前默认版本：
+  - Postgres：`postgres:17.9-alpine3.23`
+  - Redis：`redis:7.4.8-alpine3.21`
+  - MinIO：`minio/minio:RELEASE.2025-09-07T16-13-09Z`
+  - MinIO mc：`minio/mc:RELEASE.2025-08-13T08-35-41Z`
+  - nginx：`nginx:1.28.3-alpine3.23`
 - 当前支持的覆盖项包括：
   - `HOTSPOT_PREVIEW_POSTGRES_IMAGE`
   - `HOTSPOT_PREVIEW_REDIS_IMAGE`
@@ -166,10 +172,10 @@ manifest 至少包含：
   - `HOTSPOT_PREVIEW_NGINX_IMAGE`
   - `HOTSPOT_VERIFY_POSTGRES_IMAGE`
   - `HOTSPOT_VERIFY_REDIS_IMAGE`
-- Dockerfile 基础镜像默认跟随最新 Alpine 通道（Node 默认使用 `node:alpine`，并直接通过 npm 安装 `pnpm`），并支持 build arg 覆盖：
-  - `HOTSPOT_GOLANG_BASE_IMAGE`
-  - `HOTSPOT_NODE_BASE_IMAGE`
-  - `HOTSPOT_ALPINE_BASE_IMAGE`
+- Dockerfile 基础镜像默认也固定为明确版本，并支持 build arg 覆盖：
+  - `HOTSPOT_GOLANG_BASE_IMAGE`（默认 `golang:1.26.1-alpine3.23`）
+  - `HOTSPOT_NODE_BASE_IMAGE`（默认 `node:22.22.1-alpine3.23`）
+  - `HOTSPOT_ALPINE_BASE_IMAGE`（默认 `alpine:3.23.3`）
   - `HOTSPOT_ALPINE_REPO`
 
 ## 六、目录约定
@@ -184,8 +190,8 @@ deploy/
   dockerfiles/
     backend-go.verify.Dockerfile
     frontend.verify.Dockerfile
-    backend-go.preview.Dockerfile / backend-go.release.Dockerfile
-    frontend.preview.Dockerfile / frontend.release.Dockerfile
+    backend-go.app.Dockerfile
+    frontend.app.Dockerfile
   scripts/
     common.sh
     verify.sh

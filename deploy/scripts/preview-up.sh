@@ -92,6 +92,7 @@ elif port_in_use "$HTTPS_PORT"; then
   exit 1
 fi
 
+export_preview_image_defaults
 export HOTSPOT_PREVIEW_BACKEND_IMAGE="$(preview_backend_image)"
 export HOTSPOT_PREVIEW_FRONTEND_IMAGE="$(preview_frontend_image)"
 export HOTSPOT_PREVIEW_HTTP_PORT="$HTTP_PORT"
