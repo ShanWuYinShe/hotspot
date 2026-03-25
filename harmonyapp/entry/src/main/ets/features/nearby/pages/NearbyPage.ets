@@ -37,6 +37,7 @@ import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { formatCount, formatRelativeTime } from '../../../core/utils/FormatUtil';
 import pasteboard from '@ohos.pasteboard';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 
@@ -872,7 +873,7 @@ export struct NearbyPage {
       bottom: DesignConstants.SPACING.LG
     })
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId) ? DesignConstants.RADIUS.XXL + 6 : DesignConstants.RADIUS.XXL)
+    .borderRadius(AppThemeVisuals.getElevatedCardStyle(this.resolvedThemeId).borderRadius)
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
     .margin({ bottom: DesignConstants.SPACING.MD })

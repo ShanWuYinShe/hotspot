@@ -30,6 +30,7 @@ import { EmptyState, RefreshIndicator } from '../../../components/EmptyState';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import pasteboard from '@ohos.pasteboard';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF11;
@@ -528,7 +529,7 @@ export struct DiscoverPage {
           (this.isUserFollowing(user.user?.user_id ?? '') ? '已关注' : '+ 关注'))
           .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId) ? 44 : 36)
+          .height(AppThemeVisuals.getSecondaryButtonStyle(this.resolvedThemeId).height)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .enabled(!this.isUserActionPending(user.user?.user_id ?? ''))
           .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -543,7 +544,7 @@ export struct DiscoverPage {
         Button('私聊')
           .type(ButtonType.Capsule)
           .layoutWeight(1)
-          .height(AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId) ? 44 : 36)
+          .height(AppThemeVisuals.getSecondaryButtonStyle(this.resolvedThemeId).height)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontWeight(FontWeight.Medium)
@@ -565,7 +566,7 @@ export struct DiscoverPage {
       bottom: DesignConstants.SPACING.MD
     })
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId) ? DesignConstants.RADIUS.XXL + 4 : DesignConstants.RADIUS.XXL)
+    .borderRadius(AppThemeVisuals.getListItemCardStyle(this.resolvedThemeId).borderRadius)
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
   }
@@ -670,7 +671,7 @@ export struct DiscoverPage {
       bottom: DesignConstants.SPACING.MD
     })
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId) ? DesignConstants.RADIUS.XXL + 4 : DesignConstants.RADIUS.XXL)
+    .borderRadius(AppThemeVisuals.getListItemCardStyle(this.resolvedThemeId).borderRadius)
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
   }
@@ -724,7 +725,7 @@ export struct DiscoverPage {
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
       top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId) ? DesignConstants.RADIUS.XXL + 4 : DesignConstants.RADIUS.XXL)
+    .borderRadius(AppThemeVisuals.getListItemCardStyle(this.resolvedThemeId).borderRadius)
 
     Divider()
       .strokeWidth(0.5)

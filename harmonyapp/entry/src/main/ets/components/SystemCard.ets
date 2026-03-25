@@ -1,5 +1,6 @@
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { AppThemeVisuals } from '../core/theme/AppThemeVisuals';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 /**
@@ -43,7 +44,7 @@ export struct SystemCard {
   // 新增：卡片样式变体
   @Prop variant: CardVariant = CardVariant.DEFAULT;
   // 新增：圆角大小（重命名为 cardBorderRadius 避免冲突）
-  @Prop cardBorderRadius: number = DesignConstants.RADIUS.XXL;
+  @Prop cardBorderRadius: number = DesignConstants.SHAPE.CARD;
   // 新增：是否显示边框
   @Prop showBorder: boolean = true;
   // 新增：边框颜色（使用系统颜色）
@@ -61,10 +62,6 @@ export struct SystemCard {
     return kind === 'elevated' ? palette.elevatedShadow : palette.surfaceShadow;
   }
 
-  private isSoftGallery(): boolean {
-    return AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId);
-  }
-
   private getBackgroundColor(): ResourceColor {
     if (this.cardBackgroundColor) {
       return this.cardBackgroundColor as ResourceColor;
@@ -74,7 +71,7 @@ export struct SystemCard {
       case CardVariant.GLASS:
         return Color.Transparent;
       case CardVariant.FILLED:
-        return this.isSoftGallery() ? this.getPalette().buttonSecondaryBackground : this.getPalette().surfaceBackground;
+        return this.getPalette().buttonSecondaryBackground;
       case CardVariant.ELEVATED:
       case CardVariant.OUTLINED:
       case CardVariant.DEFAULT:
@@ -117,20 +114,23 @@ export struct SystemCard {
   }
 
   private getCardRadius(): number {
-    if (this.isSoftGallery() && this.cardBorderRadius === DesignConstants.RADIUS.XXL) {
-      return DesignConstants.RADIUS.XXL + 4;
+    if (this.cardBorderRadius === DesignConstants.SHAPE.CARD) {
+      return AppThemeVisuals.getSurfaceCardStyle(this.resolvedThemeId).borderRadius;
     }
     return this.cardBorderRadius;
   }
 
   private getCardPadding(): number {
-    return this.isSoftGallery() ? this.cardPadding + 2 : this.cardPadding;
+    if (this.cardPadding === DesignConstants.SPACING.LG) {
+      return AppThemeVisuals.getSurfaceCardStyle(this.resolvedThemeId).padding;
+    }
+    return this.cardPadding;
   }
 
   // 获取点击缩放比例
   private getScale(): ScaleOptions {
     if (this.clickable && this.isPressed) {
-      return this.isSoftGallery() ? { x: 0.985, y: 0.985 } : { x: 0.97, y: 0.97 };
+      return { x: 0.985, y: 0.985 };
     }
     return { x: 1, y: 1 };
   }

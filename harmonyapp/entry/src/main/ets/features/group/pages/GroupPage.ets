@@ -28,6 +28,7 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { formatCount } from '../../../core/utils/FormatUtil';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 @Preview
@@ -690,7 +691,7 @@ export struct GroupPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
-    .borderRadius(AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId) ? DesignConstants.RADIUS.XXL + 4 : DesignConstants.RADIUS.XXL)
+    .borderRadius(AppThemeVisuals.getListItemCardStyle(this.resolvedThemeId).borderRadius)
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .backgroundColor(this.getSurfaceBackground())
     .border({ width: 1, color: this.getSurfaceBorder() })
@@ -801,7 +802,7 @@ export struct GroupPage {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
-    .borderRadius(AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId) ? DesignConstants.RADIUS.XXL + 4 : DesignConstants.RADIUS.XXL)
+    .borderRadius(AppThemeVisuals.getListItemCardStyle(this.resolvedThemeId).borderRadius)
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
     .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
@@ -896,7 +897,7 @@ export struct GroupPage {
       top: DesignConstants.SPACING.LG,
       bottom: DesignConstants.SPACING.LG
     })
-    .borderRadius(AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId) ? DesignConstants.RADIUS.XXL + 4 : DesignConstants.RADIUS.XXL)
+    .borderRadius(AppThemeVisuals.getListItemCardStyle(this.resolvedThemeId).borderRadius)
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
     .margin({ bottom: 12 })

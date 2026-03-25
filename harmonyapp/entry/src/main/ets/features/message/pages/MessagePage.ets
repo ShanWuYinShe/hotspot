@@ -34,6 +34,7 @@ import pasteboard from '@ohos.pasteboard';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { InteractionStateStore } from '../../../core/state/InteractionStateStore';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF08;
@@ -702,13 +703,13 @@ export struct MessagePage {
       }
       .width('100%')
     }
-    .constraintSize({ minHeight: AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId) ? 84 : 72 })
+    .constraintSize({ minHeight: AppThemeVisuals.getListItemCardStyle(this.resolvedThemeId).minHeight ?? 72 })
     .padding(22)
     .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: 8, bottom: 8 })
     .backgroundColor(this.pressedChatKey === this.getChatKey(item)
       ? this.getSurfaceSubtle()
       : this.getSurfaceBackground())
-    .borderRadius(AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId) ? DesignConstants.RADIUS.XXL + 4 : DesignConstants.RADIUS.XXL)
+    .borderRadius(AppThemeVisuals.getListItemCardStyle(this.resolvedThemeId).borderRadius)
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
     .opacity(this.isChatDeleting(item) ? 0.7 : 1)

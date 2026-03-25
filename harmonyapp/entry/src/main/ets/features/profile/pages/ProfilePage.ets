@@ -645,7 +645,7 @@ export struct ProfilePage {
             SystemAvatar({
               avatarUrl: this.viewedUserProfile?.user?.avatar_url ?? '',
               name: this.viewedUserProfile?.user?.nickname ?? '',
-              avatarSize: 76,
+              avatarSize: this.getProfileVisualStyle().identity.avatarSize,
               shape: 'circle'
             })
 
@@ -711,33 +711,37 @@ export struct ProfilePage {
             .width('100%')
             .padding(DesignConstants.SPACING.LG)
             .backgroundColor(this.getSurfaceBackground())
-            .borderRadius(DesignConstants.RADIUS.XXL)
+            .borderRadius(this.getProfileVisualStyle().card.borderRadius)
             .border({ width: 1, color: this.getSurfaceBorder() })
             .shadow(this.getProfileVisualStyle().card.shadow)
           }
 
           Row({ space: DesignConstants.SPACING.SM }) {
             Button('私聊')
-              .type(ButtonType.Capsule)
+              .type(ButtonType.Normal)
               .layoutWeight(1)
-              .height(38)
+              .height(this.getProfileVisualStyle().secondaryButton.height)
               .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontWeight(FontWeight.Medium)
               .backgroundColor(this.getAccentBackground())
               .fontColor(this.getAccentText())
+              .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
+              .shadow(this.getProfileVisualStyle().primaryButton.shadow)
               .onClick(() => {
                 this.startPrivateChatWithViewedUser();
               })
 
             Button('返回')
-              .type(ButtonType.Capsule)
+              .type(ButtonType.Normal)
               .layoutWeight(1)
-              .height(38)
+              .height(this.getProfileVisualStyle().secondaryButton.height)
               .fontSize(DesignConstants.FONT.SIZE.MD)
               .fontWeight(FontWeight.Medium)
-              .backgroundColor(this.getSurfaceSubtle())
-              .fontColor(this.getPrimaryTextColor())
-              .border({ width: 1, color: this.getSurfaceBorder() })
+              .backgroundColor(this.getProfileVisualStyle().secondaryButton.backgroundColor)
+              .fontColor(this.getProfileVisualStyle().secondaryButton.textColor)
+              .borderRadius(this.getProfileVisualStyle().secondaryButton.borderRadius)
+              .shadow(this.getProfileVisualStyle().secondaryButton.shadow)
+              .border({ width: this.getProfileVisualStyle().secondaryButton.borderWidth, color: this.getProfileVisualStyle().secondaryButton.borderColor })
               .onClick(() => {
                 AppRouter.pop();
               })
@@ -769,12 +773,13 @@ export struct ProfilePage {
       Column({ space: DesignConstants.SPACING.SM }) {
         Stack() {
           Circle()
-            .width(72)
-            .height(72)
+            .width(this.getProfileVisualStyle().identity.avatarSize)
+            .height(this.getProfileVisualStyle().identity.avatarSize)
             .fill(this.getSurfaceSubtle())
+            .shadow(this.getProfileVisualStyle().identity.haloShadow)
           Text() {
             SymbolSpan($r(AppIcon.PERSON))
-              .fontSize(36)
+              .fontSize(this.getProfileVisualStyle().identity.avatarSize * 0.5)
               .fontColor([this.getSecondaryTextColor()])
           }
         }
@@ -817,24 +822,28 @@ export struct ProfilePage {
       // 3. CTA 按钮区域（居中窄按钮）
       Column({ space: DesignConstants.SPACING.SM }) {
         Button('快速体验（无需注册）')
-          .type(ButtonType.Capsule)
+          .type(ButtonType.Normal)
           .width('80%')
-          .height(48)
-          .backgroundColor(this.getAccentBackground())
-          .fontColor(this.getAccentText())
+          .height(this.getProfileVisualStyle().primaryButton.height)
+          .backgroundColor(this.getProfileVisualStyle().primaryButton.backgroundColor)
+          .fontColor(this.getProfileVisualStyle().primaryButton.textColor)
           .fontSize(DesignConstants.FONT.SIZE.MD)
+          .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
+          .shadow(this.getProfileVisualStyle().primaryButton.shadow)
           .onClick(() => {
             this.showQuickStart = true;
           })
 
         Button('登录 / 注册')
-          .type(ButtonType.Capsule)
+          .type(ButtonType.Normal)
           .width('80%')
-          .height(48)
-          .backgroundColor(this.getSurfaceSubtle())
-          .fontColor(this.getPrimaryTextColor())
+          .height(this.getProfileVisualStyle().secondaryButton.height)
+          .backgroundColor(this.getProfileVisualStyle().secondaryButton.backgroundColor)
+          .fontColor(this.getProfileVisualStyle().secondaryButton.textColor)
           .fontSize(DesignConstants.FONT.SIZE.MD)
-          .border({ width: 1, color: this.getSurfaceBorder() })
+          .borderRadius(this.getProfileVisualStyle().secondaryButton.borderRadius)
+          .shadow(this.getProfileVisualStyle().secondaryButton.shadow)
+          .border({ width: this.getProfileVisualStyle().secondaryButton.borderWidth, color: this.getProfileVisualStyle().secondaryButton.borderColor })
           .onClick(() => {
             AppRouter.push(PageNames.LOGIN);
           })
@@ -894,7 +903,7 @@ export struct ProfilePage {
     .alignItems(HorizontalAlign.Center)
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.LG)
+    .borderRadius(this.getProfileVisualStyle().input.borderRadius)
     .border({ width: 1, color: this.getSurfaceBorder() })
     .shadow(this.getProfileVisualStyle().card.shadow)
   }
@@ -954,7 +963,7 @@ export struct ProfilePage {
       }
        .divider({ strokeWidth: 0.5, color: this.getSurfaceBorder(), startMargin: 52, endMargin: DesignConstants.SPACING.LG })
        .backgroundColor(this.getSurfaceBackground())
-      .borderRadius(DesignConstants.RADIUS.XXL)
+      .borderRadius(this.getProfileVisualStyle().card.borderRadius)
        .shadow(this.getProfileVisualStyle().card.shadow)
       .border({ width: 1, color: this.getSurfaceBorder() })
       .margin({ bottom: DesignConstants.SPACING.MD })
@@ -986,7 +995,7 @@ export struct ProfilePage {
              .fontSize(DesignConstants.FONT.SIZE.MD)
              .width('100%')
              .height(this.getProfileVisualStyle().primaryButton.height)
-             .borderRadius(DesignConstants.RADIUS.FULL)
+             .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
              .border({ width: this.getProfileVisualStyle().primaryButton.borderWidth, color: this.getProfileVisualStyle().primaryButton.borderColor })
              .shadow(this.getProfileVisualStyle().primaryButton.shadow)
              .onClick(() => {
@@ -997,7 +1006,7 @@ export struct ProfilePage {
         .padding(DesignConstants.SPACING.LG)
       }
       .backgroundColor(this.getSurfaceBackground())
-      .borderRadius(DesignConstants.RADIUS.XXL)
+      .borderRadius(this.getProfileVisualStyle().card.borderRadius)
       .border({ width: 1, color: this.getSurfaceBorder() })
     }
     .width('100%')
@@ -1061,7 +1070,7 @@ export struct ProfilePage {
       }
       .divider({ strokeWidth: 0.5, color: this.getSurfaceBorder(), startMargin: 52, endMargin: DesignConstants.SPACING.LG })
       .backgroundColor(this.getSurfaceBackground())
-      .borderRadius(DesignConstants.RADIUS.XXL)
+      .borderRadius(this.getProfileVisualStyle().card.borderRadius)
       .shadow(this.getProfileVisualStyle().card.shadow)
       .border({ width: 1, color: this.getSurfaceBorder() })
       .margin({ bottom: DesignConstants.SPACING.MD })
@@ -1091,7 +1100,7 @@ export struct ProfilePage {
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .padding(DesignConstants.SPACING.LG)
           .backgroundColor(this.getSurfaceSubtle())
-          .borderRadius(DesignConstants.RADIUS.LG)
+          .borderRadius(this.getProfileVisualStyle().input.borderRadius)
           .type(InputType.Email)
           .onChange((value: string) => {
             this.upgradeLoginId = value;
@@ -1102,7 +1111,7 @@ export struct ProfilePage {
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .padding(DesignConstants.SPACING.LG)
           .backgroundColor(this.getSurfaceSubtle())
-          .borderRadius(DesignConstants.RADIUS.LG)
+          .borderRadius(this.getProfileVisualStyle().input.borderRadius)
           .type(InputType.Password)
           .onChange((value: string) => {
             this.upgradePassword = value;
@@ -1113,7 +1122,7 @@ export struct ProfilePage {
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .padding(DesignConstants.SPACING.LG)
           .backgroundColor(this.getSurfaceSubtle())
-          .borderRadius(DesignConstants.RADIUS.LG)
+          .borderRadius(this.getProfileVisualStyle().input.borderRadius)
           .type(InputType.Password)
           .onChange((value: string) => {
             this.upgradePasswordConfirm = value;
@@ -1122,11 +1131,14 @@ export struct ProfilePage {
 
         Row({ space: DesignConstants.SPACING.MD }) {
           Button('取消')
-            .type(ButtonType.Capsule)
-            .backgroundColor(this.getSurfaceSubtle())
-            .fontColor(this.getPrimaryTextColor())
+            .type(ButtonType.Normal)
+            .backgroundColor(this.getProfileVisualStyle().secondaryButton.backgroundColor)
+            .fontColor(this.getProfileVisualStyle().secondaryButton.textColor)
             .layoutWeight(1)
-            .height(44)
+            .height(this.getProfileVisualStyle().secondaryButton.height)
+            .borderRadius(this.getProfileVisualStyle().secondaryButton.borderRadius)
+            .shadow(this.getProfileVisualStyle().secondaryButton.shadow)
+            .border({ width: this.getProfileVisualStyle().secondaryButton.borderWidth, color: this.getProfileVisualStyle().secondaryButton.borderColor })
             .enabled(!this.isUpgrading)
             .opacity(this.isUpgrading ? 0.58 : 1)
             .onClick(() => {
@@ -1134,11 +1146,13 @@ export struct ProfilePage {
             })
 
           Button(this.isUpgrading ? '升级中...' : '确认升级')
-            .type(ButtonType.Capsule)
-            .backgroundColor(this.getAccentBackground())
-            .fontColor(this.getAccentText())
+            .type(ButtonType.Normal)
+            .backgroundColor(this.getProfileVisualStyle().primaryButton.backgroundColor)
+            .fontColor(this.getProfileVisualStyle().primaryButton.textColor)
             .layoutWeight(1)
-            .height(44)
+            .height(this.getProfileVisualStyle().primaryButton.height)
+            .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
+            .shadow(this.getProfileVisualStyle().primaryButton.shadow)
             .enabled(!this.isUpgrading)
             .opacity(this.isUpgrading ? 0.58 : 1)
             .onClick(() => this.upgradeAccount())
@@ -1174,14 +1188,14 @@ export struct ProfilePage {
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getWarningTextColor())
           .backgroundColor(this.getSurfaceSubtle())
-          .borderRadius(DesignConstants.RADIUS.MD)
+          .borderRadius(DesignConstants.SHAPE.CHIP)
           .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
       } else if (this.isAdminUser()) {
         Text('管理员')
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getAccentBackground())
           .backgroundColor(this.getSurfaceSubtle())
-          .borderRadius(DesignConstants.RADIUS.MD)
+          .borderRadius(DesignConstants.SHAPE.CHIP)
           .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
       }
 
@@ -1205,7 +1219,7 @@ export struct ProfilePage {
         .backgroundColor(this.getProfileVisualStyle().primaryButton.backgroundColor)
         .fontColor(this.getProfileVisualStyle().primaryButton.textColor)
         .fontSize(DesignConstants.FONT.SIZE.MD)
-        .borderRadius(DesignConstants.RADIUS.FULL)
+        .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
         .shadow(this.getProfileVisualStyle().primaryButton.shadow)
         .border({ width: this.getProfileVisualStyle().primaryButton.borderWidth, color: this.getProfileVisualStyle().primaryButton.borderColor })
         .onClick(() => this.startEdit())
@@ -1247,7 +1261,7 @@ export struct ProfilePage {
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .height(48)
         .backgroundColor(this.getSurfaceSubtle())
-        .borderRadius(DesignConstants.RADIUS.MD)
+        .borderRadius(DesignConstants.SHAPE.CHIP)
         .onChange((value: string) => {
           this.editNickname = value;
         })
@@ -1256,7 +1270,7 @@ export struct ProfilePage {
       TextArea({ placeholder: '请输入个人简介', text: this.editBio })
         .fontSize(DesignConstants.FONT.SIZE.MD)
         .backgroundColor(this.getSurfaceSubtle())
-        .borderRadius(DesignConstants.RADIUS.MD)
+        .borderRadius(DesignConstants.SHAPE.CHIP)
         .height(80)
         .onChange((value: string) => {
           this.editBio = value;
@@ -1268,7 +1282,7 @@ export struct ProfilePage {
           .backgroundColor(Color.Transparent)
           .fontColor(this.getPrimaryTextColor())
           .layoutWeight(1)
-          .borderRadius(DesignConstants.RADIUS.XXL)
+          .borderRadius(this.getProfileVisualStyle().card.borderRadius)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .enabled(!this.isLoading && !this.isAvatarUploading)
           .opacity(this.isLoading || this.isAvatarUploading ? 0.58 : 1)
@@ -1279,7 +1293,7 @@ export struct ProfilePage {
           .backgroundColor(this.getAccentBackground())
           .fontColor(this.getAccentText())
           .layoutWeight(1)
-          .borderRadius(DesignConstants.RADIUS.XXL)
+          .borderRadius(this.getProfileVisualStyle().card.borderRadius)
           .enabled(!this.isLoading && !this.isAvatarUploading)
           .opacity(this.isLoading || this.isAvatarUploading ? 0.58 : 1)
           .onClick(() => this.saveEdit())
@@ -1344,7 +1358,7 @@ export struct ProfilePage {
     .shadow(this.getProfileVisualStyle().metricCard.shadow)
     .border({ width: this.getProfileVisualStyle().metricCard.borderWidth, color: this.getProfileVisualStyle().metricCard.borderColor })
     .padding(this.getProfileVisualStyle().metricCard.padding)
-    .constraintSize({ minHeight: this.getProfileVisualStyle().metricCard.minHeight })
+    .constraintSize({ minHeight: this.getProfileVisualStyle().metricCard.minHeight ?? 164 })
     .layoutWeight(1)
     .stateEffect(true)
     .scale(this.pressedMenuItemKey === title ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })
@@ -1410,7 +1424,7 @@ export struct ProfilePage {
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .padding(DesignConstants.SPACING.LG)
           .backgroundColor(this.getSurfaceSubtle())
-          .borderRadius(DesignConstants.RADIUS.LG)
+          .borderRadius(this.getProfileVisualStyle().input.borderRadius)
           .enabled(!this.isQuickStarting)
           .onChange((value: string) => { this.quickNickname = value; })
           .onFocus(() => {
@@ -1422,12 +1436,14 @@ export struct ProfilePage {
           })
 
         Button(this.isQuickStarting ? '正在创建...' : '开始体验')
-          .type(ButtonType.Capsule)
-          .backgroundColor(this.getAccentBackground())
-          .fontColor(this.getAccentText())
+          .type(ButtonType.Normal)
+          .backgroundColor(this.getProfileVisualStyle().primaryButton.backgroundColor)
+          .fontColor(this.getProfileVisualStyle().primaryButton.textColor)
           .fontSize(DesignConstants.FONT.SIZE.LG)
           .width('100%')
-          .height(48)
+          .height(this.getProfileVisualStyle().primaryButton.height)
+          .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
+          .shadow(this.getProfileVisualStyle().primaryButton.shadow)
           .enabled(!this.isQuickStarting)
           .opacity(this.isQuickStarting ? 0.6 : 1.0)
           .onClick(() => this.startQuickExperience())

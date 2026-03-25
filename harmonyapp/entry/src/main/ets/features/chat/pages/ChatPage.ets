@@ -35,6 +35,7 @@ import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManag
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { KeyboardAvoidMode as UIContextKeyboardAvoidMode } from '@ohos.arkui.UIContext';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { ChatThemeManager } from '../../../core/theme/ChatTheme';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
@@ -141,12 +142,12 @@ export struct ChatPage {
     return this.getCurrentThemePalette().accentBackground;
   }
 
-  private isSoftGalleryTheme(): boolean {
-    return AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId);
-  }
-
   private getChatTheme() {
     return ChatThemeManager.current();
+  }
+
+  private getChatVisualStyle() {
+    return AppThemeVisuals.getChatVisualStyle(this.resolvedThemeId);
   }
 
   private getStableBottomInset(): number {
@@ -1048,7 +1049,7 @@ export struct ChatPage {
         bottom: DesignConstants.SPACING.MD
       })
       .backgroundColor(this.getChatTheme().listBackground)
-      .borderRadius(this.isSoftGalleryTheme() ? DesignConstants.RADIUS.XXL + 4 : DesignConstants.RADIUS.XXL)
+      .borderRadius(this.getChatVisualStyle().listRadius)
       .onScrollIndex((start: number) => {
         // 当滚动到列表顶部附近时加载更早的消息
         if (start <= 1 && this.hasMoreHistory && !this.isLoadingMoreHistory) {
@@ -1099,11 +1100,11 @@ export struct ChatPage {
         TextInput({ text: this.inputText, placeholder: '发送消息...' })
           .layoutWeight(1)
           .maxLength(MESSAGE_CONTENT_MAX)
-          .height(DesignConstants.CHAT.INPUT_HEIGHT)
+          .height(this.getChatVisualStyle().input.height)
           .backgroundColor(this.getChatTheme().inputFieldBg)
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .shadow(this.getCurrentThemePalette().controlShadow)
-          .padding({ left: DesignConstants.CHAT.BUBBLE_PADDING_H, right: DesignConstants.CHAT.BUBBLE_PADDING_H })
+          .borderRadius(this.getChatVisualStyle().input.borderRadius)
+          .shadow(this.getChatVisualStyle().input.shadow)
+          .padding({ left: this.getChatVisualStyle().input.horizontalPadding, right: this.getChatVisualStyle().input.horizontalPadding })
           .onChange((value) => {
             this.inputText = value;
             this.handleTypingInput(value);
@@ -1132,11 +1133,11 @@ export struct ChatPage {
               ? this.getCurrentThemePalette().textSecondary
               : this.getChatTheme().sendButtonActiveText
           )
-          .height(this.isSoftGalleryTheme() ? DesignConstants.CHAT.SEND_BUTTON_HEIGHT + 4 : DesignConstants.CHAT.SEND_BUTTON_HEIGHT)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .shadow(this.getCurrentThemePalette().controlShadow)
+          .height(this.getChatVisualStyle().sendButton.height)
+          .borderRadius(this.getChatVisualStyle().sendButton.borderRadius)
+          .shadow(this.getChatVisualStyle().sendButton.shadow)
           .border({ width: 1, color: this.getChatTheme().inputBorder })
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+          .padding({ left: this.getChatVisualStyle().sendButton.horizontalPadding, right: this.getChatVisualStyle().sendButton.horizontalPadding })
           .margin({ left: DesignConstants.SPACING.MD })
           .opacity(this.isSending || this.inputText.trim().length === 0 ? 0.72 : 1)
           .enabled(!this.isSending && this.inputText.trim().length > 0)
@@ -1152,7 +1153,10 @@ export struct ChatPage {
       .backgroundColor(this.getChatTheme().inputBarBg)
       .shadow(this.getCurrentThemePalette().elevatedShadow)
       .border({ width: { top: 1 }, color: this.getChatTheme().inputBorder })
-      .borderRadius({ topLeft: DesignConstants.RADIUS.LG, topRight: DesignConstants.RADIUS.LG })
+      .borderRadius({
+        topLeft: this.getChatVisualStyle().composerRadius,
+        topRight: this.getChatVisualStyle().composerRadius
+      })
 
       // 焦点落点：用于将 TextInput 失焦，从而收起软键盘
       Button('')

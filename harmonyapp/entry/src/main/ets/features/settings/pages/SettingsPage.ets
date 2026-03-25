@@ -20,6 +20,7 @@ import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { RefreshIndicator } from '../../../components/EmptyState';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { AppThemePalette } from '../../../core/theme/AppThemeTypes';
 import { KEY_RESOLVED_THEME_ID, KEY_THEME_MODE, ThemeOptionItem, ThemeMode } from '../../../core/theme/AppThemeTypes';
 
@@ -83,16 +84,7 @@ export struct SettingsPage {
     if (this.themeMode === option.mode) {
       return this.getCurrentThemePalette();
     }
-    const isDarkMode = AppStorage.get<boolean>('isDarkMode') === true;
-    switch (option.mode) {
-      case 'follow_system':
-        return AppThemeManager.getPaletteById(this.resolvedThemeId);
-      case 'soft_gallery':
-        return AppThemeManager.getPaletteById(isDarkMode ? 'soft_gallery_dark' : 'soft_gallery_light');
-      case 'default_clean':
-      default:
-        return AppThemeManager.getPaletteById(isDarkMode ? 'default_clean_dark' : 'default_clean_light');
-    }
+    return AppThemeManager.getPaletteForMode(option.mode);
   }
 
   private isThemeOptionActive(option: ThemeOptionItem): boolean {
@@ -192,7 +184,7 @@ export struct SettingsPage {
             .backgroundColor(Color.Transparent)
           }
           .backgroundColor(this.getSurfaceBackground())
-          .borderRadius(DesignConstants.RADIUS.XXL)
+          .borderRadius(DesignConstants.SHAPE.CARD)
           .shadow(this.getSoftCardShadow())
           .border({ width: 1, color: this.getSurfaceBorder() })
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 14 })
@@ -230,7 +222,7 @@ export struct SettingsPage {
             .backgroundColor(Color.Transparent)
           }
           .backgroundColor(this.getSurfaceBackground())
-          .borderRadius(DesignConstants.RADIUS.XXL)
+          .borderRadius(DesignConstants.SHAPE.CARD)
           .shadow(this.getSoftCardShadow())
           .border({ width: 1, color: this.getSurfaceBorder() })
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 14 })
@@ -243,7 +235,7 @@ export struct SettingsPage {
             .backgroundColor(Color.Transparent)
           }
           .backgroundColor(this.getSurfaceBackground())
-          .borderRadius(DesignConstants.RADIUS.XXL)
+          .borderRadius(DesignConstants.SHAPE.CARD)
           .shadow(this.getSoftCardShadow())
           .border({ width: 1, color: this.getSurfaceBorder() })
           .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 14 })
@@ -257,7 +249,8 @@ export struct SettingsPage {
                 .backgroundColor(Color.Transparent)
                 .fontColor(this.getCurrentThemePalette().accentBackground)
                 .fontSize(DesignConstants.FONT.SIZE.LG)
-                .type(ButtonType.Capsule)
+                .type(ButtonType.Normal)
+                .borderRadius(DesignConstants.SHAPE.BUTTON)
                 .shadow(this.getCurrentThemePalette().controlShadow)
                 .border({ width: 1, color: this.getSurfaceBorder() })
                 .onClick(() => { this.logout(); })
@@ -274,7 +267,8 @@ export struct SettingsPage {
                 .backgroundColor(this.getCurrentThemePalette().accentBackground)
                 .fontColor(this.getCurrentThemePalette().accentText)
                 .fontSize(DesignConstants.FONT.SIZE.LG)
-                .type(ButtonType.Capsule)
+                .type(ButtonType.Normal)
+                .borderRadius(DesignConstants.SHAPE.BUTTON)
                 .shadow(this.getCurrentThemePalette().controlShadow)
                 .border({ width: 1, color: this.getSurfaceBorder() })
                 .onClick(() => {
@@ -349,7 +343,7 @@ export struct SettingsPage {
             top: DesignConstants.SPACING.XS,
             bottom: DesignConstants.SPACING.XS
           })
-          .borderRadius(DesignConstants.RADIUS.SM)
+          .borderRadius(DesignConstants.SHAPE.CHIP)
 
         Stack() {
           IconButton({
@@ -471,13 +465,13 @@ export struct SettingsPage {
 
   @Builder
   private ThemeSheet() {
-    Column({ space: DesignConstants.SPACING.MD }) {
+    Column({ space: DesignConstants.SPACING.LG }) {
       Text('外观主题')
         .fontSize(DesignConstants.FONT.SIZE.XL)
         .fontWeight(FontWeight.Bold)
         .fontColor(this.getThemeSheetPalette().textPrimary)
 
-      Text('现在可在当前默认与 Soft Gallery 间实时切换')
+      Text('切换整体观感，预览卡片、按钮与底栏风格。')
         .fontSize(DesignConstants.FONT.SIZE.SM)
         .fontColor(this.getThemeSheetPalette().textSecondary)
         .textAlign(TextAlign.Center)
@@ -501,101 +495,92 @@ export struct SettingsPage {
 
   @Builder
   private ThemeOptionCard(option: ThemeOptionItem) {
-    Row({ space: DesignConstants.SPACING.MD }) {
-      // 左侧单选圆点（用该主题的 accent 色）
-      Column() {
-        Row() {
-          if (this.isThemeOptionActive(option)) {
-            Row()
-              .width(10)
-              .height(10)
-              .borderRadius(DesignConstants.RADIUS.FULL)
-              .backgroundColor(this.getThemeOptionPalette(option).accentBackground)
-          }
-        }
-        .width(18)
-        .height(18)
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .border({ width: 2, color: this.getThemeOptionPalette(option).accentBackground })
-      }
+    const palette = this.getThemeOptionPalette(option);
+    const preview = AppThemeVisuals.getThemePreviewStyle(palette.id);
+    const tabBar = AppThemeVisuals.getTabBarVisualStyle(palette.id);
+    const isActive = this.isThemeOptionActive(option);
 
-      // 中间文案 + “当前使用”标签
-      Column({ space: 4 }) {
-        Row({ space: DesignConstants.SPACING.SM }) {
+    Column({ space: DesignConstants.SPACING.MD }) {
+      Row({ space: DesignConstants.SPACING.SM }) {
+        Column({ space: 4 }) {
           Text(option.label)
             .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontWeight(FontWeight.Medium)
-            .fontColor(this.getThemeOptionPalette(option).textPrimary)
+            .fontColor(palette.textPrimary)
 
-          if (this.isThemeOptionActive(option)) {
-            Text('当前使用')
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .fontColor(this.getThemeOptionPalette(option).accentBackground)
-              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-              .backgroundColor(this.getThemeOptionPalette(option).surfaceSubtle)
-              .borderRadius(DesignConstants.RADIUS.XL)
-          }
+          Text(option.description)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor(palette.textSecondary)
         }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
 
-        Text(option.description)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getThemeOptionPalette(option).textSecondary)
+        Text(isActive ? '当前使用' : '点击切换')
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .fontColor(isActive ? palette.accentText : palette.accentBackground)
+          .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+          .backgroundColor(isActive ? palette.accentBackground : palette.surfaceSubtle)
+          .borderRadius(DesignConstants.SHAPE.CHIP)
       }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start)
+      .width('100%')
 
-      // 右侧主题预览块：用缩略 profile mock 展示主题气质
-      Column({ space: 4 }) {
+      Column({ space: 8 }) {
         Stack({ alignContent: Alignment.Top }) {
-          Column({ space: 4 }) {
+          Column({ space: 8 }) {
             Blank()
-              .width(18)
-              .height(18)
+              .width(preview.heroAvatarSize)
+              .height(preview.heroAvatarSize)
               .borderRadius(DesignConstants.RADIUS.FULL)
-              .backgroundColor(this.getThemeOptionPalette(option).surfaceSubtle)
-              .border({ width: 1, color: this.getThemeOptionPalette(option).borderColor })
+              .backgroundColor(palette.surfaceSubtle)
+              .border({ width: 1, color: palette.borderColor })
+              .shadow(preview.haloShadow)
 
             Blank()
-              .width(34)
-              .height(8)
-              .borderRadius(DesignConstants.RADIUS.FULL)
-              .backgroundColor(this.getThemeOptionPalette(option).accentBackground)
+              .width('66%')
+              .height(preview.primaryButton.height)
+              .borderRadius(preview.primaryButton.borderRadius)
+              .backgroundColor(preview.primaryButton.backgroundColor)
+              .shadow(preview.primaryButton.shadow)
 
-            Row({ space: 4 }) {
+            Row({ space: 8 }) {
               Blank()
                 .layoutWeight(1)
-                .height(18)
-                .borderRadius(DesignConstants.RADIUS.MD)
-                .backgroundColor(this.getThemeOptionPalette(option).surfaceSubtle)
+                .height(36)
+                .borderRadius(preview.tileRadius)
+                .backgroundColor(palette.surfaceSubtle)
               Blank()
                 .layoutWeight(1)
-                .height(18)
-                .borderRadius(DesignConstants.RADIUS.MD)
-                .backgroundColor(this.getThemeOptionPalette(option).surfaceSubtle)
+                .height(36)
+                .borderRadius(preview.tileRadius)
+                .backgroundColor(palette.surfaceSubtle)
             }
             .width('100%')
+
+            Blank()
+              .width('100%')
+              .height(18)
+              .borderRadius(tabBar.radius)
+              .backgroundColor(tabBar.backgroundColor)
+              .shadow(tabBar.shadow)
           }
           .width('100%')
-          .padding(6)
+          .alignItems(HorizontalAlign.Center)
+          .padding(DesignConstants.SPACING.MD)
         }
-        .width(46)
-        .height(58)
-        .borderRadius(DesignConstants.RADIUS.XL)
-        .backgroundColor(this.getThemeOptionPalette(option).surfaceBackground)
-        .border({ width: 1, color: this.getThemeOptionPalette(option).borderColor })
-        .shadow(this.getThemeOptionPalette(option).surfaceShadow)
+        .width('100%')
+        .borderRadius(preview.card.borderRadius)
+        .backgroundColor(preview.card.backgroundColor)
+        .border({ width: preview.card.borderWidth, color: preview.card.borderColor })
+        .shadow(preview.card.shadow)
       }
+      .width('100%')
     }
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
-    .borderRadius(DesignConstants.RADIUS.XXL)
-    .backgroundColor(this.isThemeOptionActive(option)
-      ? this.getThemeOptionPalette(option).surfaceBackground
-      : this.getThemeOptionPalette(option).surfaceSubtle)
-    .border({ width: this.isThemeOptionActive(option) ? 2 : 1,
-      color: this.isThemeOptionActive(option)
-        ? this.getThemeOptionPalette(option).accentBackground
-        : this.getThemeOptionPalette(option).borderColor })
+    .borderRadius(preview.card.borderRadius)
+    .backgroundColor(isActive ? palette.surfaceBackground : palette.surfaceSubtle)
+    .border({ width: isActive ? 2 : 1, color: isActive ? palette.accentBackground : palette.borderColor })
+    .shadow(isActive ? palette.elevatedShadow : palette.surfaceShadow)
     .onClick(() => {
       this.handleThemeChange(option.mode).catch(() => {
         SystemToast.showError('切换主题失败', this.getUIContext());
@@ -615,7 +600,7 @@ export struct SettingsPage {
       }
       .width(38)
       .height(38)
-      .borderRadius(DesignConstants.RADIUS.MD)
+      .borderRadius(DesignConstants.SHAPE.ICON_TILE)
       .backgroundColor(accentColor ? Color.Transparent : this.getSurfaceSubtle())
       .border(accentColor ? { width: 1, color: accentColor } : { width: 0, color: Color.Transparent })
       .justifyContent(FlexAlign.Center)
@@ -644,7 +629,7 @@ export struct SettingsPage {
       }
       .width(28)
       .height(28)
-      .borderRadius(DesignConstants.RADIUS.MD)
+      .borderRadius(DesignConstants.SHAPE.ICON_TILE)
       .backgroundColor(this.getSurfaceSubtle())
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)

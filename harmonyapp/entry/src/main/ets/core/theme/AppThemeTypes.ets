@@ -20,6 +20,52 @@ export class AppThemeShadow {
   }
 }
 
+export interface AppThemeShapeTokens {
+  surfaceCard: number;
+  heroCard: number;
+  compactCard: number;
+  input: number;
+  button: number;
+  chip: number;
+  tabBar: number;
+  previewCard: number;
+  listItem: number;
+  iconTile: number;
+}
+
+export interface AppThemeMetricTokens {
+  cardPadding: number;
+  heroPadding: number;
+  metricCardPadding: number;
+  profilePrimaryButtonHeight: number;
+  profilePrimaryButtonHorizontalPadding: number;
+  profileAvatarSize: number;
+  profileTitleFontSize: number;
+  profileMetricMinHeight: number;
+  profileMetricValueFontSize: number;
+  actionButtonHeight: number;
+  listItemMinHeight: number;
+  tabBarHeight: number;
+  createButtonWidth: number;
+  createButtonHeight: number;
+  chatListRadius: number;
+  chatSendButtonHeight: number;
+  previewHeroAvatarSize: number;
+  previewPrimaryButtonHeight: number;
+}
+
+export interface AppThemeEffectTokens {
+  avatarShadow: AppThemeShadow;
+  haloShadow: AppThemeShadow;
+  previewShadow: AppThemeShadow;
+}
+
+export interface AppThemeVisualTokens {
+  shape: AppThemeShapeTokens;
+  metrics: AppThemeMetricTokens;
+  effects: AppThemeEffectTokens;
+}
+
 export interface AppThemePalette {
   id: ResolvedThemeId;
   label: string;
@@ -49,6 +95,7 @@ export interface AppThemePalette {
   controlShadow: AppThemeShadow;
   tabBarShadow: AppThemeShadow;
   overlayStrong: string;
+  visuals: AppThemeVisualTokens;
 }
 
 export interface ThemeOptionItem {

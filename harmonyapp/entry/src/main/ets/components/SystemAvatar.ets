@@ -3,6 +3,7 @@ import { UserInfo } from '../core/types/api';
 import { UserTypeUtil } from '../core/utils/UserTypeUtil';
 import { MediaUrlUtil } from '../core/utils/MediaUrlUtil';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { AppThemeVisuals } from '../core/theme/AppThemeVisuals';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
 /**
@@ -41,10 +42,9 @@ export struct SystemAvatar {
   }
 
   private getAvatarShadow(): ShadowOptions {
-    if (!AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId)) {
-      return { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 };
-    }
-    return this.avatarSize >= 80 ? this.getPalette().elevatedShadow : this.getPalette().controlShadow;
+    return this.avatarSize >= 80
+      ? AppThemeVisuals.getAvatarHaloShadow(this.resolvedThemeId)
+      : AppThemeVisuals.getAvatarShadow(this.resolvedThemeId);
   }
 
   private getActualSrc(): string | Resource | undefined {

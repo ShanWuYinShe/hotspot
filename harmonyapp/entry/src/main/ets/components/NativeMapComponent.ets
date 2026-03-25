@@ -184,7 +184,7 @@ export struct NativeMapComponent {
 
   private isNightMapMode(): boolean {
     const palette = AppThemeManager.getPaletteById(this.resolvedThemeId);
-    return this.isDarkMode || palette.id === 'default_clean_dark';
+    return this.isDarkMode || palette.isDarkTheme;
   }
 
   aboutToAppear(): void {

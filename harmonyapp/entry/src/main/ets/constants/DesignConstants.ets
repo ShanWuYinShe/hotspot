@@ -151,12 +151,27 @@ export interface ChatLayoutConstants {
   AVATAR_SIZE: number;
 }
 
+// ==================== 语义化形状 token ====================
+export interface ShapeSemanticTokens {
+  CARD: number;
+  HERO_CARD: number;
+  COMPACT_CARD: number;
+  INPUT: number;
+  BUTTON: number;
+  CHIP: number;
+  TAB_BAR: number;
+  PREVIEW_CARD: number;
+  LIST_ITEM: number;
+  ICON_TILE: number;
+}
+
 // ==================== 设计常量聚合接口 ====================
 export interface DesignConstantsType {
   COLOR: ColorPalette;
   FONT: FontSystem;
   SPACING: SpacingSystem;
   RADIUS: RadiusSystem;
+  SHAPE: ShapeSemanticTokens;
   SHADOW: ShadowSystem;
   ANIMATION: AnimationSystem;
   COMPONENT: ComponentConstants;
@@ -242,6 +257,19 @@ const RADIUS: RadiusSystem = {
   XL: 20,
   XXL: 24,
   FULL: 999,
+};
+
+const SHAPE: ShapeSemanticTokens = {
+  CARD: RADIUS.XXL,
+  HERO_CARD: RADIUS.XXL + 2,
+  COMPACT_CARD: RADIUS.XL,
+  INPUT: RADIUS.XL,
+  BUTTON: RADIUS.XXL,
+  CHIP: RADIUS.XL,
+  TAB_BAR: 28,
+  PREVIEW_CARD: 28,
+  LIST_ITEM: RADIUS.XXL,
+  ICON_TILE: RADIUS.MD,
 };
 
 // ==================== 阴影系统（干净扁平风格：极轻微阴影）====================
@@ -377,6 +405,7 @@ export const DesignConstants: DesignConstantsType = {
   FONT,
   SPACING,
   RADIUS,
+  SHAPE,
   SHADOW,
   ANIMATION,
   COMPONENT,
