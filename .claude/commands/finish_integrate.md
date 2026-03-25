@@ -8,7 +8,7 @@ allowed-tools: Bash(git status:*), Bash(git branch:*), Bash(git rev-parse:*), Ba
 
 $ARGUMENTS
 
-目标不是直接自动同步回主目录 `main`，而是确认这轮 integration 是否已经满足“可线性同步回 main”的全部条件，并给出明确结论：`ready to sync`、`blocked` 或 `must refresh`。
+目标不是直接自动同步回主目录 `main`，而是确认这轮 integration 是否已经满足“可线性同步回 main”的全部条件，并给出明确结论。面向人类的 reviewer 结论使用 `ready to sync`、`blocked`、`must refresh`；回写 runtime metadata 时必须分别映射为 `ready_to_sync`、`blocked`、`must_refresh`。
 
 执行要求：
 

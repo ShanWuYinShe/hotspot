@@ -84,6 +84,7 @@
 ### compose
 - `compose/preview.yml`
 - 固定 compose project：`hotspot-preview`
+- 默认镜像版本与基础镜像默认值统一由 `deploy/scripts/lib/images.sh` 导出
 - 固定 preview image：
   - `hotspot/backend-go:preview`
   - `hotspot/frontend-svelte:preview`
@@ -94,7 +95,7 @@
 - 支持 `--clean` / `--clean-all`
 - backend-go 在启动时会自动执行 schema bootstrap 并校验关键表；对空库 preview，先清 postgres volume 再启动也应能自举成功
 - preview 构建、启动与 inspect 结果都会归档到 `tmp/deploy/logs/preview/current/`，其中既保留构建期完整 stdout/stderr，也保留 runtime `compose ps` / `compose logs` 快照与 HTTP/S3 检查结果
-- `createbuckets` 会安静重试 MinIO 连接；只有超过重试上限时才输出失败，而不是在 MinIO 启动早期连续刷瞬时连接拒绝日志
+- preview 仍保留 MinIO 服务与 `/s3/` 入口检查，但不再额外引入 `minio/mc` 初始化容器；对象存储桶与策略不在 preview 基础拓扑中预创建
 
 ## 三、release
 
@@ -120,8 +121,13 @@ manifest 至少包含：
 - ref
 - resolved SHA
 - release label
+- built_at
+- source_root
+- backend/frontend runner image
+- base image 结果
 - backend image
 - frontend image
+- log_root
 
 ### 为什么 release 不运行
 - preview 负责行为验证
@@ -159,22 +165,21 @@ manifest 至少包含：
 - 这一层是“容器镜像引用/版本”的覆盖能力，不等于依赖下载镜像源。
 - `compose/preview.yml` 与 `compose/verify.yml` 中的服务镜像默认固定为明确版本，同时支持通过环境变量覆盖。
 - 当前默认版本：
-  - Postgres：`postgres:17.9-alpine3.23`
-  - Redis：`redis:7.4.8-alpine3.21`
+  - Postgres：`postgres:18.3-alpine3.23`
+  - Redis：`redis:8.6.2-alpine3.23`
   - MinIO：`minio/minio:RELEASE.2025-09-07T16-13-09Z`
-  - MinIO mc：`minio/mc:RELEASE.2025-08-13T08-35-41Z`
   - nginx：`nginx:1.28.3-alpine3.23`
 - 当前支持的覆盖项包括：
   - `HOTSPOT_PREVIEW_POSTGRES_IMAGE`
   - `HOTSPOT_PREVIEW_REDIS_IMAGE`
   - `HOTSPOT_PREVIEW_MINIO_IMAGE`
-  - `HOTSPOT_PREVIEW_MINIO_MC_IMAGE`
   - `HOTSPOT_PREVIEW_NGINX_IMAGE`
   - `HOTSPOT_VERIFY_POSTGRES_IMAGE`
   - `HOTSPOT_VERIFY_REDIS_IMAGE`
+  - `HOTSPOT_AMAP_JSCODE`
 - Dockerfile 基础镜像默认也固定为明确版本，并支持 build arg 覆盖：
   - `HOTSPOT_GOLANG_BASE_IMAGE`（默认 `golang:1.26.1-alpine3.23`）
-  - `HOTSPOT_NODE_BASE_IMAGE`（默认 `node:22.22.1-alpine3.23`）
+  - `HOTSPOT_NODE_BASE_IMAGE`（默认 `node:24.14.0-alpine3.23`）
   - `HOTSPOT_ALPINE_BASE_IMAGE`（默认 `alpine:3.23.3`）
   - `HOTSPOT_ALPINE_REPO`
 
@@ -211,6 +216,7 @@ deploy/
 - 所有测试、check、build 验证默认都通过 `deploy/` 下的 Docker 流程执行，不直接依赖宿主环境
 - 测试与构建过程中产生的缓存、pnpm store、临时产物不得写回仓库根
 - preview 保留 HTTPS + nginx + MinIO + inspect 链
+- AMap 代理能力仍保留，但 `jscode` 必须通过 `HOTSPOT_AMAP_JSCODE` 注入，不能再硬编码在 nginx 模板中
 - 数据保留 / 清理语义保留
 - 多 worktree 并行隔离只属于 verify
 

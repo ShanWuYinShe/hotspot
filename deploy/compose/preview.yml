@@ -1,13 +1,13 @@
 services:
   postgres:
-    image: ${HOTSPOT_PREVIEW_POSTGRES_IMAGE:-postgres:17.9-alpine3.23}
+    image: ${HOTSPOT_PREVIEW_POSTGRES_IMAGE:-postgres:18.3-alpine3.23}
     restart: unless-stopped
     environment:
       POSTGRES_USER: hotspot
       POSTGRES_PASSWORD: hotspot
       POSTGRES_DB: hotspot
     volumes:
-      - preview_postgres_data:/var/lib/postgresql
+      - preview_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U hotspot -d hotspot"]
       interval: 10s
@@ -17,7 +17,7 @@ services:
       - hotspot-preview
 
   redis:
-    image: ${HOTSPOT_PREVIEW_REDIS_IMAGE:-redis:7.4.8-alpine3.21}
+    image: ${HOTSPOT_PREVIEW_REDIS_IMAGE:-redis:8.6.2-alpine3.23}
     restart: unless-stopped
     volumes:
       - preview_redis_data:/data
@@ -38,29 +38,6 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - preview_minio_data:/data
-    networks:
-      - hotspot-preview
-
-  createbuckets:
-    image: ${HOTSPOT_PREVIEW_MINIO_MC_IMAGE:-minio/mc:RELEASE.2025-08-13T08-35-41Z}
-    depends_on:
-      minio:
-        condition: service_started
-    entrypoint: >
-      /bin/sh -c "
-      attempts=0;
-      until /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin} >/dev/null 2>&1; do
-        attempts=$$((attempts + 1));
-        if [ $$attempts -ge 30 ]; then
-          echo 'minio did not become reachable in time' >&2;
-          exit 1;
-        fi;
-        sleep 2;
-      done;
-      /usr/bin/mc mb --ignore-existing myminio/${S3_BUCKET:-hotspot};
-      /usr/bin/mc anonymous set download myminio/${S3_BUCKET:-hotspot};
-      exit 0;
-      "
     networks:
       - hotspot-preview
 
@@ -113,6 +90,7 @@ services:
       - "${HOTSPOT_PREVIEW_HTTPS_PORT:-8443}:443"
     environment:
       HOTSPOT_HTTPS_REDIRECT_PORT: ${HOTSPOT_PREVIEW_HTTPS_PORT:-8443}
+      HOTSPOT_AMAP_JSCODE: ${HOTSPOT_AMAP_JSCODE:-}
     volumes:
       - ../nginx/hotspot.preview.nginx.conf:/etc/nginx/templates/default.conf.template:ro
       - ${HOTSPOT_TLS_CERT_PATH:?set HOTSPOT_TLS_CERT_PATH}:/etc/nginx/certs/tls.crt:ro
@@ -124,8 +102,6 @@ services:
         condition: service_started
       minio:
         condition: service_started
-      createbuckets:
-        condition: service_completed_successfully
     networks:
       - hotspot-preview
 

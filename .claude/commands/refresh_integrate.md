@@ -31,4 +31,6 @@ $ARGUMENTS
 - replay / 冲突处理结果
 - verify 结果
 - review 结果
-- 当前状态：`integration ready`、`blocked` 或 `must refresh again`
+- metadata 刷新结果
+- 刷新后的 `gate_status`：`pending`
+- 下一步建议：重新 replay、`/verify_integrate`、strict review

@@ -112,8 +112,18 @@ cat > "$MANIFEST_PATH" <<EOF
   "ref": "$REF",
   "resolved_sha": "$SHA",
   "label": "$LABEL",
+  "built_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "source_root": "$SOURCE_ROOT",
+  "backend_runner_image": "$BACKEND_RUNNER_IMAGE",
+  "frontend_runner_image": "$FRONTEND_RUNNER_IMAGE",
+  "base_images": {
+    "golang": "${HOTSPOT_GOLANG_BASE_IMAGE:-$(default_golang_base_image)}",
+    "node": "${HOTSPOT_NODE_BASE_IMAGE:-$(default_node_base_image)}",
+    "alpine": "${HOTSPOT_ALPINE_BASE_IMAGE:-$(default_alpine_base_image)}"
+  },
   "backend_image": "$RELEASE_BACKEND_IMAGE",
-  "frontend_image": "$RELEASE_FRONTEND_IMAGE"
+  "frontend_image": "$RELEASE_FRONTEND_IMAGE",
+  "log_root": "$LOG_ROOT"
 }
 EOF
 

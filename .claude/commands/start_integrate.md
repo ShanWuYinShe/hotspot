@@ -8,7 +8,7 @@ allowed-tools: Bash(git status:*), Bash(git branch:*), Bash(git rev-parse:*), Ba
 
 $ARGUMENTS
 
-目标不是直接 merge，而是从主目录最新本地 `main HEAD` 新建一个临时 integration worktree，把本次待集成的 feature 成果集中进去，完成冲突解决、验证、review 和线性化准备，最终达到 **integration ready**。
+目标不是直接 merge，而是从主目录最新本地 `main HEAD` 新建一个临时 integration worktree，把本次待集成的 feature 成果集中进去，完成冲突解决、验证、review 和线性化准备；初始化完成后，本轮 integration runtime metadata 应处于 `pending`，后续再推进到 `ready_to_sync`、`blocked` 或 `must_refresh`。
 
 执行要求：
 
@@ -33,4 +33,6 @@ $ARGUMENTS
 - verify 结果
 - review 结果
 - 线性化后的提交状态
-- 最终状态：`integration ready`、`blocked` 或 `must refresh`
+- metadata 初始化结果
+- 初始 `gate_status`：`pending`
+- 下一步建议：`/verify_integrate` 或继续 replay / simplify / strict review

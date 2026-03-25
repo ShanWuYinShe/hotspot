@@ -13,7 +13,7 @@ description: 复核当前 integration worktree 是否已经满足 ready to sync 
 4. 检查 simplify、严格 review 和 review 问题修复是否已经完成。
 5. 检查当前历史是否已经整理为适合回 `main` 的线性结果，优先采用 rebase / squash，避免 merge commit。
 6. 检查 integration 基线是否仍然新鲜；若主目录当前最新本地 `main HEAD` 已经前进，则当前结论必须是 `must refresh`。
-7. 结论枚举必须只使用：`ready to sync`、`blocked`、`must refresh`。
+7. 面向人类的结论枚举必须只使用：`ready to sync`、`blocked`、`must refresh`。若上层需要把结论写回 `tmp/claude/integrations/<integration-id>.json`，必须分别映射为 `ready_to_sync`、`blocked`、`must_refresh`。
 8. 输出必须使用以下 Markdown 结构，标题名不要改：
 
 ## 结论

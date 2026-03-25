@@ -1,11 +1,8 @@
-ARG HOTSPOT_NODE_BASE_IMAGE=node:22.22.1-alpine3.23
+ARG HOTSPOT_NODE_BASE_IMAGE=node:24.14.0-alpine3.23
 FROM ${HOTSPOT_NODE_BASE_IMAGE}
 WORKDIR /app
-ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
-ENV npm_config_registry=https://registry.npmmirror.com
-RUN npm install -g pnpm@10.28.0
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile --prod
+COPY node_modules ./node_modules
 COPY build ./build
 EXPOSE 3000
 ENV NODE_ENV=production

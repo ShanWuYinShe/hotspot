@@ -1,6 +1,6 @@
 services:
   postgres-test:
-    image: ${HOTSPOT_VERIFY_POSTGRES_IMAGE:-postgres:17.9-alpine3.23}
+    image: ${HOTSPOT_VERIFY_POSTGRES_IMAGE:-postgres:18.3-alpine3.23}
     environment:
       POSTGRES_USER: hotspot
       POSTGRES_PASSWORD: hotspot
@@ -12,7 +12,7 @@ services:
       retries: 20
 
   redis-test:
-    image: ${HOTSPOT_VERIFY_REDIS_IMAGE:-redis:7.4.8-alpine3.21}
+    image: ${HOTSPOT_VERIFY_REDIS_IMAGE:-redis:8.6.2-alpine3.23}
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
