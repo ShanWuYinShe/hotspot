@@ -808,9 +808,10 @@
 
         const promise = (async () => {
             await ensureDistrictSearch();
-            if (!districtSearch) return meta;
+            const search = districtSearch;
+            if (!search) return meta;
             const updated = await new Promise<RegionMeta>((resolve) => {
-                districtSearch.search(
+                search.search(
                     meta.adcode,
                     (status: string, result: AMap.DistrictSearchResult) => {
                         if (status !== "complete" || !result.districts?.length) {

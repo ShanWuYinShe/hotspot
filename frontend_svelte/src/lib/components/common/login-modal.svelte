@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { withMinimumLoadingTime, MIN_LOADING_ACTION } from '$lib/utils/loading';
 	import { authService, usersService } from '$lib/api/services';
+	import { isSuccess } from '$lib/api/client';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
@@ -48,22 +49,23 @@
 			usersService.getMyProfile()
 		]);
 
-		if (!isSuccess(statusRes) || !statusRes.data.is_valid) {
+		if (!isSuccess(statusRes) || !statusRes.data?.is_valid) {
 			return false;
 		}
-		if (!isSuccess(profileRes)) {
+		if (!isSuccess(profileRes) || !profileRes.data) {
 			return false;
 		}
 
 		const expiresAt =
 			statusRes.data.expires_at ?? new Date(Date.now() + 15 * 60 * 1000).toISOString();
+		const profile = profileRes.data;
 
 		authStore.login({
-			user_id: profileRes.data.user_id,
-			user_type: profileRes.data.user_type,
+			user_id: profile.user_id,
+			user_type: profile.user_type,
 			access_token_expires_at: expiresAt
 		});
-		authStore.setProfile(profileRes.data);
+		authStore.setProfile(profile);
 		return true;
 	}
 

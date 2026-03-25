@@ -146,9 +146,13 @@
 			const nextUsers = isSuccess(usersRes) && usersRes.data ? usersRes.data.items : [];
 			const nextMoments = isSuccess(momentsRes) && momentsRes.data ? momentsRes.data.items : [];
 			const nextGroups = isSuccess(groupsRes) && groupsRes.data ? groupsRes.data.items : [];
-			const nextError = [usersRes, momentsRes, groupsRes]
-				.find((response) => !isSuccess(response))
-				?.message ?? null;
+			const nextError = !isSuccess(usersRes)
+				? (usersRes.message ?? null)
+				: !isSuccess(momentsRes)
+					? (momentsRes.message ?? null)
+					: !isSuccess(groupsRes)
+						? (groupsRes.message ?? null)
+						: null;
 
 			users = nextUsers;
 			moments = nextMoments;

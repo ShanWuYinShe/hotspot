@@ -229,7 +229,7 @@
 		variant="secondary"
 		glow="soft"
 		interactive
-		tabindex="0"
+		tabindex={0}
 		role="link"
 		onclick={handleCardClick}
 		onkeydown={handleCardKeydown}
