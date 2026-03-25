@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
+
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
@@ -16,17 +18,27 @@ import (
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
+const (
+	testAuthTokenSecret    = "test-secret"
+	defaultAuthTokenSecret = "dev-secret-change-me"
+)
+
 func newTestHandler() *Handler {
 	handler, _ := newTestHandlerWithStore()
 	return handler
 }
 
+func newTestModuleWithStore() (*Module, *InMemoryRepository) {
+	store := NewInMemoryRepository()
+	provider := NewAppConfigProvider(appconfig.NewStaticSource(config.Load()))
+	return NewModuleWithDeps(store, provider, nil, nil), store
+}
+
 func newTestHandlerWithStore() (*Handler, *InMemoryRepository) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
-	store := NewInMemoryRepository()
-	provider := NewAppConfigProvider(appconfig.NewStaticSource(config.Load()))
-	return NewHandler(NewService(store, provider, nil, nil)), store
+	module, store := newTestModuleWithStore()
+	return module.handler, store
 }
 
 func adminContext(req *http.Request, userID string, admin bool) *http.Request {
@@ -44,6 +56,99 @@ func decodeResponse[T any](t *testing.T, rr *httptest.ResponseRecorder) httpx.Ap
 		t.Fatalf("decode response: %v", err)
 	}
 	return resp
+}
+
+func newMountedAdminRouter(t *testing.T) (http.Handler, func(string) string) {
+	t.Helper()
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+	previousHub := realtime.DefaultHub()
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	t.Cleanup(func() {
+		realtime.SetDefaultHub(previousHub)
+	})
+	module, _ := newTestModuleWithStore()
+	authService := platformauth.NewService(config.Config{AuthTokenSecret: testAuthTokenSecret})
+	platformauth.SetDefaultService(authService)
+	t.Cleanup(func() {
+		platformauth.SetDefaultService(platformauth.NewService(config.Config{AuthTokenSecret: defaultAuthTokenSecret}))
+	})
+	router := chi.NewRouter()
+	module.Mount(router)
+	issueToken := func(userID string) string {
+		result, err := authService.IssueSession(userID)
+		if err != nil {
+			t.Fatalf("issue session: %v", err)
+		}
+		return result.AccessToken
+	}
+	return router, issueToken
+}
+
+func TestAdminModerationRoutesAreMounted(t *testing.T) {
+	router, issueToken := newMountedAdminRouter(t)
+	adminToken := issueToken("admin")
+
+	tests := []struct {
+		name string
+		path string
+		body string
+	}{
+		{name: "users search", path: "/api/v1/admin/users/search", body: `{"nickname":"bob","pagination":{"limit":10}}`},
+		{name: "users open", path: "/api/v1/admin/users/open_the_door", body: `{"user_id":"user_bob"}`},
+		{name: "groups search", path: "/api/v1/admin/groups/search", body: `{"name":"hot","pagination":{"limit":10}}`},
+		{name: "groups open", path: "/api/v1/admin/groups/open_the_door", body: `{"group_id":"group_hotspot"}`},
+		{name: "reports search", path: "/api/v1/admin/reports/search", body: `{"status":"pending","pagination":{"limit":10}}`},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, tc.path, strings.NewReader(tc.body))
+			req.Header.Set("Authorization", "Bearer "+adminToken)
+			rr := httptest.NewRecorder()
+			router.ServeHTTP(rr, req)
+			if rr.Code != http.StatusOK {
+				t.Fatalf("unexpected status: %d body=%s", rr.Code, rr.Body.String())
+			}
+			resp := decodeResponse[struct{}](t, rr)
+			if resp.Code != 0 {
+				t.Fatalf("unexpected response: %#v", resp)
+			}
+		})
+	}
+}
+
+func TestAdminModerationRoutesRequireAuth(t *testing.T) {
+	router, _ := newMountedAdminRouter(t)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users/search", strings.NewReader(`{"nickname":"bob"}`))
+	rr := httptest.NewRecorder()
+
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("unexpected status: %d body=%s", rr.Code, rr.Body.String())
+	}
+	resp := decodeResponse[struct{}](t, rr)
+	if resp.Code != 10100 {
+		t.Fatalf("unexpected response: %#v", resp)
+	}
+}
+
+func TestAdminModerationRoutesRequireAdminPermission(t *testing.T) {
+	router, issueToken := newMountedAdminRouter(t)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users/search", strings.NewReader(`{"nickname":"bob"}`))
+	req.Header.Set("Authorization", "Bearer "+issueToken("user_bob"))
+	rr := httptest.NewRecorder()
+
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("unexpected status: %d body=%s", rr.Code, rr.Body.String())
+	}
+	resp := decodeResponse[struct{}](t, rr)
+	if resp.Code != 10200 {
+		t.Fatalf("unexpected response: %#v", resp)
+	}
 }
 
 func TestGetMeReturnsPermissions(t *testing.T) {

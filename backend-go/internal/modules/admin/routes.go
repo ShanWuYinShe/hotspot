@@ -33,6 +33,21 @@ func MountRoutes(r chi.Router, handler *Handler) {
 		appConfig.Post("/update_limits", handler.UpdateLimits)
 		appConfig.Post("/update_contact", handler.UpdateContact)
 	})
+	r.Route("/users", func(users chi.Router) {
+		users.Post("/search", handler.SearchUsers)
+		users.Post("/open_the_door", handler.OpenAdminUser)
+		users.Post("/ban", handler.BanUser)
+		users.Post("/unban", handler.UnbanUser)
+	})
+	r.Route("/groups", func(groups chi.Router) {
+		groups.Post("/search", handler.SearchGroups)
+		groups.Post("/open_the_door", handler.OpenAdminGroup)
+		groups.Post("/dismiss", handler.DismissGroup)
+	})
+	r.Route("/reports", func(reports chi.Router) {
+		reports.Post("/search", handler.SearchReports)
+		reports.Post("/handle", handler.HandleReport)
+	})
 	r.Route("/tags", func(tags chi.Router) {
 		tags.Post("/search", handler.SearchTags)
 		tags.Post("/delete", handler.DeleteTag)
