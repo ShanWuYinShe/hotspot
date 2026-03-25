@@ -27,11 +27,16 @@ HotSpot 是一个多端 monorepo：
 ## 主目录与 worktree 模型
 - 主目录默认始终保持在本地 `main` 且 clean；主目录只承担同步、审阅、创建/回收 worktree 和本地集成控制，不承载实现性改动。
 - 所有实现、验证和构建都在 worktree 中完成；需要本地分支时，也在对应 worktree 中使用。
+- 新 worktree 默认从主目录本地 `main` 的当前 HEAD 创建，而不是从远程分支 HEAD 创建。
+- 默认每个会话只操作自己创建或明确接管的 worktree / branch；除非用户明确指定，不要处理其他会话对象。
+- worktree 内的本地操作默认尽量自动化放行；主目录 `main`、远程状态、共享配置与历史改写继续保守。
+- 当主目录处于本地 `main + clean`、操作对象属于当前会话且动作遵循本仓库定义的本地流程时，Claude 应默认自动推进本地闭环：创建 worktree、开发、验证、review、单 worktree 结果线性同步回主目录本地 `main`，或完成 integration 后同步回主目录本地 `main`，再 cleanup；只有越过共享边界、涉及其他会话对象或需要丢弃未确认改动时才暂停确认。
 - 复杂任务先规划；只有当子任务边界清晰且文件集相对独立时才并行。
-- 每个 feature worktree 先独立完成实现、自检和验证；多分支结果统一汇总到专门的 integration worktree。
-- integration worktree 只负责汇总、冲突处理、补测、预演与交付准备，不承载新的大规模实现。
+- 每个 feature worktree 先独立完成实现、自检和验证；只有当同一任务被拆分成多个 agent + 多个 worktree 并行开发时，才需要额外新建专门的 integration worktree 来统一汇总结果。
+- 若某任务只有单一 worktree 的结果，则直接在线性历史上完成，不要再额外新建 integration worktree。
+- integration worktree 只负责汇总、冲突处理、补测、预演与交付准备，不承载新的大规模实现；其基线始终是主目录本地 `main` 的当前 HEAD，且最终应通过 `rebase + squash` 或等价线性整理方式收敛为一个 commit，再同步回主目录的本地主分支。
 - 本地集成结果通过后，再由用户决定是否同步到远程 `main`；PR 不是默认流程。
-- 本轮完成后，删除已完成的 feature worktree / branch 与 integration worktree，让主目录继续保持 `main + clean`。
+- 本轮完成后，删除已完成的 feature worktree / branch 与 integration worktree；删除本会话管理的 worktree 时，默认同步删除其对应非主分支 branch，让主目录继续保持 `main + clean`。
 
 ## 质量门顺序
 - 默认顺序：`plan -> task list -> implement -> verify -> simplify -> strict review -> commit -> integrate -> verify -> preview/release -> cleanup`
@@ -55,18 +60,19 @@ HotSpot 是一个多端 monorepo：
 ### 可直接执行
 - 读取文件、搜索代码、编辑仓库内已有文件。
 - 在专用 worktree 中完成实现、验证、代码收敛与 review。
-- 运行本地非破坏性的标准 `deploy/` 验证流程。
+- 运行标准 `deploy/` 本地流程，包括 `verify`、`preview`、`release` 以及 `deploy/` 管理的本地清理脚本。
+- 开发/测试/preview 过程中涉及的数据、数据库、volume、缓存与临时产物的准备和清理语义统一由 `deploy/` 脚本负责；Claude 侧不再单独为这些本地数据语义重复加限制。
 
 ### 需要先确认
 - 大量文件删除、批量重命名、跨目录大改。
 - 修改 `deploy/` 脚本、CI/CD、数据库 migration、共享 `.claude/settings.json`。
-- `git fetch`、`git pull`、`git merge`、`git cherry-pick`、`git push`。
-- 清理或重置 runtime / 数据库 / branch / worktree 的操作。
+- `git fetch`、`git pull`、`git merge`、`git push`。
+- 其他会话对象、状态不明对象，或需要丢弃未确认改动的 branch / worktree 清理与重置操作。
 
 ### 高风险
 - `git reset --hard`、`git clean`、`git branch -D`、任何 `--force` 推送或历史改写。
 - 删除仍有未合并改动的 branch / worktree。
-- 数据库重置、批量清理 volume、破坏性 deploy / 运维动作。
+- 破坏性远端 deploy / 运维动作。
 
 ### 绝对不要
 - 未经用户明确要求修改 `spec/`。

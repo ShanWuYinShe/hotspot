@@ -19,7 +19,7 @@ $ARGUMENTS
 5. 汇总 verify 结果时，区分编译错误、测试失败、构建失败、环境问题，以及基线问题。
 6. 若 verify 通过，说明当前 integration 已具备进入 simplify / strict review / `/finish_integrate` 的基础。
 7. 若 verify 失败，明确列出失败范围和建议修复方向。
-8. 不要默认同步回 `main`，不要 push。
+8. verify 通过后，若后续 gate 与对象归属均满足规则，应继续进入 review / finish，并在满足条件时直接线性同步回主目录本地 `main`；若需要单独入口，可复用 `/sync_back_main` 的同名规则；不要 push。
 
 结束时请输出：
 
