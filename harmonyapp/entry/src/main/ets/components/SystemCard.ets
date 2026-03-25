@@ -1,6 +1,7 @@
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { AppThemeVisuals } from '../core/theme/AppThemeVisuals';
 
 /**
  * 卡片样式变体
@@ -70,30 +71,32 @@ export struct SystemCard {
       return this.cardBackgroundColor as ResourceColor;
     }
 
-    switch (this.variant) {
-      case CardVariant.GLASS:
-        return Color.Transparent;
-      case CardVariant.FILLED:
-        return this.isSoftGallery() ? this.getPalette().buttonSecondaryBackground : this.getPalette().surfaceBackground;
-      case CardVariant.ELEVATED:
-      case CardVariant.OUTLINED:
-      case CardVariant.DEFAULT:
-      default:
-        return this.getPalette().surfaceBackground;
+    if (this.variant === CardVariant.FILLED) {
+      return this.getPalette().buttonSecondaryBackground;
     }
+
+    if (this.variant === CardVariant.GLASS) {
+      return Color.Transparent;
+    }
+
+    return AppThemeVisuals.getSurfaceCardStyle(this.resolvedThemeId).backgroundColor;
   }
 
   private getShadow(): ShadowConfig {
+    if (!this.showShadow) {
+      return { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 };
+    }
+
     switch (this.variant) {
       case CardVariant.ELEVATED:
         return this.getThemeShadow('elevated');
       case CardVariant.GLASS:
-        return this.showShadow ? this.getThemeShadow('elevated') : { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 };
+        return this.getThemeShadow('elevated');
       case CardVariant.DEFAULT:
       case CardVariant.FILLED:
       case CardVariant.OUTLINED:
       default:
-        return this.getThemeShadow('default');
+        return AppThemeVisuals.getSurfaceCardStyle(this.resolvedThemeId).shadow as ShadowConfig;
     }
   }
 
@@ -101,7 +104,11 @@ export struct SystemCard {
     if (!this.showBorder) {
       return { width: 0, color: Color.Transparent };
     }
-    return { width: 1, color: (this.cardBorderColor || this.getPalette().borderColor) as ResourceColor };
+    const profileCardStyle = AppThemeVisuals.getSurfaceCardStyle(this.resolvedThemeId);
+    return {
+      width: profileCardStyle.borderWidth,
+      color: (this.cardBorderColor || profileCardStyle.borderColor) as ResourceColor
+    };
   }
 
   // 获取毛玻璃效果
@@ -113,14 +120,19 @@ export struct SystemCard {
   }
 
   private getCardRadius(): number {
-    if (this.isSoftGallery() && this.cardBorderRadius === DesignConstants.RADIUS.XXL) {
-      return DesignConstants.RADIUS.XXL + 4;
+    const profileCardStyle = AppThemeVisuals.getSurfaceCardStyle(this.resolvedThemeId);
+    if (this.cardBorderRadius === DesignConstants.RADIUS.XXL) {
+      return profileCardStyle.borderRadius;
     }
     return this.cardBorderRadius;
   }
 
   private getCardPadding(): number {
-    return this.isSoftGallery() ? this.cardPadding + 2 : this.cardPadding;
+    const profileCardStyle = AppThemeVisuals.getSurfaceCardStyle(this.resolvedThemeId);
+    if (this.cardPadding === DesignConstants.SPACING.LG) {
+      return profileCardStyle.padding;
+    }
+    return this.cardPadding;
   }
 
   // 获取点击缩放比例

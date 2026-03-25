@@ -173,6 +173,13 @@ export class AppThemeManager {
   }
 
   static getCurrentPalette(): AppThemePalette {
+    return AppThemeManager.getPalette();
+  }
+
+  static getPalette(themeId?: string): AppThemePalette {
+    if (themeId) {
+      return AppThemeManager.getPaletteById(themeId);
+    }
     return AppThemeManager.getPaletteById(AppThemeManager.getResolvedThemeId());
   }
 

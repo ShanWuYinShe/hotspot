@@ -252,16 +252,8 @@ export struct ProfilePage {
     return this.getCurrentThemePalette().accentBackground;
   }
 
-  private isSoftGalleryTheme(): boolean {
-    return AppThemeManager.isSoftGalleryTheme(this.resolvedThemeId);
-  }
-
-  private getSoftCardShadow(): ShadowOptions {
-    return AppThemeVisuals.getSurfaceShadow(this.resolvedThemeId);
-  }
-
-  private getPrimaryButtonShadow(): ShadowOptions {
-    return AppThemeVisuals.getAccentShadow(this.resolvedThemeId);
+  private getProfileVisualStyle() {
+    return AppThemeVisuals.getProfileVisualStyle(this.resolvedThemeId);
   }
 
   private async loadUserStats(): Promise<void> {
@@ -683,10 +675,10 @@ export struct ProfilePage {
             top: DesignConstants.SPACING.LG,
             bottom: DesignConstants.SPACING.LG
           })
-          .backgroundColor(this.getSurfaceBackground())
-          .borderRadius(DesignConstants.RADIUS.XXL)
-          .border({ width: 1, color: this.getSurfaceBorder() })
-          .shadow(this.getSoftCardShadow())
+          .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
+          .borderRadius(this.getProfileVisualStyle().card.borderRadius)
+          .border({ width: this.getProfileVisualStyle().card.borderWidth, color: this.getProfileVisualStyle().card.borderColor })
+          .shadow(this.getProfileVisualStyle().card.shadow)
 
           Column({ space: DesignConstants.SPACING.SM }) {
             Text('个人简介')
@@ -699,10 +691,10 @@ export struct ProfilePage {
           }
           .width('100%')
           .padding(DesignConstants.SPACING.LG)
-          .backgroundColor(this.getSurfaceBackground())
-          .borderRadius(DesignConstants.RADIUS.XXL)
-          .border({ width: 1, color: this.getSurfaceBorder() })
-          .shadow(this.getSoftCardShadow())
+          .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
+          .borderRadius(this.getProfileVisualStyle().card.borderRadius)
+          .border({ width: this.getProfileVisualStyle().card.borderWidth, color: this.getProfileVisualStyle().card.borderColor })
+          .shadow(this.getProfileVisualStyle().card.shadow)
 
           if ((this.viewedUserProfile?.tags?.length ?? 0) > 0) {
             Flex({ wrap: FlexWrap.Wrap }) {
@@ -721,7 +713,7 @@ export struct ProfilePage {
             .backgroundColor(this.getSurfaceBackground())
             .borderRadius(DesignConstants.RADIUS.XXL)
             .border({ width: 1, color: this.getSurfaceBorder() })
-            .shadow(this.getSoftCardShadow())
+            .shadow(this.getProfileVisualStyle().card.shadow)
           }
 
           Row({ space: DesignConstants.SPACING.SM }) {
@@ -904,7 +896,7 @@ export struct ProfilePage {
     .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.LG)
     .border({ width: 1, color: this.getSurfaceBorder() })
-    .shadow(this.getSoftCardShadow())
+    .shadow(this.getProfileVisualStyle().card.shadow)
   }
 
   // ==================== 临时用户界面 ====================
@@ -918,21 +910,21 @@ export struct ProfilePage {
           this.UserInfoContent()
         }
       }
-      .backgroundColor(this.getSurfaceBackground())
-      .borderRadius(DesignConstants.RADIUS.XXL)
-      .shadow(this.getSoftCardShadow())
-      .border({ width: 1, color: this.getSurfaceBorder() })
-      .padding(DesignConstants.SPACING.LG)
+      .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
+      .borderRadius(this.getProfileVisualStyle().card.borderRadius)
+      .shadow(this.getProfileVisualStyle().card.shadow)
+      .border({ width: this.getProfileVisualStyle().card.borderWidth, color: this.getProfileVisualStyle().card.borderColor })
+      .padding(this.getProfileVisualStyle().card.padding)
       .margin({ bottom: DesignConstants.SPACING.MD })
 
       ListItem() {
         this.StatsContent()
       }
-      .backgroundColor(this.getSurfaceBackground())
-      .borderRadius(DesignConstants.RADIUS.XXL)
-      .shadow(this.getSoftCardShadow())
-      .border({ width: 1, color: this.getSurfaceBorder() })
-      .padding(DesignConstants.SPACING.LG)
+      .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
+      .borderRadius(this.getProfileVisualStyle().card.borderRadius)
+      .shadow(this.getProfileVisualStyle().card.shadow)
+      .border({ width: this.getProfileVisualStyle().card.borderWidth, color: this.getProfileVisualStyle().card.borderColor })
+      .padding(this.getProfileVisualStyle().card.padding)
       .margin({ bottom: DesignConstants.SPACING.MD })
 
       ListItemGroup() {
@@ -963,7 +955,7 @@ export struct ProfilePage {
        .divider({ strokeWidth: 0.5, color: this.getSurfaceBorder(), startMargin: 52, endMargin: DesignConstants.SPACING.LG })
        .backgroundColor(this.getSurfaceBackground())
       .borderRadius(DesignConstants.RADIUS.XXL)
-       .shadow(this.getSoftCardShadow())
+       .shadow(this.getProfileVisualStyle().card.shadow)
       .border({ width: 1, color: this.getSurfaceBorder() })
       .margin({ bottom: DesignConstants.SPACING.MD })
 
@@ -989,14 +981,14 @@ export struct ProfilePage {
 
            Button('升级为完整账号')
              .type(ButtonType.Capsule)
-             .backgroundColor(this.getAccentBackground())
-             .fontColor(this.getAccentText())
+             .backgroundColor(this.getProfileVisualStyle().primaryButton.backgroundColor)
+             .fontColor(this.getProfileVisualStyle().primaryButton.textColor)
              .fontSize(DesignConstants.FONT.SIZE.MD)
              .width('100%')
-             .height(42)
+             .height(this.getProfileVisualStyle().primaryButton.height)
              .borderRadius(DesignConstants.RADIUS.FULL)
-             .border({ width: 1, color: this.getSurfaceBorder() })
-             .shadow(this.getPrimaryButtonShadow())
+             .border({ width: this.getProfileVisualStyle().primaryButton.borderWidth, color: this.getProfileVisualStyle().primaryButton.borderColor })
+             .shadow(this.getProfileVisualStyle().primaryButton.shadow)
              .onClick(() => {
                this.showUpgradeForm = true;
              })
@@ -1025,21 +1017,21 @@ export struct ProfilePage {
           this.UserInfoContent()
         }
       }
-      .backgroundColor(this.getSurfaceBackground())
-      .borderRadius(DesignConstants.RADIUS.XXL)
-      .shadow(this.getSoftCardShadow())
-      .border({ width: 1, color: this.getSurfaceBorder() })
-      .padding(DesignConstants.SPACING.LG)
+      .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
+      .borderRadius(this.getProfileVisualStyle().card.borderRadius)
+      .shadow(this.getProfileVisualStyle().card.shadow)
+      .border({ width: this.getProfileVisualStyle().card.borderWidth, color: this.getProfileVisualStyle().card.borderColor })
+      .padding(this.getProfileVisualStyle().card.padding)
       .margin({ bottom: DesignConstants.SPACING.MD })
 
       ListItem() {
         this.StatsContent()
       }
-      .backgroundColor(this.getSurfaceBackground())
-      .borderRadius(DesignConstants.RADIUS.XXL)
-      .shadow(this.getSoftCardShadow())
-      .border({ width: 1, color: this.getSurfaceBorder() })
-      .padding(DesignConstants.SPACING.LG)
+      .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
+      .borderRadius(this.getProfileVisualStyle().card.borderRadius)
+      .shadow(this.getProfileVisualStyle().card.shadow)
+      .border({ width: this.getProfileVisualStyle().card.borderWidth, color: this.getProfileVisualStyle().card.borderColor })
+      .padding(this.getProfileVisualStyle().card.padding)
       .margin({ bottom: DesignConstants.SPACING.MD })
 
       ListItemGroup() {
@@ -1070,7 +1062,7 @@ export struct ProfilePage {
       .divider({ strokeWidth: 0.5, color: this.getSurfaceBorder(), startMargin: 52, endMargin: DesignConstants.SPACING.LG })
       .backgroundColor(this.getSurfaceBackground())
       .borderRadius(DesignConstants.RADIUS.XXL)
-      .shadow(this.getSoftCardShadow())
+      .shadow(this.getProfileVisualStyle().card.shadow)
       .border({ width: 1, color: this.getSurfaceBorder() })
       .margin({ bottom: DesignConstants.SPACING.MD })
     }
@@ -1167,13 +1159,13 @@ export struct ProfilePage {
       SystemAvatar({
         avatarUrl: this.currentUser?.avatar_url || '',
         name: this.currentUser?.nickname || '',
-        avatarSize: this.isSoftGalleryTheme() ? 116 : 96,
+        avatarSize: this.getProfileVisualStyle().identity.avatarSize,
         isOnline: this.currentUser?.presence_status === 'online',
         inset: true
       })
 
       Text(this.currentUser?.nickname || '')
-        .fontSize(this.isSoftGalleryTheme() ? DesignConstants.FONT.SIZE.XXL : DesignConstants.FONT.SIZE.XL)
+        .fontSize(this.getProfileVisualStyle().identity.titleFontSize)
         .fontWeight(FontWeight.Medium)
         .fontColor(this.getPrimaryTextColor())
 
@@ -1205,17 +1197,17 @@ export struct ProfilePage {
         Button('编辑资料')
         .type(ButtonType.Capsule)
         .width('100%')
-        .height(this.isSoftGalleryTheme() ? 54 : 42)
+        .height(this.getProfileVisualStyle().primaryButton.height)
         .padding({
-          left: this.isSoftGalleryTheme() ? DesignConstants.SPACING.XXL + 8 : DesignConstants.SPACING.XXL,
-          right: this.isSoftGalleryTheme() ? DesignConstants.SPACING.XXL + 8 : DesignConstants.SPACING.XXL
+          left: this.getProfileVisualStyle().primaryButton.horizontalPadding,
+          right: this.getProfileVisualStyle().primaryButton.horizontalPadding
         })
-        .backgroundColor(this.getAccentBackground())
-        .fontColor(this.getAccentText())
+        .backgroundColor(this.getProfileVisualStyle().primaryButton.backgroundColor)
+        .fontColor(this.getProfileVisualStyle().primaryButton.textColor)
         .fontSize(DesignConstants.FONT.SIZE.MD)
         .borderRadius(DesignConstants.RADIUS.FULL)
-        .shadow(this.getPrimaryButtonShadow())
-        .border({ width: 1, color: this.getSurfaceBorder() })
+        .shadow(this.getProfileVisualStyle().primaryButton.shadow)
+        .border({ width: this.getProfileVisualStyle().primaryButton.borderWidth, color: this.getProfileVisualStyle().primaryButton.borderColor })
         .onClick(() => this.startEdit())
     }
     .width('100%')
@@ -1329,7 +1321,7 @@ export struct ProfilePage {
           Text() {
             SymbolSpan($r(icon))
               .fontSize(18)
-              .fontColor([this.getAccentBackground()])
+              .fontColor([this.getProfileVisualStyle().metricCard.iconColor])
           }
           Text(title)
             .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -1337,7 +1329,7 @@ export struct ProfilePage {
             .layoutWeight(1)
         }
         Text(value)
-          .fontSize(22)
+          .fontSize(this.getProfileVisualStyle().metricCard.valueFontSize)
           .fontWeight(FontWeight.Bold)
           .fontColor(this.getPrimaryTextColor())
         Text(description)
@@ -1347,12 +1339,12 @@ export struct ProfilePage {
       .width('100%')
     }
     .type(ButtonType.Normal)
-    .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(this.isSoftGalleryTheme() ? DesignConstants.RADIUS.XXL + 4 : DesignConstants.RADIUS.XXL)
-    .shadow(this.getSoftCardShadow())
-    .border({ width: 1, color: this.getSurfaceBorder() })
-    .padding(this.isSoftGalleryTheme() ? DesignConstants.SPACING.XL : DesignConstants.SPACING.LG)
-    .constraintSize({ minHeight: this.isSoftGalleryTheme() ? 176 : 164 })
+    .backgroundColor(this.getProfileVisualStyle().metricCard.backgroundColor)
+    .borderRadius(this.getProfileVisualStyle().metricCard.borderRadius)
+    .shadow(this.getProfileVisualStyle().metricCard.shadow)
+    .border({ width: this.getProfileVisualStyle().metricCard.borderWidth, color: this.getProfileVisualStyle().metricCard.borderColor })
+    .padding(this.getProfileVisualStyle().metricCard.padding)
+    .constraintSize({ minHeight: this.getProfileVisualStyle().metricCard.minHeight })
     .layoutWeight(1)
     .stateEffect(true)
     .scale(this.pressedMenuItemKey === title ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })
