@@ -11,16 +11,34 @@ declare global {
 	namespace AMap {
 		function plugin(plugins: string[], callback: () => void): void;
 
+		type MarkerAnchor =
+			| 'top-left'
+			| 'top-center'
+			| 'top-right'
+			| 'middle-left'
+			| 'center'
+			| 'middle-right'
+			| 'bottom-left'
+			| 'bottom-center'
+			| 'bottom-right';
+
+		interface MapClickEvent {
+			lnglat?: LngLat;
+			stopPropagation?(): void;
+		}
+
 		class Map {
 			constructor(container: string | HTMLElement, options?: MapOptions);
 			destroy(): void;
 			getCenter(): LngLat;
-				getBounds(): Bounds;
+			getBounds(): Bounds;
 			setCenter(center: [number, number]): void;
 			setZoom(zoom: number): void;
 			getZoom(): number;
 			setZoomAndCenter(zoom: number, center: [number, number]): void;
-		on(event: string, handler: (event: { lnglat?: LngLat }) => void): void;
+			setMapStyle?(style: string): void;
+			containerToLngLat(pixel: PixelLike): LngLat;
+			on(event: string, handler: (event: MapClickEvent) => void): void;
 		}
 
 		interface MapOptions {
@@ -45,19 +63,48 @@ declare global {
 				getSouthWest(): LngLat;
 			}
 
+		interface PixelLike {
+			x: number;
+			y: number;
+		}
+
+		class Pixel {
+			constructor(x: number, y: number);
+		}
+
+		class Size {
+			constructor(width: number, height: number);
+		}
+
+		class Icon {
+			constructor(options?: IconOptions);
+		}
+
+		interface IconOptions {
+			size?: Size;
+			image?: string;
+			imageSize?: Size;
+			imageOffset?: Pixel;
+		}
+
 		class Marker {
 			constructor(options?: MarkerOptions);
 			setPosition(position: [number, number]): void;
 			getPosition(): LngLat;
 			setMap(map: Map | null): void;
 			remove(): void;
+			setLabel?(opts: { content: string; direction?: string }): void;
+			setExtData?(data: unknown): void;
+			getExtData?(): unknown;
+			setContent?(content: string | HTMLElement): void;
+			on(event: string, handler: (event: MapClickEvent) => void): void;
 		}
 
 		interface MarkerOptions {
 			position?: [number, number];
-			anchor?: 'top-left' | 'top-center' | 'top-right' | 'middle-left' | 'center' | 'middle-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
-			offset?: [number, number];
-			icon?: string;
+			anchor?: MarkerAnchor;
+			offset?: Pixel | [number, number];
+			icon?: string | Icon;
 			content?: string | HTMLElement;
 			title?: string;
 			clickable?: boolean;
@@ -90,6 +137,14 @@ declare global {
 			): void;
 		}
 
+		class DistrictSearch {
+			constructor(options?: DistrictSearchOptions);
+			search(
+				keyword: string,
+				callback: (status: string, result: DistrictSearchResult) => void
+			): void;
+		}
+
 		interface PlaceSearchOptions {
 			city?: string;
 			citylimit?: boolean;
@@ -107,6 +162,19 @@ declare global {
 				pageIndex: number;
 				pageSize: number;
 			};
+		}
+
+		interface DistrictSearchOptions {
+			subdistrict?: number;
+			extensions?: 'base' | 'all';
+		}
+
+		interface DistrictSearchDistrict {
+			center?: LngLat;
+		}
+
+		interface DistrictSearchResult {
+			districts?: DistrictSearchDistrict[];
 		}
 
 		interface PlaceSearchPoi {
@@ -134,6 +202,8 @@ declare global {
 				addressComponent?: {
 					province?: string;
 					city?: string | string[];
+					citycode?: string;
+					adcode?: string;
 					district?: string;
 					street?: string;
 					township?: string;

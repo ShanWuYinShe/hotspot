@@ -104,7 +104,39 @@
     let lastRenderedViewportSignature = "";
     let lastMapZoom = 14;
     let renderMarkers: AMap.Marker[] = [];
-    let hotspotsClusterer: any = null;
+
+    interface AMapMarkerCluster {
+        clearMarkers?(): void;
+        setMap?(map: AMap.Map | null): void;
+    }
+
+    interface HotspotMarkerClusterContext {
+        count?: number;
+        markers?: AMap.Marker[];
+        clusterData?: AMap.Marker[];
+        marker: AMap.Marker;
+    }
+
+    interface AMapMarkerClusterConstructor {
+        new (
+            map: AMap.Map,
+            markers: AMap.Marker[],
+            options: {
+                gridSize?: number;
+                minClusterSize?: number;
+                maxZoom?: number;
+                renderClusterMarker?: (
+                    context: HotspotMarkerClusterContext,
+                ) => void;
+            },
+        ): AMapMarkerCluster;
+    }
+
+    interface AMapMarkerClusterFactory {
+        MarkerClusterer?: AMapMarkerClusterConstructor;
+    }
+
+    let hotspotsClusterer: AMapMarkerCluster | null = null;
     let selectedMarker: AMap.Marker | null = null;
     let hasInit = $state(false);
     let hasSyncedFromAnchor = $state(false);
@@ -132,7 +164,7 @@
     const regionResolveCache = new Map<string, RegionKey>();
     const regionResolvePromiseCache = new Map<string, Promise<RegionKey | null>>();
     const regionCenterPromiseCache = new Map<RegionKey, Promise<RegionMeta>>();
-    let districtSearch: any = null;
+    let districtSearch: AMap.DistrictSearch | null = null;
 
     type RenderMarkerKind = "cluster";
     type ClusterPreviewKind = "server_cluster" | "overlap_group";
@@ -201,14 +233,7 @@
     let searchText = $state("");
     let isSearching = $state(false);
     let searchInput = $state<HTMLInputElement | null>(null);
-    let searchResults = $state.raw<
-        Array<{
-            name: string;
-            address: string;
-            latitude: number;
-            longitude: number;
-        }>
-    >([]);
+    let searchResults = $state.raw<SearchResultItem[]>([]);
     let searchDebounceTimer: number | null = null;
     let activeSearchRequestId = 0;
     let placeSearch: AMap.PlaceSearch | null = null;
@@ -240,10 +265,16 @@
         [showUsers, showGroups, showMoments].filter(Boolean).length,
     );
 
-    type MapClickEvent = {
-        lnglat?: AMap.LngLat;
-    };
+    interface SearchResultItem {
+        name: string;
+        address: string;
+        latitude: number;
+        longitude: number;
+    }
 
+    type MapClickEvent = AMap.MapClickEvent;
+
+    const DEFAULT_MARKER_ANCHOR: AMap.MarkerAnchor = "bottom-center";
     const PLACEMENT_HINT_DEFAULT = "已定位到该位置";
 
     function showGestureHint(message = getGestureHintMessage()) {
@@ -291,7 +322,19 @@
         }, 2000);
     }
 
-    function disposeRenderMarkers(markers: AMap.Marker[], clusterer: any) {
+    function createMarkerIcon(image: string): AMap.Icon {
+        return new AMap.Icon({
+            size: new AMap.Size(40, 50),
+            image,
+            imageSize: new AMap.Size(40, 50),
+            imageOffset: new AMap.Pixel(0, 0),
+        });
+    }
+
+    function disposeRenderMarkers(
+        markers: AMap.Marker[],
+        clusterer: AMapMarkerCluster | null,
+    ) {
         if (clusterer) {
             try {
                 clusterer.clearMarkers?.();
@@ -316,7 +359,10 @@
 
     function replaceRenderMarkers(
         nextMarkers: AMap.Marker[],
-        options?: { clusterer?: any; clearHotspotPreview?: boolean },
+        options?: {
+            clusterer?: AMapMarkerCluster | null;
+            clearHotspotPreview?: boolean;
+        },
     ) {
         const previousMarkers = renderMarkers;
         const previousClusterer = hotspotsClusterer;
@@ -339,22 +385,15 @@
 
     function ensureSelectedMarker() {
         if (!map || selectedMarker) return;
-        const AMapAny = AMap as any;
-        const centerIcon = new AMapAny.Icon({
-            size: new AMapAny.Size(40, 50),
-            image: "/map/marker_center_pin.svg",
-            imageSize: new AMapAny.Size(40, 50),
-            imageOffset: new AMapAny.Pixel(0, 0),
-        });
         const [gcjLng, gcjLat] = toGcjLngLat({
             latitude,
             longitude,
         });
         selectedMarker = new AMap.Marker({
             position: [gcjLng, gcjLat],
-            icon: centerIcon,
-            anchor: "bottom-center",
-            offset: new AMapAny.Pixel(0, 0),
+            icon: createMarkerIcon("/map/marker_center_pin.svg"),
+            anchor: DEFAULT_MARKER_ANCHOR,
+            offset: new AMap.Pixel(0, 0),
             clickable: false,
             map,
         });
@@ -382,6 +421,14 @@
         if (hotspotPreviewItems.length === 0 && !showSearch && !showFilterPanel) {
             isBottomSheetExpanded = false;
         }
+    }
+
+    function openHotspotPreview(items: MapHotspotItem[]) {
+        showSearch = false;
+        showFilterPanel = false;
+        closeClusterPreview();
+        hotspotPreviewItems = items;
+        isBottomSheetExpanded = true;
     }
 
     function toggleFilterPanel() {
@@ -629,7 +676,7 @@
 
     function createMarkerForItem(
         item: RenderItem,
-        offset?: [number, number],
+        offset?: AMap.Pixel | [number, number],
         attachToMap = true,
     ) {
         if (!map) return null;
@@ -638,40 +685,21 @@
             longitude: item.location.longitude,
         });
 
-        const AMapAny = AMap as any;
-        const icon = new AMapAny.Icon({
-            size: new AMapAny.Size(40, 50),
-            image: getMarkerIconUrl("cluster"),
-            imageSize: new AMapAny.Size(40, 50),
-            imageOffset: new AMapAny.Pixel(0, 0),
-        });
-
         const marker = new AMap.Marker({
             position,
-            icon,
-            anchor: "bottom-center",
+            icon: createMarkerIcon(getMarkerIconUrl("cluster")),
+            anchor: DEFAULT_MARKER_ANCHOR,
             offset,
             clickable: true,
             map: attachToMap ? map : undefined,
         });
 
-        (
-            marker as unknown as {
-                on: (type: "click", handler: () => void) => void;
-            }
-        ).on("click", () => {
+        marker.on("click", () => {
             suppressNextMapClick = true;
             focusRenderItemFromMarkerClick(item);
         });
 
-        (
-            marker as unknown as {
-                setLabel: (opts: {
-                    content: string;
-                    direction?: string;
-                }) => void;
-            }
-        ).setLabel({
+        marker.setLabel?.({
             content: getMarkerBadgeText(item),
             direction: "top",
         });
@@ -725,13 +753,12 @@
             const key = await new Promise<RegionKey | null>((resolve) => {
                 geocoder!.getAddress(
                     [gcjLng, gcjLat],
-                    (status: string, result: any) => {
-                        if (status !== "complete" || !result?.regeocode) {
+                    (status: string, result: AMap.GeocodeResult) => {
+                        if (status !== "complete" || !result.regeocode) {
                             resolve(null);
                             return;
                         }
-                        const comp = (result.regeocode as any)
-                            .addressComponent as any;
+                        const comp = result.regeocode.addressComponent;
                         const rawAdcode: string | undefined =
                             comp?.adcode ?? comp?.citycode;
                         const rawCity: string | string[] | undefined = comp?.city;
@@ -783,15 +810,15 @@
             await ensureDistrictSearch();
             if (!districtSearch) return meta;
             const updated = await new Promise<RegionMeta>((resolve) => {
-                (districtSearch as any).search(
+                districtSearch.search(
                     meta.adcode,
-                    (status: string, result: any) => {
+                    (status: string, result: AMap.DistrictSearchResult) => {
                         if (status !== "complete" || !result.districts?.length) {
                             resolve(meta);
                             return;
                         }
-                        const d = result.districts[0];
-                        const center = d.center;
+                        const district = result.districts[0];
+                        const center = district?.center;
                         if (!center) {
                             resolve(meta);
                             return;
@@ -850,7 +877,6 @@
         );
 
         const markers: AMap.Marker[] = [];
-        const AMapAny = AMap as any;
         for (const entry of metaEntries) {
             if (!entry) continue;
             const { key, group, meta } = entry;
@@ -858,23 +884,17 @@
                 meta.center.lng,
                 meta.center.lat,
             ];
-            const icon = new AMapAny.Icon({
-                size: new AMapAny.Size(40, 50),
-                image: "/map/marker_cluster.svg",
-                imageSize: new AMapAny.Size(40, 50),
-                imageOffset: new AMapAny.Pixel(0, 0),
-            });
             const marker = new AMap.Marker({
                 position,
-                icon,
-                anchor: "bottom-center",
+                icon: createMarkerIcon("/map/marker_cluster.svg"),
+                anchor: DEFAULT_MARKER_ANCHOR,
                 clickable: true,
             });
-            (marker as any).setLabel?.({
+            marker.setLabel?.({
                 content: `${meta.name} ${group.total} 个内容`,
                 direction: "top",
             });
-            (marker as any).on("click", () => {
+            marker.on("click", () => {
                 clusterPreview = {
                     kind: "server_cluster",
                     render_id: key,
@@ -973,48 +993,46 @@
 
 				if (items.length > 0) {
 					await loadAMapPlugin(["AMap.MarkerClusterer"]);
-					const AMapAny = AMap as any;
 					const markers: AMap.Marker[] = [];
 					for (const item of items) {
 						const [gcjLng, gcjLat] = toGcjLngLat({
 							latitude: item.location.latitude,
 							longitude: item.location.longitude,
 						});
-						const icon = new AMapAny.Icon({
-							size: new AMapAny.Size(40, 50),
-							image: getHotspotMarkerIcon(item),
-							imageSize: new AMapAny.Size(40, 50),
-							imageOffset: new AMapAny.Pixel(0, 0),
-						});
-						const marker = new AMapAny.Marker({
+						const marker = new AMap.Marker({
 							position: [gcjLng, gcjLat],
-							icon,
-							anchor: "bottom-center",
+							icon: createMarkerIcon(getHotspotMarkerIcon(item)),
+							anchor: DEFAULT_MARKER_ANCHOR,
 							clickable: true,
 						});
-						(marker as any).setExtData?.(item);
-						marker.on("click", (ev: any) => {
-							ev?.stopPropagation?.();
-							showSearch = false;
-							showFilterPanel = false;
-							closeClusterPreview();
-							hotspotPreviewItems = [item];
-							isBottomSheetExpanded = true;
+						marker.setExtData?.(item);
+						marker.on("click", (event) => {
+							event.stopPropagation?.();
+							openHotspotPreview([item]);
 						});
 						markers.push(marker);
 					}
-					const nextClusterer = new AMapAny.MarkerClusterer(map, markers, {
+					const markerClusterFactory =
+						AMap as unknown as AMapMarkerClusterFactory;
+					const MarkerClusterer = markerClusterFactory.MarkerClusterer;
+					if (!MarkerClusterer) {
+						clearRenderMarkers();
+						return;
+					}
+					const nextClusterer = new MarkerClusterer(map, markers, {
 						gridSize: 60,
 						minClusterSize: 2,
 						maxZoom: 18,
-						renderClusterMarker: (context: any) => {
-							const count: number = context.count ?? 0;
-							const children: AMap.Marker[] = (context.markers ?? context.clusterData ?? []) as AMap.Marker[];
+						renderClusterMarker: (context) => {
+							const count = context.count ?? 0;
+							const children = context.markers ?? context.clusterData ?? [];
 							let hasUser = false;
 							let hasGroup = false;
 							let hasMoment = false;
-							for (const m of children) {
-								const data = (m as any).getExtData?.() as MapHotspotItem | undefined;
+							for (const marker of children) {
+								const data = marker.getExtData?.() as
+									| MapHotspotItem
+									| undefined;
 								if (!data) continue;
 								if (data.object_type === "user") hasUser = true;
 								if (data.object_type === "group") hasGroup = true;
@@ -1031,22 +1049,20 @@
 							badge.className = "map-render-marker-badge";
 							badge.textContent = String(count);
 							div.appendChild(badge);
-							div.onclick = (ev: MouseEvent) => {
-								ev.stopPropagation();
+							div.onclick = (event: MouseEvent) => {
+								event.stopPropagation();
 								const clusterItems: MapHotspotItem[] = [];
-								for (const m of children) {
-									const data = (m as any).getExtData?.() as MapHotspotItem | undefined;
+								for (const marker of children) {
+									const data = marker.getExtData?.() as
+										| MapHotspotItem
+										| undefined;
 									if (data) {
 										clusterItems.push(data);
 									}
 								}
-								showSearch = false;
-								showFilterPanel = false;
-								closeClusterPreview();
-								hotspotPreviewItems = clusterItems;
-								isBottomSheetExpanded = true;
+								openHotspotPreview(clusterItems);
 							};
-							context.marker.setContent(div);
+							context.marker.setContent?.(div);
 						},
 					});
 					replaceRenderMarkers(markers, {
@@ -1117,14 +1133,7 @@
             x: touch.clientX - rect.left,
             y: touch.clientY - rect.top,
         };
-        const lnglat = (
-            map as unknown as {
-                containerToLngLat: (pixel: {
-                    x: number;
-                    y: number;
-                }) => AMap.LngLat;
-            }
-        ).containerToLngLat(pixel);
+        const lnglat = map.containerToLngLat(pixel);
         if (!lnglat) return null;
         return { lat: lnglat.getLat(), lng: lnglat.getLng() };
     }
@@ -1205,8 +1214,7 @@
     async function ensureDistrictSearch() {
         if (districtSearch) return;
         await loadAMapPlugin(["AMap.DistrictSearch"]);
-        const AMapAny = AMap as any;
-        districtSearch = new AMapAny.DistrictSearch({
+        districtSearch = new AMap.DistrictSearch({
             subdistrict: 0,
             extensions: "base",
         });
@@ -1254,14 +1262,7 @@
             await ensurePlaceSearch();
             if (!placeSearch) return;
 
-            const results = await new Promise<
-                Array<{
-                    name: string;
-                    address: string;
-                    latitude: number;
-                    longitude: number;
-                }>
-            >((resolve) => {
+            const results = await new Promise<SearchResultItem[]>((resolve) => {
                 const centerForSearch = toGcjLngLat({
                     latitude,
                     longitude,
@@ -1319,12 +1320,7 @@
         }
     }
 
-    function selectSearchResult(result: {
-        name: string;
-        address: string;
-        latitude: number;
-        longitude: number;
-    }) {
+    function selectSearchResult(result: SearchResultItem) {
         if (searchDebounceTimer) {
             clearTimeout(searchDebounceTimer);
             searchDebounceTimer = null;
@@ -1482,16 +1478,11 @@
                 resizeEnable: true,
             });
             try {
-                const anyMap = map as unknown as {
-                    setMapStyle?: (style: string) => void;
-                };
-                if (anyMap?.setMapStyle) {
-                    anyMap.setMapStyle(
-                        currentMode === "dark"
-                            ? "amap://styles/dark"
-                            : "amap://styles/normal",
-                    );
-                }
+                map.setMapStyle?.(
+                    currentMode === "dark"
+                        ? "amap://styles/dark"
+                        : "amap://styles/normal",
+                );
             } catch {
                 // ignore style errors
             }
