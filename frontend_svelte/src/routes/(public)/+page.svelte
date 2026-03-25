@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { onMount, untrack } from "svelte";
     import { authStore } from "$lib/stores/auth.svelte";
     import { uiStore } from "$lib/stores/ui.svelte";
     import { mapAnchorStore } from "$lib/stores/map-anchor.svelte";
@@ -35,6 +34,14 @@
     import RefreshCw from "lucide-svelte/icons/refresh-cw";
     import Hash from "lucide-svelte/icons/hash";
 
+    type HomeMode = "guest" | "explore" | "authenticated";
+
+    interface RefreshOptions {
+        refreshFeed?: boolean;
+        refreshWidgets?: boolean;
+        refreshGuestTrending?: boolean;
+    }
+
     const features = [
         {
             icon: MapPin,
@@ -68,10 +75,11 @@
 
     let refreshTrigger = $state(0);
     let showExplore = $state(false);
-
-    // Data states for Explore mode
     let trendingTags = $state.raw<TagItem[]>([]);
-    let loadingTags = $state(true);
+    let loadingTags = $state(false);
+    let lastMode = $state<HomeMode>("guest");
+    let lastAnchorUpdatedAt = $state<number | null>(null);
+    let locationDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
     const feed = usePagination<MomentItem>({
         uniqueKey: "moment_id",
@@ -83,6 +91,16 @@
             latitude: mapAnchorStore.latitude,
             longitude: mapAnchorStore.longitude,
         };
+    }
+
+    function getHomeMode(): HomeMode {
+        if (authStore.isAuthenticated) return "authenticated";
+        if (showExplore) return "explore";
+        return "guest";
+    }
+
+    function isContentActive() {
+        return getHomeMode() !== "guest";
     }
 
     async function loadTrendingTags() {
@@ -100,69 +118,135 @@
     }
 
     async function loadFeed(refresh = false) {
-        // 如果未登录且不处于探索模式，不加载
-        if (!authStore.isAuthenticated && !showExplore) return;
+        if (!isContentActive()) return;
 
-        await feed.load(async (cursor) => {
-            if (authStore.isAuthenticated) {
-                return await feedService.getMoments({
-                    reference_point: getAnchor(),
-                    source: "all",
-                    radius: mapAnchorStore.radius * 1000,
-                    pagination: { limit: 20, cursor },
-                });
-            } else {
-                // 未登录：显示附近动态
+        await feed.load(
+            async (cursor) => {
+                if (authStore.isAuthenticated) {
+                    return await feedService.getMoments({
+                        reference_point: getAnchor(),
+                        source: "all",
+                        radius: mapAnchorStore.radius * 1000,
+                        pagination: { limit: 20, cursor },
+                    });
+                }
+
                 return await momentsService.search({
                     radius: mapAnchorStore.radius * 1000,
                     reference_point: getAnchor(),
                     pagination: { limit: 20, cursor },
                 });
-            }
-        }, refresh);
+            },
+            refresh,
+        );
+    }
+
+    async function refreshHome(options: RefreshOptions = {}) {
+        const {
+            refreshFeed = true,
+            refreshWidgets = authStore.isAuthenticated,
+            refreshGuestTrending = showExplore,
+        } = options;
+
+        if (refreshWidgets && authStore.isAuthenticated) {
+            refreshTrigger++;
+        }
+
+        const tasks: Promise<void>[] = [];
+
+        if (refreshGuestTrending && showExplore) {
+            tasks.push(loadTrendingTags());
+        }
+
+        if (refreshFeed && isContentActive()) {
+            tasks.push(loadFeed(true));
+        }
+
+        await Promise.all(tasks);
     }
 
     function refreshAll() {
-        refreshTrigger++;
-        if (showExplore || authStore.isAuthenticated) {
-            if (showExplore) loadTrendingTags();
-            loadFeed(true);
-        }
+        void refreshHome();
     }
 
     function handleGetStarted() {
-        uiStore.openLoginModal(() => refreshAll());
+        uiStore.openLoginModal(() => {
+            showExplore = false;
+
+            if (getHomeMode() === "authenticated") {
+                void refreshHome({ refreshWidgets: true, refreshGuestTrending: false });
+            }
+        });
     }
 
     function handleExplore() {
+        if (showExplore) {
+            void refreshHome({ refreshWidgets: false, refreshGuestTrending: true });
+            return;
+        }
+
         showExplore = true;
-        refreshAll();
     }
 
-    onMount(() => {
-        if (authStore.isAuthenticated) {
-            refreshAll();
+    $effect(() => {
+        const mode = getHomeMode();
+
+        if (mode === lastMode) {
+            return;
         }
+
+        lastMode = mode;
+        lastAnchorUpdatedAt = null;
+
+        if (mode === "guest") {
+            trendingTags = [];
+            loadingTags = false;
+            feed.reset();
+            return;
+        }
+
+        void refreshHome({
+            refreshWidgets: mode === "authenticated",
+            refreshGuestTrending: mode === "explore",
+        });
     });
 
-    // 监听位置变化自动刷新（添加防抖避免频繁请求）
-    // 使用 untrack 防止追踪 refreshAll 内部的响应式访问（特别是 refreshTrigger 的自引用）
-    let locationDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-
     $effect(() => {
-        if (authStore.isAuthenticated || showExplore) {
-            mapAnchorStore.anchor.updatedAt;
+        const mode = getHomeMode();
 
-            // 清除之前的定时器
-            if (locationDebounceTimer) clearTimeout(locationDebounceTimer);
-
-            // 500ms 防抖
-            locationDebounceTimer = setTimeout(() => {
-                untrack(() => refreshAll());
-            }, 500);
+        if (mode === "guest") {
+            if (locationDebounceTimer) {
+                clearTimeout(locationDebounceTimer);
+                locationDebounceTimer = null;
+            }
+            lastAnchorUpdatedAt = null;
+            return;
         }
 
-        // 清理函数
+        const anchorUpdatedAt = mapAnchorStore.anchor.updatedAt;
+
+        if (lastAnchorUpdatedAt === null) {
+            lastAnchorUpdatedAt = anchorUpdatedAt;
+            return;
+        }
+
+        if (anchorUpdatedAt === lastAnchorUpdatedAt) {
+            return;
+        }
+
+        lastAnchorUpdatedAt = anchorUpdatedAt;
+
+        if (locationDebounceTimer) {
+            clearTimeout(locationDebounceTimer);
+        }
+
+        locationDebounceTimer = setTimeout(() => {
+            void refreshHome({
+                refreshWidgets: mode === "authenticated",
+                refreshGuestTrending: mode === "explore",
+            });
+        }, 500);
+
         return () => {
             if (locationDebounceTimer) {
                 clearTimeout(locationDebounceTimer);
