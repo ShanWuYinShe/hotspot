@@ -49,6 +49,7 @@ export type LocationCallback = (location: LocationInfo) => void;
 export class LocationUtil {
   private static isListening: boolean = false;
   private static locationCallback: LocationCallback | null = null;
+  private static locationUpdateVersion: number = 0;
 
   /**
    * 请求位置权限
@@ -175,6 +176,7 @@ export class LocationUtil {
       LocationUtil.locationCallback = callback;
 
       geoLocationManager.on('locationChange', requestInfo, (location: geoLocationManager.Location) => {
+        const updateVersion = ++LocationUtil.locationUpdateVersion;
         const locationInfo: LocationInfo = {
           latitude: location.latitude,
           longitude: location.longitude,
@@ -186,20 +188,25 @@ export class LocationUtil {
           locationName: '实时位置'
         };
 
-        // 异步获取地址信息
+        if (LocationUtil.locationCallback) {
+          LocationUtil.locationCallback(locationInfo);
+        }
+
         LocationUtil.reverseGeocode(location.latitude, location.longitude)
-          .then(addressInfo => {
-            if (addressInfo && addressInfo.fullAddress) {
-              locationInfo.locationName = addressInfo.fullAddress;
+          .then((addressInfo: AddressInfo | null) => {
+            if (!addressInfo?.fullAddress) {
+              return;
             }
+            if (!LocationUtil.locationCallback || updateVersion !== LocationUtil.locationUpdateVersion) {
+              return;
+            }
+            LocationUtil.locationCallback({
+              ...locationInfo,
+              locationName: addressInfo.fullAddress
+            });
           })
           .catch((error: Error) => {
             hilog.warn(DOMAIN_NUMBER, TAG, `获取地址信息失败: ${JSON.stringify(error)}`);
-          })
-          .finally(() => {
-            if (LocationUtil.locationCallback) {
-              LocationUtil.locationCallback(locationInfo);
-            }
           });
       });
 
@@ -225,6 +232,7 @@ export class LocationUtil {
       geoLocationManager.off('locationChange');
       LocationUtil.isListening = false;
       LocationUtil.locationCallback = null;
+      LocationUtil.locationUpdateVersion += 1;
       
       hilog.info(DOMAIN_NUMBER, TAG, '位置监听已停止');
       return true;

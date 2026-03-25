@@ -9,7 +9,7 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { curves } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { MapCanvasFilter, MapCanvasRequest, MapCanvasResponse, MapHeatBucket, MapHotspotItem, MapViewport } from '../../../core/types/api';
+import { Bounds, MapCanvasFilter, MapCanvasRequest, MapCanvasResponse, MapHeatBucket, MapHotspotItem, MapViewport, PaginationParams } from '../../../core/types/api';
 import { AppRouter, GroupDetailRouteParam, ProfileRouteParam, MomentDetailRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { CoordinateBounds, CoordinateConverter } from '../../../core/geo/CoordinateConverter';
@@ -31,62 +31,44 @@ const DOUBLE_CLICK_PLACEMENT_HINT: string = '已通过双击定位到该位置';
 const LONG_PRESS_PLACEMENT_HINT: string = '已通过长按定位到该位置';
 const ANCHOR_PLACEMENT_HINT: string = '已回到浏览锚点位置';
 const GENERIC_PLACEMENT_HINT: string = '已定位到该位置';
+const MARKER_COLOR_PICKER: string = '#2E7CF6';
 const MARKER_COLOR_USER: string = '#2563EB';
 const MARKER_COLOR_GROUP: string = '#059669';
 const MARKER_COLOR_MOMENT: string = '#EA580C';
 
-const HOTSPOT_CLUSTER_PREFIX: string = 'hotspot_cluster_';
-const CLUSTER_RADIUS_ZOOM_STOPS: Array<{ minZoom: number; radiusMeters: number }> = [
-  { minZoom: 17, radiusMeters: 24 },
-  { minZoom: 15, radiusMeters: 40 },
-  { minZoom: 13, radiusMeters: 56 },
-  { minZoom: 11, radiusMeters: 88 },
-  { minZoom: 0, radiusMeters: 128 }
-];
-
 type MapRenderItemType = 'heat_bucket' | 'user' | 'group' | 'moment';
-type MapRenderableEntityType = 'user' | 'group' | 'moment';
-type ClusterIconKey = 'cluster' | 'user_cluster' | 'group_cluster' | 'moment_cluster';
 
 interface MapRenderItemLocation {
-  latitude: number;
-  longitude: number;
+	latitude: number;
+	longitude: number;
 }
 
 interface MapRenderEntity {
-  payload_id: string;
-  title: string;
-  subtitle?: string;
-  type: MapRenderableEntityType;
-  distance_meters?: number;
+	payload_id: string;
+	title: string;
+	subtitle?: string;
+	type: 'user' | 'group' | 'moment';
+	distance_meters?: number;
 }
 
-interface MapRenderCluster {
-  memberIds: string[];
-  iconKey: ClusterIconKey;
-  label: string;
-  summary?: string;
-}
-
-interface MapHeatBucketMeta {
-  level: number;
+interface MapRenderHeatBucket {
+  count: number;
   breakdown?: string;
 }
 
 interface MapRenderItem {
-  render_id: string;
-  location: MapRenderItemLocation;
-  type: MapRenderItemType;
-  total_count: number;
-  cluster?: MapRenderCluster;
-  entity?: MapRenderEntity;
-  heatBucket?: MapHeatBucketMeta;
+	render_id: string;
+	location: MapRenderItemLocation;
+	type: MapRenderItemType;
+	total_count: number;
+	entity?: MapRenderEntity;
+  heatBucket?: MapRenderHeatBucket;
 }
 
 interface ConvertedRenderItem {
-  item: MapRenderItem;
-  gcj02Lat: number;
-  gcj02Lng: number;
+	item: MapRenderItem;
+	gcj02Lat: number;
+	gcj02Lng: number;
 }
 
 interface BoundsDelta {
@@ -171,7 +153,6 @@ interface FilterMenuItemProps {
   label: string;
   accentColor: string;
   active: boolean;
-  resolvedThemeId?: string;
   onToggle: () => void;
 }
 
@@ -199,9 +180,7 @@ function FilterMenuItem(props: FilterMenuItemProps) {
   .width('100%')
   .height(48)
   .padding({ left: 14, right: 16 })
-  .backgroundColor(props.active
-    ? resolveLocationPickerPalette(props.resolvedThemeId).surfaceSubtle
-    : Color.Transparent)
+  .backgroundColor(props.active ? '#1E293B' : Color.Transparent)
   .borderRadius(DesignConstants.RADIUS.XL)
   .opacity(props.active ? 1.0 : 0.85)
   .onClick(() => props.onToggle())
@@ -225,7 +204,6 @@ function FilterDropdownPanel(props: FilterPanelProps) {
       label: '用户',
       accentColor: MARKER_COLOR_USER,
       active: props.showUsers,
-      resolvedThemeId: props.resolvedThemeId,
       onToggle: props.onToggleUsers
     })
     FilterMenuItem({
@@ -233,7 +211,6 @@ function FilterDropdownPanel(props: FilterPanelProps) {
       label: '群组',
       accentColor: MARKER_COLOR_GROUP,
       active: props.showGroups,
-      resolvedThemeId: props.resolvedThemeId,
       onToggle: props.onToggleGroups
     })
     FilterMenuItem({
@@ -241,7 +218,6 @@ function FilterDropdownPanel(props: FilterPanelProps) {
       label: '动态',
       accentColor: MARKER_COLOR_MOMENT,
       active: props.showMoments,
-      resolvedThemeId: props.resolvedThemeId,
       onToggle: props.onToggleMoments
     })
   }
@@ -802,7 +778,6 @@ export struct LocationPickerPage {
   @State panelHeight: number = PANEL_SNAP_HALF;
 
 	private renderItemsMap: Map<string, MapRenderItem> = new Map();
-	private overlappingGroupsMap: Map<string, MapRenderItem[]> = new Map();
   private resolveTimerId: number = 0;
   private renderTimerId: number = 0;
   private renderRequestId: number = 0;
@@ -1125,8 +1100,15 @@ export struct LocationPickerPage {
   }
 
   private sortByProximity(results: LocationInfo[]): LocationInfo[] {
-    const refLat = this.centerLat || (this.currentLocation?.latitude ?? 0);
-    const refLng = this.centerLng || (this.currentLocation?.longitude ?? 0);
+    const gcjRefLat = this.centerLat;
+    const gcjRefLng = this.centerLng;
+    let refLat = this.currentLocation?.latitude ?? 0;
+    let refLng = this.currentLocation?.longitude ?? 0;
+    if (gcjRefLat !== 0 || gcjRefLng !== 0) {
+      const wgs84Ref = CoordinateConverter.convertGcj02ToWgs84(gcjRefLat, gcjRefLng);
+      refLat = wgs84Ref.latitude;
+      refLng = wgs84Ref.longitude;
+    }
     return results.sort((a, b) => {
       const dLatA = a.latitude - refLat;
       const dLngA = a.longitude - refLng;
@@ -1225,136 +1207,140 @@ export struct LocationPickerPage {
     AppRouter.pop();
   }
 
-  private async fetchMapRenderData(trigger: string = 'unknown'): Promise<void> {
-    if (!this.initialised || !this.mapReady) {
-      return;
-    }
-
-    const viewport = this.buildViewport();
-    const filter = this.resolveMapFilter();
-    const signature = this.buildViewportSignature(viewport, filter);
-    if (signature === this.lastViewportSignature) {
-      hilog.info(DOMAIN_NUMBER, TAG, `skip map/canvas duplicate trigger=${trigger} signature=${signature}`);
-      this.updateMarkers();
-      return;
-    }
-
-    const requestId = ++this.renderRequestId;
-    const request: MapCanvasRequest = {
-      viewport: viewport,
-      pagination: { limit: 100 }
-    };
-    if (filter) {
-      request.filter = filter;
-    }
-
-    try {
-      hilog.info(DOMAIN_NUMBER, TAG, `start map/canvas trigger=${trigger} requestId=${requestId} signature=${signature}`);
-      const response = await ApiClient.getMapCanvas(request);
-      if (requestId !== this.renderRequestId) {
-        hilog.info(DOMAIN_NUMBER, TAG, `ignore stale map/canvas response trigger=${trigger} requestId=${requestId}`);
-        return;
-      }
-      if (response.code !== 0) {
-        hilog.warn(DOMAIN_NUMBER, TAG, `map/canvas business error trigger=${trigger} requestId=${requestId} code=${response.code} message=${response.message ?? ''}`);
-        return;
-      }
-
-      const canvas: MapCanvasResponse | undefined = response.data as MapCanvasResponse | undefined;
-      this.renderItems = this.buildRenderItemsFromCanvas(canvas);
-      this.lastViewportSignature = signature;
-      this.mapToastMessage = '';
-      this.updateMarkers();
-      hilog.info(DOMAIN_NUMBER, TAG, `finish map/canvas trigger=${trigger} requestId=${requestId} items=${this.renderItems.length} mode=${this.resolveCanvasMode(canvas)}`);
-    } catch (error) {
-      hilog.warn(DOMAIN_NUMBER, TAG, `render map/canvas failed trigger=${trigger} requestId=${requestId}: ${JSON.stringify(error)}`);
-    }
-  }
-
-  private buildViewportSignature(viewport: MapViewport, filter?: MapCanvasFilter): string {
-    const boundsForSpan = new CoordinateBounds(
-      viewport.bounds.north,
-      viewport.bounds.south,
-      viewport.bounds.east,
-      viewport.bounds.west
-    );
-    const spanM: number = CoordinateConverter.calculateViewportSpanMeters(boundsForSpan);
-    return [
-      viewport.bounds.north.toFixed(6),
-      viewport.bounds.south.toFixed(6),
-      viewport.bounds.east.toFixed(6),
-      viewport.bounds.west.toFixed(6),
-      spanM.toFixed(0),
-      this.mapZoom.toFixed(2),
-      filter?.data_type ?? 'all'
-    ].join('|');
-  }
-
-  private resolveCanvasMode(canvas?: MapCanvasResponse): string {
-    if (canvas?.hotspots?.items && canvas.hotspots.items.length > 0) {
-      return 'hotspots';
-    }
-    if (canvas?.heatmap?.items && canvas.heatmap.items.length > 0) {
-      return 'heatmap';
-    }
-    return 'empty';
-  }
-
-  private buildRenderItemsFromCanvas(canvas?: MapCanvasResponse): MapRenderItem[] {
-    if (canvas?.hotspots?.items && canvas.hotspots.items.length > 0) {
-      return this.buildHotspotRenderItems(canvas.hotspots.items);
-    }
-    if (canvas?.heatmap?.items && canvas.heatmap.items.length > 0) {
-      return this.buildHeatBucketRenderItems(canvas.heatmap.items);
-    }
-    return [];
-  }
-
-  private buildHotspotRenderItems(items: MapHotspotItem[]): MapRenderItem[] {
-    const nextItems: MapRenderItem[] = [];
-    for (let index = 0; index < items.length; index++) {
-      const item = items[index];
-      const renderId = `${item.object_type}_${item.object_id}_${index}`;
-      nextItems.push({
-        render_id: renderId,
-        location: {
-          latitude: item.location.latitude,
-          longitude: item.location.longitude
-        },
-        type: item.object_type,
-        total_count: 1,
-        entity: {
-          payload_id: item.object_id,
-          title: item.title,
-          subtitle: item.subtitle,
-          type: item.object_type,
-          distance_meters: item.distance_meters
-        }
-      });
-    }
-    return nextItems;
-  }
-
-  private buildHeatBucketRenderItems(buckets: MapHeatBucket[]): MapRenderItem[] {
-    const nextItems: MapRenderItem[] = [];
-    for (let index = 0; index < buckets.length; index++) {
-      const bucket = buckets[index];
-      nextItems.push({
-        render_id: `heat_${bucket.cell_token}_${index}`,
-        location: {
-          latitude: bucket.location.latitude,
-          longitude: bucket.location.longitude
-        },
-        type: 'heat_bucket',
-        total_count: bucket.total_count,
-        heatBucket: {
-          level: bucket.level,
-          breakdown: this.formatHeatBreakdown(bucket)
-        }
-      });
-    }
-    return nextItems;
-  }
+	private async fetchMapRenderData(trigger: string = 'unknown'): Promise<void> {
+		if (!this.initialised || !this.mapReady) {
+			return;
+		}
+		const viewport = this.buildViewport();
+		if (!viewport) {
+			return;
+		}
+		const filter = this.resolveMapFilter();
+		const filterSignature = filter?.data_type ?? 'all';
+		const boundsForSpan = new CoordinateBounds(
+			viewport.bounds.north,
+			viewport.bounds.south,
+			viewport.bounds.east,
+			viewport.bounds.west
+		);
+		const zoom = Math.max(1, Math.min(20, this.mapZoom));
+		const spanM: number = CoordinateConverter.calculateViewportSpanMeters(boundsForSpan);
+		const shouldUseHotspots: boolean = spanM <= 3000 && zoom >= 13;
+		const mode: string = shouldUseHotspots ? 'hotspots' : 'heatmap';
+		const signature = `${viewport.bounds.north.toFixed(6)}|${viewport.bounds.south.toFixed(6)}|${viewport.bounds.east.toFixed(6)}|${viewport.bounds.west.toFixed(6)}|${zoom.toFixed(2)}|${filterSignature}|${mode}`;
+		if (signature === this.lastViewportSignature) {
+			hilog.info(DOMAIN_NUMBER, TAG, `skip map/${mode} duplicate trigger=${trigger} signature=${signature}`);
+			return;
+		}
+		const requestId = ++this.renderRequestId;
+		try {
+			if (shouldUseHotspots) {
+					hilog.info(DOMAIN_NUMBER, TAG, `start map/hotspots trigger=${trigger} requestId=${requestId} signature=${signature}`);
+					const pagination: PaginationParams = { limit: 100 };
+					const requestFilter: MapCanvasFilter | undefined = filter ? {
+						data_type: filter.data_type,
+						time_range: filter.time_range
+					} : undefined;
+					const request: MapCanvasRequest = {
+						viewport: viewport,
+						filter: requestFilter,
+						pagination: pagination
+					};
+					const response = await ApiClient.getMapCanvas(request);
+				if (requestId !== this.renderRequestId) {
+					hilog.info(DOMAIN_NUMBER, TAG, `ignore stale map/hotspots response trigger=${trigger} requestId=${requestId}`);
+					return;
+				}
+					if (response.code === 0) {
+						this.lastViewportSignature = signature;
+						const canvas: MapCanvasResponse | undefined = response.data as MapCanvasResponse | undefined;
+						const allItems: MapHotspotItem[] = canvas?.hotspots?.items ?? [];
+					const nextItems: MapRenderItem[] = [];
+					for (let index = 0; index < allItems.length; index++) {
+						const item = allItems[index];
+						if (item.object_type === 'user' && !this.showUsers) {
+							continue;
+						}
+						if (item.object_type === 'group' && !this.showGroups) {
+							continue;
+						}
+						if (item.object_type === 'moment' && !this.showMoments) {
+							continue;
+						}
+						const renderId = `${index}_${item.object_type}_${item.object_id}`;
+						const renderItem: MapRenderItem = {
+							render_id: renderId,
+							location: {
+								latitude: item.location.latitude,
+								longitude: item.location.longitude
+							},
+							type: item.object_type,
+							total_count: 1,
+              entity: {
+                payload_id: item.object_id,
+                title: item.title,
+                subtitle: item.subtitle,
+                type: item.object_type,
+                distance_meters: item.distance_meters
+              }
+						};
+						nextItems.push(renderItem);
+					}
+					this.renderItems = nextItems;
+					hilog.info(DOMAIN_NUMBER, TAG, `finish map/hotspots trigger=${trigger} requestId=${requestId} items=${this.renderItems.length}`);
+					this.mapToastMessage = '';
+					this.updateMarkers();
+				} else {
+					hilog.warn(DOMAIN_NUMBER, TAG, `map/hotspots business error trigger=${trigger} requestId=${requestId} code=${response.code} message=${response.message ?? ''}`);
+				}
+			} else {
+					hilog.info(DOMAIN_NUMBER, TAG, `start map/heatmap trigger=${trigger} requestId=${requestId} signature=${signature}`);
+					let request: MapCanvasRequest;
+					if (filter) {
+						request = { viewport: viewport, filter: filter };
+					} else {
+						request = { viewport: viewport };
+					}
+					const response = await ApiClient.getMapCanvas(request);
+				if (requestId !== this.renderRequestId) {
+					hilog.info(DOMAIN_NUMBER, TAG, `ignore stale map/heatmap response trigger=${trigger} requestId=${requestId}`);
+					return;
+				}
+					if (response.code === 0) {
+						this.lastViewportSignature = signature;
+						const canvas: MapCanvasResponse | undefined = response.data as MapCanvasResponse | undefined;
+						const buckets: MapHeatBucket[] = canvas?.heatmap?.items ?? [];
+					const nextItems: MapRenderItem[] = [];
+					for (let index = 0; index < buckets.length; index++) {
+						const bucket = buckets[index];
+						const renderId = `${index}_${bucket.location.latitude.toFixed(6)}_${bucket.location.longitude.toFixed(6)}`;
+						const renderItem: MapRenderItem = {
+							render_id: renderId,
+							location: {
+								latitude: bucket.location.latitude,
+								longitude: bucket.location.longitude
+							},
+							type: 'heat_bucket',
+							total_count: bucket.total_count,
+              heatBucket: {
+                count: bucket.total_count,
+                breakdown: this.formatHeatBreakdown(bucket)
+              }
+						};
+						nextItems.push(renderItem);
+					}
+						this.renderItems = nextItems;
+						hilog.info(DOMAIN_NUMBER, TAG, `finish map/heatmap trigger=${trigger} requestId=${requestId} items=${this.renderItems.length}`);
+						this.mapToastMessage = '';
+						this.updateMarkers();
+				} else {
+					hilog.warn(DOMAIN_NUMBER, TAG, `map/heatmap business error trigger=${trigger} requestId=${requestId} code=${response.code} message=${response.message ?? ''}`);
+				}
+			}
+		} catch (error) {
+			hilog.warn(DOMAIN_NUMBER, TAG, `render map data failed trigger=${trigger} requestId=${requestId}: ${JSON.stringify(error)}`);
+		}
+	}
 
   private formatHeatBreakdown(bucket: MapHeatBucket): string | undefined {
     const parts: string[] = [];
@@ -1389,6 +1375,7 @@ export struct LocationPickerPage {
   private buildViewport(): MapViewport {
     const zoom = Math.max(1, Math.min(20, this.mapZoom));
 
+    // 优先使用真实可视区域（如果 MapKit 支持 getVisibleRegion）
     if (this.visibleRegion) {
       const corners: MapCoordinate[] = [
         this.visibleRegion.northeast,
@@ -1401,71 +1388,66 @@ export struct LocationPickerPage {
       );
       const latitudes = convertedCorners.map((point) => point.latitude);
       const longitudes = convertedCorners.map((point) => point.longitude);
-      return {
-        bounds: {
-          north: Math.min(90, Math.max(...latitudes)),
-          south: Math.max(-90, Math.min(...latitudes)),
-          east: Math.min(180, Math.max(...longitudes)),
-          west: Math.max(-180, Math.min(...longitudes))
-        }
+      const north = Math.min(90, Math.max(...latitudes));
+      const south = Math.max(-90, Math.min(...latitudes));
+      const east = Math.min(180, Math.max(...longitudes));
+      const west = Math.max(-180, Math.min(...longitudes));
+
+      // 视口中心由后端根据 bounds 自行计算，这里不下发额外字段
+      const bounds: Bounds = {
+        north: north,
+        south: south,
+        east: east,
+        west: west
       };
+      const viewport: MapViewport = {
+        bounds: bounds,
+      };
+      return viewport;
     }
 
+    // 兜底：部分设备/版本不支持 getVisibleRegion 时，退回到“中心点 + zoom 推算”的近似方案
     const gcj02Lat = this.centerLat || this.mapRegion.latitude;
     const gcj02Lng = this.centerLng || this.mapRegion.longitude;
     const wgs84 = CoordinateConverter.convertGcj02ToWgs84(gcj02Lat, gcj02Lng);
     const delta: BoundsDelta = this.computeBoundsDelta(zoom);
-    return {
-      bounds: {
-        north: Math.min(90, wgs84.latitude + delta.latDelta / 2),
-        south: Math.max(-90, wgs84.latitude - delta.latDelta / 2),
-        east: Math.min(180, wgs84.longitude + delta.lonDelta / 2),
-        west: Math.max(-180, wgs84.longitude - delta.lonDelta / 2)
-      }
+    const bounds: Bounds = {
+      north: Math.min(90, wgs84.latitude + delta.latDelta / 2),
+      south: Math.max(-90, wgs84.latitude - delta.latDelta / 2),
+      east: Math.min(180, wgs84.longitude + delta.lonDelta / 2),
+      west: Math.max(-180, wgs84.longitude - delta.lonDelta / 2)
     };
+    const viewport: MapViewport = {
+      bounds: bounds,
+    };
+    return viewport;
   }
 
   private computeBoundsDelta(zoom: number): BoundsDelta {
     const latDelta = 180 / Math.pow(2, zoom);
     const lonDelta = 360 / Math.pow(2, zoom);
-    return { latDelta: latDelta, lonDelta: lonDelta };
+    const delta: BoundsDelta = { latDelta: latDelta, lonDelta: lonDelta };
+    return delta;
   }
 
   private updateMarkers(): void {
     this.renderItemsMap.clear();
-    this.overlappingGroupsMap.clear();
 
-    const convertedItems: ConvertedRenderItem[] = [];
+    const nextMarkers: MapMarker[] = [];
     for (const item of this.renderItems) {
       this.renderItemsMap.set(item.render_id, item);
       if (!this.shouldDisplayItem(item)) {
         continue;
       }
-      const gcj02 = CoordinateConverter.convertWgs84ToGcj02(item.location.latitude, item.location.longitude);
-      convertedItems.push({
+      const gcj02 = CoordinateConverter.convertWgs84ToGcj02(
+        item.location.latitude,
+        item.location.longitude
+      );
+      nextMarkers.push(this.buildSingleMarker({
         item: item,
         gcj02Lat: gcj02.latitude,
         gcj02Lng: gcj02.longitude
-      });
-    }
-
-    const nextMarkers: MapMarker[] = [];
-    const hotspotCandidates: ConvertedRenderItem[] = [];
-    for (const converted of convertedItems) {
-      if (converted.item.type === 'heat_bucket') {
-        nextMarkers.push(this.buildSingleMarker(converted));
-      } else {
-        hotspotCandidates.push(converted);
-      }
-    }
-
-    const hotspotClusters = this.clusterHotspotItems(hotspotCandidates);
-    for (const clusterItems of hotspotClusters) {
-      if (clusterItems.length === 1) {
-        nextMarkers.push(this.buildSingleMarker(clusterItems[0]));
-        continue;
-      }
-      nextMarkers.push(this.buildClusterMarker(clusterItems));
+      }));
     }
 
     if (this.centerLat !== 0 || this.centerLng !== 0) {
@@ -1476,157 +1458,23 @@ export struct LocationPickerPage {
         title: '',
         snippet: '',
         type: 'user',
-        iconKey: 'center_pin'
+        iconKey: 'center_pin',
+        clickable: false
       });
     }
     this.mapMarkers = nextMarkers;
   }
 
-  private clusterHotspotItems(items: ConvertedRenderItem[]): ConvertedRenderItem[][] {
-    const clusters: ConvertedRenderItem[][] = [];
-    const clusterRadiusMeters = this.resolveClusterRadiusMeters();
-    for (const item of items) {
-      let targetCluster: ConvertedRenderItem[] | undefined;
-      for (const existingCluster of clusters) {
-        const center = this.getClusterCenter(existingCluster);
-        const distance = this.distanceBetweenGcj02Meters(item.gcj02Lat, item.gcj02Lng, center.latitude, center.longitude);
-        if (distance <= clusterRadiusMeters) {
-          targetCluster = existingCluster;
-          break;
-        }
-      }
-      if (targetCluster) {
-        targetCluster.push(item);
-      } else {
-        clusters.push([item]);
-      }
-    }
-    return clusters;
-  }
-
-  private resolveClusterRadiusMeters(): number {
-    const zoom = Math.max(1, Math.min(20, this.mapZoom));
-    for (const stop of CLUSTER_RADIUS_ZOOM_STOPS) {
-      if (zoom >= stop.minZoom) {
-        return stop.radiusMeters;
-      }
-    }
-    return CLUSTER_RADIUS_ZOOM_STOPS[CLUSTER_RADIUS_ZOOM_STOPS.length - 1].radiusMeters;
-  }
-
-  private getClusterCenter(items: ConvertedRenderItem[]): MapCoordinate {
-    let latTotal = 0;
-    let lngTotal = 0;
-    for (const item of items) {
-      latTotal += item.gcj02Lat;
-      lngTotal += item.gcj02Lng;
-    }
+  private buildSingleMarker(c: ConvertedRenderItem): MapMarker {
     return {
-      latitude: latTotal / items.length,
-      longitude: lngTotal / items.length
-    };
-  }
-
-  private distanceBetweenGcj02Meters(lat1: number, lng1: number, lat2: number, lng2: number): number {
-    const radLat1 = lat1 * Math.PI / 180;
-    const radLat2 = lat2 * Math.PI / 180;
-    const deltaLat = (lat2 - lat1) * Math.PI / 180;
-    const deltaLng = (lng2 - lng1) * Math.PI / 180;
-    const sinLat = Math.sin(deltaLat / 2);
-    const sinLng = Math.sin(deltaLng / 2);
-    const a = sinLat * sinLat + Math.cos(radLat1) * Math.cos(radLat2) * sinLng * sinLng;
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return 6378137 * c;
-  }
-
-  private buildClusterMarker(clusterItems: ConvertedRenderItem[]): MapMarker {
-    const center = this.getClusterCenter(clusterItems);
-    const renderItems = clusterItems.map((entry: ConvertedRenderItem) => entry.item);
-    const clusterData = this.buildClusterData(renderItems);
-    const clusterId = `${HOTSPOT_CLUSTER_PREFIX}${clusterData.memberIds.join('_')}`;
-    this.overlappingGroupsMap.set(clusterId, renderItems);
-    return {
-      id: clusterId,
-      latitude: center.latitude,
-      longitude: center.longitude,
-      title: clusterData.label,
-      snippet: clusterData.summary ?? '点击查看内容',
-      type: 'cluster',
-      iconKey: clusterData.iconKey
-    };
-  }
-
-  private buildClusterData(items: MapRenderItem[]): MapRenderCluster {
-    let users = 0;
-    let groups = 0;
-    let moments = 0;
-    for (const item of items) {
-      switch (item.type) {
-        case 'user':
-          users++;
-          break;
-        case 'group':
-          groups++;
-          break;
-        case 'moment':
-          moments++;
-          break;
-        default:
-          break;
-      }
-    }
-
-    const entityCount = users + groups + moments;
-    const iconKey = this.resolveClusterIconKey(users, groups, moments);
-    return {
-      memberIds: items.map((item: MapRenderItem) => item.render_id),
-      iconKey: iconKey,
-      label: `${entityCount} 个热点`,
-      summary: this.formatClusterSummary(users, groups, moments)
-    };
-  }
-
-  private resolveClusterIconKey(users: number, groups: number, moments: number): ClusterIconKey {
-    const nonZeroTypeCount = (users > 0 ? 1 : 0) + (groups > 0 ? 1 : 0) + (moments > 0 ? 1 : 0);
-    if (nonZeroTypeCount > 1) {
-      return 'cluster';
-    }
-    if (users > 0) {
-      return 'user_cluster';
-    }
-    if (groups > 0) {
-      return 'group_cluster';
-    }
-    if (moments > 0) {
-      return 'moment_cluster';
-    }
-    return 'cluster';
-  }
-
-  private formatClusterSummary(users: number, groups: number, moments: number): string {
-    const parts: string[] = [];
-    if (users > 0) {
-      parts.push(`${users} 个用户`);
-    }
-    if (groups > 0) {
-      parts.push(`${groups} 个群组`);
-    }
-    if (moments > 0) {
-      parts.push(`${moments} 条动态`);
-    }
-    return parts.join(' · ');
-  }
-
-  private buildSingleMarker(converted: ConvertedRenderItem): MapMarker {
-    const markerType = converted.item.type === 'heat_bucket' ? 'cluster' : converted.item.type;
-    return {
-      id: converted.item.render_id,
-      latitude: converted.gcj02Lat,
-      longitude: converted.gcj02Lng,
-      title: this.getMarkerTitle(converted.item),
-      snippet: this.getMarkerSnippet(converted.item),
-      type: markerType,
-      iconKey: this.getMarkerIconKey(converted.item)
+      id: c.item.render_id,
+      latitude: c.gcj02Lat,
+      longitude: c.gcj02Lng,
+      title: this.getMarkerTitle(c.item),
+      snippet: this.getMarkerSnippet(c.item),
+      type: c.item.type,
+      iconKey: this.getMarkerIconKey(c.item),
+      clusterable: c.item.type === 'user' || c.item.type === 'group' || c.item.type === 'moment'
     };
   }
 
@@ -1645,14 +1493,11 @@ export struct LocationPickerPage {
     }
   }
 
-  private getMarkerIconKey(item: MapRenderItem): 'user' | 'group' | 'moment' | 'cluster' | 'user_cluster' | 'group_cluster' | 'moment_cluster' {
-    if (item.type === 'user' || item.type === 'group' || item.type === 'moment') {
-      return item.type;
-    }
-    if (item.cluster) {
-      return item.cluster.iconKey;
-    }
-    return 'cluster';
+  private getMarkerIconKey(item: MapRenderItem): 'user' | 'group' | 'moment' | 'heat_bucket' {
+		if (item.type === 'user' || item.type === 'group' || item.type === 'moment') {
+			return item.type;
+		}
+		return 'heat_bucket';
   }
 
   private getMarkerTitle(item: MapRenderItem): string {
@@ -1662,9 +1507,6 @@ export struct LocationPickerPage {
     if (item.type === 'heat_bucket') {
       return `${item.total_count} 个热点`;
     }
-    if (item.cluster) {
-      return item.cluster.label;
-    }
     return '';
   }
 
@@ -1673,10 +1515,7 @@ export struct LocationPickerPage {
       return item.entity.subtitle;
     }
     if (item.type === 'heat_bucket') {
-      return item.heatBucket?.breakdown ?? `S2 L${item.heatBucket?.level ?? 0}`;
-    }
-    if (item.cluster?.summary && item.cluster.summary.length > 0) {
-      return item.cluster.summary;
+      return item.heatBucket?.breakdown ?? `共 ${item.total_count} 项`;
     }
     if (item.entity?.distance_meters !== undefined) {
       return `距你 ${LocationUtil.formatDistance(item.entity.distance_meters)}`;
@@ -1684,6 +1523,11 @@ export struct LocationPickerPage {
     return '';
   }
 
+  /**
+   * 根据当前勾选的类型决定向后端传递的 data_type 过滤条件
+   * - 全选或全不选：不下发 filter，让服务端返回所有类型
+   * - 仅单选某一类：下发对应 data_type，减少无关数据
+   */
   private resolveMapFilter(): MapCanvasFilter | undefined {
     const showUsers = this.showUsers;
     const showGroups = this.showGroups;
@@ -1702,15 +1546,17 @@ export struct LocationPickerPage {
       dataType = 'group';
     } else if (!showUsers && !showGroups && showMoments) {
       dataType = 'moment';
+    } else {
+      dataType = 'all';
     }
 
-    return { data_type: dataType };
+    const filter: MapCanvasFilter = { data_type: dataType };
+    return filter;
   }
 
   private applyFilterChange(toggle: () => void): void {
     toggle();
     this.lastViewportSignature = '';
-    this.overlappingPanelItems = [];
     if (this.renderTimerId > 0) {
       clearTimeout(this.renderTimerId);
     }
@@ -1727,45 +1573,38 @@ export struct LocationPickerPage {
       this.closeSearchPanel();
     }
 
-    const overlapItems = this.overlappingGroupsMap.get(marker.id);
-    if (overlapItems && overlapItems.length > 0) {
-      this.showOverlappingPanel(overlapItems);
-      return;
-    }
-
     const item = this.renderItemsMap.get(marker.id);
-    if (!item) {
-      return;
-    }
-    if (item.type === 'heat_bucket') {
-      this.closeOverlappingPanel();
+    if (!item || !item.entity) {
       return;
     }
     this.showOverlappingPanel([item]);
   }
 
-  private closeOverlappingPanel(): void {
-    this.overlappingPanelItems = [];
+  private onClusterClick(markers: MapMarker[]): void {
+    this.showFilterPanel = false;
+    if (this.showSearchBar) {
+      this.closeSearchPanel();
+    }
+    const items: MapRenderItem[] = [];
+    for (const marker of markers) {
+      const item = this.renderItemsMap.get(marker.id);
+      if (item && item.entity) {
+        items.push(item);
+      }
+    }
+    this.showOverlappingPanel(items);
   }
 
   private showOverlappingPanel(items: MapRenderItem[]): void {
     const entityItems = items.filter((item: MapRenderItem) => item.entity !== undefined);
+    if (entityItems.length === 0) return;
     this.showFilterPanel = false;
     this.overlappingPanelItems = entityItems;
   }
 
-  private getOverlappingPanelTitle(): string {
-    if (this.overlappingPanelItems.length === 1) {
-      return '可打开的内容';
-    }
-    return `该位置有 ${this.overlappingPanelItems.length} 个可打开的内容`;
-  }
-
   private navigateToItem(item: MapRenderItem): void {
-    if (!item.entity) {
-      return;
-    }
-    this.closeOverlappingPanel();
+    if (!item.entity) return;
+    this.overlappingPanelItems = [];
     this.showFilterPanel = false;
     if (item.type === 'group') {
       const param = new GroupDetailRouteParam();
@@ -1784,40 +1623,28 @@ export struct LocationPickerPage {
 
   private getItemTypeLabel(type: string): string {
     switch (type) {
-      case 'user':
-        return '用户';
-      case 'group':
-        return '群组';
-      case 'moment':
-        return '动态';
-      default:
-        return '内容';
+      case 'user': return '用户';
+      case 'group': return '群组';
+      case 'moment': return '动态';
+      default: return '内容';
     }
   }
 
   private getTypeColor(type: string): string {
     switch (type) {
-      case 'user':
-        return MARKER_COLOR_USER;
-      case 'group':
-        return MARKER_COLOR_GROUP;
-      case 'moment':
-        return MARKER_COLOR_MOMENT;
-      default:
-        return this.getCurrentThemePalette().textSecondary;
+      case 'user': return MARKER_COLOR_USER;
+      case 'group': return MARKER_COLOR_GROUP;
+      case 'moment': return MARKER_COLOR_MOMENT;
+      default: return '#666666';
     }
   }
 
   private getTypeMarkerSvg(type: string): string {
     switch (type) {
-      case 'user':
-        return 'marker_user.svg';
-      case 'group':
-        return 'marker_group.svg';
-      case 'moment':
-        return 'marker_moment.svg';
-      default:
-        return 'marker_user.svg';
+      case 'user': return 'marker_user.svg';
+      case 'group': return 'marker_group.svg';
+      case 'moment': return 'marker_moment.svg';
+      default: return 'marker_user.svg';
     }
   }
 
@@ -1841,6 +1668,7 @@ export struct LocationPickerPage {
           onMapDoubleClick: (coord: MapCoordinate) => { this.onMapDoubleClick(coord); },
           onMapLongPress: (coord: MapCoordinate) => { this.onMapLongPress(coord); },
           onMarkerClick: (marker: MapMarker) => { this.onMarkerItemClick(marker); },
+          onClusterClick: (markers: MapMarker[]) => { this.onClusterClick(markers); },
           onActionsReady: (actions: NativeMapActions) => { this.mapActions = actions; },
           onMapReady: () => { this.handleMapReady(); },
           onVisibleRegionChange: (region: MapVisibleRegion) => { this.handleVisibleRegionChange(region); }
@@ -1939,22 +1767,23 @@ export struct LocationPickerPage {
         // 重叠 marker 选择面板
         if (this.overlappingPanelItems.length > 0) {
           Column() {
+            // 遮罩层：点击关闭
             Column()
               .width('100%')
               .layoutWeight(1)
-              .onClick(() => { this.closeOverlappingPanel(); })
+              .onClick(() => { this.overlappingPanelItems = []; })
 
             Column() {
               Row() {
-                Text(this.getOverlappingPanelTitle())
+                Text(`该位置有 ${this.overlappingPanelItems.length} 个内容`)
                   .fontSize(DesignConstants.FONT.SIZE.LG)
                   .fontWeight(FontWeight.Medium)
                   .fontColor($r('sys.color.ohos_id_color_text_primary'))
                   .layoutWeight(1)
                 Text('关闭')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .fontColor(this.getCurrentThemePalette().textSecondary)
-                  .onClick(() => { this.closeOverlappingPanel(); })
+                  .fontColor($r('sys.color.ohos_id_color_text_secondary'))
+                  .onClick(() => { this.overlappingPanelItems = []; })
               }
               .width('100%')
               .padding({
@@ -1982,7 +1811,7 @@ export struct LocationPickerPage {
                         if (item.entity && item.entity.subtitle) {
                           Text(item.entity.subtitle)
                             .fontSize(DesignConstants.FONT.SIZE.SM)
-                            .fontColor(this.getCurrentThemePalette().textSecondary)
+                            .fontColor($r('sys.color.ohos_id_color_text_secondary'))
                             .maxLines(1)
                             .textOverflow({ overflow: TextOverflow.Ellipsis })
                         }
@@ -2004,8 +1833,8 @@ export struct LocationPickerPage {
                       top: DesignConstants.SPACING.SM,
                       bottom: DesignConstants.SPACING.SM
                     })
-                    .borderRadius(DesignConstants.RADIUS.LG)
                     .onClick(() => {
+                      this.overlappingPanelItems = [];
                       this.navigateToItem(item);
                     })
                   }
@@ -2018,8 +1847,7 @@ export struct LocationPickerPage {
             }
             .width('100%')
             .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-            .borderRadius({ topLeft: 24, topRight: 24 })
-            .border({ width: { top: 1 }, color: this.getCurrentThemePalette().borderColor })
+            .borderRadius({ topLeft: 20, topRight: 20 })
             .shadow({
               radius: DesignConstants.SHADOW.LARGE.radius,
               color: DesignConstants.SHADOW.LARGE.color,

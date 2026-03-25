@@ -17,9 +17,11 @@ import { AppIcon } from './SystemIcon';
 
 const DOMAIN_NUMBER: number = 0xFF11;
 const TAG: string = 'NativeMapComponent';
+const CLUSTER_DISTANCE_VP: number = 64;
 
-type MapMarkerType = 'user' | 'group' | 'moment' | 'cluster';
+type MapMarkerType = 'user' | 'group' | 'moment' | 'cluster' | 'heat_bucket';
 type MapMarkerIconKey = MapMarkerType | 'center_pin' | 'user_cluster' | 'group_cluster' | 'moment_cluster';
+type ClusterableMapMarkerType = 'user' | 'group' | 'moment';
 
 export interface MapMarker {
   id: string;
@@ -29,6 +31,26 @@ export interface MapMarker {
   snippet?: string;
   iconKey?: MapMarkerIconKey;
   type?: MapMarkerType;
+  clusterable?: boolean;
+  clickable?: boolean;
+}
+
+class NativeClusterItem extends mapCommon.ClusterItem {
+  position: mapCommon.LatLng;
+  markerId: string;
+  markerType: ClusterableMapMarkerType;
+  token: string;
+
+  constructor(marker: MapMarker) {
+    super();
+    this.position = {
+      latitude: marker.latitude,
+      longitude: marker.longitude
+    };
+    this.markerId = marker.id;
+    this.markerType = marker.type as ClusterableMapMarkerType;
+    this.token = `${marker.id}|${marker.type ?? 'user'}|${marker.latitude.toFixed(6)}|${marker.longitude.toFixed(6)}`;
+  }
 }
 
 export interface MapRegion {
@@ -86,6 +108,12 @@ interface CameraMoveCapable {
   on(eventName: string, handler: () => void): void;
 }
 
+interface ClusterOverlayCapable {
+  on(type: 'markerClusterClick', callback: (info: map.MarkerClusterInfo) => void): void;
+  on(type: 'clusterClick', callback: (items: Array<mapCommon.ClusterItem>) => void): void;
+  remove(): Promise<void>;
+}
+
 @Component
 export struct NativeMapComponent {
   @Watch('onDarkModeChange') @StorageProp('isDarkMode') isDarkMode: boolean = false;
@@ -115,6 +143,7 @@ export struct NativeMapComponent {
   // 回调函数
   onMapReady?: () => void;
   onMarkerClick?: (marker: MapMarker) => void;
+  onClusterClick?: (markers: MapMarker[]) => void;
   onMapClick?: (coordinate: MapCoordinate) => void;
   /** 双击地图回调 */
   onMapDoubleClick?: (coordinate: MapCoordinate) => void;
@@ -129,8 +158,12 @@ export struct NativeMapComponent {
   private mapController: map.MapComponentController | null = null;
   private mapCallback?: AsyncCallback<map.MapComponentController>;
   private createdMarkers: Map<string, map.Marker> = new Map();
+  private clusterMarkerIdMap: Map<string, MapMarker> = new Map();
+  private clusterOverlayMarkerIds: Set<string> = new Set();
+  private clusterOverlay: ClusterOverlayCapable | null = null;
   private centerPinMarker: map.Marker | null = null;
   private markerIconCache: Map<string, image.PixelMap> = new Map();
+  private markerRenderVersion: number = 0;
   private syntheticCameraIdleTimerId: number = 0;
   // 双击检测
   private lastClickTime: number = 0;
@@ -173,7 +206,7 @@ export struct NativeMapComponent {
     };
   }
 
-  aboutToDisappear(): void {
+  async aboutToDisappear(): Promise<void> {
     if (this.clickTimerId > 0) {
       clearTimeout(this.clickTimerId);
       this.clickTimerId = 0;
@@ -182,6 +215,7 @@ export struct NativeMapComponent {
       clearTimeout(this.syntheticCameraIdleTimerId);
       this.syntheticCameraIdleTimerId = 0;
     }
+    await this.clearClusterOverlay();
     for (const pixelMap of this.markerIconCache.values()) {
       pixelMap.release();
     }
@@ -190,10 +224,10 @@ export struct NativeMapComponent {
 
   private async initMarkerIcons(): Promise<void> {
     // 预加载单点与聚合点的所有 SVG 图标为 PixelMap
-    const iconKeys: string[] = ['user', 'group', 'moment', 'cluster', 'center_pin', 'user_cluster', 'group_cluster', 'moment_cluster'];
+    const iconKeys: string[] = ['user', 'group', 'moment', 'cluster', 'heat_bucket', 'center_pin', 'user_cluster', 'group_cluster', 'moment_cluster'];
     const iconFiles: string[] = [
       'marker_user.svg', 'marker_group.svg', 'marker_moment.svg',
-      'marker_mixed_cluster.svg', 'marker_center_pin.svg',
+      'marker_mixed_cluster.svg', 'marker_mixed_cluster.svg', 'marker_center_pin.svg',
       'marker_user_cluster.svg', 'marker_group_cluster.svg', 'marker_moment_cluster.svg',
     ];
     const hostContext = this.getUIContext().getHostContext();
@@ -414,6 +448,164 @@ export struct NativeMapComponent {
     }, 180);
   }
 
+  private nextMarkerRenderVersion(): number {
+    this.markerRenderVersion += 1;
+    return this.markerRenderVersion;
+  }
+
+  private isClusterableMarker(marker: MapMarker): marker is MapMarker & { type: ClusterableMapMarkerType } {
+    return marker.clusterable === true && (marker.type === 'user' || marker.type === 'group' || marker.type === 'moment');
+  }
+
+  private async clearClusterOverlay(): Promise<void> {
+    const overlay = this.clusterOverlay;
+    this.clusterOverlay = null;
+    this.clusterOverlayMarkerIds.clear();
+    if (!overlay) {
+      return;
+    }
+    try {
+      await overlay.remove();
+    } catch (error) {
+      hilog.warn(DOMAIN_NUMBER, TAG, `移除 cluster overlay 失败: ${JSON.stringify(error)}`);
+    }
+  }
+
+  private resolveClusterIconKey(items: NativeClusterItem[]): MapMarkerIconKey {
+    let users = 0;
+    let groups = 0;
+    let moments = 0;
+    for (const item of items) {
+      switch (item.markerType) {
+        case 'user':
+          users++;
+          break;
+        case 'group':
+          groups++;
+          break;
+        case 'moment':
+          moments++;
+          break;
+        default:
+          break;
+      }
+    }
+    const nonZeroTypeCount = (users > 0 ? 1 : 0) + (groups > 0 ? 1 : 0) + (moments > 0 ? 1 : 0);
+    if (nonZeroTypeCount > 1) {
+      return 'cluster';
+    }
+    if (users > 0) {
+      return 'user_cluster';
+    }
+    if (groups > 0) {
+      return 'group_cluster';
+    }
+    if (moments > 0) {
+      return 'moment_cluster';
+    }
+    return 'cluster';
+  }
+
+  private async buildClusterIcon(items: Array<mapCommon.ClusterItem>): Promise<image.PixelMap> {
+    const typedItems = items.filter((item: mapCommon.ClusterItem): item is NativeClusterItem => item instanceof NativeClusterItem);
+    const iconKey = this.resolveClusterIconKey(typedItems);
+    const icon = this.markerIconCache.get(iconKey);
+    if (icon) {
+      return icon;
+    }
+    const fallback = this.markerIconCache.get('cluster') ?? this.markerIconCache.get('user');
+    if (fallback) {
+      return fallback;
+    }
+    throw new Error(`PixelMap 缓存未命中 cluster key=${iconKey}`);
+  }
+
+  private resolveMarkersFromClusterItems(items: Array<mapCommon.ClusterItem>): MapMarker[] {
+    const resolved: MapMarker[] = [];
+    for (const item of items) {
+      if (item instanceof NativeClusterItem) {
+        const marker = this.clusterMarkerIdMap.get(item.markerId);
+        if (marker) {
+          resolved.push(marker);
+        }
+        continue;
+      }
+      const candidate = item as NativeClusterItem & { token?: string; markerId?: string; position?: mapCommon.LatLng };
+      if (candidate.markerId) {
+        const marker = this.clusterMarkerIdMap.get(candidate.markerId);
+        if (marker) {
+          resolved.push(marker);
+          continue;
+        }
+      }
+      if (!candidate.position) {
+        continue;
+      }
+      const lat = candidate.position.latitude;
+      const lng = candidate.position.longitude;
+      const marker = this.markers.find((entry: MapMarker) =>
+        this.isClusterableMarker(entry) &&
+        entry.latitude.toFixed(6) === lat.toFixed(6) &&
+        entry.longitude.toFixed(6) === lng.toFixed(6)
+      );
+      if (marker) {
+        resolved.push(marker);
+      }
+    }
+    return resolved;
+  }
+
+  private async rebuildClusterOverlay(clusterMarkers: Array<MapMarker & { type: ClusterableMapMarkerType }>, renderVersion: number): Promise<void> {
+    if (!this.mapController || renderVersion !== this.markerRenderVersion) {
+      return;
+    }
+    await this.clearClusterOverlay();
+    if (clusterMarkers.length === 0 || renderVersion !== this.markerRenderVersion) {
+      return;
+    }
+
+    const nextClusterMarkerIds: Set<string> = new Set();
+    const clusterItems = clusterMarkers.map((marker: MapMarker) => {
+      const item = new NativeClusterItem(marker);
+      nextClusterMarkerIds.add(item.markerId);
+      return item;
+    });
+
+    try {
+      const overlay = await this.mapController.addClusterOverlay({
+        clusterItems: clusterItems,
+        distance: CLUSTER_DISTANCE_VP,
+        getCustomIcon: async (items: Array<mapCommon.ClusterItem>): Promise<image.PixelMap> => this.buildClusterIcon(items)
+      }) as ClusterOverlayCapable;
+      if (renderVersion !== this.markerRenderVersion) {
+        await overlay.remove();
+        return;
+      }
+      const emitClusterClick = (items: Array<mapCommon.ClusterItem>): void => {
+        if (!this.onClusterClick) {
+          return;
+        }
+        const markers = this.resolveMarkersFromClusterItems(items);
+        if (markers.length > 0) {
+          this.onClusterClick(markers);
+        }
+      };
+      overlay.on('markerClusterClick', (info: map.MarkerClusterInfo) => {
+        emitClusterClick(info.clusterItems);
+      });
+      overlay.on('clusterClick', (items: Array<mapCommon.ClusterItem>) => {
+        emitClusterClick(items);
+      });
+      this.clusterOverlayMarkerIds = nextClusterMarkerIds;
+      this.clusterOverlay = overlay;
+    } catch (error) {
+      hilog.error(DOMAIN_NUMBER, TAG, `创建 cluster overlay 失败: ${JSON.stringify(error)}`);
+      if (renderVersion === this.markerRenderVersion) {
+        this.clusterOverlayMarkerIds.clear();
+      }
+    }
+  }
+
   private async setupMap(): Promise<void> {
     if (!this.mapController) return;
 
@@ -532,9 +724,11 @@ export struct NativeMapComponent {
     // 监听标记点击
     this.mapController.on("markerClick", (marker: map.Marker) => {
       const markerId = marker.getId();
-      // 在 markers 中查找
-      const target = this.markers.find(m => this.createdMarkers.get(m.id)?.getId() === markerId);
-      if (target && this.onMarkerClick) {
+      const target = this.markers.find((item: MapMarker) => this.createdMarkers.get(item.id)?.getId() === markerId);
+      if (!target || this.clusterOverlayMarkerIds.has(target.id)) {
+        return;
+      }
+      if (this.onMarkerClick) {
         this.onMarkerClick(target);
       }
     });
@@ -552,15 +746,31 @@ export struct NativeMapComponent {
   private async updateMarkers(): Promise<void> {
     if (!this.mapController) return;
 
+    const renderVersion = this.nextMarkerRenderVersion();
+    await this.clearClusterOverlay();
+    if (renderVersion !== this.markerRenderVersion) {
+      return;
+    }
+    this.createdMarkers.clear();
+    this.clusterMarkerIdMap.clear();
+
     try {
       this.mapController.clear();
-      this.createdMarkers.clear();
       this.centerPinMarker = null;
     } catch (e) {
       hilog.warn(DOMAIN_NUMBER, TAG, `清除标记失败: ${JSON.stringify(e)}`);
     }
+    if (renderVersion !== this.markerRenderVersion) {
+      return;
+    }
 
+    const clusterMarkers: Array<MapMarker & { type: ClusterableMapMarkerType }> = [];
     for (const markerData of this.markers) {
+      if (this.isClusterableMarker(markerData)) {
+        clusterMarkers.push(markerData);
+        this.clusterMarkerIdMap.set(markerData.id, markerData);
+        continue;
+      }
       try {
         const markerOptions: mapCommon.MarkerOptions = {
           position: {
@@ -569,16 +779,25 @@ export struct NativeMapComponent {
           },
           title: markerData.title,
           snippet: markerData.snippet,
-          clickable: true,
+          clickable: markerData.clickable ?? true,
           icon: this.getMarkerIconForMarker(markerData),
           anchorU: 0.5,
           anchorV: 1.0
         };
         const marker = await this.mapController.addMarker(markerOptions);
+        if (renderVersion !== this.markerRenderVersion) {
+          marker.remove();
+          return;
+        }
         this.createdMarkers.set(markerData.id, marker);
       } catch (error) {
         hilog.error(DOMAIN_NUMBER, TAG, `添加标记失败 ${markerData.id}: ${JSON.stringify(error)}`);
       }
+    }
+
+    await this.rebuildClusterOverlay(clusterMarkers, renderVersion);
+    if (renderVersion !== this.markerRenderVersion) {
+      return;
     }
 
     if (this.showCenterPin) {
