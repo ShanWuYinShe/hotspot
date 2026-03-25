@@ -200,10 +200,17 @@ export class LocationUtil {
             if (!LocationUtil.locationCallback || updateVersion !== LocationUtil.locationUpdateVersion) {
               return;
             }
-            LocationUtil.locationCallback({
-              ...locationInfo,
+            const resolvedLocationInfo: LocationInfo = {
+              latitude: locationInfo.latitude,
+              longitude: locationInfo.longitude,
+              accuracy: locationInfo.accuracy,
+              altitude: locationInfo.altitude,
+              speed: locationInfo.speed,
+              bearing: locationInfo.bearing,
+              timestamp: locationInfo.timestamp,
               locationName: addressInfo.fullAddress
-            });
+            };
+            LocationUtil.locationCallback(resolvedLocationInfo);
           })
           .catch((error: Error) => {
             hilog.warn(DOMAIN_NUMBER, TAG, `获取地址信息失败: ${JSON.stringify(error)}`);

@@ -83,7 +83,11 @@ export class AppThemeVisuals {
     const palette = AppThemeManager.getPalette(themeId);
     const baseStyle = AppThemeVisuals.getSurfaceCardStyle(themeId);
     return {
-      ...baseStyle,
+      backgroundColor: baseStyle.backgroundColor,
+      borderColor: baseStyle.borderColor,
+      borderWidth: baseStyle.borderWidth,
+      shadow: baseStyle.shadow,
+      borderRadius: baseStyle.borderRadius,
       padding: AppThemeManager.isSoftGalleryTheme(themeId)
         ? DesignConstants.SPACING.XL
         : DesignConstants.SPACING.LG,

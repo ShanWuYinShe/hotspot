@@ -41,15 +41,15 @@ class NativeClusterItem extends mapCommon.ClusterItem {
   markerType: ClusterableMapMarkerType;
   token: string;
 
-  constructor(marker: MapMarker) {
+  constructor(marker: MapMarker, markerType: ClusterableMapMarkerType) {
     super();
     this.position = {
       latitude: marker.latitude,
       longitude: marker.longitude
     };
     this.markerId = marker.id;
-    this.markerType = marker.type as ClusterableMapMarkerType;
-    this.token = `${marker.id}|${marker.type ?? 'user'}|${marker.latitude.toFixed(6)}|${marker.longitude.toFixed(6)}`;
+    this.markerType = markerType;
+    this.token = `${marker.id}|${markerType}|${marker.latitude.toFixed(6)}|${marker.longitude.toFixed(6)}`;
   }
 }
 
@@ -112,6 +112,11 @@ interface ClusterOverlayCapable {
   on(type: 'markerClusterClick', callback: (info: map.MarkerClusterInfo) => void): void;
   on(type: 'clusterClick', callback: (items: Array<mapCommon.ClusterItem>) => void): void;
   remove(): Promise<void>;
+}
+
+interface ClusterItemCandidate {
+  markerId?: string;
+  position?: mapCommon.LatLng;
 }
 
 @Component
@@ -453,8 +458,18 @@ export struct NativeMapComponent {
     return this.markerRenderVersion;
   }
 
-  private isClusterableMarker(marker: MapMarker): marker is MapMarker & { type: ClusterableMapMarkerType } {
-    return marker.clusterable === true && (marker.type === 'user' || marker.type === 'group' || marker.type === 'moment');
+  private resolveClusterableMarkerType(marker: MapMarker): ClusterableMapMarkerType | null {
+    if (marker.clusterable !== true) {
+      return null;
+    }
+    if (marker.type === 'user' || marker.type === 'group' || marker.type === 'moment') {
+      return marker.type;
+    }
+    return null;
+  }
+
+  private isClusterableMarker(marker: MapMarker): boolean {
+    return this.resolveClusterableMarkerType(marker) !== null;
   }
 
   private async clearClusterOverlay(): Promise<void> {
@@ -507,7 +522,12 @@ export struct NativeMapComponent {
   }
 
   private async buildClusterIcon(items: Array<mapCommon.ClusterItem>): Promise<image.PixelMap> {
-    const typedItems = items.filter((item: mapCommon.ClusterItem): item is NativeClusterItem => item instanceof NativeClusterItem);
+    const typedItems: NativeClusterItem[] = [];
+    for (const item of items) {
+      if (item instanceof NativeClusterItem) {
+        typedItems.push(item);
+      }
+    }
     const iconKey = this.resolveClusterIconKey(typedItems);
     const icon = this.markerIconCache.get(iconKey);
     if (icon) {
@@ -530,7 +550,7 @@ export struct NativeMapComponent {
         }
         continue;
       }
-      const candidate = item as NativeClusterItem & { token?: string; markerId?: string; position?: mapCommon.LatLng };
+      const candidate = item as ClusterItemCandidate;
       if (candidate.markerId) {
         const marker = this.clusterMarkerIdMap.get(candidate.markerId);
         if (marker) {
@@ -555,7 +575,7 @@ export struct NativeMapComponent {
     return resolved;
   }
 
-  private async rebuildClusterOverlay(clusterMarkers: Array<MapMarker & { type: ClusterableMapMarkerType }>, renderVersion: number): Promise<void> {
+  private async rebuildClusterOverlay(clusterMarkers: MapMarker[], renderVersion: number): Promise<void> {
     if (!this.mapController || renderVersion !== this.markerRenderVersion) {
       return;
     }
@@ -565,11 +585,16 @@ export struct NativeMapComponent {
     }
 
     const nextClusterMarkerIds: Set<string> = new Set();
-    const clusterItems = clusterMarkers.map((marker: MapMarker) => {
-      const item = new NativeClusterItem(marker);
+    const clusterItems: NativeClusterItem[] = [];
+    for (const marker of clusterMarkers) {
+      const markerType = this.resolveClusterableMarkerType(marker);
+      if (!markerType) {
+        continue;
+      }
+      const item = new NativeClusterItem(marker, markerType);
       nextClusterMarkerIds.add(item.markerId);
-      return item;
-    });
+      clusterItems.push(item);
+    }
 
     try {
       const overlay = await this.mapController.addClusterOverlay({
@@ -764,7 +789,7 @@ export struct NativeMapComponent {
       return;
     }
 
-    const clusterMarkers: Array<MapMarker & { type: ClusterableMapMarkerType }> = [];
+    const clusterMarkers: MapMarker[] = [];
     for (const markerData of this.markers) {
       if (this.isClusterableMarker(markerData)) {
         clusterMarkers.push(markerData);
