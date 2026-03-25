@@ -7,6 +7,7 @@
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import AnchorSummaryCard from '$lib/components/common/anchor-summary-card.svelte';
+	import EmptyState from '$lib/components/common/empty-state.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Card, CardContent } from '$lib/components/ui/card';
@@ -23,20 +24,34 @@
 	import Users from 'lucide-svelte/icons/users';
 	import Image from 'lucide-svelte/icons/image';
 	import UsersRound from 'lucide-svelte/icons/users-round';
+	import Hash from 'lucide-svelte/icons/hash';
+	import AlertTriangle from 'lucide-svelte/icons/triangle-alert';
 	import X from 'lucide-svelte/icons/x';
 
-	let keyword = $state('');
-	let currentTab = $state<'users' | 'moments' | 'groups'>('users');
+	type SearchMode = 'keyword' | 'tag';
+	type SearchTab = 'users' | 'moments' | 'groups';
+
+	const SEARCH_TABS: SearchTab[] = ['users', 'moments', 'groups'];
+
+	let keywordInput = $state('');
+	let currentTab = $state<SearchTab>('users');
+	let activeMode = $state<SearchMode | null>(null);
+	let activeTerm = $state('');
 	let isLoading = $state(false);
+	let searchError = $state<string | null>(null);
 
 	let users = $state.raw<UserItem[]>([]);
 	let moments = $state.raw<MomentItem[]>([]);
 	let groups = $state.raw<GroupItem[]>([]);
-	
-	// 用于防止重复触发同条件搜索
-	let lastSearchFingerprint = $state<string>('');
-	// 用于取消进行中的搜索请求，防止竞态条件
+
+	let lastSearchFingerprint = $state('');
 	let searchAbortController: AbortController | null = null;
+
+	const activeLabel = $derived(activeMode === 'tag' ? `#${activeTerm}` : activeTerm);
+	const hasAnyResults = $derived(users.length + moments.length + groups.length > 0);
+	const nearbyMomentsUrl = $derived(
+		`/moments/nearby?from=${encodeURIComponent(`${page.url.pathname}${page.url.search}` || '/search')}`
+	);
 
 	function getReferencePoint() {
 		return {
@@ -45,153 +60,193 @@
 		};
 	}
 
-	function buildSearchFingerprint(mode: 'keyword' | 'tag', value: string): string {
+	function parseSearchTab(value: string | null): SearchTab {
+		return SEARCH_TABS.includes(value as SearchTab) ? (value as SearchTab) : 'users';
+	}
+
+	function buildSearchFingerprint(mode: SearchMode, value: string): string {
 		const point = getReferencePoint();
 		return `${mode}:${value}:${point.latitude.toFixed(6)}:${point.longitude.toFixed(6)}:${mapAnchorStore.radius}`;
 	}
 
-	/**
-	 * 执行关键词搜索
-	 */
-	async function performKeywordSearch(searchTerm: string) {
-		const normalized = searchTerm.trim();
-		if (!normalized) return;
-		const fingerprint = buildSearchFingerprint('keyword', normalized);
-		if (fingerprint === lastSearchFingerprint) return;
-		
-		// 取消上一次进行中的请求
-		searchAbortController?.abort();
-		const controller = new AbortController();
-		searchAbortController = controller;
-
-		isLoading = true;
-		lastSearchFingerprint = fingerprint;
-
-		try {
-			const signal = controller.signal;
-			const [usersRes, momentsRes, groupsRes] = await withMinimumLoadingTime(() =>
-				Promise.all([
-					usersService.search({ keyword: normalized, reference_point: getReferencePoint() }, { signal }),
-					momentsService.search({ keyword: normalized, reference_point: getReferencePoint() }, { signal }),
-					groupsService.search({ keyword: normalized, reference_point: getReferencePoint() }, { signal })
-				])
-			);
-
-			// 请求已被取消（新搜索已发起），不更新 UI
-			if (controller.signal.aborted) return;
-
-			if (isSuccess(usersRes) && usersRes.data) {
-				users = usersRes.data.items;
-			}
-			if (isSuccess(momentsRes) && momentsRes.data) {
-				moments = momentsRes.data.items;
-			}
-			if (isSuccess(groupsRes) && groupsRes.data) {
-				groups = groupsRes.data.items;
-			}
-		} catch {
-			if (!controller.signal.aborted) {
-				toast.error('搜索失败');
-			}
-		} finally {
-			if (!controller.signal.aborted) {
-				isLoading = false;
-			}
+	function buildSearchUrl(mode: SearchMode, value: string, tab: SearchTab): string {
+		const params = new URLSearchParams();
+		params.set(mode === 'tag' ? 'tag' : 'q', value);
+		if (tab !== 'users') {
+			params.set('tab', tab);
 		}
+		return `/search?${params.toString()}`;
 	}
 
-	/**
-	 * 执行标签搜索
-	 */
-	async function performTagSearch(tag: string) {
-		const normalized = tag.trim();
-		if (!normalized) return;
-		const fingerprint = buildSearchFingerprint('tag', normalized);
-		if (fingerprint === lastSearchFingerprint) return;
-
-		// 取消上一次进行中的请求
+	function resetResults() {
 		searchAbortController?.abort();
-		const controller = new AbortController();
-		searchAbortController = controller;
-
-		isLoading = true;
-		lastSearchFingerprint = fingerprint;
-
-		try {
-			const signal = controller.signal;
-			const [usersRes, momentsRes, groupsRes] = await withMinimumLoadingTime(() =>
-				Promise.all([
-					usersService.search({ tag: normalized, reference_point: getReferencePoint() }, { signal }),
-					momentsService.search({ tag: normalized, reference_point: getReferencePoint() }, { signal }),
-					groupsService.search({ tag: normalized, reference_point: getReferencePoint() }, { signal })
-				])
-			);
-
-			if (controller.signal.aborted) return;
-
-			if (isSuccess(usersRes) && usersRes.data) {
-				users = usersRes.data.items;
-			}
-			if (isSuccess(momentsRes) && momentsRes.data) {
-				moments = momentsRes.data.items;
-			}
-			if (isSuccess(groupsRes) && groupsRes.data) {
-				groups = groupsRes.data.items;
-			}
-		} catch {
-			if (!controller.signal.aborted) {
-				toast.error('搜索失败');
-			}
-		} finally {
-			if (!controller.signal.aborted) {
-				isLoading = false;
-			}
-		}
-	}
-
-	/**
-	 * 处理输入框的搜索（按回车或点击搜索按钮）
-	 */
-	async function handleSearch() {
-		const searchTerm = keyword.trim();
-		if (!searchTerm) return;
-
-		// 更新 URL（不触发 effect）
-		goto(`/search?q=${encodeURIComponent(searchTerm)}`, { replaceState: true, noScroll: true });
-		
-		// 执行搜索
-		await performKeywordSearch(searchTerm);
-	}
-
-	function clearSearch() {
-		keyword = '';
+		searchAbortController = null;
 		users = [];
 		moments = [];
 		groups = [];
+		isLoading = false;
+		searchError = null;
+		activeMode = null;
+		activeTerm = '';
 		lastSearchFingerprint = '';
-		goto('/search', { replaceState: true });
 	}
 
-	// 监听 URL 参数与浏览锚点变化，保持搜索结果与当前位置一致
-	$effect(() => {
-		const q = page.url.searchParams.get('q');
-		const tag = page.url.searchParams.get('tag');
-		mapAnchorStore.anchor.updatedAt;
-		
-		// 优先处理标签搜索
-		if (tag) {
-			keyword = tag;
-			performTagSearch(tag);
+	async function performSearch(mode: SearchMode, value: string) {
+		const normalized = value.trim();
+		if (!normalized) {
+			resetResults();
 			return;
 		}
-		
-		// 处理关键词搜索
-		if (q) {
-			keyword = q;
-			performKeywordSearch(q);
+
+		const fingerprint = buildSearchFingerprint(mode, normalized);
+		if (fingerprint === lastSearchFingerprint) {
+			activeMode = mode;
+			activeTerm = normalized;
+			searchError = null;
+			return;
 		}
 
-		// 组件卸载时取消进行中的请求
+		searchAbortController?.abort();
+		const controller = new AbortController();
+		searchAbortController = controller;
+
+		activeMode = mode;
+		activeTerm = normalized;
+		lastSearchFingerprint = fingerprint;
+		searchError = null;
+		isLoading = true;
+		users = [];
+		moments = [];
+		groups = [];
+
+		try {
+			const signal = controller.signal;
+			const request = mode === 'tag'
+				? {
+					tag: normalized,
+					reference_point: getReferencePoint()
+				}
+				: {
+					keyword: normalized,
+					reference_point: getReferencePoint()
+				};
+
+			const [usersRes, momentsRes, groupsRes] = await withMinimumLoadingTime(() =>
+				Promise.all([
+					usersService.search(request, { signal }),
+					momentsService.search(request, { signal }),
+					groupsService.search(request, { signal })
+				])
+			);
+
+			if (signal.aborted) {
+				return;
+			}
+
+			const nextUsers = isSuccess(usersRes) && usersRes.data ? usersRes.data.items : [];
+			const nextMoments = isSuccess(momentsRes) && momentsRes.data ? momentsRes.data.items : [];
+			const nextGroups = isSuccess(groupsRes) && groupsRes.data ? groupsRes.data.items : [];
+			const nextError = [usersRes, momentsRes, groupsRes]
+				.find((response) => !isSuccess(response))
+				?.message ?? null;
+
+			users = nextUsers;
+			moments = nextMoments;
+			groups = nextGroups;
+			searchError = nextError;
+
+			if (nextError && nextUsers.length === 0 && nextMoments.length === 0 && nextGroups.length === 0) {
+				toast.error(nextError);
+			}
+		} catch {
+			if (!controller.signal.aborted) {
+				searchError = '搜索失败';
+				toast.error('搜索失败');
+			}
+		} finally {
+			if (!controller.signal.aborted) {
+				isLoading = false;
+				searchAbortController = null;
+			}
+		}
+	}
+
+	async function handleSearch() {
+		const searchTerm = keywordInput.trim();
+		if (!searchTerm) {
+			clearSearch();
+			return;
+		}
+
+		await goto(buildSearchUrl('keyword', searchTerm, currentTab), {
+			replaceState: true,
+			noScroll: true,
+			keepFocus: true
+		});
+	}
+
+	function clearSearch() {
+		keywordInput = '';
+		resetResults();
+		void goto('/search', {
+			replaceState: true,
+			noScroll: true,
+			keepFocus: true
+		});
+	}
+
+	function retryActiveSearch() {
+		if (!activeMode || !activeTerm) {
+			return;
+		}
+
+		lastSearchFingerprint = '';
+		void performSearch(activeMode, activeTerm);
+	}
+
+	$effect(() => {
+		const q = page.url.searchParams.get('q')?.trim() ?? '';
+		const tag = page.url.searchParams.get('tag')?.trim() ?? '';
+		const urlTab = parseSearchTab(page.url.searchParams.get('tab'));
+		mapAnchorStore.anchor.updatedAt;
+
+		if (currentTab !== urlTab) {
+			currentTab = urlTab;
+		}
+
+		const nextMode: SearchMode | null = tag ? 'tag' : q ? 'keyword' : null;
+		const nextTerm = tag || q;
+
+		if (keywordInput !== nextTerm) {
+			keywordInput = nextTerm;
+		}
+
+		if (!nextMode || !nextTerm) {
+			resetResults();
+			return;
+		}
+
+		void performSearch(nextMode, nextTerm);
+	});
+
+	$effect(() => {
+		if (!activeMode || !activeTerm) {
+			return;
+		}
+
+		const urlTab = parseSearchTab(page.url.searchParams.get('tab'));
+		if (urlTab === currentTab) {
+			return;
+		}
+
+		void goto(buildSearchUrl(activeMode, activeTerm, currentTab), {
+			replaceState: true,
+			noScroll: true,
+			keepFocus: true
+		});
+	});
+
+	$effect(() => {
 		return () => {
 			searchAbortController?.abort();
 		};
@@ -203,18 +258,16 @@
 </svelte:head>
 
 <div class="space-y-5">
-	<PageHeader
-		title="搜索"
-		description="发现用户、群组与附近动态"
-	/>
+	<PageHeader title="搜索" description="发现用户、群组与附近动态" />
 
 	<AnchorSummaryCard
 		label="搜索参考锚点"
 		description={`当前按 ${mapAnchorStore.radius}km 范围参与距离排序`}
+		subtle
 	>
 		{#snippet actions()}
-			<div class="flex items-center">
-				<Button variant="outline" size="sm" class="gap-2" onclick={() => goto('/moments/nearby')}>
+			<div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+				<Button variant="outline" size="sm" class="gap-2" onclick={() => goto(nearbyMomentsUrl)}>
 					<Compass class="h-4 w-4" />
 					附近探索
 				</Button>
@@ -222,7 +275,6 @@
 		{/snippet}
 	</AnchorSummaryCard>
 
-	<!-- Search input -->
 	<form
 		class="rounded-3xl border border-border/60 bg-card/85 p-3 shadow-sm backdrop-blur-md"
 		onsubmit={(event) => {
@@ -230,7 +282,7 @@
 			handleSearch();
 		}}
 	>
-		<div class="flex items-center gap-2">
+		<div class="flex flex-col gap-2 sm:flex-row sm:items-center">
 			<div class="relative flex-1">
 				<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 				<Input
@@ -238,9 +290,9 @@
 					placeholder="搜索用户、瞬间、群组..."
 					class="h-11 rounded-2xl border-border/60 bg-background/70 pl-9 pr-9"
 					autocomplete="off"
-					bind:value={keyword}
+					bind:value={keywordInput}
 				/>
-				{#if keyword}
+				{#if keywordInput}
 					<Button
 						type="button"
 						variant="ghost"
@@ -253,16 +305,55 @@
 					</Button>
 				{/if}
 			</div>
-			<Button type="submit" class="h-11 rounded-2xl border border-border/60 bg-background/70 px-5 text-foreground hover:bg-accent/70" disabled={!keyword.trim()}>
+			<Button
+				type="submit"
+				class="h-11 rounded-2xl border border-border/60 bg-background/70 px-5 text-foreground hover:bg-accent/70 sm:min-w-28"
+				disabled={!keywordInput.trim()}
+			>
 				<Search class="h-4 w-4" />
 				搜索
 			</Button>
 		</div>
 	</form>
 
-	{#if keyword}
+	{#if activeTerm}
+		<Card class="rounded-3xl border border-border/60 bg-card/85 shadow-sm backdrop-blur-md">
+			<CardContent class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+				<div class="min-w-0 space-y-1">
+					<div class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+						{#if activeMode === 'tag'}
+							<span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary">
+								<Hash class="h-3.5 w-3.5" />
+								标签搜索
+							</span>
+						{:else}
+							<span class="inline-flex items-center rounded-full bg-muted px-2.5 py-1 font-medium text-foreground">
+								关键词搜索
+							</span>
+						{/if}
+						<span>搜索范围 {mapAnchorStore.radius}km</span>
+					</div>
+					<div class="truncate text-lg font-semibold">“{activeLabel}” 的搜索结果</div>
+				</div>
+				<div class="grid grid-cols-3 gap-2 text-center text-sm sm:min-w-72">
+					<div class="rounded-2xl bg-muted/70 px-3 py-2">
+						<div class="font-semibold text-foreground">{users.length}</div>
+						<div class="text-xs text-muted-foreground">用户</div>
+					</div>
+					<div class="rounded-2xl bg-muted/70 px-3 py-2">
+						<div class="font-semibold text-foreground">{moments.length}</div>
+						<div class="text-xs text-muted-foreground">瞬间</div>
+					</div>
+					<div class="rounded-2xl bg-muted/70 px-3 py-2">
+						<div class="font-semibold text-foreground">{groups.length}</div>
+						<div class="text-xs text-muted-foreground">群组</div>
+					</div>
+				</div>
+			</CardContent>
+		</Card>
+
 		<Tabs bind:value={currentTab}>
-			<TabsList class="h-auto gap-1.5 rounded-3xl bg-card/80 p-1.5 shadow-md shadow-black/10 dark:shadow-black/30 ring-1 ring-border/50 backdrop-blur-sm">
+			<TabsList class="h-auto flex-wrap gap-1.5 rounded-3xl bg-card/80 p-1.5 shadow-md shadow-black/10 ring-1 ring-border/50 backdrop-blur-sm dark:shadow-black/30">
 				<TabsTrigger value="users" class="gap-2 rounded-2xl">
 					<Users class="h-4 w-4" />
 					用户 ({users.length})
@@ -277,7 +368,6 @@
 				</TabsTrigger>
 			</TabsList>
 
-			<!-- Users -->
 			<TabsContent value="users" class="mt-6">
 				{#if isLoading}
 					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
@@ -287,12 +377,20 @@
 							</MasonryLayoutItem>
 						{/each}
 					</MasonryLayout>
+				{:else if searchError && !hasAnyResults}
+					<EmptyState
+						icon={AlertTriangle}
+						title="搜索失败"
+						description={searchError}
+						actionText="重试"
+						onAction={retryActiveSearch}
+					/>
 				{:else if users.length === 0}
-					<Card class="rounded-3xl border border-border/60 bg-card/85 shadow-sm backdrop-blur-md">
-						<CardContent class="py-8 text-center text-muted-foreground">
-							未找到相关用户
-						</CardContent>
-					</Card>
+					<EmptyState
+						icon={Users}
+						title="未找到相关用户"
+						description={`换个关键词，或调整 “${activeLabel}” 的搜索方式后再试试。`}
+					/>
 				{:else}
 					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
 						{#each users as user (user.user.user_id)}
@@ -311,7 +409,6 @@
 				{/if}
 			</TabsContent>
 
-			<!-- Moments -->
 			<TabsContent value="moments" class="mt-6">
 				{#if isLoading}
 					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={20}>
@@ -321,12 +418,20 @@
 							</MasonryLayoutItem>
 						{/each}
 					</MasonryLayout>
+				{:else if searchError && !hasAnyResults}
+					<EmptyState
+						icon={AlertTriangle}
+						title="搜索失败"
+						description={searchError}
+						actionText="重试"
+						onAction={retryActiveSearch}
+					/>
 				{:else if moments.length === 0}
-					<Card class="rounded-3xl border border-border/60 bg-card/85 shadow-sm backdrop-blur-md">
-						<CardContent class="py-8 text-center text-muted-foreground">
-							未找到相关瞬间
-						</CardContent>
-					</Card>
+					<EmptyState
+						icon={Image}
+						title="未找到相关瞬间"
+						description={`当前没有与 “${activeLabel}” 匹配的动态内容。`}
+					/>
 				{:else}
 					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={20}>
 						{#each moments as moment (moment.moment_id)}
@@ -341,7 +446,6 @@
 				{/if}
 			</TabsContent>
 
-			<!-- Groups -->
 			<TabsContent value="groups" class="mt-6">
 				{#if isLoading}
 					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
@@ -351,12 +455,20 @@
 							</MasonryLayoutItem>
 						{/each}
 					</MasonryLayout>
+				{:else if searchError && !hasAnyResults}
+					<EmptyState
+						icon={AlertTriangle}
+						title="搜索失败"
+						description={searchError}
+						actionText="重试"
+						onAction={retryActiveSearch}
+					/>
 				{:else if groups.length === 0}
-					<Card class="rounded-3xl border border-border/60 bg-card/85 shadow-sm backdrop-blur-md">
-						<CardContent class="py-8 text-center text-muted-foreground">
-							未找到相关群组
-						</CardContent>
-					</Card>
+					<EmptyState
+						icon={UsersRound}
+						title="未找到相关群组"
+						description={`附近暂时没有与 “${activeLabel}” 相关的群组。`}
+					/>
 				{:else}
 					<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
 						{#each groups as group (group.group.group_id)}
@@ -376,9 +488,12 @@
 		</Tabs>
 	{:else}
 		<Card class="rounded-3xl border border-border/60 bg-linear-to-br from-primary/5 via-background to-primary/10 shadow-sm">
-			<CardContent class="flex flex-col items-center justify-center py-12">
-				<Search class="mb-4 h-12 w-12 text-muted-foreground" />
-				<p class="text-muted-foreground">输入关键词开始搜索</p>
+			<CardContent class="flex flex-col items-center justify-center gap-3 py-12 text-center">
+				<Search class="h-12 w-12 text-muted-foreground" />
+				<div class="space-y-1">
+					<p class="font-medium">输入关键词开始搜索</p>
+					<p class="text-sm text-muted-foreground">支持关键词搜索，也可以从标签链接直接进入对应结果页。</p>
+				</div>
 			</CardContent>
 		</Card>
 	{/if}
