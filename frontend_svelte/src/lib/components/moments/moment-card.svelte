@@ -91,16 +91,14 @@ let { moment, class: className = '' }: Props = $props();
 		favoriteAction.toggle();
 	}
 
-	// 使用 $derived 预计算分享数据
-	const shareData = $derived({
-		title: `${moment.user.nickname} 的瞬间`,
-		text: moment.description.slice(0, 100),
-		url: `${window.location.origin}/moments/${moment.moment_id}`
-	});
-
 	function handleShare(event: MouseEvent) {
 		event.preventDefault();
 		event.stopPropagation();
+		const shareData = {
+			title: `${moment.user.nickname} 的瞬间`,
+			text: moment.description.slice(0, 100),
+			url: `${window.location.origin}/moments/${moment.moment_id}`
+		};
 		if (navigator.share) {
 			navigator.share(shareData).catch((error) => {
 				// 用户取消分享（AbortError）不需要提示

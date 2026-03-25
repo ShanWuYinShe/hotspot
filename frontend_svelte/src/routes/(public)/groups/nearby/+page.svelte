@@ -1,8 +1,7 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { browser } from '$app/environment';
 	import { groupsService } from '$lib/api/services';
+	import { navigateToNearbyBackTarget } from '../../nearby-back';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
 	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import { useLocationAwareLoad } from '$lib/hooks/use-location-aware-load.svelte';
@@ -48,12 +47,7 @@
 	}
 
 	function handleBack() {
-		if (browser && window.history.length > 1) {
-			history.back();
-			return;
-		}
-
-		void goto(returnTarget);
+		navigateToNearbyBackTarget(typeof window === 'undefined' ? undefined : window, returnTarget);
 	}
 
 	function handleRetry() {
