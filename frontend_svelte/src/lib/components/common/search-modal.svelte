@@ -178,6 +178,10 @@
 		handleSearchNavigate(term);
 	}
 
+	function getRemoveRecentLabel(term: string): string {
+		return `删除搜索记录 ${term}`;
+	}
+
 	function closeModal() {
 		open = false;
 		onOpenChange?.(false);
@@ -322,31 +326,35 @@
 			<Dialog.Description>输入关键词，点击搜索进入结果页</Dialog.Description>
 		</Dialog.Header>
 
-		<div class="flex-1 overflow-y-auto min-h-0 py-4 px-1 space-y-4">
+		<div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-4">
 			<form
-				class="rounded-2xl border border-border/60 bg-background/65 p-2.5 shadow-sm"
+				class="flex items-center gap-2 rounded-2xl border border-border/60 bg-background/65 p-2.5 shadow-sm"
 				onsubmit={(event) => {
 					event.preventDefault();
 					handleSearch();
 				}}
 			>
 				<div class="relative flex-1">
-					<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+					<Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 					<Input
 						type="text"
 						placeholder="输入关键词开始搜索"
 						class="h-11 rounded-2xl border-border/60 bg-background/75 pl-9 pr-9"
 						bind:value={keyword}
 						autocomplete="off"
+						aria-label="搜索关键词"
 					/>
 					{#if keyword}
-						<button
+						<Button
 							type="button"
-							class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+							variant="ghost"
+							size="icon"
+							class="absolute right-1 top-1/2 h-9 w-9 -translate-y-1/2 rounded-xl text-muted-foreground hover:text-foreground"
 							onclick={clearSearch}
+							aria-label="清空搜索关键词"
 						>
 							<X class="h-4 w-4" />
-						</button>
+						</Button>
 					{/if}
 				</div>
 				<Button size="icon" class="h-11 w-11 rounded-2xl" aria-label="搜索" type="submit" disabled={!keyword.trim()}>
@@ -385,25 +393,26 @@
 										</div>
 										<div class="flex flex-wrap gap-2">
 											{#each recentMatches as term (term)}
-												<div class="group flex items-center gap-1 rounded-2xl bg-secondary/80 py-1 pl-3 pr-1 transition-all hover:scale-105 hover:bg-secondary hover:shadow-md">
-													<button
+												<div class="group flex items-center gap-1 rounded-2xl bg-secondary/80 py-1 pl-1 pr-1 shadow-sm transition-colors hover:bg-secondary hover:shadow-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+													<Button
 														type="button"
-														class="text-sm font-medium transition-colors hover:text-primary"
+														variant="ghost"
+														size="sm"
+														class="h-9 rounded-2xl px-3 text-sm font-medium text-foreground hover:text-primary"
 														onclick={() => handleSearchNavigate(term)}
 													>
 														{term}
-													</button>
-													<button
+													</Button>
+													<Button
 														type="button"
-														class="flex items-center justify-center rounded-xl p-1 opacity-60 transition-all [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 hover:scale-110 hover:bg-destructive/20 hover:text-destructive active:scale-95"
-														onclick={(e) => {
-															e.stopPropagation();
-															removeRecent(term);
-														}}
-														aria-label="删除"
+														variant="ghost"
+														size="icon"
+														class="h-9 w-9 rounded-xl text-muted-foreground opacity-80 transition-all hover:bg-destructive/20 hover:text-destructive [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-within:opacity-100"
+														onclick={() => removeRecent(term)}
+														aria-label={getRemoveRecentLabel(term)}
 													>
 														<X class="h-3.5 w-3.5" />
-													</button>
+													</Button>
 												</div>
 											{/each}
 										</div>
@@ -493,25 +502,26 @@
 							{:else}
 								<div class="flex flex-wrap gap-2">
 									{#each recentSearches as term (term)}
-										<div class="group flex items-center gap-1 rounded-2xl bg-secondary/80 py-1 pl-3 pr-1 transition-all hover:scale-105 hover:bg-secondary hover:shadow-md">
-											<button
+										<div class="group flex items-center gap-1 rounded-2xl bg-secondary/80 py-1 pl-1 pr-1 shadow-sm transition-colors hover:bg-secondary hover:shadow-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+											<Button
 												type="button"
-												class="text-sm font-medium transition-colors hover:text-primary"
+												variant="ghost"
+												size="sm"
+												class="h-9 rounded-2xl px-3 text-sm font-medium text-foreground hover:text-primary"
 												onclick={() => handleRecentClick(term)}
 											>
 												{term}
-											</button>
-											<button
+											</Button>
+											<Button
 												type="button"
-												class="flex items-center justify-center rounded-xl p-1 opacity-60 transition-all [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 hover:scale-110 hover:bg-destructive/20 hover:text-destructive active:scale-95"
-												onclick={(e) => {
-													e.stopPropagation();
-													removeRecent(term);
-												}}
-												aria-label="删除"
+												variant="ghost"
+												size="icon"
+												class="h-9 w-9 rounded-xl text-muted-foreground opacity-80 transition-all hover:bg-destructive/20 hover:text-destructive [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-within:opacity-100"
+												onclick={() => removeRecent(term)}
+												aria-label={getRemoveRecentLabel(term)}
 											>
 												<X class="h-3.5 w-3.5" />
-											</button>
+											</Button>
 										</div>
 									{/each}
 								</div>
@@ -533,20 +543,27 @@
 								</div>
 							{:else if trendingTags.length === 0}
 								<p class="text-sm text-muted-foreground">暂无热门标签</p>
-					{:else}
-						<div class="flex flex-wrap gap-2">
-							{#each trendingTags as tag (tag.name)}
-								<Badge
-									variant="secondary"
-									class="cursor-pointer rounded-2xl px-3 py-1.5 hover:bg-primary/10 hover:text-primary"
-									onclick={() => handleTagClick(tag.name)}
-								>
-									<Hash class="mr-1 h-3 w-3" />
-									{tag.name}
-								</Badge>
-							{/each}
-						</div>
-					{/if}
+							{:else}
+								<div class="flex flex-wrap gap-2">
+									{#each trendingTags as tag (tag.name)}
+										<Button
+											type="button"
+											variant="ghost"
+											class="rounded-2xl p-0 hover:bg-transparent"
+											onclick={() => handleTagClick(tag.name)}
+											aria-label={`搜索热门标签 ${tag.name}`}
+										>
+											<Badge
+												variant="secondary"
+												class="rounded-2xl px-3 py-1.5 hover:bg-primary/10 hover:text-primary"
+											>
+												<Hash class="mr-1 h-3 w-3" />
+												{tag.name}
+											</Badge>
+										</Button>
+									{/each}
+								</div>
+							{/if}
 						</CardContent>
 					</Card>
 				</div>

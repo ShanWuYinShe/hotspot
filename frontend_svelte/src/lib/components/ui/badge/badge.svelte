@@ -4,7 +4,7 @@
 	import { cn } from '$lib/utils';
 	import { badgeVariants, type Variant } from './index';
 
-	interface Props extends HTMLAttributes<HTMLDivElement> {
+	interface Props extends HTMLAttributes<HTMLElement> {
 		variant?: Variant;
 		children?: Snippet;
 		class?: string;
@@ -13,8 +13,8 @@
 	let { variant = 'default', class: className, children, ...restProps }: Props = $props();
 </script>
 
-<div class={cn(badgeVariants({ variant }), className)} {...restProps}>
+<span class={cn(badgeVariants({ variant }), className)} {...restProps}>
 	{#if children}
 		{@render children()}
 	{/if}
-</div>
+</span>

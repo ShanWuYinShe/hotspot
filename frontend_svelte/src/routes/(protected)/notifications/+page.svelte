@@ -7,7 +7,7 @@
 	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import type { NotificationItem, NotificationPayload } from '$lib/types/api';
 	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent } from '$lib/components/ui/card';
+	import { Card } from '$lib/components/ui/card';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import EmptyState from '$lib/components/common/empty-state.svelte';
 	import Bell from 'lucide-svelte/icons/bell';
@@ -303,88 +303,78 @@
 		<div class="space-y-2">
 			{#each pagination.items as item (item.notification_id)}
 				{@const Icon = getNotificationIcon(item.type)}
-				<Card
-					role="button"
-					tabindex={0}
-					class="cursor-pointer transition-colors hover:bg-accent/50"
-					onclick={() => handleNotificationClick(item)}
-					onkeydown={(event) => {
-						if (event.key === 'Enter' || event.key === ' ') {
-							event.preventDefault();
-							handleNotificationClick(item);
-						}
-					}}
-				>
-					<CardContent class="flex items-start gap-4 p-4">
-							<div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-muted">
-								<Icon class="h-5 w-5" />
-							</div>
-							<div class="min-w-0 flex-1">
-								<div class="flex items-start justify-between gap-2">
-									<div>
-										<span class="font-medium">{getNotificationTitle(item)}</span>
-										<span class="text-muted-foreground">
-											{getNotificationContent(item)}
-										</span>
-									</div>
-									{#if !item.is_read}
-										<div class="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary"></div>
-									{/if}
+				<Card class="overflow-hidden transition-colors hover:bg-accent/50">
+					<div class="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:gap-4">
+						<Button
+							type="button"
+							variant="ghost"
+							class="h-auto w-full justify-start rounded-2xl p-0 text-left hover:bg-transparent sm:flex-1"
+							onclick={() => handleNotificationClick(item)}
+						>
+							<div class="flex w-full items-start gap-4">
+								<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-muted">
+									<Icon class="h-5 w-5" />
 								</div>
-								<p class="mt-1 text-xs text-muted-foreground">
-									{formatTime(item.created_at)}
-								</p>
-								{#if canHandleGroupInvite(item)}
-									<div class="mt-3 flex flex-wrap gap-2">
-										<Button
-											size="sm"
-											disabled={isProcessing(item.notification_id)}
-											onclick={(event) => {
-												event.stopPropagation();
-												handleInviteAction(item, 'accept');
-											}}
-										>
-											接受
-										</Button>
-										<Button
-											variant="outline"
-											size="sm"
-											disabled={isProcessing(item.notification_id)}
-											onclick={(event) => {
-												event.stopPropagation();
-												handleInviteAction(item, 'reject');
-											}}
-										>
-											拒绝
-										</Button>
+								<div class="min-w-0 flex-1">
+									<div class="flex items-start justify-between gap-2">
+										<div>
+											<span class="font-medium">{getNotificationTitle(item)}</span>
+											<span class="text-muted-foreground">
+												{getNotificationContent(item)}
+											</span>
+										</div>
+										{#if !item.is_read}
+											<div class="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary"></div>
+										{/if}
 									</div>
-								{:else if canHandleGroupApplication(item)}
-									<div class="mt-3 flex flex-wrap gap-2">
-										<Button
-											size="sm"
-											disabled={isProcessing(item.notification_id)}
-											onclick={(event) => {
-												event.stopPropagation();
-												handleApplicationAction(item, 'approve');
-											}}
-										>
-											批准
-										</Button>
-										<Button
-											variant="outline"
-											size="sm"
-											disabled={isProcessing(item.notification_id)}
-											onclick={(event) => {
-												event.stopPropagation();
-												handleApplicationAction(item, 'reject');
-											}}
-										>
-											拒绝
-										</Button>
-									</div>
-								{/if}
+									<p class="mt-1 text-xs text-muted-foreground">
+										{formatTime(item.created_at)}
+									</p>
+								</div>
 							</div>
-					</CardContent>
+						</Button>
+						{#if canHandleGroupInvite(item)}
+							<div class="flex flex-wrap gap-2 sm:mt-0 sm:shrink-0">
+								<Button
+									type="button"
+									size="sm"
+									disabled={isProcessing(item.notification_id)}
+									onclick={() => handleInviteAction(item, 'accept')}
+								>
+									接受
+								</Button>
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									disabled={isProcessing(item.notification_id)}
+									onclick={() => handleInviteAction(item, 'reject')}
+								>
+									拒绝
+								</Button>
+							</div>
+						{:else if canHandleGroupApplication(item)}
+							<div class="flex flex-wrap gap-2 sm:mt-0 sm:shrink-0">
+								<Button
+									type="button"
+									size="sm"
+									disabled={isProcessing(item.notification_id)}
+									onclick={() => handleApplicationAction(item, 'approve')}
+								>
+									批准
+								</Button>
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									disabled={isProcessing(item.notification_id)}
+									onclick={() => handleApplicationAction(item, 'reject')}
+								>
+									拒绝
+								</Button>
+							</div>
+						{/if}
+					</div>
 				</Card>
 			{/each}
 		</div>
