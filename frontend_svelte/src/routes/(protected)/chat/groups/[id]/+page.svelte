@@ -2,6 +2,7 @@
 	import { dev } from '$app/environment';
 	import { page } from '$app/state';
 	import { onMount, tick, untrack } from 'svelte';
+	import { navigateToChatBackTarget } from '../../detail-back';
 	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { groupsService, groupMessagesService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
@@ -13,7 +14,7 @@
 	import { useBatchMarkRead } from '$lib/hooks/use-batch-mark-read.svelte';
 	import { createReconnectTracker, mergeMessagesByIdAndSentAt, resolveLatestVisibleMessageId } from '$lib/hooks/use-chat-realtime-sync';
 	import { useChatWsSubscription } from '$lib/hooks/use-chat-ws-subscription.svelte';
-	import { autofocus, useKeyboardFocus, KEYBOARD_DISMISS_EVENT, dismissActiveKeyboardFocus } from '$lib/attachments';
+	import { autofocus, useKeyboardFocus, KEYBOARD_DISMISS_EVENT } from '$lib/attachments';
 	import { Button } from '$lib/components/ui/button';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import { Skeleton } from '$lib/components/ui/skeleton';
@@ -50,6 +51,7 @@
 	const GROUP_TYPING_INDICATOR_TTL_MS = 4500;
 	const GROUP_TYPING_NAME_PREVIEW_LIMIT = 3;
 	const groupTypingTimers = new Map<string, ReturnType<typeof setTimeout>>();
+	let isHandlingBackNavigation = false;
 	const reconnectTracker = createReconnectTracker();
 	const wsSubscription = useChatWsSubscription();
 
@@ -372,11 +374,17 @@
 		selectedImage = null;
 	}
 
-	function handleBackClick() {
-		if (typeof window !== 'undefined' && dismissActiveKeyboardFocus(window)) {
+	async function handleBackClick() {
+		if (isHandlingBackNavigation) {
 			return;
 		}
-		history.back();
+
+		isHandlingBackNavigation = true;
+		try {
+			await navigateToChatBackTarget(typeof window === 'undefined' ? undefined : window);
+		} finally {
+			isHandlingBackNavigation = false;
+		}
 	}
 
 	async function init() {

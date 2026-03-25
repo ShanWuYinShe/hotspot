@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { onMount, untrack } from 'svelte';
+	import { navigateToChatBackTarget } from '../../detail-back';
 	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { privateChatsService, privateMessagesService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
@@ -14,7 +15,7 @@
 	import { useBatchMarkRead } from '$lib/hooks/use-batch-mark-read.svelte';
 	import { createReconnectTracker, mergeMessagesByIdAndSentAt, resolveLatestVisibleMessageId } from '$lib/hooks/use-chat-realtime-sync';
 	import { useChatWsSubscription } from '$lib/hooks/use-chat-ws-subscription.svelte';
-	import { autofocus, useKeyboardFocus, KEYBOARD_DISMISS_EVENT, dismissActiveKeyboardFocus } from '$lib/attachments';
+	import { autofocus, useKeyboardFocus, KEYBOARD_DISMISS_EVENT } from '$lib/attachments';
 	import { Button } from '$lib/components/ui/button';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import {
@@ -46,6 +47,7 @@
 	const MESSAGE_CONTENT_MAX = 5000;
 	const TYPING_INDICATOR_TTL_MS = 4500;
 	let otherUserTypingTimer: ReturnType<typeof setTimeout> | null = null;
+	let isHandlingBackNavigation = false;
 	const reconnectTracker = createReconnectTracker();
 	const wsSubscription = useChatWsSubscription();
 
@@ -188,11 +190,17 @@
 		return message.sender.user_id === authStore.currentUserId;
 	}
 
-	function handleBackClick() {
-		if (typeof window !== 'undefined' && dismissActiveKeyboardFocus(window)) {
+	async function handleBackClick() {
+		if (isHandlingBackNavigation) {
 			return;
 		}
-		history.back();
+
+		isHandlingBackNavigation = true;
+		try {
+			await navigateToChatBackTarget(typeof window === 'undefined' ? undefined : window);
+		} finally {
+			isHandlingBackNavigation = false;
+		}
 	}
 
 	/**
