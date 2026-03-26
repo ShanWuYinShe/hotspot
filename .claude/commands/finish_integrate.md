@@ -20,7 +20,7 @@ $ARGUMENTS
 6. 读取仓库根 `tmp/claude/integrations/<integration-id>.json`，同步校验 `baseline_main_sha`、`verify_status`、`review_status`、`gate_status`。
 7. 必须调用 `integration-review-gate` subagent 复核当前 gate 结论，并在最终输出中复述其 `## 结论`、`## Baseline`、`## 阻塞项`、`## 建议下一步`。
 8. 通过共享脚本 `.claude/scripts/integration_meta.py` 将最终 gate 结果回写到 integration 元信息中的 `gate_status`、`review_status`、`gate_summary`、`review_summary` 与 `updated_at`。
-9. 若结论为 `ready to sync`，则下一步应进入 `/sync_back_main` 按线性方式同步回主目录本地 `main`；sync-back 完成后先 `ExitWorktree`，再回到主目录 cleanup。只有在基线过期、对象归属不明或存在未确认丢弃动作时，才停下来说明阻塞项；不要 push。
+9. 若结论为 `ready to sync`，则下一步应进入 `/sync_back_main`。只有在基线过期、对象归属不明或存在未确认丢弃动作时，才停下来说明阻塞项；不要 push。
 
 结束时请输出：
 

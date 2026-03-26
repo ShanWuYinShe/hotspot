@@ -8,7 +8,7 @@ allowed-tools: Bash(git status:*), Bash(git branch:*), Bash(git rev-parse:*), Ba
 
 $ARGUMENTS
 
-目标不是直接 merge，而是仅在“同一任务已拆分成多 agent + 多 worktree 并行开发”的前提下，从主目录最新本地 `main HEAD` 新建一个临时 integration worktree，把本次待集成的 feature 成果集中进去，完成冲突解决、验证、review 和线性化准备；初始化完成后，本轮 integration runtime metadata 应处于 `pending`，后续再推进到 `ready_to_sync`、`blocked` 或 `must_refresh`。
+该命令只负责 integration 准备态：在“同一任务已拆分成多 agent + 多 worktree 并行开发”的前提下，从主目录最新本地 `main HEAD` 新建一个临时 integration worktree，把待集成的 feature 成果 replay 进去，并初始化本轮 integration metadata。后续验证交给 `/verify_integrate`，最终 gate 判定交给 `/finish_integrate`。
 
 执行要求：
 
@@ -19,9 +19,8 @@ $ARGUMENTS
 5. 在列出本轮纳入项与进入 replay 前，先调用 `local-integration-playbook` subagent 校准当前阶段、边界、风险点与推荐命令，并在输出中复述其 `## 当前阶段`、`## 风险点`、`## 推荐命令`。
 6. 从主目录当前最新本地 `main HEAD` 创建新的临时 integration worktree。
 7. 通过共享脚本 `.claude/scripts/integration_meta.py` 初始化本轮 integration 元信息，并写入仓库根 `tmp/claude/integrations/<integration-id>.json`；至少记录：`integration_id`、`baseline_main_sha`、`integration_branch`、`integration_worktree_path`、`planned_features`、`verify_status`、`review_status`、`gate_status`、`created_at`、`updated_at`。
-8. 将各 ready feature 的成果按顺序 cherry-pick / replay 到 integration worktree；`git cherry-pick` 仅用于 integration replay，不作为单 worktree 回主目录本地 `main` 的默认方式。
-9. 完成 replay 与冲突处理后停止在 integration 准备态；后续验证交给 `/verify_integrate`，最终 gate 判定交给 `/finish_integrate`。
-10. cleanup 只能在 sync-back 完成并 `ExitWorktree` 之后，于主目录执行；不要 push。
+8. 将各 ready feature 的成果按顺序 cherry-pick / replay 到 integration worktree；`git cherry-pick` 仅用于 integration replay。
+9. 完成 replay 与冲突处理后停止在 integration 准备态；不要 push。
 
 结束时请输出：
 

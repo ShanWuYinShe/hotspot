@@ -29,14 +29,13 @@ HotSpot 是一个多端 monorepo：
 - 所有实现、验证和构建都在 worktree 中完成；需要本地分支时，也在对应 worktree 中使用。
 - 新 worktree 默认从主目录本地 `main` 的当前 HEAD 创建，而不是从远程分支 HEAD 创建。
 - 默认每个会话只操作自己创建或明确接管的 worktree / branch；除非用户明确指定，不要处理其他会话对象。
-- Claude Code 默认工作在黑盒式白名单边界内：只直接执行代码更新相关的安全操作、必要的本地 git / worktree 操作，以及通过 `deploy/` 标准脚本触发的验证/预演/交付入口；不要直接操作宿主环境中的其他能力。主目录 `main`、远程状态、共享配置与历史改写继续保守。
-- 当主目录处于本地 `main + clean`、操作对象属于当前会话且动作遵循本仓库定义的本地流程时，Claude 应默认自动推进本地闭环：创建 worktree、开发、通过 `deploy/` 标准入口验证、review、单 worktree 结果线性同步回主目录本地 `main`，或完成 integration 后同步回主目录本地 `main`；sync-back 完成后先 `ExitWorktree`，再回主目录 cleanup。只有越过共享边界、涉及其他会话对象或需要丢弃未确认改动时才暂停确认。
+- 当主目录处于本地 `main + clean`、操作对象属于当前会话且动作遵循本仓库定义的本地流程时，Claude 应默认自动推进本地闭环：创建 worktree、开发、通过 `deploy/` 标准入口验证、review，并按本仓库定义的线性方式同步回主目录本地 `main`；只有越过共享边界、涉及其他会话对象或需要丢弃未确认改动时才暂停确认。
 - 复杂任务先规划；只有当子任务边界清晰且文件集相对独立时才并行。
 - 每个 feature worktree 先独立完成实现、自检和验证；只有当同一任务被拆分成多个 agent + 多个 worktree 并行开发时，才需要额外新建专门的 integration worktree 来统一汇总结果。
 - 若某任务只有单一 worktree 的结果，则直接在线性历史上完成，不要再额外新建 integration worktree；单 worktree 结果同步回主目录本地 `main` 时，默认优先使用 `rebase` 整理来源分支，再以 fast-forward 方式前进主目录本地 `main`，而不是默认使用 `git cherry-pick`。
 - integration worktree 只负责汇总、冲突处理、补测、预演与交付准备，不承载新的大规模实现；其基线始终是主目录本地 `main` 的当前 HEAD，且最终应通过 `rebase + squash` 或等价线性整理方式收敛为一个 commit，再同步回主目录的本地主分支。
 - 本地集成结果通过后，再由用户决定是否同步到远程 `main`；PR 不是默认流程。
-- 本轮完成后，删除已完成的 feature worktree / branch 与 integration worktree；cleanup 只能在 sync-back 完成、`ExitWorktree` 返回主目录之后执行。删除本会话管理的 worktree 时，默认同步删除其对应非主分支 branch，让主目录继续保持 `main + clean`。
+- 本轮完成后，删除已完成的 feature worktree / branch 与 integration worktree；删除本会话管理的 worktree 时，默认同步删除其对应非主分支 branch，让主目录继续保持 `main + clean`。若 `git branch -d` 仅因未合到远程 tracking branch 而拒绝，但已确认结果线性同步回主目录本地 `main`，则可继续使用 `git branch -D` 完成回收。
 
 ## 质量门顺序
 - 默认顺序：`plan -> task list -> implement -> verify -> simplify -> strict review -> commit -> integrate -> verify -> preview/release -> cleanup`
@@ -58,19 +57,16 @@ HotSpot 是一个多端 monorepo：
 
 ## 风险边界
 ### 可直接执行
-- 读取文件、搜索代码、编辑仓库内已有文件。
 - 在专用 worktree 中完成实现、验证、代码收敛与 review。
 - 运行标准 `deploy/` 本地流程，包括 `verify`、`preview`、`release` 以及 `deploy/` 管理的本地清理脚本。
-- 开发/测试/preview 过程中涉及的数据、数据库、volume、缓存与临时产物的准备和清理语义统一由 `deploy/` 脚本负责；Claude 侧不再单独为这些本地数据语义重复加限制。
 
 ### 需要先确认
 - 大量文件删除、批量重命名、跨目录大改。
 - 修改 `deploy/` 脚本、CI/CD、数据库 migration、共享 `.claude/settings.json`。
-- `git fetch`、`git pull`、`git merge`、`git push`。
 - 其他会话对象、状态不明对象，或需要丢弃未确认改动的 branch / worktree 清理与重置操作。
 
 ### 高风险
-- `git reset --hard`、`git clean`、`git branch -D`、任何 `--force` 推送或历史改写。
+- `git reset --hard`、`git clean`、任何 `--force` 推送或历史改写。
 - 删除仍有未合并改动的 branch / worktree。
 - 破坏性远端 deploy / 运维动作。
 

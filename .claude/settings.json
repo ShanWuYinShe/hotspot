@@ -22,6 +22,7 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git branch -d:*)",
+      "Bash(git branch -D:*)",
       "Bash(git rebase:*)",
       "Bash(git cherry-pick:*)",
       "Bash(git merge --ff-only:*)",
@@ -46,7 +47,6 @@
       "Bash(git push:*)",
       "Bash(git reset --hard:*)",
       "Bash(git clean:*)",
-      "Bash(git branch -D:*)",
       "Bash(*--force*)"
     ]
   }

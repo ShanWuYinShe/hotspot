@@ -8,7 +8,7 @@ allowed-tools: Bash(git status:*), Bash(git branch:*), Bash(git rev-parse:*), Ba
 
 $ARGUMENTS
 
-目标不是在旧 integration worktree 上继续修补，也不是 merge 最新 `main`，而是仅在当前任务确实属于多 agent + 多 worktree 并行开发汇总时，基于主目录当前最新本地 `main HEAD` 重新建立 integration 基线，并重新 replay 本次待集成的 feature 成果。
+该命令只负责 integration 基线刷新：当旧 integration 基线过期时，基于主目录当前最新本地 `main HEAD` 重新建立 integration worktree，并重新 replay 本次待集成的 feature 成果。后续验证交给 `/verify_integrate`，最终 gate 判定交给 `/finish_integrate`。
 
 执行要求：
 
@@ -19,9 +19,8 @@ $ARGUMENTS
 5. 停止继续在旧 integration worktree 上 edit / verify / review / commit，不要 merge 最新 `main`。
 6. 从主目录当前最新本地 `main HEAD` 创建新的临时 integration worktree。
 7. 通过共享脚本 `.claude/scripts/integration_meta.py` 重建或更新仓库根 `tmp/claude/integrations/<integration-id>.json`，刷新 `baseline_main_sha`、`integration_branch`、`integration_worktree_path`、`planned_features`、`source_integration_id` 与 `updated_at`。
-8. 重新将本轮 feature 成果按顺序 cherry-pick / replay 到新的 integration worktree；`git cherry-pick` 仅用于 integration replay，不作为单 worktree 回主目录本地 `main` 的默认方式。冲突只在新的 integration worktree 中解决。
-9. refresh 完成后停止在新的 integration 准备态；后续验证交给 `/verify_integrate`，最终 gate 判定交给 `/finish_integrate`。
-10. cleanup 只能在 sync-back 完成并 `ExitWorktree` 之后，于主目录执行；不要 push。
+8. 重新将本轮 feature 成果按顺序 cherry-pick / replay 到新的 integration worktree；`git cherry-pick` 仅用于 integration replay。冲突只在新的 integration worktree 中解决。
+9. refresh 完成后停止在新的 integration 准备态；不要 push。
 
 结束时请输出：
 
