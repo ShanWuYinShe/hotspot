@@ -1766,7 +1766,7 @@
     });
 </script>
 
-<div bind:this={modalRoot}>
+<div>
     <Dialog.Root bind:open onOpenChange={setOpenState}>
         <Dialog.Content
             class={`flex h-[90dvh] max-h-[90dvh] flex-col p-0 transition-all duration-200 ease-out sm:flex-row sm:gap-4 select-none ${
