@@ -52,7 +52,7 @@ func (r *PostgresRepository) SearchAnnouncements(ctx context.Context, filter Ann
 	defer rows.Close()
 	items := make([]AnnouncementRecord, 0, limit+1)
 	for rows.Next() {
-		item, err := scanAnnouncement(rows, false)
+		item, err := scanAnnouncement(rows, true)
 		if err != nil {
 			return AnnouncementPage{}, err
 		}

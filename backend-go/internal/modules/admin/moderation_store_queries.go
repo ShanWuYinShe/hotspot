@@ -23,4 +23,8 @@ SET blocked_at = EXCLUDED.blocked_at`
 	queryDeleteMomentTagAssignments = `
 DELETE FROM moment_tags
 WHERE tag_name = $1`
+
+	queryTagDeleteState = `
+SELECT EXISTS(SELECT 1 FROM admin_blocked_tags WHERE name = $1) AS is_blocked,
+       EXISTS(SELECT 1 FROM moment_tags WHERE tag_name = $1) AS has_moment_refs`
 )

@@ -574,7 +574,7 @@ func (h *Handler) DeleteTag(w http.ResponseWriter, r *http.Request) {
 		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
 		return
 	}
-	apiErr, err := h.service.DeleteTag(r.Context(), req.Name)
+	apiErr, err := h.service.DeleteTag(withRequest(r.Context(), r), req.Name)
 	if err != nil {
 		h.writeUnavailable(w)
 		return
@@ -614,8 +614,9 @@ func (h *Handler) CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
 		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
 		return
 	}
+	ctx := withRequest(r.Context(), r)
 	idempotency.ReplayOrStore(w, r, "admin/announcements/create", func() httpx.ApiResponse[AnnouncementCreated] {
-		payload, apiErr, err := h.service.CreateAnnouncement(r.Context(), req)
+		payload, apiErr, err := h.service.CreateAnnouncement(ctx, req)
 		if err != nil {
 			return httpx.ApiResponse[AnnouncementCreated]{Code: 10600, Message: "服务暂时不可用"}
 		}
@@ -632,7 +633,7 @@ func (h *Handler) UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
 		return
 	}
-	apiErr, err := h.service.UpdateAnnouncement(r.Context(), req)
+	apiErr, err := h.service.UpdateAnnouncement(withRequest(r.Context(), r), req)
 	if err != nil {
 		h.writeUnavailable(w)
 		return
@@ -650,7 +651,7 @@ func (h *Handler) DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {
 		h.writeAPIError(w, httpx.InvalidRequest("参数错误"))
 		return
 	}
-	apiErr, err := h.service.DeleteAnnouncement(r.Context(), req.AnnouncementID)
+	apiErr, err := h.service.DeleteAnnouncement(withRequest(r.Context(), r), req.AnnouncementID)
 	if err != nil {
 		h.writeUnavailable(w)
 		return

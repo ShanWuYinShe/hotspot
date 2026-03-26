@@ -39,13 +39,17 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		return MomentItem{}, err
 	}
 	tags := normalizeMomentTags(req.Tags)
+	allowedTags, err := filterAllowedMomentTags(ctx, queryable, tags)
+	if err != nil {
+		return MomentItem{}, err
+	}
 	if err := insertMomentTags(ctx, queryable, momentID, tags, now); err != nil {
 		return MomentItem{}, err
 	}
 	return MomentItem{
 		MomentID:      momentID,
 		Description:   req.Description,
-		Tags:          tags,
+		Tags:          allowedTags,
 		CreatedAt:     createdAt,
 		LikesCount:    0,
 		CommentsCount: 0,

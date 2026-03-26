@@ -261,19 +261,25 @@ type AuditTargetType string
 type AuditDetails map[string]any
 
 const (
+	AuditActionAnnouncementCreate AuditAction = "announcement.create"
+	AuditActionAnnouncementUpdate AuditAction = "announcement.update"
+	AuditActionAnnouncementDelete AuditAction = "announcement.delete"
 	AuditActionRoleCreate         AuditAction = "role.create"
 	AuditActionRoleUpdate         AuditAction = "role.update"
 	AuditActionRoleDelete         AuditAction = "role.delete"
 	AuditActionRoleSetPermissions AuditAction = "role.set_permissions"
 	AuditActionAdminGrant         AuditAction = "admin.grant"
 	AuditActionAdminRevoke        AuditAction = "admin.revoke"
+	AuditActionTagDelete          AuditAction = "tag.delete"
 	AuditActionConfigUpdate       AuditAction = "config.update"
 )
 
 const (
-	AuditTargetTypeRole   AuditTargetType = "role"
-	AuditTargetTypeAdmin  AuditTargetType = "admin"
-	AuditTargetTypeConfig AuditTargetType = "config"
+	AuditTargetTypeAnnouncement AuditTargetType = "announcement"
+	AuditTargetTypeRole         AuditTargetType = "role"
+	AuditTargetTypeAdmin        AuditTargetType = "admin"
+	AuditTargetTypeTag          AuditTargetType = "tag"
+	AuditTargetTypeConfig       AuditTargetType = "config"
 )
 
 type AuditLogItem struct {

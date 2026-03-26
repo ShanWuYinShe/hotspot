@@ -2,7 +2,6 @@ package admin
 
 import (
 	"context"
-	"errors"
 	"sort"
 	"strings"
 	"sync"
@@ -14,6 +13,7 @@ import (
 type InMemoryModerationStore struct {
 	mu            sync.RWMutex
 	tags          map[string]TagRecord
+	blockedTags   map[string]struct{}
 	announcements map[string]systemmodule.AnnouncementRecord
 }
 
@@ -24,6 +24,7 @@ func NewInMemoryModerationStore() *InMemoryModerationStore {
 			"hotspot": {Name: "hotspot", UsageCount: 3, CreatedAt: now},
 			"travel":  {Name: "travel", UsageCount: 2, CreatedAt: now.Add(-time.Hour)},
 		},
+		blockedTags:   make(map[string]struct{}),
 		announcements: make(map[string]systemmodule.AnnouncementRecord),
 	}
 }
@@ -66,11 +67,31 @@ func (s *InMemoryModerationStore) SearchTags(_ context.Context, filter TagSearch
 	return page, nil
 }
 
+func (s *InMemoryModerationStore) GetTagDeleteState(_ context.Context, name string) (bool, bool, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	tagName := normalizeTagName(name)
+	_, isBlocked := s.blockedTags[tagName]
+	_, hasRefs := s.tags[tagName]
+	return isBlocked, hasRefs, nil
+}
+
 func (s *InMemoryModerationStore) DeleteTag(_ context.Context, name string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	delete(s.tags, normalizeTagName(name))
-	return nil
+	tagName := normalizeTagName(name)
+	if tagName == "" {
+		return errTagNotFound
+	}
+	if _, ok := s.tags[tagName]; ok {
+		delete(s.tags, tagName)
+		s.blockedTags[tagName] = struct{}{}
+		return nil
+	}
+	if _, ok := s.blockedTags[tagName]; ok {
+		return nil
+	}
+	return errTagNotFound
 }
 
 func (s *InMemoryModerationStore) SearchAnnouncements(_ context.Context, filter systemmodule.AnnouncementSearchFilter) (systemmodule.AnnouncementPage, error) {
@@ -78,9 +99,6 @@ func (s *InMemoryModerationStore) SearchAnnouncements(_ context.Context, filter 
 	defer s.mu.RUnlock()
 	items := make([]systemmodule.AnnouncementRecord, 0, len(s.announcements))
 	for _, item := range s.announcements {
-		if item.IsDeleted() {
-			continue
-		}
 		if filter.Severity != "" && item.Severity != filter.Severity {
 			continue
 		}
@@ -113,6 +131,16 @@ func (s *InMemoryModerationStore) SearchAnnouncements(_ context.Context, filter 
 	return page, nil
 }
 
+func (s *InMemoryModerationStore) GetAnnouncement(_ context.Context, announcementID string) (systemmodule.AnnouncementRecord, bool, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	item, ok := s.announcements[announcementID]
+	if !ok {
+		return systemmodule.AnnouncementRecord{}, false, nil
+	}
+	return item, true, nil
+}
+
 func (s *InMemoryModerationStore) CreateAnnouncement(_ context.Context, input systemmodule.AnnouncementCreateInput) (systemmodule.AnnouncementRecord, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -141,7 +169,7 @@ func (s *InMemoryModerationStore) UpdateAnnouncement(_ context.Context, input sy
 	defer s.mu.Unlock()
 	item, ok := s.announcements[input.AnnouncementID]
 	if !ok || item.IsDeleted() {
-		return systemmodule.AnnouncementRecord{}, errors.New("announcement not found")
+		return systemmodule.AnnouncementRecord{}, systemmodule.ErrAnnouncementNotFound()
 	}
 	if input.Title != nil {
 		item.Title = *input.Title
@@ -164,7 +192,7 @@ func (s *InMemoryModerationStore) DeleteAnnouncement(_ context.Context, announce
 	defer s.mu.Unlock()
 	item, ok := s.announcements[announcementID]
 	if !ok {
-		return errors.New("announcement not found")
+		return systemmodule.ErrAnnouncementNotFound()
 	}
 	if item.IsDeleted() {
 		return nil

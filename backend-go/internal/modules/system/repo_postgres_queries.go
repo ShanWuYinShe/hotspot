@@ -32,11 +32,11 @@ SELECT sa.announcement_id,
        COALESCE(u.avatar_url, ''),
        sa.send_push,
        sa.push_sent_at,
-       sa.view_count
+       sa.view_count,
+       sa.deleted_at
 FROM system_announcements sa
 LEFT JOIN users u ON u.user_id = sa.created_by_user_id
-WHERE sa.deleted_at IS NULL
-  AND ($1 = '' OR sa.severity = $1)
+WHERE ($1 = '' OR sa.severity = $1)
   AND ($2::timestamptz IS NULL OR sa.created_at < $2 OR (sa.created_at = $2 AND sa.announcement_id < $3))
 ORDER BY sa.created_at DESC, sa.announcement_id DESC
 LIMIT $4`

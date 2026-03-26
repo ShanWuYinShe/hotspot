@@ -68,6 +68,16 @@ func (r *InMemoryRepository) SearchAnnouncements(_ context.Context, filter Annou
 	return page, nil
 }
 
+func (r *InMemoryRepository) GetAnnouncement(_ context.Context, announcementID string) (AnnouncementRecord, bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	item, ok := r.announcements[announcementID]
+	if !ok {
+		return AnnouncementRecord{}, false, nil
+	}
+	return cloneAnnouncementRecord(item), true, nil
+}
+
 func (r *InMemoryRepository) CreateAnnouncement(_ context.Context, input AnnouncementCreateInput) (AnnouncementRecord, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

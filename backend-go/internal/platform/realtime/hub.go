@@ -128,3 +128,15 @@ func (h *Hub) BroadcastToGroup(groupID string, event Event) {
 		_ = sink.Send(event)
 	}
 }
+
+func (h *Hub) BroadcastToAll(event Event) {
+	h.mu.RLock()
+	sinks := make([]FanoutSink, 0, len(h.bySession))
+	for _, sessionSinks := range h.bySession {
+		sinks = append(sinks, sessionSinks...)
+	}
+	h.mu.RUnlock()
+	for _, sink := range sinks {
+		_ = sink.Send(event)
+	}
+}

@@ -22,4 +22,12 @@ func TestHubBroadcasts(t *testing.T) {
 	if len(groupSink.events) != 1 {
 		t.Fatalf("unexpected group events: %#v", groupSink.events)
 	}
+	allUserSink := &sinkStub{}
+	allSecondSink := &sinkStub{}
+	hub.RegisterUser("user_alice", "sess_2", allUserSink)
+	hub.RegisterUser("user_bob", "sess_3", allSecondSink)
+	hub.BroadcastToAll(Event{Type: "SystemAnnouncement"})
+	if len(allUserSink.events) != 1 || len(allSecondSink.events) != 1 {
+		t.Fatalf("unexpected broadcast-all events: %#v %#v", allUserSink.events, allSecondSink.events)
+	}
 }

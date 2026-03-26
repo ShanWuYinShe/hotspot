@@ -21,6 +21,13 @@ INSERT INTO moment_tags (moment_id, tag_name, created_at)
 VALUES ($1, $2, $3)
 ON CONFLICT (moment_id, tag_name) DO NOTHING`
 
+	queryFilterAllowedMomentTags = `
+SELECT candidate.tag_name
+FROM unnest($1::text[]) AS candidate(tag_name)
+LEFT JOIN admin_blocked_tags bt ON bt.name = candidate.tag_name
+WHERE bt.name IS NULL
+ORDER BY candidate.tag_name ASC`
+
 	queryListMomentTagsByMomentID = `
 SELECT tag_name
 FROM moment_tags

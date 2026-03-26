@@ -32,6 +32,10 @@ func (r *PersistenceRepository) SearchAnnouncements(ctx context.Context, filter 
 	return r.impl.SearchAnnouncements(ctx, filter)
 }
 
+func (r *PersistenceRepository) GetAnnouncement(ctx context.Context, announcementID string) (AnnouncementRecord, bool, error) {
+	return r.impl.GetAnnouncement(ctx, announcementID)
+}
+
 func (r *PersistenceRepository) CreateAnnouncement(ctx context.Context, input AnnouncementCreateInput) (AnnouncementRecord, error) {
 	return r.impl.CreateAnnouncement(ctx, input)
 }

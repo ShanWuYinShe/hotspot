@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"hotspot/backend-go/internal/platform/appconfig"
+	"hotspot/backend-go/internal/platform/persistence"
 )
 
 type Service struct {
@@ -13,6 +14,10 @@ type Service struct {
 
 func NewService(appConfig appconfig.Source) *Service {
 	return NewServiceWithDeps(NewInMemoryRepository(), NewAppConfigProvider(appConfig))
+}
+
+func NewServiceWithFactory(factory *persistence.Factory, appConfig appconfig.Source) *Service {
+	return NewServiceWithDeps(NewPersistenceRepository(factory), NewAppConfigProvider(appConfig))
 }
 
 func NewServiceWithDeps(repo Repository, provider Provider) *Service {

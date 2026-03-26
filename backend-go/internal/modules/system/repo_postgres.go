@@ -33,17 +33,29 @@ func (r *PostgresRepository) queryable() (persistence.QueryableDB, bool) {
 }
 
 func (r *PostgresRepository) GetMeta(ctx context.Context) ApiVersionMeta {
-	if repo, ok := r.fallback.(interface{ GetMeta(context.Context) ApiVersionMeta }); ok {
+	if repo, ok := r.fallback.(interface {
+		GetMeta(context.Context) ApiVersionMeta
+	}); ok {
 		return repo.GetMeta(ctx)
 	}
 	return ApiVersionMeta{Version: "v1", Status: ApiVersionStatusActive}
 }
 
 func (r *PostgresRepository) Health(ctx context.Context) (int, string, *HealthStatus) {
-	if repo, ok := r.fallback.(interface{ Health(context.Context) (int, string, *HealthStatus) }); ok {
+	if repo, ok := r.fallback.(interface {
+		Health(context.Context) (int, string, *HealthStatus)
+	}); ok {
 		return repo.Health(ctx)
 	}
 	return 0, "", &HealthStatus{Status: SystemHealthHealthy, Timestamp: time.Now().UTC().Format(time.RFC3339)}
+}
+
+func (r *PostgresRepository) GetAnnouncement(ctx context.Context, announcementID string) (AnnouncementRecord, bool, error) {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.GetAnnouncement(ctx, announcementID)
+	}
+	return r.getAnnouncementByID(ctx, queryable, announcementID)
 }
 
 func (r *PostgresRepository) CreateAnnouncement(ctx context.Context, input AnnouncementCreateInput) (AnnouncementRecord, error) {

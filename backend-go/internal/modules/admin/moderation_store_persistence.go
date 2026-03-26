@@ -75,23 +75,53 @@ func (s *PersistenceModerationStore) SearchTags(ctx context.Context, filter TagS
 	return page, nil
 }
 
+func (s *PersistenceModerationStore) GetTagDeleteState(ctx context.Context, name string) (bool, bool, error) {
+	queryable, ok := s.queryable()
+	if !ok {
+		return s.memory.GetTagDeleteState(ctx, name)
+	}
+	tagName := normalizeTagName(name)
+	var isBlocked bool
+	var hasMomentRefs bool
+	if err := queryable.QueryRow(ctx, queryTagDeleteState, tagName).Scan(&isBlocked, &hasMomentRefs); err != nil {
+		return false, false, err
+	}
+	return isBlocked, hasMomentRefs, nil
+}
+
 func (s *PersistenceModerationStore) DeleteTag(ctx context.Context, name string) error {
 	queryable, ok := s.queryable()
 	if !ok {
 		return s.memory.DeleteTag(ctx, name)
 	}
 	tagName := normalizeTagName(name)
+	isBlocked, hasMomentRefs, err := s.GetTagDeleteState(ctx, tagName)
+	if err != nil {
+		return err
+	}
+	if !isBlocked && !hasMomentRefs {
+		return errTagNotFound
+	}
+	if isBlocked && !hasMomentRefs {
+		return nil
+	}
 	if err := queryable.Exec(ctx, queryBlockTag, tagName, time.Now().UTC()); err != nil {
 		return err
 	}
-	if err := queryable.Exec(ctx, queryDeleteMomentTagAssignments, tagName); err != nil {
-		return err
+	if hasMomentRefs {
+		if err := queryable.Exec(ctx, queryDeleteMomentTagAssignments, tagName); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 func (s *PersistenceModerationStore) SearchAnnouncements(ctx context.Context, filter systemmodule.AnnouncementSearchFilter) (systemmodule.AnnouncementPage, error) {
 	return s.system.SearchAnnouncements(ctx, filter)
+}
+
+func (s *PersistenceModerationStore) GetAnnouncement(ctx context.Context, announcementID string) (systemmodule.AnnouncementRecord, bool, error) {
+	return s.system.GetAnnouncement(ctx, announcementID)
 }
 
 func (s *PersistenceModerationStore) CreateAnnouncement(ctx context.Context, input systemmodule.AnnouncementCreateInput) (systemmodule.AnnouncementRecord, error) {
@@ -129,6 +159,10 @@ func (a *inMemoryModerationStoreSystemAdapter) ListAnnouncements(ctx context.Con
 
 func (a *inMemoryModerationStoreSystemAdapter) SearchAnnouncements(ctx context.Context, filter systemmodule.AnnouncementSearchFilter) (systemmodule.AnnouncementPage, error) {
 	return a.repo.SearchAnnouncements(ctx, filter)
+}
+
+func (a *inMemoryModerationStoreSystemAdapter) GetAnnouncement(ctx context.Context, announcementID string) (systemmodule.AnnouncementRecord, bool, error) {
+	return a.repo.GetAnnouncement(ctx, announcementID)
 }
 
 func (a *inMemoryModerationStoreSystemAdapter) CreateAnnouncement(ctx context.Context, input systemmodule.AnnouncementCreateInput) (systemmodule.AnnouncementRecord, error) {

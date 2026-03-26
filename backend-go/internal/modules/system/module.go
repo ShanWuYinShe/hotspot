@@ -5,6 +5,7 @@ import (
 
 	"hotspot/backend-go/internal/platform/appconfig"
 	"hotspot/backend-go/internal/platform/idempotency"
+	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/ratelimit"
 	"hotspot/backend-go/internal/platform/resourceguard"
 )
@@ -13,8 +14,8 @@ type Module struct {
 	handler *Handler
 }
 
-func NewModule(source appconfig.Source) *Module {
-	service := NewService(source)
+func NewModule(factory *persistence.Factory, source appconfig.Source) *Module {
+	service := NewServiceWithFactory(factory, source)
 	return &Module{handler: NewHandler(service)}
 }
 

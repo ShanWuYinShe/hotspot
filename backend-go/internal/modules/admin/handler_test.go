@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"hotspot/backend-go/internal/modules/notifications"
+	systemmodule "hotspot/backend-go/internal/modules/system"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
@@ -34,10 +36,24 @@ func newTestModuleWithStore() (*Module, *InMemoryRepository) {
 	return NewModuleWithDeps(store, provider, nil, nil), store
 }
 
+func newTestModuleWithPushStore() (*Module, *InMemoryRepository) {
+	store := NewInMemoryRepository()
+	provider := NewAppConfigProvider(appconfig.NewStaticSource(config.Load()))
+	pushService := notifications.NewService()
+	return NewModuleWithDeps(store, provider, nil, pushService), store
+}
+
 func newTestHandlerWithStore() (*Handler, *InMemoryRepository) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
 	module, store := newTestModuleWithStore()
+	return module.handler, store
+}
+
+func newTestHandlerWithPushStore() (*Handler, *InMemoryRepository) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	module, store := newTestModuleWithPushStore()
 	return module.handler, store
 }
 
@@ -99,6 +115,8 @@ func TestAdminModerationRoutesAreMounted(t *testing.T) {
 		{name: "groups search", path: "/api/v1/admin/groups/search", body: `{"name":"hot","pagination":{"limit":10}}`},
 		{name: "groups open", path: "/api/v1/admin/groups/open_the_door", body: `{"group_id":"group_hotspot"}`},
 		{name: "reports search", path: "/api/v1/admin/reports/search", body: `{"status":"pending","pagination":{"limit":10}}`},
+		{name: "tags search", path: "/api/v1/admin/tags/search", body: `{"keyword":"hot","pagination":{"limit":10}}`},
+		{name: "announcements search", path: "/api/v1/admin/announcements/search", body: `{"pagination":{"limit":10}}`},
 	}
 
 	for _, tc := range tests {
@@ -580,5 +598,244 @@ func TestSearchReportsAndHandleReport(t *testing.T) {
 	}
 	if !foundHandleAudit {
 		t.Fatalf("unexpected audit logs: %#v", store.auditLogs)
+	}
+}
+
+func TestSearchTagsAndDeleteTag(t *testing.T) {
+	handler, store := newTestHandlerWithStore()
+
+	searchReq := adminContext(httptest.NewRequest(http.MethodPost, "/tags/search", strings.NewReader(`{"keyword":"hot","pagination":{"limit":10}}`)), "admin", true)
+	searchRR := httptest.NewRecorder()
+	handler.SearchTags(searchRR, searchReq)
+	searchResp := decodeResponse[PaginatedAdminTags](t, searchRR)
+	if searchResp.Code != 0 || searchResp.Data == nil || len(searchResp.Data.Items) != 1 || searchResp.Data.Items[0].Name != "hotspot" {
+		t.Fatalf("unexpected search response: %#v", searchResp)
+	}
+
+	deleteReq := adminContext(httptest.NewRequest(http.MethodPost, "/tags/delete", strings.NewReader(`{"name":"hotspot"}`)), "admin", true)
+	deleteRR := httptest.NewRecorder()
+	handler.DeleteTag(deleteRR, deleteReq)
+	deleteResp := decodeResponse[struct{}](t, deleteRR)
+	if deleteResp.Code != 0 {
+		t.Fatalf("unexpected delete response: %#v", deleteResp)
+	}
+
+	searchAfterReq := adminContext(httptest.NewRequest(http.MethodPost, "/tags/search", strings.NewReader(`{"keyword":"hot","pagination":{"limit":10}}`)), "admin", true)
+	searchAfterRR := httptest.NewRecorder()
+	handler.SearchTags(searchAfterRR, searchAfterReq)
+	searchAfterResp := decodeResponse[PaginatedAdminTags](t, searchAfterRR)
+	if searchAfterResp.Code != 0 || searchAfterResp.Data == nil || len(searchAfterResp.Data.Items) != 0 {
+		t.Fatalf("unexpected search-after-delete response: %#v", searchAfterResp)
+	}
+
+	deleteAgainReq := adminContext(httptest.NewRequest(http.MethodPost, "/tags/delete", strings.NewReader(`{"name":"hotspot"}`)), "admin", true)
+	deleteAgainRR := httptest.NewRecorder()
+	handler.DeleteTag(deleteAgainRR, deleteAgainReq)
+	deleteAgainResp := decodeResponse[struct{}](t, deleteAgainRR)
+	if deleteAgainResp.Code != 0 {
+		t.Fatalf("unexpected second delete response: %#v", deleteAgainResp)
+	}
+	missingReq := adminContext(httptest.NewRequest(http.MethodPost, "/tags/delete", strings.NewReader(`{"name":"missing"}`)), "admin", true)
+	missingRR := httptest.NewRecorder()
+	handler.DeleteTag(missingRR, missingReq)
+	missingResp := decodeResponse[struct{}](t, missingRR)
+	if missingResp.Code != 10300 || missingResp.Message != "标签不存在" {
+		t.Fatalf("unexpected missing delete response: %#v", missingResp)
+	}
+	foundTagDeleteAudit := false
+	tagDeleteAuditCount := 0
+	for _, entry := range store.auditLogs {
+		if entry.Action == AuditActionTagDelete {
+			tagDeleteAuditCount++
+			foundTagDeleteAudit = true
+			if entry.TargetType != AuditTargetTypeTag || entry.TargetID != "hotspot" {
+				t.Fatalf("unexpected tag delete audit target: %#v", entry)
+			}
+			if entry.Details["type"] != string(AuditActionTagDelete) || entry.Details["name"] != "hotspot" {
+				t.Fatalf("unexpected tag delete audit details: %#v", entry.Details)
+			}
+		}
+	}
+	if !foundTagDeleteAudit {
+		t.Fatalf("expected tag delete audit log, got %#v", store.auditLogs)
+	}
+	if tagDeleteAuditCount != 1 {
+		t.Fatalf("expected exactly one tag delete audit log, got %d %#v", tagDeleteAuditCount, store.auditLogs)
+	}
+}
+
+func TestCreateAnnouncementRequiresIdempotencyKey(t *testing.T) {
+	handler := newTestHandler()
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/create", strings.NewReader(`{"title":"维护通知","content":"今晚维护","severity":"warning"}`)), "admin", true)
+	rr := httptest.NewRecorder()
+
+	handler.CreateAnnouncement(rr, req)
+
+	resp := decodeResponse[AnnouncementCreated](t, rr)
+	if resp.Code != 22000 {
+		t.Fatalf("unexpected response: %#v", resp)
+	}
+}
+
+func TestSearchAnnouncementsCreateUpdateAndDelete(t *testing.T) {
+	handler, store := newTestHandlerWithPushStore()
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+	hub := realtime.DefaultHub()
+	adminSink := &sinkCapture{}
+	aliceSink := &sinkCapture{}
+	hub.RegisterUser("admin", "sess_admin_1", adminSink)
+	hub.RegisterUser("user_alice", "sess_user_alice_1", aliceSink)
+
+	createReq := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/create", strings.NewReader(`{"title":"维护通知","content":"今晚维护","severity":"warning","action_url":"https://example.com/maint","send_push":true}`)), "admin", true)
+	createReq.Header.Set("Idempotency-Key", "announce001abcd1234abcd1234abcd12")
+	createRR := httptest.NewRecorder()
+	handler.CreateAnnouncement(createRR, createReq)
+	createResp := decodeResponse[AnnouncementCreated](t, createRR)
+	if createResp.Code != 0 || createResp.Data == nil || createResp.Data.AnnouncementID == "" {
+		t.Fatalf("unexpected create response: %#v", createResp)
+	}
+	if len(adminSink.events) != 1 || len(aliceSink.events) != 1 {
+		t.Fatalf("unexpected announcement push events: %#v %#v", adminSink.events, aliceSink.events)
+	}
+	if adminSink.events[0].Type != "SystemAnnouncement" || aliceSink.events[0].Type != "SystemAnnouncement" {
+		t.Fatalf("unexpected announcement event types: %#v %#v", adminSink.events, aliceSink.events)
+	}
+	adminPayload, ok := adminSink.events[0].Payload.(systemmodule.SystemAnnouncementItem)
+	if !ok {
+		t.Fatalf("unexpected admin payload type: %#v", adminSink.events[0].Payload)
+	}
+	alicePayload, ok := aliceSink.events[0].Payload.(systemmodule.SystemAnnouncementItem)
+	if !ok {
+		t.Fatalf("unexpected alice payload type: %#v", aliceSink.events[0].Payload)
+	}
+	if adminPayload.AnnouncementID != createResp.Data.AnnouncementID || adminPayload.Title != "维护通知" || adminPayload.Content != "今晚维护" || adminPayload.Severity != AnnouncementSeverityWarning || adminPayload.ActionURL != "https://example.com/maint" {
+		t.Fatalf("unexpected admin payload: %#v", adminPayload)
+	}
+	if alicePayload != adminPayload {
+		t.Fatalf("expected broadcast payloads to match: %#v %#v", adminPayload, alicePayload)
+	}
+
+	searchReq := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/search", strings.NewReader(`{"severity":"warning","pagination":{"limit":10}}`)), "admin", true)
+	searchRR := httptest.NewRecorder()
+	handler.SearchAnnouncements(searchRR, searchReq)
+	searchResp := decodeResponse[PaginatedAdminAnnouncements](t, searchRR)
+	if searchResp.Code != 0 || searchResp.Data == nil || len(searchResp.Data.Items) != 1 || searchResp.Data.Items[0].AnnouncementID != createResp.Data.AnnouncementID {
+		t.Fatalf("unexpected search response: %#v", searchResp)
+	}
+
+	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/update", strings.NewReader(`{"announcement_id":"`+createResp.Data.AnnouncementID+`","title":"维护结束","content":"服务恢复","severity":"info","action_url":""}`)), "admin", true)
+	updateRR := httptest.NewRecorder()
+	handler.UpdateAnnouncement(updateRR, updateReq)
+	updateResp := decodeResponse[struct{}](t, updateRR)
+	if updateResp.Code != 0 {
+		t.Fatalf("unexpected update response: %#v", updateResp)
+	}
+
+	searchUpdatedReq := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/search", strings.NewReader(`{"severity":"info","pagination":{"limit":10}}`)), "admin", true)
+	searchUpdatedRR := httptest.NewRecorder()
+	handler.SearchAnnouncements(searchUpdatedRR, searchUpdatedReq)
+	searchUpdatedResp := decodeResponse[PaginatedAdminAnnouncements](t, searchUpdatedRR)
+	if searchUpdatedResp.Code != 0 || searchUpdatedResp.Data == nil || len(searchUpdatedResp.Data.Items) != 1 {
+		t.Fatalf("unexpected updated search response: %#v", searchUpdatedResp)
+	}
+	updated := searchUpdatedResp.Data.Items[0]
+	if updated.Title != "维护结束" || updated.Content != "服务恢复" || updated.ActionURL != "" {
+		t.Fatalf("unexpected updated item: %#v", updated)
+	}
+
+	deleteReq := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/delete", strings.NewReader(`{"announcement_id":"`+createResp.Data.AnnouncementID+`"}`)), "admin", true)
+	deleteRR := httptest.NewRecorder()
+	handler.DeleteAnnouncement(deleteRR, deleteReq)
+	deleteResp := decodeResponse[struct{}](t, deleteRR)
+	if deleteResp.Code != 0 {
+		t.Fatalf("unexpected delete response: %#v", deleteResp)
+	}
+	deleteAgainReq := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/delete", strings.NewReader(`{"announcement_id":"`+createResp.Data.AnnouncementID+`"}`)), "admin", true)
+	deleteAgainRR := httptest.NewRecorder()
+	handler.DeleteAnnouncement(deleteAgainRR, deleteAgainReq)
+	deleteAgainResp := decodeResponse[struct{}](t, deleteAgainRR)
+	if deleteAgainResp.Code != 0 {
+		t.Fatalf("unexpected second delete response: %#v", deleteAgainResp)
+	}
+
+	searchAfterDeleteReq := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/search", strings.NewReader(`{"pagination":{"limit":10}}`)), "admin", true)
+	searchAfterDeleteRR := httptest.NewRecorder()
+	handler.SearchAnnouncements(searchAfterDeleteRR, searchAfterDeleteReq)
+	searchAfterDeleteResp := decodeResponse[PaginatedAdminAnnouncements](t, searchAfterDeleteRR)
+	if searchAfterDeleteResp.Code != 0 || searchAfterDeleteResp.Data == nil || len(searchAfterDeleteResp.Data.Items) < 1 {
+		t.Fatalf("unexpected search-after-delete response: %#v", searchAfterDeleteResp)
+	}
+	var deleted AdminAnnouncementItem
+	foundDeleted := false
+	for _, item := range searchAfterDeleteResp.Data.Items {
+		if item.AnnouncementID == createResp.Data.AnnouncementID {
+			deleted = item
+			foundDeleted = true
+			break
+		}
+	}
+	if !foundDeleted {
+		t.Fatalf("expected deleted announcement in search results: %#v", searchAfterDeleteResp.Data.Items)
+	}
+	if deleted.AnnouncementID != createResp.Data.AnnouncementID || deleted.Title != "维护结束" {
+		t.Fatalf("unexpected deleted announcement search result: %#v", deleted)
+	}
+	foundCreateAudit := false
+	foundUpdateAudit := false
+	foundDeleteAudit := false
+	for _, entry := range store.auditLogs {
+		switch entry.Action {
+		case AuditActionAnnouncementCreate:
+			foundCreateAudit = true
+			if entry.TargetType != AuditTargetTypeAnnouncement || entry.TargetID != createResp.Data.AnnouncementID || entry.Details["title"] != "维护通知" {
+				t.Fatalf("unexpected announcement create audit: %#v", entry)
+			}
+		case AuditActionAnnouncementUpdate:
+			foundUpdateAudit = true
+			changedFields, ok := entry.Details["changed_fields"].([]string)
+			if !ok {
+				t.Fatalf("unexpected changed_fields type: %#v", entry.Details)
+			}
+			if entry.TargetType != AuditTargetTypeAnnouncement || entry.TargetID != createResp.Data.AnnouncementID || entry.Details["title"] != "维护结束" || !containsString(changedFields, "title") || !containsString(changedFields, "content") || !containsString(changedFields, "severity") || !containsString(changedFields, "action_url") {
+				t.Fatalf("unexpected announcement update audit: %#v", entry)
+			}
+		case AuditActionAnnouncementDelete:
+			foundDeleteAudit = true
+			if entry.TargetType != AuditTargetTypeAnnouncement || entry.TargetID != createResp.Data.AnnouncementID || entry.Details["title"] != "维护结束" {
+				t.Fatalf("unexpected announcement delete audit: %#v", entry)
+			}
+		}
+	}
+	if !foundCreateAudit || !foundUpdateAudit || !foundDeleteAudit {
+		t.Fatalf("missing announcement audit logs: %#v", store.auditLogs)
+	}
+	deleteAuditCount := 0
+	for _, entry := range store.auditLogs {
+		if entry.Action == AuditActionAnnouncementDelete {
+			deleteAuditCount++
+		}
+	}
+	if deleteAuditCount != 1 {
+		t.Fatalf("expected exactly one delete audit log, got %d %#v", deleteAuditCount, store.auditLogs)
+	}
+}
+
+func TestAnnouncementMutationsReturnNotFound(t *testing.T) {
+	handler := newTestHandler()
+
+	updateReq := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/update", strings.NewReader(`{"announcement_id":"missing","title":"维护结束"}`)), "admin", true)
+	updateRR := httptest.NewRecorder()
+	handler.UpdateAnnouncement(updateRR, updateReq)
+	updateResp := decodeResponse[struct{}](t, updateRR)
+	if updateResp.Code != 10300 || updateResp.Message != "公告不存在" {
+		t.Fatalf("unexpected update response: %#v", updateResp)
+	}
+
+	deleteReq := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/delete", strings.NewReader(`{"announcement_id":"missing"}`)), "admin", true)
+	deleteRR := httptest.NewRecorder()
+	handler.DeleteAnnouncement(deleteRR, deleteReq)
+	deleteResp := decodeResponse[struct{}](t, deleteRR)
+	if deleteResp.Code != 10300 || deleteResp.Message != "公告不存在" {
+		t.Fatalf("unexpected delete response: %#v", deleteResp)
 	}
 }

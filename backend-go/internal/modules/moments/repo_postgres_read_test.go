@@ -78,13 +78,14 @@ func (r *fallbackRepo) IncrementCommentCount(context.Context, string) error {
 
 type backendStub struct {
 	moments      map[string]MomentItem
+	blockedTags  map[string]struct{}
 	execErrs     map[string]error
 	queryErr     error
 	queryRowErrs map[string]error
 }
 
 func newBackendStub() *backendStub {
-	return &backendStub{moments: make(map[string]MomentItem), execErrs: make(map[string]error), queryRowErrs: make(map[string]error)}
+	return &backendStub{moments: make(map[string]MomentItem), blockedTags: make(map[string]struct{}), execErrs: make(map[string]error), queryRowErrs: make(map[string]error)}
 }
 
 func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
@@ -160,6 +161,16 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		rows := make([][]any, 0, len(items))
 		for _, item := range items {
 			rows = append(rows, []any{item.MomentID, item.User.UserID, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel})
+		}
+		return &rowsValues{rows: rows}, nil
+	case queryFilterAllowedMomentTags:
+		input := args[0].([]string)
+		rows := make([][]any, 0, len(input))
+		for _, tag := range input {
+			if _, blocked := b.blockedTags[tag]; blocked {
+				continue
+			}
+			rows = append(rows, []any{tag})
 		}
 		return &rowsValues{rows: rows}, nil
 	case queryListMomentTagsByMomentID:
@@ -294,6 +305,37 @@ func TestPostgresRepositoryIncrementCommentCountReturnsErrorOnExecFailure(t *tes
 	}
 	if backend.moments["moment_1"].CommentsCount != 0 {
 		t.Fatalf("unexpected comments count: %#v", backend.moments["moment_1"])
+	}
+	if fallback.used {
+		t.Fatal("unexpected fallback usage")
+	}
+}
+
+func TestPostgresRepositoryCreateFiltersBlockedTags(t *testing.T) {
+	backend := newBackendStub()
+	backend.blockedTags["blocked"] = struct{}{}
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	fallback := &fallbackRepo{}
+	repo := NewPostgresRepository(factory, fallback)
+	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Tags: []string{"travel", "blocked", "hotspot"}, Location: Location{LocationName: "南天门"}})
+	if err != nil {
+		t.Fatalf("unexpected create error: %v", err)
+	}
+	if len(created.Tags) != 2 || created.Tags[0] != "travel" || created.Tags[1] != "hotspot" {
+		t.Fatalf("unexpected filtered tags: %#v", created.Tags)
+	}
+	opened, ok, err := repo.Get(context.Background(), created.MomentID)
+	if err != nil || !ok {
+		t.Fatalf("unexpected opened moment: %#v ok=%v err=%v", opened, ok, err)
+	}
+	if len(opened.Tags) != 2 || opened.Tags[0] != "hotspot" && opened.Tags[0] != "travel" {
+		t.Fatalf("unexpected stored tags: %#v", opened.Tags)
+	}
+	for _, tag := range opened.Tags {
+		if tag == "blocked" {
+			t.Fatalf("blocked tag should not be persisted: %#v", opened.Tags)
+		}
 	}
 	if fallback.used {
 		t.Fatal("unexpected fallback usage")

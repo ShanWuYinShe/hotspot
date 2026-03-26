@@ -99,6 +99,9 @@ func (r *staticRepo) ListAnnouncements(context.Context, int) ([]AnnouncementReco
 func (r *staticRepo) SearchAnnouncements(context.Context, AnnouncementSearchFilter) (AnnouncementPage, error) {
 	return AnnouncementPage{}, nil
 }
+func (r *staticRepo) GetAnnouncement(context.Context, string) (AnnouncementRecord, bool, error) {
+	return AnnouncementRecord{}, false, nil
+}
 func (r *staticRepo) CreateAnnouncement(context.Context, AnnouncementCreateInput) (AnnouncementRecord, error) {
 	return AnnouncementRecord{}, nil
 }
@@ -176,7 +179,7 @@ func TestGetClientConfigUsesSharedAppConfigSource(t *testing.T) {
 		t.Fatalf("update shared source: %v", err)
 	}
 
-	handler := NewHandler(NewService(source))
+	handler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), NewAppConfigProvider(source)))
 	req := httptest.NewRequest(http.MethodPost, "/get_client_config", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()
 

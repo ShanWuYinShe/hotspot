@@ -182,6 +182,8 @@ type adminBackendStub struct {
 	roles        map[string]adminRoleStub
 	admins       map[string]adminGrantStub
 	users        map[string]UserInfo
+	blockedTags  map[string]struct{}
+	momentTags   map[string]struct{}
 	execErrs     map[string]error
 	queryErrs    map[string]error
 	queryRowErrs map[string]error
@@ -192,6 +194,8 @@ func newAdminBackendStub() *adminBackendStub {
 		roles:        make(map[string]adminRoleStub),
 		admins:       make(map[string]adminGrantStub),
 		users:        make(map[string]UserInfo),
+		blockedTags:  make(map[string]struct{}),
+		momentTags:   make(map[string]struct{}),
 		execErrs:     make(map[string]error),
 		queryErrs:    make(map[string]error),
 		queryRowErrs: make(map[string]error),
@@ -244,6 +248,10 @@ func (b *adminBackendStub) Exec(_ context.Context, query string, args ...any) er
 		grant := b.admins[args[0].(string)]
 		grant.Revoked = true
 		b.admins[grant.UserID] = grant
+	case queryBlockTag:
+		b.blockedTags[args[0].(string)] = struct{}{}
+	case queryDeleteMomentTagAssignments:
+		delete(b.momentTags, args[0].(string))
 	}
 	return nil
 }
@@ -272,6 +280,11 @@ func (b *adminBackendStub) QueryRow(_ context.Context, query string, args ...any
 			return adminRowValues{err: pgx.ErrNoRows}
 		}
 		return adminRowValues{values: []any{user.UserID, user.Nickname, user.AvatarURL}}
+	case queryTagDeleteState:
+		tagName := args[0].(string)
+		_, isBlocked := b.blockedTags[tagName]
+		_, hasMomentRefs := b.momentTags[tagName]
+		return adminRowValues{values: []any{isBlocked, hasMomentRefs}}
 	default:
 		return adminRowValues{err: persistence.ErrNotImplemented}
 	}
@@ -419,5 +432,34 @@ func TestPostgresRepositoryReturnsErrorOnQueryFailure(t *testing.T) {
 	_, err := repo.ListRoles(context.Background())
 	if err == nil {
 		t.Fatal("expected list roles error")
+	}
+}
+
+func TestPersistenceModerationStoreDeleteTagQueryableDB(t *testing.T) {
+	backend := newAdminBackendStub()
+	backend.momentTags["hotspot"] = struct{}{}
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	store := NewPersistenceModerationStore(factory, nil)
+
+	if err := store.DeleteTag(context.Background(), "hotspot"); err != nil {
+		t.Fatalf("delete tag: %v", err)
+	}
+	if _, ok := backend.blockedTags["hotspot"]; !ok {
+		t.Fatalf("expected blocked tag marker, got %#v", backend.blockedTags)
+	}
+	if _, ok := backend.momentTags["hotspot"]; ok {
+		t.Fatalf("expected moment tag assignments removed, got %#v", backend.momentTags)
+	}
+}
+
+func TestPersistenceModerationStoreDeleteTagReturnsNotFound(t *testing.T) {
+	backend := newAdminBackendStub()
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	store := NewPersistenceModerationStore(factory, nil)
+
+	if err := store.DeleteTag(context.Background(), "missing"); !errors.Is(err, errTagNotFound) {
+		t.Fatalf("expected tag not found, got %v", err)
 	}
 }

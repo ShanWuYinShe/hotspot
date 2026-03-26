@@ -87,6 +87,10 @@ func (r *fallbackAnnouncementRepo) SearchAnnouncements(context.Context, Announce
 	r.used = true
 	return AnnouncementPage{}, nil
 }
+func (r *fallbackAnnouncementRepo) GetAnnouncement(context.Context, string) (AnnouncementRecord, bool, error) {
+	r.used = true
+	return AnnouncementRecord{}, false, nil
+}
 func (r *fallbackAnnouncementRepo) CreateAnnouncement(context.Context, AnnouncementCreateInput) (AnnouncementRecord, error) {
 	r.used = true
 	return AnnouncementRecord{}, nil
@@ -223,9 +227,6 @@ func (b *announcementBackendStub) Query(_ context.Context, query string, args ..
 		limit := args[3].(int)
 		rows := make([][]any, 0, limit)
 		for _, item := range items {
-			if item.IsDeleted() {
-				continue
-			}
 			if severity != "" && string(item.Severity) != severity {
 				continue
 			}
@@ -237,7 +238,7 @@ func (b *announcementBackendStub) Query(_ context.Context, query string, args ..
 					continue
 				}
 			}
-			rows = append(rows, serializeAnnouncementRow(item, false))
+			rows = append(rows, serializeAnnouncementRow(item, true))
 			if len(rows) >= limit {
 				break
 			}
@@ -272,18 +273,18 @@ func serializeAnnouncementRow(item AnnouncementRecord, includeDeleted bool) []an
 func TestPostgresRepositoryAnnouncementReadsQueryableDB(t *testing.T) {
 	backend := newAnnouncementBackendStub()
 	backend.announcements["ann_2"] = AnnouncementRecord{AnnouncementID: "ann_2", Title: "维护", Content: "今晚维护", Severity: AnnouncementSeverityWarning, ActionURL: "https://example.com/maint", CreatedAt: time.Date(2026, 3, 23, 11, 0, 0, 0, time.UTC), CreatedBy: AnnouncementActor{UserID: "admin", Nickname: "Admin"}, SendPush: true, PushSentAt: timePtr(time.Date(2026, 3, 23, 11, 0, 1, 0, time.UTC)), ViewCount: 3}
-	backend.announcements["ann_1"] = AnnouncementRecord{AnnouncementID: "ann_1", Title: "提示", Content: "普通提示", Severity: AnnouncementSeverityInfo, CreatedAt: time.Date(2026, 3, 23, 10, 0, 0, 0, time.UTC), CreatedBy: AnnouncementActor{UserID: "admin", Nickname: "Admin"}}
+	backend.announcements["ann_1"] = AnnouncementRecord{AnnouncementID: "ann_1", Title: "提示", Content: "普通提示", Severity: AnnouncementSeverityInfo, CreatedAt: time.Date(2026, 3, 23, 10, 0, 0, 0, time.UTC), CreatedBy: AnnouncementActor{UserID: "admin", Nickname: "Admin"}, DeletedAt: timePtr(time.Date(2026, 3, 23, 12, 0, 0, 0, time.UTC))}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	fallback := &fallbackAnnouncementRepo{}
 	repo := NewPostgresRepository(factory, fallback)
 
 	items, err := repo.ListAnnouncements(context.Background(), 10)
-	if err != nil || len(items) != 2 || items[0].AnnouncementID != "ann_2" {
+	if err != nil || len(items) != 1 || items[0].AnnouncementID != "ann_2" {
 		t.Fatalf("unexpected public list: %#v err=%v", items, err)
 	}
-	page, err := repo.SearchAnnouncements(context.Background(), AnnouncementSearchFilter{Severity: AnnouncementSeverityWarning, Limit: 10})
-	if err != nil || len(page.Items) != 1 || page.Items[0].AnnouncementID != "ann_2" {
+	page, err := repo.SearchAnnouncements(context.Background(), AnnouncementSearchFilter{Limit: 10})
+	if err != nil || len(page.Items) != 2 || page.Items[0].AnnouncementID != "ann_2" || page.Items[1].AnnouncementID != "ann_1" || !page.Items[1].IsDeleted() {
 		t.Fatalf("unexpected search page: %#v err=%v", page, err)
 	}
 	if fallback.used {

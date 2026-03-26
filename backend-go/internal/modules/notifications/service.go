@@ -2,8 +2,8 @@ package notifications
 
 import (
 	"context"
-	"time"
 
+	systemmodule "hotspot/backend-go/internal/modules/system"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/realtime"
 )
@@ -33,6 +33,6 @@ func (s *Service) MarkAllRead(ctx context.Context) error {
 	return s.repo.MarkAllRead(ctx, principal.UserID)
 }
 
-func (s *Service) PushSystemAnnouncement(userID, announcementID, severity string) {
-	realtime.DefaultHub().BroadcastToUser(userID, realtime.Event{Type: "SystemAnnouncement", Payload: map[string]any{"announcement_id": announcementID, "severity": severity, "created_at": time.Now().UTC().Format(time.RFC3339)}})
+func (s *Service) PushSystemAnnouncement(item systemmodule.SystemAnnouncementItem) {
+	realtime.DefaultHub().BroadcastToAll(realtime.Event{Type: "SystemAnnouncement", Payload: item})
 }

@@ -2,8 +2,8 @@ package admin
 
 import (
 	"context"
-	"fmt"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -24,7 +24,7 @@ type Service struct {
 }
 
 type announcementPushService interface {
-	PushSystemAnnouncement(userID, announcementID, severity string)
+	PushSystemAnnouncement(item systemmodule.SystemAnnouncementItem)
 }
 
 func NewService(repo Repository, provider Provider, moderationStore ModerationStore, pushService announcementPushService) *Service {
@@ -726,14 +726,28 @@ func (s *Service) SearchTags(ctx context.Context, req AdminTagSearchRequest) (Pa
 }
 
 func (s *Service) DeleteTag(ctx context.Context, name string) (*httpx.APIError, error) {
-	if _, apiErr, err := s.requirePermission(ctx, permissionTagsWrite); apiErr != nil || err != nil {
+	actor, apiErr, err := s.requirePermission(ctx, permissionTagsWrite)
+	if apiErr != nil || err != nil {
 		return apiErr, err
 	}
-	if normalizeTagName(name) == "" {
+	tagName := normalizeTagName(name)
+	if tagName == "" {
 		return httpx.InvalidRequest("参数错误"), nil
 	}
-	if err := s.moderationStore.DeleteTag(ctx, name); err != nil {
+	wasBlocked, hadRefs, err := s.moderationStore.GetTagDeleteState(ctx, tagName)
+	if err != nil {
 		return nil, err
+	}
+	if err := s.moderationStore.DeleteTag(ctx, tagName); err != nil {
+		if errors.Is(err, errTagNotFound) {
+			return &httpx.APIError{Code: 10300, Message: "标签不存在"}, nil
+		}
+		return nil, err
+	}
+	if !wasBlocked || hadRefs {
+		if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionTagDelete, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetTypeTag, TargetID: tagName, TargetName: tagName, Details: AuditDetails{"type": string(AuditActionTagDelete), "name": tagName}}); err != nil {
+			return nil, err
+		}
 	}
 	return nil, nil
 }
@@ -776,9 +790,10 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncement
 	if apiErr := validateAnnouncementCreate(req); apiErr != nil {
 		return AnnouncementCreated{}, apiErr, nil
 	}
+	title := strings.TrimSpace(req.Title)
 	input := systemmodule.AnnouncementCreateInput{
 		Actor: systemmodule.AnnouncementActor{UserID: actor.UserID, Nickname: actor.UserID},
-		Title: strings.TrimSpace(req.Title), Content: strings.TrimSpace(req.Content), Severity: req.Severity,
+		Title: title, Content: strings.TrimSpace(req.Content), Severity: req.Severity,
 		ActionURL: strings.TrimSpace(req.ActionURL), SendPush: req.SendPush,
 	}
 	item, err := s.moderationStore.CreateAnnouncement(ctx, input)
@@ -786,19 +801,48 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncement
 		return AnnouncementCreated{}, nil, err
 	}
 	if req.SendPush && s.pushService != nil {
-		s.pushService.PushSystemAnnouncement(actor.UserID, item.AnnouncementID, string(item.Severity))
+		s.pushService.PushSystemAnnouncement(item.PublicItem())
+	}
+	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionAnnouncementCreate, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetTypeAnnouncement, TargetID: item.AnnouncementID, TargetName: title, Details: AuditDetails{"type": string(AuditActionAnnouncementCreate), "title": title}}); err != nil {
+		return AnnouncementCreated{}, nil, err
 	}
 	return AnnouncementCreated{AnnouncementID: item.AnnouncementID}, nil, nil
 }
 
 func (s *Service) UpdateAnnouncement(ctx context.Context, req UpdateAnnouncementRequest) (*httpx.APIError, error) {
-	if _, apiErr, err := s.requirePermission(ctx, permissionAnnouncementsWrite); apiErr != nil || err != nil {
+	actor, apiErr, err := s.requirePermission(ctx, permissionAnnouncementsWrite)
+	if apiErr != nil || err != nil {
 		return apiErr, err
 	}
 	if apiErr := validateAnnouncementUpdate(req); apiErr != nil {
 		return apiErr, nil
 	}
-	_, err := s.moderationStore.UpdateAnnouncement(ctx, systemmodule.AnnouncementUpdateInput{
+	current, found, err := s.moderationStore.GetAnnouncement(ctx, req.AnnouncementID)
+	if err != nil {
+		return nil, err
+	}
+	if !found || current.IsDeleted() {
+		return &httpx.APIError{Code: 10300, Message: "公告不存在"}, nil
+	}
+	changedFields := make([]string, 0, 4)
+	if req.Title != nil && strings.TrimSpace(*req.Title) != current.Title {
+		changedFields = append(changedFields, "title")
+	}
+	if req.Content != nil && strings.TrimSpace(*req.Content) != current.Content {
+		changedFields = append(changedFields, "content")
+	}
+	if req.Severity != nil && *req.Severity != current.Severity {
+		changedFields = append(changedFields, "severity")
+	}
+	currentActionURL := strings.TrimSpace(current.ActionURL)
+	if req.ActionURL != nil && strings.TrimSpace(*req.ActionURL) != currentActionURL {
+		changedFields = append(changedFields, "action_url")
+	}
+	updatedTitle := current.Title
+	if req.Title != nil {
+		updatedTitle = strings.TrimSpace(*req.Title)
+	}
+	_, err = s.moderationStore.UpdateAnnouncement(ctx, systemmodule.AnnouncementUpdateInput{
 		AnnouncementID: req.AnnouncementID,
 		Title:          trimOptional(req.Title),
 		Content:        trimOptional(req.Content),
@@ -806,25 +850,47 @@ func (s *Service) UpdateAnnouncement(ctx context.Context, req UpdateAnnouncement
 		ActionURL:      trimOptional(req.ActionURL),
 	})
 	if err != nil {
-		if errors.Is(err, systemmodule.ErrAnnouncementNotFound()) || err.Error() == "announcement not found" {
+		if errors.Is(err, systemmodule.ErrAnnouncementNotFound()) {
 			return &httpx.APIError{Code: 10300, Message: "公告不存在"}, nil
 		}
+		return nil, err
+	}
+	details := AuditDetails{"type": string(AuditActionAnnouncementUpdate), "title": updatedTitle}
+	if len(changedFields) > 0 {
+		details["changed_fields"] = changedFields
+	}
+	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionAnnouncementUpdate, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetTypeAnnouncement, TargetID: req.AnnouncementID, TargetName: updatedTitle, Details: details}); err != nil {
 		return nil, err
 	}
 	return nil, nil
 }
 
 func (s *Service) DeleteAnnouncement(ctx context.Context, announcementID string) (*httpx.APIError, error) {
-	if _, apiErr, err := s.requirePermission(ctx, permissionAnnouncementsWrite); apiErr != nil || err != nil {
+	actor, apiErr, err := s.requirePermission(ctx, permissionAnnouncementsWrite)
+	if apiErr != nil || err != nil {
 		return apiErr, err
 	}
-	if strings.TrimSpace(announcementID) == "" {
+	announcementID = strings.TrimSpace(announcementID)
+	if announcementID == "" {
 		return httpx.InvalidRequest("参数错误"), nil
 	}
+	current, found, err := s.moderationStore.GetAnnouncement(ctx, announcementID)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return &httpx.APIError{Code: 10300, Message: "公告不存在"}, nil
+	}
+	if current.IsDeleted() {
+		return nil, nil
+	}
 	if err := s.moderationStore.DeleteAnnouncement(ctx, announcementID); err != nil {
-		if errors.Is(err, systemmodule.ErrAnnouncementNotFound()) || err.Error() == "announcement not found" {
+		if errors.Is(err, systemmodule.ErrAnnouncementNotFound()) {
 			return &httpx.APIError{Code: 10300, Message: "公告不存在"}, nil
 		}
+		return nil, err
+	}
+	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionAnnouncementDelete, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetTypeAnnouncement, TargetID: announcementID, TargetName: current.Title, Details: AuditDetails{"type": string(AuditActionAnnouncementDelete), "title": current.Title}}); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -1117,7 +1183,8 @@ func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason 
 }
 
 func (s *Service) appendAudit(ctx context.Context, entry AuditLogEntry) error {
-	return s.repo.AppendAuditLog(ctx, entry)
+	actor := AdminActor{UserID: entry.Operator.UserID}
+	return s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, entry))
 }
 
 func validateAdminUserSearchRequest(req AdminUserSearchRequest) *httpx.APIError {
@@ -1215,14 +1282,18 @@ func applyPositiveIntPatch(target *int, patch *int) *httpx.APIError {
 }
 
 func newAuditEntry(ctx context.Context, actor AdminActor, entry AuditLogEntry) AuditLogEntry {
-	if entry.LogID == "" {
-		entry.LogID = "audit_" + observability.RequestIDFromContext(ctx)
-	}
 	if entry.Operator.UserID == "" {
 		entry.Operator = UserInfo{UserID: actor.UserID, Nickname: actor.UserID}
 	}
 	if entry.CreatedAt.IsZero() {
 		entry.CreatedAt = time.Now().UTC()
+	}
+	if entry.LogID == "" {
+		if requestID := observability.RequestIDFromContext(ctx); requestID != "" {
+			entry.LogID = "audit_" + requestID
+		} else {
+			entry.LogID = formatAuditLogID(string(entry.Action), entry.TargetID, entry.CreatedAt)
+		}
 	}
 	if entry.IPAddress == "" {
 		entry.IPAddress = requestIPFromContext(ctx)
