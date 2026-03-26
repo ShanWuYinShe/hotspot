@@ -34,9 +34,6 @@
 	const SEARCH_TABS: SearchTab[] = ['users', 'moments', 'groups'];
 
 	let keywordInput = $state('');
-	let currentTab = $state<SearchTab>('users');
-	let activeMode = $state<SearchMode | null>(null);
-	let activeTerm = $state('');
 	let isLoading = $state(false);
 	let searchError = $state<string | null>(null);
 
@@ -46,7 +43,15 @@
 
 	let lastSearchFingerprint = $state('');
 	let searchAbortController: AbortController | null = null;
+	let lastAnchorUpdatedAt = mapAnchorStore.anchor.updatedAt;
 
+	const currentTab = $derived(parseSearchTab(page.url.searchParams.get('tab')));
+	const activeMode = $derived.by<SearchMode | null>(() => {
+		const tag = page.url.searchParams.get('tag')?.trim() ?? '';
+		const q = page.url.searchParams.get('q')?.trim() ?? '';
+		return tag ? 'tag' : q ? 'keyword' : null;
+	});
+	const activeTerm = $derived(page.url.searchParams.get('tag')?.trim() ?? page.url.searchParams.get('q')?.trim() ?? '');
 	const activeLabel = $derived(activeMode === 'tag' ? `#${activeTerm}` : activeTerm);
 	const hasAnyResults = $derived(users.length + moments.length + groups.length > 0);
 	const nearbyMomentsUrl = $derived(
@@ -86,8 +91,6 @@
 		groups = [];
 		isLoading = false;
 		searchError = null;
-		activeMode = null;
-		activeTerm = '';
 		lastSearchFingerprint = '';
 	}
 
@@ -100,8 +103,6 @@
 
 		const fingerprint = buildSearchFingerprint(mode, normalized);
 		if (fingerprint === lastSearchFingerprint) {
-			activeMode = mode;
-			activeTerm = normalized;
 			searchError = null;
 			return;
 		}
@@ -110,8 +111,6 @@
 		const controller = new AbortController();
 		searchAbortController = controller;
 
-		activeMode = mode;
-		activeTerm = normalized;
 		lastSearchFingerprint = fingerprint;
 		searchError = null;
 		isLoading = true;
@@ -222,35 +221,31 @@
 	}
 
 	$effect(() => {
-		const q = page.url.searchParams.get('q')?.trim() ?? '';
-		const tag = page.url.searchParams.get('tag')?.trim() ?? '';
-		const urlTab = parseSearchTab(page.url.searchParams.get('tab'));
-
-		if (currentTab !== urlTab) {
-			currentTab = urlTab;
+		if (keywordInput !== activeTerm) {
+			keywordInput = activeTerm;
 		}
+	});
 
-		const nextMode: SearchMode | null = tag ? 'tag' : q ? 'keyword' : null;
-		const nextTerm = tag || q;
-
-		if (keywordInput !== nextTerm) {
-			keywordInput = nextTerm;
-		}
-
-		if (!nextMode || !nextTerm) {
+	$effect(() => {
+		if (!activeMode || !activeTerm) {
 			resetResults();
 			return;
 		}
 
-		void performSearch(nextMode, nextTerm);
+		void performSearch(activeMode, activeTerm);
 	});
 
 	$effect(() => {
-		mapAnchorStore.anchor.updatedAt;
+		const anchorUpdatedAt = mapAnchorStore.anchor.updatedAt;
 		if (!activeMode || !activeTerm) {
+			lastAnchorUpdatedAt = anchorUpdatedAt;
+			return;
+		}
+		if (anchorUpdatedAt === lastAnchorUpdatedAt) {
 			return;
 		}
 
+		lastAnchorUpdatedAt = anchorUpdatedAt;
 		lastSearchFingerprint = '';
 		void performSearch(activeMode, activeTerm);
 	});
@@ -361,7 +356,7 @@
 			</CardContent>
 		</Card>
 
-		<Tabs bind:value={currentTab} onValueChange={handleTabChange}>
+		<Tabs value={currentTab} onValueChange={handleTabChange}>
 			<TabsList class="h-auto flex-wrap gap-1.5 rounded-3xl bg-card/80 p-1.5 shadow-md shadow-black/10 ring-1 ring-border/50 backdrop-blur-sm dark:shadow-black/30">
 				<TabsTrigger value="users" class="gap-2 rounded-2xl">
 					<Users class="h-4 w-4" />

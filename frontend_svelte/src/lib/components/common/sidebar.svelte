@@ -3,8 +3,7 @@
     import { goto } from "$app/navigation";
     import { cn } from "$lib/utils";
     import { authStore } from "$lib/stores/auth.svelte";
-    import { adminRbacService } from "$lib/api/services";
-    import { isSuccess } from "$lib/api/client";
+    import { adminPermissionsStore } from "$lib/stores/admin-permissions.svelte";
     import { mapAnchorStore } from "$lib/stores/map-anchor.svelte";
     import { uiStore } from "$lib/stores/ui.svelte";
     import { notificationStore } from "$lib/stores/notification.svelte";
@@ -160,37 +159,6 @@
     let showLocationPicker = $state(false);
 
     const currentMode = $derived(mode.current);
-    let isAdminUser = $state(false);
-    let adminCheckedUserId = "";
-    let checkingAdmin = false;
-
-    $effect(() => {
-        const isAuthenticated = authStore.isAuthenticated;
-        const currentUserId = authStore.currentUserId ?? "";
-        if (!isAuthenticated || !currentUserId) {
-            isAdminUser = false;
-            adminCheckedUserId = "";
-            return;
-        }
-        if (checkingAdmin || adminCheckedUserId === currentUserId) return;
-        checkingAdmin = true;
-        void (async () => {
-            const requestUserId = currentUserId;
-            try {
-                const res = await adminRbacService.getMyPermissions();
-                if (authStore.currentUserId !== requestUserId) return;
-                isAdminUser = isSuccess(res) && !!res.data;
-            } catch {
-                if (authStore.currentUserId !== requestUserId) return;
-                isAdminUser = false;
-            } finally {
-                if (authStore.currentUserId === requestUserId) {
-                    adminCheckedUserId = requestUserId;
-                }
-                checkingAdmin = false;
-            }
-        })();
-    });
 </script>
 
 <aside
@@ -268,7 +236,7 @@
             </div>
         </div>
 
-        {#if authStore.isAuthenticated && isAdminUser}
+        {#if authStore.isAuthenticated && adminPermissionsStore.isAdmin}
             <div class="mt-6">
                 <h3
                     class="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70"

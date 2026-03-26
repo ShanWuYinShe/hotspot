@@ -1,12 +1,10 @@
 <script lang="ts">
-	import { browser, dev } from '$app/environment';
+	import { browser } from '$app/environment';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { untrack } from 'svelte';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
-	import { adminRbacService } from '$lib/api/services';
-	import { isSuccess } from '$lib/api/client';
+	import { adminPermissionsStore } from '$lib/stores/admin-permissions.svelte';
 	import { cn } from '$lib/utils';
 	import Navbar from '$lib/components/common/navbar.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -18,13 +16,10 @@
 	import Shield from 'lucide-svelte/icons/shield';
 	import Settings from 'lucide-svelte/icons/settings';
 	import LayoutDashboard from 'lucide-svelte/icons/layout-dashboard';
-	import type { AdminPermissions } from '$lib/types/api';
 
 	let { children } = $props();
 
 	let sidebarOpen = $state(false);
-	// 管理员权限状态：null=正在检查, false=非管理员, AdminPermissions=已验证
-	let adminState = $state<AdminPermissions | false | null>(null);
 
 	function closeSidebar() {
 		sidebarOpen = false;
@@ -49,71 +44,18 @@
 		return pathname.startsWith(href);
 	}
 
-	// 竞态保护：仅最新一次权限检查的结果会被应用
-	let checkVersion = 0;
-
-	// 认证 + 管理员权限检查
 	$effect(() => {
-		const initialized = authStore.initialized;
-		const isRestoring = authStore.isRestoring;
-		const isAuthenticated = authStore.isAuthenticated;
-		const currentUserId = authStore.currentUserId;
-
-		if (browser && initialized && !isAuthenticated && !isRestoring) {
+		if (browser && authStore.initialized && !authStore.isAuthenticated && !authStore.isRestoring) {
 			uiStore.saveRedirectUrl(`${page.url.pathname}${page.url.search}`);
 		}
-
-		if (!initialized || isRestoring) {
-			untrack(() => {
-				checkVersion++; // 使之前进行中的请求失效
-				adminState = null;
-			});
-			return;
-		}
-
-		// 登录后校验管理员权限
-		if (isAuthenticated && currentUserId) {
-			const version = ++checkVersion;
-			untrack(() => {
-				checkAdminPermission(version, currentUserId);
-			});
-		} else {
-			untrack(() => {
-				checkVersion++; // 使之前进行中的请求失效
-				adminState = null;
-			});
-		}
 	});
-
-	async function checkAdminPermission(version: number, userId: string) {
-		adminState = null; // 重置为"检查中"
-		try {
-			const res = await adminRbacService.getMyPermissions();
-			// 仅应用当前账号且最新一次请求的结果
-			if (version !== checkVersion || authStore.currentUserId !== userId || !authStore.isAuthenticated) {
-				return;
-			}
-			if (isSuccess(res) && res.data) {
-				adminState = res.data;
-				if (dev) console.log('[Admin] 权限验证通过:', res.data.permissions);
-			} else {
-				// 10200 权限不足 → 非管理员
-				adminState = false;
-				if (dev) console.warn('[Admin] 非管理员用户');
-			}
-		} catch {
-			if (version !== checkVersion || authStore.currentUserId !== userId || !authStore.isAuthenticated) return;
-			adminState = false;
-		}
-	}
-
 	function handleLoginClick() {
 		uiStore.saveRedirectUrl(`${page.url.pathname}${page.url.search}`);
 		uiStore.openLoginModal();
 	}
 </script>
 
-{#if authStore.isAuthenticated && adminState}
+{#if authStore.isAuthenticated && adminPermissionsStore.isAdmin}
 	<div class="min-h-screen bg-background">
 		<Navbar onMenuClick={() => (sidebarOpen = !sidebarOpen)} />
 
@@ -183,7 +125,7 @@
 			</main>
 		</div>
 	</div>
-{:else if authStore.isAuthenticated && adminState === null}
+{:else if authStore.isAuthenticated && adminPermissionsStore.isLoading}
 	<!-- 管理员权限验证中 -->
 	<div class="min-h-screen bg-background">
 		<Navbar onMenuClick={() => {}} />
@@ -194,7 +136,7 @@
 			</div>
 		</div>
 	</div>
-{:else if authStore.isAuthenticated && adminState === false}
+{:else if authStore.isAuthenticated && adminPermissionsStore.isForbidden}
 	<!-- 已登录但非管理员 -->
 	<div class="min-h-screen bg-background">
 		<Navbar onMenuClick={() => {}} />
@@ -210,6 +152,31 @@
 						<Button class="rounded-2xl px-8" onclick={() => goto('/')}>
 							返回首页
 						</Button>
+					</div>
+				</div>
+			</main>
+		</div>
+	</div>
+{:else if authStore.isAuthenticated && adminPermissionsStore.isError}
+	<div class="min-h-screen bg-background">
+		<Navbar onMenuClick={() => {}} />
+		<div class="flex min-h-[calc(100dvh-4rem)] bg-muted/30">
+			<main class="mobile-app-main md:mx-4 md:rounded-3xl md:border md:border-border/60 md:bg-card/85 md:p-6 md:shadow-sm md:backdrop-blur-md" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
+				<div class="mobile-page-shell md:mx-auto md:max-w-6xl">
+					<div class="flex flex-col items-center justify-center py-20 text-center">
+						<div class="mb-4 rounded-3xl bg-muted p-6">
+							<Shield class="h-10 w-10 text-muted-foreground" />
+						</div>
+						<h2 class="mb-2 text-xl font-semibold">权限检查失败</h2>
+						<p class="mb-6 text-muted-foreground">暂时无法验证管理员权限，请稍后重试。</p>
+						<div class="flex gap-3">
+							<Button variant="outline" class="rounded-2xl px-8" onclick={() => adminPermissionsStore.refresh()}>
+								重试
+							</Button>
+							<Button class="rounded-2xl px-8" onclick={() => goto('/')}>
+								返回首页
+							</Button>
+						</div>
 					</div>
 				</div>
 			</main>

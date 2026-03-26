@@ -3,8 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
-	import { adminRbacService } from '$lib/api/services';
-	import { isSuccess } from '$lib/api/client';
+	import { adminPermissionsStore } from '$lib/stores/admin-permissions.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
@@ -33,9 +32,6 @@
 	let showSearchModal = $state(false);
 	let showCreateMoment = $state(false);
 	let showCreateGroup = $state(false);
-	let isAdminUser = $state(false);
-	let adminCheckedUserId = '';
-	let checkingAdmin = false;
 
 	function closeTopbarModals() {
 		showSearchModal = false;
@@ -61,33 +57,6 @@
 		return () => window.removeEventListener('keydown', handleKeydown);
 	});
 
-	$effect(() => {
-		const isAuthenticated = authStore.isAuthenticated;
-		const currentUserId = authStore.currentUserId ?? '';
-		if (!isAuthenticated || !currentUserId) {
-			isAdminUser = false;
-			adminCheckedUserId = '';
-			return;
-		}
-		if (checkingAdmin || adminCheckedUserId === currentUserId) return;
-		checkingAdmin = true;
-		void (async () => {
-			const requestUserId = currentUserId;
-			try {
-				const res = await adminRbacService.getMyPermissions();
-				if (authStore.currentUserId !== requestUserId) return;
-				isAdminUser = isSuccess(res) && !!res.data;
-			} catch {
-				if (authStore.currentUserId !== requestUserId) return;
-				isAdminUser = false;
-			} finally {
-				if (authStore.currentUserId === requestUserId) {
-					adminCheckedUserId = requestUserId;
-				}
-				checkingAdmin = false;
-			}
-		})();
-	});
 
 	function handleLogout() {
 		authStore.logout();
@@ -230,7 +199,7 @@
 								</button>
 							{/snippet}
 						</DropdownMenu.Item>
-						{#if isAdminUser}
+						{#if adminPermissionsStore.isAdmin}
 							<DropdownMenu.Item>
 								{#snippet child({ props })}
 									<button {...props} class="flex w-full items-center" onclick={() => goto('/admin')}>

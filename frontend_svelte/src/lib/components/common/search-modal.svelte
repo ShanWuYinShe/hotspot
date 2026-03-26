@@ -101,12 +101,19 @@
 		suggestions = [];
 	}
 
+	function setOpenState(nextOpen: boolean) {
+		if (open === nextOpen) {
+			return;
+		}
+		open = nextOpen;
+		onOpenChange?.(nextOpen);
+	}
+
 	function handleSearchNavigate(term?: string) {
 		const next = (term ?? keyword).trim();
 		if (!next) return;
 		saveRecent(next);
-		open = false;
-		onOpenChange?.(false);
+		setOpenState(false);
 		goto(`/search?q=${encodeURIComponent(next)}`);
 	}
 
@@ -183,8 +190,7 @@
 	}
 
 	function closeModal() {
-		open = false;
-		onOpenChange?.(false);
+		setOpenState(false);
 	}
 
 	function handleSuggestionClick(item: SearchSuggestItem) {
@@ -314,7 +320,7 @@
 	});
 </script>
 
-<Dialog.Root bind:open onOpenChange={(value) => { open = value; onOpenChange?.(value); }}>
+<Dialog.Root bind:open onOpenChange={setOpenState}>
 	<Dialog.Content class="flex max-h-[85vh] flex-col rounded-3xl border border-border/60 bg-card/95 shadow-xl backdrop-blur-md sm:max-w-3xl">
 		<Dialog.Header>
 			<Dialog.Title class="flex items-center gap-3">
