@@ -19,11 +19,9 @@ $ARGUMENTS
 5. 在列出本轮纳入项与进入 replay 前，先调用 `local-integration-playbook` subagent 校准当前阶段、边界、风险点与推荐命令，并在输出中复述其 `## 当前阶段`、`## 风险点`、`## 推荐命令`。
 6. 从主目录当前最新本地 `main HEAD` 创建新的临时 integration worktree。
 7. 通过共享脚本 `.claude/scripts/integration_meta.py` 初始化本轮 integration 元信息，并写入仓库根 `tmp/claude/integrations/<integration-id>.json`；至少记录：`integration_id`、`baseline_main_sha`、`integration_branch`、`integration_worktree_path`、`planned_features`、`verify_status`、`review_status`、`gate_status`、`created_at`、`updated_at`。
-8. 将各 ready feature 的成果按顺序 cherry-pick / replay 到 integration worktree。
-9. 在 integration worktree 中运行集成验证，最终有效结论以 `deploy/scripts/verify.sh --env-name <name>` 为准。
-10. 完成 simplify、严格 review 和必要的修复；若基线过期则改走 `/refresh_integrate`。
-11. 通过 `rebase + squash` 或等价线性整理方式把多处结果收敛为一个 commit。
-12. 当结果满足规则时，应继续同步回主目录本地 `main` 并 cleanup；只有基线过期、对象归属不明或存在未确认丢弃动作时才停止；不要 push。
+8. 将各 ready feature 的成果按顺序 cherry-pick / replay 到 integration worktree；`git cherry-pick` 仅用于 integration replay，不作为单 worktree 回主目录本地 `main` 的默认方式。
+9. 完成 replay 与冲突处理后停止在 integration 准备态；后续验证交给 `/verify_integrate`，最终 gate 判定交给 `/finish_integrate`。
+10. cleanup 只能在 sync-back 完成并 `ExitWorktree` 之后，于主目录执行；不要 push。
 
 结束时请输出：
 
@@ -31,9 +29,6 @@ $ARGUMENTS
 - integration worktree 路径与分支
 - 纳入的 feature 列表
 - replay / 冲突处理结果
-- verify 结果
-- review 结果
-- 线性化后的提交状态
 - metadata 初始化结果
 - 初始 `gate_status`：`pending`
-- 下一步建议：`/verify_integrate` 或继续 replay / simplify / strict review
+- 下一步建议：`/verify_integrate` 或继续 replay

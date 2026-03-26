@@ -5,16 +5,29 @@
   "respectGitignore": true,
   "permissions": {
     "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Edit",
+      "Write",
+      "TaskCreate",
+      "TaskUpdate",
+      "TaskList",
       "EnterWorktree",
       "ExitWorktree",
       "Bash(git status:*)",
       "Bash(git rev-parse:*)",
       "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git branch -d:*)",
+      "Bash(git rebase:*)",
+      "Bash(git cherry-pick:*)",
+      "Bash(git merge --ff-only:*)",
       "Bash(git worktree list:*)",
       "Bash(git worktree add:*)",
       "Bash(git worktree remove:*)",
-      "Bash(git branch -d:*)",
-      "Bash(git cherry-pick:*)",
       "Bash(*deploy/scripts/verify.sh*)",
       "Bash(*deploy/scripts/preview-build.sh*)",
       "Bash(*deploy/scripts/preview-up.sh*)",
@@ -35,28 +48,6 @@
       "Bash(git clean:*)",
       "Bash(git branch -D:*)",
       "Bash(*--force*)"
-    ]
-  },
-  "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 - <<'PY'\nimport json, os, re, subprocess\n\ndef run(*args):\n    return subprocess.run(args, capture_output=True, text=True).stdout.strip()\n\nroot = run('git', 'rev-parse', '--show-toplevel') or '.'\nbranch = run('git', '-C', root, 'branch', '--show-current') or '(detached)'\nrole = 'worktree' if os.path.isfile(os.path.join(root, '.git')) else '主目录'\ndirty = bool(run('git', '-C', root, 'status', '--short'))\nstate = 'dirty' if dirty else 'clean'\n\nlines = [f'位置: {role}；分支: {branch}；工作区: {state}。']\nif role == '主目录':\n    if branch != 'main':\n        lines.append('主目录应保持在本地 main；如需承载改动，请切到 worktree。')\n    if dirty:\n        lines.append('主目录应保持 clean，不要在主目录承载实现性改动。')\n\nporcelain = run('git', '-C', root, 'worktree', 'list', '--porcelain')\npaths = []\nfor block in porcelain.split('\\n\\n'):\n    if not block.strip():\n        continue\n    first = block.splitlines()[0]\n    if first.startswith('worktree '):\n        paths.append(first.split(' ', 1)[1].strip())\nlinked = [p for p in paths if p != root]\ndirty_worktrees = 0\nfor path in linked:\n    if run('git', '-C', path, 'status', '--short'):\n        dirty_worktrees += 1\nif linked:\n    lines.append(f'当前共有 {len(linked)} 个 linked worktree，其中 {dirty_worktrees} 个仍有本地改动；请在集成完成后及时回收。')\n\nsettings_local = os.path.join(root, '.claude', 'settings.local.json')\nif os.path.exists(settings_local):\n    try:\n        with open(settings_local, 'r', encoding='utf-8') as f:\n            text = f.read()\n        refs = set(re.findall(r'\\.claude/worktrees/([^/\\s]+)', text))\n        existing = {os.path.basename(p.rstrip('/')) for p in linked}\n        stale = sorted(name for name in refs if name not in existing)\n        if stale:\n            lines.append(f'本地 settings.local.json 仍引用 {len(stale)} 个不存在的 worktree 路径，建议清理历史授权。')\n    except OSError:\n        pass\n\nintegration_meta_dir = os.path.join(root, 'tmp', 'claude', 'integrations')\nif os.path.isdir(integration_meta_dir):\n    non_standard_gate = []\n    for name in sorted(os.listdir(integration_meta_dir)):\n        if not name.endswith('.json'):\n            continue\n        path = os.path.join(integration_meta_dir, name)\n        try:\n            with open(path, 'r', encoding='utf-8') as f:\n                data = json.load(f)\n        except Exception:\n            continue\n        gate_status = data.get('gate_status')\n        if gate_status and gate_status not in {'pending', 'ready_to_sync', 'blocked', 'must_refresh'}:\n            non_standard_gate.append(f'{name}:{gate_status}')\n    if non_standard_gate:\n        lines.append('发现非标准 integration gate_status，建议统一为 pending/ready_to_sync/blocked/must_refresh。')\n\nlines.append('开始新一轮任务前，先自动检查最近成果是否已回到本地 main；只有状态歧义时再请求确认。')\nlines.append('默认只操作本会话创建或明确接管的 worktree/branch；新 worktree 默认基于主目录本地 main HEAD。')\nlines.append('当主目录处于本地 main + clean 且对象归属明确时，本地闭环步骤应自动推进。')\nprint(json.dumps({'systemMessage': ' '.join(lines)}, ensure_ascii=False))\nPY"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 - <<'PY'\nimport json\nmsg = '收尾检查：1) task list 与计划是否已收尾；2) 是否已运行标准 verify；3) 是否已先用 simplify 收敛代码；4) 是否已完成严格 review；5) 多 worktree 任务是否已汇总到 integration worktree；6) cleanup 时是否只处理本会话对象，并在删除 worktree 时同步删除对应 branch；7) 主目录是否回到 main + clean。'\nprint(json.dumps({'systemMessage': msg}, ensure_ascii=False))\nPY"
-          }
-        ]
-      }
     ]
   }
 }
