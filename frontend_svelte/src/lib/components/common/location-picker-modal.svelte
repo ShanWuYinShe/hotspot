@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount, tick } from "svelte";
+    import { onMount, tick, untrack } from "svelte";
     import { assertSuccess } from "$lib/api/client";
     import {
         mapService,
@@ -140,6 +140,7 @@
     let selectedMarker: AMap.Marker | null = null;
     let hasInit = $state(false);
     let hasSyncedFromAnchor = $state(false);
+    let modalRoot = $state<HTMLDivElement | null>(null);
     const LONG_PRESS_DURATION_MS = 700;
     const GESTURE_HINT_DURATION_MS = 4000;
     const MAP_RENDER_IDLE_MS = 250;
@@ -1616,6 +1617,11 @@
         onOpenChange?.(nextOpen);
     }
 
+    function handleDialogOpenChange(nextOpen: boolean) {
+        open = nextOpen;
+        onOpenChange?.(nextOpen);
+    }
+
     function resetTransientUiState() {
         if (searchDebounceTimer) {
             clearTimeout(searchDebounceTimer);
@@ -1628,7 +1634,45 @@
         showShareModal = false;
         searchText = "";
         searchResults = [];
-        closeClusterPreview();
+    }
+
+    function resetPreviewUiState() {
+        clusterPreview = null;
+        hotspotPreviewItems = [];
+        isBottomSheetExpanded = false;
+    }
+
+    function clearModalSelection() {
+        if (!browser || !modalRoot) {
+            return;
+        }
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) {
+            return;
+        }
+        const range = selection.getRangeAt(0);
+        const commonAncestor = range.commonAncestorContainer;
+        let shouldClear = modalRoot.contains(commonAncestor);
+
+        if (!shouldClear) {
+            const rects = Array.from(range.getClientRects());
+            if (rects.length === 0) {
+                return;
+            }
+            const modalRect = modalRoot.getBoundingClientRect();
+            shouldClear = rects.some((rect) => {
+                const separated =
+                    rect.right < modalRect.left ||
+                    rect.left > modalRect.right ||
+                    rect.bottom < modalRect.top ||
+                    rect.top > modalRect.bottom;
+                return !separated;
+            });
+        }
+
+        if (shouldClear) {
+            selection.removeAllRanges();
+        }
     }
 
     function destroyMapSession() {
@@ -1646,7 +1690,6 @@
         if (hasSyncedFromAnchor) {
             return;
         }
-
         const fallbackName = mapAnchorStore.name || mapAnchorStore.displayName;
         latitude = initialLocation?.latitude ?? mapAnchorStore.latitude;
         longitude = initialLocation?.longitude ?? mapAnchorStore.longitude;
@@ -1654,6 +1697,7 @@
         searchRadius = initialLocation?.radius ?? mapAnchorStore.radius;
         anchorHistory = isAnchorMode ? getAnchorHistory() : [];
         resetTransientUiState();
+        resetPreviewUiState();
 
         if (!hasInit) {
             void initMap();
@@ -1672,6 +1716,7 @@
         hasSyncedFromAnchor = false;
         lastRenderedViewportSignature = "";
         resetTransientUiState();
+        resetPreviewUiState();
         hideGestureHint();
         placementHintVisible = false;
         cancelReverseGeocodeTimer();
@@ -1687,10 +1732,15 @@
             clearTimeout(longPressTimer);
             longPressTimer = null;
         }
+        if (mapMoveFrame !== null) {
+            cancelAnimationFrame(mapMoveFrame);
+            mapMoveFrame = null;
+        }
         lastTouchLngLat = null;
         detachTouchListeners?.();
         detachContextMenuListener?.();
         detachOutsidePointerListener?.();
+        clearModalSelection();
         destroyMapSession();
     }
 
@@ -1700,15 +1750,19 @@
 
     $effect(() => {
         if (open) {
-            registerOutsidePointerListener();
-            if (!gestureHintVisible) {
-                showGestureHint();
-            }
-            syncStateFromCurrentSource();
+            untrack(() => {
+                registerOutsidePointerListener();
+                if (!gestureHintVisible) {
+                    showGestureHint();
+                }
+                syncStateFromCurrentSource();
+            });
             return;
         }
 
-        cleanupClosedSession();
+        untrack(() => {
+            cleanupClosedSession();
+        });
     });
 
     // 组件卸载时清理资源
@@ -1766,8 +1820,8 @@
     });
 </script>
 
-<div>
-    <Dialog.Root bind:open onOpenChange={setOpenState}>
+<div bind:this={modalRoot}>
+    <Dialog.Root bind:open onOpenChange={handleDialogOpenChange}>
         <Dialog.Content
             class={`flex h-[90dvh] max-h-[90dvh] flex-col p-0 transition-all duration-200 ease-out sm:flex-row sm:gap-4 select-none ${
                 isFullscreen
