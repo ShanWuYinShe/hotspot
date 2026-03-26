@@ -45,13 +45,15 @@ let refreshPromise: Promise<boolean> | null = null;
  */
 function getCookie(name: string): string | null {
 	if (typeof document === 'undefined') return null;
-	
+
 	const cookies = document.cookie.split(';');
 	for (const cookie of cookies) {
-		const [key, value] = cookie.trim().split('=');
-		if (key === name && value !== undefined) {
-			return value;
-		}
+		const trimmed = cookie.trim();
+		const separatorIndex = trimmed.indexOf('=');
+		if (separatorIndex < 0) continue;
+		const key = trimmed.slice(0, separatorIndex);
+		if (key !== name) continue;
+		return trimmed.slice(separatorIndex + 1);
 	}
 	return null;
 }
@@ -194,6 +196,8 @@ function sleep(ms: number): Promise<void> {
  */
 async function refreshToken(): Promise<boolean> {
 	const cfg = getConfig();
+	const refreshController = new AbortController();
+	const refreshTimeoutId = setTimeout(() => refreshController.abort(), 10000);
 
 	try {
 		const csrfToken = getCookie('hs_csrf_token');
@@ -206,10 +210,6 @@ async function refreshToken(): Promise<boolean> {
 			headers['X-CSRF-Token'] = csrfToken;
 		}
 
-		// 超时控制：防止刷新请求挂起导致所有待刷新请求无限等待
-		const refreshController = new AbortController();
-		const refreshTimeoutId = setTimeout(() => refreshController.abort(), 10000);
-
 		const response = await fetch(`${cfg.baseUrl}${AUTH.REFRESH_TOKEN}`, {
 			method: 'POST',
 			headers,
@@ -220,8 +220,6 @@ async function refreshToken(): Promise<boolean> {
 			}),
 			signal: refreshController.signal
 		});
-
-		clearTimeout(refreshTimeoutId);
 
 		const data = (await response.json()) as ApiResponse<Record<string, never>>;
 
@@ -238,6 +236,8 @@ async function refreshToken(): Promise<boolean> {
 		if (dev) console.error('[TokenRefresh] Token 刷新异常:', error);
 		cfg.onRefreshFail();
 		return false;
+	} finally {
+		clearTimeout(refreshTimeoutId);
 	}
 }
 
@@ -317,9 +317,6 @@ async function request<T>(
 			body: JSON.stringify(body ?? {}),
 			signal
 		});
-
-		// 清除超时定时器
-		clearTimeout(timeoutId);
 
 		// 处理 HTTP 错误
 		if (!response.ok) {
@@ -403,9 +400,6 @@ async function request<T>(
 
 		return data;
 	} catch (error) {
-		// 清除超时定时器
-		clearTimeout(timeoutId);
-
 		// 处理取消和超时错误
 		if (error instanceof Error) {
 			if (error.name === 'AbortError') {
@@ -424,7 +418,7 @@ async function request<T>(
 					};
 				}
 			}
-			
+
 			// 其他错误
 			if (dev) console.error('[API] Request error:', error);
 			return {
@@ -441,6 +435,7 @@ async function request<T>(
 			request_id: ''
 		};
 	} finally {
+		clearTimeout(timeoutId);
 		// 释放 combineSignals 在外部 signal 上注册的监听器，防止累积泄漏
 		combined?.cleanup();
 	}

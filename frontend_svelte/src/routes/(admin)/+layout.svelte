@@ -54,17 +54,28 @@
 
 	// 认证 + 管理员权限检查
 	$effect(() => {
+		const initialized = authStore.initialized;
+		const isRestoring = authStore.isRestoring;
 		const isAuthenticated = authStore.isAuthenticated;
+		const currentUserId = authStore.currentUserId;
 
-		if (browser && authStore.initialized && !isAuthenticated && !authStore.isRestoring) {
+		if (browser && initialized && !isAuthenticated && !isRestoring) {
 			uiStore.saveRedirectUrl(`${page.url.pathname}${page.url.search}`);
 		}
 
+		if (!initialized || isRestoring) {
+			untrack(() => {
+				checkVersion++; // 使之前进行中的请求失效
+				adminState = null;
+			});
+			return;
+		}
+
 		// 登录后校验管理员权限
-		if (isAuthenticated) {
+		if (isAuthenticated && currentUserId) {
 			const version = ++checkVersion;
 			untrack(() => {
-				checkAdminPermission(version);
+				checkAdminPermission(version, currentUserId);
 			});
 		} else {
 			untrack(() => {
@@ -74,12 +85,14 @@
 		}
 	});
 
-	async function checkAdminPermission(version: number) {
+	async function checkAdminPermission(version: number, userId: string) {
 		adminState = null; // 重置为"检查中"
 		try {
 			const res = await adminRbacService.getMyPermissions();
-			// 仅应用最新一次请求的结果
-			if (version !== checkVersion) return;
+			// 仅应用当前账号且最新一次请求的结果
+			if (version !== checkVersion || authStore.currentUserId !== userId || !authStore.isAuthenticated) {
+				return;
+			}
 			if (isSuccess(res) && res.data) {
 				adminState = res.data;
 				if (dev) console.log('[Admin] 权限验证通过:', res.data.permissions);
@@ -89,7 +102,7 @@
 				if (dev) console.warn('[Admin] 非管理员用户');
 			}
 		} catch {
-			if (version !== checkVersion) return;
+			if (version !== checkVersion || authStore.currentUserId !== userId || !authStore.isAuthenticated) return;
 			adminState = false;
 		}
 	}

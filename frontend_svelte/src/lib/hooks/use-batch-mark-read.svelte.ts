@@ -90,6 +90,18 @@ export function useBatchMarkRead(options: UseBatchMarkReadOptions): BatchMarkRea
 	// 可见性延迟检查定时器（消息 ID -> timer ID）
 	const visibilityTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
+	function appendUniqueIds(target: string[], ids: string[]): string[] {
+		if (ids.length === 0) return target;
+		const existing = new Set(target);
+		const next = [...target];
+		for (const id of ids) {
+			if (existing.has(id)) continue;
+			existing.add(id);
+			next.push(id);
+		}
+		return next;
+	}
+
 	/**
 	 * 批量标记已读
 	 */
@@ -104,8 +116,8 @@ export function useBatchMarkRead(options: UseBatchMarkReadOptions): BatchMarkRea
 			if (dev) console.log(`[BatchMarkRead] 已标记 ${idsToMark.length} 条消息为已读`);
 		} catch (error) {
 			if (dev) console.error('[BatchMarkRead] 标记已读失败:', error);
-			// 失败时重新加入队列
-			pendingMessageIds = [...pendingMessageIds, ...idsToMark];
+			// 失败时重新加入队列（去重，避免同一批消息无限堆积）
+			pendingMessageIds = appendUniqueIds(pendingMessageIds, idsToMark);
 		}
 	}
 
@@ -145,7 +157,7 @@ export function useBatchMarkRead(options: UseBatchMarkReadOptions): BatchMarkRea
 					// 标记为可见（使用数组操作）
 					if (!visibleMessageIds.includes(messageId)) {
 						visibleMessageIds = [...visibleMessageIds, messageId];
-						pendingMessageIds = [...pendingMessageIds, messageId];
+						pendingMessageIds = appendUniqueIds(pendingMessageIds, [messageId]);
 						scheduleBatchMarkAsRead();
 					}
 				} else {

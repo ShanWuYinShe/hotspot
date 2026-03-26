@@ -22,6 +22,7 @@
     let { children } = $props();
     let isSyncingLocationToServer = false;
     let lastSyncedLocationSignature = "";
+    let lastSyncedUserId: string | null = null;
     let hasBootstrappedLocation = false;
     const LOCATION_MAX_AGE_MS = 1 * 60 * 1000; // 1 分钟视为位置仍然新鲜
     const LOCATION_REFRESH_INTERVAL_MS = 1 * 60 * 1000; // 每 1 分钟刷新一次真实位置
@@ -47,11 +48,12 @@
     ) {
         if (isSyncingLocationToServer) return;
         const signature = buildLocationSignature(userId, location);
-        if (signature === lastSyncedLocationSignature) return;
+        if (userId === lastSyncedUserId && signature === lastSyncedLocationSignature) return;
         isSyncingLocationToServer = true;
         try {
             const response = await usersService.updateLocation({ location });
             if (isSuccess(response)) {
+                lastSyncedUserId = userId;
                 lastSyncedLocationSignature = signature;
             }
         } catch {
@@ -108,31 +110,30 @@
         );
     }
 
+    function syncAnchorFromLocation(location: {
+        point: { latitude: number; longitude: number };
+        location_name: string;
+    }) {
+        if (mapAnchorStore.name !== DEFAULT_ANCHOR_NAME) return;
+        mapAnchorStore.setAnchor(
+            location.point.latitude,
+            location.point.longitude,
+            location.location_name || "当前位置",
+        );
+    }
+
     async function initLocation(force: boolean) {
         if (locationStore.permissionDenied) return;
 
         const existing = locationStore.current;
-        if (!force && existing && isLocationFresh()) {
-            // 已有较新的真实位置时，仅在浏览锚点仍为默认值时用它初始化锚点
-            if (mapAnchorStore.name === DEFAULT_ANCHOR_NAME) {
-                const anchorName = existing.location_name || "当前位置";
-                mapAnchorStore.setAnchor(
-                    existing.point.latitude,
-                    existing.point.longitude,
-                    anchorName,
-                );
-            }
-            return;
-        }
-        if (force && existing) {
-            if (mapAnchorStore.name === DEFAULT_ANCHOR_NAME) {
-                const anchorName = existing.location_name || "当前位置";
-                mapAnchorStore.setAnchor(
-                    existing.point.latitude,
-                    existing.point.longitude,
-                    anchorName,
-                );
-            }
+        if (existing && (force || isLocationFresh())) {
+            syncAnchorFromLocation({
+                point: {
+                    latitude: existing.point.latitude,
+                    longitude: existing.point.longitude,
+                },
+                location_name: existing.location_name || "当前位置",
+            });
             return;
         }
 
@@ -143,30 +144,36 @@
             geoPoint.latitude,
             geoPoint.longitude,
         );
-        const name =
-            resolved || locationStore.current?.location_name || "当前位置";
-        locationStore.setLocation({
+        const location = {
             point: {
                 latitude: geoPoint.latitude,
                 longitude: geoPoint.longitude,
             },
-            location_name: name,
-        });
-
-        if (mapAnchorStore.name === DEFAULT_ANCHOR_NAME) {
-            mapAnchorStore.setAnchor(
-                geoPoint.latitude,
-                geoPoint.longitude,
-                name,
-            );
-        }
+            location_name:
+                resolved || locationStore.current?.location_name || "当前位置",
+        };
+        locationStore.setLocation(location);
+        syncAnchorFromLocation(location);
     }
 
     $effect(() => {
         const isAuthenticated = authStore.isAuthenticated;
         const userId = authStore.currentUserId;
+
+        if (!isAuthenticated || !userId) {
+            lastSyncedUserId = null;
+            lastSyncedLocationSignature = "";
+            return;
+        }
+
+        if (userId !== lastSyncedUserId) {
+            lastSyncedUserId = null;
+            lastSyncedLocationSignature = "";
+        }
+
         const current = locationStore.current;
-        if (!isAuthenticated || !userId || !current || !hasBootstrappedLocation) return;
+        if (!current || !hasBootstrappedLocation) return;
+
         const location = {
             point: {
                 latitude: current.point.latitude,

@@ -199,6 +199,19 @@
 		});
 	}
 
+	async function handleTabChange(value: string) {
+		const nextTab = parseSearchTab(value);
+		if (nextTab === currentTab || !activeMode || !activeTerm) {
+			return;
+		}
+
+		await goto(buildSearchUrl(activeMode, activeTerm, nextTab), {
+			replaceState: true,
+			noScroll: true,
+			keepFocus: true
+		});
+	}
+
 	function retryActiveSearch() {
 		if (!activeMode || !activeTerm) {
 			return;
@@ -212,7 +225,6 @@
 		const q = page.url.searchParams.get('q')?.trim() ?? '';
 		const tag = page.url.searchParams.get('tag')?.trim() ?? '';
 		const urlTab = parseSearchTab(page.url.searchParams.get('tab'));
-		mapAnchorStore.anchor.updatedAt;
 
 		if (currentTab !== urlTab) {
 			currentTab = urlTab;
@@ -234,20 +246,13 @@
 	});
 
 	$effect(() => {
+		mapAnchorStore.anchor.updatedAt;
 		if (!activeMode || !activeTerm) {
 			return;
 		}
 
-		const urlTab = parseSearchTab(page.url.searchParams.get('tab'));
-		if (urlTab === currentTab) {
-			return;
-		}
-
-		void goto(buildSearchUrl(activeMode, activeTerm, currentTab), {
-			replaceState: true,
-			noScroll: true,
-			keepFocus: true
-		});
+		lastSearchFingerprint = '';
+		void performSearch(activeMode, activeTerm);
 	});
 
 	$effect(() => {
@@ -356,7 +361,7 @@
 			</CardContent>
 		</Card>
 
-		<Tabs bind:value={currentTab}>
+		<Tabs bind:value={currentTab} onValueChange={handleTabChange}>
 			<TabsList class="h-auto flex-wrap gap-1.5 rounded-3xl bg-card/80 p-1.5 shadow-md shadow-black/10 ring-1 ring-border/50 backdrop-blur-sm dark:shadow-black/30">
 				<TabsTrigger value="users" class="gap-2 rounded-2xl">
 					<Users class="h-4 w-4" />

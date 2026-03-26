@@ -140,7 +140,6 @@
     let selectedMarker: AMap.Marker | null = null;
     let hasInit = $state(false);
     let hasSyncedFromAnchor = $state(false);
-    let modalRoot = $state<HTMLDivElement | null>(null);
     const LONG_PRESS_DURATION_MS = 700;
     const GESTURE_HINT_DURATION_MS = 4000;
     const MAP_RENDER_IDLE_MS = 250;
@@ -1609,7 +1608,15 @@
         void initMap();
     }
 
-    function handleClose() {
+    function setOpenState(nextOpen: boolean) {
+        if (open === nextOpen) {
+            return;
+        }
+        open = nextOpen;
+        onOpenChange?.(nextOpen);
+    }
+
+    function resetTransientUiState() {
         if (searchDebounceTimer) {
             clearTimeout(searchDebounceTimer);
             searchDebounceTimer = null;
@@ -1619,103 +1626,89 @@
         showSearch = false;
         showFilterPanel = false;
         showShareModal = false;
+        searchText = "";
+        searchResults = [];
         closeClusterPreview();
-        open = false;
-        onOpenChange?.(false);
+    }
+
+    function destroyMapSession() {
+        clearRenderMarkers();
+        overlapGroupItems = new Map();
+        latestRenderItems = [];
+        clearSelectedMarker();
+        map?.destroy();
+        map = null;
+        isMapAvailable = true;
+        hasInit = false;
+    }
+
+    function syncStateFromCurrentSource() {
+        if (hasSyncedFromAnchor) {
+            return;
+        }
+
+        const fallbackName = mapAnchorStore.name || mapAnchorStore.displayName;
+        latitude = initialLocation?.latitude ?? mapAnchorStore.latitude;
+        longitude = initialLocation?.longitude ?? mapAnchorStore.longitude;
+        locationName = initialLocation?.locationName?.trim() || fallbackName;
+        searchRadius = initialLocation?.radius ?? mapAnchorStore.radius;
+        anchorHistory = isAnchorMode ? getAnchorHistory() : [];
+        resetTransientUiState();
+
+        if (!hasInit) {
+            void initMap();
+        } else {
+            updateSelectedMarker();
+            const [gcjLng, gcjLat] = toGcjLngLat({
+                latitude,
+                longitude,
+            });
+            map?.setZoomAndCenter(14, [gcjLng, gcjLat]);
+        }
+        hasSyncedFromAnchor = true;
+    }
+
+    function cleanupClosedSession() {
+        hasSyncedFromAnchor = false;
+        lastRenderedViewportSignature = "";
+        resetTransientUiState();
+        hideGestureHint();
+        placementHintVisible = false;
+        cancelReverseGeocodeTimer();
+        if (renderMapTimer) {
+            clearTimeout(renderMapTimer);
+            renderMapTimer = null;
+        }
+        if (placementHintTimer) {
+            clearTimeout(placementHintTimer);
+            placementHintTimer = null;
+        }
+        if (longPressTimer) {
+            clearTimeout(longPressTimer);
+            longPressTimer = null;
+        }
+        lastTouchLngLat = null;
+        detachTouchListeners?.();
+        detachContextMenuListener?.();
+        detachOutsidePointerListener?.();
+        destroyMapSession();
+    }
+
+    function handleClose() {
+        setOpenState(false);
     }
 
     $effect(() => {
         if (open) {
+            registerOutsidePointerListener();
             if (!gestureHintVisible) {
                 showGestureHint();
             }
-            if (!hasSyncedFromAnchor) {
-                const fallbackName =
-                    mapAnchorStore.name || mapAnchorStore.displayName;
-                latitude = initialLocation?.latitude ?? mapAnchorStore.latitude;
-                longitude =
-                    initialLocation?.longitude ?? mapAnchorStore.longitude;
-                locationName =
-                    initialLocation?.locationName?.trim() || fallbackName;
-                searchRadius = initialLocation?.radius ?? mapAnchorStore.radius;
-                anchorHistory = isAnchorMode ? getAnchorHistory() : [];
-                showSearch = false;
-                showFilterPanel = false;
-                searchText = "";
-                searchResults = [];
-                isSearching = false;
-
-                if (!hasInit) {
-                    initMap();
-                } else {
-                    updateSelectedMarker();
-                    const [gcjLng, gcjLat] = toGcjLngLat({
-                        latitude,
-                        longitude,
-                    });
-                    map?.setZoomAndCenter(14, [gcjLng, gcjLat]);
-                }
-                hasSyncedFromAnchor = true;
-            }
-        } else {
-            hasSyncedFromAnchor = false;
-            lastRenderedViewportSignature = "";
-            closeClusterPreview();
-            activeSearchRequestId += 1;
-            isSearching = false;
-            showSearch = false;
-            showFilterPanel = false;
-            hideGestureHint();
-            placementHintVisible = false;
-            // 如果当前 selection 的屏幕区域与位置选择器弹窗区域有明显重叠
-            // 则认为选中状态是由本弹窗交互产生的，在关闭前主动清理，避免浏览器
-            // 在 DOM 卸载后将选区“迁移”到主内容区域导致大段文字被选中
-            if (browser && modalRoot) {
-                const selection = window.getSelection();
-                if (selection && selection.rangeCount > 0) {
-                    const range = selection.getRangeAt(0);
-                    const rects = Array.from(range.getClientRects());
-                    if (rects.length > 0) {
-                        const modalRect = modalRoot.getBoundingClientRect();
-                        let intersects = false;
-                        for (const rect of rects) {
-                            const separated =
-                                rect.right < modalRect.left ||
-                                rect.left > modalRect.right ||
-                                rect.bottom < modalRect.top ||
-                                rect.top > modalRect.bottom;
-                            if (!separated) {
-                                intersects = true;
-                                break;
-                            }
-                        }
-                        if (intersects) {
-                            selection.removeAllRanges();
-                        }
-                    }
-                }
-            }
-            // 如果当前选区来自位置选择器自身，在关闭弹窗时清理掉避免浏览器把选区“迁移”到主内容
-            if (browser && modalRoot) {
-                const selection = window.getSelection();
-                if (selection && selection.rangeCount > 0) {
-                    const range = selection.getRangeAt(0);
-                    const node = range.commonAncestorContainer as Node;
-                    if (modalRoot.contains(node)) {
-                        selection.removeAllRanges();
-                    }
-                }
-            }
-            // 关闭弹窗时销毁地图实例，避免下次打开时复用已失效的 DOM 容器
-            clearRenderMarkers();
-            overlapGroupItems = new Map();
-            latestRenderItems = [];
-            clearSelectedMarker();
-            map?.destroy();
-            map = null;
-            isMapAvailable = true;
-            hasInit = false;
+            syncStateFromCurrentSource();
+            return;
         }
+
+        cleanupClosedSession();
     });
 
     // 组件卸载时清理资源
@@ -1773,13 +1766,10 @@
     });
 </script>
 
-<div bind:this={modalRoot}>
+<div>
     <Dialog.Root
         bind:open
-        onOpenChange={(value) => {
-            open = value;
-            onOpenChange?.(value);
-        }}
+        onOpenChange={setOpenState}
     >
         <Dialog.Content
             class={`flex h-[90dvh] max-h-[90dvh] flex-col p-0 transition-all duration-200 ease-out sm:flex-row sm:gap-4 select-none ${
