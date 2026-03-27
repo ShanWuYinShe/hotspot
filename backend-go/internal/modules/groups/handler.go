@@ -115,3 +115,47 @@ func (h *Handler) Dismiss(w http.ResponseWriter, r *http.Request) {
 		return httpx.Success(struct{}{})
 	})
 }
+
+func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
+	var req GroupMembersRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	items, nextCursor, err := h.service.ListMembers(r.Context(), req)
+	if err != nil {
+		if err == ErrGroupNotFound {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	resp := map[string]any{
+		"items":      items,
+		"next_cursor": nextCursor,
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
+}
+
+func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
+	var req SearchGroupMembersRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" || req.Keyword == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	items, nextCursor, err := h.service.SearchMembers(r.Context(), req)
+	if err != nil {
+		if err == ErrGroupNotFound {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	resp := map[string]any{
+		"items":      items,
+		"next_cursor": nextCursor,
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
+}

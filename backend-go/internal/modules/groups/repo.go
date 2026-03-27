@@ -8,4 +8,6 @@ type Repository interface {
 	Search(context.Context, string) (PaginatedGroups, error)
 	Update(context.Context, string, UpdateGroupRequest) error
 	Dismiss(context.Context, string) error
+	ListMembers(context.Context, string, *GroupRole, int, string) ([]GroupMemberItem, string, error)
+	SearchMembers(context.Context, string, string, *GroupRole, int, string) ([]GroupMemberItem, string, error)
 }

@@ -35,6 +35,12 @@ func (r *groupErrorRepo) Update(context.Context, string, UpdateGroupRequest) err
 func (r *groupErrorRepo) Dismiss(context.Context, string) error {
 	return r.dismissErr
 }
+func (r *groupErrorRepo) ListMembers(context.Context, string, *GroupRole, int, string) ([]GroupMemberItem, string, error) {
+	return nil, "", errors.New("boom")
+}
+func (r *groupErrorRepo) SearchMembers(context.Context, string, string, *GroupRole, int, string) ([]GroupMemberItem, string, error) {
+	return nil, "", errors.New("boom")
+}
 
 func TestCreateAndOpenGroup(t *testing.T) {
 	handler := NewHandler(NewService())

@@ -91,6 +91,20 @@ func (r *PostgresRepository) Dismiss(ctx context.Context, groupID string) error 
 	return err
 }
 
+func (r *PostgresRepository) ListMembers(ctx context.Context, groupID string, role *GroupRole, limit int, cursor string) ([]GroupMemberItem, string, error) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.ListMembers(ctx, groupID, role, limit, cursor)
+	}
+	return r.fallback.ListMembers(ctx, groupID, role, limit, cursor)
+}
+
+func (r *PostgresRepository) SearchMembers(ctx context.Context, groupID string, keyword string, role *GroupRole, limit int, cursor string) ([]GroupMemberItem, string, error) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.SearchMembers(ctx, groupID, keyword, role, limit, cursor)
+	}
+	return r.fallback.SearchMembers(ctx, groupID, keyword, role, limit, cursor)
+}
+
 func nilOrString(s string) *string {
 	if s == "" {
 		return nil

@@ -35,3 +35,11 @@ func (r *PersistenceRepository) Update(ctx context.Context, userID string, req U
 func (r *PersistenceRepository) Dismiss(ctx context.Context, groupID string) error {
 	return r.impl.Dismiss(ctx, groupID)
 }
+
+func (r *PersistenceRepository) ListMembers(ctx context.Context, groupID string, role *GroupRole, limit int, cursor string) ([]GroupMemberItem, string, error) {
+	return r.impl.ListMembers(ctx, groupID, role, limit, cursor)
+}
+
+func (r *PersistenceRepository) SearchMembers(ctx context.Context, groupID string, keyword string, role *GroupRole, limit int, cursor string) ([]GroupMemberItem, string, error) {
+	return r.impl.SearchMembers(ctx, groupID, keyword, role, limit, cursor)
+}

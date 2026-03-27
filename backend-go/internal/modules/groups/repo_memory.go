@@ -105,3 +105,71 @@ func (r *InMemoryRepository) Dismiss(_ context.Context, groupID string) error {
 	delete(r.groups, groupID)
 	return nil
 }
+
+func (r *InMemoryRepository) ListMembers(_ context.Context, groupID string, role *GroupRole, limit int, cursor string) ([]GroupMemberItem, string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	group, ok := r.groups[groupID]
+	if !ok {
+		return nil, "", ErrGroupNotFound
+	}
+	now := "2024-01-15T08:30:00.000Z"
+	items := []GroupMemberItem{
+		{
+			User: UserInfo{
+				UserID:    group.Group.GroupID + "_owner",
+				Nickname:  group.Group.Name + " Owner",
+				AvatarURL: "",
+			},
+			Role:       GroupRoleOwner,
+			JoinedAt:   now,
+		},
+	}
+	if role == nil || *role == GroupRoleMember {
+		items = append(items, GroupMemberItem{
+			User: UserInfo{
+				UserID:    group.Group.GroupID + "_member",
+				Nickname:  group.Group.Name + " Member",
+				AvatarURL: "",
+			},
+			Role:     GroupRoleMember,
+			JoinedAt: now,
+		})
+	}
+	if len(items) > limit {
+		return items[:limit], items[limit-1].JoinedAt + ":" + items[limit-1].User.UserID, nil
+	}
+	return items, "", nil
+}
+
+func (r *InMemoryRepository) SearchMembers(_ context.Context, groupID string, keyword string, role *GroupRole, limit int, cursor string) ([]GroupMemberItem, string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	group, ok := r.groups[groupID]
+	if !ok {
+		return nil, "", ErrGroupNotFound
+	}
+	now := "2024-01-15T08:30:00.000Z"
+	items := []GroupMemberItem{}
+	if role == nil || *role == GroupRoleOwner {
+		items = append(items, GroupMemberItem{
+			User: UserInfo{
+				UserID:    group.Group.GroupID + "_owner",
+				Nickname:  group.Group.Name + " Owner",
+				AvatarURL: "",
+			},
+			Role:     GroupRoleOwner,
+			JoinedAt: now,
+		})
+	}
+	filtered := []GroupMemberItem{}
+	for _, item := range items {
+		if keyword == "" || item.User.Nickname == keyword {
+			filtered = append(filtered, item)
+		}
+	}
+	if len(filtered) > limit {
+		return filtered[:limit], filtered[limit-1].JoinedAt + ":" + filtered[limit-1].User.UserID, nil
+	}
+	return filtered, "", nil
+}

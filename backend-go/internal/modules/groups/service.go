@@ -60,3 +60,39 @@ func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
 	}
 	return s.repo.Dismiss(ctx, principal.UserID)
 }
+
+func (s *Service) ListMembers(ctx context.Context, req GroupMembersRequest) ([]GroupMemberItem, string, error) {
+	_, ok, err := s.repo.Get(ctx, req.GroupID)
+	if err != nil {
+		return nil, "", err
+	}
+	if !ok {
+		return nil, "", ErrGroupNotFound
+	}
+	limit := req.Limit
+	if limit == 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	return s.repo.ListMembers(ctx, req.GroupID, req.Role, limit, req.Cursor)
+}
+
+func (s *Service) SearchMembers(ctx context.Context, req SearchGroupMembersRequest) ([]GroupMemberItem, string, error) {
+	_, ok, err := s.repo.Get(ctx, req.GroupID)
+	if err != nil {
+		return nil, "", err
+	}
+	if !ok {
+		return nil, "", ErrGroupNotFound
+	}
+	limit := req.Limit
+	if limit == 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	return s.repo.SearchMembers(ctx, req.GroupID, req.Keyword, req.Role, limit, req.Cursor)
+}

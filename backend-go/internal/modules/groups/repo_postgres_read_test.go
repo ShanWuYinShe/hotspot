@@ -70,6 +70,14 @@ func (r *groupFallbackRepo) Dismiss(context.Context, string) error {
 	r.used = true
 	return nil
 }
+func (r *groupFallbackRepo) ListMembers(context.Context, string, *GroupRole, int, string) ([]GroupMemberItem, string, error) {
+	r.used = true
+	return nil, "", nil
+}
+func (r *groupFallbackRepo) SearchMembers(context.Context, string, string, *GroupRole, int, string) ([]GroupMemberItem, string, error) {
+	r.used = true
+	return nil, "", nil
+}
 
 type groupBackendStub struct {
 	rows      [][]any
