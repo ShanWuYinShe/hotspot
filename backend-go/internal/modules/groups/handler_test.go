@@ -79,6 +79,27 @@ func (r *groupErrorRepo) ApproveApplication(context.Context, string, string) err
 func (r *groupErrorRepo) RejectApplication(context.Context, string, *string) error {
 	return r.rejectApplicationErr
 }
+func (r *groupErrorRepo) UpdateMySettings(context.Context, string, UpdateGroupMySettingsRequest) error {
+	return nil
+}
+func (r *groupErrorRepo) LeaveGroup(context.Context, string, string) error {
+	return nil
+}
+func (r *groupErrorRepo) ListMyApplications(context.Context, string, *ApplicationStatus, int, string) ([]GroupApplicationItem, string, error) {
+	return nil, "", nil
+}
+func (r *groupErrorRepo) CancelApplication(context.Context, string) error {
+	return nil
+}
+func (r *groupErrorRepo) ListMyInvites(context.Context, string, *ApplicationStatus, int, string) ([]GroupInviteItem, string, error) {
+	return nil, "", nil
+}
+func (r *groupErrorRepo) AcceptInvite(context.Context, string, string) error {
+	return nil
+}
+func (r *groupErrorRepo) RejectInvite(context.Context, string) error {
+	return nil
+}
 
 func TestCreateAndOpenGroup(t *testing.T) {
 	handler := NewHandler(NewService())

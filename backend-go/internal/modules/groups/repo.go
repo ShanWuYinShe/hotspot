@@ -19,4 +19,11 @@ type Repository interface {
 	ListApplications(context.Context, string, *ApplicationStatus, int, string) ([]GroupApplicationItem, string, error)
 	ApproveApplication(context.Context, string, string) error
 	RejectApplication(context.Context, string, *string) error
+	UpdateMySettings(context.Context, string, UpdateGroupMySettingsRequest) error
+	LeaveGroup(context.Context, string, string) error
+	ListMyApplications(context.Context, string, *ApplicationStatus, int, string) ([]GroupApplicationItem, string, error)
+	CancelApplication(context.Context, string) error
+	ListMyInvites(context.Context, string, *ApplicationStatus, int, string) ([]GroupInviteItem, string, error)
+	AcceptInvite(context.Context, string) error
+	RejectInvite(context.Context, string) error
 }

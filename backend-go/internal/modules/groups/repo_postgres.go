@@ -147,6 +147,34 @@ func (r *PostgresRepository) RejectApplication(ctx context.Context, applicationI
 	return r.fallback.RejectApplication(ctx, applicationID, reason)
 }
 
+func (r *PostgresRepository) UpdateMySettings(ctx context.Context, userID string, req UpdateGroupMySettingsRequest) error {
+	return r.fallback.UpdateMySettings(ctx, userID, req)
+}
+
+func (r *PostgresRepository) LeaveGroup(ctx context.Context, userID string, groupID string) error {
+	return r.fallback.LeaveGroup(ctx, userID, groupID)
+}
+
+func (r *PostgresRepository) ListMyApplications(ctx context.Context, userID string, status *ApplicationStatus, limit int, cursor string) ([]GroupApplicationItem, string, error) {
+	return r.fallback.ListMyApplications(ctx, userID, status, limit, cursor)
+}
+
+func (r *PostgresRepository) CancelApplication(ctx context.Context, applicationID string) error {
+	return r.fallback.CancelApplication(ctx, applicationID)
+}
+
+func (r *PostgresRepository) ListMyInvites(ctx context.Context, userID string, status *ApplicationStatus, limit int, cursor string) ([]GroupInviteItem, string, error) {
+	return r.fallback.ListMyInvites(ctx, userID, status, limit, cursor)
+}
+
+func (r *PostgresRepository) AcceptInvite(ctx context.Context, userID string, inviteID string) error {
+	return r.fallback.AcceptInvite(ctx, userID, inviteID)
+}
+
+func (r *PostgresRepository) RejectInvite(ctx context.Context, inviteID string) error {
+	return r.fallback.RejectInvite(ctx, inviteID)
+}
+
 func nilOrString(s string) *string {
 	if s == "" {
 		return nil

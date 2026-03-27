@@ -203,3 +203,74 @@ func (s *Service) ApproveApplication(ctx context.Context, req ApproveGroupApplic
 func (s *Service) RejectApplication(ctx context.Context, req RejectGroupApplicationRequest) error {
 	return s.repo.RejectApplication(ctx, req.ApplicationID, req.Reason)
 }
+
+func (s *Service) UpdateMySettings(ctx context.Context, req UpdateGroupMySettingsRequest) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	group, ok, err := s.repo.Get(ctx, req.GroupID)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrGroupNotFound
+	}
+	if group.MyState == nil || !group.MyState.IsJoined {
+		return ErrPermissionDenied
+	}
+	return s.repo.UpdateMySettings(ctx, principal.UserID, req)
+}
+
+func (s *Service) LeaveGroup(ctx context.Context, req LeaveGroupRequest) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	group, ok, err := s.repo.Get(ctx, req.GroupID)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrGroupNotFound
+	}
+	if group.MyState == nil || !group.MyState.IsJoined {
+		return ErrPermissionDenied
+	}
+	if group.MyState.Role == GroupRoleOwner {
+		return ErrPermissionDenied
+	}
+	return s.repo.LeaveGroup(ctx, principal.UserID, req.GroupID)
+}
+
+func (s *Service) ListMyApplications(ctx context.Context, req MyApplicationsRequest) ([]GroupApplicationItem, string, error) {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	limit := req.Limit
+	if limit == 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	return s.repo.ListMyApplications(ctx, principal.UserID, req.Status, limit, req.Cursor)
+}
+
+func (s *Service) CancelApplication(ctx context.Context, req CancelApplicationRequest) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	return s.repo.CancelApplication(ctx, req.ApplicationID)
+}
+
+func (s *Service) ListMyInvites(ctx context.Context, req MyInvitesRequest) ([]GroupInviteItem, string, error) {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	limit := req.Limit
+	if limit == 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	return s.repo.ListMyInvites(ctx, principal.UserID, req.Status, limit, req.Cursor)
+}
+
+func (s *Service) AcceptInvite(ctx context.Context, req AcceptInviteRequest) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	return s.repo.AcceptInvite(ctx, principal.UserID, req.InviteID)
+}
+
+func (s *Service) RejectInvite(ctx context.Context, req RejectInviteRequest) error {
+	return s.repo.RejectInvite(ctx, req.InviteID)
+}

@@ -353,3 +353,137 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 		return httpx.Success(struct{}{})
 	})
 }
+
+func (h *Handler) UpdateMySettings(w http.ResponseWriter, r *http.Request) {
+	var req UpdateGroupMySettingsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	if err := h.service.UpdateMySettings(r.Context(), req); err != nil {
+		if err == ErrGroupNotFound {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
+			return
+		}
+		if err == ErrPermissionDenied {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
+}
+
+func (h *Handler) LeaveGroup(w http.ResponseWriter, r *http.Request) {
+	var req LeaveGroupRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	if err := h.service.LeaveGroup(r.Context(), req); err != nil {
+		if err == ErrGroupNotFound {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
+			return
+		}
+		if err == ErrPermissionDenied {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "群主需先转让群主身份"))
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
+}
+
+func (h *Handler) ListMyApplications(w http.ResponseWriter, r *http.Request) {
+	var req MyApplicationsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		return
+	}
+	items, nextCursor, err := h.service.ListMyApplications(r.Context(), req)
+	if err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	resp := map[string]any{
+		"items":      items,
+		"next_cursor": nextCursor,
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
+}
+
+func (h *Handler) CancelApplication(w http.ResponseWriter, r *http.Request) {
+	var req CancelApplicationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ApplicationID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	if err := h.service.CancelApplication(r.Context(), req); err != nil {
+		if err == ErrGroupNotFound {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
+}
+
+func (h *Handler) ListMyInvites(w http.ResponseWriter, r *http.Request) {
+	var req MyInvitesRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		return
+	}
+	items, nextCursor, err := h.service.ListMyInvites(r.Context(), req)
+	if err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	resp := map[string]any{
+		"items":      items,
+		"next_cursor": nextCursor,
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
+}
+
+func (h *Handler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
+	if err := idempotency.RequireKey(r); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		return
+	}
+	var req AcceptInviteRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.InviteID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	idempotency.ReplayOrStore(w, r, "groups/me/invites/accept", func() httpx.ApiResponse[struct{}] {
+		if err := h.service.AcceptInvite(r.Context(), req); err != nil {
+			if err == ErrGroupNotFound {
+				return httpx.ApiResponse[struct{}]{Code: 10300, Message: "群组不存在"}
+			}
+			return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
+		}
+		return httpx.Success(struct{}{})
+	})
+}
+
+func (h *Handler) RejectInvite(w http.ResponseWriter, r *http.Request) {
+	if err := idempotency.RequireKey(r); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		return
+	}
+	var req RejectInviteRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.InviteID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	idempotency.ReplayOrStore(w, r, "groups/me/invites/reject", func() httpx.ApiResponse[struct{}] {
+		if err := h.service.RejectInvite(r.Context(), req); err != nil {
+			return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
+		}
+		return httpx.Success(struct{}{})
+	})
+}

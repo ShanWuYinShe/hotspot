@@ -289,3 +289,58 @@ func (r *InMemoryRepository) RejectApplication(_ context.Context, applicationID 
 	_ = reason
 	return nil
 }
+
+func (r *InMemoryRepository) UpdateMySettings(_ context.Context, userID string, req UpdateGroupMySettingsRequest) error {
+	_ = userID
+	_ = req
+	return nil
+}
+
+func (r *InMemoryRepository) LeaveGroup(_ context.Context, userID string, groupID string) error {
+	_ = userID
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	group, ok := r.groups[groupID]
+	if !ok {
+		return ErrGroupNotFound
+	}
+	if group.MyState == nil || !group.MyState.IsJoined {
+		return ErrPermissionDenied
+	}
+	if group.MyState.Role == GroupRoleOwner {
+		return ErrPermissionDenied
+	}
+	group.MyState = nil
+	r.groups[groupID] = group
+	return nil
+}
+
+func (r *InMemoryRepository) ListMyApplications(_ context.Context, userID string, status *ApplicationStatus, limit int, cursor string) ([]GroupApplicationItem, string, error) {
+	_ = userID
+	_ = status
+	_ = cursor
+	return []GroupApplicationItem{}, "", nil
+}
+
+func (r *InMemoryRepository) CancelApplication(_ context.Context, applicationID string) error {
+	_ = applicationID
+	return nil
+}
+
+func (r *InMemoryRepository) ListMyInvites(_ context.Context, userID string, status *ApplicationStatus, limit int, cursor string) ([]GroupInviteItem, string, error) {
+	_ = userID
+	_ = status
+	_ = cursor
+	return []GroupInviteItem{}, "", nil
+}
+
+func (r *InMemoryRepository) AcceptInvite(_ context.Context, userID string, inviteID string) error {
+	_ = userID
+	_ = inviteID
+	return nil
+}
+
+func (r *InMemoryRepository) RejectInvite(_ context.Context, inviteID string) error {
+	_ = inviteID
+	return nil
+}

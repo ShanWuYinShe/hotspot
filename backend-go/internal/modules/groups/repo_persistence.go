@@ -79,3 +79,31 @@ func (r *PersistenceRepository) ApproveApplication(ctx context.Context, approver
 func (r *PersistenceRepository) RejectApplication(ctx context.Context, applicationID string, reason *string) error {
 	return r.impl.RejectApplication(ctx, applicationID, reason)
 }
+
+func (r *PersistenceRepository) UpdateMySettings(ctx context.Context, userID string, req UpdateGroupMySettingsRequest) error {
+	return r.impl.UpdateMySettings(ctx, userID, req)
+}
+
+func (r *PersistenceRepository) LeaveGroup(ctx context.Context, userID string, groupID string) error {
+	return r.impl.LeaveGroup(ctx, userID, groupID)
+}
+
+func (r *PersistenceRepository) ListMyApplications(ctx context.Context, userID string, status *ApplicationStatus, limit int, cursor string) ([]GroupApplicationItem, string, error) {
+	return r.impl.ListMyApplications(ctx, userID, status, limit, cursor)
+}
+
+func (r *PersistenceRepository) CancelApplication(ctx context.Context, applicationID string) error {
+	return r.impl.CancelApplication(ctx, applicationID)
+}
+
+func (r *PersistenceRepository) ListMyInvites(ctx context.Context, userID string, status *ApplicationStatus, limit int, cursor string) ([]GroupInviteItem, string, error) {
+	return r.impl.ListMyInvites(ctx, userID, status, limit, cursor)
+}
+
+func (r *PersistenceRepository) AcceptInvite(ctx context.Context, userID string, inviteID string) error {
+	return r.impl.AcceptInvite(ctx, userID, inviteID)
+}
+
+func (r *PersistenceRepository) RejectInvite(ctx context.Context, inviteID string) error {
+	return r.impl.RejectInvite(ctx, inviteID)
+}

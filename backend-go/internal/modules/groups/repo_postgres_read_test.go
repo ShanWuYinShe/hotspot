@@ -114,6 +114,34 @@ func (r *groupFallbackRepo) RejectApplication(context.Context, string, *string) 
 	r.used = true
 	return nil
 }
+func (r *groupFallbackRepo) UpdateMySettings(context.Context, string, UpdateGroupMySettingsRequest) error {
+	r.used = true
+	return nil
+}
+func (r *groupFallbackRepo) LeaveGroup(context.Context, string, string) error {
+	r.used = true
+	return nil
+}
+func (r *groupFallbackRepo) ListMyApplications(context.Context, string, *ApplicationStatus, int, string) ([]GroupApplicationItem, string, error) {
+	r.used = true
+	return nil, "", nil
+}
+func (r *groupFallbackRepo) CancelApplication(context.Context, string) error {
+	r.used = true
+	return nil
+}
+func (r *groupFallbackRepo) ListMyInvites(context.Context, string, *ApplicationStatus, int, string) ([]GroupInviteItem, string, error) {
+	r.used = true
+	return nil, "", nil
+}
+func (r *groupFallbackRepo) AcceptInvite(context.Context, string, string) error {
+	r.used = true
+	return nil
+}
+func (r *groupFallbackRepo) RejectInvite(context.Context, string) error {
+	r.used = true
+	return nil
+}
 
 type groupBackendStub struct {
 	rows      [][]any
