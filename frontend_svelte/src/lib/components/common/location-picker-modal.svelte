@@ -1830,48 +1830,51 @@
             }`}
             hideClose
         >
-            <!-- 移动端简化标题 -->
+            <!-- 移动端轻量工具栏 -->
             <div
-                class="flex items-center justify-between border-b border-white/50 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.88))] px-4 py-3 shadow-[0_12px_30px_rgba(15,23,42,0.08)] backdrop-blur-md dark:border-border/60 dark:bg-[linear-gradient(180deg,rgba(30,30,36,0.96),rgba(24,24,30,0.9))] dark:shadow-[0_12px_30px_rgba(0,0,0,0.22)] sm:hidden"
+                class="border-b border-border/50 bg-background/94 px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-sm sm:hidden"
             >
-                <div class="flex min-w-0 items-center gap-3">
-                    <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#0f172a,#2563eb)] shadow-[0_14px_32px_rgba(37,99,235,0.24)] ring-1 ring-white/40"
-                    >
-                        <MapPin class="h-5 w-5 text-white" />
-                    </div>
+                <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                        <p
-                            class="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary/75"
-                        >
+                        <p class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                             {mapModeLabel}
                         </p>
-                        <span class="block truncate text-[15px] font-semibold text-foreground"
-                            >{modalTitle}</span
-                        >
+                        <p class="mt-1 truncate text-base font-semibold text-foreground">
+                            {modalTitle}
+                        </p>
+                        <p class="mt-1 text-xs text-muted-foreground">
+                            拖动地图后确认中心点
+                        </p>
                     </div>
-                </div>
-                <div class="flex items-center gap-2">
                     <Button
                         variant="ghost"
                         size="sm"
-                        class="h-9 w-9 rounded-2xl border border-border/60 bg-white/70 p-0 shadow-sm dark:bg-card/80"
+                        class="h-9 w-9 shrink-0 rounded-full border border-border/60 bg-background/80 p-0"
                         onclick={handleClose}
                     >
                         <span class="sr-only">关闭</span>
-                        <svg
-                            class="h-4 w-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12"
-                            ></path>
-                        </svg>
+                        <X class="h-4 w-4" />
+                    </Button>
+                </div>
+                <div class="mt-3 flex items-center gap-2">
+                    <Button
+                        variant={showSearch ? "default" : "outline"}
+                        size="sm"
+                        class="h-9 flex-1 rounded-full"
+                        onclick={toggleSearch}
+                    >
+                        <Search class="h-4 w-4" />
+                        搜索地点
+                    </Button>
+                    <Button
+                        data-location-filter-trigger="true"
+                        variant={showFilterPanel ? "default" : "outline"}
+                        size="sm"
+                        class="h-9 rounded-full px-3"
+                        onclick={toggleFilterPanel}
+                    >
+                        <ListFilter class="h-4 w-4" />
+                        筛选 {activeFilterCount}
                     </Button>
                 </div>
             </div>
@@ -2099,12 +2102,12 @@
 
                 <!-- 悬浮定位按钮 (移动端) -->
                 <div
-                    class="absolute right-3 top-3 z-10 flex flex-col gap-2 sm:hidden"
+                    class="absolute right-3 top-4 z-10 flex flex-col gap-2 sm:hidden"
                 >
                     <Button
                         size="icon"
                         variant="ghost"
-                        class="h-12 w-12 rounded-[22px] border border-white/65 bg-white/92 text-foreground shadow-[0_18px_34px_rgba(15,23,42,0.24)] backdrop-blur-md transition hover:border-primary/70 hover:bg-white hover:text-primary dark:border-border/60 dark:bg-card/92 dark:shadow-[0_18px_34px_rgba(0,0,0,0.48)] dark:hover:border-primary/70 dark:hover:bg-card dark:hover:text-primary"
+                        class="h-11 w-11 rounded-full border border-border/60 bg-background/88 text-foreground shadow-[0_12px_24px_rgba(15,23,42,0.18)] backdrop-blur-sm transition hover:border-primary/60 hover:text-primary dark:shadow-[0_12px_24px_rgba(0,0,0,0.36)]"
                         onclick={handleUseCurrentLocation}
                         disabled={isLocating}
                         aria-label="使用当前位置"
@@ -2121,7 +2124,7 @@
                         <Button
                             size="icon"
                             variant="ghost"
-                            class="h-12 w-12 rounded-[22px] border border-white/65 bg-white/92 text-foreground shadow-[0_18px_34px_rgba(15,23,42,0.24)] backdrop-blur-md transition hover:border-primary/70 hover:bg-white hover:text-primary dark:border-border/60 dark:bg-card/92 dark:shadow-[0_18px_34px_rgba(0,0,0,0.48)] dark:hover:border-primary/70 dark:hover:bg-card dark:hover:text-primary"
+                            class="h-11 w-11 rounded-full border border-border/60 bg-background/88 text-foreground shadow-[0_12px_24px_rgba(15,23,42,0.18)] backdrop-blur-sm transition hover:border-primary/60 hover:text-primary dark:shadow-[0_12px_24px_rgba(0,0,0,0.36)]"
                             onclick={handleBackToBrowseAnchor}
                             aria-label="回到浏览锚点位置"
                         >
@@ -2352,7 +2355,7 @@
                         : 'calc(100% - 116px)'})"
                 >
                     <div
-                        class="rounded-t-[30px] border border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] shadow-[0_-20px_48px_rgba(15,23,42,0.18)] backdrop-blur-xl dark:border-border/60 dark:bg-[linear-gradient(180deg,rgba(30,30,36,0.96),rgba(24,24,30,0.92))] dark:shadow-[0_-20px_48px_rgba(0,0,0,0.42)]"
+                        class="rounded-t-[28px] border border-border/60 bg-background/96 shadow-[0_-16px_36px_rgba(15,23,42,0.14)] backdrop-blur-md dark:bg-card/96 dark:shadow-[0_-16px_36px_rgba(0,0,0,0.34)]"
                     >
                         <!-- 展开/收起手柄 -->
                         <button
@@ -2391,28 +2394,7 @@
                                     subtle
                                     overrideName={locationName ||
                                         "拖动地图选择位置"}
-                                >
-                                    {#snippet actions()}
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            class="h-10 rounded-2xl border-border/60 bg-background/75"
-                                            onclick={toggleSearch}
-                                        >
-                                            <Search class="h-4 w-4" />
-                                            搜索地点
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            class="h-10 rounded-2xl border-border/60 bg-background/75"
-                                            onclick={toggleFilterPanel}
-                                        >
-                                            <ListFilter class="h-4 w-4" />
-                                            内容筛选
-                                        </Button>
-                                    {/snippet}
-                                </AnchorSummaryCard>
+                                />
 
                                 {#if showSearch}
                                     <div class="overflow-hidden rounded-[28px] border border-border/60 bg-card/92 shadow-lg backdrop-blur-md">
@@ -2796,7 +2778,7 @@
                             </div>
 
                             <div
-                                class="sticky bottom-0 space-y-2 bg-[linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,0.92)_18%,rgba(255,255,255,0.98)_100%)] pb-4 pt-3 backdrop-blur-sm dark:bg-[linear-gradient(180deg,rgba(24,24,30,0),rgba(24,24,30,0.92)_18%,rgba(24,24,30,0.98)_100%)]"
+                                class="sticky bottom-0 space-y-2 border-t border-border/40 bg-[linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,0.94)_18%,rgba(255,255,255,0.98)_100%)] pb-4 pt-3 backdrop-blur-sm dark:bg-[linear-gradient(180deg,rgba(24,24,30,0),rgba(24,24,30,0.94)_18%,rgba(24,24,30,0.98)_100%)]"
                             >
                                 <Button
                                     class="h-12 w-full gap-2 text-base font-semibold"

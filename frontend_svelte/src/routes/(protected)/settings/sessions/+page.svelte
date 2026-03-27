@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { withMinimumLoadingTime } from '$lib/utils/loading';
+	import { formatDateTime } from '$lib/utils/format';
 	import { authService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
@@ -17,11 +18,7 @@
 	let sessions = $state.raw<SessionItem[]>([]);
 	let isLoading = $state(true);
 	let isRevoking = $state<string | null>(null);
-
-	function formatTime(dateStr: string): string {
-		const date = new Date(dateStr);
-		return date.toLocaleString('zh-CN', { hour12: false });
-	}
+	let isRevokingOthers = $state(false);
 
 	async function loadSessions() {
 		isLoading = true;
@@ -54,6 +51,25 @@
 		}
 	}
 
+	async function revokeOthers() {
+		if (isRevokingOthers) return;
+		isRevokingOthers = true;
+		try {
+			const response = await authService.revokeAllSessions();
+			if (isSuccess(response)) {
+				const revokedCount = response.data?.revoked_count ?? 0;
+				toast.success(revokedCount > 0 ? `已撤销 ${revokedCount} 个其他设备会话` : '没有其他设备会话需要撤销');
+				await loadSessions();
+			} else {
+				toast.error(response.message || '撤销其他设备失败');
+			}
+		} catch {
+			toast.error('撤销其他设备失败');
+		} finally {
+			isRevokingOthers = false;
+		}
+	}
+
 	onMount(() => {
 		loadSessions();
 	});
@@ -64,18 +80,32 @@
 </svelte:head>
 
 <div class="mx-auto max-w-3xl space-y-5">
-	<PageHeader title="会话管理" description="查看并管理已登录设备">
+	<PageHeader title="会话管理" description="查看并管理已登录设备，仅保留当前设备在线">
 		{#snippet actions()}
-			<Button
-				variant="outline"
-				size="sm"
-				class="rounded-2xl border-border/60 bg-background/70"
-				onclick={loadSessions}
-				disabled={isLoading}
-			>
-				<RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
-				刷新
-			</Button>
+			<div class="flex flex-wrap items-center gap-2">
+				<Button
+					variant="outline"
+					size="sm"
+					class="rounded-2xl border-border/60 bg-background/70"
+					onclick={loadSessions}
+					disabled={isLoading}
+				>
+					<RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
+					刷新
+				</Button>
+				<Button
+					variant="outline"
+					size="sm"
+					class="rounded-2xl border-destructive/40 bg-background/70 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+					onclick={revokeOthers}
+					disabled={isLoading || isRevokingOthers}
+				>
+					{#if isRevokingOthers}
+						<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+					{/if}
+					撤销其他设备
+				</Button>
+			</div>
 		{/snippet}
 	</PageHeader>
 
@@ -113,7 +143,7 @@
 								{/if}
 							</div>
 							<div class="mt-1 text-xs text-muted-foreground">
-								{session.ip_location || '未知位置'} · 最后活跃 {formatTime(session.last_active_at)}
+								{session.ip_location || '未知位置'} · 最后活跃 {formatDateTime(session.last_active_at)}
 							</div>
 						</div>
 						<div>

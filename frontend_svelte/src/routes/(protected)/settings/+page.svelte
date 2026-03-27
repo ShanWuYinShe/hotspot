@@ -13,6 +13,8 @@
 	import LogOut from 'lucide-svelte/icons/log-out';
 	import Trash2 from 'lucide-svelte/icons/trash-2';
 	import ChevronRight from 'lucide-svelte/icons/chevron-right';
+	import Share2 from 'lucide-svelte/icons/share-2';
+	import ShieldAlert from 'lucide-svelte/icons/shield-alert';
 
 	const settingsSections = [
 		{
@@ -34,6 +36,13 @@
 			items: [
 				{ icon: Bell, label: '通知设置', href: '/settings/notifications', description: '管理推送通知' }
 			]
+		},
+		{
+			title: '记录与分享',
+			items: [
+				{ icon: Share2, label: '我的分享', href: '/settings/shares', description: '查看并撤销已创建分享' },
+				{ icon: ShieldAlert, label: '我的举报记录', href: '/settings/reports', description: '跟踪举报处理进度' }
+			]
 		}
 	];
 
@@ -50,7 +59,7 @@
 <div class="mx-auto max-w-3xl space-y-5">
 	<PageHeader
 		title="设置"
-		description="统一管理账户、安全、隐私与通知偏好"
+		description="统一管理账户、安全、隐私、分享记录与举报进度"
 	/>
 
 	{#each settingsSections as section (section.title)}

@@ -11,6 +11,13 @@
 	import { Avatar, AvatarFallback } from '$lib/components/ui/avatar';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import type { ReportItem, ReportStatus } from '$lib/types/api';
+	import {
+		REPORT_REASON_LABEL,
+		REPORT_STATUS_BADGE_VARIANT,
+		REPORT_STATUS_LABEL,
+		REPORT_TARGET_TYPE_LABEL,
+		type BadgeVariant
+	} from '$lib/utils/content-labels';
 	import { formatDateTime } from '$lib/utils/format';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import Flag from 'lucide-svelte/icons/flag';
@@ -71,33 +78,11 @@
 
 	// ============ 常量 ============
 
-	type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
-
-	const REASON_LABEL: Record<string, string> = {
-		spam: '垃圾内容',
-		harassment: '骚扰',
-		violence: '暴力',
-		hate_speech: '仇恨言论',
-		sexual_content: '色情内容',
-		misinformation: '虚假信息',
-		impersonation: '冒充',
-		self_harm: '自残',
-		other: '其他'
-	};
-
-	const TARGET_TYPE_LABEL: Record<string, string> = {
-		user: '用户',
-		moment: '瞬间',
-		comment: '评论',
-		group: '群组',
-		message: '消息'
-	};
-
 	const STATUS_BADGE: Record<ReportStatus, { variant: BadgeVariant; text: string }> = {
-		pending: { variant: 'secondary', text: '待处理' },
-		reviewing: { variant: 'default', text: '审核中' },
-		resolved: { variant: 'default', text: '已处理' },
-		dismissed: { variant: 'outline', text: '已驳回' }
+		pending: { variant: REPORT_STATUS_BADGE_VARIANT.pending, text: REPORT_STATUS_LABEL.pending },
+		reviewing: { variant: REPORT_STATUS_BADGE_VARIANT.reviewing, text: REPORT_STATUS_LABEL.reviewing },
+		resolved: { variant: REPORT_STATUS_BADGE_VARIANT.resolved, text: REPORT_STATUS_LABEL.resolved },
+		dismissed: { variant: REPORT_STATUS_BADGE_VARIANT.dismissed, text: REPORT_STATUS_LABEL.dismissed }
 	};
 </script>
 
@@ -194,10 +179,10 @@
 										<div class="flex items-center gap-2">
 											<span class="font-medium">用户举报</span>
 											<span class="text-muted-foreground">举报了</span>
-											<Badge variant="outline">{TARGET_TYPE_LABEL[report.target_type] ?? report.target_type}</Badge>
+											<Badge variant="outline">{REPORT_TARGET_TYPE_LABEL[report.target_type] ?? report.target_type}</Badge>
 										</div>
 										<div class="mt-1 flex items-center gap-2">
-											<Badge variant="secondary">{REASON_LABEL[report.reason] ?? report.reason}</Badge>
+											<Badge variant="secondary">{REPORT_REASON_LABEL[report.reason] ?? report.reason}</Badge>
 											{#if report.description}
 												<span class="text-sm text-muted-foreground">{report.description}</span>
 											{/if}
