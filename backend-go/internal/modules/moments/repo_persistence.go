@@ -47,3 +47,27 @@ func (r *PersistenceRepository) Update(ctx context.Context, userID string, req E
 func (r *PersistenceRepository) Delete(ctx context.Context, momentID string) error {
 	return r.impl.Delete(ctx, momentID)
 }
+
+func (r *PersistenceRepository) Like(ctx context.Context, userID string, momentID string) error {
+	return r.impl.Like(ctx, userID, momentID)
+}
+
+func (r *PersistenceRepository) Unlike(ctx context.Context, userID string, momentID string) error {
+	return r.impl.Unlike(ctx, userID, momentID)
+}
+
+func (r *PersistenceRepository) Favorite(ctx context.Context, userID string, momentID string) error {
+	return r.impl.Favorite(ctx, userID, momentID)
+}
+
+func (r *PersistenceRepository) Unfavorite(ctx context.Context, userID string, momentID string) error {
+	return r.impl.Unfavorite(ctx, userID, momentID)
+}
+
+func (r *PersistenceRepository) ListLikes(ctx context.Context, momentID string, limit int, cursor string) ([]LikeItem, string, error) {
+	return r.impl.ListLikes(ctx, momentID, limit, cursor)
+}
+
+func (r *PersistenceRepository) ListFavorites(ctx context.Context, userID string, limit int, cursor string) (PaginatedMoments, error) {
+	return r.impl.ListFavorites(ctx, userID, limit, cursor)
+}

@@ -35,6 +35,7 @@ func (m *Module) Mount(r chi.Router) {
 			group.Use(idempotency.Middleware)
 			group.Post("/open_the_door", m.momentsHandler.OpenTheDoor)
 			group.Post("/search", m.momentsHandler.Search)
+			group.Post("/list_likes", m.momentsHandler.ListLikes)
 		})
 		momentsRouter.Group(func(group chi.Router) {
 			group.Use(platformauth.RequiredAuth)
@@ -45,6 +46,11 @@ func (m *Module) Mount(r chi.Router) {
 			group.Post("/update", m.momentsHandler.Update)
 			group.Post("/delete", m.momentsHandler.Delete)
 			group.Post("/me/list", m.momentsHandler.ListMine)
+			group.Post("/me/like", m.momentsHandler.Like)
+			group.Post("/me/unlike", m.momentsHandler.Unlike)
+			group.Post("/me/favorite", m.momentsHandler.Favorite)
+			group.Post("/me/unfavorite", m.momentsHandler.Unfavorite)
+			group.Post("/me/list_favorites", m.momentsHandler.ListFavorites)
 		})
 	})
 

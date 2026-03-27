@@ -83,3 +83,27 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Edit
 func (r *PostgresRepository) Delete(ctx context.Context, momentID string) error {
 	return r.fallback.Delete(ctx, momentID)
 }
+
+func (r *PostgresRepository) Like(ctx context.Context, userID string, momentID string) error {
+	return r.fallback.Like(ctx, userID, momentID)
+}
+
+func (r *PostgresRepository) Unlike(ctx context.Context, userID string, momentID string) error {
+	return r.fallback.Unlike(ctx, userID, momentID)
+}
+
+func (r *PostgresRepository) Favorite(ctx context.Context, userID string, momentID string) error {
+	return r.fallback.Favorite(ctx, userID, momentID)
+}
+
+func (r *PostgresRepository) Unfavorite(ctx context.Context, userID string, momentID string) error {
+	return r.fallback.Unfavorite(ctx, userID, momentID)
+}
+
+func (r *PostgresRepository) ListLikes(ctx context.Context, momentID string, limit int, cursor string) ([]LikeItem, string, error) {
+	return r.fallback.ListLikes(ctx, momentID, limit, cursor)
+}
+
+func (r *PostgresRepository) ListFavorites(ctx context.Context, userID string, limit int, cursor string) (PaginatedMoments, error) {
+	return r.fallback.ListFavorites(ctx, userID, limit, cursor)
+}

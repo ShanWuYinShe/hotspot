@@ -84,3 +84,40 @@ type EditMomentRequest struct {
 type DeleteMomentRequest struct {
 	MomentID string `json:"moment_id"`
 }
+
+type LikeMomentRequest struct {
+	MomentID string `json:"moment_id"`
+}
+
+type UnlikeMomentRequest struct {
+	MomentID string `json:"moment_id"`
+}
+
+type FavoriteMomentRequest struct {
+	MomentID string `json:"moment_id"`
+}
+
+type UnfavoriteMomentRequest struct {
+	MomentID string `json:"moment_id"`
+}
+
+type ListLikesRequest struct {
+	MomentID   string           `json:"moment_id"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
+}
+
+type LikeItem struct {
+	UserID    string   `json:"user_id"`
+	Nickname  string   `json:"nickname"`
+	AvatarURL string   `json:"avatar_url,omitempty"`
+	LikedAt   string   `json:"liked_at"`
+}
+
+type PaginatedLikes struct {
+	Items      []LikeItem `json:"items"`
+	NextCursor string     `json:"next_cursor,omitempty"`
+}
+
+type MyFavoritesRequest struct {
+	Pagination *PaginationParams `json:"pagination,omitempty"`
+}

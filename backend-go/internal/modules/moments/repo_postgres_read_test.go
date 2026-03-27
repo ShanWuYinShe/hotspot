@@ -91,6 +91,36 @@ func (r *fallbackRepo) Delete(context.Context, string) error {
 	return nil
 }
 
+func (r *fallbackRepo) Like(context.Context, string, string) error {
+	r.used = true
+	return nil
+}
+
+func (r *fallbackRepo) Unlike(context.Context, string, string) error {
+	r.used = true
+	return nil
+}
+
+func (r *fallbackRepo) Favorite(context.Context, string, string) error {
+	r.used = true
+	return nil
+}
+
+func (r *fallbackRepo) Unfavorite(context.Context, string, string) error {
+	r.used = true
+	return nil
+}
+
+func (r *fallbackRepo) ListLikes(context.Context, string, int, string) ([]LikeItem, string, error) {
+	r.used = true
+	return nil, "", nil
+}
+
+func (r *fallbackRepo) ListFavorites(context.Context, string, int, string) (PaginatedMoments, error) {
+	r.used = true
+	return PaginatedMoments{}, nil
+}
+
 type backendStub struct {
 	moments      map[string]MomentItem
 	blockedTags  map[string]struct{}

@@ -79,3 +79,68 @@ func (s *Service) Delete(ctx context.Context, momentID string) error {
 	}
 	return s.repo.Delete(ctx, momentID)
 }
+
+func (s *Service) Like(ctx context.Context, momentID string) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	exists, err := s.repo.Exists(ctx, momentID)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return ErrMomentNotFound
+	}
+	return s.repo.Like(ctx, principal.UserID, momentID)
+}
+
+func (s *Service) Unlike(ctx context.Context, momentID string) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	return s.repo.Unlike(ctx, principal.UserID, momentID)
+}
+
+func (s *Service) Favorite(ctx context.Context, momentID string) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	exists, err := s.repo.Exists(ctx, momentID)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return ErrMomentNotFound
+	}
+	return s.repo.Favorite(ctx, principal.UserID, momentID)
+}
+
+func (s *Service) Unfavorite(ctx context.Context, momentID string) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	return s.repo.Unfavorite(ctx, principal.UserID, momentID)
+}
+
+func (s *Service) ListLikes(ctx context.Context, req ListLikesRequest) ([]LikeItem, string, error) {
+	limit := 20
+	if req.Pagination != nil && req.Pagination.Limit > 0 {
+		limit = req.Pagination.Limit
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	cursor := ""
+	if req.Pagination != nil {
+		cursor = req.Pagination.Cursor
+	}
+	return s.repo.ListLikes(ctx, req.MomentID, limit, cursor)
+}
+
+func (s *Service) ListFavorites(ctx context.Context, req MyFavoritesRequest) (PaginatedMoments, error) {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	limit := 20
+	if req.Pagination != nil && req.Pagination.Limit > 0 {
+		limit = req.Pagination.Limit
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	cursor := ""
+	if req.Pagination != nil {
+		cursor = req.Pagination.Cursor
+	}
+	return s.repo.ListFavorites(ctx, principal.UserID, limit, cursor)
+}

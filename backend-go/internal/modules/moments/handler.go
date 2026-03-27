@@ -125,3 +125,95 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
 }
+
+func (h *Handler) Like(w http.ResponseWriter, r *http.Request) {
+	var req LikeMomentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.MomentID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	if err := h.service.Like(r.Context(), req.MomentID); err != nil {
+		if err == ErrMomentNotFound {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "瞬间不存在"))
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
+}
+
+func (h *Handler) Unlike(w http.ResponseWriter, r *http.Request) {
+	var req UnlikeMomentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.MomentID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	if err := h.service.Unlike(r.Context(), req.MomentID); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
+}
+
+func (h *Handler) Favorite(w http.ResponseWriter, r *http.Request) {
+	var req FavoriteMomentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.MomentID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	if err := h.service.Favorite(r.Context(), req.MomentID); err != nil {
+		if err == ErrMomentNotFound {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "瞬间不存在"))
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
+}
+
+func (h *Handler) Unfavorite(w http.ResponseWriter, r *http.Request) {
+	var req UnfavoriteMomentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.MomentID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	if err := h.service.Unfavorite(r.Context(), req.MomentID); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
+}
+
+func (h *Handler) ListLikes(w http.ResponseWriter, r *http.Request) {
+	var req ListLikesRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.MomentID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	items, nextCursor, err := h.service.ListLikes(r.Context(), req)
+	if err != nil {
+		if err == ErrMomentNotFound {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "瞬间不存在"))
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(PaginatedLikes{Items: items, NextCursor: nextCursor}))
+}
+
+func (h *Handler) ListFavorites(w http.ResponseWriter, r *http.Request) {
+	var req MyFavoritesRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	result, err := h.service.ListFavorites(r.Context(), req)
+	if err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(result))
+}

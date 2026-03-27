@@ -9,13 +9,20 @@ import (
 )
 
 type InMemoryRepository struct {
-	mu      sync.RWMutex
-	moments map[string]MomentItem
-	byUser  map[string][]string
+	mu        sync.RWMutex
+	moments   map[string]MomentItem
+	byUser    map[string][]string
+	likes     map[string]map[string]bool   // momentID -> userID -> liked
+	favorites map[string]map[string]bool   // userID -> momentID -> favorited
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
-	return &InMemoryRepository{moments: make(map[string]MomentItem), byUser: make(map[string][]string)}
+	return &InMemoryRepository{
+		moments:   make(map[string]MomentItem),
+		byUser:    make(map[string][]string),
+		likes:     make(map[string]map[string]bool),
+		favorites: make(map[string]map[string]bool),
+	}
 }
 
 func (r *InMemoryRepository) Create(_ context.Context, userID string, req CreateMomentRequest) (MomentItem, error) {
@@ -164,4 +171,120 @@ func containsTag(tags []string, tag string) bool {
 		}
 	}
 	return false
+}
+
+func (r *InMemoryRepository) Like(_ context.Context, userID string, momentID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.moments[momentID]; !ok {
+		return ErrMomentNotFound
+	}
+	if r.likes[momentID] == nil {
+		r.likes[momentID] = make(map[string]bool)
+	}
+	if !r.likes[momentID][userID] {
+		r.likes[momentID][userID] = true
+		item := r.moments[momentID]
+		item.LikesCount++
+		r.moments[momentID] = item
+	}
+	return nil
+}
+
+func (r *InMemoryRepository) Unlike(_ context.Context, userID string, momentID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.likes[momentID] != nil && r.likes[momentID][userID] {
+		delete(r.likes[momentID], userID)
+		item := r.moments[momentID]
+		if item.LikesCount > 0 {
+			item.LikesCount--
+		}
+		r.moments[momentID] = item
+	}
+	return nil
+}
+
+func (r *InMemoryRepository) Favorite(_ context.Context, userID string, momentID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.moments[momentID]; !ok {
+		return ErrMomentNotFound
+	}
+	if r.favorites[userID] == nil {
+		r.favorites[userID] = make(map[string]bool)
+	}
+	r.favorites[userID][momentID] = true
+	return nil
+}
+
+func (r *InMemoryRepository) Unfavorite(_ context.Context, userID string, momentID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.favorites[userID] != nil {
+		delete(r.favorites[userID], momentID)
+	}
+	return nil
+}
+
+func (r *InMemoryRepository) ListLikes(_ context.Context, momentID string, limit int, cursor string) ([]LikeItem, string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if _, ok := r.moments[momentID]; !ok {
+		return nil, "", ErrMomentNotFound
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	userMap := r.likes[momentID]
+	if userMap == nil {
+		return []LikeItem{}, "", nil
+	}
+	items := make([]LikeItem, 0, len(userMap))
+	for uid := range userMap {
+		items = append(items, LikeItem{UserID: uid, Nickname: uid, LikedAt: "2026-01-01T00:00:00Z"})
+	}
+	_ = cursor
+	if len(items) == 0 {
+		return []LikeItem{}, "", nil
+	}
+	if len(items) > limit {
+		return items[:limit], items[limit].UserID, nil
+	}
+	return items, "", nil
+}
+
+func (r *InMemoryRepository) ListFavorites(_ context.Context, userID string, limit int, cursor string) (PaginatedMoments, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	favMap := r.favorites[userID]
+	if favMap == nil {
+		return PaginatedMoments{Items: []MomentItem{}}, nil
+	}
+	var items []MomentItem
+	for mid := range favMap {
+		if m, ok := r.moments[mid]; ok {
+			items = append(items, m)
+		}
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].CreatedAt > items[j].CreatedAt
+	})
+	_ = cursor
+	if len(items) > limit {
+		return PaginatedMoments{Items: items[:limit], NextCursor: items[limit].MomentID}, nil
+	}
+	if len(items) == 0 {
+		items = []MomentItem{}
+	}
+	return PaginatedMoments{Items: items}, nil
 }
