@@ -49,3 +49,67 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	_ = userID
 	return item, nil
 }
+
+func (r *PostgresRepository) Update(ctx context.Context, userID string, req UpdateGroupRequest) error {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.Update(ctx, userID, req)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	var hasPassword *bool
+	if req.ClearPassword != nil && *req.ClearPassword {
+		cleared := false
+		hasPassword = &cleared
+	} else if req.Password != nil {
+		hasPwd := *req.Password != ""
+		hasPassword = &hasPwd
+	}
+	var locationName *string
+	var latitude *float64
+	var longitude *float64
+	if req.Location != nil {
+		locationName = &req.Location.LocationName
+		latitude = &req.Location.Point.Latitude
+		longitude = &req.Location.Point.Longitude
+	}
+	_ = userID
+	err := queryable.Exec(ctx, queryUpdateGroup, req.GroupID, nilOrString(req.Name), nilOrString(req.AvatarFileID), nilOrString(req.Description), hasPassword, nilOrStringJoinMethod(req.JoinMethod), nilOrBool(req.IsSearchable), nilOrInt(req.MaxMembers), locationName, latitude, longitude)
+	return err
+}
+
+func (r *PostgresRepository) Dismiss(ctx context.Context, groupID string) error {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.Dismiss(ctx, groupID)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	err := queryable.Exec(ctx, queryDeleteGroup, groupID)
+	return err
+}
+
+func nilOrString(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+func nilOrStringJoinMethod(g *GroupJoinMethod) *string {
+	if g == nil {
+		return nil
+	}
+	s := string(*g)
+	return &s
+}
+
+func nilOrBool(b *bool) *bool {
+	return b
+}
+
+func nilOrInt(i *int) *int {
+	return i
+}

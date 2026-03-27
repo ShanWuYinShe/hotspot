@@ -4,6 +4,24 @@ type GroupJoinMethod string
 
 type GroupRole string
 
+type ApplicationStatus string
+
+const (
+	GroupJoinMethodOpen      GroupJoinMethod = "open"
+	GroupJoinMethodApproval  GroupJoinMethod = "approval"
+	GroupJoinMethodInviteOnly GroupJoinMethod = "invite_only"
+
+	GroupRoleOwner  GroupRole = "owner"
+	GroupRoleAdmin  GroupRole = "admin"
+	GroupRoleMember GroupRole = "member"
+
+	ApplicationStatusPending   ApplicationStatus = "pending"
+	ApplicationStatusAccepted  ApplicationStatus = "accepted"
+	ApplicationStatusRejected  ApplicationStatus = "rejected"
+	ApplicationStatusRevoked   ApplicationStatus = "revoked"
+	ApplicationStatusCancelled ApplicationStatus = "cancelled"
+)
+
 type GroupInfo struct {
 	GroupID      string `json:"group_id"`
 	Name         string `json:"name"`
@@ -20,12 +38,12 @@ type Location struct {
 }
 
 type MyGroupState struct {
-	Role        GroupRole `json:"role"`
-	IsJoined    bool      `json:"is_joined"`
-	UnreadCount int       `json:"unread_count"`
-	IsMuted     bool      `json:"is_muted"`
-	IsPinned    bool      `json:"is_pinned"`
-	JoinedAt    string    `json:"joined_at,omitempty"`
+	Role          GroupRole `json:"role"`
+	IsJoined      bool      `json:"is_joined"`
+	UnreadCount   int       `json:"unread_count"`
+	IsMuted       bool      `json:"is_muted"`
+	IsPinned      bool      `json:"is_pinned"`
+	JoinedAt      string    `json:"joined_at,omitempty"`
 }
 
 type GroupItem struct {
@@ -57,10 +75,309 @@ type GroupOpenTheDoorRequest struct {
 }
 
 type SearchGroupsRequest struct {
-	Keyword string `json:"keyword,omitempty"`
+	Keyword        string  `json:"keyword,omitempty"`
+	Tag            string  `json:"tag,omitempty"`
+	Radius         *int    `json:"radius,omitempty"`
+	SortBy         string  `json:"sort_by,omitempty"`
+	ReferencePoint GeoPoint `json:"reference_point"`
+	Limit          int     `json:"limit,omitempty"`
+	Cursor         string  `json:"cursor,omitempty"`
+}
+
+type GeoPoint struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
+
+type UpdateGroupRequest struct {
+	GroupID       string          `json:"group_id"`
+	Name          string          `json:"name,omitempty"`
+	Description   string          `json:"description,omitempty"`
+	AvatarFileID  string          `json:"avatar_file_id,omitempty"`
+	Tags          []string        `json:"tags,omitempty"`
+	Password      *string         `json:"password,omitempty"`
+	ClearPassword *bool           `json:"clear_password,omitempty"`
+	JoinMethod    *GroupJoinMethod `json:"join_method,omitempty"`
+	IsSearchable  *bool           `json:"is_searchable,omitempty"`
+	MaxMembers    *int            `json:"max_members,omitempty"`
+	Location      *Location       `json:"location,omitempty"`
+}
+
+type DismissGroupRequest struct {
+	GroupID string `json:"group_id"`
+}
+
+type GroupMembersRequest struct {
+	GroupID    string     `json:"group_id"`
+	Role       *GroupRole `json:"role,omitempty"`
+	Limit      int        `json:"limit,omitempty"`
+	Cursor     string     `json:"cursor,omitempty"`
+}
+
+type GroupMemberItem struct {
+	User           UserInfo        `json:"user"`
+	Role           GroupRole       `json:"role"`
+	JoinedAt       string          `json:"joined_at"`
+	MutedUntil     *string         `json:"muted_until,omitempty"`
+	PresenceStatus *UserPresenceStatus `json:"presence_status,omitempty"`
+	LastOnline     *string         `json:"last_online,omitempty"`
+}
+
+type UserPresenceStatus string
+
+const (
+	UserPresenceOnline  UserPresenceStatus = "online"
+	UserPresenceOffline UserPresenceStatus = "offline"
+)
+
+type UserInfo struct {
+	UserID    string `json:"user_id"`
+	Nickname  string `json:"nickname"`
+	AvatarURL string `json:"avatar_url,omitempty"`
+}
+
+type SearchGroupMembersRequest struct {
+	GroupID string     `json:"group_id"`
+	Keyword string     `json:"keyword"`
+	Role    *GroupRole `json:"role,omitempty"`
+	Limit   int        `json:"limit,omitempty"`
+	Cursor  string     `json:"cursor,omitempty"`
+}
+
+type InviteMemberRequest struct {
+	GroupID string  `json:"group_id"`
+	UserID  string  `json:"user_id"`
+	Message *string `json:"message,omitempty"`
+}
+
+type Invitation struct {
+	InviteID  string `json:"invite_id"`
+	ExpiresAt string `json:"expires_at"`
+}
+
+type GroupSentInvitesRequest struct {
+	GroupID string             `json:"group_id"`
+	Status  *ApplicationStatus `json:"status,omitempty"`
+	Limit   int                `json:"limit,omitempty"`
+	Cursor  string             `json:"cursor,omitempty"`
+}
+
+type GroupSentInviteItem struct {
+	InviteID    string             `json:"invite_id"`
+	Invitee     UserInfo           `json:"invitee"`
+	Status      ApplicationStatus  `json:"status"`
+	Message     *string            `json:"message,omitempty"`
+	CreatedAt   string             `json:"created_at"`
+	ExpiresAt   *string            `json:"expires_at,omitempty"`
+	RespondedAt *string            `json:"responded_at,omitempty"`
+}
+
+type RevokeSentInviteRequest struct {
+	GroupID  string  `json:"group_id"`
+	InviteID string  `json:"invite_id"`
+	Reason   *string `json:"reason,omitempty"`
+}
+
+type SetMemberRoleRequest struct {
+	GroupID string          `json:"group_id"`
+	UserID  string          `json:"user_id"`
+	Role    GroupRole       `json:"role"`
+}
+
+type MuteMemberRequest struct {
+	GroupID        string `json:"group_id"`
+	UserID         string `json:"user_id"`
+	DurationMinutes int    `json:"duration_minutes"`
+}
+
+type UnmuteMemberRequest struct {
+	GroupID string `json:"group_id"`
+	UserID  string `json:"user_id"`
+}
+
+type BanMemberRequest struct {
+	GroupID string  `json:"group_id"`
+	UserID  string  `json:"user_id"`
+	Reason  *string `json:"reason,omitempty"`
+}
+
+type UnbanMemberRequest struct {
+	GroupID string `json:"group_id"`
+	UserID  string `json:"user_id"`
+}
+
+type BannedMembersRequest struct {
+	GroupID string `json:"group_id"`
+	Limit   int    `json:"limit,omitempty"`
+	Cursor  string `json:"cursor,omitempty"`
+}
+
+type BannedMemberItem struct {
+	User     UserInfo  `json:"user"`
+	BannedAt string    `json:"banned_at"`
+	Reason   *string   `json:"reason,omitempty"`
+	BannedBy *UserInfo `json:"banned_by,omitempty"`
+}
+
+type RemoveMemberRequest struct {
+	GroupID string `json:"group_id"`
+	UserID  string `json:"user_id"`
+}
+
+type GroupApplicationsRequest struct {
+	GroupID string             `json:"group_id"`
+	Status  *ApplicationStatus `json:"status,omitempty"`
+	Limit   int                `json:"limit,omitempty"`
+	Cursor  string             `json:"cursor,omitempty"`
+}
+
+type GroupApplicationItem struct {
+	ApplicationID string             `json:"application_id"`
+	Applicant     UserInfo           `json:"applicant"`
+	Message       *string            `json:"message,omitempty"`
+	Status        ApplicationStatus  `json:"status"`
+	CreatedAt     string             `json:"created_at"`
+	HandledAt     *string            `json:"handled_at,omitempty"`
+	HandledBy     *UserInfo          `json:"handled_by,omitempty"`
+}
+
+type ApproveGroupApplicationRequest struct {
+	ApplicationID string `json:"application_id"`
+}
+
+type RejectGroupApplicationRequest struct {
+	ApplicationID string  `json:"application_id"`
+	Reason        *string `json:"reason,omitempty"`
+}
+
+type CreateGroupAnnouncementRequest struct {
+	GroupID string  `json:"group_id"`
+	Title   string  `json:"title"`
+	Content string  `json:"content"`
+	IsPinned *bool  `json:"is_pinned,omitempty"`
+}
+
+type GroupAnnouncementItem struct {
+	AnnouncementID string    `json:"announcement_id"`
+	GroupID        string    `json:"group_id"`
+	Title          string    `json:"title"`
+	Content        string    `json:"content"`
+	IsPinned       bool      `json:"is_pinned"`
+	CreatedAt      string    `json:"created_at"`
+	UpdatedAt      *string   `json:"updated_at,omitempty"`
+	CreatedBy      *UserInfo `json:"created_by,omitempty"`
+}
+
+type GroupAnnouncementsRequest struct {
+	GroupID string `json:"group_id"`
+}
+
+type UpdateGroupAnnouncementRequest struct {
+	GroupID         string  `json:"group_id"`
+	AnnouncementID  string  `json:"announcement_id"`
+	Title           *string `json:"title,omitempty"`
+	Content         *string `json:"content,omitempty"`
+	IsPinned        *bool   `json:"is_pinned,omitempty"`
+}
+
+type DeleteGroupAnnouncementRequest struct {
+	GroupID        string `json:"group_id"`
+	AnnouncementID string `json:"announcement_id"`
+}
+
+type UpdateGroupMySettingsRequest struct {
+	GroupID  string  `json:"group_id"`
+	IsMuted  *bool   `json:"is_muted,omitempty"`
+	IsPinned *bool   `json:"is_pinned,omitempty"`
+}
+
+type JoinGroupRequest struct {
+	GroupID  string  `json:"group_id"`
+	Password *string `json:"password,omitempty"`
+	Message  *string `json:"message,omitempty"`
+}
+
+type JoinGroupResult struct {
+	Status      ApplicationStatus `json:"status"`
+	Application *struct {
+		ApplicationID string `json:"application_id"`
+	} `json:"application,omitempty"`
+}
+
+type TransferOwnershipRequest struct {
+	GroupID    string `json:"group_id"`
+	NewOwnerID string `json:"new_owner_id"`
+}
+
+type MyGroupsRequest struct {
+	Limit  int    `json:"limit,omitempty"`
+	Cursor string `json:"cursor,omitempty"`
+}
+
+type MyApplicationsRequest struct {
+	Status  *ApplicationStatus `json:"status,omitempty"`
+	Limit   int                `json:"limit,omitempty"`
+	Cursor  string             `json:"cursor,omitempty"`
+}
+
+type CancelApplicationRequest struct {
+	ApplicationID string `json:"application_id"`
+}
+
+type MyInvitesRequest struct {
+	Status *ApplicationStatus `json:"status,omitempty"`
+	Limit  int                `json:"limit,omitempty"`
+	Cursor string             `json:"cursor,omitempty"`
+}
+
+type GroupInviteItem struct {
+	InviteID   string             `json:"invite_id"`
+	Group      GroupInfo          `json:"group"`
+	Inviter    UserInfo           `json:"inviter"`
+	Message    *string            `json:"message,omitempty"`
+	Status     ApplicationStatus  `json:"status"`
+	CreatedAt  string             `json:"created_at"`
+	ExpiresAt  *string            `json:"expires_at,omitempty"`
+}
+
+type AcceptInviteRequest struct {
+	InviteID string `json:"invite_id"`
+}
+
+type RejectInviteRequest struct {
+	InviteID string `json:"invite_id"`
+}
+
+type LeaveGroupRequest struct {
+	GroupID string `json:"group_id"`
 }
 
 type PaginatedGroups struct {
 	Items      []GroupItem `json:"items"`
 	NextCursor string      `json:"next_cursor,omitempty"`
+}
+
+type PaginatedGroupMembers struct {
+	Items      []GroupMemberItem `json:"items"`
+	NextCursor string            `json:"next_cursor,omitempty"`
+}
+
+type PaginatedSentInvites struct {
+	Items      []GroupSentInviteItem `json:"items"`
+	NextCursor string                `json:"next_cursor,omitempty"`
+}
+
+type PaginatedBannedMembers struct {
+	Items      []BannedMemberItem `json:"items"`
+	NextCursor string             `json:"next_cursor,omitempty"`
+}
+
+type PaginatedApplications struct {
+	Items      []GroupApplicationItem `json:"items"`
+	NextCursor string                 `json:"next_cursor,omitempty"`
+}
+
+type PaginatedInvites struct {
+	Items      []GroupInviteItem `json:"items"`
+	NextCursor string            `json:"next_cursor,omitempty"`
 }

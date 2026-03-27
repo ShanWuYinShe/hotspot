@@ -30,3 +30,33 @@ func (s *Service) OpenTheDoor(ctx context.Context, groupID string) (GroupItem, b
 func (s *Service) Search(ctx context.Context, keyword string) (PaginatedGroups, error) {
 	return s.repo.Search(ctx, keyword)
 }
+
+func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	group, ok, err := s.repo.Get(ctx, req.GroupID)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrGroupNotFound
+	}
+	if group.MyState == nil || group.MyState.Role != GroupRoleOwner {
+		return ErrPermissionDenied
+	}
+	return s.repo.Update(ctx, principal.UserID, req)
+}
+
+func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	group, ok, err := s.repo.Get(ctx, req.GroupID)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrGroupNotFound
+	}
+	if group.MyState == nil || group.MyState.Role != GroupRoleOwner {
+		return ErrPermissionDenied
+	}
+	return s.repo.Dismiss(ctx, principal.UserID)
+}

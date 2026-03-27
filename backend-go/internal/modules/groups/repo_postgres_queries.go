@@ -15,4 +15,22 @@ SELECT group_id, name, avatar_url, description, has_password, location_name, lat
 FROM groups
 WHERE ($1 = '' OR name = $1)
 ORDER BY group_id ASC`
+
+	queryUpdateGroup = `
+UPDATE groups
+SET name = COALESCE($2, name),
+    avatar_url = COALESCE($3, avatar_url),
+    description = COALESCE($4, description),
+    has_password = COALESCE($5, has_password),
+    join_method = COALESCE($6, join_method),
+    is_searchable = COALESCE($7, is_searchable),
+    max_members = COALESCE($8, max_members),
+    location_name = COALESCE($9, location_name),
+    latitude = COALESCE($10, latitude),
+    longitude = COALESCE($11, longitude)
+WHERE group_id = $1`
+
+	queryDeleteGroup = `
+DELETE FROM groups
+WHERE group_id = $1`
 )

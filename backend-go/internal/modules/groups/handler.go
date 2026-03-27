@@ -66,3 +66,52 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(list))
 }
+
+func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
+	var req UpdateGroupRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	if req.ClearPassword != nil && *req.ClearPassword && req.Password != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "密码参数冲突"))
+		return
+	}
+	if err := h.service.Update(r.Context(), req); err != nil {
+		if err == ErrGroupNotFound {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
+			return
+		}
+		if err == ErrPermissionDenied {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
+}
+
+func (h *Handler) Dismiss(w http.ResponseWriter, r *http.Request) {
+	if err := idempotency.RequireKey(r); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		return
+	}
+	var req DismissGroupRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	idempotency.ReplayOrStore(w, r, "groups/dismiss", func() httpx.ApiResponse[struct{}] {
+		if err := h.service.Dismiss(r.Context(), req); err != nil {
+			if err == ErrGroupNotFound {
+				return httpx.Error(10300, "群组不存在")
+			}
+			if err == ErrPermissionDenied {
+				return httpx.Error(10400, "权限不足")
+			}
+			return httpx.Error(10600, "服务暂时不可用")
+		}
+		return httpx.Success(struct{}{})
+	})
+}

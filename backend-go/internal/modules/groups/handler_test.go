@@ -16,6 +16,8 @@ type groupErrorRepo struct {
 	createErr error
 	getErr    error
 	searchErr error
+	updateErr error
+	dismissErr error
 }
 
 func (r *groupErrorRepo) Create(context.Context, string, CreateGroupRequest) (GroupItem, error) {
@@ -26,6 +28,12 @@ func (r *groupErrorRepo) Get(context.Context, string) (GroupItem, bool, error) {
 }
 func (r *groupErrorRepo) Search(context.Context, string) (PaginatedGroups, error) {
 	return PaginatedGroups{}, r.searchErr
+}
+func (r *groupErrorRepo) Update(context.Context, string, UpdateGroupRequest) error {
+	return r.updateErr
+}
+func (r *groupErrorRepo) Dismiss(context.Context, string) error {
+	return r.dismissErr
 }
 
 func TestCreateAndOpenGroup(t *testing.T) {

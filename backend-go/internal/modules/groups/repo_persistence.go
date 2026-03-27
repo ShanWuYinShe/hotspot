@@ -27,3 +27,11 @@ func (r *PersistenceRepository) Get(ctx context.Context, groupID string) (GroupI
 func (r *PersistenceRepository) Search(ctx context.Context, keyword string) (PaginatedGroups, error) {
 	return r.impl.Search(ctx, keyword)
 }
+
+func (r *PersistenceRepository) Update(ctx context.Context, userID string, req UpdateGroupRequest) error {
+	return r.impl.Update(ctx, userID, req)
+}
+
+func (r *PersistenceRepository) Dismiss(ctx context.Context, groupID string) error {
+	return r.impl.Dismiss(ctx, groupID)
+}

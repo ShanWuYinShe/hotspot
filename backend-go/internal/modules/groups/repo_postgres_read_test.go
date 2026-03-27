@@ -62,6 +62,14 @@ func (r *groupFallbackRepo) Search(context.Context, string) (PaginatedGroups, er
 	r.used = true
 	return PaginatedGroups{}, nil
 }
+func (r *groupFallbackRepo) Update(context.Context, string, UpdateGroupRequest) error {
+	r.used = true
+	return nil
+}
+func (r *groupFallbackRepo) Dismiss(context.Context, string) error {
+	r.used = true
+	return nil
+}
 
 type groupBackendStub struct {
 	rows      [][]any

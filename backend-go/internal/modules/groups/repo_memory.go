@@ -54,3 +54,54 @@ func (r *InMemoryRepository) Search(_ context.Context, keyword string) (Paginate
 	}
 	return PaginatedGroups{Items: items}, nil
 }
+
+func (r *InMemoryRepository) Update(_ context.Context, userID string, req UpdateGroupRequest) error {
+	_ = userID
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	item, ok := r.groups[req.GroupID]
+	if !ok {
+		return ErrGroupNotFound
+	}
+	if req.Name != "" {
+		item.Group.Name = req.Name
+	}
+	if req.Description != "" {
+		item.Description = req.Description
+	}
+	if req.AvatarFileID != "" {
+		item.Group.AvatarURL = req.AvatarFileID
+	}
+	if req.Tags != nil {
+		item.Tags = req.Tags
+	}
+	if req.ClearPassword != nil && *req.ClearPassword {
+		item.HasPassword = false
+	} else if req.Password != nil {
+		item.HasPassword = *req.Password != ""
+	}
+	if req.JoinMethod != nil {
+		item.JoinMethod = *req.JoinMethod
+	}
+	if req.IsSearchable != nil {
+		item.IsSearchable = *req.IsSearchable
+	}
+	if req.MaxMembers != nil {
+		item.MaxMembers = *req.MaxMembers
+	}
+	if req.Location != nil {
+		item.Location = *req.Location
+	}
+	r.groups[req.GroupID] = item
+	return nil
+}
+
+func (r *InMemoryRepository) Dismiss(_ context.Context, groupID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.groups[groupID]; !ok {
+		return ErrGroupNotFound
+	}
+	delete(r.groups, groupID)
+	return nil
+}
