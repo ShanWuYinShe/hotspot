@@ -22,10 +22,12 @@ HotSpot 是一个多端 monorepo：
 - 默认只在仓库内工作；确需访问仓库外路径时，只使用用户明确提供或仓库文档已约定的绝对路径。
 - 临时文件统一放在仓库根目录 `tmp/`。
 - 共享自动化、hooks 与团队级权限放 `.claude/settings.json`；个人机器差异放 `.claude/settings.local.json`。
-- 所有测试、check、build 的最终结论默认都以 `deploy/` 下的 Docker 流程为准；宿主机直接运行的命令只作为临时调试参考。
+- 权限策略默认采用“最小静态 allow + 仓库规范 + 运行期 hooks 判定”模型，不把大量 Bash 命令模式硬编码进 allow 列表作为主机制。
+- Claude 是否可直接执行某个动作，默认按“目的 + 副作用 + 多 agent 冲突风险”判断：纯静态检查可直接在宿主环境执行；会影响运行环境或可能相互冲突的动作，必须通过 `deploy/` 隔离执行。
 
 ## 主目录与 worktree 模型
 - 主目录默认始终保持在本地 `main` 且 clean；主目录只承担同步、审阅、创建/回收 worktree 和本地集成控制，不承载实现性改动。
+- 任何 implement 行为开始前都必须先进入 feature worktree；主目录 `main` 只允许控制面动作（git 状态/历史检查、建/收 worktree、review、sync-back、cleanup）。
 - 所有实现、验证和构建都在 worktree 中完成；需要本地分支时，也在对应 worktree 中使用。
 - 新 worktree 默认从主目录本地 `main` 的当前 HEAD 创建，而不是从远程分支 HEAD 创建。
 - 默认每个会话只操作自己创建或明确接管的 worktree / branch；除非用户明确指定，不要处理其他会话对象。
@@ -45,12 +47,14 @@ HotSpot 是一个多端 monorepo：
 ## 本地验证与交付入口
 ### 短版工作流
 - `verify`：面向并行开发验证，支持多 agent + 多 worktree；默认在当前 worktree 上下文验证，并且在 Docker 隔离环境里完成 backend-go/frontend 的测试与构建检查。用法：`./deploy/scripts/verify.sh --env-name <name>`。
+- `verify-inspect`：面向开发内环的调试环境层；在 verify 之后，通过 `deploy/` 提供隔离运行环境与稳定入口，供 Claude Code 主动访问页面、查看 console、核对 UI 与交互。`deploy/` 不承载具体页面测试用例。
 - `preview`：面向最终候选结果预演，只有一个实例。先运行 `./deploy/scripts/preview-build.sh`，再运行 `./deploy/scripts/preview-up.sh`，最后用 `./deploy/scripts/preview-inspect.sh` 巡检。
 - `release`：面向交付，只产部署输入物，不运行环境。用法：`./deploy/scripts/release-build.sh --ref <git-ref>`。
 
 ### 原则
-- 只有 `verify` 支持多 env / 多 worktree 并行；`preview` 只有一个实例。
+- 只有 `verify` / `verify-inspect` 支持多 env / 多 worktree 并行；`preview` 只有一个实例。
 - `verify` 默认验证的是当前工作目录 / worktree，但执行发生在 Docker 隔离环境中，不应把宿主机运行结果视为最终验证结论。
+- `verify-inspect` 负责提供开发内环隔离环境，不替代候选环境；前端页面/UI 改动默认先过 `verify`，再由 Claude Code 基于 `verify-inspect` 提供的入口主动完成页面级确认，需要最终入口预演时再进入 `preview`。
 - 测试过程中产生的缓存、store、构建产物必须落在 `tmp/` 或容器临时目录，不能把 `.pnpm-store` 之类的临时目录写回仓库根。
 - `preview` / `release` 面向候选结果与确定性版本，不再承担多 env 开发隔离语义。
 - 运行与测试继续遵循：同一套配置 key，不同 datasource value。不要引入额外环境模式抽象或 Redis key-prefix 机制，除非用户明确要求。

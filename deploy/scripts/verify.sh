@@ -16,6 +16,8 @@ usage() {
   cat <<'EOF'
 Usage: ./deploy/scripts/verify.sh [options]
 
+verify 负责静态检查、构建与测试；若需要页面、console、关键 UI 与交互自动确认，请改用 ./deploy/scripts/verify-inspect.sh。
+
 Options:
   --env-name NAME    Isolated environment name for this verify run
   -h, --help         Show this help message
@@ -76,6 +78,7 @@ export_verify_image_defaults
 export HOTSPOT_SOURCE_ROOT="$SOURCE_ROOT"
 export HOTSPOT_BACKEND_GO_RUNNER_IMAGE="$BACKEND_RUNNER_IMAGE"
 export HOTSPOT_FRONTEND_RUNNER_IMAGE="$FRONTEND_RUNNER_IMAGE"
+export HOTSPOT_VERIFY_NGINX_IMAGE="${HOTSPOT_VERIFY_NGINX_IMAGE:-$(default_preview_nginx_image)}"
 export HOTSPOT_DOCKER_UID="$(host_uid)"
 export HOTSPOT_DOCKER_GID="$(host_gid)"
 export HOTSPOT_RUNNER_HOME="$(runner_home_dir)"

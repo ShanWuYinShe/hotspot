@@ -2,11 +2,12 @@
 
 ## 目标
 
-这套体系服务三个清晰目标：
+这套体系服务三个主目标，并在 verify 内补一个 inspect 子层：
 
 1. **verify**：支持多 agent + 多 worktree 并行开发时的默认本地验证
-2. **preview**：提供一个唯一的本地预演环境，验证待交付结果的完整入口行为
-3. **release**：产出正式部署输入物，不直接运行环境
+2. **verify-inspect**：开发内环的隔离调试环境层，为 Claude 提供页面访问入口与干净运行环境，不把具体验证页面逻辑塞进 deploy
+3. **preview**：提供一个唯一的本地预演环境，验证待交付结果的完整入口行为
+4. **release**：产出正式部署输入物，不直接运行环境
 
 ## 为什么这样拆
 
@@ -18,6 +19,7 @@
 
 现在改成：
 - **verify 多实例**
+- **verify-inspect 复用 verify 的多实例隔离**
 - **preview 单实例**
 - **release 只产物**
 
@@ -53,6 +55,14 @@
 - 当前工作树通过只读挂载注入容器，并复制到容器临时目录后执行测试，避免把 pnpm store、node_modules、Go module cache 或其他中间产物写回仓库根
 - verify runner 以内置的容器临时缓存运行 backend/frontend 校验，并在 `go test ./...` 前先执行 backend-go schema bootstrap
 - 每次 verify 都会额外把完整 runner 输出、`docker compose ps` 和完整 compose logs 归档到 `tmp/deploy/logs/verify/<env-name>/<run-id>/`
+- `verify-inspect` 复用同一日志根，用于归档环境启动、入口准备与 compose 运行日志；具体页面检查证据不由 deploy 产出
+
+### verify-inspect
+- 语义上属于 verify 内的 inspect/debug 子层，而不是新的候选环境。
+- 复用 verify 的 `env-name`、lock、日志归档与 worktree 输入语义。
+- 目标是让 Claude 在受控 Docker 环境中获得一个可访问的前端/后端隔离入口，而不是依赖宿主机直跑命令或把 preview 当高频调试沙箱。
+- 页面可打开、console/UI/交互核查由 Claude Code 在该入口上主动完成；这些检查不应固化进 deploy 测试用例。
+- `verify-inspect` 成功后默认保留环境，供 Claude 继续访问；后续可由下一次 `verify` / `verify-inspect` 重建或显式清理回收。
 
 ## 二、preview
 
@@ -61,6 +71,7 @@
 - 只有一个实例
 - 验证 HTTPS + nginx + frontend + backend-go + websocket + MinIO
 - 不再为多个 worktree 同时起多套 preview
+- 不承担开发内环高频调试职责；页面/console/UI/交互的自动确认默认由 verify-inspect 负责
 
 ### 入口
 
@@ -213,7 +224,8 @@ deploy/
 - 本地优先开发与本地集成分支流程不变
 - verify 默认继续走 Docker
 - verify 默认继续验证当前工作目录 / worktree
-- 所有测试、check、build 验证默认都通过 `deploy/` 下的 Docker 流程执行，不直接依赖宿主环境
+- 会影响运行环境或在多 worktree / 多 agent 下可能冲突的测试、build、preview、release、环境准备动作默认都通过 `deploy/` 下的隔离流程执行
+- 纯静态检查如 `pnpm check`、`go vet` 若确认不会污染宿主环境，也可以直接在宿主环境执行
 - 测试与构建过程中产生的缓存、pnpm store、临时产物不得写回仓库根
 - preview 保留 HTTPS + nginx + MinIO + inspect 链
 - AMap 代理能力仍保留，但 `jscode` 必须通过 `HOTSPOT_AMAP_JSCODE` 注入，不能再硬编码在 nginx 模板中

@@ -156,4 +156,5 @@ fi
 
 echo | tee -a "$INSPECT_CONSOLE_LOG"
 echo "Preview inspection passed." | tee -a "$INSPECT_CONSOLE_LOG"
+echo "说明：preview-inspect 负责候选环境入口巡检；开发内环的页面/console/UI/交互自动确认默认应通过 verify-inspect 完成。" | tee -a "$INSPECT_CONSOLE_LOG"
 echo "Logs: $LOG_ROOT" | tee -a "$INSPECT_CONSOLE_LOG"

@@ -1,8 +1,9 @@
 # HotSpot deploy workflow
 
-`deploy/` 现在只保留三层语义：
+`deploy/` 现在围绕三层主语义工作，并在 `verify` 内补一个 inspect 子层：
 
 - **verify**：默认本地验证层，服务多 agent + 多 worktree 并行开发
+- **verify-inspect**：verify 内的开发调试环境子层，只负责提供隔离运行环境与入口，供 Claude Code 主动做页面、console、关键 UI 与少量关键交互流检查
 - **preview**：单实例本地预演层，验证最终候选结果的 HTTPS / nginx / websocket / MinIO / cookie 行为；AMap 代理如有需要通过 `HOTSPOT_AMAP_JSCODE` 注入
 - **release**：正式部署输入层，只产 image / artifact / manifest，不运行环境
 
@@ -10,6 +11,7 @@
 
 ### 短版工作流
 - `verify`：用于并行开发验证，支持多 agent + 多 worktree。默认验证当前工作目录 / worktree，并在 Docker 隔离环境里完成 backend-go/frontend 的测试与构建检查。示例：`./deploy/scripts/verify.sh --env-name feature-a`
+- `verify-inspect`：用于开发内环隔离调试，复用 verify 的 env-name 隔离，拉起临时运行态并暴露稳定入口，供 Claude Code 主动访问页面、查看 console、核对关键 UI 与交互。成功后环境会保持运行，直到下一次 `verify` / `verify-inspect` 重建或被显式清理。示例：`./deploy/scripts/verify-inspect.sh --env-name feature-a`
 - `preview`：用于最终候选结果预演，只有一个实例。先 `./deploy/scripts/preview-build.sh`，再 `./deploy/scripts/preview-up.sh`，最后 `./deploy/scripts/preview-inspect.sh`
 - `release`：用于产出正式部署输入物，不运行环境。示例：`./deploy/scripts/release-build.sh --ref HEAD --label release-2026-03-21`
 
@@ -42,20 +44,23 @@
 ```
 
 ## 当前原则
-- 只有 `verify` 支持多实例并行。
+- 只有 `verify` / `verify-inspect` 支持多实例并行。
 - `preview` 只有一个实例，不再按 worktree 并行。
 - `release` 不运行环境，只产物。
 - `verify` 默认验证当前工作目录 / worktree，包含未提交修改。
-- 所有测试、check、build 验证默认都通过 `deploy/` 下的 Docker 流程完成；不要把宿主环境直接运行 `go test`、`pnpm check`、`pnpm build` 当成最终验证。
+- `verify-inspect` 属于开发内环隔离环境，不替代候选预演；前端页面/UI/交互改动默认先过 `verify`，再由 Claude Code 基于该入口主动完成页面确认。
+- `deploy/` 负责隔离那些会影响宿主环境或在多 agent 下可能冲突的动作；不要把它理解成承包所有 checks 的统一执行器。
+- 像 `pnpm check`、`go vet` 这类纯静态检查，如果确认不会污染宿主环境、不会产生运行态副作用、不会在多 agent 下相互冲突，可以直接在宿主环境执行；而测试、build、起服务、preview、release 等动作仍应走 `deploy/`。
 - 测试和构建流程产生的中间缓存默认保留在容器临时目录中，不写回宿主 worktree；宿主侧只保留日志、release/preview 产物等需要交付或复盘的输出。
 - `preview` / `release` 面向候选结果与确定性版本，不再承担多 env 开发隔离语义。
 - `verify` / `preview` / `release` 现在都会把关键日志归档到 `tmp/deploy/logs/`，便于人工复盘与 AI 分析完整错误链。
 
 ## 日志归档
 - `verify`：`tmp/deploy/logs/verify/<env-name>/<run-id>/`
+- `verify-inspect`：沿用 `tmp/deploy/logs/verify/<env-name>/<run-id>/`，记录环境启动、入口准备与 compose 运行日志
 - `preview`：`tmp/deploy/logs/preview/current/`
 - `release`：`tmp/deploy/logs/release/<label>/`
-- `verify` / `preview-build` / `release-build` 会保留完整 stdout/stderr。
+- `verify` / `verify-inspect` / `preview-build` / `release-build` 会保留完整 stdout/stderr。
 - `preview-up` 会保留启动快照、`compose ps` 与 startup logs。
 - `preview-inspect` 会保留检查输出、`compose ps`、完整 compose logs，以及 `GET /`、`POST /api/v1/system/health`、`GET /s3/` 的请求结果。
 - 控制台仍保留简洁摘要；排障时优先把 `tmp/deploy/logs/...` 下的完整日志交给 AI 分析，而不是只依赖终端头尾输出。

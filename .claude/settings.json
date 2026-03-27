@@ -15,26 +15,7 @@
       "TaskList",
       "EnterWorktree",
       "ExitWorktree",
-      "Bash(git status:*)",
-      "Bash(git rev-parse:*)",
-      "Bash(git log:*)",
-      "Bash(git diff:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git branch -d:*)",
-      "Bash(git branch -D:*)",
-      "Bash(git rebase:*)",
-      "Bash(git cherry-pick:*)",
-      "Bash(git merge --ff-only:*)",
-      "Bash(git worktree list:*)",
-      "Bash(git worktree add:*)",
-      "Bash(git worktree remove:*)",
-      "Bash(*deploy/scripts/verify.sh*)",
-      "Bash(*deploy/scripts/preview-build.sh*)",
-      "Bash(*deploy/scripts/preview-up.sh*)",
-      "Bash(*deploy/scripts/preview-down.sh*)",
-      "Bash(*deploy/scripts/preview-inspect.sh*)",
-      "Bash(*deploy/scripts/release-build.sh*)"
+      "Bash"
     ],
     "ask": [
       "Edit(.claude/settings.json)",
@@ -48,6 +29,19 @@
       "Bash(git reset --hard:*)",
       "Bash(git clean:*)",
       "Bash(*--force*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.claude/scripts/tool_guard.py\""
+          }
+        ]
+      }
     ]
   }
 }

@@ -18,6 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 与根流程的关系
 - 主目录保持 `main` + clean，所有实际改动都在 worktree 中完成；本地分支、本地集成 worktree、本地验证入口和风险边界，以仓库根 `CLAUDE.md` 为准。
 - 默认验证入口是 `verify.sh`，默认验证的是当前 worktree 快照；涉及 API、WebSocket 或地图行为时，再对照 `spec/`。
+- 前端页面/UI/交互改动默认还要追加 `verify-inspect.sh`，用于提供开发内环隔离入口；页面、console、关键 UI 与少量关键交互流应由 Claude Code 主动访问该入口完成检查；`preview` 用于候选结果预演而不是高频调试。
 
 ## 关键约束
 - 禁止硬编码 `/api/v1/...`，必须通过 `src/lib/api/endpoints.ts`。
@@ -36,6 +37,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 常用命令
 - 默认验证入口：`./deploy/scripts/verify.sh --env-name <name>`
+- 前端开发内环自动确认：`./deploy/scripts/verify-inspect.sh --env-name <name>`
 - 需要预演候选结果时：`./deploy/scripts/preview-build.sh` + `./deploy/scripts/preview-up.sh`
-- `pnpm check`、`pnpm build`、`pnpm dev` 仅作为本地调试参考，不作为默认最终验证入口。
+- `pnpm check` 属于纯静态检查，若确认不会污染宿主环境且不会与并行任务冲突，可以直接在宿主环境执行。
+- `pnpm build`、`pnpm dev` 会影响运行环境或产生较重副作用，不应作为 Claude 默认宿主执行入口；默认仍走 `deploy/` 隔离流程。
 - 当前仓库未配置独立前端单测脚本，最终验证仍以 `deploy/` 下的 Docker 流程为准。

@@ -60,3 +60,62 @@ services:
       CI: "true"
     volumes:
       - ${HOTSPOT_SOURCE_ROOT:?set HOTSPOT_SOURCE_ROOT}:/workspace:ro
+
+  backend-go-inspect:
+    image: ${HOTSPOT_BACKEND_GO_RUNNER_IMAGE:?set HOTSPOT_BACKEND_GO_RUNNER_IMAGE}
+    user: "${HOTSPOT_DOCKER_UID:?set HOTSPOT_DOCKER_UID}:${HOTSPOT_DOCKER_GID:?set HOTSPOT_DOCKER_GID}"
+    working_dir: /workspace/backend-go
+    command:
+      - sh
+      - -c
+      - rm -rf /tmp/workspace && mkdir -p /tmp/workspace/backend-go && cp -a /workspace/backend-go/. /tmp/workspace/backend-go/ && cd /tmp/workspace/backend-go && go run ./cmd/migrate && go run ./cmd/server
+    environment:
+      HOME: ${HOTSPOT_RUNNER_HOME:?set HOTSPOT_RUNNER_HOME}
+      XDG_CACHE_HOME: ${HOTSPOT_RUNNER_HOME:?set HOTSPOT_RUNNER_HOME}/.cache
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8080
+      AUTH_TOKEN_SECRET: test-secret
+      POSTGRES_DSN: postgres://hotspot:hotspot@postgres-test:5432/hotspot_test?sslmode=disable
+      REDIS_DSN: redis://redis-test:6379/0
+    volumes:
+      - ${HOTSPOT_SOURCE_ROOT:?set HOTSPOT_SOURCE_ROOT}:/workspace:ro
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+
+  frontend-inspect:
+    image: ${HOTSPOT_FRONTEND_RUNNER_IMAGE:?set HOTSPOT_FRONTEND_RUNNER_IMAGE}
+    user: "${HOTSPOT_DOCKER_UID:?set HOTSPOT_DOCKER_UID}:${HOTSPOT_DOCKER_GID:?set HOTSPOT_DOCKER_GID}"
+    working_dir: /workspace/frontend_svelte
+    command:
+      - sh
+      - -c
+      - rm -rf /tmp/workspace && mkdir -p /tmp/workspace/frontend_svelte && cp -a /workspace/frontend_svelte/. /tmp/workspace/frontend_svelte/ && cd /tmp/workspace/frontend_svelte && pnpm install --frozen-lockfile && pnpm build --mode test && PORT=3000 HOST=0.0.0.0 ORIGIN=${HOTSPOT_VERIFY_INSPECT_BASE_URL:-http://verify-inspect-nginx} node build
+    environment:
+      HOME: ${HOTSPOT_RUNNER_HOME:?set HOTSPOT_RUNNER_HOME}
+      XDG_CACHE_HOME: ${HOTSPOT_RUNNER_HOME:?set HOTSPOT_RUNNER_HOME}/.cache
+      VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
+      VITE_AMAP_SERVICE_HOST: /_AMapService
+      CI: "true"
+      HOTSPOT_VERIFY_INSPECT_BASE_URL: ${HOTSPOT_VERIFY_INSPECT_BASE_URL:-http://verify-inspect-nginx}
+    volumes:
+      - ${HOTSPOT_SOURCE_ROOT:?set HOTSPOT_SOURCE_ROOT}:/workspace:ro
+    depends_on:
+      backend-go-inspect:
+        condition: service_started
+
+  verify-inspect-nginx:
+    image: ${HOTSPOT_VERIFY_NGINX_IMAGE:-nginx:1.28.3-alpine3.23}
+    ports:
+      - "${HOTSPOT_VERIFY_INSPECT_HTTP_PORT:-38088}:80"
+    environment:
+      HOTSPOT_VERIFY_INSPECT_HTTP_PORT: ${HOTSPOT_VERIFY_INSPECT_HTTP_PORT:-38088}
+    volumes:
+      - ../nginx/hotspot.verify.nginx.conf:/etc/nginx/templates/default.conf.template:ro
+    depends_on:
+      backend-go-inspect:
+        condition: service_started
+      frontend-inspect:
+        condition: service_started
