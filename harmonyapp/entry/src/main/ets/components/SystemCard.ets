@@ -71,7 +71,7 @@ export struct SystemCard {
       case CardVariant.GLASS:
         return Color.Transparent;
       case CardVariant.FILLED:
-        return this.getPalette().buttonSecondaryBackground;
+        return this.getPalette().surfaceSubtle;
       case CardVariant.ELEVATED:
       case CardVariant.OUTLINED:
       case CardVariant.DEFAULT:

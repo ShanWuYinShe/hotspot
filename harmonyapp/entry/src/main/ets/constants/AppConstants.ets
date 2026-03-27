@@ -69,6 +69,10 @@ export interface PageNamesType {
   SEARCH: string;
   SETTINGS: string;
   ADVANCED_SETTINGS: string;
+  PRIVACY_SETTINGS: string;
+  SAFETY_SETTINGS: string;
+  RELATIONSHIP_HUB: string;
+  ANNOUNCEMENTS: string;
   PHOTO_PREVIEW: string;
   DEBUG_PANEL: string;
   SUBSCRIPTIONS: string;
@@ -92,6 +96,10 @@ export const PageNames: PageNamesType = {
   SEARCH: 'SearchPage',
   SETTINGS: 'SettingsPage',
   ADVANCED_SETTINGS: 'AdvancedSettingsPage',
+  PRIVACY_SETTINGS: 'PrivacySettingsPage',
+  SAFETY_SETTINGS: 'SafetySettingsPage',
+  RELATIONSHIP_HUB: 'RelationshipHubPage',
+  ANNOUNCEMENTS: 'AnnouncementsPage',
   PHOTO_PREVIEW: 'PhotoPreviewPage',
   DEBUG_PANEL: 'DebugPanel',
   SUBSCRIPTIONS: 'SubscriptionsPage',

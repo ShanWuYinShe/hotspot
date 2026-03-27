@@ -33,18 +33,17 @@ const DEFAULT_THEME_SHAPE: AppThemeShapeTokens = {
 };
 
 const SOFT_THEME_SHAPE: AppThemeShapeTokens = {
-  surfaceCard: DesignConstants.SHAPE.CARD + 4,
-  heroCard: DesignConstants.SHAPE.HERO_CARD + 4,
-  compactCard: DesignConstants.SHAPE.COMPACT_CARD + 4,
-  input: DesignConstants.SHAPE.INPUT + 2,
-  button: DesignConstants.SHAPE.BUTTON + 2,
-  chip: DesignConstants.SHAPE.CHIP + 2,
-  tabBar: DesignConstants.SHAPE.TAB_BAR + 4,
-  previewCard: DesignConstants.SHAPE.PREVIEW_CARD + 4,
-  listItem: DesignConstants.SHAPE.LIST_ITEM + 4,
-  iconTile: DesignConstants.SHAPE.ICON_TILE + 2
+  surfaceCard: DesignConstants.SHAPE.CARD + 6,
+  heroCard: DesignConstants.SHAPE.HERO_CARD + 8,
+  compactCard: DesignConstants.SHAPE.COMPACT_CARD + 8,
+  input: DesignConstants.SHAPE.INPUT + 4,
+  button: DesignConstants.SHAPE.BUTTON + 4,
+  chip: DesignConstants.SHAPE.CHIP + 4,
+  tabBar: DesignConstants.SHAPE.TAB_BAR + 8,
+  previewCard: DesignConstants.SHAPE.PREVIEW_CARD + 8,
+  listItem: DesignConstants.SHAPE.LIST_ITEM + 6,
+  iconTile: DesignConstants.SHAPE.ICON_TILE + 6
 };
-
 const DEFAULT_THEME_METRICS: AppThemeMetricTokens = {
   cardPadding: DesignConstants.SPACING.LG,
   heroPadding: DesignConstants.SPACING.XL,
@@ -67,24 +66,24 @@ const DEFAULT_THEME_METRICS: AppThemeMetricTokens = {
 };
 
 const SOFT_THEME_METRICS: AppThemeMetricTokens = {
-  cardPadding: DesignConstants.SPACING.LG + 2,
-  heroPadding: DesignConstants.SPACING.XL + 2,
+  cardPadding: DesignConstants.SPACING.XL,
+  heroPadding: DesignConstants.SPACING.XXL,
   metricCardPadding: DesignConstants.SPACING.XL,
-  profilePrimaryButtonHeight: 54,
-  profilePrimaryButtonHorizontalPadding: DesignConstants.SPACING.XXL + 8,
-  profileAvatarSize: 116,
-  profileTitleFontSize: DesignConstants.FONT.SIZE.XXL,
-  profileMetricMinHeight: 176,
-  profileMetricValueFontSize: 24,
-  actionButtonHeight: 44,
-  listItemMinHeight: 84,
-  tabBarHeight: 60,
-  createButtonWidth: 66,
-  createButtonHeight: 40,
-  chatListRadius: DesignConstants.SHAPE.CARD + 4,
-  chatSendButtonHeight: DesignConstants.CHAT.SEND_BUTTON_HEIGHT + 4,
-  previewHeroAvatarSize: 34,
-  previewPrimaryButtonHeight: 18
+  profilePrimaryButtonHeight: 56,
+  profilePrimaryButtonHorizontalPadding: DesignConstants.SPACING.XXL + 10,
+  profileAvatarSize: 124,
+  profileTitleFontSize: DesignConstants.FONT.SIZE.XXL + 2,
+  profileMetricMinHeight: 184,
+  profileMetricValueFontSize: 26,
+  actionButtonHeight: 46,
+  listItemMinHeight: 88,
+  tabBarHeight: 64,
+  createButtonWidth: 72,
+  createButtonHeight: 44,
+  chatListRadius: DesignConstants.SHAPE.CARD + 8,
+  chatSendButtonHeight: DesignConstants.CHAT.SEND_BUTTON_HEIGHT + 6,
+  previewHeroAvatarSize: 40,
+  previewPrimaryButtonHeight: 20
 };
 
 function cloneShadow(shadow: AppThemeShadow): AppThemeShadow {
@@ -170,7 +169,7 @@ const SOFT_GALLERY_LIGHT_VISUALS = buildVisualTokens(
   SOFT_THEME_METRICS,
   {
     avatarShadow: cloneShadow(ThemeConstants.SHADOWS.SOFT_GALLERY_LIGHT.elevated),
-    haloShadow: new AppThemeShadow(36, '#42FFF6E2', 0, 0),
+    haloShadow: new AppThemeShadow(42, '#40FFF5E7', 0, 0),
     previewShadow: cloneShadow(ThemeConstants.SHADOWS.SOFT_GALLERY_LIGHT.elevated)
   }
 );
@@ -180,7 +179,7 @@ const SOFT_GALLERY_DARK_VISUALS = buildVisualTokens(
   SOFT_THEME_METRICS,
   {
     avatarShadow: cloneShadow(ThemeConstants.SHADOWS.SOFT_GALLERY_DARK.elevated),
-    haloShadow: new AppThemeShadow(32, '#369BC3F4', 0, 0),
+    haloShadow: new AppThemeShadow(34, '#3C8BB7FF', 0, 0),
     previewShadow: cloneShadow(ThemeConstants.SHADOWS.SOFT_GALLERY_DARK.elevated)
   }
 );
@@ -207,8 +206,8 @@ const DEFAULT_CLEAN_DARK = buildPalette(
 
 const SOFT_GALLERY_LIGHT = buildPalette(
   'soft_gallery_light',
-  'Soft Gallery',
-  '奶白、柔光、静谧质感',
+  'Tactile Minimalist',
+  '奶油柔光、轻拟物、静谧触感',
   ThemeConstants.SOFT_GALLERY_LIGHT_COLORS,
   ThemeConstants.SHADOWS.SOFT_GALLERY_LIGHT,
   SOFT_GALLERY_LIGHT_VISUALS,
@@ -217,8 +216,8 @@ const SOFT_GALLERY_LIGHT = buildPalette(
 
 const SOFT_GALLERY_DARK = buildPalette(
   'soft_gallery_dark',
-  'Soft Gallery',
-  '深蓝、冷光、暖金点缀',
+  'Tactile Minimalist',
+  '冷蓝深夜、柔光边缘、暖金焦点',
   ThemeConstants.SOFT_GALLERY_DARK_COLORS,
   ThemeConstants.SHADOWS.SOFT_GALLERY_DARK,
   SOFT_GALLERY_DARK_VISUALS,
@@ -226,9 +225,9 @@ const SOFT_GALLERY_DARK = buildPalette(
 );
 
 const THEME_OPTIONS: ThemeOptionItem[] = [
-  { mode: 'follow_system', label: '跟随系统', description: '自动切换深浅主题' } as ThemeOptionItem,
-  { mode: 'default_clean', label: '当前默认', description: '清爽、干净、通用' } as ThemeOptionItem,
-  { mode: 'soft_gallery', label: 'Soft Gallery', description: '柔光、奶油感、软拟物' } as ThemeOptionItem
+  { mode: 'follow_system', label: '跟随系统', description: '自动匹配系统明暗模式' } as ThemeOptionItem,
+  { mode: 'default_clean', label: '当前默认', description: '清爽、中性、稳妥的基础主题' } as ThemeOptionItem,
+  { mode: 'soft_gallery', label: 'Tactile Minimalist', description: '浅色奶油柔光 / 深色冷焰微光' } as ThemeOptionItem
 ];
 
 export class AppThemeManager {

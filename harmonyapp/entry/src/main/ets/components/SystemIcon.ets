@@ -70,6 +70,7 @@ export enum AppIcon {
   WARNING = 'sys.symbol.exclamationmark_triangle',
   ERROR = 'sys.symbol.xmark_circle',
   SUCCESS = 'sys.symbol.checkmark_circle',
+  LOCK = 'sys.symbol.lock',
 
   // 新增智能功能图标
   NOTIFICATION = 'sys.symbol.bell',
@@ -161,6 +162,7 @@ export const AppIconMap: Map<AppIcon, string> = new Map<AppIcon, string>([
   [AppIcon.WARNING, 'exclamationmark_triangle'],
   [AppIcon.ERROR, 'xmark_circle'],
   [AppIcon.SUCCESS, 'checkmark_circle'],
+  [AppIcon.LOCK, 'lock'],
   [AppIcon.NOTIFICATION, 'bell'],
   [AppIcon.NOTIFICATION_FILL, 'bell_fill'],
   [AppIcon.CHART, 'histogram'],

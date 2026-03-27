@@ -23,7 +23,7 @@ export struct SurfaceIconButton {
     if (this.kind === 'primary') {
       return this.getPalette().accentBackground;
     }
-    return this.getPalette().buttonSecondaryBackground;
+    return this.getPalette().surfaceBackground;
   }
 
   private getBorderColor(): ResourceColor | Color {
@@ -34,14 +34,14 @@ export struct SurfaceIconButton {
   }
 
   private getShadowColor(): ShadowOptions {
-    return this.getPalette().controlShadow;
+    return this.kind === 'primary' ? this.getPalette().accentShadow : this.getPalette().controlShadow;
   }
 
   private getIconColor(): ResourceColor | Color {
     if (this.kind === 'primary') {
       return this.getPalette().accentText;
     }
-    return this.getPalette().buttonSecondaryText;
+    return this.getPalette().textPrimary;
   }
 
   build() {

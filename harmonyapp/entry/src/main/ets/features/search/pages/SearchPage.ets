@@ -1,19 +1,16 @@
-/**
- * 全局搜索页面
- * 重构：使用 HarmonyOS 原生 Tabs 组件
- */
-
-import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_IS_LOGGED_IN } from '../../../core/state/GlobalStateManager';
+import { KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_IS_LOGGED_IN, KEY_CLIENT_CONFIG } from '../../../core/state/GlobalStateManager';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { LocationInfo } from '../../../core/location/LocationUtil';
 import { PageNames } from '../../../constants/AppConstants';
-import { AppRouter, ChatRouteParam, GroupDetailRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, ChatRouteParam, GroupDetailRouteParam, MomentDetailRouteParam, ProfileRouteParam, SearchRouteParam } from '../../../core/router/AppRouter';
 import {
   UserItem, GroupItem, MomentItem, GeoPoint,
-  JoinGroupRequest, CreateReportRequest, Relationship
+  JoinGroupRequest, CreateReportRequest, Relationship,
+  SearchSuggestItem, SearchSuggestRequest, ClientConfig,
+  SearchSuggestItemTag, SearchSuggestItemUser, SearchSuggestItemGroup, SearchSuggestItemMoment
 } from '../../../core/types/api';
 import { interactionActions } from '../../../core/state/InteractionActions';
-import { InteractionStateStore, UserRelationState } from '../../../core/state/InteractionStateStore';
+import { UserRelationState } from '../../../core/state/InteractionStateStore';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
@@ -31,7 +28,7 @@ import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManag
 import pasteboard from '@ohos.pasteboard';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
-
+import { TimerManager } from '../../../core/utils/TimerManager';
 
 const DOMAIN_NUMBER: number = 0xFF10;
 const TAG: string = 'SearchPage';
@@ -48,10 +45,11 @@ export struct SearchPage {
   @StorageLink(KEY_IS_LOGGED_IN) isLoggedIn: boolean = false;
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
+  @StorageLink(KEY_CLIENT_CONFIG) clientConfig: ClientConfig | null = null;
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
   @StorageLink('interaction_user_state') userStateMap: Record<string, UserRelationState> = {};
-  
+
   @State currentIndex: number = 0;
   @State keyword: string = '';
   @State isLoading: boolean = false;
@@ -62,6 +60,8 @@ export struct SearchPage {
   @State momentResults: MomentItem[] = [];
   private momentResultsDataSource: BasicDataSource<MomentItem> = new BasicDataSource<MomentItem>([]);
   @State hasSearched: boolean = false;
+  @State suggestItems: SearchSuggestItem[] = [];
+  private suggestTimerId: number = 0;
   private controller: TabsController = new TabsController();
   @State userActionPendingIds: string[] = [];
   @State groupActionPendingIds: string[] = [];
@@ -72,6 +72,10 @@ export struct SearchPage {
 
   aboutToDisappear(): void {
     KeyboardDismissManager.getInstance().dismiss();
+    if (this.suggestTimerId) {
+      TimerManager.clearTimeout(this.suggestTimerId);
+      this.suggestTimerId = 0;
+    }
   }
 
   private getCurrentThemePalette() {
@@ -90,15 +94,86 @@ export struct SearchPage {
     return this.getCurrentThemePalette().borderColor;
   }
 
-  private async doSearch() {
-    if (!this.keyword.trim()) return;
+  private getReferencePoint(): GeoPoint | null {
     const refLoc: LocationInfo | null = this.browseAnchor ?? this.currentLocation;
-    if (!refLoc) {
+    if (refLoc) {
+      return {
+        latitude: refLoc.latitude,
+        longitude: refLoc.longitude
+      };
+    }
+    const fallback = this.clientConfig?.defaults?.default_location?.point;
+    if (fallback) {
+      return {
+        latitude: fallback.latitude,
+        longitude: fallback.longitude
+      };
+    }
+    return null;
+  }
+
+  private scheduleSuggest(): void {
+    if (this.suggestTimerId) {
+      TimerManager.clearTimeout(this.suggestTimerId);
+      this.suggestTimerId = 0;
+    }
+    const trimmed = this.keyword.trim();
+    if (!trimmed) {
+      this.suggestItems = [];
+      return;
+    }
+    this.suggestTimerId = TimerManager.setTimeout(() => {
+      this.fetchSuggest(trimmed);
+    }, 220, 'search-suggest');
+  }
+
+  private async fetchSuggest(prefix: string): Promise<void> {
+    const referencePoint = this.getReferencePoint();
+    if (!referencePoint || !prefix) {
+      this.suggestItems = [];
+      return;
+    }
+    try {
+      const request: SearchSuggestRequest = {
+        prefix,
+        reference_point: referencePoint,
+        radius: this.clientConfig?.limits?.search_radius_max
+      };
+      const response = await ApiClient.searchSuggest(request);
+      if (prefix !== this.keyword.trim() || this.hasSearched) {
+        return;
+      }
+      if (response.code === 0 && response.data) {
+        this.suggestItems = response.data.items ?? [];
+      } else {
+        this.suggestItems = [];
+      }
+    } catch (_) {
+      if (prefix === this.keyword.trim() && !this.hasSearched) {
+        this.suggestItems = [];
+      }
+    }
+  }
+
+  private async doSearch(): Promise<void> {
+    if (this.suggestTimerId) {
+      TimerManager.clearTimeout(this.suggestTimerId);
+      this.suggestTimerId = 0;
+    }
+    const trimmedKeyword = this.keyword.trim();
+    if (!trimmedKeyword) {
+      return;
+    }
+    const referencePoint = this.getReferencePoint();
+    if (!referencePoint) {
+      SystemToast.showWarning('当前缺少可用定位，暂时无法搜索', this.getUIContext());
       return;
     }
 
     this.isLoading = true;
     this.hasSearched = true;
+    this.keyword = trimmedKeyword;
+    this.suggestItems = [];
     this.userResults = [];
     this.userResultsDataSource.clear();
     this.groupResults = [];
@@ -106,26 +181,11 @@ export struct SearchPage {
     this.momentResults = [];
     this.momentResultsDataSource.clear();
 
-    const referencePoint: GeoPoint = {
-      latitude: refLoc.latitude,
-      longitude: refLoc.longitude
-    };
-
     try {
       await LoadingUtil.withMinimumTime(async () => {
-
-        const p1 = ApiClient.searchUsers({
-          keyword: this.keyword,
-          reference_point: referencePoint
-        });
-        const p2 = ApiClient.searchGroups({
-          keyword: this.keyword,
-          reference_point: referencePoint
-        });
-        const p3 = ApiClient.searchMoments({
-          keyword: this.keyword,
-          reference_point: referencePoint
-        });
+        const p1 = ApiClient.searchUsers({ keyword: trimmedKeyword, reference_point: referencePoint });
+        const p2 = ApiClient.searchGroups({ keyword: trimmedKeyword, reference_point: referencePoint });
+        const p3 = ApiClient.searchMoments({ keyword: trimmedKeyword, reference_point: referencePoint });
 
         const results = await Promise.all([p1, p2, p3]);
         const res1 = results[0];
@@ -160,103 +220,246 @@ export struct SearchPage {
     }
   }
 
-  build() {
-    NavDestination() {
-    Column() {
-      Row() {
-        IconButton({
-          icon: AppIcon.BACK,
-          iconSize: IconSize.LARGE,
-          iconColor: this.getCurrentThemePalette().textPrimary,
-          bgColor: Color.Transparent,
-          onButtonClick: () => {
-            AppRouter.pop();
-          }
-        })
+  private applyKeywordAndSearch(keyword: string): void {
+    this.keyword = keyword;
+    this.doSearch();
+  }
 
-        TextInput({ placeholder: '搜索用户、群组、瞬间...', text: this.keyword })
-          .layoutWeight(1)
-          .height(42)
-          .backgroundColor(this.getSurfaceSubtle())
-          .borderRadius(DesignConstants.RADIUS.XL)
-          .shadow(this.getCurrentThemePalette().controlShadow)
-          .padding({ left: 16, right: 16 })
-          .margin({ left: 8, right: 8 })
-          .onChange((value) => {
-            this.keyword = value;
-          })
-          .onSubmit(() => {
-            this.doSearch();
-          })
-          .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
-
-        IconButton({
-          icon: AppIcon.SEARCH,
-          iconSize: IconSize.MEDIUM,
-          iconColor: this.getCurrentThemePalette().textPrimary,
-          bgColor: this.getSurfaceSubtle(),
-          onButtonClick: () => {
-            this.doSearch();
-          }
-        })
+  private handleSuggestItemTap(item: SearchSuggestItem): void {
+    switch (item.type) {
+      case 'tag': {
+        const tagItem = item as SearchSuggestItemTag;
+        this.applyKeywordAndSearch(`#${tagItem.payload.name}`);
+        break;
       }
-      .width('100%')
-      .padding({
-        left: DesignConstants.SPACING.LG,
-        right: DesignConstants.SPACING.LG,
-        top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
-        bottom: DesignConstants.SPACING.SM
-      })
-      .backgroundColor(Color.Transparent)
-      .border({ width: { bottom: 1 }, color: this.getSurfaceBorder() })
-      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
-
-      if (this.isLoading) {
-        SystemLoadingView({ message: '搜索中...' })
-          .layoutWeight(1)
-          .transition(
-            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-          )
-      } else {
-        Tabs({ barPosition: BarPosition.Start, controller: this.controller, index: this.currentIndex }) {
-          TabContent() {
-            this.UserResultList()
-          }.tabBar(this.TabBuilder(0, '用户'))
-
-          TabContent() {
-            this.GroupResultList()
-          }.tabBar(this.TabBuilder(1, '群组'))
-
-          TabContent() {
-            this.MomentResultList()
-          }.tabBar(this.TabBuilder(2, '瞬间'))
-        }
-        .vertical(false)
-        .barMode(BarMode.Fixed)
-        .barWidth('100%')
-        .barHeight(60)
-        .animationDuration(280)
-        .onChange((index: number) => {
-          this.currentIndex = index;
-        })
-        .width('100%')
-        .layoutWeight(1)
-        .backgroundColor(Color.Transparent)
-        .transition(
-          TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-            .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-        )
+      case 'user': {
+        const userItem = item as SearchSuggestItemUser;
+        const params = new ProfileRouteParam();
+        params.userId = userItem.payload.user_id;
+        AppRouter.push(PageNames.PROFILE, params);
+        break;
+      }
+      case 'group': {
+        const groupItem = item as SearchSuggestItemGroup;
+        const params = new GroupDetailRouteParam();
+        params.groupId = groupItem.payload.group_id;
+        AppRouter.push(PageNames.GROUP_DETAIL, params);
+        break;
+      }
+      case 'moment': {
+        const momentItem = item as SearchSuggestItemMoment;
+        const params = new MomentDetailRouteParam();
+        params.momentId = momentItem.payload.moment_id;
+        AppRouter.push(PageNames.MOMENT_DETAIL, params);
+        break;
       }
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(this.getCurrentThemePalette().pageBackground)
+  }
+
+  private getSuggestKey(item: SearchSuggestItem, index: number): string {
+    switch (item.type) {
+      case 'tag':
+        return `tag-${(item as SearchSuggestItemTag).payload.name}-${index}`;
+      case 'user':
+        return `user-${(item as SearchSuggestItemUser).payload.user_id}-${index}`;
+      case 'group':
+        return `group-${(item as SearchSuggestItemGroup).payload.group_id}-${index}`;
+      case 'moment':
+        return `moment-${(item as SearchSuggestItemMoment).payload.moment_id}-${index}`;
+      default:
+        return `suggest-${index}`;
+    }
+  }
+
+  private getSuggestTitle(item: SearchSuggestItem): string {
+    switch (item.type) {
+      case 'tag':
+        return `#${(item as SearchSuggestItemTag).payload.name}`;
+      case 'user':
+        return (item as SearchSuggestItemUser).payload.nickname;
+      case 'group':
+        return (item as SearchSuggestItemGroup).payload.name;
+      case 'moment':
+        return (item as SearchSuggestItemMoment).payload.description_preview;
+      default:
+        return '';
+    }
+  }
+
+  private getSuggestSubtitle(item: SearchSuggestItem): string {
+    switch (item.type) {
+      case 'tag':
+        return `${(item as SearchSuggestItemTag).payload.usage_count} 次使用`;
+      case 'user':
+        return (item as SearchSuggestItemUser).payload.bio ?? '打开用户主页';
+      case 'group':
+        return `${(item as SearchSuggestItemGroup).payload.members_count} 人`;
+      case 'moment':
+        return (item as SearchSuggestItemMoment).payload.author.nickname ?? '打开瞬间详情';
+      default:
+        return '';
+    }
+  }
+
+  build() {
+    NavDestination() {
+      Column() {
+        Row() {
+          IconButton({
+            icon: AppIcon.BACK,
+            iconSize: IconSize.LARGE,
+            iconColor: this.getCurrentThemePalette().textPrimary,
+            bgColor: Color.Transparent,
+            onButtonClick: () => {
+              AppRouter.pop();
+            }
+          })
+
+          TextInput({ placeholder: '搜索用户、群组、瞬间...', text: this.keyword })
+            .layoutWeight(1)
+            .height(42)
+            .backgroundColor(this.getSurfaceSubtle())
+            .borderRadius(DesignConstants.RADIUS.XL)
+            .shadow(this.getCurrentThemePalette().controlShadow)
+            .padding({ left: 16, right: 16 })
+            .margin({ left: 8, right: 8 })
+            .onChange((value) => {
+              this.keyword = value;
+              this.hasSearched = false;
+              this.scheduleSuggest();
+            })
+            .onSubmit(() => {
+              this.doSearch();
+            })
+            .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
+
+          IconButton({
+            icon: AppIcon.SEARCH,
+            iconSize: IconSize.MEDIUM,
+            iconColor: this.getCurrentThemePalette().textPrimary,
+            bgColor: this.getSurfaceSubtle(),
+            onButtonClick: () => {
+              this.doSearch();
+            }
+          })
+        }
+        .width('100%')
+        .padding({
+          left: DesignConstants.SPACING.LG,
+          right: DesignConstants.SPACING.LG,
+          top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop),
+          bottom: DesignConstants.SPACING.SM
+        })
+        .backgroundColor(Color.Transparent)
+        .border({ width: { bottom: 1 }, color: this.getSurfaceBorder() })
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
+
+        if (this.isLoading) {
+          SystemLoadingView({ message: '搜索中...' })
+            .layoutWeight(1)
+        } else if (this.keyword.trim().length > 0 && this.suggestItems.length > 0 && !this.hasSearched) {
+          List({ space: DesignConstants.SPACING.SM }) {
+            ForEach(this.suggestItems, (item: SearchSuggestItem) => {
+              ListItem() {
+                this.buildSuggestRow(item)
+              }
+            }, (item: SearchSuggestItem, index?: number) => this.getSuggestKey(item, index ?? 0))
+          }
+          .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
+          .layoutWeight(1)
+          .width('100%')
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+        } else {
+          Tabs({ barPosition: BarPosition.Start, controller: this.controller, index: this.currentIndex }) {
+            TabContent() {
+              this.UserResultList()
+            }.tabBar(this.TabBuilder(0, '用户'))
+
+            TabContent() {
+              this.GroupResultList()
+            }.tabBar(this.TabBuilder(1, '群组'))
+
+            TabContent() {
+              this.MomentResultList()
+            }.tabBar(this.TabBuilder(2, '瞬间'))
+          }
+          .vertical(false)
+          .barMode(BarMode.Fixed)
+          .barWidth('100%')
+          .barHeight(60)
+          .animationDuration(280)
+          .onChange((index: number) => {
+            this.currentIndex = index;
+          })
+          .width('100%')
+          .layoutWeight(1)
+          .backgroundColor(Color.Transparent)
+        }
+      }
+      .width('100%')
+      .height('100%')
+      .backgroundColor(this.getCurrentThemePalette().pageBackground)
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {
       this.pathStack = context.pathStack;
+      const params = context.pathInfo?.param as SearchRouteParam | undefined;
+      const initialKeyword = params?.keyword?.trim() ?? '';
+      if (initialKeyword.length > 0) {
+        this.keyword = initialKeyword;
+        this.doSearch();
+      }
     })
+  }
+
+  @Builder
+  private buildSuggestRow(item: SearchSuggestItem) {
+    Row({ space: DesignConstants.SPACING.MD }) {
+      Row() {
+        Text() {
+          SymbolSpan($r(
+            item.type === 'tag' ? AppIcon.CHART : item.type === 'user' ? AppIcon.PERSON : item.type === 'group' ? AppIcon.GROUP : AppIcon.CAMERA
+          ))
+            .fontSize(18)
+            .fontColor([this.getCurrentThemePalette().accentBackground])
+        }
+      }
+      .width(40)
+      .height(40)
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .backgroundColor(this.getSurfaceSubtle())
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+
+      Column({ space: 4 }) {
+        Text(this.getSuggestTitle(item))
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(this.getSuggestSubtitle(item))
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+
+      Text() {
+        SymbolSpan($r(AppIcon.ARROW_RIGHT))
+          .fontSize(16)
+          .fontColor([this.getCurrentThemePalette().textSecondary])
+      }
+    }
+    .width('100%')
+    .padding(DesignConstants.SPACING.MD)
+    .backgroundColor(this.getSurfaceBackground())
+    .borderRadius(DesignConstants.RADIUS.XXL)
+    .shadow(this.getCurrentThemePalette().elevatedShadow)
+    .border({ width: 1, color: this.getSurfaceBorder() })
+    .onClick(() => this.handleSuggestItemTap(item))
   }
 
   @Builder TabBuilder(index: number, name: string) {
@@ -275,9 +478,7 @@ export struct SearchPage {
     .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
     .backgroundColor(this.currentIndex === index ? this.getSurfaceSubtle() : Color.Transparent)
     .borderRadius(DesignConstants.RADIUS.XL)
-    .border(this.currentIndex === index
-      ? { width: 1, color: this.getSurfaceBorder() }
-      : { width: 0 })
+    .border(this.currentIndex === index ? { width: 1, color: this.getSurfaceBorder() } : { width: 0 })
     .onClick(() => {
       if (this.currentIndex !== index) {
         this.currentIndex = index;
@@ -306,18 +507,12 @@ export struct SearchPage {
           }
         }, (item: UserItem) => {
           const uid = item.user?.user_id ?? '';
-          return uid + '_f' + (this.userStateMap[uid]?.relation?.is_following ?? false) +
-            '_p' + (this.userActionPendingIds.indexOf(uid) >= 0);
+          return uid + '_f' + (this.userStateMap[uid]?.relation?.is_following ?? false) + '_p' + (this.userActionPendingIds.indexOf(uid) >= 0);
         })
       }
       .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
       .width('100%').height('100%')
-      .padding({
-        left: DesignConstants.SPACING.MD,
-        right: DesignConstants.SPACING.MD,
-        top: DesignConstants.SPACING.SM + 2,
-        bottom: DesignConstants.SPACING.MD
-      })
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM + 2, bottom: DesignConstants.SPACING.MD })
       .scrollBar(BarState.Auto)
     }
   }
@@ -342,18 +537,12 @@ export struct SearchPage {
           }
         }, (item: GroupItem) => {
           const gid = item.group?.group_id ?? '';
-          return gid + '_j' + (item.my_state?.is_joined ?? false) +
-            '_p' + (this.groupActionPendingIds.indexOf(gid) >= 0);
+          return gid + '_j' + (item.my_state?.is_joined ?? false) + '_p' + (this.groupActionPendingIds.indexOf(gid) >= 0);
         })
       }
       .divider({ strokeWidth: 0.5, color: this.getSurfaceBorder() })
       .width('100%').height('100%')
-      .padding({
-        left: DesignConstants.SPACING.MD,
-        right: DesignConstants.SPACING.MD,
-        top: DesignConstants.SPACING.SM + 2,
-        bottom: DesignConstants.SPACING.MD
-      })
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM + 2, bottom: DesignConstants.SPACING.MD })
       .scrollBar(BarState.Auto)
     }
   }
@@ -371,7 +560,6 @@ export struct SearchPage {
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Center)
     } else {
-      // 瀑布流布局展示瞬间结果
       WaterFlow() {
         LazyForEach(this.momentResultsDataSource, (item: MomentItem) => {
           FlowItem() {
@@ -384,17 +572,11 @@ export struct SearchPage {
       .columnsTemplate('1fr 1fr')
       .columnsGap(DesignConstants.SPACING.MD)
       .rowsGap(DesignConstants.SPACING.MD)
-      .padding({
-        left: DesignConstants.SPACING.MD,
-        right: DesignConstants.SPACING.MD,
-        top: DesignConstants.SPACING.SM + 2,
-        bottom: DesignConstants.SPACING.MD
-      })
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM + 2, bottom: DesignConstants.SPACING.MD })
       .cachedCount(6)
     }
   }
 
-  // 计算搜索卡片图片高度
   private calculateSearchImageHeight(moment: MomentItem): number {
     if (!moment.images || moment.images.length === 0) {
       return 140;
@@ -468,43 +650,21 @@ export struct SearchPage {
         .justifyContent(FlexAlign.Center)
         .alignItems(VerticalAlign.Center)
         .bindMenu([
-          {
-            value: '私聊',
-            action: () => this.startPrivateChat(item)
-          },
-          {
-            value: this.isUserFollowing(item.user?.user_id ?? '') ? '取消关注' : '关注',
-            action: () => this.toggleFollow(item)
-          },
-          {
-            value: '举报用户',
-            action: () => this.reportUser(item)
-          },
-          {
-            value: '复制用户ID',
-            action: () => this.copyText(item.user?.user_id ?? '', '用户ID已复制')
-          }
+          { value: '私聊', action: () => this.startPrivateChat(item) },
+          { value: this.isUserFollowing(item.user?.user_id ?? '') ? '取消关注' : '关注', action: () => this.toggleFollow(item) },
+          { value: '举报用户', action: () => this.reportUser(item) },
+          { value: '复制用户ID', action: () => this.copyText(item.user?.user_id ?? '', '用户ID已复制') }
         ])
       }
       .width('100%')
 
-      if (item.bio) {
-        Text(item.bio)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .lineHeight(18)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .width('100%')
-      } else {
-        Text('这个人还没有留下简介')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .lineHeight(18)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .width('100%')
-      }
+      Text(item.bio ? item.bio : '这个人还没有留下简介')
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .lineHeight(18)
+        .fontColor(this.getCurrentThemePalette().textSecondary)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
 
       if (item.tags && item.tags.length > 0) {
         Flex({ wrap: FlexWrap.Wrap }) {
@@ -522,8 +682,7 @@ export struct SearchPage {
       }
 
       Row({ space: 8 }) {
-        Button(this.isUserActionPending(item.user?.user_id ?? '') ? '处理中...' :
-          (this.isUserFollowing(item.user?.user_id ?? '') ? '已关注' : '关注'))
+        Button(this.isUserActionPending(item.user?.user_id ?? '') ? '处理中...' : (this.isUserFollowing(item.user?.user_id ?? '') ? '已关注' : '关注'))
           .type(ButtonType.Capsule)
           .layoutWeight(1)
           .height(36)
@@ -583,7 +742,6 @@ export struct SearchPage {
               .fontColor(this.getCurrentThemePalette().textPrimary)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
-
             Text(`${formatCount(item.group?.members_count)} 人`)
               .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor(this.getCurrentThemePalette().textSecondary)
@@ -607,47 +765,24 @@ export struct SearchPage {
         .justifyContent(FlexAlign.Center)
         .alignItems(VerticalAlign.Center)
         .bindMenu([
-          {
-            value: '查看详情',
-            action: () => this.openGroupDetail(item)
-          },
-          {
-            value: this.isGroupJoined(item) ? '进入群聊' : '加入群组',
-            action: () => this.joinGroup(item)
-          },
-          {
-            value: '举报群组',
-            action: () => this.reportGroup(item)
-          },
-          {
-            value: '复制群组ID',
-            action: () => this.copyText(item.group?.group_id ?? '', '群组ID已复制')
-          }
+          { value: '查看详情', action: () => this.openGroupDetail(item) },
+          { value: this.isGroupJoined(item) ? '进入群聊' : '加入群组', action: () => this.joinGroup(item) },
+          { value: '举报群组', action: () => this.reportGroup(item) },
+          { value: '复制群组ID', action: () => this.copyText(item.group?.group_id ?? '', '群组ID已复制') }
         ])
       }
       .width('100%')
 
-      if (item.description) {
-        Text(item.description)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .lineHeight(18)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .width('100%')
-      } else {
-        Text('这个群还没有群介绍')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .lineHeight(18)
-          .fontColor(this.getCurrentThemePalette().textSecondary)
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .width('100%')
-      }
+      Text(item.description ? item.description : '这个群还没有群介绍')
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .lineHeight(18)
+        .fontColor(this.getCurrentThemePalette().textSecondary)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
 
       Row({ space: DesignConstants.SPACING.SM }) {
-        Button(this.isGroupActionPending(item.group?.group_id ?? '') ? '处理中...' :
-          (this.isGroupJoined(item) ? '进入群聊' : '加入群组'))
+        Button(this.isGroupActionPending(item.group?.group_id ?? '') ? '处理中...' : (this.isGroupJoined(item) ? '进入群聊' : '加入群组'))
           .type(ButtonType.Capsule)
           .layoutWeight(1)
           .height(36)
@@ -684,19 +819,13 @@ export struct SearchPage {
     .padding(DesignConstants.SPACING.MD)
     .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.XXL)
-    .shadow({
-      radius: this.getCurrentThemePalette().elevatedShadow.radius,
-      color: this.getCurrentThemePalette().elevatedShadow.color,
-      offsetX: this.getCurrentThemePalette().elevatedShadow.offsetX,
-      offsetY: this.getCurrentThemePalette().elevatedShadow.offsetY
-    })
+    .shadow(this.getCurrentThemePalette().elevatedShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
   }
 
   @Builder
   buildMomentSearchCard(item: MomentItem) {
     Column({ space: 0 }) {
-      // 图片展示
       if (item.images && item.images.length > 0) {
         Image(MediaUrlUtil.normalize(item.images[0].url))
           .width('100%')
@@ -704,7 +833,6 @@ export struct SearchPage {
           .objectFit(ImageFit.Cover)
           .backgroundColor(this.getSurfaceSubtle())
       } else {
-        // 无图片展示文字摘要
         Column() {
           Text(item.description.substring(0, 60))
             .fontSize(DesignConstants.FONT.SIZE.SM)
@@ -719,7 +847,6 @@ export struct SearchPage {
         .backgroundColor(this.getSurfaceBackground())
       }
 
-      // 用户信息
       Row({ space: 6 }) {
         SystemAvatar({
           avatarUrl: item.user?.avatar_url ?? '',
@@ -734,7 +861,6 @@ export struct SearchPage {
           .layoutWeight(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-        // 点赞数
         Row({ space: 2 }) {
           Text() {
             SymbolSpan($r(AppIcon.HEART))
@@ -752,45 +878,11 @@ export struct SearchPage {
     .backgroundColor(this.getSurfaceBackground())
     .borderRadius(DesignConstants.RADIUS.XXL)
     .clip(true)
-    .shadow({
-      radius: this.getCurrentThemePalette().elevatedShadow.radius,
-      color: this.getCurrentThemePalette().elevatedShadow.color,
-      offsetX: this.getCurrentThemePalette().elevatedShadow.offsetX,
-      offsetY: this.getCurrentThemePalette().elevatedShadow.offsetY
-    })
+    .shadow(this.getCurrentThemePalette().elevatedShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
     .onClick(() => {
       this.openMomentDetail(item);
     })
-  }
-
-  // 保留原有的列表项构建器用于其他场景
-  @Builder
-  buildMomentItem(item: MomentItem) {
-    Column({ space: DesignConstants.SPACING.SM }) {
-      Row() {
-        SystemAvatar({
-          avatarUrl: item.user?.avatar_url ?? '',
-          name: item.user?.nickname ?? '',
-          avatarSize: 32
-        })
-        .margin({ right: 8 })
-
-        Text(item.user?.nickname ?? '')
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-      }
-
-      Text(item.description)
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontColor(this.getCurrentThemePalette().textPrimary)
-        .maxLines(3)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
-    .width('100%')
-    .padding(DesignConstants.SPACING.LG)
-    .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.RADIUS.XXL)
   }
 
   private setUserActionPending(userId: string, pending: boolean): void {
@@ -892,7 +984,6 @@ export struct SearchPage {
       const response = await ApiClient.joinGroup({ group_id: groupId } as JoinGroupRequest);
       if (response.code === 0 && response.data) {
         if (response.data.status === 'joined') {
-          InteractionStateStore.getInstance().updateGroupMembership(groupId, { is_member: true });
           SystemToast.showSuccess('加入成功', this.getUIContext());
           await this.doSearch();
         } else {

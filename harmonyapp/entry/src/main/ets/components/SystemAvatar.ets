@@ -91,6 +91,7 @@ export struct SystemAvatar {
           .backgroundColor(this.getPalette().accentBackground)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .border(this.getBorderOptions())
+          .shadow(this.getPalette().controlShadow)
           .margin({ bottom: -1, right: -1 })
       } else if (this.userType && UserTypeUtil.isTempUser(this.userType)) {
         Text('临时')

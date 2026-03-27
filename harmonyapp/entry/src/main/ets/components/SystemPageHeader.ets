@@ -52,7 +52,11 @@ export struct SystemPageHeader {
   }
 
   private getHeaderShadow(): ShadowOptions {
-    return this.getPalette().controlShadow;
+    return this.getPalette().tabBarShadow;
+  }
+
+  private getHeaderBorderColor(): ResourceColor {
+    return this.getPalette().borderColor;
   }
 
   private canShowBackButton(): boolean {
@@ -121,11 +125,12 @@ export struct SystemPageHeader {
             if (this.action) {
               Button(this.action.label)
                 .type(ButtonType.Normal)
-                .backgroundColor(this.getPalette().surfaceSubtle)
-                .borderRadius(DesignConstants.RADIUS.XL)
+                .backgroundColor(this.getPalette().surfaceBackground)
+                .borderRadius(DesignConstants.RADIUS.FULL)
                 .border({ width: 1, color: this.getPalette().borderColor })
-                .height(34)
-                .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+                .shadow(this.getPalette().controlShadow)
+                .height(38)
+                .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
                 .fontColor(this.action.disabled
                   ? this.getPalette().textSecondary
                   : this.getPalette().accentBackground)
@@ -160,7 +165,7 @@ export struct SystemPageHeader {
     })
     .backgroundColor(this.getBackgroundColor())
     .shadow(this.getHeaderShadow())
-    .border({ width: { bottom: 1 }, color: this.getPalette().borderColor })
+    .border({ width: { bottom: 1 }, color: this.getHeaderBorderColor() })
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
   }
 }

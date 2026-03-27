@@ -71,6 +71,26 @@
       "buildFunction": "AdvancedSettingsPageBuilder"
     },
     {
+      "name": "PrivacySettingsPage",
+      "pageSourceFile": "src/main/ets/features/settings/pages/PrivacySettingsPage.ets",
+      "buildFunction": "PrivacySettingsPageBuilder"
+    },
+    {
+      "name": "SafetySettingsPage",
+      "pageSourceFile": "src/main/ets/features/settings/pages/SafetySettingsPage.ets",
+      "buildFunction": "SafetySettingsPageBuilder"
+    },
+    {
+      "name": "RelationshipHubPage",
+      "pageSourceFile": "src/main/ets/features/settings/pages/RelationshipHubPage.ets",
+      "buildFunction": "RelationshipHubPageBuilder"
+    },
+    {
+      "name": "AnnouncementsPage",
+      "pageSourceFile": "src/main/ets/features/settings/pages/AnnouncementsPage.ets",
+      "buildFunction": "AnnouncementsPageBuilder"
+    },
+    {
       "name": "AccountsPage",
       "pageSourceFile": "src/main/ets/features/settings/pages/AccountsPage.ets",
       "buildFunction": "AccountsPageBuilder"

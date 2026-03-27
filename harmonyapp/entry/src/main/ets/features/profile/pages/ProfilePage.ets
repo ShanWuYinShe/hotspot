@@ -280,6 +280,26 @@ export struct ProfilePage {
     AppRouter.push(PageNames.SEARCH);
   }
 
+  private openSettingsCenter(): void {
+    AppRouter.push(PageNames.SETTINGS);
+  }
+
+  private openPrivacySettings(): void {
+    AppRouter.push(PageNames.PRIVACY_SETTINGS);
+  }
+
+  private openRelationshipHub(): void {
+    AppRouter.push(PageNames.RELATIONSHIP_HUB);
+  }
+
+  private openSafetySettings(): void {
+    AppRouter.push(PageNames.SAFETY_SETTINGS);
+  }
+
+  private openAnnouncements(): void {
+    AppRouter.push(PageNames.ANNOUNCEMENTS);
+  }
+
   private openSubscriptions(): void {
     AppRouter.push(PageNames.SUBSCRIPTIONS);
   }
@@ -1178,10 +1198,22 @@ export struct ProfilePage {
         inset: true
       })
 
-      Text(this.currentUser?.nickname || '')
-        .fontSize(this.getProfileVisualStyle().identity.titleFontSize)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(this.getPrimaryTextColor())
+      Column({ space: DesignConstants.SPACING.SM }) {
+        Text(this.currentUser?.nickname || '')
+          .fontSize(this.getProfileVisualStyle().identity.titleFontSize)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.getPrimaryTextColor())
+          .textAlign(TextAlign.Center)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+        Text(this.userType === 'temp' ? 'Guest access' : 'HotSpot member')
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontColor(this.getSecondaryTextColor())
+          .textAlign(TextAlign.Center)
+      }
+      .alignItems(HorizontalAlign.Center)
+      .width('100%')
 
       if (this.userType === 'temp') {
         Text('临时用户')
@@ -1202,13 +1234,14 @@ export struct ProfilePage {
       if (this.currentUser?.bio) {
         Text(this.currentUser.bio)
           .fontSize(DesignConstants.FONT.SIZE.MD)
+          .lineHeight(22)
           .fontColor(this.getSecondaryTextColor())
           .textAlign(TextAlign.Center)
           .maxLines(3)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
 
-        Button('编辑资料')
+      Button('编辑资料')
         .type(ButtonType.Capsule)
         .width('100%')
         .height(this.getProfileVisualStyle().primaryButton.height)
@@ -1223,6 +1256,19 @@ export struct ProfilePage {
         .shadow(this.getProfileVisualStyle().primaryButton.shadow)
         .border({ width: this.getProfileVisualStyle().primaryButton.borderWidth, color: this.getProfileVisualStyle().primaryButton.borderColor })
         .onClick(() => this.startEdit())
+
+      Row({ space: DesignConstants.SPACING.MD }) {
+        this.ProfileQuickAction(AppIcon.HEART, 'Connections', () => this.openRelationshipHub())
+        this.ProfileQuickAction(AppIcon.STAR, 'Saved', () => this.openAnnouncements())
+        this.ProfileQuickAction(AppIcon.SETTINGS, 'Settings', () => this.openSettingsCenter())
+      }
+      .width('100%')
+
+      Row({ space: DesignConstants.SPACING.MD }) {
+        this.ProfileIntentCard('My Vibe', 'Tactile, Calm, Serene', AppIcon.MAP, () => this.openPrivacySettings())
+        this.ProfileIntentCard('Preferences', 'Quiet Discovery, Minimalist Art', AppIcon.FILTER, () => this.openSafetySettings())
+      }
+      .width('100%')
     }
     .width('100%')
   }
@@ -1351,6 +1397,7 @@ export struct ProfilePage {
           .fontColor(this.getSecondaryTextColor())
       }
       .width('100%')
+      .alignItems(HorizontalAlign.Start)
     }
     .type(ButtonType.Normal)
     .backgroundColor(this.getProfileVisualStyle().metricCard.backgroundColor)
@@ -1363,6 +1410,84 @@ export struct ProfilePage {
     .stateEffect(true)
     .scale(this.pressedMenuItemKey === title ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })
     .animation({ duration: 120, curve: Curve.EaseOut })
+    .onClick(onTap)
+  }
+
+  @Builder
+  private ProfileQuickAction(icon: AppIcon, label: string, onTap: () => void): void {
+    Button() {
+      Column({ space: DesignConstants.SPACING.XS }) {
+        Row() {
+          Text() {
+            SymbolSpan($r(icon))
+              .fontSize(22)
+              .fontColor([this.getAccentBackground()])
+          }
+        }
+        .width(58)
+        .height(58)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .backgroundColor(this.getSurfaceBackground())
+        .border({ width: 1, color: this.getSurfaceBorder() })
+        .shadow(this.getProfileVisualStyle().card.shadow)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+
+        Text(label)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontColor(this.getSecondaryTextColor())
+      }
+      .width('100%')
+    }
+    .type(ButtonType.Normal)
+    .backgroundColor(Color.Transparent)
+    .layoutWeight(1)
+    .onClick(onTap)
+  }
+
+  @Builder
+  private ProfileIntentCard(title: string, description: string, icon: AppIcon, onTap: () => void): void {
+    Button() {
+      Column({ space: DesignConstants.SPACING.SM }) {
+        Row() {
+          Text() {
+            SymbolSpan($r(icon))
+              .fontSize(20)
+              .fontColor([this.getAccentBackground()])
+          }
+        }
+        .width(42)
+        .height(42)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .backgroundColor(this.getSurfaceSubtle())
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+
+        Text(title)
+          .fontSize(DesignConstants.FONT.SIZE.XL)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.getPrimaryTextColor())
+          .width('100%')
+          .textAlign(TextAlign.Start)
+
+        Text(description)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .lineHeight(22)
+          .fontColor(this.getSecondaryTextColor())
+          .width('100%')
+          .textAlign(TextAlign.Start)
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+    }
+    .type(ButtonType.Normal)
+    .layoutWeight(1)
+    .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
+    .borderRadius(this.getProfileVisualStyle().card.borderRadius)
+    .shadow(this.getProfileVisualStyle().card.shadow)
+    .border({ width: this.getProfileVisualStyle().card.borderWidth, color: this.getProfileVisualStyle().card.borderColor })
+    .padding(this.getProfileVisualStyle().card.padding)
+    .constraintSize({ minHeight: 182 })
     .onClick(onTap)
   }
 

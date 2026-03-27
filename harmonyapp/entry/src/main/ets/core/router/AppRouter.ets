@@ -49,6 +49,16 @@ export class PhotoPreviewRouteParam {
   index: number = 0;
 }
 
+/** 搜索页参数 */
+export class SearchRouteParam {
+  keyword: string = '';
+}
+
+/** 公告页参数 */
+export class AnnouncementsRouteParam {
+  items: Object[] = [];
+}
+
 const DOMAIN_NUMBER: number = 0xFF20;
 const TAG: string = 'AppRouter';
 
