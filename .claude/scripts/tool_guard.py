@@ -119,6 +119,11 @@ def guard_bash(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
     if not segments:
         return 0
 
+    # 拦截使用远程引用作为基准点的 git worktree add
+    for segment in segments:
+        if re.match(r"^git\s+worktree\s+add", segment) and re.search(r"\borigin/", segment):
+            return deny("git worktree add 不允许使用远程引用（如 origin/main）作为基准点；必须使用本地分支引用（如 main），确保基于主目录本地 main 当前 HEAD 创建。")
+
     if repo and repo["is_main_primary"]:
         if all(is_git_segment(segment) for segment in segments):
             return 0

@@ -17,7 +17,7 @@ $ARGUMENTS
 3. 检查主目录是否保持本地 `main + clean`；如果不是，先停下来说明原因。
 4. 自动确定本轮 refresh 后要重新纳入的 feature 列表；如存在多个候选或范围不清晰，再请求确认。
 5. 停止继续在旧 integration worktree 上 edit / verify / review / commit，不要 merge 最新 `main`。
-6. 从主目录当前最新本地 `main HEAD` 创建新的临时 integration worktree。
+6. 从主目录当前最新本地 `main HEAD` 创建新的临时 integration worktree；必须使用 `git worktree add -b <name> <path> main`（注意 `main` 是本地分支引用，**不是 `origin/main`**）。
 7. 通过共享脚本 `.claude/scripts/integration_meta.py` 重建或更新仓库根 `tmp/claude/integrations/<integration-id>.json`，刷新 `baseline_main_sha`、`integration_branch`、`integration_worktree_path`、`planned_features`、`source_integration_id` 与 `updated_at`。
 8. 重新将本轮 feature 成果按顺序 cherry-pick / replay 到新的 integration worktree；`git cherry-pick` 仅用于 integration replay。冲突只在新的 integration worktree 中解决。
 9. refresh 完成后停止在新的 integration 准备态；不要 push。

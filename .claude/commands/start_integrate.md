@@ -17,7 +17,7 @@ $ARGUMENTS
 3. 先自动确认本次任务是否确实属于“多 agent + 多 worktree 并行开发后的汇总”；若不是，应直接在线性历史上完成，不要进入 integration。
 4. 自动确定本次待集成的 feature 列表；若存在多个候选或范围歧义，再请求确认，不要默默扩大范围。
 5. 在列出本轮纳入项与进入 replay 前，先调用 `local-integration-playbook` subagent 校准当前阶段、边界、风险点与推荐命令，并在输出中复述其 `## 当前阶段`、`## 风险点`、`## 推荐命令`。
-6. 从主目录当前最新本地 `main HEAD` 创建新的临时 integration worktree。
+6. 从主目录当前最新本地 `main HEAD` 创建新的临时 integration worktree；必须使用 `git worktree add -b <name> <path> main`（注意 `main` 是本地分支引用，**不是 `origin/main`**）。
 7. 通过共享脚本 `.claude/scripts/integration_meta.py` 初始化本轮 integration 元信息，并写入仓库根 `tmp/claude/integrations/<integration-id>.json`；至少记录：`integration_id`、`baseline_main_sha`、`integration_branch`、`integration_worktree_path`、`planned_features`、`verify_status`、`review_status`、`gate_status`、`created_at`、`updated_at`。
 8. 将各 ready feature 的成果按顺序 cherry-pick / replay 到 integration worktree；`git cherry-pick` 仅用于 integration replay。
 9. 完成 replay 与冲突处理后停止在 integration 准备态；不要 push。
