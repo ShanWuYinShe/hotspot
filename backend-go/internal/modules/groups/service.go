@@ -255,7 +255,6 @@ func (s *Service) ListMyApplications(ctx context.Context, req MyApplicationsRequ
 }
 
 func (s *Service) CancelApplication(ctx context.Context, req CancelApplicationRequest) error {
-	principal, _ := platformauth.PrincipalFromContext(ctx)
 	return s.repo.CancelApplication(ctx, req.ApplicationID)
 }
 
@@ -296,7 +295,6 @@ func (s *Service) InviteMember(ctx context.Context, req InviteMemberRequest) (In
 }
 
 func (s *Service) ListSentInvites(ctx context.Context, req GroupSentInvitesRequest) ([]GroupSentInviteItem, string, error) {
-	principal, _ := platformauth.PrincipalFromContext(ctx)
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if !ok {
 		if err != nil {
