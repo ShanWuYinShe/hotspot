@@ -10,4 +10,6 @@ type Repository interface {
 	Dismiss(context.Context, string) error
 	ListMembers(context.Context, string, *GroupRole, int, string) ([]GroupMemberItem, string, error)
 	SearchMembers(context.Context, string, string, *GroupRole, int, string) ([]GroupMemberItem, string, error)
+	ListMyGroups(context.Context, string, int, string) ([]GroupItem, string, error)
+	JoinGroup(context.Context, string, string, *string, *string) (JoinGroupResult, error)
 }

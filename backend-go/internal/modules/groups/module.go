@@ -39,6 +39,8 @@ func (m *Module) Mount(r chi.Router) {
 			group.Post("/create", m.handler.Create)
 			group.Post("/update", m.handler.Update)
 			group.Post("/dismiss", m.handler.Dismiss)
+			group.Post("/me/list", m.handler.ListMyGroups)
+			group.Post("/me/join", m.handler.JoinGroup)
 		})
 	})
 }

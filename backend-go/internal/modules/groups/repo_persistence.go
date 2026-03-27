@@ -43,3 +43,11 @@ func (r *PersistenceRepository) ListMembers(ctx context.Context, groupID string,
 func (r *PersistenceRepository) SearchMembers(ctx context.Context, groupID string, keyword string, role *GroupRole, limit int, cursor string) ([]GroupMemberItem, string, error) {
 	return r.impl.SearchMembers(ctx, groupID, keyword, role, limit, cursor)
 }
+
+func (r *PersistenceRepository) ListMyGroups(ctx context.Context, userID string, limit int, cursor string) ([]GroupItem, string, error) {
+	return r.impl.ListMyGroups(ctx, userID, limit, cursor)
+}
+
+func (r *PersistenceRepository) JoinGroup(ctx context.Context, userID string, groupID string, password *string, message *string) (JoinGroupResult, error) {
+	return r.impl.JoinGroup(ctx, userID, groupID, password, message)
+}

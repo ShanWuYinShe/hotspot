@@ -18,6 +18,10 @@ type groupErrorRepo struct {
 	searchErr error
 	updateErr error
 	dismissErr error
+	listMembersErr error
+	searchMembersErr error
+	listMyGroupsErr error
+	joinGroupErr error
 }
 
 func (r *groupErrorRepo) Create(context.Context, string, CreateGroupRequest) (GroupItem, error) {
@@ -36,10 +40,16 @@ func (r *groupErrorRepo) Dismiss(context.Context, string) error {
 	return r.dismissErr
 }
 func (r *groupErrorRepo) ListMembers(context.Context, string, *GroupRole, int, string) ([]GroupMemberItem, string, error) {
-	return nil, "", errors.New("boom")
+	return nil, "", r.listMembersErr
 }
 func (r *groupErrorRepo) SearchMembers(context.Context, string, string, *GroupRole, int, string) ([]GroupMemberItem, string, error) {
-	return nil, "", errors.New("boom")
+	return nil, "", r.searchMembersErr
+}
+func (r *groupErrorRepo) ListMyGroups(context.Context, string, int, string) ([]GroupItem, string, error) {
+	return nil, "", r.listMyGroupsErr
+}
+func (r *groupErrorRepo) JoinGroup(context.Context, string, string, *string, *string) (JoinGroupResult, error) {
+	return JoinGroupResult{}, r.joinGroupErr
 }
 
 func TestCreateAndOpenGroup(t *testing.T) {

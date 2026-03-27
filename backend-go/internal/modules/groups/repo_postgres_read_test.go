@@ -78,6 +78,14 @@ func (r *groupFallbackRepo) SearchMembers(context.Context, string, string, *Grou
 	r.used = true
 	return nil, "", nil
 }
+func (r *groupFallbackRepo) ListMyGroups(context.Context, string, int, string) ([]GroupItem, string, error) {
+	r.used = true
+	return nil, "", nil
+}
+func (r *groupFallbackRepo) JoinGroup(context.Context, string, string, *string, *string) (JoinGroupResult, error) {
+	r.used = true
+	return JoinGroupResult{}, nil
+}
 
 type groupBackendStub struct {
 	rows      [][]any

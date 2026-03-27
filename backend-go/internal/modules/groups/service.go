@@ -96,3 +96,30 @@ func (s *Service) SearchMembers(ctx context.Context, req SearchGroupMembersReque
 	}
 	return s.repo.SearchMembers(ctx, req.GroupID, req.Keyword, req.Role, limit, req.Cursor)
 }
+
+func (s *Service) ListMyGroups(ctx context.Context, req MyGroupsRequest) ([]GroupItem, string, error) {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	limit := req.Limit
+	if limit == 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	return s.repo.ListMyGroups(ctx, principal.UserID, limit, req.Cursor)
+}
+
+func (s *Service) JoinGroup(ctx context.Context, req JoinGroupRequest) (JoinGroupResult, error) {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	group, ok, err := s.repo.Get(ctx, req.GroupID)
+	if err != nil {
+		return JoinGroupResult{}, err
+	}
+	if !ok {
+		return JoinGroupResult{}, ErrGroupNotFound
+	}
+	if group.MyState != nil && group.MyState.IsJoined {
+		return JoinGroupResult{Status: ApplicationStatusAccepted}, nil
+	}
+	return s.repo.JoinGroup(ctx, principal.UserID, req.GroupID, req.Password, req.Message)
+}

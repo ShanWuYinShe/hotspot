@@ -105,6 +105,20 @@ func (r *PostgresRepository) SearchMembers(ctx context.Context, groupID string, 
 	return r.fallback.SearchMembers(ctx, groupID, keyword, role, limit, cursor)
 }
 
+func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, limit int, cursor string) ([]GroupItem, string, error) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.ListMyGroups(ctx, userID, limit, cursor)
+	}
+	return r.fallback.ListMyGroups(ctx, userID, limit, cursor)
+}
+
+func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, groupID string, password *string, message *string) (JoinGroupResult, error) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.JoinGroup(ctx, userID, groupID, password, message)
+	}
+	return r.fallback.JoinGroup(ctx, userID, groupID, password, message)
+}
+
 func nilOrString(s string) *string {
 	if s == "" {
 		return nil

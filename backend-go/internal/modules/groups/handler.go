@@ -159,3 +159,49 @@ func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
 }
+
+func (h *Handler) ListMyGroups(w http.ResponseWriter, r *http.Request) {
+	var req MyGroupsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		return
+	}
+	items, nextCursor, err := h.service.ListMyGroups(r.Context(), req)
+	if err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	resp := map[string]any{
+		"items":      items,
+		"next_cursor": nextCursor,
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
+}
+
+func (h *Handler) JoinGroup(w http.ResponseWriter, r *http.Request) {
+	if err := idempotency.RequireKey(r); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		return
+	}
+	var req JoinGroupRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	idempotency.ReplayOrStore(w, r, "groups/join", func() httpx.ApiResponse[JoinGroupResult] {
+		result, err := h.service.JoinGroup(r.Context(), req)
+		if err != nil {
+			if err == ErrGroupNotFound {
+				return httpx.ApiResponse[JoinGroupResult]{Code: 10300, Message: "群组不存在"}
+			}
+			if err == ErrInvalidPassword {
+				return httpx.ApiResponse[JoinGroupResult]{Code: 10400, Message: "密码错误"}
+			}
+			if err == ErrPermissionDenied {
+				return httpx.ApiResponse[JoinGroupResult]{Code: 10400, Message: "该群组仅限邀请加入"}
+			}
+			return httpx.ApiResponse[JoinGroupResult]{Code: 10600, Message: "服务暂时不可用"}
+		}
+		return httpx.Success(result)
+	})
+}

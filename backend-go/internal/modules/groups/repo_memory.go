@@ -173,3 +173,50 @@ func (r *InMemoryRepository) SearchMembers(_ context.Context, groupID string, ke
 	}
 	return filtered, "", nil
 }
+
+func (r *InMemoryRepository) ListMyGroups(_ context.Context, userID string, limit int, cursor string) ([]GroupItem, string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	items := []GroupItem{}
+	for _, group := range r.groups {
+		if group.MyState != nil && group.MyState.IsJoined {
+			items = append(items, group)
+		}
+	}
+	if len(items) > limit {
+		return items[:limit], items[limit-1].Group.GroupID, nil
+	}
+	return items, "", nil
+}
+
+func (r *InMemoryRepository) JoinGroup(_ context.Context, userID, groupID string, password *string, message *string) (JoinGroupResult, error) {
+	_ = userID
+	_ = password
+	_ = message
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	group, ok := r.groups[groupID]
+	if !ok {
+		return JoinGroupResult{}, ErrGroupNotFound
+	}
+	if group.MyState != nil && group.MyState.IsJoined {
+		return JoinGroupResult{Status: ApplicationStatusAccepted}, nil
+	}
+	if group.JoinMethod == GroupJoinMethodInviteOnly {
+		return JoinGroupResult{}, ErrPermissionDenied
+	}
+	if group.JoinMethod == GroupJoinMethodApproval {
+		appWrapper := &struct {
+			ApplicationID string `json:"application_id"`
+		}{
+			ApplicationID: "app_" + groupID,
+		}
+		result := JoinGroupResult{Status: ApplicationStatusPending}
+		result.Application = appWrapper
+		return result, nil
+	}
+	group.MyState = &MyGroupState{Role: GroupRoleMember, IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false}
+	group.Group.MembersCount++
+	r.groups[groupID] = group
+	return JoinGroupResult{Status: ApplicationStatusAccepted}, nil
+}
