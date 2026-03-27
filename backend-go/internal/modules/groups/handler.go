@@ -714,3 +714,28 @@ func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
 }
+
+func (h *Handler) TransferOwnership(w http.ResponseWriter, r *http.Request) {
+	var req TransferOwnershipRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" || req.NewOwnerID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	if err := h.service.TransferOwnership(r.Context(), req); err != nil {
+		if err == ErrGroupNotFound {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
+			return
+		}
+		if err == ErrPermissionDenied {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+			return
+		}
+		if err == ErrTargetNotMember {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "目标用户不是群成员"))
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
+}

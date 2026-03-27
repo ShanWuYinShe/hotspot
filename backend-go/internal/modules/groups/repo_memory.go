@@ -458,3 +458,13 @@ func (r *InMemoryRepository) RemoveMember(_ context.Context, userID string, req 
 	_ = userID
 	return nil
 }
+
+func (r *InMemoryRepository) TransferOwnership(_ context.Context, userID string, req TransferOwnershipRequest) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.groups[req.GroupID]; !ok {
+		return ErrGroupNotFound
+	}
+	_ = userID
+	return nil
+}

@@ -147,3 +147,7 @@ func (r *PersistenceRepository) ListBannedMembers(ctx context.Context, groupID s
 func (r *PersistenceRepository) RemoveMember(ctx context.Context, userID string, req RemoveMemberRequest) error {
 	return r.impl.RemoveMember(ctx, userID, req)
 }
+
+func (r *PersistenceRepository) TransferOwnership(ctx context.Context, userID string, req TransferOwnershipRequest) error {
+	return r.impl.TransferOwnership(ctx, userID, req)
+}

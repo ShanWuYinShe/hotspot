@@ -461,3 +461,39 @@ func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) err
 	_ = principal
 	return s.repo.RemoveMember(ctx, principal.UserID, req)
 }
+
+func (s *Service) TransferOwnership(ctx context.Context, req TransferOwnershipRequest) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	group, ok, err := s.repo.Get(ctx, req.GroupID)
+	if !ok {
+		if err != nil {
+			return err
+		}
+		return ErrGroupNotFound
+	}
+	if group.MyState == nil || group.MyState.Role != GroupRoleOwner {
+		return ErrPermissionDenied
+	}
+	if req.NewOwnerID == principal.UserID {
+		return ErrPermissionDenied
+	}
+
+	members, _, err := s.repo.ListMembers(ctx, req.GroupID, nil, 1000, "")
+	if err != nil {
+		return err
+	}
+
+	isMember := false
+	for _, m := range members {
+		if m.User.UserID == req.NewOwnerID {
+			isMember = true
+			break
+		}
+	}
+	if !isMember {
+		return ErrTargetNotMember
+	}
+
+	_ = principal
+	return s.repo.TransferOwnership(ctx, principal.UserID, req)
+}

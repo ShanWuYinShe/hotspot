@@ -182,6 +182,10 @@ func (r *groupFallbackRepo) RemoveMember(context.Context, string, RemoveMemberRe
 	r.used = true
 	return nil
 }
+func (r *groupFallbackRepo) TransferOwnership(context.Context, string, TransferOwnershipRequest) error {
+	r.used = true
+	return nil
+}
 
 type groupBackendStub struct {
 	rows      [][]any

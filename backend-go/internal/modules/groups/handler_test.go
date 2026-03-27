@@ -130,6 +130,9 @@ func (r *groupErrorRepo) ListBannedMembers(context.Context, string, int, string)
 func (r *groupErrorRepo) RemoveMember(context.Context, string, RemoveMemberRequest) error {
 	return nil
 }
+func (r *groupErrorRepo) TransferOwnership(context.Context, string, TransferOwnershipRequest) error {
+	return nil
+}
 
 func TestCreateAndOpenGroup(t *testing.T) {
 	handler := NewHandler(NewService())

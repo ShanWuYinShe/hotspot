@@ -215,6 +215,10 @@ func (r *PostgresRepository) RemoveMember(ctx context.Context, userID string, re
 	return r.fallback.RemoveMember(ctx, userID, req)
 }
 
+func (r *PostgresRepository) TransferOwnership(ctx context.Context, userID string, req TransferOwnershipRequest) error {
+	return r.fallback.TransferOwnership(ctx, userID, req)
+}
+
 func nilOrString(s string) *string {
 	if s == "" {
 		return nil
