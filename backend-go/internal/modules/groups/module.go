@@ -45,6 +45,9 @@ func (m *Module) Mount(r chi.Router) {
 			group.Post("/announcements/create", m.handler.CreateAnnouncement)
 			group.Post("/announcements/update", m.handler.UpdateAnnouncement)
 			group.Post("/announcements/delete", m.handler.DeleteAnnouncement)
+			group.Post("/applications/list", m.handler.ListApplications)
+			group.Post("/applications/approve", m.handler.ApproveApplication)
+			group.Post("/applications/reject", m.handler.RejectApplication)
 		})
 	})
 }

@@ -16,4 +16,7 @@ type Repository interface {
 	ListAnnouncements(context.Context, string) ([]GroupAnnouncementItem, error)
 	UpdateAnnouncement(context.Context, string, UpdateGroupAnnouncementRequest) error
 	DeleteAnnouncement(context.Context, string, string) error
+	ListApplications(context.Context, string, *ApplicationStatus, int, string) ([]GroupApplicationItem, string, error)
+	ApproveApplication(context.Context, string, string) error
+	RejectApplication(context.Context, string, *string) error
 }

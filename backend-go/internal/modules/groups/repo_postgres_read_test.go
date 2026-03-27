@@ -102,6 +102,18 @@ func (r *groupFallbackRepo) DeleteAnnouncement(context.Context, string, string) 
 	r.used = true
 	return nil
 }
+func (r *groupFallbackRepo) ListApplications(context.Context, string, *ApplicationStatus, int, string) ([]GroupApplicationItem, string, error) {
+	r.used = true
+	return nil, "", nil
+}
+func (r *groupFallbackRepo) ApproveApplication(context.Context, string, string) error {
+	r.used = true
+	return nil
+}
+func (r *groupFallbackRepo) RejectApplication(context.Context, string, *string) error {
+	r.used = true
+	return nil
+}
 
 type groupBackendStub struct {
 	rows      [][]any

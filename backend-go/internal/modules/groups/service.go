@@ -170,3 +170,36 @@ func (s *Service) DeleteAnnouncement(ctx context.Context, req DeleteGroupAnnounc
 	}
 	return s.repo.DeleteAnnouncement(ctx, req.GroupID, req.AnnouncementID)
 }
+
+func (s *Service) ListApplications(ctx context.Context, req GroupApplicationsRequest) ([]GroupApplicationItem, string, error) {
+	group, ok, err := s.repo.Get(ctx, req.GroupID)
+	if err != nil {
+		return nil, "", err
+	}
+	if !ok {
+		return nil, "", ErrGroupNotFound
+	}
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+		if principal.UserID == "" {
+			return nil, "", ErrPermissionDenied
+		}
+	}
+	limit := req.Limit
+	if limit == 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	return s.repo.ListApplications(ctx, req.GroupID, req.Status, limit, req.Cursor)
+}
+
+func (s *Service) ApproveApplication(ctx context.Context, req ApproveGroupApplicationRequest) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	return s.repo.ApproveApplication(ctx, principal.UserID, req.ApplicationID)
+}
+
+func (s *Service) RejectApplication(ctx context.Context, req RejectGroupApplicationRequest) error {
+	return s.repo.RejectApplication(ctx, req.ApplicationID, req.Reason)
+}

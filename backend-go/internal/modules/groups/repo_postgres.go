@@ -135,6 +135,18 @@ func (r *PostgresRepository) DeleteAnnouncement(ctx context.Context, groupID str
 	return r.fallback.DeleteAnnouncement(ctx, groupID, announcementID)
 }
 
+func (r *PostgresRepository) ListApplications(ctx context.Context, groupID string, status *ApplicationStatus, limit int, cursor string) ([]GroupApplicationItem, string, error) {
+	return r.fallback.ListApplications(ctx, groupID, status, limit, cursor)
+}
+
+func (r *PostgresRepository) ApproveApplication(ctx context.Context, approverID string, applicationID string) error {
+	return r.fallback.ApproveApplication(ctx, approverID, applicationID)
+}
+
+func (r *PostgresRepository) RejectApplication(ctx context.Context, applicationID string, reason *string) error {
+	return r.fallback.RejectApplication(ctx, applicationID, reason)
+}
+
 func nilOrString(s string) *string {
 	if s == "" {
 		return nil

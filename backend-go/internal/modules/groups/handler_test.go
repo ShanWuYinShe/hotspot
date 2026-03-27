@@ -26,6 +26,9 @@ type groupErrorRepo struct {
 	listAnnouncementsErr error
 	updateAnnouncementErr error
 	deleteAnnouncementErr error
+	listApplicationsErr error
+	approveApplicationErr error
+	rejectApplicationErr error
 }
 
 func (r *groupErrorRepo) Create(context.Context, string, CreateGroupRequest) (GroupItem, error) {
@@ -66,6 +69,15 @@ func (r *groupErrorRepo) UpdateAnnouncement(context.Context, string, UpdateGroup
 }
 func (r *groupErrorRepo) DeleteAnnouncement(context.Context, string, string) error {
 	return r.deleteAnnouncementErr
+}
+func (r *groupErrorRepo) ListApplications(context.Context, string, *ApplicationStatus, int, string) ([]GroupApplicationItem, string, error) {
+	return nil, "", r.listApplicationsErr
+}
+func (r *groupErrorRepo) ApproveApplication(context.Context, string, string) error {
+	return r.approveApplicationErr
+}
+func (r *groupErrorRepo) RejectApplication(context.Context, string, *string) error {
+	return r.rejectApplicationErr
 }
 
 func TestCreateAndOpenGroup(t *testing.T) {

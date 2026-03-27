@@ -268,3 +268,24 @@ func (r *InMemoryRepository) DeleteAnnouncement(_ context.Context, groupID strin
 	_ = announcementID
 	return nil
 }
+
+func (r *InMemoryRepository) ListApplications(_ context.Context, groupID string, status *ApplicationStatus, limit int, cursor string) ([]GroupApplicationItem, string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if _, ok := r.groups[groupID]; !ok {
+		return nil, "", ErrGroupNotFound
+	}
+	return []GroupApplicationItem{}, "", nil
+}
+
+func (r *InMemoryRepository) ApproveApplication(_ context.Context, approverID, applicationID string) error {
+	_ = approverID
+	_ = applicationID
+	return nil
+}
+
+func (r *InMemoryRepository) RejectApplication(_ context.Context, applicationID string, reason *string) error {
+	_ = applicationID
+	_ = reason
+	return nil
+}

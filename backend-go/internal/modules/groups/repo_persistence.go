@@ -67,3 +67,15 @@ func (r *PersistenceRepository) UpdateAnnouncement(ctx context.Context, groupID 
 func (r *PersistenceRepository) DeleteAnnouncement(ctx context.Context, groupID string, announcementID string) error {
 	return r.impl.DeleteAnnouncement(ctx, groupID, announcementID)
 }
+
+func (r *PersistenceRepository) ListApplications(ctx context.Context, groupID string, status *ApplicationStatus, limit int, cursor string) ([]GroupApplicationItem, string, error) {
+	return r.impl.ListApplications(ctx, groupID, status, limit, cursor)
+}
+
+func (r *PersistenceRepository) ApproveApplication(ctx context.Context, approverID string, applicationID string) error {
+	return r.impl.ApproveApplication(ctx, approverID, applicationID)
+}
+
+func (r *PersistenceRepository) RejectApplication(ctx context.Context, applicationID string, reason *string) error {
+	return r.impl.RejectApplication(ctx, applicationID, reason)
+}
