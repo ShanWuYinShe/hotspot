@@ -7,8 +7,10 @@ import (
 	"testing"
 
 	"github.com/gorilla/websocket"
+	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/ratelimit"
 )
 
 func wsURL(serverURL string) string { return "ws" + strings.TrimPrefix(serverURL, "http") + "/ws/v1" }
@@ -122,6 +124,7 @@ func TestRealtimeRequiresAuthFirst(t *testing.T) {
 }
 
 func TestRealtimeSubscriptionLimit(t *testing.T) {
+	ratelimit.SetSource(appconfig.NewStaticSource(config.Config{}))
 	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
 	result, _ := authService.IssueSession("user_alice")
 	handler := NewHandler(authService)
@@ -150,5 +153,48 @@ func TestRealtimeSubscriptionLimit(t *testing.T) {
 	if ack.Type != "SubscribeAck" || ack.Payload.Code == 0 {
 		payload, _ := json.Marshal(ack)
 		t.Fatalf("unexpected ack: %s", payload)
+	}
+}
+
+func TestRealtimeSubscriptionRateLimit(t *testing.T) {
+	source := appconfig.NewStaticSource(config.Config{})
+	_, _ = source.Update(nil, func(cfg appconfig.AppConfig) appconfig.AppConfig {
+		cfg.RateLimits.WSSubscribePerSecond = 1
+		return cfg
+	})
+	ratelimit.SetSource(source)
+	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
+	result, _ := authService.IssueSession("user_alice")
+	handler := NewHandler(authService)
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL(server.URL), nil)
+	if err != nil {
+		t.Fatalf("dial websocket: %v", err)
+	}
+	defer conn.Close()
+	_ = conn.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken}})
+	var established Event
+	_ = conn.ReadJSON(&established)
+	_ = conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{ClientRequestID: "conn-1", Operation: "set", Type: "user", IDs: []string{"user_bob"}}})
+	var ack Event
+	if err := conn.ReadJSON(&ack); err != nil {
+		t.Fatalf("read ack: %v", err)
+	}
+	var snapshot Event
+	if err := conn.ReadJSON(&snapshot); err != nil {
+		t.Fatalf("read snapshot: %v", err)
+	}
+	_ = conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{ClientRequestID: "conn-1", Operation: "set", Type: "user", IDs: []string{"user_charlie"}}})
+	var limited struct {
+		Type    string       `json:"type"`
+		Payload ErrorPayload `json:"payload"`
+	}
+	if err := conn.ReadJSON(&limited); err != nil {
+		t.Fatalf("read limited event: %v", err)
+	}
+	if limited.Type != "Error" || limited.Payload.Code != 20300 || limited.Payload.RetryAfter <= 0 {
+		payload, _ := json.Marshal(limited)
+		t.Fatalf("unexpected limited event: %s", payload)
 	}
 }

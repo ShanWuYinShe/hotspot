@@ -5,22 +5,31 @@ import (
 	"errors"
 	"time"
 
+	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
 type Service struct {
-	auth *platformauth.Service
-	repo Repository
-	cfg  config.Config
+	auth      *platformauth.Service
+	repo      Repository
+	cfg       config.Config
+	appConfig appconfig.Source
 }
 
 func NewService(auth *platformauth.Service, repo Repository, cfg config.Config) *Service {
+	return NewServiceWithSource(auth, repo, cfg, appconfig.NewStaticSource(cfg))
+}
+
+func NewServiceWithSource(auth *platformauth.Service, repo Repository, cfg config.Config, source appconfig.Source) *Service {
 	if repo == nil {
 		repo = NewInMemoryRepository()
 	}
-	return &Service{auth: auth, repo: repo, cfg: cfg}
+	if source == nil {
+		source = appconfig.NewStaticSource(cfg)
+	}
+	return &Service{auth: auth, repo: repo, cfg: cfg, appConfig: source}
 }
 
 func (s *Service) CheckStatus(ctx context.Context) AuthStatus {
@@ -40,7 +49,7 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (platformau
 		LoginID:  req.LoginID,
 		Nickname: req.Nickname,
 		Password: req.Password,
-		Defaults: s.profileDefaults(),
+		Defaults: s.profileDefaults(ctx),
 	})
 	if err != nil {
 		return platformauth.AuthResult{}, err
@@ -57,7 +66,7 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (platformauth.Aut
 }
 
 func (s *Service) Guest(ctx context.Context, req GuestRequest) (platformauth.AuthResult, error) {
-	account, err := s.repo.CreateGuest(ctx, GuestParams{Nickname: req.Nickname, Defaults: s.profileDefaults()})
+	account, err := s.repo.CreateGuest(ctx, GuestParams{Nickname: req.Nickname, Defaults: s.profileDefaults(ctx)})
 	if err != nil {
 		return platformauth.AuthResult{}, err
 	}
@@ -145,13 +154,14 @@ func (s *Service) RevokeAll(ctx context.Context) RevokeAllResult {
 	return RevokeAllResult{RevokedCount: s.auth.RevokeOtherSessions(principal.UserID, principal.SessionID)}
 }
 
-func (s *Service) profileDefaults() ProfileDefaults {
+func (s *Service) profileDefaults(ctx context.Context) ProfileDefaults {
 	now := time.Now().UTC()
+	defaults := s.appConfig.Get(ctx).Defaults
 	return ProfileDefaults{
-		AvatarURL:    s.cfg.DefaultUserAvatar,
-		LocationName: "南天门",
-		Latitude:     35.154922,
-		Longitude:    112.682524,
+		AvatarURL:    defaults.DefaultUserAvatar,
+		LocationName: defaults.DefaultLocation.LocationName,
+		Latitude:     defaults.DefaultLocation.Point.Latitude,
+		Longitude:    defaults.DefaultLocation.Point.Longitude,
 		CreatedAt:    now,
 	}
 }

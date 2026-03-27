@@ -1,11 +1,31 @@
 package feed
 
-import "context"
+import (
+	"context"
 
-type Service struct{ repo Repository }
+	"hotspot/backend-go/internal/platform/appconfig"
+	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/slicex"
+)
 
-func NewService() *Service                        { return NewServiceWithRepo(NewInMemoryRepository()) }
-func NewServiceWithRepo(repo Repository) *Service { return &Service{repo: repo} }
+type Service struct {
+	repo      Repository
+	appConfig appconfig.Source
+}
+
+func NewService(source appconfig.Source) *Service { return NewServiceWithSource(NewInMemoryRepository(), source) }
+
+func NewServiceWithRepo(repo Repository) *Service { return NewServiceWithSource(repo, nil) }
+
+func NewServiceWithSource(repo Repository, source appconfig.Source) *Service {
+	if repo == nil {
+		repo = NewInMemoryRepository()
+	}
+	if source == nil {
+		source = appconfig.NewStaticSource(config.Config{})
+	}
+	return &Service{repo: repo, appConfig: source}
+}
 
 func (s *Service) ListMoments(ctx context.Context) (PaginatedFeedItems, error) {
 	return s.repo.ListMoments(ctx)
@@ -20,5 +40,12 @@ func (s *Service) ListUsers(ctx context.Context) (PaginatedFeedItems, error) {
 }
 
 func (s *Service) ListTrending(ctx context.Context) (TrendingBundle, error) {
-	return s.repo.ListTrending(ctx)
+	bundle, err := s.repo.ListTrending(ctx)
+	if err != nil {
+		return TrendingBundle{}, err
+	}
+	cfg := s.appConfig.Get(ctx)
+	bundle.TrendingTags = slicex.LimitCopy(bundle.TrendingTags, cfg.ResponseDefaults.TrendingTagsCount)
+	bundle.HotMoments = slicex.LimitCopy(bundle.HotMoments, cfg.ResponseDefaults.HotMomentsCount)
+	return bundle, nil
 }

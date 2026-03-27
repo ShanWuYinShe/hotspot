@@ -20,14 +20,16 @@ import (
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/modulekit"
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/ratelimit"
 )
 
 func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.Module {
 	sharedAppConfig := appconfig.NewPersistenceSource(cfg, factory)
+	ratelimit.SetSource(sharedAppConfig)
 	return []modulekit.Module{
 		admin.NewModule(factory, sharedAppConfig),
-		auth.NewModule(cfg, factory),
-		feed.NewModule(),
+		auth.NewModule(cfg, factory, sharedAppConfig),
+		feed.NewModule(sharedAppConfig),
 		groupmessages.NewModule(factory),
 		groups.NewModule(factory),
 		mapmodule.NewModule(),
@@ -36,7 +38,7 @@ func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.M
 		notifications.NewModule(factory),
 		privatechats.NewModule(factory, sharedAppConfig),
 		reports.NewModule(factory),
-		search.NewModule(),
+		search.NewModule(sharedAppConfig),
 		share.NewModule(factory),
 		system.NewModule(factory, sharedAppConfig),
 		users.NewModule(factory),

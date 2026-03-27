@@ -15,6 +15,10 @@ func SetDefaultService(service *Service) {
 	}
 }
 
+func DefaultService() *Service {
+	return defaultService
+}
+
 func OptionalAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := WithPlatform(r.Context(), detectPlatform(r))

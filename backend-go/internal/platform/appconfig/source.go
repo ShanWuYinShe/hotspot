@@ -255,7 +255,7 @@ func defaultConfig(runtime config.Config) AppConfig {
 			HotMomentsCount:          20,
 			ChatRecentMessagesCount:  20,
 			GroupAnnouncementsCount:  10,
-			SystemAnnouncementsCount: 20,
+			SystemAnnouncementsCount: 10,
 		},
 	}
 }

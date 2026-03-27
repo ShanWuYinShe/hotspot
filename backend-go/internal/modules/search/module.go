@@ -3,6 +3,7 @@ package search
 import (
 	"github.com/go-chi/chi/v5"
 
+	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/ratelimit"
@@ -13,8 +14,8 @@ type Module struct {
 	handler *Handler
 }
 
-func NewModule() *Module {
-	return &Module{handler: NewHandler(NewService())}
+func NewModule(source appconfig.Source) *Module {
+	return &Module{handler: NewHandler(NewService(source))}
 }
 
 func (m *Module) Mount(r chi.Router) {

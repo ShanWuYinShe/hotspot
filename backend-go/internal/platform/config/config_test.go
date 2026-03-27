@@ -48,7 +48,7 @@ func TestLoadLeavesPostgresDSNEmptyWhenUnset(t *testing.T) {
 	if cfg.PostgresDSN != "" {
 		t.Fatalf("expected empty postgres dsn, got %q", cfg.PostgresDSN)
 	}
-	if cfg.RedisDSN != "redis://localhost:6379/0" {
-		t.Fatalf("unexpected redis dsn: %s", cfg.RedisDSN)
+	if cfg.RedisDSN != "" {
+		t.Fatalf("expected empty redis dsn, got %q", cfg.RedisDSN)
 	}
 }

@@ -40,7 +40,7 @@ func NewApp(cfg config.Config) (*App, error) {
 	router := NewHTTPRouter(modules)
 	rootMux := http.NewServeMux()
 	rootMux.Handle("/", router)
-	rootMux.Handle("/ws/v1", realtime.NewHandler(platformauth.NewService(cfg)))
+	rootMux.Handle("/ws/v1", realtime.NewHandler(platformauth.DefaultService()))
 
 	return &App{
 		cfg:         cfg,

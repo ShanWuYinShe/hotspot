@@ -3,6 +3,7 @@ package auth
 import (
 	"github.com/go-chi/chi/v5"
 
+	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/idempotency"
@@ -15,11 +16,11 @@ type Module struct {
 	handler *Handler
 }
 
-func NewModule(cfg config.Config, factory *persistence.Factory) *Module {
+func NewModule(cfg config.Config, factory *persistence.Factory, source appconfig.Source) *Module {
 	authService := platformauth.NewServiceWithPersistence(cfg, factory)
 	platformauth.SetDefaultService(authService)
 	repo := NewPersistenceRepository(factory)
-	service := NewService(authService, repo, cfg)
+	service := NewServiceWithSource(authService, repo, cfg, source)
 	return &Module{handler: NewHandler(service)}
 }
 

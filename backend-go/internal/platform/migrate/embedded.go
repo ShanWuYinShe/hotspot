@@ -30,6 +30,8 @@ var requiredTables = []string{
 	"reports",
 	"auth_accounts",
 	"auth_password_reset_requests",
+	"admin_audit_logs",
+	"app_configs",
 }
 
 func RequiredTables() []string {

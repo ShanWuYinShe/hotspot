@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -8,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/idempotency"
@@ -16,7 +18,8 @@ import (
 func newTestHandler() *Handler {
 	cfg := config.Config{AuthTokenSecret: "test-secret"}
 	repo := NewInMemoryRepository()
-	service := NewService(platformauth.NewService(cfg), repo, cfg)
+	source := appconfig.NewStaticSource(cfg)
+	service := NewServiceWithSource(platformauth.NewService(cfg), repo, cfg, source)
 	return NewHandler(service)
 }
 
@@ -467,5 +470,23 @@ func TestLogoutClearsCookies(t *testing.T) {
 	cookies := rr.Result().Cookies()
 	if len(cookies) < 3 {
 		t.Fatalf("expected auth cookies to be cleared, got %d", len(cookies))
+	}
+}
+
+func TestProfileDefaultsUseAppConfigSource(t *testing.T) {
+	cfg := config.Config{AuthTokenSecret: "test-secret", DefaultUserAvatar: "legacy-avatar"}
+	repo := NewInMemoryRepository()
+	source := appconfig.NewStaticSource(cfg)
+	_, _ = source.Update(nil, func(current appconfig.AppConfig) appconfig.AppConfig {
+		current.Defaults.DefaultUserAvatar = "appconfig-avatar"
+		current.Defaults.DefaultLocation.LocationName = "测试位置"
+		current.Defaults.DefaultLocation.Point.Latitude = 1.23
+		current.Defaults.DefaultLocation.Point.Longitude = 4.56
+		return current
+	})
+	service := NewServiceWithSource(platformauth.NewService(cfg), repo, cfg, source)
+	defaults := service.profileDefaults(context.Background())
+	if defaults.AvatarURL != "appconfig-avatar" || defaults.LocationName != "测试位置" || defaults.Latitude != 1.23 || defaults.Longitude != 4.56 {
+		t.Fatalf("unexpected defaults: %#v", defaults)
 	}
 }

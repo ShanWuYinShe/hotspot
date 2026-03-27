@@ -8,6 +8,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/ratelimit"
 )
 
 type Handler struct{ auth *platformauth.Service }
@@ -55,7 +56,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	payload := ConnectionEstablishedPayload{ConnectionID: fmt.Sprintf("conn_%d", time.Now().UTC().UnixNano()), UserID: principal.UserID, ServerTime: time.Now().UTC().Format(time.RFC3339)}
+	connectionID := fmt.Sprintf("conn_%d", time.Now().UTC().UnixNano())
+	payload := ConnectionEstablishedPayload{ConnectionID: connectionID, UserID: principal.UserID, ServerTime: time.Now().UTC().Format(time.RFC3339)}
 	payload.Config.PingInterval = 30
 	payload.Config.PingTimeout = 10
 	payload.Config.MaxSubscriptions.User = 500
@@ -84,6 +86,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			var payload SetSubscriptionsPayload
 			blob, _ := json.Marshal(msg.Payload)
 			_ = json.Unmarshal(blob, &payload)
+			if retryAfter, limited := ratelimit.AllowWebsocketSubscribe(r.Context(), principal.UserID, connectionID); limited {
+				_ = conn.WriteJSON(Event{Type: "Error", Payload: ErrorPayload{Code: 20300, Message: "请求过于频繁", Severity: "recoverable", Retryable: true, RetryAfter: retryAfter}})
+				continue
+			}
 			limit := 500
 			if payload.Type == "group" {
 				limit = 100

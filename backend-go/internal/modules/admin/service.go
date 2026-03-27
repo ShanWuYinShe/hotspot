@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -14,6 +13,7 @@ import (
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
+	"hotspot/backend-go/internal/platform/requestmeta"
 )
 
 type Service struct {
@@ -1309,26 +1309,7 @@ func newAuditEntry(ctx context.Context, actor AdminActor, entry AuditLogEntry) A
 
 func requestIPFromContext(ctx context.Context) string {
 	req, _ := requestFromContext(ctx)
-	if req == nil {
-		return ""
-	}
-	if ip := strings.TrimSpace(req.Header.Get("CF-Connecting-IP")); ip != "" {
-		return ip
-	}
-	if ip := strings.TrimSpace(req.Header.Get("X-Real-IP")); ip != "" {
-		return ip
-	}
-	if forwarded := strings.TrimSpace(req.Header.Get("X-Forwarded-For")); forwarded != "" {
-		parts := strings.Split(forwarded, ",")
-		if len(parts) > 0 {
-			return strings.TrimSpace(parts[0])
-		}
-	}
-	host, _, err := net.SplitHostPort(strings.TrimSpace(req.RemoteAddr))
-	if err == nil {
-		return host
-	}
-	return strings.TrimSpace(req.RemoteAddr)
+	return requestmeta.ClientIP(req)
 }
 
 func deviceSummaryFromContext(ctx context.Context) string {
