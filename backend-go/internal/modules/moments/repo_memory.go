@@ -4,23 +4,30 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
+
+type likeEntry struct {
+	userID   string
+	nickname string
+	likedAt  string
+}
 
 type InMemoryRepository struct {
 	mu        sync.RWMutex
 	moments   map[string]MomentItem
 	byUser    map[string][]string
-	likes     map[string]map[string]bool   // momentID -> userID -> liked
-	favorites map[string]map[string]bool   // userID -> momentID -> favorited
+	likes     map[string]map[string]likeEntry  // momentID -> userID -> entry
+	favorites map[string]map[string]bool       // userID -> momentID -> favorited
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{
 		moments:   make(map[string]MomentItem),
 		byUser:    make(map[string][]string),
-		likes:     make(map[string]map[string]bool),
+		likes:     make(map[string]map[string]likeEntry),
 		favorites: make(map[string]map[string]bool),
 	}
 }
@@ -87,7 +94,7 @@ func (r *InMemoryRepository) Search(_ context.Context, req SearchMomentsRequest)
 			continue
 		}
 		if req.Keyword != nil && *req.Keyword != "" {
-			if !containsString(m.Description, *req.Keyword) {
+			if !strings.Contains(m.Description, *req.Keyword) {
 				continue
 			}
 		}
@@ -151,19 +158,6 @@ func (r *InMemoryRepository) Delete(_ context.Context, momentID string) error {
 	return nil
 }
 
-func containsString(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsStringHelper(s, substr))
-}
-
-func containsStringHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
-}
-
 func containsTag(tags []string, tag string) bool {
 	for _, t := range tags {
 		if t == tag {
@@ -180,10 +174,14 @@ func (r *InMemoryRepository) Like(_ context.Context, userID string, momentID str
 		return ErrMomentNotFound
 	}
 	if r.likes[momentID] == nil {
-		r.likes[momentID] = make(map[string]bool)
+		r.likes[momentID] = make(map[string]likeEntry)
 	}
-	if !r.likes[momentID][userID] {
-		r.likes[momentID][userID] = true
+	if _, exists := r.likes[momentID][userID]; !exists {
+		r.likes[momentID][userID] = likeEntry{
+			userID:   userID,
+			nickname: userID,
+			likedAt:  time.Now().UTC().Format(time.RFC3339),
+		}
 		item := r.moments[momentID]
 		item.LikesCount++
 		r.moments[momentID] = item
@@ -194,13 +192,15 @@ func (r *InMemoryRepository) Like(_ context.Context, userID string, momentID str
 func (r *InMemoryRepository) Unlike(_ context.Context, userID string, momentID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.likes[momentID] != nil && r.likes[momentID][userID] {
-		delete(r.likes[momentID], userID)
-		item := r.moments[momentID]
-		if item.LikesCount > 0 {
-			item.LikesCount--
+	if r.likes[momentID] != nil {
+		if _, exists := r.likes[momentID][userID]; exists {
+			delete(r.likes[momentID], userID)
+			item := r.moments[momentID]
+			if item.LikesCount > 0 {
+				item.LikesCount--
+			}
+			r.moments[momentID] = item
 		}
-		r.moments[momentID] = item
 	}
 	return nil
 }
@@ -244,8 +244,8 @@ func (r *InMemoryRepository) ListLikes(_ context.Context, momentID string, limit
 		return []LikeItem{}, "", nil
 	}
 	items := make([]LikeItem, 0, len(userMap))
-	for uid := range userMap {
-		items = append(items, LikeItem{UserID: uid, Nickname: uid, LikedAt: "2026-01-01T00:00:00Z"})
+	for uid, entry := range userMap {
+		items = append(items, LikeItem{UserID: uid, Nickname: entry.nickname, LikedAt: entry.likedAt})
 	}
 	_ = cursor
 	if len(items) == 0 {

@@ -90,19 +90,20 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	if err := h.service.Update(r.Context(), req); err != nil {
+	item, err := h.service.Update(r.Context(), req)
+	if err != nil {
 		if err == ErrMomentNotFound {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "瞬间不存在"))
 			return
 		}
 		if err == ErrPermissionDenied {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(item))
 }
 
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {

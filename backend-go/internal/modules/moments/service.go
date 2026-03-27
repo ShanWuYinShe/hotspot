@@ -50,19 +50,26 @@ func (s *Service) Search(ctx context.Context, req SearchMomentsRequest) (Paginat
 	return s.repo.Search(ctx, req)
 }
 
-func (s *Service) Update(ctx context.Context, req EditMomentRequest) error {
+func (s *Service) Update(ctx context.Context, req EditMomentRequest) (MomentItem, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	item, ok, err := s.repo.Get(ctx, req.MomentID)
 	if !ok {
 		if err != nil {
-			return err
+			return MomentItem{}, err
 		}
-		return ErrMomentNotFound
+		return MomentItem{}, ErrMomentNotFound
 	}
 	if item.User.UserID != principal.UserID {
-		return ErrPermissionDenied
+		return MomentItem{}, ErrPermissionDenied
 	}
-	return s.repo.Update(ctx, principal.UserID, req)
+	if err := s.repo.Update(ctx, principal.UserID, req); err != nil {
+		return MomentItem{}, err
+	}
+	updated, _, err := s.repo.Get(ctx, req.MomentID)
+	if err != nil {
+		return MomentItem{}, err
+	}
+	return updated, nil
 }
 
 func (s *Service) Delete(ctx context.Context, momentID string) error {
