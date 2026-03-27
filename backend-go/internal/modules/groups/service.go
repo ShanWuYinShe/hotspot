@@ -6,6 +6,11 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 )
 
+const (
+	// MaxMuteDurationMinutes is the maximum duration for muting a group member (30 days)
+	MaxMuteDurationMinutes = 43200
+)
+
 type Service struct {
 	repo Repository
 }
@@ -273,4 +278,188 @@ func (s *Service) AcceptInvite(ctx context.Context, req AcceptInviteRequest) err
 
 func (s *Service) RejectInvite(ctx context.Context, req RejectInviteRequest) error {
 	return s.repo.RejectInvite(ctx, req.InviteID)
+}
+
+func (s *Service) InviteMember(ctx context.Context, req InviteMemberRequest) (Invitation, error) {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	group, ok, err := s.repo.Get(ctx, req.GroupID)
+	if !ok {
+		if err != nil {
+			return Invitation{}, err
+		}
+		return Invitation{}, ErrGroupNotFound
+	}
+	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+		return Invitation{}, ErrPermissionDenied
+	}
+	return s.repo.InviteMember(ctx, principal.UserID, req)
+}
+
+func (s *Service) ListSentInvites(ctx context.Context, req GroupSentInvitesRequest) ([]GroupSentInviteItem, string, error) {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	group, ok, err := s.repo.Get(ctx, req.GroupID)
+	if !ok {
+		if err != nil {
+			return nil, "", err
+		}
+		return nil, "", ErrGroupNotFound
+	}
+	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+		return nil, "", ErrPermissionDenied
+	}
+	limit := req.Limit
+	if limit == 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	return s.repo.ListSentInvites(ctx, req.GroupID, req.Status, limit, req.Cursor)
+}
+
+func (s *Service) RevokeInvite(ctx context.Context, req RevokeSentInviteRequest) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	group, ok, err := s.repo.Get(ctx, req.GroupID)
+	if !ok {
+		if err != nil {
+			return err
+		}
+		return ErrGroupNotFound
+	}
+	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+		return ErrPermissionDenied
+	}
+	_ = principal
+	return s.repo.RevokeInvite(ctx, req.GroupID, req.InviteID)
+}
+
+func (s *Service) SetMemberRole(ctx context.Context, req SetMemberRoleRequest) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	group, ok, err := s.repo.Get(ctx, req.GroupID)
+	if !ok {
+		if err != nil {
+			return err
+		}
+		return ErrGroupNotFound
+	}
+	if group.MyState == nil || group.MyState.Role != GroupRoleOwner {
+		return ErrPermissionDenied
+	}
+	if req.Role != GroupRoleAdmin && req.Role != GroupRoleMember {
+		return ErrPermissionDenied
+	}
+	_ = principal
+	return s.repo.SetMemberRole(ctx, principal.UserID, req)
+}
+
+func (s *Service) MuteMember(ctx context.Context, req MuteMemberRequest) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	group, ok, err := s.repo.Get(ctx, req.GroupID)
+	if !ok {
+		if err != nil {
+			return err
+		}
+		return ErrGroupNotFound
+	}
+	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+		return ErrPermissionDenied
+	}
+	if req.DurationMinutes < 1 || req.DurationMinutes > MaxMuteDurationMinutes {
+		return ErrPermissionDenied
+	}
+	_ = principal
+	return s.repo.MuteMember(ctx, principal.UserID, req)
+}
+
+func (s *Service) UnmuteMember(ctx context.Context, req UnmuteMemberRequest) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	group, ok, err := s.repo.Get(ctx, req.GroupID)
+	if !ok {
+		if err != nil {
+			return err
+		}
+		return ErrGroupNotFound
+	}
+	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+		return ErrPermissionDenied
+	}
+	_ = principal
+	return s.repo.UnmuteMember(ctx, principal.UserID, req)
+}
+
+func (s *Service) BanMember(ctx context.Context, req BanMemberRequest) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	group, ok, err := s.repo.Get(ctx, req.GroupID)
+	if !ok {
+		if err != nil {
+			return err
+		}
+		return ErrGroupNotFound
+	}
+	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+		return ErrPermissionDenied
+	}
+	if req.UserID == principal.UserID {
+		return ErrPermissionDenied
+	}
+	_ = principal
+	return s.repo.BanMember(ctx, principal.UserID, req)
+}
+
+func (s *Service) UnbanMember(ctx context.Context, req UnbanMemberRequest) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	group, ok, err := s.repo.Get(ctx, req.GroupID)
+	if !ok {
+		if err != nil {
+			return err
+		}
+		return ErrGroupNotFound
+	}
+	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+		return ErrPermissionDenied
+	}
+	_ = principal
+	return s.repo.UnbanMember(ctx, principal.UserID, req)
+}
+
+func (s *Service) ListBannedMembers(ctx context.Context, req BannedMembersRequest) ([]BannedMemberItem, string, error) {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	group, ok, err := s.repo.Get(ctx, req.GroupID)
+	if !ok {
+		if err != nil {
+			return nil, "", err
+		}
+		return nil, "", ErrGroupNotFound
+	}
+	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+		return nil, "", ErrPermissionDenied
+	}
+	limit := req.Limit
+	if limit == 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	_ = principal
+	return s.repo.ListBannedMembers(ctx, req.GroupID, limit, req.Cursor)
+}
+
+func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	group, ok, err := s.repo.Get(ctx, req.GroupID)
+	if !ok {
+		if err != nil {
+			return err
+		}
+		return ErrGroupNotFound
+	}
+	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+		return ErrPermissionDenied
+	}
+	if req.UserID == principal.UserID {
+		return ErrPermissionDenied
+	}
+	_ = principal
+	return s.repo.RemoveMember(ctx, principal.UserID, req)
 }

@@ -100,6 +100,36 @@ func (r *groupErrorRepo) AcceptInvite(context.Context, string, string) error {
 func (r *groupErrorRepo) RejectInvite(context.Context, string) error {
 	return nil
 }
+func (r *groupErrorRepo) InviteMember(context.Context, string, InviteMemberRequest) (Invitation, error) {
+	return Invitation{}, nil
+}
+func (r *groupErrorRepo) ListSentInvites(context.Context, string, *ApplicationStatus, int, string) ([]GroupSentInviteItem, string, error) {
+	return nil, "", nil
+}
+func (r *groupErrorRepo) RevokeInvite(context.Context, string, string) error {
+	return nil
+}
+func (r *groupErrorRepo) SetMemberRole(context.Context, string, SetMemberRoleRequest) error {
+	return nil
+}
+func (r *groupErrorRepo) MuteMember(context.Context, string, MuteMemberRequest) error {
+	return nil
+}
+func (r *groupErrorRepo) UnmuteMember(context.Context, string, UnmuteMemberRequest) error {
+	return nil
+}
+func (r *groupErrorRepo) BanMember(context.Context, string, BanMemberRequest) error {
+	return nil
+}
+func (r *groupErrorRepo) UnbanMember(context.Context, string, UnbanMemberRequest) error {
+	return nil
+}
+func (r *groupErrorRepo) ListBannedMembers(context.Context, string, int, string) ([]BannedMemberItem, string, error) {
+	return nil, "", nil
+}
+func (r *groupErrorRepo) RemoveMember(context.Context, string, RemoveMemberRequest) error {
+	return nil
+}
 
 func TestCreateAndOpenGroup(t *testing.T) {
 	handler := NewHandler(NewService())

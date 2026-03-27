@@ -344,3 +344,117 @@ func (r *InMemoryRepository) RejectInvite(_ context.Context, inviteID string) er
 	_ = inviteID
 	return nil
 }
+
+func (r *InMemoryRepository) InviteMember(_ context.Context, userID string, req InviteMemberRequest) (Invitation, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.groups[req.GroupID]; !ok {
+		return Invitation{}, ErrGroupNotFound
+	}
+	_ = userID
+	now := time.Now().UTC()
+	expiresAt := now.Add(24 * time.Hour)
+	return Invitation{
+		InviteID:  "invite_" + now.Format("20060102150405.000000000"),
+		ExpiresAt: expiresAt.Format(time.RFC3339),
+	}, nil
+}
+
+func (r *InMemoryRepository) ListSentInvites(_ context.Context, groupID string, status *ApplicationStatus, limit int, cursor string) ([]GroupSentInviteItem, string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if _, ok := r.groups[groupID]; !ok {
+		return nil, "", ErrGroupNotFound
+	}
+	_ = status
+	_ = cursor
+	if limit == 0 {
+		limit = 20
+	}
+	_ = limit
+	return []GroupSentInviteItem{}, "", nil
+}
+
+func (r *InMemoryRepository) RevokeInvite(_ context.Context, groupID string, inviteID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.groups[groupID]; !ok {
+		return ErrGroupNotFound
+	}
+	_ = inviteID
+	return nil
+}
+
+func (r *InMemoryRepository) SetMemberRole(_ context.Context, userID string, req SetMemberRoleRequest) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.groups[req.GroupID]; !ok {
+		return ErrGroupNotFound
+	}
+	_ = userID
+	return nil
+}
+
+func (r *InMemoryRepository) MuteMember(_ context.Context, userID string, req MuteMemberRequest) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.groups[req.GroupID]; !ok {
+		return ErrGroupNotFound
+	}
+	_ = userID
+	return nil
+}
+
+func (r *InMemoryRepository) UnmuteMember(_ context.Context, userID string, req UnmuteMemberRequest) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.groups[req.GroupID]; !ok {
+		return ErrGroupNotFound
+	}
+	_ = userID
+	return nil
+}
+
+func (r *InMemoryRepository) BanMember(_ context.Context, userID string, req BanMemberRequest) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.groups[req.GroupID]; !ok {
+		return ErrGroupNotFound
+	}
+	_ = userID
+	return nil
+}
+
+func (r *InMemoryRepository) UnbanMember(_ context.Context, userID string, req UnbanMemberRequest) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.groups[req.GroupID]; !ok {
+		return ErrGroupNotFound
+	}
+	_ = userID
+	return nil
+}
+
+func (r *InMemoryRepository) ListBannedMembers(_ context.Context, groupID string, limit int, cursor string) ([]BannedMemberItem, string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if _, ok := r.groups[groupID]; !ok {
+		return nil, "", ErrGroupNotFound
+	}
+	_ = cursor
+	if limit == 0 {
+		limit = 20
+	}
+	_ = limit
+	return []BannedMemberItem{}, "", nil
+}
+
+func (r *InMemoryRepository) RemoveMember(_ context.Context, userID string, req RemoveMemberRequest) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.groups[req.GroupID]; !ok {
+		return ErrGroupNotFound
+	}
+	_ = userID
+	return nil
+}

@@ -24,6 +24,16 @@ type Repository interface {
 	ListMyApplications(context.Context, string, *ApplicationStatus, int, string) ([]GroupApplicationItem, string, error)
 	CancelApplication(context.Context, string) error
 	ListMyInvites(context.Context, string, *ApplicationStatus, int, string) ([]GroupInviteItem, string, error)
-	AcceptInvite(context.Context, string) error
+	AcceptInvite(context.Context, string, string) error
 	RejectInvite(context.Context, string) error
+	InviteMember(context.Context, string, InviteMemberRequest) (Invitation, error)
+	ListSentInvites(context.Context, string, *ApplicationStatus, int, string) ([]GroupSentInviteItem, string, error)
+	RevokeInvite(context.Context, string, string) error
+	SetMemberRole(context.Context, string, SetMemberRoleRequest) error
+	MuteMember(context.Context, string, MuteMemberRequest) error
+	UnmuteMember(context.Context, string, UnmuteMemberRequest) error
+	BanMember(context.Context, string, BanMemberRequest) error
+	UnbanMember(context.Context, string, UnbanMemberRequest) error
+	ListBannedMembers(context.Context, string, int, string) ([]BannedMemberItem, string, error)
+	RemoveMember(context.Context, string, RemoveMemberRequest) error
 }

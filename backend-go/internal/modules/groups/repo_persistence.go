@@ -107,3 +107,43 @@ func (r *PersistenceRepository) AcceptInvite(ctx context.Context, userID string,
 func (r *PersistenceRepository) RejectInvite(ctx context.Context, inviteID string) error {
 	return r.impl.RejectInvite(ctx, inviteID)
 }
+
+func (r *PersistenceRepository) InviteMember(ctx context.Context, userID string, req InviteMemberRequest) (Invitation, error) {
+	return r.impl.InviteMember(ctx, userID, req)
+}
+
+func (r *PersistenceRepository) ListSentInvites(ctx context.Context, groupID string, status *ApplicationStatus, limit int, cursor string) ([]GroupSentInviteItem, string, error) {
+	return r.impl.ListSentInvites(ctx, groupID, status, limit, cursor)
+}
+
+func (r *PersistenceRepository) RevokeInvite(ctx context.Context, groupID string, inviteID string) error {
+	return r.impl.RevokeInvite(ctx, groupID, inviteID)
+}
+
+func (r *PersistenceRepository) SetMemberRole(ctx context.Context, userID string, req SetMemberRoleRequest) error {
+	return r.impl.SetMemberRole(ctx, userID, req)
+}
+
+func (r *PersistenceRepository) MuteMember(ctx context.Context, userID string, req MuteMemberRequest) error {
+	return r.impl.MuteMember(ctx, userID, req)
+}
+
+func (r *PersistenceRepository) UnmuteMember(ctx context.Context, userID string, req UnmuteMemberRequest) error {
+	return r.impl.UnmuteMember(ctx, userID, req)
+}
+
+func (r *PersistenceRepository) BanMember(ctx context.Context, userID string, req BanMemberRequest) error {
+	return r.impl.BanMember(ctx, userID, req)
+}
+
+func (r *PersistenceRepository) UnbanMember(ctx context.Context, userID string, req UnbanMemberRequest) error {
+	return r.impl.UnbanMember(ctx, userID, req)
+}
+
+func (r *PersistenceRepository) ListBannedMembers(ctx context.Context, groupID string, limit int, cursor string) ([]BannedMemberItem, string, error) {
+	return r.impl.ListBannedMembers(ctx, groupID, limit, cursor)
+}
+
+func (r *PersistenceRepository) RemoveMember(ctx context.Context, userID string, req RemoveMemberRequest) error {
+	return r.impl.RemoveMember(ctx, userID, req)
+}

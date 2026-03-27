@@ -142,6 +142,46 @@ func (r *groupFallbackRepo) RejectInvite(context.Context, string) error {
 	r.used = true
 	return nil
 }
+func (r *groupFallbackRepo) InviteMember(context.Context, string, InviteMemberRequest) (Invitation, error) {
+	r.used = true
+	return Invitation{}, nil
+}
+func (r *groupFallbackRepo) ListSentInvites(context.Context, string, *ApplicationStatus, int, string) ([]GroupSentInviteItem, string, error) {
+	r.used = true
+	return nil, "", nil
+}
+func (r *groupFallbackRepo) RevokeInvite(context.Context, string, string) error {
+	r.used = true
+	return nil
+}
+func (r *groupFallbackRepo) SetMemberRole(context.Context, string, SetMemberRoleRequest) error {
+	r.used = true
+	return nil
+}
+func (r *groupFallbackRepo) MuteMember(context.Context, string, MuteMemberRequest) error {
+	r.used = true
+	return nil
+}
+func (r *groupFallbackRepo) UnmuteMember(context.Context, string, UnmuteMemberRequest) error {
+	r.used = true
+	return nil
+}
+func (r *groupFallbackRepo) BanMember(context.Context, string, BanMemberRequest) error {
+	r.used = true
+	return nil
+}
+func (r *groupFallbackRepo) UnbanMember(context.Context, string, UnbanMemberRequest) error {
+	r.used = true
+	return nil
+}
+func (r *groupFallbackRepo) ListBannedMembers(context.Context, string, int, string) ([]BannedMemberItem, string, error) {
+	r.used = true
+	return nil, "", nil
+}
+func (r *groupFallbackRepo) RemoveMember(context.Context, string, RemoveMemberRequest) error {
+	r.used = true
+	return nil
+}
 
 type groupBackendStub struct {
 	rows      [][]any

@@ -175,6 +175,46 @@ func (r *PostgresRepository) RejectInvite(ctx context.Context, inviteID string) 
 	return r.fallback.RejectInvite(ctx, inviteID)
 }
 
+func (r *PostgresRepository) InviteMember(ctx context.Context, userID string, req InviteMemberRequest) (Invitation, error) {
+	return r.fallback.InviteMember(ctx, userID, req)
+}
+
+func (r *PostgresRepository) ListSentInvites(ctx context.Context, groupID string, status *ApplicationStatus, limit int, cursor string) ([]GroupSentInviteItem, string, error) {
+	return r.fallback.ListSentInvites(ctx, groupID, status, limit, cursor)
+}
+
+func (r *PostgresRepository) RevokeInvite(ctx context.Context, groupID string, inviteID string) error {
+	return r.fallback.RevokeInvite(ctx, groupID, inviteID)
+}
+
+func (r *PostgresRepository) SetMemberRole(ctx context.Context, userID string, req SetMemberRoleRequest) error {
+	return r.fallback.SetMemberRole(ctx, userID, req)
+}
+
+func (r *PostgresRepository) MuteMember(ctx context.Context, userID string, req MuteMemberRequest) error {
+	return r.fallback.MuteMember(ctx, userID, req)
+}
+
+func (r *PostgresRepository) UnmuteMember(ctx context.Context, userID string, req UnmuteMemberRequest) error {
+	return r.fallback.UnmuteMember(ctx, userID, req)
+}
+
+func (r *PostgresRepository) BanMember(ctx context.Context, userID string, req BanMemberRequest) error {
+	return r.fallback.BanMember(ctx, userID, req)
+}
+
+func (r *PostgresRepository) UnbanMember(ctx context.Context, userID string, req UnbanMemberRequest) error {
+	return r.fallback.UnbanMember(ctx, userID, req)
+}
+
+func (r *PostgresRepository) ListBannedMembers(ctx context.Context, groupID string, limit int, cursor string) ([]BannedMemberItem, string, error) {
+	return r.fallback.ListBannedMembers(ctx, groupID, limit, cursor)
+}
+
+func (r *PostgresRepository) RemoveMember(ctx context.Context, userID string, req RemoveMemberRequest) error {
+	return r.fallback.RemoveMember(ctx, userID, req)
+}
+
 func nilOrString(s string) *string {
 	if s == "" {
 		return nil
