@@ -51,3 +51,19 @@ func (r *PersistenceRepository) ListMyGroups(ctx context.Context, userID string,
 func (r *PersistenceRepository) JoinGroup(ctx context.Context, userID string, groupID string, password *string, message *string) (JoinGroupResult, error) {
 	return r.impl.JoinGroup(ctx, userID, groupID, password, message)
 }
+
+func (r *PersistenceRepository) CreateAnnouncement(ctx context.Context, creatorID string, req CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error) {
+	return r.impl.CreateAnnouncement(ctx, creatorID, req)
+}
+
+func (r *PersistenceRepository) ListAnnouncements(ctx context.Context, groupID string) ([]GroupAnnouncementItem, error) {
+	return r.impl.ListAnnouncements(ctx, groupID)
+}
+
+func (r *PersistenceRepository) UpdateAnnouncement(ctx context.Context, groupID string, req UpdateGroupAnnouncementRequest) error {
+	return r.impl.UpdateAnnouncement(ctx, groupID, req)
+}
+
+func (r *PersistenceRepository) DeleteAnnouncement(ctx context.Context, groupID string, announcementID string) error {
+	return r.impl.DeleteAnnouncement(ctx, groupID, announcementID)
+}

@@ -22,6 +22,10 @@ type groupErrorRepo struct {
 	searchMembersErr error
 	listMyGroupsErr error
 	joinGroupErr error
+	createAnnouncementErr error
+	listAnnouncementsErr error
+	updateAnnouncementErr error
+	deleteAnnouncementErr error
 }
 
 func (r *groupErrorRepo) Create(context.Context, string, CreateGroupRequest) (GroupItem, error) {
@@ -50,6 +54,18 @@ func (r *groupErrorRepo) ListMyGroups(context.Context, string, int, string) ([]G
 }
 func (r *groupErrorRepo) JoinGroup(context.Context, string, string, *string, *string) (JoinGroupResult, error) {
 	return JoinGroupResult{}, r.joinGroupErr
+}
+func (r *groupErrorRepo) CreateAnnouncement(context.Context, string, CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error) {
+	return GroupAnnouncementItem{}, r.createAnnouncementErr
+}
+func (r *groupErrorRepo) ListAnnouncements(context.Context, string) ([]GroupAnnouncementItem, error) {
+	return nil, r.listAnnouncementsErr
+}
+func (r *groupErrorRepo) UpdateAnnouncement(context.Context, string, UpdateGroupAnnouncementRequest) error {
+	return r.updateAnnouncementErr
+}
+func (r *groupErrorRepo) DeleteAnnouncement(context.Context, string, string) error {
+	return r.deleteAnnouncementErr
 }
 
 func TestCreateAndOpenGroup(t *testing.T) {

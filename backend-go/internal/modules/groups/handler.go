@@ -205,3 +205,89 @@ func (h *Handler) JoinGroup(w http.ResponseWriter, r *http.Request) {
 		return httpx.Success(result)
 	})
 }
+
+func (h *Handler) CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
+	if err := idempotency.RequireKey(r); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		return
+	}
+	var req CreateGroupAnnouncementRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" || req.Title == "" || req.Content == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	idempotency.ReplayOrStore(w, r, "groups/announcements/create", func() httpx.ApiResponse[GroupAnnouncementItem] {
+		item, err := h.service.CreateAnnouncement(r.Context(), req)
+		if err != nil {
+			if err == ErrGroupNotFound {
+				return httpx.ApiResponse[GroupAnnouncementItem]{Code: 10300, Message: "群组不存在"}
+			}
+			if err == ErrPermissionDenied {
+				return httpx.ApiResponse[GroupAnnouncementItem]{Code: 10400, Message: "权限不足"}
+			}
+			return httpx.ApiResponse[GroupAnnouncementItem]{Code: 10600, Message: "服务暂时不可用"}
+		}
+		return httpx.Success(item)
+	})
+}
+
+func (h *Handler) ListAnnouncements(w http.ResponseWriter, r *http.Request) {
+	var req GroupAnnouncementsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	items, err := h.service.ListAnnouncements(r.Context(), req)
+	if err != nil {
+		if err == ErrGroupNotFound {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	resp := map[string]any{"items": items}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
+}
+
+func (h *Handler) UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
+	var req UpdateGroupAnnouncementRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" || req.AnnouncementID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	if err := h.service.UpdateAnnouncement(r.Context(), req); err != nil {
+		if err == ErrGroupNotFound {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
+			return
+		}
+		if err == ErrPermissionDenied {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
+}
+
+func (h *Handler) DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {
+	var req DeleteGroupAnnouncementRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" || req.AnnouncementID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	if err := h.service.DeleteAnnouncement(r.Context(), req); err != nil {
+		if err == ErrGroupNotFound {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
+			return
+		}
+		if err == ErrPermissionDenied {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
+}

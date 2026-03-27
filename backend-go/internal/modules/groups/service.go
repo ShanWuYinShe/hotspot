@@ -123,3 +123,50 @@ func (s *Service) JoinGroup(ctx context.Context, req JoinGroupRequest) (JoinGrou
 	}
 	return s.repo.JoinGroup(ctx, principal.UserID, req.GroupID, req.Password, req.Message)
 }
+
+func (s *Service) CreateAnnouncement(ctx context.Context, req CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error) {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	group, ok, err := s.repo.Get(ctx, req.GroupID)
+	if err != nil {
+		return GroupAnnouncementItem{}, err
+	}
+	if !ok {
+		return GroupAnnouncementItem{}, ErrGroupNotFound
+	}
+	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+		return GroupAnnouncementItem{}, ErrPermissionDenied
+	}
+	return s.repo.CreateAnnouncement(ctx, principal.UserID, req)
+}
+
+func (s *Service) ListAnnouncements(ctx context.Context, req GroupAnnouncementsRequest) ([]GroupAnnouncementItem, error) {
+	return s.repo.ListAnnouncements(ctx, req.GroupID)
+}
+
+func (s *Service) UpdateAnnouncement(ctx context.Context, req UpdateGroupAnnouncementRequest) error {
+	group, ok, err := s.repo.Get(ctx, req.GroupID)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrGroupNotFound
+	}
+	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+		return ErrPermissionDenied
+	}
+	return s.repo.UpdateAnnouncement(ctx, req.GroupID, req)
+}
+
+func (s *Service) DeleteAnnouncement(ctx context.Context, req DeleteGroupAnnouncementRequest) error {
+	group, ok, err := s.repo.Get(ctx, req.GroupID)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrGroupNotFound
+	}
+	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+		return ErrPermissionDenied
+	}
+	return s.repo.DeleteAnnouncement(ctx, req.GroupID, req.AnnouncementID)
+}

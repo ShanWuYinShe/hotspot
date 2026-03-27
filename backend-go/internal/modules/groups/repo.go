@@ -12,4 +12,8 @@ type Repository interface {
 	SearchMembers(context.Context, string, string, *GroupRole, int, string) ([]GroupMemberItem, string, error)
 	ListMyGroups(context.Context, string, int, string) ([]GroupItem, string, error)
 	JoinGroup(context.Context, string, string, *string, *string) (JoinGroupResult, error)
+	CreateAnnouncement(context.Context, string, CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error)
+	ListAnnouncements(context.Context, string) ([]GroupAnnouncementItem, error)
+	UpdateAnnouncement(context.Context, string, UpdateGroupAnnouncementRequest) error
+	DeleteAnnouncement(context.Context, string, string) error
 }

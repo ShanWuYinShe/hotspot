@@ -119,6 +119,22 @@ func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, group
 	return r.fallback.JoinGroup(ctx, userID, groupID, password, message)
 }
 
+func (r *PostgresRepository) CreateAnnouncement(ctx context.Context, creatorID string, req CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error) {
+	return r.fallback.CreateAnnouncement(ctx, creatorID, req)
+}
+
+func (r *PostgresRepository) ListAnnouncements(ctx context.Context, groupID string) ([]GroupAnnouncementItem, error) {
+	return r.fallback.ListAnnouncements(ctx, groupID)
+}
+
+func (r *PostgresRepository) UpdateAnnouncement(ctx context.Context, groupID string, req UpdateGroupAnnouncementRequest) error {
+	return r.fallback.UpdateAnnouncement(ctx, groupID, req)
+}
+
+func (r *PostgresRepository) DeleteAnnouncement(ctx context.Context, groupID string, announcementID string) error {
+	return r.fallback.DeleteAnnouncement(ctx, groupID, announcementID)
+}
+
 func nilOrString(s string) *string {
 	if s == "" {
 		return nil

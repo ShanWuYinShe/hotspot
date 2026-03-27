@@ -220,3 +220,51 @@ func (r *InMemoryRepository) JoinGroup(_ context.Context, userID, groupID string
 	r.groups[groupID] = group
 	return JoinGroupResult{Status: ApplicationStatusAccepted}, nil
 }
+
+func (r *InMemoryRepository) CreateAnnouncement(_ context.Context, creatorID string, req CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	now := time.Now().UTC()
+	announcementID := "announce_" + now.Format("20060102150405.000000000")
+	isPinned := false
+	if req.IsPinned != nil {
+		isPinned = *req.IsPinned
+	}
+	item := GroupAnnouncementItem{
+		AnnouncementID: announcementID,
+		GroupID:        req.GroupID,
+		Title:          req.Title,
+		Content:        req.Content,
+		IsPinned:       isPinned,
+		CreatedAt:      now.Format(time.RFC3339),
+	}
+	return item, nil
+}
+
+func (r *InMemoryRepository) ListAnnouncements(_ context.Context, groupID string) ([]GroupAnnouncementItem, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if _, ok := r.groups[groupID]; !ok {
+		return nil, ErrGroupNotFound
+	}
+	return []GroupAnnouncementItem{}, nil
+}
+
+func (r *InMemoryRepository) UpdateAnnouncement(_ context.Context, groupID string, req UpdateGroupAnnouncementRequest) error {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if _, ok := r.groups[groupID]; !ok {
+		return ErrGroupNotFound
+	}
+	return nil
+}
+
+func (r *InMemoryRepository) DeleteAnnouncement(_ context.Context, groupID string, announcementID string) error {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if _, ok := r.groups[groupID]; !ok {
+		return ErrGroupNotFound
+	}
+	_ = announcementID
+	return nil
+}

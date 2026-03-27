@@ -30,6 +30,7 @@ func (m *Module) Mount(r chi.Router) {
 			group.Post("/open_the_door", m.handler.OpenTheDoor)
 			group.Post("/members/list", m.handler.ListMembers)
 			group.Post("/members/search", m.handler.SearchMembers)
+			group.Post("/announcements/list", m.handler.ListAnnouncements)
 		})
 		groupsRouter.Group(func(group chi.Router) {
 			group.Use(platformauth.RequiredAuth)
@@ -41,6 +42,9 @@ func (m *Module) Mount(r chi.Router) {
 			group.Post("/dismiss", m.handler.Dismiss)
 			group.Post("/me/list", m.handler.ListMyGroups)
 			group.Post("/me/join", m.handler.JoinGroup)
+			group.Post("/announcements/create", m.handler.CreateAnnouncement)
+			group.Post("/announcements/update", m.handler.UpdateAnnouncement)
+			group.Post("/announcements/delete", m.handler.DeleteAnnouncement)
 		})
 	})
 }

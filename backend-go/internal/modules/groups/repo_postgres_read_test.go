@@ -86,6 +86,22 @@ func (r *groupFallbackRepo) JoinGroup(context.Context, string, string, *string, 
 	r.used = true
 	return JoinGroupResult{}, nil
 }
+func (r *groupFallbackRepo) CreateAnnouncement(context.Context, string, CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error) {
+	r.used = true
+	return GroupAnnouncementItem{}, nil
+}
+func (r *groupFallbackRepo) ListAnnouncements(context.Context, string) ([]GroupAnnouncementItem, error) {
+	r.used = true
+	return nil, nil
+}
+func (r *groupFallbackRepo) UpdateAnnouncement(context.Context, string, UpdateGroupAnnouncementRequest) error {
+	r.used = true
+	return nil
+}
+func (r *groupFallbackRepo) DeleteAnnouncement(context.Context, string, string) error {
+	r.used = true
+	return nil
+}
 
 type groupBackendStub struct {
 	rows      [][]any
