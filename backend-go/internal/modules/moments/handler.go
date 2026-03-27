@@ -65,3 +65,63 @@ func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(list))
 }
+
+func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
+	var req SearchMomentsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	if req.Keyword == nil && req.Tag == nil && req.Radius == nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	result, err := h.service.Search(r.Context(), req)
+	if err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(result))
+}
+
+func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
+	var req EditMomentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.MomentID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	if err := h.service.Update(r.Context(), req); err != nil {
+		if err == ErrMomentNotFound {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "瞬间不存在"))
+			return
+		}
+		if err == ErrPermissionDenied {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
+}
+
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	var req DeleteMomentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.MomentID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	if err := h.service.Delete(r.Context(), req.MomentID); err != nil {
+		if err == ErrMomentNotFound {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "瞬间不存在"))
+			return
+		}
+		if err == ErrPermissionDenied {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
+}

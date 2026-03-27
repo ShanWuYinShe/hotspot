@@ -76,6 +76,21 @@ func (r *fallbackRepo) IncrementCommentCount(context.Context, string) error {
 	return nil
 }
 
+func (r *fallbackRepo) Search(context.Context, SearchMomentsRequest) (PaginatedMoments, error) {
+	r.used = true
+	return PaginatedMoments{}, nil
+}
+
+func (r *fallbackRepo) Update(context.Context, string, EditMomentRequest) error {
+	r.used = true
+	return nil
+}
+
+func (r *fallbackRepo) Delete(context.Context, string) error {
+	r.used = true
+	return nil
+}
+
 type backendStub struct {
 	moments      map[string]MomentItem
 	blockedTags  map[string]struct{}

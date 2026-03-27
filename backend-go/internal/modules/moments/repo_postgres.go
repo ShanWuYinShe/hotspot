@@ -71,3 +71,15 @@ func (r *PostgresRepository) IncrementCommentCount(ctx context.Context, momentID
 	}
 	return queryable.Exec(ctx, queryIncrementMomentCommentCount, momentID)
 }
+
+func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsRequest) (PaginatedMoments, error) {
+	return r.fallback.Search(ctx, req)
+}
+
+func (r *PostgresRepository) Update(ctx context.Context, userID string, req EditMomentRequest) error {
+	return r.fallback.Update(ctx, userID, req)
+}
+
+func (r *PostgresRepository) Delete(ctx context.Context, momentID string) error {
+	return r.fallback.Delete(ctx, momentID)
+}

@@ -45,3 +45,37 @@ func (s *Service) Exists(ctx context.Context, momentID string) (bool, error) {
 func (s *Service) IncrementCommentCount(ctx context.Context, momentID string) error {
 	return s.repo.IncrementCommentCount(ctx, momentID)
 }
+
+func (s *Service) Search(ctx context.Context, req SearchMomentsRequest) (PaginatedMoments, error) {
+	return s.repo.Search(ctx, req)
+}
+
+func (s *Service) Update(ctx context.Context, req EditMomentRequest) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	item, ok, err := s.repo.Get(ctx, req.MomentID)
+	if !ok {
+		if err != nil {
+			return err
+		}
+		return ErrMomentNotFound
+	}
+	if item.User.UserID != principal.UserID {
+		return ErrPermissionDenied
+	}
+	return s.repo.Update(ctx, principal.UserID, req)
+}
+
+func (s *Service) Delete(ctx context.Context, momentID string) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	item, ok, err := s.repo.Get(ctx, momentID)
+	if !ok {
+		if err != nil {
+			return err
+		}
+		return ErrMomentNotFound
+	}
+	if item.User.UserID != principal.UserID {
+		return ErrPermissionDenied
+	}
+	return s.repo.Delete(ctx, momentID)
+}
