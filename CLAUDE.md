@@ -39,12 +39,12 @@ HotSpot 是一个多端 monorepo：
 - Claude 是否可直接执行某个动作，默认按”目的 + 副作用 + 多 agent 冲突风险”判断：纯静态检查可直接在宿主环境执行；会影响运行环境或可能相互冲突的动作，必须通过 `deploy/` 隔离执行。
 
 ## 主目录与 worktree 模型
-- 主目录默认始终保持在本地 `main` 且 clean；主目录只承担同步、审阅、创建/回收 worktree 和本地集成控制，不承载实现性改动。
+- 主目录默认始终保持在本地 `main` 且无未提交改动；主目录只承担同步、审阅、创建/回收 worktree 和本地集成控制，不承载实现性改动。
 - 任何 implement 行为开始前都必须先进入 feature worktree；主目录 `main` 只允许控制面动作（git 状态/历史检查、建/收 worktree、review、sync-back、cleanup）。
 - 所有实现、验证和构建都在 worktree 中完成；需要本地分支时，也在对应 worktree 中使用。
 - **新 worktree 必须从主目录本地 `main` 的当前 HEAD 创建，绝对不要使用 `origin/main` 或任何远程引用作为基准点。** feature worktree 必须使用 `EnterWorktree` 工具创建（调用时当前工作目录必须在主目录 `main` 分支上）；项目级 `WorktreeCreate` hook 会接管 `EnterWorktree` 的实际创建过程，并强制基于本地 `main` 创建。integration worktree 使用 `git worktree add -b <name> <path> main`（注意 `main` 是本地分支引用，不是 `origin/main`）。`tool_guard.py` 会在运行时拦截任何使用 `origin/` 引用的 `git worktree add` 命令。
 - 默认每个会话只操作自己创建或明确接管的 worktree / branch；除非用户明确指定，不要处理其他会话对象。
-- 当主目录处于本地 `main + clean`、操作对象属于当前会话且动作遵循本仓库定义的本地流程时，Claude 应默认自动推进本地闭环，不需要逐步确认；只有越过共享边界、涉及其他会话对象或需要丢弃未确认改动时才暂停确认。
+- 当主目录处于本地 `main` 且无未提交改动、操作对象属于当前会话且动作遵循本仓库定义的本地流程时，Claude 应默认自动推进本地闭环，不需要逐步确认；只有越过共享边界、涉及其他会话对象或需要丢弃未确认改动时才暂停确认。
 - 每个 feature worktree 先独立完成实现、自检和验证；只有当同一任务被拆分成多个子任务并行开发时，才需要额外新建专门的 integration worktree 来统一汇总结果。
 - 若某任务只有单一 worktree 的结果，则直接在线性历史上完成，不要再额外新建 integration worktree；单 worktree 结果同步回主目录本地 `main` 时，默认优先使用 `rebase` 整理来源分支，再以 fast-forward 方式前进主目录本地 `main`。
 - integration worktree 只负责汇总、冲突处理、补测、预演与交付准备，不承载新的大规模实现；其基线始终是主目录本地 `main` 的当前 HEAD，且最终应通过 `rebase + squash` 收敛为一个 commit，再同步回主目录的本地主分支。

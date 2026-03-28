@@ -18,7 +18,7 @@ $ARGUMENTS
 4. 若当前会话仍驻留在某个通过 Claude worktree session 创建的 worktree 中，必须先执行 `ExitWorktree` 返回主目录，再做 cleanup。
 5. 仅对本会话中明确满足“已完成、已同步回本地 `main`、无未提交或未合并改动”的对象执行 cleanup；对状态不明或仍有未合并改动的 worktree，明确保留原因。
 6. 删除本会话管理的 worktree 时，默认同步删除其对应非主分支 branch；若 `git branch -d` 仅因未合到远程 tracking branch 而拒绝，但已确认结果进入本地 `main`，则可继续使用 `git branch -D` 完成回收。
-7. cleanup 完成后，确认主目录是否仍然是 `main + clean`。
+7. cleanup 完成后，确认主目录是否仍然在本地 `main` 且无未提交改动。
 
 结束时请输出：
 

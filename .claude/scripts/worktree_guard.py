@@ -43,7 +43,7 @@ def main() -> int:
         return fail("EnterWorktree 只能从主目录本地 main 分支执行。")
 
     if status:
-        return fail("EnterWorktree 前主目录必须保持 main + clean。")
+        return fail("EnterWorktree 前主目录必须保持本地 main 且无未提交改动。")
 
     name = str(payload.get("name") or "").strip() or "worktree"
     worktree_dir = primary_root / ".claude" / "worktrees" / name

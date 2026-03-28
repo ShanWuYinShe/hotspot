@@ -12,7 +12,7 @@ $ARGUMENTS
 
 执行要求：
 
-1. 先确认主目录当前处于本地 `main + clean`；如果不是，停止并说明原因。
+1. 先确认主目录当前处于本地 `main` 且无未提交改动；如果不是，停止并说明原因。
 2. 先确认当前结果属于本会话创建或明确接管的对象；若对象归属不明，停止并说明原因。
 3. 若当前任务是单 worktree 结果，确认该 worktree 已完成 verify、严格 review 与本地 commit，然后优先使用 `rebase` 整理来源分支，再以 fast-forward 方式把主目录本地 `main` 前进到该结果。
 4. 若当前任务是 integration 结果，确认其 gate 已达到 `ready to sync`，且历史已通过 `rebase + squash` 或等价方式收敛为单个 commit，再按线性历史同步回主目录本地 `main`。
@@ -28,4 +28,4 @@ $ARGUMENTS
 - sync-back 结果
 - ExitWorktree 结果
 - cleanup 结果
-- 最终主目录状态：`main + clean` 或 `blocked`
+- 最终主目录状态：`main + no-uncommitted-changes` 或 `blocked`

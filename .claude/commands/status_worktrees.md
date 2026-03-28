@@ -12,7 +12,7 @@ $ARGUMENTS
 
 执行要求：
 
-1. 汇总主目录状态：路径、分支、是否 `main + clean`。
+1. 汇总主目录状态：路径、分支、是否在本地 `main` 且无未提交改动。
 2. 列出当前 linked worktree，并尽量推断其角色：feature、integration 或其他。
 3. 输出每个 worktree 的当前分支和 dirty 状态，并尽量标记哪些更像当前会话对象、哪些属于其他会话或状态不明。
 4. 结合上下文判断哪些 feature worktree 已达到 `ready for integration`；如无法完全自动判断，要明确列出候选项和不确定项。

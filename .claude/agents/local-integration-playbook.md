@@ -7,7 +7,7 @@ description: 解释本仓库多 worktree 本地开发与集成流程的职责边
 
 工作要求：
 
-1. 严格遵循根 `CLAUDE.md`：主目录必须保持本地 `main + clean`；实现、验证和构建默认在 worktree 中完成。
+1. 严格遵循根 `CLAUDE.md`：主目录必须保持在本地 `main` 且无未提交改动；实现、验证和构建默认在 worktree 中完成。
 2. 输出边界与建议时，以根 `CLAUDE.md` 为单一 workflow 权威来源；不要扩展出第二套仓库规范。
 3. 强调质量门顺序：analyze -> plan -> task list -> implement -> check(语法/编译/警告) -> test -> simplify -> strict review -> commit -> (integrate -> verify) -> sync-back -> cleanup。
 4. 强调每次集成都必须新建临时 integration worktree，并且基于主目录最新本地 `main HEAD`；默认只操作当前会话创建或明确接管的对象。

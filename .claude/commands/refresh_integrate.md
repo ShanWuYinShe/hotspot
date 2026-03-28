@@ -13,7 +13,7 @@ $ARGUMENTS
 执行要求：
 
 1. 确认当前或最近的 integration worktree 是否已经基线过期；如果没有过期，明确说明无需 refresh。
-2. 检查主目录是否保持本地 `main + clean`；如果不是，先停下来说明原因。
+2. 检查主目录是否保持在本地 `main` 且无未提交改动；如果不是，先停下来说明原因。
 3. 自动确定本轮 refresh 后要重新纳入的 feature 列表；如范围不清晰，再请求确认。
 4. 停止在旧 integration worktree 上继续操作，不要 merge 最新 `main`。
 5. 从主目录当前最新本地 `main HEAD` 创建新的临时 integration worktree；必须使用 `git worktree add -b <name> <path> main`（`main` 是本地分支引用，**不是 `origin/main`**）。
