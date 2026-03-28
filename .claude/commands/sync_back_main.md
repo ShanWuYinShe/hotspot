@@ -8,7 +8,7 @@ allowed-tools: Bash(git status:*), Bash(git branch:*), Bash(git rev-parse:*), Ba
 
 $ARGUMENTS
 
-该命令是唯一的 sync-back 入口：负责把当前已完成结果按本仓库定义的线性方式同步回主目录本地 `main`，随后退出当前 worktree，并在主目录完成 cleanup。这里的 `main` 始终指主目录的本地 `main` 分支，而不是远程分支。
+该命令是唯一的 sync-back 入口：负责把当前已完成结果按本仓库定义的线性方式同步回主目录本地 `main`，随后退出当前 worktree，并在主目录完成 cleanup。这里的 `main` 始终指主目录的本地 `main` 分支。仓库级 workflow 以根 `CLAUDE.md` 为准。
 
 执行要求：
 
