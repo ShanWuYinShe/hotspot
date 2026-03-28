@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	momenttypes "hotspot/backend-go/internal/modules/moments"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 )
 
@@ -49,6 +50,9 @@ func (r *userErrorRepo) SetRemark(context.Context, string, string, string) error
 }
 func (r *userErrorRepo) ListBlocked(context.Context, string) ([]BlockedUserItem, error) {
 	return nil, r.listBlockedErr
+}
+func (r *userErrorRepo) ListLikedMoments(context.Context, string, int, string) (momenttypes.PaginatedMoments, error) {
+	return momenttypes.PaginatedMoments{}, r.listBlockedErr
 }
 func (r *userErrorRepo) Relationship(context.Context, string, string) (Relationship, error) {
 	return RelationshipNone, r.relErr
@@ -128,6 +132,7 @@ func TestFollowBlockRemarkAndOpenTheDoor(t *testing.T) {
 	handler := NewHandler(service)
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	_ = service.repo.PutProfile(ctx, defaultProfile("user_bob"))
+	_ = service.repo.PutSettings(ctx, "user_bob", defaultSettings())
 
 	followReq := httptest.NewRequest(http.MethodPost, "/me/follow", strings.NewReader(`{"user_id":"user_bob"}`))
 	followReq = followReq.WithContext(ctx)
@@ -172,6 +177,28 @@ func TestFollowBlockRemarkAndOpenTheDoor(t *testing.T) {
 	}
 	if blockedResp.Code != 0 || len(blockedResp.Data.Items) != 1 || blockedResp.Data.Items[0].Remark != "buddy" {
 		t.Fatalf("unexpected blocked response: %#v", blockedResp)
+	}
+}
+
+func TestListLikedMomentsRespectsVisibility(t *testing.T) {
+	repo := NewInMemoryRepository()
+	handler := NewHandler(NewServiceWithRepo(repo))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "viewer", SessionID: "sess_1"})
+	if err := repo.PutSettings(context.Background(), "user_bob", UserSettings{LikedMomentsVisible: false}); err != nil {
+		t.Fatalf("put settings: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/list_liked_moments", strings.NewReader(`{"user_id":"user_bob"}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListLikedMoments(rr, req)
+	var resp struct {
+		Code int                     `json:"code"`
+		Data momenttypes.PaginatedMoments `json:"data"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 || len(resp.Data.Items) != 0 {
+		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
 
@@ -220,6 +247,11 @@ func TestUsersHandlerReturns10600OnServiceError(t *testing.T) {
 	blockedRR := httptest.NewRecorder()
 	handler.ListBlocked(blockedRR, blockedReq)
 	assertUserCode(t, blockedRR, 10600)
+
+	likedReq := httptest.NewRequest(http.MethodPost, "/list_liked_moments", strings.NewReader(`{"user_id":"user_bob"}`)).WithContext(ctx)
+	likedRR := httptest.NewRecorder()
+	handler.ListLikedMoments(likedRR, likedReq)
+	assertUserCode(t, likedRR, 10600)
 }
 
 func assertUserCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {

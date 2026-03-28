@@ -72,4 +72,23 @@ SELECT target_user_id, COALESCE(remark, '')
 FROM user_relations
 WHERE user_id = $1 AND is_blocked = TRUE
 ORDER BY target_user_id ASC`
+
+	queryListLikedMoments = `
+SELECT m.moment_id, m.user_id, m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, ml.liked_at
+FROM moment_likes ml
+JOIN moments m ON m.moment_id = ml.moment_id
+WHERE ml.user_id = $1
+  AND (
+    $2 IS NULL
+    OR ml.liked_at < $2
+    OR (ml.liked_at = $2 AND m.moment_id < $3)
+  )
+ORDER BY ml.liked_at DESC, m.moment_id DESC
+LIMIT $4`
+
+	momenttypesQueryListMomentTagsByMomentID = `
+SELECT tag_name
+FROM moment_tags
+WHERE moment_id = $1
+ORDER BY tag_name ASC`
 )

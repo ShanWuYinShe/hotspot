@@ -3,6 +3,7 @@ package users
 import (
 	"context"
 
+	momenttypes "hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
@@ -52,6 +53,11 @@ func (r *PersistenceRepository) SetRemark(ctx context.Context, userID, targetUse
 func (r *PersistenceRepository) ListBlocked(ctx context.Context, userID string) ([]BlockedUserItem, error) {
 	return r.impl.ListBlocked(ctx, userID)
 }
+
+func (r *PersistenceRepository) ListLikedMoments(ctx context.Context, userID string, limit int, cursor string) (momenttypes.PaginatedMoments, error) {
+	return r.impl.ListLikedMoments(ctx, userID, limit, cursor)
+}
+
 func (r *PersistenceRepository) Relationship(ctx context.Context, userID, targetUserID string) (Relationship, error) {
 	return r.impl.Relationship(ctx, userID, targetUserID)
 }

@@ -28,6 +28,7 @@ func (m *Module) Mount(r chi.Router) {
 			group.Use(idempotency.Middleware)
 			group.Post("/search", m.handler.Search)
 			group.Post("/open_the_door", m.handler.OpenTheDoor)
+			group.Post("/list_liked_moments", m.handler.ListLikedMoments)
 		})
 		usersRouter.Group(func(group chi.Router) {
 			group.Use(platformauth.RequiredAuth)

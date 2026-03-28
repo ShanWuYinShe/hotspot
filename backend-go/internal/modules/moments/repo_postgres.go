@@ -2,10 +2,14 @@ package moments
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type PostgresRepository struct {
@@ -89,25 +93,240 @@ func (r *PostgresRepository) Delete(ctx context.Context, momentID string) error 
 }
 
 func (r *PostgresRepository) Like(ctx context.Context, userID string, momentID string) error {
-	return r.fallback.Like(ctx, userID, momentID)
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.Like(ctx, userID, momentID)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	exists, err := momentLikeExists(ctx, queryable, momentID, userID)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
+	now := time.Now().UTC()
+	if err := queryable.Exec(ctx, queryInsertMomentLike, momentID, userID, now); err != nil {
+		return err
+	}
+	return queryable.Exec(ctx, queryIncrementMomentLikeCount, momentID)
 }
 
 func (r *PostgresRepository) Unlike(ctx context.Context, userID string, momentID string) error {
-	return r.fallback.Unlike(ctx, userID, momentID)
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.Unlike(ctx, userID, momentID)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	exists, err := momentLikeExists(ctx, queryable, momentID, userID)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return nil
+	}
+	if err := queryable.Exec(ctx, queryDeleteMomentLike, momentID, userID); err != nil {
+		return err
+	}
+	return queryable.Exec(ctx, queryDecrementMomentLikeCount, momentID)
 }
 
 func (r *PostgresRepository) Favorite(ctx context.Context, userID string, momentID string) error {
-	return r.fallback.Favorite(ctx, userID, momentID)
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.Favorite(ctx, userID, momentID)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryInsertMomentFavorite, userID, momentID, time.Now().UTC())
 }
 
 func (r *PostgresRepository) Unfavorite(ctx context.Context, userID string, momentID string) error {
-	return r.fallback.Unfavorite(ctx, userID, momentID)
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.Unfavorite(ctx, userID, momentID)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryDeleteMomentFavorite, userID, momentID)
 }
 
 func (r *PostgresRepository) ListLikes(ctx context.Context, momentID string, limit int, cursor string) ([]LikeItem, string, error) {
-	return r.fallback.ListLikes(ctx, momentID, limit, cursor)
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.ListLikes(ctx, momentID, limit, cursor)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return nil, "", persistence.ErrNotImplemented
+	}
+	limit = normalizeMomentInteractionLimit(limit)
+	cursorLikedAt, cursorUserID, err := decodeMomentLikeCursor(cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	rows, err := queryable.Query(ctx, queryListMomentLikes, momentID, cursorLikedAt, cursorUserID, limit+1)
+	if err != nil {
+		return nil, "", err
+	}
+	defer rows.Close()
+	items := make([]LikeItem, 0, limit+1)
+	cursors := make([]string, 0, limit+1)
+	for rows.Next() {
+		var item LikeItem
+		if err := rows.Scan(&item.UserID, &item.LikedAt); err != nil {
+			return nil, "", err
+		}
+		item.Nickname = item.UserID
+		items = append(items, item)
+		cursors = append(cursors, encodeMomentLikeCursor(item.LikedAt, item.UserID))
+		if len(items) == limit+1 {
+			return items[:limit], cursors[limit-1], nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, "", err
+	}
+	return items, "", nil
 }
 
 func (r *PostgresRepository) ListFavorites(ctx context.Context, userID string, limit int, cursor string) (PaginatedMoments, error) {
-	return r.fallback.ListFavorites(ctx, userID, limit, cursor)
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.ListFavorites(ctx, userID, limit, cursor)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return PaginatedMoments{}, persistence.ErrNotImplemented
+	}
+	limit = normalizeMomentInteractionLimit(limit)
+	cursorAt, cursorMomentID, err := decodeMomentFavoriteCursor(cursor)
+	if err != nil {
+		return PaginatedMoments{}, err
+	}
+	rows, err := queryable.Query(ctx, queryListFavoriteMoments, userID, cursorAt, cursorMomentID, limit+1)
+	if err != nil {
+		return PaginatedMoments{}, err
+	}
+	defer rows.Close()
+	items := make([]MomentItem, 0, limit+1)
+	momentIDs := make([]string, 0, limit+1)
+	cursors := make([]string, 0, limit+1)
+	for rows.Next() {
+		item, favoritedAt, err := scanFavoriteMomentRow(rows)
+		if err != nil {
+			return PaginatedMoments{}, err
+		}
+		item.MyState = &MyMomentState{IsFavorited: true}
+		items = append(items, item)
+		momentIDs = append(momentIDs, item.MomentID)
+		cursors = append(cursors, encodeMomentFavoriteCursor(favoritedAt, item.MomentID))
+		if len(items) == limit+1 {
+			tagsByMomentID, err := loadMomentTags(ctx, queryable, momentIDs[:limit])
+			if err != nil {
+				return PaginatedMoments{}, err
+			}
+			for i := 0; i < limit; i++ {
+				items[i].Tags = tagsByMomentID[items[i].MomentID]
+			}
+			return PaginatedMoments{Items: items[:limit], NextCursor: cursors[limit-1]}, nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return PaginatedMoments{}, err
+	}
+	tagsByMomentID, err := loadMomentTags(ctx, queryable, momentIDs)
+	if err != nil {
+		return PaginatedMoments{}, err
+	}
+	for i := range items {
+		items[i].Tags = tagsByMomentID[items[i].MomentID]
+	}
+	return PaginatedMoments{Items: items}, nil
+}
+
+type momentInteractionCursor struct {
+	At string `json:"at"`
+	ID string `json:"id"`
+}
+
+func normalizeMomentInteractionLimit(limit int) int {
+	switch {
+	case limit <= 0:
+		return 20
+	case limit > 100:
+		return 100
+	default:
+		return limit
+	}
+}
+
+func encodeMomentLikeCursor(likedAt, userID string) string {
+	blob, err := json.Marshal(momentInteractionCursor{At: likedAt, ID: userID})
+	if err != nil {
+		return ""
+	}
+	return base64.RawURLEncoding.EncodeToString(blob)
+}
+
+func decodeMomentLikeCursor(cursor string) (any, string, error) {
+	if cursor == "" {
+		return nil, "", nil
+	}
+	blob, err := base64.RawURLEncoding.DecodeString(cursor)
+	if err != nil {
+		return nil, "", persistence.ErrNotImplemented
+	}
+	var decoded momentInteractionCursor
+	if err := json.Unmarshal(blob, &decoded); err != nil || decoded.At == "" || decoded.ID == "" {
+		return nil, "", persistence.ErrNotImplemented
+	}
+	likedAt, err := time.Parse(time.RFC3339, decoded.At)
+	if err != nil {
+		return nil, "", persistence.ErrNotImplemented
+	}
+	return likedAt.UTC(), decoded.ID, nil
+}
+
+func encodeMomentFavoriteCursor(favoritedAt, momentID string) string {
+	blob, err := json.Marshal(momentInteractionCursor{At: favoritedAt, ID: momentID})
+	if err != nil {
+		return ""
+	}
+	return base64.RawURLEncoding.EncodeToString(blob)
+}
+
+func decodeMomentFavoriteCursor(cursor string) (any, string, error) {
+	if cursor == "" {
+		return nil, "", nil
+	}
+	blob, err := base64.RawURLEncoding.DecodeString(cursor)
+	if err != nil {
+		return nil, "", persistence.ErrNotImplemented
+	}
+	var decoded momentInteractionCursor
+	if err := json.Unmarshal(blob, &decoded); err != nil || decoded.At == "" || decoded.ID == "" {
+		return nil, "", persistence.ErrNotImplemented
+	}
+	favoritedAt, err := time.Parse(time.RFC3339, decoded.At)
+	if err != nil {
+		return nil, "", persistence.ErrNotImplemented
+	}
+	return favoritedAt.UTC(), decoded.ID, nil
+}
+
+func momentLikeExists(ctx context.Context, queryable persistence.QueryableDB, momentID, userID string) (bool, error) {
+	var marker int
+	err := queryable.QueryRow(ctx, queryGetMomentLike, momentID, userID).Scan(&marker)
+	if err == nil {
+		return true, nil
+	}
+	if err == pgx.ErrNoRows {
+		return false, nil
+	}
+	return false, err
 }

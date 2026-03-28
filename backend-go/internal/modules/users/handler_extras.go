@@ -115,6 +115,20 @@ func (h *Handler) SetRemark(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
+func (h *Handler) ListLikedMoments(w http.ResponseWriter, r *http.Request) {
+	var req UserLikedMomentsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.UserID == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	result, err := h.service.ListLikedMoments(r.Context(), req)
+	if err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(result))
+}
+
 func (h *Handler) toggleUser(r *http.Request, w http.ResponseWriter, fn func(string) error) {
 	var req ToggleUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.UserID == "" {

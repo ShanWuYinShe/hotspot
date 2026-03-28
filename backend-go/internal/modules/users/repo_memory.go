@@ -4,6 +4,8 @@ import (
 	"context"
 	"sort"
 	"sync"
+
+	momenttypes "hotspot/backend-go/internal/modules/moments"
 )
 
 type InMemoryRepository struct {
@@ -118,6 +120,12 @@ func (r *InMemoryRepository) ListBlocked(_ context.Context, userID string) ([]Bl
 	sort.Slice(items, func(i, j int) bool { return items[i].User.UserID < items[j].User.UserID })
 	return items, nil
 }
+func (r *InMemoryRepository) ListLikedMoments(_ context.Context, userID string, limit int, cursor string) (momenttypes.PaginatedMoments, error) {
+	_ = limit
+	_ = cursor
+	return momenttypes.PaginatedMoments{Items: []momenttypes.MomentItem{}}, nil
+}
+
 func (r *InMemoryRepository) Relationship(_ context.Context, userID, targetUserID string) (Relationship, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

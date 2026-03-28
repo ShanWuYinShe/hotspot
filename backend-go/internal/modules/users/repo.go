@@ -1,6 +1,10 @@
 package users
 
-import "context"
+import (
+	"context"
+
+	momenttypes "hotspot/backend-go/internal/modules/moments"
+)
 
 type Repository interface {
 	GetProfile(context.Context, string) (MyProfile, bool, error)
@@ -15,5 +19,6 @@ type Repository interface {
 	Unblock(context.Context, string, string) error
 	SetRemark(context.Context, string, string, string) error
 	ListBlocked(context.Context, string) ([]BlockedUserItem, error)
+	ListLikedMoments(context.Context, string, int, string) (momenttypes.PaginatedMoments, error)
 	Relationship(context.Context, string, string) (Relationship, error)
 }

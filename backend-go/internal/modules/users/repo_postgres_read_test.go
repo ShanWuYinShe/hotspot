@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	momenttypes "hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
 )
@@ -97,6 +98,10 @@ func (r *userFallbackRepo) ListBlocked(context.Context, string) ([]BlockedUserIt
 	r.markUsed()
 	return nil, nil
 }
+func (r *userFallbackRepo) ListLikedMoments(context.Context, string, int, string) (momenttypes.PaginatedMoments, error) {
+	r.markUsed()
+	return momenttypes.PaginatedMoments{}, nil
+}
 func (r *userFallbackRepo) Relationship(context.Context, string, string) (Relationship, error) {
 	r.markUsed()
 	return RelationshipNone, nil
@@ -143,6 +148,8 @@ func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 		queryRowsByQuery: map[string][][]any{
 			querySearchUserProfiles: {{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", "2026-03-20T00:00:00Z", "2026-03-19T00:00:00Z"}},
 			queryListBlockedUsers:  {{"user_bob", "buddy"}},
+			queryListLikedMoments:  {{"moment_1", "user_alice", "hello", "2026-03-20T00:00:00Z", 3, 2, 1, "南天门", 35.0, 112.0, "public", "2026-03-21T00:00:00Z"}},
+			momenttypesQueryListMomentTagsByMomentID: {{"travel"}, {"hotspot"}},
 		},
 		queryErrs: map[string]error{},
 		execErrs:  map[string]error{},
@@ -172,6 +179,13 @@ func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 	if err != nil || rel != RelationshipFollowing {
 		t.Fatalf("unexpected relationship: %v err=%v", rel, err)
 	}
+	liked, err := repo.ListLikedMoments(context.Background(), "user_alice", 20, "")
+	if err != nil || len(liked.Items) != 1 || liked.Items[0].MomentID != "moment_1" {
+		t.Fatalf("unexpected liked moments: %#v err=%v", liked, err)
+	}
+	if liked.Items[0].MyState == nil || !liked.Items[0].MyState.IsLiked || len(liked.Items[0].Tags) != 2 {
+		t.Fatalf("unexpected liked moment state: %#v", liked.Items[0])
+	}
 	if fallback.used {
 		t.Fatal("expected postgres path without fallback")
 	}
@@ -189,6 +203,10 @@ func TestPostgresRepositorySearchAndListBlockedReturnErrorsWithoutFallback(t *te
 	}
 	if _, err := repo.ListBlocked(context.Background(), "user_alice"); err == nil {
 		t.Fatal("expected list blocked error")
+	}
+	backend.queryErrs[queryListLikedMoments] = errors.New("boom")
+	if _, err := repo.ListLikedMoments(context.Background(), "user_alice", 20, ""); err == nil {
+		t.Fatal("expected liked moments error")
 	}
 	if fallback.used {
 		t.Fatal("expected query failures without fallback")

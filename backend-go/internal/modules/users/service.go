@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	momenttypes "hotspot/backend-go/internal/modules/moments"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/realtime"
 )
@@ -158,6 +159,32 @@ func (s *Service) ListBlocked(ctx context.Context) (PaginatedBlockedUsers, error
 		return PaginatedBlockedUsers{}, err
 	}
 	return PaginatedBlockedUsers{Items: items}, nil
+}
+
+func (s *Service) ListLikedMoments(ctx context.Context, req UserLikedMomentsRequest) (momenttypes.PaginatedMoments, error) {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	settings, ok, err := s.repo.GetSettings(ctx, req.UserID)
+	if err != nil {
+		return momenttypes.PaginatedMoments{}, err
+	}
+	if !ok {
+		settings = defaultSettings()
+	}
+	if !settings.LikedMomentsVisible && principal.UserID != req.UserID {
+		return momenttypes.PaginatedMoments{Items: []momenttypes.MomentItem{}}, nil
+	}
+	limit := 20
+	cursor := ""
+	if req.Pagination != nil {
+		if req.Pagination.Limit > 0 {
+			limit = req.Pagination.Limit
+		}
+		if limit > 100 {
+			limit = 100
+		}
+		cursor = req.Pagination.Cursor
+	}
+	return s.repo.ListLikedMoments(ctx, req.UserID, limit, cursor)
 }
 
 func defaultProfile(userID string) MyProfile {

@@ -1,5 +1,7 @@
 package users
 
+import momenttypes "hotspot/backend-go/internal/modules/moments"
+
 type Relationship string
 
 const (
@@ -79,4 +81,9 @@ type BlockedUserItem struct {
 type PaginatedBlockedUsers struct {
 	Items      []BlockedUserItem `json:"items"`
 	NextCursor string            `json:"next_cursor,omitempty"`
+}
+
+type UserLikedMomentsRequest struct {
+	UserID     string                     `json:"user_id"`
+	Pagination *momenttypes.PaginationParams `json:"pagination,omitempty"`
 }

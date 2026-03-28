@@ -122,3 +122,20 @@ func loadMomentTags(ctx context.Context, queryable persistence.QueryableDB, mome
 	}
 	return tagsByMomentID, nil
 }
+
+func scanFavoriteMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, string, error) {
+	var item MomentItem
+	var userID, createdAt, locationName, privacyLevel, favoritedAt string
+	var latitude, longitude float64
+	if err := scanner.Scan(&item.MomentID, &userID, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &favoritedAt); err != nil {
+		return MomentItem{}, "", err
+	}
+	item.User = UserInfo{UserID: userID, Nickname: userID}
+	item.CreatedAt = createdAt
+	item.Location = Location{Point: struct {
+		Latitude  float64 `json:"latitude"`
+		Longitude float64 `json:"longitude"`
+	}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
+	item.PrivacyLevel = privacyLevel
+	return item, favoritedAt, nil
+}

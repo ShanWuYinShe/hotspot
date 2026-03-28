@@ -3,6 +3,7 @@ package users
 import (
 	"context"
 
+	momenttypes "hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
@@ -102,4 +103,11 @@ func (r *PostgresRepository) SetRemark(ctx context.Context, userID, targetUserID
 	}
 	following, blocked, _, _ := r.getRelationFields(ctx, userID, targetUserID)
 	return queryable.Exec(ctx, queryUpsertUserRelation, userID, targetUserID, following, blocked, remark)
+}
+
+func (r *PostgresRepository) ListLikedMoments(ctx context.Context, userID string, limit int, cursor string) (momenttypes.PaginatedMoments, error) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.ListLikedMoments(ctx, userID, limit, cursor)
+	}
+	return listLikedMomentsPostgres(ctx, r.factory, userID, limit, cursor)
 }

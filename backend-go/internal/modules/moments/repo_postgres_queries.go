@@ -38,4 +38,62 @@ ORDER BY tag_name ASC`
 UPDATE moments
 SET comments_count = comments_count + 1
 WHERE moment_id = $1`
+
+	queryInsertMomentLike = `
+INSERT INTO moment_likes (moment_id, user_id, liked_at)
+VALUES ($1, $2, $3)
+ON CONFLICT (moment_id, user_id) DO NOTHING`
+
+	queryDeleteMomentLike = `
+DELETE FROM moment_likes
+WHERE moment_id = $1 AND user_id = $2`
+
+	queryGetMomentLike = `
+SELECT 1
+FROM moment_likes
+WHERE moment_id = $1 AND user_id = $2`
+
+	queryIncrementMomentLikeCount = `
+UPDATE moments
+SET likes_count = likes_count + 1
+WHERE moment_id = $1`
+
+	queryDecrementMomentLikeCount = `
+UPDATE moments
+SET likes_count = GREATEST(likes_count - 1, 0)
+WHERE moment_id = $1`
+
+	queryInsertMomentFavorite = `
+INSERT INTO moment_favorites (user_id, moment_id, favorited_at)
+VALUES ($1, $2, $3)
+ON CONFLICT (user_id, moment_id) DO NOTHING`
+
+	queryDeleteMomentFavorite = `
+DELETE FROM moment_favorites
+WHERE user_id = $1 AND moment_id = $2`
+
+	queryListMomentLikes = `
+SELECT user_id, liked_at
+FROM moment_likes
+WHERE moment_id = $1
+  AND (
+    $2 IS NULL
+    OR liked_at < $2
+    OR (liked_at = $2 AND user_id > $3)
+  )
+ORDER BY liked_at DESC, user_id ASC
+LIMIT $4`
+
+	queryListFavoriteMoments = `
+SELECT m.moment_id, m.user_id, m.description, m.created_at, m.likes_count, m.comments_count, m.shares_count, m.location_name, m.latitude, m.longitude, m.privacy_level, mf.favorited_at
+FROM moment_favorites mf
+JOIN moments m ON m.moment_id = mf.moment_id
+WHERE mf.user_id = $1
+  AND (
+    $2 IS NULL
+    OR mf.favorited_at < $2
+    OR (mf.favorited_at = $2 AND m.moment_id < $3)
+  )
+ORDER BY mf.favorited_at DESC, m.moment_id DESC
+LIMIT $4`
 )
