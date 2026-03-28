@@ -71,45 +71,51 @@ export struct RelationshipHubPage {
 
         Scroll() {
           Column({ space: 0 }) {
-            SettingsSectionCard({ title: '好友' }) {
-              RelationshipListSection({
-                title: '互相关注',
-                subtitle: '你们已经成为彼此的好友。',
-                emptyText: '暂时还没有好友。',
-                friends: this.friends
-              })
-            }
-            .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
-
-            SettingsSectionCard({ title: '关注与粉丝' }) {
-              Column({ space: DesignConstants.SPACING.LG }) {
+            Column() {
+              SettingsSectionCard({ title: '好友' }) {
                 RelationshipListSection({
-                  title: '我的关注',
-                  subtitle: '你主动关注的人。',
-                  emptyText: '还没有关注任何人。',
-                  following: this.following
-                })
-                RelationshipListSection({
-                  title: '我的粉丝',
-                  subtitle: '关注你的人。',
-                  emptyText: '还没有新的粉丝。',
-                  followers: this.followers
+                  title: '互相关注',
+                  subtitle: '你们已经成为彼此的好友。',
+                  emptyText: '暂时还没有好友。',
+                  friends: this.friends
                 })
               }
-              .width('100%')
             }
-            .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
 
-            SettingsSectionCard({ title: '黑名单' }) {
-              RelationshipListSection({
-                title: '已拉黑用户',
-                subtitle: '你已屏蔽的用户会在这里出现。',
-                emptyText: '当前没有拉黑任何用户。',
-                blocked: this.blocked,
-                unblockUserAction: (userId: string) => this.unblock(userId)
-              })
+            Column() {
+              SettingsSectionCard({ title: '关注与粉丝' }) {
+                Column({ space: DesignConstants.SPACING.LG }) {
+                  RelationshipListSection({
+                    title: '我的关注',
+                    subtitle: '你主动关注的人。',
+                    emptyText: '还没有关注任何人。',
+                    following: this.following
+                  })
+                  RelationshipListSection({
+                    title: '我的粉丝',
+                    subtitle: '关注你的人。',
+                    emptyText: '还没有新的粉丝。',
+                    followers: this.followers
+                  })
+                }
+                .width('100%')
+              }
             }
-            .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+
+            Column() {
+              SettingsSectionCard({ title: '黑名单' }) {
+                RelationshipListSection({
+                  title: '已拉黑用户',
+                  subtitle: '你已屏蔽的用户会在这里出现。',
+                  emptyText: '当前没有拉黑任何用户。',
+                  blocked: this.blocked,
+                  unblockUserAction: (userId: string) => this.unblock(userId)
+                })
+              }
+            }
+            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
           }
           .width('100%')
           .padding({ bottom: SafeAreaUtils.resolveBottomPadding(0, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG) })

@@ -56,17 +56,62 @@ export struct PrivacySettingsPage {
     }
   }
 
+  private buildUpdatedSettings(current: UserSettings, key: keyof UserSettings, value: boolean): UserSettings {
+    return {
+      privacy_level: current.privacy_level,
+      location_visible: key === 'location_visible' ? value : current.location_visible,
+      presence_visible: key === 'presence_visible' ? value : current.presence_visible,
+      social_lists_visible: key === 'social_lists_visible' ? value : current.social_lists_visible,
+      groups_visible: key === 'groups_visible' ? value : current.groups_visible,
+      liked_moments_visible: key === 'liked_moments_visible' ? value : current.liked_moments_visible,
+      stats_visible: key === 'stats_visible' ? value : current.stats_visible,
+      allow_follow: key === 'allow_follow' ? value : current.allow_follow,
+      allow_private_chat: current.allow_private_chat,
+      searchable: key === 'searchable' ? value : current.searchable,
+      phone_searchable: current.phone_searchable,
+      nickname_searchable: key === 'nickname_searchable' ? value : current.nickname_searchable,
+      location_searchable: key === 'location_searchable' ? value : current.location_searchable
+    };
+  }
+
+  private getSettingValue(key: keyof UserSettings): boolean {
+    if (!this.settings) {
+      return false;
+    }
+    switch (key) {
+      case 'location_visible':
+        return this.settings.location_visible;
+      case 'presence_visible':
+        return this.settings.presence_visible;
+      case 'social_lists_visible':
+        return this.settings.social_lists_visible;
+      case 'groups_visible':
+        return this.settings.groups_visible;
+      case 'liked_moments_visible':
+        return this.settings.liked_moments_visible;
+      case 'stats_visible':
+        return this.settings.stats_visible;
+      case 'allow_follow':
+        return this.settings.allow_follow;
+      case 'searchable':
+        return this.settings.searchable;
+      case 'nickname_searchable':
+        return this.settings.nickname_searchable;
+      case 'location_searchable':
+        return this.settings.location_searchable;
+      default:
+        return false;
+    }
+  }
+
   private async updateSetting(key: keyof UserSettings, value: boolean): Promise<void> {
     if (!this.settings) {
       return;
     }
-    const next = { ...this.settings } as UserSettings;
-    (next as Record<string, boolean>)[String(key)] = value;
+    const next = this.buildUpdatedSettings(this.settings, key, value);
     this.settings = next;
     try {
-      const partial: Record<string, boolean> = {};
-      partial[String(key)] = value;
-      const response = await ApiClient.updateSettings({ settings: partial as Partial<UserSettings> });
+      const response = await ApiClient.updateSettings({ settings: next });
       if (response.code !== 0) {
         throw new Error(response.message || '保存失败');
       }
@@ -88,18 +133,20 @@ export struct PrivacySettingsPage {
 
         Scroll() {
           Column({ space: 0 }) {
-            SettingsSectionCard({ title: '可见性与搜索范围' }) {
-              Column() {
-                ForEach(PRIVACY_ITEMS, (item: SettingToggleItem) => {
-                  ToggleSettingRow({
-                    item,
-                    isOn: this.settings ? Boolean(this.settings[item.key]) : false,
-                    onChange: (value: boolean) => this.updateSetting(item.key, value)
-                  })
-                }, (item: SettingToggleItem) => String(item.key))
+            Column() {
+              SettingsSectionCard({ title: '可见性与搜索范围' }) {
+                Column() {
+                  ForEach(PRIVACY_ITEMS, (item: SettingToggleItem) => {
+                    ToggleSettingRow({
+                      item,
+                      isOn: this.getSettingValue(item.key),
+                      onChange: (value: boolean) => this.updateSetting(item.key, value)
+                    })
+                  }, (item: SettingToggleItem) => String(item.key))
+                }
               }
             }
-            .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
           }
           .width('100%')
           .padding({ bottom: SafeAreaUtils.resolveBottomPadding(0, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG) })

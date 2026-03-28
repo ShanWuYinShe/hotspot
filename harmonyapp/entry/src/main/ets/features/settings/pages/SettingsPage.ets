@@ -74,8 +74,13 @@ export struct SettingsPage {
     return this.themeMode === option.mode;
   }
 
-  private getSectionMargin() {
-    return { left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: 18 };
+  private getSectionMargin(top: number = 0): Padding {
+    return {
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: top,
+      bottom: DesignConstants.SPACING.LG
+    };
   }
 
   private async handleThemeChange(mode: ThemeMode): Promise<void> {
@@ -268,82 +273,96 @@ export struct SettingsPage {
         Refresh({ refreshing: $$this.metaRefreshing, builder: RefreshIndicator }) {
           Scroll() {
             Column({ space: 0 }) {
-              SettingsSectionCard({ title: '账号与资料' }) {
-                Column() {
-                  ForEach(this.buildAccountEntries(), (item: SettingsEntryItem) => {
-                    SettingsEntryRow({ item })
-                  }, (item: SettingsEntryItem) => item.title)
-                }
-              }
-              .margin(this.getSectionMargin())
-
-              SettingsSectionCard({ title: '隐私与关系' }) {
-                Column() {
-                  ForEach(this.buildPrivacyEntries(), (item: SettingsEntryItem) => {
-                    SettingsEntryRow({ item })
-                  }, (item: SettingsEntryItem) => item.title)
-                }
-              }
-              .margin(this.getSectionMargin())
-
-              SettingsSectionCard({ title: '系统与安全' }) {
-                Column() {
-                  ForEach(this.buildSystemEntries(), (item: SettingsEntryItem) => {
-                    SettingsEntryRow({ item })
-                  }, (item: SettingsEntryItem) => item.title)
-                }
-              }
-              .margin(this.getSectionMargin())
-
-              SettingsSectionCard({ title: '外观与高级' }) {
-                Column() {
-                  SettingsEntryRow({ item: {
-                    icon: AppIcon.STAR_FILL,
-                    title: '外观主题',
-                    subtitle: this.getThemeDisplayLabel(),
-                    action: () => { this.showThemeSheet = true; },
-                    accentColor: this.getThemePreviewColor()
-                  } })
-                  SettingsEntryRow({ item: {
-                    icon: AppIcon.SETTINGS,
-                    title: '高级设置',
-                    subtitle: '开发者选项、诊断与缓存工具',
-                    action: () => AppRouter.push(PageNames.ADVANCED_SETTINGS)
-                  } })
-                }
-              }
-              .margin(this.getSectionMargin())
-
-              SettingsSectionCard({ title: '平台状态' }) {
-                SettingsMetaCard({
-                  meta: this.systemMeta,
-                  loading: this.systemMetaLoading,
-                  error: this.systemMetaError,
-                  lastChecked: this.systemMetaLastChecked,
-                  refreshAction: () => {
-                    this.loadSystemMeta(true);
-                    this.loadAnnouncements(true);
+              Column() {
+                SettingsSectionCard({ title: '账号与资料' }) {
+                  Column() {
+                    ForEach(this.buildAccountEntries(), (item: SettingsEntryItem) => {
+                      SettingsEntryRow({ item })
+                    }, (item: SettingsEntryItem) => item.title)
                   }
-                })
+                }
               }
-              .margin(this.getSectionMargin())
+              .padding(this.getSectionMargin(DesignConstants.SPACING.LG))
 
-              SettingsSectionCard({ title: '系统公告速览' }) {
-                AnnouncementSummaryCard({
-                  items: this.announcements,
-                  openAll: () => {
-                    const params = new AnnouncementsRouteParam();
-                    params.items = this.announcements as Object[];
-                    AppRouter.push(PageNames.ANNOUNCEMENTS, params);
+              Column() {
+                SettingsSectionCard({ title: '隐私与关系' }) {
+                  Column() {
+                    ForEach(this.buildPrivacyEntries(), (item: SettingsEntryItem) => {
+                      SettingsEntryRow({ item })
+                    }, (item: SettingsEntryItem) => item.title)
                   }
-                })
+                }
               }
-              .margin(this.getSectionMargin())
+              .padding(this.getSectionMargin())
 
-              SettingsSectionCard({ title: '公开配置与帮助' }) {
-                SupportConfigCard({ config: this.clientConfig })
+              Column() {
+                SettingsSectionCard({ title: '系统与安全' }) {
+                  Column() {
+                    ForEach(this.buildSystemEntries(), (item: SettingsEntryItem) => {
+                      SettingsEntryRow({ item })
+                    }, (item: SettingsEntryItem) => item.title)
+                  }
+                }
               }
-              .margin(this.getSectionMargin())
+              .padding(this.getSectionMargin())
+
+              Column() {
+                SettingsSectionCard({ title: '外观与高级' }) {
+                  Column() {
+                    SettingsEntryRow({ item: {
+                      icon: AppIcon.STAR_FILL,
+                      title: '外观主题',
+                      subtitle: this.getThemeDisplayLabel(),
+                      action: () => { this.showThemeSheet = true; },
+                      accentColor: this.getThemePreviewColor()
+                    } })
+                    SettingsEntryRow({ item: {
+                      icon: AppIcon.SETTINGS,
+                      title: '高级设置',
+                      subtitle: '开发者选项、诊断与缓存工具',
+                      action: () => AppRouter.push(PageNames.ADVANCED_SETTINGS)
+                    } })
+                  }
+                }
+              }
+              .padding(this.getSectionMargin())
+
+              Column() {
+                SettingsSectionCard({ title: '平台状态' }) {
+                  SettingsMetaCard({
+                    meta: this.systemMeta,
+                    loading: this.systemMetaLoading,
+                    error: this.systemMetaError,
+                    lastChecked: this.systemMetaLastChecked,
+                    refreshAction: () => {
+                      this.loadSystemMeta(true);
+                      this.loadAnnouncements(true);
+                    }
+                  })
+                }
+              }
+              .padding(this.getSectionMargin())
+
+              Column() {
+                SettingsSectionCard({ title: '系统公告速览' }) {
+                  AnnouncementSummaryCard({
+                    items: this.announcements,
+                    openAll: () => {
+                      const params = new AnnouncementsRouteParam();
+                      params.items = this.announcements as Object[];
+                      AppRouter.push(PageNames.ANNOUNCEMENTS, params);
+                    }
+                  })
+                }
+              }
+              .padding(this.getSectionMargin())
+
+              Column() {
+                SettingsSectionCard({ title: '公开配置与帮助' }) {
+                  SupportConfigCard({ config: this.clientConfig })
+                }
+              }
+              .padding(this.getSectionMargin())
 
               if (this.isLoggedIn) {
                 Button('退出登录')
@@ -435,30 +454,25 @@ export struct SettingsPage {
 
   @Builder
   private ThemeOptionCard(option: ThemeOptionItem) {
-    const palette = this.getThemeOptionPalette(option);
-    const preview = AppThemeVisuals.getThemePreviewStyle(palette.id);
-    const tabBar = AppThemeVisuals.getTabBarVisualStyle(palette.id);
-    const isActive = this.isThemeOptionActive(option);
-
     Column({ space: DesignConstants.SPACING.MD }) {
       Row({ space: DesignConstants.SPACING.SM }) {
         Column({ space: 4 }) {
           Text(option.label)
             .fontSize(DesignConstants.FONT.SIZE.LG)
             .fontWeight(FontWeight.Medium)
-            .fontColor(palette.textPrimary)
+            .fontColor(this.getThemeOptionPalette(option).textPrimary)
           Text(option.description)
             .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(palette.textSecondary)
+            .fontColor(this.getThemeOptionPalette(option).textSecondary)
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
 
-        Text(isActive ? '当前使用' : '点击切换')
+        Text(this.isThemeOptionActive(option) ? '当前使用' : '点击切换')
           .fontSize(DesignConstants.FONT.SIZE.XS)
-          .fontColor(isActive ? palette.accentText : palette.accentBackground)
+          .fontColor(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).accentText : this.getThemeOptionPalette(option).accentBackground)
           .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-          .backgroundColor(isActive ? palette.accentBackground : palette.surfaceSubtle)
+          .backgroundColor(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).accentBackground : this.getThemeOptionPalette(option).surfaceSubtle)
           .borderRadius(DesignConstants.SHAPE.CHIP)
       }
       .width('100%')
@@ -467,51 +481,51 @@ export struct SettingsPage {
         Stack({ alignContent: Alignment.Top }) {
           Column({ space: 8 }) {
             Blank()
-              .width(preview.heroAvatarSize)
-              .height(preview.heroAvatarSize)
+              .width(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).heroAvatarSize)
+              .height(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).heroAvatarSize)
               .borderRadius(DesignConstants.RADIUS.FULL)
-              .backgroundColor(palette.surfaceSubtle)
-              .border({ width: 1, color: palette.borderColor })
-              .shadow(preview.haloShadow)
+              .backgroundColor(this.getThemeOptionPalette(option).surfaceSubtle)
+              .border({ width: 1, color: this.getThemeOptionPalette(option).borderColor })
+              .shadow(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).haloShadow)
 
             Blank()
               .width('70%')
-              .height(preview.primaryButton.height)
-              .borderRadius(preview.primaryButton.borderRadius)
-              .backgroundColor(preview.primaryButton.backgroundColor)
-              .shadow(preview.primaryButton.shadow)
+              .height(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).primaryButton.height)
+              .borderRadius(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).primaryButton.borderRadius)
+              .backgroundColor(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).primaryButton.backgroundColor)
+              .shadow(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).primaryButton.shadow)
 
             Row({ space: 10 }) {
-              Blank().layoutWeight(1).height(40).borderRadius(preview.tileRadius).backgroundColor(palette.surfaceSubtle)
-              Blank().layoutWeight(1).height(40).borderRadius(preview.tileRadius).backgroundColor(palette.surfaceSubtle)
+              Blank().layoutWeight(1).height(40).borderRadius(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).tileRadius).backgroundColor(this.getThemeOptionPalette(option).surfaceSubtle)
+              Blank().layoutWeight(1).height(40).borderRadius(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).tileRadius).backgroundColor(this.getThemeOptionPalette(option).surfaceSubtle)
             }
             .width('100%')
 
             Blank()
               .width('100%')
               .height(22)
-              .borderRadius(tabBar.radius)
-              .backgroundColor(tabBar.backgroundColor)
-              .shadow(tabBar.shadow)
+              .borderRadius(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).radius)
+              .backgroundColor(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).backgroundColor)
+              .shadow(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).shadow)
           }
           .width('100%')
           .alignItems(HorizontalAlign.Center)
           .padding(DesignConstants.SPACING.MD)
         }
         .width('100%')
-        .borderRadius(preview.card.borderRadius)
-        .backgroundColor(preview.card.backgroundColor)
-        .border({ width: preview.card.borderWidth, color: preview.card.borderColor })
-        .shadow(preview.card.shadow)
+        .borderRadius(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).card.borderRadius)
+        .backgroundColor(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).card.backgroundColor)
+        .border({ width: AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).card.borderWidth, color: AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).card.borderColor })
+        .shadow(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).card.shadow)
       }
       .width('100%')
     }
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
-    .borderRadius(preview.card.borderRadius)
-    .backgroundColor(isActive ? palette.surfaceBackground : palette.surfaceSubtle)
-    .border({ width: isActive ? 2 : 1, color: isActive ? palette.accentBackground : palette.borderColor })
-    .shadow(isActive ? palette.elevatedShadow : palette.surfaceShadow)
+    .borderRadius(AppThemeVisuals.getThemePreviewStyle(this.getThemeOptionPalette(option).id).card.borderRadius)
+    .backgroundColor(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).surfaceBackground : this.getThemeOptionPalette(option).surfaceSubtle)
+    .border({ width: this.isThemeOptionActive(option) ? 2 : 1, color: this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).accentBackground : this.getThemeOptionPalette(option).borderColor })
+    .shadow(this.isThemeOptionActive(option) ? this.getThemeOptionPalette(option).elevatedShadow : this.getThemeOptionPalette(option).surfaceShadow)
     .onClick(() => {
       this.handleThemeChange(option.mode).catch(() => {
         SystemToast.showError('切换主题失败', this.getUIContext());

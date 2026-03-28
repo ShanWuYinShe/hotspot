@@ -60,15 +60,16 @@ export struct AnnouncementsPage {
         Refresh({ refreshing: $$this.refreshing, builder: RefreshIndicator }) {
           Scroll() {
             Column({ space: 0 }) {
+              Column() {
               SettingsSectionCard({ title: '平台通知' }) {
                 AnnouncementSummaryCard({
                   items: this.announcements,
                   maxItems: 0,
-                  showOpenAll: false,
-                  openAll: () => {}
+                  showOpenAll: false
                 })
               }
-              .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+            }
+            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
             }
             .width('100%')
             .padding({ bottom: SafeAreaUtils.resolveBottomPadding(0, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG) })

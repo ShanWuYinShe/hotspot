@@ -5,7 +5,7 @@
 
 import { AppThemeShadow } from './AppThemeTypes';
 
-interface ColorConfig {
+export interface ColorConfig {
   pageBackground: string;
   surfaceBackground: string;
   surfaceSubtle: string;
@@ -27,7 +27,7 @@ interface ColorConfig {
   isDarkTheme: boolean;
 }
 
-interface ThemeShadows {
+export interface ThemeShadows {
   surface: AppThemeShadow;
   elevated: AppThemeShadow;
   accent: AppThemeShadow;

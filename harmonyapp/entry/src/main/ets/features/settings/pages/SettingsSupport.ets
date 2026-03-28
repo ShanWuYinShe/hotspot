@@ -406,7 +406,6 @@ export struct SupportConfigCard {
   }
 
   build() {
-    const links = buildSupportLinks(this.config);
     Column({ space: DesignConstants.SPACING.MD }) {
       Text('支持与服务信息')
         .fontSize(DesignConstants.FONT.SIZE.LG)
@@ -427,9 +426,9 @@ export struct SupportConfigCard {
           .width('100%')
       }
 
-      if (links.length > 0) {
+      if (buildSupportLinks(this.config).length > 0) {
         Column({ space: DesignConstants.SPACING.SM }) {
-          ForEach(links, (item: SupportLinkItem) => {
+          ForEach(buildSupportLinks(this.config), (item: SupportLinkItem) => {
             SettingsInfoLine({ label: item.title, value: item.value })
           }, (item: SupportLinkItem) => `${item.title}-${item.value}`)
         }
@@ -633,7 +632,6 @@ export struct RelationshipListSection {
   }
 
   build() {
-    const hasContent = this.friends.length > 0 || this.following.length > 0 || this.followers.length > 0 || this.blocked.length > 0;
     Column({ space: DesignConstants.SPACING.MD }) {
       Text(this.title)
         .fontSize(DesignConstants.FONT.SIZE.LG)
@@ -647,7 +645,7 @@ export struct RelationshipListSection {
           .width('100%')
       }
 
-      if (!hasContent) {
+      if (!(this.friends.length > 0 || this.following.length > 0 || this.followers.length > 0 || this.blocked.length > 0)) {
         Text(this.emptyText)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.getPalette().textSecondary)

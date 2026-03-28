@@ -17,7 +17,7 @@ import {
   ThemeMode,
   ThemeOptionItem
 } from './AppThemeTypes';
-import { ThemeConstants } from './ThemeConstants';
+import { ColorConfig, ThemeConstants, ThemeShadows } from './ThemeConstants';
 
 const DEFAULT_THEME_SHAPE: AppThemeShapeTokens = {
   surfaceCard: DesignConstants.SHAPE.CARD,
@@ -106,8 +106,8 @@ function buildPalette(
   id: ResolvedThemeId,
   label: string,
   description: string,
-  colors: typeof ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS,
-  shadows: typeof ThemeConstants.SHADOWS.DEFAULT_CLEAN_LIGHT,
+  colors: ColorConfig,
+  shadows: ThemeShadows,
   visuals: AppThemeVisualTokens,
   preferDarkContent: boolean
 ): AppThemePalette {

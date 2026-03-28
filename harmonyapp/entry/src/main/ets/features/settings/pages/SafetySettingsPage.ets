@@ -96,47 +96,51 @@ export struct SafetySettingsPage {
 
         Scroll() {
           Column({ space: 0 }) {
-            SettingsSectionCard({ title: '修改密码' }) {
-              Column({ space: DesignConstants.SPACING.MD }) {
-                TextInput({ placeholder: '当前密码', text: this.oldPassword })
-                  .type(InputType.Password)
-                  .height(46)
-                  .backgroundColor(this.getPalette().surfaceSubtle)
-                  .borderRadius(DesignConstants.SHAPE.INPUT)
-                  .border({ width: 1, color: this.getPalette().borderColor })
-                  .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-                  .onChange((value: string) => { this.oldPassword = value; })
-                TextInput({ placeholder: '新密码（至少 8 位）', text: this.newPassword })
-                  .type(InputType.Password)
-                  .height(46)
-                  .backgroundColor(this.getPalette().surfaceSubtle)
-                  .borderRadius(DesignConstants.SHAPE.INPUT)
-                  .border({ width: 1, color: this.getPalette().borderColor })
-                  .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-                  .onChange((value: string) => { this.newPassword = value; })
-                Button('更新密码')
-                  .width('100%')
-                  .height(48)
-                  .type(ButtonType.Normal)
-                  .backgroundColor(this.getPalette().accentBackground)
-                  .fontColor(this.getPalette().accentText)
-                  .borderRadius(DesignConstants.RADIUS.FULL)
-                  .shadow(this.getPalette().accentShadow)
-                  .onClick(() => this.changePassword())
+            Column() {
+              SettingsSectionCard({ title: '修改密码' }) {
+                Column({ space: DesignConstants.SPACING.MD }) {
+                  TextInput({ placeholder: '当前密码', text: this.oldPassword })
+                    .type(InputType.Password)
+                    .height(46)
+                    .backgroundColor(this.getPalette().surfaceSubtle)
+                    .borderRadius(DesignConstants.SHAPE.INPUT)
+                    .border({ width: 1, color: this.getPalette().borderColor })
+                    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+                    .onChange((value: string) => { this.oldPassword = value; })
+                  TextInput({ placeholder: '新密码（至少 8 位）', text: this.newPassword })
+                    .type(InputType.Password)
+                    .height(46)
+                    .backgroundColor(this.getPalette().surfaceSubtle)
+                    .borderRadius(DesignConstants.SHAPE.INPUT)
+                    .border({ width: 1, color: this.getPalette().borderColor })
+                    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+                    .onChange((value: string) => { this.newPassword = value; })
+                  Button('更新密码')
+                    .width('100%')
+                    .height(48)
+                    .type(ButtonType.Normal)
+                    .backgroundColor(this.getPalette().accentBackground)
+                    .fontColor(this.getPalette().accentText)
+                    .borderRadius(DesignConstants.RADIUS.FULL)
+                    .shadow(this.getPalette().accentShadow)
+                    .onClick(() => this.changePassword())
+                }
+                .width('100%')
+                .padding(DesignConstants.SPACING.LG)
               }
-              .width('100%')
-              .padding(DesignConstants.SPACING.LG)
             }
-            .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
 
-            SettingsSectionCard({ title: '登录设备' }) {
-              SessionListSection({
-                sessions: this.sessions,
-                revokeOne: (item: SessionItem) => this.revokeSession(item),
-                revokeAll: () => this.revokeAll()
-              })
+            Column() {
+              SettingsSectionCard({ title: '登录设备' }) {
+                SessionListSection({
+                  sessions: this.sessions,
+                  revokeOne: (item: SessionItem) => this.revokeSession(item),
+                  revokeAll: () => this.revokeAll()
+                })
+              }
             }
-            .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
           }
           .width('100%')
           .padding({ bottom: SafeAreaUtils.resolveBottomPadding(0, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG) })
