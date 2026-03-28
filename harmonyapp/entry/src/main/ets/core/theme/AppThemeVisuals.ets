@@ -44,6 +44,18 @@ export interface ThemeProfileIdentityStyle {
   haloShadow: ShadowOptions;
 }
 
+export interface ThemeProfileQuickActionStyle extends ThemeCardVisualStyle {
+  iconSize: number;
+  iconWrapperSize: number;
+  labelFontSize: number;
+}
+
+export interface ThemeProfileIntentStyle extends ThemeCardVisualStyle {
+  iconWrapperSize: number;
+  titleFontSize: number;
+  descriptionFontSize: number;
+}
+
 export interface ThemeProfileVisualStyle {
   card: ThemeCardVisualStyle;
   metricCard: ThemeMetricVisualStyle;
@@ -51,6 +63,8 @@ export interface ThemeProfileVisualStyle {
   secondaryButton: ThemeButtonVisualStyle;
   input: ThemeInputVisualStyle;
   identity: ThemeProfileIdentityStyle;
+  quickAction: ThemeProfileQuickActionStyle;
+  intentCard: ThemeProfileIntentStyle;
 }
 
 export interface ThemeTabBarVisualStyle {
@@ -64,6 +78,7 @@ export interface ThemeTabBarVisualStyle {
   createButtonHeight: number;
   indicatorWidth: number;
   indicatorHeight: number;
+  itemHeight: number;
 }
 
 export interface ThemePreviewVisualStyle {
@@ -313,13 +328,36 @@ export class AppThemeVisuals {
     if (cached) {
       return cached;
     }
+    const palette = AppThemeVisuals.getPalette(themeId);
     const style: ThemeProfileVisualStyle = {
       card: AppThemeVisuals.getElevatedCardStyle(themeId),
       metricCard: AppThemeVisuals.getProfileMetricCardStyle(themeId),
       primaryButton: AppThemeVisuals.getPrimaryButtonStyle(themeId),
       secondaryButton: AppThemeVisuals.getSecondaryButtonStyle(themeId),
       input: AppThemeVisuals.getInputStyle(themeId),
-      identity: AppThemeVisuals.getProfileIdentityStyle(themeId)
+      identity: AppThemeVisuals.getProfileIdentityStyle(themeId),
+      quickAction: {
+        backgroundColor: palette.surfaceBackground,
+        borderColor: palette.borderColor,
+        borderWidth: 1,
+        shadow: palette.controlShadow,
+        borderRadius: palette.visuals.shape.compactCard,
+        padding: DesignConstants.SPACING.MD,
+        iconSize: 22,
+        iconWrapperSize: 64,
+        labelFontSize: DesignConstants.FONT.SIZE.SM
+      },
+      intentCard: {
+        backgroundColor: palette.surfaceBackground,
+        borderColor: palette.borderColor,
+        borderWidth: 1,
+        shadow: palette.elevatedShadow,
+        borderRadius: palette.visuals.shape.heroCard,
+        padding: palette.visuals.metrics.cardPadding,
+        iconWrapperSize: 46,
+        titleFontSize: DesignConstants.FONT.SIZE.XL,
+        descriptionFontSize: DesignConstants.FONT.SIZE.MD
+      }
     };
     AppThemeVisuals.profileVisualCache.set(key, style);
     return style;
@@ -341,8 +379,9 @@ export class AppThemeVisuals {
       radius: palette.visuals.shape.tabBar,
       createButtonWidth: palette.visuals.metrics.createButtonWidth,
       createButtonHeight: palette.visuals.metrics.createButtonHeight,
-      indicatorWidth: 18,
-      indicatorHeight: 4
+      indicatorWidth: 22,
+      indicatorHeight: 5,
+      itemHeight: palette.visuals.metrics.tabBarHeight
     };
     AppThemeVisuals.tabBarCache.set(key, style);
     return style;

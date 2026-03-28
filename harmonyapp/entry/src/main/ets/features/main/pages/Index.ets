@@ -780,15 +780,15 @@ struct Index {
 
       if (this.currentTabIndex === targetIndex) {
         Row()
-          .width(18)
-          .height(4)
-          .margin({ top: 5 })
+          .width(this.getTabBarVisualStyle().indicatorWidth)
+          .height(this.getTabBarVisualStyle().indicatorHeight)
+          .margin({ top: 6 })
           .backgroundColor(this.getBrandAccent())
           .borderRadius(DesignConstants.RADIUS.FULL)
       }
     }
     .width('100%')
-    .height(60)
+    .height(this.getTabBarVisualStyle().itemHeight)
     .justifyContent(FlexAlign.Center)
     .padding({ top: this.currentTabIndex === targetIndex ? 0 : 2, bottom: this.currentTabIndex === targetIndex ? 0 : 2 })
     .backgroundColor(Color.Transparent)
@@ -797,51 +797,6 @@ struct Index {
       if (targetIndex !== 2) {
         this.tabsController.changeIndex(targetIndex);
       }
-    })
-  }
-
-  @Builder
-  NearbyTabBuilder() {
-    Column() {
-      Row() {
-        Text() {
-            SymbolSpan($r(AppIcon.NEARBY))
-              .fontSize(23)
-              .fontColor([this.currentTabIndex === 0
-                ? this.getBrandAccent()
-                : this.getTabInactiveColor()])
-        }
-      }
-      .width(24)
-      .height(24)
-      .justifyContent(FlexAlign.Center)
-      .margin({ top: this.currentTabIndex === 0 ? 0 : 4 })
-
-      Text('附近')
-        .fontColor(this.currentTabIndex === 0
-          ? this.getBrandAccent()
-          : this.getTabInactiveColor())
-        .fontSize(DesignConstants.FONT.SIZE.XS)
-        .margin({ top: this.currentTabIndex === 0 ? 1 : 4 })
-        .fontWeight(this.currentTabIndex === 0 ? FontWeight.Medium : FontWeight.Normal)
-
-      if (this.currentTabIndex === 0) {
-        Row()
-          .width(18)
-          .height(4)
-          .margin({ top: 5 })
-          .backgroundColor(this.getBrandAccent())
-          .borderRadius(DesignConstants.RADIUS.FULL)
-      }
-    }
-    .width('100%')
-    .height(60)
-    .justifyContent(FlexAlign.Center)
-    .padding({ top: this.currentTabIndex === 0 ? 0 : 2, bottom: this.currentTabIndex === 0 ? 0 : 2 })
-    .backgroundColor(Color.Transparent)
-    .onClick(() => {
-      this.handleTabChange(0);
-      this.tabsController.changeIndex(0);
     })
   }
 
@@ -864,6 +819,7 @@ struct Index {
       .borderRadius(DesignConstants.RADIUS.FULL)
       .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
       .shadow(this.getCurrentThemePalette().accentShadow)
+      .margin({ bottom: 2 })
 
       // "发布"文字在外框下方，与其他 tab 一致
       Text('发布')
@@ -873,15 +829,15 @@ struct Index {
 
       if (this.currentTabIndex === 2) {
         Row()
-          .width(18)
-          .height(4)
-          .margin({ top: 5 })
+          .width(this.getTabBarVisualStyle().indicatorWidth)
+          .height(this.getTabBarVisualStyle().indicatorHeight)
+          .margin({ top: 6 })
           .backgroundColor(this.getBrandAccent())
           .borderRadius(DesignConstants.RADIUS.FULL)
       }
     }
     .width('100%')
-    .height(60)
+    .height(this.getTabBarVisualStyle().itemHeight)
     .justifyContent(FlexAlign.Center)
     .padding({ top: this.currentTabIndex === 2 ? 0 : 2, bottom: this.currentTabIndex === 2 ? 0 : 2 })
     .backgroundColor(Color.Transparent)
@@ -951,6 +907,7 @@ struct Index {
               topRight: this.getTabBarVisualStyle().radius
             })
             .border({ width: { top: 1 }, color: this.getCurrentThemePalette().borderColor })
+            .margin({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, bottom: 0 })
 
           Column() {
         Navigation(this.navPathStack) {
@@ -959,7 +916,7 @@ struct Index {
           TabContent() {
             NearbyPage()
           }
-          .tabBar(this.NearbyTabBuilder())
+          .tabBar(this.TabBuilderIcon('附近', 0, AppIcon.NEARBY))
 
           // 2. 发现（热门话题/推荐用户/热门瞬间）
           TabContent() {

@@ -475,21 +475,21 @@ export struct SettingsPage {
               .shadow(preview.haloShadow)
 
             Blank()
-              .width('66%')
+              .width('70%')
               .height(preview.primaryButton.height)
               .borderRadius(preview.primaryButton.borderRadius)
               .backgroundColor(preview.primaryButton.backgroundColor)
               .shadow(preview.primaryButton.shadow)
 
-            Row({ space: 8 }) {
-              Blank().layoutWeight(1).height(36).borderRadius(preview.tileRadius).backgroundColor(palette.surfaceSubtle)
-              Blank().layoutWeight(1).height(36).borderRadius(preview.tileRadius).backgroundColor(palette.surfaceSubtle)
+            Row({ space: 10 }) {
+              Blank().layoutWeight(1).height(40).borderRadius(preview.tileRadius).backgroundColor(palette.surfaceSubtle)
+              Blank().layoutWeight(1).height(40).borderRadius(preview.tileRadius).backgroundColor(palette.surfaceSubtle)
             }
             .width('100%')
 
             Blank()
               .width('100%')
-              .height(18)
+              .height(22)
               .borderRadius(tabBar.radius)
               .backgroundColor(tabBar.backgroundColor)
               .shadow(tabBar.shadow)

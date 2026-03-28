@@ -788,111 +788,108 @@ export struct ProfilePage {
   // ==================== 匿名用户 - 游客界面 ====================
   @Builder
   private buildGuestView() {
-    Column({ space: DesignConstants.SPACING.XL }) {
-      // 1. 头像区域
-      Column({ space: DesignConstants.SPACING.SM }) {
-        Stack() {
-          Circle()
-            .width(this.getProfileVisualStyle().identity.avatarSize)
-            .height(this.getProfileVisualStyle().identity.avatarSize)
-            .fill(this.getSurfaceSubtle())
-            .shadow(this.getProfileVisualStyle().identity.haloShadow)
-          Text() {
-            SymbolSpan($r(AppIcon.PERSON))
-              .fontSize(this.getProfileVisualStyle().identity.avatarSize * 0.5)
-              .fontColor([this.getSecondaryTextColor()])
+    Scroll() {
+      Column({ space: DesignConstants.SPACING.LG }) {
+        Column({ space: DesignConstants.SPACING.MD }) {
+          Stack() {
+            Circle()
+              .width(this.getProfileVisualStyle().identity.avatarSize)
+              .height(this.getProfileVisualStyle().identity.avatarSize)
+              .fill(this.getSurfaceSubtle())
+              .shadow(this.getProfileVisualStyle().identity.haloShadow)
+            Text() {
+              SymbolSpan($r(AppIcon.PERSON))
+                .fontSize(this.getProfileVisualStyle().identity.avatarSize * 0.46)
+                .fontColor([this.getSecondaryTextColor()])
+            }
+          }
+
+          Text('游客模式')
+            .fontSize(this.getProfileVisualStyle().identity.titleFontSize)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(this.getPrimaryTextColor())
+
+          Text('以轻触感界面预览附近、发现与互动能力，登录后即可保存资料与偏好。')
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .lineHeight(24)
+            .fontColor(this.getSecondaryTextColor())
+            .textAlign(TextAlign.Center)
+        }
+        .width('100%')
+        .padding(this.getProfileVisualStyle().card.padding)
+        .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
+        .borderRadius(this.getProfileVisualStyle().card.borderRadius)
+        .border({ width: this.getProfileVisualStyle().card.borderWidth, color: this.getProfileVisualStyle().card.borderColor })
+        .shadow(this.getProfileVisualStyle().card.shadow)
+        .alignItems(HorizontalAlign.Center)
+
+        Grid() {
+          GridItem() {
+            this.buildFeatureCard($r(AppIcon.MAP), 'Explore', '发现附近热点与地图灵感')
+          }
+          GridItem() {
+            this.buildFeatureCard($r(AppIcon.SEARCH), 'Discover', '找到兴趣用户与内容线索')
+          }
+          GridItem() {
+            this.buildFeatureCard($r(AppIcon.MESSAGE), 'Chats', '登录后开启实时对话')
+          }
+          GridItem() {
+            this.buildFeatureCard($r(AppIcon.EDIT), 'Create', '记录当下灵感与生活切片')
           }
         }
+        .columnsTemplate('1fr 1fr')
+        .rowsTemplate('1fr 1fr')
+        .rowsGap(DesignConstants.SPACING.MD)
+        .columnsGap(DesignConstants.SPACING.MD)
+        .width('100%')
+        .height(236)
 
-        Text('游客模式')
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(this.getPrimaryTextColor())
-
-        Text('登录后解锁完整体验')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getSecondaryTextColor())
-      }
-      .width('100%')
-      .alignItems(HorizontalAlign.Center)
-      .padding({ top: DesignConstants.SPACING.XL })
-
-      // 2. 功能亮点卡片（2x2 网格）
-      Grid() {
-        GridItem() {
-          this.buildFeatureCard($r(AppIcon.MAP), '探索地图', '发现附近热点')
-        }
-        GridItem() {
-          this.buildFeatureCard($r(AppIcon.SEARCH), '搜索内容', '找到你感兴趣的')
-        }
-        GridItem() {
-          this.buildFeatureCard($r(AppIcon.MESSAGE), '互动交流', '与他人实时沟通')
-        }
-        GridItem() {
-          this.buildFeatureCard($r(AppIcon.EDIT), '发布分享', '记录精彩瞬间')
-        }
-      }
-      .columnsTemplate('1fr 1fr')
-      .rowsTemplate('1fr 1fr')
-      .rowsGap(DesignConstants.SPACING.MD)
-      .columnsGap(DesignConstants.SPACING.MD)
-      .width('100%')
-      .height(200)
-
-      // 3. CTA 按钮区域（居中窄按钮）
-      Column({ space: DesignConstants.SPACING.SM }) {
-        Button('快速体验（无需注册）')
-          .type(ButtonType.Normal)
-          .width('80%')
-          .height(this.getProfileVisualStyle().primaryButton.height)
-          .backgroundColor(this.getProfileVisualStyle().primaryButton.backgroundColor)
-          .fontColor(this.getProfileVisualStyle().primaryButton.textColor)
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
-          .shadow(this.getProfileVisualStyle().primaryButton.shadow)
-          .onClick(() => {
-            this.showQuickStart = true;
-          })
-
-        Button('登录 / 注册')
-          .type(ButtonType.Normal)
-          .width('80%')
-          .height(this.getProfileVisualStyle().secondaryButton.height)
-          .backgroundColor(this.getProfileVisualStyle().secondaryButton.backgroundColor)
-          .fontColor(this.getProfileVisualStyle().secondaryButton.textColor)
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .borderRadius(this.getProfileVisualStyle().secondaryButton.borderRadius)
-          .shadow(this.getProfileVisualStyle().secondaryButton.shadow)
-          .border({ width: this.getProfileVisualStyle().secondaryButton.borderWidth, color: this.getProfileVisualStyle().secondaryButton.borderColor })
-          .onClick(() => {
-            AppRouter.push(PageNames.LOGIN);
-          })
-      }
-      .width('100%')
-      .alignItems(HorizontalAlign.Center)
-
-      // 4. 设置入口
-      Row({ space: DesignConstants.SPACING.XS }) {
-        Text() {
-          SymbolSpan($r(AppIcon.SETTINGS))
+        Column({ space: DesignConstants.SPACING.SM }) {
+          Button('快速体验（无需注册）')
+            .type(ButtonType.Normal)
+            .width('100%')
+            .height(this.getProfileVisualStyle().primaryButton.height)
+            .backgroundColor(this.getProfileVisualStyle().primaryButton.backgroundColor)
+            .fontColor(this.getProfileVisualStyle().primaryButton.textColor)
             .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor([this.getSecondaryTextColor()])
+            .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
+            .shadow(this.getProfileVisualStyle().primaryButton.shadow)
+            .border({ width: this.getProfileVisualStyle().primaryButton.borderWidth, color: this.getProfileVisualStyle().primaryButton.borderColor })
+            .onClick(() => {
+              this.showQuickStart = true;
+            })
+
+          Button('登录 / 注册')
+            .type(ButtonType.Normal)
+            .width('100%')
+            .height(this.getProfileVisualStyle().secondaryButton.height)
+            .backgroundColor(this.getProfileVisualStyle().secondaryButton.backgroundColor)
+            .fontColor(this.getProfileVisualStyle().secondaryButton.textColor)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .borderRadius(this.getProfileVisualStyle().secondaryButton.borderRadius)
+            .shadow(this.getProfileVisualStyle().secondaryButton.shadow)
+            .border({ width: this.getProfileVisualStyle().secondaryButton.borderWidth, color: this.getProfileVisualStyle().secondaryButton.borderColor })
+            .onClick(() => {
+              AppRouter.push(PageNames.LOGIN);
+            })
         }
-        Text('设置')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getSecondaryTextColor())
+        .width('100%')
+        .padding(this.getProfileVisualStyle().card.padding)
+        .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
+        .borderRadius(this.getProfileVisualStyle().card.borderRadius)
+        .border({ width: this.getProfileVisualStyle().card.borderWidth, color: this.getProfileVisualStyle().card.borderColor })
+        .shadow(this.getProfileVisualStyle().card.shadow)
+
+        this.MenuItemContent('设置', AppIcon.SETTINGS, () => {
+          AppRouter.push(PageNames.SETTINGS);
+        })
       }
-      .justifyContent(FlexAlign.Center)
       .width('100%')
-      .padding({ bottom: DesignConstants.SPACING.LG })
-      .onClick(() => {
-        AppRouter.push(PageNames.SETTINGS);
-      })
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG) })
     }
     .width('100%')
-    .height('100%')
-    .justifyContent(FlexAlign.Center)
-    .padding({ left: DesignConstants.SPACING.XL, right: DesignConstants.SPACING.XL })
+    .layoutWeight(1)
+    .scrollBar(BarState.Auto)
     .bindSheet($$this.showQuickStart, this.buildQuickStartSheet(), {
       height: SheetSize.FIT_CONTENT,
       showClose: true,
@@ -904,28 +901,41 @@ export struct ProfilePage {
 
   @Builder
   private buildFeatureCard(icon: Resource, title: string, subtitle: string) {
-    Column({ space: DesignConstants.SPACING.XS }) {
-      Text() {
-        SymbolSpan(icon)
-          .fontSize(DesignConstants.FONT.SIZE.XXL)
-          .fontColor([this.getAccentBackground()])
+    Column({ space: DesignConstants.SPACING.SM }) {
+      Row() {
+        Text() {
+          SymbolSpan(icon)
+            .fontSize(this.getProfileVisualStyle().quickAction.iconSize)
+            .fontColor([this.getAccentBackground()])
+        }
       }
+      .width(this.getProfileVisualStyle().quickAction.iconWrapperSize)
+      .height(this.getProfileVisualStyle().quickAction.iconWrapperSize)
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .backgroundColor(this.getSurfaceSubtle())
+      .border({ width: 1, color: this.getSurfaceBorder() })
+      .shadow(this.getProfileVisualStyle().quickAction.shadow)
+      .justifyContent(FlexAlign.Center)
+
       Text(title)
         .fontSize(DesignConstants.FONT.SIZE.MD)
         .fontWeight(FontWeight.Medium)
         .fontColor(this.getPrimaryTextColor())
       Text(subtitle)
-        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .lineHeight(20)
         .fontColor(this.getSecondaryTextColor())
         .textAlign(TextAlign.Center)
     }
     .width('100%')
+    .height('100%')
     .alignItems(HorizontalAlign.Center)
-    .padding(DesignConstants.SPACING.MD)
-    .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(this.getProfileVisualStyle().input.borderRadius)
-    .border({ width: 1, color: this.getSurfaceBorder() })
-    .shadow(this.getProfileVisualStyle().card.shadow)
+    .justifyContent(FlexAlign.Center)
+    .padding(this.getProfileVisualStyle().quickAction.padding)
+    .backgroundColor(this.getProfileVisualStyle().quickAction.backgroundColor)
+    .borderRadius(this.getProfileVisualStyle().quickAction.borderRadius)
+    .border({ width: this.getProfileVisualStyle().quickAction.borderWidth, color: this.getProfileVisualStyle().quickAction.borderColor })
+    .shadow(this.getProfileVisualStyle().quickAction.shadow)
   }
 
   // ==================== 临时用户界面 ====================
@@ -956,6 +966,49 @@ export struct ProfilePage {
       .padding(this.getProfileVisualStyle().card.padding)
       .margin({ bottom: DesignConstants.SPACING.MD })
 
+      ListItem() {
+        Column({ space: DesignConstants.SPACING.MD }) {
+          Row({ space: DesignConstants.SPACING.SM }) {
+            Text() {
+              SymbolSpan($r(AppIcon.INFO))
+                .fontSize(DesignConstants.FONT.SIZE.LG)
+                .fontColor([this.getWarningTextColor()])
+            }
+            Text('临时身份')
+              .fontSize(DesignConstants.FONT.SIZE.MD)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(this.getWarningTextColor())
+          }
+          .width('100%')
+
+          Text('当前为临时身份，继续注册可保留资料、关系与个性化偏好，让你的触感主题长期保存。')
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(22)
+            .fontColor(this.getSecondaryTextColor())
+
+          Button('升级为完整账号')
+            .type(ButtonType.Capsule)
+            .backgroundColor(this.getProfileVisualStyle().primaryButton.backgroundColor)
+            .fontColor(this.getProfileVisualStyle().primaryButton.textColor)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .width('100%')
+            .height(this.getProfileVisualStyle().primaryButton.height)
+            .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
+            .border({ width: this.getProfileVisualStyle().primaryButton.borderWidth, color: this.getProfileVisualStyle().primaryButton.borderColor })
+            .shadow(this.getProfileVisualStyle().primaryButton.shadow)
+            .onClick(() => {
+              this.showUpgradeForm = true;
+            })
+        }
+        .width('100%')
+        .padding(DesignConstants.SPACING.LG)
+      }
+      .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
+      .borderRadius(this.getProfileVisualStyle().card.borderRadius)
+      .shadow(this.getProfileVisualStyle().card.shadow)
+      .border({ width: 1, color: this.getSurfaceBorder() })
+      .margin({ bottom: DesignConstants.SPACING.MD })
+
       ListItemGroup() {
         ListItem() {
           this.MenuItemContent('更新位置', AppIcon.LOCATION, () => this.updateLocation())
@@ -981,56 +1034,15 @@ export struct ProfilePage {
         }
         .backgroundColor(Color.Transparent)
       }
-       .divider({ strokeWidth: 0.5, color: this.getSurfaceBorder(), startMargin: 52, endMargin: DesignConstants.SPACING.LG })
-       .backgroundColor(this.getSurfaceBackground())
-      .borderRadius(this.getProfileVisualStyle().card.borderRadius)
-       .shadow(this.getProfileVisualStyle().card.shadow)
-      .border({ width: 1, color: this.getSurfaceBorder() })
-      .margin({ bottom: DesignConstants.SPACING.MD })
-
-      // 升级提示区域（保持在数据模块之后，避免打乱信息顺序）
-      ListItem() {
-        Column({ space: DesignConstants.SPACING.MD }) {
-          Row({ space: DesignConstants.SPACING.SM }) {
-            Text() {
-              SymbolSpan($r(AppIcon.INFO))
-                .fontSize(DesignConstants.FONT.SIZE.LG)
-                .fontColor([this.getWarningTextColor()])
-            }
-            Text('临时用户')
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .fontWeight(FontWeight.Medium)
-              .fontColor(this.getWarningTextColor())
-          }
-          .width('100%')
-
-          Text('当前为临时用户，数据可能不会永久保留。注册账号可保留所有数据并解锁完整功能。')
-            .fontSize(13)
-            .fontColor(this.getSecondaryTextColor())
-
-           Button('升级为完整账号')
-             .type(ButtonType.Capsule)
-             .backgroundColor(this.getProfileVisualStyle().primaryButton.backgroundColor)
-             .fontColor(this.getProfileVisualStyle().primaryButton.textColor)
-             .fontSize(DesignConstants.FONT.SIZE.MD)
-             .width('100%')
-             .height(this.getProfileVisualStyle().primaryButton.height)
-             .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
-             .border({ width: this.getProfileVisualStyle().primaryButton.borderWidth, color: this.getProfileVisualStyle().primaryButton.borderColor })
-             .shadow(this.getProfileVisualStyle().primaryButton.shadow)
-             .onClick(() => {
-               this.showUpgradeForm = true;
-             })
-        }
-        .width('100%')
-        .padding(DesignConstants.SPACING.LG)
-      }
+      .divider({ strokeWidth: 0.5, color: this.getSurfaceBorder(), startMargin: 52, endMargin: DesignConstants.SPACING.LG })
       .backgroundColor(this.getSurfaceBackground())
       .borderRadius(this.getProfileVisualStyle().card.borderRadius)
+      .shadow(this.getProfileVisualStyle().card.shadow)
       .border({ width: 1, color: this.getSurfaceBorder() })
+      .margin({ bottom: DesignConstants.SPACING.MD })
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG) })
     .layoutWeight(1)
     .scrollBar(BarState.Auto)
   }
@@ -1096,7 +1108,7 @@ export struct ProfilePage {
       .margin({ bottom: DesignConstants.SPACING.MD })
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG) })
     .layoutWeight(1)
     .scrollBar(BarState.Auto)
   }
@@ -1189,57 +1201,61 @@ export struct ProfilePage {
 
   @Builder
   private UserInfoContent(): void {
-    Column({ space: DesignConstants.SPACING.LG }) {
-      SystemAvatar({
-        avatarUrl: this.currentUser?.avatar_url || '',
-        name: this.currentUser?.nickname || '',
-        avatarSize: this.getProfileVisualStyle().identity.avatarSize,
-        isOnline: this.currentUser?.presence_status === 'online',
-        inset: true
-      })
+    Column({ space: DesignConstants.SPACING.XL }) {
+      Column({ space: DesignConstants.SPACING.MD }) {
+        SystemAvatar({
+          avatarUrl: this.currentUser?.avatar_url || '',
+          name: this.currentUser?.nickname || '',
+          avatarSize: this.getProfileVisualStyle().identity.avatarSize,
+          isOnline: this.currentUser?.presence_status === 'online',
+          inset: true
+        })
 
-      Column({ space: DesignConstants.SPACING.SM }) {
-        Text(this.currentUser?.nickname || '')
-          .fontSize(this.getProfileVisualStyle().identity.titleFontSize)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(this.getPrimaryTextColor())
-          .textAlign(TextAlign.Center)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Column({ space: DesignConstants.SPACING.SM }) {
+          Text(this.currentUser?.nickname || '')
+            .fontSize(this.getProfileVisualStyle().identity.titleFontSize)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(this.getPrimaryTextColor())
+            .textAlign(TextAlign.Center)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-        Text(this.userType === 'temp' ? 'Guest access' : 'HotSpot member')
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor(this.getSecondaryTextColor())
-          .textAlign(TextAlign.Center)
+          Text(this.userType === 'temp' ? '@guest.access' : '@hotspot.member')
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontColor(this.getSecondaryTextColor())
+            .textAlign(TextAlign.Center)
+        }
+        .alignItems(HorizontalAlign.Center)
+        .width('100%')
+
+        if (this.userType === 'temp') {
+          Text('临时身份')
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor(this.getWarningTextColor())
+            .backgroundColor(this.getSurfaceSubtle())
+            .borderRadius(DesignConstants.SHAPE.CHIP)
+            .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+        } else if (this.isAdminUser()) {
+          Text('管理员')
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor(this.getAccentBackground())
+            .backgroundColor(this.getSurfaceSubtle())
+            .borderRadius(DesignConstants.SHAPE.CHIP)
+            .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+        }
+
+        if (this.currentUser?.bio) {
+          Text(this.currentUser.bio)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .lineHeight(24)
+            .fontColor(this.getSecondaryTextColor())
+            .textAlign(TextAlign.Center)
+            .maxLines(3)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
       }
-      .alignItems(HorizontalAlign.Center)
       .width('100%')
-
-      if (this.userType === 'temp') {
-        Text('临时用户')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getWarningTextColor())
-          .backgroundColor(this.getSurfaceSubtle())
-          .borderRadius(DesignConstants.SHAPE.CHIP)
-          .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-      } else if (this.isAdminUser()) {
-        Text('管理员')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getAccentBackground())
-          .backgroundColor(this.getSurfaceSubtle())
-          .borderRadius(DesignConstants.SHAPE.CHIP)
-          .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-      }
-
-      if (this.currentUser?.bio) {
-        Text(this.currentUser.bio)
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .lineHeight(22)
-          .fontColor(this.getSecondaryTextColor())
-          .textAlign(TextAlign.Center)
-          .maxLines(3)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
+      .alignItems(HorizontalAlign.Center)
 
       Button('编辑资料')
         .type(ButtonType.Capsule)
@@ -1251,22 +1267,22 @@ export struct ProfilePage {
         })
         .backgroundColor(this.getProfileVisualStyle().primaryButton.backgroundColor)
         .fontColor(this.getProfileVisualStyle().primaryButton.textColor)
-        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .fontSize(DesignConstants.FONT.SIZE.LG)
         .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
         .shadow(this.getProfileVisualStyle().primaryButton.shadow)
         .border({ width: this.getProfileVisualStyle().primaryButton.borderWidth, color: this.getProfileVisualStyle().primaryButton.borderColor })
         .onClick(() => this.startEdit())
 
       Row({ space: DesignConstants.SPACING.MD }) {
-        this.ProfileQuickAction(AppIcon.HEART, 'Connections', () => this.openRelationshipHub())
-        this.ProfileQuickAction(AppIcon.STAR, 'Saved', () => this.openAnnouncements())
-        this.ProfileQuickAction(AppIcon.SETTINGS, 'Settings', () => this.openSettingsCenter())
+        this.ProfileQuickAction(AppIcon.HEART, '关系', () => this.openRelationshipHub())
+        this.ProfileQuickAction(AppIcon.STAR, '公告', () => this.openAnnouncements())
+        this.ProfileQuickAction(AppIcon.SETTINGS, '设置', () => this.openSettingsCenter())
       }
       .width('100%')
 
       Row({ space: DesignConstants.SPACING.MD }) {
-        this.ProfileIntentCard('My Vibe', 'Tactile, Calm, Serene', AppIcon.MAP, () => this.openPrivacySettings())
-        this.ProfileIntentCard('Preferences', 'Quiet Discovery, Minimalist Art', AppIcon.FILTER, () => this.openSafetySettings())
+        this.ProfileIntentCard('我的氛围', '轻触感、安静、松弛', AppIcon.MAP, () => this.openPrivacySettings())
+        this.ProfileIntentCard('偏好设置', '安静探索、极简审美', AppIcon.FILTER, () => this.openSafetySettings())
       }
       .width('100%')
     }
@@ -1352,15 +1368,15 @@ export struct ProfilePage {
   @Builder
   private StatsContent(): void {
     Column({ space: DesignConstants.SPACING.LG }) {
-      Text('我的数据')
+      Text('我的动态')
         .fontSize(DesignConstants.FONT.SIZE.LG)
         .fontWeight(FontWeight.Medium)
         .fontColor(this.getPrimaryTextColor())
         .alignSelf(ItemAlign.Start)
 
       Row({ space: DesignConstants.SPACING.MD }) {
-        this.StatCard('我的瞬间', formatCount(this.myMomentsCount), '浏览和管理动态', AppIcon.CAMERA, () => this.openMyMoments())
-        this.StatCard('加入群组', formatCount(this.myGroupsCount), '查看我加入的圈子', AppIcon.GROUP, () => this.openMyGroups())
+        this.StatCard('瞬间', formatCount(this.myMomentsCount), '浏览和管理动态', AppIcon.CAMERA, () => this.openMyMoments())
+        this.StatCard('群组', formatCount(this.myGroupsCount), '查看我加入的圈子', AppIcon.GROUP, () => this.openMyGroups())
       }
       .width('100%')
 
@@ -1416,31 +1432,36 @@ export struct ProfilePage {
   @Builder
   private ProfileQuickAction(icon: AppIcon, label: string, onTap: () => void): void {
     Button() {
-      Column({ space: DesignConstants.SPACING.XS }) {
+      Column({ space: DesignConstants.SPACING.SM }) {
         Row() {
           Text() {
             SymbolSpan($r(icon))
-              .fontSize(22)
+              .fontSize(this.getProfileVisualStyle().quickAction.iconSize)
               .fontColor([this.getAccentBackground()])
           }
         }
-        .width(58)
-        .height(58)
+        .width(this.getProfileVisualStyle().quickAction.iconWrapperSize)
+        .height(this.getProfileVisualStyle().quickAction.iconWrapperSize)
         .borderRadius(DesignConstants.RADIUS.FULL)
-        .backgroundColor(this.getSurfaceBackground())
+        .backgroundColor(this.getSurfaceSubtle())
         .border({ width: 1, color: this.getSurfaceBorder() })
-        .shadow(this.getProfileVisualStyle().card.shadow)
+        .shadow(this.getProfileVisualStyle().quickAction.shadow)
         .justifyContent(FlexAlign.Center)
         .alignItems(VerticalAlign.Center)
 
         Text(label)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontSize(this.getProfileVisualStyle().quickAction.labelFontSize)
           .fontColor(this.getSecondaryTextColor())
       }
       .width('100%')
+      .alignItems(HorizontalAlign.Center)
     }
     .type(ButtonType.Normal)
-    .backgroundColor(Color.Transparent)
+    .backgroundColor(this.getProfileVisualStyle().quickAction.backgroundColor)
+    .borderRadius(this.getProfileVisualStyle().quickAction.borderRadius)
+    .border({ width: this.getProfileVisualStyle().quickAction.borderWidth, color: this.getProfileVisualStyle().quickAction.borderColor })
+    .shadow(this.getProfileVisualStyle().quickAction.shadow)
+    .padding(this.getProfileVisualStyle().quickAction.padding)
     .layoutWeight(1)
     .onClick(onTap)
   }
@@ -1448,7 +1469,7 @@ export struct ProfilePage {
   @Builder
   private ProfileIntentCard(title: string, description: string, icon: AppIcon, onTap: () => void): void {
     Button() {
-      Column({ space: DesignConstants.SPACING.SM }) {
+      Column({ space: DesignConstants.SPACING.MD }) {
         Row() {
           Text() {
             SymbolSpan($r(icon))
@@ -1456,23 +1477,23 @@ export struct ProfilePage {
               .fontColor([this.getAccentBackground()])
           }
         }
-        .width(42)
-        .height(42)
+        .width(this.getProfileVisualStyle().intentCard.iconWrapperSize)
+        .height(this.getProfileVisualStyle().intentCard.iconWrapperSize)
         .borderRadius(DesignConstants.RADIUS.FULL)
         .backgroundColor(this.getSurfaceSubtle())
         .justifyContent(FlexAlign.Center)
         .alignItems(VerticalAlign.Center)
 
         Text(title)
-          .fontSize(DesignConstants.FONT.SIZE.XL)
+          .fontSize(this.getProfileVisualStyle().intentCard.titleFontSize)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.getPrimaryTextColor())
           .width('100%')
           .textAlign(TextAlign.Start)
 
         Text(description)
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .lineHeight(22)
+          .fontSize(this.getProfileVisualStyle().intentCard.descriptionFontSize)
+          .lineHeight(24)
           .fontColor(this.getSecondaryTextColor())
           .width('100%')
           .textAlign(TextAlign.Start)
@@ -1482,25 +1503,31 @@ export struct ProfilePage {
     }
     .type(ButtonType.Normal)
     .layoutWeight(1)
-    .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
-    .borderRadius(this.getProfileVisualStyle().card.borderRadius)
-    .shadow(this.getProfileVisualStyle().card.shadow)
-    .border({ width: this.getProfileVisualStyle().card.borderWidth, color: this.getProfileVisualStyle().card.borderColor })
-    .padding(this.getProfileVisualStyle().card.padding)
-    .constraintSize({ minHeight: 182 })
+    .backgroundColor(this.getProfileVisualStyle().intentCard.backgroundColor)
+    .borderRadius(this.getProfileVisualStyle().intentCard.borderRadius)
+    .shadow(this.getProfileVisualStyle().intentCard.shadow)
+    .border({ width: this.getProfileVisualStyle().intentCard.borderWidth, color: this.getProfileVisualStyle().intentCard.borderColor })
+    .padding(this.getProfileVisualStyle().intentCard.padding)
+    .constraintSize({ minHeight: 196 })
     .onClick(onTap)
   }
 
   @Builder
-  private MenuItemContent(title: string, icon: string, onTap: () => void): void {
+  private MenuItemContent(title: string, icon: AppIcon, onTap: () => void): void {
     Row({ space: DesignConstants.SPACING.MD }) {
-      Text() {
-        SymbolSpan($r(icon))
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontColor([this.getAccentBackground()])
+      Row() {
+        Text() {
+          SymbolSpan($r(icon))
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontColor([this.getAccentBackground()])
+        }
       }
-      .width(24)
-      .textAlign(TextAlign.Center)
+      .width(40)
+      .height(40)
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .backgroundColor(this.getSurfaceSubtle())
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
 
       Text(title)
         .fontSize(DesignConstants.FONT.SIZE.LG)
@@ -1516,7 +1543,7 @@ export struct ProfilePage {
     .width('100%')
     .padding({
       left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
-      top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD
+      top: DesignConstants.SPACING.MD + 2, bottom: DesignConstants.SPACING.MD + 2
     })
     .scale(this.pressedMenuItemKey === title ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })
     .animation({ duration: 100, curve: Curve.EaseOut })
