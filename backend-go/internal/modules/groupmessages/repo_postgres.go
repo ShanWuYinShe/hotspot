@@ -35,3 +35,23 @@ func (r *PostgresRepository) Send(ctx context.Context, req SendGroupMessageReque
 	}
 	return MessageSent{MessageID: messageID, SentAt: now.Format(time.RFC3339)}, nil
 }
+
+func (r *PostgresRepository) Update(ctx context.Context, req UpdateGroupMessageRequest) error {
+	// TODO: 实现PostgreSQL更新逻辑
+	return r.fallback.Update(ctx, req)
+}
+
+func (r *PostgresRepository) Recall(ctx context.Context, req RecallGroupMessageRequest) error {
+	// TODO: 实现PostgreSQL撤回逻辑
+	return r.fallback.Recall(ctx, req)
+}
+
+func (r *PostgresRepository) MarkAsRead(ctx context.Context, groupID string, upToMessageID string) error {
+	// TODO: 实现PostgreSQL标记已读逻辑
+	return r.fallback.MarkAsRead(ctx, groupID, upToMessageID)
+}
+
+func (r *PostgresRepository) MarkAllRead(ctx context.Context) error {
+	// TODO: 实现PostgreSQL标记所有已读逻辑
+	return r.fallback.MarkAllRead(ctx)
+}

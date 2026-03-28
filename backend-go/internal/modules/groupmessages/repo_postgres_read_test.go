@@ -53,6 +53,22 @@ func (r *groupMessageFallbackRepo) History(context.Context, string) (PaginatedGr
 	r.used = true
 	return PaginatedGroupMessages{}, nil
 }
+func (r *groupMessageFallbackRepo) Update(context.Context, UpdateGroupMessageRequest) error {
+	r.used = true
+	return nil
+}
+func (r *groupMessageFallbackRepo) Recall(context.Context, RecallGroupMessageRequest) error {
+	r.used = true
+	return nil
+}
+func (r *groupMessageFallbackRepo) MarkAsRead(context.Context, string, string) error {
+	r.used = true
+	return nil
+}
+func (r *groupMessageFallbackRepo) MarkAllRead(context.Context) error {
+	r.used = true
+	return nil
+}
 
 type groupMessageStubRecord struct {
 	MessageID string

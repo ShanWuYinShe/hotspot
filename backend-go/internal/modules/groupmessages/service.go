@@ -21,3 +21,19 @@ func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (Messag
 func (s *Service) History(ctx context.Context, groupID string) (PaginatedGroupMessages, error) {
 	return s.repo.History(ctx, groupID)
 }
+
+func (s *Service) Update(ctx context.Context, req UpdateGroupMessageRequest) error {
+	return s.repo.Update(ctx, req)
+}
+
+func (s *Service) Recall(ctx context.Context, req RecallGroupMessageRequest) error {
+	return s.repo.Recall(ctx, req)
+}
+
+func (s *Service) MarkAsRead(ctx context.Context, req MarkGroupMessagesReadRequest) error {
+	return s.repo.MarkAsRead(ctx, req.GroupID, req.UpToMessageID)
+}
+
+func (s *Service) MarkAllRead(ctx context.Context) error {
+	return s.repo.MarkAllRead(ctx)
+}

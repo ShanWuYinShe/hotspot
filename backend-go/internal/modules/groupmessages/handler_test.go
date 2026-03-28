@@ -21,6 +21,18 @@ func (r *groupMessageErrorRepo) Send(context.Context, SendGroupMessageRequest) (
 func (r *groupMessageErrorRepo) History(context.Context, string) (PaginatedGroupMessages, error) {
 	return PaginatedGroupMessages{}, r.historyErr
 }
+func (r *groupMessageErrorRepo) Update(context.Context, UpdateGroupMessageRequest) error {
+	return nil
+}
+func (r *groupMessageErrorRepo) Recall(context.Context, RecallGroupMessageRequest) error {
+	return nil
+}
+func (r *groupMessageErrorRepo) MarkAsRead(context.Context, string, string) error {
+	return nil
+}
+func (r *groupMessageErrorRepo) MarkAllRead(context.Context) error {
+	return nil
+}
 
 func TestSendAndHistoryGroupMessages(t *testing.T) {
 	handler := NewHandler(NewService())
