@@ -19,7 +19,7 @@ $ARGUMENTS
 5. 从主目录当前最新本地 `main HEAD` 创建新的临时 integration worktree；必须使用 `git worktree add -b <name> <path> main`（`main` 是本地分支引用，**不是 `origin/main`**）。
 6. 通过 `.claude/scripts/integration_meta.py` 刷新 integration 元信息。
 7. 重新将本轮 feature 成果按顺序 cherry-pick / replay 到新的 integration worktree；冲突只在新的 integration worktree 中解决。
-8. refresh 完成后停止在新的 integration 准备态；不要 push。
+8. refresh 完成后停止在新的 integration 准备态；远程同步策略以根 `CLAUDE.md` 与 `/sync_back_main` 为准。
 
 结束时请输出：
 

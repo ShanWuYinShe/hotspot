@@ -2,10 +2,11 @@
 import json
 import re
 import shlex
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any
+
+from git_context import GitContextError, get_repo_context
 
 
 SAFE_SHELL_PATTERNS = (
@@ -45,7 +46,10 @@ def main() -> int:
 
     tool_name = str(payload.get("tool_name", ""))
     cwd = payload.get("cwd")
-    repo = get_repo_context(cwd)
+    try:
+        repo = get_repo_context(cwd)
+    except GitContextError:
+        repo = None
 
     if tool_name == "Bash":
         return guard_bash(payload, repo)
@@ -69,45 +73,6 @@ def deny(reason: str) -> int:
     sys.stdout.write("\n")
     return 0
 
-
-def get_repo_context(cwd: Any) -> dict[str, Any] | None:
-    if not cwd:
-        return None
-    try:
-        top_level = run_git(cwd, "rev-parse", "--show-toplevel")
-        common_dir = run_git(cwd, "rev-parse", "--git-common-dir")
-        branch = run_git(cwd, "branch", "--show-current")
-    except Exception:
-        return None
-
-    top_path = Path(top_level).resolve()
-    common_path = Path(common_dir)
-    if not common_path.is_absolute():
-        common_path = (Path(cwd) / common_path).resolve()
-    else:
-        common_path = common_path.resolve()
-
-    primary_root = common_path.parent if common_path.name == ".git" else top_path
-    primary_root = primary_root.resolve()
-
-    return {
-        "cwd": Path(cwd).resolve(),
-        "top": top_path,
-        "branch": branch,
-        "primary_root": primary_root,
-        "is_primary_checkout": top_path == primary_root,
-        "is_main_primary": top_path == primary_root and branch == "main",
-    }
-
-
-def run_git(cwd: Any, *args: str) -> str:
-    result = subprocess.run(
-        ["git", "-C", str(cwd), *args],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    return result.stdout.strip()
 
 
 def guard_bash(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:

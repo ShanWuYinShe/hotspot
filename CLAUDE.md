@@ -42,7 +42,7 @@ HotSpot 是一个多端 monorepo：
 - 主目录默认始终保持在本地 `main` 且 clean；主目录只承担同步、审阅、创建/回收 worktree 和本地集成控制，不承载实现性改动。
 - 任何 implement 行为开始前都必须先进入 feature worktree；主目录 `main` 只允许控制面动作（git 状态/历史检查、建/收 worktree、review、sync-back、cleanup）。
 - 所有实现、验证和构建都在 worktree 中完成；需要本地分支时，也在对应 worktree 中使用。
-- **新 worktree 必须从主目录本地 `main` 的当前 HEAD 创建，绝对不要使用 `origin/main` 或任何远程引用作为基准点。** feature worktree 必须使用 `EnterWorktree` 工具创建（调用时当前工作目录必须在主目录 `main` 分支上）；integration worktree 使用 `git worktree add -b <name> <path> main`（注意 `main` 是本地分支引用，不是 `origin/main`）。`tool_guard.py` 会在运行时拦截任何使用 `origin/` 引用的 `git worktree add` 命令。
+- **新 worktree 必须从主目录本地 `main` 的当前 HEAD 创建，绝对不要使用 `origin/main` 或任何远程引用作为基准点。** feature worktree 必须使用 `EnterWorktree` 工具创建（调用时当前工作目录必须在主目录 `main` 分支上）；项目级 `WorktreeCreate` hook 会接管 `EnterWorktree` 的实际创建过程，并强制基于本地 `main` 创建。integration worktree 使用 `git worktree add -b <name> <path> main`（注意 `main` 是本地分支引用，不是 `origin/main`）。`tool_guard.py` 会在运行时拦截任何使用 `origin/` 引用的 `git worktree add` 命令。
 - 默认每个会话只操作自己创建或明确接管的 worktree / branch；除非用户明确指定，不要处理其他会话对象。
 - 当主目录处于本地 `main + clean`、操作对象属于当前会话且动作遵循本仓库定义的本地流程时，Claude 应默认自动推进本地闭环，不需要逐步确认；只有越过共享边界、涉及其他会话对象或需要丢弃未确认改动时才暂停确认。
 - 每个 feature worktree 先独立完成实现、自检和验证；只有当同一任务被拆分成多个子任务并行开发时，才需要额外新建专门的 integration worktree 来统一汇总结果。

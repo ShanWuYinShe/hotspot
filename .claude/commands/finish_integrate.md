@@ -19,7 +19,7 @@ $ARGUMENTS
 5. 检查提交历史是否已通过 `rebase + squash` 收敛为单个 commit。
 6. 必须调用 `integration-review-gate` subagent 复核当前 gate 结论，并在输出中复述其 `## 结论`、`## Baseline`、`## 阻塞项`、`## 建议下一步`。
 7. 通过 `.claude/scripts/integration_meta.py` 将最终 gate 结果回写到元信息。
-8. 若结论为 `ready to sync`，下一步进入 `/sync_back_main`。不要 push。
+8. 若结论为 `ready to sync`，下一步进入 `/sync_back_main`。远程同步策略以根 `CLAUDE.md` 与 `/sync_back_main` 为准。
 
 结束时请输出：
 

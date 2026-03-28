@@ -20,7 +20,7 @@ $ARGUMENTS
 6. 在该 feature worktree 中完成 `实现 → check(语法/编译/警告) → test → simplify → strict review → commit` 闭环；任一环节发现问题必须修复后重新循环。最终有效结论以 `deploy/scripts/verify.sh --env-name <name>` 为准。
 7. 若改动触达前端展示层，追加 `verify-inspect` 环节，由 Claude Code 主动完成页面级确认。
 8. 完成 simplify 和严格 review 后，必须调用 `feature-ready-check` subagent 做最终复核，并在输出中复述其 `## 结论`、`## 阻塞项`、`## 建议下一步`。
-9. 若本任务为单 worktree，进入 `/sync_back_main`；若为多子任务汇总，进入 integration；不要 push。
+9. 若本任务为单 worktree，进入 `/sync_back_main`；若为多子任务汇总，进入 integration。远程同步策略以根 `CLAUDE.md` 与 `/sync_back_main` 为准。
 
 结束时请输出：
 

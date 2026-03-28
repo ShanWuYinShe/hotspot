@@ -19,7 +19,7 @@ $ARGUMENTS
 5. 汇总结果时，区分编译错误、测试失败、构建失败、环境问题及基线问题。
 6. 若 verify 通过，下一步进入 simplify / strict review / `/finish_integrate`。
 7. 若 verify 失败，明确列出失败范围和建议修复方向。
-8. 不要 push。
+8. 远程同步策略以根 `CLAUDE.md` 与 `/sync_back_main` 为准。
 
 结束时请输出：
 
