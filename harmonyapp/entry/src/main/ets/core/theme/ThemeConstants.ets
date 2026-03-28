@@ -53,19 +53,19 @@ class ThemeShadowRegistry {
   };
 
   readonly SOFT_GALLERY_LIGHT: ThemeShadows = {
-    surface: new AppThemeShadow(24, '#1FDBCEBA', 0, 6),
-    elevated: new AppThemeShadow(36, '#26B59269', 0, 12),
-    accent: new AppThemeShadow(30, '#30C59E74', 0, 10),
-    control: new AppThemeShadow(20, '#20D4C0A4', 0, 5),
-    tabBar: new AppThemeShadow(30, '#20CBB08C', 0, -4)
+    surface: new AppThemeShadow(16, '#0D000000', 0, 2),
+    elevated: new AppThemeShadow(24, '#14000000', 0, 4),
+    accent: new AppThemeShadow(20, '#18D4AF37', 0, 3),
+    control: new AppThemeShadow(12, '#0A000000', 0, 2),
+    tabBar: new AppThemeShadow(20, '#10000000', 0, -2)
   };
 
   readonly SOFT_GALLERY_DARK: ThemeShadows = {
-    surface: new AppThemeShadow(22, '#244A6999', 0, 4),
-    elevated: new AppThemeShadow(34, '#325A7DC4', 0, 10),
-    accent: new AppThemeShadow(24, '#32D5AE7A', 0, 9),
-    control: new AppThemeShadow(20, '#2A5A7CB4', 0, 5),
-    tabBar: new AppThemeShadow(32, '#305D80C0', 0, -4)
+    surface: new AppThemeShadow(14, '#20000000', 0, 2),
+    elevated: new AppThemeShadow(22, '#30000000', 0, 4),
+    accent: new AppThemeShadow(16, '#26FFD700', 0, 3),
+    control: new AppThemeShadow(12, '#1A000000', 0, 2),
+    tabBar: new AppThemeShadow(18, '#26000000', 0, -2)
   };
 }
 
@@ -115,46 +115,46 @@ export class ThemeConstants {
   };
 
   static readonly SOFT_GALLERY_LIGHT_COLORS: ColorConfig = {
-    pageBackground: '#F6EFE6',
-    surfaceBackground: '#FCF7F0',
-    surfaceSubtle: '#F1E7DA',
-    borderColor: '#E8DAC7',
-    sheetBackground: '#F8F1E8',
-    accentBackground: '#B68960',
-    accentText: '#FFF8F1',
-    chatBackground: '#F7EFE5',
-    systemSurfaceBaseColor: '#F6EFE6',
-    overlayStrong: '#785A4138',
-    textPrimary: '#76563E',
-    textSecondary: '#967B63',
-    textTertiary: '#B5A08C',
-    iconMuted: '#98A48F',
-    buttonSecondaryBackground: '#F5ECE2',
-    buttonSecondaryText: '#76563E',
-    tabBarBackground: '#F7F0E6',
-    tabBarInactive: '#887766',
+    pageBackground: '#F8F5F2',
+    surfaceBackground: '#FFFFFF',
+    surfaceSubtle: '#F0EBE3',
+    borderColor: '#E8E0D4',
+    sheetBackground: '#F8F5F2',
+    accentBackground: '#D4AF37',
+    accentText: '#FFFFFF',
+    chatBackground: '#F5F0EA',
+    systemSurfaceBaseColor: '#F8F5F2',
+    overlayStrong: '#80000000',
+    textPrimary: '#2D2D2D',
+    textSecondary: '#6E6E6E',
+    textTertiary: '#9E9E9E',
+    iconMuted: '#9E9E9E',
+    buttonSecondaryBackground: '#FFFFFF',
+    buttonSecondaryText: '#2D2D2D',
+    tabBarBackground: '#F8F5F2',
+    tabBarInactive: '#8A8A8A',
     isDarkTheme: false
   };
 
   static readonly SOFT_GALLERY_DARK_COLORS: ColorConfig = {
-    pageBackground: '#121A27',
-    surfaceBackground: '#192233',
-    surfaceSubtle: '#212D41',
-    borderColor: '#2E4057',
-    sheetBackground: '#18202F',
-    accentBackground: '#D9B48A',
-    accentText: '#192232',
-    chatBackground: '#101725',
-    systemSurfaceBaseColor: '#121A27',
-    overlayStrong: '#BF05080D',
-    textPrimary: '#E9EDF5',
-    textSecondary: '#B4BECC',
-    textTertiary: '#8998AB',
-    iconMuted: '#97A9C0',
-    buttonSecondaryBackground: '#202C40',
-    buttonSecondaryText: '#E9EDF5',
-    tabBarBackground: '#16202F',
-    tabBarInactive: '#A4B1C2',
+    pageBackground: '#121212',
+    surfaceBackground: '#1E1E1E',
+    surfaceSubtle: '#2A2A2A',
+    borderColor: '#333333',
+    sheetBackground: '#1A1A1A',
+    accentBackground: '#FFD700',
+    accentText: '#121212',
+    chatBackground: '#0E0E0E',
+    systemSurfaceBaseColor: '#121212',
+    overlayStrong: '#99000000',
+    textPrimary: '#FFFFFF',
+    textSecondary: '#B0B0B0',
+    textTertiary: '#808080',
+    iconMuted: '#808080',
+    buttonSecondaryBackground: '#2A2A2A',
+    buttonSecondaryText: '#FFFFFF',
+    tabBarBackground: '#181818',
+    tabBarInactive: '#8A8A8A',
     isDarkTheme: true
   };
 

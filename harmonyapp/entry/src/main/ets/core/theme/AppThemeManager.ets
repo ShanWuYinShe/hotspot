@@ -169,7 +169,7 @@ const SOFT_GALLERY_LIGHT_VISUALS = buildVisualTokens(
   SOFT_THEME_METRICS,
   {
     avatarShadow: cloneShadow(ThemeConstants.SHADOWS.SOFT_GALLERY_LIGHT.elevated),
-    haloShadow: new AppThemeShadow(48, '#44FFF7EB', 0, 0),
+    haloShadow: new AppThemeShadow(36, '#30D4AF37', 0, 0),
     previewShadow: cloneShadow(ThemeConstants.SHADOWS.SOFT_GALLERY_LIGHT.elevated)
   }
 );
@@ -179,7 +179,7 @@ const SOFT_GALLERY_DARK_VISUALS = buildVisualTokens(
   SOFT_THEME_METRICS,
   {
     avatarShadow: cloneShadow(ThemeConstants.SHADOWS.SOFT_GALLERY_DARK.elevated),
-    haloShadow: new AppThemeShadow(38, '#368DB6FF', 0, 0),
+    haloShadow: new AppThemeShadow(28, '#30FFD700', 0, 0),
     previewShadow: cloneShadow(ThemeConstants.SHADOWS.SOFT_GALLERY_DARK.elevated)
   }
 );
