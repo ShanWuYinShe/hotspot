@@ -36,3 +36,14 @@ next_free_port() {
   done
   printf '%s\n' "$port"
 }
+
+s3_healthcheck_path() {
+  printf '/s3/minio/health/live\n'
+}
+
+s3_healthcheck_ok() {
+  local base_url="$1"
+  local code
+  code="$(curl -sS -o /dev/null -w "%{http_code}" "${base_url}$(s3_healthcheck_path)" || true)"
+  [[ "$code" == "200" ]]
+}

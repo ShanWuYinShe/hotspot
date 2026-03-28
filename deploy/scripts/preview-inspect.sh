@@ -132,16 +132,16 @@ fi
 
 if [[ $SKIP_S3 -eq 0 ]]; then
   echo | tee -a "$INSPECT_CONSOLE_LOG"
-  echo "GET /s3/" | tee -a "$INSPECT_CONSOLE_LOG"
+  echo "GET $(s3_healthcheck_path)" | tee -a "$INSPECT_CONSOLE_LOG"
   s3_body="$(log_file_path "$LOG_ROOT" "curl-s3.body.log")"
   s3_code_file="$(log_file_path "$LOG_ROOT" "curl-s3.code.log")"
-  curl -k -sS -o "$s3_body" -w "%{http_code}" "$BASE_URL/s3/" >"$s3_code_file"
+  curl -k -sS -o "$s3_body" -w "%{http_code}" "$BASE_URL$(s3_healthcheck_path)" >"$s3_code_file"
   code="$(cat "$s3_code_file")"
   {
     echo "status=$code"
     cat "$s3_body"
   } >"$INSPECT_S3_LOG"
-  if [[ "$code" == "200" || "$code" == "403" || "$code" == "404" ]]; then
+  if [[ "$code" == "200" ]]; then
     echo "ok (status $code)" | tee -a "$INSPECT_CONSOLE_LOG"
   else
     echo "unexpected status $code" | tee -a "$INSPECT_CONSOLE_LOG" >&2

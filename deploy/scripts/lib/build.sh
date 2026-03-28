@@ -22,10 +22,15 @@ build_app_image() {
   local image="$1"
   local dockerfile="$2"
   local context="$3"
+  shift 3
   local -a build_args=()
   while IFS= read -r -d '' arg; do
     build_args+=("$arg")
   done < <(common_docker_build_args)
+  while [[ $# -gt 0 ]]; do
+    build_args+=(--label "$1")
+    shift
+  done
   if ((${#build_args[@]} > 0)); then
     docker build "${build_args[@]}" -t "$image" -f "$dockerfile" "$context"
   else
@@ -38,7 +43,7 @@ backend_build_command() {
 }
 
 frontend_build_command() {
-  printf '%s\n' 'rm -rf /tmp/workspace && mkdir -p /tmp/workspace/frontend_svelte && cp -a /workspace/frontend_svelte/. /tmp/workspace/frontend_svelte/ && cd /tmp/workspace/frontend_svelte && CI=true pnpm install --frozen-lockfile && CI=true pnpm build && CI=true pnpm prune --prod && cp -R node_modules /out/node_modules && cp package.json pnpm-lock.yaml /out/ && rm -rf /out/build && cp -R build /out/build'
+  printf '%s\n' 'rm -rf /tmp/workspace && mkdir -p /tmp/workspace/frontend_svelte && cp -a /workspace/frontend_svelte/. /tmp/workspace/frontend_svelte/ && cd /tmp/workspace/frontend_svelte && CI=true pnpm install --frozen-lockfile && CI=true pnpm build && CI=true pnpm prune --prod --ignore-scripts && cp -R node_modules /out/node_modules && cp package.json pnpm-lock.yaml /out/ && rm -rf /out/build && cp -R build /out/build'
 }
 
 run_backend_artifact_build() {

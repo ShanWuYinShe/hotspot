@@ -104,8 +104,18 @@ ensure_dir "$MANIFEST_DIR"
 
 run_backend_artifact_build "$BACKEND_BUILD_LOG" "$SOURCE_ROOT" "$BACKEND_ARTIFACT_DIR" "$BACKEND_RUNNER_IMAGE"
 run_frontend_artifact_build "$FRONTEND_BUILD_LOG" "$SOURCE_ROOT" "$FRONTEND_ARTIFACT_DIR" "$FRONTEND_RUNNER_IMAGE"
-run_and_capture "$BACKEND_IMAGE_BUILD_LOG" build_app_image "$RELEASE_BACKEND_IMAGE" "$ROOT/deploy/dockerfiles/backend-go.app.Dockerfile" "$BACKEND_ARTIFACT_DIR"
-run_and_capture "$FRONTEND_IMAGE_BUILD_LOG" build_app_image "$RELEASE_FRONTEND_IMAGE" "$ROOT/deploy/dockerfiles/frontend.app.Dockerfile" "$FRONTEND_ARTIFACT_DIR"
+run_and_capture "$BACKEND_IMAGE_BUILD_LOG" build_app_image "$RELEASE_BACKEND_IMAGE" "$ROOT/deploy/dockerfiles/backend-go.app.Dockerfile" "$BACKEND_ARTIFACT_DIR" \
+  "hotspot.role=release-backend-go-image" \
+  "hotspot.display.name=Backend Go Release Image" \
+  "hotspot.image.kind=release" \
+  "hotspot.release.label=$LABEL" \
+  "hotspot.release.sha=$SHA"
+run_and_capture "$FRONTEND_IMAGE_BUILD_LOG" build_app_image "$RELEASE_FRONTEND_IMAGE" "$ROOT/deploy/dockerfiles/frontend.app.Dockerfile" "$FRONTEND_ARTIFACT_DIR" \
+  "hotspot.role=release-frontend-image" \
+  "hotspot.display.name=Frontend Release Image" \
+  "hotspot.image.kind=release" \
+  "hotspot.release.label=$LABEL" \
+  "hotspot.release.sha=$SHA"
 
 cat > "$MANIFEST_PATH" <<EOF
 {

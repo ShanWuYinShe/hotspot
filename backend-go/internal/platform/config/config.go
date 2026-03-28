@@ -4,6 +4,8 @@ import "os"
 
 type Config struct {
 	AppName            string
+	AppEnv             string
+	LogLevel           string
 	Host               string
 	Port               string
 	PostgresDSN        string
@@ -20,6 +22,8 @@ type Config struct {
 func Load() Config {
 	return Config{
 		AppName:            envOrDefault("APP_NAME", "hotspot-backend-go"),
+		AppEnv:             envOrDefault("APP_ENV", "production"),
+		LogLevel:           envOrDefault("LOG_LEVEL", "info"),
 		Host:               envOrDefault("APP_HOST", "0.0.0.0"),
 		Port:               envOrDefault("APP_PORT", "8081"),
 		PostgresDSN:        os.Getenv("POSTGRES_DSN"),

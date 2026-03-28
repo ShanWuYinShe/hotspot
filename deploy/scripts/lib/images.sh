@@ -76,6 +76,7 @@ common_docker_build_args() {
 export_verify_image_defaults() {
   export HOTSPOT_VERIFY_POSTGRES_IMAGE="${HOTSPOT_VERIFY_POSTGRES_IMAGE:-$(default_postgres_image)}"
   export HOTSPOT_VERIFY_REDIS_IMAGE="${HOTSPOT_VERIFY_REDIS_IMAGE:-$(default_redis_image)}"
+  export HOTSPOT_VERIFY_MINIO_IMAGE="${HOTSPOT_VERIFY_MINIO_IMAGE:-$(default_preview_minio_image)}"
 }
 
 export_preview_image_defaults() {

@@ -27,7 +27,7 @@ type App struct {
 }
 
 func NewApp(cfg config.Config) (*App, error) {
-	logger, err := observability.NewLogger()
+	logger, err := observability.NewLogger(cfg.AppEnv, cfg.LogLevel)
 	if err != nil {
 		return nil, err
 	}

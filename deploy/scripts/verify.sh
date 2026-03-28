@@ -92,7 +92,7 @@ cd "$ROOT"
   echo "Runner images: $BACKEND_RUNNER_IMAGE , $FRONTEND_RUNNER_IMAGE"
   echo "Log root: $LOG_ROOT"
 } | tee "$RUN_SUMMARY_LOG"
-docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" up -d postgres-test redis-test 2>&1 | tee -a "$VERIFY_CONSOLE_LOG"
+docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" up -d postgres redis 2>&1 | tee -a "$VERIFY_CONSOLE_LOG"
 run_and_capture "$BACKEND_VERIFY_LOG" docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" run --rm backend-go-verify
 run_and_capture "$FRONTEND_VERIFY_LOG" docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" run --rm frontend-verify
 

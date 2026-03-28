@@ -18,6 +18,9 @@ INSPECT_CONSOLE_LOG=""
 COMPOSE_PS_LOG=""
 COMPOSE_FULL_LOG=""
 RUN_SUMMARY_LOG=""
+HOME_CHECK_LOG=""
+HEALTH_CHECK_LOG=""
+S3_CHECK_LOG=""
 
 usage() {
   cat <<'EOF'
@@ -65,6 +68,9 @@ INSPECT_CONSOLE_LOG="$(log_file_path "$LOG_ROOT" "verify-inspect.console.log")"
 COMPOSE_PS_LOG="$(log_file_path "$LOG_ROOT" "compose.inspect.ps.log")"
 COMPOSE_FULL_LOG="$(log_file_path "$LOG_ROOT" "compose.inspect.full.log")"
 RUN_SUMMARY_LOG="$(log_file_path "$LOG_ROOT" "inspect.meta.log")"
+HOME_CHECK_LOG="$(log_file_path "$LOG_ROOT" "curl-home.log")"
+HEALTH_CHECK_LOG="$(log_file_path "$LOG_ROOT" "curl-health.log")"
+S3_CHECK_LOG="$(log_file_path "$LOG_ROOT" "curl-s3-health.log")"
 
 ensure_current_tree_flow_allowed "$ROOT" "verify-inspect"
 prepare_deploy_dirs "$ROOT"
@@ -115,10 +121,10 @@ cd "$ROOT"
   echo "Log root: $LOG_ROOT"
 } | tee "$RUN_SUMMARY_LOG"
 
-docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" up -d postgres-test redis-test backend-go-inspect frontend-inspect verify-inspect-nginx 2>&1 | tee -a "$INSPECT_CONSOLE_LOG"
+docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" up -d postgres redis minio backend-go-inspect frontend-inspect verify-inspect-nginx 2>&1 | tee -a "$INSPECT_CONSOLE_LOG"
 ready=0
 for _ in $(seq 1 180); do
-  if curl -f -sS "http://localhost:$HTTP_PORT/" >/dev/null 2>&1 && curl -f -sS -X POST "http://localhost:$HTTP_PORT/api/v1/system/health" -H "Content-Type: application/json" -d '{}' >/dev/null 2>&1; then
+  if curl -f -sS "http://localhost:$HTTP_PORT/" >/dev/null 2>&1 && curl -f -sS -X POST "http://localhost:$HTTP_PORT/api/v1/system/health" -H "Content-Type: application/json" -d '{}' >/dev/null 2>&1 && s3_healthcheck_ok "http://localhost:$HTTP_PORT"; then
     ready=1
     break
   fi
@@ -128,9 +134,13 @@ if [[ $ready -ne 1 ]]; then
   echo "verify-inspect environment did not become ready in time" >&2
   exit 1
 fi
+curl -f -sS "http://localhost:$HTTP_PORT/" 2>&1 | tee "$HOME_CHECK_LOG" >/dev/null
+curl -f -sS -X POST "http://localhost:$HTTP_PORT/api/v1/system/health" -H "Content-Type: application/json" -d '{}' 2>&1 | tee "$HEALTH_CHECK_LOG" >/dev/null
+curl -f -sS "http://localhost:$HTTP_PORT$(s3_healthcheck_path)" 2>&1 | tee "$S3_CHECK_LOG" >/dev/null
 echo "Verify inspect environment is ready." | tee -a "$INSPECT_CONSOLE_LOG"
 echo "Environment name: $ENV_NAME" | tee -a "$INSPECT_CONSOLE_LOG"
 echo "Compose project: $PROJECT_NAME" | tee -a "$INSPECT_CONSOLE_LOG"
 echo "Inspect entrypoint: http://localhost:$HTTP_PORT" | tee -a "$INSPECT_CONSOLE_LOG"
 echo "Logs: $LOG_ROOT" | tee -a "$INSPECT_CONSOLE_LOG"
+echo "Checked: / , /api/v1/system/health , $(s3_healthcheck_path)" | tee -a "$INSPECT_CONSOLE_LOG"
 echo "下一步应由 Claude Code 主动访问该入口做页面、console、UI 与交互检查；deploy 不承载具体页面测试用例。" | tee -a "$INSPECT_CONSOLE_LOG"
