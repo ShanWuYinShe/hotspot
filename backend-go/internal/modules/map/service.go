@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"hotspot/backend-go/internal/platform/geo"
+	"hotspot/backend-go/internal/platform/observability"
 )
 
 type Service struct{ repo Repository }
@@ -18,6 +19,7 @@ func (s *Service) Canvas(ctx context.Context, req MapCanvasRequest) (MapCanvasRe
 	if query.SpanMeters > heatmapViewportThresholdMeters {
 		heatmap, err := s.repo.Heatmap(ctx, query)
 		if err != nil {
+			observability.L().Error("map.canvas heatmap failed", "error", err)
 			return MapCanvasResponse{}, err
 		}
 		return MapCanvasResponse{Heatmap: &heatmap}, nil
@@ -25,6 +27,7 @@ func (s *Service) Canvas(ctx context.Context, req MapCanvasRequest) (MapCanvasRe
 
 	hotspots, err := s.repo.Hotspots(ctx, query)
 	if err != nil {
+		observability.L().Error("map.canvas hotspots failed", "error", err)
 		return MapCanvasResponse{}, err
 	}
 	return MapCanvasResponse{Hotspots: &hotspots}, nil

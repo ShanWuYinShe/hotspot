@@ -92,6 +92,12 @@ type backendStub struct {
 	execErrs map[string]error
 }
 
+type backendCommentCursor struct {
+	commentID string
+	likedAt   string
+	userID    string
+}
+
 func newBackendStub() *backendStub {
 	return &backendStub{comments: make(map[string][]CommentItem), execErrs: make(map[string]error)}
 }
@@ -104,6 +110,7 @@ func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
 	case queryInsertComment:
 		item := CommentItem{
 			CommentID:    args[0].(string),
+			MomentID:     args[1].(string),
 			Content:      args[4].(string),
 			CreatedAt:    args[5].(string),
 			LikesCount:   args[6].(int),
@@ -131,27 +138,81 @@ func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
 	return nil
 }
 
-func (b *backendStub) QueryRow(context.Context, string, ...any) persistence.Row {
-	return rowValues{err: persistence.ErrNotImplemented}
+func (b *backendStub) QueryRow(_ context.Context, query string, args ...any) persistence.Row {
+	switch query {
+	case queryGetComment:
+		commentID := args[0].(string)
+		for _, items := range b.comments {
+			for _, item := range items {
+				if item.CommentID == commentID {
+					return rowValues{values: []any{item.CommentID, item.MomentID, item.User.UserID, item.ParentID, item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount}}
+				}
+			}
+		}
+		return rowValues{err: persistence.ErrNotImplemented}
+	default:
+		return rowValues{err: persistence.ErrNotImplemented}
+	}
 }
 
 func (b *backendStub) Query(_ context.Context, query string, args ...any) (persistence.Rows, error) {
-	if query != queryListComments {
+	switch query {
+	case queryListComments:
+		momentID := args[0].(string)
+		items := append([]CommentItem(nil), b.comments[momentID]...)
+		sort.Slice(items, func(i, j int) bool {
+			if items[i].CreatedAt == items[j].CreatedAt {
+				return items[i].CommentID > items[j].CommentID
+			}
+			return items[i].CreatedAt > items[j].CreatedAt
+		})
+		rows := make([][]any, 0, len(items))
+		for _, item := range items {
+			rows = append(rows, []any{item.CommentID, item.User.UserID, item.ParentID, item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount})
+		}
+		return &rowsValues{rows: rows}, nil
+	case queryListCommentReplies:
+		parentID := args[0].(string)
+		cursor := backendCommentCursor{}
+		if args[1] != nil {
+			cursor.likedAt = args[1].(interface{ Format(string) string }).Format("2006-01-02T15:04:05Z07:00")
+			cursor.commentID = args[2].(string)
+		}
+		limit := args[3].(int)
+		items := make([]CommentItem, 0)
+		for _, momentItems := range b.comments {
+			for _, item := range momentItems {
+				if item.ParentID == parentID {
+					items = append(items, item)
+				}
+			}
+		}
+		sort.Slice(items, func(i, j int) bool {
+			if items[i].CreatedAt == items[j].CreatedAt {
+				return items[i].CommentID > items[j].CommentID
+			}
+			return items[i].CreatedAt > items[j].CreatedAt
+		})
+		if cursor.commentID != "" {
+			filtered := items[:0]
+			for _, item := range items {
+				if item.CreatedAt < cursor.likedAt || (item.CreatedAt == cursor.likedAt && item.CommentID < cursor.commentID) {
+					filtered = append(filtered, item)
+				}
+			}
+			items = filtered
+		}
+		if len(items) > limit {
+			items = items[:limit]
+		}
+		rows := make([][]any, 0, len(items))
+		for _, item := range items {
+			rows = append(rows, []any{item.CommentID, item.User.UserID, item.ParentID, item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount})
+		}
+		return &rowsValues{rows: rows}, nil
+	default:
 		return &persistence.InMemoryRows{}, nil
 	}
-	momentID := args[0].(string)
-	items := append([]CommentItem(nil), b.comments[momentID]...)
-	sort.Slice(items, func(i, j int) bool {
-		if items[i].CreatedAt == items[j].CreatedAt {
-			return items[i].CommentID > items[j].CommentID
-		}
-		return items[i].CreatedAt > items[j].CreatedAt
-	})
-	rows := make([][]any, 0, len(items))
-	for _, item := range items {
-		rows = append(rows, []any{item.CommentID, item.User.UserID, item.ParentID, item.Content, item.CreatedAt, item.LikesCount, item.RepliesCount})
-	}
-	return &rowsValues{rows: rows}, nil
 }
 
 func TestNewPersistenceRepositoryUsesPostgresWhenDSNConfigured(t *testing.T) {
@@ -197,5 +258,58 @@ func TestPostgresRepositoryCreateReturnsErrorOnExecFailure(t *testing.T) {
 	}
 	if fallback.used {
 		t.Fatal("unexpected fallback usage")
+	}
+}
+
+func TestPostgresRepositoryGetReturnsMomentID(t *testing.T) {
+	backend := newBackendStub()
+	backend.comments["moment_1"] = []CommentItem{{
+		CommentID:    "comment_1",
+		MomentID:     "moment_1",
+		Content:      "hello",
+		CreatedAt:    "2026-03-28T10:00:00Z",
+		LikesCount:   1,
+		RepliesCount: 0,
+		User:         UserInfo{UserID: "user_alice", Nickname: "user_alice"},
+		MyState:      &MyCommentState{IsLiked: false},
+	}}
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	repo := NewPostgresRepository(factory, &fallbackRepo{})
+
+	item, found, err := repo.Get(context.Background(), "comment_1")
+	if err != nil || !found {
+		t.Fatalf("unexpected get result: item=%#v found=%v err=%v", item, found, err)
+	}
+	if item.MomentID != "moment_1" {
+		t.Fatalf("expected moment_id to be populated, got %#v", item)
+	}
+}
+
+func TestPostgresRepositoryListRepliesUsesCursor(t *testing.T) {
+	backend := newBackendStub()
+	backend.comments["moment_1"] = []CommentItem{
+		{CommentID: "reply_3", MomentID: "moment_1", ParentID: "comment_0", Content: "c", CreatedAt: "2026-03-28T10:02:00Z", User: UserInfo{UserID: "u3", Nickname: "u3"}, MyState: &MyCommentState{IsLiked: false}},
+		{CommentID: "reply_2", MomentID: "moment_1", ParentID: "comment_0", Content: "b", CreatedAt: "2026-03-28T10:01:00Z", User: UserInfo{UserID: "u2", Nickname: "u2"}, MyState: &MyCommentState{IsLiked: false}},
+		{CommentID: "reply_1", MomentID: "moment_1", ParentID: "comment_0", Content: "a", CreatedAt: "2026-03-28T10:00:00Z", User: UserInfo{UserID: "u1", Nickname: "u1"}, MyState: &MyCommentState{IsLiked: false}},
+	}
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	repo := NewPostgresRepository(factory, &fallbackRepo{})
+
+	first, err := repo.ListReplies(context.Background(), "comment_0", 2, "")
+	if err != nil {
+		t.Fatalf("first page: %v", err)
+	}
+	if len(first.Items) != 2 || first.Items[0].CommentID != "reply_3" || first.Items[1].CommentID != "reply_2" || first.NextCursor == "" {
+		t.Fatalf("unexpected first page: %#v", first)
+	}
+
+	second, err := repo.ListReplies(context.Background(), "comment_0", 2, first.NextCursor)
+	if err != nil {
+		t.Fatalf("second page: %v", err)
+	}
+	if len(second.Items) != 1 || second.Items[0].CommentID != "reply_1" || second.NextCursor != "" {
+		t.Fatalf("unexpected second page: %#v", second)
 	}
 }

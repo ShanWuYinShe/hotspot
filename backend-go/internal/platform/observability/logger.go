@@ -9,7 +9,7 @@ import (
 )
 
 type Logger struct {
-	base *zap.Logger
+	base *zap.SugaredLogger
 }
 
 func NewLogger(appEnv, logLevel string) (*Logger, error) {
@@ -18,40 +18,62 @@ func NewLogger(appEnv, logLevel string) (*Logger, error) {
 		return nil, fmt.Errorf("parse log level %q: %w", logLevel, err)
 	}
 
-	loggerCfg, err := loggerConfig(appEnv)
-	if err != nil {
-		return nil, err
-	}
+	loggerCfg := loggerConfig(appEnv)
 	loggerCfg.Level = zap.NewAtomicLevelAt(level)
 
-	base, err := loggerCfg.Build()
+	base, err := loggerCfg.Build(zap.AddCaller(), zap.AddCallerSkip(1))
 	if err != nil {
 		return nil, err
 	}
-	return &Logger{base: base}, nil
+	return &Logger{base: base.Sugar()}, nil
 }
 
-func loggerConfig(appEnv string) (zap.Config, error) {
+func loggerConfig(appEnv string) zap.Config {
 	switch strings.ToLower(strings.TrimSpace(appEnv)) {
 	case "development":
-		return zap.NewDevelopmentConfig(), nil
+		return zap.NewDevelopmentConfig()
 	default:
-		return zap.NewProductionConfig(), nil
+		cfg := zap.NewProductionConfig()
+		cfg.EncoderConfig.TimeKey = "ts"
+		cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+		return cfg
 	}
 }
 
-func (l *Logger) Info(msg string, fields ...zap.Field) {
-	l.base.Info(msg, fields...)
+func (l *Logger) Info(msg string, keysAndValues ...any) {
+	l.base.Infow(msg, keysAndValues...)
 }
 
-func (l *Logger) Error(msg string, fields ...zap.Field) {
-	l.base.Error(msg, fields...)
+func (l *Logger) Warn(msg string, keysAndValues ...any) {
+	l.base.Warnw(msg, keysAndValues...)
+}
+
+func (l *Logger) Error(msg string, keysAndValues ...any) {
+	l.base.Errorw(msg, keysAndValues...)
+}
+
+func (l *Logger) Debug(msg string, keysAndValues ...any) {
+	l.base.Debugw(msg, keysAndValues...)
 }
 
 func (l *Logger) Sync() error {
 	return l.base.Sync()
 }
 
-func Field(key string, value any) zap.Field {
-	return zap.Any(key, value)
+var defaultLogger *Logger
+
+func SetDefault(l *Logger) {
+	defaultLogger = l
+}
+
+func L() *Logger {
+	if defaultLogger != nil {
+		return defaultLogger
+	}
+	l, err := NewLogger("production", "info")
+	if err != nil {
+		panic("observability: cannot create default logger: " + err.Error())
+	}
+	defaultLogger = l
+	return l
 }

@@ -43,41 +43,35 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return r.fallback.Update(ctx, userID, req)
 	}
-	_, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	return persistence.ErrNotImplemented
+	return queryable.Exec(ctx, queryUpdatePrivateMessage, req.MessageID, req.Content)
 }
 func (r *PostgresRepository) Recall(ctx context.Context, userID string, req RecallPrivateMessageRequest) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return r.fallback.Recall(ctx, userID, req)
 	}
-	_, ok := r.factory.DB.(persistence.QueryableDB)
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	return persistence.ErrNotImplemented
+	return queryable.Exec(ctx, queryRecallPrivateMessage, req.MessageID)
 }
 func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, req MarkPrivateMessagesReadRequest) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return r.fallback.MarkAsRead(ctx, userID, req)
 	}
-	_, ok := r.factory.DB.(persistence.QueryableDB)
-	if !ok {
-		return persistence.ErrNotImplemented
-	}
-	return persistence.ErrNotImplemented
+	// TODO: implement with read tracking table (Phase 3 groups feature)
+	return r.fallback.MarkAsRead(ctx, userID, req)
 }
 func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return r.fallback.MarkAllRead(ctx, userID)
 	}
-	_, ok := r.factory.DB.(persistence.QueryableDB)
-	if !ok {
-		return persistence.ErrNotImplemented
-	}
-	return persistence.ErrNotImplemented
+	// TODO: implement with read tracking table (Phase 3 groups feature)
+	return r.fallback.MarkAllRead(ctx, userID)
 }
 
 func orderedUsers(a, b string) (string, string) {

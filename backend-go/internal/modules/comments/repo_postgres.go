@@ -2,10 +2,15 @@ package comments
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type PostgresRepository struct {
@@ -94,21 +99,178 @@ func (r *PostgresRepository) List(ctx context.Context, momentID string) (Paginat
 }
 
 func (r *PostgresRepository) Get(ctx context.Context, commentID string) (CommentItem, bool, error) {
-	return r.fallback.Get(ctx, commentID)
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.Get(ctx, commentID)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return CommentItem{}, false, persistence.ErrNotImplemented
+	}
+	row := queryable.QueryRow(ctx, queryGetComment, commentID)
+	var item CommentItem
+	var userID, parentID, createdAt string
+	if err := row.Scan(&item.CommentID, &item.MomentID, &userID, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return CommentItem{}, false, nil
+		}
+		return CommentItem{}, false, err
+	}
+	item.User = UserInfo{UserID: userID, Nickname: userID}
+	item.ParentID = parentID
+	item.CreatedAt = createdAt
+	item.MyState = &MyCommentState{IsLiked: false}
+	return item, true, nil
 }
 
 func (r *PostgresRepository) ListReplies(ctx context.Context, commentID string, limit int, cursor string) (PaginatedComments, error) {
-	return r.fallback.ListReplies(ctx, commentID, limit, cursor)
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.ListReplies(ctx, commentID, limit, cursor)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return PaginatedComments{}, persistence.ErrNotImplemented
+	}
+	limit = normalizeCommentLimit(limit)
+	cursorCreatedAt, cursorCommentID, err := decodeCommentCursor(cursor)
+	if err != nil {
+		return PaginatedComments{}, err
+	}
+	rows, err := queryable.Query(ctx, queryListCommentReplies, commentID, cursorCreatedAt, cursorCommentID, limit+1)
+	if err != nil {
+		return PaginatedComments{}, err
+	}
+	defer rows.Close()
+	items := make([]CommentItem, 0, limit+1)
+	for rows.Next() {
+		var item CommentItem
+		var userID, parentID, createdAt string
+		if err := rows.Scan(&item.CommentID, &userID, &parentID, &item.Content, &createdAt, &item.LikesCount, &item.RepliesCount); err != nil {
+			return PaginatedComments{}, err
+		}
+		item.User = UserInfo{UserID: userID, Nickname: userID}
+		item.ParentID = parentID
+		item.CreatedAt = createdAt
+		item.MyState = &MyCommentState{IsLiked: false}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return PaginatedComments{}, err
+	}
+	if len(items) > limit {
+		return PaginatedComments{Items: items[:limit], NextCursor: encodeCommentCursor(items[limit-1].CreatedAt, items[limit-1].CommentID)}, nil
+	}
+	return PaginatedComments{Items: items}, nil
 }
 
 func (r *PostgresRepository) Like(ctx context.Context, commentID string, userID string) error {
-	return r.fallback.Like(ctx, commentID, userID)
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.Like(ctx, commentID, userID)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	var exists int
+	if err := queryable.QueryRow(ctx, queryCheckCommentLike, commentID, userID).Scan(&exists); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	} else if err == nil {
+		return nil // already liked
+	}
+	now := time.Now().UTC()
+	if err := queryable.Exec(ctx, queryInsertCommentLike, commentID, userID, now); err != nil {
+		return err
+	}
+	return queryable.Exec(ctx, queryIncrementCommentLikeCount, commentID)
 }
 
 func (r *PostgresRepository) Unlike(ctx context.Context, commentID string, userID string) error {
-	return r.fallback.Unlike(ctx, commentID, userID)
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.Unlike(ctx, commentID, userID)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	if err := queryable.Exec(ctx, queryDeleteCommentLike, commentID, userID); err != nil {
+		return err
+	}
+	return queryable.Exec(ctx, queryDecrementCommentLikeCount, commentID)
 }
 
 func (r *PostgresRepository) ListLikes(ctx context.Context, commentID string, limit int, cursor string) ([]CommentLikeItem, string, error) {
-	return r.fallback.ListLikes(ctx, commentID, limit, cursor)
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.ListLikes(ctx, commentID, limit, cursor)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return nil, "", persistence.ErrNotImplemented
+	}
+	limit = normalizeCommentLimit(limit)
+	cursorLikedAt, cursorUserID, err := decodeCommentCursor(cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	rows, err := queryable.Query(ctx, queryListCommentLikes, commentID, cursorLikedAt, cursorUserID, limit+1)
+	if err != nil {
+		return nil, "", err
+	}
+	defer rows.Close()
+	items := make([]CommentLikeItem, 0, limit+1)
+	for rows.Next() {
+		var item CommentLikeItem
+		if err := rows.Scan(&item.User.UserID, &item.User.Nickname, &item.LikedAt); err != nil {
+			return nil, "", err
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, "", err
+	}
+	if len(items) > limit {
+		return items[:limit], encodeCommentCursor(items[limit-1].LikedAt, items[limit-1].User.UserID), nil
+	}
+	return items, "", nil
+}
+
+type commentCursor struct {
+	At string `json:"at"`
+	ID string `json:"id"`
+}
+
+func normalizeCommentLimit(limit int) int {
+	switch {
+	case limit <= 0:
+		return 20
+	case limit > 100:
+		return 100
+	default:
+		return limit
+	}
+}
+
+func encodeCommentCursor(at, id string) string {
+	blob, err := json.Marshal(commentCursor{At: at, ID: id})
+	if err != nil {
+		return ""
+	}
+	return base64.RawURLEncoding.EncodeToString(blob)
+}
+
+func decodeCommentCursor(cursor string) (any, string, error) {
+	if cursor == "" {
+		return nil, "", nil
+	}
+	blob, err := base64.RawURLEncoding.DecodeString(cursor)
+	if err != nil {
+		return nil, "", persistence.ErrNotImplemented
+	}
+	var decoded commentCursor
+	if err := json.Unmarshal(blob, &decoded); err != nil || decoded.At == "" || decoded.ID == "" {
+		return nil, "", persistence.ErrNotImplemented
+	}
+	at, err := time.Parse(time.RFC3339, decoded.At)
+	if err != nil {
+		return nil, "", persistence.ErrNotImplemented
+	}
+	return at.UTC(), decoded.ID, nil
 }

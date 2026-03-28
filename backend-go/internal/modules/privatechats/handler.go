@@ -6,6 +6,7 @@ import (
 
 	"hotspot/backend-go/internal/platform/appconfig"
 	"hotspot/backend-go/internal/platform/httpx"
+	"hotspot/backend-go/internal/platform/observability"
 )
 
 type Handler struct {
@@ -24,6 +25,11 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	list, err := h.service.List(r.Context())
 	if err != nil {
+		observability.L().Error("handler error",
+			"method", "List",
+			"error", err,
+			"request_id", observability.RequestIDFromContext(r.Context()),
+		)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		return
 	}
@@ -39,6 +45,11 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 	cfg := h.appConfig.Get(r.Context())
 	result, err := h.service.OpenTheDoor(r.Context(), req.TargetUserID, cfg.ResponseDefaults.ChatRecentMessagesCount)
 	if err != nil {
+		observability.L().Error("handler error",
+			"method", "OpenTheDoor",
+			"error", err,
+			"request_id", observability.RequestIDFromContext(r.Context()),
+		)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		return
 	}

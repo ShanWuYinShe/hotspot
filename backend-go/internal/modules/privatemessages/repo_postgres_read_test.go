@@ -234,26 +234,36 @@ func TestPostgresRepositoryHistoryReturnsErrorOnQueryFailure(t *testing.T) {
 	}
 }
 
-func TestPostgresRepositoryUnsupportedMutationsReturnNotImplemented(t *testing.T) {
+func TestPostgresRepositoryMutationSupportMatchesCurrentPhase(t *testing.T) {
 	backend := &privateMessageBackendStub{items: map[string][]privateMessageStubRecord{}, execErrs: map[string]error{}, queryErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	fallback := &privateMessageFallbackRepo{}
 	repo := NewPostgresRepository(factory, fallback)
 
-	if err := repo.Update(context.Background(), "user_alice", UpdatePrivateMessageRequest{MessageID: "pm_1", Content: "updated"}); !errors.Is(err, persistence.ErrNotImplemented) {
-		t.Fatalf("expected ErrNotImplemented on update, got %v", err)
+	if err := repo.Update(context.Background(), "user_alice", UpdatePrivateMessageRequest{MessageID: "pm_1", Content: "updated"}); err != nil {
+		t.Fatalf("expected update to execute on postgres, got %v", err)
 	}
-	if err := repo.Recall(context.Background(), "user_alice", RecallPrivateMessageRequest{MessageID: "pm_1"}); !errors.Is(err, persistence.ErrNotImplemented) {
-		t.Fatalf("expected ErrNotImplemented on recall, got %v", err)
-	}
-	if err := repo.MarkAsRead(context.Background(), "user_alice", MarkPrivateMessagesReadRequest{TargetUserID: "user_bob", UpToMessageID: "pm_1"}); !errors.Is(err, persistence.ErrNotImplemented) {
-		t.Fatalf("expected ErrNotImplemented on mark_as_read, got %v", err)
-	}
-	if err := repo.MarkAllRead(context.Background(), "user_alice"); !errors.Is(err, persistence.ErrNotImplemented) {
-		t.Fatalf("expected ErrNotImplemented on mark_all_read, got %v", err)
+	if err := repo.Recall(context.Background(), "user_alice", RecallPrivateMessageRequest{MessageID: "pm_1"}); err != nil {
+		t.Fatalf("expected recall to execute on postgres, got %v", err)
 	}
 	if fallback.used {
-		t.Fatal("expected unsupported postgres mutations without fallback")
+		t.Fatal("expected update/recall to execute on postgres without fallback")
+	}
+
+	fallback.used = false
+	if err := repo.MarkAsRead(context.Background(), "user_alice", MarkPrivateMessagesReadRequest{TargetUserID: "user_bob", UpToMessageID: "pm_1"}); err != nil {
+		t.Fatalf("expected mark_as_read fallback behavior, got %v", err)
+	}
+	if !fallback.used {
+		t.Fatal("expected mark_as_read to use fallback")
+	}
+
+	fallback.used = false
+	if err := repo.MarkAllRead(context.Background(), "user_alice"); err != nil {
+		t.Fatalf("expected mark_all_read fallback behavior, got %v", err)
+	}
+	if !fallback.used {
+		t.Fatal("expected mark_all_read to use fallback")
 	}
 }

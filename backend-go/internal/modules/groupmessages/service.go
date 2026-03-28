@@ -3,6 +3,7 @@ package groupmessages
 import (
 	"context"
 
+	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
@@ -13,6 +14,7 @@ func NewServiceWithRepo(repo Repository) *Service { return &Service{repo: repo} 
 func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (MessageSent, error) {
 	msg, err := s.repo.Send(ctx, req)
 	if err != nil {
+		observability.L().Error("groupmessages.send failed", "error", err, "group_id", req.GroupID)
 		return MessageSent{}, err
 	}
 	realtime.DefaultHub().BroadcastToGroup(req.GroupID, realtime.Event{Type: "GroupMessageNew", Payload: map[string]any{"message_id": msg.MessageID, "sent_at": msg.SentAt, "group_id": req.GroupID}})
@@ -23,17 +25,33 @@ func (s *Service) History(ctx context.Context, groupID string) (PaginatedGroupMe
 }
 
 func (s *Service) Update(ctx context.Context, req UpdateGroupMessageRequest) error {
-	return s.repo.Update(ctx, req)
+	if err := s.repo.Update(ctx, req); err != nil {
+		observability.L().Error("groupmessages.update failed", "error", err, "message_id", req.MessageID)
+		return err
+	}
+	return nil
 }
 
 func (s *Service) Recall(ctx context.Context, req RecallGroupMessageRequest) error {
-	return s.repo.Recall(ctx, req)
+	if err := s.repo.Recall(ctx, req); err != nil {
+		observability.L().Error("groupmessages.recall failed", "error", err, "message_id", req.MessageID)
+		return err
+	}
+	return nil
 }
 
 func (s *Service) MarkAsRead(ctx context.Context, req MarkGroupMessagesReadRequest) error {
-	return s.repo.MarkAsRead(ctx, req.GroupID, req.UpToMessageID)
+	if err := s.repo.MarkAsRead(ctx, req.GroupID, req.UpToMessageID); err != nil {
+		observability.L().Error("groupmessages.mark_as_read failed", "error", err, "group_id", req.GroupID, "up_to_message_id", req.UpToMessageID)
+		return err
+	}
+	return nil
 }
 
 func (s *Service) MarkAllRead(ctx context.Context) error {
-	return s.repo.MarkAllRead(ctx)
+	if err := s.repo.MarkAllRead(ctx); err != nil {
+		observability.L().Error("groupmessages.mark_all_read failed", "error", err)
+		return err
+	}
+	return nil
 }

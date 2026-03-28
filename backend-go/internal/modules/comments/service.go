@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
@@ -27,10 +28,13 @@ func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (Comment
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	item, err := s.repo.Create(ctx, principal.UserID, req)
 	if err != nil {
+		observability.L().Error("comments.create repo create failed", "error", err)
 		return CommentItem{}, err
 	}
 	if err := s.moments.IncrementCommentCount(ctx, req.MomentID); err != nil {
+		observability.L().Error("comments.create increment comment count failed", "error", err, "moment_id", req.MomentID, "comment_id", item.CommentID)
 		if rollbackErr := s.repo.Delete(ctx, item.CommentID); rollbackErr != nil {
+			observability.L().Error("comments.create rollback delete failed", "error", rollbackErr, "comment_id", item.CommentID)
 			return CommentItem{}, fmt.Errorf("increment comment count: %w; rollback delete comment: %v", err, rollbackErr)
 		}
 		return CommentItem{}, err
@@ -140,6 +144,7 @@ func (s *Service) ListLikes(ctx context.Context, req CommentLikesRequest) (Pagin
 func (s *Service) ensureMomentExists(ctx context.Context, momentID string) error {
 	exists, err := s.moments.Exists(ctx, momentID)
 	if err != nil {
+		observability.L().Error("comments.ensure_moment_exists failed", "error", err, "moment_id", momentID)
 		return err
 	}
 	if !exists {

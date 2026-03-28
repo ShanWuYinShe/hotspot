@@ -4,6 +4,7 @@ import (
 	"context"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
@@ -23,6 +24,7 @@ func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (MomentIt
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	item, err := s.repo.Create(ctx, principal.UserID, req)
 	if err != nil {
+		observability.L().Error("moments.create failed", "error", err)
 		return MomentItem{}, err
 	}
 	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: "MomentCommented", Payload: map[string]any{"moment_id": item.MomentID, "moment_summary": map[string]any{"moment_id": item.MomentID, "description_preview": item.Description}, "comment_id": "created", "comment_preview": item.Description}})
@@ -67,10 +69,12 @@ func (s *Service) Update(ctx context.Context, req EditMomentRequest) (MomentItem
 		return MomentItem{}, ErrPermissionDenied
 	}
 	if err := s.repo.Update(ctx, principal.UserID, req); err != nil {
+		observability.L().Error("moments.update failed", "error", err, "moment_id", req.MomentID)
 		return MomentItem{}, err
 	}
 	updated, _, err := s.repo.Get(ctx, req.MomentID)
 	if err != nil {
+		observability.L().Error("moments.update reload failed", "error", err, "moment_id", req.MomentID)
 		return MomentItem{}, err
 	}
 	return updated, nil
@@ -95,6 +99,7 @@ func (s *Service) Like(ctx context.Context, momentID string) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	exists, err := s.repo.Exists(ctx, momentID)
 	if err != nil {
+		observability.L().Error("moments.like failed", "error", err, "moment_id", momentID)
 		return err
 	}
 	if !exists {
@@ -112,6 +117,7 @@ func (s *Service) Favorite(ctx context.Context, momentID string) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	exists, err := s.repo.Exists(ctx, momentID)
 	if err != nil {
+		observability.L().Error("moments.favorite failed", "error", err, "moment_id", momentID)
 		return err
 	}
 	if !exists {

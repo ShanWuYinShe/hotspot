@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"hotspot/backend-go/internal/platform/appconfig"
+	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
@@ -35,6 +36,7 @@ func (s *Service) Health(ctx context.Context) (int, string, *HealthStatus) {
 func (s *Service) ListAnnouncements(ctx context.Context) (SystemAnnouncementList, error) {
 	items, err := s.repo.ListAnnouncements(ctx, s.provider.GetSystemAnnouncementsCount(ctx))
 	if err != nil {
+		observability.L().Error("system.list_announcements failed", "error", err)
 		return SystemAnnouncementList{}, err
 	}
 	resp := SystemAnnouncementList{Items: make([]SystemAnnouncementItem, 0, len(items))}

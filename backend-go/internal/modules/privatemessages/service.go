@@ -4,6 +4,7 @@ import (
 	"context"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/realtime"
 )
@@ -54,6 +55,7 @@ func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (Mess
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	msg, err := s.repo.Send(ctx, principal.UserID, req.TargetUserID, req)
 	if err != nil {
+		observability.L().Error("privatemessages.send failed", "error", err, "target_user_id", req.TargetUserID)
 		return MessageSent{}, err
 	}
 	realtime.DefaultHub().BroadcastToUser(req.TargetUserID, realtime.Event{Type: "PrivateMessageNew", Payload: map[string]any{"message_id": msg.MessageID, "sent_at": msg.SentAt}})
@@ -77,20 +79,36 @@ func (s *Service) Last(ctx context.Context, targetUserID string) (*PrivateMessag
 
 func (s *Service) Update(ctx context.Context, req UpdatePrivateMessageRequest) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	return s.repo.Update(ctx, principal.UserID, req)
+	if err := s.repo.Update(ctx, principal.UserID, req); err != nil {
+		observability.L().Error("privatemessages.update failed", "error", err, "message_id", req.MessageID)
+		return err
+	}
+	return nil
 }
 
 func (s *Service) Recall(ctx context.Context, req RecallPrivateMessageRequest) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	return s.repo.Recall(ctx, principal.UserID, req)
+	if err := s.repo.Recall(ctx, principal.UserID, req); err != nil {
+		observability.L().Error("privatemessages.recall failed", "error", err, "message_id", req.MessageID)
+		return err
+	}
+	return nil
 }
 
 func (s *Service) MarkAsRead(ctx context.Context, req MarkPrivateMessagesReadRequest) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	return s.repo.MarkAsRead(ctx, principal.UserID, req)
+	if err := s.repo.MarkAsRead(ctx, principal.UserID, req); err != nil {
+		observability.L().Error("privatemessages.mark_as_read failed", "error", err, "target_user_id", req.TargetUserID, "up_to_message_id", req.UpToMessageID)
+		return err
+	}
+	return nil
 }
 
 func (s *Service) MarkAllRead(ctx context.Context) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	return s.repo.MarkAllRead(ctx, principal.UserID)
+	if err := s.repo.MarkAllRead(ctx, principal.UserID); err != nil {
+		observability.L().Error("privatemessages.mark_all_read failed", "error", err)
+		return err
+	}
+	return nil
 }

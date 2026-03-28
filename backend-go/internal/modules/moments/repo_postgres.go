@@ -77,19 +77,95 @@ func (r *PostgresRepository) IncrementCommentCount(ctx context.Context, momentID
 }
 
 func (r *PostgresRepository) DecrementCommentCount(ctx context.Context, momentID string) error {
-	return r.fallback.DecrementCommentCount(ctx, momentID)
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.DecrementCommentCount(ctx, momentID)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryDecrementMomentCommentCount, momentID)
 }
 
 func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsRequest) (PaginatedMoments, error) {
-	return r.fallback.Search(ctx, req)
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.Search(ctx, req)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return PaginatedMoments{}, persistence.ErrNotImplemented
+	}
+	limit := 20
+	if req.Pagination != nil && req.Pagination.Limit > 0 {
+		limit = req.Pagination.Limit
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	var keyword *string
+	if req.Keyword != nil && *req.Keyword != "" {
+		keyword = req.Keyword
+	}
+	rows, err := queryable.Query(ctx, querySearchMoments, keyword, req.Tag, limit+1)
+	if err != nil {
+		return PaginatedMoments{}, err
+	}
+	defer rows.Close()
+	items := make([]MomentItem, 0, limit+1)
+	momentIDs := make([]string, 0, limit+1)
+	for rows.Next() {
+		item, err := scanMomentRow(rows)
+		if err != nil {
+			return PaginatedMoments{}, err
+		}
+		items = append(items, item)
+		momentIDs = append(momentIDs, item.MomentID)
+	}
+	if err := rows.Err(); err != nil {
+		return PaginatedMoments{}, err
+	}
+	tagsByMomentID, err := loadMomentTags(ctx, queryable, momentIDs)
+	if err != nil {
+		return PaginatedMoments{}, err
+	}
+	for i := range items {
+		items[i].Tags = tagsByMomentID[items[i].MomentID]
+		items[i].MyState = &MyMomentState{}
+	}
+	if len(items) > limit {
+		return PaginatedMoments{Items: items[:limit], NextCursor: items[limit].MomentID}, nil
+	}
+	return PaginatedMoments{Items: items}, nil
 }
 
 func (r *PostgresRepository) Update(ctx context.Context, userID string, req EditMomentRequest) error {
-	return r.fallback.Update(ctx, userID, req)
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.Update(ctx, userID, req)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	var locationName, latStr, lngStr *string
+	if req.Location != nil {
+		locationName = &req.Location.LocationName
+		s := fmt.Sprintf("%f", req.Location.Point.Latitude)
+		latStr = &s
+		s2 := fmt.Sprintf("%f", req.Location.Point.Longitude)
+		lngStr = &s2
+	}
+	return queryable.Exec(ctx, queryUpdateMoment, req.MomentID, req.Description, req.PrivacyLevel, locationName, latStr, lngStr)
 }
 
 func (r *PostgresRepository) Delete(ctx context.Context, momentID string) error {
-	return r.fallback.Delete(ctx, momentID)
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.Delete(ctx, momentID)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryDeleteMoment, momentID)
 }
 
 func (r *PostgresRepository) Like(ctx context.Context, userID string, momentID string) error {

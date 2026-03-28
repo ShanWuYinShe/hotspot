@@ -37,21 +37,39 @@ func (r *PostgresRepository) Send(ctx context.Context, req SendGroupMessageReque
 }
 
 func (r *PostgresRepository) Update(ctx context.Context, req UpdateGroupMessageRequest) error {
-	// TODO: 实现PostgreSQL更新逻辑
-	return r.fallback.Update(ctx, req)
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.Update(ctx, req)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryUpdateGroupMessage, req.MessageID, req.Content)
 }
 
 func (r *PostgresRepository) Recall(ctx context.Context, req RecallGroupMessageRequest) error {
-	// TODO: 实现PostgreSQL撤回逻辑
-	return r.fallback.Recall(ctx, req)
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.Recall(ctx, req)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryRecallGroupMessage, req.MessageID)
 }
 
 func (r *PostgresRepository) MarkAsRead(ctx context.Context, groupID string, upToMessageID string) error {
-	// TODO: 实现PostgreSQL标记已读逻辑
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.MarkAsRead(ctx, groupID, upToMessageID)
+	}
+	// TODO: implement with group_members read tracking table (Phase 3 groups feature)
 	return r.fallback.MarkAsRead(ctx, groupID, upToMessageID)
 }
 
 func (r *PostgresRepository) MarkAllRead(ctx context.Context) error {
-	// TODO: 实现PostgreSQL标记所有已读逻辑
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.MarkAllRead(ctx)
+	}
+	// TODO: implement with group_members read tracking table (Phase 3 groups feature)
 	return r.fallback.MarkAllRead(ctx)
 }

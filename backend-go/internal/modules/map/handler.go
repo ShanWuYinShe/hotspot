@@ -6,6 +6,7 @@ import (
 
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/httpx"
+	"hotspot/backend-go/internal/platform/observability"
 )
 
 type Handler struct {
@@ -28,6 +29,11 @@ func (h *Handler) Canvas(w http.ResponseWriter, r *http.Request) {
 	}
 	resp, err := h.service.Canvas(r.Context(), req)
 	if err != nil {
+		observability.L().Error("handler error",
+			"method", "Canvas",
+			"error", err,
+			"request_id", observability.RequestIDFromContext(r.Context()),
+		)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		return
 	}

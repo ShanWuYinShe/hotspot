@@ -2,8 +2,10 @@ package groups
 
 import (
 	"context"
+	"time"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/observability"
 )
 
 const (
@@ -24,54 +26,102 @@ func NewServiceWithRepo(repo Repository) *Service {
 }
 
 func (s *Service) Create(ctx context.Context, req CreateGroupRequest) (GroupItem, error) {
+	startedAt := time.Now()
+	observability.L().Info("groups.create started")
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	return s.repo.Create(ctx, principal.UserID, req)
+	item, err := s.repo.Create(ctx, principal.UserID, req)
+	if err != nil {
+		observability.L().Error("groups.create failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return GroupItem{}, err
+	}
+	observability.L().Info("groups.create completed", "group_id", item.Group.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	return item, nil
 }
 
 func (s *Service) OpenTheDoor(ctx context.Context, groupID string) (GroupItem, bool, error) {
-	return s.repo.Get(ctx, groupID)
+	startedAt := time.Now()
+	observability.L().Info("groups.open_the_door started", "group_id", groupID)
+	item, ok, err := s.repo.Get(ctx, groupID)
+	if err != nil {
+		observability.L().Error("groups.open_the_door failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return GroupItem{}, false, err
+	}
+	observability.L().Info("groups.open_the_door completed", "group_id", groupID, "found", ok, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	return item, ok, nil
 }
 
 func (s *Service) Search(ctx context.Context, keyword string) (PaginatedGroups, error) {
-	return s.repo.Search(ctx, keyword)
+	startedAt := time.Now()
+	observability.L().Info("groups.search started", "keyword", keyword)
+	result, err := s.repo.Search(ctx, keyword)
+	if err != nil {
+		observability.L().Error("groups.search failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return PaginatedGroups{}, err
+	}
+	observability.L().Info("groups.search completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
+	return result, nil
 }
 
 func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) error {
+	startedAt := time.Now()
+	observability.L().Info("groups.update started", "group_id", req.GroupID)
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if err != nil {
+		observability.L().Error("groups.update failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
 	}
 	if !ok {
+		observability.L().Warn("groups.update not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return ErrGroupNotFound
 	}
 	if group.MyState == nil || group.MyState.Role != GroupRoleOwner {
+		observability.L().Warn("groups.update permission denied", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return ErrPermissionDenied
 	}
-	return s.repo.Update(ctx, principal.UserID, req)
+	if err := s.repo.Update(ctx, principal.UserID, req); err != nil {
+		observability.L().Error("groups.update failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return err
+	}
+	observability.L().Info("groups.update completed", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	return nil
 }
 
 func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
+	startedAt := time.Now()
+	observability.L().Info("groups.dismiss started", "group_id", req.GroupID)
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if err != nil {
+		observability.L().Error("groups.dismiss failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
 	}
 	if !ok {
+		observability.L().Warn("groups.dismiss not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return ErrGroupNotFound
 	}
 	if group.MyState == nil || group.MyState.Role != GroupRoleOwner {
+		observability.L().Warn("groups.dismiss permission denied", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return ErrPermissionDenied
 	}
-	return s.repo.Dismiss(ctx, principal.UserID)
+	if err := s.repo.Dismiss(ctx, principal.UserID); err != nil {
+		observability.L().Error("groups.dismiss failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return err
+	}
+	observability.L().Info("groups.dismiss completed", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	return nil
 }
 
 func (s *Service) ListMembers(ctx context.Context, req GroupMembersRequest) ([]GroupMemberItem, string, error) {
+	startedAt := time.Now()
+	observability.L().Info("groups.list_members started", "group_id", req.GroupID)
 	_, ok, err := s.repo.Get(ctx, req.GroupID)
 	if err != nil {
+		observability.L().Error("groups.list_members failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return nil, "", err
 	}
 	if !ok {
+		observability.L().Warn("groups.list_members not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return nil, "", ErrGroupNotFound
 	}
 	limit := req.Limit
@@ -81,15 +131,25 @@ func (s *Service) ListMembers(ctx context.Context, req GroupMembersRequest) ([]G
 	if limit > 100 {
 		limit = 100
 	}
-	return s.repo.ListMembers(ctx, req.GroupID, req.Role, limit, req.Cursor)
+	items, cursor, err := s.repo.ListMembers(ctx, req.GroupID, req.Role, limit, req.Cursor)
+	if err != nil {
+		observability.L().Error("groups.list_members failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return nil, "", err
+	}
+	observability.L().Info("groups.list_members completed", "group_id", req.GroupID, "count", len(items), "elapsed_ms", time.Since(startedAt).Milliseconds())
+	return items, cursor, nil
 }
 
 func (s *Service) SearchMembers(ctx context.Context, req SearchGroupMembersRequest) ([]GroupMemberItem, string, error) {
+	startedAt := time.Now()
+	observability.L().Info("groups.search_members started", "group_id", req.GroupID)
 	_, ok, err := s.repo.Get(ctx, req.GroupID)
 	if err != nil {
+		observability.L().Error("groups.search_members failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return nil, "", err
 	}
 	if !ok {
+		observability.L().Warn("groups.search_members not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return nil, "", ErrGroupNotFound
 	}
 	limit := req.Limit
@@ -99,10 +159,18 @@ func (s *Service) SearchMembers(ctx context.Context, req SearchGroupMembersReque
 	if limit > 100 {
 		limit = 100
 	}
-	return s.repo.SearchMembers(ctx, req.GroupID, req.Keyword, req.Role, limit, req.Cursor)
+	items, cursor, err := s.repo.SearchMembers(ctx, req.GroupID, req.Keyword, req.Role, limit, req.Cursor)
+	if err != nil {
+		observability.L().Error("groups.search_members failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return nil, "", err
+	}
+	observability.L().Info("groups.search_members completed", "group_id", req.GroupID, "count", len(items), "elapsed_ms", time.Since(startedAt).Milliseconds())
+	return items, cursor, nil
 }
 
 func (s *Service) ListMyGroups(ctx context.Context, req MyGroupsRequest) ([]GroupItem, string, error) {
+	startedAt := time.Now()
+	observability.L().Info("groups.list_my_groups started")
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	limit := req.Limit
 	if limit == 0 {
@@ -111,41 +179,77 @@ func (s *Service) ListMyGroups(ctx context.Context, req MyGroupsRequest) ([]Grou
 	if limit > 100 {
 		limit = 100
 	}
-	return s.repo.ListMyGroups(ctx, principal.UserID, limit, req.Cursor)
+	items, cursor, err := s.repo.ListMyGroups(ctx, principal.UserID, limit, req.Cursor)
+	if err != nil {
+		observability.L().Error("groups.list_my_groups failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return nil, "", err
+	}
+	observability.L().Info("groups.list_my_groups completed", "count", len(items), "elapsed_ms", time.Since(startedAt).Milliseconds())
+	return items, cursor, nil
 }
 
 func (s *Service) JoinGroup(ctx context.Context, req JoinGroupRequest) (JoinGroupResult, error) {
+	startedAt := time.Now()
+	observability.L().Info("groups.join_group started", "group_id", req.GroupID)
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if err != nil {
+		observability.L().Error("groups.join_group failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return JoinGroupResult{}, err
 	}
 	if !ok {
+		observability.L().Warn("groups.join_group not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return JoinGroupResult{}, ErrGroupNotFound
 	}
 	if group.MyState != nil && group.MyState.IsJoined {
+		observability.L().Info("groups.join_group already joined", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return JoinGroupResult{Status: ApplicationStatusAccepted}, nil
 	}
-	return s.repo.JoinGroup(ctx, principal.UserID, req.GroupID, req.Password, req.Message)
+	result, err := s.repo.JoinGroup(ctx, principal.UserID, req.GroupID, req.Password, req.Message)
+	if err != nil {
+		observability.L().Error("groups.join_group failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return JoinGroupResult{}, err
+	}
+	observability.L().Info("groups.join_group completed", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	return result, nil
 }
 
 func (s *Service) CreateAnnouncement(ctx context.Context, req CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error) {
+	startedAt := time.Now()
+	observability.L().Info("groups.create_announcement started", "group_id", req.GroupID)
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	group, ok, err := s.repo.Get(ctx, req.GroupID)
 	if err != nil {
+		observability.L().Error("groups.create_announcement failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return GroupAnnouncementItem{}, err
 	}
 	if !ok {
+		observability.L().Warn("groups.create_announcement not found", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return GroupAnnouncementItem{}, ErrGroupNotFound
 	}
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+		observability.L().Warn("groups.create_announcement permission denied", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return GroupAnnouncementItem{}, ErrPermissionDenied
 	}
-	return s.repo.CreateAnnouncement(ctx, principal.UserID, req)
+	item, err := s.repo.CreateAnnouncement(ctx, principal.UserID, req)
+	if err != nil {
+		observability.L().Error("groups.create_announcement failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return GroupAnnouncementItem{}, err
+	}
+	observability.L().Info("groups.create_announcement completed", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+	return item, nil
 }
 
 func (s *Service) ListAnnouncements(ctx context.Context, req GroupAnnouncementsRequest) ([]GroupAnnouncementItem, error) {
-	return s.repo.ListAnnouncements(ctx, req.GroupID)
+	startedAt := time.Now()
+	observability.L().Info("groups.list_announcements started", "group_id", req.GroupID)
+	items, err := s.repo.ListAnnouncements(ctx, req.GroupID)
+	if err != nil {
+		observability.L().Error("groups.list_announcements failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return nil, err
+	}
+	observability.L().Info("groups.list_announcements completed", "group_id", req.GroupID, "count", len(items), "elapsed_ms", time.Since(startedAt).Milliseconds())
+	return items, nil
 }
 
 func (s *Service) UpdateAnnouncement(ctx context.Context, req UpdateGroupAnnouncementRequest) error {

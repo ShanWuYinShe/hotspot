@@ -30,7 +30,7 @@ func main() {
 	}
 
 	go func() {
-		app.Logger().Info("http server listening", app.LogField("addr", cfg.HTTPAddr()))
+		app.Logger().Info("http server listening", "addr", cfg.HTTPAddr())
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen and serve: %v", err)
 		}

@@ -8,6 +8,7 @@ import (
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
@@ -45,6 +46,7 @@ func (s *Service) CheckStatus(ctx context.Context) AuthStatus {
 }
 
 func (s *Service) Register(ctx context.Context, req RegisterRequest) (platformauth.AuthResult, error) {
+	startedAt := time.Now()
 	account, err := s.repo.Register(ctx, RegisterParams{
 		LoginID:  req.LoginID,
 		Nickname: req.Nickname,
@@ -52,33 +54,87 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (platformau
 		Defaults: s.profileDefaults(ctx),
 	})
 	if err != nil {
+		observability.L().Error("service error",
+			"method", "Register",
+			"error", err,
+			"elapsed_ms", time.Since(startedAt).Milliseconds(),
+		)
 		return platformauth.AuthResult{}, err
 	}
-	return s.auth.IssueSession(account.UserID)
+	result, err := s.auth.IssueSession(account.UserID)
+	if err != nil {
+		observability.L().Error("service error",
+			"method", "Register",
+			"error", err,
+			"elapsed_ms", time.Since(startedAt).Milliseconds(),
+		)
+		return platformauth.AuthResult{}, err
+	}
+	return result, nil
 }
 
 func (s *Service) Login(ctx context.Context, req LoginRequest) (platformauth.AuthResult, error) {
+	startedAt := time.Now()
 	account, err := s.repo.Authenticate(ctx, req.LoginID, req.Password)
 	if err != nil {
+		observability.L().Error("service error",
+			"method", "Login",
+			"error", err,
+			"elapsed_ms", time.Since(startedAt).Milliseconds(),
+		)
 		return platformauth.AuthResult{}, err
 	}
-	return s.auth.IssueSession(account.UserID)
+	result, err := s.auth.IssueSession(account.UserID)
+	if err != nil {
+		observability.L().Error("service error",
+			"method", "Login",
+			"error", err,
+			"elapsed_ms", time.Since(startedAt).Milliseconds(),
+		)
+		return platformauth.AuthResult{}, err
+	}
+	return result, nil
 }
 
 func (s *Service) Guest(ctx context.Context, req GuestRequest) (platformauth.AuthResult, error) {
+	startedAt := time.Now()
 	account, err := s.repo.CreateGuest(ctx, GuestParams{Nickname: req.Nickname, Defaults: s.profileDefaults(ctx)})
 	if err != nil {
+		observability.L().Error("service error",
+			"method", "Guest",
+			"error", err,
+			"elapsed_ms", time.Since(startedAt).Milliseconds(),
+		)
 		return platformauth.AuthResult{}, err
 	}
-	return s.auth.IssueSession(account.UserID)
+	result, err := s.auth.IssueSession(account.UserID)
+	if err != nil {
+		observability.L().Error("service error",
+			"method", "Guest",
+			"error", err,
+			"elapsed_ms", time.Since(startedAt).Milliseconds(),
+		)
+		return platformauth.AuthResult{}, err
+	}
+	return result, nil
 }
 
 func (s *Service) Refresh(req RefreshTokenRequest, refreshCookie string) (platformauth.AuthResult, error) {
+	startedAt := time.Now()
 	refreshToken := req.RefreshToken
 	if req.ClientType == ClientTypeWeb {
 		refreshToken = refreshCookie
 	}
-	return s.auth.RefreshSession(refreshToken)
+	result, err := s.auth.RefreshSession(refreshToken)
+	if err != nil {
+		observability.L().Error("service error",
+			"method", "Refresh",
+			"error", err,
+			"elapsed_ms", time.Since(startedAt).Milliseconds(),
+		)
+		return platformauth.AuthResult{}, err
+	}
+	return result, nil
 }
 
 func (s *Service) ListSessions(ctx context.Context) SessionList {
@@ -108,6 +164,10 @@ func (s *Service) RevokeSession(ctx context.Context, req RevokeSessionRequest) e
 		return platformauth.Forbidden("不允许撤销当前会话")
 	}
 	if err := s.auth.RevokeSession(principal.UserID, principal.SessionID, req.SessionID); err != nil {
+		observability.L().Error("service error",
+			"method", "RevokeSession",
+			"error", err,
+		)
 		return err
 	}
 	realtime.DefaultHub().CloseSession(req.SessionID, sessionRevokedEvent())
@@ -119,17 +179,38 @@ func (s *Service) RequestPasswordReset(ctx context.Context, req RequestPasswordR
 	if errors.Is(err, ErrPasswordResetThrottled) {
 		return nil
 	}
+	if err != nil {
+		observability.L().Error("service error",
+			"method", "RequestPasswordReset",
+			"error", err,
+		)
+	}
 	return err
 }
 
 func (s *Service) ResetPassword(ctx context.Context, req ResetPasswordRequest) (platformauth.AuthResult, error) {
+	startedAt := time.Now()
 	account, err := s.repo.ResetPassword(ctx, req.LoginID, req.VerificationCode, req.NewPassword)
 	if err != nil {
+		observability.L().Error("service error",
+			"method", "ResetPassword",
+			"error", err,
+			"elapsed_ms", time.Since(startedAt).Milliseconds(),
+		)
 		return platformauth.AuthResult{}, err
 	}
 	s.closeAllSessions(account.UserID)
 	s.auth.RevokeOtherSessions(account.UserID, "")
-	return s.auth.IssueSession(account.UserID)
+	result, err := s.auth.IssueSession(account.UserID)
+	if err != nil {
+		observability.L().Error("service error",
+			"method", "ResetPassword",
+			"error", err,
+			"elapsed_ms", time.Since(startedAt).Milliseconds(),
+		)
+		return platformauth.AuthResult{}, err
+	}
+	return result, nil
 }
 
 func (s *Service) ChangePassword(ctx context.Context, req ChangePasswordRequest) error {

@@ -13,6 +13,7 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/httpx"
+	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/requestmeta"
 )
 
@@ -80,6 +81,14 @@ func Middleware(next http.Handler) http.Handler {
 				if retryAfter < 1 {
 					retryAfter = 1
 				}
+				observability.L().Warn("rate limit triggered",
+					"rule", rl.name,
+					"method", r.Method,
+					"uri", r.URL.RequestURI(),
+					"scope", rl.scope,
+					"key", rl.key,
+					"retry_after", retryAfter,
+				)
 				w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
 				httpx.WriteJSON(w, http.StatusOK, httpx.Error(10500, "请求过于频繁"))
 				return

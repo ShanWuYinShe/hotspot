@@ -8,6 +8,7 @@ import (
 
 	private_messages "hotspot/backend-go/internal/modules/privatemessages"
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/observability"
 )
 
 type Service struct {
@@ -25,14 +26,17 @@ func (s *Service) OpenTheDoor(ctx context.Context, targetUserID string, recentLi
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	createdAt, err := s.repo.GetOrCreate(ctx, principal.UserID, targetUserID)
 	if err != nil {
+		observability.L().Error("privatechats.open_the_door get_or_create failed", "error", err, "target_user_id", targetUserID)
 		return PrivateChatOpenResult{}, err
 	}
 	chat, err := s.buildChat(ctx, principal.UserID, targetUserID, createdAt)
 	if err != nil {
+		observability.L().Error("privatechats.open_the_door build_chat failed", "error", err, "target_user_id", targetUserID)
 		return PrivateChatOpenResult{}, err
 	}
 	recent, err := s.messages.Recent(ctx, targetUserID, recentLimit)
 	if err != nil {
+		observability.L().Error("privatechats.open_the_door recent failed", "error", err, "target_user_id", targetUserID)
 		return PrivateChatOpenResult{}, err
 	}
 	return PrivateChatOpenResult{Chat: chat, RecentMessages: recent}, nil
@@ -41,6 +45,7 @@ func (s *Service) List(ctx context.Context) (PaginatedPrivateChats, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	created, err := s.repo.List(ctx, principal.UserID)
 	if err != nil {
+		observability.L().Error("privatechats.list failed", "error", err)
 		return PaginatedPrivateChats{}, err
 	}
 	items := make([]PrivateChatItem, 0)
@@ -78,6 +83,7 @@ func (s *Service) List(ctx context.Context) (PaginatedPrivateChats, error) {
 func (s *Service) buildChat(ctx context.Context, userID, targetUserID string, createdAt time.Time) (PrivateChatItem, error) {
 	last, err := s.messages.Last(ctx, targetUserID)
 	if err != nil {
+		observability.L().Error("privatechats.build_chat last message failed", "error", err, "target_user_id", targetUserID)
 		return PrivateChatItem{}, err
 	}
 	item := PrivateChatItem{OtherUser: UserInfo{UserID: targetUserID, Nickname: targetUserID}, UnreadCount: 0, IsMuted: false, IsPinned: false, LastActivityAt: createdAt.UTC().Format(time.RFC3339), CreatedAt: createdAt.UTC().Format(time.RFC3339), CanMessage: true}

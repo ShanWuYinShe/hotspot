@@ -6,6 +6,7 @@ import (
 
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
+	"hotspot/backend-go/internal/platform/observability"
 )
 
 type Handler struct {
@@ -43,6 +44,11 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 	}
 	item, ok, err := h.service.OpenTheDoor(r.Context(), req.GroupID)
 	if err != nil {
+		observability.L().Error("handler error",
+			"method", "OpenTheDoor",
+			"error", err,
+			"request_id", observability.RequestIDFromContext(r.Context()),
+		)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		return
 	}
@@ -61,6 +67,11 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	}
 	list, err := h.service.Search(r.Context(), req.Keyword)
 	if err != nil {
+		observability.L().Error("handler error",
+			"method", "Search",
+			"error", err,
+			"request_id", observability.RequestIDFromContext(r.Context()),
+		)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		return
 	}

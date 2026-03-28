@@ -10,8 +10,19 @@ import (
 )
 
 func NewHTTPRouter(modules []modulekit.Module) http.Handler {
+	return newHTTPRouter(modules, nil)
+}
+
+func NewHTTPRouterWithLogger(modules []modulekit.Module, logger *observability.Logger) http.Handler {
+	return newHTTPRouter(modules, logger)
+}
+
+func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger) http.Handler {
 	r := chi.NewRouter()
 	r.Use(observability.RequestIDMiddleware)
+	if logger != nil {
+		r.Use(observability.RequestLoggerMiddleware(logger))
+	}
 	for _, module := range modules {
 		module.Mount(r)
 	}

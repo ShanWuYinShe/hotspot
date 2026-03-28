@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"go.uber.org/zap"
-
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
 	platformmigrate "hotspot/backend-go/internal/platform/migrate"
@@ -37,7 +35,7 @@ func NewApp(cfg config.Config) (*App, error) {
 		return nil, err
 	}
 	modules := BuildModules(cfg, persistenceFactory)
-	router := NewHTTPRouter(modules)
+	router := NewHTTPRouterWithLogger(modules, logger)
 	rootMux := http.NewServeMux()
 	rootMux.Handle("/", router)
 	rootMux.Handle("/ws/v1", realtime.NewHandler(platformauth.DefaultService()))
@@ -59,8 +57,8 @@ func (a *App) Logger() *observability.Logger {
 	return a.logger
 }
 
-func (a *App) LogField(key string, value any) zap.Field {
-	return observability.Field(key, value)
+func (a *App) LogField(key string, value any) (string, any) {
+	return key, value
 }
 
 func ensureSchema(cfg config.Config, factory *persistence.Factory) error {

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/httpx"
+	"hotspot/backend-go/internal/platform/observability"
 )
 
 type Handler struct {
@@ -22,6 +23,11 @@ func (h *Handler) GetMyProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	profile, err := h.service.GetMyProfile(r.Context())
 	if err != nil {
+		observability.L().Error("handler error",
+			"method", "GetMyProfile",
+			"error", err,
+			"request_id", observability.RequestIDFromContext(r.Context()),
+		)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		return
 	}
@@ -35,6 +41,11 @@ func (h *Handler) UpdateMyProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.service.UpdateMyProfile(r.Context(), req); err != nil {
+		observability.L().Error("handler error",
+			"method", "UpdateMyProfile",
+			"error", err,
+			"request_id", observability.RequestIDFromContext(r.Context()),
+		)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		return
 	}
@@ -48,6 +59,11 @@ func (h *Handler) GetMySettings(w http.ResponseWriter, r *http.Request) {
 	}
 	settings, err := h.service.GetMySettings(r.Context())
 	if err != nil {
+		observability.L().Error("handler error",
+			"method", "GetMySettings",
+			"error", err,
+			"request_id", observability.RequestIDFromContext(r.Context()),
+		)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		return
 	}
@@ -61,6 +77,11 @@ func (h *Handler) UpdateMySettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.service.UpdateMySettings(r.Context(), req); err != nil {
+		observability.L().Error("handler error",
+			"method", "UpdateMySettings",
+			"error", err,
+			"request_id", observability.RequestIDFromContext(r.Context()),
+		)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
 		return
 	}

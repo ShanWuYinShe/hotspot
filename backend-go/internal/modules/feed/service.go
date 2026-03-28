@@ -5,6 +5,7 @@ import (
 
 	"hotspot/backend-go/internal/platform/appconfig"
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/slicex"
 )
 
@@ -28,20 +29,36 @@ func NewServiceWithSource(repo Repository, source appconfig.Source) *Service {
 }
 
 func (s *Service) ListMoments(ctx context.Context) (PaginatedFeedItems, error) {
-	return s.repo.ListMoments(ctx)
+	items, err := s.repo.ListMoments(ctx)
+	if err != nil {
+		observability.L().Error("feed.list_moments failed", "error", err)
+		return PaginatedFeedItems{}, err
+	}
+	return items, nil
 }
 
 func (s *Service) ListGroups(ctx context.Context) (PaginatedFeedItems, error) {
-	return s.repo.ListGroups(ctx)
+	items, err := s.repo.ListGroups(ctx)
+	if err != nil {
+		observability.L().Error("feed.list_groups failed", "error", err)
+		return PaginatedFeedItems{}, err
+	}
+	return items, nil
 }
 
 func (s *Service) ListUsers(ctx context.Context) (PaginatedFeedItems, error) {
-	return s.repo.ListUsers(ctx)
+	items, err := s.repo.ListUsers(ctx)
+	if err != nil {
+		observability.L().Error("feed.list_users failed", "error", err)
+		return PaginatedFeedItems{}, err
+	}
+	return items, nil
 }
 
 func (s *Service) ListTrending(ctx context.Context) (TrendingBundle, error) {
 	bundle, err := s.repo.ListTrending(ctx)
 	if err != nil {
+		observability.L().Error("feed.list_trending failed", "error", err)
 		return TrendingBundle{}, err
 	}
 	cfg := s.appConfig.Get(ctx)

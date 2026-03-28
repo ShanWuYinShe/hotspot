@@ -37,7 +37,33 @@ ORDER BY tag_name ASC`
 	queryIncrementMomentCommentCount = `
 UPDATE moments
 SET comments_count = comments_count + 1
+	WHERE moment_id = $1`
+
+	queryDecrementMomentCommentCount = `
+UPDATE moments
+SET comments_count = GREATEST(comments_count - 1, 0)
 WHERE moment_id = $1`
+
+	queryUpdateMoment = `
+UPDATE moments
+SET description = COALESCE($2, description),
+    privacy_level = COALESCE($3, privacy_level),
+    location_name = COALESCE($4, location_name),
+    latitude      = COALESCE($5, latitude),
+    longitude     = COALESCE($6, longitude)
+WHERE moment_id = $1`
+
+	queryDeleteMoment = `
+DELETE FROM moments WHERE moment_id = $1`
+
+	querySearchMoments = `
+SELECT moment_id, user_id, description, created_at, likes_count, comments_count, shares_count, location_name, latitude, longitude, privacy_level
+FROM moments
+WHERE privacy_level != 'private'
+  AND ($1::text IS NULL OR description ILIKE '%' || $1 || '%')
+  AND ($2::text IS NULL OR moment_id IN (SELECT moment_id FROM moment_tags WHERE tag_name = $2))
+ORDER BY created_at DESC, moment_id DESC
+LIMIT $3`
 
 	queryInsertMomentLike = `
 INSERT INTO moment_likes (moment_id, user_id, liked_at)

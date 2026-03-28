@@ -8,6 +8,7 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
+	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
@@ -74,6 +75,20 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	result, err := h.service.Login(r.Context(), req)
 	if err != nil {
 		apiErr := apiErrorFrom(err)
+		if apiErr.Code == 10600 {
+			observability.L().Error("handler error",
+				"method", "Login",
+				"error", err,
+				"request_id", observability.RequestIDFromContext(r.Context()),
+			)
+		} else {
+			observability.L().Warn("handler business error",
+				"method", "Login",
+				"code", apiErr.Code,
+				"message", apiErr.Message,
+				"request_id", observability.RequestIDFromContext(r.Context()),
+			)
+		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(apiErr.Code, apiErr.Message))
 		return
 	}
@@ -138,6 +153,11 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := h.service.Refresh(req, refreshCookie)
 	if err != nil {
+		observability.L().Warn("handler business error",
+			"method", "RefreshToken",
+			"error", err,
+			"request_id", observability.RequestIDFromContext(r.Context()),
+		)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10100, "Refresh Token 无效或过期"))
 		return
 	}
@@ -296,6 +316,9 @@ func authSuccessApp(result platformauth.AuthResult) httpx.ApiResponse[AuthTokenP
 func errorResponse[T any](apiErr *httpx.APIError) httpx.ApiResponse[T] {
 	if apiErr == nil {
 		apiErr = &httpx.APIError{Code: 10600, Message: "服务暂时不可用"}
+	}
+	if apiErr.Code == 10600 {
+		observability.L().Error("handler error", "code", apiErr.Code, "message", apiErr.Message)
 	}
 	return httpx.ApiResponse[T]{Code: apiErr.Code, Message: apiErr.Message}
 }

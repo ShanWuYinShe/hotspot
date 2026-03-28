@@ -5,6 +5,7 @@ import (
 
 	"hotspot/backend-go/internal/platform/appconfig"
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/slicex"
 )
 
@@ -30,6 +31,7 @@ func NewServiceWithSource(repo Repository, source appconfig.Source) *Service {
 func (s *Service) Suggest(ctx context.Context, req SearchSuggestRequest) (SearchSuggestResponse, error) {
 	resp, err := s.repo.Suggest(ctx, req)
 	if err != nil {
+		observability.L().Error("search.suggest failed", "error", err)
 		return SearchSuggestResponse{}, err
 	}
 	limit := s.appConfig.Get(ctx).ResponseDefaults.SearchSuggestCount
