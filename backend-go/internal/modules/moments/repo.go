@@ -11,6 +11,7 @@ type Repository interface {
 	ListMine(context.Context, string) (PaginatedMoments, error)
 	Exists(context.Context, string) (bool, error)
 	IncrementCommentCount(context.Context, string) error
+	DecrementCommentCount(context.Context, string) error
 	Like(context.Context, string, string) error
 	Unlike(context.Context, string, string) error
 	Favorite(context.Context, string, string) error

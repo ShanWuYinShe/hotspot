@@ -62,6 +62,31 @@ func (r *fallbackRepo) List(context.Context, string) (PaginatedComments, error) 
 	return PaginatedComments{}, nil
 }
 
+func (r *fallbackRepo) Get(context.Context, string) (CommentItem, bool, error) {
+	r.used = true
+	return CommentItem{}, false, nil
+}
+
+func (r *fallbackRepo) ListReplies(context.Context, string, int, string) (PaginatedComments, error) {
+	r.used = true
+	return PaginatedComments{}, nil
+}
+
+func (r *fallbackRepo) Like(context.Context, string, string) error {
+	r.used = true
+	return nil
+}
+
+func (r *fallbackRepo) Unlike(context.Context, string, string) error {
+	r.used = true
+	return nil
+}
+
+func (r *fallbackRepo) ListLikes(context.Context, string, int, string) ([]CommentLikeItem, string, error) {
+	r.used = true
+	return nil, "", nil
+}
+
 type backendStub struct {
 	comments map[string][]CommentItem
 	execErrs map[string]error

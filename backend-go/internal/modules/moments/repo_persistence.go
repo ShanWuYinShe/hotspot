@@ -36,6 +36,10 @@ func (r *PersistenceRepository) IncrementCommentCount(ctx context.Context, momen
 	return r.impl.IncrementCommentCount(ctx, momentID)
 }
 
+func (r *PersistenceRepository) DecrementCommentCount(ctx context.Context, momentID string) error {
+	return r.impl.DecrementCommentCount(ctx, momentID)
+}
+
 func (r *PersistenceRepository) Search(ctx context.Context, req SearchMomentsRequest) (PaginatedMoments, error) {
 	return r.impl.Search(ctx, req)
 }

@@ -76,6 +76,11 @@ func (r *fallbackRepo) IncrementCommentCount(context.Context, string) error {
 	return nil
 }
 
+func (r *fallbackRepo) DecrementCommentCount(context.Context, string) error {
+	r.used = true
+	return nil
+}
+
 func (r *fallbackRepo) Search(context.Context, SearchMomentsRequest) (PaginatedMoments, error) {
 	r.used = true
 	return PaginatedMoments{}, nil

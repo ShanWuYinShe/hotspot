@@ -61,6 +61,8 @@ func (m *Module) Mount(r chi.Router) {
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)
 			group.Post("/list", m.commentsHandler.List)
+			group.Post("/list_replies", m.commentsHandler.ListReplies)
+			group.Post("/list_likes", m.commentsHandler.ListLikes)
 		})
 		commentsRouter.Group(func(group chi.Router) {
 			group.Use(platformauth.RequiredAuth)
@@ -68,6 +70,9 @@ func (m *Module) Mount(r chi.Router) {
 			group.Use(resourceguard.Middleware)
 			group.Use(idempotency.Middleware)
 			group.Post("/create", m.commentsHandler.Create)
+			group.Post("/delete", m.commentsHandler.Delete)
+			group.Post("/me/like", m.commentsHandler.Like)
+			group.Post("/me/unlike", m.commentsHandler.Unlike)
 		})
 	})
 }

@@ -40,6 +40,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	}
 	return CommentItem{
 		CommentID:    commentID,
+		MomentID:     req.MomentID,
 		User:         UserInfo{UserID: userID, Nickname: userID},
 		Content:      req.Content,
 		CreatedAt:    createdAt,
@@ -90,4 +91,24 @@ func (r *PostgresRepository) List(ctx context.Context, momentID string) (Paginat
 		return PaginatedComments{}, err
 	}
 	return PaginatedComments{Items: items}, nil
+}
+
+func (r *PostgresRepository) Get(ctx context.Context, commentID string) (CommentItem, bool, error) {
+	return r.fallback.Get(ctx, commentID)
+}
+
+func (r *PostgresRepository) ListReplies(ctx context.Context, commentID string, limit int, cursor string) (PaginatedComments, error) {
+	return r.fallback.ListReplies(ctx, commentID, limit, cursor)
+}
+
+func (r *PostgresRepository) Like(ctx context.Context, commentID string, userID string) error {
+	return r.fallback.Like(ctx, commentID, userID)
+}
+
+func (r *PostgresRepository) Unlike(ctx context.Context, commentID string, userID string) error {
+	return r.fallback.Unlike(ctx, commentID, userID)
+}
+
+func (r *PostgresRepository) ListLikes(ctx context.Context, commentID string, limit int, cursor string) ([]CommentLikeItem, string, error) {
+	return r.fallback.ListLikes(ctx, commentID, limit, cursor)
 }

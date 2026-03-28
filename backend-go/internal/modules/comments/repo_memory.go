@@ -8,36 +8,90 @@ import (
 	"time"
 )
 
+type likeEntry struct {
+	userID   string
+	nickname string
+	likedAt  string
+}
+
 type InMemoryRepository struct {
 	mu       sync.RWMutex
-	comments map[string][]CommentItem
+	comments map[string][]CommentItem // momentID -> comments
+	byID     map[string]CommentItem   // commentID -> item
+	byParent map[string][]string      // parentID -> child commentIDs
+	likes    map[string]map[string]likeEntry // commentID -> userID -> entry
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
-	return &InMemoryRepository{comments: make(map[string][]CommentItem)}
+	return &InMemoryRepository{
+		comments: make(map[string][]CommentItem),
+		byID:     make(map[string]CommentItem),
+		byParent: make(map[string][]string),
+		likes:    make(map[string]map[string]likeEntry),
+	}
 }
 
 func (r *InMemoryRepository) Create(_ context.Context, userID string, req CreateCommentRequest) (CommentItem, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	now := time.Now().UTC()
-	item := CommentItem{CommentID: fmt.Sprintf("comment_%d", now.UnixNano()), User: UserInfo{UserID: userID, Nickname: userID}, Content: req.Content, ParentID: req.ParentID, Mentions: req.Mentions, CreatedAt: now.Format(time.RFC3339), LikesCount: 0, RepliesCount: 0, MyState: &MyCommentState{IsLiked: false}}
+	item := CommentItem{
+		CommentID:    fmt.Sprintf("comment_%d", now.UnixNano()),
+		MomentID:     req.MomentID,
+		User:         UserInfo{UserID: userID, Nickname: userID},
+		Content:      req.Content,
+		ParentID:     req.ParentID,
+		Mentions:     req.Mentions,
+		CreatedAt:    now.Format(time.RFC3339),
+		LikesCount:   0,
+		RepliesCount: 0,
+		MyState:      &MyCommentState{IsLiked: false},
+	}
 	r.comments[req.MomentID] = append(r.comments[req.MomentID], item)
+	r.byID[item.CommentID] = item
+	if req.ParentID != "" {
+		r.byParent[req.ParentID] = append(r.byParent[req.ParentID], item.CommentID)
+		if parent, ok := r.byID[req.ParentID]; ok {
+			parent.RepliesCount++
+			r.byID[req.ParentID] = parent
+		}
+	}
 	return item, nil
 }
 
 func (r *InMemoryRepository) Delete(_ context.Context, commentID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	item, ok := r.byID[commentID]
+	if !ok {
+		return nil
+	}
 	for momentID, items := range r.comments {
-		for idx, item := range items {
-			if item.CommentID != commentID {
-				continue
+		for idx, it := range items {
+			if it.CommentID == commentID {
+				r.comments[momentID] = append(items[:idx], items[idx+1:]...)
+				break
 			}
-			r.comments[momentID] = append(items[:idx], items[idx+1:]...)
-			return nil
 		}
 	}
+	delete(r.byID, commentID)
+	if item.ParentID != "" {
+		children := r.byParent[item.ParentID]
+		for i, id := range children {
+			if id == commentID {
+				r.byParent[item.ParentID] = append(children[:i], children[i+1:]...)
+				break
+			}
+		}
+		if parent, ok := r.byID[item.ParentID]; ok {
+			parent.RepliesCount--
+			if parent.RepliesCount < 0 {
+				parent.RepliesCount = 0
+			}
+			r.byID[item.ParentID] = parent
+		}
+	}
+	delete(r.likes, commentID)
 	return nil
 }
 
@@ -48,3 +102,142 @@ func (r *InMemoryRepository) List(_ context.Context, momentID string) (Paginated
 	sort.Slice(items, func(i, j int) bool { return items[i].CommentID > items[j].CommentID })
 	return PaginatedComments{Items: items}, nil
 }
+
+func (r *InMemoryRepository) Get(_ context.Context, commentID string) (CommentItem, bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	item, ok := r.byID[commentID]
+	return item, ok, nil
+}
+
+func (r *InMemoryRepository) ListReplies(_ context.Context, commentID string, limit int, cursor string) (PaginatedComments, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	childIDs := r.byParent[commentID]
+	items := make([]CommentItem, 0, len(childIDs))
+	for _, id := range childIDs {
+		if item, ok := r.byID[id]; ok {
+			items = append(items, item)
+		}
+	}
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].CreatedAt == items[j].CreatedAt {
+			return items[i].CommentID < items[j].CommentID
+		}
+		return items[i].CreatedAt < items[j].CreatedAt
+	})
+	start := 0
+	if cursor != "" {
+		for i, item := range items {
+			if item.CommentID == cursor {
+				start = i + 1
+				break
+			}
+		}
+	}
+	if start >= len(items) {
+		return PaginatedComments{Items: []CommentItem{}}, nil
+	}
+	end := len(items)
+	if limit > 0 && start+limit < end {
+		end = start + limit
+	}
+	page := items[start:end]
+	var nextCursor string
+	if end < len(items) {
+		nextCursor = page[len(page)-1].CommentID
+	}
+	return PaginatedComments{Items: page, NextCursor: nextCursor}, nil
+}
+
+func (r *InMemoryRepository) Like(_ context.Context, commentID string, userID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.byID[commentID]; !ok {
+		return ErrCommentNotFound
+	}
+	if r.likes[commentID] == nil {
+		r.likes[commentID] = make(map[string]likeEntry)
+	}
+	if _, exists := r.likes[commentID][userID]; exists {
+		return nil
+	}
+	now := time.Now().UTC().Format(time.RFC3339)
+	r.likes[commentID][userID] = likeEntry{userID: userID, nickname: userID, likedAt: now}
+	if item, ok := r.byID[commentID]; ok {
+		item.LikesCount++
+		r.byID[commentID] = item
+	}
+	return nil
+}
+
+func (r *InMemoryRepository) Unlike(_ context.Context, commentID string, userID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.byID[commentID]; !ok {
+		return ErrCommentNotFound
+	}
+	if r.likes[commentID] == nil {
+		return nil
+	}
+	if _, exists := r.likes[commentID][userID]; !exists {
+		return nil
+	}
+	delete(r.likes[commentID], userID)
+	if item, ok := r.byID[commentID]; ok {
+		item.LikesCount--
+		if item.LikesCount < 0 {
+			item.LikesCount = 0
+		}
+		r.byID[commentID] = item
+	}
+	return nil
+}
+
+func (r *InMemoryRepository) ListLikes(_ context.Context, commentID string, limit int, cursor string) ([]CommentLikeItem, string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	likeMap := r.likes[commentID]
+	entries := make([]likeEntry, 0, len(likeMap))
+	for _, entry := range likeMap {
+		entries = append(entries, entry)
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		if entries[i].likedAt == entries[j].likedAt {
+			return entries[i].userID < entries[j].userID
+		}
+		return entries[i].likedAt > entries[j].likedAt
+	})
+	start := 0
+	if cursor != "" {
+		for i, e := range entries {
+			if e.userID == cursor {
+				start = i + 1
+				break
+			}
+		}
+	}
+	if start >= len(entries) {
+		return []CommentLikeItem{}, "", nil
+	}
+	end := len(entries)
+	if limit > 0 && start+limit < end {
+		end = start + limit
+	}
+	page := entries[start:end]
+	items := make([]CommentLikeItem, 0, len(page))
+	for _, e := range page {
+		items = append(items, CommentLikeItem{
+			User:    UserInfo{UserID: e.userID, Nickname: e.nickname},
+			LikedAt: e.likedAt,
+		})
+	}
+	var nextCursor string
+	if end < len(entries) {
+		nextCursor = page[len(page)-1].userID
+	}
+	return items, nextCursor, nil
+}
+
+// ensure InMemoryRepository compiles as Repository
+var _ Repository = (*InMemoryRepository)(nil)

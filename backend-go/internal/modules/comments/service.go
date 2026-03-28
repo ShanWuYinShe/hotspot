@@ -46,6 +46,97 @@ func (s *Service) List(ctx context.Context, momentID string) (PaginatedComments,
 	return s.repo.List(ctx, momentID)
 }
 
+func (s *Service) Delete(ctx context.Context, req DeleteCommentRequest) error {
+	comment, found, err := s.repo.Get(ctx, req.CommentID)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return ErrCommentNotFound
+	}
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	if comment.User.UserID != principal.UserID {
+		return ErrPermissionDenied
+	}
+	if err := s.repo.Delete(ctx, req.CommentID); err != nil {
+		return err
+	}
+	_ = s.moments.DecrementCommentCount(ctx, comment.MomentID)
+	return nil
+}
+
+func (s *Service) ListReplies(ctx context.Context, req CommentRepliesRequest) (PaginatedComments, error) {
+	_, found, err := s.repo.Get(ctx, req.CommentID)
+	if err != nil {
+		return PaginatedComments{}, err
+	}
+	if !found {
+		return PaginatedComments{}, ErrCommentNotFound
+	}
+	limit := 20
+	cursor := ""
+	if req.Pagination != nil {
+		if req.Pagination.Limit > 0 {
+			limit = req.Pagination.Limit
+		}
+		if limit > 100 {
+			limit = 100
+		}
+		cursor = req.Pagination.Cursor
+	}
+	return s.repo.ListReplies(ctx, req.CommentID, limit, cursor)
+}
+
+func (s *Service) Like(ctx context.Context, req LikeCommentRequest) error {
+	_, found, err := s.repo.Get(ctx, req.CommentID)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return ErrCommentNotFound
+	}
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	return s.repo.Like(ctx, req.CommentID, principal.UserID)
+}
+
+func (s *Service) Unlike(ctx context.Context, req UnlikeCommentRequest) error {
+	_, found, err := s.repo.Get(ctx, req.CommentID)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return ErrCommentNotFound
+	}
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	return s.repo.Unlike(ctx, req.CommentID, principal.UserID)
+}
+
+func (s *Service) ListLikes(ctx context.Context, req CommentLikesRequest) (PaginatedCommentLikes, error) {
+	_, found, err := s.repo.Get(ctx, req.CommentID)
+	if err != nil {
+		return PaginatedCommentLikes{}, err
+	}
+	if !found {
+		return PaginatedCommentLikes{}, ErrCommentNotFound
+	}
+	limit := 20
+	cursor := ""
+	if req.Pagination != nil {
+		if req.Pagination.Limit > 0 {
+			limit = req.Pagination.Limit
+		}
+		if limit > 100 {
+			limit = 100
+		}
+		cursor = req.Pagination.Cursor
+	}
+	items, nextCursor, err := s.repo.ListLikes(ctx, req.CommentID, limit, cursor)
+	if err != nil {
+		return PaginatedCommentLikes{}, err
+	}
+	return PaginatedCommentLikes{Items: items, NextCursor: nextCursor}, nil
+}
+
 func (s *Service) ensureMomentExists(ctx context.Context, momentID string) error {
 	exists, err := s.moments.Exists(ctx, momentID)
 	if err != nil {

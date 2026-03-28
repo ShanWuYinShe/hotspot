@@ -30,6 +30,10 @@ func (c *failingMomentCounter) IncrementCommentCount(ctx context.Context, moment
 	return c.repo.IncrementCommentCount(ctx, momentID)
 }
 
+func (c *failingMomentCounter) DecrementCommentCount(ctx context.Context, momentID string) error {
+	return c.repo.DecrementCommentCount(ctx, momentID)
+}
+
 func TestCreateOpenAndListMoment(t *testing.T) {
 	idempotency.SetStore(idempotency.NewInMemoryStore())
 	repo := NewInMemoryRepository()

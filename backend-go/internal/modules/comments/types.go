@@ -12,6 +12,7 @@ type MyCommentState struct {
 
 type CommentItem struct {
 	CommentID    string          `json:"comment_id"`
+	MomentID     string          `json:"-"`
 	User         UserInfo        `json:"user"`
 	Content      string          `json:"content"`
 	ParentID     string          `json:"parent_id,omitempty"`
@@ -36,4 +37,41 @@ type ListCommentsRequest struct {
 type PaginatedComments struct {
 	Items      []CommentItem `json:"items"`
 	NextCursor string        `json:"next_cursor,omitempty"`
+}
+
+type DeleteCommentRequest struct {
+	CommentID string `json:"comment_id"`
+}
+
+type PaginationParams struct {
+	Limit  int    `json:"limit,omitempty"`
+	Cursor string `json:"cursor,omitempty"`
+}
+
+type CommentRepliesRequest struct {
+	CommentID  string           `json:"comment_id"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
+}
+
+type LikeCommentRequest struct {
+	CommentID string `json:"comment_id"`
+}
+
+type UnlikeCommentRequest struct {
+	CommentID string `json:"comment_id"`
+}
+
+type CommentLikesRequest struct {
+	CommentID  string            `json:"comment_id"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
+}
+
+type CommentLikeItem struct {
+	User    UserInfo `json:"user"`
+	LikedAt string   `json:"liked_at"`
+}
+
+type PaginatedCommentLikes struct {
+	Items      []CommentLikeItem `json:"items"`
+	NextCursor string            `json:"next_cursor,omitempty"`
 }
