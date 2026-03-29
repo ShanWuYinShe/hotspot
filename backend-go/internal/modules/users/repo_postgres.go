@@ -168,6 +168,21 @@ func (r *PostgresRepository) ListMoments(ctx context.Context, userID string, lim
 	return listUserMomentsPostgres(ctx, r.factory, userID, limit, cursor, includePrivate)
 }
 
+func (r *PostgresRepository) CommonGroupCount(ctx context.Context, viewerUserID, targetUserID string) (int, error) {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.CommonGroupCount(ctx, viewerUserID, targetUserID)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return 0, persistence.ErrNotImplemented
+	}
+	var count int
+	if err := queryable.QueryRow(ctx, queryCountCommonGroups, viewerUserID, targetUserID).Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 func (r *PostgresRepository) UserExists(ctx context.Context, userID string) (bool, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return r.fallback.UserExists(ctx, userID)

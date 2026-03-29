@@ -186,6 +186,20 @@ WHERE ml.user_id = $1
 ORDER BY ml.liked_at DESC, m.moment_id DESC
 LIMIT $5`
 
+	queryCountCommonGroups = `
+SELECT COUNT(*)
+FROM (
+	SELECT gm.group_id
+	FROM group_members gm
+	JOIN groups g ON g.group_id = gm.group_id
+	WHERE gm.user_id = $1 AND g.deleted_at IS NULL
+	INTERSECT
+	SELECT gm.group_id
+	FROM group_members gm
+	JOIN groups g ON g.group_id = gm.group_id
+	WHERE gm.user_id = $2 AND g.deleted_at IS NULL
+) common_groups`
+
 	queryUserExists = `
 SELECT 1 FROM users WHERE user_id = $1`
 

@@ -26,12 +26,17 @@ type memoryRelation struct {
 	BlockReason string
 }
 
+type likedMomentRecord struct {
+	LikedAt string
+	Moment  momenttypes.MomentItem
+}
+
 type InMemoryRepository struct {
 	mu        sync.RWMutex
 	profiles  map[string]MyProfile
 	settings  map[string]UserSettings
 	relations map[string]map[string]memoryRelation
-	likedMoments map[string][]momenttypes.MomentItem
+	likedMoments map[string][]likedMomentRecord
 	groupsByUser map[string][]grouptypes.GroupItem
 	momentsByUser map[string][]momenttypes.MomentItem
 }
@@ -41,7 +46,7 @@ func NewInMemoryRepository() *InMemoryRepository {
 		profiles: make(map[string]MyProfile),
 		settings: make(map[string]UserSettings),
 		relations: make(map[string]map[string]memoryRelation),
-		likedMoments: make(map[string][]momenttypes.MomentItem),
+		likedMoments: make(map[string][]likedMomentRecord),
 		groupsByUser: make(map[string][]grouptypes.GroupItem),
 		momentsByUser: make(map[string][]momenttypes.MomentItem),
 	}
@@ -193,14 +198,14 @@ func (r *InMemoryRepository) ListBlocked(_ context.Context, userID string, limit
 func (r *InMemoryRepository) ListLikedMoments(_ context.Context, userID string, limit int, cursor, viewerUserID string) (momenttypes.PaginatedMoments, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	items := append([]momenttypes.MomentItem(nil), r.likedMoments[userID]...)
-	visible := make([]momenttypes.MomentItem, 0, len(items))
-	for _, item := range items {
-		if viewerUserID == item.User.UserID || item.PrivacyLevel != "private" {
-			visible = append(visible, item)
+	records := append([]likedMomentRecord(nil), r.likedMoments[userID]...)
+	visible := make([]likedMomentRecord, 0, len(records))
+	for _, record := range records {
+		if viewerUserID == record.Moment.User.UserID || record.Moment.PrivacyLevel != "private" {
+			visible = append(visible, record)
 		}
 	}
-	return paginateMoments(visible, limit, cursor), nil
+	return paginateLikedMoments(visible, limit, cursor), nil
 }
 
 func (r *InMemoryRepository) Relationship(_ context.Context, userID, targetUserID string) (Relationship, error) {
@@ -280,6 +285,26 @@ func (r *InMemoryRepository) ListMoments(_ context.Context, userID string, limit
 		}
 	}
 	return paginateMoments(filtered, limit, cursor), nil
+}
+func (r *InMemoryRepository) CommonGroupCount(_ context.Context, viewerUserID, targetUserID string) (int, error) {
+	r.mu.RLock(); defer r.mu.RUnlock()
+	targetSet := make(map[string]struct{}, len(r.groupsByUser[targetUserID]))
+	for _, item := range r.groupsByUser[targetUserID] {
+		targetSet[item.Group.GroupID] = struct{}{}
+	}
+	count := 0
+	seen := make(map[string]struct{})
+	for _, item := range r.groupsByUser[viewerUserID] {
+		groupID := item.Group.GroupID
+		if _, ok := seen[groupID]; ok {
+			continue
+		}
+		seen[groupID] = struct{}{}
+		if _, ok := targetSet[groupID]; ok {
+			count++
+		}
+	}
+	return count, nil
 }
 func (r *InMemoryRepository) UserExists(_ context.Context, userID string) (bool, error) {
 	r.mu.RLock(); defer r.mu.RUnlock()
@@ -366,6 +391,19 @@ func paginateMoments(items []momenttypes.MomentItem, limit int, cursor string) m
 	end := start + limit; if end > len(items) { end = len(items) }
 	resp := momenttypes.PaginatedMoments{Items: items[start:end]}
 	if end < len(items) && end > start { resp.NextCursor = encodeUserMomentCursor(items[end-1].CreatedAt, items[end-1].MomentID) }
+	return resp
+}
+
+func paginateLikedMoments(items []likedMomentRecord, limit int, cursor string) momenttypes.PaginatedMoments {
+	if limit <= 0 { limit = 20 }
+	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].LikedAt, items[i].Moment.MomentID }, len(items))
+	if !ok { return momenttypes.PaginatedMoments{} }
+	end := start + limit; if end > len(items) { end = len(items) }
+	resp := momenttypes.PaginatedMoments{Items: make([]momenttypes.MomentItem, 0, end-start)}
+	for _, item := range items[start:end] {
+		resp.Items = append(resp.Items, item.Moment)
+	}
+	if end < len(items) && end > start { resp.NextCursor = encodeUserMomentCursor(items[end-1].LikedAt, items[end-1].Moment.MomentID) }
 	return resp
 }
 

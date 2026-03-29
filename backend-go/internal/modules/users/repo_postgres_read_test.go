@@ -141,6 +141,10 @@ func (r *userFallbackRepo) ListMoments(context.Context, string, int, string, boo
 	r.markUsed()
 	return momenttypes.PaginatedMoments{}, nil
 }
+func (r *userFallbackRepo) CommonGroupCount(context.Context, string, string) (int, error) {
+	r.markUsed()
+	return 0, nil
+}
 func (r *userFallbackRepo) UserExists(context.Context, string) (bool, error) {
 	r.markUsed()
 	return false, nil

@@ -74,6 +74,7 @@ func (invalidCursorRepo) ListGroups(context.Context, string, int, string) (group
 func (invalidCursorRepo) ListMoments(context.Context, string, int, string, bool) (momenttypes.PaginatedMoments, error) {
 	return momenttypes.PaginatedMoments{}, nil
 }
+func (invalidCursorRepo) CommonGroupCount(context.Context, string, string) (int, error) { return 0, nil }
 func (invalidCursorRepo) UserExists(context.Context, string) (bool, error) { return false, nil }
 
 func (r *userErrorRepo) GetProfile(context.Context, string) (MyProfile, bool, error) {
@@ -118,6 +119,9 @@ func (r *userErrorRepo) ListGroups(context.Context, string, int, string) (groupt
 }
 func (r *userErrorRepo) ListMoments(context.Context, string, int, string, bool) (momenttypes.PaginatedMoments, error) {
 	return momenttypes.PaginatedMoments{}, r.listBlockedErr
+}
+func (r *userErrorRepo) CommonGroupCount(context.Context, string, string) (int, error) {
+	return 0, r.listBlockedErr
 }
 func (r *userErrorRepo) UserExists(context.Context, string) (bool, error) {
 	return false, r.listBlockedErr
@@ -409,6 +413,60 @@ func TestInMemoryListFollowingCursorAdvancesPage(t *testing.T) {
 	}
 	if first.Items[0].User.UserID == second.Items[0].User.UserID {
 		t.Fatalf("cursor did not advance page: first=%#v second=%#v", first, second)
+	}
+}
+
+func TestOpenTheDoorCountsNonSearchableCommonGroups(t *testing.T) {
+	service := NewService()
+	handler := NewHandler(service)
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	alice := defaultProfile("user_alice")
+	bob := defaultProfile("user_bob")
+	if err := service.repo.PutProfile(ctx, alice); err != nil {
+		t.Fatalf("put alice profile: %v", err)
+	}
+	if err := service.repo.PutProfile(ctx, bob); err != nil {
+		t.Fatalf("put bob profile: %v", err)
+	}
+	repo := service.repo.(*InMemoryRepository)
+	repo.groupsByUser["user_alice"] = []grouptypes.GroupItem{{Group: grouptypes.GroupInfo{GroupID: "group_private", Name: "Private Group"}, IsSearchable: false}}
+	repo.groupsByUser["user_bob"] = []grouptypes.GroupItem{{Group: grouptypes.GroupInfo{GroupID: "group_private", Name: "Private Group"}, IsSearchable: false}}
+	_ = service.repo.PutSettings(ctx, "user_bob", defaultSettings())
+
+	openReq := httptest.NewRequest(http.MethodPost, "/open_the_door", strings.NewReader(`{"user_id":"user_bob"}`)).WithContext(ctx)
+	openRR := httptest.NewRecorder()
+	handler.OpenTheDoor(openRR, openReq)
+	var openResp struct {
+		Code int      `json:"code"`
+		Data UserItem `json:"data"`
+	}
+	if err := json.NewDecoder(openRR.Body).Decode(&openResp); err != nil {
+		t.Fatalf("decode open response: %v", err)
+	}
+	if openResp.Code != 0 || openResp.Data.SocialContext == nil || openResp.Data.SocialContext.CommonGroupsCount == nil || *openResp.Data.SocialContext.CommonGroupsCount != 1 {
+		t.Fatalf("unexpected open response: %#v", openResp)
+	}
+}
+
+func TestInMemoryLikedMomentsCursorUsesLikedAt(t *testing.T) {
+	repo := NewInMemoryRepository()
+	repo.likedMoments["user_alice"] = []likedMomentRecord{
+		{LikedAt: "2026-03-29T12:00:00Z", Moment: momenttypes.MomentItem{MomentID: "moment_newer", CreatedAt: "2026-03-20T00:00:00Z", User: momenttypes.UserInfo{UserID: "user_bob"}}},
+		{LikedAt: "2026-03-29T11:00:00Z", Moment: momenttypes.MomentItem{MomentID: "moment_older", CreatedAt: "2026-03-21T00:00:00Z", User: momenttypes.UserInfo{UserID: "user_bob"}}},
+	}
+	first, err := repo.ListLikedMoments(context.Background(), "user_alice", 1, "", "viewer")
+	if err != nil {
+		t.Fatalf("list liked first page: %v", err)
+	}
+	if len(first.Items) != 1 || first.Items[0].MomentID != "moment_newer" || first.NextCursor == "" {
+		t.Fatalf("unexpected first page: %#v", first)
+	}
+	second, err := repo.ListLikedMoments(context.Background(), "user_alice", 1, first.NextCursor, "viewer")
+	if err != nil {
+		t.Fatalf("list liked second page: %v", err)
+	}
+	if len(second.Items) != 1 || second.Items[0].MomentID != "moment_older" {
+		t.Fatalf("unexpected second page: %#v", second)
 	}
 }
 

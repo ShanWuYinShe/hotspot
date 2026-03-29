@@ -27,5 +27,6 @@ type Repository interface {
 	ListFollowers(context.Context, string, int, string) (PaginatedFollowers, error)
 	ListGroups(context.Context, string, int, string) (grouptypes.PaginatedGroups, error)
 	ListMoments(context.Context, string, int, string, bool) (momenttypes.PaginatedMoments, error)
+	CommonGroupCount(context.Context, string, string) (int, error)
 	UserExists(context.Context, string) (bool, error)
 }

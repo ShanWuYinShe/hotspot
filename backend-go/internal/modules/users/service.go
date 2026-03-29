@@ -784,7 +784,7 @@ func (s *Service) buildSocialContext(ctx context.Context, viewerUserID string, t
 		targetSettings = defaultSettings()
 	}
 	if targetSettings.GroupsVisible {
-		commonGroupsCount, err := collectCommonGroupsCount(ctx, s.repo, viewerUserID, targetProfile.UserID)
+		commonGroupsCount, err := s.repo.CommonGroupCount(ctx, viewerUserID, targetProfile.UserID)
 		if err != nil {
 			return nil, err
 		}
@@ -836,46 +836,6 @@ func collectFriendsByUser(ctx context.Context, repo Repository, userID string) (
 	return items, nil
 }
 
-func collectCommonGroupsCount(ctx context.Context, repo Repository, viewerUserID, targetUserID string) (int, error) {
-	viewerGroups, err := collectGroupIDsByUser(ctx, repo, viewerUserID)
-	if err != nil {
-		return 0, err
-	}
-	targetGroups, err := collectGroupIDsByUser(ctx, repo, targetUserID)
-	if err != nil {
-		return 0, err
-	}
-	targetSet := make(map[string]struct{}, len(targetGroups))
-	for _, groupID := range targetGroups {
-		targetSet[groupID] = struct{}{}
-	}
-	count := 0
-	for _, groupID := range viewerGroups {
-		if _, ok := targetSet[groupID]; ok {
-			count++
-		}
-	}
-	return count, nil
-}
-
-func collectGroupIDsByUser(ctx context.Context, repo Repository, userID string) ([]string, error) {
-	items := make([]string, 0)
-	cursor := ""
-	for {
-		page, err := repo.ListGroups(ctx, userID, 100, cursor)
-		if err != nil {
-			return nil, err
-		}
-		for _, item := range page.Items {
-			items = append(items, item.Group.GroupID)
-		}
-		if page.NextCursor == "" {
-			break
-		}
-		cursor = page.NextCursor
-	}
-	return items, nil
-}
 
 func intersectTags(left, right []string) []string {
 	if len(left) == 0 || len(right) == 0 {

@@ -75,6 +75,9 @@ func (r *PersistenceRepository) ListGroups(ctx context.Context, userID string, l
 func (r *PersistenceRepository) ListMoments(ctx context.Context, userID string, limit int, cursor string, includePrivate bool) (momenttypes.PaginatedMoments, error) {
 	return r.impl.ListMoments(ctx, userID, limit, cursor, includePrivate)
 }
+func (r *PersistenceRepository) CommonGroupCount(ctx context.Context, viewerUserID, targetUserID string) (int, error) {
+	return r.impl.CommonGroupCount(ctx, viewerUserID, targetUserID)
+}
 func (r *PersistenceRepository) UserExists(ctx context.Context, userID string) (bool, error) {
 	return r.impl.UserExists(ctx, userID)
 }
