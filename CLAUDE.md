@@ -42,6 +42,7 @@ HotSpot 是一个多端 monorepo：
 - 主目录默认始终保持在本地 `main` 且无未提交改动；主目录只承担同步、审阅、创建/回收 worktree 和本地集成控制，不承载实现性改动。
 - 任何 implement 行为开始前都必须先进入 feature worktree；主目录 `main` 只允许控制面动作（git 状态/历史检查、建/收 worktree、review、sync-back、cleanup）。
 - 所有实现、验证和构建都在 worktree 中完成；需要本地分支时，也在对应 worktree 中使用。
+- **Worktree 命名必须遵循 `{子项目名}.{模块名}.{功能描述}` 格式。** `EnterWorktree` 的 `name` 参数必须按此格式传入，各段仅允许小写字母、数字和连字符，以字母开头，段间以 `.` 分隔。允许的子项目名：`backend`、`backend-go`、`frontend-svelte`（对应目录 `frontend_svelte/`）、`harmonyapp`、`spec`、`deploy`、`claude-config`（对应目录 `.claude/`）。示例：`backend-go.auth.add-oauth`、`harmonyapp.profile.fix-padding`、`claude-config.workflow.enforce-naming-rules`。`worktree_guard.py` 会在创建时校验格式和子项目合法性。
 - **新 worktree 必须从主目录本地 `main` 的当前 HEAD 创建，绝对不要使用 `origin/main` 或任何远程引用作为基准点。** feature worktree 必须使用 `EnterWorktree` 工具创建（调用时当前工作目录必须在主目录 `main` 分支上）；项目级 `WorktreeCreate` hook 会接管 `EnterWorktree` 的实际创建过程，并强制基于本地 `main` 创建。integration worktree 使用 `git worktree add -b <name> <path> main`（注意 `main` 是本地分支引用，不是 `origin/main`）。`tool_guard.py` 会在运行时拦截任何使用 `origin/` 引用的 `git worktree add` 命令。
 - 默认每个会话只操作自己创建或明确接管的 worktree / branch；除非用户明确指定，不要处理其他会话对象。
 - 当主目录处于本地 `main` 且无未提交改动、操作对象属于当前会话且动作遵循本仓库定义的本地流程时，Claude 应默认自动推进本地闭环，不需要逐步确认；只有越过共享边界、涉及其他会话对象或需要丢弃未确认改动时才暂停确认。
@@ -58,7 +59,7 @@ HotSpot 是一个多端 monorepo：
 - integration 后必须再做一轮 `verify`，不能把各 feature worktree 的局部通过当成集成通过。
 
 ## Commit 规范
-- commit 消息必须按修改涉及的子项目、模块描述变更内容，格式参考：`<type>(<scope>): <description>`，例如 `feat(groups): 实现成员管理端点`、`fix(auth): 修复 token 过期判断`、`chore(deploy): 更新 verify 脚本`。
+- commit 消息必须包含子项目名、模块名和更改的功能点，格式：`<type>(<子项目名>/<模块名>): <功能描述>`。scope 必须是 `子项目名/模块名` 双段格式，子项目名须与 worktree 命名中的允许列表一致。跨子项目变更时以主要改动方为 scope，在描述中提及其他子项目。示例：`feat(backend-go/auth): 实现 OAuth2 登录`、`fix(harmonyapp/profile): 修复底部留白`、`chore(claude-config/workflow): 更新命名规则`、`feat(harmonyapp/build): 打通受控编译闭环，涉及 claude-config`。
 - 不要在 commit 消息中添加 `Co-Authored-By` 或任何自动生成的署名行。
 - 本文提到的"主分支"或"`main`"始终指主目录的**本地** `main` 分支，不涉及远程分支状态。
 
