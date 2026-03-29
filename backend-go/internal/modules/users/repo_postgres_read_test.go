@@ -2,9 +2,13 @@ package users
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
+	grouptypes "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -27,6 +31,17 @@ func (r userRowValues) Scan(dest ...any) error {
 			*d = r.values[i].(float64)
 		case *bool:
 			*d = r.values[i].(bool)
+		case *int:
+			*d = r.values[i].(int)
+		case *time.Time:
+			*d = r.values[i].(time.Time)
+		case **time.Time:
+			if r.values[i] == nil {
+				*d = nil
+			} else {
+				value := r.values[i].(time.Time)
+				*d = &value
+			}
 		}
 	}
 	return nil
@@ -70,9 +85,9 @@ func (r *userFallbackRepo) PutSettings(context.Context, string, UserSettings) er
 	r.markUsed()
 	return nil
 }
-func (r *userFallbackRepo) SearchProfiles(context.Context, SearchUsersRequest) ([]MyProfile, error) {
+func (r *userFallbackRepo) SearchProfiles(context.Context, SearchUsersRequest) (PaginatedProfiles, error) {
 	r.markUsed()
-	return nil, nil
+	return PaginatedProfiles{}, nil
 }
 func (r *userFallbackRepo) Follow(context.Context, string, string) error {
 	r.markUsed()
@@ -82,7 +97,7 @@ func (r *userFallbackRepo) Unfollow(context.Context, string, string) error {
 	r.markUsed()
 	return nil
 }
-func (r *userFallbackRepo) Block(context.Context, string, string) error {
+func (r *userFallbackRepo) Block(context.Context, string, string, string) error {
 	r.markUsed()
 	return nil
 }
@@ -94,17 +109,41 @@ func (r *userFallbackRepo) SetRemark(context.Context, string, string, string) er
 	r.markUsed()
 	return nil
 }
-func (r *userFallbackRepo) ListBlocked(context.Context, string) ([]BlockedUserItem, error) {
+func (r *userFallbackRepo) ListBlocked(context.Context, string, int, string) (PaginatedBlockedUsers, error) {
 	r.markUsed()
-	return nil, nil
+	return PaginatedBlockedUsers{}, nil
 }
-func (r *userFallbackRepo) ListLikedMoments(context.Context, string, int, string) (momenttypes.PaginatedMoments, error) {
+func (r *userFallbackRepo) ListLikedMoments(context.Context, string, int, string, string) (momenttypes.PaginatedMoments, error) {
 	r.markUsed()
 	return momenttypes.PaginatedMoments{}, nil
 }
 func (r *userFallbackRepo) Relationship(context.Context, string, string) (Relationship, error) {
 	r.markUsed()
-	return RelationshipNone, nil
+	return Relationship{}, nil
+}
+func (r *userFallbackRepo) ListFriends(context.Context, string, int, string) (PaginatedFriends, error) {
+	r.markUsed()
+	return PaginatedFriends{}, nil
+}
+func (r *userFallbackRepo) ListFollowing(context.Context, string, int, string) (PaginatedFollowing, error) {
+	r.markUsed()
+	return PaginatedFollowing{}, nil
+}
+func (r *userFallbackRepo) ListFollowers(context.Context, string, int, string) (PaginatedFollowers, error) {
+	r.markUsed()
+	return PaginatedFollowers{}, nil
+}
+func (r *userFallbackRepo) ListGroups(context.Context, string, int, string) (grouptypes.PaginatedGroups, error) {
+	r.markUsed()
+	return grouptypes.PaginatedGroups{}, nil
+}
+func (r *userFallbackRepo) ListMoments(context.Context, string, int, string, bool) (momenttypes.PaginatedMoments, error) {
+	r.markUsed()
+	return momenttypes.PaginatedMoments{}, nil
+}
+func (r *userFallbackRepo) UserExists(context.Context, string) (bool, error) {
+	r.markUsed()
+	return false, nil
 }
 
 type userBackendStub struct {
@@ -141,14 +180,15 @@ func (b *userBackendStub) Query(_ context.Context, query string, _ ...any) (pers
 func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 	backend := &userBackendStub{
 		queryRowByQuery: map[string]persistence.Row{
-			queryGetUserProfile:  userRowValues{values: []any{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", "2026-03-20T00:00:00Z", "2026-03-19T00:00:00Z"}},
+			queryGetUserProfile:  userRowValues{values: []any{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC)}},
 			queryGetUserSettings: userRowValues{values: []any{"public", true, true, true, true, true, true, true, "everyone", true, false, true, true}},
-			queryGetUserRelation: userRowValues{values: []any{true, false, "buddy"}},
+			queryGetUserRelation: userRowValues{values: []any{true, false, "buddy", time.Date(2026, 3, 18, 0, 0, 0, 0, time.UTC), nil, ""}},
+			queryCountUserStats: userRowValues{values: []any{2, 1, 3, 4, 5}},
 		},
 		queryRowsByQuery: map[string][][]any{
-			querySearchUserProfiles: {{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", "2026-03-20T00:00:00Z", "2026-03-19T00:00:00Z"}},
-			queryListBlockedUsers:  {{"user_bob", "buddy"}},
-			queryListLikedMoments:  {{"moment_1", "user_alice", "hello", "2026-03-20T00:00:00Z", 3, 2, 1, "南天门", 35.0, 112.0, "public", "2026-03-21T00:00:00Z"}},
+			querySearchUserProfiles: {{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC)}},
+			queryListBlockedUsers:  {{"user_bob", time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC), "buddy"}},
+			queryListLikedMoments:  {{"moment_1", "user_alice", "hello", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), 3, 2, 1, "南天门", 35.0, 112.0, "public", time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC)}},
 			momenttypesQueryListMomentTagsByMomentID: {{"travel"}, {"hotspot"}},
 		},
 		queryErrs: map[string]error{},
@@ -167,19 +207,19 @@ func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 	if err != nil || !ok || settings.AllowPrivateChat != PrivateChatEveryone {
 		t.Fatalf("unexpected settings: %#v ok=%v err=%v", settings, ok, err)
 	}
-	profiles, err := repo.SearchProfiles(context.Background(), SearchUsersRequest{Keyword: "Alice"})
-	if err != nil || len(profiles) != 1 || profiles[0].UserID != "user_alice" {
+	profiles, err := repo.SearchProfiles(context.Background(), SearchUsersRequest{Keyword: "Alice", ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
+	if err != nil || len(profiles.Items) != 1 || profiles.Items[0].UserID != "user_alice" {
 		t.Fatalf("unexpected search result: %#v err=%v", profiles, err)
 	}
-	blocked, err := repo.ListBlocked(context.Background(), "user_alice")
-	if err != nil || len(blocked) != 1 || blocked[0].User.UserID != "user_bob" {
+	blocked, err := repo.ListBlocked(context.Background(), "user_alice", 20, "")
+	if err != nil || len(blocked.Items) != 1 || blocked.Items[0].User.UserID != "user_bob" {
 		t.Fatalf("unexpected blocked users: %#v err=%v", blocked, err)
 	}
 	rel, err := repo.Relationship(context.Background(), "user_alice", "user_bob")
-	if err != nil || rel != RelationshipFollowing {
+	if err != nil || !rel.IsFollowing || rel.IsBlocked {
 		t.Fatalf("unexpected relationship: %v err=%v", rel, err)
 	}
-	liked, err := repo.ListLikedMoments(context.Background(), "user_alice", 20, "")
+	liked, err := repo.ListLikedMoments(context.Background(), "user_alice", 20, "", "")
 	if err != nil || len(liked.Items) != 1 || liked.Items[0].MomentID != "moment_1" {
 		t.Fatalf("unexpected liked moments: %#v err=%v", liked, err)
 	}
@@ -198,14 +238,14 @@ func TestPostgresRepositorySearchAndListBlockedReturnErrorsWithoutFallback(t *te
 	fallback := &userFallbackRepo{}
 	repo := NewPostgresRepository(factory, fallback)
 
-	if _, err := repo.SearchProfiles(context.Background(), SearchUsersRequest{Keyword: "Alice"}); err == nil {
+	if _, err := repo.SearchProfiles(context.Background(), SearchUsersRequest{Keyword: "Alice", ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}}); err == nil {
 		t.Fatal("expected search error")
 	}
-	if _, err := repo.ListBlocked(context.Background(), "user_alice"); err == nil {
+	if _, err := repo.ListBlocked(context.Background(), "user_alice", 20, ""); err == nil {
 		t.Fatal("expected list blocked error")
 	}
 	backend.queryErrs[queryListLikedMoments] = errors.New("boom")
-	if _, err := repo.ListLikedMoments(context.Background(), "user_alice", 20, ""); err == nil {
+	if _, err := repo.ListLikedMoments(context.Background(), "user_alice", 20, "", ""); err == nil {
 		t.Fatal("expected liked moments error")
 	}
 	if fallback.used {
@@ -214,7 +254,7 @@ func TestPostgresRepositorySearchAndListBlockedReturnErrorsWithoutFallback(t *te
 }
 
 func TestPostgresRepositoryWritesReturnExecErrors(t *testing.T) {
-	backend := &userBackendStub{queryRowByQuery: map[string]persistence.Row{queryGetUserRelation: userRowValues{values: []any{false, false, ""}}}, queryRowsByQuery: map[string][][]any{}, queryErrs: map[string]error{}, execErrs: map[string]error{queryUpsertUserProfile: errors.New("boom")}}
+	backend := &userBackendStub{queryRowByQuery: map[string]persistence.Row{queryGetUserRelation: userRowValues{values: []any{false, false, "", nil, nil, ""}}}, queryRowsByQuery: map[string][][]any{}, queryErrs: map[string]error{}, execErrs: map[string]error{queryUpsertUserProfile: errors.New("boom")}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	fallback := &userFallbackRepo{}
@@ -229,5 +269,35 @@ func TestPostgresRepositoryWritesReturnExecErrors(t *testing.T) {
 	}
 	if fallback.used {
 		t.Fatal("expected write failures without fallback")
+	}
+}
+
+func TestUserMomentCursorIsOpaqueAndTamperProof(t *testing.T) {
+	cursor := encodeUserMomentCursor("2026-03-29T12:00:00Z", "moment_1")
+	if cursor == "" {
+		t.Fatal("expected cursor")
+	}
+	decoded, err := base64.RawURLEncoding.DecodeString(cursor)
+	if err != nil {
+		t.Fatalf("decode cursor token: %v", err)
+	}
+	var plain map[string]any
+	if err := json.Unmarshal(decoded, &plain); err == nil {
+		t.Fatalf("expected opaque cursor, got plain json payload %#v", plain)
+	}
+	parsedAt, parsedID, err := decodeUserMomentCursor(cursor)
+	if err != nil {
+		t.Fatalf("decode user moment cursor: %v", err)
+	}
+	if parsedID != "moment_1" {
+		t.Fatalf("unexpected parsed id: %s", parsedID)
+	}
+	at, ok := parsedAt.(time.Time)
+	if !ok || at.UTC().Format(time.RFC3339) != "2026-03-29T12:00:00Z" {
+		t.Fatalf("unexpected parsed at: %#v", parsedAt)
+	}
+	tampered := cursor[:len(cursor)-1] + "A"
+	if _, _, err := decodeUserMomentCursor(tampered); !errors.Is(err, ErrInvalidCursor) {
+		t.Fatalf("expected invalid cursor error, got %v", err)
 	}
 }

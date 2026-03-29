@@ -1,5 +1,7 @@
 package users
 
+import momenttypes "hotspot/backend-go/internal/modules/moments"
+
 type UserType string
 
 type UserPresenceStatus string
@@ -74,13 +76,39 @@ type UserSettings struct {
 }
 
 type UpdateProfileRequest struct {
-	Nickname     string   `json:"nickname,omitempty"`
-	AvatarFileID string   `json:"avatar_file_id,omitempty"`
-	Bio          string   `json:"bio,omitempty"`
-	Tags         []string `json:"tags,omitempty"`
-	Gender       Gender   `json:"gender,omitempty"`
+	Nickname     *string   `json:"nickname,omitempty"`
+	AvatarFileID *string   `json:"avatar_file_id,omitempty"`
+	Bio          *string   `json:"bio,omitempty"`
+	Tags         *[]string `json:"tags,omitempty"`
+	Gender       *Gender   `json:"gender,omitempty"`
+}
+
+type PartialUserSettings struct {
+	PrivacyLevel        *string                `json:"privacy_level,omitempty"`
+	LocationVisible     *bool                  `json:"location_visible,omitempty"`
+	PresenceVisible     *bool                  `json:"presence_visible,omitempty"`
+	SocialListsVisible  *bool                  `json:"social_lists_visible,omitempty"`
+	GroupsVisible       *bool                  `json:"groups_visible,omitempty"`
+	LikedMomentsVisible *bool                  `json:"liked_moments_visible,omitempty"`
+	StatsVisible        *bool                  `json:"stats_visible,omitempty"`
+	AllowFollow         *bool                  `json:"allow_follow,omitempty"`
+	AllowPrivateChat    *PrivateChatPermission `json:"allow_private_chat,omitempty"`
+	Searchable          *bool                  `json:"searchable,omitempty"`
+	PhoneSearchable     *bool                  `json:"phone_searchable,omitempty"`
+	NicknameSearchable  *bool                  `json:"nickname_searchable,omitempty"`
+	LocationSearchable  *bool                  `json:"location_searchable,omitempty"`
 }
 
 type UpdateSettingsRequest struct {
-	Settings UserSettings `json:"settings"`
+	Settings PartialUserSettings `json:"settings"`
+}
+
+type PaginationParams struct {
+	Limit  int    `json:"limit,omitempty"`
+	Cursor string `json:"cursor,omitempty"`
+}
+
+type UserLikedMomentsRequest struct {
+	UserID     string                        `json:"user_id"`
+	Pagination *momenttypes.PaginationParams `json:"pagination,omitempty"`
 }

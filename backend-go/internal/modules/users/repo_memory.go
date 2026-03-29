@@ -2,23 +2,49 @@ package users
 
 import (
 	"context"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/json"
+	"io"
 	"sort"
+	"strings"
 	"sync"
+	"time"
 
+	grouptypes "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
+	"hotspot/backend-go/internal/platform/geo"
 )
+
+type memoryRelation struct {
+	Following  bool
+	Blocked    bool
+	Remark     string
+	FollowedAt string
+	BlockedAt  string
+	BlockReason string
+}
 
 type InMemoryRepository struct {
 	mu        sync.RWMutex
 	profiles  map[string]MyProfile
 	settings  map[string]UserSettings
-	following map[string]map[string]bool
-	blocked   map[string]map[string]bool
-	remarks   map[string]map[string]string
+	relations map[string]map[string]memoryRelation
+	likedMoments map[string][]momenttypes.MomentItem
+	groupsByUser map[string][]grouptypes.GroupItem
+	momentsByUser map[string][]momenttypes.MomentItem
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
-	return &InMemoryRepository{profiles: make(map[string]MyProfile), settings: make(map[string]UserSettings), following: make(map[string]map[string]bool), blocked: make(map[string]map[string]bool), remarks: make(map[string]map[string]string)}
+	return &InMemoryRepository{
+		profiles: make(map[string]MyProfile),
+		settings: make(map[string]UserSettings),
+		relations: make(map[string]map[string]memoryRelation),
+		likedMoments: make(map[string][]momenttypes.MomentItem),
+		groupsByUser: make(map[string][]grouptypes.GroupItem),
+		momentsByUser: make(map[string][]momenttypes.MomentItem),
+	}
 }
 
 func (r *InMemoryRepository) GetProfile(_ context.Context, userID string) (MyProfile, bool, error) {
@@ -38,9 +64,13 @@ func (r *InMemoryRepository) DeleteProfile(_ context.Context, userID string) err
 	defer r.mu.Unlock()
 	delete(r.profiles, userID)
 	delete(r.settings, userID)
-	delete(r.following, userID)
-	delete(r.blocked, userID)
-	delete(r.remarks, userID)
+	delete(r.relations, userID)
+	delete(r.likedMoments, userID)
+	delete(r.groupsByUser, userID)
+	delete(r.momentsByUser, userID)
+	for sourceUserID := range r.relations {
+		delete(r.relations[sourceUserID], userID)
+	}
 	return nil
 }
 func (r *InMemoryRepository) GetSettings(_ context.Context, userID string) (UserSettings, bool, error) {
@@ -55,91 +85,488 @@ func (r *InMemoryRepository) PutSettings(_ context.Context, userID string, setti
 	r.settings[userID] = settings
 	return nil
 }
-func (r *InMemoryRepository) SearchProfiles(_ context.Context, req SearchUsersRequest) ([]MyProfile, error) {
+func (r *InMemoryRepository) SearchProfiles(_ context.Context, req SearchUsersRequest) (PaginatedProfiles, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	items := []MyProfile{}
+	sortBy := normalizeSearchSort(req.SortBy)
+	radius := normalizeSearchRadius(req.Radius)
+	plan := geo.NewSearchPlan(geo.Point{Latitude: req.ReferencePoint.Latitude, Longitude: req.ReferencePoint.Longitude}, radius, sortBy)
+	keyword := strings.ToLower(strings.TrimSpace(req.Keyword))
+	tag := strings.ToLower(strings.TrimSpace(req.Tag))
+	items := make([]searchProfileCandidate, 0, len(r.profiles))
 	for _, profile := range r.profiles {
-		if req.Keyword == "" || profile.Nickname == req.Keyword {
-			items = append(items, profile)
+		settings, ok := r.settings[profile.UserID]
+		if !ok {
+			settings = defaultSettings()
 		}
+		if !settings.Searchable {
+			continue
+		}
+		if keyword != "" {
+			nickname := strings.ToLower(profile.Nickname)
+			bio := strings.ToLower(profile.Bio)
+			if !(settings.NicknameSearchable && strings.Contains(nickname, keyword)) && !strings.Contains(bio, keyword) {
+				continue
+			}
+		}
+		if tag != "" && !containsFold(profile.Tags, tag) {
+			continue
+		}
+		distance, bearing, within := plan.Match(geo.Point{Latitude: profile.Location.Point.Latitude, Longitude: profile.Location.Point.Longitude})
+		if !within {
+			continue
+		}
+		items = append(items, searchProfileCandidate{Profile: profile, Distance: distance, BearingDegrees: bearing, SortBy: sortBy, RelevanceScore: searchRelevanceScore(profile, keyword, tag)})
 	}
-	sort.Slice(items, func(i, j int) bool { return items[i].UserID < items[j].UserID })
-	return items, nil
+	sortSearchCandidates(items, sortBy)
+	result := paginateSearchCandidates(items, req.Pagination)
+	for i := range result.Items {
+		profile := result.Items[i]
+		profile.Location = Location{Point: GeoPoint{Latitude: profile.Location.Point.Latitude, Longitude: profile.Location.Point.Longitude}, LocationName: profile.Location.LocationName}
+		result.Items[i] = profile
+	}
+	return result, nil
 }
 func (r *InMemoryRepository) Follow(_ context.Context, userID, targetUserID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.following[userID] == nil {
-		r.following[userID] = map[string]bool{}
-	}
-	r.following[userID][targetUserID] = true
+	relation := r.ensureRelation(userID, targetUserID)
+	relation.Following = true
+	relation.FollowedAt = nowMemoryRFC3339()
+	r.relations[userID][targetUserID] = relation
 	return nil
 }
 func (r *InMemoryRepository) Unfollow(_ context.Context, userID, targetUserID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.following[userID] != nil {
-		delete(r.following[userID], targetUserID)
-	}
+	relation := r.ensureRelation(userID, targetUserID)
+	relation.Following = false
+	relation.FollowedAt = ""
+	r.relations[userID][targetUserID] = relation
 	return nil
 }
-func (r *InMemoryRepository) Block(_ context.Context, userID, targetUserID string) error {
+func (r *InMemoryRepository) Block(_ context.Context, userID, targetUserID, reason string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.blocked[userID] == nil {
-		r.blocked[userID] = map[string]bool{}
-	}
-	r.blocked[userID][targetUserID] = true
+	relation := r.ensureRelation(userID, targetUserID)
+	relation.Blocked = true
+	relation.BlockedAt = nowMemoryRFC3339()
+	relation.BlockReason = reason
+	r.relations[userID][targetUserID] = relation
 	return nil
 }
 func (r *InMemoryRepository) Unblock(_ context.Context, userID, targetUserID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.blocked[userID] != nil {
-		delete(r.blocked[userID], targetUserID)
-	}
+	relation := r.ensureRelation(userID, targetUserID)
+	relation.Blocked = false
+	relation.BlockedAt = ""
+	relation.BlockReason = ""
+	r.relations[userID][targetUserID] = relation
 	return nil
 }
 func (r *InMemoryRepository) SetRemark(_ context.Context, userID, targetUserID, remark string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.remarks[userID] == nil {
-		r.remarks[userID] = map[string]string{}
-	}
-	r.remarks[userID][targetUserID] = remark
+	relation := r.ensureRelation(userID, targetUserID)
+	relation.Remark = remark
+	r.relations[userID][targetUserID] = relation
 	return nil
 }
-func (r *InMemoryRepository) ListBlocked(_ context.Context, userID string) ([]BlockedUserItem, error) {
+func (r *InMemoryRepository) ListBlocked(_ context.Context, userID string, limit int, cursor string) (PaginatedBlockedUsers, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	items := []BlockedUserItem{}
-	for targetUserID := range r.blocked[userID] {
-		items = append(items, BlockedUserItem{User: UserInfo{UserID: targetUserID, Nickname: targetUserID}, Remark: r.remarks[userID][targetUserID]})
+	items := make([]BlockedUserItem, 0)
+	for targetUserID, relation := range r.relations[userID] {
+		if relation.Blocked {
+			items = append(items, BlockedUserItem{User: UserInfo{UserID: targetUserID, Nickname: r.nicknameFor(targetUserID)}, BlockedAt: relation.BlockedAt, Reason: relation.BlockReason})
+		}
 	}
-	sort.Slice(items, func(i, j int) bool { return items[i].User.UserID < items[j].User.UserID })
-	return items, nil
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].BlockedAt == items[j].BlockedAt {
+			return items[i].User.UserID < items[j].User.UserID
+		}
+		return items[i].BlockedAt > items[j].BlockedAt
+	})
+	return paginateBlocked(items, limit, cursor), nil
 }
-func (r *InMemoryRepository) ListLikedMoments(_ context.Context, userID string, limit int, cursor string) (momenttypes.PaginatedMoments, error) {
-	_ = limit
-	_ = cursor
-	return momenttypes.PaginatedMoments{Items: []momenttypes.MomentItem{}}, nil
+func (r *InMemoryRepository) ListLikedMoments(_ context.Context, userID string, limit int, cursor, viewerUserID string) (momenttypes.PaginatedMoments, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	items := append([]momenttypes.MomentItem(nil), r.likedMoments[userID]...)
+	visible := make([]momenttypes.MomentItem, 0, len(items))
+	for _, item := range items {
+		if viewerUserID == item.User.UserID || item.PrivacyLevel != "private" {
+			visible = append(visible, item)
+		}
+	}
+	return paginateMoments(visible, limit, cursor), nil
 }
 
 func (r *InMemoryRepository) Relationship(_ context.Context, userID, targetUserID string) (Relationship, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	if r.blocked[userID] != nil && r.blocked[userID][targetUserID] || r.blocked[targetUserID] != nil && r.blocked[targetUserID][userID] {
-		return RelationshipBlocked, nil
-	}
-	if r.following[userID] != nil && r.following[userID][targetUserID] && r.following[targetUserID] != nil && r.following[targetUserID][userID] {
-		return RelationshipFriend, nil
-	}
-	if r.following[userID] != nil && r.following[userID][targetUserID] {
-		return RelationshipFollowing, nil
-	}
-	if r.following[targetUserID] != nil && r.following[targetUserID][userID] {
-		return RelationshipFollower, nil
-	}
-	return RelationshipNone, nil
+	forward := r.relations[userID][targetUserID]
+	reverse := r.relations[targetUserID][userID]
+	return Relationship{IsFollowing: forward.Following, IsFollowedBy: reverse.Following, IsBlocked: forward.Blocked}, nil
 }
+
+func (r *InMemoryRepository) ListFriends(_ context.Context, userID string, limit int, cursor string) (PaginatedFriends, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	items := make([]FriendItem, 0)
+	for targetUserID, relation := range r.relations[userID] {
+		reverse := r.relations[targetUserID][userID]
+		if relation.Following && reverse.Following {
+			lastOnline := r.profiles[targetUserID].LastOnline
+			presence := r.profiles[targetUserID].PresenceStatus
+			item := FriendItem{User: UserInfo{UserID: targetUserID, Nickname: r.nicknameFor(targetUserID), AvatarURL: r.profiles[targetUserID].AvatarURL}, Remark: relation.Remark, FollowedAt: relation.FollowedAt, FollowedBackAt: maxStringTime(relation.FollowedAt, reverse.FollowedAt)}
+			if lastOnline != "" { item.LastOnline = &lastOnline }
+			item.PresenceStatus = &presence
+			items = append(items, item)
+		}
+	}
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].FollowedBackAt == items[j].FollowedBackAt { return items[i].User.UserID < items[j].User.UserID }
+		return items[i].FollowedBackAt > items[j].FollowedBackAt
+	})
+	return paginateFriends(items, limit, cursor), nil
+}
+func (r *InMemoryRepository) ListFollowing(_ context.Context, userID string, limit int, cursor string) (PaginatedFollowing, error) {
+	r.mu.RLock(); defer r.mu.RUnlock()
+	items := make([]FollowingItem, 0)
+	for targetUserID, relation := range r.relations[userID] {
+		if relation.Following {
+			lastOnline := r.profiles[targetUserID].LastOnline
+			presence := r.profiles[targetUserID].PresenceStatus
+			item := FollowingItem{User: UserInfo{UserID: targetUserID, Nickname: r.nicknameFor(targetUserID), AvatarURL: r.profiles[targetUserID].AvatarURL}, FollowedAt: relation.FollowedAt, IsMutual: r.relations[targetUserID][userID].Following}
+			if lastOnline != "" { item.LastOnline = &lastOnline }
+			item.PresenceStatus = &presence
+			items = append(items, item)
+		}
+	}
+	sort.Slice(items, func(i, j int) bool { if items[i].FollowedAt == items[j].FollowedAt { return items[i].User.UserID < items[j].User.UserID }; return items[i].FollowedAt > items[j].FollowedAt })
+	return paginateFollowing(items, limit, cursor), nil
+}
+func (r *InMemoryRepository) ListFollowers(_ context.Context, userID string, limit int, cursor string) (PaginatedFollowers, error) {
+	r.mu.RLock(); defer r.mu.RUnlock()
+	items := make([]FollowerItem, 0)
+	for sourceUserID, relationMap := range r.relations {
+		relation := relationMap[userID]
+		if relation.Following {
+			lastOnline := r.profiles[sourceUserID].LastOnline
+			presence := r.profiles[sourceUserID].PresenceStatus
+			item := FollowerItem{User: UserInfo{UserID: sourceUserID, Nickname: r.nicknameFor(sourceUserID), AvatarURL: r.profiles[sourceUserID].AvatarURL}, FollowedAt: relation.FollowedAt, IsFollowingBack: r.relations[userID][sourceUserID].Following}
+			if lastOnline != "" { item.LastOnline = &lastOnline }
+			item.PresenceStatus = &presence
+			items = append(items, item)
+		}
+	}
+	sort.Slice(items, func(i, j int) bool { if items[i].FollowedAt == items[j].FollowedAt { return items[i].User.UserID < items[j].User.UserID }; return items[i].FollowedAt > items[j].FollowedAt })
+	return paginateFollowers(items, limit, cursor), nil
+}
+func (r *InMemoryRepository) ListGroups(_ context.Context, userID string, limit int, cursor string) (grouptypes.PaginatedGroups, error) {
+	r.mu.RLock(); defer r.mu.RUnlock()
+	items := append([]grouptypes.GroupItem(nil), r.groupsByUser[userID]...)
+	return paginateGroups(items, limit, cursor), nil
+}
+func (r *InMemoryRepository) ListMoments(_ context.Context, userID string, limit int, cursor string, includePrivate bool) (momenttypes.PaginatedMoments, error) {
+	r.mu.RLock(); defer r.mu.RUnlock()
+	items := append([]momenttypes.MomentItem(nil), r.momentsByUser[userID]...)
+	filtered := make([]momenttypes.MomentItem, 0, len(items))
+	for _, item := range items {
+		if includePrivate || item.PrivacyLevel != "private" {
+			filtered = append(filtered, item)
+		}
+	}
+	return paginateMoments(filtered, limit, cursor), nil
+}
+func (r *InMemoryRepository) UserExists(_ context.Context, userID string) (bool, error) {
+	r.mu.RLock(); defer r.mu.RUnlock()
+	_, ok := r.profiles[userID]
+	return ok, nil
+}
+
+func (r *InMemoryRepository) ensureRelation(userID, targetUserID string) memoryRelation {
+	if r.relations[userID] == nil {
+		r.relations[userID] = map[string]memoryRelation{}
+	}
+	return r.relations[userID][targetUserID]
+}
+
+func (r *InMemoryRepository) nicknameFor(userID string) string {
+	if profile, ok := r.profiles[userID]; ok && profile.Nickname != "" {
+		return profile.Nickname
+	}
+	return userID
+}
+
+func nowMemoryRFC3339() string { return time.Now().UTC().Format(time.RFC3339) }
+func maxStringTime(a, b string) string { if a >= b { return a }; return b }
+func maxInt(a, b int) int { if a >= b { return a }; return b }
+func containsFold(items []string, target string) bool {
+	for _, item := range items {
+		if strings.EqualFold(item, target) {
+			return true
+		}
+	}
+	return false
+}
+
+func paginateBlocked(items []BlockedUserItem, limit int, cursor string) PaginatedBlockedUsers {
+	if limit <= 0 { limit = 20 }
+	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].BlockedAt, items[i].User.UserID }, len(items))
+	if !ok { return PaginatedBlockedUsers{} }
+	end := start + limit
+	if end > len(items) { end = len(items) }
+	resp := PaginatedBlockedUsers{Items: items[start:end]}
+	if end < len(items) && end > start { resp.NextCursor = encodeUserMomentCursor(items[end-1].BlockedAt, items[end-1].User.UserID) }
+	return resp
+}
+func paginateFriends(items []FriendItem, limit int, cursor string) PaginatedFriends {
+	if limit <= 0 { limit = 20 }
+	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].FollowedBackAt, items[i].User.UserID }, len(items))
+	if !ok { return PaginatedFriends{} }
+	end := start + limit; if end > len(items) { end = len(items) }
+	resp := PaginatedFriends{Items: items[start:end]}
+	if end < len(items) && end > start { resp.NextCursor = encodeUserMomentCursor(items[end-1].FollowedBackAt, items[end-1].User.UserID) }
+	return resp
+}
+func paginateFollowing(items []FollowingItem, limit int, cursor string) PaginatedFollowing {
+	if limit <= 0 { limit = 20 }
+	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].FollowedAt, items[i].User.UserID }, len(items))
+	if !ok { return PaginatedFollowing{} }
+	end := start + limit; if end > len(items) { end = len(items) }
+	resp := PaginatedFollowing{Items: items[start:end]}
+	if end < len(items) && end > start { resp.NextCursor = encodeUserMomentCursor(items[end-1].FollowedAt, items[end-1].User.UserID) }
+	return resp
+}
+func paginateFollowers(items []FollowerItem, limit int, cursor string) PaginatedFollowers {
+	if limit <= 0 { limit = 20 }
+	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].FollowedAt, items[i].User.UserID }, len(items))
+	if !ok { return PaginatedFollowers{} }
+	end := start + limit; if end > len(items) { end = len(items) }
+	resp := PaginatedFollowers{Items: items[start:end]}
+	if end < len(items) && end > start { resp.NextCursor = encodeUserMomentCursor(items[end-1].FollowedAt, items[end-1].User.UserID) }
+	return resp
+}
+func paginateGroups(items []grouptypes.GroupItem, limit int, cursor string) grouptypes.PaginatedGroups {
+	if limit <= 0 { limit = 20 }
+	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].MyState.JoinedAt, items[i].Group.GroupID }, len(items))
+	if !ok { return grouptypes.PaginatedGroups{} }
+	end := start + limit; if end > len(items) { end = len(items) }
+	resp := grouptypes.PaginatedGroups{Items: items[start:end]}
+	if end < len(items) && end > start { resp.NextCursor = encodeUserMomentCursor(items[end-1].MyState.JoinedAt, items[end-1].Group.GroupID) }
+	return resp
+}
+func paginateMoments(items []momenttypes.MomentItem, limit int, cursor string) momenttypes.PaginatedMoments {
+	if limit <= 0 { limit = 20 }
+	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].CreatedAt, items[i].MomentID }, len(items))
+	if !ok { return momenttypes.PaginatedMoments{} }
+	end := start + limit; if end > len(items) { end = len(items) }
+	resp := momenttypes.PaginatedMoments{Items: items[start:end]}
+	if end < len(items) && end > start { resp.NextCursor = encodeUserMomentCursor(items[end-1].CreatedAt, items[end-1].MomentID) }
+	return resp
+}
+
+func findUserCursorStart(cursor string, keyAt func(i int) (string, string), length int) (int, bool) {
+	if cursor == "" {
+		return 0, true
+	}
+	decodedAt, decodedID, err := decodeUserMomentCursor(cursor)
+	if err != nil {
+		return 0, false
+	}
+	parsedAt, ok := decodedAt.(time.Time)
+	if !ok {
+		return 0, false
+	}
+	needleAt := parsedAt.UTC().Format(time.RFC3339)
+	for i := 0; i < length; i++ {
+		itemAt, itemID := keyAt(i)
+		if itemAt == needleAt && itemID == decodedID {
+			return i + 1, true
+		}
+	}
+	return 0, false
+}
+
+type searchProfileCandidate struct {
+	Profile        MyProfile
+	Distance       int
+	BearingDegrees int
+	SortBy         string
+	RelevanceScore int
+}
+
+type searchCursor struct {
+	SortBy         string `json:"sort_by"`
+	UserID         string `json:"user_id"`
+	Distance       int    `json:"distance,omitempty"`
+	CreatedAt      string `json:"created_at,omitempty"`
+	LastOnline     string `json:"last_online,omitempty"`
+}
+
+func normalizeSearchRadius(radius *int) int {
+	value := 5000
+	if radius != nil {
+		value = *radius
+	}
+	if value < 100 {
+		value = 100
+	}
+	if value > 50000 {
+		value = 50000
+	}
+	return value
+}
+
+func normalizeSearchSort(sortBy string) string {
+	switch sortBy {
+	case "distance", "newest":
+		return sortBy
+	default:
+		return "relevance"
+	}
+}
+
+func sortSearchCandidates(items []searchProfileCandidate, sortBy string) {
+	sort.Slice(items, func(i, j int) bool {
+		left, right := items[i], items[j]
+		switch sortBy {
+		case "distance":
+			if left.Distance != right.Distance {
+				return left.Distance < right.Distance
+			}
+			if left.RelevanceScore != right.RelevanceScore {
+				return left.RelevanceScore > right.RelevanceScore
+			}
+			if left.Profile.LastOnline != right.Profile.LastOnline {
+				return left.Profile.LastOnline > right.Profile.LastOnline
+			}
+		case "newest":
+			if left.Profile.CreatedAt != right.Profile.CreatedAt {
+				return left.Profile.CreatedAt > right.Profile.CreatedAt
+			}
+		default:
+			if left.RelevanceScore != right.RelevanceScore {
+				return left.RelevanceScore > right.RelevanceScore
+			}
+			if left.Profile.LastOnline != right.Profile.LastOnline {
+				return left.Profile.LastOnline > right.Profile.LastOnline
+			}
+		}
+		return left.Profile.UserID < right.Profile.UserID
+	})
+}
+
+func searchRelevanceScore(profile MyProfile, keyword, tag string) int {
+	score := 0
+	lowerNickname := strings.ToLower(profile.Nickname)
+	lowerBio := strings.ToLower(profile.Bio)
+	if keyword != "" {
+		switch {
+		case lowerNickname == keyword:
+			score += 6
+		case strings.HasPrefix(lowerNickname, keyword):
+			score += 4
+		case strings.Contains(lowerNickname, keyword):
+			score += 3
+		}
+		if strings.Contains(lowerBio, keyword) {
+			score += 2
+		}
+	}
+	if tag != "" && containsFold(profile.Tags, tag) {
+		score += 3
+	}
+	return score
+}
+
+func paginateSearchCandidates(items []searchProfileCandidate, p *PaginationParams) PaginatedProfiles {
+	limit, cursor := normalizePagination(p)
+	start := 0
+	if cursor != "" {
+		decoded, err := decodeSearchCursor(cursor)
+		if err != nil {
+			return PaginatedProfiles{InvalidCursor: true}
+		}
+		matched := false
+		for i, item := range items {
+			if searchCursorForItem(item) == decoded {
+				start = i + 1
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return PaginatedProfiles{InvalidCursor: true}
+		}
+	}
+	end := start + limit
+	if end > len(items) {
+		end = len(items)
+	}
+	result := PaginatedProfiles{Items: make([]MyProfile, 0, maxInt(end-start, 0))}
+	for _, item := range items[start:end] {
+		result.Items = append(result.Items, item.Profile)
+	}
+	if end < len(items) && end > start {
+		result.NextCursor = encodeSearchCursor(items[end-1])
+	}
+	return result
+}
+
+func searchCursorForItem(item searchProfileCandidate) searchCursor {
+	return searchCursor{SortBy: item.SortBy, UserID: item.Profile.UserID, Distance: item.Distance, CreatedAt: item.Profile.CreatedAt, LastOnline: item.Profile.LastOnline}
+}
+
+func encodeSearchCursor(item searchProfileCandidate) string {
+	payload, err := json.Marshal(searchCursorForItem(item))
+	if err != nil {
+		return ""
+	}
+	block, err := newUsersCursorBlock()
+	if err != nil {
+		return ""
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return ""
+	}
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return ""
+	}
+	sealed := gcm.Seal(nonce, nonce, payload, nil)
+	return base64.RawURLEncoding.EncodeToString(sealed)
+}
+
+func decodeSearchCursor(raw string) (searchCursor, error) {
+	blob, err := base64.RawURLEncoding.DecodeString(raw)
+	if err != nil {
+		return searchCursor{}, ErrInvalidCursor
+	}
+	block, err := newUsersCursorBlock()
+	if err != nil {
+		return searchCursor{}, ErrInvalidCursor
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return searchCursor{}, ErrInvalidCursor
+	}
+	if len(blob) < gcm.NonceSize() {
+		return searchCursor{}, ErrInvalidCursor
+	}
+	nonce, ciphertext := blob[:gcm.NonceSize()], blob[gcm.NonceSize():]
+	payload, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return searchCursor{}, ErrInvalidCursor
+	}
+	var decoded searchCursor
+	if err := json.Unmarshal(payload, &decoded); err != nil || decoded.SortBy == "" || decoded.UserID == "" {
+		return searchCursor{}, ErrInvalidCursor
+	}
+	return decoded, nil
+}
+

@@ -1,15 +1,20 @@
 package users
 
-import momenttypes "hotspot/backend-go/internal/modules/moments"
+import (
+	grouptypes "hotspot/backend-go/internal/modules/groups"
+	momenttypes "hotspot/backend-go/internal/modules/moments"
+)
 
-type Relationship string
+type Relationship struct {
+	IsFollowing  bool `json:"is_following"`
+	IsFollowedBy bool `json:"is_followed_by"`
+	IsBlocked    bool `json:"is_blocked"`
+}
 
-const (
-	RelationshipNone      Relationship = "none"
-	RelationshipFollowing Relationship = "following"
-	RelationshipFollower  Relationship = "follower"
-	RelationshipFriend    Relationship = "friend"
-	RelationshipBlocked   Relationship = "blocked"
+var (
+	RelationshipNone      = Relationship{}
+	RelationshipFollowing = Relationship{IsFollowing: true}
+	RelationshipBlocked   = Relationship{IsBlocked: true}
 )
 
 type RelativeLocation struct {
@@ -25,6 +30,13 @@ type UserInfo struct {
 	AvatarURL string `json:"avatar_url,omitempty"`
 }
 
+type SocialContext struct {
+	MutualFriendsCount int        `json:"mutual_friends_count"`
+	MutualFriendsPreview []UserInfo `json:"mutual_friends_preview,omitempty"`
+	CommonGroupsCount  *int       `json:"common_groups_count,omitempty"`
+	CommonTags         []string   `json:"common_tags,omitempty"`
+}
+
 type UserItem struct {
 	User           UserInfo           `json:"user"`
 	Bio            string             `json:"bio,omitempty"`
@@ -33,22 +45,42 @@ type UserItem struct {
 	LastOnline     string             `json:"last_online,omitempty"`
 	Location       *RelativeLocation  `json:"location,omitempty"`
 	Stats          *UserStats         `json:"stats,omitempty"`
-	Relation       Relationship       `json:"relation,omitempty"`
+	Relation       *Relationship      `json:"relation,omitempty"`
+	SocialContext  *SocialContext     `json:"social_context,omitempty"`
 }
 
 type UserOpenTheDoorRequest struct {
 	UserID string `json:"user_id"`
 }
 
+type FollowSource string
+
+const (
+	FollowSourceMoment         FollowSource = "moment"
+	FollowSourceSearch         FollowSource = "search"
+	FollowSourceRecommendation FollowSource = "recommendation"
+	FollowSourceProfile        FollowSource = "profile"
+	FollowSourceGroup          FollowSource = "group"
+)
+
 type SearchUsersRequest struct {
-	Keyword string `json:"keyword,omitempty"`
-	Tag     string `json:"tag,omitempty"`
-	Radius  int    `json:"radius,omitempty"`
+	Keyword        string            `json:"keyword,omitempty"`
+	Tag            string            `json:"tag,omitempty"`
+	Radius         *int              `json:"radius,omitempty"`
+	SortBy         string            `json:"sort_by,omitempty"`
+	ReferencePoint GeoPoint          `json:"reference_point"`
+	Pagination     *PaginationParams `json:"pagination,omitempty"`
 }
 
 type PaginatedUsers struct {
 	Items      []UserItem `json:"items"`
 	NextCursor string     `json:"next_cursor,omitempty"`
+}
+
+type PaginatedProfiles struct {
+	Items      []MyProfile
+	NextCursor string
+	InvalidCursor bool
 }
 
 type UpdateLocationRequest struct {
@@ -64,8 +96,19 @@ type DeleteAccountRequest struct {
 	Confirmation string `json:"confirmation"`
 }
 
+type FollowRequest struct {
+	UserID         string       `json:"user_id"`
+	Source         FollowSource `json:"source,omitempty"`
+	SourceMomentID string       `json:"source_moment_id,omitempty"`
+}
+
 type ToggleUserRequest struct {
 	UserID string `json:"user_id"`
+}
+
+type BlockRequest struct {
+	UserID string `json:"user_id"`
+	Reason string `json:"reason,omitempty"`
 }
 
 type SetRemarkRequest struct {
@@ -73,9 +116,79 @@ type SetRemarkRequest struct {
 	Remark string `json:"remark"`
 }
 
+type ListFriendsRequest struct {
+	UserID     string            `json:"user_id,omitempty"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
+}
+
+type FriendItem struct {
+	User           UserInfo            `json:"user"`
+	PresenceStatus *UserPresenceStatus `json:"presence_status,omitempty"`
+	LastOnline     *string             `json:"last_online,omitempty"`
+	Remark         string              `json:"remark,omitempty"`
+	FollowedAt     string              `json:"followed_at"`
+	FollowedBackAt string              `json:"followed_back_at"`
+}
+
+type PaginatedFriends struct {
+	Items      []FriendItem `json:"items"`
+	NextCursor string       `json:"next_cursor,omitempty"`
+}
+
+type ListFollowingRequest struct {
+	UserID     string            `json:"user_id,omitempty"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
+}
+
+type FollowingItem struct {
+	User            UserInfo            `json:"user"`
+	FollowedAt      string              `json:"followed_at"`
+	IsMutual        bool                `json:"is_mutual"`
+	PresenceStatus  *UserPresenceStatus `json:"presence_status,omitempty"`
+	LastOnline      *string             `json:"last_online,omitempty"`
+}
+
+type PaginatedFollowing struct {
+	Items      []FollowingItem `json:"items"`
+	NextCursor string          `json:"next_cursor,omitempty"`
+}
+
+type ListFollowersRequest struct {
+	UserID     string            `json:"user_id,omitempty"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
+}
+
+type FollowerItem struct {
+	User             UserInfo            `json:"user"`
+	FollowedAt       string              `json:"followed_at"`
+	IsFollowingBack  bool                `json:"is_following_back"`
+	PresenceStatus   *UserPresenceStatus `json:"presence_status,omitempty"`
+	LastOnline       *string             `json:"last_online,omitempty"`
+}
+
+type PaginatedFollowers struct {
+	Items      []FollowerItem `json:"items"`
+	NextCursor string         `json:"next_cursor,omitempty"`
+}
+
+type UserGroupsRequest struct {
+	UserID     string            `json:"user_id"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
+}
+
+type UserMomentsRequest struct {
+	UserID     string            `json:"user_id"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
+}
+
+type MyBlockedRequest struct {
+	Pagination *PaginationParams `json:"pagination,omitempty"`
+}
+
 type BlockedUserItem struct {
-	User   UserInfo `json:"user"`
-	Remark string   `json:"remark,omitempty"`
+	User      UserInfo `json:"user"`
+	BlockedAt string   `json:"blocked_at"`
+	Reason    string   `json:"reason,omitempty"`
 }
 
 type PaginatedBlockedUsers struct {
@@ -83,7 +196,6 @@ type PaginatedBlockedUsers struct {
 	NextCursor string            `json:"next_cursor,omitempty"`
 }
 
-type UserLikedMomentsRequest struct {
-	UserID     string                     `json:"user_id"`
-	Pagination *momenttypes.PaginationParams `json:"pagination,omitempty"`
-}
+type UserListGroupsResponse = grouptypes.PaginatedGroups
+
+type UserListMomentsResponse = momenttypes.PaginatedMoments

@@ -2,10 +2,13 @@ package users
 
 import (
 	"context"
+	"strings"
 	"time"
 
+	grouptypes "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
 )
@@ -18,7 +21,10 @@ func NewServiceWithRepo(repo Repository) *Service { return &Service{repo: repo} 
 func (s *Service) GetMyProfile(ctx context.Context) (MyProfile, error) {
 	startedAt := time.Now()
 	observability.L().Info("users.get_my_profile started")
-	principal, _ := platformauth.PrincipalFromContext(ctx)
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return MyProfile{}, err
+	}
 	if profile, ok, err := s.repo.GetProfile(ctx, principal.UserID); err != nil {
 		observability.L().Error("users.get_my_profile failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return MyProfile{}, err
@@ -38,7 +44,10 @@ func (s *Service) GetMyProfile(ctx context.Context) (MyProfile, error) {
 func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateProfileRequest) error {
 	startedAt := time.Now()
 	observability.L().Info("users.update_my_profile started")
-	principal, _ := platformauth.PrincipalFromContext(ctx)
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return err
+	}
 	profile, ok, err := s.repo.GetProfile(ctx, principal.UserID)
 	if err != nil {
 		observability.L().Error("users.update_my_profile failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
@@ -47,20 +56,20 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateProfileRequest)
 	if !ok {
 		profile = defaultProfile(principal.UserID)
 	}
-	if req.Nickname != "" {
-		profile.Nickname = req.Nickname
+	if req.Nickname != nil {
+		profile.Nickname = *req.Nickname
 	}
-	if req.AvatarFileID != "" {
-		profile.AvatarURL = req.AvatarFileID
+	if req.AvatarFileID != nil {
+		profile.AvatarURL = *req.AvatarFileID
 	}
-	if req.Bio != "" {
-		profile.Bio = req.Bio
+	if req.Bio != nil {
+		profile.Bio = *req.Bio
 	}
 	if req.Tags != nil {
-		profile.Tags = req.Tags
+		profile.Tags = *req.Tags
 	}
-	if req.Gender != "" {
-		profile.Gender = req.Gender
+	if req.Gender != nil {
+		profile.Gender = *req.Gender
 	}
 	if err := s.repo.PutProfile(ctx, profile); err != nil {
 		observability.L().Error("users.update_my_profile failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
@@ -73,7 +82,10 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateProfileRequest)
 func (s *Service) GetMySettings(ctx context.Context) (UserSettings, error) {
 	startedAt := time.Now()
 	observability.L().Info("users.get_my_settings started")
-	principal, _ := platformauth.PrincipalFromContext(ctx)
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return UserSettings{}, err
+	}
 	if settings, ok, err := s.repo.GetSettings(ctx, principal.UserID); err != nil {
 		observability.L().Error("users.get_my_settings failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return UserSettings{}, err
@@ -93,14 +105,27 @@ func (s *Service) GetMySettings(ctx context.Context) (UserSettings, error) {
 func (s *Service) UpdateMySettings(ctx context.Context, req UpdateSettingsRequest) error {
 	startedAt := time.Now()
 	observability.L().Info("users.update_my_settings started")
-	principal, _ := platformauth.PrincipalFromContext(ctx)
-	if err := s.repo.PutSettings(ctx, principal.UserID, req.Settings); err != nil {
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return err
+	}
+	settings, ok, err := s.repo.GetSettings(ctx, principal.UserID)
+	if err != nil {
+		observability.L().Error("users.update_my_settings failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return err
+	}
+	if !ok {
+		settings = defaultSettings()
+	}
+	applySettingsPatch(&settings, req.Settings)
+	if err := s.repo.PutSettings(ctx, principal.UserID, settings); err != nil {
 		observability.L().Error("users.update_my_settings failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
 	}
 	observability.L().Info("users.update_my_settings completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }
+
 func (s *Service) Search(ctx context.Context, req SearchUsersRequest) (PaginatedUsers, error) {
 	startedAt := time.Now()
 	observability.L().Info("users.search started")
@@ -109,17 +134,40 @@ func (s *Service) Search(ctx context.Context, req SearchUsersRequest) (Paginated
 		observability.L().Error("users.search failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return PaginatedUsers{}, err
 	}
-	items := make([]UserItem, 0, len(profiles))
-	for _, profile := range profiles {
-		items = append(items, userItemFromProfile(profile, RelationshipNone))
+	if profiles.InvalidCursor {
+		return PaginatedUsers{}, ErrInvalidCursor
+	}
+	principal, hasPrincipal := platformauth.PrincipalFromContext(ctx)
+	items := make([]UserItem, 0, len(profiles.Items))
+	for _, profile := range profiles.Items {
+		settings, ok, err := s.repo.GetSettings(ctx, profile.UserID)
+		if err != nil {
+			return PaginatedUsers{}, err
+		}
+		if !ok {
+			settings = defaultSettings()
+		}
+		isSelf := hasPrincipal && principal.UserID == profile.UserID
+		item := userItemFromProfile(profile, nil, isSelf || settings.PresenceVisible, isSelf || settings.LocationVisible, false)
+		if item.Location != nil {
+			item.Location.Distance, item.Location.BearingDegrees = computeRelativeDistance(req.ReferencePoint, profile.Location.Point)
+		}
+		if hasPrincipal && principal.UserID != "" && !isSelf {
+			relation, err := s.repo.Relationship(ctx, principal.UserID, profile.UserID)
+			if err != nil {
+				return PaginatedUsers{}, err
+			}
+			item.Relation = &relation
+		}
+		items = append(items, item)
 	}
 	observability.L().Info("users.search completed", "count", len(items), "elapsed_ms", time.Since(startedAt).Milliseconds())
-	return PaginatedUsers{Items: items}, nil
+	return PaginatedUsers{Items: items, NextCursor: profiles.NextCursor}, nil
 }
+
 func (s *Service) OpenTheDoor(ctx context.Context, userID string) (UserItem, bool, error) {
 	startedAt := time.Now()
 	observability.L().Info("users.open_the_door started", "user_id", userID)
-	principal, _ := platformauth.PrincipalFromContext(ctx)
 	profile, ok, err := s.repo.GetProfile(ctx, userID)
 	if err != nil {
 		observability.L().Error("users.open_the_door failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
@@ -129,18 +177,46 @@ func (s *Service) OpenTheDoor(ctx context.Context, userID string) (UserItem, boo
 		observability.L().Info("users.open_the_door not found", "user_id", userID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return UserItem{}, false, nil
 	}
-	relation, err := s.repo.Relationship(ctx, principal.UserID, userID)
+	settings, ok, err := s.repo.GetSettings(ctx, userID)
 	if err != nil {
-		observability.L().Error("users.open_the_door failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return UserItem{}, false, err
 	}
+	if !ok {
+		settings = defaultSettings()
+	}
+	principal, hasPrincipal := platformauth.PrincipalFromContext(ctx)
+	isSelf := hasPrincipal && principal.UserID == userID
+	var relation *Relationship
+	if hasPrincipal && principal.UserID != "" && !isSelf {
+		rel, err := s.repo.Relationship(ctx, principal.UserID, userID)
+		if err != nil {
+			return UserItem{}, false, err
+		}
+		relation = &rel
+	}
+	item := userItemFromProfile(profile, relation, isSelf || settings.PresenceVisible, isSelf || settings.LocationVisible, isSelf || settings.StatsVisible)
+	if relation == nil && hasPrincipal && isSelf {
+		selfRelation := Relationship{}
+		item.Relation = &selfRelation
+	}
+	if hasPrincipal && principal.UserID != "" && !isSelf {
+		socialContext, err := s.buildSocialContext(ctx, principal.UserID, profile)
+		if err != nil {
+			return UserItem{}, false, err
+		}
+		item.SocialContext = socialContext
+	}
 	observability.L().Info("users.open_the_door completed", "user_id", userID, "elapsed_ms", time.Since(startedAt).Milliseconds())
-	return userItemFromProfile(profile, relation), true, nil
+	return item, true, nil
 }
+
 func (s *Service) UpdateLocation(ctx context.Context, req UpdateLocationRequest) error {
 	startedAt := time.Now()
 	observability.L().Info("users.update_location started")
-	principal, _ := platformauth.PrincipalFromContext(ctx)
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return err
+	}
 	profile, ok, err := s.repo.GetProfile(ctx, principal.UserID)
 	if err != nil {
 		observability.L().Error("users.update_location failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
@@ -157,10 +233,14 @@ func (s *Service) UpdateLocation(ctx context.Context, req UpdateLocationRequest)
 	observability.L().Info("users.update_location completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }
+
 func (s *Service) Upgrade(ctx context.Context, req UpgradeAccountRequest) error {
 	startedAt := time.Now()
 	observability.L().Info("users.upgrade started")
-	principal, _ := platformauth.PrincipalFromContext(ctx)
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return err
+	}
 	profile, ok, err := s.repo.GetProfile(ctx, principal.UserID)
 	if err != nil {
 		observability.L().Error("users.upgrade failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
@@ -168,6 +248,9 @@ func (s *Service) Upgrade(ctx context.Context, req UpgradeAccountRequest) error 
 	}
 	if !ok {
 		profile = defaultProfile(principal.UserID)
+	}
+	if profile.UserType == UserTypeNormal {
+		return ErrConflict
 	}
 	profile.UserType = UserTypeNormal
 	profile.Email = req.LoginID
@@ -178,10 +261,14 @@ func (s *Service) Upgrade(ctx context.Context, req UpgradeAccountRequest) error 
 	observability.L().Info("users.upgrade completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }
+
 func (s *Service) DeleteAccount(ctx context.Context) error {
 	startedAt := time.Now()
 	observability.L().Info("users.delete_account started")
-	principal, _ := platformauth.PrincipalFromContext(ctx)
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return err
+	}
 	if err := s.repo.DeleteProfile(ctx, principal.UserID); err != nil {
 		observability.L().Error("users.delete_account failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
@@ -189,10 +276,30 @@ func (s *Service) DeleteAccount(ctx context.Context) error {
 	observability.L().Info("users.delete_account completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }
+
 func (s *Service) Follow(ctx context.Context, targetUserID string) error {
 	startedAt := time.Now()
 	observability.L().Info("users.follow started", "target_user_id", targetUserID)
-	principal, _ := platformauth.PrincipalFromContext(ctx)
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return err
+	}
+	if targetUserID == principal.UserID {
+		return ErrConflict
+	}
+	if err := ensureUserExists(ctx, s.repo, targetUserID); err != nil {
+		return err
+	}
+	settings, ok, err := s.repo.GetSettings(ctx, targetUserID)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		settings = defaultSettings()
+	}
+	if !settings.AllowFollow {
+		return ErrPermissionDenied
+	}
 	if err := s.repo.Follow(ctx, principal.UserID, targetUserID); err != nil {
 		observability.L().Error("users.follow failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
@@ -201,10 +308,20 @@ func (s *Service) Follow(ctx context.Context, targetUserID string) error {
 	observability.L().Info("users.follow completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }
+
 func (s *Service) Unfollow(ctx context.Context, targetUserID string) error {
 	startedAt := time.Now()
 	observability.L().Info("users.unfollow started", "target_user_id", targetUserID)
-	principal, _ := platformauth.PrincipalFromContext(ctx)
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return err
+	}
+	if targetUserID == principal.UserID {
+		return ErrConflict
+	}
+	if err := ensureUserExists(ctx, s.repo, targetUserID); err != nil {
+		return err
+	}
 	if err := s.repo.Unfollow(ctx, principal.UserID, targetUserID); err != nil {
 		observability.L().Error("users.unfollow failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
@@ -212,21 +329,41 @@ func (s *Service) Unfollow(ctx context.Context, targetUserID string) error {
 	observability.L().Info("users.unfollow completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }
-func (s *Service) Block(ctx context.Context, targetUserID string) error {
+
+func (s *Service) Block(ctx context.Context, targetUserID, reason string) error {
 	startedAt := time.Now()
 	observability.L().Info("users.block started", "target_user_id", targetUserID)
-	principal, _ := platformauth.PrincipalFromContext(ctx)
-	if err := s.repo.Block(ctx, principal.UserID, targetUserID); err != nil {
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return err
+	}
+	if targetUserID == principal.UserID {
+		return ErrConflict
+	}
+	if err := ensureUserExists(ctx, s.repo, targetUserID); err != nil {
+		return err
+	}
+	if err := s.repo.Block(ctx, principal.UserID, targetUserID, reason); err != nil {
 		observability.L().Error("users.block failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
 	}
 	observability.L().Info("users.block completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }
+
 func (s *Service) Unblock(ctx context.Context, targetUserID string) error {
 	startedAt := time.Now()
 	observability.L().Info("users.unblock started", "target_user_id", targetUserID)
-	principal, _ := platformauth.PrincipalFromContext(ctx)
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return err
+	}
+	if targetUserID == principal.UserID {
+		return ErrConflict
+	}
+	if err := ensureUserExists(ctx, s.repo, targetUserID); err != nil {
+		return err
+	}
 	if err := s.repo.Unblock(ctx, principal.UserID, targetUserID); err != nil {
 		observability.L().Error("users.unblock failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
@@ -234,10 +371,24 @@ func (s *Service) Unblock(ctx context.Context, targetUserID string) error {
 	observability.L().Info("users.unblock completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }
+
 func (s *Service) SetRemark(ctx context.Context, targetUserID, remark string) error {
 	startedAt := time.Now()
 	observability.L().Info("users.set_remark started", "target_user_id", targetUserID)
-	principal, _ := platformauth.PrincipalFromContext(ctx)
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return err
+	}
+	if err := ensureUserExists(ctx, s.repo, targetUserID); err != nil {
+		return err
+	}
+	relation, err := s.repo.Relationship(ctx, principal.UserID, targetUserID)
+	if err != nil {
+		return err
+	}
+	if !relation.IsFollowing {
+		return ErrConflict
+	}
 	if err := s.repo.SetRemark(ctx, principal.UserID, targetUserID, remark); err != nil {
 		observability.L().Error("users.set_remark failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
@@ -245,23 +396,31 @@ func (s *Service) SetRemark(ctx context.Context, targetUserID, remark string) er
 	observability.L().Info("users.set_remark completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }
-func (s *Service) ListBlocked(ctx context.Context) (PaginatedBlockedUsers, error) {
+
+func (s *Service) ListBlocked(ctx context.Context, req MyBlockedRequest) (PaginatedBlockedUsers, error) {
 	startedAt := time.Now()
 	observability.L().Info("users.list_blocked started")
-	principal, _ := platformauth.PrincipalFromContext(ctx)
-	items, err := s.repo.ListBlocked(ctx, principal.UserID)
+	principal, err := requirePrincipal(ctx)
+	if err != nil {
+		return PaginatedBlockedUsers{}, err
+	}
+	limit, cursor := normalizePagination(req.Pagination)
+	items, err := s.repo.ListBlocked(ctx, principal.UserID, limit, cursor)
 	if err != nil {
 		observability.L().Error("users.list_blocked failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return PaginatedBlockedUsers{}, err
 	}
-	observability.L().Info("users.list_blocked completed", "count", len(items), "elapsed_ms", time.Since(startedAt).Milliseconds())
-	return PaginatedBlockedUsers{Items: items}, nil
+	observability.L().Info("users.list_blocked completed", "count", len(items.Items), "elapsed_ms", time.Since(startedAt).Milliseconds())
+	return items, nil
 }
 
 func (s *Service) ListLikedMoments(ctx context.Context, req UserLikedMomentsRequest) (momenttypes.PaginatedMoments, error) {
 	startedAt := time.Now()
 	observability.L().Info("users.list_liked_moments started", "user_id", req.UserID)
-	principal, _ := platformauth.PrincipalFromContext(ctx)
+	if err := ensureUserExists(ctx, s.repo, req.UserID); err != nil {
+		return momenttypes.PaginatedMoments{}, err
+	}
+	principal, hasPrincipal := platformauth.PrincipalFromContext(ctx)
 	settings, ok, err := s.repo.GetSettings(ctx, req.UserID)
 	if err != nil {
 		observability.L().Error("users.list_liked_moments failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
@@ -270,38 +429,485 @@ func (s *Service) ListLikedMoments(ctx context.Context, req UserLikedMomentsRequ
 	if !ok {
 		settings = defaultSettings()
 	}
-	if !settings.LikedMomentsVisible && principal.UserID != req.UserID {
-		observability.L().Info("users.list_liked_moments hidden by privacy", "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return momenttypes.PaginatedMoments{Items: []momenttypes.MomentItem{}}, nil
+	viewerUserID := ""
+	if hasPrincipal {
+		viewerUserID = principal.UserID
 	}
-	limit := 20
-	cursor := ""
-	if req.Pagination != nil {
-		if req.Pagination.Limit > 0 {
-			limit = req.Pagination.Limit
-		}
-		if limit > 100 {
-			limit = 100
-		}
-		cursor = req.Pagination.Cursor
+	if !settings.LikedMomentsVisible && viewerUserID != req.UserID {
+		return momenttypes.PaginatedMoments{}, ErrPermissionDenied
 	}
-	result, err := s.repo.ListLikedMoments(ctx, req.UserID, limit, cursor)
+	limit, cursor := normalizeMomentPagination(req.Pagination)
+	result, err := s.repo.ListLikedMoments(ctx, req.UserID, limit, cursor, viewerUserID)
 	if err != nil {
 		observability.L().Error("users.list_liked_moments failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return momenttypes.PaginatedMoments{}, err
+	}
+	for i := range result.Items {
+		if result.Items[i].User.UserID != viewerUserID {
+			result.Items[i].PrivacyLevel = ""
+		}
 	}
 	observability.L().Info("users.list_liked_moments completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return result, nil
 }
 
+func (s *Service) ListFriends(ctx context.Context, req ListFriendsRequest) (PaginatedFriends, error) {
+	principal, hasPrincipal := platformauth.PrincipalFromContext(ctx)
+	targetUserID := req.UserID
+	if targetUserID == "" {
+		if !hasPrincipal || principal.UserID == "" {
+			return PaginatedFriends{}, ErrUnauthorized
+		}
+		targetUserID = principal.UserID
+	}
+	if err := ensureUserExists(ctx, s.repo, targetUserID); err != nil {
+		return PaginatedFriends{}, err
+	}
+	if err := ensureSocialListsVisible(ctx, s.repo, targetUserID, hasPrincipal && principal.UserID == targetUserID); err != nil {
+		return PaginatedFriends{}, err
+	}
+	limit, cursor := normalizePagination(req.Pagination)
+	result, err := s.repo.ListFriends(ctx, targetUserID, limit, cursor)
+	if err != nil {
+		return PaginatedFriends{}, err
+	}
+	applyPresenceVisibilityToFriends(ctx, s.repo, result.Items)
+	if !(hasPrincipal && principal.UserID == targetUserID) {
+		for i := range result.Items {
+			result.Items[i].Remark = ""
+		}
+	}
+	return result, nil
+}
+
+func (s *Service) ListFollowing(ctx context.Context, req ListFollowingRequest) (PaginatedFollowing, error) {
+	principal, hasPrincipal := platformauth.PrincipalFromContext(ctx)
+	targetUserID := req.UserID
+	if targetUserID == "" {
+		if !hasPrincipal || principal.UserID == "" {
+			return PaginatedFollowing{}, ErrUnauthorized
+		}
+		targetUserID = principal.UserID
+	}
+	if err := ensureUserExists(ctx, s.repo, targetUserID); err != nil {
+		return PaginatedFollowing{}, err
+	}
+	if err := ensureSocialListsVisible(ctx, s.repo, targetUserID, hasPrincipal && principal.UserID == targetUserID); err != nil {
+		return PaginatedFollowing{}, err
+	}
+	limit, cursor := normalizePagination(req.Pagination)
+	result, err := s.repo.ListFollowing(ctx, targetUserID, limit, cursor)
+	if err != nil {
+		return PaginatedFollowing{}, err
+	}
+	applyPresenceVisibilityToFollowing(ctx, s.repo, result.Items)
+	return result, nil
+}
+
+func (s *Service) ListFollowers(ctx context.Context, req ListFollowersRequest) (PaginatedFollowers, error) {
+	principal, hasPrincipal := platformauth.PrincipalFromContext(ctx)
+	targetUserID := req.UserID
+	if targetUserID == "" {
+		if !hasPrincipal || principal.UserID == "" {
+			return PaginatedFollowers{}, ErrUnauthorized
+		}
+		targetUserID = principal.UserID
+	}
+	if err := ensureUserExists(ctx, s.repo, targetUserID); err != nil {
+		return PaginatedFollowers{}, err
+	}
+	if err := ensureSocialListsVisible(ctx, s.repo, targetUserID, hasPrincipal && principal.UserID == targetUserID); err != nil {
+		return PaginatedFollowers{}, err
+	}
+	limit, cursor := normalizePagination(req.Pagination)
+	result, err := s.repo.ListFollowers(ctx, targetUserID, limit, cursor)
+	if err != nil {
+		return PaginatedFollowers{}, err
+	}
+	applyPresenceVisibilityToFollowers(ctx, s.repo, result.Items)
+	return result, nil
+}
+
+func (s *Service) ListGroups(ctx context.Context, req UserGroupsRequest) (grouptypes.PaginatedGroups, error) {
+	principal, hasPrincipal := platformauth.PrincipalFromContext(ctx)
+	if err := ensureUserExists(ctx, s.repo, req.UserID); err != nil {
+		return grouptypes.PaginatedGroups{}, err
+	}
+	settings, ok, err := s.repo.GetSettings(ctx, req.UserID)
+	if err != nil {
+		return grouptypes.PaginatedGroups{}, err
+	}
+	if !ok {
+		settings = defaultSettings()
+	}
+	if !(hasPrincipal && principal.UserID == req.UserID) && !settings.GroupsVisible {
+		return grouptypes.PaginatedGroups{}, ErrPermissionDenied
+	}
+	limit, cursor := normalizePagination(req.Pagination)
+	result, err := s.repo.ListGroups(ctx, req.UserID, limit, cursor)
+	if err != nil {
+		return grouptypes.PaginatedGroups{}, err
+	}
+	for i := range result.Items {
+		result.Items[i].MyState = nil
+		result.Items[i].JoinMethod = ""
+		result.Items[i].IsSearchable = false
+		result.Items[i].MaxMembers = 0
+	}
+	return result, nil
+}
+
+func (s *Service) ListMoments(ctx context.Context, req UserMomentsRequest) (momenttypes.PaginatedMoments, error) {
+	principal, hasPrincipal := platformauth.PrincipalFromContext(ctx)
+	if err := ensureUserExists(ctx, s.repo, req.UserID); err != nil {
+		return momenttypes.PaginatedMoments{}, err
+	}
+	isSelf := hasPrincipal && principal.UserID == req.UserID
+	limit, cursor := normalizePagination(req.Pagination)
+	result, err := s.repo.ListMoments(ctx, req.UserID, limit, cursor, isSelf)
+	if err != nil {
+		return momenttypes.PaginatedMoments{}, err
+	}
+	for i := range result.Items {
+		if !isSelf {
+			result.Items[i].PrivacyLevel = ""
+		}
+	}
+	return result, nil
+}
+
+func requirePrincipal(ctx context.Context) (platformauth.Principal, error) {
+	principal, ok := platformauth.PrincipalFromContext(ctx)
+	if !ok || principal.UserID == "" {
+		return platformauth.Principal{}, ErrUnauthorized
+	}
+	return principal, nil
+}
+
+func ensureUserExists(ctx context.Context, repo Repository, userID string) error {
+	exists, err := repo.UserExists(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return ErrUserNotFound
+	}
+	return nil
+}
+
+func ensureSocialListsVisible(ctx context.Context, repo Repository, userID string, isSelf bool) error {
+	if isSelf {
+		return nil
+	}
+	settings, ok, err := repo.GetSettings(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		settings = defaultSettings()
+	}
+	if !settings.SocialListsVisible {
+		return ErrPermissionDenied
+	}
+	return nil
+}
+
+func normalizePagination(p *PaginationParams) (int, string) {
+	limit := 20
+	cursor := ""
+	if p != nil {
+		if p.Limit > 0 {
+			limit = p.Limit
+		}
+		if limit > 100 {
+			limit = 100
+		}
+		cursor = p.Cursor
+	}
+	return limit, cursor
+}
+
+func normalizeMomentPagination(p *momenttypes.PaginationParams) (int, string) {
+	limit := 20
+	cursor := ""
+	if p != nil {
+		if p.Limit > 0 {
+			limit = p.Limit
+		}
+		if limit > 100 {
+			limit = 100
+		}
+		cursor = p.Cursor
+	}
+	return limit, cursor
+}
+
+func applySettingsPatch(settings *UserSettings, patch PartialUserSettings) {
+	if patch.PrivacyLevel != nil {
+		settings.PrivacyLevel = *patch.PrivacyLevel
+	}
+	if patch.LocationVisible != nil {
+		settings.LocationVisible = *patch.LocationVisible
+	}
+	if patch.PresenceVisible != nil {
+		settings.PresenceVisible = *patch.PresenceVisible
+	}
+	if patch.SocialListsVisible != nil {
+		settings.SocialListsVisible = *patch.SocialListsVisible
+	}
+	if patch.GroupsVisible != nil {
+		settings.GroupsVisible = *patch.GroupsVisible
+	}
+	if patch.LikedMomentsVisible != nil {
+		settings.LikedMomentsVisible = *patch.LikedMomentsVisible
+	}
+	if patch.StatsVisible != nil {
+		settings.StatsVisible = *patch.StatsVisible
+	}
+	if patch.AllowFollow != nil {
+		settings.AllowFollow = *patch.AllowFollow
+	}
+	if patch.AllowPrivateChat != nil {
+		settings.AllowPrivateChat = *patch.AllowPrivateChat
+	}
+	if patch.Searchable != nil {
+		settings.Searchable = *patch.Searchable
+	}
+	if patch.PhoneSearchable != nil {
+		settings.PhoneSearchable = *patch.PhoneSearchable
+	}
+	if patch.NicknameSearchable != nil {
+		settings.NicknameSearchable = *patch.NicknameSearchable
+	}
+	if patch.LocationSearchable != nil {
+		settings.LocationSearchable = *patch.LocationSearchable
+	}
+}
+
 func defaultProfile(userID string) MyProfile {
-	now := time.Now().UTC()
-	return MyProfile{UserID: userID, Nickname: "HotSpot User", UserType: UserTypeNormal, Location: Location{Point: GeoPoint{Latitude: 35.154922, Longitude: 112.682524}, LocationName: "南天门"}, PresenceStatus: UserPresenceOnline, LastOnline: now.Format(time.RFC3339), CreatedAt: now.Add(-24 * time.Hour).Format(time.RFC3339), Stats: UserStats{}}
+	now := time.Now().UTC().Format(time.RFC3339)
+	return MyProfile{UserID: userID, Nickname: userID, UserType: UserTypeTemp, Location: Location{Point: GeoPoint{Latitude: 35.154922, Longitude: 112.682524}, LocationName: "默认位置"}, PresenceStatus: UserPresenceOffline, LastOnline: now, CreatedAt: now, Stats: UserStats{}}
 }
 
 func defaultSettings() UserSettings {
 	return UserSettings{PrivacyLevel: "public", LocationVisible: true, PresenceVisible: true, SocialListsVisible: true, GroupsVisible: true, LikedMomentsVisible: true, StatsVisible: true, AllowFollow: true, AllowPrivateChat: PrivateChatEveryone, Searchable: true, PhoneSearchable: false, NicknameSearchable: true, LocationSearchable: true}
 }
-func userItemFromProfile(profile MyProfile, relation Relationship) UserItem {
-	return UserItem{User: UserInfo{UserID: profile.UserID, Nickname: profile.Nickname, AvatarURL: profile.AvatarURL}, Bio: profile.Bio, Tags: profile.Tags, PresenceStatus: profile.PresenceStatus, LastOnline: profile.LastOnline, Location: &RelativeLocation{Point: profile.Location.Point, LocationName: profile.Location.LocationName}, Stats: &profile.Stats, Relation: relation}
+
+func userItemFromProfile(profile MyProfile, relation *Relationship, includePresence bool, includeLocation bool, includeStats bool) UserItem {
+	item := UserItem{User: UserInfo{UserID: profile.UserID, Nickname: profile.Nickname, AvatarURL: profile.AvatarURL}, Bio: profile.Bio, Tags: profile.Tags, Relation: relation}
+	if includePresence {
+		item.PresenceStatus = profile.PresenceStatus
+		item.LastOnline = profile.LastOnline
+	}
+	if includeLocation {
+		item.Location = &RelativeLocation{Point: profile.Location.Point, LocationName: profile.Location.LocationName}
+	}
+	if includeStats {
+		stats := profile.Stats
+		item.Stats = &stats
+	}
+	return item
+}
+
+func applyPresenceVisibilityToFriends(ctx context.Context, repo Repository, items []FriendItem) {
+	for i := range items {
+		if !isPresenceVisible(ctx, repo, items[i].User.UserID) {
+			items[i].PresenceStatus = nil
+			items[i].LastOnline = nil
+		}
+	}
+}
+
+func applyPresenceVisibilityToFollowing(ctx context.Context, repo Repository, items []FollowingItem) {
+	for i := range items {
+		if !isPresenceVisible(ctx, repo, items[i].User.UserID) {
+			items[i].PresenceStatus = nil
+			items[i].LastOnline = nil
+		}
+	}
+}
+
+func applyPresenceVisibilityToFollowers(ctx context.Context, repo Repository, items []FollowerItem) {
+	for i := range items {
+		if !isPresenceVisible(ctx, repo, items[i].User.UserID) {
+			items[i].PresenceStatus = nil
+			items[i].LastOnline = nil
+		}
+	}
+}
+
+func isPresenceVisible(ctx context.Context, repo Repository, userID string) bool {
+	settings, ok, err := repo.GetSettings(ctx, userID)
+	if err != nil {
+		return true
+	}
+	if !ok {
+		settings = defaultSettings()
+	}
+	return settings.PresenceVisible
+}
+
+func computeRelativeDistance(reference GeoPoint, candidate GeoPoint) (int, int) {
+	point := geo.Point{Latitude: reference.Latitude, Longitude: reference.Longitude}
+	other := geo.Point{Latitude: candidate.Latitude, Longitude: candidate.Longitude}
+	return geo.DistanceMeters(point, other), geo.BearingDegrees(point, other)
+}
+
+func (s *Service) buildSocialContext(ctx context.Context, viewerUserID string, targetProfile MyProfile) (*SocialContext, error) {
+	viewerProfile, ok, err := s.repo.GetProfile(ctx, viewerUserID)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		viewerProfile = defaultProfile(viewerUserID)
+	}
+	mutualFriends, err := collectMutualFriends(ctx, s.repo, viewerUserID, targetProfile.UserID)
+	if err != nil {
+		return nil, err
+	}
+	context := &SocialContext{MutualFriendsCount: len(mutualFriends)}
+	if len(mutualFriends) > 0 {
+		preview := make([]UserInfo, 0, minInt(len(mutualFriends), 3))
+		for _, friend := range mutualFriends {
+			preview = append(preview, friend.User)
+			if len(preview) == 3 {
+				break
+			}
+		}
+		context.MutualFriendsPreview = preview
+	}
+	targetSettings, ok, err := s.repo.GetSettings(ctx, targetProfile.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		targetSettings = defaultSettings()
+	}
+	if targetSettings.GroupsVisible {
+		commonGroupsCount, err := collectCommonGroupsCount(ctx, s.repo, viewerUserID, targetProfile.UserID)
+		if err != nil {
+			return nil, err
+		}
+		context.CommonGroupsCount = &commonGroupsCount
+	}
+	commonTags := intersectTags(viewerProfile.Tags, targetProfile.Tags)
+	if len(commonTags) > 0 {
+		context.CommonTags = commonTags
+	}
+	return context, nil
+}
+
+func collectMutualFriends(ctx context.Context, repo Repository, viewerUserID, targetUserID string) ([]FriendItem, error) {
+	viewerFriends, err := collectFriendsByUser(ctx, repo, viewerUserID)
+	if err != nil {
+		return nil, err
+	}
+	targetFriends, err := collectFriendsByUser(ctx, repo, targetUserID)
+	if err != nil {
+		return nil, err
+	}
+	targetSet := make(map[string]struct{}, len(targetFriends))
+	for _, item := range targetFriends {
+		targetSet[item.User.UserID] = struct{}{}
+	}
+	mutual := make([]FriendItem, 0)
+	for _, item := range viewerFriends {
+		if _, ok := targetSet[item.User.UserID]; ok {
+			mutual = append(mutual, item)
+		}
+	}
+	return mutual, nil
+}
+
+func collectFriendsByUser(ctx context.Context, repo Repository, userID string) ([]FriendItem, error) {
+	items := make([]FriendItem, 0)
+	cursor := ""
+	for {
+		page, err := repo.ListFriends(ctx, userID, 100, cursor)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, page.Items...)
+		if page.NextCursor == "" {
+			break
+		}
+		cursor = page.NextCursor
+	}
+	return items, nil
+}
+
+func collectCommonGroupsCount(ctx context.Context, repo Repository, viewerUserID, targetUserID string) (int, error) {
+	viewerGroups, err := collectGroupIDsByUser(ctx, repo, viewerUserID)
+	if err != nil {
+		return 0, err
+	}
+	targetGroups, err := collectGroupIDsByUser(ctx, repo, targetUserID)
+	if err != nil {
+		return 0, err
+	}
+	targetSet := make(map[string]struct{}, len(targetGroups))
+	for _, groupID := range targetGroups {
+		targetSet[groupID] = struct{}{}
+	}
+	count := 0
+	for _, groupID := range viewerGroups {
+		if _, ok := targetSet[groupID]; ok {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func collectGroupIDsByUser(ctx context.Context, repo Repository, userID string) ([]string, error) {
+	items := make([]string, 0)
+	cursor := ""
+	for {
+		page, err := repo.ListGroups(ctx, userID, 100, cursor)
+		if err != nil {
+			return nil, err
+		}
+		for _, item := range page.Items {
+			items = append(items, item.Group.GroupID)
+		}
+		if page.NextCursor == "" {
+			break
+		}
+		cursor = page.NextCursor
+	}
+	return items, nil
+}
+
+func intersectTags(left, right []string) []string {
+	if len(left) == 0 || len(right) == 0 {
+		return nil
+	}
+	seen := make(map[string]string, len(left))
+	for _, item := range left {
+		key := strings.ToLower(item)
+		if _, ok := seen[key]; !ok {
+			seen[key] = item
+		}
+	}
+	common := make([]string, 0)
+	added := make(map[string]struct{})
+	for _, item := range right {
+		key := strings.ToLower(item)
+		original, ok := seen[key]
+		if !ok {
+			continue
+		}
+		if _, dup := added[key]; dup {
+			continue
+		}
+		common = append(common, original)
+		added[key] = struct{}{}
+	}
+	return common
+}
+
+func minInt(a, b int) int {
+	if a <= b {
+		return a
+	}
+	return b
 }

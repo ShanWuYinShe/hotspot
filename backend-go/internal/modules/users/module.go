@@ -28,6 +28,11 @@ func (m *Module) Mount(r chi.Router) {
 			group.Use(idempotency.Middleware)
 			group.Post("/search", m.handler.Search)
 			group.Post("/open_the_door", m.handler.OpenTheDoor)
+			group.Post("/list_friends", m.handler.ListFriends)
+			group.Post("/list_following", m.handler.ListFollowing)
+			group.Post("/list_followers", m.handler.ListFollowers)
+			group.Post("/list_groups", m.handler.ListGroups)
+			group.Post("/list_moments", m.handler.ListMoments)
 			group.Post("/list_liked_moments", m.handler.ListLikedMoments)
 		})
 		usersRouter.Group(func(group chi.Router) {

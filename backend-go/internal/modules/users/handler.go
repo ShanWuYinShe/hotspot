@@ -2,6 +2,7 @@ package users
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/httpx"
@@ -23,12 +24,7 @@ func (h *Handler) GetMyProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	profile, err := h.service.GetMyProfile(r.Context())
 	if err != nil {
-		observability.L().Error("handler error",
-			"method", "GetMyProfile",
-			"error", err,
-			"request_id", observability.RequestIDFromContext(r.Context()),
-		)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		h.writeServiceError(w, r, "GetMyProfile", err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(profile))
@@ -41,12 +37,7 @@ func (h *Handler) UpdateMyProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.service.UpdateMyProfile(r.Context(), req); err != nil {
-		observability.L().Error("handler error",
-			"method", "UpdateMyProfile",
-			"error", err,
-			"request_id", observability.RequestIDFromContext(r.Context()),
-		)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		h.writeServiceError(w, r, "UpdateMyProfile", err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
@@ -59,12 +50,7 @@ func (h *Handler) GetMySettings(w http.ResponseWriter, r *http.Request) {
 	}
 	settings, err := h.service.GetMySettings(r.Context())
 	if err != nil {
-		observability.L().Error("handler error",
-			"method", "GetMySettings",
-			"error", err,
-			"request_id", observability.RequestIDFromContext(r.Context()),
-		)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		h.writeServiceError(w, r, "GetMySettings", err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(settings))
@@ -77,13 +63,30 @@ func (h *Handler) UpdateMySettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.service.UpdateMySettings(r.Context(), req); err != nil {
-		observability.L().Error("handler error",
-			"method", "UpdateMySettings",
-			"error", err,
-			"request_id", observability.RequestIDFromContext(r.Context()),
-		)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		h.writeServiceError(w, r, "UpdateMySettings", err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
+}
+
+func (h *Handler) writeServiceError(w http.ResponseWriter, r *http.Request, method string, err error) {
+	observability.L().Error("handler error",
+		"method", method,
+		"error", err,
+		"request_id", observability.RequestIDFromContext(r.Context()),
+	)
+	switch {
+	case errors.Is(err, ErrUnauthorized):
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10100, "认证失败"))
+	case errors.Is(err, ErrPermissionDenied):
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
+	case errors.Is(err, ErrUserNotFound):
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "用户不存在"))
+	case errors.Is(err, ErrConflict):
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "业务冲突"))
+	case errors.Is(err, ErrInvalidCursor):
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "分页游标无效"))
+	default:
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+	}
 }
