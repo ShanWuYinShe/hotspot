@@ -407,7 +407,7 @@ export struct MomentDetailPage {
       .shadow(this.getCurrentThemePalette().controlShadow)
       .border({ width: 1, color: this.getSurfaceBorder() })
       .enabled(!this.likePending)
-      .opacity(this.likePending ? 0.58 : 1)
+      .opacity(this.likePending ? DesignConstants.OPACITY.LOADING : 1)
       .backgroundColor(this.getSurfaceSubtle())
       .onClick(() => {
         this.toggleLike();
@@ -431,7 +431,7 @@ export struct MomentDetailPage {
       .shadow(this.getCurrentThemePalette().controlShadow)
       .border({ width: 1, color: this.getSurfaceBorder() })
       .enabled(!this.favoritePending)
-      .opacity(this.favoritePending ? 0.58 : 1)
+      .opacity(this.favoritePending ? DesignConstants.OPACITY.LOADING : 1)
       .backgroundColor(this.getSurfaceSubtle())
       .onClick(() => {
         this.toggleFavorite();

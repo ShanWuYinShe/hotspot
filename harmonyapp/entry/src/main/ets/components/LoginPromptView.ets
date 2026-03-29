@@ -162,7 +162,7 @@ export struct LoginPromptView {
           .width('100%')
           .height(48)
           .enabled(!this.isQuickStarting)
-          .opacity(this.isQuickStarting ? 0.6 : 1.0)
+          .opacity(this.isQuickStarting ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => {
             this.dismissQuickStartKeyboard();
             this.startQuickExperience();

@@ -345,7 +345,7 @@ export struct CreateMomentPage {
           .border({ width: 1, color: this.getSurfaceBorder() })
           .shadow(this.getPrimaryButtonShadow())
           .enabled(!this.isPublishing)
-          .opacity(this.isPublishing ? 0.5 : 1)
+          .opacity(this.isPublishing ? DesignConstants.OPACITY.LOADING : 1)
           .animation({ duration: 200, curve: Curve.EaseInOut })
           .onClick(() => this.publishMoment())
       }

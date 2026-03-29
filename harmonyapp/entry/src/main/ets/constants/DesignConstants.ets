@@ -116,6 +116,27 @@ export interface AnimationSystem {
   CURVE_EMPHASIZED: Curve;
 }
 
+// ==================== 透明度系统接口 ====================
+export interface OpacitySystem {
+  /** 禁用态 */
+  DISABLED: number;
+  /** 按压/不可操作态 */
+  PRESSED: number;
+  /** 加载/pending 态 */
+  LOADING: number;
+  /** 轻微淡化 */
+  SUBTLE: number;
+}
+
+// ==================== 地图标记颜色接口 ====================
+export interface MapMarkerColors {
+  PICKER: string;
+  USER: string;
+  GROUP: string;
+  MOMENT: string;
+  DEFAULT: string;
+}
+
 // ==================== 组件特定常量接口 ====================
 export interface AvatarSizes {
   SMALL: number;
@@ -187,6 +208,8 @@ export interface DesignConstantsType {
   EFFECT: MaterialEffectSystem;
   COMPONENT: ComponentConstants;
   CHAT: ChatLayoutConstants;
+  OPACITY: OpacitySystem;
+  MAP_MARKER: MapMarkerColors;
 }
 
 // ==================== 颜色系统（干净扁平极简风格）====================
@@ -421,6 +444,23 @@ export class MasonryHelper {
   }
 }
 
+// ==================== 透明度系统 ====================
+const OPACITY: OpacitySystem = {
+  DISABLED: 0.38,
+  PRESSED: 0.72,
+  LOADING: 0.58,
+  SUBTLE: 0.85,
+};
+
+// ==================== 地图标记颜色 ====================
+const MAP_MARKER: MapMarkerColors = {
+  PICKER: '#2E7CF6',
+  USER: '#2563EB',
+  GROUP: '#059669',
+  MOMENT: '#EA580C',
+  DEFAULT: '#666666',
+};
+
 export const DesignConstants: DesignConstantsType = {
   COLOR,
   FONT,
@@ -432,4 +472,6 @@ export const DesignConstants: DesignConstantsType = {
   EFFECT,
   COMPONENT,
   CHAT,
+  OPACITY,
+  MAP_MARKER,
 };

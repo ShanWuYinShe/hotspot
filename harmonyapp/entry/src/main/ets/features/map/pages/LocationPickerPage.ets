@@ -31,10 +31,10 @@ const DOUBLE_CLICK_PLACEMENT_HINT: string = '已通过双击定位到该位置';
 const LONG_PRESS_PLACEMENT_HINT: string = '已通过长按定位到该位置';
 const ANCHOR_PLACEMENT_HINT: string = '已回到浏览锚点位置';
 const GENERIC_PLACEMENT_HINT: string = '已定位到该位置';
-const MARKER_COLOR_PICKER: string = '#2E7CF6';
-const MARKER_COLOR_USER: string = '#2563EB';
-const MARKER_COLOR_GROUP: string = '#059669';
-const MARKER_COLOR_MOMENT: string = '#EA580C';
+const MARKER_COLOR_PICKER: string = DesignConstants.MAP_MARKER.PICKER;
+const MARKER_COLOR_USER: string = DesignConstants.MAP_MARKER.USER;
+const MARKER_COLOR_GROUP: string = DesignConstants.MAP_MARKER.GROUP;
+const MARKER_COLOR_MOMENT: string = DesignConstants.MAP_MARKER.MOMENT;
 
 type MapRenderItemType = 'heat_bucket' | 'user' | 'group' | 'moment';
 
@@ -180,9 +180,9 @@ function FilterMenuItem(props: FilterMenuItemProps) {
   .width('100%')
   .height(48)
   .padding({ left: 14, right: 16 })
-  .backgroundColor(props.active ? '#1E293B' : Color.Transparent)
+  .backgroundColor(props.active ? DesignConstants.COLOR.PRIMARY_BG_DARK : Color.Transparent)
   .borderRadius(DesignConstants.RADIUS.XL)
-  .opacity(props.active ? 1.0 : 0.85)
+  .opacity(props.active ? 1.0 : DesignConstants.OPACITY.SUBTLE)
   .onClick(() => props.onToggle())
 }
 
@@ -1635,7 +1635,7 @@ export struct LocationPickerPage {
       case 'user': return MARKER_COLOR_USER;
       case 'group': return MARKER_COLOR_GROUP;
       case 'moment': return MARKER_COLOR_MOMENT;
-      default: return '#666666';
+      default: return DesignConstants.MAP_MARKER.DEFAULT;
     }
   }
 

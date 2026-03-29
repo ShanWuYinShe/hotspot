@@ -61,7 +61,7 @@ export struct SurfaceIconButton {
     .border({ width: 1, color: this.getBorderColor() })
     .shadow(this.getShadowColor())
     .enabled(!this.disabled)
-    .opacity(this.disabled ? 0.5 : 1)
+    .opacity(this.disabled ? DesignConstants.OPACITY.LOADING : 1)
     .onClick(() => {
       if (this.disabled) {
         return;

@@ -21,6 +21,7 @@ import { AppRouter, GroupDetailRouteParam } from '../core/router/AppRouter';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
+import { AppIcon } from './SystemIcon';
 
 const DOMAIN_NUMBER: number = 0xFF13;
 const TAG: string = 'SmartSearchComponent';
@@ -338,9 +339,12 @@ export struct SmartSearchComponent {
             ForEach(this.searchHistory, (historyItem: string) => {
               ListItem() {
                 Row() {
-                  Text('🕐')
-                    .fontSize(16)
-                    .margin({ right: 12 })
+                  Text() {
+                      SymbolSpan($r(AppIcon.TIME))
+                        .fontSize(16)
+                        .fontColor([this.getPalette().textSecondary])
+                    }
+                    .margin({ right: DesignConstants.SPACING.MD })
 
                   Text(historyItem)
                     .fontSize(14)
@@ -372,9 +376,12 @@ export struct SmartSearchComponent {
             ForEach(this.searchResults, (result: SearchResult) => {
               ListItem() {
                 Row() {
-                  Text(this.getResultIcon(result.type))
-                    .fontSize(20)
-                    .margin({ right: 12 })
+                  Text() {
+                      SymbolSpan($r(this.getResultIcon(result.type)))
+                        .fontSize(20)
+                        .fontColor([this.getPalette().textSecondary])
+                    }
+                    .margin({ right: DesignConstants.SPACING.MD })
 
                   Column() {
                     Text(result.title)
@@ -402,16 +409,19 @@ export struct SmartSearchComponent {
           } else if (this.searchText.trim() !== '' && !this.isSearching) {
             ListItem() {
               Column() {
-                Text('😕')
-                  .fontSize(32)
-                  .margin({ bottom: 8 })
+                Text() {
+                    SymbolSpan($r(AppIcon.EMPTY))
+                      .fontSize(32)
+                      .fontColor([this.getPalette().textTertiary])
+                  }
+                  .margin({ bottom: DesignConstants.SPACING.SM })
 
                 Text('未找到相关内容')
                   .fontSize(14)
                   .fontColor(this.getPalette().textSecondary)
               }
               .width('100%')
-              .padding(40)
+              .padding(DesignConstants.SPACING.XXL)
               .justifyContent(FlexAlign.Center)
               .alignItems(HorizontalAlign.Center)
             }
@@ -435,16 +445,16 @@ export struct SmartSearchComponent {
     })
   }
 
-  private getResultIcon(type: 'user' | 'group' | 'moment'): string {
+  private getResultIcon(type: 'user' | 'group' | 'moment'): AppIcon {
     switch (type) {
       case 'user':
-        return '👤';
+        return AppIcon.PERSON;
       case 'group':
-        return '👥';
+        return AppIcon.GROUP;
       case 'moment':
-        return '📸';
+        return AppIcon.CAMERA;
       default:
-        return '🔍';
+        return AppIcon.SEARCH;
     }
   }
 }

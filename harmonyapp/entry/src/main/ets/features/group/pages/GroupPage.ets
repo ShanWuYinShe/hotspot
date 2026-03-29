@@ -672,7 +672,7 @@ export struct GroupPage {
           .height(38)
           .layoutWeight(1)
           .enabled(!this.isInviteHandling(invite.invite_id))
-          .opacity(this.isInviteHandling(invite.invite_id) ? 0.58 : 1)
+          .opacity(this.isInviteHandling(invite.invite_id) ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => this.handleInviteAction(invite, 'accept'))
 
         Button('拒绝')
@@ -684,7 +684,7 @@ export struct GroupPage {
           .height(38)
           .layoutWeight(1)
           .enabled(!this.isInviteHandling(invite.invite_id))
-          .opacity(this.isInviteHandling(invite.invite_id) ? 0.58 : 1)
+          .opacity(this.isInviteHandling(invite.invite_id) ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => this.handleInviteAction(invite, 'reject'))
       }
       .width('100%')
@@ -795,7 +795,7 @@ export struct GroupPage {
           .height(38)
           .layoutWeight(1)
           .enabled(!this.isApplicationHandling(application.application_id))
-          .opacity(this.isApplicationHandling(application.application_id) ? 0.58 : 1)
+          .opacity(this.isApplicationHandling(application.application_id) ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => this.cancelMyApplication(application))
       }
       .width('100%')
@@ -887,7 +887,7 @@ export struct GroupPage {
         .shadow(this.getCurrentThemePalette().controlShadow)
         .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
         .enabled(!this.isGroupJoining(group.group.group_id))
-        .opacity(this.isGroupJoining(group.group.group_id) ? 0.58 : 1)
+        .opacity(this.isGroupJoining(group.group.group_id) ? DesignConstants.OPACITY.LOADING : 1)
         .onClick(() => this.joinGroup(group))
     }
     .width('100%')

@@ -648,7 +648,7 @@ export struct MessagePage {
       .width(80)
       .height('100%')
       .borderRadius(DesignConstants.RADIUS.MD)
-      .opacity(this.isChatDeleting(item) ? 0.62 : 1)
+      .opacity(this.isChatDeleting(item) ? DesignConstants.OPACITY.LOADING : 1)
       .enabled(!this.isChatDeleting(item))
       .onClick(() => this.deleteChat(item))
     }
@@ -712,7 +712,7 @@ export struct MessagePage {
     .borderRadius(AppThemeVisuals.getListItemCardStyle(this.resolvedThemeId).borderRadius)
     .shadow(this.getCurrentThemePalette().elevatedShadow)
     .border({ width: 1, color: this.getSurfaceBorder() })
-    .opacity(this.isChatDeleting(item) ? 0.7 : 1)
+    .opacity(this.isChatDeleting(item) ? DesignConstants.OPACITY.LOADING : 1)
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
         this.pressedChatKey = this.getChatKey(item);

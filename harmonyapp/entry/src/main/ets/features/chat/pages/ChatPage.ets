@@ -1139,7 +1139,7 @@ export struct ChatPage {
           .border({ width: 1, color: this.getChatTheme().inputBorder })
           .padding({ left: this.getChatVisualStyle().sendButton.horizontalPadding, right: this.getChatVisualStyle().sendButton.horizontalPadding })
           .margin({ left: DesignConstants.SPACING.MD })
-          .opacity(this.isSending || this.inputText.trim().length === 0 ? 0.72 : 1)
+          .opacity(this.isSending || this.inputText.trim().length === 0 ? DesignConstants.OPACITY.PRESSED : 1)
           .enabled(!this.isSending && this.inputText.trim().length > 0)
           .onClick(() => this.sendMessage())
       }

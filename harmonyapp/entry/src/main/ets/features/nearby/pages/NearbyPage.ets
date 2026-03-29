@@ -845,7 +845,7 @@ export struct NearbyPage {
           .fontColor(this.isUserFollowing(user.user?.user_id ?? '') ? this.getAccentBackground() : this.getAccentText())
           .shadow(this.isUserFollowing(user.user?.user_id ?? '') ? { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 } : this.getCurrentThemePalette().controlShadow)
           .border(this.isUserFollowing(user.user?.user_id ?? '') ? { width: 0 } : { width: 1, color: this.getSurfaceBorder() })
-          .opacity(this.isUserActionPending(user.user?.user_id ?? '') || this.isUserBlocked(user) ? 0.58 : 1)
+          .opacity(this.isUserActionPending(user.user?.user_id ?? '') || this.isUserBlocked(user) ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => { this.followUser(user); })
 
         Button('私聊')
@@ -859,7 +859,7 @@ export struct NearbyPage {
           .backgroundColor(this.getSurfaceSubtle())
           .fontColor(this.getCurrentThemePalette().accentBackground)
           .border({ width: 1, color: this.getSurfaceBorder() })
-          .opacity(this.isUserBlocked(user) ? 0.58 : 1)
+          .opacity(this.isUserBlocked(user) ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => { this.startPrivateChat(user); })
       }
       .width('100%')
@@ -1084,7 +1084,7 @@ export struct NearbyPage {
           .fontColor(this.isGroupJoined(group) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().accentText)
           .shadow(this.isGroupJoined(group) ? { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 } : this.getCurrentThemePalette().controlShadow)
           .border(this.isGroupJoined(group) ? { width: 0 } : { width: 1, color: this.getSurfaceBorder() })
-          .opacity(this.isGroupActionPending(group.group?.group_id ?? '') ? 0.58 : 1)
+          .opacity(this.isGroupActionPending(group.group?.group_id ?? '') ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => { this.joinGroup(group); })
 
         Button('详情')

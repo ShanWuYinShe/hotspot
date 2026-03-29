@@ -1171,7 +1171,7 @@ export struct GroupDetailPage {
                       .width('100%')
                       .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
                       .enabled(!this.isSavingGroupInfo)
-                      .opacity(this.isSavingGroupInfo ? 0.58 : 1)
+                      .opacity(this.isSavingGroupInfo ? DesignConstants.OPACITY.LOADING : 1)
                       .onClick(() => this.openEditGroupSheet())
                   }
 
@@ -1193,7 +1193,7 @@ export struct GroupDetailPage {
                     .width('100%')
                     .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
                     .enabled(!this.isLeaving)
-                    .opacity(this.isLeaving ? 0.58 : 1)
+                    .opacity(this.isLeaving ? DesignConstants.OPACITY.LOADING : 1)
                     .onClick(() => this.leaveGroup())
                 } else {
                   if (this.groupInfo?.has_password) {
@@ -1219,7 +1219,7 @@ export struct GroupDetailPage {
                     .width('100%')
                     .height(DesignConstants.COMPONENT.BUTTON_HEIGHT)
                     .enabled(!this.isJoining)
-                    .opacity(this.isJoining ? 0.58 : 1)
+                    .opacity(this.isJoining ? DesignConstants.OPACITY.LOADING : 1)
                     .onClick(() => this.joinGroup())
                 }
              }
@@ -1300,7 +1300,7 @@ export struct GroupDetailPage {
           .border({ width: 1, color: this.getSurfaceBorder() })
           .height(34)
           .enabled(!this.isSavingGroupInfo && !this.isEditGroupAvatarUploading)
-          .opacity(this.isSavingGroupInfo || this.isEditGroupAvatarUploading ? 0.58 : 1)
+          .opacity(this.isSavingGroupInfo || this.isEditGroupAvatarUploading ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => this.closeEditGroupSheet())
 
         Button(this.isSavingGroupInfo ? '保存中...' : '保存')
@@ -1312,7 +1312,7 @@ export struct GroupDetailPage {
           .border({ width: 1, color: this.getSurfaceBorder() })
           .height(34)
           .enabled(!this.isSavingGroupInfo && !this.isEditGroupAvatarUploading)
-          .opacity(this.isSavingGroupInfo || this.isEditGroupAvatarUploading ? 0.58 : 1)
+          .opacity(this.isSavingGroupInfo || this.isEditGroupAvatarUploading ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => this.saveGroupInfo())
       }
       .width('100%')
@@ -1654,7 +1654,7 @@ export struct GroupDetailPage {
           .height(34)
           .layoutWeight(1)
           .enabled(!this.isApplicationHandling(application.application_id))
-          .opacity(this.isApplicationHandling(application.application_id) ? 0.58 : 1)
+          .opacity(this.isApplicationHandling(application.application_id) ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => this.approveApplication(application))
 
         Button('拒绝')
@@ -1665,7 +1665,7 @@ export struct GroupDetailPage {
           .height(34)
           .layoutWeight(1)
           .enabled(!this.isApplicationHandling(application.application_id))
-          .opacity(this.isApplicationHandling(application.application_id) ? 0.58 : 1)
+          .opacity(this.isApplicationHandling(application.application_id) ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => this.rejectApplication(application))
       }
       .width('100%')

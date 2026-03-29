@@ -1196,7 +1196,7 @@ export struct ProfilePage {
             .shadow(this.getProfileVisualStyle().secondaryButton.shadow)
             .border({ width: this.getProfileVisualStyle().secondaryButton.borderWidth, color: this.getProfileVisualStyle().secondaryButton.borderColor })
             .enabled(!this.isUpgrading)
-            .opacity(this.isUpgrading ? 0.58 : 1)
+            .opacity(this.isUpgrading ? DesignConstants.OPACITY.LOADING : 1)
             .onClick(() => {
               this.showUpgradeForm = false;
             })
@@ -1210,7 +1210,7 @@ export struct ProfilePage {
             .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
             .shadow(this.getProfileVisualStyle().primaryButton.shadow)
             .enabled(!this.isUpgrading)
-            .opacity(this.isUpgrading ? 0.58 : 1)
+            .opacity(this.isUpgrading ? DesignConstants.OPACITY.LOADING : 1)
             .onClick(() => this.upgradeAccount())
         }
         .width('100%')
@@ -1327,7 +1327,7 @@ export struct ProfilePage {
         .type(ButtonType.Capsule)
         .backgroundColor(Color.Transparent)
         .enabled(!this.isLoading && !this.isAvatarUploading)
-        .opacity(this.isLoading || this.isAvatarUploading ? 0.58 : 1)
+        .opacity(this.isLoading || this.isAvatarUploading ? DesignConstants.OPACITY.LOADING : 1)
         .onClick(() => {
           this.selectAvatarForEdit();
         })
@@ -1371,7 +1371,7 @@ export struct ProfilePage {
           .borderRadius(this.getProfileVisualStyle().card.borderRadius)
           .border({ width: 1, color: this.getSurfaceBorder() })
           .enabled(!this.isLoading && !this.isAvatarUploading)
-          .opacity(this.isLoading || this.isAvatarUploading ? 0.58 : 1)
+          .opacity(this.isLoading || this.isAvatarUploading ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => this.cancelEdit())
 
         Button(this.isLoading ? '保存中...' : '保存')
@@ -1381,7 +1381,7 @@ export struct ProfilePage {
           .layoutWeight(1)
           .borderRadius(this.getProfileVisualStyle().card.borderRadius)
           .enabled(!this.isLoading && !this.isAvatarUploading)
-          .opacity(this.isLoading || this.isAvatarUploading ? 0.58 : 1)
+          .opacity(this.isLoading || this.isAvatarUploading ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => this.saveEdit())
       }
       .width('100%')
@@ -1621,7 +1621,7 @@ export struct ProfilePage {
           .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
           .shadow(this.getProfileVisualStyle().primaryButton.shadow)
           .enabled(!this.isQuickStarting)
-          .opacity(this.isQuickStarting ? 0.6 : 1.0)
+          .opacity(this.isQuickStarting ? DesignConstants.OPACITY.LOADING : 1.0)
           .onClick(() => this.startQuickExperience())
 
         Text('临时用户可使用大部分功能，随时可升级为完整账号')

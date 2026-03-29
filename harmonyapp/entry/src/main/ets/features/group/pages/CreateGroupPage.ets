@@ -629,7 +629,7 @@ export struct CreateGroupPage {
               .height(48)
               .fontSize(DesignConstants.FONT.SIZE.LG)
               .enabled(!this.isCreating)
-              .opacity(this.isCreating ? 0.7 : 1)
+              .opacity(this.isCreating ? DesignConstants.OPACITY.LOADING : 1)
               .animation({ duration: 200, curve: Curve.EaseInOut })
               .onClick(() => this.createGroup())
               .margin({ top: DesignConstants.SPACING.SM })

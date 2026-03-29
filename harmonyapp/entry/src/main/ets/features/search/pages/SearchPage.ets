@@ -696,7 +696,7 @@ export struct SearchPage {
           .borderColor(this.getCurrentThemePalette().accentBackground)
           .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
-          .opacity(this.isUserActionPending(item.user?.user_id ?? '') ? 0.58 : 1)
+          .opacity(this.isUserActionPending(item.user?.user_id ?? '') ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => { this.toggleFollow(item); })
 
         Button('私聊')
@@ -710,7 +710,7 @@ export struct SearchPage {
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
-          .opacity(this.isUserActionPending(item.user?.user_id ?? '') ? 0.74 : 1)
+          .opacity(this.isUserActionPending(item.user?.user_id ?? '') ? DesignConstants.OPACITY.PRESSED : 1)
           .onClick(() => { this.startPrivateChat(item); })
       }
       .width('100%')
@@ -796,7 +796,7 @@ export struct SearchPage {
           .borderColor(this.getCurrentThemePalette().accentBackground)
           .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
-          .opacity(this.isGroupActionPending(item.group?.group_id ?? '') ? 0.58 : 1)
+          .opacity(this.isGroupActionPending(item.group?.group_id ?? '') ? DesignConstants.OPACITY.LOADING : 1)
           .onClick(() => { this.joinGroup(item); })
 
         Button('详情')
@@ -810,7 +810,7 @@ export struct SearchPage {
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .shadow(this.getCurrentThemePalette().controlShadow)
           .border({ width: 1, color: this.getSurfaceBorder() })
-          .opacity(this.isGroupActionPending(item.group?.group_id ?? '') ? 0.74 : 1)
+          .opacity(this.isGroupActionPending(item.group?.group_id ?? '') ? DesignConstants.OPACITY.PRESSED : 1)
           .onClick(() => { this.openGroupDetail(item); })
       }
       .width('100%')
