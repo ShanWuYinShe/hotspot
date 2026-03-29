@@ -554,24 +554,24 @@ export struct ProfilePage {
     NavDestination() {
       Stack({ alignContent: Alignment.Top }) {
         Column() {}
-          .width('72%')
-          .height(320)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .backgroundColor(this.getCurrentThemePalette().pageGlow)
-          .opacity(this.getCurrentThemePalette().isDarkTheme ? 0.28 : 0.52)
-          .blur(48)
-          .align(Alignment.Top)
-          .margin({ top: 18 })
-
-        Column() {}
-          .width('42%')
+          .width('50%')
           .height(180)
           .borderRadius(DesignConstants.RADIUS.FULL)
+          .backgroundColor(this.getCurrentThemePalette().pageGlow)
+          .opacity(this.getCurrentThemePalette().isDarkTheme ? 0.12 : 0.30)
+          .blur(64)
+          .align(Alignment.Top)
+          .margin({ top: 12 })
+
+        Column() {}
+          .width('32%')
+          .height(120)
+          .borderRadius(DesignConstants.RADIUS.FULL)
           .backgroundColor(this.getCurrentThemePalette().heroGlow)
-          .opacity(this.getCurrentThemePalette().isDarkTheme ? 0.18 : 0.34)
-          .blur(32)
+          .opacity(this.getCurrentThemePalette().isDarkTheme ? 0.08 : 0.20)
+          .blur(48)
           .align(Alignment.TopEnd)
-          .margin({ top: 96, right: 18 })
+          .margin({ top: 64, right: 12 })
 
         Column() {
           SystemPageHeader({
@@ -1468,8 +1468,6 @@ export struct ProfilePage {
         .height(this.getProfileVisualStyle().quickAction.iconWrapperSize)
         .borderRadius(DesignConstants.RADIUS.FULL)
         .backgroundColor(this.getSurfaceSubtle())
-        .border({ width: 1, color: this.getSurfaceBorder() })
-        .shadow(this.getProfileVisualStyle().quickAction.shadow)
         .justifyContent(FlexAlign.Center)
         .alignItems(VerticalAlign.Center)
 
@@ -1532,7 +1530,7 @@ export struct ProfilePage {
     .shadow(this.getProfileVisualStyle().intentCard.shadow)
     .border({ width: this.getProfileVisualStyle().intentCard.borderWidth, color: this.getProfileVisualStyle().intentCard.borderColor })
     .padding(this.getProfileVisualStyle().intentCard.padding)
-    .constraintSize({ minHeight: 196 })
+    .constraintSize({ minHeight: 160 })
     .onClick(onTap)
   }
 

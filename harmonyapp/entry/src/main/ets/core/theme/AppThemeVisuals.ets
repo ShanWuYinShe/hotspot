@@ -82,6 +82,7 @@ export interface ThemeTabBarVisualStyle {
   createButtonHeight: number;
   indicatorWidth: number;
   indicatorHeight: number;
+  indicatorBorderRadius: number;
   itemHeight: number;
 }
 
@@ -387,8 +388,9 @@ export class AppThemeVisuals {
       floatingMargin: palette.visuals.metrics.tabBarFloatingMargin,
       createButtonWidth: palette.visuals.metrics.createButtonWidth,
       createButtonHeight: palette.visuals.metrics.createButtonHeight,
-      indicatorWidth: 22,
-      indicatorHeight: 5,
+      indicatorWidth: 16,
+      indicatorHeight: 3,
+      indicatorBorderRadius: 1.5,
       itemHeight: palette.visuals.metrics.tabBarHeight
     };
     AppThemeVisuals.tabBarCache.set(key, style);

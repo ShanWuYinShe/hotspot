@@ -785,9 +785,9 @@ struct Index {
         Row()
           .width(this.getTabBarVisualStyle().indicatorWidth)
           .height(this.getTabBarVisualStyle().indicatorHeight)
-          .margin({ top: 6 })
+          .margin({ top: 4 })
           .backgroundColor(this.getBrandAccent())
-          .borderRadius(DesignConstants.RADIUS.FULL)
+          .borderRadius(this.getTabBarVisualStyle().indicatorBorderRadius)
       }
     }
     .width('100%')
@@ -834,14 +834,15 @@ struct Index {
         Row()
           .width(this.getTabBarVisualStyle().indicatorWidth)
           .height(this.getTabBarVisualStyle().indicatorHeight)
-          .margin({ top: 6 })
+          .margin({ top: 4 })
           .backgroundColor(this.getBrandAccent())
-          .borderRadius(DesignConstants.RADIUS.FULL)
+          .borderRadius(this.getTabBarVisualStyle().indicatorBorderRadius)
       }
     }
     .width('100%')
     .height(this.getTabBarVisualStyle().itemHeight)
     .justifyContent(FlexAlign.Center)
+    .margin({ top: 4 })
     .padding({ top: this.currentTabIndex === 2 ? 0 : 2, bottom: this.currentTabIndex === 2 ? 0 : 2 })
     .backgroundColor(Color.Transparent)
     .onClick(() => {
