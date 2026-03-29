@@ -15,7 +15,13 @@
       "TaskList",
       "EnterWorktree",
       "ExitWorktree",
-      "Bash"
+      "Bash(git *)",
+      "Bash(python3 .claude/scripts/*)",
+      "Bash(python3 .claude/scripts/harmony_check.py *)",
+      "Bash(pnpm *)",
+      "Bash(go vet *)",
+      "Bash(go fmt *)",
+      "Bash(*deploy/scripts/*)"
     ],
     "ask": [
       "Edit(.claude/settings.json)",
