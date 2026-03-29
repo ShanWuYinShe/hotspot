@@ -720,13 +720,19 @@ export interface SubscriptionsSnapshotEvent {
   payload: SubscriptionsSnapshotPayload
 }
 
+export interface ErrorContext {
+  operation?: string
+  resource_type?: string
+  resource_id?: string
+}
+
 export interface ErrorPayload {
   code: number
   message: string
   severity: 'fatal' | 'recoverable' | 'warning'
   retryable: boolean
   retry_after?: number
-  context?: Record<string, Object>
+  context?: ErrorContext
 }
 
 export interface ErrorEvent {

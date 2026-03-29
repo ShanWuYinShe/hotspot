@@ -40,8 +40,9 @@ const DEFAULT_RECONNECT_CONFIG: ReconnectConfig = {
   jitterFactor: 0.2
 };
 
-const HEARTBEAT_INTERVAL = 45;
-const DEFAULT_PONG_TIMEOUT = 10;
+// Spec 参考值（仅作 fallback，优先使用 ConnectionEstablished 返回的服务端动态配置）
+const SPEC_REFERENCE_PING_INTERVAL = 30;
+const SPEC_REFERENCE_PONG_TIMEOUT = 10;
 
 export class WebSocketService {
   private static instance: WebSocketService | null = null;
@@ -52,8 +53,8 @@ export class WebSocketService {
   private reconnectTimer: number | null = null;
   private heartbeatTimer: number | null = null;
   private pongTimeoutTimer: number | null = null;
-  private heartbeatIntervalSec: number = HEARTBEAT_INTERVAL;
-  private pongTimeoutSec: number = DEFAULT_PONG_TIMEOUT;
+  private heartbeatIntervalSec: number = SPEC_REFERENCE_PING_INTERVAL;
+  private pongTimeoutSec: number = SPEC_REFERENCE_PONG_TIMEOUT;
   private awaitingPong: boolean = false;
   private currentToken: string = '';
   private subscriptions: SubscriptionItem[] = [];
@@ -427,8 +428,8 @@ export class WebSocketService {
         this.clearReconnectTimer();
         this.awaitingPong = false;
 
-        this.heartbeatIntervalSec = connPayload.config?.ping_interval || HEARTBEAT_INTERVAL;
-        this.pongTimeoutSec = connPayload.config?.ping_timeout || DEFAULT_PONG_TIMEOUT;
+        this.heartbeatIntervalSec = connPayload.config?.ping_interval || SPEC_REFERENCE_PING_INTERVAL;
+        this.pongTimeoutSec = connPayload.config?.ping_timeout || SPEC_REFERENCE_PONG_TIMEOUT;
         const currentServerTimeMs = this.parseServerTimeMs(connPayload.server_time);
         if (currentServerTimeMs > 0 && this.lastServerTimeMs > 0 && currentServerTimeMs > this.lastServerTimeMs) {
           this.lastDisconnectDurationMs = currentServerTimeMs - this.lastServerTimeMs;
@@ -542,7 +543,7 @@ export class WebSocketService {
 
   private startHeartbeat(interval?: number): void {
     this.stopHeartbeat();
-    const pingInterval = interval || this.heartbeatIntervalSec || HEARTBEAT_INTERVAL;
+    const pingInterval = interval || this.heartbeatIntervalSec || SPEC_REFERENCE_PING_INTERVAL;
     this.heartbeatTimer = setInterval(() => {
       if (this.isConnected()) {
         this.send(createPingEvent());
@@ -563,7 +564,7 @@ export class WebSocketService {
 
   private startPongTimeout(): void {
     this.clearPongTimeout();
-    const timeoutSec = this.pongTimeoutSec > 0 ? this.pongTimeoutSec : DEFAULT_PONG_TIMEOUT;
+    const timeoutSec = this.pongTimeoutSec > 0 ? this.pongTimeoutSec : SPEC_REFERENCE_PONG_TIMEOUT;
     this.pongTimeoutTimer = setTimeout(() => {
       if (!this.awaitingPong) {
         return;

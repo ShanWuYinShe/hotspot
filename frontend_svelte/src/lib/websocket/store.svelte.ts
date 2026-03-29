@@ -21,11 +21,10 @@ const log = dev ? console.log.bind(console) : () => {};
 const warn = dev ? console.warn.bind(console) : () => {};
 const logError = dev ? console.error.bind(console) : () => {};
 
-// ============ 常量配置（来自规范）============
-
-const PING_INTERVAL = 30000; // 30秒
-const PONG_TIMEOUT = 10000; // 10秒
-// SERVER_TIMEOUT = 90000 和 AUTH_TIMEOUT = 5000 保留在注释中，未来用于超时检测
+// ============ Spec 参考值（仅作 fallback，优先使用服务端动态配置）============
+// spec 明确要求"客户端不得硬编码"，以下仅当 ConnectionEstablished 未返回 config 时使用
+const SPEC_REFERENCE_PING_INTERVAL = 30000; // spec 参考值 30 秒
+const SPEC_REFERENCE_PONG_TIMEOUT = 10000;  // spec 参考值 10 秒
 
 // 指数退避重连延迟（秒）- 符合规范：1s、2s、4s、8s、16s、32s、60s（最大）
 const RECONNECT_DELAYS = [1, 2, 4, 8, 16, 32, 60];
@@ -640,12 +639,12 @@ class WebSocketStore {
 		// 使用服务端配置的 ping_interval，如果没有则使用默认值
 		const pingInterval = this.serverConfig?.ping_interval 
 			? this.serverConfig.ping_interval * 1000 // 转换为毫秒
-			: PING_INTERVAL;
+			: (warn('[WebSocket] 服务端未返回 ping_interval，使用 spec 参考值'), SPEC_REFERENCE_PING_INTERVAL);
 
 		// 使用服务端配置的 ping_timeout，如果没有则使用默认值
 		const pongTimeout = this.serverConfig?.ping_timeout
 			? this.serverConfig.ping_timeout * 1000 // 转换为毫秒
-			: PONG_TIMEOUT;
+			: (warn('[WebSocket] 服务端未返回 ping_timeout，使用 spec 参考值'), SPEC_REFERENCE_PONG_TIMEOUT);
 
 		// 每 pingInterval 毫秒发送一次 Ping
 		this.pingTimer = setInterval(() => {
@@ -689,7 +688,7 @@ class WebSocketStore {
 		// 设置 Pong 超时（使用服务端配置的超时时间）
 		const pongTimeout = this.serverConfig?.ping_timeout
 			? this.serverConfig.ping_timeout * 1000 // 转换为毫秒
-			: PONG_TIMEOUT;
+			: (warn('[WebSocket] 服务端未返回 ping_timeout，使用 spec 参考值'), SPEC_REFERENCE_PONG_TIMEOUT);
 
 		this.pongTimer = setTimeout(() => {
 			logError('[WebSocket] Pong 超时，连接异常');

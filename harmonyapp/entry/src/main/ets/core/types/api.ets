@@ -1883,8 +1883,10 @@ export type NotificationType =
   | 'group_application_received' | 'group_application_accepted' | 'system_announcement';
 
 // Spec 定义 NotificationPayload 为 discriminated union（按 type 区分），
-// 但 ArkTS 对 discriminated union 的类型窄化支持有限，
-// 因此使用扁平接口 + 精确字段类型替代。
+// 但 ArkTS 当前不支持基于字面量类型的类型窄化（type narrowing），
+// 无法在 if/switch 中自动推导 payload 的具体字段。
+// 因此使用扁平接口替代，运行时由业务层按 type 字段手动判断。
+// 若未来 ArkTS 支持 discriminated union 窄化，应迁移至联合类型以获得编译期安全。
 export interface NotificationPayload {
   type: NotificationType;
   actor?: UserInfo;
