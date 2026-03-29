@@ -885,7 +885,7 @@ export struct ProfilePage {
         })
       }
       .width('100%')
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG) })
+      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
     }
     .width('100%')
     .layoutWeight(1)
@@ -1042,7 +1042,7 @@ export struct ProfilePage {
       .margin({ bottom: DesignConstants.SPACING.MD })
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG) })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
     .layoutWeight(1)
     .scrollBar(BarState.Auto)
   }
@@ -1108,7 +1108,7 @@ export struct ProfilePage {
       .margin({ bottom: DesignConstants.SPACING.MD })
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG) })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
     .layoutWeight(1)
     .scrollBar(BarState.Auto)
   }

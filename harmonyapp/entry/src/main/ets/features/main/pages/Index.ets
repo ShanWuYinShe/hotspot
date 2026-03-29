@@ -902,10 +902,7 @@ struct Index {
             .height(this.getTabBarVisualStyle().height + this.safeAreaBottom)
             .backgroundColor(this.getTabBarBackground())
             .shadow(this.getTabBarShadow())
-            .borderRadius({
-              topLeft: this.getTabBarVisualStyle().radius,
-              topRight: this.getTabBarVisualStyle().radius
-            })
+            .borderRadius(this.getTabBarVisualStyle().radius)
             .border({ width: { top: 1 }, color: this.getCurrentThemePalette().borderColor })
             .margin({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, bottom: 0 })
 
