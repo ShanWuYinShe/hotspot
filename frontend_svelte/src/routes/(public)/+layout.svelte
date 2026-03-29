@@ -15,9 +15,7 @@
 <div class="min-h-screen bg-background">
     <Navbar onMenuClick={() => (sidebarOpen = !sidebarOpen)} />
 
-    <div
-        class="flex h-[calc(100dvh-4rem)] min-h-[calc(100dvh-4rem)] overflow-hidden bg-muted/30"
-    >
+    <div class="app-shell-frame flex overflow-hidden bg-muted/20">
         <!-- Desktop sidebar -->
         <Sidebar class="hidden w-64 shrink-0 md:block" />
         <!-- Mobile sidebar overlay -->
@@ -32,8 +30,7 @@
                 aria-label="关闭侧边栏"
             />
             <div
-                class="fixed left-0 top-14 z-50 w-64 md:hidden"
-                style="height: calc(100dvh - 3.5rem - env(safe-area-inset-bottom, 0px));"
+                class="app-mobile-sidebar fixed left-0 z-50 w-64 md:hidden"
             >
                 <Sidebar class="h-full bg-sidebar" />
             </div>
@@ -41,8 +38,7 @@
 
         <!-- Main content -->
         <main
-            class="mobile-app-main md:mx-4 md:rounded-3xl md:border md:border-border/60 md:bg-card/85 md:p-6 md:shadow-sm md:backdrop-blur-md no-scrollbar"
-            style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));"
+            class="mobile-app-main pb-safe-compact md:mx-4 md:rounded-3xl md:border md:border-border/60 md:bg-card/85 md:p-6 md:shadow-sm md:backdrop-blur-md no-scrollbar"
         >
             <div class="mobile-page-shell md:mx-auto md:max-w-7xl">
                 {@render children()}

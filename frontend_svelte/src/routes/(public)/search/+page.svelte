@@ -261,7 +261,7 @@
 	<title>搜索 - HotSpot</title>
 </svelte:head>
 
-<div class="space-y-5">
+<div class="space-y-4 sm:space-y-5">
 	<PageHeader title="搜索" description="发现用户、群组与附近动态" />
 
 	<AnchorSummaryCard
@@ -280,19 +280,19 @@
 	</AnchorSummaryCard>
 
 	<form
-		class="rounded-3xl border border-border/60 bg-card/85 p-3 shadow-sm backdrop-blur-md"
+		class="rounded-[1.35rem] border border-border/60 bg-card/90 p-3 shadow-sm backdrop-blur-sm sm:rounded-3xl sm:backdrop-blur-md"
 		onsubmit={(event) => {
 			event.preventDefault();
 			handleSearch();
 		}}
 	>
-		<div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+		<div class="flex flex-col gap-2.5 sm:flex-row sm:items-center">
 			<div class="relative flex-1">
 				<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 				<Input
 					type="text"
 					placeholder="搜索用户、瞬间、群组..."
-					class="h-11 rounded-2xl border-border/60 bg-background/70 pl-9 pr-9"
+					class="h-10.5 rounded-[1rem] border-border/60 bg-background/75 pl-9 pr-9 sm:h-11 sm:rounded-2xl"
 					autocomplete="off"
 					bind:value={keywordInput}
 				/>
@@ -311,7 +311,7 @@
 			</div>
 			<Button
 				type="submit"
-				class="h-11 rounded-2xl border border-border/60 bg-background/70 px-5 text-foreground hover:bg-accent/70 sm:min-w-28"
+				class="h-10.5 rounded-[1rem] border border-border/60 bg-background/75 px-4.5 text-foreground hover:bg-accent/70 sm:h-11 sm:min-w-28 sm:rounded-2xl sm:px-5"
 				disabled={!keywordInput.trim()}
 			>
 				<Search class="h-4 w-4" />
@@ -321,8 +321,8 @@
 	</form>
 
 	{#if activeTerm}
-		<Card class="rounded-3xl border border-border/60 bg-card/85 shadow-sm backdrop-blur-md">
-			<CardContent class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+		<Card class="rounded-[1.35rem] border border-border/60 bg-card/90 shadow-sm backdrop-blur-sm sm:rounded-3xl sm:backdrop-blur-md">
+			<CardContent class="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:p-4">
 				<div class="min-w-0 space-y-1">
 					<div class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
 						{#if activeMode === 'tag'}
@@ -357,7 +357,7 @@
 		</Card>
 
 		<Tabs value={currentTab} onValueChange={handleTabChange}>
-			<TabsList class="h-auto flex-wrap gap-1.5 rounded-3xl bg-card/80 p-1.5 shadow-md shadow-black/10 ring-1 ring-border/50 backdrop-blur-sm dark:shadow-black/30">
+			<TabsList class="h-auto flex-wrap gap-1.5 rounded-[1.35rem] bg-card/85 p-1.25 shadow-sm shadow-black/5 ring-1 ring-border/50 backdrop-blur-sm dark:shadow-black/20 sm:rounded-3xl sm:p-1.5">
 				<TabsTrigger value="users" class="gap-2 rounded-2xl">
 					<Users class="h-4 w-4" />
 					用户 ({users.length})

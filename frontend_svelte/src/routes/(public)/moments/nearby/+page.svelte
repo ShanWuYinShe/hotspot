@@ -6,6 +6,7 @@
 	import { usePagination } from '$lib/hooks/use-pagination.svelte';
 	import { useLocationAwareLoad } from '$lib/hooks/use-location-aware-load.svelte';
 	import AnchorSummaryCard from '$lib/components/common/anchor-summary-card.svelte';
+	import PageHeader from '$lib/components/layout/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import MomentCard from '$lib/components/moments/moment-card.svelte';
 	import MasonryLayout from '$lib/components/common/masonry-layout.svelte';
@@ -61,25 +62,18 @@
 	<title>附近动态 - HotSpot</title>
 </svelte:head>
 
-<div class="container mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
-	<div class="rounded-3xl border border-border/60 bg-linear-to-br from-background via-card/80 to-muted/40 p-4 shadow-sm sm:p-5">
-		<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-			<div class="flex min-w-0 items-start gap-3">
-				<Button variant="ghost" size="icon" onclick={handleBack} aria-label="返回">
-					<ArrowLeft class="h-5 w-5" />
-				</Button>
-				<div class="min-w-0 space-y-1">
-					<h1 class="truncate text-2xl font-bold">附近动态</h1>
-					<p class="text-sm text-muted-foreground">附近用户刚刚发布的内容，按热度和时间综合推荐。</p>
-				</div>
-			</div>
-
+<div class="container mx-auto max-w-7xl space-y-4 px-3 py-4 sm:space-y-5 sm:px-6 sm:py-6 lg:px-8">
+	<PageHeader title="附近动态" description="附近用户刚刚发布的内容，按热度和时间综合推荐。">
+		{#snippet actions()}
+			<Button variant="ghost" size="icon" onclick={handleBack} aria-label="返回">
+				<ArrowLeft class="h-5 w-5" />
+			</Button>
 			<div class="inline-flex shrink-0 items-center gap-1 rounded-2xl border border-border/50 bg-muted/70 px-3 py-1.5 text-xs text-muted-foreground">
 				<MapPin class="h-3.5 w-3.5" />
 				<span class="max-w-48 truncate">{mapAnchorStore.displayName}</span>
 			</div>
-		</div>
-	</div>
+		{/snippet}
+	</PageHeader>
 
 	<AnchorSummaryCard
 		label="附近发现锚点"
@@ -88,7 +82,7 @@
 	/>
 
 	{#if pagination.loading}
-		<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={20}>
+		<MasonryLayout columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }} gap={16}>
 			{#each Array(6) as _, i (i)}
 				<MasonryLayoutItem>
 					<div class="animate-pulse rounded-2xl bg-muted" style="height: {220 + (i % 3) * 34}px"></div>
@@ -108,7 +102,7 @@
 	{:else}
 		<MasonryLayout
 			columns={{ mobile: 1, tablet: 2, desktop: 3, wide: 4 }}
-			gap={20}
+			gap={16}
 			animated={true}
 			animationDelay={50}
 		>

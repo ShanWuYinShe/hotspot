@@ -59,7 +59,7 @@
 	<div class="min-h-screen bg-background">
 		<Navbar onMenuClick={() => (sidebarOpen = !sidebarOpen)} />
 
-		<div class="flex min-h-[calc(100dvh-4rem)] bg-muted/30">
+		<div class="app-shell-frame flex bg-muted/30">
 			<!-- Admin sidebar -->
 			<aside class="hidden w-64 shrink-0 bg-sidebar text-sidebar-foreground md:block">
 				<nav class="space-y-1 p-4">
@@ -93,10 +93,9 @@
 					aria-label="关闭侧边栏"
 				/>
 				<aside 
-					class="fixed left-0 top-14 z-50 w-64 bg-sidebar text-sidebar-foreground md:hidden"
-					style="height: calc(100dvh - 3.5rem - env(safe-area-inset-bottom, 0px));"
+					class="app-mobile-sidebar fixed left-0 z-50 w-64 bg-sidebar text-sidebar-foreground md:hidden"
 				>
-					<nav class="space-y-1 p-4" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
+					<nav class="space-y-1 p-4" style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));">
 						<h2 class="mb-4 px-3 text-lg font-semibold">管理后台</h2>
 						{#each adminNavItems as item (item.href)}
 							<a
@@ -118,7 +117,7 @@
 			{/if}
 
 			<!-- Main content -->
-			<main class="mobile-app-main md:mx-4 md:rounded-3xl md:border md:border-border/60 md:bg-card/85 md:p-6 md:shadow-sm md:backdrop-blur-md" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
+			<main class="mobile-app-main pb-safe-compact md:mx-4 md:rounded-3xl md:border md:border-border/60 md:bg-card/85 md:p-6 md:shadow-sm md:backdrop-blur-md">
 				<div class="mobile-page-shell md:mx-auto md:max-w-6xl">
 					{@render children()}
 				</div>
@@ -129,7 +128,7 @@
 	<!-- 管理员权限验证中 -->
 	<div class="min-h-screen bg-background">
 		<Navbar onMenuClick={() => {}} />
-		<div class="flex min-h-[calc(100dvh-4rem)] items-center justify-center bg-muted/30">
+		<div class="flex min-h-[calc(100dvh-var(--topbar-height-mobile))] items-center justify-center bg-muted/30 sm:min-h-[calc(100dvh-var(--topbar-height-desktop))]">
 			<div class="flex flex-col items-center gap-3 text-muted-foreground">
 				<div class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
 				<p class="text-sm">验证管理员权限...</p>
@@ -140,8 +139,8 @@
 	<!-- 已登录但非管理员 -->
 	<div class="min-h-screen bg-background">
 		<Navbar onMenuClick={() => {}} />
-		<div class="flex min-h-[calc(100dvh-4rem)] bg-muted/30">
-			<main class="mobile-app-main md:mx-4 md:rounded-3xl md:border md:border-border/60 md:bg-card/85 md:p-6 md:shadow-sm md:backdrop-blur-md" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
+		<div class="app-shell-frame flex bg-muted/30">
+			<main class="mobile-app-main pb-safe-compact md:mx-4 md:rounded-3xl md:border md:border-border/60 md:bg-card/85 md:p-6 md:shadow-sm md:backdrop-blur-md">
 				<div class="mobile-page-shell md:mx-auto md:max-w-6xl">
 					<div class="flex flex-col items-center justify-center py-20 text-center">
 						<div class="mb-4 rounded-3xl bg-destructive/10 p-6">
@@ -160,8 +159,8 @@
 {:else if authStore.isAuthenticated && adminPermissionsStore.isError}
 	<div class="min-h-screen bg-background">
 		<Navbar onMenuClick={() => {}} />
-		<div class="flex min-h-[calc(100dvh-4rem)] bg-muted/30">
-			<main class="mobile-app-main md:mx-4 md:rounded-3xl md:border md:border-border/60 md:bg-card/85 md:p-6 md:shadow-sm md:backdrop-blur-md" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
+		<div class="app-shell-frame flex bg-muted/30">
+			<main class="mobile-app-main pb-safe-compact md:mx-4 md:rounded-3xl md:border md:border-border/60 md:bg-card/85 md:p-6 md:shadow-sm md:backdrop-blur-md">
 				<div class="mobile-page-shell md:mx-auto md:max-w-6xl">
 					<div class="flex flex-col items-center justify-center py-20 text-center">
 						<div class="mb-4 rounded-3xl bg-muted p-6">
@@ -186,7 +185,7 @@
 	<!-- 登录态恢复中 -->
 	<div class="min-h-screen bg-background">
 		<Navbar onMenuClick={() => {}} />
-		<div class="flex min-h-[calc(100dvh-4rem)] items-center justify-center bg-muted/30">
+		<div class="flex min-h-[calc(100dvh-var(--topbar-height-mobile))] items-center justify-center bg-muted/30 sm:min-h-[calc(100dvh-var(--topbar-height-desktop))]">
 			<div class="flex flex-col items-center gap-3 text-muted-foreground">
 				<div class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
 				<p class="text-sm">正在恢复登录状态...</p>
@@ -197,8 +196,8 @@
 	<!-- 未登录 -->
 	<div class="min-h-screen bg-background">
 		<Navbar onMenuClick={() => (sidebarOpen = !sidebarOpen)} />
-		<div class="flex min-h-[calc(100dvh-4rem)] bg-muted/30">
-			<main class="mobile-app-main md:mx-4 md:rounded-3xl md:border md:border-border/60 md:bg-card/85 md:p-6 md:shadow-sm md:backdrop-blur-md" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
+		<div class="app-shell-frame flex bg-muted/30">
+			<main class="mobile-app-main pb-safe-compact md:mx-4 md:rounded-3xl md:border md:border-border/60 md:bg-card/85 md:p-6 md:shadow-sm md:backdrop-blur-md">
 				<div class="mobile-page-shell md:mx-auto md:max-w-6xl">
 					<div class="flex flex-col items-center justify-center py-20 text-center">
 						<div class="mb-4 rounded-3xl bg-muted p-6">

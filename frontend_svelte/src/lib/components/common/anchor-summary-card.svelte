@@ -28,16 +28,16 @@
 
 <Card
 	class={cn(
-		'rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md',
-		subtle && 'bg-linear-to-r from-background via-card/85 to-primary/10'
+		'rounded-[1.35rem] border border-border/60 bg-card/85 shadow-sm backdrop-blur-sm sm:rounded-3xl sm:backdrop-blur-md',
+		subtle && 'bg-linear-to-r from-background via-card/90 to-primary/8'
 	)}
 >
-	<CardContent class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+	<CardContent class="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:p-4">
 		<div class="min-w-0 space-y-1">
-			<div class="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-			<div class="truncate font-semibold text-foreground">{displayName || '未设置锚点'}</div>
+			<div class="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
+			<div class="truncate text-sm font-semibold text-foreground sm:text-base">{displayName || '未设置锚点'}</div>
 			{#if description}
-				<div class="text-xs text-muted-foreground">{description}</div>
+				<div class="text-xs leading-5 text-muted-foreground">{description}</div>
 			{/if}
 		</div>
 

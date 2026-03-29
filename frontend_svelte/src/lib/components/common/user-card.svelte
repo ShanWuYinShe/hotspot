@@ -252,19 +252,19 @@
 		onkeydown={handleCardKeydown}
 		class="group/card flex h-full flex-col overflow-hidden {className}"
 	>
-		<CardContent class="flex flex-1 flex-col p-6">
+		<CardContent class="flex flex-1 flex-col p-4.5 sm:p-6">
 			{#if variant === 'square'}
 				<!-- 方块模式：信息密度更高，卡片高度随内容自适应 -->
 				<div class="flex flex-1 flex-col gap-3">
 					<div
-						class="relative overflow-hidden rounded-2xl border border-border/40 bg-linear-to-br from-primary/15 via-secondary/10 to-muted/30 p-3.5"
+						class="relative overflow-hidden rounded-[1.1rem] border border-border/40 bg-linear-to-br from-primary/12 via-secondary/8 to-muted/25 p-3 sm:rounded-2xl sm:p-3.5"
 					>
 						<div class="pointer-events-none absolute inset-0 bg-linear-to-t from-black/5 to-transparent dark:from-white/5"></div>
 
 						<div class="relative flex items-start justify-between gap-3">
 							<div class="flex min-w-0 items-center gap-2.5">
 								<div class="relative shrink-0">
-									<Avatar glow class="size-12">
+									<Avatar glow class="size-11 sm:size-12">
 										<AvatarImage src={userInfo.avatar_url} alt={userInfo.nickname} />
 										<AvatarFallback class="bg-linear-to-br from-primary/25 to-secondary/25 text-primary font-bold text-sm">
 											{(userInfo.nickname || '用户').slice(0, 2)}
@@ -434,7 +434,7 @@
 
 		<!-- 操作按钮区域 -->
 		{#if !isMe}
-			<CardFooter class="border-t border-border/40 bg-muted/10 p-3 md:bg-muted/5 md:transition-colors md:group-hover/card:bg-muted/20">
+			<CardFooter class="border-t border-border/40 bg-muted/8 p-2.5 md:bg-muted/5 md:transition-colors md:group-hover/card:bg-muted/20">
 				<div class="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 					<Button
 						variant="ghost"

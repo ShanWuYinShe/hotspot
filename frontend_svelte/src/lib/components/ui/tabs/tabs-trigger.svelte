@@ -14,9 +14,9 @@
 <TabsPrimitive.Trigger
 	class={cn(
 		'inline-flex items-center justify-center whitespace-nowrap',
-		'px-4 py-1.5 rounded-lg',
+		'rounded-[0.95rem] px-3.5 py-1.5 sm:px-4',
 		'border border-transparent',
-		'text-sm font-medium',
+		'text-sm font-medium leading-5',
 		'transition-colors duration-200',
 		'cursor-pointer',
 		'hover:bg-primary/10 hover:text-primary',

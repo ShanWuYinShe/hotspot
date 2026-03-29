@@ -87,10 +87,10 @@
 </script>
 
 <header
-	class="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 shadow-md shadow-black/10 dark:shadow-black/30 backdrop-blur supports-backdrop-filter:bg-background/60"
+	class="sticky top-0 z-50 w-full border-b border-border/50 bg-background/88 shadow-sm shadow-black/5 dark:shadow-black/20 backdrop-blur supports-backdrop-filter:bg-background/70"
 	style="padding-top: env(safe-area-inset-top, 0px);"
 >
-	<div class="mx-auto flex h-14 w-full items-center gap-1.5 px-3 sm:h-16 sm:gap-3 sm:px-4 md:px-6">
+	<div class="mx-auto flex h-13 w-full items-center gap-1.5 px-3 sm:h-16 sm:gap-3 sm:px-4 md:px-6">
 		{#if showMenu}
 			<RippleButton 
 				variant="icon"

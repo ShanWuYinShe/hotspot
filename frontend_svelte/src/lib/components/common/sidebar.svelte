@@ -163,14 +163,14 @@
 
 <aside
     class={cn(
-        "relative flex h-full flex-col border-r border-sidebar-border/60 bg-sidebar/95 text-sidebar-foreground shadow-sm shadow-black/5 dark:shadow-black/20 backdrop-blur",
+        "relative flex h-full flex-col border-r border-sidebar-border/60 bg-sidebar/92 text-sidebar-foreground shadow-sm shadow-black/5 dark:shadow-black/20 backdrop-blur",
         className,
     )}
 >
 	<!-- 主导航区域 - 可滚动，底部通过额外 padding 为左下角入口腾出空间 -->
 	<!-- 移动端预留: 浏览锚点(56px + p-3*2) + 主题切换(44px + mt-3) + safe-area = 约140px -->
 	<!-- 桌面端预留: 浏览锚点(56px + p-3*2) + safe-area = 约80px -->
-	<nav class="flex-1 min-h-0 overflow-y-auto px-3 pt-4 pb-28 custom-scrollbar">
+	<nav class="flex-1 min-h-0 overflow-y-auto px-2.5 pt-3.5 pb-26 custom-scrollbar sm:px-3 sm:pt-4 sm:pb-28">
         <!-- 主导航 -->
         <div class="space-y-1">
             {#each mainNavItems as item (item.href)}
@@ -256,13 +256,13 @@
 	<!-- 底部区域：固定在侧边栏左下角，通过 absolute 锚定 -->
 	<div class="pointer-events-none absolute inset-x-0 bottom-0">
 		<div
-			class="pointer-events-auto border-t border-sidebar-border/30 bg-sidebar/98 backdrop-blur-sm p-3"
+			class="pointer-events-auto border-t border-sidebar-border/30 bg-sidebar/95 backdrop-blur-sm p-2.5 sm:p-3"
 			style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0rem));"
 		>
 			<!-- 浏览锚点按钮 -->
 			<Button
 				variant="ghost"
-				class="group relative flex w-full items-center gap-3 overflow-hidden rounded-xl bg-linear-to-r from-primary/5 to-primary/10 p-3 text-left transition-all duration-200 hover:from-primary/10 hover:to-primary/20 min-h-14"
+				class="group relative flex w-full items-center gap-3 overflow-hidden rounded-xl bg-linear-to-r from-primary/5 to-primary/10 p-2.5 text-left transition-all duration-200 hover:from-primary/10 hover:to-primary/20 min-h-13 sm:min-h-14 sm:p-3"
 				onclick={() => (showLocationPicker = true)}
 				{@attach rippleFeedback}
 			>

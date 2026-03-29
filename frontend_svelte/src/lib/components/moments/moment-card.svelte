@@ -153,16 +153,16 @@ let { moment, class: className = '' }: Props = $props();
 	onkeydown={handleCardKeydown}
 	class="group/card cursor-pointer overflow-hidden animate-bounce-in {className}"
 >
-	<CardHeader class="pb-3 pt-4">
+	<CardHeader class="pb-2.5 pt-3.5 sm:pb-3 sm:pt-4">
 		<div class="flex items-start justify-between gap-3">
 			<a
 				href="/users/{moment.user.user_id}"
 				data-card-action
-				class="group/user flex items-center gap-3"
+				class="group/user flex items-center gap-2.5 sm:gap-3"
 				onclick={handleMomentAuthorClick}
 			>
 				<div class="relative">
-					<Avatar glow class="h-10 w-10">
+					<Avatar glow class="h-9 w-9 sm:h-10 sm:w-10">
 						<AvatarImage src={moment.user.avatar_url} alt={moment.user.nickname} />
 						<AvatarFallback class="bg-linear-to-br from-primary/20 to-secondary/20 text-primary font-bold">{moment.user.nickname.slice(0, 2)}</AvatarFallback>
 					</Avatar>
@@ -184,7 +184,7 @@ let { moment, class: className = '' }: Props = $props();
 			{#if 'recommendation' in moment && moment.recommendation}
 				{@const recMeta = getRecommendationMeta(moment.recommendation.type)}
 				{#if recMeta}
-					<Badge variant="accent" class="gap-1.5 px-3 py-1.5 {recMeta.className}">
+					<Badge variant="accent" class="gap-1 px-2.5 py-1 text-[11px] {recMeta.className}">
 						{#if moment.recommendation.type === 'friend_liked'}
 							<Users class="h-3.5 w-3.5" />
 						{:else if moment.recommendation.type === 'nearby'}
@@ -203,14 +203,14 @@ let { moment, class: className = '' }: Props = $props();
 		</div>
 	</CardHeader>
 
-	<CardContent class="pb-3">
+	<CardContent class="pb-2.5 sm:pb-3">
 		<div class="block space-y-3">
 			{#if moment.description}
 				<p class="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">{moment.description}</p>
 			{/if}
 
 			{#if moment.images && moment.images.length > 0}
-				<div class="grid gap-2 overflow-hidden rounded-2xl border-2 border-primary/10 {moment.images.length === 1 ? '' : moment.images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}">
+				<div class="grid gap-1.5 overflow-hidden rounded-[1.1rem] border border-primary/10 {moment.images.length === 1 ? '' : moment.images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} sm:gap-2 sm:rounded-2xl">
 					{#each moment.images.slice(0, 9) as image, i (image.url)}
 						{#if moment.images.length === 1}
 							<div class="relative overflow-hidden bg-muted/30">
@@ -241,7 +241,7 @@ let { moment, class: className = '' }: Props = $props();
 			{/if}
 
 			{#if moment.tags && moment.tags.length > 0}
-				<div class="flex flex-wrap gap-2 pt-1">
+				<div class="flex flex-wrap gap-1.5 pt-0.5 sm:gap-2 sm:pt-1">
 					{#each moment.tags as tag (tag)}
 						<Badge variant="default" class="text-xs">#{tag}</Badge>
 					{/each}
@@ -250,7 +250,7 @@ let { moment, class: className = '' }: Props = $props();
 		</div>
 	</CardContent>
 
-	<CardFooter class="border-t border-border/40 bg-muted/10 py-2 md:bg-muted/5 md:transition-colors md:group-hover/card:bg-muted/20">
+	<CardFooter class="border-t border-border/40 bg-muted/8 py-2 md:bg-muted/5 md:transition-colors md:group-hover/card:bg-muted/20">
 		<div class="flex w-full flex-col gap-2 px-1 sm:flex-row sm:items-center sm:justify-between">
 			<div class="flex flex-wrap gap-2">
 				<Button
