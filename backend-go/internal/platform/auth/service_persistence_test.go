@@ -54,3 +54,98 @@ func TestRefreshSessionReturnsRotateError(t *testing.T) {
 		t.Fatal("expected refresh error")
 	}
 }
+
+func TestRefreshSessionAllowsReplayedTokenWithinGraceWindow(t *testing.T) {
+	service := NewService(config.Config{AuthTokenSecret: "test-secret"})
+	issued, err := service.IssueSession("user_alice")
+	if err != nil {
+		t.Fatalf("issue session: %v", err)
+	}
+
+	first, err := service.RefreshSession(issued.RefreshToken)
+	if err != nil {
+		t.Fatalf("first refresh: %v", err)
+	}
+	second, err := service.RefreshSession(issued.RefreshToken)
+	if err != nil {
+		t.Fatalf("second refresh in grace window: %v", err)
+	}
+	if second.RefreshToken != first.RefreshToken {
+		t.Fatalf("expected rotated refresh token reuse within grace window, got %q want %q", second.RefreshToken, first.RefreshToken)
+	}
+	if second.Principal.SessionID != first.Principal.SessionID {
+		t.Fatalf("expected same session id, got %q want %q", second.Principal.SessionID, first.Principal.SessionID)
+	}
+}
+
+func TestRefreshSessionRejectsReplayedTokenAfterGraceWindow(t *testing.T) {
+	service := NewService(config.Config{AuthTokenSecret: "test-secret"})
+	issued, err := service.IssueSession("user_alice")
+	if err != nil {
+		t.Fatalf("issue session: %v", err)
+	}
+	if _, err := service.RefreshSession(issued.RefreshToken); err != nil {
+		t.Fatalf("refresh session: %v", err)
+	}
+	stored, ok, err := service.refreshes.Get(issued.RefreshToken)
+	if err != nil || !ok {
+		t.Fatalf("get old refresh session: ok=%v err=%v", ok, err)
+	}
+	stored.GraceUntil = time.Now().UTC().Add(-time.Second)
+	memoryStore := service.refreshes.(*InMemoryRefreshStore)
+	memoryStore.mu.Lock()
+	memoryStore.items[issued.RefreshToken] = stored
+	memoryStore.mu.Unlock()
+
+	_, err = service.RefreshSession(issued.RefreshToken)
+	if err == nil || err.Error() != "expired refresh rotation window" {
+		t.Fatalf("expected expired rotation window, got %v", err)
+	}
+}
+
+func TestRefreshSessionRejectsRevokedSession(t *testing.T) {
+	service := NewService(config.Config{AuthTokenSecret: "test-secret"})
+	issued, err := service.IssueSession("user_alice")
+	if err != nil {
+		t.Fatalf("issue session: %v", err)
+	}
+	claims, err := service.tokens.ParseAccessToken(issued.AccessToken)
+	if err != nil {
+		t.Fatalf("parse access token: %v", err)
+	}
+	if _, err := service.sessions.Revoke(claims.SessionID); err != nil {
+		t.Fatalf("revoke session: %v", err)
+	}
+
+	_, err = service.RefreshSession(issued.RefreshToken)
+	if err == nil || err.Error() != "revoked session" {
+		t.Fatalf("expected revoked session error, got %v", err)
+	}
+}
+
+func TestListSessionsTouchesCurrentSessionWhenPresent(t *testing.T) {
+	service := NewService(config.Config{AuthTokenSecret: "test-secret"})
+	now := time.Now().UTC().Add(-time.Minute)
+	if err := service.sessions.Save(SessionRecord{SessionID: "sess_old", UserID: "user_alice", CreatedAt: now, LastActiveAt: now}); err != nil {
+		t.Fatalf("save old session: %v", err)
+	}
+	if err := service.sessions.Save(SessionRecord{SessionID: "sess_current", UserID: "user_alice", CreatedAt: now, LastActiveAt: now}); err != nil {
+		t.Fatalf("save current session: %v", err)
+	}
+
+	before, ok, err := service.sessions.Get("sess_current")
+	if err != nil || !ok {
+		t.Fatalf("get current session: ok=%v err=%v", ok, err)
+	}
+	listed := service.ListSessions("user_alice", "sess_current")
+	if len(listed) != 2 {
+		t.Fatalf("expected 2 sessions, got %#v", listed)
+	}
+	after, ok, err := service.sessions.Get("sess_current")
+	if err != nil || !ok {
+		t.Fatalf("get current session after list: ok=%v err=%v", ok, err)
+	}
+	if !after.LastActiveAt.After(before.LastActiveAt) {
+		t.Fatalf("expected current session to be touched, before=%v after=%v", before.LastActiveAt, after.LastActiveAt)
+	}
+}

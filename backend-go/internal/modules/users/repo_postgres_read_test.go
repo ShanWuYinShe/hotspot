@@ -151,10 +151,10 @@ func (r *userFallbackRepo) UserExists(context.Context, string) (bool, error) {
 }
 
 type userBackendStub struct {
-	queryRowByQuery map[string]persistence.Row
+	queryRowByQuery  map[string]persistence.Row
 	queryRowsByQuery map[string][][]any
-	queryErrs map[string]error
-	execErrs map[string]error
+	queryErrs        map[string]error
+	execErrs         map[string]error
 }
 
 func (b *userBackendStub) Ping(context.Context) error { return nil }
@@ -179,6 +179,32 @@ func (b *userBackendStub) Query(_ context.Context, query string, _ ...any) (pers
 		return &userRowsValues{rows: rows}, nil
 	}
 	return &persistence.InMemoryRows{}, nil
+}
+
+type userMomentCursorBackend struct {
+	firstPage [][]any
+	secondPage [][]any
+	tags [][]any
+}
+
+func (b *userMomentCursorBackend) Ping(context.Context) error { return nil }
+func (b *userMomentCursorBackend) Close() error               { return nil }
+func (b *userMomentCursorBackend) Exec(context.Context, string, ...any) error { return nil }
+func (b *userMomentCursorBackend) QueryRow(context.Context, string, ...any) persistence.Row {
+	return userRowValues{err: persistence.ErrNotImplemented}
+}
+func (b *userMomentCursorBackend) Query(_ context.Context, query string, args ...any) (persistence.Rows, error) {
+	switch query {
+	case queryListUserMoments:
+		if len(args) >= 4 && args[2] != nil && args[3] == "moment_2" {
+			return &userRowsValues{rows: b.secondPage}, nil
+		}
+		return &userRowsValues{rows: b.firstPage}, nil
+	case momenttypesQueryListMomentTagsByMomentID:
+		return &userRowsValues{rows: b.tags}, nil
+	default:
+		return &persistence.InMemoryRows{}, nil
+	}
 }
 
 func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
@@ -302,6 +328,76 @@ func TestUserMomentCursorIsOpaqueAndTamperProof(t *testing.T) {
 	}
 	tampered := cursor[:len(cursor)-1] + "A"
 	if _, _, err := decodeUserMomentCursor(tampered); !errors.Is(err, ErrInvalidCursor) {
+		t.Fatalf("expected invalid cursor error, got %v", err)
+	}
+}
+
+func TestListUserMomentsPostgresReturnsNextCursorWithoutDupingNextPage(t *testing.T) {
+	createdAt1 := time.Date(2026, 3, 29, 12, 0, 0, 0, time.UTC)
+	createdAt2 := time.Date(2026, 3, 29, 11, 0, 0, 0, time.UTC)
+	createdAt3 := time.Date(2026, 3, 29, 10, 0, 0, 0, time.UTC)
+	backend := &userMomentCursorBackend{
+		firstPage: [][]any{
+			{"moment_3", "user_alice", "third", createdAt3, 0, 0, 0, "南天门", 35.0, 112.0, "public"},
+			{"moment_2", "user_alice", "second", createdAt2, 0, 0, 0, "南天门", 35.0, 112.0, "public"},
+			{"moment_1", "user_alice", "first", createdAt1, 0, 0, 0, "南天门", 35.0, 112.0, "public"},
+		},
+		secondPage: [][]any{
+			{"moment_1", "user_alice", "first", createdAt1, 0, 0, 0, "南天门", 35.0, 112.0, "public"},
+		},
+		tags: [][]any{{"travel"}},
+	}
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+
+	page1, err := listUserMomentsPostgres(context.Background(), factory, "user_alice", 2, "", true)
+	if err != nil {
+		t.Fatalf("list first user moments page: %v", err)
+	}
+	if len(page1.Items) != 2 {
+		t.Fatalf("expected 2 items, got %#v", page1.Items)
+	}
+	if page1.Items[0].MomentID != "moment_3" || page1.Items[1].MomentID != "moment_2" {
+		t.Fatalf("unexpected first page ids: %#v", page1.Items)
+	}
+	if page1.NextCursor == "" {
+		t.Fatal("expected next cursor")
+	}
+	parsedAt, parsedID, err := decodeUserMomentCursor(page1.NextCursor)
+	if err != nil {
+		t.Fatalf("decode next cursor: %v", err)
+	}
+	cursorAt, ok := parsedAt.(time.Time)
+	if !ok {
+		t.Fatalf("expected cursor time, got %#v", parsedAt)
+	}
+	if parsedID != "moment_2" || cursorAt.UTC().Format(time.RFC3339) != createdAt2.Format(time.RFC3339) {
+		t.Fatalf("unexpected next cursor anchor: %v %s", cursorAt, parsedID)
+	}
+
+	page2, err := listUserMomentsPostgres(context.Background(), factory, "user_alice", 2, page1.NextCursor, true)
+	if err != nil {
+		t.Fatalf("list second user moments page: %v", err)
+	}
+	if len(page2.Items) != 1 || page2.Items[0].MomentID != "moment_1" {
+		t.Fatalf("unexpected second page items: %#v", page2.Items)
+	}
+	if page2.NextCursor != "" {
+		t.Fatalf("expected empty next cursor on second page, got %q", page2.NextCursor)
+	}
+	for _, item := range page2.Items {
+		if item.MomentID == "moment_2" || item.MomentID == "moment_3" {
+			t.Fatalf("expected no duplicate items across pages, got %#v", page2.Items)
+		}
+	}
+}
+
+func TestListUserMomentsPostgresRejectsInvalidCursor(t *testing.T) {
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = &userBackendStub{queryRowByQuery: map[string]persistence.Row{}, queryRowsByQuery: map[string][][]any{}, queryErrs: map[string]error{}, execErrs: map[string]error{}}
+
+	_, err := listUserMomentsPostgres(context.Background(), factory, "user_alice", 20, "bad-cursor", true)
+	if !errors.Is(err, ErrInvalidCursor) {
 		t.Fatalf("expected invalid cursor error, got %v", err)
 	}
 }
