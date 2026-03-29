@@ -501,12 +501,24 @@ export struct SettingsPage {
             }
             .width('100%')
 
-            Blank()
-              .width('100%')
-              .height(22)
-              .borderRadius(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).radius)
-              .backgroundColor(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).backgroundColor)
-              .shadow(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).shadow)
+            Column() {
+              Row() {}
+                .width('100%')
+                .height(22)
+                .borderRadius(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).radius)
+                .backgroundColor(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).backgroundColor)
+                .shadow(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).shadow)
+
+              Row() {}
+                .width(54)
+                .height(16)
+                .margin({ top: -19, left: 8 })
+                .borderRadius(DesignConstants.RADIUS.FULL)
+                .backgroundColor(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).activeBackgroundColor)
+                .shadow(AppThemeVisuals.getTabBarVisualStyle(this.getThemeOptionPalette(option).id).activeGlow)
+            }
+            .width('100%')
+            .alignItems(HorizontalAlign.Start)
           }
           .width('100%')
           .alignItems(HorizontalAlign.Center)

@@ -52,6 +52,7 @@ const DEFAULT_THEME_METRICS: AppThemeMetricTokens = {
   profilePrimaryButtonHorizontalPadding: DesignConstants.SPACING.XXL,
   profileAvatarSize: 96,
   profileTitleFontSize: DesignConstants.FONT.SIZE.XL,
+  profileSubtitleFontSize: DesignConstants.FONT.SIZE.LG,
   profileMetricMinHeight: 164,
   profileMetricValueFontSize: 22,
   actionButtonHeight: 36,
@@ -59,10 +60,12 @@ const DEFAULT_THEME_METRICS: AppThemeMetricTokens = {
   tabBarHeight: 56,
   createButtonWidth: 54,
   createButtonHeight: 34,
+  tabBarFloatingMargin: DesignConstants.SPACING.SM,
   chatListRadius: DesignConstants.SHAPE.CARD,
   chatSendButtonHeight: DesignConstants.CHAT.SEND_BUTTON_HEIGHT,
   previewHeroAvatarSize: 28,
-  previewPrimaryButtonHeight: 14
+  previewPrimaryButtonHeight: 14,
+  textureOpacity: DesignConstants.EFFECT.TEXTURE_SOFT
 };
 
 const SOFT_THEME_METRICS: AppThemeMetricTokens = {
@@ -73,6 +76,7 @@ const SOFT_THEME_METRICS: AppThemeMetricTokens = {
   profilePrimaryButtonHorizontalPadding: DesignConstants.SPACING.XXL + 14,
   profileAvatarSize: 128,
   profileTitleFontSize: DesignConstants.FONT.SIZE.XXL + 4,
+  profileSubtitleFontSize: DesignConstants.FONT.SIZE.XL,
   profileMetricMinHeight: 188,
   profileMetricValueFontSize: 28,
   actionButtonHeight: 48,
@@ -80,10 +84,12 @@ const SOFT_THEME_METRICS: AppThemeMetricTokens = {
   tabBarHeight: 70,
   createButtonWidth: 82,
   createButtonHeight: 48,
+  tabBarFloatingMargin: DesignConstants.SPACING.SM,
   chatListRadius: DesignConstants.SHAPE.CARD + 8,
   chatSendButtonHeight: DesignConstants.CHAT.SEND_BUTTON_HEIGHT + 6,
   previewHeroAvatarSize: 44,
-  previewPrimaryButtonHeight: 22
+  previewPrimaryButtonHeight: 22,
+  textureOpacity: DesignConstants.EFFECT.TEXTURE_STRONG
 };
 
 function cloneShadow(shadow: AppThemeShadow): AppThemeShadow {
@@ -116,12 +122,18 @@ function buildPalette(
     label,
     description,
     pageBackground: colors.pageBackground,
+    pageGlow: colors.pageGlow,
+    heroGlow: colors.heroGlow,
+    textureTint: colors.textureTint,
     surfaceBackground: colors.surfaceBackground,
     surfaceSubtle: colors.surfaceSubtle,
+    surfaceElevated: colors.surfaceElevated,
     borderColor: colors.borderColor,
+    floatingBorderColor: colors.floatingBorderColor,
     sheetBackground: colors.sheetBackground,
     accentBackground: colors.accentBackground,
     accentText: colors.accentText,
+    accentMuted: colors.accentMuted,
     chatBackground: colors.chatBackground,
     systemSurfaceBaseColor: colors.systemSurfaceBaseColor,
     preferDarkContent,
@@ -129,11 +141,13 @@ function buildPalette(
     textPrimary: colors.textPrimary,
     textSecondary: colors.textSecondary,
     textTertiary: colors.textTertiary,
+    textOnAccentMuted: colors.textOnAccentMuted,
     iconMuted: colors.iconMuted,
     buttonSecondaryBackground: colors.buttonSecondaryBackground,
     buttonSecondaryText: colors.buttonSecondaryText,
     tabBarBackground: colors.tabBarBackground,
     tabBarInactive: colors.tabBarInactive,
+    tabBarActiveBackground: colors.tabBarActiveBackground,
     surfaceShadow: shadows.surface,
     elevatedShadow: shadows.elevated,
     accentShadow: shadows.accent,
@@ -150,7 +164,10 @@ const DEFAULT_CLEAN_LIGHT_VISUALS = buildVisualTokens(
   {
     avatarShadow: new AppThemeShadow(0, '#00000000', 0, 0),
     haloShadow: cloneShadow(ThemeConstants.SHADOWS.DEFAULT_CLEAN_LIGHT.control),
-    previewShadow: cloneShadow(ThemeConstants.SHADOWS.DEFAULT_CLEAN_LIGHT.elevated)
+    previewShadow: cloneShadow(ThemeConstants.SHADOWS.DEFAULT_CLEAN_LIGHT.elevated),
+    insetShadow: new AppThemeShadow(0, '#00000000', 0, 0),
+    highlightShadow: new AppThemeShadow(0, '#00000000', 0, 0),
+    tabActiveGlow: new AppThemeShadow(0, '#00000000', 0, 0)
   }
 );
 
@@ -160,7 +177,10 @@ const DEFAULT_CLEAN_DARK_VISUALS = buildVisualTokens(
   {
     avatarShadow: new AppThemeShadow(0, '#00000000', 0, 0),
     haloShadow: cloneShadow(ThemeConstants.SHADOWS.DEFAULT_CLEAN_DARK.control),
-    previewShadow: cloneShadow(ThemeConstants.SHADOWS.DEFAULT_CLEAN_DARK.elevated)
+    previewShadow: cloneShadow(ThemeConstants.SHADOWS.DEFAULT_CLEAN_DARK.elevated),
+    insetShadow: new AppThemeShadow(0, '#00000000', 0, 0),
+    highlightShadow: new AppThemeShadow(0, '#00000000', 0, 0),
+    tabActiveGlow: new AppThemeShadow(0, '#00000000', 0, 0)
   }
 );
 
@@ -170,7 +190,10 @@ const SOFT_GALLERY_LIGHT_VISUALS = buildVisualTokens(
   {
     avatarShadow: cloneShadow(ThemeConstants.SHADOWS.SOFT_GALLERY_LIGHT.elevated),
     haloShadow: new AppThemeShadow(36, '#30D4AF37', 0, 0),
-    previewShadow: cloneShadow(ThemeConstants.SHADOWS.SOFT_GALLERY_LIGHT.elevated)
+    previewShadow: cloneShadow(ThemeConstants.SHADOWS.SOFT_GALLERY_LIGHT.elevated),
+    insetShadow: new AppThemeShadow(10, '#14CDB89F', 0, 4),
+    highlightShadow: new AppThemeShadow(18, '#36FFFFFF', 0, -3),
+    tabActiveGlow: new AppThemeShadow(24, '#26D4AF37', 0, 0)
   }
 );
 
@@ -180,7 +203,73 @@ const SOFT_GALLERY_DARK_VISUALS = buildVisualTokens(
   {
     avatarShadow: cloneShadow(ThemeConstants.SHADOWS.SOFT_GALLERY_DARK.elevated),
     haloShadow: new AppThemeShadow(28, '#30FFD700', 0, 0),
-    previewShadow: cloneShadow(ThemeConstants.SHADOWS.SOFT_GALLERY_DARK.elevated)
+    previewShadow: cloneShadow(ThemeConstants.SHADOWS.SOFT_GALLERY_DARK.elevated),
+    insetShadow: new AppThemeShadow(10, '#14000000', 0, 4),
+    highlightShadow: new AppThemeShadow(16, '#22FFFFFF', 0, -2),
+    tabActiveGlow: new AppThemeShadow(22, '#30FFD700', 0, 0)
+  }
+);
+
+const EDITORIAL_GLOW_SHAPE: AppThemeShapeTokens = {
+  surfaceCard: DesignConstants.SHAPE.CARD + 10,
+  heroCard: DesignConstants.SHAPE.HERO_CARD + 12,
+  compactCard: DesignConstants.SHAPE.COMPACT_CARD + 10,
+  input: DesignConstants.SHAPE.INPUT + 8,
+  button: DesignConstants.SHAPE.BUTTON + 10,
+  chip: DesignConstants.SHAPE.CHIP + 8,
+  tabBar: DesignConstants.SHAPE.TAB_BAR + 12,
+  previewCard: DesignConstants.SHAPE.PREVIEW_CARD + 12,
+  listItem: DesignConstants.SHAPE.LIST_ITEM + 10,
+  iconTile: DesignConstants.SHAPE.ICON_TILE + 10
+};
+
+const EDITORIAL_GLOW_METRICS: AppThemeMetricTokens = {
+  cardPadding: DesignConstants.SPACING.XL + 6,
+  heroPadding: DesignConstants.SPACING.XXL + 10,
+  metricCardPadding: DesignConstants.SPACING.XL + 4,
+  profilePrimaryButtonHeight: 60,
+  profilePrimaryButtonHorizontalPadding: DesignConstants.SPACING.XXL + 18,
+  profileAvatarSize: 144,
+  profileTitleFontSize: DesignConstants.FONT.SIZE.XXXL - 2,
+  profileSubtitleFontSize: DesignConstants.FONT.SIZE.XXL - 2,
+  profileMetricMinHeight: 204,
+  profileMetricValueFontSize: 32,
+  actionButtonHeight: 52,
+  listItemMinHeight: 96,
+  tabBarHeight: 78,
+  createButtonWidth: 84,
+  createButtonHeight: 52,
+  tabBarFloatingMargin: DesignConstants.SPACING.MD,
+  chatListRadius: DesignConstants.SHAPE.CARD + 10,
+  chatSendButtonHeight: DesignConstants.CHAT.SEND_BUTTON_HEIGHT + 8,
+  previewHeroAvatarSize: 46,
+  previewPrimaryButtonHeight: 24,
+  textureOpacity: DesignConstants.EFFECT.TEXTURE_STRONG
+};
+
+const EDITORIAL_GLOW_LIGHT_VISUALS = buildVisualTokens(
+  EDITORIAL_GLOW_SHAPE,
+  EDITORIAL_GLOW_METRICS,
+  {
+    avatarShadow: cloneShadow(ThemeConstants.SHADOWS.EDITORIAL_GLOW_LIGHT.elevated),
+    haloShadow: new AppThemeShadow(42, '#54FFF7EB', 0, 0),
+    previewShadow: cloneShadow(ThemeConstants.SHADOWS.EDITORIAL_GLOW_LIGHT.elevated),
+    insetShadow: new AppThemeShadow(16, '#1BE3D7CA', 0, 6),
+    highlightShadow: new AppThemeShadow(24, '#55FFFFFF', 0, -4),
+    tabActiveGlow: new AppThemeShadow(36, '#42FFFFFF', 0, 0)
+  }
+);
+
+const EDITORIAL_GLOW_DARK_VISUALS = buildVisualTokens(
+  EDITORIAL_GLOW_SHAPE,
+  EDITORIAL_GLOW_METRICS,
+  {
+    avatarShadow: cloneShadow(ThemeConstants.SHADOWS.EDITORIAL_GLOW_DARK.elevated),
+    haloShadow: new AppThemeShadow(36, '#2FF1D0B0', 0, 0),
+    previewShadow: cloneShadow(ThemeConstants.SHADOWS.EDITORIAL_GLOW_DARK.elevated),
+    insetShadow: new AppThemeShadow(18, '#2A0C1320', 0, 8),
+    highlightShadow: new AppThemeShadow(20, '#26C7D0DC', 0, -4),
+    tabActiveGlow: new AppThemeShadow(28, '#38F1D0B0', 0, 0)
   }
 );
 
@@ -224,10 +313,31 @@ const SOFT_GALLERY_DARK = buildPalette(
   false
 );
 
+const EDITORIAL_GLOW_LIGHT = buildPalette(
+  'editorial_glow_light',
+  'Editorial Glow',
+  '奶霜纸感、暖调浮雕、柔焦光晕',
+  ThemeConstants.EDITORIAL_GLOW_LIGHT_COLORS,
+  ThemeConstants.SHADOWS.EDITORIAL_GLOW_LIGHT,
+  EDITORIAL_GLOW_LIGHT_VISUALS,
+  true
+);
+
+const EDITORIAL_GLOW_DARK = buildPalette(
+  'editorial_glow_dark',
+  'Editorial Glow',
+  '深海夜幕、微光描边、暖金聚焦',
+  ThemeConstants.EDITORIAL_GLOW_DARK_COLORS,
+  ThemeConstants.SHADOWS.EDITORIAL_GLOW_DARK,
+  EDITORIAL_GLOW_DARK_VISUALS,
+  false
+);
+
 const THEME_OPTIONS: ThemeOptionItem[] = [
   { mode: 'follow_system', label: '跟随系统', description: '自动匹配系统明暗模式' } as ThemeOptionItem,
   { mode: 'default_clean', label: '当前默认', description: '清爽、中性、稳妥的基础主题' } as ThemeOptionItem,
-  { mode: 'soft_gallery', label: 'Tactile Minimalist', description: '浅色奶油柔光 / 深色夜蓝暖金' } as ThemeOptionItem
+  { mode: 'soft_gallery', label: 'Tactile Minimalist', description: '浅色奶油柔光 / 深色夜蓝暖金' } as ThemeOptionItem,
+  { mode: 'editorial_glow', label: 'Editorial Glow', description: '高保真纹理、柔光拟物、设计稿复刻基线' } as ThemeOptionItem
 ];
 
 export class AppThemeManager {
@@ -294,6 +404,10 @@ export class AppThemeManager {
         return SOFT_GALLERY_LIGHT;
       case 'soft_gallery_dark':
         return SOFT_GALLERY_DARK;
+      case 'editorial_glow_light':
+        return EDITORIAL_GLOW_LIGHT;
+      case 'editorial_glow_dark':
+        return EDITORIAL_GLOW_DARK;
       case 'default_clean_light':
       default:
         return DEFAULT_CLEAN_LIGHT;
@@ -365,6 +479,8 @@ export class AppThemeManager {
         return isDarkMode ? 'default_clean_dark' : 'default_clean_light';
       case 'soft_gallery':
         return isDarkMode ? 'soft_gallery_dark' : 'soft_gallery_light';
+      case 'editorial_glow':
+        return isDarkMode ? 'editorial_glow_dark' : 'editorial_glow_light';
       default:
         return DEFAULT_RESOLVED_THEME_ID;
     }
@@ -374,11 +490,15 @@ export class AppThemeManager {
     switch (themeMode) {
       case 'default_clean':
       case 'soft_gallery':
+      case 'editorial_glow':
       case 'follow_system':
         return themeMode;
       case 'tactile_minimal':
       case 'zen_artistic':
         return 'soft_gallery';
+      case 'tactile_editorial':
+      case 'profile_signature':
+        return 'editorial_glow';
       default:
         return DEFAULT_THEME_MODE;
     }
@@ -389,6 +509,8 @@ export class AppThemeManager {
       case 'default_clean_dark':
       case 'soft_gallery_light':
       case 'soft_gallery_dark':
+      case 'editorial_glow_light':
+      case 'editorial_glow_dark':
       case 'default_clean_light':
         return resolvedThemeId;
       case 'tactile_minimal_light':
@@ -397,6 +519,12 @@ export class AppThemeManager {
       case 'tactile_minimal_dark':
       case 'zen_artistic_dark':
         return 'soft_gallery_dark';
+      case 'tactile_editorial_light':
+      case 'profile_signature_light':
+        return 'editorial_glow_light';
+      case 'tactile_editorial_dark':
+      case 'profile_signature_dark':
+        return 'editorial_glow_dark';
       default:
         return DEFAULT_RESOLVED_THEME_ID;
     }

@@ -1,10 +1,12 @@
-export type ThemeMode = 'follow_system' | 'default_clean' | 'soft_gallery';
+export type ThemeMode = 'follow_system' | 'default_clean' | 'soft_gallery' | 'editorial_glow';
 
 export type ResolvedThemeId =
   | 'default_clean_light'
   | 'default_clean_dark'
   | 'soft_gallery_light'
-  | 'soft_gallery_dark';
+  | 'soft_gallery_dark'
+  | 'editorial_glow_light'
+  | 'editorial_glow_dark';
 
 export class AppThemeShadow {
   radius: number;
@@ -41,6 +43,7 @@ export interface AppThemeMetricTokens {
   profilePrimaryButtonHorizontalPadding: number;
   profileAvatarSize: number;
   profileTitleFontSize: number;
+  profileSubtitleFontSize: number;
   profileMetricMinHeight: number;
   profileMetricValueFontSize: number;
   actionButtonHeight: number;
@@ -48,16 +51,21 @@ export interface AppThemeMetricTokens {
   tabBarHeight: number;
   createButtonWidth: number;
   createButtonHeight: number;
+  tabBarFloatingMargin: number;
   chatListRadius: number;
   chatSendButtonHeight: number;
   previewHeroAvatarSize: number;
   previewPrimaryButtonHeight: number;
+  textureOpacity: number;
 }
 
 export interface AppThemeEffectTokens {
   avatarShadow: AppThemeShadow;
   haloShadow: AppThemeShadow;
   previewShadow: AppThemeShadow;
+  insetShadow: AppThemeShadow;
+  highlightShadow: AppThemeShadow;
+  tabActiveGlow: AppThemeShadow;
 }
 
 export interface AppThemeVisualTokens {
@@ -71,12 +79,18 @@ export interface AppThemePalette {
   label: string;
   description: string;
   pageBackground: string;
+  pageGlow: string;
+  heroGlow: string;
+  textureTint: string;
   surfaceBackground: string;
   surfaceSubtle: string;
+  surfaceElevated: string;
   borderColor: string;
+  floatingBorderColor: string;
   sheetBackground: string;
   accentBackground: string;
   accentText: string;
+  accentMuted: string;
   chatBackground: string;
   systemSurfaceBaseColor: string;
   preferDarkContent: boolean;
@@ -84,11 +98,13 @@ export interface AppThemePalette {
   textPrimary: string;
   textSecondary: string;
   textTertiary: string;
+  textOnAccentMuted: string;
   iconMuted: string;
   buttonSecondaryBackground: string;
   buttonSecondaryText: string;
   tabBarBackground: string;
   tabBarInactive: string;
+  tabBarActiveBackground: string;
   surfaceShadow: AppThemeShadow;
   elevatedShadow: AppThemeShadow;
   accentShadow: AppThemeShadow;

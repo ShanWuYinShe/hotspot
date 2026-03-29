@@ -109,7 +109,17 @@ export struct SystemAvatar {
   }
 
   build() {
-    Column() {
+    Stack({ alignContent: Alignment.Center }) {
+      if (this.avatarSize >= 80) {
+        Row()
+          .width(this.avatarSize + 24)
+          .height(this.avatarSize + 24)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .backgroundColor(this.getPalette().heroGlow)
+          .opacity(this.getPalette().isDarkTheme ? 0.22 : 0.5)
+          .shadow(AppThemeVisuals.getAvatarHaloShadow(this.resolvedThemeId))
+      }
+
       this.buildAvatarContent()
     }
   }

@@ -7,23 +7,31 @@ import { AppThemeShadow } from './AppThemeTypes';
 
 export interface ColorConfig {
   pageBackground: string;
+  pageGlow: string;
+  heroGlow: string;
+  textureTint: string;
   surfaceBackground: string;
   surfaceSubtle: string;
+  surfaceElevated: string;
   borderColor: string;
+  floatingBorderColor: string;
   sheetBackground: string;
   accentBackground: string;
   accentText: string;
+  accentMuted: string;
   chatBackground: string;
   systemSurfaceBaseColor: string;
   overlayStrong: string;
   textPrimary: string;
   textSecondary: string;
   textTertiary: string;
+  textOnAccentMuted: string;
   iconMuted: string;
   buttonSecondaryBackground: string;
   buttonSecondaryText: string;
   tabBarBackground: string;
   tabBarInactive: string;
+  tabBarActiveBackground: string;
   isDarkTheme: boolean;
 }
 
@@ -67,94 +75,202 @@ class ThemeShadowRegistry {
     control: new AppThemeShadow(12, '#1A000000', 0, 2),
     tabBar: new AppThemeShadow(18, '#26000000', 0, -2)
   };
+
+  readonly EDITORIAL_GLOW_LIGHT: ThemeShadows = {
+    surface: new AppThemeShadow(28, '#160B1220', 0, 10),
+    elevated: new AppThemeShadow(44, '#220C1726', 0, 18),
+    accent: new AppThemeShadow(30, '#2EA88466', 0, 8),
+    control: new AppThemeShadow(18, '#140E1722', 0, 6),
+    tabBar: new AppThemeShadow(36, '#1E0F1826', 0, 10)
+  };
+
+  readonly EDITORIAL_GLOW_DARK: ThemeShadows = {
+    surface: new AppThemeShadow(24, '#50000000', 0, 8),
+    elevated: new AppThemeShadow(42, '#72000000', 0, 18),
+    accent: new AppThemeShadow(34, '#40F5CDA3', 0, 10),
+    control: new AppThemeShadow(18, '#42000000', 0, 8),
+    tabBar: new AppThemeShadow(32, '#66000000', 0, 10)
+  };
 }
 
 export class ThemeConstants {
   static readonly DEFAULT_CLEAN_LIGHT_COLORS: ColorConfig = {
     pageBackground: '#FFFFFF',
+    pageGlow: '#FFF7EC',
+    heroGlow: '#F2F8F2',
+    textureTint: '#FFFFFF14',
     surfaceBackground: '#FFFFFF',
     surfaceSubtle: '#F3F4F6',
+    surfaceElevated: '#FFFFFF',
     borderColor: '#E5E7EB',
+    floatingBorderColor: '#F6F6F6',
     sheetBackground: '#FFFFFF',
     accentBackground: '#4A7A57',
     accentText: '#FFFFFF',
+    accentMuted: '#E6F1E8',
     chatBackground: '#F5F6FA',
     systemSurfaceBaseColor: '#FFFFFF',
     overlayStrong: '#80000000',
     textPrimary: '#111827',
     textSecondary: '#6B7280',
     textTertiary: '#9CA3AF',
+    textOnAccentMuted: '#2F4A35',
     iconMuted: '#6B7280',
     buttonSecondaryBackground: '#F3F4F6',
     buttonSecondaryText: '#111827',
     tabBarBackground: '#FFFFFF',
     tabBarInactive: '#6B7280',
+    tabBarActiveBackground: '#F6F8F7',
     isDarkTheme: false
   };
 
   static readonly DEFAULT_CLEAN_DARK_COLORS: ColorConfig = {
     pageBackground: '#0F1115',
+    pageGlow: '#161A22',
+    heroGlow: '#172023',
+    textureTint: '#FFFFFF08',
     surfaceBackground: '#171A20',
     surfaceSubtle: '#222733',
+    surfaceElevated: '#1B1F26',
     borderColor: '#2D3544',
+    floatingBorderColor: '#263040',
     sheetBackground: '#171A20',
     accentBackground: '#6BAF86',
     accentText: '#0F1115',
+    accentMuted: '#1D3426',
     chatBackground: '#11131D',
     systemSurfaceBaseColor: '#0F1115',
     overlayStrong: '#99000000',
     textPrimary: '#F9FAFB',
     textSecondary: '#9CA3AF',
     textTertiary: '#6B7280',
+    textOnAccentMuted: '#D9F2E0',
     iconMuted: '#9CA3AF',
     buttonSecondaryBackground: '#222733',
     buttonSecondaryText: '#F9FAFB',
     tabBarBackground: '#171A20',
     tabBarInactive: '#9CA3AF',
+    tabBarActiveBackground: '#1D242D',
     isDarkTheme: true
   };
 
   static readonly SOFT_GALLERY_LIGHT_COLORS: ColorConfig = {
     pageBackground: '#F8F5F2',
+    pageGlow: '#FFF6EB',
+    heroGlow: '#FFF2DD',
+    textureTint: '#FFFDFB22',
     surfaceBackground: '#FFFFFF',
     surfaceSubtle: '#F0EBE3',
+    surfaceElevated: '#FFFDF9',
     borderColor: '#E8E0D4',
+    floatingBorderColor: '#F5ECDD',
     sheetBackground: '#F8F5F2',
     accentBackground: '#D4AF37',
     accentText: '#FFFFFF',
+    accentMuted: '#F5E8BD',
     chatBackground: '#F5F0EA',
     systemSurfaceBaseColor: '#F8F5F2',
     overlayStrong: '#80000000',
     textPrimary: '#2D2D2D',
     textSecondary: '#6E6E6E',
     textTertiary: '#9E9E9E',
+    textOnAccentMuted: '#725A18',
     iconMuted: '#9E9E9E',
     buttonSecondaryBackground: '#FFFFFF',
     buttonSecondaryText: '#2D2D2D',
     tabBarBackground: '#F8F5F2',
     tabBarInactive: '#8A8A8A',
+    tabBarActiveBackground: '#FFFDF9',
     isDarkTheme: false
   };
 
   static readonly SOFT_GALLERY_DARK_COLORS: ColorConfig = {
     pageBackground: '#121212',
+    pageGlow: '#131922',
+    heroGlow: '#17212C',
+    textureTint: '#FFFFFF0B',
     surfaceBackground: '#1E1E1E',
     surfaceSubtle: '#2A2A2A',
+    surfaceElevated: '#23262B',
     borderColor: '#333333',
+    floatingBorderColor: '#323A44',
     sheetBackground: '#1A1A1A',
     accentBackground: '#FFD700',
     accentText: '#121212',
+    accentMuted: '#4A4020',
     chatBackground: '#0E0E0E',
     systemSurfaceBaseColor: '#121212',
     overlayStrong: '#99000000',
     textPrimary: '#FFFFFF',
     textSecondary: '#B0B0B0',
     textTertiary: '#808080',
+    textOnAccentMuted: '#F9ECA7',
     iconMuted: '#808080',
     buttonSecondaryBackground: '#2A2A2A',
     buttonSecondaryText: '#FFFFFF',
     tabBarBackground: '#181818',
     tabBarInactive: '#8A8A8A',
+    tabBarActiveBackground: '#20252C',
+    isDarkTheme: true
+  };
+
+  static readonly EDITORIAL_GLOW_LIGHT_COLORS: ColorConfig = {
+    pageBackground: '#EEE5DA',
+    pageGlow: '#FFF5EA',
+    heroGlow: '#FFF6ED',
+    textureTint: '#FFFFFF26',
+    surfaceBackground: '#F7EFE6',
+    surfaceSubtle: '#EFE5D8',
+    surfaceElevated: '#FBF7F1',
+    borderColor: '#F5ECDD',
+    floatingBorderColor: '#FFF8EF',
+    sheetBackground: '#EFE6DA',
+    accentBackground: '#8E6544',
+    accentText: '#FFF7F0',
+    accentMuted: '#E7D8C7',
+    chatBackground: '#F4ECE2',
+    systemSurfaceBaseColor: '#EEE5DA',
+    overlayStrong: '#66362112',
+    textPrimary: '#855E41',
+    textSecondary: '#947760',
+    textTertiary: '#B7A28E',
+    textOnAccentMuted: '#7D604B',
+    iconMuted: '#98A28E',
+    buttonSecondaryBackground: '#F8F2EA',
+    buttonSecondaryText: '#7C6F63',
+    tabBarBackground: '#F4ECE1',
+    tabBarInactive: '#8C977E',
+    tabBarActiveBackground: '#F8F3EA',
+    isDarkTheme: false
+  };
+
+  static readonly EDITORIAL_GLOW_DARK_COLORS: ColorConfig = {
+    pageBackground: '#141C27',
+    pageGlow: '#182336',
+    heroGlow: '#1C2940',
+    textureTint: '#FFFFFF0D',
+    surfaceBackground: '#1A2331',
+    surfaceSubtle: '#202B3C',
+    surfaceElevated: '#202B3C',
+    borderColor: '#243246',
+    floatingBorderColor: '#2A3950',
+    sheetBackground: '#141C27',
+    accentBackground: '#F1D0B0',
+    accentText: '#1A2230',
+    accentMuted: '#2E3B4F',
+    chatBackground: '#111825',
+    systemSurfaceBaseColor: '#141C27',
+    overlayStrong: '#99242E3F',
+    textPrimary: '#D8DDE5',
+    textSecondary: '#A8B0BC',
+    textTertiary: '#7E8794',
+    textOnAccentMuted: '#F4D7BE',
+    iconMuted: '#C8D0DB',
+    buttonSecondaryBackground: '#1C2636',
+    buttonSecondaryText: '#D7DDE8',
+    tabBarBackground: '#182231',
+    tabBarInactive: '#BEC6D1',
+    tabBarActiveBackground: '#202C3F',
     isDarkTheme: true
   };
 

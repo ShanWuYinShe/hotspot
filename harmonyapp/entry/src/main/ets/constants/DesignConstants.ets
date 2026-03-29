@@ -113,6 +113,7 @@ export interface AnimationSystem {
   /** loading → content 交叉淡入淡出时长 */
   DURATION_CONTENT_SWITCH: number;
   CURVE_EASE_IN_OUT: Curve;
+  CURVE_EMPHASIZED: Curve;
 }
 
 // ==================== 组件特定常量接口 ====================
@@ -166,6 +167,15 @@ export interface ShapeSemanticTokens {
 }
 
 // ==================== 设计常量聚合接口 ====================
+export interface MaterialEffectSystem {
+  BLUR_LIGHT: number;
+  BLUR_HEAVY: number;
+  TEXTURE_SOFT: number;
+  TEXTURE_STRONG: number;
+  GLOW_SOFT: number;
+  GLOW_STRONG: number;
+}
+
 export interface DesignConstantsType {
   COLOR: ColorPalette;
   FONT: FontSystem;
@@ -174,6 +184,7 @@ export interface DesignConstantsType {
   SHAPE: ShapeSemanticTokens;
   SHADOW: ShadowSystem;
   ANIMATION: AnimationSystem;
+  EFFECT: MaterialEffectSystem;
   COMPONENT: ComponentConstants;
   CHAT: ChatLayoutConstants;
 }
@@ -313,9 +324,19 @@ const ANIMATION: AnimationSystem = {
   DURATION_LONG: 500,
   DURATION_CONTENT_SWITCH: 400,
   CURVE_EASE_IN_OUT: Curve.EaseInOut,
+  CURVE_EMPHASIZED: Curve.FastOutSlowIn,
 };
 
 // ==================== 组件特定常量 ====================
+const EFFECT: MaterialEffectSystem = {
+  BLUR_LIGHT: 12,
+  BLUR_HEAVY: 24,
+  TEXTURE_SOFT: 0.12,
+  TEXTURE_STRONG: 0.22,
+  GLOW_SOFT: 16,
+  GLOW_STRONG: 32,
+};
+
 const COMPONENT: ComponentConstants = {
   AVATAR_SIZE: {
     SMALL: 32,
@@ -408,6 +429,7 @@ export const DesignConstants: DesignConstantsType = {
   SHAPE,
   SHADOW,
   ANIMATION,
+  EFFECT,
   COMPONENT,
   CHAT,
 };

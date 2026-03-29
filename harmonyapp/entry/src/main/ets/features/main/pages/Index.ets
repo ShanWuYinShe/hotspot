@@ -765,9 +765,12 @@ struct Index {
                 : this.getTabInactiveColor()])
         }
       }
-      .width(24)
-      .height(24)
+      .width(48)
+      .height(48)
       .justifyContent(FlexAlign.Center)
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .backgroundColor(this.currentTabIndex === targetIndex ? this.getTabBarVisualStyle().activeBackgroundColor : Color.Transparent)
+      .shadow(this.currentTabIndex === targetIndex ? this.getTabBarVisualStyle().activeGlow : { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 })
       .margin({ top: this.currentTabIndex === targetIndex ? 0 : 4 })
 
       Text(title)
@@ -809,17 +812,17 @@ struct Index {
         Text() {
           SymbolSpan($r(AppIcon.ADD))
             .fontSize(22)
-            .fontColor([this.getBrandAccentText()])
+            .fontColor([this.currentTabIndex === 2 ? this.getBrandAccent() : this.getBrandAccentText()])
         }
       }
       .width(this.getTabBarVisualStyle().createButtonWidth)
       .height(this.getTabBarVisualStyle().createButtonHeight)
       .justifyContent(FlexAlign.Center)
-      .backgroundColor(this.getBrandAccent())
+      .backgroundColor(this.currentTabIndex === 2 ? this.getTabBarVisualStyle().activeBackgroundColor : this.getBrandAccent())
       .borderRadius(DesignConstants.RADIUS.FULL)
-      .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
-      .shadow(this.getCurrentThemePalette().accentShadow)
-      .margin({ bottom: 2 })
+      .border({ width: 1, color: this.currentTabIndex === 2 ? this.getCurrentThemePalette().floatingBorderColor : this.getCurrentThemePalette().borderColor })
+      .shadow(this.currentTabIndex === 2 ? this.getTabBarVisualStyle().activeGlow : this.getCurrentThemePalette().accentShadow)
+      .margin({ bottom: this.currentTabIndex === 2 ? 0 : 2 })
 
       // "发布"文字在外框下方，与其他 tab 一致
       Text('发布')
@@ -903,8 +906,9 @@ struct Index {
             .backgroundColor(this.getTabBarBackground())
             .shadow(this.getTabBarShadow())
             .borderRadius(this.getTabBarVisualStyle().radius)
-            .border({ width: { top: 1 }, color: this.getCurrentThemePalette().borderColor })
-            .margin({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, bottom: 0 })
+            .border({ width: { top: 1 }, color: this.getTabBarVisualStyle().borderColor })
+            .backgroundBlurStyle(BlurStyle.Regular)
+            .margin({ left: this.getTabBarVisualStyle().floatingMargin, right: this.getTabBarVisualStyle().floatingMargin, bottom: this.getTabBarVisualStyle().floatingMargin })
 
           Column() {
         Navigation(this.navPathStack) {

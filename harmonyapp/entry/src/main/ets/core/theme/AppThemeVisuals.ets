@@ -40,6 +40,7 @@ export interface ThemeMetricVisualStyle extends ThemeCardVisualStyle {
 export interface ThemeProfileIdentityStyle {
   avatarSize: number;
   titleFontSize: number;
+  subtitleFontSize: number;
   avatarShadow: ShadowOptions;
   haloShadow: ShadowOptions;
 }
@@ -69,11 +70,14 @@ export interface ThemeProfileVisualStyle {
 
 export interface ThemeTabBarVisualStyle {
   backgroundColor: ResourceColor;
+  activeBackgroundColor: ResourceColor;
   borderColor: ResourceColor;
   borderWidth: number;
   shadow: ShadowOptions;
+  activeGlow: ShadowOptions;
   height: number;
   radius: number;
+  floatingMargin: number;
   createButtonWidth: number;
   createButtonHeight: number;
   indicatorWidth: number;
@@ -170,8 +174,8 @@ export class AppThemeVisuals {
     }
     const palette = AppThemeVisuals.getPalette(themeId);
     const style: ThemeCardVisualStyle = {
-      backgroundColor: palette.surfaceBackground,
-      borderColor: palette.borderColor,
+      backgroundColor: palette.surfaceElevated,
+      borderColor: palette.floatingBorderColor,
       borderWidth: 1,
       shadow: palette.elevatedShadow,
       borderRadius: palette.visuals.shape.heroCard,
@@ -249,9 +253,9 @@ export class AppThemeVisuals {
     }
     const palette = AppThemeVisuals.getPalette(themeId);
     const style: ThemeButtonVisualStyle = {
-      backgroundColor: palette.accentBackground,
-      textColor: palette.accentText,
-      borderColor: palette.borderColor,
+      backgroundColor: palette.accentMuted,
+      textColor: palette.textOnAccentMuted,
+      borderColor: palette.floatingBorderColor,
       borderWidth: 1,
       shadow: palette.accentShadow,
       borderRadius: palette.visuals.shape.button,
@@ -315,6 +319,7 @@ export class AppThemeVisuals {
     const style: ThemeProfileIdentityStyle = {
       avatarSize: palette.visuals.metrics.profileAvatarSize,
       titleFontSize: palette.visuals.metrics.profileTitleFontSize,
+      subtitleFontSize: palette.visuals.metrics.profileSubtitleFontSize,
       avatarShadow: palette.visuals.effects.avatarShadow,
       haloShadow: palette.visuals.effects.haloShadow
     };
@@ -337,10 +342,10 @@ export class AppThemeVisuals {
       input: AppThemeVisuals.getInputStyle(themeId),
       identity: AppThemeVisuals.getProfileIdentityStyle(themeId),
       quickAction: {
-        backgroundColor: palette.surfaceBackground,
-        borderColor: palette.borderColor,
+        backgroundColor: palette.pageBackground,
+        borderColor: palette.floatingBorderColor,
         borderWidth: 1,
-        shadow: palette.controlShadow,
+        shadow: palette.visuals.effects.highlightShadow,
         borderRadius: palette.visuals.shape.compactCard,
         padding: DesignConstants.SPACING.MD,
         iconSize: 22,
@@ -348,8 +353,8 @@ export class AppThemeVisuals {
         labelFontSize: DesignConstants.FONT.SIZE.SM
       },
       intentCard: {
-        backgroundColor: palette.surfaceBackground,
-        borderColor: palette.borderColor,
+        backgroundColor: palette.surfaceElevated,
+        borderColor: palette.floatingBorderColor,
         borderWidth: 1,
         shadow: palette.elevatedShadow,
         borderRadius: palette.visuals.shape.heroCard,
@@ -372,11 +377,14 @@ export class AppThemeVisuals {
     const palette = AppThemeVisuals.getPalette(themeId);
     const style: ThemeTabBarVisualStyle = {
       backgroundColor: palette.tabBarBackground,
-      borderColor: palette.borderColor,
+      activeBackgroundColor: palette.tabBarActiveBackground,
+      borderColor: palette.floatingBorderColor,
       borderWidth: 1,
       shadow: palette.tabBarShadow,
+      activeGlow: palette.visuals.effects.tabActiveGlow,
       height: palette.visuals.metrics.tabBarHeight,
       radius: palette.visuals.shape.tabBar,
+      floatingMargin: palette.visuals.metrics.tabBarFloatingMargin,
       createButtonWidth: palette.visuals.metrics.createButtonWidth,
       createButtonHeight: palette.visuals.metrics.createButtonHeight,
       indicatorWidth: 22,
@@ -396,8 +404,8 @@ export class AppThemeVisuals {
     const palette = AppThemeVisuals.getPalette(themeId);
     const style: ThemePreviewVisualStyle = {
       card: {
-        backgroundColor: palette.surfaceBackground,
-        borderColor: palette.borderColor,
+        backgroundColor: palette.surfaceElevated,
+        borderColor: palette.floatingBorderColor,
         borderWidth: 1,
         shadow: palette.visuals.effects.previewShadow,
         borderRadius: palette.visuals.shape.previewCard,

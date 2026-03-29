@@ -12,6 +12,7 @@ export enum CardVariant {
   OUTLINED = 'outlined',    // 边框样式
   FILLED = 'filled',        // 填充样式
   GLASS = 'glass',          // 毛玻璃样式
+  GLOW = 'glow',            // 柔光浮雕样式
 }
 
 // 阴影配置接口
@@ -72,6 +73,8 @@ export struct SystemCard {
         return Color.Transparent;
       case CardVariant.FILLED:
         return this.getPalette().surfaceSubtle;
+      case CardVariant.GLOW:
+        return this.getPalette().surfaceElevated;
       case CardVariant.ELEVATED:
       case CardVariant.OUTLINED:
       case CardVariant.DEFAULT:
@@ -89,6 +92,7 @@ export struct SystemCard {
       case CardVariant.ELEVATED:
         return this.getThemeShadow('elevated');
       case CardVariant.GLASS:
+      case CardVariant.GLOW:
         return this.getThemeShadow('elevated');
       case CardVariant.DEFAULT:
       case CardVariant.FILLED:
@@ -102,13 +106,16 @@ export struct SystemCard {
     if (!this.showBorder) {
       return { width: 0, color: Color.Transparent };
     }
-    return { width: 1, color: (this.cardBorderColor || this.getPalette().borderColor) as ResourceColor };
+    return { width: 1, color: (this.cardBorderColor || this.getPalette().floatingBorderColor || this.getPalette().borderColor) as ResourceColor };
   }
 
   // 获取毛玻璃效果
   private getBlurStyle(): BlurStyle {
     if (this.variant === CardVariant.GLASS || this.useBlur) {
       return BlurStyle.Thin;
+    }
+    if (this.variant === CardVariant.GLOW) {
+      return BlurStyle.Regular;
     }
     return BlurStyle.NONE;
   }

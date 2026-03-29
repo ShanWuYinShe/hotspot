@@ -552,76 +552,96 @@ export struct ProfilePage {
 
   build() {
     NavDestination() {
-      Column() {
-        SystemPageHeader({
-          title: this.resolveHeaderTitle(),
-          showBackButton: this.isExternalProfileMode(),
-          onBack: this.isExternalProfileMode() ? () => { AppRouter.pop(); } : undefined,
-          action: (!this.isExternalProfileMode() && this.isLoggedIn && this.currentUser && !this.isEditing && !this.showUpgradeForm)
-            ? { label: '编辑', onClick: () => this.startEdit() }
-            : undefined
-        })
+      Stack({ alignContent: Alignment.Top }) {
+        Column() {}
+          .width('72%')
+          .height(320)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .backgroundColor(this.getCurrentThemePalette().pageGlow)
+          .opacity(this.getCurrentThemePalette().isDarkTheme ? 0.28 : 0.52)
+          .blur(48)
+          .align(Alignment.Top)
+          .margin({ top: 18 })
 
-        if (this.isExternalProfileMode()) {
-          Column() {
-            this.buildExternalProfileView()
-          }
-          .width('100%')
-          .justifyContent(FlexAlign.Start)
-          .alignItems(HorizontalAlign.Start)
-          .layoutWeight(1)
-          .transition(
-            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-          )
-        } else if (this.isLoading) {
-          SystemLoadingView({ message: '正在更新...' })
+        Column() {}
+          .width('42%')
+          .height(180)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .backgroundColor(this.getCurrentThemePalette().heroGlow)
+          .opacity(this.getCurrentThemePalette().isDarkTheme ? 0.18 : 0.34)
+          .blur(32)
+          .align(Alignment.TopEnd)
+          .margin({ top: 96, right: 18 })
+
+        Column() {
+          SystemPageHeader({
+            title: this.resolveHeaderTitle(),
+            showBackButton: this.isExternalProfileMode(),
+            onBack: this.isExternalProfileMode() ? () => { AppRouter.pop(); } : undefined,
+            action: (!this.isExternalProfileMode() && this.isLoggedIn && this.currentUser && !this.isEditing && !this.showUpgradeForm)
+              ? { label: '编辑', onClick: () => this.startEdit() }
+              : undefined
+          })
+
+          if (this.isExternalProfileMode()) {
+            Column() {
+              this.buildExternalProfileView()
+            }
+            .width('100%')
+            .justifyContent(FlexAlign.Start)
+            .alignItems(HorizontalAlign.Start)
             .layoutWeight(1)
             .transition(
               TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
                 .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
             )
-        } else if (!this.isLoggedIn) {
-          // 匿名用户 - 游客模式
-          Column() {
-            this.buildGuestView()
+          } else if (this.isLoading) {
+            SystemLoadingView({ message: '正在更新...' })
+              .layoutWeight(1)
+              .transition(
+                TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+                  .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+              )
+          } else if (!this.isLoggedIn) {
+            Column() {
+              this.buildGuestView()
+            }
+            .layoutWeight(1)
+            .transition(
+              TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+                .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+            )
+          } else if (this.showUpgradeForm) {
+            Column() {
+              this.buildUpgradeFormView()
+            }
+            .layoutWeight(1)
+            .transition(
+              TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+                .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+            )
+          } else if (this.userType === 'temp') {
+            Column() {
+              this.buildTempUserView()
+            }
+            .layoutWeight(1)
+            .transition(
+              TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+                .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+            )
+          } else {
+            Column() {
+              this.buildRegisteredUserView()
+            }
+            .layoutWeight(1)
+            .transition(
+              TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
+                .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
+            )
           }
-          .layoutWeight(1)
-          .transition(
-            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-          )
-        } else if (this.showUpgradeForm) {
-          // 升级表单
-          Column() {
-            this.buildUpgradeFormView()
-          }
-          .layoutWeight(1)
-          .transition(
-            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-          )
-        } else if (this.userType === 'temp') {
-          // 临时用户
-          Column() {
-            this.buildTempUserView()
-          }
-          .layoutWeight(1)
-          .transition(
-            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-          )
-        } else {
-          // 注册用户
-          Column() {
-            this.buildRegisteredUserView()
-          }
-          .layoutWeight(1)
-          .transition(
-            TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.FastOutSlowIn })
-              .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.FastOutSlowIn }))
-          )
         }
+        .width('100%')
+        .height('100%')
       }
       .width('100%')
       .height('100%')
@@ -1043,6 +1063,8 @@ export struct ProfilePage {
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
+    .backgroundBlurStyle(BlurStyle.Thin)
     .layoutWeight(1)
     .scrollBar(BarState.Auto)
   }
@@ -1109,6 +1131,8 @@ export struct ProfilePage {
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.LG })
+    .backgroundColor(this.getCurrentThemePalette().pageBackground)
+    .backgroundBlurStyle(BlurStyle.Thin)
     .layoutWeight(1)
     .scrollBar(BarState.Auto)
   }
@@ -1221,7 +1245,7 @@ export struct ProfilePage {
             .textOverflow({ overflow: TextOverflow.Ellipsis })
 
           Text(this.userType === 'temp' ? '@guest.access' : '@hotspot.member')
-            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontSize(this.getProfileVisualStyle().identity.subtitleFontSize)
             .fontColor(this.getSecondaryTextColor())
             .textAlign(TextAlign.Center)
         }
@@ -1257,7 +1281,7 @@ export struct ProfilePage {
       .width('100%')
       .alignItems(HorizontalAlign.Center)
 
-      Button('编辑资料')
+      Button('Edit Profile')
         .type(ButtonType.Capsule)
         .width('100%')
         .height(this.getProfileVisualStyle().primaryButton.height)
@@ -1267,22 +1291,22 @@ export struct ProfilePage {
         })
         .backgroundColor(this.getProfileVisualStyle().primaryButton.backgroundColor)
         .fontColor(this.getProfileVisualStyle().primaryButton.textColor)
-        .fontSize(DesignConstants.FONT.SIZE.LG)
+        .fontSize(DesignConstants.FONT.SIZE.XL)
         .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
         .shadow(this.getProfileVisualStyle().primaryButton.shadow)
         .border({ width: this.getProfileVisualStyle().primaryButton.borderWidth, color: this.getProfileVisualStyle().primaryButton.borderColor })
         .onClick(() => this.startEdit())
 
       Row({ space: DesignConstants.SPACING.MD }) {
-        this.ProfileQuickAction(AppIcon.HEART, '关系', () => this.openRelationshipHub())
-        this.ProfileQuickAction(AppIcon.STAR, '公告', () => this.openAnnouncements())
-        this.ProfileQuickAction(AppIcon.SETTINGS, '设置', () => this.openSettingsCenter())
+        this.ProfileQuickAction(AppIcon.HEART, 'Connections', () => this.openRelationshipHub())
+        this.ProfileQuickAction(AppIcon.STAR, 'Saved', () => this.openAnnouncements())
+        this.ProfileQuickAction(AppIcon.SETTINGS, 'Settings', () => this.openSettingsCenter())
       }
       .width('100%')
 
       Row({ space: DesignConstants.SPACING.MD }) {
-        this.ProfileIntentCard('我的氛围', '轻触感、安静、松弛', AppIcon.MAP, () => this.openPrivacySettings())
-        this.ProfileIntentCard('偏好设置', '安静探索、极简审美', AppIcon.FILTER, () => this.openSafetySettings())
+        this.ProfileIntentCard('My Vibe', 'Tactile, Calm, Serene', AppIcon.MAP, () => this.openPrivacySettings())
+        this.ProfileIntentCard('Preferences', 'Quiet Discovery, Minimalist Art', AppIcon.FILTER, () => this.openSafetySettings())
       }
       .width('100%')
     }
