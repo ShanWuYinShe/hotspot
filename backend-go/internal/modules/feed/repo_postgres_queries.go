@@ -154,4 +154,25 @@ SELECT m.moment_id,
 FROM moments m
 JOIN users u ON u.user_id = m.user_id
 WHERE m.privacy_level = 'public'`
+
+	queryFeedDismissMomentExists = `
+SELECT moment_id
+FROM moments
+WHERE moment_id = $1`
+
+	queryFeedDismissUserExists = `
+SELECT user_id
+FROM users
+WHERE user_id = $1`
+
+	queryFeedDismissGroupExists = `
+SELECT group_id
+FROM groups
+WHERE group_id = $1
+  AND deleted_at IS NULL`
+
+	queryFeedDismissInsert = `
+INSERT INTO feed_dismissals (user_id, target_type, target_id)
+VALUES ($1, $2, $3)
+ON CONFLICT (user_id, target_type, target_id) DO NOTHING`
 )

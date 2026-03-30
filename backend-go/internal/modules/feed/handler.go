@@ -72,9 +72,38 @@ func (h *Handler) ListTrending(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(bundle))
 }
 
+func (h *Handler) Dismiss(w http.ResponseWriter, r *http.Request) {
+	var req DismissFeedItemRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	if err := h.service.Dismiss(r.Context(), req); err != nil {
+		switch err {
+		case ErrInvalidFeedRequest, ErrInvalidCursor:
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		case ErrDismissTargetNotFound:
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "资源不存在"))
+		default:
+			observability.L().Error("handler error",
+				"method", "Dismiss",
+				"error", err,
+				"request_id", observability.RequestIDFromContext(r.Context()),
+			)
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		}
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
+}
+
 func handleFeedError(w http.ResponseWriter, r *http.Request, method string, err error) {
 	if err == ErrInvalidFeedRequest || err == ErrInvalidCursor {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	if err == ErrDismissTargetNotFound {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "资源不存在"))
 		return
 	}
 	observability.L().Error("handler error",

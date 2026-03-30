@@ -28,3 +28,31 @@ func TestInMemoryRepositoryListTrendingReturnsTypedBundle(t *testing.T) {
 		t.Fatalf("unexpected result: %#v", result)
 	}
 }
+
+func TestInMemoryRepositoryDismissIsIdempotent(t *testing.T) {
+	repo := NewInMemoryRepository()
+	cmd := dismissCommand{ViewerUserID: "u1", TargetType: "moment", TargetID: "moment_feed_1"}
+
+	if err := repo.Dismiss(nil, cmd); err != nil {
+		t.Fatalf("first dismiss returned error: %v", err)
+	}
+	if err := repo.Dismiss(nil, cmd); err != nil {
+		t.Fatalf("second dismiss returned error: %v", err)
+	}
+}
+
+func TestInMemoryRepositoryDismissReturnsNotFoundForMissingTarget(t *testing.T) {
+	repo := NewInMemoryRepository()
+
+	if err := repo.Dismiss(nil, dismissCommand{ViewerUserID: "u1", TargetType: "moment", TargetID: "missing"}); err != ErrDismissTargetNotFound {
+		t.Fatalf("expected ErrDismissTargetNotFound, got %v", err)
+	}
+}
+
+func TestInMemoryRepositoryDismissRejectsInvalidCommand(t *testing.T) {
+	repo := NewInMemoryRepository()
+
+	if err := repo.Dismiss(nil, dismissCommand{}); err == nil {
+		t.Fatal("expected error")
+	}
+}

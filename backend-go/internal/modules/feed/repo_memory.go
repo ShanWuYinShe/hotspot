@@ -2,10 +2,12 @@ package feed
 
 import "context"
 
-type InMemoryRepository struct{}
+type InMemoryRepository struct {
+	dismissed map[string]struct{}
+}
 
 func NewInMemoryRepository() *InMemoryRepository {
-	return &InMemoryRepository{}
+	return &InMemoryRepository{dismissed: make(map[string]struct{})}
 }
 
 func (r *InMemoryRepository) ListMoments(_ context.Context, _ momentsQuery) (PaginatedMoments, error) {
@@ -63,4 +65,29 @@ func (r *InMemoryRepository) ListTrending(_ context.Context, _ string) (Trending
 			},
 		}},
 	}, nil
+}
+
+func (r *InMemoryRepository) Dismiss(_ context.Context, cmd dismissCommand) error {
+	if normalizeDismissTargetType(cmd.TargetType) == "" || cmd.TargetID == "" || cmd.ViewerUserID == "" {
+		return ErrInvalidFeedRequest
+	}
+	if !r.dismissTargetExists(cmd.TargetType, cmd.TargetID) {
+		return ErrDismissTargetNotFound
+	}
+	key := cmd.ViewerUserID + ":" + cmd.TargetType + ":" + cmd.TargetID
+	r.dismissed[key] = struct{}{}
+	return nil
+}
+
+func (r *InMemoryRepository) dismissTargetExists(targetType, targetID string) bool {
+	switch targetType {
+	case "moment":
+		return targetID == "moment_feed_1" || targetID == "moment_hot_1"
+	case "user":
+		return targetID == "user_feed_1"
+	case "group":
+		return targetID == "group_feed_1"
+	default:
+		return false
+	}
 }

@@ -12,15 +12,17 @@ import (
 )
 
 type stubRepository struct {
-	momentsResult  PaginatedMoments
-	groupsResult   PaginatedGroups
-	usersResult    PaginatedUsers
-	trendingResult TrendingBundle
-	err            error
-	lastMoments    momentsQuery
-	lastGroups     groupsQuery
-	lastUsers      usersQuery
-	lastViewerID   string
+	momentsResult   PaginatedMoments
+	groupsResult    PaginatedGroups
+	usersResult     PaginatedUsers
+	trendingResult  TrendingBundle
+	err             error
+	lastMoments     momentsQuery
+	lastGroups      groupsQuery
+	lastUsers       usersQuery
+	lastViewerID    string
+	lastDismiss     dismissCommand
+	lastDismissCall int
 }
 
 func (r *stubRepository) ListMoments(_ context.Context, query momentsQuery) (PaginatedMoments, error) {
@@ -41,6 +43,12 @@ func (r *stubRepository) ListUsers(_ context.Context, query usersQuery) (Paginat
 func (r *stubRepository) ListTrending(_ context.Context, viewerUserID string) (TrendingBundle, error) {
 	r.lastViewerID = viewerUserID
 	return r.trendingResult, r.err
+}
+
+func (r *stubRepository) Dismiss(_ context.Context, cmd dismissCommand) error {
+	r.lastDismiss = cmd
+	r.lastDismissCall++
+	return r.err
 }
 
 func TestServiceListMomentsUsesPersistenceRepositoryWhenRepoMissing(t *testing.T) {
@@ -145,5 +153,38 @@ func TestServiceListTrendingReturnsRepositoryError(t *testing.T) {
 	_, err := service.ListTrending(context.Background())
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+func TestServiceDismissRejectsInvalidTarget(t *testing.T) {
+	service := NewServiceWithRepo(&stubRepository{})
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "u1"})
+
+	if err := service.Dismiss(ctx, DismissFeedItemRequest{TargetType: "bad", TargetID: "x"}); !errors.Is(err, ErrInvalidFeedRequest) {
+		t.Fatalf("expected invalid request, got %v", err)
+	}
+	if err := service.Dismiss(ctx, DismissFeedItemRequest{TargetType: "moment", TargetID: ""}); !errors.Is(err, ErrInvalidFeedRequest) {
+		t.Fatalf("expected invalid request, got %v", err)
+	}
+}
+
+func TestServiceDismissRequiresPrincipal(t *testing.T) {
+	service := NewServiceWithRepo(&stubRepository{})
+
+	if err := service.Dismiss(context.Background(), DismissFeedItemRequest{TargetType: "moment", TargetID: "m1"}); !errors.Is(err, ErrInvalidFeedRequest) {
+		t.Fatalf("expected invalid request, got %v", err)
+	}
+}
+
+func TestServiceDismissPassesCommandToRepo(t *testing.T) {
+	repo := &stubRepository{}
+	service := NewServiceWithRepo(repo)
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "u1"})
+
+	if err := service.Dismiss(ctx, DismissFeedItemRequest{TargetType: "moment", TargetID: "m1"}); err != nil {
+		t.Fatalf("Dismiss returned error: %v", err)
+	}
+	if repo.lastDismissCall != 1 || repo.lastDismiss.ViewerUserID != "u1" || repo.lastDismiss.TargetType != "moment" || repo.lastDismiss.TargetID != "m1" {
+		t.Fatalf("unexpected dismiss command: %#v calls=%d", repo.lastDismiss, repo.lastDismissCall)
 	}
 }

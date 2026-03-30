@@ -105,6 +105,46 @@ func TestListMomentsReturnsPaginatedMoments(t *testing.T) {
 	}
 }
 
+func TestDismissDoesNotRequireIdempotencyKey(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/me/dismiss", strings.NewReader(`{"target_type":"moment","target_id":"m1"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
+
+	handler.Dismiss(rr, req)
+	assertFeedCode(t, rr, 0)
+}
+
+func TestDismissRejectsInvalidRequest(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/me/dismiss", strings.NewReader(`{"target_type":"bad","target_id":"m1"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
+
+	handler.Dismiss(rr, req)
+	assertFeedCode(t, rr, 10000)
+}
+
+func TestDismissReturnsNotFound(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubRepository{err: ErrDismissTargetNotFound}))
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/me/dismiss", strings.NewReader(`{"target_type":"moment","target_id":"m1"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
+
+	handler.Dismiss(rr, req)
+	assertFeedCode(t, rr, 10300)
+}
+
+func TestDismissReturnsSuccess(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/me/dismiss", strings.NewReader(`{"target_type":"moment","target_id":"m1"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
+
+	handler.Dismiss(rr, req)
+	assertFeedCode(t, rr, 0)
+}
+
 type feedAPIResponse[T any] struct {
 	Code int `json:"code"`
 	Data T   `json:"data"`

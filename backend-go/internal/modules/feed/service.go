@@ -2,7 +2,6 @@ package feed
 
 import (
 	"context"
-	"errors"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/appconfig"
@@ -97,6 +96,22 @@ func (s *Service) ListTrending(ctx context.Context) (TrendingBundle, error) {
 	return bundle, nil
 }
 
+func (s *Service) Dismiss(ctx context.Context, req DismissFeedItemRequest) error {
+	principal, ok := platformauth.PrincipalFromContext(ctx)
+	if !ok || principal.UserID == "" {
+		return ErrInvalidFeedRequest
+	}
+	cmd, err := s.newDismissCommand(principal.UserID, req)
+	if err != nil {
+		return err
+	}
+	if err := s.repo.Dismiss(ctx, cmd); err != nil {
+		observability.L().Error("feed.dismiss failed", "error", err)
+		return err
+	}
+	return nil
+}
+
 func (s *Service) newMomentsQuery(ctx context.Context, viewerUserID string, req ListFeedMomentsRequest) (momentsQuery, error) {
 	if req.ReferencePoint == nil || !isValidGeoPoint(*req.ReferencePoint) {
 		return momentsQuery{}, ErrInvalidFeedRequest
@@ -183,8 +198,15 @@ func normalizeFeedSource(source string) string {
 	}
 }
 
+func (s *Service) newDismissCommand(viewerUserID string, req DismissFeedItemRequest) (dismissCommand, error) {
+	targetType := normalizeDismissTargetType(req.TargetType)
+	targetID := req.TargetID
+	if targetType == "" || targetID == "" {
+		return dismissCommand{}, ErrInvalidFeedRequest
+	}
+	return dismissCommand{ViewerUserID: viewerUserID, TargetType: targetType, TargetID: targetID}, nil
+}
+
 func isValidGeoPoint(point GeoPoint) bool {
 	return point.Latitude >= -90 && point.Latitude <= 90 && point.Longitude >= -180 && point.Longitude <= 180
 }
-
-var ErrInvalidFeedRequest = errors.New("feed: invalid request")

@@ -1,6 +1,10 @@
 package feed
 
-import "time"
+import (
+	"errors"
+	"strings"
+	"time"
+)
 
 type GeoPoint struct {
 	Latitude  float64 `json:"latitude"`
@@ -134,6 +138,17 @@ type TrendingBundle struct {
 	HotMoments   []MomentItem      `json:"hot_moments"`
 }
 
+type DismissFeedItemRequest struct {
+	TargetType string `json:"target_type"`
+	TargetID   string `json:"target_id"`
+}
+
+type dismissCommand struct {
+	ViewerUserID string
+	TargetType   string
+	TargetID     string
+}
+
 type momentsQuery struct {
 	ViewerUserID   string
 	Source         string
@@ -182,3 +197,16 @@ type groupCandidate struct {
 	Item     GroupItem
 	Distance int
 }
+
+func normalizeDismissTargetType(value string) string {
+	switch strings.TrimSpace(value) {
+	case "moment", "user", "group":
+		return strings.TrimSpace(value)
+	default:
+		return ""
+	}
+}
+
+var ErrInvalidFeedRequest = errors.New("feed: invalid request")
+var ErrInvalidCursor = errors.New("feed: invalid cursor")
+var ErrDismissTargetNotFound = errors.New("feed: dismiss target not found")

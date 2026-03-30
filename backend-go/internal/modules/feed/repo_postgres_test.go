@@ -56,14 +56,29 @@ func (r *feedRowsValues) Err() error   { return r.err }
 type feedBackendStub struct {
 	queryRowsByQuery map[string][][]any
 	queryErrs        map[string]error
+	queryRowByQuery  map[string]feedRowValues
+	execErrs         map[string]error
+	execCalls        []feedExecCall
+}
+
+type feedExecCall struct {
+	query string
+	args  []any
 }
 
 func (b *feedBackendStub) Ping(context.Context) error { return nil }
 func (b *feedBackendStub) Close() error               { return nil }
-func (b *feedBackendStub) Exec(context.Context, string, ...any) error {
+func (b *feedBackendStub) Exec(_ context.Context, query string, args ...any) error {
+	b.execCalls = append(b.execCalls, feedExecCall{query: query, args: args})
+	if err := b.execErrs[query]; err != nil {
+		return err
+	}
 	return nil
 }
-func (b *feedBackendStub) QueryRow(context.Context, string, ...any) persistence.Row {
+func (b *feedBackendStub) QueryRow(_ context.Context, query string, _ ...any) persistence.Row {
+	if row, ok := b.queryRowByQuery[query]; ok {
+		return row
+	}
 	return feedRowValues{err: persistence.ErrNotImplemented}
 }
 func (b *feedBackendStub) Query(_ context.Context, query string, _ ...any) (persistence.Rows, error) {
@@ -93,6 +108,10 @@ func (r *fallbackFeedRepo) ListUsers(context.Context, usersQuery) (PaginatedUser
 func (r *fallbackFeedRepo) ListTrending(context.Context, string) (TrendingBundle, error) {
 	r.used = true
 	return TrendingBundle{TrendingTags: []TrendingTagItem{{Name: "fallback", Trend: "rising"}}}, nil
+}
+func (r *fallbackFeedRepo) Dismiss(context.Context, dismissCommand) error {
+	r.used = true
+	return nil
 }
 
 func newFeedFactory(backend persistence.PostgresQueryBackend) *persistence.Factory {
@@ -296,5 +315,50 @@ func TestPostgresRepositoryPropagatesQueryError(t *testing.T) {
 	_, err := repo.ListUsers(context.Background(), usersQuery{ViewerUserID: "viewer", ReferencePoint: GeoPoint{Latitude: 35, Longitude: 112}, Radius: 1000, Limit: 10})
 	if err == nil || err.Error() != "boom" {
 		t.Fatalf("expected query error, got %v", err)
+	}
+}
+
+func TestPostgresRepositoryDismissFallsBackWithoutDatabase(t *testing.T) {
+	fallback := &fallbackFeedRepo{}
+	repo := NewPostgresRepository(nil, fallback)
+
+	if err := repo.Dismiss(context.Background(), dismissCommand{ViewerUserID: "u1", TargetType: "moment", TargetID: "m1"}); err != nil {
+		t.Fatalf("Dismiss returned error: %v", err)
+	}
+	if !fallback.used {
+		t.Fatal("expected fallback to be used")
+	}
+}
+
+func TestPostgresRepositoryDismissReturnsNotFoundWhenTargetMissing(t *testing.T) {
+	backend := &feedBackendStub{queryRowByQuery: map[string]feedRowValues{queryFeedDismissMomentExists: {err: errors.New("no rows")}}}
+	repo := NewPostgresRepository(newFeedFactory(backend), nil)
+
+	if err := repo.Dismiss(context.Background(), dismissCommand{ViewerUserID: "u1", TargetType: "moment", TargetID: "m1"}); !errors.Is(err, ErrDismissTargetNotFound) {
+		t.Fatalf("expected not found, got %v", err)
+	}
+}
+
+func TestPostgresRepositoryDismissInsertsWhenTargetExists(t *testing.T) {
+	backend := &feedBackendStub{queryRowByQuery: map[string]feedRowValues{queryFeedDismissMomentExists: {values: []any{"m1"}}}}
+	repo := NewPostgresRepository(newFeedFactory(backend), nil)
+
+	if err := repo.Dismiss(context.Background(), dismissCommand{ViewerUserID: "u1", TargetType: "moment", TargetID: "m1"}); err != nil {
+		t.Fatalf("Dismiss returned error: %v", err)
+	}
+	if len(backend.execCalls) != 1 || backend.execCalls[0].query != queryFeedDismissInsert {
+		t.Fatalf("unexpected exec calls: %#v", backend.execCalls)
+	}
+}
+
+func TestPostgresRepositoryDismissPropagatesExecError(t *testing.T) {
+	backend := &feedBackendStub{
+		queryRowByQuery: map[string]feedRowValues{queryFeedDismissMomentExists: {values: []any{"m1"}}},
+		execErrs:        map[string]error{queryFeedDismissInsert: errors.New("boom")},
+	}
+	repo := NewPostgresRepository(newFeedFactory(backend), nil)
+
+	if err := repo.Dismiss(context.Background(), dismissCommand{ViewerUserID: "u1", TargetType: "moment", TargetID: "m1"}); err == nil || err.Error() != "boom" {
+		t.Fatalf("expected exec error, got %v", err)
 	}
 }

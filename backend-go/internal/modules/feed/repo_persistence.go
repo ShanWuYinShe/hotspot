@@ -27,3 +27,7 @@ func (r *PersistenceRepository) ListUsers(ctx context.Context, query usersQuery)
 func (r *PersistenceRepository) ListTrending(ctx context.Context, viewerUserID string) (TrendingBundle, error) {
 	return r.impl.ListTrending(ctx, viewerUserID)
 }
+
+func (r *PersistenceRepository) Dismiss(ctx context.Context, cmd dismissCommand) error {
+	return r.impl.Dismiss(ctx, cmd)
+}

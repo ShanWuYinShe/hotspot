@@ -104,6 +104,23 @@ func (r *PostgresRepository) ListTrending(ctx context.Context, viewerUserID stri
 	return TrendingBundle{TrendingTags: tags, HotMoments: hotMoments}, nil
 }
 
+func (r *PostgresRepository) Dismiss(ctx context.Context, cmd dismissCommand) error {
+	queryable, ok, err := r.queryable()
+	if err != nil {
+		return err
+	}
+	if !ok {
+		if r.fallback != nil {
+			return r.fallback.Dismiss(ctx, cmd)
+		}
+		return persistence.ErrNotImplemented
+	}
+	if err := ensureDismissTargetExists(ctx, queryable, cmd.TargetType, cmd.TargetID); err != nil {
+		return err
+	}
+	return queryable.Exec(ctx, queryFeedDismissInsert, cmd.ViewerUserID, cmd.TargetType, cmd.TargetID)
+}
+
 func (r *PostgresRepository) queryable() (persistence.QueryableDB, bool, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return nil, false, nil
@@ -288,6 +305,31 @@ func (r *PostgresRepository) loadMomentCandidates(ctx context.Context, queryable
 	}
 	sort.SliceStable(items, func(i, j int) bool { return compareMomentCandidates(items[i], items[j], query.Source) < 0 })
 	return items, nil
+}
+
+func ensureDismissTargetExists(ctx context.Context, queryable persistence.QueryableDB, targetType, targetID string) error {
+	query := queryFeedDismissMomentExists
+	switch targetType {
+	case "moment":
+		query = queryFeedDismissMomentExists
+	case "user":
+		query = queryFeedDismissUserExists
+	case "group":
+		query = queryFeedDismissGroupExists
+	default:
+		return ErrInvalidFeedRequest
+	}
+	var existingID string
+	if err := queryable.QueryRow(ctx, query, targetID).Scan(&existingID); err != nil {
+		if errors.Is(err, persistence.ErrNotImplemented) {
+			return err
+		}
+		return ErrDismissTargetNotFound
+	}
+	if existingID == "" {
+		return ErrDismissTargetNotFound
+	}
+	return nil
 }
 
 func loadTrendingTags(ctx context.Context, queryable persistence.QueryableDB, viewerUserID string) ([]TrendingTagItem, error) {
@@ -660,7 +702,5 @@ func maxInt(left, right int) int {
 	}
 	return right
 }
-
-var ErrInvalidCursor = errors.New("feed: invalid cursor")
 
 var _ Repository = (*PostgresRepository)(nil)

@@ -30,6 +30,7 @@ func (m *Module) Mount(r chi.Router) {
 			group.Post("/list_moments", m.handler.ListMoments)
 			group.Post("/list_groups", m.handler.ListGroups)
 			group.Post("/list_users", m.handler.ListUsers)
+			group.Post("/me/dismiss", m.handler.Dismiss)
 		})
 		feedRouter.Group(func(group chi.Router) {
 			group.Use(platformauth.OptionalAuth)
