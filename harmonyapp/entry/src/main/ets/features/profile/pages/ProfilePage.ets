@@ -558,8 +558,8 @@ export struct ProfilePage {
           .height(180)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .backgroundColor(this.getCurrentThemePalette().pageGlow)
-          .opacity(this.getCurrentThemePalette().isDarkTheme ? 0.12 : 0.30)
-          .blur(64)
+          .opacity(this.getCurrentThemePalette().isDarkTheme ? 0.06 : 0.18)
+          .blur(80)
           .align(Alignment.Top)
           .margin({ top: 12 })
 
@@ -568,8 +568,8 @@ export struct ProfilePage {
           .height(120)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .backgroundColor(this.getCurrentThemePalette().heroGlow)
-          .opacity(this.getCurrentThemePalette().isDarkTheme ? 0.08 : 0.20)
-          .blur(48)
+          .opacity(this.getCurrentThemePalette().isDarkTheme ? 0.04 : 0.12)
+          .blur(64)
           .align(Alignment.TopEnd)
           .margin({ top: 64, right: 12 })
 
@@ -1445,7 +1445,7 @@ export struct ProfilePage {
     .shadow(this.getProfileVisualStyle().metricCard.shadow)
     .border({ width: this.getProfileVisualStyle().metricCard.borderWidth, color: this.getProfileVisualStyle().metricCard.borderColor })
     .padding(this.getProfileVisualStyle().metricCard.padding)
-    .constraintSize({ minHeight: this.getProfileVisualStyle().metricCard.minHeight ?? 164 })
+    .height(this.getProfileVisualStyle().metricCard.minHeight ?? 164)
     .layoutWeight(1)
     .stateEffect(true)
     .scale(this.pressedMenuItemKey === title ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })
@@ -1530,7 +1530,7 @@ export struct ProfilePage {
     .shadow(this.getProfileVisualStyle().intentCard.shadow)
     .border({ width: this.getProfileVisualStyle().intentCard.borderWidth, color: this.getProfileVisualStyle().intentCard.borderColor })
     .padding(this.getProfileVisualStyle().intentCard.padding)
-    .constraintSize({ minHeight: 160 })
+    .height(this.getProfileVisualStyle().intentCard.minHeight)
     .onClick(onTap)
   }
 

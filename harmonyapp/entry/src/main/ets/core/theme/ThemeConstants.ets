@@ -148,7 +148,7 @@ export class ThemeConstants {
     iconMuted: '#9CA3AF',
     buttonSecondaryBackground: '#222733',
     buttonSecondaryText: '#F9FAFB',
-    tabBarBackground: '#171A20',
+    tabBarBackground: '#0F1115',
     tabBarInactive: '#9CA3AF',
     tabBarActiveBackground: '#1D242D',
     isDarkTheme: true
@@ -178,7 +178,7 @@ export class ThemeConstants {
     iconMuted: '#999999',
     buttonSecondaryBackground: '#FFFFFF',
     buttonSecondaryText: '#333333',
-    tabBarBackground: '#FFFFFF',
+    tabBarBackground: '#F8F5F2',
     tabBarInactive: '#B0B0B0',
     tabBarActiveBackground: '#F5F0EB',
     isDarkTheme: false
@@ -238,7 +238,7 @@ export class ThemeConstants {
     iconMuted: '#98A28E',
     buttonSecondaryBackground: '#F8F2EA',
     buttonSecondaryText: '#7C6F63',
-    tabBarBackground: '#F4ECE1',
+    tabBarBackground: '#EEE5DA',
     tabBarInactive: '#8C977E',
     tabBarActiveBackground: '#F8F3EA',
     isDarkTheme: false
@@ -268,7 +268,7 @@ export class ThemeConstants {
     iconMuted: '#C8D0DB',
     buttonSecondaryBackground: '#1C2636',
     buttonSecondaryText: '#D7DDE8',
-    tabBarBackground: '#182231',
+    tabBarBackground: '#141C27',
     tabBarInactive: '#BEC6D1',
     tabBarActiveBackground: '#202C3F',
     isDarkTheme: true

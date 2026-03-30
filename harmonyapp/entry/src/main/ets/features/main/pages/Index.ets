@@ -132,10 +132,6 @@ struct Index {
     return this.getCurrentThemePalette().accentText;
   }
 
-  private getTabBarShadow(): ShadowOptions {
-    return AppThemeVisuals.getTabBarShadow(this.resolvedThemeId);
-  }
-
   private getTabBarBackground(): string {
     return this.getCurrentThemePalette().tabBarBackground;
   }
@@ -768,32 +764,18 @@ struct Index {
       .width(48)
       .height(48)
       .justifyContent(FlexAlign.Center)
-      .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(this.currentTabIndex === targetIndex ? this.getTabBarVisualStyle().activeBackgroundColor : Color.Transparent)
-      .shadow(this.currentTabIndex === targetIndex ? this.getTabBarVisualStyle().activeGlow : { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 })
-      .margin({ top: this.currentTabIndex === targetIndex ? 0 : 4 })
 
       Text(title)
         .fontColor(this.currentTabIndex === targetIndex
           ? this.getBrandAccent()
           : this.getTabInactiveColor())
         .fontSize(DesignConstants.FONT.SIZE.XS)
-        .margin({ top: this.currentTabIndex === targetIndex ? 1 : 4 })
+        .margin({ top: 2 })
         .fontWeight(this.currentTabIndex === targetIndex ? FontWeight.Medium : FontWeight.Normal)
-
-      if (this.currentTabIndex === targetIndex) {
-        Row()
-          .width(this.getTabBarVisualStyle().indicatorWidth)
-          .height(this.getTabBarVisualStyle().indicatorHeight)
-          .margin({ top: 4 })
-          .backgroundColor(this.getBrandAccent())
-          .borderRadius(this.getTabBarVisualStyle().indicatorBorderRadius)
-      }
     }
     .width('100%')
     .height(this.getTabBarVisualStyle().itemHeight)
     .justifyContent(FlexAlign.Center)
-    .padding({ top: this.currentTabIndex === targetIndex ? 0 : 2, bottom: this.currentTabIndex === targetIndex ? 0 : 2 })
     .backgroundColor(Color.Transparent)
     .onClick(() => {
       this.handleTabChange(targetIndex);
@@ -803,11 +785,10 @@ struct Index {
     })
   }
 
-      /** 中间「+」发布按钮 Builder（图标在上、椭圆外框，与其他 tab 一致布局） */
+      /** 中间「+」发布按钮 Builder */
   @Builder
   CreateTabBuilder() {
     Column() {
-      // 扁平椭圆外框包裹图标
       Row() {
         Text() {
           SymbolSpan($r(AppIcon.ADD))
@@ -820,30 +801,15 @@ struct Index {
       .justifyContent(FlexAlign.Center)
       .backgroundColor(this.currentTabIndex === 2 ? this.getTabBarVisualStyle().activeBackgroundColor : this.getBrandAccent())
       .borderRadius(DesignConstants.RADIUS.FULL)
-      .border({ width: 1, color: this.currentTabIndex === 2 ? this.getCurrentThemePalette().floatingBorderColor : this.getCurrentThemePalette().borderColor })
-      .shadow(this.currentTabIndex === 2 ? this.getTabBarVisualStyle().activeGlow : this.getCurrentThemePalette().accentShadow)
-      .margin({ bottom: this.currentTabIndex === 2 ? 0 : 2 })
 
-      // "发布"文字在外框下方，与其他 tab 一致
       Text('发布')
         .fontColor(this.currentTabIndex === 2 ? this.getBrandAccent() : this.getTabInactiveColor())
         .fontSize(DesignConstants.FONT.SIZE.XS)
-        .margin({ top: this.currentTabIndex === 2 ? 1 : 4 })
-
-      if (this.currentTabIndex === 2) {
-        Row()
-          .width(this.getTabBarVisualStyle().indicatorWidth)
-          .height(this.getTabBarVisualStyle().indicatorHeight)
-          .margin({ top: 4 })
-          .backgroundColor(this.getBrandAccent())
-          .borderRadius(this.getTabBarVisualStyle().indicatorBorderRadius)
-      }
+        .margin({ top: 2 })
     }
     .width('100%')
     .height(this.getTabBarVisualStyle().itemHeight)
     .justifyContent(FlexAlign.Center)
-    .margin({ top: 4 })
-    .padding({ top: this.currentTabIndex === 2 ? 0 : 2, bottom: this.currentTabIndex === 2 ? 0 : 2 })
     .backgroundColor(Color.Transparent)
     .onClick(() => {
       this.handleTabChange(2);
@@ -900,16 +866,11 @@ struct Index {
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
       } else {
         Stack({ alignContent: Alignment.Bottom }) {
-          // 底部统一背景容器：覆盖导航栏 + 安全区，视觉上形成一整块底部区域
+          // 底部背景容器：与页面背景无缝融合
           Column() {}
             .width('100%')
             .height(this.getTabBarVisualStyle().height + this.safeAreaBottom)
             .backgroundColor(this.getTabBarBackground())
-            .shadow(this.getTabBarShadow())
-            .borderRadius(this.getTabBarVisualStyle().radius)
-            .border({ width: { top: 1 }, color: this.getTabBarVisualStyle().borderColor })
-            .backgroundBlurStyle(BlurStyle.Regular)
-            .margin({ left: this.getTabBarVisualStyle().floatingMargin, right: this.getTabBarVisualStyle().floatingMargin, bottom: this.getTabBarVisualStyle().floatingMargin })
 
           Column() {
         Navigation(this.navPathStack) {

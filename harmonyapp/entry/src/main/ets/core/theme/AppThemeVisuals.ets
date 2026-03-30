@@ -55,6 +55,7 @@ export interface ThemeProfileIntentStyle extends ThemeCardVisualStyle {
   iconWrapperSize: number;
   titleFontSize: number;
   descriptionFontSize: number;
+  minHeight: number;
 }
 
 export interface ThemeProfileVisualStyle {
@@ -362,7 +363,8 @@ export class AppThemeVisuals {
         padding: palette.visuals.metrics.cardPadding,
         iconWrapperSize: 40,
         titleFontSize: DesignConstants.FONT.SIZE.XL,
-        descriptionFontSize: DesignConstants.FONT.SIZE.MD
+        descriptionFontSize: DesignConstants.FONT.SIZE.MD,
+        minHeight: 140
       }
     };
     AppThemeVisuals.profileVisualCache.set(key, style);
