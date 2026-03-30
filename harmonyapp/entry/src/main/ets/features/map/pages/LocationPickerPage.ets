@@ -22,10 +22,10 @@ const DOMAIN_NUMBER: number = 0xFF13;
 const TAG: string = 'LocationPickerPage';
 const SEARCH_PANEL_HEIGHT: number = 440;
 const MAX_HISTORY_ITEMS: number = 5;
-// 底部面板三段式吸附位置
-const PANEL_SNAP_MIN: number = 148;       // 收起：手柄 + 搜索栏 + 确认按钮
-const PANEL_SNAP_HALF: number = 252;      // 半展开：显示部分历史记录
-const PANEL_SNAP_MAX: number = 420;       // 全展开：完整内容
+// 底部面板三段式吸附位置（内容高度，不含 safeAreaBottom）
+const PANEL_SNAP_MIN: number = 120;       // 收起：手柄 + 搜索栏 + 确认按钮
+const PANEL_SNAP_HALF: number = 224;      // 半展开：显示部分历史记录
+const PANEL_SNAP_MAX: number = 392;       // 全展开：完整内容
 const DEFAULT_GESTURE_HINT: string = '双击（桌面）或长按（移动端）地图可快速定位';
 const DOUBLE_CLICK_PLACEMENT_HINT: string = '已通过双击定位到该位置';
 const LONG_PRESS_PLACEMENT_HINT: string = '已通过长按定位到该位置';
@@ -280,10 +280,6 @@ struct SearchPanel {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
-  private getBottomInset(): number {
-    return this.safeAreaBottom > 0 ? this.safeAreaBottom + 8 : DesignConstants.SPACING.SM;
-  }
-
   build() {
     Column() {
       // 搜索行 - 使用官方 Search 组件
@@ -508,12 +504,12 @@ struct SearchPanel {
       .layoutWeight(1)
       .width('100%')
     }
-    .height(SEARCH_PANEL_HEIGHT)
+    .height(SEARCH_PANEL_HEIGHT + this.safeAreaBottom)
     .padding({
       left: DesignConstants.SPACING.LG,
       right: DesignConstants.SPACING.LG,
       top: DesignConstants.SPACING.LG,
-      bottom: this.getBottomInset()
+      bottom: this.safeAreaBottom
     })
     .backgroundColor(this.getPalette().surfaceBackground)
     .border({ width: { top: 1 }, color: $r('app.color.divider') })
@@ -542,10 +538,6 @@ struct MainPanel {
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
-  }
-
-  private getBottomInset(): number {
-    return this.safeAreaBottom > 0 ? this.safeAreaBottom + 8 : DesignConstants.SPACING.SM;
   }
 
   private snapToNearest(): void {
@@ -723,13 +715,13 @@ struct MainPanel {
         .margin({ top: DesignConstants.SPACING.SM })
         .onClick(this.onConfirm)
     }
-    .height(this.panelHeight)
+    .height(this.panelHeight + this.safeAreaBottom)
     .clip(true)
     .padding({
       left: DesignConstants.SPACING.LG,
       right: DesignConstants.SPACING.LG,
       top: 0,
-      bottom: this.getBottomInset()
+      bottom: this.safeAreaBottom
     })
     .backgroundColor(this.getPalette().surfaceBackground)
     .border({ width: { top: 1 }, color: $r('app.color.divider') })
@@ -774,8 +766,8 @@ export struct LocationPickerPage {
   @State anchorHistory: AnchorHistoryItem[] = [];
   @State pickMode: LocationPickerMode = 'anchor';
 
-  // 底部面板高度（仅在主面板时使用，初始为半展开位置）
-  @State panelHeight: number = PANEL_SNAP_HALF;
+  // 底部面板高度（仅在主面板时使用，初始为收起位置）
+  @State panelHeight: number = PANEL_SNAP_MIN;
 
 	private renderItemsMap: Map<string, MapRenderItem> = new Map();
   private resolveTimerId: number = 0;
@@ -896,7 +888,8 @@ export struct LocationPickerPage {
   }
 
   private getActivePanelHeight(): number {
-    return this.showSearchBar ? SEARCH_PANEL_HEIGHT : this.panelHeight;
+    const contentHeight = this.showSearchBar ? SEARCH_PANEL_HEIGHT : this.panelHeight;
+    return contentHeight + this.safeAreaBottom;
   }
 
   /** MapKit camera padding：根据面板/搜索面板高度动态计算 */
