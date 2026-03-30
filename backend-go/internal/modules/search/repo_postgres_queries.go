@@ -12,8 +12,7 @@ SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), COALESCE(u.bio, ''), u
 FROM users u
 JOIN user_settings us ON us.user_id = u.user_id
 WHERE us.searchable = TRUE
-  AND (us.nickname_searchable = TRUE OR u.bio <> '')
-  AND (u.nickname ILIKE '%' || $1 || '%' OR u.bio ILIKE '%' || $1 || '%')`
+  AND ((us.nickname_searchable = TRUE AND u.nickname ILIKE '%' || $1 || '%') OR u.bio ILIKE '%' || $1 || '%')`
 
 	querySearchSuggestGroups = `
 SELECT g.group_id, g.name, COALESCE(g.avatar_url, ''), COALESCE(g.description, ''), g.location_name, g.latitude, g.longitude, COUNT(gm.user_id) AS members_count

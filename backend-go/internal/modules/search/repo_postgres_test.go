@@ -153,6 +153,23 @@ func TestPostgresRepositoryAppliesTypeFilter(t *testing.T) {
 	}
 }
 
+func TestPostgresRepositoryHonorsNicknameSearchableOnlyForNickname(t *testing.T) {
+	backend := &searchBackendStub{queryRowsByQuery: map[string][][]any{
+		querySearchSuggestUsers: {
+			{"user_bio", "plain-user", "", "hot bio", "南天门", 35.0, 112.0},
+		},
+	}}
+	repo := NewPostgresRepository(newSearchFactory(backend), nil)
+
+	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"user"}, ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
+	if err != nil {
+		t.Fatalf("Suggest returned error: %v", err)
+	}
+	if len(resp.Items) != 1 || resp.Items[0].Payload["user_id"] != "user_bio" {
+		t.Fatalf("expected bio-matched user result, got %#v", resp.Items)
+	}
+}
+
 func TestPostgresRepositoryRanksExactBeforePrefixBeforeContains(t *testing.T) {
 	backend := &searchBackendStub{queryRowsByQuery: map[string][][]any{
 		querySearchSuggestTags: {

@@ -26,7 +26,7 @@ func (h *Handler) Suggest(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	if req.Radius != 0 && req.Radius < 100 {
+	if req.Radius != 0 && (req.Radius < 100 || req.Radius > 50000) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}

@@ -86,6 +86,19 @@ func TestServiceSuggestClampsRadiusToAppConfigLimit(t *testing.T) {
 	}
 }
 
+func TestServiceSuggestClampsRadiusToDefaultSpecMax(t *testing.T) {
+	repo := &stubRepository{}
+	service := NewServiceWithRepo(repo)
+
+	_, err := service.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", ReferencePoint: GeoPoint{Latitude: 1, Longitude: 2}, Radius: 50001})
+	if err != nil {
+		t.Fatalf("Suggest returned error: %v", err)
+	}
+	if repo.lastReq.Radius != 50000 {
+		t.Fatalf("expected service to clamp radius to default spec max 50000, got %d", repo.lastReq.Radius)
+	}
+}
+
 func TestServiceSuggestAppliesResponseDefaultLimit(t *testing.T) {
 	source := appconfig.NewStaticSource(config.Config{})
 	_, _ = source.Update(context.Background(), func(cfg appconfig.AppConfig) appconfig.AppConfig {
