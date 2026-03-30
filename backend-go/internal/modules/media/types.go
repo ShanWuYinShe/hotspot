@@ -21,10 +21,11 @@ type PresignUploadRequest struct {
 }
 
 type PresignedUpload struct {
-	UploadID  string            `json:"upload_id"`
-	UploadURL string            `json:"upload_url"`
-	Headers   map[string]string `json:"headers"`
-	ExpiresAt string            `json:"expires_at"`
+	UploadID   string            `json:"upload_id"`
+	UploadURL  string            `json:"upload_url"`
+	Headers    map[string]string `json:"headers"`
+	ExpiresAt  string            `json:"expires_at"`
+	StorageKey string            `json:"-"`
 }
 
 type BatchPresignUploadRequest struct {
@@ -47,4 +48,9 @@ type UploadedMedia struct {
 	Duration     int    `json:"duration,omitempty"`
 	Width        int    `json:"width,omitempty"`
 	Height       int    `json:"height,omitempty"`
+}
+
+type ObjectMetadata struct {
+	FileSize int
+	MimeType string
 }

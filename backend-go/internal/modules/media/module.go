@@ -4,7 +4,9 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/idempotency"
+	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/ratelimit"
 	"hotspot/backend-go/internal/platform/resourceguard"
 )
@@ -13,8 +15,10 @@ type Module struct {
 	handler *Handler
 }
 
-func NewModule() *Module {
-	return &Module{handler: NewHandler(NewService())}
+func NewModule(cfg config.Config, factory *persistence.Factory) *Module {
+	repo := NewPersistenceRepository(factory)
+	provider := NewObjectStorageProvider(cfg)
+	return &Module{handler: NewHandler(NewServiceWithRepoAndProvider(repo, provider))}
 }
 
 func (m *Module) Mount(r chi.Router) {

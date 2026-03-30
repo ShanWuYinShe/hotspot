@@ -17,6 +17,12 @@ type Config struct {
 	OfficialWebsiteURL string
 	DefaultUserAvatar  string
 	DefaultGroupAvatar string
+	S3Endpoint         string
+	S3Region           string
+	S3Bucket           string
+	S3AccessKey        string
+	S3SecretKey        string
+	S3ForcePathStyle   bool
 }
 
 func Load() Config {
@@ -35,6 +41,12 @@ func Load() Config {
 		OfficialWebsiteURL: envOrDefault("APP_OFFICIAL_WEBSITE_URL", ""),
 		DefaultUserAvatar:  envOrDefault("APP_DEFAULT_USER_AVATAR_URL", ""),
 		DefaultGroupAvatar: envOrDefault("APP_DEFAULT_GROUP_AVATAR_URL", ""),
+		S3Endpoint:         envOrDefault("S3_ENDPOINT", ""),
+		S3Region:           envOrDefault("S3_REGION", "us-east-1"),
+		S3Bucket:           envOrDefault("S3_BUCKET", ""),
+		S3AccessKey:        envOrDefault("S3_ACCESS_KEY", ""),
+		S3SecretKey:        envOrDefault("S3_SECRET_KEY", ""),
+		S3ForcePathStyle:   envBoolOrDefault("S3_FORCE_PATH_STYLE", true),
 	}
 }
 
@@ -47,4 +59,12 @@ func envOrDefault(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func envBoolOrDefault(key string, fallback bool) bool {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	return value == "1" || value == "true" || value == "TRUE" || value == "True"
 }

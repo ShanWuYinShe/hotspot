@@ -33,7 +33,7 @@ func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.M
 		groupmessages.NewModule(factory),
 		groups.NewModule(factory),
 		mapmodule.NewModule(factory),
-		media.NewModule(),
+		media.NewModule(cfg, factory),
 		moments.NewModule(factory),
 		notifications.NewModule(factory),
 		privatechats.NewModule(factory, sharedAppConfig),
