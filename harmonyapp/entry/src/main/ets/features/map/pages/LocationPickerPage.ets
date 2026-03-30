@@ -159,7 +159,7 @@ interface FilterMenuItemProps {
 
 @Builder
 function FilterMenuItem(props: FilterMenuItemProps) {
-  Row({ space: 12 }) {
+  Row({ space: DesignConstants.SPACING.MD }) {
     Image($rawfile(props.markerSvg))
       .width(24)
       .height(32)
@@ -172,19 +172,21 @@ function FilterMenuItem(props: FilterMenuItemProps) {
         : resolveLocationPickerPalette(props.resolvedThemeId).textSecondary)
       .layoutWeight(1)
     Row()
-      .width(12)
-      .height(12)
+      .width(14)
+      .height(14)
       .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(props.active ? props.accentColor : Color.Transparent)
       .border({ width: 1.5, color: props.accentColor })
   }
   .width('100%')
-  .height(48)
-  .padding({ left: 14, right: 16 })
+  .height(44)
+  .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+  .justifyContent(FlexAlign.Center)
+  .alignItems(VerticalAlign.Center)
   .backgroundColor(props.active
     ? resolveLocationPickerPalette(props.resolvedThemeId).surfaceSubtle
     : Color.Transparent)
-  .borderRadius(DesignConstants.RADIUS.XL)
+  .borderRadius(DesignConstants.RADIUS.LG)
   .opacity(props.active ? 1.0 : DesignConstants.OPACITY.SUBTLE)
   .onClick(() => props.onToggle())
 }
@@ -201,7 +203,7 @@ interface FilterPanelProps {
 
 @Builder
 function FilterDropdownPanel(props: FilterPanelProps) {
-  Column() {
+  Column({ space: DesignConstants.SPACING.XS }) {
     FilterMenuItem({
       markerSvg: 'marker_user.svg',
       label: '用户',
@@ -227,10 +229,10 @@ function FilterDropdownPanel(props: FilterPanelProps) {
       onToggle: props.onToggleMoments
     })
   }
-  .width(170)
-  .padding({ top: 6, bottom: 6 })
+  .width(180)
+  .padding(DesignConstants.SPACING.SM)
   .backgroundColor(resolveLocationPickerPalette(props.resolvedThemeId).surfaceBackground)
-  .borderRadius(DesignConstants.RADIUS.XXL)
+  .borderRadius(DesignConstants.SHAPE.CARD)
   .shadow(DesignConstants.SHADOW.MEDIUM)
   .border({ width: 1, color: resolveLocationPickerPalette(props.resolvedThemeId).borderColor })
   .onClick(() => {})

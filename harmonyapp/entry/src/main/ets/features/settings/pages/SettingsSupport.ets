@@ -118,6 +118,7 @@ export struct SettingsSectionCard {
       .borderRadius(this.getCardStyle().borderRadius)
       .shadow(this.getCardStyle().shadow)
       .border({ width: this.getCardStyle().borderWidth, color: this.getCardStyle().borderColor })
+      .clip(true)
     }
     .width('100%')
   }
@@ -147,10 +148,8 @@ export struct SettingsEntryRow {
       }
       .width(44)
       .height(44)
-      .borderRadius(DesignConstants.RADIUS.XL)
+      .borderRadius(DesignConstants.RADIUS.FULL)
       .backgroundColor(this.item.accentColor ? this.getPalette().surfaceSubtle : this.getPalette().surfaceElevated)
-      .border({ width: 1, color: this.item.accentColor ? this.item.accentColor : this.getPalette().floatingBorderColor })
-      .shadow(this.getPalette().surfaceShadow)
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
 

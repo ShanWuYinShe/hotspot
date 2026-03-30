@@ -386,7 +386,7 @@ export struct SearchPage {
           .vertical(false)
           .barMode(BarMode.Fixed)
           .barWidth('100%')
-          .barHeight(60)
+          .barHeight(52)
           .animationDuration(280)
           .onChange((index: number) => {
             this.currentIndex = index;
@@ -394,6 +394,7 @@ export struct SearchPage {
           .width('100%')
           .layoutWeight(1)
           .backgroundColor(Color.Transparent)
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
         }
       }
       .width('100%')
@@ -471,13 +472,12 @@ export struct SearchPage {
         .lineHeight(20)
     }
     .width('100%')
-    .height(40)
+    .height(36)
     .justifyContent(FlexAlign.Center)
     .alignItems(VerticalAlign.Center)
-    .margin({ left: 8, right: 8, top: 10, bottom: 10 })
-    .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
     .backgroundColor(this.currentIndex === index ? this.getSurfaceSubtle() : Color.Transparent)
-    .borderRadius(DesignConstants.RADIUS.XL)
+    .borderRadius(DesignConstants.RADIUS.FULL)
     .border(this.currentIndex === index ? { width: 1, color: this.getSurfaceBorder() } : { width: 0 })
     .onClick(() => {
       if (this.currentIndex !== index) {

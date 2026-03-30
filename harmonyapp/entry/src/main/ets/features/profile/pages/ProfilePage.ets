@@ -862,7 +862,7 @@ export struct ProfilePage {
         .rowsGap(DesignConstants.SPACING.MD)
         .columnsGap(DesignConstants.SPACING.MD)
         .width('100%')
-        .height(280)
+        .height(240)
 
         Column({ space: DesignConstants.SPACING.SM }) {
           Button('快速体验（无需注册）')
@@ -1395,22 +1395,12 @@ export struct ProfilePage {
 
   @Builder
   private StatsContent(): void {
-    Column({ space: DesignConstants.SPACING.LG }) {
-      Text('我的动态')
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(this.getPrimaryTextColor())
-        .alignSelf(ItemAlign.Start)
-
-      Row({ space: DesignConstants.SPACING.MD }) {
-        this.StatCard('瞬间', formatCount(this.myMomentsCount), '浏览和管理动态', AppIcon.CAMERA, () => this.openMyMoments())
-        this.StatCard('群组', formatCount(this.myGroupsCount), '查看我加入的圈子', AppIcon.GROUP, () => this.openMyGroups())
-      }
-      .width('100%')
-
-      Row({ space: DesignConstants.SPACING.MD }) {
-        this.StatCard('关注', formatCount(this.myFollowingCount), '我关注的用户', AppIcon.PERSON, () => this.openSearchPeople())
-        this.StatCard('粉丝', formatCount(this.myFollowersCount), '谁关注了我', AppIcon.HEART, () => this.openSearchPeople())
+    Column({ space: DesignConstants.SPACING.MD }) {
+      Row({ space: DesignConstants.SPACING.SM }) {
+        this.CompactStatItem(AppIcon.CAMERA, formatCount(this.myMomentsCount), '瞬间', () => this.openMyMoments())
+        this.CompactStatItem(AppIcon.GROUP, formatCount(this.myGroupsCount), '群组', () => this.openMyGroups())
+        this.CompactStatItem(AppIcon.PERSON, formatCount(this.myFollowingCount), '关注', () => this.openSearchPeople())
+        this.CompactStatItem(AppIcon.HEART, formatCount(this.myFollowersCount), '粉丝', () => this.openSearchPeople())
       }
       .width('100%')
     }
@@ -1418,42 +1408,34 @@ export struct ProfilePage {
   }
 
   @Builder
-  private StatCard(title: string, value: string, description: string, icon: AppIcon, onTap: () => void): void {
+  private CompactStatItem(icon: AppIcon, value: string, label: string, onTap: () => void): void {
     Button() {
-      Column({ space: DesignConstants.SPACING.SM }) {
-        Row({ space: DesignConstants.SPACING.SM }) {
-          Text() {
-            SymbolSpan($r(icon))
-              .fontSize(18)
-              .fontColor([this.getProfileVisualStyle().metricCard.iconColor])
-          }
-          Text(title)
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor(this.getSecondaryTextColor())
-            .layoutWeight(1)
+      Column({ space: DesignConstants.SPACING.XS }) {
+        Text() {
+          SymbolSpan($r(icon))
+            .fontSize(16)
+            .fontColor([this.getAccentBackground()])
         }
         Text(value)
-          .fontSize(this.getProfileVisualStyle().metricCard.valueFontSize)
+          .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Bold)
           .fontColor(this.getPrimaryTextColor())
-        Text(description)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
+        Text(label)
+          .fontSize(DesignConstants.FONT.SIZE.XS)
           .fontColor(this.getSecondaryTextColor())
       }
       .width('100%')
-      .alignItems(HorizontalAlign.Start)
+      .alignItems(HorizontalAlign.Center)
+      .justifyContent(FlexAlign.Center)
     }
     .type(ButtonType.Normal)
-    .backgroundColor(this.getProfileVisualStyle().metricCard.backgroundColor)
-    .borderRadius(this.getProfileVisualStyle().metricCard.borderRadius)
-    .shadow(this.getProfileVisualStyle().metricCard.shadow)
-    .border({ width: this.getProfileVisualStyle().metricCard.borderWidth, color: this.getProfileVisualStyle().metricCard.borderColor })
-    .padding(this.getProfileVisualStyle().metricCard.padding)
-    .height(this.getProfileVisualStyle().metricCard.minHeight ?? 164)
+    .backgroundColor(this.getSurfaceBackground())
+    .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+    .border({ width: 1, color: this.getSurfaceBorder() })
+    .shadow(this.getProfileVisualStyle().card.shadow)
+    .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
     .layoutWeight(1)
     .stateEffect(true)
-    .scale(this.pressedMenuItemKey === title ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })
-    .animation({ duration: 120, curve: Curve.EaseOut })
     .onClick(onTap)
   }
 
