@@ -13,6 +13,7 @@ import {
   FollowerItem
 } from '../../../core/types/api';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -97,6 +98,10 @@ export struct SettingsSectionCard {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
+  private getCardStyle() {
+    return AppThemeVisuals.getElevatedCardStyle(this.resolvedThemeId);
+  }
+
   build() {
     Column({ space: DesignConstants.SPACING.SM }) {
       Text(this.title)
@@ -109,10 +114,10 @@ export struct SettingsSectionCard {
         this.content();
       }
       .width('100%')
-      .backgroundColor(this.getPalette().surfaceBackground)
-      .borderRadius(DesignConstants.SHAPE.HERO_CARD)
-      .shadow(this.getPalette().elevatedShadow)
-      .border({ width: 1, color: this.getPalette().borderColor })
+      .backgroundColor(this.getCardStyle().backgroundColor)
+      .borderRadius(this.getCardStyle().borderRadius)
+      .shadow(this.getCardStyle().shadow)
+      .border({ width: this.getCardStyle().borderWidth, color: this.getCardStyle().borderColor })
     }
     .width('100%')
   }
@@ -127,6 +132,10 @@ export struct SettingsEntryRow {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
+  private getListItemStyle() {
+    return AppThemeVisuals.getListItemCardStyle(this.resolvedThemeId);
+  }
+
   build() {
     Row({ space: DesignConstants.SPACING.MD }) {
       Row() {
@@ -136,12 +145,12 @@ export struct SettingsEntryRow {
             .fontColor([this.item.accentColor ? this.item.accentColor : this.getPalette().accentBackground])
         }
       }
-      .width(42)
-      .height(42)
-      .borderRadius(DesignConstants.SHAPE.ICON_TILE)
-      .backgroundColor(this.item.accentColor ? this.getPalette().surfaceBackground : this.getPalette().surfaceSubtle)
-      .border({ width: 1, color: this.item.accentColor ? this.item.accentColor : this.getPalette().borderColor })
-      .shadow(this.getPalette().controlShadow)
+      .width(44)
+      .height(44)
+      .borderRadius(DesignConstants.RADIUS.XL)
+      .backgroundColor(this.item.accentColor ? this.getPalette().surfaceSubtle : this.getPalette().surfaceElevated)
+      .border({ width: 1, color: this.item.accentColor ? this.item.accentColor : this.getPalette().floatingBorderColor })
+      .shadow(this.getPalette().surfaceShadow)
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
 
@@ -171,6 +180,8 @@ export struct SettingsEntryRow {
     }
     .width('100%')
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+    .backgroundColor(this.getListItemStyle().backgroundColor)
+    .borderRadius(this.getListItemStyle().borderRadius)
     .onClick(this.item.action)
   }
 }
@@ -343,8 +354,8 @@ export struct AnnouncementSummaryCard {
             .type(ButtonType.Normal)
             .backgroundColor(this.getPalette().surfaceSubtle)
             .fontColor(this.getPalette().accentBackground)
-            .borderRadius(DesignConstants.RADIUS.FULL)
-            .border({ width: 1, color: this.getPalette().borderColor })
+            .borderRadius(DesignConstants.RADIUS.XL)
+            .border({ width: 1, color: this.getPalette().floatingBorderColor })
             .height(34)
             .onClick(this.openAll)
         }
@@ -386,9 +397,9 @@ export struct AnnouncementSummaryCard {
           }
           .width('100%')
           .padding(DesignConstants.SPACING.MD)
-          .backgroundColor(this.getPalette().surfaceSubtle)
-          .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
-          .border({ width: 1, color: this.getPalette().borderColor })
+          .backgroundColor(this.getPalette().surfaceElevated)
+          .borderRadius(DesignConstants.RADIUS.XXL)
+          .border({ width: 1, color: this.getPalette().floatingBorderColor })
         }, (item: SystemAnnouncementItem) => item.announcement_id)
       }
     }
@@ -435,8 +446,8 @@ export struct SupportConfigCard {
         }
         .width('100%')
         .padding(DesignConstants.SPACING.MD)
-        .backgroundColor(this.getPalette().surfaceSubtle)
-        .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+        .backgroundColor(this.getPalette().surfaceElevated)
+        .borderRadius(DesignConstants.RADIUS.XXL)
       }
     }
     .width('100%')
@@ -511,8 +522,8 @@ export struct SessionListSection {
             .type(ButtonType.Normal)
             .backgroundColor(this.getPalette().surfaceSubtle)
             .fontColor(this.getPalette().accentBackground)
-            .borderRadius(DesignConstants.RADIUS.FULL)
-            .border({ width: 1, color: this.getPalette().borderColor })
+            .borderRadius(DesignConstants.RADIUS.XL)
+            .border({ width: 1, color: this.getPalette().floatingBorderColor })
             .height(34)
             .onClick(this.revokeAll)
         }
@@ -547,8 +558,8 @@ export struct SessionListSection {
                 .type(ButtonType.Normal)
                 .backgroundColor(this.getPalette().surfaceSubtle)
                 .fontColor(this.getPalette().accentBackground)
-                .borderRadius(DesignConstants.RADIUS.FULL)
-                .border({ width: 1, color: this.getPalette().borderColor })
+                .borderRadius(DesignConstants.RADIUS.XL)
+                .border({ width: 1, color: this.getPalette().floatingBorderColor })
                 .height(34)
                 .onClick(() => this.revokeOne(item))
             } else {
@@ -562,9 +573,9 @@ export struct SessionListSection {
           }
           .width('100%')
           .padding(DesignConstants.SPACING.MD)
-          .backgroundColor(this.getPalette().surfaceSubtle)
-          .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
-          .border({ width: 1, color: this.getPalette().borderColor })
+          .backgroundColor(this.getPalette().surfaceElevated)
+          .borderRadius(DesignConstants.RADIUS.XXL)
+          .border({ width: 1, color: this.getPalette().floatingBorderColor })
         }, (item: SessionItem) => item.session_id)
       }
     }

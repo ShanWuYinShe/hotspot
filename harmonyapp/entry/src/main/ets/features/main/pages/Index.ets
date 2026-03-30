@@ -751,27 +751,36 @@ struct Index {
    */
   @Builder
   TabBuilderIcon(title: string, targetIndex: number, icon: AppIcon) {
-    Column() {
-      Row() {
-        Text() {
-            SymbolSpan($r(icon))
-              .fontSize(23)
-              .fontColor([this.currentTabIndex === targetIndex
-                ? this.getBrandAccent()
-                : this.getTabInactiveColor()])
+    Column({ space: 4 }) {
+      Column({ space: 5 }) {
+        Row() {
+          Text() {
+              SymbolSpan($r(icon))
+                .fontSize(this.currentTabIndex === targetIndex ? 24 : 22)
+                .fontColor([this.currentTabIndex === targetIndex ? this.getBrandAccent() : this.getTabInactiveColor()])
+          }
         }
+        .width(52)
+        .height(32)
+        .justifyContent(FlexAlign.Center)
+        .backgroundColor(this.currentTabIndex === targetIndex ? this.getTabBarVisualStyle().activeBackgroundColor : Color.Transparent)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .shadow(this.currentTabIndex === targetIndex
+          ? this.getTabBarVisualStyle().activeGlow
+          : { radius: 0, color: 'transparent', offsetX: 0, offsetY: 0 })
+
+        Row()
+          .width(this.currentTabIndex === targetIndex ? this.getTabBarVisualStyle().indicatorWidth : 10)
+          .height(this.getTabBarVisualStyle().indicatorHeight)
+          .borderRadius(this.getTabBarVisualStyle().indicatorBorderRadius)
+          .backgroundColor(this.currentTabIndex === targetIndex ? this.getBrandAccent() : Color.Transparent)
       }
-      .width(48)
-      .height(28)
-      .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
 
       Text(title)
-        .fontColor(this.currentTabIndex === targetIndex
-          ? this.getBrandAccent()
-          : this.getTabInactiveColor())
+        .fontColor(this.currentTabIndex === targetIndex ? this.getBrandAccent() : this.getTabInactiveColor())
         .fontSize(DesignConstants.FONT.SIZE.XS)
-        .margin({ top: 2 })
-        .fontWeight(this.currentTabIndex === targetIndex ? FontWeight.Medium : FontWeight.Normal)
+        .fontWeight(this.currentTabIndex === targetIndex ? FontWeight.Bold : FontWeight.Medium)
     }
     .width('100%')
     .height(this.getTabBarVisualStyle().itemHeight)
@@ -788,7 +797,7 @@ struct Index {
       /** 中间「+」发布按钮 Builder */
   @Builder
   CreateTabBuilder() {
-    Column() {
+    Column({ space: 4 }) {
       Row() {
         Text() {
           SymbolSpan($r(AppIcon.ADD))
@@ -801,11 +810,16 @@ struct Index {
       .justifyContent(FlexAlign.Center)
       .backgroundColor(this.currentTabIndex === 2 ? this.getTabBarVisualStyle().activeBackgroundColor : this.getBrandAccent())
       .borderRadius(DesignConstants.RADIUS.FULL)
+      .shadow(this.currentTabIndex === 2 ? this.getTabBarVisualStyle().activeGlow : this.getTabBarVisualStyle().shadow)
+      .border({
+        width: this.getTabBarVisualStyle().borderWidth,
+        color: this.currentTabIndex === 2 ? this.getBrandAccent() : this.getTabBarVisualStyle().borderColor
+      })
 
       Text('发布')
         .fontColor(this.currentTabIndex === 2 ? this.getBrandAccent() : this.getTabInactiveColor())
         .fontSize(DesignConstants.FONT.SIZE.XS)
-        .margin({ top: 2 })
+        .fontWeight(this.currentTabIndex === 2 ? FontWeight.Bold : FontWeight.Medium)
     }
     .width('100%')
     .height(this.getTabBarVisualStyle().itemHeight)

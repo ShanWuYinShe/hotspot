@@ -115,7 +115,7 @@ def ensure_dependencies_present(harmony_root: Path) -> None:
     if oh_modules.exists():
         return
     raise RuntimeError(
-        f"缺少依赖目录: {oh_modules}。如已获得用户授权，可使用 --install 通过受控脚本安装依赖后重试。"
+        f"缺少依赖目录: {oh_modules}。请在当前 worktree 中使用 --install 通过受控脚本安装依赖后重试。"
     )
 
 
@@ -167,7 +167,7 @@ def summarize_failure(result: CommandResult) -> list[str]:
 def main() -> int:
     parser = argparse.ArgumentParser(description="在非主目录 worktree 中受控运行 Harmony 检查与编译")
     parser.add_argument("--harmony-root", help="Harmony 工程目录，默认 <repo>/harmonyapp")
-    parser.add_argument("--install", action="store_true", help="在获得用户授权时，通过受控脚本先执行 ohpm install")
+    parser.add_argument("--install", action="store_true", help="在当前 worktree 中，通过受控脚本先执行 ohpm install")
     args = parser.parse_args()
 
     cwd = Path.cwd().resolve()

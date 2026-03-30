@@ -26,9 +26,9 @@ const MAX_HISTORY_ITEMS: number = 5;
 const PANEL_SNAP_MIN: number = 120;       // 收起：手柄 + 搜索栏 + 确认按钮
 const PANEL_SNAP_HALF: number = 224;      // 半展开：显示部分历史记录
 const PANEL_SNAP_MAX: number = 392;       // 全展开：完整内容
-const DEFAULT_GESTURE_HINT: string = '双击（桌面）或长按（移动端）地图可快速定位';
-const DOUBLE_CLICK_PLACEMENT_HINT: string = '已通过双击定位到该位置';
-const LONG_PRESS_PLACEMENT_HINT: string = '已通过长按定位到该位置';
+const DEFAULT_GESTURE_HINT: string = '长按地图即可快速选点';
+const DOUBLE_CLICK_PLACEMENT_HINT: string = '已为你定位到该位置';
+const LONG_PRESS_PLACEMENT_HINT: string = '已为你定位到该位置';
 const ANCHOR_PLACEMENT_HINT: string = '已回到浏览锚点位置';
 const GENERIC_PLACEMENT_HINT: string = '已定位到该位置';
 const MARKER_COLOR_PICKER: string = DesignConstants.MAP_MARKER.PICKER;
@@ -153,6 +153,7 @@ interface FilterMenuItemProps {
   label: string;
   accentColor: string;
   active: boolean;
+  resolvedThemeId?: string;
   onToggle: () => void;
 }
 
@@ -167,8 +168,8 @@ function FilterMenuItem(props: FilterMenuItemProps) {
       .fontSize(DesignConstants.FONT.SIZE.MD)
       .fontWeight(props.active ? FontWeight.Medium : FontWeight.Normal)
       .fontColor(props.active
-        ? $r('sys.color.ohos_id_color_text_primary')
-        : $r('sys.color.ohos_id_color_text_secondary'))
+        ? resolveLocationPickerPalette(props.resolvedThemeId).textPrimary
+        : resolveLocationPickerPalette(props.resolvedThemeId).textSecondary)
       .layoutWeight(1)
     Row()
       .width(12)
@@ -180,7 +181,9 @@ function FilterMenuItem(props: FilterMenuItemProps) {
   .width('100%')
   .height(48)
   .padding({ left: 14, right: 16 })
-  .backgroundColor(props.active ? DesignConstants.COLOR.PRIMARY_BG_DARK : Color.Transparent)
+  .backgroundColor(props.active
+    ? resolveLocationPickerPalette(props.resolvedThemeId).surfaceSubtle
+    : Color.Transparent)
   .borderRadius(DesignConstants.RADIUS.XL)
   .opacity(props.active ? 1.0 : DesignConstants.OPACITY.SUBTLE)
   .onClick(() => props.onToggle())
@@ -204,6 +207,7 @@ function FilterDropdownPanel(props: FilterPanelProps) {
       label: '用户',
       accentColor: MARKER_COLOR_USER,
       active: props.showUsers,
+      resolvedThemeId: props.resolvedThemeId,
       onToggle: props.onToggleUsers
     })
     FilterMenuItem({
@@ -211,6 +215,7 @@ function FilterDropdownPanel(props: FilterPanelProps) {
       label: '群组',
       accentColor: MARKER_COLOR_GROUP,
       active: props.showGroups,
+      resolvedThemeId: props.resolvedThemeId,
       onToggle: props.onToggleGroups
     })
     FilterMenuItem({
@@ -218,6 +223,7 @@ function FilterDropdownPanel(props: FilterPanelProps) {
       label: '动态',
       accentColor: MARKER_COLOR_MOMENT,
       active: props.showMoments,
+      resolvedThemeId: props.resolvedThemeId,
       onToggle: props.onToggleMoments
     })
   }
@@ -243,11 +249,12 @@ function MapToast(props: MapToastProps) {
   } else {
     Text(props.message)
       .fontSize(DesignConstants.FONT.SIZE.SM)
-      .fontColor($r('sys.color.ohos_id_color_text_primary'))
-      .backgroundColor(resolveLocationPickerPalette(props.resolvedThemeId).surfaceBackground)
-      .borderRadius(DesignConstants.RADIUS.MD)
-      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: 6, bottom: 6 })
-      .position({ top: SafeAreaUtils.resolveTopPadding(props.safeAreaTop, 100), left: 16 })
+      .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
+      .backgroundColor(resolveLocationPickerPalette(props.resolvedThemeId).surfaceElevated)
+      .borderRadius(DesignConstants.RADIUS.XL)
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: 8, bottom: 8 })
+      .shadow(DesignConstants.SHADOW.SMALL)
+      .position({ top: SafeAreaUtils.resolveTopPadding(props.safeAreaTop, 76), left: 20, right: 20 })
       .onClick(() => {})
       .transition(
         TransitionEffect.OPACITY.animation({ duration: 280, curve: Curve.FastOutSlowIn })

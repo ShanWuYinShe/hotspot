@@ -236,12 +236,12 @@ export class AppThemeVisuals {
     const style: ThemeButtonVisualStyle = {
       backgroundColor: palette.buttonSecondaryBackground,
       textColor: palette.buttonSecondaryText,
-      borderColor: palette.borderColor,
+      borderColor: palette.floatingBorderColor,
       borderWidth: 1,
-      shadow: palette.controlShadow,
-      borderRadius: palette.visuals.shape.button,
+      shadow: palette.visuals.effects.previewShadow,
+      borderRadius: Math.max(palette.visuals.shape.button - 2, DesignConstants.RADIUS.XL),
       height: palette.visuals.metrics.actionButtonHeight,
-      horizontalPadding: DesignConstants.SPACING.LG
+      horizontalPadding: DesignConstants.SPACING.XL
     };
     AppThemeVisuals.secondaryButtonCache.set(key, style);
     return style;
@@ -255,14 +255,14 @@ export class AppThemeVisuals {
     }
     const palette = AppThemeVisuals.getPalette(themeId);
     const style: ThemeButtonVisualStyle = {
-      backgroundColor: palette.accentMuted,
-      textColor: palette.textOnAccentMuted,
+      backgroundColor: palette.accentBackground,
+      textColor: palette.accentText,
       borderColor: palette.floatingBorderColor,
       borderWidth: 1,
-      shadow: palette.accentShadow,
-      borderRadius: palette.visuals.shape.button,
+      shadow: palette.visuals.effects.highlightShadow,
+      borderRadius: Math.max(palette.visuals.shape.button - 2, DesignConstants.RADIUS.XL),
       height: palette.visuals.metrics.profilePrimaryButtonHeight,
-      horizontalPadding: palette.visuals.metrics.profilePrimaryButtonHorizontalPadding
+      horizontalPadding: palette.visuals.metrics.profilePrimaryButtonHorizontalPadding + DesignConstants.SPACING.XS
     };
     AppThemeVisuals.primaryButtonCache.set(key, style);
     return style;
@@ -390,9 +390,9 @@ export class AppThemeVisuals {
       floatingMargin: palette.visuals.metrics.tabBarFloatingMargin,
       createButtonWidth: palette.visuals.metrics.createButtonWidth,
       createButtonHeight: palette.visuals.metrics.createButtonHeight,
-      indicatorWidth: 16,
-      indicatorHeight: 3,
-      indicatorBorderRadius: 1.5,
+      indicatorWidth: 22,
+      indicatorHeight: 4,
+      indicatorBorderRadius: 2,
       itemHeight: palette.visuals.metrics.tabBarHeight
     };
     AppThemeVisuals.tabBarCache.set(key, style);

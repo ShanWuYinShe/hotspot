@@ -872,9 +872,11 @@ export struct ProfilePage {
             .backgroundColor(this.getProfileVisualStyle().primaryButton.backgroundColor)
             .fontColor(this.getProfileVisualStyle().primaryButton.textColor)
             .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontWeight(FontWeight.Bold)
             .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
             .shadow(this.getProfileVisualStyle().primaryButton.shadow)
             .border({ width: this.getProfileVisualStyle().primaryButton.borderWidth, color: this.getProfileVisualStyle().primaryButton.borderColor })
+            .padding({ left: this.getProfileVisualStyle().primaryButton.horizontalPadding, right: this.getProfileVisualStyle().primaryButton.horizontalPadding })
             .onClick(() => {
               this.showQuickStart = true;
             })
@@ -886,9 +888,11 @@ export struct ProfilePage {
             .backgroundColor(this.getProfileVisualStyle().secondaryButton.backgroundColor)
             .fontColor(this.getProfileVisualStyle().secondaryButton.textColor)
             .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontWeight(FontWeight.Medium)
             .borderRadius(this.getProfileVisualStyle().secondaryButton.borderRadius)
             .shadow(this.getProfileVisualStyle().secondaryButton.shadow)
             .border({ width: this.getProfileVisualStyle().secondaryButton.borderWidth, color: this.getProfileVisualStyle().secondaryButton.borderColor })
+            .padding({ left: this.getProfileVisualStyle().secondaryButton.horizontalPadding, right: this.getProfileVisualStyle().secondaryButton.horizontalPadding })
             .onClick(() => {
               AppRouter.push(PageNames.LOGIN);
             })
@@ -1007,12 +1011,17 @@ export struct ProfilePage {
             .fontColor(this.getSecondaryTextColor())
 
           Button('升级为完整账号')
-            .type(ButtonType.Capsule)
+            .type(ButtonType.Normal)
             .backgroundColor(this.getProfileVisualStyle().primaryButton.backgroundColor)
             .fontColor(this.getProfileVisualStyle().primaryButton.textColor)
             .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontWeight(FontWeight.Bold)
             .width('100%')
             .height(this.getProfileVisualStyle().primaryButton.height)
+            .padding({
+              left: this.getProfileVisualStyle().primaryButton.horizontalPadding,
+              right: this.getProfileVisualStyle().primaryButton.horizontalPadding
+            })
             .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
             .border({ width: this.getProfileVisualStyle().primaryButton.borderWidth, color: this.getProfileVisualStyle().primaryButton.borderColor })
             .shadow(this.getProfileVisualStyle().primaryButton.shadow)
@@ -1277,7 +1286,7 @@ export struct ProfilePage {
       .alignItems(HorizontalAlign.Center)
 
       Button('编辑资料')
-        .type(ButtonType.Capsule)
+        .type(ButtonType.Normal)
         .width('100%')
         .height(this.getProfileVisualStyle().primaryButton.height)
         .padding({
@@ -1319,7 +1328,7 @@ export struct ProfilePage {
             avatarSize: 80
           })
         }
-        .type(ButtonType.Capsule)
+        .type(ButtonType.Normal)
         .backgroundColor(Color.Transparent)
         .enabled(!this.isLoading && !this.isAvatarUploading)
         .opacity(this.isLoading || this.isAvatarUploading ? DesignConstants.OPACITY.LOADING : 1)

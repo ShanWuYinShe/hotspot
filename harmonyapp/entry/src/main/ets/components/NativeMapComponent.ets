@@ -122,7 +122,7 @@ interface ClusterItemCandidate {
 @Component
 export struct NativeMapComponent {
   @Watch('onDarkModeChange') @StorageProp('isDarkMode') isDarkMode: boolean = false;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  @Watch('onResolvedThemeIdChange') @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
   @Watch('onRegionChangeProp') @Prop mapRegion: MapRegion = {
     latitude: 39.9042,
     longitude: 116.4074,
@@ -303,6 +303,14 @@ export struct NativeMapComponent {
    * 监听深色模式变化，切换地图夜间样式
    */
   onDarkModeChange() {
+    this.syncMapThemeMode();
+  }
+
+  onResolvedThemeIdChange() {
+    this.syncMapThemeMode();
+  }
+
+  private syncMapThemeMode(): void {
     if (this.isMapReady && this.mapController) {
       try {
         this.mapController.setDayNightMode(
