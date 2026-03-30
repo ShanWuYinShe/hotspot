@@ -17,7 +17,7 @@ $ARGUMENTS
 3. 分析任务：根据复杂度和文件集决定是否拆分为多个子任务；子任务边界清晰且文件集相对独立时才并行，否则保持单任务。
 4. 对非极小任务，优先进入 plan mode；然后立即建立 task list。
 5. **必须使用 `EnterWorktree` 工具**从主目录当前最新本地 `main HEAD` 创建新的 feature worktree；`name` 参数必须遵循 `{子项目名}.{模块名}.{功能描述}` 格式（如 `backend-go.auth.add-oauth`），允许的子项目名见根 `CLAUDE.md`；任何 implement 行为开始前都必须已经在该 worktree 中。
-6. 在该 feature worktree 中完成 `实现 → check(语法/编译/警告) → test → simplify → strict review → commit` 闭环；任一环节发现问题必须修复后重新循环。最终有效结论以 `deploy/scripts/verify.sh --env-name <name>` 为准；若改动涉及 `harmonyapp/`，还必须额外在非主目录 worktree 中运行 `.claude/scripts/harmony_check.py`，并在编译失败时按错误修复后重跑同一入口，直到通过或明确阻塞。在 worktree 内可直接通过 `--install` 执行依赖安装，完成 Harmony 安装、编译与测试闭环。
+6. 在该 feature worktree 中完成 `实现 → check(语法/编译/警告) → test → simplify → strict review → commit` 闭环；任一环节发现问题必须修复后重新循环。最终有效结论以 `deploy/scripts/verify.sh --env-name <name>` 为准；若改动涉及 `harmonyapp/`，还必须额外在非主目录 worktree 中运行 `.claude/scripts/harmony_worktree.py`，并在失败时按错误修复后重跑同一入口，直到通过或明确阻塞。该脚本直接基于当前 worktree 执行，不需要额外 `cd`，统一完成 Harmony 安装、测试与编译闭环。
 7. 若改动触达前端展示层，追加 `verify-inspect` 环节，由 Claude Code 主动完成页面级确认。
 8. 完成 simplify 和严格 review 后，必须调用 `feature-ready-check` subagent 做最终复核，并在输出中复述其 `## 结论`、`## 阻塞项`、`## 建议下一步`。
 9. 若本任务为单 worktree，进入 `/sync_back_main`；若为多子任务汇总，进入 integration。远程同步策略以根 `CLAUDE.md` 与 `/sync_back_main` 为准。

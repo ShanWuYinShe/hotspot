@@ -16,11 +16,6 @@ SAFE_SHELL_PATTERNS = (
     re.compile(r"^chmod(?:\s|$)"),
     re.compile(r"^sleep(?:\s|$)"),
     re.compile(r"^curl(?:\s|$)"),
-    re.compile(r"^ohpm(?:\s|$)"),
-    re.compile(r"^hvigorw(?:\s|$)"),
-    re.compile(r"^\./hvigorw(?:\s|$)"),
-    re.compile(r"^harmonyapp/hvigorw(?:\s|$)"),
-    re.compile(r"^\./harmonyapp/hvigorw(?:\s|$)"),
     re.compile(r"^(?:\./)?deploy/scripts/[a-z0-9-]+\.sh(?:\s|$)"),
     re.compile(r"^bash\s+(?:\./)?deploy/scripts/[a-z0-9-]+\.sh(?:\s|$)"),
     re.compile(r"^python3?\s+(?:\./)?\.claude/scripts/[a-zA-Z0-9_./-]+(?:\s|$)"),
@@ -100,7 +95,7 @@ def guard_bash(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
 
     for segment in segments:
         if is_blocked_runtime_segment(segment):
-            return deny("该命令会影响运行环境、产生较重副作用，或可能在多 agent 下冲突；请改用 deploy/ 标准入口或仓库控制脚本。Harmony 在非主目录 worktree 内可直接使用 .claude/scripts/harmony_check.py、ohpm、hvigorw 完成安装/编译/测试闭环。")
+            return deny("该命令会影响运行环境、产生较重副作用，或可能在多 agent 下冲突；请改用 deploy/ 标准入口或仓库控制脚本。Harmony 在非主目录 worktree 内应优先使用 .claude/scripts/harmony_worktree.py 完成安装/测试/编译闭环；脚本直接基于当前 worktree 执行，不需要额外 cd。")
         if not is_safe_shell_segment(segment):
             return deny("当前仓库的 Bash 默认只允许 git 控制面、deploy 入口、.claude 控制脚本，以及按副作用判定为安全的静态检查；其他命令请改用专用工具或受控脚本。")
 

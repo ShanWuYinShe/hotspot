@@ -73,7 +73,7 @@ HotSpot 是一个多端 monorepo：
 ### 原则
 - 只有 `verify` / `verify-inspect` 支持多 env / 多 worktree 并行；`preview` 只有一个实例。
 - `verify` 默认验证的是当前工作目录 / worktree，但执行发生在 Docker 隔离环境中，不应把宿主机运行结果视为最终验证结论。
-- 当前 `deploy/scripts/verify.sh` 只覆盖 `backend-go` 与 `frontend_svelte`；涉及 `harmonyapp/` 的任务，除仓库级 `verify` 外，还必须额外完成 `.claude/scripts/harmony_check.py` 的受控检查结果，才能视为子项目 check 环节通过。该脚本只允许在非主目录 worktree 中运行；在 worktree 内可直接通过 `--install` 执行依赖安装并继续完成 Harmony 安装、编译与测试闭环。
+- 当前 `deploy/scripts/verify.sh` 只覆盖 `backend-go` 与 `frontend_svelte`；涉及 `harmonyapp/` 的任务，除仓库级 `verify` 外，还必须额外完成 `.claude/scripts/harmony_worktree.py` 的受控结果，才能视为子项目 check/test 环节通过。该脚本只允许在非主目录 worktree 中运行，并应直接基于当前 worktree 执行，不需要额外 `cd`；可统一完成 Harmony 安装、测试与编译闭环。
 - `verify-inspect` 负责提供开发内环隔离环境，不替代候选环境；前端页面/UI 改动默认先过 `verify`，再由 Claude Code 基于 `verify-inspect` 提供的入口主动完成页面级确认，需要最终入口预演时再进入 `preview`。
 - 测试过程中产生的缓存、store、构建产物必须落在 `tmp/` 或容器临时目录，不能把 `.pnpm-store` 之类的临时目录写回仓库根。
 - `preview` / `release` 面向候选结果与确定性版本，不再承担多 env 开发隔离语义。
