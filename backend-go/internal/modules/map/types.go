@@ -21,9 +21,15 @@ type MapCanvasFilter struct {
 	TimeRange *TimeRangeParams `json:"time_range,omitempty"`
 }
 
+type PaginationParams struct {
+	Limit  int    `json:"limit,omitempty"`
+	Cursor string `json:"cursor,omitempty"`
+}
+
 type MapCanvasRequest struct {
-	Viewport MapViewport      `json:"viewport"`
-	Filter   *MapCanvasFilter `json:"filter,omitempty"`
+	Viewport   MapViewport       `json:"viewport"`
+	Filter     *MapCanvasFilter  `json:"filter,omitempty"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
 type GeoPoint struct {

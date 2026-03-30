@@ -3,6 +3,7 @@ package mapmodule
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/httpx"
@@ -17,6 +18,15 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
+func isValidMapDataType(dataType string) bool {
+	switch normalizeMapDataType(dataType) {
+	case "all", "user", "group", "moment":
+		return true
+	default:
+		return false
+	}
+}
+
 func (h *Handler) Canvas(w http.ResponseWriter, r *http.Request) {
 	var req MapCanvasRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -27,8 +37,40 @@ func (h *Handler) Canvas(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
+	if req.Filter != nil {
+		if !isValidMapDataType(req.Filter.DataType) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+			return
+		}
+		if req.Filter.TimeRange != nil {
+			var start, end time.Time
+			var err error
+			if req.Filter.TimeRange.StartTime != "" {
+				start, err = time.Parse(time.RFC3339, req.Filter.TimeRange.StartTime)
+				if err != nil {
+					httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+					return
+				}
+			}
+			if req.Filter.TimeRange.EndTime != "" {
+				end, err = time.Parse(time.RFC3339, req.Filter.TimeRange.EndTime)
+				if err != nil {
+					httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+					return
+				}
+			}
+			if !start.IsZero() && !end.IsZero() && start.After(end) {
+				httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+				return
+			}
+		}
+	}
 	resp, err := h.service.Canvas(r.Context(), req)
 	if err != nil {
+		if err == ErrInvalidCursor {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+			return
+		}
 		observability.L().Error("handler error",
 			"method", "Canvas",
 			"error", err,

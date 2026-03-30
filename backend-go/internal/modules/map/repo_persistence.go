@@ -1,11 +1,15 @@
 package mapmodule
 
-import "context"
+import (
+	"context"
+
+	"hotspot/backend-go/internal/platform/persistence"
+)
 
 type PersistenceRepository struct{ impl Repository }
 
-func NewPersistenceRepository() *PersistenceRepository {
-	return &PersistenceRepository{impl: NewInMemoryRepository()}
+func NewPersistenceRepository(factory *persistence.Factory) *PersistenceRepository {
+	return &PersistenceRepository{impl: NewPostgresRepository(factory, nil)}
 }
 
 func (r *PersistenceRepository) Heatmap(ctx context.Context, query canvasQuery) (MapHeatCanvas, error) {

@@ -2,6 +2,7 @@ package mapmodule
 
 import (
 	"context"
+	"time"
 
 	"hotspot/backend-go/internal/platform/geo"
 )
@@ -11,6 +12,11 @@ type canvasQuery struct {
 	Center     geo.Point
 	SpanMeters float64
 	Level      int
+	DataType   string
+	StartTime  time.Time
+	EndTime    time.Time
+	Limit      int
+	Cursor     string
 }
 
 type Repository interface {

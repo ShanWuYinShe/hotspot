@@ -32,7 +32,7 @@ func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.M
 		feed.NewModule(sharedAppConfig),
 		groupmessages.NewModule(factory),
 		groups.NewModule(factory),
-		mapmodule.NewModule(),
+		mapmodule.NewModule(factory),
 		media.NewModule(),
 		moments.NewModule(factory),
 		notifications.NewModule(factory),
