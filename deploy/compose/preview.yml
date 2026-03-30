@@ -126,6 +126,7 @@ services:
       - "${HOTSPOT_PREVIEW_HTTPS_PORT:-8443}:443"
     environment:
       HOTSPOT_HTTPS_REDIRECT_PORT: ${HOTSPOT_PREVIEW_HTTPS_PORT:-8443}
+      VITE_AMAP_JSCODE: ${VITE_AMAP_JSCODE:-}
     volumes:
       - ../nginx/hotspot.preview.nginx.conf:/etc/nginx/templates/default.conf.template:ro
       - ${HOTSPOT_TLS_CERT_PATH:?set HOTSPOT_TLS_CERT_PATH}:/etc/nginx/certs/tls.crt:ro

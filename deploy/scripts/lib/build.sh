@@ -70,6 +70,8 @@ run_frontend_artifact_build() {
     --user "$(host_uid):$(host_gid)" \
     -e HOME="$(runner_home_dir)" \
     -e XDG_CACHE_HOME="$(runner_home_dir)/.cache" \
+    -e "VITE_AMAP_KEY=${VITE_AMAP_KEY:-}" \
+    -e "VITE_AMAP_SERVICE_HOST=/_AMapService" \
     -v "$source_root:/workspace:ro" \
     -v "$artifact_dir:/out" \
     "$runner_image" \

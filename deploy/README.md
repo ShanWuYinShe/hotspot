@@ -88,6 +88,13 @@
   - `HOTSPOT_ALPINE_REPO`
 - 当前 `deploy/` 范围内没有 Rust Docker 构建链，因此这轮没有新增 cargo/rustup 镜像源配置；若后续引入 Rust Dockerfile，再单独补齐。
 
+## 高德地图（AMap）配置
+- 采用代理服务器转发方式，所有环境统一使用以下三个变量（均为可选，留空时地图功能降级）：
+  - `VITE_AMAP_KEY`：高德 JS API key，前端构建时注入
+  - `VITE_AMAP_SERVICE_HOST`：代理路径，默认 `/_AMapService`
+  - `VITE_AMAP_JSCODE`：安全密钥（jscode），由 nginx 代理层注入到转发请求中，不暴露给前端代码
+- 所有包含 nginx + 前端的环境（verify-inspect、preview）均已配置 `/_AMapService` 代理转发
+
 ## 目录结构
 - `compose/verify.yml`：verify 编排
 - `compose/preview.yml`：preview 编排

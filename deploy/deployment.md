@@ -227,7 +227,7 @@ deploy/
 - 纯静态检查如 `pnpm check`、`go vet` 若确认不会污染宿主环境，也可以直接在宿主环境执行
 - 测试与构建过程中产生的缓存、pnpm store、临时产物不得写回仓库根
 - preview 保留 HTTPS + nginx + MinIO + inspect 链
-- AMap 代理通过 `/_AMapService` 路径提供，前端通过 `VITE_AMAP_KEY` 和 `VITE_AMAP_SERVICE_HOST` 统一配置
+- AMap 采用代理服务器转发：nginx 通过 `/_AMapService` 代理并注入 `VITE_AMAP_JSCODE`；前端通过 `VITE_AMAP_KEY` 和 `VITE_AMAP_SERVICE_HOST` 配置
 - 数据保留 / 清理语义保留
 - 多 worktree 并行隔离只属于 verify
 
