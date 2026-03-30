@@ -147,3 +147,16 @@ func TestServiceCanvasClampsHotspotLimitTo200(t *testing.T) {
 		t.Fatalf("expected clamped limit 200, got %d", repo.lastHotQuery.Limit)
 	}
 }
+
+func TestServiceCanvasDefaultsDataTypeToAll(t *testing.T) {
+	repo := &stubMapRepository{hotspotsResp: MapHotspotsCanvas{Items: []MapHotspotItem{{ObjectType: "user", ObjectID: "u1"}}}}
+	service := NewServiceWithRepo(repo)
+
+	_, err := service.Canvas(context.Background(), MapCanvasRequest{Viewport: MapViewport{Bounds: Bounds{North: 0.2, South: 0, East: 0.2, West: 0}}})
+	if err != nil {
+		t.Fatalf("Canvas returned error: %v", err)
+	}
+	if repo.lastHotQuery.DataType != "all" {
+		t.Fatalf("expected default data type all, got %#v", repo.lastHotQuery)
+	}
+}

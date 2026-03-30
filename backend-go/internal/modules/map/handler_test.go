@@ -117,6 +117,18 @@ func TestCanvasReturnsHotspotsOnlyForSmallViewport(t *testing.T) {
 	}
 }
 
+func TestCanvasReturnsSuccessWithoutDataWhenRepositoryReturnsEmpty(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&handlerMapRepo{}))
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/canvas", strings.NewReader(`{"viewport":{"bounds":{"north":0.2,"south":0,"east":0.2,"west":0}}}`))
+
+	handler.Canvas(rr, req)
+	resp := decodeMapResponse(t, rr)
+	if resp.Code != 0 || resp.Data == nil || resp.Data.Heatmap != nil || resp.Data.Hotspots != nil {
+		t.Fatalf("unexpected response: %#v", resp)
+	}
+}
+
 type mapAPIResponse struct {
 	Code int                `json:"code"`
 	Data *MapCanvasResponse `json:"data,omitempty"`

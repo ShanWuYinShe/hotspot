@@ -155,6 +155,67 @@ func TestPostgresRepositoryTimeRangeOnlyAffectsMoments(t *testing.T) {
 	}
 }
 
+func TestPostgresRepositoryEndTimeFiltersMomentsOnly(t *testing.T) {
+	old := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	newer := time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC)
+	backend := &mapBackendStub{queryRowsByQuery: map[string][][]any{
+		queryMapCanvasUsers:   {{"user_1", "u1", "", "loc", 35.0, 112.0, newer}},
+		queryMapCanvasMoments: {{"moment_old", "old moment", "loc", 35.0, 112.0, old}, {"moment_new", "new moment", "loc", 35.0, 112.0, newer}},
+	}}
+	repo := NewPostgresRepository(newMapFactory(backend), nil)
+
+	resp, err := repo.Hotspots(context.Background(), canvasQuery{Bounds: testMapBounds(), Center: testMapCenter(), Limit: 10, DataType: "all", EndTime: time.Date(2026, 3, 2, 0, 0, 0, 0, time.UTC)})
+	if err != nil {
+		t.Fatalf("Hotspots returned error: %v", err)
+	}
+	if len(resp.Items) != 2 {
+		t.Fatalf("expected user plus filtered moment, got %#v", resp.Items)
+	}
+	for _, item := range resp.Items {
+		if item.ObjectID == "moment_new" {
+			t.Fatalf("expected new moment filtered out, got %#v", resp.Items)
+		}
+	}
+}
+
+func TestPostgresRepositoryHeatmapAppliesDataTypeFilter(t *testing.T) {
+	base := time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC)
+	backend := &mapBackendStub{queryRowsByQuery: map[string][][]any{
+		queryMapCanvasUsers: {
+			{"user_1", "u1", "", "same", 35.0, 112.0, base},
+			{"user_2", "u2", "", "same", 35.0, 112.0, base},
+		},
+		queryMapCanvasGroups: {
+			{"group_1", "g1", "", "same", 35.0, 112.0},
+		},
+	}}
+	repo := NewPostgresRepository(newMapFactory(backend), nil)
+
+	resp, err := repo.Heatmap(context.Background(), canvasQuery{Bounds: testMapBounds(), Center: testMapCenter(), Level: 12, DataType: "user"})
+	if err != nil {
+		t.Fatalf("Heatmap returned error: %v", err)
+	}
+	if len(resp.Items) != 1 || resp.Items[0].TotalCount != 2 {
+		t.Fatalf("unexpected heatmap: %#v", resp.Items)
+	}
+	if resp.Items[0].Breakdown == nil || resp.Items[0].Breakdown.User != 2 {
+		t.Fatalf("unexpected breakdown: %#v", resp.Items[0])
+	}
+}
+
+func TestPostgresRepositoryReturnsEmptyWhenCursorPastEnd(t *testing.T) {
+	base := time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC)
+	items := []mapCandidate{{ObjectType: "user", ObjectID: "user_1", CreatedAt: base.Format(time.RFC3339), Distance: 1}}
+	cursor := encodeMapCursor(items[0])
+	resp, err := paginateHotspots(items, 10, cursor)
+	if err != nil {
+		t.Fatalf("paginateHotspots returned error: %v", err)
+	}
+	if len(resp.Items) != 0 || resp.NextCursor != "" {
+		t.Fatalf("expected empty page after cursor, got %#v", resp)
+	}
+}
+
 func TestPostgresRepositoryAggregatesHeatmapBreakdownAndSortsByTotalCount(t *testing.T) {
 	base := time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC)
 	backend := &mapBackendStub{queryRowsByQuery: map[string][][]any{
