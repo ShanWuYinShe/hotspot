@@ -845,16 +845,16 @@ export struct ProfilePage {
 
         Grid() {
           GridItem() {
-            this.buildFeatureCard($r(AppIcon.MAP), 'Explore', '发现附近热点与地图灵感')
+            this.buildFeatureCard($r(AppIcon.MAP), '附近', '发现附近热点与地图灵感')
           }
           GridItem() {
-            this.buildFeatureCard($r(AppIcon.SEARCH), 'Discover', '找到兴趣用户与内容线索')
+            this.buildFeatureCard($r(AppIcon.SEARCH), '发现', '找到兴趣用户与内容线索')
           }
           GridItem() {
-            this.buildFeatureCard($r(AppIcon.MESSAGE), 'Chats', '登录后开启实时对话')
+            this.buildFeatureCard($r(AppIcon.MESSAGE), '消息', '登录后开启实时对话')
           }
           GridItem() {
-            this.buildFeatureCard($r(AppIcon.EDIT), 'Create', '记录当下灵感与生活切片')
+            this.buildFeatureCard($r(AppIcon.EDIT), '发布', '记录当下灵感与生活切片')
           }
         }
         .columnsTemplate('1fr 1fr')
@@ -862,7 +862,7 @@ export struct ProfilePage {
         .rowsGap(DesignConstants.SPACING.MD)
         .columnsGap(DesignConstants.SPACING.MD)
         .width('100%')
-        .height(236)
+        .height(280)
 
         Column({ space: DesignConstants.SPACING.SM }) {
           Button('快速体验（无需注册）')
@@ -1243,11 +1243,6 @@ export struct ProfilePage {
             .textAlign(TextAlign.Center)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-          Text(this.userType === 'temp' ? '@guest.access' : '@hotspot.member')
-            .fontSize(this.getProfileVisualStyle().identity.subtitleFontSize)
-            .fontColor(this.getSecondaryTextColor())
-            .textAlign(TextAlign.Center)
         }
         .alignItems(HorizontalAlign.Center)
         .width('100%')
@@ -1281,7 +1276,7 @@ export struct ProfilePage {
       .width('100%')
       .alignItems(HorizontalAlign.Center)
 
-      Button('Edit Profile')
+      Button('编辑资料')
         .type(ButtonType.Capsule)
         .width('100%')
         .height(this.getProfileVisualStyle().primaryButton.height)
@@ -1298,15 +1293,15 @@ export struct ProfilePage {
         .onClick(() => this.startEdit())
 
       Row({ space: DesignConstants.SPACING.MD }) {
-        this.ProfileQuickAction(AppIcon.HEART, 'Connections', () => this.openRelationshipHub())
-        this.ProfileQuickAction(AppIcon.STAR, 'Saved', () => this.openAnnouncements())
-        this.ProfileQuickAction(AppIcon.SETTINGS, 'Settings', () => this.openSettingsCenter())
+        this.ProfileQuickAction(AppIcon.HEART, '关系', () => this.openRelationshipHub())
+        this.ProfileQuickAction(AppIcon.STAR, '收藏', () => this.openAnnouncements())
+        this.ProfileQuickAction(AppIcon.SETTINGS, '设置', () => this.openSettingsCenter())
       }
       .width('100%')
 
       Row({ space: DesignConstants.SPACING.MD }) {
-        this.ProfileIntentCard('My Vibe', 'Tactile, Calm, Serene', AppIcon.MAP, () => this.openPrivacySettings())
-        this.ProfileIntentCard('Preferences', 'Quiet Discovery, Minimalist Art', AppIcon.FILTER, () => this.openSafetySettings())
+        this.ProfileIntentCard('隐私偏好', '控制资料可见范围与互动设置', AppIcon.SHIELD, () => this.openPrivacySettings())
+        this.ProfileIntentCard('安全设置', '管理密码、登录设备与账号安全', AppIcon.LOCK, () => this.openSafetySettings())
       }
       .width('100%')
     }

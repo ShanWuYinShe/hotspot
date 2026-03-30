@@ -32,18 +32,6 @@ const DEFAULT_THEME_SHAPE: AppThemeShapeTokens = {
   iconTile: DesignConstants.SHAPE.ICON_TILE
 };
 
-const SOFT_THEME_SHAPE: AppThemeShapeTokens = {
-  surfaceCard: 20,
-  heroCard: 22,
-  compactCard: 24,
-  input: 22,
-  button: 24,
-  chip: 20,
-  tabBar: 0,
-  previewCard: 28,
-  listItem: 20,
-  iconTile: 14
-};
 const DEFAULT_THEME_METRICS: AppThemeMetricTokens = {
   cardPadding: DesignConstants.SPACING.LG,
   heroPadding: DesignConstants.SPACING.XL,
@@ -61,30 +49,6 @@ const DEFAULT_THEME_METRICS: AppThemeMetricTokens = {
   createButtonWidth: 54,
   createButtonHeight: 34,
   tabBarFloatingMargin: DesignConstants.SPACING.SM,
-  chatListRadius: DesignConstants.SHAPE.CARD,
-  chatSendButtonHeight: DesignConstants.CHAT.SEND_BUTTON_HEIGHT,
-  previewHeroAvatarSize: 28,
-  previewPrimaryButtonHeight: 14,
-  textureOpacity: DesignConstants.EFFECT.TEXTURE_SOFT
-};
-
-const SOFT_THEME_METRICS: AppThemeMetricTokens = {
-  cardPadding: DesignConstants.SPACING.LG,
-  heroPadding: DesignConstants.SPACING.XL,
-  metricCardPadding: DesignConstants.SPACING.LG,
-  profilePrimaryButtonHeight: 44,
-  profilePrimaryButtonHorizontalPadding: DesignConstants.SPACING.XXL,
-  profileAvatarSize: 80,
-  profileTitleFontSize: DesignConstants.FONT.SIZE.XXL,
-  profileSubtitleFontSize: DesignConstants.FONT.SIZE.LG,
-  profileMetricMinHeight: 140,
-  profileMetricValueFontSize: 22,
-  actionButtonHeight: 36,
-  listItemMinHeight: 72,
-  tabBarHeight: 56,
-  createButtonWidth: 54,
-  createButtonHeight: 34,
-  tabBarFloatingMargin: 0,
   chatListRadius: DesignConstants.SHAPE.CARD,
   chatSendButtonHeight: DesignConstants.CHAT.SEND_BUTTON_HEIGHT,
   previewHeroAvatarSize: 28,
@@ -186,95 +150,6 @@ const DEFAULT_CLEAN_DARK_VISUALS = buildVisualTokens(
   }
 );
 
-const SOFT_GALLERY_LIGHT_VISUALS = buildVisualTokens(
-  SOFT_THEME_SHAPE,
-  SOFT_THEME_METRICS,
-  {
-    avatarShadow: NO_SHADOW,
-    haloShadow: NO_SHADOW,
-    previewShadow: cloneShadow(ThemeConstants.SHADOWS.SOFT_GALLERY_LIGHT.elevated),
-    insetShadow: NO_SHADOW,
-    highlightShadow: NO_SHADOW,
-    tabActiveGlow: NO_SHADOW
-  }
-);
-
-const SOFT_GALLERY_DARK_VISUALS = buildVisualTokens(
-  SOFT_THEME_SHAPE,
-  SOFT_THEME_METRICS,
-  {
-    avatarShadow: NO_SHADOW,
-    haloShadow: NO_SHADOW,
-    previewShadow: cloneShadow(ThemeConstants.SHADOWS.SOFT_GALLERY_DARK.elevated),
-    insetShadow: NO_SHADOW,
-    highlightShadow: NO_SHADOW,
-    tabActiveGlow: NO_SHADOW
-  }
-);
-
-const EDITORIAL_GLOW_SHAPE: AppThemeShapeTokens = {
-  surfaceCard: DesignConstants.SHAPE.CARD + 10,
-  heroCard: DesignConstants.SHAPE.HERO_CARD + 12,
-  compactCard: DesignConstants.SHAPE.COMPACT_CARD + 10,
-  input: DesignConstants.SHAPE.INPUT + 8,
-  button: DesignConstants.SHAPE.BUTTON + 10,
-  chip: DesignConstants.SHAPE.CHIP + 8,
-  tabBar: DesignConstants.SHAPE.TAB_BAR + 12,
-  previewCard: DesignConstants.SHAPE.PREVIEW_CARD + 12,
-  listItem: DesignConstants.SHAPE.LIST_ITEM + 10,
-  iconTile: DesignConstants.SHAPE.ICON_TILE + 10
-};
-
-const EDITORIAL_GLOW_METRICS: AppThemeMetricTokens = {
-  cardPadding: DesignConstants.SPACING.XL + 6,
-  heroPadding: DesignConstants.SPACING.XXL + 10,
-  metricCardPadding: DesignConstants.SPACING.XL + 4,
-  profilePrimaryButtonHeight: 60,
-  profilePrimaryButtonHorizontalPadding: DesignConstants.SPACING.XXL + 18,
-  profileAvatarSize: 144,
-  profileTitleFontSize: DesignConstants.FONT.SIZE.XXXL - 2,
-  profileSubtitleFontSize: DesignConstants.FONT.SIZE.XXL - 2,
-  profileMetricMinHeight: 204,
-  profileMetricValueFontSize: 32,
-  actionButtonHeight: 52,
-  listItemMinHeight: 96,
-  tabBarHeight: 78,
-  createButtonWidth: 58,
-  createButtonHeight: 36,
-  tabBarFloatingMargin: DesignConstants.SPACING.MD,
-  chatListRadius: DesignConstants.SHAPE.CARD + 10,
-  chatSendButtonHeight: DesignConstants.CHAT.SEND_BUTTON_HEIGHT + 8,
-  previewHeroAvatarSize: 46,
-  previewPrimaryButtonHeight: 24,
-  textureOpacity: DesignConstants.EFFECT.TEXTURE_STRONG
-};
-
-const EDITORIAL_GLOW_LIGHT_VISUALS = buildVisualTokens(
-  EDITORIAL_GLOW_SHAPE,
-  EDITORIAL_GLOW_METRICS,
-  {
-    avatarShadow: cloneShadow(ThemeConstants.SHADOWS.EDITORIAL_GLOW_LIGHT.elevated),
-    haloShadow: new AppThemeShadow(42, '#54FFF7EB', 0, 0),
-    previewShadow: cloneShadow(ThemeConstants.SHADOWS.EDITORIAL_GLOW_LIGHT.elevated),
-    insetShadow: new AppThemeShadow(16, '#1BE3D7CA', 0, 6),
-    highlightShadow: new AppThemeShadow(24, '#55FFFFFF', 0, -4),
-    tabActiveGlow: new AppThemeShadow(36, '#42FFFFFF', 0, 0)
-  }
-);
-
-const EDITORIAL_GLOW_DARK_VISUALS = buildVisualTokens(
-  EDITORIAL_GLOW_SHAPE,
-  EDITORIAL_GLOW_METRICS,
-  {
-    avatarShadow: cloneShadow(ThemeConstants.SHADOWS.EDITORIAL_GLOW_DARK.elevated),
-    haloShadow: new AppThemeShadow(36, '#2FF1D0B0', 0, 0),
-    previewShadow: cloneShadow(ThemeConstants.SHADOWS.EDITORIAL_GLOW_DARK.elevated),
-    insetShadow: new AppThemeShadow(18, '#2A0C1320', 0, 8),
-    highlightShadow: new AppThemeShadow(20, '#26C7D0DC', 0, -4),
-    tabActiveGlow: new AppThemeShadow(28, '#38F1D0B0', 0, 0)
-  }
-);
-
 const DEFAULT_CLEAN_LIGHT = buildPalette(
   'default_clean_light',
   '当前默认',
@@ -295,51 +170,9 @@ const DEFAULT_CLEAN_DARK = buildPalette(
   false
 );
 
-const SOFT_GALLERY_LIGHT = buildPalette(
-  'soft_gallery_light',
-  'Tactile Minimalist',
-  '暖奶油底、极简轮廓、柔和桃色',
-  ThemeConstants.SOFT_GALLERY_LIGHT_COLORS,
-  ThemeConstants.SHADOWS.SOFT_GALLERY_LIGHT,
-  SOFT_GALLERY_LIGHT_VISUALS,
-  true
-);
-
-const SOFT_GALLERY_DARK = buildPalette(
-  'soft_gallery_dark',
-  'Tactile Minimalist',
-  '纯黑底、极简轮廓、金橙焦点',
-  ThemeConstants.SOFT_GALLERY_DARK_COLORS,
-  ThemeConstants.SHADOWS.SOFT_GALLERY_DARK,
-  SOFT_GALLERY_DARK_VISUALS,
-  false
-);
-
-const EDITORIAL_GLOW_LIGHT = buildPalette(
-  'editorial_glow_light',
-  'Editorial Glow',
-  '奶霜纸感、暖调浮雕、柔焦光晕',
-  ThemeConstants.EDITORIAL_GLOW_LIGHT_COLORS,
-  ThemeConstants.SHADOWS.EDITORIAL_GLOW_LIGHT,
-  EDITORIAL_GLOW_LIGHT_VISUALS,
-  true
-);
-
-const EDITORIAL_GLOW_DARK = buildPalette(
-  'editorial_glow_dark',
-  'Editorial Glow',
-  '深海夜幕、微光描边、暖金聚焦',
-  ThemeConstants.EDITORIAL_GLOW_DARK_COLORS,
-  ThemeConstants.SHADOWS.EDITORIAL_GLOW_DARK,
-  EDITORIAL_GLOW_DARK_VISUALS,
-  false
-);
-
 const THEME_OPTIONS: ThemeOptionItem[] = [
   { mode: 'follow_system', label: '跟随系统', description: '自动匹配系统明暗模式' } as ThemeOptionItem,
-  { mode: 'default_clean', label: '当前默认', description: '清爽、中性、稳妥的基础主题' } as ThemeOptionItem,
-  { mode: 'soft_gallery', label: 'Tactile Minimalist', description: '暖奶油 / 纯黑金橙 · 极简触感' } as ThemeOptionItem,
-  { mode: 'editorial_glow', label: 'Editorial Glow', description: '高保真纹理、柔光拟物、设计稿复刻基线' } as ThemeOptionItem
+  { mode: 'default_clean', label: '当前默认', description: '清爽、中性、稳妥的基础主题' } as ThemeOptionItem
 ];
 
 export class AppThemeManager {
@@ -402,14 +235,6 @@ export class AppThemeManager {
     switch (AppThemeManager.normalizeResolvedThemeId(resolvedThemeId)) {
       case 'default_clean_dark':
         return DEFAULT_CLEAN_DARK;
-      case 'soft_gallery_light':
-        return SOFT_GALLERY_LIGHT;
-      case 'soft_gallery_dark':
-        return SOFT_GALLERY_DARK;
-      case 'editorial_glow_light':
-        return EDITORIAL_GLOW_LIGHT;
-      case 'editorial_glow_dark':
-        return EDITORIAL_GLOW_DARK;
       case 'default_clean_light':
       default:
         return DEFAULT_CLEAN_LIGHT;
@@ -479,10 +304,6 @@ export class AppThemeManager {
       case 'follow_system':
       case 'default_clean':
         return isDarkMode ? 'default_clean_dark' : 'default_clean_light';
-      case 'soft_gallery':
-        return isDarkMode ? 'soft_gallery_dark' : 'soft_gallery_light';
-      case 'editorial_glow':
-        return isDarkMode ? 'editorial_glow_dark' : 'editorial_glow_light';
       default:
         return DEFAULT_RESOLVED_THEME_ID;
     }
@@ -491,16 +312,8 @@ export class AppThemeManager {
   private static normalizeThemeMode(themeMode: string): ThemeMode {
     switch (themeMode) {
       case 'default_clean':
-      case 'soft_gallery':
-      case 'editorial_glow':
       case 'follow_system':
         return themeMode;
-      case 'tactile_minimal':
-      case 'zen_artistic':
-        return 'soft_gallery';
-      case 'tactile_editorial':
-      case 'profile_signature':
-        return 'editorial_glow';
       default:
         return DEFAULT_THEME_MODE;
     }
@@ -509,24 +322,8 @@ export class AppThemeManager {
   private static normalizeResolvedThemeId(resolvedThemeId: string): ResolvedThemeId {
     switch (resolvedThemeId) {
       case 'default_clean_dark':
-      case 'soft_gallery_light':
-      case 'soft_gallery_dark':
-      case 'editorial_glow_light':
-      case 'editorial_glow_dark':
       case 'default_clean_light':
         return resolvedThemeId;
-      case 'tactile_minimal_light':
-      case 'zen_artistic_light':
-        return 'soft_gallery_light';
-      case 'tactile_minimal_dark':
-      case 'zen_artistic_dark':
-        return 'soft_gallery_dark';
-      case 'tactile_editorial_light':
-      case 'profile_signature_light':
-        return 'editorial_glow_light';
-      case 'tactile_editorial_dark':
-      case 'profile_signature_dark':
-        return 'editorial_glow_dark';
       default:
         return DEFAULT_RESOLVED_THEME_ID;
     }

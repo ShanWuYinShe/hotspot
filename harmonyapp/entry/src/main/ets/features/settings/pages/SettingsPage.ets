@@ -377,19 +377,6 @@ export struct SettingsPage {
                   .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
                   .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.XXL })
                   .onClick(() => { this.logout(); })
-              } else {
-                Button('登录 / 注册')
-                  .width('100%')
-                  .height(50)
-                  .backgroundColor(this.getCurrentThemePalette().accentBackground)
-                  .fontColor(this.getCurrentThemePalette().accentText)
-                  .fontSize(DesignConstants.FONT.SIZE.LG)
-                  .type(ButtonType.Normal)
-                  .borderRadius(DesignConstants.SHAPE.BUTTON)
-                  .shadow(this.getCurrentThemePalette().accentShadow)
-                  .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
-                  .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.XXL })
-                  .onClick(() => { AppRouter.push(PageNames.LOGIN); })
               }
             }
             .width('100%')

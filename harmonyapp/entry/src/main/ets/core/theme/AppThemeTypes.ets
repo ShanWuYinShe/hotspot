@@ -1,12 +1,8 @@
-export type ThemeMode = 'follow_system' | 'default_clean' | 'soft_gallery' | 'editorial_glow';
+export type ThemeMode = 'follow_system' | 'default_clean';
 
 export type ResolvedThemeId =
   | 'default_clean_light'
-  | 'default_clean_dark'
-  | 'soft_gallery_light'
-  | 'soft_gallery_dark'
-  | 'editorial_glow_light'
-  | 'editorial_glow_dark';
+  | 'default_clean_dark';
 
 export class AppThemeShadow {
   radius: number;
