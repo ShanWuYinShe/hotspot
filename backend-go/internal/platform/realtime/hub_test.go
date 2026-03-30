@@ -77,8 +77,8 @@ func TestHubBroadcastToUserSubscribersAllowsConcurrentSendsOnSameSink(t *testing
 	}()
 
 	<-sink.started
-	<-sink.started
 	sink.release <- struct{}{}
+	<-sink.started
 	sink.release <- struct{}{}
 	wg.Wait()
 
