@@ -38,7 +38,7 @@ func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.M
 		notifications.NewModule(factory),
 		privatechats.NewModule(factory, sharedAppConfig),
 		reports.NewModule(factory),
-		search.NewModule(sharedAppConfig),
+		search.NewModule(factory, sharedAppConfig),
 		share.NewModule(factory),
 		system.NewModule(factory, sharedAppConfig),
 		users.NewModule(factory),

@@ -5,6 +5,13 @@ type GeoPoint struct {
 	Longitude float64 `json:"longitude"`
 }
 
+type RelativeLocation struct {
+	Point          GeoPoint `json:"point"`
+	LocationName   string   `json:"location_name"`
+	Distance       int      `json:"distance,omitempty"`
+	BearingDegrees int      `json:"bearing_degrees,omitempty"`
+}
+
 type SearchSuggestRequest struct {
 	Prefix         string   `json:"prefix"`
 	ReferencePoint GeoPoint `json:"reference_point"`

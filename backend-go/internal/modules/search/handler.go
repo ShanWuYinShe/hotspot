@@ -18,7 +18,15 @@ func NewHandler(service *Service) *Handler {
 
 func (h *Handler) Suggest(w http.ResponseWriter, r *http.Request) {
 	var req SearchSuggestRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Prefix == "" {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	if req.Prefix == "" || len(req.Prefix) > 50 || req.ReferencePoint == (GeoPoint{}) {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	if req.Radius != 0 && req.Radius < 100 {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}

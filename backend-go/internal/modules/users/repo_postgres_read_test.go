@@ -326,7 +326,10 @@ func TestUserMomentCursorIsOpaqueAndTamperProof(t *testing.T) {
 	if !ok || at.UTC().Format(time.RFC3339) != "2026-03-29T12:00:00Z" {
 		t.Fatalf("unexpected parsed at: %#v", parsedAt)
 	}
-	tampered := cursor[:len(cursor)-1] + "A"
+	tampered := cursor[:len(cursor)-2] + "AA"
+	if tampered == cursor {
+		t.Fatal("expected tampered cursor to differ from original")
+	}
 	if _, _, err := decodeUserMomentCursor(tampered); !errors.Is(err, ErrInvalidCursor) {
 		t.Fatalf("expected invalid cursor error, got %v", err)
 	}

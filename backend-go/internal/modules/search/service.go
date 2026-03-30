@@ -14,13 +14,13 @@ type Service struct {
 	appConfig appconfig.Source
 }
 
-func NewService(source appconfig.Source) *Service { return NewServiceWithSource(NewInMemoryRepository(), source) }
+func NewService(source appconfig.Source) *Service { return NewServiceWithSource(NewPersistenceRepository(nil), source) }
 
 func NewServiceWithRepo(repo Repository) *Service { return NewServiceWithSource(repo, nil) }
 
 func NewServiceWithSource(repo Repository, source appconfig.Source) *Service {
 	if repo == nil {
-		repo = NewInMemoryRepository()
+		repo = NewPersistenceRepository(nil)
 	}
 	if source == nil {
 		source = appconfig.NewStaticSource(config.Config{})
@@ -29,6 +29,13 @@ func NewServiceWithSource(repo Repository, source appconfig.Source) *Service {
 }
 
 func (s *Service) Suggest(ctx context.Context, req SearchSuggestRequest) (SearchSuggestResponse, error) {
+	if req.Radius <= 0 {
+		req.Radius = 5000
+	}
+	maxRadius := s.appConfig.Get(ctx).Limits.SearchRadiusMax
+	if maxRadius > 0 && req.Radius > maxRadius {
+		req.Radius = maxRadius
+	}
 	resp, err := s.repo.Suggest(ctx, req)
 	if err != nil {
 		observability.L().Error("search.suggest failed", "error", err)
