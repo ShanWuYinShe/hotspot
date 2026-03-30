@@ -110,7 +110,7 @@ export struct AdvancedSettingsPage {
       }
       .width(38)
       .height(38)
-      .borderRadius(DesignConstants.RADIUS.MD)
+      .borderRadius(DesignConstants.SHAPE.ICON_TILE)
       .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
@@ -138,7 +138,7 @@ export struct AdvancedSettingsPage {
       }
       .width(28)
       .height(28)
-      .borderRadius(DesignConstants.RADIUS.MD)
+      .borderRadius(DesignConstants.SHAPE.ICON_TILE)
       .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)

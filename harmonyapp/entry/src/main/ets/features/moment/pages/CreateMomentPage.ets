@@ -119,6 +119,10 @@ export struct CreateMomentPage {
     return this.getCurrentThemePalette().surfaceSubtle;
   }
 
+  private getOverlayBorderColor(): string {
+    return this.getCurrentThemePalette().isDarkTheme ? '#40FFFFFF' : '#26000000';
+  }
+
   private getSurfaceBorder(): string {
     return this.getCurrentThemePalette().borderColor;
   }
@@ -662,7 +666,7 @@ export struct CreateMomentPage {
       .width(28)
       .height(28)
       .borderRadius(DesignConstants.RADIUS.XXL)
-      .border({ width: 1, color: '#40FFFFFF' })
+      .border({ width: 1, color: this.getOverlayBorderColor() })
       .margin({ top: 2, right: 2 })
       .onClick(() => this.removeImage(index))
     }

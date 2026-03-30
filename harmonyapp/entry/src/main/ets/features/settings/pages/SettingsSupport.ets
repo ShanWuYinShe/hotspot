@@ -312,11 +312,12 @@ export struct AnnouncementSummaryCard {
   }
 
   private getSeverityColor(severity: string): ResourceColor {
+    const isDark = this.getPalette().isDarkTheme;
     switch (severity) {
       case 'warning':
-        return '#C2852C';
+        return isDark ? '#F3C97A' : '#B27416';
       case 'error':
-        return '#CF6C6C';
+        return isDark ? '#F2A4A4' : '#B94A54';
       default:
         return this.getPalette().accentBackground;
     }
