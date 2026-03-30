@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
 )
@@ -131,10 +132,22 @@ func TestPostgresRepositoryGetAndCompleteUpload(t *testing.T) {
 	}
 }
 
+func TestPostgresRepositoryGetReturnsFalseOnNoRows(t *testing.T) {
+	backend := &mediaBackendStub{queryRows: map[string]mediaRowValues{queryGetUploadSession: {err: pgx.ErrNoRows}}}
+	repo := NewPostgresRepository(newMediaFactory(backend), nil)
+	_, ok, err := repo.Get(context.Background(), "missing")
+	if err != nil || ok {
+		t.Fatalf("expected ok=false nil error, got ok=%v err=%v", ok, err)
+	}
+}
+
 func TestPostgresRepositoryPropagatesExecErrors(t *testing.T) {
-	backend := &mediaBackendStub{execErrs: map[string]error{queryInsertUploadSession: errors.New("insert boom")}}
+	backend := &mediaBackendStub{execErrs: map[string]error{queryInsertUploadSession: errors.New("insert boom"), queryCompleteUploadSession: errors.New("complete boom")}}
 	repo := NewPostgresRepository(newMediaFactory(backend), nil)
 	if err := repo.Save(context.Background(), pendingUpload{UploadID: "upload_1"}); err == nil {
 		t.Fatal("expected insert error")
+	}
+	if _, _, err := repo.Complete(context.Background(), "upload_1", UploadedMedia{FileID: "file_1", FileSize: 100, MimeType: "image/png"}, "key_1"); err == nil {
+		t.Fatal("expected complete error")
 	}
 }

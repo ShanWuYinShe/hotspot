@@ -62,7 +62,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	payload.Config.PingTimeout = 10
 	payload.Config.MaxSubscriptions.User = 500
 	payload.Config.MaxSubscriptions.Group = 100
-	if err := conn.WriteJSON(Event{Type: "ConnectionEstablished", Payload: payload}); err != nil {
+	if err := sink.Send(Event{Type: "ConnectionEstablished", Payload: payload}); err != nil {
 		return
 	}
 
@@ -74,20 +74,20 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		switch msg.Type {
 		case "Ping":
-			_ = conn.WriteJSON(Event{Type: "Pong", Payload: PingPayload{}})
+			_ = sink.Send(Event{Type: "Pong", Payload: PingPayload{}})
 		case "GetSubscriptions":
 			var payload GetSubscriptionsPayload
 			blob, _ := json.Marshal(msg.Payload)
 			_ = json.Unmarshal(blob, &payload)
 			snapshot := subs.snapshot()
 			snapshot.ClientRequestID = payload.ClientRequestID
-			_ = conn.WriteJSON(Event{Type: "SubscriptionsSnapshot", Payload: snapshot})
+			_ = sink.Send(Event{Type: "SubscriptionsSnapshot", Payload: snapshot})
 		case "SetSubscriptions":
 			var payload SetSubscriptionsPayload
 			blob, _ := json.Marshal(msg.Payload)
 			_ = json.Unmarshal(blob, &payload)
 			if retryAfter, limited := ratelimit.AllowWebsocketSubscribe(r.Context(), principal.UserID, connectionID); limited {
-				_ = conn.WriteJSON(Event{Type: "Error", Payload: ErrorPayload{Code: 20300, Message: "请求过于频繁", Severity: "recoverable", Retryable: true, RetryAfter: retryAfter}})
+				_ = sink.Send(Event{Type: "Error", Payload: ErrorPayload{Code: 20300, Message: "请求过于频繁", Severity: "recoverable", Retryable: true, RetryAfter: retryAfter}})
 				continue
 			}
 			limit := 500
@@ -95,16 +95,16 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				limit = 100
 			}
 			if len(payload.IDs) > limit {
-				_ = conn.WriteJSON(Event{Type: "SubscribeAck", Payload: SubscribeAckPayload{ClientRequestID: payload.ClientRequestID, Operation: payload.Operation, Type: payload.Type, IDs: payload.IDs, Code: 20100, Message: "订阅数量超出限制", FailedIDs: []FailedSubscription{{SubscriptionID: payload.IDs[limit], Reason: "limit_exceeded"}}}})
+				_ = sink.Send(Event{Type: "SubscribeAck", Payload: SubscribeAckPayload{ClientRequestID: payload.ClientRequestID, Operation: payload.Operation, Type: payload.Type, IDs: payload.IDs, Code: 20100, Message: "订阅数量超出限制", FailedIDs: []FailedSubscription{{SubscriptionID: payload.IDs[limit], Reason: "limit_exceeded"}}}})
 				continue
 			}
 			subs.apply(payload.Operation, payload.Type, payload.IDs)
 			snapshot := subs.snapshot()
 			DefaultHub().SetUserSubscriptions(snapshot.UserIDs, sink)
 			DefaultHub().SetGroupSubscriptions(snapshot.GroupIDs, sink)
-			_ = conn.WriteJSON(Event{Type: "SubscribeAck", Payload: SubscribeAckPayload{ClientRequestID: payload.ClientRequestID, Operation: payload.Operation, Type: payload.Type, IDs: payload.IDs, Code: 0}})
+			_ = sink.Send(Event{Type: "SubscribeAck", Payload: SubscribeAckPayload{ClientRequestID: payload.ClientRequestID, Operation: payload.Operation, Type: payload.Type, IDs: payload.IDs, Code: 0}})
 			snapshot.ClientRequestID = payload.ClientRequestID
-			_ = conn.WriteJSON(Event{Type: "SubscriptionsSnapshot", Payload: snapshot})
+			_ = sink.Send(Event{Type: "SubscriptionsSnapshot", Payload: snapshot})
 		case "PrivateTyping":
 			var payload PrivateTypingPayload
 			blob, _ := json.Marshal(msg.Payload)
@@ -117,9 +117,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_ = json.Unmarshal(blob, &payload)
 			DefaultHub().BroadcastToGroup(payload.GroupID, Event{Type: "GroupUserTyping", Payload: map[string]any{"user_id": principal.UserID, "group_id": payload.GroupID, "is_typing": payload.IsTyping}})
 		case "Auth":
-			_ = conn.WriteJSON(Event{Type: "Error", Payload: ErrorPayload{Code: 20000, Message: "重复鉴权", Severity: "warning", Retryable: false}})
+			_ = sink.Send(Event{Type: "Error", Payload: ErrorPayload{Code: 20000, Message: "重复鉴权", Severity: "warning", Retryable: false}})
 		default:
-			_ = conn.WriteJSON(Event{Type: "Error", Payload: ErrorPayload{Code: 20000, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
+			_ = sink.Send(Event{Type: "Error", Payload: ErrorPayload{Code: 20000, Message: "消息格式错误", Severity: "recoverable", Retryable: true, RetryAfter: 1}})
 		}
 	}
 }

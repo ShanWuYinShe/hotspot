@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"mime"
 	"path/filepath"
 	"strings"
 	"time"
@@ -134,6 +135,9 @@ func (s *Service) Complete(ctx context.Context, uploadID string) (UploadedMedia,
 		observability.L().Error("media.complete head failed", "error", err, "upload_id", uploadID, "storage_key", upload.StorageKey)
 		return UploadedMedia{}, err
 	}
+	if err := validateCompletedObjectMetadata(upload, meta); err != nil {
+		return UploadedMedia{}, err
+	}
 	file := UploadedMedia{
 		FileID:   buildFileID(upload.UploadID, upload.UserID),
 		FileSize: meta.FileSize,
@@ -219,6 +223,34 @@ func maxFileSize(category MediaCategory) int {
 	default:
 		return 0
 	}
+}
+
+func validateCompletedObjectMetadata(upload pendingUpload, meta ObjectMetadata) error {
+	if meta.FileSize <= 0 {
+		return ErrUploadConflict
+	}
+	if upload.DeclaredFileSize > 0 && meta.FileSize != upload.DeclaredFileSize {
+		return ErrUploadConflict
+	}
+	completedMimeType := normalizeMimeType(meta.MimeType)
+	if completedMimeType == "" {
+		return ErrUploadConflict
+	}
+	if upload.DeclaredMimeType != "" && completedMimeType != normalizeMimeType(upload.DeclaredMimeType) {
+		return ErrUploadConflict
+	}
+	if !isMimeAllowed(upload.Category, completedMimeType) {
+		return ErrUploadConflict
+	}
+	return nil
+}
+
+func normalizeMimeType(value string) string {
+	mediaType, _, err := mime.ParseMediaType(strings.TrimSpace(value))
+	if err != nil {
+		return strings.TrimSpace(value)
+	}
+	return mediaType
 }
 
 func buildFileID(uploadID, userID string) string {

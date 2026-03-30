@@ -93,3 +93,53 @@ func TestObjectStorageProviderHeadReturnsNotReadyOn404(t *testing.T) {
 		t.Fatalf("expected ErrUploadNotReady, got %v", err)
 	}
 }
+
+func TestObjectStorageProviderHeadRejectsInvalidMetadata(t *testing.T) {
+	t.Run("returns error on server failure", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer server.Close()
+
+		provider := NewObjectStorageProvider(config.Config{S3Endpoint: server.URL, S3Bucket: "hotspot", S3ForcePathStyle: true})
+		if _, err := provider.Head(context.Background(), "uploads/u1/upload_1.png"); err == nil {
+			t.Fatal("expected error")
+		}
+	})
+
+	t.Run("returns error when content length missing", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "image/png")
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+
+		provider := NewObjectStorageProvider(config.Config{S3Endpoint: server.URL, S3Bucket: "hotspot", S3ForcePathStyle: true})
+		if _, err := provider.Head(context.Background(), "uploads/u1/upload_1.png"); err == nil {
+			t.Fatal("expected error")
+		}
+	})
+
+	t.Run("returns error when content type missing", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Length", "123")
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+
+		provider := NewObjectStorageProvider(config.Config{S3Endpoint: server.URL, S3Bucket: "hotspot", S3ForcePathStyle: true})
+		if _, err := provider.Head(context.Background(), "uploads/u1/upload_1.png"); err == nil {
+			t.Fatal("expected error")
+		}
+	})
+}
+
+func TestObjectStorageProviderRequiresConfiguration(t *testing.T) {
+	provider := NewObjectStorageProvider(config.Config{})
+	if _, err := provider.Presign(context.Background(), PresignUploadRequest{FileName: "a.png", MimeType: "image/png"}, "u1"); err == nil {
+		t.Fatal("expected presign configuration error")
+	}
+	if _, err := provider.Head(context.Background(), "uploads/u1/upload_1.png"); err == nil {
+		t.Fatal("expected head configuration error")
+	}
+}

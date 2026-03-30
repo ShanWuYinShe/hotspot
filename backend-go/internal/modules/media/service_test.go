@@ -66,7 +66,7 @@ func TestServiceBatchPresignRejectsAnyInvalidItem(t *testing.T) {
 }
 
 func TestServiceCompleteSemantics(t *testing.T) {
-	provider := &mediaStubProvider{headResp: ObjectMetadata{FileSize: 123, MimeType: "image/png"}}
+	provider := &mediaStubProvider{headResp: ObjectMetadata{FileSize: 100, MimeType: "image/png"}}
 	repo := NewInMemoryRepository()
 	service := NewServiceWithRepoAndProvider(repo, provider)
 
@@ -88,7 +88,7 @@ func TestServiceCompleteSemantics(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected success, got %v", err)
 	}
-	if file.FileID == "" || file.FileSize != 123 || file.MimeType != "image/png" {
+	if file.FileID == "" || file.FileSize != 100 || file.MimeType != "image/png" {
 		t.Fatalf("unexpected file: %#v", file)
 	}
 
@@ -100,6 +100,35 @@ func TestServiceCompleteSemantics(t *testing.T) {
 	if _, err := service.Complete(mediaContextWithUserAndKey("u1", "key2"), "upload_1"); !errors.Is(err, ErrUploadConflict) {
 		t.Fatalf("expected ErrUploadConflict, got %v", err)
 	}
+}
+
+func TestServiceCompleteRejectsMetadataMismatch(t *testing.T) {
+	t.Run("rejects mismatched content type", func(t *testing.T) {
+		repo := NewInMemoryRepository()
+		_ = repo.Save(context.Background(), pendingUpload{UploadID: "upload_mime", UserID: "u1", StorageKey: "uploads/u1/upload_mime.png", FileName: "a.png", DeclaredFileSize: 100, DeclaredMimeType: "image/png", Category: CategoryAvatar})
+		service := NewServiceWithRepoAndProvider(repo, &mediaStubProvider{headResp: ObjectMetadata{FileSize: 100, MimeType: "image/jpeg"}})
+		if _, err := service.Complete(mediaContextWithUserAndKey("u1", "key1"), "upload_mime"); !errors.Is(err, ErrUploadConflict) {
+			t.Fatalf("expected ErrUploadConflict, got %v", err)
+		}
+	})
+
+	t.Run("rejects category incompatible content type", func(t *testing.T) {
+		repo := NewInMemoryRepository()
+		_ = repo.Save(context.Background(), pendingUpload{UploadID: "upload_category", UserID: "u1", StorageKey: "uploads/u1/upload_category.png", FileName: "a.png", DeclaredFileSize: 100, DeclaredMimeType: "image/png", Category: CategoryAvatar})
+		service := NewServiceWithRepoAndProvider(repo, &mediaStubProvider{headResp: ObjectMetadata{FileSize: 100, MimeType: "video/mp4"}})
+		if _, err := service.Complete(mediaContextWithUserAndKey("u1", "key1"), "upload_category"); !errors.Is(err, ErrUploadConflict) {
+			t.Fatalf("expected ErrUploadConflict, got %v", err)
+		}
+	})
+
+	t.Run("rejects mismatched content length", func(t *testing.T) {
+		repo := NewInMemoryRepository()
+		_ = repo.Save(context.Background(), pendingUpload{UploadID: "upload_size", UserID: "u1", StorageKey: "uploads/u1/upload_size.png", FileName: "a.png", DeclaredFileSize: 100, DeclaredMimeType: "image/png", Category: CategoryAvatar})
+		service := NewServiceWithRepoAndProvider(repo, &mediaStubProvider{headResp: ObjectMetadata{FileSize: 101, MimeType: "image/png"}})
+		if _, err := service.Complete(mediaContextWithUserAndKey("u1", "key1"), "upload_size"); !errors.Is(err, ErrUploadConflict) {
+			t.Fatalf("expected ErrUploadConflict, got %v", err)
+		}
+	})
 }
 
 func TestServicePropagatesProviderAndRepositoryErrors(t *testing.T) {
