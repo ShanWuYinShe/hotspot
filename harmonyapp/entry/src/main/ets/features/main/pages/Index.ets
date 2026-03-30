@@ -762,7 +762,7 @@ struct Index {
         }
       }
       .width(48)
-      .height(48)
+      .height(28)
       .justifyContent(FlexAlign.Center)
 
       Text(title)
@@ -1027,6 +1027,7 @@ struct Index {
     .width('100%')
     .height('100%')
     .backgroundColor(this.getCurrentThemePalette().pageBackground)
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
   }
 
   /** 获取安全区域顶部内边距（状态栏高度 + 间距） */
