@@ -2,6 +2,7 @@ package search
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"hotspot/backend-go/internal/platform/config"
@@ -253,5 +254,32 @@ func TestPostgresRepositoryReturnsRepositoryError(t *testing.T) {
 	_, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"tag"}, ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+func TestPostgresRepositoryTagQueryRequiresPublicMoments(t *testing.T) {
+	if !strings.Contains(querySearchSuggestTags, "JOIN moments m ON m.moment_id = mt.moment_id") {
+		t.Fatalf("expected tag query to join moments: %s", querySearchSuggestTags)
+	}
+	if !strings.Contains(querySearchSuggestTags, "m.privacy_level = 'public'") {
+		t.Fatalf("expected tag query to filter public moments: %s", querySearchSuggestTags)
+	}
+}
+
+func TestPostgresRepositoryUserQueryRequiresPublicProfiles(t *testing.T) {
+	if !strings.Contains(querySearchSuggestUsers, "us.privacy_level = 'public'") {
+		t.Fatalf("expected user query to filter public profiles: %s", querySearchSuggestUsers)
+	}
+}
+
+func TestPostgresRepositoryGroupQueryExcludesDeletedGroups(t *testing.T) {
+	if !strings.Contains(querySearchSuggestGroups, "g.deleted_at IS NULL") {
+		t.Fatalf("expected group query to exclude deleted groups: %s", querySearchSuggestGroups)
+	}
+}
+
+func TestPostgresRepositoryMomentQueryRequiresPublicMoments(t *testing.T) {
+	if !strings.Contains(querySearchSuggestMoments, "m.privacy_level = 'public'") {
+		t.Fatalf("expected moment query to filter public moments: %s", querySearchSuggestMoments)
 	}
 }

@@ -9,12 +9,19 @@ import (
 	"hotspot/backend-go/internal/platform/slicex"
 )
 
+const (
+	defaultSearchSuggestRadius = 5000
+	maxSearchSuggestRadius     = 50000
+)
+
 type Service struct {
 	repo      Repository
 	appConfig appconfig.Source
 }
 
-func NewService(source appconfig.Source) *Service { return NewServiceWithSource(NewPersistenceRepository(nil), source) }
+func NewService(source appconfig.Source) *Service {
+	return NewServiceWithSource(NewPersistenceRepository(nil), source)
+}
 
 func NewServiceWithRepo(repo Repository) *Service { return NewServiceWithSource(repo, nil) }
 
@@ -29,13 +36,7 @@ func NewServiceWithSource(repo Repository, source appconfig.Source) *Service {
 }
 
 func (s *Service) Suggest(ctx context.Context, req SearchSuggestRequest) (SearchSuggestResponse, error) {
-	if req.Radius <= 0 {
-		req.Radius = 5000
-	}
-	maxRadius := s.appConfig.Get(ctx).Limits.SearchRadiusMax
-	if maxRadius > 0 && req.Radius > maxRadius {
-		req.Radius = maxRadius
-	}
+	req.Radius = normalizeSuggestRadius(s.appConfig.Get(ctx).Limits.SearchRadiusMax, req.Radius)
 	resp, err := s.repo.Suggest(ctx, req)
 	if err != nil {
 		observability.L().Error("search.suggest failed", "error", err)
@@ -44,4 +45,21 @@ func (s *Service) Suggest(ctx context.Context, req SearchSuggestRequest) (Search
 	limit := s.appConfig.Get(ctx).ResponseDefaults.SearchSuggestCount
 	resp.Items = slicex.LimitCopy(resp.Items, limit)
 	return resp, nil
+}
+
+func normalizeSuggestRadius(configMax, radius int) int {
+	if radius <= 0 {
+		radius = defaultSearchSuggestRadius
+	}
+	if radius > maxSearchSuggestRadius {
+		radius = maxSearchSuggestRadius
+	}
+	if configMax > 0 && radius > configMax {
+		radius = configMax
+	}
+	return radius
+}
+
+func isValidGeoPoint(point GeoPoint) bool {
+	return point.Latitude >= -90 && point.Latitude <= 90 && point.Longitude >= -180 && point.Longitude <= 180
 }

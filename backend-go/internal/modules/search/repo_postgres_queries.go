@@ -4,7 +4,9 @@ const (
 	querySearchSuggestTags = `
 SELECT mt.tag_name, COUNT(*) AS usage_count
 FROM moment_tags mt
-WHERE mt.tag_name ILIKE '%' || $1 || '%'
+JOIN moments m ON m.moment_id = mt.moment_id
+WHERE m.privacy_level = 'public'
+  AND mt.tag_name ILIKE '%' || $1 || '%'
 GROUP BY mt.tag_name`
 
 	querySearchSuggestUsers = `
@@ -12,13 +14,15 @@ SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), COALESCE(u.bio, ''), u
 FROM users u
 JOIN user_settings us ON us.user_id = u.user_id
 WHERE us.searchable = TRUE
+  AND us.privacy_level = 'public'
   AND ((us.nickname_searchable = TRUE AND u.nickname ILIKE '%' || $1 || '%') OR u.bio ILIKE '%' || $1 || '%')`
 
 	querySearchSuggestGroups = `
 SELECT g.group_id, g.name, COALESCE(g.avatar_url, ''), COALESCE(g.description, ''), g.location_name, g.latitude, g.longitude, COUNT(gm.user_id) AS members_count
 FROM groups g
 LEFT JOIN group_members gm ON gm.group_id = g.group_id
-WHERE g.is_searchable = TRUE
+WHERE g.deleted_at IS NULL
+  AND g.is_searchable = TRUE
   AND g.name ILIKE '%' || $1 || '%'
 GROUP BY g.group_id, g.name, g.avatar_url, g.description, g.location_name, g.latitude, g.longitude`
 

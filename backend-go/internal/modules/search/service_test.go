@@ -63,8 +63,8 @@ func TestServiceSuggestAppliesDefaultRadius(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Suggest returned error: %v", err)
 	}
-	if repo.lastReq.Radius != 5000 {
-		t.Fatalf("expected default radius 5000, got %d", repo.lastReq.Radius)
+	if repo.lastReq.Radius != defaultSearchSuggestRadius {
+		t.Fatalf("expected default radius %d, got %d", defaultSearchSuggestRadius, repo.lastReq.Radius)
 	}
 }
 
@@ -94,8 +94,8 @@ func TestServiceSuggestClampsRadiusToDefaultSpecMax(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Suggest returned error: %v", err)
 	}
-	if repo.lastReq.Radius != 50000 {
-		t.Fatalf("expected service to clamp radius to default spec max 50000, got %d", repo.lastReq.Radius)
+	if repo.lastReq.Radius != maxSearchSuggestRadius {
+		t.Fatalf("expected service to clamp radius to default spec max %d, got %d", maxSearchSuggestRadius, repo.lastReq.Radius)
 	}
 }
 
@@ -125,5 +125,17 @@ func TestServiceSuggestPreservesTypeSelection(t *testing.T) {
 	}
 	if len(repo.lastReq.Types) != 2 || repo.lastReq.Types[0] != "user" || repo.lastReq.Types[1] != "group" {
 		t.Fatalf("expected types passthrough, got %#v", repo.lastReq.Types)
+	}
+}
+
+func TestIsValidGeoPoint(t *testing.T) {
+	if !isValidGeoPoint(GeoPoint{Latitude: 35, Longitude: 112}) {
+		t.Fatal("expected valid geo point")
+	}
+	if isValidGeoPoint(GeoPoint{Latitude: 91, Longitude: 112}) {
+		t.Fatal("expected invalid latitude")
+	}
+	if isValidGeoPoint(GeoPoint{Latitude: 35, Longitude: 181}) {
+		t.Fatal("expected invalid longitude")
 	}
 }

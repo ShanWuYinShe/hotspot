@@ -80,6 +80,48 @@ func TestSuggestRejectsMissingReferencePoint(t *testing.T) {
 	}
 }
 
+func TestSuggestRejectsReferencePointWithoutCoordinates(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
+	cases := []string{
+		`{"prefix":"hot","reference_point":{}}`,
+		`{"prefix":"hot","reference_point":{"latitude":1}}`,
+		`{"prefix":"hot","reference_point":{"longitude":2}}`,
+	}
+
+	for _, body := range cases {
+		req := httptest.NewRequest(http.MethodPost, "/suggest", strings.NewReader(body))
+		rr := httptest.NewRecorder()
+		handler.Suggest(rr, req)
+
+		var resp struct {
+			Code int `json:"code"`
+		}
+		if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+			t.Fatalf("decode response: %v", err)
+		}
+		if resp.Code != 10000 {
+			t.Fatalf("unexpected response for %s: %#v", body, resp)
+		}
+	}
+}
+
+func TestSuggestRejectsInvalidReferencePoint(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
+	req := httptest.NewRequest(http.MethodPost, "/suggest", strings.NewReader(`{"prefix":"hot","reference_point":{"latitude":999,"longitude":2}}`))
+	rr := httptest.NewRecorder()
+	handler.Suggest(rr, req)
+
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 10000 {
+		t.Fatalf("unexpected response: %#v", resp)
+	}
+}
+
 func TestSuggestRejectsShortRadius(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
 	req := httptest.NewRequest(http.MethodPost, "/suggest", strings.NewReader(`{"prefix":"hot","reference_point":{"latitude":1,"longitude":2},"radius":99}`))
@@ -97,8 +139,9 @@ func TestSuggestRejectsShortRadius(t *testing.T) {
 	}
 }
 
-func TestSuggestRejectsTooLargeRadius(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
+func TestSuggestAllowsTooLargeRadiusForServiceClamp(t *testing.T) {
+	repo := &stubRepository{response: SearchSuggestResponse{Items: []SearchSuggestItem{}}}
+	handler := NewHandler(NewServiceWithRepo(repo))
 	req := httptest.NewRequest(http.MethodPost, "/suggest", strings.NewReader(`{"prefix":"hot","reference_point":{"latitude":1,"longitude":2},"radius":50001}`))
 	rr := httptest.NewRecorder()
 	handler.Suggest(rr, req)
@@ -109,8 +152,11 @@ func TestSuggestRejectsTooLargeRadius(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.Code != 10000 {
+	if resp.Code != 0 {
 		t.Fatalf("unexpected response: %#v", resp)
+	}
+	if repo.lastReq.Radius != 50000 {
+		t.Fatalf("expected service clamp to 50000, got %#v", repo.lastReq)
 	}
 }
 

@@ -17,20 +17,38 @@ func NewHandler(service *Service) *Handler {
 }
 
 func (h *Handler) Suggest(w http.ResponseWriter, r *http.Request) {
-	var req SearchSuggestRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var body struct {
+		Prefix         string `json:"prefix"`
+		ReferencePoint *struct {
+			Latitude  *float64 `json:"latitude"`
+			Longitude *float64 `json:"longitude"`
+		} `json:"reference_point"`
+		Types  []string `json:"types,omitempty"`
+		Radius int      `json:"radius,omitempty"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	if req.Prefix == "" || len(req.Prefix) > 50 || req.ReferencePoint == (GeoPoint{}) {
+	if body.Prefix == "" || len(body.Prefix) > 50 || body.ReferencePoint == nil || body.ReferencePoint.Latitude == nil || body.ReferencePoint.Longitude == nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	if req.Radius != 0 && (req.Radius < 100 || req.Radius > 50000) {
+	point := GeoPoint{Latitude: *body.ReferencePoint.Latitude, Longitude: *body.ReferencePoint.Longitude}
+	if !isValidGeoPoint(point) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	result, err := h.service.Suggest(r.Context(), req)
+	if body.Radius != 0 && body.Radius < 100 {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	result, err := h.service.Suggest(r.Context(), SearchSuggestRequest{
+		Prefix:         body.Prefix,
+		ReferencePoint: point,
+		Types:          body.Types,
+		Radius:         body.Radius,
+	})
 	if err != nil {
 		observability.L().Error("handler error",
 			"method", "Suggest",

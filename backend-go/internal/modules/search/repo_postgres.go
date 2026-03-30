@@ -232,10 +232,10 @@ func queryMomentSuggestions(ctx context.Context, queryable persistence.Queryable
 			continue
 		}
 		payload := map[string]any{
-			"moment_id":            momentID,
+			"moment_id":           momentID,
 			"description_preview": truncatePreview(description),
 			"author": map[string]any{
-				"user_id":   userID,
+				"user_id":  userID,
 				"nickname": nickname,
 			},
 			"location": relativeLocationPayload(reference, locationName, latitude, longitude),
@@ -301,7 +301,7 @@ func classifyPrefixMatch(prefix, value string) int {
 func relativeLocationPayload(reference GeoPoint, locationName string, latitude, longitude float64) map[string]any {
 	distance, bearing := computeRelativeDistance(reference, GeoPoint{Latitude: latitude, Longitude: longitude})
 	return map[string]any{
-		"point": map[string]any{"latitude": latitude, "longitude": longitude},
+		"point":           map[string]any{"latitude": latitude, "longitude": longitude},
 		"location_name":   locationName,
 		"distance":        distance,
 		"bearing_degrees": bearing,
