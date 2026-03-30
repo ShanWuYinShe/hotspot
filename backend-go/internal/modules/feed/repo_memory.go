@@ -8,21 +8,59 @@ func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{}
 }
 
-func (r *InMemoryRepository) ListMoments(_ context.Context) (PaginatedFeedItems, error) {
-	return PaginatedFeedItems{Items: []map[string]any{{"moment_id": "moment_feed_1", "description": "feed moment"}}}, nil
+func (r *InMemoryRepository) ListMoments(_ context.Context, _ momentsQuery) (PaginatedMoments, error) {
+	return PaginatedMoments{Items: []MomentItem{{
+		MomentID:      "moment_feed_1",
+		Description:   "feed moment",
+		Tags:          []string{"hot"},
+		CreatedAt:     "2026-03-01T00:00:00Z",
+		LikesCount:    1,
+		CommentsCount: 0,
+		SharesCount:   0,
+		User:          UserInfo{UserID: "user_feed_1", Nickname: "feed user"},
+		Location: RelativeLocation{
+			Point:        GeoPoint{Latitude: 0, Longitude: 0},
+			LocationName: "stub",
+		},
+	}}}, nil
 }
 
-func (r *InMemoryRepository) ListGroups(_ context.Context) (PaginatedFeedItems, error) {
-	return PaginatedFeedItems{Items: []map[string]any{{"group_id": "group_feed_1", "name": "feed group"}}}, nil
+func (r *InMemoryRepository) ListGroups(_ context.Context, _ groupsQuery) (PaginatedGroups, error) {
+	return PaginatedGroups{Items: []GroupItem{{
+		Group: GroupInfo{GroupID: "group_feed_1", Name: "feed group", MembersCount: 1},
+		Location: RelativeLocation{
+			Point:        GeoPoint{Latitude: 0, Longitude: 0},
+			LocationName: "stub",
+		},
+	}}}, nil
 }
 
-func (r *InMemoryRepository) ListUsers(_ context.Context) (PaginatedFeedItems, error) {
-	return PaginatedFeedItems{Items: []map[string]any{{"user_id": "user_feed_1", "nickname": "feed user"}}}, nil
+func (r *InMemoryRepository) ListUsers(_ context.Context, _ usersQuery) (PaginatedUsers, error) {
+	return PaginatedUsers{Items: []UserItem{{
+		User: UserInfo{UserID: "user_feed_1", Nickname: "feed user"},
+		Location: &RelativeLocation{
+			Point:        GeoPoint{Latitude: 0, Longitude: 0},
+			LocationName: "stub",
+		},
+	}}}, nil
 }
 
-func (r *InMemoryRepository) ListTrending(_ context.Context) (TrendingBundle, error) {
+func (r *InMemoryRepository) ListTrending(_ context.Context, _ string) (TrendingBundle, error) {
 	return TrendingBundle{
-		TrendingTags: []map[string]any{{"name": "hot", "usage_count": 1, "trend": "rising"}},
-		HotMoments:   []map[string]any{{"moment_id": "moment_hot_1", "description": "hot moment"}},
+		TrendingTags: []TrendingTagItem{{Name: "hot", UsageCount: 1, Trend: "rising"}},
+		HotMoments: []MomentItem{{
+			MomentID:      "moment_hot_1",
+			Description:   "hot moment",
+			Tags:          []string{"hot"},
+			CreatedAt:     "2026-03-01T00:00:00Z",
+			LikesCount:    1,
+			CommentsCount: 0,
+			SharesCount:   0,
+			User:          UserInfo{UserID: "user_feed_1", Nickname: "feed user"},
+			Location: RelativeLocation{
+				Point:        GeoPoint{Latitude: 0, Longitude: 0},
+				LocationName: "stub",
+			},
+		}},
 	}, nil
 }

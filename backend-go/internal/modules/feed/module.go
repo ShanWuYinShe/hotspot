@@ -6,6 +6,7 @@ import (
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
+	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/ratelimit"
 	"hotspot/backend-go/internal/platform/resourceguard"
 )
@@ -14,8 +15,9 @@ type Module struct {
 	handler *Handler
 }
 
-func NewModule(source appconfig.Source) *Module {
-	return &Module{handler: NewHandler(NewService(source))}
+func NewModule(factory *persistence.Factory, source appconfig.Source) *Module {
+	repo := NewPersistenceRepository(factory)
+	return &Module{handler: NewHandler(NewServiceWithSource(repo, source))}
 }
 
 func (m *Module) Mount(r chi.Router) {

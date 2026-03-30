@@ -3,8 +3,8 @@ package feed
 import "context"
 
 type Repository interface {
-	ListMoments(context.Context) (PaginatedFeedItems, error)
-	ListGroups(context.Context) (PaginatedFeedItems, error)
-	ListUsers(context.Context) (PaginatedFeedItems, error)
-	ListTrending(context.Context) (TrendingBundle, error)
+	ListMoments(context.Context, momentsQuery) (PaginatedMoments, error)
+	ListGroups(context.Context, groupsQuery) (PaginatedGroups, error)
+	ListUsers(context.Context, usersQuery) (PaginatedUsers, error)
+	ListTrending(context.Context, string) (TrendingBundle, error)
 }

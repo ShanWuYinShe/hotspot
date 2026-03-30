@@ -1,33 +1,30 @@
 package feed
 
-import (
-	"context"
-	"testing"
-)
+import "testing"
 
-func TestInMemoryRepositoryListMomentsReturnsStubbedFeed(t *testing.T) {
+func TestInMemoryRepositoryListMomentsReturnsTypedStub(t *testing.T) {
 	repo := NewInMemoryRepository()
 
-	result, err := repo.ListMoments(context.Background())
+	result, err := repo.ListMoments(nil, momentsQuery{})
 	if err != nil {
 		t.Fatalf("ListMoments returned error: %v", err)
 	}
-	if len(result.Items) != 1 || result.Items[0]["moment_id"] != "moment_feed_1" {
+	if len(result.Items) != 1 || result.Items[0].MomentID != "moment_feed_1" {
 		t.Fatalf("unexpected result: %#v", result)
 	}
 }
 
-func TestInMemoryRepositoryListTrendingReturnsStubbedBundle(t *testing.T) {
+func TestInMemoryRepositoryListTrendingReturnsTypedBundle(t *testing.T) {
 	repo := NewInMemoryRepository()
 
-	result, err := repo.ListTrending(context.Background())
+	result, err := repo.ListTrending(nil, "")
 	if err != nil {
 		t.Fatalf("ListTrending returned error: %v", err)
 	}
-	if len(result.TrendingTags) != 1 || result.TrendingTags[0]["name"] != "hot" {
+	if len(result.TrendingTags) != 1 || result.TrendingTags[0].Name != "hot" {
 		t.Fatalf("unexpected result: %#v", result)
 	}
-	if len(result.HotMoments) != 1 || result.HotMoments[0]["moment_id"] != "moment_hot_1" {
+	if len(result.HotMoments) != 1 || result.HotMoments[0].MomentID != "moment_hot_1" {
 		t.Fatalf("unexpected result: %#v", result)
 	}
 }

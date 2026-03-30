@@ -29,7 +29,7 @@ func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.M
 	return []modulekit.Module{
 		admin.NewModule(factory, sharedAppConfig),
 		auth.NewModule(cfg, factory, sharedAppConfig),
-		feed.NewModule(sharedAppConfig),
+		feed.NewModule(factory, sharedAppConfig),
 		groupmessages.NewModule(factory),
 		groups.NewModule(factory),
 		mapmodule.NewModule(factory),
