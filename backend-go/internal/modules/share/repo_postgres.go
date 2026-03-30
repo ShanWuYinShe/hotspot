@@ -2,11 +2,15 @@ package share
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/json"
+	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type PostgresRepository struct {
@@ -21,45 +25,172 @@ func NewPostgresRepository(factory *persistence.Factory, fallback Repository) *P
 	return &PostgresRepository{factory: factory, fallback: fallback}
 }
 
-func (r *PostgresRepository) Create(ctx context.Context, userID string, req CreateShareRequest) (ShareCreated, error) {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Create(ctx, userID, req)
+func (r *PostgresRepository) Create(ctx context.Context, cmd createShareCommand) (ShareCreated, error) {
+	queryable, ok, err := r.queryable()
+	if err != nil {
+		return ShareCreated{}, err
 	}
-	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		return ShareCreated{}, persistence.ErrNotImplemented
+		return r.fallback.Create(ctx, cmd)
+	}
+	if err := ensureShareTargetExists(ctx, queryable, cmd.ShareType, cmd.Payload); err != nil {
+		return ShareCreated{}, err
+	}
+	payloadJSON, err := json.Marshal(cmd.Payload)
+	if err != nil {
+		return ShareCreated{}, err
 	}
 	now := time.Now().UTC()
 	shareID := fmt.Sprintf("share_%d", now.UnixNano())
-	shareCode := strings.ToUpper(fmt.Sprintf("S%011d", now.UnixNano()%100000000000))
 	createdAt := now.Format(time.RFC3339)
-	expiresAt := ""
+	var expiresAt string
 	var expiresAtValue any
-	if req.ExpiresInSeconds > 0 {
-		expiresAt = now.Add(time.Duration(req.ExpiresInSeconds) * time.Second).Format(time.RFC3339)
+	if cmd.ExpiresAt != nil {
+		expiresAt = cmd.ExpiresAt.UTC().Format(time.RFC3339)
 		expiresAtValue = expiresAt
 	}
-	if err := queryable.Exec(ctx, queryInsertShare, shareID, shareCode, userID, req.ShareType, req.Payload, createdAt, expiresAtValue, false); err != nil {
+	for attempt := 0; attempt < 5; attempt++ {
+		shareCode, err := newShareCode()
+		if err != nil {
+			return ShareCreated{}, err
+		}
+		err = queryable.Exec(ctx, queryInsertShare, shareID, shareCode, cmd.CreatorUserID, cmd.ShareType, string(payloadJSON), createdAt, expiresAtValue, false)
+		if err == nil {
+			return ShareCreated{ShareID: shareID, ShareCode: shareCode, ExpiresAt: expiresAt}, nil
+		}
+		if isUniqueViolation(err) {
+			continue
+		}
 		return ShareCreated{}, err
 	}
-	return ShareCreated{ShareID: shareID, ShareCode: shareCode, ExpiresAt: expiresAt}, nil
+	return ShareCreated{}, errors.New("share: code generation exhausted")
 }
 
-func (r *PostgresRepository) Revoke(ctx context.Context, userID, shareID string) (bool, error) {
+func (r *PostgresRepository) Revoke(ctx context.Context, cmd revokeShareCommand) error {
+	queryable, ok, err := r.queryable()
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return r.fallback.Revoke(ctx, cmd)
+	}
+	ownerUserID, revoked, err := r.getShareOwnership(ctx, queryable, cmd.ShareID)
+	if err != nil {
+		return err
+	}
+	if ownerUserID == "" {
+		return ErrShareNotFound
+	}
+	if ownerUserID != cmd.CreatorUserID {
+		return ErrSharePermission
+	}
+	if revoked {
+		return nil
+	}
+	if err := queryable.Exec(ctx, queryRevokeShare, cmd.ShareID, cmd.CreatorUserID); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *PostgresRepository) queryable() (persistence.QueryableDB, bool, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Revoke(ctx, userID, shareID)
+		return nil, false, nil
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		return false, persistence.ErrNotImplemented
+		return nil, false, persistence.ErrNotImplemented
 	}
-	if _, ok, err := r.GetByID(ctx, userID, shareID); err != nil {
-		return false, err
-	} else if !ok {
-		return false, nil
+	return queryable, true, nil
+}
+
+func getPayloadID(payload map[string]any, key string) string {
+	value, _ := payload[key].(string)
+	return value
+}
+
+func ensureShareTargetExists(ctx context.Context, queryable persistence.QueryableDB, shareType string, payload map[string]any) error {
+	switch shareType {
+	case ShareTypeUser:
+		if _, _, _, err := loadSharedUser(ctx, queryable, getPayloadID(payload, "shared_user_id")); err != nil {
+			return err
+		}
+		return nil
+	case ShareTypeGroup:
+		if _, _, _, _, err := loadSharedGroup(ctx, queryable, getPayloadID(payload, "shared_group_id")); err != nil {
+			return err
+		}
+		return nil
+	case ShareTypeMoment:
+		if _, _, _, _, _, err := loadSharedMoment(ctx, queryable, getPayloadID(payload, "shared_moment_id")); err != nil {
+			return err
+		}
+		return nil
+	case ShareTypeLocation:
+		return nil
+	default:
+		return ErrInvalidShareRequest
 	}
-	if err := queryable.Exec(ctx, queryRevokeShare, shareID, userID); err != nil {
-		return false, err
+}
+
+func loadSharedUser(ctx context.Context, queryable persistence.QueryableDB, userID string) (string, string, string, error) {
+	var id, nickname, avatarURL string
+	if err := queryable.QueryRow(ctx, queryShareUserExists, userID).Scan(&id, &nickname, &avatarURL); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", "", "", ErrShareNotFound
+		}
+		return "", "", "", err
 	}
-	return true, nil
+	return id, nickname, avatarURL, nil
+}
+
+func loadSharedGroup(ctx context.Context, queryable persistence.QueryableDB, groupID string) (string, string, string, string, error) {
+	var id, name, description, avatarURL string
+	if err := queryable.QueryRow(ctx, queryShareGroupExists, groupID).Scan(&id, &name, &description, &avatarURL); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", "", "", "", ErrShareNotFound
+		}
+		return "", "", "", "", err
+	}
+	return id, name, description, avatarURL, nil
+}
+
+func loadSharedMoment(ctx context.Context, queryable persistence.QueryableDB, momentID string) (string, string, string, string, string, error) {
+	var id, description, locationName, authorNickname, authorAvatarURL string
+	if err := queryable.QueryRow(ctx, queryShareMomentExists, momentID).Scan(&id, &description, &locationName, &authorNickname, &authorAvatarURL); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", "", "", "", "", ErrShareNotFound
+		}
+		return "", "", "", "", "", err
+	}
+	return id, description, locationName, authorNickname, authorAvatarURL, nil
+}
+
+func (r *PostgresRepository) getShareOwnership(ctx context.Context, queryable persistence.QueryableDB, shareID string) (string, bool, error) {
+	var ownerUserID string
+	var isRevoked bool
+	if err := queryable.QueryRow(ctx, queryGetShareByID, shareID).Scan(&shareID, &ownerUserID, &isRevoked); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	return ownerUserID, isRevoked, nil
+}
+
+func newShareCode() (string, error) {
+	buf := make([]byte, shareCodeLength)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	code := make([]byte, shareCodeLength)
+	for i := range buf {
+		code[i] = shareCodeAlphabet[int(buf[i])%len(shareCodeAlphabet)]
+	}
+	return string(code), nil
+}
+
+func isUniqueViolation(err error) bool {
+	var sqlState interface{ SQLState() string }
+	return errors.As(err, &sqlState) && sqlState.SQLState() == "23505"
 }

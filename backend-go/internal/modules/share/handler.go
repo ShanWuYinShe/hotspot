@@ -2,6 +2,7 @@ package share
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/httpx"
@@ -28,7 +29,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req CreateShareRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ShareType == "" || req.Payload == nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logBusinessError(r, "Create", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -36,8 +37,15 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	idempotency.ReplayOrStore(w, r, "share/create", func() httpx.ApiResponse[ShareCreated] {
 		created, err := h.service.Create(r.Context(), req)
 		if err != nil {
-			logServerError(r, "Create", err)
-			return httpx.ApiResponse[ShareCreated]{Code: 10600, Message: "服务暂时不可用"}
+			switch {
+			case errors.Is(err, ErrInvalidShareRequest):
+				return httpx.ApiResponse[ShareCreated]{Code: 10000, Message: "参数错误"}
+			case errors.Is(err, ErrShareNotFound):
+				return httpx.ApiResponse[ShareCreated]{Code: 10300, Message: "资源不存在"}
+			default:
+				logServerError(r, "Create", err)
+				return httpx.ApiResponse[ShareCreated]{Code: 10600, Message: "服务暂时不可用"}
+			}
 		}
 		return httpx.Success(created)
 	})
@@ -45,36 +53,46 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	var req GetShareRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ShareCode == "" {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logBusinessError(r, "Get", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	detail, ok, err := h.service.Get(r.Context(), req.ShareCode)
+	detail, err := h.service.Get(r.Context(), req)
 	if err != nil {
-		logServerError(r, "Get", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
-		return
-	}
-	if !ok {
-		logBusinessError(r, "Get", 10300, "分享不存在")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "分享不存在"))
+		switch {
+		case errors.Is(err, ErrInvalidShareRequest):
+			logBusinessError(r, "Get", 10000, "参数错误")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		case errors.Is(err, ErrShareNotFound):
+			logBusinessError(r, "Get", 10300, "资源不存在")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "资源不存在"))
+		default:
+			logServerError(r, "Get", err)
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		}
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(detail))
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	var payload map[string]any
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		logBusinessError(r, "List", 10000, "请求体格式错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+	var req ShareListRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		logBusinessError(r, "List", 10000, "参数错误")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	list, err := h.service.List(r.Context())
+	list, err := h.service.List(r.Context(), req)
 	if err != nil {
-		logServerError(r, "List", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		switch {
+		case errors.Is(err, ErrInvalidShareRequest):
+			logBusinessError(r, "List", 10000, "参数错误")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		default:
+			logServerError(r, "List", err)
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		}
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(list))
@@ -82,20 +100,26 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Revoke(w http.ResponseWriter, r *http.Request) {
 	var req RevokeShareRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ShareID == "" {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logBusinessError(r, "Revoke", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	ok, err := h.service.Revoke(r.Context(), req.ShareID)
-	if err != nil {
-		logServerError(r, "Revoke", err)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
-		return
-	}
-	if !ok {
-		logBusinessError(r, "Revoke", 10300, "分享不存在")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "分享不存在"))
+	if err := h.service.Revoke(r.Context(), req); err != nil {
+		switch {
+		case errors.Is(err, ErrInvalidShareRequest):
+			logBusinessError(r, "Revoke", 10000, "参数错误")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		case errors.Is(err, ErrSharePermission):
+			logBusinessError(r, "Revoke", 10200, "无权限访问")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "无权限访问"))
+		case errors.Is(err, ErrShareNotFound):
+			logBusinessError(r, "Revoke", 10300, "资源不存在")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "资源不存在"))
+		default:
+			logServerError(r, "Revoke", err)
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		}
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())

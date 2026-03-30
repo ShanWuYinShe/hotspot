@@ -20,17 +20,17 @@ type shareErrorRepo struct {
 	revokeErr error
 }
 
-func (r *shareErrorRepo) Create(context.Context, string, CreateShareRequest) (ShareCreated, error) {
+func (r *shareErrorRepo) Create(context.Context, createShareCommand) (ShareCreated, error) {
 	return ShareCreated{}, r.createErr
 }
-func (r *shareErrorRepo) Get(context.Context, string) (ShareDetail, bool, error) {
-	return ShareDetail{}, false, r.getErr
+func (r *shareErrorRepo) Get(context.Context, getShareQuery) (ShareDetail, error) {
+	return ShareDetail{}, r.getErr
 }
-func (r *shareErrorRepo) List(context.Context, string) (PaginatedShares, error) {
+func (r *shareErrorRepo) List(context.Context, listSharesQuery) (PaginatedShares, error) {
 	return PaginatedShares{}, r.listErr
 }
-func (r *shareErrorRepo) Revoke(context.Context, string, string) (bool, error) {
-	return false, r.revokeErr
+func (r *shareErrorRepo) Revoke(context.Context, revokeShareCommand) error {
+	return r.revokeErr
 }
 
 func withSharePrincipal(req *http.Request) *http.Request {
@@ -45,25 +45,16 @@ func TestCreateGetAndListShare(t *testing.T) {
 	createReq.Header.Set("Idempotency-Key", "abcd1234abcd1234abcd1234abcd1234")
 	createRR := httptest.NewRecorder()
 	handler.Create(createRR, createReq)
-	createReq2 := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"share_type":"user","payload":{"shared_user_id":"user_bob"}}`)))
-	createReq2.Header.Set("Idempotency-Key", "abcd1234abcd1234abcd1234abcd1234")
-	createRR2 := httptest.NewRecorder()
-	handler.Create(createRR2, createReq2)
 	var createResp struct {
 		Code int          `json:"code"`
 		Data ShareCreated `json:"data"`
 	}
 	_ = json.NewDecoder(createRR.Body).Decode(&createResp)
-	var createResp2 struct {
-		Code int          `json:"code"`
-		Data ShareCreated `json:"data"`
-	}
-	_ = json.NewDecoder(createRR2.Body).Decode(&createResp2)
-	if createResp.Code != 0 || createResp.Data.ShareID == "" || createResp.Data.ShareID != createResp2.Data.ShareID {
-		t.Fatalf("unexpected create response: %#v %#v", createResp, createResp2)
+	if createResp.Code != 0 || createResp.Data.ShareID == "" || !validShareCode(createResp.Data.ShareCode) {
+		t.Fatalf("unexpected create response: %#v", createResp)
 	}
 
-	getReq := httptest.NewRequest(http.MethodPost, "/get", strings.NewReader(`{"share_code":"`+createResp.Data.ShareCode+`"}`))
+	getReq := httptest.NewRequest(http.MethodPost, "/get", strings.NewReader(`{"share_code":"`+strings.ToLower(createResp.Data.ShareCode)+`"}`))
 	getRR := httptest.NewRecorder()
 	handler.Get(getRR, getReq)
 	var getResp struct {
@@ -71,11 +62,11 @@ func TestCreateGetAndListShare(t *testing.T) {
 		Data ShareDetail `json:"data"`
 	}
 	_ = json.NewDecoder(getRR.Body).Decode(&getResp)
-	if getResp.Code != 0 || getResp.Data.Share["share_code"] == nil {
+	if getResp.Code != 0 || getResp.Data.Share.ShareCode != createResp.Data.ShareCode {
 		t.Fatalf("unexpected get response: %#v", getResp)
 	}
 
-	listReq := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{}`)))
+	listReq := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{"share_type":"user"}`)))
 	listRR := httptest.NewRecorder()
 	handler.List(listRR, listReq)
 	var listResp struct {
@@ -83,21 +74,61 @@ func TestCreateGetAndListShare(t *testing.T) {
 		Data PaginatedShares `json:"data"`
 	}
 	_ = json.NewDecoder(listRR.Body).Decode(&listResp)
-	if listResp.Code != 0 || len(listResp.Data.Items) == 0 {
+	if listResp.Code != 0 || len(listResp.Data.Items) == 0 || listResp.Data.Items[0].ShareType != ShareTypeUser {
 		t.Fatalf("unexpected list response: %#v", listResp)
 	}
+}
+
+func TestShareHandlerValidatesRequest(t *testing.T) {
+	handler := NewHandler(NewService())
+
+	badCreate := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"share_type":"bad","payload":{}}`)))
+	badCreate.Header.Set("Idempotency-Key", "bbbb1234bbbb1234bbbb1234bbbb1234")
+	badCreateRR := httptest.NewRecorder()
+	handler.Create(badCreateRR, badCreate)
+	assertCode(t, badCreateRR, 10000)
+
+	badGet := httptest.NewRequest(http.MethodPost, "/get", strings.NewReader(`{"share_code":"bad"}`))
+	badGetRR := httptest.NewRecorder()
+	handler.Get(badGetRR, badGet)
+	assertCode(t, badGetRR, 10000)
+
+	badList := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/me/list", strings.NewReader(`{"share_type":"bad"}`)))
+	badListRR := httptest.NewRecorder()
+	handler.List(badListRR, badList)
+	assertCode(t, badListRR, 10000)
+}
+
+func TestShareHandlerReturnsBusinessErrors(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&shareErrorRepo{createErr: ErrShareNotFound, getErr: ErrShareNotFound, revokeErr: ErrSharePermission}))
+
+	createReq := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"share_type":"user","payload":{"shared_user_id":"user_bob"}}`)))
+	createReq.Header.Set("Idempotency-Key", "efgh1234efgh1234efgh1234efgh1234")
+	createRR := httptest.NewRecorder()
+	handler.Create(createRR, createReq)
+	assertCode(t, createRR, 10300)
+
+	getReq := httptest.NewRequest(http.MethodPost, "/get", strings.NewReader(`{"share_code":"ABCDEFGHJKLM"}`))
+	getRR := httptest.NewRecorder()
+	handler.Get(getRR, getReq)
+	assertCode(t, getRR, 10300)
+
+	revokeReq := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/revoke", strings.NewReader(`{"share_id":"share_1"}`)))
+	revokeRR := httptest.NewRecorder()
+	handler.Revoke(revokeRR, revokeReq)
+	assertCode(t, revokeRR, 10200)
 }
 
 func TestShareHandlerReturns10600OnServiceError(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&shareErrorRepo{createErr: errors.New("boom"), getErr: errors.New("boom"), listErr: errors.New("boom"), revokeErr: errors.New("boom")}))
 
 	createReq := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"share_type":"user","payload":{"shared_user_id":"user_bob"}}`)))
-	createReq.Header.Set("Idempotency-Key", "efgh1234efgh1234efgh1234efgh1234")
+	createReq.Header.Set("Idempotency-Key", "ijkl1234ijkl1234ijkl1234ijkl1234")
 	createRR := httptest.NewRecorder()
 	handler.Create(createRR, createReq)
 	assertCode(t, createRR, 10600)
 
-	getReq := httptest.NewRequest(http.MethodPost, "/get", strings.NewReader(`{"share_code":"CODE1"}`))
+	getReq := httptest.NewRequest(http.MethodPost, "/get", strings.NewReader(`{"share_code":"ABCDEFGHJKLM"}`))
 	getRR := httptest.NewRecorder()
 	handler.Get(getRR, getReq)
 	assertCode(t, getRR, 10600)

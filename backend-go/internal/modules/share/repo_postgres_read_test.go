@@ -6,6 +6,7 @@ import (
 	"errors"
 	"sort"
 	"testing"
+	"time"
 
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -50,21 +51,21 @@ func (r *shareRowsValues) Err() error   { return r.err }
 
 type shareFallbackRepo struct{ used bool }
 
-func (r *shareFallbackRepo) Create(context.Context, string, CreateShareRequest) (ShareCreated, error) {
+func (r *shareFallbackRepo) Create(context.Context, createShareCommand) (ShareCreated, error) {
 	r.used = true
 	return ShareCreated{}, nil
 }
-func (r *shareFallbackRepo) Get(context.Context, string) (ShareDetail, bool, error) {
+func (r *shareFallbackRepo) Get(context.Context, getShareQuery) (ShareDetail, error) {
 	r.used = true
-	return ShareDetail{}, false, nil
+	return ShareDetail{}, nil
 }
-func (r *shareFallbackRepo) List(context.Context, string) (PaginatedShares, error) {
+func (r *shareFallbackRepo) List(context.Context, listSharesQuery) (PaginatedShares, error) {
 	r.used = true
 	return PaginatedShares{}, nil
 }
-func (r *shareFallbackRepo) Revoke(context.Context, string, string) (bool, error) {
+func (r *shareFallbackRepo) Revoke(context.Context, revokeShareCommand) error {
 	r.used = true
-	return false, nil
+	return nil
 }
 
 type shareStubRecord struct {
@@ -84,10 +85,29 @@ type shareBackendStub struct {
 	execErrs     map[string]error
 	queryErrs    map[string]error
 	queryRowErrs map[string]error
+	users        map[string][2]string
+	groups       map[string][3]string
+	moments      map[string][4]string
 }
 
 func newShareBackendStub() *shareBackendStub {
-	return &shareBackendStub{shares: make(map[string]shareStubRecord), byCode: make(map[string]string), execErrs: make(map[string]error), queryErrs: make(map[string]error), queryRowErrs: make(map[string]error)}
+	return &shareBackendStub{
+		shares:       make(map[string]shareStubRecord),
+		byCode:       make(map[string]string),
+		execErrs:     make(map[string]error),
+		queryErrs:    make(map[string]error),
+		queryRowErrs: make(map[string]error),
+		users: map[string][2]string{
+			"user_alice": {"Alice", "https://example.com/alice.png"},
+			"user_bob":   {"Bob", "https://example.com/bob.png"},
+		},
+		groups: map[string][3]string{
+			"group_1": {"Group One", "A nice group", "https://example.com/group.png"},
+		},
+		moments: map[string][4]string{
+			"moment_1": {"hello world", "Shanghai", "Bob", "https://example.com/bob.png"},
+		},
+	}
 }
 
 func (b *shareBackendStub) Exec(_ context.Context, query string, args ...any) error {
@@ -128,15 +148,42 @@ func (b *shareBackendStub) QueryRow(_ context.Context, query string, args ...any
 	if err := b.queryRowErrs[query]; err != nil {
 		return shareRowValues{err: err}
 	}
-	if query != queryGetShare {
+	switch query {
+	case queryGetShare:
+		shareID, ok := b.byCode[args[0].(string)]
+		if !ok {
+			return shareRowValues{err: pgx.ErrNoRows}
+		}
+		record := b.shares[shareID]
+		creator := b.users[record.CreatorUserID]
+		return shareRowValues{values: []any{record.ShareID, record.ShareCode, record.ShareType, record.CreatorUserID, creator[0], creator[1], record.PayloadJSON, record.CreatedAt, record.ExpiresAt, record.IsRevoked}}
+	case queryGetShareByID:
+		record, ok := b.shares[args[0].(string)]
+		if !ok {
+			return shareRowValues{err: pgx.ErrNoRows}
+		}
+		return shareRowValues{values: []any{record.ShareID, record.CreatorUserID, record.IsRevoked}}
+	case queryShareUserExists:
+		user, ok := b.users[args[0].(string)]
+		if !ok {
+			return shareRowValues{err: pgx.ErrNoRows}
+		}
+		return shareRowValues{values: []any{args[0].(string), user[0], user[1]}}
+	case queryShareGroupExists:
+		group, ok := b.groups[args[0].(string)]
+		if !ok {
+			return shareRowValues{err: pgx.ErrNoRows}
+		}
+		return shareRowValues{values: []any{args[0].(string), group[0], group[1], group[2]}}
+	case queryShareMomentExists:
+		moment, ok := b.moments[args[0].(string)]
+		if !ok {
+			return shareRowValues{err: pgx.ErrNoRows}
+		}
+		return shareRowValues{values: []any{args[0].(string), moment[0], moment[1], moment[2], moment[3]}}
+	default:
 		return shareRowValues{err: persistence.ErrNotImplemented}
 	}
-	shareID, ok := b.byCode[args[0].(string)]
-	if !ok {
-		return shareRowValues{err: pgx.ErrNoRows}
-	}
-	record := b.shares[shareID]
-	return shareRowValues{values: []any{record.ShareID, record.ShareCode, record.ShareType, record.CreatorUserID, record.PayloadJSON, record.CreatedAt, record.ExpiresAt, record.IsRevoked}}
 }
 
 func (b *shareBackendStub) Query(_ context.Context, query string, args ...any) (persistence.Rows, error) {
@@ -147,11 +194,23 @@ func (b *shareBackendStub) Query(_ context.Context, query string, args ...any) (
 		return &persistence.InMemoryRows{}, nil
 	}
 	userID := args[0].(string)
+	shareType := args[1].(string)
+	cursorCreatedAt := args[2].(string)
+	cursorShareID := args[3].(string)
 	records := make([]shareStubRecord, 0)
 	for _, record := range b.shares {
-		if record.CreatorUserID == userID {
-			records = append(records, record)
+		if record.CreatorUserID != userID {
+			continue
 		}
+		if shareType != "" && record.ShareType != shareType {
+			continue
+		}
+		if cursorCreatedAt != "" {
+			if !(record.CreatedAt < cursorCreatedAt || (record.CreatedAt == cursorCreatedAt && record.ShareID < cursorShareID)) {
+				continue
+			}
+		}
+		records = append(records, record)
 	}
 	sort.Slice(records, func(i, j int) bool {
 		if records[i].CreatedAt == records[j].CreatedAt {
@@ -159,9 +218,13 @@ func (b *shareBackendStub) Query(_ context.Context, query string, args ...any) (
 		}
 		return records[i].CreatedAt > records[j].CreatedAt
 	})
+	limit := args[4].(int)
+	if len(records) > limit {
+		records = records[:limit]
+	}
 	rows := make([][]any, 0, len(records))
 	for _, record := range records {
-		rows = append(rows, []any{record.ShareID, record.ShareCode, record.ShareType, record.CreatedAt, record.ExpiresAt, record.IsRevoked})
+		rows = append(rows, []any{record.ShareID, record.ShareCode, record.ShareType, record.CreatedAt, record.ExpiresAt, record.IsRevoked, record.PayloadJSON})
 	}
 	return &shareRowsValues{rows: rows}, nil
 }
@@ -192,36 +255,35 @@ func TestPostgresRepositoryCreateGetListAndRevoke(t *testing.T) {
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	fallback := &shareFallbackRepo{}
 	repo := NewPostgresRepository(factory, fallback)
+	expiresAt := time.Now().UTC().Add(time.Minute)
 
-	created, err := repo.Create(context.Background(), "user_alice", CreateShareRequest{ShareType: "user", Payload: map[string]any{"shared_user_id": "user_bob"}, ExpiresInSeconds: 60})
-	if err != nil || created.ShareID == "" || created.ShareCode == "" || created.ExpiresAt == "" {
+	created, err := repo.Create(context.Background(), createShareCommand{CreatorUserID: "user_alice", ShareType: ShareTypeUser, Payload: map[string]any{"shared_user_id": "user_bob"}, ExpiresAt: &expiresAt})
+	if err != nil || created.ShareID == "" || created.ShareCode == "" || created.ExpiresAt == "" || !validShareCode(created.ShareCode) {
 		t.Fatalf("unexpected created share: %#v err=%v", created, err)
 	}
 
-	detail, ok, err := repo.Get(context.Background(), created.ShareCode)
-	if err != nil || !ok {
-		t.Fatalf("unexpected get result: %#v ok=%v err=%v", detail, ok, err)
+	detail, err := repo.Get(context.Background(), getShareQuery{ShareCode: created.ShareCode})
+	if err != nil {
+		t.Fatalf("unexpected get error: %v", err)
 	}
-	if detail.Share["share_id"] != created.ShareID || detail.Payload["shared_user_id"] != "user_bob" {
+	if detail.Share.ShareID != created.ShareID || detail.Payload["shared_user_id"] != "user_bob" || detail.Share.Creator.Nickname != "Alice" {
 		t.Fatalf("unexpected share detail: %#v", detail)
 	}
 
-	list, err := repo.List(context.Background(), "user_alice")
+	list, err := repo.List(context.Background(), listSharesQuery{CreatorUserID: "user_alice", Limit: 20})
 	if err != nil || len(list.Items) != 1 || list.Items[0].ShareID != created.ShareID || list.Items[0].IsRevoked {
 		t.Fatalf("unexpected list: %#v err=%v", list, err)
 	}
 
-	revoked, err := repo.Revoke(context.Background(), "user_alice", created.ShareID)
-	if err != nil || !revoked {
-		t.Fatalf("unexpected revoke result: revoked=%v err=%v", revoked, err)
+	if err := repo.Revoke(context.Background(), revokeShareCommand{CreatorUserID: "user_alice", ShareID: created.ShareID}); err != nil {
+		t.Fatalf("unexpected revoke error: %v", err)
 	}
 
-	_, ok, err = repo.Get(context.Background(), created.ShareCode)
-	if err != nil || ok {
-		t.Fatalf("expected revoked share to be unavailable, ok=%v err=%v", ok, err)
+	if _, err := repo.Get(context.Background(), getShareQuery{ShareCode: created.ShareCode}); !errors.Is(err, ErrShareNotFound) {
+		t.Fatalf("expected revoked share to be unavailable, got %v", err)
 	}
 
-	list, err = repo.List(context.Background(), "user_alice")
+	list, err = repo.List(context.Background(), listSharesQuery{CreatorUserID: "user_alice", Limit: 20})
 	if err != nil || len(list.Items) != 1 || !list.Items[0].IsRevoked {
 		t.Fatalf("unexpected revoked list: %#v err=%v", list, err)
 	}
@@ -237,9 +299,9 @@ func TestPostgresRepositoryGetReturnsNotFoundOnNoRows(t *testing.T) {
 	fallback := &shareFallbackRepo{}
 	repo := NewPostgresRepository(factory, fallback)
 
-	_, ok, err := repo.Get(context.Background(), "MISSING")
-	if err != nil || ok {
-		t.Fatalf("expected not found, ok=%v err=%v", ok, err)
+	_, err := repo.Get(context.Background(), getShareQuery{ShareCode: "ABCDEFGHJKLM"})
+	if !errors.Is(err, ErrShareNotFound) {
+		t.Fatalf("expected not found, got %v", err)
 	}
 	if fallback.used {
 		t.Fatal("unexpected fallback usage")
@@ -254,7 +316,7 @@ func TestPostgresRepositoryCreateReturnsErrorOnExecFailure(t *testing.T) {
 	fallback := &shareFallbackRepo{}
 	repo := NewPostgresRepository(factory, fallback)
 
-	_, err := repo.Create(context.Background(), "user_alice", CreateShareRequest{ShareType: "user", Payload: map[string]any{"shared_user_id": "user_bob"}})
+	_, err := repo.Create(context.Background(), createShareCommand{CreatorUserID: "user_alice", ShareType: ShareTypeUser, Payload: map[string]any{"shared_user_id": "user_bob"}})
 	if err == nil {
 		t.Fatal("expected create error")
 	}
@@ -271,11 +333,80 @@ func TestPostgresRepositoryListReturnsErrorOnQueryFailure(t *testing.T) {
 	fallback := &shareFallbackRepo{}
 	repo := NewPostgresRepository(factory, fallback)
 
-	_, err := repo.List(context.Background(), "user_alice")
+	_, err := repo.List(context.Background(), listSharesQuery{CreatorUserID: "user_alice", Limit: 20})
 	if err == nil {
 		t.Fatal("expected list error")
 	}
 	if fallback.used {
 		t.Fatal("unexpected fallback usage")
+	}
+}
+
+func TestPostgresRepositoryRejectsMissingTarget(t *testing.T) {
+	backend := newShareBackendStub()
+	delete(backend.users, "user_bob")
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	repo := NewPostgresRepository(factory, &shareFallbackRepo{})
+
+	_, err := repo.Create(context.Background(), createShareCommand{CreatorUserID: "user_alice", ShareType: ShareTypeUser, Payload: map[string]any{"shared_user_id": "user_bob"}})
+	if !errors.Is(err, ErrShareNotFound) {
+		t.Fatalf("expected ErrShareNotFound, got %v", err)
+	}
+}
+
+func TestPostgresRepositoryGetOmitsPreviewWhenTargetBecomesUnavailable(t *testing.T) {
+	backend := newShareBackendStub()
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	repo := NewPostgresRepository(factory, &shareFallbackRepo{})
+
+	created, err := repo.Create(context.Background(), createShareCommand{CreatorUserID: "user_alice", ShareType: ShareTypeUser, Payload: map[string]any{"shared_user_id": "user_bob"}})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	delete(backend.users, "user_bob")
+
+	detail, err := repo.Get(context.Background(), getShareQuery{ShareCode: created.ShareCode})
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if detail.Preview != nil {
+		t.Fatalf("expected nil preview, got %#v", detail.Preview)
+	}
+}
+
+func TestPostgresRepositoryListOmitsPreviewForRevokedOrUnavailableItems(t *testing.T) {
+	backend := newShareBackendStub()
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	repo := NewPostgresRepository(factory, &shareFallbackRepo{})
+
+	revoked, err := repo.Create(context.Background(), createShareCommand{CreatorUserID: "user_alice", ShareType: ShareTypeUser, Payload: map[string]any{"shared_user_id": "user_bob"}})
+	if err != nil {
+		t.Fatalf("create revoked: %v", err)
+	}
+	if err := repo.Revoke(context.Background(), revokeShareCommand{CreatorUserID: "user_alice", ShareID: revoked.ShareID}); err != nil {
+		t.Fatalf("revoke: %v", err)
+	}
+
+	active, err := repo.Create(context.Background(), createShareCommand{CreatorUserID: "user_alice", ShareType: ShareTypeUser, Payload: map[string]any{"shared_user_id": "user_bob"}})
+	if err != nil {
+		t.Fatalf("create active: %v", err)
+	}
+	_ = active
+	delete(backend.users, "user_bob")
+
+	list, err := repo.List(context.Background(), listSharesQuery{CreatorUserID: "user_alice", Limit: 20})
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(list.Items) != 2 {
+		t.Fatalf("expected 2 items, got %#v", list)
+	}
+	for _, item := range list.Items {
+		if item.Preview != nil {
+			t.Fatalf("expected nil preview for item %#v", item)
+		}
 	}
 }

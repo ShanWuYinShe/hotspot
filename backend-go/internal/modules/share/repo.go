@@ -3,8 +3,8 @@ package share
 import "context"
 
 type Repository interface {
-	Create(context.Context, string, CreateShareRequest) (ShareCreated, error)
-	Get(context.Context, string) (ShareDetail, bool, error)
-	List(context.Context, string) (PaginatedShares, error)
-	Revoke(context.Context, string, string) (bool, error)
+	Create(context.Context, createShareCommand) (ShareCreated, error)
+	Get(context.Context, getShareQuery) (ShareDetail, error)
+	List(context.Context, listSharesQuery) (PaginatedShares, error)
+	Revoke(context.Context, revokeShareCommand) error
 }
