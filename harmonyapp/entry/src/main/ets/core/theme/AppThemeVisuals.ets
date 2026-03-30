@@ -350,7 +350,7 @@ export class AppThemeVisuals {
         borderRadius: palette.visuals.shape.compactCard,
         padding: DesignConstants.SPACING.MD,
         iconSize: 22,
-        iconWrapperSize: 64,
+        iconWrapperSize: 56,
         labelFontSize: DesignConstants.FONT.SIZE.SM
       },
       intentCard: {
@@ -360,7 +360,7 @@ export class AppThemeVisuals {
         shadow: palette.elevatedShadow,
         borderRadius: palette.visuals.shape.heroCard,
         padding: palette.visuals.metrics.cardPadding,
-        iconWrapperSize: 46,
+        iconWrapperSize: 40,
         titleFontSize: DesignConstants.FONT.SIZE.XL,
         descriptionFontSize: DesignConstants.FONT.SIZE.MD
       }

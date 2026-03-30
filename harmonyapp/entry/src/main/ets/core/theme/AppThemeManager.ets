@@ -33,16 +33,16 @@ const DEFAULT_THEME_SHAPE: AppThemeShapeTokens = {
 };
 
 const SOFT_THEME_SHAPE: AppThemeShapeTokens = {
-  surfaceCard: DesignConstants.SHAPE.CARD + 6,
-  heroCard: DesignConstants.SHAPE.HERO_CARD + 8,
-  compactCard: DesignConstants.SHAPE.COMPACT_CARD + 8,
-  input: DesignConstants.SHAPE.INPUT + 4,
-  button: DesignConstants.SHAPE.BUTTON + 4,
-  chip: DesignConstants.SHAPE.CHIP + 4,
-  tabBar: DesignConstants.SHAPE.TAB_BAR + 8,
-  previewCard: DesignConstants.SHAPE.PREVIEW_CARD + 8,
-  listItem: DesignConstants.SHAPE.LIST_ITEM + 6,
-  iconTile: DesignConstants.SHAPE.ICON_TILE + 6
+  surfaceCard: 20,
+  heroCard: 22,
+  compactCard: 24,
+  input: 22,
+  button: 24,
+  chip: 20,
+  tabBar: 0,
+  previewCard: 28,
+  listItem: 20,
+  iconTile: 14
 };
 const DEFAULT_THEME_METRICS: AppThemeMetricTokens = {
   cardPadding: DesignConstants.SPACING.LG,
@@ -69,28 +69,30 @@ const DEFAULT_THEME_METRICS: AppThemeMetricTokens = {
 };
 
 const SOFT_THEME_METRICS: AppThemeMetricTokens = {
-  cardPadding: DesignConstants.SPACING.XL + 2,
-  heroPadding: DesignConstants.SPACING.XXL + 4,
-  metricCardPadding: DesignConstants.SPACING.XL + 2,
-  profilePrimaryButtonHeight: 58,
-  profilePrimaryButtonHorizontalPadding: DesignConstants.SPACING.XXL + 14,
-  profileAvatarSize: 128,
-  profileTitleFontSize: DesignConstants.FONT.SIZE.XXL + 4,
-  profileSubtitleFontSize: DesignConstants.FONT.SIZE.XL,
-  profileMetricMinHeight: 188,
-  profileMetricValueFontSize: 28,
-  actionButtonHeight: 48,
-  listItemMinHeight: 92,
-  tabBarHeight: 70,
-  createButtonWidth: 58,
-  createButtonHeight: 36,
-  tabBarFloatingMargin: DesignConstants.SPACING.SM,
-  chatListRadius: DesignConstants.SHAPE.CARD + 8,
-  chatSendButtonHeight: DesignConstants.CHAT.SEND_BUTTON_HEIGHT + 6,
-  previewHeroAvatarSize: 44,
-  previewPrimaryButtonHeight: 22,
-  textureOpacity: DesignConstants.EFFECT.TEXTURE_STRONG
+  cardPadding: DesignConstants.SPACING.LG,
+  heroPadding: DesignConstants.SPACING.XL,
+  metricCardPadding: DesignConstants.SPACING.LG,
+  profilePrimaryButtonHeight: 44,
+  profilePrimaryButtonHorizontalPadding: DesignConstants.SPACING.XXL,
+  profileAvatarSize: 80,
+  profileTitleFontSize: DesignConstants.FONT.SIZE.XXL,
+  profileSubtitleFontSize: DesignConstants.FONT.SIZE.LG,
+  profileMetricMinHeight: 140,
+  profileMetricValueFontSize: 22,
+  actionButtonHeight: 36,
+  listItemMinHeight: 72,
+  tabBarHeight: 56,
+  createButtonWidth: 54,
+  createButtonHeight: 34,
+  tabBarFloatingMargin: 0,
+  chatListRadius: DesignConstants.SHAPE.CARD,
+  chatSendButtonHeight: DesignConstants.CHAT.SEND_BUTTON_HEIGHT,
+  previewHeroAvatarSize: 28,
+  previewPrimaryButtonHeight: 14,
+  textureOpacity: DesignConstants.EFFECT.TEXTURE_SOFT
 };
+
+const NO_SHADOW: AppThemeShadow = new AppThemeShadow(0, '#00000000', 0, 0);
 
 function cloneShadow(shadow: AppThemeShadow): AppThemeShadow {
   return new AppThemeShadow(shadow.radius, shadow.color, shadow.offsetX, shadow.offsetY);
@@ -162,12 +164,12 @@ const DEFAULT_CLEAN_LIGHT_VISUALS = buildVisualTokens(
   DEFAULT_THEME_SHAPE,
   DEFAULT_THEME_METRICS,
   {
-    avatarShadow: new AppThemeShadow(0, '#00000000', 0, 0),
+    avatarShadow: NO_SHADOW,
     haloShadow: cloneShadow(ThemeConstants.SHADOWS.DEFAULT_CLEAN_LIGHT.control),
     previewShadow: cloneShadow(ThemeConstants.SHADOWS.DEFAULT_CLEAN_LIGHT.elevated),
-    insetShadow: new AppThemeShadow(0, '#00000000', 0, 0),
-    highlightShadow: new AppThemeShadow(0, '#00000000', 0, 0),
-    tabActiveGlow: new AppThemeShadow(0, '#00000000', 0, 0)
+    insetShadow: NO_SHADOW,
+    highlightShadow: NO_SHADOW,
+    tabActiveGlow: NO_SHADOW
   }
 );
 
@@ -175,12 +177,12 @@ const DEFAULT_CLEAN_DARK_VISUALS = buildVisualTokens(
   DEFAULT_THEME_SHAPE,
   DEFAULT_THEME_METRICS,
   {
-    avatarShadow: new AppThemeShadow(0, '#00000000', 0, 0),
+    avatarShadow: NO_SHADOW,
     haloShadow: cloneShadow(ThemeConstants.SHADOWS.DEFAULT_CLEAN_DARK.control),
     previewShadow: cloneShadow(ThemeConstants.SHADOWS.DEFAULT_CLEAN_DARK.elevated),
-    insetShadow: new AppThemeShadow(0, '#00000000', 0, 0),
-    highlightShadow: new AppThemeShadow(0, '#00000000', 0, 0),
-    tabActiveGlow: new AppThemeShadow(0, '#00000000', 0, 0)
+    insetShadow: NO_SHADOW,
+    highlightShadow: NO_SHADOW,
+    tabActiveGlow: NO_SHADOW
   }
 );
 
@@ -188,12 +190,12 @@ const SOFT_GALLERY_LIGHT_VISUALS = buildVisualTokens(
   SOFT_THEME_SHAPE,
   SOFT_THEME_METRICS,
   {
-    avatarShadow: cloneShadow(ThemeConstants.SHADOWS.SOFT_GALLERY_LIGHT.elevated),
-    haloShadow: new AppThemeShadow(36, '#30D4AF37', 0, 0),
+    avatarShadow: NO_SHADOW,
+    haloShadow: NO_SHADOW,
     previewShadow: cloneShadow(ThemeConstants.SHADOWS.SOFT_GALLERY_LIGHT.elevated),
-    insetShadow: new AppThemeShadow(10, '#14CDB89F', 0, 4),
-    highlightShadow: new AppThemeShadow(18, '#36FFFFFF', 0, -3),
-    tabActiveGlow: new AppThemeShadow(24, '#26D4AF37', 0, 0)
+    insetShadow: NO_SHADOW,
+    highlightShadow: NO_SHADOW,
+    tabActiveGlow: NO_SHADOW
   }
 );
 
@@ -201,12 +203,12 @@ const SOFT_GALLERY_DARK_VISUALS = buildVisualTokens(
   SOFT_THEME_SHAPE,
   SOFT_THEME_METRICS,
   {
-    avatarShadow: cloneShadow(ThemeConstants.SHADOWS.SOFT_GALLERY_DARK.elevated),
-    haloShadow: new AppThemeShadow(28, '#30FFD700', 0, 0),
+    avatarShadow: NO_SHADOW,
+    haloShadow: NO_SHADOW,
     previewShadow: cloneShadow(ThemeConstants.SHADOWS.SOFT_GALLERY_DARK.elevated),
-    insetShadow: new AppThemeShadow(10, '#14000000', 0, 4),
-    highlightShadow: new AppThemeShadow(16, '#22FFFFFF', 0, -2),
-    tabActiveGlow: new AppThemeShadow(22, '#30FFD700', 0, 0)
+    insetShadow: NO_SHADOW,
+    highlightShadow: NO_SHADOW,
+    tabActiveGlow: NO_SHADOW
   }
 );
 
@@ -296,7 +298,7 @@ const DEFAULT_CLEAN_DARK = buildPalette(
 const SOFT_GALLERY_LIGHT = buildPalette(
   'soft_gallery_light',
   'Tactile Minimalist',
-  '奶油柔光、轻拟物、静谧触感',
+  '暖奶油底、极简轮廓、柔和桃色',
   ThemeConstants.SOFT_GALLERY_LIGHT_COLORS,
   ThemeConstants.SHADOWS.SOFT_GALLERY_LIGHT,
   SOFT_GALLERY_LIGHT_VISUALS,
@@ -306,7 +308,7 @@ const SOFT_GALLERY_LIGHT = buildPalette(
 const SOFT_GALLERY_DARK = buildPalette(
   'soft_gallery_dark',
   'Tactile Minimalist',
-  '冷蓝深夜、柔光边缘、暖金焦点',
+  '纯黑底、极简轮廓、金橙焦点',
   ThemeConstants.SOFT_GALLERY_DARK_COLORS,
   ThemeConstants.SHADOWS.SOFT_GALLERY_DARK,
   SOFT_GALLERY_DARK_VISUALS,
@@ -336,7 +338,7 @@ const EDITORIAL_GLOW_DARK = buildPalette(
 const THEME_OPTIONS: ThemeOptionItem[] = [
   { mode: 'follow_system', label: '跟随系统', description: '自动匹配系统明暗模式' } as ThemeOptionItem,
   { mode: 'default_clean', label: '当前默认', description: '清爽、中性、稳妥的基础主题' } as ThemeOptionItem,
-  { mode: 'soft_gallery', label: 'Tactile Minimalist', description: '浅色奶油柔光 / 深色夜蓝暖金' } as ThemeOptionItem,
+  { mode: 'soft_gallery', label: 'Tactile Minimalist', description: '暖奶油 / 纯黑金橙 · 极简触感' } as ThemeOptionItem,
   { mode: 'editorial_glow', label: 'Editorial Glow', description: '高保真纹理、柔光拟物、设计稿复刻基线' } as ThemeOptionItem
 ];
 

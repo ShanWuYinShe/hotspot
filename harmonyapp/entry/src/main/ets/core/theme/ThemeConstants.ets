@@ -61,19 +61,19 @@ class ThemeShadowRegistry {
   };
 
   readonly SOFT_GALLERY_LIGHT: ThemeShadows = {
-    surface: new AppThemeShadow(16, '#0D000000', 0, 2),
-    elevated: new AppThemeShadow(24, '#14000000', 0, 4),
-    accent: new AppThemeShadow(20, '#18D4AF37', 0, 3),
-    control: new AppThemeShadow(12, '#0A000000', 0, 2),
-    tabBar: new AppThemeShadow(20, '#10000000', 0, -2)
+    surface: new AppThemeShadow(4, '#06000000', 0, 1),
+    elevated: new AppThemeShadow(6, '#08000000', 0, 2),
+    accent: new AppThemeShadow(0, '#00000000', 0, 0),
+    control: new AppThemeShadow(0, '#00000000', 0, 0),
+    tabBar: new AppThemeShadow(4, '#06000000', 0, -1)
   };
 
   readonly SOFT_GALLERY_DARK: ThemeShadows = {
-    surface: new AppThemeShadow(14, '#20000000', 0, 2),
-    elevated: new AppThemeShadow(22, '#30000000', 0, 4),
-    accent: new AppThemeShadow(16, '#26FFD700', 0, 3),
-    control: new AppThemeShadow(12, '#1A000000', 0, 2),
-    tabBar: new AppThemeShadow(18, '#26000000', 0, -2)
+    surface: new AppThemeShadow(4, '#10000000', 0, 1),
+    elevated: new AppThemeShadow(8, '#16000000', 0, 2),
+    accent: new AppThemeShadow(0, '#00000000', 0, 0),
+    control: new AppThemeShadow(0, '#00000000', 0, 0),
+    tabBar: new AppThemeShadow(6, '#12000000', 0, -1)
   };
 
   readonly EDITORIAL_GLOW_LIGHT: ThemeShadows = {
@@ -156,61 +156,61 @@ export class ThemeConstants {
 
   static readonly SOFT_GALLERY_LIGHT_COLORS: ColorConfig = {
     pageBackground: '#F8F5F2',
-    pageGlow: '#FFF6EB',
-    heroGlow: '#FFF2DD',
-    textureTint: '#FFFDFB22',
+    pageGlow: '#FBF7F3',
+    heroGlow: '#FBF5EF',
+    textureTint: '#FFFDFB14',
     surfaceBackground: '#FFFFFF',
     surfaceSubtle: '#F0EBE3',
-    surfaceElevated: '#FFFDF9',
+    surfaceElevated: '#FFFFFF',
     borderColor: '#E8E0D4',
-    floatingBorderColor: '#F5ECDD',
+    floatingBorderColor: '#F0E8DC',
     sheetBackground: '#F8F5F2',
-    accentBackground: '#D4AF37',
+    accentBackground: '#E8B89C',
     accentText: '#FFFFFF',
-    accentMuted: '#F5E8BD',
+    accentMuted: '#EDE5DA',
     chatBackground: '#F5F0EA',
     systemSurfaceBaseColor: '#F8F5F2',
     overlayStrong: '#80000000',
-    textPrimary: '#2D2D2D',
-    textSecondary: '#6E6E6E',
-    textTertiary: '#9E9E9E',
-    textOnAccentMuted: '#725A18',
-    iconMuted: '#9E9E9E',
+    textPrimary: '#333333',
+    textSecondary: '#666666',
+    textTertiary: '#999999',
+    textOnAccentMuted: '#5A4A3E',
+    iconMuted: '#999999',
     buttonSecondaryBackground: '#FFFFFF',
-    buttonSecondaryText: '#2D2D2D',
-    tabBarBackground: '#F8F5F2',
-    tabBarInactive: '#8A8A8A',
-    tabBarActiveBackground: '#FFFDF9',
+    buttonSecondaryText: '#333333',
+    tabBarBackground: '#FFFFFF',
+    tabBarInactive: '#B0B0B0',
+    tabBarActiveBackground: '#F5F0EB',
     isDarkTheme: false
   };
 
   static readonly SOFT_GALLERY_DARK_COLORS: ColorConfig = {
     pageBackground: '#121212',
-    pageGlow: '#131922',
-    heroGlow: '#17212C',
-    textureTint: '#FFFFFF0B',
+    pageGlow: '#1A1A1A',
+    heroGlow: '#1E1E1E',
+    textureTint: '#FFFFFF08',
     surfaceBackground: '#1E1E1E',
     surfaceSubtle: '#2A2A2A',
     surfaceElevated: '#23262B',
     borderColor: '#333333',
-    floatingBorderColor: '#323A44',
+    floatingBorderColor: '#3A3A3A',
     sheetBackground: '#1A1A1A',
-    accentBackground: '#FFD700',
+    accentBackground: '#FFA500',
     accentText: '#121212',
-    accentMuted: '#4A4020',
+    accentMuted: '#FFA500',
     chatBackground: '#0E0E0E',
     systemSurfaceBaseColor: '#121212',
     overlayStrong: '#99000000',
     textPrimary: '#FFFFFF',
     textSecondary: '#B0B0B0',
     textTertiary: '#808080',
-    textOnAccentMuted: '#F9ECA7',
+    textOnAccentMuted: '#121212',
     iconMuted: '#808080',
     buttonSecondaryBackground: '#2A2A2A',
     buttonSecondaryText: '#FFFFFF',
-    tabBarBackground: '#181818',
-    tabBarInactive: '#8A8A8A',
-    tabBarActiveBackground: '#20252C',
+    tabBarBackground: '#121212',
+    tabBarInactive: '#808080',
+    tabBarActiveBackground: '#1E2222',
     isDarkTheme: true
   };
 
