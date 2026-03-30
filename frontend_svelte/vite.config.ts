@@ -10,5 +10,16 @@ export default defineConfig({
 	},
 	server: {
 		allowedHosts: [".yinghuoren.com", ".chaoset.com"]
+	},
+	build: {
+		rollupOptions: {
+			output: {
+				manualChunks(id) {
+					if (id.includes('node_modules/svelte/') || id.includes('node_modules/.pnpm/svelte@')) {
+						return 'svelte';
+					}
+				}
+			}
+		}
 	}
 });
