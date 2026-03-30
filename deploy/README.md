@@ -4,7 +4,7 @@
 
 - **verify**：默认本地验证层，服务多 agent + 多 worktree 并行开发
 - **verify-inspect**：verify 内的开发调试环境子层，只负责提供隔离运行环境与入口，供 Claude Code 主动做页面、console、关键 UI 与少量关键交互流检查
-- **preview**：单实例本地预演层，验证最终候选结果的 HTTPS / nginx / websocket / MinIO / cookie 行为；AMap 代理如有需要通过 `HOTSPOT_AMAP_JSCODE` 注入
+- **preview**：单实例本地预演层，验证最终候选结果的 HTTPS / nginx / websocket / MinIO / cookie 行为
 - **release**：正式部署输入层，只产 image / artifact / manifest，不运行环境
 
 ## 快速入口
@@ -81,7 +81,6 @@
   - `HOTSPOT_PREVIEW_REDIS_IMAGE`（默认 `redis:8.6.2-alpine3.23`）
   - `HOTSPOT_VERIFY_POSTGRES_IMAGE`（默认 `postgres:18.3-alpine3.23`）
   - `HOTSPOT_VERIFY_REDIS_IMAGE`（默认 `redis:8.6.2-alpine3.23`）
-  - `HOTSPOT_AMAP_JSCODE`（默认空；仅在需要 AMap 代理时注入）
 - Dockerfile 基础镜像默认固定为明确版本，同时支持 build arg 覆盖，例如：
   - `HOTSPOT_GOLANG_BASE_IMAGE`（默认 `golang:1.26.1-alpine3.23`）
   - `HOTSPOT_NODE_BASE_IMAGE`（默认 `node:24.14.0-alpine3.23`）

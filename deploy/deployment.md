@@ -187,7 +187,6 @@ manifest 至少包含：
   - `HOTSPOT_PREVIEW_NGINX_IMAGE`
   - `HOTSPOT_VERIFY_POSTGRES_IMAGE`
   - `HOTSPOT_VERIFY_REDIS_IMAGE`
-  - `HOTSPOT_AMAP_JSCODE`
 - Dockerfile 基础镜像默认也固定为明确版本，并支持 build arg 覆盖：
   - `HOTSPOT_GOLANG_BASE_IMAGE`（默认 `golang:1.26.1-alpine3.23`）
   - `HOTSPOT_NODE_BASE_IMAGE`（默认 `node:24.14.0-alpine3.23`）
@@ -228,7 +227,7 @@ deploy/
 - 纯静态检查如 `pnpm check`、`go vet` 若确认不会污染宿主环境，也可以直接在宿主环境执行
 - 测试与构建过程中产生的缓存、pnpm store、临时产物不得写回仓库根
 - preview 保留 HTTPS + nginx + MinIO + inspect 链
-- AMap 代理能力仍保留，但 `jscode` 必须通过 `HOTSPOT_AMAP_JSCODE` 注入，不能再硬编码在 nginx 模板中
+- AMap 代理通过 `/_AMapService` 路径提供，前端通过 `VITE_AMAP_KEY` 和 `VITE_AMAP_SERVICE_HOST` 统一配置
 - 数据保留 / 清理语义保留
 - 多 worktree 并行隔离只属于 verify
 
