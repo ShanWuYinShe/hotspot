@@ -15,7 +15,7 @@ func (r *PostgresRepository) History(ctx context.Context, userID, targetUserID s
 		return PaginatedMessages{}, persistence.ErrNotImplemented
 	}
 	chatKey := conversationKey(userID, targetUserID)
-	rows, err := queryable.Query(ctx, queryPrivateMessagesHistory, chatKey)
+	rows, err := queryable.Query(ctx, queryPrivateMessagesHistory, chatKey, userID, targetUserID)
 	if err != nil {
 		return PaginatedMessages{}, err
 	}
@@ -24,7 +24,7 @@ func (r *PostgresRepository) History(ctx context.Context, userID, targetUserID s
 	for rows.Next() {
 		var item PrivateMessageItem
 		var senderUserID string
-		if err := rows.Scan(&item.MessageID, &item.Type, &item.Content, &item.ShareCode, &senderUserID, &item.SentAt); err != nil {
+		if err := rows.Scan(&item.MessageID, &item.Type, &item.Content, &item.ShareCode, &senderUserID, &item.SentAt, &item.IsRead); err != nil {
 			return PaginatedMessages{}, err
 		}
 		item.Sender = UserInfo{UserID: senderUserID, Nickname: senderUserID}

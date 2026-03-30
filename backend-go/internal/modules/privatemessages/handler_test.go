@@ -151,6 +151,30 @@ func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
 		handler.MarkAsRead(rr, req)
 		assertPrivateMessageCode(t, rr, 10300)
 	})
+
+	t.Run("mark as read rejects missing target user", func(t *testing.T) {
+		handler := NewHandler(NewServiceWithRepo(&privateMessageErrorRepo{}))
+		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_as_read", strings.NewReader(`{"up_to_message_id":"pm_1"}`)))
+		rr := httptest.NewRecorder()
+		handler.MarkAsRead(rr, req)
+		assertPrivateMessageCode(t, rr, 10000)
+	})
+
+	t.Run("mark as read success", func(t *testing.T) {
+		handler := NewHandler(NewServiceWithRepo(&privateMessageErrorRepo{}))
+		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_as_read", strings.NewReader(`{"target_user_id":"user_bob","up_to_message_id":"pm_1"}`)))
+		rr := httptest.NewRecorder()
+		handler.MarkAsRead(rr, req)
+		assertPrivateMessageCode(t, rr, 0)
+	})
+
+	t.Run("mark all read success", func(t *testing.T) {
+		handler := NewHandler(NewServiceWithRepo(&privateMessageErrorRepo{}))
+		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_all_read", strings.NewReader(`{}`)))
+		rr := httptest.NewRecorder()
+		handler.MarkAllRead(rr, req)
+		assertPrivateMessageCode(t, rr, 0)
+	})
 }
 
 func assertPrivateMessageCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {

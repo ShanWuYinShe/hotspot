@@ -23,6 +23,8 @@ func (r privateMessageRowValues) Scan(dest ...any) error {
 		switch d := dest[i].(type) {
 		case *string:
 			*d = r.values[i].(string)
+		case *bool:
+			*d = r.values[i].(bool)
 		}
 	}
 	return nil
@@ -89,10 +91,16 @@ type privateMessageStubRecord struct {
 	SentAt    string
 }
 
+type privateMessageReadState struct {
+	MessageID string
+	SentAt    string
+}
+
 type privateMessageBackendStub struct {
-	items     map[string][]privateMessageStubRecord
-	execErrs  map[string]error
-	queryErrs map[string]error
+	items      map[string][]privateMessageStubRecord
+	readStates map[string]map[string]privateMessageReadState
+	execErrs   map[string]error
+	queryErrs  map[string]error
 }
 
 func (b *privateMessageBackendStub) Ping(context.Context) error { return nil }
@@ -117,11 +125,81 @@ func (b *privateMessageBackendStub) Exec(_ context.Context, query string, args .
 		}
 		b.items[chatKey] = append(b.items[chatKey], record)
 		return nil
+	case queryUpsertPrivateMessageReadState:
+		chatKey := args[0].(string)
+		userID := args[1].(string)
+		messageID := args[2].(string)
+		sentAt := args[3].(string)
+		if b.readStates[chatKey] == nil {
+			b.readStates[chatKey] = map[string]privateMessageReadState{}
+		}
+		current, ok := b.readStates[chatKey][userID]
+		if !ok || sentAt > current.SentAt || (sentAt == current.SentAt && messageID > current.MessageID) {
+			b.readStates[chatKey][userID] = privateMessageReadState{MessageID: messageID, SentAt: sentAt}
+		}
+		return nil
+	case queryMarkAllPrivateMessagesReadForChat:
+		chatKey := args[0].(string)
+		userID := args[1].(string)
+		records := append([]privateMessageStubRecord(nil), b.items[chatKey]...)
+		if len(records) == 0 {
+			return nil
+		}
+		sort.Slice(records, func(i, j int) bool {
+			if records[i].SentAt == records[j].SentAt {
+				return records[i].MessageID > records[j].MessageID
+			}
+			return records[i].SentAt > records[j].SentAt
+		})
+		if b.readStates[chatKey] == nil {
+			b.readStates[chatKey] = map[string]privateMessageReadState{}
+		}
+		latest := records[0]
+		current, ok := b.readStates[chatKey][userID]
+		if !ok || latest.SentAt > current.SentAt || (latest.SentAt == current.SentAt && latest.MessageID > current.MessageID) {
+			b.readStates[chatKey][userID] = privateMessageReadState{MessageID: latest.MessageID, SentAt: latest.SentAt}
+		}
+		return nil
+	case queryMarkAllPrivateMessagesRead:
+		userID := args[0].(string)
+		if b.readStates == nil {
+			b.readStates = map[string]map[string]privateMessageReadState{}
+		}
+		for chatKey, records := range b.items {
+			ordered := append([]privateMessageStubRecord(nil), records...)
+			if len(ordered) == 0 {
+				continue
+			}
+			sort.Slice(ordered, func(i, j int) bool {
+				if ordered[i].SentAt == ordered[j].SentAt {
+					return ordered[i].MessageID > ordered[j].MessageID
+				}
+				return ordered[i].SentAt > ordered[j].SentAt
+			})
+			latest := ordered[0]
+			if b.readStates[chatKey] == nil {
+				b.readStates[chatKey] = map[string]privateMessageReadState{}
+			}
+			current, ok := b.readStates[chatKey][userID]
+			if !ok || latest.SentAt > current.SentAt || (latest.SentAt == current.SentAt && latest.MessageID > current.MessageID) {
+				b.readStates[chatKey][userID] = privateMessageReadState{MessageID: latest.MessageID, SentAt: latest.SentAt}
+			}
+		}
+		return nil
 	default:
 		return nil
 	}
 }
-func (b *privateMessageBackendStub) QueryRow(context.Context, string, ...any) persistence.Row {
+func (b *privateMessageBackendStub) QueryRow(_ context.Context, query string, args ...any) persistence.Row {
+	if query == queryPrivateMessageReadStateByMessage {
+		chatKey := args[0].(string)
+		messageID := args[1].(string)
+		for _, record := range b.items[chatKey] {
+			if record.MessageID == messageID {
+				return privateMessageRowValues{values: []any{record.SentAt, record.MessageID}}
+			}
+		}
+	}
 	return privateMessageRowValues{err: persistence.ErrNotImplemented}
 }
 func (b *privateMessageBackendStub) Query(_ context.Context, query string, args ...any) (persistence.Rows, error) {
@@ -130,6 +208,8 @@ func (b *privateMessageBackendStub) Query(_ context.Context, query string, args 
 	}
 	if query == queryPrivateMessagesHistory {
 		chatKey := args[0].(string)
+		readerUserID := args[1].(string)
+		otherUserID := args[2].(string)
 		records := append([]privateMessageStubRecord(nil), b.items[chatKey]...)
 		sort.Slice(records, func(i, j int) bool {
 			if records[i].SentAt == records[j].SentAt {
@@ -137,9 +217,25 @@ func (b *privateMessageBackendStub) Query(_ context.Context, query string, args 
 			}
 			return records[i].SentAt > records[j].SentAt
 		})
+		state := privateMessageReadState{}
+		if b.readStates != nil && b.readStates[chatKey] != nil {
+			state = b.readStates[chatKey][otherUserID]
+		}
 		rows := make([][]any, 0, len(records))
 		for _, record := range records {
-			rows = append(rows, []any{record.MessageID, record.Type, record.Content, record.ShareCode, record.SenderID, record.SentAt})
+			isRead := record.SenderID != readerUserID
+			if record.SenderID == readerUserID {
+				if state.SentAt == "" {
+					isRead = false
+				} else if record.SentAt < state.SentAt {
+					isRead = true
+				} else if record.SentAt > state.SentAt {
+					isRead = false
+				} else {
+					isRead = record.MessageID == state.MessageID
+				}
+			}
+			rows = append(rows, []any{record.MessageID, record.Type, record.Content, record.ShareCode, record.SenderID, record.SentAt, isRead})
 		}
 		return &privateMessageRowsValues{rows: rows}, nil
 	}
@@ -147,7 +243,7 @@ func (b *privateMessageBackendStub) Query(_ context.Context, query string, args 
 }
 
 func TestPostgresRepositorySendHistoryRecentAndLast(t *testing.T) {
-	backend := &privateMessageBackendStub{items: map[string][]privateMessageStubRecord{}, execErrs: map[string]error{}, queryErrs: map[string]error{}}
+	backend := &privateMessageBackendStub{items: map[string][]privateMessageStubRecord{}, readStates: map[string]map[string]privateMessageReadState{}, execErrs: map[string]error{}, queryErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	fallback := &privateMessageFallbackRepo{}
@@ -184,7 +280,7 @@ func TestPostgresRepositorySendHistoryRecentAndLast(t *testing.T) {
 }
 
 func TestPostgresRepositoryHistoryReturnsEmptyWithoutFallback(t *testing.T) {
-	backend := &privateMessageBackendStub{items: map[string][]privateMessageStubRecord{}, execErrs: map[string]error{}, queryErrs: map[string]error{}}
+	backend := &privateMessageBackendStub{items: map[string][]privateMessageStubRecord{}, readStates: map[string]map[string]privateMessageReadState{}, execErrs: map[string]error{}, queryErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	fallback := &privateMessageFallbackRepo{}
@@ -203,7 +299,7 @@ func TestPostgresRepositoryHistoryReturnsEmptyWithoutFallback(t *testing.T) {
 }
 
 func TestPostgresRepositorySendReturnsErrorOnExecFailure(t *testing.T) {
-	backend := &privateMessageBackendStub{items: map[string][]privateMessageStubRecord{}, execErrs: map[string]error{queryInsertPrivateMessage: errors.New("boom")}, queryErrs: map[string]error{}}
+	backend := &privateMessageBackendStub{items: map[string][]privateMessageStubRecord{}, readStates: map[string]map[string]privateMessageReadState{}, execErrs: map[string]error{queryInsertPrivateMessage: errors.New("boom")}, queryErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	fallback := &privateMessageFallbackRepo{}
@@ -219,7 +315,7 @@ func TestPostgresRepositorySendReturnsErrorOnExecFailure(t *testing.T) {
 }
 
 func TestPostgresRepositoryHistoryReturnsErrorOnQueryFailure(t *testing.T) {
-	backend := &privateMessageBackendStub{items: map[string][]privateMessageStubRecord{}, execErrs: map[string]error{}, queryErrs: map[string]error{queryPrivateMessagesHistory: errors.New("boom")}}
+	backend := &privateMessageBackendStub{items: map[string][]privateMessageStubRecord{}, readStates: map[string]map[string]privateMessageReadState{}, execErrs: map[string]error{}, queryErrs: map[string]error{queryPrivateMessagesHistory: errors.New("boom")}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	fallback := &privateMessageFallbackRepo{}
@@ -235,7 +331,7 @@ func TestPostgresRepositoryHistoryReturnsErrorOnQueryFailure(t *testing.T) {
 }
 
 func TestPostgresRepositoryMutationSupportMatchesCurrentPhase(t *testing.T) {
-	backend := &privateMessageBackendStub{items: map[string][]privateMessageStubRecord{}, execErrs: map[string]error{}, queryErrs: map[string]error{}}
+	backend := &privateMessageBackendStub{items: map[string][]privateMessageStubRecord{}, readStates: map[string]map[string]privateMessageReadState{}, execErrs: map[string]error{}, queryErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	fallback := &privateMessageFallbackRepo{}
@@ -251,19 +347,76 @@ func TestPostgresRepositoryMutationSupportMatchesCurrentPhase(t *testing.T) {
 		t.Fatal("expected update/recall to execute on postgres without fallback")
 	}
 
-	fallback.used = false
-	if err := repo.MarkAsRead(context.Background(), "user_alice", MarkPrivateMessagesReadRequest{TargetUserID: "user_bob", UpToMessageID: "pm_1"}); err != nil {
-		t.Fatalf("expected mark_as_read fallback behavior, got %v", err)
-	}
-	if !fallback.used {
-		t.Fatal("expected mark_as_read to use fallback")
+	chatKey := conversationKey("user_alice", "user_bob")
+	backend.items[chatKey] = []privateMessageStubRecord{
+		{MessageID: "pm_1", ChatKey: chatKey, SenderID: "user_alice", Type: "text", Content: "first", SentAt: "2026-03-30T10:00:00Z"},
+		{MessageID: "pm_2", ChatKey: chatKey, SenderID: "user_alice", Type: "text", Content: "second", SentAt: "2026-03-30T10:01:00Z"},
 	}
 
 	fallback.used = false
-	if err := repo.MarkAllRead(context.Background(), "user_alice"); err != nil {
-		t.Fatalf("expected mark_all_read fallback behavior, got %v", err)
+	if err := repo.MarkAsRead(context.Background(), "user_alice", MarkPrivateMessagesReadRequest{TargetUserID: "user_bob", UpToMessageID: "pm_1"}); err != nil {
+		t.Fatalf("expected mark_as_read postgres behavior, got %v", err)
 	}
-	if !fallback.used {
-		t.Fatal("expected mark_all_read to use fallback")
+	if fallback.used {
+		t.Fatal("expected mark_as_read on postgres without fallback")
+	}
+	state := backend.readStates[chatKey]["user_alice"]
+	if state.MessageID != "pm_1" {
+		t.Fatalf("expected mark_as_read to persist cursor, got %#v", state)
+	}
+
+	if err := repo.MarkAsRead(context.Background(), "user_alice", MarkPrivateMessagesReadRequest{TargetUserID: "user_bob", UpToMessageID: "pm_missing"}); !errors.Is(err, ErrMessageNotFound) {
+		t.Fatalf("expected ErrMessageNotFound, got %v", err)
+	}
+
+	if err := repo.MarkAllRead(context.Background(), "user_alice"); err != nil {
+		t.Fatalf("expected mark_all_read postgres behavior, got %v", err)
+	}
+	if fallback.used {
+		t.Fatal("expected mark_all_read on postgres without fallback")
+	}
+	state = backend.readStates[chatKey]["user_alice"]
+	if state.MessageID != "pm_2" {
+		t.Fatalf("expected mark_all_read to advance cursor, got %#v", state)
+	}
+}
+
+func TestPostgresRepositoryHistoryReflectsReadStateSemantics(t *testing.T) {
+	chatKey := conversationKey("user_alice", "user_bob")
+	backend := &privateMessageBackendStub{
+		items: map[string][]privateMessageStubRecord{
+			chatKey: {
+				{MessageID: "pm_3", ChatKey: chatKey, SenderID: "user_bob", Type: "text", Content: "reply", SentAt: "2026-03-30T10:02:00Z"},
+				{MessageID: "pm_2", ChatKey: chatKey, SenderID: "user_alice", Type: "text", Content: "second", SentAt: "2026-03-30T10:01:00Z"},
+				{MessageID: "pm_1", ChatKey: chatKey, SenderID: "user_alice", Type: "text", Content: "first", SentAt: "2026-03-30T10:00:00Z"},
+			},
+		},
+		readStates: map[string]map[string]privateMessageReadState{
+			chatKey: {
+				"user_bob": {MessageID: "pm_1", SentAt: "2026-03-30T10:00:00Z"},
+			},
+		},
+		execErrs:  map[string]error{},
+		queryErrs: map[string]error{},
+	}
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	repo := NewPostgresRepository(factory, &privateMessageFallbackRepo{})
+
+	history, err := repo.History(context.Background(), "user_alice", "user_bob")
+	if err != nil {
+		t.Fatalf("history: %v", err)
+	}
+	if len(history.Items) != 3 {
+		t.Fatalf("expected 3 messages, got %#v", history)
+	}
+	if !history.Items[0].IsRead {
+		t.Fatal("expected incoming message to always be read for current viewer")
+	}
+	if history.Items[1].IsRead {
+		t.Fatal("expected newer outgoing message to remain unread before peer cursor")
+	}
+	if !history.Items[2].IsRead {
+		t.Fatal("expected outgoing message at peer cursor to be read")
 	}
 }

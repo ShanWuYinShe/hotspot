@@ -63,15 +63,30 @@ func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, req 
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return r.fallback.MarkAsRead(ctx, userID, req)
 	}
-	// TODO: implement with read tracking table (Phase 3 groups feature)
-	return r.fallback.MarkAsRead(ctx, userID, req)
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	chatKey := conversationKey(userID, req.TargetUserID)
+	if req.UpToMessageID == "" {
+		return queryable.Exec(ctx, queryMarkAllPrivateMessagesReadForChat, chatKey, userID)
+	}
+	var sentAt string
+	var messageID string
+	if err := queryable.QueryRow(ctx, queryPrivateMessageReadStateByMessage, chatKey, req.UpToMessageID).Scan(&sentAt, &messageID); err != nil {
+		return ErrMessageNotFound
+	}
+	return queryable.Exec(ctx, queryUpsertPrivateMessageReadState, chatKey, userID, messageID, sentAt)
 }
 func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return r.fallback.MarkAllRead(ctx, userID)
 	}
-	// TODO: implement with read tracking table (Phase 3 groups feature)
-	return r.fallback.MarkAllRead(ctx, userID)
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryMarkAllPrivateMessagesRead, userID)
 }
 
 func orderedUsers(a, b string) (string, string) {
