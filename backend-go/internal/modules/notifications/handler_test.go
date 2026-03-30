@@ -103,6 +103,20 @@ func TestNotificationHandlerReturns10600OnServiceError(t *testing.T) {
 	assertNotificationCode(t, markAllRR, 10600)
 }
 
+func TestNotificationHandlerValidatesListRequest(t *testing.T) {
+	handler := NewHandler(NewService())
+
+	badTypeReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"type":"bad"}`)))
+	badTypeRR := httptest.NewRecorder()
+	handler.List(badTypeRR, badTypeReq)
+	assertNotificationCode(t, badTypeRR, 10000)
+
+	badCursorReq := withPrincipal(httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"pagination":{"cursor":"%%%"}}`)))
+	badCursorRR := httptest.NewRecorder()
+	handler.List(badCursorRR, badCursorReq)
+	assertNotificationCode(t, badCursorRR, 10000)
+}
+
 func assertNotificationCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
 	t.Helper()
 	var resp struct {

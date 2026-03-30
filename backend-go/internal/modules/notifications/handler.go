@@ -2,6 +2,7 @@ package notifications
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/httpx"
@@ -24,6 +25,10 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	list, err := h.service.List(r.Context(), req)
 	if err != nil {
+		if errors.Is(err, ErrInvalidNotificationRequest) {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+			return
+		}
 		observability.L().Error("handler error",
 			"method", "List",
 			"error", err,

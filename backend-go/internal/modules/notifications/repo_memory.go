@@ -2,6 +2,7 @@ package notifications
 
 import (
 	"context"
+	"sort"
 	"sync"
 )
 
@@ -17,13 +18,39 @@ func NewInMemoryRepository() *InMemoryRepository {
 func (r *InMemoryRepository) List(_ context.Context, userID string, req NotificationListRequest) (PaginatedNotifications, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
+	query, err := normalizeNotificationListQuery(req)
+	if err != nil {
+		return PaginatedNotifications{}, err
+	}
 	items := make([]NotificationItem, 0)
 	for _, item := range r.items[userID] {
-		if req.Type == "" || item.Type == req.Type {
+		if query.Type == "" || item.Type == query.Type {
 			items = append(items, item)
 		}
 	}
-	return PaginatedNotifications{Items: items}, nil
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].CreatedAt == items[j].CreatedAt {
+			return items[i].NotificationID > items[j].NotificationID
+		}
+		return items[i].CreatedAt > items[j].CreatedAt
+	})
+	if query.Cursor != nil {
+		filtered := items[:0]
+		for _, item := range items {
+			if item.CreatedAt < query.Cursor.CreatedAt || (item.CreatedAt == query.Cursor.CreatedAt && item.NotificationID < query.Cursor.NotificationID) {
+				filtered = append(filtered, item)
+			}
+		}
+		items = filtered
+	}
+	page := PaginatedNotifications{}
+	if len(items) > query.Limit {
+		last := items[query.Limit-1]
+		page.NextCursor = encodeNotificationCursor(notificationCursor{CreatedAt: last.CreatedAt, NotificationID: last.NotificationID})
+		items = items[:query.Limit]
+	}
+	page.Items = items
+	return page, nil
 }
 
 func (r *InMemoryRepository) UnreadCount(_ context.Context, userID string) (UnreadCountResult, error) {

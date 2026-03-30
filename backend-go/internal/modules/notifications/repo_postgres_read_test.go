@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"sort"
+	"strconv"
 	"testing"
 
 	"hotspot/backend-go/internal/platform/config"
@@ -106,23 +107,54 @@ func (b *notificationBackendStub) Query(_ context.Context, query string, args ..
 	if err := b.queryErrs[query]; err != nil {
 		return nil, err
 	}
-	if query != queryListNotifications {
+	switch query {
+	case queryListNotifications:
+		userID := args[0].(string)
+		typeFilter := args[1].(string)
+		cursorCreatedAt := args[2].(string)
+		cursorNotificationID := args[3].(string)
+		limit := args[4].(int)
+		items := append([]NotificationItem(nil), b.items[userID]...)
+		sort.Slice(items, func(i, j int) bool {
+			if items[i].CreatedAt == items[j].CreatedAt {
+				return items[i].NotificationID > items[j].NotificationID
+			}
+			return items[i].CreatedAt > items[j].CreatedAt
+		})
+		rows := make([][]any, 0)
+		for _, item := range items {
+			if typeFilter != "" && item.Type != typeFilter {
+				continue
+			}
+			if cursorCreatedAt != "" {
+				if !(item.CreatedAt < cursorCreatedAt || (item.CreatedAt == cursorCreatedAt && item.NotificationID < cursorNotificationID)) {
+					continue
+				}
+			}
+			payloadJSON, _ := json.Marshal(item.Payload)
+			rows = append(rows, []any{item.NotificationID, item.Type, item.IsRead, item.CreatedAt, string(payloadJSON)})
+			if len(rows) >= limit {
+				break
+			}
+		}
+		return &notificationRowsValues{rows: rows}, nil
+	case queryUnreadNotificationCounts:
+		userID := args[0].(string)
+		counts := map[string]int{}
+		for _, item := range b.items[userID] {
+			if item.IsRead {
+				continue
+			}
+			counts[item.Type]++
+		}
+		rows := make([][]any, 0, len(counts))
+		for notificationType, count := range counts {
+			rows = append(rows, []any{notificationType, strconv.Itoa(count)})
+		}
+		return &notificationRowsValues{rows: rows}, nil
+	default:
 		return &persistence.InMemoryRows{}, nil
 	}
-	userID := args[0].(string)
-	items := append([]NotificationItem(nil), b.items[userID]...)
-	sort.Slice(items, func(i, j int) bool {
-		if items[i].CreatedAt == items[j].CreatedAt {
-			return items[i].NotificationID > items[j].NotificationID
-		}
-		return items[i].CreatedAt > items[j].CreatedAt
-	})
-	rows := make([][]any, 0, len(items))
-	for _, item := range items {
-		payloadJSON, _ := json.Marshal(item.Payload)
-		rows = append(rows, []any{item.NotificationID, item.Type, item.IsRead, item.CreatedAt, string(payloadJSON)})
-	}
-	return &notificationRowsValues{rows: rows}, nil
 }
 
 func TestNewPersistenceRepositoryUsesPostgresWhenDSNConfigured(t *testing.T) {
@@ -133,37 +165,55 @@ func TestNewPersistenceRepositoryUsesPostgresWhenDSNConfigured(t *testing.T) {
 	}
 }
 
-func TestPostgresRepositoryListUnreadCountAndMarkRead(t *testing.T) {
+func TestPostgresRepositoryListSupportsFilterPaginationAndUnreadCount(t *testing.T) {
 	backend := newNotificationBackendStub()
-	backend.items["user_alice"] = []NotificationItem{{NotificationID: "notif_1", Type: "system_announcement", IsRead: false, CreatedAt: "2026-03-20T00:00:00Z", Payload: map[string]any{"type": "system_announcement", "announcement_id": "ann_1"}}, {NotificationID: "notif_2", Type: "new_follower", IsRead: true, CreatedAt: "2026-03-19T00:00:00Z", Payload: map[string]any{"type": "new_follower"}}}
+	backend.items["user_alice"] = []NotificationItem{
+		{NotificationID: "notif_3", Type: "system_announcement", IsRead: false, CreatedAt: "2026-03-20T00:00:00Z", Payload: map[string]any{"type": "system_announcement", "announcement_id": "ann_1"}},
+		{NotificationID: "notif_2", Type: "new_follower", IsRead: false, CreatedAt: "2026-03-20T00:00:00Z", Payload: map[string]any{"type": "new_follower"}},
+		{NotificationID: "notif_1", Type: "group_invite_received", IsRead: true, CreatedAt: "2026-03-19T00:00:00Z", Payload: map[string]any{"type": "group_invite_received"}},
+	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	fallback := &notificationFallbackRepo{}
 	repo := NewPostgresRepository(factory, fallback)
 
-	list, err := repo.List(context.Background(), "user_alice", NotificationListRequest{})
-	if err != nil || len(list.Items) != 2 || list.Items[0].NotificationID != "notif_1" {
-		t.Fatalf("unexpected list: %#v err=%v", list, err)
+	page1, err := repo.List(context.Background(), "user_alice", NotificationListRequest{Pagination: &PaginationParams{Limit: 2}})
+	if err != nil || len(page1.Items) != 2 || page1.Items[0].NotificationID != "notif_3" || page1.Items[1].NotificationID != "notif_2" || page1.NextCursor == "" {
+		t.Fatalf("unexpected page1: %#v err=%v", page1, err)
 	}
-	if list.Items[0].Payload["announcement_id"] != "ann_1" {
-		t.Fatalf("unexpected payload: %#v", list.Items[0])
+	if page1.Items[0].Payload["announcement_id"] != "ann_1" {
+		t.Fatalf("unexpected payload: %#v", page1.Items[0])
+	}
+
+	page2, err := repo.List(context.Background(), "user_alice", NotificationListRequest{Pagination: &PaginationParams{Limit: 2, Cursor: page1.NextCursor}})
+	if err != nil || len(page2.Items) != 1 || page2.Items[0].NotificationID != "notif_1" || page2.NextCursor != "" {
+		t.Fatalf("unexpected page2: %#v err=%v", page2, err)
+	}
+
+	filtered, err := repo.List(context.Background(), "user_alice", NotificationListRequest{Type: "new_follower", Pagination: &PaginationParams{Limit: 20}})
+	if err != nil || len(filtered.Items) != 1 || filtered.Items[0].NotificationID != "notif_2" {
+		t.Fatalf("unexpected filtered list: %#v err=%v", filtered, err)
 	}
 
 	count, err := repo.UnreadCount(context.Background(), "user_alice")
-	if err != nil || count.Total != 1 || count.ByType["system"] != 1 {
+	if err != nil || count.Total != 2 || count.ByType["system"] != 1 || count.ByType["social"] != 1 {
 		t.Fatalf("unexpected unread count: %#v err=%v", count, err)
 	}
 
-	if err := repo.MarkAsRead(context.Background(), "user_alice", []string{"notif_1"}); err != nil {
+	if err := repo.MarkAsRead(context.Background(), "user_alice", []string{"notif_3"}); err != nil {
 		t.Fatalf("mark as read: %v", err)
 	}
 	count, err = repo.UnreadCount(context.Background(), "user_alice")
-	if err != nil || count.Total != 0 {
+	if err != nil || count.Total != 1 || count.ByType["system"] != 0 {
 		t.Fatalf("unexpected unread count after mark: %#v err=%v", count, err)
 	}
 
 	if err := repo.MarkAllRead(context.Background(), "user_alice"); err != nil {
 		t.Fatalf("mark all read: %v", err)
+	}
+	count, err = repo.UnreadCount(context.Background(), "user_alice")
+	if err != nil || count.Total != 0 {
+		t.Fatalf("unexpected unread count after mark all: %#v err=%v", count, err)
 	}
 	if fallback.used {
 		t.Fatal("unexpected fallback usage")
@@ -217,6 +267,23 @@ func TestPostgresRepositoryListReturnsErrorOnQueryFailure(t *testing.T) {
 	_, err := repo.List(context.Background(), "user_alice", NotificationListRequest{})
 	if err == nil {
 		t.Fatal("expected list error")
+	}
+	if fallback.used {
+		t.Fatal("unexpected fallback usage")
+	}
+}
+
+func TestPostgresRepositoryUnreadCountReturnsErrorOnQueryFailure(t *testing.T) {
+	backend := newNotificationBackendStub()
+	backend.queryErrs[queryUnreadNotificationCounts] = errors.New("query failed")
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	fallback := &notificationFallbackRepo{}
+	repo := NewPostgresRepository(factory, fallback)
+
+	_, err := repo.UnreadCount(context.Background(), "user_alice")
+	if err == nil {
+		t.Fatal("expected unread count error")
 	}
 	if fallback.used {
 		t.Fatal("unexpected fallback usage")

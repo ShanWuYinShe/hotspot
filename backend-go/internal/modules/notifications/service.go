@@ -16,7 +16,15 @@ func NewServiceWithRepo(repo Repository) *Service { return &Service{repo: repo} 
 
 func (s *Service) List(ctx context.Context, req NotificationListRequest) (PaginatedNotifications, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	items, err := s.repo.List(ctx, principal.UserID, req)
+	query, err := normalizeNotificationListQuery(req)
+	if err != nil {
+		return PaginatedNotifications{}, err
+	}
+	normalizedReq := NotificationListRequest{Type: query.Type, Pagination: &PaginationParams{Limit: query.Limit}}
+	if query.Cursor != nil {
+		normalizedReq.Pagination.Cursor = encodeNotificationCursor(*query.Cursor)
+	}
+	items, err := s.repo.List(ctx, principal.UserID, normalizedReq)
 	if err != nil {
 		observability.L().Error("notifications.list failed", "error", err)
 		return PaginatedNotifications{}, err
