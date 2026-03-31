@@ -9,14 +9,14 @@ import (
 )
 
 type InMemoryRepository struct {
-	mu         sync.RWMutex
-	items       map[string][]GroupMessageItem
-	readCount  map[string]map[string]int               // groupID -> messageID -> count
+	mu        sync.RWMutex
+	items     map[string][]GroupMessageItem
+	readCount map[string]map[string]int // groupID -> messageID -> count
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{
-		items:      make(map[string][]GroupMessageItem),
+		items:     make(map[string][]GroupMessageItem),
 		readCount: make(map[string]map[string]int),
 	}
 }
@@ -112,27 +112,26 @@ func (r *InMemoryRepository) Recall(_ context.Context, req RecallGroupMessageReq
 	return nil
 }
 
-func (r *InMemoryRepository) MarkAsRead(_ context.Context, groupID string, upToMessageID string) error {
+func (r *InMemoryRepository) MarkAsRead(_ context.Context, _ string, req MarkGroupMessagesReadRequest) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	messages, ok := r.items[groupID]
+	messages, ok := r.items[req.GroupID]
 	if !ok {
 		return ErrMessageNotFound
 	}
 
-	if upToMessageID == "" {
+	if req.UpToMessageID == "" {
 		for _, msg := range messages {
-			r.markMessageRead(groupID, msg.MessageID)
+			r.markMessageRead(req.GroupID, msg.MessageID)
 		}
 		return nil
 	}
 
-	// 找到目标消息以获取其 sent_at
 	var targetTime string
 	found := false
 	for _, msg := range messages {
-		if msg.MessageID == upToMessageID {
+		if msg.MessageID == req.UpToMessageID {
 			targetTime = msg.SentAt
 			found = true
 			break
@@ -142,20 +141,18 @@ func (r *InMemoryRepository) MarkAsRead(_ context.Context, groupID string, upToM
 		return ErrMessageNotFound
 	}
 
-	// 标记 sent_at <= targetTime 的所有消息
 	for _, msg := range messages {
 		if msg.SentAt <= targetTime {
-			r.markMessageRead(groupID, msg.MessageID)
+			r.markMessageRead(req.GroupID, msg.MessageID)
 		}
 	}
 	return nil
 }
 
-func (r *InMemoryRepository) MarkAllRead(_ context.Context) error {
+func (r *InMemoryRepository) MarkAllRead(_ context.Context, _ string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	// 标记所有群组的所有消息
 	for groupID, messages := range r.items {
 		for _, msg := range messages {
 			r.markMessageRead(groupID, msg.MessageID)

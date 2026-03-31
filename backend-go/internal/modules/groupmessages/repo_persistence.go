@@ -32,10 +32,10 @@ func (r *PersistenceRepository) Recall(ctx context.Context, req RecallGroupMessa
 	return r.impl.Recall(ctx, req)
 }
 
-func (r *PersistenceRepository) MarkAsRead(ctx context.Context, groupID string, upToMessageID string) error {
-	return r.impl.MarkAsRead(ctx, groupID, upToMessageID)
+func (r *PersistenceRepository) MarkAsRead(ctx context.Context, userID string, req MarkGroupMessagesReadRequest) error {
+	return r.impl.MarkAsRead(ctx, userID, req)
 }
 
-func (r *PersistenceRepository) MarkAllRead(ctx context.Context) error {
-	return r.impl.MarkAllRead(ctx)
+func (r *PersistenceRepository) MarkAllRead(ctx context.Context, userID string) error {
+	return r.impl.MarkAllRead(ctx, userID)
 }

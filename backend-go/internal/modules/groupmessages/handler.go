@@ -1,7 +1,6 @@
 package groupmessages
 
 import (
-	"encoding/json"
 	"errors"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
@@ -28,7 +27,12 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req SendGroupMessageRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" || req.Type == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
+		logBusinessError(r, "Send", 10000, "请求体格式错误")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		return
+	}
+	if req.GroupID == "" || req.Type == "" {
 		logBusinessError(r, "Send", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -44,7 +48,12 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 }
 func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 	var req GetGroupMessagesHistoryRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
+		logBusinessError(r, "History", 10000, "请求体格式错误")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		return
+	}
+	if req.GroupID == "" {
 		logBusinessError(r, "History", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -60,7 +69,12 @@ func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var req UpdateGroupMessageRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.MessageID == "" || req.Content == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
+		logBusinessError(r, "Update", 10000, "请求体格式错误")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		return
+	}
+	if req.MessageID == "" || req.Content == "" {
 		logBusinessError(r, "Update", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -90,7 +104,12 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 	var req RecallGroupMessageRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.MessageID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
+		logBusinessError(r, "Recall", 10000, "请求体格式错误")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		return
+	}
+	if req.MessageID == "" {
 		logBusinessError(r, "Recall", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -120,7 +139,12 @@ func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 	var req MarkGroupMessagesReadRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GroupID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
+		logBusinessError(r, "MarkAsRead", 10000, "请求体格式错误")
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		return
+	}
+	if req.GroupID == "" {
 		logBusinessError(r, "MarkAsRead", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -140,13 +164,10 @@ func (h *Handler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) MarkAllRead(w http.ResponseWriter, r *http.Request) {
-	if r.Body != nil && r.ContentLength != 0 {
-		var discard struct{}
-		if err := json.NewDecoder(r.Body).Decode(&discard); err != nil {
-			logBusinessError(r, "MarkAllRead", 10000, "参数错误")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
-			return
-		}
+	if err := httpx.RequireEmptyObject(r); err != nil {
+		logBusinessError(r, "MarkAllRead", err.Code, err.Message)
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		return
 	}
 	if err := h.service.MarkAllRead(r.Context()); err != nil {
 		logServerError(r, "MarkAllRead", err)

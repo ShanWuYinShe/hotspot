@@ -1,6 +1,9 @@
 package auth
 
 import (
+	"encoding/base64"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -11,6 +14,9 @@ func TestTokenManagerMintAndParse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("mint token: %v", err)
 	}
+	if strings.Count(token, ".") != 2 {
+		t.Fatalf("expected JWT token format, got %q", token)
+	}
 	claims, err := manager.ParseAccessToken(token)
 	if err != nil {
 		t.Fatalf("parse token: %v", err)
@@ -20,6 +26,20 @@ func TestTokenManagerMintAndParse(t *testing.T) {
 	}
 	if claims.ExpiresAt.Unix() != expiresAt.Unix() {
 		t.Fatalf("unexpected expiry: %v != %v", claims.ExpiresAt, expiresAt)
+	}
+}
+
+func TestTokenManagerParsesLegacyTokenDuringMigration(t *testing.T) {
+	manager := NewTokenManager("test-secret")
+	expiresAt := time.Now().UTC().Add(time.Minute)
+	payload := strings.Join([]string{"user_legacy", "sess_legacy", strconv.FormatInt(expiresAt.Unix(), 10)}, ".")
+	token := base64.RawURLEncoding.EncodeToString([]byte(payload + "." + manager.sign(payload)))
+	claims, err := manager.ParseAccessToken(token)
+	if err != nil {
+		t.Fatalf("parse legacy token: %v", err)
+	}
+	if claims.UserID != "user_legacy" || claims.SessionID != "sess_legacy" {
+		t.Fatalf("unexpected legacy claims: %#v", claims)
 	}
 }
 

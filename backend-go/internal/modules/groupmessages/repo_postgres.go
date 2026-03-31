@@ -58,18 +58,32 @@ func (r *PostgresRepository) Recall(ctx context.Context, req RecallGroupMessageR
 	return queryable.Exec(ctx, queryRecallGroupMessage, req.MessageID)
 }
 
-func (r *PostgresRepository) MarkAsRead(ctx context.Context, groupID string, upToMessageID string) error {
+func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, req MarkGroupMessagesReadRequest) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.MarkAsRead(ctx, groupID, upToMessageID)
+		return r.fallback.MarkAsRead(ctx, userID, req)
 	}
-	// TODO: implement with group_members read tracking table (Phase 3 groups feature)
-	return r.fallback.MarkAsRead(ctx, groupID, upToMessageID)
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	if req.UpToMessageID == "" {
+		return queryable.Exec(ctx, queryMarkGroupMessagesReadToLatest, userID, req.GroupID)
+	}
+	var sentAt string
+	var messageID string
+	if err := queryable.QueryRow(ctx, queryGroupMessageReadStateByMessage, userID, req.GroupID, req.UpToMessageID).Scan(&sentAt, &messageID); err != nil {
+		return ErrMessageNotFound
+	}
+	return queryable.Exec(ctx, queryUpsertGroupMessageReadState, req.GroupID, userID, messageID, sentAt)
 }
 
-func (r *PostgresRepository) MarkAllRead(ctx context.Context) error {
+func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.MarkAllRead(ctx)
+		return r.fallback.MarkAllRead(ctx, userID)
 	}
-	// TODO: implement with group_members read tracking table (Phase 3 groups feature)
-	return r.fallback.MarkAllRead(ctx)
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryMarkAllGroupMessagesRead, userID)
 }

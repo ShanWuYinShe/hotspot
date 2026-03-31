@@ -27,10 +27,10 @@ func (r *groupMessageErrorRepo) Update(context.Context, UpdateGroupMessageReques
 func (r *groupMessageErrorRepo) Recall(context.Context, RecallGroupMessageRequest) error {
 	return nil
 }
-func (r *groupMessageErrorRepo) MarkAsRead(context.Context, string, string) error {
+func (r *groupMessageErrorRepo) MarkAsRead(context.Context, string, MarkGroupMessagesReadRequest) error {
 	return nil
 }
-func (r *groupMessageErrorRepo) MarkAllRead(context.Context) error {
+func (r *groupMessageErrorRepo) MarkAllRead(context.Context, string) error {
 	return nil
 }
 
@@ -67,6 +67,22 @@ func TestGroupMessagesHandlerReturns10600OnServiceError(t *testing.T) {
 	historyRR := httptest.NewRecorder()
 	handler.History(historyRR, historyReq)
 	assertGroupMessageCode(t, historyRR, 10600)
+}
+
+func TestMarkAllReadRequiresEmptyObject(t *testing.T) {
+	handler := NewHandler(NewService())
+	req := httptest.NewRequest(http.MethodPost, "/me/mark_all_read", strings.NewReader(`{"unexpected":true}`))
+	rr := httptest.NewRecorder()
+	handler.MarkAllRead(rr, req)
+	assertGroupMessageCode(t, rr, 10000)
+}
+
+func TestMarkAsReadRejectsUnknownFields(t *testing.T) {
+	handler := NewHandler(NewService())
+	req := httptest.NewRequest(http.MethodPost, "/me/mark_as_read", strings.NewReader(`{"group_id":"group_1","unexpected":true}`))
+	rr := httptest.NewRecorder()
+	handler.MarkAsRead(rr, req)
+	assertGroupMessageCode(t, rr, 10000)
 }
 
 func assertGroupMessageCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {

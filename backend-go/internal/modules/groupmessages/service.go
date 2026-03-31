@@ -3,6 +3,7 @@ package groupmessages
 import (
 	"context"
 
+	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
 )
@@ -41,16 +42,18 @@ func (s *Service) Recall(ctx context.Context, req RecallGroupMessageRequest) err
 }
 
 func (s *Service) MarkAsRead(ctx context.Context, req MarkGroupMessagesReadRequest) error {
-	if err := s.repo.MarkAsRead(ctx, req.GroupID, req.UpToMessageID); err != nil {
-		observability.L().Error("groupmessages.mark_as_read failed", "error", err, "group_id", req.GroupID, "up_to_message_id", req.UpToMessageID)
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	if err := s.repo.MarkAsRead(ctx, principal.UserID, req); err != nil {
+		observability.L().Error("groupmessages.mark_as_read failed", "error", err, "group_id", req.GroupID, "up_to_message_id", req.UpToMessageID, "user_id", principal.UserID)
 		return err
 	}
 	return nil
 }
 
 func (s *Service) MarkAllRead(ctx context.Context) error {
-	if err := s.repo.MarkAllRead(ctx); err != nil {
-		observability.L().Error("groupmessages.mark_all_read failed", "error", err)
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	if err := s.repo.MarkAllRead(ctx, principal.UserID); err != nil {
+		observability.L().Error("groupmessages.mark_all_read failed", "error", err, "user_id", principal.UserID)
 		return err
 	}
 	return nil

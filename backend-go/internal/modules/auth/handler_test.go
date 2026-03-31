@@ -99,6 +99,55 @@ func TestLoginAppReturnsTokenPair(t *testing.T) {
 	if resp.Code != 0 || resp.Data.AccessToken == "" || resp.Data.RefreshToken == "" {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
+	if strings.Count(resp.Data.AccessToken, ".") != 2 {
+		t.Fatalf("expected JWT access token, got %q", resp.Data.AccessToken)
+	}
+}
+
+func TestLoginWebReturnsEmptyDataAndCookiesOnly(t *testing.T) {
+	handler := newTestHandler()
+	registerAppUser(t, handler, "alice-web", "Alice", "secret123")
+
+	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice-web","password":"secret123","client_type":"web"}`))
+	rr := httptest.NewRecorder()
+	handler.Login(rr, req)
+
+	var resp struct {
+		Code int                    `json:"code"`
+		Data map[string]interface{} `json:"data"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("unexpected response: %#v", resp)
+	}
+	if len(resp.Data) != 0 {
+		t.Fatalf("expected empty web data, got %#v", resp.Data)
+	}
+	cookies := rr.Result().Cookies()
+	if len(cookies) == 0 {
+		t.Fatal("expected auth cookies for web login")
+	}
+}
+
+func TestLoginRejectsUnknownFields(t *testing.T) {
+	handler := newTestHandler()
+	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret","client_type":"app","unexpected":true}`))
+	rr := httptest.NewRecorder()
+
+	handler.Login(rr, req)
+
+	var resp map[string]any
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if int(resp["code"].(float64)) != 10000 {
+		t.Fatalf("unexpected response: %#v", resp)
+	}
+	if _, ok := resp["data"]; ok {
+		t.Fatalf("expected error response without data, got %#v", resp)
+	}
 }
 
 func TestLoginCollapsesUnknownUserAndWrongPassword(t *testing.T) {

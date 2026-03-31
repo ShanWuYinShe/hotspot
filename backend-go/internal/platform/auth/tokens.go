@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type TokenManager struct {
@@ -23,6 +25,11 @@ type AccessClaims struct {
 	ExpiresAt time.Time
 }
 
+type jwtAccessClaims struct {
+	SessionID string `json:"sid"`
+	jwt.RegisteredClaims
+}
+
 func NewTokenManager(secret string) *TokenManager {
 	if secret == "" {
 		secret = "dev-secret-change-me"
@@ -31,13 +38,60 @@ func NewTokenManager(secret string) *TokenManager {
 }
 
 func (m *TokenManager) MintAccessToken(userID, sessionID string, ttl time.Duration) (string, time.Time, error) {
-	expiresAt := time.Now().UTC().Add(ttl)
-	payload := strings.Join([]string{userID, sessionID, strconv.FormatInt(expiresAt.Unix(), 10)}, ".")
-	sig := m.sign(payload)
-	return base64.RawURLEncoding.EncodeToString([]byte(payload + "." + sig)), expiresAt, nil
+	now := time.Now().UTC()
+	expiresAt := now.Add(ttl)
+	claims := jwtAccessClaims{
+		SessionID: sessionID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   userID,
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signed, err := token.SignedString(m.secret)
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	return signed, expiresAt, nil
 }
 
 func (m *TokenManager) ParseAccessToken(token string) (AccessClaims, error) {
+	claims, err := m.parseJWTAccessToken(token)
+	if err == nil {
+		return claims, nil
+	}
+	if errors.Is(err, jwt.ErrTokenExpired) {
+		return AccessClaims{}, errors.New("expired token")
+	}
+	legacyClaims, legacyErr := m.parseLegacyAccessToken(token)
+	if legacyErr == nil {
+		return legacyClaims, nil
+	}
+	if legacyErr.Error() == "expired token" {
+		return AccessClaims{}, legacyErr
+	}
+	return AccessClaims{}, errors.New("invalid token")
+}
+
+func (m *TokenManager) parseJWTAccessToken(token string) (AccessClaims, error) {
+	claims := &jwtAccessClaims{}
+	parsed, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (any, error) {
+		if token.Method != jwt.SigningMethodHS256 {
+			return nil, errors.New("invalid token")
+		}
+		return m.secret, nil
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}), jwt.WithExpirationRequired())
+	if err != nil {
+		return AccessClaims{}, err
+	}
+	if !parsed.Valid || claims.Subject == "" || claims.SessionID == "" || claims.ExpiresAt == nil {
+		return AccessClaims{}, errors.New("invalid token")
+	}
+	return AccessClaims{UserID: claims.Subject, SessionID: claims.SessionID, ExpiresAt: claims.ExpiresAt.Time.UTC()}, nil
+}
+
+func (m *TokenManager) parseLegacyAccessToken(token string) (AccessClaims, error) {
 	decoded, err := base64.RawURLEncoding.DecodeString(token)
 	if err != nil {
 		return AccessClaims{}, errors.New("invalid token")

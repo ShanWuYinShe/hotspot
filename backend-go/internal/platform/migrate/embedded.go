@@ -25,6 +25,7 @@ var requiredTables = []string{
 	"private_chats",
 	"private_messages",
 	"group_messages",
+	"group_message_read_state",
 	"notifications",
 	"shares",
 	"reports",

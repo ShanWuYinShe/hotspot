@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -34,7 +33,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req RegisterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
@@ -64,7 +63,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
@@ -101,7 +100,7 @@ func (h *Handler) Guest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req GuestRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
@@ -131,7 +130,7 @@ func (h *Handler) Guest(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	var req RefreshTokenRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
@@ -183,7 +182,11 @@ func (h *Handler) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req RequestPasswordResetRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.LoginID == "" || (req.ClientType != ClientTypeWeb && req.ClientType != ClientTypeApp) {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		return
+	}
+	if req.LoginID == "" || (req.ClientType != ClientTypeWeb && req.ClientType != ClientTypeApp) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -201,7 +204,7 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req ResetPasswordRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
@@ -235,7 +238,11 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req ChangePasswordRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.OldPassword == "" || req.NewPassword == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		return
+	}
+	if req.OldPassword == "" || req.NewPassword == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
@@ -257,7 +264,11 @@ func (h *Handler) ListSessions(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 	var req RevokeSessionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.SessionID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		return
+	}
+	if req.SessionID == "" {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
