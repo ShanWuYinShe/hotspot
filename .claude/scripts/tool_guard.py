@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import os
 import re
 import shlex
 import sys
@@ -34,6 +35,18 @@ BLOCKED_RUNTIME_PATTERNS = (
     re.compile(r"^\./(?!deploy/scripts/|\.claude/scripts/)[^\s]+"),
 )
 
+ALLOWED_FRONTEND_PNPM_COMMANDS = {"install", "check", "lint", "build", "test"}
+ALLOWED_HARMONY_TASK_NAMES = {
+    "assemblehap",
+    "assembleapp",
+    "build",
+    "check",
+    "compile",
+    "lint",
+    "test",
+}
+SHELL_EDIT_COMMANDS = {"sed"}
+SED_FILE_OPTIONS = {"-f", "--file"}
 SPLIT_PATTERN = re.compile(r"\s*(?:&&|\|\||;)\s*")
 
 
@@ -83,7 +96,6 @@ def guard_bash(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
     if not segments:
         return 0
 
-    # 拦截使用远程引用作为基准点的 git worktree add
     for segment in segments:
         if re.match(r"^git\s+worktree\s+add", segment) and re.search(r"\borigin/", segment):
             return deny("git worktree add 不允许使用远程引用（如 origin/main）作为基准点；必须使用本地分支引用（如 main），确保基于主目录本地 main 当前 HEAD 创建。")
@@ -93,11 +105,22 @@ def guard_bash(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
             return 0
         return deny("主目录本地 main 只允许 git 控制面命令；请先进入 feature worktree 再实施、验证或运行脚本。")
 
+    raw_cwd = payload.get("cwd")
+    if raw_cwd:
+        command_cwd = Path(str(raw_cwd)).resolve()
+    elif repo:
+        command_cwd = Path(repo["top"]).resolve()
+    else:
+        command_cwd = Path.cwd().resolve()
+
     for segment in segments:
-        if is_blocked_runtime_segment(segment):
+        argv = tokenize_shell_segment(segment)
+        if is_allowed_worktree_segment(argv, repo, command_cwd):
+            continue
+        if is_blocked_runtime_segment(segment, argv):
             return deny("该命令会影响运行环境、产生较重副作用，或可能在多 agent 下冲突；请改用 deploy/ 标准入口或仓库控制脚本。Harmony 在非主目录 worktree 内应优先使用 .claude/scripts/harmony_worktree.py 完成安装/测试/编译闭环；脚本直接基于当前 worktree 执行，不需要额外 cd。")
-        if not is_safe_shell_segment(segment):
-            return deny("当前仓库的 Bash 默认只允许 git 控制面、deploy 入口、.claude 控制脚本，以及按副作用判定为安全的静态检查；其他命令请改用专用工具或受控脚本。")
+        if not is_safe_shell_segment(segment, argv):
+            return deny("当前仓库的 Bash 默认只允许 git 控制面、deploy 入口、.claude 控制脚本，以及按副作用判定为安全的静态检查；在非主目录 worktree 中，可直接使用 sed，以及 frontend_svelte、harmonyapp 的受限 install/check/test/build 命令。其他命令请改用专用工具或受控脚本。")
 
     return 0
 
@@ -130,21 +153,21 @@ def is_git_segment(segment: str) -> bool:
     return bool(re.match(r"^git(?:\s|$)", segment))
 
 
-def is_safe_shell_segment(segment: str) -> bool:
+def is_safe_shell_segment(segment: str, argv: list[str] | None = None) -> bool:
     if any(pattern.match(segment) for pattern in SAFE_SHELL_PATTERNS):
         return True
-    argv = tokenize_shell_segment(segment)
+    argv = argv or tokenize_shell_segment(segment)
     if not argv:
         return False
     return is_safe_static_check(argv)
 
 
-def is_blocked_runtime_segment(segment: str) -> bool:
+def is_blocked_runtime_segment(segment: str, argv: list[str] | None = None) -> bool:
     allowed_python = re.match(r"^python3?\s+(?:\./)?\.claude/scripts/[a-zA-Z0-9_./-]+(?:\s|$)", segment)
     if allowed_python:
         return False
 
-    argv = tokenize_shell_segment(segment)
+    argv = argv or tokenize_shell_segment(segment)
     if not argv:
         return False
 
@@ -154,6 +177,81 @@ def is_blocked_runtime_segment(segment: str) -> bool:
         return True
 
     return any(pattern.match(segment) for pattern in BLOCKED_RUNTIME_PATTERNS)
+
+
+def is_allowed_worktree_segment(argv: list[str], repo: dict[str, Any] | None, current_dir: Path) -> bool:
+    if not argv or not repo or repo["is_main_primary"]:
+        return False
+
+    current_root = Path(repo["top"]).resolve()
+    current_dir = current_dir.resolve()
+    if not is_within(current_dir, current_root):
+        return False
+
+    if is_allowed_shell_edit(argv, current_root, current_dir):
+        return True
+    if is_allowed_frontend_command(argv, current_root, current_dir):
+        return True
+    if is_allowed_harmony_command(argv, current_root, current_dir):
+        return True
+    return False
+
+
+def is_allowed_shell_edit(argv: list[str], current_root: Path, current_dir: Path) -> bool:
+    cmd = argv[0]
+    if cmd not in SHELL_EDIT_COMMANDS:
+        return False
+
+    file_args = extract_shell_edit_file_args(argv)
+    if not file_args:
+        return False
+    return all_paths_within_worktree(file_args, current_root, current_dir)
+
+
+def is_allowed_frontend_command(argv: list[str], current_root: Path, current_dir: Path) -> bool:
+    if argv[0] != "pnpm":
+        return False
+
+    target_dir = resolve_command_dir(argv, current_root, current_dir)
+    if target_dir is None:
+        return False
+
+    frontend_dir = (current_root / "frontend_svelte").resolve()
+    if target_dir != frontend_dir:
+        return False
+
+    meaningful = filtered_command_args("pnpm", argv[1:])
+    if not meaningful:
+        return False
+
+    if meaningful[-1] in ALLOWED_FRONTEND_PNPM_COMMANDS:
+        return True
+    return len(meaningful) >= 2 and meaningful[-2:] == ["exec", "svelte-check"]
+
+
+def is_allowed_harmony_command(argv: list[str], current_root: Path, current_dir: Path) -> bool:
+    cmd = Path(argv[0]).name.lower()
+    if cmd == "ohpm":
+        target_dir = resolve_ohpm_dir(argv, current_root, current_dir)
+        if target_dir is None:
+            return False
+        harmony_dir = (current_root / "harmonyapp").resolve()
+        if target_dir != harmony_dir:
+            return False
+        meaningful = filtered_non_option_args(argv[1:], option_with_value={"-C", "--directory"})
+        return bool(meaningful and meaningful[0] == "install")
+
+    if cmd not in {"hvigor", "hvigorw"}:
+        return False
+
+    harmony_dir = (current_root / "harmonyapp").resolve()
+    if current_dir != harmony_dir:
+        return False
+
+    meaningful = filtered_non_option_args(argv[1:])
+    if not meaningful:
+        return False
+    return any(token.lower() in ALLOWED_HARMONY_TASK_NAMES for token in meaningful)
 
 
 def tokenize_shell_segment(segment: str) -> list[str]:
@@ -217,6 +315,91 @@ def filtered_command_args(cmd: str, args: list[str]) -> list[str]:
             continue
         meaningful.append(arg)
     return meaningful
+
+
+def filtered_non_option_args(args: list[str], option_with_value: set[str] | None = None) -> list[str]:
+    meaningful: list[str] = []
+    skip_next = False
+    option_with_value = option_with_value or set()
+    for arg in args:
+        if skip_next:
+            skip_next = False
+            continue
+        if arg in option_with_value:
+            skip_next = True
+            continue
+        if arg.startswith("-"):
+            continue
+        meaningful.append(arg)
+    return meaningful
+
+
+def resolve_command_dir(argv: list[str], current_root: Path, current_dir: Path) -> Path | None:
+    target_dir = current_dir
+    for index, arg in enumerate(argv[1:], start=1):
+        if arg in {"-C", "--dir"}:
+            if index + 1 >= len(argv):
+                return None
+            target_dir = resolve_path_in_worktree(argv[index + 1], current_root, current_dir)
+            if target_dir is None:
+                return None
+    return target_dir.resolve()
+
+
+def resolve_ohpm_dir(argv: list[str], current_root: Path, current_dir: Path) -> Path | None:
+    target_dir = current_dir
+    for index, arg in enumerate(argv[1:], start=1):
+        if arg in {"-C", "--directory"}:
+            if index + 1 >= len(argv):
+                return None
+            target_dir = resolve_path_in_worktree(argv[index + 1], current_root, current_dir)
+            if target_dir is None:
+                return None
+    return target_dir.resolve()
+
+
+def extract_shell_edit_file_args(argv: list[str]) -> list[str]:
+    option_with_value = SED_FILE_OPTIONS
+    files: list[str] = []
+    skip_next = False
+    consumed_program = False
+    for index, arg in enumerate(argv[1:], start=1):
+        if skip_next:
+            skip_next = False
+            continue
+        if arg in option_with_value:
+            if index + 1 >= len(argv):
+                return []
+            files.append(argv[index + 1])
+            skip_next = True
+            continue
+        if arg.startswith("-"):
+            continue
+        if not consumed_program:
+            consumed_program = True
+            continue
+        files.append(arg)
+    return files
+
+
+def all_paths_within_worktree(args: list[str], current_root: Path, current_dir: Path) -> bool:
+    for arg in args:
+        resolved = resolve_path_in_worktree(arg, current_root, current_dir)
+        if resolved is None:
+            return False
+    return True
+
+
+def resolve_path_in_worktree(raw: str, current_root: Path, current_dir: Path) -> Path | None:
+    expanded = Path(os.path.expanduser(raw))
+    candidate = expanded if expanded.is_absolute() else (current_dir / expanded)
+    try:
+        resolved = candidate.resolve(strict=False)
+    except OSError:
+        return None
+    if not is_within(resolved, current_root):
+        return None
+    return resolved
 
 
 def is_within(path: Path, base: Path) -> bool:

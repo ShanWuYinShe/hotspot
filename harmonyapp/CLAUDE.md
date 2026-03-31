@@ -45,5 +45,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 本仓库默认最终验证入口以根 `CLAUDE.md` 约定为准。
 - Harmony 工程的检查/编译配置入口主要在 `code-linter.json5`、`hvigorfile.ts`、`entry/hvigorfile.ts`、`hvigor/hvigor-config.json5`、`build-profile.json5`。
 - `code-linter.json5` 是 Harmony code linter 配置源；当前仓库未提交独立的 linter wrapper，Claude 默认通过受控 Hvigor 编译链路完成 ArkTS 语法/类型/编译检查。
-- 在非主目录 worktree 内，为完成质量门，Claude 应优先通过 `.claude/scripts/harmony_worktree.py` 自动运行 Harmony 安装、测试与编译；脚本直接基于当前 worktree 执行，不需要额外 `cd`。若失败，只能按当前错误做最小修复后重跑同一入口，不得扩展需求或无限重试。
-- 若任务不涉及质量门闭环，不要直接代跑任意 `hvigorw` / `hvigor` / `ohpm` 命令；优先走受控脚本入口。
+- 在非主目录 worktree 且当前目录位于 `harmonyapp/` 时，可直接运行 `ohpm install` 与受限 `hvigorw` / `hvigor` 检查、测试、编译命令作为开发内环自检；前提是依赖、缓存与构建产物留在当前 worktree 内，并且不会污染 git 状态。
+- 为完成质量门，Claude 仍应优先通过 `.claude/scripts/harmony_worktree.py` 自动运行 Harmony 安装、测试与编译；脚本直接基于当前 worktree 执行，不需要额外 `cd`。若失败，只能按当前错误做最小修复后重跑同一入口，不得扩展需求或无限重试。
+- 若任务不涉及质量门闭环，不要直接代跑超出上述范围的 `hvigorw` / `hvigor` / `ohpm` 命令；优先走受控脚本入口。

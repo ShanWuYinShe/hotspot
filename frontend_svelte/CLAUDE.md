@@ -39,6 +39,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 默认验证入口：`./deploy/scripts/verify.sh --env-name <name>`
 - 前端开发内环自动确认：`./deploy/scripts/verify-inspect.sh --env-name <name>`
 - 需要预演候选结果时：`./deploy/scripts/preview-build.sh` + `./deploy/scripts/preview-up.sh`
-- `pnpm check` 属于纯静态检查，若确认不会污染宿主环境且不会与并行任务冲突，可以直接在宿主环境执行。
-- `pnpm build`、`pnpm dev` 会影响运行环境或产生较重副作用，不应作为 Claude 默认宿主执行入口；默认仍走 `deploy/` 隔离流程。
-- 当前仓库未配置独立前端单测脚本，最终验证仍以 `deploy/` 下的 Docker 流程为准。
+- 在非主目录 worktree 且当前目录位于 `frontend_svelte/` 时，可直接运行 `pnpm install`、`pnpm check`、`pnpm exec svelte-check`、`pnpm build`、`pnpm test` 作为开发内环自检；前提是依赖、缓存与构建产物留在当前 worktree 内，并且不会污染 git 状态。
+- `pnpm dev`、`pnpm preview` 及依赖变更类命令（如 `pnpm add/remove/up/dlx`）仍不应作为 Claude 默认宿主执行入口；默认继续走 `deploy/` 或 `verify-inspect` 隔离流程。
+- 当前仓库未配置稳定的独立前端单测闭环时，最终验证仍以 `deploy/` 下的 Docker 流程为准。
