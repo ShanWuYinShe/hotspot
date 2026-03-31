@@ -12,21 +12,17 @@ import (
 )
 
 type PostgresRepository struct {
-	factory  *persistence.Factory
-	fallback Repository
+	factory *persistence.Factory
 }
 
-func NewPostgresRepository(factory *persistence.Factory, fallback Repository) *PostgresRepository {
-	if fallback == nil {
-		fallback = NewInMemoryRepository()
-	}
-	return &PostgresRepository{factory: factory, fallback: fallback}
+func NewPostgresRepository(factory *persistence.Factory, _ Repository) *PostgresRepository {
+	return &PostgresRepository{factory: factory}
 }
 
 func (r *PostgresRepository) Register(ctx context.Context, params RegisterParams) (Account, error) {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.Register(ctx, params)
+		return Account{}, persistence.ErrNotImplemented
 	}
 	userID, err := generateUserID()
 	if err != nil {
@@ -58,7 +54,7 @@ func (r *PostgresRepository) Register(ctx context.Context, params RegisterParams
 func (r *PostgresRepository) CreateGuest(ctx context.Context, params GuestParams) (Account, error) {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.CreateGuest(ctx, params)
+		return Account{}, persistence.ErrNotImplemented
 	}
 	userID, err := generateUserID()
 	if err != nil {
@@ -69,6 +65,7 @@ func (r *PostgresRepository) CreateGuest(ctx context.Context, params GuestParams
 		return Account{}, err
 	}
 	if err := queryable.Exec(ctx, queryUpsertUserSettings, userID); err != nil {
+		_ = queryable.Exec(ctx, queryDeleteUserProfileByUserID, userID)
 		return Account{}, err
 	}
 	return Account{UserID: userID, Nickname: params.Nickname, UserType: "temp"}, nil
@@ -77,7 +74,7 @@ func (r *PostgresRepository) CreateGuest(ctx context.Context, params GuestParams
 func (r *PostgresRepository) Authenticate(ctx context.Context, loginID, password string) (Account, error) {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.Authenticate(ctx, loginID, password)
+		return Account{}, persistence.ErrNotImplemented
 	}
 	record, found, err := r.accountByLoginID(ctx, queryable, loginID)
 	if err != nil {
@@ -92,7 +89,7 @@ func (r *PostgresRepository) Authenticate(ctx context.Context, loginID, password
 func (r *PostgresRepository) CreatePasswordReset(ctx context.Context, loginID string, expiresAt time.Time) error {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.CreatePasswordReset(ctx, loginID, expiresAt)
+		return persistence.ErrNotImplemented
 	}
 	if _, found, err := r.accountByLoginID(ctx, queryable, loginID); err != nil {
 		return err
@@ -119,7 +116,7 @@ func (r *PostgresRepository) CreatePasswordReset(ctx context.Context, loginID st
 func (r *PostgresRepository) ResetPassword(ctx context.Context, loginID, verificationCode, newPassword string) (Account, error) {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.ResetPassword(ctx, loginID, verificationCode, newPassword)
+		return Account{}, persistence.ErrNotImplemented
 	}
 	account, found, err := r.accountByLoginID(ctx, queryable, loginID)
 	if err != nil {
@@ -152,7 +149,7 @@ func (r *PostgresRepository) ResetPassword(ctx context.Context, loginID, verific
 func (r *PostgresRepository) ChangePassword(ctx context.Context, userID, oldPassword, newPassword string) error {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.ChangePassword(ctx, userID, oldPassword, newPassword)
+		return persistence.ErrNotImplemented
 	}
 	account, found, err := r.accountByUserID(ctx, queryable, userID)
 	if err != nil {

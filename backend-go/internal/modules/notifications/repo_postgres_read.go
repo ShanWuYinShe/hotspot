@@ -10,7 +10,7 @@ import (
 
 func (r *PostgresRepository) List(ctx context.Context, userID string, req NotificationListRequest) (PaginatedNotifications, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.List(ctx, userID, req)
+		return PaginatedNotifications{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -60,7 +60,7 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, req Notifi
 
 func (r *PostgresRepository) UnreadCount(ctx context.Context, userID string) (UnreadCountResult, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.UnreadCount(ctx, userID)
+		return UnreadCountResult{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {

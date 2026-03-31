@@ -49,6 +49,11 @@ func (r *notificationRowsValues) Err() error   { return r.err }
 
 type notificationFallbackRepo struct{ used bool }
 
+type notificationNonQueryableDB struct{}
+
+func (notificationNonQueryableDB) Ping(context.Context) error { return nil }
+func (notificationNonQueryableDB) Close() error               { return nil }
+
 func (r *notificationFallbackRepo) List(context.Context, string, NotificationListRequest) (PaginatedNotifications, error) {
 	r.used = true
 	return PaginatedNotifications{}, nil
@@ -162,6 +167,34 @@ func TestNewPersistenceRepositoryUsesPostgresWhenDSNConfigured(t *testing.T) {
 	repo := NewPersistenceRepository(factory)
 	if _, ok := repo.impl.(*PostgresRepository); !ok {
 		t.Fatalf("expected postgres impl, got %T", repo.impl)
+	}
+}
+
+func TestPersistenceRepositoryUsesMemoryOnlyWithoutPostgresDSN(t *testing.T) {
+	repo := NewPersistenceRepository(nil)
+	if _, err := repo.List(context.Background(), "user_alice", NotificationListRequest{}); err != nil {
+		t.Fatalf("expected in-memory list without postgres dsn, got %v", err)
+	}
+}
+
+func TestPersistenceRepositoryWithPostgresDSNDoesNotFallbackSilently(t *testing.T) {
+	factory := &persistence.Factory{
+		Config: persistence.Config{PostgresDSN: "postgres://example"},
+		DB:     notificationNonQueryableDB{},
+	}
+	repo := &PersistenceRepository{impl: NewPostgresRepository(factory, nil)}
+
+	if _, err := repo.List(context.Background(), "user_alice", NotificationListRequest{}); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("expected ErrNotImplemented instead of in-memory fallback, got %v", err)
+	}
+	if _, err := repo.UnreadCount(context.Background(), "user_alice"); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("expected ErrNotImplemented for unread count, got %v", err)
+	}
+	if err := repo.MarkAsRead(context.Background(), "user_alice", []string{"notif_1"}); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("expected ErrNotImplemented for mark_as_read, got %v", err)
+	}
+	if err := repo.MarkAllRead(context.Background(), "user_alice"); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("expected ErrNotImplemented for mark_all_read, got %v", err)
 	}
 }
 

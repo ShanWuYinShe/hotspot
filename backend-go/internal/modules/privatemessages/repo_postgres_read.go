@@ -8,7 +8,7 @@ import (
 
 func (r *PostgresRepository) History(ctx context.Context, userID, targetUserID string) (PaginatedMessages, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.History(ctx, userID, targetUserID)
+		return PaginatedMessages{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {

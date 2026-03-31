@@ -47,6 +47,11 @@ func (r *privateChatRowsValues) Err() error   { return r.err }
 
 type privateChatFallbackRepo struct{ used bool }
 
+type privateChatNonQueryableDB struct{}
+
+func (privateChatNonQueryableDB) Ping(context.Context) error { return nil }
+func (privateChatNonQueryableDB) Close() error               { return nil }
+
 func (r *privateChatFallbackRepo) markUsed() { r.used = true }
 func (r *privateChatFallbackRepo) GetOrCreate(context.Context, string, string) (time.Time, error) {
 	r.markUsed()
@@ -116,6 +121,20 @@ func (b *privateChatBackendStub) Query(_ context.Context, query string, args ...
 		return &privateChatRowsValues{rows: rows}, nil
 	}
 	return &persistence.InMemoryRows{}, nil
+}
+
+func TestPostgresRepositoryFailsClosedWhenQueryableUnavailable(t *testing.T) {
+	repo := NewPostgresRepository(&persistence.Factory{
+		Config: persistence.Config{PostgresDSN: "postgres://example"},
+		DB:     privateChatNonQueryableDB{},
+	}, nil)
+
+	if _, err := repo.GetOrCreate(context.Background(), "user_alice", "user_bob"); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("expected ErrNotImplemented for get_or_create, got %v", err)
+	}
+	if _, err := repo.List(context.Background(), "user_alice"); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("expected ErrNotImplemented for list, got %v", err)
+	}
 }
 
 func TestPostgresRepositoryGetOrCreateAndList(t *testing.T) {

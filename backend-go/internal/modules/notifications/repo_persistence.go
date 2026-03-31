@@ -13,7 +13,7 @@ func NewPersistenceRepository(factory *persistence.Factory) *PersistenceReposito
 	if factory == nil || factory.Config.PostgresDSN == "" {
 		return &PersistenceRepository{impl: memory}
 	}
-	return &PersistenceRepository{impl: NewPostgresRepository(factory, memory)}
+	return &PersistenceRepository{impl: NewPostgresRepository(factory, nil)}
 }
 
 func (r *PersistenceRepository) List(ctx context.Context, userID string, req NotificationListRequest) (PaginatedNotifications, error) {

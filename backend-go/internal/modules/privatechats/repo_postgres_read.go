@@ -9,7 +9,7 @@ import (
 
 func (r *PostgresRepository) List(ctx context.Context, userID string) (map[string]time.Time, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.List(ctx, userID)
+		return nil, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {

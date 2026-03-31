@@ -8,20 +8,16 @@ import (
 )
 
 type PostgresRepository struct {
-	factory  *persistence.Factory
-	fallback Repository
+	factory *persistence.Factory
 }
 
-func NewPostgresRepository(factory *persistence.Factory, fallback Repository) *PostgresRepository {
-	if fallback == nil {
-		fallback = NewInMemoryRepository()
-	}
-	return &PostgresRepository{factory: factory, fallback: fallback}
+func NewPostgresRepository(factory *persistence.Factory, _ Repository) *PostgresRepository {
+	return &PostgresRepository{factory: factory}
 }
 
 func (r *PostgresRepository) GetOrCreate(ctx context.Context, userID, targetUserID string) (time.Time, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.GetOrCreate(ctx, userID, targetUserID)
+		return time.Time{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {

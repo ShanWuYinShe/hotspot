@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"hotspot/backend-go/internal/modules/groups"
+	"hotspot/backend-go/internal/modules/users"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
 	platformmigrate "hotspot/backend-go/internal/platform/migrate"
@@ -38,7 +40,10 @@ func NewApp(cfg config.Config) (*App, error) {
 	router := NewHTTPRouterWithLogger(modules, logger)
 	rootMux := http.NewServeMux()
 	rootMux.Handle("/", router)
-	rootMux.Handle("/ws/v1", realtime.NewHandler(platformauth.DefaultService()))
+	userRepo := users.NewPersistenceRepository(persistenceFactory)
+	groupRepo := groups.NewPersistenceRepository(persistenceFactory)
+	userService := users.NewServiceWithRepo(userRepo)
+	rootMux.Handle("/ws/v1", realtime.NewHandler(platformauth.DefaultService(), realtimeUserService{svc: userService}, realtimeUserRepo{repo: userRepo}, realtimeGroupRepo{repo: groupRepo}))
 
 	return &App{
 		cfg:         cfg,

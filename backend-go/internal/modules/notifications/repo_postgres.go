@@ -7,20 +7,16 @@ import (
 )
 
 type PostgresRepository struct {
-	factory  *persistence.Factory
-	fallback Repository
+	factory *persistence.Factory
 }
 
-func NewPostgresRepository(factory *persistence.Factory, fallback Repository) *PostgresRepository {
-	if fallback == nil {
-		fallback = NewInMemoryRepository()
-	}
-	return &PostgresRepository{factory: factory, fallback: fallback}
+func NewPostgresRepository(factory *persistence.Factory, _ Repository) *PostgresRepository {
+	return &PostgresRepository{factory: factory}
 }
 
 func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, ids []string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.MarkAsRead(ctx, userID, ids)
+		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -31,7 +27,7 @@ func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, ids 
 
 func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.MarkAllRead(ctx, userID)
+		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {

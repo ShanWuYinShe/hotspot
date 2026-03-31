@@ -14,7 +14,7 @@ func NewPersistenceRepository(factory *persistence.Factory) *PersistenceReposito
 	if factory == nil || factory.Config.PostgresDSN == "" {
 		return &PersistenceRepository{impl: memory}
 	}
-	return &PersistenceRepository{impl: NewPostgresRepository(factory, memory)}
+	return &PersistenceRepository{impl: NewPostgresRepository(factory, nil)}
 }
 
 func (r *PersistenceRepository) Register(ctx context.Context, params RegisterParams) (Account, error) {

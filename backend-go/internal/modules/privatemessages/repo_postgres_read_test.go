@@ -47,6 +47,11 @@ func (r *privateMessageRowsValues) Err() error   { return r.err }
 
 type privateMessageFallbackRepo struct{ used bool }
 
+type privateMessageNonQueryableDB struct{}
+
+func (privateMessageNonQueryableDB) Ping(context.Context) error { return nil }
+func (privateMessageNonQueryableDB) Close() error               { return nil }
+
 func (r *privateMessageFallbackRepo) markUsed() { r.used = true }
 func (r *privateMessageFallbackRepo) Send(context.Context, string, string, SendPrivateMessageRequest) (MessageSent, error) {
 	r.markUsed()
@@ -240,6 +245,32 @@ func (b *privateMessageBackendStub) Query(_ context.Context, query string, args 
 		return &privateMessageRowsValues{rows: rows}, nil
 	}
 	return &persistence.InMemoryRows{}, nil
+}
+
+func TestPostgresRepositoryFailsClosedWhenQueryableUnavailable(t *testing.T) {
+	repo := NewPostgresRepository(&persistence.Factory{
+		Config: persistence.Config{PostgresDSN: "postgres://example"},
+		DB:     privateMessageNonQueryableDB{},
+	}, nil)
+
+	if _, err := repo.Send(context.Background(), "user_alice", "user_bob", SendPrivateMessageRequest{Type: "text", Content: "hello"}); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("expected ErrNotImplemented for send, got %v", err)
+	}
+	if _, err := repo.History(context.Background(), "user_alice", "user_bob"); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("expected ErrNotImplemented for history, got %v", err)
+	}
+	if err := repo.Update(context.Background(), "user_alice", UpdatePrivateMessageRequest{MessageID: "pm_1", Content: "updated"}); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("expected ErrNotImplemented for update, got %v", err)
+	}
+	if err := repo.Recall(context.Background(), "user_alice", RecallPrivateMessageRequest{MessageID: "pm_1"}); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("expected ErrNotImplemented for recall, got %v", err)
+	}
+	if err := repo.MarkAsRead(context.Background(), "user_alice", MarkPrivateMessagesReadRequest{TargetUserID: "user_bob"}); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("expected ErrNotImplemented for mark_as_read, got %v", err)
+	}
+	if err := repo.MarkAllRead(context.Background(), "user_alice"); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("expected ErrNotImplemented for mark_all_read, got %v", err)
+	}
 }
 
 func TestPostgresRepositorySendHistoryRecentAndLast(t *testing.T) {

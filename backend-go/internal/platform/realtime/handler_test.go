@@ -1,7 +1,9 @@
 package realtime
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -15,13 +17,96 @@ import (
 
 func wsURL(serverURL string) string { return "ws" + strings.TrimPrefix(serverURL, "http") + "/ws/v1" }
 
+type stubUserPresenceService struct {
+	items map[string]string
+}
+
+func (s stubUserPresenceService) OpenTheDoor(_ context.Context, userID string) (string, bool, error) {
+	item, ok := s.items[userID]
+	return item, ok, nil
+}
+
+type stubUserRepo struct {
+	settings map[string]struct {
+		presenceVisible  bool
+		allowPrivateChat string
+	}
+	relations map[string]map[string]struct {
+		isFollowing  bool
+		isFollowedBy bool
+		isBlocked    bool
+	}
+}
+
+func (s stubUserRepo) GetSettings(_ context.Context, userID string) (bool, string, bool, error) {
+	item, ok := s.settings[userID]
+	return item.presenceVisible, item.allowPrivateChat, ok, nil
+}
+
+func (s stubUserRepo) Relationship(_ context.Context, userID, targetUserID string) (bool, bool, bool, error) {
+	if s.relations[userID] == nil {
+		return false, false, false, nil
+	}
+	item := s.relations[userID][targetUserID]
+	return item.isFollowing, item.isFollowedBy, item.isBlocked, nil
+}
+
+type stubGroupRepo struct {
+	members map[string][]string
+}
+
+func (s stubGroupRepo) ListMembers(_ context.Context, groupID string, limit int, cursor string) ([]string, string, error) {
+	items := s.members[groupID]
+	start := 0
+	if cursor != "" {
+		for i, userID := range items {
+			if userID == cursor {
+				start = i + 1
+				break
+			}
+		}
+	}
+	if start >= len(items) {
+		return nil, "", nil
+	}
+	end := start + limit
+	if end > len(items) {
+		end = len(items)
+	}
+	nextCursor := ""
+	if end < len(items) {
+		nextCursor = items[end-1]
+	}
+	return append([]string(nil), items[start:end]...), nextCursor, nil
+}
+
+func newRealtimeHandlerForTest(authService *platformauth.Service) *Handler {
+	return NewHandler(
+		authService,
+		stubUserPresenceService{items: map[string]string{
+			"user_alice": "online",
+			"user_bob":   "online",
+		}},
+		stubUserRepo{settings: map[string]struct {
+			presenceVisible  bool
+			allowPrivateChat string
+		}{}, relations: map[string]map[string]struct {
+			isFollowing  bool
+			isFollowedBy bool
+			isBlocked    bool
+		}{}},
+		stubGroupRepo{members: map[string][]string{}},
+	)
+}
+
 func TestRealtimeWebsocketLifecycle(t *testing.T) {
+	SetDefaultHub(NewHub())
 	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
 	result, err := authService.IssueSession("user_alice")
 	if err != nil {
 		t.Fatalf("issue session: %v", err)
 	}
-	handler := NewHandler(authService)
+	handler := newRealtimeHandlerForTest(authService)
 	server := httptest.NewServer(handler)
 	defer server.Close()
 
@@ -87,20 +172,12 @@ func TestRealtimeWebsocketLifecycle(t *testing.T) {
 	if online.Type != "UserOnline" {
 		t.Fatalf("unexpected online event: %#v", online)
 	}
-
-	_ = otherConn.WriteJSON(Event{Type: "PrivateTyping", Payload: PrivateTypingPayload{TargetUserID: "user_alice", IsTyping: true}})
-	var typing Event
-	if err := conn.ReadJSON(&typing); err != nil {
-		t.Fatalf("read typing event: %v", err)
-	}
-	if typing.Type != "PrivateUserTyping" {
-		t.Fatalf("unexpected typing event: %#v", typing)
-	}
 }
 
 func TestRealtimeRequiresAuthFirst(t *testing.T) {
+	SetDefaultHub(NewHub())
 	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
-	handler := NewHandler(authService)
+	handler := newRealtimeHandlerForTest(authService)
 	server := httptest.NewServer(handler)
 	defer server.Close()
 	conn, _, err := websocket.DefaultDialer.Dial(wsURL(server.URL), nil)
@@ -124,10 +201,11 @@ func TestRealtimeRequiresAuthFirst(t *testing.T) {
 }
 
 func TestRealtimeSubscriptionLimit(t *testing.T) {
+	SetDefaultHub(NewHub())
 	ratelimit.SetSource(appconfig.NewStaticSource(config.Config{}))
 	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
 	result, _ := authService.IssueSession("user_alice")
-	handler := NewHandler(authService)
+	handler := newRealtimeHandlerForTest(authService)
 	server := httptest.NewServer(handler)
 	defer server.Close()
 	conn, _, err := websocket.DefaultDialer.Dial(wsURL(server.URL), nil)
@@ -157,6 +235,7 @@ func TestRealtimeSubscriptionLimit(t *testing.T) {
 }
 
 func TestRealtimeSubscriptionRateLimit(t *testing.T) {
+	SetDefaultHub(NewHub())
 	source := appconfig.NewStaticSource(config.Config{})
 	_, _ = source.Update(nil, func(cfg appconfig.AppConfig) appconfig.AppConfig {
 		cfg.RateLimits.WSSubscribePerSecond = 1
@@ -165,7 +244,7 @@ func TestRealtimeSubscriptionRateLimit(t *testing.T) {
 	ratelimit.SetSource(source)
 	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
 	result, _ := authService.IssueSession("user_alice")
-	handler := NewHandler(authService)
+	handler := newRealtimeHandlerForTest(authService)
 	server := httptest.NewServer(handler)
 	defer server.Close()
 	conn, _, err := websocket.DefaultDialer.Dial(wsURL(server.URL), nil)
@@ -196,5 +275,275 @@ func TestRealtimeSubscriptionRateLimit(t *testing.T) {
 	if limited.Type != "Error" || limited.Payload.Code != 20300 || limited.Payload.RetryAfter <= 0 {
 		payload, _ := json.Marshal(limited)
 		t.Fatalf("unexpected limited event: %s", payload)
+	}
+}
+
+func TestRealtimeRejectsUserSubscriptionWhenPresenceHidden(t *testing.T) {
+	SetDefaultHub(NewHub())
+	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
+	result, _ := authService.IssueSession("user_alice")
+	handler := NewHandler(
+		authService,
+		stubUserPresenceService{items: map[string]string{"user_hidden": ""}},
+		stubUserRepo{settings: map[string]struct {
+			presenceVisible  bool
+			allowPrivateChat string
+		}{"user_hidden": {presenceVisible: false}}, relations: map[string]map[string]struct {
+			isFollowing  bool
+			isFollowedBy bool
+			isBlocked    bool
+		}{}},
+		stubGroupRepo{members: map[string][]string{}},
+	)
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL(server.URL), nil)
+	if err != nil {
+		t.Fatalf("dial websocket: %v", err)
+	}
+	defer conn.Close()
+	_ = conn.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken}})
+	var established Event
+	_ = conn.ReadJSON(&established)
+	_ = conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{ClientRequestID: "req-hidden", Operation: "set", Type: "user", IDs: []string{"user_hidden"}}})
+	var ack struct {
+		Type    string              `json:"type"`
+		Payload SubscribeAckPayload `json:"payload"`
+	}
+	if err := conn.ReadJSON(&ack); err != nil {
+		t.Fatalf("read ack: %v", err)
+	}
+	if ack.Payload.Code != 20100 || len(ack.Payload.FailedIDs) != 1 || ack.Payload.FailedIDs[0].Reason != "denied" {
+		payload, _ := json.Marshal(ack)
+		t.Fatalf("unexpected ack: %s", payload)
+	}
+}
+
+func TestRealtimeRejectsGroupSubscriptionForNonMember(t *testing.T) {
+	SetDefaultHub(NewHub())
+	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
+	result, _ := authService.IssueSession("user_alice")
+	handler := NewHandler(
+		authService,
+		stubUserPresenceService{items: map[string]string{}},
+		stubUserRepo{settings: map[string]struct {
+			presenceVisible  bool
+			allowPrivateChat string
+		}{}, relations: map[string]map[string]struct {
+			isFollowing  bool
+			isFollowedBy bool
+			isBlocked    bool
+		}{}},
+		stubGroupRepo{members: map[string][]string{"group_1": {"user_bob"}}},
+	)
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL(server.URL), nil)
+	if err != nil {
+		t.Fatalf("dial websocket: %v", err)
+	}
+	defer conn.Close()
+	_ = conn.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken}})
+	var established Event
+	_ = conn.ReadJSON(&established)
+	_ = conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{ClientRequestID: "req-group", Operation: "set", Type: "group", IDs: []string{"group_1"}}})
+	var ack struct {
+		Type    string              `json:"type"`
+		Payload SubscribeAckPayload `json:"payload"`
+	}
+	if err := conn.ReadJSON(&ack); err != nil {
+		t.Fatalf("read ack: %v", err)
+	}
+	if ack.Payload.Code != 20100 || len(ack.Payload.FailedIDs) != 1 || ack.Payload.FailedIDs[0].Reason != "denied" {
+		payload, _ := json.Marshal(ack)
+		t.Fatalf("unexpected ack: %s", payload)
+	}
+}
+
+func TestRealtimeAllowsUnsubscribeEvenWhenTargetNowDenied(t *testing.T) {
+	SetDefaultHub(NewHub())
+	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
+	result, _ := authService.IssueSession("user_alice")
+	handler := NewHandler(
+		authService,
+		stubUserPresenceService{items: map[string]string{"user_hidden": ""}},
+		stubUserRepo{settings: map[string]struct {
+			presenceVisible  bool
+			allowPrivateChat string
+		}{"user_hidden": {presenceVisible: false}}, relations: map[string]map[string]struct {
+			isFollowing  bool
+			isFollowedBy bool
+			isBlocked    bool
+		}{}},
+		stubGroupRepo{members: map[string][]string{}},
+	)
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL(server.URL), nil)
+	if err != nil {
+		t.Fatalf("dial websocket: %v", err)
+	}
+	defer conn.Close()
+	_ = conn.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken}})
+	var established Event
+	_ = conn.ReadJSON(&established)
+	_ = conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{ClientRequestID: "req-unsub", Operation: "unsubscribe", Type: "user", IDs: []string{"user_hidden"}}})
+	var ack struct {
+		Type    string              `json:"type"`
+		Payload SubscribeAckPayload `json:"payload"`
+	}
+	if err := conn.ReadJSON(&ack); err != nil {
+		t.Fatalf("read ack: %v", err)
+	}
+	if ack.Payload.Code != 0 || len(ack.Payload.FailedIDs) != 0 {
+		payload, _ := json.Marshal(ack)
+		t.Fatalf("unexpected ack: %s", payload)
+	}
+}
+
+func TestRealtimeRejectsPrivateTypingWhenPrivateChatDenied(t *testing.T) {
+	SetDefaultHub(NewHub())
+	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
+	result, _ := authService.IssueSession("user_alice")
+	handler := NewHandler(
+		authService,
+		stubUserPresenceService{items: map[string]string{}},
+		stubUserRepo{
+			settings: map[string]struct {
+				presenceVisible  bool
+				allowPrivateChat string
+			}{"user_bob": {allowPrivateChat: "nobody"}},
+			relations: map[string]map[string]struct {
+				isFollowing  bool
+				isFollowedBy bool
+				isBlocked    bool
+			}{},
+		},
+		stubGroupRepo{members: map[string][]string{}},
+	)
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL(server.URL), nil)
+	if err != nil {
+		t.Fatalf("dial websocket: %v", err)
+	}
+	defer conn.Close()
+	_ = conn.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken}})
+	var established Event
+	_ = conn.ReadJSON(&established)
+	_ = conn.WriteJSON(Event{Type: "PrivateTyping", Payload: PrivateTypingPayload{TargetUserID: "user_bob", IsTyping: true}})
+	var denied struct {
+		Type    string       `json:"type"`
+		Payload ErrorPayload `json:"payload"`
+	}
+	if err := conn.ReadJSON(&denied); err != nil {
+		t.Fatalf("read denied event: %v", err)
+	}
+	if denied.Type != "Error" || denied.Payload.Code != 20400 {
+		payload, _ := json.Marshal(denied)
+		t.Fatalf("unexpected denied event: %s", payload)
+	}
+}
+
+func TestRealtimeRejectsGroupTypingForNonMember(t *testing.T) {
+	SetDefaultHub(NewHub())
+	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
+	result, _ := authService.IssueSession("user_alice")
+	handler := NewHandler(
+		authService,
+		stubUserPresenceService{items: map[string]string{}},
+		stubUserRepo{settings: map[string]struct {
+			presenceVisible  bool
+			allowPrivateChat string
+		}{}, relations: map[string]map[string]struct {
+			isFollowing  bool
+			isFollowedBy bool
+			isBlocked    bool
+		}{}},
+		stubGroupRepo{members: map[string][]string{"group_1": {"user_bob"}}},
+	)
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL(server.URL), nil)
+	if err != nil {
+		t.Fatalf("dial websocket: %v", err)
+	}
+	defer conn.Close()
+	_ = conn.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken}})
+	var established Event
+	_ = conn.ReadJSON(&established)
+	_ = conn.WriteJSON(Event{Type: "GroupTyping", Payload: GroupTypingPayload{GroupID: "group_1", IsTyping: true}})
+	var denied struct {
+		Type    string       `json:"type"`
+		Payload ErrorPayload `json:"payload"`
+	}
+	if err := conn.ReadJSON(&denied); err != nil {
+		t.Fatalf("read denied event: %v", err)
+	}
+	if denied.Type != "Error" || denied.Payload.Code != 20400 {
+		payload, _ := json.Marshal(denied)
+		t.Fatalf("unexpected denied event: %s", payload)
+	}
+}
+
+func TestRealtimeAllowsGroupSubscriptionAndTypingBeyondFirstHundredMembers(t *testing.T) {
+	SetDefaultHub(NewHub())
+	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
+	result, _ := authService.IssueSession("user_alice")
+	members := make([]string, 0, 121)
+	for i := 0; i < 120; i++ {
+		members = append(members, fmt.Sprintf("user_member_%03d", i))
+	}
+	members = append(members, "user_alice")
+	handler := NewHandler(
+		authService,
+		stubUserPresenceService{items: map[string]string{}},
+		stubUserRepo{settings: map[string]struct {
+			presenceVisible  bool
+			allowPrivateChat string
+		}{}, relations: map[string]map[string]struct {
+			isFollowing  bool
+			isFollowedBy bool
+			isBlocked    bool
+		}{}},
+		stubGroupRepo{members: map[string][]string{"group_big": members}},
+	)
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL(server.URL), nil)
+	if err != nil {
+		t.Fatalf("dial websocket: %v", err)
+	}
+	defer conn.Close()
+	_ = conn.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken}})
+	var established Event
+	_ = conn.ReadJSON(&established)
+	_ = conn.WriteJSON(Event{Type: "SetSubscriptions", Payload: SetSubscriptionsPayload{ClientRequestID: "req-big", Operation: "set", Type: "group", IDs: []string{"group_big"}}})
+	var ack struct {
+		Type    string              `json:"type"`
+		Payload SubscribeAckPayload `json:"payload"`
+	}
+	if err := conn.ReadJSON(&ack); err != nil {
+		t.Fatalf("read ack: %v", err)
+	}
+	if ack.Payload.Code != 0 || len(ack.Payload.FailedIDs) != 0 {
+		payload, _ := json.Marshal(ack)
+		t.Fatalf("unexpected ack: %s", payload)
+	}
+	var snapshot Event
+	if err := conn.ReadJSON(&snapshot); err != nil {
+		t.Fatalf("read snapshot: %v", err)
+	}
+	if snapshot.Type != "SubscriptionsSnapshot" {
+		t.Fatalf("unexpected snapshot: %#v", snapshot)
+	}
+	_ = conn.WriteJSON(Event{Type: "GroupTyping", Payload: GroupTypingPayload{GroupID: "group_big", IsTyping: true}})
+	var typing Event
+	if err := conn.ReadJSON(&typing); err != nil {
+		t.Fatalf("read typing event: %v", err)
+	}
+	if typing.Type != "GroupUserTyping" {
+		payload, _ := json.Marshal(typing)
+		t.Fatalf("unexpected typing event: %s", payload)
 	}
 }
