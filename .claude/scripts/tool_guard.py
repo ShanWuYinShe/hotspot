@@ -60,8 +60,6 @@ def main() -> int:
 
     if tool_name == "Bash":
         return guard_bash(payload, repo)
-    if tool_name in {"Edit", "Write"}:
-        return guard_write_like(payload, repo)
     return 0
 
 
@@ -116,30 +114,6 @@ def guard_bash(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
         if is_blocked_runtime_segment(segment):
             return deny("非 git 控制面命令请通过 deploy/ 入口或 .claude/scripts/ 受控脚本执行。")
         return deny("非 git 控制面命令请通过 deploy/ 入口或 .claude/scripts/ 受控脚本执行。")
-
-    return 0
-
-
-def guard_write_like(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
-    if not repo:
-        return 0
-
-    raw_path = payload.get("tool_input", {}).get("file_path")
-    if not raw_path:
-        return 0
-
-    target = Path(str(raw_path)).resolve()
-    current_root = Path(repo["top"]).resolve()
-    primary_root = Path(repo["primary_root"]).resolve()
-
-    if not is_within(target, primary_root):
-        return 0
-
-    if repo["is_main_primary"]:
-        return deny("主目录本地 main 禁止承载实现性文件修改；请先进入 feature worktree。")
-
-    if not is_within(target, current_root):
-        return deny("当前会话只允许修改当前 checkout / worktree 内的文件；不要跨 worktree 或回写主目录文件。")
 
     return 0
 
