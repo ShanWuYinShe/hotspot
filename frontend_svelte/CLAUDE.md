@@ -39,4 +39,4 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 默认验证入口：`./deploy/scripts/verify.sh --env-name <name>`
 - 前端开发内环自动确认：`./deploy/scripts/verify-inspect.sh --env-name <name>`
 - 需要预演候选结果时：`./deploy/scripts/preview-build.sh` + `./deploy/scripts/preview-up.sh`
-- 在非主目录 worktree 且当前目录位于 `frontend_svelte/` 时，所有 `pnpm` 命令可直接执行；最终验证仍以 `deploy/` Docker 流程为准。
+- 在非主目录 worktree 中，格式化/语法检查/编译通过 `python3 .claude/scripts/frontend_dev.py --task <install|check|lint|build|all>` 执行；测试必须通过 `deploy/` 隔离执行。

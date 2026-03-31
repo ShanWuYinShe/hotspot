@@ -44,4 +44,4 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 常用命令
 - 本仓库默认最终验证入口以根 `CLAUDE.md` 约定为准。
 - Harmony 工程的检查/编译配置入口主要在 `code-linter.json5`、`hvigorfile.ts`、`entry/hvigorfile.ts`、`hvigor/hvigor-config.json5`、`build-profile.json5`。
-- 在非主目录 worktree 且当前目录位于 `harmonyapp/` 时，所有 `ohpm`/`hvigor`/`hvigorw` 命令可直接执行；质量门 check/test 环节应通过 `.claude/scripts/harmony_worktree.py` 完成。
+- 在非主目录 worktree 中，安装/检查/编译通过 `python3 .claude/scripts/harmony_worktree.py --task <install|check|build|all>` 执行；不直接调用 ohpm/hvigor 原始命令。

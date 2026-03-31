@@ -47,4 +47,4 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 默认验证入口：`./deploy/scripts/verify.sh --env-name <name>`
 - 需要 backend-go 构建产物时：`./deploy/scripts/preview-build.sh`
 - 需要确定性发布产物时：`./deploy/scripts/release-build.sh --ref <git-ref>`
-- 在非主目录 worktree 中，所有 `go` 开发命令（vet、fmt、build、test 等）可直接执行；最终验证仍以 `deploy/` Docker 流程为准。
+- 在非主目录 worktree 中，格式化/语法检查/编译通过 `python3 .claude/scripts/go_dev.py --task <check|fmt|vet|build|all>` 执行；测试必须通过 `deploy/` 隔离执行。

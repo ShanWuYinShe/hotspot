@@ -31,7 +31,12 @@ BLOCKED_RUNTIME_PATTERNS = (
     re.compile(r"^rustc(?:\s|$)"),
     re.compile(r"^docker(?:\s|$)"),
     re.compile(r"^docker-compose(?:\s|$)"),
+    re.compile(r"^go(?:\s|$)"),
+    re.compile(r"^pnpm(?:\s|$)"),
     re.compile(r"^python3?(?:\s|$)"),
+    re.compile(r"^ohpm(?:\s|$)"),
+    re.compile(r"^hvigor(?:\s|$)"),
+    re.compile(r"^hvigorw(?:\s|$)"),
     re.compile(r"^\./(?!deploy/scripts/|\.claude/scripts/)[^\s]+"),
 )
 
@@ -76,7 +81,6 @@ def deny(reason: str) -> int:
     return 0
 
 
-
 def guard_bash(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
     command = str(payload.get("tool_input", {}).get("command", "")).strip()
     if not command:
@@ -107,10 +111,11 @@ def guard_bash(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
         argv = tokenize_shell_segment(segment)
         if is_allowed_worktree_segment(argv, repo, command_cwd):
             continue
-        if is_blocked_runtime_segment(segment, argv):
-            return deny("该命令会影响运行环境或可能在多 agent 下冲突；请改用 deploy/ 标准入口或仓库控制脚本。")
-        if not is_safe_shell_segment(segment, argv):
-            return deny("当前仓库的 Bash 默认只允许 git 控制面、deploy 入口、.claude 控制脚本，以及 worktree 内的 go/pnpm/ohpm/hvigor 开发命令。其他命令请改用专用工具或受控脚本。")
+        if is_safe_shell_segment(segment):
+            continue
+        if is_blocked_runtime_segment(segment):
+            return deny("该命令会影响运行环境；请改用 deploy/ 标准入口或 .claude/scripts/ 受控脚本。")
+        return deny("当前仓库 Bash 默认只允许 git 控制面、deploy 入口、.claude/scripts/ 受控脚本，以及 worktree 内的 sed 就地编辑。开发命令（go/pnpm/ohpm/hvigor）请使用 .claude/scripts/ 下的受控脚本。")
 
     return 0
 
@@ -143,29 +148,14 @@ def is_git_segment(segment: str) -> bool:
     return bool(re.match(r"^git(?:\s|$)", segment))
 
 
-def is_safe_shell_segment(segment: str, argv: list[str] | None = None) -> bool:
-    if any(pattern.match(segment) for pattern in SAFE_SHELL_PATTERNS):
-        return True
-    argv = argv or tokenize_shell_segment(segment)
-    if not argv:
-        return False
-    return is_safe_static_check(argv)
+def is_safe_shell_segment(segment: str) -> bool:
+    return any(pattern.match(segment) for pattern in SAFE_SHELL_PATTERNS)
 
 
-def is_blocked_runtime_segment(segment: str, argv: list[str] | None = None) -> bool:
+def is_blocked_runtime_segment(segment: str) -> bool:
     allowed_python = re.match(r"^python3?\s+(?:\./)?\.claude/scripts/[a-zA-Z0-9_./-]+(?:\s|$)", segment)
     if allowed_python:
         return False
-
-    argv = argv or tokenize_shell_segment(segment)
-    if not argv:
-        return False
-
-    if is_safe_static_check(argv):
-        return False
-    if is_environment_affecting_command(argv):
-        return True
-
     return any(pattern.match(segment) for pattern in BLOCKED_RUNTIME_PATTERNS)
 
 
@@ -178,22 +168,9 @@ def is_allowed_worktree_segment(argv: list[str], repo: dict[str, Any] | None, cu
     if not is_within(current_dir, current_root):
         return False
 
-    if is_allowed_go_command(argv, current_root):
-        return True
     if is_allowed_shell_edit(argv, current_root, current_dir):
         return True
-    if is_allowed_frontend_command(argv, current_root, current_dir):
-        return True
-    if is_allowed_harmony_command(argv, current_root, current_dir):
-        return True
     return False
-
-
-def is_allowed_go_command(argv: list[str], current_root: Path) -> bool:
-    if not argv or argv[0] != "go":
-        return False
-    meaningful = filtered_command_args("go", argv[1:])
-    return bool(meaningful)
 
 
 def is_allowed_shell_edit(argv: list[str], current_root: Path, current_dir: Path) -> bool:
@@ -207,130 +184,11 @@ def is_allowed_shell_edit(argv: list[str], current_root: Path, current_dir: Path
     return all_paths_within_worktree(file_args, current_root, current_dir)
 
 
-def is_allowed_frontend_command(argv: list[str], current_root: Path, current_dir: Path) -> bool:
-    if argv[0] != "pnpm":
-        return False
-
-    target_dir = resolve_command_dir(argv, current_root, current_dir)
-    if target_dir is None:
-        return False
-
-    frontend_dir = (current_root / "frontend_svelte").resolve()
-    if target_dir != frontend_dir:
-        return False
-
-    meaningful = filtered_command_args("pnpm", argv[1:])
-    return bool(meaningful)
-
-
-def is_allowed_harmony_command(argv: list[str], current_root: Path, current_dir: Path) -> bool:
-    cmd = Path(argv[0]).name.lower()
-    if cmd == "ohpm":
-        target_dir = resolve_ohpm_dir(argv, current_root, current_dir)
-        if target_dir is None:
-            return False
-        harmony_dir = (current_root / "harmonyapp").resolve()
-        if target_dir != harmony_dir:
-            return False
-        meaningful = filtered_non_option_args(argv[1:], option_with_value={"-C", "--directory"})
-        return bool(meaningful)
-
-    if cmd not in {"hvigor", "hvigorw"}:
-        return False
-
-    harmony_dir = (current_root / "harmonyapp").resolve()
-    if current_dir != harmony_dir:
-        return False
-
-    meaningful = filtered_non_option_args(argv[1:])
-    return bool(meaningful)
-
-
 def tokenize_shell_segment(segment: str) -> list[str]:
     try:
         return shlex.split(segment)
     except ValueError:
         return segment.split()
-
-
-def is_safe_static_check(argv: list[str]) -> bool:
-    if not argv:
-        return False
-
-    cmd = argv[0]
-    meaningful = filtered_command_args(cmd, argv[1:])
-
-    if cmd == "go":
-        if meaningful and meaningful[0] in {"vet", "fmt"}:
-            return True
-
-    return False
-
-
-def is_environment_affecting_command(argv: list[str]) -> bool:
-    return False
-
-
-def filtered_command_args(cmd: str, args: list[str]) -> list[str]:
-    option_with_value = {
-        "pnpm": {"--dir", "-C", "--filter", "-F", "--config"},
-        "go": {"-C", "-modfile", "-overlay", "-toolexec"},
-    }.get(cmd, set())
-
-    meaningful: list[str] = []
-    skip_next = False
-    for arg in args:
-        if skip_next:
-            skip_next = False
-            continue
-        if arg in option_with_value:
-            skip_next = True
-            continue
-        if arg.startswith("-"):
-            continue
-        meaningful.append(arg)
-    return meaningful
-
-
-def filtered_non_option_args(args: list[str], option_with_value: set[str] | None = None) -> list[str]:
-    meaningful: list[str] = []
-    skip_next = False
-    option_with_value = option_with_value or set()
-    for arg in args:
-        if skip_next:
-            skip_next = False
-            continue
-        if arg in option_with_value:
-            skip_next = True
-            continue
-        if arg.startswith("-"):
-            continue
-        meaningful.append(arg)
-    return meaningful
-
-
-def resolve_command_dir(argv: list[str], current_root: Path, current_dir: Path) -> Path | None:
-    target_dir = current_dir
-    for index, arg in enumerate(argv[1:], start=1):
-        if arg in {"-C", "--dir"}:
-            if index + 1 >= len(argv):
-                return None
-            target_dir = resolve_path_in_worktree(argv[index + 1], current_root, current_dir)
-            if target_dir is None:
-                return None
-    return target_dir.resolve()
-
-
-def resolve_ohpm_dir(argv: list[str], current_root: Path, current_dir: Path) -> Path | None:
-    target_dir = current_dir
-    for index, arg in enumerate(argv[1:], start=1):
-        if arg in {"-C", "--directory"}:
-            if index + 1 >= len(argv):
-                return None
-            target_dir = resolve_path_in_worktree(argv[index + 1], current_root, current_dir)
-            if target_dir is None:
-                return None
-    return target_dir.resolve()
 
 
 def extract_shell_edit_file_args(argv: list[str]) -> list[str]:

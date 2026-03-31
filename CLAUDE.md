@@ -74,7 +74,7 @@ HotSpot 是一个多端 monorepo：
 ### 原则
 - 只有 `verify` / `verify-inspect` 支持多 env / 多 worktree 并行；`preview` 只有一个实例。
 - `verify` 默认验证的是当前工作目录 / worktree，但执行发生在 Docker 隔离环境中，不应把宿主机运行结果视为最终验证结论。
-- worktree 内的开发命令（`go`/`pnpm`/`ohpm`/`hvigor`）由 `tool_guard.py` 白名单放行，可直接在宿主环境执行；缓存与构建产物必须留在当前 worktree 内且不污染 git 状态。最终验证结论仍以 `deploy/` Docker 流程为准。
+- worktree 内的格式化、语法检查和编译命令由 `.claude/scripts/` 下的受控脚本封装，不允许直接调用 go/pnpm/ohpm/hvigor 原始命令；缓存与构建产物必须留在当前 worktree 内且不污染 git 状态。测试命令必须通过 `deploy/` 隔离执行。最终验证结论仍以 `deploy/` Docker 流程为准。
 - 涉及 `harmonyapp/` 的任务，质量门 check/test 环节应通过 `.claude/scripts/harmony_worktree.py` 完成；该脚本只允许在非主目录 worktree 中运行，直接基于当前 worktree 执行，不需要额外 `cd`。
 - 测试过程中产生的缓存、store、构建产物必须落在 `tmp/` 或容器临时目录，不能把 `.pnpm-store` 之类的临时目录写回仓库根。
 - `preview` / `release` 面向候选结果与确定性版本，不再承担多 env 开发隔离语义。
