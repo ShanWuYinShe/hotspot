@@ -760,17 +760,11 @@ struct Index {
                 .fontColor([this.currentTabIndex === targetIndex ? this.getBrandAccent() : this.getTabInactiveColor()])
           }
         }
-        .width(52)
-        .height(32)
         .justifyContent(FlexAlign.Center)
-        .backgroundColor(this.currentTabIndex === targetIndex ? this.getTabBarVisualStyle().activeBackgroundColor : Color.Transparent)
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .shadow(this.currentTabIndex === targetIndex
-          ? this.getTabBarVisualStyle().activeGlow
-          : { radius: 0, color: 'transparent', offsetX: 0, offsetY: 0 })
+        .padding({ left: 8, right: 8, top: 4, bottom: 4 })
 
         Row()
-          .width(this.currentTabIndex === targetIndex ? this.getTabBarVisualStyle().indicatorWidth : 10)
+          .width(this.currentTabIndex === targetIndex ? this.getTabBarVisualStyle().indicatorWidth : 0)
           .height(this.getTabBarVisualStyle().indicatorHeight)
           .borderRadius(this.getTabBarVisualStyle().indicatorBorderRadius)
           .backgroundColor(this.currentTabIndex === targetIndex ? this.getBrandAccent() : Color.Transparent)

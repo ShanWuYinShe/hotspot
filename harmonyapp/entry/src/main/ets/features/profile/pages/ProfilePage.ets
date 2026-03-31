@@ -810,7 +810,7 @@ export struct ProfilePage {
   private buildGuestView() {
     Scroll() {
       Column({ space: DesignConstants.SPACING.LG }) {
-        Column({ space: DesignConstants.SPACING.MD }) {
+        Column({ space: DesignConstants.SPACING.LG }) {
           Stack() {
             Circle()
               .width(this.getProfileVisualStyle().identity.avatarSize)
@@ -824,47 +824,76 @@ export struct ProfilePage {
             }
           }
 
-          Text('游客模式')
-            .fontSize(this.getProfileVisualStyle().identity.titleFontSize)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(this.getPrimaryTextColor())
+          Column({ space: DesignConstants.SPACING.SM }) {
+            Text('游客模式')
+              .fontSize(this.getProfileVisualStyle().identity.titleFontSize)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(this.getPrimaryTextColor())
+              .textAlign(TextAlign.Center)
 
-          Text('以轻触感界面预览附近、发现与互动能力，登录后即可保存资料与偏好。')
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .lineHeight(24)
-            .fontColor(this.getSecondaryTextColor())
-            .textAlign(TextAlign.Center)
+            Text('先体验附近探索、内容发现与基础互动；登录后再保存资料、偏好与关系。')
+              .fontSize(DesignConstants.FONT.SIZE.MD)
+              .lineHeight(24)
+              .fontColor(this.getSecondaryTextColor())
+              .textAlign(TextAlign.Center)
+          }
+          .width('100%')
+
+          Row({ space: DesignConstants.SPACING.SM }) {
+            this.buildGuestHighlight('无需注册', '先看再决定')
+            this.buildGuestHighlight('圆角轻界面', '统一视觉触感')
+          }
+          .width('100%')
         }
         .width('100%')
         .padding(this.getProfileVisualStyle().card.padding)
         .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
-        .borderRadius(this.getProfileVisualStyle().card.borderRadius)
         .border({ width: this.getProfileVisualStyle().card.borderWidth, color: this.getProfileVisualStyle().card.borderColor })
+        .borderRadius(this.getProfileVisualStyle().card.borderRadius)
         .shadow(this.getProfileVisualStyle().card.shadow)
         .alignItems(HorizontalAlign.Center)
 
-        Grid() {
-          GridItem() {
-            this.buildFeatureCard($r(AppIcon.MAP), '附近', '发现附近热点与地图灵感')
+        Column({ space: DesignConstants.SPACING.MD }) {
+          Text('可先体验这些能力')
+            .width('100%')
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(this.getPrimaryTextColor())
+
+          Grid() {
+            GridItem() {
+              this.buildFeatureCard($r(AppIcon.MAP), '附近', '发现附近热点与地图灵感')
+            }
+            GridItem() {
+              this.buildFeatureCard($r(AppIcon.SEARCH), '发现', '找到兴趣用户与内容线索')
+            }
+            GridItem() {
+              this.buildFeatureCard($r(AppIcon.MESSAGE), '消息', '登录后开启实时对话')
+            }
+            GridItem() {
+              this.buildFeatureCard($r(AppIcon.EDIT), '发布', '记录当下灵感与生活切片')
+            }
           }
-          GridItem() {
-            this.buildFeatureCard($r(AppIcon.SEARCH), '发现', '找到兴趣用户与内容线索')
-          }
-          GridItem() {
-            this.buildFeatureCard($r(AppIcon.MESSAGE), '消息', '登录后开启实时对话')
-          }
-          GridItem() {
-            this.buildFeatureCard($r(AppIcon.EDIT), '发布', '记录当下灵感与生活切片')
-          }
+          .columnsTemplate('1fr 1fr')
+          .rowsGap(DesignConstants.SPACING.MD)
+          .columnsGap(DesignConstants.SPACING.MD)
+          .width('100%')
         }
-        .columnsTemplate('1fr 1fr')
-        .rowsTemplate('1fr 1fr')
-        .rowsGap(DesignConstants.SPACING.MD)
-        .columnsGap(DesignConstants.SPACING.MD)
         .width('100%')
-        .height(240)
+        .padding(this.getProfileVisualStyle().card.padding)
+        .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
+        .border({ width: this.getProfileVisualStyle().card.borderWidth, color: this.getProfileVisualStyle().card.borderColor })
+        .borderRadius(this.getProfileVisualStyle().card.borderRadius)
+        .shadow(this.getProfileVisualStyle().card.shadow)
 
         Column({ space: DesignConstants.SPACING.SM }) {
+          Text('登录后可同步资料、保存偏好并开启完整互动。')
+            .width('100%')
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(20)
+            .fontColor(this.getSecondaryTextColor())
+            .textAlign(TextAlign.Start)
+
           Button('快速体验（无需注册）')
             .type(ButtonType.Normal)
             .width('100%')
@@ -873,9 +902,9 @@ export struct ProfilePage {
             .fontColor(this.getProfileVisualStyle().primaryButton.textColor)
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontWeight(FontWeight.Bold)
-            .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
             .shadow(this.getProfileVisualStyle().primaryButton.shadow)
             .border({ width: this.getProfileVisualStyle().primaryButton.borderWidth, color: this.getProfileVisualStyle().primaryButton.borderColor })
+            .borderRadius(this.getProfileVisualStyle().primaryButton.borderRadius)
             .padding({ left: this.getProfileVisualStyle().primaryButton.horizontalPadding, right: this.getProfileVisualStyle().primaryButton.horizontalPadding })
             .onClick(() => {
               this.showQuickStart = true;
@@ -889,9 +918,9 @@ export struct ProfilePage {
             .fontColor(this.getProfileVisualStyle().secondaryButton.textColor)
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontWeight(FontWeight.Medium)
-            .borderRadius(this.getProfileVisualStyle().secondaryButton.borderRadius)
             .shadow(this.getProfileVisualStyle().secondaryButton.shadow)
             .border({ width: this.getProfileVisualStyle().secondaryButton.borderWidth, color: this.getProfileVisualStyle().secondaryButton.borderColor })
+            .borderRadius(this.getProfileVisualStyle().secondaryButton.borderRadius)
             .padding({ left: this.getProfileVisualStyle().secondaryButton.horizontalPadding, right: this.getProfileVisualStyle().secondaryButton.horizontalPadding })
             .onClick(() => {
               AppRouter.push(PageNames.LOGIN);
@@ -900,8 +929,8 @@ export struct ProfilePage {
         .width('100%')
         .padding(this.getProfileVisualStyle().card.padding)
         .backgroundColor(this.getProfileVisualStyle().card.backgroundColor)
-        .borderRadius(this.getProfileVisualStyle().card.borderRadius)
         .border({ width: this.getProfileVisualStyle().card.borderWidth, color: this.getProfileVisualStyle().card.borderColor })
+        .borderRadius(this.getProfileVisualStyle().card.borderRadius)
         .shadow(this.getProfileVisualStyle().card.shadow)
 
         this.MenuItemContent('设置', AppIcon.SETTINGS, () => {
@@ -921,6 +950,25 @@ export struct ProfilePage {
       backgroundColor: this.getCurrentThemePalette().sheetBackground,
       keyboardAvoidMode: SheetKeyboardAvoidMode.TRANSLATE_AND_SCROLL
     })
+  }
+
+  @Builder
+  private buildGuestHighlight(title: string, subtitle: string) {
+    Column({ space: 4 }) {
+      Text(title)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(this.getPrimaryTextColor())
+      Text(subtitle)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .fontColor(this.getSecondaryTextColor())
+    }
+    .layoutWeight(1)
+    .alignItems(HorizontalAlign.Center)
+    .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+    .backgroundColor(this.getSurfaceSubtle())
+    .border({ width: 1, color: this.getSurfaceBorder() })
+    .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
   }
 
   @Builder
@@ -1430,8 +1478,8 @@ export struct ProfilePage {
     }
     .type(ButtonType.Normal)
     .backgroundColor(this.getSurfaceBackground())
-    .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
     .border({ width: 1, color: this.getSurfaceBorder() })
+    .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
     .shadow(this.getProfileVisualStyle().card.shadow)
     .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
     .layoutWeight(1)
