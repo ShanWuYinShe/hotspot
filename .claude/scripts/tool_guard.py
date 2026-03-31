@@ -35,16 +35,6 @@ BLOCKED_RUNTIME_PATTERNS = (
     re.compile(r"^\./(?!deploy/scripts/|\.claude/scripts/)[^\s]+"),
 )
 
-ALLOWED_FRONTEND_PNPM_COMMANDS = {"install", "check", "lint", "build", "test"}
-ALLOWED_HARMONY_TASK_NAMES = {
-    "assemblehap",
-    "assembleapp",
-    "build",
-    "check",
-    "compile",
-    "lint",
-    "test",
-}
 SHELL_EDIT_COMMANDS = {"sed"}
 SED_FILE_OPTIONS = {"-f", "--file"}
 SPLIT_PATTERN = re.compile(r"\s*(?:&&|\|\||;)\s*")
@@ -118,9 +108,9 @@ def guard_bash(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
         if is_allowed_worktree_segment(argv, repo, command_cwd):
             continue
         if is_blocked_runtime_segment(segment, argv):
-            return deny("该命令会影响运行环境、产生较重副作用，或可能在多 agent 下冲突；请改用 deploy/ 标准入口或仓库控制脚本。Harmony 在非主目录 worktree 内应优先使用 .claude/scripts/harmony_worktree.py 完成安装/测试/编译闭环；脚本直接基于当前 worktree 执行，不需要额外 cd。")
+            return deny("该命令会影响运行环境或可能在多 agent 下冲突；请改用 deploy/ 标准入口或仓库控制脚本。")
         if not is_safe_shell_segment(segment, argv):
-            return deny("当前仓库的 Bash 默认只允许 git 控制面、deploy 入口、.claude 控制脚本，以及按副作用判定为安全的静态检查；在非主目录 worktree 中，可直接使用 sed，以及 frontend_svelte、harmonyapp 的受限 install/check/test/build 命令。其他命令请改用专用工具或受控脚本。")
+            return deny("当前仓库的 Bash 默认只允许 git 控制面、deploy 入口、.claude 控制脚本，以及 worktree 内的 go/pnpm/ohpm/hvigor 开发命令。其他命令请改用专用工具或受控脚本。")
 
     return 0
 
@@ -188,6 +178,8 @@ def is_allowed_worktree_segment(argv: list[str], repo: dict[str, Any] | None, cu
     if not is_within(current_dir, current_root):
         return False
 
+    if is_allowed_go_command(argv, current_root):
+        return True
     if is_allowed_shell_edit(argv, current_root, current_dir):
         return True
     if is_allowed_frontend_command(argv, current_root, current_dir):
@@ -195,6 +187,13 @@ def is_allowed_worktree_segment(argv: list[str], repo: dict[str, Any] | None, cu
     if is_allowed_harmony_command(argv, current_root, current_dir):
         return True
     return False
+
+
+def is_allowed_go_command(argv: list[str], current_root: Path) -> bool:
+    if not argv or argv[0] != "go":
+        return False
+    meaningful = filtered_command_args("go", argv[1:])
+    return bool(meaningful)
 
 
 def is_allowed_shell_edit(argv: list[str], current_root: Path, current_dir: Path) -> bool:
@@ -221,12 +220,7 @@ def is_allowed_frontend_command(argv: list[str], current_root: Path, current_dir
         return False
 
     meaningful = filtered_command_args("pnpm", argv[1:])
-    if not meaningful:
-        return False
-
-    if meaningful[-1] in ALLOWED_FRONTEND_PNPM_COMMANDS:
-        return True
-    return len(meaningful) >= 2 and meaningful[-2:] == ["exec", "svelte-check"]
+    return bool(meaningful)
 
 
 def is_allowed_harmony_command(argv: list[str], current_root: Path, current_dir: Path) -> bool:
@@ -239,7 +233,7 @@ def is_allowed_harmony_command(argv: list[str], current_root: Path, current_dir:
         if target_dir != harmony_dir:
             return False
         meaningful = filtered_non_option_args(argv[1:], option_with_value={"-C", "--directory"})
-        return bool(meaningful and meaningful[0] == "install")
+        return bool(meaningful)
 
     if cmd not in {"hvigor", "hvigorw"}:
         return False
@@ -249,9 +243,7 @@ def is_allowed_harmony_command(argv: list[str], current_root: Path, current_dir:
         return False
 
     meaningful = filtered_non_option_args(argv[1:])
-    if not meaningful:
-        return False
-    return any(token.lower() in ALLOWED_HARMONY_TASK_NAMES for token in meaningful)
+    return bool(meaningful)
 
 
 def tokenize_shell_segment(segment: str) -> list[str]:
@@ -268,12 +260,6 @@ def is_safe_static_check(argv: list[str]) -> bool:
     cmd = argv[0]
     meaningful = filtered_command_args(cmd, argv[1:])
 
-    if cmd == "pnpm":
-        if meaningful and meaningful[-1] in {"check", "lint"}:
-            return True
-        if len(meaningful) >= 2 and meaningful[-2:] == ["exec", "svelte-check"]:
-            return True
-
     if cmd == "go":
         if meaningful and meaningful[0] in {"vet", "fmt"}:
             return True
@@ -282,17 +268,6 @@ def is_safe_static_check(argv: list[str]) -> bool:
 
 
 def is_environment_affecting_command(argv: list[str]) -> bool:
-    if not argv:
-        return False
-
-    cmd = argv[0]
-    meaningful = filtered_command_args(cmd, argv[1:])
-
-    if cmd == "pnpm" and meaningful:
-        return meaningful[-1] in {"dev", "build", "test", "preview", "install", "add", "remove", "up", "dlx"}
-    if cmd == "go" and meaningful:
-        return meaningful[0] in {"test", "run", "build", "install"}
-
     return False
 
 

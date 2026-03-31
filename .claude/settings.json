@@ -21,8 +21,10 @@
       "Bash(./.claude/scripts/harmony_worktree.py *)",
       "Bash(curl:*)",
       "Bash(pnpm *)",
-      "Bash(go vet *)",
-      "Bash(go fmt *)",
+      "Bash(go *)",
+      "Bash(ohpm *)",
+      "Bash(hvigorw *)",
+      "Bash(hvigor *)",
       "Bash(*deploy/scripts/*)"
     ],
     "ask": [

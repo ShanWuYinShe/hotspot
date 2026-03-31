@@ -35,14 +35,14 @@ HotSpot 是一个多端 monorepo：
 - 默认只在仓库内工作；确需访问仓库外路径时，只使用用户明确提供或仓库文档已约定的绝对路径。
 - 临时文件统一放在仓库根目录 `tmp/`。
 - 共享自动化、hooks 与团队级权限放 `.claude/settings.json`；个人机器差异放 `.claude/settings.local.json`。
-- 权限策略默认采用”最小静态 allow + 仓库规范 + 运行期 hooks 判定”模型，不把大量 Bash 命令模式硬编码进 allow 列表作为主机制。
-- Claude 是否可直接执行某个动作，默认按”目的 + 副作用 + 多 agent 冲突风险”判断：主目录本地 `main` 只允许 git 控制面动作；在非主目录 worktree 中，若命令只影响当前 worktree，且依赖、缓存、构建产物已被 `.gitignore` 忽略或定向到 `tmp/`，则可直接执行局部 install/check/test/build 与必要的 shell 就地编辑；会影响共享运行环境、启动长期进程或可能相互冲突的动作，仍必须通过 `deploy/` 隔离执行。
+- 权限策略采用”最小静态 allow + 运行期 hooks 判定”模型；命令边界由 `tool_guard.py` 强制执行，不在 MD 文件中逐条列举。
+- 主目录本地 `main` 只允许 git 控制面动作；worktree 内的标准开发命令（go/pnpm/ohpm/hvigor）可直接执行，详见 `tool_guard.py` 白名单。
 
 ## 主目录与 worktree 模型
 - 主目录默认始终保持在本地 `main` 且无未提交改动；主目录只承担同步、审阅、创建/回收 worktree 和本地集成控制，不承载实现性改动。
 - 任何 implement 行为开始前都必须先进入 feature worktree；主目录 `main` 只允许控制面动作（git 状态/历史检查、建/收 worktree、review、sync-back、cleanup）。
 - 所有实现、验证和构建都在 worktree 中完成；需要本地分支时，也在对应 worktree 中使用。
-- 在非主目录 worktree 中，允许使用 `sed` 等 shell 工具修改当前 worktree 内文件；不得跨 worktree、不得回写主目录文件；`awk` 继续视为受限命令。
+- 在非主目录 worktree 中，允许使用 `sed` 等就地编辑工具修改当前 worktree 内文件；不得跨 worktree、不得回写主目录文件。
 - **Worktree 命名必须遵循 `{子项目名}.{模块名}.{功能描述}` 格式。** `EnterWorktree` 的 `name` 参数必须按此格式传入，各段仅允许小写字母、数字和连字符，以字母开头，段间以 `.` 分隔。允许的子项目名：`backend`、`backend-go`、`frontend-svelte`（对应目录 `frontend_svelte/`）、`harmonyapp`、`spec`、`deploy`、`claude-config`（对应目录 `.claude/`）。示例：`backend-go.auth.add-oauth`、`harmonyapp.profile.fix-padding`、`claude-config.workflow.enforce-naming-rules`。`worktree_guard.py` 会在创建时校验格式和子项目合法性。
 - **新 worktree 必须从主目录本地 `main` 的当前 HEAD 创建，绝对不要使用 `origin/main` 或任何远程引用作为基准点。** feature worktree 必须使用 `EnterWorktree` 工具创建（调用时当前工作目录必须在主目录 `main` 分支上）；项目级 `WorktreeCreate` hook 会接管 `EnterWorktree` 的实际创建过程，并强制基于本地 `main` 创建。integration worktree 使用 `git worktree add -b <name> <path> main`（注意 `main` 是本地分支引用，不是 `origin/main`）。`tool_guard.py` 会在运行时拦截任何使用 `origin/` 引用的 `git worktree add` 命令。
 - 默认每个会话只操作自己创建或明确接管的 worktree / branch；除非用户明确指定，不要处理其他会话对象。
@@ -74,8 +74,8 @@ HotSpot 是一个多端 monorepo：
 ### 原则
 - 只有 `verify` / `verify-inspect` 支持多 env / 多 worktree 并行；`preview` 只有一个实例。
 - `verify` 默认验证的是当前工作目录 / worktree，但执行发生在 Docker 隔离环境中，不应把宿主机运行结果视为最终验证结论。
-- 当前 `deploy/scripts/verify.sh` 只覆盖 `backend-go` 与 `frontend_svelte`；frontend 在非主目录 worktree 的 `frontend_svelte/` 目录下可直接运行 `pnpm install/check/exec svelte-check/build/test` 作为开发内环自检，但最终有效结论仍以 `verify.sh` 为准。涉及 `harmonyapp/` 的任务，除仓库级 `verify` 外，还必须额外完成 `.claude/scripts/harmony_worktree.py` 的受控结果，才能视为子项目 check/test 环节通过；在非主目录 worktree 的 `harmonyapp/` 目录下，也允许直接运行 `ohpm install` 与受限 `hvigor`/`hvigorw` 检查、测试、编译命令作为局部自检。上述命令的依赖、缓存与构建产物必须留在当前 worktree 且不污染 git 状态。该脚本只允许在非主目录 worktree 中运行，并应直接基于当前 worktree 执行，不需要额外 `cd`；可统一完成 Harmony 安装、测试与编译闭环。
-- `verify-inspect` 负责提供开发内环隔离环境，不替代候选环境；前端页面/UI 改动默认先过 `verify`，再由 Claude Code 基于 `verify-inspect` 提供的入口主动完成页面级确认，需要最终入口预演时再进入 `preview`。
+- worktree 内的开发命令（`go`/`pnpm`/`ohpm`/`hvigor`）由 `tool_guard.py` 白名单放行，可直接在宿主环境执行；缓存与构建产物必须留在当前 worktree 内且不污染 git 状态。最终验证结论仍以 `deploy/` Docker 流程为准。
+- 涉及 `harmonyapp/` 的任务，质量门 check/test 环节应通过 `.claude/scripts/harmony_worktree.py` 完成；该脚本只允许在非主目录 worktree 中运行，直接基于当前 worktree 执行，不需要额外 `cd`。
 - 测试过程中产生的缓存、store、构建产物必须落在 `tmp/` 或容器临时目录，不能把 `.pnpm-store` 之类的临时目录写回仓库根。
 - `preview` / `release` 面向候选结果与确定性版本，不再承担多 env 开发隔离语义。
 - 运行与测试继续遵循：同一套配置 key，不同 datasource value。不要引入额外环境模式抽象或 Redis key-prefix 机制，除非用户明确要求。
