@@ -474,8 +474,8 @@ export struct DiscoverPage {
               .fontColor([this.getCurrentThemePalette().textSecondary])
           }
         }
-        .width(32)
-        .height(32)
+        .width(44)
+        .height(44)
         .justifyContent(FlexAlign.Center)
         .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.XL)

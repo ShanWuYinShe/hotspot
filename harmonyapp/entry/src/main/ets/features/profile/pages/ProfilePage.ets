@@ -300,6 +300,10 @@ export struct ProfilePage {
     AppRouter.push(PageNames.ANNOUNCEMENTS);
   }
 
+  private openMyShares(): void {
+    AppRouter.push(PageNames.MY_SHARES);
+  }
+
   private openSubscriptions(): void {
     AppRouter.push(PageNames.SUBSCRIPTIONS);
   }
@@ -862,16 +866,28 @@ export struct ProfilePage {
 
           Grid() {
             GridItem() {
-              this.buildFeatureCard($r(AppIcon.MAP), '附近', '发现附近热点与地图灵感')
+              this.buildFeatureCard($r(AppIcon.MAP), '附近', '发现附近热点与地图灵感', () => AppRouter.push(PageNames.SEARCH))
             }
             GridItem() {
-              this.buildFeatureCard($r(AppIcon.SEARCH), '发现', '找到兴趣用户与内容线索')
+              this.buildFeatureCard($r(AppIcon.SEARCH), '发现', '找到兴趣用户与内容线索', () => AppRouter.push(PageNames.SEARCH))
             }
             GridItem() {
-              this.buildFeatureCard($r(AppIcon.MESSAGE), '消息', '登录后开启实时对话')
+              this.buildFeatureCard($r(AppIcon.MESSAGE), '消息', '登录后开启实时对话', () => {
+                if (this.isLoggedIn) {
+                  AppRouter.push(PageNames.CHAT);
+                } else {
+                  AppRouter.push(PageNames.LOGIN);
+                }
+              })
             }
             GridItem() {
-              this.buildFeatureCard($r(AppIcon.EDIT), '发布', '记录当下灵感与生活切片')
+              this.buildFeatureCard($r(AppIcon.EDIT), '发布', '记录当下灵感与生活切片', () => {
+                if (this.isLoggedIn) {
+                  this.showCreateSheet();
+                } else {
+                  AppRouter.push(PageNames.LOGIN);
+                }
+              })
             }
           }
           .columnsTemplate('1fr 1fr')
@@ -971,8 +987,13 @@ export struct ProfilePage {
     .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
   }
 
+  private showCreateSheet(): void {
+    // 委托父级 Index 处理创建动作（通过 AppStorage 通信）
+    AppStorage.setOrCreate('triggerCreateAction', Date.now());
+  }
+
   @Builder
-  private buildFeatureCard(icon: Resource, title: string, subtitle: string) {
+  private buildFeatureCard(icon: Resource, title: string, subtitle: string, onTap?: () => void) {
     Column({ space: DesignConstants.SPACING.SM }) {
       Row() {
         Text() {
@@ -1008,6 +1029,11 @@ export struct ProfilePage {
     .borderRadius(this.getProfileVisualStyle().quickAction.borderRadius)
     .border({ width: this.getProfileVisualStyle().quickAction.borderWidth, color: this.getProfileVisualStyle().quickAction.borderColor })
     .shadow(this.getProfileVisualStyle().quickAction.shadow)
+    .onClick(() => {
+      if (onTap) {
+        onTap();
+      }
+    })
   }
 
   // ==================== 临时用户界面 ====================
@@ -1351,7 +1377,7 @@ export struct ProfilePage {
 
       Row({ space: DesignConstants.SPACING.MD }) {
         this.ProfileQuickAction(AppIcon.HEART, '关系', () => this.openRelationshipHub())
-        this.ProfileQuickAction(AppIcon.STAR, '收藏', () => this.openAnnouncements())
+        this.ProfileQuickAction(AppIcon.STAR, '收藏', () => this.openMyShares())
         this.ProfileQuickAction(AppIcon.SETTINGS, '设置', () => this.openSettingsCenter())
       }
       .width('100%')
@@ -1447,8 +1473,8 @@ export struct ProfilePage {
       Row({ space: DesignConstants.SPACING.SM }) {
         this.CompactStatItem(AppIcon.CAMERA, formatCount(this.myMomentsCount), '瞬间', () => this.openMyMoments())
         this.CompactStatItem(AppIcon.GROUP, formatCount(this.myGroupsCount), '群组', () => this.openMyGroups())
-        this.CompactStatItem(AppIcon.PERSON, formatCount(this.myFollowingCount), '关注', () => this.openSearchPeople())
-        this.CompactStatItem(AppIcon.HEART, formatCount(this.myFollowersCount), '粉丝', () => this.openSearchPeople())
+        this.CompactStatItem(AppIcon.PERSON, formatCount(this.myFollowingCount), '关注', () => this.openRelationshipHub())
+        this.CompactStatItem(AppIcon.HEART, formatCount(this.myFollowersCount), '粉丝', () => this.openRelationshipHub())
       }
       .width('100%')
     }

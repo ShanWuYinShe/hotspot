@@ -254,7 +254,7 @@ export struct MessagePage {
               type: 'group',
               name: item.group.name ?? '',
               avatarUrl: item.group.avatar_url,
-              lastMessage: '点击进入群聊',
+              lastMessage: '',
               lastTime: item.last_activity_at || item.created_at || '',
               lastTimestamp: this.parseTimestamp(item.last_activity_at || item.created_at || ''),
               isPinned: item.my_state?.is_pinned ?? false,
