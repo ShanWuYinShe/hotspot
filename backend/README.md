@@ -21,10 +21,16 @@ Handler → Service → Repository
 
 ## 验证命令
 
+格式化 / 语法检查 / lint / 编译通过受控脚本执行：
+
 ```bash
-cargo check
-cargo clippy
-cargo test
+python3 .claude/scripts/rust_dev.py --task all
+```
+
+测试通过 deploy/ 隔离执行：
+
+```bash
+./deploy/scripts/verify.sh --env-name <name>
 ```
 
 ## 规范与文档

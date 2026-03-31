@@ -12,11 +12,6 @@ from git_context import GitContextError, get_repo_context
 
 SAFE_SHELL_PATTERNS = (
     re.compile(r"^git(?:\s|$)"),
-    re.compile(r"^pwd(?:\s|$)"),
-    re.compile(r"^ls(?:\s|$)"),
-    re.compile(r"^chmod(?:\s|$)"),
-    re.compile(r"^sleep(?:\s|$)"),
-    re.compile(r"^curl(?:\s|$)"),
     re.compile(r"^(?:\./)?deploy/scripts/[a-z0-9-]+\.sh(?:\s|$)"),
     re.compile(r"^bash\s+(?:\./)?deploy/scripts/[a-z0-9-]+\.sh(?:\s|$)"),
     re.compile(r"^python3?\s+(?:\./)?\.claude/scripts/[a-zA-Z0-9_./-]+(?:\s|$)"),
@@ -25,18 +20,23 @@ SAFE_SHELL_PATTERNS = (
 BLOCKED_RUNTIME_PATTERNS = (
     re.compile(r"^npm(?:\s|$)"),
     re.compile(r"^npx(?:\s|$)"),
-    re.compile(r"^node(?:\s|$)"),
+    re.compile(r"^yarn(?:\s|$)"),
+    re.compile(r"^pnpm(?:\s|$)"),
     re.compile(r"^bun(?:\s|$)"),
+    re.compile(r"^node(?:\s|$)"),
     re.compile(r"^cargo(?:\s|$)"),
     re.compile(r"^rustc(?:\s|$)"),
-    re.compile(r"^docker(?:\s|$)"),
-    re.compile(r"^docker-compose(?:\s|$)"),
     re.compile(r"^go(?:\s|$)"),
-    re.compile(r"^pnpm(?:\s|$)"),
     re.compile(r"^python3?(?:\s|$)"),
+    re.compile(r"^pip3?(?:\s|$)"),
     re.compile(r"^ohpm(?:\s|$)"),
     re.compile(r"^hvigor(?:\s|$)"),
     re.compile(r"^hvigorw(?:\s|$)"),
+    re.compile(r"^docker(?:\s|$)"),
+    re.compile(r"^docker-compose(?:\s|$)"),
+    re.compile(r"^make(?:\s|$)"),
+    re.compile(r"^wget(?:\s|$)"),
+    re.compile(r"^curl(?:\s|$)"),
     re.compile(r"^\./(?!deploy/scripts/|\.claude/scripts/)[^\s]+"),
 )
 
@@ -114,8 +114,8 @@ def guard_bash(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
         if is_safe_shell_segment(segment):
             continue
         if is_blocked_runtime_segment(segment):
-            return deny("该命令会影响运行环境；请改用 deploy/ 标准入口或 .claude/scripts/ 受控脚本。")
-        return deny("当前仓库 Bash 默认只允许 git 控制面、deploy 入口、.claude/scripts/ 受控脚本，以及 worktree 内的 sed 就地编辑。开发命令（go/pnpm/ohpm/hvigor）请使用 .claude/scripts/ 下的受控脚本。")
+            return deny("非 git 控制面命令请通过 deploy/ 入口或 .claude/scripts/ 受控脚本执行。")
+        return deny("非 git 控制面命令请通过 deploy/ 入口或 .claude/scripts/ 受控脚本执行。")
 
     return 0
 

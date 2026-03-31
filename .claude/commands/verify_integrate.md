@@ -14,7 +14,7 @@ $ARGUMENTS
 
 1. 确认当前位于 integration worktree；如果不是，停止并说明原因。
 2. 读取 integration 元信息，检查基线是否仍然有效；若主目录 `main` 已前进，提示改走 `/refresh_integrate`。
-3. 使用仓库标准入口运行验证；在进入标准验证前，允许在当前 integration worktree 内做局部自检：`frontend_svelte/` 下可直接运行受限 `pnpm install/check/exec svelte-check/build/test`，`harmonyapp/` 下可直接运行 `ohpm install` 与受限 `hvigor`/`hvigorw` 检查、测试、编译命令，但这些局部结果不替代最终质量门。最终有效结论以 `deploy/scripts/verify.sh --env-name <name>` 为准；若改动涉及 `harmonyapp/`，还必须额外运行 `.claude/scripts/harmony_worktree.py` 或等价既定闭环入口。
+3. 使用仓库标准入口运行验证；在进入标准验证前，允许在当前 integration worktree 内通过受控脚本做局部自检：`python3 .claude/scripts/rust_dev.py --task all`、`python3 .claude/scripts/go_dev.py --task all`、`python3 .claude/scripts/frontend_dev.py --task all`、`python3 .claude/scripts/harmony_worktree.py --task check`，但这些局部结果不替代最终质量门。最终有效结论以 `deploy/scripts/verify.sh --env-name <name>` 为准。
 4. 通过 `.claude/scripts/integration_meta.py` 将 verify 结果回写到元信息。
 5. 汇总结果时，区分编译错误、测试失败、构建失败、环境问题及基线问题。
 6. 若 verify 通过，下一步进入 simplify / strict review / `/finish_integrate`。

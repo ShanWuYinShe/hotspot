@@ -17,9 +17,6 @@
       "ExitWorktree",
       "Bash(git *)",
       "Bash(python3 .claude/scripts/*)",
-      "Bash(python3 .claude/scripts/harmony_worktree.py *)",
-      "Bash(./.claude/scripts/harmony_worktree.py *)",
-      "Bash(curl:*)",
       "Bash(*deploy/scripts/*)"
     ],
     "ask": [

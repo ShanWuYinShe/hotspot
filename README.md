@@ -15,12 +15,26 @@
 
 ## 开发
 
-```bash
-# 后端
-cd backend && cargo run
+格式化 / 语法检查 / 编译通过受控脚本执行（必须在 feature worktree 中）：
 
-# 前端
-cd frontend_svelte && pnpm dev
+```bash
+# Rust 后端
+python3 .claude/scripts/rust_dev.py --task all
+
+# Go 后端
+python3 .claude/scripts/go_dev.py --task all
+
+# Web 前端
+python3 .claude/scripts/frontend_dev.py --task all
+
+# Harmony 客户端
+python3 .claude/scripts/harmony_worktree.py --task all
+```
+
+测试与最终验证通过 `deploy/` 隔离执行：
+
+```bash
+./deploy/scripts/verify.sh --env-name <name>
 ```
 
 ## 入口

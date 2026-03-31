@@ -11,9 +11,16 @@
 
 ## 验证命令
 
+格式化 / 语法检查 / 编译通过受控脚本执行（必须在 feature worktree 中）：
+
 ```bash
-pnpm check
-pnpm build
+python3 .claude/scripts/frontend_dev.py --task all
+```
+
+测试与最终验证通过 deploy/ 隔离执行：
+
+```bash
+./deploy/scripts/verify.sh --env-name <name>
 ```
 
 ## 规范与文档

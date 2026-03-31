@@ -36,4 +36,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 常用命令
 - 默认验证入口遵循仓库根 `CLAUDE.md` 与 `deploy/` Docker 流程。
-- `cargo check`、`cargo clippy`、`cargo test`、`cargo test <测试名> -- --exact` 仅作为用户显式要求时的本地调试参考，不作为默认最终验证入口。
+- worktree 内的格式化、语法检查和编译通过受控脚本执行：
+  - `python3 .claude/scripts/rust_dev.py --task fmt` — 格式检查
+  - `python3 .claude/scripts/rust_dev.py --task check` — 语法与类型检查
+  - `python3 .claude/scripts/rust_dev.py --task clippy` — lint
+  - `python3 .claude/scripts/rust_dev.py --task build` — 编译
+  - `python3 .claude/scripts/rust_dev.py --task all` — 以上全部（默认）
+- 不允许直接调用 `cargo fmt`/`cargo check`/`cargo clippy`/`cargo build`；`cargo test` 必须通过 `deploy/` 隔离执行。

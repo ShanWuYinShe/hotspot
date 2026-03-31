@@ -4,77 +4,20 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
-import subprocess
 import sys
-from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Sequence
 
-from git_context import GitContextError, get_repo_context
+from dev_common import (
+    CommandResult,
+    ensure_allowed_worktree,
+    finish_blocked,
+    now_stamp,
+    run,
+    summarize_failure,
+    write_command_log,
+)
 
-
-@dataclass
-class CommandResult:
-    argv: list[str]
-    returncode: int
-    stdout: str
-    stderr: str
-
-
-def now_stamp() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-
-
-def run(argv: Sequence[str], cwd: Path) -> CommandResult:
-    completed = subprocess.run(list(argv), cwd=str(cwd), capture_output=True, text=True)
-    return CommandResult(list(argv), completed.returncode, completed.stdout, completed.stderr)
-
-
-def write_command_log(path: Path, result: CommandResult) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    body = [
-        "$ " + " ".join(result.argv),
-        "",
-        "[stdout]",
-        result.stdout.rstrip(),
-        "",
-        "[stderr]",
-        result.stderr.rstrip(),
-        "",
-        f"[exit] {result.returncode}",
-    ]
-    path.write_text("\n".join(body).rstrip() + "\n", encoding="utf-8")
-
-
-def summarize_failure(result: CommandResult) -> list[str]:
-    lines: list[str] = []
-    for source in (result.stderr, result.stdout):
-        for line in source.splitlines():
-            stripped = line.strip()
-            if not stripped:
-                continue
-            lowered = stripped.lower()
-            if any(token in lowered for token in ("error", "failed", "exception", "arkts", "ets", "test")):
-                lines.append(stripped)
-    deduped: list[str] = []
-    seen: set[str] = set()
-    for line in lines:
-        if line in seen:
-            continue
-        seen.add(line)
-        deduped.append(line)
-    return deduped[:20]
-
-
-def ensure_allowed_worktree(cwd: Path) -> dict:
-    try:
-        repo = get_repo_context(cwd)
-    except GitContextError as exc:
-        raise RuntimeError(f"无法读取 git 上下文: {exc}") from exc
-    if repo["is_main_primary"]:
-        raise RuntimeError("harmony_worktree.py 只能在非主目录 worktree 中运行，不能在主目录本地 main 上运行。")
-    return repo
+_FAILURE_KEYWORDS = ("error", "failed", "exception", "arkts", "ets", "test")
 
 
 def detect_harmony_root(repo_top: Path, explicit: str | None) -> Path:
@@ -130,7 +73,7 @@ def install_dependencies(harmony_root: Path, logs_dir: Path) -> CommandResult:
     return result
 
 
-def candidate_build_commands(base: Sequence[str]) -> list[list[str]]:
+def candidate_build_commands(base: list[str]) -> list[list[str]]:
     return [
         [*base, "--mode", "module", "-p", "module=entry@default", "-p", "product=default", "-p", "buildMode=debug", "assembleHap"],
         [*base, "--mode", "project", "-p", "product=default", "-p", "buildMode=debug", "assembleApp"],
@@ -170,7 +113,7 @@ def run_build_like(harmony_root: Path, logs_dir: Path, stage_name: str) -> tuple
         "harmony_root": str(harmony_root),
         "logs_dir": str(logs_dir),
         "tried": tried,
-        "summary": summarize_failure(last_result),
+        "summary": summarize_failure(last_result, keywords=_FAILURE_KEYWORDS),
     }
 
 
@@ -212,7 +155,7 @@ def main() -> int:
             if install_result.returncode != 0:
                 report["status"] = "blocked"
                 report["reason"] = "ohpm install 失败"
-                report["summary"] = summarize_failure(install_result)
+                report["summary"] = summarize_failure(install_result, keywords=_FAILURE_KEYWORDS)
                 json.dump(report, sys.stdout, ensure_ascii=False, indent=2)
                 sys.stdout.write("\n")
                 return 1
@@ -231,15 +174,7 @@ def main() -> int:
         sys.stdout.write("\n")
         return code
     except RuntimeError as exc:
-        payload = {
-            "status": "blocked",
-            "task": args.task,
-            "reason": str(exc),
-            "logs_dir": str(logs_dir),
-        }
-        json.dump(payload, sys.stdout, ensure_ascii=False, indent=2)
-        sys.stdout.write("\n")
-        return 1
+        return finish_blocked(args.task, str(exc), logs_dir)
 
 
 if __name__ == "__main__":
