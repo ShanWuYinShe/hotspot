@@ -5,6 +5,7 @@
   "respectGitignore": true,
   "permissions": {
     "allow": [
+      "WebSearch",
       "Read",
       "Glob",
       "Grep",
@@ -17,7 +18,15 @@
       "ExitWorktree",
       "Bash(git *)",
       "Bash(python3 .claude/scripts/*)",
-      "Bash(*deploy/scripts/*)"
+      "Bash(*deploy/scripts/*)",
+      "Skill(cleanup_worktrees)",
+      "Skill(start_feature)",
+      "Skill(sync_back_main)",
+      "Skill(update-config)",
+      "Skill(status_worktrees)",
+      "mcp__zai-mcp-server__analyze_image",
+      "mcp__web-reader__webReader",
+      "WebFetch(domain:docs.anthropic.com)"
     ],
     "ask": [
       "Edit(.claude/settings.json)",
@@ -46,7 +55,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|Edit|Write",
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
