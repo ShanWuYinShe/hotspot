@@ -60,6 +60,8 @@ def main() -> int:
 
     if tool_name == "Bash":
         return guard_bash(payload, repo)
+    if tool_name in {"Edit", "Write"}:
+        return guard_edit_write(payload, repo)
     return 0
 
 
@@ -77,6 +79,12 @@ def deny(reason: str) -> int:
     )
     sys.stdout.write("\n")
     return 0
+
+
+def guard_edit_write(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
+    if not repo or not repo["is_main_primary"]:
+        return 0
+    return deny("主目录本地 main 禁止文件修改；请先进入 feature worktree。")
 
 
 def guard_bash(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
