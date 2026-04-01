@@ -4,6 +4,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	private_messages "hotspot/backend-go/internal/modules/privatemessages"
+	"hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
@@ -19,7 +20,8 @@ type Module struct {
 
 func NewModule(factory *persistence.Factory, source appconfig.Source) *Module {
 	messageRuntime := private_messages.NewRuntime(factory)
-	chatService := NewServiceWithRepos(NewPostgresRepository(factory, nil), messageRuntime.ReadService())
+	userService := users.NewServiceWithRepo(users.NewPostgresRepository(factory, nil))
+	chatService := NewServiceWithDeps(NewPostgresRepository(factory, nil), messageRuntime.ReadService(), userService)
 	return &Module{chatHandler: NewHandler(chatService, source), messageHandler: messageRuntime.Handler()}
 }
 func (m *Module) Mount(r chi.Router) {
@@ -31,6 +33,8 @@ func (m *Module) Mount(r chi.Router) {
 			group.Use(idempotency.Middleware)
 			group.Post("/me/list", m.chatHandler.List)
 			group.Post("/open_the_door", m.chatHandler.OpenTheDoor)
+			group.Post("/me/update_settings", m.chatHandler.UpdateSettings)
+			group.Post("/me/delete", m.chatHandler.Delete)
 		})
 	})
 	r.Route("/api/v1/private_messages", func(messageRouter chi.Router) {

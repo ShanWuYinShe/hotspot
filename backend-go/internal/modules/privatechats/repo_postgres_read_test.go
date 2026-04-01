@@ -23,8 +23,22 @@ func (r privateChatRowValues) Scan(dest ...any) error {
 		switch d := dest[i].(type) {
 		case *string:
 			*d = r.values[i].(string)
+		case *bool:
+			*d = r.values[i].(bool)
 		case *time.Time:
 			*d = r.values[i].(time.Time)
+		case **time.Time:
+			if r.values[i] == nil {
+				*d = nil
+				continue
+			}
+			value := r.values[i].(*time.Time)
+			if value == nil {
+				*d = nil
+				continue
+			}
+			copied := value.UTC()
+			*d = &copied
 		}
 	}
 	return nil
@@ -57,9 +71,25 @@ func (r *privateChatFallbackRepo) GetOrCreate(context.Context, string, string) (
 	r.markUsed()
 	return time.Now().UTC(), nil
 }
-func (r *privateChatFallbackRepo) List(context.Context, string) (map[string]time.Time, error) {
+func (r *privateChatFallbackRepo) List(context.Context, string, ListOptions) ([]ChatState, string, error) {
 	r.markUsed()
-	return map[string]time.Time{"fallback": time.Now().UTC()}, nil
+	return []ChatState{{ChatKey: "fallback", TargetID: "user_bob", CreatedAt: time.Now().UTC()}}, "", nil
+}
+func (r *privateChatFallbackRepo) GetState(context.Context, string, string) (ChatState, error) {
+	r.markUsed()
+	return ChatState{ChatKey: "fallback", TargetID: "user_bob", CreatedAt: time.Now().UTC()}, nil
+}
+func (r *privateChatFallbackRepo) RestoreForUser(context.Context, string, string, time.Time) error {
+	r.markUsed()
+	return nil
+}
+func (r *privateChatFallbackRepo) UpdateSettings(context.Context, string, string, UpdateChatSettings) error {
+	r.markUsed()
+	return nil
+}
+func (r *privateChatFallbackRepo) DeleteForUser(context.Context, string, string, *time.Time) error {
+	r.markUsed()
+	return nil
 }
 
 type privateChatStubRecord struct {
@@ -69,8 +99,18 @@ type privateChatStubRecord struct {
 	CreatedAt time.Time
 }
 
+type privateChatUserStateRecord struct {
+	ChatKey      string
+	UserID       string
+	IsMuted      bool
+	IsPinned     bool
+	VisibleSince *time.Time
+	DeletedAt    *time.Time
+}
+
 type privateChatBackendStub struct {
 	chats        map[string]privateChatStubRecord
+	states       map[string]map[string]privateChatUserStateRecord
 	execErrs     map[string]error
 	queryErrs    map[string]error
 	queryRowErrs map[string]error
@@ -82,13 +122,36 @@ func (b *privateChatBackendStub) Exec(_ context.Context, query string, args ...a
 	if err := b.execErrs[query]; err != nil {
 		return err
 	}
-	if query == queryInsertPrivateChat {
+	switch query {
+	case queryInsertPrivateChat:
 		chatKey := args[0].(string)
 		if _, ok := b.chats[chatKey]; ok {
 			return nil
 		}
-		createdAt, _ := time.Parse(time.RFC3339, args[3].(string))
+		createdAt, _ := time.Parse(time.RFC3339Nano, args[3].(string))
 		b.chats[chatKey] = privateChatStubRecord{ChatKey: chatKey, UserAID: args[1].(string), UserBID: args[2].(string), CreatedAt: createdAt}
+	case queryUpsertPrivateChatUserState:
+		chatKey := args[0].(string)
+		userID := args[1].(string)
+		visibleSinceAny := args[4]
+		var visibleSince *time.Time
+		if visibleSinceStr, ok := visibleSinceAny.(string); ok && visibleSinceStr != "" {
+			parsed, _ := time.Parse(time.RFC3339Nano, visibleSinceStr)
+			visibleSince = &parsed
+		}
+		deletedAtAny := args[5]
+		var deletedAt *time.Time
+		if deletedAtStr, ok := deletedAtAny.(string); ok && deletedAtStr != "" {
+			parsed, _ := time.Parse(time.RFC3339Nano, deletedAtStr)
+			deletedAt = &parsed
+		}
+		if b.states == nil {
+			b.states = map[string]map[string]privateChatUserStateRecord{}
+		}
+		if b.states[chatKey] == nil {
+			b.states[chatKey] = map[string]privateChatUserStateRecord{}
+		}
+		b.states[chatKey][userID] = privateChatUserStateRecord{ChatKey: chatKey, UserID: userID, IsMuted: args[2].(bool), IsPinned: args[3].(bool), VisibleSince: visibleSince, DeletedAt: deletedAt}
 	}
 	return nil
 }
@@ -96,12 +159,29 @@ func (b *privateChatBackendStub) QueryRow(_ context.Context, query string, args 
 	if err := b.queryRowErrs[query]; err != nil {
 		return privateChatRowValues{err: err}
 	}
-	if query == queryGetPrivateChatCreatedAt {
+	switch query {
+	case queryGetPrivateChatCreatedAt:
 		record, ok := b.chats[args[0].(string)]
 		if !ok {
 			return privateChatRowValues{err: persistence.ErrNotImplemented}
 		}
 		return privateChatRowValues{values: []any{record.CreatedAt}}
+	case queryGetPrivateChatState:
+		userID := args[0].(string)
+		chatKey := args[1].(string)
+		record, ok := b.chats[chatKey]
+		if !ok {
+			return privateChatRowValues{err: persistence.ErrNotImplemented}
+		}
+		targetID := record.UserAID
+		if record.UserAID == userID {
+			targetID = record.UserBID
+		}
+		state := privateChatUserStateRecord{}
+		if b.states != nil && b.states[chatKey] != nil {
+			state = b.states[chatKey][userID]
+		}
+		return privateChatRowValues{values: []any{record.ChatKey, targetID, record.CreatedAt, state.IsMuted, state.IsPinned, state.VisibleSince, state.DeletedAt}}
 	}
 	return privateChatRowValues{err: persistence.ErrNotImplemented}
 }
@@ -116,7 +196,15 @@ func (b *privateChatBackendStub) Query(_ context.Context, query string, args ...
 			if record.UserAID != userID && record.UserBID != userID {
 				continue
 			}
-			rows = append(rows, []any{record.ChatKey, record.CreatedAt})
+			targetID := record.UserAID
+			if record.UserAID == userID {
+				targetID = record.UserBID
+			}
+			state := privateChatUserStateRecord{}
+			if b.states != nil && b.states[record.ChatKey] != nil {
+				state = b.states[record.ChatKey][userID]
+			}
+			rows = append(rows, []any{record.ChatKey, targetID, record.CreatedAt, state.IsMuted, state.IsPinned, state.VisibleSince, state.DeletedAt})
 		}
 		return &privateChatRowsValues{rows: rows}, nil
 	}
@@ -132,13 +220,13 @@ func TestPostgresRepositoryFailsClosedWhenQueryableUnavailable(t *testing.T) {
 	if _, err := repo.GetOrCreate(context.Background(), "user_alice", "user_bob"); !errors.Is(err, persistence.ErrNotImplemented) {
 		t.Fatalf("expected ErrNotImplemented for get_or_create, got %v", err)
 	}
-	if _, err := repo.List(context.Background(), "user_alice"); !errors.Is(err, persistence.ErrNotImplemented) {
+	if _, _, err := repo.List(context.Background(), "user_alice", ListOptions{}); !errors.Is(err, persistence.ErrNotImplemented) {
 		t.Fatalf("expected ErrNotImplemented for list, got %v", err)
 	}
 }
 
 func TestPostgresRepositoryGetOrCreateAndList(t *testing.T) {
-	backend := &privateChatBackendStub{chats: map[string]privateChatStubRecord{}, execErrs: map[string]error{}, queryErrs: map[string]error{}, queryRowErrs: map[string]error{}}
+	backend := &privateChatBackendStub{chats: map[string]privateChatStubRecord{}, states: map[string]map[string]privateChatUserStateRecord{}, execErrs: map[string]error{}, queryErrs: map[string]error{}, queryRowErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	fallback := &privateChatFallbackRepo{}
@@ -148,15 +236,18 @@ func TestPostgresRepositoryGetOrCreateAndList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get or create: %v", err)
 	}
-	items, err := repo.List(context.Background(), "user_alice")
+	items, nextCursor, err := repo.List(context.Background(), "user_alice", ListOptions{})
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
 	if len(items) != 1 {
 		t.Fatalf("unexpected items: %#v", items)
 	}
-	if items[key("user_alice", "user_bob")].IsZero() || createdAt.IsZero() {
-		t.Fatalf("expected created time, got list=%#v created=%v", items, createdAt)
+	if items[0].ChatKey != key("user_alice", "user_bob") || items[0].TargetID != "user_bob" || items[0].CreatedAt.IsZero() || createdAt.IsZero() {
+		t.Fatalf("expected created state, got list=%#v created=%v", items, createdAt)
+	}
+	if nextCursor != "" {
+		t.Fatalf("expected empty next cursor, got %q", nextCursor)
 	}
 	if fallback.used {
 		t.Fatal("expected postgres path without fallback")
@@ -164,26 +255,45 @@ func TestPostgresRepositoryGetOrCreateAndList(t *testing.T) {
 }
 
 func TestPostgresRepositoryListReturnsEmptyWithoutFallback(t *testing.T) {
-	backend := &privateChatBackendStub{chats: map[string]privateChatStubRecord{}, execErrs: map[string]error{}, queryErrs: map[string]error{}, queryRowErrs: map[string]error{}}
+	backend := &privateChatBackendStub{chats: map[string]privateChatStubRecord{}, states: map[string]map[string]privateChatUserStateRecord{}, execErrs: map[string]error{}, queryErrs: map[string]error{}, queryRowErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	fallback := &privateChatFallbackRepo{}
 	repo := NewPostgresRepository(factory, fallback)
 
-	items, err := repo.List(context.Background(), "user_alice")
+	items, nextCursor, err := repo.List(context.Background(), "user_alice", ListOptions{})
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
 	if len(items) != 0 {
 		t.Fatalf("expected empty list, got %#v", items)
 	}
+	if nextCursor != "" {
+		t.Fatalf("expected empty next cursor, got %q", nextCursor)
+	}
 	if fallback.used {
 		t.Fatal("expected empty postgres result without fallback")
 	}
 }
 
+func TestPostgresRepositoryGetOrCreateReturnsErrorOnExecFailure(t *testing.T) {
+	backend := &privateChatBackendStub{chats: map[string]privateChatStubRecord{}, states: map[string]map[string]privateChatUserStateRecord{}, execErrs: map[string]error{queryInsertPrivateChat: errors.New("boom")}, queryErrs: map[string]error{}, queryRowErrs: map[string]error{}}
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	fallback := &privateChatFallbackRepo{}
+	repo := NewPostgresRepository(factory, fallback)
+
+	_, err := repo.GetOrCreate(context.Background(), "user_alice", "user_bob")
+	if err == nil {
+		t.Fatal("expected get or create error")
+	}
+	if fallback.used {
+		t.Fatal("expected exec failure without fallback")
+	}
+}
+
 func TestPostgresRepositoryGetOrCreateReturnsErrorOnQueryRowFailure(t *testing.T) {
-	backend := &privateChatBackendStub{chats: map[string]privateChatStubRecord{}, execErrs: map[string]error{}, queryErrs: map[string]error{}, queryRowErrs: map[string]error{queryGetPrivateChatCreatedAt: errors.New("boom")}}
+	backend := &privateChatBackendStub{chats: map[string]privateChatStubRecord{}, states: map[string]map[string]privateChatUserStateRecord{}, execErrs: map[string]error{}, queryErrs: map[string]error{}, queryRowErrs: map[string]error{queryGetPrivateChatCreatedAt: errors.New("boom")}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	fallback := &privateChatFallbackRepo{}
@@ -199,13 +309,13 @@ func TestPostgresRepositoryGetOrCreateReturnsErrorOnQueryRowFailure(t *testing.T
 }
 
 func TestPostgresRepositoryListReturnsErrorOnQueryFailure(t *testing.T) {
-	backend := &privateChatBackendStub{chats: map[string]privateChatStubRecord{}, execErrs: map[string]error{}, queryErrs: map[string]error{queryListPrivateChats: errors.New("boom")}, queryRowErrs: map[string]error{}}
+	backend := &privateChatBackendStub{chats: map[string]privateChatStubRecord{}, states: map[string]map[string]privateChatUserStateRecord{}, execErrs: map[string]error{}, queryErrs: map[string]error{queryListPrivateChats: errors.New("boom")}, queryRowErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	fallback := &privateChatFallbackRepo{}
 	repo := NewPostgresRepository(factory, fallback)
 
-	_, err := repo.List(context.Background(), "user_alice")
+	_, _, err := repo.List(context.Background(), "user_alice", ListOptions{})
 	if err == nil {
 		t.Fatal("expected list error")
 	}

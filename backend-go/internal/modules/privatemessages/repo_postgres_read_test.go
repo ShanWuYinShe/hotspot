@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sort"
 	"testing"
+	"time"
 
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -61,13 +62,17 @@ func (r *privateMessageFallbackRepo) History(context.Context, string, string) (P
 	r.markUsed()
 	return PaginatedMessages{Items: []PrivateMessageItem{{MessageID: "fallback"}}}, nil
 }
-func (r *privateMessageFallbackRepo) Recent(context.Context, string, string, int) (PaginatedMessages, error) {
+func (r *privateMessageFallbackRepo) Recent(context.Context, string, string, int, *time.Time) (PaginatedMessages, error) {
 	r.markUsed()
 	return PaginatedMessages{}, nil
 }
-func (r *privateMessageFallbackRepo) Last(context.Context, string, string) (*PrivateMessageItem, error) {
+func (r *privateMessageFallbackRepo) Last(context.Context, string, string, *time.Time) (*PrivateMessageItem, error) {
 	r.markUsed()
 	return &PrivateMessageItem{MessageID: "fallback"}, nil
+}
+func (r *privateMessageFallbackRepo) UnreadCount(context.Context, string, string, *time.Time) (int, error) {
+	r.markUsed()
+	return 0, nil
 }
 func (r *privateMessageFallbackRepo) Update(context.Context, string, UpdatePrivateMessageRequest) error {
 	r.markUsed()
@@ -291,14 +296,14 @@ func TestPostgresRepositorySendHistoryRecentAndLast(t *testing.T) {
 	if len(history.Items) != 1 || history.Items[0].MessageID != sent.MessageID || history.Items[0].Content != "hello" {
 		t.Fatalf("unexpected history: %#v", history)
 	}
-	recent, err := repo.Recent(context.Background(), "user_alice", "user_bob", 1)
+	recent, err := repo.Recent(context.Background(), "user_alice", "user_bob", 1, nil)
 	if err != nil {
 		t.Fatalf("recent: %v", err)
 	}
 	if len(recent.Items) != 1 || recent.Items[0].MessageID != sent.MessageID {
 		t.Fatalf("unexpected recent: %#v", recent)
 	}
-	last, err := repo.Last(context.Background(), "user_alice", "user_bob")
+	last, err := repo.Last(context.Background(), "user_alice", "user_bob", nil)
 	if err != nil {
 		t.Fatalf("last: %v", err)
 	}

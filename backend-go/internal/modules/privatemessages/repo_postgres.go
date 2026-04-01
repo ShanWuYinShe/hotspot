@@ -27,13 +27,13 @@ func (r *PostgresRepository) Send(ctx context.Context, senderID, targetUserID st
 	messageID := "pm_" + now.Format("20060102150405.000000000")
 	chatKey := conversationKey(senderID, targetUserID)
 	userAID, userBID := orderedUsers(senderID, targetUserID)
-	if err := queryable.Exec(ctx, queryInsertPrivateChat, chatKey, userAID, userBID, now.Format(time.RFC3339)); err != nil {
+	if err := queryable.Exec(ctx, queryInsertPrivateChat, chatKey, userAID, userBID, now.Format(time.RFC3339Nano)); err != nil {
 		return MessageSent{}, err
 	}
-	if err := queryable.Exec(ctx, queryInsertPrivateMessage, messageID, chatKey, senderID, req.Type, req.Content, req.ShareCode, now.Format(time.RFC3339)); err != nil {
+	if err := queryable.Exec(ctx, queryInsertPrivateMessage, messageID, chatKey, senderID, req.Type, req.Content, req.ShareCode, now.Format(time.RFC3339Nano)); err != nil {
 		return MessageSent{}, err
 	}
-	return MessageSent{MessageID: messageID, SentAt: now.Format(time.RFC3339)}, nil
+	return MessageSent{MessageID: messageID, SentAt: now.Format(time.RFC3339Nano)}, nil
 }
 func (r *PostgresRepository) Update(ctx context.Context, userID string, req UpdatePrivateMessageRequest) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {

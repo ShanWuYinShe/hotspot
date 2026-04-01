@@ -2,6 +2,7 @@ package private_messages
 
 import (
 	"context"
+	"time"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
@@ -10,8 +11,9 @@ import (
 )
 
 type ReadService interface {
-	Recent(context.Context, string, int) (PaginatedMessages, error)
-	Last(context.Context, string) (*PrivateMessageItem, error)
+	Recent(context.Context, string, int, *time.Time) (PaginatedMessages, error)
+	Last(context.Context, string, *time.Time) (*PrivateMessageItem, error)
+	UnreadCount(context.Context, string, *time.Time) (int, error)
 }
 
 type Runtime struct {
@@ -67,14 +69,19 @@ func (s *Service) History(ctx context.Context, targetUserID string) (PaginatedMe
 	return s.repo.History(ctx, principal.UserID, targetUserID)
 }
 
-func (s *Service) Recent(ctx context.Context, targetUserID string, limit int) (PaginatedMessages, error) {
+func (s *Service) Recent(ctx context.Context, targetUserID string, limit int, deletedAfter *time.Time) (PaginatedMessages, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	return s.repo.Recent(ctx, principal.UserID, targetUserID, limit)
+	return s.repo.Recent(ctx, principal.UserID, targetUserID, limit, deletedAfter)
 }
 
-func (s *Service) Last(ctx context.Context, targetUserID string) (*PrivateMessageItem, error) {
+func (s *Service) Last(ctx context.Context, targetUserID string, deletedAfter *time.Time) (*PrivateMessageItem, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	return s.repo.Last(ctx, principal.UserID, targetUserID)
+	return s.repo.Last(ctx, principal.UserID, targetUserID, deletedAfter)
+}
+
+func (s *Service) UnreadCount(ctx context.Context, targetUserID string, deletedAfter *time.Time) (int, error) {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	return s.repo.UnreadCount(ctx, principal.UserID, targetUserID, deletedAfter)
 }
 
 func (s *Service) Update(ctx context.Context, req UpdatePrivateMessageRequest) error {

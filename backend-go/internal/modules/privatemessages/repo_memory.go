@@ -26,7 +26,7 @@ func (r *InMemoryRepository) Send(_ context.Context, senderID, targetUserID stri
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	now := time.Now().UTC()
-	msg := PrivateMessageItem{MessageID: "pm_" + now.Format("20060102150405.000000000"), Type: req.Type, Content: req.Content, ShareCode: req.ShareCode, Sender: UserInfo{UserID: senderID, Nickname: senderID}, SentAt: now.Format(time.RFC3339), IsRead: false}
+	msg := PrivateMessageItem{MessageID: "pm_" + now.Format("20060102150405.000000000"), Type: req.Type, Content: req.Content, ShareCode: req.ShareCode, Sender: UserInfo{UserID: senderID, Nickname: senderID}, SentAt: now.Format(time.RFC3339Nano), IsRead: false}
 	key := conversationKey(senderID, targetUserID)
 	r.messages[key] = append(r.messages[key], msg)
 	return MessageSent{MessageID: msg.MessageID, SentAt: msg.SentAt}, nil
@@ -44,25 +44,56 @@ func (r *InMemoryRepository) History(_ context.Context, userID, targetUserID str
 	})
 	return PaginatedMessages{Items: items}, nil
 }
-func (r *InMemoryRepository) Recent(ctx context.Context, userID, targetUserID string, limit int) (PaginatedMessages, error) {
+func (r *InMemoryRepository) Recent(ctx context.Context, userID, targetUserID string, limit int, deletedAfter *time.Time) (PaginatedMessages, error) {
 	history, err := r.History(ctx, userID, targetUserID)
 	if err != nil {
 		return PaginatedMessages{}, err
+	}
+	if deletedAfter != nil {
+		filtered := history.Items[:0]
+		for _, item := range history.Items {
+			sentAt, err := time.Parse(time.RFC3339Nano, item.SentAt)
+			if err == nil && !sentAt.After(*deletedAfter) {
+				continue
+			}
+			filtered = append(filtered, item)
+		}
+		history.Items = filtered
 	}
 	if len(history.Items) > limit {
 		history.Items = history.Items[:limit]
 	}
 	return history, nil
 }
-func (r *InMemoryRepository) Last(ctx context.Context, userID, targetUserID string) (*PrivateMessageItem, error) {
-	history, err := r.History(ctx, userID, targetUserID)
+func (r *InMemoryRepository) Last(ctx context.Context, userID, targetUserID string, deletedAfter *time.Time) (*PrivateMessageItem, error) {
+	recent, err := r.Recent(ctx, userID, targetUserID, 1, deletedAfter)
 	if err != nil {
 		return nil, err
 	}
-	if len(history.Items) == 0 {
+	if len(recent.Items) == 0 {
 		return nil, nil
 	}
-	return &history.Items[0], nil
+	return &recent.Items[0], nil
+}
+
+func (r *InMemoryRepository) UnreadCount(_ context.Context, userID, targetUserID string, deletedAfter *time.Time) (int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	key := conversationKey(userID, targetUserID)
+	count := 0
+	for _, item := range r.messages[key] {
+		if item.Sender.UserID == userID || item.IsRead {
+			continue
+		}
+		if deletedAfter != nil {
+			sentAt, err := time.Parse(time.RFC3339Nano, item.SentAt)
+			if err == nil && !sentAt.After(*deletedAfter) {
+				continue
+			}
+		}
+		count++
+	}
+	return count, nil
 }
 
 func (r *InMemoryRepository) Update(_ context.Context, userID string, req UpdatePrivateMessageRequest) error {

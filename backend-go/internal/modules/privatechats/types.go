@@ -2,6 +2,11 @@ package privatechats
 
 import private_messages "hotspot/backend-go/internal/modules/privatemessages"
 
+type PaginationParams struct {
+	Limit  int    `json:"limit,omitempty"`
+	Cursor string `json:"cursor,omitempty"`
+}
+
 type UserInfo struct {
 	UserID    string `json:"user_id"`
 	Nickname  string `json:"nickname"`
@@ -35,7 +40,21 @@ type PaginatedPrivateChats struct {
 	NextCursor string            `json:"next_cursor,omitempty"`
 }
 
+type MyPrivateChatsRequest struct {
+	Pagination *PaginationParams `json:"pagination,omitempty"`
+}
+
 type OpenTheDoorRequest struct {
+	TargetUserID string `json:"target_user_id"`
+}
+
+type UpdatePrivateChatSettingsRequest struct {
+	TargetUserID string `json:"target_user_id"`
+	IsMuted      *bool  `json:"is_muted,omitempty"`
+	IsPinned     *bool  `json:"is_pinned,omitempty"`
+}
+
+type DeletePrivateChatRequest struct {
 	TargetUserID string `json:"target_user_id"`
 }
 

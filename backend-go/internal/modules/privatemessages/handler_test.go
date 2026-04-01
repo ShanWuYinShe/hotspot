@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
@@ -30,11 +31,14 @@ func (r *privateMessageErrorRepo) Send(context.Context, string, string, SendPriv
 func (r *privateMessageErrorRepo) History(context.Context, string, string) (PaginatedMessages, error) {
 	return PaginatedMessages{}, r.historyErr
 }
-func (r *privateMessageErrorRepo) Recent(context.Context, string, string, int) (PaginatedMessages, error) {
+func (r *privateMessageErrorRepo) Recent(context.Context, string, string, int, *time.Time) (PaginatedMessages, error) {
 	return PaginatedMessages{}, r.recentErr
 }
-func (r *privateMessageErrorRepo) Last(context.Context, string, string) (*PrivateMessageItem, error) {
+func (r *privateMessageErrorRepo) Last(context.Context, string, string, *time.Time) (*PrivateMessageItem, error) {
 	return nil, r.lastErr
+}
+func (r *privateMessageErrorRepo) UnreadCount(context.Context, string, string, *time.Time) (int, error) {
+	return 0, r.recentErr
 }
 func (r *privateMessageErrorRepo) Update(context.Context, string, UpdatePrivateMessageRequest) error {
 	return r.updateErr

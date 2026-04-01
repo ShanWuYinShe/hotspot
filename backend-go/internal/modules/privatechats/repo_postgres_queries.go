@@ -2,18 +2,48 @@ package privatechats
 
 const (
 	queryInsertPrivateChat = `
-INSERT INTO private_chats (chat_key, user_a_id, user_b_id, created_at)
-VALUES ($1,$2,$3,$4)
-ON CONFLICT (chat_key) DO NOTHING`
+	INSERT INTO private_chats (chat_key, user_a_id, user_b_id, created_at)
+	VALUES ($1,$2,$3,$4)
+	ON CONFLICT (chat_key) DO NOTHING`
 
 	queryGetPrivateChatCreatedAt = `
-SELECT created_at
-FROM private_chats
-WHERE chat_key = $1`
+	SELECT created_at
+	FROM private_chats
+	WHERE chat_key = $1`
 
 	queryListPrivateChats = `
-SELECT chat_key, created_at
-FROM private_chats
-WHERE user_a_id = $1 OR user_b_id = $1
-ORDER BY created_at DESC, chat_key ASC`
+	SELECT pc.chat_key,
+	       CASE WHEN pc.user_a_id = $1 THEN pc.user_b_id ELSE pc.user_a_id END AS target_user_id,
+	       pc.created_at,
+	       COALESCE(pcs.is_muted, FALSE),
+	       COALESCE(pcs.is_pinned, FALSE),
+	       pcs.visible_since,
+	       pcs.deleted_at
+	FROM private_chats pc
+	LEFT JOIN private_chat_user_state pcs
+	  ON pcs.chat_key = pc.chat_key AND pcs.user_id = $1
+	WHERE pc.user_a_id = $1 OR pc.user_b_id = $1`
+
+	queryGetPrivateChatState = `
+	SELECT pc.chat_key,
+	       CASE WHEN pc.user_a_id = $1 THEN pc.user_b_id ELSE pc.user_a_id END AS target_user_id,
+	       pc.created_at,
+	       COALESCE(pcs.is_muted, FALSE),
+	       COALESCE(pcs.is_pinned, FALSE),
+	       pcs.visible_since,
+	       pcs.deleted_at
+	FROM private_chats pc
+	LEFT JOIN private_chat_user_state pcs
+	  ON pcs.chat_key = pc.chat_key AND pcs.user_id = $1
+	WHERE pc.chat_key = $2`
+
+	queryUpsertPrivateChatUserState = `
+	INSERT INTO private_chat_user_state (chat_key, user_id, is_muted, is_pinned, visible_since, deleted_at, updated_at)
+	VALUES ($1, $2, $3, $4, $5, $6, NOW())
+	ON CONFLICT (chat_key, user_id) DO UPDATE SET
+	is_muted = EXCLUDED.is_muted,
+	is_pinned = EXCLUDED.is_pinned,
+	visible_since = EXCLUDED.visible_since,
+	deleted_at = EXCLUDED.deleted_at,
+	updated_at = NOW()`
 )
