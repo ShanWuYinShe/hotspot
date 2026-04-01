@@ -6,6 +6,7 @@ import (
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
+	"hotspot/backend-go/internal/platform/resourceguard"
 )
 
 const (
@@ -34,6 +35,7 @@ func (s *Service) Create(ctx context.Context, req CreateGroupRequest) (GroupItem
 		observability.L().Error("groups.create failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return GroupItem{}, err
 	}
+	resourceguard.RecordGroup(ctx, item.Group.GroupID)
 	observability.L().Info("groups.create completed", "group_id", item.Group.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return item, nil
 }

@@ -15,6 +15,7 @@ import (
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/realtime"
+	"hotspot/backend-go/internal/platform/resourceguard"
 	"hotspot/backend-go/migrations"
 )
 
@@ -36,6 +37,7 @@ func NewApp(cfg config.Config) (*App, error) {
 	if err := ensureSchema(cfg, persistenceFactory); err != nil {
 		return nil, err
 	}
+	resourceguard.SetDefaultChecker(newResourceGuardChecker(persistenceFactory))
 	modules := BuildModules(cfg, persistenceFactory)
 	router := NewHTTPRouterWithLogger(modules, logger)
 	rootMux := http.NewServeMux()
@@ -80,4 +82,15 @@ func ensureSchema(cfg config.Config, factory *persistence.Factory) error {
 		return fmt.Errorf("ensure backend-go schema: %w", err)
 	}
 	return nil
+}
+
+func newResourceGuardChecker(factory *persistence.Factory) resourceguard.Checker {
+	if factory == nil || factory.DB == nil {
+		return resourceguard.NoopChecker{}
+	}
+	queryable, ok := factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return resourceguard.NoopChecker{}
+	}
+	return resourceguard.NewDBChecker(queryable)
 }

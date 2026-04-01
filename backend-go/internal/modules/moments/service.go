@@ -6,6 +6,7 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
+	"hotspot/backend-go/internal/platform/resourceguard"
 )
 
 type Service struct {
@@ -27,6 +28,7 @@ func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (MomentIt
 		observability.L().Error("moments.create failed", "error", err)
 		return MomentItem{}, err
 	}
+	resourceguard.RecordMoment(ctx, item.MomentID)
 	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: "MomentCommented", Payload: map[string]any{"moment_id": item.MomentID, "moment_summary": map[string]any{"moment_id": item.MomentID, "description_preview": item.Description}, "comment_id": "created", "comment_preview": item.Description}})
 	return item, nil
 }

@@ -10,25 +10,26 @@ import (
 	"testing"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/resourceguard"
 )
 
 type groupErrorRepo struct {
-	createErr error
-	getErr    error
-	searchErr error
-	updateErr error
-	dismissErr error
-	listMembersErr error
-	searchMembersErr error
-	listMyGroupsErr error
-	joinGroupErr error
+	createErr             error
+	getErr                error
+	searchErr             error
+	updateErr             error
+	dismissErr            error
+	listMembersErr        error
+	searchMembersErr      error
+	listMyGroupsErr       error
+	joinGroupErr          error
 	createAnnouncementErr error
-	listAnnouncementsErr error
+	listAnnouncementsErr  error
 	updateAnnouncementErr error
 	deleteAnnouncementErr error
-	listApplicationsErr error
+	listApplicationsErr   error
 	approveApplicationErr error
-	rejectApplicationErr error
+	rejectApplicationErr  error
 }
 
 func (r *groupErrorRepo) Create(context.Context, string, CreateGroupRequest) (GroupItem, error) {
@@ -217,6 +218,21 @@ func TestGroupsHandlerReturns10600OnServiceError(t *testing.T) {
 	assertGroupCode(t, searchRR, 10600)
 }
 
+func TestCreateGroupRecordsResourceGuard(t *testing.T) {
+	checker := &groupRecordingChecker{}
+	resourceguard.SetDefaultChecker(checker)
+	defer resourceguard.SetDefaultChecker(resourceguard.NoopChecker{})
+
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	service := NewServiceWithRepo(NewInMemoryRepository())
+	if _, err := service.Create(ctx, CreateGroupRequest{Name: "Guarded Group", Location: Location{LocationName: "Somewhere"}}); err != nil {
+		t.Fatalf("create group: %v", err)
+	}
+	if len(checker.recorded) != 1 || !strings.HasPrefix(checker.recorded[0], "group:") {
+		t.Fatalf("unexpected records: %#v", checker.recorded)
+	}
+}
+
 func assertGroupCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
 	t.Helper()
 	var resp struct {
@@ -228,4 +244,17 @@ func assertGroupCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) 
 	if resp.Code != expected {
 		t.Fatalf("expected code %d, got %#v", expected, resp)
 	}
+}
+
+type groupRecordingChecker struct {
+	recorded []string
+}
+
+func (c *groupRecordingChecker) Ready(context.Context) bool { return true }
+func (c *groupRecordingChecker) MayExist(context.Context, resourceguard.ResourceKind, string) (bool, error) {
+	return true, nil
+}
+func (c *groupRecordingChecker) Record(_ context.Context, kind resourceguard.ResourceKind, id string) error {
+	c.recorded = append(c.recorded, string(kind)+":"+id)
+	return nil
 }

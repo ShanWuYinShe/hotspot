@@ -55,6 +55,25 @@ func TestOptionalAuthInjectsPrincipalForValidBearer(t *testing.T) {
 	}
 }
 
+func TestRequiredAuthRejectsLegacyStyleBearer(t *testing.T) {
+	SetDefaultService(NewService(config.Config{AuthTokenSecret: "test-secret"}))
+	handler := RequiredAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	req := httptest.NewRequest(http.MethodPost, "/secure", http.NoBody)
+	req.Header.Set("Authorization", "Bearer dXNlcl9sZWdhY3kuc2Vzc19sZWdhY3kuMTcxMjAwMDAwMC5zaWc")
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("unexpected status: %d", rr.Code)
+	}
+	if body := rr.Body.String(); body == "" || body == "{}\n" {
+		t.Fatal("expected api error body")
+	}
+}
+
 func TestAdminAccessRejectsNonAdminPrincipal(t *testing.T) {
 	handler := AdminAccess(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

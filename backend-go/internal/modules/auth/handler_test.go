@@ -13,6 +13,7 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/idempotency"
+	"hotspot/backend-go/internal/platform/resourceguard"
 )
 
 func newTestHandler() *Handler {
@@ -538,4 +539,80 @@ func TestProfileDefaultsUseAppConfigSource(t *testing.T) {
 	if defaults.AvatarURL != "appconfig-avatar" || defaults.LocationName != "测试位置" || defaults.Latitude != 1.23 || defaults.Longitude != 4.56 {
 		t.Fatalf("unexpected defaults: %#v", defaults)
 	}
+}
+
+func TestRegisterRecordsUserForResourceGuard(t *testing.T) {
+	checker := &recordingChecker{}
+	resourceguard.SetDefaultChecker(checker)
+	defer resourceguard.SetDefaultChecker(resourceguard.NoopChecker{})
+
+	repo := &recordingAuthRepo{registerAccount: Account{UserID: "user_new", LoginID: "alice", Nickname: "Alice"}}
+	service := NewServiceWithSource(platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"}), repo, config.Config{AuthTokenSecret: "test-secret"}, appconfig.NewStaticSource(config.Config{AuthTokenSecret: "test-secret"}))
+	if _, err := service.Register(context.Background(), RegisterRequest{LoginID: "alice", Nickname: "Alice", Password: "secret"}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	if len(checker.recorded) != 1 || checker.recorded[0] != "user:user_new" {
+		t.Fatalf("unexpected records: %#v", checker.recorded)
+	}
+}
+
+func TestGuestRecordsUserForResourceGuard(t *testing.T) {
+	checker := &recordingChecker{}
+	resourceguard.SetDefaultChecker(checker)
+	defer resourceguard.SetDefaultChecker(resourceguard.NoopChecker{})
+
+	repo := &recordingAuthRepo{guestAccount: Account{UserID: "guest_new", Nickname: "Guest"}}
+	service := NewServiceWithSource(platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"}), repo, config.Config{AuthTokenSecret: "test-secret"}, appconfig.NewStaticSource(config.Config{AuthTokenSecret: "test-secret"}))
+	if _, err := service.Guest(context.Background(), GuestRequest{Nickname: "Guest"}); err != nil {
+		t.Fatalf("guest: %v", err)
+	}
+	if len(checker.recorded) != 1 || checker.recorded[0] != "user:guest_new" {
+		t.Fatalf("unexpected records: %#v", checker.recorded)
+	}
+}
+
+type recordingAuthRepo struct {
+	registerAccount Account
+	guestAccount    Account
+}
+
+type recordingChecker struct {
+	recorded []string
+}
+
+func (r *recordingAuthRepo) Register(context.Context, RegisterParams) (Account, error) {
+	return r.registerAccount, nil
+}
+
+func (r *recordingAuthRepo) CreateGuest(context.Context, GuestParams) (Account, error) {
+	return r.guestAccount, nil
+}
+
+func (r *recordingAuthRepo) Authenticate(context.Context, string, string) (Account, error) {
+	return Account{}, ErrInvalidCredentials
+}
+
+func (r *recordingAuthRepo) CreatePasswordReset(context.Context, string, time.Time) error {
+	return nil
+}
+
+func (r *recordingAuthRepo) ResetPassword(context.Context, string, string, string) (Account, error) {
+	return Account{}, ErrPasswordResetNotFound
+}
+
+func (r *recordingAuthRepo) ChangePassword(context.Context, string, string, string) error {
+	return nil
+}
+
+func (c *recordingChecker) Ready(context.Context) bool {
+	return true
+}
+
+func (c *recordingChecker) MayExist(context.Context, resourceguard.ResourceKind, string) (bool, error) {
+	return true, nil
+}
+
+func (c *recordingChecker) Record(_ context.Context, kind resourceguard.ResourceKind, id string) error {
+	c.recorded = append(c.recorded, string(kind)+":"+id)
+	return nil
 }

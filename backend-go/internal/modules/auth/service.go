@@ -10,6 +10,7 @@ import (
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
+	"hotspot/backend-go/internal/platform/resourceguard"
 )
 
 type Service struct {
@@ -70,6 +71,7 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (platformau
 		)
 		return platformauth.AuthResult{}, err
 	}
+	resourceguard.RecordUser(ctx, account.UserID)
 	return result, nil
 }
 
@@ -116,6 +118,7 @@ func (s *Service) Guest(ctx context.Context, req GuestRequest) (platformauth.Aut
 		)
 		return platformauth.AuthResult{}, err
 	}
+	resourceguard.RecordUser(ctx, account.UserID)
 	return result, nil
 }
 

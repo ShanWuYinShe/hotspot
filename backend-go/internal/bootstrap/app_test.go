@@ -8,6 +8,7 @@ import (
 
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
+	"hotspot/backend-go/internal/platform/resourceguard"
 )
 
 type ensureSchemaStub struct {
@@ -111,5 +112,20 @@ func TestEnsureSchemaReturnsMissingTableError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "missing required tables") {
 		t.Fatalf("expected missing table error, got: %v", err)
+	}
+}
+
+func TestNewResourceGuardCheckerUsesInMemoryQueryableDB(t *testing.T) {
+	checker := newResourceGuardChecker(&persistence.Factory{DB: persistence.NewInMemoryDB()})
+	if _, ok := checker.(*resourceguard.DBChecker); !ok {
+		t.Fatalf("expected *resourceguard.DBChecker, got %T", checker)
+	}
+}
+
+func TestNewResourceGuardCheckerUsesCustomQueryableDB(t *testing.T) {
+	stub := &ensureSchemaStub{}
+	checker := newResourceGuardChecker(&persistence.Factory{DB: stub})
+	if _, ok := checker.(*resourceguard.DBChecker); !ok {
+		t.Fatalf("expected *resourceguard.DBChecker, got %T", checker)
 	}
 }

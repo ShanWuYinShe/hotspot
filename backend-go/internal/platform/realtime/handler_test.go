@@ -200,6 +200,34 @@ func TestRealtimeRequiresAuthFirst(t *testing.T) {
 	}
 }
 
+func TestRealtimeRejectsLegacyStyleAccessToken(t *testing.T) {
+	SetDefaultHub(NewHub())
+	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
+	handler := newRealtimeHandlerForTest(authService)
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL(server.URL), nil)
+	if err != nil {
+		t.Fatalf("dial websocket: %v", err)
+	}
+	defer conn.Close()
+
+	if err := conn.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: "dXNlcl9sZWdhY3kuc2Vzc19sZWdhY3kuMTcxMjAwMDAwMC5zaWc"}}); err != nil {
+		t.Fatalf("write auth: %v", err)
+	}
+	var event struct {
+		Type    string       `json:"type"`
+		Payload ErrorPayload `json:"payload"`
+	}
+	if err := conn.ReadJSON(&event); err != nil {
+		t.Fatalf("read error: %v", err)
+	}
+	if event.Type != "Error" || event.Payload.Severity != "fatal" {
+		t.Fatalf("unexpected event: %#v", event)
+	}
+}
+
 func TestRealtimeSubscriptionLimit(t *testing.T) {
 	SetDefaultHub(NewHub())
 	ratelimit.SetSource(appconfig.NewStaticSource(config.Config{}))

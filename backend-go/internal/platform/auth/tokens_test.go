@@ -1,8 +1,6 @@
 package auth
 
 import (
-	"encoding/base64"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -29,17 +27,11 @@ func TestTokenManagerMintAndParse(t *testing.T) {
 	}
 }
 
-func TestTokenManagerParsesLegacyTokenDuringMigration(t *testing.T) {
+func TestTokenManagerRejectsLegacyStyleToken(t *testing.T) {
 	manager := NewTokenManager("test-secret")
-	expiresAt := time.Now().UTC().Add(time.Minute)
-	payload := strings.Join([]string{"user_legacy", "sess_legacy", strconv.FormatInt(expiresAt.Unix(), 10)}, ".")
-	token := base64.RawURLEncoding.EncodeToString([]byte(payload + "." + manager.sign(payload)))
-	claims, err := manager.ParseAccessToken(token)
-	if err != nil {
-		t.Fatalf("parse legacy token: %v", err)
-	}
-	if claims.UserID != "user_legacy" || claims.SessionID != "sess_legacy" {
-		t.Fatalf("unexpected legacy claims: %#v", claims)
+	token := "dXNlcl9sZWdhY3kuc2Vzc19sZWdhY3kuMTcxMjAwMDAwMC5zaWc"
+	if _, err := manager.ParseAccessToken(token); err == nil || err.Error() != "invalid token" {
+		t.Fatalf("expected invalid legacy token, got %v", err)
 	}
 }
 

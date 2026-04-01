@@ -1,15 +1,11 @@
 package auth
 
 import (
-	"crypto/hmac"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -64,13 +60,6 @@ func (m *TokenManager) ParseAccessToken(token string) (AccessClaims, error) {
 	if errors.Is(err, jwt.ErrTokenExpired) {
 		return AccessClaims{}, errors.New("expired token")
 	}
-	legacyClaims, legacyErr := m.parseLegacyAccessToken(token)
-	if legacyErr == nil {
-		return legacyClaims, nil
-	}
-	if legacyErr.Error() == "expired token" {
-		return AccessClaims{}, legacyErr
-	}
 	return AccessClaims{}, errors.New("invalid token")
 }
 
@@ -89,30 +78,6 @@ func (m *TokenManager) parseJWTAccessToken(token string) (AccessClaims, error) {
 		return AccessClaims{}, errors.New("invalid token")
 	}
 	return AccessClaims{UserID: claims.Subject, SessionID: claims.SessionID, ExpiresAt: claims.ExpiresAt.Time.UTC()}, nil
-}
-
-func (m *TokenManager) parseLegacyAccessToken(token string) (AccessClaims, error) {
-	decoded, err := base64.RawURLEncoding.DecodeString(token)
-	if err != nil {
-		return AccessClaims{}, errors.New("invalid token")
-	}
-	parts := strings.Split(string(decoded), ".")
-	if len(parts) != 4 {
-		return AccessClaims{}, errors.New("invalid token")
-	}
-	payload := strings.Join(parts[:3], ".")
-	if !hmac.Equal([]byte(parts[3]), []byte(m.sign(payload))) {
-		return AccessClaims{}, errors.New("invalid token")
-	}
-	expiresUnix, err := strconv.ParseInt(parts[2], 10, 64)
-	if err != nil {
-		return AccessClaims{}, errors.New("invalid token")
-	}
-	expiresAt := time.Unix(expiresUnix, 0).UTC()
-	if time.Now().UTC().After(expiresAt) {
-		return AccessClaims{}, errors.New("expired token")
-	}
-	return AccessClaims{UserID: parts[0], SessionID: parts[1], ExpiresAt: expiresAt}, nil
 }
 
 func GenerateOpaqueToken() (string, error) {
@@ -137,10 +102,4 @@ func NewSessionID() (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("sess_%s", hex.EncodeToString(buf)), nil
-}
-
-func (m *TokenManager) sign(payload string) string {
-	h := hmac.New(sha256.New, m.secret)
-	_, _ = h.Write([]byte(payload))
-	return hex.EncodeToString(h.Sum(nil))
 }

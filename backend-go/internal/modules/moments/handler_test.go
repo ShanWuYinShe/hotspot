@@ -12,6 +12,7 @@ import (
 	"hotspot/backend-go/internal/modules/comments"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
+	"hotspot/backend-go/internal/platform/resourceguard"
 )
 
 type failingMomentCounter struct {
@@ -203,6 +204,21 @@ func TestListCommentsReturns10300WhenMomentMissing(t *testing.T) {
 	assertCommentCode(t, listRR, 10300)
 }
 
+func TestCreateMomentRecordsResourceGuard(t *testing.T) {
+	checker := &momentRecordingChecker{}
+	resourceguard.SetDefaultChecker(checker)
+	defer resourceguard.SetDefaultChecker(resourceguard.NoopChecker{})
+
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	service := NewServiceWithRepo(NewInMemoryRepository())
+	if _, err := service.Create(ctx, CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Somewhere"}}); err != nil {
+		t.Fatalf("create moment: %v", err)
+	}
+	if len(checker.recorded) != 1 || !strings.HasPrefix(checker.recorded[0], "moment:") {
+		t.Fatalf("unexpected records: %#v", checker.recorded)
+	}
+}
+
 func assertCommentCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
 	t.Helper()
 	var resp struct {
@@ -214,4 +230,17 @@ func assertCommentCode(t *testing.T, rr *httptest.ResponseRecorder, expected int
 	if resp.Code != expected {
 		t.Fatalf("expected code %d, got %#v", expected, resp)
 	}
+}
+
+type momentRecordingChecker struct {
+	recorded []string
+}
+
+func (c *momentRecordingChecker) Ready(context.Context) bool { return true }
+func (c *momentRecordingChecker) MayExist(context.Context, resourceguard.ResourceKind, string) (bool, error) {
+	return true, nil
+}
+func (c *momentRecordingChecker) Record(_ context.Context, kind resourceguard.ResourceKind, id string) error {
+	c.recorded = append(c.recorded, string(kind)+":"+id)
+	return nil
 }
