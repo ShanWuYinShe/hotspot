@@ -15,6 +15,8 @@
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 	import Eye from 'lucide-svelte/icons/eye';
 	import EyeOff from 'lucide-svelte/icons/eye-off';
+	import { validateField } from '$lib/utils/form-validation';
+	import type { FieldRule } from '$lib/utils/form-validation';
 
 	// 表单状态
 	let loginId = $state('');
@@ -26,7 +28,59 @@
 	let isLoading = $state(false);
 	let showPassword = $state(false);
 	let currentTab = $state('login');
+	let touched = $state<Record<string, boolean>>({});
 	const hasLetterAndDigit = (value: string) => /[A-Za-z]/.test(value) && /\d/.test(value);
+
+	// 验证规则
+	const loginIdRules: FieldRule[] = [
+		{ required: true, requiredMessage: '请输入账号' },
+		{ minLength: 3, minLengthMessage: '账号需 3-64 个字符' },
+		{ maxLength: 64, maxLengthMessage: '账号需 3-64 个字符' }
+	];
+	const passwordRules: FieldRule[] = [
+		{ required: true, requiredMessage: '请输入密码' },
+		{ minLength: 8, minLengthMessage: '密码需为 8-128 位且同时包含字母和数字' },
+		{ maxLength: 128, maxLengthMessage: '密码需为 8-128 位且同时包含字母和数字' },
+		{
+			custom: (v) =>
+				v && !hasLetterAndDigit(v) ? '密码需为 8-128 位且同时包含字母和数字' : undefined
+		}
+	];
+	const nicknameRules: FieldRule[] = [
+		{ required: true, requiredMessage: '请输入昵称' },
+		{ maxLength: 30, maxLengthMessage: '昵称最多 30 个字符' }
+	];
+	const confirmPasswordRules: FieldRule[] = [
+		{ required: true, requiredMessage: '请确认密码' },
+		{ custom: (v) => (v && v !== password ? '两次密码不一致' : undefined) }
+	];
+	const guestNicknameRules: FieldRule[] = [
+		{ required: true, requiredMessage: '请输入昵称' },
+		{ maxLength: 30, maxLengthMessage: '昵称最多 30 个字符' }
+	];
+
+	// 内联错误
+	let loginIdError = $derived(
+		touched['loginId'] ? validateField(loginId, loginIdRules) : undefined
+	);
+	let passwordError = $derived(
+		touched['password'] ? validateField(password, passwordRules) : undefined
+	);
+	let nicknameError = $derived(
+		touched['nickname'] ? validateField(nickname, nicknameRules) : undefined
+	);
+	let confirmPasswordError = $derived(
+		touched['confirmPassword']
+			? validateField(confirmPassword, confirmPasswordRules)
+			: undefined
+	);
+	let guestNicknameError = $derived(
+		touched['guestNickname'] ? validateField(guestNickname, guestNicknameRules) : undefined
+	);
+
+	function markTouched(field: string) {
+		touched = { ...touched, [field]: true };
+	}
 
 	function handleClose() {
 		uiStore.closeLoginModal();
@@ -37,6 +91,7 @@
 		confirmPassword = '';
 		guestNickname = '';
 		currentTab = 'login';
+		touched = {};
 	}
 
 	/**
@@ -70,20 +125,10 @@
 	}
 
 	async function handleLogin() {
-		const trimmedLoginId = loginId.trim();
-		if (!trimmedLoginId || !password) {
-			toast.error(t('auth.pleaseFillLogin'));
-			return;
-		}
-		if (trimmedLoginId.length < 3 || trimmedLoginId.length > 64) {
-			toast.error(t('auth.loginIdLengthError'));
-			return;
-		}
-		if (password.length < 8 || password.length > 128 || !hasLetterAndDigit(password)) {
-			toast.error(t('auth.passwordPolicyTip'));
-			return;
-		}
+		touched = { ...touched, loginId: true, password: true };
+		if (loginIdError || passwordError) return;
 
+		const trimmedLoginId = loginId.trim();
 		isLoading = true;
 		try {
 			const response = await withMinimumLoadingTime(
@@ -117,31 +162,11 @@
 	}
 
 	async function handleRegister() {
+		touched = { ...touched, loginId: true, password: true, nickname: true, confirmPassword: true };
+		if (loginIdError || passwordError || nicknameError || confirmPasswordError) return;
+
 		const trimmedLoginId = loginId.trim();
 		const trimmedNickname = nickname.trim();
-		if (!trimmedLoginId || !password || !trimmedNickname) {
-			toast.error(t('auth.pleaseFillAll'));
-			return;
-		}
-		if (trimmedLoginId.length < 3 || trimmedLoginId.length > 64) {
-			toast.error(t('auth.loginIdLengthError'));
-			return;
-		}
-		if (trimmedNickname.length < 1 || trimmedNickname.length > 30) {
-			toast.error(t('auth.nicknameLengthError'));
-			return;
-		}
-
-		if (password !== confirmPassword) {
-			toast.error(t('auth.passwordMismatch'));
-			return;
-		}
-
-		if (password.length < 8 || password.length > 128 || !hasLetterAndDigit(password)) {
-			toast.error(t('auth.passwordPolicyTip'));
-			return;
-		}
-
 		isLoading = true;
 		try {
 			const response = await withMinimumLoadingTime(
@@ -173,16 +198,10 @@
 	}
 
 	async function handleGuestLogin() {
-		const trimmedNickname = guestNickname.trim();
-		if (!trimmedNickname) {
-			toast.error(t('auth.pleaseEnterNickname'));
-			return;
-		}
-		if (trimmedNickname.length > 30) {
-			toast.error(t('auth.nicknameLengthError'));
-			return;
-		}
+		touched = { ...touched, guestNickname: true };
+		if (guestNicknameError) return;
 
+		const trimmedNickname = guestNickname.trim();
 		isLoading = true;
 		try {
 			const response = await withMinimumLoadingTime(
@@ -255,8 +274,12 @@
 							autocomplete="username"
 							bind:value={loginId}
 							disabled={isLoading}
-							class="h-11 rounded-2xl border-border/60 bg-background/70"
+							onblur={() => markTouched('loginId')}
+							class="h-11 rounded-2xl border-border/60 bg-background/70 {loginIdError ? 'border-destructive focus-visible:ring-destructive' : ''}"
 						/>
+						{#if loginIdError}
+							<p class="text-xs text-destructive">{loginIdError}</p>
+						{/if}
 					</div>
 					<div class="space-y-2">
 						<Label for="modal-login-password">{t('auth.password')}</Label>
@@ -268,7 +291,8 @@
 								autocomplete="current-password"
 								bind:value={password}
 								disabled={isLoading}
-								class="h-11 rounded-2xl border-border/60 bg-background/70"
+								onblur={() => markTouched('password')}
+								class="h-11 rounded-2xl border-border/60 bg-background/70 {passwordError ? 'border-destructive focus-visible:ring-destructive' : ''}"
 							/>
 							<Button
 								type="button"
@@ -285,6 +309,9 @@
 								{/if}
 							</Button>
 						</div>
+						{#if passwordError}
+							<p class="text-xs text-destructive">{passwordError}</p>
+						{/if}
 					</div>
 					<Button type="submit" class="h-11 w-full rounded-2xl" disabled={isLoading}>
 						{#if isLoading}
@@ -307,8 +334,12 @@
 							autocomplete="nickname"
 							bind:value={nickname}
 							disabled={isLoading}
-							class="h-11 rounded-2xl border-border/60 bg-background/70"
+							onblur={() => markTouched('nickname')}
+							class="h-11 rounded-2xl border-border/60 bg-background/70 {nicknameError ? 'border-destructive focus-visible:ring-destructive' : ''}"
 						/>
+						{#if nicknameError}
+							<p class="text-xs text-destructive">{nicknameError}</p>
+						{/if}
 					</div>
 					<div class="space-y-2">
 						<Label for="modal-register-id">{t('auth.account')}</Label>
@@ -319,8 +350,12 @@
 							autocomplete="username"
 							bind:value={loginId}
 							disabled={isLoading}
-							class="h-11 rounded-2xl border-border/60 bg-background/70"
+							onblur={() => markTouched('loginId')}
+							class="h-11 rounded-2xl border-border/60 bg-background/70 {loginIdError ? 'border-destructive focus-visible:ring-destructive' : ''}"
 						/>
+						{#if loginIdError}
+							<p class="text-xs text-destructive">{loginIdError}</p>
+						{/if}
 					</div>
 					<div class="space-y-2">
 						<Label for="modal-register-password">{t('auth.password')}</Label>
@@ -331,8 +366,12 @@
 							autocomplete="new-password"
 							bind:value={password}
 							disabled={isLoading}
-							class="h-11 rounded-2xl border-border/60 bg-background/70"
+							onblur={() => markTouched('password')}
+							class="h-11 rounded-2xl border-border/60 bg-background/70 {passwordError ? 'border-destructive focus-visible:ring-destructive' : ''}"
 						/>
+						{#if passwordError}
+							<p class="text-xs text-destructive">{passwordError}</p>
+						{/if}
 					</div>
 					<div class="space-y-2">
 						<Label for="modal-register-confirm">{t('auth.confirmPassword')}</Label>
@@ -343,8 +382,12 @@
 							autocomplete="new-password"
 							bind:value={confirmPassword}
 							disabled={isLoading}
-							class="h-11 rounded-2xl border-border/60 bg-background/70"
+							onblur={() => markTouched('confirmPassword')}
+							class="h-11 rounded-2xl border-border/60 bg-background/70 {confirmPasswordError ? 'border-destructive focus-visible:ring-destructive' : ''}"
 						/>
+						{#if confirmPasswordError}
+							<p class="text-xs text-destructive">{confirmPasswordError}</p>
+						{/if}
 					</div>
 					<Button type="submit" class="h-11 w-full rounded-2xl" disabled={isLoading}>
 						{#if isLoading}
@@ -370,8 +413,12 @@
 							autocomplete="nickname"
 							bind:value={guestNickname}
 							disabled={isLoading}
-							class="h-11 rounded-2xl border-border/60 bg-background/70"
+							onblur={() => markTouched('guestNickname')}
+							class="h-11 rounded-2xl border-border/60 bg-background/70 {guestNicknameError ? 'border-destructive focus-visible:ring-destructive' : ''}"
 						/>
+						{#if guestNicknameError}
+							<p class="text-xs text-destructive">{guestNicknameError}</p>
+						{/if}
 					</div>
 					<Button type="submit" class="h-11 w-full rounded-2xl" disabled={isLoading}>
 						{#if isLoading}

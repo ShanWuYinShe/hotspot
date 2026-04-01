@@ -9,6 +9,8 @@
 	import { isSuccess } from '$lib/api/client';
 	import { showApiError } from '$lib/utils/api-error';
 	import { parseTags } from '$lib/utils/format';
+	import { validateField } from '$lib/utils/form-validation';
+	import type { FieldRule } from '$lib/utils/form-validation';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
@@ -43,6 +45,7 @@
 	let maxMembers = $state('');
 	let isSearchable = $state(true);
 	let isSubmitting = $state(false);
+	let touched = $state<Record<string, boolean>>({});
 	let showLocationPicker = $state(false);
 	const GROUP_NAME_MAX = 50;
 	const GROUP_DESCRIPTION_MAX = 500;
@@ -55,6 +58,54 @@
 	const LOCATION_NAME_MAX = 100;
 
 	const tags = $derived(parseTags(tagsInput));
+
+	const nameRules: FieldRule[] = [
+		{ required: true, requiredMessage: '请输入群组名称' },
+		{ maxLength: GROUP_NAME_MAX, maxLengthMessage: `群组名称最多 ${GROUP_NAME_MAX} 字符` }
+	];
+	const groupDescriptionRules: FieldRule[] = [
+		{
+			maxLength: GROUP_DESCRIPTION_MAX,
+			maxLengthMessage: `群组介绍最多 ${GROUP_DESCRIPTION_MAX} 字符`
+		}
+	];
+	const groupPasswordRules: FieldRule[] = [
+		{
+			minLength: GROUP_PASSWORD_MIN,
+			minLengthMessage: `群组口令至少 ${GROUP_PASSWORD_MIN} 字符`
+		},
+		{
+			maxLength: GROUP_PASSWORD_MAX,
+			maxLengthMessage: `群组口令最多 ${GROUP_PASSWORD_MAX} 字符`
+		}
+	];
+	const maxMembersRules: FieldRule[] = [
+		{
+			custom: (v) => {
+				if (!v.trim()) return undefined;
+				const n = Number.parseInt(v, 10);
+				if (!Number.isInteger(n) || n < GROUP_MEMBERS_MIN || n > GROUP_MEMBERS_MAX) {
+					return `最大成员数需在 ${GROUP_MEMBERS_MIN}-${GROUP_MEMBERS_MAX} 之间`;
+				}
+				return undefined;
+			}
+		}
+	];
+
+	let nameError = $derived(touched['name'] ? validateField(name, nameRules) : undefined);
+	let groupDescriptionError = $derived(
+		touched['description'] ? validateField(description, groupDescriptionRules) : undefined
+	);
+	let groupPasswordError = $derived(
+		touched['password'] ? validateField(password, groupPasswordRules) : undefined
+	);
+	let maxMembersError = $derived(
+		touched['maxMembers'] ? validateField(maxMembers, maxMembersRules) : undefined
+	);
+
+	function markTouched(field: string) {
+		touched = { ...touched, [field]: true };
+	}
 
 	function getDefaultSelectedLocation(): SelectedLocation {
 		const rawName = mapAnchorStore.name || mapAnchorStore.displayName;
@@ -78,6 +129,7 @@
 		maxMembers = '';
 		isSearchable = true;
 		selectedLocation = getDefaultSelectedLocation();
+		touched = {};
 	}
 
 	async function handleSubmit() {
@@ -97,16 +149,14 @@
 		const rawMaxMembers = typeof maxMembers === 'string' ? maxMembers.trim() : '';
 		const parsedMaxMembers = rawMaxMembers ? Number.parseInt(rawMaxMembers, 10) : undefined;
 
-		if (!trimmedName) {
-			toast.error('请输入群组名称');
-			return;
-		}
-		if (trimmedName.length > GROUP_NAME_MAX) {
-			toast.error(`群组名称最多 ${GROUP_NAME_MAX} 字符`);
-			return;
-		}
-		if (trimmedDescription.length > GROUP_DESCRIPTION_MAX) {
-			toast.error(`群组介绍最多 ${GROUP_DESCRIPTION_MAX} 字符`);
+		touched = { name: true, description: true, password: true, maxMembers: true };
+
+		if (
+			nameError ||
+			groupDescriptionError ||
+			groupPasswordError ||
+			maxMembersError
+		) {
 			return;
 		}
 		if (tags.length > GROUP_TAG_MAX) {
@@ -115,19 +165,6 @@
 		}
 		if (tags.some((tag) => tag.length < 1 || tag.length > TAG_MAX_LENGTH)) {
 			toast.error(`标签长度需在 1-${TAG_MAX_LENGTH} 字符之间`);
-			return;
-		}
-		if (trimmedPassword && (trimmedPassword.length < GROUP_PASSWORD_MIN || trimmedPassword.length > GROUP_PASSWORD_MAX)) {
-			toast.error(`群组口令长度需在 ${GROUP_PASSWORD_MIN}-${GROUP_PASSWORD_MAX} 字符之间`);
-			return;
-		}
-		if (
-			parsedMaxMembers !== undefined &&
-			(!Number.isInteger(parsedMaxMembers) ||
-				parsedMaxMembers < GROUP_MEMBERS_MIN ||
-				parsedMaxMembers > GROUP_MEMBERS_MAX)
-		) {
-			toast.error(`最大成员数需在 ${GROUP_MEMBERS_MIN}-${GROUP_MEMBERS_MAX} 之间`);
 			return;
 		}
 		if (!locationName) {
@@ -209,12 +246,40 @@
 		<div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-4">
 			<div class="space-y-2 rounded-2xl border border-border/50 bg-background/65 p-4">
 				<Label for="group-name">群组名称</Label>
-				<Input id="group-name" class="h-11 rounded-2xl border-border/60 bg-background/75" placeholder="例如：城市漫步俱乐部" bind:value={name} />
+				<Input
+					id="group-name"
+					class="h-11 rounded-2xl border-border/60 bg-background/75 {nameError ? 'border-destructive focus-visible:ring-destructive' : ''}"
+					placeholder="例如：城市漫步俱乐部"
+					bind:value={name}
+					onblur={() => markTouched('name')}
+				/>
+				<div class="flex items-center justify-between">
+					{#if nameError}
+						<p class="text-xs text-destructive">{nameError}</p>
+					{:else}
+						<span></span>
+					{/if}
+					<span class="text-xs text-muted-foreground">{name.length}/{GROUP_NAME_MAX}</span>
+				</div>
 			</div>
 
 			<div class="space-y-2 rounded-2xl border border-border/50 bg-background/65 p-4">
 				<Label for="group-desc">群组介绍</Label>
-				<Textarea id="group-desc" placeholder="简单描述群组用途与氛围" class="min-h-[100px] rounded-2xl border-border/60 bg-background/75" bind:value={description} />
+				<Textarea
+					id="group-desc"
+					placeholder="简单描述群组用途与氛围"
+					class="min-h-[100px] rounded-2xl border-border/60 bg-background/75 {groupDescriptionError ? 'border-destructive focus-visible:ring-destructive' : ''}"
+					bind:value={description}
+					onblur={() => markTouched('description')}
+				/>
+				<div class="flex items-center justify-between">
+					{#if groupDescriptionError}
+						<p class="text-xs text-destructive">{groupDescriptionError}</p>
+					{:else}
+						<span></span>
+					{/if}
+					<span class="text-xs text-muted-foreground">{description.length}/{GROUP_DESCRIPTION_MAX}</span>
+				</div>
 			</div>
 
 			<div class="space-y-2 rounded-2xl border border-border/50 bg-background/65 p-4">
@@ -244,14 +309,36 @@
 				</div>
 				<div class="space-y-2">
 					<Label for="group-password">入群口令 (可选)</Label>
-					<Input id="group-password" class="h-11 rounded-2xl border-border/60 bg-background/75" type="password" placeholder="设置后需口令加入" bind:value={password} />
+					<Input
+						id="group-password"
+						class="h-11 rounded-2xl border-border/60 bg-background/75 {groupPasswordError ? 'border-destructive focus-visible:ring-destructive' : ''}"
+						type="password"
+						placeholder="设置后需口令加入"
+						bind:value={password}
+						onblur={() => markTouched('password')}
+					/>
+					{#if groupPasswordError}
+						<p class="text-xs text-destructive">{groupPasswordError}</p>
+					{/if}
 				</div>
 			</div>
 
 			<div class="grid gap-4 rounded-2xl border border-border/50 bg-background/65 p-4 sm:grid-cols-2">
 				<div class="space-y-2">
 					<Label for="max-members">最大成员数 (可选)</Label>
-					<Input id="max-members" class="h-11 rounded-2xl border-border/60 bg-background/75" type="number" min="2" max="2000" placeholder="例如 200" bind:value={maxMembers} />
+					<Input
+						id="max-members"
+						class="h-11 rounded-2xl border-border/60 bg-background/75 {maxMembersError ? 'border-destructive focus-visible:ring-destructive' : ''}"
+						type="number"
+						min="2"
+						max="2000"
+						placeholder="例如 200"
+						bind:value={maxMembers}
+						onblur={() => markTouched('maxMembers')}
+					/>
+					{#if maxMembersError}
+						<p class="text-xs text-destructive">{maxMembersError}</p>
+					{/if}
 				</div>
 				<div class="flex items-center justify-between rounded-2xl border border-border/60 bg-background/75 px-3 py-2 text-sm">
 					<span>允许被搜索</span>

@@ -8,6 +8,8 @@
 	import { momentsService, mediaService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { parseTags } from '$lib/utils/format';
+	import { validateField } from '$lib/utils/form-validation';
+	import type { FieldRule } from '$lib/utils/form-validation';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
@@ -41,6 +43,7 @@
 	let privacy = $state<PrivacyLevel>('public');
 	let isSubmitting = $state(false);
 	let isUploadingImages = $state(false);
+	let touched = $state<Record<string, boolean>>({});
 	let showLocationPicker = $state(false);
 	let selectedImages = $state.raw<
 		{
@@ -53,8 +56,21 @@
 	>([]);
 
 	const MAX_IMAGES = 9;
+	const DESCRIPTION_MAX = 2000;
 
 	const tags = $derived(parseTags(tagsInput));
+
+	const descriptionRules: FieldRule[] = [
+		{ required: true, requiredMessage: '请输入动态内容' },
+		{ maxLength: DESCRIPTION_MAX, maxLengthMessage: `动态内容最多 ${DESCRIPTION_MAX} 字符` }
+	];
+	let descriptionError = $derived(
+		touched['description'] ? validateField(description, descriptionRules) : undefined
+	);
+
+	function markTouched(field: string) {
+		touched = { ...touched, [field]: true };
+	}
 
 	function getDefaultSelectedLocation(): SelectedLocation {
 		return {
@@ -75,6 +91,7 @@
 		images.forEach((image) => URL.revokeObjectURL(image.previewUrl));
 		selectedImages = [];
 		selectedLocation = getDefaultSelectedLocation();
+		touched = {};
 	}
 
 	function handleImageChange(event: Event) {
@@ -154,10 +171,8 @@
 			return;
 		}
 
-		if (!description.trim()) {
-			toast.error('请输入动态内容');
-			return;
-		}
+		touched = { description: true };
+		if (descriptionError) return;
 
 		isSubmitting = true;
 		try {
@@ -228,9 +243,18 @@
 				<Textarea
 					id="moment-description"
 					placeholder="写点什么吧..."
-					class="min-h-[120px] resize-none"
+					class="min-h-[120px] resize-none {descriptionError ? 'border-destructive focus-visible:ring-destructive' : ''}"
 					bind:value={description}
+					onblur={() => markTouched('description')}
 				/>
+				<div class="flex items-center justify-between">
+					{#if descriptionError}
+						<p class="text-xs text-destructive">{descriptionError}</p>
+					{:else}
+						<span></span>
+					{/if}
+					<span class="text-xs text-muted-foreground">{description.length}/{DESCRIPTION_MAX}</span>
+				</div>
 			</div>
 
 			<div class="space-y-2">
