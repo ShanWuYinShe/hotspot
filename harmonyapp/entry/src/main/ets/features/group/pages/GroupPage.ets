@@ -72,6 +72,7 @@ export struct GroupPage {
   @State handlingApplicationIds: string[] = [];
   @State joiningGroupIds: string[] = [];
   @State pressedGroupId: string = '';
+  private isDestroyed: boolean = false;
 
   private getHeaderTopPadding(): number {
     return SafeAreaUtils.resolveTopPadding(this.safeAreaTop);
@@ -98,7 +99,9 @@ export struct GroupPage {
     return this.getCurrentThemePalette().borderColor;
   }
 
-  aboutToDisappear() {}
+  aboutToDisappear() {
+    this.isDestroyed = true;
+  }
 
   /** 获取搜索参考点：优先浏览锚点，回退到当前定位 */
   private getRefLocation(): LocationInfo | null {
@@ -220,6 +223,7 @@ export struct GroupPage {
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE }
       };
       const response = await LoadingUtil.withMinimumTime(() => ApiClient.searchGroups(request));
+      if (this.isDestroyed) return;
 
       if (response.code === 0) {
         this.groups = response.data?.items ?? [];
@@ -254,6 +258,7 @@ export struct GroupPage {
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE, cursor: this.nextCursor }
       };
       const response = await ApiClient.searchGroups(request);
+      if (this.isDestroyed) return;
       if (response.code === 0) {
         const items = response.data?.items ?? [];
         this.groups = this.groups.concat(items);
@@ -279,6 +284,7 @@ export struct GroupPage {
         status: 'pending',
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE }
       });
+      if (this.isDestroyed) return;
       if (response.code === 0) {
         this.myInvites = response.data?.items ?? [];
         this.invitesDataSource.setData(this.myInvites);
@@ -302,6 +308,7 @@ export struct GroupPage {
         status: 'pending',
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE, cursor: this.invitesNextCursor }
       });
+      if (this.isDestroyed) return;
       if (response.code === 0) {
         const items = response.data?.items ?? [];
         this.myInvites = this.myInvites.concat(items);
@@ -352,6 +359,7 @@ export struct GroupPage {
         status: 'pending',
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE }
       });
+      if (this.isDestroyed) return;
       if (response.code === 0) {
         this.myApplications = response.data?.items ?? [];
         this.applicationsDataSource.setData(this.myApplications);

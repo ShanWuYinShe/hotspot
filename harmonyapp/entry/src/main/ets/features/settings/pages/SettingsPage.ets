@@ -41,10 +41,15 @@ export struct SettingsPage {
   @State showThemeSheet: boolean = false;
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
+  private isDestroyed: boolean = false;
 
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
     this.refreshAll(false);
+  }
+
+  aboutToDisappear(): void {
+    this.isDestroyed = true;
   }
 
   private getCurrentThemePalette(): AppThemePalette {
@@ -109,6 +114,7 @@ export struct SettingsPage {
     this.systemMetaError = '';
     try {
       const response = await ApiClient.getSystemMeta();
+      if (this.isDestroyed) return;
       if (response.code === 0 && response.data) {
         this.systemMeta = response.data;
         this.systemMetaLastChecked = new Date().toISOString();
@@ -129,6 +135,7 @@ export struct SettingsPage {
     this.announcementsLoading = true;
     try {
       const response = await ApiClient.getSystemAnnouncements({});
+      if (this.isDestroyed) return;
       if (response.code === 0 && response.data) {
         this.announcements = response.data.items ?? [];
       }

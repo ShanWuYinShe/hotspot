@@ -102,6 +102,7 @@ export struct NearbyPage {
   @State groupsLoadingMore: boolean = false;
   @State userActionPendingIds: string[] = [];
   @State groupActionPendingIds: string[] = [];
+  private isDestroyed: boolean = false;
 
   async aboutToAppear() {
     SystemUiController.syncWithCurrentTheme();
@@ -141,6 +142,7 @@ export struct NearbyPage {
   }
 
   aboutToDisappear() {
+    this.isDestroyed = true;
     try {
       DistributedManager.getInstance().stopDeviceDiscovery();
     } catch {
@@ -297,6 +299,7 @@ export struct NearbyPage {
       const response = loadMore
         ? await ApiClient.searchMoments(request)
         : await LoadingUtil.withMinimumTime(() => ApiClient.searchMoments(request));
+      if (this.isDestroyed) return;
       if (response.code === 0) {
         const items = response.data?.items ?? [];
         const validItems = items.filter((m: MomentItem) => m.moment_id && m.user);
@@ -357,6 +360,7 @@ export struct NearbyPage {
       const response = loadMore
         ? await ApiClient.searchUsers(request)
         : await LoadingUtil.withMinimumTime(() => ApiClient.searchUsers(request));
+      if (this.isDestroyed) return;
       if (response.code === 0) {
         const items = response.data?.items ?? [];
         const me = GlobalStateManager.getInstance().getCurrentUser();
@@ -422,6 +426,7 @@ export struct NearbyPage {
       const response = loadMore
         ? await ApiClient.searchGroups(request)
         : await LoadingUtil.withMinimumTime(() => ApiClient.searchGroups(request));
+      if (this.isDestroyed) return;
       if (response.code === 0) {
         const items = response.data?.items ?? [];
         const validItems = items.filter((g: GroupItem) => g.group?.group_id);

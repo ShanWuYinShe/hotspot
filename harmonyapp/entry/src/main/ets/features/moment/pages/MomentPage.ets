@@ -42,6 +42,7 @@ export struct MomentPage {
   private interactionStore = InteractionStateStore.getInstance();
   private momentsDataSource: BasicDataSource<MomentItem> = new BasicDataSource([]);
   private momentCacheService = MomentCacheService.getInstance();
+  private isDestroyed: boolean = false;
 
   @State isLoading: boolean = true;
   @State isRefreshing: boolean = false;
@@ -68,7 +69,9 @@ export struct MomentPage {
     return this.getCurrentThemePalette().borderColor;
   }
 
-  aboutToDisappear() {}
+  aboutToDisappear() {
+    this.isDestroyed = true;
+  }
 
   /** 获取搜索参考点：优先浏览锚点，回退到当前定位 */
   private getRefLocation(): LocationInfo | null {
@@ -103,6 +106,7 @@ export struct MomentPage {
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE }
       };
       const response = await LoadingUtil.withMinimumTime(() => ApiClient.searchMoments(request));
+      if (this.isDestroyed) return;
 
       if (response.code === 0) {
         const items = response.data?.items ?? [];
@@ -145,6 +149,7 @@ export struct MomentPage {
         pagination: { limit: DefaultConfig.PAGE_SIZE_LARGE, cursor: this.nextCursor }
       };
       const response = await ApiClient.searchMoments(request);
+      if (this.isDestroyed) return;
       if (response.code === 0) {
         const items = response.data?.items ?? [];
         const validItems = items.filter((m: MomentItem) => m.moment_id && m.user);

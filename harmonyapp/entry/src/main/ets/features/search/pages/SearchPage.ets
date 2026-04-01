@@ -65,12 +65,14 @@ export struct SearchPage {
   private controller: TabsController = new TabsController();
   @State userActionPendingIds: string[] = [];
   @State groupActionPendingIds: string[] = [];
+  private isDestroyed: boolean = false;
 
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
   }
 
   aboutToDisappear(): void {
+    this.isDestroyed = true;
     KeyboardDismissManager.getInstance().dismiss();
     if (this.suggestTimerId) {
       TimerManager.clearTimeout(this.suggestTimerId);
@@ -140,6 +142,7 @@ export struct SearchPage {
         radius: this.clientConfig?.limits?.search_radius_max
       };
       const response = await ApiClient.searchSuggest(request);
+      if (this.isDestroyed) return;
       if (prefix !== this.keyword.trim() || this.hasSearched) {
         return;
       }
@@ -188,6 +191,7 @@ export struct SearchPage {
         const p3 = ApiClient.searchMoments({ keyword: trimmedKeyword, reference_point: referencePoint });
 
         const results = await Promise.all([p1, p2, p3]);
+        if (this.isDestroyed) return;
         const res1 = results[0];
         const res2 = results[1];
         const res3 = results[2];

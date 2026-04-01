@@ -52,6 +52,7 @@ export struct LoginPage {
 
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
+  private isDestroyed: boolean = false;
 
   private isValidLoginId(loginId: string): boolean {
     const trimmed = loginId.trim();
@@ -91,6 +92,10 @@ export struct LoginPage {
 
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
+  }
+
+  aboutToDisappear(): void {
+    this.isDestroyed = true;
   }
 
   private getCurrentThemePalette() {
@@ -540,6 +545,7 @@ export struct LoginPage {
 
     try {
       const profileResp = await ApiClient.getMyProfile();
+      if (this.isDestroyed) return;
       if (profileResp.code === 0 && profileResp.data) {
         this.stateManager.updateUser(profileResp.data);
         hilog.info(DOMAIN_NUMBER, TAG, `用户类型: ${profileResp.data.user_type || 'unknown'}`);

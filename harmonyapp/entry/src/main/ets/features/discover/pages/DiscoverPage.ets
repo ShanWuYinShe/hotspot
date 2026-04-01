@@ -64,6 +64,7 @@ export struct DiscoverPage {
   @State hotMoments: MomentItem[] = [];
   private hotMomentsDataSource: BasicDataSource<MomentItem> = new BasicDataSource<MomentItem>([]);
   private interactionStore = InteractionStateStore.getInstance();
+  private isDestroyed: boolean = false;
   @State isRefreshing: boolean = false;
   @State userActionPendingIds: string[] = [];
 
@@ -108,6 +109,10 @@ export struct DiscoverPage {
   async aboutToAppear() {
     SystemUiController.syncWithCurrentTheme();
     await this.loadData();
+  }
+
+  aboutToDisappear(): void {
+    this.isDestroyed = true;
   }
 
   private getCurrentThemePalette() {
@@ -155,6 +160,7 @@ export struct DiscoverPage {
         const results = await LoadingUtil.withMinimumTime(() =>
           Promise.all([trendingPromise, ApiClient.searchUsers(usersRequest)])
         );
+        if (this.isDestroyed) return;
         const usersResponse = results[1];
         if (usersResponse.code === 0) {
           const items = usersResponse.data?.items ?? [];
@@ -179,6 +185,7 @@ export struct DiscoverPage {
         }
       } else {
         const trendingResponse = await LoadingUtil.withMinimumTime(() => trendingPromise);
+        if (this.isDestroyed) return;
         if (trendingResponse.code === 0) {
           const bundle = trendingResponse.data;
           this.trendingTags = bundle?.trending_tags ?? [];

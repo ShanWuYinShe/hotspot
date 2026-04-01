@@ -64,6 +64,7 @@ export struct MessagePage {
 
   private chatListDataSource: BasicDataSource<ChatItem> = new BasicDataSource([]);
   private messageCacheService = MessageCacheService.getInstance();
+  private isDestroyed: boolean = false;
 
   private getHeaderTopPadding(): number {
     return SafeAreaUtils.resolveTopPadding(this.safeAreaTop);
@@ -88,6 +89,10 @@ export struct MessagePage {
     // 先从缓存加载（避免白屏），再强制调接口刷新
     await this.loadFromCache();
     await this.loadData(true);
+  }
+
+  aboutToDisappear(): void {
+    this.isDestroyed = true;
   }
 
   onMessageSync() {
@@ -125,6 +130,7 @@ export struct MessagePage {
       const results = await LoadingUtil.withMinimumTime(() =>
         Promise.allSettled([this.loadPrivateChats(), this.loadGroupChats()])
       );
+      if (this.isDestroyed) return;
       const privateChatsResult = results[0];
       const groupChatsResult = results[1];
 

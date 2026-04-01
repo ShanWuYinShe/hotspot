@@ -86,6 +86,7 @@ export struct ProfilePage {
   @State viewedUserProfile: UserItem | null = null;
   @State viewedUserLoading: boolean = false;
   @State viewedUserError: string = '';
+  private isDestroyed: boolean = false;
 
   private webSocketService = WebSocketService.getInstance();
 
@@ -144,6 +145,7 @@ export struct ProfilePage {
       const response = await LoadingUtil.withMinimumTime(() =>
         ApiClient.getUserProfile({ user_id: this.viewedUserId } as UserOpenTheDoorRequest),
       DesignConstants.ANIMATION.DURATION_CONTENT_SWITCH);
+      if (this.isDestroyed) return;
       if (response.code === 0 && response.data?.user?.user_id) {
         this.viewedUserProfile = response.data;
       } else {
@@ -208,6 +210,7 @@ export struct ProfilePage {
   }
 
   aboutToDisappear(): void {
+    this.isDestroyed = true;
     KeyboardDismissManager.getInstance().dismiss();
     try {
       NfcShareService.getInstance().clearShareData();
@@ -320,6 +323,7 @@ export struct ProfilePage {
 
     try {
       const response = await ApiClient.getMyAdminPermissions();
+      if (this.isDestroyed) return;
       if (response.code === 0 && response.data) {
         this.hasAdminPrivileges = true;
         return;
