@@ -2,6 +2,7 @@
     import { authStore } from "$lib/stores/auth.svelte";
     import { uiStore } from "$lib/stores/ui.svelte";
     import { mapAnchorStore } from "$lib/stores/map-anchor.svelte";
+    import { t } from "$lib/i18n";
     import { feedService, momentsService } from "$lib/api/services";
     import { isSuccess } from "$lib/api/client";
     import { usePagination } from "$lib/hooks/use-pagination.svelte";
@@ -42,36 +43,36 @@
         refreshGuestTrending?: boolean;
     }
 
-    const features = [
+    const features = $derived([
         {
             icon: MapPin,
-            title: "基于位置",
-            description: "发现你附近的精彩内容和有趣的人",
+            title: t("home.locationBased"),
+            description: t("home.discoverNearbyContent"),
             color: "from-blue-500/20 to-cyan-500/20",
             iconColor: "text-blue-500",
         },
         {
             icon: Image,
-            title: "生活瞬间",
-            description: "分享你的生活点滴，记录美好时刻",
+            title: t("home.lifeMoments"),
+            description: t("home.shareLifeMoments"),
             color: "from-pink-500/20 to-rose-500/20",
             iconColor: "text-pink-500",
         },
         {
             icon: Users,
-            title: "群组互动",
-            description: "加入兴趣群组，结识志同道合的朋友",
+            title: t("home.groupInteraction"),
+            description: t("home.joinInterestGroups"),
             color: "from-purple-500/20 to-violet-500/20",
             iconColor: "text-purple-500",
         },
         {
             icon: MessageCircle,
-            title: "即时聊天",
-            description: "与好友实时沟通，保持紧密联系",
+            title: t("home.instantChat"),
+            description: t("home.chatWithFriends"),
             color: "from-green-500/20 to-emerald-500/20",
             iconColor: "text-green-500",
         },
-    ];
+    ]);
 
     let refreshTrigger = $state(0);
     let showExplore = $state(false);
@@ -257,7 +258,7 @@
 </script>
 
 <svelte:head>
-    <title>HotSpot - 发现附近的精彩</title>
+    <title>{t('home.title')}</title>
 </svelte:head>
 
 <div class="space-y-10">
@@ -279,7 +280,7 @@
                     class="mb-6 inline-flex items-center gap-2 rounded-2xl bg-primary/10 px-4 py-2 text-sm font-medium text-primary backdrop-blur-sm"
                 >
                     <Sparkles class="h-4 w-4" />
-                    基于位置的社交平台
+                    {t('home.locationBasedSocial')}
                 </div>
                 <h1
                     class="mb-6 text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl"
@@ -287,14 +288,13 @@
                     <span
                         class="bg-linear-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent"
                     >
-                        发现附近的精彩
+                        {t('home.discoverNearby')}
                     </span>
                 </h1>
                 <p
                     class="mx-auto mb-10 max-w-xl text-lg text-muted-foreground md:text-xl"
                 >
-                    HotSpot 帮助你发现身边有趣的人、精彩的瞬间和活跃的群组。
-                    开始探索你的世界吧！
+                    {t('home.heroDescription')}
                 </p>
                 <div class="flex flex-col gap-4 sm:flex-row sm:justify-center">
                     <Button
@@ -302,7 +302,7 @@
                         class="gap-2 rounded-2xl px-8 shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30"
                         onclick={handleGetStarted}
                     >
-                        立即开始
+                        {t('home.getStarted')}
                         <ArrowRight class="h-4 w-4" />
                     </Button>
                     <Button
@@ -311,7 +311,7 @@
                         class="rounded-2xl px-8"
                         onclick={handleExplore}
                     >
-                        先逛逛看
+                        {t('home.browseFirst')}
                     </Button>
                 </div>
             </div>
@@ -328,10 +328,10 @@
                     <div class="flex items-center justify-between">
                         <div class="space-y-1">
                             <h2 class="text-2xl font-bold tracking-tight">
-                                探索发现
+                                {t('home.explore')}
                             </h2>
                             <p class="text-muted-foreground">
-                                发现附近的精彩人与事
+                                {t('home.discoverNearbyPeopleAndThings')}
                             </p>
                         </div>
                         <Button
@@ -339,7 +339,7 @@
                             size="icon"
                             class="rounded-2xl"
                             onclick={refreshAll}
-                            aria-label="刷新"
+                            aria-label={t('common.refresh')}
                         >
                             <RefreshCw
                                 class="h-4 w-4 {feed.loading
@@ -358,7 +358,7 @@
                         <div class="flex items-center gap-2 px-1">
                             <Hash class="h-5 w-5 text-primary" />
                             <h3 class="text-lg font-semibold tracking-tight">
-                                热门话题
+                                {t('home.trendingTopics')}
                             </h3>
                         </div>
                         <div class="flex flex-wrap gap-2">
@@ -394,7 +394,7 @@
                         <div class="flex items-center gap-2">
                             <Sparkles class="h-5 w-5 text-primary" />
                             <h3 class="text-lg font-semibold tracking-tight">
-                                推荐动态
+                                {t('home.recommendedMoments')}
                             </h3>
                         </div>
                     </div>
@@ -416,16 +416,16 @@
                     {:else if feed.error}
                         <EmptyState
                             icon={Compass}
-                            title="加载动态失败"
-                            description="请检查网络连接后重试"
-                            actionText="重试"
+                            title={t('home.loadMomentsFailed')}
+                            description={t('home.pleaseCheckNetwork')}
+                            actionText={t('common.retry')}
                             onAction={() => loadFeed(true)}
                         />
                     {:else if feed.items.length === 0}
                         <EmptyState
                             icon={Compass}
-                            title="暂无推荐"
-                            description="去发布一些内容，或者探索更多区域吧"
+                            title={t('home.noRecommendations')}
+                            description={t('home.noRecommendationsDesc')}
                         />
                     {:else}
                         <div
@@ -454,10 +454,10 @@
             <section>
                 <div class="mb-8 text-center">
                     <h2 class="mb-2 text-2xl font-bold md:text-3xl">
-                        核心功能
+                        {t('home.coreFeatures')}
                     </h2>
                     <p class="text-muted-foreground">
-                        探索 HotSpot 为你提供的精彩体验
+                        {t('home.exploreHotSpot')}
                     </p>
                 </div>
                 <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -499,7 +499,7 @@
                     >
                         10K+
                     </div>
-                    <div class="text-sm text-muted-foreground">活跃用户</div>
+                    <div class="text-sm text-muted-foreground">{t('home.activeUsers')}</div>
                 </div>
                 <div>
                     <div
@@ -507,7 +507,7 @@
                     >
                         50K+
                     </div>
-                    <div class="text-sm text-muted-foreground">精彩瞬间</div>
+                    <div class="text-sm text-muted-foreground">{t('home.greatMoments')}</div>
                 </div>
                 <div>
                     <div
@@ -515,7 +515,7 @@
                     >
                         1K+
                     </div>
-                    <div class="text-sm text-muted-foreground">活跃群组</div>
+                    <div class="text-sm text-muted-foreground">{t('home.activeGroups')}</div>
                 </div>
             </div>
         </section>
@@ -527,11 +527,9 @@
                 <div class="mb-6 flex items-center justify-between">
                     <div>
                         <h1 class="mb-2 text-2xl font-bold md:text-3xl">
-                            欢迎回来，<span class="text-primary"
-                                >{authStore.currentAccount?.nickname}</span
-                            >！
+                            {t('home.welcomeBack', { nickname: authStore.currentAccount?.nickname ?? '' })}
                         </h1>
-                        <p class="text-muted-foreground">发现附近的精彩内容</p>
+                        <p class="text-muted-foreground">{t('home.discoverNearbyContent2')}</p>
                     </div>
                     <Button
                         variant="ghost"
@@ -539,7 +537,7 @@
                         class="rounded-2xl"
                         onclick={refreshAll}
                         disabled={feed.loading}
-                        aria-label="刷新"
+                        aria-label={t('common.refresh')}
                     >
                         <RefreshCw
                             class="h-4 w-4 {feed.loading ? 'animate-spin' : ''}"
@@ -568,7 +566,7 @@
                         <div class="flex items-center gap-2">
                             <Sparkles class="h-5 w-5 text-primary" />
                             <h2 class="text-lg font-semibold tracking-tight">
-                                推荐动态
+                                {t('home.recommendedMoments')}
                             </h2>
                         </div>
                     </div>
@@ -610,9 +608,9 @@
                         <Compass
                             class="mb-4 h-12 w-12 text-muted-foreground/50"
                         />
-                        <h3 class="text-lg font-medium">暂无推荐</h3>
+                        <h3 class="text-lg font-medium">{t('home.noRecommendations')}</h3>
                         <p class="text-muted-foreground">
-                            去发布一些内容，或者探索更多区域吧
+                            {t('home.noRecommendationsDesc')}
                         </p>
                     </div>
                 {:else}
@@ -641,9 +639,9 @@
                                     <RefreshCw
                                         class="mr-2 h-4 w-4 animate-spin"
                                     />
-                                    加载中...
+                                    {t('common.loading')}
                                 {:else}
-                                    加载更多
+                                    {t('common.loadMore')}
                                 {/if}
                             </Button>
                         </div>

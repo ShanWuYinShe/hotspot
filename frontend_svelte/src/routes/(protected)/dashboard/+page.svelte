@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { t } from '$lib/i18n';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { notificationsService, usersService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
@@ -48,13 +49,13 @@
 </script>
 
 <svelte:head>
-	<title>仪表板 - HotSpot</title>
+	<title>{t('dashboard.title')}</title>
 </svelte:head>
 
 <div class="space-y-6">
 	<PageHeader
-		title={`欢迎回来，${authStore.currentAccount?.nickname ?? ''}！`}
-		description="这是你的个人仪表板"
+		title={t('dashboard.welcomeBack', { nickname: authStore.currentAccount?.nickname ?? '' })}
+		description={t('dashboard.personalDashboard')}
 	/>
 
 	{#if isLoading}
@@ -72,7 +73,7 @@
 					</div>
 					<div>
 						<p class="text-2xl font-bold">{unreadCount}</p>
-						<p class="text-xs text-muted-foreground">未读通知</p>
+						<p class="text-xs text-muted-foreground">{t('dashboard.unreadNotifications')}</p>
 					</div>
 				</CardContent>
 			</Card>
@@ -85,7 +86,7 @@
 					</div>
 					<div>
 						<p class="text-2xl font-bold">{followersCount}</p>
-						<p class="text-xs text-muted-foreground">粉丝</p>
+						<p class="text-xs text-muted-foreground">{t('dashboard.followers')}</p>
 					</div>
 				</CardContent>
 			</Card>
@@ -98,23 +99,23 @@
 					</div>
 					<div>
 						<p class="text-2xl font-bold">{followingCount}</p>
-						<p class="text-xs text-muted-foreground">关注</p>
+						<p class="text-xs text-muted-foreground">{t('dashboard.following')}</p>
 					</div>
 				</CardContent>
 			</Card>
 		</div>
 	{/if}
 
-	<h2 class="text-lg font-semibold">快速入口</h2>
+	<h2 class="text-lg font-semibold">{t('dashboard.quickAccess')}</h2>
 	<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 		<Card class="cursor-pointer transition-shadow hover:shadow-lg">
 			<a href="/moments">
 				<CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-					<CardTitle class="text-sm font-medium">我的瞬间</CardTitle>
+					<CardTitle class="text-sm font-medium">{t('dashboard.myMoments')}</CardTitle>
 					<Image class="h-4 w-4 text-muted-foreground" />
 				</CardHeader>
 				<CardContent>
-					<p class="text-xs text-muted-foreground">查看和管理你的瞬间</p>
+					<p class="text-xs text-muted-foreground">{t('dashboard.viewAndManageMoments')}</p>
 				</CardContent>
 			</a>
 		</Card>
@@ -122,11 +123,11 @@
 		<Card class="cursor-pointer transition-shadow hover:shadow-lg">
 			<a href="/groups">
 				<CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-					<CardTitle class="text-sm font-medium">我的群组</CardTitle>
+					<CardTitle class="text-sm font-medium">{t('dashboard.myGroups')}</CardTitle>
 					<Users class="h-4 w-4 text-muted-foreground" />
 				</CardHeader>
 				<CardContent>
-					<p class="text-xs text-muted-foreground">查看加入的群组</p>
+					<p class="text-xs text-muted-foreground">{t('dashboard.viewJoinedGroups')}</p>
 				</CardContent>
 			</a>
 		</Card>
@@ -134,11 +135,11 @@
 		<Card class="cursor-pointer transition-shadow hover:shadow-lg">
 			<a href="/chat">
 				<CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-					<CardTitle class="text-sm font-medium">消息</CardTitle>
+					<CardTitle class="text-sm font-medium">{t('dashboard.messages')}</CardTitle>
 					<MessageCircle class="h-4 w-4 text-muted-foreground" />
 				</CardHeader>
 				<CardContent>
-					<p class="text-xs text-muted-foreground">查看私信和群聊</p>
+					<p class="text-xs text-muted-foreground">{t('dashboard.viewMessages')}</p>
 				</CardContent>
 			</a>
 		</Card>
@@ -146,11 +147,11 @@
 		<Card class="cursor-pointer transition-shadow hover:shadow-lg">
 			<a href="/users/nearby">
 				<CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-					<CardTitle class="text-sm font-medium">附近</CardTitle>
+					<CardTitle class="text-sm font-medium">{t('dashboard.nearby')}</CardTitle>
 					<MapPin class="h-4 w-4 text-muted-foreground" />
 				</CardHeader>
 				<CardContent>
-					<p class="text-xs text-muted-foreground">发现附近的人和动态</p>
+					<p class="text-xs text-muted-foreground">{t('dashboard.discoverNearbyPeopleAndMoments')}</p>
 				</CardContent>
 			</a>
 		</Card>

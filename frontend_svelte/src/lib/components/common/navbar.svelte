@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { t } from '$lib/i18n';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { adminPermissionsStore } from '$lib/stores/admin-permissions.svelte';
@@ -98,7 +99,7 @@
 				class="shrink-0 md:hidden"
 				onclick={onMenuClick}
 				circular
-				aria-label="打开菜单"
+				aria-label={t('nav.openMenu')}
 			>
 				<Menu class="h-5 w-5" />
 			</RippleButton>
@@ -118,7 +119,7 @@
 				variant="icon"
 				size="icon"
 				class="h-9 w-9 sm:h-10 sm:w-10"
-				aria-label="打开搜索"
+				aria-label={t('nav.openSearch')}
 				onclick={openSearchModal}
 				circular
 			>
@@ -149,11 +150,11 @@
 					<DropdownMenu.Content align="end">
 						<DropdownMenu.Item onclick={openCreateMoment}>
 							<Image class="mr-2 h-4 w-4" />
-							发布动态
+							{t('nav.postMoment')}
 						</DropdownMenu.Item>
 						<DropdownMenu.Item onclick={openCreateGroup}>
 							<UsersRound class="mr-2 h-4 w-4" />
-							创建群组
+							{t('nav.createGroup')}
 						</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
@@ -187,7 +188,7 @@
 							{#snippet child({ props })}
 								<button {...props} class="flex w-full items-center" onclick={() => goto('/profile')}>
 									<User class="mr-2 h-4 w-4" />
-									个人资料
+									{t('nav.profile')}
 								</button>
 							{/snippet}
 						</DropdownMenu.Item>
@@ -195,7 +196,7 @@
 							{#snippet child({ props })}
 								<button {...props} class="flex w-full items-center" onclick={() => goto('/settings')}>
 									<Settings class="mr-2 h-4 w-4" />
-									设置
+									{t('nav.settings')}
 								</button>
 							{/snippet}
 						</DropdownMenu.Item>
@@ -204,7 +205,7 @@
 								{#snippet child({ props })}
 									<button {...props} class="flex w-full items-center" onclick={() => goto('/admin')}>
 										<Shield class="mr-2 h-4 w-4" />
-										管理后台
+										{t('nav.adminPanel')}
 									</button>
 								{/snippet}
 							</DropdownMenu.Item>
@@ -214,7 +215,7 @@
 							{#snippet child({ props })}
 								<button {...props} class="flex w-full items-center text-destructive" onclick={handleLogout}>
 									<LogOut class="mr-2 h-4 w-4" />
-									退出登录
+									{t('nav.logout')}
 								</button>
 							{/snippet}
 						</DropdownMenu.Item>
@@ -226,14 +227,14 @@
 					variant="icon"
 					size="icon"
 					class="h-9 w-9 sm:hidden"
-					aria-label="登录或注册"
+					aria-label={t('nav.loginOrRegister')}
 					onclick={handleAuthEntry}
 					circular
 				>
 					<User class="h-4 w-4" />
 				</RippleButton>
 				<Button size="sm" class="hidden rounded-2xl sm:inline-flex" onclick={handleAuthEntry}>
-					登录 / 注册
+					{t('nav.loginRegister')}
 				</Button>
 			{/if}
 		</div>

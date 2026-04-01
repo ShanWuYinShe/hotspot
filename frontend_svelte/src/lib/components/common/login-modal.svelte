@@ -2,6 +2,7 @@
 	import { withMinimumLoadingTime, MIN_LOADING_ACTION } from '$lib/utils/loading';
 	import { authService, usersService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
+	import { t } from '$lib/i18n';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
@@ -25,7 +26,6 @@
 	let isLoading = $state(false);
 	let showPassword = $state(false);
 	let currentTab = $state('login');
-	const PASSWORD_POLICY_TIP = '密码需为 8-128 位且同时包含字母和数字';
 	const hasLetterAndDigit = (value: string) => /[A-Za-z]/.test(value) && /\d/.test(value);
 
 	function handleClose() {
@@ -72,15 +72,15 @@
 	async function handleLogin() {
 		const trimmedLoginId = loginId.trim();
 		if (!trimmedLoginId || !password) {
-			toast.error('请填写登录信息');
+			toast.error(t('auth.pleaseFillLogin'));
 			return;
 		}
 		if (trimmedLoginId.length < 3 || trimmedLoginId.length > 64) {
-			toast.error('登录账号长度需在 3-64 字符之间');
+			toast.error(t('auth.loginIdLengthError'));
 			return;
 		}
 		if (password.length < 8 || password.length > 128 || !hasLetterAndDigit(password)) {
-			toast.error(PASSWORD_POLICY_TIP);
+			toast.error(t('auth.passwordPolicyTip'));
 			return;
 		}
 
@@ -99,18 +99,18 @@
 			if (response.code === 0) {
 				// spec: Web 端 body 为空，token 通过 Cookie 设置
 				if (await completeAuthFlow()) {
-					toast.success('登录成功');
+					toast.success(t('auth.loginSuccess'));
 					uiStore.onLoginSuccess();
 					loginId = '';
 					password = '';
 				} else {
-					toast.error('获取用户信息失败');
+					toast.error(t('auth.getProfileFailed'));
 				}
 			} else {
-				toast.error(response.message || '登录失败');
+				toast.error(response.message || t('auth.loginFailed'));
 			}
 		} catch (error) {
-			toast.error('登录失败，请稍后重试');
+			toast.error(t('auth.loginFailedRetry'));
 		} finally {
 			isLoading = false;
 		}
@@ -120,25 +120,25 @@
 		const trimmedLoginId = loginId.trim();
 		const trimmedNickname = nickname.trim();
 		if (!trimmedLoginId || !password || !trimmedNickname) {
-			toast.error('请填写完整信息');
+			toast.error(t('auth.pleaseFillAll'));
 			return;
 		}
 		if (trimmedLoginId.length < 3 || trimmedLoginId.length > 64) {
-			toast.error('登录账号长度需在 3-64 字符之间');
+			toast.error(t('auth.loginIdLengthError'));
 			return;
 		}
 		if (trimmedNickname.length < 1 || trimmedNickname.length > 30) {
-			toast.error('昵称长度需在 1-30 字符之间');
+			toast.error(t('auth.nicknameLengthError'));
 			return;
 		}
 
 		if (password !== confirmPassword) {
-			toast.error('两次密码不一致');
+			toast.error(t('auth.passwordMismatch'));
 			return;
 		}
 
 		if (password.length < 8 || password.length > 128 || !hasLetterAndDigit(password)) {
-			toast.error(PASSWORD_POLICY_TIP);
+			toast.error(t('auth.passwordPolicyTip'));
 			return;
 		}
 
@@ -157,16 +157,16 @@
 
 			if (response.code === 0) {
 				if (await completeAuthFlow()) {
-					toast.success('注册成功');
+					toast.success(t('auth.registerSuccess'));
 					uiStore.onLoginSuccess();
 				} else {
-					toast.error('获取用户信息失败');
+					toast.error(t('auth.getProfileFailed'));
 				}
 			} else {
-				toast.error(response.message || '注册失败');
+				toast.error(response.message || t('auth.registerFailed'));
 			}
 		} catch (error) {
-			toast.error('注册失败，请稍后重试');
+			toast.error(t('auth.registerFailedRetry'));
 		} finally {
 			isLoading = false;
 		}
@@ -175,11 +175,11 @@
 	async function handleGuestLogin() {
 		const trimmedNickname = guestNickname.trim();
 		if (!trimmedNickname) {
-			toast.error('请输入昵称');
+			toast.error(t('auth.pleaseEnterNickname'));
 			return;
 		}
 		if (trimmedNickname.length > 30) {
-			toast.error('昵称长度需在 1-30 字符之间');
+			toast.error(t('auth.nicknameLengthError'));
 			return;
 		}
 
@@ -196,16 +196,16 @@
 
 			if (response.code === 0) {
 				if (await completeAuthFlow()) {
-					toast.success('访客登录成功');
+					toast.success(t('auth.guestLoginSuccess'));
 					uiStore.onLoginSuccess();
 				} else {
-					toast.error('获取用户信息失败');
+					toast.error(t('auth.getProfileFailed'));
 				}
 			} else {
-				toast.error(response.message || '访客登录失败');
+				toast.error(response.message || t('auth.guestLoginFailed'));
 			}
 		} catch (error) {
-			toast.error('访客登录失败，请稍后重试');
+			toast.error(t('auth.guestLoginFailedRetry'));
 		} finally {
 			isLoading = false;
 		}
@@ -213,8 +213,8 @@
 
 </script>
 
-<Dialog.Root 
-	open={uiStore.showLoginModal} 
+<Dialog.Root
+	open={uiStore.showLoginModal}
 	onOpenChange={(open) => {
 		if (!open) {
 			handleClose();
@@ -227,18 +227,18 @@
 				<div class="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/50 bg-primary/10 text-primary">
 					<MapPin class="h-5 w-5" />
 				</div>
-				<div>欢迎来到 HotSpot</div>
+				<div>{t('auth.welcome')}</div>
 			</Dialog.Title>
 			<Dialog.Description>
-				登录后即可使用完整功能
+				{t('auth.loginSubtitle')}
 			</Dialog.Description>
 		</Dialog.Header>
 
 		<Tabs bind:value={currentTab} class="mt-4">
 			<TabsList class="grid w-full grid-cols-3 rounded-3xl bg-background/75 p-1.5 ring-1 ring-border/60">
-				<TabsTrigger value="login" class="rounded-2xl">登录</TabsTrigger>
-				<TabsTrigger value="register" class="rounded-2xl">注册</TabsTrigger>
-				<TabsTrigger value="guest" class="rounded-2xl">访客</TabsTrigger>
+				<TabsTrigger value="login" class="rounded-2xl">{t('auth.login')}</TabsTrigger>
+				<TabsTrigger value="register" class="rounded-2xl">{t('auth.register')}</TabsTrigger>
+				<TabsTrigger value="guest" class="rounded-2xl">{t('auth.guest')}</TabsTrigger>
 			</TabsList>
 
 			<!-- 固定最小高度以防止跳动（需容纳注册表单 4 个输入框 + 按钮） -->
@@ -247,11 +247,11 @@
 				<TabsContent value="login">
 				<form onsubmit={(e) => { e.preventDefault(); handleLogin(); }} class="space-y-4 pt-4 animate-in fade-in-0 duration-200">
 					<div class="space-y-2">
-						<Label for="modal-login-id">账号</Label>
+						<Label for="modal-login-id">{t('auth.account')}</Label>
 						<Input
 							id="modal-login-id"
 							type="text"
-							placeholder="手机号或邮箱"
+							placeholder={t('auth.phoneOrEmail')}
 							autocomplete="username"
 							bind:value={loginId}
 							disabled={isLoading}
@@ -259,12 +259,12 @@
 						/>
 					</div>
 					<div class="space-y-2">
-						<Label for="modal-login-password">密码</Label>
+						<Label for="modal-login-password">{t('auth.password')}</Label>
 						<div class="relative">
 							<Input
 								id="modal-login-password"
 								type={showPassword ? 'text' : 'password'}
-								placeholder="请输入密码"
+								placeholder={t('auth.enterPassword')}
 								autocomplete="current-password"
 								bind:value={password}
 								disabled={isLoading}
@@ -276,7 +276,7 @@
 								size="icon"
 								class="absolute right-1 top-1 h-9 w-9 rounded-xl px-0"
 								onclick={() => (showPassword = !showPassword)}
-								aria-label={showPassword ? '隐藏密码' : '显示密码'}
+								aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
 							>
 								{#if showPassword}
 									<EyeOff class="h-4 w-4" />
@@ -290,7 +290,7 @@
 						{#if isLoading}
 							<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 						{/if}
-						登录
+						{t('auth.login')}
 					</Button>
 				</form>
 			</TabsContent>
@@ -299,11 +299,11 @@
 			<TabsContent value="register">
 				<form onsubmit={(e) => { e.preventDefault(); handleRegister(); }} class="space-y-4 pt-4 animate-in fade-in-0 duration-200">
 					<div class="space-y-2">
-						<Label for="modal-register-nickname">昵称</Label>
+						<Label for="modal-register-nickname">{t('auth.nickname')}</Label>
 						<Input
 							id="modal-register-nickname"
 							type="text"
-							placeholder="给自己起个名字"
+							placeholder={t('auth.giveYourselfAName')}
 							autocomplete="nickname"
 							bind:value={nickname}
 							disabled={isLoading}
@@ -311,11 +311,11 @@
 						/>
 					</div>
 					<div class="space-y-2">
-						<Label for="modal-register-id">账号</Label>
+						<Label for="modal-register-id">{t('auth.account')}</Label>
 						<Input
 							id="modal-register-id"
 							type="text"
-							placeholder="手机号或邮箱"
+							placeholder={t('auth.phoneOrEmail')}
 							autocomplete="username"
 							bind:value={loginId}
 							disabled={isLoading}
@@ -323,11 +323,11 @@
 						/>
 					</div>
 					<div class="space-y-2">
-						<Label for="modal-register-password">密码</Label>
+						<Label for="modal-register-password">{t('auth.password')}</Label>
 						<Input
 							id="modal-register-password"
 							type="password"
-							placeholder="至少8位，包含字母和数字"
+							placeholder={t('auth.atLeast8Chars')}
 							autocomplete="new-password"
 							bind:value={password}
 							disabled={isLoading}
@@ -335,11 +335,11 @@
 						/>
 					</div>
 					<div class="space-y-2">
-						<Label for="modal-register-confirm">确认密码</Label>
+						<Label for="modal-register-confirm">{t('auth.confirmPassword')}</Label>
 						<Input
 							id="modal-register-confirm"
 							type="password"
-							placeholder="再次输入密码"
+							placeholder={t('auth.enterPasswordAgain')}
 							autocomplete="new-password"
 							bind:value={confirmPassword}
 							disabled={isLoading}
@@ -350,7 +350,7 @@
 						{#if isLoading}
 							<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 						{/if}
-						注册
+						{t('auth.register')}
 					</Button>
 				</form>
 			</TabsContent>
@@ -359,14 +359,14 @@
 			<TabsContent value="guest">
 				<form onsubmit={(e) => { e.preventDefault(); handleGuestLogin(); }} class="space-y-4 pt-4 animate-in fade-in-0 duration-200">
 					<div class="rounded-2xl border border-border/50 bg-background/65 p-3 text-sm text-muted-foreground">
-						访客模式可快速体验，部分功能受限。
+						{t('auth.guestModeHint')}
 					</div>
 					<div class="space-y-2">
-						<Label for="modal-guest-nickname">昵称</Label>
+						<Label for="modal-guest-nickname">{t('auth.nickname')}</Label>
 						<Input
 							id="modal-guest-nickname"
 							type="text"
-							placeholder="给自己起个名字"
+							placeholder={t('auth.giveYourselfAName')}
 							autocomplete="nickname"
 							bind:value={guestNickname}
 							disabled={isLoading}
@@ -377,7 +377,7 @@
 						{#if isLoading}
 							<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 						{/if}
-						访客登录
+						{t('auth.guestLogin')}
 					</Button>
 				</form>
 			</TabsContent>

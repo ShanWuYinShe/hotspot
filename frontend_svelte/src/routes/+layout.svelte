@@ -3,6 +3,7 @@
     import { page } from "$app/state";
     import { onMount } from "svelte";
     import { ModeWatcher } from "mode-watcher";
+    import { initLocale } from "$lib/i18n";
     import { Toaster } from "$lib/components/ui/sonner";
     import LoginModal from "$lib/components/common/login-modal.svelte";
     import PageLoading from "$lib/components/common/page-loading.svelte";
@@ -185,6 +186,8 @@
     });
 
     onMount(() => {
+        initLocale();
+
         const redirectParam = page.url.searchParams.get("redirect");
         const safeRedirect = normalizeRedirectPath(redirectParam);
         if (redirectParam) {

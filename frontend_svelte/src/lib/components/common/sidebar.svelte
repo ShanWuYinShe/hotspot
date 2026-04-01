@@ -2,6 +2,7 @@
     import { page } from "$app/state";
     import { goto } from "$app/navigation";
     import { cn } from "$lib/utils";
+    import { t } from "$lib/i18n";
     import { authStore } from "$lib/stores/auth.svelte";
     import { adminPermissionsStore } from "$lib/stores/admin-permissions.svelte";
     import { mapAnchorStore } from "$lib/stores/map-anchor.svelte";
@@ -37,52 +38,52 @@
         badge?: number;
     }
 
-    const mainNavItems: NavItem[] = [
-        { href: "/", label: "首页", icon: Home },
-        { href: "/users/nearby", label: "附近的人", icon: UsersRound },
-        { href: "/groups/nearby", label: "附近群组", icon: UsersRound },
-        { href: "/moments/nearby", label: "附近动态", icon: Image },
-    ];
+    const mainNavItems = $derived<NavItem[]>([
+        { href: "/", label: t("sidebar.home"), icon: Home },
+        { href: "/users/nearby", label: t("sidebar.nearbyPeople"), icon: UsersRound },
+        { href: "/groups/nearby", label: t("sidebar.nearbyGroups"), icon: UsersRound },
+        { href: "/moments/nearby", label: t("sidebar.nearbyMoments"), icon: Image },
+    ]);
 
-    const personalNavItems: NavItem[] = [
+    const personalNavItems = $derived<NavItem[]>([
         {
             href: "/chat",
-            label: "消息",
+            label: t("sidebar.messages"),
             icon: MessageCircle,
             requiresAuth: true,
         },
         {
             href: "/notifications",
-            label: "通知",
+            label: t("sidebar.notifications"),
             icon: Bell,
             requiresAuth: true,
         },
         {
             href: "/moments",
-            label: "我的瞬间",
+            label: t("sidebar.myMoments"),
             icon: Image,
             requiresAuth: true,
         },
         {
             href: "/groups",
-            label: "我的群组",
+            label: t("sidebar.myGroups"),
             icon: UsersRound,
             requiresAuth: true,
         },
-        { href: "/friends", label: "好友", icon: Heart, requiresAuth: true },
+        { href: "/friends", label: t("sidebar.friends"), icon: Heart, requiresAuth: true },
         {
             href: "/follows",
-            label: "关注",
+            label: t("sidebar.following"),
             icon: UserCheck,
             requiresAuth: true,
         },
         {
             href: "/followers",
-            label: "粉丝",
+            label: t("sidebar.followers"),
             icon: UserPlus,
             requiresAuth: true,
         },
-    ];
+    ]);
 
     // 优化：使用 $derived 缓存当前路径和参数，避免在模板中重复计算
     const currentPathname = $derived(page.url.pathname);
@@ -187,7 +188,7 @@
             <h3
                 class="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70"
             >
-                个人中心
+                {t('sidebar.personalCenter')}
             </h3>
             <div class="space-y-1">
                 {#each personalNavItems as item (item.href)}
@@ -228,7 +229,7 @@
                             <span
                                 class="rounded-2xl bg-muted px-2 py-0.5 text-xs text-muted-foreground"
                             >
-                                登录
+                                {t('sidebar.login')}
                             </span>
                         {/if}
                     </RippleNavItem>
@@ -241,13 +242,13 @@
                 <h3
                     class="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70"
                 >
-                    管理员
+                    {t('sidebar.admin')}
                 </h3>
                 <RippleNavItem href="/admin" active={isActive("/admin")}>
                     <Shield
                         class="h-5 w-5 transition-transform group-hover:scale-110"
                     />
-                    <span>管理后台</span>
+                    <span>{t('sidebar.adminPanel')}</span>
                 </RippleNavItem>
             </div>
         {/if}
@@ -273,7 +274,7 @@
 				</div>
 				<div class="min-w-0 flex-1">
 					<div class="text-xs font-medium text-muted-foreground">
-						浏览锚点
+						{t('sidebar.browseAnchor')}
 					</div>
 					<div class="truncate text-sm font-semibold text-foreground">
 						{mapAnchorStore.displayName}
@@ -293,7 +294,7 @@
 				class="group relative flex flex-1 items-center justify-center gap-2 overflow-hidden rounded-lg bg-muted/40 p-3 transition-all duration-200 hover:bg-muted/60 min-h-11"
 				onclick={toggleMode}
 				{@attach circularFeedback}
-				aria-label="切换主题"
+				aria-label={t('sidebar.toggleTheme')}
 			>
                 <div
                     class="flex h-5 w-5 items-center justify-center text-muted-foreground transition-transform group-hover:scale-110"
@@ -305,7 +306,7 @@
                     {/if}
                 </div>
 				<span class="text-sm font-medium text-foreground">
-					{currentMode === "dark" ? "浅色" : "深色"}
+					{currentMode === "dark" ? t('sidebar.light') : t('sidebar.dark')}
 				</span>
 			</Button>
 
@@ -316,7 +317,7 @@
 				class="group relative flex items-center justify-center overflow-hidden rounded-lg bg-muted/40 p-3 transition-all duration-200 hover:bg-muted/60 min-h-11 min-w-11"
 				onclick={() => goto("/settings")}
 				{@attach circularFeedback}
-				aria-label="设置"
+				aria-label={t('sidebar.settingsLabel')}
 			>
 				<Settings
 					class="h-5 w-5 text-muted-foreground transition-transform group-hover:scale-110"
