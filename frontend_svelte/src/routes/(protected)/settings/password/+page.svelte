@@ -50,11 +50,14 @@
 	}
 
 	function hasErrors(): boolean {
-		markAllTouched();
-		return !!oldPasswordError || !!newPasswordError || !!confirmPasswordError;
+		const nextOldPasswordError = validateField(oldPassword, oldPasswordRules);
+		const nextNewPasswordError = validateField(newPassword, newPasswordRules);
+		const nextConfirmPasswordError = validateField(confirmPassword, confirmPasswordRules);
+		return !!nextOldPasswordError || !!nextNewPasswordError || !!nextConfirmPasswordError;
 	}
 
 	async function handleSubmit() {
+		markAllTouched();
 		if (hasErrors()) return;
 
 		isSaving = true;
