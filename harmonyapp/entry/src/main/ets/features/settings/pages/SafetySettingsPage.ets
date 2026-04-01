@@ -9,6 +9,7 @@ import { ChangePasswordRequest, SessionItem } from '../../../core/types/api';
 import { SessionListSection, SettingsSectionCard } from './SettingsSupport';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 
 @Preview
 @Component
@@ -50,7 +51,7 @@ export struct SafetySettingsPage {
         this.newPassword = '';
         SystemToast.showSuccess('密码已更新', this.getUIContext());
       } else {
-        SystemToast.showError(response.message || '修改密码失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '修改密码失败'), this.getUIContext());
       }
     } catch (_) {
       SystemToast.showError('修改密码失败', this.getUIContext());
@@ -64,7 +65,7 @@ export struct SafetySettingsPage {
         SystemToast.showSuccess('会话已撤销', this.getUIContext());
         this.loadSessions();
       } else {
-        SystemToast.showError(response.message || '撤销失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '撤销失败'), this.getUIContext());
       }
     } catch (_) {
       SystemToast.showError('撤销失败', this.getUIContext());
@@ -78,7 +79,7 @@ export struct SafetySettingsPage {
         SystemToast.showSuccess('其他会话已全部下线', this.getUIContext());
         this.loadSessions();
       } else {
-        SystemToast.showError(response.message || '操作失败', this.getUIContext());
+        SystemToast.showError(getErrorMessage(response, '操作失败'), this.getUIContext());
       }
     } catch (_) {
       SystemToast.showError('操作失败', this.getUIContext());

@@ -100,3 +100,12 @@ export function guessUserMessageFromSnapshot(
   if ((code !== undefined && isServerErrorCode(code)) || (typeof status === 'number' && status >= 500)) return defaultMessage;
   return defaultMessage;
 }
+
+/**
+ * 便捷方法：从 API 响应对象中提取友好错误消息
+ * 供页面统一替换 response.message || 'fallback' 模式
+ */
+export function getErrorMessage(response: Object, fallback: string = '操作失败'): string {
+  const snapshot = extractApiErrorSnapshot(response);
+  return guessUserMessageFromSnapshot(snapshot, fallback);
+}

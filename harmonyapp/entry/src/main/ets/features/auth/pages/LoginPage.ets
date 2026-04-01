@@ -14,6 +14,7 @@ import { SystemToast } from '../../../components/SystemToast';
 import { PasswordSecurityUtil } from '../../../core/security/PasswordSecurityUtil';
 import { AuthData, MyProfile, LoginRequest, RegisterRequest } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
+import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
@@ -439,7 +440,7 @@ export struct LoginPage {
           await this.handleAuthSuccess(response.data);
           this.loadingProgress = 100;
         } else {
-          SystemToast.showError(response.message || '登录失败', this.getUIContext());
+          SystemToast.showError(getErrorMessage(response, '登录失败'), this.getUIContext());
         }
       }, LoadingUtil.DEFAULT_ACTION_MS);
     } catch (error) {
@@ -504,7 +505,7 @@ export struct LoginPage {
           await this.handleAuthSuccess(response.data);
           this.loadingProgress = 100;
         } else {
-          SystemToast.showError(response.message || '注册失败', this.getUIContext());
+          SystemToast.showError(getErrorMessage(response, '注册失败'), this.getUIContext());
         }
       }, LoadingUtil.DEFAULT_ACTION_MS);
     } catch (error) {
