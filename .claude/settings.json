@@ -14,8 +14,7 @@
       "TaskCreate",
       "TaskUpdate",
       "TaskList",
-      "EnterWorktree",
-      "ExitWorktree",
+      "ExitPlanMode",
       "Bash(git *)",
       "Bash(python3 .claude/scripts/*)",
       "Bash(*deploy/scripts/*)",
@@ -27,19 +26,6 @@
       "mcp__zai-mcp-server__analyze_image",
       "mcp__web-reader__webReader",
       "WebFetch(domain:docs.anthropic.com)"
-    ],
-    "ask": [
-      "Edit(.claude/settings.json)",
-      "Write(.claude/settings.json)",
-      "Edit(.claude/settings.local.json)",
-      "Write(.claude/settings.local.json)",
-      "Bash(git fetch:*)",
-      "Bash(git pull:*)",
-      "Bash(git merge:*)",
-      "Bash(git push:*)",
-      "Bash(git reset --hard:*)",
-      "Bash(git clean:*)",
-      "Bash(*--force*)"
     ]
   },
   "hooks": {
