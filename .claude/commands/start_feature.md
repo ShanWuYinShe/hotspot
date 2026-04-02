@@ -14,10 +14,9 @@ $ARGUMENTS
 
 1. 先检查主目录是否保持在本地 `main` 且无未提交改动；如果不是，先停下来说明原因。
 2. 先按任务范围读取根 `CLAUDE.md`、对应子项目 `CLAUDE.md` 与必要的 `spec/`。
-3. 分析任务：根据复杂度和文件集决定是否拆分为多个子任务；子任务边界清晰且文件集相对独立时才并行，否则保持单任务。
-4. 对非极小任务，优先进入 plan mode；然后立即建立 task list。
-5. **必须使用 `EnterWorktree` 工具**从主目录当前最新本地 `main HEAD` 创建新的 feature worktree；`name` 参数必须遵循 `{子项目名}.{模块名}.{功能描述}` 格式（如 `backend-go.auth.add-oauth`），允许的子项目名见根 `CLAUDE.md`；任何 implement 行为开始前都必须已经在该 worktree 中。
-6. 在该 feature worktree 中完成 `实现 → check(语法/编译/警告) → test → simplify → strict review → commit` 闭环；任一环节发现问题必须修复后重新循环。check 环节通过受控脚本执行：Rust 后端用 `python3 .claude/scripts/rust_dev.py --task <check|all>`，Go 后端用 `python3 .claude/scripts/go_dev.py --task <check|all>`，前端用 `python3 .claude/scripts/frontend_dev.py --task <check|all>`，Harmony 客户端用 `python3 .claude/scripts/harmony_worktree.py --task <check|all>`。最终有效结论以 `deploy/scripts/verify.sh --env-name <name>` 为准。
+3. 分析任务范围：确定涉及的子项目和模块，根据复杂度和文件集决定是否拆分为多个子任务；子任务边界清晰且文件集相对独立时才并行，否则保持单任务。此步骤只需轻量判断，不进入 plan mode。
+4. **必须使用 `EnterWorktree` 工具**从主目录当前最新本地 `main HEAD` 创建新的 feature worktree；`name` 参数必须遵循 `{子项目名}.{模块名}.{功能描述}` 格式（如 `backend-go.auth.add-oauth`），允许的子项目名见根 `CLAUDE.md`；plan、task list 和所有后续实现行为都必须在该 worktree 中进行。
+5. 在该 feature worktree 中，对非极小任务优先进入 plan mode 并建立 task list，然后完成 `实现 → check(语法/编译/警告) → test → simplify → strict review → commit` 闭环；任一环节发现问题必须修复后重新循环。check 环节通过受控脚本执行：Rust 后端用 `python3 .claude/scripts/rust_dev.py --task <check|all>`，Go 后端用 `python3 .claude/scripts/go_dev.py --task <check|all>`，前端用 `python3 .claude/scripts/frontend_dev.py --task <check|all>`，Harmony 客户端用 `python3 .claude/scripts/harmony_worktree.py --task <check|all>`。最终有效结论以 `deploy/scripts/verify.sh --env-name <name>` 为准。
 7. 若改动触达前端展示层，追加 `verify-inspect` 环节，由 Claude Code 主动完成页面级确认。
 8. 完成 simplify 和严格 review 后，必须调用 `feature-ready-check` subagent 做最终复核，并在输出中复述其 `## 结论`、`## 阻塞项`、`## 建议下一步`。
 9. 若本任务为单 worktree，进入 `/sync_back_main`；若为多子任务汇总，进入 integration。远程同步策略以根 `CLAUDE.md` 与 `/sync_back_main` 为准。

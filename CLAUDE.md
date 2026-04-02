@@ -19,8 +19,8 @@ HotSpot 是一个多端 monorepo：
 ## 整体流程
 本仓库的默认工作流是一个完整的本地闭环：
 1. **任务描述**：用户在对话中描述任务。
-2. **任务分析**：Claude Code 分析任务范围，根据复杂度和文件集决定是否拆分为多个子任务；子任务边界清晰且文件集相对独立时才并行，否则保持单任务。
-3. **创建 worktree 并实现**：从主目录本地 `main` 当前 HEAD 创建 feature worktree（多子任务时每个子任务各创建一个），在 worktree 中完成全部实现、检查、测试和 review。
+2. **范围判断**：Claude Code 在主目录进行轻量级范围判断，确定涉及的子项目、模块和复杂度，决定是否拆分为多个子任务。此步骤不进入 plan mode，不做详细设计。
+3. **创建 worktree 并完成全部工作**：从主目录本地 `main` 当前 HEAD 创建 feature worktree（多子任务时每个子任务各创建一个），在 worktree 中依次完成 plan、实现、检查、测试和 review 等全部后续环节。
 4. **合并回主目录**：
    - 单任务：在 feature worktree 中完成全部质量门后，通过 `rebase` 整理分支，以 fast-forward 方式同步回主目录本地 `main`。
    - 多子任务：新建专门的 integration worktree，将所有子任务成果通过 `rebase + squash` 收敛为单个 commit，在 integration worktree 中完成全部质量门后，再同步回主目录本地 `main`。
@@ -54,7 +54,7 @@ HotSpot 是一个多端 monorepo：
 - 本轮完成后，删除已完成的 feature worktree / branch 与 integration worktree；删除本会话管理的 worktree 时，默认同步删除其对应非主分支 branch。若 `git branch -d` 仅因未合到远程 tracking branch 而拒绝，但已确认结果线性同步回主目录本地 `main`，则可继续使用 `git branch -D` 完成回收。
 
 ## 质量门顺序
-- 默认顺序：`analyze -> plan -> task list -> implement -> check(语法/编译/警告) -> test -> simplify -> strict review -> commit -> (integrate -> verify) -> sync-back -> cleanup`
+- 默认顺序（均在 feature worktree 内完成）：`plan -> task list -> implement -> check(语法/编译/警告) -> test -> simplify -> strict review -> commit -> (integrate -> verify) -> sync-back -> cleanup`
 - 任何涉及代码修改的 worktree 必须完成 `check → test → review` 闭环；若任一环节发现问题，必须修复后重新从 check 开始循环，直到全部通过。不允许跳过任何环节或在环节未通过时进入下一步。
 - `simplify` 负责实现后的代码收敛与重复清理；严格 reviewer 负责合并前门槛，不固定绑定某一个第三方 skill。
 - integration 后必须再做一轮 `verify`，不能把各 feature worktree 的局部通过当成集成通过。
