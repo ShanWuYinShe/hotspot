@@ -6,6 +6,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
+	import { t } from '$lib/i18n';
 	import Home from 'lucide-svelte/icons/home';
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import TriangleAlert from 'lucide-svelte/icons/triangle-alert';
@@ -24,21 +25,21 @@
 		</h1>
 		<p class="text-lg text-muted-foreground">
 			{#if is404}
-				找不到你要访问的页面
+				{t('errorPage.notFound')}
 			{:else}
-				{page.error?.message ?? '页面出了点问题'}
+				{t('errorPage.defaultMessage')}
 			{/if}
 		</p>
 	</div>
 
 	<div class="flex gap-3">
-		<Button variant="outline" onclick={() => history.back()} aria-label="返回上一页">
+		<Button variant="outline" onclick={() => history.back()} aria-label={t('errorPage.backAria')}>
 			<ArrowLeft class="mr-2 h-4 w-4" />
-			返回
+			{t('errorPage.back')}
 		</Button>
-		<Button onclick={() => goto('/')} aria-label="回到首页">
+		<Button onclick={() => goto('/')} aria-label={t('errorPage.homeAria')}>
 			<Home class="mr-2 h-4 w-4" />
-			首页
+			{t('errorPage.home')}
 		</Button>
 	</div>
 </div>

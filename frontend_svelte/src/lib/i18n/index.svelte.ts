@@ -20,17 +20,42 @@ type NestedKeyOf<T> = T extends object
 
 export type TranslationKey = NestedKeyOf<typeof zhCN>;
 
-const translations = { 'zh-CN': zhCN, en };
+const translations = { 'zh-CN': zhCN, en } as const;
 
 let currentLocale = $state<Locale>('zh-CN');
 
-function getByPath(obj: unknown, path: string): string | undefined {
-	let cur: unknown = obj;
-	for (const p of path.split('.')) {
-		if (cur == null || typeof cur !== 'object') return undefined;
-		cur = (cur as Record<string, unknown>)[p];
+function flattenTranslations(
+	obj: unknown,
+	prefix = '',
+	result: Record<string, string> = {}
+): Record<string, string> {
+	if (obj == null || typeof obj !== 'object') return result;
+
+	for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+		const nextKey = prefix ? `${prefix}.${key}` : key;
+		if (typeof value === 'string') {
+			result[nextKey] = value;
+			continue;
+		}
+		flattenTranslations(value, nextKey, result);
 	}
-	return typeof cur === 'string' ? cur : undefined;
+
+	return result;
+}
+
+const flatTranslations: Record<Locale, Record<string, string>> = {
+	'zh-CN': flattenTranslations(zhCN),
+	en: flattenTranslations(en)
+};
+
+function translateWithParams(
+	locale: Locale,
+	key: TranslationKey,
+	params?: Record<string, string | number>
+): string {
+	const raw = flatTranslations[locale][key] ?? flatTranslations['zh-CN'][key] ?? key;
+	if (!params) return raw;
+	return raw.replace(/\{(\w+)\}/g, (_, k: string) => String(params[k] ?? ''));
 }
 
 /**
@@ -41,10 +66,15 @@ function getByPath(obj: unknown, path: string): string | undefined {
  */
 export function t(key: TranslationKey, params?: Record<string, string | number>): string {
 	const locale = currentLocale; // reactive read
-	const raw =
-		getByPath(translations[locale], key) ?? getByPath(translations['zh-CN'], key) ?? key;
-	if (!params) return raw;
-	return raw.replace(/\{(\w+)\}/g, (_, k: string) => String(params[k] ?? ''));
+	return translateWithParams(locale, key, params);
+}
+
+export function translateWithLocale(
+	locale: Locale,
+	key: TranslationKey,
+	params?: Record<string, string | number>
+): string {
+	return translateWithParams(locale, key, params);
 }
 
 export function getLocale(): Locale {

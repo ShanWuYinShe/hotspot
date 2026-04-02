@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { searchService, feedService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
+	import { t } from '$lib/i18n';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
@@ -29,6 +30,8 @@
 	let isLoadingTags = $state(false);
 	let isSuggesting = $state(false);
 	let trendingTags = $state.raw<TagItem[]>([]);
+	let hasLoadedTrendingTags = $state(false);
+	let trendingLoadVersion = 0;
 	let suggestions = $state.raw<SearchSuggestItem[]>([]);
 	let recentSearches = $state.raw<string[]>([]);
 	const trimmedKeyword = $derived(keyword.trim());
@@ -124,16 +127,23 @@
 	}
 
 	async function loadTrendingTags() {
+		if (isLoadingTags || hasLoadedTrendingTags) return;
+
+		const version = ++trendingLoadVersion;
 		isLoadingTags = true;
 		try {
 			const response = await feedService.getTrending();
+			if (version !== trendingLoadVersion) return;
 			if (isSuccess(response) && response.data) {
 				trendingTags = response.data.trending_tags;
+				hasLoadedTrendingTags = true;
 			}
 		} catch {
-			// ignore
+			if (version !== trendingLoadVersion) return;
 		} finally {
-			isLoadingTags = false;
+			if (version === trendingLoadVersion) {
+				isLoadingTags = false;
+			}
 		}
 	}
 
@@ -186,7 +196,7 @@
 	}
 
 	function getRemoveRecentLabel(term: string): string {
-		return `删除搜索记录 ${term}`;
+		return t('searchModal.removeRecent', { term });
 	}
 
 	function closeModal() {
@@ -223,60 +233,79 @@
 		}
 	}
 
-	function getSuggestionTitle(item: SearchSuggestItem): string {
-		if (!item?.payload) return '未知';
-		
+	function getSuggestionPresentation(item: SearchSuggestItem): {
+		title: string;
+		subtitle: string | null;
+		badge: string;
+		avatarAlt: string | null;
+		avatarFallback: string | null;
+	} {
+		const unknown = t('searchModal.unknown');
+		const unknownUser = t('searchModal.unknownUser');
+		const unknownGroup = t('searchModal.unknownGroup');
+
 		switch (item.type) {
-			case 'tag':
-				return `#${item.payload.name || ''}`;
-			case 'user':
-				return item.payload.nickname || '未知用户';
-			case 'group':
-				return item.payload.name || '未知群组';
-			case 'moment':
-				return item.payload.description_preview || '瞬间';
+			case 'tag': {
+				const payload = item.payload;
+				return {
+					title: `#${payload.name || ''}`,
+					subtitle: t('searchModal.usedCount', { count: payload.usage_count || 0 }),
+					badge: t('searchModal.tagBadge'),
+					avatarAlt: null,
+					avatarFallback: null
+				};
+			}
+			case 'user': {
+				const payload = item.payload;
+				const name = payload.nickname || unknownUser;
+				return {
+					title: name,
+					subtitle: payload.bio || null,
+					badge: t('searchModal.userBadge'),
+					avatarAlt: name,
+					avatarFallback: name.slice(0, 2)
+				};
+			}
+			case 'group': {
+				const payload = item.payload;
+				const name = payload.name || unknownGroup;
+				return {
+					title: name,
+					subtitle: payload.description || t('searchModal.memberCount', { count: payload.members_count || 0 }),
+					badge: t('searchModal.groupBadge'),
+					avatarAlt: name,
+					avatarFallback: name.slice(0, 2)
+				};
+			}
+			case 'moment': {
+				const payload = item.payload;
+				const authorName = payload.author?.nickname || unknownUser;
+				return {
+					title: payload.description_preview || t('searchModal.momentFallback'),
+					subtitle: payload.author?.nickname
+						? t('searchModal.fromAuthor', { nickname: payload.author.nickname })
+						: null,
+					badge: t('searchModal.momentBadge'),
+					avatarAlt: authorName,
+					avatarFallback: authorName.slice(0, 2)
+				};
+			}
 			default:
-				return '未知';
+				return {
+					title: unknown,
+					subtitle: null,
+					badge: unknown,
+					avatarAlt: null,
+					avatarFallback: null
+				};
 		}
 	}
 
-	function getSuggestionSubtitle(item: SearchSuggestItem): string | null {
-		if (!item?.payload) return null;
-		
-		switch (item.type) {
-			case 'tag':
-				return `使用 ${item.payload.usage_count || 0} 次`;
-			case 'user':
-				return item.payload.bio || null;
-			case 'group':
-				return item.payload.description || `${item.payload.members_count || 0} 位成员`;
-			case 'moment':
-				return item.payload.author?.nickname ? `来自 ${item.payload.author.nickname}` : null;
-			default:
-				return null;
-		}
-	}
-
-	function getSuggestionBadge(item: SearchSuggestItem): string {
-		switch (item.type) {
-			case 'tag':
-				return '标签';
-			case 'user':
-				return '用户';
-			case 'group':
-				return '群组';
-			case 'moment':
-				return '瞬间';
-		}
-	}
-
-	// 打开对话框时加载数据，关闭时清理
 	$effect(() => {
 		if (open) {
 			loadRecent();
 			loadTrendingTags();
 		} else {
-			// 关闭时清理所有状态
 			keyword = '';
 			suggestions = [];
 			if (suggestTimer) {
@@ -289,28 +318,19 @@
 		}
 	});
 
-	// 搜索建议防抖
 	$effect(() => {
 		if (!open) {
-			// Modal 关闭时不执行搜索建议
 			return;
 		}
-		
-		// 清除之前的定时器
 		if (suggestTimer) clearTimeout(suggestTimer);
-		
-		// 如果没有输入，清空建议
 		if (!trimmedKeyword) {
 			suggestions = [];
 			return;
 		}
-		
-		// 防抖：250ms 后执行搜索建议
 		suggestTimer = setTimeout(() => {
 			loadSuggestions(trimmedKeyword);
 		}, 250);
 
-		// 清理函数
 		return () => {
 			if (suggestTimer) {
 				clearTimeout(suggestTimer);
@@ -327,9 +347,9 @@
 				<div class="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/50 bg-primary/10 text-primary">
 					<Search class="h-5 w-5" />
 				</div>
-				<div>搜索</div>
+				<div>{t('searchModal.title')}</div>
 			</Dialog.Title>
-			<Dialog.Description>输入关键词，点击搜索进入结果页</Dialog.Description>
+			<Dialog.Description>{t('searchModal.description')}</Dialog.Description>
 		</Dialog.Header>
 
 		<div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-4">
@@ -344,11 +364,11 @@
 					<Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 					<Input
 						type="text"
-						placeholder="输入关键词开始搜索"
+						placeholder={t('searchModal.placeholder')}
 						class="h-11 rounded-2xl border-border/60 bg-background/75 pl-9 pr-9"
 						bind:value={keyword}
 						autocomplete="off"
-						aria-label="搜索关键词"
+						aria-label={t('searchModal.inputAria')}
 					/>
 					{#if keyword}
 						<Button
@@ -357,13 +377,13 @@
 							size="icon"
 							class="absolute right-1 top-1/2 h-9 w-9 -translate-y-1/2 rounded-xl text-muted-foreground hover:text-foreground"
 							onclick={clearSearch}
-							aria-label="清空搜索关键词"
+							aria-label={t('searchModal.clearInput')}
 						>
 							<X class="h-4 w-4" />
 						</Button>
 					{/if}
 				</div>
-				<Button size="icon" class="h-11 w-11 rounded-2xl" aria-label="搜索" type="submit" disabled={!keyword.trim()}>
+				<Button size="icon" class="h-11 w-11 rounded-2xl" aria-label={t('searchModal.submit')} type="submit" disabled={!keyword.trim()}>
 					<Search class="h-4 w-4" />
 				</Button>
 			</form>
@@ -378,7 +398,7 @@
 								{/each}
 							</div>
 						{:else if !hasSuggestions}
-							<p class="text-sm text-muted-foreground">暂无相关建议，按回车进入结果页</p>
+							<p class="text-sm text-muted-foreground">{t('searchModal.noSuggestions')}</p>
 						{:else}
 							<div class="space-y-4">
 								{#if recentMatches.length > 0}
@@ -386,7 +406,7 @@
 										<div class="flex items-center justify-between">
 											<div class="flex items-center gap-2 text-xs font-medium text-muted-foreground">
 												<Clock class="h-3 w-3" />
-												匹配的搜索历史
+												{t('searchModal.matchedHistory')}
 											</div>
 											<Button
 												variant="ghost"
@@ -394,7 +414,7 @@
 												class="h-6 px-2 text-xs text-muted-foreground hover:text-destructive hover:scale-105 active:scale-95 transition-all"
 												onclick={clearAllRecent}
 											>
-												清空全部
+												{t('searchModal.clearAll')}
 											</Button>
 										</div>
 										<div class="flex flex-wrap gap-2">
@@ -429,10 +449,11 @@
 									<div class="space-y-2">
 										<div class="flex items-center gap-2 text-xs font-medium text-muted-foreground">
 											<TrendingUp class="h-3 w-3" />
-											综合建议
+											{t('searchModal.suggestions')}
 										</div>
 										<div class="space-y-1">
 											{#each suggestions as item (getSuggestionKey(item))}
+												{@const presentation = getSuggestionPresentation(item)}
 												<button
 													type="button"
 													class="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-accent/50"
@@ -444,18 +465,18 @@
 														</div>
 													{:else if item.type === 'user' && item.payload}
 														<Avatar class="h-9 w-9">
-															<AvatarImage src={item.payload.avatar_url} alt={item.payload.nickname || '用户'} />
-															<AvatarFallback>{(item.payload.nickname || '用户').slice(0, 2)}</AvatarFallback>
+															<AvatarImage src={item.payload.avatar_url} alt={presentation.avatarAlt ?? ''} />
+															<AvatarFallback>{presentation.avatarFallback ?? '?'}</AvatarFallback>
 														</Avatar>
 													{:else if item.type === 'group' && item.payload}
 														<Avatar class="h-9 w-9">
-															<AvatarImage src={item.payload.avatar_url} alt={item.payload.name || '群组'} />
-															<AvatarFallback>{(item.payload.name || '群组').slice(0, 2)}</AvatarFallback>
+															<AvatarImage src={item.payload.avatar_url} alt={presentation.avatarAlt ?? ''} />
+															<AvatarFallback>{presentation.avatarFallback ?? '?'}</AvatarFallback>
 														</Avatar>
 													{:else if item.type === 'moment' && item.payload}
 														<Avatar class="h-9 w-9">
-															<AvatarImage src={item.payload.author?.avatar_url} alt={item.payload.author?.nickname || '用户'} />
-															<AvatarFallback>{(item.payload.author?.nickname || '用户').slice(0, 2)}</AvatarFallback>
+															<AvatarImage src={item.payload.author?.avatar_url} alt={presentation.avatarAlt ?? ''} />
+															<AvatarFallback>{presentation.avatarFallback ?? '?'}</AvatarFallback>
 														</Avatar>
 													{:else}
 														<Avatar class="h-9 w-9">
@@ -464,13 +485,13 @@
 													{/if}
 													<div class="min-w-0 flex-1">
 														<div class="flex items-center gap-2">
-															<div class="truncate text-sm font-medium">{getSuggestionTitle(item)}</div>
+															<div class="truncate text-sm font-medium">{presentation.title}</div>
 															<Badge variant="secondary" class="rounded-2xl px-2 py-0.5 text-[10px] font-medium">
-																{getSuggestionBadge(item)}
+																{presentation.badge}
 															</Badge>
 														</div>
-														{#if getSuggestionSubtitle(item)}
-															<div class="truncate text-xs text-muted-foreground">{getSuggestionSubtitle(item)}</div>
+														{#if presentation.subtitle}
+															<div class="truncate text-xs text-muted-foreground">{presentation.subtitle}</div>
 														{/if}
 													</div>
 												</button>
@@ -480,7 +501,7 @@
 								{/if}
 							</div>
 						{/if}
-						<div class="text-xs text-muted-foreground">点击搜索图标进入结果页</div>
+						<div class="text-xs text-muted-foreground">{t('searchModal.clickSearchIcon')}</div>
 					</CardContent>
 				</Card>
 			{:else}
@@ -490,7 +511,7 @@
 							<div class="flex items-center justify-between">
 								<div class="flex items-center gap-2 text-sm font-medium">
 									<Clock class="h-4 w-4 text-muted-foreground" />
-									最近搜索
+									{t('searchModal.recentSearches')}
 								</div>
 								{#if recentSearches.length > 0}
 									<Button
@@ -499,12 +520,12 @@
 										class="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
 										onclick={clearAllRecent}
 									>
-										清空全部
+										{t('searchModal.clearAll')}
 									</Button>
 								{/if}
 							</div>
 							{#if recentSearches.length === 0}
-								<p class="text-sm text-muted-foreground">暂无搜索记录</p>
+								<p class="text-sm text-muted-foreground">{t('searchModal.noRecentSearches')}</p>
 							{:else}
 								<div class="flex flex-wrap gap-2">
 									{#each recentSearches as term (term)}
@@ -539,7 +560,7 @@
 						<CardContent class="space-y-3 p-4">
 							<div class="flex items-center gap-2 text-sm font-medium">
 								<TrendingUp class="h-4 w-4 text-muted-foreground" />
-								热门标签
+								{t('searchModal.trendingTags')}
 							</div>
 							{#if isLoadingTags}
 								<div class="space-y-2">
@@ -548,7 +569,7 @@
 									{/each}
 								</div>
 							{:else if trendingTags.length === 0}
-								<p class="text-sm text-muted-foreground">暂无热门标签</p>
+								<p class="text-sm text-muted-foreground">{t('searchModal.noTrendingTags')}</p>
 							{:else}
 								<div class="flex flex-wrap gap-2">
 									{#each trendingTags as tag (tag.name)}
@@ -557,7 +578,7 @@
 											variant="ghost"
 											class="rounded-2xl p-0 hover:bg-transparent"
 											onclick={() => handleTagClick(tag.name)}
-											aria-label={`搜索热门标签 ${tag.name}`}
+											aria-label={t('searchModal.searchHotTag', { name: tag.name })}
 										>
 											<Badge
 												variant="secondary"

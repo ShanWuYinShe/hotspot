@@ -1,11 +1,12 @@
 <script lang="ts">
 	/**
 	 * 通用无限滚动加载指示器组件
-	 * 
+	 *
 	 * 参考 Instagram/Twitter/小红书 的设计：轻量、微妙、不打扰
 	 */
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 	import { Button } from '$lib/components/ui/button';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		/** 是否正在加载 */
@@ -68,7 +69,7 @@
 			<!-- 加载中：轻量的 spinner -->
 			<div class="flex items-center gap-2 text-muted-foreground">
 				<Loader2 class="h-5 w-5 animate-spin" />
-				<span class="text-sm">加载中...</span>
+				<span class="text-sm">{t('common.loading')}</span>
 			</div>
 		{:else}
 			<!-- 未加载：微妙的向下箭头提示 -->
@@ -78,7 +79,7 @@
 				size="icon"
 				class="group flex flex-col items-center gap-1 rounded-full border-none bg-transparent p-0 text-muted-foreground/50 shadow-none hover:text-muted-foreground"
 				onclick={onLoadMore}
-				aria-label="加载更多"
+				aria-label={t('common.loadMore')}
 			>
 				<svg
 					class="h-6 w-6 animate-bounce"
@@ -94,7 +95,7 @@
 					/>
 				</svg>
 				<span class="text-xs opacity-0 transition-opacity group-hover:opacity-100">
-					点击加载
+					{t('loadMoreIndicator.clickToLoad')}
 				</span>
 			</Button>
 		{/if}
