@@ -99,9 +99,12 @@ func newHandlers() (*Handler, *private_messages.Handler) {
 }
 
 func newHandlersWithUserRepo(userRepo *users.InMemoryRepository) (*Handler, *private_messages.Handler) {
-	messageRuntime := private_messages.NewRuntimeWithRepo(private_messages.NewInMemoryRepository())
-	chatHandler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), messageRuntime.ReadService(), users.NewServiceWithRepo(userRepo)), appconfig.NewStaticSource(config.Load()))
-	return chatHandler, messageRuntime.Handler()
+	messageRepo := private_messages.NewInMemoryRepository()
+	userService := users.NewServiceWithRepo(userRepo)
+	messageService := private_messages.NewServiceWithDeps(messageRepo, userService)
+	messageHandler := private_messages.NewHandler(messageService)
+	chatHandler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), messageService, userService), appconfig.NewStaticSource(config.Load()))
+	return chatHandler, messageHandler
 }
 
 func seedPrivateChatUsers(userRepo *users.InMemoryRepository) {
@@ -213,12 +216,13 @@ func TestOpenTheDoorUsesSharedResponseDefaults(t *testing.T) {
 	}
 
 	messageRepo := private_messages.NewInMemoryRepository()
-	messageRuntime := private_messages.NewRuntimeWithRepo(messageRepo)
 	userRepo := users.NewInMemoryRepository()
 	_ = userRepo.PutProfile(context.Background(), users.MyProfile{UserID: "user_bob", Nickname: "Bob", UserType: users.UserTypeNormal, Location: users.Location{LocationName: "Somewhere"}, PresenceStatus: users.UserPresenceOnline, LastOnline: time.Now().UTC().Format(time.RFC3339), CreatedAt: time.Now().UTC().Format(time.RFC3339)})
 	_ = userRepo.PutSettings(context.Background(), "user_bob", users.UserSettings{AllowPrivateChat: users.PrivateChatEveryone, PresenceVisible: true, LocationVisible: true, SocialListsVisible: true, GroupsVisible: true, LikedMomentsVisible: true, StatsVisible: true, AllowFollow: true, Searchable: true, NicknameSearchable: true, LocationSearchable: true})
-	chatHandler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), messageRuntime.ReadService(), users.NewServiceWithRepo(userRepo)), source)
-	messageHandler := messageRuntime.Handler()
+	userService := users.NewServiceWithRepo(userRepo)
+	messageService := private_messages.NewServiceWithDeps(messageRepo, userService)
+	chatHandler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), messageService, userService), source)
+	messageHandler := private_messages.NewHandler(messageService)
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 
 	for _, body := range []string{

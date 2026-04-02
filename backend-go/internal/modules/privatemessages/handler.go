@@ -1,7 +1,6 @@
 package private_messages
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -33,12 +32,12 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req SendPrivateMessageRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.TargetUserID == "" || req.Type == "" {
-		logBusinessError(r, "Send", 10000, "参数错误")
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
+		logBusinessError(r, "Send", err.Code, err.Message)
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
 		return
 	}
-	if req.Type == "text" && req.Content == "" {
+	if !isValidSendRequest(req) {
 		logBusinessError(r, "Send", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -55,12 +54,17 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetHistory(w http.ResponseWriter, r *http.Request) {
 	var req GetHistoryRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.TargetUserID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
+		logBusinessError(r, "GetHistory", err.Code, err.Message)
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		return
+	}
+	if req.TargetUserID == "" || !isValidPagination(req.Pagination) {
 		logBusinessError(r, "GetHistory", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	history, err := h.service.History(r.Context(), req.TargetUserID)
+	history, err := h.service.History(r.Context(), req)
 	if err != nil {
 		logServerError(r, "GetHistory", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
@@ -71,7 +75,7 @@ func (h *Handler) GetHistory(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var req UpdatePrivateMessageRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.MessageID == "" || req.Content == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MessageID == "" || req.Content == "" {
 		logBusinessError(r, "Update", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -98,7 +102,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 	var req RecallPrivateMessageRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.MessageID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.MessageID == "" {
 		logBusinessError(r, "Recall", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -125,7 +129,7 @@ func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 	var req MarkPrivateMessagesReadRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.TargetUserID == "" {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.TargetUserID == "" {
 		logBusinessError(r, "MarkAsRead", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -155,4 +159,30 @@ func (h *Handler) MarkAllRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
+}
+
+func isValidSendRequest(req SendPrivateMessageRequest) bool {
+	if req.TargetUserID == "" || req.Type == "" {
+		return false
+	}
+	switch req.Type {
+	case "text":
+		return req.Content != ""
+	case "image", "video", "audio", "file":
+		return req.FileID != ""
+	case "share":
+		return req.ShareCode != ""
+	default:
+		return false
+	}
+}
+
+func isValidPagination(p *PaginationParams) bool {
+	if p == nil {
+		return true
+	}
+	if p.Limit < 0 || p.Limit > 100 {
+		return false
+	}
+	return true
 }

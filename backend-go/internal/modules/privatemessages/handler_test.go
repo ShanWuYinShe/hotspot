@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"hotspot/backend-go/internal/modules/users"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
 )
@@ -28,7 +29,7 @@ type privateMessageErrorRepo struct {
 func (r *privateMessageErrorRepo) Send(context.Context, string, string, SendPrivateMessageRequest) (MessageSent, error) {
 	return MessageSent{}, r.sendErr
 }
-func (r *privateMessageErrorRepo) History(context.Context, string, string) (PaginatedMessages, error) {
+func (r *privateMessageErrorRepo) History(context.Context, string, GetHistoryRequest) (PaginatedMessages, error) {
 	return PaginatedMessages{}, r.historyErr
 }
 func (r *privateMessageErrorRepo) Recent(context.Context, string, string, int, *time.Time) (PaginatedMessages, error) {
@@ -53,6 +54,22 @@ func (r *privateMessageErrorRepo) MarkAllRead(context.Context, string) error {
 	return r.markAllErr
 }
 
+type privateMessageUserStub struct {
+	item     users.UserItem
+	ok       bool
+	openErr  error
+	settings users.UserSettings
+	setErr   error
+}
+
+func (s *privateMessageUserStub) OpenTheDoor(context.Context, string) (users.UserItem, bool, error) {
+	return s.item, s.ok, s.openErr
+}
+
+func (s *privateMessageUserStub) GetMySettings(context.Context) (users.UserSettings, error) {
+	return s.settings, s.setErr
+}
+
 func withPrivateMessagePrincipal(req *http.Request) *http.Request {
 	ctx := platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 	return req.WithContext(ctx)
@@ -60,7 +77,14 @@ func withPrivateMessagePrincipal(req *http.Request) *http.Request {
 
 func TestSendAndHistoryPrivateMessages(t *testing.T) {
 	idempotency.SetStore(idempotency.NewInMemoryStore())
-	handler := NewHandler(NewService())
+	userStub := &privateMessageUserStub{
+		item: users.UserItem{Relation: &users.Relationship{}},
+		ok:   true,
+		settings: users.UserSettings{
+			AllowPrivateChat: users.PrivateChatEveryone,
+		},
+	}
+	handler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), userStub))
 
 	sendReq := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/send", strings.NewReader(`{"target_user_id":"user_bob","type":"text","content":"hello"}`)))
 	sendReq.Header.Set("Idempotency-Key", "abcd1234abcd1234abcd1234abcd1234")
@@ -83,6 +107,37 @@ func TestSendAndHistoryPrivateMessages(t *testing.T) {
 	if resp.Code != 0 || len(resp.Data.Items) != 1 || resp.Data.Items[0].Content != "hello" {
 		t.Fatalf("unexpected history response: %#v", resp)
 	}
+}
+
+func TestPrivateMessagesSendValidatesByType(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&privateMessageErrorRepo{}))
+	cases := []string{
+		`{"target_user_id":"user_bob","type":"text"}`,
+		`{"target_user_id":"user_bob","type":"image"}`,
+		`{"target_user_id":"user_bob","type":"share"}`,
+		`{"target_user_id":"user_bob","type":"unknown","content":"x"}`,
+	}
+	for _, body := range cases {
+		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/send", strings.NewReader(body)))
+		req.Header.Set("Idempotency-Key", "bbbb1234bbbb1234bbbb1234bbbb1234")
+		rr := httptest.NewRecorder()
+		handler.Send(rr, req)
+		assertPrivateMessageCode(t, rr, 10000)
+	}
+}
+
+func TestPrivateMessagesGetHistoryRejectsInvalidPaginationAndUnknownFields(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&privateMessageErrorRepo{}))
+
+	invalidPaginationReq := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/get_history", strings.NewReader(`{"target_user_id":"user_bob","pagination":{"limit":101}}`)))
+	invalidPaginationRR := httptest.NewRecorder()
+	handler.GetHistory(invalidPaginationRR, invalidPaginationReq)
+	assertPrivateMessageCode(t, invalidPaginationRR, 10000)
+
+	unknownFieldReq := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/get_history", strings.NewReader(`{"target_user_id":"user_bob","extra":true}`)))
+	unknownFieldRR := httptest.NewRecorder()
+	handler.GetHistory(unknownFieldRR, unknownFieldReq)
+	assertPrivateMessageCode(t, unknownFieldRR, 10000)
 }
 
 func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
@@ -164,20 +219,12 @@ func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
 		assertPrivateMessageCode(t, rr, 10000)
 	})
 
-	t.Run("mark as read success", func(t *testing.T) {
+	t.Run("mark all read requires empty object", func(t *testing.T) {
 		handler := NewHandler(NewServiceWithRepo(&privateMessageErrorRepo{}))
-		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_as_read", strings.NewReader(`{"target_user_id":"user_bob","up_to_message_id":"pm_1"}`)))
-		rr := httptest.NewRecorder()
-		handler.MarkAsRead(rr, req)
-		assertPrivateMessageCode(t, rr, 0)
-	})
-
-	t.Run("mark all read success", func(t *testing.T) {
-		handler := NewHandler(NewServiceWithRepo(&privateMessageErrorRepo{}))
-		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_all_read", strings.NewReader(`{}`)))
+		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_all_read", strings.NewReader(`{"extra":true}`)))
 		rr := httptest.NewRecorder()
 		handler.MarkAllRead(rr, req)
-		assertPrivateMessageCode(t, rr, 0)
+		assertPrivateMessageCode(t, rr, 10000)
 	})
 }
 

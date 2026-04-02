@@ -15,7 +15,7 @@ var (
 
 type Repository interface {
 	Send(context.Context, string, string, SendPrivateMessageRequest) (MessageSent, error)
-	History(context.Context, string, string) (PaginatedMessages, error)
+	History(context.Context, string, GetHistoryRequest) (PaginatedMessages, error)
 	Recent(context.Context, string, string, int, *time.Time) (PaginatedMessages, error)
 	Last(context.Context, string, string, *time.Time) (*PrivateMessageItem, error)
 	UnreadCount(context.Context, string, string, *time.Time) (int, error)

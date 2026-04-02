@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"hotspot/backend-go/internal/modules/users"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -21,16 +22,28 @@ type Runtime struct {
 	readService ReadService
 }
 
+type userReader interface {
+	OpenTheDoor(context.Context, string) (users.UserItem, bool, error)
+	GetMySettings(context.Context) (users.UserSettings, error)
+}
+
 type Service struct {
-	repo Repository
+	repo  Repository
+	users userReader
 }
 
 func NewService() *Service {
-	return NewServiceWithRepo(NewInMemoryRepository())
+	userRepo := users.NewInMemoryRepository()
+	return NewServiceWithDeps(NewInMemoryRepository(), users.NewServiceWithRepo(userRepo))
 }
 
 func NewServiceWithRepo(repo Repository) *Service {
-	return &Service{repo: repo}
+	userRepo := users.NewInMemoryRepository()
+	return NewServiceWithDeps(repo, users.NewServiceWithRepo(userRepo))
+}
+
+func NewServiceWithDeps(repo Repository, userService userReader) *Service {
+	return &Service{repo: repo, users: userService}
 }
 
 func NewRuntime(factory *persistence.Factory) *Runtime {
@@ -55,6 +68,9 @@ func (r *Runtime) ReadService() ReadService {
 
 func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (MessageSent, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
+	if err := s.ensureCanSend(ctx, principal.UserID, req.TargetUserID); err != nil {
+		return MessageSent{}, err
+	}
 	msg, err := s.repo.Send(ctx, principal.UserID, req.TargetUserID, req)
 	if err != nil {
 		observability.L().Error("privatemessages.send failed", "error", err, "target_user_id", req.TargetUserID)
@@ -64,9 +80,9 @@ func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (Mess
 	return msg, nil
 }
 
-func (s *Service) History(ctx context.Context, targetUserID string) (PaginatedMessages, error) {
+func (s *Service) History(ctx context.Context, req GetHistoryRequest) (PaginatedMessages, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	return s.repo.History(ctx, principal.UserID, targetUserID)
+	return s.repo.History(ctx, principal.UserID, req)
 }
 
 func (s *Service) Recent(ctx context.Context, targetUserID string, limit int, deletedAfter *time.Time) (PaginatedMessages, error) {
@@ -116,6 +132,38 @@ func (s *Service) MarkAllRead(ctx context.Context) error {
 	if err := s.repo.MarkAllRead(ctx, principal.UserID); err != nil {
 		observability.L().Error("privatemessages.mark_all_read failed", "error", err)
 		return err
+	}
+	return nil
+}
+
+func (s *Service) ensureCanSend(ctx context.Context, userID, targetUserID string) error {
+	if s.users == nil {
+		return nil
+	}
+	item, ok, err := s.users.OpenTheDoor(ctx, targetUserID)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return users.ErrUserNotFound
+	}
+	if userID == targetUserID {
+		return nil
+	}
+	if item.Relation != nil && item.Relation.IsBlocked {
+		return ErrMessagePermissionDenied
+	}
+	settings, settingsErr := s.users.GetMySettings(platformauth.WithPrincipal(ctx, platformauth.Principal{UserID: targetUserID, SessionID: "private-message-probe"}))
+	if settingsErr != nil {
+		return settingsErr
+	}
+	switch settings.AllowPrivateChat {
+	case users.PrivateChatNobody:
+		return ErrMessagePermissionDenied
+	case users.PrivateChatFriends:
+		if item.Relation == nil || !(item.Relation.IsFollowing && item.Relation.IsFollowedBy) {
+			return ErrMessagePermissionDenied
+		}
 	}
 	return nil
 }
