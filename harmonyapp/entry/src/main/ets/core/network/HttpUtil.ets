@@ -229,7 +229,7 @@ export class HttpUtil {
 
   private static async getAuthData(): Promise<AuthData | null> {
     try {
-      return await PreferencesUtil.getObject<AuthData>(StorageKeys.USER_INFO);
+      return await PreferencesUtil.getObject<AuthData>(StorageKeys.AUTH_DATA);
     } catch {
       return null;
     }
@@ -238,7 +238,7 @@ export class HttpUtil {
   private static async clearAuthData(): Promise<void> {
     try {
       await PreferencesUtil.remove(StorageKeys.ACCESS_TOKEN);
-      await PreferencesUtil.remove(StorageKeys.USER_INFO);
+      await PreferencesUtil.remove(StorageKeys.AUTH_DATA);
     } catch {
       // ignore
     }
@@ -303,7 +303,7 @@ export class HttpUtil {
         if (payloadRecord.code === 0 && payloadRecord.data) {
           const newAuth = payloadRecord.data as AuthData;
           await PreferencesUtil.set(StorageKeys.ACCESS_TOKEN, newAuth.access_token);
-          await PreferencesUtil.setObject(StorageKeys.USER_INFO, newAuth);
+          await PreferencesUtil.setObject(StorageKeys.AUTH_DATA, newAuth);
           hilog.info(DOMAIN_NUMBER, TAG, 'Token 刷新成功');
           return true;
         }

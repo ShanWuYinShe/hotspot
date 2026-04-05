@@ -13,7 +13,7 @@ import { LogManager } from '../utils/LogManager';
 import { TimerManager } from '../utils/TimerManager';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { EventBus } from '../events/EventBus';
-import { UnifiedStorageUtil } from '../utils/UnifiedStorageUtil';
+import { PreferencesUtil } from '../storage/PreferencesUtil';
 import { createLogger } from '../utils/LogManager';
 import { common } from '@kit.AbilityKit';
 
@@ -147,21 +147,13 @@ export class ServiceRegistry {
       tags: ['core', 'communication']
     });
 
-    registerService({
-      name: 'UnifiedStorageUtil',
-      factory: () => UnifiedStorageUtil.getInstance(),
-      lifecycle: ServiceLifecycle.SINGLETON,
-      dependencies: ['LogManager', 'ErrorHandler'],
-      tags: ['core', 'storage']
-    });
-
     // 2. 注册国际化服务
     if (this.config.enableI18n) {
       registerService({
         name: 'I18nManager',
         factory: () => I18nManager.getInstance(),
         lifecycle: ServiceLifecycle.SINGLETON,
-        dependencies: ['LogManager', 'ErrorHandler', 'EventBus', 'UnifiedStorageUtil'],
+        dependencies: ['LogManager', 'ErrorHandler', 'EventBus'],
         tags: ['feature', 'i18n']
       });
     }
@@ -183,7 +175,7 @@ export class ServiceRegistry {
         name: 'SmartNotificationService',
         factory: () => SmartNotificationService.getInstance(),
         lifecycle: ServiceLifecycle.SINGLETON,
-        dependencies: ['LogManager', 'TimerManager', 'ErrorHandler', 'UnifiedStorageUtil'],
+        dependencies: ['LogManager', 'TimerManager', 'ErrorHandler'],
         tags: ['feature', 'notification']
       });
     }
@@ -251,9 +243,7 @@ export class ServiceRegistry {
     logger.info('开始初始化需要Context的服务');
 
     try {
-      // 先初始化存储服务（其他服务依赖它）
-      const storageUtil = await this.lazyServiceManager.get<UnifiedStorageUtil>('UnifiedStorageUtil');
-      await storageUtil.initializeWithContext(context);
+      await PreferencesUtil.init(context);
 
       // 初始化国际化服务
       if (this.config.enableI18n) {

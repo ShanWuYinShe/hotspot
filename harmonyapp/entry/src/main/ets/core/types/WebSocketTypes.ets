@@ -4,6 +4,10 @@
  */
 
 import { UserInfo, GroupInfo, ClientType, MessageType, MessageMedia, MessageReplyTo, GroupAnnouncementItem, MomentSummary, UserSettings, FollowSource, GroupJoinMethod, Location } from './api';
+import { hilog } from '@kit.PerformanceAnalysisKit';
+
+const DOMAIN_NUMBER: number = 0xFF38;
+const TAG: string = 'WebSocketTypes';
 
 // ============================================================================
 // 订阅管理类型
@@ -888,7 +892,7 @@ export function parseServerEvent(data: string): ServerEvent | null {
   try {
     return (JSON.parse(data) as Object) as ServerEvent
   } catch (e) {
-    console.error('Failed to parse WebSocket message:', e)
+    hilog.error(DOMAIN_NUMBER, TAG, `Failed to parse WebSocket message: ${e}`)
     return null
   }
 }

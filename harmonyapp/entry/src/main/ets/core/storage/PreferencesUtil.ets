@@ -5,6 +5,10 @@
 
 import { preferences } from '@kit.ArkData';
 import { common } from '@kit.AbilityKit';
+import { hilog } from '@kit.PerformanceAnalysisKit';
+
+const DOMAIN_NUMBER: number = 0xFF37;
+const TAG: string = 'PreferencesUtil';
 
 export class PreferencesUtil {
   private static store: preferences.Preferences | null = null;
@@ -18,7 +22,7 @@ export class PreferencesUtil {
         PreferencesUtil.store = await preferences.getPreferences(context, 'geotalk');
       } catch (error) {
         // Handle error
-        console.error(`Failed to get preferences: ${error}`);
+        hilog.error(DOMAIN_NUMBER, TAG, `Failed to get preferences: ${error}`);
       }
     }
   }
@@ -32,7 +36,7 @@ export class PreferencesUtil {
       await PreferencesUtil.store.put(key, value);
       await PreferencesUtil.store.flush();
     } catch (error) {
-       console.error(`Failed to set preference ${key}: ${error}`);
+       hilog.error(DOMAIN_NUMBER, TAG, `Failed to set preference ${key}: ${error}`);
     }
   }
 
@@ -45,7 +49,7 @@ export class PreferencesUtil {
       const result = await PreferencesUtil.store.get(key, defaultValue);
       return result as T;
     } catch (error) {
-      console.error(`Failed to get preference ${key}: ${error}`);
+      hilog.error(DOMAIN_NUMBER, TAG, `Failed to get preference ${key}: ${error}`);
       return defaultValue;
     }
   }
@@ -59,7 +63,7 @@ export class PreferencesUtil {
       await PreferencesUtil.store.delete(key);
       await PreferencesUtil.store.flush();
     } catch (error) {
-      console.error(`Failed to remove preference ${key}: ${error}`);
+      hilog.error(DOMAIN_NUMBER, TAG, `Failed to remove preference ${key}: ${error}`);
     }
   }
 
@@ -72,7 +76,7 @@ export class PreferencesUtil {
       await PreferencesUtil.store.clear();
       await PreferencesUtil.store.flush();
     } catch (error) {
-      console.error(`Failed to clear preferences: ${error}`);
+      hilog.error(DOMAIN_NUMBER, TAG, `Failed to clear preferences: ${error}`);
     }
   }
 

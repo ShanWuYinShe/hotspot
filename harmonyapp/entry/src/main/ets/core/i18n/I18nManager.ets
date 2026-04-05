@@ -10,7 +10,7 @@ import { createLogger } from '../utils/LogManager';
 import { ErrorHandler, ErrorType, ErrorLevel } from '../utils/ErrorHandler';
 import { BaseSingleton } from '../base/Singleton';
 import { EventBus } from '../events/EventBus';
-import { UnifiedStorageUtil } from '../utils/UnifiedStorageUtil';
+import { PreferencesUtil } from '../storage/PreferencesUtil';
 
 const logger = createLogger('I18nManager');
 
@@ -188,8 +188,7 @@ export class I18nManager extends BaseSingleton {
   private static instance: I18nManager | null = null;
   private context: common.UIAbilityContext | null = null;
   private eventBus: EventBus = EventBus.getInstance();
-  private storageUtil: UnifiedStorageUtil = UnifiedStorageUtil.getInstance();
-  
+
   private currentLanguage: SupportedLanguage = SupportedLanguage.ZH_CN;
   private fallbackLanguage: SupportedLanguage = SupportedLanguage.EN_US;
   private translations: Map<SupportedLanguage, TranslationMap> = new Map();
@@ -365,7 +364,7 @@ export class I18nManager extends BaseSingleton {
    */
   private async loadSavedLanguage(): Promise<boolean> {
     try {
-      const savedLanguage = await this.storageUtil.getObject<SupportedLanguage>('user_language');
+      const savedLanguage = await PreferencesUtil.getObject<SupportedLanguage>('user_language');
 
       if (savedLanguage && this.isSupportedLanguage(savedLanguage)) {
         this.currentLanguage = savedLanguage;
@@ -535,7 +534,7 @@ export class I18nManager extends BaseSingleton {
       this.currentLanguage = language;
 
       // 保存语言设置
-      await this.storageUtil.setObject('user_language', language);
+      await PreferencesUtil.setObject('user_language', language);
 
       logger.info(`语言已切换: ${oldLanguage} -> ${language}`);
 

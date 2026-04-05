@@ -4,7 +4,7 @@
  */
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { BusinessError } from '@kit.BasicServicesKit';
-import { UnifiedStorageUtil } from '../utils/UnifiedStorageUtil';
+import { PreferencesUtil } from '../storage/PreferencesUtil';
 import accessibility from '@ohos.accessibility';
 // import config from '@ohos.accessibility.config'; // Module not available
 import { bundleManager } from '@kit.AbilityKit';
@@ -73,12 +73,10 @@ export class AccessibilityManager {
   private static instance: AccessibilityManager;
   private config: AccessibilityConfig;
   private eventListeners: Map<string, ((event: AccessibilityEvent) => void)[]> = new Map();
-  private storage: UnifiedStorageUtil;
   private readonly storageKey = 'accessibility_config';
   private bundleName: string = '';
 
   private constructor() {
-    this.storage = UnifiedStorageUtil.getInstance();
     this.config = {
       screenReaderEnabled: false,
       highContrastEnabled: false,
@@ -635,7 +633,7 @@ export class AccessibilityManager {
    */
   private async saveConfig(): Promise<void> {
     try {
-      await this.storage.setObject(this.storageKey, this.config);
+      await PreferencesUtil.setObject(this.storageKey, this.config);
     } catch (error) {
       hilog.error(0x0000, 'AccessibilityManager', `保存无障碍配置失败: ${JSON.stringify(error)}`);
     }
@@ -646,7 +644,7 @@ export class AccessibilityManager {
    */
   private async loadConfig(): Promise<void> {
     try {
-      const savedConfig = await this.storage.getObject<AccessibilityConfig>(this.storageKey);
+      const savedConfig = await PreferencesUtil.getObject<AccessibilityConfig>(this.storageKey);
       if (savedConfig) {
         // 手动合并配置对象
         const mergedConfig: AccessibilityConfig = {

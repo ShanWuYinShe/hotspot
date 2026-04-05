@@ -6,7 +6,7 @@
 import { BaseSingleton } from '../../base/Singleton';
 import { createLogger } from '../../utils/LogManager';
 import { ErrorHandler, ErrorType, ErrorLevel } from '../../utils/ErrorHandler';
-import { UnifiedStorageUtil } from '../../utils/UnifiedStorageUtil';
+import { PreferencesUtil } from '../../storage/PreferencesUtil';
 import { ConfigMerger } from '../../utils/ConfigMerger';
 import { NOTIFICATION_CONSTANTS } from '../../../constants/SystemConstants';
 import { NotificationMetadata } from '../SmartNotificationService';
@@ -93,11 +93,6 @@ export class NotificationDataManager extends BaseSingleton {
   private notifications = new Map<string, SmartNotification>();
   
   /**
-   * 持久化存储
-   */
-  private storage: UnifiedStorageUtil | null = null;
-  
-  /**
    * 存储键
    */
   private readonly storageKey = 'smart_notifications';
@@ -137,10 +132,6 @@ export class NotificationDataManager extends BaseSingleton {
     logger.info('通知数据管理器初始化开始');
     
     try {
-      // 初始化存储
-      this.storage = UnifiedStorageUtil.getInstance();
-      await this.storage.initialize();
-      
       // 加载持久化的通知
       await this.loadNotificationsFromStorage();
       
@@ -163,8 +154,7 @@ export class NotificationDataManager extends BaseSingleton {
     // 清理内存
     this.notifications.clear();
     this.changeListeners = [];
-    this.storage = null;
-    
+
     NotificationDataManager.instance = null;
     logger.info('通知数据管理器清理完成');
   }
@@ -547,9 +537,7 @@ export class NotificationDataManager extends BaseSingleton {
    */
   private async loadNotificationsFromStorage(): Promise<void> {
     try {
-      if (!this.storage) return;
-      
-      const data = await this.storage.getObject<SmartNotification[]>(this.storageKey);
+      const data = await PreferencesUtil.getObject<SmartNotification[]>(this.storageKey);
       if (data && Array.isArray(data)) {
         this.notifications.clear();
         
@@ -570,10 +558,8 @@ export class NotificationDataManager extends BaseSingleton {
    */
   private async saveNotificationsToStorage(): Promise<void> {
     try {
-      if (!this.storage) return;
-      
       const notifications = Array.from(this.notifications.values());
-      await this.storage.setObject(this.storageKey, notifications);
+      await PreferencesUtil.setObject(this.storageKey, notifications);
       
       logger.debug(`保存通知到存储: ${notifications.length}个`);
     } catch (error) {

@@ -7,10 +7,11 @@
  */
 
 // 重新导出用户类型工具函数，方便使用
-export { 
-  UserTypeUtil, 
+import { UserTypeUtil, UserType } from '../utils/UserTypeUtil';
+export {
+  UserTypeUtil,
   UserType
-} from '../utils/UserTypeUtil';
+};
 
 /**
  * 便捷函数：判断是否为临时用户
@@ -68,8 +69,6 @@ export function getUserTypeDisplayName(userType: string): string {
  * @param permission 权限名称
  */
 export function hasUserPermission(userType: string, permission: string): boolean {
-  const UserTypeUtilModule = require('../utils/UserTypeUtil');
-  const UserTypeUtil = UserTypeUtilModule.UserTypeUtil;
   return UserTypeUtil.hasPermission(userType, permission);
 }
 

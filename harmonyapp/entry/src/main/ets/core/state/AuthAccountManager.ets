@@ -80,7 +80,7 @@ export class AuthAccountManager {
     await AuthAccountManager.setState(newState);
 
     // 维持一份“当前账号”的 user_info/access_token 作为会话快捷读取键
-    await PreferencesUtil.setObject(StorageKeys.USER_INFO, auth);
+    await PreferencesUtil.setObject(StorageKeys.AUTH_DATA, auth);
     await PreferencesUtil.set(StorageKeys.ACCESS_TOKEN, auth.access_token);
   }
 
@@ -100,7 +100,7 @@ export class AuthAccountManager {
     };
     await AuthAccountManager.setState(newState);
 
-    await PreferencesUtil.setObject(StorageKeys.USER_INFO, next);
+    await PreferencesUtil.setObject(StorageKeys.AUTH_DATA, next);
     await PreferencesUtil.set(StorageKeys.ACCESS_TOKEN, next.access_token);
     return next;
   }
@@ -116,7 +116,7 @@ export class AuthAccountManager {
     };
     await AuthAccountManager.setState(newState);
 
-    await PreferencesUtil.remove(StorageKeys.USER_INFO);
+    await PreferencesUtil.remove(StorageKeys.AUTH_DATA);
     await PreferencesUtil.remove(StorageKeys.ACCESS_TOKEN);
   }
 
@@ -139,7 +139,7 @@ export class AuthAccountManager {
       accounts: newAccounts
     };
     if (state.current_user_id === userId) {
-      await PreferencesUtil.remove(StorageKeys.USER_INFO);
+      await PreferencesUtil.remove(StorageKeys.AUTH_DATA);
       await PreferencesUtil.remove(StorageKeys.ACCESS_TOKEN);
     }
     await AuthAccountManager.setState(newState);
@@ -150,7 +150,7 @@ export class AuthAccountManager {
    */
   static async clearAllAccounts(): Promise<void> {
     await PreferencesUtil.remove(StorageKeys.AUTH_ACCOUNTS);
-    await PreferencesUtil.remove(StorageKeys.USER_INFO);
+    await PreferencesUtil.remove(StorageKeys.AUTH_DATA);
     await PreferencesUtil.remove(StorageKeys.ACCESS_TOKEN);
   }
 }

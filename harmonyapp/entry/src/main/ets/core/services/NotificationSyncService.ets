@@ -2,7 +2,7 @@ import { ApiClient } from '../api/ApiClient';
 import { NotificationItem, NotificationListRequest, MarkAsReadRequest, UnreadCountResult } from '../types/api';
 import { DefaultConfig } from '../../constants/AppConstants';
 import { GlobalStateManager, UnreadCount as GlobalUnreadCount } from '../state/GlobalStateManager';
-import { PersistentStateManager, UnreadCount as PersistentUnreadCount } from '../state/PersistentStateManager';
+import { PreferencesUtil } from '../storage/PreferencesUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
 const DOMAIN_NUMBER: number = 0xFF36;
@@ -22,7 +22,6 @@ export class NotificationSyncService {
   private listeners: Listener[] = [];
 
   private globalState = GlobalStateManager.getInstance();
-  private persistentState = PersistentStateManager.getInstance();
 
   static getInstance(): NotificationSyncService {
     if (!NotificationSyncService.instance) {
@@ -207,10 +206,7 @@ export class NotificationSyncService {
       total_unread_count: result.total
     };
     this.globalState.updateUnreadCount(globalCount);
-    const persistentCount: PersistentUnreadCount = {
-      total_unread_count: result.total
-    };
-    await this.persistentState.updateUnreadCounts(persistentCount);
+    await PreferencesUtil.setObject('unread_counts', globalCount);
   }
 
   private notify(): void {

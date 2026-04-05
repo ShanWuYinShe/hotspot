@@ -8,9 +8,7 @@ import { AppRouter, LoginRouteParam } from '../../../core/router/AppRouter';
 import { common } from '@kit.AbilityKit';
 import { UIContext } from '@kit.ArkUI';
 import { GlobalStateManager, UnreadCount, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_USER_TYPE, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_UNREAD_COUNT } from '../../../core/state/GlobalStateManager';
-import { CoordinateConverter } from '../../../core/geo/CoordinateConverter';
 import { LocationInfo } from '../../../core/location/LocationUtil';
-import { PersistentStateManager } from '../../../core/state/PersistentStateManager';
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { LocationUtil } from '../../../core/location/LocationUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
@@ -76,7 +74,6 @@ struct Index {
   @State showCreateSheet: boolean = false;
 
   private stateManager = GlobalStateManager.getInstance();
-  private persistentStateManager = PersistentStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
   private smartNotificationService = SmartNotificationService.getInstance();
   private notificationSyncService = NotificationSyncService.getInstance();
@@ -189,9 +186,6 @@ struct Index {
         return;
       }
 
-      await PreferencesUtil.init(this.abilityContext);
-      hilog.info(DOMAIN_NUMBER, TAG, '✅ 存储初始化完成');
-
       try {
         const configResp = await ApiClient.getClientConfig();
         if (configResp.code === 0 && configResp.data) {
@@ -206,22 +200,18 @@ struct Index {
       await PermissionManager.getInstance().initialize(this.abilityContext);
       hilog.info(DOMAIN_NUMBER, TAG, '✅ 权限管理器初始化完成');
 
-      await this.persistentStateManager.initialize();
       await this.stateManager.initialize();
       await this.initializeSmartServices();
 
-      const persistentState = this.persistentStateManager.getState();
-      if (persistentState.currentUser) {
-        this.stateManager.updateUser(persistentState.currentUser);
-      }
-      if (persistentState.currentLocation) {
-        const restoredLoc = persistentState.currentLocation as LocationInfo;
-        this.stateManager.updateLocation(restoredLoc);
-        this.initBrowseAnchorIfNeeded(restoredLoc);
+      const persistedToken = await PreferencesUtil.get<string>('access_token', '');
+      const persistedLocation = await PreferencesUtil.getObject<LocationInfo>('current_location');
+      if (persistedLocation) {
+        this.stateManager.updateLocation(persistedLocation);
+        this.initBrowseAnchorIfNeeded(persistedLocation);
       }
 
       // 冷启动时验证 token 有效性并刷新 profile（与前端 restoreSessionFromServer 对齐）
-      if (persistentState.isLoggedIn && persistentState.currentUser) {
+      if (persistedToken) {
         await this.validateSessionOnColdStart();
       }
       // ===== 持续位置追踪（与 MapKit 蓝点共享 Location Kit 数据源） =====
@@ -341,7 +331,6 @@ struct Index {
       if (statusResp.code !== 0 || !statusResp.data?.is_valid) {
         hilog.warn(DOMAIN_NUMBER, TAG, '冷启动：token 无效，清除登录态');
         this.stateManager.updateUser(null);
-        await this.persistentStateManager.updateUser(null);
         await AuthAccountManager.clearAllAccounts();
         return;
       }
@@ -350,13 +339,12 @@ struct Index {
       if (profileResp.code !== 0 || !profileResp.data) {
         hilog.warn(DOMAIN_NUMBER, TAG, '冷启动：获取 profile 失败，清除登录态');
         this.stateManager.updateUser(null);
-        await this.persistentStateManager.updateUser(null);
+        await AuthAccountManager.lockCurrent();
         return;
       }
 
-      // 更新 profile 到内存和持久化
+      // 更新 profile 到内存
       this.stateManager.updateUser(profileResp.data);
-      await this.persistentStateManager.updateUser(profileResp.data);
 
       // 更新 token 过期时间（如果 checkStatus 返回了 expires_at）
       if (statusResp.data.expires_at) {

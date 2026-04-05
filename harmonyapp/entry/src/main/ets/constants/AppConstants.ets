@@ -35,6 +35,7 @@ export const BusinessCode: BusinessCodeType = {
 // 存储键名
 export interface StorageKeysType {
   USER_INFO: string;
+  AUTH_DATA: string;
   ACCESS_TOKEN: string;
   LOCATION_CACHE: string;
   SERVER_BASE_URL: string;
@@ -44,6 +45,7 @@ export interface StorageKeysType {
 
 export const StorageKeys: StorageKeysType = {
   USER_INFO: 'user_info',
+  AUTH_DATA: 'auth_data',
   ACCESS_TOKEN: 'access_token',
   LOCATION_CACHE: 'location_cache',
   SERVER_BASE_URL: 'server_base_url',
