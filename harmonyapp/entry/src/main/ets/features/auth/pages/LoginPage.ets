@@ -517,6 +517,15 @@ export struct LoginPage {
     }
   }
 
+  private finishAuthNavigation(): void {
+    const redirectTarget = this.redirectUrl.trim();
+    if (redirectTarget.length > 0) {
+      AppRouter.replacePath(redirectTarget);
+      return;
+    }
+    AppRouter.clear();
+  }
+
   private async handleAuthSuccess(authData: AuthData) {
     await AuthAccountManager.upsertAndActivate(authData);
     await HttpUtil.setToken(authData.access_token);
@@ -561,7 +570,7 @@ export struct LoginPage {
       hilog.warn(DOMAIN_NUMBER, TAG, `WebSocket连接失败: ${JSON.stringify(error)}`);
     }
 
-    AppRouter.clear();
+    this.finishAuthNavigation();
     SystemToast.showSuccess('欢迎！', this.getUIContext());
   }
 }
