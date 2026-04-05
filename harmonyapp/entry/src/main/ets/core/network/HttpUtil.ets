@@ -27,6 +27,8 @@ import {
 } from './ApiErrorUtil';
 import { AppRouter, LoginRouteParam } from '../router/AppRouter';
 import { MediaUrlUtil } from '../utils/MediaUrlUtil';
+import { AuthAccountManager } from '../state/AuthAccountManager';
+import { GlobalStateManager } from '../state/GlobalStateManager';
 
 /**
  * Spec MUST 幂等端点列表
@@ -239,17 +241,12 @@ export class HttpUtil {
     try {
       await PreferencesUtil.remove(StorageKeys.ACCESS_TOKEN);
       await PreferencesUtil.remove(StorageKeys.AUTH_DATA);
+      await AuthAccountManager.clearAllAccounts();
     } catch {
       // ignore
     }
-    // 同步重置全局 UI 状态，让 @StorageLink 绑定的组件立即切换到未登录视图
-    try {
-      AppStorage.setOrCreate('currentUser', null);
-      AppStorage.setOrCreate('isLoggedIn', false);
-      AppStorage.setOrCreate('userType', '');
-    } catch {
-      // ignore
-    }
+    // 同步重置全局状态（UI + 全局管理器）
+    GlobalStateManager.getInstance().clear();
     hilog.info(DOMAIN_NUMBER, TAG, '认证数据已清除，UI 状态已重置为未登录');
   }
 
@@ -304,6 +301,7 @@ export class HttpUtil {
           const newAuth = payloadRecord.data as AuthData;
           await PreferencesUtil.set(StorageKeys.ACCESS_TOKEN, newAuth.access_token);
           await PreferencesUtil.setObject(StorageKeys.AUTH_DATA, newAuth);
+          await AuthAccountManager.upsertAndActivate(newAuth);
           hilog.info(DOMAIN_NUMBER, TAG, 'Token 刷新成功');
           return true;
         }
@@ -314,6 +312,7 @@ export class HttpUtil {
         return false;
       } catch (error) {
         hilog.warn(DOMAIN_NUMBER, TAG, `refresh_token failed: ${JSON.stringify(error)}`);
+        await HttpUtil.clearAuthData();
         return false;
       } finally {
         HttpUtil.refreshPromise = null;
@@ -430,7 +429,8 @@ export class HttpUtil {
       let result: Object;
       try {
         result = JSON.parse(response.result as string);
-        hilog.debug(DOMAIN_NUMBER, TAG, `响应数据: ${JSON.stringify(result)}`);
+        const resultCode = (result as Record<string, Object>)?.code;
+        hilog.debug(DOMAIN_NUMBER, TAG, `响应 code=${resultCode ?? 'unknown'}`);
       } catch (parseError) {
         throw new Error(`JSON解析失败: ${parseError}`);
       }
@@ -482,6 +482,11 @@ export class HttpUtil {
           );
         }
         hilog.warn(DOMAIN_NUMBER, TAG, '令牌刷新失败，已强制登出');
+        await HttpUtil.clearAuthData();
+        const param = new LoginRouteParam();
+        param.reason = 'expired';
+        AppRouter.clear();
+        AppRouter.push('LoginPage', param);
       }
 
       // token_optional 端点：若认证失败且本次携带了 Authorization，则匿名降级重试一次

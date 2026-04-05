@@ -1166,9 +1166,4 @@ struct Index {
     .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
       top: DesignConstants.SPACING.LG, bottom: 40 })
   }
-
-  /** 通过路由名跳转页面 */
-  private navigateToPage(name: string): void {
-    AppRouter.push(name);
-  }
 }

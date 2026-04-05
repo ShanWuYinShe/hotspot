@@ -6,7 +6,7 @@ import { DesignConstants } from '../../../constants/DesignConstants';
 import { AppIcon, IconSize, IconButton } from '../../../components/SystemIcon';
 import { SystemCard } from '../../../components/SystemCard';
 import { WebSocketService } from '../../../core/network/WebSocketService';
-import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
+import { KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { SystemToast } from '../../../components/SystemToast';
 import { MyProfile } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';

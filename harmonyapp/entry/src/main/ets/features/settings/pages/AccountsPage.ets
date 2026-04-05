@@ -11,6 +11,7 @@ import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/Global
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
 import { MyProfile, AuthData } from '../../../core/types/api';
+import { ApiClient } from '../../../core/api/ApiClient';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -125,8 +126,17 @@ export struct AccountsPage {
         return;
       }
 
-      // 3) 更新 UI 层 currentUser
-      this.stateManager.updateUser(this.toProfile(next));
+      // 3) 用真实 profile 更新 UI 层
+      try {
+        const profileRes = await ApiClient.getMyProfile();
+        if (profileRes.code === 0 && profileRes.data) {
+          this.stateManager.updateUser(profileRes.data);
+        } else {
+          this.stateManager.updateUser(this.toProfile(next));
+        }
+      } catch {
+        this.stateManager.updateUser(this.toProfile(next));
+      }
 
       // 4) 重连 WS
       this.ws.disconnect();

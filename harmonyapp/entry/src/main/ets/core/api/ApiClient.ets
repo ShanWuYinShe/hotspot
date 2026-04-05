@@ -439,18 +439,6 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<UserItem>, UserOpenTheDoorRequest>(ApiEndpoints.USER.OPEN_THE_DOOR, params);
   }
 
-  static async getUserFriendsList(params: ListFriendsRequest): Promise<ApiResponse<PaginatedData<FriendItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<FriendItem>>, ListFriendsRequest>(ApiEndpoints.USER.LIST_FRIENDS, params);
-  }
-
-  static async getUserFollowingList(params: ListFollowingRequest): Promise<ApiResponse<PaginatedData<FollowingItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<FollowingItem>>, ListFollowingRequest>(ApiEndpoints.USER.LIST_FOLLOWING, params);
-  }
-
-  static async getUserFollowersList(params: ListFollowersRequest): Promise<ApiResponse<PaginatedData<FollowerItem>>> {
-    return HttpUtil.post<ApiResponse<PaginatedData<FollowerItem>>, ListFollowersRequest>(ApiEndpoints.USER.LIST_FOLLOWERS, params);
-  }
-
   static async getUserGroups(params: UserGroupsRequest): Promise<ApiResponse<PaginatedData<GroupItem>>> {
     return HttpUtil.post<ApiResponse<PaginatedData<GroupItem>>, UserGroupsRequest>(ApiEndpoints.USER.LIST_GROUPS, params);
   }

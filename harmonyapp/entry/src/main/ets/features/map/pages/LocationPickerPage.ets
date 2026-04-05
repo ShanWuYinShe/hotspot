@@ -1089,7 +1089,7 @@ export struct LocationPickerPage {
     try {
       const results = await LoadingUtil.withMinimumTime(() => LocationUtil.geocodeMultiple(keyword, 10), LoadingUtil.DEFAULT_ACTION_MS);
       if (results.length > 0) {
-        this.searchResults = this.sortByProximity(results);
+        this.searchResults = results;
       } else {
         SystemToast.show('未找到该地点，请换个关键词试试', this.getUIContext());
       }
@@ -1099,25 +1099,6 @@ export struct LocationPickerPage {
     } finally {
       this.isSearching = false;
     }
-  }
-
-  private sortByProximity(results: LocationInfo[]): LocationInfo[] {
-    const gcjRefLat = this.centerLat;
-    const gcjRefLng = this.centerLng;
-    let refLat = this.currentLocation?.latitude ?? 0;
-    let refLng = this.currentLocation?.longitude ?? 0;
-    if (gcjRefLat !== 0 || gcjRefLng !== 0) {
-      const wgs84Ref = CoordinateConverter.convertGcj02ToWgs84(gcjRefLat, gcjRefLng);
-      refLat = wgs84Ref.latitude;
-      refLng = wgs84Ref.longitude;
-    }
-    return results.sort((a, b) => {
-      const dLatA = a.latitude - refLat;
-      const dLngA = a.longitude - refLng;
-      const dLatB = b.latitude - refLat;
-      const dLngB = b.longitude - refLng;
-      return (dLatA * dLatA + dLngA * dLngA) - (dLatB * dLatB + dLngB * dLngB);
-    });
   }
 
   private openSearchPanel(): void {
@@ -1179,9 +1160,9 @@ export struct LocationPickerPage {
     );
     this.setCenter(gcj02.latitude, gcj02.longitude);
     this.updateMarkers();
-    this.locationName = item.locationName || '历史位置';
     this.moveCameraSmoothly(gcj02.latitude, gcj02.longitude);
-    this.resolveLocation(gcj02.latitude, gcj02.longitude);
+    // 用历史项已有的名称，避免 GCJ02→WGS84→reverseGeocode 的冗余转换
+    this.locationName = item.locationName || '历史位置';
   }
 
   private confirm(): void {
