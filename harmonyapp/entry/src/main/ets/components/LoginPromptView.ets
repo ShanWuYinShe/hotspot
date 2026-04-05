@@ -7,7 +7,7 @@
 
 import { DesignConstants } from '../constants/DesignConstants';
 import { PageNames } from '../constants/AppConstants';
-import { AppRouter } from '../core/router/AppRouter';
+import { AppRouter, LoginRouteParam } from '../core/router/AppRouter';
 import { AppIcon } from './SystemIcon';
 import { SystemToast } from './SystemToast';
 import { ApiClient } from '../core/api/ApiClient';
@@ -269,6 +269,10 @@ export struct LoginPromptView {
   }
 
   private navigateToLogin(): void {
-    AppRouter.push(PageNames.LOGIN);
+    const loginParams = new LoginRouteParam();
+    loginParams.reason = 'action_required';
+    loginParams.action = '查看个人资料';
+    loginParams.redirectUrl = PageNames.PROFILE;
+    AppRouter.push(PageNames.LOGIN, loginParams);
   }
 }

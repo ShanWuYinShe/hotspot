@@ -727,6 +727,7 @@ struct Index {
       const loginParams = new LoginRouteParam();
       loginParams.reason = 'action_required';
       loginParams.action = '创建内容';
+      loginParams.redirectUrl = PageNames.INDEX;
       AppRouter.push(PageNames.LOGIN, loginParams);
       return;
     }

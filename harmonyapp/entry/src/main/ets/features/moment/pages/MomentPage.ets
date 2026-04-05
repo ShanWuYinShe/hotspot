@@ -213,6 +213,7 @@ export struct MomentPage {
               const lp = new LoginRouteParam();
               lp.reason = 'action_required';
               lp.action = '发布瞬间';
+              lp.redirectUrl = PageNames.CREATE_MOMENT;
               AppRouter.push(PageNames.LOGIN, lp);
               return;
             }

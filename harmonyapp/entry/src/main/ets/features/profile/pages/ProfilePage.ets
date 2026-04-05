@@ -165,6 +165,7 @@ export struct ProfilePage {
     const loginParams = new LoginRouteParam();
     loginParams.reason = 'action_required';
     loginParams.action = actionName;
+    loginParams.redirectUrl = PageNames.PROFILE;
     AppRouter.push(PageNames.LOGIN, loginParams);
     return false;
   }

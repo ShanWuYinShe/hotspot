@@ -110,6 +110,7 @@ export struct CreateGroupPage {
       const loginParams = new LoginRouteParam();
       loginParams.reason = 'action_required';
       loginParams.action = '创建群组';
+      loginParams.redirectUrl = PageNames.CREATE_GROUP;
       AppRouter.push(PageNames.LOGIN, loginParams);
       return;
     }
