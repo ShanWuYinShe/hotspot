@@ -65,7 +65,9 @@ def main() -> int:
     return 0
 
 
-def deny(reason: str) -> int:
+def deny(reason: str, blocked_input: str | None = None) -> int:
+    if blocked_input:
+        reason = f"{reason}\nblocked_input: {blocked_input}"
     json.dump(
         {
             "hookSpecificOutput": {
@@ -84,7 +86,26 @@ def deny(reason: str) -> int:
 def guard_edit_write(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
     if not repo or not repo["is_main_primary"]:
         return 0
-    return deny("主目录本地 main 禁止文件修改；请先进入 feature worktree。")
+
+    tool_input = payload.get("tool_input", {})
+    file_path = tool_input.get("file_path")
+    if isinstance(file_path, str) and is_allowed_plan_file_write(file_path):
+        return 0
+
+    blocked_input = file_path if isinstance(file_path, str) else None
+    return deny("主目录本地 main 禁止文件修改；请先进入 feature worktree。", blocked_input)
+
+
+def is_allowed_plan_file_write(raw: str) -> bool:
+    candidate = Path(os.path.expanduser(raw))
+    try:
+        resolved = candidate.resolve(strict=False)
+    except OSError:
+        return False
+
+    plans_root = Path.home() / ".claude" / "plans"
+    return is_within(resolved, plans_root)
+
 
 
 def guard_bash(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
@@ -98,12 +119,12 @@ def guard_bash(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
 
     for segment in segments:
         if re.match(r"^git\s+worktree\s+add", segment) and re.search(r"\borigin/", segment):
-            return deny("git worktree add 不允许使用远程引用（如 origin/main）作为基准点；必须使用本地分支引用（如 main），确保基于主目录本地 main 当前 HEAD 创建。")
+            return deny("git worktree add 不允许使用远程引用（如 origin/main）作为基准点；必须使用本地分支引用（如 main），确保基于主目录本地 main 当前 HEAD 创建。", segment)
 
     if repo and repo["is_main_primary"]:
         if all(is_git_segment(segment) for segment in segments):
             return 0
-        return deny("主目录本地 main 只允许 git 控制面命令；请先进入 feature worktree 再实施、验证或运行脚本。")
+        return deny("主目录本地 main 只允许 git 控制面命令；请先进入 feature worktree 再实施、验证或运行脚本。", command)
 
     raw_cwd = payload.get("cwd")
     if raw_cwd:
@@ -120,8 +141,8 @@ def guard_bash(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
         if is_safe_shell_segment(segment):
             continue
         if is_blocked_runtime_segment(segment):
-            return deny("非 git 控制面命令请通过 deploy/ 入口或 .claude/scripts/ 受控脚本执行。")
-        return deny("非 git 控制面命令请通过 deploy/ 入口或 .claude/scripts/ 受控脚本执行。")
+            return deny("非 git 控制面命令请通过 deploy/ 入口或 .claude/scripts/ 受控脚本执行。", command)
+        return deny("非 git 控制面命令请通过 deploy/ 入口或 .claude/scripts/ 受控脚本执行。", command)
 
     return 0
 
