@@ -3,6 +3,7 @@ import json
 import re
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 from git_context import GitContextError, get_repo_context, run_git
@@ -20,6 +21,15 @@ _VALID_SUBPROJECTS = frozenset({
 _WORKTREE_NAME_RE = re.compile(
     r"^(?P<subproject>[a-z][a-z0-9-]+)\.(?P<module>[a-z][a-z0-9-]+)\.(?P<feature>[a-z][a-z0-9-]+)$"
 )
+_BRANCH_PREFIX = "worktree-"
+_RESUME_SUFFIX_RE = re.compile(r"^(?P<root>.+)-r(?P<generation>[2-9][0-9]*)$")
+
+
+@dataclass(frozen=True)
+class WorktreeLineage:
+    name: str
+    generation: int
+    branch_name: str
 
 
 def validate_worktree_name(name: str) -> str | None:
@@ -42,6 +52,54 @@ def validate_worktree_name(name: str) -> str | None:
 def fail(message: str) -> int:
     sys.stderr.write(message + "\n")
     return 1
+
+
+def parse_lineage_name(name: str) -> tuple[str, int]:
+    m = _RESUME_SUFFIX_RE.match(name)
+    if not m:
+        return name, 1
+    return m.group("root"), int(m.group("generation"))
+
+
+def format_lineage_name(root_name: str, generation: int) -> str:
+    if generation <= 1:
+        return root_name
+    return f"{root_name}-r{generation}"
+
+
+def list_lineage_branches(primary_root: Path, root_name: str) -> list[WorktreeLineage]:
+    try:
+        refs = run_git(primary_root, "for-each-ref", "--format=%(refname:short)", "refs/heads")
+    except subprocess.CalledProcessError as exc:
+        stderr = (exc.stderr or exc.stdout or "").strip()
+        raise RuntimeError(f"无法枚举本地分支: {stderr}") from exc
+
+    lineages: list[WorktreeLineage] = []
+    for branch_name in refs.splitlines():
+        branch_name = branch_name.strip()
+        if not branch_name.startswith(_BRANCH_PREFIX):
+            continue
+        lineage_name = branch_name[len(_BRANCH_PREFIX):]
+        lineage_root, generation = parse_lineage_name(lineage_name)
+        if lineage_root != root_name:
+            continue
+        lineages.append(
+            WorktreeLineage(
+                name=lineage_name,
+                generation=generation,
+                branch_name=branch_name,
+            )
+        )
+    return sorted(lineages, key=lambda item: item.generation)
+
+
+def create_worktree(primary_root: Path, worktree_dir: Path, branch_name: str, base_ref: str) -> None:
+    subprocess.run(
+        ["git", "-C", str(primary_root), "worktree", "add", "-b", branch_name, str(worktree_dir), base_ref],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
 
 
 def main() -> int:
@@ -88,19 +146,31 @@ def main() -> int:
     if name_error:
         return fail(name_error)
 
-    worktree_dir = primary_root / ".claude" / "worktrees" / name
-    branch_name = f"worktree-{name}"
+    try:
+        existing_lineages = list_lineage_branches(primary_root, name)
+    except RuntimeError as exc:
+        return fail(str(exc))
+
+    if existing_lineages:
+        latest = existing_lineages[-1]
+        effective_generation = latest.generation + 1
+        effective_name = format_lineage_name(name, effective_generation)
+        base_ref = latest.branch_name
+        sys.stderr.write(
+            f"检测到遗留 feature lineage '{name}'，将创建派生 worktree '{effective_name}' 并基于 {base_ref} 继续进度。\n"
+        )
+    else:
+        effective_name = name
+        base_ref = "main"
+
+    worktree_dir = primary_root / ".claude" / "worktrees" / effective_name
+    branch_name = f"{_BRANCH_PREFIX}{effective_name}"
 
     try:
-        subprocess.run(
-            ["git", "-C", str(primary_root), "worktree", "add", "-b", branch_name, str(worktree_dir), "main"],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
+        create_worktree(primary_root, worktree_dir, branch_name, base_ref)
     except subprocess.CalledProcessError as exc:
         stderr = (exc.stderr or exc.stdout or "").strip()
-        return fail(f"基于本地 main 创建 worktree 失败: {stderr}")
+        return fail(f"创建 worktree 失败（branch={branch_name}, base={base_ref}）: {stderr}")
 
     sys.stdout.write(str(worktree_dir.resolve()) + "\n")
     return 0

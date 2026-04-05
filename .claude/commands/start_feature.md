@@ -16,7 +16,7 @@ $ARGUMENTS
 2. 先按任务范围读取根 `CLAUDE.md`、对应子项目 `CLAUDE.md` 与必要的 `spec/`。
 3. 分析任务：根据复杂度和文件集决定是否拆分为多个子任务；子任务边界清晰且文件集相对独立时才并行，否则保持单任务。
 4. 对非极小任务，优先进入 plan mode；然后立即建立 task list。
-5. **必须使用 `EnterWorktree` 工具**从主目录当前最新本地 `main HEAD` 创建新的 feature worktree；`name` 参数必须遵循 `{子项目名}.{模块名}.{功能描述}` 格式（如 `backend-go.auth.add-oauth`），允许的子项目名见根 `CLAUDE.md`；任何 implement 行为开始前都必须已经在该 worktree 中。
+5. **必须使用 `EnterWorktree` 工具**从主目录创建 feature worktree；`name` 参数必须遵循 `{子项目名}.{模块名}.{功能描述}` 格式（如 `backend-go.auth.add-oauth`），允许的子项目名见根 `CLAUDE.md`。该三段名表示 feature 的逻辑名：若不存在遗留同 lineage 实例，则首次创建基于当前最新本地 `main HEAD`；若已存在遗留同 lineage feature worktree / branch，则必须创建新的 `-rN` 派生实例，并基于该 lineage 最新 branch 继续之前进度，而不是重新进入旧目录。任何 implement 行为开始前都必须已经在实际创建出的 worktree 中。
 6. 在该 feature worktree 中完成 `实现 → check(语法/编译/警告) → test → simplify → strict review → commit` 闭环；任一环节发现问题必须修复后重新循环。check 环节通过受控脚本执行：Rust 后端用 `python3 .claude/scripts/rust_dev.py --task <check|all>`，Go 后端用 `python3 .claude/scripts/go_dev.py --task <check|all>`，前端用 `python3 .claude/scripts/frontend_dev.py --task <check|all>`，Harmony 客户端用 `python3 .claude/scripts/harmony_worktree.py --task <check|all>`。最终有效结论以 `deploy/scripts/verify.sh --env-name <name>` 为准。
 7. 若改动触达前端展示层，追加 `verify-inspect` 环节，由 Claude Code 主动完成页面级确认。
 8. 完成 simplify 和严格 review 后，必须调用 `feature-ready-check` subagent 做最终复核，并在输出中复述其 `## 结论`、`## 阻塞项`、`## 建议下一步`。
@@ -25,7 +25,7 @@ $ARGUMENTS
 结束时请输出：
 
 - 任务摘要
-- feature worktree 路径与分支
+- feature 逻辑名、实际 worktree 路径与实际分支（若为续做派生，说明继承自哪个旧 branch）
 - 关键变更范围
 - verify 结果
 - review 结果

@@ -10,8 +10,8 @@ description: 解释本仓库多 worktree 本地开发与集成流程的职责边
 1. 严格遵循根 `CLAUDE.md`：主目录必须保持在本地 `main` 且无未提交改动；实现、验证和构建默认在 worktree 中完成。
 2. 输出边界与建议时，以根 `CLAUDE.md` 为单一 workflow 权威来源；不要扩展出第二套仓库规范。
 3. 强调质量门顺序：analyze -> plan -> task list -> implement -> check(语法/编译/警告) -> test -> simplify -> strict review -> commit -> (integrate -> verify) -> sync-back -> cleanup。
-4. 强调每次集成都必须新建临时 integration worktree，并且基于主目录最新本地 `main HEAD`；默认只操作当前会话创建或明确接管的对象。
-5. 强调 feature 结果进入 integration 时优先使用 cherry-pick / replay，避免 merge；冲突统一在 integration worktree 中解决。
+4. 强调每次集成都必须新建临时 integration worktree，并且基于主目录最新本地 `main HEAD`；默认只操作当前会话创建或明确接管的对象。若 feature 遗留旧实例，则也应通过新建派生 feature worktree 接棒，而不是复用旧 worktree。
+5. 强调 feature 结果进入 integration 时优先使用 cherry-pick / replay，避免 merge；冲突统一在 integration worktree 中解决。feature lineage 的旧实例默认视为 superseded，进入 integration 或 sync-back 时应优先选择最新派生实例。
 6. 强调 integration 后必须再次 verify，且最终有效结论以 `deploy/` 标准流程为准。
 7. 强调若主目录 `main` 在 integration 期间前进，则当前 integration 基线视为过期，应改走 refresh/rebuild，而不是 merge 最新 `main`。
 8. 输出必须使用以下 Markdown 结构，标题名不要改：
