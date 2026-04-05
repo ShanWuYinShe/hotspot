@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { t } from '$lib/i18n';
 	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { usersService, momentsService, groupsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
@@ -163,8 +164,8 @@
 			}
 		} catch {
 			if (!controller.signal.aborted) {
-				searchError = '搜索失败';
-				toast.error('搜索失败');
+				searchError = t('searchPage.searchFailed');
+				toast.error(t('searchPage.searchFailed'));
 			}
 		} finally {
 			if (!controller.signal.aborted) {
@@ -262,18 +263,18 @@
 </svelte:head>
 
 <div class="space-y-4 sm:space-y-5">
-	<PageHeader title="搜索" description="发现用户、群组与附近动态" />
+	<PageHeader title={t('searchPage.title')} description={t('searchPage.description')} />
 
 	<AnchorSummaryCard
-		label="搜索参考锚点"
-		description={`当前按 ${mapAnchorStore.radius}km 范围参与距离排序`}
+		label={t('searchPage.anchorLabel')}
+		description={t('searchPage.anchorDescription', { radius: mapAnchorStore.radius })}
 		subtle
 	>
 		{#snippet actions()}
 			<div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
 				<Button variant="outline" size="sm" class="gap-2" onclick={() => goto(nearbyMomentsUrl)}>
 					<Compass class="h-4 w-4" />
-					附近探索
+					{t('searchPage.nearbyExplore')}
 				</Button>
 			</div>
 		{/snippet}
@@ -291,7 +292,7 @@
 				<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 				<Input
 					type="text"
-					placeholder="搜索用户、瞬间、群组..."
+					placeholder={t('searchPage.placeholder')}
 					class="h-10.5 rounded-[1rem] border-border/60 bg-background/75 pl-9 pr-9 sm:h-11 sm:rounded-2xl"
 					autocomplete="off"
 					bind:value={keywordInput}
@@ -303,7 +304,7 @@
 						size="icon"
 						class="absolute right-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border-none bg-transparent text-muted-foreground shadow-none hover:text-foreground"
 						onclick={clearSearch}
-						aria-label="清除搜索"
+						aria-label={t('searchPage.clear')}
 					>
 						<X class="h-3 w-3" />
 					</Button>
@@ -315,7 +316,7 @@
 				disabled={!keywordInput.trim()}
 			>
 				<Search class="h-4 w-4" />
-				搜索
+				{t('searchPage.submit')}
 			</Button>
 		</div>
 	</form>
@@ -328,16 +329,16 @@
 						{#if activeMode === 'tag'}
 							<span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary">
 								<Hash class="h-3.5 w-3.5" />
-								标签搜索
+								{t('searchPage.tagMode')}
 							</span>
 						{:else}
 							<span class="inline-flex items-center rounded-full bg-muted px-2.5 py-1 font-medium text-foreground">
-								关键词搜索
+								{t('searchPage.keywordMode')}
 							</span>
 						{/if}
-						<span>搜索范围 {mapAnchorStore.radius}km</span>
+						<span>{t('searchPage.range', { radius: mapAnchorStore.radius })}</span>
 					</div>
-					<div class="truncate text-lg font-semibold">“{activeLabel}” 的搜索结果</div>
+					<div class="truncate text-lg font-semibold">{t('searchPage.resultTitle', { term: activeLabel })}</div>
 				</div>
 				<div class="grid grid-cols-3 gap-2 text-center text-sm sm:min-w-72">
 					<div class="rounded-2xl bg-muted/70 px-3 py-2">

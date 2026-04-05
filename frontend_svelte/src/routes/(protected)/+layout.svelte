@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { browser } from "$app/environment";
-	import { page } from "$app/state";
+	import { t } from '$lib/i18n';
 	import { authStore } from "$lib/stores/auth.svelte";
 	import { uiStore } from "$lib/stores/ui.svelte";
 	import Navbar from "$lib/components/common/navbar.svelte";
@@ -22,13 +22,12 @@
 			!authStore.isAuthenticated &&
 			!authStore.isRestoring
 		) {
-			uiStore.saveRedirectUrl(`${page.url.pathname}${page.url.search}`);
+			uiStore.saveCurrentRedirectUrl();
 		}
 	});
 
 	function handleLoginClick() {
-		uiStore.saveRedirectUrl(`${page.url.pathname}${page.url.search}`);
-		uiStore.openLoginModal();
+		uiStore.openLoginModalWithRedirect({});
 	}
 </script>
 
@@ -48,7 +47,7 @@
 				class="fixed inset-0 z-40 h-full w-full cursor-pointer bg-black/50 p-0 md:hidden border-none shadow-none"
 				onclick={closeSidebar}
 				onkeydown={(e) => e.key === "Escape" && closeSidebar()}
-				aria-label="关闭侧边栏"
+				aria-label={t('nav.closeSidebar')}
 			/>
 			<div
 				class="app-mobile-sidebar fixed left-0 z-50 w-64 md:hidden"
@@ -71,7 +70,7 @@
 							class="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"
 						></div>
 						<p class="text-sm text-muted-foreground">
-							正在恢复登录状态…
+							{t('auth.restoringSession')}
 						</p>
 					</div>
 				{:else}
@@ -102,12 +101,12 @@
 								<path d="M7 11V7a5 5 0 0 1 10 0v4" />
 							</svg>
 						</div>
-						<h2 class="mb-2 text-xl font-semibold">需要登录</h2>
+						<h2 class="mb-2 text-xl font-semibold">{t('auth.loginRequired')}</h2>
 						<p class="mb-6 text-muted-foreground">
-							登录后即可访问此页面
+							{t('auth.loginRequiredDescription')}
 						</p>
 						<Button class="rounded-2xl px-8" onclick={handleLoginClick}>
-							立即登录
+							{t('common.loginNow')}
 						</Button>
 					</div>
 				{/if}

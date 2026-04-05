@@ -8,6 +8,7 @@
  */
 
 import { browser } from '$app/environment';
+import { presenceStore } from '$lib/stores/presence.svelte';
 import type { AuthData, MyProfile } from '$lib/types/api';
 
 const STORAGE_KEY = 'hotspot_auth';
@@ -155,6 +156,7 @@ class AuthStore {
 	invalidateSession() {
 		this.#sessionValid = false;
 		this.#profile = null;
+		presenceStore.clearAll();
 	}
 
 	/**

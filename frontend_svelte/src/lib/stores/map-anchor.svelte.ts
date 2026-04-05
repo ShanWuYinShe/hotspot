@@ -7,6 +7,7 @@
  */
 
 import { browser } from '$app/environment';
+import { getCurrentLocationLabel } from '$lib/i18n';
 import { configStore } from './config.svelte';
 
 const STORAGE_KEY = 'hotspot_map_anchor';
@@ -114,7 +115,7 @@ class MapAnchorStore {
 	radius = $derived(this.#anchor.radius || 5);
 
 	/** 显示名称（如果没有名称则使用固定占位，不展示坐标） */
-	displayName = $derived(this.#anchor.name || DEFAULT_ANCHOR_NAME);
+	displayName = $derived(this.#anchor.name || getCurrentLocationLabel());
 
 	/**
 	 * 获取允许的最大搜索半径（公里）
@@ -182,7 +183,7 @@ class MapAnchorStore {
 					this.setAnchor(
 						position.coords.latitude,
 						position.coords.longitude,
-						'当前位置'
+						''
 					);
 					resolve(true);
 				},

@@ -10,6 +10,7 @@
 	import LoadMoreButton from '$lib/components/common/load-more-button.svelte';
 	import CreateMomentModal from '$lib/components/common/create-moment-modal.svelte';
 	import type { MomentItem } from '$lib/types/api';
+	import { formatDate } from '$lib/utils/format';
 	import Plus from 'lucide-svelte/icons/plus';
 	import Image from 'lucide-svelte/icons/image';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
@@ -104,7 +105,7 @@
 									<span>{moment.likes_count} 点赞</span>
 									<span>{moment.comments_count} 评论</span>
 									<span>{moment.shares_count} 分享</span>
-									<span>{new Date(moment.created_at).toLocaleDateString('zh-CN')}</span>
+									<span>{formatDate(moment.created_at)}</span>
 								</div>
 							</a>
 						</Card>

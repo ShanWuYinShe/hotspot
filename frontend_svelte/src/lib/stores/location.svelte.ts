@@ -157,7 +157,7 @@ class LocationStore {
 				// 注意：这里只返回坐标，location_name 使用默认占位
 				this.#current = {
 					point: geoPoint,
-					location_name: '当前位置'
+					location_name: ''
 				};
 				this.#lastUpdated = new Date().toISOString();
 				this.#permissionDenied = false;

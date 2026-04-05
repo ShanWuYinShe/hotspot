@@ -24,9 +24,10 @@ class PresenceStore {
 	// ============ 内部工具 ============
 
 	/** 不可变更新 Map：clone → mutate → reassign */
-	#updateMap(mutator: (map: Map<string, UserPresence>) => void) {
+	#updateMap(mutator: (map: Map<string, UserPresence>) => boolean) {
 		const next = new Map(this.#presences);
-		mutator(next);
+		const changed = mutator(next);
+		if (!changed) return;
 		this.#presences = next;
 	}
 
@@ -80,6 +81,13 @@ class PresenceStore {
 	) {
 		this.#updateMap((map) => {
 			const existing = map.get(user_id);
+			if (
+				existing?.status === status &&
+				existing?.status_text === status_text &&
+				existing?.updated_at === online_at
+			) {
+				return false;
+			}
 			map.set(user_id, {
 				user_id,
 				status,
@@ -87,6 +95,7 @@ class PresenceStore {
 				updated_at: online_at,
 				last_seen: existing?.last_seen
 			});
+			return true;
 		});
 	}
 
@@ -94,12 +103,21 @@ class PresenceStore {
 	setOffline(user_id: string, offline_at: string, last_seen?: string) {
 		this.#updateMap((map) => {
 			const existing = map.get(user_id);
+			const nextLastSeen = last_seen ?? existing?.last_seen ?? offline_at;
+			if (
+				existing?.status === 'offline' &&
+				existing?.updated_at === offline_at &&
+				existing?.last_seen === nextLastSeen
+			) {
+				return false;
+			}
 			map.set(user_id, {
 				user_id,
 				status: 'offline',
 				updated_at: offline_at,
-				last_seen: last_seen ?? existing?.last_seen ?? offline_at
+				last_seen: nextLastSeen
 			});
+			return true;
 		});
 	}
 
@@ -111,7 +129,11 @@ class PresenceStore {
 	/** 批量清除用户状态 */
 	clearBatchPresences(user_ids: string[]) {
 		this.#updateMap((map) => {
-			for (const id of user_ids) map.delete(id);
+			let changed = false;
+			for (const id of user_ids) {
+				changed = map.delete(id) || changed;
+			}
+			return changed;
 		});
 	}
 

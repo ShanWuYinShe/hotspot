@@ -4,6 +4,7 @@
 	import { groupsService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
 	import { toast } from '$lib/stores/toast.svelte';
+	import { formatDateTime } from '$lib/utils/format';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
@@ -310,7 +311,7 @@
 									<p class="mt-1 text-xs text-muted-foreground">{application.message}</p>
 								{/if}
 								<p class="mt-1 text-xs text-muted-foreground">
-									申请时间：{new Date(application.created_at).toLocaleString('zh-CN')}
+									申请时间：{formatDateTime(application.created_at)}
 								</p>
 								<div class="mt-2 flex gap-2">
 									<Button

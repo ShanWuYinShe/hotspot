@@ -19,9 +19,8 @@ import type {
 	FollowSource,
 	PaginationParams,
 	GeoPoint,
-		VerificationSent
+	VerificationSent
 } from '$lib/types/api';
-import { authStore } from '$lib/stores/auth.svelte';
 
 export const usersService = {
 	// ==================== 搜索 ====================
@@ -29,24 +28,16 @@ export const usersService = {
 		/**
 		 * 搜索用户（对齐 spec SearchUsersRequest）
 		 */
-		search(params: {
-			keyword?: string;
+	search(params: {
+		keyword?: string;
 		tag?: string;
 		radius?: number;
 		sort_by?: 'relevance' | 'distance' | 'newest';
-			reference_point: GeoPoint;
-			pagination?: PaginationParams;
-		}, options?: RequestOptions) {
-			return paginate<UserItem>(USERS.SEARCH, params, options).then((response) => {
-				const currentUserId = authStore.currentUserId;
-				if (currentUserId && response.data?.items) {
-					response.data.items = response.data.items.filter(
-						(item) => item.user.user_id !== currentUserId
-					);
-				}
-				return response;
-			});
-		},
+		reference_point: GeoPoint;
+		pagination?: PaginationParams;
+	}, options?: RequestOptions) {
+		return paginate<UserItem>(USERS.SEARCH, params, options);
+	},
 
 	// ==================== 用户信息 ====================
 

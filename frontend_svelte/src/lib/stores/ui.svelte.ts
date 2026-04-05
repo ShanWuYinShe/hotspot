@@ -68,6 +68,18 @@ class UIStore {
 		this.#showLoginModal = true;
 		this.#loginModalCallback = callback ?? null;
 	}
+
+	openLoginModalWithRedirect(options: { url?: string; onSuccess?: () => void } = {}) {
+		this.saveRedirectUrl(options.url);
+		this.openLoginModal(options.onSuccess);
+	}
+
+	saveCurrentRedirectUrl() {
+		if (!browser) return;
+		this.saveRedirectUrl(
+			`${window.location.pathname}${window.location.search}${window.location.hash}`
+		);
+	}
 	
 	closeLoginModal() {
 		this.#showLoginModal = false;

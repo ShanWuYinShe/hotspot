@@ -80,10 +80,14 @@ export function formatDate(
 /**
  * 格式化距离（米 -> 米/公里）
  */
-export function formatDistance(meters: number): string {
+export function formatDistance(meters: number, locale: Locale = getLocale()): string {
 	if (!isFinite(meters) || meters < 0) return '—';
-	if (meters < 1000) return `${Math.round(meters)}m`;
-	return `${(meters / 1000).toFixed(1)}km`;
+	if (meters < 1000) {
+		const rounded = Math.round(meters);
+		return locale === 'zh-CN' ? `${rounded}米` : `${rounded} m`;
+	}
+	const kilometers = (meters / 1000).toFixed(1);
+	return locale === 'zh-CN' ? `${kilometers}公里` : `${kilometers} km`;
 }
 
 /**

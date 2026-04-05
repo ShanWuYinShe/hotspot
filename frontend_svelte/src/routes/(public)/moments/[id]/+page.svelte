@@ -3,6 +3,7 @@
 	import { untrack } from 'svelte';
 	import { withMinimumLoadingTime } from '$lib/utils/loading';
 	import { momentsService, commentsService } from '$lib/api/services';
+	import { formatDateTime } from '$lib/utils/format';
 	import { isSuccess } from '$lib/api/client';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
@@ -85,8 +86,7 @@
 
 	async function handleLike() {
 		if (!authStore.isAuthenticated) {
-			uiStore.saveRedirectUrl();
-			uiStore.openLoginModal(handleLike);
+			uiStore.openLoginModalWithRedirect({ onSuccess: handleLike });
 			return;
 		}
 
@@ -111,8 +111,7 @@
 
 	async function handleFavorite() {
 		if (!authStore.isAuthenticated) {
-			uiStore.saveRedirectUrl();
-			uiStore.openLoginModal(handleFavorite);
+			uiStore.openLoginModalWithRedirect({ onSuccess: handleFavorite });
 			return;
 		}
 
@@ -135,8 +134,7 @@
 	async function submitComment() {
 		if (!commentText.trim()) return;
 		if (!authStore.isAuthenticated) {
-			uiStore.saveRedirectUrl();
-			uiStore.openLoginModal(submitComment);
+			uiStore.openLoginModalWithRedirect({ onSuccess: submitComment });
 			return;
 		}
 
@@ -163,8 +161,7 @@
 	}
 
 	function formatTime(dateStr: string): string {
-		const date = new Date(dateStr);
-		return date.toLocaleString('zh-CN');
+		return formatDateTime(dateStr);
 	}
 
 	function handleBackClick() {

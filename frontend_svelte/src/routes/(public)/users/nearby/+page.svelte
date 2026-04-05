@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { authStore } from '$lib/stores/auth.svelte';
 	import { usersService } from '$lib/api/services';
 	import { navigateToNearbyBackTarget } from '../../nearby-back';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
@@ -36,12 +37,20 @@
 
 	async function loadUsers(refresh = false) {
 		await pagination.load(
-			(cursor) =>
-				usersService.search({
+			async (cursor) => {
+				const response = await usersService.search({
 					radius: mapAnchorStore.radius * 1000,
 					reference_point: getAnchor(),
 					pagination: { limit: 20, cursor }
-				}),
+				});
+				const currentUserId = authStore.currentUserId;
+				if (currentUserId && response.data?.items) {
+					response.data.items = response.data.items.filter(
+						(item) => item.user.user_id !== currentUserId
+					);
+				}
+				return response;
+			},
 			refresh
 		);
 		hasLoadedOnce = true;

@@ -164,8 +164,7 @@
 
 	async function handleSubmit() {
 		if (!authStore.isAuthenticated) {
-			uiStore.saveRedirectUrl();
-			uiStore.openLoginModal();
+			uiStore.openLoginModalWithRedirect({});
 			open = false;
 			onOpenChange?.(false);
 			return;

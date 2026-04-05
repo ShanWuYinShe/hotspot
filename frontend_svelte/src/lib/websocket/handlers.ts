@@ -8,6 +8,8 @@ import { websocketStore } from './store.svelte';
 import { toast } from '$lib/stores/toast.svelte';
 import { browser, dev } from '$app/environment';
 import { goto } from '$app/navigation';
+import { getLocale, t, translateWithLocale } from '$lib/i18n';
+import { formatDateTime } from '$lib/utils/format';
 
 // Dev-only 日志工具
 const log = dev ? console.log.bind(console) : () => {};
@@ -469,6 +471,35 @@ class WebSocketEventHandlers {
 	private userOnlineHandlers = new Set<EventHandler>();
 	private userOfflineHandlers = new Set<EventHandler>();
 
+	private isCurrentUser(userId: string): boolean {
+		return userId === authStore.currentUserId;
+	}
+
+	private getGroupFieldLabels(locale = getLocale()): Record<string, string> {
+		return {
+			name: translateWithLocale(locale, 'websocket.fieldName'),
+			avatar_url: translateWithLocale(locale, 'websocket.fieldAvatar'),
+			description: translateWithLocale(locale, 'websocket.fieldDescription'),
+			tags: translateWithLocale(locale, 'websocket.fieldTags'),
+			join_method: translateWithLocale(locale, 'websocket.fieldJoinMethod'),
+			is_searchable: translateWithLocale(locale, 'websocket.fieldSearchable'),
+			max_members: translateWithLocale(locale, 'websocket.fieldMaxMembers'),
+			has_password: translateWithLocale(locale, 'websocket.fieldPassword'),
+			location: translateWithLocale(locale, 'websocket.fieldLocation')
+		};
+	}
+
+	private redirectIfViewingGroup(groupId: string): void {
+		if (!browser) return;
+		const currentPath = window.location.pathname;
+		if (
+			currentPath.includes(`/groups/${groupId}`) ||
+			currentPath.includes(`/chat/groups/${groupId}`)
+		) {
+			void goto('/groups');
+		}
+	}
+
 	constructor() {
 		this.registerDefaultHandlers();
 	}
@@ -514,29 +545,34 @@ class WebSocketEventHandlers {
 		this.onMessage('GroupMessageRecalled', this.groupMessageRecalledHandlers);
 
 		// 关注关系
-		this.onNotify('NewFollower', (p) => `${p.actor.nickname} 关注了你`);
-		this.onNotify('MutualFollow', (p) => `你和 ${p.actor.nickname} 成为了好友`, 'success');
+		this.onNotify('NewFollower', (p) => t('notificationDropdown.content.newFollower', { nickname: p.actor.nickname }));
+		this.onNotify('MutualFollow', (p) => t('notificationDropdown.content.mutualFollow', { nickname: p.actor.nickname }), 'success');
 
 		// 生活瞬间互动
-		this.onNotify('MomentLiked', (p) => `${p.actor.nickname} 赞了你的动态`);
-		this.onNotify('MomentCommented', (p) => `${p.actor.nickname} 评论了你的动态`);
-		this.onNotify('CommentLiked', (p) => `${p.actor.nickname} 赞了你的评论`);
-		this.onNotify('CommentReply', (p) => `${p.actor.nickname} 回复了你的评论`);
+		this.onNotify('MomentLiked', (p) => t('notificationDropdown.content.momentLiked', { nickname: p.actor.nickname }));
+		this.onNotify('MomentCommented', (p) => `${p.actor.nickname} ${getLocale() === 'zh-CN' ? '评论了你的动态' : 'commented on your moment'}`);
+		this.onNotify('CommentLiked', (p) => `${p.actor.nickname} ${getLocale() === 'zh-CN' ? '赞了你的评论' : 'liked your comment'}`);
+		this.onNotify('CommentReply', (p) => `${p.actor.nickname} ${getLocale() === 'zh-CN' ? '回复了你的评论' : 'replied to your comment'}`);
 
 		// 群组邀请/申请
-		this.onNotify('GroupInviteReceived', (p) => `${p.inviter.nickname} 邀请你加入群组`);
-		this.onNotify('GroupApplicationReceived', (p) => `${p.applicant.nickname} 申请加入群组`);
-		this.onNotify('GroupAnnouncementCreated', (p) => `群组发布了新公告: ${p.title}`);
+		this.onNotify('GroupInviteReceived', (p) => t('notificationDropdown.content.groupInviteReceived', { nickname: p.inviter.nickname, groupName: p.group.name }));
+		this.onNotify('GroupApplicationReceived', (p) => `${p.applicant.nickname} ${getLocale() === 'zh-CN' ? '申请加入群组' : 'requested to join a group'}`);
+		this.onNotify('GroupAnnouncementCreated', (p) => `${translateWithLocale(getLocale(), 'notificationDropdown.titles.systemAnnouncement')}: ${p.title}`);
 		this.onNotify(
 			'MessageMentioned',
-			(p) => `${p.actor.nickname} 在${p.target_type === 'moment' ? '动态' : '评论'}中提到了你`
+			(p) => {
+				const targetLabel = p.target_type === 'moment' ? t('websocket.momentLabel') : t('websocket.commentLabel');
+				return getLocale() === 'zh-CN'
+					? `${p.actor.nickname} 在${targetLabel}中提到了你`
+					: `${p.actor.nickname} mentioned you in the ${targetLabel}`;
+			}
 		);
 
 		// 群组邀请响应（条件 toast）
 		websocketStore.on('GroupInviteResponse', (payload) => {
 			log('[WS] GroupInviteResponse:', payload);
 			if (payload.status === 'accepted') {
-				toast.success(`${payload.user.nickname} 接受了群组邀请`);
+				toast.success(t('websocket.groupInviteAccepted', { nickname: payload.user.nickname }));
 			}
 			this.notificationHandlers.forEach((handler) => handler(payload));
 		});
@@ -545,7 +581,7 @@ class WebSocketEventHandlers {
 		websocketStore.on('GroupApplicationResponse', (payload) => {
 			log('[WS] GroupApplicationResponse:', payload);
 			if (payload.status === 'accepted') {
-				toast.success(`你的入群申请已通过 - ${payload.group.name}`);
+				toast.success(t('websocket.groupApplicationAccepted', { groupName: payload.group.name }));
 			}
 			this.notificationHandlers.forEach((handler) => handler(payload));
 		});
@@ -553,7 +589,7 @@ class WebSocketEventHandlers {
 		// 群组成员加入（仅 toast，不转发 notification）
 		websocketStore.on('GroupMemberJoined', (payload: GroupMemberJoinedPayload) => {
 			log('[WS] GroupMemberJoined:', payload);
-			toast.info(`${payload.user.nickname} 加入了群组`);
+			toast.info(t('websocket.groupMemberJoined', { nickname: payload.user.nickname }));
 		});
 
 		// 私聊已读回执（spec: PrivateMessageRead）
@@ -568,98 +604,65 @@ class WebSocketEventHandlers {
 
 		// 群组成员离开（GroupMemberLeft）
 		websocketStore.on('GroupMemberLeft', (payload: GroupMemberLeftPayload) => {
-			log('[WS] 群组成员离开:', payload);
-			toast.info(`${payload.user.nickname} 离开了群组`);
+			log('[WS] GroupMemberLeft:', payload);
+			toast.info(t('websocket.groupMemberLeft', { nickname: payload.user.nickname }));
 		});
 
 		// 群组成员被移除（GroupMemberRemoved）
 		websocketStore.on('GroupMemberRemoved', (payload: GroupMemberRemovedPayload) => {
-			log('[WS] 群组成员被移除:', payload);
+			log('[WS] GroupMemberRemoved:', payload);
 
-			const isCurrentUser = payload.user.user_id === authStore.currentUserId;
-
-			if (isCurrentUser) {
-				toast.warning('你已被移出群组');
-				// 如果在群组相关页面，跳转到群组列表
-				if (browser) {
-					const currentPath = window.location.pathname;
-					if (
-						currentPath.includes(`/groups/${payload.group_id}`) ||
-						currentPath.includes(`/chat/groups/${payload.group_id}`)
-					) {
-						goto('/groups');
-					}
-				}
+			if (this.isCurrentUser(payload.user.user_id)) {
+				toast.warning(t('websocket.youWereRemovedFromGroup'));
+				this.redirectIfViewingGroup(payload.group_id);
 			} else {
-				const reasonText = payload.reason === 'banned' ? '被封禁' : '被移除';
-				toast.info(`${payload.user.nickname} ${reasonText}`);
+				const reasonText = payload.reason === 'banned' ? t('websocket.reasonBanned') : t('websocket.reasonRemoved');
+				toast.info(t('websocket.groupMemberRemoved', { nickname: payload.user.nickname, reason: reasonText }));
 			}
 		});
 
 		// 群组成员被禁言（GroupMemberMuted）
 		websocketStore.on('GroupMemberMuted', (payload: GroupMemberMutedPayload) => {
-			log('[WS] 群组成员被禁言:', payload);
+			log('[WS] GroupMemberMuted:', payload);
 
-			const isCurrentUser = payload.user.user_id === authStore.currentUserId;
-			const mutedUntil = new Date(payload.muted_until).toLocaleString('zh-CN');
-
-			if (isCurrentUser) {
-				toast.warning(`你已被禁言，直到 ${mutedUntil}`);
+			const mutedUntil = formatDateTime(payload.muted_until, getLocale());
+			if (this.isCurrentUser(payload.user.user_id)) {
+				toast.warning(t('websocket.youWereMutedUntil', { time: mutedUntil }));
 			} else {
-				toast.info(`${payload.user.nickname} 已被禁言，直到 ${mutedUntil}`);
+				toast.info(t('websocket.groupMemberMutedUntil', { nickname: payload.user.nickname, time: mutedUntil }));
 			}
 		});
 
 		// 群组成员解除禁言（GroupMemberUnmuted）
 		websocketStore.on('GroupMemberUnmuted', (payload: GroupMemberUnmutedPayload) => {
-			log('[WS] 群组成员解除禁言:', payload);
+			log('[WS] GroupMemberUnmuted:', payload);
 
-			const isCurrentUser = payload.user.user_id === authStore.currentUserId;
-
-			if (isCurrentUser) {
-				toast.success('你的禁言已解除');
+			if (this.isCurrentUser(payload.user.user_id)) {
+				toast.success(t('websocket.youWereUnmuted'));
 			} else {
-				toast.info(`${payload.user.nickname} 的禁言已解除`);
+				toast.info(t('websocket.groupMemberUnmuted', { nickname: payload.user.nickname }));
 			}
 		});
 
 		// 群组信息更新（GroupUpdated）
 		websocketStore.on('GroupUpdated', (payload: GroupUpdatedPayload) => {
-			log('[WS] 群组信息更新:', payload);
+			log('[WS] GroupUpdated:', payload);
 
+			const locale = getLocale();
+			const fieldLabels = this.getGroupFieldLabels(locale);
 			const updatedFields = Object.keys(payload.updated_fields);
 			if (updatedFields.length > 0) {
-				const fieldLabels: Record<string, string> = {
-					name: '名称',
-					avatar_url: '头像',
-					description: '描述',
-					tags: '标签',
-					join_method: '加入方式',
-					is_searchable: '可搜索性',
-					max_members: '成员上限',
-					has_password: '密码设置',
-					location: '位置'
-				};
-				const fieldsText = updatedFields.map((f) => fieldLabels[f] || f).join('、');
-				toast.success(`群组${fieldsText}已更新`);
+				const separator = locale === 'zh-CN' ? '、' : ', ';
+				const fieldsText = updatedFields.map((f) => fieldLabels[f] || f).join(separator);
+				toast.success(t('websocket.groupUpdated', { fields: fieldsText }));
 			}
 		});
 
 		// 群组解散（GroupDismissed，spec 命名）
 		websocketStore.on('GroupDismissed', (payload: GroupDismissedPayload) => {
-			log('[WS] 群组解散:', payload);
-			toast.warning('群组已解散');
-
-			// 如果在群组相关页面，跳转到群组列表
-			if (browser) {
-				const currentPath = window.location.pathname;
-				if (
-					currentPath.includes(`/groups/${payload.group_id}`) ||
-					currentPath.includes(`/chat/groups/${payload.group_id}`)
-				) {
-					goto('/groups');
-				}
-			}
+			log('[WS] GroupDismissed:', payload);
+			toast.warning(t('websocket.groupDismissed'));
+			this.redirectIfViewingGroup(payload.group_id);
 		});
 
 		// 系统公告
@@ -680,16 +683,17 @@ class WebSocketEventHandlers {
 
 		// 账号被封禁（spec 新增事件）
 		websocketStore.on('AccountBanned', (payload: AccountBannedPayload) => {
-			log('[WS] 账号被封禁:', payload);
+			log('[WS] AccountBanned:', payload);
 
-			const durationText =
-				payload.duration_days === 0 ? '永久' : `${payload.duration_days} 天`;
-			toast.error(`账号已被封禁（${durationText}）`, payload.reason);
+			const durationText = payload.duration_days === 0
+				? t('websocket.permanent')
+				: t('websocket.dayUnit', { count: payload.duration_days });
+			toast.error(t('websocket.accountBanned', { duration: durationText }), payload.reason);
 
 			// 先断开 WebSocket（设置 shouldReconnect=false，阻止自动重连），再登出
 			websocketStore.disconnect();
 			authStore.logout();
-			goto('/auth');
+			void goto('/auth');
 		});
 
 		// 在线状态（spec 简化：只有 user_id + 时间戳）

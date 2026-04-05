@@ -75,8 +75,7 @@
 
 	async function handleFollow() {
 		if (!authStore.isAuthenticated) {
-			uiStore.saveRedirectUrl();
-			uiStore.openLoginModal(handleFollow);
+			uiStore.openLoginModalWithRedirect({ onSuccess: handleFollow });
 			return;
 		}
 

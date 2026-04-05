@@ -3,7 +3,7 @@
     import { page } from "$app/state";
     import { onMount } from "svelte";
     import { ModeWatcher } from "mode-watcher";
-    import { initLocale } from "$lib/i18n";
+    import { getCurrentLocationLabel, initLocale } from "$lib/i18n";
     import { Toaster } from "$lib/components/ui/sonner";
     import LoginModal from "$lib/components/common/login-modal.svelte";
     import PageLoading from "$lib/components/common/page-loading.svelte";
@@ -84,7 +84,7 @@
                             const resolved =
                                 poiName ||
                                 result.regeocode.formattedAddress ||
-                                "当前位置";
+                                getCurrentLocationLabel();
                             resolve(resolved);
                             return;
                         }
@@ -119,7 +119,7 @@
         mapAnchorStore.setAnchor(
             location.point.latitude,
             location.point.longitude,
-            location.location_name || "当前位置",
+            location.location_name || '',
         );
     }
 
@@ -133,7 +133,7 @@
                     latitude: existing.point.latitude,
                     longitude: existing.point.longitude,
                 },
-                location_name: existing.location_name || "当前位置",
+                location_name: existing.location_name || '',
             });
             return;
         }
@@ -151,7 +151,7 @@
                 longitude: geoPoint.longitude,
             },
             location_name:
-                resolved || locationStore.current?.location_name || "当前位置",
+                resolved || locationStore.current?.location_name || '',
         };
         locationStore.setLocation(location);
         syncAnchorFromLocation(location);
@@ -180,7 +180,7 @@
                 latitude: current.point.latitude,
                 longitude: current.point.longitude,
             },
-            location_name: current.location_name || "当前位置",
+            location_name: current.location_name || '',
         };
         void syncLocationToServer(userId, location);
     });

@@ -2,6 +2,7 @@
 	import { dev } from '$app/environment';
 	import { usersService } from '$lib/api/services';
 	import { isSuccess } from '$lib/api/client';
+	import { authStore } from '$lib/stores/auth.svelte';
 	import { mapAnchorStore } from '$lib/stores/map-anchor.svelte';
 	import type { UserItem } from '$lib/types/api';
 	import UserCard from '$lib/components/common/user-card.svelte';
@@ -32,7 +33,11 @@
 			});
 			if (version !== loadVersion) return; // 丢弃过期响应
 			if (isSuccess(response) && response.data) {
-				users = response.data.items ?? [];
+				const currentUserId = authStore.currentUserId;
+				const items = response.data.items ?? [];
+				users = currentUserId
+					? items.filter((item) => item.user.user_id !== currentUserId)
+					: items;
 			}
 		} catch (error) {
 			if (version !== loadVersion) return;

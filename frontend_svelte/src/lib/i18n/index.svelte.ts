@@ -90,6 +90,10 @@ export function setLocale(locale: Locale): void {
 	}
 }
 
+export function getCurrentLocationLabel(locale: Locale = getLocale()): string {
+	return translateWithLocale(locale, 'common.currentLocation');
+}
+
 /** 在 onMount 中调用，从 localStorage 恢复用户偏好 */
 export function initLocale(): void {
 	try {

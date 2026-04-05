@@ -145,9 +145,12 @@
     function handleNavClick(item: NavItem, e: MouseEvent) {
         if (item.requiresAuth && !authStore.isAuthenticated) {
             e.preventDefault();
-            uiStore.saveRedirectUrl(item.href);
-            uiStore.openLoginModal();
+            uiStore.openLoginModalWithRedirect({ url: item.href });
         }
+    }
+
+    function navigateToSettings() {
+        void goto('/settings');
     }
 
     interface Props {
@@ -315,7 +318,7 @@
 				variant="ghost"
 				size="icon"
 				class="group relative flex items-center justify-center overflow-hidden rounded-lg bg-muted/40 p-3 transition-all duration-200 hover:bg-muted/60 min-h-11 min-w-11"
-				onclick={() => goto("/settings")}
+				onclick={navigateToSettings}
 				{@attach circularFeedback}
 				aria-label={t('sidebar.settingsLabel')}
 			>
