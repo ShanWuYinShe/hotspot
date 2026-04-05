@@ -949,6 +949,32 @@ struct Index {
         .height('100%')
       }
 
+      Column() {
+        Row() {
+          Blank().layoutWeight(1)
+          Button() {
+            Text() {
+              SymbolSpan($r(AppIcon.NOTIFICATION))
+                .fontSize(18)
+                .fontColor([this.getCurrentThemePalette().textPrimary])
+            }
+          }
+          .type(ButtonType.Normal)
+          .width(40)
+          .height(40)
+          .backgroundColor(this.getCurrentThemePalette().surfaceElevated)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
+          .shadow(this.getCurrentThemePalette().controlShadow)
+          .margin({ top: this.getSafeAreaTopPadding(), right: DesignConstants.SPACING.LG })
+          .onClick(() => {
+            this.showNotificationCenter = true;
+          })
+        }
+        .width('100%')
+      }
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
+
       if (this.visibleNotifications.length > 0) {
         Column({ space: DesignConstants.SPACING.SM }) {
           ForEach(this.visibleNotifications, (notification: SmartNotification) => {
@@ -977,7 +1003,11 @@ struct Index {
 
       if (this.showNotificationCenter) {
         Column() {
-          NotificationCenter()
+          NotificationCenter({
+            onClose: () => {
+              this.showNotificationCenter = false;
+            }
+          })
         }
         .width('100%')
         .height('100%')
@@ -987,9 +1017,6 @@ struct Index {
           TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.EaseInOut })
             .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 320, curve: Curve.EaseInOut }))
         )
-        .onClick(() => {
-          this.showNotificationCenter = false;
-        })
       }
 
       if (this.showPerformanceDetails) {

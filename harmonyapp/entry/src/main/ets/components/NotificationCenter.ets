@@ -27,6 +27,7 @@ class NotificationFilterOption {
 @Component
 export struct NotificationCenter {
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
+  onClose?: () => void;
   @State private visibleNotifications: NotificationItem[] = [];
   @State private selectedFilter: NotificationFilterKey = 'all';
   @State private isLoading: boolean = false;
@@ -293,6 +294,16 @@ export struct NotificationCenter {
             icon: AppIcon.REFRESH,
             iconSize: 20,
             onIconClick: () => this.refreshNotifications()
+          })
+
+          SystemIcon({
+            icon: AppIcon.CLOSE,
+            iconSize: 20,
+            onIconClick: () => {
+              if (this.onClose) {
+                this.onClose();
+              }
+            }
           })
         }
       }

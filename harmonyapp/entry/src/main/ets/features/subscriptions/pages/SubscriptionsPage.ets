@@ -176,7 +176,7 @@ export struct SubscriptionsPage {
           }
         })
 
-        Text('通知订阅')
+        Text('通知偏好')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.getCurrentThemePalette().textPrimary)
@@ -213,7 +213,7 @@ export struct SubscriptionsPage {
             (i.key as string) + '_v' + this.getValue(i.key) + '_s' + (this.savingKey === String(i.key)))
 
           ListItem() {
-            Text('提示：你可以随时在这里调整通知偏好，变更会即时生效。')
+            Text('提示：这里管理的是当前设备上的本地通知偏好；系统公告内容仍可在“系统公告”中统一查看。')
               .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor(this.getCurrentThemePalette().textSecondary)
               .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM })

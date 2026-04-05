@@ -235,11 +235,21 @@ export struct SettingsPage {
   private buildSystemEntries(): SettingsEntryItem[] {
     return [
       {
-        icon: AppIcon.NOTIFICATION,
-        title: '消息通知',
-        subtitle: '管理通知提醒与订阅偏好',
+        icon: AppIcon.NOTIFICATION_FILL,
+        title: '通知中心',
+        subtitle: '查看互动消息、群组提醒和未读通知',
         action: () => {
-          if (this.requireLogin('管理通知订阅', PageNames.SUBSCRIPTIONS)) {
+          if (this.requireLogin('查看通知中心', PageNames.INDEX)) {
+            AppRouter.pop();
+          }
+        }
+      },
+      {
+        icon: AppIcon.NOTIFICATION,
+        title: '通知偏好',
+        subtitle: '管理当前设备上的提醒类型与订阅偏好',
+        action: () => {
+          if (this.requireLogin('管理通知偏好', PageNames.SUBSCRIPTIONS)) {
             AppRouter.push(PageNames.SUBSCRIPTIONS);
           }
         }
@@ -247,7 +257,7 @@ export struct SettingsPage {
       {
         icon: AppIcon.INFO,
         title: '系统公告',
-        subtitle: this.announcements.length > 0 ? `最近 ${this.announcements.length} 条平台通知` : '查看维护提醒与平台通知',
+        subtitle: this.announcements.length > 0 ? `最近 ${this.announcements.length} 条平台通知` : '查看平台公告、维护提醒与系统消息',
         action: () => {
           const params = new AnnouncementsRouteParam();
           params.items = this.announcements as Object[];
