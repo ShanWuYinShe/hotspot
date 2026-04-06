@@ -1015,16 +1015,28 @@ struct Index {
       }
 
       if (this.showNotificationCenter) {
-        Column() {
-          NotificationCenter({
-            onClose: () => {
+        Stack() {
+          Column()
+            .width('100%')
+            .height('100%')
+            .backgroundColor('#66000000')
+            .onClick(() => {
               this.showNotificationCenter = false;
-            }
-          })
+            })
+
+          Column() {
+            NotificationCenter({
+              onClose: () => {
+                this.showNotificationCenter = false;
+              }
+            })
+          }
+          .width('100%')
+          .height('100%')
+          .backgroundColor(this.getCurrentThemePalette().pageBackground)
         }
         .width('100%')
         .height('100%')
-        .backgroundColor(this.getCurrentThemePalette().pageBackground)
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .transition(
           TransitionEffect.OPACITY.animation({ duration: 320, curve: Curve.EaseInOut })

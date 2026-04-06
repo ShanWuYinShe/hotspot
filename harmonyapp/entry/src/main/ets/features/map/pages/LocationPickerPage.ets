@@ -1036,6 +1036,23 @@ export struct LocationPickerPage {
     }
   }
 
+  private handleBackNavigation(): boolean {
+    if (this.overlappingPanelItems.length > 0) {
+      this.overlappingPanelItems = [];
+      return true;
+    }
+    if (this.showFilterPanel) {
+      this.showFilterPanel = false;
+      return true;
+    }
+    if (this.showSearchBar) {
+      this.closeSearchPanel(true);
+      return true;
+    }
+    AppRouter.pop();
+    return true;
+  }
+
   private handleVisibleRegionChange(region: MapVisibleRegion): void {
     this.visibleRegion = region;
     if (!this.initialised || !this.mapReady) {
@@ -1668,7 +1685,7 @@ export struct LocationPickerPage {
             filterOpen: this.showFilterPanel,
             safeAreaTop: this.safeAreaTop,
             resolvedThemeId: this.resolvedThemeId,
-            onBack: () => { AppRouter.pop(); },
+            onBack: () => { this.handleBackNavigation(); },
             onToggleFilter: () => {
               this.overlappingPanelItems = [];
               if (!this.showFilterPanel) {
@@ -1940,6 +1957,7 @@ export struct LocationPickerPage {
     .height('100%')
     .backgroundColor(this.getCurrentThemePalette().pageBackground)
     .hideTitleBar(true)
+    .onBackPressed((): boolean => this.handleBackNavigation())
     .onShown(() => { if (this.mapActions) { this.mapActions.show(); } })
     .onHidden(() => { if (this.mapActions) { this.mapActions.hide(); } })
     .onReady((context: NavDestinationContext) => {
