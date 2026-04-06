@@ -240,6 +240,7 @@ export struct SettingsPage {
         subtitle: '查看互动消息、群组提醒和未读通知',
         action: () => {
           if (this.requireLogin('查看通知中心', PageNames.INDEX)) {
+            AppStorage.setOrCreate<boolean>('openNotificationCenter', true);
             AppRouter.pop();
           }
         }

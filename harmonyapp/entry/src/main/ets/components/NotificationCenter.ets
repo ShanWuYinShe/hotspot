@@ -5,6 +5,8 @@ import { NotificationSyncService } from '../core/services/NotificationSyncServic
 import { ApiClient } from '../core/api/ApiClient';
 import { NotificationItem, NotificationPayload, NotificationType } from '../core/types/api';
 import { SystemIcon, AppIcon } from './SystemIcon';
+import { AppRouter, AnnouncementsRouteParam, GroupDetailRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../core/router/AppRouter';
+import { PageNames } from '../constants/AppConstants';
 import { SystemToast } from './SystemToast';
 import { AccessibilityManager } from '../core/accessibility/AccessibilityManager';
 import { DesignConstants } from '../constants/DesignConstants';
@@ -187,9 +189,59 @@ export struct NotificationCenter {
 
   private async handleNotificationClick(notification: NotificationItem): Promise<void> {
     await this.onMarkRead(notification);
+    if (this.navigateByNotification(notification)) {
+      if (this.onClose) {
+        this.onClose();
+      }
+      return;
+    }
     const message = this.buildNotificationMessage(notification);
     if (message.trim().length > 0) {
       SystemToast.showInfo(message, this.getUIContext());
+    }
+  }
+
+  private navigateByNotification(notification: NotificationItem): boolean {
+    switch (notification.type) {
+      case 'new_follower':
+      case 'mutual_follow': {
+        const userId = notification.payload?.actor?.user_id ?? notification.payload?.user?.user_id ?? '';
+        if (!userId) return false;
+        const params = new ProfileRouteParam();
+        params.userId = userId;
+        AppRouter.push(PageNames.PROFILE, params);
+        return true;
+      }
+      case 'moment_liked':
+      case 'moment_commented':
+      case 'comment_liked':
+      case 'comment_reply':
+      case 'mentioned': {
+        const momentId = notification.payload?.moment_id ?? '';
+        if (!momentId) return false;
+        const params = new MomentDetailRouteParam();
+        params.momentId = momentId;
+        AppRouter.push(PageNames.MOMENT_DETAIL, params);
+        return true;
+      }
+      case 'group_invite_received':
+      case 'group_invite_accepted':
+      case 'group_application_received':
+      case 'group_application_accepted': {
+        const groupId = notification.payload?.group_id ?? '';
+        if (!groupId) return false;
+        const params = new GroupDetailRouteParam();
+        params.groupId = groupId;
+        AppRouter.push(PageNames.GROUP_DETAIL, params);
+        return true;
+      }
+      case 'system_announcement': {
+        const params = new AnnouncementsRouteParam();
+        AppRouter.push(PageNames.ANNOUNCEMENTS, params);
+        return true;
+      }
+      default:
+        return false;
     }
   }
 

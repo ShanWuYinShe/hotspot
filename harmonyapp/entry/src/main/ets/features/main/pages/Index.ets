@@ -47,6 +47,7 @@ const TAG: string = 'IndexPage';
 
 // Define storage key locally since it's not exported from NotificationRenderer
 const STORAGE_KEY_VISIBLE_NOTIFICATIONS = 'visibleNotifications';
+const STORAGE_KEY_OPEN_NOTIFICATION_CENTER = 'openNotificationCenter';
 
 @Entry
 @Preview
@@ -63,6 +64,7 @@ struct Index {
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(STORAGE_KEY_VISIBLE_NOTIFICATIONS) visibleNotifications: SmartNotification[] = [];
+  @StorageLink(STORAGE_KEY_OPEN_NOTIFICATION_CENTER) @Watch('onNotificationCenterRequested') openNotificationCenter: boolean = false;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   @State currentTabIndex: number = 0;
@@ -94,6 +96,9 @@ struct Index {
 
   async aboutToAppear() {
     SystemUiController.syncWithCurrentTheme();
+    if (!AppStorage.has(STORAGE_KEY_OPEN_NOTIFICATION_CENTER)) {
+      AppStorage.setOrCreate<boolean>(STORAGE_KEY_OPEN_NOTIFICATION_CENTER, false);
+    }
     // 初始化全局路由
     AppRouter.init(this.navPathStack);
 
@@ -277,6 +282,13 @@ struct Index {
     } else {
       this.notificationSyncService.reset();
       this.stateManager.updateUnreadCount({ total_unread_count: 0 });
+    }
+  }
+
+  private onNotificationCenterRequested(): void {
+    if (this.openNotificationCenter) {
+      this.showNotificationCenter = true;
+      AppStorage.setOrCreate<boolean>(STORAGE_KEY_OPEN_NOTIFICATION_CENTER, false);
     }
   }
 
