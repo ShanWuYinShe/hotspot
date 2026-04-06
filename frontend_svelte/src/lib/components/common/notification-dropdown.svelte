@@ -35,6 +35,21 @@
 		}
 	});
 
+	$effect(() => {
+		const syncVersion = notificationStore.readSyncVersion;
+		if (!open || syncVersion === 0) return;
+		if (notificationStore.lastReadMutationType === 'mark_all_read') {
+			recentNotifications = recentNotifications.map((i) => (i.is_read ? i : { ...i, is_read: true }));
+			return;
+		}
+		if (notificationStore.lastReadMutationType === 'mark_read' && notificationStore.lastReadNotificationIds.length > 0) {
+			const ids = new Set(notificationStore.lastReadNotificationIds);
+			recentNotifications = recentNotifications.map((i) =>
+				ids.has(i.notification_id) ? { ...i, is_read: true } : i
+			);
+		}
+	});
+
 	async function loadRecent(version: number) {
 		loading = true;
 		loadFailed = false;

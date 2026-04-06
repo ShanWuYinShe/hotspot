@@ -42,6 +42,21 @@
 		loadNotifications(true);
 	});
 
+	$effect(() => {
+		const syncVersion = notificationStore.readSyncVersion;
+		if (syncVersion === 0) return;
+		if (notificationStore.lastReadMutationType === 'mark_all_read') {
+			pagination.updateItem((i) => (i.is_read ? i : { ...i, is_read: true }));
+			return;
+		}
+		if (notificationStore.lastReadMutationType === 'mark_read' && notificationStore.lastReadNotificationIds.length > 0) {
+			const ids = new Set(notificationStore.lastReadNotificationIds);
+			pagination.updateItem((i) =>
+				ids.has(i.notification_id) ? { ...i, is_read: true } : null
+			);
+		}
+	});
+
 	async function markAllRead() {
 		const ok = await notificationStore.markAllAsRead();
 		if (ok) {

@@ -15,6 +15,9 @@ import { websocketStore } from '$lib/websocket';
 class NotificationStore {
 	// 未读数量（来自 HTTP API + WebSocket 增量）
 	unreadCount = $state(0);
+	readSyncVersion = $state(0);
+	lastReadMutationType = $state<'mark_read' | 'mark_all_read' | null>(null);
+	lastReadNotificationIds = $state.raw<string[]>([]);
 
 	private cleanupFunctions: (() => void)[] = [];
 	// $effect.root() 清理函数
@@ -70,6 +73,9 @@ class NotificationStore {
 		const res = await notificationsService.markAsRead({ notification_ids: notificationIds });
 		if (isSuccess(res)) {
 			this.unreadCount = Math.max(0, this.unreadCount - notificationIds.length);
+			this.lastReadMutationType = 'mark_read';
+			this.lastReadNotificationIds = [...notificationIds];
+			this.readSyncVersion += 1;
 			return true;
 		}
 		return false;
@@ -82,6 +88,9 @@ class NotificationStore {
 		const res = await notificationsService.markAllRead();
 		if (isSuccess(res)) {
 			this.unreadCount = 0;
+			this.lastReadMutationType = 'mark_all_read';
+			this.lastReadNotificationIds = [];
+			this.readSyncVersion += 1;
 			return true;
 		}
 		return false;
