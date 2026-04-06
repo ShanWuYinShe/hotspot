@@ -166,6 +166,15 @@ export struct ProfilePage {
     loginParams.reason = 'action_required';
     loginParams.action = actionName;
     loginParams.redirectUrl = PageNames.PROFILE;
+    if (actionName === '发起私聊') {
+      const profile = this.viewedUserProfile;
+      const userId = profile?.user?.user_id ?? '';
+      if (userId) {
+        loginParams.restoreAction = 'open_private_chat';
+        loginParams.restoreTargetId = userId;
+        loginParams.restoreTitle = profile?.user?.nickname ?? '私聊';
+      }
+    }
     AppRouter.push(PageNames.LOGIN, loginParams);
     return false;
   }

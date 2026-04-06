@@ -48,6 +48,7 @@ const TAG: string = 'IndexPage';
 // Define storage key locally since it's not exported from NotificationRenderer
 const STORAGE_KEY_VISIBLE_NOTIFICATIONS = 'visibleNotifications';
 const STORAGE_KEY_OPEN_NOTIFICATION_CENTER = 'openNotificationCenter';
+const STORAGE_KEY_OPEN_CREATE_SHEET = 'openCreateSheet';
 
 @Entry
 @Preview
@@ -65,6 +66,7 @@ struct Index {
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(STORAGE_KEY_VISIBLE_NOTIFICATIONS) visibleNotifications: SmartNotification[] = [];
   @StorageLink(STORAGE_KEY_OPEN_NOTIFICATION_CENTER) @Watch('onNotificationCenterRequested') openNotificationCenter: boolean = false;
+  @StorageLink(STORAGE_KEY_OPEN_CREATE_SHEET) @Watch('onCreateSheetRequested') openCreateSheet: boolean = false;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = 'default_clean_light';
 
   @State currentTabIndex: number = 0;
@@ -98,6 +100,9 @@ struct Index {
     SystemUiController.syncWithCurrentTheme();
     if (!AppStorage.has(STORAGE_KEY_OPEN_NOTIFICATION_CENTER)) {
       AppStorage.setOrCreate<boolean>(STORAGE_KEY_OPEN_NOTIFICATION_CENTER, false);
+    }
+    if (!AppStorage.has(STORAGE_KEY_OPEN_CREATE_SHEET)) {
+      AppStorage.setOrCreate<boolean>(STORAGE_KEY_OPEN_CREATE_SHEET, false);
     }
     // 初始化全局路由
     AppRouter.init(this.navPathStack);
@@ -289,6 +294,13 @@ struct Index {
     if (this.openNotificationCenter) {
       this.showNotificationCenter = true;
       AppStorage.setOrCreate<boolean>(STORAGE_KEY_OPEN_NOTIFICATION_CENTER, false);
+    }
+  }
+
+  private onCreateSheetRequested(): void {
+    if (this.openCreateSheet) {
+      this.showCreateSheet = true;
+      AppStorage.setOrCreate<boolean>(STORAGE_KEY_OPEN_CREATE_SHEET, false);
     }
   }
 
@@ -740,6 +752,7 @@ struct Index {
       loginParams.reason = 'action_required';
       loginParams.action = '创建内容';
       loginParams.redirectUrl = PageNames.INDEX;
+      loginParams.restoreAction = 'open_create_sheet';
       AppRouter.push(PageNames.LOGIN, loginParams);
       return;
     }

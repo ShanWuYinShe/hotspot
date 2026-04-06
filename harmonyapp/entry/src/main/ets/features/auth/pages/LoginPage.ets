@@ -8,7 +8,8 @@ import { GlobalStateManager } from '../../../core/state/GlobalStateManager';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { HttpUtil } from '../../../core/network/HttpUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
-import { AppRouter } from '../../../core/router/AppRouter';
+import { AppRouter, ChatRouteParam } from '../../../core/router/AppRouter';
+import { PageNames } from '../../../constants/AppConstants';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { PasswordSecurityUtil } from '../../../core/security/PasswordSecurityUtil';
@@ -50,6 +51,9 @@ export struct LoginPage {
   @State loginMode: 'login' | 'register' = 'login';
   @State redirectUrl: string = '';
   @State redirectAction: string = '';
+  @State restoreAction: string = '';
+  @State restoreTargetId: string = '';
+  @State restoreTitle: string = '';
 
   private stateManager = GlobalStateManager.getInstance();
   private webSocketService = WebSocketService.getInstance();
@@ -241,6 +245,18 @@ export struct LoginPage {
         const action = params.action as string;
         if (action) {
           this.redirectAction = action;
+        }
+        const restoreAction = params.restoreAction as string;
+        if (restoreAction) {
+          this.restoreAction = restoreAction;
+        }
+        const restoreTargetId = params.restoreTargetId as string;
+        if (restoreTargetId) {
+          this.restoreTargetId = restoreTargetId;
+        }
+        const restoreTitle = params.restoreTitle as string;
+        if (restoreTitle) {
+          this.restoreTitle = restoreTitle;
         }
       }
     })
@@ -518,9 +534,22 @@ export struct LoginPage {
   }
 
   private finishAuthNavigation(): void {
+    if (this.restoreAction === 'open_private_chat' && this.restoreTargetId.trim().length > 0) {
+      const params = new ChatRouteParam();
+      params.chatId = this.restoreTargetId.trim();
+      params.chatType = 'private_chat';
+      params.targetId = this.restoreTargetId.trim();
+      params.title = this.restoreTitle.trim().length > 0 ? this.restoreTitle.trim() : '私聊';
+      AppRouter.push(PageNames.CHAT, params);
+      return;
+    }
+
     const redirectTarget = this.redirectUrl.trim();
     if (redirectTarget.length > 0) {
       AppRouter.replacePath(redirectTarget);
+      if (this.restoreAction === 'open_create_sheet' && redirectTarget === PageNames.INDEX) {
+        AppStorage.setOrCreate<boolean>('openCreateSheet', true);
+      }
       return;
     }
     AppRouter.clear();

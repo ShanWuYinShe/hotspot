@@ -11,6 +11,9 @@ export class LoginRouteParam {
   reason: string = '';
   action: string = '';
   redirectUrl: string = '';
+  restoreAction: string = '';
+  restoreTargetId: string = '';
+  restoreTitle: string = '';
 }
 
 /** 聊天页参数 */
