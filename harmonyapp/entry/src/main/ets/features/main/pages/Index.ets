@@ -965,24 +965,37 @@ struct Index {
       Column() {
         Row() {
           Blank().layoutWeight(1)
-          Button() {
-            Text() {
-              SymbolSpan($r(AppIcon.NOTIFICATION))
-                .fontSize(18)
-                .fontColor([this.getCurrentThemePalette().textPrimary])
+          Stack({ alignContent: Alignment.TopEnd }) {
+            Button() {
+              Text() {
+                SymbolSpan($r(this.unreadCount.total_unread_count > 0 ? AppIcon.NOTIFICATION_FILL : AppIcon.NOTIFICATION))
+                  .fontSize(18)
+                  .fontColor([this.getCurrentThemePalette().textPrimary])
+              }
+            }
+            .type(ButtonType.Normal)
+            .width(40)
+            .height(40)
+            .backgroundColor(this.getCurrentThemePalette().surfaceElevated)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
+            .shadow(this.getCurrentThemePalette().controlShadow)
+            .onClick(() => {
+              this.showNotificationCenter = true;
+            })
+
+            if (this.unreadCount.total_unread_count > 0) {
+              Text(this.unreadCount.total_unread_count > 99 ? '99+' : `${this.unreadCount.total_unread_count}`)
+                .fontSize(10)
+                .fontWeight(FontWeight.Bold)
+                .fontColor(Color.White)
+                .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+                .backgroundColor(this.getCurrentThemePalette().accentBackground)
+                .borderRadius(DesignConstants.RADIUS.FULL)
+                .translate({ x: 8, y: -6 })
             }
           }
-          .type(ButtonType.Normal)
-          .width(40)
-          .height(40)
-          .backgroundColor(this.getCurrentThemePalette().surfaceElevated)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
-          .shadow(this.getCurrentThemePalette().controlShadow)
           .margin({ top: this.getSafeAreaTopPadding(), right: DesignConstants.SPACING.LG })
-          .onClick(() => {
-            this.showNotificationCenter = true;
-          })
         }
         .width('100%')
       }

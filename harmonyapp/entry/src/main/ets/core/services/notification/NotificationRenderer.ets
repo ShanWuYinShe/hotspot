@@ -861,7 +861,7 @@ export class NotificationRenderer extends BaseSingleton {
   handleClick(notification: SmartNotification): void {
     try {
       this.stats.userInteractions++;
-      const listener = this.clickListeners.get(notification.id);
+      const listener = this.clickListeners.get(notification.id) ?? this.clickListeners.get('*');
       if (listener) {
         listener(notification);
       }
@@ -878,7 +878,7 @@ export class NotificationRenderer extends BaseSingleton {
   handleAction(action: NotificationAction, notification: SmartNotification): void {
     try {
       this.stats.userInteractions++;
-      const listener = this.actionListeners.get(notification.id);
+      const listener = this.actionListeners.get(notification.id) ?? this.actionListeners.get('*');
       if (listener) {
         listener(action, notification);
       }
