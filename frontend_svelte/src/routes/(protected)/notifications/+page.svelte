@@ -28,14 +28,18 @@
 	});
 	let processingNotifications = $state<Set<string>>(new Set());
 
-	onMount(() => {
-		pagination.load(
+	function loadNotifications(refresh = true) {
+		return pagination.load(
 			(cursor) =>
 				notificationStore.fetchHistory({
 					pagination: { cursor, limit: 20 }
 				}),
-			true
+			refresh
 		);
+	}
+
+	onMount(() => {
+		loadNotifications(true);
 	});
 
 	async function markAllRead() {
@@ -196,7 +200,15 @@
 			<Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
 		</div>
 	{:else if pagination.error}
-		<EmptyState icon={Bell} title={t('notificationsPage.loadFailed')} />
+		<div class="space-y-4">
+			<EmptyState icon={Bell} title={t('notificationsPage.loadFailed')} />
+			<div class="flex justify-center">
+				<Button variant="outline" onclick={() => loadNotifications(true)}>
+					<Loader2 class="mr-2 h-4 w-4" />
+					重试
+				</Button>
+			</div>
+		</div>
 	{:else if pagination.items.length === 0}
 		<EmptyState icon={Bell} title={t('notificationsPage.emptyTitle')} />
 	{:else}
@@ -284,13 +296,7 @@
 				<Button
 					variant="outline"
 					disabled={pagination.loadingMore}
-					onclick={() =>
-						pagination.load(
-							(cursor) =>
-								notificationStore.fetchHistory({
-									pagination: { cursor, limit: 20 }
-								})
-						)}
+					onclick={() => loadNotifications(false)}
 				>
 					{#if pagination.loadingMore}
 						<Loader2 class="mr-2 h-4 w-4 animate-spin" />

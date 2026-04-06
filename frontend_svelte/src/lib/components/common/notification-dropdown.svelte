@@ -25,6 +25,7 @@
 	let open = $state(false);
 	let recentNotifications = $state.raw<NotificationItem[]>([]);
 	let loading = $state(false);
+	let loadFailed = $state(false);
 	let loadVersion = 0;
 
 	$effect(() => {
@@ -36,17 +37,21 @@
 
 	async function loadRecent(version: number) {
 		loading = true;
+		loadFailed = false;
 		try {
 			const res = await notificationStore.fetchHistory({ pagination: { limit: 5 } });
-			if (version !== loadVersion) return; // 丢弃过期响应
+			if (version !== loadVersion) return;
 			if (isSuccess(res) && res.data) {
 				recentNotifications = res.data.items;
+				loadFailed = false;
 			} else {
 				recentNotifications = [];
+				loadFailed = true;
 			}
 		} catch {
 			if (version !== loadVersion) return;
 			recentNotifications = [];
+			loadFailed = true;
 		} finally {
 			if (version === loadVersion) {
 				loading = false;
@@ -94,6 +99,11 @@
 		open = false;
 		goto('/notifications');
 	}
+
+	function retryLoadRecent() {
+		const version = ++loadVersion;
+		untrack(() => loadRecent(version));
+	}
 </script>
 
 <DropdownMenu.Root bind:open>
@@ -116,7 +126,7 @@
 		{/snippet}
 	</DropdownMenu.Trigger>
 
-	<DropdownMenu.Content class="w-96 p-0" align="end" sideOffset={8}>
+	<DropdownMenu.Content class="w-[min(24rem,calc(100vw-2rem))] p-0" align="end" sideOffset={8}>
 		<!-- Header -->
 		<div class="flex items-center justify-between border-b border-border/50 px-4 py-3">
 			<div class="flex items-center gap-2">
@@ -158,6 +168,17 @@
 			<div class="flex flex-col items-center justify-center py-12">
 				<div class="h-8 w-8 animate-pulse rounded-full bg-muted"></div>
 				<p class="mt-3 text-sm text-muted-foreground">{t('common.loading')}</p>
+			</div>
+		{:else if loadFailed}
+			<div class="flex flex-col items-center justify-center py-12 px-4 text-center">
+				<div class="mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+					<Bell class="h-8 w-8 text-muted-foreground" />
+				</div>
+				<p class="text-sm font-medium">加载通知失败</p>
+				<p class="text-xs text-muted-foreground">请稍后重试</p>
+				<Button variant="outline" size="sm" class="mt-4 rounded-2xl" onclick={retryLoadRecent}>
+					重试
+				</Button>
 			</div>
 		{:else if recentNotifications.length === 0}
 			<div class="flex flex-col items-center justify-center py-12">
