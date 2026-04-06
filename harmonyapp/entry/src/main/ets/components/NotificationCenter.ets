@@ -237,6 +237,7 @@ export struct NotificationCenter {
       }
       case 'system_announcement': {
         const params = new AnnouncementsRouteParam();
+        params.focusAnnouncementId = notification.payload?.announcement_id ?? '';
         AppRouter.push(PageNames.ANNOUNCEMENTS, params);
         return true;
       }
@@ -681,11 +682,15 @@ export struct NotificationCenter {
       case 'moment_commented':
         return `${actor}: ${payload?.comment_preview ?? '发表了评论'}`;
       case 'comment_liked':
-        return `${actor} 赞了你的评论`;
+        return payload?.comment_preview ? `${actor} 赞了你的评论：${payload.comment_preview}` : `${actor} 赞了你的评论`;
       case 'comment_reply':
-        return `${actor}: ${payload?.reply_content_preview ?? '回复了你的评论'}`;
+        return payload?.replied_comment_preview
+          ? `${actor} 回复了你的评论：${payload.replied_comment_preview}`
+          : `${actor}: ${payload?.reply_content_preview ?? '回复了你的评论'}`;
       case 'mentioned':
-        return `${actor} 在动态中提到了你`;
+        return payload?.target_type === 'comment'
+          ? `${actor} 在评论中提到了你`
+          : `${actor} 在动态中提到了你`;
       case 'group_invite_received':
         return `${payload?.group_name ?? '某群组'} 邀请你加入`;
       case 'group_invite_accepted':

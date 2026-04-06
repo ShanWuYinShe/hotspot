@@ -19,6 +19,7 @@ export struct AnnouncementsPage {
   @State announcements: SystemAnnouncementItem[] = [];
   @State loading: boolean = false;
   @State refreshing: boolean = false;
+  private focusAnnouncementId: string = '';
 
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
@@ -26,6 +27,17 @@ export struct AnnouncementsPage {
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  private applyAnnouncementFocus(items: SystemAnnouncementItem[]): SystemAnnouncementItem[] {
+    if (!this.focusAnnouncementId) {
+      return items;
+    }
+    const focused = items.find((item) => item.announcement_id === this.focusAnnouncementId);
+    if (!focused) {
+      return items;
+    }
+    return [focused, ...items.filter((item) => item.announcement_id !== this.focusAnnouncementId)];
   }
 
   private async loadAnnouncements(force: boolean): Promise<void> {
@@ -36,7 +48,7 @@ export struct AnnouncementsPage {
     try {
       const response = await ApiClient.getSystemAnnouncements({});
       if (response.code === 0 && response.data) {
-        this.announcements = response.data.items ?? [];
+        this.announcements = this.applyAnnouncementFocus(response.data.items ?? []);
       } else {
         SystemToast.showError(response.message || '获取系统公告失败', this.getUIContext());
       }
@@ -90,9 +102,10 @@ export struct AnnouncementsPage {
     .onReady((context: NavDestinationContext) => {
       this.pathStack = context.pathStack;
       const params = context.pathInfo?.param as AnnouncementsRouteParam | undefined;
+      this.focusAnnouncementId = params?.focusAnnouncementId ?? '';
       const routeItems = params?.items as SystemAnnouncementItem[] | undefined;
       if (routeItems && routeItems.length > 0) {
-        this.announcements = routeItems;
+        this.announcements = this.applyAnnouncementFocus(routeItems);
       } else {
         this.loadAnnouncements(false);
       }

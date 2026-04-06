@@ -57,6 +57,7 @@ export class SearchRouteParam {
 /** 公告页参数 */
 export class AnnouncementsRouteParam {
   items: Object[] = [];
+  focusAnnouncementId: string = '';
 }
 
 const DOMAIN_NUMBER: number = 0xFF20;
