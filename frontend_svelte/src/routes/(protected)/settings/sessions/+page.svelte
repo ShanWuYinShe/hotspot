@@ -80,7 +80,7 @@
 </svelte:head>
 
 <div class="mx-auto max-w-3xl space-y-5">
-	<PageHeader title="会话管理" description="查看并管理已登录设备，仅保留当前设备在线">
+	<PageHeader title="会话管理" description="查看并管理已登录设备，仅保留当前设备在线" backHref="/settings" backLabel="返回设置">
 		{#snippet actions()}
 			<div class="flex flex-wrap items-center gap-2">
 				<Button

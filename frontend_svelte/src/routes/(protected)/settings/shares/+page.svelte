@@ -89,7 +89,7 @@
 </svelte:head>
 
 <div class="mx-auto max-w-4xl space-y-5">
-	<PageHeader title="我的分享" description="查看你创建过的分享，并管理其可访问状态">
+	<PageHeader title="我的分享" description="查看你创建过的分享，并管理其可访问状态" backHref="/settings" backLabel="返回设置">
 		{#snippet actions()}
 			<Button
 				variant="outline"

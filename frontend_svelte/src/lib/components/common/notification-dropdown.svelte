@@ -83,8 +83,11 @@
 				);
 			}
 		}
+		const target = getNotificationLink(item);
 		open = false;
-		goto(getNotificationLink(item));
+		if (target) {
+			goto(target);
+		}
 	}
 
 	function handleViewAll() {

@@ -86,6 +86,8 @@
 	<PageHeader
 		title="隐私设置"
 		description="控制你在 HotSpot 的可见范围与互动权限"
+		backHref="/settings"
+		backLabel="返回设置"
 	/>
 
 	{#if isLoading}

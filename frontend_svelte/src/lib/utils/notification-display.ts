@@ -128,8 +128,9 @@ export function getNotificationLink(item: NotificationItem): string {
 		case 'group_application_accepted':
 			return `/groups/${p.group_id}`;
 		case 'system_announcement':
+			return '';
 		default:
-			return '#';
+			return '';
 	}
 }
 

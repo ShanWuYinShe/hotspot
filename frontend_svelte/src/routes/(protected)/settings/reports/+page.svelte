@@ -67,7 +67,7 @@
 </svelte:head>
 
 <div class="mx-auto max-w-4xl space-y-5">
-	<PageHeader title="我的举报记录" description="查看你提交过的举报，以及当前处理进度">
+	<PageHeader title="我的举报记录" description="查看你提交过的举报，以及当前处理进度" backHref="/settings" backLabel="返回设置">
 		{#snippet actions()}
 			<Button
 				variant="outline"

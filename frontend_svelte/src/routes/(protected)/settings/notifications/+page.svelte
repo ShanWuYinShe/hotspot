@@ -95,7 +95,7 @@
 </svelte:head>
 
 <div class="mx-auto max-w-3xl space-y-5">
-	<PageHeader title="通知设置" description="管理通知偏好、未读状态和通知中心入口" />
+	<PageHeader title="通知设置" description="管理通知偏好、未读状态和通知中心入口" backHref="/settings" backLabel="返回设置" />
 
 	<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
 		<CardHeader>

@@ -91,6 +91,8 @@
 	<PageHeader
 		title="修改密码"
 		description="请确保新密码足够安全，避免与其他平台重复"
+		backHref="/settings"
+		backLabel="返回设置"
 	/>
 
 	<Card class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md">
