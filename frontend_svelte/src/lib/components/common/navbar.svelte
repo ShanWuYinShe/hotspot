@@ -21,8 +21,6 @@
 	import Plus from 'lucide-svelte/icons/plus';
 	import Image from 'lucide-svelte/icons/image';
 	import UsersRound from 'lucide-svelte/icons/users-round';
-	import CreateMomentModal from './create-moment-modal.svelte';
-	import CreateGroupModal from './create-group-modal.svelte';
 
 	interface Props {
 		onMenuClick?: () => void;
@@ -31,13 +29,9 @@
 
 	let { onMenuClick, showMenu = true }: Props = $props();
 	let showSearchModal = $state(false);
-	let showCreateMoment = $state(false);
-	let showCreateGroup = $state(false);
 
 	function closeTopbarModals() {
 		showSearchModal = false;
-		showCreateMoment = false;
-		showCreateGroup = false;
 	}
 
 	function openSearchModal() {
@@ -74,7 +68,7 @@
 			return;
 		}
 		closeTopbarModals();
-		showCreateMoment = true;
+		uiStore.openCreateMoment();
 	}
 
 	function openCreateGroup() {
@@ -83,7 +77,7 @@
 			return;
 		}
 		closeTopbarModals();
-		showCreateGroup = true;
+		uiStore.openCreateGroup();
 	}
 </script>
 
@@ -93,10 +87,10 @@
 >
 	<div class="mx-auto flex h-13 w-full items-center gap-1.5 px-3 sm:h-16 sm:gap-3 sm:px-4 md:px-6">
 		{#if showMenu}
-			<RippleButton 
+			<RippleButton
 				variant="icon"
 				size="icon"
-				class="shrink-0 md:hidden"
+				class="hidden shrink-0 md:hidden"
 				onclick={onMenuClick}
 				circular
 				aria-label={t('nav.openMenu')}
@@ -126,38 +120,38 @@
 				<Search class="h-4 w-4 sm:h-5 sm:w-5" />
 			</RippleButton>
 
-			<!-- Theme toggle - 在小屏幕上隐藏 -->
-			<div class="hidden sm:block">
+			<div class="hidden md:block">
 				<ThemeToggle />
 			</div>
 
 			{#if authStore.isAuthenticated}
-				<!-- Create Menu - 仅登录后显示 -->
-				<DropdownMenu.Root>
-					<DropdownMenu.Trigger>
-						{#snippet child({ props })}
-							<RippleButton
-								variant="icon"
-								size="icon"
-								class="h-9 w-9 sm:h-10 sm:w-10"
-								{...props}
-								circular
-							>
-								<Plus class="h-4 w-4 sm:h-5 sm:w-5" />
-							</RippleButton>
-						{/snippet}
-					</DropdownMenu.Trigger>
-					<DropdownMenu.Content align="end">
-						<DropdownMenu.Item onclick={openCreateMoment}>
-							<Image class="mr-2 h-4 w-4" />
-							{t('nav.postMoment')}
-						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={openCreateGroup}>
-							<UsersRound class="mr-2 h-4 w-4" />
-							{t('nav.createGroup')}
-						</DropdownMenu.Item>
-					</DropdownMenu.Content>
-				</DropdownMenu.Root>
+				<div class="hidden md:block">
+					<DropdownMenu.Root>
+						<DropdownMenu.Trigger>
+							{#snippet child({ props })}
+								<RippleButton
+									variant="icon"
+									size="icon"
+									class="h-10 w-10"
+									{...props}
+									circular
+								>
+									<Plus class="h-5 w-5" />
+								</RippleButton>
+							{/snippet}
+						</DropdownMenu.Trigger>
+						<DropdownMenu.Content align="end">
+							<DropdownMenu.Item onclick={openCreateMoment}>
+								<Image class="mr-2 h-4 w-4" />
+								{t('nav.postMoment')}
+							</DropdownMenu.Item>
+							<DropdownMenu.Item onclick={openCreateGroup}>
+								<UsersRound class="mr-2 h-4 w-4" />
+								{t('nav.createGroup')}
+							</DropdownMenu.Item>
+						</DropdownMenu.Content>
+					</DropdownMenu.Root>
+				</div>
 
 				<!-- Notifications Dropdown -->
 				<NotificationDropdown />
@@ -242,5 +236,3 @@
 </header>
 
 <SearchModal bind:open={showSearchModal} />
-<CreateMomentModal bind:open={showCreateMoment} />
-<CreateGroupModal bind:open={showCreateGroup} />

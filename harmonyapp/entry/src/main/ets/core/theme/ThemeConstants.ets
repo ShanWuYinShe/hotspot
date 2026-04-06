@@ -29,6 +29,9 @@ export interface ColorConfig {
   iconMuted: string;
   buttonSecondaryBackground: string;
   buttonSecondaryText: string;
+  primaryButtonBorderColor: string;
+  inputBackgroundColor: string;
+  quickActionBackgroundColor: string;
   tabBarBackground: string;
   tabBarInactive: string;
   tabBarActiveBackground: string;
@@ -59,6 +62,22 @@ class ThemeShadowRegistry {
     control: new AppThemeShadow(0, '#00000000', 0, 0),
     tabBar: new AppThemeShadow(10, '#26000000', 0, -1)
   };
+
+  readonly FIGMA_NEU_LIGHT: ThemeShadows = {
+    surface: new AppThemeShadow(16, '#BFB7AC55', 10, 10),
+    elevated: new AppThemeShadow(22, '#C3BAAE66', 12, 12),
+    accent: new AppThemeShadow(18, '#D4845A52', 0, 10),
+    control: new AppThemeShadow(12, '#FFFFFFCC', -6, -6),
+    tabBar: new AppThemeShadow(18, '#B4AB9E66', 0, -6)
+  };
+
+  readonly FIGMA_NEU_DARK: ThemeShadows = {
+    surface: new AppThemeShadow(18, '#0F101580', 10, 10),
+    elevated: new AppThemeShadow(24, '#0B0C108F', 12, 12),
+    accent: new AppThemeShadow(20, '#D4845A3D', 0, 10),
+    control: new AppThemeShadow(14, '#2D313BCC', -6, -6),
+    tabBar: new AppThemeShadow(18, '#0B0C1099', 0, -6)
+  };
 }
 
 export class ThemeConstants {
@@ -86,6 +105,9 @@ export class ThemeConstants {
     iconMuted: '#6B7280',
     buttonSecondaryBackground: '#F3F4F6',
     buttonSecondaryText: '#111827',
+    primaryButtonBorderColor: '#F6F6F6',
+    inputBackgroundColor: '#F3F4F6',
+    quickActionBackgroundColor: '#FFFFFF',
     tabBarBackground: '#FFFFFF',
     tabBarInactive: '#6B7280',
     tabBarActiveBackground: '#F6F8F7',
@@ -116,9 +138,78 @@ export class ThemeConstants {
     iconMuted: '#9CA3AF',
     buttonSecondaryBackground: '#222733',
     buttonSecondaryText: '#F9FAFB',
+    primaryButtonBorderColor: '#263040',
+    inputBackgroundColor: '#222733',
+    quickActionBackgroundColor: '#0F1115',
     tabBarBackground: '#0F1115',
     tabBarInactive: '#9CA3AF',
     tabBarActiveBackground: '#1D242D',
+    isDarkTheme: true
+  };
+
+  static readonly FIGMA_NEU_LIGHT_COLORS: ColorConfig = {
+    pageBackground: '#D0CBC3',
+    pageGlow: '#E6DDD2',
+    heroGlow: '#F4E9DE',
+    textureTint: '#FFFFFF16',
+    surfaceBackground: '#EAE5DE',
+    surfaceSubtle: '#E1DBD3',
+    surfaceElevated: '#F2EEE8',
+    borderColor: '#F7F5F2',
+    floatingBorderColor: '#DFD9D1',
+    sheetBackground: '#EAE5DE',
+    accentBackground: '#D4845A',
+    accentText: '#FFFFFF',
+    accentMuted: '#F3E0D4',
+    chatBackground: '#DED8D0',
+    systemSurfaceBaseColor: '#D0CBC3',
+    overlayStrong: '#6B22140F',
+    textPrimary: '#4A4036',
+    textSecondary: '#7A7269',
+    textTertiary: '#9B948A',
+    textOnAccentMuted: '#7F533C',
+    iconMuted: '#7A7269',
+    buttonSecondaryBackground: '#E6E0D8',
+    buttonSecondaryText: '#4A4036',
+    primaryButtonBorderColor: '#D4845A',
+    inputBackgroundColor: '#EAE5DE',
+    quickActionBackgroundColor: '#EAE5DE',
+    tabBarBackground: '#EAE5DE',
+    tabBarInactive: '#8A8075',
+    tabBarActiveBackground: '#F2EEE8',
+    isDarkTheme: false
+  };
+
+  static readonly FIGMA_NEU_DARK_COLORS: ColorConfig = {
+    pageBackground: '#0F1015',
+    pageGlow: '#161821',
+    heroGlow: '#1B1E28',
+    textureTint: '#FFFFFF0A',
+    surfaceBackground: '#1A1C23',
+    surfaceSubtle: '#232731',
+    surfaceElevated: '#20242D',
+    borderColor: '#2A2C35',
+    floatingBorderColor: '#15161C',
+    sheetBackground: '#1A1C23',
+    accentBackground: '#D4845A',
+    accentText: '#FFF8F4',
+    accentMuted: '#35261E',
+    chatBackground: '#14161D',
+    systemSurfaceBaseColor: '#0F1015',
+    overlayStrong: '#A6000000',
+    textPrimary: '#E5E7EB',
+    textSecondary: '#8D94A0',
+    textTertiary: '#666D78',
+    textOnAccentMuted: '#F3CCB4',
+    iconMuted: '#8D94A0',
+    buttonSecondaryBackground: '#232731',
+    buttonSecondaryText: '#E5E7EB',
+    primaryButtonBorderColor: '#D4845A',
+    inputBackgroundColor: '#1A1C23',
+    quickActionBackgroundColor: '#1A1C23',
+    tabBarBackground: '#1A1C23',
+    tabBarInactive: '#8D94A0',
+    tabBarActiveBackground: '#232731',
     isDarkTheme: true
   };
 

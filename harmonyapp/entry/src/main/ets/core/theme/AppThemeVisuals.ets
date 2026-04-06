@@ -241,7 +241,7 @@ export class AppThemeVisuals {
       shadow: palette.visuals.effects.previewShadow,
       borderRadius: Math.max(palette.visuals.shape.button - 2, DesignConstants.RADIUS.XL),
       height: palette.visuals.metrics.actionButtonHeight,
-      horizontalPadding: DesignConstants.SPACING.XL
+      horizontalPadding: palette.visuals.metrics.secondaryButtonHorizontalPadding
     };
     AppThemeVisuals.secondaryButtonCache.set(key, style);
     return style;
@@ -257,7 +257,7 @@ export class AppThemeVisuals {
     const style: ThemeButtonVisualStyle = {
       backgroundColor: palette.accentBackground,
       textColor: palette.accentText,
-      borderColor: palette.floatingBorderColor,
+      borderColor: palette.primaryButtonBorderColor,
       borderWidth: 1,
       shadow: palette.visuals.effects.highlightShadow,
       borderRadius: Math.max(palette.visuals.shape.button - 2, DesignConstants.RADIUS.XL),
@@ -276,7 +276,7 @@ export class AppThemeVisuals {
     }
     const palette = AppThemeVisuals.getPalette(themeId);
     const style: ThemeInputVisualStyle = {
-      backgroundColor: palette.surfaceSubtle,
+      backgroundColor: palette.inputBackgroundColor,
       borderColor: palette.borderColor,
       borderWidth: 1,
       borderRadius: palette.visuals.shape.input,
@@ -344,7 +344,7 @@ export class AppThemeVisuals {
       input: AppThemeVisuals.getInputStyle(themeId),
       identity: AppThemeVisuals.getProfileIdentityStyle(themeId),
       quickAction: {
-        backgroundColor: palette.pageBackground,
+        backgroundColor: palette.quickActionBackgroundColor,
         borderColor: palette.floatingBorderColor,
         borderWidth: 1,
         shadow: palette.visuals.effects.highlightShadow,

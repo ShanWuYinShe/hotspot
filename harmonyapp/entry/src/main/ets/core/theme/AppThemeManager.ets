@@ -38,6 +38,7 @@ const DEFAULT_THEME_METRICS: AppThemeMetricTokens = {
   metricCardPadding: DesignConstants.SPACING.LG,
   profilePrimaryButtonHeight: DesignConstants.COMPONENT.BUTTON_HEIGHT,
   profilePrimaryButtonHorizontalPadding: DesignConstants.SPACING.XXL,
+  secondaryButtonHorizontalPadding: DesignConstants.SPACING.XL,
   profileAvatarSize: 96,
   profileTitleFontSize: DesignConstants.FONT.SIZE.XL,
   profileSubtitleFontSize: DesignConstants.FONT.SIZE.LG,
@@ -150,6 +151,70 @@ const DEFAULT_CLEAN_DARK_VISUALS = buildVisualTokens(
   }
 );
 
+const FIGMA_NEU_THEME_SHAPE: AppThemeShapeTokens = {
+  surfaceCard: DesignConstants.RADIUS.XXL,
+  heroCard: 28,
+  compactCard: DesignConstants.RADIUS.XL,
+  input: 20,
+  button: 22,
+  chip: DesignConstants.SHAPE.CHIP,
+  tabBar: 30,
+  previewCard: 28,
+  listItem: 22,
+  iconTile: 18
+};
+
+const FIGMA_NEU_THEME_METRICS: AppThemeMetricTokens = {
+  cardPadding: DesignConstants.SPACING.XL,
+  heroPadding: DesignConstants.SPACING.XXL,
+  metricCardPadding: DesignConstants.SPACING.LG,
+  profilePrimaryButtonHeight: DesignConstants.COMPONENT.BUTTON_HEIGHT,
+  profilePrimaryButtonHorizontalPadding: DesignConstants.SPACING.XXL,
+  secondaryButtonHorizontalPadding: DesignConstants.SPACING.XXL,
+  profileAvatarSize: 96,
+  profileTitleFontSize: DesignConstants.FONT.SIZE.XL,
+  profileSubtitleFontSize: DesignConstants.FONT.SIZE.LG,
+  profileMetricMinHeight: 164,
+  profileMetricValueFontSize: 22,
+  actionButtonHeight: 40,
+  listItemMinHeight: 72,
+  tabBarHeight: 64,
+  createButtonWidth: 54,
+  createButtonHeight: 54,
+  tabBarFloatingMargin: DesignConstants.SPACING.MD,
+  chatListRadius: DesignConstants.SHAPE.CARD,
+  chatSendButtonHeight: DesignConstants.CHAT.SEND_BUTTON_HEIGHT,
+  previewHeroAvatarSize: 32,
+  previewPrimaryButtonHeight: 18,
+  textureOpacity: 0
+};
+
+const FIGMA_NEU_LIGHT_VISUALS = buildVisualTokens(
+  FIGMA_NEU_THEME_SHAPE,
+  FIGMA_NEU_THEME_METRICS,
+  {
+    avatarShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_LIGHT.surface),
+    haloShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_LIGHT.control),
+    previewShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_LIGHT.elevated),
+    insetShadow: new AppThemeShadow(10, '#FFFFFFC8', -5, -5),
+    highlightShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_LIGHT.accent),
+    tabActiveGlow: new AppThemeShadow(14, '#D4845A40', 0, 6)
+  }
+);
+
+const FIGMA_NEU_DARK_VISUALS = buildVisualTokens(
+  FIGMA_NEU_THEME_SHAPE,
+  FIGMA_NEU_THEME_METRICS,
+  {
+    avatarShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_DARK.surface),
+    haloShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_DARK.control),
+    previewShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_DARK.elevated),
+    insetShadow: new AppThemeShadow(12, '#2D313B99', -5, -5),
+    highlightShadow: cloneShadow(ThemeConstants.SHADOWS.FIGMA_NEU_DARK.accent),
+    tabActiveGlow: new AppThemeShadow(16, '#D4845A38', 0, 7)
+  }
+);
+
 const DEFAULT_CLEAN_LIGHT = buildPalette(
   'default_clean_light',
   '当前默认',
@@ -170,9 +235,30 @@ const DEFAULT_CLEAN_DARK = buildPalette(
   false
 );
 
+const FIGMA_NEU_LIGHT = buildPalette(
+  'figma_neu_light',
+  '浮雕暖调',
+  '暖灰底、柔和阴影、轻浮雕边框',
+  ThemeConstants.FIGMA_NEU_LIGHT_COLORS,
+  ThemeConstants.SHADOWS.FIGMA_NEU_LIGHT,
+  FIGMA_NEU_LIGHT_VISUALS,
+  true
+);
+
+const FIGMA_NEU_DARK = buildPalette(
+  'figma_neu_dark',
+  '浮雕暖调',
+  '暗色暖调、柔和立体层次',
+  ThemeConstants.FIGMA_NEU_DARK_COLORS,
+  ThemeConstants.SHADOWS.FIGMA_NEU_DARK,
+  FIGMA_NEU_DARK_VISUALS,
+  false
+);
+
 const THEME_OPTIONS: ThemeOptionItem[] = [
   { mode: 'follow_system', label: '跟随系统', description: '自动匹配系统明暗模式' } as ThemeOptionItem,
-  { mode: 'default_clean', label: '当前默认', description: '清爽、中性、稳妥的基础主题' } as ThemeOptionItem
+  { mode: 'default_clean', label: '当前默认', description: '清爽、中性、稳妥的基础主题' } as ThemeOptionItem,
+  { mode: 'figma_neu', label: '浮雕暖调', description: '柔和压边、暖灰底与立体按钮感' } as ThemeOptionItem
 ];
 
 export class AppThemeManager {
@@ -233,6 +319,10 @@ export class AppThemeManager {
 
   static getPaletteById(resolvedThemeId: string): AppThemePalette {
     switch (AppThemeManager.normalizeResolvedThemeId(resolvedThemeId)) {
+      case 'figma_neu_dark':
+        return FIGMA_NEU_DARK;
+      case 'figma_neu_light':
+        return FIGMA_NEU_LIGHT;
       case 'default_clean_dark':
         return DEFAULT_CLEAN_DARK;
       case 'default_clean_light':
@@ -304,6 +394,8 @@ export class AppThemeManager {
       case 'follow_system':
       case 'default_clean':
         return isDarkMode ? 'default_clean_dark' : 'default_clean_light';
+      case 'figma_neu':
+        return isDarkMode ? 'figma_neu_dark' : 'figma_neu_light';
       default:
         return DEFAULT_RESOLVED_THEME_ID;
     }
@@ -313,6 +405,7 @@ export class AppThemeManager {
     switch (themeMode) {
       case 'default_clean':
       case 'follow_system':
+      case 'figma_neu':
         return themeMode;
       default:
         return DEFAULT_THEME_MODE;
@@ -323,6 +416,8 @@ export class AppThemeManager {
     switch (resolvedThemeId) {
       case 'default_clean_dark':
       case 'default_clean_light':
+      case 'figma_neu_dark':
+      case 'figma_neu_light':
         return resolvedThemeId;
       default:
         return DEFAULT_RESOLVED_THEME_ID;

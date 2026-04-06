@@ -261,11 +261,11 @@
     <title>{t('home.title')}</title>
 </svelte:head>
 
-<div class="space-y-10">
+<div class="space-y-6 md:space-y-10">
     {#if !authStore.isAuthenticated}
         <!-- Hero section for guests -->
         <section
-            class="relative overflow-hidden rounded-3xl bg-linear-to-br from-primary/10 via-primary/15 to-secondary/10 p-8 shadow-xl shadow-primary/10 ring-1 ring-primary/10 md:p-16"
+            class="relative overflow-hidden rounded-[2rem] border border-border/80 bg-card/95 p-5 shadow-[10px_10px_22px_var(--shadow-dark),-10px_-10px_22px_var(--shadow-light)] md:rounded-3xl md:bg-linear-to-br md:from-primary/10 md:via-primary/15 md:to-secondary/10 md:p-16 md:shadow-xl md:shadow-primary/10 md:ring-1 md:ring-primary/10"
         >
             <!-- Decorative elements -->
             <div
@@ -277,13 +277,13 @@
 
             <div class="relative mx-auto max-w-3xl text-center">
                 <div
-                    class="mb-6 inline-flex items-center gap-2 rounded-2xl bg-primary/10 px-4 py-2 text-sm font-medium text-primary backdrop-blur-sm"
+                    class="mb-4 inline-flex items-center gap-2 rounded-[1.25rem] border border-border/70 bg-accent px-4 py-2 text-sm font-medium text-primary shadow-[6px_6px_14px_var(--shadow-dark),-6px_-6px_14px_var(--shadow-light)] md:mb-6 md:rounded-2xl md:bg-primary/10 md:shadow-none"
                 >
                     <Sparkles class="h-4 w-4" />
                     {t('home.locationBasedSocial')}
                 </div>
                 <h1
-                    class="mb-6 text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl"
+                    class="mb-4 text-[2rem] font-bold tracking-tight md:mb-6 md:text-5xl lg:text-6xl"
                 >
                     <span
                         class="bg-linear-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent"
@@ -296,10 +296,10 @@
                 >
                     {t('home.heroDescription')}
                 </p>
-                <div class="flex flex-col gap-4 sm:flex-row sm:justify-center">
+                <div class="flex flex-col gap-3 sm:flex-row sm:justify-center">
                     <Button
                         size="lg"
-                        class="gap-2 rounded-2xl px-8 shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30"
+                        class="gap-2 rounded-[1.5rem] px-8"
                         onclick={handleGetStarted}
                     >
                         {t('home.getStarted')}
@@ -308,7 +308,7 @@
                     <Button
                         size="lg"
                         variant="outline"
-                        class="rounded-2xl px-8"
+                        class="rounded-[1.5rem] px-8"
                         onclick={handleExplore}
                     >
                         {t('home.browseFirst')}
@@ -323,7 +323,7 @@
                 class="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500"
             >
                 <div
-                    class="rounded-3xl border border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-md"
+                    class="rounded-[1.75rem] border border-border/80 bg-card/92 p-4 shadow-[10px_10px_22px_var(--shadow-dark),-10px_-10px_22px_var(--shadow-light)] backdrop-blur-md"
                 >
                     <div class="flex items-center justify-between">
                         <div class="space-y-1">
@@ -353,7 +353,7 @@
                 <!-- Trending Topics -->
                 {#if !loadingTags && trendingTags.length > 0}
                     <section
-                        class="space-y-4 rounded-3xl border border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-md"
+                        class="space-y-4 rounded-[1.75rem] border border-border/80 bg-card/92 p-4 shadow-[10px_10px_22px_var(--shadow-dark),-10px_-10px_22px_var(--shadow-light)] backdrop-blur-md"
                     >
                         <div class="flex items-center gap-2 px-1">
                             <Hash class="h-5 w-5 text-primary" />
@@ -388,7 +388,7 @@
 
                 <!-- Moments Feed -->
                 <section
-                    class="space-y-6 rounded-3xl border border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-md"
+                    class="space-y-6 rounded-[1.75rem] border border-border/80 bg-card/92 p-4 shadow-[10px_10px_22px_var(--shadow-dark),-10px_-10px_22px_var(--shadow-light)] backdrop-blur-md"
                 >
                     <div class="flex items-center justify-between px-1">
                         <div class="flex items-center gap-2">

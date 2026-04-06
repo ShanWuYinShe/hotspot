@@ -51,14 +51,20 @@ class UIStore {
 	// 登录模态框状态
 	#showLoginModal = $state(false);
 	#loginModalCallback = $state<(() => void) | null>(null);
-	
+	#showCreateSheet = $state(false);
+	#showCreateMoment = $state(false);
+	#showCreateGroup = $state(false);
+
 	// ==================== 登录模态框 ====================
-	
+
 	/** 是否显示登录模态框 */
 	showLoginModal = $derived(this.#showLoginModal);
-	
+
 	/** 登录成功后的回调函数 */
 	loginModalCallback = $derived(this.#loginModalCallback);
+	showCreateSheet = $derived(this.#showCreateSheet);
+	showCreateMoment = $derived(this.#showCreateMoment);
+	showCreateGroup = $derived(this.#showCreateGroup);
 	
 	/**
 	 * 打开登录模态框
@@ -150,6 +156,32 @@ class UIStore {
 		} catch {
 			return false;
 		}
+	}
+
+	openCreateSheet() {
+		this.#showCreateSheet = true;
+	}
+
+	closeCreateSheet() {
+		this.#showCreateSheet = false;
+	}
+
+	openCreateMoment() {
+		this.#showCreateSheet = false;
+		this.#showCreateMoment = true;
+	}
+
+	closeCreateMoment() {
+		this.#showCreateMoment = false;
+	}
+
+	openCreateGroup() {
+		this.#showCreateSheet = false;
+		this.#showCreateGroup = true;
+	}
+
+	closeCreateGroup() {
+		this.#showCreateGroup = false;
 	}
 }
 

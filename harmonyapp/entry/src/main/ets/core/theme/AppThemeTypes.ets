@@ -1,8 +1,10 @@
-export type ThemeMode = 'follow_system' | 'default_clean';
+export type ThemeMode = 'follow_system' | 'default_clean' | 'figma_neu';
 
 export type ResolvedThemeId =
   | 'default_clean_light'
-  | 'default_clean_dark';
+  | 'default_clean_dark'
+  | 'figma_neu_light'
+  | 'figma_neu_dark';
 
 export class AppThemeShadow {
   radius: number;
@@ -37,6 +39,7 @@ export interface AppThemeMetricTokens {
   metricCardPadding: number;
   profilePrimaryButtonHeight: number;
   profilePrimaryButtonHorizontalPadding: number;
+  secondaryButtonHorizontalPadding: number;
   profileAvatarSize: number;
   profileTitleFontSize: number;
   profileSubtitleFontSize: number;
@@ -98,6 +101,9 @@ export interface AppThemePalette {
   iconMuted: string;
   buttonSecondaryBackground: string;
   buttonSecondaryText: string;
+  primaryButtonBorderColor: string;
+  inputBackgroundColor: string;
+  quickActionBackgroundColor: string;
   tabBarBackground: string;
   tabBarInactive: string;
   tabBarActiveBackground: string;
