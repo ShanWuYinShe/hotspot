@@ -21,9 +21,11 @@
     import TrendingTags from "$lib/components/home/trending-tags.svelte";
     import RecommendedUsers from "$lib/components/home/recommended-users.svelte";
     import RecommendedGroups from "$lib/components/home/recommended-groups.svelte";
+    import AnchorSummaryCard from "$lib/components/common/anchor-summary-card.svelte";
     import ListSkeleton from "$lib/components/common/list-skeleton.svelte";
     import EmptyState from "$lib/components/common/empty-state.svelte";
     import LoadMoreButton from "$lib/components/common/load-more-button.svelte";
+    import PageHeader from "$lib/components/layout/page-header.svelte";
     import type { MomentItem, TagItem } from "$lib/types/api";
     import MapPin from "lucide-svelte/icons/map-pin";
     import Users from "lucide-svelte/icons/users";
@@ -46,31 +48,27 @@
     const features = $derived([
         {
             icon: MapPin,
-            title: t("home.locationBased"),
-            description: t("home.discoverNearbyContent"),
-            color: "from-blue-500/20 to-cyan-500/20",
-            iconColor: "text-blue-500",
+            title: 'Nearby shell',
+            description: '统一移动端的附近内容入口，承载动态 / 用户 / 群组浏览。',
+            iconColor: 'text-primary',
         },
         {
             icon: Image,
-            title: t("home.lifeMoments"),
-            description: t("home.shareLifeMoments"),
-            color: "from-pink-500/20 to-rose-500/20",
-            iconColor: "text-pink-500",
+            title: 'Moments feed',
+            description: '动态流与推荐内容优先，和 Harmony 的 Nearby / Discover 保持一致。',
+            iconColor: 'text-primary',
         },
         {
             icon: Users,
-            title: t("home.groupInteraction"),
-            description: t("home.joinInterestGroups"),
-            color: "from-purple-500/20 to-violet-500/20",
-            iconColor: "text-purple-500",
+            title: 'Group discovery',
+            description: '推荐群组和附近群组通过相同的卡片结构进入。',
+            iconColor: 'text-primary',
         },
         {
             icon: MessageCircle,
-            title: t("home.instantChat"),
-            description: t("home.chatWithFriends"),
-            color: "from-green-500/20 to-emerald-500/20",
-            iconColor: "text-green-500",
+            title: 'Message entry',
+            description: '消息与聊天入口保持在统一移动端主壳层里。',
+            iconColor: 'text-primary',
         },
     ]);
 
@@ -261,7 +259,13 @@
     <title>{t('home.title')}</title>
 </svelte:head>
 
-<div class="space-y-6 md:space-y-10">
+<div class="space-y-5 md:space-y-8">
+    <AnchorSummaryCard
+        label={authStore.isAuthenticated ? '附近发现锚点' : '浏览锚点'}
+        description={`当前按 ${mapAnchorStore.radius}km 范围浏览附近内容`}
+        subtle
+    />
+
     {#if !authStore.isAuthenticated}
         <!-- Hero section for guests -->
         <section
@@ -452,7 +456,7 @@
         {:else}
             <!-- Features -->
             <section>
-                <div class="mb-8 text-center">
+                <div class="mb-6 text-center md:mb-8">
                     <h2 class="mb-2 text-2xl font-bold md:text-3xl">
                         {t('home.coreFeatures')}
                     </h2>
@@ -460,14 +464,14 @@
                         {t('home.exploreHotSpot')}
                     </p>
                 </div>
-                <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {#each features as feature (feature.title)}
                         <Card
-                            class="group cursor-pointer border-0 bg-linear-to-br {feature.color} backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10"
+                            class="group cursor-pointer rounded-[1.75rem] border border-border/70 bg-card/92 transition-all duration-300 hover:shadow-xl hover:shadow-primary/10"
                         >
                             <CardHeader>
                                 <div
-                                    class="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-background/80 shadow-sm transition-transform group-hover:scale-110"
+                                    class="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 shadow-sm transition-transform group-hover:scale-110"
                                 >
                                     <feature.icon
                                         class="h-6 w-6 {feature.iconColor}"
@@ -523,29 +527,36 @@
         <!-- Dashboard for authenticated users -->
         <div class="space-y-8">
             <!-- Header with stats -->
-            <section>
-                <div class="mb-6 flex items-center justify-between">
-                    <div>
-                        <h1 class="mb-2 text-2xl font-bold md:text-3xl">
-                            {t('home.welcomeBack', { nickname: authStore.currentAccount?.nickname ?? '' })}
-                        </h1>
-                        <p class="text-muted-foreground">{t('home.discoverNearbyContent2')}</p>
-                    </div>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        class="rounded-2xl"
-                        onclick={refreshAll}
-                        disabled={feed.loading}
-                        aria-label={t('common.refresh')}
-                    >
-                        <RefreshCw
-                            class="h-4 w-4 {feed.loading ? 'animate-spin' : ''}"
-                        />
-                    </Button>
-                </div>
+            <section class="space-y-4">
+                <PageHeader
+                    title={t('home.welcomeBack', { nickname: authStore.currentAccount?.nickname ?? '' })}
+                    description={t('home.discoverNearbyContent2')}
+                >
+                    {#snippet actions()}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            class="rounded-2xl"
+                            onclick={refreshAll}
+                            disabled={feed.loading}
+                            aria-label={t('common.refresh')}
+                        >
+                            <RefreshCw
+                                class="h-4 w-4 {feed.loading ? 'animate-spin' : ''}"
+                            />
+                        </Button>
+                    {/snippet}
+                </PageHeader>
 
                 <DashboardStats {refreshTrigger} />
+            </section>
+
+            <section class="space-y-4 rounded-[1.75rem] border border-border/80 bg-card/92 p-4 shadow-[10px_10px_22px_var(--shadow-dark),-10px_-10px_22px_var(--shadow-light)] backdrop-blur-md">
+                <div class="flex items-center gap-2 px-1">
+                    <Compass class="h-5 w-5 text-primary" />
+                    <h2 class="text-lg font-semibold tracking-tight">Nearby / Discover</h2>
+                </div>
+                <p class="px-1 text-sm text-muted-foreground">围绕浏览锚点组织推荐话题、用户、群组与动态，让 Web mobile 与 Harmony 的移动端主壳层保持一致。</p>
             </section>
 
             <!-- Trending Topics -->
@@ -560,7 +571,7 @@
             <!-- Moments Feed -->
             <section class="space-y-6">
                 <div
-                    class="rounded-3xl border border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-md"
+                    class="rounded-[1.75rem] border border-border/80 bg-card/92 p-4 shadow-[10px_10px_22px_var(--shadow-dark),-10px_-10px_22px_var(--shadow-light)] backdrop-blur-md"
                 >
                     <div class="flex items-center justify-between px-1">
                         <div class="flex items-center gap-2">
@@ -579,7 +590,7 @@
                         {#each Array(6) as _, i (i)}
                             <div class="mb-3 break-inside-avoid">
                                 <Card
-                                    class="rounded-3xl border border-border/60 bg-card/80 shadow-sm backdrop-blur-md"
+                                    class="rounded-[1.75rem] border border-border/80 bg-card/92 shadow-[10px_10px_22px_var(--shadow-dark),-10px_-10px_22px_var(--shadow-light)] backdrop-blur-md"
                                 >
                                     <CardContent class="space-y-3 p-4">
                                         <div class="flex items-center gap-3">

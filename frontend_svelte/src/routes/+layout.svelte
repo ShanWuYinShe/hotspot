@@ -12,6 +12,7 @@
     import PageLoading from "$lib/components/common/page-loading.svelte";
     import { goto } from "$app/navigation";
     import { authStore } from "$lib/stores/auth.svelte";
+    import { themeStore } from "$lib/stores/theme.svelte";
     import { normalizeRedirectPath, uiStore } from "$lib/stores/ui.svelte";
     import { locationStore } from "$lib/stores/location.svelte";
     import {
@@ -190,6 +191,7 @@
 
     onMount(() => {
         initLocale();
+        themeStore.init();
 
         const redirectParam = page.url.searchParams.get("redirect");
         const safeRedirect = normalizeRedirectPath(redirectParam);

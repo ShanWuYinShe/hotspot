@@ -42,6 +42,12 @@ export default {
 		login: '登录',
 		toggleTheme: '切换主题',
 		settingsLabel: '设置',
+		themeFamily: '主题风格',
+		defaultClean: '默认清爽',
+		figmaNeu: '浮雕暖调',
+		defaultCleanDesc: '清爽、中性、稳妥的基础主题',
+		figmaNeuDesc: '暖灰底、柔和阴影、立体按钮感',
+		systemMode: '跟随系统',
 	},
 	auth: {
 		welcome: '欢迎来到 HotSpot',

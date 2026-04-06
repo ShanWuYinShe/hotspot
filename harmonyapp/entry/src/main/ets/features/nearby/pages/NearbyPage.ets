@@ -510,6 +510,19 @@ export struct NearbyPage {
   @Builder
   private buildHeaderSurface() {
     Column({ space: DesignConstants.SPACING.SM }) {
+      Text('附近内容')
+        .fontSize(DesignConstants.FONT.SIZE.XXL)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(this.getCurrentThemePalette().textPrimary)
+        .width('100%')
+        .textAlign(TextAlign.Start)
+
+      Text('统一承载附近动态、用户与群组浏览')
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .fontColor(this.getCurrentThemePalette().textSecondary)
+        .width('100%')
+        .textAlign(TextAlign.Start)
+
       LocationBar({ showSearchButton: true })
 
       if (this.nearbyDeviceCount > 0) {

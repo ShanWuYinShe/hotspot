@@ -42,6 +42,12 @@ export default {
 		login: 'Sign In',
 		toggleTheme: 'Toggle theme',
 		settingsLabel: 'Settings',
+		themeFamily: 'Theme style',
+		defaultClean: 'Default Clean',
+		figmaNeu: 'Soft Relief',
+		defaultCleanDesc: 'Clean, neutral, and stable baseline theme',
+		figmaNeuDesc: 'Warm gray surfaces with soft shadow depth',
+		systemMode: 'System',
 	},
 	auth: {
 		welcome: 'Welcome to HotSpot',

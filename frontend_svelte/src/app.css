@@ -49,8 +49,103 @@
 	--radius: 0.625rem;
 }
 
-/* Light mode variables */
-:root {
+/* Theme family: default_clean (baseline) */
+:root,
+:root[data-theme-family="default_clean"] {
+	--background: #ffffff;
+	--foreground: #111827;
+	--card: #ffffff;
+	--card-foreground: #111827;
+	--popover: #ffffff;
+	--popover-foreground: #111827;
+
+	--primary: #4a7a57;
+	--primary-foreground: #ffffff;
+	--secondary: #f3f4f6;
+	--secondary-foreground: #111827;
+	--accent: #f6f8f7;
+	--accent-foreground: #111827;
+
+	--muted: #f3f4f6;
+	--muted-foreground: #6b7280;
+	--destructive: #d75b5b;
+	--destructive-foreground: #ffffff;
+	--border: #e5e7eb;
+	--input: #e5e7eb;
+	--ring: #4a7a57;
+
+	--glow-primary: rgba(74, 122, 87, 0.20);
+	--glow-accent: rgba(74, 122, 87, 0.12);
+	--glow-success: rgba(74, 122, 87, 0.16);
+
+	--shadow-light: rgba(255, 255, 255, 0.72);
+	--shadow-dark: rgba(229, 231, 235, 0.72);
+
+	--chart-1: oklch(0.646 0.222 41.116);
+	--chart-2: oklch(0.6 0.118 184.704);
+	--chart-3: oklch(0.398 0.07 227.392);
+	--chart-4: oklch(0.828 0.189 84.429);
+	--chart-5: oklch(0.769 0.188 70.08);
+	--sidebar: #ffffff;
+	--sidebar-foreground: #111827;
+	--sidebar-primary: #4a7a57;
+	--sidebar-primary-foreground: #ffffff;
+	--sidebar-accent: #f6f8f7;
+	--sidebar-accent-foreground: #111827;
+	--sidebar-border: #e5e7eb;
+	--sidebar-ring: #4a7a57;
+	--topbar-height-mobile: 3.5rem;
+	--topbar-height-desktop: 4rem;
+}
+
+:root.dark,
+:root[data-theme-family="default_clean"].dark {
+	--background: #0f1115;
+	--foreground: #f9fafb;
+	--card: #171a20;
+	--card-foreground: #f9fafb;
+	--popover: #171a20;
+	--popover-foreground: #f9fafb;
+
+	--primary: #6baf86;
+	--primary-foreground: #0f1115;
+	--secondary: #222733;
+	--secondary-foreground: #f9fafb;
+	--accent: #1d242d;
+	--accent-foreground: #f9fafb;
+
+	--muted: #222733;
+	--muted-foreground: #9ca3af;
+	--destructive: #e06f6f;
+	--destructive-foreground: #fff8f4;
+	--border: #2d3544;
+	--input: #263040;
+	--ring: #6baf86;
+
+	--glow-primary: rgba(107, 175, 134, 0.18);
+	--glow-accent: rgba(107, 175, 134, 0.12);
+	--glow-success: rgba(107, 175, 134, 0.14);
+
+	--shadow-light: rgba(38, 48, 64, 0.82);
+	--shadow-dark: rgba(11, 12, 16, 0.88);
+
+	--chart-1: oklch(0.488 0.243 264.376);
+	--chart-2: oklch(0.696 0.17 162.48);
+	--chart-3: oklch(0.985 0 0);
+	--chart-4: oklch(0.806 0.204 91.732);
+	--chart-5: oklch(0.769 0.188 70.08);
+	--sidebar: #171a20;
+	--sidebar-foreground: #f9fafb;
+	--sidebar-primary: #6baf86;
+	--sidebar-primary-foreground: #0f1115;
+	--sidebar-accent: #1d242d;
+	--sidebar-accent-foreground: #f9fafb;
+	--sidebar-border: #2d3544;
+	--sidebar-ring: #6baf86;
+}
+
+/* Theme family: figma_neu */
+:root[data-theme-family="figma_neu"] {
 	--background: #d0cbc3;
 	--foreground: #4a4036;
 	--card: #eae5de;
@@ -93,12 +188,9 @@
 	--sidebar-accent-foreground: #4a4036;
 	--sidebar-border: #dfd9d1;
 	--sidebar-ring: #d4845a;
-	--topbar-height-mobile: 3.5rem;
-	--topbar-height-desktop: 4rem;
 }
 
-/* Dark mode variables */
-.dark {
+:root[data-theme-family="figma_neu"].dark {
 	--background: #0f1015;
 	--foreground: #e5e7eb;
 	--card: #1a1c23;

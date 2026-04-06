@@ -757,6 +757,7 @@ export struct DiscoverPage {
     .backgroundColor(this.getSurfaceSubtle())
     .borderRadius(DesignConstants.RADIUS.FULL)
     .shadow(this.getCurrentThemePalette().controlShadow)
+    .border({ width: 1, color: this.getSurfaceBorder() })
   }
 
   @Builder

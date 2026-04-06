@@ -136,6 +136,9 @@
 </svelte:head>
 
 <div class="mx-auto max-w-4xl space-y-5 pb-8">
+	<div class="rounded-[1.75rem] border border-border/80 bg-card/92 p-4 shadow-[10px_10px_22px_var(--shadow-dark),-10px_-10px_22px_var(--shadow-light)] backdrop-blur-md">
+		<p class="text-sm text-muted-foreground">Profile 页以 Harmony 的身份卡、快捷动作和个人模块分层为主参考，Web mobile 保持同样的信息层次。</p>
+	</div>
 	<PageHeader
 		title="个人资料"
 		description="管理你的个人信息和账户设置"

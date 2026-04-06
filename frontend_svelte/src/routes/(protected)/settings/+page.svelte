@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { authStore } from '$lib/stores/auth.svelte';
+	import { themeStore, type ThemeFamily } from '$lib/stores/theme.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
+	import { t } from '$lib/i18n';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import PageHeader from '$lib/components/layout/page-header.svelte';
@@ -46,9 +48,15 @@
 		}
 	];
 
+	const currentThemeFamily = $derived(themeStore.themeFamily);
+
 	function handleLogout() {
 		authStore.logout();
 		toast.success('已退出登录');
+	}
+
+	function setThemeFamily(themeFamily: ThemeFamily) {
+		themeStore.setThemeFamily(themeFamily);
 	}
 </script>
 
@@ -57,6 +65,9 @@
 </svelte:head>
 
 <div class="mx-auto max-w-3xl space-y-5">
+	<div class="rounded-[1.75rem] border border-border/80 bg-card/92 p-4 shadow-[10px_10px_22px_var(--shadow-dark),-10px_-10px_22px_var(--shadow-light)] backdrop-blur-md">
+		<p class="text-sm text-muted-foreground">Settings 页保持与 Harmony 一致的分区顺序：外观主题、隐私安全、通知订阅、账号与记录。</p>
+	</div>
 	<PageHeader
 		title="设置"
 		description="统一管理账户、安全、隐私、分享记录与举报进度"
@@ -94,18 +105,48 @@
 		<CardHeader>
 			<CardTitle class="text-lg">外观</CardTitle>
 		</CardHeader>
-		<CardContent class="pt-0">
+		<CardContent class="space-y-3 pt-0">
 			<div class="flex items-center justify-between rounded-2xl border border-border/50 bg-background/65 px-4 py-4">
 				<div class="flex items-center gap-4">
 					<div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
 						<Palette class="h-5 w-5" />
 					</div>
 					<div>
-						<p class="font-medium">主题</p>
-						<p class="text-sm text-muted-foreground">切换深色/浅色模式</p>
+						<p class="font-medium">{t('sidebar.toggleTheme')}</p>
+						<p class="text-sm text-muted-foreground">{t('sidebar.systemMode')} / {t('sidebar.light')} / {t('sidebar.dark')}</p>
 					</div>
 				</div>
 				<ThemeToggle />
+			</div>
+
+			<div class="grid gap-3 md:grid-cols-2">
+				<button
+					type="button"
+					class="rounded-3xl border px-4 py-4 text-left transition-all {currentThemeFamily === 'default_clean' ? 'border-primary bg-primary/8 shadow-md' : 'border-border/50 bg-background/65 hover:border-primary/25'}"
+					onclick={() => setThemeFamily('default_clean')}
+				>
+					<div class="mb-3 flex items-center justify-between">
+						<p class="font-semibold">{t('sidebar.defaultClean')}</p>
+						{#if currentThemeFamily === 'default_clean'}
+							<span class="rounded-full bg-primary px-2 py-1 text-xs text-primary-foreground">当前</span>
+						{/if}
+					</div>
+					<p class="text-sm text-muted-foreground">{t('sidebar.defaultCleanDesc')}</p>
+				</button>
+
+				<button
+					type="button"
+					class="rounded-3xl border px-4 py-4 text-left transition-all {currentThemeFamily === 'figma_neu' ? 'border-primary bg-primary/8 shadow-md' : 'border-border/50 bg-background/65 hover:border-primary/25'}"
+					onclick={() => setThemeFamily('figma_neu')}
+				>
+					<div class="mb-3 flex items-center justify-between">
+						<p class="font-semibold">{t('sidebar.figmaNeu')}</p>
+						{#if currentThemeFamily === 'figma_neu'}
+							<span class="rounded-full bg-primary px-2 py-1 text-xs text-primary-foreground">当前</span>
+						{/if}
+					</div>
+					<p class="text-sm text-muted-foreground">{t('sidebar.figmaNeuDesc')}</p>
+				</button>
 			</div>
 		</CardContent>
 	</Card>

@@ -75,6 +75,9 @@
 </svelte:head>
 
 <div class="space-y-5">
+	<div class="rounded-[1.75rem] border border-border/80 bg-card/92 p-4 shadow-[10px_10px_22px_var(--shadow-dark),-10px_-10px_22px_var(--shadow-light)] backdrop-blur-md">
+		<p class="text-sm text-muted-foreground">统一承载私聊与群聊会话，保持 Harmony 与 Web mobile 一致的消息主壳层。</p>
+	</div>
 	<PageHeader
 		title="消息"
 		description="私聊与群聊会话统一在这里管理"
