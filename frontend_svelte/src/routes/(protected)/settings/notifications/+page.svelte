@@ -2,6 +2,7 @@
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import type { NotificationType } from '$lib/types/api';
 	import { notificationStore } from '$lib/stores/notification.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -13,19 +14,34 @@
 	import ExternalLink from 'lucide-svelte/icons/external-link';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 
-	type NotificationPreferenceKey = 'social' | 'interaction' | 'group' | 'system';
-	type NotificationPreferences = Record<NotificationPreferenceKey, boolean>;
+	type NotificationPreferenceGroup = 'social' | 'interaction' | 'group' | 'system';
+	type NotificationPreferenceMap = Record<NotificationType, boolean>;
 
-	const STORAGE_KEY = 'hotspot_notification_preferences';
-	const DEFAULT_PREFERENCES: NotificationPreferences = {
-		social: true,
-		interaction: true,
-		group: true,
-		system: true
+	const STORAGE_KEY = 'hotspot_notification_preferences_v2';
+	const DEFAULT_PREFERENCES: NotificationPreferenceMap = {
+		new_follower: true,
+		mutual_follow: true,
+		moment_liked: true,
+		moment_commented: true,
+		comment_liked: true,
+		comment_reply: true,
+		mentioned: true,
+		group_invite_received: true,
+		group_invite_accepted: true,
+		group_application_received: true,
+		group_application_accepted: true,
+		system_announcement: true
+	};
+
+	const GROUP_TO_TYPES: Record<NotificationPreferenceGroup, NotificationType[]> = {
+		social: ['new_follower', 'mutual_follow'],
+		interaction: ['moment_liked', 'moment_commented', 'comment_liked', 'comment_reply', 'mentioned'],
+		group: ['group_invite_received', 'group_invite_accepted', 'group_application_received', 'group_application_accepted'],
+		system: ['system_announcement']
 	};
 
 	const preferenceItems: Array<{
-		key: NotificationPreferenceKey;
+		key: NotificationPreferenceGroup;
 		title: string;
 		description: string;
 	}> = [
@@ -35,7 +51,7 @@
 		{ key: 'system', title: '系统公告', description: '平台公告、维护提醒和系统消息' }
 	];
 
-	let preferences = $state<NotificationPreferences>({ ...DEFAULT_PREFERENCES });
+	let preferences = $state<NotificationPreferenceMap>({ ...DEFAULT_PREFERENCES });
 	let isSaving = $state(false);
 	let isMarkingAllRead = $state(false);
 
@@ -44,15 +60,23 @@
 		try {
 			const raw = localStorage.getItem(STORAGE_KEY);
 			if (!raw) return;
-			const parsed = JSON.parse(raw) as Partial<NotificationPreferences>;
+			const parsed = JSON.parse(raw) as Partial<NotificationPreferenceMap>;
 			preferences = { ...DEFAULT_PREFERENCES, ...parsed };
 		} catch {
 			preferences = { ...DEFAULT_PREFERENCES };
 		}
 	}
 
-	function togglePreference(key: NotificationPreferenceKey, checked: boolean) {
-		preferences = { ...preferences, [key]: checked };
+	function isGroupEnabled(group: NotificationPreferenceGroup): boolean {
+		return GROUP_TO_TYPES[group].every((type) => preferences[type]);
+	}
+
+	function togglePreference(group: NotificationPreferenceGroup, checked: boolean) {
+		const next = { ...preferences };
+		for (const type of GROUP_TO_TYPES[group]) {
+			next[type] = checked;
+		}
+		preferences = next;
 	}
 
 	async function savePreferences() {
@@ -142,12 +166,12 @@
 		<CardHeader>
 			<CardTitle class="text-base">偏好说明</CardTitle>
 			<CardDescription>
-				当前仓库尚未接入服务端通知偏好协议，所以这里先提供本地偏好保存与通知管理入口。
+				当前仓库尚未接入服务端通知偏好协议，所以这里先用本地持久化保存一个与 NotificationType 对齐的偏好模型。
 			</CardDescription>
 		</CardHeader>
 		<CardContent class="pt-0">
 			<p class="rounded-2xl border border-border/50 bg-background/65 px-4 py-3 text-sm text-muted-foreground">
-				这些开关用于保留你在当前浏览器的通知偏好。真正收到的通知仍以服务端与 WebSocket 推送为准。
+				这些开关用于保留你在当前浏览器的通知偏好，并已按真实 NotificationType 存储，后续若接入服务端协议，可直接映射到服务端字段。真正收到的通知仍以服务端与 WebSocket 推送为准。
 			</p>
 		</CardContent>
 	</Card>
@@ -166,7 +190,7 @@
 						<p class="font-medium">{item.title}</p>
 						<p class="text-sm text-muted-foreground">{item.description}</p>
 					</div>
-					<Switch checked={preferences[item.key]} onchange={(checked: boolean) => togglePreference(item.key, checked)} />
+					<Switch checked={isGroupEnabled(item.key)} onchange={(checked: boolean) => togglePreference(item.key, checked)} />
 				</div>
 			{/each}
 
