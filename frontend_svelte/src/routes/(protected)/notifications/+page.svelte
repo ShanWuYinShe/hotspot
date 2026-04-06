@@ -168,7 +168,10 @@
 				);
 			}
 		}
-		goto(getNotificationLink(item));
+		const target = getNotificationLink(item);
+		if (target) {
+			goto(target);
+		}
 	}
 </script>
 
