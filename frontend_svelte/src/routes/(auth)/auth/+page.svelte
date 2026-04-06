@@ -18,7 +18,6 @@
 	});
 
 	async function handleSuccess() {
-		uiStore.saveRedirectUrl(page.url.searchParams.get('redirect') ?? undefined);
 		uiStore.onLoginSuccess();
 	}
 </script>
