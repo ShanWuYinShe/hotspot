@@ -1,7 +1,7 @@
 ---
 description: 启动一轮本地 integration 流程并汇总 ready feature
 argument-hint: [feature refs or notes]
-allowed-tools: Bash(git status:*), Bash(git branch:*), Bash(git rev-parse:*), Bash(git worktree list:*), Bash(git worktree add:*), Bash(git cherry-pick:*), Bash(git log:*), Read, Glob, Grep, AskUserQuestion
+allowed-tools: Bash(python3 .claude/scripts/integrate_prepare.py *), Read, Glob, Grep, AskUserQuestion
 ---
 
 围绕以下范围启动一轮新的本地 integration 流程：
@@ -16,9 +16,9 @@ $ARGUMENTS
 2. 确认本次任务是否确实属于”多子任务并行开发后的汇总”；若不是，应直接在线性历史上完成，不要进入 integration。
 3. 自动确定本次待集成的 feature 列表；若存在多个候选或范围歧义，再请求确认。
 4. 在列出本轮纳入项与进入 replay 前，先调用 `local-integration-playbook` subagent 校准当前阶段与风险点，并在输出中复述其 `## 当前阶段`、`## 风险点`、`## 推荐命令`。
-5. 从主目录当前最新本地 `main HEAD` 创建新的临时 integration worktree；必须使用 `git worktree add -b <name> <path> main`（`main` 是本地分支引用，**不是 `origin/main`**）。分支名 `<name>` 建议遵循 `integration_{简要描述}` 格式（如 `integration_multi-auth-modules`）。
-6. 通过 `.claude/scripts/integration_meta.py` 初始化本轮 integration 元信息。
-7. 将各 ready feature 的成果按顺序 cherry-pick / replay 到 integration worktree。
+5. 创建新的临时 integration worktree，并初始化本轮 integration 元信息。
+6. 将各 ready feature 的成果按顺序 replay 到 integration worktree。
+7. 此阶段只负责 replay 与冲突处理，不要求此时已经收敛为单个 commit；线性收敛与最终 gate 在 `/finish_integrate` 前完成。
 8. 完成 replay 与冲突处理后停止在 integration 准备态；远程同步策略以根 `CLAUDE.md` 与 `/sync_back_main` 为准。
 
 结束时请输出：

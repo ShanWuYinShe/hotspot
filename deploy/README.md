@@ -10,38 +10,10 @@
 ## 快速入口
 
 ### 短版工作流
-- `verify`：用于并行开发验证，支持多 agent + 多 worktree。默认验证当前工作目录 / worktree，并在 Docker 隔离环境里完成 backend-go/frontend 的测试与构建检查。示例：`./deploy/scripts/verify.sh --env-name feature-a`
-- `verify-inspect`：用于开发内环隔离调试，复用 verify 的 env-name 隔离，拉起临时运行态并暴露稳定入口，供 Claude Code 主动访问页面、查看 console、核对关键 UI 与交互。成功后环境会保持运行，直到下一次 `verify` / `verify-inspect` 重建或被显式清理。示例：`./deploy/scripts/verify-inspect.sh --env-name feature-a`
-- `preview`：用于最终候选结果预演，只有一个实例。先 `./deploy/scripts/preview-build.sh`，再 `./deploy/scripts/preview-up.sh`，最后 `./deploy/scripts/preview-inspect.sh`
-- `release`：用于产出正式部署输入物，不运行环境。示例：`./deploy/scripts/release-build.sh --ref HEAD --label release-2026-03-21`
-
-### 常用命令
-
-#### verify
-```bash
-./deploy/scripts/verify.sh --env-name feature-a
-```
-
-#### preview
-```bash
-./deploy/scripts/preview-build.sh
-./deploy/scripts/preview-up.sh
-./deploy/scripts/preview-inspect.sh
-```
-
-停止或清理 preview：
-
-```bash
-./deploy/scripts/preview-down.sh
-./deploy/scripts/preview-down.sh --remove
-./deploy/scripts/preview-down.sh --clean-all
-```
-
-#### release
-```bash
-./deploy/scripts/release-build.sh --ref HEAD
-./deploy/scripts/release-build.sh --ref <sha-or-tag> --label release-2026-03-21
-```
+- `verify`：用于并行开发验证，支持多 agent + 多 worktree。默认验证当前工作目录 / worktree，并在 Docker 隔离环境里完成 backend-go/frontend 的测试与构建检查。
+- `verify-inspect`：用于开发内环隔离调试，复用 verify 的 env-name 隔离，拉起临时运行态并暴露稳定入口，供 Claude Code 主动访问页面、查看 console、核对关键 UI 与交互。成功后环境会保持运行，直到下一次 `verify` / `verify-inspect` 重建或被显式清理。
+- `preview`：用于最终候选结果预演，只有一个实例。
+- `release`：用于产出正式部署输入物，不运行环境。
 
 ## 当前原则
 - 只有 `verify` / `verify-inspect` 支持多实例并行。
@@ -49,8 +21,8 @@
 - `release` 不运行环境，只产物。
 - `verify` 默认验证当前工作目录 / worktree，包含未提交修改。
 - `verify-inspect` 属于开发内环隔离环境，不替代候选预演；前端页面/UI/交互改动默认先过 `verify`，再由 Claude Code 基于该入口主动完成页面确认。
-- `deploy/` 负责隔离那些会影响宿主环境或在多 agent 下可能冲突的动作；不要把它理解成承包所有 checks 的统一执行器。
-- 像 `pnpm check`、`go vet` 这类纯静态检查，如果确认不会污染宿主环境、不会产生运行态副作用、不会在多 agent 下相互冲突，可以直接在宿主环境执行；而测试、build、起服务、preview、release 等动作仍应走 `deploy/`。
+- `deploy/` 负责隔离那些会影响宿主环境或在多 agent 下可能冲突的动作；不要把它理解成承包所有 checks 的统一执行器。针对 Claude Code 的默认 workflow 边界（例如是否允许宿主机直跑静态检查），以仓库根 `CLAUDE.md` 为准；这里不再单独创造例外规则。
+- `preview` / `release` 使用 deploy-managed detached worktree 或确定性 git ref 构建候选结果，它们不是 Claude 的 feature / integration worktree 替代物。
 - 测试和构建流程产生的中间缓存默认保留在容器临时目录中，不写回宿主 worktree；宿主侧只保留日志、release/preview 产物等需要交付或复盘的输出。
 - `preview` / `release` 面向候选结果与确定性版本，不再承担多 env 开发隔离语义。
 - `verify` / `preview` / `release` 现在都会把关键日志归档到 `tmp/deploy/logs/`，便于人工复盘与 AI 分析完整错误链。

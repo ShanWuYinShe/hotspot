@@ -17,6 +17,8 @@
 - runtime 也被设计成多 env，多余且复杂
 - preview image 与正式部署 image 的语义混淆
 
+本文只解释 deploy 体系为什么这样设计；涉及 Claude Code 的仓库级 workflow、worktree / integration / sync-back / quality gate 规则，统一以仓库根 `CLAUDE.md` 为准。
+
 现在改成：
 - **verify 多实例**
 - **verify-inspect 复用 verify 的多实例隔离**
@@ -39,13 +41,11 @@
 - lock
 - 测试依赖容器
 
-宿主侧只保留当前 checkout 下 `tmp/deploy/` 里的日志、构建产物、release manifest 与 deploy-managed worktree；Go / pnpm 等中间缓存默认留在容器临时目录内，不再写回宿主 worktree，从根上避免 worktree 清理时被缓存权限卡住。
+宿主侧只保留当前 checkout 下 `tmp/deploy/` 里的日志、构建产物、release manifest 与 deploy-managed worktree；Go / pnpm 等中间缓存默认留在容器临时目录内，不再写回宿主 worktree，从根上避免 worktree 清理时被缓存权限卡住。这里的 deploy-managed worktree 指 deploy 为 preview / release 维护的 detached worktree，它不替代 Claude 的 feature / integration worktree 语义。
 
 ### 入口
 
-```bash
-./deploy/scripts/verify.sh --env-name feature-a
-```
+`verify` 提供一个标准验证入口，负责在隔离环境中验证当前工作树结果。
 
 ### 技术实现
 - `compose/verify.yml`
@@ -75,11 +75,7 @@
 
 ### 入口
 
-```bash
-./deploy/scripts/preview-build.sh
-./deploy/scripts/preview-up.sh
-./deploy/scripts/preview-inspect.sh
-```
+`preview` 提供单实例候选结果预演入口，由构建、启动和巡检三个子阶段组成。
 
 ### 输入
 - 默认：当前工作目录 / worktree
@@ -117,10 +113,7 @@
 
 ### 入口
 
-```bash
-./deploy/scripts/release-build.sh --ref HEAD
-./deploy/scripts/release-build.sh --ref <sha-or-tag> --label release-xxx
-```
+`release` 提供一个基于确定性 git 版本的正式部署输入物构建入口，可为给定 ref 生成可交付产物与完整构建日志。
 
 ### 输出
 - backend image

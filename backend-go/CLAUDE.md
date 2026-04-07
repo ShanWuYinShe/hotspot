@@ -14,8 +14,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `test/`：集成测试与后续 PG/Redis harness 的扩展入口。
 
 ## 与根流程的关系
-- 主目录保持 `main` + clean，所有实际改动都在 worktree 中完成；本地分支、本地集成 worktree、本地验证入口和风险边界，以仓库根 `CLAUDE.md` 为准。
-- 默认验证入口是 `verify.sh`，默认验证的是当前 worktree 快照，并且测试/构建检查必须在 Docker 内完成；runtime 行为确认走单实例 `preview`。
+- worktree / integration / sync-back / quality gate / 风险边界等仓库级流程，以仓库根 `CLAUDE.md` 为唯一权威来源；本文件只补充 backend-go 的局部架构、实现约束与验证提示。
+- backend-go 的默认验证入口是 `verify.sh`，默认验证当前 worktree 快照；runtime 行为确认走单实例 `preview`。
 
 ## 关键约束
 - 严格遵守 `Handler -> Service -> Repository` 分层。
@@ -43,8 +43,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - `AUTH_TOKEN_SECRET`
   - 以及 app config 相关的公开站点/默认资源配置
 
-## 常用命令
-- 默认验证入口：`./deploy/scripts/verify.sh --env-name <name>`
-- 需要 backend-go 构建产物时：`./deploy/scripts/preview-build.sh`
-- 需要确定性发布产物时：`./deploy/scripts/release-build.sh --ref <git-ref>`
-- 在非主目录 worktree 中，格式化/语法检查/编译通过 `python3 .claude/scripts/go_dev.py --task <check|fmt|vet|build|all>` 执行；测试必须通过 `deploy/` 隔离执行。
+## 常用能力
+- 支持通过仓库定义的默认验证入口确认当前 worktree 快照。
+- 支持为 backend-go 生成候选预演所需的构建产物。
+- 支持基于确定性 git ref 生成发布输入物。
+- 在非主目录 worktree 中，backend-go 的格式化、静态检查和编译通过受控入口执行；测试仍通过 `deploy/` 隔离完成。

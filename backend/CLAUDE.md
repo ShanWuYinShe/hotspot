@@ -17,7 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `src/utils/`：缓存、token、web cookie、客户端 IP 等通用工具。
 
 ## 与根流程的关系
-- 主目录保持 `main` + clean，所有实际改动都在 worktree 中完成；本地分支、本地集成 worktree、本地验证入口和风险边界，以仓库根 `CLAUDE.md` 为准。
+- worktree / integration / sync-back / quality gate / 风险边界等仓库级流程，以仓库根 `CLAUDE.md` 为唯一权威来源；本文件只补充 Rust 后端的局部架构、实现约束与验证提示。
 - 后端改动完成后，优先运行根文档定义的本地 Docker 验证流程；影响 runtime 行为时，再补跑 runtime 验证。
 
 ## 关键约束
@@ -34,12 +34,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 新增路由时优先放在 `src/routes/v1/`，再由 `src/main.rs` 的总路由挂载。
 - 如果需要自查旧式 SQL 写法，重点检查是否出现非宏 `sqlx::query(`、`sqlx::query_as::<`、`sqlx::query_scalar::<`。
 
-## 常用命令
+## 常用能力
 - 默认验证入口遵循仓库根 `CLAUDE.md` 与 `deploy/` Docker 流程。
-- worktree 内的格式化、语法检查和编译通过受控脚本执行：
-  - `python3 .claude/scripts/rust_dev.py --task fmt` — 格式检查
-  - `python3 .claude/scripts/rust_dev.py --task check` — 语法与类型检查
-  - `python3 .claude/scripts/rust_dev.py --task clippy` — lint
-  - `python3 .claude/scripts/rust_dev.py --task build` — 编译
-  - `python3 .claude/scripts/rust_dev.py --task all` — 以上全部（默认）
-- 不允许直接调用 `cargo fmt`/`cargo check`/`cargo clippy`/`cargo build`；`cargo test` 必须通过 `deploy/` 隔离执行。
+- worktree 内的格式化、语法检查和编译通过受控入口执行。
+- 不允许直接调用裸 `cargo` 开发命令；测试通过 `deploy/` 隔离执行。

@@ -16,7 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `src/hooks.server.ts`：服务端会话/认证钩子。
 
 ## 与根流程的关系
-- 主目录保持 `main` + clean，所有实际改动都在 worktree 中完成；本地分支、本地集成 worktree、本地验证入口和风险边界，以仓库根 `CLAUDE.md` 为准。
+- worktree / integration / sync-back / quality gate / 风险边界等仓库级流程，以仓库根 `CLAUDE.md` 为唯一权威来源；本文件只补充前端的局部架构、实现约束与验证提示。
 - 默认验证入口是 `verify.sh`，默认验证的是当前 worktree 快照；涉及 API、WebSocket 或地图行为时，再对照 `spec/`。
 - 前端页面/UI/交互改动默认还要追加 `verify-inspect.sh`，用于提供开发内环隔离入口；页面、console、关键 UI 与少量关键交互流应由 Claude Code 主动访问该入口完成检查；`preview` 用于候选结果预演而不是高频调试。
 
@@ -35,8 +35,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - marker、overlay、位置选择器中心点必须使用地图 SDK 原生能力，禁止 DOM 伪 marker。
 - center pin 必须绑定地图相机中心；回写业务状态时直接使用地图 SDK 返回的中心坐标。
 
-## 常用命令
-- 默认验证入口：`./deploy/scripts/verify.sh --env-name <name>`
-- 前端开发内环自动确认：`./deploy/scripts/verify-inspect.sh --env-name <name>`
-- 需要预演候选结果时：`./deploy/scripts/preview-build.sh` + `./deploy/scripts/preview-up.sh`
-- 在非主目录 worktree 中，格式化/语法检查/编译通过 `python3 .claude/scripts/frontend_dev.py --task <install|check|lint|build|all>` 执行；测试必须通过 `deploy/` 隔离执行。
+## 常用能力
+- 支持通过默认验证入口确认当前前端 worktree 快照。
+- 支持通过开发内环隔离环境完成页面/UI/交互确认。
+- 支持为候选结果准备本地预演环境。
+- 在非主目录 worktree 中，前端安装、静态检查和编译通过受控入口执行；测试仍通过 `deploy/` 隔离执行。

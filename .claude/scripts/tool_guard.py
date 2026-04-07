@@ -7,17 +7,16 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from controlled_allowlist import CONTROLLED_DEPLOY_SCRIPTS, CONTROLLED_PYTHON_SCRIPTS
 from git_context import GitContextError, get_repo_context
 
 
 SAFE_SHELL_PATTERNS = (
-    re.compile(r"^git(?:\s|$)"),
-    re.compile(r"^(?:\./)?deploy/scripts/[a-z0-9-]+\.sh(?:\s|$)"),
-    re.compile(r"^bash\s+(?:\./)?deploy/scripts/[a-z0-9-]+\.sh(?:\s|$)"),
-    re.compile(r"^python3?\s+(?:\./)?\.claude/scripts/[a-zA-Z0-9_./-]+(?:\s|$)"),
+    re.compile(r"^python3?\s+(?:\./)?\.claude/scripts/[a-zA-Z0-9_./-]+\.py(?:\s|$)"),
 )
 
 BLOCKED_RUNTIME_PATTERNS = (
+    re.compile(r"^git(?:\s|$)"),
     re.compile(r"^npm(?:\s|$)"),
     re.compile(r"^npx(?:\s|$)"),
     re.compile(r"^yarn(?:\s|$)"),
@@ -113,18 +112,36 @@ def guard_bash(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
     if not command:
         return 0
 
+    if is_allowed_controlled_python(command) or is_allowed_deploy_script(command):
+        return 0
+
     segments = [segment.strip() for segment in SPLIT_PATTERN.split(command) if segment.strip()]
     if not segments:
         return 0
 
-    for segment in segments:
-        if re.match(r"^git\s+worktree\s+add", segment) and re.search(r"\borigin/", segment):
-            return deny("git worktree add 不允许使用远程引用（如 origin/main）作为基准点；必须使用本地分支引用（如 main），确保基于主目录本地 main 当前 HEAD 创建。", segment)
+    git_segments = [segment for segment in segments if is_git_segment(segment)]
+    git_state_change_segments = [segment for segment in git_segments if is_git_state_change_segment(segment)]
+    if len(git_segments) > 1:
+        if len(git_state_change_segments) == 0:
+            return deny("只读 git 查询也必须分步执行；不要使用 &&、; 或 || 串联多个命令。", command)
+        return deny("git 状态变更命令必须分步执行；不要使用 &&、; 或 || 串联多个命令。", command)
+
+    if any(is_git_segment(segment) for segment in segments):
+        if all(is_allowed_direct_git_segment(segment) for segment in segments):
+            return 0
+        return deny("不允许直接执行裸 git 状态变更命令；如需修改仓库状态，请改用白名单中的受控入口。", command)
 
     if repo and repo["is_main_primary"]:
-        if all(is_git_segment(segment) for segment in segments):
+        if all(is_allowed_direct_git_read_segment(segment) for segment in segments):
             return 0
-        return deny("主目录本地 main 只允许 git 控制面命令；请先进入 feature worktree 再实施、验证或运行脚本。", command)
+        if all(is_allowed_controlled_python(segment) or is_allowed_deploy_script(segment) for segment in segments):
+            return 0
+        return deny("主目录本地 main 只允许只读 git 查询或受控脚本入口；不要在主目录直接执行 git 状态变更。", command)
+
+    if repo and is_integration_branch(repo.get("branch")):
+        for segment in segments:
+            if is_git_merge_segment(segment):
+                return deny("integration worktree 禁止使用 git merge 汇总 feature 或追平 main；请改用受控脚本中的 cherry-pick / replay / rebase / squash / refresh-rebuild 入口。", segment)
 
     raw_cwd = payload.get("cwd")
     if raw_cwd:
@@ -149,6 +166,57 @@ def guard_bash(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
 
 def is_git_segment(segment: str) -> bool:
     return bool(re.match(r"^git(?:\s|$)", segment))
+
+
+def is_allowed_direct_git_read_segment(segment: str) -> bool:
+    return bool(
+        re.match(
+            r"^git\s+(?:status|diff|log|branch|rev-parse|show-ref|worktree\s+list)(?:\s|$)",
+            segment,
+        )
+    )
+
+
+def is_allowed_direct_git_segment(segment: str) -> bool:
+    return bool(
+        re.match(
+            r"^git\s+(?:status|diff|log|branch|rev-parse|show-ref|worktree\s+list|add|rm|commit|rebase)(?:\s|$)",
+            segment,
+        )
+    )
+
+
+def is_git_merge_segment(segment: str) -> bool:
+    return bool(re.match(r"^git\s+merge(?:\s|$)", segment))
+
+
+def is_git_state_change_segment(segment: str) -> bool:
+    return bool(
+        re.match(
+            r"^git\s+(?:add|commit|rebase|merge|cherry-pick|worktree\s+add|worktree\s+remove|branch\s+-d|branch\s+-D|checkout|switch|reset|clean)(?:\s|$)",
+            segment,
+        )
+    )
+
+
+def is_integration_branch(branch: Any) -> bool:
+    return isinstance(branch, str) and branch.startswith("integration-")
+
+
+def is_allowed_controlled_python(segment: str) -> bool:
+    for name in CONTROLLED_PYTHON_SCRIPTS:
+        if re.match(rf"^python3?\s+(?:\./)?\.claude/scripts/{re.escape(name)}\.py(?:\s|$)", segment):
+            return True
+    return False
+
+
+def is_allowed_deploy_script(segment: str) -> bool:
+    for name in CONTROLLED_DEPLOY_SCRIPTS:
+        if re.match(rf"^(?:\./)?deploy/scripts/{re.escape(name)}(?:\s|$)", segment):
+            return True
+        if re.match(rf"^bash\s+(?:\./)?deploy/scripts/{re.escape(name)}(?:\s|$)", segment):
+            return True
+    return False
 
 
 def is_safe_shell_segment(segment: str) -> bool:

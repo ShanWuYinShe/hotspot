@@ -12,7 +12,7 @@ description: 复核当前 integration worktree 是否已经满足 ready to sync 
 3. 检查 cherry-pick / replay 冲突是否都已闭环解决，是否还有冲突标记或临时性补丁痕迹。
 4. 检查 integration verify 是否已经完成并通过；最终有效结论默认以 `deploy/scripts/verify.sh --env-name <name>` 为准。
 5. 检查 simplify、严格 review 和 review 问题修复是否已经完成。
-6. 检查当前历史是否已经整理为适合回主目录本地 `main` 的线性结果，优先采用 rebase / squash，避免 merge commit。
+6. 检查当前历史是否已经整理为适合当前线性同步规则的结果；若当前状态不满足要求，结论必须是 `blocked` 或 `must refresh`，不能给出 `ready to sync`。
 7. 检查 integration 基线是否仍然新鲜；若主目录当前最新本地 `main HEAD` 已经前进，则当前结论必须是 `must refresh`。
 8. 面向人类的结论枚举必须只使用：`ready to sync`、`blocked`、`must refresh`。若上层需要把结论写回 `tmp/claude/integrations/<integration-id>.json`，必须分别映射为 `ready_to_sync`、`blocked`、`must_refresh`。
 9. 输出必须使用以下 Markdown 结构，标题名不要改：
@@ -34,6 +34,9 @@ description: 复核当前 integration worktree 是否已经满足 ready to sync 
 
 ## 历史线性化
 - 状态：
+- 是否存在 merge commit：
+- 是否已收敛为可 rebase-only sync-back 的线性结果：
+- 若未满足，应采用的修正方式（rebase / squash / replay / refresh）：
 - 依据：
 
 ## 阻塞项

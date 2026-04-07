@@ -19,7 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `entry/src/main/ets/core/geo/CoordinateConverter.ets`：坐标转换。
 
 ## 与根流程的关系
-- 主目录保持 `main` + clean，所有实际改动都在 worktree 中完成；本地分支、本地集成 worktree、本地验证入口和风险边界，以仓库根 `CLAUDE.md` 为准；涉及 API、地图、Safe Area、登录态或 WebSocket 的改动时，再对照 `spec/`。
+- worktree / integration / sync-back / quality gate / 风险边界等仓库级流程，以仓库根 `CLAUDE.md` 为唯一权威来源；本文件只补充 Harmony 客户端的局部架构、实现约束与验证提示；涉及 API、地图、Safe Area、登录态或 WebSocket 的改动时，再对照 `spec/`。
 
 ## 关键约束
 - API 路径只在 `core/config/ApiEndpoints.ets` 定义，禁止业务代码硬编码。
@@ -41,7 +41,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 地图 marker、品牌图形等业务图形可以使用自定义资源，但不要混入系统图标管理方式。
 - Safe Area 只通过统一能力计算和复用；不要在页面里硬编码状态栏、导航栏高度。
 
-## 常用命令
+## 常用能力
 - 本仓库默认最终验证入口以根 `CLAUDE.md` 约定为准。
 - Harmony 工程的检查/编译配置入口主要在 `code-linter.json5`、`hvigorfile.ts`、`entry/hvigorfile.ts`、`hvigor/hvigor-config.json5`、`build-profile.json5`。
-- 在非主目录 worktree 中，安装/检查/编译通过 `python3 .claude/scripts/harmony_worktree.py --task <install|check|build|all>` 执行；不直接调用 ohpm/hvigor 原始命令。
+- 在非主目录 worktree 中，安装、检查和编译通过受控入口执行；不直接调用 ohpm/hvigor 原始命令。
