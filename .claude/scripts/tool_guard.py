@@ -168,20 +168,40 @@ def is_git_segment(segment: str) -> bool:
     return bool(re.match(r"^git(?:\s|$)", segment))
 
 
+def strip_git_global_options(segment: str) -> str:
+    argv = tokenize_shell_segment(segment)
+    if not argv or argv[0] != "git":
+        return segment
+    i = 1
+    while i < len(argv):
+        arg = argv[i]
+        if arg in {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--config-env"}:
+            i += 2
+            continue
+        if arg in {"--no-pager", "--paginate"}:
+            i += 1
+            continue
+        break
+    rest = argv[i:]
+    return "git " + " ".join(rest) if rest else "git"
+
+
 def is_allowed_direct_git_read_segment(segment: str) -> bool:
+    normalized = strip_git_global_options(segment)
     return bool(
         re.match(
             r"^git\s+(?:status|diff|log|branch|rev-parse|show-ref|worktree\s+list)(?:\s|$)",
-            segment,
+            normalized,
         )
     )
 
 
 def is_allowed_direct_git_segment(segment: str) -> bool:
+    normalized = strip_git_global_options(segment)
     return bool(
         re.match(
             r"^git\s+(?:status|diff|log|branch|rev-parse|show-ref|worktree\s+list|add|rm|commit|rebase)(?:\s|$)",
-            segment,
+            normalized,
         )
     )
 
