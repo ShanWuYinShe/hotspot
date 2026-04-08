@@ -44,25 +44,29 @@ def main() -> int:
             if Path(worktree_path).resolve() == cwd.resolve():
                 blocked_reason = "当前会话仍驻留在该 worktree 中，请先 ExitWorktree。"
             else:
-                git_run(cwd, "worktree", "remove", worktree_path)
-                removed = True
-                if tip_equals_main:
-                    # 标准 sync-back 后来源分支 tip == main tip，-d 必然成功
-                    git_run(cwd, "branch", "-d", branch)
-                    deletion_method = "-d (squash-merged)"
-                    branch_deleted = True
-                else:
-                    try:
+                try:
+                    git_run(cwd, "worktree", "remove", worktree_path)
+                except RuntimeError as exc:
+                    blocked_reason = str(exc)
+                if not blocked_reason:
+                    removed = True
+                    if tip_equals_main:
+                        # 标准 sync-back 后来源分支 tip == main tip，-d 必然成功
                         git_run(cwd, "branch", "-d", branch)
-                        deletion_method = "-d"
+                        deletion_method = "-d (synced)"
                         branch_deleted = True
-                    except RuntimeError:
-                        if args.force:
-                            git_run(cwd, "branch", "-D", branch)
-                            deletion_method = "-D (forced)"
+                    else:
+                        try:
+                            git_run(cwd, "branch", "-d", branch)
+                            deletion_method = "-d"
                             branch_deleted = True
-                        else:
-                            deletion_method = "blocked: 需要 --force 才能强制删除未完全合并的分支"
+                        except RuntimeError:
+                            if args.force:
+                                git_run(cwd, "branch", "-D", branch)
+                                deletion_method = "-D (forced)"
+                                branch_deleted = True
+                            else:
+                                deletion_method = "blocked: 需要 --force 才能强制删除"
         candidates.append(
             {
                 "path": worktree_path,
