@@ -10,9 +10,10 @@
 ## 快速入口
 
 ### 短版工作流
-- `verify`：用于并行开发验证，支持多 agent + 多 worktree。默认验证当前工作目录 / worktree，并在 Docker 隔离环境里完成 backend-go/frontend 的测试与构建检查。
-- `verify-inspect`：用于开发内环隔离调试，复用 verify 的 env-name 隔离，拉起临时运行态并暴露稳定入口，供 Claude Code 主动访问页面、查看 console、核对关键 UI 与交互。成功后环境会保持运行，直到下一次 `verify` / `verify-inspect` 重建或被显式清理。
-- `preview`：用于最终候选结果预演，只有一个实例。
+- `verify`：用于并行开发验证，支持多 agent + 多 worktree。默认验证当前工作目录 / worktree，并在 Docker 隔离环境里完成 backend-go/frontend 的测试与构建检查。支持 `--only backend` / `--only frontend` 选择性验证；默认两端并行执行。
+- `verify-inspect`：用于开发内环隔离调试，复用 verify 的 env-name 隔离，拉起临时运行态并暴露稳定入口，供 Claude Code 主动访问页面、查看 console、核对关键 UI 与交互。成功后环境会保持运行，直到下一次 `verify` / `verify-inspect` 重建或被 `verify-inspect-down` 显式清理。支持 `--only backend` 只启动后端 inspect。
+- `verify-inspect-down`：显式关闭运行中的 inspect 环境，支持 `--remove` 清理 volumes。
+- `preview`：用于最终候选结果预演，只有一个实例。`preview-build` 支持 `--only backend` / `--only frontend` 选择性构建。
 - `release`：用于产出正式部署输入物，不运行环境。
 
 ## 当前原则
@@ -68,10 +69,11 @@
 - 所有包含 nginx + 前端的环境（verify-inspect、preview）均已配置 `/_AMapService` 代理转发
 
 ## 目录结构
-- `compose/verify.yml`：verify 编排
+- `compose/verify.yml`：verify + verify-inspect 编排
 - `compose/preview.yml`：preview 编排
 - `dockerfiles/`：runner / app Dockerfiles
-- `scripts/`：verify / preview / release 入口
+- `scripts/`：verify / verify-inspect / verify-inspect-down / preview / release 入口
+- `nginx/hotspot.verify.nginx.conf`：verify-inspect nginx 入口配置
 - `nginx/hotspot.preview.nginx.conf`：preview 统一入口配置
 
 更多设计说明见 [deployment.md](deployment.md)

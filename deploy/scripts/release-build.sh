@@ -102,8 +102,21 @@ ensure_dir "$MANIFEST_DIR"
   echo "Frontend release image: $RELEASE_FRONTEND_IMAGE"
 } | tee "$RELEASE_BUILD_META_LOG"
 
-run_backend_artifact_build "$BACKEND_BUILD_LOG" "$SOURCE_ROOT" "$BACKEND_ARTIFACT_DIR" "$BACKEND_RUNNER_IMAGE"
-run_frontend_artifact_build "$FRONTEND_BUILD_LOG" "$SOURCE_ROOT" "$FRONTEND_ARTIFACT_DIR" "$FRONTEND_RUNNER_IMAGE"
+run_backend_artifact_build "$BACKEND_BUILD_LOG" "$SOURCE_ROOT" "$BACKEND_ARTIFACT_DIR" "$BACKEND_RUNNER_IMAGE" &
+BACKEND_PID=$!
+run_frontend_artifact_build "$FRONTEND_BUILD_LOG" "$SOURCE_ROOT" "$FRONTEND_ARTIFACT_DIR" "$FRONTEND_RUNNER_IMAGE" &
+FRONTEND_PID=$!
+BACKEND_EXIT=0
+FRONTEND_EXIT=0
+wait "$BACKEND_PID" || BACKEND_EXIT=$?
+wait "$FRONTEND_PID" || FRONTEND_EXIT=$?
+if [[ $BACKEND_EXIT -ne 0 || $FRONTEND_EXIT -ne 0 ]]; then
+  echo "Artifact build failed." >&2
+  [[ $BACKEND_EXIT -ne 0 ]] && echo "  backend artifact build exited with $BACKEND_EXIT" >&2
+  [[ $FRONTEND_EXIT -ne 0 ]] && echo "  frontend artifact build exited with $FRONTEND_EXIT" >&2
+  exit 1
+fi
+
 run_and_capture "$BACKEND_IMAGE_BUILD_LOG" build_app_image "$RELEASE_BACKEND_IMAGE" "$ROOT/deploy/dockerfiles/backend-go.app.Dockerfile" "$BACKEND_ARTIFACT_DIR" \
   "hotspot.role=release-backend-go-image" \
   "hotspot.display.name=Backend Go Release Image" \
