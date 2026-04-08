@@ -120,6 +120,14 @@ def parse_feature_lineage(branch: str) -> tuple[str, int]:
     return name, 1
 
 
+def merge_base_sha(cwd: Path, ref1: str, ref2: str = "HEAD") -> str:
+    return git_output(cwd, "merge-base", ref1, ref2)
+
+
+def commit_count_between(cwd: Path, ref1: str, ref2: str = "HEAD") -> int:
+    return int(git_output(cwd, "rev-list", "--count", f"{ref1}..{ref2}") or "0")
+
+
 def ensure_within_worktree(cwd: Path, raw_paths: list[str]) -> tuple[Path, list[Path]]:
     repo = resolve_repo(cwd)
     worktree_root = Path(str(repo["top"])).resolve()

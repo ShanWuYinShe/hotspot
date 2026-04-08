@@ -30,11 +30,16 @@ def main() -> int:
     verify_passed = meta.get("verify_status") == "passed"
     review_passed = meta.get("review_status") == "passed"
     gate_status = "ready_to_sync" if commits_ahead == 1 and merge_commits == 0 and not baseline_stale and verify_passed and review_passed else ("must_refresh" if baseline_stale else "blocked")
-    gate_summary = (
-        "integration 已满足基础 gate 条件，可进入下一步。"
-        if gate_status == "ready_to_sync"
-        else ("integration 基线已过期，必须先 refresh。" if gate_status == "must_refresh" else "integration 尚未满足 verify/review/线性化等 gate 条件。")
-    )
+    if gate_status == "ready_to_sync":
+        gate_summary = "integration 已满足基础 gate 条件，可进入下一步。"
+    elif gate_status == "must_refresh":
+        gate_summary = "integration 基线已过期，必须先 refresh。"
+    elif not verify_passed or not review_passed:
+        gate_summary = "integration 尚未满足 verify/review 条件。"
+    elif merge_commits > 0:
+        gate_summary = f"integration 存在 {merge_commits} 个 merge commit，必须先整理为纯线性历史。"
+    else:
+        gate_summary = f"integration 当前有 {commits_ahead} 个 commit（需要 1 个），必须先 squash 为单个 commit 再进入 sync-back。"
     meta_path = mark_gate_status(str(primary_root), integration_id, gate_status, gate_summary)
     raise SystemExit(
         ok(
@@ -48,7 +53,7 @@ def main() -> int:
             review_passed=review_passed,
             gate_status=gate_status,
             metadata_path=meta_path,
-            next_step=("当前基础 gate 已通过，可继续进入下一步。" if gate_status == "ready_to_sync" else ("当前 integration 需要先 refresh。" if gate_status == "must_refresh" else "当前 integration 仍未满足最终 gate 条件，请先补齐 verify/review 或继续整理历史。")),
+            next_step=("当前基础 gate 已通过，可继续进入下一步。" if gate_status == "ready_to_sync" else ("当前 integration 需要先 refresh。" if gate_status == "must_refresh" else f"当前 integration 仍未满足最终 gate 条件：{gate_summary}")),
         )
     )
 

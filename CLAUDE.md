@@ -24,6 +24,7 @@ HotSpot 是一个多端 monorepo：
 4. **线性同步回主目录**：
    - 单任务：在 feature worktree 中完成全部质量门后，通过 `rebase` 整理分支，以 fast-forward 方式同步回主目录本地 `main`。
    - 多子任务：新建专门的 integration worktree，将所有子任务成果通过 `rebase + squash` 收敛为单个 commit，在 integration worktree 中完成全部质量门后，再同步回主目录本地 `main`。
+   - **每个 feature worktree 在 sync-back 之前必须恰好只有 1 个 commit**：开发过程中如需调整，使用 `git commit --amend` 保持单 commit 状态，而不是新增多个 commit。sync-back 脚本会检查 commit 数量，不为 1 将被 blocked。
 
 任何涉及代码修改的 worktree 都必须完成以下闭环才算任务完成：
 `编写代码 → 检查（语法错误、编译错误、警告） → 测试 → simplify → strict review`
@@ -54,7 +55,7 @@ HotSpot 是一个多端 monorepo：
 - 若某任务只有单一 worktree 的结果，则直接在线性历史上完成，不要再额外新建 integration worktree；单 worktree 结果同步回主目录本地 `main` 时，必须先将来源分支整理为适合 rebase 的线性历史，再通过 rebase-only 路径让主目录本地 `main` fast-forward 前进。**绝不允许使用 `git merge`，包括 `git merge --ff-only`，将其他 worktree 的成果同步/合并回主目录本地 `main`。** 若当前状态不满足 rebase，必须先在来源 worktree 内继续整理历史，而不是用 merge 兜底。
 - integration worktree 只负责汇总、冲突处理、补测、预演与交付准备，不承载新的大规模实现；其基线始终是主目录本地 `main` 的当前 HEAD，且最终必须通过 `rebase + squash` 收敛为一个 commit，再同步回主目录的本地主分支。若当前 integration 状态不满足 rebase / squash，则必须 refresh/rebuild、replay 或继续整理历史，绝不允许 merge 最新 `main` 或 merge feature 作为补救路径。
 - 本地集成结果通过后，再由用户决定是否同步到远程 `main`；PR 不是默认流程。
-- 本轮完成后，删除已完成的 feature worktree / branch 与 integration worktree；删除本会话管理的 worktree 时，默认同步删除其对应非主分支 branch。若 `git branch -d` 仅因未合到远程 tracking branch 而拒绝，但已确认结果线性同步回主目录本地 `main`，则可继续使用 `git branch -D` 完成回收。
+- 本轮完成后，删除已完成的 feature worktree / branch 与 integration worktree；删除本会话管理的 worktree 时，默认同步删除其对应非主分支 branch。因为每个 worktree 只有 1 个 commit 且通过 rebase + fast-forward 同步，sync-back 后来源分支 tip 等于 main tip，`git branch -d` 可干净删除。仅对 superseded lineage 旧分支等特殊情况才需要 `git branch -D`。
 
 ## 质量门顺序
 - 默认顺序：`analyze -> plan -> task list -> implement -> check(语法/编译/警告) -> test -> simplify -> strict review -> commit -> (integrate -> verify) -> sync-back -> cleanup`
@@ -63,6 +64,7 @@ HotSpot 是一个多端 monorepo：
 - integration 后必须再做一轮 `verify`，不能把各 feature worktree 的局部通过当成集成通过。
 
 ## Commit 规范
+- **每个 feature worktree 必须恰好只有 1 个 commit**：开发过程中如需调整已提交的内容，使用 `git commit --amend` 而不是新增 commit。sync-back 脚本会检查 commit 数量，不为 1 将 blocked。对于 integration worktree，最终也必须收敛为 1 个 commit。
 - commit 消息必须包含子项目名、模块名和更改的功能点，格式：`<type>(<子项目名>/<模块名>): <功能描述>`。scope 必须是 `子项目名/模块名` 双段格式，子项目名须与 worktree 命名中的允许列表一致。跨子项目变更时以主要改动方为 scope，在描述中提及其他子项目。示例：`feat(backend-go/auth): 实现 OAuth2 登录`、`fix(harmonyapp/profile): 修复底部留白`、`chore(claude-config/workflow): 更新命名规则`、`feat(harmonyapp/build): 打通受控编译闭环，涉及 claude-config`。
 - 不要在 commit 消息中添加 `Co-Authored-By` 或任何自动生成的署名行。
 - 本文提到的"主分支"或"`main`"始终指主目录的**本地** `main` 分支，不涉及远程分支状态。
