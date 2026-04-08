@@ -21,7 +21,7 @@ def main() -> int:
     main_head = head_sha(cwd, "main")
     candidates = []
     merged = git_output(cwd, "branch", "--merged", "main")
-    merged_set = {line.strip().lstrip("* ").strip() for line in merged.splitlines() if line.strip()}
+    merged_set = {line.strip().lstrip("*+ ").strip() for line in merged.splitlines() if line.strip()}
     for item in items:
         branch = item.get("branch", "").removeprefix("refs/heads/")
         role = classify_worktree(branch)
@@ -47,7 +47,7 @@ def main() -> int:
                 git_run(cwd, "worktree", "remove", worktree_path)
                 removed = True
                 if tip_equals_main:
-                    # squash-merged: feature tip == main tip，-d 必然成功
+                    # 标准 sync-back 后来源分支 tip == main tip，-d 必然成功
                     git_run(cwd, "branch", "-d", branch)
                     deletion_method = "-d (squash-merged)"
                     branch_deleted = True
