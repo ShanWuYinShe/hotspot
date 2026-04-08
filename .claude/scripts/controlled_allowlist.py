@@ -20,6 +20,7 @@ CONTROLLED_PYTHON_SCRIPTS = (
 CONTROLLED_DEPLOY_SCRIPTS = (
     "verify.sh",
     "verify-inspect.sh",
+    "verify-inspect-down.sh",
     "preview-build.sh",
     "preview-up.sh",
     "preview-inspect.sh",

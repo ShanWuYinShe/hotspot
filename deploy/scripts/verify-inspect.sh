@@ -22,6 +22,9 @@ HOME_CHECK_LOG=""
 HEALTH_CHECK_LOG=""
 S3_CHECK_LOG=""
 
+# --only targets
+ONLY_TARGETS=()
+
 usage() {
   cat <<'EOF'
 Usage: ./deploy/scripts/verify-inspect.sh [options]
@@ -29,6 +32,8 @@ Usage: ./deploy/scripts/verify-inspect.sh [options]
 verify-inspect 只负责在 Docker 中拉起供 Claude 使用的隔离运行环境与入口，不负责定义或执行具体验证哪些页面/交互。
 
 Options:
+  --only TARGETS     Comma-separated targets: backend, frontend (default: both)
+                     frontend-only implies full stack (frontend needs backend)
   --env-name NAME    Isolated environment name for this inspect run
   --http-port PORT   Public HTTP port for inspect nginx entry (default: 38088)
   -h, --help         Show this help message
@@ -37,6 +42,11 @@ EOF
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --only)
+      shift
+      [[ $# -gt 0 ]] || { echo "missing value for --only" >&2; exit 1; }
+      IFS=',' read -ra ONLY_TARGETS <<< "$1"
+      ;;
     --env-name)
       shift
       [[ $# -gt 0 ]] || { echo "missing value for --env-name" >&2; exit 1; }
@@ -59,6 +69,34 @@ while [[ $# -gt 0 ]]; do
   esac
   shift
 done
+
+# Default to both targets
+if [[ ${#ONLY_TARGETS[@]} -eq 0 ]]; then
+  ONLY_TARGETS=("backend" "frontend")
+fi
+
+# Validate targets
+for target in "${ONLY_TARGETS[@]}"; do
+  if [[ "$target" != "backend" && "$target" != "frontend" ]]; then
+    echo "invalid --only target: $target (expected: backend, frontend)" >&2
+    exit 1
+  fi
+done
+
+should_run() {
+  local target="$1"
+  local t
+  for t in "${ONLY_TARGETS[@]}"; do
+    [[ "$t" == "$target" ]] && return 0
+  done
+  return 1
+}
+
+# Determine inspect mode
+BACKEND_ONLY=0
+if should_run backend && ! should_run frontend; then
+  BACKEND_ONLY=1
+fi
 
 ENV_NAME="$(sanitize_name "$ENV_NAME")"
 PROJECT_NAME="$(verify_project_name "$ENV_NAME")"
@@ -89,13 +127,19 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if port_in_use "$HTTP_PORT"; then
+# Port check only needed when nginx is involved (full stack mode)
+if [[ $BACKEND_ONLY -eq 0 ]] && port_in_use "$HTTP_PORT"; then
   echo "verify-inspect HTTP port $HTTP_PORT is already in use" >&2
   exit 1
 fi
 
-ensure_runner_image "$BACKEND_RUNNER_IMAGE" "$ROOT/deploy/dockerfiles/backend-go.verify.Dockerfile" "$ROOT"
-ensure_runner_image "$FRONTEND_RUNNER_IMAGE" "$ROOT/deploy/dockerfiles/frontend.verify.Dockerfile" "$ROOT"
+# Build runner images only for selected targets
+if should_run backend; then
+  ensure_runner_image "$BACKEND_RUNNER_IMAGE" "$ROOT/deploy/dockerfiles/backend-go.verify.Dockerfile" "$ROOT"
+fi
+if should_run frontend; then
+  ensure_runner_image "$FRONTEND_RUNNER_IMAGE" "$ROOT/deploy/dockerfiles/frontend.verify.Dockerfile" "$ROOT"
+fi
 export_verify_image_defaults
 
 export HOTSPOT_SOURCE_ROOT="$SOURCE_ROOT"
@@ -116,31 +160,70 @@ cd "$ROOT"
   echo "Environment name: $ENV_NAME"
   echo "Compose project: $PROJECT_NAME"
   echo "Source root: $SOURCE_ROOT"
-  echo "Inspect entrypoint: http://localhost:$HTTP_PORT"
+  if [[ $BACKEND_ONLY -eq 1 ]]; then
+    echo "Mode: backend-only (no frontend, minio, nginx)"
+  else
+    echo "Inspect entrypoint: http://localhost:$HTTP_PORT"
+  fi
+  echo "Targets: ${ONLY_TARGETS[*]}"
   echo "Runner images: $BACKEND_RUNNER_IMAGE , $FRONTEND_RUNNER_IMAGE"
   echo "Log root: $LOG_ROOT"
 } | tee "$RUN_SUMMARY_LOG"
 
-docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" up -d postgres redis minio backend-go-inspect frontend-inspect verify-inspect-nginx 2>&1 | tee -a "$INSPECT_CONSOLE_LOG"
-ready=0
-for _ in $(seq 1 180); do
-  if curl -f -sS "http://localhost:$HTTP_PORT/" >/dev/null 2>&1 && curl -f -sS -X POST "http://localhost:$HTTP_PORT/api/v1/system/health" -H "Content-Type: application/json" -d '{}' >/dev/null 2>&1 && s3_healthcheck_ok "http://localhost:$HTTP_PORT"; then
-    ready=1
-    break
+if [[ $BACKEND_ONLY -eq 1 ]]; then
+  # Backend-only: start postgres, redis, backend-go-inspect
+  # postgres and redis are pulled in by depends_on, but explicit is clearer
+  docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" up -d postgres redis backend-go-inspect 2>&1 | tee -a "$INSPECT_CONSOLE_LOG"
+
+  ready=0
+  for _ in $(seq 1 180); do
+    if docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" exec -T backend-go-inspect \
+       curl -f -sS -X POST http://localhost:8080/api/v1/system/health \
+       -H "Content-Type: application/json" -d '{}' >/dev/null 2>&1; then
+      ready=1
+      break
+    fi
+    sleep 1
+  done
+  if [[ $ready -ne 1 ]]; then
+    echo "verify-inspect backend-only environment did not become ready in time" >&2
+    exit 1
   fi
-  sleep 1
-done
-if [[ $ready -ne 1 ]]; then
-  echo "verify-inspect environment did not become ready in time" >&2
-  exit 1
+
+  docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" exec -T backend-go-inspect \
+    curl -f -sS -X POST http://localhost:8080/api/v1/system/health \
+    -H "Content-Type: application/json" -d '{}' 2>&1 | tee "$HEALTH_CHECK_LOG" >/dev/null
+
+  echo "Verify inspect environment is ready (backend-only)." | tee -a "$INSPECT_CONSOLE_LOG"
+  echo "Environment name: $ENV_NAME" | tee -a "$INSPECT_CONSOLE_LOG"
+  echo "Compose project: $PROJECT_NAME" | tee -a "$INSPECT_CONSOLE_LOG"
+  echo "Targets: ${ONLY_TARGETS[*]}" | tee -a "$INSPECT_CONSOLE_LOG"
+  echo "Logs: $LOG_ROOT" | tee -a "$INSPECT_CONSOLE_LOG"
+  echo "Backend access: docker compose -p $PROJECT_NAME exec backend-go-inspect curl http://localhost:8080/..." | tee -a "$INSPECT_CONSOLE_LOG"
+else
+  # Full stack (default or frontend-only which needs backend anyway)
+  docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" up -d postgres redis minio backend-go-inspect frontend-inspect verify-inspect-nginx 2>&1 | tee -a "$INSPECT_CONSOLE_LOG"
+  ready=0
+  for _ in $(seq 1 180); do
+    if curl -f -sS "http://localhost:$HTTP_PORT/" >/dev/null 2>&1 && curl -f -sS -X POST "http://localhost:$HTTP_PORT/api/v1/system/health" -H "Content-Type: application/json" -d '{}' >/dev/null 2>&1 && s3_healthcheck_ok "http://localhost:$HTTP_PORT"; then
+      ready=1
+      break
+    fi
+    sleep 1
+  done
+  if [[ $ready -ne 1 ]]; then
+    echo "verify-inspect environment did not become ready in time" >&2
+    exit 1
+  fi
+  curl -f -sS "http://localhost:$HTTP_PORT/" 2>&1 | tee "$HOME_CHECK_LOG" >/dev/null
+  curl -f -sS -X POST "http://localhost:$HTTP_PORT/api/v1/system/health" -H "Content-Type: application/json" -d '{}' 2>&1 | tee "$HEALTH_CHECK_LOG" >/dev/null
+  curl -f -sS "http://localhost:$HTTP_PORT$(s3_healthcheck_path)" 2>&1 | tee "$S3_CHECK_LOG" >/dev/null
+  echo "Verify inspect environment is ready." | tee -a "$INSPECT_CONSOLE_LOG"
+  echo "Environment name: $ENV_NAME" | tee -a "$INSPECT_CONSOLE_LOG"
+  echo "Compose project: $PROJECT_NAME" | tee -a "$INSPECT_CONSOLE_LOG"
+  echo "Inspect entrypoint: http://localhost:$HTTP_PORT" | tee -a "$INSPECT_CONSOLE_LOG"
+  echo "Targets: ${ONLY_TARGETS[*]}" | tee -a "$INSPECT_CONSOLE_LOG"
+  echo "Logs: $LOG_ROOT" | tee -a "$INSPECT_CONSOLE_LOG"
+  echo "Checked: / , /api/v1/system/health , $(s3_healthcheck_path)" | tee -a "$INSPECT_CONSOLE_LOG"
+  echo "下一步应由 Claude Code 主动访问该入口做页面、console、UI 与交互检查；deploy 不承载具体页面测试用例。" | tee -a "$INSPECT_CONSOLE_LOG"
 fi
-curl -f -sS "http://localhost:$HTTP_PORT/" 2>&1 | tee "$HOME_CHECK_LOG" >/dev/null
-curl -f -sS -X POST "http://localhost:$HTTP_PORT/api/v1/system/health" -H "Content-Type: application/json" -d '{}' 2>&1 | tee "$HEALTH_CHECK_LOG" >/dev/null
-curl -f -sS "http://localhost:$HTTP_PORT$(s3_healthcheck_path)" 2>&1 | tee "$S3_CHECK_LOG" >/dev/null
-echo "Verify inspect environment is ready." | tee -a "$INSPECT_CONSOLE_LOG"
-echo "Environment name: $ENV_NAME" | tee -a "$INSPECT_CONSOLE_LOG"
-echo "Compose project: $PROJECT_NAME" | tee -a "$INSPECT_CONSOLE_LOG"
-echo "Inspect entrypoint: http://localhost:$HTTP_PORT" | tee -a "$INSPECT_CONSOLE_LOG"
-echo "Logs: $LOG_ROOT" | tee -a "$INSPECT_CONSOLE_LOG"
-echo "Checked: / , /api/v1/system/health , $(s3_healthcheck_path)" | tee -a "$INSPECT_CONSOLE_LOG"
-echo "下一步应由 Claude Code 主动访问该入口做页面、console、UI 与交互检查；deploy 不承载具体页面测试用例。" | tee -a "$INSPECT_CONSOLE_LOG"
