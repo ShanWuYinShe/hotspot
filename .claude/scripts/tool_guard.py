@@ -136,7 +136,7 @@ def guard_bash(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
     if any(is_git_segment(segment) for segment in segments):
         if all(is_allowed_direct_git_segment(segment) for segment in segments):
             return 0
-        return deny("当前 git 命令不在允许范围内。若该步骤涉及复杂历史整理、冲突处理或删除，请切到 Bash 模式手动分步执行。", command)
+        return deny("当前 git 命令不在允许范围内。请按仓库当前规则使用允许的 git 原语；若该动作超出自动化支持范围，请先停下来再决定下一步。", command)
 
     if repo and is_integration_branch(repo.get("branch")):
         for segment in segments:
@@ -190,7 +190,7 @@ def is_allowed_direct_git_read_segment(segment: str) -> bool:
     normalized = strip_git_global_options(segment)
     return bool(
         re.match(
-            r"^git\s+(?:status|diff|log|branch|rev-parse|show-ref|worktree\s+list)(?:\s|$)",
+            r"^git\s+(?:status|diff|log|reflog|branch|rev-parse|show-ref|worktree\s+list)(?:\s|$)",
             normalized,
         )
     )
@@ -198,9 +198,11 @@ def is_allowed_direct_git_read_segment(segment: str) -> bool:
 
 def is_allowed_direct_git_segment(segment: str) -> bool:
     normalized = strip_git_global_options(segment)
+    if re.match(r"^git\s+reset\s+--soft(?:\s|$)", normalized):
+        return True
     return bool(
         re.match(
-            r"^git\s+(?:status|diff|log|branch|rev-parse|show-ref|worktree\s+list|add|rm|commit|rebase)(?:\s|$)",
+            r"^git\s+(?:status|diff|log|reflog|branch|rev-parse|show-ref|worktree\s+list|add|rm|commit|rebase)(?:\s|$)",
             normalized,
         )
     )

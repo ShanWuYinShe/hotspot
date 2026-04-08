@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from workflow_common import ok, prepare_integration_worktree
+from workflow_common import git_run, ok, prepare_integration_worktree
 
 
 def main() -> int:
@@ -26,12 +26,17 @@ def main() -> int:
         features=list(args.features),
         create_if_missing=args.refresh,
     )
-    if args.refresh:
-        payload["next_step"] = "集成范围和 worktree 已准备好；如需实际 replay/cherry-pick 与冲突处理，请在 Bash 模式下逐步执行。"
-        action = "refresh-integrate"
-    else:
-        action = "start-integrate"
-    raise SystemExit(ok(action=action, **payload))
+    integration_worktree = Path(str(payload["integration_worktree"]))
+    replay_results = []
+    for feature in args.features:
+        try:
+            git_run(integration_worktree, "cherry-pick", feature)
+            replay_results.append({"source_branch": feature, "status": "applied"})
+        except RuntimeError as exc:
+            replay_results.append({"source_branch": feature, "status": "conflict", "reason": str(exc)})
+            raise SystemExit(ok(status="blocked", action="refresh-integrate" if args.refresh else "start-integrate", **payload, replay_results=replay_results, next_step="当前 replay 发生冲突；请根据输出逐步解决冲突后再继续。"))
+    action = "refresh-integrate" if args.refresh else "start-integrate"
+    raise SystemExit(ok(action=action, **payload, replay_results=replay_results))
 
 
 if __name__ == "__main__":

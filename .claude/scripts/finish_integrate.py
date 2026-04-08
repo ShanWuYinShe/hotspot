@@ -4,8 +4,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from integration_meta import mark_gate_status
-from workflow_common import git_output, ok, require_integration, resolve_repo
+from integration_meta import load_meta, mark_gate_status, stale
+from workflow_common import git_output, head_sha, ok, require_integration, resolve_repo
 
 
 def main() -> int:
@@ -19,11 +19,23 @@ def main() -> int:
     require_integration(repo)
     branch = str(repo.get("branch") or "")
     integration_id = args.integration_id or branch.removeprefix("integration-")
+    primary_root = Path(str(repo['primary_root'])).resolve()
+    current_main_sha = head_sha(primary_root, "main")
+    meta = load_meta(str(primary_root), integration_id)
+    if meta is None:
+        raise SystemExit(ok(status="blocked", reason=f"integration metadata 不存在: {integration_id}"))
     commits_ahead = int(git_output(cwd, "rev-list", "--count", f"main..{branch}") or "0")
     merge_commits = int(git_output(cwd, "rev-list", "--count", "--merges", f"main..{branch}") or "0")
-    gate_status = "ready_to_sync" if commits_ahead == 1 and merge_commits == 0 else "blocked"
-    gate_summary = "integration 已收敛为单个非 merge commit，可进入下一步。" if gate_status == "ready_to_sync" else "integration 尚未满足单 commit 且无 merge commit 的 gate 条件。"
-    meta_path = mark_gate_status(str(Path(str(repo['primary_root'])).resolve()), integration_id, gate_status, gate_summary)
+    baseline_stale = stale(str(primary_root), meta, current_main_sha)
+    verify_passed = meta.get("verify_status") == "passed"
+    review_passed = meta.get("review_status") == "passed"
+    gate_status = "ready_to_sync" if commits_ahead == 1 and merge_commits == 0 and not baseline_stale and verify_passed and review_passed else ("must_refresh" if baseline_stale else "blocked")
+    gate_summary = (
+        "integration 已满足基础 gate 条件，可进入下一步。"
+        if gate_status == "ready_to_sync"
+        else ("integration 基线已过期，必须先 refresh。" if gate_status == "must_refresh" else "integration 尚未满足 verify/review/线性化等 gate 条件。")
+    )
+    meta_path = mark_gate_status(str(primary_root), integration_id, gate_status, gate_summary)
     raise SystemExit(
         ok(
             action="finish-integrate",
@@ -31,9 +43,12 @@ def main() -> int:
             integration_id=integration_id,
             commits_ahead_of_main=commits_ahead,
             merge_commits=merge_commits,
+            baseline_stale=baseline_stale,
+            verify_passed=verify_passed,
+            review_passed=review_passed,
             gate_status=gate_status,
             metadata_path=meta_path,
-            next_step=("当前历史线性化检查通过；如需继续完成最终 gate，请结合 verify/review 结果人工确认或在 Bash 模式下继续后续步骤。" if gate_status == "ready_to_sync" else "当前仅完成基础线性化检查；仍需继续整理状态后再评估是否 ready to sync。"),
+            next_step=("当前基础 gate 已通过，可继续进入下一步。" if gate_status == "ready_to_sync" else ("当前 integration 需要先 refresh。" if gate_status == "must_refresh" else "当前 integration 仍未满足最终 gate 条件，请先补齐 verify/review 或继续整理历史。")),
         )
     )
 

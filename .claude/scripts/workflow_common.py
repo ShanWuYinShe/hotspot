@@ -65,6 +65,14 @@ def git_run(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return completed
 
 
+def shell_run(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    completed = subprocess.run(list(args), cwd=str(cwd), capture_output=True, text=True)
+    if completed.returncode != 0:
+        stderr = (completed.stderr or completed.stdout or "").strip()
+        raise RuntimeError(stderr or f"命令 {' '.join(args)} 失败")
+    return completed
+
+
 def clean_status(cwd: Path) -> bool:
     return git_output(cwd, "status", "--short") == ""
 
