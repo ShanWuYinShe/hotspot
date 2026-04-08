@@ -126,17 +126,17 @@ def guard_bash(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
             return deny("只读 git 查询也必须分步执行；不要使用 &&、; 或 || 串联多个命令。", command)
         return deny("git 状态变更命令必须分步执行；不要使用 &&、; 或 || 串联多个命令。", command)
 
-    if any(is_git_segment(segment) for segment in segments):
-        if all(is_allowed_direct_git_segment(segment) for segment in segments):
-            return 0
-        return deny("不允许直接执行裸 git 状态变更命令；如需修改仓库状态，请改用白名单中的受控入口。", command)
-
     if repo and repo["is_main_primary"]:
         if all(is_allowed_direct_git_read_segment(segment) for segment in segments):
             return 0
         if all(is_allowed_controlled_python(segment) or is_allowed_deploy_script(segment) for segment in segments):
             return 0
-        return deny("主目录本地 main 只允许只读 git 查询或受控脚本入口；不要在主目录直接执行 git 状态变更。", command)
+        return deny("主目录本地 main 只允许只读 git 查询或受控脚本入口。", command)
+
+    if any(is_git_segment(segment) for segment in segments):
+        if all(is_allowed_direct_git_segment(segment) for segment in segments):
+            return 0
+        return deny("当前 git 命令不在允许范围内。若该步骤涉及复杂历史整理、冲突处理或删除，请切到 Bash 模式手动分步执行。", command)
 
     if repo and is_integration_branch(repo.get("branch")):
         for segment in segments:
