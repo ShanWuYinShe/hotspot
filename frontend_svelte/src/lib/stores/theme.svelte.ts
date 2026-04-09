@@ -4,14 +4,43 @@
  */
 
 import { browser } from '$app/environment';
+import type { TranslationKey } from '$lib/i18n';
 
-export type ThemeFamily = 'default_clean' | 'figma_neu';
+export const THEME_FAMILIES = ['social_blue', 'default_clean', 'figma_neu'] as const;
+
+export type ThemeFamily = (typeof THEME_FAMILIES)[number];
+
+export const THEME_FAMILY_OPTIONS: {
+	family: ThemeFamily;
+	labelKey: TranslationKey;
+	descriptionKey: TranslationKey;
+}[] = [
+	{
+		family: 'social_blue',
+		labelKey: 'sidebar.socialBlue',
+		descriptionKey: 'sidebar.socialBlueDesc'
+	},
+	{
+		family: 'default_clean',
+		labelKey: 'sidebar.defaultClean',
+		descriptionKey: 'sidebar.defaultCleanDesc'
+	},
+	{
+		family: 'figma_neu',
+		labelKey: 'sidebar.figmaNeu',
+		descriptionKey: 'sidebar.figmaNeuDesc'
+	}
+];
 
 const THEME_FAMILY_STORAGE_KEY = 'hotspot_theme_family';
 const DEFAULT_THEME_FAMILY: ThemeFamily = 'default_clean';
 
+function isThemeFamily(value: string | null | undefined): value is ThemeFamily {
+	return THEME_FAMILIES.some((themeFamily) => themeFamily === value);
+}
+
 function normalizeThemeFamily(value: string | null | undefined): ThemeFamily {
-	return value === 'figma_neu' ? 'figma_neu' : DEFAULT_THEME_FAMILY;
+	return isThemeFamily(value) ? value : DEFAULT_THEME_FAMILY;
 }
 
 class ThemeStore {
@@ -27,6 +56,7 @@ class ThemeStore {
 	}
 
 	setThemeFamily(themeFamily: ThemeFamily) {
+		if (this.#themeFamily === themeFamily) return;
 		this.#themeFamily = themeFamily;
 		if (!browser) return;
 		localStorage.setItem(THEME_FAMILY_STORAGE_KEY, themeFamily);

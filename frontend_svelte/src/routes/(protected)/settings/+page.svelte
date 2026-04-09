@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { authStore } from '$lib/stores/auth.svelte';
-	import { themeStore, type ThemeFamily } from '$lib/stores/theme.svelte';
+	import { THEME_FAMILY_OPTIONS, themeStore, type ThemeFamily } from '$lib/stores/theme.svelte';
 	import { toast } from '$lib/stores/toast.svelte';
 	import { t } from '$lib/i18n';
 	import { Button } from '$lib/components/ui/button';
@@ -65,9 +65,6 @@
 </svelte:head>
 
 <div class="mx-auto max-w-3xl space-y-5">
-	<div class="rounded-[1.75rem] border border-border/80 bg-card/92 p-4 shadow-[10px_10px_22px_var(--shadow-dark),-10px_-10px_22px_var(--shadow-light)] backdrop-blur-md">
-		<p class="text-sm text-muted-foreground">Settings 页保持与 Harmony 一致的分区顺序：外观主题、隐私安全、通知订阅、账号与记录。</p>
-	</div>
 	<PageHeader
 		title="设置"
 		description="统一管理账户、安全、隐私、分享记录与举报进度"
@@ -119,34 +116,22 @@
 				<ThemeToggle />
 			</div>
 
-			<div class="grid gap-3 md:grid-cols-2">
-				<button
-					type="button"
-					class="rounded-3xl border px-4 py-4 text-left transition-all {currentThemeFamily === 'default_clean' ? 'border-primary bg-primary/8 shadow-md' : 'border-border/50 bg-background/65 hover:border-primary/25'}"
-					onclick={() => setThemeFamily('default_clean')}
-				>
-					<div class="mb-3 flex items-center justify-between">
-						<p class="font-semibold">{t('sidebar.defaultClean')}</p>
-						{#if currentThemeFamily === 'default_clean'}
-							<span class="rounded-full bg-primary px-2 py-1 text-xs text-primary-foreground">当前</span>
-						{/if}
-					</div>
-					<p class="text-sm text-muted-foreground">{t('sidebar.defaultCleanDesc')}</p>
-				</button>
-
-				<button
-					type="button"
-					class="rounded-3xl border px-4 py-4 text-left transition-all {currentThemeFamily === 'figma_neu' ? 'border-primary bg-primary/8 shadow-md' : 'border-border/50 bg-background/65 hover:border-primary/25'}"
-					onclick={() => setThemeFamily('figma_neu')}
-				>
-					<div class="mb-3 flex items-center justify-between">
-						<p class="font-semibold">{t('sidebar.figmaNeu')}</p>
-						{#if currentThemeFamily === 'figma_neu'}
-							<span class="rounded-full bg-primary px-2 py-1 text-xs text-primary-foreground">当前</span>
-						{/if}
-					</div>
-					<p class="text-sm text-muted-foreground">{t('sidebar.figmaNeuDesc')}</p>
-				</button>
+			<div class="grid gap-3 md:grid-cols-3">
+				{#each THEME_FAMILY_OPTIONS as option (option.family)}
+					<button
+						type="button"
+						class="rounded-3xl border px-4 py-4 text-left transition-all {currentThemeFamily === option.family ? 'border-primary bg-primary/8 shadow-md' : 'border-border/50 bg-background/65 hover:border-primary/25'}"
+						onclick={() => setThemeFamily(option.family)}
+					>
+						<div class="mb-3 flex items-center justify-between">
+							<p class="font-semibold">{t(option.labelKey)}</p>
+							{#if currentThemeFamily === option.family}
+								<span class="rounded-full bg-primary px-2 py-1 text-xs text-primary-foreground">{t('sidebar.currentTheme')}</span>
+							{/if}
+						</div>
+						<p class="text-sm text-muted-foreground">{t(option.descriptionKey)}</p>
+					</button>
+				{/each}
 			</div>
 		</CardContent>
 	</Card>

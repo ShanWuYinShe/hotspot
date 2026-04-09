@@ -42,7 +42,7 @@
             <Navbar onMenuClick={() => (sidebarOpen = !sidebarOpen)} />
 
             <div class="app-shell-frame flex overflow-hidden bg-muted/20">
-                <Sidebar class="hidden w-64 shrink-0 md:block" />
+                <Sidebar class="hidden h-full w-64 shrink-0 md:block" />
                 {#if sidebarOpen}
                     <Button
                         type="button"

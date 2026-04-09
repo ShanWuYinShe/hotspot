@@ -49,6 +49,97 @@
 	--radius: 0.625rem;
 }
 
+/* Theme family: social_blue */
+:root[data-theme-family="social_blue"] {
+	--background: #f4f7ff;
+	--foreground: #16213d;
+	--card: #f8faff;
+	--card-foreground: #16213d;
+	--popover: #ffffff;
+	--popover-foreground: #16213d;
+
+	--primary: #2563eb;
+	--primary-foreground: #ffffff;
+	--secondary: #dbeafe;
+	--secondary-foreground: #1d4ed8;
+	--accent: #f43f5e;
+	--accent-foreground: #ffffff;
+
+	--muted: #e8eefc;
+	--muted-foreground: #5b6b8a;
+	--destructive: #d75b5b;
+	--destructive-foreground: #ffffff;
+	--border: #c7d7ff;
+	--input: #c7d7ff;
+	--ring: #2563eb;
+
+	--glow-primary: rgba(37, 99, 235, 0.24);
+	--glow-accent: rgba(244, 63, 94, 0.18);
+	--glow-success: rgba(14, 165, 233, 0.18);
+
+	--shadow-light: rgba(255, 255, 255, 0.88);
+	--shadow-dark: rgba(173, 191, 235, 0.72);
+
+	--chart-1: oklch(0.65 0.2 255);
+	--chart-2: oklch(0.72 0.16 215);
+	--chart-3: oklch(0.61 0.22 14);
+	--chart-4: oklch(0.8 0.16 88);
+	--chart-5: oklch(0.72 0.17 315);
+	--sidebar: #f7f9ff;
+	--sidebar-foreground: #16213d;
+	--sidebar-primary: #2563eb;
+	--sidebar-primary-foreground: #ffffff;
+	--sidebar-accent: #eef4ff;
+	--sidebar-accent-foreground: #1d4ed8;
+	--sidebar-border: #c7d7ff;
+	--sidebar-ring: #2563eb;
+}
+
+:root[data-theme-family="social_blue"].dark {
+	--background: #0f172a;
+	--foreground: #eff6ff;
+	--card: #111c34;
+	--card-foreground: #eff6ff;
+	--popover: #15223f;
+	--popover-foreground: #eff6ff;
+
+	--primary: #60a5fa;
+	--primary-foreground: #0b1220;
+	--secondary: #1d3557;
+	--secondary-foreground: #dbeafe;
+	--accent: #fb7185;
+	--accent-foreground: #fff1f2;
+
+	--muted: #17253f;
+	--muted-foreground: #9fb3d9;
+	--destructive: #f87171;
+	--destructive-foreground: #fff8f4;
+	--border: #27406b;
+	--input: #27406b;
+	--ring: #60a5fa;
+
+	--glow-primary: rgba(96, 165, 250, 0.24);
+	--glow-accent: rgba(251, 113, 133, 0.18);
+	--glow-success: rgba(14, 165, 233, 0.18);
+
+	--shadow-light: rgba(31, 48, 84, 0.82);
+	--shadow-dark: rgba(3, 9, 23, 0.88);
+
+	--chart-1: oklch(0.74 0.17 250);
+	--chart-2: oklch(0.7 0.16 195);
+	--chart-3: oklch(0.72 0.17 8);
+	--chart-4: oklch(0.8 0.16 88);
+	--chart-5: oklch(0.74 0.15 315);
+	--sidebar: #111c34;
+	--sidebar-foreground: #eff6ff;
+	--sidebar-primary: #60a5fa;
+	--sidebar-primary-foreground: #0b1220;
+	--sidebar-accent: #17253f;
+	--sidebar-accent-foreground: #dbeafe;
+	--sidebar-border: #27406b;
+	--sidebar-ring: #60a5fa;
+}
+
 /* Theme family: default_clean (baseline) */
 :root,
 :root[data-theme-family="default_clean"] {
@@ -451,7 +542,7 @@
 	}
 
 	.app-shell-frame {
-		min-height: calc(100dvh - var(--topbar-height-mobile));
+		height: calc(100dvh - var(--topbar-height-mobile));
 	}
 
 	.mobile-shell-frame {
@@ -460,7 +551,7 @@
 
 	@media (min-width: 640px) {
 		.app-shell-frame {
-			min-height: calc(100dvh - var(--topbar-height-desktop));
+			height: calc(100dvh - var(--topbar-height-desktop));
 		}
 	}
 

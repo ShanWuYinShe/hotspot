@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { mode, setMode } from 'mode-watcher';
 	import { Button } from '$lib/components/ui/button';
-	import { themeStore, type ThemeFamily } from '$lib/stores/theme.svelte';
+	import { THEME_FAMILY_OPTIONS, themeStore, type ThemeFamily } from '$lib/stores/theme.svelte';
 	import { t } from '$lib/i18n';
 	import Sun from 'lucide-svelte/icons/sun';
 	import Moon from 'lucide-svelte/icons/moon';
@@ -13,8 +13,16 @@
 		setMode(currentMode === 'dark' ? 'light' : 'dark');
 	}
 
+	const themeFamilyCycle: ThemeFamily[] = THEME_FAMILY_OPTIONS.map(({ family }) => family);
+
+	function getThemeFamilyLabel(themeFamily: ThemeFamily) {
+		const option = THEME_FAMILY_OPTIONS.find((item) => item.family === themeFamily);
+		return option ? t(option.labelKey) : t('sidebar.defaultClean');
+	}
+
 	function toggleThemeFamily() {
-		const nextFamily: ThemeFamily = currentFamily === 'default_clean' ? 'figma_neu' : 'default_clean';
+		const currentIndex = themeFamilyCycle.indexOf(currentFamily);
+		const nextFamily = themeFamilyCycle[(currentIndex + 1) % themeFamilyCycle.length] ?? 'default_clean';
 		themeStore.setThemeFamily(nextFamily);
 	}
 </script>
@@ -29,6 +37,6 @@
 		<span class="sr-only">{t('sidebar.toggleTheme')}</span>
 	</Button>
 	<Button variant="outline" size="sm" class="rounded-[1rem] px-3" onclick={toggleThemeFamily}>
-		{currentFamily === 'default_clean' ? t('sidebar.defaultClean') : t('sidebar.figmaNeu')}
+		{getThemeFamilyLabel(currentFamily)}
 	</Button>
 </div>
