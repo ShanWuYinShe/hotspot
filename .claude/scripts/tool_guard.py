@@ -7,16 +7,15 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from controlled_allowlist import CONTROLLED_DEPLOY_SCRIPTS, CONTROLLED_PYTHON_SCRIPTS
+from controlled_allowlist import CONTROLLED_DEPLOY_SCRIPTS, CONTROLLED_PYTHON_SCRIPTS, INTERNAL_GUARD_SCRIPTS
 from git_context import GitContextError, get_repo_context
-
+from workflow_common import is_integration_branch
 
 SAFE_SHELL_PATTERNS = (
     re.compile(r"^python3?\s+(?:\./)?\.claude/scripts/[a-zA-Z0-9_./-]+\.py(?:\s|$)"),
 )
 
 BLOCKED_RUNTIME_PATTERNS = (
-    re.compile(r"^git(?:\s|$)"),
     re.compile(r"^npm(?:\s|$)"),
     re.compile(r"^npx(?:\s|$)"),
     re.compile(r"^yarn(?:\s|$)"),
@@ -36,7 +35,6 @@ BLOCKED_RUNTIME_PATTERNS = (
     re.compile(r"^make(?:\s|$)"),
     re.compile(r"^wget(?:\s|$)"),
     re.compile(r"^curl(?:\s|$)"),
-    re.compile(r"^\./(?!deploy/scripts/|\.claude/scripts/)[^\s]+"),
 )
 
 SHELL_EDIT_COMMANDS = {"sed"}
@@ -106,7 +104,6 @@ def is_allowed_plan_file_write(raw: str) -> bool:
     return is_within(resolved, plans_root)
 
 
-
 def guard_bash(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
     command = str(payload.get("tool_input", {}).get("command", "")).strip()
     if not command:
@@ -126,22 +123,8 @@ def guard_bash(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
             return deny("只读 git 查询也必须分步执行；不要使用 &&、; 或 || 串联多个命令。", command)
         return deny("git 状态变更命令必须分步执行；不要使用 &&、; 或 || 串联多个命令。", command)
 
-    if repo and repo["is_main_primary"]:
-        if all(is_allowed_direct_git_read_segment(segment) for segment in segments):
-            return 0
-        if all(is_allowed_controlled_python(segment) or is_allowed_deploy_script(segment) for segment in segments):
-            return 0
-        return deny("主目录本地 main 只允许只读 git 查询或受控脚本入口。", command)
-
     if any(is_git_segment(segment) for segment in segments):
-        if all(is_allowed_direct_git_segment(segment) for segment in segments):
-            return 0
-        return deny("当前 git 命令不在允许范围内。请按仓库当前规则使用允许的 git 原语；若该动作超出自动化支持范围，请先停下来再决定下一步。", command)
-
-    if repo and is_integration_branch(repo.get("branch")):
-        for segment in segments:
-            if is_git_merge_segment(segment):
-                return deny("integration worktree 禁止使用 git merge 汇总 feature 或追平 main；请改用受控脚本中的 cherry-pick / replay / rebase / squash / refresh-rebuild 入口。", segment)
+        return guard_git_segments(segments, repo, command)
 
     raw_cwd = payload.get("cwd")
     if raw_cwd:
@@ -157,10 +140,26 @@ def guard_bash(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
             continue
         if is_safe_shell_segment(segment):
             continue
+        if is_allowed_readonly_shell_segment(argv):
+            continue
         if is_blocked_runtime_segment(segment):
-            return deny("非 git 控制面命令请通过 deploy/ 入口或 .claude/scripts/ 受控脚本执行。", command)
-        return deny("非 git 控制面命令请通过 deploy/ 入口或 .claude/scripts/ 受控脚本执行。", command)
+            return deny("该命令会产生运行态副作用或依赖本地开发工具链；请优先使用 skill 指引的仓库入口，隔离运行/测试走 deploy 或受控脚本。", command)
+        return deny("该命令不在允许的直接执行范围内；若需要严格流程，请优先使用 skill 暴露的仓库入口。", command)
 
+    return 0
+
+
+def guard_git_segments(segments: list[str], repo: dict[str, Any] | None, command: str) -> int:
+    if repo and repo["is_main_primary"]:
+        if all(is_allowed_main_git_segment(segment) for segment in segments):
+            return 0
+        return deny("主目录本地 main 只允许安全的 git 控制面动作；高风险历史改写、merge 兜底与破坏性清理仍然禁止。", command)
+
+    for segment in segments:
+        if not is_allowed_direct_git_segment(segment):
+            return deny("当前 git 命令超出允许范围；请改用仓库 skill/脚本或先确认是否属于高风险动作。", command)
+        if repo and is_integration_branch(repo.get("branch")) and is_git_merge_segment(segment):
+            return deny("integration worktree 禁止使用 git merge 汇总 feature 或追平 main；请继续使用线性 history。", segment)
     return 0
 
 
@@ -186,47 +185,51 @@ def strip_git_global_options(segment: str) -> str:
     return "git " + " ".join(rest) if rest else "git"
 
 
-def is_allowed_direct_git_read_segment(segment: str) -> bool:
+def is_allowed_main_git_segment(segment: str) -> bool:
     normalized = strip_git_global_options(segment)
     return bool(
         re.match(
-            r"^git\s+(?:status|diff|log|reflog|branch|rev-parse|show-ref|worktree\s+list)(?:\s|$)",
+            r"^git\s+(?:status|diff|log|reflog|branch|rev-parse|show-ref|worktree\s+list|worktree\s+add|worktree\s+remove|rebase)(?:\s|$)",
             normalized,
         )
-    )
+    ) and not is_high_risk_git_segment(normalized)
 
 
 def is_allowed_direct_git_segment(segment: str) -> bool:
     normalized = strip_git_global_options(segment)
-    if re.match(r"^git\s+reset\s+--soft(?:\s|$)", normalized):
-        return True
     return bool(
         re.match(
-            r"^git\s+(?:status|diff|log|reflog|branch|rev-parse|show-ref|worktree\s+list|add|rm|commit|rebase)(?:\s|$)",
+            r"^git\s+(?:status|diff|log|reflog|branch|rev-parse|show-ref|worktree\s+list|add|rm|commit|rebase|reset\s+--soft|checkout|switch|cherry-pick)(?:\s|$)",
             normalized,
         )
-    )
+    ) and not is_high_risk_git_segment(normalized)
 
 
-def is_git_merge_segment(segment: str) -> bool:
-    return bool(re.match(r"^git\s+merge(?:\s|$)", segment))
-
-
-def is_git_state_change_segment(segment: str) -> bool:
+def is_high_risk_git_segment(segment: str) -> bool:
     return bool(
         re.match(
-            r"^git\s+(?:add|commit|rebase|merge|cherry-pick|worktree\s+add|worktree\s+remove|branch\s+-d|branch\s+-D|checkout|switch|reset|clean)(?:\s|$)",
+            r"^git\s+(?:reset\s+--hard|clean(?:\s|$)|merge(?:\s|$)|push\s+--force(?:-with-lease)?(?:\s|$)|branch\s+-D(?:\s|$)|checkout\s+\.|restore\s+\.|worktree\s+prune(?:\s|$))",
             segment,
         )
     )
 
 
-def is_integration_branch(branch: Any) -> bool:
-    return isinstance(branch, str) and branch.startswith("integration-")
+def is_git_merge_segment(segment: str) -> bool:
+    return bool(re.match(r"^git\s+merge(?:\s|$)", strip_git_global_options(segment)))
+
+
+def is_git_state_change_segment(segment: str) -> bool:
+    normalized = strip_git_global_options(segment)
+    return bool(
+        re.match(
+            r"^git\s+(?:add|commit|rebase|merge|cherry-pick|worktree\s+add|worktree\s+remove|branch\s+-d|branch\s+-D|checkout|switch|reset|clean)(?:\s|$)",
+            normalized,
+        )
+    )
 
 
 def is_allowed_controlled_python(segment: str) -> bool:
-    for name in CONTROLLED_PYTHON_SCRIPTS:
+    for name in (*CONTROLLED_PYTHON_SCRIPTS, *INTERNAL_GUARD_SCRIPTS):
         if re.match(rf"^python3?\s+(?:\./)?\.claude/scripts/{re.escape(name)}\.py(?:\s|$)", segment):
             return True
     return False
@@ -243,6 +246,13 @@ def is_allowed_deploy_script(segment: str) -> bool:
 
 def is_safe_shell_segment(segment: str) -> bool:
     return any(pattern.match(segment) for pattern in SAFE_SHELL_PATTERNS)
+
+
+def is_allowed_readonly_shell_segment(argv: list[str]) -> bool:
+    if not argv:
+        return False
+    cmd = argv[0]
+    return cmd in {"pwd", "ls", "which", "git"}
 
 
 def is_blocked_runtime_segment(segment: str) -> bool:

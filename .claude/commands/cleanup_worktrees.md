@@ -16,11 +16,10 @@ $ARGUMENTS
 2. 对每个 worktree 判断：是否已完成使命、是否已通过仓库定义的 rebase-only sync-back 路径同步回本地 `main`、是否仍有未提交或未合并改动、当前会话是否仍在使用它。对同 lineage 的旧实例要明确标记其是否已被最新实例 superseded。
 3. 默认只清理当前会话创建或明确接管的 worktree / branch；除非用户明确指定，不要处理其他会话对象。
 4. 若当前会话仍驻留在某个通过 Claude worktree session 创建的 worktree 中，必须先执行 `ExitWorktree` 返回主目录，再做 cleanup。
-5. 仅对本会话中明确满足“已完成、已通过 rebase-only 路径同步回本地 `main`、无未提交或未合并改动”的对象执行 cleanup；对状态不明或仍有未合并改动的 worktree，明确保留原因。若某旧实例虽已 superseded，但其独有进度尚未进入最新实例或本地 `main`，则必须保留，不得仅因存在更新的 `-rN` 实例就回收。
-6. 删除本会话管理的 worktree 时，默认同步删除其对应非主分支 branch，但必须按对象分步执行：先单独判断并执行 `git worktree remove`，重新观察结果后，再决定是否单独执行分支删除。不要把 `worktree remove` 与 branch 删除串成同一条 Bash。分支删除策略：
-   - 经过 rebase + fast-forward sync-back 的分支：来源分支只有 1 个 commit 且 tip 等于 main tip，`git branch -d` 可干净删除，这是主路径。
-   - Superseded lineage 旧分支或其他未通过标准 sync-back 流程合并的分支：`git branch -d` 可能被拒绝（"not fully merged"），此时需要 `--force` 参数才允许使用 `git branch -D`；默认不允许强制删除。
+5. 仅对本会话中明确满足“已完成、已通过 rebase-only 路径同步回本地 `main`、无未提交或未合并改动”的对象执行 cleanup；对状态不明或仍有未合并改动的 worktree，明确保留原因。
+6. 删除本会话管理的 worktree 时，默认同步删除其对应非主分支 branch，但必须按对象分步执行：先单独判断并执行 `git worktree remove`，重新观察结果后，再决定是否单独执行分支删除。不要把 `worktree remove` 与 branch 删除串成同一条 Bash。
 7. cleanup 完成后，确认主目录是否仍然在本地 `main` 且无未提交改动。
+8. 若需要保存盘点结果或调试输出，默认写入 `tmp/`。
 
 结束时请输出：
 

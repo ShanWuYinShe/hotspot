@@ -8,7 +8,7 @@ allowed-tools: Bash(python3 .claude/scripts/finish_integrate.py *), Read, Glob, 
 
 $ARGUMENTS
 
-确认这轮 integration 是否已经满足"可线性同步回主目录本地 `main`"的全部条件。仓库级 workflow 以根 `CLAUDE.md` 为准。面向人类的结论使用 `ready to sync`、`blocked`、`must refresh`；回写 metadata 时映射为 `ready_to_sync`、`blocked`、`must_refresh`。
+确认这轮 integration 是否已经满足“可线性同步回主目录本地 `main`”的全部条件。仓库级 workflow 以根 `CLAUDE.md` 为准。面向人类的结论使用 `ready to sync`、`blocked`、`must refresh`；回写 metadata 时映射为 `ready_to_sync`、`blocked`、`must_refresh`。
 
 执行要求：
 
@@ -19,7 +19,8 @@ $ARGUMENTS
 5. 检查提交历史是否已通过 `rebase + squash` 收敛为单个 commit，且当前 integration 不含 merge commit、baseline 仍然新鲜，并已达到可 rebase-only sync-back 的状态。若不满足，必须输出 `blocked` 或 `must refresh`，先整理状态，不得 merge。
 6. 必须调用 `integration-review-gate` subagent 复核当前 gate 结论，并在输出中复述其 `## 结论`、`## Baseline`、`## 阻塞项`、`## 建议下一步`。
 7. 通过 `.claude/scripts/integration_meta.py` 将最终 gate 结果回写到元信息。
-8. 只有当 gate 明确确认当前 integration 已满足 rebase-only sync-back 条件时，下一步才允许进入 `/sync_back_main`。远程同步策略以根 `CLAUDE.md` 与 `/sync_back_main` 为准。
+8. 只有当 gate 明确确认当前 integration 已满足 rebase-only sync-back 条件时，下一步才允许进入 `/sync_back_main`。
+9. 若有调试输出、截图或中间分析文件，默认写入 `tmp/`。
 
 结束时请输出：
 

@@ -17,8 +17,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 与根流程的关系
 - worktree / integration / sync-back / quality gate / 风险边界等仓库级流程，以仓库根 `CLAUDE.md` 为唯一权威来源；本文件只补充前端的局部架构、实现约束与验证提示。
-- 默认验证入口是 `verify.sh`，默认验证的是当前 worktree 快照；涉及 API、WebSocket 或地图行为时，再对照 `spec/`。
-- 前端页面/UI/交互改动默认还要追加 `verify-inspect.sh`，用于提供开发内环隔离入口；页面、console、关键 UI 与少量关键交互流应由 Claude Code 主动访问该入口完成检查；`preview` 用于候选结果预演而不是高频调试。
+- skill 入口、受控脚本边界、`tmp/` 使用原则都以根 `CLAUDE.md` 为准；这里不重复复制仓库级规则。
+- 最终验证入口默认是 `verify.sh`；涉及页面/UI/交互时，通常还需要 `verify-inspect.sh` 提供隔离页面入口。
 
 ## 关键约束
 - 禁止硬编码 `/api/v1/...`，必须通过 `src/lib/api/endpoints.ts`。
@@ -36,7 +36,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - center pin 必须绑定地图相机中心；回写业务状态时直接使用地图 SDK 返回的中心坐标。
 
 ## 常用能力
-- 支持通过默认验证入口确认当前前端 worktree 快照。
-- 支持通过开发内环隔离环境完成页面/UI/交互确认。
-- 支持为候选结果准备本地预演环境。
-- 在非主目录 worktree 中，前端安装、静态检查和编译通过受控入口执行；测试仍通过 `deploy/` 隔离执行。
+- 普通分析、代码阅读、局部低副作用开发动作可直接进行。
+- 当仓库已经提供 skill 时，优先通过 skill 发现并使用标准 workflow 入口。
+- 页面/UI/交互的最终确认仍优先走 `verify` + `verify-inspect` 提供的隔离入口。
+- 验证截图、调试输出和中间文件默认写到当前 worktree 的 `tmp/`，不要污染 worktree 根目录。

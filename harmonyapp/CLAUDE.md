@@ -20,6 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 与根流程的关系
 - worktree / integration / sync-back / quality gate / 风险边界等仓库级流程，以仓库根 `CLAUDE.md` 为唯一权威来源；本文件只补充 Harmony 客户端的局部架构、实现约束与验证提示；涉及 API、地图、Safe Area、登录态或 WebSocket 的改动时，再对照 `spec/`。
+- skill 入口、受控脚本边界、`tmp/` 使用原则都以根 `CLAUDE.md` 为准；这里不重复复制仓库级规则。
 
 ## 关键约束
 - API 路径只在 `core/config/ApiEndpoints.ets` 定义，禁止业务代码硬编码。
@@ -42,6 +43,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Safe Area 只通过统一能力计算和复用；不要在页面里硬编码状态栏、导航栏高度。
 
 ## 常用能力
-- 本仓库默认最终验证入口以根 `CLAUDE.md` 约定为准。
-- Harmony 工程的检查/编译配置入口主要在 `code-linter.json5`、`hvigorfile.ts`、`entry/hvigorfile.ts`、`hvigor/hvigor-config.json5`、`build-profile.json5`。
-- 在非主目录 worktree 中，安装、检查和编译通过受控入口执行；不直接调用 ohpm/hvigor 原始命令。
+- 普通分析、代码阅读、局部低副作用开发动作可直接进行。
+- 当仓库已经提供 skill 时，优先通过 skill 发现并使用标准 workflow 入口。
+- Harmony 的统一验证与构建入口仍以根 `CLAUDE.md` 约定为准。
+- 调试输出、截图和中间文件默认写到当前 worktree 的 `tmp/`。

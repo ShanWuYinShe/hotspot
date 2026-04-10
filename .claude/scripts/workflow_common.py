@@ -128,6 +128,14 @@ def commit_count_between(cwd: Path, ref1: str, ref2: str = "HEAD") -> int:
     return int(git_output(cwd, "rev-list", "--count", f"{ref1}..{ref2}") or "0")
 
 
+def merge_commit_count_between(cwd: Path, ref1: str, ref2: str = "HEAD") -> int:
+    return int(git_output(cwd, "rev-list", "--count", "--merges", f"{ref1}..{ref2}") or "0")
+
+
+def is_integration_branch(branch: str) -> bool:
+    return branch.startswith("integration-")
+
+
 def ensure_within_worktree(cwd: Path, raw_paths: list[str]) -> tuple[Path, list[Path]]:
     repo = resolve_repo(cwd)
     worktree_root = Path(str(repo["top"])).resolve()

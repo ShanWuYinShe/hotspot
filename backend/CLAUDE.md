@@ -18,7 +18,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 与根流程的关系
 - worktree / integration / sync-back / quality gate / 风险边界等仓库级流程，以仓库根 `CLAUDE.md` 为唯一权威来源；本文件只补充 Rust 后端的局部架构、实现约束与验证提示。
-- 后端改动完成后，优先运行根文档定义的本地 Docker 验证流程；影响 runtime 行为时，再补跑 runtime 验证。
+- skill 入口、受控脚本边界、`tmp/` 使用原则都以根 `CLAUDE.md` 为准；这里不重复复制仓库级规则。
+- 后端改动完成后，优先运行根文档定义的隔离验证流程；影响 runtime 行为时，再补跑 runtime 验证。
 
 ## 关键约束
 - 只用 `POST` + JSON，业务响应统一为 `HTTP 200 + ApiResponse<T>`。
@@ -35,6 +36,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 如果需要自查旧式 SQL 写法，重点检查是否出现非宏 `sqlx::query(`、`sqlx::query_as::<`、`sqlx::query_scalar::<`。
 
 ## 常用能力
-- 默认验证入口遵循仓库根 `CLAUDE.md` 与 `deploy/` Docker 流程。
-- worktree 内的格式化、语法检查和编译通过受控入口执行。
-- 不允许直接调用裸 `cargo` 开发命令；测试通过 `deploy/` 隔离执行。
+- 普通分析、代码阅读、局部低副作用开发动作可直接进行。
+- 当仓库已经提供 skill 时，优先通过 skill 发现并使用标准 workflow 入口。
+- 最终验证与隔离运行仍优先走根文档定义的 `deploy/` 入口。
+- 日志片段、截图和临时分析文件默认写到当前 worktree 的 `tmp/`。

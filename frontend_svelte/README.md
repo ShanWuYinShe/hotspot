@@ -9,22 +9,21 @@
 - **UI 组件**：bits-ui + lucide-svelte
 - **通知**：svelte-sonner
 
-## 验证命令
+## 验证与协作
 
-格式化 / 语法检查 / 编译通过受控脚本执行（必须在 feature worktree 中）：
-
-```bash
-python3 .claude/scripts/frontend_dev.py --task all
-```
-
-测试与最终验证通过 deploy/ 隔离执行：
+- 仓库级 workflow、skill 入口和风险边界以根目录 [CLAUDE.md](../CLAUDE.md) 为准。
+- 普通分析、代码阅读、局部低副作用开发动作通常可以直接完成。
+- 页面/UI/交互的最终确认优先走隔离入口：
 
 ```bash
 ./deploy/scripts/verify.sh --env-name <name>
+./deploy/scripts/verify-inspect.sh --env-name <name>
 ```
+
+- 验证截图、调试输出和中间文件默认写到当前 worktree 的 `tmp/`。
 
 ## 规范与文档
 
 - 完整协作规范见 [CLAUDE.md](CLAUDE.md)
-- 本地优先工作流见根目录 [CLAUDE.md](../CLAUDE.md)
+- 本地 workflow 见根目录 [CLAUDE.md](../CLAUDE.md)
 - API 规范见 [spec/](../spec/)

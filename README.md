@@ -13,32 +13,33 @@
 | `deploy/` | Docker / Nginx |
 | `spec/` | API 规范 |
 
-## 开发
-
-格式化 / 语法检查 / 编译通过受控脚本执行（必须在 feature worktree 中）：
-
-```bash
-# Rust 后端
-python3 .claude/scripts/rust_dev.py --task all
-
-# Go 后端
-python3 .claude/scripts/go_dev.py --task all
-
-# Web 前端
-python3 .claude/scripts/frontend_dev.py --task all
-
-# Harmony 客户端
-python3 .claude/scripts/harmony_worktree.py --task all
-```
-
-测试与最终验证通过 `deploy/` 隔离执行：
-
-```bash
-./deploy/scripts/verify.sh --env-name <name>
-```
-
-## 入口
+## 开发协作
 
 - 协作与实现说明先读 [CLAUDE.md](CLAUDE.md)，进入子项目后再读对应目录下的 `CLAUDE.md`。
+- 仓库优先通过 **文档引导 + skill 入口 + 少量严格脚本** 协作，而不是依赖大量 hook 阻断。
+- 普通分析、代码阅读、局部低副作用开发动作通常可以直接完成；当仓库已经提供对应 skill 时，优先通过 skill 使用成熟入口。
+- 隔离运行、统一验证、候选预演、发布输入物等高确定性步骤仍优先走 `deploy/` 或 `.claude/scripts/` 提供的标准入口。
+- 临时文件、中间文件、验证截图和调试输出统一写入 `tmp/`，避免污染 git 状态。
+
+## 常见入口
+
+### skill / workflow 入口
+- `start_feature`
+- `status_worktrees`
+- `start_integrate`
+- `verify_integrate`
+- `finish_integrate`
+- `sync_back_main`
+- `cleanup_worktrees`
+- `controlled_tools`
+
+### 隔离验证入口
+```bash
+./deploy/scripts/verify.sh --env-name <name>
+./deploy/scripts/verify-inspect.sh --env-name <name>
+```
+
+## 其他入口
+
 - [spec/](spec/) - API 规范
 - [deploy/](deploy/) - 本地验证与运行入口

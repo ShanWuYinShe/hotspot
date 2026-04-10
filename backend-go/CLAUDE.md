@@ -15,7 +15,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 与根流程的关系
 - worktree / integration / sync-back / quality gate / 风险边界等仓库级流程，以仓库根 `CLAUDE.md` 为唯一权威来源；本文件只补充 backend-go 的局部架构、实现约束与验证提示。
-- backend-go 的默认验证入口是 `verify.sh`，默认验证当前 worktree 快照；runtime 行为确认走单实例 `preview`。
+- 标准 workflow、skill 入口、受控脚本边界、`tmp/` 使用原则都以根 `CLAUDE.md` 为准；这里不重复复制仓库级规则。
+- backend-go 的最终验证入口默认是 `verify.sh`；若涉及 runtime 行为，再结合候选预演或 inspect 入口确认。
 
 ## 关键约束
 - 严格遵守 `Handler -> Service -> Repository` 分层。
@@ -34,17 +35,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 新增 geo 逻辑时，优先看 `internal/platform/geo`、`internal/modules/map` 和已有附近搜索实现，而不是在模块里重写一套 S2 计算。
 - 错误码只能来自 spec，HTTP 统一返回 `HTTP 200 + ApiResponse<T>`，业务成功唯一依据是 `code == 0`。
 
-## 运行配置
-- 当前后端主要使用环境变量：
-  - `APP_HOST`
-  - `APP_PORT`
-  - `POSTGRES_DSN`
-  - `REDIS_DSN`
-  - `AUTH_TOKEN_SECRET`
-  - 以及 app config 相关的公开站点/默认资源配置
-
 ## 常用能力
-- 支持通过仓库定义的默认验证入口确认当前 worktree 快照。
-- 支持为 backend-go 生成候选预演所需的构建产物。
-- 支持基于确定性 git ref 生成发布输入物。
-- 在非主目录 worktree 中，backend-go 的格式化、静态检查和编译通过受控入口执行；测试仍通过 `deploy/` 隔离完成。
+- 普通分析、代码阅读、局部低副作用开发动作可直接进行。
+- 当仓库已经提供 skill 时，优先通过 skill 发现并使用标准 workflow 入口。
+- 统一验证与隔离运行仍优先走 `deploy/` 提供的入口。
+- 若需要落调试输出、日志片段或临时分析文件，默认写到当前 worktree 的 `tmp/`。
