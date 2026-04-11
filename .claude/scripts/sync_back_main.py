@@ -4,22 +4,28 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from feature_meta import load_meta as load_feature_meta, mark_sync_status as mark_feature_sync_status
+from integration_meta import load_meta as load_integration_meta, mark_sync_status as mark_integration_sync_status
 from workflow_common import (
     clean_status,
+    classify_ownership,
     commit_count_between,
-    git_run,
+    feature_ready_to_sync,
     head_sha,
+    integration_ready_to_sync,
     is_integration_branch,
     merge_commit_count_between,
     ok,
     resolve_repo,
 )
+from workflow_common import git_run
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="执行 rebase + fast-forward 的 sync-back")
     parser.add_argument("--cwd", default=".")
     parser.add_argument("--source-branch")
+    parser.add_argument("--owner-token", default="")
     args = parser.parse_args()
 
     cwd = Path(args.cwd).resolve()
@@ -27,6 +33,7 @@ def main() -> int:
     branch = str(repo.get("branch") or "")
     source_branch = args.source_branch or branch
     primary_root = Path(str(repo["primary_root"])).resolve()
+    owner_token = args.owner_token.strip() or None
 
     if not source_branch:
         raise SystemExit(ok(status="blocked", reason="缺少来源分支，无法执行 sync-back。"))
@@ -34,6 +41,24 @@ def main() -> int:
         raise SystemExit(ok(status="blocked", reason="来源 worktree 必须保持干净后才能进行 sync-back。"))
     if not clean_status(primary_root):
         raise SystemExit(ok(status="blocked", reason="主目录本地 main 必须保持干净后才能进行 sync-back。"))
+
+    if is_integration_branch(source_branch):
+        integration_id = source_branch.removeprefix("integration-")
+        meta = load_integration_meta(str(primary_root), integration_id)
+        if meta is None:
+            raise SystemExit(ok(status="blocked", reason=f"integration metadata 不存在: {integration_id}"))
+        if classify_ownership(meta, owner_token) != "owned":
+            raise SystemExit(ok(status="blocked", reason="integration 对象归属不明，不能自动 sync-back。"))
+        if not integration_ready_to_sync(meta):
+            raise SystemExit(ok(status="blocked", reason="integration gate 尚未 ready_to_sync。"))
+    else:
+        meta = load_feature_meta(str(primary_root), branch=source_branch)
+        if meta is None:
+            raise SystemExit(ok(status="blocked", reason=f"feature metadata 不存在: {source_branch}"))
+        if classify_ownership(meta, owner_token) != "owned":
+            raise SystemExit(ok(status="blocked", reason="feature 对象归属不明，不能自动 sync-back。"))
+        if not feature_ready_to_sync(meta):
+            raise SystemExit(ok(status="blocked", reason="feature 质量门尚未全部通过，不能自动 sync-back。"))
 
     commits_ahead = commit_count_between(cwd, "main")
     merge_commits = merge_commit_count_between(cwd, "main")
@@ -65,6 +90,11 @@ def main() -> int:
     rebased_head = head_sha(cwd)
     git_run(primary_root, "rebase", source_branch)
     main_head_after = head_sha(primary_root, "main")
+
+    if is_integration_branch(source_branch):
+        mark_integration_sync_status(str(primary_root), source_branch.removeprefix("integration-"), "synced", "synced to local main", main_head_after)
+    else:
+        mark_feature_sync_status(str(primary_root), "synced", branch=source_branch, sync_summary="synced to local main", synced_main_sha=main_head_after)
 
     raise SystemExit(
         ok(

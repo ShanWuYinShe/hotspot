@@ -16,6 +16,7 @@ CONTROLLED_PYTHON_SCRIPTS = (
     "frontend_dev",
     "harmony_worktree",
     "integration_meta",
+    "feature_meta",
     "inspect_verify",
 )
 

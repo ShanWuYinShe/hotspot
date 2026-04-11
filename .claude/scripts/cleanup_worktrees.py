@@ -4,19 +4,22 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from workflow_common import classify_worktree, clean_status, git_output, git_run, head_sha, list_worktrees, ok, require_main_primary, resolve_repo
+from feature_meta import delete_meta as delete_feature_meta, load_meta as load_feature_meta, mark_cleanup_status as mark_feature_cleanup_status
+from integration_meta import delete_meta as delete_integration_meta, load_meta as load_integration_meta, mark_cleanup_status as mark_integration_cleanup_status
+from workflow_common import classify_ownership, classify_worktree, clean_status, cleanup_eligibility, git_output, git_run, head_sha, list_worktrees, ok, require_main_primary, resolve_repo
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="盘点并执行 worktree cleanup")
     parser.add_argument("--cwd", default=".")
     parser.add_argument("--apply", action="store_true")
-    parser.add_argument("--force", action="store_true", help="允许对未完全合并的分支使用 -D 强制删除")
+    parser.add_argument("--owner-token", default="")
     args = parser.parse_args()
 
     cwd = Path(args.cwd).resolve()
     repo = resolve_repo(cwd)
     require_main_primary(repo)
+    owner_token = args.owner_token.strip() or None
     items = list_worktrees(cwd)
     main_head = head_sha(cwd, "main")
     candidates = []
@@ -36,11 +39,27 @@ def main() -> int:
             except RuntimeError:
                 pass
         tip_equals_main = branch_tip == main_head if branch_tip else False
+        target_clean = clean_status(Path(worktree_path)) if worktree_path else False
         blocked_reason = ""
         removed = False
         branch_deleted = False
         deletion_method = ""
-        if merged_to_main and args.apply:
+        ownership_state = "takeover_required"
+        cleanup_state = "keep"
+
+        if role == "feature":
+            meta = load_feature_meta(str(cwd), branch=branch)
+            ownership_state = classify_ownership(meta, owner_token)
+            cleanup_state = cleanup_eligibility(meta, tip_equals_main=tip_equals_main, clean=target_clean, owner_token=owner_token)
+        elif role == "integration":
+            meta = load_integration_meta(str(cwd), branch.removeprefix("integration-"))
+            ownership_state = classify_ownership(meta, owner_token)
+            cleanup_state = cleanup_eligibility(meta, tip_equals_main=tip_equals_main, clean=target_clean, owner_token=owner_token)
+        else:
+            meta = None
+            cleanup_state = "needs confirmation"
+
+        if cleanup_state == "safe to cleanup" and args.apply:
             if Path(worktree_path).resolve() == cwd.resolve():
                 blocked_reason = "当前会话仍驻留在该 worktree 中，请先 ExitWorktree。"
             else:
@@ -50,23 +69,28 @@ def main() -> int:
                     blocked_reason = str(exc)
                 if not blocked_reason:
                     removed = True
-                    if tip_equals_main:
-                        # 标准 sync-back 后来源分支 tip == main tip，-d 必然成功
+                    try:
                         git_run(cwd, "branch", "-d", branch)
-                        deletion_method = "-d (synced)"
+                        deletion_method = "-d"
                         branch_deleted = True
-                    else:
-                        try:
-                            git_run(cwd, "branch", "-d", branch)
-                            deletion_method = "-d"
-                            branch_deleted = True
-                        except RuntimeError:
-                            if args.force:
-                                git_run(cwd, "branch", "-D", branch)
-                                deletion_method = "-D (forced)"
-                                branch_deleted = True
-                            else:
-                                deletion_method = "blocked: 需要 --force 才能强制删除"
+                    except RuntimeError as exc:
+                        blocked_reason = str(exc)
+                    if branch_deleted:
+                        if role == "feature" and meta is not None:
+                            mark_feature_cleanup_status(str(cwd), "cleaned", branch=branch, cleanup_summary="worktree and branch cleaned")
+                            delete_feature_meta(str(cwd), branch.removeprefix("worktree-"))
+                        elif role == "integration" and meta is not None:
+                            integration_id = branch.removeprefix("integration-")
+                            mark_integration_cleanup_status(str(cwd), integration_id, "cleaned", "worktree and branch cleaned")
+                            delete_integration_meta(str(cwd), integration_id)
+        elif meta is not None:
+            summary = blocked_reason or cleanup_state
+            recorded_status = "kept" if cleanup_state != "safe to cleanup" or not args.apply else "cleaned"
+            if role == "feature":
+                mark_feature_cleanup_status(str(cwd), recorded_status, branch=branch, cleanup_summary=summary)
+            elif role == "integration":
+                mark_integration_cleanup_status(str(cwd), branch.removeprefix("integration-"), recorded_status, summary)
+
         candidates.append(
             {
                 "path": worktree_path,
@@ -74,7 +98,9 @@ def main() -> int:
                 "role": role,
                 "merged_to_main": merged_to_main,
                 "tip_equals_main": tip_equals_main,
-                "cleanup_candidate": merged_to_main,
+                "clean": target_clean,
+                "ownership_state": ownership_state,
+                "cleanup_state": cleanup_state,
                 "blocked_reason": blocked_reason,
                 "removed": removed,
                 "branch_deleted": branch_deleted,

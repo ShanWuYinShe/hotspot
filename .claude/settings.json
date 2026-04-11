@@ -30,6 +30,7 @@
       "Bash(python3 .claude/scripts/frontend_dev.py *)",
       "Bash(python3 .claude/scripts/harmony_worktree.py *)",
       "Bash(python3 .claude/scripts/integration_meta.py *)",
+      "Bash(python3 .claude/scripts/feature_meta.py *)",
       "Bash(python3 .claude/scripts/inspect_verify.py *)",
       "Bash(./deploy/scripts/verify.sh *)",
       "Bash(./deploy/scripts/verify-inspect.sh *)",

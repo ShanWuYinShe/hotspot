@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 import json
 import os
 import re
@@ -14,6 +16,7 @@ from workflow_common import is_integration_branch
 SAFE_SHELL_PATTERNS = (
     re.compile(r"^python3?\s+(?:\./)?\.claude/scripts/[a-zA-Z0-9_./-]+\.py(?:\s|$)"),
 )
+PY_COMPILE_PREFIX = ("python", "python3")
 
 BLOCKED_RUNTIME_PATTERNS = (
     re.compile(r"^npm(?:\s|$)"),
@@ -63,14 +66,16 @@ def main() -> int:
 
 
 def deny(reason: str, blocked_input: str | None = None) -> int:
+    visible_reason = reason
     if blocked_input:
-        reason = f"{reason}\nblocked_input: {blocked_input}"
+        visible_reason = f"{visible_reason}\nblocked_input: {blocked_input}"
+    sys.stderr.write(visible_reason + "\n")
     json.dump(
         {
             "hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
                 "permissionDecision": "deny",
-                "permissionDecisionReason": reason,
+                "permissionDecisionReason": visible_reason,
             }
         },
         sys.stdout,
@@ -139,6 +144,8 @@ def guard_bash(payload: dict[str, Any], repo: dict[str, Any] | None) -> int:
         if is_allowed_worktree_segment(argv, repo, command_cwd):
             continue
         if is_safe_shell_segment(segment):
+            continue
+        if is_allowed_readonly_python_segment(argv, repo, command_cwd):
             continue
         if is_allowed_readonly_shell_segment(argv):
             continue
@@ -253,6 +260,20 @@ def is_allowed_readonly_shell_segment(argv: list[str]) -> bool:
         return False
     cmd = argv[0]
     return cmd in {"pwd", "ls", "which", "git"}
+
+
+def is_allowed_readonly_python_segment(argv: list[str], repo: dict[str, Any] | None, current_dir: Path) -> bool:
+    if len(argv) < 4:
+        return False
+    if argv[0] not in PY_COMPILE_PREFIX:
+        return False
+    if argv[1:3] != ["-m", "py_compile"]:
+        return False
+    if not repo:
+        return False
+    current_root = Path(repo["top"]).resolve()
+    file_args = argv[3:]
+    return all_paths_within_worktree(file_args, current_root, current_dir.resolve())
 
 
 def is_blocked_runtime_segment(segment: str) -> bool:

@@ -1,5 +1,5 @@
 ---
-description: 说明 integration 运行时元信息文件的路径约定和最小字段集
+description: 说明 integration 运行时元信息文件的路径约定和状态字段
 argument-hint: [integration-id]
 allowed-tools: Read, Glob, Grep
 ---
@@ -8,35 +8,33 @@ allowed-tools: Read, Glob, Grep
 
 $ARGUMENTS
 
-目标是统一说明 `tmp/claude/integrations/<integration-id>.json` 的路径、字段和读写原则，供 `/start_integrate`、`/refresh_integrate`、`/verify_integrate`、`/finish_integrate`、`/status_worktrees` 使用。
+目标是统一说明 `tmp/claude/integrations/<integration-id>.json` 的路径、字段和读写原则，供 `/start_integrate`、`/refresh_integrate`、`/verify_integrate`、`/finish_integrate`、`/sync_back_main`、`/cleanup_worktrees`、`/status_worktrees` 使用。
 
 约定如下：
 
-1. 运行时元信息文件统一放在仓库根：`tmp/claude/integrations/`。
+1. integration metadata 统一放在仓库根：`tmp/claude/integrations/`。
 2. 每轮 integration 对应一个 JSON 文件：`tmp/claude/integrations/<integration-id>.json`。
-3. 最小字段集与状态枚举：
-   - `integration_id`
-   - `baseline_main_sha`
-   - `integration_branch`
-   - `integration_worktree_path`
-   - `planned_features`
-   - `verify_status`：`pending` / `passed` / `failed` / `stale`
-   - `review_status`：`pending` / `passed` / `failed` / `stale`
-   - `gate_status`：`pending` / `ready_to_sync` / `blocked` / `must_refresh`
-   - `created_at`
-   - `updated_at`
-   - `verify_env_name`
-   - `verify_summary`
-   - `review_summary`
-   - `gate_summary`
-   - `source_integration_id`
-4. 共享脚本 `.claude/scripts/integration_meta.py` 当前负责定义元信息路径、字段、状态枚举与读写 API；命令和 hook 若要读写 integration metadata，应统一复用它，而不是各自手写路径拼接和 JSON 解析。若需要把 reviewer 的自然语言结论写入元信息，必须先标准化为机器枚举：`ready to sync -> ready_to_sync`、`must refresh -> must_refresh`。
-5. `start_integrate` 负责初始化文件；`refresh_integrate` 负责刷新基线并继承 `planned_features`；`verify_integrate` / `finish_integrate` 负责更新状态；`status_worktrees` 只读取，不在命令之外的自动化路径里写状态。
-6. `active` / `stale` 是根据 `baseline_main_sha` 与当前主目录本地 `main HEAD` 比对得到的派生状态，不是必须持久化的独立字段。
-7. 该文件是运行时状态锚点，不是业务配置，也不是审计日志；不要把无关字段塞进去。
+3. 它是 runtime state，不是业务配置，也不是长期审计日志；只放当前自动流程推进需要的字段。
+4. 共享脚本 `.claude/scripts/integration_meta.py` 负责字段 schema、状态枚举与读写 API；命令、hook、脚本若要读写 integration metadata，应统一复用它，而不是各自手写路径拼接和 JSON 解析。
+5. metadata 至少应覆盖：
+   - identity：`schema_version`、`integration_id`、`integration_branch`、`integration_worktree_path`
+   - baseline / ownership：`baseline_main_sha`、`owner_token`、`ownership_state`
+   - replay：`planned_features[]`、`replay_status`、`replay_summary`
+   - gates：`verify_status`、`review_status`、`simplify_status`、`gate_status`
+   - lifecycle：`sync_status`、`cleanup_status`、`synced_main_sha`
+   - evidence：`verify_env_name`、`verify_summary`、`review_summary`、`simplify_summary`、`gate_summary`、`sync_summary`、`cleanup_summary`、`verify_evidence_path`、`review_evidence_path`、`gate_evidence_path`
+   - lineage：`source_integration_id`
+   - timestamps：`created_at`、`updated_at`
+6. `planned_features[]` 是对象数组，至少包含：
+   - `source_branch`
+   - `source_head_sha`
+   - `replayed_head_sha`
+   - `replay_status`
+   - `replay_summary`
+7. 派生状态如 `active` / `stale` / `safe_to_cleanup` 是根据 metadata + 当前本地 `main HEAD` + git 现实共同计算出的结果，不必单独持久化。
 
 结束时请输出：
-- 当前约定路径
-- 最小字段集
-- 各命令的读写职责
-- 如何据此判断 `active` / `stale`
+- 当前 metadata 路径
+- 字段分组
+- 各命令 / 脚本的读写职责
+- 如何据此判断 `active` / `stale` / `ready_to_sync` / `safe_to_cleanup`
