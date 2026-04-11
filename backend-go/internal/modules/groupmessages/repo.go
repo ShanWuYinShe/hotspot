@@ -2,12 +2,18 @@ package groupmessages
 
 import "context"
 
+type MessageEventMeta struct {
+	GroupID   string
+	MessageID string
+	SentAt    string
+}
+
 type Repository interface {
 	Send(context.Context, SendGroupMessageRequest) (MessageSent, error)
-	History(context.Context, string) (PaginatedGroupMessages, error)
+	History(context.Context, string, *PaginationParams) (PaginatedGroupMessages, error)
 
-	Update(context.Context, UpdateGroupMessageRequest) error
-	Recall(context.Context, RecallGroupMessageRequest) error
+	Update(context.Context, UpdateGroupMessageRequest) (MessageEventMeta, error)
+	Recall(context.Context, RecallGroupMessageRequest) (MessageEventMeta, error)
 	MarkAsRead(context.Context, string, MarkGroupMessagesReadRequest) error
 	MarkAllRead(context.Context, string) error
 }

@@ -1,8 +1,42 @@
 package private_messages
 
+import (
+	"time"
+
+	platformcursor "hotspot/backend-go/internal/platform/cursor"
+)
+
 type PaginationParams struct {
 	Limit  int    `json:"limit,omitempty"`
 	Cursor string `json:"cursor,omitempty"`
+}
+
+type messageCursor struct {
+	SentAt    string `json:"sent_at"`
+	MessageID string `json:"message_id"`
+}
+
+func encodeMessageCursor(sentAt, messageID string) string {
+	value, err := platformcursor.Encode("private_messages.history", messageCursor{SentAt: sentAt, MessageID: messageID})
+	if err != nil {
+		return ""
+	}
+	return value
+}
+
+func decodeMessageCursor(value string) (time.Time, string, error) {
+	if value == "" {
+		return time.Time{}, "", nil
+	}
+	var decoded messageCursor
+	if err := platformcursor.Decode("private_messages.history", value, &decoded); err != nil || decoded.SentAt == "" || decoded.MessageID == "" {
+		return time.Time{}, "", ErrInvalidCursor
+	}
+	parsed, err := time.Parse(time.RFC3339Nano, decoded.SentAt)
+	if err != nil {
+		return time.Time{}, "", ErrInvalidCursor
+	}
+	return parsed.UTC(), decoded.MessageID, nil
 }
 
 type UserInfo struct {

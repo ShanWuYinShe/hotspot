@@ -55,8 +55,24 @@ func (r *PostgresRepository) historySince(ctx context.Context, userID, targetUse
 	if !ok {
 		return PaginatedMessages{}, persistence.ErrNotImplemented
 	}
+	limit := 20
+	cursorValue := ""
+	if pagination != nil {
+		if pagination.Limit > 0 {
+			limit = pagination.Limit
+		}
+		cursorValue = pagination.Cursor
+	}
+	cursorSentAt, cursorMessageID, err := decodeMessageCursor(cursorValue)
+	if err != nil {
+		return PaginatedMessages{}, err
+	}
 	chatKey := conversationKey(userID, targetUserID)
-	rows, err := queryable.Query(ctx, queryPrivateMessagesHistory, chatKey, userID, targetUserID)
+	cursorSentAtValue := ""
+	if !cursorSentAt.IsZero() {
+		cursorSentAtValue = cursorSentAt.Format(time.RFC3339Nano)
+	}
+	rows, err := queryable.Query(ctx, queryPrivateMessagesHistory, chatKey, userID, targetUserID, cursorSentAtValue, cursorMessageID, limit+1)
 	if err != nil {
 		return PaginatedMessages{}, err
 	}
@@ -97,26 +113,9 @@ func (r *PostgresRepository) historySince(ctx context.Context, userID, targetUse
 	if err := rows.Err(); err != nil {
 		return PaginatedMessages{}, err
 	}
-	limit := 20
-	if pagination != nil && pagination.Limit > 0 {
-		limit = pagination.Limit
-	}
-	cursor := ""
-	if pagination != nil {
-		cursor = pagination.Cursor
-	}
-	if cursor != "" {
-		start := 0
-		for start < len(items) && items[start].MessageID != cursor {
-			start++
-		}
-		if start == len(items) {
-			return PaginatedMessages{Items: []PrivateMessageItem{}}, nil
-		}
-		items = items[start+1:]
-	}
 	if len(items) <= limit {
 		return PaginatedMessages{Items: items}, nil
 	}
-	return PaginatedMessages{Items: items[:limit], NextCursor: items[limit-1].MessageID}, nil
+	next := items[limit-1]
+	return PaginatedMessages{Items: items[:limit], NextCursor: encodeMessageCursor(next.SentAt, next.MessageID)}, nil
 }

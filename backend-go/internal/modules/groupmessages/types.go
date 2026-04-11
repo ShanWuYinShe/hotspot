@@ -1,19 +1,25 @@
 package groupmessages
 
+import (
+	"time"
+
+	platformcursor "hotspot/backend-go/internal/platform/cursor"
+)
+
 type GroupMessageItem struct {
-	MessageID   string                   `json:"message_id"`
-	Type        string                   `json:"type"`
-	Content     string                   `json:"content,omitempty"`
-	Media       map[string]any           `json:"media,omitempty"`
-	ShareCode   string                   `json:"share_code,omitempty"`
-	Sender      map[string]any           `json:"sender"` // UserInfo
-	ReplyTo     map[string]any           `json:"reply_to,omitempty"`
-	Mentions    []string                 `json:"mentions,omitempty"`
-	RecalledBy  map[string]any           `json:"recalled_by,omitempty"`
-	SentAt      string                   `json:"sent_at"`
-	EditedAt    string                   `json:"edited_at,omitempty"`
-	RecalledAt  string                   `json:"recalled_at,omitempty"`
-	ReadCount   int                      `json:"read_count,omitempty"`
+	MessageID  string         `json:"message_id"`
+	Type       string         `json:"type"`
+	Content    string         `json:"content,omitempty"`
+	Media      map[string]any `json:"media,omitempty"`
+	ShareCode  string         `json:"share_code,omitempty"`
+	Sender     map[string]any `json:"sender"` // UserInfo
+	ReplyTo    map[string]any `json:"reply_to,omitempty"`
+	Mentions   []string       `json:"mentions,omitempty"`
+	RecalledBy map[string]any `json:"recalled_by,omitempty"`
+	SentAt     string         `json:"sent_at"`
+	EditedAt   string         `json:"edited_at,omitempty"`
+	RecalledAt string         `json:"recalled_at,omitempty"`
+	ReadCount  int            `json:"read_count,omitempty"`
 }
 type MessageSent struct {
 	MessageID string `json:"message_id"`
@@ -28,11 +34,46 @@ type SendGroupMessageRequest struct {
 	ReplyToMessageID string   `json:"reply_to_message_id,omitempty"`
 	Mentions         []string `json:"mentions,omitempty"`
 }
+type PaginationParams struct {
+	Limit  int    `json:"limit,omitempty"`
+	Cursor string `json:"cursor,omitempty"`
+}
+
+type groupMessageCursor struct {
+	SentAt    string `json:"sent_at"`
+	MessageID string `json:"message_id"`
+}
+
+func encodeGroupMessageCursor(sentAt, messageID string) string {
+	value, err := platformcursor.Encode("group_messages.history", groupMessageCursor{SentAt: sentAt, MessageID: messageID})
+	if err != nil {
+		return ""
+	}
+	return value
+}
+
+func decodeGroupMessageCursor(value string) (time.Time, string, error) {
+	if value == "" {
+		return time.Time{}, "", nil
+	}
+	var decoded groupMessageCursor
+	if err := platformcursor.Decode("group_messages.history", value, &decoded); err != nil || decoded.SentAt == "" || decoded.MessageID == "" {
+		return time.Time{}, "", ErrInvalidCursor
+	}
+	parsed, err := time.Parse(time.RFC3339Nano, decoded.SentAt)
+	if err != nil {
+		return time.Time{}, "", ErrInvalidCursor
+	}
+	return parsed.UTC(), decoded.MessageID, nil
+}
+
 type GetGroupMessagesHistoryRequest struct {
-	GroupID string `json:"group_id"`
+	GroupID    string            `json:"group_id"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 type PaginatedGroupMessages struct {
-	Items []GroupMessageItem `json:"items"`
+	Items      []GroupMessageItem `json:"items"`
+	NextCursor string             `json:"next_cursor,omitempty"`
 }
 
 // 新增请求类型

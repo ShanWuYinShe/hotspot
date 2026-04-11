@@ -530,21 +530,29 @@ func (s *Service) ListFollowers(ctx context.Context, req ListFollowersRequest) (
 
 func (s *Service) ListGroups(ctx context.Context, req UserGroupsRequest) (grouptypes.PaginatedGroups, error) {
 	principal, hasPrincipal := platformauth.PrincipalFromContext(ctx)
-	if err := ensureUserExists(ctx, s.repo, req.UserID); err != nil {
+	targetUserID := req.UserID
+	if targetUserID == "" {
+		if !hasPrincipal || principal.UserID == "" {
+			return grouptypes.PaginatedGroups{}, ErrUnauthorized
+		}
+		targetUserID = principal.UserID
+	}
+	if err := ensureUserExists(ctx, s.repo, targetUserID); err != nil {
 		return grouptypes.PaginatedGroups{}, err
 	}
-	settings, ok, err := s.repo.GetSettings(ctx, req.UserID)
+	settings, ok, err := s.repo.GetSettings(ctx, targetUserID)
 	if err != nil {
 		return grouptypes.PaginatedGroups{}, err
 	}
 	if !ok {
 		settings = defaultSettings()
 	}
-	if !(hasPrincipal && principal.UserID == req.UserID) && !settings.GroupsVisible {
+	isSelf := hasPrincipal && principal.UserID == targetUserID
+	if !isSelf && !settings.GroupsVisible {
 		return grouptypes.PaginatedGroups{}, ErrPermissionDenied
 	}
 	limit, cursor := normalizePagination(req.Pagination)
-	result, err := s.repo.ListGroups(ctx, req.UserID, limit, cursor)
+	result, err := s.repo.ListGroups(ctx, targetUserID, limit, cursor)
 	if err != nil {
 		return grouptypes.PaginatedGroups{}, err
 	}
@@ -559,12 +567,19 @@ func (s *Service) ListGroups(ctx context.Context, req UserGroupsRequest) (groupt
 
 func (s *Service) ListMoments(ctx context.Context, req UserMomentsRequest) (momenttypes.PaginatedMoments, error) {
 	principal, hasPrincipal := platformauth.PrincipalFromContext(ctx)
-	if err := ensureUserExists(ctx, s.repo, req.UserID); err != nil {
+	targetUserID := req.UserID
+	if targetUserID == "" {
+		if !hasPrincipal || principal.UserID == "" {
+			return momenttypes.PaginatedMoments{}, ErrUnauthorized
+		}
+		targetUserID = principal.UserID
+	}
+	if err := ensureUserExists(ctx, s.repo, targetUserID); err != nil {
 		return momenttypes.PaginatedMoments{}, err
 	}
-	isSelf := hasPrincipal && principal.UserID == req.UserID
+	isSelf := hasPrincipal && principal.UserID == targetUserID
 	limit, cursor := normalizePagination(req.Pagination)
-	result, err := s.repo.ListMoments(ctx, req.UserID, limit, cursor, isSelf)
+	result, err := s.repo.ListMoments(ctx, targetUserID, limit, cursor, isSelf)
 	if err != nil {
 		return momenttypes.PaginatedMoments{}, err
 	}
@@ -835,7 +850,6 @@ func collectFriendsByUser(ctx context.Context, repo Repository, userID string) (
 	}
 	return items, nil
 }
-
 
 func intersectTags(left, right []string) []string {
 	if len(left) == 0 || len(right) == 0 {

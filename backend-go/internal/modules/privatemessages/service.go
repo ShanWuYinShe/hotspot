@@ -102,27 +102,41 @@ func (s *Service) UnreadCount(ctx context.Context, targetUserID string, deletedA
 
 func (s *Service) Update(ctx context.Context, req UpdatePrivateMessageRequest) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	if err := s.repo.Update(ctx, principal.UserID, req); err != nil {
+	meta, err := s.repo.Update(ctx, principal.UserID, req)
+	if err != nil {
 		observability.L().Error("privatemessages.update failed", "error", err, "message_id", req.MessageID)
 		return err
 	}
+	event := realtime.Event{Type: "PrivateMessageEdited", Payload: map[string]any{"message_id": req.MessageID, "target_user_id": meta.TargetUserID}}
+	realtime.DefaultHub().BroadcastToUser(meta.TargetUserID, event)
+	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
 	return nil
 }
 
 func (s *Service) Recall(ctx context.Context, req RecallPrivateMessageRequest) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	if err := s.repo.Recall(ctx, principal.UserID, req); err != nil {
+	meta, err := s.repo.Recall(ctx, principal.UserID, req)
+	if err != nil {
 		observability.L().Error("privatemessages.recall failed", "error", err, "message_id", req.MessageID)
 		return err
 	}
+	event := realtime.Event{Type: "PrivateMessageRecalled", Payload: map[string]any{"message_id": req.MessageID, "target_user_id": meta.TargetUserID}}
+	realtime.DefaultHub().BroadcastToUser(meta.TargetUserID, event)
+	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
 	return nil
 }
 
 func (s *Service) MarkAsRead(ctx context.Context, req MarkPrivateMessagesReadRequest) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	if err := s.repo.MarkAsRead(ctx, principal.UserID, req); err != nil {
+	meta, err := s.repo.MarkAsRead(ctx, principal.UserID, req)
+	if err != nil {
 		observability.L().Error("privatemessages.mark_as_read failed", "error", err, "target_user_id", req.TargetUserID, "up_to_message_id", req.UpToMessageID)
 		return err
+	}
+	event := realtime.Event{Type: "PrivateMessageRead", Payload: map[string]any{"target_user_id": meta.TargetUserID, "message_id": meta.MessageID, "read_at": time.Now().UTC().Format(time.RFC3339Nano)}}
+	realtime.DefaultHub().BroadcastToUser(meta.TargetUserID, event)
+	if principal.UserID != meta.TargetUserID {
+		realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
 	}
 	return nil
 }

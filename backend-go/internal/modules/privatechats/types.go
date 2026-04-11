@@ -1,10 +1,43 @@
 package privatechats
 
-import private_messages "hotspot/backend-go/internal/modules/privatemessages"
+import (
+	"time"
+
+	private_messages "hotspot/backend-go/internal/modules/privatemessages"
+	platformcursor "hotspot/backend-go/internal/platform/cursor"
+)
 
 type PaginationParams struct {
 	Limit  int    `json:"limit,omitempty"`
 	Cursor string `json:"cursor,omitempty"`
+}
+
+type chatCursor struct {
+	LastActivityAt string `json:"last_activity_at"`
+	UserID         string `json:"user_id"`
+}
+
+func encodeChatCursor(lastActivityAt, userID string) string {
+	value, err := platformcursor.Encode("private_chats.list", chatCursor{LastActivityAt: lastActivityAt, UserID: userID})
+	if err != nil {
+		return ""
+	}
+	return value
+}
+
+func decodeChatCursor(value string) (time.Time, string, error) {
+	if value == "" {
+		return time.Time{}, "", nil
+	}
+	var decoded chatCursor
+	if err := platformcursor.Decode("private_chats.list", value, &decoded); err != nil || decoded.LastActivityAt == "" || decoded.UserID == "" {
+		return time.Time{}, "", private_messages.ErrInvalidCursor
+	}
+	parsed, err := time.Parse(time.RFC3339Nano, decoded.LastActivityAt)
+	if err != nil {
+		return time.Time{}, "", private_messages.ErrInvalidCursor
+	}
+	return parsed.UTC(), decoded.UserID, nil
 }
 
 type UserInfo struct {

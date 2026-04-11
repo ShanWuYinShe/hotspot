@@ -18,14 +18,14 @@ type groupMessageErrorRepo struct {
 func (r *groupMessageErrorRepo) Send(context.Context, SendGroupMessageRequest) (MessageSent, error) {
 	return MessageSent{}, r.sendErr
 }
-func (r *groupMessageErrorRepo) History(context.Context, string) (PaginatedGroupMessages, error) {
+func (r *groupMessageErrorRepo) History(context.Context, string, *PaginationParams) (PaginatedGroupMessages, error) {
 	return PaginatedGroupMessages{}, r.historyErr
 }
-func (r *groupMessageErrorRepo) Update(context.Context, UpdateGroupMessageRequest) error {
-	return nil
+func (r *groupMessageErrorRepo) Update(context.Context, UpdateGroupMessageRequest) (MessageEventMeta, error) {
+	return MessageEventMeta{}, nil
 }
-func (r *groupMessageErrorRepo) Recall(context.Context, RecallGroupMessageRequest) error {
-	return nil
+func (r *groupMessageErrorRepo) Recall(context.Context, RecallGroupMessageRequest) (MessageEventMeta, error) {
+	return MessageEventMeta{}, nil
 }
 func (r *groupMessageErrorRepo) MarkAsRead(context.Context, string, MarkGroupMessagesReadRequest) error {
 	return nil

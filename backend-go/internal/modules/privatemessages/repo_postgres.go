@@ -41,68 +41,80 @@ func (r *PostgresRepository) Send(ctx context.Context, senderID, targetUserID st
 	}
 	return MessageSent{MessageID: messageID, SentAt: now.Format(time.RFC3339Nano)}, nil
 }
-func (r *PostgresRepository) Update(ctx context.Context, userID string, req UpdatePrivateMessageRequest) error {
+func (r *PostgresRepository) Update(ctx context.Context, userID string, req UpdatePrivateMessageRequest) (MessageEventMeta, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
+		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		return persistence.ErrNotImplemented
+		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
 	meta, err := r.getMessageMeta(ctx, req.MessageID)
 	if err != nil {
-		return ErrMessageNotFound
+		return MessageEventMeta{}, ErrMessageNotFound
 	}
 	if meta.SenderUserID != userID {
-		return ErrMessagePermissionDenied
+		return MessageEventMeta{}, ErrMessagePermissionDenied
 	}
 	if meta.Type != "text" || meta.IsRecalled {
-		return ErrMessageNotEditable
+		return MessageEventMeta{}, ErrMessageNotEditable
 	}
-	return queryable.Exec(ctx, queryUpdatePrivateMessage, req.MessageID, req.Content)
+	if err := queryable.Exec(ctx, queryUpdatePrivateMessage, req.MessageID, req.Content); err != nil {
+		return MessageEventMeta{}, err
+	}
+	return MessageEventMeta{TargetUserID: otherUserID(meta.ChatKey, userID), MessageID: req.MessageID, SentAt: meta.SentAt}, nil
 }
-func (r *PostgresRepository) Recall(ctx context.Context, userID string, req RecallPrivateMessageRequest) error {
+func (r *PostgresRepository) Recall(ctx context.Context, userID string, req RecallPrivateMessageRequest) (MessageEventMeta, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
+		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		return persistence.ErrNotImplemented
+		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
 	meta, err := r.getMessageMeta(ctx, req.MessageID)
 	if err != nil {
-		return ErrMessageNotFound
+		return MessageEventMeta{}, ErrMessageNotFound
 	}
 	if meta.SenderUserID != userID {
-		return ErrMessagePermissionDenied
+		return MessageEventMeta{}, ErrMessagePermissionDenied
 	}
 	if meta.IsRecalled {
-		return ErrMessageNotRecallable
+		return MessageEventMeta{}, ErrMessageNotRecallable
 	}
 	sentAt, parseErr := time.Parse(time.RFC3339Nano, meta.SentAt)
 	if parseErr == nil && time.Since(sentAt) > 2*time.Minute {
-		return ErrMessageNotRecallable
+		return MessageEventMeta{}, ErrMessageNotRecallable
 	}
-	return queryable.Exec(ctx, queryRecallPrivateMessage, req.MessageID)
+	if err := queryable.Exec(ctx, queryRecallPrivateMessage, req.MessageID); err != nil {
+		return MessageEventMeta{}, err
+	}
+	return MessageEventMeta{TargetUserID: otherUserID(meta.ChatKey, userID), MessageID: req.MessageID, SentAt: meta.SentAt}, nil
 }
-func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, req MarkPrivateMessagesReadRequest) error {
+func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, req MarkPrivateMessagesReadRequest) (MessageEventMeta, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
+		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		return persistence.ErrNotImplemented
+		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
 	chatKey := conversationKey(userID, req.TargetUserID)
 	if req.UpToMessageID == "" {
-		return queryable.Exec(ctx, queryMarkAllPrivateMessagesReadForChat, chatKey, userID)
+		if err := queryable.Exec(ctx, queryMarkAllPrivateMessagesReadForChat, chatKey, userID); err != nil {
+			return MessageEventMeta{}, err
+		}
+		return MessageEventMeta{TargetUserID: req.TargetUserID}, nil
 	}
 	var sentAt string
 	var messageID string
 	if err := queryable.QueryRow(ctx, queryPrivateMessageReadStateByMessage, chatKey, req.UpToMessageID).Scan(&sentAt, &messageID); err != nil {
-		return ErrMessageNotFound
+		return MessageEventMeta{}, ErrMessageNotFound
 	}
-	return queryable.Exec(ctx, queryUpsertPrivateMessageReadState, chatKey, userID, messageID, sentAt)
+	if err := queryable.Exec(ctx, queryUpsertPrivateMessageReadState, chatKey, userID, messageID, sentAt); err != nil {
+		return MessageEventMeta{}, err
+	}
+	return MessageEventMeta{TargetUserID: req.TargetUserID, MessageID: messageID, SentAt: sentAt}, nil
 }
 func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {

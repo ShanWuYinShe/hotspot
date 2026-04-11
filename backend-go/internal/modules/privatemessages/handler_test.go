@@ -41,14 +41,14 @@ func (r *privateMessageErrorRepo) Last(context.Context, string, string, *time.Ti
 func (r *privateMessageErrorRepo) UnreadCount(context.Context, string, string, *time.Time) (int, error) {
 	return 0, r.recentErr
 }
-func (r *privateMessageErrorRepo) Update(context.Context, string, UpdatePrivateMessageRequest) error {
-	return r.updateErr
+func (r *privateMessageErrorRepo) Update(context.Context, string, UpdatePrivateMessageRequest) (MessageEventMeta, error) {
+	return MessageEventMeta{}, r.updateErr
 }
-func (r *privateMessageErrorRepo) Recall(context.Context, string, RecallPrivateMessageRequest) error {
-	return r.recallErr
+func (r *privateMessageErrorRepo) Recall(context.Context, string, RecallPrivateMessageRequest) (MessageEventMeta, error) {
+	return MessageEventMeta{}, r.recallErr
 }
-func (r *privateMessageErrorRepo) MarkAsRead(context.Context, string, MarkPrivateMessagesReadRequest) error {
-	return r.markErr
+func (r *privateMessageErrorRepo) MarkAsRead(context.Context, string, MarkPrivateMessagesReadRequest) (MessageEventMeta, error) {
+	return MessageEventMeta{}, r.markErr
 }
 func (r *privateMessageErrorRepo) MarkAllRead(context.Context, string) error {
 	return r.markAllErr

@@ -53,12 +53,12 @@ func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
-	if req.GroupID == "" {
+	if req.GroupID == "" || !isValidPagination(req.Pagination) {
 		logBusinessError(r, "History", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	history, err := h.service.History(r.Context(), req.GroupID)
+	history, err := h.service.History(r.Context(), req.GroupID, req.Pagination)
 	if err != nil {
 		logServerError(r, "History", err)
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
@@ -175,4 +175,18 @@ func (h *Handler) MarkAllRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
+}
+
+func isValidPagination(p *PaginationParams) bool {
+	if p == nil {
+		return true
+	}
+	if p.Limit < 0 || p.Limit > 100 {
+		return false
+	}
+	if p.Cursor == "" {
+		return true
+	}
+	_, _, err := decodeGroupMessageCursor(p.Cursor)
+	return err == nil
 }

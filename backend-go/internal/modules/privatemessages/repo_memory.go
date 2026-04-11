@@ -57,27 +57,35 @@ func (r *InMemoryRepository) History(_ context.Context, userID string, req GetHi
 		return items[i].SentAt > items[j].SentAt
 	})
 	limit := 20
-	cursor := ""
+	cursorValue := ""
 	if req.Pagination != nil {
 		if req.Pagination.Limit > 0 {
 			limit = req.Pagination.Limit
 		}
-		cursor = req.Pagination.Cursor
+		cursorValue = req.Pagination.Cursor
 	}
-	if cursor != "" {
-		start := 0
-		for start < len(items) && items[start].MessageID != cursor {
-			start++
+	cursorSentAt, cursorMessageID, err := decodeMessageCursor(cursorValue)
+	if err != nil {
+		return PaginatedMessages{}, err
+	}
+	if !cursorSentAt.IsZero() {
+		filtered := make([]PrivateMessageItem, 0, len(items))
+		for _, item := range items {
+			sentAt, parseErr := time.Parse(time.RFC3339Nano, item.SentAt)
+			if parseErr != nil {
+				continue
+			}
+			if sentAt.Before(cursorSentAt) || (sentAt.Equal(cursorSentAt) && item.MessageID < cursorMessageID) {
+				filtered = append(filtered, item)
+			}
 		}
-		if start == len(items) {
-			return PaginatedMessages{Items: []PrivateMessageItem{}}, nil
-		}
-		items = items[start+1:]
+		items = filtered
 	}
 	if len(items) <= limit {
 		return PaginatedMessages{Items: items}, nil
 	}
-	return PaginatedMessages{Items: items[:limit], NextCursor: items[limit-1].MessageID}, nil
+	next := items[limit-1]
+	return PaginatedMessages{Items: items[:limit], NextCursor: encodeMessageCursor(next.SentAt, next.MessageID)}, nil
 }
 func (r *InMemoryRepository) Recent(ctx context.Context, userID, targetUserID string, limit int, deletedAfter *time.Time) (PaginatedMessages, error) {
 	history, err := r.History(ctx, userID, GetHistoryRequest{TargetUserID: targetUserID})
@@ -152,7 +160,7 @@ func (r *InMemoryRepository) UnreadCount(_ context.Context, userID, targetUserID
 	return count, nil
 }
 
-func (r *InMemoryRepository) Update(_ context.Context, userID string, req UpdatePrivateMessageRequest) error {
+func (r *InMemoryRepository) Update(_ context.Context, userID string, req UpdatePrivateMessageRequest) (MessageEventMeta, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	for key, msgs := range r.messages {
@@ -161,21 +169,21 @@ func (r *InMemoryRepository) Update(_ context.Context, userID string, req Update
 				continue
 			}
 			if msgs[i].Sender.UserID != userID {
-				return ErrMessagePermissionDenied
+				return MessageEventMeta{}, ErrMessagePermissionDenied
 			}
 			if msgs[i].Type != "text" || msgs[i].RecalledAt != "" {
-				return ErrMessageNotEditable
+				return MessageEventMeta{}, ErrMessageNotEditable
 			}
 			msgs[i].Content = req.Content
 			msgs[i].EditedAt = time.Now().UTC().Format(time.RFC3339Nano)
 			r.messages[key] = msgs
-			return nil
+			return MessageEventMeta{TargetUserID: otherUserID(key, userID), MessageID: req.MessageID, SentAt: msgs[i].SentAt}, nil
 		}
 	}
-	return ErrMessageNotFound
+	return MessageEventMeta{}, ErrMessageNotFound
 }
 
-func (r *InMemoryRepository) Recall(_ context.Context, userID string, req RecallPrivateMessageRequest) error {
+func (r *InMemoryRepository) Recall(_ context.Context, userID string, req RecallPrivateMessageRequest) (MessageEventMeta, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	for key, msgs := range r.messages {
@@ -184,24 +192,24 @@ func (r *InMemoryRepository) Recall(_ context.Context, userID string, req Recall
 				continue
 			}
 			if msgs[i].Sender.UserID != userID {
-				return ErrMessagePermissionDenied
+				return MessageEventMeta{}, ErrMessagePermissionDenied
 			}
 			if msgs[i].RecalledAt != "" {
-				return ErrMessageNotRecallable
+				return MessageEventMeta{}, ErrMessageNotRecallable
 			}
 			sentAt, err := time.Parse(time.RFC3339Nano, msgs[i].SentAt)
 			if err == nil && time.Since(sentAt) > 2*time.Minute {
-				return ErrMessageNotRecallable
+				return MessageEventMeta{}, ErrMessageNotRecallable
 			}
 			msgs[i].RecalledAt = time.Now().UTC().Format(time.RFC3339Nano)
 			r.messages[key] = msgs
-			return nil
+			return MessageEventMeta{TargetUserID: otherUserID(key, userID), MessageID: req.MessageID, SentAt: msgs[i].SentAt}, nil
 		}
 	}
-	return ErrMessageNotFound
+	return MessageEventMeta{}, ErrMessageNotFound
 }
 
-func (r *InMemoryRepository) MarkAsRead(_ context.Context, userID string, req MarkPrivateMessagesReadRequest) error {
+func (r *InMemoryRepository) MarkAsRead(_ context.Context, userID string, req MarkPrivateMessagesReadRequest) (MessageEventMeta, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	key := conversationKey(userID, req.TargetUserID)
@@ -215,7 +223,7 @@ func (r *InMemoryRepository) MarkAsRead(_ context.Context, userID string, req Ma
 			}
 		}
 		if !found {
-			return ErrMessageNotFound
+			return MessageEventMeta{}, ErrMessageNotFound
 		}
 	}
 	if r.readCursor[key] == nil {
@@ -223,7 +231,7 @@ func (r *InMemoryRepository) MarkAsRead(_ context.Context, userID string, req Ma
 	}
 	if req.UpToMessageID != "" {
 		r.readCursor[key][userID] = req.UpToMessageID
-		return nil
+		return MessageEventMeta{TargetUserID: req.TargetUserID, MessageID: req.UpToMessageID}, nil
 	}
 	latestMessageID := ""
 	latestSentAt := ""
@@ -236,7 +244,7 @@ func (r *InMemoryRepository) MarkAsRead(_ context.Context, userID string, req Ma
 	if latestMessageID != "" {
 		r.readCursor[key][userID] = latestMessageID
 	}
-	return nil
+	return MessageEventMeta{TargetUserID: req.TargetUserID, MessageID: latestMessageID, SentAt: latestSentAt}, nil
 }
 
 func (r *InMemoryRepository) MarkAllRead(_ context.Context, userID string) error {
@@ -264,4 +272,15 @@ func (r *InMemoryRepository) MarkAllRead(_ context.Context, userID string) error
 		r.readCursor[key][userID] = latestMessageID
 	}
 	return nil
+}
+
+func otherUserID(chatKey, userID string) string {
+	parts := strings.Split(chatKey, ":")
+	if len(parts) != 2 {
+		return ""
+	}
+	if parts[0] == userID {
+		return parts[1]
+	}
+	return parts[0]
 }

@@ -8,4 +8,5 @@ var (
 	ErrMessageRecalled     = errors.New("message already recalled")
 	ErrMessageNotEditable  = errors.New("message not editable")
 	ErrMessageRecallWindow = errors.New("recall window expired")
+	ErrInvalidCursor       = errors.New("groupmessages: invalid cursor")
 )

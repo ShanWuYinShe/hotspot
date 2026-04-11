@@ -23,6 +23,8 @@ func (r groupMessageRowValues) Scan(dest ...any) error {
 		switch d := dest[i].(type) {
 		case *string:
 			*d = r.values[i].(string)
+		case *int:
+			*d = r.values[i].(int)
 		}
 	}
 	return nil
@@ -49,17 +51,17 @@ func (r *groupMessageFallbackRepo) Send(context.Context, SendGroupMessageRequest
 	r.used = true
 	return MessageSent{}, nil
 }
-func (r *groupMessageFallbackRepo) History(context.Context, string) (PaginatedGroupMessages, error) {
+func (r *groupMessageFallbackRepo) History(context.Context, string, *PaginationParams) (PaginatedGroupMessages, error) {
 	r.used = true
 	return PaginatedGroupMessages{}, nil
 }
-func (r *groupMessageFallbackRepo) Update(context.Context, UpdateGroupMessageRequest) error {
+func (r *groupMessageFallbackRepo) Update(context.Context, UpdateGroupMessageRequest) (MessageEventMeta, error) {
 	r.used = true
-	return nil
+	return MessageEventMeta{}, nil
 }
-func (r *groupMessageFallbackRepo) Recall(context.Context, RecallGroupMessageRequest) error {
+func (r *groupMessageFallbackRepo) Recall(context.Context, RecallGroupMessageRequest) (MessageEventMeta, error) {
 	r.used = true
-	return nil
+	return MessageEventMeta{}, nil
 }
 func (r *groupMessageFallbackRepo) MarkAsRead(context.Context, string, MarkGroupMessagesReadRequest) error {
 	r.used = true
@@ -190,7 +192,7 @@ func (b *groupMessageBackendStub) Query(_ context.Context, query string, args ..
 		})
 		rows := make([][]any, 0, len(records))
 		for _, record := range records {
-			rows = append(rows, []any{record.MessageID, record.Type, record.Content, record.SentAt})
+			rows = append(rows, []any{record.MessageID, record.Type, record.Content, record.SentAt, "", "", "", "", "", 0})
 		}
 		return &groupMessageRowsValues{rows: rows}, nil
 	}
@@ -208,7 +210,7 @@ func TestPostgresRepositorySendAndHistory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("send: %v", err)
 	}
-	history, err := repo.History(context.Background(), "group_1")
+	history, err := repo.History(context.Background(), "group_1", nil)
 	if err != nil {
 		t.Fatalf("history: %v", err)
 	}
@@ -227,7 +229,7 @@ func TestPostgresRepositoryHistoryReturnsEmptyWithoutFallback(t *testing.T) {
 	fallback := &groupMessageFallbackRepo{}
 	repo := NewPostgresRepository(factory, fallback)
 
-	history, err := repo.History(context.Background(), "group_1")
+	history, err := repo.History(context.Background(), "group_1", nil)
 	if err != nil {
 		t.Fatalf("history: %v", err)
 	}
@@ -262,7 +264,7 @@ func TestPostgresRepositoryHistoryReturnsErrorOnQueryFailure(t *testing.T) {
 	fallback := &groupMessageFallbackRepo{}
 	repo := NewPostgresRepository(factory, fallback)
 
-	_, err := repo.History(context.Background(), "group_1")
+	_, err := repo.History(context.Background(), "group_1", nil)
 	if err == nil {
 		t.Fatal("expected history error")
 	}

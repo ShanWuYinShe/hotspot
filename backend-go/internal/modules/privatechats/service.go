@@ -101,15 +101,22 @@ func (s *Service) List(ctx context.Context, req MyPrivateChatsRequest) (Paginate
 	if req.Pagination != nil {
 		cursor = req.Pagination.Cursor
 	}
-	if cursor != "" {
-		start := 0
-		for start < len(items) && items[start].OtherUser.UserID != cursor {
-			start++
+	cursorAt, cursorUserID, err := decodeChatCursor(cursor)
+	if err != nil {
+		return PaginatedPrivateChats{}, err
+	}
+	if !cursorAt.IsZero() {
+		filtered := make([]PrivateChatItem, 0, len(items))
+		for _, item := range items {
+			lastActivityAt, parseErr := time.Parse(time.RFC3339Nano, item.LastActivityAt)
+			if parseErr != nil {
+				continue
+			}
+			if lastActivityAt.Before(cursorAt) || (lastActivityAt.Equal(cursorAt) && item.OtherUser.UserID > cursorUserID) {
+				filtered = append(filtered, item)
+			}
 		}
-		if start == len(items) {
-			return PaginatedPrivateChats{Items: []PrivateChatItem{}}, nil
-		}
-		items = items[start+1:]
+		items = filtered
 	}
 	limit := 20
 	if req.Pagination != nil && req.Pagination.Limit > 0 {
@@ -118,7 +125,8 @@ func (s *Service) List(ctx context.Context, req MyPrivateChatsRequest) (Paginate
 	if len(items) <= limit {
 		return PaginatedPrivateChats{Items: items}, nil
 	}
-	return PaginatedPrivateChats{Items: items[:limit], NextCursor: items[limit-1].OtherUser.UserID}, nil
+	next := items[limit-1]
+	return PaginatedPrivateChats{Items: items[:limit], NextCursor: encodeChatCursor(next.LastActivityAt, next.OtherUser.UserID)}, nil
 }
 
 func (s *Service) UpdateSettings(ctx context.Context, req UpdatePrivateChatSettingsRequest) error {

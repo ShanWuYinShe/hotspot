@@ -184,5 +184,9 @@ func isValidPagination(p *PaginationParams) bool {
 	if p.Limit < 0 || p.Limit > 100 {
 		return false
 	}
-	return true
+	if p.Cursor == "" {
+		return true
+	}
+	_, _, err := decodeMessageCursor(p.Cursor)
+	return err == nil
 }

@@ -20,15 +20,15 @@ func (r *PersistenceRepository) Send(ctx context.Context, req SendGroupMessageRe
 	return r.impl.Send(ctx, req)
 }
 
-func (r *PersistenceRepository) History(ctx context.Context, groupID string) (PaginatedGroupMessages, error) {
-	return r.impl.History(ctx, groupID)
+func (r *PersistenceRepository) History(ctx context.Context, groupID string, pagination *PaginationParams) (PaginatedGroupMessages, error) {
+	return r.impl.History(ctx, groupID, pagination)
 }
 
-func (r *PersistenceRepository) Update(ctx context.Context, req UpdateGroupMessageRequest) error {
+func (r *PersistenceRepository) Update(ctx context.Context, req UpdateGroupMessageRequest) (MessageEventMeta, error) {
 	return r.impl.Update(ctx, req)
 }
 
-func (r *PersistenceRepository) Recall(ctx context.Context, req RecallGroupMessageRequest) error {
+func (r *PersistenceRepository) Recall(ctx context.Context, req RecallGroupMessageRequest) (MessageEventMeta, error) {
 	return r.impl.Recall(ctx, req)
 }
 
