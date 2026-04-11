@@ -49,7 +49,7 @@ type PaginationParams struct {
 }
 
 type CommentRepliesRequest struct {
-	CommentID  string           `json:"comment_id"`
+	CommentID  string            `json:"comment_id"`
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 

@@ -17,6 +17,7 @@ type Config struct {
 	OfficialWebsiteURL string
 	DefaultUserAvatar  string
 	DefaultGroupAvatar string
+	TrustedProxyCIDRs  string
 	S3Endpoint         string
 	S3Region           string
 	S3Bucket           string
@@ -41,6 +42,7 @@ func Load() Config {
 		OfficialWebsiteURL: envOrDefault("APP_OFFICIAL_WEBSITE_URL", ""),
 		DefaultUserAvatar:  envOrDefault("APP_DEFAULT_USER_AVATAR_URL", ""),
 		DefaultGroupAvatar: envOrDefault("APP_DEFAULT_GROUP_AVATAR_URL", ""),
+		TrustedProxyCIDRs:  envOrDefault("TRUSTED_PROXY_CIDRS", ""),
 		S3Endpoint:         envOrDefault("S3_ENDPOINT", ""),
 		S3Region:           envOrDefault("S3_REGION", "us-east-1"),
 		S3Bucket:           envOrDefault("S3_BUCKET", ""),

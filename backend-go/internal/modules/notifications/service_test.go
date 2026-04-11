@@ -33,7 +33,7 @@ func (r *notificationListCaptureRepo) UnreadCount(context.Context, string) (Unre
 }
 
 func (r *notificationListCaptureRepo) MarkAsRead(context.Context, string, []string) error { return nil }
-func (r *notificationListCaptureRepo) MarkAllRead(context.Context, string) error           { return nil }
+func (r *notificationListCaptureRepo) MarkAllRead(context.Context, string) error          { return nil }
 
 func TestPushSystemAnnouncementFansOut(t *testing.T) {
 	hub := realtime.NewHub()

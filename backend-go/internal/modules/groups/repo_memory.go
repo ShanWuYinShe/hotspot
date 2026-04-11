@@ -121,8 +121,8 @@ func (r *InMemoryRepository) ListMembers(_ context.Context, groupID string, role
 				Nickname:  group.Group.Name + " Owner",
 				AvatarURL: "",
 			},
-			Role:       GroupRoleOwner,
-			JoinedAt:   now,
+			Role:     GroupRoleOwner,
+			JoinedAt: now,
 		},
 	}
 	if role == nil || *role == GroupRoleMember {

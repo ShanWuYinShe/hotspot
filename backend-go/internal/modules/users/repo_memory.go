@@ -18,11 +18,11 @@ import (
 )
 
 type memoryRelation struct {
-	Following  bool
-	Blocked    bool
-	Remark     string
-	FollowedAt string
-	BlockedAt  string
+	Following   bool
+	Blocked     bool
+	Remark      string
+	FollowedAt  string
+	BlockedAt   string
 	BlockReason string
 }
 
@@ -32,22 +32,22 @@ type likedMomentRecord struct {
 }
 
 type InMemoryRepository struct {
-	mu        sync.RWMutex
-	profiles  map[string]MyProfile
-	settings  map[string]UserSettings
-	relations map[string]map[string]memoryRelation
-	likedMoments map[string][]likedMomentRecord
-	groupsByUser map[string][]grouptypes.GroupItem
+	mu            sync.RWMutex
+	profiles      map[string]MyProfile
+	settings      map[string]UserSettings
+	relations     map[string]map[string]memoryRelation
+	likedMoments  map[string][]likedMomentRecord
+	groupsByUser  map[string][]grouptypes.GroupItem
 	momentsByUser map[string][]momenttypes.MomentItem
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{
-		profiles: make(map[string]MyProfile),
-		settings: make(map[string]UserSettings),
-		relations: make(map[string]map[string]memoryRelation),
-		likedMoments: make(map[string][]likedMomentRecord),
-		groupsByUser: make(map[string][]grouptypes.GroupItem),
+		profiles:      make(map[string]MyProfile),
+		settings:      make(map[string]UserSettings),
+		relations:     make(map[string]map[string]memoryRelation),
+		likedMoments:  make(map[string][]likedMomentRecord),
+		groupsByUser:  make(map[string][]grouptypes.GroupItem),
 		momentsByUser: make(map[string][]momenttypes.MomentItem),
 	}
 }
@@ -226,35 +226,48 @@ func (r *InMemoryRepository) ListFriends(_ context.Context, userID string, limit
 			lastOnline := r.profiles[targetUserID].LastOnline
 			presence := r.profiles[targetUserID].PresenceStatus
 			item := FriendItem{User: UserInfo{UserID: targetUserID, Nickname: r.nicknameFor(targetUserID), AvatarURL: r.profiles[targetUserID].AvatarURL}, Remark: relation.Remark, FollowedAt: relation.FollowedAt, FollowedBackAt: maxStringTime(relation.FollowedAt, reverse.FollowedAt)}
-			if lastOnline != "" { item.LastOnline = &lastOnline }
+			if lastOnline != "" {
+				item.LastOnline = &lastOnline
+			}
 			item.PresenceStatus = &presence
 			items = append(items, item)
 		}
 	}
 	sort.Slice(items, func(i, j int) bool {
-		if items[i].FollowedBackAt == items[j].FollowedBackAt { return items[i].User.UserID < items[j].User.UserID }
+		if items[i].FollowedBackAt == items[j].FollowedBackAt {
+			return items[i].User.UserID < items[j].User.UserID
+		}
 		return items[i].FollowedBackAt > items[j].FollowedBackAt
 	})
 	return paginateFriends(items, limit, cursor), nil
 }
 func (r *InMemoryRepository) ListFollowing(_ context.Context, userID string, limit int, cursor string) (PaginatedFollowing, error) {
-	r.mu.RLock(); defer r.mu.RUnlock()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	items := make([]FollowingItem, 0)
 	for targetUserID, relation := range r.relations[userID] {
 		if relation.Following {
 			lastOnline := r.profiles[targetUserID].LastOnline
 			presence := r.profiles[targetUserID].PresenceStatus
 			item := FollowingItem{User: UserInfo{UserID: targetUserID, Nickname: r.nicknameFor(targetUserID), AvatarURL: r.profiles[targetUserID].AvatarURL}, FollowedAt: relation.FollowedAt, IsMutual: r.relations[targetUserID][userID].Following}
-			if lastOnline != "" { item.LastOnline = &lastOnline }
+			if lastOnline != "" {
+				item.LastOnline = &lastOnline
+			}
 			item.PresenceStatus = &presence
 			items = append(items, item)
 		}
 	}
-	sort.Slice(items, func(i, j int) bool { if items[i].FollowedAt == items[j].FollowedAt { return items[i].User.UserID < items[j].User.UserID }; return items[i].FollowedAt > items[j].FollowedAt })
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].FollowedAt == items[j].FollowedAt {
+			return items[i].User.UserID < items[j].User.UserID
+		}
+		return items[i].FollowedAt > items[j].FollowedAt
+	})
 	return paginateFollowing(items, limit, cursor), nil
 }
 func (r *InMemoryRepository) ListFollowers(_ context.Context, userID string, limit int, cursor string) (PaginatedFollowers, error) {
-	r.mu.RLock(); defer r.mu.RUnlock()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	items := make([]FollowerItem, 0)
 	for sourceUserID, relationMap := range r.relations {
 		relation := relationMap[userID]
@@ -262,21 +275,30 @@ func (r *InMemoryRepository) ListFollowers(_ context.Context, userID string, lim
 			lastOnline := r.profiles[sourceUserID].LastOnline
 			presence := r.profiles[sourceUserID].PresenceStatus
 			item := FollowerItem{User: UserInfo{UserID: sourceUserID, Nickname: r.nicknameFor(sourceUserID), AvatarURL: r.profiles[sourceUserID].AvatarURL}, FollowedAt: relation.FollowedAt, IsFollowingBack: r.relations[userID][sourceUserID].Following}
-			if lastOnline != "" { item.LastOnline = &lastOnline }
+			if lastOnline != "" {
+				item.LastOnline = &lastOnline
+			}
 			item.PresenceStatus = &presence
 			items = append(items, item)
 		}
 	}
-	sort.Slice(items, func(i, j int) bool { if items[i].FollowedAt == items[j].FollowedAt { return items[i].User.UserID < items[j].User.UserID }; return items[i].FollowedAt > items[j].FollowedAt })
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].FollowedAt == items[j].FollowedAt {
+			return items[i].User.UserID < items[j].User.UserID
+		}
+		return items[i].FollowedAt > items[j].FollowedAt
+	})
 	return paginateFollowers(items, limit, cursor), nil
 }
 func (r *InMemoryRepository) ListGroups(_ context.Context, userID string, limit int, cursor string) (grouptypes.PaginatedGroups, error) {
-	r.mu.RLock(); defer r.mu.RUnlock()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	items := append([]grouptypes.GroupItem(nil), r.groupsByUser[userID]...)
 	return paginateGroups(items, limit, cursor), nil
 }
 func (r *InMemoryRepository) ListMoments(_ context.Context, userID string, limit int, cursor string, includePrivate bool) (momenttypes.PaginatedMoments, error) {
-	r.mu.RLock(); defer r.mu.RUnlock()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	items := append([]momenttypes.MomentItem(nil), r.momentsByUser[userID]...)
 	filtered := make([]momenttypes.MomentItem, 0, len(items))
 	for _, item := range items {
@@ -287,7 +309,8 @@ func (r *InMemoryRepository) ListMoments(_ context.Context, userID string, limit
 	return paginateMoments(filtered, limit, cursor), nil
 }
 func (r *InMemoryRepository) CommonGroupCount(_ context.Context, viewerUserID, targetUserID string) (int, error) {
-	r.mu.RLock(); defer r.mu.RUnlock()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	targetSet := make(map[string]struct{}, len(r.groupsByUser[targetUserID]))
 	for _, item := range r.groupsByUser[targetUserID] {
 		targetSet[item.Group.GroupID] = struct{}{}
@@ -307,7 +330,8 @@ func (r *InMemoryRepository) CommonGroupCount(_ context.Context, viewerUserID, t
 	return count, nil
 }
 func (r *InMemoryRepository) UserExists(_ context.Context, userID string) (bool, error) {
-	r.mu.RLock(); defer r.mu.RUnlock()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	_, ok := r.profiles[userID]
 	return ok, nil
 }
@@ -327,8 +351,18 @@ func (r *InMemoryRepository) nicknameFor(userID string) string {
 }
 
 func nowMemoryRFC3339() string { return time.Now().UTC().Format(time.RFC3339) }
-func maxStringTime(a, b string) string { if a >= b { return a }; return b }
-func maxInt(a, b int) int { if a >= b { return a }; return b }
+func maxStringTime(a, b string) string {
+	if a >= b {
+		return a
+	}
+	return b
+}
+func maxInt(a, b int) int {
+	if a >= b {
+		return a
+	}
+	return b
+}
 func containsFold(items []string, target string) bool {
 	for _, item := range items {
 		if strings.EqualFold(item, target) {
@@ -339,71 +373,133 @@ func containsFold(items []string, target string) bool {
 }
 
 func paginateBlocked(items []BlockedUserItem, limit int, cursor string) PaginatedBlockedUsers {
-	if limit <= 0 { limit = 20 }
+	if limit <= 0 {
+		limit = 20
+	}
 	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].BlockedAt, items[i].User.UserID }, len(items))
-	if !ok { return PaginatedBlockedUsers{} }
+	if !ok {
+		return PaginatedBlockedUsers{}
+	}
 	end := start + limit
-	if end > len(items) { end = len(items) }
+	if end > len(items) {
+		end = len(items)
+	}
 	resp := PaginatedBlockedUsers{Items: items[start:end]}
-	if end < len(items) && end > start { resp.NextCursor = encodeUserMomentCursor(items[end-1].BlockedAt, items[end-1].User.UserID) }
+	if end < len(items) && end > start {
+		resp.NextCursor = encodeUserMomentCursor(items[end-1].BlockedAt, items[end-1].User.UserID)
+	}
 	return resp
 }
 func paginateFriends(items []FriendItem, limit int, cursor string) PaginatedFriends {
-	if limit <= 0 { limit = 20 }
+	if limit <= 0 {
+		limit = 20
+	}
 	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].FollowedBackAt, items[i].User.UserID }, len(items))
-	if !ok { return PaginatedFriends{} }
-	end := start + limit; if end > len(items) { end = len(items) }
+	if !ok {
+		return PaginatedFriends{}
+	}
+	end := start + limit
+	if end > len(items) {
+		end = len(items)
+	}
 	resp := PaginatedFriends{Items: items[start:end]}
-	if end < len(items) && end > start { resp.NextCursor = encodeUserMomentCursor(items[end-1].FollowedBackAt, items[end-1].User.UserID) }
+	if end < len(items) && end > start {
+		resp.NextCursor = encodeUserMomentCursor(items[end-1].FollowedBackAt, items[end-1].User.UserID)
+	}
 	return resp
 }
 func paginateFollowing(items []FollowingItem, limit int, cursor string) PaginatedFollowing {
-	if limit <= 0 { limit = 20 }
+	if limit <= 0 {
+		limit = 20
+	}
 	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].FollowedAt, items[i].User.UserID }, len(items))
-	if !ok { return PaginatedFollowing{} }
-	end := start + limit; if end > len(items) { end = len(items) }
+	if !ok {
+		return PaginatedFollowing{}
+	}
+	end := start + limit
+	if end > len(items) {
+		end = len(items)
+	}
 	resp := PaginatedFollowing{Items: items[start:end]}
-	if end < len(items) && end > start { resp.NextCursor = encodeUserMomentCursor(items[end-1].FollowedAt, items[end-1].User.UserID) }
+	if end < len(items) && end > start {
+		resp.NextCursor = encodeUserMomentCursor(items[end-1].FollowedAt, items[end-1].User.UserID)
+	}
 	return resp
 }
 func paginateFollowers(items []FollowerItem, limit int, cursor string) PaginatedFollowers {
-	if limit <= 0 { limit = 20 }
+	if limit <= 0 {
+		limit = 20
+	}
 	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].FollowedAt, items[i].User.UserID }, len(items))
-	if !ok { return PaginatedFollowers{} }
-	end := start + limit; if end > len(items) { end = len(items) }
+	if !ok {
+		return PaginatedFollowers{}
+	}
+	end := start + limit
+	if end > len(items) {
+		end = len(items)
+	}
 	resp := PaginatedFollowers{Items: items[start:end]}
-	if end < len(items) && end > start { resp.NextCursor = encodeUserMomentCursor(items[end-1].FollowedAt, items[end-1].User.UserID) }
+	if end < len(items) && end > start {
+		resp.NextCursor = encodeUserMomentCursor(items[end-1].FollowedAt, items[end-1].User.UserID)
+	}
 	return resp
 }
 func paginateGroups(items []grouptypes.GroupItem, limit int, cursor string) grouptypes.PaginatedGroups {
-	if limit <= 0 { limit = 20 }
+	if limit <= 0 {
+		limit = 20
+	}
 	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].MyState.JoinedAt, items[i].Group.GroupID }, len(items))
-	if !ok { return grouptypes.PaginatedGroups{} }
-	end := start + limit; if end > len(items) { end = len(items) }
+	if !ok {
+		return grouptypes.PaginatedGroups{}
+	}
+	end := start + limit
+	if end > len(items) {
+		end = len(items)
+	}
 	resp := grouptypes.PaginatedGroups{Items: items[start:end]}
-	if end < len(items) && end > start { resp.NextCursor = encodeUserMomentCursor(items[end-1].MyState.JoinedAt, items[end-1].Group.GroupID) }
+	if end < len(items) && end > start {
+		resp.NextCursor = encodeUserMomentCursor(items[end-1].MyState.JoinedAt, items[end-1].Group.GroupID)
+	}
 	return resp
 }
 func paginateMoments(items []momenttypes.MomentItem, limit int, cursor string) momenttypes.PaginatedMoments {
-	if limit <= 0 { limit = 20 }
+	if limit <= 0 {
+		limit = 20
+	}
 	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].CreatedAt, items[i].MomentID }, len(items))
-	if !ok { return momenttypes.PaginatedMoments{} }
-	end := start + limit; if end > len(items) { end = len(items) }
+	if !ok {
+		return momenttypes.PaginatedMoments{}
+	}
+	end := start + limit
+	if end > len(items) {
+		end = len(items)
+	}
 	resp := momenttypes.PaginatedMoments{Items: items[start:end]}
-	if end < len(items) && end > start { resp.NextCursor = encodeUserMomentCursor(items[end-1].CreatedAt, items[end-1].MomentID) }
+	if end < len(items) && end > start {
+		resp.NextCursor = encodeUserMomentCursor(items[end-1].CreatedAt, items[end-1].MomentID)
+	}
 	return resp
 }
 
 func paginateLikedMoments(items []likedMomentRecord, limit int, cursor string) momenttypes.PaginatedMoments {
-	if limit <= 0 { limit = 20 }
+	if limit <= 0 {
+		limit = 20
+	}
 	start, ok := findUserCursorStart(cursor, func(i int) (string, string) { return items[i].LikedAt, items[i].Moment.MomentID }, len(items))
-	if !ok { return momenttypes.PaginatedMoments{} }
-	end := start + limit; if end > len(items) { end = len(items) }
+	if !ok {
+		return momenttypes.PaginatedMoments{}
+	}
+	end := start + limit
+	if end > len(items) {
+		end = len(items)
+	}
 	resp := momenttypes.PaginatedMoments{Items: make([]momenttypes.MomentItem, 0, end-start)}
 	for _, item := range items[start:end] {
 		resp.Items = append(resp.Items, item.Moment)
 	}
-	if end < len(items) && end > start { resp.NextCursor = encodeUserMomentCursor(items[end-1].LikedAt, items[end-1].Moment.MomentID) }
+	if end < len(items) && end > start {
+		resp.NextCursor = encodeUserMomentCursor(items[end-1].LikedAt, items[end-1].Moment.MomentID)
+	}
 	return resp
 }
 
@@ -438,11 +534,11 @@ type searchProfileCandidate struct {
 }
 
 type searchCursor struct {
-	SortBy         string `json:"sort_by"`
-	UserID         string `json:"user_id"`
-	Distance       int    `json:"distance,omitempty"`
-	CreatedAt      string `json:"created_at,omitempty"`
-	LastOnline     string `json:"last_online,omitempty"`
+	SortBy     string `json:"sort_by"`
+	UserID     string `json:"user_id"`
+	Distance   int    `json:"distance,omitempty"`
+	CreatedAt  string `json:"created_at,omitempty"`
+	LastOnline string `json:"last_online,omitempty"`
 }
 
 func normalizeSearchRadius(radius *int) int {
@@ -607,4 +703,3 @@ func decodeSearchCursor(raw string) (searchCursor, error) {
 	}
 	return decoded, nil
 }
-

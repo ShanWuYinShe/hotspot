@@ -341,7 +341,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		cursorMomentID := args[2].(string)
 		limit := args[3].(int)
 		type favoriteRow struct {
-			moment     MomentItem
+			moment      MomentItem
 			favoritedAt string
 		}
 		favoriteRows := make([]favoriteRow, 0)

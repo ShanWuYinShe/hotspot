@@ -19,8 +19,8 @@ type InMemoryRepository struct {
 	mu        sync.RWMutex
 	moments   map[string]MomentItem
 	byUser    map[string][]string
-	likes     map[string]map[string]likeEntry  // momentID -> userID -> entry
-	favorites map[string]map[string]bool       // userID -> momentID -> favorited
+	likes     map[string]map[string]likeEntry // momentID -> userID -> entry
+	favorites map[string]map[string]bool      // userID -> momentID -> favorited
 }
 
 func NewInMemoryRepository() *InMemoryRepository {

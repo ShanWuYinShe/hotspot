@@ -2,9 +2,9 @@ package admin
 
 import (
 	"context"
+	"fmt"
 	groupsmodule "hotspot/backend-go/internal/modules/groups"
 	usersmodule "hotspot/backend-go/internal/modules/users"
-	"fmt"
 	"sort"
 	"strings"
 	"sync"
@@ -639,9 +639,9 @@ func (r *InMemoryRepository) seedAuditLogs() {
 			TargetID:   "user_alice",
 			TargetName: "Alice",
 			Details: AuditDetails{
-				"type":            string(AuditActionAdminGrant),
-				"target_user_id":  "user_alice",
-				"role_ids":        []string{"role_ops"},
+				"type":                  string(AuditActionAdminGrant),
+				"target_user_id":        "user_alice",
+				"role_ids":              []string{"role_ops"},
 				"grant_all_permissions": false,
 			},
 			IPLocation:    "CN-BJ-Beijing",

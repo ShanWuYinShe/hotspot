@@ -58,7 +58,7 @@ func (m *Module) Mount(r chi.Router) {
 			group.Post("/members/unmute", m.handler.UnmuteMember)
 			group.Post("/members/ban", m.handler.BanMember)
 			group.Post("/members/unban", m.handler.UnbanMember)
-			group.Post("/members/banned/list", m.handler.ListBannedMembers)
+			group.Post("/members/list_banned", m.handler.ListBannedMembers)
 			group.Post("/members/remove_member", m.handler.RemoveMember)
 			group.Post("/announcements/create", m.handler.CreateAnnouncement)
 			group.Post("/announcements/update", m.handler.UpdateAnnouncement)

@@ -3,8 +3,8 @@ package feed
 import (
 	"context"
 
-	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/appconfig"
+	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/slicex"
@@ -15,7 +15,9 @@ type Service struct {
 	appConfig appconfig.Source
 }
 
-func NewService(source appconfig.Source) *Service { return NewServiceWithSource(NewPersistenceRepository(nil), source) }
+func NewService(source appconfig.Source) *Service {
+	return NewServiceWithSource(NewPersistenceRepository(nil), source)
+}
 
 func NewServiceWithRepo(repo Repository) *Service { return NewServiceWithSource(repo, nil) }
 

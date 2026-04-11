@@ -84,13 +84,13 @@ type MyGroupState struct {
 }
 
 type GroupItem struct {
-	Group          GroupInfo          `json:"group"`
-	Description    string             `json:"description,omitempty"`
-	HasPassword    bool               `json:"has_password"`
-	Location       RelativeLocation   `json:"location"`
-	MyState        *MyGroupState      `json:"my_state,omitempty"`
-	FriendsInGroup int                `json:"friends_in_group,omitempty"`
-	LastActivityAt string             `json:"last_activity_at,omitempty"`
+	Group          GroupInfo        `json:"group"`
+	Description    string           `json:"description,omitempty"`
+	HasPassword    bool             `json:"has_password"`
+	Location       RelativeLocation `json:"location"`
+	MyState        *MyGroupState    `json:"my_state,omitempty"`
+	FriendsInGroup int              `json:"friends_in_group,omitempty"`
+	LastActivityAt string           `json:"last_activity_at,omitempty"`
 }
 
 type PaginatedGroups struct {
@@ -108,17 +108,17 @@ type RecommendationContext struct {
 }
 
 type MomentItem struct {
-	MomentID        string                 `json:"moment_id"`
-	Description     string                 `json:"description"`
-	Tags            []string               `json:"tags"`
-	CreatedAt       string                 `json:"created_at"`
-	LikesCount      int                    `json:"likes_count"`
-	CommentsCount   int                    `json:"comments_count"`
-	SharesCount     int                    `json:"shares_count"`
-	User            UserInfo               `json:"user"`
-	Location        RelativeLocation       `json:"location"`
-	MyState         *MyMomentState         `json:"my_state,omitempty"`
-	Recommendation  *RecommendationContext `json:"recommendation,omitempty"`
+	MomentID       string                 `json:"moment_id"`
+	Description    string                 `json:"description"`
+	Tags           []string               `json:"tags"`
+	CreatedAt      string                 `json:"created_at"`
+	LikesCount     int                    `json:"likes_count"`
+	CommentsCount  int                    `json:"comments_count"`
+	SharesCount    int                    `json:"shares_count"`
+	User           UserInfo               `json:"user"`
+	Location       RelativeLocation       `json:"location"`
+	MyState        *MyMomentState         `json:"my_state,omitempty"`
+	Recommendation *RecommendationContext `json:"recommendation,omitempty"`
 }
 
 type PaginatedMoments struct {

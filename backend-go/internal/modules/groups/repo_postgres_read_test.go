@@ -220,7 +220,7 @@ func (b *groupBackendStub) Query(_ context.Context, query string, _ ...any) (per
 
 func TestPostgresRepositoryCreateGetAndSearch(t *testing.T) {
 	backend := &groupBackendStub{
-		rows: [][]any{{"group_1", "Hot Group", "", "desc", false, "南天门", 35.0, 112.0, "open", true, 200}},
+		rows:      [][]any{{"group_1", "Hot Group", "", "desc", false, "南天门", 35.0, 112.0, "open", true, 200}},
 		queryErrs: map[string]error{},
 		queryRow:  groupRowValues{values: []any{"group_1", "Hot Group", "", "desc", false, "南天门", 35.0, 112.0, "open", true, 200}},
 		execErrs:  map[string]error{},

@@ -73,6 +73,7 @@ services:
       APP_HOST: 0.0.0.0
       APP_PORT: 8080
       AUTH_TOKEN_SECRET: test-secret
+      TRUSTED_PROXY_CIDRS: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
       POSTGRES_DSN: postgres://hotspot:hotspot@postgres:5432/hotspot?sslmode=disable
       REDIS_DSN: redis://redis:6379/0
     volumes:
@@ -132,6 +133,7 @@ services:
       APP_HOST: 0.0.0.0
       APP_PORT: 8080
       AUTH_TOKEN_SECRET: test-secret
+      TRUSTED_PROXY_CIDRS: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
       POSTGRES_DSN: postgres://hotspot:hotspot@postgres:5432/hotspot?sslmode=disable
       REDIS_DSN: redis://redis:6379/0
     volumes:

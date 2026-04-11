@@ -31,10 +31,10 @@ type UserInfo struct {
 }
 
 type SocialContext struct {
-	MutualFriendsCount int        `json:"mutual_friends_count"`
+	MutualFriendsCount   int        `json:"mutual_friends_count"`
 	MutualFriendsPreview []UserInfo `json:"mutual_friends_preview,omitempty"`
-	CommonGroupsCount  *int       `json:"common_groups_count,omitempty"`
-	CommonTags         []string   `json:"common_tags,omitempty"`
+	CommonGroupsCount    *int       `json:"common_groups_count,omitempty"`
+	CommonTags           []string   `json:"common_tags,omitempty"`
 }
 
 type UserItem struct {
@@ -78,8 +78,8 @@ type PaginatedUsers struct {
 }
 
 type PaginatedProfiles struct {
-	Items      []MyProfile
-	NextCursor string
+	Items         []MyProfile
+	NextCursor    string
 	InvalidCursor bool
 }
 
@@ -141,11 +141,11 @@ type ListFollowingRequest struct {
 }
 
 type FollowingItem struct {
-	User            UserInfo            `json:"user"`
-	FollowedAt      string              `json:"followed_at"`
-	IsMutual        bool                `json:"is_mutual"`
-	PresenceStatus  *UserPresenceStatus `json:"presence_status,omitempty"`
-	LastOnline      *string             `json:"last_online,omitempty"`
+	User           UserInfo            `json:"user"`
+	FollowedAt     string              `json:"followed_at"`
+	IsMutual       bool                `json:"is_mutual"`
+	PresenceStatus *UserPresenceStatus `json:"presence_status,omitempty"`
+	LastOnline     *string             `json:"last_online,omitempty"`
 }
 
 type PaginatedFollowing struct {
@@ -159,11 +159,11 @@ type ListFollowersRequest struct {
 }
 
 type FollowerItem struct {
-	User             UserInfo            `json:"user"`
-	FollowedAt       string              `json:"followed_at"`
-	IsFollowingBack  bool                `json:"is_following_back"`
-	PresenceStatus   *UserPresenceStatus `json:"presence_status,omitempty"`
-	LastOnline       *string             `json:"last_online,omitempty"`
+	User            UserInfo            `json:"user"`
+	FollowedAt      string              `json:"followed_at"`
+	IsFollowingBack bool                `json:"is_following_back"`
+	PresenceStatus  *UserPresenceStatus `json:"presence_status,omitempty"`
+	LastOnline      *string             `json:"last_online,omitempty"`
 }
 
 type PaginatedFollowers struct {

@@ -143,7 +143,7 @@ func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resp := map[string]any{
-		"items":      items,
+		"items":       items,
 		"next_cursor": nextCursor,
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
@@ -165,7 +165,7 @@ func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resp := map[string]any{
-		"items":      items,
+		"items":       items,
 		"next_cursor": nextCursor,
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
@@ -183,7 +183,7 @@ func (h *Handler) ListMyGroups(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resp := map[string]any{
-		"items":      items,
+		"items":       items,
 		"next_cursor": nextCursor,
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
@@ -323,7 +323,7 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resp := map[string]any{
-		"items":      items,
+		"items":       items,
 		"next_cursor": nextCursor,
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
@@ -419,7 +419,7 @@ func (h *Handler) ListMyApplications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resp := map[string]any{
-		"items":      items,
+		"items":       items,
 		"next_cursor": nextCursor,
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
@@ -454,7 +454,7 @@ func (h *Handler) ListMyInvites(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resp := map[string]any{
-		"items":      items,
+		"items":       items,
 		"next_cursor": nextCursor,
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
@@ -544,7 +544,7 @@ func (h *Handler) ListSentInvites(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resp := map[string]any{
-		"items":      items,
+		"items":       items,
 		"next_cursor": nextCursor,
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))
@@ -699,7 +699,7 @@ func (h *Handler) ListBannedMembers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resp := map[string]any{
-		"items":      items,
+		"items":       items,
 		"next_cursor": nextCursor,
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(resp))

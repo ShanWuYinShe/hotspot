@@ -112,7 +112,7 @@ func TestServiceCanvasReturnsParseErrorForInvalidTimeRange(t *testing.T) {
 
 	_, err := service.Canvas(context.Background(), MapCanvasRequest{
 		Viewport: MapViewport{Bounds: Bounds{North: 0.2, South: 0, East: 0.2, West: 0}},
-		Filter: &MapCanvasFilter{TimeRange: &TimeRangeParams{StartTime: "bad-time"}},
+		Filter:   &MapCanvasFilter{TimeRange: &TimeRangeParams{StartTime: "bad-time"}},
 	})
 	if err == nil {
 		t.Fatal("expected error")

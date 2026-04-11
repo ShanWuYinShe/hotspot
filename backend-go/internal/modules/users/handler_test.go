@@ -45,10 +45,10 @@ func (invalidCursorRepo) PutSettings(context.Context, string, UserSettings) erro
 func (invalidCursorRepo) SearchProfiles(context.Context, SearchUsersRequest) (PaginatedProfiles, error) {
 	return PaginatedProfiles{InvalidCursor: true}, nil
 }
-func (invalidCursorRepo) Follow(context.Context, string, string) error { return nil }
-func (invalidCursorRepo) Unfollow(context.Context, string, string) error { return nil }
-func (invalidCursorRepo) Block(context.Context, string, string, string) error { return nil }
-func (invalidCursorRepo) Unblock(context.Context, string, string) error { return nil }
+func (invalidCursorRepo) Follow(context.Context, string, string) error            { return nil }
+func (invalidCursorRepo) Unfollow(context.Context, string, string) error          { return nil }
+func (invalidCursorRepo) Block(context.Context, string, string, string) error     { return nil }
+func (invalidCursorRepo) Unblock(context.Context, string, string) error           { return nil }
 func (invalidCursorRepo) SetRemark(context.Context, string, string, string) error { return nil }
 func (invalidCursorRepo) ListBlocked(context.Context, string, int, string) (PaginatedBlockedUsers, error) {
 	return PaginatedBlockedUsers{}, nil
@@ -74,7 +74,9 @@ func (invalidCursorRepo) ListGroups(context.Context, string, int, string) (group
 func (invalidCursorRepo) ListMoments(context.Context, string, int, string, bool) (momenttypes.PaginatedMoments, error) {
 	return momenttypes.PaginatedMoments{}, nil
 }
-func (invalidCursorRepo) CommonGroupCount(context.Context, string, string) (int, error) { return 0, nil }
+func (invalidCursorRepo) CommonGroupCount(context.Context, string, string) (int, error) {
+	return 0, nil
+}
 func (invalidCursorRepo) UserExists(context.Context, string) (bool, error) { return false, nil }
 
 func (r *userErrorRepo) GetProfile(context.Context, string) (MyProfile, bool, error) {
@@ -85,14 +87,16 @@ func (r *userErrorRepo) DeleteProfile(context.Context, string) error { return r.
 func (r *userErrorRepo) GetSettings(context.Context, string) (UserSettings, bool, error) {
 	return UserSettings{}, false, r.getSettingsErr
 }
-func (r *userErrorRepo) PutSettings(context.Context, string, UserSettings) error { return r.putSettingsErr }
+func (r *userErrorRepo) PutSettings(context.Context, string, UserSettings) error {
+	return r.putSettingsErr
+}
 func (r *userErrorRepo) SearchProfiles(context.Context, SearchUsersRequest) (PaginatedProfiles, error) {
 	return PaginatedProfiles{}, r.searchErr
 }
-func (r *userErrorRepo) Follow(context.Context, string, string) error   { return r.followErr }
-func (r *userErrorRepo) Unfollow(context.Context, string, string) error { return r.unfollowErr }
+func (r *userErrorRepo) Follow(context.Context, string, string) error        { return r.followErr }
+func (r *userErrorRepo) Unfollow(context.Context, string, string) error      { return r.unfollowErr }
 func (r *userErrorRepo) Block(context.Context, string, string, string) error { return r.blockErr }
-func (r *userErrorRepo) Unblock(context.Context, string, string) error  { return r.unblockErr }
+func (r *userErrorRepo) Unblock(context.Context, string, string) error       { return r.unblockErr }
 func (r *userErrorRepo) SetRemark(context.Context, string, string, string) error {
 	return r.remarkErr
 }
@@ -312,7 +316,7 @@ func TestListLikedMomentsRespectsVisibility(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.ListLikedMoments(rr, req)
 	var resp struct {
-		Code int                     `json:"code"`
+		Code int                          `json:"code"`
 		Data momenttypes.PaginatedMoments `json:"data"`
 	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -349,9 +353,9 @@ func TestSearchCursorIsOpaqueAndTamperProof(t *testing.T) {
 	}
 
 	result, err := repo.SearchProfiles(context.Background(), SearchUsersRequest{
-		Keyword: "Alice",
+		Keyword:        "Alice",
 		ReferencePoint: GeoPoint{Latitude: 35, Longitude: 112},
-		Pagination: &PaginationParams{Limit: 1},
+		Pagination:     &PaginationParams{Limit: 1},
 	})
 	if err != nil {
 		t.Fatalf("search profiles: %v", err)
@@ -370,9 +374,9 @@ func TestSearchCursorIsOpaqueAndTamperProof(t *testing.T) {
 
 	tampered := result.NextCursor[:len(result.NextCursor)-1] + "A"
 	invalid, err := repo.SearchProfiles(context.Background(), SearchUsersRequest{
-		Keyword: "Alice",
+		Keyword:        "Alice",
 		ReferencePoint: GeoPoint{Latitude: 35, Longitude: 112},
-		Pagination: &PaginationParams{Limit: 1, Cursor: tampered},
+		Pagination:     &PaginationParams{Limit: 1, Cursor: tampered},
 	})
 	if err != nil {
 		t.Fatalf("search profiles with tampered cursor: %v", err)
@@ -530,7 +534,9 @@ func TestUsersHandlerReturns10600OnServiceError(t *testing.T) {
 
 func assertUserCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
 	t.Helper()
-	var resp struct { Code int `json:"code"` }
+	var resp struct {
+		Code int `json:"code"`
+	}
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}

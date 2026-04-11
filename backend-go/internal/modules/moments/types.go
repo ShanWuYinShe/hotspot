@@ -53,12 +53,12 @@ type PaginatedMoments struct {
 }
 
 type SearchMomentsRequest struct {
-	Keyword        *string                `json:"keyword,omitempty"`
-	Tag            *string                `json:"tag,omitempty"`
-	Radius         *int                   `json:"radius,omitempty"`
-	SortBy         string                 `json:"sort_by,omitempty"`
-	ReferencePoint GeoPoint               `json:"reference_point"`
-	Pagination     *PaginationParams      `json:"pagination,omitempty"`
+	Keyword        *string           `json:"keyword,omitempty"`
+	Tag            *string           `json:"tag,omitempty"`
+	Radius         *int              `json:"radius,omitempty"`
+	SortBy         string            `json:"sort_by,omitempty"`
+	ReferencePoint GeoPoint          `json:"reference_point"`
+	Pagination     *PaginationParams `json:"pagination,omitempty"`
 }
 
 type GeoPoint struct {
@@ -72,13 +72,13 @@ type PaginationParams struct {
 }
 
 type EditMomentRequest struct {
-	MomentID      string   `json:"moment_id"`
-	Description   *string  `json:"description,omitempty"`
-	Location      *Location `json:"location,omitempty"`
-	PrivacyLevel  *string  `json:"privacy_level,omitempty"`
-	Tags          []string `json:"tags,omitempty"`
-	ImageFileIDs  []string `json:"image_file_ids,omitempty"`
-	Mentions      []string `json:"mentions,omitempty"`
+	MomentID     string    `json:"moment_id"`
+	Description  *string   `json:"description,omitempty"`
+	Location     *Location `json:"location,omitempty"`
+	PrivacyLevel *string   `json:"privacy_level,omitempty"`
+	Tags         []string  `json:"tags,omitempty"`
+	ImageFileIDs []string  `json:"image_file_ids,omitempty"`
+	Mentions     []string  `json:"mentions,omitempty"`
 }
 
 type DeleteMomentRequest struct {
@@ -102,15 +102,15 @@ type UnfavoriteMomentRequest struct {
 }
 
 type ListLikesRequest struct {
-	MomentID   string           `json:"moment_id"`
+	MomentID   string            `json:"moment_id"`
 	Pagination *PaginationParams `json:"pagination,omitempty"`
 }
 
 type LikeItem struct {
-	UserID    string   `json:"user_id"`
-	Nickname  string   `json:"nickname"`
-	AvatarURL string   `json:"avatar_url,omitempty"`
-	LikedAt   string   `json:"liked_at"`
+	UserID    string `json:"user_id"`
+	Nickname  string `json:"nickname"`
+	AvatarURL string `json:"avatar_url,omitempty"`
+	LikedAt   string `json:"liked_at"`
 }
 
 type PaginatedLikes struct {

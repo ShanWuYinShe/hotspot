@@ -13,10 +13,10 @@ import (
 )
 
 type notificationErrorRepo struct {
-	listErr      error
-	unreadErr    error
-	markReadErr  error
-	markAllErr   error
+	listErr     error
+	unreadErr   error
+	markReadErr error
+	markAllErr  error
 }
 
 func (r *notificationErrorRepo) List(context.Context, string, NotificationListRequest) (PaginatedNotifications, error) {

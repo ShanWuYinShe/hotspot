@@ -16,9 +16,9 @@ type likeEntry struct {
 
 type InMemoryRepository struct {
 	mu       sync.RWMutex
-	comments map[string][]CommentItem // momentID -> comments
-	byID     map[string]CommentItem   // commentID -> item
-	byParent map[string][]string      // parentID -> child commentIDs
+	comments map[string][]CommentItem        // momentID -> comments
+	byID     map[string]CommentItem          // commentID -> item
+	byParent map[string][]string             // parentID -> child commentIDs
 	likes    map[string]map[string]likeEntry // commentID -> userID -> entry
 }
 

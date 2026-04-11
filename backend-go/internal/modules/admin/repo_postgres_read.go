@@ -2,10 +2,10 @@ package admin
 
 import (
 	"context"
-	groupsmodule "hotspot/backend-go/internal/modules/groups"
-	usersmodule "hotspot/backend-go/internal/modules/users"
 	"encoding/json"
 	"errors"
+	groupsmodule "hotspot/backend-go/internal/modules/groups"
+	usersmodule "hotspot/backend-go/internal/modules/users"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -262,7 +262,6 @@ type adminUserRow struct {
 	Phone             string
 }
 
-
 type adminGroupRow struct {
 	GroupID        string
 	Name           string
@@ -283,28 +282,26 @@ type adminGroupRow struct {
 	LastActivityAt time.Time
 }
 
-
 type adminReportRow struct {
-	ReportID          string
-	TargetType        string
-	TargetID          string
-	Reason            string
-	Description       string
-	Status            string
-	CreatedAt         time.Time
-	HandledAt         *time.Time
-	ReporterUserID    string
-	ReporterNickname  string
-	ReporterAvatarURL string
-	HandledByUserID   string
-	HandledByNickname string
-	HandledByAvatar   string
-	HandleNote        string
-	TargetUserID      string
+	ReportID           string
+	TargetType         string
+	TargetID           string
+	Reason             string
+	Description        string
+	Status             string
+	CreatedAt          time.Time
+	HandledAt          *time.Time
+	ReporterUserID     string
+	ReporterNickname   string
+	ReporterAvatarURL  string
+	HandledByUserID    string
+	HandledByNickname  string
+	HandledByAvatar    string
+	HandleNote         string
+	TargetUserID       string
 	TargetUserNickname string
-	TargetUserAvatar  string
+	TargetUserAvatar   string
 }
-
 
 func scanAdminUserRow(row persistence.Row) (AdminUserItem, error) {
 	var record adminUserRow
@@ -332,25 +329,24 @@ func scanAdminUserRow(row persistence.Row) (AdminUserItem, error) {
 		return AdminUserItem{}, err
 	}
 	return AdminUserItem{
-		User: usersmodule.UserInfo{UserID: record.UserID, Nickname: record.Nickname, AvatarURL: record.AvatarURL},
-		Bio:            record.Bio,
-		PresenceStatus: usersmodule.UserPresenceStatus(record.PresenceStatus),
-		LastOnline:     record.LastOnline.UTC().Format(time.RFC3339),
-		Location: &usersmodule.RelativeLocation{Point: usersmodule.GeoPoint{Latitude: record.Latitude, Longitude: record.Longitude}, LocationName: record.LocationName},
-		Relation:       usersmodule.RelationshipNone,
-		Status:         UserAccountStatus(record.Status),
-		CreatedAt:      record.CreatedAt.UTC().Format(time.RFC3339),
-		LastActiveAt:   record.LastOnline.UTC().Format(time.RFC3339),
-		LoginID:        record.LoginID,
-		RegisterIP:     record.RegisterIP,
-		RegisterLocation: record.RegisterLocation,
-		LastLoginIP:    record.LastLoginIP,
+		User:              usersmodule.UserInfo{UserID: record.UserID, Nickname: record.Nickname, AvatarURL: record.AvatarURL},
+		Bio:               record.Bio,
+		PresenceStatus:    usersmodule.UserPresenceStatus(record.PresenceStatus),
+		LastOnline:        record.LastOnline.UTC().Format(time.RFC3339),
+		Location:          &usersmodule.RelativeLocation{Point: usersmodule.GeoPoint{Latitude: record.Latitude, Longitude: record.Longitude}, LocationName: record.LocationName},
+		Relation:          usersmodule.RelationshipNone,
+		Status:            UserAccountStatus(record.Status),
+		CreatedAt:         record.CreatedAt.UTC().Format(time.RFC3339),
+		LastActiveAt:      record.LastOnline.UTC().Format(time.RFC3339),
+		LoginID:           record.LoginID,
+		RegisterIP:        record.RegisterIP,
+		RegisterLocation:  record.RegisterLocation,
+		LastLoginIP:       record.LastLoginIP,
 		LastLoginLocation: record.LastLoginLocation,
-		Email:          record.Email,
-		Phone:          record.Phone,
+		Email:             record.Email,
+		Phone:             record.Phone,
 	}, nil
 }
-
 
 func scanAdminGroupRow(row persistence.Row) (AdminGroupItem, error) {
 	var record adminGroupRow
@@ -376,7 +372,7 @@ func scanAdminGroupRow(row persistence.Row) (AdminGroupItem, error) {
 		return AdminGroupItem{}, err
 	}
 	return AdminGroupItem{
-		Group: groupsmodule.GroupInfo{GroupID: record.GroupID, Name: record.Name, AvatarURL: record.AvatarURL, MembersCount: record.MembersCount},
+		Group:       groupsmodule.GroupInfo{GroupID: record.GroupID, Name: record.Name, AvatarURL: record.AvatarURL, MembersCount: record.MembersCount},
 		Description: record.Description,
 		HasPassword: record.HasPassword,
 		Location: groupsmodule.Location{Point: struct {
@@ -391,7 +387,6 @@ func scanAdminGroupRow(row persistence.Row) (AdminGroupItem, error) {
 		LastActivityAt: record.LastActivityAt.UTC().Format(time.RFC3339),
 	}, nil
 }
-
 
 func scanAdminReportRow(row persistence.Row, withTargetUser bool) (reportHandleRecord, error) {
 	var record adminReportRow
@@ -463,4 +458,3 @@ func scanAdminReportRow(row persistence.Row, withTargetUser bool) (reportHandleR
 	}
 	return result, nil
 }
-

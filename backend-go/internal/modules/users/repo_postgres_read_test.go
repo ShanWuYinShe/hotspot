@@ -182,13 +182,13 @@ func (b *userBackendStub) Query(_ context.Context, query string, _ ...any) (pers
 }
 
 type userMomentCursorBackend struct {
-	firstPage [][]any
+	firstPage  [][]any
 	secondPage [][]any
-	tags [][]any
+	tags       [][]any
 }
 
-func (b *userMomentCursorBackend) Ping(context.Context) error { return nil }
-func (b *userMomentCursorBackend) Close() error               { return nil }
+func (b *userMomentCursorBackend) Ping(context.Context) error                 { return nil }
+func (b *userMomentCursorBackend) Close() error                               { return nil }
 func (b *userMomentCursorBackend) Exec(context.Context, string, ...any) error { return nil }
 func (b *userMomentCursorBackend) QueryRow(context.Context, string, ...any) persistence.Row {
 	return userRowValues{err: persistence.ErrNotImplemented}
@@ -213,12 +213,12 @@ func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 			queryGetUserProfile:  userRowValues{values: []any{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC)}},
 			queryGetUserSettings: userRowValues{values: []any{"public", true, true, true, true, true, true, true, "everyone", true, false, true, true}},
 			queryGetUserRelation: userRowValues{values: []any{true, false, "buddy", time.Date(2026, 3, 18, 0, 0, 0, 0, time.UTC), nil, ""}},
-			queryCountUserStats: userRowValues{values: []any{2, 1, 3, 4, 5}},
+			queryCountUserStats:  userRowValues{values: []any{2, 1, 3, 4, 5}},
 		},
 		queryRowsByQuery: map[string][][]any{
-			querySearchUserProfiles: {{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC)}},
-			queryListBlockedUsers:  {{"user_bob", time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC), "buddy"}},
-			queryListLikedMoments:  {{"moment_1", "user_alice", "hello", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), 3, 2, 1, "南天门", 35.0, 112.0, "public", time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC)}},
+			querySearchUserProfiles:                  {{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC)}},
+			queryListBlockedUsers:                    {{"user_bob", time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC), "buddy"}},
+			queryListLikedMoments:                    {{"moment_1", "user_alice", "hello", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), 3, 2, 1, "南天门", 35.0, 112.0, "public", time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC)}},
 			momenttypesQueryListMomentTagsByMomentID: {{"travel"}, {"hotspot"}},
 		},
 		queryErrs: map[string]error{},

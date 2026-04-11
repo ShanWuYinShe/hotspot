@@ -1,12 +1,14 @@
 package requestmeta
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
+	"sync/atomic"
 )
 
-var cloudflareCIDRs = mustParseCIDRs([]string{
+var defaultTrustedProxyCIDRs = mustParseCIDRs([]string{
 	"173.245.48.0/20",
 	"103.21.244.0/22",
 	"103.22.200.0/22",
@@ -31,81 +33,135 @@ var cloudflareCIDRs = mustParseCIDRs([]string{
 	"2c0f:f248::/32",
 })
 
+var trustedProxyCIDRs atomic.Value
+
+func init() {
+	trustedProxyCIDRs.Store(cloneCIDRs(defaultTrustedProxyCIDRs))
+}
+
+func InitTrustedProxies(raw string) error {
+	cidrs := cloneCIDRs(defaultTrustedProxyCIDRs)
+	extra, err := parseCIDRList(raw)
+	if err != nil {
+		return err
+	}
+	cidrs = append(cidrs, extra...)
+	trustedProxyCIDRs.Store(cidrs)
+	return nil
+}
+
 func ClientIP(req *http.Request) string {
 	if req == nil {
 		return ""
 	}
-	remoteIP := remoteAddrIP(req.RemoteAddr)
-	if !isCloudflareRemote(remoteIP) {
+	remoteIP, remoteParsed := remoteAddrIP(req.RemoteAddr)
+	if remoteIP == "" || !isTrustedProxyRemote(remoteParsed) {
 		return remoteIP
 	}
-	if ip := parseIP(strings.TrimSpace(req.Header.Get("CF-Connecting-IP"))); ip != "" {
+	if ip := headerIP(req.Header.Get("CF-Connecting-IP")); ip != "" {
 		return ip
 	}
-	if ip := parseIP(strings.TrimSpace(req.Header.Get("X-Real-IP"))); ip != "" {
+	if ip := headerIP(req.Header.Get("X-Real-IP")); ip != "" {
 		return ip
 	}
-	if forwarded := strings.TrimSpace(req.Header.Get("X-Forwarded-For")); forwarded != "" {
-		parts := strings.Split(forwarded, ",")
-		for _, part := range parts {
-			ip := parseIP(strings.TrimSpace(part))
-			if ip == "" || isPrivateIP(ip) {
-				continue
-			}
-			return ip
-		}
+	if ip := forwardedIP(req.Header.Get("X-Forwarded-For")); ip != "" {
+		return ip
 	}
 	return remoteIP
 }
 
-func remoteAddrIP(remoteAddr string) string {
+func remoteAddrIP(remoteAddr string) (string, net.IP) {
 	host, _, err := net.SplitHostPort(strings.TrimSpace(remoteAddr))
 	if err == nil {
-		return parseIP(host)
+		return normalizedIP(host)
 	}
-	return parseIP(strings.TrimSpace(remoteAddr))
+	return normalizedIP(remoteAddr)
 }
 
-func parseIP(raw string) string {
+func headerIP(raw string) string {
+	ip, _ := normalizedIP(raw)
+	return ip
+}
+
+func forwardedIP(raw string) string {
+	for _, part := range strings.Split(strings.TrimSpace(raw), ",") {
+		ip, parsed := normalizedIP(part)
+		if ip == "" || isPrivateIP(parsed) {
+			continue
+		}
+		return ip
+	}
+	return ""
+}
+
+func normalizedIP(raw string) (string, net.IP) {
 	parsed := net.ParseIP(strings.TrimSpace(raw))
 	if parsed == nil {
-		return ""
+		return "", nil
 	}
-	return parsed.String()
+	return parsed.String(), parsed
 }
 
-func isCloudflareRemote(ip string) bool {
-	if ip == "" {
+func isTrustedProxyRemote(ip net.IP) bool {
+	if ip == nil {
 		return false
 	}
-	parsed := net.ParseIP(ip)
-	if parsed == nil {
-		return false
-	}
-	for _, cidr := range cloudflareCIDRs {
-		if cidr.Contains(parsed) {
+	for _, cidr := range currentTrustedProxyCIDRs() {
+		if cidr.Contains(ip) {
 			return true
 		}
 	}
 	return false
 }
 
-func isPrivateIP(ip string) bool {
-	parsed := net.ParseIP(ip)
-	if parsed == nil {
+func isPrivateIP(ip net.IP) bool {
+	if ip == nil {
 		return false
 	}
-	return parsed.IsLoopback() || parsed.IsPrivate() || parsed.IsLinkLocalUnicast() || parsed.IsLinkLocalMulticast()
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast()
+}
+
+func currentTrustedProxyCIDRs() []*net.IPNet {
+	cidrs, _ := trustedProxyCIDRs.Load().([]*net.IPNet)
+	return cidrs
 }
 
 func mustParseCIDRs(raw []string) []*net.IPNet {
+	cidrs, err := parseCIDRs(raw)
+	if err != nil {
+		panic(err)
+	}
+	return cidrs
+}
+
+func parseCIDRList(raw string) ([]*net.IPNet, error) {
+	parts := strings.FieldsFunc(raw, func(r rune) bool {
+		return r == ',' || r == ';' || r == '\n' || r == '\r' || r == '\t' || r == ' '
+	})
+	return parseCIDRs(parts)
+}
+
+func parseCIDRs(raw []string) ([]*net.IPNet, error) {
 	cidrs := make([]*net.IPNet, 0, len(raw))
 	for _, item := range raw {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
 		_, network, err := net.ParseCIDR(item)
 		if err != nil {
-			panic(err)
+			return nil, fmt.Errorf("parse trusted proxy cidr %q: %w", item, err)
 		}
 		cidrs = append(cidrs, network)
 	}
-	return cidrs
+	return cidrs, nil
+}
+
+func cloneCIDRs(src []*net.IPNet) []*net.IPNet {
+	if len(src) == 0 {
+		return nil
+	}
+	cloned := make([]*net.IPNet, len(src))
+	copy(cloned, src)
+	return cloned
 }

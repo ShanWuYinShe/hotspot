@@ -3,6 +3,8 @@ package observability
 import (
 	"net/http"
 	"time"
+
+	"hotspot/backend-go/internal/platform/requestmeta"
 )
 
 type responseCapture struct {
@@ -38,7 +40,7 @@ func RequestLoggerMiddleware(logger *Logger) func(http.Handler) http.Handler {
 				"status", rc.status,
 				"latency_ms", elapsed.Milliseconds(),
 				"request_id", requestID,
-				"client_ip", clientIP(r),
+				"client_ip", requestmeta.ClientIP(r),
 				"bytes", rc.bytes,
 			}
 
@@ -52,14 +54,4 @@ func RequestLoggerMiddleware(logger *Logger) func(http.Handler) http.Handler {
 			}
 		})
 	}
-}
-
-func clientIP(r *http.Request) string {
-	if ip := r.Header.Get("X-Forwarded-For"); ip != "" {
-		return ip
-	}
-	if ip := r.Header.Get("X-Real-Ip"); ip != "" {
-		return ip
-	}
-	return r.RemoteAddr
 }

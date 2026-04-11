@@ -28,6 +28,7 @@ func TestConfigCarriesDatasourceValues(t *testing.T) {
 func TestLoadLeavesPostgresDSNEmptyWhenUnset(t *testing.T) {
 	oldPostgres := os.Getenv("POSTGRES_DSN")
 	oldRedis := os.Getenv("REDIS_DSN")
+	oldTrustedProxyCIDRs := os.Getenv("TRUSTED_PROXY_CIDRS")
 	defer func() {
 		if oldPostgres == "" {
 			_ = os.Unsetenv("POSTGRES_DSN")
@@ -39,10 +40,16 @@ func TestLoadLeavesPostgresDSNEmptyWhenUnset(t *testing.T) {
 		} else {
 			_ = os.Setenv("REDIS_DSN", oldRedis)
 		}
+		if oldTrustedProxyCIDRs == "" {
+			_ = os.Unsetenv("TRUSTED_PROXY_CIDRS")
+		} else {
+			_ = os.Setenv("TRUSTED_PROXY_CIDRS", oldTrustedProxyCIDRs)
+		}
 	}()
 
 	_ = os.Unsetenv("POSTGRES_DSN")
 	_ = os.Unsetenv("REDIS_DSN")
+	_ = os.Unsetenv("TRUSTED_PROXY_CIDRS")
 
 	cfg := Load()
 	if cfg.PostgresDSN != "" {
@@ -50,5 +57,25 @@ func TestLoadLeavesPostgresDSNEmptyWhenUnset(t *testing.T) {
 	}
 	if cfg.RedisDSN != "" {
 		t.Fatalf("expected empty redis dsn, got %q", cfg.RedisDSN)
+	}
+	if cfg.TrustedProxyCIDRs != "" {
+		t.Fatalf("expected empty trusted proxy cidrs, got %q", cfg.TrustedProxyCIDRs)
+	}
+}
+
+func TestLoadCarriesTrustedProxyCIDRs(t *testing.T) {
+	oldValue := os.Getenv("TRUSTED_PROXY_CIDRS")
+	defer func() {
+		if oldValue == "" {
+			_ = os.Unsetenv("TRUSTED_PROXY_CIDRS")
+		} else {
+			_ = os.Setenv("TRUSTED_PROXY_CIDRS", oldValue)
+		}
+	}()
+
+	_ = os.Setenv("TRUSTED_PROXY_CIDRS", "10.0.0.0/8,192.168.0.0/16")
+	cfg := Load()
+	if cfg.TrustedProxyCIDRs != "10.0.0.0/8,192.168.0.0/16" {
+		t.Fatalf("unexpected trusted proxy cidrs: %q", cfg.TrustedProxyCIDRs)
 	}
 }

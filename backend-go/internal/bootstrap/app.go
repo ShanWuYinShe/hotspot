@@ -15,6 +15,7 @@ import (
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/realtime"
+	"hotspot/backend-go/internal/platform/requestmeta"
 	"hotspot/backend-go/internal/platform/resourceguard"
 	"hotspot/backend-go/migrations"
 )
@@ -28,6 +29,9 @@ type App struct {
 }
 
 func NewApp(cfg config.Config) (*App, error) {
+	if err := requestmeta.InitTrustedProxies(cfg.TrustedProxyCIDRs); err != nil {
+		return nil, err
+	}
 	logger, err := observability.NewLogger(cfg.AppEnv, cfg.LogLevel)
 	if err != nil {
 		return nil, err

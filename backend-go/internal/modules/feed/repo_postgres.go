@@ -165,7 +165,7 @@ func (r *PostgresRepository) loadUserCandidates(ctx context.Context, queryable p
 				Distance:       distance,
 				BearingDegrees: bearing,
 			},
-			Relation: &UserRelation{IsFollowing: isFollowing, IsFollowedBy: isFollowedBy, IsBlocked: false},
+			Relation:      &UserRelation{IsFollowing: isFollowing, IsFollowedBy: isFollowedBy, IsBlocked: false},
 			SocialContext: &UserSocialContext{MutualFriendsCount: mutualFriendsCount, CommonGroupsCount: commonGroupsCount},
 		}
 		items = append(items, userCandidate{Item: item, Distance: distance})
@@ -199,7 +199,7 @@ func (r *PostgresRepository) loadGroupCandidates(ctx context.Context, queryable 
 			continue
 		}
 		item := GroupItem{
-			Group: GroupInfo{GroupID: groupID, Name: name, AvatarURL: avatarURL, MembersCount: membersCount},
+			Group:          GroupInfo{GroupID: groupID, Name: name, AvatarURL: avatarURL, MembersCount: membersCount},
 			Description:    strings.TrimSpace(description),
 			HasPassword:    hasPassword,
 			Location:       RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName, Distance: distance, BearingDegrees: bearing},
@@ -396,15 +396,15 @@ func loadTrendingMoments(ctx context.Context, queryable persistence.QueryableDB,
 			return nil, err
 		}
 		item := MomentItem{
-			MomentID:      momentID,
-			Description:   description,
-			CreatedAt:     createdAt.UTC().Format(time.RFC3339),
-			LikesCount:    likesCount,
-			CommentsCount: commentsCount,
-			SharesCount:   sharesCount,
-			User:          UserInfo{UserID: userID, Nickname: nickname, AvatarURL: avatarURL},
-			Location:      RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName},
-			MyState:       &MyMomentState{IsLiked: isLiked, IsFavorited: isFavorited},
+			MomentID:       momentID,
+			Description:    description,
+			CreatedAt:      createdAt.UTC().Format(time.RFC3339),
+			LikesCount:     likesCount,
+			CommentsCount:  commentsCount,
+			SharesCount:    sharesCount,
+			User:           UserInfo{UserID: userID, Nickname: nickname, AvatarURL: avatarURL},
+			Location:       RelativeLocation{Point: GeoPoint{Latitude: latitude, Longitude: longitude}, LocationName: locationName},
+			MyState:        &MyMomentState{IsLiked: isLiked, IsFavorited: isFavorited},
 			Recommendation: &RecommendationContext{Type: "trending"},
 		}
 		items = append(items, momentCandidate{Item: item, Score: likesCount + commentsCount + sharesCount, CreatedAt: createdAt.UTC()})
