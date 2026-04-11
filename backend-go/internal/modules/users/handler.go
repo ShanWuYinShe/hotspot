@@ -75,18 +75,30 @@ func (h *Handler) writeServiceError(w http.ResponseWriter, r *http.Request, meth
 		"error", err,
 		"request_id", observability.RequestIDFromContext(r.Context()),
 	)
+	apiErr := apiErrorFromService(err)
+	httpx.WriteJSON(w, http.StatusOK, httpx.Error(apiErr.Code, apiErr.Message))
+}
+
+func apiErrorFromService(err error) *httpx.APIError {
 	switch {
 	case errors.Is(err, ErrUnauthorized):
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10100, "认证失败"))
+		return &httpx.APIError{Code: 10100, Message: "认证失败"}
 	case errors.Is(err, ErrPermissionDenied):
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
+		return &httpx.APIError{Code: 10200, Message: "权限不足"}
 	case errors.Is(err, ErrUserNotFound):
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "用户不存在"))
+		return &httpx.APIError{Code: 10300, Message: "用户不存在"}
 	case errors.Is(err, ErrConflict):
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "业务冲突"))
+		return &httpx.APIError{Code: 10400, Message: "业务冲突"}
 	case errors.Is(err, ErrInvalidCursor):
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "分页游标无效"))
+		return &httpx.APIError{Code: 10000, Message: "分页游标无效"}
+	case errors.Is(err, ErrContactChangeUnavailable):
+		return &httpx.APIError{Code: 10600, Message: "服务暂时不可用"}
 	default:
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
+		return &httpx.APIError{Code: 10600, Message: "服务暂时不可用"}
 	}
+}
+
+func errorResponse[T any](err error) httpx.ApiResponse[T] {
+	apiErr := apiErrorFromService(err)
+	return httpx.ApiResponse[T]{Code: apiErr.Code, Message: apiErr.Message}
 }

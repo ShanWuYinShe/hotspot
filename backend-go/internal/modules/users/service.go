@@ -79,6 +79,36 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateProfileRequest)
 	return nil
 }
 
+func (s *Service) RequestEmailChange(ctx context.Context, req RequestEmailChangeRequest) (VerificationSent, error) {
+	if err := s.contactChangeUnavailable(ctx, "users.request_email_change unavailable"); err != nil {
+		return VerificationSent{}, err
+	}
+	return VerificationSent{}, nil
+}
+
+func (s *Service) ConfirmEmailChange(ctx context.Context, req ConfirmEmailChangeRequest) error {
+	return s.contactChangeUnavailable(ctx, "users.confirm_email_change unavailable")
+}
+
+func (s *Service) RequestPhoneChange(ctx context.Context, req RequestPhoneChangeRequest) (VerificationSent, error) {
+	if err := s.contactChangeUnavailable(ctx, "users.request_phone_change unavailable"); err != nil {
+		return VerificationSent{}, err
+	}
+	return VerificationSent{}, nil
+}
+
+func (s *Service) ConfirmPhoneChange(ctx context.Context, req ConfirmPhoneChangeRequest) error {
+	return s.contactChangeUnavailable(ctx, "users.confirm_phone_change unavailable")
+}
+
+func (s *Service) contactChangeUnavailable(ctx context.Context, message string) error {
+	if _, err := requirePrincipal(ctx); err != nil {
+		return err
+	}
+	observability.L().Warn(message)
+	return ErrContactChangeUnavailable
+}
+
 func (s *Service) GetMySettings(ctx context.Context) (UserSettings, error) {
 	startedAt := time.Now()
 	observability.L().Info("users.get_my_settings started")

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/httpx"
+	"hotspot/backend-go/internal/platform/idempotency"
 )
 
 func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
@@ -58,6 +59,96 @@ func (h *Handler) UpdateLocation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
+}
+
+func (h *Handler) RequestEmailChange(w http.ResponseWriter, r *http.Request) {
+	if err := idempotency.RequireKey(r); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		return
+	}
+	var req RequestEmailChangeRequest
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		return
+	}
+	if req.NewEmail == "" || req.Password == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	idempotency.ReplayOrStore(w, r, "users/me/email/request_change", func() httpx.ApiResponse[VerificationSent] {
+		result, err := h.service.RequestEmailChange(r.Context(), req)
+		if err != nil {
+			return errorResponse[VerificationSent](err)
+		}
+		return httpx.Success(result)
+	})
+}
+
+func (h *Handler) ConfirmEmailChange(w http.ResponseWriter, r *http.Request) {
+	if err := idempotency.RequireKey(r); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		return
+	}
+	var req ConfirmEmailChangeRequest
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		return
+	}
+	if req.NewEmail == "" || req.VerificationCode == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	idempotency.ReplayOrStore(w, r, "users/me/email/confirm_change", func() httpx.ApiResponse[struct{}] {
+		if err := h.service.ConfirmEmailChange(r.Context(), req); err != nil {
+			return errorResponse[struct{}](err)
+		}
+		return httpx.SuccessEmpty()
+	})
+}
+
+func (h *Handler) RequestPhoneChange(w http.ResponseWriter, r *http.Request) {
+	if err := idempotency.RequireKey(r); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		return
+	}
+	var req RequestPhoneChangeRequest
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		return
+	}
+	if req.NewPhone == "" || req.Password == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	idempotency.ReplayOrStore(w, r, "users/me/phone/request_change", func() httpx.ApiResponse[VerificationSent] {
+		result, err := h.service.RequestPhoneChange(r.Context(), req)
+		if err != nil {
+			return errorResponse[VerificationSent](err)
+		}
+		return httpx.Success(result)
+	})
+}
+
+func (h *Handler) ConfirmPhoneChange(w http.ResponseWriter, r *http.Request) {
+	if err := idempotency.RequireKey(r); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		return
+	}
+	var req ConfirmPhoneChangeRequest
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
+		return
+	}
+	if req.NewPhone == "" || req.VerificationCode == "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
+	idempotency.ReplayOrStore(w, r, "users/me/phone/confirm_change", func() httpx.ApiResponse[struct{}] {
+		if err := h.service.ConfirmPhoneChange(r.Context(), req); err != nil {
+			return errorResponse[struct{}](err)
+		}
+		return httpx.SuccessEmpty()
+	})
 }
 
 func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
