@@ -17,8 +17,15 @@ type notificationErrorRepo struct {
 	unreadErr   error
 	markReadErr error
 	markAllErr  error
+	appendErr   error
 }
 
+func (r *notificationErrorRepo) Append(context.Context, string, NotificationItem) error {
+	return r.appendErr
+}
+func (r *notificationErrorRepo) AppendMany(context.Context, []string, NotificationItem) error {
+	return r.appendErr
+}
 func (r *notificationErrorRepo) List(context.Context, string, NotificationListRequest) (PaginatedNotifications, error) {
 	return PaginatedNotifications{}, r.listErr
 }

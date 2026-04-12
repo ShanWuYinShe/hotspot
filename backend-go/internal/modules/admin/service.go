@@ -24,6 +24,7 @@ type Service struct {
 }
 
 type announcementPushService interface {
+	AppendSystemAnnouncement(ctx context.Context, userIDs []string, item systemmodule.SystemAnnouncementItem) error
 	PushSystemAnnouncement(item systemmodule.SystemAnnouncementItem)
 }
 
@@ -821,8 +822,24 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncement
 	if err != nil {
 		return AnnouncementCreated{}, nil, err
 	}
-	if req.SendPush && s.pushService != nil {
-		s.pushService.PushSystemAnnouncement(item.PublicItem())
+	if s.pushService != nil {
+		usersPage, searchErr := s.repo.SearchUsers(ctx, AdminUserSearchRequest{Pagination: &PaginationParams{Limit: 1000}})
+		if searchErr != nil {
+			return AnnouncementCreated{}, nil, searchErr
+		}
+		userIDs := make([]string, 0, len(usersPage.Items))
+		for _, user := range usersPage.Items {
+			if user.User.UserID == "" {
+				continue
+			}
+			userIDs = append(userIDs, user.User.UserID)
+		}
+		if err := s.pushService.AppendSystemAnnouncement(ctx, userIDs, item.PublicItem()); err != nil {
+			return AnnouncementCreated{}, nil, err
+		}
+		if req.SendPush {
+			s.pushService.PushSystemAnnouncement(item.PublicItem())
+		}
 	}
 	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionAnnouncementCreate, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.UserID}, TargetType: AuditTargetTypeAnnouncement, TargetID: item.AnnouncementID, TargetName: title, Details: AuditDetails{"type": string(AuditActionAnnouncementCreate), "title": title}}); err != nil {
 		return AnnouncementCreated{}, nil, err

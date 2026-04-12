@@ -16,6 +16,14 @@ func NewPersistenceRepository(factory *persistence.Factory) *PersistenceReposito
 	return &PersistenceRepository{impl: NewPostgresRepository(factory, nil)}
 }
 
+func (r *PersistenceRepository) Append(ctx context.Context, userID string, item NotificationItem) error {
+	return r.impl.Append(ctx, userID, item)
+}
+
+func (r *PersistenceRepository) AppendMany(ctx context.Context, userIDs []string, item NotificationItem) error {
+	return r.impl.AppendMany(ctx, userIDs, item)
+}
+
 func (r *PersistenceRepository) List(ctx context.Context, userID string, req NotificationListRequest) (PaginatedNotifications, error) {
 	return r.impl.List(ctx, userID, req)
 }

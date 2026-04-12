@@ -7,16 +7,29 @@ import (
 
 	grouptypes "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
+	"hotspot/backend-go/internal/modules/notifications"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
-type Service struct{ repo Repository }
+type Service struct {
+	repo          Repository
+	notifications userNotificationWriter
+}
 
-func NewService() *Service                        { return NewServiceWithRepo(NewInMemoryRepository()) }
-func NewServiceWithRepo(repo Repository) *Service { return &Service{repo: repo} }
+type userNotificationWriter interface {
+	AppendNewFollower(ctx context.Context, targetUserID string, actor map[string]any) error
+}
+
+func NewService() *Service { return NewServiceWithDeps(NewInMemoryRepository(), notifications.NewService()) }
+
+func NewServiceWithRepo(repo Repository) *Service { return NewServiceWithDeps(repo, nil) }
+
+func NewServiceWithDeps(repo Repository, notificationWriter userNotificationWriter) *Service {
+	return &Service{repo: repo, notifications: notificationWriter}
+}
 
 func (s *Service) GetMyProfile(ctx context.Context) (MyProfile, error) {
 	startedAt := time.Now()
@@ -334,7 +347,14 @@ func (s *Service) Follow(ctx context.Context, targetUserID string) error {
 		observability.L().Error("users.follow failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
 	}
-	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: "NewFollower", Payload: map[string]any{"actor": map[string]any{"user_id": principal.UserID, "nickname": principal.UserID}, "followed_at": time.Now().UTC().Format(time.RFC3339)}})
+	actor := map[string]any{"user_id": principal.UserID, "nickname": principal.UserID}
+	if s.notifications != nil {
+		if err := s.notifications.AppendNewFollower(ctx, targetUserID, actor); err != nil {
+			observability.L().Error("users.follow notification append failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+			return err
+		}
+	}
+	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: "NewFollower", Payload: map[string]any{"actor": actor, "followed_at": time.Now().UTC().Format(time.RFC3339)}})
 	observability.L().Info("users.follow completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }

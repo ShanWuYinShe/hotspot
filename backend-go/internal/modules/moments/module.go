@@ -4,6 +4,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"hotspot/backend-go/internal/modules/comments"
+	"hotspot/backend-go/internal/modules/notifications"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -19,7 +20,8 @@ type Module struct {
 func NewModule(factory *persistence.Factory) *Module {
 	momentRepo := NewPersistenceRepository(factory)
 	momentService := NewServiceWithRepo(momentRepo)
-	commentService := comments.NewService(comments.NewPersistenceRepository(factory), momentService)
+	notificationService := notifications.NewServiceWithRepo(notifications.NewPersistenceRepository(factory))
+	commentService := comments.NewServiceWithDeps(comments.NewPersistenceRepository(factory), momentService, notificationService)
 	return &Module{
 		momentsHandler:  NewHandler(momentService),
 		commentsHandler: comments.NewHandler(commentService),

@@ -10,6 +10,10 @@ WHERE user_id = $1
 ORDER BY created_at DESC, notification_id DESC
 LIMIT $5`
 
+	queryInsertNotification = `
+INSERT INTO notifications (notification_id, user_id, type, is_read, created_at, payload)
+VALUES ($1, $2, $3, $4, $5, $6::jsonb)`
+
 	queryUnreadNotificationCounts = `
 SELECT type, COUNT(*)::text
 FROM notifications

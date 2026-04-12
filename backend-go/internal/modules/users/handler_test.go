@@ -12,6 +12,7 @@ import (
 
 	grouptypes "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
+	"hotspot/backend-go/internal/modules/notifications"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 )
 
@@ -342,6 +343,16 @@ func TestFollowBlockRemarkAndOpenTheDoor(t *testing.T) {
 	}
 	if len(openResp.Data.SocialContext.CommonTags) != 1 || openResp.Data.SocialContext.CommonTags[0] != "music" {
 		t.Fatalf("unexpected common tags: %#v", openResp.Data.SocialContext)
+	}
+
+	notificationRepo := notifications.NewInMemoryRepository()
+	serviceWithNotifications := NewServiceWithDeps(service.repo, notifications.NewServiceWithRepo(notificationRepo))
+	if err := serviceWithNotifications.Follow(ctx, "user_bob"); err != nil {
+		t.Fatalf("follow with notifications: %v", err)
+	}
+	notificationsPage, err := notificationRepo.List(context.Background(), "user_bob", notifications.NotificationListRequest{})
+	if err != nil || len(notificationsPage.Items) != 1 || notificationsPage.Items[0].Type != "new_follower" {
+		t.Fatalf("unexpected notifications page: %#v err=%v", notificationsPage, err)
 	}
 
 	blockedReq := httptest.NewRequest(http.MethodPost, "/me/list_blocked", strings.NewReader(`{}`))

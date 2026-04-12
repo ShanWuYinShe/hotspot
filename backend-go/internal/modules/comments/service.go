@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
 
+	"hotspot/backend-go/internal/modules/notifications"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
@@ -13,12 +16,21 @@ import (
 var ErrMomentNotFound = errors.New("comments: moment not found")
 
 type Service struct {
-	repo    Repository
-	moments MomentProvider
+	repo          Repository
+	moments       MomentProvider
+	notifications commentNotificationWriter
+}
+
+type commentNotificationWriter interface {
+	AppendCommentReply(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any, parentCommentID string, parentPreview string, replyID string, replyPreview string) error
 }
 
 func NewService(repo Repository, moments MomentProvider) *Service {
-	return &Service{repo: repo, moments: moments}
+	return NewServiceWithDeps(repo, moments, notifications.NewService())
+}
+
+func NewServiceWithDeps(repo Repository, moments MomentProvider, notificationWriter commentNotificationWriter) *Service {
+	return &Service{repo: repo, moments: moments, notifications: notificationWriter}
 }
 
 func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (CommentItem, error) {
@@ -39,7 +51,38 @@ func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (Comment
 		}
 		return CommentItem{}, err
 	}
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: "CommentReply", Payload: map[string]any{"comment_id": item.CommentID, "replied_comment_preview": item.Content, "reply_id": item.CommentID, "reply_content_preview": item.Content, "moment_id": req.MomentID, "moment_summary": map[string]any{"moment_id": req.MomentID, "description_preview": item.Content}}})
+	if req.ParentID == "" {
+		return item, nil
+	}
+	parent, found, err := s.repo.Get(ctx, req.ParentID)
+	if err != nil {
+		return CommentItem{}, err
+	}
+	if !found {
+		return CommentItem{}, ErrCommentNotFound
+	}
+	targetUserID := parent.User.UserID
+	if targetUserID == "" || targetUserID == principal.UserID {
+		return item, nil
+	}
+	actor := map[string]any{"user_id": principal.UserID, "nickname": principal.UserID}
+	momentSummary := map[string]any{"moment_id": req.MomentID, "description_preview": summarizeCommentText(parent.Content, item.Content)}
+	payload := map[string]any{
+		"moment_id":               req.MomentID,
+		"moment_summary":          momentSummary,
+		"comment_id":              parent.CommentID,
+		"replied_comment_preview": summarizeCommentText(parent.Content, ""),
+		"reply_id":                item.CommentID,
+		"actor":                   actor,
+		"content":                 item.Content,
+		"replied_at":              time.Now().UTC().Format(time.RFC3339),
+	}
+	if s.notifications != nil {
+		if err := s.notifications.AppendCommentReply(ctx, targetUserID, actor, req.MomentID, momentSummary, parent.CommentID, summarizeCommentText(parent.Content, ""), item.CommentID, summarizeCommentText(item.Content, "")); err != nil {
+			return CommentItem{}, err
+		}
+	}
+	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: "CommentReply", Payload: payload})
 	return item, nil
 }
 
@@ -139,6 +182,17 @@ func (s *Service) ListLikes(ctx context.Context, req CommentLikesRequest) (Pagin
 		return PaginatedCommentLikes{}, err
 	}
 	return PaginatedCommentLikes{Items: items, NextCursor: nextCursor}, nil
+}
+
+func summarizeCommentText(primary string, fallback string) string {
+	value := strings.TrimSpace(primary)
+	if value == "" {
+		value = strings.TrimSpace(fallback)
+	}
+	if len(value) > 80 {
+		return value[:80]
+	}
+	return value
 }
 
 func (s *Service) ensureMomentExists(ctx context.Context, momentID string) error {

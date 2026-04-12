@@ -15,6 +15,25 @@ func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{items: make(map[string][]NotificationItem)}
 }
 
+func (r *InMemoryRepository) Append(_ context.Context, userID string, item NotificationItem) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.items[userID] = append(r.items[userID], normalizeNotificationItem(item))
+	return nil
+}
+
+func (r *InMemoryRepository) AppendMany(ctx context.Context, userIDs []string, item NotificationItem) error {
+	for _, userID := range userIDs {
+		if userID == "" {
+			continue
+		}
+		if err := r.Append(ctx, userID, item); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *InMemoryRepository) List(_ context.Context, userID string, req NotificationListRequest) (PaginatedNotifications, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

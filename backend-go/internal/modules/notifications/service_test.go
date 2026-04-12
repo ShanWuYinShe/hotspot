@@ -13,14 +13,29 @@ import (
 type sinkStub struct{ events []realtime.Event }
 
 type notificationListCaptureRepo struct {
-	userID  string
-	req     NotificationListRequest
-	list    PaginatedNotifications
-	listErr error
+	userID      string
+	appendUser  string
+	appendMany  []string
+	appended    []NotificationItem
+	req         NotificationListRequest
+	list        PaginatedNotifications
+	listErr     error
 }
 
 func (s *sinkStub) Send(e realtime.Event) error { s.events = append(s.events, e); return nil }
 func (s *sinkStub) Close() error                { return nil }
+
+func (r *notificationListCaptureRepo) Append(_ context.Context, userID string, item NotificationItem) error {
+	r.appendUser = userID
+	r.appended = append(r.appended, item)
+	return nil
+}
+
+func (r *notificationListCaptureRepo) AppendMany(_ context.Context, userIDs []string, item NotificationItem) error {
+	r.appendMany = append([]string(nil), userIDs...)
+	r.appended = append(r.appended, item)
+	return nil
+}
 
 func (r *notificationListCaptureRepo) List(_ context.Context, userID string, req NotificationListRequest) (PaginatedNotifications, error) {
 	r.userID = userID
@@ -34,6 +49,21 @@ func (r *notificationListCaptureRepo) UnreadCount(context.Context, string) (Unre
 
 func (r *notificationListCaptureRepo) MarkAsRead(context.Context, string, []string) error { return nil }
 func (r *notificationListCaptureRepo) MarkAllRead(context.Context, string) error          { return nil }
+
+func TestAppendNewFollowerBuildsNotification(t *testing.T) {
+	repo := &notificationListCaptureRepo{}
+	service := NewServiceWithRepo(repo)
+	if err := service.AppendNewFollower(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}); err != nil {
+		t.Fatalf("append new follower: %v", err)
+	}
+	if repo.appendUser != "user_alice" || len(repo.appended) != 1 {
+		t.Fatalf("unexpected append capture: %#v", repo)
+	}
+	item := repo.appended[0]
+	if item.Type != "new_follower" || item.Payload["type"] != "new_follower" {
+		t.Fatalf("unexpected notification item: %#v", item)
+	}
+}
 
 func TestPushSystemAnnouncementFansOut(t *testing.T) {
 	hub := realtime.NewHub()
@@ -54,6 +84,22 @@ func TestPushSystemAnnouncementFansOut(t *testing.T) {
 	alicePayload, ok := aliceSink.events[0].Payload.(systemmodule.SystemAnnouncementItem)
 	if !ok || alicePayload.AnnouncementID != "ann_1" || alicePayload.Title != "维护通知" {
 		t.Fatalf("unexpected alice payload: %#v", aliceSink.events[0].Payload)
+	}
+}
+
+func TestAppendSystemAnnouncementBuildsNotificationsForUsers(t *testing.T) {
+	repo := &notificationListCaptureRepo{}
+	service := NewServiceWithRepo(repo)
+	payload := systemmodule.SystemAnnouncementItem{AnnouncementID: "ann_1", Title: "维护通知", Content: "今晚维护", Severity: systemmodule.AnnouncementSeverityInfo, CreatedAt: "2026-03-26T00:00:00Z"}
+	if err := service.AppendSystemAnnouncement(context.Background(), []string{"user_alice", "user_bob"}, payload); err != nil {
+		t.Fatalf("append system announcement: %v", err)
+	}
+	if len(repo.appendMany) != 2 || len(repo.appended) != 1 {
+		t.Fatalf("unexpected append-many capture: %#v", repo)
+	}
+	item := repo.appended[0]
+	if item.Type != "system_announcement" || item.Payload["announcement_id"] != "ann_1" || item.Payload["type"] != "system_announcement" {
+		t.Fatalf("unexpected system notification item: %#v", item)
 	}
 }
 

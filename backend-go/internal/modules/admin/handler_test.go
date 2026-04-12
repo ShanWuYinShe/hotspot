@@ -2,6 +2,7 @@ package admin
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -36,11 +37,12 @@ func newTestModuleWithStore() (*Module, *InMemoryRepository) {
 	return NewModuleWithDeps(store, provider, nil, nil), store
 }
 
-func newTestModuleWithPushStore() (*Module, *InMemoryRepository) {
+func newTestModuleWithPushStore() (*Module, *InMemoryRepository, *notifications.InMemoryRepository) {
 	store := NewInMemoryRepository()
 	provider := NewAppConfigProvider(appconfig.NewStaticSource(config.Load()))
-	pushService := notifications.NewService()
-	return NewModuleWithDeps(store, provider, nil, pushService), store
+	notificationRepo := notifications.NewInMemoryRepository()
+	pushService := notifications.NewServiceWithRepo(notificationRepo)
+	return NewModuleWithDeps(store, provider, nil, pushService), store, notificationRepo
 }
 
 func newTestHandlerWithStore() (*Handler, *InMemoryRepository) {
@@ -50,11 +52,11 @@ func newTestHandlerWithStore() (*Handler, *InMemoryRepository) {
 	return module.handler, store
 }
 
-func newTestHandlerWithPushStore() (*Handler, *InMemoryRepository) {
+func newTestHandlerWithPushStore() (*Handler, *InMemoryRepository, *notifications.InMemoryRepository) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
-	module, store := newTestModuleWithPushStore()
-	return module.handler, store
+	module, store, notificationRepo := newTestModuleWithPushStore()
+	return module.handler, store, notificationRepo
 }
 
 func adminContext(req *http.Request, userID string, admin bool) *http.Request {
@@ -705,7 +707,7 @@ func TestCreateAnnouncementRequiresIdempotencyKey(t *testing.T) {
 }
 
 func TestSearchAnnouncementsCreateUpdateAndDelete(t *testing.T) {
-	handler, store := newTestHandlerWithPushStore()
+	handler, store, notificationRepo := newTestHandlerWithPushStore()
 	idempotency.SetStore(idempotency.NewInMemoryStore())
 	hub := realtime.DefaultHub()
 	adminSink := &sinkCapture{}
@@ -740,6 +742,14 @@ func TestSearchAnnouncementsCreateUpdateAndDelete(t *testing.T) {
 	}
 	if alicePayload != adminPayload {
 		t.Fatalf("expected broadcast payloads to match: %#v %#v", adminPayload, alicePayload)
+	}
+	adminNotifications, err := notificationRepo.List(context.Background(), "admin", notifications.NotificationListRequest{})
+	if err != nil || len(adminNotifications.Items) != 1 || adminNotifications.Items[0].Type != "system_announcement" {
+		t.Fatalf("unexpected admin notifications: %#v err=%v", adminNotifications, err)
+	}
+	aliceNotifications, err := notificationRepo.List(context.Background(), "user_alice", notifications.NotificationListRequest{})
+	if err != nil || len(aliceNotifications.Items) != 1 || aliceNotifications.Items[0].Type != "system_announcement" {
+		t.Fatalf("unexpected alice notifications: %#v err=%v", aliceNotifications, err)
 	}
 
 	searchReq := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/search", strings.NewReader(`{"severity":"warning","pagination":{"limit":10}}`)), "admin", true)

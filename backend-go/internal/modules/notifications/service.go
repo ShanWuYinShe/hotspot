@@ -60,6 +60,43 @@ func (s *Service) MarkAllRead(ctx context.Context) error {
 	return nil
 }
 
+func (s *Service) AppendNewFollower(ctx context.Context, targetUserID string, actor map[string]any) error {
+	return s.repo.Append(ctx, targetUserID, NotificationItem{
+		Type:    "new_follower",
+		IsRead:  false,
+		Payload: map[string]any{"type": "new_follower", "actor": actor},
+	})
+}
+
+func (s *Service) AppendSystemAnnouncement(ctx context.Context, userIDs []string, item systemmodule.SystemAnnouncementItem) error {
+	return s.repo.AppendMany(ctx, userIDs, NotificationItem{
+		Type:   "system_announcement",
+		IsRead: false,
+		Payload: map[string]any{
+			"type":            "system_announcement",
+			"announcement_id": item.AnnouncementID,
+			"severity":        item.Severity,
+		},
+	})
+}
+
+func (s *Service) AppendCommentReply(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any, parentCommentID string, parentPreview string, replyID string, replyPreview string) error {
+	return s.repo.Append(ctx, targetUserID, NotificationItem{
+		Type:   "comment_reply",
+		IsRead: false,
+		Payload: map[string]any{
+			"type":                    "comment_reply",
+			"actor":                   actor,
+			"moment_id":               momentID,
+			"moment_summary":          momentSummary,
+			"comment_id":              parentCommentID,
+			"replied_comment_preview": parentPreview,
+			"reply_id":                replyID,
+			"reply_content_preview":   replyPreview,
+		},
+	})
+}
+
 func (s *Service) PushSystemAnnouncement(item systemmodule.SystemAnnouncementItem) {
 	realtime.DefaultHub().BroadcastToAll(realtime.Event{Type: "SystemAnnouncement", Payload: item})
 }
