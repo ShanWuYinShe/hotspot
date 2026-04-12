@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"hotspot/backend-go/internal/platform/requestmeta"
+
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
@@ -84,6 +86,10 @@ func TestLoginAppReturnsTokenPair(t *testing.T) {
 	registerAppUser(t, handler, "alice", "Alice", "secret")
 
 	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret","client_type":"app"}`))
+	req.RemoteAddr = "173.245.48.5:443"
+	req.Header.Set("CF-Connecting-IP", "8.8.4.4")
+	req.Header.Set("CF-IPCountry", "SG")
+	req.Header.Set("User-Agent", "HotSpot App/1.0")
 	rr := httptest.NewRecorder()
 	handler.Login(rr, req)
 
@@ -297,6 +303,68 @@ func TestListSessionsReturnsCurrentSession(t *testing.T) {
 	}
 	if resp.Code != 0 || len(resp.Data.Items) == 0 || !resp.Data.Items[0].IsCurrent {
 		t.Fatalf("unexpected response: %#v", resp)
+	}
+}
+
+func TestListSessionsIncludesSessionMetadata(t *testing.T) {
+	handler := newTestHandler()
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+	registerReq := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"alice-meta","nickname":"Alice","password":"secret","client_type":"app"}`))
+	registerReq.Header.Set("Idempotency-Key", "meta1234abcd1234abcd1234abcd1234")
+	registerReq.RemoteAddr = "173.245.48.5:443"
+	registerReq.Header.Set("CF-Connecting-IP", "203.0.113.9")
+	registerReq.Header.Set("CF-IPCountry", "US")
+	registerReq.Header.Set("User-Agent", "HotSpot iOS/1.2.3")
+	registerRR := httptest.NewRecorder()
+	handler.Register(registerRR, registerReq)
+	var registerResp struct {
+		Code int              `json:"code"`
+		Data AuthTokenPairApp `json:"data"`
+	}
+	if err := json.NewDecoder(registerRR.Body).Decode(&registerResp); err != nil {
+		t.Fatalf("decode register response: %v", err)
+	}
+	if registerResp.Code != 0 {
+		t.Fatalf("unexpected register response: %#v", registerResp)
+	}
+	principal, _, ok := handler.service.auth.AuthenticateRequest(context.Background(), "Bearer "+registerResp.Data.AccessToken, "")
+	if !ok {
+		t.Fatal("expected authenticated principal")
+	}
+
+	listReq := httptest.NewRequest(http.MethodPost, "/me/sessions/list", strings.NewReader(`{}`))
+	listReq = listReq.WithContext(platformauth.WithPrincipal(listReq.Context(), principal))
+	listRR := httptest.NewRecorder()
+	handler.ListSessions(listRR, listReq)
+
+	var listResp struct {
+		Code int         `json:"code"`
+		Data SessionList `json:"data"`
+	}
+	if err := json.NewDecoder(listRR.Body).Decode(&listResp); err != nil {
+		t.Fatalf("decode list response: %v", err)
+	}
+	if listResp.Code != 0 || len(listResp.Data.Items) != 1 {
+		t.Fatalf("unexpected list response: %#v", listResp)
+	}
+	item := listResp.Data.Items[0]
+	if item.DeviceType != "app" || item.DeviceName != "HotSpot iOS/1.2.3" || item.IPAddress != "203.0.xxx.xxx" || item.IPLocation != "US" {
+		t.Fatalf("unexpected session item: %#v", item)
+	}
+}
+
+func TestSessionMetaFromRequestUsesTrustedProxyHeaders(t *testing.T) {
+	if err := requestmeta.InitTrustedProxies(""); err != nil {
+		t.Fatalf("init trusted proxies: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/login", http.NoBody)
+	req.RemoteAddr = "173.245.48.5:443"
+	req.Header.Set("CF-Connecting-IP", "198.51.100.2")
+	req.Header.Set("CF-IPCountry", "jp")
+	req.Header.Set("User-Agent", "HotSpot Web/9.9")
+	meta := sessionMetaFromRequest(req, ClientTypeWeb)
+	if meta.DeviceType != "web" || meta.DeviceName != "HotSpot Web/9.9" || meta.IPAddress != "198.51.100.2" || meta.IPLocation != "JP" {
+		t.Fatalf("unexpected session meta: %#v", meta)
 	}
 }
 
@@ -548,7 +616,7 @@ func TestRegisterRecordsUserForResourceGuard(t *testing.T) {
 
 	repo := &recordingAuthRepo{registerAccount: Account{UserID: "user_new", LoginID: "alice", Nickname: "Alice"}}
 	service := NewServiceWithSource(platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"}), repo, config.Config{AuthTokenSecret: "test-secret"}, appconfig.NewStaticSource(config.Config{AuthTokenSecret: "test-secret"}))
-	if _, err := service.Register(context.Background(), RegisterRequest{LoginID: "alice", Nickname: "Alice", Password: "secret"}); err != nil {
+	if _, err := service.Register(context.Background(), RegisterRequest{LoginID: "alice", Nickname: "Alice", Password: "secret"}, platformauth.SessionMeta{}); err != nil {
 		t.Fatalf("register: %v", err)
 	}
 	if len(checker.recorded) != 1 || checker.recorded[0] != "user:user_new" {
@@ -563,7 +631,7 @@ func TestGuestRecordsUserForResourceGuard(t *testing.T) {
 
 	repo := &recordingAuthRepo{guestAccount: Account{UserID: "guest_new", Nickname: "Guest"}}
 	service := NewServiceWithSource(platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"}), repo, config.Config{AuthTokenSecret: "test-secret"}, appconfig.NewStaticSource(config.Config{AuthTokenSecret: "test-secret"}))
-	if _, err := service.Guest(context.Background(), GuestRequest{Nickname: "Guest"}); err != nil {
+	if _, err := service.Guest(context.Background(), GuestRequest{Nickname: "Guest"}, platformauth.SessionMeta{}); err != nil {
 		t.Fatalf("guest: %v", err)
 	}
 	if len(checker.recorded) != 1 || checker.recorded[0] != "user:guest_new" {
@@ -590,6 +658,10 @@ func (r *recordingAuthRepo) CreateGuest(context.Context, GuestParams) (Account, 
 
 func (r *recordingAuthRepo) Authenticate(context.Context, string, string) (Account, error) {
 	return Account{}, ErrInvalidCredentials
+}
+
+func (r *recordingAuthRepo) UpdateLoginMeta(context.Context, string, string, string) error {
+	return nil
 }
 
 func (r *recordingAuthRepo) CreatePasswordReset(context.Context, string, time.Time) error {

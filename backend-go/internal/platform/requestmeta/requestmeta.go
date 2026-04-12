@@ -70,6 +70,35 @@ func ClientIP(req *http.Request) string {
 	return remoteIP
 }
 
+func ClientCountry(req *http.Request) string {
+	if !trustedProxyRequest(req) {
+		return ""
+	}
+	return strings.ToUpper(strings.TrimSpace(req.Header.Get("CF-IPCountry")))
+}
+
+func RequestRay(req *http.Request) string {
+	if !trustedProxyRequest(req) {
+		return ""
+	}
+	return strings.TrimSpace(req.Header.Get("CF-Ray"))
+}
+
+func ForwardedProto(req *http.Request) string {
+	if !trustedProxyRequest(req) {
+		return ""
+	}
+	return strings.ToLower(strings.TrimSpace(req.Header.Get("X-Forwarded-Proto")))
+}
+
+func trustedProxyRequest(req *http.Request) bool {
+	if req == nil {
+		return false
+	}
+	_, remoteParsed := remoteAddrIP(req.RemoteAddr)
+	return isTrustedProxyRemote(remoteParsed)
+}
+
 func remoteAddrIP(remoteAddr string) (string, net.IP) {
 	host, _, err := net.SplitHostPort(strings.TrimSpace(remoteAddr))
 	if err == nil {

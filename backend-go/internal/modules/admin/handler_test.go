@@ -169,6 +169,33 @@ func TestAdminModerationRoutesRequireAdminPermission(t *testing.T) {
 	}
 }
 
+func TestBanUserAuditUsesCloudflareCountry(t *testing.T) {
+	handler, store := newTestHandlerWithStore()
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+	req := adminContext(httptest.NewRequest(http.MethodPost, "/users/ban", strings.NewReader(`{"user_id":"user_bob","reason":"spam"}`)), "admin", true)
+	req.Header.Set("Idempotency-Key", "banusercountry1234def05678ghij9012")
+	req.RemoteAddr = "173.245.48.5:443"
+	req.Header.Set("CF-Connecting-IP", "8.8.8.8")
+	req.Header.Set("CF-IPCountry", "JP")
+	rr := httptest.NewRecorder()
+
+	handler.BanUser(rr, req)
+
+	resp := decodeResponse[struct{}](t, rr)
+	if resp.Code != 0 {
+		t.Fatalf("unexpected response: %#v", resp)
+	}
+	for _, entry := range store.auditLogs {
+		if entry.Action == "user.ban" {
+			if entry.IPLocation != "JP" {
+				t.Fatalf("unexpected audit location: %#v", entry)
+			}
+			return
+		}
+	}
+	t.Fatalf("expected user.ban audit log, got %#v", store.auditLogs)
+}
+
 func TestGetMeReturnsPermissions(t *testing.T) {
 	handler := newTestHandler()
 	req := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/get_me", strings.NewReader(`{}`)), "admin", true)

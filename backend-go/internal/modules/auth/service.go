@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"hotspot/backend-go/internal/platform/appconfig"
@@ -46,13 +47,15 @@ func (s *Service) CheckStatus(ctx context.Context) AuthStatus {
 	return AuthStatus{IsValid: true, ExpiresAt: expiresAt.UTC().Format(time.RFC3339)}
 }
 
-func (s *Service) Register(ctx context.Context, req RegisterRequest) (platformauth.AuthResult, error) {
+func (s *Service) Register(ctx context.Context, req RegisterRequest, meta platformauth.SessionMeta) (platformauth.AuthResult, error) {
 	startedAt := time.Now()
 	account, err := s.repo.Register(ctx, RegisterParams{
-		LoginID:  req.LoginID,
-		Nickname: req.Nickname,
-		Password: req.Password,
-		Defaults: s.profileDefaults(ctx),
+		LoginID:          req.LoginID,
+		Nickname:         req.Nickname,
+		Password:         req.Password,
+		Defaults:         s.profileDefaults(ctx),
+		RegisterIP:       meta.IPAddress,
+		RegisterLocation: meta.IPLocation,
 	})
 	if err != nil {
 		observability.L().Error("service error",
@@ -62,7 +65,7 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (platformau
 		)
 		return platformauth.AuthResult{}, err
 	}
-	result, err := s.auth.IssueSession(account.UserID)
+	result, err := s.auth.IssueSessionWithMeta(account.UserID, meta)
 	if err != nil {
 		observability.L().Error("service error",
 			"method", "Register",
@@ -75,7 +78,7 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (platformau
 	return result, nil
 }
 
-func (s *Service) Login(ctx context.Context, req LoginRequest) (platformauth.AuthResult, error) {
+func (s *Service) Login(ctx context.Context, req LoginRequest, meta platformauth.SessionMeta) (platformauth.AuthResult, error) {
 	startedAt := time.Now()
 	account, err := s.repo.Authenticate(ctx, req.LoginID, req.Password)
 	if err != nil {
@@ -86,7 +89,15 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (platformauth.Aut
 		)
 		return platformauth.AuthResult{}, err
 	}
-	result, err := s.auth.IssueSession(account.UserID)
+	if err := s.repo.UpdateLoginMeta(ctx, account.UserID, meta.IPAddress, meta.IPLocation); err != nil {
+		observability.L().Error("service error",
+			"method", "Login",
+			"error", err,
+			"elapsed_ms", time.Since(startedAt).Milliseconds(),
+		)
+		return platformauth.AuthResult{}, err
+	}
+	result, err := s.auth.IssueSessionWithMeta(account.UserID, meta)
 	if err != nil {
 		observability.L().Error("service error",
 			"method", "Login",
@@ -98,9 +109,9 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (platformauth.Aut
 	return result, nil
 }
 
-func (s *Service) Guest(ctx context.Context, req GuestRequest) (platformauth.AuthResult, error) {
+func (s *Service) Guest(ctx context.Context, req GuestRequest, meta platformauth.SessionMeta) (platformauth.AuthResult, error) {
 	startedAt := time.Now()
-	account, err := s.repo.CreateGuest(ctx, GuestParams{Nickname: req.Nickname, Defaults: s.profileDefaults(ctx)})
+	account, err := s.repo.CreateGuest(ctx, GuestParams{Nickname: req.Nickname, Defaults: s.profileDefaults(ctx), RegisterIP: meta.IPAddress, RegisterLocation: meta.IPLocation})
 	if err != nil {
 		observability.L().Error("service error",
 			"method", "Guest",
@@ -109,7 +120,7 @@ func (s *Service) Guest(ctx context.Context, req GuestRequest) (platformauth.Aut
 		)
 		return platformauth.AuthResult{}, err
 	}
-	result, err := s.auth.IssueSession(account.UserID)
+	result, err := s.auth.IssueSessionWithMeta(account.UserID, meta)
 	if err != nil {
 		observability.L().Error("service error",
 			"method", "Guest",
@@ -150,6 +161,10 @@ func (s *Service) ListSessions(ctx context.Context) SessionList {
 	for _, session := range sessions {
 		items = append(items, SessionItem{
 			SessionID:    session.SessionID,
+			DeviceType:   session.DeviceType,
+			DeviceName:   session.DeviceName,
+			IPAddress:    maskIPAddress(session.IPAddress),
+			IPLocation:   session.IPLocation,
 			CreatedAt:    session.CreatedAt.UTC().Format(time.RFC3339),
 			LastActiveAt: session.LastActiveAt.UTC().Format(time.RFC3339),
 			IsCurrent:    session.SessionID == principal.SessionID,
@@ -191,7 +206,7 @@ func (s *Service) RequestPasswordReset(ctx context.Context, req RequestPasswordR
 	return err
 }
 
-func (s *Service) ResetPassword(ctx context.Context, req ResetPasswordRequest) (platformauth.AuthResult, error) {
+func (s *Service) ResetPassword(ctx context.Context, req ResetPasswordRequest, meta platformauth.SessionMeta) (platformauth.AuthResult, error) {
 	startedAt := time.Now()
 	account, err := s.repo.ResetPassword(ctx, req.LoginID, req.VerificationCode, req.NewPassword)
 	if err != nil {
@@ -204,7 +219,7 @@ func (s *Service) ResetPassword(ctx context.Context, req ResetPasswordRequest) (
 	}
 	s.closeAllSessions(account.UserID)
 	s.auth.RevokeOtherSessions(account.UserID, "")
-	result, err := s.auth.IssueSession(account.UserID)
+	result, err := s.auth.IssueSessionWithMeta(account.UserID, meta)
 	if err != nil {
 		observability.L().Error("service error",
 			"method", "ResetPassword",
@@ -269,4 +284,21 @@ func (s *Service) closeOtherSessions(userID, currentSessionID string) {
 
 func sessionRevokedEvent() realtime.Event {
 	return realtime.Event{Type: "Error", Payload: realtime.ErrorPayload{Code: 20000, Message: "会话已失效", Severity: "fatal", Retryable: false}}
+}
+
+func maskIPAddress(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	if strings.Count(raw, ".") == 3 {
+		parts := strings.Split(raw, ".")
+		return parts[0] + "." + parts[1] + ".xxx.xxx"
+	}
+	if strings.Contains(raw, ":") {
+		parts := strings.Split(raw, ":")
+		if len(parts) > 2 {
+			return strings.Join(parts[:2], ":") + ":xxxx:xxxx"
+		}
+	}
+	return raw
 }

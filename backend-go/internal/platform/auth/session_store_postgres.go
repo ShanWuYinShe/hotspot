@@ -27,7 +27,7 @@ func (s *PostgresSessionStore) Save(session SessionRecord) error {
 	if !ok {
 		return s.fallback.Save(session)
 	}
-	return queryable.Exec(context.Background(), queryUpsertSession, session.SessionID, session.UserID, session.CreatedAt, session.LastActiveAt, session.RevokedAt)
+	return queryable.Exec(context.Background(), queryUpsertSession, session.SessionID, session.UserID, session.CreatedAt, session.LastActiveAt, session.RevokedAt, session.DeviceType, session.DeviceName, session.IPAddress, session.IPLocation)
 }
 
 func (s *PostgresSessionStore) Touch(sessionID string) error {
@@ -88,7 +88,7 @@ func (s *PostgresSessionStore) Get(sessionID string) (SessionRecord, bool, error
 	}
 	var record SessionRecord
 	var revokedAt *time.Time
-	if err := queryable.QueryRow(context.Background(), queryGetSession, sessionID).Scan(&record.SessionID, &record.UserID, &record.CreatedAt, &record.LastActiveAt, &revokedAt); err != nil {
+	if err := queryable.QueryRow(context.Background(), queryGetSession, sessionID).Scan(&record.SessionID, &record.UserID, &record.CreatedAt, &record.LastActiveAt, &revokedAt, &record.DeviceType, &record.DeviceName, &record.IPAddress, &record.IPLocation); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return SessionRecord{}, false, nil
 		}
@@ -112,7 +112,7 @@ func (s *PostgresSessionStore) ListActiveByUser(userID string) ([]SessionRecord,
 	for rows.Next() {
 		var record SessionRecord
 		var revokedAt *time.Time
-		if err := rows.Scan(&record.SessionID, &record.UserID, &record.CreatedAt, &record.LastActiveAt, &revokedAt); err != nil {
+		if err := rows.Scan(&record.SessionID, &record.UserID, &record.CreatedAt, &record.LastActiveAt, &revokedAt, &record.DeviceType, &record.DeviceName, &record.IPAddress, &record.IPLocation); err != nil {
 			return nil, err
 		}
 		record.RevokedAt = revokedAt

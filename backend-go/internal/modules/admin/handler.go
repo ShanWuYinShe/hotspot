@@ -288,7 +288,7 @@ func (h *Handler) BanUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	idempotency.ReplayOrStore(w, r, "admin/users/ban", func() httpx.ApiResponse[struct{}] {
-		apiErr, err := h.service.BanUser(r.Context(), req)
+		apiErr, err := h.service.BanUser(withRequest(r.Context(), r), req)
 		if err != nil {
 			observability.L().Error("handler error", "method", "BanUser", "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
 			return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
@@ -307,7 +307,7 @@ func (h *Handler) UnbanUser(w http.ResponseWriter, r *http.Request) {
 		h.writeAPIError(w, r, httpx.InvalidRequest("参数错误"))
 		return
 	}
-	apiErr, err := h.service.UnbanUser(r.Context(), req)
+	apiErr, err := h.service.UnbanUser(withRequest(r.Context(), r), req)
 	if err != nil {
 		h.writeUnavailable(w, r)
 		return

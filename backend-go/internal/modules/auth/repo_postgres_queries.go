@@ -7,8 +7,8 @@ VALUES ($1, $2, $3, $4, $5)`
 	queryDeleteAuthAccountByLoginID = `DELETE FROM auth_accounts
 WHERE login_id = $1`
 
-	queryInsertUserProfile = `INSERT INTO users (user_id, nickname, avatar_url, user_type, bio, gender, email, phone, location_name, latitude, longitude, presence_status, last_online, created_at)
-VALUES ($1, $2, $3, $4, '', '', $5, '', $6, $7, $8, 'online', $9, $10)`
+	queryInsertUserProfile = `INSERT INTO users (user_id, nickname, avatar_url, user_type, bio, gender, email, phone, location_name, latitude, longitude, presence_status, last_online, created_at, register_ip, register_location, last_login_ip, last_login_location)
+VALUES ($1, $2, $3, $4, '', '', $5, '', $6, $7, $8, 'online', $9, $10, $11, $12, $13, $14)`
 
 	queryDeleteUserProfileByUserID = `DELETE FROM users
 WHERE user_id = $1`
@@ -46,5 +46,10 @@ WHERE request_id = $1`
 
 	queryUpdateAccountPassword = `UPDATE auth_accounts
 SET password_hash = $2, updated_at = $3
+WHERE user_id = $1`
+
+	queryUpdateLoginMeta = `UPDATE users
+SET last_login_ip = $2,
+    last_login_location = $3
 WHERE user_id = $1`
 )

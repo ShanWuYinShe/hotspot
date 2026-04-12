@@ -29,6 +29,10 @@ func (r *PersistenceRepository) Authenticate(ctx context.Context, loginID, passw
 	return r.impl.Authenticate(ctx, loginID, password)
 }
 
+func (r *PersistenceRepository) UpdateLoginMeta(ctx context.Context, userID, ip, location string) error {
+	return r.impl.UpdateLoginMeta(ctx, userID, ip, location)
+}
+
 func (r *PersistenceRepository) CreatePasswordReset(ctx context.Context, loginID string, expiresAt time.Time) error {
 	return r.impl.CreatePasswordReset(ctx, loginID, expiresAt)
 }

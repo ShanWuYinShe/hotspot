@@ -25,6 +25,14 @@ type AuthResult struct {
 	CSRFToken      string
 }
 
+// SessionMeta carries request-derived session metadata for auditing and UX.
+type SessionMeta struct {
+	DeviceType string
+	DeviceName string
+	IPAddress  string
+	IPLocation string
+}
+
 func NewService(cfg config.Config) *Service {
 	return &Service{
 		tokens:     NewTokenManager(cfg.AuthTokenSecret),
@@ -71,6 +79,10 @@ func (s *Service) AuthenticateRequest(rctx context.Context, authHeader string, a
 }
 
 func (s *Service) IssueSession(userID string) (AuthResult, error) {
+	return s.IssueSessionWithMeta(userID, SessionMeta{})
+}
+
+func (s *Service) IssueSessionWithMeta(userID string, meta SessionMeta) (AuthResult, error) {
 	sessionID, err := NewSessionID()
 	if err != nil {
 		return AuthResult{}, err
@@ -89,7 +101,16 @@ func (s *Service) IssueSession(userID string) (AuthResult, error) {
 		return AuthResult{}, err
 	}
 	refreshExpires := time.Now().UTC().Add(s.refreshTTL)
-	if err := s.sessions.Save(SessionRecord{SessionID: sessionID, UserID: userID, CreatedAt: createdAt, LastActiveAt: createdAt}); err != nil {
+	if err := s.sessions.Save(SessionRecord{
+		SessionID:    sessionID,
+		UserID:       userID,
+		CreatedAt:    createdAt,
+		LastActiveAt: createdAt,
+		DeviceType:   meta.DeviceType,
+		DeviceName:   meta.DeviceName,
+		IPAddress:    meta.IPAddress,
+		IPLocation:   meta.IPLocation,
+	}); err != nil {
 		return AuthResult{}, err
 	}
 	if err := s.refreshes.Save(RefreshSession{UserID: userID, SessionID: sessionID, RefreshToken: refreshToken, ExpiresAt: refreshExpires}); err != nil {

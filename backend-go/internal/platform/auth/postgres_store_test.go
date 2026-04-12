@@ -94,6 +94,10 @@ func (b *authBackendStub) Exec(_ context.Context, query string, args ...any) err
 			UserID:       args[1].(string),
 			CreatedAt:    args[2].(time.Time),
 			LastActiveAt: args[3].(time.Time),
+			DeviceType:   args[5].(string),
+			DeviceName:   args[6].(string),
+			IPAddress:    args[7].(string),
+			IPLocation:   args[8].(string),
 		}
 		if args[4] != nil {
 			revokedAt := args[4].(*time.Time)
@@ -170,7 +174,7 @@ func (b *authBackendStub) Query(_ context.Context, query string, args ...any) (p
 	rows := [][]any{}
 	for _, record := range b.sessions {
 		if record.UserID == userID && record.RevokedAt == nil {
-			rows = append(rows, []any{record.SessionID, record.UserID, record.CreatedAt, record.LastActiveAt, record.RevokedAt})
+			rows = append(rows, []any{record.SessionID, record.UserID, record.CreatedAt, record.LastActiveAt, record.RevokedAt, record.DeviceType, record.DeviceName, record.IPAddress, record.IPLocation})
 		}
 	}
 	return &authRows{rows: rows}, nil
@@ -180,7 +184,7 @@ func (b *authBackendStub) QueryRow(_ context.Context, query string, args ...any)
 	switch query {
 	case queryGetSession:
 		if record, ok := b.sessions[args[0].(string)]; ok {
-			return authRow{values: []any{record.SessionID, record.UserID, record.CreatedAt, record.LastActiveAt, record.RevokedAt}}
+			return authRow{values: []any{record.SessionID, record.UserID, record.CreatedAt, record.LastActiveAt, record.RevokedAt, record.DeviceType, record.DeviceName, record.IPAddress, record.IPLocation}}
 		}
 		return authRow{err: pgx.ErrNoRows}
 	case queryGetRefreshToken:
@@ -211,13 +215,16 @@ func TestPostgresSessionStoreWritesAndReadsQueryableDB(t *testing.T) {
 	backend := newAuthBackendStub()
 	store := NewPostgresSessionStore(newAuthFactory(backend), nil)
 	now := time.Now().UTC().Round(time.Second)
-	record := SessionRecord{SessionID: "sess_1", UserID: "user_alice", CreatedAt: now, LastActiveAt: now}
+	record := SessionRecord{SessionID: "sess_1", UserID: "user_alice", CreatedAt: now, LastActiveAt: now, DeviceType: "app", DeviceName: "HotSpot App", IPAddress: "203.0.113.1", IPLocation: "US"}
 	if err := store.Save(record); err != nil {
 		t.Fatalf("save session: %v", err)
 	}
 	stored, ok, err := store.Get("sess_1")
 	if err != nil || !ok || stored.UserID != "user_alice" {
 		t.Fatalf("unexpected session: %#v ok=%v err=%v", stored, ok, err)
+	}
+	if stored.DeviceType != "app" || stored.DeviceName != "HotSpot App" || stored.IPAddress != "203.0.113.1" || stored.IPLocation != "US" {
+		t.Fatalf("unexpected stored metadata: %#v", stored)
 	}
 	items, err := store.ListActiveByUser("user_alice")
 	if err != nil || len(items) != 1 || items[0].SessionID != "sess_1" {

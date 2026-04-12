@@ -2,6 +2,7 @@ package auth
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -9,6 +10,7 @@ import (
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
+	"hotspot/backend-go/internal/platform/requestmeta"
 )
 
 type Handler struct {
@@ -43,7 +45,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.ClientType == ClientTypeWeb {
 		idempotency.ReplayOrStore(w, r, "auth/register", func() httpx.ApiResponse[AuthTokenPairWeb] {
-			result, err := h.service.Register(r.Context(), req)
+			result, err := h.service.Register(r.Context(), req, sessionMetaFromRequest(r, req.ClientType))
 			if err != nil {
 				return errorResponse[AuthTokenPairWeb](apiErrorFrom(err))
 			}
@@ -53,7 +55,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	idempotency.ReplayOrStore(w, r, "auth/register", func() httpx.ApiResponse[AuthTokenPairApp] {
-		result, err := h.service.Register(r.Context(), req)
+		result, err := h.service.Register(r.Context(), req, sessionMetaFromRequest(r, req.ClientType))
 		if err != nil {
 			return errorResponse[AuthTokenPairApp](apiErrorFrom(err))
 		}
@@ -71,7 +73,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	result, err := h.service.Login(r.Context(), req)
+	result, err := h.service.Login(r.Context(), req, sessionMetaFromRequest(r, req.ClientType))
 	if err != nil {
 		apiErr := apiErrorFrom(err)
 		if apiErr.Code == 10600 {
@@ -110,7 +112,7 @@ func (h *Handler) Guest(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.ClientType == ClientTypeWeb {
 		idempotency.ReplayOrStore(w, r, "auth/guest", func() httpx.ApiResponse[AuthTokenPairWeb] {
-			result, err := h.service.Guest(r.Context(), req)
+			result, err := h.service.Guest(r.Context(), req, sessionMetaFromRequest(r, req.ClientType))
 			if err != nil {
 				return errorResponse[AuthTokenPairWeb](apiErrorFrom(err))
 			}
@@ -120,7 +122,7 @@ func (h *Handler) Guest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	idempotency.ReplayOrStore(w, r, "auth/guest", func() httpx.ApiResponse[AuthTokenPairApp] {
-		result, err := h.service.Guest(r.Context(), req)
+		result, err := h.service.Guest(r.Context(), req, sessionMetaFromRequest(r, req.ClientType))
 		if err != nil {
 			return errorResponse[AuthTokenPairApp](apiErrorFrom(err))
 		}
@@ -214,7 +216,7 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.ClientType == ClientTypeWeb {
 		idempotency.ReplayOrStore(w, r, "auth/reset_password", func() httpx.ApiResponse[AuthTokenPairWeb] {
-			result, err := h.service.ResetPassword(r.Context(), req)
+			result, err := h.service.ResetPassword(r.Context(), req, sessionMetaFromRequest(r, req.ClientType))
 			if err != nil {
 				return errorResponse[AuthTokenPairWeb](apiErrorFrom(err))
 			}
@@ -224,7 +226,7 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	idempotency.ReplayOrStore(w, r, "auth/reset_password", func() httpx.ApiResponse[AuthTokenPairApp] {
-		result, err := h.service.ResetPassword(r.Context(), req)
+		result, err := h.service.ResetPassword(r.Context(), req, sessionMetaFromRequest(r, req.ClientType))
 		if err != nil {
 			return errorResponse[AuthTokenPairApp](apiErrorFrom(err))
 		}
@@ -332,4 +334,21 @@ func errorResponse[T any](apiErr *httpx.APIError) httpx.ApiResponse[T] {
 		observability.L().Error("handler error", "code", apiErr.Code, "message", apiErr.Message)
 	}
 	return httpx.ApiResponse[T]{Code: apiErr.Code, Message: apiErr.Message}
+}
+
+func sessionMetaFromRequest(r *http.Request, clientType ClientType) platformauth.SessionMeta {
+	meta := platformauth.SessionMeta{
+		DeviceType: string(clientType),
+		IPAddress:  requestmeta.ClientIP(r),
+		IPLocation: requestmeta.ClientCountry(r),
+	}
+	if r == nil {
+		return meta
+	}
+	ua := strings.TrimSpace(r.Header.Get("User-Agent"))
+	if len(ua) > 120 {
+		ua = ua[:120]
+	}
+	meta.DeviceName = ua
+	return meta
 }

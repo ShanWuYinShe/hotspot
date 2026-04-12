@@ -47,6 +47,10 @@ type AuthTokenPairApp struct {
 
 type SessionItem struct {
 	SessionID    string `json:"session_id"`
+	DeviceType   string `json:"device_type,omitempty"`
+	DeviceName   string `json:"device_name,omitempty"`
+	IPAddress    string `json:"ip_address,omitempty"`
+	IPLocation   string `json:"ip_location,omitempty"`
 	CreatedAt    string `json:"created_at"`
 	LastActiveAt string `json:"last_active_at"`
 	IsCurrent    bool   `json:"is_current"`

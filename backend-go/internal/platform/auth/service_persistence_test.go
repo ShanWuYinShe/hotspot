@@ -43,6 +43,21 @@ func TestIssueSessionReturnsStoreWriteError(t *testing.T) {
 	}
 }
 
+func TestIssueSessionWithMetaPersistsSessionMetadata(t *testing.T) {
+	service := NewService(config.Config{AuthTokenSecret: "test-secret"})
+	issued, err := service.IssueSessionWithMeta("user_alice", SessionMeta{DeviceType: "app", DeviceName: "HotSpot App", IPAddress: "203.0.113.7", IPLocation: "US"})
+	if err != nil {
+		t.Fatalf("issue session with meta: %v", err)
+	}
+	stored, ok, err := service.sessions.Get(issued.Principal.SessionID)
+	if err != nil || !ok {
+		t.Fatalf("get session: ok=%v err=%v", ok, err)
+	}
+	if stored.DeviceType != "app" || stored.DeviceName != "HotSpot App" || stored.IPAddress != "203.0.113.7" || stored.IPLocation != "US" {
+		t.Fatalf("unexpected stored session: %#v", stored)
+	}
+}
+
 func TestRefreshSessionReturnsRotateError(t *testing.T) {
 	refreshes := &rotateFailRefreshStore{current: RefreshSession{UserID: "user_alice", SessionID: "sess_1", RefreshToken: "refresh_1", ExpiresAt: time.Now().UTC().Add(time.Hour)}, err: errors.New("refresh rotate failed")}
 	service := NewServiceWithStores(config.Config{AuthTokenSecret: "test-secret"}, NewInMemorySessionStore(), refreshes)

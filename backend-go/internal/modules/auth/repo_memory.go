@@ -8,7 +8,11 @@ import (
 
 type accountRecord struct {
 	Account
-	PasswordHash string
+	PasswordHash    string
+	RegisterIP      string
+	RegisterLocation string
+	LastLoginIP     string
+	LastLoginLocation string
 }
 
 type passwordResetRecord struct {
@@ -51,7 +55,14 @@ func (r *InMemoryRepository) Register(_ context.Context, params RegisterParams) 
 	if err != nil {
 		return Account{}, err
 	}
-	account := accountRecord{Account: Account{UserID: userID, LoginID: params.LoginID, Nickname: params.Nickname, UserType: "normal"}, PasswordHash: hashed}
+	account := accountRecord{
+		Account:           Account{UserID: userID, LoginID: params.LoginID, Nickname: params.Nickname, UserType: "normal"},
+		PasswordHash:      hashed,
+		RegisterIP:        params.RegisterIP,
+		RegisterLocation:  params.RegisterLocation,
+		LastLoginIP:       params.RegisterIP,
+		LastLoginLocation: params.RegisterLocation,
+	}
 	r.accountsByLogin[params.LoginID] = account
 	r.accountsByUser[userID] = account
 	return account.Account, nil
@@ -64,7 +75,13 @@ func (r *InMemoryRepository) CreateGuest(_ context.Context, params GuestParams) 
 	if err != nil {
 		return Account{}, err
 	}
-	account := accountRecord{Account: Account{UserID: userID, Nickname: params.Nickname, UserType: "temp"}}
+	account := accountRecord{
+		Account:           Account{UserID: userID, Nickname: params.Nickname, UserType: "temp"},
+		RegisterIP:        params.RegisterIP,
+		RegisterLocation:  params.RegisterLocation,
+		LastLoginIP:       params.RegisterIP,
+		LastLoginLocation: params.RegisterLocation,
+	}
 	r.accountsByUser[userID] = account
 	return account.Account, nil
 }
@@ -77,6 +94,22 @@ func (r *InMemoryRepository) Authenticate(_ context.Context, loginID, password s
 		return Account{}, ErrInvalidCredentials
 	}
 	return account.Account, nil
+}
+
+func (r *InMemoryRepository) UpdateLoginMeta(_ context.Context, userID, ip, location string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	account, ok := r.accountsByUser[userID]
+	if !ok {
+		return nil
+	}
+	account.LastLoginIP = ip
+	account.LastLoginLocation = location
+	r.accountsByUser[userID] = account
+	if account.LoginID != "" {
+		r.accountsByLogin[account.LoginID] = account
+	}
+	return nil
 }
 
 func (r *InMemoryRepository) CreatePasswordReset(_ context.Context, loginID string, expiresAt time.Time) error {

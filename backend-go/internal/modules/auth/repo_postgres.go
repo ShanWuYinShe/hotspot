@@ -39,7 +39,7 @@ func (r *PostgresRepository) Register(ctx context.Context, params RegisterParams
 		}
 		return Account{}, err
 	}
-	if err := queryable.Exec(ctx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "normal", params.LoginID, params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, now, now); err != nil {
+	if err := queryable.Exec(ctx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "normal", params.LoginID, params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, now, now, params.RegisterIP, params.RegisterLocation, params.RegisterIP, params.RegisterLocation); err != nil {
 		_ = queryable.Exec(ctx, queryDeleteAuthAccountByLoginID, params.LoginID)
 		return Account{}, err
 	}
@@ -61,7 +61,7 @@ func (r *PostgresRepository) CreateGuest(ctx context.Context, params GuestParams
 		return Account{}, err
 	}
 	now := params.Defaults.CreatedAt.UTC()
-	if err := queryable.Exec(ctx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "temp", "", params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, now, now); err != nil {
+	if err := queryable.Exec(ctx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "temp", "", params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, now, now, params.RegisterIP, params.RegisterLocation, params.RegisterIP, params.RegisterLocation); err != nil {
 		return Account{}, err
 	}
 	if err := queryable.Exec(ctx, queryUpsertUserSettings, userID); err != nil {
@@ -84,6 +84,14 @@ func (r *PostgresRepository) Authenticate(ctx context.Context, loginID, password
 		return Account{}, ErrInvalidCredentials
 	}
 	return record.Account, nil
+}
+
+func (r *PostgresRepository) UpdateLoginMeta(ctx context.Context, userID, ip, location string) error {
+	queryable, ok := r.queryable()
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryUpdateLoginMeta, userID, ip, location)
 }
 
 func (r *PostgresRepository) CreatePasswordReset(ctx context.Context, loginID string, expiresAt time.Time) error {

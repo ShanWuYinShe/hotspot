@@ -24,6 +24,9 @@ func TestRequestLoggerMiddlewareUsesRequestmetaClientIP(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/system/health", http.NoBody)
 	req.RemoteAddr = "173.245.48.5:443"
 	req.Header.Set("CF-Connecting-IP", "8.8.8.8")
+	req.Header.Set("CF-IPCountry", "US")
+	req.Header.Set("CF-Ray", "abc123-HKG")
+	req.Header.Set("X-Forwarded-Proto", "https")
 	rr := httptest.NewRecorder()
 
 	handler.ServeHTTP(rr, req)
@@ -32,7 +35,17 @@ func TestRequestLoggerMiddlewareUsesRequestmetaClientIP(t *testing.T) {
 	if len(entries) != 1 {
 		t.Fatalf("expected one log entry, got %d", len(entries))
 	}
-	if got := entries[0].ContextMap()["client_ip"]; got != "8.8.8.8" {
+	context := entries[0].ContextMap()
+	if got := context["client_ip"]; got != "8.8.8.8" {
 		t.Fatalf("unexpected client ip: %v", got)
+	}
+	if got := context["cf_country"]; got != "US" {
+		t.Fatalf("unexpected cf country: %v", got)
+	}
+	if got := context["cf_ray"]; got != "abc123-HKG" {
+		t.Fatalf("unexpected cf ray: %v", got)
+	}
+	if got := context["forwarded_proto"]; got != "https" {
+		t.Fatalf("unexpected forwarded proto: %v", got)
 	}
 }

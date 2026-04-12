@@ -1323,7 +1323,12 @@ func newAuditEntry(ctx context.Context, actor AdminActor, entry AuditLogEntry) A
 		entry.DeviceSummary = deviceSummaryFromContext(ctx)
 	}
 	if entry.IPLocation == "" && entry.IPAddress != "" {
-		entry.IPLocation = "unknown"
+		if req, ok := requestFromContext(ctx); ok {
+			entry.IPLocation = requestmeta.ClientCountry(req)
+		}
+		if entry.IPLocation == "" {
+			entry.IPLocation = "unknown"
+		}
 	}
 	return entry
 }

@@ -43,6 +43,15 @@ func RequestLoggerMiddleware(logger *Logger) func(http.Handler) http.Handler {
 				"client_ip", requestmeta.ClientIP(r),
 				"bytes", rc.bytes,
 			}
+			if cfRay := requestmeta.RequestRay(r); cfRay != "" {
+				fields = append(fields, "cf_ray", cfRay)
+			}
+			if country := requestmeta.ClientCountry(r); country != "" {
+				fields = append(fields, "cf_country", country)
+			}
+			if proto := requestmeta.ForwardedProto(r); proto != "" {
+				fields = append(fields, "forwarded_proto", proto)
+			}
 
 			switch {
 			case rc.status >= 500:

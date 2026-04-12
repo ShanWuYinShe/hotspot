@@ -12,6 +12,10 @@ type SessionRecord struct {
 	CreatedAt    time.Time
 	LastActiveAt time.Time
 	RevokedAt    *time.Time
+	DeviceType   string
+	DeviceName   string
+	IPAddress    string
+	IPLocation   string
 }
 
 type InMemorySessionStore struct {
