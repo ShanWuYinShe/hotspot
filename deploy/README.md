@@ -10,7 +10,7 @@
 ## deploy 与 skill / 普通动作的边界
 - `deploy/` 的职责是承接**隔离运行、正式验证、候选预演、交付输入物**这类高副作用或高确定性步骤。
 - `deploy/` 不是普通分析、代码阅读、局部低副作用开发动作的统一执行器；这类动作仍应优先按根 `CLAUDE.md` 的规则直接完成，或优先使用仓库已提供的 skill。
-- Claude Code 应优先通过根 `CLAUDE.md` 与 `.claude/commands/*.md` 了解仓库已经提供了哪些标准入口，再决定是否进入 `deploy/`。
+- Claude Code 应优先通过根 `CLAUDE.md` 与 `.claude/skills/` 了解仓库已经提供了哪些标准入口，再决定是否进入 `deploy/`。
 - 当一个动作需要隔离环境、统一日志、统一 runner、统一 compose 行为，或会在多 agent / 多 worktree 下产生冲突时，才优先进入 `deploy/`。
 - `tmp/` 是默认的宿主侧中间产物目录；`deploy/` 产生的日志、检查输出和交付物摘要也应优先落到 `tmp/deploy/...`，避免污染 git 状态。
 

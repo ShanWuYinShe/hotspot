@@ -4,6 +4,18 @@
   "autoMemoryEnabled": true,
   "respectGitignore": true,
   "permissions": {
-    "allow": []
+    "defaultMode": "auto",
+    "allow": [
+      "Bash(./deploy/scripts/verify.sh:*)",
+      "Bash(./deploy/scripts/verify-inspect.sh:*)",
+      "Bash(python3:*)",
+      "Bash(git:*)",
+      "Bash(cargo:*)",
+      "Bash(go:*)",
+      "Bash(pnpm:*)",
+      "Bash(ohpm:*)",
+      "Bash(hvigorw:*)",
+      "Bash(./hvigorw:*)"
+    ]
   }
 }
