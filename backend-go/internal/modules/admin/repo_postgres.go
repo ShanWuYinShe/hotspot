@@ -751,7 +751,10 @@ func (r *PostgresRepository) RecallGroupMessage(ctx context.Context, messageID s
 	if !ok {
 		return r.fallback.RecallGroupMessage(ctx, messageID)
 	}
-	return queryable.Exec(ctx, "UPDATE group_messages SET is_recalled = TRUE, recalled_at = NOW() WHERE message_id = $1 AND is_recalled = FALSE", messageID)
+	if err := queryable.Exec(ctx, "UPDATE group_messages SET is_recalled = TRUE, recalled_at = NOW() WHERE message_id = $1 AND is_recalled = FALSE", messageID); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *PostgresRepository) RecallPrivateMessage(ctx context.Context, messageID string) error {
@@ -759,7 +762,10 @@ func (r *PostgresRepository) RecallPrivateMessage(ctx context.Context, messageID
 	if !ok {
 		return r.fallback.RecallPrivateMessage(ctx, messageID)
 	}
-	return queryable.Exec(ctx, "UPDATE private_messages SET is_recalled = TRUE, recalled_at = NOW() WHERE message_id = $1 AND is_recalled = FALSE", messageID)
+	if err := queryable.Exec(ctx, "UPDATE private_messages SET is_recalled = TRUE, recalled_at = NOW() WHERE message_id = $1 AND is_recalled = FALSE", messageID); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *PostgresRepository) DeleteMoment(ctx context.Context, momentID string) error {

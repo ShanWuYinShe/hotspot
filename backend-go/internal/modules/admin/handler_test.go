@@ -666,6 +666,38 @@ func TestHandleGroupReportDismissesGroup(t *testing.T) {
 	}
 }
 
+func TestHandleMomentCommentAndMessageReportsApplyContentActions(t *testing.T) {
+	handler, store := newTestHandlerWithStore()
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+	store.reports["report_moment"] = reportHandleRecord{
+		Item:       AdminReportItem{ReportID: "report_moment", TargetType: ReportTargetTypeMoment, TargetID: "moment_1", Reason: "spam", Status: ReportStatusPending, CreatedAt: "2026-04-14T00:00:00Z", Reporter: UserInfo{UserID: "user_alice", Nickname: "Alice"}},
+		TargetUser: UserInfo{UserID: "user_bob", Nickname: "Bob"},
+	}
+	store.reports["report_comment"] = reportHandleRecord{
+		Item:       AdminReportItem{ReportID: "report_comment", TargetType: ReportTargetTypeComment, TargetID: "comment_1", Reason: "spam", Status: ReportStatusPending, CreatedAt: "2026-04-14T00:00:00Z", Reporter: UserInfo{UserID: "user_alice", Nickname: "Alice"}},
+		TargetUser: UserInfo{UserID: "user_bob", Nickname: "Bob"},
+	}
+	store.reports["report_message"] = reportHandleRecord{
+		Item:       AdminReportItem{ReportID: "report_message", TargetType: ReportTargetTypeMessage, TargetID: "message_1", Reason: "spam", Status: ReportStatusPending, CreatedAt: "2026-04-14T00:00:00Z", Reporter: UserInfo{UserID: "user_alice", Nickname: "Alice"}},
+		TargetUser: UserInfo{UserID: "user_bob", Nickname: "Bob"},
+	}
+
+	for _, reportID := range []string{"report_moment", "report_comment", "report_message"} {
+		handleReq := adminContext(httptest.NewRequest(http.MethodPost, "/reports/handle", strings.NewReader(`{"report_id":"`+reportID+`","action":"resolve","note":"policy","ban_duration_days":1}`)), "admin", true)
+		handleReq.Header.Set("Idempotency-Key", reportID+"abcd1234abcd1234abcd1234")
+		handleRR := httptest.NewRecorder()
+		handler.HandleReport(handleRR, handleReq)
+		handleResp := decodeResponse[struct{}](t, handleRR)
+		if handleResp.Code != 0 {
+			t.Fatalf("unexpected handle response for %s: %#v", reportID, handleResp)
+		}
+	}
+	state, ok, err := store.GetUserBanState(context.Background(), "user_bob")
+	if err != nil || !ok || state.Status != UserAccountStatusBanned {
+		t.Fatalf("expected target user banned after content reports: %#v ok=%v err=%v", state, ok, err)
+	}
+}
+
 func TestSearchTagsAndDeleteTag(t *testing.T) {
 	handler, store := newTestHandlerWithStore()
 

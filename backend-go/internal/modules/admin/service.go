@@ -1159,6 +1159,35 @@ func (s *Service) HandleReport(ctx context.Context, req AdminReportHandleRequest
 					return apiErr, err
 				}
 			}
+		case ReportTargetTypeMoment:
+			if err := s.repo.DeleteMoment(ctx, record.Item.TargetID); err != nil {
+				return nil, err
+			}
+			if req.BanDurationDays != nil {
+				if apiErr, err := s.banUser(ctx, actor, record.TargetUser.UserID, req.Note, req.BanDurationDays, false); apiErr != nil || err != nil {
+					return apiErr, err
+				}
+			}
+		case ReportTargetTypeComment:
+			if err := s.repo.DeleteComment(ctx, record.Item.TargetID); err != nil {
+				return nil, err
+			}
+			if req.BanDurationDays != nil {
+				if apiErr, err := s.banUser(ctx, actor, record.TargetUser.UserID, req.Note, req.BanDurationDays, false); apiErr != nil || err != nil {
+					return apiErr, err
+				}
+			}
+		case ReportTargetTypeMessage:
+			if err := s.repo.RecallGroupMessage(ctx, record.Item.TargetID); err != nil {
+				if err := s.repo.RecallPrivateMessage(ctx, record.Item.TargetID); err != nil {
+					return nil, err
+				}
+			}
+			if req.BanDurationDays != nil {
+				if apiErr, err := s.banUser(ctx, actor, record.TargetUser.UserID, req.Note, req.BanDurationDays, false); apiErr != nil || err != nil {
+					return apiErr, err
+				}
+			}
 		}
 	}
 	_, ok, err := s.repo.HandleReport(ctx, req.ReportID, req.Action, strings.TrimSpace(req.Note), &UserInfo{UserID: actor.UserID, Nickname: actor.UserID})
