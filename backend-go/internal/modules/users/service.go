@@ -20,7 +20,7 @@ type Service struct {
 }
 
 type userNotificationWriter interface {
-	AppendNewFollower(ctx context.Context, targetUserID string, actor map[string]any) error
+	AppendNewFollower(ctx context.Context, targetUserID string, actor map[string]any, source string, sourceMomentID string) error
 	AppendMutualFollow(ctx context.Context, targetUserID string, actor map[string]any) error
 }
 
@@ -323,7 +323,7 @@ func (s *Service) DeleteAccount(ctx context.Context) error {
 	return nil
 }
 
-func (s *Service) Follow(ctx context.Context, targetUserID string) error {
+func (s *Service) Follow(ctx context.Context, targetUserID string, source FollowSource, sourceMomentID string) error {
 	startedAt := time.Now()
 	observability.L().Info("users.follow started", "target_user_id", targetUserID)
 	principal, err := requirePrincipal(ctx)
@@ -346,19 +346,31 @@ func (s *Service) Follow(ctx context.Context, targetUserID string) error {
 	if !settings.AllowFollow {
 		return ErrPermissionDenied
 	}
-	if err := s.repo.Follow(ctx, principal.UserID, targetUserID); err != nil {
+	if err := s.repo.Follow(ctx, principal.UserID, targetUserID, source, sourceMomentID); err != nil {
 		observability.L().Error("users.follow failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
 	}
 	actor := map[string]any{"user_id": principal.UserID, "nickname": principal.UserID}
 	followedAt := time.Now().UTC().Format(time.RFC3339)
+	sourceValue := strings.TrimSpace(string(source))
+	sourceMomentID = strings.TrimSpace(sourceMomentID)
+	if sourceValue != string(FollowSourceMoment) {
+		sourceMomentID = ""
+	}
 	if s.notifications != nil {
-		if err := s.notifications.AppendNewFollower(ctx, targetUserID, actor); err != nil {
+		if err := s.notifications.AppendNewFollower(ctx, targetUserID, actor, sourceValue, sourceMomentID); err != nil {
 			observability.L().Error("users.follow notification append failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 			return err
 		}
 	}
-	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: "NewFollower", Payload: map[string]any{"actor": actor, "followed_at": followedAt}})
+	newFollowerPayload := map[string]any{"actor": actor, "followed_at": followedAt}
+	if sourceValue != "" {
+		newFollowerPayload["source"] = sourceValue
+	}
+	if sourceMomentID != "" {
+		newFollowerPayload["source_moment_id"] = sourceMomentID
+	}
+	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: "NewFollower", Payload: newFollowerPayload})
 	relation, err := s.repo.Relationship(ctx, targetUserID, principal.UserID)
 	if err != nil {
 		observability.L().Error("users.follow relationship check failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())

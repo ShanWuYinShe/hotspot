@@ -60,11 +60,18 @@ func (s *Service) MarkAllRead(ctx context.Context) error {
 	return nil
 }
 
-func (s *Service) AppendNewFollower(ctx context.Context, targetUserID string, actor map[string]any) error {
+func (s *Service) AppendNewFollower(ctx context.Context, targetUserID string, actor map[string]any, source string, sourceMomentID string) error {
+	payload := map[string]any{"type": "new_follower", "actor": actor}
+	if source != "" {
+		payload["source"] = source
+	}
+	if sourceMomentID != "" {
+		payload["source_moment_id"] = sourceMomentID
+	}
 	return s.repo.Append(ctx, targetUserID, NotificationItem{
 		Type:    "new_follower",
 		IsRead:  false,
-		Payload: map[string]any{"type": "new_follower", "actor": actor},
+		Payload: payload,
 	})
 }
 

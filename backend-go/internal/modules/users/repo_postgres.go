@@ -62,9 +62,9 @@ func (r *PostgresRepository) PutSettings(ctx context.Context, userID string, set
 	}
 	return queryable.Exec(ctx, queryUpsertUserSettings, userID, settings.PrivacyLevel, settings.LocationVisible, settings.PresenceVisible, settings.SocialListsVisible, settings.GroupsVisible, settings.LikedMomentsVisible, settings.StatsVisible, settings.AllowFollow, settings.AllowPrivateChat, settings.Searchable, settings.PhoneSearchable, settings.NicknameSearchable, settings.LocationSearchable)
 }
-func (r *PostgresRepository) Follow(ctx context.Context, userID, targetUserID string) error {
+func (r *PostgresRepository) Follow(ctx context.Context, userID, targetUserID string, source FollowSource, sourceMomentID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Follow(ctx, userID, targetUserID)
+		return r.fallback.Follow(ctx, userID, targetUserID, source, sourceMomentID)
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {

@@ -183,7 +183,7 @@ func (h *Handler) Follow(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	if err := h.service.Follow(r.Context(), req.UserID); err != nil {
+	if err := h.service.Follow(r.Context(), req.UserID, req.Source, req.SourceMomentID); err != nil {
 		h.writeServiceError(w, r, "Follow", err)
 		return
 	}

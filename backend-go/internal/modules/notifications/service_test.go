@@ -53,7 +53,7 @@ func (r *notificationListCaptureRepo) MarkAllRead(context.Context, string) error
 func TestAppendNewFollowerBuildsNotification(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
-	if err := service.AppendNewFollower(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}); err != nil {
+	if err := service.AppendNewFollower(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "", ""); err != nil {
 		t.Fatalf("append new follower: %v", err)
 	}
 	if repo.appendUser != "user_alice" || len(repo.appended) != 1 {
@@ -62,6 +62,21 @@ func TestAppendNewFollowerBuildsNotification(t *testing.T) {
 	item := repo.appended[0]
 	if item.Type != "new_follower" || item.Payload["type"] != "new_follower" {
 		t.Fatalf("unexpected notification item: %#v", item)
+	}
+}
+
+func TestAppendNewFollowerIncludesSourceFields(t *testing.T) {
+	repo := &notificationListCaptureRepo{}
+	service := NewServiceWithRepo(repo)
+	if err := service.AppendNewFollower(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "moment", "moment_123"); err != nil {
+		t.Fatalf("append new follower with source: %v", err)
+	}
+	if repo.appendUser != "user_alice" || len(repo.appended) != 1 {
+		t.Fatalf("unexpected append capture: %#v", repo)
+	}
+	item := repo.appended[0]
+	if item.Payload["source"] != "moment" || item.Payload["source_moment_id"] != "moment_123" {
+		t.Fatalf("unexpected source payload: %#v", item.Payload)
 	}
 }
 

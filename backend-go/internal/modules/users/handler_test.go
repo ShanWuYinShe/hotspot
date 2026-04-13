@@ -52,7 +52,9 @@ func (invalidCursorRepo) PutSettings(context.Context, string, UserSettings) erro
 func (invalidCursorRepo) SearchProfiles(context.Context, SearchUsersRequest) (PaginatedProfiles, error) {
 	return PaginatedProfiles{InvalidCursor: true}, nil
 }
-func (invalidCursorRepo) Follow(context.Context, string, string) error            { return nil }
+func (invalidCursorRepo) Follow(context.Context, string, string, FollowSource, string) error {
+	return nil
+}
 func (invalidCursorRepo) Unfollow(context.Context, string, string) error          { return nil }
 func (invalidCursorRepo) Block(context.Context, string, string, string) error     { return nil }
 func (invalidCursorRepo) Unblock(context.Context, string, string) error           { return nil }
@@ -100,7 +102,9 @@ func (r *userErrorRepo) PutSettings(context.Context, string, UserSettings) error
 func (r *userErrorRepo) SearchProfiles(context.Context, SearchUsersRequest) (PaginatedProfiles, error) {
 	return PaginatedProfiles{}, r.searchErr
 }
-func (r *userErrorRepo) Follow(context.Context, string, string) error        { return r.followErr }
+func (r *userErrorRepo) Follow(context.Context, string, string, FollowSource, string) error {
+	return r.followErr
+}
 func (r *userErrorRepo) Unfollow(context.Context, string, string) error      { return r.unfollowErr }
 func (r *userErrorRepo) Block(context.Context, string, string, string) error { return r.blockErr }
 func (r *userErrorRepo) Unblock(context.Context, string, string) error       { return r.unblockErr }
@@ -353,7 +357,7 @@ func TestFollowBlockRemarkAndOpenTheDoor(t *testing.T) {
 
 	notificationRepo := notifications.NewInMemoryRepository()
 	serviceWithNotifications := NewServiceWithDeps(service.repo, notifications.NewServiceWithRepo(notificationRepo))
-	if err := serviceWithNotifications.Follow(ctx, "user_bob"); err != nil {
+	if err := serviceWithNotifications.Follow(ctx, "user_bob", FollowSourceProfile, ""); err != nil {
 		t.Fatalf("follow with notifications: %v", err)
 	}
 	notificationsPage, err := notificationRepo.List(context.Background(), "user_bob", notifications.NotificationListRequest{})
@@ -396,7 +400,7 @@ func TestFollowMutualFollowAddsNotificationsAndRealtime(t *testing.T) {
 	}
 	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_alice"})
 	ctxBob := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_bob"})
-	if err := service.Follow(ctxBob, "user_alice"); err != nil {
+	if err := service.Follow(ctxBob, "user_alice", FollowSourceProfile, ""); err != nil {
 		t.Fatalf("seed reverse follow: %v", err)
 	}
 
@@ -407,7 +411,7 @@ func TestFollowMutualFollowAddsNotificationsAndRealtime(t *testing.T) {
 	hub.RegisterUser("user_alice", "sess_alice", aliceSink)
 	hub.RegisterUser("user_bob", "sess_bob", bobSink)
 
-	if err := serviceWithNotifications.Follow(ctxAlice, "user_bob"); err != nil {
+	if err := serviceWithNotifications.Follow(ctxAlice, "user_bob", FollowSourceProfile, ""); err != nil {
 		t.Fatalf("follow with mutual follow: %v", err)
 	}
 	aliceNotifications, err := notificationRepo.List(context.Background(), "user_alice", notifications.NotificationListRequest{})
@@ -429,6 +433,54 @@ func TestFollowMutualFollowAddsNotificationsAndRealtime(t *testing.T) {
 	}
 	if len(bobSink.events) != 2 || bobSink.events[0].Type != "NewFollower" || bobSink.events[1].Type != "MutualFollow" {
 		t.Fatalf("unexpected bob events: %#v", bobSink.events)
+	}
+}
+
+func TestFollowCarriesSourceIntoNotificationAndRealtime(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	repo := NewInMemoryRepository()
+	if err := repo.PutProfile(context.Background(), defaultProfile("user_alice")); err != nil {
+		t.Fatalf("put alice profile: %v", err)
+	}
+	if err := repo.PutProfile(context.Background(), defaultProfile("user_bob")); err != nil {
+		t.Fatalf("put bob profile: %v", err)
+	}
+	if err := repo.PutSettings(context.Background(), "user_alice", defaultSettings()); err != nil {
+		t.Fatalf("put alice settings: %v", err)
+	}
+	if err := repo.PutSettings(context.Background(), "user_bob", defaultSettings()); err != nil {
+		t.Fatalf("put bob settings: %v", err)
+	}
+	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_alice"})
+	notificationRepo := notifications.NewInMemoryRepository()
+	serviceWithNotifications := NewServiceWithDeps(repo, notifications.NewServiceWithRepo(notificationRepo))
+	bobSink := &testRealtimeSink{}
+	hub.RegisterUser("user_bob", "sess_bob", bobSink)
+
+	if err := serviceWithNotifications.Follow(ctxAlice, "user_bob", FollowSourceMoment, "moment_123"); err != nil {
+		t.Fatalf("follow with source: %v", err)
+	}
+	notificationsPage, err := notificationRepo.List(context.Background(), "user_bob", notifications.NotificationListRequest{})
+	if err != nil {
+		t.Fatalf("list notifications: %v", err)
+	}
+	if len(notificationsPage.Items) != 1 || notificationsPage.Items[0].Type != "new_follower" {
+		t.Fatalf("unexpected notifications page: %#v", notificationsPage)
+	}
+	notifPayload := notificationsPage.Items[0].Payload
+	if notifPayload["source"] != string(FollowSourceMoment) || notifPayload["source_moment_id"] != "moment_123" {
+		t.Fatalf("unexpected notification payload: %#v", notifPayload)
+	}
+	if len(bobSink.events) != 1 || bobSink.events[0].Type != "NewFollower" {
+		t.Fatalf("unexpected realtime events: %#v", bobSink.events)
+	}
+	eventPayload, ok := bobSink.events[0].Payload.(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected realtime payload type: %#v", bobSink.events[0].Payload)
+	}
+	if eventPayload["source"] != string(FollowSourceMoment) || eventPayload["source_moment_id"] != "moment_123" {
+		t.Fatalf("unexpected realtime payload: %#v", eventPayload)
 	}
 }
 
@@ -525,10 +577,10 @@ func TestInMemoryListFollowingCursorAdvancesPage(t *testing.T) {
 			t.Fatalf("put profile %s: %v", id, err)
 		}
 	}
-	if err := repo.Follow(ctx, "user_a", "user_b"); err != nil {
+	if err := repo.Follow(ctx, "user_a", "user_b", FollowSourceProfile, ""); err != nil {
 		t.Fatalf("follow b: %v", err)
 	}
-	if err := repo.Follow(ctx, "user_a", "user_c"); err != nil {
+	if err := repo.Follow(ctx, "user_a", "user_c", FollowSourceProfile, ""); err != nil {
 		t.Fatalf("follow c: %v", err)
 	}
 	first, err := repo.ListFollowing(ctx, "user_a", 1, "")

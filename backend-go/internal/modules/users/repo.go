@@ -14,7 +14,7 @@ type Repository interface {
 	GetSettings(context.Context, string) (UserSettings, bool, error)
 	PutSettings(context.Context, string, UserSettings) error
 	SearchProfiles(context.Context, SearchUsersRequest) (PaginatedProfiles, error)
-	Follow(context.Context, string, string) error
+	Follow(context.Context, string, string, FollowSource, string) error
 	Unfollow(context.Context, string, string) error
 	Block(context.Context, string, string, string) error
 	Unblock(context.Context, string, string) error

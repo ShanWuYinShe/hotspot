@@ -36,8 +36,8 @@ func (r *PersistenceRepository) PutSettings(ctx context.Context, userID string, 
 func (r *PersistenceRepository) SearchProfiles(ctx context.Context, req SearchUsersRequest) (PaginatedProfiles, error) {
 	return r.impl.SearchProfiles(ctx, req)
 }
-func (r *PersistenceRepository) Follow(ctx context.Context, userID, targetUserID string) error {
-	return r.impl.Follow(ctx, userID, targetUserID)
+func (r *PersistenceRepository) Follow(ctx context.Context, userID, targetUserID string, source FollowSource, sourceMomentID string) error {
+	return r.impl.Follow(ctx, userID, targetUserID, source, sourceMomentID)
 }
 func (r *PersistenceRepository) Unfollow(ctx context.Context, userID, targetUserID string) error {
 	return r.impl.Unfollow(ctx, userID, targetUserID)

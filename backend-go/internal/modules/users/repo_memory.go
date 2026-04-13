@@ -132,7 +132,7 @@ func (r *InMemoryRepository) SearchProfiles(_ context.Context, req SearchUsersRe
 	}
 	return result, nil
 }
-func (r *InMemoryRepository) Follow(_ context.Context, userID, targetUserID string) error {
+func (r *InMemoryRepository) Follow(_ context.Context, userID, targetUserID string, _ FollowSource, _ string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	relation := r.ensureRelation(userID, targetUserID)
