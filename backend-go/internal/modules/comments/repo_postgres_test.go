@@ -72,9 +72,9 @@ func (r *fallbackRepo) ListReplies(context.Context, string, int, string) (Pagina
 	return PaginatedComments{}, nil
 }
 
-func (r *fallbackRepo) Like(context.Context, string, string) error {
+func (r *fallbackRepo) Like(context.Context, string, string) (bool, error) {
 	r.used = true
-	return nil
+	return false, nil
 }
 
 func (r *fallbackRepo) Unlike(context.Context, string, string) error {

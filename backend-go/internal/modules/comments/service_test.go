@@ -41,6 +41,10 @@ func (w *failingNotificationWriter) AppendMomentCommented(context.Context, strin
 	w.calls++
 	return errors.New("notification down")
 }
+func (w *failingNotificationWriter) AppendCommentLiked(context.Context, string, map[string]any, string, string, string, map[string]any) error {
+	w.calls++
+	return errors.New("notification down")
+}
 func (w *failingNotificationWriter) AppendCommentReply(context.Context, string, map[string]any, string, map[string]any, string, string, string, string) error {
 	w.calls++
 	return errors.New("notification down")
@@ -390,6 +394,127 @@ func TestCreateCommentIgnoresNotificationFailures(t *testing.T) {
 	}
 	if len(page.Items) != 1 {
 		t.Fatalf("expected persisted comment, got %#v", page)
+	}
+}
+
+func TestLikeCommentSendsRealtimeAndNotificationToAuthor(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	repo := NewInMemoryRepository()
+	moments := &momentProviderStub{
+		exists:         true,
+		notificationOK: true,
+		notificationContext: MomentNotificationContext{
+			UserID:  "user_alice",
+			Summary: map[string]any{"moment_id": "moment_1", "description_preview": "moment summary"},
+		},
+	}
+	notificationRepo := notifications.NewInMemoryRepository()
+	service := NewServiceWithDeps(repo, moments, notifications.NewServiceWithRepo(notificationRepo))
+	comment, err := repo.Create(testCommentContext("user_alice"), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "comment body"})
+	if err != nil {
+		t.Fatalf("create comment: %v", err)
+	}
+	aliceSink := &sinkCapture{}
+	hub.RegisterUser("user_alice", "sess_alice", aliceSink)
+
+	if err := service.Like(testCommentContext("user_bob"), LikeCommentRequest{CommentID: comment.CommentID}); err != nil {
+		t.Fatalf("like comment: %v", err)
+	}
+	if len(aliceSink.events) != 1 {
+		t.Fatalf("expected one event, got %#v", aliceSink.events)
+	}
+	if aliceSink.events[0].Type != "CommentLiked" {
+		t.Fatalf("unexpected event type: %#v", aliceSink.events)
+	}
+	payload, ok := aliceSink.events[0].Payload.(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected payload type: %#v", aliceSink.events[0].Payload)
+	}
+	if payload["comment_id"] != comment.CommentID || payload["comment_preview"] != "comment body" || payload["moment_id"] != "moment_1" {
+		t.Fatalf("unexpected payload: %#v", payload)
+	}
+	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notifications.NotificationListRequest{})
+	if err != nil {
+		t.Fatalf("list notifications: %v", err)
+	}
+	if len(notificationsPage.Items) != 1 || notificationsPage.Items[0].Type != "comment_liked" {
+		t.Fatalf("unexpected notifications page: %#v", notificationsPage)
+	}
+}
+
+func TestLikeCommentSkipsSelfNotification(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	repo := NewInMemoryRepository()
+	moments := &momentProviderStub{
+		exists:         true,
+		notificationOK: true,
+		notificationContext: MomentNotificationContext{
+			UserID:  "user_alice",
+			Summary: map[string]any{"moment_id": "moment_1", "description_preview": "moment summary"},
+		},
+	}
+	notificationRepo := notifications.NewInMemoryRepository()
+	service := NewServiceWithDeps(repo, moments, notifications.NewServiceWithRepo(notificationRepo))
+	comment, err := repo.Create(testCommentContext("user_alice"), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "comment body"})
+	if err != nil {
+		t.Fatalf("create comment: %v", err)
+	}
+	aliceSink := &sinkCapture{}
+	hub.RegisterUser("user_alice", "sess_alice", aliceSink)
+
+	if err := service.Like(testCommentContext("user_alice"), LikeCommentRequest{CommentID: comment.CommentID}); err != nil {
+		t.Fatalf("like comment: %v", err)
+	}
+	if len(aliceSink.events) != 0 {
+		t.Fatalf("expected no self event, got %#v", aliceSink.events)
+	}
+	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notifications.NotificationListRequest{})
+	if err != nil {
+		t.Fatalf("list notifications: %v", err)
+	}
+	if len(notificationsPage.Items) != 0 {
+		t.Fatalf("expected no self notifications, got %#v", notificationsPage)
+	}
+}
+
+func TestLikeCommentDeduplicatesRepeatedLike(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	repo := NewInMemoryRepository()
+	moments := &momentProviderStub{
+		exists:         true,
+		notificationOK: true,
+		notificationContext: MomentNotificationContext{
+			UserID:  "user_alice",
+			Summary: map[string]any{"moment_id": "moment_1", "description_preview": "moment summary"},
+		},
+	}
+	notificationRepo := notifications.NewInMemoryRepository()
+	service := NewServiceWithDeps(repo, moments, notifications.NewServiceWithRepo(notificationRepo))
+	comment, err := repo.Create(testCommentContext("user_alice"), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "comment body"})
+	if err != nil {
+		t.Fatalf("create comment: %v", err)
+	}
+	aliceSink := &sinkCapture{}
+	hub.RegisterUser("user_alice", "sess_alice", aliceSink)
+
+	if err := service.Like(testCommentContext("user_bob"), LikeCommentRequest{CommentID: comment.CommentID}); err != nil {
+		t.Fatalf("first like: %v", err)
+	}
+	if err := service.Like(testCommentContext("user_bob"), LikeCommentRequest{CommentID: comment.CommentID}); err != nil {
+		t.Fatalf("second like: %v", err)
+	}
+	if len(aliceSink.events) != 1 {
+		t.Fatalf("expected one event, got %#v", aliceSink.events)
+	}
+	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notifications.NotificationListRequest{})
+	if err != nil {
+		t.Fatalf("list notifications: %v", err)
+	}
+	if len(notificationsPage.Items) != 1 || notificationsPage.Items[0].Type != "comment_liked" {
+		t.Fatalf("expected one comment_liked notification, got %#v", notificationsPage)
 	}
 }
 

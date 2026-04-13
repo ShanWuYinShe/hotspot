@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"hotspot/backend-go/internal/modules/comments"
+	"hotspot/backend-go/internal/modules/notifications"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/realtime"
@@ -230,6 +231,105 @@ func TestCreateMomentRecordsResourceGuard(t *testing.T) {
 	}
 	if len(checker.recorded) != 1 || !strings.HasPrefix(checker.recorded[0], "moment:") {
 		t.Fatalf("unexpected records: %#v", checker.recorded)
+	}
+}
+
+func TestLikeMomentSendsRealtimeAndNotificationToAuthor(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	notificationRepo := notifications.NewInMemoryRepository()
+	service := NewServiceWithDeps(NewInMemoryRepository(), notifications.NewServiceWithRepo(notificationRepo))
+	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	ctxBob := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_2"})
+	created, err := service.Create(ctxAlice, CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Somewhere"}})
+	if err != nil {
+		t.Fatalf("create moment: %v", err)
+	}
+	aliceSink := &sinkCapture{}
+	hub.RegisterUser("user_alice", "sess_alice", aliceSink)
+
+	if err := service.Like(ctxBob, created.MomentID); err != nil {
+		t.Fatalf("like moment: %v", err)
+	}
+	if len(aliceSink.events) != 1 {
+		t.Fatalf("expected one event, got %#v", aliceSink.events)
+	}
+	if aliceSink.events[0].Type != "MomentLiked" {
+		t.Fatalf("unexpected event type: %#v", aliceSink.events)
+	}
+	payload, ok := aliceSink.events[0].Payload.(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected payload type: %#v", aliceSink.events[0].Payload)
+	}
+	if payload["moment_id"] != created.MomentID {
+		t.Fatalf("unexpected payload: %#v", payload)
+	}
+	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notifications.NotificationListRequest{})
+	if err != nil {
+		t.Fatalf("list notifications: %v", err)
+	}
+	if len(notificationsPage.Items) != 1 || notificationsPage.Items[0].Type != "moment_liked" {
+		t.Fatalf("unexpected notifications page: %#v", notificationsPage)
+	}
+}
+
+func TestLikeMomentSkipsSelfNotification(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	notificationRepo := notifications.NewInMemoryRepository()
+	service := NewServiceWithDeps(NewInMemoryRepository(), notifications.NewServiceWithRepo(notificationRepo))
+	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	created, err := service.Create(ctxAlice, CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Somewhere"}})
+	if err != nil {
+		t.Fatalf("create moment: %v", err)
+	}
+	aliceSink := &sinkCapture{}
+	hub.RegisterUser("user_alice", "sess_alice", aliceSink)
+
+	if err := service.Like(ctxAlice, created.MomentID); err != nil {
+		t.Fatalf("like own moment: %v", err)
+	}
+	if len(aliceSink.events) != 0 {
+		t.Fatalf("expected no self event, got %#v", aliceSink.events)
+	}
+	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notifications.NotificationListRequest{})
+	if err != nil {
+		t.Fatalf("list notifications: %v", err)
+	}
+	if len(notificationsPage.Items) != 0 {
+		t.Fatalf("expected no self notifications, got %#v", notificationsPage)
+	}
+}
+
+func TestLikeMomentDeduplicatesRepeatedLike(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	notificationRepo := notifications.NewInMemoryRepository()
+	service := NewServiceWithDeps(NewInMemoryRepository(), notifications.NewServiceWithRepo(notificationRepo))
+	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	ctxBob := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_2"})
+	created, err := service.Create(ctxAlice, CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Somewhere"}})
+	if err != nil {
+		t.Fatalf("create moment: %v", err)
+	}
+	aliceSink := &sinkCapture{}
+	hub.RegisterUser("user_alice", "sess_alice", aliceSink)
+
+	if err := service.Like(ctxBob, created.MomentID); err != nil {
+		t.Fatalf("first like: %v", err)
+	}
+	if err := service.Like(ctxBob, created.MomentID); err != nil {
+		t.Fatalf("second like: %v", err)
+	}
+	if len(aliceSink.events) != 1 {
+		t.Fatalf("expected one event, got %#v", aliceSink.events)
+	}
+	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notifications.NotificationListRequest{})
+	if err != nil {
+		t.Fatalf("list notifications: %v", err)
+	}
+	if len(notificationsPage.Items) != 1 || notificationsPage.Items[0].Type != "moment_liked" {
+		t.Fatalf("expected one moment_liked notification, got %#v", notificationsPage)
 	}
 }
 

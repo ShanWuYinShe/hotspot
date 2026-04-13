@@ -3,23 +3,35 @@ package moments
 import (
 	"context"
 	"strings"
+	"time"
 
 	"hotspot/backend-go/internal/modules/comments"
+	"hotspot/backend-go/internal/modules/notifications"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
+	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/resourceguard"
 )
 
 type Service struct {
-	repo Repository
+	repo          Repository
+	notifications momentNotificationWriter
+}
+
+type momentNotificationWriter interface {
+	AppendMomentLiked(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any) error
 }
 
 func NewService() *Service {
-	return NewServiceWithRepo(NewInMemoryRepository())
+	return NewServiceWithDeps(NewInMemoryRepository(), notifications.NewService())
 }
 
 func NewServiceWithRepo(repo Repository) *Service {
-	return &Service{repo: repo}
+	return NewServiceWithDeps(repo, notifications.NewService())
+}
+
+func NewServiceWithDeps(repo Repository, notificationWriter momentNotificationWriter) *Service {
+	return &Service{repo: repo, notifications: notificationWriter}
 }
 
 func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (MomentItem, error) {
@@ -121,7 +133,36 @@ func (s *Service) Like(ctx context.Context, momentID string) error {
 	if !exists {
 		return ErrMomentNotFound
 	}
-	return s.repo.Like(ctx, principal.UserID, momentID)
+	newlyLiked, err := s.repo.Like(ctx, principal.UserID, momentID)
+	if err != nil {
+		observability.L().Error("moments.like failed", "error", err, "moment_id", momentID, "user_id", principal.UserID)
+		return err
+	}
+	if !newlyLiked {
+		return nil
+	}
+	momentContext, ok, err := s.NotificationContext(ctx, momentID)
+	if err != nil {
+		observability.L().Error("moments.like load notification context failed", "error", err, "moment_id", momentID)
+		return nil
+	}
+	if !ok || strings.TrimSpace(momentContext.UserID) == "" || momentContext.UserID == principal.UserID {
+		return nil
+	}
+	actor := buildMomentActor(principal.UserID)
+	momentSummary := cloneMomentSummary(momentContext.Summary, momentID)
+	if s.notifications != nil {
+		if err := s.notifications.AppendMomentLiked(ctx, momentContext.UserID, actor, momentID, momentSummary); err != nil {
+			observability.L().Error("moments.like append notification failed", "error", err, "moment_id", momentID, "target_user_id", momentContext.UserID)
+		}
+	}
+	realtime.DefaultHub().BroadcastToUser(momentContext.UserID, realtime.Event{Type: "MomentLiked", Payload: map[string]any{
+		"moment_id":      momentID,
+		"moment_summary": cloneMomentSummary(momentSummary, momentID),
+		"actor":          actor,
+		"liked_at":       time.Now().UTC().Format(time.RFC3339),
+	}})
+	return nil
 }
 
 func (s *Service) Unlike(ctx context.Context, momentID string) error {
@@ -176,6 +217,22 @@ func (s *Service) ListFavorites(ctx context.Context, req MyFavoritesRequest) (Pa
 		cursor = req.Pagination.Cursor
 	}
 	return s.repo.ListFavorites(ctx, principal.UserID, limit, cursor)
+}
+
+func buildMomentActor(userID string) map[string]any {
+	userID = strings.TrimSpace(userID)
+	return map[string]any{"user_id": userID, "nickname": userID}
+}
+
+func cloneMomentSummary(summary map[string]any, momentID string) map[string]any {
+	cloned := make(map[string]any, len(summary)+1)
+	for key, value := range summary {
+		cloned[key] = value
+	}
+	if len(cloned) == 0 {
+		cloned["moment_id"] = momentID
+	}
+	return cloned
 }
 
 func summarizeMomentDescription(description string) string {

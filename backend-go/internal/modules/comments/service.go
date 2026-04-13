@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"hotspot/backend-go/internal/modules/notifications"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -23,6 +24,7 @@ type Service struct {
 
 type commentNotificationWriter interface {
 	AppendMomentCommented(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any, commentID string, commentPreview string) error
+	AppendCommentLiked(ctx context.Context, targetUserID string, actor map[string]any, commentID string, commentPreview string, momentID string, momentSummary map[string]any) error
 	AppendCommentReply(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any, parentCommentID string, parentPreview string, replyID string, replyPreview string) error
 	AppendMentioned(ctx context.Context, targetUserID string, actor map[string]any, targetType string, momentID string, momentSummary map[string]any, commentID string, commentPreview string) error
 }
@@ -129,7 +131,7 @@ func (s *Service) ListReplies(ctx context.Context, req CommentRepliesRequest) (P
 }
 
 func (s *Service) Like(ctx context.Context, req LikeCommentRequest) error {
-	_, found, err := s.repo.Get(ctx, req.CommentID)
+	comment, found, err := s.repo.Get(ctx, req.CommentID)
 	if err != nil {
 		return err
 	}
@@ -137,7 +139,38 @@ func (s *Service) Like(ctx context.Context, req LikeCommentRequest) error {
 		return ErrCommentNotFound
 	}
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	return s.repo.Like(ctx, req.CommentID, principal.UserID)
+	newlyLiked, err := s.repo.Like(ctx, req.CommentID, principal.UserID)
+	if err != nil {
+		return err
+	}
+	if !newlyLiked || strings.TrimSpace(comment.User.UserID) == "" || comment.User.UserID == principal.UserID {
+		return nil
+	}
+	momentContext, ok, err := s.moments.NotificationContext(ctx, comment.MomentID)
+	if err != nil {
+		observability.L().Error("comments.like load moment notification context failed", "error", err, "moment_id", comment.MomentID, "comment_id", comment.CommentID)
+		return nil
+	}
+	if !ok {
+		return nil
+	}
+	actor := buildCommentActor(CommentItem{User: UserInfo{UserID: principal.UserID, Nickname: principal.UserID}}, principal.UserID)
+	momentSummary := notificationMomentSummary(momentContext, comment.MomentID)
+	commentPreview := summarizeCommentText(comment.Content, "")
+	if s.notifications != nil {
+		if err := s.notifications.AppendCommentLiked(ctx, comment.User.UserID, actor, comment.CommentID, commentPreview, comment.MomentID, momentSummary); err != nil {
+			observability.L().Error("comments.like append comment_liked notification failed", "error", err, "moment_id", comment.MomentID, "comment_id", comment.CommentID, "target_user_id", comment.User.UserID)
+		}
+	}
+	realtime.DefaultHub().BroadcastToUser(comment.User.UserID, realtime.Event{Type: "CommentLiked", Payload: map[string]any{
+		"comment_id":      comment.CommentID,
+		"moment_id":       comment.MomentID,
+		"moment_summary":  cloneSummary(momentSummary),
+		"comment_preview": commentPreview,
+		"actor":           actor,
+		"liked_at":        currentTimestamp(),
+	}})
+	return nil
 }
 
 func (s *Service) Unlike(ctx context.Context, req UnlikeCommentRequest) error {
@@ -314,6 +347,10 @@ func sortedMentionTargets(targets map[string]struct{}) []string {
 	}
 	sort.Strings(userIDs)
 	return userIDs
+}
+
+func currentTimestamp() string {
+	return time.Now().UTC().Format(time.RFC3339)
 }
 
 func summarizeCommentText(primary string, fallback string) string {

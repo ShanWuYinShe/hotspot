@@ -80,6 +80,19 @@ func (s *Service) AppendSystemAnnouncement(ctx context.Context, userIDs []string
 	})
 }
 
+func (s *Service) AppendMomentLiked(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any) error {
+	return s.repo.Append(ctx, targetUserID, NotificationItem{
+		Type:   "moment_liked",
+		IsRead: false,
+		Payload: map[string]any{
+			"type":           "moment_liked",
+			"actor":          actor,
+			"moment_id":      momentID,
+			"moment_summary": momentSummary,
+		},
+	})
+}
+
 func (s *Service) AppendMomentCommented(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any, commentID string, commentPreview string) error {
 	return s.repo.Append(ctx, targetUserID, NotificationItem{
 		Type:   "moment_commented",
@@ -91,6 +104,21 @@ func (s *Service) AppendMomentCommented(ctx context.Context, targetUserID string
 			"moment_summary":  momentSummary,
 			"comment_id":      commentID,
 			"comment_preview": commentPreview,
+		},
+	})
+}
+
+func (s *Service) AppendCommentLiked(ctx context.Context, targetUserID string, actor map[string]any, commentID string, commentPreview string, momentID string, momentSummary map[string]any) error {
+	return s.repo.Append(ctx, targetUserID, NotificationItem{
+		Type:   "comment_liked",
+		IsRead: false,
+		Payload: map[string]any{
+			"type":            "comment_liked",
+			"actor":           actor,
+			"comment_id":      commentID,
+			"comment_preview": commentPreview,
+			"moment_id":       momentID,
+			"moment_summary":  momentSummary,
 		},
 	})
 }

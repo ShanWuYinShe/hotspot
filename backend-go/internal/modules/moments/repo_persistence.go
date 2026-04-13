@@ -52,7 +52,7 @@ func (r *PersistenceRepository) Delete(ctx context.Context, momentID string) err
 	return r.impl.Delete(ctx, momentID)
 }
 
-func (r *PersistenceRepository) Like(ctx context.Context, userID string, momentID string) error {
+func (r *PersistenceRepository) Like(ctx context.Context, userID string, momentID string) (bool, error) {
 	return r.impl.Like(ctx, userID, momentID)
 }
 

@@ -150,17 +150,17 @@ func (r *InMemoryRepository) ListReplies(_ context.Context, commentID string, li
 	return PaginatedComments{Items: page, NextCursor: nextCursor}, nil
 }
 
-func (r *InMemoryRepository) Like(_ context.Context, commentID string, userID string) error {
+func (r *InMemoryRepository) Like(_ context.Context, commentID string, userID string) (bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, ok := r.byID[commentID]; !ok {
-		return ErrCommentNotFound
+		return false, ErrCommentNotFound
 	}
 	if r.likes[commentID] == nil {
 		r.likes[commentID] = make(map[string]likeEntry)
 	}
 	if _, exists := r.likes[commentID][userID]; exists {
-		return nil
+		return false, nil
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
 	r.likes[commentID][userID] = likeEntry{userID: userID, nickname: userID, likedAt: now}
@@ -168,7 +168,7 @@ func (r *InMemoryRepository) Like(_ context.Context, commentID string, userID st
 		item.LikesCount++
 		r.byID[commentID] = item
 	}
-	return nil
+	return true, nil
 }
 
 func (r *InMemoryRepository) Unlike(_ context.Context, commentID string, userID string) error {

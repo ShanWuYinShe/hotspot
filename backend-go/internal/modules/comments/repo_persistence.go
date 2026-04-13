@@ -36,7 +36,7 @@ func (r *PersistenceRepository) ListReplies(ctx context.Context, commentID strin
 	return r.impl.ListReplies(ctx, commentID, limit, cursor)
 }
 
-func (r *PersistenceRepository) Like(ctx context.Context, commentID string, userID string) error {
+func (r *PersistenceRepository) Like(ctx context.Context, commentID string, userID string) (bool, error) {
 	return r.impl.Like(ctx, commentID, userID)
 }
 

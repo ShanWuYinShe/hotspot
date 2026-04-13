@@ -182,26 +182,27 @@ func containsTag(tags []string, tag string) bool {
 	return false
 }
 
-func (r *InMemoryRepository) Like(_ context.Context, userID string, momentID string) error {
+func (r *InMemoryRepository) Like(_ context.Context, userID string, momentID string) (bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, ok := r.moments[momentID]; !ok {
-		return ErrMomentNotFound
+		return false, ErrMomentNotFound
 	}
 	if r.likes[momentID] == nil {
 		r.likes[momentID] = make(map[string]likeEntry)
 	}
-	if _, exists := r.likes[momentID][userID]; !exists {
-		r.likes[momentID][userID] = likeEntry{
-			userID:   userID,
-			nickname: userID,
-			likedAt:  time.Now().UTC().Format(time.RFC3339),
-		}
-		item := r.moments[momentID]
-		item.LikesCount++
-		r.moments[momentID] = item
+	if _, exists := r.likes[momentID][userID]; exists {
+		return false, nil
 	}
-	return nil
+	r.likes[momentID][userID] = likeEntry{
+		userID:   userID,
+		nickname: userID,
+		likedAt:  time.Now().UTC().Format(time.RFC3339),
+	}
+	item := r.moments[momentID]
+	item.LikesCount++
+	r.moments[momentID] = item
+	return true, nil
 }
 
 func (r *InMemoryRepository) Unlike(_ context.Context, userID string, momentID string) error {

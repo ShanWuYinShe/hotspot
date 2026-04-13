@@ -8,7 +8,7 @@ type Repository interface {
 	List(context.Context, string) (PaginatedComments, error)
 	Get(ctx context.Context, commentID string) (CommentItem, bool, error)
 	ListReplies(ctx context.Context, commentID string, limit int, cursor string) (PaginatedComments, error)
-	Like(ctx context.Context, commentID string, userID string) error
+	Like(ctx context.Context, commentID string, userID string) (bool, error)
 	Unlike(ctx context.Context, commentID string, userID string) error
 	ListLikes(ctx context.Context, commentID string, limit int, cursor string) ([]CommentLikeItem, string, error)
 }

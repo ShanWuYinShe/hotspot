@@ -65,6 +65,24 @@ func TestAppendNewFollowerBuildsNotification(t *testing.T) {
 	}
 }
 
+func TestAppendMomentLikedBuildsNotification(t *testing.T) {
+	repo := &notificationListCaptureRepo{}
+	service := NewServiceWithRepo(repo)
+	if err := service.AppendMomentLiked(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "moment_1", map[string]any{"moment_id": "moment_1", "description_preview": "summary"}); err != nil {
+		t.Fatalf("append moment liked: %v", err)
+	}
+	if repo.appendUser != "user_alice" || len(repo.appended) != 1 {
+		t.Fatalf("unexpected append capture: %#v", repo)
+	}
+	item := repo.appended[0]
+	if item.Type != "moment_liked" || item.Payload["type"] != "moment_liked" {
+		t.Fatalf("unexpected notification item: %#v", item)
+	}
+	if item.Payload["moment_id"] != "moment_1" {
+		t.Fatalf("unexpected payload: %#v", item.Payload)
+	}
+}
+
 func TestAppendMomentCommentedBuildsNotification(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
@@ -79,6 +97,24 @@ func TestAppendMomentCommentedBuildsNotification(t *testing.T) {
 		t.Fatalf("unexpected notification item: %#v", item)
 	}
 	if item.Payload["comment_id"] != "comment_1" || item.Payload["comment_preview"] != "preview" {
+		t.Fatalf("unexpected payload: %#v", item.Payload)
+	}
+}
+
+func TestAppendCommentLikedBuildsNotification(t *testing.T) {
+	repo := &notificationListCaptureRepo{}
+	service := NewServiceWithRepo(repo)
+	if err := service.AppendCommentLiked(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "comment_1", "preview", "moment_1", map[string]any{"moment_id": "moment_1", "description_preview": "summary"}); err != nil {
+		t.Fatalf("append comment liked: %v", err)
+	}
+	if repo.appendUser != "user_alice" || len(repo.appended) != 1 {
+		t.Fatalf("unexpected append capture: %#v", repo)
+	}
+	item := repo.appended[0]
+	if item.Type != "comment_liked" || item.Payload["type"] != "comment_liked" {
+		t.Fatalf("unexpected notification item: %#v", item)
+	}
+	if item.Payload["comment_id"] != "comment_1" || item.Payload["comment_preview"] != "preview" || item.Payload["moment_id"] != "moment_1" {
 		t.Fatalf("unexpected payload: %#v", item.Payload)
 	}
 }

@@ -168,26 +168,29 @@ func (r *PostgresRepository) Delete(ctx context.Context, momentID string) error 
 	return queryable.Exec(ctx, queryDeleteMoment, momentID)
 }
 
-func (r *PostgresRepository) Like(ctx context.Context, userID string, momentID string) error {
+func (r *PostgresRepository) Like(ctx context.Context, userID string, momentID string) (bool, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return r.fallback.Like(ctx, userID, momentID)
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		return persistence.ErrNotImplemented
+		return false, persistence.ErrNotImplemented
 	}
 	exists, err := momentLikeExists(ctx, queryable, momentID, userID)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if exists {
-		return nil
+		return false, nil
 	}
 	now := time.Now().UTC()
 	if err := queryable.Exec(ctx, queryInsertMomentLike, momentID, userID, now); err != nil {
-		return err
+		return false, err
 	}
-	return queryable.Exec(ctx, queryIncrementMomentLikeCount, momentID)
+	if err := queryable.Exec(ctx, queryIncrementMomentLikeCount, momentID); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func (r *PostgresRepository) Unlike(ctx context.Context, userID string, momentID string) error {

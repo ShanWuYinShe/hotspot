@@ -162,25 +162,28 @@ func (r *PostgresRepository) ListReplies(ctx context.Context, commentID string, 
 	return PaginatedComments{Items: items}, nil
 }
 
-func (r *PostgresRepository) Like(ctx context.Context, commentID string, userID string) error {
+func (r *PostgresRepository) Like(ctx context.Context, commentID string, userID string) (bool, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return r.fallback.Like(ctx, commentID, userID)
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		return persistence.ErrNotImplemented
+		return false, persistence.ErrNotImplemented
 	}
 	var exists int
 	if err := queryable.QueryRow(ctx, queryCheckCommentLike, commentID, userID).Scan(&exists); err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return err
+		return false, err
 	} else if err == nil {
-		return nil // already liked
+		return false, nil
 	}
 	now := time.Now().UTC()
 	if err := queryable.Exec(ctx, queryInsertCommentLike, commentID, userID, now); err != nil {
-		return err
+		return false, err
 	}
-	return queryable.Exec(ctx, queryIncrementCommentLikeCount, commentID)
+	if err := queryable.Exec(ctx, queryIncrementCommentLikeCount, commentID); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func (r *PostgresRepository) Unlike(ctx context.Context, commentID string, userID string) error {

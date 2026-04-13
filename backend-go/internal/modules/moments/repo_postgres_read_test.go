@@ -102,9 +102,9 @@ func (r *fallbackRepo) Delete(context.Context, string) error {
 	return nil
 }
 
-func (r *fallbackRepo) Like(context.Context, string, string) error {
+func (r *fallbackRepo) Like(context.Context, string, string) (bool, error) {
 	r.used = true
-	return nil
+	return false, nil
 }
 
 func (r *fallbackRepo) Unlike(context.Context, string, string) error {
@@ -537,10 +537,10 @@ func TestPostgresRepositoryLikeAndUnlikeAreIdempotent(t *testing.T) {
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory, &fallbackRepo{})
 
-	if err := repo.Like(context.Background(), "user_bob", "moment_1"); err != nil {
+	if _, err := repo.Like(context.Background(), "user_bob", "moment_1"); err != nil {
 		t.Fatalf("first like: %v", err)
 	}
-	if err := repo.Like(context.Background(), "user_bob", "moment_1"); err != nil {
+	if _, err := repo.Like(context.Background(), "user_bob", "moment_1"); err != nil {
 		t.Fatalf("second like: %v", err)
 	}
 	if got := backend.moments["moment_1"].LikesCount; got != 1 {
