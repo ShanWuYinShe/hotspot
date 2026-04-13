@@ -652,7 +652,7 @@ func reportItemFromModule(item reportsmodule.ReportItem, reporter usersmodule.Us
 		ReportID:    item.ReportID,
 		TargetType:  ReportTargetType(item.TargetType),
 		TargetID:    item.TargetID,
-		Reason:      item.Reason,
+		Reason:      string(item.Reason),
 		Description: item.Description,
 		Status:      ReportStatus(item.Status),
 		CreatedAt:   item.CreatedAt,

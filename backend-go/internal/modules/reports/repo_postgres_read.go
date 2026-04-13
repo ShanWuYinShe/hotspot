@@ -6,15 +6,15 @@ import (
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
-func (r *PostgresRepository) List(ctx context.Context, userID string) (PaginatedReports, error) {
+func (r *PostgresRepository) List(ctx context.Context, userID string, req MyReportsRequest) (PaginatedReports, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.List(ctx, userID)
+		return r.fallback.List(ctx, userID, req)
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
 		return PaginatedReports{}, persistence.ErrNotImplemented
 	}
-	rows, err := queryable.Query(ctx, queryListReports, userID)
+	rows, err := queryable.Query(ctx, queryListReports, userID, string(req.Status), string(req.TargetType))
 	if err != nil {
 		return PaginatedReports{}, err
 	}

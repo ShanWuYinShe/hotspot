@@ -49,9 +49,17 @@ func (r *reportFallbackRepo) Create(context.Context, string, CreateReportRequest
 	r.used = true
 	return ReportCreated{}, nil
 }
-func (r *reportFallbackRepo) List(context.Context, string) (PaginatedReports, error) {
+func (r *reportFallbackRepo) List(context.Context, string, MyReportsRequest) (PaginatedReports, error) {
 	r.used = true
 	return PaginatedReports{}, nil
+}
+func (r *reportFallbackRepo) ExistsOpenReport(context.Context, ReportTargetType, string) (bool, error) {
+	r.used = true
+	return false, nil
+}
+func (r *reportFallbackRepo) TargetOwner(context.Context, ReportTargetType, string) (string, bool, error) {
+	r.used = true
+	return "", false, nil
 }
 
 type reportBackendStub struct {
@@ -70,7 +78,7 @@ func (b *reportBackendStub) Exec(_ context.Context, query string, args ...any) e
 	}
 	if query == queryInsertReport {
 		userID := args[1].(string)
-		item := ReportItem{ReportID: args[0].(string), TargetType: args[2].(string), TargetID: args[3].(string), Reason: args[4].(string), Description: args[5].(string), Status: args[6].(string), CreatedAt: args[7].(string)}
+		item := ReportItem{ReportID: args[0].(string), TargetType: ReportTargetType(args[2].(string)), TargetID: args[3].(string), Reason: ReportReason(args[4].(string)), Description: args[5].(string), Status: ReportStatus(args[6].(string)), CreatedAt: args[7].(string)}
 		b.reports[userID] = append(b.reports[userID], item)
 	}
 	return nil
@@ -121,7 +129,7 @@ func TestPostgresRepositoryCreateAndList(t *testing.T) {
 	if err != nil || created.ReportID == "" {
 		t.Fatalf("unexpected create result: %#v err=%v", created, err)
 	}
-	list, err := repo.List(context.Background(), "user_alice")
+	list, err := repo.List(context.Background(), "user_alice", MyReportsRequest{})
 	if err != nil || len(list.Items) != 1 || list.Items[0].ReportID != created.ReportID {
 		t.Fatalf("unexpected list: %#v err=%v", list, err)
 	}
@@ -137,7 +145,7 @@ func TestPostgresRepositoryListReturnsEmptyWithoutFallback(t *testing.T) {
 	fallback := &reportFallbackRepo{}
 	repo := NewPostgresRepository(factory, fallback)
 
-	list, err := repo.List(context.Background(), "user_alice")
+	list, err := repo.List(context.Background(), "user_alice", MyReportsRequest{})
 	if err != nil || len(list.Items) != 0 {
 		t.Fatalf("unexpected list: %#v err=%v", list, err)
 	}
@@ -171,7 +179,7 @@ func TestPostgresRepositoryListReturnsErrorOnQueryFailure(t *testing.T) {
 	fallback := &reportFallbackRepo{}
 	repo := NewPostgresRepository(factory, fallback)
 
-	_, err := repo.List(context.Background(), "user_alice")
+	_, err := repo.List(context.Background(), "user_alice", MyReportsRequest{})
 	if err == nil {
 		t.Fatal("expected list error")
 	}
