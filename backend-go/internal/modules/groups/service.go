@@ -6,6 +6,7 @@ import (
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
+	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/resourceguard"
 )
 
@@ -106,10 +107,13 @@ func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
 		observability.L().Warn("groups.dismiss permission denied", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return ErrPermissionDenied
 	}
-	if err := s.repo.Dismiss(ctx, principal.UserID); err != nil {
+	if err := s.repo.Dismiss(ctx, req.GroupID); err != nil {
 		observability.L().Error("groups.dismiss failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
 	}
+	event := realtime.Event{Type: "GroupDismissed", Payload: map[string]any{"group_id": req.GroupID, "dismissed_at": time.Now().UTC().Format(time.RFC3339), "reason": "owner_dismissed"}}
+	realtime.DefaultHub().BroadcastToUser(principal.UserID, event)
+	realtime.DefaultHub().BroadcastToGroup(req.GroupID, event)
 	observability.L().Info("groups.dismiss completed", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }

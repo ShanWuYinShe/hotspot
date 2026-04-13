@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/resourceguard"
 )
 
@@ -218,6 +219,33 @@ func TestGroupsHandlerReturns10600OnServiceError(t *testing.T) {
 	assertGroupCode(t, searchRR, 10600)
 }
 
+func TestDismissGroupUsesGroupIDAndBroadcastsDismissedEvent(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	repo := NewInMemoryRepository()
+	service := NewServiceWithRepo(repo)
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	created, err := service.Create(ctx, CreateGroupRequest{Name: "Dismiss Me", Location: Location{LocationName: "Somewhere"}})
+	if err != nil {
+		t.Fatalf("create group: %v", err)
+	}
+	sink := &groupRealtimeSink{}
+	hub.RegisterUser("user_alice", "sess_alice", sink)
+	if err := service.Dismiss(ctx, DismissGroupRequest{GroupID: created.Group.GroupID}); err != nil {
+		t.Fatalf("dismiss group: %v", err)
+	}
+	if _, ok, err := repo.Get(context.Background(), created.Group.GroupID); err != nil || ok {
+		t.Fatalf("expected group removed, got ok=%v err=%v", ok, err)
+	}
+	if len(sink.events) != 1 || sink.events[0].Type != "GroupDismissed" {
+		t.Fatalf("unexpected realtime events: %#v", sink.events)
+	}
+	payload, ok := sink.events[0].Payload.(map[string]any)
+	if !ok || payload["group_id"] != created.Group.GroupID || payload["reason"] != "owner_dismissed" {
+		t.Fatalf("unexpected dismiss payload: %#v", sink.events[0].Payload)
+	}
+}
+
 func TestCreateGroupRecordsResourceGuard(t *testing.T) {
 	checker := &groupRecordingChecker{}
 	resourceguard.SetDefaultChecker(checker)
@@ -245,6 +273,11 @@ func assertGroupCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) 
 		t.Fatalf("expected code %d, got %#v", expected, resp)
 	}
 }
+
+type groupRealtimeSink struct{ events []realtime.Event }
+
+func (s *groupRealtimeSink) Send(e realtime.Event) error { s.events = append(s.events, e); return nil }
+func (s *groupRealtimeSink) Close() error                { return nil }
 
 type groupRecordingChecker struct {
 	recorded []string
