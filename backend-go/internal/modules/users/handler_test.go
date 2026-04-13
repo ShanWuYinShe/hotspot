@@ -14,7 +14,13 @@ import (
 	momenttypes "hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/modules/notifications"
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/realtime"
 )
+
+type testRealtimeSink struct{ events []realtime.Event }
+
+func (s *testRealtimeSink) Send(e realtime.Event) error { s.events = append(s.events, e); return nil }
+func (s *testRealtimeSink) Close() error                { return nil }
 
 type userErrorRepo struct {
 	getProfileErr  error
@@ -368,6 +374,61 @@ func TestFollowBlockRemarkAndOpenTheDoor(t *testing.T) {
 	}
 	if blockedResp.Code != 0 || len(blockedResp.Data.Items) != 1 || blockedResp.Data.Items[0].User.UserID != "user_bob" {
 		t.Fatalf("unexpected blocked response: %#v", blockedResp)
+	}
+}
+
+func TestFollowMutualFollowAddsNotificationsAndRealtime(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	repo := NewInMemoryRepository()
+	service := NewServiceWithRepo(repo)
+	if err := repo.PutProfile(context.Background(), defaultProfile("user_alice")); err != nil {
+		t.Fatalf("put alice profile: %v", err)
+	}
+	if err := repo.PutProfile(context.Background(), defaultProfile("user_bob")); err != nil {
+		t.Fatalf("put bob profile: %v", err)
+	}
+	if err := repo.PutSettings(context.Background(), "user_alice", defaultSettings()); err != nil {
+		t.Fatalf("put alice settings: %v", err)
+	}
+	if err := repo.PutSettings(context.Background(), "user_bob", defaultSettings()); err != nil {
+		t.Fatalf("put bob settings: %v", err)
+	}
+	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_alice"})
+	ctxBob := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_bob"})
+	if err := service.Follow(ctxBob, "user_alice"); err != nil {
+		t.Fatalf("seed reverse follow: %v", err)
+	}
+
+	notificationRepo := notifications.NewInMemoryRepository()
+	serviceWithNotifications := NewServiceWithDeps(repo, notifications.NewServiceWithRepo(notificationRepo))
+	aliceSink := &testRealtimeSink{}
+	bobSink := &testRealtimeSink{}
+	hub.RegisterUser("user_alice", "sess_alice", aliceSink)
+	hub.RegisterUser("user_bob", "sess_bob", bobSink)
+
+	if err := serviceWithNotifications.Follow(ctxAlice, "user_bob"); err != nil {
+		t.Fatalf("follow with mutual follow: %v", err)
+	}
+	aliceNotifications, err := notificationRepo.List(context.Background(), "user_alice", notifications.NotificationListRequest{})
+	if err != nil {
+		t.Fatalf("list alice notifications: %v", err)
+	}
+	bobNotifications, err := notificationRepo.List(context.Background(), "user_bob", notifications.NotificationListRequest{})
+	if err != nil {
+		t.Fatalf("list bob notifications: %v", err)
+	}
+	if len(aliceNotifications.Items) != 1 || aliceNotifications.Items[0].Type != "mutual_follow" {
+		t.Fatalf("unexpected alice notifications: %#v", aliceNotifications)
+	}
+	if len(bobNotifications.Items) != 2 || bobNotifications.Items[0].Type != "mutual_follow" || bobNotifications.Items[1].Type != "new_follower" {
+		t.Fatalf("unexpected bob notifications: %#v", bobNotifications)
+	}
+	if len(aliceSink.events) != 1 || aliceSink.events[0].Type != "MutualFollow" {
+		t.Fatalf("unexpected alice events: %#v", aliceSink.events)
+	}
+	if len(bobSink.events) != 2 || bobSink.events[0].Type != "NewFollower" || bobSink.events[1].Type != "MutualFollow" {
+		t.Fatalf("unexpected bob events: %#v", bobSink.events)
 	}
 }
 

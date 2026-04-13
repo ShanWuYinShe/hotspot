@@ -68,6 +68,14 @@ func (s *Service) AppendNewFollower(ctx context.Context, targetUserID string, ac
 	})
 }
 
+func (s *Service) AppendMutualFollow(ctx context.Context, targetUserID string, actor map[string]any) error {
+	return s.repo.Append(ctx, targetUserID, NotificationItem{
+		Type:    "mutual_follow",
+		IsRead:  false,
+		Payload: map[string]any{"type": "mutual_follow", "actor": actor},
+	})
+}
+
 func (s *Service) AppendSystemAnnouncement(ctx context.Context, userIDs []string, item systemmodule.SystemAnnouncementItem) error {
 	return s.repo.AppendMany(ctx, userIDs, NotificationItem{
 		Type:   "system_announcement",

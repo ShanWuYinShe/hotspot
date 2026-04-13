@@ -21,9 +21,12 @@ type Service struct {
 
 type userNotificationWriter interface {
 	AppendNewFollower(ctx context.Context, targetUserID string, actor map[string]any) error
+	AppendMutualFollow(ctx context.Context, targetUserID string, actor map[string]any) error
 }
 
-func NewService() *Service { return NewServiceWithDeps(NewInMemoryRepository(), notifications.NewService()) }
+func NewService() *Service {
+	return NewServiceWithDeps(NewInMemoryRepository(), notifications.NewService())
+}
 
 func NewServiceWithRepo(repo Repository) *Service { return NewServiceWithDeps(repo, nil) }
 
@@ -348,13 +351,35 @@ func (s *Service) Follow(ctx context.Context, targetUserID string) error {
 		return err
 	}
 	actor := map[string]any{"user_id": principal.UserID, "nickname": principal.UserID}
+	followedAt := time.Now().UTC().Format(time.RFC3339)
 	if s.notifications != nil {
 		if err := s.notifications.AppendNewFollower(ctx, targetUserID, actor); err != nil {
 			observability.L().Error("users.follow notification append failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 			return err
 		}
 	}
-	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: "NewFollower", Payload: map[string]any{"actor": actor, "followed_at": time.Now().UTC().Format(time.RFC3339)}})
+	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: "NewFollower", Payload: map[string]any{"actor": actor, "followed_at": followedAt}})
+	relation, err := s.repo.Relationship(ctx, targetUserID, principal.UserID)
+	if err != nil {
+		observability.L().Error("users.follow relationship check failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
+		return err
+	}
+	if relation.IsFollowing {
+		mutualAt := time.Now().UTC().Format(time.RFC3339)
+		if s.notifications != nil {
+			if err := s.notifications.AppendMutualFollow(ctx, principal.UserID, actor); err != nil {
+				observability.L().Error("users.follow mutual notification append failed", "error", err, "target_user_id", principal.UserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+				return err
+			}
+			if err := s.notifications.AppendMutualFollow(ctx, targetUserID, actor); err != nil {
+				observability.L().Error("users.follow mutual notification append failed", "error", err, "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
+				return err
+			}
+		}
+		mutualPayload := map[string]any{"actor": actor, "mutual_at": mutualAt}
+		realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: "MutualFollow", Payload: mutualPayload})
+		realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: "MutualFollow", Payload: mutualPayload})
+	}
 	observability.L().Info("users.follow completed", "target_user_id", targetUserID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }

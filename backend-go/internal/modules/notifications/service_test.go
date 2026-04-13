@@ -65,6 +65,21 @@ func TestAppendNewFollowerBuildsNotification(t *testing.T) {
 	}
 }
 
+func TestAppendMutualFollowBuildsNotification(t *testing.T) {
+	repo := &notificationListCaptureRepo{}
+	service := NewServiceWithRepo(repo)
+	if err := service.AppendMutualFollow(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}); err != nil {
+		t.Fatalf("append mutual follow: %v", err)
+	}
+	if repo.appendUser != "user_alice" || len(repo.appended) != 1 {
+		t.Fatalf("unexpected append capture: %#v", repo)
+	}
+	item := repo.appended[0]
+	if item.Type != "mutual_follow" || item.Payload["type"] != "mutual_follow" {
+		t.Fatalf("unexpected notification item: %#v", item)
+	}
+}
+
 func TestAppendMomentLikedBuildsNotification(t *testing.T) {
 	repo := &notificationListCaptureRepo{}
 	service := NewServiceWithRepo(repo)
