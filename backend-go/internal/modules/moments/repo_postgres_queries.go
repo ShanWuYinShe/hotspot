@@ -34,6 +34,25 @@ FROM moment_tags
 WHERE moment_id = $1
 ORDER BY tag_name ASC`
 
+	queryDeleteMomentTagsByMomentID = `
+DELETE FROM moment_tags
+WHERE moment_id = $1`
+
+	queryInsertMomentMention = `
+INSERT INTO moment_mentions (moment_id, mentioned_user_id, created_at)
+VALUES ($1, $2, $3)
+ON CONFLICT (moment_id, mentioned_user_id) DO NOTHING`
+
+	queryListMomentMentionsByMomentID = `
+SELECT mentioned_user_id
+FROM moment_mentions
+WHERE moment_id = $1
+ORDER BY mentioned_user_id ASC`
+
+	queryDeleteMomentMentionsByMomentID = `
+DELETE FROM moment_mentions
+WHERE moment_id = $1`
+
 	queryIncrementMomentCommentCount = `
 UPDATE moments
 SET comments_count = comments_count + 1

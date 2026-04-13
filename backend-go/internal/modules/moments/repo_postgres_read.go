@@ -30,6 +30,11 @@ func (r *PostgresRepository) Get(ctx context.Context, momentID string) (MomentIt
 		return MomentItem{}, false, err
 	}
 	item.Tags = tagsByMomentID[momentID]
+	mentionsByMomentID, err := loadMomentMentions(ctx, queryable, []string{momentID})
+	if err != nil {
+		return MomentItem{}, false, err
+	}
+	item.Mentions = mentionsByMomentID[momentID]
 	return item, true, nil
 }
 
@@ -63,8 +68,13 @@ func (r *PostgresRepository) ListMine(ctx context.Context, userID string) (Pagin
 	if err != nil {
 		return PaginatedMoments{}, err
 	}
+	mentionsByMomentID, err := loadMomentMentions(ctx, queryable, momentIDs)
+	if err != nil {
+		return PaginatedMoments{}, err
+	}
 	for i := range items {
 		items[i].Tags = tagsByMomentID[items[i].MomentID]
+		items[i].Mentions = mentionsByMomentID[items[i].MomentID]
 	}
 	return PaginatedMoments{Items: items}, nil
 }
@@ -121,6 +131,38 @@ func loadMomentTags(ctx context.Context, queryable persistence.QueryableDB, mome
 		tagsByMomentID[momentID] = tags
 	}
 	return tagsByMomentID, nil
+}
+
+func loadMomentMentions(ctx context.Context, queryable persistence.QueryableDB, momentIDs []string) (map[string][]string, error) {
+	if len(momentIDs) == 0 {
+		return map[string][]string{}, nil
+	}
+	mentionsByMomentID := make(map[string][]string, len(momentIDs))
+	for _, momentID := range momentIDs {
+		rows, err := queryable.Query(ctx, queryListMomentMentionsByMomentID, momentID)
+		if err != nil {
+			return nil, err
+		}
+		mentions := make([]string, 0)
+		for rows.Next() {
+			var mentionedUserID string
+			if err := rows.Scan(&mentionedUserID); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			mentions = append(mentions, mentionedUserID)
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		if err := rows.Close(); err != nil {
+			return nil, err
+		}
+		sort.Strings(mentions)
+		mentionsByMomentID[momentID] = mentions
+	}
+	return mentionsByMomentID, nil
 }
 
 func scanFavoriteMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, string, error) {

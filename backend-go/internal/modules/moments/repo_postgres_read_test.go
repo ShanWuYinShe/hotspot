@@ -174,6 +174,18 @@ func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
 		item.Tags = append(item.Tags, tag)
 		sort.Strings(item.Tags)
 		b.moments[momentID] = item
+	case queryInsertMomentMention:
+		momentID := args[0].(string)
+		item := b.moments[momentID]
+		mentionedUserID := args[1].(string)
+		item.Mentions = append(item.Mentions, mentionedUserID)
+		sort.Strings(item.Mentions)
+		b.moments[momentID] = item
+	case queryDeleteMomentMentionsByMomentID:
+		momentID := args[0].(string)
+		item := b.moments[momentID]
+		item.Mentions = nil
+		b.moments[momentID] = item
 	case queryIncrementMomentCommentCount:
 		momentID := args[0].(string)
 		item := b.moments[momentID]
@@ -297,6 +309,17 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 			rows = append(rows, []any{tag})
 		}
 		return &rowsValues{rows: rows}, nil
+	case queryListMomentMentionsByMomentID:
+		momentID := args[0].(string)
+		item, ok := b.moments[momentID]
+		if !ok {
+			return &rowsValues{rows: nil}, nil
+		}
+		rows := make([][]any, 0, len(item.Mentions))
+		for _, mentionedUserID := range item.Mentions {
+			rows = append(rows, []any{mentionedUserID})
+		}
+		return &rowsValues{rows: rows}, nil
 	case queryListMomentLikes:
 		momentID := args[0].(string)
 		cursorAt := ""
@@ -410,7 +433,7 @@ func TestPostgresRepositoryWritesQueryableDB(t *testing.T) {
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	fallback := &fallbackRepo{}
 	repo := NewPostgresRepository(factory, fallback)
-	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Tags: []string{" travel ", "hotspot", "travel"}, Location: Location{Point: struct {
+	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Tags: []string{" travel ", "hotspot", "travel"}, Mentions: []string{"user_bob", "user_bob", "user_charlie"}, Location: Location{Point: struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	}{Latitude: 35.0, Longitude: 112.0}, LocationName: "南天门"}})
@@ -420,8 +443,8 @@ func TestPostgresRepositoryWritesQueryableDB(t *testing.T) {
 	if len(created.Tags) != 2 || created.Tags[0] != "travel" || created.Tags[1] != "hotspot" {
 		t.Fatalf("unexpected persisted tags: %#v", created.Tags)
 	}
-	if len(created.Mentions) != 0 {
-		t.Fatalf("postgres create should not return non-persisted mentions: %#v", created)
+	if len(created.Mentions) != 2 || created.Mentions[0] != "user_bob" || created.Mentions[1] != "user_charlie" {
+		t.Fatalf("unexpected persisted mentions: %#v", created.Mentions)
 	}
 	if err := repo.IncrementCommentCount(context.Background(), created.MomentID); err != nil {
 		t.Fatalf("increment comment count: %v", err)
@@ -430,9 +453,15 @@ func TestPostgresRepositoryWritesQueryableDB(t *testing.T) {
 	if err != nil || !ok || opened.CommentsCount != 1 {
 		t.Fatalf("unexpected opened item: %#v ok=%v err=%v", opened, ok, err)
 	}
+	if len(opened.Mentions) != 2 || opened.Mentions[0] != "user_bob" || opened.Mentions[1] != "user_charlie" {
+		t.Fatalf("unexpected opened mentions: %#v", opened.Mentions)
+	}
 	list, err := repo.ListMine(context.Background(), "user_alice")
 	if err != nil || len(list.Items) != 1 || list.Items[0].MomentID != created.MomentID || list.Items[0].CommentsCount != 1 {
 		t.Fatalf("unexpected list after write: %#v err=%v", list, err)
+	}
+	if len(list.Items[0].Mentions) != 2 || list.Items[0].Mentions[0] != "user_bob" || list.Items[0].Mentions[1] != "user_charlie" {
+		t.Fatalf("unexpected list mentions: %#v", list.Items[0].Mentions)
 	}
 	if fallback.used {
 		t.Fatal("unexpected fallback usage")

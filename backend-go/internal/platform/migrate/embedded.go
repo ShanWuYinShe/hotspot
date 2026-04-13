@@ -21,6 +21,7 @@ var requiredTables = []string{
 	"auth_sessions",
 	"auth_refresh_tokens",
 	"moments",
+	"moment_mentions",
 	"comments",
 	"private_chats",
 	"private_messages",

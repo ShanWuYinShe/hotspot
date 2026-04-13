@@ -50,10 +50,15 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	if err := insertMomentTags(ctx, queryable, momentID, tags, now); err != nil {
 		return MomentItem{}, err
 	}
+	normalizedMentions := normalizeMomentMentions(req.Mentions)
+	if err := replaceMomentMentions(ctx, queryable, momentID, normalizedMentions, now); err != nil {
+		return MomentItem{}, err
+	}
 	return MomentItem{
 		MomentID:      momentID,
 		Description:   req.Description,
 		Tags:          allowedTags,
+		Mentions:      normalizedMentions,
 		CreatedAt:     createdAt,
 		LikesCount:    0,
 		CommentsCount: 0,
@@ -154,7 +159,23 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Edit
 		s2 := fmt.Sprintf("%f", req.Location.Point.Longitude)
 		lngStr = &s2
 	}
-	return queryable.Exec(ctx, queryUpdateMoment, req.MomentID, req.Description, req.PrivacyLevel, locationName, latStr, lngStr)
+	if err := queryable.Exec(ctx, queryUpdateMoment, req.MomentID, req.Description, req.PrivacyLevel, locationName, latStr, lngStr); err != nil {
+		return err
+	}
+	if req.Tags != nil {
+		if err := queryable.Exec(ctx, queryDeleteMomentTagsByMomentID, req.MomentID); err != nil {
+			return err
+		}
+		if err := insertMomentTags(ctx, queryable, req.MomentID, req.Tags, time.Now().UTC()); err != nil {
+			return err
+		}
+	}
+	if req.Mentions != nil {
+		if err := replaceMomentMentions(ctx, queryable, req.MomentID, req.Mentions, time.Now().UTC()); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *PostgresRepository) Delete(ctx context.Context, momentID string) error {
@@ -272,6 +293,10 @@ func (r *PostgresRepository) ListLikes(ctx context.Context, momentID string, lim
 		return nil, "", err
 	}
 	return items, "", nil
+}
+
+func (r *PostgresRepository) NotificationContext(ctx context.Context, momentID string) (MomentItem, bool, error) {
+	return r.Get(ctx, momentID)
 }
 
 func (r *PostgresRepository) ListFavorites(ctx context.Context, userID string, limit int, cursor string) (PaginatedMoments, error) {

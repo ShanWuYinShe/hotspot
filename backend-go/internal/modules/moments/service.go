@@ -20,6 +20,7 @@ type Service struct {
 
 type momentNotificationWriter interface {
 	AppendMomentLiked(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any) error
+	AppendMentioned(ctx context.Context, targetUserID string, actor map[string]any, targetType string, momentID string, momentSummary map[string]any, commentID string, commentPreview string) error
 }
 
 func NewService() *Service {
@@ -42,6 +43,7 @@ func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (MomentIt
 		return MomentItem{}, err
 	}
 	resourceguard.RecordMoment(ctx, item.MomentID)
+	s.notifyMomentMentions(ctx, principal.UserID, item)
 	return item, nil
 }
 
@@ -105,6 +107,7 @@ func (s *Service) Update(ctx context.Context, req EditMomentRequest) (MomentItem
 		observability.L().Error("moments.update reload failed", "error", err, "moment_id", req.MomentID)
 		return MomentItem{}, err
 	}
+	s.notifyMomentMentions(ctx, principal.UserID, updated)
 	return updated, nil
 }
 
@@ -241,4 +244,27 @@ func summarizeMomentDescription(description string) string {
 		return value[:80]
 	}
 	return value
+}
+
+func (s *Service) notifyMomentMentions(ctx context.Context, actorUserID string, item MomentItem) {
+	if s.notifications == nil {
+		return
+	}
+	momentSummary := cloneMomentSummary(map[string]any{"moment_id": item.MomentID, "description_preview": summarizeMomentDescription(item.Description)}, item.MomentID)
+	actor := buildMomentActor(actorUserID)
+	for _, mentionedUserID := range normalizeMomentMentions(item.Mentions) {
+		if mentionedUserID == actorUserID {
+			continue
+		}
+		if err := s.notifications.AppendMentioned(ctx, mentionedUserID, actor, "moment", item.MomentID, momentSummary, "", ""); err != nil {
+			observability.L().Error("moments.mentions append notification failed", "error", err, "moment_id", item.MomentID, "mentioned_user_id", mentionedUserID)
+		}
+		realtime.DefaultHub().BroadcastToUser(mentionedUserID, realtime.Event{Type: "MessageMentioned", Payload: map[string]any{
+			"target_type":    "moment",
+			"moment_id":      item.MomentID,
+			"moment_summary": cloneMomentSummary(momentSummary, item.MomentID),
+			"actor":          actor,
+			"mentioned_at":   item.CreatedAt,
+		}})
+	}
 }

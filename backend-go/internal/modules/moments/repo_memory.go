@@ -41,7 +41,7 @@ func (r *InMemoryRepository) Create(_ context.Context, userID string, req Create
 	if privacy == "" {
 		privacy = "public"
 	}
-	item := MomentItem{MomentID: momentID, Description: req.Description, Tags: normalizeMomentTags(req.Tags), Mentions: req.Mentions, CreatedAt: now.Format(time.RFC3339), LikesCount: 0, CommentsCount: 0, SharesCount: 0, User: UserInfo{UserID: userID, Nickname: userID}, Location: req.Location, PrivacyLevel: privacy, MyState: &MyMomentState{IsLiked: false, IsFavorited: false}}
+	item := MomentItem{MomentID: momentID, Description: req.Description, Tags: normalizeMomentTags(req.Tags), Mentions: normalizeMomentMentions(req.Mentions), CreatedAt: now.Format(time.RFC3339), LikesCount: 0, CommentsCount: 0, SharesCount: 0, User: UserInfo{UserID: userID, Nickname: userID}, Location: req.Location, PrivacyLevel: privacy, MyState: &MyMomentState{IsLiked: false, IsFavorited: false}}
 	r.moments[momentID] = item
 	r.byUser[userID] = append(r.byUser[userID], momentID)
 	return item, nil
@@ -151,8 +151,18 @@ func (r *InMemoryRepository) Update(_ context.Context, userID string, req EditMo
 	if req.Tags != nil {
 		item.Tags = normalizeMomentTags(req.Tags)
 	}
+	if req.Mentions != nil {
+		item.Mentions = normalizeMomentMentions(req.Mentions)
+	}
 	r.moments[req.MomentID] = item
 	return nil
+}
+
+func (r *InMemoryRepository) NotificationContext(_ context.Context, momentID string) (MomentItem, bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	item, ok := r.moments[momentID]
+	return item, ok, nil
 }
 
 func (r *InMemoryRepository) Delete(_ context.Context, momentID string) error {

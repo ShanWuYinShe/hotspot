@@ -333,7 +333,76 @@ func TestLikeMomentDeduplicatesRepeatedLike(t *testing.T) {
 	}
 }
 
-func TestCreateMomentDoesNotBroadcastMomentCommented(t *testing.T) {
+func TestCreateMomentSendsMentionNotificationsAndRealtime(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	notificationRepo := notifications.NewInMemoryRepository()
+	service := NewServiceWithDeps(NewInMemoryRepository(), notifications.NewServiceWithRepo(notificationRepo))
+	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	bobSink := &sinkCapture{}
+	hub.RegisterUser("user_bob", "sess_bob", bobSink)
+
+	created, err := service.Create(ctxAlice, CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Somewhere"}, Mentions: []string{"user_bob", "user_bob", "user_alice"}})
+	if err != nil {
+		t.Fatalf("create moment: %v", err)
+	}
+	if len(created.Mentions) != 2 || created.Mentions[0] != "user_bob" || created.Mentions[1] != "user_alice" {
+		t.Fatalf("unexpected mentions: %#v", created.Mentions)
+	}
+	if len(bobSink.events) != 1 || bobSink.events[0].Type != "MessageMentioned" {
+		t.Fatalf("unexpected realtime events: %#v", bobSink.events)
+	}
+	payload, ok := bobSink.events[0].Payload.(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected payload type: %#v", bobSink.events[0].Payload)
+	}
+	if payload["target_type"] != "moment" || payload["moment_id"] != created.MomentID {
+		t.Fatalf("unexpected realtime payload: %#v", payload)
+	}
+	notificationsPage, err := notificationRepo.List(context.Background(), "user_bob", notifications.NotificationListRequest{})
+	if err != nil {
+		t.Fatalf("list notifications: %v", err)
+	}
+	if len(notificationsPage.Items) != 1 || notificationsPage.Items[0].Type != "mentioned" {
+		t.Fatalf("unexpected notifications page: %#v", notificationsPage)
+	}
+}
+
+func TestUpdateMomentReplacesMentionNotificationsAndState(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	notificationRepo := notifications.NewInMemoryRepository()
+	service := NewServiceWithDeps(NewInMemoryRepository(), notifications.NewServiceWithRepo(notificationRepo))
+	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	bobSink := &sinkCapture{}
+	carolSink := &sinkCapture{}
+	hub.RegisterUser("user_bob", "sess_bob", bobSink)
+	hub.RegisterUser("user_carol", "sess_carol", carolSink)
+
+	created, err := service.Create(ctxAlice, CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Somewhere"}, Mentions: []string{"user_bob"}})
+	if err != nil {
+		t.Fatalf("create moment: %v", err)
+	}
+	updated, err := service.Update(ctxAlice, EditMomentRequest{MomentID: created.MomentID, Mentions: []string{"user_carol"}})
+	if err != nil {
+		t.Fatalf("update moment: %v", err)
+	}
+	if len(updated.Mentions) != 1 || updated.Mentions[0] != "user_carol" {
+		t.Fatalf("unexpected updated mentions: %#v", updated.Mentions)
+	}
+	if len(carolSink.events) != 1 || carolSink.events[0].Type != "MessageMentioned" {
+		t.Fatalf("unexpected carol events: %#v", carolSink.events)
+	}
+	carolNotifications, err := notificationRepo.List(context.Background(), "user_carol", notifications.NotificationListRequest{})
+	if err != nil {
+		t.Fatalf("list carol notifications: %v", err)
+	}
+	if len(carolNotifications.Items) != 1 || carolNotifications.Items[0].Type != "mentioned" {
+		t.Fatalf("unexpected carol notifications: %#v", carolNotifications)
+	}
+}
+
+func TestCreateMomentWithoutMentionsDoesNotBroadcastMentionEvent(t *testing.T) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
 	sink := &sinkCapture{}

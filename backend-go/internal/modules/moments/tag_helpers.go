@@ -28,6 +28,26 @@ func normalizeMomentTags(tags []string) []string {
 	return result
 }
 
+func normalizeMomentMentions(mentions []string) []string {
+	if len(mentions) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(mentions))
+	result := make([]string, 0, len(mentions))
+	for _, mention := range mentions {
+		normalized := strings.TrimSpace(mention)
+		if normalized == "" {
+			continue
+		}
+		if _, ok := seen[normalized]; ok {
+			continue
+		}
+		seen[normalized] = struct{}{}
+		result = append(result, normalized)
+	}
+	return result
+}
+
 func filterAllowedMomentTags(ctx context.Context, queryable persistence.QueryableDB, tags []string) ([]string, error) {
 	if len(tags) == 0 {
 		return nil, nil
@@ -58,6 +78,18 @@ func insertMomentTags(ctx context.Context, queryable persistence.QueryableDB, mo
 	}
 	for _, tag := range allowed {
 		if err := queryable.Exec(ctx, queryInsertMomentTagAssignment, momentID, tag, createdAt); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func replaceMomentMentions(ctx context.Context, queryable persistence.QueryableDB, momentID string, mentions []string, createdAt time.Time) error {
+	if err := queryable.Exec(ctx, queryDeleteMomentMentionsByMomentID, momentID); err != nil {
+		return err
+	}
+	for _, mention := range normalizeMomentMentions(mentions) {
+		if err := queryable.Exec(ctx, queryInsertMomentMention, momentID, mention, createdAt); err != nil {
 			return err
 		}
 	}
