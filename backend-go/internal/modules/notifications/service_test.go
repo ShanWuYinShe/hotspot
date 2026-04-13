@@ -13,13 +13,13 @@ import (
 type sinkStub struct{ events []realtime.Event }
 
 type notificationListCaptureRepo struct {
-	userID      string
-	appendUser  string
-	appendMany  []string
-	appended    []NotificationItem
-	req         NotificationListRequest
-	list        PaginatedNotifications
-	listErr     error
+	userID     string
+	appendUser string
+	appendMany []string
+	appended   []NotificationItem
+	req        NotificationListRequest
+	list       PaginatedNotifications
+	listErr    error
 }
 
 func (s *sinkStub) Send(e realtime.Event) error { s.events = append(s.events, e); return nil }
@@ -62,6 +62,42 @@ func TestAppendNewFollowerBuildsNotification(t *testing.T) {
 	item := repo.appended[0]
 	if item.Type != "new_follower" || item.Payload["type"] != "new_follower" {
 		t.Fatalf("unexpected notification item: %#v", item)
+	}
+}
+
+func TestAppendMomentCommentedBuildsNotification(t *testing.T) {
+	repo := &notificationListCaptureRepo{}
+	service := NewServiceWithRepo(repo)
+	if err := service.AppendMomentCommented(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "moment_1", map[string]any{"moment_id": "moment_1", "description_preview": "summary"}, "comment_1", "preview"); err != nil {
+		t.Fatalf("append moment commented: %v", err)
+	}
+	if repo.appendUser != "user_alice" || len(repo.appended) != 1 {
+		t.Fatalf("unexpected append capture: %#v", repo)
+	}
+	item := repo.appended[0]
+	if item.Type != "moment_commented" || item.Payload["type"] != "moment_commented" {
+		t.Fatalf("unexpected notification item: %#v", item)
+	}
+	if item.Payload["comment_id"] != "comment_1" || item.Payload["comment_preview"] != "preview" {
+		t.Fatalf("unexpected payload: %#v", item.Payload)
+	}
+}
+
+func TestAppendMentionedBuildsNotification(t *testing.T) {
+	repo := &notificationListCaptureRepo{}
+	service := NewServiceWithRepo(repo)
+	if err := service.AppendMentioned(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "comment", "moment_1", map[string]any{"moment_id": "moment_1", "description_preview": "summary"}, "comment_1", "preview"); err != nil {
+		t.Fatalf("append mentioned: %v", err)
+	}
+	if repo.appendUser != "user_alice" || len(repo.appended) != 1 {
+		t.Fatalf("unexpected append capture: %#v", repo)
+	}
+	item := repo.appended[0]
+	if item.Type != "mentioned" || item.Payload["type"] != "mentioned" {
+		t.Fatalf("unexpected notification item: %#v", item)
+	}
+	if item.Payload["target_type"] != "comment" || item.Payload["comment_id"] != "comment_1" || item.Payload["comment_preview"] != "preview" {
+		t.Fatalf("unexpected payload: %#v", item.Payload)
 	}
 }
 

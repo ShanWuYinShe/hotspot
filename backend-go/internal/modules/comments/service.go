@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
-	"time"
 
 	"hotspot/backend-go/internal/modules/notifications"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -22,7 +22,9 @@ type Service struct {
 }
 
 type commentNotificationWriter interface {
+	AppendMomentCommented(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any, commentID string, commentPreview string) error
 	AppendCommentReply(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any, parentCommentID string, parentPreview string, replyID string, replyPreview string) error
+	AppendMentioned(ctx context.Context, targetUserID string, actor map[string]any, targetType string, momentID string, momentSummary map[string]any, commentID string, commentPreview string) error
 }
 
 func NewService(repo Repository, moments MomentProvider) *Service {
@@ -38,51 +40,43 @@ func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (Comment
 		return CommentItem{}, err
 	}
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	item, err := s.repo.Create(ctx, principal.UserID, req)
+	normalizedReq := req
+	replyTarget, hasReplyTarget, err := s.resolveReplyTarget(ctx, req.ParentID)
+	if err != nil {
+		return CommentItem{}, err
+	}
+	if hasReplyTarget && replyTarget.ParentID != "" {
+		normalizedReq.ParentID = replyTarget.ParentID
+	}
+	item, err := s.repo.Create(ctx, principal.UserID, normalizedReq)
 	if err != nil {
 		observability.L().Error("comments.create repo create failed", "error", err)
 		return CommentItem{}, err
 	}
-	if err := s.moments.IncrementCommentCount(ctx, req.MomentID); err != nil {
-		observability.L().Error("comments.create increment comment count failed", "error", err, "moment_id", req.MomentID, "comment_id", item.CommentID)
+	if err := s.moments.IncrementCommentCount(ctx, normalizedReq.MomentID); err != nil {
+		observability.L().Error("comments.create increment comment count failed", "error", err, "moment_id", normalizedReq.MomentID, "comment_id", item.CommentID)
 		if rollbackErr := s.repo.Delete(ctx, item.CommentID); rollbackErr != nil {
 			observability.L().Error("comments.create rollback delete failed", "error", rollbackErr, "comment_id", item.CommentID)
 			return CommentItem{}, fmt.Errorf("increment comment count: %w; rollback delete comment: %v", err, rollbackErr)
 		}
 		return CommentItem{}, err
 	}
-	if req.ParentID == "" {
-		return item, nil
-	}
-	parent, found, err := s.repo.Get(ctx, req.ParentID)
+	momentContext, ok, err := s.moments.NotificationContext(ctx, normalizedReq.MomentID)
 	if err != nil {
-		return CommentItem{}, err
-	}
-	if !found {
-		return CommentItem{}, ErrCommentNotFound
-	}
-	targetUserID := parent.User.UserID
-	if targetUserID == "" || targetUserID == principal.UserID {
+		observability.L().Error("comments.create load moment notification context failed", "error", err, "moment_id", normalizedReq.MomentID, "comment_id", item.CommentID)
 		return item, nil
 	}
-	actor := map[string]any{"user_id": principal.UserID, "nickname": principal.UserID}
-	momentSummary := map[string]any{"moment_id": req.MomentID, "description_preview": summarizeCommentText(parent.Content, item.Content)}
-	payload := map[string]any{
-		"moment_id":               req.MomentID,
-		"moment_summary":          momentSummary,
-		"comment_id":              parent.CommentID,
-		"replied_comment_preview": summarizeCommentText(parent.Content, ""),
-		"reply_id":                item.CommentID,
-		"actor":                   actor,
-		"content":                 item.Content,
-		"replied_at":              time.Now().UTC().Format(time.RFC3339),
+	if !ok {
+		return item, nil
 	}
-	if s.notifications != nil {
-		if err := s.notifications.AppendCommentReply(ctx, targetUserID, actor, req.MomentID, momentSummary, parent.CommentID, summarizeCommentText(parent.Content, ""), item.CommentID, summarizeCommentText(item.Content, "")); err != nil {
-			return CommentItem{}, err
-		}
+	actor := buildCommentActor(item, principal.UserID)
+	mentionTargets := uniqueMentionTargets(normalizedReq.Mentions, principal.UserID)
+	if hasReplyTarget {
+		s.notifyReplyTarget(ctx, momentContext, actor, replyTarget, item, mentionTargets)
+	} else {
+		s.notifyMomentAuthor(ctx, momentContext, actor, item, mentionTargets)
 	}
-	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: "CommentReply", Payload: payload})
+	s.notifyMentionedUsers(ctx, momentContext, actor, item, mentionTargets)
 	return item, nil
 }
 
@@ -182,6 +176,144 @@ func (s *Service) ListLikes(ctx context.Context, req CommentLikesRequest) (Pagin
 		return PaginatedCommentLikes{}, err
 	}
 	return PaginatedCommentLikes{Items: items, NextCursor: nextCursor}, nil
+}
+
+func (s *Service) resolveReplyTarget(ctx context.Context, parentID string) (CommentItem, bool, error) {
+	parentID = strings.TrimSpace(parentID)
+	if parentID == "" {
+		return CommentItem{}, false, nil
+	}
+	parent, found, err := s.repo.Get(ctx, parentID)
+	if err != nil {
+		return CommentItem{}, false, err
+	}
+	if !found {
+		return CommentItem{}, false, ErrCommentNotFound
+	}
+	return parent, true, nil
+}
+
+func (s *Service) notifyMomentAuthor(ctx context.Context, momentContext MomentNotificationContext, actor map[string]any, item CommentItem, mentionTargets map[string]struct{}) {
+	targetUserID := strings.TrimSpace(momentContext.UserID)
+	if targetUserID == "" || targetUserID == item.User.UserID {
+		return
+	}
+	delete(mentionTargets, targetUserID)
+	momentSummary := notificationMomentSummary(momentContext, item.MomentID)
+	commentPreview := summarizeCommentText(item.Content, "")
+	if s.notifications != nil {
+		if err := s.notifications.AppendMomentCommented(ctx, targetUserID, actor, item.MomentID, momentSummary, item.CommentID, commentPreview); err != nil {
+			observability.L().Error("comments.create append moment_commented notification failed", "error", err, "moment_id", item.MomentID, "comment_id", item.CommentID, "target_user_id", targetUserID)
+		}
+	}
+	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: "MomentCommented", Payload: map[string]any{
+		"moment_id":      item.MomentID,
+		"moment_summary": cloneSummary(momentSummary),
+		"comment_id":     item.CommentID,
+		"actor":          actor,
+		"content":        item.Content,
+		"commented_at":   item.CreatedAt,
+	}})
+}
+
+func (s *Service) notifyReplyTarget(ctx context.Context, momentContext MomentNotificationContext, actor map[string]any, replyTarget CommentItem, item CommentItem, mentionTargets map[string]struct{}) {
+	targetUserID := strings.TrimSpace(replyTarget.User.UserID)
+	if targetUserID == "" || targetUserID == item.User.UserID {
+		return
+	}
+	delete(mentionTargets, targetUserID)
+	momentSummary := notificationMomentSummary(momentContext, item.MomentID)
+	parentPreview := summarizeCommentText(replyTarget.Content, "")
+	replyPreview := summarizeCommentText(item.Content, "")
+	if s.notifications != nil {
+		if err := s.notifications.AppendCommentReply(ctx, targetUserID, actor, item.MomentID, momentSummary, replyTarget.CommentID, parentPreview, item.CommentID, replyPreview); err != nil {
+			observability.L().Error("comments.create append comment_reply notification failed", "error", err, "moment_id", item.MomentID, "comment_id", item.CommentID, "target_user_id", targetUserID)
+		}
+	}
+	realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: "CommentReply", Payload: map[string]any{
+		"moment_id":               item.MomentID,
+		"moment_summary":          cloneSummary(momentSummary),
+		"comment_id":              replyTarget.CommentID,
+		"replied_comment_preview": parentPreview,
+		"reply_id":                item.CommentID,
+		"actor":                   actor,
+		"content":                 item.Content,
+		"replied_at":              item.CreatedAt,
+	}})
+}
+
+func (s *Service) notifyMentionedUsers(ctx context.Context, momentContext MomentNotificationContext, actor map[string]any, item CommentItem, mentionTargets map[string]struct{}) {
+	momentSummary := notificationMomentSummary(momentContext, item.MomentID)
+	commentPreview := summarizeCommentText(item.Content, "")
+	for _, targetUserID := range sortedMentionTargets(mentionTargets) {
+		if s.notifications != nil {
+			if err := s.notifications.AppendMentioned(ctx, targetUserID, actor, "comment", item.MomentID, momentSummary, item.CommentID, commentPreview); err != nil {
+				observability.L().Error("comments.create append mentioned notification failed", "error", err, "moment_id", item.MomentID, "comment_id", item.CommentID, "target_user_id", targetUserID)
+			}
+		}
+		realtime.DefaultHub().BroadcastToUser(targetUserID, realtime.Event{Type: "MessageMentioned", Payload: map[string]any{
+			"target_type":     "comment",
+			"moment_id":       item.MomentID,
+			"comment_id":      item.CommentID,
+			"moment_summary":  cloneSummary(momentSummary),
+			"comment_preview": commentPreview,
+			"actor":           actor,
+			"mentioned_at":    item.CreatedAt,
+		}})
+	}
+}
+
+func buildCommentActor(item CommentItem, fallbackUserID string) map[string]any {
+	userID := strings.TrimSpace(item.User.UserID)
+	if userID == "" {
+		userID = strings.TrimSpace(fallbackUserID)
+	}
+	nickname := strings.TrimSpace(item.User.Nickname)
+	if nickname == "" {
+		nickname = userID
+	}
+	actor := map[string]any{"user_id": userID, "nickname": nickname}
+	if avatarURL := strings.TrimSpace(item.User.AvatarURL); avatarURL != "" {
+		actor["avatar_url"] = avatarURL
+	}
+	return actor
+}
+
+func notificationMomentSummary(momentContext MomentNotificationContext, momentID string) map[string]any {
+	summary := cloneSummary(momentContext.Summary)
+	if len(summary) == 0 {
+		summary["moment_id"] = momentID
+	}
+	return summary
+}
+
+func cloneSummary(summary map[string]any) map[string]any {
+	cloned := make(map[string]any, len(summary))
+	for key, value := range summary {
+		cloned[key] = value
+	}
+	return cloned
+}
+
+func uniqueMentionTargets(mentions []string, selfUserID string) map[string]struct{} {
+	targets := make(map[string]struct{}, len(mentions))
+	for _, mention := range mentions {
+		userID := strings.TrimSpace(mention)
+		if userID == "" || userID == selfUserID {
+			continue
+		}
+		targets[userID] = struct{}{}
+	}
+	return targets
+}
+
+func sortedMentionTargets(targets map[string]struct{}) []string {
+	userIDs := make([]string, 0, len(targets))
+	for userID := range targets {
+		userIDs = append(userIDs, userID)
+	}
+	sort.Strings(userIDs)
+	return userIDs
 }
 
 func summarizeCommentText(primary string, fallback string) string {

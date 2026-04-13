@@ -80,6 +80,21 @@ func (s *Service) AppendSystemAnnouncement(ctx context.Context, userIDs []string
 	})
 }
 
+func (s *Service) AppendMomentCommented(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any, commentID string, commentPreview string) error {
+	return s.repo.Append(ctx, targetUserID, NotificationItem{
+		Type:   "moment_commented",
+		IsRead: false,
+		Payload: map[string]any{
+			"type":            "moment_commented",
+			"actor":           actor,
+			"moment_id":       momentID,
+			"moment_summary":  momentSummary,
+			"comment_id":      commentID,
+			"comment_preview": commentPreview,
+		},
+	})
+}
+
 func (s *Service) AppendCommentReply(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any, parentCommentID string, parentPreview string, replyID string, replyPreview string) error {
 	return s.repo.Append(ctx, targetUserID, NotificationItem{
 		Type:   "comment_reply",
@@ -94,6 +109,27 @@ func (s *Service) AppendCommentReply(ctx context.Context, targetUserID string, a
 			"reply_id":                replyID,
 			"reply_content_preview":   replyPreview,
 		},
+	})
+}
+
+func (s *Service) AppendMentioned(ctx context.Context, targetUserID string, actor map[string]any, targetType string, momentID string, momentSummary map[string]any, commentID string, commentPreview string) error {
+	payload := map[string]any{
+		"type":           "mentioned",
+		"actor":          actor,
+		"target_type":    targetType,
+		"moment_id":      momentID,
+		"moment_summary": momentSummary,
+	}
+	if commentID != "" {
+		payload["comment_id"] = commentID
+	}
+	if commentPreview != "" {
+		payload["comment_preview"] = commentPreview
+	}
+	return s.repo.Append(ctx, targetUserID, NotificationItem{
+		Type:    "mentioned",
+		IsRead:  false,
+		Payload: payload,
 	})
 }
 

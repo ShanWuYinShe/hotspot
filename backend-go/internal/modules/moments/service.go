@@ -2,10 +2,11 @@ package moments
 
 import (
 	"context"
+	"strings"
 
+	"hotspot/backend-go/internal/modules/comments"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
-	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/resourceguard"
 )
 
@@ -29,12 +30,25 @@ func (s *Service) Create(ctx context.Context, req CreateMomentRequest) (MomentIt
 		return MomentItem{}, err
 	}
 	resourceguard.RecordMoment(ctx, item.MomentID)
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: "MomentCommented", Payload: map[string]any{"moment_id": item.MomentID, "moment_summary": map[string]any{"moment_id": item.MomentID, "description_preview": item.Description}, "comment_id": "created", "comment_preview": item.Description}})
 	return item, nil
 }
 
 func (s *Service) OpenTheDoor(ctx context.Context, momentID string) (MomentItem, bool, error) {
 	return s.repo.Get(ctx, momentID)
+}
+
+func (s *Service) NotificationContext(ctx context.Context, momentID string) (comments.MomentNotificationContext, bool, error) {
+	item, ok, err := s.repo.Get(ctx, momentID)
+	if err != nil || !ok {
+		return comments.MomentNotificationContext{}, ok, err
+	}
+	return comments.MomentNotificationContext{
+		UserID: item.User.UserID,
+		Summary: map[string]any{
+			"moment_id":           item.MomentID,
+			"description_preview": summarizeMomentDescription(item.Description),
+		},
+	}, true, nil
 }
 
 func (s *Service) ListMine(ctx context.Context) (PaginatedMoments, error) {
@@ -162,4 +176,12 @@ func (s *Service) ListFavorites(ctx context.Context, req MyFavoritesRequest) (Pa
 		cursor = req.Pagination.Cursor
 	}
 	return s.repo.ListFavorites(ctx, principal.UserID, limit, cursor)
+}
+
+func summarizeMomentDescription(description string) string {
+	value := strings.TrimSpace(description)
+	if len(value) > 80 {
+		return value[:80]
+	}
+	return value
 }

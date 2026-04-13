@@ -12,6 +12,7 @@ import (
 	"hotspot/backend-go/internal/modules/comments"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
+	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/resourceguard"
 )
 
@@ -34,6 +35,19 @@ func (c *failingMomentCounter) IncrementCommentCount(ctx context.Context, moment
 func (c *failingMomentCounter) DecrementCommentCount(ctx context.Context, momentID string) error {
 	return c.repo.DecrementCommentCount(ctx, momentID)
 }
+
+func (c *failingMomentCounter) NotificationContext(ctx context.Context, momentID string) (comments.MomentNotificationContext, bool, error) {
+	item, ok, err := c.repo.Get(ctx, momentID)
+	if err != nil || !ok {
+		return comments.MomentNotificationContext{}, ok, err
+	}
+	return comments.MomentNotificationContext{UserID: item.User.UserID, Summary: map[string]any{"moment_id": item.MomentID, "description_preview": item.Description}}, true, nil
+}
+
+type sinkCapture struct{ events []realtime.Event }
+
+func (s *sinkCapture) Send(e realtime.Event) error { s.events = append(s.events, e); return nil }
+func (s *sinkCapture) Close() error                { return nil }
 
 func TestCreateOpenAndListMoment(t *testing.T) {
 	idempotency.SetStore(idempotency.NewInMemoryStore())
@@ -181,7 +195,7 @@ func TestCreateCommentDoesNotIncrementMomentCountWhenCounterFails(t *testing.T) 
 
 func TestCreateCommentReturns10300WhenMomentMissing(t *testing.T) {
 	idempotency.SetStore(idempotency.NewInMemoryStore())
-	momentRepo := NewInMemoryRepository()
+	momentRepo := NewServiceWithRepo(NewInMemoryRepository())
 	commentService := comments.NewService(comments.NewInMemoryRepository(), momentRepo)
 	commentHandler := comments.NewHandler(commentService)
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
@@ -195,7 +209,7 @@ func TestCreateCommentReturns10300WhenMomentMissing(t *testing.T) {
 }
 
 func TestListCommentsReturns10300WhenMomentMissing(t *testing.T) {
-	commentService := comments.NewService(comments.NewInMemoryRepository(), NewInMemoryRepository())
+	commentService := comments.NewService(comments.NewInMemoryRepository(), NewServiceWithRepo(NewInMemoryRepository()))
 	commentHandler := comments.NewHandler(commentService)
 
 	listReq := httptest.NewRequest(http.MethodPost, "/list", strings.NewReader(`{"moment_id":"moment_missing"}`))
@@ -216,6 +230,22 @@ func TestCreateMomentRecordsResourceGuard(t *testing.T) {
 	}
 	if len(checker.recorded) != 1 || !strings.HasPrefix(checker.recorded[0], "moment:") {
 		t.Fatalf("unexpected records: %#v", checker.recorded)
+	}
+}
+
+func TestCreateMomentDoesNotBroadcastMomentCommented(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	sink := &sinkCapture{}
+	hub.RegisterUser("user_alice", "sess_alice", sink)
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	service := NewServiceWithRepo(NewInMemoryRepository())
+
+	if _, err := service.Create(ctx, CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Somewhere"}}); err != nil {
+		t.Fatalf("create moment: %v", err)
+	}
+	if len(sink.events) != 0 {
+		t.Fatalf("expected no realtime events, got %#v", sink.events)
 	}
 }
 
