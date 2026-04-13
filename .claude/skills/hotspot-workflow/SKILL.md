@@ -1,14 +1,9 @@
 ---
 name: hotspot-workflow
 description: >
-  This skill should be used when the user asks to implement, fix, refactor,
-  complete a clear local code task, add or repair tests, run end-to-end local
-  workflow steps in a worktree, verify changes before merging, or clean up
-  worktrees and local branches. Common triggers include "实现功能", "修复 bug",
-  "重构", "补测试", "联调", "清理 worktree", "清理分支", "feature",
-  and "cleanup". It supports `feature` mode for end-to-end implementation in a
-  worktree and `cleanup` mode for pruning merged or abandoned worktrees and
-  branches.
+  实现功能、修复 bug、重构、补测试、联调、验证变更或清理 worktree /
+  分支时使用。支持 `feature` 模式（worktree 内端到端实现）和 `cleanup`
+  模式（清理已合并或废弃的 worktree 与分支）。
 argument-hint: <feature|cleanup> [...]
 ---
 
