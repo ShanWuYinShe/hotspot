@@ -630,6 +630,42 @@ func TestSearchReportsAndHandleReport(t *testing.T) {
 	}
 }
 
+func TestHandleGroupReportDismissesGroup(t *testing.T) {
+	handler, store := newTestHandlerWithStore()
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+	store.reports["report_group"] = reportHandleRecord{
+		Item: AdminReportItem{
+			ReportID:   "report_group",
+			TargetType: ReportTargetTypeGroup,
+			TargetID:   "group_hotspot",
+			Reason:     "spam",
+			Status:     ReportStatusPending,
+			CreatedAt:  "2026-04-14T00:00:00Z",
+			Reporter:   UserInfo{UserID: "user_alice", Nickname: "Alice"},
+		},
+		TargetUser: UserInfo{UserID: "user_alice", Nickname: "Alice"},
+	}
+	if _, ok := store.groups["group_hotspot"]; !ok {
+		t.Fatal("expected seed group_hotspot")
+	}
+
+	handleReq := adminContext(httptest.NewRequest(http.MethodPost, "/reports/handle", strings.NewReader(`{"report_id":"report_group","action":"resolve","note":"policy","ban_duration_days":7}`)), "admin", true)
+	handleReq.Header.Set("Idempotency-Key", "reportgroupabcd1234abcd1234abcd12")
+	handleRR := httptest.NewRecorder()
+	handler.HandleReport(handleRR, handleReq)
+	handleResp := decodeResponse[struct{}](t, handleRR)
+	if handleResp.Code != 0 {
+		t.Fatalf("unexpected handle response: %#v", handleResp)
+	}
+	if _, ok := store.groups["group_hotspot"]; ok {
+		t.Fatalf("expected group to be dismissed, groups=%#v", store.groups)
+	}
+	state, ok, err := store.GetUserBanState(handleReq.Context(), "user_alice")
+	if err != nil || !ok || state.Status != UserAccountStatusBanned || state.DurationDays != 7 {
+		t.Fatalf("unexpected owner ban state after group handle: %#v ok=%v err=%v", state, ok, err)
+	}
+}
+
 func TestSearchTagsAndDeleteTag(t *testing.T) {
 	handler, store := newTestHandlerWithStore()
 

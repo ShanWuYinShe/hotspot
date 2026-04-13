@@ -746,6 +746,38 @@ func (r *PostgresRepository) HandleReport(ctx context.Context, reportID string, 
 	return record.Item, true, nil
 }
 
+func (r *PostgresRepository) RecallGroupMessage(ctx context.Context, messageID string) error {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.RecallGroupMessage(ctx, messageID)
+	}
+	return queryable.Exec(ctx, "UPDATE group_messages SET is_recalled = TRUE, recalled_at = NOW() WHERE message_id = $1 AND is_recalled = FALSE", messageID)
+}
+
+func (r *PostgresRepository) RecallPrivateMessage(ctx context.Context, messageID string) error {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.RecallPrivateMessage(ctx, messageID)
+	}
+	return queryable.Exec(ctx, "UPDATE private_messages SET is_recalled = TRUE, recalled_at = NOW() WHERE message_id = $1 AND is_recalled = FALSE", messageID)
+}
+
+func (r *PostgresRepository) DeleteMoment(ctx context.Context, momentID string) error {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.DeleteMoment(ctx, momentID)
+	}
+	return queryable.Exec(ctx, "DELETE FROM moments WHERE moment_id = $1", momentID)
+}
+
+func (r *PostgresRepository) DeleteComment(ctx context.Context, commentID string) error {
+	queryable, ok := r.queryable()
+	if !ok {
+		return r.fallback.DeleteComment(ctx, commentID)
+	}
+	return queryable.Exec(ctx, "DELETE FROM comments WHERE comment_id = $1", commentID)
+}
+
 func (r *PostgresRepository) IsBanned(ctx context.Context, userID string) (bool, error) {
 	state, found, err := r.GetUserBanState(ctx, userID)
 	if err != nil || !found {

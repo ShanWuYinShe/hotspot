@@ -28,5 +28,9 @@ type Repository interface {
 	SearchReports(context.Context, AdminReportSearchRequest) (adminReportPage, error)
 	GetReportHandleRecord(context.Context, string) (reportHandleRecord, bool, error)
 	HandleReport(context.Context, string, ReportHandleAction, string, *UserInfo) (AdminReportItem, bool, error)
+	RecallGroupMessage(context.Context, string) error
+	RecallPrivateMessage(context.Context, string) error
+	DeleteMoment(context.Context, string) error
+	DeleteComment(context.Context, string) error
 	AppendAuditLog(context.Context, AuditLogEntry) error
 }

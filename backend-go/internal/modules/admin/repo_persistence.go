@@ -116,6 +116,22 @@ func (r *PersistenceRepository) HandleReport(ctx context.Context, reportID strin
 	return r.impl.HandleReport(ctx, reportID, action, note, handledBy)
 }
 
+func (r *PersistenceRepository) RecallGroupMessage(ctx context.Context, messageID string) error {
+	return r.impl.RecallGroupMessage(ctx, messageID)
+}
+
+func (r *PersistenceRepository) RecallPrivateMessage(ctx context.Context, messageID string) error {
+	return r.impl.RecallPrivateMessage(ctx, messageID)
+}
+
+func (r *PersistenceRepository) DeleteMoment(ctx context.Context, momentID string) error {
+	return r.impl.DeleteMoment(ctx, momentID)
+}
+
+func (r *PersistenceRepository) DeleteComment(ctx context.Context, commentID string) error {
+	return r.impl.DeleteComment(ctx, commentID)
+}
+
 func (r *PersistenceRepository) AppendAuditLog(ctx context.Context, entry AuditLogEntry) error {
 	return r.impl.AppendAuditLog(ctx, entry)
 }

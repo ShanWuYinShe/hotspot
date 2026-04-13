@@ -940,6 +940,26 @@ func (r *InMemoryRepository) HandleReport(_ context.Context, reportID string, ac
 	return cloneAdminReportItem(record.Item), true, nil
 }
 
+func (r *InMemoryRepository) RecallGroupMessage(_ context.Context, messageID string) error {
+	_ = messageID
+	return nil
+}
+
+func (r *InMemoryRepository) RecallPrivateMessage(_ context.Context, messageID string) error {
+	_ = messageID
+	return nil
+}
+
+func (r *InMemoryRepository) DeleteMoment(_ context.Context, momentID string) error {
+	_ = momentID
+	return nil
+}
+
+func (r *InMemoryRepository) DeleteComment(_ context.Context, commentID string) error {
+	_ = commentID
+	return nil
+}
+
 func (r *InMemoryRepository) IsBanned(_ context.Context, userID string) (bool, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

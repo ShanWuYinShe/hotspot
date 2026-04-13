@@ -1139,9 +1139,26 @@ func (s *Service) HandleReport(ctx context.Context, req AdminReportHandleRequest
 	if record.Item.Status != ReportStatusPending && record.Item.Status != ReportStatusReviewing {
 		return &httpx.APIError{Code: 10400, Message: "举报已处理"}, nil
 	}
-	if req.Action == ReportHandleResolve && req.BanDurationDays != nil {
-		if apiErr, err := s.banUser(ctx, actor, record.TargetUser.UserID, req.Note, req.BanDurationDays, false); apiErr != nil || err != nil {
-			return apiErr, err
+	if req.Action == ReportHandleResolve {
+		switch record.Item.TargetType {
+		case ReportTargetTypeGroup:
+			if _, _, err := s.repo.DismissGroup(ctx, record.Item.TargetID); err != nil {
+				if apiErr, ok := err.(*httpx.APIError); ok {
+					return apiErr, nil
+				}
+				return nil, err
+			}
+			if req.BanDurationDays != nil {
+				if apiErr, err := s.banUser(ctx, actor, record.TargetUser.UserID, req.Note, req.BanDurationDays, false); apiErr != nil || err != nil {
+					return apiErr, err
+				}
+			}
+		case ReportTargetTypeUser:
+			if req.BanDurationDays != nil {
+				if apiErr, err := s.banUser(ctx, actor, record.TargetUser.UserID, req.Note, req.BanDurationDays, false); apiErr != nil || err != nil {
+					return apiErr, err
+				}
+			}
 		}
 	}
 	_, ok, err := s.repo.HandleReport(ctx, req.ReportID, req.Action, strings.TrimSpace(req.Note), &UserInfo{UserID: actor.UserID, Nickname: actor.UserID})

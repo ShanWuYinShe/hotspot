@@ -159,6 +159,22 @@ func (r *adminFallbackRepo) HandleReport(context.Context, string, ReportHandleAc
 	r.used = true
 	return AdminReportItem{}, false, nil
 }
+func (r *adminFallbackRepo) RecallGroupMessage(context.Context, string) error {
+	r.used = true
+	return nil
+}
+func (r *adminFallbackRepo) RecallPrivateMessage(context.Context, string) error {
+	r.used = true
+	return nil
+}
+func (r *adminFallbackRepo) DeleteMoment(context.Context, string) error {
+	r.used = true
+	return nil
+}
+func (r *adminFallbackRepo) DeleteComment(context.Context, string) error {
+	r.used = true
+	return nil
+}
 
 type adminRoleStub struct {
 	RoleID      string
