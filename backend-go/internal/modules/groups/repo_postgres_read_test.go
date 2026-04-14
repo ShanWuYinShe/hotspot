@@ -3,7 +3,9 @@ package groups
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
+	"time"
 
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -30,6 +32,15 @@ func (r groupRowValues) Scan(dest ...any) error {
 			*d = r.values[i].(int)
 		case *float64:
 			*d = r.values[i].(float64)
+		case *[]string:
+			*d = r.values[i].([]string)
+		case **time.Time:
+			if r.values[i] == nil {
+				*d = nil
+			} else {
+				value := r.values[i].(time.Time)
+				*d = &value
+			}
 		}
 	}
 	return nil
@@ -60,7 +71,7 @@ func (r *groupFallbackRepo) Get(context.Context, string) (GroupItem, bool, error
 	r.used = true
 	return GroupItem{}, false, nil
 }
-func (r *groupFallbackRepo) Search(context.Context, string) (PaginatedGroups, error) {
+func (r *groupFallbackRepo) Search(context.Context, SearchGroupsRequest) (PaginatedGroups, error) {
 	r.used = true
 	return PaginatedGroups{}, nil
 }
@@ -220,6 +231,12 @@ func (b *groupBackendStub) Query(_ context.Context, query string, _ ...any) (per
 	if err := b.queryErrs[query]; err != nil {
 		return nil, err
 	}
+	if strings.Contains(query, "FROM groups g") {
+		if err := b.queryErrs[querySearchGroups]; err != nil {
+			return nil, err
+		}
+		return &groupRowsValues{rows: b.rows}, nil
+	}
 	if query == querySearchGroups {
 		return &groupRowsValues{rows: b.rows}, nil
 	}
@@ -228,9 +245,9 @@ func (b *groupBackendStub) Query(_ context.Context, query string, _ ...any) (per
 
 func TestPostgresRepositoryCreateGetAndSearch(t *testing.T) {
 	backend := &groupBackendStub{
-		rows:      [][]any{{"group_1", "Hot Group", "", "desc", false, "南天门", 35.0, 112.0, "open", true, 200, "user_alice", nil, nil}},
+		rows:      [][]any{{"group_1", "Hot Group", "", "desc", false, "南天门", 35.0, 112.0, "open", true, 200, "user_alice", nil, nil, []string{"hiking"}, 1, 0, 1}},
 		queryErrs: map[string]error{},
-		queryRow:  groupRowValues{values: []any{"group_1", "Hot Group", "", "desc", false, "南天门", 35.0, 112.0, "open", true, 200, "user_alice", nil, nil}},
+		queryRow:  groupRowValues{values: []any{"group_1", "Hot Group", "", "desc", false, "南天门", 35.0, 112.0, "open", true, 200, "user_alice", nil, nil, []string{"hiking"}}},
 		execErrs:  map[string]error{},
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
@@ -255,7 +272,7 @@ func TestPostgresRepositoryCreateGetAndSearch(t *testing.T) {
 	if item.OwnerID != "user_alice" {
 		t.Fatalf("expected owner id in fetched item, got %#v", item)
 	}
-	list, err := repo.Search(context.Background(), "Hot Group")
+	list, err := repo.Search(context.Background(), SearchGroupsRequest{Keyword: "Hot Group", ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
 	if err != nil || len(list.Items) != 1 || list.Items[0].Group.GroupID != "group_1" {
 		t.Fatalf("unexpected list: %#v err=%v", list, err)
 	}
@@ -300,7 +317,7 @@ func TestPostgresRepositorySearchReturnsErrorOnQueryFailure(t *testing.T) {
 	fallback := &groupFallbackRepo{}
 	repo := NewPostgresRepository(factory, fallback)
 
-	_, err := repo.Search(context.Background(), "Hot Group")
+	_, err := repo.Search(context.Background(), SearchGroupsRequest{Keyword: "Hot Group", ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
 	if err == nil {
 		t.Fatal("expected search error")
 	}

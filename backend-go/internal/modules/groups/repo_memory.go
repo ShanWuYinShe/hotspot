@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/geo"
 )
 
 type inMemoryInviteRecord struct {
@@ -88,17 +90,91 @@ func (r *InMemoryRepository) Get(ctx context.Context, groupID string) (GroupItem
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	return r.cloneGroupForUser(item, principal.UserID), true, nil
 }
-func (r *InMemoryRepository) Search(ctx context.Context, keyword string) (PaginatedGroups, error) {
+func (r *InMemoryRepository) Search(ctx context.Context, req SearchGroupsRequest) (PaginatedGroups, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
+	req = normalizedSearchRequest(req)
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	items := []GroupItem{}
+	items := make([]GroupItem, 0)
+	metas := make(map[string]groupSearchMeta)
+	var (
+		plan    geo.SearchPlan
+		hasPlan bool
+	)
+	if req.Radius != nil {
+		plan = geo.NewSearchPlan(searchGeoPoint(req.ReferencePoint), *req.Radius, req.SortBy)
+		hasPlan = true
+	}
 	for _, item := range r.groups {
-		if keyword == "" || item.Group.Name == keyword {
-			items = append(items, r.cloneGroupForUser(item, principal.UserID))
+		if !item.IsSearchable {
+			continue
+		}
+		if req.Keyword != "" {
+			keyword := strings.ToLower(req.Keyword)
+			if !strings.Contains(strings.ToLower(item.Group.Name), keyword) && !strings.Contains(strings.ToLower(item.Description), keyword) {
+				continue
+			}
+		}
+		if req.Tag != "" {
+			matchedTag := false
+			for _, tag := range item.Tags {
+				if strings.EqualFold(tag, req.Tag) {
+					matchedTag = true
+					break
+				}
+			}
+			if !matchedTag {
+				continue
+			}
+		}
+		meta := groupSearchMeta{CreatedAt: groupCreatedAt(item), NameMatch: searchNameMatchScore(item, req.Keyword)}
+		if hasPlan {
+			distance, bearing, ok := plan.Match(groupLocationPoint(item.Location))
+			if !ok {
+				continue
+			}
+			meta.Distance = distance
+			meta.Bearing = bearing
+		}
+		cloned := r.cloneGroupForUser(item, principal.UserID)
+		items = append(items, cloned)
+		metas[cloned.Group.GroupID] = meta
+		if req.SortBy == searchSortRelevance && req.Keyword == "" {
+			metas[cloned.Group.GroupID] = meta
 		}
 	}
-	return PaginatedGroups{Items: items}, nil
+	sortGroupsForSearch(items, metas, req.SortBy)
+	cursor, err := decodeSearchCursor(req.Cursor)
+	if err != nil {
+		return PaginatedGroups{}, err
+	}
+	if cursor.GroupID != "" {
+		filtered := make([]GroupItem, 0, len(items))
+		for _, item := range items {
+			if matchesSearchCursor(metas[item.Group.GroupID], item, cursor) {
+				filtered = append(filtered, item)
+			}
+		}
+		items = filtered
+	}
+	limit := req.Limit
+	if limit <= 0 {
+		limit = defaultSearchLimit
+	}
+	response := PaginatedGroups{}
+	if len(items) <= limit {
+		response.Items = items
+		return response, nil
+	}
+	response.Items = items[:limit]
+	last := response.Items[len(response.Items)-1]
+	lastMeta := metas[last.Group.GroupID]
+	next, err := encodeSearchCursor(groupSearchCursor{SortBy: req.SortBy, GroupID: last.Group.GroupID, Distance: lastMeta.Distance, MembersCount: last.Group.MembersCount, NameMatch: lastMeta.NameMatch, CreatedAt: lastMeta.CreatedAt.Format(time.RFC3339)})
+	if err != nil {
+		return PaginatedGroups{}, err
+	}
+	response.NextCursor = next
+	return response, nil
 }
 
 func (r *InMemoryRepository) Update(_ context.Context, userID string, req UpdateGroupRequest) error {

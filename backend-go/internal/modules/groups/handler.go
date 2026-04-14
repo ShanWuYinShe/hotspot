@@ -3,6 +3,7 @@ package groups
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
@@ -65,8 +66,25 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
-	list, err := h.service.Search(r.Context(), req.Keyword)
+	if !hasSearchCriteria(req) {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "至少需要提供 keyword、tag、radius 之一"))
+		return
+	}
+	if req.Radius != nil && (*req.Radius < minSearchRadius || *req.Radius > maxSearchRadius) {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "radius 超出范围"))
+		return
+	}
+	if sortBy := normalizedSearchSort(req.SortBy); sortBy == "" && strings.TrimSpace(req.SortBy) != "" {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "sort_by 不支持"))
+		return
+	}
+	req = normalizedSearchRequest(req)
+	list, err := h.service.Search(r.Context(), req)
 	if err != nil {
+		if err == ErrAccessRestricted {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
+			return
+		}
 		observability.L().Error("handler error",
 			"method", "Search",
 			"error", err,

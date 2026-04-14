@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
 
 	"github.com/jackc/pgx/v5"
@@ -47,7 +48,8 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	}
 	nowRFC3339 := now.Format(time.RFC3339)
 	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: req.Tags, HasPassword: req.Password != "", Location: newRelativeLocation(req.Location), MyState: &MyGroupState{Role: "owner", IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, IsSearchable: isSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: userID}
-	if err := queryable.Exec(ctx, queryInsertGroup, groupID, req.Name, req.AvatarFileID, req.Description, req.Password != "", req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, joinMethod, isSearchable, maxMembers, userID, now, now); err != nil {
+	s2CellToken := geo.CellTokenAtLevel(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude}, 14)
+	if err := queryable.Exec(ctx, queryInsertGroup, groupID, req.Name, req.AvatarFileID, req.Description, req.Password != "", req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, joinMethod, isSearchable, maxMembers, userID, now, now, req.Tags, s2CellToken); err != nil {
 		return GroupItem{}, err
 	}
 	if err := queryable.Exec(ctx, queryInsertGroupMember, groupID, userID, string(GroupRoleOwner), now); err != nil {
@@ -75,13 +77,16 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 	var locationName *string
 	var latitude *float64
 	var longitude *float64
+	var s2CellToken *string
 	if req.Location != nil {
 		locationName = &req.Location.LocationName
 		latitude = &req.Location.Point.Latitude
 		longitude = &req.Location.Point.Longitude
+		token := geo.CellTokenAtLevel(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude}, 14)
+		s2CellToken = &token
 	}
 	_ = userID
-	err := queryable.Exec(ctx, queryUpdateGroup, req.GroupID, nilOrString(req.Name), nilOrString(req.AvatarFileID), nilOrString(req.Description), hasPassword, nilOrStringJoinMethod(req.JoinMethod), nilOrBool(req.IsSearchable), nilOrInt(req.MaxMembers), locationName, latitude, longitude)
+	err := queryable.Exec(ctx, queryUpdateGroup, req.GroupID, nilOrString(req.Name), nilOrString(req.AvatarFileID), nilOrString(req.Description), hasPassword, nilOrStringJoinMethod(req.JoinMethod), nilOrBool(req.IsSearchable), nilOrInt(req.MaxMembers), locationName, latitude, longitude, nilOrStrings(req.Tags), s2CellToken)
 	return err
 }
 
@@ -166,14 +171,16 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 		var locationName, joinMethod, roleText string
 		var latitude, longitude float64
 		var createdAt, lastActivityAt *time.Time
+		var tags []string
 		var joinedAt time.Time
-		if err := rows.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &item.Description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.IsSearchable, &item.MaxMembers, &item.OwnerID, &createdAt, &lastActivityAt, &roleText, &joinedAt); err != nil {
+		if err := rows.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &item.Description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.IsSearchable, &item.MaxMembers, &item.OwnerID, &createdAt, &lastActivityAt, &tags, &roleText, &joinedAt); err != nil {
 			return nil, "", err
 		}
 		item.Location = RelativeLocation{Point: struct {
 			Latitude  float64 `json:"latitude"`
 			Longitude float64 `json:"longitude"`
 		}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
+		item.Tags = tags
 		item.JoinMethod = GroupJoinMethod(joinMethod)
 		item.CreatedAt = formatOptionalTime(createdAt)
 		item.LastActivityAt = formatOptionalTime(lastActivityAt)
@@ -626,6 +633,13 @@ func derefTime(value *time.Time) string {
 		return ""
 	}
 	return value.UTC().Format(time.RFC3339)
+}
+
+func nilOrStrings(values []string) []string {
+	if values == nil {
+		return nil
+	}
+	return values
 }
 
 func (r *PostgresRepository) loadApplication(ctx context.Context, applicationID string) (GroupApplicationItem, error) {

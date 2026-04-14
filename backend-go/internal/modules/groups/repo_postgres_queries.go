@@ -2,19 +2,18 @@ package groups
 
 const (
 	queryInsertGroup = `
-	INSERT INTO groups (group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members, owner_id, created_at, last_activity_at)
-	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`
+	INSERT INTO groups (group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members, owner_id, created_at, last_activity_at, tags, s2_cell_token)
+	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`
 
 	queryGetGroup = `
-	SELECT group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members, owner_id, created_at, last_activity_at
+	SELECT group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members, owner_id, created_at, last_activity_at, COALESCE(tags, '{}')
 	FROM groups
 	WHERE group_id = $1 AND deleted_at IS NULL`
 
 	querySearchGroups = `
-	SELECT group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members, owner_id, created_at, last_activity_at
-	FROM groups
-	WHERE deleted_at IS NULL AND ($1 = '' OR name = $1)
-	ORDER BY group_id ASC`
+	SELECT g.group_id, g.name, g.avatar_url, g.description, g.has_password, g.location_name, g.latitude, g.longitude, g.join_method, g.is_searchable, g.max_members, g.owner_id, g.created_at, g.last_activity_at, COALESCE(g.tags, '{}')
+	FROM groups g
+	WHERE g.deleted_at IS NULL`
 
 	queryGetGroupMembership = `
 SELECT role, joined_at
@@ -33,9 +32,9 @@ WHERE group_id = $1 AND ($2 = '' OR role = $2)
 ORDER BY joined_at ASC, user_id ASC`
 
 	queryListMyGroups = `
-	SELECT g.group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members, g.owner_id, g.created_at, g.last_activity_at,
-	       gm.role, gm.joined_at
-	FROM groups g
+		SELECT g.group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members, g.owner_id, g.created_at, g.last_activity_at, COALESCE(g.tags, '{}'),
+		       gm.role, gm.joined_at
+		FROM groups g
 	JOIN group_members gm ON gm.group_id = g.group_id
 WHERE gm.user_id = $1 AND g.deleted_at IS NULL
 ORDER BY gm.joined_at DESC, g.group_id DESC`
@@ -115,18 +114,20 @@ SET status = $2, responded_at = $3
 WHERE invite_id = $1`
 
 	queryUpdateGroup = `
-UPDATE groups
-SET name = COALESCE($2, name),
-    avatar_url = COALESCE($3, avatar_url),
-    description = COALESCE($4, description),
-    has_password = COALESCE($5, has_password),
-    join_method = COALESCE($6, join_method),
-    is_searchable = COALESCE($7, is_searchable),
-    max_members = COALESCE($8, max_members),
-    location_name = COALESCE($9, location_name),
-    latitude = COALESCE($10, latitude),
-    longitude = COALESCE($11, longitude)
-WHERE group_id = $1`
+	UPDATE groups
+	SET name = COALESCE($2, name),
+	    avatar_url = COALESCE($3, avatar_url),
+	    description = COALESCE($4, description),
+	    has_password = COALESCE($5, has_password),
+	    join_method = COALESCE($6, join_method),
+	    is_searchable = COALESCE($7, is_searchable),
+	    max_members = COALESCE($8, max_members),
+	    location_name = COALESCE($9, location_name),
+	    latitude = COALESCE($10, latitude),
+	    longitude = COALESCE($11, longitude),
+	    tags = COALESCE($12, tags),
+	    s2_cell_token = COALESCE($13, s2_cell_token)
+	WHERE group_id = $1`
 
 	queryDeleteGroup = `
 DELETE FROM groups

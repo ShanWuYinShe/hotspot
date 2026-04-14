@@ -3,9 +3,12 @@ package groups
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
 
 	"github.com/jackc/pgx/v5"
@@ -39,23 +42,28 @@ func (r *PostgresRepository) Get(ctx context.Context, groupID string) (GroupItem
 	return item, true, nil
 }
 
-func (r *PostgresRepository) Search(ctx context.Context, keyword string) (PaginatedGroups, error) {
+func (r *PostgresRepository) Search(ctx context.Context, req SearchGroupsRequest) (PaginatedGroups, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Search(ctx, keyword)
+		return r.fallback.Search(ctx, req)
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
 		return PaginatedGroups{}, persistence.ErrNotImplemented
 	}
-	rows, err := queryable.Query(ctx, querySearchGroups, keyword)
+	req = normalizedSearchRequest(req)
+	query, args, limit, cursor, err := buildGroupSearchQuery(req)
+	if err != nil {
+		return PaginatedGroups{}, err
+	}
+	rows, err := queryable.Query(ctx, query, args...)
 	if err != nil {
 		return PaginatedGroups{}, err
 	}
 	defer rows.Close()
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	items := []GroupItem{}
+	items := make([]GroupItem, 0)
 	for rows.Next() {
-		item, err := scanGroupBase(rows)
+		item, meta, err := scanSearchGroupRow(rows)
 		if err != nil {
 			return PaginatedGroups{}, err
 		}
@@ -63,16 +71,35 @@ func (r *PostgresRepository) Search(ctx context.Context, keyword string) (Pagina
 		if err != nil {
 			return PaginatedGroups{}, err
 		}
-		item.Group.MembersCount, err = countGroupMembers(ctx, queryable, item.Group.GroupID)
-		if err != nil {
-			return PaginatedGroups{}, err
+		if cursor.GroupID != "" && !matchesSearchCursor(meta, item, cursor) {
+			continue
 		}
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
 		return PaginatedGroups{}, err
 	}
-	return PaginatedGroups{Items: items}, nil
+	response := PaginatedGroups{}
+	if len(items) <= limit {
+		response.Items = items
+		return response, nil
+	}
+	response.Items = items[:limit]
+	last := response.Items[len(response.Items)-1]
+	lastDistance := 0
+	if last.Location.Distance != nil {
+		lastDistance = int(*last.Location.Distance)
+	}
+	lastCreatedAt := ""
+	if last.CreatedAt != nil {
+		lastCreatedAt = *last.CreatedAt
+	}
+	next, err := encodeSearchCursor(groupSearchCursor{SortBy: req.SortBy, GroupID: last.Group.GroupID, Distance: lastDistance, MembersCount: last.Group.MembersCount, NameMatch: searchNameMatchScore(last, req.Keyword), CreatedAt: lastCreatedAt})
+	if err != nil {
+		return PaginatedGroups{}, err
+	}
+	response.NextCursor = next
+	return response, nil
 }
 
 func scanGroupBase(scanner interface{ Scan(...any) error }) (GroupItem, error) {
@@ -80,7 +107,8 @@ func scanGroupBase(scanner interface{ Scan(...any) error }) (GroupItem, error) {
 	var locationName, joinMethod string
 	var latitude, longitude float64
 	var createdAt, lastActivityAt *time.Time
-	if err := scanner.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &item.Description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.IsSearchable, &item.MaxMembers, &item.OwnerID, &createdAt, &lastActivityAt); err != nil {
+	var tags []string
+	if err := scanner.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &item.Description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.IsSearchable, &item.MaxMembers, &item.OwnerID, &createdAt, &lastActivityAt, &tags); err != nil {
 		return GroupItem{}, err
 	}
 	item.Location = RelativeLocation{Point: struct {
@@ -90,7 +118,35 @@ func scanGroupBase(scanner interface{ Scan(...any) error }) (GroupItem, error) {
 	item.JoinMethod = GroupJoinMethod(joinMethod)
 	item.CreatedAt = formatOptionalTime(createdAt)
 	item.LastActivityAt = formatOptionalTime(lastActivityAt)
+	item.Tags = tags
 	return item, nil
+}
+
+func scanSearchGroupRow(scanner interface{ Scan(...any) error }) (GroupItem, groupSearchMeta, error) {
+	var item GroupItem
+	var meta groupSearchMeta
+	var locationName, joinMethod string
+	var latitude, longitude float64
+	var createdAt, lastActivityAt *time.Time
+	var tags []string
+	var distanceMeters, nameMatchScore int
+	if err := scanner.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &item.Description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.IsSearchable, &item.MaxMembers, &item.OwnerID, &createdAt, &lastActivityAt, &tags, &item.Group.MembersCount, &distanceMeters, &nameMatchScore); err != nil {
+		return GroupItem{}, groupSearchMeta{}, err
+	}
+	item.Location = RelativeLocation{Point: struct {
+		Latitude  float64 `json:"latitude"`
+		Longitude float64 `json:"longitude"`
+	}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
+	distance := float64(distanceMeters)
+	item.Location.Distance = &distance
+	item.JoinMethod = GroupJoinMethod(joinMethod)
+	item.CreatedAt = formatOptionalTime(createdAt)
+	item.LastActivityAt = formatOptionalTime(lastActivityAt)
+	item.Tags = tags
+	meta.Distance = distanceMeters
+	meta.NameMatch = nameMatchScore
+	meta.CreatedAt = groupCreatedAt(item)
+	return item, meta, nil
 }
 
 func getGroupBase(ctx context.Context, queryable persistence.QueryableDB, groupID string) (GroupItem, error) {
@@ -139,4 +195,95 @@ func formatOptionalTime(value *time.Time) *string {
 	}
 	formatted := value.UTC().Format(time.RFC3339)
 	return &formatted
+}
+
+func buildGroupSearchQuery(req SearchGroupsRequest) (string, []any, int, groupSearchCursor, error) {
+	limit := normalizeSearchLimit(req.Limit)
+	cursor, err := decodeSearchCursor(req.Cursor)
+	if err != nil {
+		return "", nil, 0, groupSearchCursor{}, err
+	}
+	if cursor.SortBy == "" {
+		cursor.SortBy = req.SortBy
+	}
+	args := make([]any, 0, 32)
+	addArg := func(value any) string {
+		args = append(args, value)
+		return fmt.Sprintf("$%d", len(args))
+	}
+	reference := searchGeoPoint(req.ReferencePoint)
+	refLat := addArg(reference.Latitude)
+	refLng := addArg(reference.Longitude)
+	distanceExpr := fmt.Sprintf(`CAST(6371000 * 2 * ASIN(SQRT(POWER(SIN(RADIANS(latitude - %s) / 2), 2) + COS(RADIANS(%s)) * COS(RADIANS(latitude)) * POWER(SIN(RADIANS(longitude - %s) / 2), 2))) AS INTEGER)`, refLat, refLat, refLng)
+	nameMatchExpr := "0"
+	if req.Keyword != "" {
+		keywordArg := addArg(req.Keyword)
+		nameMatchExpr = fmt.Sprintf(`CASE WHEN name ILIKE '%%' || %s || '%%' THEN 1 ELSE 0 END`, keywordArg)
+	}
+	var builder strings.Builder
+	builder.WriteString("SELECT * FROM (")
+	builder.WriteString("SELECT g.group_id, g.name, g.avatar_url, g.description, g.has_password, g.location_name, g.latitude, g.longitude, g.join_method, g.is_searchable, g.max_members, g.owner_id, g.created_at, g.last_activity_at, COALESCE(g.tags, '{}')")
+	builder.WriteString(", (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = g.group_id) AS members_count")
+	builder.WriteString(", ")
+	builder.WriteString(distanceExpr)
+	builder.WriteString(" AS distance_meters, ")
+	builder.WriteString(nameMatchExpr)
+	builder.WriteString(" AS name_match_score")
+	builder.WriteString(" FROM groups g WHERE g.deleted_at IS NULL AND g.is_searchable = true")
+	if req.Keyword != "" {
+		keywordArg := addArg(req.Keyword)
+		builder.WriteString(fmt.Sprintf(" AND (g.name ILIKE '%%' || %s || '%%' OR g.description ILIKE '%%' || %s || '%%')", keywordArg, keywordArg))
+	}
+	if req.Tag != "" {
+		tagArg := addArg(req.Tag)
+		builder.WriteString(fmt.Sprintf(" AND %s = ANY(g.tags)", tagArg))
+	}
+	if req.Radius != nil {
+		plan := geo.NewSearchPlan(reference, *req.Radius, req.SortBy)
+		tokens := geo.CoveringTokens(geo.BoundsAround(plan.Reference, plan.Radius), plan.Level, 32)
+		if len(tokens) == 0 {
+			return "SELECT * FROM (SELECT NULL WHERE FALSE) empty", nil, limit, cursor, nil
+		}
+		tokensArg := addArg(tokens)
+		builder.WriteString(fmt.Sprintf(" AND g.s2_cell_token = ANY(%s)", tokensArg))
+	}
+	builder.WriteString(") search WHERE 1=1")
+	if req.Radius != nil {
+		radiusArg := addArg(*req.Radius)
+		builder.WriteString(fmt.Sprintf(" AND distance_meters <= %s", radiusArg))
+	}
+	if cursor.GroupID != "" {
+		switch req.SortBy {
+		case searchSortDistance:
+			distanceArg := addArg(cursor.Distance)
+			groupIDArg := addArg(cursor.GroupID)
+			builder.WriteString(fmt.Sprintf(" AND (distance_meters > %s OR (distance_meters = %s AND group_id > %s))", distanceArg, distanceArg, groupIDArg))
+		case searchSortNewest:
+			createdAtArg := addArg(cursor.CreatedAt)
+			groupIDArg := addArg(cursor.GroupID)
+			builder.WriteString(fmt.Sprintf(" AND (created_at < %s::timestamptz OR (created_at = %s::timestamptz AND group_id > %s))", createdAtArg, createdAtArg, groupIDArg))
+		case searchSortPopular:
+			membersArg := addArg(cursor.MembersCount)
+			groupIDArg := addArg(cursor.GroupID)
+			builder.WriteString(fmt.Sprintf(" AND (members_count < %s OR (members_count = %s AND group_id > %s))", membersArg, membersArg, groupIDArg))
+		default:
+			nameMatchArg := addArg(cursor.NameMatch)
+			membersArg := addArg(cursor.MembersCount)
+			groupIDArg := addArg(cursor.GroupID)
+			builder.WriteString(fmt.Sprintf(" AND (name_match_score < %s OR (name_match_score = %s AND (members_count < %s OR (members_count = %s AND group_id > %s))))", nameMatchArg, nameMatchArg, membersArg, membersArg, groupIDArg))
+		}
+	}
+	switch req.SortBy {
+	case searchSortDistance:
+		builder.WriteString(" ORDER BY distance_meters ASC, group_id ASC")
+	case searchSortNewest:
+		builder.WriteString(" ORDER BY created_at DESC, group_id ASC")
+	case searchSortPopular:
+		builder.WriteString(" ORDER BY members_count DESC, group_id ASC")
+	default:
+		builder.WriteString(" ORDER BY name_match_score DESC, members_count DESC, group_id ASC")
+	}
+	limitArg := addArg(limit + 1)
+	builder.WriteString(fmt.Sprintf(" LIMIT %s", limitArg))
+	return builder.String(), args, limit, cursor, nil
 }

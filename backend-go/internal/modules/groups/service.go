@@ -6,6 +6,7 @@ import (
 
 	"hotspot/backend-go/internal/modules/notifications"
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/resourceguard"
@@ -66,13 +67,21 @@ func (s *Service) OpenTheDoor(ctx context.Context, groupID string) (GroupItem, b
 	return item, ok, nil
 }
 
-func (s *Service) Search(ctx context.Context, keyword string) (PaginatedGroups, error) {
+func (s *Service) Search(ctx context.Context, req SearchGroupsRequest) (PaginatedGroups, error) {
 	startedAt := time.Now()
-	observability.L().Info("groups.search started", "keyword", keyword)
-	result, err := s.repo.Search(ctx, keyword)
+	observability.L().Info("groups.search started", "keyword", req.Keyword, "tag", req.Tag, "sort_by", req.SortBy)
+	result, err := s.repo.Search(ctx, req)
 	if err != nil {
 		observability.L().Error("groups.search failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return PaginatedGroups{}, err
+	}
+	reference := searchGeoPoint(req.ReferencePoint)
+	for i := range result.Items {
+		candidate := groupLocationPoint(result.Items[i].Location)
+		distance := float64(geo.DistanceMeters(reference, candidate))
+		bearing := float64(geo.BearingDegrees(reference, candidate))
+		result.Items[i].Location.Distance = &distance
+		result.Items[i].Location.BearingDegrees = &bearing
 	}
 	observability.L().Info("groups.search completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return result, nil

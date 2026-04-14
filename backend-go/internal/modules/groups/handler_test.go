@@ -45,7 +45,7 @@ func (r *groupErrorRepo) Create(context.Context, string, CreateGroupRequest) (Gr
 func (r *groupErrorRepo) Get(context.Context, string) (GroupItem, bool, error) {
 	return GroupItem{}, false, r.getErr
 }
-func (r *groupErrorRepo) Search(context.Context, string) (PaginatedGroups, error) {
+func (r *groupErrorRepo) Search(context.Context, SearchGroupsRequest) (PaginatedGroups, error) {
 	return PaginatedGroups{}, r.searchErr
 }
 func (r *groupErrorRepo) Update(context.Context, string, UpdateGroupRequest) error {
@@ -184,11 +184,14 @@ func TestSearchGroupsReturnsMatches(t *testing.T) {
 	service := NewServiceWithRepo(repo)
 	handler := NewHandler(service)
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	if _, err := service.Create(ctx, CreateGroupRequest{Name: "Searchable", Location: Location{LocationName: "Here"}}); err != nil {
+	if _, err := service.Create(ctx, CreateGroupRequest{Name: "Searchable", Location: Location{Point: struct {
+		Latitude  float64 `json:"latitude"`
+		Longitude float64 `json:"longitude"`
+	}{Latitude: 31.2, Longitude: 121.5}, LocationName: "Here"}}); err != nil {
 		t.Fatalf("create group: %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(`{"keyword":"Searchable"}`))
+	req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(`{"keyword":"Searchable","reference_point":{"latitude":31.2,"longitude":121.5}}`))
 	rr := httptest.NewRecorder()
 	handler.Search(rr, req)
 
@@ -201,6 +204,29 @@ func TestSearchGroupsReturnsMatches(t *testing.T) {
 	}
 	if resp.Code != 0 || len(resp.Data.Items) == 0 {
 		t.Fatalf("unexpected response: %#v", resp)
+	}
+	if resp.Data.Items[0].Location.Distance == nil || resp.Data.Items[0].Location.BearingDegrees == nil {
+		t.Fatalf("expected geo enrichment, got %#v", resp.Data.Items[0].Location)
+	}
+}
+
+func TestSearchGroupsValidation(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "missing criteria", body: `{"reference_point":{"latitude":31.2,"longitude":121.5}}`},
+		{name: "radius out of range", body: `{"radius":99,"reference_point":{"latitude":31.2,"longitude":121.5}}`},
+		{name: "invalid sort", body: `{"keyword":"abc","sort_by":"random","reference_point":{"latitude":31.2,"longitude":121.5}}`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(tc.body))
+			rr := httptest.NewRecorder()
+			handler.Search(rr, req)
+			assertGroupCode(t, rr, 10000)
+		})
 	}
 }
 
