@@ -6,6 +6,8 @@ type GroupRole string
 
 type ApplicationStatus string
 
+type JoinGroupStatus string
+
 const (
 	GroupJoinMethodOpen       GroupJoinMethod = "open"
 	GroupJoinMethodApproval   GroupJoinMethod = "approval"
@@ -15,11 +17,13 @@ const (
 	GroupRoleAdmin  GroupRole = "admin"
 	GroupRoleMember GroupRole = "member"
 
-	ApplicationStatusPending   ApplicationStatus = "pending"
-	ApplicationStatusAccepted  ApplicationStatus = "accepted"
-	ApplicationStatusRejected  ApplicationStatus = "rejected"
-	ApplicationStatusRevoked   ApplicationStatus = "revoked"
-	ApplicationStatusCancelled ApplicationStatus = "cancelled"
+	ApplicationStatusPending  ApplicationStatus = "pending"
+	ApplicationStatusAccepted ApplicationStatus = "accepted"
+	ApplicationStatusRejected ApplicationStatus = "rejected"
+	ApplicationStatusRevoked  ApplicationStatus = "revoked"
+
+	JoinGroupStatusJoined          JoinGroupStatus = "joined"
+	JoinGroupStatusPendingApproval JoinGroupStatus = "pending_approval"
 )
 
 type GroupInfo struct {
@@ -233,6 +237,7 @@ type GroupApplicationsRequest struct {
 
 type GroupApplicationItem struct {
 	ApplicationID string            `json:"application_id"`
+	GroupID       string            `json:"-"`
 	Applicant     UserInfo          `json:"applicant"`
 	Message       *string           `json:"message,omitempty"`
 	Status        ApplicationStatus `json:"status"`
@@ -298,7 +303,7 @@ type JoinGroupRequest struct {
 }
 
 type JoinGroupResult struct {
-	Status      ApplicationStatus `json:"status"`
+	Status      JoinGroupStatus `json:"status"`
 	Application *struct {
 		ApplicationID string `json:"application_id"`
 	} `json:"application,omitempty"`

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"hotspot/backend-go/internal/modules/notifications"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/resourceguard"
@@ -243,6 +244,124 @@ func TestDismissGroupUsesGroupIDAndBroadcastsDismissedEvent(t *testing.T) {
 	payload, ok := sink.events[0].Payload.(map[string]any)
 	if !ok || payload["group_id"] != created.Group.GroupID || payload["reason"] != "owner_dismissed" {
 		t.Fatalf("unexpected dismiss payload: %#v", sink.events[0].Payload)
+	}
+}
+
+func TestJoinApprovalSendsApplicationNotification(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	notificationRepo := notifications.NewInMemoryRepository()
+	repo := NewInMemoryRepository()
+	service := NewServiceWithDeps(repo, notifications.NewServiceWithRepo(notificationRepo))
+	ownerCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_owner"})
+	joinMethod := GroupJoinMethodApproval
+	created, err := service.Create(ownerCtx, CreateGroupRequest{Name: "Approval Group", JoinMethod: joinMethod, Location: Location{LocationName: "Somewhere"}})
+	if err != nil {
+		t.Fatalf("create group: %v", err)
+	}
+	ownerSink := &groupRealtimeSink{}
+	hub.RegisterUser("user_alice", "sess_owner", ownerSink)
+	memberCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_member"})
+	message := "please let me in"
+	result, err := service.JoinGroup(memberCtx, JoinGroupRequest{GroupID: created.Group.GroupID, Message: &message})
+	if err != nil {
+		t.Fatalf("join group: %v", err)
+	}
+	if result.Status != JoinGroupStatusPendingApproval || result.Application == nil {
+		t.Fatalf("unexpected join result: %#v", result)
+	}
+	if len(ownerSink.events) != 1 || ownerSink.events[0].Type != "GroupApplicationReceived" {
+		t.Fatalf("unexpected owner events: %#v", ownerSink.events)
+	}
+	notificationsPage, err := notificationRepo.List(context.Background(), "user_alice", notifications.NotificationListRequest{})
+	if err != nil {
+		t.Fatalf("list notifications: %v", err)
+	}
+	if len(notificationsPage.Items) != 1 || notificationsPage.Items[0].Type != "group_application_received" {
+		t.Fatalf("unexpected notifications: %#v", notificationsPage)
+	}
+}
+
+func TestInviteAndAcceptFlowSendsNotifications(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	notificationRepo := notifications.NewInMemoryRepository()
+	repo := NewInMemoryRepository()
+	service := NewServiceWithDeps(repo, notifications.NewServiceWithRepo(notificationRepo))
+	ownerCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_owner"})
+	created, err := service.Create(ownerCtx, CreateGroupRequest{Name: "Invite Group", Location: Location{LocationName: "Somewhere"}})
+	if err != nil {
+		t.Fatalf("create group: %v", err)
+	}
+	inviteeSink := &groupRealtimeSink{}
+	ownerSink := &groupRealtimeSink{}
+	hub.RegisterUser("user_bob", "sess_bob", inviteeSink)
+	hub.RegisterUser("user_alice", "sess_owner", ownerSink)
+	message := "join us"
+	invitation, err := service.InviteMember(ownerCtx, InviteMemberRequest{GroupID: created.Group.GroupID, UserID: "user_bob", Message: &message})
+	if err != nil {
+		t.Fatalf("invite member: %v", err)
+	}
+	if invitation.InviteID == "" {
+		t.Fatalf("expected invite id, got %#v", invitation)
+	}
+	inviteNotifications, err := notificationRepo.List(context.Background(), "user_bob", notifications.NotificationListRequest{})
+	if err != nil {
+		t.Fatalf("list invite notifications: %v", err)
+	}
+	if len(inviteeSink.events) != 1 || inviteeSink.events[0].Type != "GroupInviteReceived" {
+		t.Fatalf("unexpected invitee events: %#v", inviteeSink.events)
+	}
+	if len(inviteNotifications.Items) != 1 || inviteNotifications.Items[0].Type != "group_invite_received" {
+		t.Fatalf("unexpected invite notifications: %#v", inviteNotifications)
+	}
+	inviteeCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_bob"})
+	if err := service.AcceptInvite(inviteeCtx, AcceptInviteRequest{InviteID: invitation.InviteID}); err != nil {
+		t.Fatalf("accept invite: %v", err)
+	}
+	ownerNotifications, err := notificationRepo.List(context.Background(), "user_alice", notifications.NotificationListRequest{})
+	if err != nil {
+		t.Fatalf("list owner notifications: %v", err)
+	}
+	if len(ownerSink.events) != 1 || ownerSink.events[0].Type != "GroupInviteResponse" {
+		t.Fatalf("unexpected owner events: %#v", ownerSink.events)
+	}
+	if len(ownerNotifications.Items) != 1 || ownerNotifications.Items[0].Type != "group_invite_accepted" {
+		t.Fatalf("unexpected owner notifications: %#v", ownerNotifications)
+	}
+}
+
+func TestApproveApplicationSendsAcceptedNotification(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+	notificationRepo := notifications.NewInMemoryRepository()
+	repo := NewInMemoryRepository()
+	service := NewServiceWithDeps(repo, notifications.NewServiceWithRepo(notificationRepo))
+	ownerCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_owner"})
+	joinMethod := GroupJoinMethodApproval
+	created, err := service.Create(ownerCtx, CreateGroupRequest{Name: "Approval Group", JoinMethod: joinMethod, Location: Location{LocationName: "Somewhere"}})
+	if err != nil {
+		t.Fatalf("create group: %v", err)
+	}
+	memberCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_member"})
+	result, err := service.JoinGroup(memberCtx, JoinGroupRequest{GroupID: created.Group.GroupID})
+	if err != nil {
+		t.Fatalf("join group: %v", err)
+	}
+	memberSink := &groupRealtimeSink{}
+	hub.RegisterUser("user_bob", "sess_member", memberSink)
+	if err := service.ApproveApplication(ownerCtx, ApproveGroupApplicationRequest{ApplicationID: result.Application.ApplicationID}); err != nil {
+		t.Fatalf("approve application: %v", err)
+	}
+	memberNotifications, err := notificationRepo.List(context.Background(), "user_bob", notifications.NotificationListRequest{})
+	if err != nil {
+		t.Fatalf("list member notifications: %v", err)
+	}
+	if len(memberSink.events) != 1 || memberSink.events[0].Type != "GroupApplicationResponse" {
+		t.Fatalf("unexpected member events: %#v", memberSink.events)
+	}
+	if len(memberNotifications.Items) != 1 || memberNotifications.Items[0].Type != "group_application_accepted" {
+		t.Fatalf("unexpected member notifications: %#v", memberNotifications)
 	}
 }
 

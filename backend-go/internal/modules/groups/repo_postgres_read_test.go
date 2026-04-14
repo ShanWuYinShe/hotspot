@@ -7,6 +7,8 @@ import (
 
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type groupRowValues struct {
@@ -205,6 +207,12 @@ func (b *groupBackendStub) Exec(_ context.Context, query string, _ ...any) error
 func (b *groupBackendStub) QueryRow(_ context.Context, query string, _ ...any) persistence.Row {
 	if query == queryGetGroup {
 		return b.queryRow
+	}
+	if query == queryCountGroupMembers {
+		return groupRowValues{values: []any{1}}
+	}
+	if query == queryGetGroupMembership {
+		return groupRowValues{err: pgx.ErrNoRows}
 	}
 	return groupRowValues{err: persistence.ErrNotImplemented}
 }

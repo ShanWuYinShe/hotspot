@@ -167,6 +167,31 @@ func TestAppendMentionedBuildsNotification(t *testing.T) {
 	}
 }
 
+func TestAppendGroupInviteReceivedBuildsNotification(t *testing.T) {
+	repo := &notificationListCaptureRepo{}
+	service := NewServiceWithRepo(repo)
+	message := "join us"
+	if err := service.AppendGroupInviteReceived(context.Background(), "user_alice", map[string]any{"user_id": "user_bob", "nickname": "Bob"}, "group_1", "Hot Group", "invite_1", &message); err != nil {
+		t.Fatalf("append group invite received: %v", err)
+	}
+	item := repo.appended[0]
+	if item.Type != "group_invite_received" || item.Payload["invite_id"] != "invite_1" || item.Payload["group_id"] != "group_1" {
+		t.Fatalf("unexpected notification item: %#v", item)
+	}
+}
+
+func TestAppendGroupApplicationAcceptedBuildsNotification(t *testing.T) {
+	repo := &notificationListCaptureRepo{}
+	service := NewServiceWithRepo(repo)
+	if err := service.AppendGroupApplicationAccepted(context.Background(), "user_alice", "group_1", "Hot Group", "app_1"); err != nil {
+		t.Fatalf("append group application accepted: %v", err)
+	}
+	item := repo.appended[0]
+	if item.Type != "group_application_accepted" || item.Payload["application_id"] != "app_1" {
+		t.Fatalf("unexpected notification item: %#v", item)
+	}
+}
+
 func TestPushSystemAnnouncementFansOut(t *testing.T) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)

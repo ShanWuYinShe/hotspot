@@ -8,13 +8,111 @@ VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`
 	queryGetGroup = `
 SELECT group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members
 FROM groups
-WHERE group_id = $1`
+WHERE group_id = $1 AND deleted_at IS NULL`
 
 	querySearchGroups = `
 SELECT group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members
 FROM groups
-WHERE ($1 = '' OR name = $1)
+WHERE deleted_at IS NULL AND ($1 = '' OR name = $1)
 ORDER BY group_id ASC`
+
+	queryGetGroupMembership = `
+SELECT role, joined_at
+FROM group_members
+WHERE group_id = $1 AND user_id = $2`
+
+	queryCountGroupMembers = `
+SELECT COUNT(*)
+FROM group_members
+WHERE group_id = $1`
+
+	queryListGroupMembers = `
+SELECT user_id, role, joined_at
+FROM group_members
+WHERE group_id = $1 AND ($2 = '' OR role = $2)
+ORDER BY joined_at ASC, user_id ASC`
+
+	queryListMyGroups = `
+SELECT g.group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members,
+       gm.role, gm.joined_at
+FROM groups g
+JOIN group_members gm ON gm.group_id = g.group_id
+WHERE gm.user_id = $1 AND g.deleted_at IS NULL
+ORDER BY gm.joined_at DESC, g.group_id DESC`
+
+	queryInsertGroupMember = `
+INSERT INTO group_members (group_id, user_id, role, joined_at)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (group_id, user_id) DO NOTHING`
+
+	queryInsertGroupApplication = `
+INSERT INTO group_applications (application_id, group_id, applicant_user_id, message, status, created_at)
+VALUES ($1, $2, $3, $4, $5, $6)`
+
+	queryFindPendingGroupApplication = `
+SELECT application_id
+FROM group_applications
+WHERE group_id = $1 AND applicant_user_id = $2 AND status = 'pending'
+ORDER BY created_at DESC, application_id DESC
+LIMIT 1`
+
+	queryGetGroupApplication = `
+SELECT application_id, group_id, applicant_user_id, COALESCE(message, ''), status, created_at, handled_at, handled_by_user_id
+FROM group_applications
+WHERE application_id = $1`
+
+	queryListGroupApplications = `
+SELECT application_id, applicant_user_id, COALESCE(message, ''), status, created_at, handled_at, handled_by_user_id
+FROM group_applications
+WHERE group_id = $1 AND ($2 = '' OR status = $2)
+ORDER BY created_at DESC, application_id DESC`
+
+	queryListMyGroupApplications = `
+SELECT application_id, group_id, COALESCE(message, ''), status, created_at, handled_at, handled_by_user_id
+FROM group_applications
+WHERE applicant_user_id = $1 AND ($2 = '' OR status = $2)
+ORDER BY created_at DESC, application_id DESC`
+
+	queryUpdateGroupApplication = `
+UPDATE group_applications
+SET status = $2, handled_at = $3, handled_by_user_id = $4
+WHERE application_id = $1`
+
+	queryInsertGroupInvite = `
+INSERT INTO group_invites (invite_id, group_id, inviter_user_id, invitee_user_id, message, status, created_at, expires_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+
+	queryGetGroupInvite = `
+SELECT invite_id, group_id, inviter_user_id, invitee_user_id, COALESCE(message, ''), status, created_at, expires_at, responded_at
+FROM group_invites
+WHERE invite_id = $1`
+
+	queryFindPendingGroupInvite = `
+SELECT invite_id, expires_at
+FROM group_invites
+WHERE group_id = $1 AND invitee_user_id = $2 AND status = 'pending'
+ORDER BY created_at DESC, invite_id DESC
+LIMIT 1`
+
+	queryListSentInvites = `
+SELECT invite_id, invitee_user_id, COALESCE(message, ''), status, created_at, expires_at, responded_at
+FROM group_invites
+WHERE group_id = $1 AND ($2 = '' OR status = $2)
+ORDER BY created_at DESC, invite_id DESC`
+
+	queryListMyInvites = `
+SELECT gi.invite_id, gi.group_id, g.name, COALESCE(g.avatar_url, ''),
+       (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = gi.group_id) AS members_count,
+       gi.inviter_user_id, COALESCE(gi.message, ''), gi.status, gi.created_at, gi.expires_at, gi.responded_at
+FROM group_invites gi
+JOIN groups g ON g.group_id = gi.group_id
+WHERE gi.invitee_user_id = $1 AND ($2 = '' OR gi.status = $2)
+ORDER BY gi.created_at DESC, gi.invite_id DESC`
+
+	queryUpdateGroupInvite = `
+UPDATE group_invites
+SET status = $2, responded_at = $3
+WHERE invite_id = $1`
 
 	queryUpdateGroup = `
 UPDATE groups

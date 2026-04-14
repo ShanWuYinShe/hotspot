@@ -95,6 +95,32 @@ func (s *Service) AppendSystemAnnouncement(ctx context.Context, userIDs []string
 	})
 }
 
+func (s *Service) AppendGroupInviteReceived(ctx context.Context, targetUserID string, actor map[string]any, groupID string, groupName string, inviteID string, message *string) error {
+	payload := map[string]any{
+		"type":       "group_invite_received",
+		"actor":      actor,
+		"group_id":   groupID,
+		"group_name": groupName,
+		"invite_id":  inviteID,
+	}
+	if message != nil && *message != "" {
+		payload["message"] = *message
+	}
+	return s.repo.Append(ctx, targetUserID, NotificationItem{Type: "group_invite_received", IsRead: false, Payload: payload})
+}
+
+func (s *Service) AppendGroupInviteAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, inviteID string, user map[string]any) error {
+	return s.repo.Append(ctx, targetUserID, NotificationItem{Type: "group_invite_accepted", IsRead: false, Payload: map[string]any{"type": "group_invite_accepted", "group_id": groupID, "group_name": groupName, "invite_id": inviteID, "user": user}})
+}
+
+func (s *Service) AppendGroupApplicationReceived(ctx context.Context, targetUserID string, applicant map[string]any, groupID string, groupName string, applicationID string) error {
+	return s.repo.Append(ctx, targetUserID, NotificationItem{Type: "group_application_received", IsRead: false, Payload: map[string]any{"type": "group_application_received", "applicant": applicant, "group_id": groupID, "group_name": groupName, "application_id": applicationID}})
+}
+
+func (s *Service) AppendGroupApplicationAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string) error {
+	return s.repo.Append(ctx, targetUserID, NotificationItem{Type: "group_application_accepted", IsRead: false, Payload: map[string]any{"type": "group_application_accepted", "group_id": groupID, "group_name": groupName, "application_id": applicationID}})
+}
+
 func (s *Service) AppendMomentLiked(ctx context.Context, targetUserID string, actor map[string]any, momentID string, momentSummary map[string]any) error {
 	return s.repo.Append(ctx, targetUserID, NotificationItem{
 		Type:   "moment_liked",

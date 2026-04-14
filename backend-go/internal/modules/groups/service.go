@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"hotspot/backend-go/internal/modules/notifications"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/realtime"
@@ -16,15 +17,27 @@ const (
 )
 
 type Service struct {
-	repo Repository
+	repo          Repository
+	notifications groupNotificationWriter
+}
+
+type groupNotificationWriter interface {
+	AppendGroupInviteReceived(ctx context.Context, targetUserID string, actor map[string]any, groupID string, groupName string, inviteID string, message *string) error
+	AppendGroupInviteAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, inviteID string, user map[string]any) error
+	AppendGroupApplicationReceived(ctx context.Context, targetUserID string, applicant map[string]any, groupID string, groupName string, applicationID string) error
+	AppendGroupApplicationAccepted(ctx context.Context, targetUserID string, groupID string, groupName string, applicationID string) error
 }
 
 func NewService() *Service {
-	return NewServiceWithRepo(NewInMemoryRepository())
+	return NewServiceWithDeps(NewInMemoryRepository(), notifications.NewService())
 }
 
 func NewServiceWithRepo(repo Repository) *Service {
-	return &Service{repo: repo}
+	return NewServiceWithDeps(repo, notifications.NewService())
+}
+
+func NewServiceWithDeps(repo Repository, notificationWriter groupNotificationWriter) *Service {
+	return &Service{repo: repo, notifications: notificationWriter}
 }
 
 func (s *Service) Create(ctx context.Context, req CreateGroupRequest) (GroupItem, error) {
@@ -209,12 +222,15 @@ func (s *Service) JoinGroup(ctx context.Context, req JoinGroupRequest) (JoinGrou
 	}
 	if group.MyState != nil && group.MyState.IsJoined {
 		observability.L().Info("groups.join_group already joined", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return JoinGroupResult{Status: ApplicationStatusAccepted}, nil
+		return JoinGroupResult{Status: JoinGroupStatusJoined}, nil
 	}
 	result, err := s.repo.JoinGroup(ctx, principal.UserID, req.GroupID, req.Password, req.Message)
 	if err != nil {
 		observability.L().Error("groups.join_group failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return JoinGroupResult{}, err
+	}
+	if result.Status == JoinGroupStatusPendingApproval {
+		s.notifyGroupApplicationReceived(ctx, group, principal.UserID, result.Application, req.Message)
 	}
 	observability.L().Info("groups.join_group completed", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return result, nil
@@ -312,11 +328,34 @@ func (s *Service) ListApplications(ctx context.Context, req GroupApplicationsReq
 
 func (s *Service) ApproveApplication(ctx context.Context, req ApproveGroupApplicationRequest) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	return s.repo.ApproveApplication(ctx, principal.UserID, req.ApplicationID)
+	application, group, ok, err := s.findApplicationForApprover(ctx, principal.UserID, req.ApplicationID)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrGroupNotFound
+	}
+	if err := s.repo.ApproveApplication(ctx, principal.UserID, req.ApplicationID); err != nil {
+		return err
+	}
+	s.notifyGroupApplicationAccepted(ctx, group, application)
+	realtime.DefaultHub().BroadcastToGroup(group.Group.GroupID, realtime.Event{Type: "GroupMemberJoined", Payload: map[string]any{"group_id": group.Group.GroupID, "user": groupUserInfo(application.Applicant), "role": string(GroupRoleMember), "member_count": group.Group.MembersCount + 1, "joined_at": time.Now().UTC().Format(time.RFC3339)}})
+	return nil
 }
 
 func (s *Service) RejectApplication(ctx context.Context, req RejectGroupApplicationRequest) error {
-	return s.repo.RejectApplication(ctx, req.ApplicationID, req.Reason)
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	_, _, ok, err := s.findApplicationForApprover(ctx, principal.UserID, req.ApplicationID)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrGroupNotFound
+	}
+	if err := s.repo.RejectApplication(ctx, req.ApplicationID, req.Reason); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *Service) UpdateMySettings(ctx context.Context, req UpdateGroupMySettingsRequest) error {
@@ -382,7 +421,19 @@ func (s *Service) ListMyInvites(ctx context.Context, req MyInvitesRequest) ([]Gr
 
 func (s *Service) AcceptInvite(ctx context.Context, req AcceptInviteRequest) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	return s.repo.AcceptInvite(ctx, principal.UserID, req.InviteID)
+	invite, ok, err := s.findInviteForUser(ctx, principal.UserID, req.InviteID)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrGroupNotFound
+	}
+	if err := s.repo.AcceptInvite(ctx, principal.UserID, req.InviteID); err != nil {
+		return err
+	}
+	s.notifyGroupInviteAccepted(ctx, invite, principal.UserID)
+	realtime.DefaultHub().BroadcastToGroup(invite.Group.GroupID, realtime.Event{Type: "GroupMemberJoined", Payload: map[string]any{"group_id": invite.Group.GroupID, "user": groupUserInfo(UserInfo{UserID: principal.UserID, Nickname: principal.UserID}), "role": string(GroupRoleMember), "member_count": invite.Group.MembersCount + 1, "joined_at": time.Now().UTC().Format(time.RFC3339)}})
+	return nil
 }
 
 func (s *Service) RejectInvite(ctx context.Context, req RejectInviteRequest) error {
@@ -401,7 +452,12 @@ func (s *Service) InviteMember(ctx context.Context, req InviteMemberRequest) (In
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
 		return Invitation{}, ErrPermissionDenied
 	}
-	return s.repo.InviteMember(ctx, principal.UserID, req)
+	invitation, err := s.repo.InviteMember(ctx, principal.UserID, req)
+	if err != nil {
+		return Invitation{}, err
+	}
+	s.notifyGroupInviteReceived(ctx, group, principal.UserID, req, invitation)
+	return invitation, nil
 }
 
 func (s *Service) ListSentInvites(ctx context.Context, req GroupSentInvitesRequest) ([]GroupSentInviteItem, string, error) {
@@ -606,4 +662,107 @@ func (s *Service) TransferOwnership(ctx context.Context, req TransferOwnershipRe
 
 	_ = principal
 	return s.repo.TransferOwnership(ctx, principal.UserID, req)
+}
+
+func groupUserInfo(user UserInfo) map[string]any {
+	payload := map[string]any{"user_id": user.UserID, "nickname": user.Nickname}
+	if user.AvatarURL != "" {
+		payload["avatar_url"] = user.AvatarURL
+	}
+	return payload
+}
+
+func (s *Service) notifyGroupInviteReceived(ctx context.Context, group GroupItem, inviterUserID string, req InviteMemberRequest, invitation Invitation) {
+	actor := groupUserInfo(UserInfo{UserID: inviterUserID, Nickname: inviterUserID})
+	if s.notifications != nil {
+		_ = s.notifications.AppendGroupInviteReceived(ctx, req.UserID, actor, group.Group.GroupID, group.Group.Name, invitation.InviteID, req.Message)
+	}
+	payload := map[string]any{
+		"invite_id": invitation.InviteID,
+		"group": map[string]any{
+			"group_id":      group.Group.GroupID,
+			"name":          group.Group.Name,
+			"avatar_url":    group.Group.AvatarURL,
+			"members_count": group.Group.MembersCount,
+		},
+		"inviter":    actor,
+		"created_at": time.Now().UTC().Format(time.RFC3339),
+	}
+	if req.Message != nil && *req.Message != "" {
+		payload["message"] = *req.Message
+	}
+	realtime.DefaultHub().BroadcastToUser(req.UserID, realtime.Event{Type: "GroupInviteReceived", Payload: payload})
+}
+
+func (s *Service) notifyGroupInviteAccepted(ctx context.Context, invite GroupInviteItem, userID string) {
+	user := groupUserInfo(UserInfo{UserID: userID, Nickname: userID})
+	if s.notifications != nil {
+		_ = s.notifications.AppendGroupInviteAccepted(ctx, invite.Inviter.UserID, invite.Group.GroupID, invite.Group.Name, invite.InviteID, user)
+	}
+	realtime.DefaultHub().BroadcastToUser(invite.Inviter.UserID, realtime.Event{Type: "GroupInviteResponse", Payload: map[string]any{"invite_id": invite.InviteID, "group_id": invite.Group.GroupID, "user": user, "status": "accepted", "responded_at": time.Now().UTC().Format(time.RFC3339)}})
+}
+
+func (s *Service) notifyGroupApplicationReceived(ctx context.Context, group GroupItem, applicantUserID string, application *struct {
+	ApplicationID string `json:"application_id"`
+}, message *string) {
+	if application == nil {
+		return
+	}
+	applicant := groupUserInfo(UserInfo{UserID: applicantUserID, Nickname: applicantUserID})
+	admins, _, err := s.repo.ListMembers(ctx, group.Group.GroupID, nil, 1000, "")
+	if err != nil {
+		return
+	}
+	for _, member := range admins {
+		if member.Role != GroupRoleOwner && member.Role != GroupRoleAdmin {
+			continue
+		}
+		if s.notifications != nil {
+			_ = s.notifications.AppendGroupApplicationReceived(ctx, member.User.UserID, applicant, group.Group.GroupID, group.Group.Name, application.ApplicationID)
+		}
+		payload := map[string]any{"application_id": application.ApplicationID, "group_id": group.Group.GroupID, "applicant": applicant, "created_at": time.Now().UTC().Format(time.RFC3339)}
+		if message != nil && *message != "" {
+			payload["message"] = *message
+		}
+		realtime.DefaultHub().BroadcastToUser(member.User.UserID, realtime.Event{Type: "GroupApplicationReceived", Payload: payload})
+	}
+}
+
+func (s *Service) notifyGroupApplicationAccepted(ctx context.Context, group GroupItem, application GroupApplicationItem) {
+	if s.notifications != nil {
+		_ = s.notifications.AppendGroupApplicationAccepted(ctx, application.Applicant.UserID, group.Group.GroupID, group.Group.Name, application.ApplicationID)
+	}
+	realtime.DefaultHub().BroadcastToUser(application.Applicant.UserID, realtime.Event{Type: "GroupApplicationResponse", Payload: map[string]any{"application_id": application.ApplicationID, "group": map[string]any{"group_id": group.Group.GroupID, "name": group.Group.Name, "avatar_url": group.Group.AvatarURL, "members_count": group.Group.MembersCount}, "status": "accepted", "responded_at": time.Now().UTC().Format(time.RFC3339)}})
+}
+
+func (s *Service) findApplicationForApprover(ctx context.Context, approverUserID string, applicationID string) (GroupApplicationItem, GroupItem, bool, error) {
+	groups, _, err := s.repo.ListMyGroups(ctx, approverUserID, 1000, "")
+	if err != nil {
+		return GroupApplicationItem{}, GroupItem{}, false, err
+	}
+	for _, group := range groups {
+		items, _, err := s.repo.ListApplications(ctx, group.Group.GroupID, nil, 1000, "")
+		if err != nil {
+			return GroupApplicationItem{}, GroupItem{}, false, err
+		}
+		for _, item := range items {
+			if item.ApplicationID == applicationID {
+				return item, group, true, nil
+			}
+		}
+	}
+	return GroupApplicationItem{}, GroupItem{}, false, nil
+}
+
+func (s *Service) findInviteForUser(ctx context.Context, userID string, inviteID string) (GroupInviteItem, bool, error) {
+	items, _, err := s.repo.ListMyInvites(ctx, userID, nil, 1000, "")
+	if err != nil {
+		return GroupInviteItem{}, false, err
+	}
+	for _, item := range items {
+		if item.InviteID == inviteID {
+			return item, true, nil
+		}
+	}
+	return GroupInviteItem{}, false, nil
 }

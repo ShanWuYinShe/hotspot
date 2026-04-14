@@ -3,17 +3,56 @@ package groups
 import (
 	"context"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
+
+	platformauth "hotspot/backend-go/internal/platform/auth"
 )
 
+type inMemoryInviteRecord struct {
+	InviteID    string
+	GroupID     string
+	InviterID   string
+	InviteeID   string
+	Status      ApplicationStatus
+	Message     *string
+	CreatedAt   string
+	ExpiresAt   *string
+	RespondedAt *string
+}
+
+type inMemoryApplicationRecord struct {
+	ApplicationID string
+	GroupID       string
+	ApplicantID   string
+	Status        ApplicationStatus
+	Message       *string
+	CreatedAt     string
+	HandledAt     *string
+	HandledBy     *UserInfo
+}
+
+type inMemoryMembership struct {
+	Role     GroupRole
+	JoinedAt string
+}
+
 type InMemoryRepository struct {
-	mu     sync.RWMutex
-	groups map[string]GroupItem
+	mu           sync.RWMutex
+	groups       map[string]GroupItem
+	members      map[string]map[string]inMemoryMembership
+	invites      map[string]inMemoryInviteRecord
+	applications map[string]inMemoryApplicationRecord
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
-	return &InMemoryRepository{groups: make(map[string]GroupItem)}
+	return &InMemoryRepository{
+		groups:       make(map[string]GroupItem),
+		members:      make(map[string]map[string]inMemoryMembership),
+		invites:      make(map[string]inMemoryInviteRecord),
+		applications: make(map[string]inMemoryApplicationRecord),
+	}
 }
 func (r *InMemoryRepository) Create(_ context.Context, userID string, req CreateGroupRequest) (GroupItem, error) {
 	_ = userID
@@ -35,21 +74,27 @@ func (r *InMemoryRepository) Create(_ context.Context, userID string, req Create
 	}
 	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: req.Tags, HasPassword: req.Password != "", Location: req.Location, MyState: &MyGroupState{Role: "owner", IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: now.Format(time.RFC3339)}, JoinMethod: joinMethod, IsSearchable: isSearchable, MaxMembers: maxMembers}
 	r.groups[groupID] = item
+	r.members[groupID] = map[string]inMemoryMembership{userID: {Role: GroupRoleOwner, JoinedAt: now.Format(time.RFC3339)}}
 	return item, nil
 }
-func (r *InMemoryRepository) Get(_ context.Context, groupID string) (GroupItem, bool, error) {
+func (r *InMemoryRepository) Get(ctx context.Context, groupID string) (GroupItem, bool, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	item, ok := r.groups[groupID]
-	return item, ok, nil
+	if !ok {
+		return GroupItem{}, false, nil
+	}
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	return r.cloneGroupForUser(item, principal.UserID), true, nil
 }
-func (r *InMemoryRepository) Search(_ context.Context, keyword string) (PaginatedGroups, error) {
+func (r *InMemoryRepository) Search(ctx context.Context, keyword string) (PaginatedGroups, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
+	principal, _ := platformauth.PrincipalFromContext(ctx)
 	items := []GroupItem{}
 	for _, item := range r.groups {
 		if keyword == "" || item.Group.Name == keyword {
-			items = append(items, item)
+			items = append(items, r.cloneGroupForUser(item, principal.UserID))
 		}
 	}
 	return PaginatedGroups{Items: items}, nil
@@ -103,6 +148,17 @@ func (r *InMemoryRepository) Dismiss(_ context.Context, groupID string) error {
 		return ErrGroupNotFound
 	}
 	delete(r.groups, groupID)
+	delete(r.members, groupID)
+	for inviteID, invite := range r.invites {
+		if invite.GroupID == groupID {
+			delete(r.invites, inviteID)
+		}
+	}
+	for applicationID, application := range r.applications {
+		if application.GroupID == groupID {
+			delete(r.applications, applicationID)
+		}
+	}
 	return nil
 }
 
@@ -113,28 +169,23 @@ func (r *InMemoryRepository) ListMembers(_ context.Context, groupID string, role
 	if !ok {
 		return nil, "", ErrGroupNotFound
 	}
-	now := "2024-01-15T08:30:00.000Z"
-	items := []GroupMemberItem{
-		{
-			User: UserInfo{
-				UserID:    group.Group.GroupID + "_owner",
-				Nickname:  group.Group.Name + " Owner",
-				AvatarURL: "",
-			},
-			Role:     GroupRoleOwner,
-			JoinedAt: now,
-		},
+	items := make([]GroupMemberItem, 0)
+	for userID, membership := range r.members[groupID] {
+		if role != nil && membership.Role != *role {
+			continue
+		}
+		items = append(items, GroupMemberItem{User: UserInfo{UserID: userID, Nickname: userID}, Role: membership.Role, JoinedAt: membership.JoinedAt})
 	}
-	if role == nil || *role == GroupRoleMember {
-		items = append(items, GroupMemberItem{
-			User: UserInfo{
-				UserID:    group.Group.GroupID + "_member",
-				Nickname:  group.Group.Name + " Member",
-				AvatarURL: "",
-			},
-			Role:     GroupRoleMember,
-			JoinedAt: now,
-		})
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].JoinedAt == items[j].JoinedAt {
+			return items[i].User.UserID < items[j].User.UserID
+		}
+		return items[i].JoinedAt < items[j].JoinedAt
+	})
+	for i := range items {
+		if items[i].User.UserID == group.Group.GroupID+"_owner" {
+			items[i].User.Nickname = group.Group.Name + " Owner"
+		}
 	}
 	if len(items) > limit {
 		return items[:limit], items[limit-1].JoinedAt + ":" + items[limit-1].User.UserID, nil
@@ -143,28 +194,13 @@ func (r *InMemoryRepository) ListMembers(_ context.Context, groupID string, role
 }
 
 func (r *InMemoryRepository) SearchMembers(_ context.Context, groupID string, keyword string, role *GroupRole, limit int, cursor string) ([]GroupMemberItem, string, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	group, ok := r.groups[groupID]
-	if !ok {
-		return nil, "", ErrGroupNotFound
+	items, _, err := r.ListMembers(context.Background(), groupID, role, limit, cursor)
+	if err != nil {
+		return nil, "", err
 	}
-	now := "2024-01-15T08:30:00.000Z"
-	items := []GroupMemberItem{}
-	if role == nil || *role == GroupRoleOwner {
-		items = append(items, GroupMemberItem{
-			User: UserInfo{
-				UserID:    group.Group.GroupID + "_owner",
-				Nickname:  group.Group.Name + " Owner",
-				AvatarURL: "",
-			},
-			Role:     GroupRoleOwner,
-			JoinedAt: now,
-		})
-	}
-	filtered := []GroupMemberItem{}
+	filtered := make([]GroupMemberItem, 0, len(items))
 	for _, item := range items {
-		if keyword == "" || item.User.Nickname == keyword {
+		if keyword == "" || item.User.Nickname == keyword || item.User.UserID == keyword {
 			filtered = append(filtered, item)
 		}
 	}
@@ -179,8 +215,8 @@ func (r *InMemoryRepository) ListMyGroups(_ context.Context, userID string, limi
 	defer r.mu.RUnlock()
 	items := []GroupItem{}
 	for _, group := range r.groups {
-		if group.MyState != nil && group.MyState.IsJoined {
-			items = append(items, group)
+		if _, joined := r.members[group.Group.GroupID][userID]; joined {
+			items = append(items, r.cloneGroupForUser(group, userID))
 		}
 	}
 	if len(items) > limit {
@@ -190,35 +226,47 @@ func (r *InMemoryRepository) ListMyGroups(_ context.Context, userID string, limi
 }
 
 func (r *InMemoryRepository) JoinGroup(_ context.Context, userID, groupID string, password *string, message *string) (JoinGroupResult, error) {
-	_ = userID
-	_ = password
-	_ = message
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	group, ok := r.groups[groupID]
 	if !ok {
 		return JoinGroupResult{}, ErrGroupNotFound
 	}
-	if group.MyState != nil && group.MyState.IsJoined {
-		return JoinGroupResult{Status: ApplicationStatusAccepted}, nil
+	if _, joined := r.members[groupID][userID]; joined {
+		return JoinGroupResult{Status: JoinGroupStatusJoined}, nil
 	}
 	if group.JoinMethod == GroupJoinMethodInviteOnly {
 		return JoinGroupResult{}, ErrPermissionDenied
 	}
 	if group.JoinMethod == GroupJoinMethodApproval {
-		appWrapper := &struct {
-			ApplicationID string `json:"application_id"`
-		}{
-			ApplicationID: "app_" + groupID,
+		for _, record := range r.applications {
+			if record.GroupID == groupID && record.ApplicantID == userID && record.Status == ApplicationStatusPending {
+				return JoinGroupResult{Status: JoinGroupStatusPendingApproval, Application: &struct {
+					ApplicationID string `json:"application_id"`
+				}{ApplicationID: record.ApplicationID}}, nil
+			}
 		}
-		result := JoinGroupResult{Status: ApplicationStatusPending}
-		result.Application = appWrapper
-		return result, nil
+		now := time.Now().UTC()
+		applicationID := "app_" + now.Format("20060102150405.000000000")
+		record := inMemoryApplicationRecord{ApplicationID: applicationID, GroupID: groupID, ApplicantID: userID, Status: ApplicationStatusPending, Message: message, CreatedAt: now.Format(time.RFC3339)}
+		r.applications[applicationID] = record
+		return JoinGroupResult{Status: JoinGroupStatusPendingApproval, Application: &struct {
+			ApplicationID string `json:"application_id"`
+		}{ApplicationID: applicationID}}, nil
 	}
-	group.MyState = &MyGroupState{Role: GroupRoleMember, IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false}
-	group.Group.MembersCount++
+	if group.HasPassword {
+		if password == nil || *password == "" {
+			return JoinGroupResult{}, ErrInvalidPassword
+		}
+	}
+	if r.members[groupID] == nil {
+		r.members[groupID] = make(map[string]inMemoryMembership)
+	}
+	now := time.Now().UTC().Format(time.RFC3339)
+	r.members[groupID][userID] = inMemoryMembership{Role: GroupRoleMember, JoinedAt: now}
+	group.Group.MembersCount = len(r.members[groupID])
 	r.groups[groupID] = group
-	return JoinGroupResult{Status: ApplicationStatusAccepted}, nil
+	return JoinGroupResult{Status: JoinGroupStatusJoined}, nil
 }
 
 func (r *InMemoryRepository) CreateAnnouncement(_ context.Context, creatorID string, req CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error) {
@@ -275,18 +323,64 @@ func (r *InMemoryRepository) ListApplications(_ context.Context, groupID string,
 	if _, ok := r.groups[groupID]; !ok {
 		return nil, "", ErrGroupNotFound
 	}
-	return []GroupApplicationItem{}, "", nil
+	items := make([]GroupApplicationItem, 0)
+	for _, record := range r.applications {
+		if record.GroupID != groupID {
+			continue
+		}
+		if status != nil && *status != record.Status {
+			continue
+		}
+		items = append(items, GroupApplicationItem{
+			ApplicationID: record.ApplicationID,
+			Applicant:     UserInfo{UserID: record.ApplicantID, Nickname: record.ApplicantID},
+			Message:       record.Message,
+			Status:        record.Status,
+			CreatedAt:     record.CreatedAt,
+			HandledAt:     record.HandledAt,
+			HandledBy:     record.HandledBy,
+		})
+	}
+	return items, "", nil
 }
 
 func (r *InMemoryRepository) ApproveApplication(_ context.Context, approverID, applicationID string) error {
-	_ = approverID
-	_ = applicationID
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	record, ok := r.applications[applicationID]
+	if !ok {
+		return ErrGroupNotFound
+	}
+	record.Status = ApplicationStatusAccepted
+	now := time.Now().UTC().Format(time.RFC3339)
+	record.HandledAt = &now
+	record.HandledBy = &UserInfo{UserID: approverID, Nickname: approverID}
+	r.applications[applicationID] = record
+	if r.members[record.GroupID] == nil {
+		r.members[record.GroupID] = make(map[string]inMemoryMembership)
+	}
+	r.members[record.GroupID][record.ApplicantID] = inMemoryMembership{Role: GroupRoleMember, JoinedAt: now}
+	if group, ok := r.groups[record.GroupID]; ok {
+		group.Group.MembersCount = len(r.members[record.GroupID])
+		r.groups[record.GroupID] = group
+	}
 	return nil
 }
 
 func (r *InMemoryRepository) RejectApplication(_ context.Context, applicationID string, reason *string) error {
-	_ = applicationID
-	_ = reason
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	record, ok := r.applications[applicationID]
+	if !ok {
+		return ErrGroupNotFound
+	}
+	record.Status = ApplicationStatusRejected
+	now := time.Now().UTC().Format(time.RFC3339)
+	record.HandledAt = &now
+	if reason != nil {
+		record.Message = reason
+	}
+	r.applications[applicationID] = record
 	return nil
 }
 
@@ -316,48 +410,121 @@ func (r *InMemoryRepository) LeaveGroup(_ context.Context, userID string, groupI
 }
 
 func (r *InMemoryRepository) ListMyApplications(_ context.Context, userID string, status *ApplicationStatus, limit int, cursor string) ([]GroupApplicationItem, string, error) {
-	_ = userID
-	_ = status
-	_ = cursor
-	return []GroupApplicationItem{}, "", nil
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	items := make([]GroupApplicationItem, 0)
+	for _, record := range r.applications {
+		if record.ApplicantID != userID {
+			continue
+		}
+		if status != nil && *status != record.Status {
+			continue
+		}
+		items = append(items, GroupApplicationItem{ApplicationID: record.ApplicationID, Applicant: UserInfo{UserID: record.ApplicantID, Nickname: record.ApplicantID}, Message: record.Message, Status: record.Status, CreatedAt: record.CreatedAt, HandledAt: record.HandledAt, HandledBy: record.HandledBy})
+	}
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].CreatedAt == items[j].CreatedAt {
+			return items[i].ApplicationID > items[j].ApplicationID
+		}
+		return items[i].CreatedAt > items[j].CreatedAt
+	})
+	return items, "", nil
 }
 
 func (r *InMemoryRepository) CancelApplication(_ context.Context, applicationID string) error {
-	_ = applicationID
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	record, ok := r.applications[applicationID]
+	if !ok {
+		return ErrGroupNotFound
+	}
+	record.Status = ApplicationStatusRevoked
+	r.applications[applicationID] = record
 	return nil
 }
 
 func (r *InMemoryRepository) ListMyInvites(_ context.Context, userID string, status *ApplicationStatus, limit int, cursor string) ([]GroupInviteItem, string, error) {
-	_ = userID
-	_ = status
-	_ = cursor
-	return []GroupInviteItem{}, "", nil
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	items := make([]GroupInviteItem, 0)
+	for _, record := range r.invites {
+		if record.InviteeID != userID {
+			continue
+		}
+		if status != nil && *status != record.Status {
+			continue
+		}
+		group := r.groups[record.GroupID]
+		items = append(items, GroupInviteItem{InviteID: record.InviteID, Group: group.Group, Inviter: UserInfo{UserID: record.InviterID, Nickname: record.InviterID}, Message: record.Message, Status: record.Status, CreatedAt: record.CreatedAt, ExpiresAt: record.ExpiresAt})
+	}
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].CreatedAt == items[j].CreatedAt {
+			return items[i].InviteID > items[j].InviteID
+		}
+		return items[i].CreatedAt > items[j].CreatedAt
+	})
+	return items, "", nil
 }
 
 func (r *InMemoryRepository) AcceptInvite(_ context.Context, userID string, inviteID string) error {
-	_ = userID
-	_ = inviteID
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	record, ok := r.invites[inviteID]
+	if !ok {
+		return ErrGroupNotFound
+	}
+	record.Status = ApplicationStatusAccepted
+	now := time.Now().UTC().Format(time.RFC3339)
+	record.RespondedAt = &now
+	r.invites[inviteID] = record
+	if r.members[record.GroupID] == nil {
+		r.members[record.GroupID] = make(map[string]inMemoryMembership)
+	}
+	r.members[record.GroupID][userID] = inMemoryMembership{Role: GroupRoleMember, JoinedAt: now}
+	if group, ok := r.groups[record.GroupID]; ok {
+		group.Group.MembersCount = len(r.members[record.GroupID])
+		r.groups[record.GroupID] = group
+	}
 	return nil
 }
 
 func (r *InMemoryRepository) RejectInvite(_ context.Context, inviteID string) error {
-	_ = inviteID
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	record, ok := r.invites[inviteID]
+	if !ok {
+		return ErrGroupNotFound
+	}
+	record.Status = ApplicationStatusRejected
+	now := time.Now().UTC().Format(time.RFC3339)
+	record.RespondedAt = &now
+	r.invites[inviteID] = record
 	return nil
 }
 
 func (r *InMemoryRepository) InviteMember(_ context.Context, userID string, req InviteMemberRequest) (Invitation, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if _, ok := r.groups[req.GroupID]; !ok {
+	group, ok := r.groups[req.GroupID]
+	if !ok {
 		return Invitation{}, ErrGroupNotFound
 	}
-	_ = userID
+	if _, member := r.members[req.GroupID][req.UserID]; member {
+		return Invitation{}, ErrAlreadyMember
+	}
+	for _, record := range r.invites {
+		if record.GroupID == req.GroupID && record.InviteeID == req.UserID && record.Status == ApplicationStatusPending {
+			return Invitation{InviteID: record.InviteID, ExpiresAt: derefString(record.ExpiresAt)}, nil
+		}
+	}
 	now := time.Now().UTC()
-	expiresAt := now.Add(24 * time.Hour)
-	return Invitation{
-		InviteID:  "invite_" + now.Format("20060102150405.000000000"),
-		ExpiresAt: expiresAt.Format(time.RFC3339),
-	}, nil
+	expiresAt := now.Add(24 * time.Hour).Format(time.RFC3339)
+	inviteID := "invite_" + now.Format("20060102150405.000000000")
+	record := inMemoryInviteRecord{InviteID: inviteID, GroupID: req.GroupID, InviterID: userID, InviteeID: req.UserID, Status: ApplicationStatusPending, Message: req.Message, CreatedAt: now.Format(time.RFC3339), ExpiresAt: &expiresAt}
+	r.invites[inviteID] = record
+	group.Group.MembersCount = len(r.members[req.GroupID])
+	r.groups[req.GroupID] = group
+	return Invitation{InviteID: inviteID, ExpiresAt: expiresAt}, nil
 }
 
 func (r *InMemoryRepository) ListSentInvites(_ context.Context, groupID string, status *ApplicationStatus, limit int, cursor string) ([]GroupSentInviteItem, string, error) {
@@ -366,13 +533,23 @@ func (r *InMemoryRepository) ListSentInvites(_ context.Context, groupID string, 
 	if _, ok := r.groups[groupID]; !ok {
 		return nil, "", ErrGroupNotFound
 	}
-	_ = status
-	_ = cursor
-	if limit == 0 {
-		limit = 20
+	items := make([]GroupSentInviteItem, 0)
+	for _, record := range r.invites {
+		if record.GroupID != groupID {
+			continue
+		}
+		if status != nil && *status != record.Status {
+			continue
+		}
+		items = append(items, GroupSentInviteItem{InviteID: record.InviteID, Invitee: UserInfo{UserID: record.InviteeID, Nickname: record.InviteeID}, Status: record.Status, Message: record.Message, CreatedAt: record.CreatedAt, ExpiresAt: record.ExpiresAt, RespondedAt: record.RespondedAt})
 	}
-	_ = limit
-	return []GroupSentInviteItem{}, "", nil
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].CreatedAt == items[j].CreatedAt {
+			return items[i].InviteID > items[j].InviteID
+		}
+		return items[i].CreatedAt > items[j].CreatedAt
+	})
+	return items, "", nil
 }
 
 func (r *InMemoryRepository) RevokeInvite(_ context.Context, groupID string, inviteID string) error {
@@ -381,7 +558,14 @@ func (r *InMemoryRepository) RevokeInvite(_ context.Context, groupID string, inv
 	if _, ok := r.groups[groupID]; !ok {
 		return ErrGroupNotFound
 	}
-	_ = inviteID
+	record, ok := r.invites[inviteID]
+	if !ok {
+		return nil
+	}
+	record.Status = ApplicationStatusRevoked
+	now := time.Now().UTC().Format(time.RFC3339)
+	record.RespondedAt = &now
+	r.invites[inviteID] = record
 	return nil
 }
 
@@ -467,4 +651,25 @@ func (r *InMemoryRepository) TransferOwnership(_ context.Context, userID string,
 	}
 	_ = userID
 	return nil
+}
+
+func (r *InMemoryRepository) cloneGroupForUser(group GroupItem, userID string) GroupItem {
+	cloned := group
+	if memberships, ok := r.members[group.Group.GroupID]; ok {
+		cloned.Group.MembersCount = len(memberships)
+		if membership, joined := memberships[userID]; joined {
+			state := &MyGroupState{Role: membership.Role, IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: membership.JoinedAt}
+			cloned.MyState = state
+		} else {
+			cloned.MyState = nil
+		}
+	}
+	return cloned
+}
+
+func derefString(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }
