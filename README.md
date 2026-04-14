@@ -16,10 +16,17 @@
 ## 开发协作
 
 - 协作与实现说明先读 [CLAUDE.md](CLAUDE.md)，进入子项目后再读对应目录下的 `CLAUDE.md`。
-- 仓库优先通过 **文档引导 + skill 入口 + 少量严格脚本** 协作，而不是依赖大量 hook 阻断。
-- 普通分析、代码阅读、局部低副作用开发动作通常可以直接完成；当仓库已经提供对应 skill 时，优先通过 skill 使用成熟入口。
+- 仓库优先通过 **分层规则 + skill 入口 + 少量严格脚本** 协作，而不是依赖大量 hook 阻断。
+- 根 `CLAUDE.md` 只定义硬约束、任务分级和协作入口；子项目 `CLAUDE.md` 负责技术约束和本地命令；workflow skill 负责编排具体流程。
+- 普通分析、代码阅读、局部低副作用开发动作通常可以直接完成；中大型任务再升级到设计、计划或调试 skill。
 - 隔离运行、统一验证、候选预演、发布输入物等高确定性步骤仍优先走 `deploy/scripts/` 提供的标准入口。
 - 临时文件、中间文件、验证截图和调试输出统一写入 `tmp/`，避免污染 git 状态。
+
+## 任务与验证分级
+
+- 任务分级：`L0` 只读分析，`L1` 低风险小改动，`L2` 需要简短计划的中等改动，`L3` 需要先设计的高风险改动。
+- 验证分级：`开发完成` 只要求与改动直接相关的本地校验通过；`准备合并` 才按风险升级到 `verify.sh` 隔离验证。
+- 所有写操作默认在 `.worktrees/` 下的 worktree 中完成。
 
 ## 常见入口
 
@@ -32,6 +39,11 @@
 ```bash
 ./deploy/scripts/verify.sh --env-name <name>
 ./deploy/scripts/verify-inspect.sh --env-name <name>
+```
+
+### worktree 入口
+```bash
+git worktree add .worktrees/<branch-name> -b <branch-name>
 ```
 
 ## 其他入口

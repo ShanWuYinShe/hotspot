@@ -15,8 +15,16 @@ argument-hint: <feature|cleanup> [...]
 - 若第一个参数 `$1` 是 `feature`，将其后的内容视为功能或代码任务描述。
 - 若第一个参数 `$1` 是 `cleanup`，将其后的内容视为可选过滤条件。
 - 若用户没有显式提供模式，但请求是清晰的本地代码任务，按 `feature` 模式处理。
+- 若请求是 bug、失败日志或异常行为排查，优先按 `feature` 模式进入并转入调试路径，而不是直接进入重型实现流程。
 - 若用户请求是盘点或清理 worktree / 临时分支，按 `cleanup` 模式处理。
 - 若无法明确判断模式，不要猜测，直接向用户追问。
+
+## 风险分流
+- 先根据根 `CLAUDE.md` 判断任务级别。
+- `L0/L1`：读取实现参考后可直接执行，不必先进入设计或正式计划。
+- `L2`：先写简短计划，再继续实现与验证。
+- `L3`：先设计，再计划，再进入实现。
+- 若任务核心是定位 bug、测试失败或异常行为，优先使用调试流程，而不是把问题当成普通功能开发。
 
 ## 按需加载的参考文件
 - `feature` 模式的准备与实现：[references/feature/implementation.md](references/feature/implementation.md)
@@ -30,9 +38,10 @@ argument-hint: <feature|cleanup> [...]
 - 只在进入对应阶段时读取对应的 reference 文件，不要一开始预读全部内容。
 - 在 `feature` 模式下，按顺序读取：
   1. [references/feature/implementation.md](references/feature/implementation.md)
-  2. [references/feature/testing.md](references/feature/testing.md)
-  3. 仅在需要真实环境验证时读取 [references/feature/integration.md](references/feature/integration.md)
-  4. [references/feature/finish.md](references/feature/finish.md)
-  5. 需要判断是否应中止时读取 [references/stop-conditions.md](references/stop-conditions.md)
+  2. `L2/L3` 或任务性质要求时，再进入计划 / 设计 / 调试技能
+  3. [references/feature/testing.md](references/feature/testing.md)
+  4. 仅在准备合并且需要真实环境验证时读取 [references/feature/integration.md](references/feature/integration.md)
+  5. [references/feature/finish.md](references/feature/finish.md)
+  6. 需要判断是否应中止时读取 [references/stop-conditions.md](references/stop-conditions.md)
 - 在 `cleanup` 模式下，先读取 [references/cleanup.md](references/cleanup.md)，并在遇到风险判断时读取 [references/stop-conditions.md](references/stop-conditions.md)。
 - 除非遇到真正阻塞的问题，否则不要在中途停下来征求确认。
