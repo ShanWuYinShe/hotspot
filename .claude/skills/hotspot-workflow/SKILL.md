@@ -26,6 +26,10 @@ argument-hint: <feature|cleanup> [...]
 - `L3`：先设计，再计划，再进入实现。
 - 若任务核心是定位 bug、测试失败或异常行为，优先使用调试流程，而不是把问题当成普通功能开发。
 
+## 默认终点
+- `feature` 模式的默认目标是达到“开发完成”或“准备合并”状态，而不是默认自动完成合并回主线、删除 worktree 或删除临时分支。
+- 只有在用户明确要求进入最终整理、同步主线或清理阶段时，才继续执行对应收尾动作。
+
 ## 按需加载的参考文件
 - `feature` 模式的准备与实现：[references/feature/implementation.md](references/feature/implementation.md)
 - `feature` 模式的本地测试与子项目校验：[references/feature/testing.md](references/feature/testing.md)
@@ -33,6 +37,13 @@ argument-hint: <feature|cleanup> [...]
 - `feature` 模式的整理提交、线性合并、清理与完成标准：[references/feature/finish.md](references/feature/finish.md)
 - `cleanup` 模式的完整执行步骤与安全边界：[references/cleanup.md](references/cleanup.md)
 - 两种模式共用的停止条件：[references/stop-conditions.md](references/stop-conditions.md)
+
+## 最小执行清单
+- 先读根 `CLAUDE.md`，再读相关子项目 `CLAUDE.md`
+- 判断任务级别：`L0/L1/L2/L3`
+- 在 `.worktrees/` 下的 worktree 内完成所有修改、测试与提交
+- 先完成本地校验；只有命中条件时才升级到隔离验证
+- 若动作涉及主线同步、删除 worktree / 分支或其他高副作用收尾动作，先确认用户是否明确要求
 
 ## 使用规则
 - 只在进入对应阶段时读取对应的 reference 文件，不要一开始预读全部内容。

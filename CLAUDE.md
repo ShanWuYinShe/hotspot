@@ -18,6 +18,11 @@
 - **Git 安全**：禁止破坏性 git 操作；同步到 `main` 前必须整理为单功能单 commit，并保持线性历史。
 - **Commit 规范**：最终 commit message 格式为 `<type>(<scope>): <subject>`，例如 `feat(backend-go/auth): add oauth login flow`。
 
+## 规则优先级
+- 根 `CLAUDE.md` 定义仓库级硬约束、任务分级、验证边界与默认协作入口，优先级最高。
+- 子项目 `CLAUDE.md` 只补充该子项目的技术约束、本地命令与实现边界，不得放宽根级硬约束。
+- workflow skill 负责过程编排与阶段引导；若与根/子项目规则冲突，以更高层规则为准。
+
 ## 任务分级
 - **L0**：问答、只读分析、查文档。
 - **L1**：单子项目、影响面小、无契约或架构变化的局部改动；可在读完上下文后直接实现。
@@ -27,12 +32,15 @@
 ## 验证分级
 - **开发完成**：完成与改动直接相关的格式化、lint、类型检查、编译和本地单元测试；不得遗留调试代码或临时注释。
 - **准备合并**：在“开发完成”的基础上，如改动涉及数据库写入、迁移、跨服务联调或真实环境链路，再运行 `./deploy/scripts/verify.sh --env-name <name>` 进行隔离验证。
+- 当前 `deploy/scripts/verify.sh` 的 Docker 隔离验证主要覆盖 `backend-go/` 与 `frontend_svelte/`。
+- `backend/` 与 `harmonyapp/` 目前仍以各自子项目定义的本地校验为主；若后续新增对应隔离验证入口，再统一收敛到 deploy workflow。
 
 ## 协作入口
 - 先阅读根 `CLAUDE.md`，进入子项目后再阅读对应目录下的 `CLAUDE.md`。
 - 默认先理解上下文，再做最小必要改动；低风险任务直接实现，高风险任务再升级流程。
-- `hotspot-workflow` 是仓库级 workflow 入口，用于 worktree、验证、收尾与 cleanup 流程。
-- 仅在任务类型命中时再使用相关 skill：
+- `hotspot-workflow` 是仓库级 workflow 入口，用于 worktree 内实现、分级验证、必要时的整理收尾，以及独立的 cleanup 流程。
+- 默认目标是达到“开发完成”或“准备合并”状态；只有在用户明确要求时，才进入合并回主线、删除临时 worktree / 分支等后续动作。
+- 仅在任务类型命中时再使用相关 skill。以下既可能是仓库内提供的入口，也可能是平台内置能力；若仓库内未显式提供，以当前执行环境实际可用项为准：
   - `brainstorming`：新增功能、行为变化、范围不清、跨模块设计。
   - `writing-plans`：需要明确拆解步骤的中大型任务。
   - `systematic-debugging`：bug、失败日志、异常行为排查。
