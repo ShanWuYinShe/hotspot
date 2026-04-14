@@ -171,7 +171,7 @@ func TestContactChangeEndpointsReturnUnavailableWhenProviderMissing(t *testing.T
 			req.Header.Set("Idempotency-Key", "abcd1234abcd1234abcd1234abcd1234")
 			rr := httptest.NewRecorder()
 			tc.call(rr, req)
-			assertUserCode(t, rr, 10600)
+			assertUserCode(t, rr, 10400)
 		})
 	}
 }

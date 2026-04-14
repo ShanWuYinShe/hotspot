@@ -9,10 +9,19 @@ import (
 	"hotspot/backend-go/internal/platform/observability"
 )
 
-type Service struct{ repo Repository }
+type MomentsSharer interface {
+	IncrementSharesCount(ctx context.Context, momentID string) error
+}
+
+type Service struct {
+	repo          Repository
+	momentsSharer MomentsSharer
+}
 
 func NewService() *Service                        { return NewServiceWithRepo(NewInMemoryRepository()) }
 func NewServiceWithRepo(repo Repository) *Service { return &Service{repo: repo} }
+
+func (s *Service) SetMomentsSharer(m MomentsSharer) { s.momentsSharer = m }
 
 func (s *Service) Create(ctx context.Context, req CreateShareRequest) (ShareCreated, error) {
 	principal, ok := platformauth.PrincipalFromContext(ctx)
@@ -27,6 +36,13 @@ func (s *Service) Create(ctx context.Context, req CreateShareRequest) (ShareCrea
 	if err != nil {
 		observability.L().Error("share.create failed", "error", err)
 		return ShareCreated{}, err
+	}
+	if s.momentsSharer != nil && cmd.ShareType == ShareTypeMoment {
+		if sharedMomentID, _ := cmd.Payload["shared_moment_id"].(string); sharedMomentID != "" {
+			if err := s.momentsSharer.IncrementSharesCount(ctx, sharedMomentID); err != nil {
+				observability.L().Warn("share.create: failed to increment shares_count", "error", err, "moment_id", sharedMomentID)
+			}
+		}
 	}
 	return result, nil
 }

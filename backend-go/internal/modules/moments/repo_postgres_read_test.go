@@ -87,6 +87,11 @@ func (r *fallbackRepo) DecrementCommentCount(context.Context, string) error {
 	return nil
 }
 
+func (r *fallbackRepo) IncrementSharesCount(context.Context, string) error {
+	r.used = true
+	return nil
+}
+
 func (r *fallbackRepo) Search(context.Context, SearchMomentsRequest) (PaginatedMoments, error) {
 	r.used = true
 	return PaginatedMoments{}, nil
@@ -190,6 +195,11 @@ func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
 		momentID := args[0].(string)
 		item := b.moments[momentID]
 		item.CommentsCount++
+		b.moments[momentID] = item
+	case queryIncrementMomentShareCount:
+		momentID := args[0].(string)
+		item := b.moments[momentID]
+		item.SharesCount++
 		b.moments[momentID] = item
 	case queryInsertMomentLike:
 		momentID := args[0].(string)

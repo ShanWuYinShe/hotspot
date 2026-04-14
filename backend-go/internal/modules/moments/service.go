@@ -82,6 +82,10 @@ func (s *Service) DecrementCommentCount(ctx context.Context, momentID string) er
 	return s.repo.DecrementCommentCount(ctx, momentID)
 }
 
+func (s *Service) IncrementSharesCount(ctx context.Context, momentID string) error {
+	return s.repo.IncrementSharesCount(ctx, momentID)
+}
+
 func (s *Service) Search(ctx context.Context, req SearchMomentsRequest) (PaginatedMoments, error) {
 	return s.repo.Search(ctx, req)
 }

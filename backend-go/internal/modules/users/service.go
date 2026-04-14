@@ -91,6 +91,10 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateProfileRequest)
 		observability.L().Error("users.update_my_profile failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
 	}
+	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{
+		Type:    "UserProfileUpdated",
+		Payload: map[string]any{"user_id": principal.UserID},
+	})
 	observability.L().Info("users.update_my_profile completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }
@@ -276,6 +280,10 @@ func (s *Service) UpdateLocation(ctx context.Context, req UpdateLocationRequest)
 		observability.L().Error("users.update_location failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
 	}
+	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{
+		Type:    "UserProfileUpdated",
+		Payload: map[string]any{"user_id": principal.UserID},
+	})
 	observability.L().Info("users.update_location completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
 	return nil
 }

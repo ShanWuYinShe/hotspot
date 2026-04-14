@@ -1,6 +1,8 @@
 package media
 
 import (
+	"strings"
+
 	"github.com/go-chi/chi/v5"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -17,7 +19,12 @@ type Module struct {
 
 func NewModule(cfg config.Config, factory *persistence.Factory) *Module {
 	repo := NewPersistenceRepository(factory)
-	provider := NewObjectStorageProvider(cfg)
+	var provider Provider
+	if strings.TrimSpace(cfg.S3Endpoint) != "" && strings.TrimSpace(cfg.S3Bucket) != "" {
+		provider = NewObjectStorageProvider(cfg)
+	} else {
+		provider = NewStubProvider()
+	}
 	return &Module{handler: NewHandler(NewServiceWithRepoAndProvider(repo, provider))}
 }
 

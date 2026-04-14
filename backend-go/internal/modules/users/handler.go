@@ -92,7 +92,7 @@ func apiErrorFromService(err error) *httpx.APIError {
 	case errors.Is(err, ErrInvalidCursor):
 		return &httpx.APIError{Code: 10000, Message: "分页游标无效"}
 	case errors.Is(err, ErrContactChangeUnavailable):
-		return &httpx.APIError{Code: 10600, Message: "服务暂时不可用"}
+		return &httpx.APIError{Code: 10400, Message: "暂不支持此功能"}
 	default:
 		return &httpx.APIError{Code: 10600, Message: "服务暂时不可用"}
 	}

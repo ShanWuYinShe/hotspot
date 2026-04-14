@@ -92,6 +92,17 @@ func (r *PostgresRepository) DecrementCommentCount(ctx context.Context, momentID
 	return queryable.Exec(ctx, queryDecrementMomentCommentCount, momentID)
 }
 
+func (r *PostgresRepository) IncrementSharesCount(ctx context.Context, momentID string) error {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return r.fallback.IncrementSharesCount(ctx, momentID)
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryIncrementMomentShareCount, momentID)
+}
+
 func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsRequest) (PaginatedMoments, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
 		return r.fallback.Search(ctx, req)

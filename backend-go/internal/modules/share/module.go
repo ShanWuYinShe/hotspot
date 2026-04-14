@@ -2,6 +2,7 @@ package share
 
 import (
 	"github.com/go-chi/chi/v5"
+	"hotspot/backend-go/internal/modules/moments"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -13,7 +14,9 @@ type Module struct{ handler *Handler }
 
 func NewModule(factory *persistence.Factory) *Module {
 	repo := NewPersistenceRepository(factory)
-	return &Module{handler: NewHandler(NewServiceWithRepo(repo))}
+	service := NewServiceWithRepo(repo)
+	service.SetMomentsSharer(moments.NewServiceWithRepo(moments.NewPersistenceRepository(factory)))
+	return &Module{handler: NewHandler(service)}
 }
 
 func (m *Module) Mount(r chi.Router) {

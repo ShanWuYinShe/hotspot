@@ -63,6 +63,11 @@ UPDATE moments
 SET comments_count = GREATEST(comments_count - 1, 0)
 WHERE moment_id = $1`
 
+	queryIncrementMomentShareCount = `
+UPDATE moments
+SET shares_count = shares_count + 1
+WHERE moment_id = $1`
+
 	queryUpdateMoment = `
 UPDATE moments
 SET description = COALESCE($2, description),

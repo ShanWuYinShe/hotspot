@@ -100,6 +100,18 @@ func (r *InMemoryRepository) DecrementCommentCount(_ context.Context, momentID s
 	return nil
 }
 
+func (r *InMemoryRepository) IncrementSharesCount(_ context.Context, momentID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	item, ok := r.moments[momentID]
+	if !ok {
+		return ErrMomentNotFound
+	}
+	item.SharesCount++
+	r.moments[momentID] = item
+	return nil
+}
+
 func (r *InMemoryRepository) Search(_ context.Context, req SearchMomentsRequest) (PaginatedMoments, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
