@@ -13,13 +13,7 @@
 
 - 仓库级 workflow、skill 入口和风险边界以根目录 [CLAUDE.md](../CLAUDE.md) 为准。
 - 普通分析、代码阅读、局部低副作用开发动作通常可以直接完成。
-- 页面/UI/交互的最终确认优先走隔离入口：
-
-```bash
-./deploy/scripts/verify.sh --env-name <name>
-./deploy/scripts/verify-inspect.sh --env-name <name>
-```
-
+- 页面/UI/交互的最终确认应在 Docker 隔离环境中执行。
 - 验证截图、调试输出和中间文件默认写到当前 worktree 的 `.local/`。
 
 ## 规范与文档

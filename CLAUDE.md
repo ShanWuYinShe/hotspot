@@ -8,7 +8,6 @@
 - `frontend_svelte/`：SvelteKit Web 前端，Svelte 5 + TypeScript。
 - `harmonyapp/`：HarmonyOS ArkTS 客户端。
 - `spec/`：API 契约的唯一权威来源（只读）。
-- `deploy/`：部署与隔离验证脚本。
 
 ## 硬约束
 - **隔离开发**：所有写操作、测试和提交都在 `git worktree` 中完成；默认 worktree 目录为 `.worktrees/`。主目录仅用于同步和只读操作。
@@ -31,9 +30,7 @@
 
 ## 验证分级
 - **开发完成**：完成与改动直接相关的格式化、lint、类型检查、编译和本地单元测试；不得遗留调试代码或临时注释。
-- **准备合并**：在“开发完成”的基础上，如改动涉及数据库写入、迁移、跨服务联调或真实环境链路，再运行 `./deploy/scripts/verify.sh --env-name <name>` 进行隔离验证。
-- 当前 `deploy/scripts/verify.sh` 的 Docker 隔离验证主要覆盖 `backend-go/` 与 `frontend_svelte/`。
-- `backend/` 与 `harmonyapp/` 目前仍以各自子项目定义的本地校验为主；若后续新增对应隔离验证入口，再统一收敛到 deploy workflow。
+- **准备合并**：在”开发完成”的基础上，如改动涉及数据库写入、迁移、跨服务联调或真实环境链路，自行判断是否需要 Docker 隔离环境验证；涉及真实数据库操作的测试不应在宿主环境直接运行。
 
 ## 协作入口
 - 先阅读根 `CLAUDE.md`，进入子项目后再阅读对应目录下的 `CLAUDE.md`。

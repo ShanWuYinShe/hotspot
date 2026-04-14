@@ -31,8 +31,6 @@
   "permissions": {
     "defaultMode": "auto",
     "allow": [
-      "Bash(./deploy/scripts/verify.sh:*)",
-      "Bash(./deploy/scripts/verify-inspect.sh:*)",
       "Bash(python3:*)",
       "Bash(git:*)",
       "Bash(cargo:*)",

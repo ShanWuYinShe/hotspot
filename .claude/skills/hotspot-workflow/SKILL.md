@@ -42,7 +42,7 @@ argument-hint: <feature|cleanup> [...]
 - 先读根 `CLAUDE.md`，再读相关子项目 `CLAUDE.md`
 - 判断任务级别：`L0/L1/L2/L3`
 - 在 `.worktrees/` 下的 worktree 内完成所有修改、测试与提交
-- 先完成本地校验；只有命中条件时才升级到隔离验证
+- 先完成本地校验；只有命中条件时才升级到 Docker 隔离验证
 - 若动作涉及主线同步、删除 worktree / 分支或其他高副作用收尾动作，先确认用户是否明确要求
 
 ## 使用规则
