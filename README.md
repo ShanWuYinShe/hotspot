@@ -29,11 +29,6 @@
 
 ## 常见入口
 
-### skill / workflow 入口
-- `hotspot-workflow`：单一 workflow skill，总入口；可由 Claude 自动应用，也可显式调用 `/hotspot-workflow <feature|cleanup> ...`
-  - `/hotspot-workflow feature <功能描述>`：端到端功能开发流程
-  - `/hotspot-workflow cleanup [过滤条件]`：盘点并清理已合并或废弃的临时 worktree 与分支
-
 ### worktree 入口
 ```bash
 git worktree add .worktrees/<branch-name> -b <branch-name>
