@@ -93,8 +93,8 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 			return
 		}
-		if err == ErrPermissionDenied {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+		if err == ErrAccessRestricted {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
@@ -118,8 +118,8 @@ func (h *Handler) Dismiss(w http.ResponseWriter, r *http.Request) {
 			if err == ErrGroupNotFound {
 				return httpx.Error(10300, "群组不存在")
 			}
-			if err == ErrPermissionDenied {
-				return httpx.Error(10400, "权限不足")
+			if err == ErrAccessRestricted {
+				return httpx.Error(10200, "权限不足")
 			}
 			return httpx.Error(10600, "服务暂时不可用")
 		}
@@ -208,8 +208,14 @@ func (h *Handler) JoinGroup(w http.ResponseWriter, r *http.Request) {
 			if err == ErrInvalidPassword {
 				return httpx.ApiResponse[JoinGroupResult]{Code: 10400, Message: "密码错误"}
 			}
-			if err == ErrPermissionDenied {
-				return httpx.ApiResponse[JoinGroupResult]{Code: 10400, Message: "该群组仅限邀请加入"}
+			if err == ErrAlreadyApplied {
+				return httpx.ApiResponse[JoinGroupResult]{Code: 10400, Message: "已申请过"}
+			}
+			if err == ErrGroupFull {
+				return httpx.ApiResponse[JoinGroupResult]{Code: 10400, Message: "群组已满"}
+			}
+			if err == ErrAccessRestricted {
+				return httpx.ApiResponse[JoinGroupResult]{Code: 10200, Message: "该群组仅限邀请加入"}
 			}
 			return httpx.ApiResponse[JoinGroupResult]{Code: 10600, Message: "服务暂时不可用"}
 		}
@@ -233,8 +239,8 @@ func (h *Handler) CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
 			if err == ErrGroupNotFound {
 				return httpx.ApiResponse[GroupAnnouncementItem]{Code: 10300, Message: "群组不存在"}
 			}
-			if err == ErrPermissionDenied {
-				return httpx.ApiResponse[GroupAnnouncementItem]{Code: 10400, Message: "权限不足"}
+			if err == ErrAccessRestricted {
+				return httpx.ApiResponse[GroupAnnouncementItem]{Code: 10200, Message: "权限不足"}
 			}
 			return httpx.ApiResponse[GroupAnnouncementItem]{Code: 10600, Message: "服务暂时不可用"}
 		}
@@ -272,8 +278,8 @@ func (h *Handler) UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 			return
 		}
-		if err == ErrPermissionDenied {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+		if err == ErrAccessRestricted {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
@@ -293,8 +299,8 @@ func (h *Handler) DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 			return
 		}
-		if err == ErrPermissionDenied {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+		if err == ErrAccessRestricted {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
@@ -315,8 +321,8 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 			return
 		}
-		if err == ErrPermissionDenied {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+		if err == ErrAccessRestricted {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
@@ -341,6 +347,15 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 	}
 	idempotency.ReplayOrStore(w, r, "groups/applications/approve", func() httpx.ApiResponse[struct{}] {
 		if err := h.service.ApproveApplication(r.Context(), req); err != nil {
+			if err == ErrGroupNotFound {
+				return httpx.ApiResponse[struct{}]{Code: 10300, Message: "群组不存在"}
+			}
+			if err == ErrAccessRestricted {
+				return httpx.ApiResponse[struct{}]{Code: 10200, Message: "权限不足"}
+			}
+			if err == ErrAlreadyProcessed {
+				return httpx.ApiResponse[struct{}]{Code: 10400, Message: "申请已处理"}
+			}
 			return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
 		}
 		return httpx.Success(struct{}{})
@@ -359,6 +374,15 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 	}
 	idempotency.ReplayOrStore(w, r, "groups/applications/reject", func() httpx.ApiResponse[struct{}] {
 		if err := h.service.RejectApplication(r.Context(), req); err != nil {
+			if err == ErrGroupNotFound {
+				return httpx.ApiResponse[struct{}]{Code: 10300, Message: "群组不存在"}
+			}
+			if err == ErrAccessRestricted {
+				return httpx.ApiResponse[struct{}]{Code: 10200, Message: "权限不足"}
+			}
+			if err == ErrAlreadyProcessed {
+				return httpx.ApiResponse[struct{}]{Code: 10400, Message: "申请已处理"}
+			}
 			return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
 		}
 		return httpx.Success(struct{}{})
@@ -376,8 +400,12 @@ func (h *Handler) UpdateMySettings(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 			return
 		}
-		if err == ErrPermissionDenied {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+		if err == ErrNotMember {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "不是群成员"))
+			return
+		}
+		if err == ErrAccessRestricted {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
@@ -397,8 +425,12 @@ func (h *Handler) LeaveGroup(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 			return
 		}
-		if err == ErrPermissionDenied {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "群主需先转让群主身份"))
+		if err == ErrNotMember {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "不是群成员"))
+			return
+		}
+		if err == ErrAccessRestricted {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "群主需先转让群主身份"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
@@ -493,6 +525,12 @@ func (h *Handler) RejectInvite(w http.ResponseWriter, r *http.Request) {
 	}
 	idempotency.ReplayOrStore(w, r, "groups/me/invites/reject", func() httpx.ApiResponse[struct{}] {
 		if err := h.service.RejectInvite(r.Context(), req); err != nil {
+			if err == ErrGroupNotFound {
+				return httpx.ApiResponse[struct{}]{Code: 10300, Message: "群组不存在"}
+			}
+			if err == ErrInviteExpired {
+				return httpx.ApiResponse[struct{}]{Code: 10400, Message: "邀请已失效"}
+			}
 			return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
 		}
 		return httpx.Success(struct{}{})
@@ -515,8 +553,11 @@ func (h *Handler) InviteMember(w http.ResponseWriter, r *http.Request) {
 			if err == ErrGroupNotFound {
 				return httpx.ApiResponse[Invitation]{Code: 10300, Message: "群组不存在"}
 			}
-			if err == ErrPermissionDenied {
-				return httpx.ApiResponse[Invitation]{Code: 10400, Message: "权限不足"}
+			if err == ErrAccessRestricted {
+				return httpx.ApiResponse[Invitation]{Code: 10200, Message: "权限不足"}
+			}
+			if err == ErrAlreadyMember {
+				return httpx.ApiResponse[Invitation]{Code: 10400, Message: "已是群成员"}
 			}
 			return httpx.ApiResponse[Invitation]{Code: 10600, Message: "服务暂时不可用"}
 		}
@@ -536,8 +577,8 @@ func (h *Handler) ListSentInvites(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 			return
 		}
-		if err == ErrPermissionDenied {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+		if err == ErrAccessRestricted {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
@@ -561,8 +602,8 @@ func (h *Handler) RevokeInvite(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 			return
 		}
-		if err == ErrPermissionDenied {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+		if err == ErrAccessRestricted {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
@@ -582,8 +623,8 @@ func (h *Handler) SetMemberRole(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 			return
 		}
-		if err == ErrPermissionDenied {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+		if err == ErrAccessRestricted {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
@@ -603,8 +644,8 @@ func (h *Handler) MuteMember(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 			return
 		}
-		if err == ErrPermissionDenied {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+		if err == ErrAccessRestricted {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
@@ -624,8 +665,8 @@ func (h *Handler) UnmuteMember(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 			return
 		}
-		if err == ErrPermissionDenied {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+		if err == ErrAccessRestricted {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
@@ -649,8 +690,8 @@ func (h *Handler) BanMember(w http.ResponseWriter, r *http.Request) {
 			if err == ErrGroupNotFound {
 				return httpx.ApiResponse[struct{}]{Code: 10300, Message: "群组不存在"}
 			}
-			if err == ErrPermissionDenied {
-				return httpx.ApiResponse[struct{}]{Code: 10400, Message: "权限不足"}
+			if err == ErrAccessRestricted {
+				return httpx.ApiResponse[struct{}]{Code: 10200, Message: "权限不足"}
 			}
 			return httpx.ApiResponse[struct{}]{Code: 10600, Message: "服务暂时不可用"}
 		}
@@ -669,8 +710,8 @@ func (h *Handler) UnbanMember(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 			return
 		}
-		if err == ErrPermissionDenied {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+		if err == ErrAccessRestricted {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
@@ -691,8 +732,8 @@ func (h *Handler) ListBannedMembers(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 			return
 		}
-		if err == ErrPermissionDenied {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+		if err == ErrAccessRestricted {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
@@ -716,8 +757,8 @@ func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 			return
 		}
-		if err == ErrPermissionDenied {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+		if err == ErrAccessRestricted {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10600, "服务暂时不可用"))
@@ -737,8 +778,8 @@ func (h *Handler) TransferOwnership(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10300, "群组不存在"))
 			return
 		}
-		if err == ErrPermissionDenied {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+		if err == ErrAccessRestricted {
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
 			return
 		}
 		if err == ErrTargetNotMember {

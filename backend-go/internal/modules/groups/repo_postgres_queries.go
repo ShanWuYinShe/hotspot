@@ -2,19 +2,19 @@ package groups
 
 const (
 	queryInsertGroup = `
-INSERT INTO groups (group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`
+	INSERT INTO groups (group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members, owner_id, created_at, last_activity_at)
+	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`
 
 	queryGetGroup = `
-SELECT group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members
-FROM groups
-WHERE group_id = $1 AND deleted_at IS NULL`
+	SELECT group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members, owner_id, created_at, last_activity_at
+	FROM groups
+	WHERE group_id = $1 AND deleted_at IS NULL`
 
 	querySearchGroups = `
-SELECT group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members
-FROM groups
-WHERE deleted_at IS NULL AND ($1 = '' OR name = $1)
-ORDER BY group_id ASC`
+	SELECT group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members, owner_id, created_at, last_activity_at
+	FROM groups
+	WHERE deleted_at IS NULL AND ($1 = '' OR name = $1)
+	ORDER BY group_id ASC`
 
 	queryGetGroupMembership = `
 SELECT role, joined_at
@@ -33,10 +33,10 @@ WHERE group_id = $1 AND ($2 = '' OR role = $2)
 ORDER BY joined_at ASC, user_id ASC`
 
 	queryListMyGroups = `
-SELECT g.group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members,
-       gm.role, gm.joined_at
-FROM groups g
-JOIN group_members gm ON gm.group_id = g.group_id
+	SELECT g.group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members, g.owner_id, g.created_at, g.last_activity_at,
+	       gm.role, gm.joined_at
+	FROM groups g
+	JOIN group_members gm ON gm.group_id = g.group_id
 WHERE gm.user_id = $1 AND g.deleted_at IS NULL
 ORDER BY gm.joined_at DESC, g.group_id DESC`
 

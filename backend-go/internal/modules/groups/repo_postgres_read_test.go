@@ -228,9 +228,9 @@ func (b *groupBackendStub) Query(_ context.Context, query string, _ ...any) (per
 
 func TestPostgresRepositoryCreateGetAndSearch(t *testing.T) {
 	backend := &groupBackendStub{
-		rows:      [][]any{{"group_1", "Hot Group", "", "desc", false, "南天门", 35.0, 112.0, "open", true, 200}},
+		rows:      [][]any{{"group_1", "Hot Group", "", "desc", false, "南天门", 35.0, 112.0, "open", true, 200, "user_alice", nil, nil}},
 		queryErrs: map[string]error{},
-		queryRow:  groupRowValues{values: []any{"group_1", "Hot Group", "", "desc", false, "南天门", 35.0, 112.0, "open", true, 200}},
+		queryRow:  groupRowValues{values: []any{"group_1", "Hot Group", "", "desc", false, "南天门", 35.0, 112.0, "open", true, 200, "user_alice", nil, nil}},
 		execErrs:  map[string]error{},
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
@@ -245,9 +245,15 @@ func TestPostgresRepositoryCreateGetAndSearch(t *testing.T) {
 	if created.Group.GroupID == "" {
 		t.Fatalf("expected created group id, got %#v", created)
 	}
+	if created.OwnerID != "user_alice" || created.CreatedAt == nil {
+		t.Fatalf("expected owner metadata on created group, got %#v", created)
+	}
 	item, ok, err := repo.Get(context.Background(), "group_1")
 	if err != nil || !ok || item.Group.GroupID != "group_1" {
 		t.Fatalf("unexpected item: %#v err=%v", item, err)
+	}
+	if item.OwnerID != "user_alice" {
+		t.Fatalf("expected owner id in fetched item, got %#v", item)
 	}
 	list, err := repo.Search(context.Background(), "Hot Group")
 	if err != nil || len(list.Items) != 1 || list.Items[0].Group.GroupID != "group_1" {

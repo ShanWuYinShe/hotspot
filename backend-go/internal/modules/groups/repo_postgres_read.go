@@ -79,14 +79,17 @@ func scanGroupBase(scanner interface{ Scan(...any) error }) (GroupItem, error) {
 	var item GroupItem
 	var locationName, joinMethod string
 	var latitude, longitude float64
-	if err := scanner.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &item.Description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.IsSearchable, &item.MaxMembers); err != nil {
+	var createdAt, lastActivityAt *time.Time
+	if err := scanner.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &item.Description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.IsSearchable, &item.MaxMembers, &item.OwnerID, &createdAt, &lastActivityAt); err != nil {
 		return GroupItem{}, err
 	}
-	item.Location = Location{Point: struct {
+	item.Location = RelativeLocation{Point: struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
 	item.JoinMethod = GroupJoinMethod(joinMethod)
+	item.CreatedAt = formatOptionalTime(createdAt)
+	item.LastActivityAt = formatOptionalTime(lastActivityAt)
 	return item, nil
 }
 
@@ -115,4 +118,25 @@ func countGroupMembers(ctx context.Context, queryable persistence.QueryableDB, g
 		return 0, err
 	}
 	return count, nil
+}
+
+func newRelativeLocation(location Location) RelativeLocation {
+	return RelativeLocation{
+		Point: struct {
+			Latitude  float64 `json:"latitude"`
+			Longitude float64 `json:"longitude"`
+		}{
+			Latitude:  location.Point.Latitude,
+			Longitude: location.Point.Longitude,
+		},
+		LocationName: location.LocationName,
+	}
+}
+
+func formatOptionalTime(value *time.Time) *string {
+	if value == nil {
+		return nil
+	}
+	formatted := value.UTC().Format(time.RFC3339)
+	return &formatted
 }

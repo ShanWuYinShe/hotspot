@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -24,14 +25,18 @@ type groupErrorRepo struct {
 	listMembersErr        error
 	searchMembersErr      error
 	listMyGroupsErr       error
+	listMyGroupsItems     []GroupItem
 	joinGroupErr          error
 	createAnnouncementErr error
 	listAnnouncementsErr  error
 	updateAnnouncementErr error
 	deleteAnnouncementErr error
 	listApplicationsErr   error
+	listApplicationsItems []GroupApplicationItem
 	approveApplicationErr error
 	rejectApplicationErr  error
+	listMyInvitesItems    []GroupInviteItem
+	rejectInviteErr       error
 }
 
 func (r *groupErrorRepo) Create(context.Context, string, CreateGroupRequest) (GroupItem, error) {
@@ -56,7 +61,7 @@ func (r *groupErrorRepo) SearchMembers(context.Context, string, string, *GroupRo
 	return nil, "", r.searchMembersErr
 }
 func (r *groupErrorRepo) ListMyGroups(context.Context, string, int, string) ([]GroupItem, string, error) {
-	return nil, "", r.listMyGroupsErr
+	return r.listMyGroupsItems, "", r.listMyGroupsErr
 }
 func (r *groupErrorRepo) JoinGroup(context.Context, string, string, *string, *string) (JoinGroupResult, error) {
 	return JoinGroupResult{}, r.joinGroupErr
@@ -74,7 +79,7 @@ func (r *groupErrorRepo) DeleteAnnouncement(context.Context, string, string) err
 	return r.deleteAnnouncementErr
 }
 func (r *groupErrorRepo) ListApplications(context.Context, string, *ApplicationStatus, int, string) ([]GroupApplicationItem, string, error) {
-	return nil, "", r.listApplicationsErr
+	return r.listApplicationsItems, "", r.listApplicationsErr
 }
 func (r *groupErrorRepo) ApproveApplication(context.Context, string, string) error {
 	return r.approveApplicationErr
@@ -95,13 +100,13 @@ func (r *groupErrorRepo) CancelApplication(context.Context, string) error {
 	return nil
 }
 func (r *groupErrorRepo) ListMyInvites(context.Context, string, *ApplicationStatus, int, string) ([]GroupInviteItem, string, error) {
-	return nil, "", nil
+	return r.listMyInvitesItems, "", nil
 }
 func (r *groupErrorRepo) AcceptInvite(context.Context, string, string) error {
 	return nil
 }
 func (r *groupErrorRepo) RejectInvite(context.Context, string) error {
-	return nil
+	return r.rejectInviteErr
 }
 func (r *groupErrorRepo) InviteMember(context.Context, string, InviteMemberRequest) (Invitation, error) {
 	return Invitation{}, nil
@@ -362,6 +367,109 @@ func TestApproveApplicationSendsAcceptedNotification(t *testing.T) {
 	}
 	if len(memberNotifications.Items) != 1 || memberNotifications.Items[0].Type != "group_application_accepted" {
 		t.Fatalf("unexpected member notifications: %#v", memberNotifications)
+	}
+}
+
+func TestApproveApplicationHandlerMapsSpecificErrors(t *testing.T) {
+	tests := []struct {
+		name     string
+		repo     *groupErrorRepo
+		expected int
+	}{
+		{
+			name:     "not found",
+			repo:     &groupErrorRepo{},
+			expected: 10300,
+		},
+		{
+			name:     "access restricted",
+			repo:     &groupErrorRepo{listMyGroupsItems: []GroupItem{{Group: GroupInfo{GroupID: "group_1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}}}, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", Status: ApplicationStatusPending}}},
+			expected: 10200,
+		},
+		{
+			name:     "already processed",
+			repo:     &groupErrorRepo{listMyGroupsItems: []GroupItem{{Group: GroupInfo{GroupID: "group_1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}}}, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", Status: ApplicationStatusAccepted}}},
+			expected: 10400,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			handler := NewHandler(NewServiceWithRepo(tc.repo))
+			req := httptest.NewRequest(http.MethodPost, "/applications/approve", strings.NewReader(`{"application_id":"app_1"}`))
+			req.Header.Set("Idempotency-Key", fmt.Sprintf("approve-app-%024d", tc.expected))
+			req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+			rr := httptest.NewRecorder()
+			handler.ApproveApplication(rr, req)
+			assertGroupCode(t, rr, tc.expected)
+		})
+	}
+}
+
+func TestRejectApplicationHandlerMapsSpecificErrors(t *testing.T) {
+	tests := []struct {
+		name     string
+		repo     *groupErrorRepo
+		expected int
+	}{
+		{
+			name:     "not found",
+			repo:     &groupErrorRepo{},
+			expected: 10300,
+		},
+		{
+			name:     "access restricted",
+			repo:     &groupErrorRepo{listMyGroupsItems: []GroupItem{{Group: GroupInfo{GroupID: "group_1"}, MyState: &MyGroupState{Role: GroupRoleMember, IsJoined: true}}}, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", Status: ApplicationStatusPending}}},
+			expected: 10200,
+		},
+		{
+			name:     "already processed",
+			repo:     &groupErrorRepo{listMyGroupsItems: []GroupItem{{Group: GroupInfo{GroupID: "group_1"}, MyState: &MyGroupState{Role: GroupRoleOwner, IsJoined: true}}}, listApplicationsItems: []GroupApplicationItem{{ApplicationID: "app_1", Status: ApplicationStatusRejected}}},
+			expected: 10400,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			handler := NewHandler(NewServiceWithRepo(tc.repo))
+			req := httptest.NewRequest(http.MethodPost, "/applications/reject", strings.NewReader(`{"application_id":"app_1"}`))
+			req.Header.Set("Idempotency-Key", fmt.Sprintf("reject-app--%024d", tc.expected))
+			req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+			rr := httptest.NewRecorder()
+			handler.RejectApplication(rr, req)
+			assertGroupCode(t, rr, tc.expected)
+		})
+	}
+}
+
+func TestRejectInviteHandlerMapsSpecificErrors(t *testing.T) {
+	tests := []struct {
+		name     string
+		repo     *groupErrorRepo
+		expected int
+	}{
+		{
+			name:     "not found",
+			repo:     &groupErrorRepo{},
+			expected: 10300,
+		},
+		{
+			name:     "expired",
+			repo:     &groupErrorRepo{listMyInvitesItems: []GroupInviteItem{{InviteID: "invite_1", Status: ApplicationStatusRejected}}},
+			expected: 10400,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			handler := NewHandler(NewServiceWithRepo(tc.repo))
+			req := httptest.NewRequest(http.MethodPost, "/me/invites/reject", strings.NewReader(`{"invite_id":"invite_1"}`))
+			req.Header.Set("Idempotency-Key", fmt.Sprintf("reject-inv-%024d", tc.expected))
+			req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"}))
+			rr := httptest.NewRecorder()
+			handler.RejectInvite(rr, req)
+			assertGroupCode(t, rr, tc.expected)
+		})
 	}
 }
 

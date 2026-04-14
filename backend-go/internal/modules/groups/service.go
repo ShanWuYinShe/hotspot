@@ -93,7 +93,7 @@ func (s *Service) Update(ctx context.Context, req UpdateGroupRequest) error {
 	}
 	if group.MyState == nil || group.MyState.Role != GroupRoleOwner {
 		observability.L().Warn("groups.update permission denied", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return ErrPermissionDenied
+		return ErrAccessRestricted
 	}
 	if err := s.repo.Update(ctx, principal.UserID, req); err != nil {
 		observability.L().Error("groups.update failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
@@ -118,7 +118,7 @@ func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
 	}
 	if group.MyState == nil || group.MyState.Role != GroupRoleOwner {
 		observability.L().Warn("groups.dismiss permission denied", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return ErrPermissionDenied
+		return ErrAccessRestricted
 	}
 	if err := s.repo.Dismiss(ctx, req.GroupID); err != nil {
 		observability.L().Error("groups.dismiss failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
@@ -251,7 +251,7 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateGroupAnnounc
 	}
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
 		observability.L().Warn("groups.create_announcement permission denied", "group_id", req.GroupID, "elapsed_ms", time.Since(startedAt).Milliseconds())
-		return GroupAnnouncementItem{}, ErrPermissionDenied
+		return GroupAnnouncementItem{}, ErrAccessRestricted
 	}
 	item, err := s.repo.CreateAnnouncement(ctx, principal.UserID, req)
 	if err != nil {
@@ -283,7 +283,7 @@ func (s *Service) UpdateAnnouncement(ctx context.Context, req UpdateGroupAnnounc
 		return ErrGroupNotFound
 	}
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
-		return ErrPermissionDenied
+		return ErrAccessRestricted
 	}
 	return s.repo.UpdateAnnouncement(ctx, req.GroupID, req)
 }
@@ -297,7 +297,7 @@ func (s *Service) DeleteAnnouncement(ctx context.Context, req DeleteGroupAnnounc
 		return ErrGroupNotFound
 	}
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
-		return ErrPermissionDenied
+		return ErrAccessRestricted
 	}
 	return s.repo.DeleteAnnouncement(ctx, req.GroupID, req.AnnouncementID)
 }
@@ -313,8 +313,9 @@ func (s *Service) ListApplications(ctx context.Context, req GroupApplicationsReq
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
 		if principal.UserID == "" {
-			return nil, "", ErrPermissionDenied
+			return nil, "", ErrAccessRestricted
 		}
+		return nil, "", ErrAccessRestricted
 	}
 	limit := req.Limit
 	if limit == 0 {
@@ -328,12 +329,9 @@ func (s *Service) ListApplications(ctx context.Context, req GroupApplicationsReq
 
 func (s *Service) ApproveApplication(ctx context.Context, req ApproveGroupApplicationRequest) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	application, group, ok, err := s.findApplicationForApprover(ctx, principal.UserID, req.ApplicationID)
+	application, group, err := s.findApplicationForApprover(ctx, principal.UserID, req.ApplicationID)
 	if err != nil {
 		return err
-	}
-	if !ok {
-		return ErrGroupNotFound
 	}
 	if err := s.repo.ApproveApplication(ctx, principal.UserID, req.ApplicationID); err != nil {
 		return err
@@ -345,12 +343,9 @@ func (s *Service) ApproveApplication(ctx context.Context, req ApproveGroupApplic
 
 func (s *Service) RejectApplication(ctx context.Context, req RejectGroupApplicationRequest) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	_, _, ok, err := s.findApplicationForApprover(ctx, principal.UserID, req.ApplicationID)
+	_, _, err := s.findApplicationForApprover(ctx, principal.UserID, req.ApplicationID)
 	if err != nil {
 		return err
-	}
-	if !ok {
-		return ErrGroupNotFound
 	}
 	if err := s.repo.RejectApplication(ctx, req.ApplicationID, req.Reason); err != nil {
 		return err
@@ -368,7 +363,7 @@ func (s *Service) UpdateMySettings(ctx context.Context, req UpdateGroupMySetting
 		return ErrGroupNotFound
 	}
 	if group.MyState == nil || !group.MyState.IsJoined {
-		return ErrPermissionDenied
+		return ErrNotMember
 	}
 	return s.repo.UpdateMySettings(ctx, principal.UserID, req)
 }
@@ -383,10 +378,10 @@ func (s *Service) LeaveGroup(ctx context.Context, req LeaveGroupRequest) error {
 		return ErrGroupNotFound
 	}
 	if group.MyState == nil || !group.MyState.IsJoined {
-		return ErrPermissionDenied
+		return ErrNotMember
 	}
 	if group.MyState.Role == GroupRoleOwner {
-		return ErrPermissionDenied
+		return ErrAccessRestricted
 	}
 	return s.repo.LeaveGroup(ctx, principal.UserID, req.GroupID)
 }
@@ -437,6 +432,17 @@ func (s *Service) AcceptInvite(ctx context.Context, req AcceptInviteRequest) err
 }
 
 func (s *Service) RejectInvite(ctx context.Context, req RejectInviteRequest) error {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	invite, ok, err := s.findInviteForUser(ctx, principal.UserID, req.InviteID)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrGroupNotFound
+	}
+	if invite.Status != ApplicationStatusPending {
+		return ErrInviteExpired
+	}
 	return s.repo.RejectInvite(ctx, req.InviteID)
 }
 
@@ -450,7 +456,7 @@ func (s *Service) InviteMember(ctx context.Context, req InviteMemberRequest) (In
 		return Invitation{}, ErrGroupNotFound
 	}
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
-		return Invitation{}, ErrPermissionDenied
+		return Invitation{}, ErrAccessRestricted
 	}
 	invitation, err := s.repo.InviteMember(ctx, principal.UserID, req)
 	if err != nil {
@@ -469,7 +475,7 @@ func (s *Service) ListSentInvites(ctx context.Context, req GroupSentInvitesReque
 		return nil, "", ErrGroupNotFound
 	}
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
-		return nil, "", ErrPermissionDenied
+		return nil, "", ErrAccessRestricted
 	}
 	limit := req.Limit
 	if limit == 0 {
@@ -491,7 +497,7 @@ func (s *Service) RevokeInvite(ctx context.Context, req RevokeSentInviteRequest)
 		return ErrGroupNotFound
 	}
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
-		return ErrPermissionDenied
+		return ErrAccessRestricted
 	}
 	_ = principal
 	return s.repo.RevokeInvite(ctx, req.GroupID, req.InviteID)
@@ -507,10 +513,10 @@ func (s *Service) SetMemberRole(ctx context.Context, req SetMemberRoleRequest) e
 		return ErrGroupNotFound
 	}
 	if group.MyState == nil || group.MyState.Role != GroupRoleOwner {
-		return ErrPermissionDenied
+		return ErrAccessRestricted
 	}
 	if req.Role != GroupRoleAdmin && req.Role != GroupRoleMember {
-		return ErrPermissionDenied
+		return ErrAccessRestricted
 	}
 	_ = principal
 	return s.repo.SetMemberRole(ctx, principal.UserID, req)
@@ -526,10 +532,10 @@ func (s *Service) MuteMember(ctx context.Context, req MuteMemberRequest) error {
 		return ErrGroupNotFound
 	}
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
-		return ErrPermissionDenied
+		return ErrAccessRestricted
 	}
 	if req.DurationMinutes < 1 || req.DurationMinutes > MaxMuteDurationMinutes {
-		return ErrPermissionDenied
+		return ErrAccessRestricted
 	}
 	_ = principal
 	return s.repo.MuteMember(ctx, principal.UserID, req)
@@ -545,7 +551,7 @@ func (s *Service) UnmuteMember(ctx context.Context, req UnmuteMemberRequest) err
 		return ErrGroupNotFound
 	}
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
-		return ErrPermissionDenied
+		return ErrAccessRestricted
 	}
 	_ = principal
 	return s.repo.UnmuteMember(ctx, principal.UserID, req)
@@ -561,10 +567,10 @@ func (s *Service) BanMember(ctx context.Context, req BanMemberRequest) error {
 		return ErrGroupNotFound
 	}
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
-		return ErrPermissionDenied
+		return ErrAccessRestricted
 	}
 	if req.UserID == principal.UserID {
-		return ErrPermissionDenied
+		return ErrAccessRestricted
 	}
 	_ = principal
 	return s.repo.BanMember(ctx, principal.UserID, req)
@@ -580,7 +586,7 @@ func (s *Service) UnbanMember(ctx context.Context, req UnbanMemberRequest) error
 		return ErrGroupNotFound
 	}
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
-		return ErrPermissionDenied
+		return ErrAccessRestricted
 	}
 	_ = principal
 	return s.repo.UnbanMember(ctx, principal.UserID, req)
@@ -596,7 +602,7 @@ func (s *Service) ListBannedMembers(ctx context.Context, req BannedMembersReques
 		return nil, "", ErrGroupNotFound
 	}
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
-		return nil, "", ErrPermissionDenied
+		return nil, "", ErrAccessRestricted
 	}
 	limit := req.Limit
 	if limit == 0 {
@@ -619,10 +625,10 @@ func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) err
 		return ErrGroupNotFound
 	}
 	if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
-		return ErrPermissionDenied
+		return ErrAccessRestricted
 	}
 	if req.UserID == principal.UserID {
-		return ErrPermissionDenied
+		return ErrAccessRestricted
 	}
 	_ = principal
 	return s.repo.RemoveMember(ctx, principal.UserID, req)
@@ -638,10 +644,10 @@ func (s *Service) TransferOwnership(ctx context.Context, req TransferOwnershipRe
 		return ErrGroupNotFound
 	}
 	if group.MyState == nil || group.MyState.Role != GroupRoleOwner {
-		return ErrPermissionDenied
+		return ErrAccessRestricted
 	}
 	if req.NewOwnerID == principal.UserID {
-		return ErrPermissionDenied
+		return ErrAccessRestricted
 	}
 
 	members, _, err := s.repo.ListMembers(ctx, req.GroupID, nil, 1000, "")
@@ -735,23 +741,29 @@ func (s *Service) notifyGroupApplicationAccepted(ctx context.Context, group Grou
 	realtime.DefaultHub().BroadcastToUser(application.Applicant.UserID, realtime.Event{Type: "GroupApplicationResponse", Payload: map[string]any{"application_id": application.ApplicationID, "group": map[string]any{"group_id": group.Group.GroupID, "name": group.Group.Name, "avatar_url": group.Group.AvatarURL, "members_count": group.Group.MembersCount}, "status": "accepted", "responded_at": time.Now().UTC().Format(time.RFC3339)}})
 }
 
-func (s *Service) findApplicationForApprover(ctx context.Context, approverUserID string, applicationID string) (GroupApplicationItem, GroupItem, bool, error) {
+func (s *Service) findApplicationForApprover(ctx context.Context, approverUserID string, applicationID string) (GroupApplicationItem, GroupItem, error) {
 	groups, _, err := s.repo.ListMyGroups(ctx, approverUserID, 1000, "")
 	if err != nil {
-		return GroupApplicationItem{}, GroupItem{}, false, err
+		return GroupApplicationItem{}, GroupItem{}, err
 	}
 	for _, group := range groups {
 		items, _, err := s.repo.ListApplications(ctx, group.Group.GroupID, nil, 1000, "")
 		if err != nil {
-			return GroupApplicationItem{}, GroupItem{}, false, err
+			return GroupApplicationItem{}, GroupItem{}, err
 		}
 		for _, item := range items {
 			if item.ApplicationID == applicationID {
-				return item, group, true, nil
+				if group.MyState == nil || (group.MyState.Role != GroupRoleOwner && group.MyState.Role != GroupRoleAdmin) {
+					return GroupApplicationItem{}, GroupItem{}, ErrAccessRestricted
+				}
+				if item.Status != ApplicationStatusPending {
+					return GroupApplicationItem{}, GroupItem{}, ErrAlreadyProcessed
+				}
+				return item, group, nil
 			}
 		}
 	}
-	return GroupApplicationItem{}, GroupItem{}, false, nil
+	return GroupApplicationItem{}, GroupItem{}, ErrGroupNotFound
 }
 
 func (s *Service) findInviteForUser(ctx context.Context, userID string, inviteID string) (GroupInviteItem, bool, error) {

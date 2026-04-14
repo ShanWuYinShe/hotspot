@@ -45,8 +45,9 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	if joinMethod == "" {
 		joinMethod = "open"
 	}
-	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: req.Tags, HasPassword: req.Password != "", Location: req.Location, MyState: &MyGroupState{Role: "owner", IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: now.Format(time.RFC3339)}, JoinMethod: joinMethod, IsSearchable: isSearchable, MaxMembers: maxMembers}
-	if err := queryable.Exec(ctx, queryInsertGroup, groupID, req.Name, req.AvatarFileID, req.Description, req.Password != "", req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, joinMethod, isSearchable, maxMembers); err != nil {
+	nowRFC3339 := now.Format(time.RFC3339)
+	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: req.Tags, HasPassword: req.Password != "", Location: newRelativeLocation(req.Location), MyState: &MyGroupState{Role: "owner", IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, IsSearchable: isSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: userID}
+	if err := queryable.Exec(ctx, queryInsertGroup, groupID, req.Name, req.AvatarFileID, req.Description, req.Password != "", req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, joinMethod, isSearchable, maxMembers, userID, now, now); err != nil {
 		return GroupItem{}, err
 	}
 	if err := queryable.Exec(ctx, queryInsertGroupMember, groupID, userID, string(GroupRoleOwner), now); err != nil {
@@ -164,15 +165,18 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 		var item GroupItem
 		var locationName, joinMethod, roleText string
 		var latitude, longitude float64
+		var createdAt, lastActivityAt *time.Time
 		var joinedAt time.Time
-		if err := rows.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &item.Description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.IsSearchable, &item.MaxMembers, &roleText, &joinedAt); err != nil {
+		if err := rows.Scan(&item.Group.GroupID, &item.Group.Name, &item.Group.AvatarURL, &item.Description, &item.HasPassword, &locationName, &latitude, &longitude, &joinMethod, &item.IsSearchable, &item.MaxMembers, &item.OwnerID, &createdAt, &lastActivityAt, &roleText, &joinedAt); err != nil {
 			return nil, "", err
 		}
-		item.Location = Location{Point: struct {
+		item.Location = RelativeLocation{Point: struct {
 			Latitude  float64 `json:"latitude"`
 			Longitude float64 `json:"longitude"`
 		}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
 		item.JoinMethod = GroupJoinMethod(joinMethod)
+		item.CreatedAt = formatOptionalTime(createdAt)
+		item.LastActivityAt = formatOptionalTime(lastActivityAt)
 		item.MyState = &MyGroupState{Role: GroupRole(roleText), IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: joinedAt.UTC().Format(time.RFC3339)}
 		item.Group.MembersCount, err = countGroupMembers(ctx, queryable, item.Group.GroupID)
 		if err != nil {

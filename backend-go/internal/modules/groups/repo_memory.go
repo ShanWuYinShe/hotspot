@@ -54,11 +54,12 @@ func NewInMemoryRepository() *InMemoryRepository {
 		applications: make(map[string]inMemoryApplicationRecord),
 	}
 }
+
 func (r *InMemoryRepository) Create(_ context.Context, userID string, req CreateGroupRequest) (GroupItem, error) {
-	_ = userID
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	now := time.Now().UTC()
+	nowRFC3339 := now.Format(time.RFC3339)
 	groupID := fmt.Sprintf("group_%d", now.UnixNano())
 	isSearchable := true
 	if req.IsSearchable != nil {
@@ -72,9 +73,9 @@ func (r *InMemoryRepository) Create(_ context.Context, userID string, req Create
 	if joinMethod == "" {
 		joinMethod = "open"
 	}
-	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: req.Tags, HasPassword: req.Password != "", Location: req.Location, MyState: &MyGroupState{Role: "owner", IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: now.Format(time.RFC3339)}, JoinMethod: joinMethod, IsSearchable: isSearchable, MaxMembers: maxMembers}
+	item := GroupItem{Group: GroupInfo{GroupID: groupID, Name: req.Name, AvatarURL: req.AvatarFileID, MembersCount: 1}, Description: req.Description, Tags: req.Tags, HasPassword: req.Password != "", Location: newRelativeLocation(req.Location), MyState: &MyGroupState{Role: "owner", IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: nowRFC3339}, JoinMethod: joinMethod, IsSearchable: isSearchable, MaxMembers: maxMembers, CreatedAt: &nowRFC3339, OwnerID: userID}
 	r.groups[groupID] = item
-	r.members[groupID] = map[string]inMemoryMembership{userID: {Role: GroupRoleOwner, JoinedAt: now.Format(time.RFC3339)}}
+	r.members[groupID] = map[string]inMemoryMembership{userID: {Role: GroupRoleOwner, JoinedAt: nowRFC3339}}
 	return item, nil
 }
 func (r *InMemoryRepository) Get(ctx context.Context, groupID string) (GroupItem, bool, error) {
@@ -135,7 +136,7 @@ func (r *InMemoryRepository) Update(_ context.Context, userID string, req Update
 		item.MaxMembers = *req.MaxMembers
 	}
 	if req.Location != nil {
-		item.Location = *req.Location
+		item.Location = newRelativeLocation(*req.Location)
 	}
 	r.groups[req.GroupID] = item
 	return nil
@@ -236,14 +237,12 @@ func (r *InMemoryRepository) JoinGroup(_ context.Context, userID, groupID string
 		return JoinGroupResult{Status: JoinGroupStatusJoined}, nil
 	}
 	if group.JoinMethod == GroupJoinMethodInviteOnly {
-		return JoinGroupResult{}, ErrPermissionDenied
+		return JoinGroupResult{}, ErrAccessRestricted
 	}
 	if group.JoinMethod == GroupJoinMethodApproval {
 		for _, record := range r.applications {
 			if record.GroupID == groupID && record.ApplicantID == userID && record.Status == ApplicationStatusPending {
-				return JoinGroupResult{Status: JoinGroupStatusPendingApproval, Application: &struct {
-					ApplicationID string `json:"application_id"`
-				}{ApplicationID: record.ApplicationID}}, nil
+				return JoinGroupResult{}, ErrAlreadyApplied
 			}
 		}
 		now := time.Now().UTC()
@@ -258,6 +257,9 @@ func (r *InMemoryRepository) JoinGroup(_ context.Context, userID, groupID string
 		if password == nil || *password == "" {
 			return JoinGroupResult{}, ErrInvalidPassword
 		}
+	}
+	if group.MaxMembers > 0 && len(r.members[groupID]) >= group.MaxMembers {
+		return JoinGroupResult{}, ErrGroupFull
 	}
 	if r.members[groupID] == nil {
 		r.members[groupID] = make(map[string]inMemoryMembership)
@@ -351,6 +353,9 @@ func (r *InMemoryRepository) ApproveApplication(_ context.Context, approverID, a
 	if !ok {
 		return ErrGroupNotFound
 	}
+	if record.Status != ApplicationStatusPending {
+		return ErrAlreadyProcessed
+	}
 	record.Status = ApplicationStatusAccepted
 	now := time.Now().UTC().Format(time.RFC3339)
 	record.HandledAt = &now
@@ -373,6 +378,9 @@ func (r *InMemoryRepository) RejectApplication(_ context.Context, applicationID 
 	record, ok := r.applications[applicationID]
 	if !ok {
 		return ErrGroupNotFound
+	}
+	if record.Status != ApplicationStatusPending {
+		return ErrAlreadyProcessed
 	}
 	record.Status = ApplicationStatusRejected
 	now := time.Now().UTC().Format(time.RFC3339)
@@ -399,10 +407,10 @@ func (r *InMemoryRepository) LeaveGroup(_ context.Context, userID string, groupI
 		return ErrGroupNotFound
 	}
 	if group.MyState == nil || !group.MyState.IsJoined {
-		return ErrPermissionDenied
+		return ErrNotMember
 	}
 	if group.MyState.Role == GroupRoleOwner {
-		return ErrPermissionDenied
+		return ErrAccessRestricted
 	}
 	group.MyState = nil
 	r.groups[groupID] = group
@@ -473,6 +481,9 @@ func (r *InMemoryRepository) AcceptInvite(_ context.Context, userID string, invi
 	if !ok {
 		return ErrGroupNotFound
 	}
+	if record.Status != ApplicationStatusPending {
+		return ErrInviteExpired
+	}
 	record.Status = ApplicationStatusAccepted
 	now := time.Now().UTC().Format(time.RFC3339)
 	record.RespondedAt = &now
@@ -494,6 +505,9 @@ func (r *InMemoryRepository) RejectInvite(_ context.Context, inviteID string) er
 	record, ok := r.invites[inviteID]
 	if !ok {
 		return ErrGroupNotFound
+	}
+	if record.Status != ApplicationStatusPending {
+		return ErrInviteExpired
 	}
 	record.Status = ApplicationStatusRejected
 	now := time.Now().UTC().Format(time.RFC3339)

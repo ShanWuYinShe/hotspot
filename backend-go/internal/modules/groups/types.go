@@ -38,8 +38,12 @@ type Location struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	} `json:"point"`
-	LocationName string `json:"location_name"`
+	LocationName   string   `json:"location_name"`
+	Distance       *float64 `json:"distance,omitempty"`
+	BearingDegrees *float64 `json:"bearing_degrees,omitempty"`
 }
+
+type RelativeLocation = Location
 
 type MyGroupState struct {
 	Role        GroupRole `json:"role"`
@@ -51,15 +55,18 @@ type MyGroupState struct {
 }
 
 type GroupItem struct {
-	Group        GroupInfo       `json:"group"`
-	Description  string          `json:"description,omitempty"`
-	Tags         []string        `json:"tags,omitempty"`
-	HasPassword  bool            `json:"has_password"`
-	Location     Location        `json:"location"`
-	MyState      *MyGroupState   `json:"my_state,omitempty"`
-	JoinMethod   GroupJoinMethod `json:"join_method,omitempty"`
-	IsSearchable bool            `json:"is_searchable,omitempty"`
-	MaxMembers   int             `json:"max_members,omitempty"`
+	Group          GroupInfo        `json:"group"`
+	Description    string           `json:"description,omitempty"`
+	Tags           []string         `json:"tags,omitempty"`
+	HasPassword    bool             `json:"has_password"`
+	Location       RelativeLocation `json:"location"`
+	MyState        *MyGroupState    `json:"my_state,omitempty"`
+	JoinMethod     GroupJoinMethod  `json:"join_method,omitempty"`
+	IsSearchable   bool             `json:"is_searchable,omitempty"`
+	MaxMembers     int              `json:"max_members,omitempty"`
+	LastActivityAt *string          `json:"last_activity_at,omitempty"`
+	CreatedAt      *string          `json:"created_at,omitempty"`
+	OwnerID        string           `json:"owner_id,omitempty"`
 }
 
 type CreateGroupRequest struct {
