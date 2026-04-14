@@ -29,7 +29,7 @@ Handler → Service → Repository
 ./deploy/scripts/verify.sh --env-name <name>
 ```
 
-- 若需保存日志片段、验证截图或中间分析文件，默认写到当前 worktree 的 `tmp/`。
+- 若需保存日志片段、验证截图或中间分析文件，默认写到当前 worktree 的 `.local/`。
 
 ## 规范与文档
 

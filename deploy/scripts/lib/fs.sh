@@ -2,7 +2,7 @@
 
 deploy_tmp_root() {
   local root="$1"
-  printf '%s/tmp/deploy\n' "$root"
+  printf '%s/.local/deploy\n' "$root"
 }
 
 ensure_dir() {
@@ -13,7 +13,7 @@ ensure_writable_dir() {
   local path="$1"
   if [[ ! -w "$path" ]]; then
     echo "deploy path is not writable by the current user: $path" >&2
-    echo "fix the ownership of this tmp/deploy path before rerunning the flow." >&2
+    echo "fix the ownership of this .local/deploy path before rerunning the flow." >&2
     exit 1
   fi
 }

@@ -14,7 +14,7 @@
 - **隔离开发**：所有写操作、测试和提交都在 `git worktree` 中完成；默认 worktree 目录为 `.worktrees/`。主目录仅用于同步和只读操作。
 - **契约权威**：`spec/` 是 API 契约的唯一权威来源；修改接口、字段、错误码前先对齐 `spec/`。
 - **跨端边界**：距离与位置计算统一由后端完成，前端和客户端只展示结果。
-- **临时文件**：所有临时文件、截图、中间输出写入 `tmp/` 目录。
+- **临时文件**：所有临时文件、截图、中间输出写入 `.local/` 目录。
 - **Git 安全**：禁止破坏性 git 操作；同步到 `main` 前必须整理为单功能单 commit，并保持线性历史。
 - **Commit 规范**：最终 commit message 格式为 `<type>(<scope>): <subject>`，例如 `feat(backend-go/auth): add oauth login flow`。
 

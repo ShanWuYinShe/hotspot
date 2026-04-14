@@ -14,7 +14,7 @@ Thumbs.db:encryptable
 # ============================================
 # Temporary Files
 # ============================================
-tmp/
+.local/
 *.tmp
 *.log
 
@@ -59,4 +59,3 @@ __pycache__/
 .claude/worktrees/
 .claude/settings.local.json
 .playwright-mcp/
-

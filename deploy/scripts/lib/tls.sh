@@ -2,7 +2,7 @@
 
 preview_tls_cert_dir() {
   local root="$1"
-  printf '%s/tmp/certs\n' "$root"
+  printf '%s/.local/certs\n' "$root"
 }
 
 preview_default_tls_cert_path() {

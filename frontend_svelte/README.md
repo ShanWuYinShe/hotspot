@@ -20,7 +20,7 @@
 ./deploy/scripts/verify-inspect.sh --env-name <name>
 ```
 
-- 验证截图、调试输出和中间文件默认写到当前 worktree 的 `tmp/`。
+- 验证截图、调试输出和中间文件默认写到当前 worktree 的 `.local/`。
 
 ## 规范与文档
 

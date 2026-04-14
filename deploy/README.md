@@ -12,7 +12,7 @@
 - `deploy/` 不是普通分析、代码阅读、局部低副作用开发动作的统一执行器；这类动作仍应优先按根 `CLAUDE.md` 的规则直接完成，或优先使用仓库已提供的 skill。
 - Claude Code 应优先通过根 `CLAUDE.md` 与 `.claude/skills/` 了解仓库已经提供了哪些标准入口，再决定是否进入 `deploy/`。
 - 当一个动作需要隔离环境、统一日志、统一 runner、统一 compose 行为，或会在多 agent / 多 worktree 下产生冲突时，才优先进入 `deploy/`。
-- `tmp/` 是默认的宿主侧中间产物目录；`deploy/` 产生的日志、检查输出和交付物摘要也应优先落到 `tmp/deploy/...`，避免污染 git 状态。
+- `.local/` 是默认的宿主侧中间产物目录；`deploy/` 产生的日志、检查输出和交付物摘要也应优先落到 `.local/deploy/...`，避免污染 git 状态。
 
 ## 快速入口
 
@@ -33,17 +33,17 @@
 - `preview` / `release` 使用 deploy-managed detached worktree 或确定性 git ref 构建候选结果，它们不是 Claude 的 feature / integration worktree 替代物。
 - 测试和构建流程产生的中间缓存默认保留在容器临时目录中，不写回宿主 worktree；宿主侧只保留日志、release/preview 产物等需要交付或复盘的输出。
 - `preview` / `release` 面向候选结果与确定性版本，不再承担多 env 开发隔离语义。
-- `verify` / `preview` / `release` 现在都会把关键日志归档到 `tmp/deploy/logs/`，便于人工复盘与 AI 分析完整错误链。
+- `verify` / `preview` / `release` 现在都会把关键日志归档到 `.local/deploy/logs/`，便于人工复盘与 AI 分析完整错误链。
 
 ## 日志归档
-- `verify`：`tmp/deploy/logs/verify/<env-name>/<run-id>/`
-- `verify-inspect`：沿用 `tmp/deploy/logs/verify/<env-name>/<run-id>/`，记录环境启动、入口准备与 compose 运行日志
-- `preview`：`tmp/deploy/logs/preview/current/`
-- `release`：`tmp/deploy/logs/release/<label>/`
+- `verify`：`.local/deploy/logs/verify/<env-name>/<run-id>/`
+- `verify-inspect`：沿用 `.local/deploy/logs/verify/<env-name>/<run-id>/`，记录环境启动、入口准备与 compose 运行日志
+- `preview`：`.local/deploy/logs/preview/current/`
+- `release`：`.local/deploy/logs/release/<label>/`
 - `verify` / `verify-inspect` / `preview-build` / `release-build` 会保留完整 stdout/stderr。
 - `preview-up` 会保留启动快照、`compose ps` 与 startup logs。
 - `preview-inspect` 会保留检查输出、`compose ps`、完整 compose logs，以及 `GET /`、`POST /api/v1/system/health`、`GET /s3/` 的请求结果。
-- 控制台仍保留简洁摘要；排障时优先把 `tmp/deploy/logs/...` 下的完整日志交给 AI 分析，而不是只依赖终端头尾输出。
+- 控制台仍保留简洁摘要；排障时优先把 `.local/deploy/logs/...` 下的完整日志交给 AI 分析，而不是只依赖终端头尾输出。
 
 ## 依赖下载镜像源与镜像引用覆盖
 - 这两类配置不是一回事：

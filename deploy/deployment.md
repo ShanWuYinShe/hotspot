@@ -41,7 +41,7 @@
 - lock
 - 测试依赖容器
 
-宿主侧只保留当前 checkout 下 `tmp/deploy/` 里的日志、构建产物、release manifest 与 deploy-managed worktree；Go / pnpm 等中间缓存默认留在容器临时目录内，不再写回宿主 worktree，从根上避免 worktree 清理时被缓存权限卡住。这里的 deploy-managed worktree 指 deploy 为 preview / release 维护的 detached worktree，它不替代 Claude 的 feature / integration worktree 语义。
+宿主侧只保留当前 checkout 下 `.local/deploy/` 里的日志、构建产物、release manifest 与 deploy-managed worktree；Go / pnpm 等中间缓存默认留在容器临时目录内，不再写回宿主 worktree，从根上避免 worktree 清理时被缓存权限卡住。这里的 deploy-managed worktree 指 deploy 为 preview / release 维护的 detached worktree，它不替代 Claude 的 feature / integration worktree 语义。
 
 ### 入口
 
@@ -54,7 +54,7 @@
   - `dockerfiles/frontend.verify.Dockerfile`
 - 当前工作树通过只读挂载注入容器，并复制到容器临时目录后执行测试，避免把 pnpm store、node_modules、Go module cache 或其他中间产物写回仓库根
 - verify runner 以内置的容器临时缓存运行 backend/frontend 校验，并在 `go test ./...` 前先执行 backend-go schema bootstrap
-- 每次 verify 都会额外把完整 runner 输出、`docker compose ps` 和完整 compose logs 归档到 `tmp/deploy/logs/verify/<env-name>/<run-id>/`
+- 每次 verify 都会额外把完整 runner 输出、`docker compose ps` 和完整 compose logs 归档到 `.local/deploy/logs/verify/<env-name>/<run-id>/`
 - `verify-inspect` 复用同一日志根，用于归档环境启动、入口准备与 compose 运行日志；具体页面检查证据不由 deploy 产出
 
 ### verify-inspect
@@ -101,7 +101,7 @@
 - 默认保留 postgres / redis / minio 数据
 - 支持 `--clean` / `--clean-all`
 - backend-go 在启动时会自动执行 schema bootstrap 并校验关键表；对空库 preview，先清 postgres volume 再启动也应能自举成功
-- preview 构建、启动与 inspect 结果都会归档到 `tmp/deploy/logs/preview/current/`，其中既保留构建期完整 stdout/stderr，也保留 runtime `compose ps` / `compose logs` 快照与 HTTP/S3 检查结果
+- preview 构建、启动与 inspect 结果都会归档到 `.local/deploy/logs/preview/current/`，其中既保留构建期完整 stdout/stderr，也保留 runtime `compose ps` / `compose logs` 快照与 HTTP/S3 检查结果
 - preview 仍保留 MinIO 服务与 `/s3/` 入口检查，但不再额外引入 `minio/mc` 初始化容器；对象存储桶与策略不在 preview 基础拓扑中预创建
 
 ## 三、release
@@ -119,7 +119,7 @@
 - backend image
 - frontend image
 - manifest.json
-- `tmp/deploy/logs/release/<label>/` 下的完整构建日志
+- `.local/deploy/logs/release/<label>/` 下的完整构建日志
 
 manifest 至少包含：
 - ref
