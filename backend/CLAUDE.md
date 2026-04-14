@@ -1,14 +1,9 @@
 # CLAUDE.md
 
-## 架构
-Rust 主后端，基于 Axum 框架。
-
-- `src/main.rs`：入口，装配 AppState、路由、tracing
-- `src/routes/v1/`：按业务域拆分路由
-- `src/handlers/`：HTTP 边界，参数提取，调用 service
-- `src/services/`：业务逻辑、事务、事件发布
-- `src/repositories/`：SQLx 仓库层
-- `src/events/`、`src/websocket/`：事件总线与实时推送
+## 构建 & 测试 & Lint
+- `cargo test` — 单元测试
+- `cargo clippy` — lint
+- `cargo fmt` — 格式化
 
 ## 约束
 - **分层**：Handler → Service → Repository，不跨层访问。

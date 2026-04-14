@@ -1,13 +1,9 @@
 # CLAUDE.md
 
-## 架构
-模块化单体 Go 后端，使用 Chi 路由。
-
-- `cmd/server/main.go`：入口
-- `internal/bootstrap/`：依赖装配、路由注册
-- `internal/platform/`：平台能力（auth、httpx、persistence、cache、realtime、geo、observability）
-- `internal/modules/`：业务模块，内部维持 `handler -> service -> repo` 分层
-- `migrations/`：数据库迁移
+## 构建 & 测试 & Lint
+- `go test -short ./...` — 单元测试（`-short` 跳过需要 DB 的集成测试）
+- `go vet ./...` — 静态检查
+- `gofmt -w .` — 格式化
 
 ## 约束
 - **分层**：Handler → Service → Repository。SQL 仅在 repo 层编写。
