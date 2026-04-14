@@ -113,8 +113,8 @@ S3_CHECK_LOG="$(log_file_path "$LOG_ROOT" "curl-s3-health.log")"
 ensure_current_tree_flow_allowed "$ROOT" "verify-inspect"
 prepare_deploy_dirs "$ROOT"
 ensure_dir "$LOG_ROOT"
-docker compose -p "$(verify_project_name "$ENV_NAME")" -f "$COMPOSE_FILE" down -v --remove-orphans >/dev/null 2>&1 || true
 LOCK_PATH="$(acquire_lock "$ROOT" "verify-inspect-$ENV_NAME")"
+docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" down -v --remove-orphans >/dev/null 2>&1 || true
 
 cleanup() {
   local status=$?
