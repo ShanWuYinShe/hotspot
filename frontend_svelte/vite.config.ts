@@ -15,7 +15,7 @@ export default defineConfig({
 		rollupOptions: {
 			output: {
 				manualChunks(id) {
-					if (id.includes('node_modules/svelte/') || id.includes('node_modules/.pnpm/svelte@')) {
+					if (id.includes('node_modules/svelte/')) {
 						return 'svelte';
 					}
 				}

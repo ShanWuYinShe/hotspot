@@ -35,7 +35,7 @@
       "Bash(git:*)",
       "Bash(cargo:*)",
       "Bash(go:*)",
-      "Bash(pnpm:*)",
+      "Bash(bun:*)",
       "Bash(ohpm:*)",
       "Bash(hvigorw:*)",
       "Bash(./hvigorw:*)",

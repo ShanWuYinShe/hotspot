@@ -25,7 +25,6 @@ target/
 frontend_svelte/node_modules/
 frontend_svelte/build/
 frontend_svelte/.svelte-kit/
-.pnpm-store/
 
 # ============================================
 # IDE & Editor
@@ -58,4 +57,3 @@ __pycache__/
 .worktrees
 .claude/worktrees/
 .claude/settings.local.json
-.playwright-mcp/

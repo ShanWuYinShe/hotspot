@@ -3,11 +3,11 @@
 - 本文件只定义本子项目的技术约束与本地命令；仓库级 workflow、任务分级与验证边界以根 `CLAUDE.md` 为准。
 
 ## 构建 & 测试 & Lint
-- `pnpm check` — 类型检查
-- `pnpm build` — 构建
-- `pnpm test` — 单元测试
-- `pnpm lint` — lint
-- `pnpm format` — 格式化
+- `bun check` — 类型检查
+- `bun run build` — 构建
+- `bun test` — 单元测试
+- `bun lint` — lint
+- `bun run format` — 格式化
 
 ## 约束
 - **API 路径**：统一从 `endpoints.ts` 引用。
