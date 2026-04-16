@@ -38,7 +38,7 @@ func NewServiceWithDeps(repo Repository, moments MomentProvider, notificationWri
 }
 
 func (s *Service) Create(ctx context.Context, req CreateCommentRequest) (CommentItem, error) {
-	if err := s.ensureMomentExists(ctx, req.MomentID); err != nil {
+	if err := s.ensureMomentCommentable(ctx, req.MomentID); err != nil {
 		return CommentItem{}, err
 	}
 	principal, _ := platformauth.PrincipalFromContext(ctx)
@@ -362,6 +362,21 @@ func summarizeCommentText(primary string, fallback string) string {
 		return value[:80]
 	}
 	return value
+}
+
+func (s *Service) ensureMomentCommentable(ctx context.Context, momentID string) error {
+	found, canComment, err := s.moments.CheckCommentable(ctx, momentID)
+	if err != nil {
+		observability.L().Error("comments.ensure_moment_commentable failed", "error", err, "moment_id", momentID)
+		return err
+	}
+	if !found {
+		return ErrMomentNotFound
+	}
+	if !canComment {
+		return ErrMomentNoPermission
+	}
+	return nil
 }
 
 func (s *Service) ensureMomentExists(ctx context.Context, momentID string) error {

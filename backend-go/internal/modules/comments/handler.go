@@ -37,6 +37,10 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 				logBusinessError(r, "Create", 10300, "瞬间不存在")
 				return httpx.ApiResponse[CommentItem]{Code: 10300, Message: "瞬间不存在"}
 			}
+			if errors.Is(err, ErrMomentNoPermission) {
+				logBusinessError(r, "Create", 10200, "权限不足")
+				return httpx.ApiResponse[CommentItem]{Code: 10200, Message: "权限不足"}
+			}
 			logServerError(r, "Create", err)
 			return httpx.ApiResponse[CommentItem]{Code: 10600, Message: "服务暂时不可用"}
 		}

@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"hotspot/backend-go/internal/platform/geo"
 )
 
 type likeEntry struct {
@@ -132,9 +134,20 @@ func (r *InMemoryRepository) Search(_ context.Context, req SearchMomentsRequest)
 		}
 		items = append(items, m)
 	}
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].CreatedAt > items[j].CreatedAt
-	})
+	sortBy := req.SortBy
+	if sortBy == "" {
+		sortBy = "relevance"
+	}
+	refPt := geo.Point{Latitude: req.ReferencePoint.Latitude, Longitude: req.ReferencePoint.Longitude}
+	keyword := ""
+	if req.Keyword != nil {
+		keyword = *req.Keyword
+	}
+	tag := ""
+	if req.Tag != nil {
+		tag = *req.Tag
+	}
+	sortMoments(items, sortBy, refPt, keyword, tag)
 	if len(items) == 0 {
 		items = []MomentItem{}
 	}
@@ -325,4 +338,64 @@ func (r *InMemoryRepository) ListFavorites(_ context.Context, userID string, lim
 		items = []MomentItem{}
 	}
 	return PaginatedMoments{Items: items}, nil
+}
+
+// sortMoments sorts a slice of MomentItem in place according to the given mode.
+// refPt is used for distance calculation; keyword and tag are used for relevance scoring.
+func sortMoments(items []MomentItem, sortBy string, refPt geo.Point, keyword, tag string) {
+	switch sortBy {
+	case "distance":
+		sort.SliceStable(items, func(i, j int) bool {
+			di := geo.DistanceMeters(refPt, geo.Point{Latitude: items[i].Location.Point.Latitude, Longitude: items[i].Location.Point.Longitude})
+			dj := geo.DistanceMeters(refPt, geo.Point{Latitude: items[j].Location.Point.Latitude, Longitude: items[j].Location.Point.Longitude})
+			if di != dj {
+				return di < dj
+			}
+			return items[i].MomentID < items[j].MomentID
+		})
+	case "newest":
+		sort.SliceStable(items, func(i, j int) bool {
+			if items[i].CreatedAt != items[j].CreatedAt {
+				return items[i].CreatedAt > items[j].CreatedAt
+			}
+			return items[i].MomentID < items[j].MomentID
+		})
+	case "popular":
+		sort.SliceStable(items, func(i, j int) bool {
+			si := items[i].LikesCount + items[i].CommentsCount
+			sj := items[j].LikesCount + items[j].CommentsCount
+			if si != sj {
+				return si > sj
+			}
+			if items[i].CreatedAt != items[j].CreatedAt {
+				return items[i].CreatedAt > items[j].CreatedAt
+			}
+			return items[i].MomentID < items[j].MomentID
+		})
+	default: // "relevance"
+		sort.SliceStable(items, func(i, j int) bool {
+			ri := relevanceScore(items[i], keyword, tag)
+			rj := relevanceScore(items[j], keyword, tag)
+			if ri != rj {
+				return ri > rj
+			}
+			if items[i].CreatedAt != items[j].CreatedAt {
+				return items[i].CreatedAt > items[j].CreatedAt
+			}
+			return items[i].MomentID < items[j].MomentID
+		})
+	}
+}
+
+// relevanceScore returns a simple integer score: items matching both keyword
+// and tag score 2, matching either one score 1, otherwise 0.
+func relevanceScore(m MomentItem, keyword, tag string) int {
+	score := 0
+	if keyword != "" && strings.Contains(m.Description, keyword) {
+		score++
+	}
+	if tag != "" && containsTag(m.Tags, tag) {
+		score++
+	}
+	return score
 }

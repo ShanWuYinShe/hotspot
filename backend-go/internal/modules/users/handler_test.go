@@ -248,6 +248,44 @@ func TestUpdateMyProfilePersistsChanges(t *testing.T) {
 	}
 }
 
+func TestUpdateMyProfileRejectsUnknownFieldsAndTrailingJSON(t *testing.T) {
+	handler := NewHandler(NewService())
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+
+	t.Run("unknown field", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/me/profile/update", strings.NewReader(`{"nickname":"Alice","bogus":true}`)).WithContext(ctx)
+		rr := httptest.NewRecorder()
+		handler.UpdateMyProfile(rr, req)
+		assertUserCode(t, rr, 10000)
+	})
+
+	t.Run("trailing JSON", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/me/profile/update", strings.NewReader(`{"nickname":"Alice"}{"bio":"x"}`)).WithContext(ctx)
+		rr := httptest.NewRecorder()
+		handler.UpdateMyProfile(rr, req)
+		assertUserCode(t, rr, 10000)
+	})
+}
+
+func TestUpdateMySettingsRejectsUnknownFieldsAndTrailingJSON(t *testing.T) {
+	handler := NewHandler(NewService())
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+
+	t.Run("unknown field", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/me/settings/update", strings.NewReader(`{"settings":{"allow_follow":true},"bogus":1}`)).WithContext(ctx)
+		rr := httptest.NewRecorder()
+		handler.UpdateMySettings(rr, req)
+		assertUserCode(t, rr, 10000)
+	})
+
+	t.Run("trailing JSON", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/me/settings/update", strings.NewReader(`{"settings":{"allow_follow":true}}{}`)).WithContext(ctx)
+		rr := httptest.NewRecorder()
+		handler.UpdateMySettings(rr, req)
+		assertUserCode(t, rr, 10000)
+	})
+}
+
 func TestGetMySettingsReturnsDefaults(t *testing.T) {
 	handler := NewHandler(NewService())
 	req := httptest.NewRequest(http.MethodPost, "/me/settings/get", strings.NewReader(`{}`))
@@ -725,4 +763,64 @@ func assertUserCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
 	if resp.Code != expected {
 		t.Fatalf("expected code %d, got %#v", expected, resp)
 	}
+}
+
+// --- Upgrade tests ---
+
+func TestHandlerUpgradeRejectsInvalidLoginID(t *testing.T) {
+	service := NewService()
+	handler := NewHandler(service)
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+
+	tests := []struct {
+		name    string
+		loginID string
+	}{
+		{name: "random string", loginID: "abc!@#"},
+		{name: "too short phone", loginID: "123"},
+		{name: "email without domain dot", loginID: "user@com"},
+		{name: "email without local part", loginID: "@example.com"},
+		{name: "mixed alphanumeric", loginID: "abc123def"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			rr := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"login_id":"`+tc.loginID+`","password":"pass"}`)).WithContext(ctx)
+			handler.Upgrade(rr, req)
+			assertUserCode(t, rr, 10000)
+		})
+	}
+}
+
+func TestHandlerUpgradeAcceptsValidEmail(t *testing.T) {
+	service := NewService()
+	handler := NewHandler(service)
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	alice := defaultProfile("user_alice")
+	alice.UserType = UserTypeTemp
+	if err := service.repo.PutProfile(context.Background(), alice); err != nil {
+		t.Fatalf("put profile: %v", err)
+	}
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"login_id":"alice@example.com","password":"secret"}`)).WithContext(ctx)
+	handler.Upgrade(rr, req)
+	assertUserCode(t, rr, 0)
+}
+
+func TestHandlerUpgradeAcceptsValidPhone(t *testing.T) {
+	service := NewService()
+	handler := NewHandler(service)
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	alice := defaultProfile("user_alice")
+	alice.UserType = UserTypeTemp
+	if err := service.repo.PutProfile(context.Background(), alice); err != nil {
+		t.Fatalf("put profile: %v", err)
+	}
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"login_id":"13800138000","password":"secret"}`)).WithContext(ctx)
+	handler.Upgrade(rr, req)
+	assertUserCode(t, rr, 0)
 }

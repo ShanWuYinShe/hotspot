@@ -12,6 +12,9 @@ import (
 
 type momentProviderStub struct {
 	exists              bool
+	commentableFound    bool
+	commentable         bool
+	commentableErr      error
 	increment           int
 	notificationContext MomentNotificationContext
 	notificationOK      bool
@@ -19,6 +22,9 @@ type momentProviderStub struct {
 }
 
 func (m *momentProviderStub) Exists(context.Context, string) (bool, error) { return m.exists, nil }
+func (m *momentProviderStub) CheckCommentable(context.Context, string) (bool, bool, error) {
+	return m.commentableFound, m.commentable, m.commentableErr
+}
 func (m *momentProviderStub) IncrementCommentCount(context.Context, string) error {
 	m.increment++
 	return nil
@@ -63,7 +69,7 @@ func TestCreateTopLevelCommentSendsRealtimeAndNotificationToMomentAuthor(t *test
 	realtime.SetDefaultHub(hub)
 	repo := NewInMemoryRepository()
 	moments := &momentProviderStub{
-		exists:         true,
+		exists: true, commentableFound: true, commentable: true,
 		notificationOK: true,
 		notificationContext: MomentNotificationContext{
 			UserID:  "user_alice",
@@ -116,7 +122,7 @@ func TestCreateTopLevelCommentOnOwnMomentSkipsRealtimeAndNotification(t *testing
 	realtime.SetDefaultHub(hub)
 	repo := NewInMemoryRepository()
 	moments := &momentProviderStub{
-		exists:         true,
+		exists: true, commentableFound: true, commentable: true,
 		notificationOK: true,
 		notificationContext: MomentNotificationContext{
 			UserID:  "user_alice",
@@ -148,7 +154,7 @@ func TestCreateReplySendsRealtimeAndNotificationToParentAuthor(t *testing.T) {
 	realtime.SetDefaultHub(hub)
 	repo := NewInMemoryRepository()
 	moments := &momentProviderStub{
-		exists:         true,
+		exists: true, commentableFound: true, commentable: true,
 		notificationOK: true,
 		notificationContext: MomentNotificationContext{
 			UserID:  "user_alice",
@@ -208,7 +214,7 @@ func TestCreateReplyToOwnCommentSkipsRealtimeAndNotification(t *testing.T) {
 	realtime.SetDefaultHub(hub)
 	repo := NewInMemoryRepository()
 	moments := &momentProviderStub{
-		exists:         true,
+		exists: true, commentableFound: true, commentable: true,
 		notificationOK: true,
 		notificationContext: MomentNotificationContext{
 			UserID:  "user_alice",
@@ -247,7 +253,7 @@ func TestCreateCommentMentionSendsRealtimeAndNotification(t *testing.T) {
 	realtime.SetDefaultHub(hub)
 	repo := NewInMemoryRepository()
 	moments := &momentProviderStub{
-		exists:         true,
+		exists: true, commentableFound: true, commentable: true,
 		notificationOK: true,
 		notificationContext: MomentNotificationContext{
 			UserID:  "user_alice",
@@ -291,7 +297,7 @@ func TestCreateReplyMentionDeduplicatesReplyTarget(t *testing.T) {
 	realtime.SetDefaultHub(hub)
 	repo := NewInMemoryRepository()
 	moments := &momentProviderStub{
-		exists:         true,
+		exists: true, commentableFound: true, commentable: true,
 		notificationOK: true,
 		notificationContext: MomentNotificationContext{
 			UserID:  "user_alice",
@@ -333,7 +339,7 @@ func TestCreateTopLevelCommentMentionDeduplicatesMomentAuthor(t *testing.T) {
 	realtime.SetDefaultHub(hub)
 	repo := NewInMemoryRepository()
 	moments := &momentProviderStub{
-		exists:         true,
+		exists: true, commentableFound: true, commentable: true,
 		notificationOK: true,
 		notificationContext: MomentNotificationContext{
 			UserID:  "user_alice",
@@ -368,7 +374,7 @@ func TestCreateCommentIgnoresNotificationFailures(t *testing.T) {
 	realtime.SetDefaultHub(hub)
 	repo := NewInMemoryRepository()
 	moments := &momentProviderStub{
-		exists:         true,
+		exists: true, commentableFound: true, commentable: true,
 		notificationOK: true,
 		notificationContext: MomentNotificationContext{
 			UserID:  "user_alice",
@@ -402,7 +408,7 @@ func TestLikeCommentSendsRealtimeAndNotificationToAuthor(t *testing.T) {
 	realtime.SetDefaultHub(hub)
 	repo := NewInMemoryRepository()
 	moments := &momentProviderStub{
-		exists:         true,
+		exists: true, commentableFound: true, commentable: true,
 		notificationOK: true,
 		notificationContext: MomentNotificationContext{
 			UserID:  "user_alice",
@@ -448,7 +454,7 @@ func TestLikeCommentSkipsSelfNotification(t *testing.T) {
 	realtime.SetDefaultHub(hub)
 	repo := NewInMemoryRepository()
 	moments := &momentProviderStub{
-		exists:         true,
+		exists: true, commentableFound: true, commentable: true,
 		notificationOK: true,
 		notificationContext: MomentNotificationContext{
 			UserID:  "user_alice",
@@ -484,7 +490,7 @@ func TestLikeCommentDeduplicatesRepeatedLike(t *testing.T) {
 	realtime.SetDefaultHub(hub)
 	repo := NewInMemoryRepository()
 	moments := &momentProviderStub{
-		exists:         true,
+		exists: true, commentableFound: true, commentable: true,
 		notificationOK: true,
 		notificationContext: MomentNotificationContext{
 			UserID:  "user_alice",
@@ -520,7 +526,7 @@ func TestLikeCommentDeduplicatesRepeatedLike(t *testing.T) {
 
 func TestCreateReplyToMissingParentReturnsCommentNotFound(t *testing.T) {
 	repo := NewInMemoryRepository()
-	moments := &momentProviderStub{exists: true}
+	moments := &momentProviderStub{exists: true, commentableFound: true, commentable: true}
 	service := NewServiceWithDeps(repo, moments, notifications.NewService())
 	_, err := service.Create(testCommentContext("user_bob"), CreateCommentRequest{MomentID: "moment_1", ParentID: "missing_parent", Content: "reply"})
 	if !errors.Is(err, ErrCommentNotFound) {
@@ -535,4 +541,24 @@ func firstCommentID(t *testing.T, repo *InMemoryRepository, momentID string) str
 		t.Fatalf("list comments: %#v err=%v", page, err)
 	}
 	return page.Items[0].CommentID
+}
+
+func TestCreateCommentReturnsNoPermissionWhenMomentExistsButNotCommentable(t *testing.T) {
+	repo := NewInMemoryRepository()
+	moments := &momentProviderStub{commentableFound: true, commentable: false}
+	service := NewServiceWithDeps(repo, moments, notifications.NewService())
+	_, err := service.Create(testCommentContext("user_bob"), CreateCommentRequest{MomentID: "moment_private", Content: "hello"})
+	if !errors.Is(err, ErrMomentNoPermission) {
+		t.Fatalf("expected ErrMomentNoPermission, got %v", err)
+	}
+}
+
+func TestCreateCommentReturnsNotFoundWhenMomentDoesNotExist(t *testing.T) {
+	repo := NewInMemoryRepository()
+	moments := &momentProviderStub{commentableFound: false}
+	service := NewServiceWithDeps(repo, moments, notifications.NewService())
+	_, err := service.Create(testCommentContext("user_bob"), CreateCommentRequest{MomentID: "moment_missing", Content: "hello"})
+	if !errors.Is(err, ErrMomentNotFound) {
+		t.Fatalf("expected ErrMomentNotFound, got %v", err)
+	}
 }

@@ -307,7 +307,11 @@ func (s *Service) Upgrade(ctx context.Context, req UpgradeAccountRequest) error 
 		return ErrConflict
 	}
 	profile.UserType = UserTypeNormal
-	profile.Email = req.LoginID
+	if strings.Contains(req.LoginID, "@") {
+		profile.Email = req.LoginID
+	} else {
+		profile.Phone = req.LoginID
+	}
 	if err := s.repo.PutProfile(ctx, profile); err != nil {
 		observability.L().Error("users.upgrade failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return err
@@ -316,12 +320,15 @@ func (s *Service) Upgrade(ctx context.Context, req UpgradeAccountRequest) error 
 	return nil
 }
 
-func (s *Service) DeleteAccount(ctx context.Context) error {
+func (s *Service) DeleteAccount(ctx context.Context, req DeleteAccountRequest) error {
 	startedAt := time.Now()
 	observability.L().Info("users.delete_account started")
 	principal, err := requirePrincipal(ctx)
 	if err != nil {
 		return err
+	}
+	if req.Confirmation != "DELETE_MY_ACCOUNT" {
+		return ErrConflict
 	}
 	if err := s.repo.DeleteProfile(ctx, principal.UserID); err != nil {
 		observability.L().Error("users.delete_account failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())

@@ -26,6 +26,14 @@ func (c *failingMomentCounter) Exists(ctx context.Context, momentID string) (boo
 	return c.repo.Exists(ctx, momentID)
 }
 
+func (c *failingMomentCounter) CheckCommentable(ctx context.Context, momentID string) (bool, bool, error) {
+	_, ok, err := c.repo.Get(ctx, momentID)
+	if err != nil || !ok {
+		return ok, false, err
+	}
+	return true, true, nil
+}
+
 func (c *failingMomentCounter) IncrementCommentCount(ctx context.Context, momentID string) error {
 	if c.failErr != nil {
 		return c.failErr
@@ -418,6 +426,37 @@ func TestCreateMomentWithoutMentionsDoesNotBroadcastMentionEvent(t *testing.T) {
 	}
 }
 
+func TestDeleteMomentReturns10200WhenPermissionDenied(t *testing.T) {
+	repo := NewInMemoryRepository()
+	handler := NewHandler(NewServiceWithRepo(repo))
+	_ = platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	ctxOther := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_bob", SessionID: "sess_2"})
+
+	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Location: Location{LocationName: "Somewhere"}})
+	if err != nil {
+		t.Fatalf("create moment: %v", err)
+	}
+
+	deleteReq := httptest.NewRequest(http.MethodPost, "/delete", strings.NewReader(`{"moment_id":"`+created.MomentID+`"}`))
+	deleteReq = deleteReq.WithContext(ctxOther)
+	deleteRR := httptest.NewRecorder()
+	handler.Delete(deleteRR, deleteReq)
+
+	var resp struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(deleteRR.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 10200 {
+		t.Fatalf("expected code 10200, got code=%d message=%s", resp.Code, resp.Message)
+	}
+	if resp.Message != "权限不足" {
+		t.Fatalf("expected message '权限不足', got %s", resp.Message)
+	}
+}
+
 func assertCommentCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
 	t.Helper()
 	var resp struct {
@@ -442,4 +481,286 @@ func (c *momentRecordingChecker) MayExist(context.Context, resourceguard.Resourc
 func (c *momentRecordingChecker) Record(_ context.Context, kind resourceguard.ResourceKind, id string) error {
 	c.recorded = append(c.recorded, string(kind)+":"+id)
 	return nil
+}
+
+func TestSearchRejectsInvalidSortBy(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
+	for _, invalid := range []string{"random", "RELEVANCE", "distancee", "new", "popularity"} {
+		t.Run(invalid, func(t *testing.T) {
+			body := `{"keyword":"test","sort_by":"` + invalid + `","reference_point":{"latitude":0,"longitude":0}}`
+			req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(body))
+			rr := httptest.NewRecorder()
+			handler.Search(rr, req)
+			var resp struct {
+				Code int `json:"code"`
+			}
+			if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+				t.Fatalf("decode: %v", err)
+			}
+			if resp.Code != 10000 {
+				t.Fatalf("expected code 10000 for sort_by=%q, got %d", invalid, resp.Code)
+			}
+		})
+	}
+}
+
+func TestSearchAcceptsValidSortBy(t *testing.T) {
+	repo := NewInMemoryRepository()
+	handler := NewHandler(NewServiceWithRepo(repo))
+	for _, valid := range []string{"relevance", "distance", "newest", "popular", ""} {
+		t.Run("sort_by="+valid, func(t *testing.T) {
+			sortField := ""
+			if valid != "" {
+				sortField = `,"sort_by":"` + valid + `"`
+			}
+			body := `{"keyword":"test"` + sortField + `,"reference_point":{"latitude":0,"longitude":0}}`
+			req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(body))
+			rr := httptest.NewRecorder()
+			handler.Search(rr, req)
+			var resp struct {
+				Code int `json:"code"`
+			}
+			if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+				t.Fatalf("decode: %v", err)
+			}
+			if resp.Code != 0 {
+				t.Fatalf("expected code 0 for sort_by=%q, got %d", valid, resp.Code)
+			}
+		})
+	}
+}
+
+func TestSearchSortByNewest(t *testing.T) {
+	repo := NewInMemoryRepository()
+	handler := NewHandler(NewServiceWithRepo(repo))
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_test", SessionID: "s1"})
+
+	// Create moments with known timestamps by inserting directly
+	m1 := MomentItem{
+		MomentID: "moment_a", Description: "alpha test", PrivacyLevel: "public",
+		CreatedAt: "2025-01-01T00:00:00Z",
+		Location: Location{Point: struct {
+			Latitude  float64 `json:"latitude"`
+			Longitude float64 `json:"longitude"`
+		}{Latitude: 0, Longitude: 0}, LocationName: "Here"},
+		User: UserInfo{UserID: "user_test"},
+	}
+	m2 := MomentItem{
+		MomentID: "moment_b", Description: "beta test", PrivacyLevel: "public",
+		CreatedAt: "2025-06-01T00:00:00Z",
+		Location: Location{Point: struct {
+			Latitude  float64 `json:"latitude"`
+			Longitude float64 `json:"longitude"`
+		}{Latitude: 0, Longitude: 0}, LocationName: "Here"},
+		User: UserInfo{UserID: "user_test"},
+	}
+	m3 := MomentItem{
+		MomentID: "moment_c", Description: "gamma test", PrivacyLevel: "public",
+		CreatedAt: "2025-03-01T00:00:00Z",
+		Location: Location{Point: struct {
+			Latitude  float64 `json:"latitude"`
+			Longitude float64 `json:"longitude"`
+		}{Latitude: 0, Longitude: 0}, LocationName: "Here"},
+		User: UserInfo{UserID: "user_test"},
+	}
+	repo.moments[m1.MomentID] = m1
+	repo.moments[m2.MomentID] = m2
+	repo.moments[m3.MomentID] = m3
+
+	req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(
+		`{"keyword":"test","sort_by":"newest","reference_point":{"latitude":0,"longitude":0}}`))
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.Search(rr, req)
+	var resp struct {
+		Code int              `json:"code"`
+		Data PaginatedMoments `json:"data"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+	if len(resp.Data.Items) != 3 {
+		t.Fatalf("expected 3 items, got %d", len(resp.Data.Items))
+	}
+	// newest first: b (June), c (March), a (January)
+	if resp.Data.Items[0].MomentID != "moment_b" || resp.Data.Items[1].MomentID != "moment_c" || resp.Data.Items[2].MomentID != "moment_a" {
+		var order []string
+		for _, it := range resp.Data.Items {
+			order = append(order, it.MomentID)
+		}
+		t.Fatalf("expected [moment_b, moment_c, moment_a], got %v", order)
+	}
+}
+
+func TestSearchSortByDistance(t *testing.T) {
+	repo := NewInMemoryRepository()
+	handler := NewHandler(NewServiceWithRepo(repo))
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_test", SessionID: "s1"})
+
+	m1 := MomentItem{
+		MomentID: "moment_far", Description: "far away", PrivacyLevel: "public",
+		CreatedAt: "2025-01-01T00:00:00Z",
+		Location: Location{Point: struct {
+			Latitude  float64 `json:"latitude"`
+			Longitude float64 `json:"longitude"`
+		}{Latitude: 40.0, Longitude: -74.0}, LocationName: "NYC"},
+		User: UserInfo{UserID: "user_test"},
+	}
+	m2 := MomentItem{
+		MomentID: "moment_near", Description: "nearby", PrivacyLevel: "public",
+		CreatedAt: "2025-06-01T00:00:00Z",
+		Location: Location{Point: struct {
+			Latitude  float64 `json:"latitude"`
+			Longitude float64 `json:"longitude"`
+		}{Latitude: 39.0, Longitude: -77.0}, LocationName: "DC"},
+		User: UserInfo{UserID: "user_test"},
+	}
+	repo.moments[m1.MomentID] = m1
+	repo.moments[m2.MomentID] = m2
+
+	// reference point near DC (39.0, -77.0)
+	req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(
+		`{"radius":500000,"sort_by":"distance","reference_point":{"latitude":39.0,"longitude":-77.0}}`))
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.Search(rr, req)
+	var resp struct {
+		Code int              `json:"code"`
+		Data PaginatedMoments `json:"data"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+	if len(resp.Data.Items) != 2 {
+		t.Fatalf("expected 2 items, got %d", len(resp.Data.Items))
+	}
+	// nearest first: near (DC) then far (NYC)
+	if resp.Data.Items[0].MomentID != "moment_near" || resp.Data.Items[1].MomentID != "moment_far" {
+		var order []string
+		for _, it := range resp.Data.Items {
+			order = append(order, it.MomentID)
+		}
+		t.Fatalf("expected [moment_near, moment_far], got %v", order)
+	}
+}
+
+func TestSearchSortByPopular(t *testing.T) {
+	repo := NewInMemoryRepository()
+	handler := NewHandler(NewServiceWithRepo(repo))
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_test", SessionID: "s1"})
+
+	m1 := MomentItem{
+		MomentID: "moment_unpopular", Description: "unpopular", PrivacyLevel: "public",
+		CreatedAt: "2025-06-01T00:00:00Z", LikesCount: 1, CommentsCount: 0,
+		Location: Location{Point: struct {
+			Latitude  float64 `json:"latitude"`
+			Longitude float64 `json:"longitude"`
+		}{Latitude: 0, Longitude: 0}, LocationName: "Here"},
+		User: UserInfo{UserID: "user_test"},
+	}
+	m2 := MomentItem{
+		MomentID: "moment_popular", Description: "popular", PrivacyLevel: "public",
+		CreatedAt: "2025-01-01T00:00:00Z", LikesCount: 10, CommentsCount: 5,
+		Location: Location{Point: struct {
+			Latitude  float64 `json:"latitude"`
+			Longitude float64 `json:"longitude"`
+		}{Latitude: 0, Longitude: 0}, LocationName: "Here"},
+		User: UserInfo{UserID: "user_test"},
+	}
+	m3 := MomentItem{
+		MomentID: "moment_medium", Description: "medium", PrivacyLevel: "public",
+		CreatedAt: "2025-03-01T00:00:00Z", LikesCount: 3, CommentsCount: 2,
+		Location: Location{Point: struct {
+			Latitude  float64 `json:"latitude"`
+			Longitude float64 `json:"longitude"`
+		}{Latitude: 0, Longitude: 0}, LocationName: "Here"},
+		User: UserInfo{UserID: "user_test"},
+	}
+	repo.moments[m1.MomentID] = m1
+	repo.moments[m2.MomentID] = m2
+	repo.moments[m3.MomentID] = m3
+
+	req := httptest.NewRequest(http.MethodPost, "/search", strings.NewReader(
+		`{"keyword":"","radius":50000,"sort_by":"popular","reference_point":{"latitude":0,"longitude":0}}`))
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.Search(rr, req)
+	var resp struct {
+		Code int              `json:"code"`
+		Data PaginatedMoments `json:"data"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+	if len(resp.Data.Items) != 3 {
+		t.Fatalf("expected 3 items, got %d", len(resp.Data.Items))
+	}
+	// popular first: popular(15), medium(5), unpopular(1)
+	if resp.Data.Items[0].MomentID != "moment_popular" || resp.Data.Items[1].MomentID != "moment_medium" || resp.Data.Items[2].MomentID != "moment_unpopular" {
+		var order []string
+		for _, it := range resp.Data.Items {
+			order = append(order, it.MomentID)
+		}
+		t.Fatalf("expected [moment_popular, moment_medium, moment_unpopular], got %v", order)
+	}
+}
+
+func TestCreateMomentAcceptsLocationWithoutName(t *testing.T) {
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+	repo := NewInMemoryRepository()
+	handler := NewHandler(NewServiceWithRepo(repo))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+
+	createReq := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"description":"hello","location":{"point":{"latitude":35.68,"longitude":139.69}}}`))
+	createReq.Header.Set("Idempotency-Key", "zzzz1234zzzz1234zzzz1234zzzz1234")
+	createReq = createReq.WithContext(ctx)
+	createRR := httptest.NewRecorder()
+	handler.Create(createRR, createReq)
+
+	var resp struct {
+		Code int `json:"code"`
+		Data struct {
+			MomentID string `json:"moment_id"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(createRR.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected success (code 0), got code %d", resp.Code)
+	}
+	if resp.Data.MomentID == "" {
+		t.Fatal("expected moment_id in response")
+	}
+}
+
+func TestCreateMomentRejectsZeroLocation(t *testing.T) {
+	idempotency.SetStore(idempotency.NewInMemoryStore())
+	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+
+	createReq := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"description":"hello","location":{"point":{"latitude":0,"longitude":0}}}`))
+	createReq.Header.Set("Idempotency-Key", "yyyy1234yyyy1234yyyy1234yyyy1234")
+	createReq = createReq.WithContext(ctx)
+	createRR := httptest.NewRecorder()
+	handler.Create(createRR, createReq)
+
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.NewDecoder(createRR.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 10000 {
+		t.Fatalf("expected code 10000 for zero coordinates, got %d", resp.Code)
+	}
 }
