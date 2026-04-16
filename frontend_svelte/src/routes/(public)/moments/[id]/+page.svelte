@@ -25,6 +25,8 @@
 	import ArrowLeft from 'lucide-svelte/icons/arrow-left';
 	import Send from 'lucide-svelte/icons/send';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
+	import Pencil from 'lucide-svelte/icons/pencil';
+	import CreateMomentModal from '$lib/components/common/create-moment-modal.svelte';
 
 	const momentId = $derived(page.params.id!);
 
@@ -35,13 +37,17 @@
 	let commentsError = $state(false);
 	let commentText = $state('');
 	let isSubmitting = $state(false);
+	let loadVersion = 0;
+	let showEditModal = $state(false);
+	const isOwner = $derived(
+		authStore.isAuthenticated && moment !== null && authStore.currentAccount?.user_id === moment.user.user_id
+	);
 
 	// 交互状态
 	let isLiked = $state(false);
 	let isFavorited = $state(false);
 	let likesCount = $state(0);
 	let commentsCount = $state(0);
-	let loadVersion = 0;
 
 	async function loadMoment(id: string, version: number) {
 		try {
@@ -63,6 +69,13 @@
 			toast.error('加载失败');
 		} finally {
 			if (version === loadVersion) isLoading = false;
+		}
+	}
+
+	function handleEdited() {
+		if (momentId) {
+			loadVersion++;
+			loadMoment(momentId, loadVersion);
 		}
 	}
 
@@ -203,6 +216,13 @@
 			<ArrowLeft class="h-5 w-5" />
 		</Button>
 		<h1 class="text-xl font-bold">瞬间详情</h1>
+		{#if isOwner}
+			<div class="ml-auto">
+				<Button variant="ghost" size="icon" onclick={() => (showEditModal = true)} aria-label="编辑">
+					<Pencil class="h-4 w-4" />
+				</Button>
+			</div>
+		{/if}
 	</div>
 
 	{#if isLoading}
@@ -405,5 +425,13 @@
 				</Button>
 			</CardContent>
 		</Card>
+	{/if}
+
+	{#if isOwner && moment}
+		<CreateMomentModal
+			bind:open={showEditModal}
+			editMoment={moment}
+			onEdited={handleEdited}
+		/>
 	{/if}
 </div>

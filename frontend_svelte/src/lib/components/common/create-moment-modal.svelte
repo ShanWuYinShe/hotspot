@@ -16,7 +16,7 @@
 	import { toast } from '$lib/stores/toast.svelte';
 	import LocationPickerModal from './location-picker-modal.svelte';
 	import AnchorSummaryCard from '$lib/components/common/anchor-summary-card.svelte';
-	import type { PrivacyLevel } from '$lib/types/api';
+	import type { PrivacyLevel, MomentItem } from '$lib/types/api';
 	import { untrack } from 'svelte';
 	import Image from 'lucide-svelte/icons/image';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
@@ -27,6 +27,8 @@
 		open: boolean;
 		onOpenChange?: (open: boolean) => void;
 		onCreated?: () => void;
+		editMoment?: MomentItem;
+		onEdited?: () => void;
 	}
 
 	interface SelectedLocation {
@@ -36,7 +38,11 @@
 		radius: number;
 	}
 
-	let { open = $bindable(), onOpenChange, onCreated }: Props = $props();
+	let { open = $bindable(), onOpenChange, onCreated, editMoment, onEdited }: Props = $props();
+
+	const isEditMode = $derived(editMoment !== undefined);
+	const dialogTitle = $derived(isEditMode ? '编辑动态' : '发布动态');
+	const dialogSubtitle = $derived(isEditMode ? '修改你的生活瞬间' : '分享你此刻的生活瞬间');
 
 	let description = $state('');
 	let tagsInput = $state('');
@@ -84,13 +90,17 @@
 	let selectedLocation = $state.raw<SelectedLocation>(getDefaultSelectedLocation());
 
 	function resetForm() {
-		description = '';
-		tagsInput = '';
-		privacy = 'public';
+		if (!isEditMode) {
+			description = '';
+			tagsInput = '';
+			privacy = 'public';
+		}
 		const images = untrack(() => selectedImages);
 		images.forEach((image) => URL.revokeObjectURL(image.previewUrl));
 		selectedImages = [];
-		selectedLocation = getDefaultSelectedLocation();
+		if (!isEditMode) {
+			selectedLocation = getDefaultSelectedLocation();
+		}
 		touched = {};
 	}
 
@@ -181,34 +191,59 @@
 				toast.error('请选择发布位置');
 				return;
 			}
-			const response = await momentsService.create({
-				description: description.trim(),
-				location: {
-					point: {
-						latitude: selectedLocation.latitude,
-						longitude: selectedLocation.longitude
+			if (isEditMode && editMoment) {
+				const response = await momentsService.update({
+					moment_id: editMoment.moment_id,
+					description: description.trim(),
+					location: {
+						point: {
+							latitude: selectedLocation.latitude,
+							longitude: selectedLocation.longitude
+						},
+						location_name: locationName
 					},
-					location_name: locationName
-				},
-				image_file_ids: imageIds.length > 0 ? imageIds : undefined,
-				tags: tags.length > 0 ? tags : undefined,
-				privacy_level: privacy
-			});
-
-			if (isSuccess(response)) {
-				toast.success('动态已发布');
-				resetForm();
-				open = false;
-				onOpenChange?.(false);
-				onCreated?.();
+					image_file_ids: imageIds.length > 0 ? imageIds : undefined,
+					tags: tags.length > 0 ? tags : undefined,
+					privacy_level: privacy
+				});
+				if (isSuccess(response)) {
+					toast.success('动态已更新');
+					open = false;
+					onOpenChange?.(false);
+					onEdited?.();
+				} else {
+					toast.error(response.message || '更新失败');
+				}
 			} else {
-				toast.error(response.message || '发布失败');
+				const response = await momentsService.create({
+					description: description.trim(),
+					location: {
+						point: {
+							latitude: selectedLocation.latitude,
+							longitude: selectedLocation.longitude
+						},
+						location_name: locationName
+					},
+					image_file_ids: imageIds.length > 0 ? imageIds : undefined,
+					tags: tags.length > 0 ? tags : undefined,
+					privacy_level: privacy
+				});
+
+				if (isSuccess(response)) {
+					toast.success('动态已发布');
+					resetForm();
+					open = false;
+					onOpenChange?.(false);
+					onCreated?.();
+				} else {
+					toast.error(response.message || '发布失败');
+				}
 			}
 		} catch (error) {
 			if (error instanceof Error && error.message === '图片上传失败') {
 				toast.error('图片上传失败，请重试');
 			} else {
-				toast.error('发布失败');
+				toast.error(isEditMode ? '更新失败' : '发布失败');
 			}
 		} finally {
 			isSubmitting = false;
@@ -218,6 +253,20 @@
 	$effect(() => {
 		if (!open) {
 			resetForm();
+		}
+	});
+
+	$effect(() => {
+		if (open && editMoment) {
+			description = editMoment.description;
+			tagsInput = editMoment.tags.join(' ');
+			privacy = editMoment.privacy_level ?? 'public';
+			selectedLocation = {
+				latitude: editMoment.location.point.latitude,
+				longitude: editMoment.location.point.longitude,
+				locationName: editMoment.location.location_name,
+				radius: mapAnchorStore.radius
+			};
 		}
 	});
 </script>
@@ -230,8 +279,8 @@
 					<Send class="h-5 w-5 text-primary" />
 				</div>
 				<div>
-					<div>发布动态</div>
-					<div class="text-sm font-normal text-muted-foreground">分享你此刻的生活瞬间</div>
+					<div>{dialogTitle}</div>
+					<div class="text-sm font-normal text-muted-foreground">{dialogSubtitle}</div>
 				</div>
 			</Dialog.Title>
 		</Dialog.Header>
@@ -311,6 +360,16 @@
 						{/each}
 					</div>
 				{/if}
+
+				{#if isEditMode && editMoment?.images && editMoment.images.length > 0}
+					<div class="grid gap-3 sm:grid-cols-3">
+						{#each editMoment.images as image (image.thumbnail_url ?? image.url)}
+							<div class="overflow-hidden rounded-xl border bg-muted/30">
+								<img src={image.thumbnail_url ?? image.url} alt="已有图片" class="h-28 w-full object-cover opacity-75" />
+							</div>
+						{/each}
+					</div>
+				{/if}
 			</div>
 
 			<div class="space-y-2">
@@ -341,7 +400,7 @@
 				{#if isSubmitting}
 					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 				{/if}
-				发布
+				{isEditMode ? '保存' : '发布'}
 			</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
