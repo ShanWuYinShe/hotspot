@@ -11,6 +11,7 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { SystemToast } from '../../../components/SystemToast';
 import { IconButton, AppIcon, IconSize } from '../../../components/SystemIcon';
+import { ShareActionHelper } from '../../../core/utils/ShareActionHelper';
 import { SystemShareService } from '../../../core/services/SystemShareService';
 import { common } from '@kit.AbilityKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
@@ -452,14 +453,16 @@ export struct GroupDetailPage {
     if (!this.groupInfo) return;
     try {
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-      const content = SystemShareService.buildGroupShareContent(
-        this.groupInfo.group?.name ?? '',
-        this.groupInfo.description,
-        this.groupInfo.group?.group_id ?? this.groupId
+      const groupName = this.groupInfo.group?.name ?? '群组';
+      await ShareActionHelper.shareResource(
+        context,
+        'group',
+        { shared_group_id: this.groupId },
+        `加入群组「${groupName}」`,
+        this.groupInfo.description ?? '在 GeoTalk 发现有趣的附近群组'
       );
-      await SystemShareService.getInstance().shareText(context, content);
     } catch {
-      // User cancelled or share failed - non-fatal
+      // 用户取消分享
     }
   }
 

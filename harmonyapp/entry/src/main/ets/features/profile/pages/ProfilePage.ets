@@ -27,6 +27,7 @@ import { AppIcon } from '../../../components/SystemIcon';
 import { EmptyState } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
+import { ShareActionHelper } from '../../../core/utils/ShareActionHelper';
 import { NfcShareService } from '../../../core/services/NfcShareService';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
@@ -194,6 +195,24 @@ export struct ProfilePage {
     params.targetId = userId;
     params.title = profile?.user?.nickname ?? '私聊';
     AppRouter.push(PageNames.CHAT, params);
+  }
+
+  private async shareProfileByCode(): Promise<void> {
+    const userId = this.viewedUserProfile?.user?.user_id;
+    if (!userId) return;
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      const nickname = this.viewedUserProfile?.user?.nickname ?? '用户';
+      await ShareActionHelper.shareResource(
+        context,
+        'user',
+        { shared_user_id: userId },
+        `来认识 ${nickname}`,
+        this.viewedUserProfile?.bio ?? '快来 GeoTalk 和附近的人交流吧！'
+      );
+    } catch {
+      // 用户取消分享
+    }
   }
 
   async aboutToAppear() {
@@ -787,6 +806,21 @@ export struct ProfilePage {
               .shadow(this.getProfileVisualStyle().primaryButton.shadow)
               .onClick(() => {
                 this.startPrivateChatWithViewedUser();
+              })
+
+            Button('分享')
+              .type(ButtonType.Normal)
+              .layoutWeight(1)
+              .height(this.getProfileVisualStyle().secondaryButton.height)
+              .fontSize(DesignConstants.FONT.SIZE.MD)
+              .fontWeight(FontWeight.Medium)
+              .backgroundColor(this.getProfileVisualStyle().secondaryButton.backgroundColor)
+              .fontColor(this.getProfileVisualStyle().secondaryButton.textColor)
+              .borderRadius(this.getProfileVisualStyle().secondaryButton.borderRadius)
+              .shadow(this.getProfileVisualStyle().secondaryButton.shadow)
+              .border({ width: this.getProfileVisualStyle().secondaryButton.borderWidth, color: this.getProfileVisualStyle().secondaryButton.borderColor })
+              .onClick(() => {
+                this.shareProfileByCode();
               })
 
             Button('返回')

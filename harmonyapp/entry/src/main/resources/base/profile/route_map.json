@@ -109,6 +109,11 @@
       "name": "DebugPanel",
       "pageSourceFile": "src/main/ets/features/debug/pages/DebugPanel.ets",
       "buildFunction": "DebugPanelBuilder"
+    },
+    {
+      "name": "ShareResolutionPage",
+      "pageSourceFile": "src/main/ets/features/share/pages/ShareResolutionPage.ets",
+      "buildFunction": "ShareResolutionPageBuilder"
     }
   ]
 }

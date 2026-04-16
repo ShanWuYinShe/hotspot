@@ -63,6 +63,23 @@ export class AnnouncementsRouteParam {
   focusAnnouncementId: string = '';
 }
 
+/** 编辑瞬间页参数 */
+export class EditMomentRouteParam {
+  moment_id: string = '';
+  description: string = '';
+  tags: string[] = [];
+  existingImageUrls: string[] = [];
+  privacy_level: string = 'public';
+  location_name: string = '';
+  latitude: number = 0;
+  longitude: number = 0;
+}
+
+/** 分享解析页参数 */
+export class ShareResolutionRouteParam {
+  share_code: string = '';
+}
+
 const DOMAIN_NUMBER: number = 0xFF20;
 const TAG: string = 'AppRouter';
 

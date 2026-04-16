@@ -16,11 +16,12 @@ import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { SystemCard } from '../../../components/SystemCard';
-import { ApiResponse, CreateMomentRequest, MomentItem, GeoPoint } from '../../../core/types/api';
+import { ApiResponse, CreateMomentRequest, MomentItem, GeoPoint, PrivacyLevel } from '../../../core/types/api';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
-import { AppRouter, LocationPickerRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, LocationPickerRouteParam, EditMomentRouteParam } from '../../../core/router/AppRouter';
+import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
@@ -50,6 +51,10 @@ export struct CreateMomentPage {
   @State isPublishing: boolean = false;
   @State localLocation: LocationInfo | null = null;
   @State publishingMessage: string = ''; // 显示发布进度提示
+  @State isEditMode: boolean = false;
+  @State editMomentId: string = '';
+  @State existingImageUrls: string[] = [];
+  @State privacyLevel: string = 'public';
 
   async aboutToAppear() {
     SystemUiController.syncWithCurrentTheme();
@@ -258,32 +263,47 @@ export struct CreateMomentPage {
         }
         
         this.publishingMessage = '正在发布...';
-        
+
         const geoPoint: GeoPoint = {
           latitude: localLoc.latitude,
           longitude: localLoc.longitude
         };
-        const request: CreateMomentRequest = {
-          description: this.description.trim(),
-          location: {
-            point: geoPoint,
-            location_name: localLoc.locationName || "未知位置"
-          },
-          tags: this.tags.length > 0 ? this.tags : undefined,
-          image_file_ids: imageFileIds.length > 0 ? imageFileIds : undefined
-        };
 
-        const response: ApiResponse<MomentItem> = await ApiClient.createMoment(request);
+        let response: ApiResponse<MomentItem>;
+        if (this.isEditMode) {
+          response = await ApiClient.updateMoment({
+            moment_id: this.editMomentId,
+            description: this.description.trim(),
+            location: {
+              point: geoPoint,
+              location_name: localLoc.locationName || "未知位置"
+            },
+            tags: this.tags.length > 0 ? this.tags : undefined,
+            image_file_ids: imageFileIds.length > 0 ? imageFileIds : undefined,
+            privacy_level: this.privacyLevel as PrivacyLevel
+          });
+        } else {
+          const request: CreateMomentRequest = {
+            description: this.description.trim(),
+            location: {
+              point: geoPoint,
+              location_name: localLoc.locationName || "未知位置"
+            },
+            tags: this.tags.length > 0 ? this.tags : undefined,
+            image_file_ids: imageFileIds.length > 0 ? imageFileIds : undefined
+          };
+          response = await ApiClient.createMoment(request);
+        }
 
         if (response.code === 0) {
-          SystemToast.showSuccess('瞬间发布成功', this.getUIContext());
+          SystemToast.showSuccess(this.isEditMode ? '瞬间已更新' : '瞬间发布成功', this.getUIContext());
           AppRouter.pop();
         } else {
-          SystemToast.showError(response.message || '发布瞬间失败', this.getUIContext());
+          SystemToast.showError(response.message || (this.isEditMode ? '更新瞬间失败' : '发布瞬间失败'), this.getUIContext());
         }
       }, LoadingUtil.DEFAULT_ACTION_MS);
     } catch (error) {
-      SystemToast.showError('发布瞬间失败', this.getUIContext());
+      SystemToast.showError(this.isEditMode ? '更新瞬间失败' : '发布瞬间失败', this.getUIContext());
     } finally {
       this.isPublishing = false;
     }
@@ -331,14 +351,14 @@ export struct CreateMomentPage {
           }
         })
 
-        Text('发布瞬间')
+        Text(this.isEditMode ? '编辑瞬间' : '发布瞬间')
           .fontSize(DesignConstants.FONT.SIZE.XL)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
 
-        Button('发布')
+        Button(this.isEditMode ? '保存' : '发布')
           .type(ButtonType.Capsule)
           .backgroundColor(this.getCurrentThemePalette().accentBackground)
           .fontColor(this.getCurrentThemePalette().accentText)
@@ -401,6 +421,29 @@ export struct CreateMomentPage {
               .margin({ bottom: DesignConstants.SPACING.MD })
 
               // 使用 Grid 组件显示图片
+              if (this.isEditMode && this.existingImageUrls.length > 0) {
+                Text('已有图片')
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
+                  .margin({ top: 8 })
+
+                Grid() {
+                  ForEach(this.existingImageUrls, (url: string, index: number) => {
+                    GridItem() {
+                      Image(MediaUrlUtil.normalize(url))
+                        .width('100%')
+                        .height(110)
+                        .objectFit(ImageFit.Cover)
+                        .borderRadius(DesignConstants.RADIUS.MD)
+                    }
+                  }, (url: string, index: number) => `existing_${index}_${url}`)
+                }
+                .columnsTemplate('1fr 1fr 1fr')
+                .rowsGap(8)
+                .columnsGap(8)
+                .margin({ bottom: DesignConstants.SPACING.MD })
+              }
+
               Grid() {
                 // 已选图片
                 ForEach(this.imageUrls, (imageUrl: string, index: number) => {
@@ -600,6 +643,22 @@ export struct CreateMomentPage {
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {
       this.pathStack = context.pathStack;
+      const param = context.pathInfo?.param;
+      // 检查编辑参数
+      const editParam = param as EditMomentRouteParam | undefined;
+      if (editParam && editParam.moment_id) {
+        this.isEditMode = true;
+        this.editMomentId = editParam.moment_id;
+        this.description = editParam.description;
+        this.tags = [...editParam.tags];
+        this.existingImageUrls = [...editParam.existingImageUrls];
+        this.privacyLevel = editParam.privacy_level ?? 'public';
+        this.localLocation = {
+          latitude: editParam.latitude,
+          longitude: editParam.longitude,
+          locationName: editParam.location_name
+        };
+      }
     })
   }
 

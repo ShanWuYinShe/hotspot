@@ -27,6 +27,7 @@ import { PreferencesUtil } from '../core/storage/PreferencesUtil';
 import { StorageKeys } from '../constants/AppConstants';
 import { ApiClient } from '../core/api/ApiClient';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { AppRouter, ShareResolutionRouteParam } from '../core/router/AppRouter';
 
 const DOMAIN_NUMBER: number = 0xFF00;
 const TAG: string = 'GeoTalk';
@@ -478,9 +479,23 @@ export default class EntryAbility extends UIAbility {
    * 处理新的Want请求
    */
   private handleNewWant(want: Want): void {
-    // 处理分享、深度链接等
     if (want.action === 'ohos.want.action.sendData') {
       hilog.info(DOMAIN_NUMBER, TAG, '接收到分享请求');
+      return;
+    }
+
+    // 处理深链接：解析 /share/{code} 路径
+    const uri = want.uri;
+    if (uri) {
+      const shareMatch = uri.match(/\/share\/([A-HJ-NP-Z2-9]{12})$/i);
+      if (shareMatch && shareMatch[1]) {
+        const shareCode = shareMatch[1].toUpperCase();
+        hilog.info(DOMAIN_NUMBER, TAG, `Deep link share code: ${shareCode}`);
+        const param = new ShareResolutionRouteParam();
+        param.share_code = shareCode;
+        AppRouter.push('ShareResolutionPage', param);
+        return;
+      }
     }
   }
 

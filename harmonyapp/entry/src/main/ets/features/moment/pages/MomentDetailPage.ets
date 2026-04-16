@@ -4,14 +4,15 @@
  */
 
 import { ApiClient } from '../../../core/api/ApiClient';
-import { GlobalStateManager } from '../../../core/state/GlobalStateManager';
+import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { interactionActions } from '../../../core/state/InteractionActions';
 import { InteractionStateStore, MomentSocialState } from '../../../core/state/InteractionStateStore';
-import { AppRouter, PhotoPreviewRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, EditMomentRouteParam, PhotoPreviewRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import {
   MomentImage,
   MomentItem,
+  MyProfile,
 } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -23,6 +24,7 @@ import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil'
 import { KEY_BROWSE_ANCHOR } from '../../../core/state/GlobalStateManager';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
+import { ShareActionHelper } from '../../../core/utils/ShareActionHelper';
 import { SystemShareService } from '../../../core/services/SystemShareService';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { formatCount } from '../../../core/utils/FormatUtil';
@@ -56,6 +58,7 @@ export struct MomentDetailPage {
   @State errorMessage: string = '';
   @State likePending: boolean = false;
   @State favoritePending: boolean = false;
+  @StorageLink(KEY_CURRENT_USER) currentUser: MyProfile | null = null;
 
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
@@ -152,15 +155,35 @@ export struct MomentDetailPage {
     if (!this.moment) return;
     try {
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-      const content = SystemShareService.buildMomentShareContent(
-        this.moment.description,
-        this.moment.user?.nickname ?? '匿名用户',
-        this.moment.moment_id
+      await ShareActionHelper.shareResource(
+        context,
+        'moment',
+        { shared_moment_id: this.moment.moment_id },
+        `${this.moment.user?.nickname ?? '匿名'} 的动态`,
+        this.moment.description.length > 100 ? this.moment.description.substring(0, 100) + '...' : this.moment.description
       );
-      await SystemShareService.getInstance().shareText(context, content);
     } catch {
-      // 用户取消分享或系统分享失败，不阻断主流程
+      // 用户取消分享
     }
+  }
+
+  private isOwner(): boolean {
+    if (!this.moment || !this.currentUser) return false;
+    return this.moment.user.user_id === this.currentUser.user_id;
+  }
+
+  private editMoment(): void {
+    if (!this.moment) return;
+    const param = new EditMomentRouteParam();
+    param.moment_id = this.moment.moment_id;
+    param.description = this.moment.description;
+    param.tags = [...this.moment.tags];
+    param.existingImageUrls = this.moment.images?.map(img => img.url) ?? [];
+    param.privacy_level = this.moment.privacy_level ?? 'public';
+    param.location_name = this.moment.location?.location_name ?? '';
+    param.latitude = this.moment.location?.point.latitude ?? 0;
+    param.longitude = this.moment.location?.point.longitude ?? 0;
+    AppRouter.push(PageNames.CREATE_MOMENT, param);
   }
 
   private previewImage(index: number): void {
@@ -247,6 +270,16 @@ export struct MomentDetailPage {
         .fontWeight(FontWeight.Bold)
         .fontColor(this.getCurrentThemePalette().textPrimary)
         .layoutWeight(1)
+
+      if (this.isOwner()) {
+        IconButton({
+          icon: AppIcon.EDIT,
+          iconSize: IconSize.LARGE,
+          iconColor: this.getCurrentThemePalette().textPrimary,
+          bgColor: this.getSurfaceSubtle(),
+          onButtonClick: () => this.editMoment()
+        })
+      }
     }
     .width('100%')
     .padding({
