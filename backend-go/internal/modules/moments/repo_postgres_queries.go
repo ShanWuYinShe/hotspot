@@ -89,6 +89,13 @@ WHERE privacy_level != 'private'
 ORDER BY created_at DESC, moment_id DESC
 LIMIT $3`
 
+	querySearchMomentsAll = `
+SELECT moment_id, user_id, description, created_at, likes_count, comments_count, shares_count, location_name, latitude, longitude, privacy_level
+FROM moments
+WHERE privacy_level != 'private'
+  AND ($1::text IS NULL OR description ILIKE '%' || $1 || '%')
+  AND ($2::text IS NULL OR moment_id IN (SELECT moment_id FROM moment_tags WHERE tag_name = $2))`
+
 	queryInsertMomentLike = `
 INSERT INTO moment_likes (moment_id, user_id, liked_at)
 VALUES ($1, $2, $3)

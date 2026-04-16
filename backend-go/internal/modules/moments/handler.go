@@ -32,7 +32,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req CreateMomentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Description == "" || req.Location.LocationName == "" {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Description == "" || (req.Location.Point.Latitude == 0 && req.Location.Point.Longitude == 0) {
 		logBusinessError(r, "Create", 10000, "参数错误")
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
@@ -95,6 +95,15 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
+	if req.SortBy != "" {
+		switch req.SortBy {
+		case "relevance", "distance", "newest", "popular":
+		default:
+			logBusinessError(r, "Search", 10000, "参数错误")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+			return
+		}
+	}
 	result, err := h.service.Search(r.Context(), req)
 	if err != nil {
 		logServerError(r, "Search", err)
@@ -144,8 +153,8 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err == ErrPermissionDenied {
-			logBusinessError(r, "Delete", 10400, "权限不足")
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10400, "权限不足"))
+			logBusinessError(r, "Delete", 10200, "权限不足")
+			httpx.WriteJSON(w, http.StatusOK, httpx.Error(10200, "权限不足"))
 			return
 		}
 		logServerError(r, "Delete", err)

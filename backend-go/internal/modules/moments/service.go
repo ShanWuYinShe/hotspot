@@ -74,6 +74,18 @@ func (s *Service) Exists(ctx context.Context, momentID string) (bool, error) {
 	return s.repo.Exists(ctx, momentID)
 }
 
+func (s *Service) CheckCommentable(ctx context.Context, momentID string) (found bool, canComment bool, err error) {
+	item, ok, err := s.repo.Get(ctx, momentID)
+	if err != nil || !ok {
+		return ok, false, err
+	}
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	if item.PrivacyLevel == "private" && item.User.UserID != principal.UserID {
+		return true, false, nil
+	}
+	return true, true, nil
+}
+
 func (s *Service) IncrementCommentCount(ctx context.Context, momentID string) error {
 	return s.repo.IncrementCommentCount(ctx, momentID)
 }

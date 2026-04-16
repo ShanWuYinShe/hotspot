@@ -1,7 +1,6 @@
 package users
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -32,7 +31,7 @@ func (h *Handler) GetMyProfile(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateMyProfile(w http.ResponseWriter, r *http.Request) {
 	var req UpdateProfileRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}
@@ -58,7 +57,7 @@ func (h *Handler) GetMySettings(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UpdateMySettings(w http.ResponseWriter, r *http.Request) {
 	var req UpdateSettingsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "请求体格式错误"))
 		return
 	}

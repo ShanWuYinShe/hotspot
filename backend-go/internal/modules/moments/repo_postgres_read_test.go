@@ -3,7 +3,9 @@ package moments
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -405,6 +407,50 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 			rows = append(rows, []any{item.MomentID, item.User.UserID, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, row.favoritedAt})
 		}
 		return &rowsValues{rows: rows}, nil
+	case querySearchMoments, querySearchMomentsAll:
+		var keywordStr string
+		if args[0] != nil {
+			if kp, ok := args[0].(*string); ok && kp != nil {
+				keywordStr = *kp
+			}
+		}
+		var tagFilter string
+		if args[1] != nil {
+			if tp, ok := args[1].(*string); ok && tp != nil {
+				tagFilter = *tp
+			}
+		}
+		limit := -1
+		if query == querySearchMoments {
+			limit = args[2].(int)
+		}
+		items := make([]MomentItem, 0)
+		for _, item := range b.moments {
+			if item.PrivacyLevel == "private" {
+				continue
+			}
+			if keywordStr != "" && !containsTagInDescription(item.Description, keywordStr) {
+				continue
+			}
+			if tagFilter != "" && !containsTag(item.Tags, tagFilter) {
+				continue
+			}
+			items = append(items, item)
+		}
+		sort.Slice(items, func(i, j int) bool {
+			if items[i].CreatedAt == items[j].CreatedAt {
+				return items[i].MomentID > items[j].MomentID
+			}
+			return items[i].CreatedAt > items[j].CreatedAt
+		})
+		if limit >= 0 && len(items) > limit {
+			items = items[:limit]
+		}
+		rows := make([][]any, 0, len(items))
+		for _, item := range items {
+			rows = append(rows, []any{item.MomentID, item.User.UserID, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel})
+		}
+		return &rowsValues{rows: rows}, nil
 	default:
 		return &persistence.InMemoryRows{}, nil
 	}
@@ -667,5 +713,141 @@ func TestPostgresRepositoryInteractionReadsReturnErrorsWithoutFallback(t *testin
 	}
 	if _, err := repo.ListFavorites(context.Background(), "user_bob", 20, ""); err == nil {
 		t.Fatal("expected list favorites error")
+	}
+}
+
+func containsTagInDescription(description, keyword string) bool {
+	return strings.Contains(description, keyword)
+}
+
+func TestPostgresRepositorySearchSortByPopularReturnsOlderPopularMoments(t *testing.T) {
+	// Regression test: before the fix, the Postgres search path always fetched
+	// LIMIT (limit+1) rows ordered by created_at DESC, then re-sorted in Go for
+	// non-newest modes. This meant older but more popular moments were excluded
+	// from the candidate window. This test verifies that sort_by=popular returns
+	// older moments when they have higher engagement.
+	backend := newBackendStub()
+	// newest moment, low engagement
+	backend.moments["moment_new"] = MomentItem{
+		MomentID: "moment_new", Description: "new quiet post", CreatedAt: "2026-04-15T00:00:00Z",
+		LikesCount: 0, CommentsCount: 0, SharesCount: 0,
+		User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public",
+		Location: Location{Point: struct {
+			Latitude  float64 `json:"latitude"`
+			Longitude float64 `json:"longitude"`
+		}{Latitude: 35.0, Longitude: 112.0}},
+	}
+	// older moment, high engagement
+	backend.moments["moment_old_popular"] = MomentItem{
+		MomentID: "moment_old_popular", Description: "old viral post", CreatedAt: "2026-04-01T00:00:00Z",
+		LikesCount: 100, CommentsCount: 50, SharesCount: 0,
+		User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public",
+		Location: Location{Point: struct {
+			Latitude  float64 `json:"latitude"`
+			Longitude float64 `json:"longitude"`
+		}{Latitude: 35.0, Longitude: 112.0}},
+	}
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	repo := NewPostgresRepository(factory, &fallbackRepo{})
+
+	keyword := "post"
+	result, err := repo.Search(context.Background(), SearchMomentsRequest{
+		Keyword:        &keyword,
+		SortBy:         "popular",
+		Pagination:     &PaginationParams{Limit: 1},
+		ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result.Items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(result.Items))
+	}
+	if result.Items[0].MomentID != "moment_old_popular" {
+		t.Fatalf("expected most popular moment (moment_old_popular), got %s — older popular moment was excluded by newest-first limit", result.Items[0].MomentID)
+	}
+}
+
+func TestPostgresRepositorySearchSortByDistanceReturnsCloserOlderMoments(t *testing.T) {
+	// Regression test: sort_by=distance must return the closest moment even if it's
+	// older than the LIMIT window of newest-first ordering.
+	backend := newBackendStub()
+	// newest but far
+	backend.moments["moment_new_far"] = MomentItem{
+		MomentID: "moment_new_far", Description: "far away", CreatedAt: "2026-04-15T00:00:00Z",
+		LikesCount: 0, CommentsCount: 0, SharesCount: 0,
+		User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public",
+		Location: Location{Point: struct {
+			Latitude  float64 `json:"latitude"`
+			Longitude float64 `json:"longitude"`
+		}{Latitude: 40.0, Longitude: 116.0}},
+	}
+	// older but very close
+	backend.moments["moment_old_close"] = MomentItem{
+		MomentID: "moment_old_close", Description: "nearby", CreatedAt: "2026-04-01T00:00:00Z",
+		LikesCount: 0, CommentsCount: 0, SharesCount: 0,
+		User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public",
+		Location: Location{Point: struct {
+			Latitude  float64 `json:"latitude"`
+			Longitude float64 `json:"longitude"`
+		}{Latitude: 35.001, Longitude: 112.001}},
+	}
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	repo := NewPostgresRepository(factory, &fallbackRepo{})
+
+	result, err := repo.Search(context.Background(), SearchMomentsRequest{
+		SortBy:         "distance",
+		Pagination:     &PaginationParams{Limit: 1},
+		ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result.Items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(result.Items))
+	}
+	if result.Items[0].MomentID != "moment_old_close" {
+		t.Fatalf("expected closest moment (moment_old_close), got %s — closer older moment was excluded by newest-first limit", result.Items[0].MomentID)
+	}
+}
+
+func TestPostgresRepositorySearchSortByNewestAppliesLimit(t *testing.T) {
+	// Verify that sort_by=newest still uses the efficient LIMIT path and returns
+	// only the newest moments up to the requested limit.
+	backend := newBackendStub()
+	for i := 0; i < 5; i++ {
+		id := fmt.Sprintf("moment_%d", i)
+		backend.moments[id] = MomentItem{
+			MomentID: id, Description: "post", CreatedAt: fmt.Sprintf("2026-04-%02dT00:00:00Z", 10+i),
+			LikesCount: 0, CommentsCount: 0, SharesCount: 0,
+			User: UserInfo{UserID: "user_alice"}, PrivacyLevel: "public",
+			Location: Location{Point: struct {
+				Latitude  float64 `json:"latitude"`
+				Longitude float64 `json:"longitude"`
+			}{Latitude: 35.0, Longitude: 112.0}},
+		}
+	}
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	repo := NewPostgresRepository(factory, &fallbackRepo{})
+
+	result, err := repo.Search(context.Background(), SearchMomentsRequest{
+		SortBy:         "newest",
+		Pagination:     &PaginationParams{Limit: 3},
+		ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result.Items) != 3 {
+		t.Fatalf("expected 3 items, got %d", len(result.Items))
+	}
+	if result.Items[0].MomentID != "moment_4" {
+		t.Fatalf("expected newest moment (moment_4), got %s", result.Items[0].MomentID)
+	}
+	if result.NextCursor == "" {
+		t.Fatal("expected next cursor for newest with more results")
 	}
 }

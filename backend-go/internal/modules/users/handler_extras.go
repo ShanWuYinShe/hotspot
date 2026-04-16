@@ -3,6 +3,7 @@ package users
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
@@ -157,11 +158,28 @@ func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
+	if !isValidLoginID(req.LoginID) {
+		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
+		return
+	}
 	if err := h.service.Upgrade(r.Context(), req); err != nil {
 		h.writeServiceError(w, r, "Upgrade", err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
+}
+
+func isValidLoginID(loginID string) bool {
+	if strings.Contains(loginID, "@") {
+		parts := strings.SplitN(loginID, "@", 2)
+		return len(parts[0]) > 0 && len(parts[1]) > 0 && strings.Contains(parts[1], ".")
+	}
+	for _, c := range loginID {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return len(loginID) >= 5
 }
 
 func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
@@ -170,7 +188,7 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, httpx.Error(10000, "参数错误"))
 		return
 	}
-	if err := h.service.DeleteAccount(r.Context()); err != nil {
+	if err := h.service.DeleteAccount(r.Context(), req); err != nil {
 		h.writeServiceError(w, r, "DeleteAccount", err)
 		return
 	}

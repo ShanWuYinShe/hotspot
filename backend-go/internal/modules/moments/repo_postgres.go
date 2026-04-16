@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/persistence"
 
 	"github.com/jackc/pgx/v5"
@@ -118,17 +119,27 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 	if limit > 100 {
 		limit = 100
 	}
+	sortBy := req.SortBy
+	if sortBy == "" {
+		sortBy = "relevance"
+	}
 	var keyword *string
 	if req.Keyword != nil && *req.Keyword != "" {
 		keyword = req.Keyword
 	}
-	rows, err := queryable.Query(ctx, querySearchMoments, keyword, req.Tag, limit+1)
+	var rows persistence.Rows
+	var err error
+	if sortBy == "newest" {
+		rows, err = queryable.Query(ctx, querySearchMoments, keyword, req.Tag, limit+1)
+	} else {
+		rows, err = queryable.Query(ctx, querySearchMomentsAll, keyword, req.Tag)
+	}
 	if err != nil {
 		return PaginatedMoments{}, err
 	}
 	defer rows.Close()
-	items := make([]MomentItem, 0, limit+1)
-	momentIDs := make([]string, 0, limit+1)
+	items := make([]MomentItem, 0)
+	momentIDs := make([]string, 0)
 	for rows.Next() {
 		item, err := scanMomentRow(rows)
 		if err != nil {
@@ -148,6 +159,16 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 		items[i].Tags = tagsByMomentID[items[i].MomentID]
 		items[i].MyState = &MyMomentState{}
 	}
+	refPt := geo.Point{Latitude: req.ReferencePoint.Latitude, Longitude: req.ReferencePoint.Longitude}
+	sortKeyword := ""
+	if req.Keyword != nil {
+		sortKeyword = *req.Keyword
+	}
+	sortTag := ""
+	if req.Tag != nil {
+		sortTag = *req.Tag
+	}
+	sortMoments(items, sortBy, refPt, sortKeyword, sortTag)
 	if len(items) > limit {
 		return PaginatedMoments{Items: items[:limit], NextCursor: items[limit].MomentID}, nil
 	}
