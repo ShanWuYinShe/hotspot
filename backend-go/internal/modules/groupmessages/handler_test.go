@@ -4,88 +4,60 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	platformauth "hotspot/backend-go/internal/platform/auth"
 )
 
-type groupMessageErrorRepo struct {
+// --- stub repo ---
+
+type stubGroupMessageRepo struct {
+	sendResult MessageSent
 	sendErr    error
-	historyErr error
+	histResult PaginatedGroupMessages
+	histErr    error
+	updateMeta MessageEventMeta
+	updateErr  error
+	recallMeta MessageEventMeta
+	recallErr  error
+	markReadFn func(context.Context, string, MarkGroupMessagesReadRequest) error
+	markAllErr error
 }
 
-func (r *groupMessageErrorRepo) Send(context.Context, SendGroupMessageRequest) (MessageSent, error) {
-	return MessageSent{}, r.sendErr
+func (r *stubGroupMessageRepo) Send(_ context.Context, _ SendGroupMessageRequest) (MessageSent, error) {
+	return r.sendResult, r.sendErr
 }
-func (r *groupMessageErrorRepo) History(context.Context, string, *PaginationParams) (PaginatedGroupMessages, error) {
-	return PaginatedGroupMessages{}, r.historyErr
+func (r *stubGroupMessageRepo) History(_ context.Context, _ string, _ *PaginationParams) (PaginatedGroupMessages, error) {
+	return r.histResult, r.histErr
 }
-func (r *groupMessageErrorRepo) Update(context.Context, UpdateGroupMessageRequest) (MessageEventMeta, error) {
-	return MessageEventMeta{}, nil
+func (r *stubGroupMessageRepo) Update(_ context.Context, _ UpdateGroupMessageRequest) (MessageEventMeta, error) {
+	return r.updateMeta, r.updateErr
 }
-func (r *groupMessageErrorRepo) Recall(context.Context, RecallGroupMessageRequest) (MessageEventMeta, error) {
-	return MessageEventMeta{}, nil
+func (r *stubGroupMessageRepo) Recall(_ context.Context, _ RecallGroupMessageRequest) (MessageEventMeta, error) {
+	return r.recallMeta, r.recallErr
 }
-func (r *groupMessageErrorRepo) MarkAsRead(context.Context, string, MarkGroupMessagesReadRequest) error {
+func (r *stubGroupMessageRepo) MarkAsRead(ctx context.Context, userID string, req MarkGroupMessagesReadRequest) error {
+	if r.markReadFn != nil {
+		return r.markReadFn(ctx, userID, req)
+	}
 	return nil
 }
-func (r *groupMessageErrorRepo) MarkAllRead(context.Context, string) error {
-	return nil
+func (r *stubGroupMessageRepo) MarkAllRead(_ context.Context, _ string) error {
+	return r.markAllErr
 }
 
-func TestSendAndHistoryGroupMessages(t *testing.T) {
-	handler := NewHandler(NewService())
-	sendReq := httptest.NewRequest(http.MethodPost, "/send", strings.NewReader(`{"group_id":"group_1","type":"text","content":"hello"}`))
-	sendReq.Header.Set("Idempotency-Key", "abcd1234abcd1234abcd1234abcd1234")
-	sendRR := httptest.NewRecorder()
-	handler.Send(sendRR, sendReq)
+// --- helpers ---
 
-	historyReq := httptest.NewRequest(http.MethodPost, "/get_history", strings.NewReader(`{"group_id":"group_1"}`))
-	historyRR := httptest.NewRecorder()
-	handler.History(historyRR, historyReq)
-	var historyResp struct {
-		Code int                    `json:"code"`
-		Data PaginatedGroupMessages `json:"data"`
-	}
-	_ = json.NewDecoder(historyRR.Body).Decode(&historyResp)
-	if historyResp.Code != 0 || len(historyResp.Data.Items) != 1 {
-		t.Fatalf("unexpected history response: %#v", historyResp)
-	}
+func gmCtx(userID string) *http.Request {
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	return req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: userID}))
 }
 
-func TestGroupMessagesHandlerReturns10600OnServiceError(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(&groupMessageErrorRepo{sendErr: errors.New("boom"), historyErr: errors.New("boom")}))
-
-	sendReq := httptest.NewRequest(http.MethodPost, "/send", strings.NewReader(`{"group_id":"group_1","type":"text","content":"hello"}`))
-	sendReq.Header.Set("Idempotency-Key", "efgh1234efgh1234efgh1234efgh1234")
-	sendRR := httptest.NewRecorder()
-	handler.Send(sendRR, sendReq)
-	assertGroupMessageCode(t, sendRR, 10600)
-
-	historyReq := httptest.NewRequest(http.MethodPost, "/get_history", strings.NewReader(`{"group_id":"group_1"}`))
-	historyRR := httptest.NewRecorder()
-	handler.History(historyRR, historyReq)
-	assertGroupMessageCode(t, historyRR, 10600)
-}
-
-func TestMarkAllReadRequiresEmptyObject(t *testing.T) {
-	handler := NewHandler(NewService())
-	req := httptest.NewRequest(http.MethodPost, "/me/mark_all_read", strings.NewReader(`{"unexpected":true}`))
-	rr := httptest.NewRecorder()
-	handler.MarkAllRead(rr, req)
-	assertGroupMessageCode(t, rr, 10000)
-}
-
-func TestMarkAsReadRejectsUnknownFields(t *testing.T) {
-	handler := NewHandler(NewService())
-	req := httptest.NewRequest(http.MethodPost, "/me/mark_as_read", strings.NewReader(`{"group_id":"group_1","unexpected":true}`))
-	rr := httptest.NewRecorder()
-	handler.MarkAsRead(rr, req)
-	assertGroupMessageCode(t, rr, 10000)
-}
-
-func assertGroupMessageCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
+func gmAssertCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {
 	t.Helper()
 	var resp struct {
 		Code int `json:"code"`
@@ -94,6 +66,371 @@ func assertGroupMessageCode(t *testing.T, rr *httptest.ResponseRecorder, expecte
 		t.Fatalf("decode response: %v", err)
 	}
 	if resp.Code != expected {
-		t.Fatalf("expected code %d, got %#v", expected, resp)
+		t.Fatalf("expected code %d, got %d (body: %s)", expected, resp.Code, rr.Body.String())
 	}
+}
+
+// --- Send tests ---
+
+func TestHandlerSendRejectsMissingIdempotencyKey(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{"group_id":"g1","type":"text","content":"hi"}`))
+
+	rr := httptest.NewRecorder()
+	handler.Send(rr, req)
+	gmAssertCode(t, rr, 10000)
+}
+
+func TestHandlerSendRejectsInvalidJSON(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{bad`))
+	req.Header.Set("Idempotency-Key", "aaaa1111aaaa1111aaaa1111aaaa1111")
+
+	rr := httptest.NewRecorder()
+	handler.Send(rr, req)
+	gmAssertCode(t, rr, 10000)
+}
+
+func TestHandlerSendRejectsMissingGroupID(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{"type":"text","content":"hi"}`))
+	req.Header.Set("Idempotency-Key", "bbbb1111bbbb1111bbbb1111bbbb1111")
+
+	rr := httptest.NewRecorder()
+	handler.Send(rr, req)
+	gmAssertCode(t, rr, 10000)
+}
+
+func TestHandlerSendRejectsMissingType(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{"group_id":"g1","content":"hi"}`))
+	req.Header.Set("Idempotency-Key", "cccc1111cccc1111cccc1111cccc1111")
+
+	rr := httptest.NewRecorder()
+	handler.Send(rr, req)
+	gmAssertCode(t, rr, 10000)
+}
+
+func TestHandlerSendHappyPath(t *testing.T) {
+	repo := &stubGroupMessageRepo{sendResult: MessageSent{MessageID: "m1", SentAt: "2026-01-01T00:00:00Z"}}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{"group_id":"g1","type":"text","content":"hi"}`))
+	req.Header.Set("Idempotency-Key", "dddd1111dddd1111dddd1111dddd1111")
+
+	rr := httptest.NewRecorder()
+	handler.Send(rr, req)
+	var resp struct {
+		Code int `json:"code"`
+		Data struct {
+			MessageID string `json:"message_id"`
+		} `json:"data"`
+	}
+	json.NewDecoder(rr.Body).Decode(&resp)
+	if resp.Code != 0 || resp.Data.MessageID != "m1" {
+		t.Fatalf("unexpected: %+v", resp)
+	}
+}
+
+func TestHandlerSendReturns10600OnError(t *testing.T) {
+	repo := &stubGroupMessageRepo{sendErr: errors.New("boom")}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{"group_id":"g1","type":"text","content":"hi"}`))
+	req.Header.Set("Idempotency-Key", "eeee1111eeee1111eeee1111eeee1111")
+
+	rr := httptest.NewRecorder()
+	handler.Send(rr, req)
+	gmAssertCode(t, rr, 10600)
+}
+
+// --- Update tests ---
+
+func TestHandlerUpdateRejectsInvalidJSON(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{bad`))
+
+	rr := httptest.NewRecorder()
+	handler.Update(rr, req)
+	gmAssertCode(t, rr, 10000)
+}
+
+func TestHandlerUpdateRejectsMissingMessageID(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{"content":"edited"}`))
+
+	rr := httptest.NewRecorder()
+	handler.Update(rr, req)
+	gmAssertCode(t, rr, 10000)
+}
+
+func TestHandlerUpdateRejectsEmptyContent(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{"message_id":"m1","content":""}`))
+
+	rr := httptest.NewRecorder()
+	handler.Update(rr, req)
+	gmAssertCode(t, rr, 10000)
+}
+
+func TestHandlerUpdateMapsErrors(t *testing.T) {
+	tests := []struct {
+		name     string
+		repoErr  error
+		expected int
+	}{
+		{"not found", ErrMessageNotFound, 10300},
+		{"permission denied", ErrPermissionDenied, 10200},
+		{"recalled", ErrMessageRecalled, 10400},
+		{"not editable", ErrMessageNotEditable, 10400},
+		{"internal", errors.New("boom"), 10600},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := &stubGroupMessageRepo{updateErr: tc.repoErr}
+			handler := NewHandler(NewServiceWithRepo(repo))
+			req := gmCtx("u1")
+			req.Body = io.NopCloser(strings.NewReader(`{"message_id":"m1","content":"edited"}`))
+
+			rr := httptest.NewRecorder()
+			handler.Update(rr, req)
+			gmAssertCode(t, rr, tc.expected)
+		})
+	}
+}
+
+func TestHandlerUpdateHappyPath(t *testing.T) {
+	repo := &stubGroupMessageRepo{updateMeta: MessageEventMeta{GroupID: "g1", MessageID: "m1"}}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{"message_id":"m1","content":"edited"}`))
+
+	rr := httptest.NewRecorder()
+	handler.Update(rr, req)
+	gmAssertCode(t, rr, 0)
+}
+
+// --- Recall tests ---
+
+func TestHandlerRecallRejectsInvalidJSON(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{bad`))
+
+	rr := httptest.NewRecorder()
+	handler.Recall(rr, req)
+	gmAssertCode(t, rr, 10000)
+}
+
+func TestHandlerRecallRejectsMissingMessageID(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{}`))
+
+	rr := httptest.NewRecorder()
+	handler.Recall(rr, req)
+	gmAssertCode(t, rr, 10000)
+}
+
+func TestHandlerRecallMapsErrors(t *testing.T) {
+	tests := []struct {
+		name     string
+		repoErr  error
+		expected int
+	}{
+		{"not found", ErrMessageNotFound, 10300},
+		{"permission denied", ErrPermissionDenied, 10200},
+		{"already recalled", ErrMessageRecalled, 10400},
+		{"recall window expired", ErrMessageRecallWindow, 10400},
+		{"internal", errors.New("boom"), 10600},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := &stubGroupMessageRepo{recallErr: tc.repoErr}
+			handler := NewHandler(NewServiceWithRepo(repo))
+			req := gmCtx("u1")
+			req.Body = io.NopCloser(strings.NewReader(`{"message_id":"m1"}`))
+
+			rr := httptest.NewRecorder()
+			handler.Recall(rr, req)
+			gmAssertCode(t, rr, tc.expected)
+		})
+	}
+}
+
+func TestHandlerRecallHappyPath(t *testing.T) {
+	repo := &stubGroupMessageRepo{recallMeta: MessageEventMeta{GroupID: "g1", MessageID: "m1"}}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{"message_id":"m1"}`))
+
+	rr := httptest.NewRecorder()
+	handler.Recall(rr, req)
+	gmAssertCode(t, rr, 0)
+}
+
+// --- History tests ---
+
+func TestHandlerHistoryRejectsInvalidJSON(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{bad`))
+
+	rr := httptest.NewRecorder()
+	handler.History(rr, req)
+	gmAssertCode(t, rr, 10000)
+}
+
+func TestHandlerHistoryRejectsMissingGroupID(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{}`))
+
+	rr := httptest.NewRecorder()
+	handler.History(rr, req)
+	gmAssertCode(t, rr, 10000)
+}
+
+func TestHandlerHistoryRejectsInvalidCursor(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{"group_id":"g1","pagination":{"cursor":"not-a-valid-cursor"}}`))
+
+	rr := httptest.NewRecorder()
+	handler.History(rr, req)
+	gmAssertCode(t, rr, 10000)
+}
+
+func TestHandlerHistoryRejectsInvalidLimit(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{"group_id":"g1","pagination":{"limit":999}}`))
+
+	rr := httptest.NewRecorder()
+	handler.History(rr, req)
+	gmAssertCode(t, rr, 10000)
+}
+
+func TestHandlerHistoryReturns10600OnError(t *testing.T) {
+	repo := &stubGroupMessageRepo{histErr: errors.New("boom")}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{"group_id":"g1"}`))
+
+	rr := httptest.NewRecorder()
+	handler.History(rr, req)
+	gmAssertCode(t, rr, 10600)
+}
+
+func TestHandlerHistoryHappyPath(t *testing.T) {
+	repo := &stubGroupMessageRepo{histResult: PaginatedGroupMessages{Items: []GroupMessageItem{{MessageID: "m1"}}}}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{"group_id":"g1"}`))
+
+	rr := httptest.NewRecorder()
+	handler.History(rr, req)
+	var resp struct {
+		Code int                    `json:"code"`
+		Data PaginatedGroupMessages `json:"data"`
+	}
+	json.NewDecoder(rr.Body).Decode(&resp)
+	if resp.Code != 0 || len(resp.Data.Items) != 1 {
+		t.Fatalf("unexpected: %+v", resp)
+	}
+}
+
+// --- MarkAsRead tests ---
+
+func TestHandlerMarkAsReadRejectsInvalidJSON(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{bad`))
+
+	rr := httptest.NewRecorder()
+	handler.MarkAsRead(rr, req)
+	gmAssertCode(t, rr, 10000)
+}
+
+func TestHandlerMarkAsReadRejectsMissingGroupID(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{}`))
+
+	rr := httptest.NewRecorder()
+	handler.MarkAsRead(rr, req)
+	gmAssertCode(t, rr, 10000)
+}
+
+func TestHandlerMarkAsReadRejectsUnknownFields(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{"group_id":"g1","bogus":true}`))
+
+	rr := httptest.NewRecorder()
+	handler.MarkAsRead(rr, req)
+	gmAssertCode(t, rr, 10000)
+}
+
+func TestHandlerMarkAsReadHappyPath(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{"group_id":"g1"}`))
+
+	rr := httptest.NewRecorder()
+	handler.MarkAsRead(rr, req)
+	gmAssertCode(t, rr, 0)
+}
+
+func TestHandlerMarkAsReadMapsNotFound(t *testing.T) {
+	repo := &stubGroupMessageRepo{markReadFn: func(_ context.Context, _ string, _ MarkGroupMessagesReadRequest) error {
+		return ErrMessageNotFound
+	}}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{"group_id":"g1"}`))
+
+	rr := httptest.NewRecorder()
+	handler.MarkAsRead(rr, req)
+	gmAssertCode(t, rr, 10300)
+}
+
+// --- MarkAllRead tests ---
+
+func TestHandlerMarkAllReadRequiresEmptyObject(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{"unexpected":true}`))
+
+	rr := httptest.NewRecorder()
+	handler.MarkAllRead(rr, req)
+	gmAssertCode(t, rr, 10000)
+}
+
+func TestHandlerMarkAllReadHappyPath(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubGroupMessageRepo{}))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{}`))
+
+	rr := httptest.NewRecorder()
+	handler.MarkAllRead(rr, req)
+	gmAssertCode(t, rr, 0)
+}
+
+func TestHandlerMarkAllReadReturns10600OnError(t *testing.T) {
+	repo := &stubGroupMessageRepo{markAllErr: errors.New("boom")}
+	handler := NewHandler(NewServiceWithRepo(repo))
+	req := gmCtx("u1")
+	req.Body = io.NopCloser(strings.NewReader(`{}`))
+
+	rr := httptest.NewRecorder()
+	handler.MarkAllRead(rr, req)
+	gmAssertCode(t, rr, 10600)
 }

@@ -41,7 +41,7 @@ type Repository interface {
 	CreateGuest(context.Context, GuestParams) (Account, error)
 	Authenticate(context.Context, string, string) (Account, error)
 	UpdateLoginMeta(context.Context, string, string, string) error
-	CreatePasswordReset(context.Context, string, time.Time) error
+	CreatePasswordReset(context.Context, string, time.Time) (string, error)
 	ResetPassword(context.Context, string, string, string) (Account, error)
 	ChangePassword(context.Context, string, string, string) error
 }

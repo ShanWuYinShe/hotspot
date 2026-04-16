@@ -174,7 +174,7 @@ func TestHandlerCreateRejectsMissingIdempotencyKey(t *testing.T) {
 	// no Idempotency-Key header
 
 	handler.Create(rr, req)
-	assertCode(t, rr, 22000)
+	assertCode(t, rr, 10000)
 }
 
 func TestHandlerCreateRejectsInvalidJSON(t *testing.T) {

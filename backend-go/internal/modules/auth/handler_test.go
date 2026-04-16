@@ -57,7 +57,7 @@ func TestRegisterRequiresIdempotencyKey(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if int(resp["code"].(float64)) != 22000 {
+	if int(resp["code"].(float64)) != 10000 {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -490,7 +490,7 @@ func TestChangePasswordRequiresIdempotencyKey(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if int(resp["code"].(float64)) != 22000 {
+	if int(resp["code"].(float64)) != 10000 {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -664,8 +664,8 @@ func (r *recordingAuthRepo) UpdateLoginMeta(context.Context, string, string, str
 	return nil
 }
 
-func (r *recordingAuthRepo) CreatePasswordReset(context.Context, string, time.Time) error {
-	return nil
+func (r *recordingAuthRepo) CreatePasswordReset(context.Context, string, time.Time) (string, error) {
+	return "", nil
 }
 
 func (r *recordingAuthRepo) ResetPassword(context.Context, string, string, string) (Account, error) {

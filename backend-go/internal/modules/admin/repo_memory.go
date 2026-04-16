@@ -28,20 +28,49 @@ type adminGrantRecord struct {
 }
 
 type InMemoryRepository struct {
-	mu             sync.RWMutex
-	roles          map[string]roleRecord
-	admins         map[string]adminGrantRecord
-	users          map[string]UserInfo
-	adminUsers     map[string]AdminUserItem
-	groups         map[string]AdminGroupItem
-	groupMembers   map[string][]string
-	reports        map[string]reportHandleRecord
-	banStates      map[string]UserBanState
-	userSessions   map[string][]string
-	auditLogs      map[string]AuditLogEntry
-	auditOrder     []string
-	deletedRoleIDs map[string]struct{}
-	revokedAdmins  map[string]struct{}
+	mu              sync.RWMutex
+	roles           map[string]roleRecord
+	admins          map[string]adminGrantRecord
+	users           map[string]UserInfo
+	adminUsers      map[string]AdminUserItem
+	groups          map[string]AdminGroupItem
+	groupMembers    map[string][]string
+	reports         map[string]reportHandleRecord
+	banStates       map[string]UserBanState
+	userSessions    map[string][]string
+	auditLogs       map[string]AuditLogEntry
+	auditOrder      []string
+	deletedRoleIDs  map[string]struct{}
+	revokedAdmins   map[string]struct{}
+	moments         map[string]momentRecord
+	comments        map[string]commentRecord
+	groupMessages   map[string]messageRecord
+	privateMessages map[string]messageRecord
+}
+
+type momentRecord struct {
+	ID        string
+	Content   string
+	AuthorID  string
+	CreatedAt time.Time
+	Deleted   bool
+}
+
+type commentRecord struct {
+	ID        string
+	Content   string
+	AuthorID  string
+	MomentID  string
+	CreatedAt time.Time
+	Deleted   bool
+}
+
+type messageRecord struct {
+	ID        string
+	Content   string
+	SenderID  string
+	CreatedAt time.Time
+	Recalled  bool
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
@@ -143,18 +172,22 @@ func NewInMemoryRepository() *InMemoryRepository {
 	}
 
 	repo := &InMemoryRepository{
-		roles:          make(map[string]roleRecord),
-		admins:         make(map[string]adminGrantRecord),
-		users:          users,
-		adminUsers:     adminUsers,
-		groups:         groups,
-		groupMembers:   map[string][]string{"group_hotspot": {"user_alice", "user_bob"}},
-		reports:        reports,
-		banStates:      map[string]UserBanState{"admin": {Status: UserAccountStatusNormal}, "user_alice": {Status: UserAccountStatusNormal}, "user_bob": {Status: UserAccountStatusNormal}, "user_cindy": {Status: UserAccountStatusNormal}},
-		userSessions:   map[string][]string{"user_alice": {"sess_user_alice_1"}, "user_bob": {"sess_user_bob_1"}},
-		auditLogs:      make(map[string]AuditLogEntry),
-		deletedRoleIDs: make(map[string]struct{}),
-		revokedAdmins:  make(map[string]struct{}),
+		roles:           make(map[string]roleRecord),
+		admins:          make(map[string]adminGrantRecord),
+		users:           users,
+		adminUsers:      adminUsers,
+		groups:          groups,
+		groupMembers:    map[string][]string{"group_hotspot": {"user_alice", "user_bob"}},
+		reports:         reports,
+		banStates:       map[string]UserBanState{"admin": {Status: UserAccountStatusNormal}, "user_alice": {Status: UserAccountStatusNormal}, "user_bob": {Status: UserAccountStatusNormal}, "user_cindy": {Status: UserAccountStatusNormal}},
+		userSessions:    map[string][]string{"user_alice": {"sess_user_alice_1"}, "user_bob": {"sess_user_bob_1"}},
+		auditLogs:       make(map[string]AuditLogEntry),
+		deletedRoleIDs:  make(map[string]struct{}),
+		revokedAdmins:   make(map[string]struct{}),
+		moments:         make(map[string]momentRecord),
+		comments:        make(map[string]commentRecord),
+		groupMessages:   make(map[string]messageRecord),
+		privateMessages: make(map[string]messageRecord),
 	}
 	repo.seedAuditLogs()
 	return repo
@@ -941,23 +974,120 @@ func (r *InMemoryRepository) HandleReport(_ context.Context, reportID string, ac
 }
 
 func (r *InMemoryRepository) RecallGroupMessage(_ context.Context, messageID string) error {
-	_ = messageID
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	msg, ok := r.groupMessages[messageID]
+	if !ok {
+		return nil
+	}
+	msg.Recalled = true
+	r.groupMessages[messageID] = msg
 	return nil
 }
 
 func (r *InMemoryRepository) RecallPrivateMessage(_ context.Context, messageID string) error {
-	_ = messageID
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	msg, ok := r.privateMessages[messageID]
+	if !ok {
+		return nil
+	}
+	msg.Recalled = true
+	r.privateMessages[messageID] = msg
 	return nil
 }
 
 func (r *InMemoryRepository) DeleteMoment(_ context.Context, momentID string) error {
-	_ = momentID
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.moments, momentID)
 	return nil
 }
 
 func (r *InMemoryRepository) DeleteComment(_ context.Context, commentID string) error {
-	_ = commentID
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.comments, commentID)
 	return nil
+}
+
+func (r *InMemoryRepository) CreateMoment(_ context.Context, id, content, authorID string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.moments[id] = momentRecord{
+		ID:        id,
+		Content:   content,
+		AuthorID:  authorID,
+		CreatedAt: time.Now().UTC(),
+	}
+}
+
+func (r *InMemoryRepository) CreateComment(_ context.Context, id, content, authorID, momentID string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.comments[id] = commentRecord{
+		ID:        id,
+		Content:   content,
+		AuthorID:  authorID,
+		MomentID:  momentID,
+		CreatedAt: time.Now().UTC(),
+	}
+}
+
+func (r *InMemoryRepository) SendGroupMessage(_ context.Context, id, content, senderID string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.groupMessages[id] = messageRecord{
+		ID:        id,
+		Content:   content,
+		SenderID:  senderID,
+		CreatedAt: time.Now().UTC(),
+	}
+}
+
+func (r *InMemoryRepository) SendPrivateMessage(_ context.Context, id, content, senderID string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.privateMessages[id] = messageRecord{
+		ID:        id,
+		Content:   content,
+		SenderID:  senderID,
+		CreatedAt: time.Now().UTC(),
+	}
+}
+
+func (r *InMemoryRepository) HasMoment(id string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	_, ok := r.moments[id]
+	return ok
+}
+
+func (r *InMemoryRepository) HasComment(id string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	_, ok := r.comments[id]
+	return ok
+}
+
+func (r *InMemoryRepository) IsGroupMessageRecalled(id string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	msg, ok := r.groupMessages[id]
+	if !ok {
+		return false
+	}
+	return msg.Recalled
+}
+
+func (r *InMemoryRepository) IsPrivateMessageRecalled(id string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	msg, ok := r.privateMessages[id]
+	if !ok {
+		return false
+	}
+	return msg.Recalled
 }
 
 func (r *InMemoryRepository) IsBanned(_ context.Context, userID string) (bool, error) {

@@ -7,11 +7,12 @@ import (
 )
 
 var (
-	ErrLoginIDConflict        = errors.New("auth: login id conflict")
-	ErrInvalidCredentials     = errors.New("auth: invalid credentials")
-	ErrInvalidOldPassword     = errors.New("auth: invalid old password")
-	ErrPasswordResetNotFound  = errors.New("auth: password reset not found")
-	ErrPasswordResetThrottled = errors.New("auth: password reset throttled")
+	ErrLoginIDConflict         = errors.New("auth: login id conflict")
+	ErrInvalidCredentials      = errors.New("auth: invalid credentials")
+	ErrInvalidOldPassword      = errors.New("auth: invalid old password")
+	ErrPasswordResetNotFound   = errors.New("auth: password reset not found")
+	ErrPasswordResetThrottled  = errors.New("auth: password reset throttled")
+	ErrEmailServiceUnavailable = errors.New("auth: email service not available")
 )
 
 func apiErrorFrom(err error) *httpx.APIError {
@@ -33,6 +34,8 @@ func apiErrorFrom(err error) *httpx.APIError {
 		return &httpx.APIError{Code: 10300, Message: "重置请求不存在或已过期"}
 	case errors.Is(err, ErrPasswordResetThrottled):
 		return &httpx.APIError{Code: 10500, Message: "请求过于频繁"}
+	case errors.Is(err, ErrEmailServiceUnavailable):
+		return &httpx.APIError{Code: 10500, Message: "邮件服务暂不可用"}
 	default:
 		return &httpx.APIError{Code: 10600, Message: "服务暂时不可用"}
 	}

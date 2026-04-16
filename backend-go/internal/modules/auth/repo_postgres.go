@@ -94,31 +94,34 @@ func (r *PostgresRepository) UpdateLoginMeta(ctx context.Context, userID, ip, lo
 	return queryable.Exec(ctx, queryUpdateLoginMeta, userID, ip, location)
 }
 
-func (r *PostgresRepository) CreatePasswordReset(ctx context.Context, loginID string, expiresAt time.Time) error {
+func (r *PostgresRepository) CreatePasswordReset(ctx context.Context, loginID string, expiresAt time.Time) (string, error) {
 	queryable, ok := r.queryable()
 	if !ok {
-		return persistence.ErrNotImplemented
+		return "", persistence.ErrNotImplemented
 	}
 	if _, found, err := r.accountByLoginID(ctx, queryable, loginID); err != nil {
-		return err
+		return "", err
 	} else if !found {
-		return nil
+		return "", nil
 	}
 	requestID, err := generateUserID()
 	if err != nil {
-		return err
+		return "", err
 	}
 	code, err := generateVerificationCode()
 	if err != nil {
-		return err
+		return "", err
 	}
 	now := time.Now().UTC()
 	if latest, found, err := r.latestPasswordResetByLoginID(ctx, queryable, loginID); err != nil {
-		return err
+		return "", err
 	} else if found && now.Sub(latest.CreatedAt) < passwordResetThrottleWindow {
-		return ErrPasswordResetThrottled
+		return "", ErrPasswordResetThrottled
 	}
-	return queryable.Exec(ctx, queryInsertPasswordReset, requestID, loginID, code, expiresAt.UTC(), now)
+	if err := queryable.Exec(ctx, queryInsertPasswordReset, requestID, loginID, code, expiresAt.UTC(), now); err != nil {
+		return "", err
+	}
+	return code, nil
 }
 
 func (r *PostgresRepository) ResetPassword(ctx context.Context, loginID, verificationCode, newPassword string) (Account, error) {

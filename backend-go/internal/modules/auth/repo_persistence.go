@@ -33,7 +33,7 @@ func (r *PersistenceRepository) UpdateLoginMeta(ctx context.Context, userID, ip,
 	return r.impl.UpdateLoginMeta(ctx, userID, ip, location)
 }
 
-func (r *PersistenceRepository) CreatePasswordReset(ctx context.Context, loginID string, expiresAt time.Time) error {
+func (r *PersistenceRepository) CreatePasswordReset(ctx context.Context, loginID string, expiresAt time.Time) (string, error) {
 	return r.impl.CreatePasswordReset(ctx, loginID, expiresAt)
 }
 

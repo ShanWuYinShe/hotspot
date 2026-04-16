@@ -14,11 +14,16 @@ import (
 	"hotspot/backend-go/internal/platform/resourceguard"
 )
 
+type emailSender interface {
+	SendPasswordReset(ctx context.Context, to string, code string) error
+}
+
 type Service struct {
-	auth      *platformauth.Service
-	repo      Repository
-	cfg       config.Config
-	appConfig appconfig.Source
+	auth        *platformauth.Service
+	repo        Repository
+	cfg         config.Config
+	appConfig   appconfig.Source
+	emailSender emailSender
 }
 
 func NewService(auth *platformauth.Service, repo Repository, cfg config.Config) *Service {
@@ -32,7 +37,18 @@ func NewServiceWithSource(auth *platformauth.Service, repo Repository, cfg confi
 	if source == nil {
 		source = appconfig.NewStaticSource(cfg)
 	}
-	return &Service{auth: auth, repo: repo, cfg: cfg, appConfig: source}
+	return &Service{auth: auth, repo: repo, cfg: cfg, appConfig: source, emailSender: &noopEmailSender{}}
+}
+
+func (s *Service) WithEmailSender(sender emailSender) *Service {
+	s.emailSender = sender
+	return s
+}
+
+type noopEmailSender struct{}
+
+func (*noopEmailSender) SendPasswordReset(_ context.Context, _ string, _ string) error {
+	return ErrEmailServiceUnavailable
 }
 
 func (s *Service) CheckStatus(ctx context.Context) AuthStatus {
@@ -193,7 +209,7 @@ func (s *Service) RevokeSession(ctx context.Context, req RevokeSessionRequest) e
 }
 
 func (s *Service) RequestPasswordReset(ctx context.Context, req RequestPasswordResetRequest) error {
-	err := s.repo.CreatePasswordReset(ctx, req.LoginID, time.Now().UTC().Add(10*time.Minute))
+	code, err := s.repo.CreatePasswordReset(ctx, req.LoginID, time.Now().UTC().Add(10*time.Minute))
 	if errors.Is(err, ErrPasswordResetThrottled) {
 		return nil
 	}
@@ -202,8 +218,19 @@ func (s *Service) RequestPasswordReset(ctx context.Context, req RequestPasswordR
 			"method", "RequestPasswordReset",
 			"error", err,
 		)
+		return err
 	}
-	return err
+	if code == "" {
+		return nil
+	}
+	if sendErr := s.emailSender.SendPasswordReset(ctx, req.LoginID, code); sendErr != nil {
+		observability.L().Warn("email send failed for password reset",
+			"method", "RequestPasswordReset",
+			"login_id", req.LoginID,
+			"error", sendErr,
+		)
+	}
+	return nil
 }
 
 func (s *Service) ResetPassword(ctx context.Context, req ResetPasswordRequest, meta platformauth.SessionMeta) (platformauth.AuthResult, error) {

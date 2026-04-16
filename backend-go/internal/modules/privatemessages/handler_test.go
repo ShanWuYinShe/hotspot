@@ -13,6 +13,7 @@ import (
 	"hotspot/backend-go/internal/modules/users"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/idempotency"
+	"hotspot/backend-go/internal/platform/realtime"
 )
 
 type privateMessageErrorRepo struct {
@@ -75,6 +76,221 @@ func withPrivateMessagePrincipal(req *http.Request) *http.Request {
 	return req.WithContext(ctx)
 }
 
+// --- realtime event capture ---
+
+type eventSink struct {
+	events []realtime.Event
+}
+
+func (s *eventSink) Send(e realtime.Event) error {
+	s.events = append(s.events, e)
+	return nil
+}
+func (s *eventSink) Close() error { return nil }
+
+// --- realtime broadcast tests ---
+
+func TestSendBroadcastsPrivateMessageNewToTarget(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+
+	userStub := &privateMessageUserStub{
+		item:     users.UserItem{Relation: &users.Relationship{}},
+		ok:       true,
+		settings: users.UserSettings{AllowPrivateChat: users.PrivateChatEveryone},
+	}
+	service := NewServiceWithDeps(NewInMemoryRepository(), userStub)
+
+	bobSink := &eventSink{}
+	hub.RegisterUser("user_bob", "sess_bob", bobSink)
+
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_alice"})
+	msg, err := service.Send(ctx, SendPrivateMessageRequest{TargetUserID: "user_bob", Type: "text", Content: "hello"})
+	if err != nil {
+		t.Fatalf("send: %v", err)
+	}
+
+	if len(bobSink.events) != 1 {
+		t.Fatalf("expected 1 event for target, got %d", len(bobSink.events))
+	}
+	event := bobSink.events[0]
+	if event.Type != "PrivateMessageNew" {
+		t.Fatalf("expected PrivateMessageNew, got %s", event.Type)
+	}
+	payload, ok := event.Payload.(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected payload type: %T", event.Payload)
+	}
+	if payload["message_id"] != msg.MessageID {
+		t.Fatalf("expected message_id %s, got %v", msg.MessageID, payload["message_id"])
+	}
+}
+
+func TestUpdateBroadcastsPrivateMessageEditedToBothParties(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+
+	repo := NewInMemoryRepository()
+	userStub := &privateMessageUserStub{
+		item:     users.UserItem{Relation: &users.Relationship{}},
+		ok:       true,
+		settings: users.UserSettings{AllowPrivateChat: users.PrivateChatEveryone},
+	}
+	service := NewServiceWithDeps(repo, userStub)
+
+	// alice sends a message to bob
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_alice"})
+	sent, err := service.Send(ctx, SendPrivateMessageRequest{TargetUserID: "user_bob", Type: "text", Content: "original"})
+	if err != nil {
+		t.Fatalf("send: %v", err)
+	}
+
+	aliceSink := &eventSink{}
+	bobSink := &eventSink{}
+	hub.RegisterUser("user_alice", "sess_alice", aliceSink)
+	hub.RegisterUser("user_bob", "sess_bob", bobSink)
+
+	// alice updates the message
+	updateCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_alice"})
+	if err := service.Update(updateCtx, UpdatePrivateMessageRequest{MessageID: sent.MessageID, Content: "updated"}); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+
+	if len(aliceSink.events) != 1 {
+		t.Fatalf("expected 1 event for alice, got %d", len(aliceSink.events))
+	}
+	if aliceSink.events[0].Type != "PrivateMessageEdited" {
+		t.Fatalf("expected PrivateMessageEdited, got %s", aliceSink.events[0].Type)
+	}
+
+	if len(bobSink.events) != 1 {
+		t.Fatalf("expected 1 event for bob, got %d", len(bobSink.events))
+	}
+	if bobSink.events[0].Type != "PrivateMessageEdited" {
+		t.Fatalf("expected PrivateMessageEdited, got %s", bobSink.events[0].Type)
+	}
+}
+
+func TestRecallBroadcastsPrivateMessageRecalledToBothParties(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+
+	repo := NewInMemoryRepository()
+	userStub := &privateMessageUserStub{
+		item:     users.UserItem{Relation: &users.Relationship{}},
+		ok:       true,
+		settings: users.UserSettings{AllowPrivateChat: users.PrivateChatEveryone},
+	}
+	service := NewServiceWithDeps(repo, userStub)
+
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_alice"})
+	sent, err := service.Send(ctx, SendPrivateMessageRequest{TargetUserID: "user_bob", Type: "text", Content: "to recall"})
+	if err != nil {
+		t.Fatalf("send: %v", err)
+	}
+
+	aliceSink := &eventSink{}
+	bobSink := &eventSink{}
+	hub.RegisterUser("user_alice", "sess_alice", aliceSink)
+	hub.RegisterUser("user_bob", "sess_bob", bobSink)
+
+	recallCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_alice"})
+	if err := service.Recall(recallCtx, RecallPrivateMessageRequest{MessageID: sent.MessageID}); err != nil {
+		t.Fatalf("recall: %v", err)
+	}
+
+	if len(aliceSink.events) != 1 || aliceSink.events[0].Type != "PrivateMessageRecalled" {
+		t.Fatalf("expected PrivateMessageRecalled for alice, got %v", aliceSink.events)
+	}
+	if len(bobSink.events) != 1 || bobSink.events[0].Type != "PrivateMessageRecalled" {
+		t.Fatalf("expected PrivateMessageRecalled for bob, got %v", bobSink.events)
+	}
+}
+
+func TestMarkAsReadBroadcastsPrivateMessageReadToTarget(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+
+	repo := NewInMemoryRepository()
+	userStub := &privateMessageUserStub{
+		item:     users.UserItem{Relation: &users.Relationship{}},
+		ok:       true,
+		settings: users.UserSettings{AllowPrivateChat: users.PrivateChatEveryone},
+	}
+	service := NewServiceWithDeps(repo, userStub)
+
+	// alice sends to bob
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_alice"})
+	sent, err := service.Send(ctx, SendPrivateMessageRequest{TargetUserID: "user_bob", Type: "text", Content: "hello"})
+	if err != nil {
+		t.Fatalf("send: %v", err)
+	}
+
+	// alice marks as read
+	aliceSink := &eventSink{}
+	bobSink := &eventSink{}
+	hub.RegisterUser("user_alice", "sess_alice", aliceSink)
+	hub.RegisterUser("user_bob", "sess_bob", bobSink)
+
+	markCtx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_alice"})
+	if err := service.MarkAsRead(markCtx, MarkPrivateMessagesReadRequest{TargetUserID: "user_bob", UpToMessageID: sent.MessageID}); err != nil {
+		t.Fatalf("mark as read: %v", err)
+	}
+
+	// Only bob should receive the read event (alice is the marker, not the target)
+	if len(bobSink.events) != 1 {
+		t.Fatalf("expected 1 event for bob, got %d", len(bobSink.events))
+	}
+	if bobSink.events[0].Type != "PrivateMessageRead" {
+		t.Fatalf("expected PrivateMessageRead, got %s", bobSink.events[0].Type)
+	}
+}
+
+func TestMarkAllReadDoesNotBroadcast(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+
+	repo := NewInMemoryRepository()
+	userStub := &privateMessageUserStub{
+		item:     users.UserItem{Relation: &users.Relationship{}},
+		ok:       true,
+		settings: users.UserSettings{AllowPrivateChat: users.PrivateChatEveryone},
+	}
+	service := NewServiceWithDeps(repo, userStub)
+
+	sink := &eventSink{}
+	hub.RegisterUser("user_alice", "sess_alice", sink)
+
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_alice"})
+	if err := service.MarkAllRead(ctx); err != nil {
+		t.Fatalf("mark all read: %v", err)
+	}
+
+	if len(sink.events) != 0 {
+		t.Fatalf("expected no events for MarkAllRead, got %d", len(sink.events))
+	}
+}
+
+func TestSendIgnoresRealtimeErrors(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+
+	userStub := &privateMessageUserStub{
+		item:     users.UserItem{Relation: &users.Relationship{}},
+		ok:       true,
+		settings: users.UserSettings{AllowPrivateChat: users.PrivateChatEveryone},
+	}
+	service := NewServiceWithDeps(NewInMemoryRepository(), userStub)
+
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_alice"})
+	_, err := service.Send(ctx, SendPrivateMessageRequest{TargetUserID: "user_bob", Type: "text", Content: "hello"})
+	if err != nil {
+		t.Fatalf("send should succeed even if realtime fails: %v", err)
+	}
+}
+
+// --- existing handler tests (retained) ---
+
 func TestSendAndHistoryPrivateMessages(t *testing.T) {
 	idempotency.SetStore(idempotency.NewInMemoryStore())
 	userStub := &privateMessageUserStub{
@@ -87,7 +303,7 @@ func TestSendAndHistoryPrivateMessages(t *testing.T) {
 	handler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), userStub))
 
 	sendReq := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/send", strings.NewReader(`{"target_user_id":"user_bob","type":"text","content":"hello"}`)))
-	sendReq.Header.Set("Idempotency-Key", "abcd1234abcd1234abcd1234abcd1234")
+	sendReq.Header.Set("Idempotency-Key", "pm_snd_0000000000000000000000001")
 	sendRR := httptest.NewRecorder()
 	handler.Send(sendRR, sendReq)
 
@@ -110,7 +326,7 @@ func TestSendAndHistoryPrivateMessages(t *testing.T) {
 }
 
 func TestPrivateMessagesSendValidatesByType(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(&privateMessageErrorRepo{}))
+	handler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), &privateMessageUserStub{}))
 	cases := []string{
 		`{"target_user_id":"user_bob","type":"text"}`,
 		`{"target_user_id":"user_bob","type":"image"}`,
@@ -127,7 +343,7 @@ func TestPrivateMessagesSendValidatesByType(t *testing.T) {
 }
 
 func TestPrivateMessagesGetHistoryRejectsInvalidPaginationAndUnknownFields(t *testing.T) {
-	handler := NewHandler(NewServiceWithRepo(&privateMessageErrorRepo{}))
+	handler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), &privateMessageUserStub{}))
 
 	invalidPaginationReq := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/get_history", strings.NewReader(`{"target_user_id":"user_bob","pagination":{"limit":101}}`)))
 	invalidPaginationRR := httptest.NewRecorder()
@@ -142,7 +358,7 @@ func TestPrivateMessagesGetHistoryRejectsInvalidPaginationAndUnknownFields(t *te
 
 func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
 	t.Run("send and history generic errors", func(t *testing.T) {
-		handler := NewHandler(NewServiceWithRepo(&privateMessageErrorRepo{sendErr: errors.New("boom"), historyErr: errors.New("boom"), markAllErr: errors.New("boom")}))
+		handler := NewHandler(NewServiceWithDeps(&privateMessageErrorRepo{sendErr: errors.New("boom"), historyErr: errors.New("boom"), markAllErr: errors.New("boom")}, &privateMessageUserStub{}))
 
 		sendReq := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/send", strings.NewReader(`{"target_user_id":"user_bob","type":"text","content":"hello"}`)))
 		sendReq.Header.Set("Idempotency-Key", "efgh1234efgh1234efgh1234efgh1234")
@@ -173,7 +389,7 @@ func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
-				handler := NewHandler(NewServiceWithRepo(&privateMessageErrorRepo{updateErr: tc.err}))
+				handler := NewHandler(NewServiceWithDeps(&privateMessageErrorRepo{updateErr: tc.err}, &privateMessageUserStub{}))
 				req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/update", strings.NewReader(`{"message_id":"pm_1","content":"updated"}`)))
 				rr := httptest.NewRecorder()
 				handler.Update(rr, req)
@@ -194,7 +410,7 @@ func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
-				handler := NewHandler(NewServiceWithRepo(&privateMessageErrorRepo{recallErr: tc.err}))
+				handler := NewHandler(NewServiceWithDeps(&privateMessageErrorRepo{recallErr: tc.err}, &privateMessageUserStub{}))
 				req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/recall", strings.NewReader(`{"message_id":"pm_1"}`)))
 				rr := httptest.NewRecorder()
 				handler.Recall(rr, req)
@@ -204,7 +420,7 @@ func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
 	})
 
 	t.Run("mark as read maps not found", func(t *testing.T) {
-		handler := NewHandler(NewServiceWithRepo(&privateMessageErrorRepo{markErr: ErrMessageNotFound}))
+		handler := NewHandler(NewServiceWithDeps(&privateMessageErrorRepo{markErr: ErrMessageNotFound}, &privateMessageUserStub{}))
 		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_as_read", strings.NewReader(`{"target_user_id":"user_bob","up_to_message_id":"pm_1"}`)))
 		rr := httptest.NewRecorder()
 		handler.MarkAsRead(rr, req)
@@ -212,7 +428,7 @@ func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
 	})
 
 	t.Run("mark as read rejects missing target user", func(t *testing.T) {
-		handler := NewHandler(NewServiceWithRepo(&privateMessageErrorRepo{}))
+		handler := NewHandler(NewServiceWithDeps(&privateMessageErrorRepo{}, &privateMessageUserStub{}))
 		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_as_read", strings.NewReader(`{"up_to_message_id":"pm_1"}`)))
 		rr := httptest.NewRecorder()
 		handler.MarkAsRead(rr, req)
@@ -220,7 +436,7 @@ func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
 	})
 
 	t.Run("mark all read requires empty object", func(t *testing.T) {
-		handler := NewHandler(NewServiceWithRepo(&privateMessageErrorRepo{}))
+		handler := NewHandler(NewServiceWithDeps(&privateMessageErrorRepo{}, &privateMessageUserStub{}))
 		req := withPrivateMessagePrincipal(httptest.NewRequest(http.MethodPost, "/mark_all_read", strings.NewReader(`{"extra":true}`)))
 		rr := httptest.NewRecorder()
 		handler.MarkAllRead(rr, req)

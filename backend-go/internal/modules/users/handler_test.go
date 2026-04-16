@@ -36,6 +36,7 @@ type userErrorRepo struct {
 	unblockErr     error
 	remarkErr      error
 	deleteErr      error
+	exists         bool
 }
 
 type invalidCursorRepo struct{}
@@ -139,7 +140,7 @@ func (r *userErrorRepo) CommonGroupCount(context.Context, string, string) (int, 
 	return 0, r.listBlockedErr
 }
 func (r *userErrorRepo) UserExists(context.Context, string) (bool, error) {
-	return false, r.listBlockedErr
+	return r.exists, nil
 }
 
 func TestRequestEmailChangeRequiresIdempotencyKey(t *testing.T) {
@@ -149,7 +150,7 @@ func TestRequestEmailChangeRequiresIdempotencyKey(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	handler.RequestEmailChange(rr, req)
-	assertUserCode(t, rr, 22000)
+	assertUserCode(t, rr, 10000)
 }
 
 func TestContactChangeEndpointsReturnUnavailableWhenProviderMissing(t *testing.T) {
@@ -702,6 +703,7 @@ func TestUsersHandlerReturns10600OnServiceError(t *testing.T) {
 		putSettingsErr: errors.New("boom"),
 		searchErr:      errors.New("boom"),
 		listBlockedErr: errors.New("boom"),
+		exists:         true,
 		relErr:         errors.New("boom"),
 		followErr:      errors.New("boom"),
 		blockErr:       errors.New("boom"),
@@ -750,6 +752,526 @@ func TestUsersHandlerReturns10600OnServiceError(t *testing.T) {
 	likedRR := httptest.NewRecorder()
 	handler.ListLikedMoments(likedRR, likedReq)
 	assertUserCode(t, likedRR, 10600)
+}
+
+// ---------------------------------------------------------------------------
+// Unblock handler tests
+// ---------------------------------------------------------------------------
+
+func TestUnblockInvalidJSON(t *testing.T) {
+	handler := NewHandler(NewService())
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	req := httptest.NewRequest(http.MethodPost, "/me/unblock", strings.NewReader(`{invalid`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.Unblock(rr, req)
+	assertUserCode(t, rr, 10000)
+}
+
+func TestUnblockMissingUserID(t *testing.T) {
+	handler := NewHandler(NewService())
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	req := httptest.NewRequest(http.MethodPost, "/me/unblock", strings.NewReader(`{}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.Unblock(rr, req)
+	assertUserCode(t, rr, 10000)
+}
+
+func TestUnblockUnauthorized(t *testing.T) {
+	handler := NewHandler(NewService())
+	req := httptest.NewRequest(http.MethodPost, "/me/unblock", strings.NewReader(`{"user_id":"user_bob"}`))
+	rr := httptest.NewRecorder()
+	handler.Unblock(rr, req)
+	assertUserCode(t, rr, 10100)
+}
+
+func TestUnblockUserNotFound(t *testing.T) {
+	repo := NewInMemoryRepository()
+	handler := NewHandler(NewServiceWithRepo(repo))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	req := httptest.NewRequest(http.MethodPost, "/me/unblock", strings.NewReader(`{"user_id":"user_nonexistent"}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.Unblock(rr, req)
+	assertUserCode(t, rr, 10300)
+}
+
+func TestUnblockSelfReturnsConflict(t *testing.T) {
+	handler := NewHandler(NewService())
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	req := httptest.NewRequest(http.MethodPost, "/me/unblock", strings.NewReader(`{"user_id":"user_alice"}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.Unblock(rr, req)
+	assertUserCode(t, rr, 10400)
+}
+
+func TestUnblockHappyPath(t *testing.T) {
+	repo := NewInMemoryRepository()
+	handler := NewHandler(NewServiceWithRepo(repo))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	if err := repo.PutProfile(ctx, defaultProfile("user_alice")); err != nil {
+		t.Fatalf("put alice: %v", err)
+	}
+	if err := repo.PutProfile(ctx, defaultProfile("user_bob")); err != nil {
+		t.Fatalf("put bob: %v", err)
+	}
+	if err := repo.Block(ctx, "user_alice", "user_bob", ""); err != nil {
+		t.Fatalf("block bob: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/me/unblock", strings.NewReader(`{"user_id":"user_bob"}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.Unblock(rr, req)
+	assertUserCode(t, rr, 0)
+}
+
+func TestUnblockServerError(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&userErrorRepo{
+		unblockErr: errors.New("boom"),
+		exists:     true,
+	}))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	req := httptest.NewRequest(http.MethodPost, "/me/unblock", strings.NewReader(`{"user_id":"user_bob"}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.Unblock(rr, req)
+	assertUserCode(t, rr, 10600)
+}
+
+// ---------------------------------------------------------------------------
+// ListFriends handler tests
+// ---------------------------------------------------------------------------
+
+func TestListFriendsInvalidJSON(t *testing.T) {
+	handler := NewHandler(NewService())
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	req := httptest.NewRequest(http.MethodPost, "/me/friends", strings.NewReader(`{invalid`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListFriends(rr, req)
+	assertUserCode(t, rr, 10000)
+}
+
+func TestListFriendsUnauthorizedWhenNoUserIDAndNoPrincipal(t *testing.T) {
+	handler := NewHandler(NewService())
+	req := httptest.NewRequest(http.MethodPost, "/me/friends", strings.NewReader(`{}`))
+	rr := httptest.NewRecorder()
+	handler.ListFriends(rr, req)
+	assertUserCode(t, rr, 10100)
+}
+
+func TestListFriendsUserNotFound(t *testing.T) {
+	handler := NewHandler(NewService())
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	req := httptest.NewRequest(http.MethodPost, "/me/friends", strings.NewReader(`{"user_id":"user_nonexistent"}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListFriends(rr, req)
+	assertUserCode(t, rr, 10300)
+}
+
+func TestListFriendsPermissionDenied(t *testing.T) {
+	repo := NewInMemoryRepository()
+	handler := NewHandler(NewServiceWithRepo(repo))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	if err := repo.PutProfile(ctx, defaultProfile("user_bob")); err != nil {
+		t.Fatalf("put bob: %v", err)
+	}
+	if err := repo.PutSettings(ctx, "user_bob", UserSettings{SocialListsVisible: false}); err != nil {
+		t.Fatalf("put bob settings: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/me/friends", strings.NewReader(`{"user_id":"user_bob"}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListFriends(rr, req)
+	assertUserCode(t, rr, 10200)
+}
+
+func TestListFriendsHappyPath(t *testing.T) {
+	repo := NewInMemoryRepository()
+	handler := NewHandler(NewServiceWithRepo(repo))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	if err := repo.PutProfile(ctx, defaultProfile("user_alice")); err != nil {
+		t.Fatalf("put alice: %v", err)
+	}
+	if err := repo.PutProfile(ctx, defaultProfile("user_bob")); err != nil {
+		t.Fatalf("put bob: %v", err)
+	}
+	if err := repo.PutSettings(ctx, "user_alice", defaultSettings()); err != nil {
+		t.Fatalf("put alice settings: %v", err)
+	}
+	if err := repo.PutSettings(ctx, "user_bob", defaultSettings()); err != nil {
+		t.Fatalf("put bob settings: %v", err)
+	}
+	if err := repo.Follow(ctx, "user_alice", "user_bob", FollowSourceProfile, ""); err != nil {
+		t.Fatalf("follow bob: %v", err)
+	}
+	if err := repo.Follow(ctx, "user_bob", "user_alice", FollowSourceProfile, ""); err != nil {
+		t.Fatalf("follow alice: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/me/friends", strings.NewReader(`{}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListFriends(rr, req)
+	var resp struct {
+		Code int              `json:"code"`
+		Data PaginatedFriends `json:"data"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+	if len(resp.Data.Items) != 1 || resp.Data.Items[0].User.UserID != "user_bob" {
+		t.Fatalf("unexpected friends: %#v", resp.Data)
+	}
+}
+
+func TestListFriendsServerError(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&userErrorRepo{
+		listBlockedErr: errors.New("boom"),
+		exists:         true,
+	}))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	req := httptest.NewRequest(http.MethodPost, "/me/friends", strings.NewReader(`{}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListFriends(rr, req)
+	assertUserCode(t, rr, 10600)
+}
+
+// ---------------------------------------------------------------------------
+// ListFollowing handler tests
+// ---------------------------------------------------------------------------
+
+func TestListFollowingInvalidJSON(t *testing.T) {
+	handler := NewHandler(NewService())
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	req := httptest.NewRequest(http.MethodPost, "/me/following", strings.NewReader(`{invalid`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListFollowing(rr, req)
+	assertUserCode(t, rr, 10000)
+}
+
+func TestListFollowingUnauthorizedWhenNoUserIDAndNoPrincipal(t *testing.T) {
+	handler := NewHandler(NewService())
+	req := httptest.NewRequest(http.MethodPost, "/me/following", strings.NewReader(`{}`))
+	rr := httptest.NewRecorder()
+	handler.ListFollowing(rr, req)
+	assertUserCode(t, rr, 10100)
+}
+
+func TestListFollowingUserNotFound(t *testing.T) {
+	handler := NewHandler(NewService())
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	req := httptest.NewRequest(http.MethodPost, "/me/following", strings.NewReader(`{"user_id":"user_nonexistent"}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListFollowing(rr, req)
+	assertUserCode(t, rr, 10300)
+}
+
+func TestListFollowingPermissionDenied(t *testing.T) {
+	repo := NewInMemoryRepository()
+	handler := NewHandler(NewServiceWithRepo(repo))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	if err := repo.PutProfile(ctx, defaultProfile("user_bob")); err != nil {
+		t.Fatalf("put bob: %v", err)
+	}
+	if err := repo.PutSettings(ctx, "user_bob", UserSettings{SocialListsVisible: false}); err != nil {
+		t.Fatalf("put bob settings: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/me/following", strings.NewReader(`{"user_id":"user_bob"}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListFollowing(rr, req)
+	assertUserCode(t, rr, 10200)
+}
+
+func TestListFollowingHappyPath(t *testing.T) {
+	repo := NewInMemoryRepository()
+	handler := NewHandler(NewServiceWithRepo(repo))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	if err := repo.PutProfile(ctx, defaultProfile("user_alice")); err != nil {
+		t.Fatalf("put alice: %v", err)
+	}
+	if err := repo.PutProfile(ctx, defaultProfile("user_bob")); err != nil {
+		t.Fatalf("put bob: %v", err)
+	}
+	if err := repo.PutSettings(ctx, "user_alice", defaultSettings()); err != nil {
+		t.Fatalf("put alice settings: %v", err)
+	}
+	if err := repo.PutSettings(ctx, "user_bob", defaultSettings()); err != nil {
+		t.Fatalf("put bob settings: %v", err)
+	}
+	if err := repo.Follow(ctx, "user_alice", "user_bob", FollowSourceProfile, ""); err != nil {
+		t.Fatalf("follow bob: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/me/following", strings.NewReader(`{}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListFollowing(rr, req)
+	var resp struct {
+		Code int                `json:"code"`
+		Data PaginatedFollowing `json:"data"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+	if len(resp.Data.Items) != 1 || resp.Data.Items[0].User.UserID != "user_bob" {
+		t.Fatalf("unexpected following: %#v", resp.Data)
+	}
+}
+
+func TestListFollowingServerError(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&userErrorRepo{
+		listBlockedErr: errors.New("boom"),
+		exists:         true,
+	}))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	req := httptest.NewRequest(http.MethodPost, "/me/following", strings.NewReader(`{}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListFollowing(rr, req)
+	assertUserCode(t, rr, 10600)
+}
+
+// ---------------------------------------------------------------------------
+// ListFollowers handler tests
+// ---------------------------------------------------------------------------
+
+func TestListFollowersInvalidJSON(t *testing.T) {
+	handler := NewHandler(NewService())
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	req := httptest.NewRequest(http.MethodPost, "/me/followers", strings.NewReader(`{invalid`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListFollowers(rr, req)
+	assertUserCode(t, rr, 10000)
+}
+
+func TestListFollowersUnauthorizedWhenNoUserIDAndNoPrincipal(t *testing.T) {
+	handler := NewHandler(NewService())
+	req := httptest.NewRequest(http.MethodPost, "/me/followers", strings.NewReader(`{}`))
+	rr := httptest.NewRecorder()
+	handler.ListFollowers(rr, req)
+	assertUserCode(t, rr, 10100)
+}
+
+func TestListFollowersUserNotFound(t *testing.T) {
+	handler := NewHandler(NewService())
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	req := httptest.NewRequest(http.MethodPost, "/me/followers", strings.NewReader(`{"user_id":"user_nonexistent"}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListFollowers(rr, req)
+	assertUserCode(t, rr, 10300)
+}
+
+func TestListFollowersPermissionDenied(t *testing.T) {
+	repo := NewInMemoryRepository()
+	handler := NewHandler(NewServiceWithRepo(repo))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	if err := repo.PutProfile(ctx, defaultProfile("user_bob")); err != nil {
+		t.Fatalf("put bob: %v", err)
+	}
+	if err := repo.PutSettings(ctx, "user_bob", UserSettings{SocialListsVisible: false}); err != nil {
+		t.Fatalf("put bob settings: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/me/followers", strings.NewReader(`{"user_id":"user_bob"}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListFollowers(rr, req)
+	assertUserCode(t, rr, 10200)
+}
+
+func TestListFollowersHappyPath(t *testing.T) {
+	repo := NewInMemoryRepository()
+	handler := NewHandler(NewServiceWithRepo(repo))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	if err := repo.PutProfile(ctx, defaultProfile("user_alice")); err != nil {
+		t.Fatalf("put alice: %v", err)
+	}
+	if err := repo.PutProfile(ctx, defaultProfile("user_bob")); err != nil {
+		t.Fatalf("put bob: %v", err)
+	}
+	if err := repo.PutSettings(ctx, "user_alice", defaultSettings()); err != nil {
+		t.Fatalf("put alice settings: %v", err)
+	}
+	if err := repo.PutSettings(ctx, "user_bob", defaultSettings()); err != nil {
+		t.Fatalf("put bob settings: %v", err)
+	}
+	if err := repo.Follow(ctx, "user_bob", "user_alice", FollowSourceProfile, ""); err != nil {
+		t.Fatalf("bob follows alice: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/me/followers", strings.NewReader(`{}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListFollowers(rr, req)
+	var resp struct {
+		Code int                `json:"code"`
+		Data PaginatedFollowers `json:"data"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+	if len(resp.Data.Items) != 1 || resp.Data.Items[0].User.UserID != "user_bob" {
+		t.Fatalf("unexpected followers: %#v", resp.Data)
+	}
+}
+
+func TestListFollowersServerError(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&userErrorRepo{
+		listBlockedErr: errors.New("boom"),
+		exists:         true,
+	}))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	req := httptest.NewRequest(http.MethodPost, "/me/followers", strings.NewReader(`{}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListFollowers(rr, req)
+	assertUserCode(t, rr, 10600)
+}
+
+// ---------------------------------------------------------------------------
+// ListGroups handler tests
+// ---------------------------------------------------------------------------
+
+func TestListGroupsInvalidJSON(t *testing.T) {
+	handler := NewHandler(NewService())
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	req := httptest.NewRequest(http.MethodPost, "/me/groups", strings.NewReader(`{invalid`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListGroups(rr, req)
+	assertUserCode(t, rr, 10000)
+}
+
+func TestListGroupsUnauthorizedWhenNoUserIDAndNoPrincipal(t *testing.T) {
+	handler := NewHandler(NewService())
+	req := httptest.NewRequest(http.MethodPost, "/me/groups", strings.NewReader(`{}`))
+	rr := httptest.NewRecorder()
+	handler.ListGroups(rr, req)
+	assertUserCode(t, rr, 10100)
+}
+
+func TestListGroupsUserNotFound(t *testing.T) {
+	handler := NewHandler(NewService())
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	req := httptest.NewRequest(http.MethodPost, "/me/groups", strings.NewReader(`{"user_id":"user_nonexistent"}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListGroups(rr, req)
+	assertUserCode(t, rr, 10300)
+}
+
+func TestListGroupsPermissionDenied(t *testing.T) {
+	repo := NewInMemoryRepository()
+	handler := NewHandler(NewServiceWithRepo(repo))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	if err := repo.PutProfile(ctx, defaultProfile("user_bob")); err != nil {
+		t.Fatalf("put bob: %v", err)
+	}
+	if err := repo.PutSettings(ctx, "user_bob", UserSettings{GroupsVisible: false}); err != nil {
+		t.Fatalf("put bob settings: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/me/groups", strings.NewReader(`{"user_id":"user_bob"}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListGroups(rr, req)
+	assertUserCode(t, rr, 10200)
+}
+
+func TestListGroupsHappyPath(t *testing.T) {
+	repo := NewInMemoryRepository()
+	handler := NewHandler(NewServiceWithRepo(repo))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	if err := repo.PutProfile(ctx, defaultProfile("user_alice")); err != nil {
+		t.Fatalf("put alice: %v", err)
+	}
+	if err := repo.PutSettings(ctx, "user_alice", defaultSettings()); err != nil {
+		t.Fatalf("put alice settings: %v", err)
+	}
+	mr := repo
+	mr.groupsByUser["user_alice"] = []grouptypes.GroupItem{{Group: grouptypes.GroupInfo{GroupID: "group_1", Name: "Test Group"}}}
+	req := httptest.NewRequest(http.MethodPost, "/me/groups", strings.NewReader(`{}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListGroups(rr, req)
+	var resp struct {
+		Code int                        `json:"code"`
+		Data grouptypes.PaginatedGroups `json:"data"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+	if len(resp.Data.Items) != 1 || resp.Data.Items[0].Group.GroupID != "group_1" {
+		t.Fatalf("unexpected groups: %#v", resp.Data)
+	}
+}
+
+func TestListGroupsServerError(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&userErrorRepo{
+		listBlockedErr: errors.New("boom"),
+		exists:         true,
+	}))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	req := httptest.NewRequest(http.MethodPost, "/me/groups", strings.NewReader(`{}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListGroups(rr, req)
+	assertUserCode(t, rr, 10600)
+}
+
+// ---------------------------------------------------------------------------
+// ListMoments handler tests
+// ---------------------------------------------------------------------------
+
+func TestListMomentsInvalidJSON(t *testing.T) {
+	handler := NewHandler(NewService())
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	req := httptest.NewRequest(http.MethodPost, "/me/moments", strings.NewReader(`{invalid`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListMoments(rr, req)
+	assertUserCode(t, rr, 10000)
+}
+
+func TestListMomentsUnauthorizedWhenNoUserIDAndNoPrincipal(t *testing.T) {
+	handler := NewHandler(NewService())
+	req := httptest.NewRequest(http.MethodPost, "/me/moments", strings.NewReader(`{}`))
+	rr := httptest.NewRecorder()
+	handler.ListMoments(rr, req)
+	assertUserCode(t, rr, 10100)
+}
+
+func TestListMomentsUserNotFound(t *testing.T) {
+	handler := NewHandler(NewService())
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	req := httptest.NewRequest(http.MethodPost, "/me/moments", strings.NewReader(`{"user_id":"user_nonexistent"}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListMoments(rr, req)
+	assertUserCode(t, rr, 10300)
+}
+
+func TestListMomentsHappyPath(t *testing.T) {
+	repo := NewInMemoryRepository()
+	handler := NewHandler(NewServiceWithRepo(repo))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	if err := repo.PutProfile(ctx, defaultProfile("user_alice")); err != nil {
+		t.Fatalf("put alice: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/me/moments", strings.NewReader(`{}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListMoments(rr, req)
+	var resp struct {
+		Code int                          `json:"code"`
+		Data momenttypes.PaginatedMoments `json:"data"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+}
+
+func TestListMomentsServerError(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&userErrorRepo{
+		listBlockedErr: errors.New("boom"),
+		exists:         true,
+	}))
+	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	req := httptest.NewRequest(http.MethodPost, "/me/moments", strings.NewReader(`{}`)).WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ListMoments(rr, req)
+	assertUserCode(t, rr, 10600)
 }
 
 func assertUserCode(t *testing.T, rr *httptest.ResponseRecorder, expected int) {

@@ -40,7 +40,7 @@ func (r *stubRepo) MarkAllRead(_ context.Context, _ string) error {
 	return r.markAllReadErr
 }
 
-func gmCtx(userID string) context.Context {
+func gmAuthCtx(userID string) context.Context {
 	return platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: userID})
 }
 
@@ -120,7 +120,7 @@ func TestServiceRecallPropagatesError(t *testing.T) {
 
 func TestServiceMarkAsReadExtractsPrincipal(t *testing.T) {
 	service := NewServiceWithRepo(&stubRepo{})
-	err := service.MarkAsRead(gmCtx("u1"), MarkGroupMessagesReadRequest{GroupID: "g1", UpToMessageID: "gm5"})
+	err := service.MarkAsRead(gmAuthCtx("u1"), MarkGroupMessagesReadRequest{GroupID: "g1", UpToMessageID: "gm5"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -128,7 +128,7 @@ func TestServiceMarkAsReadExtractsPrincipal(t *testing.T) {
 
 func TestServiceMarkAsReadPropagatesError(t *testing.T) {
 	service := NewServiceWithRepo(&stubRepo{markReadErr: errors.New("boom")})
-	err := service.MarkAsRead(gmCtx("u1"), MarkGroupMessagesReadRequest{GroupID: "g1"})
+	err := service.MarkAsRead(gmAuthCtx("u1"), MarkGroupMessagesReadRequest{GroupID: "g1"})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -136,7 +136,7 @@ func TestServiceMarkAsReadPropagatesError(t *testing.T) {
 
 func TestServiceMarkAllReadExtractsPrincipal(t *testing.T) {
 	service := NewServiceWithRepo(&stubRepo{})
-	err := service.MarkAllRead(gmCtx("u1"))
+	err := service.MarkAllRead(gmAuthCtx("u1"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -144,7 +144,7 @@ func TestServiceMarkAllReadExtractsPrincipal(t *testing.T) {
 
 func TestServiceMarkAllReadPropagatesError(t *testing.T) {
 	service := NewServiceWithRepo(&stubRepo{markAllReadErr: errors.New("boom")})
-	err := service.MarkAllRead(gmCtx("u1"))
+	err := service.MarkAllRead(gmAuthCtx("u1"))
 	if err == nil {
 		t.Fatal("expected error")
 	}

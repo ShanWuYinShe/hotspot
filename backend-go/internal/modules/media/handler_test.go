@@ -119,7 +119,7 @@ func TestMediaHandlerCompleteMapsSpecCodes(t *testing.T) {
 	missingKeyReq := mediaAuthedCompleteRequest("upload_ready", "")
 	missingKeyRR := httptest.NewRecorder()
 	handler.CompleteUpload(missingKeyRR, missingKeyReq)
-	assertMediaCode(t, missingKeyRR, 22000)
+	assertMediaCode(t, missingKeyRR, 10000)
 
 	notFoundReq := mediaAuthedCompleteRequest("upload_missing", "abcd1234abcd1234abcd1234abcd1234")
 	notFoundRR := httptest.NewRecorder()

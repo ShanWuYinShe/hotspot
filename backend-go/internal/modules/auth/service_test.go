@@ -22,6 +22,7 @@ type stubAuthRepo struct {
 	authErr         error
 	updateMetaErr   error
 	resetCreateErr  error
+	resetCode       string
 	resetAccount    Account
 	resetErr        error
 	changePwdErr    error
@@ -39,8 +40,8 @@ func (r *stubAuthRepo) Authenticate(_ context.Context, _, _ string) (Account, er
 func (r *stubAuthRepo) UpdateLoginMeta(_ context.Context, _, _, _ string) error {
 	return r.updateMetaErr
 }
-func (r *stubAuthRepo) CreatePasswordReset(_ context.Context, _ string, _ time.Time) error {
-	return r.resetCreateErr
+func (r *stubAuthRepo) CreatePasswordReset(_ context.Context, _ string, _ time.Time) (string, error) {
+	return r.resetCode, r.resetCreateErr
 }
 func (r *stubAuthRepo) ResetPassword(_ context.Context, _, _, _ string) (Account, error) {
 	return r.resetAccount, r.resetErr

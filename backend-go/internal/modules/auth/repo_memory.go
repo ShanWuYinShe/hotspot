@@ -8,10 +8,10 @@ import (
 
 type accountRecord struct {
 	Account
-	PasswordHash    string
-	RegisterIP      string
-	RegisterLocation string
-	LastLoginIP     string
+	PasswordHash      string
+	RegisterIP        string
+	RegisterLocation  string
+	LastLoginIP       string
 	LastLoginLocation string
 }
 
@@ -112,24 +112,24 @@ func (r *InMemoryRepository) UpdateLoginMeta(_ context.Context, userID, ip, loca
 	return nil
 }
 
-func (r *InMemoryRepository) CreatePasswordReset(_ context.Context, loginID string, expiresAt time.Time) error {
+func (r *InMemoryRepository) CreatePasswordReset(_ context.Context, loginID string, expiresAt time.Time) (string, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, ok := r.accountsByLogin[loginID]; !ok {
-		return nil
+		return "", nil
 	}
 	requestID, err := generateUserID()
 	if err != nil {
-		return err
+		return "", err
 	}
 	code, err := generateVerificationCode()
 	if err != nil {
-		return err
+		return "", err
 	}
 	now := time.Now().UTC()
 	items := r.resetsByLogin[loginID]
 	if n := len(items); n > 0 && now.Sub(items[n-1].CreatedAt) < passwordResetThrottleWindow {
-		return ErrPasswordResetThrottled
+		return "", ErrPasswordResetThrottled
 	}
 	r.resetsByLogin[loginID] = append(items, passwordResetRecord{
 		RequestID:        requestID,
@@ -138,7 +138,7 @@ func (r *InMemoryRepository) CreatePasswordReset(_ context.Context, loginID stri
 		ExpiresAt:        expiresAt,
 		CreatedAt:        now,
 	})
-	return nil
+	return code, nil
 }
 
 func (r *InMemoryRepository) ResetPassword(_ context.Context, loginID, verificationCode, newPassword string) (Account, error) {

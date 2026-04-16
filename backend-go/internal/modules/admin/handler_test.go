@@ -266,7 +266,7 @@ func TestCreateRoleRequiresIdempotencyKey(t *testing.T) {
 	handler.CreateRole(rr, req)
 
 	resp := decodeResponse[AdminRoleItem](t, rr)
-	if resp.Code != 22000 {
+	if resp.Code != 10000 {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -387,7 +387,7 @@ func TestBanUserRequiresIdempotencyKey(t *testing.T) {
 	handler.BanUser(rr, req)
 
 	resp := decodeResponse[struct{}](t, rr)
-	if resp.Code != 22000 {
+	if resp.Code != 10000 {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
@@ -669,6 +669,9 @@ func TestHandleGroupReportDismissesGroup(t *testing.T) {
 func TestHandleMomentCommentAndMessageReportsApplyContentActions(t *testing.T) {
 	handler, store := newTestHandlerWithStore()
 	idempotency.SetStore(idempotency.NewInMemoryStore())
+	store.CreateMoment(context.Background(), "moment_1", "bad moment", "user_bob")
+	store.CreateComment(context.Background(), "comment_1", "bad comment", "user_bob", "moment_other")
+	store.SendGroupMessage(context.Background(), "message_1", "bad message", "user_bob")
 	store.reports["report_moment"] = reportHandleRecord{
 		Item:       AdminReportItem{ReportID: "report_moment", TargetType: ReportTargetTypeMoment, TargetID: "moment_1", Reason: "spam", Status: ReportStatusPending, CreatedAt: "2026-04-14T00:00:00Z", Reporter: UserInfo{UserID: "user_alice", Nickname: "Alice"}},
 		TargetUser: UserInfo{UserID: "user_bob", Nickname: "Bob"},
@@ -691,6 +694,15 @@ func TestHandleMomentCommentAndMessageReportsApplyContentActions(t *testing.T) {
 		if handleResp.Code != 0 {
 			t.Fatalf("unexpected handle response for %s: %#v", reportID, handleResp)
 		}
+	}
+	if store.HasMoment("moment_1") {
+		t.Fatal("expected moment_1 to be deleted after report resolution")
+	}
+	if store.HasComment("comment_1") {
+		t.Fatal("expected comment_1 to be deleted after report resolution")
+	}
+	if !store.IsGroupMessageRecalled("message_1") {
+		t.Fatal("expected message_1 to be recalled after report resolution")
 	}
 	state, ok, err := store.GetUserBanState(context.Background(), "user_bob")
 	if err != nil || !ok || state.Status != UserAccountStatusBanned {
@@ -769,7 +781,7 @@ func TestCreateAnnouncementRequiresIdempotencyKey(t *testing.T) {
 	handler.CreateAnnouncement(rr, req)
 
 	resp := decodeResponse[AnnouncementCreated](t, rr)
-	if resp.Code != 22000 {
+	if resp.Code != 10000 {
 		t.Fatalf("unexpected response: %#v", resp)
 	}
 }
