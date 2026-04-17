@@ -18,7 +18,7 @@ import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
-import { MyProfile, UpdateLocationRequest, UpgradeAccountRequest, GuestRequest, UserItem, UserOpenTheDoorRequest } from '../../../core/types/api';
+import { MyProfile, UpdateLocationRequest, UpgradeAccountRequest, GuestRequest, UserItem, UserOpenTheDoorRequest, UserSharePayload } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { common } from '@kit.AbilityKit';
@@ -203,10 +203,11 @@ export struct ProfilePage {
     try {
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       const nickname = this.viewedUserProfile?.user?.nickname ?? '用户';
+      const payload: UserSharePayload = { shared_user_id: userId };
       await ShareActionHelper.shareResource(
         context,
         'user',
-        { shared_user_id: userId },
+        payload,
         `来认识 ${nickname}`,
         this.viewedUserProfile?.bio ?? '快来 GeoTalk 和附近的人交流吧！'
       );

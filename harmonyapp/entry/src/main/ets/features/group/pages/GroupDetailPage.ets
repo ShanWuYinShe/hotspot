@@ -19,6 +19,7 @@ import {
   GroupItem,
   GroupApplicationItem,
   GroupMemberItem,
+  GroupSharePayload,
   RelativeLocation,
   SettableGroupRole,
   UpdateGroupRequest
@@ -454,10 +455,11 @@ export struct GroupDetailPage {
     try {
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       const groupName = this.groupInfo.group?.name ?? '群组';
+      const payload: GroupSharePayload = { shared_group_id: this.groupId };
       await ShareActionHelper.shareResource(
         context,
         'group',
-        { shared_group_id: this.groupId },
+        payload,
         `加入群组「${groupName}」`,
         this.groupInfo.description ?? '在 GeoTalk 发现有趣的附近群组'
       );

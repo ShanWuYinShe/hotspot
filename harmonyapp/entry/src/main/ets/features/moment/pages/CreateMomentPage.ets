@@ -643,9 +643,9 @@ export struct CreateMomentPage {
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {
       this.pathStack = context.pathStack;
-      const param = context.pathInfo?.param;
+      const param: EditMomentRouteParam | undefined = context.pathInfo?.param as EditMomentRouteParam | undefined;
       // 检查编辑参数
-      const editParam = param as EditMomentRouteParam | undefined;
+      const editParam = param;
       if (editParam && editParam.moment_id) {
         this.isEditMode = true;
         this.editMomentId = editParam.moment_id;

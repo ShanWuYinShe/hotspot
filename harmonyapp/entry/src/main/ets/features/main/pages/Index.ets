@@ -975,44 +975,46 @@ struct Index {
         .height('100%')
       }
 
-      Column() {
-        Row() {
-          Blank().layoutWeight(1)
-          Stack({ alignContent: Alignment.TopEnd }) {
-            Button() {
-              Text() {
-                SymbolSpan($r(this.unreadCount.total_unread_count > 0 ? AppIcon.NOTIFICATION_FILL : AppIcon.NOTIFICATION))
-                  .fontSize(18)
-                  .fontColor([this.getCurrentThemePalette().textPrimary])
+      if (this.currentTabIndex === 1) {
+        Column() {
+          Row() {
+            Blank().layoutWeight(1)
+            Stack({ alignContent: Alignment.TopEnd }) {
+              Button() {
+                Text() {
+                  SymbolSpan($r(this.unreadCount.total_unread_count > 0 ? AppIcon.NOTIFICATION_FILL : AppIcon.NOTIFICATION))
+                    .fontSize(18)
+                    .fontColor([this.getCurrentThemePalette().textPrimary])
+                }
+              }
+              .type(ButtonType.Normal)
+              .width(40)
+              .height(40)
+              .backgroundColor(this.getCurrentThemePalette().surfaceElevated)
+              .borderRadius(DesignConstants.RADIUS.FULL)
+              .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
+              .shadow(this.getCurrentThemePalette().controlShadow)
+              .onClick(() => {
+                this.showNotificationCenter = true;
+              })
+
+              if (this.unreadCount.total_unread_count > 0) {
+                Text(this.unreadCount.total_unread_count > 99 ? '99+' : `${this.unreadCount.total_unread_count}`)
+                  .fontSize(10)
+                  .fontWeight(FontWeight.Bold)
+                  .fontColor(Color.White)
+                  .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+                  .backgroundColor(this.getCurrentThemePalette().accentBackground)
+                  .borderRadius(DesignConstants.RADIUS.FULL)
+                  .translate({ x: 8, y: -6 })
               }
             }
-            .type(ButtonType.Normal)
-            .width(40)
-            .height(40)
-            .backgroundColor(this.getCurrentThemePalette().surfaceElevated)
-            .borderRadius(DesignConstants.RADIUS.FULL)
-            .border({ width: 1, color: this.getCurrentThemePalette().borderColor })
-            .shadow(this.getCurrentThemePalette().controlShadow)
-            .onClick(() => {
-              this.showNotificationCenter = true;
-            })
-
-            if (this.unreadCount.total_unread_count > 0) {
-              Text(this.unreadCount.total_unread_count > 99 ? '99+' : `${this.unreadCount.total_unread_count}`)
-                .fontSize(10)
-                .fontWeight(FontWeight.Bold)
-                .fontColor(Color.White)
-                .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-                .backgroundColor(this.getCurrentThemePalette().accentBackground)
-                .borderRadius(DesignConstants.RADIUS.FULL)
-                .translate({ x: 8, y: -6 })
-            }
+            .margin({ top: this.getSafeAreaTopPadding(), right: DesignConstants.SPACING.LG })
           }
-          .margin({ top: this.getSafeAreaTopPadding(), right: DesignConstants.SPACING.LG })
+          .width('100%')
         }
-        .width('100%')
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
       }
-      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.visibleNotifications.length > 0) {
         Column({ space: DesignConstants.SPACING.SM }) {

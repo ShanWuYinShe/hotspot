@@ -6,6 +6,13 @@ import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ApiClient } from '../api/ApiClient';
 import { SystemShareService, ShareContent } from '../services/SystemShareService';
+import {
+  ShareType,
+  SharePayload,
+  UserSharePayload,
+  GroupSharePayload,
+  MomentSharePayload
+} from '../types/api';
 
 const DOMAIN_NUMBER: number = 0xFF30;
 const TAG: string = 'ShareActionHelper';
@@ -16,8 +23,8 @@ export class ShareActionHelper {
    */
   static async shareResource(
     context: common.UIAbilityContext,
-    shareType: string,
-    payload: Record<string, Object>,
+    shareType: ShareType,
+    payload: UserSharePayload | GroupSharePayload | MomentSharePayload,
     title: string,
     description: string
   ): Promise<void> {

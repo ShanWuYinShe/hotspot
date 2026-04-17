@@ -12,6 +12,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import {
   MomentImage,
   MomentItem,
+  MomentSharePayload,
   MyProfile,
 } from '../../../core/types/api';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -155,10 +156,11 @@ export struct MomentDetailPage {
     if (!this.moment) return;
     try {
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      const payload: MomentSharePayload = { shared_moment_id: this.moment.moment_id };
       await ShareActionHelper.shareResource(
         context,
         'moment',
-        { shared_moment_id: this.moment.moment_id },
+        payload,
         `${this.moment.user?.nickname ?? '匿名'} 的动态`,
         this.moment.description.length > 100 ? this.moment.description.substring(0, 100) + '...' : this.moment.description
       );
