@@ -2,12 +2,10 @@ package mapmodule
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
 	"hotspot/backend-go/internal/platform/geo"
-	"hotspot/backend-go/internal/platform/persistence"
 )
 
 type stubMapRepository struct {
@@ -29,12 +27,15 @@ func (r *stubMapRepository) Hotspots(_ context.Context, query canvasQuery) (MapH
 	return r.hotspotsResp, r.hotspotsErr
 }
 
-func TestServiceCanvasUsesPersistenceRepositoryWhenRepoMissing(t *testing.T) {
+func TestServiceCanvasUsesInMemoryFallbackWhenRepoMissing(t *testing.T) {
 	service := NewServiceWithRepo(nil)
 
-	_, err := service.Canvas(context.Background(), MapCanvasRequest{Viewport: MapViewport{Bounds: Bounds{North: 1, South: 0, East: 1, West: 0}}})
-	if !errors.Is(err, persistence.ErrNotImplemented) {
-		t.Fatalf("expected ErrNotImplemented, got %v", err)
+	resp, err := service.Canvas(context.Background(), MapCanvasRequest{Viewport: MapViewport{Bounds: Bounds{North: 1, South: 0, East: 1, West: 0}}})
+	if err != nil {
+		t.Fatalf("expected no error with in-memory fallback, got %v", err)
+	}
+	if resp.Hotspots == nil && resp.Heatmap == nil {
+		t.Fatalf("expected non-empty canvas from in-memory fallback, got nil")
 	}
 }
 
