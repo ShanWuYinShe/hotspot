@@ -33,19 +33,20 @@ func (r *PostgresRepository) Register(ctx context.Context, params RegisterParams
 		return Account{}, err
 	}
 	now := params.Defaults.CreatedAt.UTC()
-	if err := queryable.Exec(ctx, queryInsertAuthAccount, params.LoginID, userID, hashed, now, now); err != nil {
-		if isUniqueViolation(err) {
-			return Account{}, ErrLoginIDConflict
-		}
+	if err := queryable.Exec(ctx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "normal", params.LoginID, params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, now, now, params.RegisterIP, params.RegisterLocation, params.RegisterIP, params.RegisterLocation); err != nil {
 		return Account{}, err
 	}
-	if err := queryable.Exec(ctx, queryInsertUserProfile, userID, params.Nickname, params.Defaults.AvatarURL, "normal", params.LoginID, params.Defaults.LocationName, params.Defaults.Latitude, params.Defaults.Longitude, now, now, params.RegisterIP, params.RegisterLocation, params.RegisterIP, params.RegisterLocation); err != nil {
-		_ = queryable.Exec(ctx, queryDeleteAuthAccountByLoginID, params.LoginID)
+	if err := queryable.Exec(ctx, queryInsertAuthAccount, params.LoginID, userID, hashed, now, now); err != nil {
+		if isUniqueViolation(err) {
+			_ = queryable.Exec(ctx, queryDeleteUserProfileByUserID, userID)
+			return Account{}, ErrLoginIDConflict
+		}
+		_ = queryable.Exec(ctx, queryDeleteUserProfileByUserID, userID)
 		return Account{}, err
 	}
 	if err := queryable.Exec(ctx, queryUpsertUserSettings, userID); err != nil {
-		_ = queryable.Exec(ctx, queryDeleteUserProfileByUserID, userID)
 		_ = queryable.Exec(ctx, queryDeleteAuthAccountByLoginID, params.LoginID)
+		_ = queryable.Exec(ctx, queryDeleteUserProfileByUserID, userID)
 		return Account{}, err
 	}
 	return Account{UserID: userID, LoginID: params.LoginID, Nickname: params.Nickname, UserType: "normal"}, nil

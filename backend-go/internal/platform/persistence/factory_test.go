@@ -8,8 +8,8 @@ import (
 )
 
 func TestNewFactoryUsesDatasourceConfig(t *testing.T) {
-	factory := NewFactory(config.Config{PostgresDSN: "postgres://test", RedisDSN: "redis://test"})
-	if factory.Config.PostgresDSN != "postgres://test" || factory.Config.RedisDSN != "redis://test" {
+	factory := NewFactory(config.Config{PostgresDSN: "postgres://test"})
+	if factory.Config.PostgresDSN != "postgres://test" {
 		t.Fatalf("unexpected factory config: %#v", factory.Config)
 	}
 	if _, ok := factory.DB.(*PostgresDB); !ok {

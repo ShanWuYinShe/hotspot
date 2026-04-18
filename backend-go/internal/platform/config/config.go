@@ -9,7 +9,6 @@ type Config struct {
 	Host               string
 	Port               string
 	PostgresDSN        string
-	RedisDSN           string
 	AuthTokenSecret    string
 	SupportEmail       string
 	PrivacyPolicyURL   string
@@ -34,7 +33,6 @@ func Load() Config {
 		Host:               envOrDefault("APP_HOST", "0.0.0.0"),
 		Port:               envOrDefault("APP_PORT", "8081"),
 		PostgresDSN:        os.Getenv("POSTGRES_DSN"),
-		RedisDSN:           os.Getenv("REDIS_DSN"),
 		AuthTokenSecret:    envOrDefault("AUTH_TOKEN_SECRET", "dev-secret-change-me"),
 		SupportEmail:       envOrDefault("APP_SUPPORT_EMAIL", "support@example.com"),
 		PrivacyPolicyURL:   envOrDefault("APP_PRIVACY_POLICY_URL", ""),

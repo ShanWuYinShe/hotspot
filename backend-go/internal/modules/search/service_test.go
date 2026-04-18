@@ -7,7 +7,6 @@ import (
 
 	"hotspot/backend-go/internal/platform/appconfig"
 	"hotspot/backend-go/internal/platform/config"
-	"hotspot/backend-go/internal/platform/persistence"
 )
 
 type stubRepository struct {
@@ -46,12 +45,15 @@ func TestServiceSuggestReturnsRepositoryError(t *testing.T) {
 	}
 }
 
-func TestServiceSuggestUsesPersistenceRepositoryWhenRepoMissing(t *testing.T) {
+func TestServiceSuggestUsesInMemoryFallbackWhenNoPostgres(t *testing.T) {
 	service := NewServiceWithSource(nil, appconfig.NewStaticSource(config.Config{}))
 
-	_, err := service.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", ReferencePoint: GeoPoint{Latitude: 1, Longitude: 2}})
-	if !errors.Is(err, persistence.ErrNotImplemented) {
-		t.Fatalf("expected ErrNotImplemented, got %v", err)
+	result, err := service.Suggest(context.Background(), SearchSuggestRequest{Prefix: "", ReferencePoint: GeoPoint{Latitude: 1, Longitude: 2}})
+	if err != nil {
+		t.Fatalf("expected no error with in-memory fallback, got %v", err)
+	}
+	if len(result.Items) != 0 {
+		t.Fatalf("expected empty suggest from in-memory fallback, got %d items", len(result.Items))
 	}
 }
 

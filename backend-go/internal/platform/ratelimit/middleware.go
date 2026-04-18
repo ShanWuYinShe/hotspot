@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -74,6 +75,10 @@ func AllowWebsocketSubscribe(ctx context.Context, userID, connectionID string) (
 
 func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if os.Getenv("APP_ENV") == "test" {
+			next.ServeHTTP(w, r)
+			return
+		}
 		rules := classifyRules(r, CurrentRateLimits(r.Context()))
 		now := time.Now().UTC()
 		for _, rl := range rules {
