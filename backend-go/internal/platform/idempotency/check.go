@@ -2,12 +2,9 @@ package idempotency
 
 import (
 	"net/http"
-	"regexp"
 
 	"hotspot/backend-go/internal/platform/httpx"
 )
-
-var keyPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{32,64}$`)
 
 func RequireKey(r *http.Request) *httpx.APIError {
 	key := r.Header.Get("Idempotency-Key")
