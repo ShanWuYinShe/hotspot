@@ -50,11 +50,11 @@ func (p *ObjectStorageProvider) Presign(ctx context.Context, req PresignUploadRe
 }
 
 func (p *ObjectStorageProvider) Head(ctx context.Context, storageKey string) (ObjectMetadata, error) {
-	objectURL, err := p.objectURL(storageKey)
+	signedURL, err := p.presignURL(ctx, http.MethodHead, storageKey, 5*time.Minute)
 	if err != nil {
 		return ObjectMetadata{}, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodHead, objectURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, signedURL, nil)
 	if err != nil {
 		return ObjectMetadata{}, err
 	}
@@ -81,21 +81,20 @@ func (p *ObjectStorageProvider) Head(ctx context.Context, storageKey string) (Ob
 	return ObjectMetadata{FileSize: size, MimeType: mimeType}, nil
 }
 
-func (p *ObjectStorageProvider) presignPutObjectURL(ctx context.Context, storageKey, mimeType, md5Value string) (string, map[string]string, time.Time, error) {
+func (p *ObjectStorageProvider) presignURL(ctx context.Context, method, storageKey string, ttl time.Duration) (string, error) {
 	_ = ctx
 	endpoint, err := url.Parse(strings.TrimSpace(p.cfg.S3Endpoint))
 	if err != nil {
-		return "", nil, time.Time{}, err
+		return "", err
 	}
 	if endpoint.Scheme == "" || endpoint.Host == "" || strings.TrimSpace(p.cfg.S3Bucket) == "" {
-		return "", nil, time.Time{}, fmt.Errorf("media object storage not configured")
+		return "", fmt.Errorf("media object storage not configured")
 	}
 	region := strings.TrimSpace(p.cfg.S3Region)
 	if region == "" {
 		region = "us-east-1"
 	}
 	now := p.now().UTC()
-	expiresAt := now.Add(mediaPresignTTL)
 	amzDate := now.Format("20060102T150405Z")
 	dateStamp := now.Format("20060102")
 	credentialScope := dateStamp + "/" + region + "/s3/aws4_request"
@@ -106,11 +105,11 @@ func (p *ObjectStorageProvider) presignPutObjectURL(ctx context.Context, storage
 	query.Set("X-Amz-Algorithm", "AWS4-HMAC-SHA256")
 	query.Set("X-Amz-Credential", p.cfg.S3AccessKey+"/"+credentialScope)
 	query.Set("X-Amz-Date", amzDate)
-	query.Set("X-Amz-Expires", strconv.Itoa(int(mediaPresignTTL.Seconds())))
+	query.Set("X-Amz-Expires", strconv.Itoa(int(ttl.Seconds())))
 	query.Set("X-Amz-SignedHeaders", signedHeaders)
 	canonicalHeaders := "host:" + host + "\n"
 	canonicalRequest := strings.Join([]string{
-		http.MethodPut,
+		method,
 		canonicalURI,
 		query.Encode(),
 		canonicalHeaders,
@@ -128,24 +127,20 @@ func (p *ObjectStorageProvider) presignPutObjectURL(ctx context.Context, storage
 	presignedURL := *endpoint
 	presignedURL.Path = canonicalURI
 	presignedURL.RawQuery = query.Encode()
+	return presignedURL.String(), nil
+}
+
+func (p *ObjectStorageProvider) presignPutObjectURL(ctx context.Context, storageKey, mimeType, md5Value string) (string, map[string]string, time.Time, error) {
+	uploadURL, err := p.presignURL(ctx, http.MethodPut, storageKey, mediaPresignTTL)
+	if err != nil {
+		return "", nil, time.Time{}, err
+	}
+	expiresAt := p.now().UTC().Add(mediaPresignTTL)
 	headers := map[string]string{"Content-Type": mimeType}
 	if md5Value != "" {
 		headers["Content-MD5"] = md5Value
 	}
-	return presignedURL.String(), headers, expiresAt, nil
-}
-
-func (p *ObjectStorageProvider) objectURL(storageKey string) (string, error) {
-	endpoint, err := url.Parse(strings.TrimSpace(p.cfg.S3Endpoint))
-	if err != nil {
-		return "", err
-	}
-	if endpoint.Scheme == "" || endpoint.Host == "" || strings.TrimSpace(p.cfg.S3Bucket) == "" {
-		return "", fmt.Errorf("media object storage not configured")
-	}
-	endpoint.Path = p.canonicalURI(endpoint, strings.TrimSpace(p.cfg.S3Bucket), storageKey)
-	endpoint.RawQuery = ""
-	return endpoint.String(), nil
+	return uploadURL, headers, expiresAt, nil
 }
 
 func (p *ObjectStorageProvider) canonicalURI(endpoint *url.URL, bucket, storageKey string) string {
