@@ -271,3 +271,39 @@ func TestServiceBuildChatRejectsMissingUser(t *testing.T) {
 }
 
 func boolPtr(b bool) *bool { return &b }
+
+func TestServiceWithInMemoryChatRepo(t *testing.T) {
+	memoryChat := NewInMemoryRepository()
+	msgs := &stubMsgReadService{}
+	usr := &stubChatUserReader{item: defaultUserItem(), found: true, settings: defaultSettings()}
+	svc := NewServiceWithDeps(memoryChat, msgs, usr)
+
+	_, err := svc.OpenTheDoor(chatCtx("u1"), "u2", 20)
+	if err != nil {
+		t.Fatalf("OpenTheDoor with in-memory repo failed: %v", err)
+	}
+}
+
+func TestServiceDeleteWithInMemoryRepo(t *testing.T) {
+	memoryChat := NewInMemoryRepository()
+	msgs := &stubMsgReadService{}
+	usr := &stubChatUserReader{item: defaultUserItem(), found: true, settings: defaultSettings()}
+	svc := NewServiceWithDeps(memoryChat, msgs, usr)
+
+	err := svc.Delete(chatCtx("u1"), "u2")
+	if err != nil {
+		t.Fatalf("Delete with in-memory repo failed: %v", err)
+	}
+}
+
+func TestServiceUpdateSettingsWithInMemoryRepo(t *testing.T) {
+	memoryChat := NewInMemoryRepository()
+	msgs := &stubMsgReadService{}
+	usr := &stubChatUserReader{item: defaultUserItem(), found: true, settings: defaultSettings()}
+	svc := NewServiceWithDeps(memoryChat, msgs, usr)
+
+	err := svc.UpdateSettings(chatCtx("u1"), UpdatePrivateChatSettingsRequest{TargetUserID: "u2", IsMuted: boolPtr(true)})
+	if err != nil {
+		t.Fatalf("UpdateSettings with in-memory repo failed: %v", err)
+	}
+}

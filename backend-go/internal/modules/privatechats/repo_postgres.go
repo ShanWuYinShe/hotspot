@@ -8,19 +8,26 @@ import (
 )
 
 type PostgresRepository struct {
-	factory *persistence.Factory
+	factory  *persistence.Factory
+	fallback Repository
 }
 
-func NewPostgresRepository(factory *persistence.Factory, _ Repository) *PostgresRepository {
-	return &PostgresRepository{factory: factory}
+func NewPostgresRepository(factory *persistence.Factory, fallback Repository) *PostgresRepository {
+	return &PostgresRepository{factory: factory, fallback: fallback}
 }
 
 func (r *PostgresRepository) GetOrCreate(ctx context.Context, userID, targetUserID string) (time.Time, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		if r.fallback != nil {
+			return r.fallback.GetOrCreate(ctx, userID, targetUserID)
+		}
 		return time.Time{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
+		if r.fallback != nil {
+			return r.fallback.GetOrCreate(ctx, userID, targetUserID)
+		}
 		return time.Time{}, persistence.ErrNotImplemented
 	}
 	chatKey := key(userID, targetUserID)
@@ -36,12 +43,18 @@ func (r *PostgresRepository) GetOrCreate(ctx context.Context, userID, targetUser
 	return createdAt, nil
 }
 
-func (r *PostgresRepository) List(ctx context.Context, userID string, _ ListOptions) ([]ChatState, string, error) {
+func (r *PostgresRepository) List(ctx context.Context, userID string, opts ListOptions) ([]ChatState, string, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		if r.fallback != nil {
+			return r.fallback.List(ctx, userID, opts)
+		}
 		return nil, "", persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
+		if r.fallback != nil {
+			return r.fallback.List(ctx, userID, opts)
+		}
 		return nil, "", persistence.ErrNotImplemented
 	}
 	rows, err := queryable.Query(ctx, queryListPrivateChats, userID)
@@ -65,10 +78,16 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, _ ListOpti
 
 func (r *PostgresRepository) GetState(ctx context.Context, userID, targetUserID string) (ChatState, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		if r.fallback != nil {
+			return r.fallback.GetState(ctx, userID, targetUserID)
+		}
 		return ChatState{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
+		if r.fallback != nil {
+			return r.fallback.GetState(ctx, userID, targetUserID)
+		}
 		return ChatState{}, persistence.ErrNotImplemented
 	}
 	state, err := scanChatState(queryable.QueryRow(ctx, queryGetPrivateChatState, userID, key(userID, targetUserID)))
@@ -79,18 +98,30 @@ func (r *PostgresRepository) GetState(ctx context.Context, userID, targetUserID 
 }
 
 func (r *PostgresRepository) RestoreForUser(ctx context.Context, userID, targetUserID string, visibleSince time.Time) error {
-	state, err := r.GetState(ctx, userID, targetUserID)
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		if r.fallback != nil {
+			return r.fallback.RestoreForUser(ctx, userID, targetUserID, visibleSince)
+		}
+		return persistence.ErrNotImplemented
+	}
+	state, err := r.getStateImpl(ctx, userID, targetUserID)
 	if err != nil {
 		return err
 	}
 	ts := visibleSince.UTC()
 	state.VisibleSince = &ts
 	state.DeletedAt = nil
-	return r.upsertState(ctx, userID, state)
+	return r.upsertStateImpl(ctx, userID, state)
 }
 
 func (r *PostgresRepository) UpdateSettings(ctx context.Context, userID, targetUserID string, update UpdateChatSettings) error {
-	state, err := r.GetState(ctx, userID, targetUserID)
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		if r.fallback != nil {
+			return r.fallback.UpdateSettings(ctx, userID, targetUserID, update)
+		}
+		return persistence.ErrNotImplemented
+	}
+	state, err := r.getStateImpl(ctx, userID, targetUserID)
 	if err != nil {
 		return err
 	}
@@ -100,22 +131,25 @@ func (r *PostgresRepository) UpdateSettings(ctx context.Context, userID, targetU
 	if update.IsPinned != nil {
 		state.IsPinned = *update.IsPinned
 	}
-	return r.upsertState(ctx, userID, state)
+	return r.upsertStateImpl(ctx, userID, state)
 }
 
 func (r *PostgresRepository) DeleteForUser(ctx context.Context, userID, targetUserID string, deletedAt *time.Time) error {
-	state, err := r.GetState(ctx, userID, targetUserID)
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		if r.fallback != nil {
+			return r.fallback.DeleteForUser(ctx, userID, targetUserID, deletedAt)
+		}
+		return persistence.ErrNotImplemented
+	}
+	state, err := r.getStateImpl(ctx, userID, targetUserID)
 	if err != nil {
 		return err
 	}
 	state.DeletedAt = deletedAt
-	return r.upsertState(ctx, userID, state)
+	return r.upsertStateImpl(ctx, userID, state)
 }
 
-func (r *PostgresRepository) upsertState(ctx context.Context, userID string, state ChatState) error {
-	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return persistence.ErrNotImplemented
-	}
+func (r *PostgresRepository) upsertStateImpl(ctx context.Context, userID string, state ChatState) error {
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
 		return persistence.ErrNotImplemented
@@ -129,6 +163,14 @@ func (r *PostgresRepository) upsertState(ctx context.Context, userID string, sta
 		deletedAt = state.DeletedAt.UTC().Format(time.RFC3339Nano)
 	}
 	return queryable.Exec(ctx, queryUpsertPrivateChatUserState, state.ChatKey, userID, state.IsMuted, state.IsPinned, visibleSince, deletedAt)
+}
+
+func (r *PostgresRepository) getStateImpl(ctx context.Context, userID, targetUserID string) (ChatState, error) {
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return ChatState{}, persistence.ErrNotImplemented
+	}
+	return scanChatState(queryable.QueryRow(ctx, queryGetPrivateChatState, userID, key(userID, targetUserID)))
 }
 
 func orderedChatUsers(a, b string) (string, string) {

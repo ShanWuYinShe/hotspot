@@ -47,7 +47,11 @@ func NewServiceWithDeps(repo Repository, userService userReader) *Service {
 }
 
 func NewRuntime(factory *persistence.Factory) *Runtime {
-	return NewRuntimeWithRepo(NewPostgresRepository(factory, nil))
+	memory := NewInMemoryRepository()
+	if factory == nil || factory.Config.PostgresDSN == "" {
+		return NewRuntimeWithRepo(memory)
+	}
+	return NewRuntimeWithRepo(NewPostgresRepository(factory, memory))
 }
 
 func NewRuntimeWithRepo(repo Repository) *Runtime {
