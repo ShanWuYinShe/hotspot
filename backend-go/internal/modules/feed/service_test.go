@@ -8,7 +8,6 @@ import (
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
-	"hotspot/backend-go/internal/platform/persistence"
 )
 
 type stubRepository struct {
@@ -51,13 +50,16 @@ func (r *stubRepository) Dismiss(_ context.Context, cmd dismissCommand) error {
 	return r.err
 }
 
-func TestServiceListMomentsUsesPersistenceRepositoryWhenRepoMissing(t *testing.T) {
+func TestServiceListMomentsUsesInMemoryFallbackWhenNoPostgres(t *testing.T) {
 	service := NewServiceWithSource(nil, appconfig.NewStaticSource(config.Config{}))
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "u1"})
 
-	_, err := service.ListMoments(ctx, ListFeedMomentsRequest{Source: "following", ReferencePoint: &GeoPoint{Latitude: 1, Longitude: 2}})
-	if !errors.Is(err, persistence.ErrNotImplemented) {
-		t.Fatalf("expected ErrNotImplemented, got %v", err)
+	result, err := service.ListMoments(ctx, ListFeedMomentsRequest{Source: "following", ReferencePoint: &GeoPoint{Latitude: 1, Longitude: 2}})
+	if err != nil {
+		t.Fatalf("expected no error with in-memory fallback, got %v", err)
+	}
+	if len(result.Items) != 0 {
+		t.Fatalf("expected empty moments from in-memory fallback, got %d", len(result.Items))
 	}
 }
 

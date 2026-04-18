@@ -9,7 +9,11 @@ import (
 type PersistenceRepository struct{ impl Repository }
 
 func NewPersistenceRepository(factory *persistence.Factory) *PersistenceRepository {
-	return &PersistenceRepository{impl: NewPostgresRepository(factory, nil)}
+	memory := NewInMemoryRepository()
+	if factory == nil || factory.Config.PostgresDSN == "" {
+		return &PersistenceRepository{impl: memory}
+	}
+	return &PersistenceRepository{impl: NewPostgresRepository(factory, memory)}
 }
 
 func (r *PersistenceRepository) ListMoments(ctx context.Context, query momentsQuery) (PaginatedMoments, error) {
