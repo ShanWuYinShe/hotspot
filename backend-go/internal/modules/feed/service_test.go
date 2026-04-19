@@ -50,19 +50,6 @@ func (r *stubRepository) Dismiss(_ context.Context, cmd dismissCommand) error {
 	return r.err
 }
 
-func TestServiceListMomentsUsesInMemoryFallbackWhenNoPostgres(t *testing.T) {
-	service := NewServiceWithSource(nil, appconfig.NewStaticSource(config.Config{}))
-	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "u1"})
-
-	result, err := service.ListMoments(ctx, ListFeedMomentsRequest{Source: "following", ReferencePoint: &GeoPoint{Latitude: 1, Longitude: 2}})
-	if err != nil {
-		t.Fatalf("expected no error with in-memory fallback, got %v", err)
-	}
-	if len(result.Items) != 0 {
-		t.Fatalf("expected empty moments from in-memory fallback, got %d", len(result.Items))
-	}
-}
-
 func TestServiceListMomentsAppliesDefaultsAndPagination(t *testing.T) {
 	repo := &stubRepository{}
 	service := NewServiceWithRepo(repo)

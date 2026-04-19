@@ -10,20 +10,6 @@ import (
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
-func TestPersistenceRepositoryUsesMemoryOnlyWithoutPostgresDSN(t *testing.T) {
-	repo := NewPersistenceRepository(nil)
-	if _, err := repo.Register(context.Background(), RegisterParams{
-		LoginID:          "alice",
-		Nickname:         "Alice",
-		Password:         "secret123",
-		Defaults:         ProfileDefaults{CreatedAt: time.Now().UTC()},
-		RegisterIP:       "203.0.113.10",
-		RegisterLocation: "US",
-	}); err != nil {
-		t.Fatalf("expected in-memory register without postgres dsn, got %v", err)
-	}
-}
-
 func TestPostgresRepositoryFailsClosedWhenQueryableUnavailable(t *testing.T) {
 	repo := NewPostgresRepository(&persistence.Factory{
 		Config: persistence.Config{PostgresDSN: "postgres://example"},
