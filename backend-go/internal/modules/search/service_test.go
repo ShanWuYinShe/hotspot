@@ -45,18 +45,6 @@ func TestServiceSuggestReturnsRepositoryError(t *testing.T) {
 	}
 }
 
-func TestServiceSuggestUsesInMemoryFallbackWhenNoPostgres(t *testing.T) {
-	service := NewServiceWithSource(nil, appconfig.NewStaticSource(config.Config{}))
-
-	result, err := service.Suggest(context.Background(), SearchSuggestRequest{Prefix: "", ReferencePoint: GeoPoint{Latitude: 1, Longitude: 2}})
-	if err != nil {
-		t.Fatalf("expected no error with in-memory fallback, got %v", err)
-	}
-	if len(result.Items) != 0 {
-		t.Fatalf("expected empty suggest from in-memory fallback, got %d items", len(result.Items))
-	}
-}
-
 func TestServiceSuggestAppliesDefaultRadius(t *testing.T) {
 	repo := &stubRepository{}
 	service := NewServiceWithRepo(repo)

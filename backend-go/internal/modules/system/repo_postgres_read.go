@@ -7,9 +7,9 @@ import (
 )
 
 func (r *PostgresRepository) ListAnnouncements(ctx context.Context, limit int) ([]AnnouncementRecord, error) {
-	queryable, ok := r.queryable()
-	if !ok {
-		return r.fallback.ListAnnouncements(ctx, limit)
+	queryable, err := r.queryable()
+	if err != nil {
+		return nil, err
 	}
 	if limit <= 0 {
 		limit = 10
@@ -34,9 +34,9 @@ func (r *PostgresRepository) ListAnnouncements(ctx context.Context, limit int) (
 }
 
 func (r *PostgresRepository) SearchAnnouncements(ctx context.Context, filter AnnouncementSearchFilter) (AnnouncementPage, error) {
-	queryable, ok := r.queryable()
-	if !ok {
-		return r.fallback.SearchAnnouncements(ctx, filter)
+	queryable, err := r.queryable()
+	if err != nil {
+		return AnnouncementPage{}, err
 	}
 	limit := normalizeLimit(filter.Limit)
 	cursorCreatedAt := any(nil)

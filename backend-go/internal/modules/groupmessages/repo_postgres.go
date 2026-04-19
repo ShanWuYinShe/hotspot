@@ -9,20 +9,16 @@ import (
 )
 
 type PostgresRepository struct {
-	factory  *persistence.Factory
-	fallback Repository
+	factory *persistence.Factory
 }
 
-func NewPostgresRepository(factory *persistence.Factory, fallback Repository) *PostgresRepository {
-	if fallback == nil {
-		fallback = NewInMemoryRepository()
-	}
-	return &PostgresRepository{factory: factory, fallback: fallback}
+func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
+	return &PostgresRepository{factory: factory}
 }
 
 func (r *PostgresRepository) Send(ctx context.Context, req SendGroupMessageRequest) (MessageSent, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Send(ctx, req)
+		return MessageSent{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -38,7 +34,7 @@ func (r *PostgresRepository) Send(ctx context.Context, req SendGroupMessageReque
 
 func (r *PostgresRepository) Update(ctx context.Context, req UpdateGroupMessageRequest) (MessageEventMeta, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Update(ctx, req)
+		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -56,7 +52,7 @@ func (r *PostgresRepository) Update(ctx context.Context, req UpdateGroupMessageR
 
 func (r *PostgresRepository) Recall(ctx context.Context, req RecallGroupMessageRequest) (MessageEventMeta, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Recall(ctx, req)
+		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -74,7 +70,7 @@ func (r *PostgresRepository) Recall(ctx context.Context, req RecallGroupMessageR
 
 func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, req MarkGroupMessagesReadRequest) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.MarkAsRead(ctx, userID, req)
+		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -93,7 +89,7 @@ func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, req 
 
 func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.MarkAllRead(ctx, userID)
+		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {

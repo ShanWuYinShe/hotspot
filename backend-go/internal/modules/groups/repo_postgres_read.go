@@ -16,7 +16,7 @@ import (
 
 func (r *PostgresRepository) Get(ctx context.Context, groupID string) (GroupItem, bool, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Get(ctx, groupID)
+		return GroupItem{}, false, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -44,7 +44,7 @@ func (r *PostgresRepository) Get(ctx context.Context, groupID string) (GroupItem
 
 func (r *PostgresRepository) Search(ctx context.Context, req SearchGroupsRequest) (PaginatedGroups, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Search(ctx, req)
+		return PaginatedGroups{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {

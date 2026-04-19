@@ -8,26 +8,19 @@ import (
 )
 
 type PostgresRepository struct {
-	factory  *persistence.Factory
-	fallback Repository
+	factory *persistence.Factory
 }
 
-func NewPostgresRepository(factory *persistence.Factory, fallback Repository) *PostgresRepository {
-	return &PostgresRepository{factory: factory, fallback: fallback}
+func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
+	return &PostgresRepository{factory: factory}
 }
 
 func (r *PostgresRepository) Send(ctx context.Context, senderID, targetUserID string, req SendPrivateMessageRequest) (MessageSent, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		if r.fallback != nil {
-			return r.fallback.Send(ctx, senderID, targetUserID, req)
-		}
 		return MessageSent{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		if r.fallback != nil {
-			return r.fallback.Send(ctx, senderID, targetUserID, req)
-		}
 		return MessageSent{}, persistence.ErrNotImplemented
 	}
 	now := time.Now().UTC()
@@ -50,16 +43,10 @@ func (r *PostgresRepository) Send(ctx context.Context, senderID, targetUserID st
 }
 func (r *PostgresRepository) Update(ctx context.Context, userID string, req UpdatePrivateMessageRequest) (MessageEventMeta, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		if r.fallback != nil {
-			return r.fallback.Update(ctx, userID, req)
-		}
 		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		if r.fallback != nil {
-			return r.fallback.Update(ctx, userID, req)
-		}
 		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
 	meta, err := r.getMessageMetaImpl(ctx, req.MessageID)
@@ -79,16 +66,10 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 }
 func (r *PostgresRepository) Recall(ctx context.Context, userID string, req RecallPrivateMessageRequest) (MessageEventMeta, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		if r.fallback != nil {
-			return r.fallback.Recall(ctx, userID, req)
-		}
 		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		if r.fallback != nil {
-			return r.fallback.Recall(ctx, userID, req)
-		}
 		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
 	meta, err := r.getMessageMetaImpl(ctx, req.MessageID)
@@ -112,16 +93,10 @@ func (r *PostgresRepository) Recall(ctx context.Context, userID string, req Reca
 }
 func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, req MarkPrivateMessagesReadRequest) (MessageEventMeta, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		if r.fallback != nil {
-			return r.fallback.MarkAsRead(ctx, userID, req)
-		}
 		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		if r.fallback != nil {
-			return r.fallback.MarkAsRead(ctx, userID, req)
-		}
 		return MessageEventMeta{}, persistence.ErrNotImplemented
 	}
 	chatKey := conversationKey(userID, req.TargetUserID)
@@ -143,16 +118,10 @@ func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, req 
 }
 func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		if r.fallback != nil {
-			return r.fallback.MarkAllRead(ctx, userID)
-		}
 		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		if r.fallback != nil {
-			return r.fallback.MarkAllRead(ctx, userID)
-		}
 		return persistence.ErrNotImplemented
 	}
 	return queryable.Exec(ctx, queryMarkAllPrivateMessagesRead, userID)

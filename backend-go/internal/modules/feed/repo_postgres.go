@@ -20,24 +20,17 @@ import (
 )
 
 type PostgresRepository struct {
-	factory  *persistence.Factory
-	fallback Repository
+	factory *persistence.Factory
 }
 
-func NewPostgresRepository(factory *persistence.Factory, fallback Repository) *PostgresRepository {
-	return &PostgresRepository{factory: factory, fallback: fallback}
+func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
+	return &PostgresRepository{factory: factory}
 }
 
 func (r *PostgresRepository) ListMoments(ctx context.Context, query momentsQuery) (PaginatedMoments, error) {
-	queryable, ok, err := r.queryable()
+	queryable, err := r.queryable()
 	if err != nil {
 		return PaginatedMoments{}, err
-	}
-	if !ok {
-		if r.fallback != nil {
-			return r.fallback.ListMoments(ctx, query)
-		}
-		return PaginatedMoments{}, persistence.ErrNotImplemented
 	}
 	candidates, err := r.loadMomentCandidates(ctx, queryable, query)
 	if err != nil {
@@ -47,15 +40,9 @@ func (r *PostgresRepository) ListMoments(ctx context.Context, query momentsQuery
 }
 
 func (r *PostgresRepository) ListGroups(ctx context.Context, query groupsQuery) (PaginatedGroups, error) {
-	queryable, ok, err := r.queryable()
+	queryable, err := r.queryable()
 	if err != nil {
 		return PaginatedGroups{}, err
-	}
-	if !ok {
-		if r.fallback != nil {
-			return r.fallback.ListGroups(ctx, query)
-		}
-		return PaginatedGroups{}, persistence.ErrNotImplemented
 	}
 	candidates, err := r.loadGroupCandidates(ctx, queryable, query)
 	if err != nil {
@@ -65,15 +52,9 @@ func (r *PostgresRepository) ListGroups(ctx context.Context, query groupsQuery) 
 }
 
 func (r *PostgresRepository) ListUsers(ctx context.Context, query usersQuery) (PaginatedUsers, error) {
-	queryable, ok, err := r.queryable()
+	queryable, err := r.queryable()
 	if err != nil {
 		return PaginatedUsers{}, err
-	}
-	if !ok {
-		if r.fallback != nil {
-			return r.fallback.ListUsers(ctx, query)
-		}
-		return PaginatedUsers{}, persistence.ErrNotImplemented
 	}
 	candidates, err := r.loadUserCandidates(ctx, queryable, query)
 	if err != nil {
@@ -83,15 +64,9 @@ func (r *PostgresRepository) ListUsers(ctx context.Context, query usersQuery) (P
 }
 
 func (r *PostgresRepository) ListTrending(ctx context.Context, viewerUserID string) (TrendingBundle, error) {
-	queryable, ok, err := r.queryable()
+	queryable, err := r.queryable()
 	if err != nil {
 		return TrendingBundle{}, err
-	}
-	if !ok {
-		if r.fallback != nil {
-			return r.fallback.ListTrending(ctx, viewerUserID)
-		}
-		return TrendingBundle{}, persistence.ErrNotImplemented
 	}
 	tags, err := loadTrendingTags(ctx, queryable, viewerUserID)
 	if err != nil {
@@ -105,15 +80,9 @@ func (r *PostgresRepository) ListTrending(ctx context.Context, viewerUserID stri
 }
 
 func (r *PostgresRepository) Dismiss(ctx context.Context, cmd dismissCommand) error {
-	queryable, ok, err := r.queryable()
+	queryable, err := r.queryable()
 	if err != nil {
 		return err
-	}
-	if !ok {
-		if r.fallback != nil {
-			return r.fallback.Dismiss(ctx, cmd)
-		}
-		return persistence.ErrNotImplemented
 	}
 	if err := ensureDismissTargetExists(ctx, queryable, cmd.TargetType, cmd.TargetID); err != nil {
 		return err
@@ -121,15 +90,15 @@ func (r *PostgresRepository) Dismiss(ctx context.Context, cmd dismissCommand) er
 	return queryable.Exec(ctx, queryFeedDismissInsert, cmd.ViewerUserID, cmd.TargetType, cmd.TargetID)
 }
 
-func (r *PostgresRepository) queryable() (persistence.QueryableDB, bool, error) {
+func (r *PostgresRepository) queryable() (persistence.QueryableDB, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, false, nil
+		return nil, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		return nil, false, persistence.ErrNotImplemented
+		return nil, persistence.ErrNotImplemented
 	}
-	return queryable, true, nil
+	return queryable, nil
 }
 
 func (r *PostgresRepository) loadUserCandidates(ctx context.Context, queryable persistence.QueryableDB, query usersQuery) ([]userCandidate, error) {

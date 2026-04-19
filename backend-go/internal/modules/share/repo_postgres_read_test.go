@@ -49,25 +49,6 @@ func (r *shareRowsValues) Scan(dest ...any) error {
 func (r *shareRowsValues) Close() error { return nil }
 func (r *shareRowsValues) Err() error   { return r.err }
 
-type shareFallbackRepo struct{ used bool }
-
-func (r *shareFallbackRepo) Create(context.Context, createShareCommand) (ShareCreated, error) {
-	r.used = true
-	return ShareCreated{}, nil
-}
-func (r *shareFallbackRepo) Get(context.Context, getShareQuery) (ShareDetail, error) {
-	r.used = true
-	return ShareDetail{}, nil
-}
-func (r *shareFallbackRepo) List(context.Context, listSharesQuery) (PaginatedShares, error) {
-	r.used = true
-	return PaginatedShares{}, nil
-}
-func (r *shareFallbackRepo) Revoke(context.Context, revokeShareCommand) error {
-	r.used = true
-	return nil
-}
-
 type shareStubRecord struct {
 	ShareID       string
 	ShareCode     string
@@ -253,8 +234,7 @@ func TestPostgresRepositoryCreateGetListAndRevoke(t *testing.T) {
 	backend := newShareBackendStub()
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &shareFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 	expiresAt := time.Now().UTC().Add(time.Minute)
 
 	created, err := repo.Create(context.Background(), createShareCommand{CreatorUserID: "user_alice", ShareType: ShareTypeUser, Payload: map[string]any{"shared_user_id": "user_bob"}, ExpiresAt: &expiresAt})
@@ -287,24 +267,17 @@ func TestPostgresRepositoryCreateGetListAndRevoke(t *testing.T) {
 	if err != nil || len(list.Items) != 1 || !list.Items[0].IsRevoked {
 		t.Fatalf("unexpected revoked list: %#v err=%v", list, err)
 	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
-	}
 }
 
 func TestPostgresRepositoryGetReturnsNotFoundOnNoRows(t *testing.T) {
 	backend := newShareBackendStub()
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &shareFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	_, err := repo.Get(context.Background(), getShareQuery{ShareCode: "ABCDEFGHJKLM"})
 	if !errors.Is(err, ErrShareNotFound) {
 		t.Fatalf("expected not found, got %v", err)
-	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
 	}
 }
 
@@ -313,15 +286,11 @@ func TestPostgresRepositoryCreateReturnsErrorOnExecFailure(t *testing.T) {
 	backend.execErrs[queryInsertShare] = errors.New("write failed")
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &shareFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	_, err := repo.Create(context.Background(), createShareCommand{CreatorUserID: "user_alice", ShareType: ShareTypeUser, Payload: map[string]any{"shared_user_id": "user_bob"}})
 	if err == nil {
 		t.Fatal("expected create error")
-	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
 	}
 }
 
@@ -330,15 +299,11 @@ func TestPostgresRepositoryListReturnsErrorOnQueryFailure(t *testing.T) {
 	backend.queryErrs[queryListShares] = errors.New("query failed")
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &shareFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	_, err := repo.List(context.Background(), listSharesQuery{CreatorUserID: "user_alice", Limit: 20})
 	if err == nil {
 		t.Fatal("expected list error")
-	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
 	}
 }
 
@@ -347,7 +312,7 @@ func TestPostgresRepositoryRejectsMissingTarget(t *testing.T) {
 	delete(backend.users, "user_bob")
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, &shareFallbackRepo{})
+	repo := NewPostgresRepository(factory)
 
 	_, err := repo.Create(context.Background(), createShareCommand{CreatorUserID: "user_alice", ShareType: ShareTypeUser, Payload: map[string]any{"shared_user_id": "user_bob"}})
 	if !errors.Is(err, ErrShareNotFound) {
@@ -359,7 +324,7 @@ func TestPostgresRepositoryGetOmitsPreviewWhenTargetBecomesUnavailable(t *testin
 	backend := newShareBackendStub()
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, &shareFallbackRepo{})
+	repo := NewPostgresRepository(factory)
 
 	created, err := repo.Create(context.Background(), createShareCommand{CreatorUserID: "user_alice", ShareType: ShareTypeUser, Payload: map[string]any{"shared_user_id": "user_bob"}})
 	if err != nil {
@@ -380,7 +345,7 @@ func TestPostgresRepositoryListOmitsPreviewForRevokedOrUnavailableItems(t *testi
 	backend := newShareBackendStub()
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, &shareFallbackRepo{})
+	repo := NewPostgresRepository(factory)
 
 	revoked, err := repo.Create(context.Background(), createShareCommand{CreatorUserID: "user_alice", ShareType: ShareTypeUser, Payload: map[string]any{"shared_user_id": "user_bob"}})
 	if err != nil {

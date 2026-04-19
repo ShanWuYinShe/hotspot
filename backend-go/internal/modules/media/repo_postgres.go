@@ -10,24 +10,17 @@ import (
 )
 
 type PostgresRepository struct {
-	factory  *persistence.Factory
-	fallback Repository
+	factory *persistence.Factory
 }
 
-func NewPostgresRepository(factory *persistence.Factory, fallback Repository) *PostgresRepository {
-	if fallback == nil {
-		fallback = NewInMemoryRepository()
-	}
-	return &PostgresRepository{factory: factory, fallback: fallback}
+func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
+	return &PostgresRepository{factory: factory}
 }
 
 func (r *PostgresRepository) Save(ctx context.Context, upload pendingUpload) error {
-	queryable, useFallback, err := r.queryable()
+	queryable, err := r.queryable()
 	if err != nil {
 		return err
-	}
-	if useFallback {
-		return r.fallback.Save(ctx, upload)
 	}
 	return queryable.Exec(ctx, queryInsertUploadSession,
 		upload.UploadID,
@@ -53,12 +46,9 @@ func (r *PostgresRepository) Save(ctx context.Context, upload pendingUpload) err
 }
 
 func (r *PostgresRepository) Get(ctx context.Context, uploadID string) (pendingUpload, bool, error) {
-	queryable, useFallback, err := r.queryable()
+	queryable, err := r.queryable()
 	if err != nil {
 		return pendingUpload{}, false, err
-	}
-	if useFallback {
-		return r.fallback.Get(ctx, uploadID)
 	}
 	var (
 		result        pendingUpload
@@ -111,12 +101,9 @@ func (r *PostgresRepository) Get(ctx context.Context, uploadID string) (pendingU
 }
 
 func (r *PostgresRepository) Complete(ctx context.Context, uploadID string, file UploadedMedia, idempotencyKey string) (pendingUpload, bool, error) {
-	queryable, useFallback, err := r.queryable()
+	queryable, err := r.queryable()
 	if err != nil {
 		return pendingUpload{}, false, err
-	}
-	if useFallback {
-		return r.fallback.Complete(ctx, uploadID, file, idempotencyKey)
 	}
 	completedAt := time.Now().UTC()
 	if err := queryable.Exec(ctx, queryCompleteUploadSession,
@@ -137,15 +124,15 @@ func (r *PostgresRepository) Complete(ctx context.Context, uploadID string, file
 	return r.Get(ctx, uploadID)
 }
 
-func (r *PostgresRepository) queryable() (persistence.QueryableDB, bool, error) {
+func (r *PostgresRepository) queryable() (persistence.QueryableDB, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, true, nil
+		return nil, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		return nil, false, persistence.ErrNotImplemented
+		return nil, persistence.ErrNotImplemented
 	}
-	return queryable, false, nil
+	return queryable, nil
 }
 
 func statusFromCompleted(completed bool) string {

@@ -57,88 +57,6 @@ func (r *rowsValues) Scan(dest ...any) error {
 func (r *rowsValues) Close() error { return nil }
 func (r *rowsValues) Err() error   { return r.err }
 
-type fallbackRepo struct{ used bool }
-
-func (r *fallbackRepo) Create(context.Context, string, CreateMomentRequest) (MomentItem, error) {
-	r.used = true
-	return MomentItem{}, nil
-}
-
-func (r *fallbackRepo) Get(context.Context, string) (MomentItem, bool, error) {
-	r.used = true
-	return MomentItem{}, false, nil
-}
-
-func (r *fallbackRepo) ListMine(context.Context, string) (PaginatedMoments, error) {
-	r.used = true
-	return PaginatedMoments{}, nil
-}
-
-func (r *fallbackRepo) Exists(context.Context, string) (bool, error) {
-	r.used = true
-	return false, nil
-}
-
-func (r *fallbackRepo) IncrementCommentCount(context.Context, string) error {
-	r.used = true
-	return nil
-}
-
-func (r *fallbackRepo) DecrementCommentCount(context.Context, string) error {
-	r.used = true
-	return nil
-}
-
-func (r *fallbackRepo) IncrementSharesCount(context.Context, string) error {
-	r.used = true
-	return nil
-}
-
-func (r *fallbackRepo) Search(context.Context, SearchMomentsRequest) (PaginatedMoments, error) {
-	r.used = true
-	return PaginatedMoments{}, nil
-}
-
-func (r *fallbackRepo) Update(context.Context, string, EditMomentRequest) error {
-	r.used = true
-	return nil
-}
-
-func (r *fallbackRepo) Delete(context.Context, string) error {
-	r.used = true
-	return nil
-}
-
-func (r *fallbackRepo) Like(context.Context, string, string) (bool, error) {
-	r.used = true
-	return false, nil
-}
-
-func (r *fallbackRepo) Unlike(context.Context, string, string) error {
-	r.used = true
-	return nil
-}
-
-func (r *fallbackRepo) Favorite(context.Context, string, string) error {
-	r.used = true
-	return nil
-}
-
-func (r *fallbackRepo) Unfavorite(context.Context, string, string) error {
-	r.used = true
-	return nil
-}
-
-func (r *fallbackRepo) ListLikes(context.Context, string, int, string) ([]LikeItem, string, error) {
-	r.used = true
-	return nil, "", nil
-}
-
-func (r *fallbackRepo) ListFavorites(context.Context, string, int, string) (PaginatedMoments, error) {
-	r.used = true
-	return PaginatedMoments{}, nil
-}
-
 type backendStub struct {
 	moments      map[string]MomentItem
 	blockedTags  map[string]struct{}
@@ -464,8 +382,7 @@ func TestPostgresRepositoryReadsQueryableDB(t *testing.T) {
 	}{Latitude: 35.0, Longitude: 112.0}, LocationName: "南天门"}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &fallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 	item, ok, err := repo.Get(context.Background(), "moment_1")
 	if err != nil || !ok || item.MomentID != "moment_1" || item.Description != "hello" {
 		t.Fatalf("unexpected item: %#v ok=%v err=%v", item, ok, err)
@@ -478,17 +395,13 @@ func TestPostgresRepositoryReadsQueryableDB(t *testing.T) {
 	if err != nil || len(list.Items) != 1 || list.Items[0].MomentID != "moment_1" {
 		t.Fatalf("unexpected list: %#v err=%v", list, err)
 	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
-	}
 }
 
 func TestPostgresRepositoryWritesQueryableDB(t *testing.T) {
 	backend := newBackendStub()
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &fallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Tags: []string{" travel ", "hotspot", "travel"}, Mentions: []string{"user_bob", "user_bob", "user_charlie"}, Location: Location{Point: struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
@@ -519,17 +432,13 @@ func TestPostgresRepositoryWritesQueryableDB(t *testing.T) {
 	if len(list.Items[0].Mentions) != 2 || list.Items[0].Mentions[0] != "user_bob" || list.Items[0].Mentions[1] != "user_charlie" {
 		t.Fatalf("unexpected list mentions: %#v", list.Items[0].Mentions)
 	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
-	}
 }
 
 func TestPostgresRepositoryGetReturnsNotFoundOnNoRows(t *testing.T) {
 	backend := newBackendStub()
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &fallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 	_, ok, err := repo.Get(context.Background(), "missing")
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
@@ -544,9 +453,6 @@ func TestPostgresRepositoryGetReturnsNotFoundOnNoRows(t *testing.T) {
 	if exists {
 		t.Fatal("expected missing moment to report exists=false")
 	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
-	}
 }
 
 func TestPostgresRepositoryCreateReturnsErrorOnExecFailure(t *testing.T) {
@@ -554,14 +460,10 @@ func TestPostgresRepositoryCreateReturnsErrorOnExecFailure(t *testing.T) {
 	backend.execErrs[queryInsertMoment] = errors.New("write failed")
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &fallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 	_, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Location: Location{LocationName: "南天门"}})
 	if err == nil {
 		t.Fatal("expected create error")
-	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
 	}
 }
 
@@ -571,16 +473,12 @@ func TestPostgresRepositoryIncrementCommentCountReturnsErrorOnExecFailure(t *tes
 	backend.moments["moment_1"] = MomentItem{MomentID: "moment_1", User: UserInfo{UserID: "user_alice"}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &fallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 	if err := repo.IncrementCommentCount(context.Background(), "moment_1"); err == nil {
 		t.Fatal("expected increment error")
 	}
 	if backend.moments["moment_1"].CommentsCount != 0 {
 		t.Fatalf("unexpected comments count: %#v", backend.moments["moment_1"])
-	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
 	}
 }
 
@@ -589,8 +487,7 @@ func TestPostgresRepositoryCreateFiltersBlockedTags(t *testing.T) {
 	backend.blockedTags["blocked"] = struct{}{}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &fallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 	created, err := repo.Create(context.Background(), "user_alice", CreateMomentRequest{Description: "hello", Tags: []string{"travel", "blocked", "hotspot"}, Location: Location{LocationName: "南天门"}})
 	if err != nil {
 		t.Fatalf("unexpected create error: %v", err)
@@ -610,9 +507,6 @@ func TestPostgresRepositoryCreateFiltersBlockedTags(t *testing.T) {
 			t.Fatalf("blocked tag should not be persisted: %#v", opened.Tags)
 		}
 	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
-	}
 }
 
 func TestPostgresRepositoryLikeAndUnlikeAreIdempotent(t *testing.T) {
@@ -620,7 +514,7 @@ func TestPostgresRepositoryLikeAndUnlikeAreIdempotent(t *testing.T) {
 	backend.moments["moment_1"] = MomentItem{MomentID: "moment_1", User: UserInfo{UserID: "user_alice"}, LikesCount: 0}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, &fallbackRepo{})
+	repo := NewPostgresRepository(factory)
 
 	if _, err := repo.Like(context.Background(), "user_bob", "moment_1"); err != nil {
 		t.Fatalf("first like: %v", err)
@@ -660,7 +554,7 @@ func TestPostgresRepositoryListsLikesAndFavorites(t *testing.T) {
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, &fallbackRepo{})
+	repo := NewPostgresRepository(factory)
 
 	likes, nextCursor, err := repo.ListLikes(context.Background(), "moment_1", 2, "")
 	if err != nil {
@@ -707,7 +601,7 @@ func TestPostgresRepositoryInteractionReadsReturnErrorsWithoutFallback(t *testin
 	backend.queryErr = errors.New("boom")
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, &fallbackRepo{})
+	repo := NewPostgresRepository(factory)
 	if _, _, err := repo.ListLikes(context.Background(), "moment_1", 20, ""); err == nil {
 		t.Fatal("expected list likes error")
 	}
@@ -749,7 +643,7 @@ func TestPostgresRepositorySearchSortByPopularReturnsOlderPopularMoments(t *test
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, &fallbackRepo{})
+	repo := NewPostgresRepository(factory)
 
 	keyword := "post"
 	result, err := repo.Search(context.Background(), SearchMomentsRequest{
@@ -795,7 +689,7 @@ func TestPostgresRepositorySearchSortByDistanceReturnsCloserOlderMoments(t *test
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, &fallbackRepo{})
+	repo := NewPostgresRepository(factory)
 
 	result, err := repo.Search(context.Background(), SearchMomentsRequest{
 		SortBy:         "distance",
@@ -831,7 +725,7 @@ func TestPostgresRepositorySearchSortByNewestAppliesLimit(t *testing.T) {
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, &fallbackRepo{})
+	repo := NewPostgresRepository(factory)
 
 	result, err := repo.Search(context.Background(), SearchMomentsRequest{
 		SortBy:         "newest",

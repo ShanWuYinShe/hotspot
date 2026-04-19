@@ -45,48 +45,6 @@ func (r *rowsValues) Scan(dest ...any) error {
 func (r *rowsValues) Close() error { return nil }
 func (r *rowsValues) Err() error   { return r.err }
 
-type fallbackRepo struct{ used bool }
-
-func (r *fallbackRepo) Create(context.Context, string, CreateCommentRequest) (CommentItem, error) {
-	r.used = true
-	return CommentItem{}, nil
-}
-
-func (r *fallbackRepo) Delete(context.Context, string) error {
-	r.used = true
-	return nil
-}
-
-func (r *fallbackRepo) List(context.Context, string) (PaginatedComments, error) {
-	r.used = true
-	return PaginatedComments{}, nil
-}
-
-func (r *fallbackRepo) Get(context.Context, string) (CommentItem, bool, error) {
-	r.used = true
-	return CommentItem{}, false, nil
-}
-
-func (r *fallbackRepo) ListReplies(context.Context, string, int, string) (PaginatedComments, error) {
-	r.used = true
-	return PaginatedComments{}, nil
-}
-
-func (r *fallbackRepo) Like(context.Context, string, string) (bool, error) {
-	r.used = true
-	return false, nil
-}
-
-func (r *fallbackRepo) Unlike(context.Context, string, string) error {
-	r.used = true
-	return nil
-}
-
-func (r *fallbackRepo) ListLikes(context.Context, string, int, string) ([]CommentLikeItem, string, error) {
-	r.used = true
-	return nil, "", nil
-}
-
 type backendStub struct {
 	comments map[string][]CommentItem
 	execErrs map[string]error
@@ -227,8 +185,7 @@ func TestPostgresRepositoryWritesAndReadsQueryableDB(t *testing.T) {
 	backend := newBackendStub()
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &fallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 	created, err := repo.Create(context.Background(), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "nice", ParentID: "comment_0"})
 	if err != nil || created.CommentID == "" || created.Content != "nice" {
 		t.Fatalf("unexpected created comment: %#v err=%v", created, err)
@@ -240,9 +197,6 @@ func TestPostgresRepositoryWritesAndReadsQueryableDB(t *testing.T) {
 	if err != nil || len(list.Items) != 1 || list.Items[0].CommentID != created.CommentID || list.Items[0].ParentID != "comment_0" {
 		t.Fatalf("unexpected list: %#v err=%v", list, err)
 	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
-	}
 }
 
 func TestPostgresRepositoryCreateReturnsErrorOnExecFailure(t *testing.T) {
@@ -250,14 +204,10 @@ func TestPostgresRepositoryCreateReturnsErrorOnExecFailure(t *testing.T) {
 	backend.execErrs[queryInsertComment] = errors.New("write failed")
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &fallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 	_, err := repo.Create(context.Background(), "user_alice", CreateCommentRequest{MomentID: "moment_1", Content: "nice"})
 	if err == nil {
 		t.Fatal("expected create error")
-	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
 	}
 }
 
@@ -275,7 +225,7 @@ func TestPostgresRepositoryGetReturnsMomentID(t *testing.T) {
 	}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, &fallbackRepo{})
+	repo := NewPostgresRepository(factory)
 
 	item, found, err := repo.Get(context.Background(), "comment_1")
 	if err != nil || !found {
@@ -295,7 +245,7 @@ func TestPostgresRepositoryListRepliesUsesCursor(t *testing.T) {
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, &fallbackRepo{})
+	repo := NewPostgresRepository(factory)
 
 	first, err := repo.ListReplies(context.Background(), "comment_0", 2, "")
 	if err != nil {

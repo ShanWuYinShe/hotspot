@@ -61,145 +61,6 @@ func (r *groupRowsValues) Scan(dest ...any) error {
 func (r *groupRowsValues) Close() error { return nil }
 func (r *groupRowsValues) Err() error   { return r.err }
 
-type groupFallbackRepo struct{ used bool }
-
-func (r *groupFallbackRepo) Create(context.Context, string, CreateGroupRequest) (GroupItem, error) {
-	r.used = true
-	return GroupItem{}, nil
-}
-func (r *groupFallbackRepo) Get(context.Context, string) (GroupItem, bool, error) {
-	r.used = true
-	return GroupItem{}, false, nil
-}
-func (r *groupFallbackRepo) Search(context.Context, SearchGroupsRequest) (PaginatedGroups, error) {
-	r.used = true
-	return PaginatedGroups{}, nil
-}
-func (r *groupFallbackRepo) Update(context.Context, string, UpdateGroupRequest) error {
-	r.used = true
-	return nil
-}
-func (r *groupFallbackRepo) Dismiss(context.Context, string) error {
-	r.used = true
-	return nil
-}
-func (r *groupFallbackRepo) ListMembers(context.Context, string, *GroupRole, int, string) ([]GroupMemberItem, string, error) {
-	r.used = true
-	return nil, "", nil
-}
-func (r *groupFallbackRepo) SearchMembers(context.Context, string, string, *GroupRole, int, string) ([]GroupMemberItem, string, error) {
-	r.used = true
-	return nil, "", nil
-}
-func (r *groupFallbackRepo) ListMyGroups(context.Context, string, int, string) ([]GroupItem, string, error) {
-	r.used = true
-	return nil, "", nil
-}
-func (r *groupFallbackRepo) JoinGroup(context.Context, string, string, *string, *string) (JoinGroupResult, error) {
-	r.used = true
-	return JoinGroupResult{}, nil
-}
-func (r *groupFallbackRepo) CreateAnnouncement(context.Context, string, CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error) {
-	r.used = true
-	return GroupAnnouncementItem{}, nil
-}
-func (r *groupFallbackRepo) ListAnnouncements(context.Context, string) ([]GroupAnnouncementItem, error) {
-	r.used = true
-	return nil, nil
-}
-func (r *groupFallbackRepo) UpdateAnnouncement(context.Context, string, UpdateGroupAnnouncementRequest) error {
-	r.used = true
-	return nil
-}
-func (r *groupFallbackRepo) DeleteAnnouncement(context.Context, string, string) error {
-	r.used = true
-	return nil
-}
-func (r *groupFallbackRepo) ListApplications(context.Context, string, *ApplicationStatus, int, string) ([]GroupApplicationItem, string, error) {
-	r.used = true
-	return nil, "", nil
-}
-func (r *groupFallbackRepo) ApproveApplication(context.Context, string, string) error {
-	r.used = true
-	return nil
-}
-func (r *groupFallbackRepo) RejectApplication(context.Context, string, *string) error {
-	r.used = true
-	return nil
-}
-func (r *groupFallbackRepo) UpdateMySettings(context.Context, string, UpdateGroupMySettingsRequest) error {
-	r.used = true
-	return nil
-}
-func (r *groupFallbackRepo) LeaveGroup(context.Context, string, string) error {
-	r.used = true
-	return nil
-}
-func (r *groupFallbackRepo) ListMyApplications(context.Context, string, *ApplicationStatus, int, string) ([]GroupApplicationItem, string, error) {
-	r.used = true
-	return nil, "", nil
-}
-func (r *groupFallbackRepo) CancelApplication(context.Context, string) error {
-	r.used = true
-	return nil
-}
-func (r *groupFallbackRepo) ListMyInvites(context.Context, string, *ApplicationStatus, int, string) ([]GroupInviteItem, string, error) {
-	r.used = true
-	return nil, "", nil
-}
-func (r *groupFallbackRepo) AcceptInvite(context.Context, string, string) error {
-	r.used = true
-	return nil
-}
-func (r *groupFallbackRepo) RejectInvite(context.Context, string) error {
-	r.used = true
-	return nil
-}
-func (r *groupFallbackRepo) InviteMember(context.Context, string, InviteMemberRequest) (Invitation, error) {
-	r.used = true
-	return Invitation{}, nil
-}
-func (r *groupFallbackRepo) ListSentInvites(context.Context, string, *ApplicationStatus, int, string) ([]GroupSentInviteItem, string, error) {
-	r.used = true
-	return nil, "", nil
-}
-func (r *groupFallbackRepo) RevokeInvite(context.Context, string, string) error {
-	r.used = true
-	return nil
-}
-func (r *groupFallbackRepo) SetMemberRole(context.Context, string, SetMemberRoleRequest) error {
-	r.used = true
-	return nil
-}
-func (r *groupFallbackRepo) MuteMember(context.Context, string, MuteMemberRequest) error {
-	r.used = true
-	return nil
-}
-func (r *groupFallbackRepo) UnmuteMember(context.Context, string, UnmuteMemberRequest) error {
-	r.used = true
-	return nil
-}
-func (r *groupFallbackRepo) BanMember(context.Context, string, BanMemberRequest) error {
-	r.used = true
-	return nil
-}
-func (r *groupFallbackRepo) UnbanMember(context.Context, string, UnbanMemberRequest) error {
-	r.used = true
-	return nil
-}
-func (r *groupFallbackRepo) ListBannedMembers(context.Context, string, int, string) ([]BannedMemberItem, string, error) {
-	r.used = true
-	return nil, "", nil
-}
-func (r *groupFallbackRepo) RemoveMember(context.Context, string, RemoveMemberRequest) error {
-	r.used = true
-	return nil
-}
-func (r *groupFallbackRepo) TransferOwnership(context.Context, string, TransferOwnershipRequest) error {
-	r.used = true
-	return nil
-}
-
 type groupBackendStub struct {
 	rows      [][]any
 	queryErrs map[string]error
@@ -252,8 +113,7 @@ func TestPostgresRepositoryCreateGetAndSearch(t *testing.T) {
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &groupFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	created, err := repo.Create(context.Background(), "user_alice", CreateGroupRequest{Name: "Hot Group", Location: Location{LocationName: "南天门"}})
 	if err != nil {
@@ -276,17 +136,13 @@ func TestPostgresRepositoryCreateGetAndSearch(t *testing.T) {
 	if err != nil || len(list.Items) != 1 || list.Items[0].Group.GroupID != "group_1" {
 		t.Fatalf("unexpected list: %#v err=%v", list, err)
 	}
-	if fallback.used {
-		t.Fatal("expected postgres path without fallback")
-	}
 }
 
 func TestPostgresRepositoryGetReturnsNotFoundWithoutFallback(t *testing.T) {
 	backend := &groupBackendStub{rows: nil, queryErrs: map[string]error{}, queryRow: groupRowValues{err: errors.New("no rows")}, execErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &groupFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	_, ok, err := repo.Get(context.Background(), "missing")
 	if err == nil && ok {
@@ -298,15 +154,11 @@ func TestPostgresRepositoryCreateReturnsErrorOnExecFailure(t *testing.T) {
 	backend := &groupBackendStub{rows: nil, queryErrs: map[string]error{}, queryRow: groupRowValues{err: persistence.ErrNotImplemented}, execErrs: map[string]error{queryInsertGroup: errors.New("boom")}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &groupFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	_, err := repo.Create(context.Background(), "user_alice", CreateGroupRequest{Name: "Hot Group", Location: Location{LocationName: "南天门"}})
 	if err == nil {
 		t.Fatal("expected create error")
-	}
-	if fallback.used {
-		t.Fatal("expected create exec failure without fallback")
 	}
 }
 
@@ -314,14 +166,10 @@ func TestPostgresRepositorySearchReturnsErrorOnQueryFailure(t *testing.T) {
 	backend := &groupBackendStub{rows: nil, queryErrs: map[string]error{querySearchGroups: errors.New("boom")}, queryRow: groupRowValues{err: persistence.ErrNotImplemented}, execErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &groupFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	_, err := repo.Search(context.Background(), SearchGroupsRequest{Keyword: "Hot Group", ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
 	if err == nil {
 		t.Fatal("expected search error")
-	}
-	if fallback.used {
-		t.Fatal("expected query failure without fallback")
 	}
 }

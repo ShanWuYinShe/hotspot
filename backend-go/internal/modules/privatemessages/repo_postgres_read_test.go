@@ -316,7 +316,7 @@ func TestPostgresRepositoryFailsClosedWhenQueryableUnavailable(t *testing.T) {
 	repo := NewPostgresRepository(&persistence.Factory{
 		Config: persistence.Config{PostgresDSN: "postgres://example"},
 		DB:     privateMessageNonQueryableDB{},
-	}, nil)
+	})
 
 	if _, err := repo.Send(context.Background(), "user_alice", "user_bob", SendPrivateMessageRequest{Type: "text", Content: "hello"}); !errors.Is(err, persistence.ErrNotImplemented) {
 		t.Fatalf("expected ErrNotImplemented for send, got %v", err)
@@ -342,7 +342,7 @@ func TestPostgresRepositorySendHistoryRecentAndLast(t *testing.T) {
 	backend := &privateMessageBackendStub{items: map[string][]privateMessageStubRecord{}, readStates: map[string]map[string]privateMessageReadState{}, execErrs: map[string]error{}, queryErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, nil)
+	repo := NewPostgresRepository(factory)
 
 	sent, err := repo.Send(context.Background(), "user_alice", "user_bob", SendPrivateMessageRequest{Type: "text", Content: "hello"})
 	if err != nil {
@@ -387,7 +387,7 @@ func TestPostgresRepositoryHistorySupportsMediaReplyAndPagination(t *testing.T) 
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, nil)
+	repo := NewPostgresRepository(factory)
 
 	history, err := repo.History(context.Background(), "user_alice", GetHistoryRequest{TargetUserID: "user_bob", Pagination: &PaginationParams{Limit: 2}})
 	if err != nil {
@@ -416,7 +416,7 @@ func TestPostgresRepositoryHistoryReturnsEmptyWithoutFallback(t *testing.T) {
 	backend := &privateMessageBackendStub{items: map[string][]privateMessageStubRecord{}, readStates: map[string]map[string]privateMessageReadState{}, execErrs: map[string]error{}, queryErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, nil)
+	repo := NewPostgresRepository(factory)
 
 	history, err := repo.History(context.Background(), "user_alice", GetHistoryRequest{TargetUserID: "user_bob"})
 	if err != nil {
@@ -431,7 +431,7 @@ func TestPostgresRepositorySendReturnsErrorOnExecFailure(t *testing.T) {
 	backend := &privateMessageBackendStub{items: map[string][]privateMessageStubRecord{}, readStates: map[string]map[string]privateMessageReadState{}, execErrs: map[string]error{queryInsertPrivateMessage: errors.New("boom")}, queryErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, nil)
+	repo := NewPostgresRepository(factory)
 
 	_, err := repo.Send(context.Background(), "user_alice", "user_bob", SendPrivateMessageRequest{Type: "text", Content: "hello"})
 	if err == nil {
@@ -443,7 +443,7 @@ func TestPostgresRepositoryHistoryReturnsErrorOnQueryFailure(t *testing.T) {
 	backend := &privateMessageBackendStub{items: map[string][]privateMessageStubRecord{}, readStates: map[string]map[string]privateMessageReadState{}, execErrs: map[string]error{}, queryErrs: map[string]error{queryPrivateMessagesHistory: errors.New("boom")}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, nil)
+	repo := NewPostgresRepository(factory)
 
 	_, err := repo.History(context.Background(), "user_alice", GetHistoryRequest{TargetUserID: "user_bob"})
 	if err == nil {
@@ -466,7 +466,7 @@ func TestPostgresRepositoryMutationSupportMatchesCurrentPhase(t *testing.T) {
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, nil)
+	repo := NewPostgresRepository(factory)
 
 	if _, err := repo.Update(context.Background(), "user_alice", UpdatePrivateMessageRequest{MessageID: "pm_1", Content: "updated"}); err != nil {
 		t.Fatalf("expected update to execute on postgres, got %v", err)
@@ -523,7 +523,7 @@ func TestPostgresRepositoryHistoryReflectsReadStateSemantics(t *testing.T) {
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, nil)
+	repo := NewPostgresRepository(factory)
 
 	history, err := repo.History(context.Background(), "user_alice", GetHistoryRequest{TargetUserID: "user_bob"})
 	if err != nil {
@@ -563,7 +563,7 @@ func TestPostgresRepositoryUnreadCountUsesViewerReadState(t *testing.T) {
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, nil)
+	repo := NewPostgresRepository(factory)
 
 	count, err := repo.UnreadCount(context.Background(), "user_alice", "user_bob", nil)
 	if err != nil {

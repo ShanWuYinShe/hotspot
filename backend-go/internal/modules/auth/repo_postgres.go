@@ -15,7 +15,7 @@ type PostgresRepository struct {
 	factory *persistence.Factory
 }
 
-func NewPostgresRepository(factory *persistence.Factory, _ Repository) *PostgresRepository {
+func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 	return &PostgresRepository{factory: factory}
 }
 

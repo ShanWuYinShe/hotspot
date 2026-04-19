@@ -226,8 +226,7 @@ func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &userFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	profile, ok, err := repo.GetProfile(context.Background(), "user_alice")
 	if err != nil || !ok || profile.UserID != "user_alice" || profile.Nickname != "Alice" {
@@ -256,17 +255,13 @@ func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 	if liked.Items[0].MyState == nil || !liked.Items[0].MyState.IsLiked || len(liked.Items[0].Tags) != 2 {
 		t.Fatalf("unexpected liked moment state: %#v", liked.Items[0])
 	}
-	if fallback.used {
-		t.Fatal("expected postgres path without fallback")
-	}
 }
 
 func TestPostgresRepositorySearchAndListBlockedReturnErrorsWithoutFallback(t *testing.T) {
 	backend := &userBackendStub{queryRowByQuery: map[string]persistence.Row{}, queryRowsByQuery: map[string][][]any{}, queryErrs: map[string]error{querySearchUserProfiles: errors.New("boom"), queryListBlockedUsers: errors.New("boom")}, execErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &userFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	if _, err := repo.SearchProfiles(context.Background(), SearchUsersRequest{Keyword: "Alice", ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}}); err == nil {
 		t.Fatal("expected search error")
@@ -278,17 +273,13 @@ func TestPostgresRepositorySearchAndListBlockedReturnErrorsWithoutFallback(t *te
 	if _, err := repo.ListLikedMoments(context.Background(), "user_alice", 20, "", ""); err == nil {
 		t.Fatal("expected liked moments error")
 	}
-	if fallback.used {
-		t.Fatal("expected query failures without fallback")
-	}
 }
 
 func TestPostgresRepositoryWritesReturnExecErrors(t *testing.T) {
 	backend := &userBackendStub{queryRowByQuery: map[string]persistence.Row{queryGetUserRelation: userRowValues{values: []any{false, false, "", nil, nil, ""}}}, queryRowsByQuery: map[string][][]any{}, queryErrs: map[string]error{}, execErrs: map[string]error{queryUpsertUserProfile: errors.New("boom")}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &userFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	if err := repo.PutProfile(context.Background(), MyProfile{UserID: "user_alice", Nickname: "Alice", UserType: UserTypeNormal, Location: Location{LocationName: "南天门"}}); err == nil {
 		t.Fatal("expected put profile error")
@@ -296,9 +287,6 @@ func TestPostgresRepositoryWritesReturnExecErrors(t *testing.T) {
 	backend.execErrs = map[string]error{queryUpsertUserRelation: errors.New("boom")}
 	if err := repo.Follow(context.Background(), "user_alice", "user_bob", FollowSourceProfile, ""); err == nil {
 		t.Fatal("expected follow error")
-	}
-	if fallback.used {
-		t.Fatal("expected write failures without fallback")
 	}
 }
 

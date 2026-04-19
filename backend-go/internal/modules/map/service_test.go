@@ -27,18 +27,6 @@ func (r *stubMapRepository) Hotspots(_ context.Context, query canvasQuery) (MapH
 	return r.hotspotsResp, r.hotspotsErr
 }
 
-func TestServiceCanvasUsesInMemoryFallbackWhenRepoMissing(t *testing.T) {
-	service := NewServiceWithRepo(nil)
-
-	resp, err := service.Canvas(context.Background(), MapCanvasRequest{Viewport: MapViewport{Bounds: Bounds{North: 1, South: 0, East: 1, West: 0}}})
-	if err != nil {
-		t.Fatalf("expected no error with in-memory fallback, got %v", err)
-	}
-	if resp.Hotspots == nil && resp.Heatmap == nil {
-		t.Fatalf("expected non-empty canvas from in-memory fallback, got nil")
-	}
-}
-
 func TestServiceCanvasUsesHeatmapForLargeViewport(t *testing.T) {
 	repo := &stubMapRepository{heatmapResp: MapHeatCanvas{Items: []MapHeatBucket{{CellToken: "a", Level: 8, TotalCount: 2}}}}
 	service := NewServiceWithRepo(repo)

@@ -13,20 +13,16 @@ import (
 )
 
 type PostgresRepository struct {
-	factory  *persistence.Factory
-	fallback Repository
+	factory *persistence.Factory
 }
 
-func NewPostgresRepository(factory *persistence.Factory, fallback Repository) *PostgresRepository {
-	if fallback == nil {
-		fallback = NewInMemoryRepository()
-	}
-	return &PostgresRepository{factory: factory, fallback: fallback}
+func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
+	return &PostgresRepository{factory: factory}
 }
 
 func (r *PostgresRepository) Create(ctx context.Context, userID string, req CreateGroupRequest) (GroupItem, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Create(ctx, userID, req)
+		return GroupItem{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -60,7 +56,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 
 func (r *PostgresRepository) Update(ctx context.Context, userID string, req UpdateGroupRequest) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Update(ctx, userID, req)
+		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -92,7 +88,7 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Upda
 
 func (r *PostgresRepository) Dismiss(ctx context.Context, groupID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Dismiss(ctx, groupID)
+		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -104,7 +100,7 @@ func (r *PostgresRepository) Dismiss(ctx context.Context, groupID string) error 
 
 func (r *PostgresRepository) ListMembers(ctx context.Context, groupID string, role *GroupRole, limit int, cursor string) ([]GroupMemberItem, string, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.ListMembers(ctx, groupID, role, limit, cursor)
+		return nil, "", persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -154,7 +150,7 @@ func (r *PostgresRepository) SearchMembers(ctx context.Context, groupID string, 
 
 func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, limit int, cursor string) ([]GroupItem, string, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.ListMyGroups(ctx, userID, limit, cursor)
+		return nil, "", persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -199,7 +195,7 @@ func (r *PostgresRepository) ListMyGroups(ctx context.Context, userID string, li
 
 func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, groupID string, password *string, message *string) (JoinGroupResult, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.JoinGroup(ctx, userID, groupID, password, message)
+		return JoinGroupResult{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -249,24 +245,24 @@ func (r *PostgresRepository) JoinGroup(ctx context.Context, userID string, group
 }
 
 func (r *PostgresRepository) CreateAnnouncement(ctx context.Context, creatorID string, req CreateGroupAnnouncementRequest) (GroupAnnouncementItem, error) {
-	return r.fallback.CreateAnnouncement(ctx, creatorID, req)
+	return GroupAnnouncementItem{}, persistence.ErrNotImplemented
 }
 
 func (r *PostgresRepository) ListAnnouncements(ctx context.Context, groupID string) ([]GroupAnnouncementItem, error) {
-	return r.fallback.ListAnnouncements(ctx, groupID)
+	return nil, persistence.ErrNotImplemented
 }
 
 func (r *PostgresRepository) UpdateAnnouncement(ctx context.Context, groupID string, req UpdateGroupAnnouncementRequest) error {
-	return r.fallback.UpdateAnnouncement(ctx, groupID, req)
+	return persistence.ErrNotImplemented
 }
 
 func (r *PostgresRepository) DeleteAnnouncement(ctx context.Context, groupID string, announcementID string) error {
-	return r.fallback.DeleteAnnouncement(ctx, groupID, announcementID)
+	return persistence.ErrNotImplemented
 }
 
 func (r *PostgresRepository) ListApplications(ctx context.Context, groupID string, status *ApplicationStatus, limit int, cursor string) ([]GroupApplicationItem, string, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.ListApplications(ctx, groupID, status, limit, cursor)
+		return nil, "", persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -314,7 +310,7 @@ func (r *PostgresRepository) ListApplications(ctx context.Context, groupID strin
 
 func (r *PostgresRepository) ApproveApplication(ctx context.Context, approverID string, applicationID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.ApproveApplication(ctx, approverID, applicationID)
+		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -333,7 +329,7 @@ func (r *PostgresRepository) ApproveApplication(ctx context.Context, approverID 
 
 func (r *PostgresRepository) RejectApplication(ctx context.Context, applicationID string, reason *string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.RejectApplication(ctx, applicationID, reason)
+		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -343,16 +339,16 @@ func (r *PostgresRepository) RejectApplication(ctx context.Context, applicationI
 }
 
 func (r *PostgresRepository) UpdateMySettings(ctx context.Context, userID string, req UpdateGroupMySettingsRequest) error {
-	return r.fallback.UpdateMySettings(ctx, userID, req)
+	return persistence.ErrNotImplemented
 }
 
 func (r *PostgresRepository) LeaveGroup(ctx context.Context, userID string, groupID string) error {
-	return r.fallback.LeaveGroup(ctx, userID, groupID)
+	return persistence.ErrNotImplemented
 }
 
 func (r *PostgresRepository) ListMyApplications(ctx context.Context, userID string, status *ApplicationStatus, limit int, cursor string) ([]GroupApplicationItem, string, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.ListMyApplications(ctx, userID, status, limit, cursor)
+		return nil, "", persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -400,7 +396,7 @@ func (r *PostgresRepository) ListMyApplications(ctx context.Context, userID stri
 
 func (r *PostgresRepository) CancelApplication(ctx context.Context, applicationID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.CancelApplication(ctx, applicationID)
+		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -411,7 +407,7 @@ func (r *PostgresRepository) CancelApplication(ctx context.Context, applicationI
 
 func (r *PostgresRepository) ListMyInvites(ctx context.Context, userID string, status *ApplicationStatus, limit int, cursor string) ([]GroupInviteItem, string, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.ListMyInvites(ctx, userID, status, limit, cursor)
+		return nil, "", persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -457,7 +453,7 @@ func (r *PostgresRepository) ListMyInvites(ctx context.Context, userID string, s
 
 func (r *PostgresRepository) AcceptInvite(ctx context.Context, userID string, inviteID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.AcceptInvite(ctx, userID, inviteID)
+		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -476,7 +472,7 @@ func (r *PostgresRepository) AcceptInvite(ctx context.Context, userID string, in
 
 func (r *PostgresRepository) RejectInvite(ctx context.Context, inviteID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.RejectInvite(ctx, inviteID)
+		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -487,7 +483,7 @@ func (r *PostgresRepository) RejectInvite(ctx context.Context, inviteID string) 
 
 func (r *PostgresRepository) InviteMember(ctx context.Context, userID string, req InviteMemberRequest) (Invitation, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.InviteMember(ctx, userID, req)
+		return Invitation{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -509,7 +505,7 @@ func (r *PostgresRepository) InviteMember(ctx context.Context, userID string, re
 
 func (r *PostgresRepository) ListSentInvites(ctx context.Context, groupID string, status *ApplicationStatus, limit int, cursor string) ([]GroupSentInviteItem, string, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.ListSentInvites(ctx, groupID, status, limit, cursor)
+		return nil, "", persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -557,7 +553,7 @@ func (r *PostgresRepository) ListSentInvites(ctx context.Context, groupID string
 
 func (r *PostgresRepository) RevokeInvite(ctx context.Context, groupID string, inviteID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.RevokeInvite(ctx, groupID, inviteID)
+		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -567,35 +563,35 @@ func (r *PostgresRepository) RevokeInvite(ctx context.Context, groupID string, i
 }
 
 func (r *PostgresRepository) SetMemberRole(ctx context.Context, userID string, req SetMemberRoleRequest) error {
-	return r.fallback.SetMemberRole(ctx, userID, req)
+	return persistence.ErrNotImplemented
 }
 
 func (r *PostgresRepository) MuteMember(ctx context.Context, userID string, req MuteMemberRequest) error {
-	return r.fallback.MuteMember(ctx, userID, req)
+	return persistence.ErrNotImplemented
 }
 
 func (r *PostgresRepository) UnmuteMember(ctx context.Context, userID string, req UnmuteMemberRequest) error {
-	return r.fallback.UnmuteMember(ctx, userID, req)
+	return persistence.ErrNotImplemented
 }
 
 func (r *PostgresRepository) BanMember(ctx context.Context, userID string, req BanMemberRequest) error {
-	return r.fallback.BanMember(ctx, userID, req)
+	return persistence.ErrNotImplemented
 }
 
 func (r *PostgresRepository) UnbanMember(ctx context.Context, userID string, req UnbanMemberRequest) error {
-	return r.fallback.UnbanMember(ctx, userID, req)
+	return persistence.ErrNotImplemented
 }
 
 func (r *PostgresRepository) ListBannedMembers(ctx context.Context, groupID string, limit int, cursor string) ([]BannedMemberItem, string, error) {
-	return r.fallback.ListBannedMembers(ctx, groupID, limit, cursor)
+	return nil, "", persistence.ErrNotImplemented
 }
 
 func (r *PostgresRepository) RemoveMember(ctx context.Context, userID string, req RemoveMemberRequest) error {
-	return r.fallback.RemoveMember(ctx, userID, req)
+	return persistence.ErrNotImplemented
 }
 
 func (r *PostgresRepository) TransferOwnership(ctx context.Context, userID string, req TransferOwnershipRequest) error {
-	return r.fallback.TransferOwnership(ctx, userID, req)
+	return persistence.ErrNotImplemented
 }
 
 func nilOrString(s string) *string {

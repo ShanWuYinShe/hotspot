@@ -15,15 +15,11 @@ import (
 )
 
 type PostgresRepository struct {
-	factory  *persistence.Factory
-	fallback Repository
+	factory *persistence.Factory
 }
 
-func NewPostgresRepository(factory *persistence.Factory, fallback Repository) *PostgresRepository {
-	if fallback == nil {
-		fallback = NewInMemoryRepository()
-	}
-	return &PostgresRepository{factory: factory, fallback: fallback}
+func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
+	return &PostgresRepository{factory: factory}
 }
 
 func (r *PostgresRepository) queryable() (persistence.QueryableDB, bool) {
@@ -37,14 +33,14 @@ func (r *PostgresRepository) queryable() (persistence.QueryableDB, bool) {
 func (r *PostgresRepository) GetActor(ctx context.Context, userID string) (AdminActor, bool, error) {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.GetActor(ctx, userID)
+		return AdminActor{}, false, persistence.ErrNotImplemented
 	}
 	return r.getActorFromDB(ctx, queryable, userID)
 }
 
 func (r *PostgresRepository) ListPermissions(ctx context.Context) ([]AdminPermissionItem, error) {
 	if _, ok := r.queryable(); !ok {
-		return r.fallback.ListPermissions(ctx)
+		return nil, persistence.ErrNotImplemented
 	}
 	items := make([]AdminPermissionItem, len(permissionDictionary))
 	copy(items, permissionDictionary)
@@ -54,7 +50,7 @@ func (r *PostgresRepository) ListPermissions(ctx context.Context) ([]AdminPermis
 func (r *PostgresRepository) ListRoles(ctx context.Context) ([]AdminRoleItem, error) {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.ListRoles(ctx)
+		return nil, persistence.ErrNotImplemented
 	}
 	rows, err := queryable.Query(ctx, queryRoleList)
 	if err != nil {
@@ -80,7 +76,7 @@ func (r *PostgresRepository) ListRoles(ctx context.Context) ([]AdminRoleItem, er
 func (r *PostgresRepository) CreateRole(ctx context.Context, req AdminRbacRoleCreateRequest) (AdminRoleItem, error) {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.CreateRole(ctx, req)
+		return AdminRoleItem{}, persistence.ErrNotImplemented
 	}
 	name := normalizeRoleName(req.Name)
 	existing, found, err := r.getRoleByName(ctx, queryable, name)
@@ -109,7 +105,7 @@ func (r *PostgresRepository) CreateRole(ctx context.Context, req AdminRbacRoleCr
 func (r *PostgresRepository) UpdateRole(ctx context.Context, req AdminRbacRoleUpdateRequest) error {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.UpdateRole(ctx, req)
+		return persistence.ErrNotImplemented
 	}
 	item, found, err := r.getRoleByID(ctx, queryable, req.RoleID)
 	if err != nil {
@@ -147,7 +143,7 @@ func (r *PostgresRepository) UpdateRole(ctx context.Context, req AdminRbacRoleUp
 func (r *PostgresRepository) DeleteRole(ctx context.Context, roleID string) error {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.DeleteRole(ctx, roleID)
+		return persistence.ErrNotImplemented
 	}
 	item, found, err := r.getRoleByID(ctx, queryable, roleID)
 	if err != nil {
@@ -172,7 +168,7 @@ func (r *PostgresRepository) DeleteRole(ctx context.Context, roleID string) erro
 func (r *PostgresRepository) SetRolePermissions(ctx context.Context, roleID string, permissionKeys []string) error {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.SetRolePermissions(ctx, roleID, permissionKeys)
+		return persistence.ErrNotImplemented
 	}
 	item, found, err := r.getRoleByID(ctx, queryable, roleID)
 	if err != nil {
@@ -196,7 +192,7 @@ func (r *PostgresRepository) SetRolePermissions(ctx context.Context, roleID stri
 func (r *PostgresRepository) ListAdmins(ctx context.Context, pagination PaginationParams) (adminListPage, error) {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.ListAdmins(ctx, pagination)
+		return adminListPage{}, persistence.ErrNotImplemented
 	}
 	cursor, apiErr := decodeAdminCursor(pagination.Cursor)
 	if apiErr != nil {
@@ -233,7 +229,7 @@ func (r *PostgresRepository) ListAdmins(ctx context.Context, pagination Paginati
 func (r *PostgresRepository) GrantAdmin(ctx context.Context, grant AdminGrantUpsert) error {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.GrantAdmin(ctx, grant)
+		return persistence.ErrNotImplemented
 	}
 	if _, found, err := r.lookupUser(ctx, queryable, grant.UserID); err != nil {
 		return err
@@ -270,7 +266,7 @@ func (r *PostgresRepository) GrantAdmin(ctx context.Context, grant AdminGrantUps
 func (r *PostgresRepository) RevokeAdmin(ctx context.Context, userID string) error {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.RevokeAdmin(ctx, userID)
+		return persistence.ErrNotImplemented
 	}
 	_, found, err := r.getActorFromDB(ctx, queryable, userID)
 	if err != nil {
@@ -291,7 +287,7 @@ func (r *PostgresRepository) RevokeAdmin(ctx context.Context, userID string) err
 func (r *PostgresRepository) ListAuditLogs(ctx context.Context, filter AuditLogFilter, includeIPAddress bool) (auditLogPage, error) {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.ListAuditLogs(ctx, filter, includeIPAddress)
+		return auditLogPage{}, persistence.ErrNotImplemented
 	}
 	cursor, apiErr := decodeAuditCursor(filter.Pagination.Cursor)
 	if apiErr != nil {
@@ -337,7 +333,7 @@ func (r *PostgresRepository) ListAuditLogs(ctx context.Context, filter AuditLogF
 func (r *PostgresRepository) GetAuditLog(ctx context.Context, logID string, includeIPAddress bool) (AuditLogItem, bool, error) {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.GetAuditLog(ctx, logID, includeIPAddress)
+		return AuditLogItem{}, false, persistence.ErrNotImplemented
 	}
 	entry, found, err := r.getAuditEntryByID(ctx, queryable, logID)
 	if err != nil || !found {
@@ -349,7 +345,7 @@ func (r *PostgresRepository) GetAuditLog(ctx context.Context, logID string, incl
 func (r *PostgresRepository) AppendAuditLog(ctx context.Context, entry AuditLogEntry) error {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.AppendAuditLog(ctx, entry)
+		return persistence.ErrNotImplemented
 	}
 	if entry.LogID == "" {
 		entry.LogID = fmt.Sprintf("audit_%d", time.Now().UTC().UnixNano())
@@ -397,7 +393,7 @@ func isUniqueViolation(err error) bool {
 func (r *PostgresRepository) SearchUsers(ctx context.Context, req AdminUserSearchRequest) (adminUserPage, error) {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.SearchUsers(ctx, req)
+		return adminUserPage{}, persistence.ErrNotImplemented
 	}
 	rows, err := queryable.Query(ctx, queryAdminSearchUsers, req.UserID, req.Nickname, req.LoginID, string(req.Status), string(req.UserType))
 	if err != nil {
@@ -448,7 +444,7 @@ func (r *PostgresRepository) SearchUsers(ctx context.Context, req AdminUserSearc
 func (r *PostgresRepository) GetUser(ctx context.Context, userID string) (AdminUserItem, bool, error) {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.GetUser(ctx, userID)
+		return AdminUserItem{}, false, persistence.ErrNotImplemented
 	}
 	item, err := scanAdminUserRow(queryable.QueryRow(ctx, queryAdminGetUser, userID))
 	if err != nil {
@@ -463,7 +459,7 @@ func (r *PostgresRepository) GetUser(ctx context.Context, userID string) (AdminU
 func (r *PostgresRepository) GetUserBanState(ctx context.Context, userID string) (UserBanState, bool, error) {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.GetUserBanState(ctx, userID)
+		return UserBanState{}, false, persistence.ErrNotImplemented
 	}
 	var state UserBanState
 	var bannedAt *time.Time
@@ -482,7 +478,7 @@ func (r *PostgresRepository) GetUserBanState(ctx context.Context, userID string)
 func (r *PostgresRepository) SetUserBanState(ctx context.Context, userID string, state UserBanState) error {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.SetUserBanState(ctx, userID, state)
+		return persistence.ErrNotImplemented
 	}
 	status := state.Status
 	if status == "" {
@@ -510,7 +506,7 @@ func (r *PostgresRepository) SetUserBanState(ctx context.Context, userID string,
 func (r *PostgresRepository) ListUserSessions(ctx context.Context, userID string) ([]string, error) {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.ListUserSessions(ctx, userID)
+		return nil, persistence.ErrNotImplemented
 	}
 	rows, err := queryable.Query(ctx, queryAdminListUserSessions, userID)
 	if err != nil {
@@ -534,7 +530,7 @@ func (r *PostgresRepository) ListUserSessions(ctx context.Context, userID string
 func (r *PostgresRepository) RevokeSession(ctx context.Context, sessionID string) error {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.RevokeSession(ctx, sessionID)
+		return persistence.ErrNotImplemented
 	}
 	return queryable.Exec(ctx, queryAdminRevokeSession, sessionID)
 }
@@ -542,7 +538,7 @@ func (r *PostgresRepository) RevokeSession(ctx context.Context, sessionID string
 func (r *PostgresRepository) SearchGroups(ctx context.Context, req AdminGroupSearchRequest) (adminGroupPage, error) {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.SearchGroups(ctx, req)
+		return adminGroupPage{}, persistence.ErrNotImplemented
 	}
 	rows, err := queryable.Query(ctx, queryAdminSearchGroups, req.GroupID, req.Name, req.OwnerID)
 	if err != nil {
@@ -593,7 +589,7 @@ func (r *PostgresRepository) SearchGroups(ctx context.Context, req AdminGroupSea
 func (r *PostgresRepository) GetGroup(ctx context.Context, groupID string) (AdminGroupItem, bool, error) {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.GetGroup(ctx, groupID)
+		return AdminGroupItem{}, false, persistence.ErrNotImplemented
 	}
 	item, err := scanAdminGroupRow(queryable.QueryRow(ctx, queryAdminGetGroup, groupID))
 	if err != nil {
@@ -608,7 +604,7 @@ func (r *PostgresRepository) GetGroup(ctx context.Context, groupID string) (Admi
 func (r *PostgresRepository) DismissGroup(ctx context.Context, groupID string) (AdminGroupItem, bool, error) {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.DismissGroup(ctx, groupID)
+		return AdminGroupItem{}, false, persistence.ErrNotImplemented
 	}
 	item, found, err := r.GetGroup(ctx, groupID)
 	if err != nil || !found {
@@ -623,7 +619,7 @@ func (r *PostgresRepository) DismissGroup(ctx context.Context, groupID string) (
 func (r *PostgresRepository) ListGroupMemberIDs(ctx context.Context, groupID string) ([]string, error) {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.ListGroupMemberIDs(ctx, groupID)
+		return nil, persistence.ErrNotImplemented
 	}
 	rows, err := queryable.Query(ctx, queryAdminListGroupMemberIDs, groupID)
 	if err != nil {
@@ -647,7 +643,7 @@ func (r *PostgresRepository) ListGroupMemberIDs(ctx context.Context, groupID str
 func (r *PostgresRepository) SearchReports(ctx context.Context, req AdminReportSearchRequest) (adminReportPage, error) {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.SearchReports(ctx, req)
+		return adminReportPage{}, persistence.ErrNotImplemented
 	}
 	rows, err := queryable.Query(ctx, queryAdminSearchReports, string(req.Status), string(req.TargetType))
 	if err != nil {
@@ -698,7 +694,7 @@ func (r *PostgresRepository) SearchReports(ctx context.Context, req AdminReportS
 func (r *PostgresRepository) GetReportHandleRecord(ctx context.Context, reportID string) (reportHandleRecord, bool, error) {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.GetReportHandleRecord(ctx, reportID)
+		return reportHandleRecord{}, false, persistence.ErrNotImplemented
 	}
 	record, err := scanAdminReportRow(queryable.QueryRow(ctx, queryAdminGetReportHandleRecord, reportID), true)
 	if err != nil {
@@ -713,7 +709,7 @@ func (r *PostgresRepository) GetReportHandleRecord(ctx context.Context, reportID
 func (r *PostgresRepository) HandleReport(ctx context.Context, reportID string, action ReportHandleAction, note string, handledBy *UserInfo) (AdminReportItem, bool, error) {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.HandleReport(ctx, reportID, action, note, handledBy)
+		return AdminReportItem{}, false, persistence.ErrNotImplemented
 	}
 	record, found, err := r.GetReportHandleRecord(ctx, reportID)
 	if err != nil || !found {
@@ -749,7 +745,7 @@ func (r *PostgresRepository) HandleReport(ctx context.Context, reportID string, 
 func (r *PostgresRepository) RecallGroupMessage(ctx context.Context, messageID string) error {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.RecallGroupMessage(ctx, messageID)
+		return persistence.ErrNotImplemented
 	}
 	if err := queryable.Exec(ctx, "UPDATE group_messages SET is_recalled = TRUE, recalled_at = NOW() WHERE message_id = $1 AND is_recalled = FALSE", messageID); err != nil {
 		return err
@@ -760,7 +756,7 @@ func (r *PostgresRepository) RecallGroupMessage(ctx context.Context, messageID s
 func (r *PostgresRepository) RecallPrivateMessage(ctx context.Context, messageID string) error {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.RecallPrivateMessage(ctx, messageID)
+		return persistence.ErrNotImplemented
 	}
 	if err := queryable.Exec(ctx, "UPDATE private_messages SET is_recalled = TRUE, recalled_at = NOW() WHERE message_id = $1 AND is_recalled = FALSE", messageID); err != nil {
 		return err
@@ -771,7 +767,7 @@ func (r *PostgresRepository) RecallPrivateMessage(ctx context.Context, messageID
 func (r *PostgresRepository) DeleteMoment(ctx context.Context, momentID string) error {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.DeleteMoment(ctx, momentID)
+		return persistence.ErrNotImplemented
 	}
 	return queryable.Exec(ctx, "DELETE FROM moments WHERE moment_id = $1", momentID)
 }
@@ -779,7 +775,7 @@ func (r *PostgresRepository) DeleteMoment(ctx context.Context, momentID string) 
 func (r *PostgresRepository) DeleteComment(ctx context.Context, commentID string) error {
 	queryable, ok := r.queryable()
 	if !ok {
-		return r.fallback.DeleteComment(ctx, commentID)
+		return persistence.ErrNotImplemented
 	}
 	return queryable.Exec(ctx, "DELETE FROM comments WHERE comment_id = $1", commentID)
 }

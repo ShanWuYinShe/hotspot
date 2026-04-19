@@ -12,7 +12,7 @@ import (
 
 func (r *PostgresRepository) Get(ctx context.Context, momentID string) (MomentItem, bool, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Get(ctx, momentID)
+		return MomentItem{}, false, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -40,7 +40,7 @@ func (r *PostgresRepository) Get(ctx context.Context, momentID string) (MomentIt
 
 func (r *PostgresRepository) ListMine(ctx context.Context, userID string) (PaginatedMoments, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.ListMine(ctx, userID)
+		return PaginatedMoments{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {

@@ -69,41 +69,6 @@ func (r *announcementRowsValues) Scan(dest ...any) error {
 func (r *announcementRowsValues) Close() error { return nil }
 func (r *announcementRowsValues) Err() error   { return r.err }
 
-type fallbackAnnouncementRepo struct{ used bool }
-
-func (r *fallbackAnnouncementRepo) GetMeta(context.Context) ApiVersionMeta {
-	r.used = true
-	return ApiVersionMeta{}
-}
-func (r *fallbackAnnouncementRepo) Health(context.Context) (int, string, *HealthStatus) {
-	r.used = true
-	return 0, "", nil
-}
-func (r *fallbackAnnouncementRepo) ListAnnouncements(context.Context, int) ([]AnnouncementRecord, error) {
-	r.used = true
-	return nil, nil
-}
-func (r *fallbackAnnouncementRepo) SearchAnnouncements(context.Context, AnnouncementSearchFilter) (AnnouncementPage, error) {
-	r.used = true
-	return AnnouncementPage{}, nil
-}
-func (r *fallbackAnnouncementRepo) GetAnnouncement(context.Context, string) (AnnouncementRecord, bool, error) {
-	r.used = true
-	return AnnouncementRecord{}, false, nil
-}
-func (r *fallbackAnnouncementRepo) CreateAnnouncement(context.Context, AnnouncementCreateInput) (AnnouncementRecord, error) {
-	r.used = true
-	return AnnouncementRecord{}, nil
-}
-func (r *fallbackAnnouncementRepo) UpdateAnnouncement(context.Context, AnnouncementUpdateInput) (AnnouncementRecord, error) {
-	r.used = true
-	return AnnouncementRecord{}, nil
-}
-func (r *fallbackAnnouncementRepo) DeleteAnnouncement(context.Context, string) error {
-	r.used = true
-	return nil
-}
-
 type announcementBackendStub struct {
 	announcements map[string]AnnouncementRecord
 	queryErrs     map[string]error
@@ -276,8 +241,7 @@ func TestPostgresRepositoryAnnouncementReadsQueryableDB(t *testing.T) {
 	backend.announcements["ann_1"] = AnnouncementRecord{AnnouncementID: "ann_1", Title: "提示", Content: "普通提示", Severity: AnnouncementSeverityInfo, CreatedAt: time.Date(2026, 3, 23, 10, 0, 0, 0, time.UTC), CreatedBy: AnnouncementActor{UserID: "admin", Nickname: "Admin"}, DeletedAt: timePtr(time.Date(2026, 3, 23, 12, 0, 0, 0, time.UTC))}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &fallbackAnnouncementRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	items, err := repo.ListAnnouncements(context.Background(), 10)
 	if err != nil || len(items) != 1 || items[0].AnnouncementID != "ann_2" {
@@ -287,17 +251,13 @@ func TestPostgresRepositoryAnnouncementReadsQueryableDB(t *testing.T) {
 	if err != nil || len(page.Items) != 2 || page.Items[0].AnnouncementID != "ann_2" || page.Items[1].AnnouncementID != "ann_1" || !page.Items[1].IsDeleted() {
 		t.Fatalf("unexpected search page: %#v err=%v", page, err)
 	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
-	}
 }
 
 func TestPostgresRepositoryAnnouncementWritesQueryableDB(t *testing.T) {
 	backend := newAnnouncementBackendStub()
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &fallbackAnnouncementRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	created, err := repo.CreateAnnouncement(context.Background(), AnnouncementCreateInput{Actor: AnnouncementActor{UserID: "admin", Nickname: "Admin"}, Title: "维护", Content: "今晚维护", Severity: AnnouncementSeverityWarning, ActionURL: "https://example.com/maint", SendPush: true})
 	if err != nil || created.AnnouncementID == "" || created.PushSentAt == nil {
@@ -318,17 +278,13 @@ func TestPostgresRepositoryAnnouncementWritesQueryableDB(t *testing.T) {
 	if stored.DeletedAt == nil {
 		t.Fatalf("expected deleted_at to be set: %#v", stored)
 	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
-	}
 }
 
 func TestPostgresRepositoryAnnouncementNotFoundAndErrors(t *testing.T) {
 	backend := newAnnouncementBackendStub()
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &fallbackAnnouncementRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	title := "x"
 	_, err := repo.UpdateAnnouncement(context.Background(), AnnouncementUpdateInput{AnnouncementID: "missing", Title: &title})
@@ -341,9 +297,6 @@ func TestPostgresRepositoryAnnouncementNotFoundAndErrors(t *testing.T) {
 	backend.queryErrs[queryListPublicAnnouncements] = errors.New("read failed")
 	if _, err := repo.ListAnnouncements(context.Background(), 10); err == nil {
 		t.Fatal("expected list error")
-	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
 	}
 }
 

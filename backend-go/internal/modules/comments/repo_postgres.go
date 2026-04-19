@@ -14,20 +14,16 @@ import (
 )
 
 type PostgresRepository struct {
-	factory  *persistence.Factory
-	fallback Repository
+	factory *persistence.Factory
 }
 
-func NewPostgresRepository(factory *persistence.Factory, fallback Repository) *PostgresRepository {
-	if fallback == nil {
-		fallback = NewInMemoryRepository()
-	}
-	return &PostgresRepository{factory: factory, fallback: fallback}
+func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
+	return &PostgresRepository{factory: factory}
 }
 
 func (r *PostgresRepository) Create(ctx context.Context, userID string, req CreateCommentRequest) (CommentItem, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Create(ctx, userID, req)
+		return CommentItem{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -57,7 +53,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 
 func (r *PostgresRepository) Delete(ctx context.Context, commentID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Delete(ctx, commentID)
+		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -68,7 +64,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, commentID string) error
 
 func (r *PostgresRepository) List(ctx context.Context, momentID string) (PaginatedComments, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.List(ctx, momentID)
+		return PaginatedComments{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -100,7 +96,7 @@ func (r *PostgresRepository) List(ctx context.Context, momentID string) (Paginat
 
 func (r *PostgresRepository) Get(ctx context.Context, commentID string) (CommentItem, bool, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Get(ctx, commentID)
+		return CommentItem{}, false, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -124,7 +120,7 @@ func (r *PostgresRepository) Get(ctx context.Context, commentID string) (Comment
 
 func (r *PostgresRepository) ListReplies(ctx context.Context, commentID string, limit int, cursor string) (PaginatedComments, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.ListReplies(ctx, commentID, limit, cursor)
+		return PaginatedComments{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -164,7 +160,7 @@ func (r *PostgresRepository) ListReplies(ctx context.Context, commentID string, 
 
 func (r *PostgresRepository) Like(ctx context.Context, commentID string, userID string) (bool, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Like(ctx, commentID, userID)
+		return false, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -188,7 +184,7 @@ func (r *PostgresRepository) Like(ctx context.Context, commentID string, userID 
 
 func (r *PostgresRepository) Unlike(ctx context.Context, commentID string, userID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Unlike(ctx, commentID, userID)
+		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -202,7 +198,7 @@ func (r *PostgresRepository) Unlike(ctx context.Context, commentID string, userI
 
 func (r *PostgresRepository) ListLikes(ctx context.Context, commentID string, limit int, cursor string) ([]CommentLikeItem, string, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.ListLikes(ctx, commentID, limit, cursor)
+		return nil, "", persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {

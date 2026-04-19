@@ -69,36 +69,14 @@ func (b *searchBackendStub) Query(_ context.Context, query string, _ ...any) (pe
 	return &persistence.InMemoryRows{}, nil
 }
 
-type fallbackSearchRepo struct {
-	used bool
-}
-
-func (r *fallbackSearchRepo) Suggest(context.Context, SearchSuggestRequest) (SearchSuggestResponse, error) {
-	r.used = true
-	return SearchSuggestResponse{Items: []SearchSuggestItem{{Type: "tag", Payload: map[string]any{"name": "fallback"}}}}, nil
-}
-
 func newSearchFactory(backend persistence.PostgresQueryBackend) *persistence.Factory {
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	return factory
 }
 
-func TestPostgresRepositoryFallsBackWithoutDatabase(t *testing.T) {
-	fallback := &fallbackSearchRepo{}
-	repo := NewPostgresRepository(nil, fallback)
-
-	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot"})
-	if err != nil {
-		t.Fatalf("Suggest returned error: %v", err)
-	}
-	if !fallback.used || len(resp.Items) != 1 || resp.Items[0].Payload["name"] != "fallback" {
-		t.Fatalf("expected fallback response, got %#v used=%v", resp, fallback.used)
-	}
-}
-
-func TestPostgresRepositoryReturnsNotImplementedWithoutDatabaseOrFallback(t *testing.T) {
-	repo := NewPostgresRepository(nil, nil)
+func TestPostgresRepositoryReturnsNotImplementedWithoutDatabase(t *testing.T) {
+	repo := NewPostgresRepository(nil)
 
 	_, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot"})
 	if err == nil {
@@ -110,7 +88,7 @@ func TestPostgresRepositoryReturnsNotImplementedWithoutDatabaseOrFallback(t *tes
 }
 
 func TestPostgresRepositoryReturnsEmptyForBlankPrefix(t *testing.T) {
-	repo := NewPostgresRepository(newSearchFactory(&searchBackendStub{}), nil)
+	repo := NewPostgresRepository(newSearchFactory(&searchBackendStub{}))
 
 	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "   "})
 	if err != nil {
@@ -128,7 +106,7 @@ func TestPostgresRepositoryFiltersUnknownTypesAsAll(t *testing.T) {
 		querySearchSuggestGroups:  {{"group_1", "hot-group", "", "", "南天门", 35.0, 112.0, 5}},
 		querySearchSuggestMoments: {{"moment_1", "user_1", "Alice", "hot moment", "南天门", 35.0, 112.0, 9}},
 	}}
-	repo := NewPostgresRepository(newSearchFactory(backend), nil)
+	repo := NewPostgresRepository(newSearchFactory(backend))
 
 	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"weird"}, ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
 	if err != nil {
@@ -143,7 +121,7 @@ func TestPostgresRepositoryAppliesTypeFilter(t *testing.T) {
 	backend := &searchBackendStub{queryRowsByQuery: map[string][][]any{
 		querySearchSuggestUsers: {{"user_1", "hot-user", "", "", "南天门", 35.0, 112.0}},
 	}}
-	repo := NewPostgresRepository(newSearchFactory(backend), nil)
+	repo := NewPostgresRepository(newSearchFactory(backend))
 
 	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"user"}, ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
 	if err != nil {
@@ -160,7 +138,7 @@ func TestPostgresRepositoryHonorsNicknameSearchableOnlyForNickname(t *testing.T)
 			{"user_bio", "plain-user", "", "hot bio", "南天门", 35.0, 112.0},
 		},
 	}}
-	repo := NewPostgresRepository(newSearchFactory(backend), nil)
+	repo := NewPostgresRepository(newSearchFactory(backend))
 
 	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"user"}, ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
 	if err != nil {
@@ -179,7 +157,7 @@ func TestPostgresRepositoryRanksExactBeforePrefixBeforeContains(t *testing.T) {
 			{"hot", 5},
 		},
 	}}
-	repo := NewPostgresRepository(newSearchFactory(backend), nil)
+	repo := NewPostgresRepository(newSearchFactory(backend))
 
 	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"tag"}, ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
 	if err != nil {
@@ -200,7 +178,7 @@ func TestPostgresRepositoryUsesDistanceBeforePopularityWhenMatchRankTies(t *test
 			{"group_near", "hot-group", "", "", "近处", 35.0001, 112.0, 1},
 		},
 	}}
-	repo := NewPostgresRepository(newSearchFactory(backend), nil)
+	repo := NewPostgresRepository(newSearchFactory(backend))
 
 	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"group"}, ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
 	if err != nil {
@@ -218,7 +196,7 @@ func TestPostgresRepositoryAppliesRadiusFilter(t *testing.T) {
 			{"user_far", "hot-far", "", "", "远处", 35.1, 112.0},
 		},
 	}}
-	repo := NewPostgresRepository(newSearchFactory(backend), nil)
+	repo := NewPostgresRepository(newSearchFactory(backend))
 
 	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"user"}, ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}, Radius: 2000})
 	if err != nil {
@@ -236,7 +214,7 @@ func TestPostgresRepositoryDedupesSameTypeSameID(t *testing.T) {
 			{"hot", 2},
 		},
 	}}
-	repo := NewPostgresRepository(newSearchFactory(backend), nil)
+	repo := NewPostgresRepository(newSearchFactory(backend))
 
 	resp, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"tag"}, ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
 	if err != nil {
@@ -249,7 +227,7 @@ func TestPostgresRepositoryDedupesSameTypeSameID(t *testing.T) {
 
 func TestPostgresRepositoryReturnsRepositoryError(t *testing.T) {
 	backend := &searchBackendStub{queryErrs: map[string]error{querySearchSuggestTags: persistence.ErrNotImplemented}}
-	repo := NewPostgresRepository(newSearchFactory(backend), nil)
+	repo := NewPostgresRepository(newSearchFactory(backend))
 
 	_, err := repo.Suggest(context.Background(), SearchSuggestRequest{Prefix: "hot", Types: []string{"tag"}, ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
 	if err == nil {

@@ -68,38 +68,22 @@ func (b *mediaBackendStub) Query(context.Context, string, ...any) (persistence.R
 	return &persistence.InMemoryRows{}, nil
 }
 
-type fallbackMediaRepo struct{ used bool }
-
-func (r *fallbackMediaRepo) Save(context.Context, pendingUpload) error { r.used = true; return nil }
-func (r *fallbackMediaRepo) Get(context.Context, string) (pendingUpload, bool, error) {
-	r.used = true
-	return pendingUpload{UploadID: "fallback"}, true, nil
-}
-func (r *fallbackMediaRepo) Complete(context.Context, string, UploadedMedia, string) (pendingUpload, bool, error) {
-	r.used = true
-	return pendingUpload{UploadID: "fallback", Completed: true}, true, nil
-}
-
 func newMediaFactory(backend persistence.PostgresQueryBackend) *persistence.Factory {
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	return factory
 }
 
-func TestPostgresRepositoryFallsBackWithoutDatabase(t *testing.T) {
-	fallback := &fallbackMediaRepo{}
-	repo := NewPostgresRepository(nil, fallback)
-	if err := repo.Save(context.Background(), pendingUpload{UploadID: "upload_1"}); err != nil {
-		t.Fatalf("Save returned error: %v", err)
-	}
-	if !fallback.used {
-		t.Fatal("expected fallback repo usage")
+func TestPostgresRepositoryReturnsNotImplementedWithoutDatabase(t *testing.T) {
+	repo := NewPostgresRepository(nil)
+	if err := repo.Save(context.Background(), pendingUpload{UploadID: "upload_1"}); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("expected ErrNotImplemented, got %v", err)
 	}
 }
 
 func TestPostgresRepositoryReturnsNotImplementedWithoutQueryable(t *testing.T) {
 	factory := &persistence.Factory{Config: persistence.Config{PostgresDSN: "postgres://example"}, DB: persistence.NewInMemoryDB()}
-	repo := NewPostgresRepository(factory, nil)
+	repo := NewPostgresRepository(factory)
 	if err := repo.Save(context.Background(), pendingUpload{UploadID: "upload_1"}); !errors.Is(err, persistence.ErrNotImplemented) {
 		t.Fatalf("expected ErrNotImplemented, got %v", err)
 	}
@@ -111,7 +95,7 @@ func TestPostgresRepositoryGetAndCompleteUpload(t *testing.T) {
 	backend := &mediaBackendStub{queryRows: map[string]mediaRowValues{
 		queryGetUploadSession: {values: []any{"upload_1", "u1", "uploads/u1/upload_1.png", "a.png", 100, "image/png", CategoryAvatar, "", "completed", "file_1", 100, "image/png", "", 0, 0, 0, "key_1", createdAt, completedAt}},
 	}}
-	repo := NewPostgresRepository(newMediaFactory(backend), nil)
+	repo := NewPostgresRepository(newMediaFactory(backend))
 
 	if err := repo.Save(context.Background(), pendingUpload{UploadID: "upload_1", UserID: "u1", StorageKey: "uploads/u1/upload_1.png", FileName: "a.png", DeclaredFileSize: 100, DeclaredMimeType: "image/png", Category: CategoryAvatar, CreatedAt: createdAt.Format(time.RFC3339)}); err != nil {
 		t.Fatalf("Save returned error: %v", err)
@@ -134,7 +118,7 @@ func TestPostgresRepositoryGetAndCompleteUpload(t *testing.T) {
 
 func TestPostgresRepositoryGetReturnsFalseOnNoRows(t *testing.T) {
 	backend := &mediaBackendStub{queryRows: map[string]mediaRowValues{queryGetUploadSession: {err: pgx.ErrNoRows}}}
-	repo := NewPostgresRepository(newMediaFactory(backend), nil)
+	repo := NewPostgresRepository(newMediaFactory(backend))
 	_, ok, err := repo.Get(context.Background(), "missing")
 	if err != nil || ok {
 		t.Fatalf("expected ok=false nil error, got ok=%v err=%v", ok, err)
@@ -143,7 +127,7 @@ func TestPostgresRepositoryGetReturnsFalseOnNoRows(t *testing.T) {
 
 func TestPostgresRepositoryPropagatesExecErrors(t *testing.T) {
 	backend := &mediaBackendStub{execErrs: map[string]error{queryInsertUploadSession: errors.New("insert boom"), queryCompleteUploadSession: errors.New("complete boom")}}
-	repo := NewPostgresRepository(newMediaFactory(backend), nil)
+	repo := NewPostgresRepository(newMediaFactory(backend))
 	if err := repo.Save(context.Background(), pendingUpload{UploadID: "upload_1"}); err == nil {
 		t.Fatal("expected insert error")
 	}

@@ -8,7 +8,7 @@ import (
 
 func (r *PostgresRepository) List(ctx context.Context, userID string, req MyReportsRequest) (PaginatedReports, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.List(ctx, userID, req)
+		return PaginatedReports{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {

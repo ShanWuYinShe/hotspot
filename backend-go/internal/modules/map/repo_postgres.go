@@ -20,8 +20,7 @@ import (
 )
 
 type PostgresRepository struct {
-	factory  *persistence.Factory
-	fallback Repository
+	factory *persistence.Factory
 }
 
 type mapCandidate struct {
@@ -42,17 +41,14 @@ type mapCursor struct {
 	CreatedAt string `json:"created_at,omitempty"`
 }
 
-func NewPostgresRepository(factory *persistence.Factory, fallback Repository) *PostgresRepository {
-	return &PostgresRepository{factory: factory, fallback: fallback}
+func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
+	return &PostgresRepository{factory: factory}
 }
 
 func (r *PostgresRepository) Heatmap(ctx context.Context, query canvasQuery) (MapHeatCanvas, error) {
 	items, err := r.loadCandidates(ctx, query)
 	if err != nil {
 		return MapHeatCanvas{}, err
-	}
-	if items == nil && r.fallback != nil {
-		return r.fallback.Heatmap(ctx, query)
 	}
 	buckets := aggregateHeatBuckets(items, query.Level)
 	return MapHeatCanvas{Items: buckets}, nil
@@ -63,22 +59,13 @@ func (r *PostgresRepository) Hotspots(ctx context.Context, query canvasQuery) (M
 	if err != nil {
 		return MapHotspotsCanvas{}, err
 	}
-	if items == nil && r.fallback != nil {
-		return r.fallback.Hotspots(ctx, query)
-	}
 	return paginateHotspots(items, query.Limit, query.Cursor)
 }
 
 func (r *PostgresRepository) loadCandidates(ctx context.Context, query canvasQuery) ([]mapCandidate, error) {
-	queryable, ok, err := r.queryable()
+	queryable, err := r.queryable()
 	if err != nil {
 		return nil, err
-	}
-	if !ok {
-		if r.fallback != nil {
-			return nil, nil
-		}
-		return nil, persistence.ErrNotImplemented
 	}
 	items := make([]mapCandidate, 0)
 	if query.DataType == "all" || query.DataType == "user" {
@@ -106,15 +93,15 @@ func (r *PostgresRepository) loadCandidates(ctx context.Context, query canvasQue
 	return items, nil
 }
 
-func (r *PostgresRepository) queryable() (persistence.QueryableDB, bool, error) {
+func (r *PostgresRepository) queryable() (persistence.QueryableDB, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, false, nil
+		return nil, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		return nil, false, persistence.ErrNotImplemented
+		return nil, persistence.ErrNotImplemented
 	}
-	return queryable, true, nil
+	return queryable, nil
 }
 
 func queryMapUsers(ctx context.Context, queryable persistence.QueryableDB, query canvasQuery) ([]mapCandidate, error) {

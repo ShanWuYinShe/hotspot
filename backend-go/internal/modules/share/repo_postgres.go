@@ -14,24 +14,17 @@ import (
 )
 
 type PostgresRepository struct {
-	factory  *persistence.Factory
-	fallback Repository
+	factory *persistence.Factory
 }
 
-func NewPostgresRepository(factory *persistence.Factory, fallback Repository) *PostgresRepository {
-	if fallback == nil {
-		fallback = NewInMemoryRepository()
-	}
-	return &PostgresRepository{factory: factory, fallback: fallback}
+func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
+	return &PostgresRepository{factory: factory}
 }
 
 func (r *PostgresRepository) Create(ctx context.Context, cmd createShareCommand) (ShareCreated, error) {
-	queryable, ok, err := r.queryable()
+	queryable, err := r.queryable()
 	if err != nil {
 		return ShareCreated{}, err
-	}
-	if !ok {
-		return r.fallback.Create(ctx, cmd)
 	}
 	if err := ensureShareTargetExists(ctx, queryable, cmd.ShareType, cmd.Payload); err != nil {
 		return ShareCreated{}, err
@@ -67,12 +60,9 @@ func (r *PostgresRepository) Create(ctx context.Context, cmd createShareCommand)
 }
 
 func (r *PostgresRepository) Revoke(ctx context.Context, cmd revokeShareCommand) error {
-	queryable, ok, err := r.queryable()
+	queryable, err := r.queryable()
 	if err != nil {
 		return err
-	}
-	if !ok {
-		return r.fallback.Revoke(ctx, cmd)
 	}
 	ownerUserID, revoked, err := r.getShareOwnership(ctx, queryable, cmd.ShareID)
 	if err != nil {
@@ -93,15 +83,15 @@ func (r *PostgresRepository) Revoke(ctx context.Context, cmd revokeShareCommand)
 	return nil
 }
 
-func (r *PostgresRepository) queryable() (persistence.QueryableDB, bool, error) {
+func (r *PostgresRepository) queryable() (persistence.QueryableDB, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, false, nil
+		return nil, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		return nil, false, persistence.ErrNotImplemented
+		return nil, persistence.ErrNotImplemented
 	}
-	return queryable, true, nil
+	return queryable, nil
 }
 
 func getPayloadID(payload map[string]any, key string) string {

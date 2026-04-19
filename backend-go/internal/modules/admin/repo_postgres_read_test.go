@@ -401,8 +401,7 @@ func TestPostgresRepositoryRoleAndAdminFlows(t *testing.T) {
 	backend.users["user_bob"] = UserInfo{UserID: "user_bob", Nickname: "Bob", AvatarURL: "avatar"}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &adminFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	created, err := repo.CreateRole(context.Background(), AdminRbacRoleCreateRequest{Name: "Reviewer"})
 	if err != nil || created.RoleID == "" {
@@ -433,9 +432,6 @@ func TestPostgresRepositoryRoleAndAdminFlows(t *testing.T) {
 	if err != nil || ok {
 		t.Fatalf("expected revoked actor to be missing, ok=%v err=%v", ok, err)
 	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
-	}
 }
 
 func TestPostgresRepositoryReturnsErrorOnQueryFailure(t *testing.T) {
@@ -443,7 +439,7 @@ func TestPostgresRepositoryReturnsErrorOnQueryFailure(t *testing.T) {
 	backend.queryErrs[queryRoleList] = errors.New("query failed")
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, &adminFallbackRepo{})
+	repo := NewPostgresRepository(factory)
 
 	_, err := repo.ListRoles(context.Background())
 	if err == nil {

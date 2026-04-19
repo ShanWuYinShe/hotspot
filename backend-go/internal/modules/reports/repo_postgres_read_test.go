@@ -43,25 +43,6 @@ func (r *reportRowsValues) Scan(dest ...any) error {
 func (r *reportRowsValues) Close() error { return nil }
 func (r *reportRowsValues) Err() error   { return r.err }
 
-type reportFallbackRepo struct{ used bool }
-
-func (r *reportFallbackRepo) Create(context.Context, string, CreateReportRequest) (ReportCreated, error) {
-	r.used = true
-	return ReportCreated{}, nil
-}
-func (r *reportFallbackRepo) List(context.Context, string, MyReportsRequest) (PaginatedReports, error) {
-	r.used = true
-	return PaginatedReports{}, nil
-}
-func (r *reportFallbackRepo) ExistsOpenReport(context.Context, ReportTargetType, string) (bool, error) {
-	r.used = true
-	return false, nil
-}
-func (r *reportFallbackRepo) TargetOwner(context.Context, ReportTargetType, string) (string, bool, error) {
-	r.used = true
-	return "", false, nil
-}
-
 type reportBackendStub struct {
 	reports   map[string][]ReportItem
 	execErrs  map[string]error
@@ -122,8 +103,7 @@ func TestPostgresRepositoryCreateAndList(t *testing.T) {
 	backend := newReportBackendStub()
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &reportFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	created, err := repo.Create(context.Background(), "user_alice", CreateReportRequest{TargetType: "moment", TargetID: "moment_1", Reason: "spam", Description: "bad"})
 	if err != nil || created.ReportID == "" {
@@ -133,24 +113,17 @@ func TestPostgresRepositoryCreateAndList(t *testing.T) {
 	if err != nil || len(list.Items) != 1 || list.Items[0].ReportID != created.ReportID {
 		t.Fatalf("unexpected list: %#v err=%v", list, err)
 	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
-	}
 }
 
 func TestPostgresRepositoryListReturnsEmptyWithoutFallback(t *testing.T) {
 	backend := newReportBackendStub()
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &reportFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	list, err := repo.List(context.Background(), "user_alice", MyReportsRequest{})
 	if err != nil || len(list.Items) != 0 {
 		t.Fatalf("unexpected list: %#v err=%v", list, err)
-	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
 	}
 }
 
@@ -159,15 +132,11 @@ func TestPostgresRepositoryCreateReturnsErrorOnExecFailure(t *testing.T) {
 	backend.execErrs[queryInsertReport] = errors.New("write failed")
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &reportFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	_, err := repo.Create(context.Background(), "user_alice", CreateReportRequest{TargetType: "moment", TargetID: "moment_1", Reason: "spam"})
 	if err == nil {
 		t.Fatal("expected create error")
-	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
 	}
 }
 
@@ -176,14 +145,10 @@ func TestPostgresRepositoryListReturnsErrorOnQueryFailure(t *testing.T) {
 	backend.queryErrs[queryListReports] = errors.New("query failed")
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &reportFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	_, err := repo.List(context.Background(), "user_alice", MyReportsRequest{})
 	if err == nil {
 		t.Fatal("expected list error")
-	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
 	}
 }

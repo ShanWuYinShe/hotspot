@@ -8,26 +8,19 @@ import (
 )
 
 type PostgresRepository struct {
-	factory  *persistence.Factory
-	fallback Repository
+	factory *persistence.Factory
 }
 
-func NewPostgresRepository(factory *persistence.Factory, fallback Repository) *PostgresRepository {
-	return &PostgresRepository{factory: factory, fallback: fallback}
+func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
+	return &PostgresRepository{factory: factory}
 }
 
 func (r *PostgresRepository) GetOrCreate(ctx context.Context, userID, targetUserID string) (time.Time, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		if r.fallback != nil {
-			return r.fallback.GetOrCreate(ctx, userID, targetUserID)
-		}
 		return time.Time{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		if r.fallback != nil {
-			return r.fallback.GetOrCreate(ctx, userID, targetUserID)
-		}
 		return time.Time{}, persistence.ErrNotImplemented
 	}
 	chatKey := key(userID, targetUserID)
@@ -45,16 +38,10 @@ func (r *PostgresRepository) GetOrCreate(ctx context.Context, userID, targetUser
 
 func (r *PostgresRepository) List(ctx context.Context, userID string, opts ListOptions) ([]ChatState, string, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		if r.fallback != nil {
-			return r.fallback.List(ctx, userID, opts)
-		}
 		return nil, "", persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		if r.fallback != nil {
-			return r.fallback.List(ctx, userID, opts)
-		}
 		return nil, "", persistence.ErrNotImplemented
 	}
 	rows, err := queryable.Query(ctx, queryListPrivateChats, userID)
@@ -78,16 +65,10 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, opts ListO
 
 func (r *PostgresRepository) GetState(ctx context.Context, userID, targetUserID string) (ChatState, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		if r.fallback != nil {
-			return r.fallback.GetState(ctx, userID, targetUserID)
-		}
 		return ChatState{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
-		if r.fallback != nil {
-			return r.fallback.GetState(ctx, userID, targetUserID)
-		}
 		return ChatState{}, persistence.ErrNotImplemented
 	}
 	state, err := scanChatState(queryable.QueryRow(ctx, queryGetPrivateChatState, userID, key(userID, targetUserID)))
@@ -99,9 +80,6 @@ func (r *PostgresRepository) GetState(ctx context.Context, userID, targetUserID 
 
 func (r *PostgresRepository) RestoreForUser(ctx context.Context, userID, targetUserID string, visibleSince time.Time) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		if r.fallback != nil {
-			return r.fallback.RestoreForUser(ctx, userID, targetUserID, visibleSince)
-		}
 		return persistence.ErrNotImplemented
 	}
 	state, err := r.getStateImpl(ctx, userID, targetUserID)
@@ -116,9 +94,6 @@ func (r *PostgresRepository) RestoreForUser(ctx context.Context, userID, targetU
 
 func (r *PostgresRepository) UpdateSettings(ctx context.Context, userID, targetUserID string, update UpdateChatSettings) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		if r.fallback != nil {
-			return r.fallback.UpdateSettings(ctx, userID, targetUserID, update)
-		}
 		return persistence.ErrNotImplemented
 	}
 	state, err := r.getStateImpl(ctx, userID, targetUserID)
@@ -136,9 +111,6 @@ func (r *PostgresRepository) UpdateSettings(ctx context.Context, userID, targetU
 
 func (r *PostgresRepository) DeleteForUser(ctx context.Context, userID, targetUserID string, deletedAt *time.Time) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		if r.fallback != nil {
-			return r.fallback.DeleteForUser(ctx, userID, targetUserID, deletedAt)
-		}
 		return persistence.ErrNotImplemented
 	}
 	state, err := r.getStateImpl(ctx, userID, targetUserID)

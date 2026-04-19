@@ -45,33 +45,6 @@ func (r *groupMessageRowsValues) Scan(dest ...any) error {
 func (r *groupMessageRowsValues) Close() error { return nil }
 func (r *groupMessageRowsValues) Err() error   { return r.err }
 
-type groupMessageFallbackRepo struct{ used bool }
-
-func (r *groupMessageFallbackRepo) Send(context.Context, SendGroupMessageRequest) (MessageSent, error) {
-	r.used = true
-	return MessageSent{}, nil
-}
-func (r *groupMessageFallbackRepo) History(context.Context, string, *PaginationParams) (PaginatedGroupMessages, error) {
-	r.used = true
-	return PaginatedGroupMessages{}, nil
-}
-func (r *groupMessageFallbackRepo) Update(context.Context, UpdateGroupMessageRequest) (MessageEventMeta, error) {
-	r.used = true
-	return MessageEventMeta{}, nil
-}
-func (r *groupMessageFallbackRepo) Recall(context.Context, RecallGroupMessageRequest) (MessageEventMeta, error) {
-	r.used = true
-	return MessageEventMeta{}, nil
-}
-func (r *groupMessageFallbackRepo) MarkAsRead(context.Context, string, MarkGroupMessagesReadRequest) error {
-	r.used = true
-	return nil
-}
-func (r *groupMessageFallbackRepo) MarkAllRead(context.Context, string) error {
-	r.used = true
-	return nil
-}
-
 type groupMessageStubRecord struct {
 	MessageID string
 	GroupID   string
@@ -203,8 +176,7 @@ func TestPostgresRepositorySendAndHistory(t *testing.T) {
 	backend := &groupMessageBackendStub{items: map[string][]groupMessageStubRecord{}, readStates: map[string]groupMessageReadState{}, execErrs: map[string]error{}, queryErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &groupMessageFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	sent, err := repo.Send(context.Background(), SendGroupMessageRequest{GroupID: "group_1", Type: "text", Content: "hello"})
 	if err != nil {
@@ -217,17 +189,13 @@ func TestPostgresRepositorySendAndHistory(t *testing.T) {
 	if len(history.Items) != 1 || history.Items[0].MessageID != sent.MessageID {
 		t.Fatalf("unexpected history: %#v", history)
 	}
-	if fallback.used {
-		t.Fatal("expected postgres path without fallback")
-	}
 }
 
 func TestPostgresRepositoryHistoryReturnsEmptyWithoutFallback(t *testing.T) {
 	backend := &groupMessageBackendStub{items: map[string][]groupMessageStubRecord{}, readStates: map[string]groupMessageReadState{}, execErrs: map[string]error{}, queryErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &groupMessageFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	history, err := repo.History(context.Background(), "group_1", nil)
 	if err != nil {
@@ -236,24 +204,17 @@ func TestPostgresRepositoryHistoryReturnsEmptyWithoutFallback(t *testing.T) {
 	if len(history.Items) != 0 {
 		t.Fatalf("expected empty history, got %#v", history)
 	}
-	if fallback.used {
-		t.Fatal("expected empty postgres result without fallback")
-	}
 }
 
 func TestPostgresRepositorySendReturnsErrorOnExecFailure(t *testing.T) {
 	backend := &groupMessageBackendStub{items: map[string][]groupMessageStubRecord{}, execErrs: map[string]error{queryInsertGroupMessage: errors.New("boom")}, queryErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &groupMessageFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	_, err := repo.Send(context.Background(), SendGroupMessageRequest{GroupID: "group_1", Type: "text", Content: "hello"})
 	if err == nil {
 		t.Fatal("expected send error")
-	}
-	if fallback.used {
-		t.Fatal("expected exec failure without fallback")
 	}
 }
 
@@ -261,15 +222,11 @@ func TestPostgresRepositoryHistoryReturnsErrorOnQueryFailure(t *testing.T) {
 	backend := &groupMessageBackendStub{items: map[string][]groupMessageStubRecord{}, execErrs: map[string]error{}, queryErrs: map[string]error{queryGroupMessagesHistory: errors.New("boom")}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &groupMessageFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	_, err := repo.History(context.Background(), "group_1", nil)
 	if err == nil {
 		t.Fatal("expected history error")
-	}
-	if fallback.used {
-		t.Fatal("expected query failure without fallback")
 	}
 }
 
@@ -277,8 +234,7 @@ func TestPostgresRepositoryMarkReadSupportMatchesCurrentPhase(t *testing.T) {
 	backend := &groupMessageBackendStub{items: map[string][]groupMessageStubRecord{}, readStates: map[string]groupMessageReadState{}, execErrs: map[string]error{}, queryErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &groupMessageFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	backend.items["group_1"] = []groupMessageStubRecord{
 		{MessageID: "gm_1", GroupID: "group_1", Type: "text", Content: "first", SentAt: "2026-03-31T10:00:00Z"},
@@ -288,19 +244,14 @@ func TestPostgresRepositoryMarkReadSupportMatchesCurrentPhase(t *testing.T) {
 		{MessageID: "gm_3", GroupID: "group_2", Type: "text", Content: "other", SentAt: "2026-03-31T10:02:00Z"},
 	}
 
-	fallback.used = false
 	if err := repo.MarkAsRead(context.Background(), "user_alice", MarkGroupMessagesReadRequest{GroupID: "group_1", UpToMessageID: "gm_1"}); err != nil {
 		t.Fatalf("expected mark_as_read postgres behavior, got %v", err)
-	}
-	if fallback.used {
-		t.Fatal("expected mark_as_read on postgres without fallback")
 	}
 	state := backend.readStates[groupMessageReadStateKey("group_1", "user_alice")]
 	if state.MessageID != "gm_1" || state.SentAt != "2026-03-31T10:00:00Z" {
 		t.Fatalf("unexpected mark_as_read state: %#v", state)
 	}
 
-	fallback.used = false
 	if err := repo.MarkAsRead(context.Background(), "user_alice", MarkGroupMessagesReadRequest{GroupID: "group_1"}); err != nil {
 		t.Fatalf("expected mark_as_read latest postgres behavior, got %v", err)
 	}
@@ -316,12 +267,8 @@ func TestPostgresRepositoryMarkReadSupportMatchesCurrentPhase(t *testing.T) {
 		t.Fatalf("expected ErrMessageNotFound, got %v", err)
 	}
 
-	fallback.used = false
 	if err := repo.MarkAllRead(context.Background(), "user_alice"); err != nil {
 		t.Fatalf("expected mark_all_read postgres behavior, got %v", err)
-	}
-	if fallback.used {
-		t.Fatal("expected mark_all_read on postgres without fallback")
 	}
 	state = backend.readStates[groupMessageReadStateKey("group_1", "user_alice")]
 	if state.MessageID != "gm_2" || state.SentAt != "2026-03-31T10:01:00Z" {

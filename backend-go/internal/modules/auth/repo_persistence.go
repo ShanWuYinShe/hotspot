@@ -10,11 +10,7 @@ import (
 type PersistenceRepository struct{ impl Repository }
 
 func NewPersistenceRepository(factory *persistence.Factory) *PersistenceRepository {
-	memory := NewInMemoryRepository()
-	if factory == nil || factory.Config.PostgresDSN == "" {
-		return &PersistenceRepository{impl: memory}
-	}
-	return &PersistenceRepository{impl: NewPostgresRepository(factory, nil)}
+	return &PersistenceRepository{impl: NewPostgresRepository(factory)}
 }
 
 func (r *PersistenceRepository) Register(ctx context.Context, params RegisterParams) (Account, error) {

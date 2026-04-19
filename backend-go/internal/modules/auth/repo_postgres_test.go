@@ -28,7 +28,7 @@ func TestPostgresRepositoryFailsClosedWhenQueryableUnavailable(t *testing.T) {
 	repo := NewPostgresRepository(&persistence.Factory{
 		Config: persistence.Config{PostgresDSN: "postgres://example"},
 		DB:     persistence.NewInMemoryDB(),
-	}, nil)
+	})
 
 	if _, err := repo.Register(context.Background(), RegisterParams{
 		LoginID:          "alice",
@@ -87,7 +87,7 @@ func TestPostgresRepositoryCreateGuestRollsBackProfileWhenSettingsWriteFails(t *
 	backend := &authExecRecorder{}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, nil)
+	repo := NewPostgresRepository(factory)
 
 	_, err := repo.CreateGuest(context.Background(), GuestParams{
 		Nickname:         "Alice",
@@ -116,7 +116,7 @@ func TestPostgresRepositoryUpdateLoginMetaWritesUserColumns(t *testing.T) {
 	backend := &authExecRecorder{}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, nil)
+	repo := NewPostgresRepository(factory)
 
 	if err := repo.UpdateLoginMeta(context.Background(), "user_alice", "198.51.100.1", "JP"); err != nil {
 		t.Fatalf("update login meta: %v", err)

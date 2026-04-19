@@ -75,38 +75,26 @@ func (b *mapBackendStub) Query(_ context.Context, query string, _ ...any) (persi
 	return &persistence.InMemoryRows{}, nil
 }
 
-type fallbackMapRepo struct{ used bool }
-
-func (r *fallbackMapRepo) Heatmap(context.Context, canvasQuery) (MapHeatCanvas, error) {
-	r.used = true
-	return MapHeatCanvas{Items: []MapHeatBucket{{CellToken: "fallback", Level: 8, TotalCount: 1}}}, nil
-}
-func (r *fallbackMapRepo) Hotspots(context.Context, canvasQuery) (MapHotspotsCanvas, error) {
-	r.used = true
-	return MapHotspotsCanvas{Items: []MapHotspotItem{{ObjectType: "user", ObjectID: "fallback"}}}, nil
-}
-
 func newMapFactory(backend persistence.PostgresQueryBackend) *persistence.Factory {
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	return factory
 }
 
-func TestPostgresRepositoryFallsBackWithoutDatabase(t *testing.T) {
-	fallback := &fallbackMapRepo{}
-	repo := NewPostgresRepository(nil, fallback)
+func TestPostgresRepositoryReturnsNotImplementedWithoutDatabase(t *testing.T) {
+	repo := NewPostgresRepository(nil)
 
 	resp, err := repo.Hotspots(context.Background(), canvasQuery{Limit: 10})
-	if err != nil {
-		t.Fatalf("Hotspots returned error: %v", err)
+	if !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("expected ErrNotImplemented, got %v", err)
 	}
-	if !fallback.used || len(resp.Items) != 1 || resp.Items[0].ObjectID != "fallback" {
-		t.Fatalf("expected fallback response, got %#v used=%v", resp, fallback.used)
+	if len(resp.Items) != 0 {
+		t.Fatalf("expected empty response, got %#v", resp)
 	}
 }
 
 func TestPostgresRepositoryReturnsNotImplementedWithoutDatabaseOrFallback(t *testing.T) {
-	repo := NewPostgresRepository(nil, nil)
+	repo := NewPostgresRepository(nil)
 
 	_, err := repo.Hotspots(context.Background(), canvasQuery{Limit: 10})
 	if !errors.Is(err, persistence.ErrNotImplemented) {
@@ -118,7 +106,7 @@ func TestPostgresRepositoryAppliesDataTypeFilter(t *testing.T) {
 	backend := &mapBackendStub{queryRowsByQuery: map[string][][]any{
 		queryMapCanvasGroups: {{"group_1", "g1", "", "loc", 35.0, 112.0}},
 	}}
-	repo := NewPostgresRepository(newMapFactory(backend), nil)
+	repo := NewPostgresRepository(newMapFactory(backend))
 
 	resp, err := repo.Hotspots(context.Background(), canvasQuery{Bounds: testMapBounds(), Center: testMapCenter(), Limit: 10, DataType: "group"})
 	if err != nil {
@@ -136,7 +124,7 @@ func TestPostgresRepositoryTimeRangeOnlyAffectsMoments(t *testing.T) {
 		queryMapCanvasUsers:   {{"user_1", "u1", "", "loc", 35.0, 112.0, old}},
 		queryMapCanvasMoments: {{"moment_old", "old moment", "loc", 35.0, 112.0, old}, {"moment_new", "new moment", "loc", 35.0, 112.0, newer}},
 	}}
-	repo := NewPostgresRepository(newMapFactory(backend), nil)
+	repo := NewPostgresRepository(newMapFactory(backend))
 
 	resp, err := repo.Hotspots(context.Background(), canvasQuery{Bounds: testMapBounds(), Center: testMapCenter(), Limit: 10, DataType: "all", StartTime: time.Date(2026, 3, 2, 0, 0, 0, 0, time.UTC)})
 	if err != nil {
@@ -162,7 +150,7 @@ func TestPostgresRepositoryEndTimeFiltersMomentsOnly(t *testing.T) {
 		queryMapCanvasUsers:   {{"user_1", "u1", "", "loc", 35.0, 112.0, newer}},
 		queryMapCanvasMoments: {{"moment_old", "old moment", "loc", 35.0, 112.0, old}, {"moment_new", "new moment", "loc", 35.0, 112.0, newer}},
 	}}
-	repo := NewPostgresRepository(newMapFactory(backend), nil)
+	repo := NewPostgresRepository(newMapFactory(backend))
 
 	resp, err := repo.Hotspots(context.Background(), canvasQuery{Bounds: testMapBounds(), Center: testMapCenter(), Limit: 10, DataType: "all", EndTime: time.Date(2026, 3, 2, 0, 0, 0, 0, time.UTC)})
 	if err != nil {
@@ -189,7 +177,7 @@ func TestPostgresRepositoryHeatmapAppliesDataTypeFilter(t *testing.T) {
 			{"group_1", "g1", "", "same", 35.0, 112.0},
 		},
 	}}
-	repo := NewPostgresRepository(newMapFactory(backend), nil)
+	repo := NewPostgresRepository(newMapFactory(backend))
 
 	resp, err := repo.Heatmap(context.Background(), canvasQuery{Bounds: testMapBounds(), Center: testMapCenter(), Level: 12, DataType: "user"})
 	if err != nil {
@@ -231,7 +219,7 @@ func TestPostgresRepositoryAggregatesHeatmapBreakdownAndSortsByTotalCount(t *tes
 			{"moment_2", "m2", "far", 36.0, 113.0, base},
 		},
 	}}
-	repo := NewPostgresRepository(newMapFactory(backend), nil)
+	repo := NewPostgresRepository(newMapFactory(backend))
 
 	resp, err := repo.Heatmap(context.Background(), canvasQuery{Bounds: testMapBounds(), Center: testMapCenter(), Level: 12, DataType: "all"})
 	if err != nil {
@@ -260,7 +248,7 @@ func TestPostgresRepositorySortsHotspotsByDistanceThenTieBreakers(t *testing.T) 
 			{"moment_old", "moment", "", 35.0001, 112.0, base},
 		},
 	}}
-	repo := NewPostgresRepository(newMapFactory(backend), nil)
+	repo := NewPostgresRepository(newMapFactory(backend))
 
 	resp, err := repo.Hotspots(context.Background(), canvasQuery{Bounds: testMapBounds(), Center: testMapCenter(), Limit: 10, DataType: "all"})
 	if err != nil {
@@ -286,7 +274,7 @@ func TestPostgresRepositoryPaginatesHotspotsWithOpaqueCursor(t *testing.T) {
 			{"user_3", "u3", "", "", 35.0003, 112.0, base},
 		},
 	}}
-	repo := NewPostgresRepository(newMapFactory(backend), nil)
+	repo := NewPostgresRepository(newMapFactory(backend))
 	query := canvasQuery{Bounds: testMapBounds(), Center: testMapCenter(), Limit: 2, DataType: "user"}
 
 	first, err := repo.Hotspots(context.Background(), query)
@@ -313,7 +301,7 @@ func TestPostgresRepositoryRejectsInvalidCursor(t *testing.T) {
 }
 
 func TestPostgresRepositoryReturnsEmptyForNoMatches(t *testing.T) {
-	repo := NewPostgresRepository(newMapFactory(&mapBackendStub{}), nil)
+	repo := NewPostgresRepository(newMapFactory(&mapBackendStub{}))
 
 	heatmap, err := repo.Heatmap(context.Background(), canvasQuery{Bounds: testMapBounds(), Center: testMapCenter(), Level: 12, DataType: "all"})
 	if err != nil {
@@ -332,7 +320,7 @@ func TestPostgresRepositoryReturnsEmptyForNoMatches(t *testing.T) {
 }
 
 func TestPostgresRepositoryPropagatesQueryError(t *testing.T) {
-	repo := NewPostgresRepository(newMapFactory(&mapBackendStub{queryErrs: map[string]error{queryMapCanvasUsers: errors.New("boom")}}), nil)
+	repo := NewPostgresRepository(newMapFactory(&mapBackendStub{queryErrs: map[string]error{queryMapCanvasUsers: errors.New("boom")}}))
 
 	_, err := repo.Hotspots(context.Background(), canvasQuery{Bounds: testMapBounds(), Center: testMapCenter(), Limit: 10, DataType: "user"})
 	if err == nil || err.Error() != "boom" {

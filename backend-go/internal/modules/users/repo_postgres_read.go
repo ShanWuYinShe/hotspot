@@ -25,7 +25,7 @@ import (
 
 func (r *PostgresRepository) GetProfile(ctx context.Context, userID string) (MyProfile, bool, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.GetProfile(ctx, userID)
+		return MyProfile{}, false, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -48,7 +48,7 @@ func (r *PostgresRepository) GetProfile(ctx context.Context, userID string) (MyP
 
 func (r *PostgresRepository) GetSettings(ctx context.Context, userID string) (UserSettings, bool, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.GetSettings(ctx, userID)
+		return UserSettings{}, false, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -68,7 +68,7 @@ func (r *PostgresRepository) GetSettings(ctx context.Context, userID string) (Us
 
 func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsersRequest) (PaginatedProfiles, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.SearchProfiles(ctx, req)
+		return PaginatedProfiles{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -112,7 +112,7 @@ func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsers
 
 func (r *PostgresRepository) Relationship(ctx context.Context, userID, targetUserID string) (Relationship, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Relationship(ctx, userID, targetUserID)
+		return Relationship{}, persistence.ErrNotImplemented
 	}
 	following, blocked, _, _, _, _, err := r.getRelationFields(ctx, userID, targetUserID)
 	if err != nil {

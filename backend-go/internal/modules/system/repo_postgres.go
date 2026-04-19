@@ -13,55 +13,44 @@ import (
 var errAnnouncementNotFound = errors.New("announcement not found")
 
 type PostgresRepository struct {
-	factory  *persistence.Factory
-	fallback Repository
+	factory *persistence.Factory
 }
 
-func NewPostgresRepository(factory *persistence.Factory, fallback Repository) *PostgresRepository {
-	if fallback == nil {
-		fallback = NewInMemoryRepository()
-	}
-	return &PostgresRepository{factory: factory, fallback: fallback}
+func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
+	return &PostgresRepository{factory: factory}
 }
 
-func (r *PostgresRepository) queryable() (persistence.QueryableDB, bool) {
+func (r *PostgresRepository) queryable() (persistence.QueryableDB, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return nil, false
+		return nil, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
-	return queryable, ok
+	if !ok {
+		return nil, persistence.ErrNotImplemented
+	}
+	return queryable, nil
 }
 
 func (r *PostgresRepository) GetMeta(ctx context.Context) ApiVersionMeta {
-	if repo, ok := r.fallback.(interface {
-		GetMeta(context.Context) ApiVersionMeta
-	}); ok {
-		return repo.GetMeta(ctx)
-	}
 	return ApiVersionMeta{Version: "v1", Status: ApiVersionStatusActive}
 }
 
 func (r *PostgresRepository) Health(ctx context.Context) (int, string, *HealthStatus) {
-	if repo, ok := r.fallback.(interface {
-		Health(context.Context) (int, string, *HealthStatus)
-	}); ok {
-		return repo.Health(ctx)
-	}
 	return 0, "", &HealthStatus{Status: SystemHealthHealthy, Timestamp: time.Now().UTC().Format(time.RFC3339)}
 }
 
 func (r *PostgresRepository) GetAnnouncement(ctx context.Context, announcementID string) (AnnouncementRecord, bool, error) {
-	queryable, ok := r.queryable()
-	if !ok {
-		return r.fallback.GetAnnouncement(ctx, announcementID)
+	queryable, err := r.queryable()
+	if err != nil {
+		return AnnouncementRecord{}, false, err
 	}
 	return r.getAnnouncementByID(ctx, queryable, announcementID)
 }
 
 func (r *PostgresRepository) CreateAnnouncement(ctx context.Context, input AnnouncementCreateInput) (AnnouncementRecord, error) {
-	queryable, ok := r.queryable()
-	if !ok {
-		return r.fallback.CreateAnnouncement(ctx, input)
+	queryable, err := r.queryable()
+	if err != nil {
+		return AnnouncementRecord{}, err
 	}
 	now := time.Now().UTC()
 	item := AnnouncementRecord{
@@ -98,9 +87,9 @@ func (r *PostgresRepository) CreateAnnouncement(ctx context.Context, input Annou
 }
 
 func (r *PostgresRepository) UpdateAnnouncement(ctx context.Context, input AnnouncementUpdateInput) (AnnouncementRecord, error) {
-	queryable, ok := r.queryable()
-	if !ok {
-		return r.fallback.UpdateAnnouncement(ctx, input)
+	queryable, err := r.queryable()
+	if err != nil {
+		return AnnouncementRecord{}, err
 	}
 	current, found, err := r.getAnnouncementByID(ctx, queryable, input.AnnouncementID)
 	if err != nil {
@@ -135,9 +124,9 @@ func (r *PostgresRepository) UpdateAnnouncement(ctx context.Context, input Annou
 }
 
 func (r *PostgresRepository) DeleteAnnouncement(ctx context.Context, announcementID string) error {
-	queryable, ok := r.queryable()
-	if !ok {
-		return r.fallback.DeleteAnnouncement(ctx, announcementID)
+	queryable, err := r.queryable()
+	if err != nil {
+		return err
 	}
 	current, found, err := r.getAnnouncementByID(ctx, queryable, announcementID)
 	if err != nil {

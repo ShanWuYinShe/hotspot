@@ -91,50 +91,26 @@ func (b *feedBackendStub) Query(_ context.Context, query string, _ ...any) (pers
 	return &persistence.InMemoryRows{}, nil
 }
 
-type fallbackFeedRepo struct{ used bool }
-
-func (r *fallbackFeedRepo) ListMoments(context.Context, momentsQuery) (PaginatedMoments, error) {
-	r.used = true
-	return PaginatedMoments{Items: []MomentItem{{MomentID: "fallback"}}}, nil
-}
-func (r *fallbackFeedRepo) ListGroups(context.Context, groupsQuery) (PaginatedGroups, error) {
-	r.used = true
-	return PaginatedGroups{Items: []GroupItem{{Group: GroupInfo{GroupID: "fallback"}}}}, nil
-}
-func (r *fallbackFeedRepo) ListUsers(context.Context, usersQuery) (PaginatedUsers, error) {
-	r.used = true
-	return PaginatedUsers{Items: []UserItem{{User: UserInfo{UserID: "fallback"}}}}, nil
-}
-func (r *fallbackFeedRepo) ListTrending(context.Context, string) (TrendingBundle, error) {
-	r.used = true
-	return TrendingBundle{TrendingTags: []TrendingTagItem{{Name: "fallback", Trend: "rising"}}}, nil
-}
-func (r *fallbackFeedRepo) Dismiss(context.Context, dismissCommand) error {
-	r.used = true
-	return nil
-}
-
 func newFeedFactory(backend persistence.PostgresQueryBackend) *persistence.Factory {
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	return factory
 }
 
-func TestPostgresRepositoryFallsBackWithoutDatabase(t *testing.T) {
-	fallback := &fallbackFeedRepo{}
-	repo := NewPostgresRepository(nil, fallback)
+func TestPostgresRepositoryReturnsNotImplementedWithoutDatabase(t *testing.T) {
+	repo := NewPostgresRepository(nil)
 
 	resp, err := repo.ListUsers(context.Background(), usersQuery{Limit: 10})
-	if err != nil {
-		t.Fatalf("ListUsers returned error: %v", err)
+	if !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("expected ErrNotImplemented, got %v", err)
 	}
-	if !fallback.used || len(resp.Items) != 1 || resp.Items[0].User.UserID != "fallback" {
-		t.Fatalf("expected fallback response, got %#v used=%v", resp, fallback.used)
+	if len(resp.Items) != 0 {
+		t.Fatalf("expected empty response, got %#v", resp)
 	}
 }
 
 func TestPostgresRepositoryReturnsNotImplementedWithoutDatabaseOrFallback(t *testing.T) {
-	repo := NewPostgresRepository(nil, nil)
+	repo := NewPostgresRepository(nil)
 
 	_, err := repo.ListGroups(context.Background(), groupsQuery{Limit: 10})
 	if !errors.Is(err, persistence.ErrNotImplemented) {
@@ -150,7 +126,7 @@ func TestPostgresRepositoryFiltersUsersByRadiusAndExcludesSelf(t *testing.T) {
 			{"u3", "far", "", "", "loc", 36.0, 112.0, false, false, 0, 0},
 		},
 	}}
-	repo := NewPostgresRepository(newFeedFactory(backend), nil)
+	repo := NewPostgresRepository(newFeedFactory(backend))
 
 	resp, err := repo.ListUsers(context.Background(), usersQuery{ViewerUserID: "u1", ReferencePoint: GeoPoint{Latitude: 35, Longitude: 112}, Radius: 1000, Limit: 10})
 	if err != nil {
@@ -169,7 +145,7 @@ func TestPostgresRepositoryPaginatesUsersWithOpaqueCursor(t *testing.T) {
 			{"u1", "a", "", "", "loc", 35.0003, 112.0, false, false, 0, 0},
 		},
 	}}
-	repo := NewPostgresRepository(newFeedFactory(backend), nil)
+	repo := NewPostgresRepository(newFeedFactory(backend))
 	query := usersQuery{ViewerUserID: "viewer", ReferencePoint: GeoPoint{Latitude: 35, Longitude: 112}, Radius: 2000, Limit: 2}
 
 	first, err := repo.ListUsers(context.Background(), query)
@@ -196,7 +172,7 @@ func TestPostgresRepositoryFiltersGroupsByRadiusAndSorts(t *testing.T) {
 			{"g2", "near-b", "", "", false, "loc", 35.0001, 112.0, 10, true, 3},
 		},
 	}}
-	repo := NewPostgresRepository(newFeedFactory(backend), nil)
+	repo := NewPostgresRepository(newFeedFactory(backend))
 
 	resp, err := repo.ListGroups(context.Background(), groupsQuery{ViewerUserID: "viewer", ReferencePoint: GeoPoint{Latitude: 35, Longitude: 112}, Radius: 2000, Limit: 10})
 	if err != nil {
@@ -217,7 +193,7 @@ func TestPostgresRepositoryLoadsFollowingMomentsOnly(t *testing.T) {
 		},
 		queryFeedMomentTags: {{"hot"}},
 	}}
-	repo := NewPostgresRepository(newFeedFactory(backend), nil)
+	repo := NewPostgresRepository(newFeedFactory(backend))
 
 	resp, err := repo.ListMoments(context.Background(), momentsQuery{ViewerUserID: "viewer", Source: "following", ReferencePoint: GeoPoint{Latitude: 35, Longitude: 112}, Radius: 5000, Limit: 2})
 	if err != nil {
@@ -244,7 +220,7 @@ func TestPostgresRepositoryLoadsNearbyMomentsOnlyWithinRadius(t *testing.T) {
 		},
 		queryFeedMomentTags: {},
 	}}
-	repo := NewPostgresRepository(newFeedFactory(backend), nil)
+	repo := NewPostgresRepository(newFeedFactory(backend))
 
 	resp, err := repo.ListMoments(context.Background(), momentsQuery{ViewerUserID: "viewer", Source: "nearby", ReferencePoint: GeoPoint{Latitude: 35, Longitude: 112}, Radius: 1000, Limit: 10})
 	if err != nil {
@@ -265,7 +241,7 @@ func TestPostgresRepositoryAllMomentsUsesStableCursorPagination(t *testing.T) {
 		},
 		queryFeedMomentTags: {},
 	}}
-	repo := NewPostgresRepository(newFeedFactory(backend), nil)
+	repo := NewPostgresRepository(newFeedFactory(backend))
 	query := momentsQuery{ViewerUserID: "viewer", Source: "all", ReferencePoint: GeoPoint{Latitude: 35, Longitude: 112}, Radius: 5000, Limit: 2}
 
 	first, err := repo.ListMoments(context.Background(), query)
@@ -291,7 +267,7 @@ func TestPostgresRepositoryTrendingAggregatesTagsAndMoments(t *testing.T) {
 		queryFeedTrendingHotMoments: {{"m1", "u1", "nick", "", "desc", base, 9, 1, 0, "loc", 35.0, 112.0, false, false}},
 		queryFeedMomentTags:         {{"hot"}},
 	}}
-	repo := NewPostgresRepository(newFeedFactory(backend), nil)
+	repo := NewPostgresRepository(newFeedFactory(backend))
 
 	resp, err := repo.ListTrending(context.Background(), "viewer")
 	if err != nil {
@@ -310,7 +286,7 @@ func TestPostgresRepositoryRejectsInvalidCursor(t *testing.T) {
 }
 
 func TestPostgresRepositoryPropagatesQueryError(t *testing.T) {
-	repo := NewPostgresRepository(newFeedFactory(&feedBackendStub{queryErrs: map[string]error{queryFeedUsers: errors.New("boom")}}), nil)
+	repo := NewPostgresRepository(newFeedFactory(&feedBackendStub{queryErrs: map[string]error{queryFeedUsers: errors.New("boom")}}))
 
 	_, err := repo.ListUsers(context.Background(), usersQuery{ViewerUserID: "viewer", ReferencePoint: GeoPoint{Latitude: 35, Longitude: 112}, Radius: 1000, Limit: 10})
 	if err == nil || err.Error() != "boom" {
@@ -318,21 +294,17 @@ func TestPostgresRepositoryPropagatesQueryError(t *testing.T) {
 	}
 }
 
-func TestPostgresRepositoryDismissFallsBackWithoutDatabase(t *testing.T) {
-	fallback := &fallbackFeedRepo{}
-	repo := NewPostgresRepository(nil, fallback)
+func TestPostgresRepositoryDismissReturnsNotImplementedWithoutDatabase(t *testing.T) {
+	repo := NewPostgresRepository(nil)
 
-	if err := repo.Dismiss(context.Background(), dismissCommand{ViewerUserID: "u1", TargetType: "moment", TargetID: "m1"}); err != nil {
-		t.Fatalf("Dismiss returned error: %v", err)
-	}
-	if !fallback.used {
-		t.Fatal("expected fallback to be used")
+	if err := repo.Dismiss(context.Background(), dismissCommand{ViewerUserID: "u1", TargetType: "moment", TargetID: "m1"}); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("expected ErrNotImplemented, got %v", err)
 	}
 }
 
 func TestPostgresRepositoryDismissReturnsNotFoundWhenTargetMissing(t *testing.T) {
 	backend := &feedBackendStub{queryRowByQuery: map[string]feedRowValues{queryFeedDismissMomentExists: {err: errors.New("no rows")}}}
-	repo := NewPostgresRepository(newFeedFactory(backend), nil)
+	repo := NewPostgresRepository(newFeedFactory(backend))
 
 	if err := repo.Dismiss(context.Background(), dismissCommand{ViewerUserID: "u1", TargetType: "moment", TargetID: "m1"}); !errors.Is(err, ErrDismissTargetNotFound) {
 		t.Fatalf("expected not found, got %v", err)
@@ -341,7 +313,7 @@ func TestPostgresRepositoryDismissReturnsNotFoundWhenTargetMissing(t *testing.T)
 
 func TestPostgresRepositoryDismissInsertsWhenTargetExists(t *testing.T) {
 	backend := &feedBackendStub{queryRowByQuery: map[string]feedRowValues{queryFeedDismissMomentExists: {values: []any{"m1"}}}}
-	repo := NewPostgresRepository(newFeedFactory(backend), nil)
+	repo := NewPostgresRepository(newFeedFactory(backend))
 
 	if err := repo.Dismiss(context.Background(), dismissCommand{ViewerUserID: "u1", TargetType: "moment", TargetID: "m1"}); err != nil {
 		t.Fatalf("Dismiss returned error: %v", err)
@@ -356,7 +328,7 @@ func TestPostgresRepositoryDismissPropagatesExecError(t *testing.T) {
 		queryRowByQuery: map[string]feedRowValues{queryFeedDismissMomentExists: {values: []any{"m1"}}},
 		execErrs:        map[string]error{queryFeedDismissInsert: errors.New("boom")},
 	}
-	repo := NewPostgresRepository(newFeedFactory(backend), nil)
+	repo := NewPostgresRepository(newFeedFactory(backend))
 
 	if err := repo.Dismiss(context.Background(), dismissCommand{ViewerUserID: "u1", TargetType: "moment", TargetID: "m1"}); err == nil || err.Error() != "boom" {
 		t.Fatalf("expected exec error, got %v", err)

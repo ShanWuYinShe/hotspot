@@ -47,37 +47,10 @@ func (r *notificationRowsValues) Scan(dest ...any) error {
 func (r *notificationRowsValues) Close() error { return nil }
 func (r *notificationRowsValues) Err() error   { return r.err }
 
-type notificationFallbackRepo struct{ used bool }
-
 type notificationNonQueryableDB struct{}
 
 func (notificationNonQueryableDB) Ping(context.Context) error { return nil }
 func (notificationNonQueryableDB) Close() error               { return nil }
-
-func (r *notificationFallbackRepo) Append(context.Context, string, NotificationItem) error {
-	r.used = true
-	return nil
-}
-func (r *notificationFallbackRepo) AppendMany(context.Context, []string, NotificationItem) error {
-	r.used = true
-	return nil
-}
-func (r *notificationFallbackRepo) List(context.Context, string, NotificationListRequest) (PaginatedNotifications, error) {
-	r.used = true
-	return PaginatedNotifications{}, nil
-}
-func (r *notificationFallbackRepo) UnreadCount(context.Context, string) (UnreadCountResult, error) {
-	r.used = true
-	return UnreadCountResult{}, nil
-}
-func (r *notificationFallbackRepo) MarkAsRead(context.Context, string, []string) error {
-	r.used = true
-	return nil
-}
-func (r *notificationFallbackRepo) MarkAllRead(context.Context, string) error {
-	r.used = true
-	return nil
-}
 
 type notificationBackendStub struct {
 	items     map[string][]NotificationItem
@@ -189,19 +162,12 @@ func TestNewPersistenceRepositoryUsesPostgresWhenDSNConfigured(t *testing.T) {
 	}
 }
 
-func TestPersistenceRepositoryUsesMemoryOnlyWithoutPostgresDSN(t *testing.T) {
-	repo := NewPersistenceRepository(nil)
-	if _, err := repo.List(context.Background(), "user_alice", NotificationListRequest{}); err != nil {
-		t.Fatalf("expected in-memory list without postgres dsn, got %v", err)
-	}
-}
-
 func TestPersistenceRepositoryWithPostgresDSNDoesNotFallbackSilently(t *testing.T) {
 	factory := &persistence.Factory{
 		Config: persistence.Config{PostgresDSN: "postgres://example"},
 		DB:     notificationNonQueryableDB{},
 	}
-	repo := &PersistenceRepository{impl: NewPostgresRepository(factory, nil)}
+	repo := &PersistenceRepository{impl: NewPostgresRepository(factory)}
 
 	if err := repo.Append(context.Background(), "user_alice", NotificationItem{Type: "new_follower"}); !errors.Is(err, persistence.ErrNotImplemented) {
 		t.Fatalf("expected ErrNotImplemented for append, got %v", err)
@@ -229,8 +195,7 @@ func TestPostgresRepositoryListSupportsFilterPaginationAndUnreadCount(t *testing
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &notificationFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	page1, err := repo.List(context.Background(), "user_alice", NotificationListRequest{Pagination: &PaginationParams{Limit: 2}})
 	if err != nil || len(page1.Items) != 2 || page1.Items[0].NotificationID != "notif_3" || page1.Items[1].NotificationID != "notif_2" || page1.NextCursor == "" {
@@ -270,16 +235,13 @@ func TestPostgresRepositoryListSupportsFilterPaginationAndUnreadCount(t *testing
 	if err != nil || count.Total != 0 {
 		t.Fatalf("unexpected unread count after mark all: %#v err=%v", count, err)
 	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
-	}
 }
 
 func TestPostgresRepositoryAppendWritesAndAffectsUnreadCount(t *testing.T) {
 	backend := newNotificationBackendStub()
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory, nil)
+	repo := NewPostgresRepository(factory)
 	if err := repo.Append(context.Background(), "user_alice", NotificationItem{Type: "new_follower", Payload: map[string]any{"actor": map[string]any{"user_id": "user_bob"}}}); err != nil {
 		t.Fatalf("append: %v", err)
 	}
@@ -297,8 +259,7 @@ func TestPostgresRepositoryReturnsEmptyListWithoutFallback(t *testing.T) {
 	backend := newNotificationBackendStub()
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &notificationFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	list, err := repo.List(context.Background(), "user_alice", NotificationListRequest{})
 	if err != nil || len(list.Items) != 0 {
@@ -308,9 +269,6 @@ func TestPostgresRepositoryReturnsEmptyListWithoutFallback(t *testing.T) {
 	if err != nil || count.Total != 0 {
 		t.Fatalf("unexpected count: %#v err=%v", count, err)
 	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
-	}
 }
 
 func TestPostgresRepositoryMarkAsReadReturnsErrorOnExecFailure(t *testing.T) {
@@ -318,14 +276,10 @@ func TestPostgresRepositoryMarkAsReadReturnsErrorOnExecFailure(t *testing.T) {
 	backend.execErrs[queryMarkNotificationsRead] = errors.New("write failed")
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &notificationFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	if err := repo.MarkAsRead(context.Background(), "user_alice", []string{"notif_1"}); err == nil {
 		t.Fatal("expected mark as read error")
-	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
 	}
 }
 
@@ -334,15 +288,11 @@ func TestPostgresRepositoryListReturnsErrorOnQueryFailure(t *testing.T) {
 	backend.queryErrs[queryListNotifications] = errors.New("query failed")
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &notificationFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	_, err := repo.List(context.Background(), "user_alice", NotificationListRequest{})
 	if err == nil {
 		t.Fatal("expected list error")
-	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
 	}
 }
 
@@ -351,14 +301,10 @@ func TestPostgresRepositoryUnreadCountReturnsErrorOnQueryFailure(t *testing.T) {
 	backend.queryErrs[queryUnreadNotificationCounts] = errors.New("query failed")
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &notificationFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	_, err := repo.UnreadCount(context.Background(), "user_alice")
 	if err == nil {
 		t.Fatal("expected unread count error")
-	}
-	if fallback.used {
-		t.Fatal("unexpected fallback usage")
 	}
 }

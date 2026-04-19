@@ -59,38 +59,10 @@ func (r *privateChatRowsValues) Scan(dest ...any) error {
 func (r *privateChatRowsValues) Close() error { return nil }
 func (r *privateChatRowsValues) Err() error   { return r.err }
 
-type privateChatFallbackRepo struct{ used bool }
-
 type privateChatNonQueryableDB struct{}
 
 func (privateChatNonQueryableDB) Ping(context.Context) error { return nil }
 func (privateChatNonQueryableDB) Close() error               { return nil }
-
-func (r *privateChatFallbackRepo) markUsed() { r.used = true }
-func (r *privateChatFallbackRepo) GetOrCreate(context.Context, string, string) (time.Time, error) {
-	r.markUsed()
-	return time.Now().UTC(), nil
-}
-func (r *privateChatFallbackRepo) List(context.Context, string, ListOptions) ([]ChatState, string, error) {
-	r.markUsed()
-	return []ChatState{{ChatKey: "fallback", TargetID: "user_bob", CreatedAt: time.Now().UTC()}}, "", nil
-}
-func (r *privateChatFallbackRepo) GetState(context.Context, string, string) (ChatState, error) {
-	r.markUsed()
-	return ChatState{ChatKey: "fallback", TargetID: "user_bob", CreatedAt: time.Now().UTC()}, nil
-}
-func (r *privateChatFallbackRepo) RestoreForUser(context.Context, string, string, time.Time) error {
-	r.markUsed()
-	return nil
-}
-func (r *privateChatFallbackRepo) UpdateSettings(context.Context, string, string, UpdateChatSettings) error {
-	r.markUsed()
-	return nil
-}
-func (r *privateChatFallbackRepo) DeleteForUser(context.Context, string, string, *time.Time) error {
-	r.markUsed()
-	return nil
-}
 
 type privateChatStubRecord struct {
 	ChatKey   string
@@ -215,7 +187,7 @@ func TestPostgresRepositoryFailsClosedWhenQueryableUnavailable(t *testing.T) {
 	repo := NewPostgresRepository(&persistence.Factory{
 		Config: persistence.Config{PostgresDSN: "postgres://example"},
 		DB:     privateChatNonQueryableDB{},
-	}, nil)
+	})
 
 	if _, err := repo.GetOrCreate(context.Background(), "user_alice", "user_bob"); !errors.Is(err, persistence.ErrNotImplemented) {
 		t.Fatalf("expected ErrNotImplemented for get_or_create, got %v", err)
@@ -229,8 +201,7 @@ func TestPostgresRepositoryGetOrCreateAndList(t *testing.T) {
 	backend := &privateChatBackendStub{chats: map[string]privateChatStubRecord{}, states: map[string]map[string]privateChatUserStateRecord{}, execErrs: map[string]error{}, queryErrs: map[string]error{}, queryRowErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &privateChatFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	createdAt, err := repo.GetOrCreate(context.Background(), "user_alice", "user_bob")
 	if err != nil {
@@ -249,17 +220,13 @@ func TestPostgresRepositoryGetOrCreateAndList(t *testing.T) {
 	if nextCursor != "" {
 		t.Fatalf("expected empty next cursor, got %q", nextCursor)
 	}
-	if fallback.used {
-		t.Fatal("expected postgres path without fallback")
-	}
 }
 
 func TestPostgresRepositoryListReturnsEmptyWithoutFallback(t *testing.T) {
 	backend := &privateChatBackendStub{chats: map[string]privateChatStubRecord{}, states: map[string]map[string]privateChatUserStateRecord{}, execErrs: map[string]error{}, queryErrs: map[string]error{}, queryRowErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &privateChatFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	items, nextCursor, err := repo.List(context.Background(), "user_alice", ListOptions{})
 	if err != nil {
@@ -271,24 +238,17 @@ func TestPostgresRepositoryListReturnsEmptyWithoutFallback(t *testing.T) {
 	if nextCursor != "" {
 		t.Fatalf("expected empty next cursor, got %q", nextCursor)
 	}
-	if fallback.used {
-		t.Fatal("expected empty postgres result without fallback")
-	}
 }
 
 func TestPostgresRepositoryGetOrCreateReturnsErrorOnExecFailure(t *testing.T) {
 	backend := &privateChatBackendStub{chats: map[string]privateChatStubRecord{}, states: map[string]map[string]privateChatUserStateRecord{}, execErrs: map[string]error{queryInsertPrivateChat: errors.New("boom")}, queryErrs: map[string]error{}, queryRowErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &privateChatFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	_, err := repo.GetOrCreate(context.Background(), "user_alice", "user_bob")
 	if err == nil {
 		t.Fatal("expected get or create error")
-	}
-	if fallback.used {
-		t.Fatal("expected exec failure without fallback")
 	}
 }
 
@@ -296,15 +256,11 @@ func TestPostgresRepositoryGetOrCreateReturnsErrorOnQueryRowFailure(t *testing.T
 	backend := &privateChatBackendStub{chats: map[string]privateChatStubRecord{}, states: map[string]map[string]privateChatUserStateRecord{}, execErrs: map[string]error{}, queryErrs: map[string]error{}, queryRowErrs: map[string]error{queryGetPrivateChatCreatedAt: errors.New("boom")}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &privateChatFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	_, err := repo.GetOrCreate(context.Background(), "user_alice", "user_bob")
 	if err == nil {
 		t.Fatal("expected get or create error")
-	}
-	if fallback.used {
-		t.Fatal("expected query row failure without fallback")
 	}
 }
 
@@ -312,14 +268,10 @@ func TestPostgresRepositoryListReturnsErrorOnQueryFailure(t *testing.T) {
 	backend := &privateChatBackendStub{chats: map[string]privateChatStubRecord{}, states: map[string]map[string]privateChatUserStateRecord{}, execErrs: map[string]error{}, queryErrs: map[string]error{queryListPrivateChats: errors.New("boom")}, queryRowErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
-	fallback := &privateChatFallbackRepo{}
-	repo := NewPostgresRepository(factory, fallback)
+	repo := NewPostgresRepository(factory)
 
 	_, _, err := repo.List(context.Background(), "user_alice", ListOptions{})
 	if err == nil {
 		t.Fatal("expected list error")
-	}
-	if fallback.used {
-		t.Fatal("expected query failure without fallback")
 	}
 }

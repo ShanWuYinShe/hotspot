@@ -14,20 +14,16 @@ import (
 )
 
 type PostgresRepository struct {
-	factory  *persistence.Factory
-	fallback Repository
+	factory *persistence.Factory
 }
 
-func NewPostgresRepository(factory *persistence.Factory, fallback Repository) *PostgresRepository {
-	if fallback == nil {
-		fallback = NewInMemoryRepository()
-	}
-	return &PostgresRepository{factory: factory, fallback: fallback}
+func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
+	return &PostgresRepository{factory: factory}
 }
 
 func (r *PostgresRepository) Create(ctx context.Context, userID string, req CreateMomentRequest) (MomentItem, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Create(ctx, userID, req)
+		return MomentItem{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -73,7 +69,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 
 func (r *PostgresRepository) IncrementCommentCount(ctx context.Context, momentID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.IncrementCommentCount(ctx, momentID)
+		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -84,7 +80,7 @@ func (r *PostgresRepository) IncrementCommentCount(ctx context.Context, momentID
 
 func (r *PostgresRepository) DecrementCommentCount(ctx context.Context, momentID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.DecrementCommentCount(ctx, momentID)
+		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -95,7 +91,7 @@ func (r *PostgresRepository) DecrementCommentCount(ctx context.Context, momentID
 
 func (r *PostgresRepository) IncrementSharesCount(ctx context.Context, momentID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.IncrementSharesCount(ctx, momentID)
+		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -106,7 +102,7 @@ func (r *PostgresRepository) IncrementSharesCount(ctx context.Context, momentID 
 
 func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsRequest) (PaginatedMoments, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Search(ctx, req)
+		return PaginatedMoments{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -177,7 +173,7 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 
 func (r *PostgresRepository) Update(ctx context.Context, userID string, req EditMomentRequest) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Update(ctx, userID, req)
+		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -212,7 +208,7 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Edit
 
 func (r *PostgresRepository) Delete(ctx context.Context, momentID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Delete(ctx, momentID)
+		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -223,7 +219,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, momentID string) error 
 
 func (r *PostgresRepository) Like(ctx context.Context, userID string, momentID string) (bool, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Like(ctx, userID, momentID)
+		return false, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -248,7 +244,7 @@ func (r *PostgresRepository) Like(ctx context.Context, userID string, momentID s
 
 func (r *PostgresRepository) Unlike(ctx context.Context, userID string, momentID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Unlike(ctx, userID, momentID)
+		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -269,7 +265,7 @@ func (r *PostgresRepository) Unlike(ctx context.Context, userID string, momentID
 
 func (r *PostgresRepository) Favorite(ctx context.Context, userID string, momentID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Favorite(ctx, userID, momentID)
+		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -280,7 +276,7 @@ func (r *PostgresRepository) Favorite(ctx context.Context, userID string, moment
 
 func (r *PostgresRepository) Unfavorite(ctx context.Context, userID string, momentID string) error {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.Unfavorite(ctx, userID, momentID)
+		return persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -291,7 +287,7 @@ func (r *PostgresRepository) Unfavorite(ctx context.Context, userID string, mome
 
 func (r *PostgresRepository) ListLikes(ctx context.Context, momentID string, limit int, cursor string) ([]LikeItem, string, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.ListLikes(ctx, momentID, limit, cursor)
+		return nil, "", persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {
@@ -333,7 +329,7 @@ func (r *PostgresRepository) NotificationContext(ctx context.Context, momentID s
 
 func (r *PostgresRepository) ListFavorites(ctx context.Context, userID string, limit int, cursor string) (PaginatedMoments, error) {
 	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
-		return r.fallback.ListFavorites(ctx, userID, limit, cursor)
+		return PaginatedMoments{}, persistence.ErrNotImplemented
 	}
 	queryable, ok := r.factory.DB.(persistence.QueryableDB)
 	if !ok {

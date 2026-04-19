@@ -13,12 +13,9 @@ import (
 )
 
 func (r *PostgresRepository) Get(ctx context.Context, query getShareQuery) (ShareDetail, error) {
-	queryable, ok, err := r.queryable()
+	queryable, err := r.queryable()
 	if err != nil {
 		return ShareDetail{}, err
-	}
-	if !ok {
-		return r.fallback.Get(ctx, query)
 	}
 	var record shareRecord
 	var payloadJSON string
@@ -69,12 +66,9 @@ func (r *PostgresRepository) Get(ctx context.Context, query getShareQuery) (Shar
 }
 
 func (r *PostgresRepository) List(ctx context.Context, query listSharesQuery) (PaginatedShares, error) {
-	queryable, ok, err := r.queryable()
+	queryable, err := r.queryable()
 	if err != nil {
 		return PaginatedShares{}, err
-	}
-	if !ok {
-		return r.fallback.List(ctx, query)
 	}
 	cursor, err := decodeShareCursor(query.Cursor)
 	if err != nil {
