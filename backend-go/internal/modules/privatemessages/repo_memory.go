@@ -2,6 +2,7 @@ package private_messages
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"strings"
 	"sync"
@@ -12,6 +13,7 @@ type InMemoryRepository struct {
 	mu         sync.RWMutex
 	messages   map[string][]PrivateMessageItem
 	readCursor map[string]map[string]string
+	seq        int64
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
@@ -27,7 +29,9 @@ func (r *InMemoryRepository) Send(_ context.Context, senderID, targetUserID stri
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	now := time.Now().UTC()
-	msg := PrivateMessageItem{MessageID: "pm_" + now.Format("20060102150405.000000000"), Type: req.Type, Content: req.Content, ShareCode: req.ShareCode, Sender: UserInfo{UserID: senderID, Nickname: senderID}, SentAt: now.Format(time.RFC3339Nano), IsRead: false}
+	r.seq++
+	sentAt := now.Format("2006-01-02T15:04:05.000000000Z")
+	msg := PrivateMessageItem{MessageID: fmt.Sprintf("pm_%d_%s", r.seq, now.Format("20060102150405.000000000")), Type: req.Type, Content: req.Content, ShareCode: req.ShareCode, Sender: UserInfo{UserID: senderID, Nickname: senderID}, SentAt: sentAt, IsRead: false}
 	if req.FileID != "" {
 		msg.Media = &MessageMedia{URL: req.FileID}
 	}
@@ -71,7 +75,7 @@ func (r *InMemoryRepository) History(_ context.Context, userID string, req GetHi
 	if !cursorSentAt.IsZero() {
 		filtered := make([]PrivateMessageItem, 0, len(items))
 		for _, item := range items {
-			sentAt, parseErr := time.Parse(time.RFC3339Nano, item.SentAt)
+			sentAt, parseErr := time.Parse("2006-01-02T15:04:05.000000000Z", item.SentAt)
 			if parseErr != nil {
 				continue
 			}
@@ -95,7 +99,7 @@ func (r *InMemoryRepository) Recent(ctx context.Context, userID, targetUserID st
 	if deletedAfter != nil {
 		filtered := history.Items[:0]
 		for _, item := range history.Items {
-			sentAt, err := time.Parse(time.RFC3339Nano, item.SentAt)
+			sentAt, err := time.Parse("2006-01-02T15:04:05.000000000Z", item.SentAt)
 			if err == nil && !sentAt.After(*deletedAfter) {
 				continue
 			}
@@ -142,7 +146,7 @@ func (r *InMemoryRepository) UnreadCount(_ context.Context, userID, targetUserID
 			continue
 		}
 		if deletedAfter != nil {
-			sentAt, err := time.Parse(time.RFC3339Nano, item.SentAt)
+			sentAt, err := time.Parse("2006-01-02T15:04:05.000000000Z", item.SentAt)
 			if err == nil && !sentAt.After(*deletedAfter) {
 				continue
 			}
@@ -175,7 +179,7 @@ func (r *InMemoryRepository) Update(_ context.Context, userID string, req Update
 				return MessageEventMeta{}, ErrMessageNotEditable
 			}
 			msgs[i].Content = req.Content
-			msgs[i].EditedAt = time.Now().UTC().Format(time.RFC3339Nano)
+			msgs[i].EditedAt = time.Now().UTC().Format("2006-01-02T15:04:05.000000000Z")
 			r.messages[key] = msgs
 			return MessageEventMeta{TargetUserID: otherUserID(key, userID), MessageID: req.MessageID, SentAt: msgs[i].SentAt}, nil
 		}
@@ -197,11 +201,11 @@ func (r *InMemoryRepository) Recall(_ context.Context, userID string, req Recall
 			if msgs[i].RecalledAt != "" {
 				return MessageEventMeta{}, ErrMessageNotRecallable
 			}
-			sentAt, err := time.Parse(time.RFC3339Nano, msgs[i].SentAt)
+			sentAt, err := time.Parse("2006-01-02T15:04:05.000000000Z", msgs[i].SentAt)
 			if err == nil && time.Since(sentAt) > 2*time.Minute {
 				return MessageEventMeta{}, ErrMessageNotRecallable
 			}
-			msgs[i].RecalledAt = time.Now().UTC().Format(time.RFC3339Nano)
+			msgs[i].RecalledAt = time.Now().UTC().Format("2006-01-02T15:04:05.000000000Z")
 			r.messages[key] = msgs
 			return MessageEventMeta{TargetUserID: otherUserID(key, userID), MessageID: req.MessageID, SentAt: msgs[i].SentAt}, nil
 		}
