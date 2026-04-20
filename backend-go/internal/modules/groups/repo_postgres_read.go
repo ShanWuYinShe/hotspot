@@ -239,13 +239,12 @@ func buildGroupSearchQuery(req SearchGroupsRequest) (string, []any, int, groupSe
 		builder.WriteString(fmt.Sprintf(" AND %s = ANY(g.tags)", tagArg))
 	}
 	if req.Radius != nil {
-		plan := geo.NewSearchPlan(reference, *req.Radius, req.SortBy)
-		tokens := geo.CoveringTokens(geo.BoundsAround(plan.Reference, plan.Radius), plan.Level, 32)
-		if len(tokens) == 0 {
-			return "SELECT * FROM (SELECT NULL WHERE FALSE) empty", nil, limit, cursor, nil
-		}
-		tokensArg := addArg(tokens)
-		builder.WriteString(fmt.Sprintf(" AND g.s2_cell_token = ANY(%s)", tokensArg))
+		bounds := geo.BoundsAround(reference, *req.Radius)
+		southArg := addArg(bounds.South)
+		northArg := addArg(bounds.North)
+		westArg := addArg(bounds.West)
+		eastArg := addArg(bounds.East)
+		builder.WriteString(fmt.Sprintf(" AND g.latitude BETWEEN %s AND %s AND g.longitude BETWEEN %s AND %s", southArg, northArg, westArg, eastArg))
 	}
 	builder.WriteString(") search WHERE 1=1")
 	if req.Radius != nil {
