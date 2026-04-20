@@ -3,6 +3,7 @@ package persistence
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"hotspot/backend-go/internal/platform/config"
 )
@@ -16,8 +17,12 @@ func NewFactory(cfg config.Config) *Factory {
 	factory := &Factory{Config: Config{PostgresDSN: cfg.PostgresDSN}}
 	if cfg.PostgresDSN != "" {
 		db := NewPostgresDB(cfg.PostgresDSN)
-		if pool, err := pgxpool.New(context.Background(), cfg.PostgresDSN); err == nil {
-			db.Pool = pool
+		poolConfig, err := pgxpool.ParseConfig(cfg.PostgresDSN)
+		if err == nil {
+			poolConfig.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+			if pool, err := pgxpool.NewWithConfig(context.Background(), poolConfig); err == nil {
+				db.Pool = pool
+			}
 		}
 		factory.DB = db
 	} else {
