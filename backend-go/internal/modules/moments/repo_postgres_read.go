@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sort"
+	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
 
@@ -86,13 +87,14 @@ func (r *PostgresRepository) Exists(ctx context.Context, momentID string) (bool,
 
 func scanMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, error) {
 	var item MomentItem
-	var userID, createdAt, locationName, privacyLevel string
+	var userID, locationName, privacyLevel string
+	var createdAt time.Time
 	var latitude, longitude float64
 	if err := scanner.Scan(&item.MomentID, &userID, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel); err != nil {
 		return MomentItem{}, err
 	}
 	item.User = UserInfo{UserID: userID, Nickname: userID}
-	item.CreatedAt = createdAt
+	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	item.Location = Location{Point: struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
@@ -167,17 +169,18 @@ func loadMomentMentions(ctx context.Context, queryable persistence.QueryableDB, 
 
 func scanFavoriteMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, string, error) {
 	var item MomentItem
-	var userID, createdAt, locationName, privacyLevel, favoritedAt string
+	var userID, locationName, privacyLevel string
+	var createdAt, favoritedAt time.Time
 	var latitude, longitude float64
 	if err := scanner.Scan(&item.MomentID, &userID, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &favoritedAt); err != nil {
 		return MomentItem{}, "", err
 	}
 	item.User = UserInfo{UserID: userID, Nickname: userID}
-	item.CreatedAt = createdAt
+	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	item.Location = Location{Point: struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
 	item.PrivacyLevel = privacyLevel
-	return item, favoritedAt, nil
+	return item, favoritedAt.UTC().Format(time.RFC3339), nil
 }

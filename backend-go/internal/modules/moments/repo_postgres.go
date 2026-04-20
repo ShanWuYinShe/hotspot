@@ -307,9 +307,11 @@ func (r *PostgresRepository) ListLikes(ctx context.Context, momentID string, lim
 	cursors := make([]string, 0, limit+1)
 	for rows.Next() {
 		var item LikeItem
-		if err := rows.Scan(&item.UserID, &item.LikedAt); err != nil {
+		var likedAt time.Time
+		if err := rows.Scan(&item.UserID, &likedAt); err != nil {
 			return nil, "", err
 		}
+		item.LikedAt = likedAt.UTC().Format(time.RFC3339)
 		item.Nickname = item.UserID
 		items = append(items, item)
 		cursors = append(cursors, encodeMomentLikeCursor(item.LikedAt, item.UserID))
