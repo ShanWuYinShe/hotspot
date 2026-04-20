@@ -82,6 +82,7 @@ services:
       PORT: "3000"
       HOST: 0.0.0.0
       ORIGIN: http://localhost:8888
+      BACKEND_URL: http://backend:8081
       VITE_AMAP_KEY: ""
       VITE_AMAP_SERVICE_HOST: /_AMapService
 
