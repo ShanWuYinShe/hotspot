@@ -20,7 +20,7 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, req Notifi
 	if err != nil {
 		return PaginatedNotifications{}, err
 	}
-	cursorCreatedAt := ""
+	var cursorCreatedAt any
 	cursorNotificationID := ""
 	if query.Cursor != nil {
 		cursorCreatedAt = query.Cursor.CreatedAt
