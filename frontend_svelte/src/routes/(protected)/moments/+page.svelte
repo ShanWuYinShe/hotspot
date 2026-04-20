@@ -23,7 +23,7 @@
 
 	async function loadMoments(refresh = false) {
 		await pagination.load(
-			(cursor) => momentsService.getMyMoments({ pagination: { limit: 20, cursor } }),
+			() => momentsService.getMyMoments(),
 			refresh
 		);
 	}
