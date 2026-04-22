@@ -5,7 +5,7 @@
   "respectGitignore": true,
   "permissions": {
     "defaultMode": "auto",
-    "allow": [],
+    "allow": ["Bash(GOCACHE=/Users/liyou/Work/hotspot/.local/gocache go *)"],
     "deny": []
   }
 }
