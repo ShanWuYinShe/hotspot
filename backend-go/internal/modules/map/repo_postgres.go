@@ -237,7 +237,7 @@ func paginateHotspots(items []mapCandidate, limit int, cursor string) (MapHotspo
 	if end > len(items) {
 		end = len(items)
 	}
-	resp := MapHotspotsCanvas{Items: make([]MapHotspotItem, 0, maxInt(0, end-start))}
+	resp := MapHotspotsCanvas{Items: make([]MapHotspotItem, 0, max(0, end-start))}
 	for _, item := range items[start:end] {
 		resp.Items = append(resp.Items, MapHotspotItem{
 			ObjectType:     item.ObjectType,
@@ -376,13 +376,6 @@ func findMapCursorStart(items []mapCandidate, decoded mapCursor) int {
 		}
 	}
 	return len(items)
-}
-
-func maxInt(left, right int) int {
-	if left > right {
-		return left
-	}
-	return right
 }
 
 func newMapCursorBlock() (cipher.Block, error) {
