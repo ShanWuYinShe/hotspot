@@ -7,7 +7,7 @@ type SearchPlan struct {
 	Radius    int
 	SortBy    string
 	Level     int
-	covering  map[string]struct{}
+	ranges    [][2]int64
 }
 
 func NewSearchPlan(reference Point, radius int, sortBy string) SearchPlan {
@@ -17,18 +17,13 @@ func NewSearchPlan(reference Point, radius int, sortBy string) SearchPlan {
 	if radius > 50000 {
 		radius = 50000
 	}
-	span := float64(radius * 2)
-	level := SuggestedLevel(span)
 	bounds := BoundsAround(reference, radius)
-	tokens := CoveringTokens(bounds, level, 32)
-	covering := make(map[string]struct{}, len(tokens))
-	for _, token := range tokens {
-		covering[token] = struct{}{}
-	}
+	ranges := SearchCovering(bounds)
+	level := SuggestedLevel(float64(radius * 2))
 	if sortBy == "" {
 		sortBy = "relevance"
 	}
-	return SearchPlan{Reference: reference, Radius: radius, SortBy: sortBy, Level: level, covering: covering}
+	return SearchPlan{Reference: reference, Radius: radius, SortBy: sortBy, Level: level, ranges: ranges}
 }
 
 func BoundsAround(reference Point, radiusMeters int) Bounds {
@@ -41,22 +36,24 @@ func BoundsAround(reference Point, radiusMeters int) Bounds {
 	return Bounds{
 		North: clamp(reference.Latitude+latDelta, -90, 90),
 		South: clamp(reference.Latitude-latDelta, -90, 90),
-		East:  clamp(reference.Longitude+lngDelta, -180, 180),
-		West:  clamp(reference.Longitude-lngDelta, -180, 180),
+		East:  reference.Longitude + lngDelta,
+		West:  reference.Longitude - lngDelta,
 	}
 }
 
 func (p SearchPlan) Match(candidate Point) (distance int, bearing int, ok bool) {
-	token := CellTokenAtLevel(candidate, p.Level)
-	if _, found := p.covering[token]; !found {
-		return 0, 0, false
+	cellID := LeafCellID(candidate)
+	for _, r := range p.ranges {
+		if cellID >= r[0] && cellID <= r[1] {
+			distance = DistanceMeters(p.Reference, candidate)
+			if distance > p.Radius {
+				return 0, 0, false
+			}
+			bearing = BearingDegrees(p.Reference, candidate)
+			return distance, bearing, true
+		}
 	}
-	distance = DistanceMeters(p.Reference, candidate)
-	if distance > p.Radius {
-		return 0, 0, false
-	}
-	bearing = BearingDegrees(p.Reference, candidate)
-	return distance, bearing, true
+	return 0, 0, false
 }
 
 func clamp(v, minV, maxV float64) float64 {

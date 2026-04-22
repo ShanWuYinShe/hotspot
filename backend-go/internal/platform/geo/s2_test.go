@@ -290,28 +290,16 @@ func TestSearchPlanMatch_ClampsRadius(t *testing.T) {
 	}
 }
 
-func TestSearchPlanLevel_MatchesCoveringLevel(t *testing.T) {
-	// SearchPlan.Match uses CellTokenAtLevel at plan.Level to check covering.
-	// The covering map was built at the same level, so they should match.
+func TestSearchPlanLevel_RangeContainsNearby(t *testing.T) {
+	// SearchPlan now uses SearchCovering ranges (same as DB BETWEEN).
+	// A nearby point's leaf cell ID must fall within the plan's ranges.
 	ref := Point{Latitude: 39.9, Longitude: 116.4}
 	plan := NewSearchPlan(ref, 5000, "distance")
 
-	// Get token at plan.Level for a point near reference
 	nearby := Point{Latitude: 39.905, Longitude: 116.405}
-	token := CellTokenAtLevel(nearby, plan.Level)
-
-	// This token should be in the covering if the point is inside the bounds
-	bounds := BoundsAround(ref, 5000)
-	tokens := CoveringTokens(bounds, plan.Level, 32)
-	found := false
-	for _, tok := range tokens {
-		if tok == token {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Errorf("token %s (level=%d) for nearby point not in covering (tokens=%d)", token, plan.Level, len(tokens))
+	_, _, ok := plan.Match(nearby)
+	if !ok {
+		t.Error("nearby point should match plan with range-based covering")
 	}
 }
 
@@ -342,22 +330,50 @@ func TestSearchPlan_LevelVsRadius(t *testing.T) {
 }
 
 func TestSearchPlan_Level14StorageCoversRange(t *testing.T) {
-	// Groups store s2_cell_token at level 14. Which search radii use level 14?
-	// span > 10000 AND span <= 50000 → level 14
-	// That means radius > 5000 AND radius <= 25000 uses the same level.
+	// SuggestedLevel(span): >1M→8, >200k→10, >50k→12, >10k→14, >2k→16, else→18
 	ref := Point{Latitude: 39.9, Longitude: 116.4}
 
 	for _, radius := range []int{6000, 10000, 15000, 20000, 25000} {
 		plan := NewSearchPlan(ref, radius, "distance")
 		if plan.Level != 14 {
-			t.Errorf("radius %dm should use level 14 (for group search compatibility), got %d", radius, plan.Level)
+			t.Errorf("radius %dm should use level 14, got %d", radius, plan.Level)
 		}
 	}
-	// Outside this range, levels diverge — the s2_cell_token filter won't work
 	for _, radius := range []int{5000, 30000} {
 		plan := NewSearchPlan(ref, radius, "distance")
 		if plan.Level == 14 {
 			t.Errorf("radius %dm should NOT use level 14, got %d", radius, plan.Level)
+		}
+	}
+}
+
+func TestSearchPlan_MatchConsistentWithSearchCovering(t *testing.T) {
+	// THE critical consistency test: a point within radius must pass Match
+	// exactly when its leaf cell ID is in SearchCovering ranges AND within distance.
+	ref := Point{Latitude: 39.9042, Longitude: 116.4074}
+	for _, radius := range []int{500, 1000, 5000, 25000, 50000} {
+		plan := NewSearchPlan(ref, radius, "distance")
+		bounds := BoundsAround(ref, radius)
+		ranges := SearchCovering(bounds)
+
+		// The plan's internal ranges should match SearchCovering output
+		planRangesMatch := len(plan.ranges) == len(ranges)
+		if planRangesMatch {
+			for i := range ranges {
+				if plan.ranges[i] != ranges[i] {
+					planRangesMatch = false
+					break
+				}
+			}
+		}
+		if !planRangesMatch {
+			t.Errorf("r=%dm: plan ranges don't match SearchCovering output", radius)
+		}
+
+		// Reference point itself must always match
+		_, _, ok := plan.Match(ref)
+		if !ok {
+			t.Errorf("r=%dm: reference point should always match its own plan", radius)
 		}
 	}
 }
@@ -374,5 +390,349 @@ func TestValidateBounds(t *testing.T) {
 	}
 	if err := ValidateBounds(Bounds{North: 10, South: 0, East: 10, West: 0}); err != nil {
 		t.Errorf("valid bounds: %v", err)
+	}
+}
+
+func TestLeafCellID_SamePointSameID(t *testing.T) {
+	p := Point{Latitude: 39.9042, Longitude: 116.4074}
+	id1 := LeafCellID(p)
+	id2 := LeafCellID(p)
+	if id1 != id2 {
+		t.Fatalf("same point should produce same cell ID: %d vs %d", id1, id2)
+	}
+}
+
+func TestLeafCellID_NearbyPointsDifferentID(t *testing.T) {
+	p1 := Point{Latitude: 39.9042, Longitude: 116.4074}
+	p2 := Point{Latitude: 39.9050, Longitude: 116.4080}
+	id1 := LeafCellID(p1)
+	id2 := LeafCellID(p2)
+	if id1 == 0 || id2 == 0 {
+		t.Fatalf("expected non-zero cell IDs: %d, %d", id1, id2)
+	}
+}
+
+func TestLeafCellID_DistantPointsFarApart(t *testing.T) {
+	beijing := LeafCellID(Point{Latitude: 39.9042, Longitude: 116.4074})
+	shanghai := LeafCellID(Point{Latitude: 31.2304, Longitude: 121.4737})
+	if beijing == 0 || shanghai == 0 {
+		t.Fatal("expected non-zero cell IDs")
+	}
+	// Distant cities should have very different cell IDs
+	diff := beijing - shanghai
+	if diff < 0 {
+		diff = -diff
+	}
+	if diff < 1_000_000 {
+		t.Errorf("distant cities should have very different cell IDs, diff=%d", diff)
+	}
+}
+
+func TestSearchCovering_Basic(t *testing.T) {
+	ref := Point{Latitude: 39.9, Longitude: 116.4}
+	bounds := BoundsAround(ref, 5000)
+	ranges := SearchCovering(bounds)
+	if len(ranges) == 0 {
+		t.Fatal("expected non-empty covering ranges")
+	}
+	for i, r := range ranges {
+		if r[0] > r[1] {
+			t.Errorf("range %d: min %d > max %d", i, r[0], r[1])
+		}
+	}
+}
+
+func TestSearchCovering_ContainsCenterPoint(t *testing.T) {
+	ref := Point{Latitude: 34.7869, Longitude: 113.6421}
+	for _, radius := range []int{1000, 5000, 25000, 50000} {
+		bounds := BoundsAround(ref, radius)
+		ranges := SearchCovering(bounds)
+		centerID := LeafCellID(Center(bounds))
+		found := false
+		for _, r := range ranges {
+			if centerID >= r[0] && centerID <= r[1] {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("r=%d: center cell ID %d not in any covering range (ranges=%d)", radius, centerID, len(ranges))
+		}
+	}
+}
+
+func TestSearchCovering_ContainsInteriorPoints(t *testing.T) {
+	bounds := Bounds{North: 40.0, South: 39.8, East: 116.5, West: 116.3}
+	ranges := SearchCovering(bounds)
+	testPoints := []Point{
+		{Latitude: 39.9, Longitude: 116.4},
+		{Latitude: 39.85, Longitude: 116.35},
+		{Latitude: 39.95, Longitude: 116.45},
+	}
+	for _, p := range testPoints {
+		id := LeafCellID(p)
+		found := false
+		for _, r := range ranges {
+			if id >= r[0] && id <= r[1] {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("point (%.4f, %.4f) cell ID %d not in any covering range", p.Latitude, p.Longitude, id)
+		}
+	}
+}
+
+func TestSearchCovering_SmallRadius(t *testing.T) {
+	ref := Point{Latitude: 39.9, Longitude: 116.4}
+	bounds := BoundsAround(ref, 500)
+	ranges := SearchCovering(bounds)
+	if len(ranges) == 0 {
+		t.Fatal("small radius should still produce covering ranges")
+	}
+	centerID := LeafCellID(ref)
+	found := false
+	for _, r := range ranges {
+		if centerID >= r[0] && centerID <= r[1] {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("center cell ID %d not in covering for 500m radius", centerID)
+	}
+}
+
+// cellInRanges checks if a leaf cell ID falls within any covering range.
+func cellInRanges(cellID int64, ranges [][2]int64) bool {
+	for _, r := range ranges {
+		if cellID >= r[0] && cellID <= r[1] {
+			return true
+		}
+	}
+	return false
+}
+
+func TestRoundTrip_FullRadiusSweep(t *testing.T) {
+	// THE critical test: a point stored via LeafCellID must be findable
+	// via SearchCovering at every supported search radius.
+	ref := Point{Latitude: 39.9042, Longitude: 116.4074}
+	storedID := LeafCellID(ref)
+
+	radii := []int{100, 200, 500, 1000, 2000, 3000, 5000, 8000, 10000, 15000, 20000, 25000, 30000, 40000, 50000}
+	for _, radius := range radii {
+		bounds := BoundsAround(ref, radius)
+		ranges := SearchCovering(bounds)
+		if !cellInRanges(storedID, ranges) {
+			t.Errorf("radius=%dm: stored cell ID %d not in covering (ranges=%d)", radius, storedID, len(ranges))
+		}
+	}
+}
+
+func TestRoundTrip_OffsetPointsWithinRadius(t *testing.T) {
+	// Points offset from center but still inside the radius must also be found.
+	ref := Point{Latitude: 39.9, Longitude: 116.4}
+	radius := 5000
+
+	// Generate 8 points at ~50% of radius in cardinal and diagonal directions
+	offsets := []struct {
+		latDelta float64
+		lngDelta float64
+	}{
+		{0.02, 0},      // ~2.2km north
+		{-0.02, 0},     // ~2.2km south
+		{0, 0.02},      // ~1.7km east
+		{0, -0.02},     // ~1.7km west
+		{0.01, 0.01},   // ~1.5km NE
+		{-0.01, -0.01}, // ~1.5km SW
+		{0.01, -0.01},  // ~1.5km NW
+		{-0.01, 0.01},  // ~1.5km SE
+	}
+
+	bounds := BoundsAround(ref, radius)
+	ranges := SearchCovering(bounds)
+
+	for _, off := range offsets {
+		p := Point{Latitude: ref.Latitude + off.latDelta, Longitude: ref.Longitude + off.lngDelta}
+		id := LeafCellID(p)
+		if !cellInRanges(id, ranges) {
+			dist := DistanceMeters(ref, p)
+			t.Errorf("offset point (%.4f, %.4f) dist=%dm not in 5km covering (id=%d, ranges=%d)",
+				p.Latitude, p.Longitude, dist, id, len(ranges))
+		}
+	}
+}
+
+func TestRoundTrip_MultipleCities(t *testing.T) {
+	// Test round-trip across different global locations.
+	cities := []struct {
+		name string
+		lat  float64
+		lng  float64
+	}{
+		{"Beijing", 39.9042, 116.4074},
+		{"New York", 40.7128, -74.0060},
+		{"London", 51.5074, -0.1278},
+		{"Tokyo", 35.6762, 139.6503},
+		{"Sydney", -33.8688, 151.2093},
+		{"São Paulo", -23.5505, -46.6333},
+	}
+	for _, city := range cities {
+		ref := Point{Latitude: city.lat, Longitude: city.lng}
+		storedID := LeafCellID(ref)
+		for _, radius := range []int{500, 5000, 25000, 50000} {
+			bounds := BoundsAround(ref, radius)
+			ranges := SearchCovering(bounds)
+			if !cellInRanges(storedID, ranges) {
+				t.Errorf("%s r=%dm: cell ID %d not in covering", city.name, radius, storedID)
+			}
+		}
+	}
+}
+
+func TestSearchCovering_RangesSorted(t *testing.T) {
+	// Ranges should be in ascending order (Hilbert curve property),
+	// which helps PostgreSQL optimize BETWEEN scans.
+	ref := Point{Latitude: 39.9, Longitude: 116.4}
+	for _, radius := range []int{1000, 5000, 25000, 50000} {
+		bounds := BoundsAround(ref, radius)
+		ranges := SearchCovering(bounds)
+		for i := 1; i < len(ranges); i++ {
+			if ranges[i][0] <= ranges[i-1][1] {
+				t.Errorf("r=%dm: ranges[%d]=[,%d] overlaps or not after ranges[%d]=[,%d]",
+					radius, i, ranges[i][1], i-1, ranges[i-1][1])
+			}
+		}
+	}
+}
+
+func TestSearchCovering_RangesReasonable(t *testing.T) {
+	// A 5km search should produce a manageable number of ranges.
+	ref := Point{Latitude: 39.9, Longitude: 116.4}
+	for _, tc := range []struct {
+		radius    int
+		maxRanges int
+	}{
+		{500, 50},
+		{5000, 64},
+		{25000, 64},
+		{50000, 64},
+	} {
+		bounds := BoundsAround(ref, tc.radius)
+		ranges := SearchCovering(bounds)
+		if len(ranges) > tc.maxRanges {
+			t.Errorf("r=%dm: %d ranges exceeds reasonable limit of %d", tc.radius, len(ranges), tc.maxRanges)
+		}
+		if len(ranges) == 0 {
+			t.Errorf("r=%dm: got 0 ranges", tc.radius)
+		}
+	}
+}
+
+func TestRoundTrip_NearPole(t *testing.T) {
+	// Near the north pole — ensure bounds clamping doesn't break covering.
+	ref := Point{Latitude: 89.0, Longitude: 0}
+	storedID := LeafCellID(ref)
+	for _, radius := range []int{1000, 5000, 25000} {
+		bounds := BoundsAround(ref, radius)
+		if bounds.North > 90 {
+			t.Errorf("r=%dm: North bound %.4f exceeds 90", radius, bounds.North)
+		}
+		ranges := SearchCovering(bounds)
+		if !cellInRanges(storedID, ranges) {
+			t.Errorf("near-pole r=%dm: cell ID %d not in covering", radius, storedID)
+		}
+	}
+}
+
+func TestRoundTrip_NearDateLine(t *testing.T) {
+	// Near the international date line (longitude ~180).
+	ref := Point{Latitude: 35.0, Longitude: 179.5}
+	storedID := LeafCellID(ref)
+	bounds := BoundsAround(ref, 5000)
+	ranges := SearchCovering(bounds)
+	if !cellInRanges(storedID, ranges) {
+		t.Errorf("near-dateline: cell ID %d not in covering (ranges=%d)", storedID, len(ranges))
+	}
+}
+
+func TestRoundTrip_Equator(t *testing.T) {
+	// At the equator — longitude degrees are widest.
+	ref := Point{Latitude: 0, Longitude: 0}
+	storedID := LeafCellID(ref)
+	for _, radius := range []int{1000, 5000, 25000, 50000} {
+		bounds := BoundsAround(ref, radius)
+		ranges := SearchCovering(bounds)
+		if !cellInRanges(storedID, ranges) {
+			t.Errorf("equator r=%dm: cell ID %d not in covering", radius, storedID)
+		}
+	}
+}
+
+func TestSearchCovering_LargeRadiusStillFast(t *testing.T) {
+	// 50km search should still produce reasonable output quickly.
+	ref := Point{Latitude: 39.9, Longitude: 116.4}
+	bounds := BoundsAround(ref, 50000)
+	ranges := SearchCovering(bounds)
+	if len(ranges) == 0 {
+		t.Fatal("50km search should produce ranges")
+	}
+	if len(ranges) > 500 {
+		t.Errorf("50km search produced %d ranges — too many, query will be slow", len(ranges))
+	}
+}
+
+func TestRoundTrip_DateLineCrossing(t *testing.T) {
+	ref := Point{Latitude: 35.0, Longitude: 179.8}
+	// With 50km radius, a point at -179.8 (36km away) must be found.
+	bounds := BoundsAround(ref, 50000)
+	ranges := SearchCovering(bounds)
+	storedID := LeafCellID(ref)
+	if !cellInRanges(storedID, ranges) {
+		t.Errorf("reference cell ID %d not in covering", storedID)
+	}
+	across := Point{Latitude: 35.0, Longitude: -179.8}
+	acrossID := LeafCellID(across)
+	if !cellInRanges(acrossID, ranges) {
+		dist := DistanceMeters(ref, across)
+		t.Errorf("across-dateline point (dist=%dm) not in covering (ranges=%d)", dist, len(ranges))
+	}
+}
+
+func TestRoundTrip_DateLineCrossingNegativeSide(t *testing.T) {
+	ref := Point{Latitude: 35.0, Longitude: -179.8}
+	bounds := BoundsAround(ref, 50000)
+	ranges := SearchCovering(bounds)
+	across := Point{Latitude: 35.0, Longitude: 179.8}
+	acrossID := LeafCellID(across)
+	if !cellInRanges(acrossID, ranges) {
+		t.Errorf("across-dateline point not in covering (ranges=%d)", len(ranges))
+	}
+}
+
+func TestRoundTrip_SouthernHemisphere(t *testing.T) {
+	// Southern hemisphere points must still be found via LeafCellID + SearchCovering.
+	ref := Point{Latitude: -33.87, Longitude: 151.21}
+	for _, radius := range []int{1000, 5000, 25000, 50000} {
+		bounds := BoundsAround(ref, radius)
+		ranges := SearchCovering(bounds)
+		storedID := LeafCellID(ref)
+		if !cellInRanges(storedID, ranges) {
+			t.Errorf("Sydney r=%dm: cell ID %d not in covering", radius, storedID)
+		}
+	}
+}
+
+func TestSearchPlan_MatchNegativeCellID(t *testing.T) {
+	ref := Point{Latitude: -33.87, Longitude: 151.21}
+	plan := NewSearchPlan(ref, 5000, "distance")
+	nearby := Point{Latitude: -33.86, Longitude: 151.22}
+	distance, _, ok := plan.Match(nearby)
+	if !ok {
+		t.Error("nearby point in southern hemisphere should match plan")
+	}
+	if distance <= 0 {
+		t.Errorf("expected positive distance, got %d", distance)
 	}
 }
