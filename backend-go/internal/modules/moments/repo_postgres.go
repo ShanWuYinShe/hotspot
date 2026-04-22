@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"hotspot/backend-go/internal/platform/geo"
@@ -119,27 +120,35 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 	if sortBy == "" {
 		sortBy = "relevance"
 	}
-	var keyword *string
-	if req.Keyword != nil && *req.Keyword != "" {
-		keyword = req.Keyword
+	refPt := geo.Point{Latitude: req.ReferencePoint.Latitude, Longitude: req.ReferencePoint.Longitude}
+	radius := 50000
+	if req.Radius != nil && *req.Radius > 0 {
+		radius = *req.Radius
 	}
-	var rows persistence.Rows
-	var err error
-	if sortBy == "newest" {
-		rows, err = queryable.Query(ctx, querySearchMoments, keyword, req.Tag, limit+1)
-	} else {
-		rows, err = queryable.Query(ctx, querySearchMomentsAll, keyword, req.Tag)
+	if radius > 50000 {
+		radius = 50000
 	}
+	bounds := geo.BoundsAround(refPt, radius)
+	sql, args := buildSearchMomentsQuery(bounds, req.Keyword, req.Tag, sortBy, limit+1)
+	if sql == "" {
+		return PaginatedMoments{}, nil
+	}
+	rows, err := queryable.Query(ctx, sql, args...)
 	if err != nil {
 		return PaginatedMoments{}, err
 	}
 	defer rows.Close()
+	plan := geo.NewSearchPlan(refPt, radius, sortBy)
 	items := make([]MomentItem, 0)
 	momentIDs := make([]string, 0)
 	for rows.Next() {
 		item, err := scanMomentRow(rows)
 		if err != nil {
 			return PaginatedMoments{}, err
+		}
+		_, _, within := plan.Match(geo.Point{Latitude: item.Location.Point.Latitude, Longitude: item.Location.Point.Longitude})
+		if !within {
+			continue
 		}
 		items = append(items, item)
 		momentIDs = append(momentIDs, item.MomentID)
@@ -155,7 +164,6 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 		items[i].Tags = tagsByMomentID[items[i].MomentID]
 		items[i].MyState = &MyMomentState{}
 	}
-	refPt := geo.Point{Latitude: req.ReferencePoint.Latitude, Longitude: req.ReferencePoint.Longitude}
 	sortKeyword := ""
 	if req.Keyword != nil {
 		sortKeyword = *req.Keyword
@@ -169,6 +177,38 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 		return PaginatedMoments{Items: items[:limit], NextCursor: items[limit].MomentID}, nil
 	}
 	return PaginatedMoments{Items: items}, nil
+}
+
+func buildSearchMomentsQuery(bounds geo.Bounds, keyword *string, tag *string, sortBy string, limit int) (string, []any) {
+	ranges := geo.SearchCovering(bounds)
+	if len(ranges) == 0 {
+		return "", nil
+	}
+	args := make([]any, 0, len(ranges)*2+3)
+	var builder strings.Builder
+	builder.WriteString(`SELECT moment_id, user_id, description, created_at, likes_count, comments_count, shares_count, location_name, latitude, longitude, privacy_level FROM moments WHERE privacy_level != 'private' AND (`)
+	for i, r := range ranges {
+		if i > 0 {
+			builder.WriteString(" OR ")
+		}
+		args = append(args, r[0], r[1])
+		builder.WriteString(fmt.Sprintf("s2_cell_id BETWEEN $%d AND $%d", len(args)-1, len(args)))
+	}
+	builder.WriteString(")")
+	if keyword != nil && *keyword != "" {
+		args = append(args, *keyword)
+		builder.WriteString(fmt.Sprintf(" AND description ILIKE '%%' || $%d || '%%'", len(args)))
+	}
+	if tag != nil && *tag != "" {
+		args = append(args, *tag)
+		builder.WriteString(fmt.Sprintf(" AND moment_id IN (SELECT moment_id FROM moment_tags WHERE tag_name = $%d)", len(args)))
+	}
+	if sortBy == "newest" {
+		builder.WriteString(" ORDER BY created_at DESC, moment_id DESC")
+		args = append(args, limit)
+		builder.WriteString(fmt.Sprintf(" LIMIT $%d", len(args)))
+	}
+	return builder.String(), args
 }
 
 func (r *PostgresRepository) Update(ctx context.Context, userID string, req EditMomentRequest) error {
@@ -413,15 +453,15 @@ func decodeMomentLikeCursor(cursor string) (any, string, error) {
 	}
 	blob, err := base64.RawURLEncoding.DecodeString(cursor)
 	if err != nil {
-		return nil, "", persistence.ErrNotImplemented
+		return nil, "", ErrInvalidCursor
 	}
 	var decoded momentInteractionCursor
 	if err := json.Unmarshal(blob, &decoded); err != nil || decoded.At == "" || decoded.ID == "" {
-		return nil, "", persistence.ErrNotImplemented
+		return nil, "", ErrInvalidCursor
 	}
 	likedAt, err := time.Parse(time.RFC3339, decoded.At)
 	if err != nil {
-		return nil, "", persistence.ErrNotImplemented
+		return nil, "", ErrInvalidCursor
 	}
 	return likedAt.UTC(), decoded.ID, nil
 }
@@ -440,15 +480,15 @@ func decodeMomentFavoriteCursor(cursor string) (any, string, error) {
 	}
 	blob, err := base64.RawURLEncoding.DecodeString(cursor)
 	if err != nil {
-		return nil, "", persistence.ErrNotImplemented
+		return nil, "", ErrInvalidCursor
 	}
 	var decoded momentInteractionCursor
 	if err := json.Unmarshal(blob, &decoded); err != nil || decoded.At == "" || decoded.ID == "" {
-		return nil, "", persistence.ErrNotImplemented
+		return nil, "", ErrInvalidCursor
 	}
 	favoritedAt, err := time.Parse(time.RFC3339, decoded.At)
 	if err != nil {
-		return nil, "", persistence.ErrNotImplemented
+		return nil, "", ErrInvalidCursor
 	}
 	return favoritedAt.UTC(), decoded.ID, nil
 }

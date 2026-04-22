@@ -228,28 +228,48 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 			rows = append(rows, []any{tag})
 		}
 		return &rowsValues{rows: rows}, nil
-	case queryListMomentTagsByMomentID:
-		momentID := args[0].(string)
-		item, ok := b.moments[momentID]
-		if !ok {
-			return &rowsValues{rows: nil}, nil
+	case queryListMomentTagsByMomentID, queryListMomentTagsByMomentIDs:
+		batchTagRows := func(ids []string) [][]any {
+			out := make([][]any, 0)
+			for _, mid := range ids {
+				item, ok := b.moments[mid]
+				if !ok {
+					continue
+				}
+				for _, tag := range item.Tags {
+					out = append(out, []any{mid, tag})
+				}
+			}
+			return out
 		}
-		rows := make([][]any, 0, len(item.Tags))
-		for _, tag := range item.Tags {
-			rows = append(rows, []any{tag})
+		switch v := args[0].(type) {
+		case string:
+			return &rowsValues{rows: batchTagRows([]string{v})}, nil
+		case []string:
+			return &rowsValues{rows: batchTagRows(v)}, nil
 		}
-		return &rowsValues{rows: rows}, nil
-	case queryListMomentMentionsByMomentID:
-		momentID := args[0].(string)
-		item, ok := b.moments[momentID]
-		if !ok {
-			return &rowsValues{rows: nil}, nil
+		return &rowsValues{rows: nil}, nil
+	case queryListMomentMentionsByMomentID, queryListMomentMentionsByMomentIDs:
+		batchMentionRows := func(ids []string) [][]any {
+			out := make([][]any, 0)
+			for _, mid := range ids {
+				item, ok := b.moments[mid]
+				if !ok {
+					continue
+				}
+				for _, mentionedUserID := range item.Mentions {
+					out = append(out, []any{mid, mentionedUserID})
+				}
+			}
+			return out
 		}
-		rows := make([][]any, 0, len(item.Mentions))
-		for _, mentionedUserID := range item.Mentions {
-			rows = append(rows, []any{mentionedUserID})
+		switch v := args[0].(type) {
+		case string:
+			return &rowsValues{rows: batchMentionRows([]string{v})}, nil
+		case []string:
+			return &rowsValues{rows: batchMentionRows(v)}, nil
 		}
-		return &rowsValues{rows: rows}, nil
+		return &rowsValues{rows: nil}, nil
 	case queryListMomentLikes:
 		momentID := args[0].(string)
 		cursorAt := ""
