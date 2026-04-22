@@ -67,10 +67,6 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchGroupsRequest
 		if err != nil {
 			return PaginatedGroups{}, err
 		}
-		item.MyState, err = loadGroupMembership(ctx, queryable, item.Group.GroupID, principal.UserID)
-		if err != nil {
-			return PaginatedGroups{}, err
-		}
 		if cursor.GroupID != "" && !matchesSearchCursor(meta, item, cursor) {
 			continue
 		}
@@ -78,6 +74,17 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchGroupsRequest
 	}
 	if err := rows.Err(); err != nil {
 		return PaginatedGroups{}, err
+	}
+	groupIDs := make([]string, len(items))
+	for i, item := range items {
+		groupIDs[i] = item.Group.GroupID
+	}
+	memberships, err := loadGroupMemberships(ctx, queryable, groupIDs, principal.UserID)
+	if err != nil {
+		return PaginatedGroups{}, err
+	}
+	for i := range items {
+		items[i].MyState = memberships[items[i].Group.GroupID]
 	}
 	response := PaginatedGroups{}
 	if len(items) <= limit {
@@ -168,6 +175,30 @@ func loadGroupMembership(ctx context.Context, queryable persistence.QueryableDB,
 	return &MyGroupState{Role: GroupRole(role), IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: joinedAt.UTC().Format(time.RFC3339)}, nil
 }
 
+func loadGroupMemberships(ctx context.Context, queryable persistence.QueryableDB, groupIDs []string, userID string) (map[string]*MyGroupState, error) {
+	result := make(map[string]*MyGroupState, len(groupIDs))
+	if userID == "" || len(groupIDs) == 0 {
+		return result, nil
+	}
+	rows, err := queryable.Query(ctx, queryGetGroupMemberships, userID, groupIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var groupID, role string
+		var joinedAt time.Time
+		if err := rows.Scan(&groupID, &role, &joinedAt); err != nil {
+			return nil, err
+		}
+		result[groupID] = &MyGroupState{Role: GroupRole(role), IsJoined: true, UnreadCount: 0, IsMuted: false, IsPinned: false, JoinedAt: joinedAt.UTC().Format(time.RFC3339)}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 func countGroupMembers(ctx context.Context, queryable persistence.QueryableDB, groupID string) (int, error) {
 	var count int
 	if err := queryable.QueryRow(ctx, queryCountGroupMembers, groupID).Scan(&count); err != nil {
@@ -214,7 +245,7 @@ func buildGroupSearchQuery(req SearchGroupsRequest) (string, []any, int, groupSe
 	reference := searchGeoPoint(req.ReferencePoint)
 	refLat := addArg(reference.Latitude)
 	refLng := addArg(reference.Longitude)
-	distanceExpr := fmt.Sprintf(`CAST(6371000 * 2 * ASIN(SQRT(POWER(SIN(RADIANS(latitude - %s) / 2), 2) + COS(RADIANS(%s)) * COS(RADIANS(latitude)) * POWER(SIN(RADIANS(longitude - %s) / 2), 2))) AS INTEGER)`, refLat, refLat, refLng)
+	distanceExpr := geo.HaversineDistanceSQL(refLat, refLng)
 	nameMatchExpr := "0"
 	if req.Keyword != "" {
 		keywordArg := addArg(req.Keyword)

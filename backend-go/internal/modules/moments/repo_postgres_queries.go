@@ -34,6 +34,12 @@ FROM moment_tags
 WHERE moment_id = $1
 ORDER BY tag_name ASC`
 
+	queryListMomentTagsByMomentIDs = `
+SELECT moment_id, tag_name
+FROM moment_tags
+WHERE moment_id = ANY($1)
+ORDER BY moment_id, tag_name ASC`
+
 	queryDeleteMomentTagsByMomentID = `
 DELETE FROM moment_tags
 WHERE moment_id = $1`
@@ -48,6 +54,12 @@ SELECT mentioned_user_id
 FROM moment_mentions
 WHERE moment_id = $1
 ORDER BY mentioned_user_id ASC`
+
+	queryListMomentMentionsByMomentIDs = `
+SELECT moment_id, mentioned_user_id
+FROM moment_mentions
+WHERE moment_id = ANY($1)
+ORDER BY moment_id, mentioned_user_id ASC`
 
 	queryDeleteMomentMentionsByMomentID = `
 DELETE FROM moment_mentions

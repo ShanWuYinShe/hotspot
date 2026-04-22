@@ -3,9 +3,6 @@ package moments
 import (
 	"context"
 	"errors"
-	"sort"
-	"time"
-
 	"hotspot/backend-go/internal/platform/persistence"
 
 	"github.com/jackc/pgx/v5"
@@ -87,14 +84,13 @@ func (r *PostgresRepository) Exists(ctx context.Context, momentID string) (bool,
 
 func scanMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, error) {
 	var item MomentItem
-	var userID, locationName, privacyLevel string
-	var createdAt time.Time
+	var userID, createdAt, locationName, privacyLevel string
 	var latitude, longitude float64
 	if err := scanner.Scan(&item.MomentID, &userID, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel); err != nil {
 		return MomentItem{}, err
 	}
 	item.User = UserInfo{UserID: userID, Nickname: userID}
-	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
+	item.CreatedAt = createdAt
 	item.Location = Location{Point: struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
@@ -108,29 +104,20 @@ func loadMomentTags(ctx context.Context, queryable persistence.QueryableDB, mome
 		return map[string][]string{}, nil
 	}
 	tagsByMomentID := make(map[string][]string, len(momentIDs))
-	for _, momentID := range momentIDs {
-		rows, err := queryable.Query(ctx, queryListMomentTagsByMomentID, momentID)
-		if err != nil {
+	rows, err := queryable.Query(ctx, queryListMomentTagsByMomentIDs, momentIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var momentID, tag string
+		if err := rows.Scan(&momentID, &tag); err != nil {
 			return nil, err
 		}
-		tags := make([]string, 0)
-		for rows.Next() {
-			var tag string
-			if err := rows.Scan(&tag); err != nil {
-				rows.Close()
-				return nil, err
-			}
-			tags = append(tags, tag)
-		}
-		if err := rows.Err(); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		if err := rows.Close(); err != nil {
-			return nil, err
-		}
-		sort.Strings(tags)
-		tagsByMomentID[momentID] = tags
+		tagsByMomentID[momentID] = append(tagsByMomentID[momentID], tag)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return tagsByMomentID, nil
 }
@@ -140,47 +127,37 @@ func loadMomentMentions(ctx context.Context, queryable persistence.QueryableDB, 
 		return map[string][]string{}, nil
 	}
 	mentionsByMomentID := make(map[string][]string, len(momentIDs))
-	for _, momentID := range momentIDs {
-		rows, err := queryable.Query(ctx, queryListMomentMentionsByMomentID, momentID)
-		if err != nil {
+	rows, err := queryable.Query(ctx, queryListMomentMentionsByMomentIDs, momentIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var momentID, mentionedUserID string
+		if err := rows.Scan(&momentID, &mentionedUserID); err != nil {
 			return nil, err
 		}
-		mentions := make([]string, 0)
-		for rows.Next() {
-			var mentionedUserID string
-			if err := rows.Scan(&mentionedUserID); err != nil {
-				rows.Close()
-				return nil, err
-			}
-			mentions = append(mentions, mentionedUserID)
-		}
-		if err := rows.Err(); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		if err := rows.Close(); err != nil {
-			return nil, err
-		}
-		sort.Strings(mentions)
-		mentionsByMomentID[momentID] = mentions
+		mentionsByMomentID[momentID] = append(mentionsByMomentID[momentID], mentionedUserID)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return mentionsByMomentID, nil
 }
 
 func scanFavoriteMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, string, error) {
 	var item MomentItem
-	var userID, locationName, privacyLevel string
-	var createdAt, favoritedAt time.Time
+	var userID, createdAt, locationName, privacyLevel, favoritedAt string
 	var latitude, longitude float64
 	if err := scanner.Scan(&item.MomentID, &userID, &item.Description, &createdAt, &item.LikesCount, &item.CommentsCount, &item.SharesCount, &locationName, &latitude, &longitude, &privacyLevel, &favoritedAt); err != nil {
 		return MomentItem{}, "", err
 	}
 	item.User = UserInfo{UserID: userID, Nickname: userID}
-	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
+	item.CreatedAt = createdAt
 	item.Location = Location{Point: struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	}{Latitude: latitude, Longitude: longitude}, LocationName: locationName}
 	item.PrivacyLevel = privacyLevel
-	return item, favoritedAt.UTC().Format(time.RFC3339), nil
+	return item, favoritedAt, nil
 }

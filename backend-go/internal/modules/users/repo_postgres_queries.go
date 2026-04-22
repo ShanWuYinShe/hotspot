@@ -208,4 +208,10 @@ SELECT tag_name
 FROM moment_tags
 WHERE moment_id = $1
 ORDER BY tag_name ASC`
+
+	momenttypesQueryListMomentTagsByMomentIDs = `
+SELECT moment_id, tag_name
+FROM moment_tags
+WHERE moment_id = ANY($1)
+ORDER BY moment_id, tag_name ASC`
 )

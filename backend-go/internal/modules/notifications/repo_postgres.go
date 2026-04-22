@@ -32,11 +32,23 @@ func (r *PostgresRepository) Append(ctx context.Context, userID string, item Not
 }
 
 func (r *PostgresRepository) AppendMany(ctx context.Context, userIDs []string, item NotificationItem) error {
+	if r.factory == nil || r.factory.DB == nil || r.factory.Config.PostgresDSN == "" {
+		return nil
+	}
+	queryable, ok := r.factory.DB.(persistence.QueryableDB)
+	if !ok {
+		return nil
+	}
+	item = normalizeNotificationItem(item)
+	payloadJSON, err := json.Marshal(item.Payload)
+	if err != nil {
+		return err
+	}
 	for _, userID := range userIDs {
 		if userID == "" {
 			continue
 		}
-		if err := r.Append(ctx, userID, item); err != nil {
+		if err := queryable.Exec(ctx, queryInsertNotification, item.NotificationID, userID, item.Type, item.IsRead, item.CreatedAt, string(payloadJSON)); err != nil {
 			return err
 		}
 	}

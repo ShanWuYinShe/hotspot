@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -172,11 +173,21 @@ func (b *userBackendStub) QueryRow(_ context.Context, query string, _ ...any) pe
 	return userRowValues{err: persistence.ErrNotImplemented}
 }
 func (b *userBackendStub) Query(_ context.Context, query string, _ ...any) (persistence.Rows, error) {
-	if err := b.queryErrs[query]; err != nil {
+	if err, ok := b.queryErrs[query]; ok {
 		return nil, err
+	}
+	for key, err := range b.queryErrs {
+		if key != "" && strings.Contains(query, key) {
+			return nil, err
+		}
 	}
 	if rows, ok := b.queryRowsByQuery[query]; ok {
 		return &userRowsValues{rows: rows}, nil
+	}
+	for key, rows := range b.queryRowsByQuery {
+		if key != "" && strings.Contains(query, key) {
+			return &userRowsValues{rows: rows}, nil
+		}
 	}
 	return &persistence.InMemoryRows{}, nil
 }
@@ -200,7 +211,7 @@ func (b *userMomentCursorBackend) Query(_ context.Context, query string, args ..
 			return &userRowsValues{rows: b.secondPage}, nil
 		}
 		return &userRowsValues{rows: b.firstPage}, nil
-	case momenttypesQueryListMomentTagsByMomentID:
+	case momenttypesQueryListMomentTagsByMomentID, momenttypesQueryListMomentTagsByMomentIDs:
 		return &userRowsValues{rows: b.tags}, nil
 	default:
 		return &persistence.InMemoryRows{}, nil
@@ -216,10 +227,11 @@ func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 			queryCountUserStats:  userRowValues{values: []any{2, 1, 3, 4, 5}},
 		},
 		queryRowsByQuery: map[string][][]any{
-			querySearchUserProfiles:                  {{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC)}},
-			queryListBlockedUsers:                    {{"user_bob", time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC), "buddy"}},
-			queryListLikedMoments:                    {{"moment_1", "user_alice", "hello", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), 3, 2, 1, "南天门", 35.0, 112.0, "public", time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC)}},
-			momenttypesQueryListMomentTagsByMomentID: {{"travel"}, {"hotspot"}},
+			"FROM users u":                            {{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC)}},
+			queryListBlockedUsers:                     {{"user_bob", time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC), "buddy"}},
+			queryListLikedMoments:                     {{"moment_1", "user_alice", "hello", time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC), 3, 2, 1, "南天门", 35.0, 112.0, "public", time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC)}},
+			momenttypesQueryListMomentTagsByMomentID:  {{"travel"}, {"hotspot"}},
+			momenttypesQueryListMomentTagsByMomentIDs: {{"moment_1", "travel"}, {"moment_1", "hotspot"}},
 		},
 		queryErrs: map[string]error{},
 		execErrs:  map[string]error{},
@@ -258,7 +270,7 @@ func TestPostgresRepositoryReadsFromQueryableDB(t *testing.T) {
 }
 
 func TestPostgresRepositorySearchAndListBlockedReturnErrorsWithoutFallback(t *testing.T) {
-	backend := &userBackendStub{queryRowByQuery: map[string]persistence.Row{}, queryRowsByQuery: map[string][][]any{}, queryErrs: map[string]error{querySearchUserProfiles: errors.New("boom"), queryListBlockedUsers: errors.New("boom")}, execErrs: map[string]error{}}
+	backend := &userBackendStub{queryRowByQuery: map[string]persistence.Row{}, queryRowsByQuery: map[string][][]any{}, queryErrs: map[string]error{"FROM users u": errors.New("boom"), queryListBlockedUsers: errors.New("boom")}, execErrs: map[string]error{}}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
@@ -336,7 +348,7 @@ func TestListUserMomentsPostgresReturnsNextCursorWithoutDupingNextPage(t *testin
 		secondPage: [][]any{
 			{"moment_1", "user_alice", "first", createdAt1, 0, 0, 0, "南天门", 35.0, 112.0, "public"},
 		},
-		tags: [][]any{{"travel"}},
+		tags: [][]any{{"moment_3", "travel"}},
 	}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend

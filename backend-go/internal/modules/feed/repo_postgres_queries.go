@@ -129,6 +129,12 @@ FROM moment_tags
 WHERE moment_id = $1
 ORDER BY tag_name ASC`
 
+	queryFeedMomentTagsByMomentIDs = `
+SELECT moment_id, tag_name
+FROM moment_tags
+WHERE moment_id = ANY($1)
+ORDER BY moment_id, tag_name ASC`
+
 	queryFeedTrendingTags = `
 SELECT mt.tag_name, COUNT(*) AS usage_count
 FROM moment_tags mt

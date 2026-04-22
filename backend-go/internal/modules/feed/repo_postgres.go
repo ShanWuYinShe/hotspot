@@ -232,7 +232,7 @@ func (r *PostgresRepository) loadMomentCandidates(ctx context.Context, queryable
 			score += 1000
 		}
 		if query.Source == "nearby" {
-			score += maxInt(0, query.Radius-distance)
+			score += max(0, query.Radius-distance)
 		}
 		item := MomentItem{
 			MomentID:      momentID,
@@ -398,29 +398,24 @@ func loadTrendingMoments(ctx context.Context, queryable persistence.QueryableDB,
 }
 
 func loadMomentTags(ctx context.Context, queryable persistence.QueryableDB, momentIDs []string) (map[string][]string, error) {
+	if len(momentIDs) == 0 {
+		return map[string][]string{}, nil
+	}
 	result := make(map[string][]string, len(momentIDs))
-	for _, momentID := range momentIDs {
-		rows, err := queryable.Query(ctx, queryFeedMomentTags, momentID)
-		if err != nil {
+	rows, err := queryable.Query(ctx, queryFeedMomentTagsByMomentIDs, momentIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var momentID, tag string
+		if err := rows.Scan(&momentID, &tag); err != nil {
 			return nil, err
 		}
-		tags := make([]string, 0)
-		for rows.Next() {
-			var tag string
-			if err := rows.Scan(&tag); err != nil {
-				rows.Close()
-				return nil, err
-			}
-			tags = append(tags, tag)
-		}
-		if err := rows.Err(); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		if err := rows.Close(); err != nil {
-			return nil, err
-		}
-		result[momentID] = tags
+		result[momentID] = append(result[momentID], tag)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return result, nil
 }
@@ -431,8 +426,8 @@ func paginateUsers(items []userCandidate, limit int, cursor string) (PaginatedUs
 		return PaginatedUsers{}, err
 	}
 	start := findUserCursorStart(items, decoded)
-	end := minInt(len(items), start+limit)
-	resp := PaginatedUsers{Items: make([]UserItem, 0, maxInt(0, end-start))}
+	end := min(len(items), start+limit)
+	resp := PaginatedUsers{Items: make([]UserItem, 0, max(0, end-start))}
 	for _, item := range items[start:end] {
 		resp.Items = append(resp.Items, item.Item)
 	}
@@ -448,8 +443,8 @@ func paginateGroups(items []groupCandidate, limit int, cursor string) (Paginated
 		return PaginatedGroups{}, err
 	}
 	start := findGroupCursorStart(items, decoded)
-	end := minInt(len(items), start+limit)
-	resp := PaginatedGroups{Items: make([]GroupItem, 0, maxInt(0, end-start))}
+	end := min(len(items), start+limit)
+	resp := PaginatedGroups{Items: make([]GroupItem, 0, max(0, end-start))}
 	for _, item := range items[start:end] {
 		resp.Items = append(resp.Items, item.Item)
 	}
@@ -465,8 +460,8 @@ func paginateMoments(items []momentCandidate, limit int, cursor string, source s
 		return PaginatedMoments{}, err
 	}
 	start := findMomentCursorStart(items, decoded, source)
-	end := minInt(len(items), start+limit)
-	resp := PaginatedMoments{Items: make([]MomentItem, 0, maxInt(0, end-start))}
+	end := min(len(items), start+limit)
+	resp := PaginatedMoments{Items: make([]MomentItem, 0, max(0, end-start))}
 	for _, item := range items[start:end] {
 		resp.Items = append(resp.Items, item.Item)
 	}
@@ -656,20 +651,6 @@ func newFeedCursorBlock() (cipher.Block, error) {
 	}
 	key := sha256.Sum256([]byte(secret))
 	return aes.NewCipher(key[:])
-}
-
-func minInt(left, right int) int {
-	if left < right {
-		return left
-	}
-	return right
-}
-
-func maxInt(left, right int) int {
-	if left > right {
-		return left
-	}
-	return right
 }
 
 var _ Repository = (*PostgresRepository)(nil)

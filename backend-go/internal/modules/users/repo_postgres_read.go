@@ -9,8 +9,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
-	"sort"
 	"strings"
 	"time"
 
@@ -74,15 +74,21 @@ func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsers
 	if !ok {
 		return PaginatedProfiles{}, persistence.ErrNotImplemented
 	}
-	rows, err := queryable.Query(ctx, querySearchUserProfiles, req.Keyword)
+	radius := normalizeSearchRadius(req.Radius)
+	refPt := geo.Point{Latitude: req.ReferencePoint.Latitude, Longitude: req.ReferencePoint.Longitude}
+	bounds := geo.BoundsAround(refPt, radius)
+	sql, args := buildSearchUsersQuery(bounds, req.Keyword)
+	if sql == "" {
+		return PaginatedProfiles{}, nil
+	}
+	rows, err := queryable.Query(ctx, sql, args...)
 	if err != nil {
 		return PaginatedProfiles{}, err
 	}
 	defer rows.Close()
 	candidates := make([]searchProfileCandidate, 0)
 	sortBy := normalizeSearchSort(req.SortBy)
-	radius := normalizeSearchRadius(req.Radius)
-	plan := geo.NewSearchPlan(geo.Point{Latitude: req.ReferencePoint.Latitude, Longitude: req.ReferencePoint.Longitude}, radius, sortBy)
+	plan := geo.NewSearchPlan(refPt, radius, sortBy)
 	keyword := strings.ToLower(strings.TrimSpace(req.Keyword))
 	tag := strings.ToLower(strings.TrimSpace(req.Tag))
 	for rows.Next() {
@@ -108,6 +114,29 @@ func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsers
 	}
 	sortSearchCandidates(candidates, normalizeSearchSort(req.SortBy))
 	return paginateSearchCandidates(candidates, req.Pagination), nil
+}
+
+func buildSearchUsersQuery(bounds geo.Bounds, keyword string) (string, []any) {
+	ranges := geo.SearchCovering(bounds)
+	if len(ranges) == 0 {
+		return "", nil
+	}
+	args := make([]any, 0, len(ranges)*2+1)
+	var builder strings.Builder
+	builder.WriteString(`SELECT u.user_id, u.nickname, COALESCE(u.avatar_url, ''), u.user_type, COALESCE(u.bio, ''), COALESCE(u.gender, ''), COALESCE(u.email, ''), COALESCE(u.phone, ''), u.location_name, u.latitude, u.longitude, u.presence_status, u.last_online, u.created_at FROM users u JOIN user_settings us ON us.user_id = u.user_id WHERE us.searchable = TRUE AND us.location_visible = TRUE AND us.privacy_level = 'public' AND (`)
+	for i, r := range ranges {
+		if i > 0 {
+			builder.WriteString(" OR ")
+		}
+		args = append(args, r[0], r[1])
+		builder.WriteString(fmt.Sprintf("u.s2_cell_id BETWEEN $%d AND $%d", len(args)-1, len(args)))
+	}
+	builder.WriteString(")")
+	if keyword != "" {
+		args = append(args, keyword)
+		builder.WriteString(fmt.Sprintf(" AND ($%d = '' OR (us.nickname_searchable = TRUE AND u.nickname ILIKE '%%' || $%d || '%%') OR u.bio ILIKE '%%' || $%d || '%%')", len(args), len(args), len(args)))
+	}
+	return builder.String(), args
 }
 
 func (r *PostgresRepository) Relationship(ctx context.Context, userID, targetUserID string) (Relationship, error) {
@@ -655,29 +684,20 @@ func loadUserMomentTags(ctx context.Context, queryable persistence.QueryableDB, 
 		return map[string][]string{}, nil
 	}
 	tagsByMomentID := make(map[string][]string, len(momentIDs))
-	for _, momentID := range momentIDs {
-		rows, err := queryable.Query(ctx, momenttypesQueryListMomentTagsByMomentID, momentID)
-		if err != nil {
+	rows, err := queryable.Query(ctx, momenttypesQueryListMomentTagsByMomentIDs, momentIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var momentID, tag string
+		if err := rows.Scan(&momentID, &tag); err != nil {
 			return nil, err
 		}
-		tags := make([]string, 0)
-		for rows.Next() {
-			var tag string
-			if err := rows.Scan(&tag); err != nil {
-				rows.Close()
-				return nil, err
-			}
-			tags = append(tags, tag)
-		}
-		if err := rows.Err(); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		if err := rows.Close(); err != nil {
-			return nil, err
-		}
-		sort.Strings(tags)
-		tagsByMomentID[momentID] = tags
+		tagsByMomentID[momentID] = append(tagsByMomentID[momentID], tag)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return tagsByMomentID, nil
 }

@@ -20,6 +20,11 @@ SELECT role, joined_at
 FROM group_members
 WHERE group_id = $1 AND user_id = $2`
 
+	queryGetGroupMemberships = `
+SELECT group_id, role, joined_at
+FROM group_members
+WHERE user_id = $1 AND group_id = ANY($2)`
+
 	queryCountGroupMembers = `
 SELECT COUNT(*)
 FROM group_members

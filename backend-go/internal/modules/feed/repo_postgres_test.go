@@ -3,6 +3,7 @@ package feed
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -54,11 +55,11 @@ func (r *feedRowsValues) Close() error { return nil }
 func (r *feedRowsValues) Err() error   { return r.err }
 
 type feedBackendStub struct {
-	queryRowsByQuery map[string][][]any
-	queryErrs        map[string]error
-	queryRowByQuery  map[string]feedRowValues
-	execErrs         map[string]error
-	execCalls        []feedExecCall
+	queryRowsByKey map[string][][]any
+	queryErrs      map[string]error
+	queryRowBySQL  map[string]feedRowValues
+	execErrs       map[string]error
+	execCalls      []feedExecCall
 }
 
 type feedExecCall struct {
@@ -76,17 +77,21 @@ func (b *feedBackendStub) Exec(_ context.Context, query string, args ...any) err
 	return nil
 }
 func (b *feedBackendStub) QueryRow(_ context.Context, query string, _ ...any) persistence.Row {
-	if row, ok := b.queryRowByQuery[query]; ok {
+	if row, ok := b.queryRowBySQL[query]; ok {
 		return row
 	}
 	return feedRowValues{err: persistence.ErrNotImplemented}
 }
 func (b *feedBackendStub) Query(_ context.Context, query string, _ ...any) (persistence.Rows, error) {
-	if err := b.queryErrs[query]; err != nil {
-		return nil, err
+	for key, err := range b.queryErrs {
+		if strings.Contains(query, key) {
+			return nil, err
+		}
 	}
-	if rows, ok := b.queryRowsByQuery[query]; ok {
-		return &feedRowsValues{rows: rows}, nil
+	for key, rows := range b.queryRowsByKey {
+		if strings.Contains(query, key) {
+			return &feedRowsValues{rows: rows}, nil
+		}
 	}
 	return &persistence.InMemoryRows{}, nil
 }
@@ -119,8 +124,8 @@ func TestPostgresRepositoryReturnsNotImplementedWithoutDatabaseOrFallback(t *tes
 }
 
 func TestPostgresRepositoryFiltersUsersByRadiusAndExcludesSelf(t *testing.T) {
-	backend := &feedBackendStub{queryRowsByQuery: map[string][][]any{
-		queryFeedUsers: {
+	backend := &feedBackendStub{queryRowsByKey: map[string][][]any{
+		"FROM users u": {
 			{"u1", "self", "", "", "loc", 35.0, 112.0, false, false, 0, 0},
 			{"u2", "near", "", "", "loc", 35.0001, 112.0, true, false, 2, 1},
 			{"u3", "far", "", "", "loc", 36.0, 112.0, false, false, 0, 0},
@@ -138,8 +143,8 @@ func TestPostgresRepositoryFiltersUsersByRadiusAndExcludesSelf(t *testing.T) {
 }
 
 func TestPostgresRepositoryPaginatesUsersWithOpaqueCursor(t *testing.T) {
-	backend := &feedBackendStub{queryRowsByQuery: map[string][][]any{
-		queryFeedUsers: {
+	backend := &feedBackendStub{queryRowsByKey: map[string][][]any{
+		"FROM users u": {
 			{"u3", "c", "", "", "loc", 35.0001, 112.0, false, false, 0, 0},
 			{"u2", "b", "", "", "loc", 35.0002, 112.0, false, false, 0, 0},
 			{"u1", "a", "", "", "loc", 35.0003, 112.0, false, false, 0, 0},
@@ -165,8 +170,8 @@ func TestPostgresRepositoryPaginatesUsersWithOpaqueCursor(t *testing.T) {
 }
 
 func TestPostgresRepositoryFiltersGroupsByRadiusAndSorts(t *testing.T) {
-	backend := &feedBackendStub{queryRowsByQuery: map[string][][]any{
-		queryFeedGroups: {
+	backend := &feedBackendStub{queryRowsByKey: map[string][][]any{
+		"FROM groups g": {
 			{"g0", "far", "", "", false, "loc", 35.03, 112.0, 10, false, 0},
 			{"g1", "near-a", "", "", false, "loc", 35.0001, 112.0, 10, true, 3},
 			{"g2", "near-b", "", "", false, "loc", 35.0001, 112.0, 10, true, 3},
@@ -184,12 +189,11 @@ func TestPostgresRepositoryFiltersGroupsByRadiusAndSorts(t *testing.T) {
 }
 
 func TestPostgresRepositoryLoadsFollowingMomentsOnly(t *testing.T) {
-	base := time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC)
-	backend := &feedBackendStub{queryRowsByQuery: map[string][][]any{
+	backend := &feedBackendStub{queryRowsByKey: map[string][][]any{
 		queryFeedMomentsFollowing: {
-			{"m3", "u3", "nick", "", "newest", base.Add(2 * time.Hour), 5, 1, 0, "loc", 35.0, 112.0, true, false},
-			{"m2", "u2", "nick", "", "new", base.Add(time.Hour), 5, 1, 0, "loc", 35.0, 112.0, true, false},
-			{"m1", "u1", "nick", "", "old", base, 1, 0, 0, "loc", 35.0, 112.0, false, false},
+			{"m3", "u3", "nick", "", "newest", time.Date(2026, 3, 3, 2, 0, 0, 0, time.UTC), 5, 1, 0, "loc", 35.0, 112.0, true, false},
+			{"m2", "u2", "nick", "", "new", time.Date(2026, 3, 3, 1, 0, 0, 0, time.UTC), 5, 1, 0, "loc", 35.0, 112.0, true, false},
+			{"m1", "u1", "nick", "", "old", time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC), 1, 0, 0, "loc", 35.0, 112.0, false, false},
 		},
 		queryFeedMomentTags: {{"hot"}},
 	}}
@@ -212,11 +216,10 @@ func TestPostgresRepositoryLoadsFollowingMomentsOnly(t *testing.T) {
 }
 
 func TestPostgresRepositoryLoadsNearbyMomentsOnlyWithinRadius(t *testing.T) {
-	base := time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC)
-	backend := &feedBackendStub{queryRowsByQuery: map[string][][]any{
-		queryFeedMomentsNearby: {
-			{"m1", "u1", "nick", "", "near", base, 1, 0, 0, "loc", 35.0001, 112.0, false, false, false},
-			{"m2", "u2", "nick", "", "far", base, 99, 0, 0, "loc", 36.0, 112.0, false, false, false},
+	backend := &feedBackendStub{queryRowsByKey: map[string][][]any{
+		"FROM moments m": {
+			{"m1", "u1", "nick", "", "near", time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC), 1, 0, 0, "loc", 35.0001, 112.0, false, false, false},
+			{"m2", "u2", "nick", "", "far", time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC), 99, 0, 0, "loc", 36.0, 112.0, false, false, false},
 		},
 		queryFeedMomentTags: {},
 	}}
@@ -232,12 +235,11 @@ func TestPostgresRepositoryLoadsNearbyMomentsOnlyWithinRadius(t *testing.T) {
 }
 
 func TestPostgresRepositoryAllMomentsUsesStableCursorPagination(t *testing.T) {
-	base := time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC)
-	backend := &feedBackendStub{queryRowsByQuery: map[string][][]any{
-		queryFeedMomentsAll: {
-			{"m1", "u1", "nick", "", "one", base, 10, 0, 0, "loc", 35.0001, 112.0, false, false, false},
-			{"m2", "u2", "nick", "", "two", base.Add(time.Minute), 9, 0, 0, "loc", 35.0002, 112.0, false, false, true},
-			{"m3", "u3", "nick", "", "three", base.Add(2 * time.Minute), 8, 0, 0, "loc", 35.0003, 112.0, false, false, false},
+	backend := &feedBackendStub{queryRowsByKey: map[string][][]any{
+		"FROM moments m": {
+			{"m1", "u1", "nick", "", "one", time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC), 10, 0, 0, "loc", 35.0001, 112.0, false, false, false},
+			{"m2", "u2", "nick", "", "two", time.Date(2026, 3, 3, 1, 0, 0, 0, time.UTC), 9, 0, 0, "loc", 35.0002, 112.0, false, false, true},
+			{"m3", "u3", "nick", "", "three", time.Date(2026, 3, 3, 2, 0, 0, 0, time.UTC), 8, 0, 0, "loc", 35.0003, 112.0, false, false, false},
 		},
 		queryFeedMomentTags: {},
 	}}
@@ -261,11 +263,11 @@ func TestPostgresRepositoryAllMomentsUsesStableCursorPagination(t *testing.T) {
 }
 
 func TestPostgresRepositoryTrendingAggregatesTagsAndMoments(t *testing.T) {
-	base := time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC)
-	backend := &feedBackendStub{queryRowsByQuery: map[string][][]any{
-		queryFeedTrendingTags:       {{"hot", 3}, {"new", 1}},
-		queryFeedTrendingHotMoments: {{"m1", "u1", "nick", "", "desc", base, 9, 1, 0, "loc", 35.0, 112.0, false, false}},
-		queryFeedMomentTags:         {{"hot"}},
+	backend := &feedBackendStub{queryRowsByKey: map[string][][]any{
+		queryFeedTrendingTags:          {{"hot", 3}, {"new", 1}},
+		queryFeedTrendingHotMoments:    {{"m1", "u1", "nick", "", "desc", time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC), 9, 1, 0, "loc", 35.0, 112.0, false, false}},
+		queryFeedMomentTags:            {{"hot"}},
+		queryFeedMomentTagsByMomentIDs: {{"m1", "hot"}},
 	}}
 	repo := NewPostgresRepository(newFeedFactory(backend))
 
@@ -286,7 +288,7 @@ func TestPostgresRepositoryRejectsInvalidCursor(t *testing.T) {
 }
 
 func TestPostgresRepositoryPropagatesQueryError(t *testing.T) {
-	repo := NewPostgresRepository(newFeedFactory(&feedBackendStub{queryErrs: map[string]error{queryFeedUsers: errors.New("boom")}}))
+	repo := NewPostgresRepository(newFeedFactory(&feedBackendStub{queryErrs: map[string]error{"FROM users u": errors.New("boom")}}))
 
 	_, err := repo.ListUsers(context.Background(), usersQuery{ViewerUserID: "viewer", ReferencePoint: GeoPoint{Latitude: 35, Longitude: 112}, Radius: 1000, Limit: 10})
 	if err == nil || err.Error() != "boom" {
@@ -303,7 +305,7 @@ func TestPostgresRepositoryDismissReturnsNotImplementedWithoutDatabase(t *testin
 }
 
 func TestPostgresRepositoryDismissReturnsNotFoundWhenTargetMissing(t *testing.T) {
-	backend := &feedBackendStub{queryRowByQuery: map[string]feedRowValues{queryFeedDismissMomentExists: {err: errors.New("no rows")}}}
+	backend := &feedBackendStub{queryRowBySQL: map[string]feedRowValues{queryFeedDismissMomentExists: {err: errors.New("no rows")}}}
 	repo := NewPostgresRepository(newFeedFactory(backend))
 
 	if err := repo.Dismiss(context.Background(), dismissCommand{ViewerUserID: "u1", TargetType: "moment", TargetID: "m1"}); !errors.Is(err, ErrDismissTargetNotFound) {
@@ -312,7 +314,7 @@ func TestPostgresRepositoryDismissReturnsNotFoundWhenTargetMissing(t *testing.T)
 }
 
 func TestPostgresRepositoryDismissInsertsWhenTargetExists(t *testing.T) {
-	backend := &feedBackendStub{queryRowByQuery: map[string]feedRowValues{queryFeedDismissMomentExists: {values: []any{"m1"}}}}
+	backend := &feedBackendStub{queryRowBySQL: map[string]feedRowValues{queryFeedDismissMomentExists: {values: []any{"m1"}}}}
 	repo := NewPostgresRepository(newFeedFactory(backend))
 
 	if err := repo.Dismiss(context.Background(), dismissCommand{ViewerUserID: "u1", TargetType: "moment", TargetID: "m1"}); err != nil {
@@ -325,8 +327,8 @@ func TestPostgresRepositoryDismissInsertsWhenTargetExists(t *testing.T) {
 
 func TestPostgresRepositoryDismissPropagatesExecError(t *testing.T) {
 	backend := &feedBackendStub{
-		queryRowByQuery: map[string]feedRowValues{queryFeedDismissMomentExists: {values: []any{"m1"}}},
-		execErrs:        map[string]error{queryFeedDismissInsert: errors.New("boom")},
+		queryRowBySQL: map[string]feedRowValues{queryFeedDismissMomentExists: {values: []any{"m1"}}},
+		execErrs:      map[string]error{queryFeedDismissInsert: errors.New("boom")},
 	}
 	repo := NewPostgresRepository(newFeedFactory(backend))
 
