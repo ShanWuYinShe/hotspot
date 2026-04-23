@@ -65,3 +65,31 @@ func TestLoadCarriesTrustedProxyCIDRs(t *testing.T) {
 		t.Fatalf("unexpected trusted proxy cidrs: %q", cfg.TrustedProxyCIDRs)
 	}
 }
+
+func TestLoadCarriesS3PublicEndpointSettings(t *testing.T) {
+	oldEndpoint := os.Getenv("S3_PUBLIC_ENDPOINT")
+	oldForcePathStyle := os.Getenv("S3_PUBLIC_FORCE_PATH_STYLE")
+	defer func() {
+		if oldEndpoint == "" {
+			_ = os.Unsetenv("S3_PUBLIC_ENDPOINT")
+		} else {
+			_ = os.Setenv("S3_PUBLIC_ENDPOINT", oldEndpoint)
+		}
+		if oldForcePathStyle == "" {
+			_ = os.Unsetenv("S3_PUBLIC_FORCE_PATH_STYLE")
+		} else {
+			_ = os.Setenv("S3_PUBLIC_FORCE_PATH_STYLE", oldForcePathStyle)
+		}
+	}()
+
+	_ = os.Setenv("S3_PUBLIC_ENDPOINT", "http://localhost:9000")
+	_ = os.Setenv("S3_PUBLIC_FORCE_PATH_STYLE", "false")
+
+	cfg := Load()
+	if cfg.S3PublicEndpoint != "http://localhost:9000" {
+		t.Fatalf("unexpected s3 public endpoint: %q", cfg.S3PublicEndpoint)
+	}
+	if cfg.S3PublicForcePathStyle {
+		t.Fatal("expected s3 public force path style to be false")
+	}
+}

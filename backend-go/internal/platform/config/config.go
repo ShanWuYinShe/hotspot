@@ -17,12 +17,14 @@ type Config struct {
 	DefaultUserAvatar  string
 	DefaultGroupAvatar string
 	TrustedProxyCIDRs  string
-	S3Endpoint         string
-	S3Region           string
-	S3Bucket           string
-	S3AccessKey        string
-	S3SecretKey        string
-	S3ForcePathStyle   bool
+	S3Endpoint             string
+	S3PublicEndpoint       string
+	S3Region               string
+	S3Bucket               string
+	S3AccessKey            string
+	S3SecretKey            string
+	S3ForcePathStyle       bool
+	S3PublicForcePathStyle bool
 }
 
 func Load() Config {
@@ -41,12 +43,14 @@ func Load() Config {
 		DefaultUserAvatar:  envOrDefault("APP_DEFAULT_USER_AVATAR_URL", ""),
 		DefaultGroupAvatar: envOrDefault("APP_DEFAULT_GROUP_AVATAR_URL", ""),
 		TrustedProxyCIDRs:  envOrDefault("TRUSTED_PROXY_CIDRS", ""),
-		S3Endpoint:         envOrDefault("S3_ENDPOINT", ""),
-		S3Region:           envOrDefault("S3_REGION", "us-east-1"),
-		S3Bucket:           envOrDefault("S3_BUCKET", ""),
-		S3AccessKey:        envOrDefault("S3_ACCESS_KEY", ""),
-		S3SecretKey:        envOrDefault("S3_SECRET_KEY", ""),
-		S3ForcePathStyle:   envBoolOrDefault("S3_FORCE_PATH_STYLE", true),
+		S3Endpoint:             envOrDefault("S3_ENDPOINT", ""),
+		S3PublicEndpoint:       envOrDefault("S3_PUBLIC_ENDPOINT", ""),
+		S3Region:               envOrDefault("S3_REGION", "us-east-1"),
+		S3Bucket:               envOrDefault("S3_BUCKET", ""),
+		S3AccessKey:            envOrDefault("S3_ACCESS_KEY", ""),
+		S3SecretKey:            envOrDefault("S3_SECRET_KEY", ""),
+		S3ForcePathStyle:       envBoolOrDefault("S3_FORCE_PATH_STYLE", true),
+		S3PublicForcePathStyle: envBoolOrDefault("S3_PUBLIC_FORCE_PATH_STYLE", true),
 	}
 }
 

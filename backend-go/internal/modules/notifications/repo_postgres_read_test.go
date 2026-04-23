@@ -107,8 +107,14 @@ func (b *notificationBackendStub) Query(_ context.Context, query string, args ..
 	switch query {
 	case queryListNotifications:
 		userID := args[0].(string)
-		typeFilter := args[1].(string)
-		cursorCreatedAt := args[2].(string)
+		typeFilter := ""
+		if args[1] != nil {
+			typeFilter = args[1].(string)
+		}
+		cursorCreatedAt := ""
+		if args[2] != nil {
+			cursorCreatedAt = args[2].(string)
+		}
 		cursorNotificationID := args[3].(string)
 		limit := args[4].(int)
 		items := append([]NotificationItem(nil), b.items[userID]...)

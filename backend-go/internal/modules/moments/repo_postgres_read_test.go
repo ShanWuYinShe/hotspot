@@ -37,6 +37,17 @@ func (r rowValues) Scan(dest ...any) error {
 			}
 		case *float64:
 			*d = r.values[i].(float64)
+		case *time.Time:
+			switch v := r.values[i].(type) {
+			case time.Time:
+				*d = v
+			case string:
+				parsed, err := time.Parse(time.RFC3339, v)
+				if err != nil {
+					return err
+				}
+				*d = parsed
+			}
 		}
 	}
 	return nil
@@ -197,6 +208,56 @@ func (b *backendStub) QueryRow(_ context.Context, query string, args ...any) per
 func (b *backendStub) Query(_ context.Context, query string, args ...any) (persistence.Rows, error) {
 	if b.queryErr != nil {
 		return nil, b.queryErr
+	}
+	if strings.Contains(query, "FROM moments WHERE privacy_level <>") && strings.Contains(query, "unnest($1::bigint[], $2::bigint[])") {
+		argIndex := 2
+		var keywordStr string
+		if len(args) > argIndex {
+			if s, ok := args[argIndex].(string); ok {
+				keywordStr = s
+				argIndex++
+			}
+		}
+		var tagFilter string
+		if len(args) > argIndex {
+			if s, ok := args[argIndex].(string); ok {
+				tagFilter = s
+				argIndex++
+			}
+		}
+		limit := -1
+		if strings.Contains(query, " LIMIT $") && len(args) > argIndex {
+			limit = args[argIndex].(int)
+		}
+		items := make([]MomentItem, 0)
+		for _, item := range b.moments {
+			if item.PrivacyLevel == "private" {
+				continue
+			}
+			if keywordStr != "" && !containsTagInDescription(item.Description, keywordStr) {
+				continue
+			}
+			if tagFilter != "" && !containsTag(item.Tags, tagFilter) {
+				continue
+			}
+			items = append(items, item)
+		}
+		if limit >= 0 {
+			sort.Slice(items, func(i, j int) bool {
+				if items[i].CreatedAt == items[j].CreatedAt {
+					return items[i].MomentID > items[j].MomentID
+				}
+				return items[i].CreatedAt > items[j].CreatedAt
+			})
+			if len(items) > limit {
+				items = items[:limit]
+			}
+		}
+		rows := make([][]any, 0, len(items))
+		for _, item := range items {
+			rows = append(rows, []any{item.MomentID, item.User.UserID, item.Description, item.CreatedAt, item.LikesCount, item.CommentsCount, item.SharesCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel})
+		}
+		return &rowsValues{rows: rows}, nil
 	}
 	switch query {
 	case queryListMyMoments:

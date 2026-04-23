@@ -50,7 +50,7 @@ func (p *ObjectStorageProvider) Presign(ctx context.Context, req PresignUploadRe
 }
 
 func (p *ObjectStorageProvider) Head(ctx context.Context, storageKey string) (ObjectMetadata, error) {
-	signedURL, err := p.presignURL(ctx, http.MethodHead, storageKey, 5*time.Minute)
+	signedURL, err := p.presignInternalURL(ctx, http.MethodHead, storageKey, 5*time.Minute)
 	if err != nil {
 		return ObjectMetadata{}, err
 	}
@@ -82,8 +82,16 @@ func (p *ObjectStorageProvider) Head(ctx context.Context, storageKey string) (Ob
 }
 
 func (p *ObjectStorageProvider) presignURL(ctx context.Context, method, storageKey string, ttl time.Duration) (string, error) {
+	return p.presignURLWithEndpoint(ctx, method, storageKey, ttl, p.clientFacingEndpoint)
+}
+
+func (p *ObjectStorageProvider) presignInternalURL(ctx context.Context, method, storageKey string, ttl time.Duration) (string, error) {
+	return p.presignURLWithEndpoint(ctx, method, storageKey, ttl, p.internalEndpoint)
+}
+
+func (p *ObjectStorageProvider) presignURLWithEndpoint(ctx context.Context, method, storageKey string, ttl time.Duration, endpointFn func() (*url.URL, bool, error)) (string, error) {
 	_ = ctx
-	endpoint, err := url.Parse(strings.TrimSpace(p.cfg.S3Endpoint))
+	endpoint, forcePathStyle, err := endpointFn()
 	if err != nil {
 		return "", err
 	}
@@ -99,7 +107,7 @@ func (p *ObjectStorageProvider) presignURL(ctx context.Context, method, storageK
 	dateStamp := now.Format("20060102")
 	credentialScope := dateStamp + "/" + region + "/s3/aws4_request"
 	host := endpoint.Host
-	canonicalURI := p.canonicalURI(endpoint, strings.TrimSpace(p.cfg.S3Bucket), storageKey)
+	canonicalURI := canonicalURIForEndpoint(endpoint, strings.TrimSpace(p.cfg.S3Bucket), storageKey, forcePathStyle)
 	signedHeaders := "host"
 	query := url.Values{}
 	query.Set("X-Amz-Algorithm", "AWS4-HMAC-SHA256")
@@ -143,9 +151,30 @@ func (p *ObjectStorageProvider) presignPutObjectURL(ctx context.Context, storage
 	return uploadURL, headers, expiresAt, nil
 }
 
-func (p *ObjectStorageProvider) canonicalURI(endpoint *url.URL, bucket, storageKey string) string {
+func (p *ObjectStorageProvider) internalEndpoint() (*url.URL, bool, error) {
+	endpoint, err := url.Parse(strings.TrimSpace(p.cfg.S3Endpoint))
+	if err != nil {
+		return nil, false, err
+	}
+	return endpoint, p.cfg.S3ForcePathStyle, nil
+}
+
+func (p *ObjectStorageProvider) clientFacingEndpoint() (*url.URL, bool, error) {
+	rawEndpoint := strings.TrimSpace(p.cfg.S3PublicEndpoint)
+	forcePathStyle := p.cfg.S3PublicForcePathStyle
+	if rawEndpoint == "" {
+		return p.internalEndpoint()
+	}
+	endpoint, err := url.Parse(rawEndpoint)
+	if err != nil {
+		return nil, false, err
+	}
+	return endpoint, forcePathStyle, nil
+}
+
+func canonicalURIForEndpoint(endpoint *url.URL, bucket, storageKey string, forcePathStyle bool) string {
 	cleanKey := path.Clean("/" + strings.TrimLeft(storageKey, "/"))
-	if p.cfg.S3ForcePathStyle || strings.Contains(endpoint.Host, ":") || endpoint.Host == "localhost" {
+	if forcePathStyle || strings.Contains(endpoint.Host, ":") || endpoint.Host == "localhost" {
 		basePath := strings.TrimSuffix(endpoint.Path, "/")
 		return basePath + "/" + bucket + cleanKey
 	}

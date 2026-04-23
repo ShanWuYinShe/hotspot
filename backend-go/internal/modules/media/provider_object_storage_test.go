@@ -369,6 +369,41 @@ func TestPresignURLPathStyle(t *testing.T) {
 	}
 }
 
+func TestPresignURLUsesPublicEndpointForClientFacingURL(t *testing.T) {
+	provider := NewObjectStorageProvider(config.Config{
+		S3Endpoint:             "http://minio:9000",
+		S3PublicEndpoint:       "http://localhost:9000",
+		S3Region:               "us-east-1",
+		S3Bucket:               "hotspot",
+		S3AccessKey:            "access-key",
+		S3SecretKey:            "secret-key",
+		S3ForcePathStyle:       true,
+		S3PublicForcePathStyle: true,
+	})
+	provider.now = func() time.Time {
+		return time.Date(2026, 3, 30, 8, 0, 0, 0, time.UTC)
+	}
+
+	presignedURL, err := provider.presignURL(context.Background(), http.MethodPut, "uploads/u1/upload_1.png", 15*time.Minute)
+	if err != nil {
+		t.Fatalf("presignURL returned error: %v", err)
+	}
+
+	parsed, err := url.Parse(presignedURL)
+	if err != nil {
+		t.Fatalf("failed to parse presigned url: %v", err)
+	}
+	if parsed.Host != "localhost:9000" {
+		t.Fatalf("expected client-facing host localhost:9000, got %q", parsed.Host)
+	}
+	if !strings.HasPrefix(parsed.Path, "/hotspot/uploads/") {
+		t.Fatalf("expected path to start with /hotspot/uploads/, got %q", parsed.Path)
+	}
+	if parsed.Query().Get("X-Amz-SignedHeaders") != "host" {
+		t.Fatalf("expected signed host header, got %q", parsed.Query().Get("X-Amz-SignedHeaders"))
+	}
+}
+
 func TestPresignURLPathStyleAutoDetect(t *testing.T) {
 	t.Run("localhost endpoint auto-detects path style", func(t *testing.T) {
 		provider := NewObjectStorageProvider(config.Config{
@@ -454,6 +489,39 @@ func TestHeadSendsSignedRequest(t *testing.T) {
 	}
 	if !strings.Contains(capturedURL, "X-Amz-Signature=") {
 		t.Fatalf("expected signed URL with X-Amz-Signature, got %q", capturedURL)
+	}
+}
+
+func TestHeadUsesInternalEndpointEvenWhenPublicEndpointConfigured(t *testing.T) {
+	var capturedHost string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedHost = r.Host
+		w.Header().Set("Content-Length", "123")
+		w.Header().Set("Content-Type", "image/png")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	provider := NewObjectStorageProvider(config.Config{
+		S3Endpoint:             server.URL,
+		S3PublicEndpoint:       "http://localhost:1",
+		S3Region:               "us-east-1",
+		S3Bucket:               "hotspot",
+		S3AccessKey:            "access-key",
+		S3SecretKey:            "secret-key",
+		S3ForcePathStyle:       true,
+		S3PublicForcePathStyle: true,
+	})
+	provider.now = func() time.Time {
+		return time.Date(2026, 3, 30, 8, 0, 0, 0, time.UTC)
+	}
+
+	_, err := provider.Head(context.Background(), "uploads/u1/upload_1.png")
+	if err != nil {
+		t.Fatalf("Head returned error: %v", err)
+	}
+	if capturedHost == "" {
+		t.Fatal("expected HEAD request to reach internal endpoint")
 	}
 }
 
