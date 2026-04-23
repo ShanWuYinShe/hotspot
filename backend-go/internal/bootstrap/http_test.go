@@ -12,7 +12,14 @@ import (
 )
 
 func TestNewHTTPRouterMountsSystemRoutes(t *testing.T) {
-	cfg := config.Config{}
+	cfg := config.Config{
+		S3Endpoint:       "http://minio:9000",
+		S3Bucket:         "hotspot",
+		S3Region:         "us-east-1",
+		S3AccessKey:      "minioadmin",
+		S3SecretKey:      "minioadmin123",
+		S3ForcePathStyle: true,
+	}
 	router := NewHTTPRouter(BuildModules(cfg, persistence.NewFactory(cfg)))
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/system/get_meta", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()

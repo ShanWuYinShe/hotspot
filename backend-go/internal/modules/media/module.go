@@ -1,6 +1,7 @@
 package media
 
 import (
+	"net/url"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -19,12 +20,11 @@ type Module struct {
 
 func NewModule(cfg config.Config, factory *persistence.Factory) *Module {
 	repo := NewPersistenceRepository(factory)
-	var provider Provider
-	if strings.TrimSpace(cfg.S3Endpoint) != "" && strings.TrimSpace(cfg.S3Bucket) != "" {
-		provider = NewObjectStorageProvider(cfg)
-	} else {
-		provider = NewStubProvider()
+	endpoint, err := url.Parse(strings.TrimSpace(cfg.S3Endpoint))
+	if err != nil || endpoint.Scheme == "" || endpoint.Host == "" || strings.TrimSpace(cfg.S3Bucket) == "" {
+		panic("media object storage not configured")
 	}
+	provider := NewObjectStorageProvider(cfg)
 	return &Module{handler: NewHandler(NewServiceWithRepoAndProvider(repo, provider))}
 }
 
