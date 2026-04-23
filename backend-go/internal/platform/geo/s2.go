@@ -87,6 +87,18 @@ func LeafCellID(p Point) int64 {
 	return int64(cellID)
 }
 
+// CoveringArrays returns the S2 covering as two separate slices
+// suitable for passing to PostgreSQL's unnest($1::bigint[], $2::bigint[]).
+func CoveringArrays(bounds Bounds) (mins []int64, maxs []int64) {
+	ranges := SearchCovering(bounds)
+	mins = make([]int64, len(ranges))
+	maxs = make([]int64, len(ranges))
+	for i, r := range ranges {
+		mins[i], maxs[i] = r[0], r[1]
+	}
+	return
+}
+
 // SearchCovering returns [RangeMin, RangeMax] pairs of leaf cell IDs
 // for a mixed-level S2 covering of the given bounds.
 // Each pair maps to a BETWEEN clause on the leaf cell ID column,

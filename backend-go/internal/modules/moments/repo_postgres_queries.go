@@ -13,8 +13,8 @@ WHERE user_id = $1
 ORDER BY created_at DESC, moment_id DESC`
 
 	queryInsertMoment = `
-INSERT INTO moments (moment_id, user_id, description, created_at, likes_count, comments_count, shares_count, location_name, latitude, longitude, privacy_level)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`
+INSERT INTO moments (moment_id, user_id, description, created_at, likes_count, comments_count, shares_count, location_name, latitude, longitude, privacy_level, s2_cell_id)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`
 
 	queryInsertMomentTagAssignment = `
 INSERT INTO moment_tags (moment_id, tag_name, created_at)
@@ -86,7 +86,8 @@ SET description = COALESCE($2, description),
     privacy_level = COALESCE($3, privacy_level),
     location_name = COALESCE($4, location_name),
     latitude      = COALESCE($5, latitude),
-    longitude     = COALESCE($6, longitude)
+    longitude     = COALESCE($6, longitude),
+    s2_cell_id    = COALESCE($7, s2_cell_id)
 WHERE moment_id = $1`
 
 	queryDeleteMoment = `

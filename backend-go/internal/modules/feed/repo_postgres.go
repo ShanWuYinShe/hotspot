@@ -103,7 +103,11 @@ func (r *PostgresRepository) queryable() (persistence.QueryableDB, error) {
 
 func (r *PostgresRepository) loadUserCandidates(ctx context.Context, queryable persistence.QueryableDB, query usersQuery) ([]userCandidate, error) {
 	bounds := geo.BoundsAround(geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}, query.Radius)
-	rows, err := queryable.Query(ctx, queryFeedUsers, bounds.South, bounds.North, bounds.West, bounds.East, query.ViewerUserID)
+	mins, maxs := geo.CoveringArrays(bounds)
+	if len(mins) == 0 {
+		return nil, nil
+	}
+	rows, err := queryable.Query(ctx, queryFeedUsers, mins, maxs, query.ViewerUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +152,11 @@ func (r *PostgresRepository) loadUserCandidates(ctx context.Context, queryable p
 
 func (r *PostgresRepository) loadGroupCandidates(ctx context.Context, queryable persistence.QueryableDB, query groupsQuery) ([]groupCandidate, error) {
 	bounds := geo.BoundsAround(geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}, query.Radius)
-	rows, err := queryable.Query(ctx, queryFeedGroups, bounds.South, bounds.North, bounds.West, bounds.East, query.ViewerUserID)
+	mins, maxs := geo.CoveringArrays(bounds)
+	if len(mins) == 0 {
+		return nil, nil
+	}
+	rows, err := queryable.Query(ctx, queryFeedGroups, mins, maxs, query.ViewerUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -186,13 +194,22 @@ func (r *PostgresRepository) loadGroupCandidates(ctx context.Context, queryable 
 
 func (r *PostgresRepository) loadMomentCandidates(ctx context.Context, queryable persistence.QueryableDB, query momentsQuery) ([]momentCandidate, error) {
 	bounds := geo.BoundsAround(geo.Point{Latitude: query.ReferencePoint.Latitude, Longitude: query.ReferencePoint.Longitude}, query.Radius)
-	querySQL := queryFeedMomentsAll
-	args := []any{bounds.South, bounds.North, bounds.West, bounds.East, query.ViewerUserID}
-	if query.Source == "following" {
+	mins, maxs := geo.CoveringArrays(bounds)
+	if len(mins) == 0 && query.Source != "following" {
+		return nil, nil
+	}
+	var querySQL string
+	var args []any
+	switch query.Source {
+	case "following":
 		querySQL = queryFeedMomentsFollowing
 		args = []any{query.ViewerUserID}
-	} else if query.Source == "nearby" {
+	case "nearby":
 		querySQL = queryFeedMomentsNearby
+		args = []any{mins, maxs, query.ViewerUserID}
+	default:
+		querySQL = queryFeedMomentsAll
+		args = []any{mins, maxs, query.ViewerUserID}
 	}
 	rows, err := queryable.Query(ctx, querySQL, args...)
 	if err != nil {

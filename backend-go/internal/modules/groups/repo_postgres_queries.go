@@ -2,8 +2,8 @@ package groups
 
 const (
 	queryInsertGroup = `
-	INSERT INTO groups (group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members, owner_id, created_at, last_activity_at, tags, s2_cell_token)
-	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`
+	INSERT INTO groups (group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members, owner_id, created_at, last_activity_at, tags, s2_cell_token, s2_cell_id)
+	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`
 
 	queryGetGroup = `
 	SELECT group_id, name, avatar_url, description, has_password, location_name, latitude, longitude, join_method, is_searchable, max_members, owner_id, created_at, last_activity_at, COALESCE(tags, '{}')
@@ -131,7 +131,8 @@ WHERE invite_id = $1`
 	    latitude = COALESCE($10, latitude),
 	    longitude = COALESCE($11, longitude),
 	    tags = COALESCE($12, tags),
-	    s2_cell_token = COALESCE($13, s2_cell_token)
+	    s2_cell_token = COALESCE($13, s2_cell_token),
+	    s2_cell_id = COALESCE($14, s2_cell_id)
 	WHERE group_id = $1`
 
 	queryDeleteGroup = `

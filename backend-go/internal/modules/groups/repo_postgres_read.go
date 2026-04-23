@@ -271,11 +271,12 @@ func buildGroupSearchQuery(req SearchGroupsRequest) (string, []any, int, groupSe
 	}
 	if req.Radius != nil {
 		bounds := geo.BoundsAround(reference, *req.Radius)
-		southArg := addArg(bounds.South)
-		northArg := addArg(bounds.North)
-		westArg := addArg(bounds.West)
-		eastArg := addArg(bounds.East)
-		builder.WriteString(fmt.Sprintf(" AND g.latitude BETWEEN %s AND %s AND g.longitude BETWEEN %s AND %s", southArg, northArg, westArg, eastArg))
+		mins, maxs := geo.CoveringArrays(bounds)
+		if len(mins) > 0 {
+			minArg := addArg(mins)
+			maxArg := addArg(maxs)
+			builder.WriteString(fmt.Sprintf(" AND EXISTS (SELECT 1 FROM unnest(%s::bigint[], %s::bigint[]) AS t(lo, hi) WHERE g.s2_cell_id BETWEEN t.lo AND t.hi)", minArg, maxArg))
+		}
 	}
 	builder.WriteString(") search WHERE 1=1")
 	if req.Radius != nil {

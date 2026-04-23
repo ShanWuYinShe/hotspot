@@ -37,7 +37,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	if privacy == "" {
 		privacy = "public"
 	}
-	if err := queryable.Exec(ctx, queryInsertMoment, momentID, userID, req.Description, createdAt, 0, 0, 0, req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, privacy); err != nil {
+	if err := queryable.Exec(ctx, queryInsertMoment, momentID, userID, req.Description, createdAt, 0, 0, 0, req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, privacy, geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})); err != nil {
 		return MomentItem{}, err
 	}
 	tags := normalizeMomentTags(req.Tags)
@@ -180,21 +180,14 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 }
 
 func buildSearchMomentsQuery(bounds geo.Bounds, keyword *string, tag *string, sortBy string, limit int) (string, []any) {
-	ranges := geo.SearchCovering(bounds)
-	if len(ranges) == 0 {
+	mins, maxs := geo.CoveringArrays(bounds)
+	if len(mins) == 0 {
 		return "", nil
 	}
-	args := make([]any, 0, len(ranges)*2+3)
+	args := make([]any, 0, 6)
 	var builder strings.Builder
-	builder.WriteString(`SELECT moment_id, user_id, description, created_at, likes_count, comments_count, shares_count, location_name, latitude, longitude, privacy_level FROM moments WHERE privacy_level != 'private' AND (`)
-	for i, r := range ranges {
-		if i > 0 {
-			builder.WriteString(" OR ")
-		}
-		args = append(args, r[0], r[1])
-		builder.WriteString(fmt.Sprintf("s2_cell_id BETWEEN $%d AND $%d", len(args)-1, len(args)))
-	}
-	builder.WriteString(")")
+	builder.WriteString(`SELECT moment_id, user_id, description, created_at, likes_count, comments_count, shares_count, location_name, latitude, longitude, privacy_level FROM moments WHERE privacy_level <> 'private' AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi) WHERE s2_cell_id BETWEEN t.lo AND t.hi)`)
+	args = append(args, mins, maxs)
 	if keyword != nil && *keyword != "" {
 		args = append(args, *keyword)
 		builder.WriteString(fmt.Sprintf(" AND description ILIKE '%%' || $%d || '%%'", len(args)))
@@ -220,14 +213,17 @@ func (r *PostgresRepository) Update(ctx context.Context, userID string, req Edit
 		return persistence.ErrNotImplemented
 	}
 	var locationName, latStr, lngStr *string
+	var s2CellID *int64
 	if req.Location != nil {
 		locationName = &req.Location.LocationName
 		s := fmt.Sprintf("%f", req.Location.Point.Latitude)
 		latStr = &s
 		s2 := fmt.Sprintf("%f", req.Location.Point.Longitude)
 		lngStr = &s2
+		id := geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})
+		s2CellID = &id
 	}
-	if err := queryable.Exec(ctx, queryUpdateMoment, req.MomentID, req.Description, req.PrivacyLevel, locationName, latStr, lngStr); err != nil {
+	if err := queryable.Exec(ctx, queryUpdateMoment, req.MomentID, req.Description, req.PrivacyLevel, locationName, latStr, lngStr, s2CellID); err != nil {
 		return err
 	}
 	if req.Tags != nil {

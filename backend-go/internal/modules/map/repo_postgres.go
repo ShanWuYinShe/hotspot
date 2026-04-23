@@ -105,7 +105,11 @@ func (r *PostgresRepository) queryable() (persistence.QueryableDB, error) {
 }
 
 func queryMapUsers(ctx context.Context, queryable persistence.QueryableDB, query canvasQuery) ([]mapCandidate, error) {
-	rows, err := queryable.Query(ctx, queryMapCanvasUsers, query.Bounds.South, query.Bounds.North, query.Bounds.West, query.Bounds.East)
+	mins, maxs := geo.CoveringArrays(query.Bounds)
+	if len(mins) == 0 {
+		return nil, nil
+	}
+	rows, err := queryable.Query(ctx, queryMapCanvasUsers, mins, maxs)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +131,11 @@ func queryMapUsers(ctx context.Context, queryable persistence.QueryableDB, query
 }
 
 func queryMapGroups(ctx context.Context, queryable persistence.QueryableDB, query canvasQuery) ([]mapCandidate, error) {
-	rows, err := queryable.Query(ctx, queryMapCanvasGroups, query.Bounds.South, query.Bounds.North, query.Bounds.West, query.Bounds.East)
+	mins, maxs := geo.CoveringArrays(query.Bounds)
+	if len(mins) == 0 {
+		return nil, nil
+	}
+	rows, err := queryable.Query(ctx, queryMapCanvasGroups, mins, maxs)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +156,11 @@ func queryMapGroups(ctx context.Context, queryable persistence.QueryableDB, quer
 }
 
 func queryMapMoments(ctx context.Context, queryable persistence.QueryableDB, query canvasQuery) ([]mapCandidate, error) {
-	rows, err := queryable.Query(ctx, queryMapCanvasMoments, query.Bounds.South, query.Bounds.North, query.Bounds.West, query.Bounds.East)
+	mins, maxs := geo.CoveringArrays(query.Bounds)
+	if len(mins) == 0 {
+		return nil, nil
+	}
+	rows, err := queryable.Query(ctx, queryMapCanvasMoments, mins, maxs)
 	if err != nil {
 		return nil, err
 	}

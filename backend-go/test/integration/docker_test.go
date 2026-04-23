@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -45,22 +46,36 @@ func TestMain(m *testing.M) {
 	}
 
 	maybeMigrate()
-	if err := waitForBackendWithPost(backendAddr+"/api/v1/system/health", 60*time.Second); err != nil {
-		fmt.Fprintf(os.Stderr, "backend not ready: %v\n", err)
-		os.Exit(1)
-	}
+	if shouldWaitForBackend() {
+		if err := waitForBackendWithPost(backendAddr+"/api/v1/system/health", 60*time.Second); err != nil {
+			fmt.Fprintf(os.Stderr, "backend not ready: %v\n", err)
+			os.Exit(1)
+		}
 
-	jar, _ := cookiejar.New(nil)
-	testClient = &http.Client{
-		Jar: jar,
-		CheckRedirect: func(*http.Request, []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
-		Timeout: 15 * time.Second,
+		jar, _ := cookiejar.New(nil)
+		testClient = &http.Client{
+			Jar: jar,
+			CheckRedirect: func(*http.Request, []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+			Timeout: 15 * time.Second,
+		}
 	}
 
 	code := m.Run()
 	os.Exit(code)
+}
+
+func shouldWaitForBackend() bool {
+	for _, arg := range os.Args {
+		if strings.HasPrefix(arg, "-test.run=") {
+			pattern := strings.TrimPrefix(arg, "-test.run=")
+			if strings.Contains(pattern, "Explain") || strings.Contains(pattern, "RequiredTables") {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func maybeMigrate() {

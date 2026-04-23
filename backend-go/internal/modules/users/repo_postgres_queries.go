@@ -29,8 +29,8 @@ VALUES ($1, $2)
 ON CONFLICT (user_id, tag_name) DO NOTHING`
 
 	queryUpsertUserProfile = `
-INSERT INTO users (user_id, nickname, avatar_url, user_type, bio, gender, email, phone, location_name, latitude, longitude, presence_status, last_online, created_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::timestamptz,$14::timestamptz)
+INSERT INTO users (user_id, nickname, avatar_url, user_type, bio, gender, email, phone, location_name, latitude, longitude, presence_status, last_online, created_at, s2_cell_id)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::timestamptz,$14::timestamptz,$15)
 ON CONFLICT (user_id) DO UPDATE SET
 nickname = EXCLUDED.nickname,
 avatar_url = EXCLUDED.avatar_url,
@@ -43,7 +43,8 @@ location_name = EXCLUDED.location_name,
 latitude = EXCLUDED.latitude,
 longitude = EXCLUDED.longitude,
 presence_status = EXCLUDED.presence_status,
-last_online = EXCLUDED.last_online`
+last_online = EXCLUDED.last_online,
+s2_cell_id = EXCLUDED.s2_cell_id`
 
 	queryDeleteUserProfile = `DELETE FROM users WHERE user_id = $1`
 
