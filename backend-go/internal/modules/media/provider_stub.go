@@ -2,7 +2,6 @@ package media
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 )
@@ -26,5 +25,5 @@ func (p *StubProvider) Presign(ctx context.Context, req PresignUploadRequest, ow
 func (p *StubProvider) Head(ctx context.Context, storageKey string) (ObjectMetadata, error) {
 	_ = ctx
 	_ = storageKey
-	return ObjectMetadata{}, errors.New("stub provider does not support head")
+	return ObjectMetadata{FileSize: 1, MimeType: "image/png"}, nil
 }
