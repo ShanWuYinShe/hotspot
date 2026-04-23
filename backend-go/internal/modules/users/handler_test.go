@@ -1346,3 +1346,17 @@ func TestHandlerUpgradeAcceptsValidPhone(t *testing.T) {
 	handler.Upgrade(rr, req)
 	assertUserCode(t, rr, 0)
 }
+
+func TestHandlerUpdateLocationRejectsEmptyLocationName(t *testing.T) {
+	handler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), nil))
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/me/location/update", strings.NewReader(`{"location":{"point":{"latitude":35.0,"longitude":112.0},"location_name":""}}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
+	handler.UpdateLocation(rr, req)
+	var resp map[string]any
+	json.Unmarshal([]byte(rr.Body.String()), &resp)
+	code, _ := resp["code"].(float64)
+	if int(code) != 10000 {
+		t.Fatalf("expected code 10000 for empty location_name, got %v", code)
+	}
+}

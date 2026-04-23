@@ -12,6 +12,7 @@ import (
 
 	"hotspot/backend-go/internal/platform/appconfig"
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/httpx"
 )
 
 func TestGetMetaRejectsNonEmptyBody(t *testing.T) {
@@ -76,6 +77,60 @@ func TestGetClientConfigReturnsSpecShape(t *testing.T) {
 	}
 	if resp.Data.Defaults.DefaultLocation.LocationName == "" {
 		t.Fatal("expected default location name")
+	}
+}
+
+func TestGetMetaReturnsActiveV1(t *testing.T) {
+	repo := &stubRepo{meta: ApiVersionMeta{Version: "v1", Status: ApiVersionStatusActive}}
+	service := NewServiceWithDeps(repo, &stubProvider{})
+	handler := NewHandler(service)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/get_meta", strings.NewReader(`{}`))
+	handler.GetMeta(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status=%d", rr.Code)
+	}
+	var resp httpx.ApiResponse[ApiVersionMeta]
+	json.NewDecoder(rr.Body).Decode(&resp)
+	if resp.Code != 0 {
+		t.Fatalf("code=%d", resp.Code)
+	}
+	if resp.Data.Version != "v1" {
+		t.Fatalf("version=%s", resp.Data.Version)
+	}
+	if resp.Data.Status != ApiVersionStatusActive {
+		t.Fatalf("status=%s", resp.Data.Status)
+	}
+}
+
+func TestHealthReturnsHealthyStatus(t *testing.T) {
+	ts := time.Now().UTC().Format(time.RFC3339)
+	health := &HealthStatus{Status: SystemHealthHealthy, Timestamp: ts}
+	service := NewServiceWithDeps(&stubRepo{healthCode: 0, health: health}, &stubProvider{})
+	handler := NewHandler(service)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/health", strings.NewReader(`{}`))
+	handler.Health(rr, req)
+	var resp httpx.ApiResponse[HealthStatus]
+	json.NewDecoder(rr.Body).Decode(&resp)
+	if resp.Code != 0 {
+		t.Fatalf("expected code 0, got %d", resp.Code)
+	}
+	if resp.Data.Status != SystemHealthHealthy {
+		t.Fatalf("expected healthy, got %s", resp.Data.Status)
+	}
+}
+
+func TestHealthReturnsUnhealthyCode(t *testing.T) {
+	service := NewServiceWithDeps(&stubRepo{healthCode: 10600, healthMsg: "db down", health: nil}, &stubProvider{})
+	handler := NewHandler(service)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/health", strings.NewReader(`{}`))
+	handler.Health(rr, req)
+	var resp httpx.ApiResponse[HealthStatus]
+	json.NewDecoder(rr.Body).Decode(&resp)
+	if resp.Code != 10600 {
+		t.Fatalf("expected code 10600, got %d", resp.Code)
 	}
 }
 

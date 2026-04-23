@@ -9,7 +9,10 @@ import (
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
+	"hotspot/backend-go/internal/platform/realtime"
 )
+
+func TestMain(m *testing.M) { realtime.ResetHub(); m.Run() }
 
 // --- stub repo ---
 
@@ -56,14 +59,15 @@ func testConfig() config.Config {
 	return config.Config{AuthTokenSecret: "test-secret-for-unit-tests"}
 }
 
-func newTestService(repo *stubAuthRepo) *Service {
+func newTestService(repo *stubAuthRepo) (*Service, *platformauth.Service) {
 	cfg := testConfig()
+	authSvc := platformauth.NewService(cfg)
 	return NewServiceWithSource(
-		platformauth.NewService(cfg),
+		authSvc,
 		repo,
 		cfg,
 		appconfig.NewStaticSource(cfg),
-	)
+	), authSvc
 }
 
 func authCtx(userID string) context.Context {
@@ -86,7 +90,7 @@ func defaultMeta() platformauth.SessionMeta {
 // --- CheckStatus ---
 
 func TestServiceCheckStatusNoPrincipal(t *testing.T) {
-	svc := newTestService(&stubAuthRepo{})
+	svc, _ := newTestService(&stubAuthRepo{})
 	status := svc.CheckStatus(context.Background())
 	if status.IsValid {
 		t.Fatal("expected invalid for no principal")
@@ -94,7 +98,7 @@ func TestServiceCheckStatusNoPrincipal(t *testing.T) {
 }
 
 func TestServiceCheckStatusWithPrincipal(t *testing.T) {
-	svc := newTestService(&stubAuthRepo{})
+	svc, _ := newTestService(&stubAuthRepo{})
 	status := svc.CheckStatus(authCtx("u1"))
 	if !status.IsValid {
 		t.Fatal("expected valid")
@@ -105,7 +109,7 @@ func TestServiceCheckStatusWithPrincipal(t *testing.T) {
 }
 
 func TestServiceCheckStatusWithExpiry(t *testing.T) {
-	svc := newTestService(&stubAuthRepo{})
+	svc, _ := newTestService(&stubAuthRepo{})
 	expiry := time.Now().Add(15 * time.Minute).UTC()
 	status := svc.CheckStatus(authCtxWithExpiry("u1", expiry))
 	if !status.IsValid {
@@ -120,7 +124,7 @@ func TestServiceCheckStatusWithExpiry(t *testing.T) {
 
 func TestServiceRegisterHappyPath(t *testing.T) {
 	repo := &stubAuthRepo{registerAccount: Account{UserID: "u1", LoginID: "a@b.com"}}
-	svc := newTestService(repo)
+	svc, _ := newTestService(repo)
 	result, err := svc.Register(context.Background(), RegisterRequest{LoginID: "a@b.com", Password: "pass"}, defaultMeta())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -132,7 +136,7 @@ func TestServiceRegisterHappyPath(t *testing.T) {
 
 func TestServiceRegisterPropagatesRepoError(t *testing.T) {
 	repo := &stubAuthRepo{registerErr: ErrLoginIDConflict}
-	svc := newTestService(repo)
+	svc, _ := newTestService(repo)
 	_, err := svc.Register(context.Background(), RegisterRequest{LoginID: "dup"}, defaultMeta())
 	if !errors.Is(err, ErrLoginIDConflict) {
 		t.Fatalf("expected login id conflict, got %v", err)
@@ -143,7 +147,7 @@ func TestServiceRegisterPropagatesRepoError(t *testing.T) {
 
 func TestServiceLoginHappyPath(t *testing.T) {
 	repo := &stubAuthRepo{authAccount: Account{UserID: "u1", LoginID: "a@b.com"}}
-	svc := newTestService(repo)
+	svc, _ := newTestService(repo)
 	result, err := svc.Login(context.Background(), LoginRequest{LoginID: "a@b.com", Password: "pass"}, defaultMeta())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -155,7 +159,7 @@ func TestServiceLoginHappyPath(t *testing.T) {
 
 func TestServiceLoginRejectsBadCredentials(t *testing.T) {
 	repo := &stubAuthRepo{authErr: ErrInvalidCredentials}
-	svc := newTestService(repo)
+	svc, _ := newTestService(repo)
 	_, err := svc.Login(context.Background(), LoginRequest{LoginID: "a@b.com", Password: "wrong"}, defaultMeta())
 	if !errors.Is(err, ErrInvalidCredentials) {
 		t.Fatalf("expected invalid credentials, got %v", err)
@@ -164,7 +168,7 @@ func TestServiceLoginRejectsBadCredentials(t *testing.T) {
 
 func TestServiceLoginPropagatesMetaError(t *testing.T) {
 	repo := &stubAuthRepo{authAccount: Account{UserID: "u1"}, updateMetaErr: errors.New("boom")}
-	svc := newTestService(repo)
+	svc, _ := newTestService(repo)
 	_, err := svc.Login(context.Background(), LoginRequest{LoginID: "a@b.com"}, defaultMeta())
 	if err == nil {
 		t.Fatal("expected error from update meta")
@@ -175,7 +179,7 @@ func TestServiceLoginPropagatesMetaError(t *testing.T) {
 
 func TestServiceGuestHappyPath(t *testing.T) {
 	repo := &stubAuthRepo{guestAccount: Account{UserID: "g1"}}
-	svc := newTestService(repo)
+	svc, _ := newTestService(repo)
 	result, err := svc.Guest(context.Background(), GuestRequest{Nickname: "guest"}, defaultMeta())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -187,7 +191,7 @@ func TestServiceGuestHappyPath(t *testing.T) {
 
 func TestServiceGuestPropagatesError(t *testing.T) {
 	repo := &stubAuthRepo{guestErr: errors.New("boom")}
-	svc := newTestService(repo)
+	svc, _ := newTestService(repo)
 	_, err := svc.Guest(context.Background(), GuestRequest{Nickname: "guest"}, defaultMeta())
 	if err == nil {
 		t.Fatal("expected error")
@@ -199,7 +203,7 @@ func TestServiceGuestPropagatesError(t *testing.T) {
 func TestServiceRefreshUsesCookieForWeb(t *testing.T) {
 	// First register+login to get a valid refresh token
 	repo := &stubAuthRepo{registerAccount: Account{UserID: "u1"}}
-	svc := newTestService(repo)
+	svc, _ := newTestService(repo)
 	result, err := svc.Register(context.Background(), RegisterRequest{LoginID: "a@b.com"}, defaultMeta())
 	if err != nil {
 		t.Fatalf("setup: %v", err)
@@ -215,7 +219,7 @@ func TestServiceRefreshUsesCookieForWeb(t *testing.T) {
 }
 
 func TestServiceRefreshRejectsInvalidToken(t *testing.T) {
-	svc := newTestService(&stubAuthRepo{})
+	svc, _ := newTestService(&stubAuthRepo{})
 	_, err := svc.Refresh(RefreshTokenRequest{RefreshToken: "bad-token", ClientType: ClientTypeApp}, "")
 	if err == nil {
 		t.Fatal("expected error for invalid token")
@@ -226,7 +230,7 @@ func TestServiceRefreshRejectsInvalidToken(t *testing.T) {
 
 func TestServiceListSessionsMasksIP(t *testing.T) {
 	repo := &stubAuthRepo{}
-	svc := newTestService(repo)
+	svc, _ := newTestService(repo)
 	// Register to create a session
 	meta := platformauth.SessionMeta{DeviceType: "ios", IPAddress: "192.168.1.100", IPLocation: "US"}
 	result, _ := svc.Register(context.Background(), RegisterRequest{LoginID: "a@b.com"}, meta)
@@ -244,7 +248,7 @@ func TestServiceListSessionsMasksIP(t *testing.T) {
 }
 
 func TestServiceListSessionsEmptyWithoutAuth(t *testing.T) {
-	svc := newTestService(&stubAuthRepo{})
+	svc, _ := newTestService(&stubAuthRepo{})
 	list := svc.ListSessions(context.Background())
 	if len(list.Items) != 0 {
 		t.Fatal("expected empty list without auth")
@@ -254,7 +258,7 @@ func TestServiceListSessionsEmptyWithoutAuth(t *testing.T) {
 // --- RevokeSession ---
 
 func TestServiceRevokeSessionRejectsNoAuth(t *testing.T) {
-	svc := newTestService(&stubAuthRepo{})
+	svc, _ := newTestService(&stubAuthRepo{})
 	err := svc.RevokeSession(context.Background(), RevokeSessionRequest{SessionID: "s1"})
 	if err == nil {
 		t.Fatal("expected error for no auth")
@@ -262,7 +266,7 @@ func TestServiceRevokeSessionRejectsNoAuth(t *testing.T) {
 }
 
 func TestServiceRevokeSessionRejectsCurrentSession(t *testing.T) {
-	svc := newTestService(&stubAuthRepo{})
+	svc, _ := newTestService(&stubAuthRepo{})
 	ctx := authCtxWithSession("u1", "current-session")
 	err := svc.RevokeSession(ctx, RevokeSessionRequest{SessionID: "current-session"})
 	if err == nil {
@@ -272,7 +276,7 @@ func TestServiceRevokeSessionRejectsCurrentSession(t *testing.T) {
 
 func TestServiceRevokeSessionHappyPath(t *testing.T) {
 	repo := &stubAuthRepo{}
-	svc := newTestService(repo)
+	svc, _ := newTestService(repo)
 	// Create two sessions for the user
 	meta1 := platformauth.SessionMeta{DeviceType: "ios", IPAddress: "1.1.1.1"}
 	meta2 := platformauth.SessionMeta{DeviceType: "web", IPAddress: "2.2.2.2"}
@@ -290,7 +294,7 @@ func TestServiceRevokeSessionHappyPath(t *testing.T) {
 // --- ChangePassword ---
 
 func TestServiceChangePasswordRequiresAuth(t *testing.T) {
-	svc := newTestService(&stubAuthRepo{})
+	svc, _ := newTestService(&stubAuthRepo{})
 	err := svc.ChangePassword(context.Background(), ChangePasswordRequest{OldPassword: "old", NewPassword: "new"})
 	if err == nil {
 		t.Fatal("expected error for no auth")
@@ -299,7 +303,7 @@ func TestServiceChangePasswordRequiresAuth(t *testing.T) {
 
 func TestServiceChangePasswordHappyPath(t *testing.T) {
 	repo := &stubAuthRepo{}
-	svc := newTestService(repo)
+	svc, _ := newTestService(repo)
 	ctx := authCtx("u1")
 	err := svc.ChangePassword(ctx, ChangePasswordRequest{OldPassword: "old", NewPassword: "new"})
 	if err != nil {
@@ -309,7 +313,7 @@ func TestServiceChangePasswordHappyPath(t *testing.T) {
 
 func TestServiceChangePasswordPropagatesError(t *testing.T) {
 	repo := &stubAuthRepo{changePwdErr: ErrInvalidOldPassword}
-	svc := newTestService(repo)
+	svc, _ := newTestService(repo)
 	ctx := authCtx("u1")
 	err := svc.ChangePassword(ctx, ChangePasswordRequest{OldPassword: "wrong"})
 	if !errors.Is(err, ErrInvalidOldPassword) {
@@ -321,7 +325,7 @@ func TestServiceChangePasswordPropagatesError(t *testing.T) {
 
 func TestServiceRequestPasswordResetHappyPath(t *testing.T) {
 	repo := &stubAuthRepo{}
-	svc := newTestService(repo)
+	svc, _ := newTestService(repo)
 	err := svc.RequestPasswordReset(context.Background(), RequestPasswordResetRequest{LoginID: "a@b.com"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -330,7 +334,7 @@ func TestServiceRequestPasswordResetHappyPath(t *testing.T) {
 
 func TestServiceRequestPasswordResetSwallowsThrottled(t *testing.T) {
 	repo := &stubAuthRepo{resetCreateErr: ErrPasswordResetThrottled}
-	svc := newTestService(repo)
+	svc, _ := newTestService(repo)
 	err := svc.RequestPasswordReset(context.Background(), RequestPasswordResetRequest{LoginID: "a@b.com"})
 	if err != nil {
 		t.Fatalf("expected nil (swallowed), got %v", err)
@@ -339,7 +343,7 @@ func TestServiceRequestPasswordResetSwallowsThrottled(t *testing.T) {
 
 func TestServiceRequestPasswordResetPropagatesOtherError(t *testing.T) {
 	repo := &stubAuthRepo{resetCreateErr: errors.New("boom")}
-	svc := newTestService(repo)
+	svc, _ := newTestService(repo)
 	err := svc.RequestPasswordReset(context.Background(), RequestPasswordResetRequest{LoginID: "a@b.com"})
 	if err == nil {
 		t.Fatal("expected error")
@@ -350,7 +354,7 @@ func TestServiceRequestPasswordResetPropagatesOtherError(t *testing.T) {
 
 func TestServiceResetPasswordHappyPath(t *testing.T) {
 	repo := &stubAuthRepo{resetAccount: Account{UserID: "u1"}}
-	svc := newTestService(repo)
+	svc, _ := newTestService(repo)
 	result, err := svc.ResetPassword(context.Background(), ResetPasswordRequest{LoginID: "a@b.com", VerificationCode: "123456", NewPassword: "new"}, defaultMeta())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -362,7 +366,7 @@ func TestServiceResetPasswordHappyPath(t *testing.T) {
 
 func TestServiceResetPasswordRejectsBadCode(t *testing.T) {
 	repo := &stubAuthRepo{resetErr: ErrPasswordResetNotFound}
-	svc := newTestService(repo)
+	svc, _ := newTestService(repo)
 	_, err := svc.ResetPassword(context.Background(), ResetPasswordRequest{LoginID: "a@b.com", VerificationCode: "bad"}, defaultMeta())
 	if !errors.Is(err, ErrPasswordResetNotFound) {
 		t.Fatalf("expected not found, got %v", err)
@@ -372,7 +376,7 @@ func TestServiceResetPasswordRejectsBadCode(t *testing.T) {
 // --- RevokeAll ---
 
 func TestServiceRevokeAllWithoutAuth(t *testing.T) {
-	svc := newTestService(&stubAuthRepo{})
+	svc, _ := newTestService(&stubAuthRepo{})
 	result := svc.RevokeAll(context.Background())
 	if result.RevokedCount != 0 {
 		t.Fatal("expected 0 revoked without auth")
@@ -381,7 +385,7 @@ func TestServiceRevokeAllWithoutAuth(t *testing.T) {
 
 func TestServiceRevokeAllHappyPath(t *testing.T) {
 	repo := &stubAuthRepo{}
-	svc := newTestService(repo)
+	svc, _ := newTestService(repo)
 	// Create two sessions
 	meta1 := platformauth.SessionMeta{DeviceType: "ios", IPAddress: "1.1.1.1"}
 	meta2 := platformauth.SessionMeta{DeviceType: "web", IPAddress: "2.2.2.2"}
@@ -417,3 +421,40 @@ func TestMaskEmpty(t *testing.T) {
 		t.Fatalf("expected empty, got %s", result)
 	}
 }
+
+// --- realtime integration ---
+
+func TestRevokeSessionClosesRealtimeConnection(t *testing.T) {
+	svc, authSvc := newTestService(&stubAuthRepo{})
+	reg, _ := svc.Register(context.Background(), RegisterRequest{LoginID: "ws_revoke", Nickname: "test", Password: "pass123"}, defaultMeta())
+	sessionID := reg.Principal.SessionID
+	userID := reg.Principal.UserID
+	otherResult, _ := authSvc.IssueSession(userID)
+	otherSessionID := otherResult.Principal.SessionID
+
+	hub := realtime.DefaultHub()
+	sink := &testSink{}
+	hub.RegisterUser(userID, otherSessionID, sink)
+
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: userID, SessionID: sessionID})
+	err := svc.RevokeSession(ctx, RevokeSessionRequest{SessionID: otherSessionID})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !sink.closed {
+		t.Fatal("expected sink to be closed after RevokeSession")
+	}
+}
+
+type testSink struct {
+	closed bool
+}
+
+func (s *testSink) Send(event realtime.Event) error {
+	if event.Type == "Error" {
+		s.closed = true
+	}
+	return nil
+}
+
+func (s *testSink) Close() error { return nil }

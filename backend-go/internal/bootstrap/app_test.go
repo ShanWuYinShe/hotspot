@@ -3,6 +3,8 @@ package bootstrap
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -127,5 +129,35 @@ func TestNewResourceGuardCheckerUsesCustomQueryableDB(t *testing.T) {
 	checker := newResourceGuardChecker(&persistence.Factory{DB: stub})
 	if _, ok := checker.(*resourceguard.DBChecker); !ok {
 		t.Fatalf("expected *resourceguard.DBChecker, got %T", checker)
+	}
+}
+
+func TestAppRouterServesWSV1(t *testing.T) {
+	cfg := config.Config{
+		AppEnv:           "test",
+		LogLevel:         "info",
+		S3Endpoint:       "http://localhost:9000",
+		S3Region:         "us-east-1",
+		S3Bucket:         "hotspot-media",
+		S3AccessKey:      "test-access-key",
+		S3SecretKey:      "test-secret-key",
+		S3ForcePathStyle: true,
+	}
+	app, err := NewApp(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Use HTTP request to /ws/v1 - WebSocket upgrade requires specific headers,
+	// so we just verify the route exists and does not return 404.
+	req := httptest.NewRequest(http.MethodGet, "/ws/v1", nil)
+	req.Header.Set("Connection", "Upgrade")
+	req.Header.Set("Upgrade", "websocket")
+	req.Header.Set("Sec-WebSocket-Version", "13")
+	req.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
+	rr := httptest.NewRecorder()
+	app.Router().ServeHTTP(rr, req)
+	// Route should exist - not 404
+	if rr.Code == http.StatusNotFound {
+		t.Fatal("/ws/v1 route not found - got 404")
 	}
 }

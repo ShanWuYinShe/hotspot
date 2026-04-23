@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -687,4 +688,133 @@ func (c *recordingChecker) MayExist(context.Context, resourceguard.ResourceKind,
 func (c *recordingChecker) Record(_ context.Context, kind resourceguard.ResourceKind, id string) error {
 	c.recorded = append(c.recorded, string(kind)+":"+id)
 	return nil
+}
+
+// Task 5: auth/register — web response has no token in body
+
+func TestRegisterWebResponseHasNoTokenInBody(t *testing.T) {
+	handler := newTestHandler()
+	rr := httptest.NewRecorder()
+	key := fmt.Sprintf("%032x", time.Now().UnixNano())
+	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"webuser","nickname":"WebUser","password":"pass123","client_type":"web"}`))
+	req.Header.Set("Idempotency-Key", key)
+	handler.Register(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rr.Code, rr.Body.String())
+	}
+	body := rr.Body.String()
+	if strings.Contains(body, "access_token") {
+		t.Fatalf("web response body must not contain access_token: %s", body)
+	}
+	if strings.Contains(body, "refresh_token") {
+		t.Fatalf("web response body must not contain refresh_token: %s", body)
+	}
+	var resp map[string]any
+	json.Unmarshal([]byte(body), &resp)
+	data, _ := resp["data"].(map[string]any)
+	if len(data) != 0 {
+		t.Fatalf("web response data should be empty object, got: %v", data)
+	}
+	// Verify Set-Cookie headers are present
+	setCookie := rr.Header().Get("Set-Cookie")
+	if setCookie == "" {
+		t.Fatal("expected Set-Cookie header for web")
+	}
+	if !strings.Contains(setCookie, "access_token=") {
+		t.Fatalf("expected access_token in Set-Cookie: %s", setCookie)
+	}
+}
+
+// Task 6: auth/login — error code 10100 for wrong password and nonexistent user
+
+func TestLoginReturns10100OnWrongPassword(t *testing.T) {
+	handler := newTestHandler()
+	_ = registerAppUser(t, handler, "loginerr", "RightPass", "pass123")
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"loginerr","password":"wrongpass","client_type":"app"}`))
+	handler.Login(rr, req)
+	var resp map[string]any
+	json.Unmarshal([]byte(rr.Body.String()), &resp)
+	code, _ := resp["code"].(float64)
+	if int(code) != 10100 {
+		t.Fatalf("expected code 10100, got %v", code)
+	}
+}
+
+func TestLoginReturns10100OnNonexistentUser(t *testing.T) {
+	handler := newTestHandler()
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"ghost","password":"whatever","client_type":"app"}`))
+	handler.Login(rr, req)
+	var resp map[string]any
+	json.Unmarshal([]byte(rr.Body.String()), &resp)
+	code, _ := resp["code"].(float64)
+	if int(code) != 10100 {
+		t.Fatalf("expected code 10100, got %v", code)
+	}
+}
+
+// Task 7: auth/logout — Cookie Max-Age=0
+
+func TestLogoutClearsCookiesWithMaxAgeZero(t *testing.T) {
+	handler := newTestHandler()
+	reg := registerAppUser(t, handler, "logout_test", "Pass123", "pass123")
+	sessionID := handler.service.auth.UnsafeFirstSessionIDForUser(reg.UserID)
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: reg.UserID, SessionID: sessionID})
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/logout", strings.NewReader(`{}`)).WithContext(ctx)
+	handler.Logout(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rr.Code, rr.Body.String())
+	}
+	accessFound := false
+	refreshFound := false
+	for _, c := range rr.Result().Cookies() {
+		if c.Name == "access_token" {
+			accessFound = true
+			if c.MaxAge != 0 {
+				t.Fatalf("access_token cookie MaxAge should be 0, got %d", c.MaxAge)
+			}
+		}
+		if c.Name == "refresh_token" {
+			refreshFound = true
+			if c.MaxAge != 0 {
+				t.Fatalf("refresh_token cookie MaxAge should be 0, got %d", c.MaxAge)
+			}
+		}
+	}
+	if !accessFound {
+		t.Fatal("expected Set-Cookie with access_token Max-Age=0")
+	}
+	if !refreshFound {
+		t.Fatal("expected Set-Cookie with refresh_token Max-Age=0")
+	}
+}
+
+// Task 8: auth/refresh_token — client_type constraints
+
+func TestRefreshTokenWebRejectsBodyToken(t *testing.T) {
+	handler := newTestHandler()
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/refresh_token", strings.NewReader(`{"client_type":"web","refresh_token":"should_not_be_here"}`))
+	handler.RefreshToken(rr, req)
+	var resp map[string]any
+	json.Unmarshal([]byte(rr.Body.String()), &resp)
+	code, _ := resp["code"].(float64)
+	if int(code) != 10000 {
+		t.Fatalf("expected code 10000, got %v", code)
+	}
+}
+
+func TestRefreshTokenAppRejectsEmptyToken(t *testing.T) {
+	handler := newTestHandler()
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/refresh_token", strings.NewReader(`{"client_type":"app"}`))
+	handler.RefreshToken(rr, req)
+	var resp map[string]any
+	json.Unmarshal([]byte(rr.Body.String()), &resp)
+	code, _ := resp["code"].(float64)
+	if int(code) != 10000 {
+		t.Fatalf("expected code 10000, got %v", code)
+	}
 }

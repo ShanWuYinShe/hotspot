@@ -144,6 +144,23 @@ func TestServiceGetMyProfileCreatesDefault(t *testing.T) {
 	}
 }
 
+func TestServiceGetMyProfileCreatesDefaultWhenMissing(t *testing.T) {
+	repo := NewInMemoryRepository()
+	svc := NewServiceWithDeps(repo, nil)
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "new_user"})
+	profile, err := svc.GetMyProfile(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if profile.UserID != "new_user" {
+		t.Fatalf("expected user_id=new_user, got %s", profile.UserID)
+	}
+	_, ok, _ := repo.GetProfile(ctx, "new_user")
+	if !ok {
+		t.Fatal("expected profile to be persisted")
+	}
+}
+
 func TestServiceGetMyProfileReturnsExisting(t *testing.T) {
 	expected := testProfile("u1")
 	svc := NewServiceWithRepo(&stubUserRepo{profile: expected, profileFound: true})
