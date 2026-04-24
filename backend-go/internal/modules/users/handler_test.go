@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	grouptypes "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
@@ -21,6 +22,11 @@ type testRealtimeSink struct{ events []realtime.Event }
 
 func (s *testRealtimeSink) Send(e realtime.Event) error { s.events = append(s.events, e); return nil }
 func (s *testRealtimeSink) Close() error                { return nil }
+
+func defaultTestProfile(userID string) MyProfile {
+	now := time.Now().UTC().Format(time.RFC3339)
+	return MyProfile{UserID: userID, Nickname: userID, UserType: UserTypeTemp, Location: Location{Point: GeoPoint{Latitude: 35.154922, Longitude: 112.682524}, LocationName: "默认位置"}, PresenceStatus: UserPresenceOffline, LastOnline: now, CreatedAt: now, Stats: UserStats{}}
+}
 
 type userErrorRepo struct {
 	getProfileErr  error
@@ -312,18 +318,18 @@ func TestFollowBlockRemarkAndOpenTheDoor(t *testing.T) {
 	service := NewService()
 	handler := NewHandler(service)
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	alice := defaultProfile("user_alice")
+	alice := defaultTestProfile("user_alice")
 	alice.Tags = []string{"coffee", "music"}
 	if err := service.repo.PutProfile(ctx, alice); err != nil {
 		t.Fatalf("put alice profile: %v", err)
 	}
-	_ = service.repo.PutProfile(ctx, defaultProfile("user_bob"))
-	bob := defaultProfile("user_bob")
+	_ = service.repo.PutProfile(ctx, defaultTestProfile("user_bob"))
+	bob := defaultTestProfile("user_bob")
 	bob.Tags = []string{"music", "travel"}
 	if err := service.repo.PutProfile(ctx, bob); err != nil {
 		t.Fatalf("put bob profile: %v", err)
 	}
-	charlie := defaultProfile("user_charlie")
+	charlie := defaultTestProfile("user_charlie")
 	charlie.Nickname = "Charlie"
 	if err := service.repo.PutProfile(ctx, charlie); err != nil {
 		t.Fatalf("put charlie profile: %v", err)
@@ -395,7 +401,7 @@ func TestFollowBlockRemarkAndOpenTheDoor(t *testing.T) {
 	}
 
 	notificationRepo := notifications.NewInMemoryRepository()
-	serviceWithNotifications := NewServiceWithDeps(service.repo, notifications.NewServiceWithRepo(notificationRepo))
+	serviceWithNotifications := NewServiceWithDeps(service.repo, notifications.NewServiceWithRepo(notificationRepo), nil)
 	if err := serviceWithNotifications.Follow(ctx, "user_bob", FollowSourceProfile, ""); err != nil {
 		t.Fatalf("follow with notifications: %v", err)
 	}
@@ -425,10 +431,10 @@ func TestFollowMutualFollowAddsNotificationsAndRealtime(t *testing.T) {
 	realtime.SetDefaultHub(hub)
 	repo := NewInMemoryRepository()
 	service := NewServiceWithRepo(repo)
-	if err := repo.PutProfile(context.Background(), defaultProfile("user_alice")); err != nil {
+	if err := repo.PutProfile(context.Background(), defaultTestProfile("user_alice")); err != nil {
 		t.Fatalf("put alice profile: %v", err)
 	}
-	if err := repo.PutProfile(context.Background(), defaultProfile("user_bob")); err != nil {
+	if err := repo.PutProfile(context.Background(), defaultTestProfile("user_bob")); err != nil {
 		t.Fatalf("put bob profile: %v", err)
 	}
 	if err := repo.PutSettings(context.Background(), "user_alice", defaultSettings()); err != nil {
@@ -444,7 +450,7 @@ func TestFollowMutualFollowAddsNotificationsAndRealtime(t *testing.T) {
 	}
 
 	notificationRepo := notifications.NewInMemoryRepository()
-	serviceWithNotifications := NewServiceWithDeps(repo, notifications.NewServiceWithRepo(notificationRepo))
+	serviceWithNotifications := NewServiceWithDeps(repo, notifications.NewServiceWithRepo(notificationRepo), nil)
 	aliceSink := &testRealtimeSink{}
 	bobSink := &testRealtimeSink{}
 	hub.RegisterUser("user_alice", "sess_alice", aliceSink)
@@ -479,10 +485,10 @@ func TestFollowCarriesSourceIntoNotificationAndRealtime(t *testing.T) {
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
 	repo := NewInMemoryRepository()
-	if err := repo.PutProfile(context.Background(), defaultProfile("user_alice")); err != nil {
+	if err := repo.PutProfile(context.Background(), defaultTestProfile("user_alice")); err != nil {
 		t.Fatalf("put alice profile: %v", err)
 	}
-	if err := repo.PutProfile(context.Background(), defaultProfile("user_bob")); err != nil {
+	if err := repo.PutProfile(context.Background(), defaultTestProfile("user_bob")); err != nil {
 		t.Fatalf("put bob profile: %v", err)
 	}
 	if err := repo.PutSettings(context.Background(), "user_alice", defaultSettings()); err != nil {
@@ -493,7 +499,7 @@ func TestFollowCarriesSourceIntoNotificationAndRealtime(t *testing.T) {
 	}
 	ctxAlice := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_alice"})
 	notificationRepo := notifications.NewInMemoryRepository()
-	serviceWithNotifications := NewServiceWithDeps(repo, notifications.NewServiceWithRepo(notificationRepo))
+	serviceWithNotifications := NewServiceWithDeps(repo, notifications.NewServiceWithRepo(notificationRepo), nil)
 	bobSink := &testRealtimeSink{}
 	hub.RegisterUser("user_bob", "sess_bob", bobSink)
 
@@ -527,7 +533,7 @@ func TestListLikedMomentsRespectsVisibility(t *testing.T) {
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "viewer", SessionID: "sess_1"})
-	if err := repo.PutProfile(context.Background(), defaultProfile("user_bob")); err != nil {
+	if err := repo.PutProfile(context.Background(), defaultTestProfile("user_bob")); err != nil {
 		t.Fatalf("put profile: %v", err)
 	}
 	if err := repo.PutSettings(context.Background(), "user_bob", UserSettings{LikedMomentsVisible: false}); err != nil {
@@ -550,7 +556,7 @@ func TestListLikedMomentsRespectsVisibility(t *testing.T) {
 
 func TestSearchCursorIsOpaqueAndTamperProof(t *testing.T) {
 	repo := NewInMemoryRepository()
-	alice := defaultProfile("user_alice")
+	alice := defaultTestProfile("user_alice")
 	alice.Nickname = "Alice"
 	alice.LastOnline = "2026-03-29T11:00:00Z"
 	alice.CreatedAt = "2026-03-29T10:00:00Z"
@@ -561,7 +567,7 @@ func TestSearchCursorIsOpaqueAndTamperProof(t *testing.T) {
 	if err := repo.PutSettings(context.Background(), alice.UserID, defaultSettings()); err != nil {
 		t.Fatalf("put alice settings: %v", err)
 	}
-	bob := defaultProfile("user_bob")
+	bob := defaultTestProfile("user_bob")
 	bob.Nickname = "Alice Bob"
 	bob.LastOnline = "2026-03-29T10:30:00Z"
 	bob.CreatedAt = "2026-03-29T09:30:00Z"
@@ -611,7 +617,7 @@ func TestInMemoryListFollowingCursorAdvancesPage(t *testing.T) {
 	repo := NewInMemoryRepository()
 	ctx := context.Background()
 	for _, id := range []string{"user_a", "user_b", "user_c"} {
-		profile := defaultProfile(id)
+		profile := defaultTestProfile(id)
 		if err := repo.PutProfile(ctx, profile); err != nil {
 			t.Fatalf("put profile %s: %v", id, err)
 		}
@@ -645,8 +651,8 @@ func TestOpenTheDoorCountsNonSearchableCommonGroups(t *testing.T) {
 	service := NewService()
 	handler := NewHandler(service)
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	alice := defaultProfile("user_alice")
-	bob := defaultProfile("user_bob")
+	alice := defaultTestProfile("user_alice")
+	bob := defaultTestProfile("user_bob")
 	if err := service.repo.PutProfile(ctx, alice); err != nil {
 		t.Fatalf("put alice profile: %v", err)
 	}
@@ -807,10 +813,10 @@ func TestUnblockHappyPath(t *testing.T) {
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	if err := repo.PutProfile(ctx, defaultProfile("user_alice")); err != nil {
+	if err := repo.PutProfile(ctx, defaultTestProfile("user_alice")); err != nil {
 		t.Fatalf("put alice: %v", err)
 	}
-	if err := repo.PutProfile(ctx, defaultProfile("user_bob")); err != nil {
+	if err := repo.PutProfile(ctx, defaultTestProfile("user_bob")); err != nil {
 		t.Fatalf("put bob: %v", err)
 	}
 	if err := repo.Block(ctx, "user_alice", "user_bob", ""); err != nil {
@@ -868,7 +874,7 @@ func TestListFriendsPermissionDenied(t *testing.T) {
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	if err := repo.PutProfile(ctx, defaultProfile("user_bob")); err != nil {
+	if err := repo.PutProfile(ctx, defaultTestProfile("user_bob")); err != nil {
 		t.Fatalf("put bob: %v", err)
 	}
 	if err := repo.PutSettings(ctx, "user_bob", UserSettings{SocialListsVisible: false}); err != nil {
@@ -884,10 +890,10 @@ func TestListFriendsHappyPath(t *testing.T) {
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	if err := repo.PutProfile(ctx, defaultProfile("user_alice")); err != nil {
+	if err := repo.PutProfile(ctx, defaultTestProfile("user_alice")); err != nil {
 		t.Fatalf("put alice: %v", err)
 	}
-	if err := repo.PutProfile(ctx, defaultProfile("user_bob")); err != nil {
+	if err := repo.PutProfile(ctx, defaultTestProfile("user_bob")); err != nil {
 		t.Fatalf("put bob: %v", err)
 	}
 	if err := repo.PutSettings(ctx, "user_alice", defaultSettings()); err != nil {
@@ -966,7 +972,7 @@ func TestListFollowingPermissionDenied(t *testing.T) {
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	if err := repo.PutProfile(ctx, defaultProfile("user_bob")); err != nil {
+	if err := repo.PutProfile(ctx, defaultTestProfile("user_bob")); err != nil {
 		t.Fatalf("put bob: %v", err)
 	}
 	if err := repo.PutSettings(ctx, "user_bob", UserSettings{SocialListsVisible: false}); err != nil {
@@ -982,10 +988,10 @@ func TestListFollowingHappyPath(t *testing.T) {
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	if err := repo.PutProfile(ctx, defaultProfile("user_alice")); err != nil {
+	if err := repo.PutProfile(ctx, defaultTestProfile("user_alice")); err != nil {
 		t.Fatalf("put alice: %v", err)
 	}
-	if err := repo.PutProfile(ctx, defaultProfile("user_bob")); err != nil {
+	if err := repo.PutProfile(ctx, defaultTestProfile("user_bob")); err != nil {
 		t.Fatalf("put bob: %v", err)
 	}
 	if err := repo.PutSettings(ctx, "user_alice", defaultSettings()); err != nil {
@@ -1061,7 +1067,7 @@ func TestListFollowersPermissionDenied(t *testing.T) {
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	if err := repo.PutProfile(ctx, defaultProfile("user_bob")); err != nil {
+	if err := repo.PutProfile(ctx, defaultTestProfile("user_bob")); err != nil {
 		t.Fatalf("put bob: %v", err)
 	}
 	if err := repo.PutSettings(ctx, "user_bob", UserSettings{SocialListsVisible: false}); err != nil {
@@ -1077,10 +1083,10 @@ func TestListFollowersHappyPath(t *testing.T) {
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	if err := repo.PutProfile(ctx, defaultProfile("user_alice")); err != nil {
+	if err := repo.PutProfile(ctx, defaultTestProfile("user_alice")); err != nil {
 		t.Fatalf("put alice: %v", err)
 	}
-	if err := repo.PutProfile(ctx, defaultProfile("user_bob")); err != nil {
+	if err := repo.PutProfile(ctx, defaultTestProfile("user_bob")); err != nil {
 		t.Fatalf("put bob: %v", err)
 	}
 	if err := repo.PutSettings(ctx, "user_alice", defaultSettings()); err != nil {
@@ -1156,7 +1162,7 @@ func TestListGroupsPermissionDenied(t *testing.T) {
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	if err := repo.PutProfile(ctx, defaultProfile("user_bob")); err != nil {
+	if err := repo.PutProfile(ctx, defaultTestProfile("user_bob")); err != nil {
 		t.Fatalf("put bob: %v", err)
 	}
 	if err := repo.PutSettings(ctx, "user_bob", UserSettings{GroupsVisible: false}); err != nil {
@@ -1172,7 +1178,7 @@ func TestListGroupsHappyPath(t *testing.T) {
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	if err := repo.PutProfile(ctx, defaultProfile("user_alice")); err != nil {
+	if err := repo.PutProfile(ctx, defaultTestProfile("user_alice")); err != nil {
 		t.Fatalf("put alice: %v", err)
 	}
 	if err := repo.PutSettings(ctx, "user_alice", defaultSettings()); err != nil {
@@ -1244,7 +1250,7 @@ func TestListMomentsHappyPath(t *testing.T) {
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	if err := repo.PutProfile(ctx, defaultProfile("user_alice")); err != nil {
+	if err := repo.PutProfile(ctx, defaultTestProfile("user_alice")); err != nil {
 		t.Fatalf("put alice: %v", err)
 	}
 	req := httptest.NewRequest(http.MethodPost, "/me/moments", strings.NewReader(`{}`)).WithContext(ctx)
@@ -1319,7 +1325,7 @@ func TestHandlerUpgradeAcceptsValidEmail(t *testing.T) {
 	service := NewService()
 	handler := NewHandler(service)
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	alice := defaultProfile("user_alice")
+	alice := defaultTestProfile("user_alice")
 	alice.UserType = UserTypeTemp
 	if err := service.repo.PutProfile(context.Background(), alice); err != nil {
 		t.Fatalf("put profile: %v", err)
@@ -1335,7 +1341,7 @@ func TestHandlerUpgradeAcceptsValidPhone(t *testing.T) {
 	service := NewService()
 	handler := NewHandler(service)
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
-	alice := defaultProfile("user_alice")
+	alice := defaultTestProfile("user_alice")
 	alice.UserType = UserTypeTemp
 	if err := service.repo.PutProfile(context.Background(), alice); err != nil {
 		t.Fatalf("put profile: %v", err)
@@ -1348,7 +1354,7 @@ func TestHandlerUpgradeAcceptsValidPhone(t *testing.T) {
 }
 
 func TestHandlerUpdateLocationRejectsEmptyLocationName(t *testing.T) {
-	handler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), nil))
+	handler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), nil, nil))
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/me/location/update", strings.NewReader(`{"location":{"point":{"latitude":35.0,"longitude":112.0},"location_name":""}}`))
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))

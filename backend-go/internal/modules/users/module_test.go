@@ -9,7 +9,7 @@ import (
 
 func TestUsersModuleMountsContactChangeRoutes(t *testing.T) {
 	router := chi.NewRouter()
-	NewModule(nil).Mount(router)
+	NewModule(nil, nil).Mount(router)
 
 	routes := map[string]bool{
 		"/api/v1/users/me/email/request_change": false,

@@ -19,9 +19,18 @@ type MyMomentState struct {
 	IsFavorited bool `json:"is_favorited"`
 }
 
+type MomentImage struct {
+	URL         string `json:"url"`
+	ThumbnailURL string `json:"thumbnail_url,omitempty"`
+	Width       int    `json:"width,omitempty"`
+	Height      int    `json:"height,omitempty"`
+	MimeType    string `json:"mime_type,omitempty"`
+}
+
 type MomentItem struct {
 	MomentID      string         `json:"moment_id"`
 	Description   string         `json:"description"`
+	Images        []MomentImage  `json:"images,omitempty"`
 	Tags          []string       `json:"tags,omitempty"`
 	Mentions      []string       `json:"mentions,omitempty"`
 	CreatedAt     string         `json:"created_at"`

@@ -41,6 +41,6 @@ func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.M
 		search.NewModule(factory, sharedAppConfig),
 		share.NewModule(factory),
 		system.NewModule(factory, sharedAppConfig),
-		users.NewModule(factory),
+		users.NewModule(factory, sharedAppConfig),
 	}
 }

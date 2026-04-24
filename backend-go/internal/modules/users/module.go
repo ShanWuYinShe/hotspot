@@ -5,6 +5,7 @@ import (
 
 	"hotspot/backend-go/internal/modules/notifications"
 	platformauth "hotspot/backend-go/internal/platform/auth"
+	"hotspot/backend-go/internal/platform/appconfig"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/ratelimit"
@@ -15,10 +16,10 @@ type Module struct {
 	handler *Handler
 }
 
-func NewModule(factory *persistence.Factory) *Module {
+func NewModule(factory *persistence.Factory, appConfig appconfig.Source) *Module {
 	repo := NewPersistenceRepository(factory)
 	notificationService := notifications.NewServiceWithRepo(notifications.NewPersistenceRepository(factory))
-	return &Module{handler: NewHandler(NewServiceWithDeps(repo, notificationService))}
+	return &Module{handler: NewHandler(NewServiceWithDeps(repo, notificationService, appConfig))}
 }
 
 func (m *Module) Mount(r chi.Router) {

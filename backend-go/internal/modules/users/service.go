@@ -8,6 +8,7 @@ import (
 	grouptypes "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/modules/notifications"
+	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/observability"
@@ -17,6 +18,7 @@ import (
 type Service struct {
 	repo          Repository
 	notifications userNotificationWriter
+	appConfig     appconfig.Source
 }
 
 type userNotificationWriter interface {
@@ -25,13 +27,13 @@ type userNotificationWriter interface {
 }
 
 func NewService() *Service {
-	return NewServiceWithDeps(NewInMemoryRepository(), notifications.NewService())
+	return NewServiceWithDeps(NewInMemoryRepository(), notifications.NewService(), nil)
 }
 
-func NewServiceWithRepo(repo Repository) *Service { return NewServiceWithDeps(repo, nil) }
+func NewServiceWithRepo(repo Repository) *Service { return NewServiceWithDeps(repo, nil, nil) }
 
-func NewServiceWithDeps(repo Repository, notificationWriter userNotificationWriter) *Service {
-	return &Service{repo: repo, notifications: notificationWriter}
+func NewServiceWithDeps(repo Repository, notificationWriter userNotificationWriter, appConfig appconfig.Source) *Service {
+	return &Service{repo: repo, notifications: notificationWriter, appConfig: appConfig}
 }
 
 func (s *Service) GetMyProfile(ctx context.Context) (MyProfile, error) {
@@ -48,7 +50,7 @@ func (s *Service) GetMyProfile(ctx context.Context) (MyProfile, error) {
 		observability.L().Info("users.get_my_profile completed", "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return profile, nil
 	}
-	profile := defaultProfile(principal.UserID)
+	profile := s.defaultProfile(ctx,principal.UserID)
 	if err := s.repo.PutProfile(ctx, profile); err != nil {
 		observability.L().Error("users.get_my_profile failed", "error", err, "elapsed_ms", time.Since(startedAt).Milliseconds())
 		return MyProfile{}, err
@@ -70,7 +72,7 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateProfileRequest)
 		return err
 	}
 	if !ok {
-		profile = defaultProfile(principal.UserID)
+		profile = s.defaultProfile(ctx,principal.UserID)
 	}
 	if req.Nickname != nil {
 		profile.Nickname = *req.Nickname
@@ -273,7 +275,7 @@ func (s *Service) UpdateLocation(ctx context.Context, req UpdateLocationRequest)
 		return err
 	}
 	if !ok {
-		profile = defaultProfile(principal.UserID)
+		profile = s.defaultProfile(ctx,principal.UserID)
 	}
 	profile.Location = req.Location
 	if err := s.repo.PutProfile(ctx, profile); err != nil {
@@ -301,7 +303,7 @@ func (s *Service) Upgrade(ctx context.Context, req UpgradeAccountRequest) error 
 		return err
 	}
 	if !ok {
-		profile = defaultProfile(principal.UserID)
+		profile = s.defaultProfile(ctx,principal.UserID)
 	}
 	if profile.UserType == UserTypeNormal {
 		return ErrConflict
@@ -801,9 +803,18 @@ func applySettingsPatch(settings *UserSettings, patch PartialUserSettings) {
 	}
 }
 
-func defaultProfile(userID string) MyProfile {
+func (s *Service) defaultProfile(ctx context.Context, userID string) MyProfile {
 	now := time.Now().UTC().Format(time.RFC3339)
-	return MyProfile{UserID: userID, Nickname: userID, UserType: UserTypeTemp, Location: Location{Point: GeoPoint{Latitude: 35.154922, Longitude: 112.682524}, LocationName: "默认位置"}, PresenceStatus: UserPresenceOffline, LastOnline: now, CreatedAt: now, Stats: UserStats{}}
+	lat := 35.154922
+	lng := 112.682524
+	locName := "默认位置"
+	if s.appConfig != nil {
+		defaults := s.appConfig.Get(ctx).Defaults
+		lat = defaults.DefaultLocation.Point.Latitude
+		lng = defaults.DefaultLocation.Point.Longitude
+		locName = defaults.DefaultLocation.LocationName
+	}
+	return MyProfile{UserID: userID, Nickname: userID, UserType: UserTypeTemp, Location: Location{Point: GeoPoint{Latitude: lat, Longitude: lng}, LocationName: locName}, PresenceStatus: UserPresenceOffline, LastOnline: now, CreatedAt: now, Stats: UserStats{}}
 }
 
 func defaultSettings() UserSettings {
@@ -876,7 +887,7 @@ func (s *Service) buildSocialContext(ctx context.Context, viewerUserID string, t
 		return nil, err
 	}
 	if !ok {
-		viewerProfile = defaultProfile(viewerUserID)
+		viewerProfile = s.defaultProfile(ctx,viewerUserID)
 	}
 	mutualFriends, err := collectMutualFriends(ctx, s.repo, viewerUserID, targetProfile.UserID)
 	if err != nil {

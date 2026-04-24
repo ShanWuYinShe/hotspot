@@ -146,7 +146,7 @@ func TestServiceGetMyProfileCreatesDefault(t *testing.T) {
 
 func TestServiceGetMyProfileCreatesDefaultWhenMissing(t *testing.T) {
 	repo := NewInMemoryRepository()
-	svc := NewServiceWithDeps(repo, nil)
+	svc := NewServiceWithDeps(repo, nil, nil)
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "new_user"})
 	profile, err := svc.GetMyProfile(ctx)
 	if err != nil {
